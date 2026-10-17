@@ -15,13 +15,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Java
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Setup Flutter
+      - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -33,11 +33,15 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build APK
+      - name: Generate Waffra app icon
+        run: dart run flutter_launcher_icons
+
+      - name: Build Android APK
         run: flutter build apk --debug
 
-      - name: Upload APK
+      - name: Upload Waffra APK
         uses: actions/upload-artifact@v4
         with:
           name: Waffra-Android-APK
           path: build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 30
