@@ -90,28 +90,61 @@ class BankResult {
 }
 class BankParser {
  static BankResult parse(String original){
-  final s=digits(original).replaceAll('\u200f','').replaceAll('\u200e','').replaceAll('\u00a0',' ');
-  final outgoing=RegExp(r'شراء|pos|مدى|mada|حوالة\s+(?:داخلية\s+)?صادرة|تحويل\s+صادر|سحب|خصم|دفع|purchase|debit',caseSensitive:false).hasMatch(s);
-  final incoming=RegExp(r'راتب|إيداع|ايداع|حوالة\s+(?:داخلية\s+)?واردة|تحويل\s+وارد|salary|credited|deposit|received',caseSensitive:false).hasMatch(s);
-  final explicitIncoming=RegExp(r'حوالة\s+(?:داخلية\s+)?واردة|تحويل\s+وارد|إيداع|ايداع|تم\s+إضافة|credited|received',caseSensitive:false).hasMatch(s);
-  final income=explicitIncoming||(incoming&&!outgoing);
-  const n=r'([0-9][0-9,]*(?:\.[0-9]{1,2})?)', c=r'(?:SR|SAR|ر\.?\s?س\.?|ريال)';
-  final patterns=[RegExp('(?:بـ|بقيمة|بمبلغ|مبلغ|المبلغ|amount|amt)\\s*[:：-]?\\s*$n\\s*$c',caseSensitive:false),RegExp('(?:بـ|بقيمة|بمبلغ|مبلغ|المبلغ|amount|amt)\\s*[:：-]?\\s*$c\\s*$n',caseSensitive:false),RegExp('$n\\s*$c',caseSensitive:false),RegExp('$c\\s*$n',caseSensitive:false)];
-  double? value;for(final re in patterns){final m=re.firstMatch(s);if(m!=null){value=amountOf(m.group(1)??'');if(value!=null)break;}}
-  var title=income?'إيداع بنكي':'عملية بنكية';var cat=income?'دخل آخر':'أخرى';String? suggested;
-  if(RegExp(r'شراء|pos|مدى|mada',caseSensitive:false).hasMatch(s)){title='شراء نقاط بيع';cat='تسوّق';}
-  else if(RegExp('حوالة|تحويل').hasMatch(s)){title=income?'حوالة واردة':'حوالة صادرة';cat=income?'دخل آخر':'تحويلات';}
-  else if(RegExp(r'راتب|salary',caseSensitive:false).hasMatch(s)){title='راتب';cat='راتب';}
-  else if(income){title='مبلغ وارد';cat='دخل آخر';}
+  final s=digits(original)
+    .replaceAll('\u200f','').replaceAll('\u200e','')
+    .replaceAll('\u00a0',' ').replaceAll('ـ','');
+  // Classify direction before reading the merchant or transaction details.
+  // Saudi banks commonly say "حوالة محلية واردة" and "حوالة محلية صادرة".
+  final incomingTransfer=RegExp(
+   r'(?:حوال[ةه]|تحويل|تحويلات)\s*(?:(?:بنكي[ةه]?|محلي[ةه]?|داخلي[ةه]?|دولي[ةه]?|سريع[ةه]?)\s*){0,3}(?:وارد[ةه]?|مستلم[ةه]?)|(?:وارد[ةه]?|مستلم[ةه]?)\s*(?:حوال[ةه]|تحويل)|(?:تم\s*)?(?:استلام|استقبال|وصلت)\s*(?:حوال[ةه]?|تحويل)',
+   caseSensitive:false).hasMatch(s);
+  final outgoingTransfer=RegExp(
+   r'(?:حوال[ةه]|تحويل|تحويلات)\s*(?:(?:بنكي[ةه]?|محلي[ةه]?|داخلي[ةه]?|دولي[ةه]?|سريع[ةه]?)\s*){0,3}(?:صادر[ةه]?|مرسل[ةه]?)|(?:صادر[ةه]?|مرسل[ةه]?)\s*(?:حوال[ةه]|تحويل)',
+   caseSensitive:false).hasMatch(s);
+  final incomeSignal=RegExp(
+   r'راتب|معاش|إيداع|ايداع|إيداعات|تم\s*(?:إضافة|ايداع|إيداع|قيد)\s*(?:مبلغ|المبلغ)?|مبلغ\s*مضاف|دائن|credited|credit\b|deposit|received|salary|refund|استرداد|مسترد',
+   caseSensitive:false).hasMatch(s);
+  final expenseSignal=RegExp(
+   r'شراء|نقاط\s*بيع|pos\b|مدى|mada|سحب|خصم|دفع|فاتورة|purchase|debit\b|withdrawal|payment',
+   caseSensitive:false).hasMatch(s);
+  // An explicit incoming transfer wins over generic words like "من" and
+  // over unrelated merchant names in the same bank notification.
+  final income=incomingTransfer ? true : outgoingTransfer ? false :
+    incomeSignal ? true : expenseSignal ? false : false;
+  const number=r'([0-9][0-9,]*(?:\.[0-9]{1,2})?)';
+  const currency=r'(?:SR|SAR|S\.A\.R\.?|ر\.?\s?س\.?|ريال(?:\s*سعودي)?|﷼|⃁)';
+  final patterns=[
+   RegExp('$currency\\s*[:：-]?\\s*$number',caseSensitive:false),
+   RegExp('$number\\s*$currency',caseSensitive:false),
+   RegExp('(?:المبلغ|مبلغ|بقيمة|بمبلغ|amount|amt)\\s*[:：-]?\\s*$number',caseSensitive:false),
+  ];
+  double? value;
+  for(final re in patterns){
+   final m=re.firstMatch(s);
+   if(m!=null){value=amountOf(m.group(1)??'');if(value!=null)break;}
+  }
+  var title=income?'مبلغ وارد':'عملية بنكية';
+  var cat=income?'دخل آخر':'أخرى';
+  String? suggested;
+  if(incomingTransfer){title='حوالة واردة';cat='دخل آخر';}
+  else if(outgoingTransfer){title='حوالة صادرة';cat='تحويلات';}
+  else if(RegExp(r'راتب|salary',caseSensitive:false).hasMatch(s)){
+   title='راتب';cat='راتب';
+  }else if(income){title='إيداع بنكي';cat='دخل آخر';}
+  else if(RegExp(r'شراء|pos\b|مدى|mada',caseSensitive:false).hasMatch(s)){
+   title='شراء نقاط بيع';cat='تسوّق';
+  }else if(RegExp(r'حوال[ةه]|تحويل').hasMatch(s)){
+   title='حوالة صادرة';cat='تحويلات';
+  }
   if(!income){
    if(RegExp(r'مطعم|كافيه|قهوة|coffee|restaurant|برجر|بيتزا',caseSensitive:false).hasMatch(s))cat='مطاعم وكافيهات';
    else if(RegExp(r'بنزين|وقود|محطة|uber|careem|أوبر|كريم',caseSensitive:false).hasMatch(s))cat='مواصلات';
    else if(RegExp(r'فاتورة|كهرباء|مياه|stc|mobily|زين',caseSensitive:false).hasMatch(s))cat='فواتير';
    else if(RegExp(r'صيدلية|مستشفى|عيادة|pharmacy',caseSensitive:false).hasMatch(s))cat='صحة';
    else if(RegExp(r'إيجار|ايجار|rent',caseSensitive:false).hasMatch(s))cat='سكن';
-   else if(RegExp(r'نادي|gym|fitness|رياضة',caseSensitive:false).hasMatch(s)){cat='رياضة ولياقة';suggested='رياضة ولياقة';}
-   else if(RegExp(r'مدرسة|جامعة|دورة|تعليم',caseSensitive:false).hasMatch(s)){cat='تعليم';suggested='تعليم';}
-   else if(RegExp(r'سفر|طيران|فندق|hotel|airline',caseSensitive:false).hasMatch(s)){cat='سفر';suggested='سفر';}
+   else if(RegExp(r'نادي|gym|fitness|رياضة',caseSensitive:false).hasMatch(s)){cat='رياضة ولياقة';suggested=cat;}
+   else if(RegExp(r'مدرسة|جامعة|دورة|تعليم',caseSensitive:false).hasMatch(s)){cat='تعليم';suggested=cat;}
+   else if(RegExp(r'سفر|طيران|فندق|hotel|airline',caseSensitive:false).hasMatch(s)){cat='سفر';suggested=cat;}
   }
   return BankResult(value,income,title,cat,suggested);
  }
@@ -129,14 +162,80 @@ class _WaffraAppState extends State<WaffraApp>{
  @override Widget build(BuildContext context)=>MaterialApp(debugShowCheckedModeBanner:false,title:'وفرة | Waffra',locale:const Locale('ar','SA'),theme:ThemeData(useMaterial3:true,colorSchemeSeed:emerald,scaffoldBackgroundColor:sand),darkTheme:ThemeData(useMaterial3:true,brightness:Brightness.dark,colorSchemeSeed:emerald),themeMode:dark?ThemeMode.dark:ThemeMode.light,home:Directionality(textDirection:TextDirection.rtl,child:loading?const Scaffold(body:Center(child:CircularProgressIndicator())):!onboarded?IntroScreen(onFinish:intro):profile==null?LoginScreen(onSave:saveUser):HomeScreen(profile:profile!,dark:dark,onTheme:theme,onLogout:logout,onProfile:saveUser)));
 }
 class IntroScreen extends StatefulWidget {final Future<void> Function() onFinish;const IntroScreen({super.key,required this.onFinish});@override State<IntroScreen> createState()=>_IntroScreenState();}
-class _IntroScreenState extends State<IntroScreen>{
- final pager=PageController();int index=0;bool busy=false;
- static const imgs=['assets/images.jpeg','assets/kafd-slider-2-image-1200x750.jpg','assets/pexels-photo-32918067.jpg'];
- static const titles=['هلا بك في وفرة','خلّ مصروفاتك تحت السيطرة','خلّ قراراتك المالية أذكى'];
- static const descriptions=['كل ريال له قيمة، ووفرة يساعدك ترتّب أمورك','تابع دخلك وصرفك واعرف وين تروح فلوسك','حدّد ميزانيتك وحقّق أهدافك خطوة بخطوة'];
- @override void dispose(){pager.dispose();super.dispose();}
- Future<void> next()async{if(busy)return;if(index==imgs.length-1){setState(()=>busy=true);await widget.onFinish();}else{await pager.nextPage(duration:const Duration(milliseconds:350),curve:Curves.easeInOut);}}
- @override Widget build(BuildContext context)=>Scaffold(body:Stack(fit:StackFit.expand,children:[PageView.builder(controller:pager,itemCount:imgs.length,onPageChanged:(v)=>setState(()=>index=v),itemBuilder:(_,i)=>Stack(fit:StackFit.expand,children:[Container(color:forest,child:Image.asset(imgs[i],fit:BoxFit.contain,filterQuality:FilterQuality.high,isAntiAlias:true,errorBuilder:(_,__,___)=>const Center(child:Icon(Icons.landscape,size:100,color:gold)))),const DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,colors:[Color(0x55000000),Colors.transparent,Color(0xDD033C2C)]))),SafeArea(child:Padding(padding:const EdgeInsets.fromLTRB(24,25,24,145),child:Column(children:[const Text('وفرة',style:TextStyle(color:Colors.white,fontSize:42,fontWeight:FontWeight.w900)),const Spacer(),Text(titles[i],textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:28,fontWeight:FontWeight.bold)),const SizedBox(height:12),Text(descriptions[i],textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:17))])))])),SafeArea(child:Column(children:[Align(alignment:Alignment.topLeft,child:TextButton(onPressed:busy?null:widget.onFinish,child:const Text('تخطّي',style:TextStyle(color:Colors.white)))),const Spacer(),Row(mainAxisAlignment:MainAxisAlignment.center,children:List.generate(imgs.length,(i)=>AnimatedContainer(duration:const Duration(milliseconds:200),margin:const EdgeInsets.all(4),width:i==index?26:8,height:8,decoration:BoxDecoration(color:i==index?gold:Colors.white60,borderRadius:BorderRadius.circular(10))))),Padding(padding:const EdgeInsets.fromLTRB(24,16,24,28),child:SizedBox(width:double.infinity,height:52,child:FilledButton(onPressed:busy?null:next,child:Text(index==imgs.length-1?'يلا نبدأ':'التالي'))))]))]));
+class _IntroScreenState extends State<IntroScreen> {
+  bool busy = false;
+
+  Future<void> start() async {
+    if (busy) return;
+    setState(() => busy = true);
+    try {
+      await widget.onFinish();
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: forest,
+    body: Stack(
+      fit: StackFit.expand,
+      children: [
+        Image.asset(
+          'assets/waffra_welcome.jpg',
+          fit: BoxFit.cover,
+          alignment: Alignment.topCenter,
+          filterQuality: FilterQuality.high,
+        ),
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.center,
+              end: Alignment.bottomCenter,
+              colors: [Colors.transparent, Color(0xCC003E30)],
+            ),
+          ),
+        ),
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(28, 20, 28, 24),
+            child: Column(
+              children: [
+                const Spacer(),
+                SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: FilledButton(
+                    onPressed: busy ? null : start,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: forest,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                    ),
+                    child: Text(
+                      busy ? 'جارٍ البدء...' : 'ابدأ الآن',
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 15),
+                const Text(
+                  'خصوصيتك أولاً • بياناتك محفوظة على جهازك',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 class LoginScreen extends StatefulWidget {final Future<void> Function(Person) onSave;const LoginScreen({super.key,required this.onSave});@override State<LoginScreen> createState()=>_LoginScreenState();}
 class _LoginScreenState extends State<LoginScreen>{String? provider;@override Widget build(BuildContext context)=>provider!=null?ProfileForm(provider:provider!,onSave:widget.onSave,onBack:()=>setState(()=>provider=null)):Scaffold(body:SafeArea(child:Center(child:SingleChildScrollView(padding:const EdgeInsets.all(28),child:Column(children:[const CircleAvatar(radius:54,backgroundColor:forest,child:Icon(Icons.account_balance_wallet,color:Colors.white,size:58)),const SizedBox(height:20),const Text('وفرة',style:TextStyle(fontSize:42,color:emerald,fontWeight:FontWeight.w900)),const SizedBox(height:12),const Text('هلا بك! جاهز ترتّب فلوسك؟',style:TextStyle(fontSize:19)),const SizedBox(height:30),SizedBox(width:double.infinity,height:52,child:OutlinedButton.icon(onPressed:()=>setState(()=>provider='Google'),icon:const Icon(Icons.g_mobiledata,size:32),label:const Text('المتابعة باستخدام Google'))),const SizedBox(height:12),SizedBox(width:double.infinity,height:52,child:FilledButton.icon(onPressed:()=>setState(()=>provider='Apple'),icon:const Icon(Icons.apple),label:const Text('المتابعة باستخدام Apple'))),const SizedBox(height:20),const Text('تسجيل الدخول تجريبي، وما فيه ربط فعلي مع Google أو Apple.',textAlign:TextAlign.center,style:TextStyle(color:Colors.grey,fontSize:12))])))));
