@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -163,79 +164,19 @@ class _WaffraAppState extends State<WaffraApp>{
 }
 class IntroScreen extends StatefulWidget {final Future<void> Function() onFinish;const IntroScreen({super.key,required this.onFinish});@override State<IntroScreen> createState()=>_IntroScreenState();}
 class _IntroScreenState extends State<IntroScreen> {
-  bool busy = false;
-
-  Future<void> start() async {
-    if (busy) return;
-    setState(() => busy = true);
-    try {
-      await widget.onFinish();
-    } finally {
-      if (mounted) setState(() => busy = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: forest,
-    body: Stack(
-      fit: StackFit.expand,
-      children: [
-        Image.asset(
-          'assets/waffra_welcome.jpg',
-          fit: BoxFit.cover,
-          alignment: Alignment.topCenter,
-          filterQuality: FilterQuality.high,
-        ),
-        const DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.center,
-              end: Alignment.bottomCenter,
-              colors: [Colors.transparent, Color(0xCC003E30)],
-            ),
-          ),
-        ),
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(28, 20, 28, 24),
-            child: Column(
-              children: [
-                const Spacer(),
-                SizedBox(
-                  width: double.infinity,
-                  height: 54,
-                  child: FilledButton(
-                    onPressed: busy ? null : start,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: forest,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                    ),
-                    child: Text(
-                      busy ? 'جارٍ البدء...' : 'ابدأ الآن',
-                      style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 15),
-                const Text(
-                  'خصوصيتك أولاً • بياناتك محفوظة على جهازك',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
+ bool busy=false;
+ Future<void> proceed() async {if(busy)return;setState(()=>busy=true);try{await widget.onFinish();}finally{if(mounted)setState(()=>busy=false);}}
+ @override Widget build(BuildContext context)=>Scaffold(backgroundColor:forest,body:Stack(fit:StackFit.expand,children:[
+  Image.asset('assets/waffra_welcome.jpg',fit:BoxFit.cover,alignment:Alignment.center,filterQuality:FilterQuality.high),
+  Container(decoration:const BoxDecoration(gradient:LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,colors:[Color(0xB800392D),Color(0x2200392D),Color(0xE600392D)],stops:[0,.55,1]))),
+  SafeArea(child:Padding(padding:const EdgeInsets.fromLTRB(24,32,24,20),child:Column(children:[
+   const Spacer(flex:2),Image.asset('assets/waffra_app_icon.png',width:180,height:180,fit:BoxFit.contain),
+   const SizedBox(height:20),const Text('فلوسك وين تروح؟ وفرة يعلّمك.',textAlign:TextAlign.center,style:TextStyle(color:Colors.white,fontSize:23,fontWeight:FontWeight.w800)),
+   const Spacer(flex:5),SizedBox(width:double.infinity,height:54,child:FilledButton(onPressed:busy?null:proceed,style:FilledButton.styleFrom(backgroundColor:Colors.white,foregroundColor:forest),child:const Text('ابدأ الآن',style:TextStyle(fontSize:17,fontWeight:FontWeight.bold)))),
+   const SizedBox(height:12),SizedBox(width:double.infinity,height:52,child:OutlinedButton(onPressed:busy?null:proceed,style:OutlinedButton.styleFrom(foregroundColor:Colors.white,side:const BorderSide(color:Colors.white70)),child:const Text('لديك حساب؟ قم بتسجيل الدخول',style:TextStyle(fontSize:15,fontWeight:FontWeight.w600)))),
+   const SizedBox(height:15),const Text('بياناتك المالية محفوظة على جهازك',style:TextStyle(color:Colors.white70,fontSize:12)),
+  ])))
+ ]));
 }
 class LoginScreen extends StatefulWidget {final Future<void> Function(Person) onSave;const LoginScreen({super.key,required this.onSave});@override State<LoginScreen> createState()=>_LoginScreenState();}
 class _LoginScreenState extends State<LoginScreen>{String? provider;@override Widget build(BuildContext context)=>provider!=null?ProfileForm(provider:provider!,onSave:widget.onSave,onBack:()=>setState(()=>provider=null)):Scaffold(body:SafeArea(child:Center(child:SingleChildScrollView(padding:const EdgeInsets.all(28),child:Column(children:[const CircleAvatar(radius:54,backgroundColor:forest,child:Icon(Icons.account_balance_wallet,color:Colors.white,size:58)),const SizedBox(height:20),const Text('وفرة',style:TextStyle(fontSize:42,color:emerald,fontWeight:FontWeight.w900)),const SizedBox(height:12),const Text('هلا بك! جاهز ترتّب فلوسك؟',style:TextStyle(fontSize:19)),const SizedBox(height:30),SizedBox(width:double.infinity,height:52,child:OutlinedButton.icon(onPressed:()=>setState(()=>provider='Google'),icon:const Icon(Icons.g_mobiledata,size:32),label:const Text('المتابعة باستخدام Google'))),const SizedBox(height:12),SizedBox(width:double.infinity,height:52,child:FilledButton.icon(onPressed:()=>setState(()=>provider='Apple'),icon:const Icon(Icons.apple),label:const Text('المتابعة باستخدام Apple'))),const SizedBox(height:20),const Text('تسجيل الدخول تجريبي، وما فيه ربط فعلي مع Google أو Apple.',textAlign:TextAlign.center,style:TextStyle(color:Colors.grey,fontSize:12))])))));
@@ -261,6 +202,7 @@ void snack(BuildContext context,String text){ScaffoldMessenger.of(context).showS
 class HomeScreen extends StatefulWidget {final Person profile;final bool dark;final VoidCallback onTheme;final Future<void> Function() onLogout;final Future<void> Function(Person) onProfile;const HomeScreen({super.key,required this.profile,required this.dark,required this.onTheme,required this.onLogout,required this.onProfile});@override State<HomeScreen> createState()=>_HomeScreenState();}
 class _HomeScreenState extends State<HomeScreen>{
  final entries=<MoneyEntry>[],categories=<BudgetCategory>[],goals=<SavingGoal>[],recurring=<RecurringBill>[];
+ late final String saudiGreeting = const ['يا هلا وغلا', 'حيّاك الله', 'يا مرحبا مليون', 'نوّرت وفرة', 'يا زين الطلّة', 'هلا والله', 'أسعد الله وقتك', 'يا مرحبا الساع', 'حياك يا الغالي', 'منوّر يا بعد حيّي'][Random().nextInt(10)];
  int tab=0,year=DateTime.now().year,month=DateTime.now().month;String search='',typeFilter='الكل',categoryFilter='الكل',period='شهري';bool ready=false;
  @override void initState(){super.initState();load();}
  Future<void> load()async{
@@ -301,11 +243,22 @@ class _HomeScreenState extends State<HomeScreen>{
  Future<bool?> confirm(String title,String body)=>showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:Text(title),content:Text(body),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('تأكيد'))]));
  Widget stat(String label,double value,IconData icon,Color color)=>Expanded(child:Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Icon(icon,color:color),const SizedBox(height:8),Text(label),const SizedBox(height:6),FittedBox(child:RiyalAmount(value,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:16)))]))));
  Widget tile(MoneyEntry e){final c=categoryFor(e.category,e.income);return Card(child:ListTile(leading:CircleAvatar(backgroundColor:Color(c.color).withValues(alpha:.15),child:Icon(categoryIcon(c.icon),color:Color(c.color))),title:Text(e.title),subtitle:Text('${e.category} • ${dayText(e.date)}'),trailing:Row(mainAxisSize:MainAxisSize.min,children:[RiyalAmount(e.amount,prefix:e.income?'+':'-',style:TextStyle(fontWeight:FontWeight.bold,color:e.income?emerald:null)),PopupMenuButton<String>(onSelected:(v){if(v=='edit')entrySheet(initial:e);else deleteEntry(e);},itemBuilder:(_)=>const [PopupMenuItem(value:'edit',child:Text('تعديل')),PopupMenuItem(value:'delete',child:Text('حذف'))])])));}
- Widget dashboard(){final inc=sum(entries,true),exp=sum(entries,false);final visible=entries.where((e){final q=search.trim().toLowerCase();return(e.title.toLowerCase().contains(q)||e.category.toLowerCase().contains(q))&&(typeFilter=='الكل'||(typeFilter=='الدخل'&&e.income)||(typeFilter=='المصروفات'&&!e.income))&&(categoryFilter=='الكل'||categoryFilter==e.category);}).toList()..sort((a,b)=>b.date.compareTo(a.date));final filterCats=<String>{'الكل',...entries.where((e)=>typeFilter=='الكل'||(typeFilter=='الدخل'&&e.income)||(typeFilter=='المصروفات'&&!e.income)).map((e)=>e.category)}.toList();final selected=filterCats.contains(categoryFilter)?categoryFilter:'الكل';return ListView(padding:const EdgeInsets.all(16),children:[Text('هلا ${widget.profile.name} 👋',style:Theme.of(context).textTheme.titleLarge),const SizedBox(height:12),Container(padding:const EdgeInsets.all(24),decoration:BoxDecoration(gradient:const LinearGradient(colors:[forest,emerald]),borderRadius:BorderRadius.circular(24)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('رصيدك الحالي',style:TextStyle(color:Colors.white70)),const SizedBox(height:10),RiyalAmount(inc-exp,style:const TextStyle(color:Colors.white,fontSize:28,fontWeight:FontWeight.bold)),const SizedBox(height:8),const Text('كل ريال تحسب له حساب',style:TextStyle(color:Colors.white70))])),const SizedBox(height:12),Row(children:[stat('الدخل',inc,Icons.south_west,emerald),stat('المصروفات',exp,Icons.north_east,Colors.deepOrange)]),const SizedBox(height:10),OutlinedButton.icon(onPressed:()=>entrySheet(sms:true),icon:const Icon(Icons.content_paste),label:const Text('الصق رسالة بنكية')),const SizedBox(height:12),Text('عملياتك المالية',style:Theme.of(context).textTheme.titleLarge),const SizedBox(height:12),TextField(onChanged:(v)=>setState(()=>search=v),decoration:const InputDecoration(labelText:'دوّر على عملية',prefixIcon:Icon(Icons.search),border:OutlineInputBorder())),const SizedBox(height:10),Wrap(spacing:8,children:['الكل','الدخل','المصروفات'].map((x)=>ChoiceChip(label:Text(x),selected:typeFilter==x,onSelected:(_)=>setState((){typeFilter=x;categoryFilter='الكل';}))).toList()),DropdownButtonFormField<String>(key:ValueKey('$typeFilter-$selected'),initialValue:selected,decoration:const InputDecoration(labelText:'تصفية حسب القسم'),items:filterCats.map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(x)=>setState(()=>categoryFilter=x??'الكل')),const SizedBox(height:10),Text('عدد العمليات: ${visible.length}'),if(visible.isEmpty)const Padding(padding:EdgeInsets.all(24),child:Center(child:Text('ما عندك عمليات مطابقة'))),...visible.map(tile),const SizedBox(height:90)]);}
+ Widget dashboard(){final inc=sum(entries,true),exp=sum(entries,false);final visible=entries.where((e){final q=search.trim().toLowerCase();return(e.title.toLowerCase().contains(q)||e.category.toLowerCase().contains(q))&&(typeFilter=='الكل'||(typeFilter=='الدخل'&&e.income)||(typeFilter=='المصروفات'&&!e.income))&&(categoryFilter=='الكل'||categoryFilter==e.category);}).toList()..sort((a,b)=>b.date.compareTo(a.date));final filterCats=<String>{'الكل',...entries.where((e)=>typeFilter=='الكل'||(typeFilter=='الدخل'&&e.income)||(typeFilter=='المصروفات'&&!e.income)).map((e)=>e.category)}.toList();final selected=filterCats.contains(categoryFilter)?categoryFilter:'الكل';return ListView(padding:const EdgeInsets.all(16),children:[Text('$saudiGreeting ${widget.profile.name} 👋',style:Theme.of(context).textTheme.titleLarge),const SizedBox(height:12),Container(padding:const EdgeInsets.all(24),decoration:BoxDecoration(gradient:const LinearGradient(colors:[forest,emerald]),borderRadius:BorderRadius.circular(24)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('رصيدك الحالي',style:TextStyle(color:Colors.white70)),const SizedBox(height:10),RiyalAmount(inc-exp,style:const TextStyle(color:Colors.white,fontSize:28,fontWeight:FontWeight.bold)),const SizedBox(height:8),const Text('كل ريال تحسب له حساب',style:TextStyle(color:Colors.white70))])),const SizedBox(height:12),Row(children:[stat('الدخل',inc,Icons.south_west,emerald),stat('المصروفات',exp,Icons.north_east,Colors.deepOrange)]),const SizedBox(height:10),OutlinedButton.icon(onPressed:()=>entrySheet(sms:true),icon:const Icon(Icons.content_paste),label:const Text('الصق رسالة بنكية')),const SizedBox(height:12),Text('عملياتك المالية',style:Theme.of(context).textTheme.titleLarge),const SizedBox(height:12),TextField(onChanged:(v)=>setState(()=>search=v),decoration:const InputDecoration(labelText:'دوّر على عملية',prefixIcon:Icon(Icons.search),border:OutlineInputBorder())),const SizedBox(height:10),Wrap(spacing:8,children:['الكل','الدخل','المصروفات'].map((x)=>ChoiceChip(label:Text(x),selected:typeFilter==x,onSelected:(_)=>setState((){typeFilter=x;categoryFilter='الكل';}))).toList()),DropdownButtonFormField<String>(key:ValueKey('$typeFilter-$selected'),initialValue:selected,decoration:const InputDecoration(labelText:'تصفية حسب القسم'),items:filterCats.map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(x)=>setState(()=>categoryFilter=x??'الكل')),const SizedBox(height:10),Text('عدد العمليات: ${visible.length}'),if(visible.isEmpty)const Padding(padding:EdgeInsets.all(24),child:Center(child:Text('ما عندك عمليات مطابقة'))),...visible.map(tile),const SizedBox(height:90)]);}
  List<MoneyEntry> get analysisEntries=>entries.where((e)=>e.date.year==year&&(period=='سنوي'||e.date.month==month)).toList();
  Widget analytics(){final data=analysisEntries,inc=sum(analysisEntries,true),exp=sum(analysisEntries,false);final months=<int>{DateTime.now().year,year,...entries.map((e)=>e.date.year)}.toList()..sort((a,b)=>b.compareTo(a));final points=period=='شهري'?List.generate(5,(i){final v=data.where((e)=>(e.date.day-1)~/7==i);return ChartPoint('أ${i+1}',sum(v,true),sum(v,false));}):List.generate(12,(i){final v=data.where((e)=>e.date.month==i+1);return ChartPoint('${i+1}',sum(v,true),sum(v,false));});final breakdown=<String,double>{};for(final e in data.where((e)=>!e.income)){breakdown[e.category]=(breakdown[e.category]??0)+e.amount;}return ListView(padding:const EdgeInsets.all(16),children:[Text('تحليلاتك المالية',style:Theme.of(context).textTheme.titleLarge),const SizedBox(height:12),SegmentedButton<String>(segments:const [ButtonSegment(value:'شهري',label:Text('شهري')),ButtonSegment(value:'سنوي',label:Text('سنوي'))],selected:{period},onSelectionChanged:(v)=>setState(()=>period=v.first)),const SizedBox(height:12),Row(children:[Expanded(child:DropdownButtonFormField<int>(initialValue:year,decoration:const InputDecoration(labelText:'السنة'),items:months.map((x)=>DropdownMenuItem(value:x,child:Text('$x'))).toList(),onChanged:(v){if(v!=null)setState(()=>year=v);})),if(period=='شهري')Expanded(child:DropdownButtonFormField<int>(initialValue:month,decoration:const InputDecoration(labelText:'الشهر'),items:List.generate(12,(i)=>DropdownMenuItem(value:i+1,child:Text('شهر ${i+1}'))),onChanged:(v){if(v!=null)setState(()=>month=v);}))]),const SizedBox(height:12),Row(children:[stat('الدخل',inc,Icons.south_west,emerald),stat('المصروفات',exp,Icons.north_east,Colors.deepOrange)]),Card(child:Padding(padding:const EdgeInsets.all(15),child:Column(children:[const Text('الدخل مقابل المصروفات',style:TextStyle(fontWeight:FontWeight.bold)),const SizedBox(height:16),FinanceChart(points:points)]))),const SizedBox(height:16),Text('توزيع مصروفاتك',style:Theme.of(context).textTheme.titleMedium),...breakdown.entries.map((x){final c=categoryFor(x.key,false);return Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(children:[Row(children:[Icon(categoryIcon(c.icon),color:Color(c.color)),const SizedBox(width:8),Expanded(child:Text(x.key)),RiyalAmount(x.value)]),const SizedBox(height:10),LinearProgressIndicator(value:exp==0?0:x.value/exp,color:Color(c.color),minHeight:8,borderRadius:BorderRadius.circular(8))])));}),if(breakdown.isEmpty)const Padding(padding:EdgeInsets.all(20),child:Text('ما فيه مصروفات في هالفترة')),const SizedBox(height:80)]);}
  Widget categoriesPage(){final now=DateTime.now();final current=entries.where((e)=>!e.income&&e.date.year==now.year&&e.date.month==now.month);return ListView(padding:const EdgeInsets.all(16),children:[Text('أقسامك وميزانياتك',style:Theme.of(context).textTheme.titleLarge),const Text('حدّد ميزانية شهرية لكل قسم وتابع صرفك'),const SizedBox(height:12),FilledButton.icon(onPressed:()=>addCategory(),icon:const Icon(Icons.add),label:const Text('إضافة قسم مصروفات')),OutlinedButton.icon(onPressed:()=>addCategory(income:true),icon:const Icon(Icons.add),label:const Text('إضافة قسم دخل')),const SizedBox(height:12),...categories.map((c){final spent=sum(current.where((e)=>e.category==c.name),false);return Card(child:Padding(padding:const EdgeInsets.all(10),child:Column(children:[ListTile(leading:CircleAvatar(backgroundColor:Color(c.color).withValues(alpha:.15),child:Icon(categoryIcon(c.icon),color:Color(c.color))),title:Text(c.name),subtitle:Text(c.income?'دخل':c.budget>0?'الميزانية: ${cash(c.budget)}':'بدون ميزانية محددة'),trailing:PopupMenuButton<String>(onSelected:(v)=>v=='edit'?updateCategory(c):deleteCategory(c),itemBuilder:(_)=>const [PopupMenuItem(value:'edit',child:Text('تعديل')),PopupMenuItem(value:'delete',child:Text('حذف'))])),if(!c.income&&c.budget>0)...[LinearProgressIndicator(value:(spent/c.budget).clamp(0.0,1.0),minHeight:8,color:spent>c.budget?Colors.red:Color(c.color),borderRadius:BorderRadius.circular(8)),const SizedBox(height:5),Text('صرفت ${cash(spent)} من ${cash(c.budget)}',style:TextStyle(color:spent>c.budget?Colors.red:null))]])));}),const SizedBox(height:80)]);}
- Future<void> goalDialog()async{final name=TextEditingController(),target=TextEditingController();final g=await showDialog<SavingGoal>(context:context,builder:(ctx)=>AlertDialog(title:const Text('هدف ادخار جديد'),content:Column(mainAxisSize:MainAxisSize.min,children:[TextField(controller:name,decoration:const InputDecoration(labelText:'اسم الهدف، مثل سيارة')),TextField(controller:target,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'المبلغ المستهدف'))]),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:(){final n=amountOf(target.text);if(name.text.trim().isNotEmpty&&n!=null)Navigator.pop(ctx,SavingGoal(id:newId(),name:name.text.trim(),target:n,saved:0));},child:const Text('إضافة'))]));_disposeAfterRouteTransition([name,target]);if(g!=null&&mounted){setState(()=>goals.add(g));await persist();}}
+ Future<void> goalDialog()async{
+  final name=TextEditingController(),target=TextEditingController();
+  final g=await showDialog<SavingGoal>(context:context,builder:(ctx)=>AlertDialog(
+   title:const Text('إضافة هدف ادخار'),scrollable:true,
+   content:Column(mainAxisSize:MainAxisSize.min,children:[
+    TextField(controller:name,textInputAction:TextInputAction.next,decoration:const InputDecoration(labelText:'اسم الهدف',hintText:'سيارة، سفر، منزل، أو مبلغ ادخار')),
+    const SizedBox(height:12),TextField(controller:target,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'المبلغ المستهدف بالريال',hintText:'مثال: 25000')),
+   ]),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),
+   FilledButton(onPressed:(){final n=amountOf(target.text);if(name.text.trim().isEmpty||n==null){ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content:Text('اكتب اسم الهدف ومبلغًا صحيحًا أكبر من صفر')));return;}Navigator.pop(ctx,SavingGoal(id:newId(),name:name.text.trim(),target:n,saved:0));},child:const Text('إضافة الهدف'))]));
+  _disposeAfterRouteTransition([name,target]);
+  if(g!=null&&mounted){setState(()=>goals.add(g));await persist();if(mounted)snack(context,'تمت إضافة الهدف بنجاح');}
+ }
  Future<void> fundGoal(SavingGoal g)async{final amount=TextEditingController();final n=await showDialog<double>(context:context,builder:(ctx)=>AlertDialog(title:Text('إضافة ادخار لـ ${g.name}'),content:TextField(controller:amount,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'المبلغ المدّخر')),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:(){final v=amountOf(amount.text);if(v!=null)Navigator.pop(ctx,v);},child:const Text('إضافة'))]));_disposeAfterRouteTransition([amount]);if(n!=null&&mounted){setState((){final i=goals.indexWhere((x)=>x.id==g.id);if(i>=0)goals[i]=g.copy(saved:g.saved+n);});await persist();}}
  Widget goalsPage()=>ListView(padding:const EdgeInsets.all(16),children:[Text('أهداف الادخار',style:Theme.of(context).textTheme.titleLarge),const SizedBox(height:8),const Text('خلّ حلمك هدف وامش له خطوة بخطوة'),const SizedBox(height:12),FilledButton.icon(onPressed:goalDialog,icon:const Icon(Icons.add),label:const Text('هدف جديد')),const SizedBox(height:12),...goals.map((g)=>Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(children:[Row(children:[const Icon(Icons.savings,color:emerald),const SizedBox(width:8),Expanded(child:Text(g.name,style:const TextStyle(fontWeight:FontWeight.bold))),PopupMenuButton<String>(onSelected:(v)async{if(v=='delete'){setState(()=>goals.removeWhere((x)=>x.id==g.id));await persist();}},itemBuilder:(_)=>const [PopupMenuItem(value:'delete',child:Text('حذف الهدف'))])]),const SizedBox(height:10),LinearProgressIndicator(value:(g.saved/g.target).clamp(0.0,1.0),minHeight:10,borderRadius:BorderRadius.circular(10)),const SizedBox(height:8),Wrap(crossAxisAlignment:WrapCrossAlignment.center,spacing:6,children:[RiyalAmount(g.saved),const Text('من'),RiyalAmount(g.target)]),TextButton.icon(onPressed:()=>fundGoal(g),icon:const Icon(Icons.add),label:const Text('أضف مبلغ مدّخر'))])))),if(goals.isEmpty)const Padding(padding:EdgeInsets.all(24),child:Text('ما أضفت أي هدف ادخار للحين')),const SizedBox(height:90)]);
  Future<void> recurringDialog()async{final title=TextEditingController(),amount=TextEditingController(),day=TextEditingController(text:'1');bool income=false;String category=forType(false).first.name;final r=await showDialog<RecurringBill>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update){final options=forType(income);final selected=options.any((x)=>x.name==category)?category:options.first.name;return AlertDialog(title:const Text('عملية شهرية متكررة'),content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[TextField(controller:title,decoration:const InputDecoration(labelText:'الوصف')),TextField(controller:amount,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'المبلغ')),DropdownButtonFormField<bool>(initialValue:income,items:const [DropdownMenuItem(value:false,child:Text('مصروف')),DropdownMenuItem(value:true,child:Text('دخل'))],onChanged:(v){if(v!=null)update((){income=v;category=forType(v).first.name;});}),DropdownButtonFormField<String>(key:ValueKey('$income-$selected'),initialValue:selected,items:options.map((c)=>DropdownMenuItem(value:c.name,child:Text(c.name))).toList(),onChanged:(v){if(v!=null)update(()=>category=v);}),TextField(controller:day,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'يوم الشهر (1 - 31)'))])),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:(){final n=amountOf(amount.text),d=int.tryParse(digits(day.text));if(title.text.trim().isNotEmpty&&n!=null&&d!=null&&d>=1&&d<=31)Navigator.pop(ctx,RecurringBill(id:newId(),title:title.text.trim(),category:category,amount:n,income:income,day:d));},child:const Text('حفظ'))]);}));_disposeAfterRouteTransition([title,amount,day]);if(r!=null&&mounted){setState(()=>recurring.add(r));await persist();await applyRecurring();}}
