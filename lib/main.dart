@@ -1,5 +1,7 @@
 
+import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -8,52 +10,50 @@ void main() {
   runApp(const WaffraApp());
 }
 
-const kGreen = Color(0xFF087A54);
-const kDarkGreen = Color(0xFF064D3B);
-const kCream = Color(0xFFF7F6F0);
-const kGold = Color(0xFFD8BA78);
+const Color green = Color(0xFF087A54);
+const Color deepGreen = Color(0xFF064D3B);
+const Color cream = Color(0xFFF8F6EF);
+const Color gold = Color(0xFFD8BA78);
 
-String formatMoney(double amount) {
-  return '${amount.toStringAsFixed(2)} ر.س';
-}
+String money(num value) => '${value.toStringAsFixed(2)} ر.س';
 
-String formatDate(DateTime date) {
-  return '${date.day}/${date.month}/${date.year}';
-}
+String dateText(DateTime value) =>
+    '${value.day}/${value.month}/${value.year}';
 
-String normalizeDigits(String value) {
-  const arabic = '٠١٢٣٤٥٦٧٨٩';
-  const persian = '۰۱۲۳۴۵۶۷۸۹';
+String normalizeDigits(String text) {
+  const ar = '٠١٢٣٤٥٦٧٨٩';
+  const fa = '۰۱۲۳۴۵۶۷۸۹';
 
-  return value.replaceAllMapped(RegExp('[٠-٩۰-۹]'), (match) {
-    final char = match.group(0)!;
-    final index = arabic.indexOf(char);
-    return '${index >= 0 ? index : persian.indexOf(char)}';
+  return text.replaceAllMapped(RegExp('[٠-٩۰-۹]'), (match) {
+    final c = match.group(0)!;
+    final a = ar.indexOf(c);
+    return '${a >= 0 ? a : fa.indexOf(c)}';
   });
 }
 
-double? parseAmount(String text) {
-  var value = normalizeDigits(text).replaceAll(' ', '').trim();
+double? readAmount(String text) {
+  var value = normalizeDigits(text).replaceAll(' ', '');
 
   if (value.contains(',') && value.contains('.')) {
-    value = value.lastIndexOf('.') > value.lastIndexOf(',')
-        ? value.replaceAll(',', '')
-        : value.replaceAll('.', '').replaceAll(',', '.');
-  } else if (RegExp(r'^\d{1,3}(,\d{3})+(\.\d+)?$')
-      .hasMatch(value)) {
+    value = value.replaceAll(',', '');
+  } else if (RegExp(r'^\d{1,3}(,\d{3})+$').hasMatch(value)) {
     value = value.replaceAll(',', '');
   } else {
     value = value.replaceAll(',', '.');
   }
 
-  return double.tryParse(value);
+  final number = double.tryParse(value);
+
+  return number != null && number.isFinite && number > 0
+      ? number
+      : null;
 }
 
-// ============================================
+// ==========================================
 // MODELS
-// ============================================
+// ==========================================
 
-class MoneyEntry {
+class Entry {
   final String id;
   final String title;
   final double amount;
@@ -61,7 +61,7 @@ class MoneyEntry {
   final String category;
   final DateTime date;
 
-  const MoneyEntry({
+  const Entry({
     required this.id,
     required this.title,
     required this.amount,
@@ -79,8 +79,8 @@ class MoneyEntry {
         'date': date.toIso8601String(),
       };
 
-  factory MoneyEntry.fromJson(Map<String, dynamic> json) {
-    return MoneyEntry(
+  factory Entry.fromJson(Map<String, dynamic> json) {
+    return Entry(
       id: (json['id'] ??
               DateTime.now().microsecondsSinceEpoch.toString())
           .toString(),
@@ -88,13 +88,12 @@ class MoneyEntry {
       amount: (json['amount'] as num).toDouble(),
       income: json['income'] == true,
       category: (json['category'] ?? 'أخرى').toString(),
-      date: DateTime.tryParse((json['date'] ?? '').toString()) ??
-          DateTime.now(),
+      date: DateTime.tryParse('${json['date']}') ?? DateTime.now(),
     );
   }
 }
 
-class WaffraProfile {
+class UserProfile {
   final String name;
   final String email;
   final String provider;
@@ -102,7 +101,7 @@ class WaffraProfile {
   final String avatar;
   final DateTime birthday;
 
-  const WaffraProfile({
+  const UserProfile({
     required this.name,
     required this.email,
     required this.provider,
@@ -120,16 +119,15 @@ class WaffraProfile {
         'birthday': birthday.toIso8601String(),
       };
 
-  factory WaffraProfile.fromJson(Map<String, dynamic> json) {
-    return WaffraProfile(
-      name: (json['name'] ?? '').toString(),
-      email: (json['email'] ?? '').toString(),
-      provider: (json['provider'] ?? 'Google').toString(),
-      gender: (json['gender'] ?? 'ذكر').toString(),
-      avatar: (json['avatar'] ?? 'person').toString(),
+  factory UserProfile.fromJson(Map<String, dynamic> json) {
+    return UserProfile(
+      name: '${json['name'] ?? ''}',
+      email: '${json['email'] ?? ''}',
+      provider: '${json['provider'] ?? 'Google'}',
+      gender: '${json['gender'] ?? 'ذكر'}',
+      avatar: '${json['avatar'] ?? 'person'}',
       birthday:
-          DateTime.tryParse((json['birthday'] ?? '').toString()) ??
-              DateTime(2000),
+          DateTime.tryParse('${json['birthday']}') ?? DateTime(2000),
     );
   }
 }
@@ -137,19 +135,19 @@ class WaffraProfile {
 IconData avatarIcon(String value) {
   switch (value) {
     case 'male':
-      return Icons.face_rounded;
+      return Icons.face;
     case 'female':
-      return Icons.face_3_rounded;
+      return Icons.face_3;
     case 'smile':
-      return Icons.sentiment_very_satisfied_rounded;
+      return Icons.sentiment_very_satisfied;
     default:
-      return Icons.person_rounded;
+      return Icons.person;
   }
 }
 
-// ============================================
+// ==========================================
 // APPLICATION
-// ============================================
+// ==========================================
 
 class WaffraApp extends StatefulWidget {
   const WaffraApp({super.key});
@@ -160,81 +158,76 @@ class WaffraApp extends StatefulWidget {
 
 class _WaffraAppState extends State<WaffraApp> {
   bool loading = true;
-  bool onboardingDone = false;
-  bool darkMode = false;
-  WaffraProfile? profile;
+  bool introDone = false;
+  bool dark = false;
+  UserProfile? profile;
 
   @override
   void initState() {
     super.initState();
-    loadSettings();
+    load();
   }
 
-  Future<void> loadSettings() async {
+  Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
-    final rawProfile = prefs.getString('waffra_profile');
 
-    WaffraProfile? savedProfile;
+    UserProfile? saved;
 
-    if (rawProfile != null) {
+    final raw = prefs.getString('waffra_profile');
+
+    if (raw != null) {
       try {
-        savedProfile = WaffraProfile.fromJson(
-          Map<String, dynamic>.from(jsonDecode(rawProfile)),
+        saved = UserProfile.fromJson(
+          Map<String, dynamic>.from(jsonDecode(raw)),
         );
       } catch (error) {
-        debugPrint('Profile loading error: $error');
+        debugPrint('Profile loading failed: $error');
       }
     }
 
     if (!mounted) return;
 
     setState(() {
-      onboardingDone =
+      introDone =
           prefs.getBool('waffra_onboarding_completed') ?? false;
-      darkMode = prefs.getBool('waffra_dark_mode') ?? false;
-      profile = savedProfile;
+      dark = prefs.getBool('waffra_dark_mode') ?? false;
+      profile = saved;
       loading = false;
     });
   }
 
-  Future<void> finishOnboarding() async {
+  Future<void> finishIntro() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('waffra_onboarding_completed', true);
 
-    if (mounted) {
-      setState(() => onboardingDone = true);
-    }
+    if (mounted) setState(() => introDone = true);
   }
 
-  Future<void> saveProfile(WaffraProfile value) async {
+  Future<void> saveProfile(UserProfile value) async {
     final prefs = await SharedPreferences.getInstance();
+
     await prefs.setString(
       'waffra_profile',
       jsonEncode(value.toJson()),
     );
 
-    if (mounted) {
-      setState(() => profile = value);
-    }
+    if (mounted) setState(() => profile = value);
   }
 
-  Future<void> signOut() async {
+  Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('waffra_profile');
 
-    if (mounted) {
-      setState(() => profile = null);
-    }
+    if (mounted) setState(() => profile = null);
   }
 
   Future<void> toggleTheme() async {
-    final next = !darkMode;
+    final value = !dark;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('waffra_dark_mode', next);
 
-    if (mounted) {
-      setState(() => darkMode = next);
-    }
+    await prefs.setBool('waffra_dark_mode', value);
+
+    if (mounted) setState(() => dark = value);
   }
 
   @override
@@ -245,79 +238,75 @@ class _WaffraAppState extends State<WaffraApp> {
       locale: const Locale('ar', 'SA'),
       theme: ThemeData(
         useMaterial3: true,
-        colorSchemeSeed: kGreen,
-        scaffoldBackgroundColor: kCream,
+        colorSchemeSeed: green,
+        scaffoldBackgroundColor: cream,
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
-        colorSchemeSeed: kGreen,
+        colorSchemeSeed: green,
       ),
-      themeMode: darkMode ? ThemeMode.dark : ThemeMode.light,
+      themeMode: dark ? ThemeMode.dark : ThemeMode.light,
       home: Directionality(
         textDirection: TextDirection.rtl,
         child: loading
             ? const Scaffold(
                 body: Center(child: CircularProgressIndicator()),
               )
-            : !onboardingDone
-                ? OnboardingScreen(onFinish: finishOnboarding)
+            : !introDone
+                ? IntroScreen(onFinish: finishIntro)
                 : profile == null
-                    ? DemoLoginScreen(onSave: saveProfile)
+                    ? LoginScreen(onSave: saveProfile)
                     : HomeScreen(
                         profile: profile!,
-                        darkMode: darkMode,
-                        onToggleTheme: toggleTheme,
-                        onSignOut: signOut,
-                        onSaveProfile: saveProfile,
+                        dark: dark,
+                        onTheme: toggleTheme,
+                        onLogout: logout,
+                        onProfile: saveProfile,
                       ),
       ),
     );
   }
 }
 
-// ============================================
-// ONBOARDING - FULL SCREEN IMAGES
-// ============================================
+// ==========================================
+// FULL SCREEN ONBOARDING
+// ==========================================
 
-class OnboardingScreen extends StatefulWidget {
+class IntroScreen extends StatefulWidget {
   final Future<void> Function() onFinish;
 
-  const OnboardingScreen({
+  const IntroScreen({
     super.key,
     required this.onFinish,
   });
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  State<IntroScreen> createState() => _IntroScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
+class _IntroScreenState extends State<IntroScreen> {
   final PageController controller = PageController();
-  int current = 0;
-  bool finishing = false;
 
-  static const titles = [
+  int page = 0;
+  bool busy = false;
+
+  static const List<String> images = [
+    'assets/images.jpeg',
+    'assets/kafd-slider-2-image-1200x750.jpg',
+    'assets/pexels-photo-32918067.jpg',
+  ];
+
+  static const List<String> titles = [
     'أهلاً بك في وفرة',
-    'تحكّم في مصروفاتك',
-    'افهم عاداتك المالية',
-    'خصوصيتك أولويتنا',
+    'مصروفاتك تحت السيطرة',
+    'قرارات مالية أذكى',
   ];
 
-  static const subtitles = [
-    'فلوسك أوضح، وقراراتك أذكى',
-    'سجّل دخلك ومصروفاتك بكل سهولة',
-    'اكتشف أين تذهب أموالك كل شهر',
-    'بياناتك المالية محفوظة على جهازك',
-  ];
-
-  // صور خلفية بملء الشاشة.
-  // يمكن استبدال الروابط بصور سعودية موثقة لاحقاً.
-  static const images = [
-    'https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=1400',
-    'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1400',
-    'https://images.unsplash.com/photo-1494526585095-c41746248156?w=1400',
-    'https://images.unsplash.com/photo-1511818966892-d7d671e672a2?w=1400',
+  static const List<String> descriptions = [
+    'ابدأ رحلتك نحو تنظيم أموالك بكل سهولة',
+    'سجّل دخلك ومصروفاتك وتابع كل ريال',
+    'حلّل عملياتك واكتشف فرص التوفير',
   ];
 
   @override
@@ -326,12 +315,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
-  Future<void> next() async {
-    if (finishing) return;
+  Future<void> finish() async {
+    if (busy) return;
 
-    if (current == 3) {
-      setState(() => finishing = true);
-      await widget.onFinish();
+    setState(() => busy = true);
+    await widget.onFinish();
+  }
+
+  Future<void> next() async {
+    if (page == images.length - 1) {
+      await finish();
     } else {
       await controller.nextPage(
         duration: const Duration(milliseconds: 350),
@@ -348,25 +341,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         children: [
           PageView.builder(
             controller: controller,
-            itemCount: 4,
-            onPageChanged: (index) {
-              setState(() => current = index);
+            itemCount: images.length,
+            onPageChanged: (value) {
+              setState(() => page = value);
             },
             itemBuilder: (context, index) {
               return Stack(
                 fit: StackFit.expand,
                 children: [
-                  Container(color: kDarkGreen),
-                  Image.network(
+                  Container(color: deepGreen),
+                  Image.asset(
                     images[index],
                     fit: BoxFit.cover,
+                    alignment: Alignment.center,
                     errorBuilder: (_, __, ___) {
                       return Container(
-                        color: kDarkGreen,
+                        color: deepGreen,
                         child: const Icon(
-                          Icons.landscape_rounded,
-                          color: kGold,
-                          size: 140,
+                          Icons.landscape,
+                          size: 110,
+                          color: gold,
                         ),
                       );
                     },
@@ -378,9 +372,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         end: Alignment.bottomCenter,
                         colors: [
                           Color(0x88000000),
-                          Color(0x00000000),
-                          Color(0xAA000000),
-                          Color(0xEE032D24),
+                          Colors.transparent,
+                          Color(0x66000000),
+                          Color(0xEE033C2C),
                         ],
                       ),
                     ),
@@ -388,9 +382,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   SafeArea(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(
-                        25,
-                        45,
-                        25,
+                        24,
+                        40,
+                        24,
                         135,
                       ),
                       child: Column(
@@ -399,7 +393,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             'وفرة',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 38,
+                              fontSize: 39,
                               fontWeight: FontWeight.w900,
                             ),
                           ),
@@ -409,18 +403,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 31,
-                              fontWeight: FontWeight.w900,
+                              fontSize: 30,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            subtitles[index],
+                            descriptions[index],
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 17,
-                              height: 1.7,
                             ),
                           ),
                         ],
@@ -437,10 +430,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 Align(
                   alignment: Alignment.topLeft,
                   child: Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: current < 3
+                    padding: const EdgeInsets.all(12),
+                    child: page < images.length - 1
                         ? TextButton(
-                            onPressed: widget.onFinish,
+                            onPressed: finish,
                             child: const Text(
                               'تخطي',
                               style: TextStyle(
@@ -455,16 +448,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(
-                    4,
+                    images.length,
                     (index) => AnimatedContainer(
-                      duration: const Duration(milliseconds: 220),
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      duration: const Duration(
+                        milliseconds: 200,
+                      ),
+                      width: page == index ? 28 : 8,
                       height: 8,
-                      width: index == current ? 28 : 8,
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                      ),
                       decoration: BoxDecoration(
-                        color: index == current
-                            ? kGold
-                            : Colors.white54,
+                        color: page == index
+                            ? gold
+                            : Colors.white60,
                         borderRadius: BorderRadius.circular(20),
                       ),
                     ),
@@ -473,20 +470,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
                     24,
-                    22,
+                    20,
                     24,
-                    25,
+                    26,
                   ),
                   child: SizedBox(
                     width: double.infinity,
-                    height: 56,
+                    height: 55,
                     child: FilledButton(
-                      onPressed: finishing ? null : next,
+                      onPressed: busy ? null : next,
                       style: FilledButton.styleFrom(
-                        backgroundColor: kGreen,
+                        backgroundColor: green,
                       ),
                       child: Text(
-                        current == 3 ? 'ابدأ مع وفرة' : 'التالي',
+                        page == images.length - 1
+                            ? 'ابدأ مع وفرة'
+                            : 'التالي',
                       ),
                     ),
                   ),
@@ -500,23 +499,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
-// ============================================
+// ==========================================
 // DEMO LOGIN
-// ============================================
+// ==========================================
 
-class DemoLoginScreen extends StatefulWidget {
-  final Future<void> Function(WaffraProfile) onSave;
+class LoginScreen extends StatefulWidget {
+  final Future<void> Function(UserProfile) onSave;
 
-  const DemoLoginScreen({
+  const LoginScreen({
     super.key,
     required this.onSave,
   });
 
   @override
-  State<DemoLoginScreen> createState() => _DemoLoginScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _DemoLoginScreenState extends State<DemoLoginScreen> {
+class _LoginScreenState extends State<LoginScreen> {
   String? provider;
 
   @override
@@ -536,51 +535,46 @@ class _DemoLoginScreenState extends State<DemoLoginScreen> {
             padding: const EdgeInsets.all(28),
             child: Column(
               children: [
-                Container(
-                  height: 110,
-                  width: 110,
-                  decoration: const BoxDecoration(
-                    color: kDarkGreen,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.account_balance_wallet_rounded,
+                const CircleAvatar(
+                  radius: 55,
+                  backgroundColor: deepGreen,
+                  child: Icon(
+                    Icons.account_balance_wallet,
                     color: Colors.white,
-                    size: 55,
+                    size: 58,
                   ),
                 ),
-                const SizedBox(height: 22),
+                const SizedBox(height: 24),
                 const Text(
                   'وفرة',
                   style: TextStyle(
-                    color: kGreen,
                     fontSize: 42,
+                    color: green,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 const Text(
                   'أهلاً بك في رحلتك المالية',
                   style: TextStyle(fontSize: 19),
                 ),
-                const SizedBox(height: 34),
+                const SizedBox(height: 32),
                 const Text(
                   'تسجيل دخول تجريبي',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 16,
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 15),
                 SizedBox(
                   width: double.infinity,
-                  height: 56,
+                  height: 55,
                   child: OutlinedButton.icon(
                     onPressed: () {
                       setState(() => provider = 'Google');
                     },
                     icon: const Icon(
-                      Icons.g_mobiledata_rounded,
+                      Icons.g_mobiledata,
                       size: 32,
                     ),
                     label: const Text(
@@ -591,7 +585,7 @@ class _DemoLoginScreenState extends State<DemoLoginScreen> {
                 const SizedBox(height: 14),
                 SizedBox(
                   width: double.infinity,
-                  height: 56,
+                  height: 55,
                   child: FilledButton.icon(
                     onPressed: () {
                       setState(() => provider = 'Apple');
@@ -602,15 +596,14 @@ class _DemoLoginScreenState extends State<DemoLoginScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 25),
+                const SizedBox(height: 22),
                 const Text(
-                  'نسخة تجريبية مجانية: الأزرار لا تتصل '
-                  'بـ Google أو Apple ولا تتحقق من ملكية الإيميل.',
+                  'الدخول تجريبي فقط. لا يتم الاتصال بخوادم '
+                  'Google أو Apple أو التحقق من البريد الإلكتروني.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 12,
                     color: Colors.grey,
-                    height: 1.6,
+                    fontSize: 12,
                   ),
                 ),
               ],
@@ -622,14 +615,14 @@ class _DemoLoginScreenState extends State<DemoLoginScreen> {
   }
 }
 
-// ============================================
-// PROFILE FORM
-// ============================================
+// ==========================================
+// USER PROFILE
+// ==========================================
 
 class ProfileForm extends StatefulWidget {
   final String provider;
-  final WaffraProfile? initial;
-  final Future<void> Function(WaffraProfile) onSave;
+  final UserProfile? initial;
+  final Future<void> Function(UserProfile) onSave;
   final VoidCallback? onBack;
 
   const ProfileForm({
@@ -661,12 +654,14 @@ class _ProfileFormState extends State<ProfileForm> {
     name = TextEditingController(
       text: widget.initial?.name ?? '',
     );
+
     email = TextEditingController(
       text: widget.initial?.email ?? '',
     );
+
     gender = widget.initial?.gender ?? 'ذكر';
     avatar = widget.initial?.avatar ?? 'person';
-    birthday = widget.initial?.birthday ?? DateTime(2000, 1, 1);
+    birthday = widget.initial?.birthday ?? DateTime(2000);
   }
 
   @override
@@ -676,29 +671,28 @@ class _ProfileFormState extends State<ProfileForm> {
     super.dispose();
   }
 
-  Future<void> pickBirthday() async {
-    final selected = await showDatePicker(
+  Future<void> selectBirthday() async {
+    final result = await showDatePicker(
       context: context,
       initialDate: birthday,
       firstDate: DateTime(1900),
       lastDate: DateTime.now(),
     );
 
-    if (selected != null) {
-      setState(() => birthday = selected);
+    if (result != null) {
+      setState(() => birthday = result);
     }
   }
 
   Future<void> submit() async {
-    final userName = name.text.trim();
-    final userEmail = email.text.trim();
-
-    if (userName.isEmpty ||
+    if (name.text.trim().isEmpty ||
         !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
-            .hasMatch(userEmail)) {
+            .hasMatch(email.text.trim())) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('أدخل الاسم وبريدًا إلكترونيًا صحيحًا'),
+          content: Text(
+            'أدخل الاسم والبريد الإلكتروني بشكل صحيح',
+          ),
         ),
       );
       return;
@@ -707,9 +701,9 @@ class _ProfileFormState extends State<ProfileForm> {
     setState(() => saving = true);
 
     await widget.onSave(
-      WaffraProfile(
-        name: userName,
-        email: userEmail,
+      UserProfile(
+        name: name.text.trim(),
+        email: email.text.trim(),
         provider: widget.provider,
         gender: gender,
         avatar: avatar,
@@ -722,14 +716,12 @@ class _ProfileFormState extends State<ProfileForm> {
     setState(() => saving = false);
 
     if (widget.initial != null) {
-      Navigator.of(context).pop();
+      Navigator.pop(context);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final editing = widget.initial != null;
-
     return Scaffold(
       appBar: AppBar(
         leading: widget.onBack == null
@@ -739,7 +731,9 @@ class _ProfileFormState extends State<ProfileForm> {
                 icon: const Icon(Icons.arrow_back),
               ),
         title: Text(
-          editing ? 'تعديل الملف الشخصي' : 'استكمال الملف الشخصي',
+          widget.initial == null
+              ? 'استكمال الملف الشخصي'
+              : 'تعديل الملف الشخصي',
         ),
       ),
       body: SafeArea(
@@ -747,20 +741,15 @@ class _ProfileFormState extends State<ProfileForm> {
           padding: const EdgeInsets.all(22),
           children: [
             Text(
-              editing
-                  ? 'بيانات حسابك'
-                  : 'المتابعة عبر ${widget.provider} — تجريبي',
+              'المتابعة عبر ${widget.provider} — تجريبي',
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 18),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 22),
             Center(
               child: CircleAvatar(
                 radius: 52,
-                backgroundColor: kGreen,
+                backgroundColor: green,
                 child: Icon(
                   avatarIcon(avatar),
                   color: Colors.white,
@@ -768,48 +757,49 @@ class _ProfileFormState extends State<ProfileForm> {
                 ),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             const Text(
-              'اختر Avatar',
+              'اختر الصورة الرمزية',
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             Wrap(
               alignment: WrapAlignment.center,
-              spacing: 9,
-              children: ['person', 'male', 'female', 'smile']
-                  .map(
-                    (value) => ChoiceChip(
-                      label: Icon(avatarIcon(value)),
-                      selected: avatar == value,
-                      onSelected: (_) {
-                        setState(() => avatar = value);
-                      },
-                    ),
-                  )
-                  .toList(),
+              spacing: 8,
+              children: [
+                'person',
+                'male',
+                'female',
+                'smile',
+              ].map((value) {
+                return ChoiceChip(
+                  label: Icon(avatarIcon(value)),
+                  selected: avatar == value,
+                  onSelected: (_) {
+                    setState(() => avatar = value);
+                  },
+                );
+              }).toList(),
             ),
-            const SizedBox(height: 25),
+            const SizedBox(height: 20),
             TextField(
               controller: name,
               decoration: const InputDecoration(
                 labelText: 'الاسم',
-                prefixIcon: Icon(Icons.person_outline),
                 border: OutlineInputBorder(),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 13),
             TextField(
               controller: email,
               keyboardType: TextInputType.emailAddress,
               decoration: const InputDecoration(
                 labelText: 'البريد الإلكتروني',
-                hintText: 'name@gmail.com أو name@icloud.com',
-                prefixIcon: Icon(Icons.email_outlined),
+                hintText: 'name@gmail.com',
                 border: OutlineInputBorder(),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 13),
             DropdownButtonFormField<String>(
               initialValue: gender,
               decoration: const InputDecoration(
@@ -836,32 +826,21 @@ class _ProfileFormState extends State<ProfileForm> {
                 }
               },
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 13),
             OutlinedButton.icon(
-              onPressed: pickBirthday,
+              onPressed: selectBirthday,
               icon: const Icon(Icons.calendar_month),
               label: Text(
-                'تاريخ الميلاد: ${formatDate(birthday)}',
+                'تاريخ الميلاد: ${dateText(birthday)}',
               ),
             ),
-            const SizedBox(height: 25),
-            SizedBox(
-              height: 54,
-              child: FilledButton(
-                onPressed: saving ? null : submit,
-                child: Text(
-                  editing ? 'حفظ التعديلات' : 'إنشاء الحساب والدخول',
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'هذا ملف شخصي محلي، وليس حساب Google أو Apple '
-              'حقيقيًا. لا يتم تخزين كلمة مرور.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey,
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: saving ? null : submit,
+              child: Text(
+                widget.initial == null
+                    ? 'إنشاء الحساب والدخول'
+                    : 'حفظ التعديلات',
               ),
             ),
           ],
@@ -871,129 +850,190 @@ class _ProfileFormState extends State<ProfileForm> {
   }
 }
 
-// ============================================
-// MESSAGE PARSER
-// ============================================
+// ==========================================
+// BANK MESSAGE ANALYZER
+// ==========================================
 
-class MessageData {
+class ParsedMessage {
   final double? amount;
   final String title;
   final bool income;
   final String category;
 
-  const MessageData(
-    this.amount,
-    this.title,
-    this.income,
-    this.category,
-  );
+  const ParsedMessage({
+    required this.amount,
+    required this.title,
+    required this.income,
+    required this.category,
+  });
 }
 
-MessageData analyzeMessage(String source) {
-  final text = normalizeDigits(source);
-  final lower = text.toLowerCase();
-
-  final isIncome = RegExp(
-        r'راتب|إيداع|ايداع|حوالة واردة|تحويل وارد|استلام|salary|credited|deposit|received',
-        caseSensitive: false,
-      ).hasMatch(lower) &&
-      !RegExp(
-        r'شراء|خصم|دفع|سحب|purchase|debit|withdrawal',
-        caseSensitive: false,
-      ).hasMatch(lower);
-
-  final patterns = [
-    RegExp(
-      r'(?:مبلغ|بقيمة|المبلغ|amount|amt)\s*[:\-]?\s*([0-9][0-9,\.]*)',
-      caseSensitive: false,
-    ),
-    RegExp(
-      r'([0-9][0-9,\.]*)\s*(?:sar|ريال|ر\.?س\.?)',
-      caseSensitive: false,
-    ),
-    RegExp(
-      r'(?:sar|ريال|ر\.?س\.?)\s*([0-9][0-9,\.]*)',
-      caseSensitive: false,
-    ),
-  ];
-
-  double? amount;
-
-  for (final pattern in patterns) {
-    final match = pattern.firstMatch(text);
-
-    if (match == null) continue;
-
-    amount = parseAmount(match.group(1) ?? '');
-
-    if (amount != null && amount > 0 && amount.isFinite) {
-      break;
-    }
-  }
-
-  String title = isIncome ? 'دخل من رسالة' : 'مصروف من رسالة';
-
-  final merchant = RegExp(
-    r'(?:لدى|عند|merchant|at)\s*[:\-]?\s*([^\n\r،,]{2,45})',
-    caseSensitive: false,
-  ).firstMatch(text);
-
-  if (merchant != null) {
-    final value = merchant.group(1)!
-        .split(
-          RegExp(
-            r'باستخدام|بطاقة|الرصيد|بتاريخ|card',
-            caseSensitive: false,
-          ),
-        )
-        .first
+class BankMessageAnalyzer {
+  static ParsedMessage analyze(String original) {
+    final text = normalizeDigits(original)
+        .replaceAll('\u200f', '')
+        .replaceAll('\u200e', '')
+        .replaceAll('\u00a0', ' ')
         .trim();
 
-    if (value.isNotEmpty) title = value;
-  }
+    final lower = text.toLowerCase();
 
-  String category = isIncome ? 'دخل آخر' : 'أخرى';
+    final outgoing = RegExp(
+      r'شراء|pos|مدى|mada|حوالة\s+(?:داخلية\s+)?صادرة|'
+      r'تحويل\s+صادر|سحب|خصم|دفع|purchase|debit',
+      caseSensitive: false,
+    ).hasMatch(lower);
 
-  if (isIncome) {
-    if (RegExp(r'راتب|salary').hasMatch(lower)) {
-      category = 'راتب';
+    final incoming = RegExp(
+      r'راتب|إيداع|ايداع|حوالة\s+(?:داخلية\s+)?واردة|'
+      r'تحويل\s+وارد|salary|credited|deposit|received',
+      caseSensitive: false,
+    ).hasMatch(lower);
+
+    final income = incoming && !outgoing;
+
+    double? amount;
+
+    // Supported:
+    // بـ2SR
+    // بـ84.72SR
+    // بـSR 60
+    // SAR 120
+    // 120 ريال
+
+    const number = r'([0-9][0-9,]*(?:\.[0-9]{1,2})?)';
+    const currency = r'(?:SR|SAR|ر\.?\s?س\.?|ريال)';
+
+    final patterns = <RegExp>[
+      RegExp(
+        '(?:بـ|ب|بقيمة|بمبلغ|مبلغ|المبلغ|amount|amt)'
+        '\\s*[:：-]?\\s*$number\\s*$currency',
+        caseSensitive: false,
+      ),
+      RegExp(
+        '(?:بـ|ب|بقيمة|بمبلغ|مبلغ|المبلغ|amount|amt)'
+        '\\s*[:：-]?\\s*$currency\\s*$number',
+        caseSensitive: false,
+      ),
+      RegExp(
+        '$number\\s*$currency',
+        caseSensitive: false,
+      ),
+      RegExp(
+        '$currency\\s*$number',
+        caseSensitive: false,
+      ),
+    ];
+
+    for (final pattern in patterns) {
+      final match = pattern.firstMatch(text);
+
+      if (match == null) continue;
+
+      final value = readAmount(match.group(1) ?? '');
+
+      if (value != null) {
+        amount = value;
+        break;
+      }
     }
-  } else if (RegExp(
-    r'مطعم|كافيه|قهوة|طعام|food|coffee|restaurant',
-  ).hasMatch(lower)) {
-    category = 'طعام';
-  } else if (RegExp(
-    r'بنزين|وقود|محطة|أوبر|كريم|uber|careem',
-  ).hasMatch(lower)) {
-    category = 'مواصلات';
-  } else if (RegExp(
-    r'فاتورة|كهرباء|مياه|stc|mobily|زين',
-  ).hasMatch(lower)) {
-    category = 'فواتير';
-  } else if (RegExp(
-    r'صيدلية|مستشفى|عيادة|pharmacy',
-  ).hasMatch(lower)) {
-    category = 'صحة';
-  } else if (RegExp(
-    r'جرير|تسوق|شراء|amazon|noon|نون|shop',
-  ).hasMatch(lower)) {
-    category = 'تسوق';
-  }
 
-  return MessageData(
-    amount,
-    title,
-    isIncome,
-    category,
-  );
+    String title;
+    String category;
+
+    if (RegExp(
+      r'شراء|pos|مدى|mada',
+      caseSensitive: false,
+    ).hasMatch(lower)) {
+      title = 'شراء نقاط بيع';
+      category = 'تسوق';
+
+      final merchants = RegExp(
+        r'(?:^|\n)\s*من\s*([^\n\r]{2,45})',
+        multiLine: true,
+      ).allMatches(text).toList();
+
+      for (final match in merchants.reversed) {
+        final value = (match.group(1) ?? '').trim();
+
+        if (RegExp(r'[a-zA-Z\u0600-\u06FF]')
+            .hasMatch(value)) {
+          title = 'شراء - $value';
+          break;
+        }
+      }
+    } else if (RegExp(
+      r'حوالة|تحويل',
+      caseSensitive: false,
+    ).hasMatch(lower)) {
+      title = income ? 'حوالة واردة' : 'حوالة صادرة';
+      category = income ? 'دخل آخر' : 'تحويلات';
+
+      final recipient = RegExp(
+        r'(?:لـ|إلى|الى)\s*(?:[0-9]+[;؛:\-]?)?\s*'
+        r'([^\n\r]+)',
+      ).firstMatch(text);
+
+      if (!income && recipient != null) {
+        final value = recipient.group(1)?.trim() ?? '';
+
+        if (value.isNotEmpty) {
+          title = 'حوالة إلى $value';
+        }
+      }
+    } else if (RegExp(
+      r'راتب|salary',
+      caseSensitive: false,
+    ).hasMatch(lower)) {
+      title = 'راتب';
+      category = 'راتب';
+    } else if (income) {
+      title = 'إيداع أو دخل';
+      category = 'دخل آخر';
+    } else {
+      title = 'مصروف من رسالة';
+      category = 'أخرى';
+    }
+
+    if (!income) {
+      if (RegExp(
+        r'مطعم|كافيه|قهوة|coffee|restaurant',
+        caseSensitive: false,
+      ).hasMatch(lower)) {
+        category = 'طعام';
+      } else if (RegExp(
+        r'بنزين|وقود|محطة|uber|careem|أوبر|كريم',
+        caseSensitive: false,
+      ).hasMatch(lower)) {
+        category = 'مواصلات';
+      } else if (RegExp(
+        r'فاتورة|كهرباء|مياه|stc|mobily|زين',
+        caseSensitive: false,
+      ).hasMatch(lower)) {
+        category = 'فواتير';
+      } else if (RegExp(
+        r'صيدلية|مستشفى|عيادة|pharmacy',
+        caseSensitive: false,
+      ).hasMatch(lower)) {
+        category = 'صحة';
+      }
+    }
+
+    return ParsedMessage(
+      amount: amount,
+      title: title,
+      income: income,
+      category: category,
+    );
+  }
 }
 
-// ============================================
-// ADD / EDIT TRANSACTION
-// ============================================
+// ==========================================
+// ADD / EDIT ENTRY
+// ==========================================
 
 class EntrySheet extends StatefulWidget {
-  final MoneyEntry? initial;
+  final Entry? initial;
   final bool fromMessage;
 
   const EntrySheet({
@@ -1007,13 +1047,17 @@ class EntrySheet extends StatefulWidget {
 }
 
 class _EntrySheetState extends State<EntrySheet> {
-  late final TextEditingController titleController;
-  late final TextEditingController amountController;
-  final messageController = TextEditingController();
+  late final TextEditingController title;
+  late final TextEditingController amount;
+
+  final TextEditingController message = TextEditingController();
 
   late bool income;
   late String category;
   late DateTime date;
+
+  bool analyzing = false;
+  bool analyzed = false;
 
   static const expenseCategories = [
     'طعام',
@@ -1021,6 +1065,7 @@ class _EntrySheetState extends State<EntrySheet> {
     'مواصلات',
     'فواتير',
     'صحة',
+    'تحويلات',
     'أخرى',
   ];
 
@@ -1034,91 +1079,193 @@ class _EntrySheetState extends State<EntrySheet> {
   void initState() {
     super.initState();
 
-    final entry = widget.initial;
-
-    titleController = TextEditingController(
-      text: entry?.title ?? '',
+    title = TextEditingController(
+      text: widget.initial?.title ?? '',
     );
 
-    amountController = TextEditingController(
-      text: entry?.amount.toStringAsFixed(2) ?? '',
+    amount = TextEditingController(
+      text: widget.initial?.amount.toStringAsFixed(2) ?? '',
     );
 
-    income = entry?.income ?? false;
-    category = entry?.category ?? 'طعام';
-    date = entry?.date ?? DateTime.now();
+    income = widget.initial?.income ?? false;
+    category = widget.initial?.category ?? 'طعام';
+    date = widget.initial?.date ?? DateTime.now();
   }
 
   @override
   void dispose() {
-    titleController.dispose();
-    amountController.dispose();
-    messageController.dispose();
+    title.dispose();
+    amount.dispose();
+    message.dispose();
     super.dispose();
   }
 
-  void analyze() {
-    if (messageController.text.trim().isEmpty) {
+  Future<void> analyze() async {
+    if (analyzing) return;
+
+    if (message.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('الصق نص الرسالة أولاً'),
+          content: Text('الصق الرسالة البنكية أولاً'),
         ),
       );
       return;
     }
 
-    final result = analyzeMessage(messageController.text);
+    setState(() => analyzing = true);
+
+    final rootNavigator = Navigator.of(
+      context,
+      rootNavigator: true,
+    );
+
+    unawaited(
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const PopScope(
+          canPop: false,
+          child: AlertDialog(
+            title: Text('تحليل الرسالة'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 20),
+                Text(
+                  'جارٍ تحليل الرسالة...',
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'يتم استخراج المبلغ ونوع العملية',
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    ParsedMessage? result;
+
+    try {
+      await Future<void>.delayed(
+        const Duration(milliseconds: 850),
+      );
+
+      result = BankMessageAnalyzer.analyze(message.text);
+    } catch (error) {
+      debugPrint('Analysis error: $error');
+    }
+
+    if (!mounted) return;
+
+    rootNavigator.pop();
 
     setState(() {
-      income = result.income;
-      category = result.category;
-      titleController.text = result.title;
-      amountController.text =
-          result.amount?.toStringAsFixed(2) ?? '';
+      analyzing = false;
+
+      if (result != null) {
+        analyzed = true;
+        income = result.income;
+        category = result.category;
+        title.text = result.title;
+        amount.text =
+            result.amount?.toStringAsFixed(2) ?? '';
+      }
     });
 
-    if (result.amount == null) {
+    if (result == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('لم أتعرف على المبلغ، اكتبه يدوياً'),
+          content: Text('تعذر تحليل الرسالة'),
         ),
       );
+      return;
     }
+
+    final parsed = result;
+
+    if (!mounted) return;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('نتيجة تحليل الرسالة'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'نوع العملية: ${parsed.income ? 'دخل' : 'مصروف'}',
+            ),
+            const SizedBox(height: 12),
+            Text(
+              parsed.amount == null
+                  ? 'لم يتم التعرف على المبلغ'
+                  : 'المبلغ: ${money(parsed.amount!)}',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 19,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text('الوصف: ${parsed.title}'),
+            const SizedBox(height: 12),
+            Text('التصنيف: ${parsed.category}'),
+            const SizedBox(height: 15),
+            const Text(
+              'راجع البيانات وعدّلها إذا لزم الأمر قبل الحفظ.',
+            ),
+          ],
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+            },
+            child: const Text('مراجعة وحفظ'),
+          ),
+        ],
+      ),
+    );
   }
 
-  Future<void> pickDate() async {
-    final picked = await showDatePicker(
+  Future<void> selectDate() async {
+    final result = await showDatePicker(
       context: context,
       initialDate: date,
       firstDate: DateTime(2000),
       lastDate: DateTime.now(),
     );
 
-    if (picked != null) {
-      setState(() => date = picked);
+    if (result != null) {
+      setState(() => date = result);
     }
   }
 
   void save() {
-    final value = parseAmount(amountController.text);
+    final value = readAmount(amount.text);
 
-    if (titleController.text.trim().isEmpty ||
-        value == null ||
-        !value.isFinite ||
-        value <= 0) {
+    if (title.text.trim().isEmpty || value == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('أدخل وصفاً ومبلغاً صحيحاً'),
+          content: Text(
+            'أدخل الوصف والمبلغ بشكل صحيح',
+          ),
         ),
       );
       return;
     }
 
-    Navigator.of(context).pop(
-      MoneyEntry(
+    Navigator.pop(
+      context,
+      Entry(
         id: widget.initial?.id ??
             DateTime.now().microsecondsSinceEpoch.toString(),
-        title: titleController.text.trim(),
+        title: title.text.trim(),
         amount: value,
         income: income,
         category: category,
@@ -1152,34 +1299,40 @@ class _EntrySheetState extends State<EntrySheet> {
               widget.initial != null
                   ? 'تعديل العملية'
                   : widget.fromMessage
-                      ? 'إضافة من رسالة'
+                      ? 'إضافة من رسالة بنكية'
                       : 'إضافة عملية جديدة',
               style: Theme.of(context).textTheme.titleLarge,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             if (widget.fromMessage) ...[
               const Text(
-                'انسخ رسالة العملية من الموبايل والصقها هنا. '
-                'سيتم تحليلها محلياً بدون اشتراك.',
+                'الصق الرسالة البنكية ثم اضغط تحليل الرسالة.',
               ),
               const SizedBox(height: 12),
               TextField(
-                controller: messageController,
-                minLines: 3,
-                maxLines: 6,
+                controller: message,
+                minLines: 4,
+                maxLines: 8,
                 decoration: const InputDecoration(
-                  labelText: 'نص الرسالة',
-                  hintText: 'اضغط مطولاً واختر لصق',
+                  labelText: 'نص الرسالة البنكية',
+                  hintText: 'اضغط مطولاً ثم اختر لصق',
                   border: OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(height: 10),
-              OutlinedButton.icon(
-                onPressed: analyze,
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: analyzing ? null : analyze,
                 icon: const Icon(Icons.auto_awesome),
                 label: const Text('تحليل الرسالة'),
               ),
-              const SizedBox(height: 12),
+              if (analyzed) ...[
+                const SizedBox(height: 10),
+                const Text(
+                  'تم التحليل. راجع البيانات قبل الحفظ.',
+                  style: TextStyle(color: green),
+                ),
+              ],
+              const SizedBox(height: 16),
             ],
             SegmentedButton<bool>(
               segments: const [
@@ -1193,34 +1346,36 @@ class _EntrySheetState extends State<EntrySheet> {
                 ),
               ],
               selected: {income},
-              onSelectionChanged: (selected) {
+              onSelectionChanged: (values) {
                 setState(() {
-                  income = selected.first;
+                  income = values.first;
                   category = income ? 'راتب' : 'طعام';
                 });
               },
             ),
-            const SizedBox(height: 15),
+            const SizedBox(height: 14),
             TextField(
-              controller: titleController,
+              controller: title,
               decoration: const InputDecoration(
                 labelText: 'وصف العملية',
                 border: OutlineInputBorder(),
               ),
             ),
-            const SizedBox(height: 13),
+            const SizedBox(height: 12),
             TextField(
-              controller: amountController,
+              controller: amount,
               keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+                  const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               decoration: const InputDecoration(
                 labelText: 'المبلغ بالريال',
                 border: OutlineInputBorder(),
               ),
             ),
-            const SizedBox(height: 13),
+            const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              key: ValueKey(income),
+              key: ValueKey('$income-$selectedCategory'),
               initialValue: selectedCategory,
               decoration: const InputDecoration(
                 labelText: 'التصنيف',
@@ -1238,15 +1393,15 @@ class _EntrySheetState extends State<EntrySheet> {
                 }
               },
             ),
-            const SizedBox(height: 13),
+            const SizedBox(height: 12),
             OutlinedButton.icon(
-              onPressed: pickDate,
+              onPressed: selectDate,
               icon: const Icon(Icons.calendar_month),
-              label: Text('التاريخ: ${formatDate(date)}'),
+              label: Text('التاريخ: ${dateText(date)}'),
             ),
             const SizedBox(height: 20),
             FilledButton.icon(
-              onPressed: save,
+              onPressed: analyzing ? null : save,
               icon: const Icon(Icons.check),
               label: Text(
                 widget.initial == null
@@ -1261,9 +1416,9 @@ class _EntrySheetState extends State<EntrySheet> {
   }
 }
 
-// ============================================
-// CHARTS - NO EXTRA PACKAGES
-// ============================================
+// ==========================================
+// ANALYTICS CHART
+// ==========================================
 
 class ChartPoint {
   final String label;
@@ -1277,10 +1432,10 @@ class ChartPoint {
   );
 }
 
-class FinanceBarChart extends StatelessWidget {
+class FinanceChart extends StatelessWidget {
   final List<ChartPoint> points;
 
-  const FinanceBarChart({
+  const FinanceChart({
     super.key,
     required this.points,
   });
@@ -1290,26 +1445,29 @@ class FinanceBarChart extends StatelessWidget {
     double maximum = 1;
 
     for (final point in points) {
-      if (point.income > maximum) maximum = point.income;
-      if (point.expense > maximum) maximum = point.expense;
+      if (point.income > maximum) {
+        maximum = point.income;
+      }
+
+      if (point.expense > maximum) {
+        maximum = point.expense;
+      }
     }
 
     return Column(
       children: [
-        Row(
+        const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(width: 12, height: 12, color: kGreen),
-            const SizedBox(width: 6),
-            const Text('الدخل'),
-            const SizedBox(width: 20),
-            Container(
-              width: 12,
-              height: 12,
+            Icon(Icons.square, color: green, size: 15),
+            Text(' الدخل'),
+            SizedBox(width: 18),
+            Icon(
+              Icons.square,
               color: Colors.deepOrange,
+              size: 15,
             ),
-            const SizedBox(width: 6),
-            const Text('المصروفات'),
+            Text(' المصروفات'),
           ],
         ),
         const SizedBox(height: 20),
@@ -1323,24 +1481,22 @@ class FinanceBarChart extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Row(
-                        mainAxisAlignment:
-                            MainAxisAlignment.center,
-                        crossAxisAlignment:
-                            CrossAxisAlignment.end,
+                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Flexible(
+                          Expanded(
                             child: FractionallySizedBox(
+                              alignment: Alignment.bottomCenter,
                               heightFactor:
                                   (point.income / maximum).clamp(
                                 0.015,
                                 1.0,
                               ),
-                              alignment: Alignment.bottomCenter,
                               child: Container(
-                                margin:
-                                    const EdgeInsets.symmetric(horizontal: 2),
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 2,
+                                ),
                                 decoration: const BoxDecoration(
-                                  color: kGreen,
+                                  color: green,
                                   borderRadius: BorderRadius.vertical(
                                     top: Radius.circular(5),
                                   ),
@@ -1348,17 +1504,18 @@ class FinanceBarChart extends StatelessWidget {
                               ),
                             ),
                           ),
-                          Flexible(
+                          Expanded(
                             child: FractionallySizedBox(
+                              alignment: Alignment.bottomCenter,
                               heightFactor:
                                   (point.expense / maximum).clamp(
                                 0.015,
                                 1.0,
                               ),
-                              alignment: Alignment.bottomCenter,
                               child: Container(
-                                margin:
-                                    const EdgeInsets.symmetric(horizontal: 2),
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 2,
+                                ),
                                 decoration: const BoxDecoration(
                                   color: Colors.deepOrange,
                                   borderRadius: BorderRadius.vertical(
@@ -1371,7 +1528,7 @@ class FinanceBarChart extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 9),
                     Text(
                       point.label,
                       style: const TextStyle(fontSize: 11),
@@ -1387,24 +1544,24 @@ class FinanceBarChart extends StatelessWidget {
   }
 }
 
-// ============================================
+// ==========================================
 // HOME
-// ============================================
+// ==========================================
 
 class HomeScreen extends StatefulWidget {
-  final WaffraProfile profile;
-  final bool darkMode;
-  final VoidCallback onToggleTheme;
-  final Future<void> Function() onSignOut;
-  final Future<void> Function(WaffraProfile) onSaveProfile;
+  final UserProfile profile;
+  final bool dark;
+  final VoidCallback onTheme;
+  final Future<void> Function() onLogout;
+  final Future<void> Function(UserProfile) onProfile;
 
   const HomeScreen({
     super.key,
     required this.profile,
-    required this.darkMode,
-    required this.onToggleTheme,
-    required this.onSignOut,
-    required this.onSaveProfile,
+    required this.dark,
+    required this.onTheme,
+    required this.onLogout,
+    required this.onProfile,
   });
 
   @override
@@ -1412,15 +1569,17 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final List<MoneyEntry> entries = [];
+  final List<Entry> entries = [];
 
   int tab = 0;
+
   String search = '';
   String typeFilter = 'الكل';
   String categoryFilter = 'الكل';
-  String analyticsPeriod = 'شهري';
-  int selectedYear = DateTime.now().year;
-  int selectedMonth = DateTime.now().month;
+  String period = 'شهري';
+
+  int year = DateTime.now().year;
+  int month = DateTime.now().month;
 
   @override
   void initState() {
@@ -1435,11 +1594,11 @@ class _HomeScreenState extends State<HomeScreen> {
     if (raw == null) return;
 
     try {
-      final data = jsonDecode(raw) as List;
+      final decoded = jsonDecode(raw) as List;
 
-      final loaded = data.map((item) {
-        return MoneyEntry.fromJson(
-          Map<String, dynamic>.from(item),
+      final loaded = decoded.map((value) {
+        return Entry.fromJson(
+          Map<String, dynamic>.from(value),
         );
       }).toList();
 
@@ -1451,7 +1610,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ..addAll(loaded);
       });
     } catch (error) {
-      debugPrint('Entries loading error: $error');
+      debugPrint('Entries loading failed: $error');
     }
   }
 
@@ -1466,32 +1625,30 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  double totalIncome(Iterable<MoneyEntry> items) {
-    return items
+  double totalIncome(Iterable<Entry> data) {
+    return data
         .where((entry) => entry.income)
         .fold(0.0, (sum, entry) => sum + entry.amount);
   }
 
-  double totalExpense(Iterable<MoneyEntry> items) {
-    return items
+  double totalExpense(Iterable<Entry> data) {
+    return data
         .where((entry) => !entry.income)
         .fold(0.0, (sum, entry) => sum + entry.amount);
   }
 
-  Future<void> openEntry({
-    MoneyEntry? initial,
+  Future<void> editEntry({
+    Entry? initial,
     bool fromMessage = false,
   }) async {
-    final result = await showModalBottomSheet<MoneyEntry>(
+    final result = await showModalBottomSheet<Entry>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (context) {
-        return EntrySheet(
-          initial: initial,
-          fromMessage: fromMessage,
-        );
-      },
+      builder: (_) => EntrySheet(
+        initial: initial,
+        fromMessage: fromMessage,
+      ),
     );
 
     if (!mounted || result == null) return;
@@ -1500,152 +1657,121 @@ class _HomeScreenState extends State<HomeScreen> {
       if (initial == null) {
         entries.insert(0, result);
       } else {
-        final index =
-            entries.indexWhere((entry) => entry.id == initial.id);
+        final index = entries.indexWhere(
+          (entry) => entry.id == initial.id,
+        );
 
         if (index >= 0) {
           entries[index] = result;
         }
       }
 
-      entries.sort((a, b) => b.date.compareTo(a.date));
+      entries.sort(
+        (a, b) => b.date.compareTo(a.date),
+      );
     });
 
     await persist();
   }
 
-  Future<void> deleteEntry(MoneyEntry entry) async {
+  Future<void> deleteEntry(Entry entry) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('حذف العملية'),
-          content: Text(
-            'هل تريد حذف "${entry.title}"؟',
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('حذف العملية'),
+        content: Text(
+          'هل تريد حذف "${entry.title}"؟',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext, false);
+            },
+            child: const Text('إلغاء'),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('إلغاء'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('حذف'),
-            ),
-          ],
-        );
-      },
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext, true);
+            },
+            child: const Text('حذف'),
+          ),
+        ],
+      ),
     );
 
     if (confirmed != true || !mounted) return;
 
     setState(() {
-      entries.removeWhere((item) => item.id == entry.id);
+      entries.removeWhere(
+        (value) => value.id == entry.id,
+      );
     });
 
     await persist();
   }
 
-  List<MoneyEntry> get filteredEntries {
+  List<String> get categories {
+    final values = entries.where((entry) {
+      if (typeFilter == 'الدخل') return entry.income;
+      if (typeFilter == 'المصروفات') return !entry.income;
+      return true;
+    }).map((entry) => entry.category).toSet().toList()
+      ..sort();
+
+    return ['الكل', ...values];
+  }
+
+  List<Entry> get filtered {
     final result = entries.where((entry) {
-      final matchesSearch =
-          entry.title.toLowerCase().contains(search.toLowerCase()) ||
-              entry.category.toLowerCase().contains(
-                    search.toLowerCase(),
-                  );
+      final matchesSearch = entry.title
+              .toLowerCase()
+              .contains(search.toLowerCase()) ||
+          entry.category
+              .toLowerCase()
+              .contains(search.toLowerCase());
 
       final matchesType = typeFilter == 'الكل' ||
           (typeFilter == 'الدخل' && entry.income) ||
           (typeFilter == 'المصروفات' && !entry.income);
 
-      final matchesCategory = categoryFilter == 'الكل' ||
-          entry.category == categoryFilter;
+      final matchesCategory =
+          categoryFilter == 'الكل' ||
+              entry.category == categoryFilter;
 
-      return matchesSearch && matchesType && matchesCategory;
+      return matchesSearch &&
+          matchesType &&
+          matchesCategory;
     }).toList();
 
-    result.sort((a, b) => b.date.compareTo(a.date));
+    result.sort(
+      (a, b) => b.date.compareTo(a.date),
+    );
+
     return result;
   }
 
-  List<String> get availableCategories {
-    final categories = entries
-        .where((entry) {
-          if (typeFilter == 'الدخل') return entry.income;
-          if (typeFilter == 'المصروفات') return !entry.income;
-          return true;
-        })
-        .map((entry) => entry.category)
-        .toSet()
-        .toList()
-      ..sort();
-
-    return ['الكل', ...categories];
-  }
-
-  Widget balanceCard() {
-    final income = totalIncome(entries);
-    final expense = totalExpense(entries);
-
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [kDarkGreen, kGreen],
-        ),
-        borderRadius: BorderRadius.circular(25),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'رصيدك الحالي',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 16,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            formatMoney(income - expense),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 29,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 14),
-          const Text(
-            'كل ريال تحسب له حساب',
-            style: TextStyle(color: Colors.white70),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget miniStat(
-    String title,
-    double amount,
+  Widget stat(
+    String label,
+    double value,
     IconData icon,
     Color color,
   ) {
     return Expanded(
       child: Card(
         child: Padding(
-          padding: const EdgeInsets.all(15),
+          padding: const EdgeInsets.all(13),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(icon, color: color),
-              const SizedBox(height: 10),
-              Text(title),
+              const SizedBox(height: 9),
+              Text(label),
               const SizedBox(height: 7),
               Text(
-                formatMoney(amount),
+                money(value),
                 style: const TextStyle(
+                  fontSize: 15,
                   fontWeight: FontWeight.bold,
-                  fontSize: 16,
                 ),
               ),
             ],
@@ -1655,43 +1781,44 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget entryCard(MoneyEntry entry) {
+  Widget entryTile(Entry entry) {
     return Card(
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: entry.income
-              ? kGreen.withValues(alpha: 0.12)
-              : Colors.deepOrange.withValues(alpha: 0.12),
           child: Icon(
             entry.income
-                ? Icons.south_west_rounded
-                : Icons.north_east_rounded,
-            color: entry.income ? kGreen : Colors.deepOrange,
+                ? Icons.south_west
+                : Icons.north_east,
+            color: entry.income
+                ? green
+                : Colors.deepOrange,
           ),
         ),
         title: Text(entry.title),
         subtitle: Text(
-          '${entry.category} • ${formatDate(entry.date)}',
+          '${entry.category} • ${dateText(entry.date)}',
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              '${entry.income ? '+' : '-'}${formatMoney(entry.amount)}',
+              '${entry.income ? '+' : '-'}${money(entry.amount)}',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                color: entry.income ? kGreen : null,
+                color: entry.income ? green : null,
               ),
             ),
             PopupMenuButton<String>(
               onSelected: (value) {
                 if (value == 'edit') {
-                  openEntry(initial: entry);
-                } else if (value == 'delete') {
+                  editEntry(initial: entry);
+                }
+
+                if (value == 'delete') {
                   deleteEntry(entry);
                 }
               },
-              itemBuilder: (context) => const [
+              itemBuilder: (_) => const [
                 PopupMenuItem(
                   value: 'edit',
                   child: Row(
@@ -1721,12 +1848,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget dashboard() {
-    final filtered = filteredEntries;
-    final categories = availableCategories;
+    final income = totalIncome(entries);
+    final expense = totalExpense(entries);
 
-    final selectedCategory = categories.contains(categoryFilter)
-        ? categoryFilter
-        : 'الكل';
+    final selectedCategory =
+        categories.contains(categoryFilter)
+            ? categoryFilter
+            : 'الكل';
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -1735,43 +1863,78 @@ class _HomeScreenState extends State<HomeScreen> {
           'أهلاً، ${widget.profile.name} 👋',
           style: Theme.of(context).textTheme.titleLarge,
         ),
-        const SizedBox(height: 15),
-        balanceCard(),
-        const SizedBox(height: 15),
+        const SizedBox(height: 14),
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [deepGreen, green],
+            ),
+            borderRadius: BorderRadius.circular(25),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'رصيدك الحالي',
+                style: TextStyle(color: Colors.white70),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                money(income - expense),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 29,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'كل ريال تحسب له حساب',
+                style: TextStyle(color: Colors.white70),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
         Row(
           children: [
-            miniStat(
-              'إجمالي الدخل',
-              totalIncome(entries),
+            stat(
+              'الدخل',
+              income,
               Icons.south_west,
-              kGreen,
+              green,
             ),
-            miniStat(
+            stat(
               'المصروفات',
-              totalExpense(entries),
+              expense,
               Icons.north_east,
               Colors.deepOrange,
             ),
           ],
         ),
-        const SizedBox(height: 15),
+        const SizedBox(height: 14),
         OutlinedButton.icon(
-          onPressed: () => openEntry(fromMessage: true),
-          icon: const Icon(Icons.content_paste_rounded),
-          label: const Text('إضافة من رسالة منسوخة'),
+          onPressed: () {
+            editEntry(fromMessage: true);
+          },
+          icon: const Icon(Icons.content_paste),
+          label: const Text(
+            'إضافة من رسالة بنكية منسوخة',
+          ),
         ),
-        const SizedBox(height: 22),
+        const SizedBox(height: 20),
         Text(
           'عملياتك المالية',
           style: Theme.of(context).textTheme.titleLarge,
         ),
-        const SizedBox(height: 13),
+        const SizedBox(height: 12),
         TextField(
           onChanged: (value) {
             setState(() => search = value);
           },
           decoration: const InputDecoration(
-            labelText: 'بحث في الدخل أو المصروفات',
+            labelText: 'ابحث في الدخل والمصروفات',
             prefixIcon: Icon(Icons.search),
             border: OutlineInputBorder(),
           ),
@@ -1780,15 +1943,19 @@ class _HomeScreenState extends State<HomeScreen> {
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
-            children: ['الكل', 'الدخل', 'المصروفات'].map((type) {
+            children: [
+              'الكل',
+              'الدخل',
+              'المصروفات',
+            ].map((value) {
               return Padding(
                 padding: const EdgeInsets.only(left: 8),
                 child: ChoiceChip(
-                  label: Text(type),
-                  selected: typeFilter == type,
+                  label: Text(value),
+                  selected: typeFilter == value,
                   onSelected: (_) {
                     setState(() {
-                      typeFilter = type;
+                      typeFilter = value;
                       categoryFilter = 'الكل';
                     });
                   },
@@ -1799,107 +1966,113 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: 10),
         DropdownButtonFormField<String>(
-          key: ValueKey('$typeFilter-$selectedCategory'),
+          key: ValueKey(
+            '$typeFilter-$selectedCategory',
+          ),
           initialValue: selectedCategory,
           decoration: const InputDecoration(
             labelText: 'فلتر التصنيف',
             border: OutlineInputBorder(),
           ),
-          items: categories.map((category) {
+          items: categories.map((value) {
             return DropdownMenuItem(
-              value: category,
-              child: Text(category),
+              value: value,
+              child: Text(value),
             );
           }).toList(),
           onChanged: (value) {
-            setState(() => categoryFilter = value ?? 'الكل');
+            setState(() {
+              categoryFilter = value ?? 'الكل';
+            });
           },
         ),
         const SizedBox(height: 12),
-        Text(
-          'عدد العمليات: ${filtered.length}',
-        ),
-        const SizedBox(height: 10),
+        Text('عدد العمليات: ${filtered.length}'),
+        const SizedBox(height: 8),
         if (filtered.isEmpty)
           const Padding(
-            padding: EdgeInsets.all(28),
+            padding: EdgeInsets.all(30),
             child: Center(
               child: Text('لا توجد عمليات مطابقة'),
             ),
           ),
-        ...filtered.map(entryCard),
+        ...filtered.map(entryTile),
         const SizedBox(height: 100),
       ],
     );
   }
 
-  List<MoneyEntry> get analyticsEntries {
+  List<Entry> get analyticsData {
     return entries.where((entry) {
-      if (analyticsPeriod == 'شهري') {
-        return entry.date.year == selectedYear &&
-            entry.date.month == selectedMonth;
+      if (period == 'شهري') {
+        return entry.date.year == year &&
+            entry.date.month == month;
       }
-      return entry.date.year == selectedYear;
+
+      return entry.date.year == year;
     }).toList();
   }
 
-  List<ChartPoint> chartPoints() {
-    if (analyticsPeriod == 'شهري') {
+  List<ChartPoint> get chartPoints {
+    if (period == 'شهري') {
       final days = DateTime(
-        selectedYear,
-        selectedMonth + 1,
+        year,
+        month + 1,
         0,
       ).day;
 
-      final weeks = (days / 7).ceil();
+      return List.generate(
+        (days / 7).ceil(),
+        (index) {
+          final start = index * 7 + 1;
+          final end = (start + 6).clamp(1, days);
 
-      return List.generate(weeks, (index) {
-        final start = index * 7 + 1;
-        final end = (start + 6).clamp(1, days);
+          final data = analyticsData.where(
+            (entry) =>
+                entry.date.day >= start &&
+                entry.date.day <= end,
+          );
 
-        final items = analyticsEntries.where((entry) {
-          return entry.date.day >= start &&
-              entry.date.day <= end;
-        });
-
-        return ChartPoint(
-          'أ${index + 1}',
-          totalIncome(items),
-          totalExpense(items),
-        );
-      });
+          return ChartPoint(
+            'أ${index + 1}',
+            totalIncome(data),
+            totalExpense(data),
+          );
+        },
+      );
     }
 
     return List.generate(12, (index) {
-      final month = index + 1;
-
-      final items = analyticsEntries.where((entry) {
-        return entry.date.month == month;
-      });
+      final data = analyticsData.where(
+        (entry) => entry.date.month == index + 1,
+      );
 
       return ChartPoint(
-        '$month',
-        totalIncome(items),
-        totalExpense(items),
+        '${index + 1}',
+        totalIncome(data),
+        totalExpense(data),
       );
     });
   }
 
   Widget analytics() {
-    final items = analyticsEntries;
-    final income = totalIncome(items);
-    final expense = totalExpense(items);
+    final data = analyticsData;
+    final income = totalIncome(data);
+    final expense = totalExpense(data);
 
-    final categories = <String, double>{};
+    final categoryTotals = <String, double>{};
 
-    for (final entry in items.where((e) => !e.income)) {
-      categories[entry.category] =
-          (categories[entry.category] ?? 0) + entry.amount;
+    for (final entry in data.where(
+      (entry) => !entry.income,
+    )) {
+      categoryTotals[entry.category] =
+          (categoryTotals[entry.category] ?? 0) +
+              entry.amount;
     }
 
     final years = <int>{
       DateTime.now().year,
-      selectedYear,
+      year,
       ...entries.map((entry) => entry.date.year),
     }.toList()
       ..sort((a, b) => b.compareTo(a));
@@ -1923,9 +2096,9 @@ class _HomeScreenState extends State<HomeScreen> {
               label: Text('سنوي'),
             ),
           ],
-          selected: {analyticsPeriod},
+          selected: {period},
           onSelectionChanged: (value) {
-            setState(() => analyticsPeriod = value.first);
+            setState(() => period = value.first);
           },
         ),
         const SizedBox(height: 15),
@@ -1933,42 +2106,43 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Expanded(
               child: DropdownButtonFormField<int>(
-                initialValue: selectedYear,
+                initialValue: year,
                 decoration: const InputDecoration(
                   labelText: 'السنة',
                   border: OutlineInputBorder(),
                 ),
-                items: years.map((year) {
+                items: years.map((value) {
                   return DropdownMenuItem(
-                    value: year,
-                    child: Text('$year'),
+                    value: value,
+                    child: Text('$value'),
                   );
                 }).toList(),
                 onChanged: (value) {
                   if (value != null) {
-                    setState(() => selectedYear = value);
+                    setState(() => year = value);
                   }
                 },
               ),
             ),
-            if (analyticsPeriod == 'شهري') ...[
+            if (period == 'شهري') ...[
               const SizedBox(width: 10),
               Expanded(
                 child: DropdownButtonFormField<int>(
-                  initialValue: selectedMonth,
+                  initialValue: month,
                   decoration: const InputDecoration(
                     labelText: 'الشهر',
                     border: OutlineInputBorder(),
                   ),
-                  items: List.generate(12, (index) {
-                    return DropdownMenuItem(
+                  items: List.generate(
+                    12,
+                    (index) => DropdownMenuItem(
                       value: index + 1,
                       child: Text('شهر ${index + 1}'),
-                    );
-                  }),
+                    ),
+                  ),
                   onChanged: (value) {
                     if (value != null) {
-                      setState(() => selectedMonth = value);
+                      setState(() => month = value);
                     }
                   },
                 ),
@@ -1976,16 +2150,16 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ],
         ),
-        const SizedBox(height: 17),
+        const SizedBox(height: 15),
         Row(
           children: [
-            miniStat(
+            stat(
               'الدخل',
               income,
               Icons.south_west,
-              kGreen,
+              green,
             ),
-            miniStat(
+            stat(
               'المصروفات',
               expense,
               Icons.north_east,
@@ -1993,10 +2167,10 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         Card(
           child: Padding(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(17),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -2007,17 +2181,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 22),
-                FinanceBarChart(points: chartPoints()),
+                const SizedBox(height: 20),
+                FinanceChart(points: chartPoints),
                 const SizedBox(height: 10),
                 Text(
-                  analyticsPeriod == 'شهري'
+                  period == 'شهري'
                       ? 'أ1، أ2... تمثل أسابيع الشهر'
                       : 'الأرقام تمثل أشهر السنة',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey,
-                  ),
+                  style: const TextStyle(fontSize: 12),
                 ),
               ],
             ),
@@ -2029,17 +2200,16 @@ class _HomeScreenState extends State<HomeScreen> {
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 10),
-        if (categories.isEmpty)
+        if (categoryTotals.isEmpty)
           const Padding(
-            padding: EdgeInsets.all(28),
+            padding: EdgeInsets.all(25),
             child: Center(
-              child: Text('لا توجد مصروفات في الفترة المحددة'),
+              child: Text(
+                'لا توجد مصروفات في الفترة المحددة',
+              ),
             ),
           ),
-        ...categories.entries.map((entry) {
-          final ratio =
-              expense <= 0 ? 0.0 : entry.value / expense;
-
+        ...categoryTotals.entries.map((item) {
           return Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -2049,13 +2219,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     mainAxisAlignment:
                         MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(entry.key),
-                      Text(formatMoney(entry.value)),
+                      Text(item.key),
+                      Text(money(item.value)),
                     ],
                   ),
                   const SizedBox(height: 12),
                   LinearProgressIndicator(
-                    value: ratio.clamp(0.0, 1.0),
+                    value: expense == 0
+                        ? 0
+                        : (item.value / expense).clamp(
+                            0.0,
+                            1.0,
+                          ),
                     minHeight: 9,
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -2070,20 +2245,19 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> editProfile() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) => ProfileForm(
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProfileForm(
           provider: widget.profile.provider,
           initial: widget.profile,
-          onSave: widget.onSaveProfile,
+          onSave: widget.onProfile,
         ),
       ),
     );
   }
 
   Widget profilePage() {
-    final profile = widget.profile;
-
     return ListView(
       padding: const EdgeInsets.all(22),
       children: [
@@ -2091,17 +2265,17 @@ class _HomeScreenState extends State<HomeScreen> {
         Center(
           child: CircleAvatar(
             radius: 52,
-            backgroundColor: kGreen,
+            backgroundColor: green,
             child: Icon(
-              avatarIcon(profile.avatar),
-              size: 60,
+              avatarIcon(widget.profile.avatar),
               color: Colors.white,
+              size: 60,
             ),
           ),
         ),
         const SizedBox(height: 15),
         Text(
-          profile.name,
+          widget.profile.name,
           textAlign: TextAlign.center,
           style: const TextStyle(
             fontSize: 23,
@@ -2110,7 +2284,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: 7),
         Text(
-          profile.email,
+          widget.profile.email,
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 20),
@@ -2118,19 +2292,33 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             children: [
               ListTile(
-                leading: const Icon(Icons.account_circle_outlined),
-                title: const Text('طريقة الدخول التجريبية'),
-                subtitle: Text(profile.provider),
+                leading: const Icon(
+                  Icons.account_circle_outlined,
+                ),
+                title: const Text(
+                  'طريقة الدخول التجريبية',
+                ),
+                subtitle: Text(
+                  widget.profile.provider,
+                ),
               ),
               ListTile(
-                leading: const Icon(Icons.people_outline),
+                leading: const Icon(
+                  Icons.people_outline,
+                ),
                 title: const Text('الجنس'),
-                subtitle: Text(profile.gender),
+                subtitle: Text(
+                  widget.profile.gender,
+                ),
               ),
               ListTile(
-                leading: const Icon(Icons.cake_outlined),
+                leading: const Icon(
+                  Icons.cake_outlined,
+                ),
                 title: const Text('تاريخ الميلاد'),
-                subtitle: Text(formatDate(profile.birthday)),
+                subtitle: Text(
+                  dateText(widget.profile.birthday),
+                ),
               ),
             ],
           ),
@@ -2143,9 +2331,9 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: 10),
         OutlinedButton.icon(
-          onPressed: widget.onToggleTheme,
+          onPressed: widget.onTheme,
           icon: Icon(
-            widget.darkMode
+            widget.dark
                 ? Icons.light_mode
                 : Icons.dark_mode,
           ),
@@ -2153,19 +2341,18 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: 10),
         FilledButton.icon(
-          onPressed: widget.onSignOut,
+          onPressed: widget.onLogout,
           icon: const Icon(Icons.logout),
-          label: const Text('تسجيل الخروج التجريبي'),
+          label: const Text(
+            'تسجيل الخروج التجريبي',
+          ),
         ),
         const SizedBox(height: 18),
         const Text(
-          'ملاحظة: لا توجد مصادقة حقيقية أو مزامنة سحابية. '
-          'البيانات المالية محفوظة محلياً على هذا الجهاز.',
+          'البيانات المالية محفوظة محلياً على جهازك. '
+          'لا توجد مزامنة سحابية أو مصادقة حقيقية.',
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey,
-          ),
+          style: TextStyle(fontSize: 12),
         ),
       ],
     );
@@ -2177,14 +2364,15 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text(
           'وفرة | Waffra',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
         ),
         actions: [
           IconButton(
-            onPressed: widget.onToggleTheme,
-            tooltip: 'تغيير المظهر',
+            onPressed: widget.onTheme,
             icon: Icon(
-              widget.darkMode
+              widget.dark
                   ? Icons.light_mode
                   : Icons.dark_mode,
             ),
@@ -2192,7 +2380,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Padding(
             padding: const EdgeInsets.only(left: 12),
             child: CircleAvatar(
-              backgroundColor: kGreen,
+              backgroundColor: green,
               child: Icon(
                 avatarIcon(widget.profile.avatar),
                 color: Colors.white,
@@ -2213,15 +2401,15 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       floatingActionButton: tab == 0
           ? FloatingActionButton.extended(
-              onPressed: () => openEntry(),
+              onPressed: () => editEntry(),
               icon: const Icon(Icons.add),
               label: const Text('إضافة عملية'),
             )
           : null,
       bottomNavigationBar: NavigationBar(
         selectedIndex: tab,
-        onDestinationSelected: (index) {
-          setState(() => tab = index);
+        onDestinationSelected: (value) {
+          setState(() => tab = value);
         },
         destinations: const [
           NavigationDestination(
