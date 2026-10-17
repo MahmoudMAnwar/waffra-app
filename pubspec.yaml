@@ -2,7 +2,7 @@
 name: waffra
 description: Waffra - Saudi expense tracker
 publish_to: none
-version: 2.1.0+3
+version: 2.3.0+4
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
@@ -12,7 +12,18 @@ dependencies:
     sdk: flutter
   shared_preferences: ^2.3.2
 
+dev_dependencies:
+  flutter_launcher_icons: ^0.14.4
+
 flutter:
   uses-material-design: true
   assets:
     - assets/
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: assets/app_icon.png
+  adaptive_icon_background: "#064D3B"
+  adaptive_icon_foreground: assets/app_icon.png
+  min_sdk_android: 21
