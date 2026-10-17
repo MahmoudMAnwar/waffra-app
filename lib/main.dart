@@ -9,10 +9,10 @@ void main() {
   runApp(const WaffraApp());
 }
 
-const Color waffraGreen = Color(0xFF087A54);
-const Color waffraDarkGreen = Color(0xFF064D3B);
-const Color waffraGold = Color(0xFFD5B675);
-const Color waffraCream = Color(0xFFF7F5EF);
+const Color green = Color(0xFF087A54);
+const Color darkGreen = Color(0xFF064D3B);
+const Color cream = Color(0xFFF7F6F0);
+const Color gold = Color(0xFFD7B675);
 
 class Entry {
   final String title;
@@ -29,23 +29,21 @@ class Entry {
     this.date,
   );
 
-  Map<String, dynamic> toJson() {
-    return {
-      'title': title,
-      'amount': amount,
-      'income': income,
-      'category': category,
-      'date': date.toIso8601String(),
-    };
-  }
+  Map<String, dynamic> toJson() => {
+        'title': title,
+        'amount': amount,
+        'income': income,
+        'category': category,
+        'date': date.toIso8601String(),
+      };
 
-  factory Entry.fromJson(Map<String, dynamic> json) {
+  factory Entry.fromJson(Map<String, dynamic> data) {
     return Entry(
-      json['title'] as String,
-      (json['amount'] as num).toDouble(),
-      json['income'] as bool,
-      json['category'] as String,
-      DateTime.parse(json['date'] as String),
+      data['title'] as String,
+      (data['amount'] as num).toDouble(),
+      data['income'] as bool,
+      data['category'] as String,
+      DateTime.parse(data['date'] as String),
     );
   }
 }
@@ -60,34 +58,34 @@ class WaffraApp extends StatefulWidget {
 class _WaffraAppState extends State<WaffraApp> {
   bool dark = false;
   bool loading = true;
-  bool onboardingCompleted = false;
+  bool seenIntro = false;
 
   @override
   void initState() {
     super.initState();
-    checkOnboarding();
+    loadSettings();
   }
 
-  Future<void> checkOnboarding() async {
+  Future<void> loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
 
     if (!mounted) return;
 
     setState(() {
-      onboardingCompleted =
+      seenIntro =
           prefs.getBool('waffra_onboarding_completed') ?? false;
       loading = false;
     });
   }
 
-  Future<void> finishOnboarding() async {
+  Future<void> finishIntro() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('waffra_onboarding_completed', true);
 
     if (!mounted) return;
 
     setState(() {
-      onboardingCompleted = true;
+      seenIntro = true;
     });
   }
 
@@ -99,39 +97,29 @@ class _WaffraAppState extends State<WaffraApp> {
       locale: const Locale('ar', 'SA'),
       theme: ThemeData(
         useMaterial3: true,
-        colorSchemeSeed: waffraGreen,
-        scaffoldBackgroundColor: waffraCream,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: waffraCream,
-          foregroundColor: waffraDarkGreen,
-        ),
+        colorSchemeSeed: green,
+        scaffoldBackgroundColor: cream,
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
-        colorSchemeSeed: waffraGreen,
+        colorSchemeSeed: green,
       ),
       themeMode: dark ? ThemeMode.dark : ThemeMode.light,
       home: Directionality(
         textDirection: TextDirection.rtl,
         child: loading
             ? const Scaffold(
-                body: Center(
-                  child: CircularProgressIndicator(),
-                ),
+                body: Center(child: CircularProgressIndicator()),
               )
-            : onboardingCompleted
+            : seenIntro
                 ? HomePage(
                     dark: dark,
-                    toggleTheme: () {
-                      setState(() {
-                        dark = !dark;
-                      });
+                    onTheme: () {
+                      setState(() => dark = !dark);
                     },
                   )
-                : OnboardingPage(
-                    onFinish: finishOnboarding,
-                  ),
+                : IntroPage(onDone: finishIntro),
       ),
     );
   }
@@ -141,73 +129,52 @@ class _WaffraAppState extends State<WaffraApp> {
 // ONBOARDING
 // ========================================
 
-class OnboardingData {
-  final String title;
-  final String subtitle;
-  final String landmark;
-  final IconData icon;
-  final Color color;
+class IntroPage extends StatefulWidget {
+  final Future<void> Function() onDone;
 
-  const OnboardingData({
-    required this.title,
-    required this.subtitle,
-    required this.landmark,
-    required this.icon,
-    required this.color,
-  });
-}
-
-class OnboardingPage extends StatefulWidget {
-  final Future<void> Function() onFinish;
-
-  const OnboardingPage({
+  const IntroPage({
     super.key,
-    required this.onFinish,
+    required this.onDone,
   });
 
   @override
-  State<OnboardingPage> createState() => _OnboardingPageState();
+  State<IntroPage> createState() => _IntroPageState();
 }
 
-class _OnboardingPageState extends State<OnboardingPage> {
+class _IntroPageState extends State<IntroPage> {
   final PageController controller = PageController();
 
-  int currentPage = 0;
+  int page = 0;
   bool finishing = false;
 
-  final List<OnboardingData> pages = const [
-    OnboardingData(
-      title: 'أهلاً بك في وفرة',
-      subtitle:
-          'فلوسك أوضح، وقراراتك أذكى.\nرحلتك نحو إدارة مالية أفضل تبدأ هنا.',
-      landmark: 'برج المملكة • الرياض',
-      icon: Icons.account_balance_wallet_rounded,
-      color: Color(0xFF064D3B),
-    ),
-    OnboardingData(
-      title: 'تحكّم في مصروفاتك',
-      subtitle:
-          'سجّل دخلك ومصروفاتك بسهولة،\nوخلي كل ريال في مكانه الصحيح.',
-      landmark: 'الدرعية • أصالة سعودية',
-      icon: Icons.payments_rounded,
-      color: Color(0xFF087A54),
-    ),
-    OnboardingData(
-      title: 'افهم عاداتك المالية',
-      subtitle:
-          'تابع ملخص دخلك ومصروفاتك،\nواكتشف أين تذهب أموالك.',
-      landmark: 'مركز الملك عبدالله المالي • الرياض',
-      icon: Icons.insert_chart_rounded,
-      color: Color(0xFF075B4C),
-    ),
-    OnboardingData(
-      title: 'خصوصيتك أولويتنا',
-      subtitle:
-          'بياناتك محفوظة محلياً على جهازك.\nلا ربط بنكي ولا حاجة لبيانات بطاقتك.',
-      landmark: 'وفرة • خصوصية واطمئنان',
-      icon: Icons.shield_rounded,
-      color: Color(0xFF064D3B),
-    ),
+  static const titles = [
+    'أهلاً بك في وفرة',
+    'تحكّم في مصروفاتك',
+    'افهم عاداتك المالية',
+    'خصوصيتك أولويتنا',
+  ];
+
+  static const descriptions = [
+    'فلوسك أوضح، وقراراتك أذكى.\nابدأ رحلتك المالية بثقة.',
+    'سجّل الدخل والمصروفات بسهولة،\nوخلي كل ريال في مكانه الصحيح.',
+    'تابع تحليلاتك واكتشف\nأين تذهب أموالك.',
+    'بياناتك محفوظة على جهازك.\nبدون ربط بنكي أو اشتراكات.',
+  ];
+
+  // صور حقيقية لمعالم سعودية بدون عرض أسمائها في الواجهة.
+  // يتم تحميلها من الإنترنت.
+  static const imageUrls = [
+    'https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=1200',
+    'https://images.unsplash.com/photo-1494526585095-c41746248156?w=1200',
+    'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200',
+    'https://images.unsplash.com/photo-1511818966892-d7d671e672a2?w=1200',
+  ];
+
+  static const icons = [
+    Icons.account_balance_wallet_rounded,
+    Icons.receipt_long_rounded,
+    Icons.insights_rounded,
+    Icons.shield_rounded,
   ];
 
   @override
@@ -216,53 +183,50 @@ class _OnboardingPageState extends State<OnboardingPage> {
     super.dispose();
   }
 
+  Future<void> done() async {
+    if (finishing) return;
+
+    setState(() => finishing = true);
+    await widget.onDone();
+  }
+
   Future<void> next() async {
-    if (currentPage < pages.length - 1) {
+    if (page == 3) {
+      await done();
+    } else {
       await controller.nextPage(
         duration: const Duration(milliseconds: 350),
         curve: Curves.easeInOut,
       );
-    } else {
-      await complete();
     }
-  }
-
-  Future<void> complete() async {
-    if (finishing) return;
-
-    setState(() {
-      finishing = true;
-    });
-
-    await widget.onFinish();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: waffraCream,
+      backgroundColor: cream,
       body: SafeArea(
         child: Column(
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: 24,
-                vertical: 14,
+                vertical: 12,
               ),
               child: Row(
                 children: [
                   const Text(
                     'وفرة',
                     style: TextStyle(
-                      color: waffraDarkGreen,
-                      fontSize: 27,
+                      color: darkGreen,
+                      fontSize: 28,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
                   const Spacer(),
-                  if (currentPage < pages.length - 1)
+                  if (page < 3)
                     TextButton(
-                      onPressed: complete,
+                      onPressed: done,
                       child: const Text('تخطي'),
                     ),
                 ],
@@ -271,16 +235,95 @@ class _OnboardingPageState extends State<OnboardingPage> {
             Expanded(
               child: PageView.builder(
                 controller: controller,
-                itemCount: pages.length,
+                itemCount: 4,
                 onPageChanged: (value) {
-                  setState(() {
-                    currentPage = value;
-                  });
+                  setState(() => page = value);
                 },
                 itemBuilder: (context, index) {
-                  return OnboardingSlide(
-                    data: pages[index],
-                    index: index,
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Flexible(
+                          child: AspectRatio(
+                            aspectRatio: 0.9,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(30),
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  Container(
+                                    color: darkGreen,
+                                    child: const Icon(
+                                      Icons.account_balance_rounded,
+                                      color: gold,
+                                      size: 120,
+                                    ),
+                                  ),
+                                  Image.network(
+                                    imageUrls[index],
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stack) {
+                                      return const SizedBox.shrink();
+                                    },
+                                  ),
+                                  Container(
+                                    decoration: const BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                        colors: [
+                                          Color(0x00064D3B),
+                                          Color(0xDD064D3B),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  Center(
+                                    child: Container(
+                                      padding: const EdgeInsets.all(20),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(
+                                          alpha: 0.20,
+                                        ),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        icons[index],
+                                        color: Colors.white,
+                                        size: 58,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 30),
+                        Text(
+                          titles[index],
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: darkGreen,
+                            fontSize: 26,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          descriptions[index],
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Color(0xFF56665E),
+                            fontSize: 15,
+                            height: 1.7,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+                    ),
                   );
                 },
               ),
@@ -288,23 +331,19 @@ class _OnboardingPageState extends State<OnboardingPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
-                pages.length,
-                (index) {
-                  final selected = index == currentPage;
-
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 250),
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    height: 8,
-                    width: selected ? 28 : 8,
-                    decoration: BoxDecoration(
-                      color: selected
-                          ? waffraGreen
-                          : const Color(0xFFC7D5CD),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  );
-                },
+                4,
+                (index) => AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  width: page == index ? 28 : 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: page == index
+                        ? green
+                        : const Color(0xFFC7D5CD),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
               ),
             ),
             Padding(
@@ -315,19 +354,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 child: FilledButton(
                   onPressed: finishing ? null : next,
                   style: FilledButton.styleFrom(
-                    backgroundColor: waffraGreen,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                    ),
+                    backgroundColor: green,
                   ),
                   child: Text(
-                    currentPage == pages.length - 1
-                        ? 'ابدأ رحلتك مع وفرة'
-                        : 'التالي',
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    page == 3 ? 'ابدأ رحلتك مع وفرة' : 'التالي',
                   ),
                 ),
               ),
@@ -339,301 +369,245 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 }
 
-class OnboardingSlide extends StatelessWidget {
-  final OnboardingData data;
-  final int index;
+// ========================================
+// MESSAGE PARSER
+// ========================================
 
-  const OnboardingSlide({
-    super.key,
-    required this.data,
-    required this.index,
-  });
+class ParsedMessage {
+  final double? amount;
+  final String title;
+  final bool income;
+  final String category;
 
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Flexible(
-            child: AspectRatio(
-              aspectRatio: 0.95,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topRight,
-                    end: Alignment.bottomLeft,
-                    colors: [
-                      data.color,
-                      waffraGreen,
-                      const Color(0xFF0B9973),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(32),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(32),
-                  child: Stack(
-                    children: [
-                      Positioned(
-                        top: -70,
-                        left: -65,
-                        child: Container(
-                          width: 220,
-                          height: 220,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.12),
-                              width: 35,
-                            ),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        bottom: -100,
-                        right: -75,
-                        child: Container(
-                          width: 260,
-                          height: 260,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: waffraGold.withValues(alpha: 0.20),
-                              width: 42,
-                            ),
-                          ),
-                        ),
-                      ),
-                      Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            LandmarkIllustration(index: index),
-                            const SizedBox(height: 24),
-                            Container(
-                              padding: const EdgeInsets.all(17),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.14),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                data.icon,
-                                size: 45,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Positioned(
-                        bottom: 22,
-                        left: 16,
-                        right: 16,
-                        child: Text(
-                          data.landmark,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 30),
-          Text(
-            data.title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.w900,
-              color: waffraDarkGreen,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            data.subtitle,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 15,
-              height: 1.7,
-              color: Color(0xFF56665E),
-            ),
-          ),
-          const SizedBox(height: 20),
-        ],
-      ),
-    );
-  }
+  const ParsedMessage(
+    this.amount,
+    this.title,
+    this.income,
+    this.category,
+  );
 }
 
-// رسومات معمارية مبسطة مستوحاة من المعالم السعودية.
-// لا تستخدم صوراً أو شعارات رسمية.
+class MessageParser {
+  static String normalizeDigits(String input) {
+    const arabic = '٠١٢٣٤٥٦٧٨٩';
+    const persian = '۰۱۲۳۴۵۶۷۸۹';
 
-class LandmarkIllustration extends StatelessWidget {
-  final int index;
+    return input.replaceAllMapped(
+      RegExp('[٠-٩۰-۹]'),
+      (match) {
+        final ch = match.group(0)!;
+        final a = arabic.indexOf(ch);
+        return (a >= 0 ? a : persian.indexOf(ch)).toString();
+      },
+    );
+  }
 
-  const LandmarkIllustration({
-    super.key,
-    required this.index,
-  });
+  static ParsedMessage parse(String source) {
+    final text = normalizeDigits(source);
+    final lower = text.toLowerCase();
 
-  @override
-  Widget build(BuildContext context) {
-    switch (index) {
-      case 0:
-        return const KingdomTowerIllustration();
-      case 1:
-        return const Icon(
-          Icons.account_balance_rounded,
-          color: waffraGold,
-          size: 145,
-        );
-      case 2:
-        return const Icon(
-          Icons.apartment_rounded,
-          color: waffraGold,
-          size: 145,
-        );
-      default:
-        return const Icon(
-          Icons.lock_person_rounded,
-          color: waffraGold,
-          size: 145,
-        );
+    final income = RegExp(
+          r'إيداع|ايداع|حوالة واردة|تحويل وارد|استلام|راتب|تم إضافة|تم اضافة|credited|deposit|received|salary',
+        ).hasMatch(lower) &&
+        !RegExp(
+          r'شراء|سحب|خصم|دفع|مدفوع|purchase|withdrawal|debit',
+        ).hasMatch(lower);
+
+    const number = r'([0-9][0-9,\.\s]*[0-9]|[0-9])';
+
+    final patterns = [
+      RegExp(
+        '(?:مبلغ|بقيمة|المبلغ|amount|amt)\\s*[:：-]?\\s*$number\\s*(?:ر\\.?س\\.?|ريال|sar|s\\.?a\\.?r\\.?)?',
+        caseSensitive: false,
+      ),
+      RegExp(
+        '$number\\s*(?:ر\\.?س\\.?|ريال(?:\\s+سعودي)?|sar|s\\.?a\\.?r\\.?)',
+        caseSensitive: false,
+      ),
+      RegExp(
+        '(?:sar|ر\\.?س\\.?|ريال)\\s*[:：-]?\\s*$number',
+        caseSensitive: false,
+      ),
+    ];
+
+    double? amount;
+
+    for (final pattern in patterns) {
+      final match = pattern.firstMatch(text);
+      if (match == null) continue;
+
+      String clean =
+          (match.group(1) ?? '').replaceAll(' ', '');
+
+      if (clean.contains(',') && clean.contains('.')) {
+        clean = clean.lastIndexOf('.') > clean.lastIndexOf(',')
+            ? clean.replaceAll(',', '')
+            : clean.replaceAll('.', '').replaceAll(',', '.');
+      } else if (RegExp(
+        r'^\d{1,3}(,\d{3})+(\.\d+)?$',
+      ).hasMatch(clean)) {
+        clean = clean.replaceAll(',', '');
+      } else if (RegExp(
+        r'^\d{1,3}(\.\d{3})+(,\d+)?$',
+      ).hasMatch(clean)) {
+        clean = clean.replaceAll('.', '').replaceAll(',', '.');
+      } else {
+        clean = clean.replaceAll(',', '.');
+      }
+
+      amount = double.tryParse(clean);
+
+      if (amount != null && amount.isFinite && amount > 0) {
+        break;
+      }
     }
-  }
-}
 
-class KingdomTowerIllustration extends StatelessWidget {
-  const KingdomTowerIllustration({super.key});
+    String title = income ? 'دخل من رسالة' : 'مصروف من رسالة';
 
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 175,
-      width: 145,
-      child: CustomPaint(
-        painter: KingdomTowerPainter(),
-      ),
-    );
-  }
-}
+    final merchant = RegExp(
+      r'(?:لدى|عند|من متجر|merchant|at)\s*[:：-]?\s*([^\n\r،,]{2,45})',
+      caseSensitive: false,
+    ).firstMatch(text);
 
-class KingdomTowerPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final towerPaint = Paint()
-      ..color = waffraGold
-      ..style = PaintingStyle.fill;
+    if (merchant != null) {
+      String name = merchant.group(1)!.trim();
 
-    final outlinePaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.65)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-
-    final path = Path()
-      ..moveTo(size.width * 0.25, size.height)
-      ..lineTo(size.width * 0.36, size.height * 0.10)
-      ..quadraticBezierTo(
-        size.width * 0.50,
-        size.height * 0.25,
-        size.width * 0.64,
-        size.height * 0.10,
-      )
-      ..lineTo(size.width * 0.75, size.height)
-      ..close();
-
-    canvas.drawPath(path, towerPaint);
-    canvas.drawPath(path, outlinePaint);
-
-    final opening = Path()
-      ..moveTo(size.width * 0.40, size.height * 0.13)
-      ..quadraticBezierTo(
-        size.width * 0.50,
-        size.height * 0.23,
-        size.width * 0.60,
-        size.height * 0.13,
-      )
-      ..lineTo(size.width * 0.57, size.height * 0.30)
-      ..quadraticBezierTo(
-        size.width * 0.50,
-        size.height * 0.35,
-        size.width * 0.43,
-        size.height * 0.30,
-      )
-      ..close();
-
-    canvas.drawPath(
-      opening,
-      Paint()..color = waffraDarkGreen,
-    );
-
-    final windowPaint = Paint()
-      ..color = waffraDarkGreen.withValues(alpha: 0.30)
-      ..strokeWidth = 1;
-
-    for (int i = 0; i < 9; i++) {
-      final y = size.height * (0.40 + i * 0.06);
-
-      canvas.drawLine(
-        Offset(size.width * 0.37, y),
-        Offset(size.width * 0.63, y),
-        windowPaint,
+      name = name.replaceFirst(
+        RegExp(
+          r'\s+(?:باستخدام|بطاقة|بتاريخ|الرصيد|ending|card)\b.*$',
+          caseSensitive: false,
+        ),
+        '',
       );
-    }
-  }
 
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+      if (name.trim().isNotEmpty) {
+        title = name.trim();
+      }
+    }
+
+    String category = income ? 'دخل آخر' : 'أخرى';
+
+    if (income) {
+      if (RegExp(r'راتب|salary').hasMatch(lower)) {
+        category = 'راتب';
+      }
+    } else if (RegExp(
+      r'مطعم|كافيه|قهوة|وجبة|طعام|restaurant|coffee|food',
+    ).hasMatch(lower)) {
+      category = 'طعام';
+    } else if (RegExp(
+      r'بنزين|وقود|محطة|uber|careem|أوبر|كريم|مواصلات',
+    ).hasMatch(lower)) {
+      category = 'مواصلات';
+    } else if (RegExp(
+      r'فاتورة|كهرباء|مياه|اتصالات|stc|mobily|زين',
+    ).hasMatch(lower)) {
+      category = 'فواتير';
+    } else if (RegExp(
+      r'صيدلية|مستشفى|عيادة|pharmacy',
+    ).hasMatch(lower)) {
+      category = 'صحة';
+    } else if (RegExp(
+      r'جرير|تسوق|متجر|shop|amazon|نون|شراء',
+    ).hasMatch(lower)) {
+      category = 'تسوق';
+    }
+
+    return ParsedMessage(amount, title, income, category);
+  }
 }
 
 // ========================================
 // ADD ENTRY SHEET
 // ========================================
 
-class AddEntrySheet extends StatefulWidget {
-  const AddEntrySheet({super.key});
+class EntrySheet extends StatefulWidget {
+  final bool fromMessage;
+
+  const EntrySheet({
+    super.key,
+    this.fromMessage = false,
+  });
 
   @override
-  State<AddEntrySheet> createState() => _AddEntrySheetState();
+  State<EntrySheet> createState() => _EntrySheetState();
 }
 
-class _AddEntrySheetState extends State<AddEntrySheet> {
-  final titleController = TextEditingController();
-  final amountController = TextEditingController();
+class _EntrySheetState extends State<EntrySheet> {
+  final title = TextEditingController();
+  final amount = TextEditingController();
+  final message = TextEditingController();
 
-  bool isIncome = false;
+  bool income = false;
   String category = 'طعام';
+  bool parsed = false;
+
+  static const expenseCategories = [
+    'طعام',
+    'تسوق',
+    'مواصلات',
+    'فواتير',
+    'صحة',
+    'أخرى',
+  ];
+
+  static const incomeCategories = [
+    'راتب',
+    'عمل إضافي',
+    'دخل آخر',
+  ];
 
   @override
   void dispose() {
-    titleController.dispose();
-    amountController.dispose();
+    title.dispose();
+    amount.dispose();
+    message.dispose();
     super.dispose();
   }
 
-  void saveEntry() {
-    final title = titleController.text.trim();
+  void analyze() {
+    if (message.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('الصق الرسالة أولاً')),
+      );
+      return;
+    }
 
-    final amount = double.tryParse(
-      amountController.text.trim().replaceAll(',', '.'),
-    );
+    final result = MessageParser.parse(message.text);
 
-    if (title.isEmpty ||
-        amount == null ||
-        !amount.isFinite ||
-        amount <= 0) {
+    setState(() {
+      parsed = true;
+      income = result.income;
+      category = result.category;
+      title.text = result.title;
+      amount.text = result.amount?.toStringAsFixed(2) ?? '';
+    });
+
+    if (result.amount == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('من فضلك أدخل وصفاً ومبلغاً صحيحاً'),
+          content: Text(
+            'لم أتعرف على المبلغ. اكتبه يدوياً.',
+          ),
+        ),
+      );
+    }
+  }
+
+  void saveEntry() {
+    final value = double.tryParse(
+      MessageParser.normalizeDigits(
+        amount.text.trim(),
+      ).replaceAll(',', '.'),
+    );
+
+    if (title.text.trim().isEmpty ||
+        value == null ||
+        !value.isFinite ||
+        value <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('أدخل وصفاً ومبلغاً صحيحاً'),
         ),
       );
       return;
@@ -641,9 +615,9 @@ class _AddEntrySheetState extends State<AddEntrySheet> {
 
     Navigator.of(context).pop(
       Entry(
-        title,
-        amount,
-        isIncome,
+        title.text.trim(),
+        value,
+        income,
         category,
         DateTime.now(),
       ),
@@ -652,23 +626,15 @@ class _AddEntrySheetState extends State<AddEntrySheet> {
 
   @override
   Widget build(BuildContext context) {
-    final categories = isIncome
-        ? ['راتب', 'عمل إضافي', 'دخل آخر']
-        : [
-            'طعام',
-            'تسوق',
-            'مواصلات',
-            'فواتير',
-            'صحة',
-            'أخرى',
-          ];
+    final categories =
+        income ? incomeCategories : expenseCategories;
 
     return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      padding: EdgeInsets.fromLTRB(
+        20,
+        16,
+        20,
+        MediaQuery.of(context).viewInsets.bottom + 24,
       ),
       child: SingleChildScrollView(
         child: Column(
@@ -676,52 +642,84 @@ class _AddEntrySheetState extends State<AddEntrySheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'إضافة عملية جديدة',
+              widget.fromMessage
+                  ? 'إضافة من رسالة'
+                  : 'إضافة عملية جديدة',
               style: Theme.of(context).textTheme.titleLarge,
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 14),
+            if (widget.fromMessage) ...[
+              const Text(
+                'انسخ رسالة العملية من أي تطبيق، ثم الصقها هنا. '
+                'لن يتم حفظ نص الرسالة الأصلية.',
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: message,
+                minLines: 3,
+                maxLines: 6,
+                decoration: const InputDecoration(
+                  labelText: 'نص الرسالة المنسوخة',
+                  hintText: 'اضغط مطولاً هنا ثم اختر لصق',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: analyze,
+                icon: const Icon(Icons.auto_awesome),
+                label: const Text('تحليل الرسالة'),
+              ),
+              if (parsed)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    'راجع التفاصيل قبل الحفظ.',
+                    style: TextStyle(color: green),
+                  ),
+                ),
+              const SizedBox(height: 10),
+            ],
             SegmentedButton<bool>(
               segments: const [
                 ButtonSegment(
                   value: false,
                   label: Text('مصروف'),
-                  icon: Icon(Icons.arrow_upward),
                 ),
                 ButtonSegment(
                   value: true,
                   label: Text('دخل'),
-                  icon: Icon(Icons.arrow_downward),
                 ),
               ],
-              selected: {isIncome},
+              selected: {income},
               onSelectionChanged: (selection) {
                 setState(() {
-                  isIncome = selection.first;
-                  category = isIncome ? 'راتب' : 'طعام';
+                  income = selection.first;
+                  category = income ? 'راتب' : 'طعام';
                 });
               },
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             TextField(
-              controller: titleController,
+              controller: title,
               decoration: const InputDecoration(
-                labelText: 'وصف العملية',
+                labelText: 'الوصف',
                 border: OutlineInputBorder(),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             TextField(
-              controller: amountController,
+              controller: amount,
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(
-                labelText: 'المبلغ بالريال السعودي',
+                labelText: 'المبلغ بالريال',
                 border: OutlineInputBorder(),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              key: ValueKey(isIncome),
+              key: ValueKey(income),
               initialValue: category,
               decoration: const InputDecoration(
                 labelText: 'التصنيف',
@@ -729,29 +727,23 @@ class _AddEntrySheetState extends State<AddEntrySheet> {
               ),
               items: categories
                   .map(
-                    (item) => DropdownMenuItem(
-                      value: item,
-                      child: Text(item),
+                    (name) => DropdownMenuItem<String>(
+                      value: name,
+                      child: Text(name),
                     ),
                   )
                   .toList(),
               onChanged: (value) {
                 if (value != null) {
-                  setState(() {
-                    category = value;
-                  });
+                  setState(() => category = value);
                 }
               },
             ),
-            const SizedBox(height: 22),
+            const SizedBox(height: 20),
             FilledButton.icon(
               onPressed: saveEntry,
-              icon: const Icon(Icons.check_circle_outline),
+              icon: const Icon(Icons.check),
               label: const Text('حفظ العملية'),
-              style: FilledButton.styleFrom(
-                backgroundColor: waffraGreen,
-                padding: const EdgeInsets.symmetric(vertical: 15),
-              ),
             ),
           ],
         ),
@@ -766,12 +758,12 @@ class _AddEntrySheetState extends State<AddEntrySheet> {
 
 class HomePage extends StatefulWidget {
   final bool dark;
-  final VoidCallback toggleTheme;
+  final VoidCallback onTheme;
 
   const HomePage({
     super.key,
     required this.dark,
-    required this.toggleTheme,
+    required this.onTheme,
   });
 
   @override
@@ -780,7 +772,6 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final List<Entry> entries = [];
-
   int tab = 0;
 
   @override
@@ -829,28 +820,24 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  double get income {
-    return entries
-        .where((entry) => entry.income)
-        .fold(0.0, (sum, entry) => sum + entry.amount);
-  }
+  double get income => entries
+      .where((entry) => entry.income)
+      .fold(0.0, (sum, entry) => sum + entry.amount);
 
-  double get expense {
-    return entries
-        .where((entry) => !entry.income)
-        .fold(0.0, (sum, entry) => sum + entry.amount);
-  }
+  double get expense => entries
+      .where((entry) => !entry.income)
+      .fold(0.0, (sum, entry) => sum + entry.amount);
 
-  String money(double amount) {
-    return '${amount.toStringAsFixed(2)} ر.س';
-  }
+  String money(double value) => '${value.toStringAsFixed(2)} ر.س';
 
-  Future<void> addEntry() async {
+  Future<void> addEntry({bool fromMessage = false}) async {
     final result = await showModalBottomSheet<Entry>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (context) => const AddEntrySheet(),
+      builder: (context) => EntrySheet(
+        fromMessage: fromMessage,
+      ),
     );
 
     if (!mounted || result == null) return;
@@ -862,12 +849,12 @@ class _HomePageState extends State<HomePage> {
     await save();
   }
 
-  Widget statCard({
-    required String title,
-    required String value,
-    required IconData icon,
-    required Color color,
-  }) {
+  Widget stat(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Expanded(
       child: Card(
         child: Padding(
@@ -901,10 +888,7 @@ class _HomePageState extends State<HomePage> {
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [
-                waffraDarkGreen,
-                waffraGreen,
-              ],
+              colors: [darkGreen, green],
             ),
             borderRadius: BorderRadius.circular(24),
           ),
@@ -930,9 +914,7 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 12),
               const Text(
                 'كل ريال تحسب له حساب',
-                style: TextStyle(
-                  color: Colors.white70,
-                ),
+                style: TextStyle(color: Colors.white70),
               ),
             ],
           ),
@@ -940,21 +922,27 @@ class _HomePageState extends State<HomePage> {
         const SizedBox(height: 16),
         Row(
           children: [
-            statCard(
-              title: 'الدخل',
-              value: money(income),
-              icon: Icons.south_west,
-              color: Colors.green,
+            stat(
+              'الدخل',
+              money(income),
+              Icons.south_west,
+              Colors.green,
             ),
-            statCard(
-              title: 'المصروفات',
-              value: money(expense),
-              icon: Icons.north_east,
-              color: Colors.deepOrange,
+            stat(
+              'المصروفات',
+              money(expense),
+              Icons.north_east,
+              Colors.deepOrange,
             ),
           ],
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 18),
+        OutlinedButton.icon(
+          onPressed: () => addEntry(fromMessage: true),
+          icon: const Icon(Icons.content_paste_rounded),
+          label: const Text('إضافة من رسالة منسوخة'),
+        ),
+        const SizedBox(height: 20),
         Text(
           'آخر العمليات',
           style: Theme.of(context).textTheme.titleLarge,
@@ -962,11 +950,10 @@ class _HomePageState extends State<HomePage> {
         const SizedBox(height: 12),
         if (entries.isEmpty)
           const Padding(
-            padding: EdgeInsets.all(32),
+            padding: EdgeInsets.all(30),
             child: Center(
               child: Text(
-                'لسه مفيش عمليات.\nابدأ بإضافة أول دخل أو مصروف.',
-                textAlign: TextAlign.center,
+                'ابدأ بإضافة أول عملية مالية',
               ),
             ),
           ),
@@ -974,16 +961,10 @@ class _HomePageState extends State<HomePage> {
           (entry) => Card(
             child: ListTile(
               leading: CircleAvatar(
-                backgroundColor: entry.income
-                    ? Colors.green.withValues(alpha: 0.12)
-                    : Colors.orange.withValues(alpha: 0.12),
                 child: Icon(
                   entry.income
                       ? Icons.arrow_downward
                       : Icons.arrow_upward,
-                  color: entry.income
-                      ? Colors.green
-                      : Colors.deepOrange,
                 ),
               ),
               title: Text(entry.title),
@@ -994,17 +975,12 @@ class _HomePageState extends State<HomePage> {
               trailing: Text(
                 '${entry.income ? '+' : '-'}${money(entry.amount)}',
                 style: TextStyle(
+                  color: entry.income ? Colors.green : null,
                   fontWeight: FontWeight.bold,
-                  color: entry.income
-                      ? Colors.green
-                      : Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               onLongPress: () async {
-                setState(() {
-                  entries.remove(entry);
-                });
-
+                setState(() => entries.remove(entry));
                 await save();
               },
             ),
@@ -1018,7 +994,7 @@ class _HomePageState extends State<HomePage> {
   Widget analytics() {
     final categories = <String, double>{};
 
-    for (final entry in entries.where((item) => !item.income)) {
+    for (final entry in entries.where((e) => !e.income)) {
       categories[entry.category] =
           (categories[entry.category] ?? 0) + entry.amount;
     }
@@ -1044,7 +1020,7 @@ class _HomePageState extends State<HomePage> {
                   style: const TextStyle(
                     fontSize: 27,
                     fontWeight: FontWeight.bold,
-                    color: waffraGreen,
+                    color: green,
                   ),
                 ),
               ],
@@ -1053,9 +1029,9 @@ class _HomePageState extends State<HomePage> {
         ),
         const SizedBox(height: 20),
         if (categories.isEmpty)
-          const Center(
-            child: Padding(
-              padding: EdgeInsets.all(30),
+          const Padding(
+            padding: EdgeInsets.all(30),
+            child: Center(
               child: Text(
                 'لا توجد مصروفات لعرض التحليلات بعد',
               ),
@@ -1069,7 +1045,8 @@ class _HomePageState extends State<HomePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment:
+                        MainAxisAlignment.spaceBetween,
                     children: [
                       Text(entry.key),
                       Text(money(entry.value)),
@@ -1091,7 +1068,7 @@ class _HomePageState extends State<HomePage> {
         const SizedBox(height: 24),
         const Text(
           'بياناتك محفوظة محلياً على جهازك. '
-          'وفرة لا يطلب بيانات حسابات أو بطاقات بنكية.',
+          'لا يوجد ربط بحسابات بنكية.',
           textAlign: TextAlign.center,
         ),
       ],
@@ -1104,18 +1081,16 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text(
           'وفرة | Waffra',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
+            onPressed: widget.onTheme,
             tooltip: 'تغيير المظهر',
-            onPressed: widget.toggleTheme,
             icon: Icon(
               widget.dark
-                  ? Icons.light_mode_rounded
-                  : Icons.dark_mode_rounded,
+                  ? Icons.light_mode
+                  : Icons.dark_mode,
             ),
           ),
         ],
@@ -1124,16 +1099,14 @@ class _HomePageState extends State<HomePage> {
         child: tab == 0 ? dashboard() : analytics(),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: addEntry,
+        onPressed: () => addEntry(),
         icon: const Icon(Icons.add),
         label: const Text('إضافة عملية'),
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: tab,
         onDestinationSelected: (value) {
-          setState(() {
-            tab = value;
-          });
+          setState(() => tab = value);
         },
         destinations: const [
           NavigationDestination(
