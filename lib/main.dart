@@ -1614,7 +1614,7 @@ Future<void> bulkSmsSheet()async {
      }
      Navigator.pop(ctx,SavingGoal(id:newId(),name:name.text.trim(),target:n,saved:0));
     },child:const WaffraText('إضافة الهدف')),
-   ]));
+   ])));
   disposeLater([name,target]);
   if(g!=null&&mounted){
    setState(()=>goals.add(g));await persist();
