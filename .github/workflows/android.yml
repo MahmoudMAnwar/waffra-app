@@ -54,6 +54,14 @@ jobs:
               source = source.replace('import io.flutter.embedding.android.FlutterActivity',
                                       'import io.flutter.embedding.android.FlutterFragmentActivity')
               source = source.replace('FlutterActivity()', 'FlutterFragmentActivity()')
+              if 'FLAG_SECURE' not in source:
+                  source = source.replace('import io.flutter.embedding.android.FlutterFragmentActivity',
+                      'import android.os.Bundle\nimport android.view.WindowManager\nimport io.flutter.embedding.android.FlutterFragmentActivity')
+                  source = source.replace('FlutterFragmentActivity() {',
+                      'FlutterFragmentActivity() {\n    override fun onCreate(savedInstanceState: Bundle?) {\n        super.onCreate(savedInstanceState)\n        window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)\n    }')
+                  if 'FLAG_SECURE' not in source:
+                      raise SystemExit('Could not add screenshot protection to Kotlin MainActivity')
+
               if 'FlutterFragmentActivity' not in source:
                   raise SystemExit('Could not patch MainActivity.kt')
               activity.write_text(source)
@@ -64,6 +72,14 @@ jobs:
               source = source.replace('import io.flutter.embedding.android.FlutterActivity;',
                                       'import io.flutter.embedding.android.FlutterFragmentActivity;')
               source = source.replace('extends FlutterActivity', 'extends FlutterFragmentActivity')
+              if 'FLAG_SECURE' not in source:
+                  source = source.replace('import io.flutter.embedding.android.FlutterFragmentActivity;',
+                      'import android.os.Bundle;\nimport android.view.WindowManager;\nimport io.flutter.embedding.android.FlutterFragmentActivity;')
+                  source = source.replace('extends FlutterFragmentActivity {',
+                      'extends FlutterFragmentActivity {\n    @Override public void onCreate(Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n        getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);\n    }')
+                  if 'FLAG_SECURE' not in source:
+                      raise SystemExit('Could not add screenshot protection to Java MainActivity')
+
               if 'FlutterFragmentActivity' not in source:
                   raise SystemExit('Could not patch MainActivity.java')
               activity.write_text(source)
