@@ -228,11 +228,21 @@ class WaffraApp extends StatefulWidget {
  const WaffraApp({super.key});
  @override State<WaffraApp> createState()=>_WaffraAppState();
 }
-class _WaffraAppState extends State<WaffraApp> {
+class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  bool loading=true,onboarded=false,dark=false,locked=false,showLogin=false;
  String language='ar';
  String? pinHash;Person? profile;
- @override void initState(){super.initState();load();}
+ @override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);load();}
+ DateTime? _backgroundAt;
+ @override void didChangeAppLifecycleState(AppLifecycleState state){
+  if(state==AppLifecycleState.paused||state==AppLifecycleState.hidden){_backgroundAt=DateTime.now();}
+  if(state==AppLifecycleState.resumed&&pinHash!=null&&!locked&&_backgroundAt!=null){
+   final away=DateTime.now().difference(_backgroundAt!);
+   _backgroundAt=null;
+   if(away>=const Duration(seconds:30)&&mounted)setState(()=>locked=true);
+  }
+ }
+ @override void dispose(){WidgetsBinding.instance.removeObserver(this);super.dispose();}
  String? startupError;
  Future<void> load()async {
   try {
@@ -355,6 +365,8 @@ class PinLockScreen extends StatefulWidget {
 class _PinLockScreenState extends State<PinLockScreen> {
  final pinController=TextEditingController();
  bool busy=false,biometricAvailable=false,checking=true,showPin=false;
+ int failedPinAttempts=0;
+ DateTime? pinCooldownUntil;
  String error='';
  @override void initState(){super.initState();checkBiometrics();}
  Future<void> checkBiometrics()async {
@@ -379,9 +391,16 @@ class _PinLockScreenState extends State<PinLockScreen> {
   else{setState(()=>error='تعذّر التحقق بالبصمة. حاول مجددًا أو استخدم رمز PIN.');}
  }
  void verifyPin(){
+  if(pinCooldownUntil!=null&&DateTime.now().isBefore(pinCooldownUntil!)){
+   setState(()=>error=waffraIsEnglish?'Too many attempts. Try again in a minute.':'محاولات كثيرة، جرّب بعد دقيقة.');return;
+  }
   if(sha256.convert(utf8.encode(pinController.text.trim())).toString()==widget.pinHash){
-   widget.onUnlock();
-  }else{setState((){error='رمز PIN غير صحيح';pinController.clear();});}
+   failedPinAttempts=0;pinCooldownUntil=null;widget.onUnlock();
+  }else{
+   failedPinAttempts++;
+   if(failedPinAttempts>=5){failedPinAttempts=0;pinCooldownUntil=DateTime.now().add(const Duration(minutes:1));}
+   setState((){error=pinCooldownUntil!=null?'محاولات كثيرة، جرّب بعد دقيقة.':'رمز PIN غير صحيح';pinController.clear();});
+  }
  }
  @override void dispose(){pinController.dispose();super.dispose();}
  @override Widget build(BuildContext context)=>Scaffold(
