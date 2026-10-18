@@ -56,12 +56,18 @@ jobs:
               source = source.replace('FlutterActivity()', 'FlutterFragmentActivity()')
               if 'FLAG_SECURE' not in source:
                   source = source.replace('import io.flutter.embedding.android.FlutterFragmentActivity',
-                      'import android.os.Bundle\nimport android.view.WindowManager\nimport io.flutter.embedding.android.FlutterFragmentActivity')
-                  source = source.replace('FlutterFragmentActivity() {',
-                      'FlutterFragmentActivity() {\n    override fun onCreate(savedInstanceState: Bundle?) {\n        super.onCreate(savedInstanceState)\n        window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)\n    }')
-                  if 'FLAG_SECURE' not in source:
+                      'import android.os.Bundle\\nimport android.view.WindowManager\\nimport io.flutter.embedding.android.FlutterFragmentActivity')
+                  import re
+                  source, count = re.subn(
+                      r'class\\s+MainActivity\\s*:\\s*FlutterFragmentActivity\\(\\)\\s*(?:\\{\\s*\\})?',
+                      'class MainActivity : FlutterFragmentActivity() {\\n'
+                      '    override fun onCreate(savedInstanceState: Bundle?) {\\n'
+                      '        super.onCreate(savedInstanceState)\\n'
+                      '        window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)\\n'
+                      '    }\\n}',
+                      source, count=1)
+                  if count != 1 or 'FLAG_SECURE' not in source:
                       raise SystemExit('Could not add screenshot protection to Kotlin MainActivity')
-
               if 'FlutterFragmentActivity' not in source:
                   raise SystemExit('Could not patch MainActivity.kt')
               activity.write_text(source)
