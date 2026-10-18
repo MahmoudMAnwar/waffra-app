@@ -1184,7 +1184,7 @@ Future<void> bulkSmsSheet()async {
     final groups=List.generate(periods,(i)=>items.where((e)=>yearly?
      e.date.month==i+1:((e.date.day-1)~/7)==i).toList());
     final active=List.generate(periods,(i)=>i).where((i)=>groups[i].isNotEmpty).toList();
-    final maxValue=max(1.0,...groups.expand((g)=>[sum(g,true),sum(g,false)]));
+    final maxValue=groups.expand<double>((g)=>[sum(g,true),sum(g,false)]).fold<double>(1.0,(largest,value)=>max(largest,value));
     pw.Widget bar(double value,PdfColor color)=>pw.Expanded(child:pw.Row(children:[
      pw.Expanded(flex:max(1,(value/maxValue*100).round()),
       child:pw.Container(height:13,color:color)),
