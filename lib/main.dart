@@ -409,6 +409,17 @@ class _PinLockScreenState extends State<PinLockScreen> {
   backgroundColor:forest,
   body:LayoutBuilder(builder:(context,c)=>Stack(fit:StackFit.expand,children:[
    Image.asset('assets/app_lock.png',fit:BoxFit.fill,filterQuality:FilterQuality.high),
+   // Four visible PIN indicators aligned over the four circles in the artwork.
+   Positioned(top:c.maxHeight*0.393,left:c.maxWidth*0.305,
+    width:c.maxWidth*0.39,height:c.maxHeight*0.035,
+    child:Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,
+     children:List.generate(4,(i)=>AnimatedContainer(
+      duration:const Duration(milliseconds:140),
+      width:c.maxWidth*0.038,height:c.maxWidth*0.038,
+      decoration:BoxDecoration(shape:BoxShape.circle,
+       color:i<pinController.text.length?Colors.white:Colors.transparent,
+       border:Border.all(color:Colors.white.withValues(alpha:0.7),width:1.2)),
+     )))),
    // Keep the approved full-screen keypad artwork: transparent touch targets
    // make the pictured digits functional without drawing a second keypad.
    ...List.generate(12,(index){
@@ -450,7 +461,7 @@ class _WaffraOnboardingState extends State<WaffraOnboarding> {
   backgroundColor:const Color(0xFFF7F8F0),
   body:PageView(controller:controller,onPageChanged:(v)=>setState(()=>current=v),
    children:List.generate(4,(i)=>LayoutBuilder(builder:(context,c)=>Stack(fit:StackFit.expand,children:[
-    Image.asset('assets/onboarding_0${i+1}.png',fit:BoxFit.fill,filterQuality:FilterQuality.high),
+    Image.asset('assets/onboarding_0${i+1}.png',fit:BoxFit.contain,filterQuality:FilterQuality.high),
     Positioned(left:0,right:0,top:0,height:c.maxHeight*0.125,
      child:Align(alignment:Alignment.centerLeft,child:GestureDetector(
       behavior:HitTestBehavior.opaque,onTap:finish,
@@ -547,21 +558,21 @@ class _LoginScreenState extends State<LoginScreen> {
  }
  @override Widget build(BuildContext context){
   if(provider!=null)return ProfileForm(provider:provider!,onSave:widget.onSave,onBack:()=>setState(()=>provider=null));
-  return Scaffold(backgroundColor:forest,body:LayoutBuilder(builder:(context,c){
+  return Scaffold(resizeToAvoidBottomInset:false,backgroundColor:forest,body:LayoutBuilder(builder:(context,c){
    final h=c.maxHeight,w=c.maxWidth;
    Widget hit(double top,double height,VoidCallback callback)=>Positioned(
     left:w*0.08,right:w*0.08,top:h*top,height:h*height,
     child:GestureDetector(behavior:HitTestBehavior.opaque,onTap:callback,
      child:const ColoredBox(color:Colors.transparent)));
    if(signInMode&&registered!=null)return Stack(fit:StackFit.expand,children:[
-    Image.asset('assets/signin.png',fit:BoxFit.fill,filterQuality:FilterQuality.high),
+    Image.asset('assets/signin.png',fit:BoxFit.cover,filterQuality:FilterQuality.high),
     Positioned(left:w*0.13,right:w*0.13,top:h*0.425,height:h*0.052,
      child:TextField(controller:signInPhone,keyboardType:TextInputType.phone,
       textAlign:TextAlign.center,style:const TextStyle(color:forest,fontSize:17),
       decoration:const InputDecoration(filled:true,fillColor:Colors.white,
        isDense:true,contentPadding:EdgeInsets.all(9),border:InputBorder.none))),
     Positioned(left:w*0.13,right:w*0.13,top:h*0.503,height:h*0.052,
-     child:TextField(controller:signInPassword,obscureText:!showSignInPassword,
+     child:TextField(controller:signInPassword,onSubmitted:(_)=>_signIn(),obscureText:!showSignInPassword,
       textAlign:TextAlign.center,style:const TextStyle(color:forest,fontSize:17),
       decoration:InputDecoration(filled:true,fillColor:Colors.white,isDense:true,
        contentPadding:const EdgeInsets.all(9),border:InputBorder.none,
@@ -571,7 +582,7 @@ class _LoginScreenState extends State<LoginScreen> {
     hit(0.78,0.055,()=>setState(()=>signInMode=false)),
    ]);
    return Stack(fit:StackFit.expand,children:[
-    Image.asset('assets/welcome_login.png',fit:BoxFit.fill,filterQuality:FilterQuality.high),
+    Image.asset('assets/welcome_login.png',fit:BoxFit.cover,filterQuality:FilterQuality.high),
     hit(0.495,0.067,()=>demoSocial('Google')),
     hit(0.574,0.067,()=>demoSocial('Apple')),
     hit(0.651,0.072,()=>setState(()=>provider='Phone')),
@@ -1212,15 +1223,19 @@ Future<void> bulkSmsSheet()async {
       textDirection:rtl?pw.TextDirection.rtl:pw.TextDirection.ltr,
       textAlign:center?pw.TextAlign.center:(rtl?pw.TextAlign.right:pw.TextAlign.left),
       style:pw.TextStyle(font:font,fontSize:9,color:PdfColors.black)));
+   // Split SMS into readable script-specific lines. Long mixed Arabic/Latin
+   // descriptions must wrap inside the description column, never overflow.
    pw.Widget pdfDescriptionCell(String raw)=>pw.Padding(
-    padding:const pw.EdgeInsets.symmetric(horizontal:6,vertical:6),
+    padding:const pw.EdgeInsets.symmetric(horizontal:7,vertical:8),
     child:pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.stretch,
-     children:splitWaffraPdfText(raw).map((segment)=>pw.Text(
-      segment.text,
-      textDirection:segment.rtl?pw.TextDirection.rtl:pw.TextDirection.ltr,
-      textAlign:segment.rtl?pw.TextAlign.right:pw.TextAlign.left,
-      style:pw.TextStyle(font:font,fontSize:9,color:PdfColors.black),
-     )).toList(),
+     children:splitWaffraPdfText(raw).map((segment)=>pw.Padding(
+      padding:const pw.EdgeInsets.only(bottom:2),
+      child:pw.Text(segment.text,
+       textDirection:segment.rtl?pw.TextDirection.rtl:pw.TextDirection.ltr,
+       textAlign:segment.rtl?pw.TextAlign.right:pw.TextAlign.left,
+       softWrap:true,
+       style:pw.TextStyle(font:font,fontSize:9,color:PdfColors.black),
+      ))).toList(),
     ));
    // The approved branded template remains unchanged; only its content layout is improved.
    final pageTheme=pw.PageTheme(
