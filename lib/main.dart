@@ -1185,6 +1185,28 @@ Future<void> bulkSmsSheet()async {
   final female=widget.profile.gender=='أنثى'||widget.profile.gender.toLowerCase()=='female';
   return '${female?'يا هلا وغلا ونورتي':'يا هلا وغلا ونورت'} يا $name 👋';
  }
+ Future<void> confirmDeleteAllEntries() async {
+  if(entries.isEmpty){snack(context,waffraIsEnglish?'No transactions to delete':'لا توجد معاملات لحذفها');return;}
+  final confirmed=await showDialog<bool>(context:context,builder:(dialogContext)=>AlertDialog(
+   title:WaffraText(waffraIsEnglish?'Delete all transactions?':'حذف كل المعاملات؟'),
+   content:WaffraText(waffraIsEnglish?'All transactions will be permanently deleted. This cannot be undone.':'سيتم حذف جميع معاملاتك نهائيًا، ولا يمكن التراجع عن هذا الإجراء.'),
+   actions:[
+    TextButton(onPressed:()=>Navigator.pop(dialogContext,false),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+    FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(dialogContext,true),child:WaffraText(waffraIsEnglish?'Delete all':'حذف الكل')),
+   ],
+  ));
+  if(confirmed!=true||!mounted)return;
+  final backup=List<MoneyEntry>.of(entries);
+  setState(()=>entries.clear());
+  try {
+   final prefs=await SharedPreferences.getInstance();
+   final saved=await prefs.setString('entries','[]');
+   if(!saved)throw StateError('Failed to persist deletion');
+   if(mounted)snack(context,waffraIsEnglish?'All transactions deleted':'تم حذف جميع المعاملات');
+  }catch(e){
+   if(mounted){setState(()=>entries.addAll(backup));snack(context,waffraIsEnglish?'Delete failed':'فشل حذف المعاملات');}
+  }
+ }
  Widget dashboard(){
   final inc=sum(entries,true),exp=sum(entries,false);
   final visible=entries.where((e){
@@ -1208,7 +1230,12 @@ Future<void> bulkSmsSheet()async {
     decoration:BoxDecoration(gradient:const LinearGradient(colors:[forest,emerald]),borderRadius:BorderRadius.circular(24)),
     child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
      const WaffraText('رصيدك الحالي',style:TextStyle(color:Colors.white70)),const SizedBox(height:10),
-     RiyalAmount(inc-exp,style:const TextStyle(color:Colors.white,fontSize:28,fontWeight:FontWeight.bold)),
+     TweenAnimationBuilder<double>(
+      tween:Tween<double>(begin:0,end:inc-exp),
+      duration:const Duration(milliseconds:850),
+      curve:Curves.easeOutCubic,
+      builder:(context,value,child)=>RiyalAmount(value,style:const TextStyle(color:Colors.white,fontSize:28,fontWeight:FontWeight.bold)),
+     ),
      const SizedBox(height:8),
      const WaffraText('كل ريال تحسب له حساب',style:TextStyle(color:Colors.white70)),
     ])),
@@ -1217,7 +1244,12 @@ Future<void> bulkSmsSheet()async {
    const SizedBox(height:10),
    OutlinedButton.icon(onPressed:bulkSmsSheet,icon:const Icon(Icons.content_paste),label:const WaffraText('الصق رسالة بنكية')),
    const SizedBox(height:12),
-   WaffraText('عملياتك المالية',style:Theme.of(context).textTheme.titleLarge),
+   Row(children:[
+    Expanded(child:WaffraText('عملياتك المالية',style:Theme.of(context).textTheme.titleLarge)),
+    TextButton.icon(onPressed:entries.isEmpty?null:confirmDeleteAllEntries,
+     icon:const Icon(Icons.delete_outline,color:Colors.red),
+     label:WaffraText(waffraIsEnglish?'Delete all':'حذف كل المعاملات',style:const TextStyle(color:Colors.red))),
+   ]),
    const SizedBox(height:12),
    TextField(onChanged:(v)=>setState(()=>search=v),
     decoration:InputDecoration(labelText:waffraTr('دوّر على عملية'),prefixIcon:Icon(Icons.search),border:OutlineInputBorder())),
