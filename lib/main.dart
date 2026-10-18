@@ -342,18 +342,21 @@ class _PinLockScreenState extends State<PinLockScreen> {
   body:Stack(fit:StackFit.expand,children:[
    // The approved original welcome artwork is used unchanged.
    Image.asset('assets/waffra_welcome_integrated.png',fit:BoxFit.cover),
+   Container(color:const Color(0x44064D3B)),
    SafeArea(child:Center(child:SingleChildScrollView(
     padding:const EdgeInsets.symmetric(horizontal:34,vertical:20),
     child:Column(mainAxisSize:MainAxisSize.min,children:[
-     SizedBox(height:MediaQuery.of(context).size.height*.17),
-     SizedBox(width:115,height:115,child:FilledButton(
+     SizedBox(height:MediaQuery.of(context).size.height*.12),
+     const WaffraText('فلوسك فين تروح؟\nوفرة يعلمك.',textAlign:TextAlign.center,style:TextStyle(color:Colors.white,fontSize:23,fontWeight:FontWeight.bold,shadows:[Shadow(color:Colors.black87,blurRadius:12)])),
+     const SizedBox(height:28),
+     SizedBox(width:72,height:72,child:FilledButton(
       onPressed:busy||checking?null:biometric,
       style:FilledButton.styleFrom(
        padding:EdgeInsets.zero,backgroundColor:const Color(0x66064D3B),
        disabledBackgroundColor:const Color(0x66064D3B),
        foregroundColor:Colors.white,
        shape:const CircleBorder(side:BorderSide(color:Colors.white70,width:2))),
-      child:const Icon(Icons.fingerprint,size:63,color:Colors.white))),
+      child:const Icon(Icons.fingerprint,size:37,color:Colors.white))),
      const SizedBox(height:9),
      WaffraText(checking?'جاري فحص البصمة...':'لمس البصمة',
       style:const TextStyle(color:Colors.white,fontSize:18,fontWeight:FontWeight.bold)),
@@ -365,14 +368,14 @@ class _PinLockScreenState extends State<PinLockScreen> {
       Expanded(child:Divider(color:Colors.white70)),
      ]),
      const SizedBox(height:12),
-     SizedBox(width:double.infinity,height:54,child:OutlinedButton.icon(
+     SizedBox(width:270,height:46,child:OutlinedButton.icon(
       onPressed:busy?null:()=>setState((){showPin=!showPin;error='';}),
       style:OutlinedButton.styleFrom(
        backgroundColor:const Color(0x22064D3B),foregroundColor:Colors.white,
        side:const BorderSide(color:Colors.white,width:1.5),
        shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(28))),
       icon:const Icon(Icons.dialpad),
-      label:const WaffraText('إدخال رمز PIN',style:TextStyle(fontSize:17,fontWeight:FontWeight.bold)))),
+      label:const WaffraText('إدخال رمز PIN',style:TextStyle(fontSize:14,fontWeight:FontWeight.bold)))),
      if(showPin)...[
       const SizedBox(height:18),
       TextField(controller:pinController,autofocus:true,obscureText:true,
@@ -605,41 +608,58 @@ Future<void> bulkSmsSheet()async {
   if(busy)return;
   final found=splitBankMessages(pasted.text.trim());
   if(found.isEmpty)return;
-  final parsedResults=found.map(BankParser.parse).toList();
-  final validIndexes=<int>[];
-  final invalid=<int>[];
-  for(var i=0;i<parsedResults.length;i++){
-   final amount=parsedResults[i].amount;
-   if(amount==null||amount<=0){invalid.add(i+1);}else{validIndexes.add(i);}
+  if(found.length>100){update(()=>statusMessage=waffraIsEnglish?'Maximum 100 transactions per paste.':'الحد الأقصى 100 معاملة في كل عملية لصق.');return;}
+  final results=found.map(BankParser.parse).toList();
+  final valid=<int>[],invalid=<int>[],duplicates=<int>[];
+  final seen=<String>{};
+  for(var i=0;i<found.length;i++){
+   final hash=bankSmsHash(found[i]);
+   if(smsHashes.contains(hash)||!seen.add(hash)){duplicates.add(i);continue;}
+   if(results[i].amount==null||results[i].amount!<=0){invalid.add(i);continue;}
+   valid.add(i);
   }
-  if(validIndexes.isEmpty){
-   update((){messages=found;parsed=true;statusMessage='لم يتم التعرف على مبلغ صالح. تأكد من نسخ الرسالة كاملة، مثال: شراء PoS بـ84.72SR';});
-   return;
-  }
+  if(valid.isEmpty){update(()=>statusMessage=waffraIsEnglish?'No new valid transactions were detected.':'لم يتم اكتشاف معاملات جديدة صالحة للإضافة.');return;}
+  final incomes=valid.where((i)=>results[i].income).toList();
+  final expenses=valid.where((i)=>!results[i].income).toList();
+  final incomeTotal=incomes.fold<double>(0,(v,i)=>v+results[i].amount!);
+  final expenseTotal=expenses.fold<double>(0,(v,i)=>v+results[i].amount!);
+  final accepted=await showDialog<bool>(context:ctx,builder:(dialogCtx)=>AlertDialog(
+   title:WaffraText(waffraIsEnglish?'Confirm transactions':'تأكيد إضافة المعاملات'),
+   content:WaffraText(waffraIsEnglish
+    ?'Detected ${valid.length} transactions: ${incomes.length} income (SAR ${incomeTotal.toStringAsFixed(2)}) and ${expenses.length} expenses (SAR ${expenseTotal.toStringAsFixed(2)}). ${invalid.length} unrecognized, ${duplicates.length} duplicates. Add the valid transactions?'
+    :'تم اكتشاف ${valid.length} معاملات: ${incomes.length} دخل (${incomeTotal.toStringAsFixed(2)} ر.س) و${expenses.length} مصروفات (${expenseTotal.toStringAsFixed(2)} ر.س). تعذر تحليل ${invalid.length}، والمكرر ${duplicates.length}. هل تريد تأكيد الإضافة؟'),
+   actions:[TextButton(onPressed:()=>Navigator.pop(dialogCtx,false),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+    FilledButton(onPressed:()=>Navigator.pop(dialogCtx,true),child:WaffraText(waffraIsEnglish?'Confirm and add':'تأكيد وإضافة المعاملات'))]));
+  if(accepted!=true||!ctx.mounted)return;
+  update(()=>busy=true);
   final additions=<MoneyEntry>[];
   final newHashes=<String>{};
-  for(final i in validIndexes){
-   final hash=bankSmsHash(found[i]);
-   if(smsHashes.contains(hash)||!newHashes.add(hash))continue;
-   final result=parsedResults[i];
+  for(final i in valid){
+   final result=results[i];
    final cat=categories.any((c)=>c.income==result.income&&c.name==result.category)
     ?result.category:(forType(result.income).isNotEmpty?forType(result.income).first.name:'أخرى');
-   additions.add(MoneyEntry(id:newId(),title:'${result.title} — ${found[i].replaceAll(RegExp(r'\s+'),' ').trim()}',
+   additions.add(MoneyEntry(id:newId(),title:'${result.title} — ${found[i].replaceAll(RegExp(r'\\s+'),' ').trim()}',
     category:cat,amount:result.amount!,income:result.income,date:DateTime.now()));
+   newHashes.add(bankSmsHash(found[i]));
   }
-  if(additions.isEmpty){update((){messages=found;parsed=true;statusMessage='هذه الرسالة محفوظة بالفعل، لن نكرر العملية.';});return;}
-  update(()=>busy=true);
   try{
    setState(()=>entries.insertAll(0,additions));
-   smsHashes.addAll(newHashes);
    await persist();
    final prefs=await SharedPreferences.getInstance();
-   await prefs.setStringList('waffra_sms_hashes_v1',smsHashes.toList());
+   final updatedHashes={...smsHashes,...newHashes};
+   await prefs.setStringList('waffra_sms_hashes_v1',updatedHashes.toList());
+   smsHashes.addAll(newHashes);
    if(!ctx.mounted)return;
    Navigator.pop(ctx);
-   if(mounted)snack(context,'تم حفظ ${additions.length} معاملة تلقائيًا${invalid.isNotEmpty?'، وتعذر تحليل ${invalid.length} رسالة':''}');
+   if(mounted)await showDialog<void>(context:context,builder:(dialogCtx)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Transactions added successfully':'تمت إضافة المعاملات بنجاح'),
+    content:WaffraText(waffraIsEnglish
+     ?'Added ${additions.length} transactions: ${incomes.length} income and ${expenses.length} expenses. ${invalid.length} could not be analyzed; ${duplicates.length} duplicates skipped.'
+     :'تمت إضافة ${additions.length} معاملات: ${incomes.length} دخل و${expenses.length} مصروفات. تعذر تحليل ${invalid.length}، وتم تخطي ${duplicates.length} معاملات مكررة.'),
+    actions:[FilledButton(onPressed:()=>Navigator.pop(dialogCtx),child:WaffraText(waffraIsEnglish?'Done':'تم'))]));
   }catch(e){
-   if(ctx.mounted){update(()=>busy=false);snack(ctx,'فشل حفظ الرسائل: $e');}
+   setState(()=>entries.removeWhere((entry)=>additions.any((a)=>a.id==entry.id)));
+   if(ctx.mounted){update(()=>busy=false);snack(ctx,waffraIsEnglish?'Failed to save transactions':'فشل حفظ المعاملات');}
   }
  }
 
@@ -675,7 +695,7 @@ Future<void> bulkSmsSheet()async {
        if(text.trim().isNotEmpty){
         pasteTimer=Timer(const Duration(milliseconds:650),(){
          if(sheetActive&&ctx.mounted&&pasted.text.trim()==text.trim()){
-          saveParsedMessages(ctx,update);
+          update((){messages=splitBankMessages(pasted.text.trim());parsed=true;});
          }
         });
        }
@@ -688,18 +708,16 @@ Future<void> bulkSmsSheet()async {
         FocusScope.of(ctx).unfocus();
         pasteTimer?.cancel();
         if(pasted.text.trim().isEmpty){snack(ctx,'الصق رسالة بنكية أولاً');return;}
-        await saveParsedMessages(ctx,update);
+        update((){messages=splitBankMessages(pasted.text.trim());parsed=true;});
        },
-       label:WaffraText(busy?'جارٍ التحليل والحفظ...':'تحليل الرسائل وإضافتها')),
+       label:WaffraText(busy?'جارٍ التحليل...':'تحليل الرسائل')),
       if(statusMessage.isNotEmpty)...[
        const SizedBox(height:8),
        WaffraText(statusMessage,style:const TextStyle(color:Colors.deepOrange,fontWeight:FontWeight.w600)),
       ],
       if(parsed&&statusMessage.isEmpty)...[
        const SizedBox(height:10),
-       WaffraText(messages.length==1?'تم استخراج معاملة واحدة بنجاح':
-        messages.length==2?'تم استخراج معاملتين بنجاح':
-        'تم استخراج ${messages.length} معاملات بنجاح',
+       WaffraText(waffraIsEnglish?'Detected ${messages.length} messages':'تم اكتشاف ${messages.length} رسائل',
         style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
        const SizedBox(height:8),
        FilledButton.icon(icon:const Icon(Icons.check_circle_outline),
