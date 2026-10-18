@@ -50,46 +50,46 @@ jobs:
           java = list((android / 'app/src/main/java').rglob('MainActivity.java'))
           if kotlin:
               activity = kotlin[0]
-              source = activity.read_text()
-              source = source.replace('import io.flutter.embedding.android.FlutterActivity',
-                                      'import io.flutter.embedding.android.FlutterFragmentActivity')
-              source = source.replace('FlutterActivity()', 'FlutterFragmentActivity()')
-              if 'FLAG_SECURE' not in source:
-                  source = source.replace('import io.flutter.embedding.android.FlutterFragmentActivity',
-                      'import android.os.Bundle\\nimport android.view.WindowManager\\nimport io.flutter.embedding.android.FlutterFragmentActivity')
-                  import re
-                  source, count = re.subn(
-                      r'class\\s+MainActivity\\s*:\\s*FlutterFragmentActivity\\(\\)\\s*(?:\\{\\s*\\})?',
-                      'class MainActivity : FlutterFragmentActivity() {\\n'
-                      '    override fun onCreate(savedInstanceState: Bundle?) {\\n'
-                      '        super.onCreate(savedInstanceState)\\n'
-                      '        window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)\\n'
-                      '    }\\n}',
-                      source, count=1)
-                  if count != 1 or 'FLAG_SECURE' not in source:
-                      raise SystemExit('Could not add screenshot protection to Kotlin MainActivity')
-              if 'FlutterFragmentActivity' not in source:
-                  raise SystemExit('Could not patch MainActivity.kt')
+              original = activity.read_text()
+              import re
+              package_match = re.search(r'^\\s*package\\s+([\\w.]+)', original, re.MULTILINE)
+              if not package_match:
+                  raise SystemExit('Cannot determine Kotlin MainActivity package')
+              package_name = package_match.group(1)
+              source = (
+                  f'package {package_name}\\n\\n'
+                  'import android.os.Bundle\\n'
+                  'import android.view.WindowManager\\n'
+                  'import io.flutter.embedding.android.FlutterFragmentActivity\\n\\n'
+                  'class MainActivity : FlutterFragmentActivity() {\\n'
+                  '    override fun onCreate(savedInstanceState: Bundle?) {\\n'
+                  '        super.onCreate(savedInstanceState)\\n'
+                  '        window.setFlags(\\n'
+                  '            WindowManager.LayoutParams.FLAG_SECURE,\\n'
+                  '            WindowManager.LayoutParams.FLAG_SECURE\\n'
+                  '        )\\n'
+                  '    }\\n'
+                  '}\\n'
+              )
               activity.write_text(source)
-              print('Configured', activity)
+              assert 'FLAG_SECURE' in activity.read_text()
+              print('Configured secure Kotlin activity:', activity)
           elif java:
               activity = java[0]
               source = activity.read_text()
               source = source.replace('import io.flutter.embedding.android.FlutterActivity;',
-                                      'import io.flutter.embedding.android.FlutterFragmentActivity;')
+                                      'import android.os.Bundle;\\nimport android.view.WindowManager;\\nimport io.flutter.embedding.android.FlutterFragmentActivity;')
               source = source.replace('extends FlutterActivity', 'extends FlutterFragmentActivity')
+              source = source.replace('extends FlutterFragmentActivity {',
+                  'extends FlutterFragmentActivity {\\n'
+                  '    @Override public void onCreate(Bundle savedInstanceState) {\\n'
+                  '        super.onCreate(savedInstanceState);\\n'
+                  '        getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);\\n'
+                  '    }')
               if 'FLAG_SECURE' not in source:
-                  source = source.replace('import io.flutter.embedding.android.FlutterFragmentActivity;',
-                      'import android.os.Bundle;\nimport android.view.WindowManager;\nimport io.flutter.embedding.android.FlutterFragmentActivity;')
-                  source = source.replace('extends FlutterFragmentActivity {',
-                      'extends FlutterFragmentActivity {\n    @Override public void onCreate(Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n        getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);\n    }')
-                  if 'FLAG_SECURE' not in source:
-                      raise SystemExit('Could not add screenshot protection to Java MainActivity')
-
-              if 'FlutterFragmentActivity' not in source:
-                  raise SystemExit('Could not patch MainActivity.java')
+                  raise SystemExit('Could not secure Java MainActivity')
               activity.write_text(source)
-              print('Configured', activity)
+              print('Configured secure Java activity:', activity)
           else:
               raise SystemExit('Could not find MainActivity')
 
