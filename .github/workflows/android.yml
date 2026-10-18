@@ -131,44 +131,21 @@ jobs:
       - name: Generate Waffra app icon
         run: dart run flutter_launcher_icons
 
-      - name: Build baseline Android Debug APK
-        run: flutter build apk --debug
-
-      - name: Measure baseline APK
-        shell: bash
-        run: |
-          cp build/app/outputs/flutter-apk/app-debug.apk /tmp/waffra-baseline-debug.apk
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('/tmp/waffra-baseline-debug.apk')
-          print(f'BASELINE_DEBUG_APK_MIB={p.stat().st_size / 1048576:.2f}')
-          PY
-
       - name: Build optimized ARM64 Release APK
         run: flutter build apk --release --target-platform android-arm64 --tree-shake-icons
 
-      - name: Measure optimized APK and savings
+      - name: Measure release APK size
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          old = Path('/tmp/waffra-baseline-debug.apk').stat().st_size
-          new = Path('build/app/outputs/flutter-apk/app-release.apk').stat().st_size
-          print(f'BASELINE_DEBUG_APK_MIB={old / 1048576:.2f}')
-          print(f'OPTIMIZED_ARM64_RELEASE_APK_MIB={new / 1048576:.2f}')
-          print(f'APK_SAVINGS_PERCENT={(old - new) / old * 100:.1f}')
+          p = Path('build/app/outputs/flutter-apk/app-release.apk')
+          print(f'WAFFRA_ARM64_RELEASE_APK_MIB={p.stat().st_size / 1048576:.2f}')
           PY
 
-      - name: Upload optimized Waffra APK
+      - name: Upload Waffra Release APK
         uses: actions/upload-artifact@v4
         with:
           name: Waffra-Android-ARM64-Release
           path: build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 30
-
-      - name: Upload baseline Debug APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: Waffra-Android-Debug-Baseline
-          path: /tmp/waffra-baseline-debug.apk
           retention-days: 30
