@@ -1751,7 +1751,13 @@ Future<void> bulkSmsSheet()async {
      style:const TextStyle(fontWeight:FontWeight.bold,color:emerald)),
     TextButton.icon(onPressed:()=>fundGoal(g),icon:const Icon(Icons.add),label:const WaffraText('أضف مبلغ مدّخر')),
    ])))),
-  if(goals.isEmpty)const Padding(padding:EdgeInsets.all(24),child:WaffraText('ما أضفت أي هدف ادخار للحين')),
+  if(goals.isEmpty) SizedBox(height:MediaQuery.sizeOf(context).height*0.48,child:Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+   Icon(Icons.account_balance_wallet_outlined,size:78,color:emerald.withValues(alpha:0.55)),
+   const SizedBox(height:18),
+   WaffraText('ما أضفت أي هدف ادخار للحين',textAlign:TextAlign.center,style:Theme.of(context).textTheme.titleMedium),
+   const SizedBox(height:8),
+   const WaffraText('ابدأ بإضافة أول هدف ادخار لك',textAlign:TextAlign.center),
+  ]))),
   const SizedBox(height:90),
  ]);
  Future<void> recurringDialog()async {
@@ -1809,7 +1815,13 @@ Future<void> bulkSmsSheet()async {
      if(ok==true&&mounted){setState(()=>recurring.removeWhere((x)=>x.id==r.id));await persist();}
     },icon:const Icon(Icons.delete_outline)),
    ])))),
-  if(recurring.isEmpty)const Padding(padding:EdgeInsets.all(24),child:WaffraText('ما عندك عمليات متكررة')),
+  if(recurring.isEmpty) SizedBox(height:MediaQuery.sizeOf(context).height*0.48,child:Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+   Icon(Icons.repeat,size:78,color:emerald.withValues(alpha:0.55)),
+   const SizedBox(height:18),
+   WaffraText('ما عندك عمليات متكررة',textAlign:TextAlign.center,style:Theme.of(context).textTheme.titleMedium),
+   const SizedBox(height:8),
+   const WaffraText('أضف عملية متكررة لتنظيم مصروفاتك الشهرية',textAlign:TextAlign.center),
+  ]))),
   const SizedBox(height:90),
  ]);
  String exportBackup()=>const JsonEncoder.withIndent('  ').convert({
