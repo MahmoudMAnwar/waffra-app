@@ -504,7 +504,7 @@ class _WaffraOnboardingState extends State<WaffraOnboarding> {
       WaffraText(titles[i],textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:27,fontWeight:FontWeight.bold)),
       const SizedBox(height:17),
       WaffraText(subtitles[i],textAlign:TextAlign.center,style:const TextStyle(color:Colors.white70,fontSize:17,height:1.7)),
-     ])))),
+     ]))))),
    Padding(padding:const EdgeInsets.fromLTRB(28,10,28,28),child:Column(children:[
     Row(mainAxisAlignment:MainAxisAlignment.center,children:List.generate(4,(i)=>AnimatedContainer(
      duration:const Duration(milliseconds:350),margin:const EdgeInsets.symmetric(horizontal:4),
