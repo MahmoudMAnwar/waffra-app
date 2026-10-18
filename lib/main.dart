@@ -19,6 +19,7 @@ import 'waffra_biometrics.dart';
 import 'waffra_welcome_background.dart';
 import 'currency_converter.dart';
 import 'waffra_i18n.dart';
+import 'waffra_pdf_text.dart';
 
 void main() { WidgetsFlutterBinding.ensureInitialized(); runApp(const WaffraApp()); }
 const emerald=Color(0xFF087A54), forest=Color(0xFF064D3B), sand=Color(0xFFF8F6EF), gold=Color(0xFFD8BA78);
@@ -1172,36 +1173,8 @@ Future<void> bulkSmsSheet()async {
    final exportedAt=DateTime.now();
    final oldest=items.map((e)=>e.date).reduce((a,b)=>a.isBefore(b)?a:b);
    final newest=items.map((e)=>e.date).reduce((a,b)=>a.isAfter(b)?a:b);
-   String pdfClean(String input){
-    // Bank SMS can contain currency-symbol glyphs and invisible/nonstandard
-    // Unicode characters that the embedded Tajawal fonts cannot draw.
-    // Keep readable Arabic, Latin, numbers and common punctuation only.
-    final normalized=input
-     .replaceAll('\u20C1',' SAR ')
-     .replaceAll('\uFFFC',' ')
-     .replaceAll('\uFFFD',' ')
-     .replaceAll('\u00A0',' ')
-     .replaceAll('\u200D',' ')
-     .replaceAll('\u200C',' ');
-    final safe=String.fromCharCodes(normalized.runes.where((c){
-     if(c==9||c==10||c==13||c==32)return true;
-     if(c>=0x30&&c<=0x39)return true;   // Latin digits
-     if(c>=0x41&&c<=0x5A)return true;   // Latin uppercase
-     if(c>=0x61&&c<=0x7A)return true;   // Latin lowercase
-     if(c>=0x0600&&c<=0x06FF)return true; // Arabic
-     if(c>=0x0750&&c<=0x077F)return true; // Arabic supplement
-     if(c>=0x08A0&&c<=0x08FF)return true; // Arabic extended
-     if(c>=0x0021&&c<=0x002F)return true; // Common punctuation
-     if(c>=0x003A&&c<=0x0040)return true;
-     if(c>=0x005B&&c<=0x0060)return true;
-     if(c>=0x007B&&c<=0x007E)return true;
-     if(c==0x00D7||c==0x00F7||c==0x2013||c==0x2014||
-        c==0x2018||c==0x2019||c==0x201C||c==0x201D||
-        c==0x2026)return true;
-     return false;
-    }));
-    return safe.replaceAll(RegExp(r'\s+'),' ').trim();
-   }
+   // Keep stored descriptions unchanged; sanitize only the exported PDF copy.
+   String pdfClean(String input)=>sanitizeWaffraPdfText(input);
       String fmt(num number){
     final n=number.toDouble();
     if(n==n.roundToDouble())return n.toStringAsFixed(0);
@@ -1231,6 +1204,24 @@ Future<void> bulkSmsSheet()async {
      pw.Text(waffraTr(label),style:pw.TextStyle(font:bold,fontSize:10,color:PdfColors.teal900)),
      pw.SizedBox(height:5),pw.Text('${fmt(value)} SAR',style:pw.TextStyle(font:bold,fontSize:15,color:PdfColors.teal900)),
     ])));
+   // Explicit script direction prevents mixed Arabic/Latin SMS text from
+   // overlapping or reversing adjacent numbers in the PDF viewer.
+   pw.Widget pdfCell(String raw,{bool rtl=false,bool center=false})=>
+    pw.Padding(padding:const pw.EdgeInsets.symmetric(horizontal:5,vertical:7),
+     child:pw.Text(pdfClean(raw),
+      textDirection:rtl?pw.TextDirection.rtl:pw.TextDirection.ltr,
+      textAlign:center?pw.TextAlign.center:(rtl?pw.TextAlign.right:pw.TextAlign.left),
+      style:pw.TextStyle(font:font,fontSize:9,color:PdfColors.black)));
+   pw.Widget pdfDescriptionCell(String raw)=>pw.Padding(
+    padding:const pw.EdgeInsets.symmetric(horizontal:6,vertical:6),
+    child:pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.stretch,
+     children:splitWaffraPdfText(raw).map((segment)=>pw.Text(
+      segment.text,
+      textDirection:segment.rtl?pw.TextDirection.rtl:pw.TextDirection.ltr,
+      textAlign:segment.rtl?pw.TextAlign.right:pw.TextAlign.left,
+      style:pw.TextStyle(font:font,fontSize:9,color:PdfColors.black),
+     )).toList(),
+    ));
    // The approved branded template remains unchanged; only its content layout is improved.
    final pageTheme=pw.PageTheme(
     pageFormat:const PdfPageFormat(900,600),
@@ -1270,14 +1261,12 @@ Future<void> bulkSmsSheet()async {
         ...ordered.map((e)=>pw.TableRow(
          decoration:pw.BoxDecoration(color:e.income?const PdfColor.fromInt(0xFFB2D5C2):const PdfColor.fromInt(0xFFF0F7F2)),
          children:[
-          pdfClean(dayText(e.date)),
-          english?(e.income?'Income':'Expense'):(e.income?'دخل':'مصروف'),
-          pdfClean(waffraTr(e.category)),
-          pdfClean(e.title),
-          '${e.income?'+':'-'}${fmt(e.amount)}',
-         ].map((value)=>pw.Padding(padding:const pw.EdgeInsets.symmetric(horizontal:5,vertical:7),
-          child:pw.Text(value,textAlign:english?pw.TextAlign.left:pw.TextAlign.right,
-           style:pw.TextStyle(font:font,fontSize:9,color:PdfColors.black)))).toList(),
+          pdfCell(dayText(e.date),center:true),
+          pdfCell(english?(e.income?'Income':'Expense'):(e.income?'دخل':'مصروف'),rtl:!english),
+          pdfCell(waffraTr(e.category),rtl:!english),
+          pdfDescriptionCell(e.title),
+          pdfCell('${e.income?'+':'-'}${fmt(e.amount)}',center:true),
+         ],
         )),
        ],
       ),
