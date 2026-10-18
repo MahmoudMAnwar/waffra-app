@@ -606,17 +606,19 @@ Future<void> bulkSmsSheet()async {
   final found=splitBankMessages(pasted.text.trim());
   if(found.isEmpty)return;
   final parsedResults=found.map(BankParser.parse).toList();
+  final validIndexes=<int>[];
   final invalid=<int>[];
   for(var i=0;i<parsedResults.length;i++){
-   if(parsedResults[i].amount==null||parsedResults[i].amount!<=0)invalid.add(i+1);
+   final amount=parsedResults[i].amount;
+   if(amount==null||amount<=0){invalid.add(i+1);}else{validIndexes.add(i);}
   }
-  if(invalid.isNotEmpty){
-   update((){messages=found;parsed=true;statusMessage='تعذّر قراءة مبلغ الرسالة رقم ${invalid.join('، ')}. تأكد من وجود المبلغ ورمز العملة.';});
+  if(validIndexes.isEmpty){
+   update((){messages=found;parsed=true;statusMessage='لم يتم التعرف على مبلغ صالح. تأكد من نسخ الرسالة كاملة، مثال: شراء PoS بـ84.72SR';});
    return;
   }
   final additions=<MoneyEntry>[];
   final newHashes=<String>{};
-  for(var i=0;i<found.length;i++){
+  for(final i in validIndexes){
    final hash=bankSmsHash(found[i]);
    if(smsHashes.contains(hash)||!newHashes.add(hash))continue;
    final result=parsedResults[i];
@@ -635,7 +637,7 @@ Future<void> bulkSmsSheet()async {
    await prefs.setStringList('waffra_sms_hashes_v1',smsHashes.toList());
    if(!ctx.mounted)return;
    Navigator.pop(ctx);
-   if(mounted)snack(context,'تم تحليل وحفظ ${additions.length} معاملة في أقسامها تلقائيًا');
+   if(mounted)snack(context,'تم حفظ ${additions.length} معاملة تلقائيًا${invalid.isNotEmpty?'، وتعذر تحليل ${invalid.length} رسالة':''}');
   }catch(e){
    if(ctx.mounted){update(()=>busy=false);snack(ctx,'فشل حفظ الرسائل: $e');}
   }
