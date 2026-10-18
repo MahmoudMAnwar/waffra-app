@@ -511,17 +511,18 @@ class ProfileForm extends StatefulWidget {
  @override State<ProfileForm> createState()=>_ProfileFormState();
 }
 class _ProfileFormState extends State<ProfileForm> {
- late final TextEditingController name,email,phone,password,confirmPassword;
+ late final TextEditingController name,email,confirmEmail,phone,password,confirmPassword;
  late String gender,avatar;late DateTime birthday;bool busy=false;
  @override void initState(){super.initState();
   name=TextEditingController(text:widget.initial?.name??'');
   email=TextEditingController(text:widget.initial?.email??'');
+  confirmEmail=TextEditingController();
   phone=TextEditingController(text:widget.initial?.phone??'');
   password=TextEditingController();confirmPassword=TextEditingController();
   gender=widget.initial?.gender??'ذكر';avatar=widget.initial?.avatar??'person';
   birthday=widget.initial?.birthday??DateTime(2000);
  }
- @override void dispose(){name.dispose();email.dispose();phone.dispose();password.dispose();confirmPassword.dispose();super.dispose();}
+ @override void dispose(){name.dispose();email.dispose();confirmEmail.dispose();phone.dispose();password.dispose();confirmPassword.dispose();super.dispose();}
  Future<void> save()async {
   final validEmail=RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email.text.trim());
   final validPhone=RegExp(r'^05[0-9]{8}$').hasMatch(phone.text.trim());
@@ -529,6 +530,9 @@ class _ProfileFormState extends State<ProfileForm> {
    snack(context,waffraIsEnglish?'Enter a name, valid email and Saudi phone number':'أدخل الاسم والبريد الصحيح ورقم جوال يبدأ بـ 05 من 10 أرقام');return;
   }
   if(widget.initial==null){
+   if(email.text.trim().toLowerCase()!=confirmEmail.text.trim().toLowerCase()){
+    snack(context,waffraIsEnglish?'Email addresses do not match':'البريد الإلكتروني غير متطابق في الحقلين');return;
+   }
    if(!validPhone){snack(context,'أدخل رقم الجوال من 10 أرقام يبدأ بـ 05');return;}
    if(!RegExp(r'^(?=.*[A-Za-z])(?=.*[0-9]).{8,}$').hasMatch(password.text)||password.text!=confirmPassword.text){
     snack(context,'كلمة المرور يجب أن تكون 8 خانات على الأقل وتشمل أحرفًا وأرقامًا وتتطابق في الحقلين');return;
@@ -563,7 +567,24 @@ class _ProfileFormState extends State<ProfileForm> {
    const SizedBox(height:12),
    TextField(controller:email,readOnly:widget.initial!=null,keyboardType:TextInputType.emailAddress,
     decoration:InputDecoration(labelText:waffraIsEnglish?'Email':'البريد الإلكتروني',filled:widget.initial!=null,
-     fillColor:Colors.grey.withValues(alpha:0.15),helperText:widget.initial!=null?'البريد الإلكتروني المسجل لا يمكن تعديله':null,border:const OutlineInputBorder())),
+     fillColor:Colors.grey.withValues(alpha:0.15),helperText:widget.initial!=null?(waffraIsEnglish?'Registered email cannot be changed':'البريد الإلكتروني المسجل لا يمكن تعديله'):null,
+     suffixIcon:widget.initial==null?IconButton(tooltip:waffraIsEnglish?'Copy email':'نسخ البريد الإلكتروني',
+      icon:const Icon(Icons.copy_outlined),onPressed:()async{
+       await Clipboard.setData(ClipboardData(text:email.text.trim()));
+       if(mounted)snack(context,waffraIsEnglish?'Email copied':'تم نسخ البريد الإلكتروني');
+      }):null,border:const OutlineInputBorder())),
+   if(widget.initial==null) ...[
+    const SizedBox(height:12),
+    TextField(controller:confirmEmail,keyboardType:TextInputType.emailAddress,
+     decoration:InputDecoration(labelText:waffraIsEnglish?'Confirm email':'تأكيد البريد الإلكتروني',
+      suffixIcon:IconButton(tooltip:waffraIsEnglish?'Paste email':'لصق البريد الإلكتروني',
+       icon:const Icon(Icons.content_paste_outlined),onPressed:()async{
+        final data=await Clipboard.getData(Clipboard.kTextPlain);
+        if(!mounted)return;
+        final value=data?.text??'';
+        confirmEmail.value=TextEditingValue(text:value,selection:TextSelection.collapsed(offset:value.length));
+       }),border:const OutlineInputBorder())),
+   ],
    const SizedBox(height:12),
    TextField(controller:phone,keyboardType:TextInputType.phone,inputFormatters:[FilteringTextInputFormatter.digitsOnly,LengthLimitingTextInputFormatter(10)],
     decoration:InputDecoration(labelText:waffraIsEnglish?'Mobile number':'رقم الجوال',hintText:'05XXXXXXXX',
