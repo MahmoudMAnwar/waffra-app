@@ -1030,11 +1030,18 @@ Future<void> bulkSmsSheet()async {
    }
    // Keep the approved two-page PDF as the canonical, bundled design asset.
    // The generated export below still supplies live financial values.
-   final approvedTemplate=await rootBundle.load(
-    'assets/Waffra_Approved_Report_Template_Preview.pdf');
-   if(approvedTemplate.lengthInBytes==0){
-    throw StateError('Approved Waffra PDF template is empty');
+   // Rasterize the branded PDF template once, then draw it as the
+   // background of every exported report page. Financial data stays dynamic.
+   final templateData=await rootBundle.load('assets/Waffra_Report_Template.pdf');
+   if(templateData.lengthInBytes==0)throw StateError('Waffra PDF template is empty');
+   pw.MemoryImage? reportBackground;
+   await for(final raster in Printing.raster(
+     templateData.buffer.asUint8List(),pages:[0],dpi:120)){
+    reportBackground=pw.MemoryImage(await raster.toPng());
+    break;
    }
+   if(reportBackground==null)throw StateError('Unable to render Waffra PDF template');
+   final brandedBackground=reportBackground;
    final doc=pw.Document();
    final totalIncome=sum(items,true),totalExpenses=sum(items,false);
    final categoryTotals=<String,double>{};
@@ -1047,30 +1054,10 @@ Future<void> bulkSmsSheet()async {
     ])));
    doc.addPage(pw.MultiPage(
     pageTheme:pw.PageTheme(
-     pageFormat:PdfPageFormat.a4,
-     margin:const pw.EdgeInsets.fromLTRB(30,112,30,52),
-     buildBackground:(ctx)=>pw.FullPage(ignoreMargins:true,child:pw.Container(
-      color:PdfColors.white,
-      child:pw.Stack(children:[
-       pw.Positioned(top:30,left:30,child:pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.start,children:[
-        pw.Text('Waffra',style:pw.TextStyle(font:bold,fontSize:24,color:PdfColors.teal900)),
-        pw.Text('وفرة',style:pw.TextStyle(font:bold,fontSize:13,color:PdfColors.teal900)),
-       ])),
-       pw.Positioned(top:30,right:30,child:pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.end,children:[
-        pw.Text(english?(analytics?'Analytics Report':'Expense Report'):(analytics?'تقرير التحليلات':'تقرير المصروفات'),
-         style:pw.TextStyle(font:bold,fontSize:17,color:PdfColors.teal900)),
-        pw.SizedBox(height:5),
-        pw.Text('${english?'Exported':'تاريخ التصدير'}: ${dayText(exportedAt)}',style:pw.TextStyle(font:font,fontSize:9)),
-        pw.Text('${english?'From':'من'} ${dayText(oldest)} ${english?'to':'إلى'} ${dayText(newest)}',
-         style:pw.TextStyle(font:font,fontSize:9)),
-       ])),
-       pw.Positioned(left:30,right:30,top:93,child:pw.Container(height:1,color:PdfColors.teal100)),
-       pw.Positioned(left:30,right:30,bottom:38,child:pw.Container(height:1,color:PdfColors.teal100)),
-       pw.Positioned(left:30,bottom:21,child:pw.Text(
-        english?'Waffra helps you know where your money goes':'وفرة يعلمك وين فلوسك تروح',
-        style:pw.TextStyle(font:font,fontSize:8,color:PdfColors.teal900))),
-      ]))),
-
+     pageFormat:const PdfPageFormat(900,600),
+     margin:const pw.EdgeInsets.fromLTRB(36,302,36,143),
+     buildBackground:(ctx)=>pw.FullPage(ignoreMargins:true,
+      child:pw.Image(brandedBackground,fit:pw.BoxFit.fill)),
      theme:pw.ThemeData.withFont(base:font,bold:bold),
      textDirection:english?pw.TextDirection.ltr:pw.TextDirection.rtl,
     ),
