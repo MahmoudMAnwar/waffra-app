@@ -408,7 +408,7 @@ class _PinLockScreenState extends State<PinLockScreen> {
   backgroundColor:forest,
   body:Stack(fit:StackFit.expand,children:[
    // The approved original welcome artwork is used unchanged.
-   Image.asset('assets/waffra_welcome_integrated.png',fit:BoxFit.cover),
+   Image.asset('assets/app_lock.png',fit:BoxFit.cover),
    // Preserve the welcome image, logo and slogan without tint or extra text.
    SafeArea(child:Align(alignment:const Alignment(0,0.58),child:SingleChildScrollView(
     padding:const EdgeInsets.symmetric(horizontal:34,vertical:12),
@@ -499,12 +499,7 @@ class _WaffraOnboardingState extends State<WaffraOnboarding> {
       Container(height:250,width:double.infinity,decoration:BoxDecoration(
        gradient:const LinearGradient(colors:[Color(0xFF087759),Color(0xFF064D3B)],begin:Alignment.topRight,end:Alignment.bottomLeft),
        borderRadius:BorderRadius.circular(36),border:Border.all(color:Colors.white24)),
-       child:Stack(alignment:Alignment.center,children:[
-        Positioned(top:18,right:20,child:Icon(Icons.spa_rounded,color:Colors.white.withValues(alpha:0.13),size:115)),
-        Positioned(bottom:16,left:16,child:Icon(Icons.spa_rounded,color:Colors.white.withValues(alpha:0.12),size:90)),
-        Icon(symbols[i],size:115,color:Colors.white),
-        if(i==0)const Positioned(bottom:20,child:WaffraText('برج المملكة  •  برج الفيصلية  •  الرياض',style:TextStyle(color:Colors.white,fontSize:14))),
-       ])),
+       child:ClipRRect(borderRadius:BorderRadius.circular(35),child:Image.asset('assets/onboarding_0${i+1}.png',fit:BoxFit.contain)))),
       const SizedBox(height:44),
       WaffraText(titles[i],textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:27,fontWeight:FontWeight.bold)),
       const SizedBox(height:17),
@@ -606,7 +601,7 @@ class _LoginScreenState extends State<LoginScreen> {
  }
  @override Widget build(BuildContext context)=>signInMode&&registered!=null?
   Scaffold(backgroundColor:forest,body:SafeArea(child:Center(child:SingleChildScrollView(padding:const EdgeInsets.all(28),child:Column(mainAxisSize:MainAxisSize.min,children:[
-   const Icon(Icons.account_circle_rounded,color:Colors.white,size:82),
+   SizedBox(height:155,width:240,child:Image.asset('assets/signin.png',fit:BoxFit.cover,alignment:Alignment.topCenter)),
    const SizedBox(height:18),
    WaffraText(waffraIsEnglish?'Welcome back':'حياك الله من جديد',style:const TextStyle(color:Colors.white,fontSize:28,fontWeight:FontWeight.bold)),
    const SizedBox(height:24),
@@ -620,7 +615,7 @@ class _LoginScreenState extends State<LoginScreen> {
   ProfileForm(provider:provider!,onSave:widget.onSave,onBack:()=>setState(()=>provider=null)):
   Scaffold(backgroundColor:forest,body:SafeArea(child:Center(child:SingleChildScrollView(
    padding:const EdgeInsets.all(28),child:Column(children:[
-    const Icon(Icons.spa_rounded,size:106,color:Colors.white),
+    SizedBox(height:145,width:230,child:Image.asset('assets/welcome_login.png',fit:BoxFit.cover,alignment:Alignment.topCenter)),
     const SizedBox(height:20),const WaffraText('وفرة',style:TextStyle(fontSize:42,color:Colors.white,fontWeight:FontWeight.w900)),
     const SizedBox(height:12),const WaffraText('وفرة بعلمك وين فلوسك تروح',style:TextStyle(fontSize:19,color:Colors.white)),
     const SizedBox(height:30),
@@ -1235,17 +1230,21 @@ Future<void> bulkSmsSheet()async {
    final oldest=items.map((e)=>e.date).reduce((a,b)=>a.isBefore(b)?a:b);
    final newest=items.map((e)=>e.date).reduce((a,b)=>a.isAfter(b)?a:b);
    String pdfClean(String input){
-    // Filter unsupported emoji and bidi formatting using code points, not
-    // Unicode regex character ranges (which caused FormatException).
-    final cleaned=String.fromCharCodes(input.runes.where((code){
-     if(code>=0x1F000&&code<=0x1FAFF)return false;
-     if(code>=0x200B&&code<=0x200F)return false;
-     if(code>=0x202A&&code<=0x202E)return false;
-     if(code>=0x2066&&code<=0x2069)return false;
-     if(code==0xFE0E||code==0xFE0F)return false;
+    // Bank SMS often contains unsupported private-use glyphs, controls and
+    // replacement characters that appear as square boxes in exported PDFs.
+    final safe=String.fromCharCodes(input.runes.where((c){
+     if(c<32&&c!=10&&c!=9)return false;
+     if(c>=0x7F&&c<=0x9F)return false;
+     if(c>=0xE000&&c<=0xF8FF)return false;
+     if(c>=0xFFF0&&c<=0xFFFF)return false;
+     if(c>=0x1F000&&c<=0x1FAFF)return false;
+     if(c>=0x200B&&c<=0x200F)return false;
+     if(c>=0x202A&&c<=0x202E)return false;
+     if(c>=0x2060&&c<=0x206F)return false;
+     if(c==0xFFFD||c==0xFE0E||c==0xFE0F)return false;
      return true;
     }));
-    return cleaned.replaceAll(RegExp(r'\s+'),' ').trim();
+    return safe.replaceAll(RegExp(r'\\s+'),' ').trim();
    }
       String fmt(num number){
     final n=number.toDouble();
@@ -1318,7 +1317,7 @@ Future<void> bulkSmsSheet()async {
           dayText(e.date),
           english?(e.income?'Income':'Expense'):(e.income?'دخل':'مصروف'),
           waffraTr(e.category),
-          pdfClean(e.title).length>75?'${pdfClean(e.title).substring(0,75)}…':pdfClean(e.title),
+          pdfClean(e.title),
           '${e.income?'+':'-'}${fmt(e.amount)}',
          ].map((value)=>pw.Padding(padding:const pw.EdgeInsets.symmetric(horizontal:5,vertical:7),
           child:pw.Text(value,textAlign:english?pw.TextAlign.left:pw.TextAlign.right,
