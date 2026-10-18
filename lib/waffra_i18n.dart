@@ -5,6 +5,18 @@ final ValueNotifier<String> waffraLanguage = ValueNotifier<String>('ar');
 bool get waffraIsEnglish => waffraLanguage.value == 'en';
 
 const Map<String,String> _english = {
+ 'بدون ميزانية محددة': 'No budget set',
+ 'الميزانية': 'Budget',
+ 'تمت الإضافة بنجاح': 'Added successfully',
+ 'فشلت العملية': 'Operation failed',
+ 'هل تريد تأكيد الإضافة؟': 'Confirm adding transactions?',
+ 'تأكيد وإضافة المعاملات': 'Confirm and add transactions',
+ 'الميزانية الشهرية': 'Monthly budget',
+ 'المعاملات': 'Transactions',
+ 'الإيرادات': 'Income',
+ 'إضافة معاملة': 'Add transaction',
+ 'حدث خطأ أثناء الحفظ': 'Failed to save',
+ 'تم الحفظ بنجاح': 'Saved successfully',
  'تأكد من تسجيل بصمتك في إعدادات الهاتف، وبعدها افتح التطبيق مرة أخرى. يمكنك الدخول برمز PIN الآن.': 'Register a fingerprint in your phone settings, then reopen the app. You can unlock with your PIN now.',
  '🔒 بياناتك المالية محفوظة على جهازك': '🔒 Your financial data stays on your device',
  'بياناتك محفوظة على جهازك. المتابعة هنا لإنشاء ملف شخصي محلي، وليست مصادقة فعلية مع Google أو Apple.': 'Your information stays on your device. This creates a local profile and does not sign in to Google or Apple.',
@@ -225,6 +237,33 @@ String waffraTr(String source) {
  if(!waffraIsEnglish)return source;
  final exact=_english[source];
  if(exact!=null)return exact;
+ final budget=RegExp(r'^الميزانية: (.+) • تنبيه عند (.+)\s*(\d+)$').firstMatch(source);
+ if(tx!=null)return 'Transactions: ${tx.group(1)}';
+ final mon=RegExp(r'^شهر\s*(\d+)$').firstMatch(source);
+ if(mon!=null)return 'Month ${mon.group(1)}';
+ final week=RegExp(r'^أسبوع\s*(\d+)$').firstMatch(source);
+ if(week!=null)return 'Week ${week.group(1)}';
+ return source;
+}
+
+/// Translates existing Text widgets without changing model/category identifiers.
+class WaffraText extends Text {
+ const WaffraText(super.data,{
+  super.key,super.style,super.strutStyle,super.textAlign,super.textDirection,
+  super.locale,super.softWrap,super.overflow,super.textScaler,super.maxLines,
+  super.semanticsLabel,super.textWidthBasis,super.textHeightBehavior,super.selectionColor,
+ });
+ @override
+ Widget build(BuildContext context)=>Text(
+  waffraTr(data??''),
+  key:key,style:style,strutStyle:strutStyle,textAlign:textAlign,textDirection:textDirection,
+  locale:locale,softWrap:softWrap,overflow:overflow,textScaler:textScaler,maxLines:maxLines,
+  semanticsLabel:semanticsLabel,textWidthBasis:textWidthBasis,
+  textHeightBehavior:textHeightBehavior,selectionColor:selectionColor,
+ );
+}
+).firstMatch(source);
+ if(budget!=null)return 'Budget: ${budget.group(1)} • Alert at ${budget.group(2)}';
  final tx=RegExp(r'^عدد العمليات:\s*(\d+)$').firstMatch(source);
  if(tx!=null)return 'Transactions: ${tx.group(1)}';
  final mon=RegExp(r'^شهر\s*(\d+)$').firstMatch(source);
