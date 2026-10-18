@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'waffra_i18n.dart';
 
 class CurrencyConverterPage extends StatefulWidget {
  const CurrencyConverterPage({super.key,this.lastIncomeAmount});
@@ -9,6 +10,7 @@ class CurrencyConverterPage extends StatefulWidget {
 }
 class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
  late final TextEditingController amount;
+ final currencyEnglish=const {'SAR':'Saudi riyal','EGP':'Egyptian pound','USD':'US dollar','AED':'UAE dirham','KWD':'Kuwaiti dinar','EUR':'Euro','GBP':'British pound','BHD':'Bahraini dinar','QAR':'Qatari riyal','OMR':'Omani riyal'};
  final currencies=const {'SAR':'ريال سعودي','EGP':'جنيه مصري','USD':'دولار أمريكي',
   'AED':'درهم إماراتي','KWD':'دينار كويتي','EUR':'يورو','GBP':'جنيه إسترليني',
   'BHD':'دينار بحريني','QAR':'ريال قطري','OMR':'ريال عُماني'};
@@ -44,43 +46,43 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
   finally{if(mounted)setState(()=>busy=false);}
  }
  @override Widget build(BuildContext context)=>Scaffold(
-  appBar:AppBar(title:const Text('تحويل العملات')),
+  appBar:AppBar(title:const WaffraText('تحويل العملات')),
   body:ListView(padding:const EdgeInsets.all(20),children:[
-   const Text('اعرف قيمة راتبك أو أي مبلغ بعملة ثانية، حسب أحدث سعر متاح.'),
+   const WaffraText('اعرف قيمة راتبك أو أي مبلغ بعملة ثانية، حسب أحدث سعر متاح.'),
    const SizedBox(height:18),
    TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
-    decoration:const InputDecoration(labelText:'المبلغ',border:OutlineInputBorder())),
+    decoration:InputDecoration(labelText:waffraTr('المبلغ'),border:OutlineInputBorder())),
    const SizedBox(height:14),
    DropdownButtonFormField<String>(initialValue:from,
-    decoration:const InputDecoration(labelText:'من عملة',border:OutlineInputBorder()),
-    items:currencies.entries.map((e)=>DropdownMenuItem(value:e.key,child:Text('${e.value} (${e.key})'))).toList(),
+    decoration:InputDecoration(labelText:waffraTr('من عملة'),border:OutlineInputBorder()),
+    items:currencies.entries.map((e)=>DropdownMenuItem(value:e.key,child:WaffraText('${waffraIsEnglish?currencyEnglish[e.key]:e.value} (${e.key})'))).toList(),
     onChanged:(v){if(v!=null)setState(()=>from=v);}),
    const SizedBox(height:14),
    DropdownButtonFormField<String>(initialValue:to,
-    hint:const Text('اختر العملة'),
-    decoration:const InputDecoration(labelText:'إلى عملة',border:OutlineInputBorder()),
-    items:currencies.entries.map((e)=>DropdownMenuItem(value:e.key,child:Text('${e.value} (${e.key})'))).toList(),
+    hint:const WaffraText('اختر العملة'),
+    decoration:InputDecoration(labelText:waffraTr('إلى عملة'),border:OutlineInputBorder()),
+    items:currencies.entries.map((e)=>DropdownMenuItem(value:e.key,child:WaffraText('${waffraIsEnglish?currencyEnglish[e.key]:e.value} (${e.key})'))).toList(),
     onChanged:(v){setState(()=>to=v);}),
    const SizedBox(height:20),
    FilledButton.icon(onPressed:busy?null:convert,
-    icon:const Icon(Icons.currency_exchange),label:Text(busy?'جاري جلب السعر...':'حوّل الحين')),
+    icon:const Icon(Icons.currency_exchange),label:WaffraText(busy?'جاري جلب السعر...':'حوّل الحين')),
    if(busy)const Padding(padding:EdgeInsets.only(top:14),child:LinearProgressIndicator()),
    if(status.isNotEmpty)Padding(padding:const EdgeInsets.only(top:16),
-    child:Text(status,style:TextStyle(color:Theme.of(context).colorScheme.error))),
+    child:WaffraText(status,style:TextStyle(color:Theme.of(context).colorScheme.error))),
    if(result!=null)...[
     const SizedBox(height:24),
     Card(child:Padding(padding:const EdgeInsets.all(20),child:Column(children:[
-     const Text('المبلغ بعد التحويل'),
+     const WaffraText('المبلغ بعد التحويل'),
      const SizedBox(height:8),
-     Text('${result!.toStringAsFixed(2)} $to',
+     WaffraText('${result!.toStringAsFixed(2)} $to',
       style:Theme.of(context).textTheme.headlineMedium),
      const SizedBox(height:8),
-     Text('1 $from = ${rate!.toStringAsFixed(4)} $to'),
-     if(updated!=null)Text('آخر تحديث متاح: ${updated!.day}/${updated!.month}/${updated!.year}'),
+     WaffraText('1 $from = ${rate!.toStringAsFixed(4)} $to'),
+     if(updated!=null)WaffraText('آخر تحديث متاح: ${updated!.day}/${updated!.month}/${updated!.year}'),
     ]))),
    ],
    const SizedBox(height:20),
-   const Text('المصدر: ExchangeRate-API (open.er-api.com). الأسعار استرشادية وقد تختلف عن أسعار البنوك أو التحويل الفعلي.',
+   const WaffraText('المصدر: ExchangeRate-API (open.er-api.com). الأسعار استرشادية وقد تختلف عن أسعار البنوك أو التحويل الفعلي.',
     style:TextStyle(fontSize:12)),
   ]));
 }
