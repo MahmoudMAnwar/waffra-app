@@ -1096,8 +1096,10 @@ Future<void> bulkSmsSheet()async {
    return;
   }
   try{
+   // Embed a full Arabic Unicode fallback; Tajawal stays the primary typeface.
    final font=await PdfGoogleFonts.tajawalRegular();
    final bold=await PdfGoogleFonts.tajawalBold();
+   final arabicFallback=await PdfGoogleFonts.notoNaskhArabicRegular();
    final english=waffraIsEnglish;
    final exportedAt=DateTime.now();
    final oldest=items.map((e)=>e.date).reduce((a,b)=>a.isBefore(b)?a:b);
@@ -1137,7 +1139,7 @@ Future<void> bulkSmsSheet()async {
     margin:const pw.EdgeInsets.fromLTRB(36,115,36,90),
     buildBackground:(ctx)=>pw.FullPage(ignoreMargins:true,
      child:pw.Image(brandedBackground,fit:pw.BoxFit.fill)),
-    theme:pw.ThemeData.withFont(base:font,bold:bold),
+    theme:pw.ThemeData.withFont(base:font,bold:bold,fontFallback:[arabicFallback]),
     textDirection:english?pw.TextDirection.ltr:pw.TextDirection.rtl,
    );
    pw.Widget heading(String ar,String en)=>pw.Padding(
@@ -1182,14 +1184,14 @@ Future<void> bulkSmsSheet()async {
     final groups=List.generate(periods,(i)=>items.where((e)=>yearly?
      e.date.month==i+1:((e.date.day-1)~/7)==i).toList());
     final active=List.generate(periods,(i)=>i).where((i)=>groups[i].isNotEmpty).toList();
-    final maxValue=max(1.0,max(totalIncome,totalExpenses));
+    final maxValue=max(1.0,...groups.expand((g)=>[sum(g,true),sum(g,false)]));
     pw.Widget bar(double value,PdfColor color)=>pw.Expanded(child:pw.Row(children:[
      pw.Expanded(flex:max(1,(value/maxValue*100).round()),
       child:pw.Container(height:13,color:color)),
      pw.Expanded(flex:max(1,100-(value/maxValue*100).round()),
       child:pw.SizedBox(height:13)),
     ]));
-    doc.addPage(pw.MultiPage(pageTheme:pageTheme,build:(ctx)=>[
+    doc.addPage(pw.Page(pageTheme:pageTheme,build:(ctx)=>pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.stretch,children:[
      heading('تقرير التحليلات المالية','Financial Analytics'),
      heading('الدخل والمصروفات حسب الفترة','Income vs Expenses by Period'),
      ...active.map((i)=>pw.Padding(padding:const pw.EdgeInsets.symmetric(vertical:7),
@@ -1205,11 +1207,11 @@ Future<void> bulkSmsSheet()async {
        ])),
       ]))),
      if(totalExpenses>0)...[
-      pw.SizedBox(height:22),
+      pw.SizedBox(height:12),
       heading('توزيع المصروفات حسب الفئات','Expenses by Category'),
-      pw.Center(child:pw.SvgImage(svg:expensePieSvg(categoryTotals),width:215,height:215)),
+      pw.Center(child:pw.SvgImage(svg:expensePieSvg(categoryTotals),width:150,height:150)),
       pw.SizedBox(height:10),
-      ...((categoryTotals.entries.toList()..sort((a,b)=>b.value.compareTo(a.value)))
+      ...((categoryTotals.entries.toList()..sort((a,b)=>b.value.compareTo(a.value))).take(7)
        .map((e)=>pw.Padding(padding:const pw.EdgeInsets.symmetric(vertical:4),
         child:pw.Row(children:[
          pw.SizedBox(width:145,child:pw.Text(waffraTr(e.key),style:pw.TextStyle(font:font,fontSize:10))),
@@ -1218,7 +1220,7 @@ Future<void> bulkSmsSheet()async {
           style:pw.TextStyle(font:bold,fontSize:10))),
         ])))),
      ],
-    ]));
+    ])));
    }
    final bytes=await doc.save();
    // Android print dialog can be unavailable on some devices; share the PDF as fallback.
