@@ -1,4 +1,3 @@
-
 name: Build Waffra Android APK
 
 on:
@@ -29,6 +28,61 @@ jobs:
 
       - name: Generate Android project
         run: flutter create --platforms=android --project-name=waffra .
+
+      - name: Configure Android biometric authentication
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          android = Path('android')
+          manifest = android / 'app/src/main/AndroidManifest.xml'
+          if not manifest.exists():
+              raise SystemExit('Missing generated AndroidManifest.xml')
+          xml = manifest.read_text()
+          for permission in ('USE_BIOMETRIC', 'USE_FINGERPRINT'):
+              entry = f'<uses-permission android:name="android.permission.{permission}" />'
+              if entry not in xml:
+                  xml = xml.replace('<application', '    ' + entry + '\n    <application', 1)
+          manifest.write_text(xml)
+
+          kotlin = list((android / 'app/src/main/kotlin').rglob('MainActivity.kt'))
+          java = list((android / 'app/src/main/java').rglob('MainActivity.java'))
+          if kotlin:
+              activity = kotlin[0]
+              source = activity.read_text()
+              source = source.replace('import io.flutter.embedding.android.FlutterActivity',
+                                      'import io.flutter.embedding.android.FlutterFragmentActivity')
+              source = source.replace('FlutterActivity()', 'FlutterFragmentActivity()')
+              if 'FlutterFragmentActivity' not in source:
+                  raise SystemExit('Could not patch MainActivity.kt')
+              activity.write_text(source)
+              print('Configured', activity)
+          elif java:
+              activity = java[0]
+              source = activity.read_text()
+              source = source.replace('import io.flutter.embedding.android.FlutterActivity;',
+                                      'import io.flutter.embedding.android.FlutterFragmentActivity;')
+              source = source.replace('extends FlutterActivity', 'extends FlutterFragmentActivity')
+              if 'FlutterFragmentActivity' not in source:
+                  raise SystemExit('Could not patch MainActivity.java')
+              activity.write_text(source)
+              print('Configured', activity)
+          else:
+              raise SystemExit('Could not find MainActivity')
+
+          # local_auth requires an AppCompat-based theme for older Android versions.
+          for styles in android.glob('app/src/main/res/values*/styles.xml'):
+              content = styles.read_text()
+              content = content.replace(
+                  '<style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">',
+                  '<style name="NormalTheme" parent="Theme.AppCompat.DayNight.NoActionBar">')
+              content = content.replace(
+                  '<style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">',
+                  '<style name="NormalTheme" parent="Theme.AppCompat.DayNight.NoActionBar">')
+              styles.write_text(content)
+              print('Configured', styles)
+          PY
 
       - name: Install dependencies
         run: flutter pub get
