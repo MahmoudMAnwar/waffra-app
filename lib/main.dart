@@ -378,7 +378,7 @@ class _PinLockScreenState extends State<PinLockScreen> {
       TextField(controller:pinController,autofocus:true,obscureText:true,
        keyboardType:TextInputType.number,maxLength:8,textAlign:TextAlign.center,
        style:const TextStyle(color:Colors.white,fontSize:20),
-       decoration:const InputDecoration(labelText:'أدخل رمز PIN',
+       decoration:InputDecoration(labelText:waffraTr('أدخل رمز PIN'),
         labelStyle:TextStyle(color:Colors.white),counterStyle:TextStyle(color:Colors.white70),
         enabledBorder:OutlineInputBorder(borderSide:BorderSide(color:Colors.white70)),
         focusedBorder:OutlineInputBorder(borderSide:BorderSide(color:Colors.white))),
@@ -495,13 +495,13 @@ class _ProfileFormState extends State<ProfileForm> {
    Wrap(alignment:WrapAlignment.center,spacing:12,children:['ذكر','أنثى']
     .map((a)=>ChoiceChip(label:Row(mainAxisSize:MainAxisSize.min,children:[saudiAvatar(a,radius:20),const SizedBox(width:6),WaffraText(a)]),selected:gender==a,onSelected:(_)=>setState((){gender=a;avatar=a=='ذكر'?'male':'female';}))).toList()),
    const SizedBox(height:16),
-   TextField(controller:name,decoration:const InputDecoration(labelText:'اسمك',border:OutlineInputBorder())),
+   TextField(controller:name,decoration:InputDecoration(labelText:waffraTr('اسمك'),border:OutlineInputBorder())),
    const SizedBox(height:12),
    TextField(controller:email,keyboardType:TextInputType.emailAddress,
-    decoration:const InputDecoration(labelText:'بريدك الإلكتروني',border:OutlineInputBorder())),
+    decoration:InputDecoration(labelText:waffraTr('بريدك الإلكتروني'),border:OutlineInputBorder())),
    const SizedBox(height:12),
    DropdownButtonFormField<String>(initialValue:gender,
-    decoration:const InputDecoration(labelText:'الجنس',border:OutlineInputBorder()),
+    decoration:InputDecoration(labelText:waffraTr('الجنس'),border:OutlineInputBorder()),
     items:['ذكر','أنثى','غير محدد'].map((x)=>DropdownMenuItem(value:x,child:WaffraText(x))).toList(),
     onChanged:(v){if(v!=null)setState((){gender=v;avatar=v=='أنثى'?'female':'male';});}),
    const SizedBox(height:12),
@@ -677,8 +677,8 @@ Future<void> bulkSmsSheet()async {
          }
         });
        }
-      },decoration:const InputDecoration(labelText:'الصق رسالة أو عدة رسائل بنكية',
-       hintText:'الصق الرسائل كاملة، كل رسالة بتاريخها',border:OutlineInputBorder())),
+      },decoration:InputDecoration(labelText:waffraTr('الصق رسالة أو عدة رسائل بنكية'),
+       hintText:waffraTr('الصق الرسائل كاملة، كل رسالة بتاريخها'),border:OutlineInputBorder())),
       const SizedBox(height:12),
       FilledButton.icon(
        icon:const Icon(Icons.add_circle_outline),
@@ -716,7 +716,7 @@ Future<void> bulkSmsSheet()async {
       const SizedBox(height:6),
       WaffraText('تم حفظ $savedCount من ${messages.length} رسائل. راجع كل رسالة وحدد قسمها قبل الحفظ.'),
       const SizedBox(height:12),
-      InputDecorator(decoration:const InputDecoration(labelText:'نص الرسالة الحالية',border:OutlineInputBorder()),
+      InputDecorator(decoration:InputDecoration(labelText:waffraTr('نص الرسالة الحالية'),border:OutlineInputBorder()),
        child:SelectableText(messages[index])),
       const SizedBox(height:12),
       SegmentedButton<bool>(segments:const [ButtonSegment(value:true,label:WaffraText('دخل')),
@@ -724,14 +724,14 @@ Future<void> bulkSmsSheet()async {
         income=v.first;category=forType(income).isNotEmpty?forType(income).first.name:'أخرى';
        })),
       const SizedBox(height:12),
-      TextField(controller:description,maxLines:2,decoration:const InputDecoration(labelText:'وصف الرسالة',border:OutlineInputBorder())),
+      TextField(controller:description,maxLines:2,decoration:InputDecoration(labelText:waffraTr('وصف الرسالة'),border:OutlineInputBorder())),
       const SizedBox(height:12),
       TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
-       decoration:const InputDecoration(labelText:'مبلغ هذه الرسالة بالريال',border:OutlineInputBorder())),
+       decoration:InputDecoration(labelText:waffraTr('مبلغ هذه الرسالة بالريال'),border:OutlineInputBorder())),
       const SizedBox(height:12),
       DropdownButtonFormField<String>(key:ValueKey('$index-$income'),initialValue:available.any((c)=>c.name==category)?category:(available.isNotEmpty?available.first.name:null),
        items:available.map((c)=>DropdownMenuItem(value:c.name,child:WaffraText(c.name))).toList(),
-       decoration:const InputDecoration(labelText:'قسم هذه الرسالة',border:OutlineInputBorder()),
+       decoration:InputDecoration(labelText:waffraTr('قسم هذه الرسالة'),border:OutlineInputBorder()),
        onChanged:(v){if(v!=null)update(()=>category=v);}),
       const SizedBox(height:12),
       FilledButton(onPressed:busy?null:()async{
@@ -812,8 +812,8 @@ Future<void> bulkSmsSheet()async {
       const SizedBox(height:12),
       if(sms)...[
        TextField(controller:message,minLines:3,maxLines:6,onChanged:parseNow,
-        decoration:const InputDecoration(labelText:'الصق الرسالة البنكية هنا',
-         hintText:'أول ما تلصقها نحلّلها تلقائيًا',border:OutlineInputBorder())),
+        decoration:InputDecoration(labelText:waffraTr('الصق الرسالة البنكية هنا'),
+         hintText:waffraTr('أول ما تلصقها نحلّلها تلقائيًا'),border:OutlineInputBorder())),
        const SizedBox(height:8),
        if(analyzing)const LinearProgressIndicator(),
        if(hasParsed)WaffraText(value.text.isEmpty?'ما قدرنا نحدد المبلغ. اكتبه يدويًا.':
@@ -827,13 +827,13 @@ Future<void> bulkSmsSheet()async {
         income=v.first;category=forType(income).isNotEmpty?forType(income).first.name:'أخرى';suggestion=null;
        })),
       const SizedBox(height:12),
-      TextField(controller:title,decoration:const InputDecoration(labelText:'وصف العملية',border:OutlineInputBorder())),
+      TextField(controller:title,decoration:InputDecoration(labelText:waffraTr('وصف العملية'),border:OutlineInputBorder())),
       const SizedBox(height:12),
       TextField(controller:value,keyboardType:const TextInputType.numberWithOptions(decimal:true),
-       decoration:const InputDecoration(labelText:'المبلغ بالريال',border:OutlineInputBorder())),
+       decoration:InputDecoration(labelText:waffraTr('المبلغ بالريال'),border:OutlineInputBorder())),
       const SizedBox(height:12),
       DropdownButtonFormField<String>(key:ValueKey('$income-$chosen'),initialValue:chosen,
-       decoration:const InputDecoration(labelText:'القسم',border:OutlineInputBorder()),
+       decoration:InputDecoration(labelText:waffraTr('القسم'),border:OutlineInputBorder()),
        items:available.map((c)=>DropdownMenuItem(value:c.name,child:WaffraText(c.name))).toList(),
        onChanged:(v){if(v!=null)update(()=>category=v);}),
       if(suggestion!=null)TextButton.icon(onPressed:()async {
@@ -1159,6 +1159,7 @@ Future<void> bulkSmsSheet()async {
  String get greeting {
   final name=widget.profile.name.trim();
   if(name=='يا غالي'||name.isEmpty)return waffraTr('يا هلا وغلا 👋');
+  if(waffraIsEnglish)return 'Welcome, $name 👋';
   final female=widget.profile.gender=='أنثى'||widget.profile.gender.toLowerCase()=='female';
   return '${female?'يا هلا وغلا ونورتي':'يا هلا وغلا ونورت'} يا $name 👋';
  }
@@ -1197,13 +1198,13 @@ Future<void> bulkSmsSheet()async {
    WaffraText('عملياتك المالية',style:Theme.of(context).textTheme.titleLarge),
    const SizedBox(height:12),
    TextField(onChanged:(v)=>setState(()=>search=v),
-    decoration:const InputDecoration(labelText:'دوّر على عملية',prefixIcon:Icon(Icons.search),border:OutlineInputBorder())),
+    decoration:InputDecoration(labelText:waffraTr('دوّر على عملية'),prefixIcon:Icon(Icons.search),border:OutlineInputBorder())),
    const SizedBox(height:10),
    Wrap(spacing:8,children:['الكل','الدخل','المصروفات'].map((x)=>ChoiceChip(
     label:WaffraText(x),selected:typeFilter==x,
     onSelected:(_)=>setState((){typeFilter=x;categoryFilter='الكل';}))).toList()),
    DropdownButtonFormField<String>(key:ValueKey('$typeFilter-$selected'),initialValue:selected,
-    decoration:const InputDecoration(labelText:'تصفية حسب القسم'),
+    decoration:InputDecoration(labelText:waffraTr('تصفية حسب القسم')),
     items:filterCats.map((x)=>DropdownMenuItem(value:x,child:WaffraText(x))).toList(),
     onChanged:(x)=>setState(()=>categoryFilter=x??'الكل')),
    const SizedBox(height:10),
@@ -1238,11 +1239,11 @@ Future<void> bulkSmsSheet()async {
    const SizedBox(height:12),
    Row(children:[
     Expanded(child:DropdownButtonFormField<int>(initialValue:year,
-     decoration:const InputDecoration(labelText:'السنة'),
+     decoration:InputDecoration(labelText:waffraTr('السنة')),
      items:years.map((x)=>DropdownMenuItem(value:x,child:WaffraText('$x'))).toList(),
      onChanged:(v){if(v!=null)setState(()=>year=v);})),
     if(period=='شهري')Expanded(child:DropdownButtonFormField<int>(initialValue:month,
-     decoration:const InputDecoration(labelText:'الشهر'),
+     decoration:InputDecoration(labelText:waffraTr('الشهر')),
      items:List.generate(12,(i)=>DropdownMenuItem(value:i+1,child:WaffraText('شهر ${i+1}'))),
      onChanged:(v){if(v!=null)setState(()=>month=v);})),
    ]),
@@ -1303,7 +1304,7 @@ Future<void> bulkSmsSheet()async {
    builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
     title:WaffraText(initial==null?'قسم جديد':'تعديل القسم'),
     content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-     TextField(controller:name,decoration:const InputDecoration(labelText:'اسم القسم')),
+     TextField(controller:name,decoration:InputDecoration(labelText:waffraTr('اسم القسم'))),
      const SizedBox(height:12),const WaffraText('اختر أيقونة'),
      Wrap(spacing:5,children:iconNames.map((x)=>IconButton(
       style:IconButton.styleFrom(backgroundColor:icon==x?emerald.withValues(alpha:.2):null),
@@ -1315,10 +1316,10 @@ Future<void> bulkSmsSheet()async {
        child:color==x?const Icon(Icons.check,color:Colors.white,size:17):null))).toList()),
      if(!(initial?.income??income))...[
       TextField(controller:budget,onChanged:(_)=>update((){}),
-       keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'ميزانية شهرية (اختياري)')),
+       keyboardType:TextInputType.number,decoration:InputDecoration(labelText:waffraTr('ميزانية شهرية (اختياري)'))),
       const SizedBox(height:10),
       DropdownButtonFormField<int>(initialValue:alertPercent,
-       decoration:const InputDecoration(labelText:'ودّك ننبهك عند كم ٪ من الميزانية؟'),
+       decoration:InputDecoration(labelText:waffraTr('ودّك ننبهك عند كم ٪ من الميزانية؟')),
        items:[50,60,70,75,80,85,90,95,100].map((v)=>DropdownMenuItem(value:v,child:WaffraText('$v٪'))).toList(),
        onChanged:(v){if(v!=null)update(()=>alertPercent=v);}),
       if(amountOf(budget.text)!=null)Padding(padding:const EdgeInsets.only(top:8),
@@ -1414,10 +1415,10 @@ Future<void> bulkSmsSheet()async {
    title:const WaffraText('إضافة هدف ادخار'),scrollable:true,
    content:Column(mainAxisSize:MainAxisSize.min,children:[
     TextField(controller:name,textInputAction:TextInputAction.next,
-     decoration:const InputDecoration(labelText:'اسم الهدف',hintText:'سيارة، سفر، منزل، أو مبلغ ادخار')),
+     decoration:InputDecoration(labelText:waffraTr('اسم الهدف'),hintText:waffraTr('سيارة، سفر، منزل، أو مبلغ ادخار'))),
     const SizedBox(height:12),
     TextField(controller:target,keyboardType:const TextInputType.numberWithOptions(decimal:true),
-     decoration:const InputDecoration(labelText:'المبلغ المستهدف بالريال',hintText:'مثال: 25000')),
+     decoration:InputDecoration(labelText:waffraTr('المبلغ المستهدف بالريال'),hintText:waffraTr('مثال: 25000'))),
    ]),
    actions:[
     TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إلغاء')),
@@ -1441,7 +1442,7 @@ Future<void> bulkSmsSheet()async {
   final n=await showDialog<double>(context:context,builder:(ctx)=>AlertDialog(
    title:WaffraText('إضافة ادخار لـ ${g.name}'),
    content:TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
-    decoration:const InputDecoration(labelText:'المبلغ المدّخر')),
+    decoration:InputDecoration(labelText:waffraTr('المبلغ المدّخر'))),
    actions:[
     TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إلغاء')),
     FilledButton(onPressed:(){
@@ -1516,9 +1517,9 @@ Future<void> bulkSmsSheet()async {
     final selected=options.any((x)=>x.name==category)?category:options.first.name;
     return AlertDialog(title:const WaffraText('عملية شهرية متكررة'),
      content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-      TextField(controller:title,decoration:const InputDecoration(labelText:'الوصف')),
+      TextField(controller:title,decoration:InputDecoration(labelText:waffraTr('الوصف'))),
       TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
-       decoration:const InputDecoration(labelText:'المبلغ')),
+       decoration:InputDecoration(labelText:waffraTr('المبلغ'))),
       DropdownButtonFormField<bool>(initialValue:income,
        items:const [DropdownMenuItem(value:true,child:WaffraText('دخل')),
         DropdownMenuItem(value:false,child:WaffraText('مصروف'))],
@@ -1527,7 +1528,7 @@ Future<void> bulkSmsSheet()async {
        items:options.map((c)=>DropdownMenuItem(value:c.name,child:WaffraText(c.name))).toList(),
        onChanged:(v){if(v!=null)update(()=>category=v);}),
       TextField(controller:day,keyboardType:TextInputType.number,
-       decoration:const InputDecoration(labelText:'يوم الشهر (1 - 31)')),
+       decoration:InputDecoration(labelText:waffraTr('يوم الشهر (1 - 31)'))),
      ])),
      actions:[
       TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إلغاء')),
@@ -1586,7 +1587,7 @@ Future<void> bulkSmsSheet()async {
     },icon:const Icon(Icons.copy),label:const WaffraText('نسخ النسخة الاحتياطية')),
     const SizedBox(height:12),
     TextField(controller:input,minLines:4,maxLines:7,
-     decoration:const InputDecoration(labelText:'الصق نسخة JSON للاستعادة',border:OutlineInputBorder())),
+     decoration:InputDecoration(labelText:waffraTr('الصق نسخة JSON للاستعادة'),border:OutlineInputBorder())),
    ])),
    actions:[
     TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إغلاق')),
@@ -1967,7 +1968,7 @@ class _PinLockScreenState extends State<PinLockScreen> {
       TextField(controller:pinController,autofocus:true,obscureText:true,
        keyboardType:TextInputType.number,maxLength:8,textAlign:TextAlign.center,
        style:const TextStyle(color:Colors.white,fontSize:20),
-       decoration:const InputDecoration(labelText:'أدخل رمز PIN',
+       decoration:InputDecoration(labelText:waffraTr('أدخل رمز PIN'),
         labelStyle:TextStyle(color:Colors.white),counterStyle:TextStyle(color:Colors.white70),
         enabledBorder:OutlineInputBorder(borderSide:BorderSide(color:Colors.white70)),
         focusedBorder:OutlineInputBorder(borderSide:BorderSide(color:Colors.white))),
@@ -2084,13 +2085,13 @@ class _ProfileFormState extends State<ProfileForm> {
    Wrap(alignment:WrapAlignment.center,spacing:12,children:['ذكر','أنثى']
     .map((a)=>ChoiceChip(label:Row(mainAxisSize:MainAxisSize.min,children:[saudiAvatar(a,radius:20),const SizedBox(width:6),WaffraText(a)]),selected:gender==a,onSelected:(_)=>setState((){gender=a;avatar=a=='ذكر'?'male':'female';}))).toList()),
    const SizedBox(height:16),
-   TextField(controller:name,decoration:const InputDecoration(labelText:'اسمك',border:OutlineInputBorder())),
+   TextField(controller:name,decoration:InputDecoration(labelText:waffraTr('اسمك'),border:OutlineInputBorder())),
    const SizedBox(height:12),
    TextField(controller:email,keyboardType:TextInputType.emailAddress,
-    decoration:const InputDecoration(labelText:'بريدك الإلكتروني',border:OutlineInputBorder())),
+    decoration:InputDecoration(labelText:waffraTr('بريدك الإلكتروني'),border:OutlineInputBorder())),
    const SizedBox(height:12),
    DropdownButtonFormField<String>(initialValue:gender,
-    decoration:const InputDecoration(labelText:'الجنس',border:OutlineInputBorder()),
+    decoration:InputDecoration(labelText:waffraTr('الجنس'),border:OutlineInputBorder()),
     items:['ذكر','أنثى','غير محدد'].map((x)=>DropdownMenuItem(value:x,child:WaffraText(x))).toList(),
     onChanged:(v){if(v!=null)setState((){gender=v;avatar=v=='أنثى'?'female':'male';});}),
    const SizedBox(height:12),
@@ -2266,8 +2267,8 @@ Future<void> bulkSmsSheet()async {
          }
         });
        }
-      },decoration:const InputDecoration(labelText:'الصق رسالة أو عدة رسائل بنكية',
-       hintText:'الصق الرسائل كاملة، كل رسالة بتاريخها',border:OutlineInputBorder())),
+      },decoration:InputDecoration(labelText:waffraTr('الصق رسالة أو عدة رسائل بنكية'),
+       hintText:waffraTr('الصق الرسائل كاملة، كل رسالة بتاريخها'),border:OutlineInputBorder())),
       const SizedBox(height:12),
       FilledButton.icon(
        icon:const Icon(Icons.add_circle_outline),
@@ -2305,7 +2306,7 @@ Future<void> bulkSmsSheet()async {
       const SizedBox(height:6),
       WaffraText('تم حفظ $savedCount من ${messages.length} رسائل. راجع كل رسالة وحدد قسمها قبل الحفظ.'),
       const SizedBox(height:12),
-      InputDecorator(decoration:const InputDecoration(labelText:'نص الرسالة الحالية',border:OutlineInputBorder()),
+      InputDecorator(decoration:InputDecoration(labelText:waffraTr('نص الرسالة الحالية'),border:OutlineInputBorder()),
        child:SelectableText(messages[index])),
       const SizedBox(height:12),
       SegmentedButton<bool>(segments:const [ButtonSegment(value:true,label:WaffraText('دخل')),
@@ -2313,14 +2314,14 @@ Future<void> bulkSmsSheet()async {
         income=v.first;category=forType(income).isNotEmpty?forType(income).first.name:'أخرى';
        })),
       const SizedBox(height:12),
-      TextField(controller:description,maxLines:2,decoration:const InputDecoration(labelText:'وصف الرسالة',border:OutlineInputBorder())),
+      TextField(controller:description,maxLines:2,decoration:InputDecoration(labelText:waffraTr('وصف الرسالة'),border:OutlineInputBorder())),
       const SizedBox(height:12),
       TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
-       decoration:const InputDecoration(labelText:'مبلغ هذه الرسالة بالريال',border:OutlineInputBorder())),
+       decoration:InputDecoration(labelText:waffraTr('مبلغ هذه الرسالة بالريال'),border:OutlineInputBorder())),
       const SizedBox(height:12),
       DropdownButtonFormField<String>(key:ValueKey('$index-$income'),initialValue:available.any((c)=>c.name==category)?category:(available.isNotEmpty?available.first.name:null),
        items:available.map((c)=>DropdownMenuItem(value:c.name,child:WaffraText(c.name))).toList(),
-       decoration:const InputDecoration(labelText:'قسم هذه الرسالة',border:OutlineInputBorder()),
+       decoration:InputDecoration(labelText:waffraTr('قسم هذه الرسالة'),border:OutlineInputBorder()),
        onChanged:(v){if(v!=null)update(()=>category=v);}),
       const SizedBox(height:12),
       FilledButton(onPressed:busy?null:()async{
@@ -2401,8 +2402,8 @@ Future<void> bulkSmsSheet()async {
       const SizedBox(height:12),
       if(sms)...[
        TextField(controller:message,minLines:3,maxLines:6,onChanged:parseNow,
-        decoration:const InputDecoration(labelText:'الصق الرسالة البنكية هنا',
-         hintText:'أول ما تلصقها نحلّلها تلقائيًا',border:OutlineInputBorder())),
+        decoration:InputDecoration(labelText:waffraTr('الصق الرسالة البنكية هنا'),
+         hintText:waffraTr('أول ما تلصقها نحلّلها تلقائيًا'),border:OutlineInputBorder())),
        const SizedBox(height:8),
        if(analyzing)const LinearProgressIndicator(),
        if(hasParsed)WaffraText(value.text.isEmpty?'ما قدرنا نحدد المبلغ. اكتبه يدويًا.':
@@ -2416,13 +2417,13 @@ Future<void> bulkSmsSheet()async {
         income=v.first;category=forType(income).isNotEmpty?forType(income).first.name:'أخرى';suggestion=null;
        })),
       const SizedBox(height:12),
-      TextField(controller:title,decoration:const InputDecoration(labelText:'وصف العملية',border:OutlineInputBorder())),
+      TextField(controller:title,decoration:InputDecoration(labelText:waffraTr('وصف العملية'),border:OutlineInputBorder())),
       const SizedBox(height:12),
       TextField(controller:value,keyboardType:const TextInputType.numberWithOptions(decimal:true),
-       decoration:const InputDecoration(labelText:'المبلغ بالريال',border:OutlineInputBorder())),
+       decoration:InputDecoration(labelText:waffraTr('المبلغ بالريال'),border:OutlineInputBorder())),
       const SizedBox(height:12),
       DropdownButtonFormField<String>(key:ValueKey('$income-$chosen'),initialValue:chosen,
-       decoration:const InputDecoration(labelText:'القسم',border:OutlineInputBorder()),
+       decoration:InputDecoration(labelText:waffraTr('القسم'),border:OutlineInputBorder()),
        items:available.map((c)=>DropdownMenuItem(value:c.name,child:WaffraText(c.name))).toList(),
        onChanged:(v){if(v!=null)update(()=>category=v);}),
       if(suggestion!=null)TextButton.icon(onPressed:()async {
@@ -2786,13 +2787,13 @@ Future<void> bulkSmsSheet()async {
    WaffraText('عملياتك المالية',style:Theme.of(context).textTheme.titleLarge),
    const SizedBox(height:12),
    TextField(onChanged:(v)=>setState(()=>search=v),
-    decoration:const InputDecoration(labelText:'دوّر على عملية',prefixIcon:Icon(Icons.search),border:OutlineInputBorder())),
+    decoration:InputDecoration(labelText:waffraTr('دوّر على عملية'),prefixIcon:Icon(Icons.search),border:OutlineInputBorder())),
    const SizedBox(height:10),
    Wrap(spacing:8,children:['الكل','الدخل','المصروفات'].map((x)=>ChoiceChip(
     label:WaffraText(x),selected:typeFilter==x,
     onSelected:(_)=>setState((){typeFilter=x;categoryFilter='الكل';}))).toList()),
    DropdownButtonFormField<String>(key:ValueKey('$typeFilter-$selected'),initialValue:selected,
-    decoration:const InputDecoration(labelText:'تصفية حسب القسم'),
+    decoration:InputDecoration(labelText:waffraTr('تصفية حسب القسم')),
     items:filterCats.map((x)=>DropdownMenuItem(value:x,child:WaffraText(x))).toList(),
     onChanged:(x)=>setState(()=>categoryFilter=x??'الكل')),
    const SizedBox(height:10),
@@ -2827,11 +2828,11 @@ Future<void> bulkSmsSheet()async {
    const SizedBox(height:12),
    Row(children:[
     Expanded(child:DropdownButtonFormField<int>(initialValue:year,
-     decoration:const InputDecoration(labelText:'السنة'),
+     decoration:InputDecoration(labelText:waffraTr('السنة')),
      items:years.map((x)=>DropdownMenuItem(value:x,child:WaffraText('$x'))).toList(),
      onChanged:(v){if(v!=null)setState(()=>year=v);})),
     if(period=='شهري')Expanded(child:DropdownButtonFormField<int>(initialValue:month,
-     decoration:const InputDecoration(labelText:'الشهر'),
+     decoration:InputDecoration(labelText:waffraTr('الشهر')),
      items:List.generate(12,(i)=>DropdownMenuItem(value:i+1,child:WaffraText('شهر ${i+1}'))),
      onChanged:(v){if(v!=null)setState(()=>month=v);})),
    ]),
@@ -2892,7 +2893,7 @@ Future<void> bulkSmsSheet()async {
    builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
     title:WaffraText(initial==null?'قسم جديد':'تعديل القسم'),
     content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-     TextField(controller:name,decoration:const InputDecoration(labelText:'اسم القسم')),
+     TextField(controller:name,decoration:InputDecoration(labelText:waffraTr('اسم القسم'))),
      const SizedBox(height:12),const WaffraText('اختر أيقونة'),
      Wrap(spacing:5,children:iconNames.map((x)=>IconButton(
       style:IconButton.styleFrom(backgroundColor:icon==x?emerald.withValues(alpha:.2):null),
@@ -2904,10 +2905,10 @@ Future<void> bulkSmsSheet()async {
        child:color==x?const Icon(Icons.check,color:Colors.white,size:17):null))).toList()),
      if(!(initial?.income??income))...[
       TextField(controller:budget,onChanged:(_)=>update((){}),
-       keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'ميزانية شهرية (اختياري)')),
+       keyboardType:TextInputType.number,decoration:InputDecoration(labelText:waffraTr('ميزانية شهرية (اختياري)'))),
       const SizedBox(height:10),
       DropdownButtonFormField<int>(initialValue:alertPercent,
-       decoration:const InputDecoration(labelText:'ودّك ننبهك عند كم ٪ من الميزانية؟'),
+       decoration:InputDecoration(labelText:waffraTr('ودّك ننبهك عند كم ٪ من الميزانية؟')),
        items:[50,60,70,75,80,85,90,95,100].map((v)=>DropdownMenuItem(value:v,child:WaffraText('$v٪'))).toList(),
        onChanged:(v){if(v!=null)update(()=>alertPercent=v);}),
       if(amountOf(budget.text)!=null)Padding(padding:const EdgeInsets.only(top:8),
@@ -3003,10 +3004,10 @@ Future<void> bulkSmsSheet()async {
    title:const WaffraText('إضافة هدف ادخار'),scrollable:true,
    content:Column(mainAxisSize:MainAxisSize.min,children:[
     TextField(controller:name,textInputAction:TextInputAction.next,
-     decoration:const InputDecoration(labelText:'اسم الهدف',hintText:'سيارة، سفر، منزل، أو مبلغ ادخار')),
+     decoration:InputDecoration(labelText:waffraTr('اسم الهدف'),hintText:waffraTr('سيارة، سفر، منزل، أو مبلغ ادخار'))),
     const SizedBox(height:12),
     TextField(controller:target,keyboardType:const TextInputType.numberWithOptions(decimal:true),
-     decoration:const InputDecoration(labelText:'المبلغ المستهدف بالريال',hintText:'مثال: 25000')),
+     decoration:InputDecoration(labelText:waffraTr('المبلغ المستهدف بالريال'),hintText:waffraTr('مثال: 25000'))),
    ]),
    actions:[
     TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إلغاء')),
@@ -3030,7 +3031,7 @@ Future<void> bulkSmsSheet()async {
   final n=await showDialog<double>(context:context,builder:(ctx)=>AlertDialog(
    title:WaffraText('إضافة ادخار لـ ${g.name}'),
    content:TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
-    decoration:const InputDecoration(labelText:'المبلغ المدّخر')),
+    decoration:InputDecoration(labelText:waffraTr('المبلغ المدّخر'))),
    actions:[
     TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إلغاء')),
     FilledButton(onPressed:(){
@@ -3105,9 +3106,9 @@ Future<void> bulkSmsSheet()async {
     final selected=options.any((x)=>x.name==category)?category:options.first.name;
     return AlertDialog(title:const WaffraText('عملية شهرية متكررة'),
      content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-      TextField(controller:title,decoration:const InputDecoration(labelText:'الوصف')),
+      TextField(controller:title,decoration:InputDecoration(labelText:waffraTr('الوصف'))),
       TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
-       decoration:const InputDecoration(labelText:'المبلغ')),
+       decoration:InputDecoration(labelText:waffraTr('المبلغ'))),
       DropdownButtonFormField<bool>(initialValue:income,
        items:const [DropdownMenuItem(value:true,child:WaffraText('دخل')),
         DropdownMenuItem(value:false,child:WaffraText('مصروف'))],
@@ -3116,7 +3117,7 @@ Future<void> bulkSmsSheet()async {
        items:options.map((c)=>DropdownMenuItem(value:c.name,child:WaffraText(c.name))).toList(),
        onChanged:(v){if(v!=null)update(()=>category=v);}),
       TextField(controller:day,keyboardType:TextInputType.number,
-       decoration:const InputDecoration(labelText:'يوم الشهر (1 - 31)')),
+       decoration:InputDecoration(labelText:waffraTr('يوم الشهر (1 - 31)'))),
      ])),
      actions:[
       TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إلغاء')),
@@ -3175,7 +3176,7 @@ Future<void> bulkSmsSheet()async {
     },icon:const Icon(Icons.copy),label:const WaffraText('نسخ النسخة الاحتياطية')),
     const SizedBox(height:12),
     TextField(controller:input,minLines:4,maxLines:7,
-     decoration:const InputDecoration(labelText:'الصق نسخة JSON للاستعادة',border:OutlineInputBorder())),
+     decoration:InputDecoration(labelText:waffraTr('الصق نسخة JSON للاستعادة'),border:OutlineInputBorder())),
    ])),
    actions:[
     TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إغلاق')),
