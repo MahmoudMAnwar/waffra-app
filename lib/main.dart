@@ -597,12 +597,43 @@ Future<void> bulkSmsSheet()async {
         style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
        const SizedBox(height:8),
        FilledButton.icon(icon:const Icon(Icons.check_circle_outline),
-        onPressed:()async{
+        onPressed:busy?null:()async{
          if(messages.isEmpty){snack(ctx,'حلّل الرسائل أولاً');return;}
-         await prepare(0,update);
-         if(!ctx.mounted)return;
-         update(()=>reviewing=true);
-        },label:const Text('تأكيد ومراجعة المعاملات')),
+         final parsedMessages=messages.map(BankParser.parse).toList();
+         final invalid=<int>[];
+         final additions=<MoneyEntry>[];
+         final newHashes=<String>{};
+         for(var i=0;i<messages.length;i++){
+          final result=parsedMessages[i];
+          if(result.amount==null||result.amount!<=0){invalid.add(i+1);continue;}
+          final hash=bankSmsHash(messages[i]);
+          if(smsHashes.contains(hash)||!newHashes.add(hash))continue;
+          final fallback=forType(result.income);
+          final selectedCategory=categories.any((c)=>c.income==result.income&&c.name==result.category)
+           ?result.category:(fallback.isNotEmpty?fallback.first.name:'أخرى');
+          additions.add(MoneyEntry(
+           id:newId(),title:'${result.title} — ${messages[i].replaceAll(RegExp(r'\s+'),' ').trim()}',
+           category:selectedCategory,amount:result.amount!,income:result.income,date:DateTime.now()));
+         }
+         if(invalid.isNotEmpty){
+          snack(ctx,'تعذّر قراءة مبلغ الرسائل رقم ${invalid.join('، ')}. راجعها قبل التأكيد.');
+          return;
+         }
+         if(additions.isEmpty){snack(ctx,'كل الرسائل المحددة محفوظة بالفعل');return;}
+         update(()=>busy=true);
+         try{
+          setState(()=>entries.insertAll(0,additions));
+          smsHashes.addAll(newHashes);
+          await persist();
+          final prefs=await SharedPreferences.getInstance();
+          await prefs.setStringList('waffra_sms_hashes_v1',smsHashes.toList());
+          if(!ctx.mounted)return;
+          Navigator.pop(ctx);
+          if(mounted)snack(context,'تم حفظ ${additions.length} معاملة بنجاح');
+         }catch(e){
+          if(ctx.mounted){update(()=>busy=false);snack(ctx,'تعذّر حفظ المعاملات: $e');}
+         }
+        },label:Text(busy?'جارٍ حفظ المعاملات...':'تأكيد وإضافة ${messages.length} معاملة')),
       ],
       TextButton.icon(onPressed:(){
        pasteTimer?.cancel();pasted.clear();
