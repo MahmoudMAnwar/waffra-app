@@ -1009,10 +1009,6 @@ Future<void> bulkSmsSheet()async {
   try{
    final font=await PdfGoogleFonts.tajawalRegular();
    final bold=await PdfGoogleFonts.tajawalBold();
-   final templateBytes=(await rootBundle.load('assets/waffra_report_template.png')).buffer.asUint8List();
-   final template=img.decodeImage(templateBytes);
-   if(template==null)throw StateError('تعذر قراءة صورة التقرير');
-   final backgroundArt=pw.MemoryImage(templateBytes);
    final english=waffraIsEnglish;
    final exportedAt=DateTime.now();
    final oldest=items.map((e)=>e.date).reduce((a,b)=>a.isBefore(b)?a:b);
@@ -1035,33 +1031,28 @@ Future<void> bulkSmsSheet()async {
    doc.addPage(pw.MultiPage(
     pageTheme:pw.PageTheme(
      pageFormat:PdfPageFormat.a4,
-     margin:const pw.EdgeInsets.fromLTRB(26,225,26,112),
-     buildBackground:(ctx)=>pw.FullPage(ignoreMargins:true,child:pw.Stack(children:[
-      // Original unaltered report artwork, including matching header/footer logos.
-      pw.Positioned.fill(child:pw.Image(backgroundArt,fit:pw.BoxFit.fill)),
-      // This title panel sits on the template's existing teal header panel.
-      pw.Positioned(top:30,right:20,child:pw.Container(
-       width:175,height:118,color:PdfColor.fromInt(0xFF005B51),
-       padding:const pw.EdgeInsets.symmetric(horizontal:8,vertical:6),
-       child:pw.Column(
-        mainAxisAlignment:pw.MainAxisAlignment.center,
-        crossAxisAlignment:english?pw.CrossAxisAlignment.start:pw.CrossAxisAlignment.end,
-        children:[
-         pw.Text(english?(analytics?'Analytics Report':'Expense Report'):
-          (analytics?'تقرير التحليلات':'تقرير المصروفات'),
-          style:pw.TextStyle(font:bold,fontSize:14,color:PdfColors.white)),
-         pw.SizedBox(height:9),
-         pw.Text('${english?'Exported':'تاريخ التصدير'}: ${dayText(exportedAt)}',
-          style:pw.TextStyle(font:font,fontSize:10,color:PdfColors.white)),
-         pw.SizedBox(height:6),
-         pw.Text('${english?'From':'من'} ${dayText(oldest)} ${english?'to':'إلى'} ${dayText(newest)}',
-          style:pw.TextStyle(font:font,fontSize:9,color:PdfColors.white)),
-        ],
-       ))),
-      pw.Positioned(bottom:22,right:18,child:pw.Text(
-       '${english?'Exported':'تاريخ التصدير'}: ${dayText(exportedAt)}',
-       style:pw.TextStyle(font:font,fontSize:10,color:PdfColors.white))),
-     ])),
+     margin:const pw.EdgeInsets.fromLTRB(30,112,30,52),
+     buildBackground:(ctx)=>pw.FullPage(ignoreMargins:true,child:pw.Container(
+      color:PdfColors.white,
+      child:pw.Stack(children:[
+       pw.Positioned(top:30,left:30,child:pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.start,children:[
+        pw.Text('Waffra',style:pw.TextStyle(font:bold,fontSize:24,color:PdfColors.teal900)),
+        pw.Text('وفرة',style:pw.TextStyle(font:bold,fontSize:13,color:PdfColors.teal900)),
+       ])),
+       pw.Positioned(top:30,right:30,child:pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.end,children:[
+        pw.Text(english?(analytics?'Analytics Report':'Expense Report'):(analytics?'تقرير التحليلات':'تقرير المصروفات'),
+         style:pw.TextStyle(font:bold,fontSize:17,color:PdfColors.teal900)),
+        pw.SizedBox(height:5),
+        pw.Text('${english?'Exported':'تاريخ التصدير'}: ${dayText(exportedAt)}',style:pw.TextStyle(font:font,fontSize:9)),
+        pw.Text('${english?'From':'من'} ${dayText(oldest)} ${english?'to':'إلى'} ${dayText(newest)}',
+         style:pw.TextStyle(font:font,fontSize:9)),
+       ])),
+       pw.Positioned(left:30,right:30,top:93,child:pw.Container(height:1,color:PdfColors.teal100)),
+       pw.Positioned(left:30,right:30,bottom:38,child:pw.Container(height:1,color:PdfColors.teal100)),
+       pw.Positioned(left:30,bottom:21,child:pw.Text(
+        english?'Waffra helps you know where your money goes':'وفرة يعلمك وين فلوسك تروح',
+        style:pw.TextStyle(font:font,fontSize:8,color:PdfColors.teal900))),
+      ]))),
 
      theme:pw.ThemeData.withFont(base:font,bold:bold),
      textDirection:english?pw.TextDirection.ltr:pw.TextDirection.rtl,
@@ -1116,7 +1107,7 @@ Future<void> bulkSmsSheet()async {
      pw.Text(waffraTr('توزيع المصروفات حسب الفئات'),style:pw.TextStyle(font:bold,fontSize:13,color:PdfColors.teal900)),
      if(totalExpenses>0)...[
       pw.SizedBox(height:10),
-      pw.Center(child:pw.SvgImage(svg:expensePieSvg(categoryTotals),width:170,height:170)),
+      pw.Center(child:pw.SvgImage(svg:expensePieSvg(categoryTotals),width:125,height:125)),
      ],
      pw.SizedBox(height:8),
      if(true)pw.TableHelper.fromTextArray(
