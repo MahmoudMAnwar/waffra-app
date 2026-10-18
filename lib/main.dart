@@ -406,61 +406,29 @@ class _PinLockScreenState extends State<PinLockScreen> {
  @override void dispose(){pinController.dispose();super.dispose();}
  @override Widget build(BuildContext context)=>Scaffold(
   backgroundColor:forest,
-  body:Stack(fit:StackFit.expand,children:[
-   // The approved original welcome artwork is used unchanged.
-   Image.asset('assets/app_lock.png',fit:BoxFit.cover),
-   // Preserve the welcome image, logo and slogan without tint or extra text.
-   SafeArea(child:Align(alignment:const Alignment(0,0.58),child:SingleChildScrollView(
-    padding:const EdgeInsets.symmetric(horizontal:34,vertical:12),
-    child:Column(mainAxisSize:MainAxisSize.min,children:[
-     SizedBox(width:64,height:64,child:FilledButton(
-      onPressed:busy||checking?null:biometric,
-      style:FilledButton.styleFrom(
-       padding:EdgeInsets.zero,backgroundColor:const Color(0x66064D3B),
-       disabledBackgroundColor:const Color(0x66064D3B),
-       foregroundColor:Colors.white,
-       shape:const CircleBorder(side:BorderSide(color:Colors.white70,width:2))),
-      child:const Icon(Icons.fingerprint,size:34,color:Colors.white))),
-     const SizedBox(height:9),
-     WaffraText(checking?'جاري فحص البصمة...':'لمس البصمة',
-      style:const TextStyle(color:Colors.white,fontSize:18,fontWeight:FontWeight.bold)),
-     const SizedBox(height:21),
-     const Row(children:[
-      Expanded(child:Divider(color:Colors.white70)),
-      Padding(padding:EdgeInsets.symmetric(horizontal:15),
-       child:WaffraText('أو',style:TextStyle(color:Colors.white,fontSize:16))),
-      Expanded(child:Divider(color:Colors.white70)),
-     ]),
-     const SizedBox(height:12),
-     SizedBox(width:270,height:46,child:OutlinedButton.icon(
-      onPressed:busy?null:()=>setState((){showPin=!showPin;error='';}),
-      style:OutlinedButton.styleFrom(
-       backgroundColor:const Color(0x22064D3B),foregroundColor:Colors.white,
-       side:const BorderSide(color:Colors.white,width:1.5),
-       shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(28))),
-      icon:const Icon(Icons.dialpad),
-      label:const WaffraText('إدخال رمز PIN',style:TextStyle(fontSize:14,fontWeight:FontWeight.bold)))),
-     if(showPin)...[
-      const SizedBox(height:18),
-      TextField(controller:pinController,autofocus:true,obscureText:true,
-       keyboardType:TextInputType.number,maxLength:8,textAlign:TextAlign.center,
-       style:const TextStyle(color:Colors.white,fontSize:20),
-       decoration:InputDecoration(labelText:waffraTr('أدخل رمز PIN'),
-        labelStyle:TextStyle(color:Colors.white),counterStyle:TextStyle(color:Colors.white70),
-        enabledBorder:OutlineInputBorder(borderSide:BorderSide(color:Colors.white70)),
-        focusedBorder:OutlineInputBorder(borderSide:BorderSide(color:Colors.white))),
-       onSubmitted:(_)=>verifyPin()),
-      const SizedBox(height:8),
-      SizedBox(width:double.infinity,child:FilledButton(
-       onPressed:verifyPin,child:const WaffraText('فتح التطبيق'))),
-     ],
-     if(error.isNotEmpty)...[
-      const SizedBox(height:12),
-      WaffraText(error,textAlign:TextAlign.center,
-       style:const TextStyle(color:Colors.orangeAccent)),
-     ],
-    ]))))]));
-
+  body:LayoutBuilder(builder:(context,c)=>Stack(fit:StackFit.expand,children:[
+   Image.asset('assets/app_lock.png',fit:BoxFit.fill,filterQuality:FilterQuality.high),
+   // Keep the approved full-screen keypad artwork: transparent touch targets
+   // make the pictured digits functional without drawing a second keypad.
+   ...List.generate(12,(index){
+    final row=index~/3,col=index%3;
+    final digit=row==3?(col==1?'0':''): '${row*3+col+1}';
+    return Positioned(
+     left:c.maxWidth*(0.15+col*0.235),top:c.maxHeight*(0.445+row*0.088),
+     width:c.maxWidth*0.23,height:c.maxHeight*0.078,
+     child:GestureDetector(behavior:HitTestBehavior.opaque,onTap:(){
+      if(row==3&&col==0){biometric();return;}
+      if(row==3&&col==2){if(pinController.text.isNotEmpty)pinController.text=pinController.text.substring(0,pinController.text.length-1);setState((){});return;}
+      if(pinController.text.length<8){pinController.text+=digit;setState((){});}
+      if(pinController.text.length==4)verifyPin();
+     },child:const ColoredBox(color:Colors.transparent)));
+   }),
+   if(error.isNotEmpty)Positioned(left:20,right:20,bottom:c.maxHeight*0.16,
+    child:Container(padding:const EdgeInsets.all(10),color:forest,
+     child:WaffraText(error,textAlign:TextAlign.center,
+      style:const TextStyle(color:Colors.white,fontSize:15)))),
+  ])),
+ );
 }
 class WaffraOnboarding extends StatefulWidget {
  final VoidCallback onFinish;
@@ -470,51 +438,28 @@ class WaffraOnboarding extends StatefulWidget {
 class _WaffraOnboardingState extends State<WaffraOnboarding> {
  final controller=PageController();
  int current=0;
- static const titles=['كل معاملاتك في مكان واحد','الصق رسالتك والباقي علينا','تحليلات بسيطة لقرارات أذكى','حقق أهدافك خطوة بخطوة'];
- static const subtitles=[
-  'من قلب الرياض، وفرة يساعدك تعرف وين تروح فلوسك وتتابع دخلك ومصروفاتك.',
-  'انسخ الرسائل البنكية والصقها، ووفرة يساعدك ترتب دخلك ومصروفاتك.',
-  'تابع أرقامك ورسومك البيانية وتقاريرك المالية بطريقة واضحة.',
-  'حط هدف ادخارك وتابع تقدمك، خطوة بخطوة حتى توصله.'
- ];
- static const symbols=[Icons.location_city_rounded,Icons.sms_rounded,Icons.bar_chart_rounded,Icons.savings_rounded];
  Future<void> finish()async{
   final p=await SharedPreferences.getInstance();
   await p.setBool('waffra_onboarding_completed',true);
   if(mounted)widget.onFinish();
  }
- void next(){if(current==3){finish();}else{controller.nextPage(duration:const Duration(milliseconds:650),curve:Curves.easeInOutCubic);}}
+ void next(){if(current==3){finish();}else{controller.nextPage(duration:const Duration(milliseconds:450),curve:Curves.easeInOutCubic);}}
  @override void dispose(){controller.dispose();super.dispose();}
  @override Widget build(BuildContext context)=>Scaffold(
-  backgroundColor:forest,
-  body:SafeArea(child:Column(children:[
-   Padding(padding:const EdgeInsets.symmetric(horizontal:22,vertical:12),child:Row(
-    mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
-     TextButton(onPressed:finish,child:const WaffraText('تخطي',style:TextStyle(color:Colors.white70,fontSize:15))),
-     const WaffraText('وفرة | Waffra',style:TextStyle(color:Colors.white,fontSize:23,fontWeight:FontWeight.bold)),
-    ])),
-   Expanded(child:PageView(controller:controller,onPageChanged:(v)=>setState(()=>current=v),
-    children:List.generate(4,(i)=>Padding(padding:const EdgeInsets.symmetric(horizontal:26),child:Column(
-     mainAxisAlignment:MainAxisAlignment.center,children:[
-      Container(height:250,width:double.infinity,decoration:BoxDecoration(
-       gradient:const LinearGradient(colors:[Color(0xFF087759),Color(0xFF064D3B)],begin:Alignment.topRight,end:Alignment.bottomLeft),
-       borderRadius:BorderRadius.circular(36),border:Border.all(color:Colors.white24)),
-       child:ClipRRect(borderRadius:BorderRadius.circular(35),child:Image.asset('assets/onboarding_0${i+1}.png',fit:BoxFit.contain))),
-      const SizedBox(height:44),
-      WaffraText(titles[i],textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:27,fontWeight:FontWeight.bold)),
-      const SizedBox(height:17),
-      WaffraText(subtitles[i],textAlign:TextAlign.center,style:const TextStyle(color:Colors.white70,fontSize:17,height:1.7)),
-     ]))))),
-   Padding(padding:const EdgeInsets.fromLTRB(28,10,28,28),child:Column(children:[
-    Row(mainAxisAlignment:MainAxisAlignment.center,children:List.generate(4,(i)=>AnimatedContainer(
-     duration:const Duration(milliseconds:350),margin:const EdgeInsets.symmetric(horizontal:4),
-     width:current==i?28:8,height:8,decoration:BoxDecoration(color:current==i?Colors.white:Colors.white38,borderRadius:BorderRadius.circular(10))))),
-    const SizedBox(height:22),
-    SizedBox(width:double.infinity,height:55,child:FilledButton(
-     style:FilledButton.styleFrom(backgroundColor:Colors.white,foregroundColor:forest),
-     onPressed:next,child:WaffraText(current==3?'ابدأ رحلتك مع وفرة':'التالي',style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)))),
-   ])),
-  ])));
+  backgroundColor:const Color(0xFFF7F8F0),
+  body:PageView(controller:controller,onPageChanged:(v)=>setState(()=>current=v),
+   children:List.generate(4,(i)=>LayoutBuilder(builder:(context,c)=>Stack(fit:StackFit.expand,children:[
+    Image.asset('assets/onboarding_0${i+1}.png',fit:BoxFit.fill,filterQuality:FilterQuality.high),
+    Positioned(left:0,right:0,top:0,height:c.maxHeight*0.125,
+     child:Align(alignment:Alignment.centerLeft,child:GestureDetector(
+      behavior:HitTestBehavior.opaque,onTap:finish,
+      child:SizedBox(width:c.maxWidth*0.27,height:c.maxHeight*0.12)))),
+    Positioned(left:c.maxWidth*0.035,right:c.maxWidth*0.035,bottom:c.maxHeight*0.008,
+     height:c.maxHeight*0.085,child:GestureDetector(
+      behavior:HitTestBehavior.opaque,onTap:next,
+      child:const ColoredBox(color:Colors.transparent))),
+   ])))),
+ );
 }
 
 class IntroScreen extends StatefulWidget {
