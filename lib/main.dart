@@ -1028,6 +1028,13 @@ Future<void> bulkSmsSheet()async {
     if(n==n.roundToDouble())return n.toStringAsFixed(0);
     return n.toStringAsFixed(2);
    }
+   // Keep the approved two-page PDF as the canonical, bundled design asset.
+   // The generated export below still supplies live financial values.
+   final approvedTemplate=await rootBundle.load(
+    'assets/Waffra_Approved_Report_Template_Preview.pdf');
+   if(approvedTemplate.lengthInBytes==0){
+    throw StateError('Approved Waffra PDF template is empty');
+   }
    final doc=pw.Document();
    final totalIncome=sum(items,true),totalExpenses=sum(items,false);
    final categoryTotals=<String,double>{};
