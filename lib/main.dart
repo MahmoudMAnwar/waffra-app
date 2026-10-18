@@ -499,7 +499,7 @@ class _WaffraOnboardingState extends State<WaffraOnboarding> {
       Container(height:250,width:double.infinity,decoration:BoxDecoration(
        gradient:const LinearGradient(colors:[Color(0xFF087759),Color(0xFF064D3B)],begin:Alignment.topRight,end:Alignment.bottomLeft),
        borderRadius:BorderRadius.circular(36),border:Border.all(color:Colors.white24)),
-       child:ClipRRect(borderRadius:BorderRadius.circular(35),child:Image.asset('assets/onboarding_0${i+1}.png',fit:BoxFit.contain)))),
+       child:ClipRRect(borderRadius:BorderRadius.circular(35),child:Image.asset('assets/onboarding_0${i+1}.png',fit:BoxFit.contain))),
       const SizedBox(height:44),
       WaffraText(titles[i],textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:27,fontWeight:FontWeight.bold)),
       const SizedBox(height:17),
