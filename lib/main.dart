@@ -289,6 +289,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  }
  Future<void> saveUser(Person u)async {
   final p=await SharedPreferences.getInstance();await p.setString('waffra_profile',jsonEncode(u.toJson()));
+  if(u.phone.trim().isNotEmpty)await p.setString('waffra_registered_profile',jsonEncode(u.toJson()));
   if(mounted)setState((){profile=u;showLogin=false;});
  }
  Future<void> logout()async {
@@ -506,6 +507,33 @@ class LoginScreen extends StatefulWidget {
 }
 class _LoginScreenState extends State<LoginScreen> {
  String? provider;
+ Person? registered;
+ bool signInMode=false,showSignInPassword=false,signingIn=false;
+ final signInPhone=TextEditingController(),signInPassword=TextEditingController();
+ @override void initState(){super.initState();_loadRegistered();}
+ Future<void> _loadRegistered()async{
+  final prefs=await SharedPreferences.getInstance();
+  final raw=prefs.getString('waffra_registered_profile');
+  if(raw==null)return;
+  try{final u=Person.fromJson(Map<String,dynamic>.from(jsonDecode(raw)));if(mounted)setState((){registered=u;signInMode=true;signInPhone.text=u.phone;});}catch(_){ }
+ }
+ @override void dispose(){signInPhone.dispose();signInPassword.dispose();super.dispose();}
+ Future<void> _signIn()async{
+  if(signingIn)return;
+  setState(()=>signingIn=true);
+  try{
+   final p=await SharedPreferences.getInstance();
+   final salt=p.getString('waffra_local_password_salt');
+   final expected=p.getString('waffra_local_password_hash');
+   final account=registered;
+   if(account==null||salt==null||expected==null||signInPhone.text.trim()!=account.phone||
+     sha256.convert(utf8.encode('$salt:${signInPassword.text}')).toString()!=expected){
+    if(mounted)snack(context,waffraIsEnglish?'Incorrect phone number or password':'رقم الجوال أو كلمة المرور غير صحيحة');return;
+   }
+   await widget.onSave(account);
+  }finally{if(mounted)setState(()=>signingIn=false);}
+ }
+
  bool socialBusy=false;
  Future<void> demoSocial(String selected)async {
   if(socialBusy)return;
@@ -516,7 +544,19 @@ class _LoginScreenState extends State<LoginScreen> {
    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(waffraIsEnglish?'Local demo profile opened — not authenticated with $selected':'تم الدخول للملف المحلي التجريبي بنجاح — لم تتم المصادقة مع $selected')));
   }finally{if(mounted)setState(()=>socialBusy=false);}
  }
- @override Widget build(BuildContext context)=>provider!=null?
+ @override Widget build(BuildContext context)=>signInMode&&registered!=null?
+  Scaffold(backgroundColor:forest,body:SafeArea(child:Center(child:SingleChildScrollView(padding:const EdgeInsets.all(28),child:Column(mainAxisSize:MainAxisSize.min,children:[
+   const Icon(Icons.account_circle_rounded,color:Colors.white,size:82),
+   const SizedBox(height:18),
+   WaffraText(waffraIsEnglish?'Welcome back':'حياك الله من جديد',style:const TextStyle(color:Colors.white,fontSize:28,fontWeight:FontWeight.bold)),
+   const SizedBox(height:24),
+   TextField(controller:signInPhone,keyboardType:TextInputType.phone,decoration:const InputDecoration(filled:true,fillColor:Colors.white,labelText:'رقم الجوال',border:OutlineInputBorder())),
+   const SizedBox(height:12),
+   TextField(controller:signInPassword,obscureText:!showSignInPassword,decoration:InputDecoration(filled:true,fillColor:Colors.white,labelText:waffraIsEnglish?'Password':'كلمة المرور',border:const OutlineInputBorder(),suffixIcon:IconButton(onPressed:()=>setState(()=>showSignInPassword=!showSignInPassword),icon:Icon(showSignInPassword?Icons.visibility_off:Icons.visibility)))),
+   const SizedBox(height:18),
+   SizedBox(width:double.infinity,child:FilledButton(onPressed:signingIn?null:_signIn,child:WaffraText(waffraIsEnglish?'Sign in':'تسجيل الدخول'))),
+   TextButton(onPressed:()=>setState(()=>signInMode=false),child:WaffraText(waffraIsEnglish?'Create a different local account':'إنشاء حساب محلي جديد',style:const TextStyle(color:Colors.white))),
+  ]))))):provider!=null?
   ProfileForm(provider:provider!,onSave:widget.onSave,onBack:()=>setState(()=>provider=null)):
   Scaffold(backgroundColor:forest,body:SafeArea(child:Center(child:SingleChildScrollView(
    padding:const EdgeInsets.all(28),child:Column(children:[
