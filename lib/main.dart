@@ -141,11 +141,22 @@ class BankParser {
   final incoming=RegExp(r'حوال[ةه].{0,25}وارد|تحويل.{0,25}وارد|استلام.{0,25}حوال|credited|deposit|راتب|إيداع|ايداع',caseSensitive:false).hasMatch(s);
   final outgoing=RegExp(r'حوال[ةه].{0,25}صادر|تحويل.{0,25}صادر|شراء|نقاط\s*بيع|pos\b|مدى|سحب|خصم|دفع|فاتورة|purchase|debit\b',caseSensitive:false).hasMatch(s);
   final income=incoming&&!outgoing;
+  // Saudi SMS can write currency before or after the amount, with no space:
+  // "84.72SR", "SR 84.72", "84.72ر.س", "بـ84.72SR".
   const n=r'([0-9][0-9,]*(?:\.[0-9]{1,2})?)';
-  const currency=r'(?:SR|SAR|ر\.?\s?س\.?|ريال(?:\s*سعودي)?|﷼|⃁)';
-  final patterns=[RegExp('$currency\\s*[:：-]?\\s*$n',caseSensitive:false),RegExp('$n\\s*$currency',caseSensitive:false),RegExp('(?:المبلغ|مبلغ|بقيمة|بمبلغ|amount|amt)\\s*[:：-]?\\s*$n',caseSensitive:false)];
+  const currency=r'(?:SAR|SR|ر\.?\s*س\.?|ريال(?:\s*سعودي)?|﷼|⃁)';
+  final patterns=[
+   RegExp('$n\\s*$currency',caseSensitive:false),
+   RegExp('$currency\\s*[:：-]?\\s*$n',caseSensitive:false),
+   RegExp('(?:المبلغ|مبلغ|بقيمة|بمبلغ|amount|amt)\\s*[:：-]?\\s*$n',caseSensitive:false),
+  ];
   double? value;
-  for(final p in patterns){final m=p.firstMatch(s);if(m!=null){value=amountOf(m.group(1)??'');if(value!=null)break;}}
+  for(final p in patterns){
+   final m=p.firstMatch(s);
+   if(m==null)continue;
+   value=amountOf(m.group(1)??'');
+   if(value!=null)break;
+  }
   var title=income?'مبلغ وارد':'عملية بنكية',cat=income?'دخل آخر':'أخرى';
   String? suggestion;
   if(RegExp(r'راتب|salary',caseSensitive:false).hasMatch(s)){title='راتب';cat='راتب';}
@@ -550,8 +561,13 @@ Future<void> bulkSmsSheet()async {
   final found=splitBankMessages(pasted.text.trim());
   if(found.isEmpty)return;
   final parsedResults=found.map(BankParser.parse).toList();
-  if(parsedResults.any((r)=>r.amount==null||r.amount!<=0)){
+  final invalid=<int>[];
+  for(var i=0;i<parsedResults.length;i++){
+   if(parsedResults[i].amount==null||parsedResults[i].amount!<=0)invalid.add(i+1);
+  }
+  if(invalid.isNotEmpty){
    update((){messages=found;parsed=true;});
+   if(ctx.mounted)snack(ctx,'لم أستطع قراءة مبلغ الرسالة رقم ${invalid.join('، ')}. تأكد من وجود المبلغ ورمز العملة.');
    return;
   }
   final additions=<MoneyEntry>[];
@@ -622,16 +638,13 @@ Future<void> bulkSmsSheet()async {
       const SizedBox(height:12),
       FilledButton.icon(
        icon:const Icon(Icons.add_circle_outline),
-       onPressed:(){
+       onPressed:busy?null:()async{
         FocusScope.of(ctx).unfocus();
         pasteTimer?.cancel();
-        final raw=pasted.text.trim();
-        if(raw.isEmpty){snack(ctx,'الصق رسالة بنكية أولاً');return;}
-        final found=splitBankMessages(raw);
-        if(found.isEmpty){snack(ctx,'لم يتم العثور على معاملات. راجع نص الرسالة');return;}
-        update((){messages=found;parsed=true;});
+        if(pasted.text.trim().isEmpty){snack(ctx,'الصق رسالة بنكية أولاً');return;}
+        await saveParsedMessages(ctx,update);
        },
-       label:const Text('تحليل الرسائل وإضافتها')),
+       label:Text(busy?'جارٍ التحليل والحفظ...':'تحليل الرسائل وإضافتها')),
       if(parsed)...[
        const SizedBox(height:10),
        Text(messages.length==1?'تم استخراج معاملة واحدة بنجاح':
@@ -933,8 +946,6 @@ Future<void> bulkSmsSheet()async {
    if(template==null)throw StateError('تعذر قراءة صورة التقرير');
    final headerArt=pw.MemoryImage(Uint8List.fromList(img.encodePng(img.copyCrop(template,
     x:0,y:0,width:template.width,height:(template.height*0.54).round()))));
-   final footerLogo=pw.MemoryImage(Uint8List.fromList(img.encodePng(img.copyCrop(template,
-    x:0,y:0,width:(template.width*0.32).round(),height:(template.height*0.50).round()))));
    final doc=pw.Document();
    final totalIncome=sum(items,true),totalExpenses=sum(items,false);
    final categoryTotals=<String,double>{};
@@ -953,8 +964,13 @@ Future<void> bulkSmsSheet()async {
       pw.Positioned(top:0,left:0,right:0,child:pw.SizedBox(height:210,child:pw.Image(headerArt,fit:pw.BoxFit.fill))),
  
       pw.Positioned(bottom:0,left:0,right:0,child:pw.Container(height:95,color:PdfColors.teal900)),
-      pw.Positioned(bottom:12,left:20,child:pw.SizedBox(width:120,height:73,
-       child:pw.Image(footerLogo,fit:pw.BoxFit.contain))),
+      pw.Positioned(bottom:17,left:22,child:pw.Column(
+       crossAxisAlignment:pw.CrossAxisAlignment.center,children:[
+        pw.Text('Waffra',style:pw.TextStyle(font:bold,fontSize:21,color:PdfColors.white)),
+        pw.Text('وفرة',style:pw.TextStyle(font:bold,fontSize:17,color:PdfColors.white)),
+        pw.Text('وفرة بيدك.. فلوسك تروح',
+         style:pw.TextStyle(font:font,fontSize:8,color:PdfColors.white)),
+       ])),
       pw.Positioned(bottom:24,right:20,child:pw.Text(
        'تاريخ التصدير: ${dayText(DateTime.now())}',
        style:pw.TextStyle(font:font,fontSize:10,color:PdfColors.white))),
