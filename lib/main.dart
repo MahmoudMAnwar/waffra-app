@@ -61,12 +61,17 @@ class RiyalAmount extends StatelessWidget {
   final effective=DefaultTextStyle.of(context).style.merge(style);
   final color=effective.color??Theme.of(context).colorScheme.onSurface;
   final size=effective.fontSize??16;
-  return Row(mainAxisSize:MainAxisSize.min,textDirection:TextDirection.ltr,children:[
-   Text('$prefix${formatMoney(amount)}',style:effective),const SizedBox(width:4),
-   Image.asset('assets/Saudi_Riyal_Symbol-1.png',width:size*.9,height:size*.9,
-    color:color,colorBlendMode:BlendMode.srcIn,
-    errorBuilder:(_,__,___)=>Text('﷼',style:effective)),
-  ]);
+  return ValueListenableBuilder<bool>(
+   valueListenable:hideWaffraAmounts,
+   builder:(context,hidden,_)=>Row(mainAxisSize:MainAxisSize.min,textDirection:TextDirection.ltr,children:[
+    Text(hidden?'••••':'$prefix${formatMoney(amount)}',style:effective),
+    if(!hidden)...[
+     const SizedBox(width:4),
+     Image.asset('assets/Saudi_Riyal_Symbol-1.png',width:size*.9,height:size*.9,
+      color:color,colorBlendMode:BlendMode.srcIn,
+      errorBuilder:(_,__,___)=>Text('﷼',style:effective)),
+    ],
+   ]));
  }
 }
 class MoneyEntry {
@@ -962,6 +967,10 @@ Future<void> bulkSmsSheet()async {
      margin:const pw.EdgeInsets.fromLTRB(26,225,26,112),
      buildBackground:(ctx)=>pw.FullPage(ignoreMargins:true,child:pw.Stack(children:[
       pw.Positioned(top:0,left:0,right:0,child:pw.SizedBox(height:210,child:pw.Image(headerArt,fit:pw.BoxFit.fill))),
+      pw.Positioned(top:70,right:24,child:pw.Container(
+       color:PdfColors.teal900,padding:const pw.EdgeInsets.symmetric(horizontal:10,vertical:5),
+       child:pw.Text('تاريخ التصدير: ${dayText(DateTime.now())}',
+        style:pw.TextStyle(font:font,fontSize:10,color:PdfColors.white)))),
  
       pw.Positioned(bottom:0,left:0,right:0,child:pw.Container(height:95,color:PdfColors.teal900)),
       pw.Positioned(bottom:17,left:22,child:pw.Column(
@@ -1105,7 +1114,12 @@ Future<void> bulkSmsSheet()async {
   final filterCats=<String>{'الكل',...entries.where((e)=>typeFilter=='الكل'||
    (typeFilter=='الدخل'&&e.income)||(typeFilter=='المصروفات'&&!e.income)).map((e)=>e.category)}.toList();
   final selected=filterCats.contains(categoryFilter)?categoryFilter:'الكل';
-  return ListView(padding:const EdgeInsets.all(16),children:[
+  return RefreshIndicator(
+   onRefresh:()async{
+    if(mounted)setState((){});
+    await Future<void>.delayed(const Duration(milliseconds:250));
+   },
+   child:ListView(physics:const AlwaysScrollableScrollPhysics(),padding:const EdgeInsets.all(16),children:[
    Text(greeting,style:Theme.of(context).textTheme.titleLarge),
    const SizedBox(height:12),
    Container(padding:const EdgeInsets.all(24),
@@ -1140,7 +1154,7 @@ Future<void> bulkSmsSheet()async {
    Text('عدد العمليات: ${visible.length}'),
    if(visible.isEmpty)const Padding(padding:EdgeInsets.all(24),child:Center(child:Text('ما عندك عمليات مطابقة'))),
    ...visible.map(tile),const SizedBox(height:90),
-  ]);
+  ]));
  }
  List<MoneyEntry> get analysisEntries=>entries.where((e)=>e.date.year==year&&
   (period=='سنوي'||e.date.month==month)).toList();
