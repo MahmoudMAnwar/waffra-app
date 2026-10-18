@@ -322,8 +322,13 @@ class _WaffraAppState extends State<WaffraApp> {
    startupError!=null?Scaffold(body:Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[
     const Icon(Icons.error_outline,size:48,color:Colors.red),
     const SizedBox(height:12),
-    const WaffraText('تعذر تشغيل وفرة. بياناتك محفوظة، حاول مرة أخرى.'),
+    const WaffraText('تعذر تشغيل وفرة. لم يتم حذف بياناتك.'),
     const SizedBox(height:12),
+    SelectableText(startupError??'Unknown startup error',textDirection:TextDirection.ltr,textAlign:TextAlign.center,style:const TextStyle(fontSize:12)),
+    const SizedBox(height:12),
+    OutlinedButton.icon(onPressed:()=>Clipboard.setData(ClipboardData(text:startupError??'Unknown startup error')),
+     icon:const Icon(Icons.copy),label:const WaffraText('نسخ تفاصيل الخطأ')),
+    const SizedBox(height:8),
     FilledButton(onPressed:(){setState((){loading=true;startupError=null;});load();},child:const WaffraText('إعادة المحاولة')),
    ])))):
    locked?PinLockScreen(pinHash:pinHash!,onUnlock:()=>setState(()=>locked=false)):
