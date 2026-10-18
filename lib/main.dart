@@ -727,7 +727,7 @@ Future<void> bulkSmsSheet()async {
       ],
       if(parsed&&statusMessage.isEmpty)...[
        const SizedBox(height:10),
-       WaffraText(waffraIsEnglish?'Detected ${messages.length} messages':'تم اكتشاف ${messages.length} رسائل',
+       WaffraText(waffraIsEnglish?'Detected ${messages.length} transactions':'تم اكتشاف ${messages.length} معاملة',
         style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
        const SizedBox(height:8),
        FilledButton.icon(icon:const Icon(Icons.check_circle_outline),
@@ -1032,7 +1032,7 @@ Future<void> bulkSmsSheet()async {
    // The generated export below still supplies live financial values.
    // Rasterize the branded PDF template once, then draw it as the
    // background of every exported report page. Financial data stays dynamic.
-   final templateData=await rootBundle.load('assets/Waffra_Report_Template.pdf');
+   final templateData=await rootBundle.load('assets/Waffra_Riyadh_Report_Template.pdf');
    if(templateData.lengthInBytes==0)throw StateError('Waffra PDF template is empty');
    pw.MemoryImage? reportBackground;
    await for(final raster in Printing.raster(
@@ -1736,15 +1736,16 @@ Future<void> bulkSmsSheet()async {
  @override Widget build(BuildContext context)=>Scaffold(
   appBar:AppBar(title:const WaffraText('وفرة | Waffra',style:TextStyle(fontWeight:FontWeight.bold)),
    actions:[
-    PopupMenuButton<String>(
-     tooltip:'AR | EN',
-     onSelected:(v)async{setState(()=>tab=0);await widget.onLanguage(v);},
-     itemBuilder:(_)=>[
-      const PopupMenuItem(value:'ar',child:WaffraText('العربية')),
-      const PopupMenuItem(value:'en',child:WaffraText('الإنجليزية')),
-     ],
-     child:const Padding(padding:EdgeInsets.symmetric(horizontal:5),
-      child:Center(child:WaffraText('AR | EN',style:TextStyle(color:Colors.white,fontWeight:FontWeight.bold,fontSize:12))))),
+    TextButton(
+     onPressed:()async{
+      final next=waffraIsEnglish?'ar':'en';
+      setState(()=>tab=0);
+      await widget.onLanguage(next);
+     },
+     style:TextButton.styleFrom(foregroundColor:Colors.white),
+     child:Text(waffraIsEnglish?'AR':'EN',
+      style:const TextStyle(fontWeight:FontWeight.bold,fontSize:14)),
+    ),
     ValueListenableBuilder<bool>(
      valueListenable:hideWaffraAmounts,
      builder:(context,hidden,_)=>IconButton(
