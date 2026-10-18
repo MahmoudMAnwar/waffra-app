@@ -355,21 +355,18 @@ class _PinLockScreenState extends State<PinLockScreen> {
   body:Stack(fit:StackFit.expand,children:[
    // The approved original welcome artwork is used unchanged.
    Image.asset('assets/waffra_welcome_integrated.png',fit:BoxFit.cover),
-   Container(color:const Color(0x44064D3B)),
-   SafeArea(child:Center(child:SingleChildScrollView(
-    padding:const EdgeInsets.symmetric(horizontal:34,vertical:20),
+   // Preserve the welcome image, logo and slogan without tint or extra text.
+   SafeArea(child:Align(alignment:const Alignment(0,0.58),child:SingleChildScrollView(
+    padding:const EdgeInsets.symmetric(horizontal:34,vertical:12),
     child:Column(mainAxisSize:MainAxisSize.min,children:[
-     SizedBox(height:MediaQuery.of(context).size.height*.12),
-     const WaffraText('فلوسك فين تروح؟\nوفرة يعلمك.',textAlign:TextAlign.center,style:TextStyle(color:Colors.white,fontSize:23,fontWeight:FontWeight.bold,shadows:[Shadow(color:Colors.black87,blurRadius:12)])),
-     const SizedBox(height:28),
-     SizedBox(width:72,height:72,child:FilledButton(
+     SizedBox(width:64,height:64,child:FilledButton(
       onPressed:busy||checking?null:biometric,
       style:FilledButton.styleFrom(
        padding:EdgeInsets.zero,backgroundColor:const Color(0x66064D3B),
        disabledBackgroundColor:const Color(0x66064D3B),
        foregroundColor:Colors.white,
        shape:const CircleBorder(side:BorderSide(color:Colors.white70,width:2))),
-      child:const Icon(Icons.fingerprint,size:37,color:Colors.white))),
+      child:const Icon(Icons.fingerprint,size:34,color:Colors.white))),
      const SizedBox(height:9),
      WaffraText(checking?'جاري فحص البصمة...':'لمس البصمة',
       style:const TextStyle(color:Colors.white,fontSize:18,fontWeight:FontWeight.bold)),
