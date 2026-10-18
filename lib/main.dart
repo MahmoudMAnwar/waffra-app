@@ -465,7 +465,7 @@ class _WaffraOnboardingState extends State<WaffraOnboarding> {
   backgroundColor:const Color(0xFFF7F8F0),
   body:PageView(controller:controller,onPageChanged:(v)=>setState(()=>current=v),
    children:List.generate(4,(i)=>LayoutBuilder(builder:(context,c)=>Stack(fit:StackFit.expand,children:[
-    Image.asset('assets/onboarding_0${i+1}.png',fit:BoxFit.contain,filterQuality:FilterQuality.high),
+    Image.asset('assets/onboarding_0${i+1}.png',fit:BoxFit.cover,alignment:Alignment.center,filterQuality:FilterQuality.high,errorBuilder:(context,error,stack)=>Center(child:WaffraText(waffraIsEnglish?'Onboarding image unavailable':'صورة التعريف غير متاحة'))),
     Positioned(left:0,right:0,top:0,height:c.maxHeight*0.125,
      child:Align(alignment:Alignment.centerLeft,child:GestureDetector(
       behavior:HitTestBehavior.opaque,onTap:finish,
