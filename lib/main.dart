@@ -183,6 +183,19 @@ class BankParser {
   return BankResult(value,income,title,cat,suggestion);
  }
 }
+DateTime? bankSmsDate(String raw) {
+ final normalized=digits(raw).replaceAll('‏','').replaceAll('‎','');
+ final match=RegExp(r'(\\d{1,2})[/-](\\d{1,2})[/-](\\d{2,4})\\s+(\\d{1,2}):(\\d{2})').firstMatch(normalized);
+ if(match==null)return null;
+ final day=int.tryParse(match.group(1)!),month=int.tryParse(match.group(2)!);
+ var year=int.tryParse(match.group(3)!);
+ final hour=int.tryParse(match.group(4)!),minute=int.tryParse(match.group(5)!);
+ if(day==null||month==null||year==null||hour==null||minute==null)return null;
+ if(year<100)year+=2000;
+ if(month<1||month>12||day<1||day>31||hour>23||minute>59)return null;
+ final date=DateTime(year,month,day,hour,minute);
+ return date.year==year&&date.month==month&&date.day==day?date:null;
+}
 String bankSmsHash(String raw)=>sha256.convert(utf8.encode(digits(raw).replaceAll(RegExp(r'\s+'),' ').trim().toLowerCase())).toString();
 List<String> splitBankMessages(String raw){
  final clean=raw.replaceAll('\r\n','\n').replaceAll('\u200f','').replaceAll('\u200e','').trim();
@@ -639,7 +652,7 @@ Future<void> bulkSmsSheet()async {
    final cat=categories.any((c)=>c.income==result.income&&c.name==result.category)
     ?result.category:(forType(result.income).isNotEmpty?forType(result.income).first.name:'أخرى');
    additions.add(MoneyEntry(id:newId(),title:'${result.title} — ${found[i].replaceAll(RegExp(r'\\s+'),' ').trim()}',
-    category:cat,amount:result.amount!,income:result.income,date:DateTime.now()));
+    category:cat,amount:result.amount!,income:result.income,date:bankSmsDate(found[i])??DateTime.now()));
    newHashes.add(bankSmsHash(found[i]));
   }
   try{
