@@ -312,15 +312,23 @@ class _WaffraAppState extends State<WaffraApp> {
    valueListenable:hideWaffraAmounts,
    builder:(context,hidden,_)=>Directionality(
     textDirection:language=='ar'?TextDirection.rtl:TextDirection.ltr,
-    child:AnimatedSwitcher(duration:const Duration(milliseconds:350),switchInCurve:Curves.easeOutCubic,
-     transitionBuilder:(w,a)=>FadeTransition(opacity:a,child:SlideTransition(position:Tween<Offset>(begin:const Offset(0.035,0),end:Offset.zero).animate(a),child:w)),
+    child:AnimatedSwitcher(duration:const Duration(milliseconds:800),switchInCurve:Curves.easeOutCubic,
+     transitionBuilder:(w,a)=>FadeTransition(opacity:a,child:SlideTransition(position:Tween<Offset>(begin:const Offset(0.11,0),end:Offset.zero).animate(a),child:w)),
      child:KeyedSubtree(key:ValueKey(language),child:child??const SizedBox.shrink())))),
   theme:ThemeData(useMaterial3:true,colorSchemeSeed:emerald,scaffoldBackgroundColor:sand,appBarTheme:const AppBarTheme(backgroundColor:forest,foregroundColor:Colors.white),navigationBarTheme:NavigationBarThemeData(backgroundColor:forest,labelTextStyle:WidgetStateProperty.all(const TextStyle(color:Colors.white,fontSize:11)),iconTheme:WidgetStateProperty.all(const IconThemeData(color:Colors.white))),floatingActionButtonTheme:const FloatingActionButtonThemeData(backgroundColor:forest,foregroundColor:Colors.white),fontFamily:'Tajawal',textTheme:ThemeData.light().textTheme.apply(fontFamily:'Tajawal'),primaryTextTheme:ThemeData.light().primaryTextTheme.apply(fontFamily:'Tajawal')),
   darkTheme:ThemeData(useMaterial3:true,brightness:Brightness.dark,colorSchemeSeed:emerald,appBarTheme:const AppBarTheme(backgroundColor:forest,foregroundColor:Colors.white),navigationBarTheme:NavigationBarThemeData(backgroundColor:forest,labelTextStyle:WidgetStateProperty.all(const TextStyle(color:Colors.white,fontSize:11)),iconTheme:WidgetStateProperty.all(const IconThemeData(color:Colors.white))),floatingActionButtonTheme:const FloatingActionButtonThemeData(backgroundColor:forest,foregroundColor:Colors.white),fontFamily:'Tajawal',textTheme:ThemeData.dark().textTheme.apply(fontFamily:'Tajawal'),primaryTextTheme:ThemeData.dark().primaryTextTheme.apply(fontFamily:'Tajawal')),
   themeMode:dark?ThemeMode.dark:ThemeMode.light,
-  themeAnimationDuration:const Duration(milliseconds:400),
+  themeAnimationDuration:const Duration(milliseconds:750),
   themeAnimationCurve:Curves.easeInOutCubic,
-  home:Directionality(textDirection:language=='ar'?TextDirection.rtl:TextDirection.ltr,child:
+  home:PopScope(canPop:false,onPopInvokedWithResult:(didPop,result)async {
+   if(didPop||!mounted)return;
+   final exit=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Exit Waffra?':'تبي تطلع من وفرة؟'),
+    content:WaffraText(waffraIsEnglish?'Do you want to exit the app?':'متأكد تبي تطلع من التطبيق؟'),
+    actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:WaffraText(waffraIsEnglish?'No':'لا')),
+     FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:WaffraText(waffraIsEnglish?'Yes':'نعم'))]));
+   if(exit==true)SystemNavigator.pop();
+  },child:Directionality(textDirection:language=='ar'?TextDirection.rtl:TextDirection.ltr,child:
    loading?const Scaffold(body:Center(child:CircularProgressIndicator())):
    startupError!=null?Scaffold(body:Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[
     const Icon(Icons.error_outline,size:48,color:Colors.red),
@@ -337,7 +345,7 @@ class _WaffraAppState extends State<WaffraApp> {
    locked?PinLockScreen(pinHash:pinHash!,onUnlock:()=>setState(()=>locked=false)):
    !onboarded?IntroScreen(onStart:quickStart,onLogin:intro):
    profile==null||showLogin?LoginScreen(onSave:saveUser):
-   HomeScreen(key:ValueKey(language),profile:profile!,dark:dark,onTheme:theme,onLanguage:setLanguage,onLogout:logout,onProfile:saveUser,onSetPin:setPin,pinEnabled:pinHash!=null)));
+   HomeScreen(key:ValueKey(language),profile:profile!,dark:dark,onTheme:theme,onLanguage:setLanguage,onLogout:logout,onProfile:saveUser,onSetPin:setPin,pinEnabled:pinHash!=null))));
 }
 class PinLockScreen extends StatefulWidget {
  final String pinHash;final VoidCallback onUnlock;
@@ -788,17 +796,18 @@ Future<void> bulkSmsSheet()async {
         });
        }
       },decoration:InputDecoration(labelText:waffraTr('الصق رسالة أو عدة رسائل بنكية'),
-       hintText:waffraTr('الصق الرسائل كاملة، كل رسالة بتاريخها'),border:OutlineInputBorder())),
+       hintText:waffraIsEnglish?'Paste your bank messages here. We will analyze them automatically.':'الصق رسالتك البنكية هنا، وخلّ الباقي علينا! بنحلّلها لك تلقائيًا ونرتّب مصروفاتك ودخلك.',border:OutlineInputBorder())),
       const SizedBox(height:12),
-      FilledButton.icon(
-       icon:const Icon(Icons.add_circle_outline),
-       onPressed:busy?null:()async{
-        FocusScope.of(ctx).unfocus();
+      OutlinedButton.icon(icon:const Icon(Icons.content_paste),
+       onPressed:busy?null:()async {
+        final data=await Clipboard.getData(Clipboard.kTextPlain);
+        if(!ctx.mounted)return;
+        final text=data?.text?.trim()??'';
+        if(text.isEmpty){snack(ctx,waffraIsEnglish?'Clipboard is empty':'ما فيه رسالة منسوخة حاليًا');return;}
+        pasted.text=text;
         pasteTimer?.cancel();
-        if(pasted.text.trim().isEmpty){snack(ctx,'الصق رسالة بنكية أولاً');return;}
-        update((){messages=splitBankMessages(pasted.text.trim());parsed=true;});
-       },
-       label:WaffraText(busy?'جارٍ التحليل...':'تحليل الرسائل')),
+        update((){messages=splitBankMessages(text);parsed=true;statusMessage='';});
+       },label:WaffraText(waffraIsEnglish?'Paste last copied message':'لصق آخر رسالة نسختها')),
       if(statusMessage.isNotEmpty)...[
        const SizedBox(height:8),
        WaffraText(statusMessage,style:const TextStyle(color:Colors.deepOrange,fontWeight:FontWeight.w600)),
@@ -1102,6 +1111,11 @@ Future<void> bulkSmsSheet()async {
    final exportedAt=DateTime.now();
    final oldest=items.map((e)=>e.date).reduce((a,b)=>a.isBefore(b)?a:b);
    final newest=items.map((e)=>e.date).reduce((a,b)=>a.isAfter(b)?a:b);
+   String pdfClean(String input){
+    final noControls=input.replaceAll(RegExp(r'[\\u200B-\\u200F\\u202A-\\u202E\\u2066-\\u2069\\uFE0E\\uFE0F]'),'');
+    final noEmoji=noControls.replaceAll(RegExp(r'[\\u{1F000}-\\u{1FAFF}]',unicode:true),'');
+    return noEmoji.replaceAll(RegExp(r'\\s+'),' ').trim();
+   }
    String fmt(num number){
     final n=number.toDouble();
     if(n==n.roundToDouble())return n.toStringAsFixed(0);
@@ -1162,7 +1176,7 @@ Future<void> bulkSmsSheet()async {
        data:ordered.map((e)=>[
         dayText(e.date),english?(e.income?'Income':'Expense'):(e.income?'دخل':'مصروف'),
         waffraTr(e.category),
-        e.title.replaceAll(RegExp(r'\\s+'),' ').trim(),
+        pdfClean(e.title).length>125?'${pdfClean(e.title).substring(0,125)}…':pdfClean(e.title),
         '${e.income?'+':'-'}${fmt(e.amount)}',
        ]).toList(),
        headerDecoration:const pw.BoxDecoration(color:PdfColors.teal800),
@@ -1191,6 +1205,7 @@ Future<void> bulkSmsSheet()async {
     ]));
     doc.addPage(pw.Page(pageTheme:pageTheme,build:(ctx)=>pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.stretch,children:[
      heading('تقرير التحليلات المالية','Financial Analytics'),
+     pw.Container(padding:const pw.EdgeInsets.all(12),decoration:pw.BoxDecoration(border:pw.Border.all(color:PdfColors.grey400,width:1),borderRadius:pw.BorderRadius.circular(9)),child:pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.stretch,children:[
      heading('الدخل والمصروفات حسب الفترة','Income vs Expenses by Period'),
      ...active.map((i)=>pw.Padding(padding:const pw.EdgeInsets.symmetric(vertical:7),
       child:pw.Row(children:[
@@ -1204,8 +1219,10 @@ Future<void> bulkSmsSheet()async {
          bar(sum(groups[i],false),PdfColors.deepOrange),pw.SizedBox(width:62,child:pw.Text(fmt(sum(groups[i],false)),style:pw.TextStyle(font:font,fontSize:9)))]),
        ])),
       ]))),
+     ])),
      if(totalExpenses>0)...[
       pw.SizedBox(height:12),
+      pw.Container(padding:const pw.EdgeInsets.all(12),decoration:pw.BoxDecoration(border:pw.Border.all(color:PdfColors.grey400,width:1),borderRadius:pw.BorderRadius.circular(9)),child:pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.stretch,children:[
       heading('توزيع المصروفات حسب الفئات','Expenses by Category'),
       pw.Center(child:pw.SvgImage(svg:expensePieSvg(categoryTotals),width:150,height:150)),
       pw.SizedBox(height:10),
@@ -1217,6 +1234,7 @@ Future<void> bulkSmsSheet()async {
          pw.SizedBox(width:90,child:pw.Text('${(e.value/totalExpenses*100).toStringAsFixed(1)}%',
           style:pw.TextStyle(font:bold,fontSize:10))),
         ])))),
+      ])),
      ],
     ])));
    }
@@ -1304,7 +1322,9 @@ Future<void> bulkSmsSheet()async {
    child:ListView(physics:const AlwaysScrollableScrollPhysics(),padding:const EdgeInsets.all(16),children:[
    WaffraText(greeting,style:Theme.of(context).textTheme.titleLarge),
    const SizedBox(height:12),
-   Container(padding:const EdgeInsets.all(24),
+   TweenAnimationBuilder<double>(tween:Tween<double>(begin:0,end:1),duration:const Duration(milliseconds:1100),curve:Curves.easeOutCubic,
+    builder:(context,progress,child)=>Opacity(opacity:progress,child:Transform.scale(scale:0.84+0.16*progress,child:child)),
+    child:Container(padding:const EdgeInsets.all(24),
     decoration:BoxDecoration(gradient:const LinearGradient(colors:[forest,emerald]),borderRadius:BorderRadius.circular(24)),
     child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
      const WaffraText('رصيدك الحالي',style:TextStyle(color:Colors.white70)),const SizedBox(height:10),
@@ -1316,7 +1336,7 @@ Future<void> bulkSmsSheet()async {
      ),
      const SizedBox(height:8),
      const WaffraText('كل ريال تحسب له حساب',style:TextStyle(color:Colors.white70)),
-    ])),
+    ]))),
    const SizedBox(height:12),
    Row(children:[stat('الدخل',inc,Icons.south_west,emerald),stat('المصروفات',exp,Icons.north_east,Colors.deepOrange)]),
    const SizedBox(height:10),
