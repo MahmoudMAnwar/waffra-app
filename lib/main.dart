@@ -544,41 +544,39 @@ class _LoginScreenState extends State<LoginScreen> {
    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(waffraIsEnglish?'Local demo profile opened — not authenticated with $selected':'تم الدخول للملف المحلي التجريبي بنجاح — لم تتم المصادقة مع $selected')));
   }finally{if(mounted)setState(()=>socialBusy=false);}
  }
- @override Widget build(BuildContext context)=>signInMode&&registered!=null?
-  Scaffold(backgroundColor:forest,body:SafeArea(child:Center(child:SingleChildScrollView(padding:const EdgeInsets.all(28),child:Column(mainAxisSize:MainAxisSize.min,children:[
-   SizedBox(height:155,width:240,child:Image.asset('assets/signin.png',fit:BoxFit.cover,alignment:Alignment.topCenter)),
-   const SizedBox(height:18),
-   WaffraText(waffraIsEnglish?'Welcome back':'حياك الله من جديد',style:const TextStyle(color:Colors.white,fontSize:28,fontWeight:FontWeight.bold)),
-   const SizedBox(height:24),
-   TextField(controller:signInPhone,keyboardType:TextInputType.phone,decoration:const InputDecoration(filled:true,fillColor:Colors.white,labelText:'رقم الجوال',border:OutlineInputBorder())),
-   const SizedBox(height:12),
-   TextField(controller:signInPassword,obscureText:!showSignInPassword,decoration:InputDecoration(filled:true,fillColor:Colors.white,labelText:waffraIsEnglish?'Password':'كلمة المرور',border:const OutlineInputBorder(),suffixIcon:IconButton(onPressed:()=>setState(()=>showSignInPassword=!showSignInPassword),icon:Icon(showSignInPassword?Icons.visibility_off:Icons.visibility)))),
-   const SizedBox(height:18),
-   SizedBox(width:double.infinity,child:FilledButton(onPressed:signingIn?null:_signIn,child:WaffraText(waffraIsEnglish?'Sign in':'تسجيل الدخول'))),
-   TextButton(onPressed:()=>setState(()=>signInMode=false),child:WaffraText(waffraIsEnglish?'Create a different local account':'إنشاء حساب محلي جديد',style:const TextStyle(color:Colors.white))),
-  ]))))):provider!=null?
-  ProfileForm(provider:provider!,onSave:widget.onSave,onBack:()=>setState(()=>provider=null)):
-  Scaffold(backgroundColor:forest,body:SafeArea(child:Center(child:SingleChildScrollView(
-   padding:const EdgeInsets.all(28),child:Column(children:[
-    SizedBox(height:145,width:230,child:Image.asset('assets/welcome_login.png',fit:BoxFit.cover,alignment:Alignment.topCenter)),
-    const SizedBox(height:20),const WaffraText('وفرة',style:TextStyle(fontSize:42,color:Colors.white,fontWeight:FontWeight.w900)),
-    const SizedBox(height:12),const WaffraText('وفرة بعلمك وين فلوسك تروح',style:TextStyle(fontSize:19,color:Colors.white)),
-    const SizedBox(height:30),
-    SizedBox(width:double.infinity,height:52,child:OutlinedButton.icon(
-     style:OutlinedButton.styleFrom(backgroundColor:Colors.white,foregroundColor:const Color(0xFF4285F4),side:const BorderSide(color:Color(0xFFDADCE0))),
-     onPressed:socialBusy?null:()=>demoSocial('Google'),icon:const Icon(Icons.g_mobiledata,size:32,color:Color(0xFF4285F4)),
-     label:const WaffraText('المتابعة باستخدام Google',style:TextStyle(color:Colors.black87)))),
-    const SizedBox(height:12),
-    SizedBox(width:double.infinity,height:52,child:FilledButton.icon(
-     style:FilledButton.styleFrom(backgroundColor:Colors.black,foregroundColor:Colors.white),
-     onPressed:socialBusy?null:()=>demoSocial('Apple'),icon:const Icon(Icons.apple,color:Colors.white),
-     label:const WaffraText('المتابعة باستخدام Apple',style:TextStyle(color:Colors.white)))),
-    const SizedBox(height:14),
-    SizedBox(width:double.infinity,height:52,child:OutlinedButton.icon(style:OutlinedButton.styleFrom(foregroundColor:Colors.white,side:const BorderSide(color:Colors.white70)),onPressed:()=>setState(()=>provider='Phone'),icon:const Icon(Icons.phone_android),label:WaffraText(waffraIsEnglish?'Register with mobile number':'التسجيل برقم الجوال'))),
-    const SizedBox(height:20),
-    const WaffraText('بياناتك محفوظة على جهازك. المتابعة هنا لإنشاء ملف شخصي محلي، وليست مصادقة فعلية مع Google أو Apple.',
-     textAlign:TextAlign.center,style:TextStyle(color:Colors.white70,fontSize:12)),
-   ])))));
+ @override Widget build(BuildContext context){
+  if(provider!=null)return ProfileForm(provider:provider!,onSave:widget.onSave,onBack:()=>setState(()=>provider=null));
+  return Scaffold(backgroundColor:forest,body:LayoutBuilder(builder:(context,c){
+   final h=c.maxHeight,w=c.maxWidth;
+   Widget hit(double top,double height,VoidCallback callback)=>Positioned(
+    left:w*0.08,right:w*0.08,top:h*top,height:h*height,
+    child:GestureDetector(behavior:HitTestBehavior.opaque,onTap:callback,
+     child:const ColoredBox(color:Colors.transparent)));
+   if(signInMode&&registered!=null)return Stack(fit:StackFit.expand,children:[
+    Image.asset('assets/signin.png',fit:BoxFit.fill,filterQuality:FilterQuality.high),
+    Positioned(left:w*0.13,right:w*0.13,top:h*0.425,height:h*0.052,
+     child:TextField(controller:signInPhone,keyboardType:TextInputType.phone,
+      textAlign:TextAlign.center,style:const TextStyle(color:forest,fontSize:17),
+      decoration:const InputDecoration(filled:true,fillColor:Colors.white,
+       isDense:true,contentPadding:EdgeInsets.all(9),border:InputBorder.none))),
+    Positioned(left:w*0.13,right:w*0.13,top:h*0.503,height:h*0.052,
+     child:TextField(controller:signInPassword,obscureText:!showSignInPassword,
+      textAlign:TextAlign.center,style:const TextStyle(color:forest,fontSize:17),
+      decoration:InputDecoration(filled:true,fillColor:Colors.white,isDense:true,
+       contentPadding:const EdgeInsets.all(9),border:InputBorder.none,
+       suffixIcon:IconButton(onPressed:()=>setState(()=>showSignInPassword=!showSignInPassword),
+        icon:Icon(showSignInPassword?Icons.visibility_off:Icons.visibility))))),
+    hit(0.57,0.075,()=>_signIn()),
+    hit(0.78,0.055,()=>setState(()=>signInMode=false)),
+   ]);
+   return Stack(fit:StackFit.expand,children:[
+    Image.asset('assets/welcome_login.png',fit:BoxFit.fill,filterQuality:FilterQuality.high),
+    hit(0.495,0.067,()=>demoSocial('Google')),
+    hit(0.574,0.067,()=>demoSocial('Apple')),
+    hit(0.651,0.072,()=>setState(()=>provider='Phone')),
+   ]);
+  }));
+ }
 }
 class ProfileForm extends StatefulWidget {
  final String provider;final Person? initial;
