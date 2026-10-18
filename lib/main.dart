@@ -560,7 +560,7 @@ class _LoginScreenState extends State<LoginScreen> {
   ProfileForm(provider:provider!,onSave:widget.onSave,onBack:()=>setState(()=>provider=null)):
   Scaffold(backgroundColor:forest,body:SafeArea(child:Center(child:SingleChildScrollView(
    padding:const EdgeInsets.all(28),child:Column(children:[
-    ClipOval(child:Image.asset('assets/waffra_app_icon.png',width:108,height:108,fit:BoxFit.cover)),
+    const Icon(Icons.spa_rounded,size:106,color:Colors.white),
     const SizedBox(height:20),const WaffraText('وفرة',style:TextStyle(fontSize:42,color:Colors.white,fontWeight:FontWeight.w900)),
     const SizedBox(height:12),const WaffraText('وفرة بعلمك وين فلوسك تروح',style:TextStyle(fontSize:19,color:Colors.white)),
     const SizedBox(height:30),
