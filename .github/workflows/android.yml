@@ -52,24 +52,24 @@ jobs:
               activity = kotlin[0]
               original = activity.read_text()
               import re
-              package_match = re.search(r'^\\s*package\\s+([\\w.]+)', original, re.MULTILINE)
+              package_match = re.search(r'^\s*package\s+([\w.]+)', original, re.MULTILINE)
               if not package_match:
                   raise SystemExit('Cannot determine Kotlin MainActivity package')
               package_name = package_match.group(1)
               source = (
-                  f'package {package_name}\\n\\n'
-                  'import android.os.Bundle\\n'
-                  'import android.view.WindowManager\\n'
-                  'import io.flutter.embedding.android.FlutterFragmentActivity\\n\\n'
-                  'class MainActivity : FlutterFragmentActivity() {\\n'
-                  '    override fun onCreate(savedInstanceState: Bundle?) {\\n'
-                  '        super.onCreate(savedInstanceState)\\n'
-                  '        window.setFlags(\\n'
-                  '            WindowManager.LayoutParams.FLAG_SECURE,\\n'
-                  '            WindowManager.LayoutParams.FLAG_SECURE\\n'
-                  '        )\\n'
-                  '    }\\n'
-                  '}\\n'
+                  f'package {package_name}\n\n'
+                  'import android.os.Bundle\n'
+                  'import android.view.WindowManager\n'
+                  'import io.flutter.embedding.android.FlutterFragmentActivity\n\n'
+                  'class MainActivity : FlutterFragmentActivity() {\n'
+                  '    override fun onCreate(savedInstanceState: Bundle?) {\n'
+                  '        super.onCreate(savedInstanceState)\n'
+                  '        window.setFlags(\n'
+                  '            WindowManager.LayoutParams.FLAG_SECURE,\n'
+                  '            WindowManager.LayoutParams.FLAG_SECURE\n'
+                  '        )\n'
+                  '    }\n'
+                  '}\n'
               )
               activity.write_text(source)
               assert 'FLAG_SECURE' in activity.read_text()
