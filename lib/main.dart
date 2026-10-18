@@ -1129,11 +1129,19 @@ Future<void> bulkSmsSheet()async {
    final oldest=items.map((e)=>e.date).reduce((a,b)=>a.isBefore(b)?a:b);
    final newest=items.map((e)=>e.date).reduce((a,b)=>a.isAfter(b)?a:b);
    String pdfClean(String input){
-    final noControls=input.replaceAll(RegExp('[\\u200B-\\u200F\\u202A-\\u202E\\u2066-\\u2069\\uFE0E\\uFE0F]'),'');
-    final noEmoji=noControls.replaceAll(RegExp('[\\u{1F000}-\\u{1FAFF}]',unicode:true),'');
-    return noEmoji.replaceAll(RegExp(r'\\s+'),' ').trim();
+    // Filter unsupported emoji and bidi formatting using code points, not
+    // Unicode regex character ranges (which caused FormatException).
+    final cleaned=String.fromCharCodes(input.runes.where((code){
+     if(code>=0x1F000&&code<=0x1FAFF)return false;
+     if(code>=0x200B&&code<=0x200F)return false;
+     if(code>=0x202A&&code<=0x202E)return false;
+     if(code>=0x2066&&code<=0x2069)return false;
+     if(code==0xFE0E||code==0xFE0F)return false;
+     return true;
+    }));
+    return cleaned.replaceAll(RegExp(r'\s+'),' ').trim();
    }
-   String fmt(num number){
+      String fmt(num number){
     final n=number.toDouble();
     if(n==n.roundToDouble())return n.toStringAsFixed(0);
     return n.toStringAsFixed(2);
