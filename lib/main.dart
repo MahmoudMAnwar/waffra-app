@@ -811,7 +811,7 @@ update((){parsed=false;messages=[];index=0;pasted.clear();description.clear();am
    content:Text('وصل صرف قسم «${c.name}» إلى ${formatMoney(spent/c.budget*100)}٪ من الميزانية. صرفت ${cash(spent)} من ${cash(c.budget)}، وحد التنبيه اللي اخترته ${c.alertPercent}٪.'),
    actions:[FilledButton(onPressed:()=>Navigator.pop(ctx),child:const Text('حسنًا'))]));
  }
- Future<void> exportEntriesPdf(List<MoneyEntry> items,String title)async {
+ Future<void> exportEntriesPdf(List<MoneyEntry> items,String title,{bool analytics=false})async {
   try{
    final font=await PdfGoogleFonts.tajawalRegular();
    final bold=await PdfGoogleFonts.tajawalBold();
@@ -844,6 +844,32 @@ update((){parsed=false;messages=[];index=0;pasted.clear();description.clear();am
       summary('إجمالي المصروفات',totalExpenses,PdfColors.red50),pw.SizedBox(width:8),
       summary('الصافي',totalIncome-totalExpenses,PdfColors.amber50)]),
      pw.SizedBox(height:16),
+     if(analytics)...[
+      pw.Text('الدخل والمصروفات حسب الفترة',style:pw.TextStyle(font:bold,fontSize:13,color:PdfColors.teal900)),
+      pw.SizedBox(height:8),
+      ...List.generate(title.contains('سنوي')?12:5,(i){
+       final group=items.where((e)=>title.contains('سنوي')?e.date.month==i+1:((e.date.day-1)~/7)==i).toList();
+       final inc=sum(group,true),exp=sum(group,false);
+       final maxValue=[totalIncome,totalExpenses,1.0].reduce((a,b)=>a>b?a:b);
+       pw.Widget bar(double value,PdfColor color)=>pw.Expanded(child:pw.Container(
+        height:9,alignment:pw.Alignment.centerLeft,child:pw.Row(children:[
+         pw.Expanded(flex:((value/maxValue*100).round()).clamp(1,100),
+          child:pw.Container(height:9,color:color)),
+         pw.Expanded(flex:(100-((value/maxValue*100).round()).clamp(1,100)).clamp(1,100),
+          child:pw.SizedBox(height:9)),
+        ])));
+       return pw.Padding(padding:const pw.EdgeInsets.symmetric(vertical:4),
+        child:pw.Row(children:[
+         pw.SizedBox(width:42,child:pw.Text(title.contains('سنوي')?'${i+1}':'أ${i+1}',style:pw.TextStyle(font:font,fontSize:9))),
+         pw.Expanded(child:pw.Column(children:[
+          pw.Row(children:[pw.SizedBox(width:35,child:pw.Text('دخل',style:pw.TextStyle(font:font,fontSize:8))),bar(inc,PdfColors.teal),pw.SizedBox(width:48,child:pw.Text(formatMoney(inc),style:pw.TextStyle(font:font,fontSize:8)))]),
+          pw.SizedBox(height:3),
+          pw.Row(children:[pw.SizedBox(width:35,child:pw.Text('صرف',style:pw.TextStyle(font:font,fontSize:8))),bar(exp,PdfColors.deepOrange),pw.SizedBox(width:48,child:pw.Text(formatMoney(exp),style:pw.TextStyle(font:font,fontSize:8)))]),
+         ])),
+        ]));
+      }),
+      pw.SizedBox(height:12),
+     ],
      pw.Text('توزيع المصروفات حسب الفئات',style:pw.TextStyle(font:bold,fontSize:13,color:PdfColors.teal900)),
      pw.SizedBox(height:8),
      ...((categoryTotals.entries.toList()..sort((a,b)=>b.value.compareTo(a.value))).map((e)=>pw.Padding(
@@ -851,9 +877,9 @@ update((){parsed=false;messages=[];index=0;pasted.clear();description.clear();am
        pw.Expanded(child:pw.Text(e.key,style:pw.TextStyle(font:font,fontSize:10))),
        pw.Text('${formatMoney(e.value)} SAR',style:pw.TextStyle(font:bold,fontSize:10))])))),
      pw.SizedBox(height:14),
-     pw.Text('تفاصيل العمليات',style:pw.TextStyle(font:bold,fontSize:13,color:PdfColors.teal900)),
-     pw.SizedBox(height:8),
-     pw.TableHelper.fromTextArray(headers:['التاريخ','النوع','القسم','الوصف','المبلغ (ريال)'],
+     if(!analytics)pw.Text('تفاصيل العمليات',style:pw.TextStyle(font:bold,fontSize:13,color:PdfColors.teal900)),
+     if(!analytics)pw.SizedBox(height:8),
+     if(!analytics)pw.TableHelper.fromTextArray(headers:['التاريخ','النوع','القسم','الوصف','المبلغ (ريال)'],
       data:items.map((e)=>[dayText(e.date),e.income?'دخل':'مصروف',e.category,e.title,formatMoney(e.amount)]).toList(),
       headerDecoration:const pw.BoxDecoration(color:PdfColors.teal800),
       headerStyle:pw.TextStyle(font:bold,fontSize:9,color:PdfColors.white),
@@ -986,7 +1012,7 @@ update((){parsed=false;messages=[];index=0;pasted.clear();description.clear();am
     const SizedBox(height:16),FinanceChart(points:points),
    ]))),
    const SizedBox(height:16),
-   OutlinedButton.icon(onPressed:()=>exportEntriesPdf(data,'تحليلات وفرة - $period ${period=='شهري'?'$month/':''}$year'),
+   OutlinedButton.icon(onPressed:()=>exportEntriesPdf(data,'تحليلات وفرة - $period ${period=='شهري'?'$month/':''}$year',analytics:true),
     icon:const Icon(Icons.picture_as_pdf_outlined),label:const Text('تصدير التحليلات إلى PDF')),
    const SizedBox(height:12),
    Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(children:[
