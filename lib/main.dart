@@ -223,6 +223,11 @@ class _WaffraAppState extends State<WaffraApp> {
  Future<void> load()async {
   final p=await SharedPreferences.getInstance();Person? u;
   try{final s=p.getString('waffra_profile');if(s!=null)u=Person.fromJson(Map<String,dynamic>.from(jsonDecode(s)));}catch(e){debugPrint('$e');}
+  // Migrate the previous default-deny setting once; users may turn it off later.
+  if(p.getBool('waffra_screenshot_default_v2')!=true){
+   await p.setBool('waffra_allow_screenshots',true);
+   await p.setBool('waffra_screenshot_default_v2',true);
+  }
   final screenshotsAllowed=p.getBool('waffra_allow_screenshots')??true;
   language=p.getString('waffra_language')=='en'?'en':'ar';
   waffraLanguage.value=language;
@@ -329,24 +334,39 @@ class _PinLockScreenState extends State<PinLockScreen> {
  @override Widget build(BuildContext context)=>Scaffold(
   backgroundColor:forest,
   body:Stack(fit:StackFit.expand,children:[
-   Image.asset('assets/waffra_lock_new.png',fit:BoxFit.cover),
-   SafeArea(child:Center(child:
-   SingleChildScrollView(padding:const EdgeInsets.symmetric(horizontal:26,vertical:20),
+   // The approved original welcome artwork is used unchanged.
+   Image.asset('assets/waffra_welcome_integrated.png',fit:BoxFit.cover),
+   SafeArea(child:Center(child:SingleChildScrollView(
+    padding:const EdgeInsets.symmetric(horizontal:34,vertical:20),
     child:Column(mainAxisSize:MainAxisSize.min,children:[
-     SizedBox(height:MediaQuery.of(context).size.height*.42),
-     SizedBox(width:double.infinity,height:55,child:FilledButton.icon(
+     SizedBox(height:MediaQuery.of(context).size.height*.17),
+     SizedBox(width:115,height:115,child:FilledButton(
       onPressed:busy||checking?null:biometric,
-      style:FilledButton.styleFrom(backgroundColor:Colors.white,foregroundColor:forest),
-      icon:const Icon(Icons.fingerprint,size:29),
-      label:WaffraText(checking?'جاري فحص البصمة...':'الدخول بالبصمة',
-       style:const TextStyle(fontSize:17,fontWeight:FontWeight.bold)))),
-     const SizedBox(height:14),
-     SizedBox(width:double.infinity,height:53,child:OutlinedButton.icon(
+      style:FilledButton.styleFrom(
+       padding:EdgeInsets.zero,backgroundColor:const Color(0x66064D3B),
+       disabledBackgroundColor:const Color(0x66064D3B),
+       foregroundColor:Colors.white,
+       shape:const CircleBorder(side:BorderSide(color:Colors.white70,width:2))),
+      child:const Icon(Icons.fingerprint,size:63,color:Colors.white))),
+     const SizedBox(height:9),
+     WaffraText(checking?'جاري فحص البصمة...':'لمس البصمة',
+      style:const TextStyle(color:Colors.white,fontSize:18,fontWeight:FontWeight.bold)),
+     const SizedBox(height:21),
+     const Row(children:[
+      Expanded(child:Divider(color:Colors.white70)),
+      Padding(padding:EdgeInsets.symmetric(horizontal:15),
+       child:WaffraText('أو',style:TextStyle(color:Colors.white,fontSize:16))),
+      Expanded(child:Divider(color:Colors.white70)),
+     ]),
+     const SizedBox(height:12),
+     SizedBox(width:double.infinity,height:54,child:OutlinedButton.icon(
       onPressed:busy?null:()=>setState((){showPin=!showPin;error='';}),
-      style:OutlinedButton.styleFrom(foregroundColor:Colors.white,
-       side:const BorderSide(color:Colors.white70)),
-      icon:const Icon(Icons.lock_outline),
-      label:const WaffraText('الدخول برمز PIN',style:TextStyle(fontSize:16)))),
+      style:OutlinedButton.styleFrom(
+       backgroundColor:const Color(0x22064D3B),foregroundColor:Colors.white,
+       side:const BorderSide(color:Colors.white,width:1.5),
+       shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(28))),
+      icon:const Icon(Icons.dialpad),
+      label:const WaffraText('إدخال رمز PIN',style:TextStyle(fontSize:17,fontWeight:FontWeight.bold)))),
      if(showPin)...[
       const SizedBox(height:18),
       TextField(controller:pinController,autofocus:true,obscureText:true,
@@ -367,6 +387,7 @@ class _PinLockScreenState extends State<PinLockScreen> {
        style:const TextStyle(color:Colors.orangeAccent)),
      ],
     ]))))]));
+
 }
 class IntroScreen extends StatefulWidget {
  final Future<void> Function() onStart,onLogin;
