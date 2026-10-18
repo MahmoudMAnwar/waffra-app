@@ -3,21 +3,24 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 class CurrencyConverterPage extends StatefulWidget {
- const CurrencyConverterPage({super.key});
+ const CurrencyConverterPage({super.key,this.lastIncomeAmount});
+ final double? lastIncomeAmount;
  @override State<CurrencyConverterPage> createState()=>_CurrencyConverterPageState();
 }
 class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
- final amount=TextEditingController(text:'1000');
+ late final TextEditingController amount;
  final currencies=const {'SAR':'ريال سعودي','EGP':'جنيه مصري','USD':'دولار أمريكي',
   'AED':'درهم إماراتي','KWD':'دينار كويتي','EUR':'يورو','GBP':'جنيه إسترليني',
   'BHD':'دينار بحريني','QAR':'ريال قطري','OMR':'ريال عُماني'};
- String from='SAR',to='EGP',status='';
+ String from='SAR',status='';
+ String? to;
  double? result,rate;
  bool busy=false;
  DateTime? updated;
- @override void initState(){super.initState();convert();}
+ @override void initState(){super.initState();amount=TextEditingController(text:widget.lastIncomeAmount?.toStringAsFixed(2)??'');}
  @override void dispose(){amount.dispose();super.dispose();}
  Future<void> convert()async {
+  if(to==null){setState(()=>status='اختر العملة المراد التحويل إليها');return;}
   final input=double.tryParse(amount.text.trim().replaceAll(',',''));
   if(input==null||!input.isFinite||input<0){setState(()=>status='اكتب مبلغ صحيح عشان نحسبه');return;}
   setState((){busy=true;status='';result=null;});
@@ -54,9 +57,10 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
     onChanged:(v){if(v!=null)setState(()=>from=v);}),
    const SizedBox(height:14),
    DropdownButtonFormField<String>(initialValue:to,
+    hint:const Text('اختر العملة'),
     decoration:const InputDecoration(labelText:'إلى عملة',border:OutlineInputBorder()),
     items:currencies.entries.map((e)=>DropdownMenuItem(value:e.key,child:Text('${e.value} (${e.key})'))).toList(),
-    onChanged:(v){if(v!=null)setState(()=>to=v);}),
+    onChanged:(v){setState(()=>to=v);}),
    const SizedBox(height:20),
    FilledButton.icon(onPressed:busy?null:convert,
     icon:const Icon(Icons.currency_exchange),label:Text(busy?'جاري جلب السعر...':'حوّل الحين')),

@@ -267,18 +267,11 @@ class _PinLockScreenState extends State<PinLockScreen> {
  @override Widget build(BuildContext context)=>Scaffold(
   backgroundColor:forest,
   body:Stack(fit:StackFit.expand,children:[
-   Image.asset('assets/waffra_welcome_integrated.png',fit:BoxFit.cover),
-   Container(color:forest.withValues(alpha:.36)),
+   Image.asset('assets/waffra_lock_new.png',fit:BoxFit.cover),
    SafeArea(child:Center(child:
    SingleChildScrollView(padding:const EdgeInsets.symmetric(horizontal:26,vertical:20),
     child:Column(mainAxisSize:MainAxisSize.min,children:[
-     const SizedBox(height:100),
-     const SizedBox(height:28),
-     const Text('أهلًا برجعتك إلى وفرة',textAlign:TextAlign.center,
-      style:TextStyle(color:Colors.white,fontSize:24,fontWeight:FontWeight.w800)),
-     const SizedBox(height:12),
-     const Text('اختر طريقة فتح التطبيق',style:TextStyle(color:Colors.white70,fontSize:15)),
-     const SizedBox(height:30),
+     SizedBox(height:MediaQuery.of(context).size.height*.42),
      SizedBox(width:double.infinity,height:55,child:FilledButton.icon(
       onPressed:busy||checking?null:biometric,
       style:FilledButton.styleFrom(backgroundColor:Colors.white,foregroundColor:forest),
@@ -514,6 +507,13 @@ Future<void> bulkSmsSheet()async {
  var parsed=false;
  var busy=false;
  var savedCount=0;
+ Timer? autoParse;
+ bool sheetActive=true;
+ void disposeLater(){
+  Future<void>.delayed(const Duration(milliseconds:500),(){
+   pasted.dispose();description.dispose();amount.dispose();
+  });
+ }
  Future<void> prepare(int i,StateSetter update)async {
   final result=BankParser.parse(messages[i]);
   update((){
@@ -533,16 +533,24 @@ Future<void> bulkSmsSheet()async {
      Text('إضافة رسائل بنكية',style:Theme.of(ctx).textTheme.titleLarge),
      const SizedBox(height:12),
      if(!parsed)...[
-      TextField(controller:pasted,minLines:7,maxLines:13,decoration:const InputDecoration(
+      TextField(controller:pasted,minLines:7,maxLines:13,onChanged:(text){
+       autoParse?.cancel();
+       if(text.trim().isEmpty)return;
+       autoParse=Timer(const Duration(milliseconds:450),(){
+        if(!sheetActive||!ctx.mounted)return;
+        final list=splitBankMessages(text);
+        if(list.isEmpty)return;
+        messages=list;parsed=true;prepare(0,update);
+       });
+      },decoration:const InputDecoration(
        labelText:'الصق رسالة أو عدة رسائل بنكية',hintText:'الصق الرسائل كاملة، كل رسالة بتاريخها',border:OutlineInputBorder())),
-      const SizedBox(height:12),
-      FilledButton(onPressed:(){
-       final list=splitBankMessages(pasted.text);
-       if(list.isEmpty){snack(ctx,'الصق الرسائل أولًا');return;}
-       messages=list;parsed=true;prepare(0,update);
-      },child:const Text('تحليل الرسائل ومراجعتها')),
+      const SizedBox(height:8),
+      const Text('يتم تحليل الرسائل تلقائيًا بعد اللصق',style:TextStyle(color:emerald)),
      ]else...[
-      Text('الرسالة ${index+1} من ${messages.length} — إجمالي مبالغ الرسائل: ${cash(total)}',style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
+      TextButton.icon(onPressed:busy?null:(){
+      autoParse?.cancel();update((){parsed=false;messages=[];index=0;pasted.clear();description.clear();amount.clear();});
+     },icon:const Icon(Icons.delete_outline),label:const Text('حذف النص بالكامل ولصق رسائل جديدة')),
+     Text('الرسالة ${index+1} من ${messages.length} — إجمالي مبالغ الرسائل: ${cash(total)}',style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
       const SizedBox(height:6),
       Text('تم حفظ $savedCount من ${messages.length} رسائل. راجع كل رسالة وحدد قسمها قبل الحفظ.'),
       const SizedBox(height:12),
@@ -595,7 +603,7 @@ Future<void> bulkSmsSheet()async {
      ],
     ])));
   }));
- pasted.dispose();description.dispose();amount.dispose();
+ sheetActive=false;autoParse?.cancel();disposeLater();
 }
 
  Future<void> entrySheet({MoneyEntry? initial,bool sms=false})async {
@@ -698,7 +706,7 @@ Future<void> bulkSmsSheet()async {
        },icon:const Icon(Icons.attach_file),label:const Text('إرفاق صورة'))),
       ]),
       if(receiptPath!=null)ListTile(
-       title:const Text('الفاتورة مرفقة'),leading:const Icon(Icons.image,color:emerald),
+       title:Text(receiptPath!.split('/').last.replaceFirst(RegExp(r'^\d+__'),'')),leading:const Icon(Icons.image,color:emerald),
        trailing:IconButton(icon:const Icon(Icons.close),onPressed:()=>update(()=>receiptPath=null)),
        onTap:()=>showReceipt(receiptPath!)),
       const SizedBox(height:12),
@@ -755,7 +763,8 @@ Future<void> bulkSmsSheet()async {
   final directory=Directory('${(await getApplicationDocumentsDirectory()).path}/receipts');
   if(!await directory.exists())await directory.create(recursive:true);
   final ext=picked.path.toLowerCase().endsWith('.png')?'png':'jpg';
-  final target='${directory.path}/${newId()}.$ext';
+  final original=picked.name.replaceAll(RegExp(r'[^a-zA-Z0-9_\-.\u0600-\u06FF ]'),'_');
+  final target='${directory.path}/${newId()}__$original';
   await File(picked.path).copy(target);
   return target;
  }
@@ -787,25 +796,52 @@ Future<void> bulkSmsSheet()async {
   try{
    final font=await PdfGoogleFonts.tajawalRegular();
    final bold=await PdfGoogleFonts.tajawalBold();
+   final headerImage=pw.MemoryImage((await rootBundle.load('assets/waffra_pdf_header.jpg')).buffer.asUint8List());
+   final footerImage=pw.MemoryImage((await rootBundle.load('assets/waffra_pdf_footer.jpg')).buffer.asUint8List());
    final doc=pw.Document();
-   doc.addPage(pw.MultiPage(pageFormat:PdfPageFormat.a4,
-    theme:pw.ThemeData.withFont(base:font,bold:bold),
-    textDirection:pw.TextDirection.rtl,
+   final totalIncome=sum(items,true),totalExpenses=sum(items,false);
+   final categoryTotals=<String,double>{};
+   for(final e in items.where((e)=>!e.income)){categoryTotals[e.category]=(categoryTotals[e.category]??0)+e.amount;}
+   pw.Widget summary(String label,double value,PdfColor bg)=>pw.Expanded(child:pw.Container(
+    padding:const pw.EdgeInsets.all(10),decoration:pw.BoxDecoration(color:bg,borderRadius:pw.BorderRadius.circular(7)),
+    child:pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.start,children:[
+     pw.Text(label,style:pw.TextStyle(font:bold,fontSize:10,color:PdfColors.teal900)),
+     pw.SizedBox(height:5),pw.Text('${formatMoney(value)} SAR',style:pw.TextStyle(font:bold,fontSize:15,color:PdfColors.teal900)),
+    ])));
+   doc.addPage(pw.MultiPage(pageFormat:PdfPageFormat.a4,margin:const pw.EdgeInsets.fromLTRB(25,22,25,28),
+    theme:pw.ThemeData.withFont(base:font,bold:bold),textDirection:pw.TextDirection.rtl,
+    header:(ctx)=>pw.Column(children:[
+     pw.Image(headerImage,height:105,width:PdfPageFormat.a4.width-50,fit:pw.BoxFit.cover),
+     pw.SizedBox(height:9),pw.Text(title,style:pw.TextStyle(font:bold,fontSize:18,color:PdfColors.teal900)),
+     pw.SizedBox(height:7)]),
+    footer:(ctx)=>pw.Column(children:[
+     pw.Image(footerImage,height:46,width:PdfPageFormat.a4.width-50,fit:pw.BoxFit.cover),
+     pw.SizedBox(height:4),pw.Row(mainAxisAlignment:pw.MainAxisAlignment.spaceBetween,children:[
+      pw.Text('وفرة | Waffra',style:pw.TextStyle(font:bold,fontSize:9,color:PdfColors.teal900)),
+      pw.Text('${ctx.pageNumber} / ${ctx.pagesCount}',style:pw.TextStyle(font:font,fontSize:9))])]),
     build:(ctx)=>[
-     pw.Text(title,style:pw.TextStyle(font:bold,fontSize:20)),
-     pw.SizedBox(height:12),
-     pw.TableHelper.fromTextArray(
-      headers:['التاريخ','النوع','القسم','الوصف','المبلغ (ريال)'],
+     pw.Row(children:[summary('إجمالي الدخل',totalIncome,PdfColors.green50),pw.SizedBox(width:8),
+      summary('إجمالي المصروفات',totalExpenses,PdfColors.red50),pw.SizedBox(width:8),
+      summary('الصافي',totalIncome-totalExpenses,PdfColors.amber50)]),
+     pw.SizedBox(height:16),
+     pw.Text('توزيع المصروفات حسب الفئات',style:pw.TextStyle(font:bold,fontSize:13,color:PdfColors.teal900)),
+     pw.SizedBox(height:8),
+     ...((categoryTotals.entries.toList()..sort((a,b)=>b.value.compareTo(a.value))).map((e)=>pw.Padding(
+      padding:const pw.EdgeInsets.symmetric(vertical:3),child:pw.Row(children:[
+       pw.Expanded(child:pw.Text(e.key,style:pw.TextStyle(font:font,fontSize:10))),
+       pw.Text('${formatMoney(e.value)} SAR',style:pw.TextStyle(font:bold,fontSize:10))])))),
+     pw.SizedBox(height:14),
+     pw.Text('تفاصيل العمليات',style:pw.TextStyle(font:bold,fontSize:13,color:PdfColors.teal900)),
+     pw.SizedBox(height:8),
+     pw.TableHelper.fromTextArray(headers:['التاريخ','النوع','القسم','الوصف','المبلغ (ريال)'],
       data:items.map((e)=>[dayText(e.date),e.income?'دخل':'مصروف',e.category,e.title,formatMoney(e.amount)]).toList(),
-      headerStyle:pw.TextStyle(font:bold,fontSize:10),cellStyle:pw.TextStyle(font:font,fontSize:9),
-      cellAlignment:pw.Alignment.centerRight,
-     ),
-     pw.SizedBox(height:12),
-     pw.Text('إجمالي الدخل: ${formatMoney(sum(items,true))} ريال'),
-     pw.Text('إجمالي المصروفات: ${formatMoney(sum(items,false))} ريال'),
+      headerDecoration:const pw.BoxDecoration(color:PdfColors.teal800),
+      headerStyle:pw.TextStyle(font:bold,fontSize:9,color:PdfColors.white),
+      cellStyle:pw.TextStyle(font:font,fontSize:8),cellAlignment:pw.Alignment.centerRight,
+      cellPadding:const pw.EdgeInsets.all(6)),
     ]));
    await Printing.layoutPdf(onLayout:(format)async=>doc.save(),name:'waffra_report.pdf');
-  }catch(e){if(mounted)snack(context,'تعذّر إنشاء PDF. تأكد من اتصال الإنترنت أول مرة لتحميل الخط.');}
+  }catch(e){debugPrint('PDF export error: $e');if(mounted)snack(context,'تعذّر إنشاء PDF. تحقق من الاتصال والملفات المطلوبة.');}
  }
  Future<void> deleteEntry(MoneyEntry e)async {
   final yes=await confirm('حذف العملية','ودّك تحذف «${e.title}»؟');
@@ -1347,12 +1383,14 @@ Future<void> bulkSmsSheet()async {
    icon:Icon(widget.pinEnabled?Icons.lock:Icons.lock_open),
    label:Text(widget.pinEnabled?'إلغاء قفل التطبيق':'تفعيل قفل التطبيق برمز PIN')),
   OutlinedButton.icon(onPressed:()=>Navigator.push<void>(context,
-   MaterialPageRoute(builder:(_)=>const CurrencyConverterPage())),
+   MaterialPageRoute(builder:(_)=>CurrencyConverterPage(lastIncomeAmount:entries.where((e)=>e.income).isEmpty?null:entries.where((e)=>e.income).reduce((a,b)=>a.date.isAfter(b.date)?a:b).amount))),
    icon:const Icon(Icons.currency_exchange),label:const Text('تحويل العملات')),
   OutlinedButton.icon(onPressed:widget.onTheme,
    icon:Icon(widget.dark?Icons.light_mode:Icons.dark_mode),label:const Text('تغيير المظهر')),
   OutlinedButton.icon(onPressed:backupDialog,icon:const Icon(Icons.backup_outlined),
    label:const Text('النسخ الاحتياطي والاستعادة')),
+  if(widget.profile.provider=='محلي')FilledButton.icon(onPressed:widget.onLogout,icon:const Icon(Icons.login),
+   label:const Text('تسجيل الدخول')),
   if(widget.profile.provider!='محلي')FilledButton.icon(onPressed:widget.onLogout,icon:const Icon(Icons.logout),
    label:const Text('تسجيل الخروج')),
   const SizedBox(height:16),
