@@ -23,6 +23,7 @@ import 'waffra_pdf_text.dart';
 
 void main() { WidgetsFlutterBinding.ensureInitialized(); runApp(const WaffraApp()); }
 const emerald=Color(0xFF087A54), forest=Color(0xFF064D3B), sand=Color(0xFFF8F6EF), gold=Color(0xFFD8BA78);
+final ValueNotifier<int> waffraReturnHome=ValueNotifier<int>(0);
 final ValueNotifier<bool> hideWaffraAmounts=ValueNotifier<bool>(false);
 final ValueNotifier<bool> allowWaffraScreenshots=ValueNotifier<bool>(true);
 const MethodChannel _privacyChannel=MethodChannel('waffra/privacy');
@@ -237,6 +238,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  DateTime? _backgroundAt;
  @override void didChangeAppLifecycleState(AppLifecycleState state){
   if(state==AppLifecycleState.paused||state==AppLifecycleState.hidden){_backgroundAt=DateTime.now();}
+  if(state==AppLifecycleState.resumed&&_backgroundAt!=null){
+   waffraReturnHome.value++;
+  }
   if(state==AppLifecycleState.resumed&&pinHash!=null&&!locked&&_backgroundAt!=null){
    final away=DateTime.now().difference(_backgroundAt!);
    _backgroundAt=null;
@@ -617,9 +621,9 @@ class _ProfileFormState extends State<ProfileForm> {
    snack(context,waffraIsEnglish?'Enter a name, valid email and Saudi phone number':'أدخل الاسم والبريد الصحيح ورقم جوال يبدأ بـ 05 من 10 أرقام');return;
   }
   if(widget.initial==null){
-   if(!validPhone){snack(context,'أدخل رقم الجوال من 10 أرقام يبدأ بـ 05');return;}
+   if(!validPhone){snack(context,waffraIsEnglish?'Enter a 10-digit mobile number starting with 05':'أدخل رقم الجوال من 10 أرقام يبدأ بـ 05');return;}
    if(!RegExp(r'^(?=.*[A-Za-z])(?=.*[0-9]).{8,}$').hasMatch(password.text)||password.text!=confirmPassword.text){
-    snack(context,'كلمة المرور يجب أن تكون 8 خانات على الأقل وتشمل أحرفًا وأرقامًا وتتطابق في الحقلين');return;
+    snack(context,waffraIsEnglish?'Password must be at least 8 characters, include letters and numbers, and match the confirmation.':'كلمة المرور يجب أن تكون 8 خانات على الأقل وتشمل أحرفًا وأرقامًا وتتطابق في الحقلين');return;
    }
   }
   setState(()=>busy=true);
@@ -645,7 +649,7 @@ class _ProfileFormState extends State<ProfileForm> {
    Center(child:saudiAvatar(gender,radius:48)),
    const SizedBox(height:10),
    Wrap(alignment:WrapAlignment.center,spacing:12,children:['ذكر','أنثى']
-    .map((a)=>ChoiceChip(label:Row(mainAxisSize:MainAxisSize.min,children:[saudiAvatar(a,radius:20),const SizedBox(width:6),WaffraText(a)]),selected:gender==a,onSelected:(_)=>setState((){gender=a;avatar=a=='ذكر'?'male':'female';}))).toList()),
+    .map((a)=>ChoiceChip(label:Row(mainAxisSize:MainAxisSize.min,children:[saudiAvatar(a,radius:20),const SizedBox(width:6),WaffraText(waffraIsEnglish?(a=='ذكر'?'Male':'Female'):a)]),selected:gender==a,onSelected:(_)=>setState((){gender=a;avatar=a=='ذكر'?'male':'female';}))).toList()),
    const SizedBox(height:16),
    TextField(controller:name,decoration:InputDecoration(labelText:waffraTr('اسمك'),border:OutlineInputBorder())),
    const SizedBox(height:12),
@@ -661,24 +665,24 @@ class _ProfileFormState extends State<ProfileForm> {
    if(widget.initial==null) ...[
     const SizedBox(height:12),
     TextField(controller:password,obscureText:!showPassword,decoration:InputDecoration(
-     suffixIcon:IconButton(tooltip:showPassword?'إخفاء كلمة المرور':'إظهار كلمة المرور',icon:Icon(showPassword?Icons.visibility_off:Icons.visibility),onPressed:()=>setState(()=>showPassword=!showPassword)),labelText:waffraIsEnglish?'Password':'كلمة المرور',
+     suffixIcon:IconButton(tooltip:waffraIsEnglish?(showPassword?'Hide password':'Show password'):(showPassword?'إخفاء كلمة المرور':'إظهار كلمة المرور'),icon:Icon(showPassword?Icons.visibility_off:Icons.visibility),onPressed:()=>setState(()=>showPassword=!showPassword)),labelText:waffraIsEnglish?'Password':'كلمة المرور',
      helperText:waffraIsEnglish?'At least 8 characters, including letters and numbers':'8 خانات على الأقل، تشمل أحرفًا وأرقامًا',border:const OutlineInputBorder())),
     const SizedBox(height:12),
     TextField(controller:confirmPassword,obscureText:!showConfirmPassword,decoration:InputDecoration(
-     suffixIcon:IconButton(tooltip:showConfirmPassword?'إخفاء كلمة المرور':'إظهار كلمة المرور',icon:Icon(showConfirmPassword?Icons.visibility_off:Icons.visibility),onPressed:()=>setState(()=>showConfirmPassword=!showConfirmPassword)),labelText:waffraIsEnglish?'Confirm password':'تأكيد كلمة المرور',border:const OutlineInputBorder())),
+     suffixIcon:IconButton(tooltip:waffraIsEnglish?(showConfirmPassword?'Hide password':'Show password'):(showConfirmPassword?'إخفاء كلمة المرور':'إظهار كلمة المرور'),icon:Icon(showConfirmPassword?Icons.visibility_off:Icons.visibility),onPressed:()=>setState(()=>showConfirmPassword=!showConfirmPassword)),labelText:waffraIsEnglish?'Confirm password':'تأكيد كلمة المرور',border:const OutlineInputBorder())),
    ],
    const SizedBox(height:12),
    DropdownButtonFormField<String>(initialValue:gender,
     decoration:InputDecoration(labelText:waffraTr('الجنس'),border:OutlineInputBorder()),
-    items:['ذكر','أنثى','غير محدد'].map((x)=>DropdownMenuItem(value:x,child:WaffraText(x))).toList(),
+    items:['ذكر','أنثى','غير محدد'].map((x)=>DropdownMenuItem(value:x,child:WaffraText(waffraIsEnglish?(x=='ذكر'?'Male':x=='أنثى'?'Female':'Not specified'):x))).toList(),
     onChanged:(v){if(v!=null)setState((){gender=v;avatar=v=='أنثى'?'female':'male';});}),
    const SizedBox(height:12),
    OutlinedButton.icon(onPressed:()async {
     final d=await showDatePicker(context:context,initialDate:birthday,firstDate:DateTime(1900),lastDate:DateTime.now());
     if(d!=null)setState(()=>birthday=d);
-   },icon:const Icon(Icons.calendar_month),label:WaffraText('تاريخ الميلاد: ${dayText(birthday)}')),
+   },icon:const Icon(Icons.calendar_month),label:WaffraText('${waffraIsEnglish?'Date of birth':'تاريخ الميلاد'}: ${dayText(birthday)}')),
    const SizedBox(height:20),
-   FilledButton(onPressed:busy?null:save,child:const WaffraText('حفظ البيانات')),
+   FilledButton(onPressed:busy?null:save,child:WaffraText(waffraIsEnglish?'Save profile':'حفظ البيانات')),
   ]));
 }
 void disposeLater(List<TextEditingController> controllers){
@@ -705,7 +709,9 @@ class _HomeScreenState extends State<HomeScreen> {
  int tab=0,year=DateTime.now().year,month=DateTime.now().month;
  String search='',typeFilter='الكل',categoryFilter='الكل',period='شهري';
  bool ready=false;
- @override void initState(){super.initState();load();}
+ @override void initState(){super.initState();waffraReturnHome.addListener(_returnToHome);load();}
+ void _returnToHome(){if(mounted&&tab!=0)setState(()=>tab=0);}
+ @override void dispose(){waffraReturnHome.removeListener(_returnToHome);super.dispose();}
  Future<void> load()async {
   final p=await SharedPreferences.getInstance();
   try{final raw=p.getString('entries');if(raw!=null)entries.addAll((jsonDecode(raw) as List).map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('entries: $e');}
@@ -1172,8 +1178,8 @@ Future<void> bulkSmsSheet()async {
  Future<void> exportEntriesPdf(List<MoneyEntry> items,String title,{bool analytics=false})async {
   if(items.isEmpty){
    if(mounted)snack(context,analytics
-    ?'لا يمكن تصدير تقرير التحليلات. أضف عملية دخل أو مصروف أولاً.'
-    :'لا يمكن تصدير التقرير. يجب إضافة عملية دخل أو مصروف أولاً.');
+    ?(waffraIsEnglish?'Cannot export the analytics report. Add an income or expense transaction first.':'لا يمكن تصدير تقرير التحليلات. أضف عملية دخل أو مصروف أولاً.')
+    :(waffraIsEnglish?'Cannot export the report. Add an income or expense transaction first.':'لا يمكن تصدير التقرير. يجب إضافة عملية دخل أو مصروف أولاً.'));
    return;
   }
   try{
@@ -1442,7 +1448,10 @@ Future<void> bulkSmsSheet()async {
    OutlinedButton.icon(onPressed:bulkSmsSheet,icon:const Icon(Icons.content_paste),label:const WaffraText('الصق رسالة بنكية')),
    const SizedBox(height:12),
    Row(children:[
-    Expanded(child:WaffraText('عملياتك المالية',style:Theme.of(context).textTheme.titleLarge)),
+    Expanded(child:Container(
+     padding:const EdgeInsets.symmetric(horizontal:14,vertical:12),
+     decoration:BoxDecoration(border:Border.all(color:forest.withValues(alpha:0.55),width:1.3),borderRadius:BorderRadius.circular(14)),
+     child:WaffraText('عملياتك المالية',style:Theme.of(context).textTheme.titleLarge))),
     OutlinedButton.icon(onPressed:entries.isEmpty?null:confirmDeleteAllEntries,
      style:OutlinedButton.styleFrom(side:const BorderSide(color:Colors.red,width:1.4),foregroundColor:Colors.red),
      icon:const Icon(Icons.delete_outline,color:Colors.red),
