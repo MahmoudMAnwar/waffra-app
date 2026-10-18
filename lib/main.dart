@@ -994,7 +994,8 @@ Future<void> bulkSmsSheet()async {
    String fmt(num number){
     final n=number.toDouble();
     if(n==n.roundToDouble())return n.toStringAsFixed(0);
-    return n.toStringAsFixed(2).replaceFirst(RegExp(r'0+
+    return n.toStringAsFixed(2);
+   }
    final doc=pw.Document();
    final totalIncome=sum(items,true),totalExpenses=sum(items,false);
    final categoryTotals=<String,double>{};
