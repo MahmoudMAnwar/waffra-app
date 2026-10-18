@@ -552,6 +552,7 @@ Future<void> bulkSmsSheet()async {
        pasteTimer?.cancel();
        if(!sheetActive||!ctx.mounted)return;
        if(text.trim().isEmpty){update((){parsed=false;messages=[];});return;}
+       update((){parsed=false;messages=[];});
        pasteTimer=Timer(const Duration(milliseconds:350),(){
         if(!sheetActive||!ctx.mounted)return;
         final found=splitBankMessages(pasted.text);
@@ -569,14 +570,13 @@ Future<void> bulkSmsSheet()async {
         'تم استخراج ${messages.length} معاملات بنجاح',
         style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
        const Text('راجع كل معاملة قبل حفظها.'),
-       FilledButton(onPressed:(){
+       FilledButton.icon(icon:const Icon(Icons.add_circle_outline),onPressed:(){
         pasteTimer?.cancel();
         final found=splitBankMessages(pasted.text);
         if(found.isEmpty)return;
-        messages=found;
-        prepare(0,update);
         update(()=>reviewing=true);
-       },child:const Text('تأكيد ومراجعة')),
+        prepare(0,update);
+       },label:Text(messages.length==1?'إضافة المعاملة ومراجعتها':'إضافة ومراجعة ${messages.length} معاملات')),
       ]else const Text('يتم تحليل الرسائل تلقائيًا بعد اللصق'),
      ]else...[
       TextButton.icon(onPressed:busy?null:(){
@@ -630,7 +630,7 @@ Future<void> bulkSmsSheet()async {
        savedCount++;
        if(index+1>=messages.length){Navigator.pop(ctx);if(mounted)snack(context,'تم حفظ $savedCount عملية بنجاح');}
        else{await prepare(index+1,update);update(()=>busy=false);}
-      },child:Text(index+1==messages.length?'حفظ الرسالة الأخيرة':'حفظ والانتقال للرسالة التالية')),
+      },child:Text(index+1==messages.length?'إضافة المعاملة وحفظها':'إضافة المعاملة وحفظها ثم التالي')),
       if(index+1<messages.length)TextButton(onPressed:busy?null:()=>prepare(index+1,update),child:const Text('تخطي هذه الرسالة')),
       const SizedBox(height:8),
       OutlinedButton.icon(onPressed:busy?null:(){
@@ -878,7 +878,7 @@ Future<void> bulkSmsSheet()async {
      buildBackground:(ctx)=>pw.FullPage(ignoreMargins:true,child:pw.Stack(children:[
       pw.Positioned(top:0,left:0,right:0,child:pw.SizedBox(height:210,child:pw.Image(headerArt,fit:pw.BoxFit.fill))),
       pw.Positioned(top:28,right:12,child:pw.SizedBox(width:245,height:94,
-       child:pw.Container(color:PdfColors.teal900,padding:const pw.EdgeInsets.all(10),
+       child:pw.Container(padding:const pw.EdgeInsets.all(10),
         child:pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.end,children:[
          pw.Text(analytics?'تقرير التحليلات':'تقرير الدخل والمصروفات',
           style:pw.TextStyle(font:bold,fontSize:18,color:PdfColors.white)),
@@ -886,7 +886,7 @@ Future<void> bulkSmsSheet()async {
         ])))) ,
       pw.Positioned(bottom:0,left:0,right:0,child:pw.SizedBox(height:95,child:pw.Image(footerArt,fit:pw.BoxFit.fill))),
       pw.Positioned(bottom:20,right:12,child:pw.SizedBox(width:115,height:22,
-       child:pw.Container(color:PdfColors.teal900,alignment:pw.Alignment.center,
+       child:pw.Container(alignment:pw.Alignment.center,
         child:pw.Text(dayText(DateTime.now()),style:pw.TextStyle(font:font,fontSize:10,color:PdfColors.white))))) ,
      ])),
      theme:pw.ThemeData.withFont(base:font,bold:bold),
@@ -924,6 +924,20 @@ Future<void> bulkSmsSheet()async {
         ]));
       }),
       pw.SizedBox(height:12),
+      pw.Text('جدول الدخل والمصروفات حسب الفترة',style:pw.TextStyle(font:bold,fontSize:11,color:PdfColors.teal900)),
+      pw.SizedBox(height:6),
+      pw.TableHelper.fromTextArray(
+       headers:['الفترة','الدخل (ريال)','المصروفات (ريال)','الصافي (ريال)'],
+       data:List.generate(title.contains('سنوي')?12:5,(i){
+        final group=items.where((e)=>title.contains('سنوي')?e.date.month==i+1:((e.date.day-1)~/7)==i).toList();
+        final inc=sum(group,true),exp=sum(group,false);
+        return [title.contains('سنوي')?'شهر ${i+1}':'أسبوع ${i+1}',formatMoney(inc),formatMoney(exp),formatMoney(inc-exp)];
+       }),
+       headerDecoration:const pw.BoxDecoration(color:PdfColors.teal800),
+       headerStyle:pw.TextStyle(font:bold,fontSize:9,color:PdfColors.white),
+       cellStyle:pw.TextStyle(font:font,fontSize:8),
+       cellAlignment:pw.Alignment.center,cellPadding:const pw.EdgeInsets.all(5)),
+      pw.SizedBox(height:12),
      ],
      pw.Text('توزيع المصروفات حسب الفئات',style:pw.TextStyle(font:bold,fontSize:13,color:PdfColors.teal900)),
      if(analytics&&totalExpenses>0)...[
@@ -931,7 +945,16 @@ Future<void> bulkSmsSheet()async {
       pw.Center(child:pw.SvgImage(svg:expensePieSvg(categoryTotals),width:170,height:170)),
      ],
      pw.SizedBox(height:8),
-     ...((categoryTotals.entries.toList()..sort((a,b)=>b.value.compareTo(a.value))).map((e)=>pw.Padding(
+     if(analytics)pw.TableHelper.fromTextArray(
+      headers:['الفئة','المبلغ (ريال)','النسبة من المصروفات'],
+      data:(categoryTotals.entries.toList()..sort((a,b)=>b.value.compareTo(a.value)))
+       .map((e)=>[e.key,formatMoney(e.value),
+        totalExpenses>0?'${(e.value/totalExpenses*100).toStringAsFixed(1)}%':'0%']).toList(),
+      headerDecoration:const pw.BoxDecoration(color:PdfColors.teal800),
+      headerStyle:pw.TextStyle(font:bold,fontSize:9,color:PdfColors.white),
+      cellStyle:pw.TextStyle(font:font,fontSize:8),
+      cellAlignment:pw.Alignment.centerRight,cellPadding:const pw.EdgeInsets.all(5)),
+     if(!analytics)...((categoryTotals.entries.toList()..sort((a,b)=>b.value.compareTo(a.value))).map((e)=>pw.Padding(
       padding:const pw.EdgeInsets.symmetric(vertical:3),child:pw.Row(children:[
        pw.Expanded(child:pw.Text(e.key,style:pw.TextStyle(font:font,fontSize:10))),
        pw.Text('${formatMoney(e.value)} SAR',style:pw.TextStyle(font:bold,fontSize:10))])))),
