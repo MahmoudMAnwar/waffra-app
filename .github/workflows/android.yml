@@ -1,3 +1,4 @@
+# Re-trigger optimized ARM64 build after CI speed improvements
 name: Build Waffra Android APK
 
 on:
