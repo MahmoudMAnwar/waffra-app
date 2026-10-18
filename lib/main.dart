@@ -1052,91 +1052,95 @@ Future<void> bulkSmsSheet()async {
      pw.Text(waffraTr(label),style:pw.TextStyle(font:bold,fontSize:10,color:PdfColors.teal900)),
      pw.SizedBox(height:5),pw.Text('${fmt(value)} SAR',style:pw.TextStyle(font:bold,fontSize:15,color:PdfColors.teal900)),
     ])));
-   doc.addPage(pw.MultiPage(
-    pageTheme:pw.PageTheme(
-     pageFormat:const PdfPageFormat(900,600),
-     margin:const pw.EdgeInsets.fromLTRB(36,302,36,143),
-     buildBackground:(ctx)=>pw.FullPage(ignoreMargins:true,
-      child:pw.Image(brandedBackground,fit:pw.BoxFit.fill)),
-     theme:pw.ThemeData.withFont(base:font,bold:bold),
-     textDirection:english?pw.TextDirection.ltr:pw.TextDirection.rtl,
-    ),
-    footer:(ctx)=>pw.Align(alignment:pw.Alignment.centerRight,
+   // The approved branded template remains unchanged; only its content layout is improved.
+   final pageTheme=pw.PageTheme(
+    pageFormat:const PdfPageFormat(900,600),
+    margin:const pw.EdgeInsets.fromLTRB(36,115,36,90),
+    buildBackground:(ctx)=>pw.FullPage(ignoreMargins:true,
+     child:pw.Image(brandedBackground,fit:pw.BoxFit.fill)),
+    theme:pw.ThemeData.withFont(base:font,bold:bold),
+    textDirection:english?pw.TextDirection.ltr:pw.TextDirection.rtl,
+   );
+   pw.Widget heading(String ar,String en)=>pw.Padding(
+    padding:const pw.EdgeInsets.only(bottom:10),
+    child:pw.Text(english?en:ar,style:pw.TextStyle(font:bold,fontSize:15,color:PdfColors.teal900)));
+   if(!analytics){
+    final ordered=items.toList()..sort((a,b)=>b.date.compareTo(a.date));
+    doc.addPage(pw.MultiPage(
+     pageTheme:pageTheme,
+     footer:(ctx)=>pw.Align(alignment:pw.Alignment.centerRight,
       child:pw.Text('${ctx.pageNumber} / ${ctx.pagesCount}',style:pw.TextStyle(font:font,fontSize:9,color:PdfColors.teal900))),
-    build:(ctx)=>[
-     pw.Row(children:[summary('إجمالي الدخل',totalIncome,PdfColors.green50),pw.SizedBox(width:8),
-      summary('إجمالي المصروفات',totalExpenses,PdfColors.red50),pw.SizedBox(width:8),
-      summary('الصافي',totalIncome-totalExpenses,PdfColors.amber50)]),
-     pw.SizedBox(height:16),
-     if(true)...[
-      pw.Text(waffraTr('الدخل والمصروفات حسب الفترة'),style:pw.TextStyle(font:bold,fontSize:13,color:PdfColors.teal900)),
-      pw.SizedBox(height:8),
-      ...List.generate(title.contains('سنوي')?12:5,(i){
-       final group=items.where((e)=>title.contains('سنوي')?e.date.month==i+1:((e.date.day-1)~/7)==i).toList();
-       final inc=sum(group,true),exp=sum(group,false);
-       final maxValue=[totalIncome,totalExpenses,1.0].reduce((a,b)=>a>b?a:b);
-       pw.Widget bar(double value,PdfColor color)=>pw.Expanded(child:pw.Container(
-        height:9,alignment:pw.Alignment.centerLeft,child:pw.Row(children:[
-         pw.Expanded(flex:((value/maxValue*100).round()).clamp(1,100),
-          child:pw.Container(height:9,color:color)),
-         pw.Expanded(flex:(100-((value/maxValue*100).round()).clamp(1,100)).clamp(1,100),
-          child:pw.SizedBox(height:9)),
-        ])));
-       return pw.Padding(padding:const pw.EdgeInsets.symmetric(vertical:4),
-        child:pw.Row(children:[
-         pw.SizedBox(width:42,child:pw.Text(title.contains('سنوي')?'${i+1}':'أ${i+1}',style:pw.TextStyle(font:font,fontSize:9))),
-         pw.Expanded(child:pw.Column(children:[
-          pw.Row(children:[pw.SizedBox(width:35,child:pw.Text(waffraTr('دخل'),style:pw.TextStyle(font:font,fontSize:8))),bar(inc,PdfColors.teal),pw.SizedBox(width:48,child:pw.Text(fmt(inc),style:pw.TextStyle(font:font,fontSize:8)))]),
-          pw.SizedBox(height:3),
-          pw.Row(children:[pw.SizedBox(width:35,child:pw.Text(waffraTr('صرف'),style:pw.TextStyle(font:font,fontSize:8))),bar(exp,PdfColors.deepOrange),pw.SizedBox(width:48,child:pw.Text(fmt(exp),style:pw.TextStyle(font:font,fontSize:8)))]),
-         ])),
-        ]));
-      }),
-      pw.SizedBox(height:12),
-      pw.Text(waffraTr('جدول الدخل والمصروفات حسب الفترة'),style:pw.TextStyle(font:bold,fontSize:11,color:PdfColors.teal900)),
-      pw.SizedBox(height:6),
+     build:(ctx)=>[
+      heading('تقرير الدخل والمصروفات','Income & Expenses Report'),
+      pw.Row(children:[summary('إجمالي الدخل',totalIncome,PdfColors.green50),pw.SizedBox(width:8),
+       summary('إجمالي المصروفات',totalExpenses,PdfColors.red50),pw.SizedBox(width:8),
+       summary('الصافي',totalIncome-totalExpenses,PdfColors.amber50)]),
+      pw.SizedBox(height:14),
+      heading('تفاصيل العمليات','Transactions'),
       pw.TableHelper.fromTextArray(
-       headers:[waffraTr('الفترة'),english?'Income (SAR)':'الدخل (ريال)',english?'Expenses (SAR)':'المصروفات (ريال)',english?'Net (SAR)':'الصافي (ريال)'],
-       data:List.generate(title.contains('سنوي')?12:5,(i){
-        final group=items.where((e)=>title.contains('سنوي')?e.date.month==i+1:((e.date.day-1)~/7)==i).toList();
-        final inc=sum(group,true),exp=sum(group,false);
-        return [title.contains('سنوي')?'${english?'Month':'شهر'} ${i+1}':'${english?'Week':'أسبوع'} ${i+1}',fmt(inc),fmt(exp),fmt(inc-exp)];
-       }),
+       headers:english?['Date','Type','Category','Description','Amount (SAR)']:
+        ['التاريخ','النوع','القسم','الوصف','المبلغ (ريال)'],
+       data:ordered.map((e)=>[
+        dayText(e.date),english?(e.income?'Income':'Expense'):(e.income?'دخل':'مصروف'),
+        waffraTr(e.category),
+        e.title.replaceAll(RegExp(r'\\s+'),' ').trim(),
+        '${e.income?'+':'-'}${fmt(e.amount)}',
+       ]).toList(),
        headerDecoration:const pw.BoxDecoration(color:PdfColors.teal800),
-       headerStyle:pw.TextStyle(font:bold,fontSize:9,color:PdfColors.white),
-       cellStyle:pw.TextStyle(font:font,fontSize:8),
-       cellAlignment:pw.Alignment.center,cellPadding:const pw.EdgeInsets.all(5)),
-      pw.SizedBox(height:12),
-     ],
-     pw.Text(waffraTr('توزيع المصروفات حسب الفئات'),style:pw.TextStyle(font:bold,fontSize:13,color:PdfColors.teal900)),
-     if(totalExpenses>0)...[
-      pw.SizedBox(height:10),
-      pw.Center(child:pw.SvgImage(svg:expensePieSvg(categoryTotals),width:125,height:125)),
-     ],
-     pw.SizedBox(height:8),
-     if(true)pw.TableHelper.fromTextArray(
-      headers:[waffraTr('الفئة'),english?'Amount (SAR)':'المبلغ (ريال)',waffraTr('النسبة من المصروفات')],
-      data:(categoryTotals.entries.toList()..sort((a,b)=>b.value.compareTo(a.value)))
-       .map((e)=>[e.key,fmt(e.value),
-        totalExpenses>0?'${(e.value/totalExpenses*100).toStringAsFixed(1)}%':'0%']).toList(),
-      headerDecoration:const pw.BoxDecoration(color:PdfColors.teal800),
-      headerStyle:pw.TextStyle(font:bold,fontSize:9,color:PdfColors.white),
-      cellStyle:pw.TextStyle(font:font,fontSize:8),
-      cellAlignment:pw.Alignment.centerRight,cellPadding:const pw.EdgeInsets.all(5)),
-     if(false)...((categoryTotals.entries.toList()..sort((a,b)=>b.value.compareTo(a.value))).map((e)=>pw.Padding(
-      padding:const pw.EdgeInsets.symmetric(vertical:3),child:pw.Row(children:[
-       pw.Expanded(child:pw.Text(e.key,style:pw.TextStyle(font:font,fontSize:10))),
-       pw.Text('${fmt(e.value)} SAR',style:pw.TextStyle(font:bold,fontSize:10))])))),
-     pw.SizedBox(height:14),
-     pw.Text(waffraTr('تفاصيل العمليات'),style:pw.TextStyle(font:bold,fontSize:13,color:PdfColors.teal900)),
-     pw.SizedBox(height:8),
-     pw.TableHelper.fromTextArray(headers:[waffraTr('التاريخ'),waffraTr('نوع'),waffraTr('القسم'),waffraTr('الوصف'),english?'Amount (SAR)':'المبلغ (ريال)'],
-      data:items.map((e)=>[dayText(e.date),waffraTr(e.income?'دخل':'مصروف'),waffraTr(e.category),e.title,fmt(e.amount)]).toList(),
-      headerDecoration:const pw.BoxDecoration(color:PdfColors.teal800),
-      headerStyle:pw.TextStyle(font:bold,fontSize:9,color:PdfColors.white),
-      cellStyle:pw.TextStyle(font:font,fontSize:8),cellAlignment:pw.Alignment.centerRight,
-      cellPadding:const pw.EdgeInsets.all(6)),
+       headerStyle:pw.TextStyle(font:bold,fontSize:10,color:PdfColors.white),
+       cellStyle:pw.TextStyle(font:font,fontSize:9),
+       cellAlignment:pw.Alignment.centerRight,
+       cellPadding:const pw.EdgeInsets.symmetric(horizontal:6,vertical:5),
+       oddRowDecoration:const pw.BoxDecoration(color:PdfColors.grey100),
+       columnWidths:{0:const pw.FixedColumnWidth(92),1:const pw.FixedColumnWidth(70),
+        2:const pw.FixedColumnWidth(100),3:const pw.FlexColumnWidth(3),
+        4:const pw.FixedColumnWidth(90)},
+      ),
+     ]));
+   }else{
+    final yearly=title.contains('سنوي');
+    final periods=yearly?12:5;
+    final groups=List.generate(periods,(i)=>items.where((e)=>yearly?
+     e.date.month==i+1:((e.date.day-1)~/7)==i).toList());
+    final active=List.generate(periods,(i)=>i).where((i)=>groups[i].isNotEmpty).toList();
+    final maxValue=max(1.0,max(totalIncome,totalExpenses));
+    pw.Widget bar(double value,PdfColor color)=>pw.Expanded(child:pw.Row(children:[
+     pw.Expanded(flex:max(1,(value/maxValue*100).round()),
+      child:pw.Container(height:13,color:color)),
+     pw.Expanded(flex:max(1,100-(value/maxValue*100).round()),
+      child:pw.SizedBox(height:13)),
     ]));
+    doc.addPage(pw.MultiPage(pageTheme:pageTheme,build:(ctx)=>[
+     heading('تقرير التحليلات المالية','Financial Analytics'),
+     heading('الدخل والمصروفات حسب الفترة','Income vs Expenses by Period'),
+     ...active.map((i)=>pw.Padding(padding:const pw.EdgeInsets.symmetric(vertical:7),
+      child:pw.Row(children:[
+       pw.SizedBox(width:65,child:pw.Text(yearly?'${i+1}':'${english?'Week':'أسبوع'} ${i+1}',
+        style:pw.TextStyle(font:font,fontSize:10))),
+       pw.Expanded(child:pw.Column(children:[
+        pw.Row(children:[pw.SizedBox(width:48,child:pw.Text(english?'Income':'دخل',style:pw.TextStyle(font:font,fontSize:9))),
+         bar(sum(groups[i],true),PdfColors.teal),pw.SizedBox(width:62,child:pw.Text(fmt(sum(groups[i],true)),style:pw.TextStyle(font:font,fontSize:9)))]),
+        pw.SizedBox(height:5),
+        pw.Row(children:[pw.SizedBox(width:48,child:pw.Text(english?'Expense':'مصروف',style:pw.TextStyle(font:font,fontSize:9))),
+         bar(sum(groups[i],false),PdfColors.deepOrange),pw.SizedBox(width:62,child:pw.Text(fmt(sum(groups[i],false)),style:pw.TextStyle(font:font,fontSize:9)))]),
+       ])),
+      ]))),
+     if(totalExpenses>0)...[
+      pw.SizedBox(height:22),
+      heading('توزيع المصروفات حسب الفئات','Expenses by Category'),
+      pw.Center(child:pw.SvgImage(svg:expensePieSvg(categoryTotals),width:215,height:215)),
+      pw.SizedBox(height:10),
+      ...((categoryTotals.entries.toList()..sort((a,b)=>b.value.compareTo(a.value)))
+       .map((e)=>pw.Padding(padding:const pw.EdgeInsets.symmetric(vertical:4),
+        child:pw.Row(children:[
+         pw.SizedBox(width:145,child:pw.Text(waffraTr(e.key),style:pw.TextStyle(font:font,fontSize:10))),
+         pw.Expanded(child:pw.Row(children:[pw.Expanded(flex:max(1,(e.value/totalExpenses*100).round()),child:pw.Container(height:12,color:PdfColors.teal)),pw.Expanded(flex:max(1,100-(e.value/totalExpenses*100).round()),child:pw.SizedBox(height:12))])),
+         pw.SizedBox(width:90,child:pw.Text('${(e.value/totalExpenses*100).toStringAsFixed(1)}%',
+          style:pw.TextStyle(font:bold,fontSize:10))),
+        ])))),
+     ],
+    ]));
+   }
    final bytes=await doc.save();
    // Android print dialog can be unavailable on some devices; share the PDF as fallback.
    await Printing.sharePdf(bytes:bytes,filename:'waffra_report.pdf');
@@ -1155,7 +1159,7 @@ Future<void> bulkSmsSheet()async {
    ]))));
  Widget tile(MoneyEntry e){
   final c=categoryFor(e.category,e.income);
-  return Card(child:ListTile(
+  return Card(color:e.income?const Color(0xFFB2D5C2):const Color(0xFFF0F7F2),child:ListTile(
    leading:CircleAvatar(backgroundColor:Color(c.color).withValues(alpha:.15),
     child:Icon(categoryIcon(c.icon),color:Color(c.color))),
    title:WaffraText(e.title),subtitle:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
@@ -1675,9 +1679,9 @@ Future<void> bulkSmsSheet()async {
   WaffraText(widget.profile.email,textAlign:TextAlign.center),
   const SizedBox(height:16),
   Card(child:Column(children:[
-   ListTile(leading:const Icon(Icons.people),title:const WaffraText('الجنس'),subtitle:WaffraText(widget.profile.gender)),
+   ListTile(leading:const Icon(Icons.people),title:const WaffraText('الجنس'),subtitle:WaffraText(waffraIsEnglish?({'غير محدد':'Not specified','ذكر':'Male','أنثى':'Female'}[widget.profile.gender]??widget.profile.gender):widget.profile.gender)),
    ListTile(leading:const Icon(Icons.cake),title:const WaffraText('تاريخ الميلاد'),subtitle:WaffraText(dayText(widget.profile.birthday))),
-   ListTile(leading:const Icon(Icons.login),title:const WaffraText('طريقة إنشاء الملف الشخصي'),subtitle:WaffraText(widget.profile.provider)),
+   ListTile(leading:const Icon(Icons.login),title:const WaffraText('طريقة إنشاء الملف الشخصي'),subtitle:WaffraText(waffraIsEnglish?({'محلي':'Local','جوجل':'Google','آبل':'Apple'}[widget.profile.provider]??widget.profile.provider):widget.profile.provider)),
   ])),
   const SizedBox(height:12),
   OutlinedButton.icon(onPressed:()async {
