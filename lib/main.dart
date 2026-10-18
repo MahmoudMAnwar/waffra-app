@@ -320,9 +320,9 @@ class _WaffraAppState extends State<WaffraApp> {
   themeMode:dark?ThemeMode.dark:ThemeMode.light,
   themeAnimationDuration:const Duration(milliseconds:750),
   themeAnimationCurve:Curves.easeInOutCubic,
-  home:PopScope(canPop:false,onPopInvokedWithResult:(didPop,result)async {
+  home:Builder(builder:(rootContext)=>PopScope(canPop:false,onPopInvokedWithResult:(didPop,result)async {
    if(didPop||!mounted)return;
-   final exit=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
+   final exit=await showDialog<bool>(context:rootContext,builder:(ctx)=>AlertDialog(
     title:WaffraText(waffraIsEnglish?'Exit Waffra?':'تبي تطلع من وفرة؟'),
     content:WaffraText(waffraIsEnglish?'Do you want to exit the app?':'متأكد تبي تطلع من التطبيق؟'),
     actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:WaffraText(waffraIsEnglish?'No':'لا')),
@@ -345,7 +345,7 @@ class _WaffraAppState extends State<WaffraApp> {
    locked?PinLockScreen(pinHash:pinHash!,onUnlock:()=>setState(()=>locked=false)):
    !onboarded?IntroScreen(onStart:quickStart,onLogin:intro):
    profile==null||showLogin?LoginScreen(onSave:saveUser):
-   HomeScreen(key:ValueKey(language),profile:profile!,dark:dark,onTheme:theme,onLanguage:setLanguage,onLogout:logout,onProfile:saveUser,onSetPin:setPin,pinEnabled:pinHash!=null))));
+   HomeScreen(key:ValueKey(language),profile:profile!,dark:dark,onTheme:theme,onLanguage:setLanguage,onLogout:logout,onProfile:saveUser,onSetPin:setPin,pinEnabled:pinHash!=null)))));
 }
 class PinLockScreen extends StatefulWidget {
  final String pinHash;final VoidCallback onUnlock;
