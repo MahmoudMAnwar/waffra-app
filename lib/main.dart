@@ -1195,7 +1195,7 @@ Future<void> bulkSmsSheet()async {
        data:ordered.map((e)=>[
         dayText(e.date),english?(e.income?'Income':'Expense'):(e.income?'دخل':'مصروف'),
         waffraTr(e.category),
-        pdfClean(e.title).length>125?'${pdfClean(e.title).substring(0,125)}…':pdfClean(e.title),
+        pdfClean(e.title).length>85?'${pdfClean(e.title).substring(0,85)}…':pdfClean(e.title),
         '${e.income?'+':'-'}${fmt(e.amount)}',
        ]).toList(),
        headerDecoration:const pw.BoxDecoration(color:PdfColors.teal800),
