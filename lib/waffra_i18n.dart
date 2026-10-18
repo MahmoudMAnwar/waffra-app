@@ -156,7 +156,6 @@ const Map<String,String> _english = {
  'تقرير المصروفات': 'Expense report',
  'تقرير التحليلات': 'Analytics report',
  'Waffra': 'Waffra',
- 'كل ريال تحسب له حساب': 'Every riyal counts',
 };
 
 String waffraTr(String source) {
