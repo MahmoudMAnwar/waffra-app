@@ -518,11 +518,11 @@ class _LoginScreenState extends State<LoginScreen> {
  }
  @override Widget build(BuildContext context)=>provider!=null?
   ProfileForm(provider:provider!,onSave:widget.onSave,onBack:()=>setState(()=>provider=null)):
-  Scaffold(body:SafeArea(child:Center(child:SingleChildScrollView(
+  Scaffold(backgroundColor:forest,body:SafeArea(child:Center(child:SingleChildScrollView(
    padding:const EdgeInsets.all(28),child:Column(children:[
     ClipOval(child:Image.asset('assets/waffra_app_icon.png',width:108,height:108,fit:BoxFit.cover)),
-    const SizedBox(height:20),const WaffraText('وفرة',style:TextStyle(fontSize:42,color:emerald,fontWeight:FontWeight.w900)),
-    const SizedBox(height:12),const WaffraText('وفرة بعلمك وين فلوسك تروح',style:TextStyle(fontSize:19)),
+    const SizedBox(height:20),const WaffraText('وفرة',style:TextStyle(fontSize:42,color:Colors.white,fontWeight:FontWeight.w900)),
+    const SizedBox(height:12),const WaffraText('وفرة بعلمك وين فلوسك تروح',style:TextStyle(fontSize:19,color:Colors.white)),
     const SizedBox(height:30),
     SizedBox(width:double.infinity,height:52,child:OutlinedButton.icon(
      style:OutlinedButton.styleFrom(backgroundColor:Colors.white,foregroundColor:const Color(0xFF4285F4),side:const BorderSide(color:Color(0xFFDADCE0))),
@@ -534,10 +534,10 @@ class _LoginScreenState extends State<LoginScreen> {
      onPressed:socialBusy?null:()=>demoSocial('Apple'),icon:const Icon(Icons.apple,color:Colors.white),
      label:const WaffraText('المتابعة باستخدام Apple',style:TextStyle(color:Colors.white)))),
     const SizedBox(height:14),
-    SizedBox(width:double.infinity,height:52,child:OutlinedButton.icon(onPressed:()=>setState(()=>provider='Phone'),icon:const Icon(Icons.phone_android),label:WaffraText(waffraIsEnglish?'Register with mobile number':'التسجيل برقم الجوال'))),
+    SizedBox(width:double.infinity,height:52,child:OutlinedButton.icon(style:OutlinedButton.styleFrom(foregroundColor:Colors.white,side:const BorderSide(color:Colors.white70)),onPressed:()=>setState(()=>provider='Phone'),icon:const Icon(Icons.phone_android),label:WaffraText(waffraIsEnglish?'Register with mobile number':'التسجيل برقم الجوال'))),
     const SizedBox(height:20),
     const WaffraText('بياناتك محفوظة على جهازك. المتابعة هنا لإنشاء ملف شخصي محلي، وليست مصادقة فعلية مع Google أو Apple.',
-     textAlign:TextAlign.center,style:TextStyle(color:Colors.grey,fontSize:12)),
+     textAlign:TextAlign.center,style:TextStyle(color:Colors.white70,fontSize:12)),
    ])))));
 }
 class ProfileForm extends StatefulWidget {
