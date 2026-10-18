@@ -156,7 +156,7 @@ List<String> splitBankMessages(String raw){
  final clean=raw.replaceAll('\r\n','\n').replaceAll('\u200f','').replaceAll('\u200e','').trim();
  if(clean.isEmpty)return [];
  // Bank SMS messages often start with a transaction heading, even without dates.
- final heading=RegExp(r'(?im)^\s*(?:شراء(?:\s+PoS)?|حوال[ةه]|تحويل|إيداع|ايداع|راتب|سحب|دفع|نقاط بيع|POS|Purchase|Debit|Credit)\b');
+ final heading=RegExp(r'(?im)^\s*(?:شراء(?:\s+PoS)?|حوال[ةه]|تحويل|إيداع|ايداع|راتب|سحب|دفع|نقاط بيع|POS|Purchase|Debit|Credit)(?=\s|$|[:：])');
  final starts=heading.allMatches(clean).map((m)=>m.start).toList();
  if(starts.length>1){
   final result=<String>[];
@@ -548,9 +548,15 @@ Future<void> bulkSmsSheet()async {
        if(text.trim().isEmpty){update((){messages=[];parsed=false;});return;}
        final detected=splitBankMessages(text);
        if(detected.isEmpty)return;
-       messages=detected;
-       parsed=true;
-       prepare(0,update);
+       final first=BankParser.parse(detected.first);
+       update((){
+        messages=detected;parsed=true;index=0;
+        income=first.income;
+        category=categories.any((c)=>c.income==income&&c.name==first.category)
+         ?first.category:(forType(income).isNotEmpty?forType(income).first.name:'أخرى');
+        description.text='${first.title} — ${detected.first.replaceAll(RegExp(r'\s+'),' ').trim()}';
+        amount.text=first.amount==null?'':formatMoney(first.amount!);
+       });
       },decoration:const InputDecoration(
        labelText:'الصق رسالة أو عدة رسائل بنكية',hintText:'الصق الرسائل كاملة، كل رسالة بتاريخها',border:OutlineInputBorder())),
       const SizedBox(height:8),
@@ -825,9 +831,10 @@ update((){parsed=false;messages=[];index=0;pasted.clear();description.clear();am
      pageFormat:PdfPageFormat.a4,
      margin:const pw.EdgeInsets.fromLTRB(26,184,26,92),
      buildBackground:(ctx)=>pw.FullPage(ignoreMargins:true,
-      child:pw.Image(reportBackground,fit:pw.BoxFit.fill)),
+      child:pw.Image(reportBackground,fit:pw.BoxFit.contain)),
+     theme:pw.ThemeData.withFont(base:font,bold:bold),
+     textDirection:pw.TextDirection.rtl,
     ),
-    theme:pw.ThemeData.withFont(base:font,bold:bold),textDirection:pw.TextDirection.rtl,
     header:(ctx)=>pw.Container(height:18,alignment:pw.Alignment.centerRight,
       child:pw.Text(title,style:pw.TextStyle(font:bold,fontSize:14,color:PdfColors.teal900))),
     footer:(ctx)=>pw.Align(alignment:pw.Alignment.centerRight,
