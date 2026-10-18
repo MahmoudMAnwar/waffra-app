@@ -155,18 +155,29 @@ String bankSmsHash(String raw)=>sha256.convert(utf8.encode(digits(raw).replaceAl
 List<String> splitBankMessages(String raw){
  final clean=raw.replaceAll('\r\n','\n').replaceAll('\u200f','').replaceAll('\u200e','').trim();
  if(clean.isEmpty)return [];
- // Most Saudi SMS samples terminate in a date/time line, e.g. 17/10/26 20:00.
- final dateLine=RegExp(r'(?m)^\s*[0-9٠-٩]{1,2}[/\-][0-9٠-٩]{1,2}[/\-][0-9٠-٩]{2,4}\s+[0-9٠-٩]{1,2}:[0-9٠-٩]{2}\s*$');
- final matches=dateLine.allMatches(clean).toList();
- if(matches.length>=2){
-  final parts=<String>[];var start=0;
-  for(final m in matches){final part=clean.substring(start,m.end).trim();if(part.isNotEmpty)parts.add(part);start=m.end;}
-  if(clean.substring(start).trim().isNotEmpty)parts.add(clean.substring(start).trim());
-  return parts;
+ // Bank SMS messages often start with a transaction heading, even without dates.
+ final heading=RegExp(r'(?im)^\s*(?:شراء(?:\s+PoS)?|حوال[ةه]|تحويل|إيداع|ايداع|راتب|سحب|دفع|نقاط بيع|POS|Purchase|Debit|Credit)\b');
+ final starts=heading.allMatches(clean).map((m)=>m.start).toList();
+ if(starts.length>1){
+  final result=<String>[];
+  for(var i=0;i<starts.length;i++){
+   final from=i==0?0:starts[i];
+   final to=i+1<starts.length?starts[i+1]:clean.length;
+   final part=clean.substring(from,to).trim();
+   if(part.isNotEmpty)result.add(part);
+  }
+  return result;
  }
- // Separate messages by a blank line before an SMS transaction heading.
- final byHeading=clean.split(RegExp(r'\n\s*\n(?=\s*(?:شراء|حوالة|تحويل|إيداع|راتب|سحب|دفع|POS|Purchase)\b)',caseSensitive:false));
- return byHeading.where((x)=>x.trim().isNotEmpty).map((x)=>x.trim()).toList();
+ final dateLine=RegExp(r'(?m)^\s*[0-9٠-٩]{1,2}[/\-][0-9٠-٩]{1,2}[/\-][0-9٠-٩]{2,4}\s+[0-9٠-٩]{1,2}:[0-9٠-٩]{2}\s*$');
+ final dates=dateLine.allMatches(clean).toList();
+ if(dates.length>1){
+  final result=<String>[];var start=0;
+  for(final d in dates){final part=clean.substring(start,d.end).trim();if(part.isNotEmpty)result.add(part);start=d.end;}
+  final rest=clean.substring(start).trim();if(rest.isNotEmpty)result.add(rest);
+  return result;
+ }
+ final separated=clean.split(RegExp(r'\n\s*\n+'));
+ return separated.where((x)=>x.trim().isNotEmpty).map((x)=>x.trim()).toList();
 }
 
 class WaffraApp extends StatefulWidget {
@@ -507,7 +518,6 @@ Future<void> bulkSmsSheet()async {
  var parsed=false;
  var busy=false;
  var savedCount=0;
- Timer? autoParse;
  bool sheetActive=true;
  void disposeLater(){
   Future<void>.delayed(const Duration(milliseconds:500),(){
@@ -533,22 +543,21 @@ Future<void> bulkSmsSheet()async {
      Text('إضافة رسائل بنكية',style:Theme.of(ctx).textTheme.titleLarge),
      const SizedBox(height:12),
      if(!parsed)...[
-      TextField(controller:pasted,minLines:7,maxLines:13,onChanged:(text){
-       autoParse?.cancel();
-       if(text.trim().isEmpty)return;
-       autoParse=Timer(const Duration(milliseconds:450),(){
-        if(!sheetActive||!ctx.mounted)return;
-        final list=splitBankMessages(text);
-        if(list.isEmpty)return;
-        messages=list;parsed=true;prepare(0,update);
-       });
+      TextField(controller:pasted,minLines:5,maxLines:9,onChanged:(text){
+       if(!sheetActive||!ctx.mounted)return;
+       if(text.trim().isEmpty){update((){messages=[];parsed=false;});return;}
+       final detected=splitBankMessages(text);
+       if(detected.isEmpty)return;
+       messages=detected;
+       parsed=true;
+       prepare(0,update);
       },decoration:const InputDecoration(
        labelText:'الصق رسالة أو عدة رسائل بنكية',hintText:'الصق الرسائل كاملة، كل رسالة بتاريخها',border:OutlineInputBorder())),
       const SizedBox(height:8),
       const Text('يتم تحليل الرسائل تلقائيًا بعد اللصق',style:TextStyle(color:emerald)),
      ]else...[
       TextButton.icon(onPressed:busy?null:(){
-      autoParse?.cancel();update((){parsed=false;messages=[];index=0;pasted.clear();description.clear();amount.clear();});
+update((){parsed=false;messages=[];index=0;pasted.clear();description.clear();amount.clear();});
      },icon:const Icon(Icons.delete_outline),label:const Text('حذف النص بالكامل ولصق رسائل جديدة')),
      Text('الرسالة ${index+1} من ${messages.length} — إجمالي مبالغ الرسائل: ${cash(total)}',style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
       const SizedBox(height:6),
@@ -600,10 +609,14 @@ Future<void> bulkSmsSheet()async {
        else{await prepare(index+1,update);update(()=>busy=false);}
       },child:Text(index+1==messages.length?'حفظ الرسالة الأخيرة':'حفظ والانتقال للرسالة التالية')),
       if(index+1<messages.length)TextButton(onPressed:busy?null:()=>prepare(index+1,update),child:const Text('تخطي هذه الرسالة')),
+      const SizedBox(height:8),
+      OutlinedButton.icon(onPressed:busy?null:(){
+       update((){parsed=false;messages=[];index=0;savedCount=0;pasted.clear();description.clear();amount.clear();});
+      },icon:const Icon(Icons.delete_forever_outlined),label:const Text('حذف النص بالكامل وإضافة رسائل أخرى')),
      ],
     ])));
   }));
- sheetActive=false;autoParse?.cancel();disposeLater();
+ sheetActive=false;disposeLater();
 }
 
  Future<void> entrySheet({MoneyEntry? initial,bool sms=false})async {
@@ -796,8 +809,7 @@ Future<void> bulkSmsSheet()async {
   try{
    final font=await PdfGoogleFonts.tajawalRegular();
    final bold=await PdfGoogleFonts.tajawalBold();
-   final headerImage=pw.MemoryImage((await rootBundle.load('assets/waffra_pdf_header.jpg')).buffer.asUint8List());
-   final footerImage=pw.MemoryImage((await rootBundle.load('assets/waffra_pdf_footer.jpg')).buffer.asUint8List());
+   final reportBackground=pw.MemoryImage((await rootBundle.load('assets/waffra_report_template.png')).buffer.asUint8List());
    final doc=pw.Document();
    final totalIncome=sum(items,true),totalExpenses=sum(items,false);
    final categoryTotals=<String,double>{};
@@ -808,17 +820,18 @@ Future<void> bulkSmsSheet()async {
      pw.Text(label,style:pw.TextStyle(font:bold,fontSize:10,color:PdfColors.teal900)),
      pw.SizedBox(height:5),pw.Text('${formatMoney(value)} SAR',style:pw.TextStyle(font:bold,fontSize:15,color:PdfColors.teal900)),
     ])));
-   doc.addPage(pw.MultiPage(pageFormat:PdfPageFormat.a4,margin:const pw.EdgeInsets.fromLTRB(25,22,25,28),
+   doc.addPage(pw.MultiPage(
+    pageTheme:pw.PageTheme(
+     pageFormat:PdfPageFormat.a4,
+     margin:const pw.EdgeInsets.fromLTRB(26,184,26,92),
+     buildBackground:(ctx)=>pw.FullPage(ignoreMargins:true,
+      child:pw.Image(reportBackground,fit:pw.BoxFit.fill)),
+    ),
     theme:pw.ThemeData.withFont(base:font,bold:bold),textDirection:pw.TextDirection.rtl,
-    header:(ctx)=>pw.Column(children:[
-     pw.Image(headerImage,height:105,width:PdfPageFormat.a4.width-50,fit:pw.BoxFit.cover),
-     pw.SizedBox(height:9),pw.Text(title,style:pw.TextStyle(font:bold,fontSize:18,color:PdfColors.teal900)),
-     pw.SizedBox(height:7)]),
-    footer:(ctx)=>pw.Column(children:[
-     pw.Image(footerImage,height:46,width:PdfPageFormat.a4.width-50,fit:pw.BoxFit.cover),
-     pw.SizedBox(height:4),pw.Row(mainAxisAlignment:pw.MainAxisAlignment.spaceBetween,children:[
-      pw.Text('وفرة | Waffra',style:pw.TextStyle(font:bold,fontSize:9,color:PdfColors.teal900)),
-      pw.Text('${ctx.pageNumber} / ${ctx.pagesCount}',style:pw.TextStyle(font:font,fontSize:9))])]),
+    header:(ctx)=>pw.Container(height:18,alignment:pw.Alignment.centerRight,
+      child:pw.Text(title,style:pw.TextStyle(font:bold,fontSize:14,color:PdfColors.teal900))),
+    footer:(ctx)=>pw.Align(alignment:pw.Alignment.centerRight,
+      child:pw.Text('${ctx.pageNumber} / ${ctx.pagesCount}',style:pw.TextStyle(font:font,fontSize:9,color:PdfColors.teal900))),
     build:(ctx)=>[
      pw.Row(children:[summary('إجمالي الدخل',totalIncome,PdfColors.green50),pw.SizedBox(width:8),
       summary('إجمالي المصروفات',totalExpenses,PdfColors.red50),pw.SizedBox(width:8),
@@ -840,8 +853,10 @@ Future<void> bulkSmsSheet()async {
       cellStyle:pw.TextStyle(font:font,fontSize:8),cellAlignment:pw.Alignment.centerRight,
       cellPadding:const pw.EdgeInsets.all(6)),
     ]));
-   await Printing.layoutPdf(onLayout:(format)async=>doc.save(),name:'waffra_report.pdf');
-  }catch(e){debugPrint('PDF export error: $e');if(mounted)snack(context,'تعذّر إنشاء PDF. تحقق من الاتصال والملفات المطلوبة.');}
+   final bytes=await doc.save();
+   // Android print dialog can be unavailable on some devices; share the PDF as fallback.
+   await Printing.sharePdf(bytes:bytes,filename:'waffra_report.pdf');
+  }catch(e,st){debugPrint('PDF export error: $e\n$st');if(mounted)snack(context,'تعذّر إنشاء PDF: $e');}
  }
  Future<void> deleteEntry(MoneyEntry e)async {
   final yes=await confirm('حذف العملية','ودّك تحذف «${e.title}»؟');
