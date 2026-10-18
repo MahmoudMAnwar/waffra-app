@@ -545,6 +545,42 @@ Future<void> bulkSmsSheet()async {
  var busy=false;
  var savedCount=0;
  bool sheetActive=true;
+ Future<void> saveParsedMessages(BuildContext ctx,StateSetter update)async {
+  if(busy)return;
+  final found=splitBankMessages(pasted.text.trim());
+  if(found.isEmpty)return;
+  final parsedResults=found.map(BankParser.parse).toList();
+  if(parsedResults.any((r)=>r.amount==null||r.amount!<=0)){
+   update((){messages=found;parsed=true;});
+   return;
+  }
+  final additions=<MoneyEntry>[];
+  final newHashes=<String>{};
+  for(var i=0;i<found.length;i++){
+   final hash=bankSmsHash(found[i]);
+   if(smsHashes.contains(hash)||!newHashes.add(hash))continue;
+   final result=parsedResults[i];
+   final cat=categories.any((c)=>c.income==result.income&&c.name==result.category)
+    ?result.category:(forType(result.income).isNotEmpty?forType(result.income).first.name:'أخرى');
+   additions.add(MoneyEntry(id:newId(),title:'${result.title} — ${found[i].replaceAll(RegExp(r'\s+'),' ').trim()}',
+    category:cat,amount:result.amount!,income:result.income,date:DateTime.now()));
+  }
+  if(additions.isEmpty){update((){messages=found;parsed=true;});return;}
+  update(()=>busy=true);
+  try{
+   setState(()=>entries.insertAll(0,additions));
+   smsHashes.addAll(newHashes);
+   await persist();
+   final prefs=await SharedPreferences.getInstance();
+   await prefs.setStringList('waffra_sms_hashes_v1',smsHashes.toList());
+   if(!ctx.mounted)return;
+   Navigator.pop(ctx);
+   if(mounted)snack(context,'تم تحليل وحفظ ${additions.length} معاملة في أقسامها تلقائيًا');
+  }catch(e){
+   if(ctx.mounted){update(()=>busy=false);snack(ctx,'فشل حفظ الرسائل: $e');}
+  }
+ }
+
  void disposeLater(){
   pasteTimer?.cancel();
   Future<void>.delayed(const Duration(milliseconds:500),(){
@@ -574,6 +610,13 @@ Future<void> bulkSmsSheet()async {
        pasteTimer?.cancel();
        if(!sheetActive||!ctx.mounted)return;
        update((){parsed=false;messages=[];});
+       if(text.trim().isNotEmpty){
+        pasteTimer=Timer(const Duration(milliseconds:650),(){
+         if(sheetActive&&ctx.mounted&&pasted.text.trim()==text.trim()){
+          saveParsedMessages(ctx,update);
+         }
+        });
+       }
       },decoration:const InputDecoration(labelText:'الصق رسالة أو عدة رسائل بنكية',
        hintText:'الصق الرسائل كاملة، كل رسالة بتاريخها',border:OutlineInputBorder())),
       const SizedBox(height:12),
@@ -597,43 +640,8 @@ Future<void> bulkSmsSheet()async {
         style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
        const SizedBox(height:8),
        FilledButton.icon(icon:const Icon(Icons.check_circle_outline),
-        onPressed:busy?null:()async{
-         if(messages.isEmpty){snack(ctx,'حلّل الرسائل أولاً');return;}
-         final parsedMessages=messages.map(BankParser.parse).toList();
-         final invalid=<int>[];
-         final additions=<MoneyEntry>[];
-         final newHashes=<String>{};
-         for(var i=0;i<messages.length;i++){
-          final result=parsedMessages[i];
-          if(result.amount==null||result.amount!<=0){invalid.add(i+1);continue;}
-          final hash=bankSmsHash(messages[i]);
-          if(smsHashes.contains(hash)||!newHashes.add(hash))continue;
-          final fallback=forType(result.income);
-          final selectedCategory=categories.any((c)=>c.income==result.income&&c.name==result.category)
-           ?result.category:(fallback.isNotEmpty?fallback.first.name:'أخرى');
-          additions.add(MoneyEntry(
-           id:newId(),title:'${result.title} — ${messages[i].replaceAll(RegExp(r'\s+'),' ').trim()}',
-           category:selectedCategory,amount:result.amount!,income:result.income,date:DateTime.now()));
-         }
-         if(invalid.isNotEmpty){
-          snack(ctx,'تعذّر قراءة مبلغ الرسائل رقم ${invalid.join('، ')}. راجعها قبل التأكيد.');
-          return;
-         }
-         if(additions.isEmpty){snack(ctx,'كل الرسائل المحددة محفوظة بالفعل');return;}
-         update(()=>busy=true);
-         try{
-          setState(()=>entries.insertAll(0,additions));
-          smsHashes.addAll(newHashes);
-          await persist();
-          final prefs=await SharedPreferences.getInstance();
-          await prefs.setStringList('waffra_sms_hashes_v1',smsHashes.toList());
-          if(!ctx.mounted)return;
-          Navigator.pop(ctx);
-          if(mounted)snack(context,'تم حفظ ${additions.length} معاملة بنجاح');
-         }catch(e){
-          if(ctx.mounted){update(()=>busy=false);snack(ctx,'تعذّر حفظ المعاملات: $e');}
-         }
-        },label:Text(busy?'جارٍ حفظ المعاملات...':'تأكيد وإضافة ${messages.length} معاملة')),
+        onPressed:busy?null:()=>saveParsedMessages(ctx,update),
+        label:Text(busy?'جارٍ الحفظ...':'تأكيد وحفظ المعاملات')),
       ],
       TextButton.icon(onPressed:(){
        pasteTimer?.cancel();pasted.clear();
@@ -925,6 +933,8 @@ Future<void> bulkSmsSheet()async {
    if(template==null)throw StateError('تعذر قراءة صورة التقرير');
    final headerArt=pw.MemoryImage(Uint8List.fromList(img.encodePng(img.copyCrop(template,
     x:0,y:0,width:template.width,height:(template.height*0.54).round()))));
+   final footerLogo=pw.MemoryImage(Uint8List.fromList(img.encodePng(img.copyCrop(template,
+    x:0,y:0,width:(template.width*0.32).round(),height:(template.height*0.50).round()))));
    final doc=pw.Document();
    final totalIncome=sum(items,true),totalExpenses=sum(items,false);
    final categoryTotals=<String,double>{};
@@ -943,6 +953,8 @@ Future<void> bulkSmsSheet()async {
       pw.Positioned(top:0,left:0,right:0,child:pw.SizedBox(height:210,child:pw.Image(headerArt,fit:pw.BoxFit.fill))),
  
       pw.Positioned(bottom:0,left:0,right:0,child:pw.Container(height:95,color:PdfColors.teal900)),
+      pw.Positioned(bottom:12,left:20,child:pw.SizedBox(width:120,height:73,
+       child:pw.Image(footerLogo,fit:pw.BoxFit.contain))),
       pw.Positioned(bottom:24,right:20,child:pw.Text(
        'تاريخ التصدير: ${dayText(DateTime.now())}',
        style:pw.TextStyle(font:font,fontSize:10,color:PdfColors.white))),
@@ -1017,9 +1029,9 @@ Future<void> bulkSmsSheet()async {
        pw.Expanded(child:pw.Text(e.key,style:pw.TextStyle(font:font,fontSize:10))),
        pw.Text('${formatMoney(e.value)} SAR',style:pw.TextStyle(font:bold,fontSize:10))])))),
      pw.SizedBox(height:14),
-     if(!analytics)pw.Text('تفاصيل العمليات',style:pw.TextStyle(font:bold,fontSize:13,color:PdfColors.teal900)),
-     if(!analytics)pw.SizedBox(height:8),
-     if(!analytics)pw.TableHelper.fromTextArray(headers:['التاريخ','النوع','القسم','الوصف','المبلغ (ريال)'],
+     pw.Text('تفاصيل العمليات',style:pw.TextStyle(font:bold,fontSize:13,color:PdfColors.teal900)),
+     pw.SizedBox(height:8),
+     pw.TableHelper.fromTextArray(headers:['التاريخ','النوع','القسم','الوصف','المبلغ (ريال)'],
       data:items.map((e)=>[dayText(e.date),e.income?'دخل':'مصروف',e.category,e.title,formatMoney(e.amount)]).toList(),
       headerDecoration:const pw.BoxDecoration(color:PdfColors.teal800),
       headerStyle:pw.TextStyle(font:bold,fontSize:9,color:PdfColors.white),
@@ -1152,7 +1164,7 @@ Future<void> bulkSmsSheet()async {
     const SizedBox(height:16),FinanceChart(points:points),
    ]))),
    const SizedBox(height:16),
-   OutlinedButton.icon(onPressed:()=>exportEntriesPdf(data,'تحليلات وفرة - $period ${period=='شهري'?'$month/':''}$year'),
+   OutlinedButton.icon(onPressed:()=>exportEntriesPdf(data,'تحليلات وفرة - $period ${period=='شهري'?'$month/':''}$year',analytics:true),
     icon:const Icon(Icons.picture_as_pdf_outlined),label:const Text('تصدير التحليلات إلى PDF')),
    const SizedBox(height:12),
    Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(children:[
