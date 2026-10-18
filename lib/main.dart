@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:crypto/crypto.dart';
 import 'waffra_biometrics.dart';
 import 'waffra_welcome_background.dart';
+import 'currency_converter.dart';
 
 void main() { WidgetsFlutterBinding.ensureInitialized(); runApp(const WaffraApp()); }
 const emerald=Color(0xFF087A54), forest=Color(0xFF064D3B), sand=Color(0xFFF8F6EF), gold=Color(0xFFD8BA78);
@@ -187,6 +188,7 @@ class _WaffraAppState extends State<WaffraApp> {
  }
  @override Widget build(BuildContext context)=>MaterialApp(
   debugShowCheckedModeBanner:false,title:'وفرة | Waffra',locale:const Locale('ar','SA'),
+  builder:(context,child)=>Directionality(textDirection:TextDirection.rtl,child:child??const SizedBox.shrink()),
   theme:ThemeData(useMaterial3:true,colorSchemeSeed:emerald,scaffoldBackgroundColor:sand,textTheme:GoogleFonts.tajawalTextTheme()),
   darkTheme:ThemeData(useMaterial3:true,brightness:Brightness.dark,colorSchemeSeed:emerald,textTheme:GoogleFonts.tajawalTextTheme(ThemeData.dark().textTheme)),
   themeMode:dark?ThemeMode.dark:ThemeMode.light,
@@ -292,27 +294,32 @@ class _IntroScreenState extends State<IntroScreen> {
   try{await(login?widget.onLogin():widget.onStart());}finally{if(mounted)setState(()=>busy=false);}
  }
  @override Widget build(BuildContext context)=>Scaffold(backgroundColor:forest,
-  body:WaffraWelcomeBackground(child:SafeArea(child:Padding(
-   padding:const EdgeInsets.fromLTRB(24,32,24,20),child:Column(children:[
-    const Spacer(flex:2),
-    Image.asset('assets/waffra_logo_transparent.png',width:180,height:180,fit:BoxFit.contain),
-    const SizedBox(height:20),
-    const Text('فلوسك وين تروح؟\nوفرة يعلّمك.',textAlign:TextAlign.center,
-     style:TextStyle(color:Colors.white,fontSize:23,fontWeight:FontWeight.w800)),
-    const Spacer(flex:5),
-    SizedBox(width:double.infinity,height:54,child:FilledButton(
-     onPressed:busy?null:()=>proceed(false),
-     style:FilledButton.styleFrom(backgroundColor:Colors.white,foregroundColor:forest),
-     child:const Text('ابدأ الآن',style:TextStyle(fontSize:17,fontWeight:FontWeight.bold)))),
-    const SizedBox(height:12),
-    SizedBox(width:double.infinity,height:52,child:OutlinedButton(
-     onPressed:busy?null:()=>proceed(true),
-     style:OutlinedButton.styleFrom(foregroundColor:Colors.white,side:const BorderSide(color:Colors.white70)),
-     child:const Text('لديك حساب؟ قم بتسجيل الدخول',style:TextStyle(fontSize:15,fontWeight:FontWeight.w600)))),
-    const SizedBox(height:15),
-    const Text('بياناتك المالية محفوظة على جهازك',style:TextStyle(color:Colors.white70,fontSize:12)),
-   ])))));
+  body:Directionality(textDirection:TextDirection.rtl,child:Stack(fit:StackFit.expand,children:[
+   Column(children:[
+    Expanded(flex:82,child:SizedBox(width:double.infinity,child:Image.asset(
+     'assets/waffra_welcome_integrated.png',fit:BoxFit.fill))),
+    const Expanded(flex:18,child:ColoredBox(color:forest)),
+   ]),
+   SafeArea(child:Column(children:[
+    const Spacer(),
+    Padding(padding:const EdgeInsets.fromLTRB(24,0,24,20),child:Column(children:[
+     SizedBox(width:double.infinity,height:54,child:FilledButton(
+      onPressed:busy?null:()=>proceed(false),
+      style:FilledButton.styleFrom(backgroundColor:Colors.white,foregroundColor:forest),
+      child:const Text('ابدأ الآن',style:TextStyle(fontSize:17,fontWeight:FontWeight.bold)))),
+     const SizedBox(height:12),
+     SizedBox(width:double.infinity,height:52,child:OutlinedButton(
+      onPressed:busy?null:()=>proceed(true),
+      style:OutlinedButton.styleFrom(foregroundColor:Colors.white,side:const BorderSide(color:Colors.white70)),
+      child:const Text('لديك حساب؟ قم بتسجيل الدخول',style:TextStyle(fontSize:15,fontWeight:FontWeight.w600)))),
+     const SizedBox(height:15),
+     const Text('🔒 بياناتك المالية محفوظة على جهازك',
+      style:TextStyle(color:Colors.white70,fontSize:12)),
+    ])),
+   ])),
+  ])));
 }
+
 class LoginScreen extends StatefulWidget {
  final Future<void> Function(Person) onSave;
  const LoginScreen({super.key,required this.onSave});
@@ -559,7 +566,13 @@ class _HomeScreenState extends State<HomeScreen> {
        if(sms){
         if(message.text.trim().isEmpty){snack(context,'الصق الرسالة البنكية أولًا');return;}
         final h=sha256.convert(utf8.encode(digits(message.text).replaceAll(RegExp(r'\s+'),' ').trim().toLowerCase())).toString();
-        if(smsHashes.contains(h)){snack(context,'هذه الرسالة البنكية أُضيفت من قبل');return;}
+        if(smsHashes.contains(h)){
+         showDialog<void>(context:sheetContext,builder:(dialogContext)=>AlertDialog(
+          title:const Text('⚠️ الرسالة مكررة'),
+          content:const Text('هذي الرسالة البنكية أضفتها قبل كذا. ما راح نسجّلها مرتين.'),
+          actions:[FilledButton(onPressed:()=>Navigator.pop(dialogContext),child:const Text('تمام'))]));
+         return;
+        }
         pendingHash=h;
        }
        Navigator.pop(sheetContext,MoneyEntry(id:initial?.id??newId(),title:title.text.trim(),
@@ -591,7 +604,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
  }
  Future<void> deleteEntry(MoneyEntry e)async {
-  final yes=await confirm('حذف العملية','متأكد ودّك تحذف «${e.title}»؟');
+  final yes=await confirm('حذف العملية','ودّك تحذف «${e.title}»؟');
   if(yes!=true||!mounted)return;
   setState(()=>entries.removeWhere((x)=>x.id==e.id));await persist();
  }
@@ -888,7 +901,7 @@ class _HomeScreenState extends State<HomeScreen> {
   if(RegExp(r'دراس|تعليم|جامعة|school').hasMatch(x))return Icons.school;
   if(RegExp(r'جوال|هاتف|موبايل').hasMatch(x))return Icons.smartphone;
   if(RegExp(r'مشروع|تجارة').hasMatch(x))return Icons.storefront;
-  return Icons.savings;
+  return Icons.account_balance_wallet;
  }
  Widget goalsPage()=>ListView(padding:const EdgeInsets.all(16),children:[
   Text('أهداف الادخار',style:Theme.of(context).textTheme.titleLarge),
@@ -912,7 +925,10 @@ class _HomeScreenState extends State<HomeScreen> {
     const SizedBox(height:8),
     Wrap(crossAxisAlignment:WrapCrossAlignment.center,spacing:6,
      children:[RiyalAmount(g.saved),const Text('من'),RiyalAmount(g.target)]),
-    Text('المتبقي للهدف: ${cash((g.target-g.saved).clamp(0.0,double.infinity))}',
+    if(g.saved>=g.target)
+     const Text('🎉 مبروك! تم تحقيق الهدف',
+      style:TextStyle(fontWeight:FontWeight.bold,color:emerald))
+    else Text('المتبقي للهدف: ${cash((g.target-g.saved).clamp(0.0,double.infinity))}',
      style:const TextStyle(fontWeight:FontWeight.bold,color:emerald)),
     TextButton.icon(onPressed:()=>fundGoal(g),icon:const Icon(Icons.add),label:const Text('أضف مبلغ مدّخر')),
    ])))),
@@ -1015,7 +1031,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final newRecurring=(raw['recurring'] as List).map((x)=>RecurringBill.fromJson(Map<String,dynamic>.from(x))).toList();
       if(newCategories.isEmpty)throw const FormatException('Empty categories');
       if(!mounted)return;
-      final ok=await confirm('تأكيد الاستعادة','بتستبدل البيانات الحالية بالنسخة الملصوقة. متأكد؟');
+      final ok=await confirm('تأكيد الاستعادة','ودّك تستبدل البيانات الحالية بالنسخة الملصوقة؟');
       if(ok!=true||!mounted)return;
       setState((){
        entries..clear()..addAll(newEntries);
@@ -1084,6 +1100,9 @@ class _HomeScreenState extends State<HomeScreen> {
   OutlinedButton.icon(onPressed:configurePin,
    icon:Icon(widget.pinEnabled?Icons.lock:Icons.lock_open),
    label:Text(widget.pinEnabled?'إلغاء قفل التطبيق':'تفعيل قفل التطبيق برمز PIN')),
+  OutlinedButton.icon(onPressed:()=>Navigator.push<void>(context,
+   MaterialPageRoute(builder:(_)=>const CurrencyConverterPage())),
+   icon:const Icon(Icons.currency_exchange),label:const Text('تحويل العملات بسعر الصرف الحالي')),
   OutlinedButton.icon(onPressed:widget.onTheme,
    icon:Icon(widget.dark?Icons.light_mode:Icons.dark_mode),label:const Text('تغيير المظهر')),
   OutlinedButton.icon(onPressed:backupDialog,icon:const Icon(Icons.backup_outlined),
@@ -1107,13 +1126,13 @@ class _HomeScreenState extends State<HomeScreen> {
   floatingActionButton:tab==0?FloatingActionButton.extended(
    onPressed:()=>entrySheet(),icon:const Icon(Icons.add),label:const Text('أضف عملية')):null,
   bottomNavigationBar:NavigationBar(height:74,
-   labelBehavior:NavigationDestinationLabelBehavior.onlyShowSelected,
+   labelBehavior:NavigationDestinationLabelBehavior.alwaysShow,
    selectedIndex:tab,onDestinationSelected:(v)=>setState(()=>tab=v),
    destinations:const [
     NavigationDestination(icon:Icon(Icons.home_outlined),selectedIcon:Icon(Icons.home),label:'الرئيسية'),
     NavigationDestination(icon:Icon(Icons.bar_chart_outlined),label:'التحليلات'),
     NavigationDestination(icon:Icon(Icons.category_outlined),label:'الأقسام'),
-    NavigationDestination(icon:Icon(Icons.savings_outlined),label:'الادخار'),
+    NavigationDestination(icon:Icon(Icons.account_balance_wallet_outlined),label:'الادخار'),
     NavigationDestination(icon:Icon(Icons.repeat),label:'المتكررة'),
     NavigationDestination(icon:Icon(Icons.person_outline),label:'حسابي'),
    ]));
