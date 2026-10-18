@@ -234,27 +234,38 @@ class _WaffraAppState extends State<WaffraApp> {
  String language='ar';
  String? pinHash;Person? profile;
  @override void initState(){super.initState();load();}
+ String? startupError;
  Future<void> load()async {
-  final p=await SharedPreferences.getInstance();Person? u;
-  try{final s=p.getString('waffra_profile');if(s!=null)u=Person.fromJson(Map<String,dynamic>.from(jsonDecode(s)));}catch(e){debugPrint('$e');}
-  // Migrate the previous default-deny setting once; users may turn it off later.
-  if(p.getBool('waffra_screenshot_default_v2')!=true){
-   await p.setBool('waffra_allow_screenshots',true);
-   await p.setBool('waffra_screenshot_default_v2',true);
+  try {
+   final p=await SharedPreferences.getInstance().timeout(const Duration(seconds:15));
+   Person? u;
+   try{final raw=p.getString('waffra_profile');if(raw!=null)u=Person.fromJson(Map<String,dynamic>.from(jsonDecode(raw)));}catch(e){debugPrint('Profile loading: $e');}
+   // Screenshot settings are best-effort and must never block application startup.
+   if(p.getBool('waffra_screenshot_default_v2')!=true){
+    try {
+     await p.setBool('waffra_allow_screenshots',true).timeout(const Duration(seconds:3));
+     await p.setBool('waffra_screenshot_default_v2',true).timeout(const Duration(seconds:3));
+    }catch(e){debugPrint('Screenshot migration: $e');}
+   }
+   final screenshotsAllowed=p.getBool('waffra_allow_screenshots')??true;
+   language=p.getString('waffra_language')=='en'?'en':'ar';
+   waffraLanguage.value=language;
+   allowWaffraScreenshots.value=screenshotsAllowed;
+   if(Platform.isAndroid){
+    try{await _privacyChannel.invokeMethod<void>('setScreenshotsAllowed',screenshotsAllowed).timeout(const Duration(seconds:3));}
+    catch(e){debugPrint('Privacy initialization failed: $e');}
+   }
+   if(!mounted)return;
+   setState((){
+    onboarded=p.getBool('waffra_onboarding_completed')??false;
+    dark=p.getBool('waffra_dark_mode')??false;
+    profile=u;pinHash=p.getString('waffra_pin_sha256');
+    locked=pinHash!=null;startupError=null;loading=false;
+   });
+  }catch(e){
+   debugPrint('Waffra startup failed: $e');
+   if(mounted)setState((){startupError=e.toString();loading=false;});
   }
-  final screenshotsAllowed=p.getBool('waffra_allow_screenshots')??true;
-  language=p.getString('waffra_language')=='en'?'en':'ar';
-  waffraLanguage.value=language;
-  allowWaffraScreenshots.value=screenshotsAllowed;
-  if(Platform.isAndroid){
-   try{await _privacyChannel.invokeMethod<void>('setScreenshotsAllowed',screenshotsAllowed);}
-   on PlatformException catch(e){debugPrint('Privacy initialization failed: $e');}
-  }
-  if(!mounted)return;
-  setState((){
-   onboarded=p.getBool('waffra_onboarding_completed')??false;dark=p.getBool('waffra_dark_mode')??false;
-   profile=u;pinHash=p.getString('waffra_pin_sha256');locked=pinHash!=null;loading=false;
-  });
  }
  Future<void> quickStart()async {
   final p=await SharedPreferences.getInstance();
@@ -308,6 +319,13 @@ class _WaffraAppState extends State<WaffraApp> {
   themeMode:dark?ThemeMode.dark:ThemeMode.light,
   home:Directionality(textDirection:language=='ar'?TextDirection.rtl:TextDirection.ltr,child:
    loading?const Scaffold(body:Center(child:CircularProgressIndicator())):
+   startupError!=null?Scaffold(body:Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[
+    const Icon(Icons.error_outline,size:48,color:Colors.red),
+    const SizedBox(height:12),
+    const WaffraText('تعذر تشغيل وفرة. بياناتك محفوظة، حاول مرة أخرى.'),
+    const SizedBox(height:12),
+    FilledButton(onPressed:(){setState((){loading=true;startupError=null;});load();},child:const WaffraText('إعادة المحاولة')),
+   ])))):
    locked?PinLockScreen(pinHash:pinHash!,onUnlock:()=>setState(()=>locked=false)):
    !onboarded?IntroScreen(onStart:quickStart,onLogin:intro):
    profile==null||showLogin?LoginScreen(onSave:saveUser):
