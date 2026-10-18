@@ -200,7 +200,7 @@ List<String> splitBankMessages(String raw){
   }
   return result;
  }
- final dateLine=RegExp(r'^\s*[0-9٠-٩]{1,2}[/\-][0-9٠-٩]{1,2}[/\-][0-9٠-٩]{2,4}\s+[0-9٠-٩]{1,2}:[0-9٠-٩]{2}\s*
+ final dateLine=RegExp(r'^\s*[0-9٠-٩]{1,2}[/\-][0-9٠-٩]{1,2}[/\-][0-9٠-٩]{2,4}\s+[0-9٠-٩]{1,2}:[0-9٠-٩]{2}\s*',multiLine:true);
  final dates=dateLine.allMatches(clean).toList();
  if(dates.length>1){
   final result=<String>[];var start=0;
