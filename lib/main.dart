@@ -742,9 +742,9 @@ Future<void> bulkSmsSheet()async {
       TextButton.icon(onPressed:busy?null:(){
        update((){reviewing=false;parsed=false;messages=[];index=0;pasted.clear();description.clear();amount.clear();});
       },icon:const Icon(Icons.delete_outline),label:const WaffraText('حذف النص بالكامل ولصق رسائل جديدة')),
-      WaffraText('الرسالة ${index+1} من ${messages.length} — إجمالي مبالغ الرسائل: ${cash(total)}',style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
+      WaffraText(waffraIsEnglish?'Transaction ${index+1} of ${messages.length} — Total: ${cash(total)}':'المعاملة ${index+1} من ${messages.length} — إجمالي المبالغ: ${cash(total)}',style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
       const SizedBox(height:6),
-      WaffraText('تم حفظ $savedCount من ${messages.length} رسائل. راجع كل رسالة وحدد قسمها قبل الحفظ.'),
+      WaffraText(waffraIsEnglish?'Saved $savedCount of ${messages.length} transactions. Review and categorize each transaction before saving.':'تم حفظ $savedCount من ${messages.length} معاملات. راجع كل معاملة وحدد قسمها قبل الحفظ.'),
       const SizedBox(height:12),
       InputDecorator(decoration:InputDecoration(labelText:waffraTr('نص الرسالة الحالية'),border:OutlineInputBorder()),
        child:SelectableText(messages[index])),
