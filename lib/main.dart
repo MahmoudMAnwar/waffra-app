@@ -84,10 +84,10 @@ class MoneyEntry {
  factory MoneyEntry.fromJson(Map<String,dynamic> j)=>MoneyEntry(id:'${j['id']??newId()}',title:'${j['title']??''}',category:'${j['category']??'أخرى'}',amount:(j['amount'] as num).toDouble(),income:j['income']==true,date:DateTime.tryParse('${j['date']}')??DateTime.now(),receiptPath:j['receiptPath']?.toString());
 }
 class Person {
- final String name,email,provider,gender,avatar;final DateTime birthday;
- Person({required this.name,required this.email,required this.provider,required this.gender,required this.avatar,required this.birthday});
- Map<String,dynamic> toJson()=>{'name':name,'email':email,'provider':provider,'gender':gender,'avatar':avatar,'birthday':birthday.toIso8601String()};
- factory Person.fromJson(Map<String,dynamic> j)=>Person(name:'${j['name']??''}',email:'${j['email']??''}',provider:'${j['provider']??'محلي'}',gender:'${j['gender']??'غير محدد'}',avatar:'${j['avatar']??'person'}',birthday:DateTime.tryParse('${j['birthday']}')??DateTime(2000));
+ final String name,email,provider,gender,avatar,phone;final DateTime birthday;
+ Person({required this.name,required this.email,required this.provider,required this.gender,required this.avatar,required this.birthday,this.phone=''});
+ Map<String,dynamic> toJson()=>{'name':name,'email':email,'provider':provider,'gender':gender,'avatar':avatar,'phone':phone,'birthday':birthday.toIso8601String()};
+ factory Person.fromJson(Map<String,dynamic> j)=>Person(name:'${j['name']??''}',email:'${j['email']??''}',provider:'${j['provider']??'محلي'}',gender:'${j['gender']??'غير محدد'}',avatar:'${j['avatar']??'person'}',phone:'${j['phone']??(j['provider']=='Phone'?j['email']??'':'')}',birthday:DateTime.tryParse('${j['birthday']}')??DateTime(2000));
 }
 class BudgetCategory {
  final String id,name,icon;final int color;final bool income;final double budget;final int alertPercent;
@@ -505,25 +505,44 @@ class ProfileForm extends StatefulWidget {
  @override State<ProfileForm> createState()=>_ProfileFormState();
 }
 class _ProfileFormState extends State<ProfileForm> {
- late final TextEditingController name,email,phone;
+ late final TextEditingController name,email,phone,password,confirmPassword;
  late String gender,avatar;late DateTime birthday;bool busy=false;
  @override void initState(){super.initState();
   name=TextEditingController(text:widget.initial?.name??'');
   email=TextEditingController(text:widget.initial?.email??'');
-  phone=TextEditingController();
+  phone=TextEditingController(text:widget.initial?.phone??'');
+  password=TextEditingController();confirmPassword=TextEditingController();
   gender=widget.initial?.gender??'ذكر';avatar=widget.initial?.avatar??'person';
   birthday=widget.initial?.birthday??DateTime(2000);
  }
- @override void dispose(){name.dispose();email.dispose();phone.dispose();super.dispose();}
+ @override void dispose(){name.dispose();email.dispose();phone.dispose();password.dispose();confirmPassword.dispose();super.dispose();}
  Future<void> save()async {
-  if(name.text.trim().isEmpty || (widget.provider=='Phone' ? !(phone.text.trim().length==10 && phone.text.trim().startsWith('05')) : !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email.text.trim()))){
-   snack(context,widget.provider=='Phone'?'أدخل الاسم ورقم جوال يبدأ بـ 05 ويتكون من 10 أرقام':'تأكد من الاسم والبريد الإلكتروني');return;
+  final validEmail=RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email.text.trim());
+  final validPhone=RegExp(r'^05[0-9]{8}$').hasMatch(phone.text.trim());
+  if(name.text.trim().isEmpty||(!validEmail && widget.initial==null)||(!validPhone && phone.text.trim().isNotEmpty)){
+   snack(context,waffraIsEnglish?'Enter a name, valid email and Saudi phone number':'أدخل الاسم والبريد الصحيح ورقم جوال يبدأ بـ 05 من 10 أرقام');return;
+  }
+  if(widget.initial==null){
+   if(!validPhone){snack(context,'أدخل رقم الجوال من 10 أرقام يبدأ بـ 05');return;}
+   if(!RegExp(r'^(?=.*[A-Za-z])(?=.*[0-9]).{8,}$').hasMatch(password.text)||password.text!=confirmPassword.text){
+    snack(context,'كلمة المرور يجب أن تكون 8 خانات على الأقل وتشمل أحرفًا وأرقامًا وتتطابق في الحقلين');return;
+   }
   }
   setState(()=>busy=true);
-  await widget.onSave(Person(name:name.text.trim(),email:widget.provider=='Phone'?phone.text.trim():email.text.trim(),
-   provider:widget.provider,gender:gender,avatar:avatar,birthday:birthday));
-  if(!mounted)return;setState(()=>busy=false);
-  if(widget.initial!=null)Navigator.pop(context);
+  try {
+   if(widget.initial==null){
+    final p=await SharedPreferences.getInstance();
+    final salt=List<int>.generate(16,(_)=>Random.secure().nextInt(256));
+    final saltHex=base64Encode(salt);
+    await p.setString('waffra_local_password_salt',saltHex);
+    await p.setString('waffra_local_password_hash',sha256.convert(utf8.encode('$saltHex:${password.text}')).toString());
+   }
+   await widget.onSave(Person(name:name.text.trim(),email:widget.initial?.email.isNotEmpty==true?widget.initial!.email:email.text.trim(),
+    phone:phone.text.trim(),provider:widget.provider,gender:gender,avatar:avatar,birthday:birthday));
+   if(!mounted)return;
+   if(widget.initial!=null)Navigator.pop(context);
+  }catch(e){if(mounted)snack(context,'تعذر حفظ البيانات: $e');}
+  finally{if(mounted)setState(()=>busy=false);}
  }
  @override Widget build(BuildContext context)=>Scaffold(
   appBar:AppBar(title:WaffraText(widget.initial==null?'كمّل بياناتك':'تعديل الحساب'),
@@ -536,8 +555,20 @@ class _ProfileFormState extends State<ProfileForm> {
    const SizedBox(height:16),
    TextField(controller:name,decoration:InputDecoration(labelText:waffraTr('اسمك'),border:OutlineInputBorder())),
    const SizedBox(height:12),
-   if(widget.provider=='Phone') TextField(controller:phone,keyboardType:TextInputType.phone,inputFormatters:[FilteringTextInputFormatter.digitsOnly,LengthLimitingTextInputFormatter(10)],decoration:const InputDecoration(labelText:'رقم الجوال',hintText:'05XXXXXXXX',helperText:'أدخل رقم جوال يبدأ بـ 05 ومكون من 10 أرقام',border:OutlineInputBorder())) else TextField(controller:email,keyboardType:TextInputType.emailAddress,
-    decoration:InputDecoration(labelText:waffraTr('بريدك الإلكتروني'),border:OutlineInputBorder())),
+   TextField(controller:email,readOnly:widget.initial!=null,keyboardType:TextInputType.emailAddress,
+    decoration:InputDecoration(labelText:waffraIsEnglish?'Email':'البريد الإلكتروني',filled:widget.initial!=null,
+     fillColor:Colors.grey.withValues(alpha:0.15),helperText:widget.initial!=null?'البريد الإلكتروني المسجل لا يمكن تعديله':null,border:const OutlineInputBorder())),
+   const SizedBox(height:12),
+   TextField(controller:phone,keyboardType:TextInputType.phone,inputFormatters:[FilteringTextInputFormatter.digitsOnly,LengthLimitingTextInputFormatter(10)],
+    decoration:InputDecoration(labelText:waffraIsEnglish?'Mobile number':'رقم الجوال',hintText:'05XXXXXXXX',
+     helperText:waffraIsEnglish?'10 digits starting with 05':'رقم سعودي من 10 أرقام يبدأ بـ 05',border:const OutlineInputBorder())),
+   if(widget.initial==null) ...[
+    const SizedBox(height:12),
+    TextField(controller:password,obscureText:true,decoration:InputDecoration(labelText:waffraIsEnglish?'Password':'كلمة المرور',
+     helperText:waffraIsEnglish?'At least 8 characters, including letters and numbers':'8 خانات على الأقل، تشمل أحرفًا وأرقامًا',border:const OutlineInputBorder())),
+    const SizedBox(height:12),
+    TextField(controller:confirmPassword,obscureText:true,decoration:InputDecoration(labelText:waffraIsEnglish?'Confirm password':'تأكيد كلمة المرور',border:const OutlineInputBorder())),
+   ],
    const SizedBox(height:12),
    DropdownButtonFormField<String>(initialValue:gender,
     decoration:InputDecoration(labelText:waffraTr('الجنس'),border:OutlineInputBorder()),
@@ -1220,14 +1251,16 @@ Future<void> bulkSmsSheet()async {
   ));
   if(confirmed!=true||!mounted)return;
   final backup=List<MoneyEntry>.of(entries);
-  setState(()=>entries.clear());
+  final hashBackup=Set<String>.of(smsHashes);
+  setState((){entries.clear();smsHashes.clear();});
   try {
    final prefs=await SharedPreferences.getInstance();
    final saved=await prefs.setString('entries','[]');
-   if(!saved)throw StateError('Failed to persist deletion');
+   final cleared=await prefs.setStringList('waffra_sms_hashes_v1',<String>[]);
+   if(!saved||!cleared)throw StateError('Failed to persist deletion');
    if(mounted)snack(context,waffraIsEnglish?'All transactions deleted':'تم حذف جميع المعاملات');
   }catch(e){
-   if(mounted){setState(()=>entries.addAll(backup));snack(context,waffraIsEnglish?'Delete failed':'فشل حذف المعاملات');}
+   if(mounted){setState((){entries.addAll(backup);smsHashes.addAll(hashBackup);});snack(context,waffraIsEnglish?'Delete failed':'فشل حذف المعاملات');}
   }
  }
  Widget dashboard(){
