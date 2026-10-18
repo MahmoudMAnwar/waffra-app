@@ -311,7 +311,7 @@ class _PinLockScreenState extends State<PinLockScreen> {
       Text(error,textAlign:TextAlign.center,
        style:const TextStyle(color:Colors.orangeAccent)),
      ],
-    ])))))]));
+    ]))))]));
 }
 class IntroScreen extends StatefulWidget {
  final Future<void> Function() onStart,onLogin;
