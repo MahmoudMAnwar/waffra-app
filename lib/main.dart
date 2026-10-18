@@ -325,7 +325,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     child:AnimatedSwitcher(duration:const Duration(milliseconds:800),switchInCurve:Curves.easeOutCubic,
      transitionBuilder:(w,a)=>FadeTransition(opacity:a,child:SlideTransition(position:Tween<Offset>(begin:const Offset(0.11,0),end:Offset.zero).animate(a),child:w)),
      child:KeyedSubtree(key:ValueKey(language),child:child??const SizedBox.shrink())))),
-  theme:ThemeData(useMaterial3:true,colorSchemeSeed:emerald,scaffoldBackgroundColor:sand,appBarTheme:const AppBarTheme(backgroundColor:forest,foregroundColor:Colors.white),navigationBarTheme:NavigationBarThemeData(backgroundColor:forest,labelTextStyle:WidgetStateProperty.all(const TextStyle(color:Colors.white,fontSize:11)),iconTheme:WidgetStateProperty.all(const IconThemeData(color:Colors.white))),floatingActionButtonTheme:const FloatingActionButtonThemeData(backgroundColor:forest,foregroundColor:Colors.white),fontFamily:'Tajawal',textTheme:ThemeData.light().textTheme.apply(fontFamily:'Tajawal'),primaryTextTheme:ThemeData.light().primaryTextTheme.apply(fontFamily:'Tajawal')),
+  theme:ThemeData(useMaterial3:true,colorSchemeSeed:emerald,scaffoldBackgroundColor:sand,appBarTheme:const AppBarTheme(backgroundColor:forest,foregroundColor:Colors.white),navigationBarTheme:NavigationBarThemeData(backgroundColor:forest,labelTextStyle:WidgetStateProperty.all(const TextStyle(color:Colors.white,fontSize:11)),iconTheme:WidgetStateProperty.resolveWith((states)=>IconThemeData(color:states.contains(WidgetState.selected)?forest:Colors.white,size:27))),floatingActionButtonTheme:const FloatingActionButtonThemeData(backgroundColor:forest,foregroundColor:Colors.white),fontFamily:'Tajawal',textTheme:ThemeData.light().textTheme.apply(fontFamily:'Tajawal'),primaryTextTheme:ThemeData.light().primaryTextTheme.apply(fontFamily:'Tajawal')),
   darkTheme:ThemeData(useMaterial3:true,brightness:Brightness.dark,colorSchemeSeed:emerald,appBarTheme:const AppBarTheme(backgroundColor:forest,foregroundColor:Colors.white),navigationBarTheme:NavigationBarThemeData(backgroundColor:forest,labelTextStyle:WidgetStateProperty.all(const TextStyle(color:Colors.white,fontSize:11)),iconTheme:WidgetStateProperty.all(const IconThemeData(color:Colors.white))),floatingActionButtonTheme:const FloatingActionButtonThemeData(backgroundColor:forest,foregroundColor:Colors.white),fontFamily:'Tajawal',textTheme:ThemeData.dark().textTheme.apply(fontFamily:'Tajawal'),primaryTextTheme:ThemeData.dark().primaryTextTheme.apply(fontFamily:'Tajawal')),
   themeMode:dark?ThemeMode.dark:ThemeMode.light,
   themeAnimationDuration:const Duration(milliseconds:750),
@@ -768,9 +768,7 @@ Future<void> bulkSmsSheet()async {
    Navigator.pop(ctx);
    if(mounted)await showDialog<void>(context:context,builder:(dialogCtx)=>AlertDialog(
     title:WaffraText(waffraIsEnglish?'Transactions added successfully':'تمت إضافة المعاملات بنجاح'),
-    content:WaffraText(waffraIsEnglish
-     ?'Added ${additions.length} transactions: ${incomes.length} income and ${expenses.length} expenses. ${invalid.length} could not be analyzed; ${duplicates.length} duplicates skipped.'
-     :'تمت إضافة ${additions.length} معاملات: ${incomes.length} دخل و${expenses.length} مصروفات. تعذر تحليل ${invalid.length}، وتم تخطي ${duplicates.length} معاملات مكررة.'),
+    content:const SizedBox.shrink(),
     actions:[FilledButton(onPressed:()=>Navigator.pop(dialogCtx),child:WaffraText(waffraIsEnglish?'Done':'تم'))]));
   }catch(e){
    setState(()=>entries.removeWhere((entry)=>additions.any((a)=>a.id==entry.id)));
@@ -1131,8 +1129,8 @@ Future<void> bulkSmsSheet()async {
    final oldest=items.map((e)=>e.date).reduce((a,b)=>a.isBefore(b)?a:b);
    final newest=items.map((e)=>e.date).reduce((a,b)=>a.isAfter(b)?a:b);
    String pdfClean(String input){
-    final noControls=input.replaceAll(RegExp(r'[\\u200B-\\u200F\\u202A-\\u202E\\u2066-\\u2069\\uFE0E\\uFE0F]'),'');
-    final noEmoji=noControls.replaceAll(RegExp(r'[\\u{1F000}-\\u{1FAFF}]',unicode:true),'');
+    final noControls=input.replaceAll(RegExp('[\\u200B-\\u200F\\u202A-\\u202E\\u2066-\\u2069\\uFE0E\\uFE0F]'),'');
+    final noEmoji=noControls.replaceAll(RegExp('[\\u{1F000}-\\u{1FAFF}]',unicode:true),'');
     return noEmoji.replaceAll(RegExp(r'\\s+'),' ').trim();
    }
    String fmt(num number){
@@ -1284,7 +1282,10 @@ Future<void> bulkSmsSheet()async {
      child:const Padding(padding:EdgeInsets.only(top:4),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.attach_file,size:15,color:emerald),WaffraText('عرض الفاتورة',style:TextStyle(color:emerald))]))),
    ]),
    trailing:Row(mainAxisSize:MainAxisSize.min,children:[
-    RiyalAmount(e.amount,prefix:e.income?'+':'-',style:TextStyle(fontWeight:FontWeight.bold,color:e.income?emerald:null)),
+    Column(mainAxisSize:MainAxisSize.min,children:[
+     Text('${e.income?'+':'-'}${cash(e.amount)}',style:TextStyle(fontFamily:'Tajawal',fontSize:18,fontWeight:FontWeight.w800,color:e.income?emerald:null)),
+     WaffraText(waffraIsEnglish?'SAR':'ريال',style:TextStyle(fontSize:13,fontWeight:FontWeight.bold,color:e.income?emerald:null)),
+    ]),
     PopupMenuButton<String>(onSelected:(v){
      if(v=='edit')entrySheet(initial:e);else deleteEntry(e);
     },itemBuilder:(_)=>const [PopupMenuItem(value:'edit',child:WaffraText('تعديل')),
@@ -1363,7 +1364,8 @@ Future<void> bulkSmsSheet()async {
    const SizedBox(height:12),
    Row(children:[
     Expanded(child:WaffraText('عملياتك المالية',style:Theme.of(context).textTheme.titleLarge)),
-    TextButton.icon(onPressed:entries.isEmpty?null:confirmDeleteAllEntries,
+    OutlinedButton.icon(onPressed:entries.isEmpty?null:confirmDeleteAllEntries,
+     style:OutlinedButton.styleFrom(side:const BorderSide(color:Colors.red,width:1.4),foregroundColor:Colors.red),
      icon:const Icon(Icons.delete_outline,color:Colors.red),
      label:WaffraText(waffraIsEnglish?'Delete all':'حذف كل المعاملات',style:const TextStyle(color:Colors.red))),
    ]),
@@ -1582,9 +1584,17 @@ Future<void> bulkSmsSheet()async {
  }
  Future<void> goalDialog()async {
   final name=TextEditingController(),target=TextEditingController();
-  final g=await showDialog<SavingGoal>(context:context,builder:(ctx)=>AlertDialog(
+  final prefs=await SharedPreferences.getInstance();
+  final customGoals=prefs.getStringList('waffra_custom_goals_v1')??<String>[];
+  final suggested=['سيارة','منزل','سفر','زواج','صندوق الطوارئ','تعليم','حج أو عمرة','مشروع خاص',...customGoals];
+  String selectedGoal='';
+  final g=await showDialog<SavingGoal>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,updateGoal)=>AlertDialog(
    title:const WaffraText('إضافة هدف ادخار'),scrollable:true,
    content:Column(mainAxisSize:MainAxisSize.min,children:[
+    DropdownButtonFormField<String>(isExpanded:true,decoration:InputDecoration(labelText:waffraTr('اختر هدف الادخار')),
+     items:[...suggested,'هدف آخر'].map((v)=>DropdownMenuItem(value:v,child:WaffraText(v))).toList(),
+     onChanged:(v){if(v==null)return;updateGoal(()=>selectedGoal=v);name.text=v=='هدف آخر'?'':v;}),
+    const SizedBox(height:12),
     TextField(controller:name,textInputAction:TextInputAction.next,
      decoration:InputDecoration(labelText:waffraTr('اسم الهدف'),hintText:waffraTr('سيارة، سفر، منزل، أو مبلغ ادخار'))),
     const SizedBox(height:12),
@@ -1598,6 +1608,9 @@ Future<void> bulkSmsSheet()async {
      if(name.text.trim().isEmpty||n==null){
       ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content:WaffraText('اكتب اسم الهدف ومبلغًا صحيحًا أكبر من صفر')));
       return;
+     }
+     if((selectedGoal=='هدف آخر'||!suggested.contains(name.text.trim()))&&!customGoals.contains(name.text.trim())){
+      prefs.setStringList('waffra_custom_goals_v1',[...customGoals,name.text.trim()]);
      }
      Navigator.pop(ctx,SavingGoal(id:newId(),name:name.text.trim(),target:n,saved:0));
     },child:const WaffraText('إضافة الهدف')),
@@ -1917,7 +1930,7 @@ Future<void> bulkSmsSheet()async {
    IndexedStack(index:tab,children:[dashboard(),analytics(),categoriesPage(),goalsPage(),recurringPage(),profilePage()]),
   floatingActionButton:tab==0?FloatingActionButton.extended(
    onPressed:()=>entrySheet(),icon:const Icon(Icons.add),label:const WaffraText('أضف عملية')):null,
-  bottomNavigationBar:NavigationBar(height:74,
+  bottomNavigationBar:NavigationBar(height:74,indicatorColor:const Color(0xFFCFE9D9),
    labelBehavior:NavigationDestinationLabelBehavior.alwaysShow,
    selectedIndex:tab,onDestinationSelected:(v)=>setState(()=>tab=v),
    destinations:[
