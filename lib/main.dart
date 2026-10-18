@@ -22,6 +22,16 @@ import 'currency_converter.dart';
 void main() { WidgetsFlutterBinding.ensureInitialized(); runApp(const WaffraApp()); }
 const emerald=Color(0xFF087A54), forest=Color(0xFF064D3B), sand=Color(0xFFF8F6EF), gold=Color(0xFFD8BA78);
 final ValueNotifier<bool> hideWaffraAmounts=ValueNotifier<bool>(false);
+final ValueNotifier<bool> allowWaffraScreenshots=ValueNotifier<bool>(false);
+const MethodChannel _privacyChannel=MethodChannel('waffra/privacy');
+Future<void> setWaffraScreenshotsAllowed(bool allowed)async {
+ await SharedPreferences.getInstance().then((p)=>p.setBool('waffra_allow_screenshots',allowed));
+ allowWaffraScreenshots.value=allowed;
+ if(Platform.isAndroid){
+  try{await _privacyChannel.invokeMethod<void>('setScreenshotsAllowed',allowed);}
+  on PlatformException catch(e){debugPrint('Screenshot setting failed: $e');}
+ }
+}
 String formatMoney(num value) {
   if(hideWaffraAmounts.value)return '••••';
   final n=value.toDouble();
@@ -195,6 +205,12 @@ class _WaffraAppState extends State<WaffraApp> {
  Future<void> load()async {
   final p=await SharedPreferences.getInstance();Person? u;
   try{final s=p.getString('waffra_profile');if(s!=null)u=Person.fromJson(Map<String,dynamic>.from(jsonDecode(s)));}catch(e){debugPrint('$e');}
+  final screenshotsAllowed=p.getBool('waffra_allow_screenshots')??false;
+  allowWaffraScreenshots.value=screenshotsAllowed;
+  if(Platform.isAndroid){
+   try{await _privacyChannel.invokeMethod<void>('setScreenshotsAllowed',screenshotsAllowed);}
+   on PlatformException catch(e){debugPrint('Privacy initialization failed: $e');}
+  }
   if(!mounted)return;
   setState((){
    onboarded=p.getBool('waffra_onboarding_completed')??false;dark=p.getBool('waffra_dark_mode')??false;
@@ -577,11 +593,12 @@ Future<void> bulkSmsSheet()async {
         style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
        const SizedBox(height:8),
        FilledButton.icon(icon:const Icon(Icons.check_circle_outline),
-        onPressed:(){
-         if(messages.isEmpty)return;
+        onPressed:()async{
+         if(messages.isEmpty){snack(ctx,'حلّل الرسائل أولاً');return;}
+         await prepare(0,update);
+         if(!ctx.mounted)return;
          update(()=>reviewing=true);
-         prepare(0,update);
-        },label:const Text('تأكيد والانتقال لإضافة المعاملات')),
+        },label:const Text('تأكيد ومراجعة المعاملات')),
       ],
       TextButton.icon(onPressed:(){
        pasteTimer?.cancel();pasted.clear();
@@ -873,9 +890,6 @@ Future<void> bulkSmsSheet()async {
    if(template==null)throw StateError('تعذر قراءة صورة التقرير');
    final headerArt=pw.MemoryImage(Uint8List.fromList(img.encodePng(img.copyCrop(template,
     x:0,y:0,width:template.width,height:(template.height*0.54).round()))));
-   final footerArt=pw.MemoryImage(Uint8List.fromList(img.encodePng(img.copyCrop(template,
-    x:0,y:(template.height*0.75).round(),width:template.width,
-    height:template.height-(template.height*0.75).round()))));
    final doc=pw.Document();
    final totalIncome=sum(items,true),totalExpenses=sum(items,false);
    final categoryTotals=<String,double>{};
@@ -892,17 +906,11 @@ Future<void> bulkSmsSheet()async {
      margin:const pw.EdgeInsets.fromLTRB(26,225,26,112),
      buildBackground:(ctx)=>pw.FullPage(ignoreMargins:true,child:pw.Stack(children:[
       pw.Positioned(top:0,left:0,right:0,child:pw.SizedBox(height:210,child:pw.Image(headerArt,fit:pw.BoxFit.fill))),
-      pw.Positioned(top:28,right:12,child:pw.SizedBox(width:245,height:94,
-       child:pw.Container(padding:const pw.EdgeInsets.all(10),
-        child:pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.end,children:[
-         pw.Text(analytics?'تقرير التحليلات':'تقرير الدخل والمصروفات',
-          style:pw.TextStyle(font:bold,fontSize:18,color:PdfColors.white)),
-         pw.Text(title,style:pw.TextStyle(font:font,fontSize:10,color:PdfColors.white)),
-        ])))) ,
-      pw.Positioned(bottom:0,left:0,right:0,child:pw.SizedBox(height:95,child:pw.Image(footerArt,fit:pw.BoxFit.fill))),
-      pw.Positioned(bottom:20,right:12,child:pw.SizedBox(width:115,height:22,
-       child:pw.Container(alignment:pw.Alignment.center,
-        child:pw.Text(dayText(DateTime.now()),style:pw.TextStyle(font:font,fontSize:10,color:PdfColors.white))))) ,
+ 
+      pw.Positioned(bottom:0,left:0,right:0,child:pw.Container(height:95,color:PdfColors.teal900)),
+      pw.Positioned(bottom:24,right:20,child:pw.Text(
+       'تاريخ التصدير: ${dayText(DateTime.now())}',
+       style:pw.TextStyle(font:font,fontSize:10,color:PdfColors.white))),
      ])),
      theme:pw.ThemeData.withFont(base:font,bold:bold),
      textDirection:pw.TextDirection.rtl,
@@ -1109,7 +1117,7 @@ Future<void> bulkSmsSheet()async {
     const SizedBox(height:16),FinanceChart(points:points),
    ]))),
    const SizedBox(height:16),
-   OutlinedButton.icon(onPressed:()=>exportEntriesPdf(data,'تحليلات وفرة - $period ${period=='شهري'?'$month/':''}$year',analytics:true),
+   OutlinedButton.icon(onPressed:()=>exportEntriesPdf(data,'تحليلات وفرة - $period ${period=='شهري'?'$month/':''}$year'),
     icon:const Icon(Icons.picture_as_pdf_outlined),label:const Text('تصدير التحليلات إلى PDF')),
    const SizedBox(height:12),
    Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(children:[
@@ -1524,9 +1532,24 @@ Future<void> bulkSmsSheet()async {
    await Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>ProfileForm(
     provider:widget.profile.provider,initial:widget.profile,onSave:widget.onProfile)));
   },icon:const Icon(Icons.edit),label:const Text('تعديل حسابي')),
-  OutlinedButton.icon(onPressed:configurePin,
-   icon:Icon(widget.pinEnabled?Icons.lock:Icons.lock_open),
-   label:Text(widget.pinEnabled?'إلغاء قفل التطبيق':'تفعيل قفل التطبيق برمز PIN')),
+  const SizedBox(height:14),
+  const Text('الأمان والخصوصية',style:TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
+  Card(child:Column(children:[
+   ListTile(onTap:configurePin,leading:Icon(widget.pinEnabled?Icons.lock:Icons.lock_open),
+    title:const Text('قفل التطبيق برمز PIN'),
+    subtitle:Text(widget.pinEnabled?'مفعّل — اضغط لإلغاء القفل':'غير مفعّل — اضغط للتفعيل'),
+    trailing:const Icon(Icons.chevron_left)),
+   const Divider(height:1),
+   ValueListenableBuilder<bool>(valueListenable:allowWaffraScreenshots,
+    builder:(context,allowed,_)=>SwitchListTile(
+     secondary:Icon(allowed?Icons.screenshot:Icons.shield_outlined),
+     title:const Text('السماح بلقطات الشاشة'),
+     subtitle:Text(allowed?'مسموح — يمكن تصوير محتوى التطبيق':'ممنوع — حماية بياناتك مفعّلة'),
+     value:allowed,onChanged:(v)async{
+      await setWaffraScreenshotsAllowed(v);
+      if(mounted)snack(context,v?'تم السماح بلقطات الشاشة':'تم منع لقطات الشاشة لحماية بياناتك');
+     })),
+  ])),
   OutlinedButton.icon(onPressed:()=>Navigator.push<void>(context,
    MaterialPageRoute(builder:(_)=>CurrencyConverterPage(lastIncomeAmount:entries.where((e)=>e.income).isEmpty?null:entries.where((e)=>e.income).reduce((a,b)=>a.date.isAfter(b.date)?a:b).amount))),
    icon:const Icon(Icons.currency_exchange),label:const Text('تحويل العملات')),
@@ -1551,11 +1574,7 @@ Future<void> bulkSmsSheet()async {
       tooltip:hidden?'إظهار المبالغ':'إخفاء المبالغ',
       onPressed:()=>hideWaffraAmounts.value=!hidden,
       icon:Icon(hidden?Icons.visibility_off_outlined:Icons.visibility_outlined))),
-    IconButton(
-     tooltip:'حماية بياناتك',
-     onPressed:()=>ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content:Text('حفاظًا على أمان بياناتك، تم منع تصوير الشاشة وتسجيلها داخل تطبيق وفرة.'))),
-     icon:const Icon(Icons.shield_outlined)),
+
     IconButton(onPressed:widget.onTheme,icon:Icon(widget.dark?Icons.light_mode:Icons.dark_mode)),
     Padding(padding:const EdgeInsets.only(left:12),
      child:InkWell(onTap:()=>setState(()=>tab=5),borderRadius:BorderRadius.circular(30),child:saudiAvatar(widget.profile.gender))),
