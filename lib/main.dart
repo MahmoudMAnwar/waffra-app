@@ -767,9 +767,15 @@ Future<void> bulkSmsSheet()async {
    if(!ctx.mounted)return;
    Navigator.pop(ctx);
    if(mounted)await showDialog<void>(context:context,builder:(dialogCtx)=>AlertDialog(
-    title:WaffraText(waffraIsEnglish?'Transactions added successfully':'تمت إضافة المعاملات بنجاح'),
-    content:const SizedBox.shrink(),
-    actions:[FilledButton(onPressed:()=>Navigator.pop(dialogCtx),child:WaffraText(waffraIsEnglish?'Done':'تم'))]));
+    title:Column(mainAxisSize:MainAxisSize.min,children:[
+     const Icon(Icons.check_circle_rounded,color:Color(0xFF16805E),size:54),
+     const SizedBox(height:16),
+     WaffraText(waffraIsEnglish?'Transactions added successfully':'تمت إضافة المعاملات بنجاح',textAlign:TextAlign.center,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:22)),
+    ]),
+    content:const SizedBox(height:8),
+    actionsAlignment:MainAxisAlignment.center,
+    actionsPadding:const EdgeInsets.fromLTRB(24,0,24,18),
+    actions:[SizedBox(width:180,child:FilledButton(onPressed:()=>Navigator.pop(dialogCtx),child:WaffraText(waffraIsEnglish?'Done':'تم')))]));
   }catch(e){
    setState(()=>entries.removeWhere((entry)=>additions.any((a)=>a.id==entry.id)));
    if(ctx.mounted){update(()=>busy=false);snack(ctx,waffraIsEnglish?'Failed to save transactions':'فشل حفظ المعاملات');}
@@ -1602,9 +1608,11 @@ Future<void> bulkSmsSheet()async {
     DropdownButtonFormField<String>(isExpanded:true,decoration:InputDecoration(labelText:waffraTr('اختر هدف الادخار')),
      items:[...suggested,'هدف آخر'].map((v)=>DropdownMenuItem(value:v,child:WaffraText(v))).toList(),
      onChanged:(v){if(v==null)return;updateGoal(()=>selectedGoal=v);name.text=v=='هدف آخر'?'':v;}),
-    const SizedBox(height:12),
-    TextField(controller:name,textInputAction:TextInputAction.next,
-     decoration:InputDecoration(labelText:waffraTr('اسم الهدف'),hintText:waffraTr('سيارة، سفر، منزل، أو مبلغ ادخار'))),
+    if(selectedGoal=='هدف آخر')...[
+     const SizedBox(height:12),
+     TextField(controller:name,textInputAction:TextInputAction.next,
+      decoration:InputDecoration(labelText:waffraTr('اسم الهدف'),hintText:waffraTr('مثال: تجديد المنزل'))),
+    ],
     const SizedBox(height:12),
     TextField(controller:target,keyboardType:const TextInputType.numberWithOptions(decimal:true),
      decoration:InputDecoration(labelText:waffraTr('المبلغ المستهدف بالريال'),hintText:waffraTr('مثال: 25000'))),
@@ -1935,7 +1943,10 @@ Future<void> bulkSmsSheet()async {
      child:InkWell(onTap:()=>setState(()=>tab=5),borderRadius:BorderRadius.circular(30),child:saudiAvatar(widget.profile.gender))),
    ]),
   body:!ready?const Center(child:CircularProgressIndicator()):
-   IndexedStack(index:tab,children:[dashboard(),analytics(),categoriesPage(),goalsPage(),recurringPage(),profilePage()]),
+   AnimatedSwitcher(duration:const Duration(milliseconds:430),reverseDuration:const Duration(milliseconds:250),
+    transitionBuilder:(child,animation)=>FadeTransition(opacity:animation,child:SlideTransition(
+     position:Tween<Offset>(begin:const Offset(0.035,0),end:Offset.zero).animate(CurvedAnimation(parent:animation,curve:Curves.easeOutCubic)),child:child)),
+    child:KeyedSubtree(key:ValueKey(tab),child:[dashboard(),analytics(),categoriesPage(),goalsPage(),recurringPage(),profilePage()][tab])),
   floatingActionButton:tab==0?FloatingActionButton.extended(
    onPressed:()=>entrySheet(),icon:const Icon(Icons.add),label:const WaffraText('أضف عملية')):null,
   bottomNavigationBar:NavigationBar(height:74,indicatorColor:const Color(0xFFCFE9D9),
