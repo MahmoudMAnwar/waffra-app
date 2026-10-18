@@ -11,6 +11,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -279,6 +280,11 @@ class _WaffraAppState extends State<WaffraApp> {
  }
  @override Widget build(BuildContext context)=>MaterialApp(
   debugShowCheckedModeBanner:false,title:'وفرة | Waffra',locale:Locale(language,language=='ar'?'SA':'US'),
+  supportedLocales:const [Locale('ar','SA'),Locale('en','US')],
+  localizationsDelegates:const [
+   GlobalMaterialLocalizations.delegate,GlobalWidgetsLocalizations.delegate,
+   GlobalCupertinoLocalizations.delegate,
+  ],
   builder:(context,child)=>ValueListenableBuilder<bool>(
    valueListenable:hideWaffraAmounts,
    builder:(context,hidden,_)=>Directionality(
@@ -401,7 +407,7 @@ class _IntroScreenState extends State<IntroScreen> {
   try{await(login?widget.onLogin():widget.onStart());}finally{if(mounted)setState(()=>busy=false);}
  }
  @override Widget build(BuildContext context)=>Scaffold(backgroundColor:forest,
-  body:Directionality(textDirection:TextDirection.rtl,child:Stack(fit:StackFit.expand,children:[
+  body:Directionality(textDirection:waffraIsEnglish?TextDirection.ltr:TextDirection.rtl,child:Stack(fit:StackFit.expand,children:[
    Column(children:[
     Expanded(flex:82,child:SizedBox(width:double.infinity,child:Image.asset(
      'assets/waffra_welcome_integrated.png',fit:BoxFit.fill))),
