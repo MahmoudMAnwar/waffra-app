@@ -1,3 +1,4 @@
+# Waffra ARM64 release rebuild requested 2026-10-18 18:20 UTC
 # Re-trigger optimized ARM64 build; preserve Tajawal typography
 name: Build Waffra Android APK
 
