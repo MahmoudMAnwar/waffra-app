@@ -1201,24 +1201,30 @@ Future<void> bulkSmsSheet()async {
        summary('الصافي',totalIncome-totalExpenses,PdfColors.amber50)]),
       pw.SizedBox(height:14),
       heading('تفاصيل العمليات','Transactions'),
-      pw.TableHelper.fromTextArray(
-       headers:english?['Date','Type','Category','Description','Amount (SAR)']:
-        ['التاريخ','النوع','القسم','الوصف','المبلغ (ريال)'],
-       data:ordered.map((e)=>[
-        dayText(e.date),english?(e.income?'Income':'Expense'):(e.income?'دخل':'مصروف'),
-        waffraTr(e.category),
-        pdfClean(e.title).length>85?'${pdfClean(e.title).substring(0,85)}…':pdfClean(e.title),
-        '${e.income?'+':'-'}${fmt(e.amount)}',
-       ]).toList(),
-       headerDecoration:const pw.BoxDecoration(color:PdfColors.teal800),
-       headerStyle:pw.TextStyle(font:bold,fontSize:10,color:PdfColors.white),
-       cellStyle:pw.TextStyle(font:font,fontSize:9),
-       cellAlignment:pw.Alignment.centerRight,
-       cellPadding:const pw.EdgeInsets.symmetric(horizontal:6,vertical:5),
-       oddRowDecoration:const pw.BoxDecoration(color:PdfColors.grey100),
-       columnWidths:{0:const pw.FixedColumnWidth(92),1:const pw.FixedColumnWidth(70),
-        2:const pw.FixedColumnWidth(100),3:const pw.FlexColumnWidth(3),
-        4:const pw.FixedColumnWidth(90)},
+      pw.Table(
+       border:pw.TableBorder.all(color:PdfColors.grey400,width:0.4),
+       columnWidths:{0:const pw.FixedColumnWidth(90),1:const pw.FixedColumnWidth(65),
+        2:const pw.FixedColumnWidth(95),3:const pw.FlexColumnWidth(3),
+        4:const pw.FixedColumnWidth(85)},
+       children:[
+        pw.TableRow(decoration:const pw.BoxDecoration(color:PdfColors.teal800),
+         children:(english?['Date','Type','Category','Description','Amount (SAR)']:
+          ['التاريخ','النوع','القسم','الوصف','المبلغ (ريال)'])
+          .map((h)=>pw.Padding(padding:const pw.EdgeInsets.all(6),
+           child:pw.Text(h,textAlign:pw.TextAlign.center,style:pw.TextStyle(font:bold,fontSize:10,color:PdfColors.white)))).toList()),
+        ...ordered.map((e)=>pw.TableRow(
+         decoration:pw.BoxDecoration(color:e.income?const PdfColor.fromInt(0xFFB2D5C2):const PdfColor.fromInt(0xFFF0F7F2)),
+         children:[
+          dayText(e.date),
+          english?(e.income?'Income':'Expense'):(e.income?'دخل':'مصروف'),
+          waffraTr(e.category),
+          pdfClean(e.title).length>75?'${pdfClean(e.title).substring(0,75)}…':pdfClean(e.title),
+          '${e.income?'+':'-'}${fmt(e.amount)}',
+         ].map((value)=>pw.Padding(padding:const pw.EdgeInsets.symmetric(horizontal:5,vertical:7),
+          child:pw.Text(value,textAlign:english?pw.TextAlign.left:pw.TextAlign.right,
+           style:pw.TextStyle(font:font,fontSize:9,color:PdfColors.black)))).toList(),
+        )),
+       ],
       ),
      ]));
    }else{
