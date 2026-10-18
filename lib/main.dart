@@ -101,6 +101,8 @@ IconData categoryIcon(String n) {
  }
 }
 IconData avatarIcon(String s)=>s=='male'?Icons.face:s=='female'?Icons.face_3:s=='smile'?Icons.sentiment_very_satisfied:Icons.person;
+Widget saudiAvatar(String gender,{double radius=25})=>CircleAvatar(radius:radius,backgroundColor:const Color(0xFFE5F1E9),backgroundImage:AssetImage(gender=='أنثى'||gender=='female'?'assets/avatar_saudi_female.png':'assets/avatar_saudi_male.png'));
+
 const colors=[0xFF087A54,0xFFED7045,0xFF3867D6,0xFF9C56B8,0xFFDF9C24,0xFF008C9E,0xFFDA5079,0xFF687B42];
 List<BudgetCategory> defaultCategories()=>[
  BudgetCategory(id:'food',name:'مطاعم وكافيهات',icon:'restaurant',color:colors[1],income:false),
@@ -149,6 +151,24 @@ class BankParser {
   return BankResult(value,income,title,cat,suggestion);
  }
 }
+String bankSmsHash(String raw)=>sha256.convert(utf8.encode(digits(raw).replaceAll(RegExp(r'\s+'),' ').trim().toLowerCase())).toString();
+List<String> splitBankMessages(String raw){
+ final clean=raw.replaceAll('\r\n','\n').replaceAll('\u200f','').replaceAll('\u200e','').trim();
+ if(clean.isEmpty)return [];
+ // Most Saudi SMS samples terminate in a date/time line, e.g. 17/10/26 20:00.
+ final dateLine=RegExp(r'(?m)^\s*[0-9٠-٩]{1,2}[/\-][0-9٠-٩]{1,2}[/\-][0-9٠-٩]{2,4}\s+[0-9٠-٩]{1,2}:[0-9٠-٩]{2}\s*$');
+ final matches=dateLine.allMatches(clean).toList();
+ if(matches.length>=2){
+  final parts=<String>[];var start=0;
+  for(final m in matches){final part=clean.substring(start,m.end).trim();if(part.isNotEmpty)parts.add(part);start=m.end;}
+  if(clean.substring(start).trim().isNotEmpty)parts.add(clean.substring(start).trim());
+  return parts;
+ }
+ // Separate messages by a blank line before an SMS transaction heading.
+ final byHeading=clean.split(RegExp(r'\n\s*\n(?=\s*(?:شراء|حوالة|تحويل|إيداع|راتب|سحب|دفع|POS|Purchase)\b)',caseSensitive:false));
+ return byHeading.where((x)=>x.trim().isNotEmpty).map((x)=>x.trim()).toList();
+}
+
 class WaffraApp extends StatefulWidget {
  const WaffraApp({super.key});
  @override State<WaffraApp> createState()=>_WaffraAppState();
@@ -183,7 +203,7 @@ class _WaffraAppState extends State<WaffraApp> {
  }
  Future<void> logout()async {
   final p=await SharedPreferences.getInstance();await p.remove('waffra_profile');
-  if(mounted)setState(()=>profile=null);
+  if(mounted)setState((){profile=null;showLogin=true;locked=false;});
  }
  Future<void> setPin(String? value)async {
   final p=await SharedPreferences.getInstance();
@@ -354,7 +374,7 @@ class _LoginScreenState extends State<LoginScreen> {
      onPressed:()=>setState(()=>provider='Apple'),icon:const Icon(Icons.apple),
      label:const Text('المتابعة باستخدام Apple'))),
     const SizedBox(height:20),
-    const Text('تسجيل الدخول تجريبي، وما فيه ربط فعلي مع Google أو Apple.',
+    const Text('بياناتك محفوظة على جهازك. المتابعة هنا لإنشاء ملف شخصي محلي، وليست مصادقة فعلية مع Google أو Apple.',
      textAlign:TextAlign.center,style:TextStyle(color:Colors.grey,fontSize:12)),
    ])))));
 }
@@ -388,10 +408,10 @@ class _ProfileFormState extends State<ProfileForm> {
   appBar:AppBar(title:Text(widget.initial==null?'كمّل بياناتك':'تعديل الحساب'),
    leading:widget.onBack==null?null:IconButton(onPressed:widget.onBack,icon:const Icon(Icons.arrow_back))),
   body:ListView(padding:const EdgeInsets.all(22),children:[
-   Center(child:CircleAvatar(radius:48,backgroundColor:emerald,child:Icon(avatarIcon(avatar),color:Colors.white,size:54))),
+   Center(child:saudiAvatar(gender,radius:48)),
    const SizedBox(height:10),
-   Wrap(alignment:WrapAlignment.center,spacing:8,children:['person','male','female','smile']
-    .map((a)=>ChoiceChip(label:Icon(avatarIcon(a)),selected:avatar==a,onSelected:(_)=>setState(()=>avatar=a))).toList()),
+   Wrap(alignment:WrapAlignment.center,spacing:12,children:['ذكر','أنثى']
+    .map((a)=>ChoiceChip(label:Row(mainAxisSize:MainAxisSize.min,children:[saudiAvatar(a,radius:20),const SizedBox(width:6),Text(a)]),selected:gender==a,onSelected:(_)=>setState((){gender=a;avatar=a=='ذكر'?'male':'female';}))).toList()),
    const SizedBox(height:16),
    TextField(controller:name,decoration:const InputDecoration(labelText:'اسمك',border:OutlineInputBorder())),
    const SizedBox(height:12),
@@ -401,7 +421,7 @@ class _ProfileFormState extends State<ProfileForm> {
    DropdownButtonFormField<String>(initialValue:gender,
     decoration:const InputDecoration(labelText:'الجنس',border:OutlineInputBorder()),
     items:['ذكر','أنثى','غير محدد'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),
-    onChanged:(v){if(v!=null)setState(()=>gender=v);}),
+    onChanged:(v){if(v!=null)setState((){gender=v;avatar=v=='أنثى'?'female':'male';});}),
    const SizedBox(height:12),
    OutlinedButton.icon(onPressed:()async {
     final d=await showDatePicker(context:context,initialDate:birthday,firstDate:DateTime(1900),lastDate:DateTime.now());
@@ -483,6 +503,101 @@ class _HomeScreenState extends State<HomeScreen> {
   context:context,builder:(ctx)=>AlertDialog(title:Text(title),content:Text(body),
   actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),
    FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('تأكيد'))]));
+Future<void> bulkSmsSheet()async {
+ final pasted=TextEditingController();
+ final description=TextEditingController();
+ final amount=TextEditingController();
+ var messages=<String>[];
+ var index=0;
+ var income=false;
+ var category='أخرى';
+ var parsed=false;
+ var busy=false;
+ var savedCount=0;
+ Future<void> prepare(int i,StateSetter update)async {
+  final result=BankParser.parse(messages[i]);
+  update((){
+   index=i;income=result.income;
+   category=categories.any((c)=>c.income==income&&c.name==result.category)?result.category:
+    (forType(income).isNotEmpty?forType(income).first.name:'أخرى');
+   description.text='${result.title} — ${messages[i].replaceAll(RegExp(r'\s+'),' ').trim()}';
+   amount.text=result.amount==null?'':formatMoney(result.amount!);
+  });
+ }
+ await showModalBottomSheet<void>(context:context,isScrollControlled:true,showDragHandle:true,
+  builder:(ctx)=>StatefulBuilder(builder:(ctx,update){
+   final available=forType(income);
+   final total=messages.fold<double>(0,(sum,s)=>sum+(BankParser.parse(s).amount??0));
+   return Padding(padding:EdgeInsets.fromLTRB(18,8,18,MediaQuery.of(ctx).viewInsets.bottom+24),
+    child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+     Text('إضافة رسائل بنكية',style:Theme.of(ctx).textTheme.titleLarge),
+     const SizedBox(height:12),
+     if(!parsed)...[
+      TextField(controller:pasted,minLines:7,maxLines:13,decoration:const InputDecoration(
+       labelText:'الصق رسالة أو عدة رسائل بنكية',hintText:'الصق الرسائل كاملة، كل رسالة بتاريخها',border:OutlineInputBorder())),
+      const SizedBox(height:12),
+      FilledButton(onPressed:(){
+       final list=splitBankMessages(pasted.text);
+       if(list.isEmpty){snack(ctx,'الصق الرسائل أولًا');return;}
+       messages=list;parsed=true;prepare(0,update);
+      },child:const Text('تحليل الرسائل ومراجعتها')),
+     ]else...[
+      Text('الرسالة ${index+1} من ${messages.length} — إجمالي مبالغ الرسائل: ${cash(total)}',style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
+      const SizedBox(height:6),
+      Text('تم حفظ $savedCount من ${messages.length} رسائل. راجع كل رسالة وحدد قسمها قبل الحفظ.'),
+      const SizedBox(height:12),
+      InputDecorator(decoration:const InputDecoration(labelText:'نص الرسالة الحالية',border:OutlineInputBorder()),
+       child:SelectableText(messages[index])),
+      const SizedBox(height:12),
+      SegmentedButton<bool>(segments:const [ButtonSegment(value:true,label:Text('دخل')),
+       ButtonSegment(value:false,label:Text('مصروف'))],selected:{income},onSelectionChanged:(v)=>update((){
+        income=v.first;category=forType(income).isNotEmpty?forType(income).first.name:'أخرى';
+       })),
+      const SizedBox(height:12),
+      TextField(controller:description,maxLines:2,decoration:const InputDecoration(labelText:'وصف الرسالة',border:OutlineInputBorder())),
+      const SizedBox(height:12),
+      TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
+       decoration:const InputDecoration(labelText:'مبلغ هذه الرسالة بالريال',border:OutlineInputBorder())),
+      const SizedBox(height:12),
+      DropdownButtonFormField<String>(key:ValueKey('$index-$income'),initialValue:available.any((c)=>c.name==category)?category:(available.isNotEmpty?available.first.name:null),
+       items:available.map((c)=>DropdownMenuItem(value:c.name,child:Text(c.name))).toList(),
+       decoration:const InputDecoration(labelText:'قسم هذه الرسالة',border:OutlineInputBorder()),
+       onChanged:(v){if(v!=null)update(()=>category=v);}),
+      const SizedBox(height:12),
+      FilledButton(onPressed:busy?null:()async{
+       final n=amountOf(amount.text);
+       if(n==null||description.text.trim().isEmpty){snack(ctx,'راجع وصف الرسالة والمبلغ');return;}
+       final hash=bankSmsHash(messages[index]);
+       if(smsHashes.contains(hash)){
+        final yes=await showDialog<bool>(context:ctx,builder:(d)=>AlertDialog(
+         title:const Text('⚠️ رسالة مكررة'),content:const Text('هذي الرسالة سبق حفظها. ودّك تضيفها مرة ثانية؟'),
+         actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('إلغاء')),
+          FilledButton(onPressed:()=>Navigator.pop(d,true),child:const Text('إضافة على أي حال'))]));
+        if(yes!=true||!ctx.mounted)return;
+       }
+       update(()=>busy=true);
+       final now=DateTime.now();
+       final previous=sum(entries.where((e)=>!e.income&&e.category==category&&e.date.year==now.year&&e.date.month==now.month),false);
+       final entry=MoneyEntry(id:newId(),title:description.text.trim(),category:category,amount:n,income:income,date:now);
+       setState(()=>entries.insert(0,entry));
+       smsHashes.add(hash);
+       await persist();
+       final prefs=await SharedPreferences.getInstance();
+       await prefs.setStringList('waffra_sms_hashes_v1',smsHashes.toList());
+       if(!ctx.mounted)return;
+       await budgetAlert(entry,previous);
+       if(!ctx.mounted)return;
+       savedCount++;
+       if(index+1>=messages.length){Navigator.pop(ctx);if(mounted)snack(context,'تم حفظ $savedCount عملية بنجاح');}
+       else{await prepare(index+1,update);update(()=>busy=false);}
+      },child:Text(index+1==messages.length?'حفظ الرسالة الأخيرة':'حفظ والانتقال للرسالة التالية')),
+      if(index+1<messages.length)TextButton(onPressed:busy?null:()=>prepare(index+1,update),child:const Text('تخطي هذه الرسالة')),
+     ],
+    ])));
+  }));
+ pasted.dispose();description.dispose();amount.dispose();
+}
+
  Future<void> entrySheet({MoneyEntry? initial,bool sms=false})async {
   final title=TextEditingController(text:initial?.title??'');
   final value=TextEditingController(text:initial==null?'':formatMoney(initial.amount));
@@ -752,7 +867,7 @@ class _HomeScreenState extends State<HomeScreen> {
    const SizedBox(height:12),
    Row(children:[stat('الدخل',inc,Icons.south_west,emerald),stat('المصروفات',exp,Icons.north_east,Colors.deepOrange)]),
    const SizedBox(height:10),
-   OutlinedButton.icon(onPressed:()=>entrySheet(sms:true),icon:const Icon(Icons.content_paste),label:const Text('الصق رسالة بنكية')),
+   OutlinedButton.icon(onPressed:bulkSmsSheet,icon:const Icon(Icons.content_paste),label:const Text('الصق رسالة بنكية')),
    const SizedBox(height:12),
    Text('عملياتك المالية',style:Theme.of(context).textTheme.titleLarge),
    const SizedBox(height:12),
@@ -1213,8 +1328,7 @@ class _HomeScreenState extends State<HomeScreen> {
  }
  Widget profilePage()=>ListView(padding:const EdgeInsets.all(18),children:[
   const SizedBox(height:10),
-  Center(child:CircleAvatar(radius:46,backgroundColor:emerald,
-   child:Icon(avatarIcon(widget.profile.avatar),color:Colors.white,size:55))),
+  Center(child:saudiAvatar(widget.profile.gender,radius:46)),
   const SizedBox(height:12),
   Text(widget.profile.name,textAlign:TextAlign.center,style:Theme.of(context).textTheme.titleLarge),
   Text(widget.profile.email,textAlign:TextAlign.center),
@@ -1222,7 +1336,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Card(child:Column(children:[
    ListTile(leading:const Icon(Icons.people),title:const Text('الجنس'),subtitle:Text(widget.profile.gender)),
    ListTile(leading:const Icon(Icons.cake),title:const Text('تاريخ الميلاد'),subtitle:Text(dayText(widget.profile.birthday))),
-   ListTile(leading:const Icon(Icons.login),title:const Text('طريقة الدخول التجريبية'),subtitle:Text(widget.profile.provider)),
+   ListTile(leading:const Icon(Icons.login),title:const Text('طريقة إنشاء الملف الشخصي'),subtitle:Text(widget.profile.provider)),
   ])),
   const SizedBox(height:12),
   OutlinedButton.icon(onPressed:()async {
@@ -1234,15 +1348,15 @@ class _HomeScreenState extends State<HomeScreen> {
    label:Text(widget.pinEnabled?'إلغاء قفل التطبيق':'تفعيل قفل التطبيق برمز PIN')),
   OutlinedButton.icon(onPressed:()=>Navigator.push<void>(context,
    MaterialPageRoute(builder:(_)=>const CurrencyConverterPage())),
-   icon:const Icon(Icons.currency_exchange),label:const Text('تحويل العملات بسعر الصرف الحالي')),
+   icon:const Icon(Icons.currency_exchange),label:const Text('تحويل العملات')),
   OutlinedButton.icon(onPressed:widget.onTheme,
    icon:Icon(widget.dark?Icons.light_mode:Icons.dark_mode),label:const Text('تغيير المظهر')),
   OutlinedButton.icon(onPressed:backupDialog,icon:const Icon(Icons.backup_outlined),
    label:const Text('النسخ الاحتياطي والاستعادة')),
-  FilledButton.icon(onPressed:widget.onLogout,icon:const Icon(Icons.logout),
-   label:const Text('تسجيل خروج تجريبي')),
+  if(widget.profile.provider!='محلي')FilledButton.icon(onPressed:widget.onLogout,icon:const Icon(Icons.logout),
+   label:const Text('تسجيل الخروج')),
   const SizedBox(height:16),
-  const Text('بياناتك محفوظة على جهازك. احفظ نسخة احتياطية قبل تغيير الجوال أو حذف التطبيق. ما فيه ربط بنكي أو تسجيل دخول حقيقي.',
+  const Text('بياناتك محفوظة على جهازك. احفظ نسخة احتياطية قبل تغيير الجوال أو حذف التطبيق. ما فيه ربط بالحسابات البنكية.',
    textAlign:TextAlign.center,style:TextStyle(fontSize:12)),
  ]);
  @override Widget build(BuildContext context)=>Scaffold(
@@ -1250,8 +1364,7 @@ class _HomeScreenState extends State<HomeScreen> {
    actions:[
     IconButton(onPressed:widget.onTheme,icon:Icon(widget.dark?Icons.light_mode:Icons.dark_mode)),
     Padding(padding:const EdgeInsets.only(left:12),
-     child:CircleAvatar(backgroundColor:emerald,
-      child:Icon(avatarIcon(widget.profile.avatar),color:Colors.white))),
+     child:InkWell(onTap:()=>setState(()=>tab=5),borderRadius:BorderRadius.circular(30),child:saudiAvatar(widget.profile.gender))),
    ]),
   body:!ready?const Center(child:CircularProgressIndicator()):
    IndexedStack(index:tab,children:[dashboard(),analytics(),categoriesPage(),goalsPage(),recurringPage(),profilePage()]),
