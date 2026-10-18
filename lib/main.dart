@@ -354,7 +354,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     FilledButton(onPressed:(){setState((){loading=true;startupError=null;});load();},child:const WaffraText('إعادة المحاولة')),
    ])))):
    locked?PinLockScreen(pinHash:pinHash!,onUnlock:()=>setState(()=>locked=false)):
-   !onboarded?IntroScreen(onStart:quickStart,onLogin:intro):
+   !onboarded?WaffraOnboarding(onFinish:()=>setState(()=>onboarded=true)):
    profile==null||showLogin?LoginScreen(onSave:saveUser):
    HomeScreen(key:ValueKey(language),profile:profile!,dark:dark,onTheme:theme,onLanguage:setLanguage,onLogout:logout,onProfile:saveUser,onSetPin:setPin,pinEnabled:pinHash!=null)))));
 }
@@ -462,6 +462,66 @@ class _PinLockScreenState extends State<PinLockScreen> {
     ]))))]));
 
 }
+class WaffraOnboarding extends StatefulWidget {
+ final VoidCallback onFinish;
+ const WaffraOnboarding({super.key,required this.onFinish});
+ @override State<WaffraOnboarding> createState()=>_WaffraOnboardingState();
+}
+class _WaffraOnboardingState extends State<WaffraOnboarding> {
+ final controller=PageController();
+ int current=0;
+ static const titles=['كل معاملاتك في مكان واحد','الصق رسالتك والباقي علينا','تحليلات بسيطة لقرارات أذكى','حقق أهدافك خطوة بخطوة'];
+ static const subtitles=[
+  'من قلب الرياض، وفرة يساعدك تعرف وين تروح فلوسك وتتابع دخلك ومصروفاتك.',
+  'انسخ الرسائل البنكية والصقها، ووفرة يساعدك ترتب دخلك ومصروفاتك.',
+  'تابع أرقامك ورسومك البيانية وتقاريرك المالية بطريقة واضحة.',
+  'حط هدف ادخارك وتابع تقدمك، خطوة بخطوة حتى توصله.'
+ ];
+ static const symbols=[Icons.location_city_rounded,Icons.sms_rounded,Icons.bar_chart_rounded,Icons.savings_rounded];
+ Future<void> finish()async{
+  final p=await SharedPreferences.getInstance();
+  await p.setBool('waffra_onboarding_completed',true);
+  if(mounted)widget.onFinish();
+ }
+ void next(){if(current==3){finish();}else{controller.nextPage(duration:const Duration(milliseconds:650),curve:Curves.easeInOutCubic);}}
+ @override void dispose(){controller.dispose();super.dispose();}
+ @override Widget build(BuildContext context)=>Scaffold(
+  backgroundColor:forest,
+  body:SafeArea(child:Column(children:[
+   Padding(padding:const EdgeInsets.symmetric(horizontal:22,vertical:12),child:Row(
+    mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
+     TextButton(onPressed:finish,child:const WaffraText('تخطي',style:TextStyle(color:Colors.white70,fontSize:15))),
+     const WaffraText('وفرة | Waffra',style:TextStyle(color:Colors.white,fontSize:23,fontWeight:FontWeight.bold)),
+    ])),
+   Expanded(child:PageView(controller:controller,onPageChanged:(v)=>setState(()=>current=v),
+    children:List.generate(4,(i)=>Padding(padding:const EdgeInsets.symmetric(horizontal:26),child:Column(
+     mainAxisAlignment:MainAxisAlignment.center,children:[
+      Container(height:250,width:double.infinity,decoration:BoxDecoration(
+       gradient:const LinearGradient(colors:[Color(0xFF087759),Color(0xFF064D3B)],begin:Alignment.topRight,end:Alignment.bottomLeft),
+       borderRadius:BorderRadius.circular(36),border:Border.all(color:Colors.white24)),
+       child:Stack(alignment:Alignment.center,children:[
+        Positioned(top:18,right:20,child:Icon(Icons.spa_rounded,color:Colors.white.withValues(alpha:0.13),size:115)),
+        Positioned(bottom:16,left:16,child:Icon(Icons.spa_rounded,color:Colors.white.withValues(alpha:0.12),size:90)),
+        Icon(symbols[i],size:115,color:Colors.white),
+        if(i==0)const Positioned(bottom:20,child:WaffraText('برج المملكة  •  برج الفيصلية  •  الرياض',style:TextStyle(color:Colors.white,fontSize:14))),
+       ])),
+      const SizedBox(height:44),
+      WaffraText(titles[i],textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:27,fontWeight:FontWeight.bold)),
+      const SizedBox(height:17),
+      WaffraText(subtitles[i],textAlign:TextAlign.center,style:const TextStyle(color:Colors.white70,fontSize:17,height:1.7)),
+     ])))),
+   Padding(padding:const EdgeInsets.fromLTRB(28,10,28,28),child:Column(children:[
+    Row(mainAxisAlignment:MainAxisAlignment.center,children:List.generate(4,(i)=>AnimatedContainer(
+     duration:const Duration(milliseconds:350),margin:const EdgeInsets.symmetric(horizontal:4),
+     width:current==i?28:8,height:8,decoration:BoxDecoration(color:current==i?Colors.white:Colors.white38,borderRadius:BorderRadius.circular(10))))),
+    const SizedBox(height:22),
+    SizedBox(width:double.infinity,height:55,child:FilledButton(
+     style:FilledButton.styleFrom(backgroundColor:Colors.white,foregroundColor:forest),
+     onPressed:next,child:WaffraText(current==3?'ابدأ رحلتك مع وفرة':'التالي',style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)))),
+   ])),
+  ])));
+}
+
 class IntroScreen extends StatefulWidget {
  final Future<void> Function() onStart,onLogin;
  const IntroScreen({super.key,required this.onStart,required this.onLogin});
