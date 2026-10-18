@@ -551,33 +551,40 @@ Future<void> bulkSmsSheet()async {
       TextField(controller:pasted,minLines:5,maxLines:9,onChanged:(text){
        pasteTimer?.cancel();
        if(!sheetActive||!ctx.mounted)return;
-       if(text.trim().isEmpty){update((){parsed=false;messages=[];});return;}
        update((){parsed=false;messages=[];});
-       pasteTimer=Timer(const Duration(milliseconds:350),(){
-        if(!sheetActive||!ctx.mounted)return;
-        final found=splitBankMessages(pasted.text);
-        update((){messages=found;parsed=found.isNotEmpty;});
-       });
       },decoration:const InputDecoration(labelText:'الصق رسالة أو عدة رسائل بنكية',
        hintText:'الصق الرسائل كاملة، كل رسالة بتاريخها',border:OutlineInputBorder())),
-      TextButton.icon(onPressed:(){
-       pasteTimer?.cancel();pasted.clear();
-       update((){parsed=false;messages=[];});
-      },icon:const Icon(Icons.delete_outline),label:const Text('حذف النص بالكامل')),
+      const SizedBox(height:12),
+      FilledButton.icon(
+       icon:const Icon(Icons.add_circle_outline),
+       onPressed:(){
+        FocusScope.of(ctx).unfocus();
+        pasteTimer?.cancel();
+        final raw=pasted.text.trim();
+        if(raw.isEmpty){snack(ctx,'الصق رسالة بنكية أولاً');return;}
+        final found=splitBankMessages(raw);
+        if(found.isEmpty){snack(ctx,'لم يتم العثور على معاملات. راجع نص الرسالة');return;}
+        update((){messages=found;parsed=true;});
+       },
+       label:const Text('تحليل الرسائل وإضافتها')),
       if(parsed)...[
+       const SizedBox(height:10),
        Text(messages.length==1?'تم استخراج معاملة واحدة بنجاح':
         messages.length==2?'تم استخراج معاملتين بنجاح':
         'تم استخراج ${messages.length} معاملات بنجاح',
         style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
-       const Text('راجع كل معاملة قبل حفظها.'),
-       FilledButton.icon(icon:const Icon(Icons.add_circle_outline),onPressed:(){
-        pasteTimer?.cancel();
-        final found=splitBankMessages(pasted.text);
-        if(found.isEmpty)return;
-        update(()=>reviewing=true);
-        prepare(0,update);
-       },label:Text(messages.length==1?'إضافة المعاملة ومراجعتها':'إضافة ومراجعة ${messages.length} معاملات')),
-      ]else const Text('يتم تحليل الرسائل تلقائيًا بعد اللصق'),
+       const SizedBox(height:8),
+       FilledButton.icon(icon:const Icon(Icons.check_circle_outline),
+        onPressed:(){
+         if(messages.isEmpty)return;
+         update(()=>reviewing=true);
+         prepare(0,update);
+        },label:const Text('تأكيد والانتقال لإضافة المعاملات')),
+      ],
+      TextButton.icon(onPressed:(){
+       pasteTimer?.cancel();pasted.clear();
+       update((){parsed=false;messages=[];});
+      },icon:const Icon(Icons.delete_outline),label:const Text('حذف النص بالكامل')),
      ]else...[
       TextButton.icon(onPressed:busy?null:(){
        update((){reviewing=false;parsed=false;messages=[];index=0;pasted.clear();description.clear();amount.clear();});
@@ -850,6 +857,12 @@ Future<void> bulkSmsSheet()async {
   return out.toString();
  }
  Future<void> exportEntriesPdf(List<MoneyEntry> items,String title,{bool analytics=false})async {
+  if(items.isEmpty){
+   if(mounted)snack(context,analytics
+    ?'لا يمكن تصدير تقرير التحليلات. أضف عملية دخل أو مصروف أولاً.'
+    :'لا يمكن تصدير التقرير. يجب إضافة عملية دخل أو مصروف أولاً.');
+   return;
+  }
   try{
    final font=await PdfGoogleFonts.tajawalRegular();
    final bold=await PdfGoogleFonts.tajawalBold();
