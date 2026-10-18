@@ -480,25 +480,35 @@ class LoginScreen extends StatefulWidget {
 }
 class _LoginScreenState extends State<LoginScreen> {
  String? provider;
+ bool socialBusy=false;
+ Future<void> demoSocial(String selected)async {
+  if(socialBusy)return;
+  setState(()=>socialBusy=true);
+  try {
+   await widget.onSave(Person(name:'',email:'',phone:'',provider:'Local $selected demo',gender:'غير محدد',avatar:'person',birthday:DateTime(2000)));
+   if(!mounted)return;
+   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(waffraIsEnglish?'Local demo profile opened — not authenticated with $selected':'تم الدخول للملف المحلي التجريبي بنجاح — لم تتم المصادقة مع $selected')));
+  }finally{if(mounted)setState(()=>socialBusy=false);}
+ }
  @override Widget build(BuildContext context)=>provider!=null?
   ProfileForm(provider:provider!,onSave:widget.onSave,onBack:()=>setState(()=>provider=null)):
   Scaffold(body:SafeArea(child:Center(child:SingleChildScrollView(
    padding:const EdgeInsets.all(28),child:Column(children:[
-    const CircleAvatar(radius:54,backgroundColor:forest,child:Icon(Icons.account_balance_wallet,color:Colors.white,size:58)),
+    ClipOval(child:Image.asset('assets/waffra_app_icon.png',width:108,height:108,fit:BoxFit.cover)),
     const SizedBox(height:20),const WaffraText('وفرة',style:TextStyle(fontSize:42,color:emerald,fontWeight:FontWeight.w900)),
     const SizedBox(height:12),const WaffraText('وفرة بعلمك وين فلوسك تروح',style:TextStyle(fontSize:19)),
     const SizedBox(height:30),
     SizedBox(width:double.infinity,height:52,child:OutlinedButton.icon(
      style:OutlinedButton.styleFrom(backgroundColor:Colors.white,foregroundColor:const Color(0xFF4285F4),side:const BorderSide(color:Color(0xFFDADCE0))),
-     onPressed:()=>setState(()=>provider='Google'),icon:const Icon(Icons.g_mobiledata,size:32,color:Color(0xFF4285F4)),
+     onPressed:socialBusy?null:()=>demoSocial('Google'),icon:const Icon(Icons.g_mobiledata,size:32,color:Color(0xFF4285F4)),
      label:const WaffraText('المتابعة باستخدام Google',style:TextStyle(color:Colors.black87)))),
     const SizedBox(height:12),
     SizedBox(width:double.infinity,height:52,child:FilledButton.icon(
      style:FilledButton.styleFrom(backgroundColor:Colors.black,foregroundColor:Colors.white),
-     onPressed:()=>setState(()=>provider='Apple'),icon:const Icon(Icons.apple,color:Colors.white),
+     onPressed:socialBusy?null:()=>demoSocial('Apple'),icon:const Icon(Icons.apple,color:Colors.white),
      label:const WaffraText('المتابعة باستخدام Apple',style:TextStyle(color:Colors.white)))),
     const SizedBox(height:14),
-    SizedBox(width:double.infinity,height:52,child:OutlinedButton.icon(onPressed:()=>setState(()=>provider='Phone'),icon:const Icon(Icons.alternate_email),label:WaffraText(waffraIsEnglish?'Email and mobile registration':'التسجيل بالبريد الإلكتروني ورقم الجوال'))),
+    SizedBox(width:double.infinity,height:52,child:OutlinedButton.icon(onPressed:()=>setState(()=>provider='Phone'),icon:const Icon(Icons.phone_android),label:WaffraText(waffraIsEnglish?'Register with mobile number':'التسجيل برقم الجوال'))),
     const SizedBox(height:20),
     const WaffraText('بياناتك محفوظة على جهازك. المتابعة هنا لإنشاء ملف شخصي محلي، وليست مصادقة فعلية مع Google أو Apple.',
      textAlign:TextAlign.center,style:TextStyle(color:Colors.grey,fontSize:12)),
@@ -512,6 +522,7 @@ class ProfileForm extends StatefulWidget {
 }
 class _ProfileFormState extends State<ProfileForm> {
  late final TextEditingController name,email,confirmEmail,phone,password,confirmPassword;
+ bool showPassword=false,showConfirmPassword=false;
  late String gender,avatar;late DateTime birthday;bool busy=false;
  @override void initState(){super.initState();
   name=TextEditingController(text:widget.initial?.name??'');
@@ -526,13 +537,10 @@ class _ProfileFormState extends State<ProfileForm> {
  Future<void> save()async {
   final validEmail=RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email.text.trim());
   final validPhone=RegExp(r'^05[0-9]{8}$').hasMatch(phone.text.trim());
-  if(name.text.trim().isEmpty||(!validEmail && widget.initial==null)||(!validPhone && phone.text.trim().isNotEmpty)){
+  if(name.text.trim().isEmpty||(!validPhone && phone.text.trim().isNotEmpty)){
    snack(context,waffraIsEnglish?'Enter a name, valid email and Saudi phone number':'أدخل الاسم والبريد الصحيح ورقم جوال يبدأ بـ 05 من 10 أرقام');return;
   }
   if(widget.initial==null){
-   if(email.text.trim().toLowerCase()!=confirmEmail.text.trim().toLowerCase()){
-    snack(context,waffraIsEnglish?'Email addresses do not match':'البريد الإلكتروني غير متطابق في الحقلين');return;
-   }
    if(!validPhone){snack(context,'أدخل رقم الجوال من 10 أرقام يبدأ بـ 05');return;}
    if(!RegExp(r'^(?=.*[A-Za-z])(?=.*[0-9]).{8,}$').hasMatch(password.text)||password.text!=confirmPassword.text){
     snack(context,'كلمة المرور يجب أن تكون 8 خانات على الأقل وتشمل أحرفًا وأرقامًا وتتطابق في الحقلين');return;
@@ -547,7 +555,7 @@ class _ProfileFormState extends State<ProfileForm> {
     await p.setString('waffra_local_password_salt',saltHex);
     await p.setString('waffra_local_password_hash',sha256.convert(utf8.encode('$saltHex:${password.text}')).toString());
    }
-   await widget.onSave(Person(name:name.text.trim(),email:widget.initial?.email.isNotEmpty==true?widget.initial!.email:email.text.trim(),
+   await widget.onSave(Person(name:name.text.trim(),email:widget.initial?.email??'',
     phone:phone.text.trim(),provider:widget.provider,gender:gender,avatar:avatar,birthday:birthday));
    if(!mounted)return;
    if(widget.initial!=null)Navigator.pop(context);
@@ -565,41 +573,23 @@ class _ProfileFormState extends State<ProfileForm> {
    const SizedBox(height:16),
    TextField(controller:name,decoration:InputDecoration(labelText:waffraTr('اسمك'),border:OutlineInputBorder())),
    const SizedBox(height:12),
-   TextField(controller:email,readOnly:widget.initial!=null,keyboardType:TextInputType.emailAddress,
-    decoration:InputDecoration(labelText:waffraIsEnglish?'Email':'البريد الإلكتروني',filled:widget.initial!=null,
-     fillColor:Colors.grey.withValues(alpha:0.15),helperText:widget.initial!=null?(waffraIsEnglish?'Registered email cannot be changed':'البريد الإلكتروني المسجل لا يمكن تعديله'):null,
-     suffixIcon:widget.initial==null?IconButton(tooltip:waffraIsEnglish?'Copy email':'نسخ البريد الإلكتروني',
-      icon:const Icon(Icons.copy_outlined),onPressed:()async{
-       await Clipboard.setData(ClipboardData(text:email.text.trim()));
-       if(mounted)snack(context,waffraIsEnglish?'Email copied':'تم نسخ البريد الإلكتروني');
-      }):null,border:const OutlineInputBorder())),
-   if(widget.initial==null) ...[
+   if(widget.initial!=null&&email.text.trim().isNotEmpty) ...[
+    TextField(controller:email,readOnly:true,keyboardType:TextInputType.emailAddress,
+     decoration:InputDecoration(labelText:waffraIsEnglish?'Registered email':'البريد الإلكتروني المسجل',
+      filled:true,fillColor:Colors.grey.withValues(alpha:0.15),border:const OutlineInputBorder())),
     const SizedBox(height:12),
-    TextField(controller:confirmEmail,keyboardType:TextInputType.emailAddress,
-     decoration:InputDecoration(labelText:waffraIsEnglish?'Confirm email':'تأكيد البريد الإلكتروني',
-      suffixIcon:IconButton(tooltip:waffraIsEnglish?'Paste email':'لصق البريد الإلكتروني',
-       icon:const Icon(Icons.content_paste_outlined),onPressed:()async{
-        final data=await Clipboard.getData(Clipboard.kTextPlain);
-        if(!mounted)return;
-        final value=data?.text??'';
-        confirmEmail.value=TextEditingValue(text:value,selection:TextSelection.collapsed(offset:value.length));
-       }),border:const OutlineInputBorder())),
    ],
-   const SizedBox(height:12),
    TextField(controller:phone,keyboardType:TextInputType.phone,inputFormatters:[FilteringTextInputFormatter.digitsOnly,LengthLimitingTextInputFormatter(10)],
     decoration:InputDecoration(labelText:waffraIsEnglish?'Mobile number':'رقم الجوال',hintText:'05XXXXXXXX',
      helperText:waffraIsEnglish?'10 digits starting with 05':'رقم سعودي من 10 أرقام يبدأ بـ 05',border:const OutlineInputBorder())),
    if(widget.initial==null) ...[
-    const SizedBox(height:6),
-    OutlinedButton.icon(onPressed:()=>snack(context,waffraIsEnglish?'Phone number suggestions and real SMS verification require Android/Firebase setup. Enter your number manually for now.':'اقتراح أرقام الشرائح والتحقق برسالة OTP يحتاجان إعداد Android وFirebase. أدخل الرقم يدويًا حاليًا.'),
-     icon:const Icon(Icons.verified_user_outlined),label:WaffraText(waffraIsEnglish?'Verify mobile (setup required)':'التحقق من رقم الجوال (يتطلب التفعيل)')),
-   ],
-   if(widget.initial==null) ...[
     const SizedBox(height:12),
-    TextField(controller:password,obscureText:true,decoration:InputDecoration(labelText:waffraIsEnglish?'Password':'كلمة المرور',
+    TextField(controller:password,obscureText:!showPassword,decoration:InputDecoration(
+     suffixIcon:IconButton(tooltip:showPassword?'إخفاء كلمة المرور':'إظهار كلمة المرور',icon:Icon(showPassword?Icons.visibility_off:Icons.visibility),onPressed:()=>setState(()=>showPassword=!showPassword)),labelText:waffraIsEnglish?'Password':'كلمة المرور',
      helperText:waffraIsEnglish?'At least 8 characters, including letters and numbers':'8 خانات على الأقل، تشمل أحرفًا وأرقامًا',border:const OutlineInputBorder())),
     const SizedBox(height:12),
-    TextField(controller:confirmPassword,obscureText:true,decoration:InputDecoration(labelText:waffraIsEnglish?'Confirm password':'تأكيد كلمة المرور',border:const OutlineInputBorder())),
+    TextField(controller:confirmPassword,obscureText:!showConfirmPassword,decoration:InputDecoration(
+     suffixIcon:IconButton(tooltip:showConfirmPassword?'إخفاء كلمة المرور':'إظهار كلمة المرور',icon:Icon(showConfirmPassword?Icons.visibility_off:Icons.visibility),onPressed:()=>setState(()=>showConfirmPassword=!showConfirmPassword)),labelText:waffraIsEnglish?'Confirm password':'تأكيد كلمة المرور',border:const OutlineInputBorder())),
    ],
    const SizedBox(height:12),
    DropdownButtonFormField<String>(initialValue:gender,
