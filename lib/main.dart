@@ -14,7 +14,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:crypto/crypto.dart';
 import 'waffra_biometrics.dart';
 import 'waffra_welcome_background.dart';
@@ -316,8 +315,8 @@ class _WaffraAppState extends State<WaffraApp> {
     child:AnimatedSwitcher(duration:const Duration(milliseconds:350),switchInCurve:Curves.easeOutCubic,
      transitionBuilder:(w,a)=>FadeTransition(opacity:a,child:SlideTransition(position:Tween<Offset>(begin:const Offset(0.035,0),end:Offset.zero).animate(a),child:w)),
      child:KeyedSubtree(key:ValueKey(language),child:child??const SizedBox.shrink())))),
-  theme:ThemeData(useMaterial3:true,colorSchemeSeed:emerald,scaffoldBackgroundColor:sand,appBarTheme:const AppBarTheme(backgroundColor:forest,foregroundColor:Colors.white),navigationBarTheme:NavigationBarThemeData(backgroundColor:forest,labelTextStyle:WidgetStateProperty.all(const TextStyle(color:Colors.white,fontSize:11)),iconTheme:WidgetStateProperty.all(const IconThemeData(color:Colors.white))),floatingActionButtonTheme:const FloatingActionButtonThemeData(backgroundColor:forest,foregroundColor:Colors.white),fontFamily:GoogleFonts.tajawal().fontFamily,textTheme:GoogleFonts.tajawalTextTheme(),primaryTextTheme:GoogleFonts.tajawalTextTheme()),
-  darkTheme:ThemeData(useMaterial3:true,brightness:Brightness.dark,colorSchemeSeed:emerald,appBarTheme:const AppBarTheme(backgroundColor:forest,foregroundColor:Colors.white),navigationBarTheme:NavigationBarThemeData(backgroundColor:forest,labelTextStyle:WidgetStateProperty.all(const TextStyle(color:Colors.white,fontSize:11)),iconTheme:WidgetStateProperty.all(const IconThemeData(color:Colors.white))),floatingActionButtonTheme:const FloatingActionButtonThemeData(backgroundColor:forest,foregroundColor:Colors.white),fontFamily:GoogleFonts.tajawal().fontFamily,textTheme:GoogleFonts.tajawalTextTheme(ThemeData.dark().textTheme),primaryTextTheme:GoogleFonts.tajawalTextTheme(ThemeData.dark().primaryTextTheme)),
+  theme:ThemeData(useMaterial3:true,colorSchemeSeed:emerald,scaffoldBackgroundColor:sand,appBarTheme:const AppBarTheme(backgroundColor:forest,foregroundColor:Colors.white),navigationBarTheme:NavigationBarThemeData(backgroundColor:forest,labelTextStyle:WidgetStateProperty.all(const TextStyle(color:Colors.white,fontSize:11)),iconTheme:WidgetStateProperty.all(const IconThemeData(color:Colors.white))),floatingActionButtonTheme:const FloatingActionButtonThemeData(backgroundColor:forest,foregroundColor:Colors.white),fontFamily:'Tajawal',textTheme:ThemeData.light().textTheme.apply(fontFamily:'Tajawal'),primaryTextTheme:ThemeData.light().primaryTextTheme.apply(fontFamily:'Tajawal')),
+  darkTheme:ThemeData(useMaterial3:true,brightness:Brightness.dark,colorSchemeSeed:emerald,appBarTheme:const AppBarTheme(backgroundColor:forest,foregroundColor:Colors.white),navigationBarTheme:NavigationBarThemeData(backgroundColor:forest,labelTextStyle:WidgetStateProperty.all(const TextStyle(color:Colors.white,fontSize:11)),iconTheme:WidgetStateProperty.all(const IconThemeData(color:Colors.white))),floatingActionButtonTheme:const FloatingActionButtonThemeData(backgroundColor:forest,foregroundColor:Colors.white),fontFamily:'Tajawal',textTheme:ThemeData.dark().textTheme.apply(fontFamily:'Tajawal'),primaryTextTheme:ThemeData.dark().primaryTextTheme.apply(fontFamily:'Tajawal')),
   themeMode:dark?ThemeMode.dark:ThemeMode.light,
   themeAnimationDuration:const Duration(milliseconds:400),
   themeAnimationCurve:Curves.easeInOutCubic,
@@ -1097,9 +1096,8 @@ Future<void> bulkSmsSheet()async {
   }
   try{
    // Embed a full Arabic Unicode fallback; Tajawal stays the primary typeface.
-   final font=await PdfGoogleFonts.tajawalRegular();
-   final bold=await PdfGoogleFonts.tajawalBold();
-   final arabicFallback=await PdfGoogleFonts.notoNaskhArabicRegular();
+   final font=pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal-Regular.ttf'));
+   final bold=pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal-Bold.ttf'));
    final english=waffraIsEnglish;
    final exportedAt=DateTime.now();
    final oldest=items.map((e)=>e.date).reduce((a,b)=>a.isBefore(b)?a:b);
@@ -1139,7 +1137,7 @@ Future<void> bulkSmsSheet()async {
     margin:const pw.EdgeInsets.fromLTRB(36,115,36,90),
     buildBackground:(ctx)=>pw.FullPage(ignoreMargins:true,
      child:pw.Image(brandedBackground,fit:pw.BoxFit.fill)),
-    theme:pw.ThemeData.withFont(base:font,bold:bold,fontFallback:[arabicFallback]),
+    theme:pw.ThemeData.withFont(base:font,bold:bold),
     textDirection:english?pw.TextDirection.ltr:pw.TextDirection.rtl,
    );
    pw.Widget heading(String ar,String en)=>pw.Padding(

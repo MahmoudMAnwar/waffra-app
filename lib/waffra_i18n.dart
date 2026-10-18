@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 /// Language preference shared by UI and PDF exports. Internal saved values remain unchanged.
 final ValueNotifier<String> waffraLanguage = ValueNotifier<String>('ar');
@@ -259,7 +258,7 @@ class WaffraText extends Text {
  @override
  Widget build(BuildContext context)=>Text(
   waffraTr(data??''),
-  key:key,style:GoogleFonts.tajawal(textStyle:DefaultTextStyle.of(context).style.merge(style)),strutStyle:strutStyle,textAlign:textAlign,textDirection:textDirection,
+  key:key,style:DefaultTextStyle.of(context).style.merge(style).copyWith(fontFamily:'Tajawal'),strutStyle:strutStyle,textAlign:textAlign,textDirection:textDirection,
   locale:locale,softWrap:softWrap,overflow:overflow,textScaler:textScaler,maxLines:maxLines,
   semanticsLabel:semanticsLabel,textWidthBasis:textWidthBasis,
   textHeightBehavior:textHeightBehavior,selectionColor:selectionColor,
