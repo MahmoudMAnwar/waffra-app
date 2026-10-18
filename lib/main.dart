@@ -313,10 +313,14 @@ class _WaffraAppState extends State<WaffraApp> {
    valueListenable:hideWaffraAmounts,
    builder:(context,hidden,_)=>Directionality(
     textDirection:language=='ar'?TextDirection.rtl:TextDirection.ltr,
-    child:child??const SizedBox.shrink())),
+    child:AnimatedSwitcher(duration:const Duration(milliseconds:350),switchInCurve:Curves.easeOutCubic,
+     transitionBuilder:(w,a)=>FadeTransition(opacity:a,child:SlideTransition(position:Tween<Offset>(begin:const Offset(0.035,0),end:Offset.zero).animate(a),child:w)),
+     child:KeyedSubtree(key:ValueKey(language),child:child??const SizedBox.shrink())))),
   theme:ThemeData(useMaterial3:true,colorSchemeSeed:emerald,scaffoldBackgroundColor:sand,appBarTheme:const AppBarTheme(backgroundColor:forest,foregroundColor:Colors.white),navigationBarTheme:NavigationBarThemeData(backgroundColor:forest,labelTextStyle:WidgetStateProperty.all(const TextStyle(color:Colors.white,fontSize:11)),iconTheme:WidgetStateProperty.all(const IconThemeData(color:Colors.white))),floatingActionButtonTheme:const FloatingActionButtonThemeData(backgroundColor:forest,foregroundColor:Colors.white),textTheme:GoogleFonts.tajawalTextTheme()),
   darkTheme:ThemeData(useMaterial3:true,brightness:Brightness.dark,colorSchemeSeed:emerald,appBarTheme:const AppBarTheme(backgroundColor:forest,foregroundColor:Colors.white),navigationBarTheme:NavigationBarThemeData(backgroundColor:forest,labelTextStyle:WidgetStateProperty.all(const TextStyle(color:Colors.white,fontSize:11)),iconTheme:WidgetStateProperty.all(const IconThemeData(color:Colors.white))),floatingActionButtonTheme:const FloatingActionButtonThemeData(backgroundColor:forest,foregroundColor:Colors.white),textTheme:GoogleFonts.tajawalTextTheme(ThemeData.dark().textTheme)),
   themeMode:dark?ThemeMode.dark:ThemeMode.light,
+  themeAnimationDuration:const Duration(milliseconds:400),
+  themeAnimationCurve:Curves.easeInOutCubic,
   home:Directionality(textDirection:language=='ar'?TextDirection.rtl:TextDirection.ltr,child:
    loading?const Scaffold(body:Center(child:CircularProgressIndicator())):
    startupError!=null?Scaffold(body:Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[
@@ -485,14 +489,16 @@ class _LoginScreenState extends State<LoginScreen> {
     const SizedBox(height:12),const WaffraText('وفرة بعلمك وين فلوسك تروح',style:TextStyle(fontSize:19)),
     const SizedBox(height:30),
     SizedBox(width:double.infinity,height:52,child:OutlinedButton.icon(
-     onPressed:()=>setState(()=>provider='Google'),icon:const Icon(Icons.g_mobiledata,size:32),
-     label:const WaffraText('المتابعة باستخدام Google'))),
+     style:OutlinedButton.styleFrom(backgroundColor:Colors.white,foregroundColor:const Color(0xFF4285F4),side:const BorderSide(color:Color(0xFFDADCE0))),
+     onPressed:()=>setState(()=>provider='Google'),icon:const Icon(Icons.g_mobiledata,size:32,color:Color(0xFF4285F4)),
+     label:const WaffraText('المتابعة باستخدام Google',style:TextStyle(color:Colors.black87)))),
     const SizedBox(height:12),
     SizedBox(width:double.infinity,height:52,child:FilledButton.icon(
-     onPressed:()=>setState(()=>provider='Apple'),icon:const Icon(Icons.apple),
-     label:const WaffraText('المتابعة باستخدام Apple'))),
+     style:FilledButton.styleFrom(backgroundColor:Colors.black,foregroundColor:Colors.white),
+     onPressed:()=>setState(()=>provider='Apple'),icon:const Icon(Icons.apple,color:Colors.white),
+     label:const WaffraText('المتابعة باستخدام Apple',style:TextStyle(color:Colors.white)))),
     const SizedBox(height:14),
-    SizedBox(width:double.infinity,height:52,child:OutlinedButton.icon(onPressed:()=>setState(()=>provider='Phone'),icon:const Icon(Icons.phone_android),label:const WaffraText('التسجيل برقم الجوال'))),
+    SizedBox(width:double.infinity,height:52,child:OutlinedButton.icon(onPressed:()=>setState(()=>provider='Phone'),icon:const Icon(Icons.alternate_email),label:WaffraText(waffraIsEnglish?'Email and mobile registration':'التسجيل بالبريد الإلكتروني ورقم الجوال'))),
     const SizedBox(height:20),
     const WaffraText('بياناتك محفوظة على جهازك. المتابعة هنا لإنشاء ملف شخصي محلي، وليست مصادقة فعلية مع Google أو Apple.',
      textAlign:TextAlign.center,style:TextStyle(color:Colors.grey,fontSize:12)),
@@ -562,6 +568,11 @@ class _ProfileFormState extends State<ProfileForm> {
    TextField(controller:phone,keyboardType:TextInputType.phone,inputFormatters:[FilteringTextInputFormatter.digitsOnly,LengthLimitingTextInputFormatter(10)],
     decoration:InputDecoration(labelText:waffraIsEnglish?'Mobile number':'رقم الجوال',hintText:'05XXXXXXXX',
      helperText:waffraIsEnglish?'10 digits starting with 05':'رقم سعودي من 10 أرقام يبدأ بـ 05',border:const OutlineInputBorder())),
+   if(widget.initial==null) ...[
+    const SizedBox(height:6),
+    OutlinedButton.icon(onPressed:()=>snack(context,waffraIsEnglish?'Phone number suggestions and real SMS verification require Android/Firebase setup. Enter your number manually for now.':'اقتراح أرقام الشرائح والتحقق برسالة OTP يحتاجان إعداد Android وFirebase. أدخل الرقم يدويًا حاليًا.'),
+     icon:const Icon(Icons.verified_user_outlined),label:WaffraText(waffraIsEnglish?'Verify mobile (setup required)':'التحقق من رقم الجوال (يتطلب التفعيل)')),
+   ],
    if(widget.initial==null) ...[
     const SizedBox(height:12),
     TextField(controller:password,obscureText:true,decoration:InputDecoration(labelText:waffraIsEnglish?'Password':'كلمة المرور',
