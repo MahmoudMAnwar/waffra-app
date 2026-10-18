@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:pdf/pdf.dart';
+import 'package:image/image.dart' as img;
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'dart:math';
@@ -516,10 +518,13 @@ Future<void> bulkSmsSheet()async {
  var income=false;
  var category='أخرى';
  var parsed=false;
+ var reviewing=false;
+ Timer? pasteTimer;
  var busy=false;
  var savedCount=0;
  bool sheetActive=true;
  void disposeLater(){
+  pasteTimer?.cancel();
   Future<void>.delayed(const Duration(milliseconds:500),(){
    pasted.dispose();description.dispose();amount.dispose();
   });
@@ -542,30 +547,42 @@ Future<void> bulkSmsSheet()async {
     child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
      Text('إضافة رسائل بنكية',style:Theme.of(ctx).textTheme.titleLarge),
      const SizedBox(height:12),
-     if(!parsed)...[
+     if(!reviewing)...[
       TextField(controller:pasted,minLines:5,maxLines:9,onChanged:(text){
+       pasteTimer?.cancel();
        if(!sheetActive||!ctx.mounted)return;
-       if(text.trim().isEmpty){update((){messages=[];parsed=false;});return;}
-       final detected=splitBankMessages(text);
-       if(detected.isEmpty)return;
-       final first=BankParser.parse(detected.first);
-       update((){
-        messages=detected;parsed=true;index=0;
-        income=first.income;
-        category=categories.any((c)=>c.income==income&&c.name==first.category)
-         ?first.category:(forType(income).isNotEmpty?forType(income).first.name:'أخرى');
-        description.text='${first.title} — ${detected.first.replaceAll(RegExp(r'\s+'),' ').trim()}';
-        amount.text=first.amount==null?'':formatMoney(first.amount!);
+       if(text.trim().isEmpty){update((){parsed=false;messages=[];});return;}
+       pasteTimer=Timer(const Duration(milliseconds:350),(){
+        if(!sheetActive||!ctx.mounted)return;
+        final found=splitBankMessages(pasted.text);
+        update((){messages=found;parsed=found.isNotEmpty;});
        });
-      },decoration:const InputDecoration(
-       labelText:'الصق رسالة أو عدة رسائل بنكية',hintText:'الصق الرسائل كاملة، كل رسالة بتاريخها',border:OutlineInputBorder())),
-      const SizedBox(height:8),
-      const Text('يتم تحليل الرسائل تلقائيًا بعد اللصق',style:TextStyle(color:emerald)),
+      },decoration:const InputDecoration(labelText:'الصق رسالة أو عدة رسائل بنكية',
+       hintText:'الصق الرسائل كاملة، كل رسالة بتاريخها',border:OutlineInputBorder())),
+      TextButton.icon(onPressed:(){
+       pasteTimer?.cancel();pasted.clear();
+       update((){parsed=false;messages=[];});
+      },icon:const Icon(Icons.delete_outline),label:const Text('حذف النص بالكامل')),
+      if(parsed)...[
+       Text(messages.length==1?'تم استخراج معاملة واحدة بنجاح':
+        messages.length==2?'تم استخراج معاملتين بنجاح':
+        'تم استخراج ${messages.length} معاملات بنجاح',
+        style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
+       const Text('راجع كل معاملة قبل حفظها.'),
+       FilledButton(onPressed:(){
+        pasteTimer?.cancel();
+        final found=splitBankMessages(pasted.text);
+        if(found.isEmpty)return;
+        messages=found;
+        prepare(0,update);
+        update(()=>reviewing=true);
+       },child:const Text('تأكيد ومراجعة')),
+      ]else const Text('يتم تحليل الرسائل تلقائيًا بعد اللصق'),
      ]else...[
       TextButton.icon(onPressed:busy?null:(){
-update((){parsed=false;messages=[];index=0;pasted.clear();description.clear();amount.clear();});
-     },icon:const Icon(Icons.delete_outline),label:const Text('حذف النص بالكامل ولصق رسائل جديدة')),
-     Text('الرسالة ${index+1} من ${messages.length} — إجمالي مبالغ الرسائل: ${cash(total)}',style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
+       update((){reviewing=false;parsed=false;messages=[];index=0;pasted.clear();description.clear();amount.clear();});
+      },icon:const Icon(Icons.delete_outline),label:const Text('حذف النص بالكامل ولصق رسائل جديدة')),
+      Text('الرسالة ${index+1} من ${messages.length} — إجمالي مبالغ الرسائل: ${cash(total)}',style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
       const SizedBox(height:6),
       Text('تم حفظ $savedCount من ${messages.length} رسائل. راجع كل رسالة وحدد قسمها قبل الحفظ.'),
       const SizedBox(height:12),
@@ -617,7 +634,7 @@ update((){parsed=false;messages=[];index=0;pasted.clear();description.clear();am
       if(index+1<messages.length)TextButton(onPressed:busy?null:()=>prepare(index+1,update),child:const Text('تخطي هذه الرسالة')),
       const SizedBox(height:8),
       OutlinedButton.icon(onPressed:busy?null:(){
-       update((){parsed=false;messages=[];index=0;savedCount=0;pasted.clear();description.clear();amount.clear();});
+       update((){reviewing=false;parsed=false;messages=[];index=0;savedCount=0;pasted.clear();description.clear();amount.clear();});
       },icon:const Icon(Icons.delete_forever_outlined),label:const Text('حذف النص بالكامل وإضافة رسائل أخرى')),
      ],
     ])));
@@ -811,11 +828,39 @@ update((){parsed=false;messages=[];index=0;pasted.clear();description.clear();am
    content:Text('وصل صرف قسم «${c.name}» إلى ${formatMoney(spent/c.budget*100)}٪ من الميزانية. صرفت ${cash(spent)} من ${cash(c.budget)}، وحد التنبيه اللي اخترته ${c.alertPercent}٪.'),
    actions:[FilledButton(onPressed:()=>Navigator.pop(ctx),child:const Text('حسنًا'))]));
  }
+ String expensePieSvg(Map<String,double> totals){
+  final values=totals.values.where((v)=>v>0).toList();
+  final total=values.fold<double>(0,(a,b)=>a+b);
+  const colors=['#006B5B','#E8AF47','#F08B64','#4D98A3','#9075B8','#9EBF70'];
+  final out=StringBuffer('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">');
+  if(total==0)return '${out}</svg>';
+  var angle=-pi/2;
+  for(var i=0;i<values.length;i++){
+   final sweep=2*pi*values[i]/total;
+   final points=<String>['100,100'];
+   final steps=max(2,(sweep*50).ceil());
+   for(var j=0;j<=steps;j++){
+    final a=angle+sweep*j/steps;
+    points.add('${(100+88*cos(a)).toStringAsFixed(2)},${(100+88*sin(a)).toStringAsFixed(2)}');
+   }
+   out.write('<polygon points="${points.join(' ')}" fill="${colors[i%colors.length]}" stroke="white" stroke-width="1"/>');
+   angle+=sweep;
+  }
+  out.write('</svg>');
+  return out.toString();
+ }
  Future<void> exportEntriesPdf(List<MoneyEntry> items,String title,{bool analytics=false})async {
   try{
    final font=await PdfGoogleFonts.tajawalRegular();
    final bold=await PdfGoogleFonts.tajawalBold();
-   final reportBackground=pw.MemoryImage((await rootBundle.load('assets/waffra_report_template.png')).buffer.asUint8List());
+   final templateBytes=(await rootBundle.load('assets/waffra_report_template.png')).buffer.asUint8List();
+   final template=img.decodeImage(templateBytes);
+   if(template==null)throw StateError('تعذر قراءة صورة التقرير');
+   final headerArt=pw.MemoryImage(Uint8List.fromList(img.encodePng(img.copyCrop(template,
+    x:0,y:0,width:template.width,height:(template.height*0.54).round()))));
+   final footerArt=pw.MemoryImage(Uint8List.fromList(img.encodePng(img.copyCrop(template,
+    x:0,y:(template.height*0.75).round(),width:template.width,
+    height:template.height-(template.height*0.75).round()))));
    final doc=pw.Document();
    final totalIncome=sum(items,true),totalExpenses=sum(items,false);
    final categoryTotals=<String,double>{};
@@ -829,14 +874,24 @@ update((){parsed=false;messages=[];index=0;pasted.clear();description.clear();am
    doc.addPage(pw.MultiPage(
     pageTheme:pw.PageTheme(
      pageFormat:PdfPageFormat.a4,
-     margin:const pw.EdgeInsets.fromLTRB(26,184,26,92),
-     buildBackground:(ctx)=>pw.FullPage(ignoreMargins:true,
-      child:pw.Image(reportBackground,fit:pw.BoxFit.contain)),
+     margin:const pw.EdgeInsets.fromLTRB(26,225,26,112),
+     buildBackground:(ctx)=>pw.FullPage(ignoreMargins:true,child:pw.Stack(children:[
+      pw.Positioned(top:0,left:0,right:0,height:210,child:pw.Image(headerArt,fit:pw.BoxFit.fill)),
+      pw.Positioned(top:28,right:12,width:245,height:94,
+       child:pw.Container(color:PdfColors.teal900,padding:const pw.EdgeInsets.all(10),
+        child:pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.end,children:[
+         pw.Text(analytics?'تقرير التحليلات':'تقرير الدخل والمصروفات',
+          style:pw.TextStyle(font:bold,fontSize:18,color:PdfColors.white)),
+         pw.Text(title,style:pw.TextStyle(font:font,fontSize:10,color:PdfColors.white)),
+        ]))),
+      pw.Positioned(bottom:0,left:0,right:0,height:95,child:pw.Image(footerArt,fit:pw.BoxFit.fill)),
+      pw.Positioned(bottom:20,right:12,width:115,height:22,
+       child:pw.Container(color:PdfColors.teal900,alignment:pw.Alignment.center,
+        child:pw.Text(dayText(DateTime.now()),style:pw.TextStyle(font:font,fontSize:10,color:PdfColors.white)))),
+     ])),
      theme:pw.ThemeData.withFont(base:font,bold:bold),
      textDirection:pw.TextDirection.rtl,
     ),
-    header:(ctx)=>pw.Container(height:18,alignment:pw.Alignment.centerRight,
-      child:pw.Text(title,style:pw.TextStyle(font:bold,fontSize:14,color:PdfColors.teal900))),
     footer:(ctx)=>pw.Align(alignment:pw.Alignment.centerRight,
       child:pw.Text('${ctx.pageNumber} / ${ctx.pagesCount}',style:pw.TextStyle(font:font,fontSize:9,color:PdfColors.teal900))),
     build:(ctx)=>[
@@ -871,6 +926,10 @@ update((){parsed=false;messages=[];index=0;pasted.clear();description.clear();am
       pw.SizedBox(height:12),
      ],
      pw.Text('توزيع المصروفات حسب الفئات',style:pw.TextStyle(font:bold,fontSize:13,color:PdfColors.teal900)),
+     if(analytics&&totalExpenses>0)...[
+      pw.SizedBox(height:10),
+      pw.Center(child:pw.SvgImage(svg:expensePieSvg(categoryTotals),width:170,height:170)),
+     ],
      pw.SizedBox(height:8),
      ...((categoryTotals.entries.toList()..sort((a,b)=>b.value.compareTo(a.value))).map((e)=>pw.Padding(
       padding:const pw.EdgeInsets.symmetric(vertical:3),child:pw.Row(children:[
