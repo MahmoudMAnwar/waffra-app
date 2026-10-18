@@ -21,7 +21,9 @@ import 'currency_converter.dart';
 
 void main() { WidgetsFlutterBinding.ensureInitialized(); runApp(const WaffraApp()); }
 const emerald=Color(0xFF087A54), forest=Color(0xFF064D3B), sand=Color(0xFFF8F6EF), gold=Color(0xFFD8BA78);
+final ValueNotifier<bool> hideWaffraAmounts=ValueNotifier<bool>(false);
 String formatMoney(num value) {
+  if(hideWaffraAmounts.value)return '••••';
   final n=value.toDouble();
   if(n==n.roundToDouble()) return n.toStringAsFixed(0);
   return n.toStringAsFixed(2).replaceFirst(RegExp(r'0+$'),'').replaceFirst(RegExp(r'\.$'),'');
@@ -229,7 +231,24 @@ class _WaffraAppState extends State<WaffraApp> {
  }
  @override Widget build(BuildContext context)=>MaterialApp(
   debugShowCheckedModeBanner:false,title:'وفرة | Waffra',locale:const Locale('ar','SA'),
-  builder:(context,child)=>Directionality(textDirection:TextDirection.rtl,child:child??const SizedBox.shrink()),
+  builder:(context,child)=>ValueListenableBuilder<bool>(
+   valueListenable:hideWaffraAmounts,
+   builder:(context,hidden,_)=>Directionality(textDirection:TextDirection.rtl,
+    child:Stack(children:[
+     child??const SizedBox.shrink(),
+     Positioned(top:MediaQuery.paddingOf(context).top+5,left:6,
+      child:Material(color:forest,borderRadius:BorderRadius.circular(22),
+       child:Row(mainAxisSize:MainAxisSize.min,children:[
+        IconButton(
+         tooltip:hidden?'إظهار المبالغ المالية':'إخفاء المبالغ المالية',
+         onPressed:()=>hideWaffraAmounts.value=!hidden,
+         icon:Icon(hidden?Icons.visibility_off:Icons.visibility,color:Colors.white)),
+        IconButton(tooltip:'حماية الشاشة',onPressed:(){
+         ScaffoldMessenger.maybeOf(context)?.showSnackBar(const SnackBar(
+          content:Text('لحماية بياناتك، تم تعطيل لقطات الشاشة وتسجيل الشاشة داخل وفرة على أندرويد.')));
+        },icon:const Icon(Icons.shield_outlined,color:Colors.white)),
+       ]))),
+    ]))),
   theme:ThemeData(useMaterial3:true,colorSchemeSeed:emerald,scaffoldBackgroundColor:sand,appBarTheme:const AppBarTheme(backgroundColor:forest,foregroundColor:Colors.white),navigationBarTheme:NavigationBarThemeData(backgroundColor:forest,labelTextStyle:WidgetStateProperty.all(const TextStyle(color:Colors.white,fontSize:11)),iconTheme:WidgetStateProperty.all(const IconThemeData(color:Colors.white))),floatingActionButtonTheme:const FloatingActionButtonThemeData(backgroundColor:forest,foregroundColor:Colors.white),textTheme:GoogleFonts.tajawalTextTheme()),
   darkTheme:ThemeData(useMaterial3:true,brightness:Brightness.dark,colorSchemeSeed:emerald,appBarTheme:const AppBarTheme(backgroundColor:forest,foregroundColor:Colors.white),navigationBarTheme:NavigationBarThemeData(backgroundColor:forest,labelTextStyle:WidgetStateProperty.all(const TextStyle(color:Colors.white,fontSize:11)),iconTheme:WidgetStateProperty.all(const IconThemeData(color:Colors.white))),floatingActionButtonTheme:const FloatingActionButtonThemeData(backgroundColor:forest,foregroundColor:Colors.white),textTheme:GoogleFonts.tajawalTextTheme(ThemeData.dark().textTheme)),
   themeMode:dark?ThemeMode.dark:ThemeMode.light,
