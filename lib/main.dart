@@ -203,43 +203,82 @@ class PinLockScreen extends StatefulWidget {
  @override State<PinLockScreen> createState()=>_PinLockScreenState();
 }
 class _PinLockScreenState extends State<PinLockScreen> {
- final c=TextEditingController();String error='';bool busy=false,biometricAvailable=false;
+ final pinController=TextEditingController();
+ bool busy=false,biometricAvailable=false,checking=true,showPin=false;
+ String error='';
  @override void initState(){super.initState();checkBiometrics();}
  Future<void> checkBiometrics()async {
   final available=await WaffraBiometrics.isAvailable();
-  if(mounted)setState(()=>biometricAvailable=available);
+  if(mounted)setState((){biometricAvailable=available;checking=false;});
  }
  Future<void> biometric()async {
-  if(busy)return;setState(()=>busy=true);
-  final ok=await WaffraBiometrics.unlock();
-  if(!mounted)return;setState(()=>busy=false);
-  if(ok)widget.onUnlock();
+  if(busy)return;
+  if(!biometricAvailable){
+   await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+    title:const Text('البصمة غير متاحة'),
+    content:const Text('تأكد من تسجيل بصمتك في إعدادات الهاتف، وبعدها افتح التطبيق مرة أخرى. يمكنك الدخول برمز PIN الآن.'),
+    actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('حسنًا'))]));
+   return;
+  }
+  setState(()=>busy=true);
+  // Android displays its own system biometric prompt, positioned by the OS.
+  final success=await WaffraBiometrics.unlock();
+  if(!mounted)return;
+  setState(()=>busy=false);
+  if(success){widget.onUnlock();}
+  else{setState(()=>error='تعذّر التحقق بالبصمة. حاول مجددًا أو استخدم رمز PIN.');}
  }
- @override void dispose(){c.dispose();super.dispose();}
- @override Widget build(BuildContext context)=>Scaffold(backgroundColor:forest,
-  body:WaffraWelcomeBackground(child:SafeArea(child:Padding(
-   padding:const EdgeInsets.symmetric(horizontal:28,vertical:24),
-   child:Column(children:[
-    const Spacer(flex:2),
-    Image.asset('assets/waffra_app_icon.png',width:145,height:145,fit:BoxFit.contain),
-    const Spacer(flex:3),
-    const Text('فتح وفرة',style:TextStyle(color:Colors.white,fontSize:25,fontWeight:FontWeight.bold)),
-    const SizedBox(height:16),
-    TextField(controller:c,keyboardType:TextInputType.number,obscureText:true,maxLength:8,
-     textAlign:TextAlign.center,style:const TextStyle(color:Colors.white),
-     decoration:const InputDecoration(labelText:'رمز القفل',labelStyle:TextStyle(color:Colors.white),
-      enabledBorder:OutlineInputBorder(borderSide:BorderSide(color:Colors.white70)),
-      focusedBorder:OutlineInputBorder(borderSide:BorderSide(color:Colors.white)))),
-    if(error.isNotEmpty)Text(error,style:const TextStyle(color:Colors.orangeAccent)),
-    const SizedBox(height:8),
-    SizedBox(width:double.infinity,child:FilledButton(onPressed:(){
-     if(sha256.convert(utf8.encode(c.text.trim())).toString()==widget.pinHash){widget.onUnlock();}
-     else{setState((){error='الرمز غير صحيح';c.clear();});}
-    },child:const Text('فتح التطبيق'))),
-    if(biometricAvailable)IconButton(onPressed:busy?null:biometric,
-      icon:const Icon(Icons.fingerprint,size:43,color:Colors.white),tooltip:'فتح بالبصمة'),
-    const SizedBox(height:18),
-   ])))));
+ void verifyPin(){
+  if(sha256.convert(utf8.encode(pinController.text.trim())).toString()==widget.pinHash){
+   widget.onUnlock();
+  }else{setState((){error='رمز PIN غير صحيح';pinController.clear();});}
+ }
+ @override void dispose(){pinController.dispose();super.dispose();}
+ @override Widget build(BuildContext context)=>Scaffold(
+  backgroundColor:forest,
+  body:WaffraWelcomeBackground(child:SafeArea(child:Center(child:
+   SingleChildScrollView(padding:const EdgeInsets.symmetric(horizontal:26,vertical:20),
+    child:Column(mainAxisSize:MainAxisSize.min,children:[
+     Image.asset('assets/waffra_logo_transparent.png',width:155,height:155,fit:BoxFit.contain),
+     const SizedBox(height:28),
+     const Text('أهلًا برجعتك إلى وفرة',textAlign:TextAlign.center,
+      style:TextStyle(color:Colors.white,fontSize:24,fontWeight:FontWeight.w800)),
+     const SizedBox(height:12),
+     const Text('اختر طريقة فتح التطبيق',style:TextStyle(color:Colors.white70,fontSize:15)),
+     const SizedBox(height:30),
+     SizedBox(width:double.infinity,height:55,child:FilledButton.icon(
+      onPressed:busy||checking?null:biometric,
+      style:FilledButton.styleFrom(backgroundColor:Colors.white,foregroundColor:forest),
+      icon:const Icon(Icons.fingerprint,size:29),
+      label:Text(checking?'جاري فحص البصمة...':'الدخول بالبصمة',
+       style:const TextStyle(fontSize:17,fontWeight:FontWeight.bold)))),
+     const SizedBox(height:14),
+     SizedBox(width:double.infinity,height:53,child:OutlinedButton.icon(
+      onPressed:busy?null:()=>setState((){showPin=!showPin;error='';}),
+      style:OutlinedButton.styleFrom(foregroundColor:Colors.white,
+       side:const BorderSide(color:Colors.white70)),
+      icon:const Icon(Icons.lock_outline),
+      label:const Text('الدخول برمز PIN',style:TextStyle(fontSize:16)))),
+     if(showPin)...[
+      const SizedBox(height:18),
+      TextField(controller:pinController,autofocus:true,obscureText:true,
+       keyboardType:TextInputType.number,maxLength:8,textAlign:TextAlign.center,
+       style:const TextStyle(color:Colors.white,fontSize:20),
+       decoration:const InputDecoration(labelText:'أدخل رمز PIN',
+        labelStyle:TextStyle(color:Colors.white),counterStyle:TextStyle(color:Colors.white70),
+        enabledBorder:OutlineInputBorder(borderSide:BorderSide(color:Colors.white70)),
+        focusedBorder:OutlineInputBorder(borderSide:BorderSide(color:Colors.white))),
+       onSubmitted:(_)=>verifyPin()),
+      const SizedBox(height:8),
+      SizedBox(width:double.infinity,child:FilledButton(
+       onPressed:verifyPin,child:const Text('فتح التطبيق'))),
+     ],
+     if(error.isNotEmpty)...[
+      const SizedBox(height:12),
+      Text(error,textAlign:TextAlign.center,
+       style:const TextStyle(color:Colors.orangeAccent)),
+     ],
+    ]))))));
 }
 class IntroScreen extends StatefulWidget {
  final Future<void> Function() onStart,onLogin;
@@ -256,7 +295,7 @@ class _IntroScreenState extends State<IntroScreen> {
   body:WaffraWelcomeBackground(child:SafeArea(child:Padding(
    padding:const EdgeInsets.fromLTRB(24,32,24,20),child:Column(children:[
     const Spacer(flex:2),
-    Image.asset('assets/waffra_app_icon.png',width:180,height:180,fit:BoxFit.contain),
+    Image.asset('assets/waffra_logo_transparent.png',width:180,height:180,fit:BoxFit.contain),
     const SizedBox(height:20),
     const Text('فلوسك وين تروح؟\nوفرة يعلّمك.',textAlign:TextAlign.center,
      style:TextStyle(color:Colors.white,fontSize:23,fontWeight:FontWeight.w800)),
