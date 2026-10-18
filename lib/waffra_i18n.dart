@@ -237,32 +237,7 @@ String waffraTr(String source) {
  if(!waffraIsEnglish)return source;
  final exact=_english[source];
  if(exact!=null)return exact;
- final budget=RegExp(r'^الميزانية: (.+) • تنبيه عند (.+)\s*(\d+)$').firstMatch(source);
- if(tx!=null)return 'Transactions: ${tx.group(1)}';
- final mon=RegExp(r'^شهر\s*(\d+)$').firstMatch(source);
- if(mon!=null)return 'Month ${mon.group(1)}';
- final week=RegExp(r'^أسبوع\s*(\d+)$').firstMatch(source);
- if(week!=null)return 'Week ${week.group(1)}';
- return source;
-}
-
-/// Translates existing Text widgets without changing model/category identifiers.
-class WaffraText extends Text {
- const WaffraText(super.data,{
-  super.key,super.style,super.strutStyle,super.textAlign,super.textDirection,
-  super.locale,super.softWrap,super.overflow,super.textScaler,super.maxLines,
-  super.semanticsLabel,super.textWidthBasis,super.textHeightBehavior,super.selectionColor,
- });
- @override
- Widget build(BuildContext context)=>Text(
-  waffraTr(data??''),
-  key:key,style:style,strutStyle:strutStyle,textAlign:textAlign,textDirection:textDirection,
-  locale:locale,softWrap:softWrap,overflow:overflow,textScaler:textScaler,maxLines:maxLines,
-  semanticsLabel:semanticsLabel,textWidthBasis:textWidthBasis,
-  textHeightBehavior:textHeightBehavior,selectionColor:selectionColor,
- );
-}
-).firstMatch(source);
+ final budget=RegExp(r'^الميزانية: (.+) • تنبيه عند (.+)$').firstMatch(source);
  if(budget!=null)return 'Budget: ${budget.group(1)} • Alert at ${budget.group(2)}';
  final tx=RegExp(r'^عدد العمليات:\s*(\d+)$').firstMatch(source);
  if(tx!=null)return 'Transactions: ${tx.group(1)}';
