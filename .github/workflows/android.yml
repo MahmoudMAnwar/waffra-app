@@ -122,6 +122,45 @@ jobs:
               print('Configured', styles)
           PY
 
+      - name: Preserve SharedPreferences Android plugin in Release
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          app = Path('android/app')
+          kt = app / 'build.gradle.kts'
+          groovy = app / 'build.gradle'
+          if kt.exists():
+              path = kt
+              source = path.read_text()
+              needle = 'buildTypes {'
+              if needle not in source:
+                  raise SystemExit('Cannot find Android Kotlin buildTypes')
+              source = source.replace(needle, needle + '''
+                  getByName("release") {
+                      isMinifyEnabled = false
+                      isShrinkResources = false
+                  }
+              ''', 1)
+          elif groovy.exists():
+              path = groovy
+              source = path.read_text()
+              needle = 'buildTypes {'
+              if needle not in source:
+                  raise SystemExit('Cannot find Android Groovy buildTypes')
+              source = source.replace(needle, needle + '''
+                  release {
+                      minifyEnabled false
+                      shrinkResources false
+                  }
+              ''', 1)
+          else:
+              raise SystemExit('Cannot find Android app Gradle build file')
+          path.write_text(source)
+          print('Disabled R8 shrinking and obfuscation for Release:', path)
+          print('Keeping ARM64 and Flutter Dart tree shaking enabled')
+          PY
+
       - name: Install dependencies
         run: flutter pub get
 
