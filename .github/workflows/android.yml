@@ -1,4 +1,4 @@
-# Re-trigger optimized ARM64 build after CI speed improvements
+# Re-trigger optimized ARM64 build; preserve Tajawal typography
 name: Build Waffra Android APK
 
 on:
