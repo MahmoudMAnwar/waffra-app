@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -5,12 +6,13 @@ import 'package:google_sign_in/google_sign_in.dart';
 class WaffraGoogleAuth {
   WaffraGoogleAuth._();
 
-  static final FirebaseAuth _auth = FirebaseAuth.instance;
+  static FirebaseAuth get _auth => FirebaseAuth.instance;
   static final GoogleSignIn _google = GoogleSignIn.instance;
   static bool _initialized = false;
 
   static Future<void> initialize() async {
     if (_initialized) return;
+    if (Firebase.apps.isEmpty) await Firebase.initializeApp();
     await _google.initialize();
     _initialized = true;
   }
