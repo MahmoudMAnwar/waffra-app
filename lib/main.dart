@@ -795,6 +795,47 @@ class _ProfileFormState extends State<ProfileForm> {
   birthday=widget.initial?.birthday??DateTime(2000);
  }
  @override void dispose(){name.dispose();email.dispose();confirmEmail.dispose();phone.dispose();password.dispose();confirmPassword.dispose();super.dispose();}
+ Future<void> editAvatar()async {
+  final choice=await showModalBottomSheet<String>(context:context,builder:(ctx)=>SafeArea(
+   child:Column(mainAxisSize:MainAxisSize.min,children:[
+    ListTile(leading:const Icon(Icons.photo_library_outlined),title:WaffraText(waffraIsEnglish?'Choose from gallery':'اختيار صورة من المعرض'),onTap:()=>Navigator.pop(ctx,'gallery')),
+    ListTile(leading:const Icon(Icons.restore),title:WaffraText(waffraIsEnglish?'Restore default avatar':'استعادة الصورة الافتراضية'),onTap:()=>Navigator.pop(ctx,'default')),
+   ])));
+  if(choice==null||!mounted)return;
+  if(choice=='default'){setState(()=>avatar=gender=='أنثى'?'female':'male');return;}
+  final selected=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:92);
+  if(selected==null||!mounted)return;
+  final cropKey=GlobalKey();
+  final png=await showDialog<Uint8List>(context:context,builder:(ctx)=>AlertDialog(
+   title:WaffraText(waffraIsEnglish?'Crop profile photo':'قص صورة الملف الشخصي'),
+   content:Column(mainAxisSize:MainAxisSize.min,children:[
+    RepaintBoundary(key:cropKey,child:ClipOval(child:SizedBox(width:230,height:230,
+     child:InteractiveViewer(minScale:1,maxScale:5,child:
+      Image.file(File(selected.path),fit:BoxFit.cover))))),
+    const SizedBox(height:12),
+    WaffraText(waffraIsEnglish?'Pinch to zoom and drag to position':'كبّر الصورة وحرّكها داخل الدائرة'),
+   ]),
+   actions:[
+    TextButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+    FilledButton(onPressed:()async{
+     try{
+      final boundary=cropKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if(boundary==null)return;
+      final frame=await boundary.toImage(pixelRatio:2);
+      final data=await frame.toByteData(format:ui.ImageByteFormat.png);
+      if(ctx.mounted&&data!=null)Navigator.pop(ctx,data.buffer.asUint8List());
+     }catch(e){debugPrint('Avatar crop: $e');}
+    },child:WaffraText(waffraIsEnglish?'Save photo':'حفظ الصورة')),
+   ]));
+  if(png==null||!mounted)return;
+  try{
+   final dir=Directory('${(await getApplicationDocumentsDirectory()).path}/avatars');
+   if(!await dir.exists())await dir.create(recursive:true);
+   final file=File('${dir.path}/avatar_${newId()}.png');
+   await file.writeAsBytes(png,flush:true);
+   if(mounted)setState(()=>avatar='file:${file.path}');
+  }catch(e){if(mounted)snack(context,waffraIsEnglish?'Could not save photo':'تعذر حفظ الصورة');}
+ }
  Future<void> save()async {
   final validEmail=RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email.text.trim());
   final validPhone=RegExp(r'^05[0-9]{8}$').hasMatch(phone.text.trim());
@@ -827,7 +868,13 @@ class _ProfileFormState extends State<ProfileForm> {
   appBar:AppBar(title:WaffraText(widget.initial==null?'كمّل بياناتك':'تعديل الحساب'),
    leading:widget.onBack==null?null:IconButton(onPressed:widget.onBack,icon:const Icon(Icons.arrow_back))),
   body:ListView(padding:const EdgeInsets.all(22),children:[
-   Center(child:saudiAvatar(gender,radius:48)),
+   Center(child:Stack(alignment:Alignment.bottomRight,children:[
+    waffraAvatar(gender,avatar,radius:48),
+    Material(color:forest,shape:const CircleBorder(),child:IconButton(
+     tooltip:waffraIsEnglish?'Edit profile photo':'تعديل الصورة',
+     icon:const Icon(Icons.camera_alt,color:Colors.white,size:19),
+     onPressed:editAvatar)),
+   ])),
    const SizedBox(height:10),
    Wrap(alignment:WrapAlignment.center,spacing:12,children:['ذكر','أنثى']
     .map((a)=>ChoiceChip(label:Row(mainAxisSize:MainAxisSize.min,children:[saudiAvatar(a,radius:20),const SizedBox(width:6),WaffraText(waffraIsEnglish?(a=='ذكر'?'Male':'Female'):a)]),selected:gender==a,onSelected:(_)=>setState((){gender=a;avatar=a=='ذكر'?'male':'female';}))).toList()),
