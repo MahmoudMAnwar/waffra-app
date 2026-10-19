@@ -2433,7 +2433,7 @@ Future<void> bulkSmsSheet()async {
    (darkMode?const Color(0xFF202B26):Colors.white);
   return Padding(padding:const EdgeInsets.symmetric(vertical:3),child:Container(
    decoration:BoxDecoration(color:rowColor,borderRadius:BorderRadius.circular(12),
-    border:Border.all(color:forest.withValues(alpha:darkMode?.18:.08))),
+    border:Border.all(color:forest.withValues(alpha:darkMode ? 0.18 : 0.08))),
    child:Padding(padding:const EdgeInsets.symmetric(horizontal:7,vertical:7),child:Row(children:[
     CircleAvatar(radius:18,
      backgroundColor:Color(cat.color).withValues(alpha:0.13),
