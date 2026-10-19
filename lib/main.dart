@@ -18,6 +18,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:crypto/crypto.dart';
 import 'waffra_biometrics.dart';
 import 'waffra_amount_formatter.dart';
+import 'waffra_validators.dart';
 import 'waffra_welcome_background.dart';
 import 'currency_converter.dart';
 import 'waffra_i18n.dart';
@@ -782,7 +783,7 @@ class _ProfileFormState extends State<ProfileForm> {
   confirmEmail=TextEditingController();
   phone=TextEditingController(text:widget.initial?.phone??'');
   password=TextEditingController();confirmPassword=TextEditingController();
-  gender=widget.initial?.gender??'ذكر';avatar=widget.initial?.avatar??'person';
+  gender=['ذكر','أنثى'].contains(widget.initial?.gender)?widget.initial!.gender:'ذكر';avatar=widget.initial?.avatar??'person';
   birthday=widget.initial?.birthday??DateTime(2000);
  }
  @override void dispose(){name.dispose();email.dispose();confirmEmail.dispose();phone.dispose();password.dispose();confirmPassword.dispose();super.dispose();}
@@ -790,7 +791,7 @@ class _ProfileFormState extends State<ProfileForm> {
   final validEmail=RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email.text.trim());
   final validPhone=RegExp(r'^05[0-9]{8}$').hasMatch(phone.text.trim());
   if(name.text.trim().isEmpty||(!validPhone && phone.text.trim().isNotEmpty)){
-   snack(context,waffraIsEnglish?'Enter a name, valid email and Saudi phone number':'أدخل الاسم والبريد الصحيح ورقم جوال يبدأ بـ 05 من 10 أرقام');return;
+   snack(context,waffraIsEnglish?'Enter a name and valid mobile number starting with 05':'أدخل الاسم ورقم جوال يبدأ بـ 05 من 10 أرقام');return;
   }
   if(widget.initial==null){
    if(!validPhone){snack(context,waffraIsEnglish?'Enter a 10-digit mobile number starting with 05':'أدخل رقم الجوال من 10 أرقام يبدأ بـ 05');return;}
@@ -833,7 +834,7 @@ class _ProfileFormState extends State<ProfileForm> {
    ],
    TextField(controller:phone,keyboardType:TextInputType.phone,inputFormatters:[FilteringTextInputFormatter.digitsOnly,LengthLimitingTextInputFormatter(10)],
     decoration:InputDecoration(labelText:waffraIsEnglish?'Mobile number':'رقم الجوال',hintText:'05XXXXXXXX',
-     helperText:waffraIsEnglish?'10 digits starting with 05':'رقم سعودي من 10 أرقام يبدأ بـ 05',border:const OutlineInputBorder())),
+     helperText:waffraIsEnglish?'10 digits starting with 05':'رقم جوال يبدأ بـ 05 (10 أرقام)',border:const OutlineInputBorder())),
    if(widget.initial==null) ...[
     const SizedBox(height:12),
     TextField(controller:password,obscureText:!showPassword,
@@ -860,7 +861,7 @@ class _ProfileFormState extends State<ProfileForm> {
    const SizedBox(height:12),
    DropdownButtonFormField<String>(initialValue:gender,
     decoration:InputDecoration(labelText:waffraTr('الجنس'),border:OutlineInputBorder()),
-    items:['ذكر','أنثى','غير محدد'].map((x)=>DropdownMenuItem(value:x,child:WaffraText(waffraIsEnglish?(x=='ذكر'?'Male':x=='أنثى'?'Female':'Not specified'):x))).toList(),
+    items:['ذكر','أنثى'].map((x)=>DropdownMenuItem(value:x,child:WaffraText(waffraIsEnglish?(x=='ذكر'?'Male':'Female'):x))).toList(),
     onChanged:(v){if(v!=null)setState((){gender=v;avatar=v=='أنثى'?'female':'male';});}),
    const SizedBox(height:12),
    OutlinedButton.icon(onPressed:()async {
@@ -875,7 +876,11 @@ void disposeLater(List<TextEditingController> controllers){
  Future<void>.delayed(const Duration(milliseconds:700),(){for(final c in controllers){c.dispose();}});
 }
 void snack(BuildContext context,String text){
- ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:WaffraText(text)));
+ final messenger=ScaffoldMessenger.of(context);
+ messenger.hideCurrentSnackBar();
+ messenger.showSnackBar(SnackBar(behavior:SnackBarBehavior.floating,
+  margin:const EdgeInsets.fromLTRB(16,8,16,92),
+  content:WaffraText(text,maxLines:4),duration:const Duration(seconds:3)));
 }
 
 class HomeScreen extends StatefulWidget {
@@ -2316,11 +2321,16 @@ Future<void> bulkSmsSheet()async {
   final name=TextEditingController(text:initial?.name??suggested??'');
   final budget=TextEditingController(text:initial==null||initial.budget==0?'':formatWaffraMoney(initial.budget));
   String icon=initial?.icon??'category';int color=initial?.color??colors[0];int alertPercent=initial?.alertPercent??80;
+  bool attempted=false;
   final result=await showDialog<BudgetCategory>(context:context,
    builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
     title:WaffraText(initial==null?'قسم جديد':'تعديل القسم'),
     content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-     TextField(controller:name,decoration:InputDecoration(labelText:waffraTr('اسم القسم'))),
+     TextField(controller:name,onChanged:(_)=>update((){}),decoration:InputDecoration(
+      labelText:waffraIsEnglish?'Category name *':'اسم القسم *',
+      errorText:attempted?(
+       WaffraValidators.requiredText(name.text)!=null?(waffraIsEnglish?'Category name is required':'اسم القسم حقل إجباري'):
+       WaffraValidators.uniqueCategory(name.text,categories.where((c)=>c.id!=initial?.id&&c.income==(initial?.income??income)).map((c)=>c.name))!=null?(waffraIsEnglish?'Category already exists':'اسم القسم مستخدم بالفعل'):null):null)),
      const SizedBox(height:12),const WaffraText('اختر أيقونة'),
      Wrap(spacing:5,children:iconNames.map((x)=>IconButton(
       style:IconButton.styleFrom(backgroundColor:icon==x?emerald.withValues(alpha:.2):null),
@@ -2332,7 +2342,9 @@ Future<void> bulkSmsSheet()async {
        child:color==x?const Icon(Icons.check,color:Colors.white,size:17):null))).toList()),
      if(!(initial?.income??income))...[
       TextField(controller:budget,onChanged:(_)=>update((){}),
-       keyboardType:const TextInputType.numberWithOptions(decimal:true),inputFormatters:[const WaffraAmountFormatter()],decoration:InputDecoration(labelText:waffraTr('ميزانية شهرية (اختياري)'))),
+       keyboardType:const TextInputType.numberWithOptions(decimal:true),inputFormatters:[const WaffraAmountFormatter()],decoration:InputDecoration(labelText:waffraTr('ميزانية شهرية (اختياري)'),
+       errorText:attempted&&WaffraValidators.positiveAmount(budget.text,required:false)!=null?
+        (waffraIsEnglish?'Enter a valid amount':'أدخل مبلغًا صحيحًا أكبر من صفر'):null)),
       const SizedBox(height:10),
       DropdownButtonFormField<int>(initialValue:alertPercent,
        decoration:InputDecoration(labelText:waffraTr('ودّك ننبهك عند كم ٪ من الميزانية؟')),
@@ -2345,7 +2357,10 @@ Future<void> bulkSmsSheet()async {
     actions:[
      TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إلغاء')),
      FilledButton(onPressed:(){
-      final n=name.text.trim();if(n.isEmpty)return;
+      final n=name.text.trim();update(()=>attempted=true);
+      if(WaffraValidators.requiredText(n)!=null || WaffraValidators.uniqueCategory(n,
+       categories.where((c)=>c.id!=initial?.id&&c.income==(initial?.income??income)).map((c)=>c.name))!=null ||
+       WaffraValidators.positiveAmount(budget.text,required:false)!=null)return;
       Navigator.pop(ctx,BudgetCategory(id:initial?.id??newId(),name:n,icon:icon,color:color,
        income:initial?.income??income,budget:budget.text.trim().isEmpty?0:(amountOf(budget.text)??0),alertPercent:alertPercent));
      },child:const WaffraText('حفظ')),
@@ -2541,31 +2556,31 @@ Future<void> bulkSmsSheet()async {
   final prefs=await SharedPreferences.getInstance();
   final customGoals=prefs.getStringList('waffra_custom_goals_v1')??<String>[];
   final suggested=['سيارة','منزل','سفر','زواج','صندوق الطوارئ','تعليم','حج أو عمرة','مشروع خاص',...customGoals];
-  String selectedGoal='';
+  String selectedGoal='';bool attempted=false;
   final g=await showDialog<SavingGoal>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,updateGoal)=>AlertDialog(
    title:const WaffraText('إضافة هدف ادخار'),scrollable:true,
    content:Column(mainAxisSize:MainAxisSize.min,children:[
-    DropdownButtonFormField<String>(isExpanded:true,decoration:InputDecoration(labelText:waffraTr('اختر هدف الادخار')),
+    DropdownButtonFormField<String>(isExpanded:true,decoration:InputDecoration(labelText:waffraIsEnglish?'Savings goal *':'اختر هدف الادخار *',
+      errorText:attempted&&selectedGoal.isEmpty?(waffraIsEnglish?'Goal is required':'الهدف حقل إجباري'):null),
      items:[...suggested,'هدف آخر'].map((v)=>DropdownMenuItem(value:v,child:WaffraText(v))).toList(),
      onChanged:(v){if(v==null)return;updateGoal(()=>selectedGoal=v);name.text=v=='هدف آخر'?'':v;}),
     if(selectedGoal=='هدف آخر')...[
      const SizedBox(height:12),
-     TextField(controller:name,textInputAction:TextInputAction.next,
-      decoration:InputDecoration(labelText:waffraTr('اسم الهدف'),hintText:waffraTr('مثال: تجديد المنزل'))),
+     TextField(controller:name,textInputAction:TextInputAction.next,onChanged:(_)=>updateGoal((){}),
+      decoration:InputDecoration(labelText:waffraIsEnglish?'Goal name *':'اسم الهدف *',hintText:waffraTr('مثال: تجديد المنزل'),
+       errorText:attempted&&WaffraValidators.requiredText(name.text)!=null?(waffraIsEnglish?'Goal name is required':'اسم الهدف حقل إجباري'):null)),
     ],
     const SizedBox(height:12),
     TextField(controller:target,keyboardType:const TextInputType.numberWithOptions(decimal:true),
-       inputFormatters:[const WaffraAmountFormatter()],
-     decoration:InputDecoration(labelText:waffraTr('المبلغ المستهدف بالريال'),hintText:waffraTr('مثال: 25000'))),
+       inputFormatters:[const WaffraAmountFormatter()],onChanged:(_)=>updateGoal((){}),
+     decoration:InputDecoration(labelText:waffraIsEnglish?'Target amount *':'المبلغ المستهدف *',hintText:waffraTr('مثال: 25000'),
+      errorText:attempted&&WaffraValidators.positiveAmount(target.text)!=null?(waffraIsEnglish?'Enter an amount greater than zero':'المبلغ حقل إجباري ويجب أن يكون أكبر من صفر'):null)),
    ]),
    actions:[
     TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إلغاء')),
     FilledButton(onPressed:(){
-     final n=amountOf(target.text);
-     if(name.text.trim().isEmpty||n==null){
-      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content:WaffraText('اكتب اسم الهدف ومبلغًا صحيحًا أكبر من صفر')));
-      return;
-     }
+     final n=amountOf(target.text);updateGoal(()=>attempted=true);
+     if(WaffraValidators.requiredText(name.text)!=null||WaffraValidators.positiveAmount(target.text)!=null||selectedGoal.isEmpty||n==null)return;
      if((selectedGoal=='هدف آخر'||!suggested.contains(name.text.trim()))&&!customGoals.contains(name.text.trim())){
       prefs.setStringList('waffra_custom_goals_v1',[...customGoals,name.text.trim()]);
      }
@@ -2678,17 +2693,19 @@ Future<void> bulkSmsSheet()async {
  ]);
  Future<void> recurringDialog()async {
   final title=TextEditingController(),amount=TextEditingController(),day=TextEditingController(text:'1');
-  bool income=false;String category=forType(false).first.name;
+  bool income=false;String category=forType(false).first.name;bool attempted=false;
   final r=await showDialog<RecurringBill>(context:context,
    builder:(ctx)=>StatefulBuilder(builder:(ctx,update){
     final options=forType(income);
     final selected=options.any((x)=>x.name==category)?category:options.first.name;
     return AlertDialog(title:const WaffraText('عملية شهرية متكررة'),
      content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-      TextField(controller:title,decoration:InputDecoration(labelText:waffraTr('الوصف'))),
+      TextField(controller:title,onChanged:(_)=>update((){}),decoration:InputDecoration(labelText:waffraIsEnglish?'Description *':'الوصف *',
+       errorText:attempted&&WaffraValidators.requiredText(title.text)!=null?(waffraIsEnglish?'Description is required':'الوصف حقل إجباري'):null)),
       TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
-       inputFormatters:[const WaffraAmountFormatter()],
-       decoration:InputDecoration(labelText:waffraTr('المبلغ'))),
+       inputFormatters:[const WaffraAmountFormatter()],onChanged:(_)=>update((){}),
+       decoration:InputDecoration(labelText:waffraIsEnglish?'Amount *':'المبلغ *',
+        errorText:attempted&&WaffraValidators.positiveAmount(amount.text)!=null?(waffraIsEnglish?'Enter an amount greater than zero':'المبلغ حقل إجباري ويجب أن يكون أكبر من صفر'):null)),
       DropdownButtonFormField<bool>(initialValue:income,
        items:const [DropdownMenuItem(value:true,child:WaffraText('دخل')),
         DropdownMenuItem(value:false,child:WaffraText('مصروف'))],
@@ -2696,14 +2713,15 @@ Future<void> bulkSmsSheet()async {
       DropdownButtonFormField<String>(key:ValueKey('$income-$selected'),initialValue:selected,
        items:options.map((c)=>DropdownMenuItem(value:c.name,child:WaffraText(c.name))).toList(),
        onChanged:(v){if(v!=null)update(()=>category=v);}),
-      TextField(controller:day,keyboardType:TextInputType.number,
-       decoration:InputDecoration(labelText:waffraTr('يوم الشهر (1 - 31)'))),
+      TextField(controller:day,keyboardType:TextInputType.number,onChanged:(_)=>update((){}),
+       decoration:InputDecoration(labelText:waffraIsEnglish?'Day of month *':'يوم الشهر * (1 - 31)',
+       errorText:attempted&&WaffraValidators.dayOfMonth(day.text)!=null?(waffraIsEnglish?'Choose a day from 1 to 31':'أدخل يومًا صحيحًا من 1 إلى 31'):null)),
      ])),
      actions:[
       TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إلغاء')),
       FilledButton(onPressed:(){
-       final n=amountOf(amount.text),d=int.tryParse(digits(day.text));
-       if(title.text.trim().isNotEmpty&&n!=null&&d!=null&&d>=1&&d<=31){
+       final n=amountOf(amount.text),d=int.tryParse(digits(day.text));update(()=>attempted=true);
+       if(WaffraValidators.requiredText(title.text)==null&&WaffraValidators.positiveAmount(amount.text)==null&&WaffraValidators.dayOfMonth(day.text)==null&&n!=null&&d!=null){
         Navigator.pop(ctx,RecurringBill(id:newId(),title:title.text.trim(),category:category,
          amount:n,income:income,day:d));
        }
