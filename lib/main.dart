@@ -1077,6 +1077,8 @@ class _HomeScreenState extends State<HomeScreen> {
  int tab=0,year=DateTime.now().year,month=DateTime.now().month;
  String search='',typeFilter='الكل',categoryFilter='الكل',period='شهري';
  String categorySearch='',categoryDisplay='all',goalDisplay='all',recurringDisplay='all';
+  String? forecastCategory;
+  int forecastReduction=20;
  bool recurringRemindersEnabled=false;
  bool ready=false;
  final _tourKeys=List<GlobalKey>.generate(6,(_)=>GlobalKey());
@@ -2530,6 +2532,101 @@ Future<void> bulkSmsSheet()async {
  }
  List<MoneyEntry> get analysisEntries=>entries.where((e)=>e.date.year==year&&
   (period=='سنوي'||e.date.month==month)).toList();
+
+ Widget nextMonthForecast(){
+  final now=DateTime.now();
+  final months=List.generate(3,(i)=>DateTime(now.year,now.month-i));
+  final used=months.where((m)=>entries.any((e)=>e.date.year==m.year&&e.date.month==m.month)).toList();
+  final history=entries.where((e)=>used.any((m)=>m.year==e.date.year&&m.month==e.date.month)).toList();
+  final divisor=max(1,used.length);
+  final nextIncome=sum(history,true)/divisor,nextExpenses=sum(history,false)/divisor;
+  final current=entries.where((e)=>e.date.year==now.year&&e.date.month==now.month).toList();
+  final thisIncome=sum(current,true),thisExpenses=sum(current,false);
+  final next=DateTime(now.year,now.month+1);
+  final categoryAmounts=<String,double>{};
+  for(final e in history.where((e)=>!e.income)){
+   categoryAmounts[e.category]=(categoryAmounts[e.category]??0)+e.amount/divisor;
+  }
+  final ranked=categoryAmounts.entries.toList()..sort((a,b)=>b.value.compareTo(a.value));
+  final top=ranked.take(5).toList();
+  final chosen=top.any((e)=>e.key==forecastCategory)?forecastCategory:(top.isEmpty?null:top.first.key);
+  final saving=(categoryAmounts[chosen]??0)*forecastReduction/100;
+  String compare(double future,double previous){
+   if(previous<=0)return waffraIsEnglish?'Not enough data':'بيانات المقارنة غير كافية';
+   final p=(future-previous)/previous*100;
+   return '${p>=0?'+':''}${p.toStringAsFixed(1)}%';
+  }
+  Widget tile(String label,double amount,Color color,IconData icon,String delta)=>Expanded(
+   child:Container(padding:const EdgeInsets.all(12),decoration:BoxDecoration(
+    borderRadius:BorderRadius.circular(17),border:Border.all(color:color.withValues(alpha:.6)),
+    color:color.withValues(alpha:.10)),
+    child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+     Icon(icon,color:color),const SizedBox(height:7),
+     WaffraText(label,style:const TextStyle(fontSize:12)),
+     FittedBox(fit:BoxFit.scaleDown,child:WaffraText(cash(amount),
+      style:const TextStyle(fontWeight:FontWeight.bold,fontSize:17))),
+     WaffraText(delta,style:const TextStyle(fontSize:11)),
+    ])));
+  return Card(shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(22)),
+   child:Padding(padding:const EdgeInsets.all(15),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    Row(children:[const Icon(Icons.auto_awesome,color:emerald),
+     const SizedBox(width:8),Expanded(child:WaffraText(waffraIsEnglish?
+      'Your smart financial forecast':'توقعاتك المالية الذكية',
+      style:const TextStyle(fontWeight:FontWeight.bold,fontSize:17)))]),
+    const SizedBox(height:6),
+    WaffraText(waffraIsEnglish?'Next month: ${next.month}/${next.year}':'الشهر القادم: ${next.month}/${next.year}',
+     style:const TextStyle(fontSize:12)),
+    const SizedBox(height:12),
+    Row(children:[
+     tile(waffraIsEnglish?'Expected income':'الدخل المتوقع',nextIncome,emerald,Icons.south_west,compare(nextIncome,thisIncome)),
+     const SizedBox(width:8),
+     tile(waffraIsEnglish?'Expected expenses':'المصروفات المتوقعة',nextExpenses,Colors.deepOrange,Icons.north_east,compare(nextExpenses,thisExpenses)),
+    ]),
+    const SizedBox(height:10),
+    Row(children:[const Icon(Icons.account_balance_wallet_outlined,color:emerald),
+     const SizedBox(width:8),Expanded(child:WaffraText(waffraIsEnglish?'Expected balance':'الرصيد المتوقع')),
+     WaffraText(cash(sum(entries,true)-sum(entries,false)+nextIncome-nextExpenses),
+      style:const TextStyle(fontWeight:FontWeight.bold))]),
+    const SizedBox(height:12),
+    WaffraText(waffraIsEnglish?'Current month vs forecast':'مقارنة الشهر الحالي بالشهر القادم',
+     style:const TextStyle(fontWeight:FontWeight.bold)),
+    const SizedBox(height:8),
+    FinanceChart(points:[
+     ChartPoint(waffraIsEnglish?'Current':'الحالي',thisIncome,thisExpenses),
+     ChartPoint(waffraIsEnglish?'Forecast':'المتوقع',nextIncome,nextExpenses),
+    ]),
+    const SizedBox(height:14),
+    WaffraText(waffraIsEnglish?'Forecast by category':'توقعات المصروفات حسب الأقسام',
+     style:const TextStyle(fontWeight:FontWeight.bold)),
+    if(top.isEmpty)Padding(padding:const EdgeInsets.all(12),
+     child:WaffraText(waffraIsEnglish?'Record transactions to see forecasts.':'سجل معاملات لعرض التوقعات.')),
+    ...top.map((item)=>Padding(padding:const EdgeInsets.only(top:8),child:Row(children:[
+     Expanded(child:WaffraText(item.key)),WaffraText(cash(item.value)),
+     const SizedBox(width:8),WaffraText(nextExpenses>0?
+      '${(item.value/nextExpenses*100).toStringAsFixed(0)}%':'0%',
+      style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
+    ]))),
+    if(chosen!=null)...[
+     const SizedBox(height:15),
+     Row(children:[const Icon(Icons.tune,color:emerald),const SizedBox(width:8),
+      WaffraText(waffraIsEnglish?'What if?':'ماذا لو؟',
+       style:const TextStyle(fontWeight:FontWeight.bold,fontSize:16))]),
+     DropdownButtonFormField<String>(initialValue:chosen,
+      decoration:InputDecoration(labelText:waffraIsEnglish?'Reduce category expenses':'تقليل مصروفات قسم'),
+      items:top.map((e)=>DropdownMenuItem(value:e.key,child:WaffraText(e.key))).toList(),
+      onChanged:(v)=>setState((){forecastCategory=v;forecastReduction=20;})),
+     Row(children:[Expanded(child:Slider(value:forecastReduction.toDouble(),min:0,max:50,divisions:10,
+      onChanged:(v)=>setState(()=>forecastReduction=v.round()))),WaffraText('${forecastReduction}%')]),
+     WaffraText(waffraIsEnglish?'Adjusted expenses: ${cash(nextExpenses-saving)} • Save ${cash(saving)}':
+      'المصروفات بعد التخفيض: ${cash(nextExpenses-saving)} • التوفير ${cash(saving)}',
+      style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
+    ],
+    const SizedBox(height:12),
+    WaffraText(waffraIsEnglish?'Estimates use up to 3 months of locally recorded transactions. Actual results may differ.':
+     'تقديرات من معاملات آخر 3 أشهر المسجلة محليًا، وقد تختلف النتائج الفعلية.',
+     style:const TextStyle(fontSize:11)),
+   ])));
+ }
  Widget analytics(){
   final data=analysisEntries,inc=sum(data,true),exp=sum(data,false);
   final years=<int>{DateTime.now().year,year,...entries.map((e)=>e.date.year)}.toList()..sort((a,b)=>b.compareTo(a));
@@ -2559,6 +2656,8 @@ Future<void> bulkSmsSheet()async {
      items:List.generate(12,(i)=>DropdownMenuItem(value:i+1,child:WaffraText('شهر ${i+1}'))),
      onChanged:(v){if(v!=null)setState(()=>month=v);})),
    ]),
+   const SizedBox(height:12),
+   nextMonthForecast(),
    const SizedBox(height:12),
    Row(children:[stat('الدخل',inc,Icons.south_west,emerald),stat('المصروفات',exp,Icons.north_east,Colors.deepOrange)]),
    Card(child:Padding(padding:const EdgeInsets.all(15),child:Column(children:[
