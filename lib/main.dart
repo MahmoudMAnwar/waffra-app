@@ -541,11 +541,13 @@ class _WaffraOnboardingState extends State<WaffraOnboarding> {
   final imageWidth=artworkWidth*scale;
   final imageHeight=979.0*scale;
   return ClipRect(child:Stack(fit:StackFit.expand,children:[
-   Positioned.fill(child:Image.asset(
-    'assets/onboarding_0'+(index+1).toString()+'.png',
-    fit:BoxFit.cover,color:const Color(0xFFFAF9F1),
-    colorBlendMode:BlendMode.modulate,
-    opacity:0.045,filterQuality:FilterQuality.low)),
+   Positioned.fill(child:Opacity(
+    opacity:0.045,
+    child:Image.asset(
+     'assets/onboarding_0'+(index+1).toString()+'.png',
+     fit:BoxFit.cover,color:const Color(0xFFFAF9F1),
+     colorBlendMode:BlendMode.modulate,
+     filterQuality:FilterQuality.low))),
    Positioned(
     left:(box.maxWidth-imageWidth)/2,
     top:(box.maxHeight-cropHeight*scale)/2-cropTop*scale,
