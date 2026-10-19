@@ -113,8 +113,14 @@ class SavingChallenge {
  final int days,completedDays;final DateTime? lastDone;
  SavingChallenge({required this.id,required this.title,required this.dailyAmount,
   required this.days,this.completedDays=0,this.lastDone});
- SavingChallenge complete()=>SavingChallenge(id:id,title:title,dailyAmount:dailyAmount,
-  days:days,completedDays:completedDays+1,lastDone:DateTime.now());
+ bool canComplete(DateTime now)=>completedDays<days&&(lastDone==null||
+  lastDone!.year!=now.year||lastDone!.month!=now.month||lastDone!.day!=now.day);
+ SavingChallenge complete({DateTime? at}){
+  final now=at??DateTime.now();
+  if(!canComplete(now))return this;
+  return SavingChallenge(id:id,title:title,dailyAmount:dailyAmount,
+   days:days,completedDays:completedDays+1,lastDone:now);
+ }
  Map<String,dynamic> toJson()=>{'id':id,'title':title,'dailyAmount':dailyAmount,
   'days':days,'completedDays':completedDays,'lastDone':lastDone?.toIso8601String()};
  factory SavingChallenge.fromJson(Map<String,dynamic> json)=>SavingChallenge(
@@ -2932,6 +2938,116 @@ Future<void> bulkSmsSheet()async {
   if(RegExp(r'مشروع|تجارة').hasMatch(x))return Icons.storefront;
   return Icons.account_balance_wallet;
  }
+
+ Future<void> createSavingChallenge()async {
+  final name=TextEditingController(),amount=TextEditingController();
+  var attempted=false,days=30;
+  final challenge=await showDialog<SavingChallenge>(
+   context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'New savings challenge':'تحدي ادخار جديد'),
+    content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+     TextField(controller:name,onChanged:(_)=>update((){}),decoration:InputDecoration(
+      labelText:waffraIsEnglish?'Challenge name *':'اسم التحدي *',
+      errorText:attempted&&WaffraValidators.requiredText(name.text)!=null?
+       (waffraIsEnglish?'Name is required':'اسم التحدي حقل إجباري'):null)),
+     const SizedBox(height:12),
+     TextField(controller:amount,onChanged:(_)=>update((){}),
+      keyboardType:const TextInputType.numberWithOptions(decimal:true),
+      inputFormatters:[const WaffraAmountFormatter()],decoration:InputDecoration(
+       labelText:waffraIsEnglish?'Daily amount *':'الادخار اليومي *',
+       errorText:attempted&&WaffraValidators.positiveAmount(amount.text)!=null?
+        (waffraIsEnglish?'Enter a positive amount':'المبلغ حقل إجباري ويجب أن يكون أكبر من صفر'):null)),
+     const SizedBox(height:12),
+     DropdownButtonFormField<int>(initialValue:days,
+      decoration:InputDecoration(labelText:waffraIsEnglish?'Duration *':'مدة التحدي *'),
+      items:[7,14,30].map((n)=>DropdownMenuItem<int>(value:n,
+       child:WaffraText(waffraIsEnglish?'$n days':'$n يوم'))).toList(),
+      onChanged:(n){if(n!=null)update(()=>days=n);}),
+     const SizedBox(height:12),
+     WaffraText(waffraIsEnglish?
+      'This tracks your habit manually and never deducts money.':
+      'التحدي لتتبّع عادتك يدويًا، ولن يخصم أو يحوّل أموالًا تلقائيًا.',
+      style:const TextStyle(color:Colors.grey,fontSize:12)),
+    ])),
+    actions:[
+     TextButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+     FilledButton(onPressed:(){
+      update(()=>attempted=true);
+      if(WaffraValidators.requiredText(name.text)!=null||
+       WaffraValidators.positiveAmount(amount.text)!=null)return;
+      final value=amountOf(amount.text);
+      if(value==null)return;
+      Navigator.pop(ctx,SavingChallenge(id:newId(),title:name.text.trim(),
+       dailyAmount:value,days:days));
+     },child:WaffraText(waffraIsEnglish?'Save challenge':'إضافة التحدي')),
+    ])));
+  disposeLater([name,amount]);
+  if(challenge==null||!mounted)return;
+  setState(()=>challenges.add(challenge));
+  await persist();
+ }
+ Widget savingsChallengesSection()=>Card(
+  margin:const EdgeInsets.symmetric(vertical:12),elevation:1,
+  shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(20)),
+  child:ExpansionTile(
+   initiallyExpanded:challenges.isNotEmpty,
+   leading:const Icon(Icons.emoji_events_outlined,color:emerald),
+   title:WaffraText(waffraIsEnglish?'Savings challenges':'تحديات الادخار',
+    style:const TextStyle(fontWeight:FontWeight.bold)),
+   subtitle:WaffraText(waffraIsEnglish?'Build your saving habit':'حوّل التوفير إلى عادة يومية'),
+   children:[
+    if(challenges.isEmpty)Padding(padding:const EdgeInsets.all(14),
+     child:WaffraText(waffraIsEnglish?'Try a daily savings challenge':
+      'ابدأ تحديًا بسيطًا ووفّر مبلغًا كل يوم.',textAlign:TextAlign.center)),
+    ...challenges.map((c){
+     final completed=c.completedDays>=c.days,allowed=c.canComplete(DateTime.now());
+     return Padding(padding:const EdgeInsets.fromLTRB(14,7,14,12),
+      child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+       Row(children:[
+        Expanded(child:WaffraText(c.title,style:const TextStyle(fontWeight:FontWeight.bold))),
+        IconButton(icon:const Icon(Icons.delete_outline,size:20),
+         tooltip:waffraIsEnglish?'Delete challenge':'حذف التحدي',
+         onPressed:()async{
+          final ok=await confirmDeletion(waffraIsEnglish?'Delete challenge?':'حذف التحدي',
+           waffraIsEnglish?'Progress cannot be recovered.':
+            'سيتم حذف التحدي وتقدمه نهائيًا، ولا يمكن استعادته.');
+          if(ok==true&&mounted){
+           setState(()=>challenges.removeWhere((x)=>x.id==c.id));await persist();
+          }
+         }),
+       ]),
+       WaffraText(waffraIsEnglish?
+        'Daily: ${cash(c.dailyAmount)} • Target: ${cash(c.days*c.dailyAmount)}':
+        'يوميًا: ${cash(c.dailyAmount)} • المستهدف: ${cash(c.days*c.dailyAmount)}',
+        style:const TextStyle(fontSize:12)),
+       const SizedBox(height:7),
+       LinearProgressIndicator(value:(c.completedDays/c.days).clamp(0.0,1.0),
+        minHeight:8,borderRadius:BorderRadius.circular(8)),
+       const SizedBox(height:8),
+       Row(children:[
+        Expanded(child:WaffraText(waffraIsEnglish?
+         '${c.completedDays} of ${c.days} days':
+         '${c.completedDays} من ${c.days} يوم',
+         style:const TextStyle(fontSize:12))),
+        TextButton.icon(onPressed:allowed?()async{
+          final i=challenges.indexWhere((x)=>x.id==c.id);
+          if(i<0||!challenges[i].canComplete(DateTime.now()))return;
+          setState(()=>challenges[i]=challenges[i].complete());
+          await persist();
+         }:null,icon:Icon(completed?Icons.check_circle_outline:Icons.check,size:18),
+         label:WaffraText(completed?(waffraIsEnglish?'Complete':'مكتمل'):
+          allowed?(waffraIsEnglish?'Saved today':'وفّرت اليوم'):
+          (waffraIsEnglish?'Marked today':'تم اليوم'))),
+       ]),
+      ]));
+    }),
+    Padding(padding:const EdgeInsets.fromLTRB(14,0,14,14),
+     child:OutlinedButton.icon(onPressed:createSavingChallenge,
+      icon:const Icon(Icons.add),
+      label:WaffraText(waffraIsEnglish?'New challenge':'تحدي جديد'))),
+   ],
+  ));
+
  Widget goalsPage(){
   final target=goals.fold<double>(0,(v,g)=>v+g.target);
   final saved=goals.fold<double>(0,(v,g)=>v+g.saved);
@@ -3050,6 +3166,7 @@ Future<void> bulkSmsSheet()async {
     ])),
    if(goals.isNotEmpty&&filtered.isEmpty)Padding(padding:const EdgeInsets.all(34),
     child:WaffraText(waffraIsEnglish?'No goals in this filter':'لا توجد أهداف في هذا التصنيف',textAlign:TextAlign.center)),
+   savingsChallengesSection(),
    const SizedBox(height:30),
   ]);
  }
