@@ -861,47 +861,67 @@ class HomeScreen extends StatefulWidget {
 }
 // Scroll-linked, pinned balance summary. Shrinks with the user's gesture;
 // does not count up money on every tab revisit.
+// Consistent Tajawal currency label on the approved dashboard.
+// The home cards use the WORD ريال, not a bank/SAR currency icon.
+class WaffraCurrencyAmount extends StatelessWidget {
+ final double amount;
+ final double fontSize;
+ final Color? color;
+ final FontWeight weight;
+ const WaffraCurrencyAmount(this.amount,{
+  super.key,this.fontSize=20,this.color,this.weight=FontWeight.w700});
+ @override Widget build(BuildContext context)=>
+  ValueListenableBuilder<bool>(valueListenable:hideWaffraAmounts,
+   builder:(context,hidden,_)=>Directionality(
+    textDirection:TextDirection.ltr,
+    child:Row(mainAxisSize:MainAxisSize.min,children:[
+     WaffraText(hidden?'••••':formatMoney(amount),
+      style:TextStyle(fontFamily:'Tajawal',fontSize:fontSize,
+       fontWeight:weight,color:color)),
+     if(!hidden)...[
+      const SizedBox(width:5),
+      WaffraText(waffraIsEnglish?'SAR':'ريال',
+       style:TextStyle(fontFamily:'Tajawal',fontSize:fontSize*.63,
+        fontWeight:FontWeight.w600,color:color)),
+     ]
+    ])));
+}
+// Collapse the balance as the user scrolls, then let it scroll AWAY
+// with the rest of the home page. It is intentionally not pinned.
 class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
  final double balance;
  final bool english;
  const WaffraBalanceHeader({required this.balance,required this.english});
- @override double get minExtent=>78;
- @override double get maxExtent=>166;
+ @override double get minExtent=>70;
+ @override double get maxExtent=>155;
  @override Widget build(BuildContext context,double shrinkOffset,bool overlapsContent){
   final progress=(shrinkOffset/(maxExtent-minExtent)).clamp(0.0,1.0);
-  final taglineHeight=27.0*(1-progress);
-  final textSize=28.0-7.0*progress;
   return Container(
    color:Theme.of(context).scaffoldBackgroundColor,
-   padding:const EdgeInsets.fromLTRB(16,0,16,6),
+   padding:const EdgeInsets.fromLTRB(14,0,14,5),
    child:Container(
-    padding:EdgeInsets.symmetric(horizontal:19,vertical:8-3*progress),
+    padding:EdgeInsets.symmetric(horizontal:18,vertical:6-2*progress),
     decoration:BoxDecoration(
-     gradient:const LinearGradient(colors:[forest,emerald]),
-     borderRadius:BorderRadius.circular(24-10*progress)),
+     gradient:const LinearGradient(colors:[forest,emerald],
+      begin:AlignmentDirectional.centerStart,end:AlignmentDirectional.centerEnd),
+     borderRadius:BorderRadius.circular(24-9*progress)),
     child:Column(
      mainAxisAlignment:MainAxisAlignment.center,
-     crossAxisAlignment:CrossAxisAlignment.end,
+     crossAxisAlignment:CrossAxisAlignment.start,
      children:[
       WaffraText(english?'Current balance':'رصيدك الحالي',
-       style:TextStyle(color:Colors.white70,fontSize:15-2*progress)),
-      SizedBox(height:5-3*progress),
-      AnimatedSwitcher(
-       duration:const Duration(milliseconds:340),
-       switchInCurve:Curves.easeOutCubic,
-       transitionBuilder:(child,animation)=>FadeTransition(
-        opacity:animation,child:SlideTransition(
-         position:Tween<Offset>(begin:const Offset(0,0.13),end:Offset.zero)
-          .animate(animation),child:child)),
-       child:KeyedSubtree(
-        key:ValueKey(balance.toStringAsFixed(2)),
-        child:RiyalAmount(balance,
-         style:TextStyle(color:Colors.white,fontSize:textSize,fontWeight:FontWeight.bold)))),
-      SizedBox(height:taglineHeight,
+       style:TextStyle(fontSize:15-2*progress,color:Colors.white70,
+        fontWeight:FontWeight.w600)),
+      SizedBox(height:4-2*progress),
+      Align(alignment:AlignmentDirectional.centerStart,
+       child:FittedBox(fit:BoxFit.scaleDown,
+        child:WaffraCurrencyAmount(balance,
+         fontSize:29-7*progress,color:Colors.white))),
+      if(progress<1)SizedBox(height:25*(1-progress),
        child:ClipRect(child:Opacity(opacity:1-progress,
-        child:Align(alignment:Alignment.centerRight,
+        child:Align(alignment:AlignmentDirectional.centerStart,
          child:WaffraText(english?'Every riyal counts':'كل ريال تحسب له حساب',
-          style:const TextStyle(color:Colors.white70,fontSize:13)))))),
+          style:const TextStyle(fontSize:13,color:Colors.white70)))))),
      ],
     )),
   );
