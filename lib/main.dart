@@ -414,19 +414,21 @@ class _PinLockScreenState extends State<PinLockScreen> {
   backgroundColor:forest,
   body:LayoutBuilder(builder:(context,c)=>Stack(fit:StackFit.expand,children:[
    Image.asset('assets/app_lock.png',fit:BoxFit.fill,filterQuality:FilterQuality.high),
-   // Align fill-only dots to the four circles ALREADY PRINTED in the image.
-   // Measured against screenshots on the user's device; no extra outlines.
-   // Fixed visual sequence left -> right, irrespective of app Directionality.
+   // Exact source-art locations: four circles in app_lock.png (852x1846)
+   // centered at x=305,386,468,550 and y=774. Image and dots share the
+   // same Stack rect, so placement is device-size and language independent.
    ...List.generate(4,(i){
     if(i>=pinController.text.length)return const SizedBox.shrink();
-    const xCenters=<double>[0.356,0.453,0.549,0.644];
-    final dot=c.maxWidth*0.018;
+    const xCenters=<double>[305/852,386/852,468/852,550/852];
+    const yCenter=774/1846;
+    final diameter=c.maxWidth*0.019;
     return Positioned(
-     left:c.maxWidth*xCenters[i]-dot/2,
-     top:c.maxHeight*0.423-dot/2,
-     width:dot,height:dot,
+     left:c.maxWidth*xCenters[i]-diameter/2,
+     top:c.maxHeight*yCenter-diameter/2,
+     width:diameter,height:diameter,
      child:IgnorePointer(child:DecoratedBox(
-      decoration:const BoxDecoration(shape:BoxShape.circle,color:Colors.white))));
+      decoration:const BoxDecoration(shape:BoxShape.circle,color:Colors.white))),
+    );
    }),
    // Keep the approved full-screen keypad artwork: transparent touch targets
    // make the pictured digits functional without drawing a second keypad.
@@ -458,53 +460,122 @@ class WaffraOnboarding extends StatefulWidget {
 class _WaffraOnboardingState extends State<WaffraOnboarding> {
  final controller=PageController();
  int current=0;
- // Source PNG dimensions checked against the committed design assets.
- // Keeping their intrinsic ratio prevents all top/bottom clipping and stretching.
- static const widths=<double>[360,363,362,363];
- static const double artworkHeight=979;
- Future<void> finish()async {
+ static const sourceWidth=<double>[360,363,362,363];
+ static const titleAr=<String>[
+  'كل معاملاتك\nفي مكان واحد',
+  'الصق رسالتك..\nوالباقي علينا',
+  'تحليلات بسيطة\nلقرارات أذكى',
+  'حقق أهدافك\nخطوة بخطوة',
+ ];
+ static const subtitleAr=<String>[
+  'تابع دخلك ومصروفاتك بسهولة\nوشوف رصيدك الحالي دائمًا.',
+  'انسخ رسائلك البنكية والصقها في وفرة،\nونساعدك تصنّف معاملاتك تلقائيًا.',
+  'اكتشف عادات صرفك من خلال\nرسوم بيانية وتقارير واضحة وسهلة الفهم.',
+  'سواء تدخر لمنزل، سيارة، سفر أو أي هدف آخر.\nحدد هدفك وتابع تقدمك بكل سهولة.',
+ ];
+ static const titleEn=<String>[
+  'All your transactions\nin one place',
+  'Paste your messages,\nwe handle the rest',
+  'Simple analytics,\nsmarter decisions',
+  'Reach your goals\nstep by step',
+ ];
+ static const subtitleEn=<String>[
+  'Track income, expenses and your balance, all in one place.',
+  'Paste your bank messages and let Waffra categorize your transactions.',
+  'Understand spending habits with clear charts and financial reports.',
+  'Set your savings goals and follow your progress with ease.',
+ ];
+ Future<void> finish()async{
   final prefs=await SharedPreferences.getInstance();
   await prefs.setBool('waffra_onboarding_completed',true);
   if(mounted)widget.onFinish();
  }
  void next(){
   if(current==3){finish();return;}
-  controller.nextPage(duration:const Duration(milliseconds:450),curve:Curves.easeInOutCubic);
+  controller.nextPage(duration:const Duration(milliseconds:430),curve:Curves.easeInOutCubic);
  }
  @override void dispose(){controller.dispose();super.dispose();}
- Widget slide(int index)=>LayoutBuilder(builder:(context,c){
-  // Keep the COMPLETE approved artwork visible. Fill the extra side space
-  // with a softened extension of the same artwork rather than empty margins
-  // or BoxFit.cover cropping its headings and bottom CTA.
-  final scale=min(c.maxWidth/widths[index],c.maxHeight/artworkHeight);
-  final w=widths[index]*scale,h=artworkHeight*scale;
-  final image='assets/onboarding_0'+(index+1).toString()+'.png';
-  return Stack(fit:StackFit.expand,children:[
-   ClipRect(child:ImageFiltered(
-    imageFilter:ui.ImageFilter.blur(sigmaX:19,sigmaY:19),
-    child:Image.asset(image,fit:BoxFit.cover,filterQuality:FilterQuality.high))),
-   const ColoredBox(color:Color(0x66FFFDF6)),
-   Center(child:SizedBox(width:w,height:h,child:Stack(
-    fit:StackFit.expand,children:[
-     Image.asset(image,fit:BoxFit.fill,filterQuality:FilterQuality.high,
-      errorBuilder:(context,error,stack)=>Center(child:WaffraText(
-       waffraIsEnglish?'Onboarding image unavailable':'صورة التعريف غير متاحة'))),
-     Positioned(left:w*0.04,top:h*0.045,width:w*0.29,height:h*0.075,
-      child:Semantics(button:true,label:waffraIsEnglish?'Skip onboarding':'تخطي التعريف',
-       child:GestureDetector(behavior:HitTestBehavior.opaque,onTap:finish,
-        child:const ColoredBox(color:Colors.transparent)))),
-     Positioned(left:w*0.035,right:w*0.035,bottom:h*0.012,height:h*0.080,
-      child:Semantics(button:true,label:index==3?'ابدأ رحلتك مع وفرة':'التالي',
-       child:GestureDetector(behavior:HitTestBehavior.opaque,onTap:next,
-        child:const ColoredBox(color:Colors.transparent)))),
-    ]))),
-  ]);
+ // Crop only the illustration region from the original approved design.
+ // Headlines, progress markers and buttons are real responsive Flutter UI,
+ // avoiding the impossible "cover without cropping or stretching" tradeoff.
+ Widget illustration(int index)=>LayoutBuilder(builder:(context,box){
+  const cropTop=310.0,cropHeight=580.0;
+  final scale=min(box.maxWidth/sourceWidth[index],box.maxHeight/cropHeight);
+  final imageWidth=sourceWidth[index]*scale;
+  final imageHeight=979.0*scale;
+  return ClipRect(child:Stack(fit:StackFit.expand,children:[
+   // A subtle edge-to-edge wash of the artwork fills the hero backdrop.
+   Opacity(opacity:0.11,child:Image.asset(
+    'assets/onboarding_0'+(index+1).toString()+'.png',
+    fit:BoxFit.cover,filterQuality:FilterQuality.high)),
+   Positioned(
+    left:(box.maxWidth-imageWidth)/2,
+    top:(box.maxHeight-cropHeight*scale)/2-cropTop*scale,
+    width:imageWidth,height:imageHeight,
+    child:Image.asset('assets/onboarding_0'+(index+1).toString()+'.png',
+     fit:BoxFit.fill,filterQuality:FilterQuality.high)),
+  ]));
  });
-
+ Widget slide(int index)=>LayoutBuilder(builder:(context,limits){
+  final compact=limits.maxHeight<680;
+  final titleSize=compact?25.0:29.0;
+  final subtitleSize=compact?14.0:16.0;
+  final pageName=waffraIsEnglish?titleEn[index]:titleAr[index];
+  final pageDesc=waffraIsEnglish?subtitleEn[index]:subtitleAr[index];
+  return Padding(
+   padding:const EdgeInsets.symmetric(horizontal:14),
+   child:Column(children:[
+    const SizedBox(height:10),
+    Directionality(textDirection:TextDirection.ltr,child:Row(
+     mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
+      TextButton(onPressed:finish,
+       child:WaffraText(waffraIsEnglish?'Skip':'تخطي',
+        style:const TextStyle(color:forest,fontSize:16))),
+      Padding(padding:const EdgeInsets.symmetric(horizontal:7),
+       child:WaffraText((index+1).toString()+' / 4',
+        style:const TextStyle(color:forest,fontSize:17))),
+     ])),
+    SizedBox(height:compact?5:16),
+    WaffraText(pageName,textAlign:TextAlign.center,
+     style:TextStyle(color:forest,fontWeight:FontWeight.w800,
+      fontSize:titleSize,height:1.23)),
+    SizedBox(height:compact?8:13),
+    WaffraText(pageDesc,textAlign:TextAlign.center,
+     style:TextStyle(color:const Color(0xFF5B5B60),
+      fontSize:subtitleSize,height:1.35)),
+    const SizedBox(height:8),
+    Expanded(child:illustration(index)),
+    const SizedBox(height:8),
+    Directionality(textDirection:TextDirection.ltr,child:Row(
+     mainAxisAlignment:MainAxisAlignment.center,
+     children:List.generate(4,(i)=>AnimatedContainer(
+      duration:const Duration(milliseconds:250),
+      width:i==current?12:9,height:i==current?12:9,
+      margin:const EdgeInsets.symmetric(horizontal:5),
+      decoration:BoxDecoration(shape:BoxShape.circle,
+       color:i==current?forest:const Color(0xFFD0DAD0))))),
+    const SizedBox(height:14),
+    SizedBox(width:double.infinity,height:55,child:FilledButton(
+     onPressed:next,style:FilledButton.styleFrom(
+      backgroundColor:forest,foregroundColor:Colors.white,
+      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(30))),
+     child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+      const Icon(Icons.arrow_back_rounded,size:23),
+      const SizedBox(width:17),
+      WaffraText(index==3
+       ?(waffraIsEnglish?'Start with Waffra':'ابدأ رحلتك مع وفرة')
+       :(waffraIsEnglish?'Next':'التالي'),
+       style:const TextStyle(color:Colors.white,fontSize:19,
+        fontWeight:FontWeight.bold)),
+     ]))),
+    const SizedBox(height:12),
+   ]),
+  );
+ });
  @override Widget build(BuildContext context)=>Scaffold(
-  backgroundColor:const Color(0xFFF8F7EF),
+  backgroundColor:const Color(0xFFFAF9F1),
   body:SafeArea(child:PageView(
-   controller:controller,onPageChanged:(index)=>setState(()=>current=index),
+   controller:controller,onPageChanged:(nextIndex)=>setState(()=>current=nextIndex),
    children:List.generate(4,slide),
   )),
  );
