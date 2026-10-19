@@ -839,12 +839,63 @@ class HomeScreen extends StatefulWidget {
   required this.onSetPin,required this.onTheme,required this.onLanguage,required this.onLogout,required this.onProfile});
  @override State<HomeScreen> createState()=>_HomeScreenState();
 }
+// Scroll-linked, pinned balance summary. Shrinks with the user's gesture;
+// does not count up money on every tab revisit.
+class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
+ final double balance;
+ final bool english;
+ const WaffraBalanceHeader({required this.balance,required this.english});
+ @override double get minExtent=>78;
+ @override double get maxExtent=>166;
+ @override Widget build(BuildContext context,double shrinkOffset,bool overlapsContent){
+  final progress=(shrinkOffset/(maxExtent-minExtent)).clamp(0.0,1.0);
+  final taglineHeight=27.0*(1-progress);
+  final textSize=28.0-7.0*progress;
+  return Container(
+   color:Theme.of(context).scaffoldBackgroundColor,
+   padding:const EdgeInsets.fromLTRB(16,0,16,6),
+   child:Container(
+    padding:EdgeInsets.symmetric(horizontal:19,vertical:8-3*progress),
+    decoration:BoxDecoration(
+     gradient:const LinearGradient(colors:[forest,emerald]),
+     borderRadius:BorderRadius.circular(24-10*progress)),
+    child:Column(
+     mainAxisAlignment:MainAxisAlignment.center,
+     crossAxisAlignment:CrossAxisAlignment.end,
+     children:[
+      WaffraText(english?'Current balance':'رصيدك الحالي',
+       style:TextStyle(color:Colors.white70,fontSize:15-2*progress)),
+      SizedBox(height:5-3*progress),
+      AnimatedSwitcher(
+       duration:const Duration(milliseconds:340),
+       switchInCurve:Curves.easeOutCubic,
+       transitionBuilder:(child,animation)=>FadeTransition(
+        opacity:animation,child:SlideTransition(
+         position:Tween<Offset>(begin:const Offset(0,0.13),end:Offset.zero)
+          .animate(animation),child:child)),
+       child:KeyedSubtree(
+        key:ValueKey(balance.toStringAsFixed(2)),
+        child:RiyalAmount(balance,
+         style:TextStyle(color:Colors.white,fontSize:textSize,fontWeight:FontWeight.bold)))),
+      SizedBox(height:taglineHeight,
+       child:ClipRect(child:Opacity(opacity:1-progress,
+        child:Align(alignment:Alignment.centerRight,
+         child:WaffraText(english?'Every riyal counts':'كل ريال تحسب له حساب',
+          style:const TextStyle(color:Colors.white70,fontSize:13))))),
+     ],
+    )),
+  );
+ }
+ @override bool shouldRebuild(covariant WaffraBalanceHeader oldDelegate)=>
+  balance!=oldDelegate.balance||english!=oldDelegate.english;
+}
 class _HomeScreenState extends State<HomeScreen> {
  final smsHashes=<String>{};
  final entries=<MoneyEntry>[],categories=<BudgetCategory>[],goals=<SavingGoal>[],recurring=<RecurringBill>[];
  int tab=0,year=DateTime.now().year,month=DateTime.now().month;
  String search='',typeFilter='الكل',categoryFilter='الكل',period='شهري';
  bool ready=false;
+ bool addFabExpanded=false;
  @override void initState(){super.initState();waffraReturnHome.addListener(_returnToHome);load();}
  void _returnToHome(){if(mounted&&tab!=0)setState(()=>tab=0);}
  @override void dispose(){waffraReturnHome.removeListener(_returnToHome);super.dispose();}
@@ -1583,27 +1634,19 @@ Future<void> bulkSmsSheet()async {
   return RefreshIndicator(
    onRefresh:()async{
     if(mounted)setState((){});
-    await Future<void>.delayed(const Duration(milliseconds:250));
+    await Future<void>.delayed(const Duration(milliseconds:150));
    },
-   child:ListView(physics:const AlwaysScrollableScrollPhysics(),padding:const EdgeInsets.all(16),children:[
-   WaffraText(greeting,style:Theme.of(context).textTheme.titleLarge),
-   const SizedBox(height:12),
-   TweenAnimationBuilder<double>(tween:Tween<double>(begin:0,end:1),duration:const Duration(milliseconds:1100),curve:Curves.easeOutCubic,
-    builder:(context,progress,child)=>Opacity(opacity:progress,child:Transform.scale(scale:0.84+0.16*progress,child:child)),
-    child:Container(padding:const EdgeInsets.all(24),
-    decoration:BoxDecoration(gradient:const LinearGradient(colors:[forest,emerald]),borderRadius:BorderRadius.circular(24)),
-    child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-     const WaffraText('رصيدك الحالي',style:TextStyle(color:Colors.white70)),const SizedBox(height:10),
-     TweenAnimationBuilder<double>(
-      tween:Tween<double>(begin:0,end:inc-exp),
-      duration:const Duration(milliseconds:850),
-      curve:Curves.easeOutCubic,
-      builder:(context,value,child)=>RiyalAmount(value,style:const TextStyle(color:Colors.white,fontSize:28,fontWeight:FontWeight.bold)),
-     ),
-     const SizedBox(height:8),
-     const WaffraText('كل ريال تحسب له حساب',style:TextStyle(color:Colors.white70)),
-    ]))),
-   const SizedBox(height:12),
+   child:CustomScrollView(
+    physics:const AlwaysScrollableScrollPhysics(),
+    slivers:[
+     SliverToBoxAdapter(child:Padding(
+      padding:const EdgeInsets.fromLTRB(16,16,16,12),
+      child:WaffraText(greeting,style:Theme.of(context).textTheme.titleLarge))),
+     SliverPersistentHeader(
+      pinned:true,
+      delegate:WaffraBalanceHeader(balance:inc-exp,english:waffraIsEnglish)),
+     SliverPadding(padding:const EdgeInsets.symmetric(horizontal:16),
+      sliver:SliverList(delegate:SliverChildListDelegate([
    Row(children:[stat('الدخل',inc,Icons.south_west,emerald),stat('المصروفات',exp,Icons.north_east,Colors.deepOrange)]),
    const SizedBox(height:10),
    OutlinedButton.icon(onPressed:bulkSmsSheet,icon:const Icon(Icons.content_paste),label:const WaffraText('الصق رسالة بنكية')),
@@ -1618,8 +1661,6 @@ Future<void> bulkSmsSheet()async {
      style:Theme.of(context).textTheme.titleLarge)),
    const SizedBox(height:14),
    Wrap(spacing:12,runSpacing:10,children:[
-    FilledButton.icon(onPressed:()=>entrySheet(),
-     icon:const Icon(Icons.add),label:const WaffraText('أضف عملية')),
     OutlinedButton.icon(onPressed:entries.isEmpty?null:confirmDeleteAllEntries,
      style:OutlinedButton.styleFrom(
       side:const BorderSide(color:Colors.red,width:1.4),
@@ -1645,8 +1686,9 @@ Future<void> bulkSmsSheet()async {
    const SizedBox(height:8),
    WaffraText('عدد العمليات: ${visible.length}'),
    if(visible.isEmpty)const Padding(padding:EdgeInsets.all(24),child:Center(child:WaffraText('ما عندك عمليات مطابقة'))),
-   ...visible.map(tile),const SizedBox(height:90),
-  ]));
+   ...visible.map(tile),const SizedBox(height:130),
+  ]))),
+   ]));
  }
  List<MoneyEntry> get analysisEntries=>entries.where((e)=>e.date.year==year&&
   (period=='سنوي'||e.date.month==month)).toList();
@@ -2220,39 +2262,76 @@ Future<void> bulkSmsSheet()async {
    textAlign:TextAlign.center,style:TextStyle(fontSize:12)),
  ]);
  @override Widget build(BuildContext context)=>Scaffold(
-  appBar:AppBar(title:const WaffraText('وفرة | Waffra',style:TextStyle(fontWeight:FontWeight.bold)),
+  appBar:AppBar(title:const WaffraText('وفرة | Waffra',
+    style:TextStyle(fontWeight:FontWeight.bold)),
    actions:[
-    TextButton(
+    SizedBox(width:40,height:46,child:Center(child:TextButton(
+     style:TextButton.styleFrom(padding:EdgeInsets.zero,foregroundColor:Colors.white,
+      minimumSize:const Size(40,42)),
      onPressed:()async{
       final next=waffraIsEnglish?'ar':'en';
       setState(()=>tab=0);
       await widget.onLanguage(next);
-     },
-     style:TextButton.styleFrom(foregroundColor:Colors.white),
-     child:Text(waffraIsEnglish?'AR':'EN',
-      style:const TextStyle(fontWeight:FontWeight.bold,fontSize:14)),
-    ),
-    ValueListenableBuilder<bool>(
-     valueListenable:hideWaffraAmounts,
-     builder:(context,hidden,_)=>IconButton(
-      tooltip:hidden?'إظهار المبالغ':'إخفاء المبالغ',
-      onPressed:()=>hideWaffraAmounts.value=!hidden,
-      icon:Icon(hidden?Icons.visibility_off_outlined:Icons.visibility_outlined))),
-
-    IconButton(onPressed:widget.onTheme,icon:Icon(widget.dark?Icons.light_mode:Icons.dark_mode)),
-    Padding(padding:const EdgeInsets.only(left:12),
-     child:InkWell(onTap:()=>setState(()=>tab=5),borderRadius:BorderRadius.circular(30),child:saudiAvatar(widget.profile.gender))),
+     },child:Text(waffraIsEnglish?'AR':'EN',
+      style:const TextStyle(fontWeight:FontWeight.bold,fontSize:14))))),
+    ValueListenableBuilder<bool>(valueListenable:hideWaffraAmounts,
+     builder:(context,hidden,_)=>SizedBox(width:42,height:46,
+      child:IconButton(
+       padding:EdgeInsets.zero,
+       constraints:const BoxConstraints.tightFor(width:42,height:42),
+       tooltip:hidden?(waffraIsEnglish?'Show amounts':'إظهار المبالغ'):
+                      (waffraIsEnglish?'Hide amounts':'إخفاء المبالغ'),
+       onPressed:()=>hideWaffraAmounts.value=!hidden,
+       icon:Icon(hidden?Icons.visibility_off_outlined:Icons.visibility_outlined)))),
+    SizedBox(width:42,height:46,child:IconButton(
+     padding:EdgeInsets.zero,
+     constraints:const BoxConstraints.tightFor(width:42,height:42),
+     onPressed:widget.onTheme,
+     icon:Icon(widget.dark?Icons.light_mode:Icons.dark_mode))),
+    SizedBox(width:49,height:46,child:Center(child:InkWell(
+     onTap:()=>setState(()=>tab=5),
+     borderRadius:BorderRadius.circular(30),
+     child:saudiAvatar(widget.profile.gender)))),
+    const SizedBox(width:5),
    ]),
   body:!ready?const Center(child:CircularProgressIndicator()):
    AnimatedSwitcher(duration:const Duration(milliseconds:235),reverseDuration:const Duration(milliseconds:190),
     transitionBuilder:(child,animation)=>FadeTransition(opacity:animation,child:SlideTransition(
      position:Tween<Offset>(begin:const Offset(0.035,0),end:Offset.zero).animate(CurvedAnimation(parent:animation,curve:Curves.easeOutCubic)),child:child)),
     child:KeyedSubtree(key:ValueKey(tab),child:[dashboard(),analytics(),categoriesPage(),goalsPage(),recurringPage(),profilePage()][tab])),
-  // Add-transaction is now an inline button; no overlay over Export PDF.
-  floatingActionButton:null,
+  // The FAB starts as a compact + at the physical bottom-left.
+  // First tap opens it into a labelled pill; second tap opens the editor.
+  floatingActionButtonLocation:waffraIsEnglish
+    ?FloatingActionButtonLocation.startFloat
+    :FloatingActionButtonLocation.endFloat,
+  floatingActionButton:tab!=0?null:AnimatedContainer(
+   duration:const Duration(milliseconds:230),
+   curve:Curves.easeOutCubic,
+   width:addFabExpanded?184:56,height:56,
+   decoration:BoxDecoration(color:forest,borderRadius:BorderRadius.circular(30),
+    boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:0.14),
+     blurRadius:12,offset:const Offset(0,5))]),
+   child:Material(type:MaterialType.transparency,
+    child:InkWell(borderRadius:BorderRadius.circular(30),
+     onTap:()async{
+      if(!addFabExpanded){setState(()=>addFabExpanded=true);return;}
+      setState(()=>addFabExpanded=false);
+      await entrySheet();
+     },
+     child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+      const Icon(Icons.add,color:Colors.white,size:25),
+      if(addFabExpanded)...[
+       const SizedBox(width:8),
+       Flexible(child:WaffraText(waffraIsEnglish?'Add transaction':'أضف عملية',
+        style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold),
+        maxLines:1,softWrap:false)),
+      ],
+     ]))),),
   bottomNavigationBar:NavigationBar(height:74,indicatorColor:const Color(0xFFCFE9D9),
    labelBehavior:NavigationDestinationLabelBehavior.alwaysShow,
-   selectedIndex:tab,onDestinationSelected:(v)=>setState(()=>tab=v),
+   selectedIndex:tab,onDestinationSelected:(v)=>setState((){
+    tab=v;addFabExpanded=false;
+   }),
    destinations:[
     NavigationDestination(icon:const Icon(Icons.home_outlined),selectedIcon:const Icon(Icons.home),label:waffraTr('الرئيسية')),
     NavigationDestination(icon:const Icon(Icons.bar_chart_outlined),label:waffraTr('التحليلات')),
