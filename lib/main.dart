@@ -398,7 +398,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     FilledButton(onPressed:(){setState((){loading=true;startupError=null;});load();},child:const WaffraText('إعادة المحاولة')),
    ])))):
    locked?PinLockScreen(pinHash:pinHash!,onUnlock:()=>setState(()=>locked=false)):
-   !onboarded?WaffraOnboarding(onFinish:()=>setState(()=>onboarded=true)):
+   !onboarded?WaffraOnboarding(onFinish:quickStart):
    profile==null||showLogin?LoginScreen(onSave:saveUser):
    HomeScreen(key:ValueKey(language),profile:profile!,dark:dark,onTheme:theme,onLanguage:setLanguage,onLogout:logout,onProfile:saveUser,onSetPin:setPin,pinEnabled:pinHash!=null)))));
 }
@@ -1228,6 +1228,7 @@ Future<void> bulkSmsSheet()async {
  var busy=false;
  var savedCount=0;
  var statusMessage='';
+ var rejectedMessages=<String>[];
  bool sheetActive=true;
  Future<void> saveParsedMessages(BuildContext ctx,StateSetter update)async {
   if(busy)return;
@@ -1257,7 +1258,7 @@ Future<void> bulkSmsSheet()async {
    valid.addAll(duplicates);
    valid.sort();
   }
-  if(valid.isEmpty){update(()=>statusMessage=waffraIsEnglish?'No valid transactions were detected.':'لم يتم اكتشاف معاملات صالحة للإضافة.');return;}
+  if(valid.isEmpty){update(()=>{statusMessage=waffraIsEnglish?'No valid transactions were detected. Review the unrecognized messages below.':'لم يتم اكتشاف معاملات صالحة. راجع الرسائل غير المعروفة أدناه.',rejectedMessages=invalid.map((i)=>found[i]).toList()});return;}
   final incomes=valid.where((i)=>results[i].income).toList();
   final expenses=valid.where((i)=>!results[i].income).toList();
   final incomeTotal=incomes.fold<double>(0,(v,i)=>v+results[i].amount!);
@@ -1270,7 +1271,7 @@ Future<void> bulkSmsSheet()async {
    actions:[TextButton(onPressed:()=>Navigator.pop(dialogCtx,false),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
     FilledButton(onPressed:()=>Navigator.pop(dialogCtx,true),child:WaffraText(waffraIsEnglish?'Confirm and add':'تأكيد وإضافة المعاملات'))]));
   if(accepted!=true||!ctx.mounted)return;
-  update(()=>busy=true);
+  update(()=>{busy=true,rejectedMessages=invalid.map((i)=>found[i]).toList()});
   final additions=<MoneyEntry>[];
   final newHashes=<String>{};
   for(final i in valid){
@@ -1299,7 +1300,9 @@ Future<void> bulkSmsSheet()async {
      const SizedBox(height:16),
      WaffraText(waffraIsEnglish?'Transactions added successfully':'تمت إضافة المعاملات بنجاح',textAlign:TextAlign.center,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:22)),
     ]),
-    content:const SizedBox(height:8),
+    content:WaffraText(waffraIsEnglish
+     ?'Saved: ${additions.length} • Income: ${incomes.length} • Expenses: ${expenses.length} • Not added: ${invalid.length}'
+     :'تم الحفظ: ${additions.length} • دخل: ${incomes.length} • مصروفات: ${expenses.length} • لم تُضف: ${invalid.length}',textAlign:TextAlign.center),
     actionsAlignment:MainAxisAlignment.center,
     actionsPadding:const EdgeInsets.fromLTRB(24,0,24,18),
     actions:[SizedBox(width:180,child:FilledButton(onPressed:()=>Navigator.pop(dialogCtx),child:WaffraText(waffraIsEnglish?'Done':'تم')))]));
@@ -1361,6 +1364,17 @@ Future<void> bulkSmsSheet()async {
       if(statusMessage.isNotEmpty)...[
        const SizedBox(height:8),
        WaffraText(statusMessage,style:const TextStyle(color:Colors.deepOrange,fontWeight:FontWeight.w600)),
+      ],
+      if(rejectedMessages.isNotEmpty)...[
+       const SizedBox(height:8),
+       WaffraText(waffraIsEnglish?'Unrecognized messages — edit and retry':'رسائل لم يتم تحليلها — راجعها وأعد المحاولة',style:const TextStyle(fontWeight:FontWeight.bold)),
+       ...rejectedMessages.asMap().entries.map((item)=>Card(child:ListTile(
+        title:WaffraText(waffraIsEnglish?'Message ${item.key+1}':'رسالة ${item.key+1}'),
+        subtitle:SelectableText(item.value,maxLines:4),
+        trailing:IconButton(icon:const Icon(Icons.edit_outlined),tooltip:waffraIsEnglish?'Review manually':'مراجعة يدويًا',onPressed:(){
+         Navigator.pop(ctx);
+         entrySheet(sms:true);
+        }))),
       ],
       if(parsed&&statusMessage.isEmpty)...[
        const SizedBox(height:10),
@@ -3690,7 +3704,7 @@ Future<void> bulkSmsSheet()async {
   final local=p.provider=='محلي'||p.provider.startsWith('Local');
   final gender=p.gender=='ذكر'?(waffraIsEnglish?'Male':'ذكر'):
    p.gender=='أنثى'?(waffraIsEnglish?'Female':'أنثى'):
-   (waffraIsEnglish?'Select gender':'اختر الجنس');
+   (waffraIsEnglish?'Not specified':'غير محدد');
   void edit(){Navigator.push<void>(context,MaterialPageRoute(
    builder:(_)=>ProfileForm(provider:p.provider,initial:p,onSave:widget.onProfile)));}
   return ListView(padding:const EdgeInsets.fromLTRB(16,12,16,22),children:[
