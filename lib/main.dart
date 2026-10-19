@@ -553,7 +553,7 @@ class _WaffraOnboardingState extends State<WaffraOnboarding> {
       width:i==current?12:9,height:i==current?12:9,
       margin:const EdgeInsets.symmetric(horizontal:5),
       decoration:BoxDecoration(shape:BoxShape.circle,
-       color:i==current?forest:const Color(0xFFD0DAD0))))),
+       color:i==current?forest:const Color(0xFFD0DAD0)))))),
     const SizedBox(height:14),
     SizedBox(width:double.infinity,height:55,child:FilledButton(
      onPressed:next,style:FilledButton.styleFrom(
