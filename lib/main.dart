@@ -4075,7 +4075,7 @@ Future<void> bulkSmsSheet()async {
  List<WaffraCalendarItem> get financialCalendarItems=>[
   ...entries.map((e)=>WaffraCalendarItem(e.date,e.title,e.amount,e.income)),
   ...recurring.where((r)=>r.active).map((r)=>WaffraCalendarItem(
-   DateTime(DateTime.now().year,DateTime.now().month,r.day.clamp(1,28)),
+   DateTime(DateTime.now().year,DateTime.now().month,r.day.clamp(1,28).toInt()),
    r.title,r.amount,r.income,scheduled:true)),
  ];
  void openFinancialCalendar()=>Navigator.push<void>(context,MaterialPageRoute(
