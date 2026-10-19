@@ -130,6 +130,52 @@ jobs:
               print('Configured', styles)
           PY
 
+      - name: Configure Android scheduled notification support
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          manifest=Path('android/app/src/main/AndroidManifest.xml')
+          xml=manifest.read_text()
+          for permission in ('POST_NOTIFICATIONS','RECEIVE_BOOT_COMPLETED'):
+              entry=f'<uses-permission android:name="android.permission.{permission}" />'
+              if entry not in xml:
+                  xml=xml.replace('<application','    '+entry+'\n    <application',1)
+          if 'ScheduledNotificationReceiver' not in xml:
+              receivers = '''
+                  <receiver android:exported="false"
+                      android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+                  <receiver android:exported="false"
+                      android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+                      <intent-filter>
+                          <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                          <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                          <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+                      </intent-filter>
+                  </receiver>
+              '''
+              xml=xml.replace('</application>',receivers+'\n    </application>',1)
+          manifest.write_text(xml)
+          kt=Path('android/app/build.gradle.kts')
+          groovy=Path('android/app/build.gradle')
+          if kt.exists():
+              source=kt.read_text()
+              source=source.replace('compileOptions {',
+                  'compileOptions {\n        isCoreLibraryDesugaringEnabled = true',1)
+              source+='\n// Required by flutter_local_notifications\ndependencies {\n'
+              source+='    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n'
+              kt.write_text(source)
+          elif groovy.exists():
+              source=groovy.read_text()
+              source=source.replace('compileOptions {',
+                  'compileOptions {\n        coreLibraryDesugaringEnabled true',1)
+              source+="\ndependencies { coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4' }\n"
+              groovy.write_text(source)
+          else:
+              raise SystemExit('Missing Android Gradle app file')
+          print('Configured Android receivers and Java API desugaring')
+          PY
+
       - name: Preserve SharedPreferences Android plugin in Release
         shell: bash
         run: |
