@@ -1258,7 +1258,7 @@ Future<void> bulkSmsSheet()async {
    valid.addAll(duplicates);
    valid.sort();
   }
-  if(valid.isEmpty){update(()=>{statusMessage=waffraIsEnglish?'No valid transactions were detected. Review the unrecognized messages below.':'لم يتم اكتشاف معاملات صالحة. راجع الرسائل غير المعروفة أدناه.',rejectedMessages=invalid.map((i)=>found[i]).toList()});return;}
+  if(valid.isEmpty){update(() {statusMessage=waffraIsEnglish?'No valid transactions were detected. Review the unrecognized messages below.':'لم يتم اكتشاف معاملات صالحة. راجع الرسائل غير المعروفة أدناه.';rejectedMessages=invalid.map((i)=>found[i]).toList();});return;}
   final incomes=valid.where((i)=>results[i].income).toList();
   final expenses=valid.where((i)=>!results[i].income).toList();
   final incomeTotal=incomes.fold<double>(0,(v,i)=>v+results[i].amount!);
@@ -1271,7 +1271,7 @@ Future<void> bulkSmsSheet()async {
    actions:[TextButton(onPressed:()=>Navigator.pop(dialogCtx,false),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
     FilledButton(onPressed:()=>Navigator.pop(dialogCtx,true),child:WaffraText(waffraIsEnglish?'Confirm and add':'تأكيد وإضافة المعاملات'))]));
   if(accepted!=true||!ctx.mounted)return;
-  update(()=>{busy=true,rejectedMessages=invalid.map((i)=>found[i]).toList()});
+  update(() {busy=true;rejectedMessages=invalid.map((i)=>found[i]).toList();});
   final additions=<MoneyEntry>[];
   final newHashes=<String>{};
   for(final i in valid){
@@ -1373,7 +1373,7 @@ Future<void> bulkSmsSheet()async {
         subtitle:SelectableText(item.value,maxLines:4),
         trailing:IconButton(icon:const Icon(Icons.edit_outlined),tooltip:waffraIsEnglish?'Review manually':'مراجعة يدويًا',onPressed:(){
          Navigator.pop(ctx);
-         entrySheet(sms:true);
+         entrySheet(sms:true,initialSms:item.value);
         }))),
       ],
       if(parsed&&statusMessage.isEmpty)...[
@@ -1466,11 +1466,11 @@ Future<void> bulkSmsSheet()async {
  sheetActive=false;disposeLater();
 }
 
- Future<void> entrySheet({MoneyEntry? initial,bool sms=false})async {
+ Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms})async {
   final title=TextEditingController(text:initial?.title??'');
   final value=TextEditingController(text:initial==null?'':formatWaffraMoney(initial.amount));
-  final message=TextEditingController();
-  bool income=initial?.income??false,analyzing=false,hasParsed=false;
+  final message=TextEditingController(text:initialSms??'');
+  bool income=initial?.income??false,analyzing=false,hasParsed=initialSms!=null;
   String category=initial?.category??'أخرى';
   DateTime date=initial?.date??DateTime.now();
    String? suggestion,pendingHash,receiptPath=initial?.receiptPath;
