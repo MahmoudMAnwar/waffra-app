@@ -1792,73 +1792,126 @@ Future<void> bulkSmsSheet()async {
      ])));
   }finally{disposeLater([min,max]);}
  }
- Widget monthlyInsights(){
-  final now=DateTime.now();
-  final prev=DateTime(now.year,now.month-1,1);
-  final thisMonth=entries.where((e)=>e.date.year==now.year&&e.date.month==now.month);
-  final lastMonth=entries.where((e)=>e.date.year==prev.year&&e.date.month==prev.month);
-  final spent=sum(thisMonth,false),lastSpent=sum(lastMonth,false);
-  final change=lastSpent<=0?null:(spent-lastSpent)/lastSpent*100;
-  final byCategory=<String,double>{};
-  for(final e in thisMonth.where((e)=>!e.income)){
-   byCategory[e.category]=(byCategory[e.category]??0)+e.amount;
-  }
-  final ranked=byCategory.entries.toList()..sort((a,b)=>b.value.compareTo(a.value));
-  final due=recurring.where((r){
-   final maxDay=DateTime(now.year,now.month+1,0).day;
-   final deadline=DateTime(now.year,now.month,r.day.clamp(1,maxDay));
-   final days=deadline.difference(DateTime(now.year,now.month,now.day)).inDays;
-   return days>=0&&days<=3;
-  }).toList();
-  return Card(child:Padding(padding:const EdgeInsets.all(13),child:Column(
-   crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+ Widget monthlyBudgetCard(){
+  final today=DateTime.now();
+  final monthEntries=entries.where((e)=>e.date.year==today.year&&e.date.month==today.month);
+  final spent=sum(monthEntries,false);
+  final used=monthlyBudget>0?(spent/monthlyBudget).clamp(0.0,1.0):0.0;
+  return Container(
+   padding:const EdgeInsets.all(15),
+   decoration:BoxDecoration(color:Theme.of(context).cardColor,
+    borderRadius:BorderRadius.circular(20),
+    border:Border.all(color:forest.withValues(alpha:0.10)),
+    boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:0.04),
+     blurRadius:8,offset:const Offset(0,3))]),
+   child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
     Row(children:[
+     const Icon(Icons.donut_large,color:emerald,size:23),
+     const SizedBox(width:8),
      Expanded(child:WaffraText(waffraIsEnglish?'Monthly budget':'الميزانية الشهرية',
-      style:const TextStyle(fontSize:16,fontWeight:FontWeight.bold))),
+      style:const TextStyle(fontWeight:FontWeight.bold,fontSize:18))),
      TextButton.icon(onPressed:editMonthlyBudget,
       icon:const Icon(Icons.edit_outlined,size:17),
-      label:WaffraText(waffraIsEnglish?'Set budget':'تحديد الميزانية')),
+      label:WaffraText(waffraIsEnglish?'Edit':'تحديد الميزانية')),
     ]),
+    const SizedBox(height:7),
     if(monthlyBudget>0)...[
-     LinearProgressIndicator(value:(spent/monthlyBudget).clamp(0.0,1.0),
-      minHeight:8,borderRadius:BorderRadius.circular(8),
-      color:spent>monthlyBudget?Colors.red:
-       spent>=monthlyBudget*.8?Colors.deepOrange:emerald),
-     const SizedBox(height:6),
-     WaffraText((waffraIsEnglish?'Spent ':'صرفت ')+formatMoney(spent)+
-      (waffraIsEnglish?' of ':' من ')+formatMoney(monthlyBudget)+
-      (waffraIsEnglish?' SAR':' ريال')),
-     if(spent>=monthlyBudget*.8)WaffraText(waffraIsEnglish?
-      (spent>=monthlyBudget?'Budget reached':'80% of your budget used'):
-      (spent>=monthlyBudget?'وصلت للميزانية':'استهلكت 80٪ من ميزانيتك'),
-      style:const TextStyle(color:Colors.deepOrange,fontWeight:FontWeight.bold)),
-    ]else WaffraText(waffraIsEnglish?
-      'Set a monthly budget to track spending.':
-      'حدّد ميزانية إجمالية للشهر لمتابعة مصروفاتك.',
-      style:const TextStyle(color:Colors.grey)),
-    if(thisMonth.isNotEmpty)ExpansionTile(
-     tilePadding:EdgeInsets.zero,
-     title:WaffraText(waffraIsEnglish?'Monthly insights':'ملخص الشهر',
-      style:const TextStyle(fontWeight:FontWeight.bold)),
-     children:[
-      if(change!=null)ListTile(dense:true,
-       leading:Icon(change>0?Icons.trending_up:Icons.trending_down,
-        color:change>0?Colors.deepOrange:emerald),
-       title:WaffraText((waffraIsEnglish?'Spending ':'المصروفات ')+
-        (change>=0?(waffraIsEnglish?'increased ':'زادت '):
-         (waffraIsEnglish?'decreased ':'قلت '))+
-        change.abs().toStringAsFixed(1)+'%'+
-        (waffraIsEnglish?' vs last month':' عن الشهر الماضي'))),
-      if(ranked.isNotEmpty)ListTile(dense:true,
-       leading:const Icon(Icons.category_outlined,color:emerald),
-       title:WaffraText((waffraIsEnglish?'Top spending category: ':'أكثر قسم صرفت عليه: ')+
-        ranked.first.key)),
+     WaffraText(waffraIsEnglish?
+      'Used '+(used*100).toStringAsFixed(0)+'% of your budget':
+      'تم إنفاق '+(used*100).toStringAsFixed(0)+'٪ من ميزانيتك',
+      style:const TextStyle(fontSize:13)),
+     const SizedBox(height:8),
+     ClipRRect(borderRadius:BorderRadius.circular(12),
+      child:LinearProgressIndicator(value:used,minHeight:9,
+       backgroundColor:emerald.withValues(alpha:0.10),
+       valueColor:AlwaysStoppedAnimation<Color>(
+        spent>=monthlyBudget?Colors.deepOrange:emerald))),
+     const SizedBox(height:14),
+     Row(children:[
+      Expanded(child:_budgetFigure(waffraIsEnglish?'Budget':'الميزانية',monthlyBudget)),
+      Expanded(child:_budgetFigure(waffraIsEnglish?'Spent':'المصروف',spent)),
+      Expanded(child:_budgetFigure(waffraIsEnglish?'Remaining':'المتبقي',
+       max(0.0,monthlyBudget-spent))),
      ]),
-    if(due.isNotEmpty)Padding(padding:const EdgeInsets.only(top:7),
-     child:WaffraText((waffraIsEnglish?'Upcoming recurring payments: ':
-      'تذكير بالعمليات المتكررة القادمة: ')+due.map((r)=>r.title).join('، '),
-      style:const TextStyle(fontSize:13,color:emerald))),
-   ])));
+     if(spent>=monthlyBudget*.8)Padding(
+      padding:const EdgeInsets.only(top:10),
+      child:WaffraText(waffraIsEnglish?
+       (spent>=monthlyBudget?'Monthly budget reached.':'80% of budget used.'):
+       (spent>=monthlyBudget?'وصلت لحد الميزانية الشهرية.':'استهلكت 80٪ من الميزانية.'),
+       style:const TextStyle(color:Colors.deepOrange,fontSize:13))),
+    ]else Padding(padding:const EdgeInsets.symmetric(vertical:7),
+     child:WaffraText(waffraIsEnglish?
+      'Set your monthly budget to track spending here.':
+      'حدّد ميزانية شهرية عشان تتابع مصروفاتك والمتبقي منها.',
+      style:const TextStyle(fontSize:14,color:Colors.grey))),
+   ]));
+ }
+ Widget _budgetFigure(String label,double amount)=>Column(
+  mainAxisSize:MainAxisSize.min,children:[
+   WaffraText(label,textAlign:TextAlign.center,
+    style:const TextStyle(color:Colors.grey,fontSize:12)),
+   const SizedBox(height:5),
+   FittedBox(fit:BoxFit.scaleDown,
+    child:WaffraCurrencyAmount(amount,fontSize:16,color:emerald)),
+  ]);
+ Widget monthlySummaryCard(){
+  final today=DateTime.now();
+  final prev=DateTime(today.year,today.month-1,1);
+  final current=entries.where((e)=>!e.income&&
+   e.date.year==today.year&&e.date.month==today.month);
+  final lastMonth=entries.where((e)=>!e.income&&
+   e.date.year==prev.year&&e.date.month==prev.month);
+  final spent=sum(current,false),prior=sum(lastMonth,false);
+  final categoriesTotal=<String,double>{};
+  for(final item in current){
+   categoriesTotal[item.category]=(categoriesTotal[item.category]??0)+item.amount;
+  }
+  final ranked=categoriesTotal.entries.toList()..sort((a,b)=>b.value.compareTo(a.value));
+  final top=ranked.isEmpty?null:ranked.first;
+  final change=prior<=0?null:(spent-prior)/prior*100;
+  return Container(
+   padding:const EdgeInsets.all(15),
+   decoration:BoxDecoration(color:Theme.of(context).cardColor,
+    borderRadius:BorderRadius.circular(20),
+    border:Border.all(color:forest.withValues(alpha:0.10))),
+   child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    Row(children:[
+     const Icon(Icons.bar_chart_rounded,color:emerald),
+     const SizedBox(width:8),
+     Expanded(child:WaffraText(waffraIsEnglish?'Monthly summary':'ملخص الشهر',
+      style:const TextStyle(fontWeight:FontWeight.bold,fontSize:18))),
+    ]),
+    const SizedBox(height:10),
+    if(top==null)WaffraText(waffraIsEnglish?
+      'No expenses recorded this month.':
+      'لا توجد مصروفات مسجلة لهذا الشهر.',
+      style:const TextStyle(color:Colors.grey,fontSize:14))
+    else Container(
+     padding:const EdgeInsets.symmetric(horizontal:12,vertical:12),
+     decoration:BoxDecoration(color:emerald.withValues(alpha:0.08),
+      borderRadius:BorderRadius.circular(14)),
+     child:Row(children:[
+      const CircleAvatar(backgroundColor:Color(0xFFD8EDE0),
+       child:Icon(Icons.pie_chart_outline,color:emerald)),
+      const SizedBox(width:8),
+      Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+       WaffraText(waffraIsEnglish?'Highest spending category':
+        'أكثر قسم صرفت عليه',style:const TextStyle(fontSize:12)),
+       WaffraText(waffraTr(top.key),maxLines:2,
+        style:const TextStyle(fontWeight:FontWeight.bold,fontSize:16)),
+      ])),
+      const SizedBox(width:4),
+      FittedBox(fit:BoxFit.scaleDown,
+       child:WaffraCurrencyAmount(top.value,fontSize:16,color:emerald)),
+     ])),
+    if(change!=null)Padding(padding:const EdgeInsets.only(top:9),
+     child:WaffraText((waffraIsEnglish?'Spending ':'المصروفات ')+
+      (change>=0?(waffraIsEnglish?'increased ':'زادت '):
+       (waffraIsEnglish?'decreased ':'قلت '))+
+      change.abs().toStringAsFixed(1)+'%'+
+      (waffraIsEnglish?' vs last month':' عن الشهر الماضي'),
+      style:const TextStyle(color:Colors.grey,fontSize:12))),
+   ]));
  }
  Widget dashboard(){
   final inc=sum(entries,true),exp=sum(entries,false);
