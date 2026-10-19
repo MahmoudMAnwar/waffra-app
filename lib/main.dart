@@ -942,7 +942,7 @@ class _HomeScreenState extends State<HomeScreen> {
  bool addFabExpanded=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
  @override void initState(){super.initState();waffraReturnHome.addListener(_returnToHome);load();}
- void _returnToHome(){if(mounted&&tab!=0)setState(()=>tab=0);}
+ void _returnToHome(){if(mounted)setState((){tab=0;addFabExpanded=false;});}
  @override void dispose(){waffraReturnHome.removeListener(_returnToHome);super.dispose();}
  Future<void> load()async {
   final p=await SharedPreferences.getInstance();
@@ -2731,6 +2731,22 @@ Future<void> bulkSmsSheet()async {
  ]);
  // Build only the selected tab; constructing all six tabs on every frame
  // caused avoidable work and visible transition lag on Android.
+ Widget _addMenuOption({
+  required IconData icon,required String label,required VoidCallback onTap,
+ })=>Material(
+  color:Theme.of(context).cardColor,
+  elevation:7,shadowColor:Colors.black12,
+  borderRadius:BorderRadius.circular(25),
+  child:InkWell(
+   onTap:onTap,
+   borderRadius:BorderRadius.circular(25),
+   child:Padding(padding:const EdgeInsets.symmetric(horizontal:15,vertical:11),
+    child:Row(mainAxisSize:MainAxisSize.min,children:[
+     Icon(icon,color:forest,size:21),
+     const SizedBox(width:10),
+     WaffraText(label,style:const TextStyle(
+      fontSize:15,fontWeight:FontWeight.bold,color:forest)),
+    ]))));
  Widget currentTab(){
   switch(tab){
    case 0:return dashboard();
@@ -2742,71 +2758,101 @@ Future<void> bulkSmsSheet()async {
   }
  }
  @override Widget build(BuildContext context)=>Scaffold(
-  appBar:AppBar(title:const WaffraText('وفرة | Waffra',
-    style:TextStyle(fontWeight:FontWeight.bold)),
+  appBar:AppBar(
+   titleSpacing:10,
+   title:FittedBox(fit:BoxFit.scaleDown,
+    alignment:AlignmentDirectional.centerStart,
+    child:WaffraText(waffraIsEnglish?'Waffra':'Waffra | وفرة',
+     style:const TextStyle(fontWeight:FontWeight.bold,fontSize:22))),
    actions:[
-    SizedBox(width:40,height:46,child:Center(child:TextButton(
-     style:TextButton.styleFrom(padding:EdgeInsets.zero,foregroundColor:Colors.white,
-      minimumSize:const Size(40,42)),
-     onPressed:()async{
-      final next=waffraIsEnglish?'ar':'en';
-      setState(()=>tab=0);
-      await widget.onLanguage(next);
-     },child:Text(waffraIsEnglish?'AR':'EN',
-      style:const TextStyle(fontWeight:FontWeight.bold,fontSize:14))))),
-    ValueListenableBuilder<bool>(valueListenable:hideWaffraAmounts,
-     builder:(context,hidden,_)=>SizedBox(width:42,height:46,
-      child:IconButton(
+    SizedBox(width:42,height:kToolbarHeight,
+     child:Center(child:TextButton(
+      style:TextButton.styleFrom(
+       padding:EdgeInsets.zero,foregroundColor:Colors.white,
+       minimumSize:const Size(42,42),tapTargetSize:MaterialTapTargetSize.shrinkWrap),
+      onPressed:()async{
+       if(mounted)setState(()=>addFabExpanded=false);
+       await widget.onLanguage(waffraIsEnglish?'ar':'en');
+      },
+      child:Text(waffraIsEnglish?'AR':'EN',
+       style:const TextStyle(fontWeight:FontWeight.bold,fontSize:15))))),
+    SizedBox(width:42,height:kToolbarHeight,
+     child:Center(child:ValueListenableBuilder<bool>(
+      valueListenable:hideWaffraAmounts,
+      builder:(ctx,hidden,_)=>IconButton(
        padding:EdgeInsets.zero,
        constraints:const BoxConstraints.tightFor(width:42,height:42),
        tooltip:hidden?(waffraIsEnglish?'Show amounts':'إظهار المبالغ'):
-                      (waffraIsEnglish?'Hide amounts':'إخفاء المبالغ'),
+        (waffraIsEnglish?'Hide amounts':'إخفاء المبالغ'),
        onPressed:()=>hideWaffraAmounts.value=!hidden,
-       icon:Icon(hidden?Icons.visibility_off_outlined:Icons.visibility_outlined)))),
-    SizedBox(width:42,height:46,child:IconButton(
-     padding:EdgeInsets.zero,
-     constraints:const BoxConstraints.tightFor(width:42,height:42),
-     onPressed:widget.onTheme,
-     icon:Icon(widget.dark?Icons.light_mode:Icons.dark_mode))),
-    SizedBox(width:49,height:46,child:Center(child:InkWell(
-     onTap:()=>setState(()=>tab=5),
-     borderRadius:BorderRadius.circular(30),
-     child:saudiAvatar(widget.profile.gender)))),
-    const SizedBox(width:5),
+       icon:Icon(hidden?Icons.visibility_off_outlined:Icons.visibility_outlined))))),
+    SizedBox(width:42,height:kToolbarHeight,
+     child:Center(child:IconButton(
+      padding:EdgeInsets.zero,
+      constraints:const BoxConstraints.tightFor(width:42,height:42),
+      tooltip:waffraIsEnglish?'Change appearance':'تغيير المظهر',
+      onPressed:widget.onTheme,
+      icon:Icon(widget.dark?Icons.light_mode:Icons.dark_mode)))),
+    SizedBox(width:48,height:kToolbarHeight,
+     child:Center(child:InkWell(
+      onTap:()=>setState((){
+       addFabExpanded=false;tab=5;
+      }),
+      borderRadius:BorderRadius.circular(30),
+      child:saudiAvatar(widget.profile.gender)))),
+    const SizedBox(width:4),
    ]),
   body:!ready?const Center(child:CircularProgressIndicator()):
    AnimatedSwitcher(duration:const Duration(milliseconds:235),reverseDuration:const Duration(milliseconds:190),
     transitionBuilder:(child,animation)=>FadeTransition(opacity:animation,child:SlideTransition(
      position:Tween<Offset>(begin:const Offset(0.035,0),end:Offset.zero).animate(CurvedAnimation(parent:animation,curve:Curves.easeOutCubic)),child:child)),
     child:KeyedSubtree(key:ValueKey(tab),child:currentTab())),
-  // The FAB starts as a compact + at the physical bottom-left.
-  // First tap opens it into a labelled pill; second tap opens the editor.
+  // Floating plus starts collapsed at the physical bottom-left in both
+  // languages. Expanded menu has two REAL actions, never a dummy label.
   floatingActionButtonLocation:waffraIsEnglish
-    ?FloatingActionButtonLocation.startFloat
-    :FloatingActionButtonLocation.endFloat,
-  floatingActionButton:tab!=0?null:AnimatedContainer(
-   duration:const Duration(milliseconds:230),
-   curve:Curves.easeOutCubic,
-   width:addFabExpanded?184:56,height:56,
-   decoration:BoxDecoration(color:forest,borderRadius:BorderRadius.circular(30),
-    boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:0.14),
-     blurRadius:12,offset:const Offset(0,5))]),
-   child:Material(type:MaterialType.transparency,
-    child:InkWell(borderRadius:BorderRadius.circular(30),
-     onTap:()async{
-      if(!addFabExpanded){setState(()=>addFabExpanded=true);return;}
-      setState(()=>addFabExpanded=false);
-      await entrySheet();
-     },
-     child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
-      const Icon(Icons.add,color:Colors.white,size:25),
-      if(addFabExpanded)...[
-       const SizedBox(width:8),
-       Flexible(child:WaffraText(waffraIsEnglish?'Add transaction':'أضف عملية',
-        style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold),
-        maxLines:1,softWrap:false)),
-      ],
-     ]))),),
+   ?FloatingActionButtonLocation.startFloat
+   :FloatingActionButtonLocation.endFloat,
+  floatingActionButton:!ready||tab!=0?null:Column(
+   mainAxisSize:MainAxisSize.min,
+   crossAxisAlignment:CrossAxisAlignment.start,children:[
+    AnimatedSize(duration:const Duration(milliseconds:210),
+     curve:Curves.easeOutCubic,
+     alignment:Alignment.bottomLeft,
+     child:addFabExpanded?Padding(
+      padding:const EdgeInsets.only(bottom:9),
+      child:Column(mainAxisSize:MainAxisSize.min,
+       crossAxisAlignment:CrossAxisAlignment.start,children:[
+        _addMenuOption(
+         icon:Icons.edit_note_rounded,
+         label:waffraIsEnglish?'Manual transaction':'عملية يدوية',
+         onTap:(){
+          setState(()=>addFabExpanded=false);
+          entrySheet();
+         }),
+        const SizedBox(height:7),
+        _addMenuOption(
+         icon:Icons.sms_outlined,
+         label:waffraIsEnglish?'Bank message':'رسالة بنكية',
+         onTap:(){
+          setState(()=>addFabExpanded=false);
+          bulkSmsSheet();
+         }),
+       ])):const SizedBox.shrink()),
+    Material(
+     color:forest,elevation:7,
+     shadowColor:Colors.black26,
+     shape:const CircleBorder(),
+     child:InkWell(
+      customBorder:const CircleBorder(),
+      onTap:()=>setState(()=>addFabExpanded=!addFabExpanded),
+      child:SizedBox(width:58,height:58,
+       child:AnimatedRotation(
+        duration:const Duration(milliseconds:210),
+        turns:addFabExpanded?0.125:0,
+        child:Icon(addFabExpanded?Icons.close:Icons.add,
+         color:Colors.white,size:28))),
+     )),
+   ]),
   bottomNavigationBar:NavigationBar(height:74,indicatorColor:const Color(0xFFCFE9D9),
    labelBehavior:NavigationDestinationLabelBehavior.alwaysShow,
    selectedIndex:tab,onDestinationSelected:(v)=>setState((){
