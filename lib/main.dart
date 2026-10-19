@@ -370,10 +370,10 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     child:AnimatedSwitcher(duration:const Duration(milliseconds:240),switchInCurve:Curves.easeOutCubic,
      transitionBuilder:(w,a)=>FadeTransition(opacity:a,child:SlideTransition(position:Tween<Offset>(begin:const Offset(0.11,0),end:Offset.zero).animate(a),child:w)),
      child:KeyedSubtree(key:ValueKey(language),child:child??const SizedBox.shrink())))),
-  theme:ThemeData(useMaterial3:true,colorSchemeSeed:emerald,scaffoldBackgroundColor:sand,appBarTheme:const AppBarTheme(backgroundColor:forest,foregroundColor:Colors.white),navigationBarTheme:NavigationBarThemeData(backgroundColor:forest,labelTextStyle:WidgetStateProperty.all(const TextStyle(color:Colors.white,fontSize:11)),iconTheme:WidgetStateProperty.resolveWith((states)=>IconThemeData(color:states.contains(WidgetState.selected)?forest:Colors.white,size:27))),floatingActionButtonTheme:const FloatingActionButtonThemeData(backgroundColor:forest,foregroundColor:Colors.white),fontFamily:'Tajawal',textTheme:ThemeData.light().textTheme.apply(fontFamily:'Tajawal'),primaryTextTheme:ThemeData.light().primaryTextTheme.apply(fontFamily:'Tajawal')),
-  darkTheme:ThemeData(useMaterial3:true,brightness:Brightness.dark,colorSchemeSeed:emerald,appBarTheme:const AppBarTheme(backgroundColor:forest,foregroundColor:Colors.white),navigationBarTheme:NavigationBarThemeData(backgroundColor:forest,labelTextStyle:WidgetStateProperty.all(const TextStyle(color:Colors.white,fontSize:11)),iconTheme:WidgetStateProperty.all(const IconThemeData(color:Colors.white))),floatingActionButtonTheme:const FloatingActionButtonThemeData(backgroundColor:forest,foregroundColor:Colors.white),fontFamily:'Tajawal',textTheme:ThemeData.dark().textTheme.apply(fontFamily:'Tajawal'),primaryTextTheme:ThemeData.dark().primaryTextTheme.apply(fontFamily:'Tajawal')),
+  theme:ThemeData(useMaterial3:true,colorSchemeSeed:emerald,outlinedButtonTheme:OutlinedButtonThemeData(style:OutlinedButton.styleFrom(side:const BorderSide(color:forest,width:1.2),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18)))),scaffoldBackgroundColor:sand,appBarTheme:const AppBarTheme(backgroundColor:forest,foregroundColor:Colors.white),navigationBarTheme:NavigationBarThemeData(backgroundColor:forest,labelTextStyle:WidgetStateProperty.all(const TextStyle(color:Colors.white,fontSize:11)),iconTheme:WidgetStateProperty.resolveWith((states)=>IconThemeData(color:states.contains(WidgetState.selected)?forest:Colors.white,size:27))),floatingActionButtonTheme:const FloatingActionButtonThemeData(backgroundColor:forest,foregroundColor:Colors.white),fontFamily:'Tajawal',textTheme:ThemeData.light().textTheme.apply(fontFamily:'Tajawal'),primaryTextTheme:ThemeData.light().primaryTextTheme.apply(fontFamily:'Tajawal')),
+  darkTheme:ThemeData(useMaterial3:true,brightness:Brightness.dark,colorSchemeSeed:emerald,outlinedButtonTheme:OutlinedButtonThemeData(style:OutlinedButton.styleFrom(foregroundColor:Colors.white,side:const BorderSide(color:Color(0xFF77BBA2),width:1.2),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18)))),appBarTheme:const AppBarTheme(backgroundColor:forest,foregroundColor:Colors.white),navigationBarTheme:NavigationBarThemeData(backgroundColor:forest,labelTextStyle:WidgetStateProperty.all(const TextStyle(color:Colors.white,fontSize:11)),iconTheme:WidgetStateProperty.all(const IconThemeData(color:Colors.white))),floatingActionButtonTheme:const FloatingActionButtonThemeData(backgroundColor:forest,foregroundColor:Colors.white),fontFamily:'Tajawal',textTheme:ThemeData.dark().textTheme.apply(fontFamily:'Tajawal'),primaryTextTheme:ThemeData.dark().primaryTextTheme.apply(fontFamily:'Tajawal')),
   themeMode:dark?ThemeMode.dark:ThemeMode.light,
-  themeAnimationDuration:const Duration(milliseconds:260),
+  themeAnimationDuration:Duration.zero,
   themeAnimationCurve:Curves.easeInOutCubic,
   home:Builder(builder:(rootContext)=>PopScope(canPop:false,onPopInvokedWithResult:(didPop,result)async {
    if(didPop||!mounted)return;
@@ -619,18 +619,18 @@ class _WaffraOnboardingState extends State<WaffraOnboarding> {
      mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
       TextButton(onPressed:finish,
        child:WaffraText(waffraIsEnglish?'Skip':'تخطي',
-        style:const TextStyle(color:forest,fontSize:16))),
+        style:const TextStyle(color:Colors.white,fontSize:16))),
       Padding(padding:const EdgeInsets.symmetric(horizontal:7),
        child:WaffraText((index+1).toString()+' / 4',
-        style:const TextStyle(color:forest,fontSize:17))),
+        style:const TextStyle(color:Colors.white,fontSize:17))),
      ])),
     SizedBox(height:compact?4:9),
     WaffraText(pageName,textAlign:TextAlign.center,
-     style:TextStyle(color:forest,fontWeight:FontWeight.w800,
+     style:TextStyle(color:Colors.white,fontWeight:FontWeight.w800,
       fontSize:titleSize,height:1.23)),
     SizedBox(height:compact?6:9),
     WaffraText(pageDesc,textAlign:TextAlign.center,
-     style:TextStyle(color:const Color(0xFF5B5B60),
+     style:TextStyle(color:const Color(0xFFD1E9DC),
       fontSize:subtitleSize,height:1.35)),
     const SizedBox(height:3),
     Expanded(child:illustration(index)),
@@ -643,7 +643,7 @@ class _WaffraOnboardingState extends State<WaffraOnboarding> {
       width:i==current?19:8,height:8,
       margin:const EdgeInsets.symmetric(horizontal:4),
       decoration:BoxDecoration(borderRadius:BorderRadius.circular(8),
-       color:i==current?forest:const Color(0xFFD0DAD0)))))),
+       color:i==current?Colors.white:const Color(0xFF5F9782)))))),
     const SizedBox(height:9),
     Listener(
      onPointerDown:(_)=>setState(()=>nextPressed=true),
@@ -655,13 +655,13 @@ class _WaffraOnboardingState extends State<WaffraOnboarding> {
       curve:Curves.easeOutCubic,
       child:SizedBox(width:double.infinity,height:55,child:FilledButton(
      onPressed:next,style:FilledButton.styleFrom(
-      backgroundColor:nextPressed?const Color(0xFF033A2B):forest,foregroundColor:Colors.white,
+      backgroundColor:nextPressed?const Color(0xFFE4F1EA):Colors.white,foregroundColor:forest,
       shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(30))),
      child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
       const Icon(Icons.arrow_back_rounded,size:23),
       const SizedBox(width:17),
       Flexible(child:FittedBox(fit:BoxFit.scaleDown,child:WaffraText(index==3
-       ?(waffraIsEnglish?'Start with Waffra':'ابدأ رحلتك مع وفرة')
+       ?(waffraIsEnglish?'Start now':'ابدأ الآن')
        :(waffraIsEnglish?'Next':'التالي'),
        maxLines:1,softWrap:false,
        style:const TextStyle(color:Colors.white,fontSize:19,
@@ -672,7 +672,7 @@ class _WaffraOnboardingState extends State<WaffraOnboarding> {
   );
  });
  @override Widget build(BuildContext context)=>Scaffold(
-  backgroundColor:const Color(0xFFFAF9F1),
+  backgroundColor:forest,
   body:SafeArea(child:PageView.builder(
    controller:controller,allowImplicitScrolling:true,
    itemCount:4,
@@ -2862,8 +2862,9 @@ Future<void> bulkSmsSheet()async {
    Row(key:_tourKeys[2],children:[
     Expanded(child:WaffraText(waffraIsEnglish?'Categories & budgets':'أقسامك وميزانياتك',
      style:Theme.of(context).textTheme.titleLarge)),
-    TextButton.icon(onPressed:showCategoryTrash,
-     icon:const Icon(Icons.delete_outline,size:20),label:WaffraText(waffraIsEnglish?'Deleted':'الأقسام المحذوفة')),
+    OutlinedButton.icon(onPressed:showCategoryTrash,
+      style:OutlinedButton.styleFrom(padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),visualDensity:VisualDensity.compact,minimumSize:const Size(0,34)),
+     icon:const Icon(Icons.delete_outline,size:16),label:WaffraText(waffraIsEnglish?'Deleted categories':'الأقسام المحذوفة',style:const TextStyle(fontSize:11,fontWeight:FontWeight.bold))),
    ]),
    WaffraText(waffraIsEnglish?'Organize spending and set budgets easily':'أضف أقسامًا جديدة لتنظيم دخلك ومصروفاتك بسهولة.',
     style:const TextStyle(fontSize:13)),
@@ -3607,8 +3608,8 @@ Future<void> bulkSmsSheet()async {
     target.bottom.clamp(4.0,area.maxHeight-4).toDouble());
   }
   final width=min(300.0,area.maxWidth-24);
-  const popupHeight=151.0;
-  final below=target.bottom+popupHeight+14<area.maxHeight;
+  const popupHeight=205.0;
+  final below=area.maxHeight-target.bottom>=popupHeight+20||area.maxHeight-target.bottom>=target.top;
   final top=(below?target.bottom+10:target.top-popupHeight-10)
    .clamp(7.0,max(7.0,area.maxHeight-popupHeight-7)).toDouble();
   final left=(target.center.dx-width/2).clamp(12.0,max(12.0,area.maxWidth-width-12)).toDouble();
@@ -3631,7 +3632,7 @@ Future<void> bulkSmsSheet()async {
         WaffraText('${tourStep+1}/6',style:const TextStyle(color:emerald,fontSize:11)),
        ]),
        const SizedBox(height:6),
-       WaffraText(waffraIsEnglish?enHelp[tourStep]:arHelp[tourStep],maxLines:2,
+       WaffraText(waffraIsEnglish?enHelp[tourStep]:arHelp[tourStep],
         style:const TextStyle(fontSize:12)),
        const SizedBox(height:8),
        Row(children:[
@@ -3799,18 +3800,18 @@ Future<void> bulkSmsSheet()async {
  Widget _addMenuOption({
   required IconData icon,required String label,required VoidCallback onTap,
  })=>Material(
-  color:Theme.of(context).cardColor,
+  color:Theme.of(context).brightness==Brightness.dark?const Color(0xFF087A54):Colors.white,
   elevation:7,shadowColor:Colors.black12,
-  borderRadius:BorderRadius.circular(25),
+  shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(25),side:BorderSide(color:Theme.of(context).brightness==Brightness.dark?const Color(0xFF89E0BB):forest,width:1.2)),
   child:InkWell(
    onTap:onTap,
    borderRadius:BorderRadius.circular(25),
    child:Padding(padding:const EdgeInsets.symmetric(horizontal:15,vertical:11),
     child:Row(mainAxisSize:MainAxisSize.min,children:[
-     Icon(icon,color:forest,size:21),
+     Icon(icon,color:Theme.of(context).brightness==Brightness.dark?Colors.white:forest,size:21),
      const SizedBox(width:10),
-     WaffraText(label,style:const TextStyle(
-      fontSize:15,fontWeight:FontWeight.bold,color:forest)),
+     WaffraText(label,style:TextStyle(
+      fontSize:15,fontWeight:FontWeight.bold,color:Theme.of(context).brightness==Brightness.dark?Colors.white:forest)),
     ]))));
  Widget currentTab(){
   switch(tab){
