@@ -2902,7 +2902,7 @@ Future<void> bulkSmsSheet()async {
   setState((){
    tourStep++;
    tab=tourTabs[tourStep];
-   addFabExpanded=tourStep==1;
+   addFabExpanded=false;
   });
  }
  Widget tourOverlay()=>LayoutBuilder(builder:(context,area){
@@ -2928,12 +2928,12 @@ Future<void> bulkSmsSheet()async {
   final desc=waffraIsEnglish?descEn[tourStep]:descAr[tourStep];
   final w=area.maxWidth,h=area.maxHeight;
   final focus=tourStep==0?Rect.fromLTWH(12,48,w-24,min(170.0,h*.33))
-   :tourStep==1?Rect.fromLTWH(12,max(0,h-150),w-24,125)
+   :tourStep==1?Rect.fromLTWH(10,max(0.0,h-100),100,84)
    :Rect.fromLTWH(12,12,w-24,min(165.0,h*.3));
   return Stack(children:[
    Positioned.fill(child:CustomPaint(painter:WaffraTourShade(focus))),
    Align(alignment:Alignment.bottomCenter,child:Padding(
-    padding:const EdgeInsets.fromLTRB(16,12,16,17),
+    padding:const EdgeInsets.fromLTRB(16,12,16,95),
     child:Material(
      borderRadius:BorderRadius.circular(23),elevation:14,
      color:Theme.of(context).cardColor,
