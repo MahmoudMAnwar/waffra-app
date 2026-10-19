@@ -1030,6 +1030,7 @@ class _HomeScreenState extends State<HomeScreen> {
  double? minTransactionAmount,maxTransactionAmount;
  int tab=0,year=DateTime.now().year,month=DateTime.now().month;
  String search='',typeFilter='الكل',categoryFilter='الكل',period='شهري';
+ String categorySearch='',categoryDisplay='all',goalDisplay='all',recurringDisplay='all';
  bool ready=false;
  bool tourActive=false;
  int tourStep=0;
@@ -2567,45 +2568,114 @@ Future<void> bulkSmsSheet()async {
    )));
  }
  Widget categoriesPage(){
-  final now=DateTime.now();
-  final current=entries.where((e)=>!e.income&&e.date.year==now.year&&e.date.month==now.month);
-  return ListView(padding:const EdgeInsets.all(16),children:[
+  final today=DateTime.now();
+  final monthly=entries.where((e)=>!e.income&&e.date.year==today.year&&e.date.month==today.month);
+  final spent=sum(monthly,false);
+  final filtered=categories.where((c){
+   if(categoryDisplay=='budget'&&c.budget<=0)return false;
+   if(categoryDisplay=='none'&&c.budget>0)return false;
+   return c.name.toLowerCase().contains(categorySearch.trim().toLowerCase());
+  }).toList();
+  Widget categoryCard(BudgetCategory c){
+   final color=Color(c.color);
+   final amount=sum(monthly.where((e)=>e.category==c.name),false);
+   final hasBudget=!c.income&&c.budget>0;
+   return Card(
+    margin:const EdgeInsets.only(bottom:10),
+    elevation:1.2,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(20)),
+    child:InkWell(borderRadius:BorderRadius.circular(20),onTap:()=>updateCategory(c),
+     child:Padding(padding:const EdgeInsets.all(13),child:Column(children:[
+      Row(children:[
+       CircleAvatar(radius:23,backgroundColor:color.withValues(alpha:.14),
+        child:Icon(categoryIcon(c.icon),color:color)),
+       const SizedBox(width:12),
+       Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        WaffraText(c.name,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:16)),
+        const SizedBox(height:3),
+        WaffraText(c.income?(waffraIsEnglish?'Income category':'قسم دخل'):
+         hasBudget?(waffraIsEnglish?'Budget: ${cash(c.budget)}':'الميزانية: ${cash(c.budget)}'):
+         (waffraIsEnglish?'No budget set':'بدون ميزانية محددة'),
+         style:TextStyle(fontSize:12,color:Theme.of(context).hintColor)),
+       ])),
+       PopupMenuButton<String>(tooltip:waffraIsEnglish?'Category options':'خيارات القسم',
+        onSelected:(v){if(v=='edit')updateCategory(c);else if(v=='delete')deleteCategory(c);},
+        itemBuilder:(_)=>[
+         PopupMenuItem(value:'edit',child:WaffraText(waffraIsEnglish?'Edit':'تعديل')),
+         PopupMenuItem(value:'delete',child:WaffraText(waffraIsEnglish?'Delete':'حذف'))]),
+      ]),
+      if(hasBudget)...[
+       const SizedBox(height:13),
+       Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
+        WaffraText('${((amount/c.budget)*100).round()}%',style:TextStyle(color:color,fontWeight:FontWeight.bold)),
+        WaffraText(waffraIsEnglish?'Spent ${cash(amount)} of ${cash(c.budget)}':'صرفت ${cash(amount)} من ${cash(c.budget)}',
+         style:const TextStyle(fontSize:12))]),
+       const SizedBox(height:7),
+       LinearProgressIndicator(value:(amount/c.budget).clamp(0.0,1.0),minHeight:8,
+        color:amount>c.budget?Colors.red:color,
+        backgroundColor:color.withValues(alpha:.13),
+        borderRadius:BorderRadius.circular(8)),
+       const SizedBox(height:9),
+       Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
+        WaffraText(waffraIsEnglish?'Remaining':'المتبقي',style:const TextStyle(fontSize:12)),
+        WaffraText(cash(max(0,c.budget-amount)),
+         style:TextStyle(fontSize:13,fontWeight:FontWeight.bold,color:amount>c.budget?Colors.red:color)),
+       ]),
+      ],
+     ]))));
+  }
+  return ListView(padding:const EdgeInsets.fromLTRB(16,16,16,20),children:[
    Row(children:[
-    Expanded(child:WaffraText('أقسامك وميزانياتك',
+    Expanded(child:WaffraText(waffraIsEnglish?'Categories & budgets':'أقسامك وميزانياتك',
      style:Theme.of(context).textTheme.titleLarge)),
-    IconButton(onPressed:showCategoryTrash,
-     tooltip:waffraIsEnglish?'Recently deleted':'الأقسام المحذوفة',
-     icon:const Icon(Icons.delete_outline,color:emerald)),
+    TextButton.icon(onPressed:showCategoryTrash,
+     icon:const Icon(Icons.delete_outline,size:20),label:WaffraText(waffraIsEnglish?'Deleted':'الأقسام المحذوفة')),
    ]),
-   const WaffraText('حدّد ميزانية شهرية لكل قسم وتابع صرفك'),
-   const SizedBox(height:8),
-   WaffraText(waffraIsEnglish?'Use the + button to add an income or expense category':'اضغط على + أسفل اليسار لإضافة قسم دخل أو مصروفات',
-    style:const TextStyle(color:emerald,fontSize:13)),
+   WaffraText(waffraIsEnglish?'Organize spending and set budgets easily':'أضف أقسامًا جديدة لتنظيم دخلك ومصروفاتك بسهولة.',
+    style:const TextStyle(fontSize:13)),
+   const SizedBox(height:14),
+   Row(children:[
+    Expanded(child:_summaryBox(waffraIsEnglish?'Categories':'عدد الأقسام',
+     categories.length.toString(),Icons.layers,emerald)),
+    const SizedBox(width:10),
+    Expanded(child:_summaryBox(waffraIsEnglish?'Monthly spending':'المصروف الشهري',
+     cash(spent),Icons.trending_up,Colors.deepOrange)),
+   ]),
+   const SizedBox(height:15),
+   Wrap(spacing:8,runSpacing:6,children:[
+    _filterChip(waffraIsEnglish?'All':'الكل',categoryDisplay=='all',()=>setState(()=>categoryDisplay='all')),
+    _filterChip(waffraIsEnglish?'Budgeted':'بميزانية',categoryDisplay=='budget',()=>setState(()=>categoryDisplay='budget')),
+    _filterChip(waffraIsEnglish?'No budget':'بدون ميزانية',categoryDisplay=='none',()=>setState(()=>categoryDisplay='none')),
+   ]),
    const SizedBox(height:12),
-   ...categories.map((c){
-    final spent=sum(current.where((e)=>e.category==c.name),false);
-    return Card(child:Padding(padding:const EdgeInsets.all(10),child:Column(children:[
-     ListTile(
-      leading:CircleAvatar(backgroundColor:Color(c.color).withValues(alpha:.15),
-       child:Icon(categoryIcon(c.icon),color:Color(c.color))),
-      title:WaffraText(c.name),
-      subtitle:WaffraText(c.income?'دخل':c.budget>0?'الميزانية: ${cash(c.budget)} • تنبيه عند ${c.alertPercent}٪':'بدون ميزانية محددة'),
-      trailing:PopupMenuButton<String>(onSelected:(v){
-       if(v=='edit')updateCategory(c);else deleteCategory(c);
-      },itemBuilder:(_)=>const [PopupMenuItem(value:'edit',child:WaffraText('تعديل')),
-       PopupMenuItem(value:'delete',child:WaffraText('حذف'))])),
-     if(!c.income&&c.budget>0)...[
-      LinearProgressIndicator(value:(spent/c.budget).clamp(0.0,1.0),minHeight:8,
-       color:spent>c.budget?Colors.red:Color(c.color),borderRadius:BorderRadius.circular(8)),
-      const SizedBox(height:5),
-      WaffraText('صرفت ${cash(spent)} من ${cash(c.budget)}',
-       style:TextStyle(color:spent>c.budget?Colors.red:null)),
-     ],
-    ])));
-   }),
-   const SizedBox(height:80),
+   TextField(onChanged:(v)=>setState(()=>categorySearch=v),
+    decoration:InputDecoration(prefixIcon:const Icon(Icons.search),
+     hintText:waffraIsEnglish?'Search categories':'البحث عن قسم...',
+     border:OutlineInputBorder(borderRadius:BorderRadius.circular(30)),
+     isDense:true)),
+   const SizedBox(height:14),
+   ...filtered.map(categoryCard),
+   if(filtered.isEmpty)Padding(padding:const EdgeInsets.symmetric(vertical:54),
+    child:Column(children:[
+     const Icon(Icons.search_off_rounded,size:54,color:emerald),
+     const SizedBox(height:12),
+     WaffraText(waffraIsEnglish?'No matching categories':'لا توجد أقسام مطابقة'),
+    ])),
+   const SizedBox(height:120),
   ]);
  }
+ Widget _summaryBox(String heading,String number,IconData icon,Color color)=>Container(
+  padding:const EdgeInsets.all(12),
+  decoration:BoxDecoration(color:color.withValues(alpha:.08),borderRadius:BorderRadius.circular(18)),
+  child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+   Icon(icon,color:color,size:21),const SizedBox(height:5),
+   WaffraText(heading,style:const TextStyle(fontSize:12)),
+   FittedBox(fit:BoxFit.scaleDown,alignment:AlignmentDirectional.centerStart,
+    child:WaffraText(number,style:const TextStyle(fontSize:17,fontWeight:FontWeight.bold))),
+  ]));
+ Widget _filterChip(String label,bool selected,VoidCallback onTap)=>
+  ChoiceChip(label:WaffraText(label),selected:selected,onSelected:(_)=>onTap(),
+   showCheckmark:false,selectedColor:forest,labelStyle:TextStyle(
+    color:selected?Colors.white:null,fontWeight:selected?FontWeight.bold:FontWeight.normal));
  Future<void> goalDialog()async {
   final name=TextEditingController(),target=TextEditingController();
   final prefs=await SharedPreferences.getInstance();
