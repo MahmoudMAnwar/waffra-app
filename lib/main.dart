@@ -523,7 +523,18 @@ class _WaffraOnboardingState extends State<WaffraOnboarding> {
  }
  void next(){
   if(current==3){finish();return;}
-  controller.nextPage(duration:const Duration(milliseconds:235),curve:Curves.easeOutCubic);
+  controller.nextPage(duration:const Duration(milliseconds:265),curve:Curves.easeInOutCubic);
+ }
+ @override void initState(){
+  super.initState();
+  // Decode the four lightweight artwork assets up front rather than during
+  // the first swipe; prevents a first-transition decode hitch.
+  WidgetsBinding.instance.addPostFrameCallback((_){
+   if(!mounted)return;
+   for(var i=1;i<=4;i++){
+    precacheImage(AssetImage('assets/onboarding_0'+i.toString()+'.png'),context);
+   }
+  });
  }
  @override void dispose(){controller.dispose();super.dispose();}
  // Crop only the illustration region from the original approved design.
@@ -532,28 +543,25 @@ class _WaffraOnboardingState extends State<WaffraOnboarding> {
  // Responsive hero: maximize available width while preserving artwork proportions.
  // Keep its important central content visible and never distort the illustration.
  Widget illustration(int index)=>LayoutBuilder(builder:(context,box){
-  const cropTop=305.0,cropHeight=595.0;
+  // Artwork's embedded captions, buttons and pagination are not included
+  // in this hero crop. Those are separate, accessible Flutter controls.
+  const cropTop=315.0,cropHeight=555.0;
   final artworkWidth=sourceWidth[index];
   final widthScale=box.maxWidth/artworkWidth;
   final heightScale=box.maxHeight/cropHeight;
   // Fill most of the hero area, allowing only a very small horizontal crop.
-  final scale=min(widthScale*1.035,heightScale);
+  final scale=min(widthScale*1.025,heightScale);
   final imageWidth=artworkWidth*scale;
   final imageHeight=979.0*scale;
   return ClipRect(child:Stack(fit:StackFit.expand,children:[
-   Positioned.fill(child:Opacity(
-    opacity:0.045,
-    child:Image.asset(
-     'assets/onboarding_0'+(index+1).toString()+'.png',
-     fit:BoxFit.cover,color:const Color(0xFFFAF9F1),
-     colorBlendMode:BlendMode.modulate,
-     filterQuality:FilterQuality.low))),
+   const Positioned.fill(child:ColoredBox(color:Color(0xFFFAF9F1))),
    Positioned(
     left:(box.maxWidth-imageWidth)/2,
     top:(box.maxHeight-cropHeight*scale)/2-cropTop*scale,
     width:imageWidth,height:imageHeight,
-    child:Image.asset('assets/onboarding_0'+(index+1).toString()+'.png',
-     fit:BoxFit.fill,filterQuality:FilterQuality.high)),
+    child:RepaintBoundary(child:Image.asset(
+     'assets/onboarding_0'+(index+1).toString()+'.png',
+     fit:BoxFit.fill,filterQuality:FilterQuality.high))),
   ]));
  });
  Widget slide(int index)=>LayoutBuilder(builder:(context,limits){
@@ -585,8 +593,17 @@ class _WaffraOnboardingState extends State<WaffraOnboarding> {
       fontSize:subtitleSize,height:1.35)),
     const SizedBox(height:3),
     Expanded(child:illustration(index)),
-    // Approved artwork already contains a page-indicator row: do not draw it twice.
-    const SizedBox(height:8),
+    // This is the only visible pagination row. Baked-in artwork dots are
+    // excluded by the hero crop above, so there can be no duplicate.
+    Directionality(textDirection:TextDirection.ltr,child:Row(
+     mainAxisAlignment:MainAxisAlignment.center,
+     children:List.generate(4,(i)=>AnimatedContainer(
+      duration:const Duration(milliseconds:170),curve:Curves.easeOut,
+      width:i==current?19:8,height:8,
+      margin:const EdgeInsets.symmetric(horizontal:4),
+      decoration:BoxDecoration(borderRadius:BorderRadius.circular(8),
+       color:i==current?forest:const Color(0xFFD0DAD0)))))),
+    const SizedBox(height:9),
     SizedBox(width:double.infinity,height:55,child:FilledButton(
      onPressed:next,style:FilledButton.styleFrom(
       backgroundColor:forest,foregroundColor:Colors.white,
@@ -607,9 +624,11 @@ class _WaffraOnboardingState extends State<WaffraOnboarding> {
  });
  @override Widget build(BuildContext context)=>Scaffold(
   backgroundColor:const Color(0xFFFAF9F1),
-  body:SafeArea(child:PageView(
-   controller:controller,onPageChanged:(nextIndex)=>setState(()=>current=nextIndex),
-   children:List.generate(4,slide),
+  body:SafeArea(child:PageView.builder(
+   controller:controller,allowImplicitScrolling:true,
+   itemCount:4,
+   onPageChanged:(nextIndex)=>setState(()=>current=nextIndex),
+   itemBuilder:(context,index)=>slide(index),
   )),
  );
 }
@@ -1494,8 +1513,12 @@ Future<void> bulkSmsSheet()async {
           pdfCell(dayText(e.date),center:true),
           pdfCell(english?(e.income?'Income':'Expense'):(e.income?'دخل':'مصروف'),rtl:!english),
           pdfCell(waffraTr(e.category),rtl:!english),
-          pw.Padding(padding:const pw.EdgeInsets.symmetric(horizontal:6,vertical:7),
-           child:pw.Align(alignment:english?pw.Alignment.centerLeft:pw.Alignment.centerRight,
+          pw.Container(
+           width:double.infinity,
+           alignment:english?pw.Alignment.centerLeft:pw.Alignment.centerRight,
+           padding:const pw.EdgeInsets.symmetric(horizontal:6,vertical:7),
+           child:pw.Directionality(
+            textDirection:english?pw.TextDirection.ltr:pw.TextDirection.rtl,
             child:pw.Image(art.$1,width:460,height:art.$2,fit:pw.BoxFit.contain))),
           pdfCell('${e.income?'+':'-'}${fmt(e.amount)}',center:true),
          ],
