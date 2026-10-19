@@ -1726,7 +1726,7 @@ Future<void> bulkSmsSheet()async {
  }
  Future<void> deleteEntry(MoneyEntry e)async {
   final yes=await confirmDeletion(waffraIsEnglish?'Delete transaction':'حذف العملية',
-   waffraIsEnglish?'Delete this transaction?':'ودّك تحذف «'+e.title+'»؟');
+   waffraIsEnglish?'Delete «'+e.title+'»? You can undo for 6 seconds after deletion.':'هل تريد حذف المعاملة «'+e.title+'»؟ يمكنك التراجع خلال 6 ثوانٍ بعد الحذف.');
   if(yes!=true||!mounted)return;
   setState(()=>entries.removeWhere((x)=>x.id==e.id));
   await persist();
@@ -1780,14 +1780,9 @@ Future<void> bulkSmsSheet()async {
  }
  Future<void> confirmDeleteAllEntries() async {
   if(entries.isEmpty){snack(context,waffraIsEnglish?'No transactions to delete':'لا توجد معاملات لحذفها');return;}
-  final confirmed=await showDialog<bool>(context:context,builder:(dialogContext)=>AlertDialog(
-   title:WaffraText(waffraIsEnglish?'Delete all transactions?':'حذف كل المعاملات؟'),
-   content:WaffraText(waffraIsEnglish?'All transactions will be permanently deleted. This cannot be undone.':'سيتم حذف جميع معاملاتك نهائيًا، ولا يمكن التراجع عن هذا الإجراء.'),
-   actions:[
-    TextButton(onPressed:()=>Navigator.pop(dialogContext,false),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
-    FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),onPressed:()=>Navigator.pop(dialogContext,true),child:WaffraText(waffraIsEnglish?'Delete all':'حذف الكل')),
-   ],
-  ));
+  final confirmed=await confirmDeletion(
+   waffraIsEnglish?'Delete all transactions?':'حذف كل المعاملات؟',
+   waffraIsEnglish?'Delete all ${entries.length} recorded transactions permanently? This cannot be undone.':'سيتم حذف جميع المعاملات المسجلة وعددها ${entries.length} نهائيًا، ولا يمكن التراجع عن هذا الإجراء.');
   if(confirmed!=true||!mounted)return;
   final backup=List<MoneyEntry>.of(entries);
   final hashBackup=Set<String>.of(smsHashes);
@@ -2407,6 +2402,8 @@ Future<void> bulkSmsSheet()async {
        tab=0;addFabExpanded=false;showAllTransactions=true;
        showTransactionFilters=true;categoryFilter=c.name;
        typeFilter=c.income?'الدخل':'المصروفات';
+       search='';transactionsDateRange=null;
+       minTransactionAmount=null;maxTransactionAmount=null;
       });
      },child:WaffraText(waffraIsEnglish?'View transactions':'عرض المعاملات المرتبطة'))
      else TextButton(onPressed:(){
@@ -2731,7 +2728,9 @@ Future<void> bulkSmsSheet()async {
    trailing:Row(mainAxisSize:MainAxisSize.min,children:[
     RiyalAmount(r.amount),
     IconButton(onPressed:()async {
-     final ok=await confirmDeletion('حذف التكرار','تبي توقف تكرار ${r.title}؟ العمليات المسجّلة بتبقى محفوظة.');
+     final ok=await confirmDeletion(
+      waffraIsEnglish?'Delete recurring transaction?':'حذف التكرار',
+      waffraIsEnglish?'Stop recurring «${r.title}»? Previously saved transactions remain, but this recurring schedule cannot be recovered.':'هل تريد إيقاف تكرار «${r.title}»؟ ستبقى المعاملات المسجّلة محفوظة، لكن لا يمكن استرجاع جدولة التكرار بعد حذفها.');
      if(ok==true&&mounted){setState(()=>recurring.removeWhere((x)=>x.id==r.id));await persist();}
     },icon:const Icon(Icons.delete_outline)),
    ])))),
@@ -2794,7 +2793,9 @@ Future<void> bulkSmsSheet()async {
        restoredRules.addAll(rules.map((key,value)=>MapEntry(key.toString(),value.toString())));
       }
       if(!mounted)return;
-      final ok=await confirm('تأكيد الاستعادة','ودّك تستبدل البيانات الحالية بالنسخة الملصوقة؟');
+      final ok=await confirm(
+       waffraIsEnglish?'Confirm backup restore':'تأكيد الاستعادة',
+       waffraIsEnglish?'This will replace all current transactions, categories, savings goals and recurring items with the backup. Make a backup of current data first. Continue?':'سيتم استبدال جميع المعاملات والأقسام وأهداف الادخار والعمليات المتكررة الحالية بمحتويات النسخة الاحتياطية. احفظ نسخة من بياناتك الحالية قبل المتابعة. هل تريد الاستمرار؟');
       if(ok!=true||!mounted)return;
       setState((){
        entries..clear()..addAll(newEntries);
