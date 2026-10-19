@@ -1150,7 +1150,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  bool tourActive=false;
  bool tourTargetReady=false;
  int tourStep=0;
- static const tourTabs=<int>[0,0,1,1,3,4];
+ static const tourTabs=<int>[0,0,1,3,4,5];
  bool addFabExpanded=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
  @override void initState(){super.initState();_tourGlow=AnimationController(vsync:this,duration:const Duration(milliseconds:1150));waffraReturnHome.addListener(_returnToHome);load();}
@@ -2993,7 +2993,7 @@ Future<void> bulkSmsSheet()async {
       });
      },child:WaffraText(waffraIsEnglish?'View transactions':'عرض المعاملات المرتبطة'))
      else TextButton(onPressed:(){
-      Navigator.pop(ctx);setState((){tab=3;goalsOpened=false;addFabExpanded=false;});
+      Navigator.pop(ctx);setState((){tab=4;goalsOpened=false;addFabExpanded=false;});
      },child:WaffraText(waffraIsEnglish?'View recurring':'عرض العمليات المتكررة')),
     ]));
    return;
@@ -4143,7 +4143,8 @@ Future<void> bulkSmsSheet()async {
    case 0:return goalsOpened?goalsPage():dashboard();
    case 1:return categoriesPage();
    case 2:return dashboard(); // Analysis opens in a modal, not a tab page.
-   case 3:return recurringPage();
+   case 3:return goalsPage();
+   case 4:return recurringPage();
    default:return profilePage();
   }
  }
@@ -4199,7 +4200,7 @@ Future<void> bulkSmsSheet()async {
     SizedBox(width:48,height:kToolbarHeight,
      child:Center(child:InkWell(
       onTap:()=>setState((){
-       addFabExpanded=false;goalsOpened=false;tab=4;
+       addFabExpanded=false;goalsOpened=false;tab=5;
       }),
       borderRadius:BorderRadius.circular(30),
       child:waffraAvatar(widget.profile.gender,widget.profile.avatar,radius:19)))),
@@ -4275,6 +4276,7 @@ Future<void> bulkSmsSheet()async {
     NavigationDestination(icon:KeyedSubtree(key:_tourKeys[3],child:const Icon(Icons.auto_awesome_rounded)),
      selectedIcon:const Icon(Icons.auto_awesome_rounded,color:emerald),
      label:waffraIsEnglish?'Analysis':'التحليل',tooltip:waffraIsEnglish?'Analyze income and expenses':'تحليل الدخل والمصروفات'),
+    NavigationDestination(icon:const Icon(Icons.flag_outlined),selectedIcon:const Icon(Icons.flag),label:waffraIsEnglish?'Goals':'أهداف الادخار'),
     NavigationDestination(icon:const Icon(Icons.repeat),label:waffraTr('المتكررة')),
     NavigationDestination(icon:KeyedSubtree(key:_tourKeys[5],child:const Icon(Icons.person_outline)),label:waffraTr('حسابي')),
    ])),
