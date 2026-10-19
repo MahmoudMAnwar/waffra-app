@@ -1,0 +1,65 @@
+name: Create Waffra Android Signing Key
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Generate signing key and certificate fingerprints
+        shell: bash
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.WAFFRA_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "$KEYSTORE_PASSWORD" ]; then
+            echo "::error::Missing WAFFRA_KEYSTORE_PASSWORD repository secret"
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/waffra-signing"
+          cd "$RUNNER_TEMP/waffra-signing"
+          keytool -genkeypair -v \
+            -keystore waffra-release.jks \
+            -storetype PKCS12 \
+            -alias waffra \
+            -keyalg RSA -keysize 3072 \
+            -validity 10000 \
+            -dname "CN=Waffra, OU=Mobile, O=Waffra, L=Riyadh, C=SA" \
+            -storepass "$KEYSTORE_PASSWORD" \
+            -keypass "$KEYSTORE_PASSWORD" > /dev/null 2>&1
+          keytool -exportcert -rfc \
+            -keystore waffra-release.jks \
+            -alias waffra \
+            -storepass "$KEYSTORE_PASSWORD" \
+            -file waffra-release-public.pem > /dev/null 2>&1
+          echo "===== Waffra Android signing fingerprints (safe to share) ====="
+          openssl x509 -in waffra-release-public.pem -noout -fingerprint -sha1
+          openssl x509 -in waffra-release-public.pem -noout -fingerprint -sha256
+          echo "==============================================================="
+          # Never upload the plaintext keystore or print its contents.
+          export WAFFRA_ENCRYPTION_PASSWORD="$KEYSTORE_PASSWORD"
+          openssl enc -aes-256-cbc -pbkdf2 -iter 250000 -salt \
+            -in waffra-release.jks \
+            -out waffra-release.jks.enc \
+            -pass env:WAFFRA_ENCRYPTION_PASSWORD
+          rm -f waffra-release.jks
+          echo "ENCRYPTED_KEYSTORE_PATH=$RUNNER_TEMP/waffra-signing/waffra-release.jks.enc" >> "$GITHUB_ENV"
+
+      - name: Upload encrypted signing key backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: waffra-android-signing-key-ENCRYPTED
+          path: ${{ env.ENCRYPTED_KEYSTORE_PATH }}
+          if-no-files-found: error
+          retention-days: 7
