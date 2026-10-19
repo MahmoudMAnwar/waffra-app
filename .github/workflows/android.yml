@@ -285,11 +285,11 @@ jobs:
       # The hosted Android emulator uses x86_64. Build an x64 Release APK for
       # the smoke test; upload only the final ARM64 APK for the user.
       - name: Build x64 Release APK for emulator smoke test
-        if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+        if: github.event_name == 'workflow_dispatch'
         run: flutter build apk --release --target-platform android-x64 --tree-shake-icons
 
       - name: Verify Release startup on Android emulator
-        if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+        if: github.event_name == 'workflow_dispatch'
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
