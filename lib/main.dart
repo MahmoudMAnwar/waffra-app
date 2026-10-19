@@ -4133,9 +4133,6 @@ Future<void> bulkSmsSheet()async {
       value:allowed,onChanged:(v)async{await setWaffraScreenshotsAllowed(v);if(mounted)setState((){});}))
    ]),
    _accountSection(waffraIsEnglish?'Data & utilities':'البيانات والأدوات',Icons.storage_outlined,[
-    _accountTile(waffraIsEnglish?'Savings goals':'أهداف الادخار',
-     waffraIsEnglish?'Create and follow savings goals':'أضف أهدافك وتابع المدخرات',
-     Icons.flag_outlined,onTap:()=>setState((){tab=0;goalsOpened=true;})),
     _accountTile(waffraIsEnglish?'Backup and restore':'النسخ الاحتياطي والاستعادة',
      waffraIsEnglish?'Keep your local data safe':'احفظ بياناتك واستعدها',
      Icons.backup_outlined,onTap:backupDialog),
