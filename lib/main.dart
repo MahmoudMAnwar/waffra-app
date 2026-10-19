@@ -401,7 +401,6 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     FilledButton(onPressed:(){setState((){loading=true;startupError=null;});load();},child:const WaffraText('إعادة المحاولة')),
    ])))):
    locked?PinLockScreen(pinHash:pinHash!,onUnlock:()=>setState(()=>locked=false)):
-   !onboarded?WaffraOnboarding(onFinish:quickStart):
    profile==null||showLogin?LoginScreen(onSave:saveUser):
    HomeScreen(key:ValueKey(language),profile:profile!,dark:dark,onTheme:theme,onLanguage:setLanguage,onLogout:logout,onProfile:saveUser,onSetPin:setPin,pinEnabled:pinHash!=null)))));
 }
