@@ -2427,16 +2427,28 @@ Future<void> bulkSmsSheet()async {
  Widget compactTransaction(MoneyEntry entry){
   final cat=categoryFor(entry.category,entry.income);
   final valueColor=entry.income?waffraIncomeTone(context):Colors.deepOrange;
-  return Column(children:[
-   Padding(padding:const EdgeInsets.symmetric(vertical:7),child:Row(children:[
+  final darkMode=Theme.of(context).brightness==Brightness.dark;
+  final rowColor=entry.income?(darkMode?const Color(0xFF244C3A):const Color(0xFFB2D5C2)):
+   (darkMode?const Color(0xFF202B26):Colors.white);
+  return Padding(padding:const EdgeInsets.symmetric(vertical:3),child:Container(
+   decoration:BoxDecoration(color:rowColor,borderRadius:BorderRadius.circular(12),
+    border:Border.all(color:forest.withValues(alpha:darkMode?.18:.08))),
+   child:Padding(padding:const EdgeInsets.symmetric(horizontal:7,vertical:7),child:Row(children:[
     CircleAvatar(radius:18,
      backgroundColor:Color(cat.color).withValues(alpha:0.13),
      child:Icon(categoryIcon(cat.icon),size:19,color:Color(cat.color))),
     const SizedBox(width:8),
     Expanded(child:InkWell(onTap:()=>entrySheet(initial:entry),
      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      WaffraText(entry.title,maxLines:1,
-       style:const TextStyle(fontSize:13,fontWeight:FontWeight.w600)),
+      Row(children:[
+       Expanded(child:WaffraText(entry.title,maxLines:1,
+        style:const TextStyle(fontSize:13,fontWeight:FontWeight.w600))),
+       if(entry.receiptPath!=null&&entry.receiptPath!.trim().isNotEmpty)...[
+        const SizedBox(width:4),
+        Tooltip(message:waffraIsEnglish?'Attachment':'مرفق',child:Icon(Icons.attach_file_rounded,size:16,
+         color:darkMode?Colors.white70:forest)),
+       ],
+      ]),
       const SizedBox(height:2),
       WaffraText(waffraTr(entry.category)+' • '+dayText(entry.date),
        maxLines:1,style:const TextStyle(fontSize:11,color:Colors.grey)),
@@ -2460,9 +2472,7 @@ Future<void> bulkSmsSheet()async {
        child:WaffraText(waffraIsEnglish?'Delete':'حذف',
         style:const TextStyle(color:Colors.red))),
      ]),
-   ])),
-   Divider(height:1,color:forest.withValues(alpha:0.09)),
-  ]);
+   ]))));
  }
  Widget dashboard(){
   final inc=sum(entries,true),exp=sum(entries,false);
