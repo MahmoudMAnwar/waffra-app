@@ -112,7 +112,7 @@ class WaffraSubscriptionScreen extends StatelessWidget {
         ...possible.map((e)=>ListTile(leading:const Icon(Icons.search),
           title:Text(e.title),
           subtitle:Text(english?'${e.payments} similar payments':'${e.payments} مدفوعات متشابهة'),
-          trailing:Text('~${e.estimatedMonthly.toStringAsFixed(2)}')),
+          trailing:Text('~${e.estimatedMonthly.toStringAsFixed(2)}'))),
         const SizedBox(height:16),
         Text(english?'Suggestions are estimates from local transactions only.':
           'الاقتراحات تقديرية وتعتمد على معاملات الجهاز فقط.'),
