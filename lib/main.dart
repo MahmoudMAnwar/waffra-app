@@ -3411,88 +3411,154 @@ Future<void> bulkSmsSheet()async {
    )),
   ]);
  });
- Widget profilePage()=>ListView(padding:const EdgeInsets.all(18),children:[
-  const SizedBox(height:10),
-  Center(child:waffraAvatar(widget.profile.gender,widget.profile.avatar,radius:46)),
-  const SizedBox(height:12),
-  if(widget.profile.name.trim().isNotEmpty&&widget.profile.name!='يا غالي') WaffraText(widget.profile.name,textAlign:TextAlign.center,style:Theme.of(context).textTheme.titleLarge),
-  WaffraText(widget.profile.email,textAlign:TextAlign.center),
-  const SizedBox(height:16),
-  Card(child:Column(children:[
-   ListTile(leading:const Icon(Icons.people),title:const WaffraText('الجنس'),subtitle:WaffraText(waffraIsEnglish?({'غير محدد':'Not specified','ذكر':'Male','أنثى':'Female'}[widget.profile.gender]??widget.profile.gender):widget.profile.gender)),
-   ListTile(leading:const Icon(Icons.cake),title:const WaffraText('تاريخ الميلاد'),subtitle:WaffraText(dayText(widget.profile.birthday))),
-   ListTile(leading:const Icon(Icons.login),title:const WaffraText('طريقة إنشاء الملف الشخصي'),subtitle:WaffraText(waffraIsEnglish?({'محلي':'Local','جوجل':'Google','آبل':'Apple'}[widget.profile.provider]??widget.profile.provider):widget.profile.provider)),
-  ])),
-  const SizedBox(height:12),
-  OutlinedButton.icon(onPressed:()async {
-   await Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>ProfileForm(
-    provider:widget.profile.provider,initial:widget.profile,onSave:widget.onProfile)));
-  },icon:const Icon(Icons.edit),label:const WaffraText('تعديل حسابي')),
-  const SizedBox(height:14),
-  Card(child:ExpansionTile(
-   initiallyExpanded:false,
-   leading:const Icon(Icons.settings_outlined,color:emerald),
-   title:const WaffraText('إعدادات التطبيق',
-    style:TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
-   children:[
-    ListTile(
-     leading:const Icon(Icons.language),
-     title:const WaffraText('لغة التطبيق'),
-     subtitle:WaffraText(waffraIsEnglish?'English':'العربية'),
-     trailing:SegmentedButton<String>(
-      segments:const [
-       ButtonSegment(value:'ar',label:WaffraText('AR')),
-       ButtonSegment(value:'en',label:WaffraText('EN')),
-      ],
-      selected:{waffraLanguage.value},
-      onSelectionChanged:(v)async{setState(()=>tab=0);await widget.onLanguage(v.first);},
-      showSelectedIcon:false,
-     ),
-    ),
-    const Divider(height:1),
-    ListTile(
-     leading:Icon(widget.dark?Icons.dark_mode:Icons.light_mode),
-     title:const WaffraText('المظهر'),
+ Future<void> changePin()async {
+  if(!widget.pinEnabled)return;
+  final previous=await _askForPin(title:waffraIsEnglish?'Current PIN':'رمز القفل الحالي',
+   fieldLabel:waffraIsEnglish?'Enter PIN':'أدخل رمز القفل',existing:true);
+  if(previous==null||!mounted)return;
+  final p=await SharedPreferences.getInstance();
+  if(sha256.convert(utf8.encode(previous)).toString()!=p.getString('waffra_pin_sha256')){
+   snack(context,waffraIsEnglish?'Wrong PIN':'رمز القفل غير صحيح');return;
+  }
+  final next=await _askForPin(title:waffraIsEnglish?'New PIN':'رمز جديد',
+   fieldLabel:waffraIsEnglish?'4 digits':'أربعة أرقام');
+  if(next==null||!mounted)return;
+  final again=await _askForPin(title:waffraIsEnglish?'Confirm PIN':'تأكيد الرمز',
+   fieldLabel:waffraIsEnglish?'Repeat PIN':'أعد إدخال الرمز');
+  if(again==null||!mounted)return;
+  if(again!=next){snack(context,waffraIsEnglish?'PINs do not match':'الرمزان غير متطابقين');return;}
+  await widget.onSetPin(next);
+  if(mounted)snack(context,waffraIsEnglish?'PIN changed':'تم تغيير الرمز بنجاح');
+ }
+ Future<void> eraseFinancialData()async {
+  final ok=await confirmDeletion(
+   waffraIsEnglish?'Permanently delete financial data?':'حذف البيانات المالية نهائيًا',
+   waffraIsEnglish?'This deletes transactions, categories, budgets, goals and recurring schedules. It cannot be undone. Your profile and app settings stay.':
+    'سيتم حذف المعاملات والأقسام والميزانيات والأهداف والجدولة المتكررة نهائيًا. لا يمكن التراجع. سيبقى الملف الشخصي وإعدادات التطبيق.');
+  if(ok!=true||!mounted)return;
+  setState((){
+   entries.clear();categories..clear()..addAll(defaultCategories());
+   goals.clear();recurring.clear();deletedCategories.clear();smsHashes.clear();
+   learnedMerchantCategories.clear();monthlyBudget=0;
+  });
+  final p=await SharedPreferences.getInstance();
+  await p.remove('waffra_sms_hashes_v1');await persist();
+  if(mounted)snack(context,waffraIsEnglish?'Financial data deleted':'تم حذف البيانات المالية');
+ }
+ Widget _accountTile(String label,String subtitle,IconData icon,{VoidCallback? onTap,Widget? trailing,Color tint=emerald})=>
+  ListTile(
+   leading:CircleAvatar(backgroundColor:tint.withValues(alpha:.12),child:Icon(icon,color:tint,size:21)),
+   title:WaffraText(label,style:const TextStyle(fontWeight:FontWeight.bold)),
+   subtitle:WaffraText(subtitle,maxLines:2,overflow:TextOverflow.ellipsis),
+   trailing:trailing??(onTap==null?null:const Icon(Icons.chevron_left)),onTap:onTap);
+ Widget _accountSection(String heading,IconData icon,List<Widget> children)=>Column(
+  crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+   Padding(padding:const EdgeInsets.fromLTRB(4,12,4,7),
+    child:Row(children:[Icon(icon,color:emerald),const SizedBox(width:7),
+     Expanded(child:WaffraText(heading,style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)))])),
+   Card(shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(20)),
+    child:Column(children:[
+     for(var i=0;i<children.length;i++)...[
+      children[i],if(i<children.length-1)const Divider(height:1,indent:14,endIndent:14),
+     ],
+    ])),
+  ]);
+ Widget profilePage(){
+  final p=widget.profile;
+  final local=p.provider=='محلي'||p.provider.startsWith('Local');
+  final gender=p.gender=='ذكر'?(waffraIsEnglish?'Male':'ذكر'):
+   p.gender=='أنثى'?(waffraIsEnglish?'Female':'أنثى'):
+   (waffraIsEnglish?'Select gender':'اختر الجنس');
+  void edit(){Navigator.push<void>(context,MaterialPageRoute(
+   builder:(_)=>ProfileForm(provider:p.provider,initial:p,onSave:widget.onProfile)));}
+  return ListView(padding:const EdgeInsets.fromLTRB(16,12,16,22),children:[
+   Center(child:InkWell(onTap:edit,child:Stack(alignment:Alignment.bottomRight,children:[
+    waffraAvatar(p.gender,p.avatar,radius:56),
+    const CircleAvatar(radius:16,backgroundColor:forest,child:Icon(Icons.camera_alt,size:18,color:Colors.white)),
+   ]))),
+   const SizedBox(height:10),
+   WaffraText(p.name.trim().isEmpty?(waffraIsEnglish?'My account':'حسابي'):p.name,
+    textAlign:TextAlign.center,style:Theme.of(context).textTheme.titleLarge),
+   if(p.email.trim().isNotEmpty)WaffraText(p.email,textAlign:TextAlign.center),
+   const SizedBox(height:13),
+   Row(children:[
+    Expanded(child:_summaryBox(waffraIsEnglish?'Birthday':'تاريخ الميلاد',
+     dayText(p.birthday),Icons.cake_outlined,emerald)),
+    const SizedBox(width:6),
+    Expanded(child:_summaryBox(waffraIsEnglish?'Gender':'الجنس',gender,Icons.people,emerald)),
+    const SizedBox(width:6),
+    Expanded(child:_summaryBox(waffraIsEnglish?'Account':'نوع الحساب',
+     local?(waffraIsEnglish?'Local':'محلي'):p.provider,Icons.person,emerald)),
+   ]),
+   const SizedBox(height:11),
+   OutlinedButton.icon(onPressed:edit,icon:const Icon(Icons.edit_outlined),
+    label:WaffraText(waffraIsEnglish?'Edit profile':'تعديل حسابي')),
+   _accountSection(waffraIsEnglish?'App settings':'إعدادات التطبيق',Icons.settings_outlined,[
+    _accountTile(waffraIsEnglish?'App language':'لغة التطبيق',
+     waffraIsEnglish?'English':'العربية',Icons.language,
+     trailing:SegmentedButton<String>(segments:const [
+      ButtonSegment(value:'ar',label:Text('AR')),ButtonSegment(value:'en',label:Text('EN')),
+     ],selected:{waffraLanguage.value},showSelectedIcon:false,
+     onSelectionChanged:(v)async{setState(()=>tab=0);await widget.onLanguage(v.first);})),
+    SwitchListTile(secondary:Icon(widget.dark?Icons.dark_mode:Icons.light_mode,color:emerald),
+     title:WaffraText(waffraIsEnglish?'Appearance':'المظهر'),
      subtitle:WaffraText(widget.dark?(waffraIsEnglish?'Dark':'داكن'):(waffraIsEnglish?'Light':'فاتح')),
-     trailing:Switch(value:widget.dark,onChanged:(_)=>widget.onTheme()),
-     onTap:widget.onTheme,
-    ),
-   ],
-  )),
-  const SizedBox(height:14),
-  const WaffraText('الأمان والخصوصية',style:TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
-  Card(child:Column(children:[
-   ListTile(onTap:configurePin,leading:Icon(widget.pinEnabled?Icons.lock:Icons.lock_open),
-    title:const WaffraText('قفل التطبيق برمز PIN'),
-    subtitle:WaffraText(widget.pinEnabled?'مفعّل — اضغط لإلغاء القفل':'غير مفعّل — اضغط للتفعيل'),
-    trailing:const Icon(Icons.chevron_left)),
-   const Divider(height:1),
-   ValueListenableBuilder<bool>(valueListenable:allowWaffraScreenshots,
-    builder:(context,allowed,_)=>SwitchListTile(
-     secondary:Icon(allowed?Icons.screenshot:Icons.shield_outlined),
-     title:const WaffraText('السماح بلقطات الشاشة'),
-     subtitle:WaffraText(allowed?'مسموح — يمكن تصوير محتوى التطبيق':'ممنوع — حماية بياناتك مفعّلة'),
-     value:allowed,onChanged:(v)async{
-      await setWaffraScreenshotsAllowed(v);
-      if(mounted)snack(context,v?'تم السماح بلقطات الشاشة':'تم منع لقطات الشاشة لحماية بياناتك');
-     })),
-  ])),
-  OutlinedButton.icon(onPressed:()=>Navigator.push<void>(context,
-   MaterialPageRoute(builder:(_)=>CurrencyConverterPage(lastIncomeAmount:entries.where((e)=>e.income).isEmpty?null:entries.where((e)=>e.income).reduce((a,b)=>a.date.isAfter(b.date)?a:b).amount))),
-   icon:const Icon(Icons.currency_exchange),label:const WaffraText('تحويل العملات')),
-  OutlinedButton.icon(onPressed:beginTour,icon:const Icon(Icons.help_outline),
-   label:WaffraText(waffraIsEnglish?'Replay app tour':'إعادة الجولة التعريفية')),
-  OutlinedButton.icon(onPressed:backupDialog,icon:const Icon(Icons.backup_outlined),
-   label:const WaffraText('النسخ الاحتياطي والاستعادة')),
-  if(widget.profile.provider=='محلي')FilledButton.icon(onPressed:widget.onLogout,icon:const Icon(Icons.login),
-   label:const WaffraText('تسجيل الدخول')),
-  if(widget.profile.provider!='محلي')FilledButton.icon(onPressed:widget.onLogout,icon:const Icon(Icons.logout),
-   label:const WaffraText('تسجيل الخروج')),
-  const SizedBox(height:16),
-  const WaffraText('بياناتك محفوظة على جهازك. احفظ نسخة احتياطية قبل تغيير الجوال أو حذف التطبيق. ما فيه ربط بالحسابات البنكية.',
-   textAlign:TextAlign.center,style:TextStyle(fontSize:12)),
- ]);
- // Build only the selected tab; constructing all six tabs on every frame
+     value:widget.dark,onChanged:(_)=>widget.onTheme()),
+    _accountTile(waffraIsEnglish?'Currency converter':'تحويل العملات',
+     waffraIsEnglish?'Saudi Riyal and other currencies':'الريال السعودي والعملات الأخرى',
+     Icons.currency_exchange,onTap:()=>Navigator.push<void>(context,MaterialPageRoute(
+      builder:(_)=>CurrencyConverterPage(lastIncomeAmount:null)))),
+   ]),
+   _accountSection(waffraIsEnglish?'Security & privacy':'الأمان والخصوصية',Icons.shield_outlined,[
+    _accountTile(waffraIsEnglish?'PIN app lock':'قفل التطبيق برمز PIN',
+     widget.pinEnabled?(waffraIsEnglish?'Enabled':'مفعّل'):(waffraIsEnglish?'Disabled':'غير مفعّل'),
+     widget.pinEnabled?Icons.lock:Icons.lock_open,onTap:configurePin),
+    if(widget.pinEnabled)_accountTile(waffraIsEnglish?'Change PIN':'تغيير رمز PIN',
+     waffraIsEnglish?'Update your lock code':'تحديث رمز القفل',
+     Icons.password_outlined,onTap:changePin),
+    ValueListenableBuilder<bool>(valueListenable:allowWaffraScreenshots,
+     builder:(context,allowed,_)=>SwitchListTile(
+      secondary:const Icon(Icons.screenshot_outlined,color:emerald),
+      title:WaffraText(waffraIsEnglish?'Allow screenshots':'السماح بلقطات الشاشة'),
+      subtitle:WaffraText(allowed?(waffraIsEnglish?'Allowed':'مسموح'):(waffraIsEnglish?'Blocked':'ممنوع')),
+      value:allowed,onChanged:(v)async{await setWaffraScreenshotsAllowed(v);if(mounted)setState((){});}))
+   ]),
+   _accountSection(waffraIsEnglish?'Data & utilities':'البيانات والأدوات',Icons.storage_outlined,[
+    _accountTile(waffraIsEnglish?'Backup and restore':'النسخ الاحتياطي والاستعادة',
+     waffraIsEnglish?'Keep your local data safe':'احفظ بياناتك واستعدها',
+     Icons.backup_outlined,onTap:backupDialog),
+    _accountTile(waffraIsEnglish?'Replay app tour':'إعادة الجولة التعريفية',
+     waffraIsEnglish?'Learn Waffra features':'تعرف على خصائص وفرة',
+     Icons.help_outline,onTap:beginTour),
+    _accountTile(waffraIsEnglish?'Delete financial data':'حذف البيانات المالية',
+     waffraIsEnglish?'Permanent and irreversible':'نهائي ولا يمكن التراجع عنه',
+     Icons.delete_forever,color:Colors.red,onTap:eraseFinancialData),
+   ]),
+   _accountSection(waffraIsEnglish?'About the app':'عن التطبيق',Icons.info_outline,[
+    _accountTile(waffraIsEnglish?'About Waffra':'عن وفرة',
+     waffraIsEnglish?'On-device financial management':'إدارة مالية تحفظ بياناتك محليًا',
+     Icons.info_outline,onTap:()=>showAboutDialog(context:context,applicationName:'وفرة | Waffra',
+      children:[WaffraText(waffraIsEnglish?'No bank account integration. Your data stays on your device.':
+       'لا يوجد ربط بالحسابات البنكية؛ بياناتك محفوظة على جهازك.')]))
+   ]),
+   const SizedBox(height:15),
+   OutlinedButton.icon(style:OutlinedButton.styleFrom(foregroundColor:Colors.red,
+    side:const BorderSide(color:Colors.red)),
+    onPressed:()async{
+     final ok=await confirm(waffraIsEnglish?'Sign out?':'تسجيل الخروج',
+      waffraIsEnglish?'Your data remains on this device.':'ستبقى بياناتك على هذا الجهاز.');
+     if(ok==true&&mounted)await widget.onLogout();
+    },
+    icon:const Icon(Icons.logout),label:WaffraText(waffraIsEnglish?'Sign out':'تسجيل الخروج')),
+   const SizedBox(height:13),
+   WaffraText(waffraIsEnglish?
+    'Your data stays on this device. Make a backup before changing phones or deleting the app.':
+    'بياناتك محفوظة على جهازك. احفظ نسخة احتياطية قبل تغيير الجوال أو حذف التطبيق. ما فيه ربط بالحسابات البنكية.',
+    textAlign:TextAlign.center,style:const TextStyle(fontSize:11)),
+   const SizedBox(height:20),
+  ]);
+ }
+// Build only the selected tab; constructing all six tabs on every frame
  // caused avoidable work and visible transition lag on Android.
  Widget _addMenuOption({
   required IconData icon,required String label,required VoidCallback onTap,
