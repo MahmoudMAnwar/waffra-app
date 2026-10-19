@@ -2499,6 +2499,18 @@ Future<void> bulkSmsSheet()async {
   const WaffraText('بياناتك محفوظة على جهازك. احفظ نسخة احتياطية قبل تغيير الجوال أو حذف التطبيق. ما فيه ربط بالحسابات البنكية.',
    textAlign:TextAlign.center,style:TextStyle(fontSize:12)),
  ]);
+ // Build only the selected tab; constructing all six tabs on every frame
+ // caused avoidable work and visible transition lag on Android.
+ Widget currentTab(){
+  switch(tab){
+   case 0:return dashboard();
+   case 1:return analytics();
+   case 2:return categoriesPage();
+   case 3:return goalsPage();
+   case 4:return recurringPage();
+   default:return profilePage();
+  }
+ }
  @override Widget build(BuildContext context)=>Scaffold(
   appBar:AppBar(title:const WaffraText('وفرة | Waffra',
     style:TextStyle(fontWeight:FontWeight.bold)),
@@ -2536,7 +2548,7 @@ Future<void> bulkSmsSheet()async {
    AnimatedSwitcher(duration:const Duration(milliseconds:235),reverseDuration:const Duration(milliseconds:190),
     transitionBuilder:(child,animation)=>FadeTransition(opacity:animation,child:SlideTransition(
      position:Tween<Offset>(begin:const Offset(0.035,0),end:Offset.zero).animate(CurvedAnimation(parent:animation,curve:Curves.easeOutCubic)),child:child)),
-    child:KeyedSubtree(key:ValueKey(tab),child:[dashboard(),analytics(),categoriesPage(),goalsPage(),recurringPage(),profilePage()][tab])),
+    child:KeyedSubtree(key:ValueKey(tab),child:currentTab())),
   // The FAB starts as a compact + at the physical bottom-left.
   // First tap opens it into a labelled pill; second tap opens the editor.
   floatingActionButtonLocation:waffraIsEnglish
