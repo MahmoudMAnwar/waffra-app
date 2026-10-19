@@ -1481,7 +1481,10 @@ Future<void> bulkSmsSheet()async {
      textAlign:english?TextAlign.left:TextAlign.right,
      maxLines:8,ellipsis:'...',
     );
-    painter.layout(maxWidth:logicalWidth*scale);
+    // TextPainter otherwise shrinks to its longest run, so TextAlign.right
+    // has no spare horizontal space to align against. Force the whole
+    // raster canvas width (including mixed Arabic/Latin bank SMS).
+    painter.layout(minWidth:logicalWidth*scale,maxWidth:logicalWidth*scale);
     final recorder=ui.PictureRecorder();
     final canvas=Canvas(recorder);
     painter.paint(canvas,Offset.zero);
