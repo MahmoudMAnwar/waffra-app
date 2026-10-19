@@ -2627,20 +2627,117 @@ Future<void> bulkSmsSheet()async {
      style:const TextStyle(fontSize:11)),
    ])));
  }
+
+ Future<void> showAiAnalysis()async {
+  final now=DateTime.now();
+  final recent=entries.where((e)=>e.date.isAfter(now.subtract(const Duration(days:90)))&&!e.date.isAfter(now)).toList();
+  final income=sum(recent,true),spending=sum(recent,false);
+  final hasEnoughData=recent.length>=3&&income>0;
+  final balanceRatio=income>0?(income-spending)/income:0.0;
+  final score=hasEnoughData?((balanceRatio+1)*50).clamp(0.0,100.0).round():null;
+  final biggest=<String,double>{};
+  for(final e in recent.where((e)=>!e.income)){
+   biggest[e.category]=(biggest[e.category]??0)+e.amount;
+  }
+  final top=biggest.entries.toList()..sort((a,b)=>b.value.compareTo(a.value));
+  final wait=Future<void>.delayed(const Duration(milliseconds:1700));
+  await showModalBottomSheet<void>(
+   context:context,isScrollControlled:true,showDragHandle:true,
+   backgroundColor:Theme.of(context).cardColor,
+   shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
+   builder:(ctx)=>SafeArea(child:Padding(padding:EdgeInsets.fromLTRB(20,10,20,MediaQuery.of(ctx).viewInsets.bottom+20),
+    child:FutureBuilder<void>(future:wait,builder:(dialogCtx,snapshot){
+     if(snapshot.connectionState!=ConnectionState.done){
+      return SizedBox(height:260,child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
+       TweenAnimationBuilder<double>(tween:Tween(begin:.55,end:1),duration:const Duration(milliseconds:1300),
+        curve:Curves.easeInOutCubic,builder:(ctx,scale,child)=>Transform.scale(scale:scale,child:child),
+        child:const CircleAvatar(radius:36,backgroundColor:Color(0x2236D1A1),
+         child:Icon(Icons.auto_awesome_rounded,color:emerald,size:40))),
+       const SizedBox(height:16),
+       const CircularProgressIndicator(color:emerald),
+       const SizedBox(height:15),
+       WaffraText(waffraIsEnglish?'Analyzing your transactions...':'جارٍ تحليل معاملاتك الآن...',
+        textAlign:TextAlign.center,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:18)),
+       const SizedBox(height:6),
+       WaffraText(waffraIsEnglish?'Checking income, expenses and categories':
+        'بنراجع الدخل والمصروفات وأقسام الإنفاق',textAlign:TextAlign.center),
+      ]));
+     }
+     final label=score==null?
+      (waffraIsEnglish?'Not enough data':'بيانات غير كافية'):
+      score>=70?(waffraIsEnglish?'Good balance':'توازن مالي جيد'):
+      score>=45?(waffraIsEnglish?'Needs attention':'يحتاج متابعة'):
+      (waffraIsEnglish?'Review your spending':'راجع مصروفاتك');
+     return SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,
+      crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      const Icon(Icons.auto_awesome_rounded,color:emerald,size:40),
+      const SizedBox(height:9),
+      WaffraText(waffraIsEnglish?'Your smart financial analysis':'نتيجة تحليلك المالي الذكي',
+       textAlign:TextAlign.center,style:const TextStyle(fontSize:20,fontWeight:FontWeight.bold)),
+      const SizedBox(height:15),
+      Container(padding:const EdgeInsets.all(16),decoration:BoxDecoration(
+       color:emerald.withValues(alpha:.10),border:Border.all(color:emerald.withValues(alpha:.4)),
+       borderRadius:BorderRadius.circular(18)),child:Column(children:[
+       WaffraText(label,style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
+       const SizedBox(height:7),
+       WaffraText(score==null?'—':'$score / 100',
+        style:const TextStyle(color:emerald,fontSize:32,fontWeight:FontWeight.bold)),
+       if(score!=null)LinearProgressIndicator(value:score/100,minHeight:9,
+        color:emerald,borderRadius:BorderRadius.circular(9)),
+       const SizedBox(height:9),
+       WaffraText(waffraIsEnglish?'Indicative cash-flow balance, not a credit score.':
+        'تقييم استرشادي لتوازن الدخل والمصروفات، وليس تصنيفًا ائتمانيًا.',
+        textAlign:TextAlign.center,style:const TextStyle(fontSize:12)),
+      ])),
+      const SizedBox(height:16),
+      Row(children:[
+       Expanded(child:WaffraText(waffraIsEnglish?'Income (90 days)':'الدخل خلال 90 يوم')),
+       WaffraText(cash(income),style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
+      ]),
+      const SizedBox(height:8),
+      Row(children:[
+       Expanded(child:WaffraText(waffraIsEnglish?'Expenses (90 days)':'المصروفات خلال 90 يوم')),
+       WaffraText(cash(spending),style:const TextStyle(color:Colors.deepOrange,fontWeight:FontWeight.bold)),
+      ]),
+      if(top.isNotEmpty)...[
+       const SizedBox(height:14),
+       WaffraText(waffraIsEnglish?'Top expense category':'أعلى قسم مصروفات',
+        style:const TextStyle(fontWeight:FontWeight.bold)),
+       WaffraText('${top.first.key}: ${cash(top.first.value)}'),
+      ],
+      const SizedBox(height:14),
+      WaffraText(recent.isEmpty?
+       (waffraIsEnglish?'Add more transactions to improve the analysis.':'سجل معاملات جديدة للحصول على تحليل أدق.'):
+       (spending>income&&income>0?
+        (waffraIsEnglish?'Your expenses exceed your income; consider lowering optional spending.':
+         'مصروفاتك أعلى من دخلك؛ جرّب تقليل المصروفات الاختيارية.'):
+        (waffraIsEnglish?'Review your largest categories to increase possible savings.':
+         'راجع أكبر أقسام الصرف لزيادة فرص التوفير.'))),
+      const SizedBox(height:16),
+      FilledButton.icon(onPressed:()=>Navigator.pop(dialogCtx),
+       icon:const Icon(Icons.check),label:WaffraText(waffraIsEnglish?'View forecast below':'عرض التوقعات بالأسفل')),
+      const SizedBox(height:8),
+     ]));
+    }))));
+ }
  Widget analytics(){
   final data=analysisEntries,inc=sum(data,true),exp=sum(data,false);
   final years=<int>{DateTime.now().year,year,...entries.map((e)=>e.date.year)}.toList()..sort((a,b)=>b.compareTo(a));
   final points=period=='شهري'?List.generate(5,(i){
    final v=data.where((e)=>(e.date.day-1)~/7==i);
-   return ChartPoint('أ${i+1}',sum(v,true),sum(v,false));
+   return ChartPoint(waffraIsEnglish?'Week ${i+1}':'الأسبوع ${i+1}',sum(v,true),sum(v,false));
   }):List.generate(12,(i){
    final v=data.where((e)=>e.date.month==i+1);
-   return ChartPoint('${i+1}',sum(v,true),sum(v,false));
+   return ChartPoint(waffraIsEnglish?'Month ${i+1}':'شهر ${i+1}',sum(v,true),sum(v,false));
   });
   final breakdown=<String,double>{};
   for(final e in data.where((e)=>!e.income)){breakdown[e.category]=(breakdown[e.category]??0)+e.amount;}
   return ListView(padding:const EdgeInsets.all(16),children:[
-   KeyedSubtree(key:_tourKeys[5],child:WaffraText('تحليلاتك المالية',style:Theme.of(context).textTheme.titleLarge)),
+   Row(children:[
+    Expanded(child:KeyedSubtree(key:_tourKeys[5],child:WaffraText(waffraIsEnglish?'Your financial analytics':'تحليلاتك المالية',style:Theme.of(context).textTheme.titleLarge))),
+    IconButton.filledTonal(onPressed:showAiAnalysis,tooltip:waffraIsEnglish?'AI financial analysis':'تحليل مالي ذكي',icon:const Icon(Icons.auto_awesome_rounded,color:emerald,size:27)),
+    const SizedBox(width:3),WaffraText('AI',style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
+   ]),
    const SizedBox(height:12),
    SegmentedButton<String>(segments:const [ButtonSegment(value:'شهري',label:WaffraText('شهري')),
     ButtonSegment(value:'سنوي',label:WaffraText('سنوي'))],
@@ -4080,28 +4177,61 @@ class FinanceChart extends StatelessWidget {
  final List<ChartPoint> points;
  const FinanceChart({super.key,required this.points});
  @override Widget build(BuildContext context){
-  double max=1;
-  for(final p in points){if(p.income>max)max=p.income;if(p.expense>max)max=p.expense;}
-  return Column(children:[
-   const Row(mainAxisAlignment:MainAxisAlignment.center,children:[
-    Icon(Icons.square,color:emerald,size:15),WaffraText(' دخل  '),
-    Icon(Icons.square,color:Colors.deepOrange,size:15),WaffraText(' مصروفات'),
+  var maximum=1.0;
+  for(final p in points){
+   maximum=max(maximum,max(p.income,p.expense));
+  }
+  final step=max(1.0,(maximum/4).ceilToDouble());
+  final textColor=Theme.of(context).colorScheme.onSurface;
+  final chartWidth=max(MediaQuery.sizeOf(context).width-95.0,points.length*70.0);
+  return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+   Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+    const Icon(Icons.square,color:emerald,size:15),
+    WaffraText(waffraIsEnglish?' Income  ':' دخل  '),
+    const Icon(Icons.square,color:Colors.deepOrange,size:15),
+    WaffraText(waffraIsEnglish?' Expenses':' مصروفات'),
    ]),
-   const SizedBox(height:15),
-   SizedBox(height:190,child:Row(crossAxisAlignment:CrossAxisAlignment.end,
-    children:points.map((p)=>Expanded(child:Column(children:[
-     Expanded(child:Row(crossAxisAlignment:CrossAxisAlignment.end,children:[
-      Expanded(child:FractionallySizedBox(alignment:Alignment.bottomCenter,
-       heightFactor:(p.income/max).clamp(.015,1.0),
-       child:Container(margin:const EdgeInsets.symmetric(horizontal:1),
-        decoration:const BoxDecoration(color:emerald,borderRadius:BorderRadius.vertical(top:Radius.circular(5)))))),
-      Expanded(child:FractionallySizedBox(alignment:Alignment.bottomCenter,
-       heightFactor:(p.expense/max).clamp(.015,1.0),
-       child:Container(margin:const EdgeInsets.symmetric(horizontal:1),
-        decoration:const BoxDecoration(color:Colors.deepOrange,borderRadius:BorderRadius.vertical(top:Radius.circular(5)))))),
-     ])),
-     const SizedBox(height:7),WaffraText(p.label,style:const TextStyle(fontSize:10)),
-    ]))).toList())),
+   const SizedBox(height:5),
+   WaffraText(waffraIsEnglish?'Y-axis: amount (SAR)  •  X-axis: time period':
+    'المحور الرأسي: المبلغ (ريال)  •  المحور الأفقي: الفترة الزمنية',
+    textAlign:TextAlign.center,style:const TextStyle(fontSize:10)),
+   const SizedBox(height:13),
+   SingleChildScrollView(scrollDirection:Axis.horizontal,
+    child:SizedBox(width:chartWidth,height:240,child:BarChart(BarChartData(
+     alignment:BarChartAlignment.spaceAround,
+     minY:0,maxY:step*4.5,
+     gridData:FlGridData(show:true,drawVerticalLine:false,horizontalInterval:step),
+     borderData:FlBorderData(show:true,border:Border(
+      left:BorderSide(color:textColor.withValues(alpha:.4)),
+      bottom:BorderSide(color:textColor.withValues(alpha:.4)))),
+     barTouchData:BarTouchData(enabled:true),
+     titlesData:FlTitlesData(
+      topTitles:const AxisTitles(sideTitles:SideTitles(showTitles:false)),
+      rightTitles:const AxisTitles(sideTitles:SideTitles(showTitles:false)),
+      leftTitles:AxisTitles(sideTitles:SideTitles(showTitles:true,
+       reservedSize:46,interval:step,
+       getTitlesWidget:(value,meta)=>Padding(
+        padding:const EdgeInsets.only(right:4),
+        child:Text(value.toStringAsFixed(0),style:TextStyle(color:textColor,fontSize:10))))),
+      bottomTitles:AxisTitles(sideTitles:SideTitles(showTitles:true,
+       reservedSize:40,
+       getTitlesWidget:(value,meta){
+        final i=value.toInt();
+        if(i<0||i>=points.length||i.toDouble()!=value)return const SizedBox.shrink();
+        return Padding(padding:const EdgeInsets.only(top:9),
+         child:Text(points[i].label,style:TextStyle(color:textColor,fontSize:10),
+          textAlign:TextAlign.center,maxLines:2));
+       })),
+     ),
+     barGroups:List.generate(points.length,(i)=>BarChartGroupData(x:i,
+      barsSpace:3,barRods:[
+       BarChartRodData(toY:points[i].income,color:emerald,width:13,
+        borderRadius:const BorderRadius.vertical(top:Radius.circular(5))),
+       BarChartRodData(toY:points[i].expense,color:Colors.deepOrange,width:13,
+        borderRadius:const BorderRadius.vertical(top:Radius.circular(5))),
+      ])),
+    )))),
+   ),
   ]);
  }
 }
