@@ -1505,13 +1505,14 @@ Future<void> bulkSmsSheet()async {
     // TextPainter otherwise shrinks to its longest run, so TextAlign.right
     // has no spare horizontal space to align against. Force the whole
     // raster canvas width (including mixed Arabic/Latin bank SMS).
-    painter.layout(minWidth:logicalWidth*scale,maxWidth:logicalWidth*scale);
+    painter.layout(minWidth:logicalWidth,maxWidth:logicalWidth);
     final recorder=ui.PictureRecorder();
     final canvas=Canvas(recorder);
+    canvas.scale(scale,scale);
     painter.paint(canvas,Offset.zero);
     final picture=recorder.endRecording();
     final raster=await picture.toImage(
-     (logicalWidth*scale).ceil(),max(1,painter.height.ceil()));
+     (logicalWidth*scale).ceil(),max(1,(painter.height*scale).ceil()));
     final bytes=await raster.toByteData(format:ui.ImageByteFormat.png);
     final height=max(12.0,painter.height/scale);
     painter.dispose();
@@ -1567,12 +1568,13 @@ Future<void> bulkSmsSheet()async {
           pdfCell(english?(e.income?'Income':'Expense'):(e.income?'دخل':'مصروف'),rtl:!english),
           pdfCell(waffraTr(e.category),rtl:!english),
           pw.Container(
-           width:double.infinity,
            alignment:english?pw.Alignment.centerLeft:pw.Alignment.centerRight,
            padding:const pw.EdgeInsets.symmetric(horizontal:6,vertical:7),
            child:pw.Directionality(
             textDirection:english?pw.TextDirection.ltr:pw.TextDirection.rtl,
-            child:pw.Image(art.$1,width:460,height:art.$2,fit:pw.BoxFit.contain))),
+            child:pw.Align(
+             alignment:english?pw.Alignment.centerLeft:pw.Alignment.centerRight,
+             child:pw.Image(art.$1,height:art.$2,fit:pw.BoxFit.scaleDown)))),
           pdfCell('${e.income?'+':'-'}${fmt(e.amount)}',center:true),
          ],
         );
@@ -2027,10 +2029,6 @@ Future<void> bulkSmsSheet()async {
           homeSummaryCard(waffraIsEnglish?'Expenses':'المصروفات',
            exp,Icons.north_east,Colors.deepOrange,const Color(0xFFFDF4F2)),
          ]),
-         const SizedBox(height:11),
-         OutlinedButton.icon(onPressed:bulkSmsSheet,
-          icon:const Icon(Icons.content_paste),
-          label:WaffraText(waffraIsEnglish?'Paste bank SMS':'الصق رسالة بنكية')),
          const SizedBox(height:12),
          monthlyBudgetCard(),
          const SizedBox(height:12),
@@ -2809,9 +2807,7 @@ Future<void> bulkSmsSheet()async {
     child:KeyedSubtree(key:ValueKey(tab),child:currentTab())),
   // Floating plus starts collapsed at the physical bottom-left in both
   // languages. Expanded menu has two REAL actions, never a dummy label.
-  floatingActionButtonLocation:waffraIsEnglish
-   ?FloatingActionButtonLocation.startFloat
-   :FloatingActionButtonLocation.endFloat,
+  floatingActionButtonLocation:FloatingActionButtonLocation.startFloat,
   floatingActionButton:!ready||tab!=0?null:Column(
    mainAxisSize:MainAxisSize.min,
    crossAxisAlignment:CrossAxisAlignment.start,children:[
