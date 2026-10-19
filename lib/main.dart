@@ -32,6 +32,13 @@ void main() { WidgetsFlutterBinding.ensureInitialized(); runApp(const WaffraApp(
 const emerald=Color(0xFF087A54), forest=Color(0xFF064D3B), sand=Color(0xFFF8F6EF), gold=Color(0xFFD8BA78);
 Color waffraIncomeTone(BuildContext context)=>Theme.of(context).brightness==Brightness.dark?const Color(0xFF6CE0AB):const Color(0xFF16845B);
 final ValueNotifier<int> waffraReturnHome=ValueNotifier<int>(0);
+final ValueNotifier<String> waffraAnimationLevel=ValueNotifier<String>('balanced');
+Duration waffraMotion(int milliseconds){
+ final factor=switch(waffraAnimationLevel.value){
+  'full'=>1.35,'reduced'=>0.45,'off'=>0.0,_=>1.0,
+ };
+ return Duration(milliseconds:(milliseconds*factor).round());
+}
 final ValueNotifier<bool> hideWaffraAmounts=ValueNotifier<bool>(false);
 final ValueNotifier<bool> allowWaffraScreenshots=ValueNotifier<bool>(true);
 const MethodChannel _privacyChannel=MethodChannel('waffra/privacy');
@@ -303,6 +310,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    }
    final screenshotsAllowed=p.getBool('waffra_allow_screenshots')??true;
    language=p.getString('waffra_language')=='en'?'en':'ar';
+   final animation=p.getString('waffra_animation_level');
+   waffraAnimationLevel.value={'full','balanced','reduced','off'}.contains(animation)?animation!:'balanced';
    waffraLanguage.value=language;
    allowWaffraScreenshots.value=screenshotsAllowed;
    if(Platform.isAndroid){
@@ -370,13 +379,13 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    valueListenable:hideWaffraAmounts,
    builder:(context,hidden,_)=>Directionality(
     textDirection:language=='ar'?TextDirection.rtl:TextDirection.ltr,
-    child:AnimatedSwitcher(duration:const Duration(milliseconds:240),switchInCurve:Curves.easeOutCubic,
+    child:AnimatedSwitcher(duration:waffraMotion(240),switchInCurve:Curves.easeOutCubic,
      transitionBuilder:(w,a)=>FadeTransition(opacity:a,child:SlideTransition(position:Tween<Offset>(begin:const Offset(0.11,0),end:Offset.zero).animate(a),child:w)),
      child:KeyedSubtree(key:ValueKey(language),child:child??const SizedBox.shrink())))),
   theme:ThemeData(useMaterial3:true,colorSchemeSeed:emerald,outlinedButtonTheme:OutlinedButtonThemeData(style:OutlinedButton.styleFrom(side:const BorderSide(color:forest,width:1.2),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18)))),filledButtonTheme:FilledButtonThemeData(style:FilledButton.styleFrom(shape:RoundedRectangleBorder(side:const BorderSide(color:forest,width:1.0),borderRadius:BorderRadius.circular(17)))),textButtonTheme:TextButtonThemeData(style:TextButton.styleFrom(shape:RoundedRectangleBorder(side:const BorderSide(color:Color(0x44064D3B)),borderRadius:BorderRadius.circular(14)))),inputDecorationTheme:InputDecorationTheme(filled:true,fillColor:const Color(0xFFF7FBF8),border:OutlineInputBorder(borderRadius:BorderRadius.circular(13)),labelStyle:const TextStyle(color:forest),hintStyle:const TextStyle(color:Color(0xFF63766A))),scaffoldBackgroundColor:sand,appBarTheme:const AppBarTheme(backgroundColor:forest,foregroundColor:Colors.white),navigationBarTheme:NavigationBarThemeData(backgroundColor:forest,labelTextStyle:WidgetStateProperty.all(const TextStyle(color:Colors.white,fontSize:11)),iconTheme:WidgetStateProperty.resolveWith((states)=>IconThemeData(color:states.contains(WidgetState.selected)?forest:Colors.white,size:27))),floatingActionButtonTheme:const FloatingActionButtonThemeData(backgroundColor:forest,foregroundColor:Colors.white),fontFamily:'Tajawal',textTheme:ThemeData.light().textTheme.apply(fontFamily:'Tajawal'),primaryTextTheme:ThemeData.light().primaryTextTheme.apply(fontFamily:'Tajawal')),
   darkTheme:ThemeData(useMaterial3:true,brightness:Brightness.dark,colorSchemeSeed:emerald,outlinedButtonTheme:OutlinedButtonThemeData(style:OutlinedButton.styleFrom(foregroundColor:Colors.white,side:const BorderSide(color:Color(0xFF77BBA2),width:1.2),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18)))),filledButtonTheme:FilledButtonThemeData(style:FilledButton.styleFrom(shape:RoundedRectangleBorder(side:const BorderSide(color:Color(0xFF77BBA2)),borderRadius:BorderRadius.circular(17)))),textButtonTheme:TextButtonThemeData(style:TextButton.styleFrom(foregroundColor:Colors.white,shape:RoundedRectangleBorder(side:const BorderSide(color:Color(0xFF61937E)),borderRadius:BorderRadius.circular(14)))),inputDecorationTheme:InputDecorationTheme(filled:true,fillColor:const Color(0xFF1E3730),border:OutlineInputBorder(borderRadius:BorderRadius.circular(13)),labelStyle:const TextStyle(color:Color(0xFFDEEDE5)),hintStyle:const TextStyle(color:Color(0xFFBBD2C5))),appBarTheme:const AppBarTheme(backgroundColor:forest,foregroundColor:Colors.white),navigationBarTheme:NavigationBarThemeData(backgroundColor:forest,labelTextStyle:WidgetStateProperty.all(const TextStyle(color:Colors.white,fontSize:11)),iconTheme:WidgetStateProperty.all(const IconThemeData(color:Colors.white))),floatingActionButtonTheme:const FloatingActionButtonThemeData(backgroundColor:forest,foregroundColor:Colors.white),fontFamily:'Tajawal',textTheme:ThemeData.dark().textTheme.apply(fontFamily:'Tajawal'),primaryTextTheme:ThemeData.dark().primaryTextTheme.apply(fontFamily:'Tajawal')),
   themeMode:dark?ThemeMode.dark:ThemeMode.light,
-  themeAnimationDuration:Duration.zero,
+  themeAnimationDuration:waffraMotion(250),
   themeAnimationCurve:Curves.easeInOutCubic,
   home:Builder(builder:(rootContext)=>PopScope(canPop:false,onPopInvokedWithResult:(didPop,result)async {
    if(didPop||!mounted)return;
@@ -1151,6 +1160,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  int tab=0,year=DateTime.now().year,month=DateTime.now().month;
  bool goalsOpened=false;
  late final AnimationController _tourGlow;
+ Future<void> setAnimationLevel(String next)async {
+  if(!{'full','balanced','reduced','off'}.contains(next))return;
+  waffraAnimationLevel.value=next;
+  _tourGlow.duration=waffraMotion(1150);
+  if(tourActive){_tourGlow.stop();if(next!='off')_tourGlow.repeat(reverse:true);}
+  if(mounted)setState((){});
+  final p=await SharedPreferences.getInstance();
+  await p.setString('waffra_animation_level',next);
+ }
  String search='',typeFilter='الكل',categoryFilter='الكل',period='شهري';
  String categorySearch='',categoryDisplay='all',goalDisplay='all',recurringDisplay='all';
   String? forecastCategory;
@@ -1164,7 +1182,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  static const tourTabs=<int>[0,0,1,3,4,5];
  bool addFabExpanded=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
- @override void initState(){super.initState();_tourGlow=AnimationController(vsync:this,duration:const Duration(milliseconds:1150));waffraReturnHome.addListener(_returnToHome);load();}
+ @override void initState(){super.initState();_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);load();}
  void _returnToHome(){if(mounted)setState((){tab=0;goalsOpened=false;addFabExpanded=false;});}
  @override void dispose(){_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);super.dispose();}
  Future<void> load()async {
@@ -1206,7 +1224,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(trashBefore!=deletedCategories.length)await persist();
   if(!(p.getBool('waffra_in_app_tour_seen_v2')??false)&&mounted){
    WidgetsBinding.instance.addPostFrameCallback((_){
-    if(mounted){setState((){tourActive=true;tourStep=0;tab=0;goalsOpened=false;addFabExpanded=false;tourTargetReady=false;});_tourGlow.repeat(reverse:true);scheduleTourFocus();}
+    if(mounted){setState((){tourActive=true;tourStep=0;tab=0;goalsOpened=false;addFabExpanded=false;tourTargetReady=false;});if(waffraAnimationLevel.value!='off')_tourGlow.repeat(reverse:true);scheduleTourFocus();}
    });
   }
  }
@@ -2721,7 +2739,7 @@ Future<void> bulkSmsSheet()async {
    biggest[e.category]=(biggest[e.category]??0)+e.amount;
   }
   final top=biggest.entries.toList()..sort((a,b)=>b.value.compareTo(a.value));
-  final wait=Future<void>.delayed(const Duration(milliseconds:1700));
+  final wait=Future<void>.delayed(waffraMotion(1700));
   final showDetails=await showModalBottomSheet<bool>(
    context:context,isScrollControlled:true,showDragHandle:true,
    backgroundColor:Theme.of(context).cardColor,
@@ -2730,7 +2748,7 @@ Future<void> bulkSmsSheet()async {
     child:FutureBuilder<void>(future:wait,builder:(dialogCtx,snapshot){
      if(snapshot.connectionState!=ConnectionState.done){
       return SizedBox(height:260,child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
-       TweenAnimationBuilder<double>(tween:Tween(begin:.55,end:1),duration:const Duration(milliseconds:1300),
+       TweenAnimationBuilder<double>(tween:Tween(begin:.55,end:1),duration:waffraMotion(1300),
         curve:Curves.easeInOutCubic,builder:(ctx,scale,child)=>Transform.scale(scale:scale,child:child),
         child:const CircleAvatar(radius:36,backgroundColor:Color(0x2236D1A1),
          child:Icon(Icons.auto_awesome_rounded,color:emerald,size:40))),
@@ -3899,10 +3917,10 @@ Future<void> bulkSmsSheet()async {
    final focus=_tourKeys[tourStep].currentContext;
    if(focus!=null){
     try{await Scrollable.ensureVisible(focus,
-     duration:const Duration(milliseconds:700),alignment:.16,
+     duration:waffraMotion(700),alignment:.16,
      curve:Curves.easeOutCubic);}catch(e){debugPrint('Tour focus: $e');}
    }
-   await Future<void>.delayed(const Duration(milliseconds:450));
+   await Future<void>.delayed(waffraMotion(450));
    if(mounted&&tourActive)setState(()=>tourTargetReady=focus!=null);
   });
  }
@@ -3914,7 +3932,7 @@ Future<void> bulkSmsSheet()async {
  }
  void beginTour(){
   setState((){tourStep=0;tourActive=true;tourTargetReady=false;tab=0;goalsOpened=false;addFabExpanded=false;});
-  _tourGlow.repeat(reverse:true);
+  if(waffraAnimationLevel.value!='off')_tourGlow.repeat(reverse:true);
   scheduleTourFocus();
  }
  void advanceTour(){
@@ -3956,7 +3974,7 @@ Future<void> bulkSmsSheet()async {
    Positioned.fill(child:AnimatedBuilder(animation:_tourGlow,
     builder:(ctx,_)=>CustomPaint(painter:WaffraTourShade(target,glow:_tourGlow.value)))),
    AnimatedPositioned(
-    duration:const Duration(milliseconds:700),
+    duration:waffraMotion(700),
     curve:Curves.easeInOutCubic,top:top,left:left,width:width,
     child:Material(elevation:12,color:Theme.of(context).cardColor,
      borderRadius:BorderRadius.circular(18),
@@ -3966,7 +3984,7 @@ Future<void> bulkSmsSheet()async {
        Row(children:[
         const Icon(Icons.lightbulb_outline,color:emerald,size:18),
         const SizedBox(width:5),
-        Expanded(child:AnimatedSwitcher(duration:const Duration(milliseconds:650),
+        Expanded(child:AnimatedSwitcher(duration:waffraMotion(650),
          transitionBuilder:(child,animation)=>FadeTransition(opacity:animation,
           child:SlideTransition(position:Tween<Offset>(begin:const Offset(0,.18),end:Offset.zero).animate(animation),child:child)),
          child:WaffraText(waffraIsEnglish?en[tourStep]:ar[tourStep],key:ValueKey(tourStep),
@@ -4072,6 +4090,17 @@ Future<void> bulkSmsSheet()async {
    OutlinedButton.icon(onPressed:edit,icon:const Icon(Icons.edit_outlined),
     label:WaffraText(waffraIsEnglish?'Edit profile':'تعديل حسابي')),
    _accountSection(waffraIsEnglish?'App settings':'إعدادات التطبيق',Icons.settings_outlined,[
+    ListTile(
+     leading:const CircleAvatar(child:Icon(Icons.auto_awesome_outlined,color:emerald)),
+     title:WaffraText(waffraIsEnglish?'Animations & effects':'الحركة والتأثيرات',style:const TextStyle(fontWeight:FontWeight.bold)),
+     subtitle:WaffraText(waffraIsEnglish?'Choose motion intensity':'اختر مستوى الحركة في التطبيق'),
+     trailing:DropdownButton<String>(value:waffraAnimationLevel.value,underline:const SizedBox.shrink(),
+      onChanged:(v){if(v!=null)setAnimationLevel(v);},items:[
+       DropdownMenuItem(value:'full',child:WaffraText(waffraIsEnglish?'Full':'كاملة')),
+       DropdownMenuItem(value:'balanced',child:WaffraText(waffraIsEnglish?'Balanced':'متوازنة')),
+       DropdownMenuItem(value:'reduced',child:WaffraText(waffraIsEnglish?'Reduced':'خفيفة')),
+       DropdownMenuItem(value:'off',child:WaffraText(waffraIsEnglish?'Off':'بدون حركة')),
+      ])),
     _accountTile(waffraIsEnglish?'App language':'لغة التطبيق',
      waffraIsEnglish?'English':'العربية',Icons.language,
      trailing:SegmentedButton<String>(segments:const [
