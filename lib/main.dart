@@ -1131,6 +1131,7 @@ class _HomeScreenState extends State<HomeScreen> {
  bool ready=false;
  final _tourKeys=List<GlobalKey>.generate(6,(_)=>GlobalKey());
  bool tourActive=false;
+ bool tourTargetReady=false;
  int tourStep=0;
  static const tourTabs=<int>[0,0,2,3,4,1];
  bool addFabExpanded=false;
@@ -1177,7 +1178,7 @@ class _HomeScreenState extends State<HomeScreen> {
   if(trashBefore!=deletedCategories.length)await persist();
   if(!(p.getBool('waffra_in_app_tour_seen_v1')??false)&&mounted){
    WidgetsBinding.instance.addPostFrameCallback((_){
-    if(mounted)setState((){tourActive=true;tourStep=0;tab=0;addFabExpanded=false;});
+    if(mounted){setState((){tourActive=true;tourStep=0;tab=0;addFabExpanded=false;tourTargetReady=false;});scheduleTourFocus();}
    });
   }
  }
@@ -2816,20 +2817,32 @@ Future<void> bulkSmsSheet()async {
    OutlinedButton.icon(onPressed:()=>exportEntriesPdf(data,'تحليلات وفرة - $period ${period=='شهري'?'$month/':''}$year',analytics:true),
     icon:const Icon(Icons.picture_as_pdf_outlined),label:const WaffraText('تصدير التحليلات إلى PDF')),
    const SizedBox(height:12),
-   Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(children:[
-    const WaffraText('الدخل والمصروفات - أعمدة',style:TextStyle(fontWeight:FontWeight.bold)),
-    const SizedBox(height:14),
-    SizedBox(height:180,child:BarChart(BarChartData(
-     alignment:BarChartAlignment.spaceAround,
-     barTouchData:BarTouchData(enabled:true),
-     titlesData:const FlTitlesData(topTitles:AxisTitles(sideTitles:SideTitles(showTitles:false)),
-      rightTitles:AxisTitles(sideTitles:SideTitles(showTitles:false))),
-     barGroups:List.generate(points.length,(i)=>BarChartGroupData(x:i,barRods:[
-      BarChartRodData(toY:points[i].income,color:emerald,width:10),
-      BarChartRodData(toY:points[i].expense,color:Colors.deepOrange,width:10),
-     ])),
-    ))),
-   ]))),
+   Card(child:Padding(padding:const EdgeInsets.all(16),
+    child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+     WaffraText(waffraIsEnglish?'Horizontal income and expense comparison':
+      'مقارنة الدخل والمصروفات بأشرطة أفقية',
+      style:const TextStyle(fontWeight:FontWeight.bold)),
+     const SizedBox(height:6),
+     WaffraText(waffraIsEnglish?'Bar length = amount in SAR.':
+      'طول الشريط يوضح المبلغ بالريال.',
+      style:const TextStyle(fontSize:11)),
+     const SizedBox(height:13),
+     Row(children:[
+      Expanded(child:WaffraText(waffraIsEnglish?'Income':'الدخل')),
+      WaffraText(cash(inc),style:const TextStyle(fontWeight:FontWeight.bold,color:emerald)),
+     ]),
+     const SizedBox(height:6),
+     LinearProgressIndicator(value:(inc/max(1.0,max(inc,exp))).clamp(0.0,1.0),
+      minHeight:15,borderRadius:BorderRadius.circular(8),color:emerald),
+     const SizedBox(height:14),
+     Row(children:[
+      Expanded(child:WaffraText(waffraIsEnglish?'Expenses':'المصروفات')),
+      WaffraText(cash(exp),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.deepOrange)),
+     ]),
+     const SizedBox(height:6),
+     LinearProgressIndicator(value:(exp/max(1.0,max(inc,exp))).clamp(0.0,1.0),
+      minHeight:15,borderRadius:BorderRadius.circular(8),color:Colors.deepOrange),
+    ]))),
    if(breakdown.isNotEmpty)Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(children:[
     const WaffraText('توزيع المصروفات - دائري',style:TextStyle(fontWeight:FontWeight.bold)),
     const SizedBox(height:14),
@@ -3842,21 +3855,36 @@ Future<void> bulkSmsSheet()async {
     'رمزا PIN غير متطابقين. أعد إدخال رمز التأكيد.');
   }
  }
+ void scheduleTourFocus(){
+  WidgetsBinding.instance.addPostFrameCallback((_)async {
+   if(!mounted||!tourActive)return;
+   final focus=_tourKeys[tourStep].currentContext;
+   if(focus!=null){
+    try{await Scrollable.ensureVisible(focus,
+     duration:const Duration(milliseconds:230),alignment:.16,
+     curve:Curves.easeOutCubic);}catch(e){debugPrint('Tour focus: $e');}
+   }
+   if(mounted&&tourActive)setState(()=>tourTargetReady=focus!=null);
+  });
+ }
  Future<void> completeTour()async {
-  if(mounted)setState((){tourActive=false;addFabExpanded=false;tab=0;});
+  if(mounted)setState((){tourActive=false;tourTargetReady=false;addFabExpanded=false;tab=0;});
   final p=await SharedPreferences.getInstance();
   await p.setBool('waffra_in_app_tour_seen_v1',true);
  }
  void beginTour(){
-  setState((){tourStep=0;tourActive=true;tab=0;addFabExpanded=false;});
+  setState((){tourStep=0;tourActive=true;tourTargetReady=false;tab=0;addFabExpanded=false;});
+  scheduleTourFocus();
  }
  void advanceTour(){
   if(tourStep>=tourTabs.length-1){completeTour();return;}
-  setState((){tourStep++;tab=tourTabs[tourStep];addFabExpanded=false;});
+  setState((){tourStep++;tab=tourTabs[tourStep];tourTargetReady=false;addFabExpanded=false;});
+  scheduleTourFocus();
  }
  void previousTour(){
   if(tourStep<=0)return;
-  setState((){tourStep--;tab=tourTabs[tourStep];addFabExpanded=false;});
+  setState((){tourStep--;tab=tourTabs[tourStep];tourTargetReady=false;addFabExpanded=false;});
+  scheduleTourFocus();
  }
  Widget tourOverlay()=>LayoutBuilder(builder:(overlayCtx,area){
   const ar=['الرصيد الحالي','إضافة المعاملات','الأقسام','أهداف الادخار','العمليات المتكررة','التحليلات'];
@@ -3876,8 +3904,10 @@ Future<void> bulkSmsSheet()async {
     target.bottom.clamp(4.0,area.maxHeight-4).toDouble());
   }
   final width=min(300.0,area.maxWidth-24);
-  const popupHeight=180.0;
-  final below=area.maxHeight-target.bottom>=popupHeight+20||area.maxHeight-target.bottom>=target.top;
+  final popupHeight=min(225.0,max(130.0,area.maxHeight*.56));
+  final spaceBelow=area.maxHeight-target.bottom-12;
+  final spaceAbove=target.top-12;
+  final below=spaceBelow>=popupHeight||(spaceBelow>=spaceAbove&&spaceAbove<popupHeight);
   final top=(below?target.bottom+12:target.top-popupHeight-12)
    .clamp(7.0,max(7.0,area.maxHeight-popupHeight-7)).toDouble();
   final left=(target.center.dx-width/2).clamp(12.0,max(12.0,area.maxWidth-width-12)).toDouble();
@@ -3890,7 +3920,8 @@ Future<void> bulkSmsSheet()async {
     curve:Curves.easeOutCubic,top:top,left:left,width:width,
     child:Material(elevation:12,color:Theme.of(context).cardColor,
      borderRadius:BorderRadius.circular(18),
-     child:Padding(padding:const EdgeInsets.all(12),child:Column(
+     child:ConstrainedBox(constraints:BoxConstraints(maxHeight:popupHeight),
+      child:SingleChildScrollView(padding:const EdgeInsets.all(12),child:Column(
       mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
        Row(children:[
         const Icon(Icons.lightbulb_outline,color:emerald,size:18),
@@ -3903,16 +3934,15 @@ Future<void> bulkSmsSheet()async {
        WaffraText(waffraIsEnglish?enHelp[tourStep]:arHelp[tourStep],
         style:const TextStyle(fontSize:12)),
        const SizedBox(height:8),
-       Row(children:[
+       Wrap(alignment:WrapAlignment.spaceBetween,spacing:5,runSpacing:6,children:[
         TextButton(onPressed:completeTour,child:WaffraText(waffraIsEnglish?'Skip':'تخطي')),
-        const Spacer(),
         if(tourStep>0)TextButton(onPressed:previousTour,
          child:WaffraText(waffraIsEnglish?'Back':'السابق')),
         FilledButton(onPressed:advanceTour,
          child:WaffraText(tourStep==5?
           (waffraIsEnglish?'Finish':'إنهاء'):(waffraIsEnglish?'Next':'التالي'))),
        ]),
-      ]))),
+      ])))),
    ),
   ]);
  });
@@ -4143,7 +4173,7 @@ Future<void> bulkSmsSheet()async {
     valueListenable:hideWaffraAmounts,
     builder:(context,hidden,_)=>Stack(children:[
      Positioned.fill(child:currentTab()),
-     if(tourActive)Positioned.fill(child:tourOverlay()),
+     if(tourActive&&tourTargetReady)Positioned.fill(child:tourOverlay()),
     ])),
   // Floating plus starts collapsed at the physical bottom-left in both
   // languages. Expanded menu has two REAL actions, never a dummy label.
