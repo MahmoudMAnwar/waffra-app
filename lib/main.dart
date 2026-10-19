@@ -911,6 +911,9 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
 class _HomeScreenState extends State<HomeScreen> {
  final smsHashes=<String>{};
  final entries=<MoneyEntry>[],categories=<BudgetCategory>[],goals=<SavingGoal>[],recurring=<RecurringBill>[];
+ double monthlyBudget=0;
+ DateTimeRange? transactionsDateRange;
+ double? minTransactionAmount,maxTransactionAmount;
  int tab=0,year=DateTime.now().year,month=DateTime.now().month;
  String search='',typeFilter='الكل',categoryFilter='الكل',period='شهري';
  bool ready=false;
@@ -925,6 +928,7 @@ class _HomeScreenState extends State<HomeScreen> {
   try{final raw=p.getString('waffra_goals_v24');if(raw!=null)goals.addAll((jsonDecode(raw) as List).map((x)=>SavingGoal.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('goals: $e');}
   try{final raw=p.getString('waffra_recurring_v24');if(raw!=null)recurring.addAll((jsonDecode(raw) as List).map((x)=>RecurringBill.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('recurring: $e');}
   smsHashes.addAll(p.getStringList('waffra_sms_hashes_v1')??const []);
+  monthlyBudget=p.getDouble('waffra_monthly_budget_v1')??0;
   if(categories.isEmpty)categories.addAll(defaultCategories());
   for(final e in entries){
    if(!categories.any((c)=>c.name==e.category&&c.income==e.income)){
@@ -939,7 +943,8 @@ class _HomeScreenState extends State<HomeScreen> {
    p.setString('entries',jsonEncode(entries.map((e)=>e.toJson()).toList())),
    p.setString('waffra_categories_v24',jsonEncode(categories.map((e)=>e.toJson()).toList())),
    p.setString('waffra_goals_v24',jsonEncode(goals.map((e)=>e.toJson()).toList())),
-   p.setString('waffra_recurring_v24',jsonEncode(recurring.map((e)=>e.toJson()).toList()))
+   p.setString('waffra_recurring_v24',jsonEncode(recurring.map((e)=>e.toJson()).toList())),
+   p.setDouble('waffra_monthly_budget_v1',monthlyBudget)
   ]);
  }
  Future<void> applyRecurring()async {
@@ -1643,11 +1648,164 @@ Future<void> bulkSmsSheet()async {
    if(mounted){setState((){entries.addAll(backup);smsHashes.addAll(hashBackup);});snack(context,waffraIsEnglish?'Delete failed':'فشل حذف المعاملات');}
   }
  }
+ Future<void> editMonthlyBudget()async {
+  final amount=TextEditingController(text:monthlyBudget==0?'':monthlyBudget.toStringAsFixed(0));
+  try{
+   final next=await showDialog<double>(context:context,builder:(ctx)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Monthly budget':'الميزانية الشهرية'),
+    content:TextField(controller:amount,autofocus:true,
+     keyboardType:const TextInputType.numberWithOptions(decimal:true),
+     decoration:InputDecoration(
+      labelText:waffraIsEnglish?'Spending limit (SAR)':'حد المصروفات بالريال',
+      helperText:waffraIsEnglish?'Enter 0 to disable':'أدخل 0 لإيقاف الميزانية',
+      border:const OutlineInputBorder())),
+    actions:[
+     TextButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+     FilledButton(onPressed:(){
+      final v=double.tryParse(amount.text.trim().replaceAll(',',''));
+      if(v==null||!v.isFinite||v<0){
+       ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+        content:WaffraText(waffraIsEnglish?'Enter a valid amount':'أدخل مبلغًا صحيحًا')));
+       return;
+      }
+      Navigator.pop(ctx,v);
+     },child:WaffraText(waffraIsEnglish?'Save':'حفظ')),
+    ]));
+   if(next!=null&&mounted){setState(()=>monthlyBudget=next);await persist();}
+  }finally{disposeLater([amount]);}
+ }
+ Future<void> editTransactionFilters()async {
+  final min=TextEditingController(text:minTransactionAmount?.toStringAsFixed(2)??'');
+  final max=TextEditingController(text:maxTransactionAmount?.toStringAsFixed(2)??'');
+  DateTimeRange? chosen=transactionsDateRange;
+  try{
+   await showDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(
+    builder:(ctx,update)=>AlertDialog(
+     title:WaffraText(waffraIsEnglish?'Advanced filters':'فلترة بالتاريخ والمبلغ'),
+     content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+      TextField(controller:min,keyboardType:const TextInputType.numberWithOptions(decimal:true),
+       decoration:InputDecoration(
+        labelText:waffraIsEnglish?'Minimum amount':'أقل مبلغ',
+        border:const OutlineInputBorder())),
+      const SizedBox(height:10),
+      TextField(controller:max,keyboardType:const TextInputType.numberWithOptions(decimal:true),
+       decoration:InputDecoration(
+        labelText:waffraIsEnglish?'Maximum amount':'أعلى مبلغ',
+        border:const OutlineInputBorder())),
+      const SizedBox(height:12),
+      OutlinedButton.icon(onPressed:()async{
+       final range=await showDateRangePicker(context:ctx,
+        firstDate:DateTime(2000),lastDate:DateTime.now(),
+        initialDateRange:chosen);
+       if(range!=null)update(()=>chosen=range);
+      },icon:const Icon(Icons.date_range),
+       label:WaffraText(chosen==null
+        ?(waffraIsEnglish?'Choose date range':'حدد فترة زمنية')
+        :dayText(chosen!.start)+' - '+dayText(chosen!.end))),
+     ])),
+     actions:[
+      TextButton(onPressed:(){
+       setState((){
+        transactionsDateRange=null;minTransactionAmount=null;maxTransactionAmount=null;
+       });
+       Navigator.pop(ctx);
+      },child:WaffraText(waffraIsEnglish?'Clear':'مسح الفلاتر')),
+      FilledButton(onPressed:(){
+       final lo=min.text.trim().isEmpty?null:double.tryParse(min.text.trim());
+       final hi=max.text.trim().isEmpty?null:double.tryParse(max.text.trim());
+       if((min.text.trim().isNotEmpty&&lo==null)||
+          (max.text.trim().isNotEmpty&&hi==null)||
+          (lo!=null&&(!lo.isFinite||lo<0))||
+          (hi!=null&&(!hi.isFinite||hi<0))||
+          (lo!=null&&hi!=null&&lo>hi)){
+        ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+         content:WaffraText(waffraIsEnglish?'Check amount limits':'تأكد من حدود المبلغ')));
+        return;
+       }
+       setState((){
+        transactionsDateRange=chosen;minTransactionAmount=lo;maxTransactionAmount=hi;
+       });
+       Navigator.pop(ctx);
+      },child:WaffraText(waffraIsEnglish?'Apply':'تطبيق')),
+     ])));
+  }finally{disposeLater([min,max]);}
+ }
+ Widget monthlyInsights(){
+  final now=DateTime.now();
+  final prev=DateTime(now.year,now.month-1,1);
+  final thisMonth=entries.where((e)=>e.date.year==now.year&&e.date.month==now.month);
+  final lastMonth=entries.where((e)=>e.date.year==prev.year&&e.date.month==prev.month);
+  final spent=sum(thisMonth,false),lastSpent=sum(lastMonth,false);
+  final change=lastSpent<=0?null:(spent-lastSpent)/lastSpent*100;
+  final byCategory=<String,double>{};
+  for(final e in thisMonth.where((e)=>!e.income)){
+   byCategory[e.category]=(byCategory[e.category]??0)+e.amount;
+  }
+  final ranked=byCategory.entries.toList()..sort((a,b)=>b.value.compareTo(a.value));
+  final due=recurring.where((r){
+   final maxDay=DateTime(now.year,now.month+1,0).day;
+   final deadline=DateTime(now.year,now.month,r.day.clamp(1,maxDay));
+   final days=deadline.difference(DateTime(now.year,now.month,now.day)).inDays;
+   return days>=0&&days<=3;
+  }).toList();
+  return Card(child:Padding(padding:const EdgeInsets.all(13),child:Column(
+   crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    Row(children:[
+     Expanded(child:WaffraText(waffraIsEnglish?'Monthly budget':'الميزانية الشهرية',
+      style:const TextStyle(fontSize:16,fontWeight:FontWeight.bold))),
+     TextButton.icon(onPressed:editMonthlyBudget,
+      icon:const Icon(Icons.edit_outlined,size:17),
+      label:WaffraText(waffraIsEnglish?'Set budget':'تحديد الميزانية')),
+    ]),
+    if(monthlyBudget>0)...[
+     LinearProgressIndicator(value:(spent/monthlyBudget).clamp(0.0,1.0),
+      minHeight:8,borderRadius:BorderRadius.circular(8),
+      color:spent>monthlyBudget?Colors.red:
+       spent>=monthlyBudget*.8?Colors.deepOrange:emerald),
+     const SizedBox(height:6),
+     WaffraText((waffraIsEnglish?'Spent ':'صرفت ')+formatMoney(spent)+
+      (waffraIsEnglish?' of ':' من ')+formatMoney(monthlyBudget)+
+      (waffraIsEnglish?' SAR':' ريال')),
+     if(spent>=monthlyBudget*.8)WaffraText(waffraIsEnglish?
+      (spent>=monthlyBudget?'Budget reached':'80% of your budget used'):
+      (spent>=monthlyBudget?'وصلت للميزانية':'استهلكت 80٪ من ميزانيتك'),
+      style:const TextStyle(color:Colors.deepOrange,fontWeight:FontWeight.bold)),
+    ]else WaffraText(waffraIsEnglish?
+      'Set a monthly budget to track spending.':
+      'حدّد ميزانية إجمالية للشهر لمتابعة مصروفاتك.',
+      style:const TextStyle(color:Colors.grey)),
+    if(thisMonth.isNotEmpty)ExpansionTile(
+     tilePadding:EdgeInsets.zero,
+     title:WaffraText(waffraIsEnglish?'Monthly insights':'ملخص الشهر',
+      style:const TextStyle(fontWeight:FontWeight.bold)),
+     children:[
+      if(change!=null)ListTile(dense:true,
+       leading:Icon(change>0?Icons.trending_up:Icons.trending_down,
+        color:change>0?Colors.deepOrange:emerald),
+       title:WaffraText((waffraIsEnglish?'Spending ':'المصروفات ')+
+        (change>=0?(waffraIsEnglish?'increased ':'زادت '):
+         (waffraIsEnglish?'decreased ':'قلت '))+
+        change.abs().toStringAsFixed(1)+'%'+
+        (waffraIsEnglish?' vs last month':' عن الشهر الماضي'))),
+      if(ranked.isNotEmpty)ListTile(dense:true,
+       leading:const Icon(Icons.category_outlined,color:emerald),
+       title:WaffraText((waffraIsEnglish?'Top spending category: ':'أكثر قسم صرفت عليه: ')+
+        ranked.first.key)),
+     ]),
+    if(due.isNotEmpty)Padding(padding:const EdgeInsets.only(top:7),
+     child:WaffraText((waffraIsEnglish?'Upcoming recurring payments: ':
+      'تذكير بالعمليات المتكررة القادمة: ')+due.map((r)=>r.title).join('، '),
+      style:const TextStyle(fontSize:13,color:emerald))),
+   ]))));
+ }
  Widget dashboard(){
   final inc=sum(entries,true),exp=sum(entries,false);
   final visible=entries.where((e){
    final q=search.trim().toLowerCase();
    return(e.title.toLowerCase().contains(q)||e.category.toLowerCase().contains(q))&&
+    (transactionsDateRange==null||(e.date.isAfter(transactionsDateRange!.start.subtract(const Duration(days:1)))&&e.date.isBefore(transactionsDateRange!.end.add(const Duration(days:1)))))&&
+    (minTransactionAmount==null||e.amount>=minTransactionAmount!)&&
+    (maxTransactionAmount==null||e.amount<=maxTransactionAmount!)&&
     (typeFilter=='الكل'||(typeFilter=='الدخل'&&e.income)||(typeFilter=='المصروفات'&&!e.income))&&
     (categoryFilter=='الكل'||categoryFilter==e.category);
   }).toList()..sort((a,b)=>b.date.compareTo(a.date));
@@ -1672,6 +1830,8 @@ Future<void> bulkSmsSheet()async {
       sliver:SliverList(delegate:SliverChildListDelegate([
    Row(children:[stat('الدخل',inc,Icons.south_west,emerald),stat('المصروفات',exp,Icons.north_east,Colors.deepOrange)]),
    const SizedBox(height:10),
+   monthlyInsights(),
+   const SizedBox(height:10),
    OutlinedButton.icon(onPressed:bulkSmsSheet,icon:const Icon(Icons.content_paste),label:const WaffraText('الصق رسالة بنكية')),
    const SizedBox(height:12),
    // Full-width title and a separate action row avoid adjacent border overlap.
@@ -1695,7 +1855,12 @@ Future<void> bulkSmsSheet()async {
    const SizedBox(height:12),
    TextField(onChanged:(v)=>setState(()=>search=v),
     decoration:InputDecoration(labelText:waffraTr('دوّر على عملية'),prefixIcon:Icon(Icons.search),border:OutlineInputBorder())),
-   const SizedBox(height:10),
+   Align(alignment:AlignmentDirectional.centerStart,
+    child:TextButton.icon(onPressed:editTransactionFilters,
+     icon:Icon(transactionsDateRange!=null||minTransactionAmount!=null||maxTransactionAmount!=null?
+      Icons.filter_alt:Icons.filter_alt_outlined),
+     label:WaffraText(waffraIsEnglish?'Date and amount filters':'فلترة بالتاريخ والمبلغ'))),
+   const SizedBox(height:4),
    Wrap(spacing:8,children:['الكل','الدخل','المصروفات'].map((x)=>ChoiceChip(
     label:WaffraText(x),selected:typeFilter==x,
     onSelected:(_)=>setState((){typeFilter=x;categoryFilter='الكل';}))).toList()),
@@ -2094,6 +2259,7 @@ Future<void> bulkSmsSheet()async {
   'categories':categories.map((e)=>e.toJson()).toList(),
   'goals':goals.map((e)=>e.toJson()).toList(),
   'recurring':recurring.map((e)=>e.toJson()).toList(),
+  'monthlyBudget':monthlyBudget,
   'profile':widget.profile.toJson(),
  });
  Future<void> backupDialog()async {
