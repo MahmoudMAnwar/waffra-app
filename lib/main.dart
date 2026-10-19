@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -413,20 +414,19 @@ class _PinLockScreenState extends State<PinLockScreen> {
   backgroundColor:forest,
   body:LayoutBuilder(builder:(context,c)=>Stack(fit:StackFit.expand,children:[
    Image.asset('assets/app_lock.png',fit:BoxFit.fill,filterQuality:FilterQuality.high),
-   // The image ALREADY has four outlined circles. Only paint their filled
-   // centers on entry: no extra borders or second row of indicators.
-   // Absolute x positions run LEFT TO RIGHT in both Arabic and English.
+   // Align fill-only dots to the four circles ALREADY PRINTED in the image.
+   // Measured against screenshots on the user's device; no extra outlines.
+   // Fixed visual sequence left -> right, irrespective of app Directionality.
    ...List.generate(4,(i){
     if(i>=pinController.text.length)return const SizedBox.shrink();
-    const xCenters=<double>[0.324,0.441,0.558,0.675];
-    final dot=c.maxWidth*0.020;
+    const xCenters=<double>[0.356,0.453,0.549,0.644];
+    final dot=c.maxWidth*0.018;
     return Positioned(
      left:c.maxWidth*xCenters[i]-dot/2,
-     top:c.maxHeight*0.391-dot/2,
+     top:c.maxHeight*0.423-dot/2,
      width:dot,height:dot,
-     child:Directionality(textDirection:TextDirection.ltr,
-      child:IgnorePointer(child:DecoratedBox(
-       decoration:const BoxDecoration(shape:BoxShape.circle,color:Colors.white)))));
+     child:IgnorePointer(child:DecoratedBox(
+      decoration:const BoxDecoration(shape:BoxShape.circle,color:Colors.white))));
    }),
    // Keep the approved full-screen keypad artwork: transparent touch targets
    // make the pictured digits functional without drawing a second keypad.
@@ -473,25 +473,34 @@ class _WaffraOnboardingState extends State<WaffraOnboarding> {
  }
  @override void dispose(){controller.dispose();super.dispose();}
  Widget slide(int index)=>LayoutBuilder(builder:(context,c){
+  // Keep the COMPLETE approved artwork visible. Fill the extra side space
+  // with a softened extension of the same artwork rather than empty margins
+  // or BoxFit.cover cropping its headings and bottom CTA.
   final scale=min(c.maxWidth/widths[index],c.maxHeight/artworkHeight);
   final w=widths[index]*scale,h=artworkHeight*scale;
-  return Center(child:SizedBox(width:w,height:h,child:Stack(
-   fit:StackFit.expand,children:[
-    Image.asset('assets/onboarding_0'+(index+1).toString()+'.png',
-     fit:BoxFit.fill,filterQuality:FilterQuality.high,
-     errorBuilder:(context,error,stack)=>Center(child:WaffraText(
-      waffraIsEnglish?'Onboarding image unavailable':'صورة التعريف غير متاحة'))),
-    // Touch regions are relative to the FITTED IMAGE, not the device viewport.
-    Positioned(left:w*0.04,top:h*0.045,width:w*0.29,height:h*0.075,
-     child:Semantics(button:true,label:waffraIsEnglish?'Skip onboarding':'تخطي التعريف',
-      child:GestureDetector(behavior:HitTestBehavior.opaque,onTap:finish,
-       child:const ColoredBox(color:Colors.transparent)))),
-    Positioned(left:w*0.035,right:w*0.035,bottom:h*0.012,height:h*0.080,
-     child:Semantics(button:true,label:index==3?'ابدأ رحلتك مع وفرة':'التالي',
-      child:GestureDetector(behavior:HitTestBehavior.opaque,onTap:next,
-       child:const ColoredBox(color:Colors.transparent)))),
-   ])));
+  final image='assets/onboarding_0'+(index+1).toString()+'.png';
+  return Stack(fit:StackFit.expand,children:[
+   ClipRect(child:ImageFiltered(
+    imageFilter:ui.ImageFilter.blur(sigmaX:19,sigmaY:19),
+    child:Image.asset(image,fit:BoxFit.cover,filterQuality:FilterQuality.high))),
+   const ColoredBox(color:Color(0x66FFFDF6)),
+   Center(child:SizedBox(width:w,height:h,child:Stack(
+    fit:StackFit.expand,children:[
+     Image.asset(image,fit:BoxFit.fill,filterQuality:FilterQuality.high,
+      errorBuilder:(context,error,stack)=>Center(child:WaffraText(
+       waffraIsEnglish?'Onboarding image unavailable':'صورة التعريف غير متاحة'))),
+     Positioned(left:w*0.04,top:h*0.045,width:w*0.29,height:h*0.075,
+      child:Semantics(button:true,label:waffraIsEnglish?'Skip onboarding':'تخطي التعريف',
+       child:GestureDetector(behavior:HitTestBehavior.opaque,onTap:finish,
+        child:const ColoredBox(color:Colors.transparent)))),
+     Positioned(left:w*0.035,right:w*0.035,bottom:h*0.012,height:h*0.080,
+      child:Semantics(button:true,label:index==3?'ابدأ رحلتك مع وفرة':'التالي',
+       child:GestureDetector(behavior:HitTestBehavior.opaque,onTap:next,
+        child:const ColoredBox(color:Colors.transparent)))),
+    ]))),
+  ]);
  });
+
  @override Widget build(BuildContext context)=>Scaffold(
   backgroundColor:const Color(0xFFF8F7EF),
   body:SafeArea(child:PageView(
