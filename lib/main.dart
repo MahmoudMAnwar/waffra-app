@@ -1586,9 +1586,24 @@ Future<void> bulkSmsSheet()async {
   }catch(e,st){debugPrint('PDF export error: $e\n$st');if(mounted)snack(context,'تعذّر إنشاء PDF: $e');}
  }
  Future<void> deleteEntry(MoneyEntry e)async {
-  final yes=await confirm('حذف العملية','ودّك تحذف «${e.title}»؟');
+  final yes=await confirm(waffraIsEnglish?'Delete transaction':'حذف العملية',
+   waffraIsEnglish?'Delete this transaction?':'ودّك تحذف «'+e.title+'»؟');
   if(yes!=true||!mounted)return;
-  setState(()=>entries.removeWhere((x)=>x.id==e.id));await persist();
+  setState(()=>entries.removeWhere((x)=>x.id==e.id));
+  await persist();
+  if(!mounted)return;
+  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+   duration:const Duration(seconds:6),
+   content:WaffraText(waffraIsEnglish?'Transaction deleted':'تم حذف العملية'),
+   action:SnackBarAction(
+    label:waffraIsEnglish?'Undo':'تراجع',
+    onPressed:()async{
+     if(!mounted||entries.any((x)=>x.id==e.id))return;
+     setState(()=>entries.insert(0,e));
+     await persist();
+    }),
+  ));
  }
  Widget stat(String label,double value,IconData icon,Color color)=>Expanded(
   child:Card(child:Padding(padding:const EdgeInsets.all(12),
