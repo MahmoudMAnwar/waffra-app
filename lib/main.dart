@@ -533,10 +533,10 @@ class _WaffraOnboardingState extends State<WaffraOnboarding> {
  bool nextPressed=false;
  static const sourceWidth=<double>[360,363,362,363];
  static const titleAr=<String>[
-  'كل معاملاتك\nفي مكان واحد',
-  'الصق رسالتك..\nوالباقي علينا',
-  'تحليلات بسيطة\nلقرارات أذكى',
-  'حقق أهدافك\nخطوة بخطوة',
+  'إدارة أموالك\nبكل سهولة',
+  'سجّل معاملاتك\nبسهولة',
+  'افهم نمط\nإنفاقك',
+  'حقق أهدافك\nالمالية',
  ];
  static const subtitleAr=<String>[
   'تابع دخلك ومصروفاتك بسهولة\nوشوف رصيدك الحالي دائمًا.',
@@ -1993,7 +1993,7 @@ Future<void> bulkSmsSheet()async {
      decoration:InputDecoration(
       labelText:waffraIsEnglish?'Spending limit (SAR)':'حد المصروفات بالريال',
       helperText:waffraIsEnglish?'Enter 0 to disable':'أدخل 0 لإيقاف الميزانية',
-      border:const OutlineInputBorder())),
+      border:OutlineInputBorder(borderRadius:BorderRadius.circular(15)),filled:true,fillColor:const Color(0xFF0C6149))),
     actions:[
      TextButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
      FilledButton(onPressed:(){
@@ -3606,8 +3606,12 @@ Future<void> bulkSmsSheet()async {
  })async{
   final input=TextEditingController();
   try{
-   return await showDialog<String>(context:context,builder:(dialogContext)=>AlertDialog(
-    title:WaffraText(title),
+   return await showDialog<String>(context:context,builder:(dialogContext)=>Theme(data:Theme.of(dialogContext).copyWith(brightness:Brightness.dark,colorScheme:ColorScheme.fromSeed(seedColor:emerald,brightness:Brightness.dark)),child:AlertDialog(
+    backgroundColor:forest,
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26),side:const BorderSide(color:Color(0xFF2C9674))),
+    title:Column(mainAxisSize:MainAxisSize.min,children:[
+     const CircleAvatar(radius:26,backgroundColor:emerald,child:Icon(Icons.lock_outline,color:Colors.white,size:28)),
+     const SizedBox(height:12),WaffraText(title,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold))]),
     content:TextField(
      controller:input,autofocus:true,
      textDirection:TextDirection.ltr,textAlign:TextAlign.center,
@@ -3633,7 +3637,7 @@ Future<void> bulkSmsSheet()async {
       }
      },child:WaffraText(waffraIsEnglish?'Confirm':'تأكيد')),
     ],
-   ));
+   )));
   }finally{disposeLater([input]);}
  }
  Future<void> configurePin()async {
@@ -3707,9 +3711,9 @@ Future<void> bulkSmsSheet()async {
     target.bottom.clamp(4.0,area.maxHeight-4).toDouble());
   }
   final width=min(300.0,area.maxWidth-24);
-  const popupHeight=205.0;
+  const popupHeight=180.0;
   final below=area.maxHeight-target.bottom>=popupHeight+20||area.maxHeight-target.bottom>=target.top;
-  final top=(below?target.bottom+10:target.top-popupHeight-10)
+  final top=(below?target.bottom+12:target.top-popupHeight-12)
    .clamp(7.0,max(7.0,area.maxHeight-popupHeight-7)).toDouble();
   final left=(target.center.dx-width/2).clamp(12.0,max(12.0,area.maxWidth-width-12)).toDouble();
   return Stack(children:[
