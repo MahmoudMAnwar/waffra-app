@@ -995,12 +995,14 @@ class WaffraCurrencyAmount extends StatelessWidget {
 class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
  final double balance;
  final bool english;
- const WaffraBalanceHeader({required this.balance,required this.english});
+ final GlobalKey? focusKey;
+ const WaffraBalanceHeader({required this.balance,required this.english,this.focusKey});
  @override double get minExtent=>70;
  @override double get maxExtent=>155;
  @override Widget build(BuildContext context,double shrinkOffset,bool overlapsContent){
   final progress=(shrinkOffset/(maxExtent-minExtent)).clamp(0.0,1.0);
   return Container(
+   key:focusKey,
    color:Theme.of(context).scaffoldBackgroundColor,
    padding:const EdgeInsets.fromLTRB(14,0,14,5),
    child:Container(
@@ -1046,6 +1048,7 @@ class _HomeScreenState extends State<HomeScreen> {
  String search='',typeFilter='الكل',categoryFilter='الكل',period='شهري';
  String categorySearch='',categoryDisplay='all',goalDisplay='all',recurringDisplay='all';
  bool ready=false;
+ final _tourKeys=List<GlobalKey>.generate(6,(_)=>GlobalKey());
  bool tourActive=false;
  int tourStep=0;
  static const tourTabs=<int>[0,0,2,3,4,1];
@@ -2299,7 +2302,7 @@ Future<void> bulkSmsSheet()async {
       // Not pinned: the shrinking balance scrolls away without covering data.
       SliverPersistentHeader(
        pinned:false,
-       delegate:WaffraBalanceHeader(balance:inc-exp,english:waffraIsEnglish)),
+       delegate:WaffraBalanceHeader(balance:inc-exp,english:waffraIsEnglish,focusKey:_tourKeys[0])),
       SliverPadding(padding:const EdgeInsets.fromLTRB(14,10,14,96),
        sliver:SliverToBoxAdapter(child:Column(
         crossAxisAlignment:CrossAxisAlignment.stretch,children:[
@@ -2443,7 +2446,7 @@ Future<void> bulkSmsSheet()async {
   final breakdown=<String,double>{};
   for(final e in data.where((e)=>!e.income)){breakdown[e.category]=(breakdown[e.category]??0)+e.amount;}
   return ListView(padding:const EdgeInsets.all(16),children:[
-   WaffraText('تحليلاتك المالية',style:Theme.of(context).textTheme.titleLarge),
+   KeyedSubtree(key:_tourKeys[5],child:WaffraText('تحليلاتك المالية',style:Theme.of(context).textTheme.titleLarge)),
    const SizedBox(height:12),
    SegmentedButton<String>(segments:const [ButtonSegment(value:'شهري',label:WaffraText('شهري')),
     ButtonSegment(value:'سنوي',label:WaffraText('سنوي'))],
@@ -2759,7 +2762,7 @@ Future<void> bulkSmsSheet()async {
      ]))));
   }
   return ListView(padding:const EdgeInsets.fromLTRB(16,16,16,20),children:[
-   Row(children:[
+   Row(key:_tourKeys[2],children:[
     Expanded(child:WaffraText(waffraIsEnglish?'Categories & budgets':'أقسامك وميزانياتك',
      style:Theme.of(context).textTheme.titleLarge)),
     TextButton.icon(onPressed:showCategoryTrash,
@@ -2916,8 +2919,8 @@ Future<void> bulkSmsSheet()async {
   final filtered=goals.where((g)=>goalDisplay=='all'||
    (goalDisplay=='done'?g.saved>=g.target:g.saved<g.target)).toList();
   return ListView(padding:const EdgeInsets.fromLTRB(16,16,16,24),children:[
-   WaffraText(waffraIsEnglish?'Savings goals':'أهداف الادخار',
-    style:Theme.of(context).textTheme.titleLarge),
+   KeyedSubtree(key:_tourKeys[3],child:WaffraText(waffraIsEnglish?'Savings goals':'أهداف الادخار',
+    style:Theme.of(context).textTheme.titleLarge)),
    const SizedBox(height:6),
    WaffraText(waffraIsEnglish?'Turn your dreams into goals, one step at a time':
     'حوّل أحلامك إلى خطط واقعية وابدأ رحلتك نحو تحقيقها.',
@@ -3089,8 +3092,8 @@ Future<void> bulkSmsSheet()async {
    return days>=0&&days<=3;
   }).length;
   return ListView(padding:const EdgeInsets.fromLTRB(16,16,16,24),children:[
-   WaffraText(waffraIsEnglish?'Recurring transactions':'العمليات المتكررة',
-    style:Theme.of(context).textTheme.titleLarge),
+   KeyedSubtree(key:_tourKeys[4],child:WaffraText(waffraIsEnglish?'Recurring transactions':'العمليات المتكررة',
+    style:Theme.of(context).textTheme.titleLarge)),
    const SizedBox(height:6),
    WaffraText(waffraIsEnglish?'Due monthly transactions are recorded once when you open Waffra.':
     'نسجّل العملية المستحقة مرة واحدة لكل شهر عند فتح التطبيق.',
@@ -3687,7 +3690,7 @@ Future<void> bulkSmsSheet()async {
      child:InkWell(
       customBorder:const CircleBorder(),
       onTap:()=>setState(()=>addFabExpanded=!addFabExpanded),
-      child:SizedBox(width:58,height:58,
+      child:SizedBox(key:_tourKeys[1],width:58,height:58,
        child:AnimatedRotation(
         duration:const Duration(milliseconds:210),
         turns:addFabExpanded?0.125:0,
