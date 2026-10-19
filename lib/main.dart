@@ -2946,7 +2946,7 @@ Future<void> bulkSmsSheet()async {
           :(waffraIsEnglish?'Next':'التالي'))),
        ]),
       ]))),
-   ))),
+   )),
   ]);
  });
  Widget profilePage()=>ListView(padding:const EdgeInsets.all(18),children:[
