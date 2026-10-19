@@ -963,6 +963,8 @@ class _HomeScreenState extends State<HomeScreen> {
  final smsHashes=<String>{};
  final learnedMerchantCategories=<String,String>{};
  final entries=<MoneyEntry>[],categories=<BudgetCategory>[],goals=<SavingGoal>[],recurring=<RecurringBill>[];
+ // Soft-deleted categories are retained on-device for up to 30 days.
+ final deletedCategories=<Map<String,dynamic>>[];
  double monthlyBudget=0;
  DateTimeRange? transactionsDateRange;
  double? minTransactionAmount,maxTransactionAmount;
@@ -980,6 +982,15 @@ class _HomeScreenState extends State<HomeScreen> {
   try{final raw=p.getString('waffra_categories_v24');categories.addAll(raw==null?defaultCategories():(jsonDecode(raw) as List).map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('categories: $e');categories.addAll(defaultCategories());}
   try{final raw=p.getString('waffra_goals_v24');if(raw!=null)goals.addAll((jsonDecode(raw) as List).map((x)=>SavingGoal.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('goals: $e');}
   try{final raw=p.getString('waffra_recurring_v24');if(raw!=null)recurring.addAll((jsonDecode(raw) as List).map((x)=>RecurringBill.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('recurring: $e');}
+  try{
+   final raw=p.getString('waffra_deleted_categories_v1');
+   if(raw!=null)deletedCategories.addAll((jsonDecode(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));
+  }catch(e){debugPrint('Deleted categories: $e');}
+  final trashBefore=deletedCategories.length;
+  deletedCategories.removeWhere((item){
+   final when=DateTime.tryParse('${item['deletedAt']??''}');
+   return when==null||!DateTime.now().isBefore(when.add(const Duration(days:30)));
+  });
   smsHashes.addAll(p.getStringList('waffra_sms_hashes_v1')??const []);
   monthlyBudget=p.getDouble('waffra_monthly_budget_v1')??0;
   try{
@@ -998,6 +1009,7 @@ class _HomeScreenState extends State<HomeScreen> {
    }
   }
   if(!mounted)return;setState(()=>ready=true);await applyRecurring();
+  if(trashBefore!=deletedCategories.length)await persist();
  }
  Future<void> persist()async {
   final p=await SharedPreferences.getInstance();
@@ -1006,6 +1018,7 @@ class _HomeScreenState extends State<HomeScreen> {
    p.setString('waffra_categories_v24',jsonEncode(categories.map((e)=>e.toJson()).toList())),
    p.setString('waffra_goals_v24',jsonEncode(goals.map((e)=>e.toJson()).toList())),
    p.setString('waffra_recurring_v24',jsonEncode(recurring.map((e)=>e.toJson()).toList())),
+   p.setString('waffra_deleted_categories_v1',jsonEncode(deletedCategories)),
    p.setDouble('waffra_monthly_budget_v1',monthlyBudget),
    p.setString('waffra_learned_merchants_v1',jsonEncode(learnedMerchantCategories))
   ]);
@@ -1058,12 +1071,26 @@ Future<void> bulkSmsSheet()async {
   final valid=<int>[],invalid=<int>[],duplicates=<int>[];
   final seen=<String>{};
   for(var i=0;i<found.length;i++){
+   if(results[i].amount==null||results[i].amount!<=0){invalid.add(i);continue;}
    final hash=bankSmsHash(found[i]);
    if(smsHashes.contains(hash)||!seen.add(hash)){duplicates.add(i);continue;}
-   if(results[i].amount==null||results[i].amount!<=0){invalid.add(i);continue;}
    valid.add(i);
   }
-  if(valid.isEmpty){update(()=>statusMessage=waffraIsEnglish?'No new valid transactions were detected.':'لم يتم اكتشاف معاملات جديدة صالحة للإضافة.');return;}
+  if(duplicates.isNotEmpty){
+   final addRepeated=await showDialog<bool>(context:ctx,builder:(d)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Duplicate transactions detected':'تم اكتشاف معاملات مكررة'),
+    content:WaffraText(waffraIsEnglish
+     ?'${duplicates.length} transaction(s) may already exist or repeat within this paste. Add them anyway, along with the new valid transactions?'
+     :'تم اكتشاف ${duplicates.length} معاملة مكررة، إما مسجلة سابقًا أو مكررة داخل الرسائل الملصوقة. هل تريد إضافتها على أي حال مع المعاملات الجديدة؟'),
+    actions:[
+     TextButton(onPressed:()=>Navigator.pop(d,false),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+     FilledButton(onPressed:()=>Navigator.pop(d,true),child:WaffraText(waffraIsEnglish?'Add anyway':'إضافة على أي حال')),
+    ]));
+   if(addRepeated!=true||!ctx.mounted)return;
+   valid.addAll(duplicates);
+   valid.sort();
+  }
+  if(valid.isEmpty){update(()=>statusMessage=waffraIsEnglish?'No valid transactions were detected.':'لم يتم اكتشاف معاملات صالحة للإضافة.');return;}
   final incomes=valid.where((i)=>results[i].income).toList();
   final expenses=valid.where((i)=>!results[i].income).toList();
   final incomeTotal=incomes.fold<double>(0,(v,i)=>v+results[i].amount!);
@@ -1071,8 +1098,8 @@ Future<void> bulkSmsSheet()async {
   final accepted=await showDialog<bool>(context:ctx,builder:(dialogCtx)=>AlertDialog(
    title:WaffraText(waffraIsEnglish?'Confirm transactions':'تأكيد إضافة المعاملات'),
    content:WaffraText(waffraIsEnglish
-    ?'Detected ${valid.length} transactions: ${incomes.length} income (SAR ${incomeTotal.toStringAsFixed(2)}) and ${expenses.length} expenses (SAR ${expenseTotal.toStringAsFixed(2)}). ${invalid.length} unrecognized, ${duplicates.length} duplicates. Add the valid transactions?'
-    :'تم اكتشاف ${valid.length} معاملات: ${incomes.length} دخل (${incomeTotal.toStringAsFixed(2)} ر.س) و${expenses.length} مصروفات (${expenseTotal.toStringAsFixed(2)} ر.س). تعذر تحليل ${invalid.length}، والمكرر ${duplicates.length}. هل تريد تأكيد الإضافة؟'),
+    ?'Detected ${valid.length} transactions: ${incomes.length} income (SAR ${incomeTotal.toStringAsFixed(2)}) and ${expenses.length} expenses (SAR ${expenseTotal.toStringAsFixed(2)}). ${invalid.length} unrecognized. Add these transactions?'
+    :'تم اكتشاف ${valid.length} معاملات: ${incomes.length} دخل (${incomeTotal.toStringAsFixed(2)} ر.س) و${expenses.length} مصروفات (${expenseTotal.toStringAsFixed(2)} ر.س). تعذر تحليل ${invalid.length}. هل تريد تأكيد الإضافة؟'),
    actions:[TextButton(onPressed:()=>Navigator.pop(dialogCtx,false),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
     FilledButton(onPressed:()=>Navigator.pop(dialogCtx,true),child:WaffraText(waffraIsEnglish?'Confirm and add':'تأكيد وإضافة المعاملات'))]));
   if(accepted!=true||!ctx.mounted)return;
@@ -2417,17 +2444,33 @@ Future<void> bulkSmsSheet()async {
  }
  Future<void> fundGoal(SavingGoal g)async {
   final amount=TextEditingController();
-  final n=await showDialog<double>(context:context,builder:(ctx)=>AlertDialog(
+  final n=await showDialog<double>(context:context,builder:(ctx)=>StatefulBuilder(
+   builder:(ctx,update)=>AlertDialog(
    title:WaffraText('إضافة ادخار لـ ${g.name}'),
-   content:TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
-       inputFormatters:[const WaffraAmountFormatter()],
-    decoration:InputDecoration(labelText:waffraTr('المبلغ المدّخر'))),
+   content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    WaffraText(waffraIsEnglish?'Target: ${formatWaffraMoney(g.target)} SAR':'المبلغ المستهدف: ${formatWaffraMoney(g.target)} ريال'),
+    WaffraText(waffraIsEnglish?'Already saved: ${formatWaffraMoney(g.saved)} SAR':'المدخر حاليًا: ${formatWaffraMoney(g.saved)} ريال'),
+    const SizedBox(height:8),
+    WaffraText(waffraIsEnglish
+     ?'Remaining: ${formatWaffraMoney(max(0,g.target-g.saved))} SAR'
+     :'المتبقي للهدف: ${formatWaffraMoney(max(0,g.target-g.saved))} ريال',
+     style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
+    const SizedBox(height:14),
+    TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
+     inputFormatters:[const WaffraAmountFormatter()],onChanged:(_)=>update((){}),
+     decoration:InputDecoration(labelText:waffraTr('المبلغ المدّخر'),border:const OutlineInputBorder())),
+    const SizedBox(height:12),
+    WaffraText(waffraIsEnglish
+     ?'Remaining after adding: ${formatWaffraMoney(max(0,g.target-g.saved-(amountOf(amount.text)??0)))} SAR'
+     :'المتبقي بعد الإضافة: ${formatWaffraMoney(max(0,g.target-g.saved-(amountOf(amount.text)??0)))} ريال',
+     style:const TextStyle(color:emerald,fontWeight:FontWeight.w600)),
+   ]),
    actions:[
     TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إلغاء')),
     FilledButton(onPressed:(){
      final v=amountOf(amount.text);if(v!=null)Navigator.pop(ctx,v);
     },child:const WaffraText('إضافة')),
-   ]));
+   ])));
   disposeLater([amount]);
   if(n!=null&&mounted){
    final achieved=g.saved<g.target&&g.saved+n>=g.target;
@@ -2468,7 +2511,11 @@ Future<void> bulkSmsSheet()async {
      Icon(goalIcon(g.name),color:emerald),const SizedBox(width:8),
      Expanded(child:WaffraText(g.name,style:const TextStyle(fontWeight:FontWeight.bold))),
      PopupMenuButton<String>(onSelected:(v)async {
-      if(v=='delete'){setState(()=>goals.removeWhere((x)=>x.id==g.id));await persist();}
+      if(v=='delete'){
+       final yes=await confirm(waffraIsEnglish?'Delete savings goal?':'حذف هدف الادخار',
+        waffraIsEnglish?'Delete ${g.name}? This cannot be undone.':'هل تريد حذف هدف الادخار «${g.name}» نهائيًا؟ لا يمكن التراجع عن هذا الإجراء.');
+       if(yes==true&&mounted){setState(()=>goals.removeWhere((x)=>x.id==g.id));await persist();}
+      }
      },itemBuilder:(_)=>const [PopupMenuItem(value:'delete',child:WaffraText('حذف الهدف'))]),
     ]),
     const SizedBox(height:10),
@@ -2564,6 +2611,7 @@ Future<void> bulkSmsSheet()async {
   'categories':categories.map((e)=>e.toJson()).toList(),
   'goals':goals.map((e)=>e.toJson()).toList(),
   'recurring':recurring.map((e)=>e.toJson()).toList(),
+  'deletedCategories':deletedCategories,
   'monthlyBudget':monthlyBudget,
   'learnedMerchants':learnedMerchantCategories,
   'profile':widget.profile.toJson(),
@@ -2596,6 +2644,8 @@ Future<void> bulkSmsSheet()async {
       final newCategories=(raw['categories'] as List).map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x))).toList();
       final newGoals=(raw['goals'] as List).map((x)=>SavingGoal.fromJson(Map<String,dynamic>.from(x))).toList();
       final newRecurring=(raw['recurring'] as List).map((x)=>RecurringBill.fromJson(Map<String,dynamic>.from(x))).toList();
+      final newTrash=raw['deletedCategories'] is List?
+       (raw['deletedCategories'] as List).map((x)=>Map<String,dynamic>.from(x as Map)).toList():<Map<String,dynamic>>[];
       if(newCategories.isEmpty)throw const FormatException('Empty categories');
       final restoredBudget=raw['monthlyBudget'] is num?
        (raw['monthlyBudget'] as num).toDouble():monthlyBudget;
@@ -2612,6 +2662,7 @@ Future<void> bulkSmsSheet()async {
        categories..clear()..addAll(newCategories);
        goals..clear()..addAll(newGoals);
        recurring..clear()..addAll(newRecurring);
+       deletedCategories..clear()..addAll(newTrash);
        monthlyBudget=restoredBudget;
        learnedMerchantCategories..clear()..addAll(restoredRules);
       });
