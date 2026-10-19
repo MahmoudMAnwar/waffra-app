@@ -459,70 +459,91 @@ class _PinLockScreenState extends State<PinLockScreen> {
   }
  }
  @override void dispose(){pinController.dispose();super.dispose();}
- @override Widget build(BuildContext context)=>Scaffold(
-  backgroundColor:forest,
-  body:LayoutBuilder(builder:(context,c)=>Stack(fit:StackFit.expand,children:[
-   Image.asset('assets/app_lock.png',fit:BoxFit.fill,filterQuality:FilterQuality.high),
-   // Exact source-art locations: four circles in app_lock.png (852x1846)
-   // centered at x=305,386,468,550 and y=774. Image and dots share the
-   // same Stack rect, so placement is device-size and language independent.
-   ...List.generate(4,(i){
-    if(i>=pinController.text.length)return const SizedBox.shrink();
-    const xCenters=<double>[305/852,386/852,468/852,550/852];
-    const yCenter=774/1846;
-    final diameter=c.maxWidth*0.019;
-    return Positioned(
-     left:c.maxWidth*xCenters[i]-diameter/2,
-     top:c.maxHeight*yCenter-diameter/2,
-     width:diameter,height:diameter,
-     child:IgnorePointer(child:DecoratedBox(
-      decoration:const BoxDecoration(shape:BoxShape.circle,color:Colors.white))),
-    );
-   }),
-   // Keep the approved full-screen keypad artwork: transparent touch targets
-   // make the pictured digits functional without drawing a second keypad.
-   ...List.generate(12,(index){
-    final row=index~/3,col=index%3;
-    final digit=row==3?(col==1?'0':''): '${row*3+col+1}';
-    return Positioned(
-     left:c.maxWidth*(0.15+col*0.235),top:c.maxHeight*(0.445+row*0.088),
-     width:c.maxWidth*0.23,height:c.maxHeight*0.078,
-     child:GestureDetector(behavior:HitTestBehavior.opaque,onTap:(){
-      if(row==3&&col==0){biometric();return;}
-      if(row==3&&col==2){if(pinController.text.isNotEmpty)pinController.text=pinController.text.substring(0,pinController.text.length-1);setState((){});return;}
-      if(pinController.text.length<8){pinController.text+=digit;setState((){});}
-      if(pinController.text.length==4)verifyPin();
-     },child:const ColoredBox(color:Colors.transparent)));
-   }),
-   // The printed face-recognition label is also a real action.
-   Positioned(left:c.maxWidth*0.25,top:c.maxHeight*0.80,
-    width:c.maxWidth*0.50,height:c.maxHeight*0.095,
-    child:Semantics(button:true,
-     label:waffraIsEnglish?'Use face or fingerprint':'استخدام بصمة الوجه أو الإصبع',
-     child:GestureDetector(onTap:biometric,behavior:HitTestBehavior.opaque,
-      child:const ColoredBox(color:Colors.transparent)))),
-   if(error.isNotEmpty)Positioned(left:20,right:20,top:c.maxHeight*0.797,
-    child:Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:7),
-     decoration:BoxDecoration(color:forest.withValues(alpha:.92),borderRadius:BorderRadius.circular(12)),
-     child:WaffraText(error,textAlign:TextAlign.center,
-      style:const TextStyle(color:Colors.white,fontSize:15)))),
-   if(busy)Positioned.fill(child:ColoredBox(
-    color:const Color(0x9900221A),
-    child:Center(child:Container(
-     constraints:const BoxConstraints(maxWidth:300),
-     padding:const EdgeInsets.symmetric(vertical:25,horizontal:22),
-     decoration:BoxDecoration(color:forest,borderRadius:BorderRadius.circular(20),
-      border:Border.all(color:Colors.white30)),
-     child:Column(mainAxisSize:MainAxisSize.min,children:[
-      const CircularProgressIndicator(color:Colors.white),
-      const SizedBox(height:18),
-      WaffraText(waffraIsEnglish?'Verifying your identity...':'جارٍ التحقق من هويتك...',
-       textAlign:TextAlign.center,
-       style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold,fontSize:17)),
-     ]))))),
-  ])),
+
+ Widget _padButton(String label,{IconData? icon,required VoidCallback onPressed}){
+  return Semantics(button:true,label:icon==Icons.fingerprint?
+    (waffraIsEnglish?'Unlock with fingerprint':'فتح بالبصمة'):label,
+   child:Material(color:const Color(0xE0156B51),
+    shape:CircleBorder(side:BorderSide(color:Colors.white.withValues(alpha:.27))),
+    child:InkWell(customBorder:const CircleBorder(),onTap:busy?null:onPressed,
+     child:SizedBox(width:64,height:58,child:Center(child:icon!=null?
+      Icon(icon,color:Colors.white,size:25):
+      Text(label,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w700,fontSize:25)))))));
+ }
+ void _keyDigit(String digit){
+  if(pinController.text.length>=4||busy)return;
+  pinController.text+=digit;
+  setState((){error='';});
+  if(pinController.text.length==4)verifyPin();
+ }
+ @override Widget build(BuildContext context)=>Scaffold(backgroundColor:forest,
+  body:Stack(fit:StackFit.expand,children:[
+   Image.asset('assets/waffra_splash_approved_exact.png',fit:BoxFit.cover,
+    filterQuality:FilterQuality.high),
+   const ColoredBox(color:Color(0x66002219)),
+   SafeArea(child:Align(alignment:Alignment.bottomCenter,
+    child:SingleChildScrollView(
+     padding:const EdgeInsets.symmetric(horizontal:20,vertical:14),
+     child:Container(constraints:const BoxConstraints(maxWidth:370),
+      padding:const EdgeInsets.fromLTRB(17,18,17,14),
+      decoration:BoxDecoration(color:const Color(0xEE064D3B),
+       borderRadius:BorderRadius.circular(28),
+       border:Border.all(color:const Color(0x667FD8AF),width:1.4),
+       boxShadow:const [BoxShadow(color:Colors.black38,blurRadius:20)]),
+      child:Column(mainAxisSize:MainAxisSize.min,children:[
+       const Icon(Icons.lock_outline_rounded,color:Colors.white,size:34),
+       const SizedBox(height:7),
+       WaffraText(waffraIsEnglish?'Enter your PIN':'أدخل رمز القفل',
+        style:const TextStyle(color:Colors.white,fontSize:22,fontWeight:FontWeight.bold)),
+       const SizedBox(height:5),
+       WaffraText(waffraIsEnglish?'Unlock Waffra securely':'لحماية بياناتك وخصوصيتك',
+        style:const TextStyle(color:Color(0xFFCEE9D9),fontSize:13)),
+       const SizedBox(height:13),
+       Row(mainAxisAlignment:MainAxisAlignment.center,children:List.generate(4,(i)=>Container(
+        width:14,height:14,margin:const EdgeInsets.symmetric(horizontal:10),
+        decoration:BoxDecoration(shape:BoxShape.circle,
+         color:i<pinController.text.length?Colors.white:Colors.transparent,
+         border:Border.all(color:Colors.white70,width:1.5))))),
+       const SizedBox(height:13),
+       Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
+        _padButton('1',onPressed:()=>_keyDigit('1')),
+        _padButton('2',onPressed:()=>_keyDigit('2')),
+        _padButton('3',onPressed:()=>_keyDigit('3')),
+       ]),
+       const SizedBox(height:7),
+       Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
+        _padButton('4',onPressed:()=>_keyDigit('4')),
+        _padButton('5',onPressed:()=>_keyDigit('5')),
+        _padButton('6',onPressed:()=>_keyDigit('6')),
+       ]),
+       const SizedBox(height:7),
+       Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
+        _padButton('7',onPressed:()=>_keyDigit('7')),
+        _padButton('8',onPressed:()=>_keyDigit('8')),
+        _padButton('9',onPressed:()=>_keyDigit('9')),
+       ]),
+       const SizedBox(height:7),
+       Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
+        _padButton('',icon:Icons.fingerprint,onPressed:biometric),
+        _padButton('0',onPressed:()=>_keyDigit('0')),
+        _padButton('',icon:Icons.backspace_outlined,onPressed:(){
+         if(pinController.text.isNotEmpty){
+          pinController.text=pinController.text.substring(0,pinController.text.length-1);
+          setState(()=>error='');
+         }
+        }),
+       ]),
+       if(error.isNotEmpty)Padding(padding:const EdgeInsets.only(top:12),
+        child:WaffraText(error,textAlign:TextAlign.center,
+         style:const TextStyle(color:Color(0xFFFFC9C2),fontWeight:FontWeight.bold,fontSize:13))),
+       if(busy)const Padding(padding:EdgeInsets.only(top:12),
+        child:CircularProgressIndicator(color:Colors.white)),
+      ])),
+    ))),
+  ]),
  );
 }
+
 class WaffraOnboarding extends StatefulWidget {
  final VoidCallback onFinish;
  const WaffraOnboarding({super.key,required this.onFinish});
@@ -746,40 +767,85 @@ class _LoginScreenState extends State<LoginScreen> {
    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(waffraIsEnglish?'Local demo profile opened — not authenticated with $selected':'تم الدخول للملف المحلي التجريبي بنجاح — لم تتم المصادقة مع $selected')));
   }finally{if(mounted)setState(()=>socialBusy=false);}
  }
+
  @override Widget build(BuildContext context){
-  if(provider!=null)return ProfileForm(provider:provider!,onSave:widget.onSave,onBack:()=>setState(()=>provider=null));
-  return Scaffold(resizeToAvoidBottomInset:false,backgroundColor:forest,body:LayoutBuilder(builder:(context,c){
-   final h=c.maxHeight,w=c.maxWidth;
-   Widget hit(double top,double height,VoidCallback callback)=>Positioned(
-    left:w*0.08,right:w*0.08,top:h*top,height:h*height,
-    child:GestureDetector(behavior:HitTestBehavior.opaque,onTap:callback,
-     child:const ColoredBox(color:Colors.transparent)));
-   if(signInMode&&registered!=null)return Stack(fit:StackFit.expand,children:[
-    Image.asset('assets/signin.png',fit:BoxFit.cover,filterQuality:FilterQuality.high),
-    Positioned(left:w*0.13,right:w*0.13,top:h*0.425,height:h*0.052,
-     child:TextField(controller:signInPhone,keyboardType:TextInputType.phone,
-      textAlign:TextAlign.center,style:const TextStyle(color:forest,fontSize:17),
-      decoration:const InputDecoration(filled:true,fillColor:Colors.white,
-       isDense:true,contentPadding:EdgeInsets.all(9),border:InputBorder.none))),
-    Positioned(left:w*0.13,right:w*0.13,top:h*0.503,height:h*0.052,
-     child:TextField(controller:signInPassword,onSubmitted:(_)=>_signIn(),obscureText:!showSignInPassword,
-      textAlign:TextAlign.center,style:const TextStyle(color:forest,fontSize:17),
-      decoration:InputDecoration(filled:true,fillColor:Colors.white,isDense:true,
-       contentPadding:const EdgeInsets.all(9),border:InputBorder.none,
-       suffixIcon:IconButton(onPressed:()=>setState(()=>showSignInPassword=!showSignInPassword),
-        icon:Icon(showSignInPassword?Icons.visibility_off:Icons.visibility))))),
-    hit(0.57,0.075,()=>_signIn()),
-    hit(0.78,0.055,()=>setState(()=>signInMode=false)),
-   ]);
-   return Stack(fit:StackFit.expand,children:[
-    Image.asset('assets/welcome_login.png',fit:BoxFit.cover,filterQuality:FilterQuality.high),
-    hit(0.495,0.067,()=>demoSocial('Google')),
-    hit(0.574,0.067,()=>demoSocial('Apple')),
-    hit(0.651,0.072,()=>setState(()=>provider='Phone')),
-   ]);
-  }));
+  if(provider!=null)return ProfileForm(provider:provider!,onSave:widget.onSave,
+   onBack:()=>setState(()=>provider=null));
+  final hasExisting=registered!=null;
+  return Scaffold(backgroundColor:forest,resizeToAvoidBottomInset:true,
+   body:Stack(fit:StackFit.expand,children:[
+    Image.asset('assets/waffra_login_approved_exact.png',fit:BoxFit.cover,
+     filterQuality:FilterQuality.high),
+    Align(alignment:Alignment.bottomCenter,child:SafeArea(
+     top:false,child:SingleChildScrollView(
+      padding:EdgeInsets.fromLTRB(18,14,18,MediaQuery.of(context).viewInsets.bottom+18),
+      child:Container(
+       padding:const EdgeInsets.all(17),
+       decoration:BoxDecoration(color:forest.withValues(alpha:.96),
+        border:Border.all(color:Colors.white.withValues(alpha:.30)),
+        borderRadius:BorderRadius.circular(24)),
+       child:Column(mainAxisSize:MainAxisSize.min,
+        crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        if(signInMode&&hasExisting)...[
+         WaffraText(waffraIsEnglish?'Sign in to Waffra':'تسجيل الدخول إلى وفرة',
+          textAlign:TextAlign.center,
+          style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold,color:Colors.white)),
+         const SizedBox(height:12),
+         TextField(controller:signInPhone,keyboardType:TextInputType.phone,
+          style:const TextStyle(color:forest),textDirection:TextDirection.ltr,
+          decoration:InputDecoration(labelText:waffraIsEnglish?'Phone':'رقم الجوال',
+           filled:true,fillColor:Colors.white,
+           border:OutlineInputBorder(borderRadius:BorderRadius.circular(13)))),
+         const SizedBox(height:10),
+         TextField(controller:signInPassword,obscureText:!showSignInPassword,
+          onSubmitted:(_)=>_signIn(),style:const TextStyle(color:forest),
+          decoration:InputDecoration(labelText:waffraIsEnglish?'Password':'كلمة المرور',
+           filled:true,fillColor:Colors.white,
+           border:OutlineInputBorder(borderRadius:BorderRadius.circular(13)),
+           suffixIcon:IconButton(onPressed:()=>setState(()=>showSignInPassword=!showSignInPassword),
+            icon:Icon(showSignInPassword?Icons.visibility_off:Icons.visibility)))),
+         const SizedBox(height:13),
+         FilledButton(onPressed:signingIn?null:_signIn,
+          style:FilledButton.styleFrom(backgroundColor:Colors.white,foregroundColor:forest),
+          child:WaffraText(signingIn?
+           (waffraIsEnglish?'Signing in...':'جارٍ تسجيل الدخول'):
+           (waffraIsEnglish?'Sign in':'تسجيل الدخول'))),
+         TextButton(onPressed:()=>setState(()=>signInMode=false),
+          child:WaffraText(waffraIsEnglish?'Other options':'خيارات أخرى',
+           style:const TextStyle(color:Colors.white))),
+        ]else...[
+         WaffraText(waffraIsEnglish?'Welcome to Waffra':'مرحباً بك في وفرة',
+          style:const TextStyle(color:Colors.white,fontSize:19,fontWeight:FontWeight.bold),
+          textAlign:TextAlign.center),
+         const SizedBox(height:12),
+         FilledButton.icon(onPressed:signingIn?null:()async{
+          if(signingIn)return;
+          setState(()=>signingIn=true);
+          try{
+           await widget.onSave(Person(name:'',email:'',phone:'',provider:'محلي',
+            gender:'',avatar:'person',birthday:DateTime(2000)));
+          }finally{if(mounted)setState(()=>signingIn=false);}
+         },style:FilledButton.styleFrom(backgroundColor:Colors.white,foregroundColor:forest),
+          icon:const Icon(Icons.arrow_forward),
+          label:WaffraText(waffraIsEnglish?'Start now — no sign in':'ابدأ الآن بدون تسجيل دخول')),
+         const SizedBox(height:8),
+         OutlinedButton.icon(onPressed:()=>setState(()=>provider='Phone'),
+          style:OutlinedButton.styleFrom(foregroundColor:Colors.white,
+           side:const BorderSide(color:Colors.white70)),
+          icon:const Icon(Icons.person_add_alt_1_outlined),
+          label:WaffraText(waffraIsEnglish?'Create a local account':'إنشاء حساب محلي')),
+         if(hasExisting)TextButton(onPressed:()=>setState(()=>signInMode=true),
+          child:WaffraText(waffraIsEnglish?'Already have an account? Sign in':
+           'عندك حساب بالفعل؟ تسجيل الدخول',
+           style:const TextStyle(color:Colors.white))),
+        ],
+       ])),
+      ),
+     ))),
+   ]));
  }
 }
+
 class ProfileForm extends StatefulWidget {
  final String provider;final Person? initial;
  final Future<void> Function(Person) onSave;final VoidCallback? onBack;
