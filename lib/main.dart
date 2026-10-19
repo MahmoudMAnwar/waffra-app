@@ -107,10 +107,14 @@ class SavingGoal {
  factory SavingGoal.fromJson(Map<String,dynamic> j)=>SavingGoal(id:'${j['id']??newId()}',name:'${j['name']??''}',target:(j['target'] as num).toDouble(),saved:(j['saved'] as num?)?.toDouble()??0);
 }
 class RecurringBill {
- final String id,title,category;final double amount;final bool income;final int day;
- RecurringBill({required this.id,required this.title,required this.category,required this.amount,required this.income,required this.day});
- Map<String,dynamic> toJson()=>{'id':id,'title':title,'category':category,'amount':amount,'income':income,'day':day};
- factory RecurringBill.fromJson(Map<String,dynamic> j)=>RecurringBill(id:'${j['id']??newId()}',title:'${j['title']??''}',category:'${j['category']??'أخرى'}',amount:(j['amount'] as num).toDouble(),income:j['income']==true,day:(j['day'] as num?)?.toInt()??1);
+ final String id,title,category;final double amount;final bool income;final int day;final bool active;
+ RecurringBill({required this.id,required this.title,required this.category,required this.amount,required this.income,required this.day,this.active=true});
+ RecurringBill copy({bool? active})=>RecurringBill(id:id,title:title,category:category,amount:amount,income:income,day:day,active:active??this.active);
+ Map<String,dynamic> toJson()=>{'id':id,'title':title,'category':category,'amount':amount,'income':income,'day':day,'active':active};
+ factory RecurringBill.fromJson(Map<String,dynamic> j)=>RecurringBill(id:'${j['id']??newId()}',
+  title:'${j['title']??''}',category:'${j['category']??'أخرى'}',
+  amount:(j['amount'] as num).toDouble(),income:j['income']==true,
+  day:(j['day'] as num?)?.toInt()??1,active:j['active']!=false);
 }
 const iconNames=['restaurant','shopping','car','receipt','health','transfer','salary','home','education','sport','gift','travel','coffee','category'];
 IconData categoryIcon(String n) {
@@ -1095,6 +1099,7 @@ class _HomeScreenState extends State<HomeScreen> {
  Future<void> applyRecurring()async {
   final now=DateTime.now();bool changed=false;
   for(final r in recurring){
+   if(!r.active)continue;
    final d=r.day.clamp(1,DateTime(now.year,now.month+1,0).day);
    final due=DateTime(now.year,now.month,d);
    if(due.isAfter(now))continue;
@@ -2937,34 +2942,126 @@ Future<void> bulkSmsSheet()async {
    setState(()=>recurring.add(r));await persist();await applyRecurring();
   }
  }
- Widget recurringPage()=>ListView(padding:const EdgeInsets.all(16),children:[
-  WaffraText('العمليات المتكررة',style:Theme.of(context).textTheme.titleLarge),
-  const SizedBox(height:8),
-  const WaffraText('نسجّل العملية المستحقة مرة وحدة لكل شهر عند فتح التطبيق.'),
-  const SizedBox(height:12),
-  FilledButton.icon(onPressed:recurringDialog,icon:const Icon(Icons.add),label:const WaffraText('عملية متكررة جديدة')),
-  const SizedBox(height:12),
-  ...recurring.map((r)=>Card(child:ListTile(
-   leading:Icon(r.income?Icons.south_west:Icons.event_repeat,color:emerald),
-   title:WaffraText(r.title),subtitle:WaffraText('${r.category} • يوم ${r.day} من كل شهر'),
-   trailing:Row(mainAxisSize:MainAxisSize.min,children:[
-    RiyalAmount(r.amount),
-    IconButton(onPressed:()async {
-     final ok=await confirmDeletion(
-      waffraIsEnglish?'Delete recurring transaction?':'حذف التكرار',
-      waffraIsEnglish?'Stop recurring «${r.title}»? Previously saved transactions remain, but this recurring schedule cannot be recovered.':'هل تريد إيقاف تكرار «${r.title}»؟ ستبقى المعاملات المسجّلة محفوظة، لكن لا يمكن استرجاع جدولة التكرار بعد حذفها.');
-     if(ok==true&&mounted){setState(()=>recurring.removeWhere((x)=>x.id==r.id));await persist();}
-    },icon:const Icon(Icons.delete_outline)),
-   ])))),
-  if(recurring.isEmpty) SizedBox(height:MediaQuery.sizeOf(context).height*0.48,child:Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
-   Icon(Icons.repeat,size:78,color:emerald.withValues(alpha:0.55)),
-   const SizedBox(height:18),
-   WaffraText('ما عندك عمليات متكررة',textAlign:TextAlign.center,style:Theme.of(context).textTheme.titleMedium),
-   const SizedBox(height:8),
-   const WaffraText('أضف عملية متكررة لتنظيم مصروفاتك الشهرية',textAlign:TextAlign.center),
-  ]))),
-  const SizedBox(height:90),
- ]);
+ DateTime nextRecurringDue(RecurringBill r) {
+  final now=DateTime.now();
+  DateTime due(int y,int m)=>DateTime(y,m,r.day.clamp(1,DateTime(y,m+1,0).day));
+  final thisMonth=due(now.year,now.month);
+  return thisMonth.isBefore(DateTime(now.year,now.month,now.day))
+   ?due(now.year,now.month+1):thisMonth;
+ }
+ Widget recurringPage(){
+  final active=recurring.where((r)=>r.active).toList();
+  final monthly=active.where((r)=>!r.income).fold<double>(0,(v,r)=>v+r.amount);
+  final shown=recurring.where((r)=>recurringDisplay=='all'||
+   (recurringDisplay=='active'?r.active:!r.active)).toList();
+  final upcoming=active.where((r){
+   final days=nextRecurringDue(r).difference(DateTime(DateTime.now().year,DateTime.now().month,DateTime.now().day)).inDays;
+   return days>=0&&days<=3;
+  }).length;
+  return ListView(padding:const EdgeInsets.fromLTRB(16,16,16,24),children:[
+   WaffraText(waffraIsEnglish?'Recurring transactions':'العمليات المتكررة',
+    style:Theme.of(context).textTheme.titleLarge),
+   const SizedBox(height:6),
+   WaffraText(waffraIsEnglish?'Due monthly transactions are recorded once when you open Waffra.':
+    'نسجّل العملية المستحقة مرة واحدة لكل شهر عند فتح التطبيق.',
+    style:const TextStyle(fontSize:13)),
+   const SizedBox(height:13),
+   if(recurring.isNotEmpty)...[
+    Row(children:[
+     Expanded(child:_summaryBox(waffraIsEnglish?'Transactions':'عدد العمليات',
+      recurring.length.toString(),Icons.calendar_month,emerald)),
+     const SizedBox(width:8),
+     Expanded(child:_summaryBox(waffraIsEnglish?'Monthly expenses':'المبلغ الشهري',
+      cash(monthly),Icons.payments_outlined,emerald)),
+     const SizedBox(width:8),
+     Expanded(child:_summaryBox(waffraIsEnglish?'Active':'النشطة',
+      '${active.length}/${recurring.length}',Icons.donut_large,emerald)),
+    ]),
+    if(upcoming>0)Padding(padding:const EdgeInsets.only(top:10),
+     child:Card(color:Colors.amber.withValues(alpha:.13),child:ListTile(
+      leading:const Icon(Icons.notifications_active_outlined,color:Colors.orange),
+      title:WaffraText(waffraIsEnglish?'Upcoming obligations':'التزامات قريبة'),
+      subtitle:WaffraText(waffraIsEnglish?'$upcoming due within 3 days':
+       '$upcoming عملية مستحقة خلال 3 أيام'),
+     ))),
+    const SizedBox(height:12),
+   ],
+   FilledButton.icon(onPressed:recurringDialog,icon:const Icon(Icons.add),
+    label:WaffraText(waffraIsEnglish?'New recurring transaction':'عملية متكررة جديدة')),
+   const SizedBox(height:13),
+   if(recurring.isNotEmpty)...[
+    Wrap(spacing:8,runSpacing:6,children:[
+     _filterChip(waffraIsEnglish?'All':'الكل',recurringDisplay=='all',()=>setState(()=>recurringDisplay='all')),
+     _filterChip(waffraIsEnglish?'Active':'نشطة',recurringDisplay=='active',()=>setState(()=>recurringDisplay='active')),
+     _filterChip(waffraIsEnglish?'Paused':'متوقفة',recurringDisplay=='paused',()=>setState(()=>recurringDisplay='paused')),
+    ]),
+    const SizedBox(height:11),
+   ],
+   ...shown.map((r){
+    final color=Color(categoryFor(r.category,r.income).color);
+    final when=nextRecurringDue(r);
+    return Card(elevation:1.1,margin:const EdgeInsets.only(bottom:10),
+     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(19)),
+     child:Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:9),child:Row(children:[
+      CircleAvatar(backgroundColor:color.withValues(alpha:.13),
+       child:Icon(categoryIcon(categoryFor(r.category,r.income).icon),color:color)),
+      const SizedBox(width:10),
+      Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+       WaffraText(r.title,style:const TextStyle(fontSize:15,fontWeight:FontWeight.bold)),
+       WaffraText(cash(r.amount),style:const TextStyle(fontSize:14)),
+       const SizedBox(height:3),
+       WaffraText(r.active?
+        (waffraIsEnglish?'Next due: ${dayText(when)}':'الاستحقاق القادم: ${dayText(when)}'):
+        (waffraIsEnglish?'Paused':'متوقفة'),
+        style:TextStyle(fontSize:11,color:r.active?Theme.of(context).hintColor:Colors.deepOrange)),
+      ])),
+      Switch(value:r.active,onChanged:(enabled)async {
+       final index=recurring.indexWhere((item)=>item.id==r.id);
+       if(index<0)return;
+       setState(()=>recurring[index]=r.copy(active:enabled));
+       await persist();
+       if(enabled)await applyRecurring();
+      }),
+      PopupMenuButton<String>(onSelected:(v)async {
+       if(v!='delete')return;
+       final ok=await confirmDeletion(waffraIsEnglish?'Delete recurring transaction?':'حذف العملية المتكررة',
+        waffraIsEnglish?'The recurring schedule cannot be recovered. Previous transactions remain.':
+         'هل تريد حذف جدولة العملية نهائيًا؟ ستبقى العمليات السابقة محفوظة ولا يمكن استعادة الجدولة.');
+       if(ok==true&&mounted){setState(()=>recurring.removeWhere((e)=>e.id==r.id));await persist();}
+      },itemBuilder:(_)=>[
+       PopupMenuItem(value:'delete',child:WaffraText(waffraIsEnglish?'Delete':'حذف'))]),
+     ]))));
+   }),
+   if(recurring.isEmpty)Padding(padding:const EdgeInsets.only(top:34),
+    child:Column(children:[
+     Container(width:174,height:174,decoration:BoxDecoration(
+      borderRadius:BorderRadius.circular(88),color:emerald.withValues(alpha:.08)),
+      child:const Icon(Icons.event_repeat_rounded,size:100,color:emerald)),
+     const SizedBox(height:18),
+     WaffraText(waffraIsEnglish?'No recurring transactions yet':'ما عندك عمليات متكررة',
+      style:Theme.of(context).textTheme.titleLarge,textAlign:TextAlign.center),
+     const SizedBox(height:12),
+     WaffraText(waffraIsEnglish?'Add a recurring transaction to organize monthly finances':
+      'أضف عملية متكررة لتنظيم مصروفاتك الشهرية ومتابعتها بسهولة.',
+      textAlign:TextAlign.center),
+     const SizedBox(height:19),
+     OutlinedButton.icon(onPressed:recurringDialog,icon:const Icon(Icons.add),
+      label:WaffraText(waffraIsEnglish?'Add first recurring item':'إضافة أول عملية متكررة')),
+     const SizedBox(height:22),
+     Row(children:[
+      Expanded(child:_summaryBox(waffraIsEnglish?'Save time':'توفير الوقت','✓',Icons.bolt,emerald)),
+      const SizedBox(width:8),
+      Expanded(child:_summaryBox(waffraIsEnglish?'Stay organized':'تنظيم أفضل','✓',Icons.analytics,emerald)),
+      const SizedBox(width:8),
+      Expanded(child:_summaryBox(waffraIsEnglish?'Due reminders':'تذكير بالمواعيد','✓',Icons.notifications_none,emerald)),
+     ]),
+    ])),
+   if(recurring.isNotEmpty&&shown.isEmpty)Padding(padding:const EdgeInsets.all(32),
+    child:WaffraText(waffraIsEnglish?'No items match this filter':'لا توجد عمليات في هذا التصنيف',
+     textAlign:TextAlign.center)),
+   const SizedBox(height:20),
+  ]);
+ }
  String exportBackup()=>const JsonEncoder.withIndent('  ').convert({
   'format':'waffra-backup','version':24,'exportedAt':DateTime.now().toIso8601String(),
   'entries':entries.map((e)=>e.toJson()).toList(),
