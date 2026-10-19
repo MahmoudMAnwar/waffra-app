@@ -232,7 +232,23 @@ jobs:
             echo "Release app launched without detected startup exception"
 
       - name: Build optimized ARM64 Release APK
-        run: flutter build apk --release --target-platform android-arm64 --tree-shake-icons
+        shell: bash
+        run: |
+          set -o pipefail
+          # Gradle/Maven occasionally answer 429 Too Many Requests on hosted
+          # runners. Retry transient download failures rather than report
+          # them as application or Dart compilation failures.
+          for attempt in 1 2 3 4; do
+            echo "Android ARM64 build attempt ${attempt}/4"
+            if flutter build apk --release --target-platform android-arm64 --tree-shake-icons; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 4 ]; then
+              echo "Android build failed after four attempts"
+              exit 1
+            fi
+            sleep $((15 * attempt))
+          done
 
       - name: Measure release APK size
         shell: bash
