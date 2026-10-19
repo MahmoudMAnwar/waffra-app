@@ -1334,18 +1334,36 @@ Future<void> bulkSmsSheet()async {
       style:pw.TextStyle(font:font,fontSize:9,color:PdfColors.black)));
    // Split SMS into readable script-specific lines. Long mixed Arabic/Latin
    // descriptions must wrap inside the description column, never overflow.
-   pw.Widget pdfDescriptionCell(String raw)=>pw.Padding(
-    padding:const pw.EdgeInsets.symmetric(horizontal:7,vertical:8),
-    child:pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.stretch,
-     children:splitWaffraPdfText(raw).map((segment)=>pw.Padding(
-      padding:const pw.EdgeInsets.only(bottom:2),
-      child:pw.Text(segment.text,
-       textDirection:segment.rtl?pw.TextDirection.rtl:pw.TextDirection.ltr,
-       textAlign:segment.rtl?pw.TextAlign.right:pw.TextAlign.left,
-       softWrap:true,
-       style:pw.TextStyle(font:font,fontSize:9,color:PdfColors.black),
-      ))).toList(),
-    ));
+   // Flutter/Skia shapes mixed Arabic, English and numbers reliably.
+   // The pdf package can create unsupported-glyph boxes for these same runs.
+   // Rasterize ONLY the transaction description text at 2x resolution with
+   // the app's Tajawal font, leaving dates, categories and amounts as PDF text.
+   Future<(pw.MemoryImage,double)> pdfDescriptionArtwork(String raw)async {
+    const scale=2.0,logicalWidth=460.0;
+    final description=pdfClean(raw);
+    final painter=TextPainter(
+     text:TextSpan(text:description.isEmpty?'—':description,
+      style:const TextStyle(fontFamily:'Tajawal',fontSize:18,
+       height:1.38,color:Colors.black)),
+     textDirection:english?TextDirection.ltr:TextDirection.rtl,
+     textAlign:english?TextAlign.left:TextAlign.right,
+     maxLines:8,ellipsis:'...',
+    );
+    painter.layout(maxWidth:logicalWidth*scale);
+    final recorder=ui.PictureRecorder();
+    final canvas=Canvas(recorder);
+    painter.paint(canvas,Offset.zero);
+    final picture=recorder.endRecording();
+    final raster=await picture.toImage(
+     (logicalWidth*scale).ceil(),max(1,painter.height.ceil()));
+    final bytes=await raster.toByteData(format:ui.ImageByteFormat.png);
+    final height=max(12.0,painter.height/scale);
+    painter.dispose();
+    raster.dispose();
+    picture.dispose();
+    if(bytes==null)throw StateError('Unable to rasterize bank SMS description');
+    return (pw.MemoryImage(bytes.buffer.asUint8List()),height);
+   }
    // The approved branded template remains unchanged; only its content layout is improved.
    final pageTheme=pw.PageTheme(
     pageFormat:const PdfPageFormat(900,600),
@@ -1360,6 +1378,8 @@ Future<void> bulkSmsSheet()async {
     child:pw.Text(english?en:ar,style:pw.TextStyle(font:bold,fontSize:15,color:PdfColors.teal900)));
    if(!analytics){
     final ordered=items.toList()..sort((a,b)=>b.date.compareTo(a.date));
+    final descriptions=<(pw.MemoryImage,double)>[];
+    for(final e in ordered){descriptions.add(await pdfDescriptionArtwork(e.title));}
     doc.addPage(pw.MultiPage(
      pageTheme:pageTheme,
      footer:(ctx)=>pw.Align(alignment:pw.Alignment.centerRight,
@@ -1382,16 +1402,20 @@ Future<void> bulkSmsSheet()async {
           ['التاريخ','النوع','القسم','الوصف','المبلغ (ريال)'])
           .map((h)=>pw.Padding(padding:const pw.EdgeInsets.all(6),
            child:pw.Text(h,textAlign:pw.TextAlign.center,style:pw.TextStyle(font:bold,fontSize:10,color:PdfColors.white)))).toList()),
-        ...ordered.map((e)=>pw.TableRow(
+        ...ordered.asMap().entries.map((row){
+         final e=row.value,art=descriptions[row.key];
+         return pw.TableRow(
          decoration:pw.BoxDecoration(color:e.income?const PdfColor.fromInt(0xFFB2D5C2):const PdfColor.fromInt(0xFFF0F7F2)),
          children:[
           pdfCell(dayText(e.date),center:true),
           pdfCell(english?(e.income?'Income':'Expense'):(e.income?'دخل':'مصروف'),rtl:!english),
           pdfCell(waffraTr(e.category),rtl:!english),
-          pdfDescriptionCell(e.title),
+          pw.Padding(padding:const pw.EdgeInsets.symmetric(horizontal:6,vertical:7),
+           child:pw.Image(art.$1,width:460,height:art.$2,fit:pw.BoxFit.contain)),
           pdfCell('${e.income?'+':'-'}${fmt(e.amount)}',center:true),
          ],
-        )),
+        );
+        }),
        ],
       ),
      ]));
