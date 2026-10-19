@@ -126,6 +126,14 @@ IconData categoryIcon(String n) {
 }
 IconData avatarIcon(String s)=>s=='male'?Icons.face:s=='female'?Icons.face_3:s=='smile'?Icons.sentiment_very_satisfied:Icons.person;
 Widget saudiAvatar(String gender,{double radius=25})=>CircleAvatar(radius:radius,backgroundColor:const Color(0xFFE5F1E9),backgroundImage:AssetImage(gender=='أنثى'||gender=='female'?'assets/avatar_saudi_female.png':'assets/avatar_saudi_male.png'));
+Widget waffraAvatar(String gender,String avatar,{double radius=25}) {
+ final file=avatar.startsWith('file:')?File(avatar.substring(5)):null;
+ if(file!=null&&file.existsSync()){
+  return CircleAvatar(radius:radius,backgroundColor:const Color(0xFFE5F1E9),
+   backgroundImage:FileImage(file));
+ }
+ return saudiAvatar(gender,radius:radius);
+}
 
 const colors=[0xFF087A54,0xFFED7045,0xFF3867D6,0xFF9C56B8,0xFFDF9C24,0xFF008C9E,0xFFDA5079,0xFF687B42];
 List<BudgetCategory> defaultCategories()=>[
@@ -2982,7 +2990,7 @@ Future<void> bulkSmsSheet()async {
  });
  Widget profilePage()=>ListView(padding:const EdgeInsets.all(18),children:[
   const SizedBox(height:10),
-  Center(child:saudiAvatar(widget.profile.gender,radius:46)),
+  Center(child:waffraAvatar(widget.profile.gender,widget.profile.avatar,radius:46)),
   const SizedBox(height:12),
   if(widget.profile.name.trim().isNotEmpty&&widget.profile.name!='يا غالي') WaffraText(widget.profile.name,textAlign:TextAlign.center,style:Theme.of(context).textTheme.titleLarge),
   WaffraText(widget.profile.email,textAlign:TextAlign.center),
@@ -3131,7 +3139,7 @@ Future<void> bulkSmsSheet()async {
        addFabExpanded=false;tab=5;
       }),
       borderRadius:BorderRadius.circular(30),
-      child:saudiAvatar(widget.profile.gender)))),
+      child:waffraAvatar(widget.profile.gender,widget.profile.avatar,radius:19)))),
     const SizedBox(width:4),
    ]),
   // Instant content swap avoids building/animating the previous heavy tab
