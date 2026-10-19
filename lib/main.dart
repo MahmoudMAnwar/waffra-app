@@ -17,6 +17,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:crypto/crypto.dart';
 import 'waffra_biometrics.dart';
+import 'waffra_amount_formatter.dart';
 import 'waffra_welcome_background.dart';
 import 'currency_converter.dart';
 import 'waffra_i18n.dart';
@@ -38,10 +39,8 @@ Future<void> setWaffraScreenshotsAllowed(bool allowed)async {
  }
 }
 String formatMoney(num value) {
-  if(hideWaffraAmounts.value)return '••••';
-  final n=value.toDouble();
-  if(n==n.roundToDouble()) return n.toStringAsFixed(0);
-  return n.toStringAsFixed(2).replaceFirst(RegExp(r'0+$'),'').replaceFirst(RegExp(r'\.$'),'');
+ if(hideWaffraAmounts.value)return '***';
+ return formatWaffraMoney(value);
 }
 String cash(num value)=>'${formatMoney(value)} ﷼';
 String dayText(DateTime d)=>'${d.day}/${d.month}/${d.year}';
@@ -69,7 +68,7 @@ class RiyalAmount extends StatelessWidget {
   return ValueListenableBuilder<bool>(
    valueListenable:hideWaffraAmounts,
    builder:(context,hidden,_)=>Row(mainAxisSize:MainAxisSize.min,textDirection:TextDirection.ltr,children:[
-    WaffraText(hidden?'••••':'$prefix${formatMoney(amount)}',style:effective),
+    WaffraText(hidden?'***':'$prefix${formatMoney(amount)}',style:effective),
     if(!hidden)...[
      const SizedBox(width:4),
      Image.asset('assets/Saudi_Riyal_Symbol-1.png',width:size*.9,height:size*.9,
@@ -463,8 +462,9 @@ class _PinLockScreenState extends State<PinLockScreen> {
      label:waffraIsEnglish?'Use face or fingerprint':'استخدام بصمة الوجه أو الإصبع',
      child:GestureDetector(onTap:biometric,behavior:HitTestBehavior.opaque,
       child:const ColoredBox(color:Colors.transparent)))),
-   if(error.isNotEmpty)Positioned(left:20,right:20,bottom:c.maxHeight*0.16,
-    child:Container(padding:const EdgeInsets.all(10),color:forest,
+   if(error.isNotEmpty)Positioned(left:20,right:20,top:c.maxHeight*0.797,
+    child:Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:7),
+     decoration:BoxDecoration(color:forest.withValues(alpha:.92),borderRadius:BorderRadius.circular(12)),
      child:WaffraText(error,textAlign:TextAlign.center,
       style:const TextStyle(color:Colors.white,fontSize:15)))),
    if(busy)Positioned.fill(child:ColoredBox(
@@ -492,6 +492,7 @@ class WaffraOnboarding extends StatefulWidget {
 class _WaffraOnboardingState extends State<WaffraOnboarding> {
  final controller=PageController();
  int current=0;
+ bool nextPressed=false;
  static const sourceWidth=<double>[360,363,362,363];
  static const titleAr=<String>[
   'كل معاملاتك\nفي مكان واحد',
@@ -523,6 +524,7 @@ class _WaffraOnboardingState extends State<WaffraOnboarding> {
   if(mounted)widget.onFinish();
  }
  void next(){
+  HapticFeedback.selectionClick();
   if(current==3){finish();return;}
   controller.nextPage(duration:const Duration(milliseconds:265),curve:Curves.easeInOutCubic);
  }
@@ -605,9 +607,17 @@ class _WaffraOnboardingState extends State<WaffraOnboarding> {
       decoration:BoxDecoration(borderRadius:BorderRadius.circular(8),
        color:i==current?forest:const Color(0xFFD0DAD0)))))),
     const SizedBox(height:9),
-    SizedBox(width:double.infinity,height:55,child:FilledButton(
+    Listener(
+     onPointerDown:(_)=>setState(()=>nextPressed=true),
+     onPointerUp:(_)=>setState(()=>nextPressed=false),
+     onPointerCancel:(_)=>setState(()=>nextPressed=false),
+     child:AnimatedScale(
+      scale:nextPressed?0.96:1,
+      duration:const Duration(milliseconds:120),
+      curve:Curves.easeOutCubic,
+      child:SizedBox(width:double.infinity,height:55,child:FilledButton(
      onPressed:next,style:FilledButton.styleFrom(
-      backgroundColor:forest,foregroundColor:Colors.white,
+      backgroundColor:nextPressed?const Color(0xFF033A2B):forest,foregroundColor:Colors.white,
       shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(30))),
      child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
       const Icon(Icons.arrow_back_rounded,size:23),
@@ -618,7 +628,7 @@ class _WaffraOnboardingState extends State<WaffraOnboarding> {
        maxLines:1,softWrap:false,
        style:const TextStyle(color:Colors.white,fontSize:19,
         fontWeight:FontWeight.bold)))),
-     ]))),
+     ]))))),
     const SizedBox(height:12),
    ]),
   );
@@ -759,6 +769,12 @@ class ProfileForm extends StatefulWidget {
 class _ProfileFormState extends State<ProfileForm> {
  late final TextEditingController name,email,confirmEmail,phone,password,confirmPassword;
  bool showPassword=false,showConfirmPassword=false;
+ bool get comparingPasswords=>password.text.isNotEmpty&&confirmPassword.text.isNotEmpty;
+ bool get matchingPasswords=>comparingPasswords&&password.text==confirmPassword.text;
+ OutlineInputBorder passwordBorder({bool focused=false}){
+  final c=!comparingPasswords?Colors.grey:(matchingPasswords?emerald:Colors.red);
+  return OutlineInputBorder(borderSide:BorderSide(color:c,width:focused?2:1.4));
+ }
  late String gender,avatar;late DateTime birthday;bool busy=false;
  @override void initState(){super.initState();
   name=TextEditingController(text:widget.initial?.name??'');
@@ -820,12 +836,26 @@ class _ProfileFormState extends State<ProfileForm> {
      helperText:waffraIsEnglish?'10 digits starting with 05':'رقم سعودي من 10 أرقام يبدأ بـ 05',border:const OutlineInputBorder())),
    if(widget.initial==null) ...[
     const SizedBox(height:12),
-    TextField(controller:password,obscureText:!showPassword,decoration:InputDecoration(
+    TextField(controller:password,obscureText:!showPassword,
+     onChanged:(_)=>setState((){}),decoration:InputDecoration(
      suffixIcon:IconButton(tooltip:waffraIsEnglish?(showPassword?'Hide password':'Show password'):(showPassword?'إخفاء كلمة المرور':'إظهار كلمة المرور'),icon:Icon(showPassword?Icons.visibility_off:Icons.visibility),onPressed:()=>setState(()=>showPassword=!showPassword)),labelText:waffraIsEnglish?'Password':'كلمة المرور',
-     helperText:waffraIsEnglish?'At least 8 characters, including letters and numbers':'8 خانات على الأقل، تشمل أحرفًا وأرقامًا',border:const OutlineInputBorder())),
+     helperText:waffraIsEnglish?'At least 8 characters, including letters and numbers':'8 خانات على الأقل، تشمل أحرفًا وأرقامًا',
+     enabledBorder:passwordBorder(),focusedBorder:passwordBorder(focused:true))),
     const SizedBox(height:12),
-    TextField(controller:confirmPassword,obscureText:!showConfirmPassword,decoration:InputDecoration(
-     suffixIcon:IconButton(tooltip:waffraIsEnglish?(showConfirmPassword?'Hide password':'Show password'):(showConfirmPassword?'إخفاء كلمة المرور':'إظهار كلمة المرور'),icon:Icon(showConfirmPassword?Icons.visibility_off:Icons.visibility),onPressed:()=>setState(()=>showConfirmPassword=!showConfirmPassword)),labelText:waffraIsEnglish?'Confirm password':'تأكيد كلمة المرور',border:const OutlineInputBorder())),
+    TextField(controller:confirmPassword,obscureText:!showConfirmPassword,
+     onChanged:(_)=>setState((){}),decoration:InputDecoration(
+     suffixIcon:IconButton(tooltip:waffraIsEnglish?(showConfirmPassword?'Hide password':'Show password'):(showConfirmPassword?'إخفاء كلمة المرور':'إظهار كلمة المرور'),icon:Icon(showConfirmPassword?Icons.visibility_off:Icons.visibility),onPressed:()=>setState(()=>showConfirmPassword=!showConfirmPassword)),labelText:waffraIsEnglish?'Confirm password':'تأكيد كلمة المرور',
+     enabledBorder:passwordBorder(),focusedBorder:passwordBorder(focused:true))),
+    if(comparingPasswords)Padding(padding:const EdgeInsets.only(top:8),
+     child:Row(children:[
+      Icon(matchingPasswords?Icons.check_circle_outline:Icons.error_outline,
+       color:matchingPasswords?emerald:Colors.red,size:18),
+      const SizedBox(width:6),
+      WaffraText(matchingPasswords
+       ?(waffraIsEnglish?'Passwords match':'كلمتا المرور متطابقتان')
+       :(waffraIsEnglish?'Passwords do not match':'كلمتا المرور غير متطابقتين'),
+       style:TextStyle(fontWeight:FontWeight.w600,color:matchingPasswords?emerald:Colors.red)),
+     ])),
    ],
    const SizedBox(height:12),
    DropdownButtonFormField<String>(initialValue:gender,
@@ -875,7 +905,7 @@ class WaffraCurrencyAmount extends StatelessWidget {
    builder:(context,hidden,_)=>Directionality(
     textDirection:TextDirection.ltr,
     child:Row(mainAxisSize:MainAxisSize.min,children:[
-     WaffraText(hidden?'••••':formatMoney(amount),
+     WaffraText(hidden?'***':formatMoney(amount),
       style:TextStyle(fontFamily:'Tajawal',fontSize:fontSize,
        fontWeight:weight,color:color)),
      if(!hidden)...[
@@ -1170,6 +1200,7 @@ Future<void> bulkSmsSheet()async {
       TextField(controller:description,maxLines:2,decoration:InputDecoration(labelText:waffraTr('وصف الرسالة'),border:OutlineInputBorder())),
       const SizedBox(height:12),
       TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
+       inputFormatters:[const WaffraAmountFormatter()],
        decoration:InputDecoration(labelText:waffraTr('مبلغ هذه الرسالة بالريال'),border:OutlineInputBorder())),
       const SizedBox(height:12),
       DropdownButtonFormField<String>(key:ValueKey('$index-$income'),initialValue:available.any((c)=>c.name==category)?category:(available.isNotEmpty?available.first.name:null),
@@ -1276,6 +1307,7 @@ Future<void> bulkSmsSheet()async {
       TextField(controller:title,decoration:InputDecoration(labelText:waffraTr('وصف العملية'),border:OutlineInputBorder())),
       const SizedBox(height:12),
       TextField(controller:value,keyboardType:const TextInputType.numberWithOptions(decimal:true),
+       inputFormatters:[const WaffraAmountFormatter()],
        decoration:InputDecoration(labelText:waffraTr('المبلغ بالريال'),border:OutlineInputBorder())),
       const SizedBox(height:12),
       DropdownButtonFormField<String>(key:ValueKey('$income-$chosen'),initialValue:chosen,
@@ -1720,6 +1752,7 @@ Future<void> bulkSmsSheet()async {
     title:WaffraText(waffraIsEnglish?'Monthly budget':'الميزانية الشهرية'),
     content:TextField(controller:amount,autofocus:true,
      keyboardType:const TextInputType.numberWithOptions(decimal:true),
+       inputFormatters:[const WaffraAmountFormatter()],
      decoration:InputDecoration(
       labelText:waffraIsEnglish?'Spending limit (SAR)':'حد المصروفات بالريال',
       helperText:waffraIsEnglish?'Enter 0 to disable':'أدخل 0 لإيقاف الميزانية',
@@ -1749,11 +1782,13 @@ Future<void> bulkSmsSheet()async {
      title:WaffraText(waffraIsEnglish?'Advanced filters':'فلترة بالتاريخ والمبلغ'),
      content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
       TextField(controller:min,keyboardType:const TextInputType.numberWithOptions(decimal:true),
+       inputFormatters:[const WaffraAmountFormatter()],
        decoration:InputDecoration(
         labelText:waffraIsEnglish?'Minimum amount':'أقل مبلغ',
         border:const OutlineInputBorder())),
       const SizedBox(height:10),
       TextField(controller:max,keyboardType:const TextInputType.numberWithOptions(decimal:true),
+       inputFormatters:[const WaffraAmountFormatter()],
        decoration:InputDecoration(
         labelText:waffraIsEnglish?'Maximum amount':'أعلى مبلغ',
         border:const OutlineInputBorder())),
@@ -1927,15 +1962,15 @@ Future<void> bulkSmsSheet()async {
     boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:0.04),
      blurRadius:7,offset:const Offset(0,3))]),
    child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-    Row(children:[
+    Row(textDirection:TextDirection.rtl,children:[
+     Expanded(child:WaffraText(label,textAlign:TextAlign.right,
+      style:const TextStyle(fontSize:15,fontWeight:FontWeight.bold))),
+     const SizedBox(width:6),
      CircleAvatar(backgroundColor:color.withValues(alpha:0.12),
       radius:19,child:Icon(symbol,color:color,size:21)),
-     const SizedBox(width:6),
-     Expanded(child:WaffraText(label,textAlign:TextAlign.end,
-      style:const TextStyle(fontSize:15,fontWeight:FontWeight.bold))),
     ]),
     const SizedBox(height:9),
-    Align(alignment:AlignmentDirectional.centerEnd,
+    Align(alignment:Alignment.centerRight,
      child:FittedBox(fit:BoxFit.scaleDown,
       child:WaffraCurrencyAmount(value,fontSize:19))),
    ])));
@@ -2245,7 +2280,7 @@ Future<void> bulkSmsSheet()async {
        child:color==x?const Icon(Icons.check,color:Colors.white,size:17):null))).toList()),
      if(!(initial?.income??income))...[
       TextField(controller:budget,onChanged:(_)=>update((){}),
-       keyboardType:TextInputType.number,decoration:InputDecoration(labelText:waffraTr('ميزانية شهرية (اختياري)'))),
+       keyboardType:const TextInputType.numberWithOptions(decimal:true),inputFormatters:[const WaffraAmountFormatter()],decoration:InputDecoration(labelText:waffraTr('ميزانية شهرية (اختياري)'))),
       const SizedBox(height:10),
       DropdownButtonFormField<int>(initialValue:alertPercent,
        decoration:InputDecoration(labelText:waffraTr('ودّك ننبهك عند كم ٪ من الميزانية؟')),
@@ -2357,6 +2392,7 @@ Future<void> bulkSmsSheet()async {
     ],
     const SizedBox(height:12),
     TextField(controller:target,keyboardType:const TextInputType.numberWithOptions(decimal:true),
+       inputFormatters:[const WaffraAmountFormatter()],
      decoration:InputDecoration(labelText:waffraTr('المبلغ المستهدف بالريال'),hintText:waffraTr('مثال: 25000'))),
    ]),
    actions:[
@@ -2384,6 +2420,7 @@ Future<void> bulkSmsSheet()async {
   final n=await showDialog<double>(context:context,builder:(ctx)=>AlertDialog(
    title:WaffraText('إضافة ادخار لـ ${g.name}'),
    content:TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
+       inputFormatters:[const WaffraAmountFormatter()],
     decoration:InputDecoration(labelText:waffraTr('المبلغ المدّخر'))),
    actions:[
     TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إلغاء')),
@@ -2467,6 +2504,7 @@ Future<void> bulkSmsSheet()async {
      content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
       TextField(controller:title,decoration:InputDecoration(labelText:waffraTr('الوصف'))),
       TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
+       inputFormatters:[const WaffraAmountFormatter()],
        decoration:InputDecoration(labelText:waffraTr('المبلغ'))),
       DropdownButtonFormField<bool>(initialValue:income,
        items:const [DropdownMenuItem(value:true,child:WaffraText('دخل')),
@@ -2679,20 +2717,35 @@ Future<void> bulkSmsSheet()async {
     provider:widget.profile.provider,initial:widget.profile,onSave:widget.onProfile)));
   },icon:const Icon(Icons.edit),label:const WaffraText('تعديل حسابي')),
   const SizedBox(height:14),
-  const WaffraText('إعدادات التطبيق',style:TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
-  Card(child:ListTile(
-   leading:const Icon(Icons.language),
-   title:const WaffraText('لغة التطبيق'),
-   subtitle:WaffraText(waffraIsEnglish?'English':'العربية'),
-   trailing:SegmentedButton<String>(
-    segments:const [
-     ButtonSegment(value:'ar',label:WaffraText('AR')),
-     ButtonSegment(value:'en',label:WaffraText('EN')),
-    ],
-    selected:{waffraLanguage.value},
-    onSelectionChanged:(v)async{setState(()=>tab=0);await widget.onLanguage(v.first);},
-    showSelectedIcon:false,
-   ),
+  Card(child:ExpansionTile(
+   initiallyExpanded:false,
+   leading:const Icon(Icons.settings_outlined,color:emerald),
+   title:const WaffraText('إعدادات التطبيق',
+    style:TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
+   children:[
+    ListTile(
+     leading:const Icon(Icons.language),
+     title:const WaffraText('لغة التطبيق'),
+     subtitle:WaffraText(waffraIsEnglish?'English':'العربية'),
+     trailing:SegmentedButton<String>(
+      segments:const [
+       ButtonSegment(value:'ar',label:WaffraText('AR')),
+       ButtonSegment(value:'en',label:WaffraText('EN')),
+      ],
+      selected:{waffraLanguage.value},
+      onSelectionChanged:(v)async{setState(()=>tab=0);await widget.onLanguage(v.first);},
+      showSelectedIcon:false,
+     ),
+    ),
+    const Divider(height:1),
+    ListTile(
+     leading:Icon(widget.dark?Icons.dark_mode:Icons.light_mode),
+     title:const WaffraText('المظهر'),
+     subtitle:WaffraText(widget.dark?(waffraIsEnglish?'Dark':'داكن'):(waffraIsEnglish?'Light':'فاتح')),
+     trailing:Switch(value:widget.dark,onChanged:(_)=>widget.onTheme()),
+     onTap:widget.onTheme,
+    ),
+   ],
   )),
   const SizedBox(height:14),
   const WaffraText('الأمان والخصوصية',style:TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
@@ -2715,8 +2768,6 @@ Future<void> bulkSmsSheet()async {
   OutlinedButton.icon(onPressed:()=>Navigator.push<void>(context,
    MaterialPageRoute(builder:(_)=>CurrencyConverterPage(lastIncomeAmount:entries.where((e)=>e.income).isEmpty?null:entries.where((e)=>e.income).reduce((a,b)=>a.date.isAfter(b.date)?a:b).amount))),
    icon:const Icon(Icons.currency_exchange),label:const WaffraText('تحويل العملات')),
-  OutlinedButton.icon(onPressed:widget.onTheme,
-   icon:Icon(widget.dark?Icons.light_mode:Icons.dark_mode),label:const WaffraText('تغيير المظهر')),
   OutlinedButton.icon(onPressed:backupDialog,icon:const Icon(Icons.backup_outlined),
    label:const WaffraText('النسخ الاحتياطي والاستعادة')),
   if(widget.profile.provider=='محلي')FilledButton.icon(onPressed:widget.onLogout,icon:const Icon(Icons.login),
@@ -2800,11 +2851,9 @@ Future<void> bulkSmsSheet()async {
       child:saudiAvatar(widget.profile.gender)))),
     const SizedBox(width:4),
    ]),
-  body:!ready?const Center(child:CircularProgressIndicator()):
-   AnimatedSwitcher(duration:const Duration(milliseconds:235),reverseDuration:const Duration(milliseconds:190),
-    transitionBuilder:(child,animation)=>FadeTransition(opacity:animation,child:SlideTransition(
-     position:Tween<Offset>(begin:const Offset(0.035,0),end:Offset.zero).animate(CurvedAnimation(parent:animation,curve:Curves.easeOutCubic)),child:child)),
-    child:KeyedSubtree(key:ValueKey(tab),child:currentTab())),
+  // Instant content swap avoids building/animating the previous heavy tab
+  // alongside the next one (the recurring -> savings navigation hitch).
+  body:!ready?const Center(child:CircularProgressIndicator()):currentTab(),
   // Floating plus starts collapsed at the physical bottom-left in both
   // languages. Expanded menu has two REAL actions, never a dummy label.
   floatingActionButtonLocation:FloatingActionButtonLocation.startFloat,
