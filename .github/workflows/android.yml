@@ -47,6 +47,15 @@ jobs:
           data=json.loads(source.read_text())
           assert data['project_info']['project_id']=='waffra-app'
           assert any(c['client_info']['android_client_info']['package_name']=='com.waffra.app' for c in data['client'])
+          # Flutter create --org com.waffra --project-name waffra generates
+          # com.waffra.waffra. Keep the existing generated package identity
+          # aligned with Firebase's registered com.waffra.app client.
+          app_gradle=Path('android/app/build.gradle.kts')
+          gradle=app_gradle.read_text()
+          if 'com.waffra.waffra' not in gradle:
+              raise SystemExit('Unexpected generated Android applicationId; refusing blind replacement')
+          gradle=gradle.replace('com.waffra.waffra','com.waffra.app')
+          app_gradle.write_text(gradle)
           dest=Path('android/app/google-services.json')
           dest.parent.mkdir(parents=True,exist_ok=True)
           shutil.copyfile(source,dest)
