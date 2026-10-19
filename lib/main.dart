@@ -799,7 +799,8 @@ class _LoginScreenState extends State<LoginScreen> {
   try {
    await widget.onSave(Person(name:'',email:'',phone:'',provider:'Local $selected demo',gender:'',avatar:'person',birthday:DateTime(2000)));
    if(!mounted)return;
-   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(waffraIsEnglish?'Local demo profile opened — not authenticated with $selected':'تم الدخول للملف المحلي التجريبي بنجاح — لم تتم المصادقة مع $selected')));
+   ScaffoldMessenger.of(context).showSnackBar(SnackBar(behavior:SnackBarBehavior.floating,
+    margin:const EdgeInsets.fromLTRB(16,8,16,12),content:Text(waffraIsEnglish?'Local demo profile opened — not authenticated with $selected':'تم الدخول للملف المحلي التجريبي بنجاح — لم تتم المصادقة مع $selected')));
   }finally{if(mounted)setState(()=>socialBusy=false);}
  }
 
@@ -1060,7 +1061,7 @@ void snack(BuildContext context,String text){
  final messenger=ScaffoldMessenger.of(context);
  messenger.hideCurrentSnackBar();
  messenger.showSnackBar(SnackBar(behavior:SnackBarBehavior.floating,
-  margin:const EdgeInsets.fromLTRB(16,8,16,92),
+  margin:const EdgeInsets.fromLTRB(16,8,16,12),
   content:WaffraText(text,maxLines:4),duration:const Duration(seconds:3)));
 }
 
@@ -2013,6 +2014,7 @@ Future<void> bulkSmsSheet()async {
   if(!mounted)return;
   ScaffoldMessenger.of(context).hideCurrentSnackBar();
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+   behavior:SnackBarBehavior.floating,margin:const EdgeInsets.fromLTRB(16,8,16,12),
    duration:const Duration(seconds:6),
    content:WaffraText(waffraIsEnglish?'Transaction deleted':'تم حذف العملية'),
    action:SnackBarAction(
@@ -2097,7 +2099,8 @@ Future<void> bulkSmsSheet()async {
      FilledButton(onPressed:(){
       final v=double.tryParse(amount.text.trim().replaceAll(',',''));
       if(v==null||!v.isFinite||v<0){
-       ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+       ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(behavior:SnackBarBehavior.floating,
+        margin:const EdgeInsets.fromLTRB(16,8,16,12),
         content:WaffraText(waffraIsEnglish?'Enter a valid amount':'أدخل مبلغًا صحيحًا')));
        return;
       }
@@ -2153,7 +2156,8 @@ Future<void> bulkSmsSheet()async {
           (lo!=null&&(!lo.isFinite||lo<0))||
           (hi!=null&&(!hi.isFinite||hi<0))||
           (lo!=null&&hi!=null&&lo>hi)){
-        ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+        ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(behavior:SnackBarBehavior.floating,
+         margin:const EdgeInsets.fromLTRB(16,8,16,12),
          content:WaffraText(waffraIsEnglish?'Check amount limits':'تأكد من حدود المبلغ')));
         return;
        }
@@ -2839,8 +2843,6 @@ Future<void> bulkSmsSheet()async {
   return ListView(padding:const EdgeInsets.all(16),children:[
    Row(children:[
     Expanded(child:WaffraText(waffraIsEnglish?'Your financial analytics':'تحليلاتك المالية',style:Theme.of(context).textTheme.titleLarge)),
-    IconButton.filledTonal(onPressed:showAiAnalysis,tooltip:waffraIsEnglish?'AI financial analysis':'تحليل مالي ذكي',icon:const Icon(Icons.auto_awesome_rounded,color:emerald,size:27)),
-    const SizedBox(width:3),WaffraText('AI',style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
    ]),
    const SizedBox(height:12),
    SegmentedButton<String>(segments:const [ButtonSegment(value:'شهري',label:WaffraText('شهري')),
@@ -3449,7 +3451,6 @@ Future<void> bulkSmsSheet()async {
     Row(mainAxisAlignment:MainAxisAlignment.center,children:[
      Flexible(child:FittedBox(fit:BoxFit.scaleDown,child:WaffraText(name,
       style:const TextStyle(fontSize:12,fontWeight:FontWeight.bold)))),
-     const SizedBox(width:3),Icon(Icons.check_rounded,size:16,color:color),
     ]),
    ]),
   ));
@@ -3864,7 +3865,8 @@ Future<void> bulkSmsSheet()async {
       if(existing?RegExp(r'^\d{4,8}$').hasMatch(code):RegExp(r'^\d{4}$').hasMatch(code)){
        Navigator.pop(dialogContext,code);
       }else{
-       ScaffoldMessenger.of(dialogContext).showSnackBar(SnackBar(
+       ScaffoldMessenger.of(dialogContext).showSnackBar(SnackBar(behavior:SnackBarBehavior.floating,
+        margin:const EdgeInsets.fromLTRB(16,8,16,12),
         content:WaffraText(waffraIsEnglish?
          (existing?'Enter 4 to 8 digits':'Enter exactly 4 digits'):
          (existing?'أدخل من 4 إلى 8 أرقام':'أدخل أربعة أرقام بالضبط'))));
