@@ -2277,7 +2277,7 @@ Future<void> bulkSmsSheet()async {
       ])),
      const SizedBox(height:10),
      Expanded(child:items.isEmpty?Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
-      Icon(income?Icons.savings_outlined:Icons.receipt_long_outlined,
+      Icon(income?Icons.account_balance_wallet_outlined:Icons.receipt_long_outlined,
        size:66,color:emerald.withValues(alpha:.6)),
       const SizedBox(height:10),
       WaffraText(waffraIsEnglish?'No transactions yet':'لا توجد عمليات حتى الآن'),
@@ -3142,7 +3142,7 @@ Future<void> bulkSmsSheet()async {
     Row(children:[
      Expanded(child:_summaryBox(waffraIsEnglish?'Total target':'إجمالي المستهدف',cash(target),Icons.flag_outlined,emerald)),
      const SizedBox(width:8),
-     Expanded(child:_summaryBox(waffraIsEnglish?'Saved':'إجمالي المدخرات',cash(saved),Icons.savings_outlined,emerald)),
+     Expanded(child:_summaryBox(waffraIsEnglish?'Saved':'إجمالي المدخرات',cash(saved),Icons.account_balance_wallet_outlined,emerald)),
      const SizedBox(width:8),
      Expanded(child:Container(padding:const EdgeInsets.all(8),
       decoration:BoxDecoration(color:emerald.withValues(alpha:.08),borderRadius:BorderRadius.circular(18)),
@@ -3220,7 +3220,7 @@ Future<void> bulkSmsSheet()async {
     child:Column(children:[
      Container(width:170,height:170,decoration:BoxDecoration(
       color:emerald.withValues(alpha:.08),borderRadius:BorderRadius.circular(90)),
-      child:const Icon(Icons.savings_outlined,size:100,color:emerald)),
+      child:const Icon(Icons.account_balance_wallet_outlined,size:100,color:emerald)),
      const SizedBox(height:20),
      WaffraText(waffraIsEnglish?'No savings goals yet':'ما أضفت أي هدف ادخاري بعد',
       style:Theme.of(context).textTheme.titleLarge,textAlign:TextAlign.center),
