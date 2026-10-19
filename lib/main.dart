@@ -12,6 +12,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'waffra_financial_tools.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
@@ -4071,6 +4072,16 @@ Future<void> bulkSmsSheet()async {
      ],
     ])),
   ]);
+ List<WaffraCalendarItem> get financialCalendarItems=>[
+  ...entries.map((e)=>WaffraCalendarItem(e.date,e.title,e.amount,e.income)),
+  ...recurring.where((r)=>r.active).map((r)=>WaffraCalendarItem(
+   DateTime(DateTime.now().year,DateTime.now().month,r.day.clamp(1,28)),
+   r.title,r.amount,r.income,scheduled:true)),
+ ];
+ void openFinancialCalendar()=>Navigator.push<void>(context,MaterialPageRoute(
+  builder:(_)=>WaffraFinancialCalendar(items:financialCalendarItems,english:waffraIsEnglish)));
+ void openSubscriptionInsights()=>Navigator.push<void>(context,MaterialPageRoute(
+  builder:(_)=>WaffraSubscriptionScreen(items:financialCalendarItems,english:waffraIsEnglish)));
  Widget profilePage(){
   final p=widget.profile;
   final local=p.provider=='محلي'||p.provider.startsWith('Local');
@@ -4143,6 +4154,13 @@ Future<void> bulkSmsSheet()async {
       value:allowed,onChanged:(v)async{await setWaffraScreenshotsAllowed(v);if(mounted)setState((){});}))
    ]),
    _accountSection(waffraIsEnglish?'Data & utilities':'البيانات والأدوات',Icons.storage_outlined,[
+    _accountTile(waffraIsEnglish?'Financial calendar':'التقويم المالي',
+     waffraIsEnglish?'Transactions and recurring dates':'العمليات ومواعيد المتكررة',
+     Icons.calendar_month_outlined,onTap:openFinancialCalendar),
+    _accountTile(waffraIsEnglish?'Subscription insights':'كشف الاشتراكات',
+     waffraIsEnglish?'Recurring costs and possible subscriptions':'المدفوعات الدورية والاشتراكات المحتملة',
+     Icons.subscriptions_outlined,onTap:openSubscriptionInsights),
+
     _accountTile(waffraIsEnglish?'Backup and restore':'النسخ الاحتياطي والاستعادة',
      waffraIsEnglish?'Keep your local data safe':'احفظ بياناتك واستعدها',
      Icons.backup_outlined,onTap:backupDialog),
