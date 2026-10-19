@@ -57,11 +57,11 @@ jobs:
           s=settings.read_text()
           plugin='id("com.google.gms.google-services") version "4.4.2" apply false'
           if 'com.google.gms.google-services' not in s:
-              s=s.replace('plugins {','plugins {\\n    '+plugin,1)
+              s=s.replace('plugins {','plugins {'+chr(10)+'    '+plugin,1)
           settings.write_text(s)
           a=app.read_text()
           if 'id("com.google.gms.google-services")' not in a:
-              a=a.replace('plugins {','plugins {\\n    id("com.google.gms.google-services")',1)
+              a=a.replace('plugins {','plugins {'+chr(10)+'    id("com.google.gms.google-services")',1)
           app.write_text(a)
           print('Firebase Android configuration installed')
           PY
