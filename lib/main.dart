@@ -42,14 +42,14 @@ String formatMoney(num value) {
  if(hideWaffraAmounts.value)return '***';
  return formatWaffraMoney(value);
 }
-String cash(num value)=>'${formatMoney(value)} ﷼';
+String cash(num value)=>hideWaffraAmounts.value?'***':'${formatMoney(value)} ﷼';
 String dayText(DateTime d)=>'${d.day}/${d.month}/${d.year}';
 String digits(String s) {
   const a='٠١٢٣٤٥٦٧٨٩',p='۰۱۲۳۴۵۶۷۸۹';
   return s.replaceAllMapped(RegExp('[٠-٩۰-۹]'),(m){final c=m.group(0)!;final i=a.indexOf(c);return '${i>=0?i:p.indexOf(c)}';});
 }
 double? amountOf(String s) {
-  var v=digits(s).replaceAll(' ','');
+  var v=digits(s).replaceAll(' ','').replaceAll('٫','.').replaceAll('٬',',');
   if(v.contains('.')&&v.contains(','))v=v.replaceAll(',','');
   else if(RegExp(r'^\d{1,3}(,\d{3})+$').hasMatch(v))v=v.replaceAll(',','');
   else v=v.replaceAll(',','.');
@@ -1222,12 +1222,20 @@ Future<void> bulkSmsSheet()async {
         onPressed:busy?null:()=>saveParsedMessages(ctx,update),
         label:WaffraText(busy?'جارٍ الحفظ...':'تأكيد وحفظ المعاملات')),
       ],
-      TextButton.icon(onPressed:(){
+      TextButton.icon(onPressed:()async{
+       final yes=await confirmDeletion(
+        waffraIsEnglish?'Clear pasted messages?':'حذف النص بالكامل',
+        waffraIsEnglish?'Clear all pasted text? Unsaved messages will be lost.':'هل تريد حذف النص الملصوق بالكامل؟ ستفقد الرسائل غير المحفوظة.');
+       if(yes!=true||!ctx.mounted)return;
        pasteTimer?.cancel();pasted.clear();
        update((){parsed=false;messages=[];});
       },icon:const Icon(Icons.delete_outline),label:const WaffraText('حذف النص بالكامل')),
      ]else...[
-      TextButton.icon(onPressed:busy?null:(){
+      TextButton.icon(onPressed:busy?null:()async{
+       final yes=await confirmDeletion(
+        waffraIsEnglish?'Clear pasted messages?':'حذف الرسائل الملصوقة',
+        waffraIsEnglish?'Discard the unsaved pasted text and start again?':'هل تريد حذف الرسائل غير المحفوظة والبدء من جديد؟');
+       if(yes!=true||!ctx.mounted)return;
        update((){reviewing=false;parsed=false;messages=[];index=0;pasted.clear();description.clear();amount.clear();});
       },icon:const Icon(Icons.delete_outline),label:const WaffraText('حذف النص بالكامل ولصق رسائل جديدة')),
       WaffraText(waffraIsEnglish?'Transaction ${index+1} of ${messages.length} — Total: ${cash(total)}':'المعاملة ${index+1} من ${messages.length} — إجمالي المبالغ: ${cash(total)}',style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
@@ -1282,7 +1290,11 @@ Future<void> bulkSmsSheet()async {
       },child:WaffraText(index+1==messages.length?'إضافة المعاملة وحفظها':'إضافة المعاملة وحفظها ثم التالي')),
       if(index+1<messages.length)TextButton(onPressed:busy?null:()=>prepare(index+1,update),child:const WaffraText('تخطي هذه الرسالة')),
       const SizedBox(height:8),
-      OutlinedButton.icon(onPressed:busy?null:(){
+      OutlinedButton.icon(onPressed:busy?null:()async{
+       final yes=await confirmDeletion(
+        waffraIsEnglish?'Clear pasted messages?':'حذف الرسائل الملصوقة',
+        waffraIsEnglish?'Discard all unsaved pasted text? Saved transactions will remain.':'هل تريد حذف النص غير المحفوظ؟ المعاملات المحفوظة ستظل موجودة.');
+       if(yes!=true||!ctx.mounted)return;
        update((){reviewing=false;parsed=false;messages=[];index=0;savedCount=0;pasted.clear();description.clear();amount.clear();});
       },icon:const Icon(Icons.delete_forever_outlined),label:const WaffraText('حذف النص بالكامل وإضافة رسائل أخرى')),
      ],
@@ -3106,10 +3118,12 @@ Future<void> bulkSmsSheet()async {
   // Instant content swap avoids building/animating the previous heavy tab
   // alongside the next one (the recurring -> savings navigation hitch).
   body:!ready?const Center(child:CircularProgressIndicator()):
-   Stack(children:[
-    Positioned.fill(child:currentTab()),
-    if(tourActive)Positioned.fill(child:tourOverlay()),
-   ]),
+   ValueListenableBuilder<bool>(
+    valueListenable:hideWaffraAmounts,
+    builder:(context,hidden,_)=>Stack(children:[
+     Positioned.fill(child:currentTab()),
+     if(tourActive)Positioned.fill(child:tourOverlay()),
+    ])),
   // Floating plus starts collapsed at the physical bottom-left in both
   // languages. Expanded menu has two REAL actions, never a dummy label.
   floatingActionButtonLocation:const WaffraPhysicalLeftFab(),
