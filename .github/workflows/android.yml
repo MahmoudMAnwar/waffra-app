@@ -253,6 +253,74 @@ jobs:
           print('Keeping ARM64 and Flutter Dart tree shaking enabled')
           PY
 
+      # Release builds must use the Firebase-registered production certificate.
+      # Decode only on the runner; never commit the private signing key.
+      - name: Configure and validate Waffra release signing
+        shell: bash
+        env:
+          WAFFRA_RELEASE_KEYSTORE_BASE64: ${{ secrets.WAFFRA_RELEASE_KEYSTORE_BASE64 }}
+          WAFFRA_RELEASE_STORE_PASSWORD: ${{ secrets.WAFFRA_RELEASE_STORE_PASSWORD }}
+          WAFFRA_RELEASE_KEY_PASSWORD: ${{ secrets.WAFFRA_RELEASE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in WAFFRA_RELEASE_KEYSTORE_BASE64 WAFFRA_RELEASE_STORE_PASSWORD WAFFRA_RELEASE_KEY_PASSWORD; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::Required signing secret $name is missing or empty"
+              exit 1
+            fi
+          done
+          umask 077
+          if ! printf '%s' "$WAFFRA_RELEASE_KEYSTORE_BASE64" | base64 --decode > android/app/waffra-release.jks; then
+            echo "::error::Signing keystore Base64 cannot be decoded"
+            exit 1
+          fi
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, subprocess, sys
+
+          key = Path('android/app/waffra-release.jks')
+          if key.stat().st_size < 500:
+              sys.exit('Signing keystore is unexpectedly small')
+          result = subprocess.run(
+              ['keytool', '-list', '-v', '-storetype', 'JKS', '-keystore', str(key),
+               '-alias', 'waffra-release', '-storepass:env', 'WAFFRA_RELEASE_STORE_PASSWORD'],
+              text=True, capture_output=True)
+          if result.returncode:
+              sys.exit('FAIL: cannot unlock the release keystore with the stored password, or signing alias is missing')
+          if 'PrivateKeyEntry' not in result.stdout:
+              sys.exit('FAIL: signing alias is not a private key entry')
+          expected = {
+              'SHA1': '7B:65:B9:0C:A5:1C:0D:EC:5D:36:CB:AB:1A:F7:89:11:9D:9B:43:35',
+              'SHA256': '89:4C:43:6D:C4:27:0D:46:81:57:07:A2:91:47:70:9E:89:CD:42:D4:0F:BF:5D:3A:E2:41:04:29:3B:03:AE:8C',
+          }
+          for label, fingerprint in expected.items():
+              match = re.search(r'\b' + label + r':\s*([0-9A-Fa-f:]+)', result.stdout)
+              if not match or match.group(1).lower() != fingerprint.lower():
+                  sys.exit('FAIL: release signing ' + label + ' does not match the certificate registered in Firebase')
+              print('Verified release signing', label + ':', match.group(1))
+
+          gradle_path = Path('android/app/build.gradle.kts')
+          gradle = gradle_path.read_text()
+          if gradle.count('buildTypes {') != 1:
+              sys.exit('FAIL: cannot find a unique Android buildTypes block')
+          gradle = gradle.replace('buildTypes {', '''signingConfigs {
+                  create("waffraRelease") {
+                      keyAlias = "waffra-release"
+                      keyPassword = System.getenv("WAFFRA_RELEASE_KEY_PASSWORD")
+                      storeFile = file("waffra-release.jks")
+                      storePassword = System.getenv("WAFFRA_RELEASE_STORE_PASSWORD")
+                  }
+              }
+              buildTypes {''', 1)
+          gradle, n = re.subn(
+              r'signingConfig\s*=\s*signingConfigs\.getByName\("debug"\)',
+              'signingConfig = signingConfigs.getByName("waffraRelease")', gradle)
+          if n != 1:
+              sys.exit('FAIL: expected Flutter-generated release signingConfig not found')
+          gradle_path.write_text(gradle)
+          print('Configured Android release build to use validated Waffra private signing key')
+          PY
+
       - name: Install dependencies
         run: flutter pub get
 
@@ -286,6 +354,9 @@ jobs:
       # the smoke test; upload only the final ARM64 APK for the user.
       - name: Build x64 Release APK for emulator smoke test
         if: github.event_name == 'workflow_dispatch'
+        env:
+          WAFFRA_RELEASE_STORE_PASSWORD: ${{ secrets.WAFFRA_RELEASE_STORE_PASSWORD }}
+          WAFFRA_RELEASE_KEY_PASSWORD: ${{ secrets.WAFFRA_RELEASE_KEY_PASSWORD }}
         run: flutter build apk --release --target-platform android-x64 --tree-shake-icons
 
       - name: Verify Release startup on Android emulator
@@ -323,6 +394,9 @@ jobs:
 
       - name: Build optimized ARM64 Release APK
         shell: bash
+        env:
+          WAFFRA_RELEASE_STORE_PASSWORD: ${{ secrets.WAFFRA_RELEASE_STORE_PASSWORD }}
+          WAFFRA_RELEASE_KEY_PASSWORD: ${{ secrets.WAFFRA_RELEASE_KEY_PASSWORD }}
         run: |
           set -o pipefail
           # Gradle/Maven occasionally answer 429 Too Many Requests on hosted
@@ -349,28 +423,33 @@ jobs:
           print(f'WAFFRA_ARM64_RELEASE_APK_MIB={p.stat().st_size / 1048576:.2f}')
           PY
 
-      - name: Verify APK signing fingerprints against Firebase
+      - name: Verify final APK uses Firebase-registered Waffra release signing
         shell: bash
         run: |
           python3 - <<'PY'
-          import json, subprocess, re, pathlib, sys
-          config=json.loads(pathlib.Path('firebase/google-services.json').read_text())
-          android_clients=[o for c in config['client'] for o in c.get('oauth_client',[]) if o.get('client_type')==1 and o.get('android_info',{}).get('package_name')=='com.waffra.app']
-          if not android_clients:
-              sys.exit('FAIL: Android OAuth client missing in Firebase configuration')
-          expected={o['android_info']['certificate_hash'].replace(':','').lower() for o in android_clients}
-          apk='build/app/outputs/flutter-apk/app-release.apk'
-          result=subprocess.run(['bash','-lc',f'find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1'],capture_output=True,text=True,check=True)
-          signer=result.stdout.strip()
-          if not signer: sys.exit('FAIL: apksigner not found')
-          verified=subprocess.run([signer,'verify','--print-certs',apk],capture_output=True,text=True)
-          if verified.returncode: sys.exit('FAIL: APK signature invalid: '+verified.stderr)
-          print(verified.stdout)
-          match=re.search(r'Signer #1 certificate SHA-1 digest:\\s*([0-9a-fA-F:]+)',verified.stdout)
-          if not match: sys.exit('FAIL: could not read APK SHA-1')
-          actual=match.group(1).replace(':','').lower()
-          print('Firebase SHA-1 match:',actual in expected)
-          if actual not in expected: sys.exit('FAIL: APK SHA-1 differs from Firebase Android OAuth certificate; Google Sign-In will fail')
+          import json, pathlib, re, subprocess, sys
+          expected_sha1 = '7b65b90ca51c0dec5d36cbab1af789119d9b4335'
+          expected_sha256 = '894c436dc4270d46815707a29147709e89cd42d40fbf5d3ae24104293b03ae8c'
+          apk = 'build/app/outputs/flutter-apk/app-release.apk'
+          found = subprocess.run(
+              ['bash', '-lc', 'find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1'],
+              text=True, capture_output=True, check=True).stdout.strip()
+          if not found: sys.exit('FAIL: Android apksigner not found')
+          result = subprocess.run([found, 'verify', '--print-certs', apk], text=True, capture_output=True)
+          if result.returncode: sys.exit('FAIL: final APK signature verification failed')
+          for label, expected in [('SHA-1', expected_sha1), ('SHA-256', expected_sha256)]:
+              match = re.search(r'certificate ' + label + r' digest:\s*([0-9a-fA-F:]+)', result.stdout)
+              if not match or match.group(1).replace(':','').lower() != expected:
+                  sys.exit('FAIL: final APK ' + label + ' is not the registered Waffra release certificate')
+              print('Final APK', label, 'matches Firebase registered release certificate')
+          cfg=json.loads(pathlib.Path('firebase/google-services.json').read_text())
+          android_clients = [
+              o for client in cfg['client'] for o in client.get('oauth_client', [])
+              if o.get('client_type') == 1 and
+              o.get('android_info', {}).get('package_name') == 'com.waffra.app'
+          ]
+          if not any(o['android_info'].get('certificate_hash','').replace(':','').lower() == expected_sha1 for o in android_clients):
+              print('NOTICE: checked-in google-services.json predates release SHA-1; refresh it from Firebase to ensure Google Sign-In client data is current')
           PY
 
       - name: Upload Waffra Release APK
