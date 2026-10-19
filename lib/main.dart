@@ -1047,6 +1047,16 @@ class _HomeScreenState extends State<HomeScreen> {
   context:context,builder:(ctx)=>AlertDialog(title:WaffraText(title),content:WaffraText(body),
   actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const WaffraText('إلغاء')),
    FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const WaffraText('تأكيد'))]));
+ Future<bool?> confirmDeletion(String title,String body)=>showDialog<bool>(
+  context:context,builder:(ctx)=>AlertDialog(
+   title:WaffraText(title),content:WaffraText(body),
+   actions:[
+    TextButton(onPressed:()=>Navigator.pop(ctx,false),
+     child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+    FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),
+     onPressed:()=>Navigator.pop(ctx,true),
+     child:WaffraText(waffraIsEnglish?'Confirm delete':'تأكيد الحذف')),
+   ]));
 Future<void> bulkSmsSheet()async {
  final pasted=TextEditingController();
  final description=TextEditingController();
@@ -1695,7 +1705,7 @@ Future<void> bulkSmsSheet()async {
   }catch(e,st){debugPrint('PDF export error: $e\n$st');if(mounted)snack(context,'تعذّر إنشاء PDF: $e');}
  }
  Future<void> deleteEntry(MoneyEntry e)async {
-  final yes=await confirm(waffraIsEnglish?'Delete transaction':'حذف العملية',
+  final yes=await confirmDeletion(waffraIsEnglish?'Delete transaction':'حذف العملية',
    waffraIsEnglish?'Delete this transaction?':'ودّك تحذف «'+e.title+'»؟');
   if(yes!=true||!mounted)return;
   setState(()=>entries.removeWhere((x)=>x.id==e.id));
@@ -2360,21 +2370,130 @@ Future<void> bulkSmsSheet()async {
   await persist();
  }
  Future<void> deleteCategory(BudgetCategory c)async {
-  if(entries.any((e)=>e.category==c.name&&e.income==c.income)||
-    recurring.any((e)=>e.category==c.name&&e.income==c.income)){
-   snack(context,'ما تقدر تحذف قسم مرتبط بعمليات أو مصاريف متكررة');return;
+  final linkedEntries=entries.where((e)=>e.category==c.name&&e.income==c.income).length;
+  final linkedRecurring=recurring.where((e)=>e.category==c.name&&e.income==c.income).length;
+  if(linkedEntries>0||linkedRecurring>0){
+   if(!mounted)return;
+   await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Category cannot be deleted':'لا يمكن حذف القسم'),
+    content:WaffraText(waffraIsEnglish
+     ?'This category has $linkedEntries linked transaction(s) and $linkedRecurring recurring item(s). Delete these linked items first to protect your financial history.'
+     :'هذا القسم مرتبط بعدد $linkedEntries معاملة مالية و$linkedRecurring عملية متكررة. يجب حذف العناصر المرتبطة أولًا قبل حذف القسم.'),
+    actions:[
+     TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('حسنًا')),
+     if(linkedEntries>0)TextButton(onPressed:(){
+      Navigator.pop(ctx);
+      setState((){
+       tab=0;addFabExpanded=false;showAllTransactions=true;
+       showTransactionFilters=true;categoryFilter=c.name;
+       typeFilter=c.income?'الدخل':'المصروفات';
+      });
+     },child:WaffraText(waffraIsEnglish?'View transactions':'عرض المعاملات المرتبطة'))
+     else TextButton(onPressed:(){
+      Navigator.pop(ctx);setState((){tab=4;addFabExpanded=false;});
+     },child:WaffraText(waffraIsEnglish?'View recurring':'عرض العمليات المتكررة')),
+    ]));
+   return;
   }
-  setState(()=>categories.removeWhere((e)=>e.id==c.id));await persist();
+  final yes=await confirmDeletion(
+   waffraIsEnglish?'Delete category?':'حذف القسم',
+   waffraIsEnglish
+    ?'Move «${c.name}» to Recently Deleted for 30 days? You can restore its name, icon and color, but its budget will reset to zero.'
+    :'هل تريد نقل القسم «${c.name}» إلى المحذوفات لمدة 30 يومًا؟ عند استرجاعه سيعود بميزانية صفر.');
+  if(yes!=true||!mounted)return;
+  setState((){
+   categories.removeWhere((e)=>e.id==c.id);
+   deletedCategories.add({'category':c.toJson(),'deletedAt':DateTime.now().toIso8601String()});
+  });
+  await persist();
+  if(mounted)snack(context,waffraIsEnglish?'Category moved to Recently Deleted for 30 days':'تم نقل القسم للمحذوفات لمدة 30 يومًا');
+ }
+ Future<void> showCategoryTrash()async {
+  final before=deletedCategories.length;
+  deletedCategories.removeWhere((item){
+   final when=DateTime.tryParse('${item['deletedAt']??''}');
+   return when==null||!DateTime.now().isBefore(when.add(const Duration(days:30)));
+  });
+  if(before!=deletedCategories.length)await persist();
+  if(!mounted)return;
+  await showDialog<void>(context:context,builder:(dialogCtx)=>StatefulBuilder(
+   builder:(dialogCtx,refresh)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Recently deleted categories':'الأقسام المحذوفة'),
+    content:SizedBox(width:double.maxFinite,height:min(440.0,MediaQuery.sizeOf(dialogCtx).height*.5),
+     child:deletedCategories.isEmpty
+      ?Center(child:WaffraText(waffraIsEnglish?'No deleted categories':'لا توجد أقسام محذوفة'))
+      :ListView(children:deletedCategories.map((item){
+        final original=BudgetCategory.fromJson(Map<String,dynamic>.from(item['category'] as Map));
+        final deletedAt=DateTime.parse(item['deletedAt'] as String);
+        final daysLeft=max(0,(deletedAt.add(const Duration(days:30))
+         .difference(DateTime.now()).inHours/24).ceil());
+        return Card(child:Padding(padding:const EdgeInsets.all(9),child:Column(
+         crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          Row(children:[
+           Icon(categoryIcon(original.icon),color:Color(original.color)),
+           const SizedBox(width:8),
+           Expanded(child:WaffraText(original.name,
+            style:const TextStyle(fontWeight:FontWeight.bold))),
+          ]),
+          WaffraText(waffraIsEnglish
+           ?'${original.income?'Income':'Expense'} • $daysLeft days remaining'
+           :'${original.income?'دخل':'مصروفات'} • متبقي $daysLeft يوم',
+           style:TextStyle(fontSize:12,color:daysLeft<=3?Colors.red:null)),
+          Row(children:[
+           TextButton.icon(icon:const Icon(Icons.restore),
+            onPressed:()async{
+             if(categories.any((c)=>c.name==original.name&&c.income==original.income)){
+              snack(dialogCtx,waffraIsEnglish?'A category with this name already exists':'يوجد قسم نشط بنفس الاسم بالفعل');return;
+             }
+             final restored=original.copy(budget:0);
+             setState((){
+              categories.add(restored);
+              deletedCategories.remove(item);
+             });
+             await persist();
+             if(!dialogCtx.mounted)return;
+             Navigator.pop(dialogCtx);
+             if(mounted)snack(context,waffraIsEnglish
+              ?'Category restored with zero balance and no budget. Add new transactions and a budget to use it.'
+              :'تم استرجاع القسم بقيمة صفر وبدون ميزانية. سجّل عليه معاملات وميزانية جديدة.');
+            },
+            label:WaffraText(waffraIsEnglish?'Restore':'استرجاع')),
+           const Spacer(),
+           IconButton(tooltip:waffraIsEnglish?'Delete forever':'حذف نهائي',
+            icon:const Icon(Icons.delete_forever_outlined,color:Colors.red),
+            onPressed:()async{
+             final yes=await confirmDeletion(
+              waffraIsEnglish?'Permanently delete category?':'حذف القسم نهائيًا',
+              waffraIsEnglish?'Delete «${original.name}» forever? You cannot restore it.'
+               :'هل تريد حذف القسم «${original.name}» نهائيًا؟ لا يمكن استرجاعه بعد ذلك.');
+             if(yes==true&&mounted){
+              setState(()=>deletedCategories.remove(item));
+              refresh((){});
+              await persist();
+             }
+            }),
+          ]),
+         ])));
+       }).toList())),
+    actions:[TextButton(onPressed:()=>Navigator.pop(dialogCtx),
+     child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))],
+   )));
  }
  Widget categoriesPage(){
   final now=DateTime.now();
   final current=entries.where((e)=>!e.income&&e.date.year==now.year&&e.date.month==now.month);
   return ListView(padding:const EdgeInsets.all(16),children:[
-   WaffraText('أقسامك وميزانياتك',style:Theme.of(context).textTheme.titleLarge),
+   Row(children:[
+    Expanded(child:WaffraText('أقسامك وميزانياتك',
+     style:Theme.of(context).textTheme.titleLarge)),
+    IconButton(onPressed:showCategoryTrash,
+     tooltip:waffraIsEnglish?'Recently deleted':'الأقسام المحذوفة',
+     icon:const Icon(Icons.delete_outline,color:emerald)),
+   ]),
    const WaffraText('حدّد ميزانية شهرية لكل قسم وتابع صرفك'),
-   const SizedBox(height:12),
-   FilledButton.icon(onPressed:()=>addCategory(),icon:const Icon(Icons.add),label:const WaffraText('إضافة قسم مصروفات')),
-   OutlinedButton.icon(onPressed:()=>addCategory(income:true),icon:const Icon(Icons.add),label:const WaffraText('إضافة قسم دخل')),
+   const SizedBox(height:8),
+   WaffraText(waffraIsEnglish?'Use the + button to add an income or expense category':'اضغط على + أسفل اليسار لإضافة قسم دخل أو مصروفات',
+    style:const TextStyle(color:emerald,fontSize:13)),
    const SizedBox(height:12),
    ...categories.map((c){
     final spent=sum(current.where((e)=>e.category==c.name),false);
@@ -2512,7 +2631,7 @@ Future<void> bulkSmsSheet()async {
      Expanded(child:WaffraText(g.name,style:const TextStyle(fontWeight:FontWeight.bold))),
      PopupMenuButton<String>(onSelected:(v)async {
       if(v=='delete'){
-       final yes=await confirm(waffraIsEnglish?'Delete savings goal?':'حذف هدف الادخار',
+       final yes=await confirmDeletion(waffraIsEnglish?'Delete savings goal?':'حذف هدف الادخار',
         waffraIsEnglish?'Delete ${g.name}? This cannot be undone.':'هل تريد حذف هدف الادخار «${g.name}» نهائيًا؟ لا يمكن التراجع عن هذا الإجراء.');
        if(yes==true&&mounted){setState(()=>goals.removeWhere((x)=>x.id==g.id));await persist();}
       }
@@ -2592,7 +2711,7 @@ Future<void> bulkSmsSheet()async {
    trailing:Row(mainAxisSize:MainAxisSize.min,children:[
     RiyalAmount(r.amount),
     IconButton(onPressed:()async {
-     final ok=await confirm('حذف التكرار','تبي توقف تكرار ${r.title}؟ العمليات المسجّلة بتبقى محفوظة.');
+     final ok=await confirmDeletion('حذف التكرار','تبي توقف تكرار ${r.title}؟ العمليات المسجّلة بتبقى محفوظة.');
      if(ok==true&&mounted){setState(()=>recurring.removeWhere((x)=>x.id==r.id));await persist();}
     },icon:const Icon(Icons.delete_outline)),
    ])))),
@@ -2907,8 +3026,9 @@ Future<void> bulkSmsSheet()async {
   body:!ready?const Center(child:CircularProgressIndicator()):currentTab(),
   // Floating plus starts collapsed at the physical bottom-left in both
   // languages. Expanded menu has two REAL actions, never a dummy label.
-  floatingActionButtonLocation:FloatingActionButtonLocation.startFloat,
-  floatingActionButton:!ready||tab!=0?null:Column(
+  floatingActionButtonLocation:const WaffraPhysicalLeftFab(),
+  floatingActionButton:!ready||(tab!=0&&tab!=2)?null:Directionality(
+   textDirection:TextDirection.ltr,child:Column(
    mainAxisSize:MainAxisSize.min,
    crossAxisAlignment:CrossAxisAlignment.start,children:[
     AnimatedSize(duration:const Duration(milliseconds:210),
@@ -2918,6 +3038,7 @@ Future<void> bulkSmsSheet()async {
       padding:const EdgeInsets.only(bottom:9),
       child:Column(mainAxisSize:MainAxisSize.min,
        crossAxisAlignment:CrossAxisAlignment.start,children:[
+        if(tab==0)...[
         _addMenuOption(
          icon:Icons.edit_note_rounded,
          label:waffraIsEnglish?'Manual transaction':'عملية يدوية',
@@ -2933,6 +3054,15 @@ Future<void> bulkSmsSheet()async {
           setState(()=>addFabExpanded=false);
           bulkSmsSheet();
          }),
+        ]else...[
+         _addMenuOption(icon:Icons.trending_up,
+          label:waffraIsEnglish?'Income category':'إضافة قسم دخل',
+          onTap:(){setState(()=>addFabExpanded=false);addCategory(income:true);}),
+         const SizedBox(height:7),
+         _addMenuOption(icon:Icons.trending_down,
+          label:waffraIsEnglish?'Expense category':'إضافة قسم مصروفات',
+          onTap:(){setState(()=>addFabExpanded=false);addCategory();}),
+        ],
        ])):const SizedBox.shrink()),
     Material(
      color:forest,elevation:7,
@@ -2948,7 +3078,7 @@ Future<void> bulkSmsSheet()async {
         child:Icon(addFabExpanded?Icons.close:Icons.add,
          color:Colors.white,size:28))),
      )),
-   ]),
+   ])),
   bottomNavigationBar:NavigationBar(height:74,indicatorColor:const Color(0xFFCFE9D9),
    labelBehavior:NavigationDestinationLabelBehavior.alwaysShow,
    selectedIndex:tab,onDestinationSelected:(v)=>setState((){
@@ -2962,6 +3092,16 @@ Future<void> bulkSmsSheet()async {
     NavigationDestination(icon:const Icon(Icons.repeat),label:waffraTr('المتكررة')),
     NavigationDestination(icon:const Icon(Icons.person_outline),label:waffraTr('حسابي')),
    ]));
+}
+/// Positions the expandable plus menu physically on the left in RTL
+/// and LTR, independent of Scaffold's locale-sensitive start/end anchors.
+class WaffraPhysicalLeftFab extends FloatingActionButtonLocation {
+ const WaffraPhysicalLeftFab();
+ @override Offset getOffset(ScaffoldPrelayoutGeometry geometry){
+  final bottom=geometry.bottomNavigationBarTop??geometry.scaffoldSize.height-geometry.minInsets.bottom;
+  return Offset(16+geometry.minInsets.left,
+   max(16,bottom-geometry.floatingActionButtonSize.height-16));
+ }
 }
 class ChartPoint {
  final String label;final double income,expense;
