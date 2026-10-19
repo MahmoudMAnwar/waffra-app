@@ -922,9 +922,14 @@ class _ProfileFormState extends State<ProfileForm> {
       filled:true,fillColor:Colors.grey.withValues(alpha:0.15),border:const OutlineInputBorder())),
     const SizedBox(height:12),
    ],
-   TextField(controller:phone,keyboardType:TextInputType.phone,inputFormatters:[FilteringTextInputFormatter.digitsOnly,LengthLimitingTextInputFormatter(10)],
-    decoration:InputDecoration(labelText:waffraIsEnglish?'Mobile number':'رقم الجوال',hintText:'05XXXXXXXX',
-     helperText:waffraIsEnglish?'Mobile number starting with 05':'رقم جوال يبدأ بـ 05',border:const OutlineInputBorder())),
+   TextField(controller:phone,keyboardType:TextInputType.phone,
+    onChanged:(_)=>setState((){}),
+    inputFormatters:[FilteringTextInputFormatter.digitsOnly,LengthLimitingTextInputFormatter(10)],
+    decoration:InputDecoration(labelText:waffraIsEnglish?'Mobile number starting with 05 *':'رقم جوال يبدأ بـ 05 *',
+     hintText:'05XXXXXXXX',
+     errorText:profileAttempted&&((widget.initial==null||phone.text.trim().isNotEmpty)&&WaffraValidators.mobileNumber(phone.text)!=null)?
+      (waffraIsEnglish?'Enter a valid mobile number starting with 05':'رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام'):null,
+     border:const OutlineInputBorder())),
    if(widget.initial==null) ...[
     const SizedBox(height:12),
     TextField(controller:password,obscureText:!showPassword,
@@ -1415,7 +1420,8 @@ Future<void> bulkSmsSheet()async {
   bool income=initial?.income??false,analyzing=false,hasParsed=false;
   String category=initial?.category??'أخرى';
   DateTime date=initial?.date??DateTime.now();
-  String? suggestion,pendingHash,receiptPath=initial?.receiptPath;
+   String? suggestion,pendingHash,receiptPath=initial?.receiptPath;
+   bool attempted=false;
   Timer? debounce;
   final result=await showModalBottomSheet<MoneyEntry>(
    context:context,isScrollControlled:true,showDragHandle:true,
@@ -1450,9 +1456,13 @@ Future<void> bulkSmsSheet()async {
        style:Theme.of(sheetContext).textTheme.titleLarge),
       const SizedBox(height:12),
       if(sms)...[
-       TextField(controller:message,minLines:3,maxLines:6,onChanged:parseNow,
-        decoration:InputDecoration(labelText:waffraTr('الصق الرسالة البنكية هنا'),
-         hintText:waffraTr('أول ما تلصقها نحلّلها تلقائيًا'),border:OutlineInputBorder())),
+       TextField(controller:message,minLines:3,maxLines:6,
+        onChanged:(v){parseNow(v);update((){});},
+        decoration:InputDecoration(labelText:waffraIsEnglish?'Bank SMS *':'الرسالة البنكية *',
+         hintText:waffraTr('أول ما تلصقها نحلّلها تلقائيًا'),
+         errorText:attempted&&message.text.trim().isEmpty?
+          (waffraIsEnglish?'Bank message is required':'الرسالة البنكية حقل إجباري'):null,
+         border:OutlineInputBorder())),
        const SizedBox(height:8),
        if(analyzing)const LinearProgressIndicator(),
        if(hasParsed)WaffraText(value.text.isEmpty?'ما قدرنا نحدد المبلغ. اكتبه يدويًا.':
@@ -1466,11 +1476,18 @@ Future<void> bulkSmsSheet()async {
         income=v.first;category=forType(income).isNotEmpty?forType(income).first.name:'أخرى';suggestion=null;
        })),
       const SizedBox(height:12),
-      TextField(controller:title,decoration:InputDecoration(labelText:waffraTr('وصف العملية'),border:OutlineInputBorder())),
+      TextField(controller:title,onChanged:(_)=>update((){}),
+       decoration:InputDecoration(labelText:waffraIsEnglish?'Description *':'وصف العملية *',
+        errorText:attempted&&WaffraValidators.requiredText(title.text)!=null?
+         (waffraIsEnglish?'Description is required':'وصف العملية حقل إجباري'):null,
+        border:OutlineInputBorder())),
       const SizedBox(height:12),
       TextField(controller:value,keyboardType:const TextInputType.numberWithOptions(decimal:true),
-       inputFormatters:[const WaffraAmountFormatter()],
-       decoration:InputDecoration(labelText:waffraTr('المبلغ بالريال'),border:OutlineInputBorder())),
+       inputFormatters:[const WaffraAmountFormatter()],onChanged:(_)=>update((){}),
+       decoration:InputDecoration(labelText:waffraIsEnglish?'Amount *':'المبلغ *',
+        errorText:attempted&&WaffraValidators.positiveAmount(value.text)!=null?
+         (waffraIsEnglish?'Enter an amount greater than zero':'المبلغ حقل إجباري ويجب أن يكون أكبر من صفر'):null,
+        border:OutlineInputBorder())),
       const SizedBox(height:12),
       DropdownButtonFormField<String>(key:ValueKey('$income-$chosen'),initialValue:chosen,
        decoration:InputDecoration(labelText:waffraTr('القسم'),border:OutlineInputBorder()),
@@ -1517,10 +1534,11 @@ Future<void> bulkSmsSheet()async {
        onTap:()=>showReceipt(receiptPath!)),
       const SizedBox(height:12),
       FilledButton(onPressed:analyzing?null:()async {
+       update(()=>attempted=true);
        final n=amountOf(value.text);
-       if(title.text.trim().isEmpty||n==null){snack(context,'تأكد من الوصف والمبلغ');return;}
+       if(WaffraValidators.requiredText(title.text)!=null||n==null)return;
        if(sms){
-        if(message.text.trim().isEmpty){snack(context,'الصق الرسالة البنكية أولًا');return;}
+        if(message.text.trim().isEmpty)return;
         final h=sha256.convert(utf8.encode(digits(message.text).replaceAll(RegExp(r'\s+'),' ').trim().toLowerCase())).toString();
         if(smsHashes.contains(h)){
          final proceed=await showDialog<bool>(context:sheetContext,builder:(dialogContext)=>AlertDialog(
@@ -2884,6 +2902,7 @@ Future<void> bulkSmsSheet()async {
  }
  Future<void> fundGoal(SavingGoal g)async {
   final amount=TextEditingController();
+  bool attempted=false;
   final n=await showDialog<double>(context:context,builder:(ctx)=>StatefulBuilder(
    builder:(ctx,update)=>AlertDialog(
    title:WaffraText('إضافة ادخار لـ ${g.name}'),
@@ -2898,7 +2917,10 @@ Future<void> bulkSmsSheet()async {
     const SizedBox(height:14),
     TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
      inputFormatters:[const WaffraAmountFormatter()],onChanged:(_)=>update((){}),
-     decoration:InputDecoration(labelText:waffraTr('المبلغ المدّخر'),border:const OutlineInputBorder())),
+     decoration:InputDecoration(labelText:waffraIsEnglish?'Saved amount *':'المبلغ المدّخر *',
+      errorText:attempted&&WaffraValidators.positiveAmount(amount.text)!=null?
+       (waffraIsEnglish?'Amount must be positive':'المبلغ حقل إجباري ويجب أن يكون أكبر من صفر'):null,
+      border:const OutlineInputBorder())),
     const SizedBox(height:12),
     WaffraText(waffraIsEnglish
      ?'Remaining after adding: ${formatWaffraMoney(max(0,g.target-g.saved-(amountOf(amount.text)??0)))} SAR'
@@ -2908,6 +2930,7 @@ Future<void> bulkSmsSheet()async {
    actions:[
     TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إلغاء')),
     FilledButton(onPressed:(){
+     update(()=>attempted=true);
      final v=amountOf(amount.text);if(v!=null)Navigator.pop(ctx,v);
     },child:const WaffraText('إضافة')),
    ])));
