@@ -3824,16 +3824,20 @@ Future<void> bulkSmsSheet()async {
     title:Column(mainAxisSize:MainAxisSize.min,children:[
      const CircleAvatar(radius:26,backgroundColor:emerald,child:Icon(Icons.lock_outline,color:Colors.white,size:28)),
      const SizedBox(height:12),WaffraText(title,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold))]),
-    content:TextField(
+    content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+     WaffraText(fieldLabel,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w600)),
+     const SizedBox(height:12),
+     TextField(
      controller:input,autofocus:true,
      textDirection:TextDirection.ltr,textAlign:TextAlign.center,
      keyboardType:TextInputType.number,
      inputFormatters:[FilteringTextInputFormatter.digitsOnly,
       LengthLimitingTextInputFormatter(existing?8:4)],
      obscureText:true,
-     decoration:InputDecoration(labelText:fieldLabel,
-      helperText:existing?'4–8 digits / من 4 إلى 8 أرقام':'4 digits / أربعة أرقام',
+     decoration:InputDecoration(hintText:'••••',hintStyle:const TextStyle(color:Colors.white54),
+      helperText:existing?(waffraIsEnglish?'4 to 8 digits':'من 4 إلى 8 أرقام'):(waffraIsEnglish?'4 digits':'أربعة أرقام'),
       border:const OutlineInputBorder())),
+    ])),
     actions:[
      TextButton(onPressed:()=>Navigator.pop(dialogContext),
       child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
