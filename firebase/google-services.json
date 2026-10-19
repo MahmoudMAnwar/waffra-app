@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "824623621537",
+    "project_id": "waffra-app",
+    "storage_bucket": "waffra-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:824623621537:android:8e8613ab4bf0b3540a97e0",
+        "android_client_info": {
+          "package_name": "com.waffra.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "824623621537-dqrokel1e952gtdgvtskq1i52smqpn8j.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBbvnu4ycRYUfmVZ-6t1WJDBdSyByXiies"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "824623621537-dqrokel1e952gtdgvtskq1i52smqpn8j.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
