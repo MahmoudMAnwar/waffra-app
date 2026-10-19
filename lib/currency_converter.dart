@@ -34,7 +34,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
     if(mounted)setState((){rate=1;result=input;updated=DateTime.now();});
     return;
    }
-   double fetchedRate;
+   late double fetchedRate;
    DateTime? fetchedAt;
    try{
     final response=await http.get(Uri.parse('https://open.er-api.com/v6/latest/$from'))
