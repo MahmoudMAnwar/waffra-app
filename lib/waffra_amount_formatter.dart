@@ -6,7 +6,7 @@ class WaffraAmountFormatter extends TextInputFormatter {
  const WaffraAmountFormatter();
  @override
  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
-  final normalized=newValue.text.replaceAllMapped(RegExp('[٠-٩۰-۹]'),(m){
+  final normalized=newValue.text.replaceAll('٫','.').replaceAll('٬',',').replaceAllMapped(RegExp('[٠-٩۰-۹]'),(m){
    const arabic='٠١٢٣٤٥٦٧٨٩',persian='۰۱۲۳۴۵۶۷۸۹';
    final c=m.group(0)!;final a=arabic.indexOf(c);
    return (a>=0?a:persian.indexOf(c)).toString();
