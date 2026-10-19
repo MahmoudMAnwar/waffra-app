@@ -464,7 +464,7 @@ class _PinLockScreenState extends State<PinLockScreen> {
  Widget _padButton(String label,{IconData? icon,required VoidCallback onPressed}){
   return Semantics(button:true,label:icon==Icons.fingerprint?
     (waffraIsEnglish?'Unlock with fingerprint':'فتح بالبصمة'):label,
-   child:Material(color:const Color(0xE0156B51),
+   child:Material(color:const Color(0x99156B51),
     shape:CircleBorder(side:BorderSide(color:Colors.white.withValues(alpha:.27))),
     child:InkWell(customBorder:const CircleBorder(),onTap:busy?null:onPressed,
      child:SizedBox(width:64,height:58,child:Center(child:icon!=null?
@@ -487,10 +487,6 @@ class _PinLockScreenState extends State<PinLockScreen> {
      padding:const EdgeInsets.symmetric(horizontal:20,vertical:14),
      child:Container(constraints:const BoxConstraints(maxWidth:370),
       padding:const EdgeInsets.fromLTRB(17,18,17,14),
-      decoration:BoxDecoration(color:const Color(0xEE064D3B),
-       borderRadius:BorderRadius.circular(28),
-       border:Border.all(color:const Color(0x667FD8AF),width:1.4),
-       boxShadow:const [BoxShadow(color:Colors.black38,blurRadius:20)]),
       child:Column(mainAxisSize:MainAxisSize.min,children:[
        const Icon(Icons.lock_outline_rounded,color:Colors.white,size:34),
        const SizedBox(height:7),
@@ -506,25 +502,25 @@ class _PinLockScreenState extends State<PinLockScreen> {
          color:i<pinController.text.length?Colors.white:Colors.transparent,
          border:Border.all(color:Colors.white70,width:1.5))))),
        const SizedBox(height:13),
-       Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
+       Row(textDirection:TextDirection.ltr,mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
         _padButton('1',onPressed:()=>_keyDigit('1')),
         _padButton('2',onPressed:()=>_keyDigit('2')),
         _padButton('3',onPressed:()=>_keyDigit('3')),
        ]),
        const SizedBox(height:7),
-       Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
+       Row(textDirection:TextDirection.ltr,mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
         _padButton('4',onPressed:()=>_keyDigit('4')),
         _padButton('5',onPressed:()=>_keyDigit('5')),
         _padButton('6',onPressed:()=>_keyDigit('6')),
        ]),
        const SizedBox(height:7),
-       Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
+       Row(textDirection:TextDirection.ltr,mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
         _padButton('7',onPressed:()=>_keyDigit('7')),
         _padButton('8',onPressed:()=>_keyDigit('8')),
         _padButton('9',onPressed:()=>_keyDigit('9')),
        ]),
        const SizedBox(height:7),
-       Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
+       Row(textDirection:TextDirection.ltr,mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
         _padButton('',icon:Icons.fingerprint,onPressed:biometric),
         _padButton('0',onPressed:()=>_keyDigit('0')),
         _padButton('',icon:Icons.backspace_outlined,onPressed:(){
@@ -773,6 +769,21 @@ class _LoginScreenState extends State<LoginScreen> {
  }
 
  bool socialBusy=false;
+ Future<void> chooseRegistration()async {
+  final choice=await showModalBottomSheet<String>(context:context,showDragHandle:true,
+   builder:(ctx)=>SafeArea(child:Padding(padding:const EdgeInsets.all(16),child:Column(mainAxisSize:MainAxisSize.min,children:[
+    WaffraText(waffraIsEnglish?'Create account':'إنشاء حساب',style:Theme.of(ctx).textTheme.titleLarge),
+    ListTile(leading:const Icon(Icons.g_mobiledata,size:30),title:WaffraText(waffraIsEnglish?'Continue with Google':'المتابعة باستخدام Google'),onTap:()=>Navigator.pop(ctx,'Google')),
+    ListTile(leading:const Icon(Icons.apple),title:WaffraText(waffraIsEnglish?'Continue with Apple':'المتابعة باستخدام Apple'),onTap:()=>Navigator.pop(ctx,'Apple')),
+    ListTile(leading:const Icon(Icons.phone_android),title:WaffraText(waffraIsEnglish?'Register with phone number':'التسجيل برقم الجوال'),onTap:()=>Navigator.pop(ctx,'Phone')),
+   ]))));
+  if(!mounted||choice==null)return;
+  if(choice=='Phone'){setState(()=>provider='Phone');return;}
+  await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+   title:WaffraText(waffraIsEnglish?'Sign-in not configured':'تسجيل الدخول غير مفعّل'),
+   content:WaffraText(waffraIsEnglish?'Secure $choice sign-in needs authentication setup. No account was created.':'تسجيل الدخول الآمن باستخدام $choice يحتاج إعداد خدمة المصادقة. لم يتم إنشاء حساب.'),
+   actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))]));
+ }
  Future<void> demoSocial(String selected)async {
   if(socialBusy)return;
   setState(()=>socialBusy=true);
@@ -844,11 +855,11 @@ class _LoginScreenState extends State<LoginScreen> {
           icon:const Icon(Icons.arrow_forward),
           label:WaffraText(waffraIsEnglish?'Start now — no sign in':'ابدأ الآن بدون تسجيل دخول')),
          const SizedBox(height:8),
-         OutlinedButton.icon(onPressed:()=>setState(()=>provider='Phone'),
+         OutlinedButton.icon(onPressed:chooseRegistration,
           style:OutlinedButton.styleFrom(foregroundColor:Colors.white,
            side:const BorderSide(color:Colors.white70)),
           icon:const Icon(Icons.person_add_alt_1_outlined),
-          label:WaffraText(waffraIsEnglish?'Create a local account':'إنشاء حساب محلي')),
+          label:WaffraText(waffraIsEnglish?'Create account':'إنشاء حساب')),
          if(hasExisting)TextButton(onPressed:()=>setState(()=>signInMode=true),
           child:WaffraText(waffraIsEnglish?'Already have an account? Sign in':
            'عندك حساب بالفعل؟ تسجيل الدخول',
@@ -2467,9 +2478,7 @@ Future<void> bulkSmsSheet()async {
        padding:const EdgeInsets.fromLTRB(15,12,15,10),
        child:Row(children:[Expanded(child:WaffraText(greeting,
         style:Theme.of(context).textTheme.titleLarge)),
-        IconButton.filledTonal(onPressed:()=>setState(()=>goalsOpened=true),
-         tooltip:waffraIsEnglish?'Savings goals':'أهداف الادخار',
-         icon:const Icon(Icons.flag_outlined,color:emerald))]))),
+        const SizedBox.shrink()]))),
       // Not pinned: the shrinking balance scrolls away without covering data.
       SliverPersistentHeader(
        pinned:false,
@@ -2713,7 +2722,7 @@ Future<void> bulkSmsSheet()async {
   }
   final top=biggest.entries.toList()..sort((a,b)=>b.value.compareTo(a.value));
   final wait=Future<void>.delayed(const Duration(milliseconds:1700));
-  await showModalBottomSheet<void>(
+  final showDetails=await showModalBottomSheet<bool>(
    context:context,isScrollControlled:true,showDragHandle:true,
    backgroundColor:Theme.of(context).cardColor,
    shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
@@ -2752,8 +2761,8 @@ Future<void> bulkSmsSheet()async {
        borderRadius:BorderRadius.circular(18)),child:Column(children:[
        WaffraText(label,style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
        const SizedBox(height:7),
-       WaffraText(score==null?'—':'$score / 100',
-        style:const TextStyle(color:emerald,fontSize:32,fontWeight:FontWeight.bold)),
+       Directionality(textDirection:TextDirection.ltr,child:WaffraText(score==null?'—':'$score / 100',
+        style:const TextStyle(color:emerald,fontSize:32,fontWeight:FontWeight.bold))),
        if(score!=null)LinearProgressIndicator(value:score/100,minHeight:9,
         color:emerald,borderRadius:BorderRadius.circular(9)),
        const SizedBox(height:9),
@@ -2786,11 +2795,16 @@ Future<void> bulkSmsSheet()async {
         (waffraIsEnglish?'Review your largest categories to increase possible savings.':
          'راجع أكبر أقسام الصرف لزيادة فرص التوفير.'))),
       const SizedBox(height:16),
-      FilledButton.icon(onPressed:()=>Navigator.pop(dialogCtx),
-       icon:const Icon(Icons.check),label:WaffraText(waffraIsEnglish?'View forecast below':'عرض التوقعات بالأسفل')),
+      FilledButton.icon(onPressed:()=>Navigator.pop(dialogCtx,true),
+       icon:const Icon(Icons.bar_chart_rounded),label:WaffraText(waffraIsEnglish?'View detailed analysis':'عرض التحليل التفصيلي')),
       const SizedBox(height:8),
      ]));
     }))));
+  if(showDetails==true&&mounted){
+   await Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>Scaffold(
+    appBar:AppBar(title:WaffraText(waffraIsEnglish?'Detailed analysis':'التحليل التفصيلي')),
+    body:analytics())));
+  }
  }
  Widget analytics(){
   final data=analysisEntries,inc=sum(data,true),exp=sum(data,false);
@@ -3881,9 +3895,10 @@ Future<void> bulkSmsSheet()async {
    final focus=_tourKeys[tourStep].currentContext;
    if(focus!=null){
     try{await Scrollable.ensureVisible(focus,
-     duration:const Duration(milliseconds:230),alignment:.16,
+     duration:const Duration(milliseconds:700),alignment:.16,
      curve:Curves.easeOutCubic);}catch(e){debugPrint('Tour focus: $e');}
    }
+   await Future<void>.delayed(const Duration(milliseconds:450));
    if(mounted&&tourActive)setState(()=>tourTargetReady=focus!=null);
   });
  }
@@ -3937,8 +3952,8 @@ Future<void> bulkSmsSheet()async {
    Positioned.fill(child:AnimatedBuilder(animation:_tourGlow,
     builder:(ctx,_)=>CustomPaint(painter:WaffraTourShade(target,glow:_tourGlow.value)))),
    AnimatedPositioned(
-    duration:const Duration(milliseconds:300),
-    curve:Curves.easeOutCubic,top:top,left:left,width:width,
+    duration:const Duration(milliseconds:700),
+    curve:Curves.easeInOutCubic,top:top,left:left,width:width,
     child:Material(elevation:12,color:Theme.of(context).cardColor,
      borderRadius:BorderRadius.circular(18),
      child:ConstrainedBox(constraints:BoxConstraints(maxHeight:popupHeight),
@@ -3947,7 +3962,7 @@ Future<void> bulkSmsSheet()async {
        Row(children:[
         const Icon(Icons.lightbulb_outline,color:emerald,size:18),
         const SizedBox(width:5),
-        Expanded(child:AnimatedSwitcher(duration:const Duration(milliseconds:270),
+        Expanded(child:AnimatedSwitcher(duration:const Duration(milliseconds:650),
          transitionBuilder:(child,animation)=>FadeTransition(opacity:animation,
           child:SlideTransition(position:Tween<Offset>(begin:const Offset(0,.18),end:Offset.zero).animate(animation),child:child)),
          child:WaffraText(waffraIsEnglish?en[tourStep]:ar[tourStep],key:ValueKey(tourStep),
@@ -4276,7 +4291,7 @@ Future<void> bulkSmsSheet()async {
     NavigationDestination(icon:KeyedSubtree(key:_tourKeys[3],child:const Icon(Icons.auto_awesome_rounded)),
      selectedIcon:const Icon(Icons.auto_awesome_rounded,color:emerald),
      label:waffraIsEnglish?'Analysis':'التحليل',tooltip:waffraIsEnglish?'Analyze income and expenses':'تحليل الدخل والمصروفات'),
-    NavigationDestination(icon:const Icon(Icons.flag_outlined),selectedIcon:const Icon(Icons.flag),label:waffraIsEnglish?'Goals':'أهداف الادخار'),
+    NavigationDestination(icon:const Icon(Icons.flag_outlined),selectedIcon:const Icon(Icons.flag),label:waffraIsEnglish?'Goals':'الأهداف'),
     NavigationDestination(icon:const Icon(Icons.repeat),label:waffraTr('المتكررة')),
     NavigationDestination(icon:KeyedSubtree(key:_tourKeys[5],child:const Icon(Icons.person_outline)),label:waffraTr('حسابي')),
    ])),
