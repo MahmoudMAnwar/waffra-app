@@ -900,7 +900,7 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
        child:ClipRect(child:Opacity(opacity:1-progress,
         child:Align(alignment:Alignment.centerRight,
          child:WaffraText(english?'Every riyal counts':'كل ريال تحسب له حساب',
-          style:const TextStyle(color:Colors.white70,fontSize:13))))),
+          style:const TextStyle(color:Colors.white70,fontSize:13)))))),
      ],
     )),
   );
