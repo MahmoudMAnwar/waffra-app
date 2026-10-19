@@ -21,6 +21,7 @@ import 'waffra_biometrics.dart';
 import 'waffra_amount_formatter.dart';
 import 'waffra_validators.dart';
 import 'waffra_financial_insights.dart';
+import 'waffra_reminders.dart';
 import 'waffra_welcome_background.dart';
 import 'currency_converter.dart';
 import 'waffra_i18n.dart';
@@ -1076,6 +1077,7 @@ class _HomeScreenState extends State<HomeScreen> {
  int tab=0,year=DateTime.now().year,month=DateTime.now().month;
  String search='',typeFilter='الكل',categoryFilter='الكل',period='شهري';
  String categorySearch='',categoryDisplay='all',goalDisplay='all',recurringDisplay='all';
+ bool recurringRemindersEnabled=false;
  bool ready=false;
  final _tourKeys=List<GlobalKey>.generate(6,(_)=>GlobalKey());
  bool tourActive=false;
@@ -1104,6 +1106,7 @@ class _HomeScreenState extends State<HomeScreen> {
   });
   smsHashes.addAll(p.getStringList('waffra_sms_hashes_v1')??const []);
   monthlyBudget=p.getDouble('waffra_monthly_budget_v1')??0;
+  recurringRemindersEnabled=p.getBool('waffra_recurring_reminders_enabled_v1')??false;
   try{
    final rawRules=p.getString('waffra_learned_merchants_v1');
    if(rawRules!=null){
@@ -1120,6 +1123,7 @@ class _HomeScreenState extends State<HomeScreen> {
    }
   }
   if(!mounted)return;setState(()=>ready=true);await applyRecurring();
+  if(recurringRemindersEnabled)unawaited(syncRecurringReminders());
   if(trashBefore!=deletedCategories.length)await persist();
   if(!(p.getBool('waffra_in_app_tour_seen_v1')??false)&&mounted){
    WidgetsBinding.instance.addPostFrameCallback((_){
@@ -1140,6 +1144,41 @@ class _HomeScreenState extends State<HomeScreen> {
    p.setString('waffra_learned_merchants_v1',jsonEncode(learnedMerchantCategories))
   ]);
  }
+
+ Future<void> syncRecurringReminders()async {
+  if(!recurringRemindersEnabled)return;
+  try {
+   await WaffraReminders.schedule(
+    recurring.where((r)=>r.active).map((r)=>
+     WaffraReminder(id:r.id,title:r.title,day:r.day)).toList(),
+    english:waffraIsEnglish);
+  }catch(e){debugPrint('Reminder scheduling failed: $e');}
+ }
+ Future<void> toggleRecurringReminders(bool enabled)async {
+  if(enabled){
+   try {
+    final granted=await WaffraReminders.requestPermission();
+    if(!granted){
+     if(mounted)snack(context,waffraIsEnglish?
+      'Allow notifications in Android settings to enable reminders.':
+      'يرجى السماح بالإشعارات في إعدادات أندرويد لتفعيل التذكيرات.');
+     return;
+    }
+   }catch(e){
+    if(mounted)snack(context,waffraIsEnglish?'Could not activate reminders.':'تعذر تفعيل التذكيرات.');
+    return;
+   }
+  }
+  final prefs=await SharedPreferences.getInstance();
+  await prefs.setBool('waffra_recurring_reminders_enabled_v1',enabled);
+  if(!mounted)return;
+  setState(()=>recurringRemindersEnabled=enabled);
+  try {
+   if(enabled)await syncRecurringReminders();
+   else await WaffraReminders.clear();
+  }catch(e){debugPrint('Reminder toggle failed: $e');}
+ }
+
  Future<void> applyRecurring()async {
   final now=DateTime.now();bool changed=false;
   for(final r in recurring){
@@ -3233,6 +3272,7 @@ Future<void> bulkSmsSheet()async {
   disposeLater([title,amount,day]);
   if(r!=null&&mounted){
    setState(()=>recurring.add(r));await persist();await applyRecurring();
+   await syncRecurringReminders();
   }
  }
  DateTime nextRecurringDue(RecurringBill r) {
@@ -3258,7 +3298,19 @@ Future<void> bulkSmsSheet()async {
    WaffraText(waffraIsEnglish?'Due monthly transactions are recorded once when you open Waffra.':
     'نسجّل العملية المستحقة مرة واحدة لكل شهر عند فتح التطبيق.',
     style:const TextStyle(fontSize:13)),
-   const SizedBox(height:13),
+   const SizedBox(height:9),
+   SwitchListTile.adaptive(
+    contentPadding:const EdgeInsets.symmetric(horizontal:5),
+    title:WaffraText(waffraIsEnglish?'Remind me before due dates':'ذكرني قبل مواعيد الاستحقاق'),
+    subtitle:WaffraText(waffraIsEnglish?
+     'Optional Android alerts one day early at 9 AM (Riyadh time).':
+     'إشعارات أندرويد اختيارية قبل الموعد بيوم الساعة 9 صباحًا بتوقيت الرياض.',
+     style:const TextStyle(fontSize:12)),
+    value:recurringRemindersEnabled,
+    secondary:const Icon(Icons.notifications_active_outlined,color:emerald),
+    onChanged:toggleRecurringReminders,
+   ),
+   const SizedBox(height:9),
    if(recurring.isNotEmpty)...[
     Row(children:[
      Expanded(child:_summaryBox(waffraIsEnglish?'Transactions':'عدد العمليات',
@@ -3314,13 +3366,14 @@ Future<void> bulkSmsSheet()async {
        setState(()=>recurring[index]=r.copy(active:enabled));
        await persist();
        if(enabled)await applyRecurring();
+       await syncRecurringReminders();
       }),
       PopupMenuButton<String>(onSelected:(v)async {
        if(v!='delete')return;
        final ok=await confirmDeletion(waffraIsEnglish?'Delete recurring transaction?':'حذف العملية المتكررة',
         waffraIsEnglish?'The recurring schedule cannot be recovered. Previous transactions remain.':
          'هل تريد حذف جدولة العملية نهائيًا؟ ستبقى العمليات السابقة محفوظة ولا يمكن استعادة الجدولة.');
-       if(ok==true&&mounted){setState(()=>recurring.removeWhere((e)=>e.id==r.id));await persist();}
+       if(ok==true&&mounted){setState(()=>recurring.removeWhere((e)=>e.id==r.id));await persist();await syncRecurringReminders();}
       },itemBuilder:(_)=>[
        PopupMenuItem(value:'delete',child:WaffraText(waffraIsEnglish?'Delete':'حذف'))]),
      ])));
@@ -3422,6 +3475,7 @@ Future<void> bulkSmsSheet()async {
        learnedMerchantCategories..clear()..addAll(restoredRules);
       });
       await persist();
+      await syncRecurringReminders();
       if(ctx.mounted)Navigator.pop(ctx);
       if(mounted)snack(context,'تمت استعادة البيانات بنجاح');
      }catch(e){
