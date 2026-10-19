@@ -12,6 +12,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -751,7 +752,7 @@ class _LoginScreenState extends State<LoginScreen> {
   if(socialBusy)return;
   setState(()=>socialBusy=true);
   try {
-   await widget.onSave(Person(name:'',email:'',phone:'',provider:'Local $selected demo',gender:'غير محدد',avatar:'person',birthday:DateTime(2000)));
+   await widget.onSave(Person(name:'',email:'',phone:'',provider:'Local $selected demo',gender:'',avatar:'person',birthday:DateTime(2000)));
    if(!mounted)return;
    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(waffraIsEnglish?'Local demo profile opened — not authenticated with $selected':'تم الدخول للملف المحلي التجريبي بنجاح — لم تتم المصادقة مع $selected')));
   }finally{if(mounted)setState(()=>socialBusy=false);}
@@ -2214,7 +2215,7 @@ Future<void> bulkSmsSheet()async {
         subtitle:WaffraText('${e.category} • ${dayText(e.date)}',style:const TextStyle(fontSize:12)),
         trailing:WaffraText(cash(e.amount),
          style:TextStyle(fontWeight:FontWeight.bold,color:income?emerald:Colors.deepOrange)));
-      }))),
+      })),
     ])));
  }
  Widget homeSummaryCard(String label,double value,IconData symbol,Color color,Color tint)=>
@@ -2606,7 +2607,7 @@ Future<void> bulkSmsSheet()async {
    for(var j=0;j<recurring.length;j++){
     final r=recurring[j];
     if(r.category==c.name&&r.income==c.income){
-     recurring[j]=RecurringBill(id:r.id,title:r.title,category:v.name,amount:r.amount,income:r.income,day:r.day);
+     recurring[j]=RecurringBill(id:r.id,title:r.title,category:v.name,amount:r.amount,income:r.income,day:r.day,active:r.active);
     }
    }
   });
@@ -2959,7 +2960,7 @@ Future<void> bulkSmsSheet()async {
         WaffraText('${(pct*100).round()}%',style:const TextStyle(fontWeight:FontWeight.bold,fontSize:12))])),
        const SizedBox(height:7),
        WaffraText(waffraIsEnglish?'Progress':'الإنجاز',style:const TextStyle(fontSize:11)),
-      ])))),
+      ]))),
     ]),
     const SizedBox(height:14),
    ],
@@ -3020,7 +3021,7 @@ Future<void> bulkSmsSheet()async {
       ]),
       if(g.saved>=g.target)WaffraText(waffraIsEnglish?'Goal achieved!':'🎉 تم تحقيق الهدف!',
        style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
-     ]))),
+     ])),
     );
    }),
    if(goals.isEmpty)Padding(padding:const EdgeInsets.only(top:35,bottom:18),
@@ -3182,7 +3183,7 @@ Future<void> bulkSmsSheet()async {
        if(ok==true&&mounted){setState(()=>recurring.removeWhere((e)=>e.id==r.id));await persist();}
       },itemBuilder:(_)=>[
        PopupMenuItem(value:'delete',child:WaffraText(waffraIsEnglish?'Delete':'حذف'))]),
-     ]))));
+     ])));
    }),
    if(recurring.isEmpty)Padding(padding:const EdgeInsets.only(top:34),
     child:Column(children:[
