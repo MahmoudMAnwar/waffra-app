@@ -354,8 +354,10 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   if(mounted)setState(()=>language=next);
  }
  Future<void> theme()async {
-  final v=!dark,p=await SharedPreferences.getInstance();
-  await p.setBool('waffra_dark_mode',v);if(mounted)setState(()=>dark=v);
+  final v=!dark;
+  if(mounted)setState(()=>dark=v); // Change appearance immediately, persist asynchronously.
+  final p=await SharedPreferences.getInstance();
+  await p.setBool('waffra_dark_mode',v);
  }
  @override Widget build(BuildContext context)=>MaterialApp(
   debugShowCheckedModeBanner:false,title:'وفرة | Waffra',locale:Locale(language,language=='ar'?'SA':'US'),
@@ -371,8 +373,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     child:AnimatedSwitcher(duration:const Duration(milliseconds:240),switchInCurve:Curves.easeOutCubic,
      transitionBuilder:(w,a)=>FadeTransition(opacity:a,child:SlideTransition(position:Tween<Offset>(begin:const Offset(0.11,0),end:Offset.zero).animate(a),child:w)),
      child:KeyedSubtree(key:ValueKey(language),child:child??const SizedBox.shrink())))),
-  theme:ThemeData(useMaterial3:true,colorSchemeSeed:emerald,outlinedButtonTheme:OutlinedButtonThemeData(style:OutlinedButton.styleFrom(side:const BorderSide(color:forest,width:1.2),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18)))),scaffoldBackgroundColor:sand,appBarTheme:const AppBarTheme(backgroundColor:forest,foregroundColor:Colors.white),navigationBarTheme:NavigationBarThemeData(backgroundColor:forest,labelTextStyle:WidgetStateProperty.all(const TextStyle(color:Colors.white,fontSize:11)),iconTheme:WidgetStateProperty.resolveWith((states)=>IconThemeData(color:states.contains(WidgetState.selected)?forest:Colors.white,size:27))),floatingActionButtonTheme:const FloatingActionButtonThemeData(backgroundColor:forest,foregroundColor:Colors.white),fontFamily:'Tajawal',textTheme:ThemeData.light().textTheme.apply(fontFamily:'Tajawal'),primaryTextTheme:ThemeData.light().primaryTextTheme.apply(fontFamily:'Tajawal')),
-  darkTheme:ThemeData(useMaterial3:true,brightness:Brightness.dark,colorSchemeSeed:emerald,outlinedButtonTheme:OutlinedButtonThemeData(style:OutlinedButton.styleFrom(foregroundColor:Colors.white,side:const BorderSide(color:Color(0xFF77BBA2),width:1.2),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18)))),appBarTheme:const AppBarTheme(backgroundColor:forest,foregroundColor:Colors.white),navigationBarTheme:NavigationBarThemeData(backgroundColor:forest,labelTextStyle:WidgetStateProperty.all(const TextStyle(color:Colors.white,fontSize:11)),iconTheme:WidgetStateProperty.all(const IconThemeData(color:Colors.white))),floatingActionButtonTheme:const FloatingActionButtonThemeData(backgroundColor:forest,foregroundColor:Colors.white),fontFamily:'Tajawal',textTheme:ThemeData.dark().textTheme.apply(fontFamily:'Tajawal'),primaryTextTheme:ThemeData.dark().primaryTextTheme.apply(fontFamily:'Tajawal')),
+  theme:ThemeData(useMaterial3:true,colorSchemeSeed:emerald,outlinedButtonTheme:OutlinedButtonThemeData(style:OutlinedButton.styleFrom(side:const BorderSide(color:forest,width:1.2),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18)))),filledButtonTheme:FilledButtonThemeData(style:FilledButton.styleFrom(shape:RoundedRectangleBorder(side:const BorderSide(color:forest,width:1.0),borderRadius:BorderRadius.circular(17)))),textButtonTheme:TextButtonThemeData(style:TextButton.styleFrom(shape:RoundedRectangleBorder(side:const BorderSide(color:Color(0x44064D3B)),borderRadius:BorderRadius.circular(14)))),inputDecorationTheme:InputDecorationTheme(filled:true,fillColor:const Color(0xFFF7FBF8),border:OutlineInputBorder(borderRadius:BorderRadius.circular(13)),labelStyle:const TextStyle(color:forest),hintStyle:const TextStyle(color:Color(0xFF63766A))),scaffoldBackgroundColor:sand,appBarTheme:const AppBarTheme(backgroundColor:forest,foregroundColor:Colors.white),navigationBarTheme:NavigationBarThemeData(backgroundColor:forest,labelTextStyle:WidgetStateProperty.all(const TextStyle(color:Colors.white,fontSize:11)),iconTheme:WidgetStateProperty.resolveWith((states)=>IconThemeData(color:states.contains(WidgetState.selected)?forest:Colors.white,size:27))),floatingActionButtonTheme:const FloatingActionButtonThemeData(backgroundColor:forest,foregroundColor:Colors.white),fontFamily:'Tajawal',textTheme:ThemeData.light().textTheme.apply(fontFamily:'Tajawal'),primaryTextTheme:ThemeData.light().primaryTextTheme.apply(fontFamily:'Tajawal')),
+  darkTheme:ThemeData(useMaterial3:true,brightness:Brightness.dark,colorSchemeSeed:emerald,outlinedButtonTheme:OutlinedButtonThemeData(style:OutlinedButton.styleFrom(foregroundColor:Colors.white,side:const BorderSide(color:Color(0xFF77BBA2),width:1.2),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18)))),filledButtonTheme:FilledButtonThemeData(style:FilledButton.styleFrom(shape:RoundedRectangleBorder(side:const BorderSide(color:Color(0xFF77BBA2)),borderRadius:BorderRadius.circular(17)))),textButtonTheme:TextButtonThemeData(style:TextButton.styleFrom(foregroundColor:Colors.white,shape:RoundedRectangleBorder(side:const BorderSide(color:Color(0xFF61937E)),borderRadius:BorderRadius.circular(14)))),inputDecorationTheme:InputDecorationTheme(filled:true,fillColor:const Color(0xFF1E3730),border:OutlineInputBorder(borderRadius:BorderRadius.circular(13)),labelStyle:const TextStyle(color:Color(0xFFDEEDE5)),hintStyle:const TextStyle(color:Color(0xFFBBD2C5))),appBarTheme:const AppBarTheme(backgroundColor:forest,foregroundColor:Colors.white),navigationBarTheme:NavigationBarThemeData(backgroundColor:forest,labelTextStyle:WidgetStateProperty.all(const TextStyle(color:Colors.white,fontSize:11)),iconTheme:WidgetStateProperty.all(const IconThemeData(color:Colors.white))),floatingActionButtonTheme:const FloatingActionButtonThemeData(backgroundColor:forest,foregroundColor:Colors.white),fontFamily:'Tajawal',textTheme:ThemeData.dark().textTheme.apply(fontFamily:'Tajawal'),primaryTextTheme:ThemeData.dark().primaryTextTheme.apply(fontFamily:'Tajawal')),
   themeMode:dark?ThemeMode.dark:ThemeMode.light,
   themeAnimationDuration:Duration.zero,
   themeAnimationCurve:Curves.easeInOutCubic,
@@ -1996,8 +1998,8 @@ Future<void> bulkSmsSheet()async {
    ]),
    trailing:Row(mainAxisSize:MainAxisSize.min,children:[
     Column(mainAxisSize:MainAxisSize.min,children:[
-     Text('${e.income?'+':'-'}${cash(e.amount)}',style:TextStyle(fontFamily:'Tajawal',fontSize:18,fontWeight:FontWeight.w800,color:e.income?emerald:null)),
-     WaffraText(waffraIsEnglish?'SAR':'ريال',style:TextStyle(fontSize:13,fontWeight:FontWeight.bold,color:e.income?emerald:null)),
+     Text('${e.income?'+':'-'}${cash(e.amount)}',style:TextStyle(fontFamily:'Tajawal',fontSize:18,fontWeight:FontWeight.w800,color:e.income?waffraIncomeTone(context):null)),
+     WaffraText(waffraIsEnglish?'SAR':'ريال',style:TextStyle(fontSize:13,fontWeight:FontWeight.bold,color:e.income?waffraIncomeTone(context):null)),
     ]),
     PopupMenuButton<String>(onSelected:(v){
      if(v=='edit')entrySheet(initial:e);else deleteEntry(e);
@@ -2459,10 +2461,10 @@ Future<void> bulkSmsSheet()async {
         crossAxisAlignment:CrossAxisAlignment.stretch,children:[
          Row(children:[
           homeSummaryCard(waffraIsEnglish?'Income':'الدخل',
-           inc,Icons.south_west,emerald,const Color(0xFFEFF8F3)),
+           inc,Icons.south_west,waffraIncomeTone(context),const Color(0xFFB2D5C2)),
           const SizedBox(width:9),
           homeSummaryCard(waffraIsEnglish?'Expenses':'المصروفات',
-           exp,Icons.north_east,Colors.deepOrange,const Color(0xFFFDF4F2)),
+           exp,Icons.north_east,Colors.deepOrange,const Color(0xFFF0F7F2)),
          ]),
          const SizedBox(height:12),
          monthlyBudgetCard(),
@@ -2744,7 +2746,7 @@ Future<void> bulkSmsSheet()async {
       const SizedBox(height:16),
       Row(children:[
        Expanded(child:WaffraText(waffraIsEnglish?'Income (90 days)':'الدخل خلال 90 يوم')),
-       WaffraText(cash(income),style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
+       WaffraText(cash(income),style:TextStyle(color:waffraIncomeTone(context),fontWeight:FontWeight.bold)),
       ]),
       const SizedBox(height:8),
       Row(children:[
@@ -2808,7 +2810,7 @@ Future<void> bulkSmsSheet()async {
    const SizedBox(height:12),
    nextMonthForecast(),
    const SizedBox(height:12),
-   Row(children:[stat('الدخل',inc,Icons.south_west,emerald),stat('المصروفات',exp,Icons.north_east,Colors.deepOrange)]),
+   Row(children:[stat('الدخل',inc,Icons.south_west,waffraIncomeTone(context)),stat('المصروفات',exp,Icons.north_east,Colors.deepOrange)]),
    Card(child:Padding(padding:const EdgeInsets.all(15),child:Column(children:[
     const WaffraText('الدخل مقابل المصروفات',style:TextStyle(fontWeight:FontWeight.bold)),
     const SizedBox(height:16),FinanceChart(points:points),
@@ -2829,11 +2831,11 @@ Future<void> bulkSmsSheet()async {
      const SizedBox(height:13),
      Row(children:[
       Expanded(child:WaffraText(waffraIsEnglish?'Income':'الدخل')),
-      WaffraText(cash(inc),style:const TextStyle(fontWeight:FontWeight.bold,color:emerald)),
+      WaffraText(cash(inc),style:TextStyle(fontWeight:FontWeight.bold,color:waffraIncomeTone(context))),
      ]),
      const SizedBox(height:6),
      LinearProgressIndicator(value:(inc/max(1.0,max(inc,exp))).clamp(0.0,1.0),
-      minHeight:15,borderRadius:BorderRadius.circular(8),color:emerald),
+      minHeight:15,borderRadius:BorderRadius.circular(8),color:waffraIncomeTone(context)),
      const SizedBox(height:14),
      Row(children:[
       Expanded(child:WaffraText(waffraIsEnglish?'Expenses':'المصروفات')),
@@ -4284,7 +4286,7 @@ class FinanceChart extends StatelessWidget {
   final chartWidth=max(MediaQuery.sizeOf(context).width-95.0,points.length*70.0);
   return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
    Row(mainAxisAlignment:MainAxisAlignment.center,children:[
-    const Icon(Icons.square,color:emerald,size:15),
+    Icon(Icons.square,color:waffraIncomeTone(context),size:15),
     WaffraText(waffraIsEnglish?' Income  ':' دخل  '),
     const Icon(Icons.square,color:Colors.deepOrange,size:15),
     WaffraText(waffraIsEnglish?' Expenses':' مصروفات'),
@@ -4323,7 +4325,7 @@ class FinanceChart extends StatelessWidget {
      ),
      barGroups:List.generate(points.length,(i)=>BarChartGroupData(x:i,
       barsSpace:3,barRods:[
-       BarChartRodData(toY:points[i].income,color:emerald,width:13,
+       BarChartRodData(toY:points[i].income,color:waffraIncomeTone(context),width:13,
         borderRadius:const BorderRadius.vertical(top:Radius.circular(5))),
        BarChartRodData(toY:points[i].expense,color:Colors.deepOrange,width:13,
         borderRadius:const BorderRadius.vertical(top:Radius.circular(5))),
