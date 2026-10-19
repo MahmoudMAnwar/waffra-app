@@ -8,6 +8,12 @@ on:
       - main
   workflow_dispatch:
 
+# Only the newest pushed revision needs an APK; avoid competing Gradle
+# downloads and Maven 429 rate limits across superseded builds.
+concurrency:
+  group: waffra-android-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
