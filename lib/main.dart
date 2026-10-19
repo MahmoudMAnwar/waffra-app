@@ -1138,6 +1138,7 @@ class _HomeScreenState extends State<HomeScreen> {
  DateTimeRange? transactionsDateRange;
  double? minTransactionAmount,maxTransactionAmount;
  int tab=0,year=DateTime.now().year,month=DateTime.now().month;
+ bool goalsOpened=false;
  String search='',typeFilter='الكل',categoryFilter='الكل',period='شهري';
  String categorySearch='',categoryDisplay='all',goalDisplay='all',recurringDisplay='all';
   String? forecastCategory;
@@ -1152,7 +1153,7 @@ class _HomeScreenState extends State<HomeScreen> {
  bool addFabExpanded=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
  @override void initState(){super.initState();waffraReturnHome.addListener(_returnToHome);load();}
- void _returnToHome(){if(mounted)setState((){tab=0;addFabExpanded=false;});}
+ void _returnToHome(){if(mounted)setState((){tab=0;goalsOpened=false;addFabExpanded=false;});}
  @override void dispose(){waffraReturnHome.removeListener(_returnToHome);super.dispose();}
  Future<void> load()async {
   final p=await SharedPreferences.getInstance();
@@ -2463,8 +2464,11 @@ Future<void> bulkSmsSheet()async {
      slivers:[
       SliverToBoxAdapter(child:Padding(
        padding:const EdgeInsets.fromLTRB(15,12,15,10),
-       child:WaffraText(greeting,
-        style:Theme.of(context).textTheme.titleLarge))),
+       child:Row(children:[Expanded(child:WaffraText(greeting,
+        style:Theme.of(context).textTheme.titleLarge)),
+        IconButton.filledTonal(onPressed:()=>setState(()=>goalsOpened=true),
+         tooltip:waffraIsEnglish?'Savings goals':'أهداف الادخار',
+         icon:const Icon(Icons.flag_outlined,color:emerald))]))),
       // Not pinned: the shrinking balance scrolls away without covering data.
       SliverPersistentHeader(
        pinned:false,
@@ -2801,7 +2805,7 @@ Future<void> bulkSmsSheet()async {
   for(final e in data.where((e)=>!e.income)){breakdown[e.category]=(breakdown[e.category]??0)+e.amount;}
   return ListView(padding:const EdgeInsets.all(16),children:[
    Row(children:[
-    Expanded(child:KeyedSubtree(key:_tourKeys[5],child:WaffraText(waffraIsEnglish?'Your financial analytics':'تحليلاتك المالية',style:Theme.of(context).textTheme.titleLarge))),
+    Expanded(child:WaffraText(waffraIsEnglish?'Your financial analytics':'تحليلاتك المالية',style:Theme.of(context).textTheme.titleLarge)),
     IconButton.filledTonal(onPressed:showAiAnalysis,tooltip:waffraIsEnglish?'AI financial analysis':'تحليل مالي ذكي',icon:const Icon(Icons.auto_awesome_rounded,color:emerald,size:27)),
     const SizedBox(width:3),WaffraText('AI',style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
    ]),
@@ -2988,7 +2992,7 @@ Future<void> bulkSmsSheet()async {
       });
      },child:WaffraText(waffraIsEnglish?'View transactions':'عرض المعاملات المرتبطة'))
      else TextButton(onPressed:(){
-      Navigator.pop(ctx);setState((){tab=4;addFabExpanded=false;});
+      Navigator.pop(ctx);setState((){tab=3;goalsOpened=false;addFabExpanded=false;});
      },child:WaffraText(waffraIsEnglish?'View recurring':'عرض العمليات المتكررة')),
     ]));
    return;
@@ -3424,8 +3428,8 @@ Future<void> bulkSmsSheet()async {
   final filtered=goals.where((g)=>goalDisplay=='all'||
    (goalDisplay=='done'?g.saved>=g.target:g.saved<g.target)).toList();
   return ListView(padding:const EdgeInsets.fromLTRB(16,16,16,24),children:[
-   KeyedSubtree(key:_tourKeys[3],child:WaffraText(waffraIsEnglish?'Savings goals':'أهداف الادخار',
-    style:Theme.of(context).textTheme.titleLarge)),
+   WaffraText(waffraIsEnglish?'Savings goals':'أهداف الادخار',
+    style:Theme.of(context).textTheme.titleLarge),
    const SizedBox(height:6),
    WaffraText(waffraIsEnglish?'Turn your dreams into goals, one step at a time':
     'حوّل أحلامك إلى خطط واقعية وابدأ رحلتك نحو تحقيقها.',
@@ -4074,6 +4078,9 @@ Future<void> bulkSmsSheet()async {
       value:allowed,onChanged:(v)async{await setWaffraScreenshotsAllowed(v);if(mounted)setState((){});}))
    ]),
    _accountSection(waffraIsEnglish?'Data & utilities':'البيانات والأدوات',Icons.storage_outlined,[
+    _accountTile(waffraIsEnglish?'Savings goals':'أهداف الادخار',
+     waffraIsEnglish?'Create and follow savings goals':'أضف أهدافك وتابع المدخرات',
+     Icons.flag_outlined,onTap:()=>setState((){tab=0;goalsOpened=true;})),
     _accountTile(waffraIsEnglish?'Backup and restore':'النسخ الاحتياطي والاستعادة',
      waffraIsEnglish?'Keep your local data safe':'احفظ بياناتك واستعدها',
      Icons.backup_outlined,onTap:backupDialog),
@@ -4128,16 +4135,28 @@ Future<void> bulkSmsSheet()async {
     ]))));
  Widget currentTab(){
   switch(tab){
-   case 0:return dashboard();
-   case 1:return analytics();
-   case 2:return categoriesPage();
-   case 3:return goalsPage();
-   case 4:return recurringPage();
+   case 0:return goalsOpened?goalsPage():dashboard();
+   case 1:return categoriesPage();
+   case 2:return dashboard(); // Analysis opens in a modal, not a tab page.
+   case 3:return recurringPage();
    default:return profilePage();
   }
  }
+ Future<void> selectFooter(int target)async {
+  if(target==2){
+   final previous=tab;
+   setState((){tab=2;goalsOpened=false;addFabExpanded=false;});
+   try{await showAiAnalysis();}finally{
+    if(mounted&&tab==2)setState(()=>tab=previous);
+   }
+   return;
+  }
+  if(mounted)setState((){tab=target;goalsOpened=false;addFabExpanded=false;});
+ }
  @override Widget build(BuildContext context)=>Scaffold(
   appBar:AppBar(
+   leading:goalsOpened?IconButton(tooltip:waffraIsEnglish?'Back to home':'العودة للرئيسية',
+    icon:const Icon(Icons.arrow_back),onPressed:()=>setState(()=>goalsOpened=false)):null,
    titleSpacing:10,
    title:FittedBox(fit:BoxFit.scaleDown,
     alignment:AlignmentDirectional.centerStart,
@@ -4175,7 +4194,7 @@ Future<void> bulkSmsSheet()async {
     SizedBox(width:48,height:kToolbarHeight,
      child:Center(child:InkWell(
       onTap:()=>setState((){
-       addFabExpanded=false;tab=5;
+       addFabExpanded=false;goalsOpened=false;tab=4;
       }),
       borderRadius:BorderRadius.circular(30),
       child:waffraAvatar(widget.profile.gender,widget.profile.avatar,radius:19)))),
@@ -4193,7 +4212,7 @@ Future<void> bulkSmsSheet()async {
   // Floating plus starts collapsed at the physical bottom-left in both
   // languages. Expanded menu has two REAL actions, never a dummy label.
   floatingActionButtonLocation:const WaffraPhysicalLeftFab(),
-  floatingActionButton:!ready||(tab!=0&&tab!=2)?null:Directionality(
+  floatingActionButton:!ready||goalsOpened||(tab!=0&&tab!=1)?null:Directionality(
    textDirection:TextDirection.ltr,child:Column(
    mainAxisSize:MainAxisSize.min,
    crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -4247,16 +4266,15 @@ Future<void> bulkSmsSheet()async {
    ])),
   bottomNavigationBar:NavigationBar(height:74,indicatorColor:const Color(0xFFCFE9D9),
    labelBehavior:NavigationDestinationLabelBehavior.alwaysShow,
-   selectedIndex:tab,onDestinationSelected:(v)=>setState((){
-    tab=v;addFabExpanded=false;
-   }),
+   selectedIndex:tab,onDestinationSelected:selectFooter,
    destinations:[
     NavigationDestination(icon:const Icon(Icons.home_outlined),selectedIcon:const Icon(Icons.home),label:waffraTr('الرئيسية')),
-    NavigationDestination(icon:const Icon(Icons.bar_chart_outlined),label:waffraTr('التحليلات')),
-    NavigationDestination(icon:const Icon(Icons.category_outlined),label:waffraTr('الأقسام')),
-    NavigationDestination(icon:const Icon(Icons.account_balance_wallet_outlined),label:waffraTr('الادخار')),
+    NavigationDestination(icon:const Icon(Icons.category_outlined),selectedIcon:const Icon(Icons.category),label:waffraTr('الأقسام')),
+    NavigationDestination(icon:KeyedSubtree(key:_tourKeys[3],child:const Icon(Icons.auto_awesome_rounded)),
+     selectedIcon:const Icon(Icons.auto_awesome_rounded,color:emerald),
+     label:waffraIsEnglish?'Analysis':'التحليل',tooltip:waffraIsEnglish?'Analyze income and expenses':'تحليل الدخل والمصروفات'),
     NavigationDestination(icon:const Icon(Icons.repeat),label:waffraTr('المتكررة')),
-    NavigationDestination(icon:const Icon(Icons.person_outline),label:waffraTr('حسابي')),
+    NavigationDestination(icon:KeyedSubtree(key:_tourKeys[5],child:const Icon(Icons.person_outline)),label:waffraTr('حسابي')),
    ]));
 }
 /// Positions the expandable plus menu physically on the left in RTL
