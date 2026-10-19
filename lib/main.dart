@@ -1374,7 +1374,7 @@ Future<void> bulkSmsSheet()async {
         trailing:IconButton(icon:const Icon(Icons.edit_outlined),tooltip:waffraIsEnglish?'Review manually':'مراجعة يدويًا',onPressed:(){
          Navigator.pop(ctx);
          entrySheet(sms:true,initialSms:item.value);
-        }))),
+        })))),
       ],
       if(parsed&&statusMessage.isEmpty)...[
        const SizedBox(height:10),
