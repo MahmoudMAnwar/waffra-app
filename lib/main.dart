@@ -3352,66 +3352,68 @@ Future<void> bulkSmsSheet()async {
  }
  void advanceTour(){
   if(tourStep>=tourTabs.length-1){completeTour();return;}
-  setState((){
-   tourStep++;
-   tab=tourTabs[tourStep];
-   addFabExpanded=false;
-  });
+  setState((){tourStep++;tab=tourTabs[tourStep];addFabExpanded=false;});
  }
- Widget tourOverlay()=>LayoutBuilder(builder:(context,area){
-  const titlesAr=['الرصيد الحالي','إضافة المعاملات','الأقسام','أهداف الادخار','العمليات المتكررة','التقارير والتحليلات'];
-  const descAr=[
-   'اعرف رصيدك ودخلك ومصروفاتك من الصفحة الرئيسية.',
-   'اضغط على + لإضافة عملية يدوية أو لصق رسائل بنكية.',
-   'نظّم معاملاتك في أقسام الدخل والمصروفات وأنشئ أقسامًا جديدة.',
-   'أنشئ أهداف ادخار وتابع مدخراتك والمبلغ المتبقي.',
-   'سجّل المعاملات الشهرية المتكررة وتابعها بسهولة.',
-   'راجع تقاريرك ورسومك البيانية لمعرفة أين تذهب أموالك.',
-  ];
-  const titlesEn=['Current balance','Add transactions','Categories','Savings goals','Recurring items','Reports & analytics'];
-  const descEn=[
-   'See your balance, income and expenses on your home page.',
-   'Use + to add a manual transaction or paste bank messages.',
-   'Organize your income and expenses into categories.',
-   'Set savings goals and see how much remains to reach them.',
-   'Manage recurring monthly income and expenses.',
-   'Explore your reports and charts to understand spending.',
-  ];
-  final title=waffraIsEnglish?titlesEn[tourStep]:titlesAr[tourStep];
-  final desc=waffraIsEnglish?descEn[tourStep]:descAr[tourStep];
-  final w=area.maxWidth,h=area.maxHeight;
-  final focus=tourStep==0?Rect.fromLTWH(12,48,w-24,min(170.0,h*.33))
-   :tourStep==1?Rect.fromLTWH(10,max(0.0,h-100),100,84)
-   :Rect.fromLTWH(12,12,w-24,min(165.0,h*.3));
+ void previousTour(){
+  if(tourStep<=0)return;
+  setState((){tourStep--;tab=tourTabs[tourStep];addFabExpanded=false;});
+ }
+ Widget tourOverlay()=>LayoutBuilder(builder:(overlayCtx,area){
+  const ar=['الرصيد الحالي','إضافة المعاملات','الأقسام','أهداف الادخار','العمليات المتكررة','التحليلات'];
+  const en=['Balance','Add transactions','Categories','Savings goals','Recurring items','Analytics'];
+  const arHelp=['اعرف رصيدك ودخلك ومصروفاتك.','من زر + أضف عملية أو رسالة بنكية.','نظّم الأقسام وميزانياتها.','تابع أهدافك والمدخر والمتبقي.','نظّم التكرارات ومواعيد الاستحقاق.','تابع التقارير والرسوم البيانية.'];
+  const enHelp=['Your balance, income and expenses.','Use + to add a transaction or SMS.','Manage your categories and budgets.','Track goals and remaining savings.','See and pause recurring transactions.','Explore your charts and reports.'];
+  final element=_tourKeys[tourStep].currentContext?.findRenderObject();
+  final layer=overlayCtx.findRenderObject();
+  Rect target=Rect.fromLTWH(16,12,area.maxWidth-32,65);
+  if(element is RenderBox&&layer is RenderBox&&element.hasSize){
+   final offset=element.localToGlobal(Offset.zero)-layer.localToGlobal(Offset.zero);
+   target=Rect.fromLTWH(offset.dx,offset.dy,element.size.width,element.size.height).inflate(5);
+   target=Rect.fromLTRB(
+    target.left.clamp(4.0,area.maxWidth-4).toDouble(),
+    target.top.clamp(4.0,area.maxHeight-4).toDouble(),
+    target.right.clamp(4.0,area.maxWidth-4).toDouble(),
+    target.bottom.clamp(4.0,area.maxHeight-4).toDouble());
+  }
+  final width=min(300.0,area.maxWidth-24);
+  const popupHeight=151.0;
+  final below=target.bottom+popupHeight+14<area.maxHeight;
+  final top=(below?target.bottom+10:target.top-popupHeight-10)
+   .clamp(7.0,max(7.0,area.maxHeight-popupHeight-7)).toDouble();
+  final left=(target.center.dx-width/2).clamp(12.0,max(12.0,area.maxWidth-width-12)).toDouble();
   return Stack(children:[
-   Positioned.fill(child:CustomPaint(painter:WaffraTourShade(focus))),
-   Align(alignment:Alignment.bottomCenter,child:Padding(
-    padding:const EdgeInsets.fromLTRB(16,12,16,95),
-    child:Material(
-     borderRadius:BorderRadius.circular(23),elevation:14,
-     color:Theme.of(context).cardColor,
-     child:Padding(padding:const EdgeInsets.all(17),child:Column(
+   Positioned.fill(child:TweenAnimationBuilder<Rect?>(
+    tween:RectTween(end:target),duration:const Duration(milliseconds:300),
+    builder:(ctx,rect,_)=>CustomPaint(painter:WaffraTourShade(rect??target)))),
+   AnimatedPositioned(
+    duration:const Duration(milliseconds:300),
+    curve:Curves.easeOutCubic,top:top,left:left,width:width,
+    child:Material(elevation:12,color:Theme.of(context).cardColor,
+     borderRadius:BorderRadius.circular(18),
+     child:Padding(padding:const EdgeInsets.all(12),child:Column(
       mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
        Row(children:[
-        const Icon(Icons.lightbulb_outline,color:emerald),
-        const SizedBox(width:8),
-        Expanded(child:WaffraText(title,style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold))),
-        WaffraText('${tourStep+1}/${tourTabs.length}',style:const TextStyle(color:emerald)),
+        const Icon(Icons.lightbulb_outline,color:emerald,size:18),
+        const SizedBox(width:5),
+        Expanded(child:WaffraText(waffraIsEnglish?en[tourStep]:ar[tourStep],
+         style:const TextStyle(fontSize:15,fontWeight:FontWeight.bold))),
+        WaffraText('${tourStep+1}/6',style:const TextStyle(color:emerald,fontSize:11)),
        ]),
-       const SizedBox(height:9),
-       WaffraText(desc,style:const TextStyle(fontSize:15)),
-       const SizedBox(height:14),
+       const SizedBox(height:6),
+       WaffraText(waffraIsEnglish?enHelp[tourStep]:arHelp[tourStep],maxLines:2,
+        style:const TextStyle(fontSize:12)),
+       const SizedBox(height:8),
        Row(children:[
-        TextButton(onPressed:completeTour,
-         child:WaffraText(waffraIsEnglish?'Skip':'تخطي')),
+        TextButton(onPressed:completeTour,child:WaffraText(waffraIsEnglish?'Skip':'تخطي')),
         const Spacer(),
+        if(tourStep>0)TextButton(onPressed:previousTour,
+         child:WaffraText(waffraIsEnglish?'Back':'السابق')),
         FilledButton(onPressed:advanceTour,
-         child:WaffraText(tourStep==tourTabs.length-1
-          ?(waffraIsEnglish?'Finish':'إنهاء')
-          :(waffraIsEnglish?'Next':'التالي'))),
+         child:WaffraText(tourStep==5?
+          (waffraIsEnglish?'Finish':'إنهاء'):(waffraIsEnglish?'Next':'التالي'))),
        ]),
       ]))),
-   )),
+   ),
   ]);
  });
  Future<void> changePin()async {
