@@ -3321,7 +3321,7 @@ Future<void> bulkSmsSheet()async {
      const SizedBox(width:3),Icon(Icons.check_rounded,size:16,color:color),
     ]),
    ]),
-  )));
+  ));
  }
  Widget goalsPage(){
   final target=goals.fold<double>(0,(v,g)=>v+g.target);
@@ -4233,7 +4233,6 @@ class FinanceChart extends StatelessWidget {
         borderRadius:const BorderRadius.vertical(top:Radius.circular(5))),
       ])),
     )))),
-   ),
   ]);
  }
 }
