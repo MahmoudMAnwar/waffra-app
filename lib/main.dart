@@ -940,6 +940,7 @@ class _HomeScreenState extends State<HomeScreen> {
  String search='',typeFilter='الكل',categoryFilter='الكل',period='شهري';
  bool ready=false;
  bool addFabExpanded=false;
+ bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
  @override void initState(){super.initState();waffraReturnHome.addListener(_returnToHome);load();}
  void _returnToHome(){if(mounted&&tab!=0)setState(()=>tab=0);}
  @override void dispose(){waffraReturnHome.removeListener(_returnToHome);super.dispose();}
@@ -1913,6 +1914,69 @@ Future<void> bulkSmsSheet()async {
       style:const TextStyle(color:Colors.grey,fontSize:12))),
    ]));
  }
+ Widget homeSummaryCard(String label,double value,IconData symbol,Color color,Color tint)=>
+  Expanded(child:Container(
+   padding:const EdgeInsets.symmetric(horizontal:12,vertical:14),
+   decoration:BoxDecoration(
+    color:Theme.of(context).brightness==Brightness.dark?
+     Theme.of(context).cardColor:tint,
+    borderRadius:BorderRadius.circular(19),
+    border:Border.all(color:color.withValues(alpha:0.10)),
+    boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:0.04),
+     blurRadius:7,offset:const Offset(0,3))]),
+   child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    Row(children:[
+     CircleAvatar(backgroundColor:color.withValues(alpha:0.12),
+      radius:19,child:Icon(symbol,color:color,size:21)),
+     const SizedBox(width:6),
+     Expanded(child:WaffraText(label,textAlign:TextAlign.end,
+      style:const TextStyle(fontSize:15,fontWeight:FontWeight.bold))),
+    ]),
+    const SizedBox(height:9),
+    Align(alignment:AlignmentDirectional.centerEnd,
+     child:FittedBox(fit:BoxFit.scaleDown,
+      child:WaffraCurrencyAmount(value,fontSize:19))),
+   ])));
+ Widget compactTransaction(MoneyEntry entry){
+  final cat=categoryFor(entry.category,entry.income);
+  final valueColor=entry.income?emerald:Colors.deepOrange;
+  return Column(children:[
+   Padding(padding:const EdgeInsets.symmetric(vertical:7),child:Row(children:[
+    CircleAvatar(radius:18,
+     backgroundColor:Color(cat.color).withValues(alpha:0.13),
+     child:Icon(categoryIcon(cat.icon),size:19,color:Color(cat.color))),
+    const SizedBox(width:8),
+    Expanded(child:InkWell(onTap:()=>entrySheet(initial:entry),
+     child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+      WaffraText(entry.title,maxLines:1,
+       style:const TextStyle(fontSize:13,fontWeight:FontWeight.w600)),
+      const SizedBox(height:2),
+      WaffraText(waffraTr(entry.category)+' • '+dayText(entry.date),
+       maxLines:1,style:const TextStyle(fontSize:11,color:Colors.grey)),
+     ]))),
+    const SizedBox(width:5),
+    ConstrainedBox(constraints:const BoxConstraints(maxWidth:119),
+     child:FittedBox(fit:BoxFit.scaleDown,
+      child:WaffraCurrencyAmount(entry.income?entry.amount:-entry.amount,
+       fontSize:15,color:valueColor))),
+    PopupMenuButton<String>(
+     tooltip:waffraIsEnglish?'Transaction options':'خيارات العملية',
+     onSelected:(action){
+      if(action=='edit')entrySheet(initial:entry);
+      if(action=='delete')deleteEntry(entry);
+     },
+     icon:const Icon(Icons.more_vert,size:18),
+     itemBuilder:(ctx)=>[
+      PopupMenuItem(value:'edit',
+       child:WaffraText(waffraIsEnglish?'Edit':'تعديل')),
+      PopupMenuItem(value:'delete',
+       child:WaffraText(waffraIsEnglish?'Delete':'حذف',
+        style:const TextStyle(color:Colors.red))),
+     ]),
+   ])),
+   Divider(height:1,color:forest.withValues(alpha:0.09)),
+  ]);
+ }
  Widget dashboard(){
   final inc=sum(entries,true),exp=sum(entries,false);
   final visible=entries.where((e){
@@ -1927,71 +1991,161 @@ Future<void> bulkSmsSheet()async {
   final filterCats=<String>{'الكل',...entries.where((e)=>typeFilter=='الكل'||
    (typeFilter=='الدخل'&&e.income)||(typeFilter=='المصروفات'&&!e.income)).map((e)=>e.category)}.toList();
   final selected=filterCats.contains(categoryFilter)?categoryFilter:'الكل';
+  final shown=showAllTransactions?visible:visible.take(5).toList();
   return RefreshIndicator(
    onRefresh:()async{
     if(mounted)setState((){});
     await Future<void>.delayed(const Duration(milliseconds:150));
    },
-   child:CustomScrollView(
-    physics:const AlwaysScrollableScrollPhysics(),
-    slivers:[
-     SliverToBoxAdapter(child:Padding(
-      padding:const EdgeInsets.fromLTRB(16,16,16,12),
-      child:WaffraText(greeting,style:Theme.of(context).textTheme.titleLarge))),
-     SliverPersistentHeader(
-      pinned:true,
-      delegate:WaffraBalanceHeader(balance:inc-exp,english:waffraIsEnglish)),
-     SliverPadding(padding:const EdgeInsets.symmetric(horizontal:16),
-      sliver:SliverList(delegate:SliverChildListDelegate([
-   Row(children:[stat('الدخل',inc,Icons.south_west,emerald),stat('المصروفات',exp,Icons.north_east,Colors.deepOrange)]),
-   const SizedBox(height:10),
-   monthlyInsights(),
-   const SizedBox(height:10),
-   OutlinedButton.icon(onPressed:bulkSmsSheet,icon:const Icon(Icons.content_paste),label:const WaffraText('الصق رسالة بنكية')),
-   const SizedBox(height:12),
-   // Full-width title and a separate action row avoid adjacent border overlap.
-   Container(width:double.infinity,
-    padding:const EdgeInsets.symmetric(horizontal:14,vertical:12),
-    decoration:BoxDecoration(
-     border:Border.all(color:forest.withValues(alpha:0.55),width:1.3),
-     borderRadius:BorderRadius.circular(14)),
-    child:WaffraText('عملياتك المالية',
-     style:Theme.of(context).textTheme.titleLarge)),
-   const SizedBox(height:14),
-   Wrap(spacing:12,runSpacing:10,children:[
-    OutlinedButton.icon(onPressed:entries.isEmpty?null:confirmDeleteAllEntries,
-     style:OutlinedButton.styleFrom(
-      side:const BorderSide(color:Colors.red,width:1.4),
-      foregroundColor:Colors.red),
-     icon:const Icon(Icons.delete_outline,color:Colors.red),
-     label:WaffraText(waffraIsEnglish?'Delete all':'حذف كل المعاملات',
-      style:const TextStyle(color:Colors.red))),
-   ]),
-   const SizedBox(height:12),
-   TextField(onChanged:(v)=>setState(()=>search=v),
-    decoration:InputDecoration(labelText:waffraTr('دوّر على عملية'),prefixIcon:Icon(Icons.search),border:OutlineInputBorder())),
-   Align(alignment:AlignmentDirectional.centerStart,
-    child:TextButton.icon(onPressed:editTransactionFilters,
-     icon:Icon(transactionsDateRange!=null||minTransactionAmount!=null||maxTransactionAmount!=null?
-      Icons.filter_alt:Icons.filter_alt_outlined),
-     label:WaffraText(waffraIsEnglish?'Date and amount filters':'فلترة بالتاريخ والمبلغ'))),
-   const SizedBox(height:4),
-   Wrap(spacing:8,children:['الكل','الدخل','المصروفات'].map((x)=>ChoiceChip(
-    label:WaffraText(x),selected:typeFilter==x,
-    onSelected:(_)=>setState((){typeFilter=x;categoryFilter='الكل';}))).toList()),
-   DropdownButtonFormField<String>(key:ValueKey('$typeFilter-$selected'),initialValue:selected,
-    decoration:InputDecoration(labelText:waffraTr('تصفية حسب القسم')),
-    items:filterCats.map((x)=>DropdownMenuItem(value:x,child:WaffraText(x))).toList(),
-    onChanged:(x)=>setState(()=>categoryFilter=x??'الكل')),
-   const SizedBox(height:10),
-   OutlinedButton.icon(onPressed:()=>exportEntriesPdf(visible,'تقرير عمليات وفرة'),
-    icon:const Icon(Icons.picture_as_pdf_outlined),label:const WaffraText('تصدير النتائج إلى PDF')),
-   const SizedBox(height:8),
-   WaffraText('عدد العمليات: ${visible.length}'),
-   if(visible.isEmpty)const Padding(padding:EdgeInsets.all(24),child:Center(child:WaffraText('ما عندك عمليات مطابقة'))),
-   ...visible.map(tile),const SizedBox(height:130),
-  ]))),
-   ]));
+   child:NotificationListener<ScrollStartNotification>(
+    onNotification:(notification){
+     if(addFabExpanded){
+      WidgetsBinding.instance.addPostFrameCallback((_){
+       if(mounted&&addFabExpanded)setState(()=>addFabExpanded=false);
+      });
+     }
+     return false;
+    },
+    child:CustomScrollView(
+     physics:const AlwaysScrollableScrollPhysics(),
+     slivers:[
+      SliverToBoxAdapter(child:Padding(
+       padding:const EdgeInsets.fromLTRB(15,12,15,10),
+       child:WaffraText(greeting,
+        style:Theme.of(context).textTheme.titleLarge))),
+      // Not pinned: the shrinking balance scrolls away without covering data.
+      SliverPersistentHeader(
+       pinned:false,
+       delegate:WaffraBalanceHeader(balance:inc-exp,english:waffraIsEnglish)),
+      SliverPadding(padding:const EdgeInsets.fromLTRB(14,10,14,96),
+       sliver:SliverToBoxAdapter(child:Column(
+        crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+         Row(children:[
+          homeSummaryCard(waffraIsEnglish?'Income':'الدخل',
+           inc,Icons.south_west,emerald,const Color(0xFFEFF8F3)),
+          const SizedBox(width:9),
+          homeSummaryCard(waffraIsEnglish?'Expenses':'المصروفات',
+           exp,Icons.north_east,Colors.deepOrange,const Color(0xFFFDF4F2)),
+         ]),
+         const SizedBox(height:11),
+         OutlinedButton.icon(onPressed:bulkSmsSheet,
+          icon:const Icon(Icons.content_paste),
+          label:WaffraText(waffraIsEnglish?'Paste bank SMS':'الصق رسالة بنكية')),
+         const SizedBox(height:12),
+         monthlyBudgetCard(),
+         const SizedBox(height:12),
+         monthlySummaryCard(),
+         const SizedBox(height:12),
+         Container(
+          padding:const EdgeInsets.all(12),
+          decoration:BoxDecoration(
+           color:Theme.of(context).cardColor,
+           borderRadius:BorderRadius.circular(20),
+           border:Border.all(color:forest.withValues(alpha:0.10))),
+          child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+           Row(children:[
+            const Icon(Icons.receipt_long_outlined,color:emerald),
+            const SizedBox(width:7),
+            Expanded(child:WaffraText(waffraIsEnglish?
+             'Your transactions':'عملياتك المالية',
+             style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold))),
+            TextButton(onPressed:()=>setState((){
+             showAllTransactions=!showAllTransactions;
+             if(showAllTransactions){
+              typeFilter='الكل';categoryFilter='الكل';search='';
+              minTransactionAmount=null;maxTransactionAmount=null;
+              transactionsDateRange=null;
+             }
+            }),child:WaffraText(showAllTransactions?
+             (waffraIsEnglish?'Show less':'عرض أقل'):
+             (waffraIsEnglish?'View all':'عرض الكل'))),
+           ]),
+           Divider(color:forest.withValues(alpha:0.10)),
+           Row(children:[
+            IconButton(
+             tooltip:waffraIsEnglish?'Filter':'فلترة',
+             onPressed:()=>setState(()=>showTransactionFilters=!showTransactionFilters),
+             icon:Icon(showTransactionFilters?
+              Icons.filter_alt:Icons.filter_alt_outlined,color:emerald)),
+            IconButton(
+             tooltip:waffraIsEnglish?'Search':'بحث',
+             onPressed:()=>setState((){
+              showTransactionSearch=!showTransactionSearch;
+              if(!showTransactionSearch)search='';
+             }),icon:const Icon(Icons.search)),
+            if(showTransactionSearch)Expanded(child:TextField(
+             onChanged:(v)=>setState(()=>search=v),
+             decoration:InputDecoration(isDense:true,
+              hintText:waffraIsEnglish?'Search':'ابحث عن عملية',
+              border:const OutlineInputBorder()))),
+            if(!showTransactionSearch)const Spacer(),
+            PopupMenuButton<String>(
+             tooltip:waffraIsEnglish?'More actions':'المزيد من الخيارات',
+             icon:const Icon(Icons.more_vert),
+             onSelected:(action){
+              if(action=='delete-all')confirmDeleteAllEntries();
+              if(action=='pdf')exportEntriesPdf(visible,'تقرير عمليات وفرة');
+             },
+             itemBuilder:(ctx)=>[
+              PopupMenuItem(value:'pdf',child:Row(children:[
+               const Icon(Icons.picture_as_pdf_outlined,color:emerald),
+               const SizedBox(width:8),
+               WaffraText(waffraIsEnglish?'Export PDF':'تصدير PDF'),
+              ])),
+              PopupMenuItem(value:'delete-all',enabled:entries.isNotEmpty,
+               child:Row(children:[
+                const Icon(Icons.delete_outline,color:Colors.red),
+                const SizedBox(width:8),
+                WaffraText(waffraIsEnglish?'Delete all transactions':'حذف كل المعاملات',
+                 style:const TextStyle(color:Colors.red)),
+               ])),
+             ],
+            ),
+           ]),
+           if(showTransactionFilters)...[
+            const SizedBox(height:8),
+            Wrap(spacing:6,runSpacing:6,
+             children:['الكل','الدخل','المصروفات'].map((choice)=>ChoiceChip(
+              selected:typeFilter==choice,
+              label:WaffraText(waffraIsEnglish?
+               (choice=='الكل'?'All':choice=='الدخل'?'Income':'Expenses'):choice),
+              onSelected:(_)=>setState((){
+               typeFilter=choice;categoryFilter='الكل';
+              }))).toList()),
+            DropdownButtonFormField<String>(
+             key:ValueKey(typeFilter+'-'+selected),initialValue:selected,
+             decoration:InputDecoration(labelText:waffraIsEnglish?
+              'Category':'تصفية حسب القسم'),
+             items:filterCats.map((value)=>DropdownMenuItem(
+              value:value,child:WaffraText(waffraTr(value)))).toList(),
+             onChanged:(value)=>setState(()=>categoryFilter=value??'الكل')),
+            Align(alignment:AlignmentDirectional.centerStart,
+             child:TextButton.icon(onPressed:editTransactionFilters,
+              icon:const Icon(Icons.date_range),
+              label:WaffraText(waffraIsEnglish?
+               'Date and amount filters':'فلترة بالتاريخ والمبلغ'))),
+           ],
+           const SizedBox(height:6),
+           if(visible.isEmpty)Padding(
+            padding:const EdgeInsets.symmetric(vertical:26),
+            child:Center(child:WaffraText(waffraIsEnglish?
+             'No matching transactions':'ما عندك عمليات مطابقة'))),
+           ...shown.map(compactTransaction),
+           if(visible.isNotEmpty)Padding(
+            padding:const EdgeInsets.only(top:7),
+            child:Row(children:[
+             WaffraText(waffraIsEnglish?'Transactions: '+visible.length.toString():
+              'عدد العمليات: '+visible.length.toString(),
+              style:const TextStyle(color:Colors.grey,fontSize:12)),
+             const Spacer(),
+             TextButton.icon(onPressed:()=>exportEntriesPdf(visible,'تقرير عمليات وفرة'),
+              icon:const Icon(Icons.picture_as_pdf_outlined,size:18),
+              label:WaffraText(waffraIsEnglish?'Export PDF':'تصدير PDF')),
+            ])),
+          ])),
+        ]))),
+     ],
+    )));
  }
  List<MoneyEntry> get analysisEntries=>entries.where((e)=>e.date.year==year&&
   (period=='سنوي'||e.date.month==month)).toList();
