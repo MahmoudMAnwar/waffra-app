@@ -1127,7 +1127,7 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
  @override bool shouldRebuild(covariant WaffraBalanceHeader oldDelegate)=>
   true; // Theme and layout changes must repaint the sliver immediately.
 }
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
  final smsHashes=<String>{};
  final learnedMerchantCategories=<String,String>{};
  final entries=<MoneyEntry>[],categories=<BudgetCategory>[],goals=<SavingGoal>[],recurring=<RecurringBill>[];
@@ -1139,6 +1139,7 @@ class _HomeScreenState extends State<HomeScreen> {
  double? minTransactionAmount,maxTransactionAmount;
  int tab=0,year=DateTime.now().year,month=DateTime.now().month;
  bool goalsOpened=false;
+ late final AnimationController _tourGlow;
  String search='',typeFilter='الكل',categoryFilter='الكل',period='شهري';
  String categorySearch='',categoryDisplay='all',goalDisplay='all',recurringDisplay='all';
   String? forecastCategory;
@@ -1149,12 +1150,12 @@ class _HomeScreenState extends State<HomeScreen> {
  bool tourActive=false;
  bool tourTargetReady=false;
  int tourStep=0;
- static const tourTabs=<int>[0,0,2,3,4,1];
+ static const tourTabs=<int>[0,0,1,1,3,4];
  bool addFabExpanded=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
- @override void initState(){super.initState();waffraReturnHome.addListener(_returnToHome);load();}
+ @override void initState(){super.initState();_tourGlow=AnimationController(vsync:this,duration:const Duration(milliseconds:1150));waffraReturnHome.addListener(_returnToHome);load();}
  void _returnToHome(){if(mounted)setState((){tab=0;goalsOpened=false;addFabExpanded=false;});}
- @override void dispose(){waffraReturnHome.removeListener(_returnToHome);super.dispose();}
+ @override void dispose(){_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);super.dispose();}
  Future<void> load()async {
   final p=await SharedPreferences.getInstance();
   try{final raw=p.getString('entries');if(raw!=null)entries.addAll((jsonDecode(raw) as List).map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('entries: $e');}
@@ -1192,9 +1193,9 @@ class _HomeScreenState extends State<HomeScreen> {
   if(!mounted)return;setState(()=>ready=true);await applyRecurring();
   if(recurringRemindersEnabled)unawaited(syncRecurringReminders());
   if(trashBefore!=deletedCategories.length)await persist();
-  if(!(p.getBool('waffra_in_app_tour_seen_v1')??false)&&mounted){
+  if(!(p.getBool('waffra_in_app_tour_seen_v2')??false)&&mounted){
    WidgetsBinding.instance.addPostFrameCallback((_){
-    if(mounted){setState((){tourActive=true;tourStep=0;tab=0;addFabExpanded=false;tourTargetReady=false;});scheduleTourFocus();}
+    if(mounted){setState((){tourActive=true;tourStep=0;tab=0;goalsOpened=false;addFabExpanded=false;tourTargetReady=false;});_tourGlow.repeat(reverse:true);scheduleTourFocus();}
    });
   }
  }
@@ -3887,12 +3888,14 @@ Future<void> bulkSmsSheet()async {
   });
  }
  Future<void> completeTour()async {
-  if(mounted)setState((){tourActive=false;tourTargetReady=false;addFabExpanded=false;tab=0;});
+  _tourGlow.stop();
+  if(mounted)setState((){tourActive=false;tourTargetReady=false;addFabExpanded=false;tab=0;goalsOpened=false;});
   final p=await SharedPreferences.getInstance();
-  await p.setBool('waffra_in_app_tour_seen_v1',true);
+  await p.setBool('waffra_in_app_tour_seen_v2',true);
  }
  void beginTour(){
-  setState((){tourStep=0;tourActive=true;tourTargetReady=false;tab=0;addFabExpanded=false;});
+  setState((){tourStep=0;tourActive=true;tourTargetReady=false;tab=0;goalsOpened=false;addFabExpanded=false;});
+  _tourGlow.repeat(reverse:true);
   scheduleTourFocus();
  }
  void advanceTour(){
@@ -3906,10 +3909,10 @@ Future<void> bulkSmsSheet()async {
   scheduleTourFocus();
  }
  Widget tourOverlay()=>LayoutBuilder(builder:(overlayCtx,area){
-  const ar=['الرصيد الحالي','إضافة المعاملات','الأقسام','أهداف الادخار','العمليات المتكررة','التحليلات'];
-  const en=['Balance','Add transactions','Categories','Savings goals','Recurring items','Analytics'];
-  const arHelp=['اعرف رصيدك ودخلك ومصروفاتك.','من زر + أضف عملية أو رسالة بنكية.','نظّم الأقسام وميزانياتها.','تابع أهدافك والمدخر والمتبقي.','نظّم التكرارات ومواعيد الاستحقاق.','تابع التقارير والرسوم البيانية.'];
-  const enHelp=['Your balance, income and expenses.','Use + to add a transaction or SMS.','Manage your categories and budgets.','Track goals and remaining savings.','See and pause recurring transactions.','Explore your charts and reports.'];
+  const ar=['الرصيد الحالي','إضافة المعاملات','الأقسام','التحليل','العمليات المتكررة','حسابي'];
+  const en=['Balance','Add transactions','Categories','Analysis','Recurring items','My account'];
+  const arHelp=['اعرف رصيدك ودخلك ومصروفاتك.','من زر + أضف عملية أو رسالة بنكية.','نظّم الأقسام وميزانياتها.','اضغط التحليل لعرض تقييمك المالي والرسوم البيانية والتوقعات.','نظّم التكرارات ومواعيد الاستحقاق.','إدارة حسابك وأهداف الادخار وإعدادات التطبيق.'];
+  const enHelp=['Your balance, income and expenses.','Use + to add a transaction or SMS.','Manage your categories and budgets.','Tap Analysis for animated scoring, income and expense charts, and forecasts.','See and pause recurring transactions.','Manage your account, goals and settings.'];
   final element=_tourKeys[tourStep].currentContext?.findRenderObject();
   final layer=overlayCtx.findRenderObject();
   Rect target=Rect.fromLTWH(16,12,area.maxWidth-32,65);
@@ -3931,9 +3934,8 @@ Future<void> bulkSmsSheet()async {
    .clamp(7.0,max(7.0,area.maxHeight-popupHeight-7)).toDouble();
   final left=(target.center.dx-width/2).clamp(12.0,max(12.0,area.maxWidth-width-12)).toDouble();
   return Stack(children:[
-   Positioned.fill(child:TweenAnimationBuilder<Rect?>(
-    tween:RectTween(end:target),duration:const Duration(milliseconds:300),
-    builder:(ctx,rect,_)=>CustomPaint(painter:WaffraTourShade(rect??target)))),
+   Positioned.fill(child:AnimatedBuilder(animation:_tourGlow,
+    builder:(ctx,_)=>CustomPaint(painter:WaffraTourShade(target,glow:_tourGlow.value)))),
    AnimatedPositioned(
     duration:const Duration(milliseconds:300),
     curve:Curves.easeOutCubic,top:top,left:left,width:width,
@@ -3945,8 +3947,11 @@ Future<void> bulkSmsSheet()async {
        Row(children:[
         const Icon(Icons.lightbulb_outline,color:emerald,size:18),
         const SizedBox(width:5),
-        Expanded(child:WaffraText(waffraIsEnglish?en[tourStep]:ar[tourStep],
-         style:const TextStyle(fontSize:15,fontWeight:FontWeight.bold))),
+        Expanded(child:AnimatedSwitcher(duration:const Duration(milliseconds:270),
+         transitionBuilder:(child,animation)=>FadeTransition(opacity:animation,
+          child:SlideTransition(position:Tween<Offset>(begin:const Offset(0,.18),end:Offset.zero).animate(animation),child:child)),
+         child:WaffraText(waffraIsEnglish?en[tourStep]:ar[tourStep],key:ValueKey(tourStep),
+          style:const TextStyle(fontSize:15,fontWeight:FontWeight.bold)))),
         WaffraText('${tourStep+1}/6',style:const TextStyle(color:emerald,fontSize:11)),
        ]),
        const SizedBox(height:6),
@@ -4153,7 +4158,7 @@ Future<void> bulkSmsSheet()async {
   }
   if(mounted)setState((){tab=target;goalsOpened=false;addFabExpanded=false;});
  }
- @override Widget build(BuildContext context)=>Scaffold(
+ @override Widget build(BuildContext context)=>Stack(children:[Scaffold(
   appBar:AppBar(
    leading:goalsOpened?IconButton(tooltip:waffraIsEnglish?'Back to home':'العودة للرئيسية',
     icon:const Icon(Icons.arrow_back),onPressed:()=>setState(()=>goalsOpened=false)):null,
@@ -4205,10 +4210,7 @@ Future<void> bulkSmsSheet()async {
   body:!ready?const Center(child:CircularProgressIndicator()):
    ValueListenableBuilder<bool>(
     valueListenable:hideWaffraAmounts,
-    builder:(context,hidden,_)=>Stack(children:[
-     Positioned.fill(child:currentTab()),
-     if(tourActive&&tourTargetReady)Positioned.fill(child:tourOverlay()),
-    ])),
+    builder:(context,hidden,_)=>currentTab()),
   // Floating plus starts collapsed at the physical bottom-left in both
   // languages. Expanded menu has two REAL actions, never a dummy label.
   floatingActionButtonLocation:const WaffraPhysicalLeftFab(),
@@ -4275,22 +4277,27 @@ Future<void> bulkSmsSheet()async {
      label:waffraIsEnglish?'Analysis':'التحليل',tooltip:waffraIsEnglish?'Analyze income and expenses':'تحليل الدخل والمصروفات'),
     NavigationDestination(icon:const Icon(Icons.repeat),label:waffraTr('المتكررة')),
     NavigationDestination(icon:KeyedSubtree(key:_tourKeys[5],child:const Icon(Icons.person_outline)),label:waffraTr('حسابي')),
-   ]));
+   ])),
+   if(tourActive&&tourTargetReady)Positioned.fill(child:tourOverlay()),
+  ]);
 }
 /// Positions the expandable plus menu physically on the left in RTL
 /// and LTR, independent of Scaffold's locale-sensitive start/end anchors.
 /// A coach-mark scrim with a transparent focus over the current page.
 class WaffraTourShade extends CustomPainter {
  final Rect focus;
- const WaffraTourShade(this.focus);
+ final double glow;
+ const WaffraTourShade(this.focus,{this.glow=0});
  @override void paint(Canvas canvas,Size size){
   final border=RRect.fromRectAndRadius(focus,const Radius.circular(20));
   final shade=Path()..fillType=PathFillType.evenOdd
    ..addRect(Offset.zero & size)..addRRect(border);
   canvas.drawPath(shade,Paint()..color=Colors.black.withValues(alpha:.61));
-  canvas.drawRRect(border,Paint()..color=Colors.white..style=PaintingStyle.stroke..strokeWidth=2);
+  canvas.drawRRect(border,Paint()..color=const Color(0xFF65E5AD).withValues(alpha:.15+.30*glow)
+   ..style=PaintingStyle.stroke..strokeWidth=7+5*glow..maskFilter=const MaskFilter.blur(BlurStyle.normal,7));
+  canvas.drawRRect(border,Paint()..color=Colors.white..style=PaintingStyle.stroke..strokeWidth=2+glow);
  }
- @override bool shouldRepaint(covariant WaffraTourShade old)=>old.focus!=focus;
+ @override bool shouldRepaint(covariant WaffraTourShade old)=>old.focus!=focus||old.glow!=glow;
 }
 class WaffraPhysicalLeftFab extends FloatingActionButtonLocation {
  const WaffraPhysicalLeftFab();
