@@ -48,7 +48,7 @@ jobs:
           if not manifest.exists():
               raise SystemExit('Missing generated AndroidManifest.xml')
           xml = manifest.read_text()
-          for permission in ('USE_BIOMETRIC', 'USE_FINGERPRINT'):
+          for permission in ('INTERNET', 'USE_BIOMETRIC', 'USE_FINGERPRINT'):
               entry = f'<uses-permission android:name="android.permission.{permission}" />'
               if entry not in xml:
                   xml = xml.replace('<application', '    ' + entry + '\n    <application', 1)
