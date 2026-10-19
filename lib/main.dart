@@ -3532,7 +3532,7 @@ Future<void> bulkSmsSheet()async {
      Icons.help_outline,onTap:beginTour),
     _accountTile(waffraIsEnglish?'Delete financial data':'حذف البيانات المالية',
      waffraIsEnglish?'Permanent and irreversible':'نهائي ولا يمكن التراجع عنه',
-     Icons.delete_forever,color:Colors.red,onTap:eraseFinancialData),
+     Icons.delete_forever,tint:Colors.red,onTap:eraseFinancialData),
    ]),
    _accountSection(waffraIsEnglish?'About the app':'عن التطبيق',Icons.info_outline,[
     _accountTile(waffraIsEnglish?'About Waffra':'عن وفرة',
