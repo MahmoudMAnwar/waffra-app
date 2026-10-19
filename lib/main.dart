@@ -971,6 +971,9 @@ class _HomeScreenState extends State<HomeScreen> {
  int tab=0,year=DateTime.now().year,month=DateTime.now().month;
  String search='',typeFilter='الكل',categoryFilter='الكل',period='شهري';
  bool ready=false;
+ bool tourActive=false;
+ int tourStep=0;
+ static const tourTabs=<int>[0,0,2,3,4,1];
  bool addFabExpanded=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
  @override void initState(){super.initState();waffraReturnHome.addListener(_returnToHome);load();}
@@ -1010,6 +1013,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
   if(!mounted)return;setState(()=>ready=true);await applyRecurring();
   if(trashBefore!=deletedCategories.length)await persist();
+  if(!(p.getBool('waffra_in_app_tour_seen_v1')??false)&&mounted){
+   WidgetsBinding.instance.addPostFrameCallback((_){
+    if(mounted)setState((){tourActive=true;tourStep=0;tab=0;addFabExpanded=false;});
+   });
+  }
  }
  Future<void> persist()async {
   final p=await SharedPreferences.getInstance();
@@ -2869,6 +2877,78 @@ Future<void> bulkSmsSheet()async {
     'رمزا PIN غير متطابقين. أعد إدخال رمز التأكيد.');
   }
  }
+ Future<void> completeTour()async {
+  if(mounted)setState((){tourActive=false;addFabExpanded=false;tab=0;});
+  final p=await SharedPreferences.getInstance();
+  await p.setBool('waffra_in_app_tour_seen_v1',true);
+ }
+ void beginTour(){
+  setState((){tourStep=0;tourActive=true;tab=0;addFabExpanded=false;});
+ }
+ void advanceTour(){
+  if(tourStep>=tourTabs.length-1){completeTour();return;}
+  setState((){
+   tourStep++;
+   tab=tourTabs[tourStep];
+   addFabExpanded=tourStep==1;
+  });
+ }
+ Widget tourOverlay()=>LayoutBuilder(builder:(context,area){
+  const titlesAr=['الرصيد الحالي','إضافة المعاملات','الأقسام','أهداف الادخار','العمليات المتكررة','التقارير والتحليلات'];
+  const descAr=[
+   'اعرف رصيدك ودخلك ومصروفاتك من الصفحة الرئيسية.',
+   'اضغط على + لإضافة عملية يدوية أو لصق رسائل بنكية.',
+   'نظّم معاملاتك في أقسام الدخل والمصروفات وأنشئ أقسامًا جديدة.',
+   'أنشئ أهداف ادخار وتابع مدخراتك والمبلغ المتبقي.',
+   'سجّل المعاملات الشهرية المتكررة وتابعها بسهولة.',
+   'راجع تقاريرك ورسومك البيانية لمعرفة أين تذهب أموالك.',
+  ];
+  const titlesEn=['Current balance','Add transactions','Categories','Savings goals','Recurring items','Reports & analytics'];
+  const descEn=[
+   'See your balance, income and expenses on your home page.',
+   'Use + to add a manual transaction or paste bank messages.',
+   'Organize your income and expenses into categories.',
+   'Set savings goals and see how much remains to reach them.',
+   'Manage recurring monthly income and expenses.',
+   'Explore your reports and charts to understand spending.',
+  ];
+  final title=waffraIsEnglish?titlesEn[tourStep]:titlesAr[tourStep];
+  final desc=waffraIsEnglish?descEn[tourStep]:descAr[tourStep];
+  final w=area.maxWidth,h=area.maxHeight;
+  final focus=tourStep==0?Rect.fromLTWH(12,48,w-24,min(170.0,h*.33))
+   :tourStep==1?Rect.fromLTWH(12,max(0,h-150),w-24,125)
+   :Rect.fromLTWH(12,12,w-24,min(165.0,h*.3));
+  return Stack(children:[
+   Positioned.fill(child:CustomPaint(painter:WaffraTourShade(focus))),
+   Align(alignment:Alignment.bottomCenter,child:Padding(
+    padding:const EdgeInsets.fromLTRB(16,12,16,17),
+    child:Material(
+     borderRadius:BorderRadius.circular(23),elevation:14,
+     color:Theme.of(context).cardColor,
+     child:Padding(padding:const EdgeInsets.all(17),child:Column(
+      mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+       Row(children:[
+        const Icon(Icons.lightbulb_outline,color:emerald),
+        const SizedBox(width:8),
+        Expanded(child:WaffraText(title,style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold))),
+        WaffraText('${tourStep+1}/${tourTabs.length}',style:const TextStyle(color:emerald)),
+       ]),
+       const SizedBox(height:9),
+       WaffraText(desc,style:const TextStyle(fontSize:15)),
+       const SizedBox(height:14),
+       Row(children:[
+        TextButton(onPressed:completeTour,
+         child:WaffraText(waffraIsEnglish?'Skip':'تخطي')),
+        const Spacer(),
+        FilledButton(onPressed:advanceTour,
+         child:WaffraText(tourStep==tourTabs.length-1
+          ?(waffraIsEnglish?'Finish':'إنهاء')
+          :(waffraIsEnglish?'Next':'التالي'))),
+       ]),
+      ]))),
+   ))),
+  ]);
+ });
  Widget profilePage()=>ListView(padding:const EdgeInsets.all(18),children:[
   const SizedBox(height:10),
   Center(child:saudiAvatar(widget.profile.gender,radius:46)),
@@ -2938,6 +3018,8 @@ Future<void> bulkSmsSheet()async {
   OutlinedButton.icon(onPressed:()=>Navigator.push<void>(context,
    MaterialPageRoute(builder:(_)=>CurrencyConverterPage(lastIncomeAmount:entries.where((e)=>e.income).isEmpty?null:entries.where((e)=>e.income).reduce((a,b)=>a.date.isAfter(b.date)?a:b).amount))),
    icon:const Icon(Icons.currency_exchange),label:const WaffraText('تحويل العملات')),
+  OutlinedButton.icon(onPressed:beginTour,icon:const Icon(Icons.help_outline),
+   label:WaffraText(waffraIsEnglish?'Replay app tour':'إعادة الجولة التعريفية')),
   OutlinedButton.icon(onPressed:backupDialog,icon:const Icon(Icons.backup_outlined),
    label:const WaffraText('النسخ الاحتياطي والاستعادة')),
   if(widget.profile.provider=='محلي')FilledButton.icon(onPressed:widget.onLogout,icon:const Icon(Icons.login),
@@ -3023,7 +3105,11 @@ Future<void> bulkSmsSheet()async {
    ]),
   // Instant content swap avoids building/animating the previous heavy tab
   // alongside the next one (the recurring -> savings navigation hitch).
-  body:!ready?const Center(child:CircularProgressIndicator()):currentTab(),
+  body:!ready?const Center(child:CircularProgressIndicator()):
+   Stack(children:[
+    Positioned.fill(child:currentTab()),
+    if(tourActive)Positioned.fill(child:tourOverlay()),
+   ]),
   // Floating plus starts collapsed at the physical bottom-left in both
   // languages. Expanded menu has two REAL actions, never a dummy label.
   floatingActionButtonLocation:const WaffraPhysicalLeftFab(),
@@ -3095,12 +3181,25 @@ Future<void> bulkSmsSheet()async {
 }
 /// Positions the expandable plus menu physically on the left in RTL
 /// and LTR, independent of Scaffold's locale-sensitive start/end anchors.
+/// A coach-mark scrim with a transparent focus over the current page.
+class WaffraTourShade extends CustomPainter {
+ final Rect focus;
+ const WaffraTourShade(this.focus);
+ @override void paint(Canvas canvas,Size size){
+  final border=RRect.fromRectAndRadius(focus,const Radius.circular(20));
+  final shade=Path()..fillType=PathFillType.evenOdd
+   ..addRect(Offset.zero & size)..addRRect(border);
+  canvas.drawPath(shade,Paint()..color=Colors.black.withValues(alpha:.61));
+  canvas.drawRRect(border,Paint()..color=Colors.white..style=PaintingStyle.stroke..strokeWidth=2);
+ }
+ @override bool shouldRepaint(covariant WaffraTourShade old)=>old.focus!=focus;
+}
 class WaffraPhysicalLeftFab extends FloatingActionButtonLocation {
  const WaffraPhysicalLeftFab();
  @override Offset getOffset(ScaffoldPrelayoutGeometry geometry){
   final bottom=geometry.bottomNavigationBarTop??geometry.scaffoldSize.height-geometry.minInsets.bottom;
   return Offset(16+geometry.minInsets.left,
-   max(16,bottom-geometry.floatingActionButtonSize.height-16));
+   max(16.0,bottom-geometry.floatingActionButtonSize.height-16));
  }
 }
 class ChartPoint {
