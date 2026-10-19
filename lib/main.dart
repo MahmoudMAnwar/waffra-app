@@ -107,6 +107,22 @@ class SavingGoal {
  Map<String,dynamic> toJson()=>{'id':id,'name':name,'target':target,'saved':saved};
  factory SavingGoal.fromJson(Map<String,dynamic> j)=>SavingGoal(id:'${j['id']??newId()}',name:'${j['name']??''}',target:(j['target'] as num).toDouble(),saved:(j['saved'] as num?)?.toDouble()??0);
 }
+class SavingChallenge {
+ final String id,title;final double dailyAmount;
+ final int days,completedDays;final DateTime? lastDone;
+ SavingChallenge({required this.id,required this.title,required this.dailyAmount,
+  required this.days,this.completedDays=0,this.lastDone});
+ SavingChallenge complete()=>SavingChallenge(id:id,title:title,dailyAmount:dailyAmount,
+  days:days,completedDays:completedDays+1,lastDone:DateTime.now());
+ Map<String,dynamic> toJson()=>{'id':id,'title':title,'dailyAmount':dailyAmount,
+  'days':days,'completedDays':completedDays,'lastDone':lastDone?.toIso8601String()};
+ factory SavingChallenge.fromJson(Map<String,dynamic> json)=>SavingChallenge(
+  id:'${json['id']??newId()}',title:'${json['title']??''}',
+  dailyAmount:(json['dailyAmount'] as num?)?.toDouble()??0,
+  days:(json['days'] as num?)?.toInt()??30,
+  completedDays:(json['completedDays'] as num?)?.toInt()??0,
+  lastDone:DateTime.tryParse('${json['lastDone']}'));
+}
 class RecurringBill {
  final String id,title,category;final double amount;final bool income;final int day;final bool active;
  RecurringBill({required this.id,required this.title,required this.category,required this.amount,required this.income,required this.day,this.active=true});
@@ -1039,6 +1055,7 @@ class _HomeScreenState extends State<HomeScreen> {
  final smsHashes=<String>{};
  final learnedMerchantCategories=<String,String>{};
  final entries=<MoneyEntry>[],categories=<BudgetCategory>[],goals=<SavingGoal>[],recurring=<RecurringBill>[];
+ final challenges=<SavingChallenge>[];
  // Soft-deleted categories are retained on-device for up to 30 days.
  final deletedCategories=<Map<String,dynamic>>[];
  double monthlyBudget=0;
@@ -1063,6 +1080,7 @@ class _HomeScreenState extends State<HomeScreen> {
   try{final raw=p.getString('waffra_categories_v24');categories.addAll(raw==null?defaultCategories():(jsonDecode(raw) as List).map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('categories: $e');categories.addAll(defaultCategories());}
   try{final raw=p.getString('waffra_goals_v24');if(raw!=null)goals.addAll((jsonDecode(raw) as List).map((x)=>SavingGoal.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('goals: $e');}
   try{final raw=p.getString('waffra_recurring_v24');if(raw!=null)recurring.addAll((jsonDecode(raw) as List).map((x)=>RecurringBill.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('recurring: $e');}
+  try{final raw=p.getString('waffra_challenges_v1');if(raw!=null)challenges.addAll((jsonDecode(raw) as List).map((e)=>SavingChallenge.fromJson(Map<String,dynamic>.from(e))));}catch(e){debugPrint('challenges: $e');}
   try{
    final raw=p.getString('waffra_deleted_categories_v1');
    if(raw!=null)deletedCategories.addAll((jsonDecode(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));
@@ -1104,6 +1122,7 @@ class _HomeScreenState extends State<HomeScreen> {
    p.setString('waffra_categories_v24',jsonEncode(categories.map((e)=>e.toJson()).toList())),
    p.setString('waffra_goals_v24',jsonEncode(goals.map((e)=>e.toJson()).toList())),
    p.setString('waffra_recurring_v24',jsonEncode(recurring.map((e)=>e.toJson()).toList())),
+   p.setString('waffra_challenges_v1',jsonEncode(challenges.map((e)=>e.toJson()).toList())),
    p.setString('waffra_deleted_categories_v1',jsonEncode(deletedCategories)),
    p.setDouble('waffra_monthly_budget_v1',monthlyBudget),
    p.setString('waffra_learned_merchants_v1',jsonEncode(learnedMerchantCategories))
@@ -3201,6 +3220,7 @@ Future<void> bulkSmsSheet()async {
   'categories':categories.map((e)=>e.toJson()).toList(),
   'goals':goals.map((e)=>e.toJson()).toList(),
   'recurring':recurring.map((e)=>e.toJson()).toList(),
+  'challenges':challenges.map((e)=>e.toJson()).toList(),
   'deletedCategories':deletedCategories,
   'monthlyBudget':monthlyBudget,
   'learnedMerchants':learnedMerchantCategories,
@@ -3234,6 +3254,7 @@ Future<void> bulkSmsSheet()async {
       final newCategories=(raw['categories'] as List).map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x))).toList();
       final newGoals=(raw['goals'] as List).map((x)=>SavingGoal.fromJson(Map<String,dynamic>.from(x))).toList();
       final newRecurring=(raw['recurring'] as List).map((x)=>RecurringBill.fromJson(Map<String,dynamic>.from(x))).toList();
+      final newChallenges=raw['challenges'] is List?(raw['challenges'] as List).map((x)=>SavingChallenge.fromJson(Map<String,dynamic>.from(x))).toList():<SavingChallenge>[];
       final newTrash=raw['deletedCategories'] is List?
        (raw['deletedCategories'] as List).map((x)=>Map<String,dynamic>.from(x as Map)).toList():<Map<String,dynamic>>[];
       if(newCategories.isEmpty)throw const FormatException('Empty categories');
@@ -3254,6 +3275,7 @@ Future<void> bulkSmsSheet()async {
        categories..clear()..addAll(newCategories);
        goals..clear()..addAll(newGoals);
        recurring..clear()..addAll(newRecurring);
+       challenges..clear()..addAll(newChallenges);
        deletedCategories..clear()..addAll(newTrash);
        monthlyBudget=restoredBudget;
        learnedMerchantCategories..clear()..addAll(restoredRules);
@@ -3443,7 +3465,7 @@ Future<void> bulkSmsSheet()async {
   if(ok!=true||!mounted)return;
   setState((){
    entries.clear();categories..clear()..addAll(defaultCategories());
-   goals.clear();recurring.clear();deletedCategories.clear();smsHashes.clear();
+   goals.clear();challenges.clear();recurring.clear();deletedCategories.clear();smsHashes.clear();
    learnedMerchantCategories.clear();monthlyBudget=0;
   });
   final p=await SharedPreferences.getInstance();
