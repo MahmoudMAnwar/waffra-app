@@ -1811,7 +1811,7 @@ Future<void> bulkSmsSheet()async {
      child:WaffraText((waffraIsEnglish?'Upcoming recurring payments: ':
       'تذكير بالعمليات المتكررة القادمة: ')+due.map((r)=>r.title).join('، '),
       style:const TextStyle(fontSize:13,color:emerald))),
-   ]))));
+   ])));
  }
  Widget dashboard(){
   final inc=sum(entries,true),exp=sum(entries,false);
