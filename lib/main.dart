@@ -529,16 +529,23 @@ class _WaffraOnboardingState extends State<WaffraOnboarding> {
  // Crop only the illustration region from the original approved design.
  // Headlines, progress markers and buttons are real responsive Flutter UI,
  // avoiding the impossible "cover without cropping or stretching" tradeoff.
+ // Responsive hero: maximize available width while preserving artwork proportions.
+ // Keep its important central content visible and never distort the illustration.
  Widget illustration(int index)=>LayoutBuilder(builder:(context,box){
-  const cropTop=310.0,cropHeight=580.0;
-  final scale=min(box.maxWidth/sourceWidth[index],box.maxHeight/cropHeight);
-  final imageWidth=sourceWidth[index]*scale;
+  const cropTop=305.0,cropHeight=595.0;
+  final artworkWidth=sourceWidth[index];
+  final widthScale=box.maxWidth/artworkWidth;
+  final heightScale=box.maxHeight/cropHeight;
+  // Fill most of the hero area, allowing only a very small horizontal crop.
+  final scale=min(widthScale*1.035,heightScale);
+  final imageWidth=artworkWidth*scale;
   final imageHeight=979.0*scale;
   return ClipRect(child:Stack(fit:StackFit.expand,children:[
-   // A subtle edge-to-edge wash of the artwork fills the hero backdrop.
-   Opacity(opacity:0.11,child:Image.asset(
+   Positioned.fill(child:Image.asset(
     'assets/onboarding_0'+(index+1).toString()+'.png',
-    fit:BoxFit.cover,filterQuality:FilterQuality.high)),
+    fit:BoxFit.cover,color:const Color(0xFFFAF9F1),
+    colorBlendMode:BlendMode.modulate,
+    opacity:0.045,filterQuality:FilterQuality.low)),
    Positioned(
     left:(box.maxWidth-imageWidth)/2,
     top:(box.maxHeight-cropHeight*scale)/2-cropTop*scale,
@@ -549,12 +556,12 @@ class _WaffraOnboardingState extends State<WaffraOnboarding> {
  });
  Widget slide(int index)=>LayoutBuilder(builder:(context,limits){
   final compact=limits.maxHeight<680;
-  final titleSize=compact?25.0:29.0;
-  final subtitleSize=compact?14.0:16.0;
+  final titleSize=compact?24.0:28.0;
+  final subtitleSize=compact?14.0:15.5;
   final pageName=waffraIsEnglish?titleEn[index]:titleAr[index];
   final pageDesc=waffraIsEnglish?subtitleEn[index]:subtitleAr[index];
   return Padding(
-   padding:const EdgeInsets.symmetric(horizontal:14),
+   padding:const EdgeInsets.symmetric(horizontal:10),
    child:Column(children:[
     const SizedBox(height:10),
     Directionality(textDirection:TextDirection.ltr,child:Row(
@@ -566,18 +573,18 @@ class _WaffraOnboardingState extends State<WaffraOnboarding> {
        child:WaffraText((index+1).toString()+' / 4',
         style:const TextStyle(color:forest,fontSize:17))),
      ])),
-    SizedBox(height:compact?5:16),
+    SizedBox(height:compact?4:9),
     WaffraText(pageName,textAlign:TextAlign.center,
      style:TextStyle(color:forest,fontWeight:FontWeight.w800,
       fontSize:titleSize,height:1.23)),
-    SizedBox(height:compact?8:13),
+    SizedBox(height:compact?6:9),
     WaffraText(pageDesc,textAlign:TextAlign.center,
      style:TextStyle(color:const Color(0xFF5B5B60),
       fontSize:subtitleSize,height:1.35)),
-    const SizedBox(height:8),
+    const SizedBox(height:3),
     Expanded(child:illustration(index)),
     // Approved artwork already contains a page-indicator row: do not draw it twice.
-    const SizedBox(height:13),
+    const SizedBox(height:8),
     SizedBox(width:double.infinity,height:55,child:FilledButton(
      onPressed:next,style:FilledButton.styleFrom(
       backgroundColor:forest,foregroundColor:Colors.white,
