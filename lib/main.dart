@@ -329,13 +329,13 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    valueListenable:hideWaffraAmounts,
    builder:(context,hidden,_)=>Directionality(
     textDirection:language=='ar'?TextDirection.rtl:TextDirection.ltr,
-    child:AnimatedSwitcher(duration:const Duration(milliseconds:800),switchInCurve:Curves.easeOutCubic,
+    child:AnimatedSwitcher(duration:const Duration(milliseconds:240),switchInCurve:Curves.easeOutCubic,
      transitionBuilder:(w,a)=>FadeTransition(opacity:a,child:SlideTransition(position:Tween<Offset>(begin:const Offset(0.11,0),end:Offset.zero).animate(a),child:w)),
      child:KeyedSubtree(key:ValueKey(language),child:child??const SizedBox.shrink())))),
   theme:ThemeData(useMaterial3:true,colorSchemeSeed:emerald,scaffoldBackgroundColor:sand,appBarTheme:const AppBarTheme(backgroundColor:forest,foregroundColor:Colors.white),navigationBarTheme:NavigationBarThemeData(backgroundColor:forest,labelTextStyle:WidgetStateProperty.all(const TextStyle(color:Colors.white,fontSize:11)),iconTheme:WidgetStateProperty.resolveWith((states)=>IconThemeData(color:states.contains(WidgetState.selected)?forest:Colors.white,size:27))),floatingActionButtonTheme:const FloatingActionButtonThemeData(backgroundColor:forest,foregroundColor:Colors.white),fontFamily:'Tajawal',textTheme:ThemeData.light().textTheme.apply(fontFamily:'Tajawal'),primaryTextTheme:ThemeData.light().primaryTextTheme.apply(fontFamily:'Tajawal')),
   darkTheme:ThemeData(useMaterial3:true,brightness:Brightness.dark,colorSchemeSeed:emerald,appBarTheme:const AppBarTheme(backgroundColor:forest,foregroundColor:Colors.white),navigationBarTheme:NavigationBarThemeData(backgroundColor:forest,labelTextStyle:WidgetStateProperty.all(const TextStyle(color:Colors.white,fontSize:11)),iconTheme:WidgetStateProperty.all(const IconThemeData(color:Colors.white))),floatingActionButtonTheme:const FloatingActionButtonThemeData(backgroundColor:forest,foregroundColor:Colors.white),fontFamily:'Tajawal',textTheme:ThemeData.dark().textTheme.apply(fontFamily:'Tajawal'),primaryTextTheme:ThemeData.dark().primaryTextTheme.apply(fontFamily:'Tajawal')),
   themeMode:dark?ThemeMode.dark:ThemeMode.light,
-  themeAnimationDuration:const Duration(milliseconds:750),
+  themeAnimationDuration:const Duration(milliseconds:260),
   themeAnimationCurve:Curves.easeInOutCubic,
   home:Builder(builder:(rootContext)=>PopScope(canPop:false,onPopInvokedWithResult:(didPop,result)async {
    if(didPop||!mounted)return;
@@ -372,13 +372,23 @@ class PinLockScreen extends StatefulWidget {
 class _PinLockScreenState extends State<PinLockScreen> {
  final pinController=TextEditingController();
  bool busy=false,biometricAvailable=false,checking=true,showPin=false;
+ bool autoBiometricStarted=false;
  int failedPinAttempts=0;
  DateTime? pinCooldownUntil;
  String error='';
  @override void initState(){super.initState();checkBiometrics();}
  Future<void> checkBiometrics()async {
   final available=await WaffraBiometrics.isAvailable();
-  if(mounted)setState((){biometricAvailable=available;checking=false;});
+  if(!mounted)return;
+  setState((){biometricAvailable=available;checking=false;});
+  // Show the OS's actual Face ID / fingerprint dialog once on opening
+  // the lock page, only if enrolled biometrics are available.
+  if(available&&!autoBiometricStarted){
+   autoBiometricStarted=true;
+   WidgetsBinding.instance.addPostFrameCallback((_){
+    if(mounted)biometric();
+   });
+  }
  }
  Future<void> biometric()async {
   if(busy)return;
@@ -389,7 +399,7 @@ class _PinLockScreenState extends State<PinLockScreen> {
     actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('حسنًا'))]));
    return;
   }
-  setState(()=>busy=true);
+  setState((){busy=true;error='';});
   // Android displays its own system biometric prompt, positioned by the OS.
   final success=await WaffraBiometrics.unlock();
   if(!mounted)return;
@@ -445,10 +455,31 @@ class _PinLockScreenState extends State<PinLockScreen> {
       if(pinController.text.length==4)verifyPin();
      },child:const ColoredBox(color:Colors.transparent)));
    }),
+   // The printed face-recognition label is also a real action.
+   Positioned(left:c.maxWidth*0.25,top:c.maxHeight*0.80,
+    width:c.maxWidth*0.50,height:c.maxHeight*0.095,
+    child:Semantics(button:true,
+     label:waffraIsEnglish?'Use face or fingerprint':'استخدام بصمة الوجه أو الإصبع',
+     child:GestureDetector(onTap:biometric,behavior:HitTestBehavior.opaque,
+      child:const ColoredBox(color:Colors.transparent)))),
    if(error.isNotEmpty)Positioned(left:20,right:20,bottom:c.maxHeight*0.16,
     child:Container(padding:const EdgeInsets.all(10),color:forest,
      child:WaffraText(error,textAlign:TextAlign.center,
       style:const TextStyle(color:Colors.white,fontSize:15)))),
+   if(busy)Positioned.fill(child:ColoredBox(
+    color:const Color(0x9900221A),
+    child:Center(child:Container(
+     constraints:const BoxConstraints(maxWidth:300),
+     padding:const EdgeInsets.symmetric(vertical:25,horizontal:22),
+     decoration:BoxDecoration(color:forest,borderRadius:BorderRadius.circular(20),
+      border:Border.all(color:Colors.white30)),
+     child:Column(mainAxisSize:MainAxisSize.min,children:[
+      const CircularProgressIndicator(color:Colors.white),
+      const SizedBox(height:18),
+      WaffraText(waffraIsEnglish?'Verifying your identity...':'جارٍ التحقق من هويتك...',
+       textAlign:TextAlign.center,
+       style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold,fontSize:17)),
+     ]))))),
   ])),
  );
 }
@@ -492,7 +523,7 @@ class _WaffraOnboardingState extends State<WaffraOnboarding> {
  }
  void next(){
   if(current==3){finish();return;}
-  controller.nextPage(duration:const Duration(milliseconds:430),curve:Curves.easeInOutCubic);
+  controller.nextPage(duration:const Duration(milliseconds:235),curve:Curves.easeOutCubic);
  }
  @override void dispose(){controller.dispose();super.dispose();}
  // Crop only the illustration region from the original approved design.
@@ -545,16 +576,8 @@ class _WaffraOnboardingState extends State<WaffraOnboarding> {
       fontSize:subtitleSize,height:1.35)),
     const SizedBox(height:8),
     Expanded(child:illustration(index)),
-    const SizedBox(height:8),
-    Directionality(textDirection:TextDirection.ltr,child:Row(
-     mainAxisAlignment:MainAxisAlignment.center,
-     children:List.generate(4,(i)=>AnimatedContainer(
-      duration:const Duration(milliseconds:250),
-      width:i==current?12:9,height:i==current?12:9,
-      margin:const EdgeInsets.symmetric(horizontal:5),
-      decoration:BoxDecoration(shape:BoxShape.circle,
-       color:i==current?forest:const Color(0xFFD0DAD0)))))),
-    const SizedBox(height:14),
+    // Approved artwork already contains a page-indicator row: do not draw it twice.
+    const SizedBox(height:13),
     SizedBox(width:double.infinity,height:55,child:FilledButton(
      onPressed:next,style:FilledButton.styleFrom(
       backgroundColor:forest,foregroundColor:Colors.white,
@@ -1412,7 +1435,8 @@ Future<void> bulkSmsSheet()async {
           pdfCell(english?(e.income?'Income':'Expense'):(e.income?'دخل':'مصروف'),rtl:!english),
           pdfCell(waffraTr(e.category),rtl:!english),
           pw.Padding(padding:const pw.EdgeInsets.symmetric(horizontal:6,vertical:7),
-           child:pw.Image(art.$1,width:460,height:art.$2,fit:pw.BoxFit.contain)),
+           child:pw.Align(alignment:english?pw.Alignment.centerLeft:pw.Alignment.centerRight,
+            child:pw.Image(art.$1,width:460,height:art.$2,fit:pw.BoxFit.contain))),
           pdfCell('${e.income?'+':'-'}${fmt(e.amount)}',center:true),
          ],
         );
@@ -1575,15 +1599,25 @@ Future<void> bulkSmsSheet()async {
    const SizedBox(height:10),
    OutlinedButton.icon(onPressed:bulkSmsSheet,icon:const Icon(Icons.content_paste),label:const WaffraText('الصق رسالة بنكية')),
    const SizedBox(height:12),
-   Row(children:[
-    Expanded(child:Container(
-     padding:const EdgeInsets.symmetric(horizontal:14,vertical:12),
-     decoration:BoxDecoration(border:Border.all(color:forest.withValues(alpha:0.55),width:1.3),borderRadius:BorderRadius.circular(14)),
-     child:WaffraText('عملياتك المالية',style:Theme.of(context).textTheme.titleLarge))),
+   // Full-width title and a separate action row avoid adjacent border overlap.
+   Container(width:double.infinity,
+    padding:const EdgeInsets.symmetric(horizontal:14,vertical:12),
+    decoration:BoxDecoration(
+     border:Border.all(color:forest.withValues(alpha:0.55),width:1.3),
+     borderRadius:BorderRadius.circular(14)),
+    child:WaffraText('عملياتك المالية',
+     style:Theme.of(context).textTheme.titleLarge)),
+   const SizedBox(height:14),
+   Wrap(spacing:12,runSpacing:10,children:[
+    FilledButton.icon(onPressed:()=>entrySheet(),
+     icon:const Icon(Icons.add),label:const WaffraText('أضف عملية')),
     OutlinedButton.icon(onPressed:entries.isEmpty?null:confirmDeleteAllEntries,
-     style:OutlinedButton.styleFrom(side:const BorderSide(color:Colors.red,width:1.4),foregroundColor:Colors.red),
+     style:OutlinedButton.styleFrom(
+      side:const BorderSide(color:Colors.red,width:1.4),
+      foregroundColor:Colors.red),
      icon:const Icon(Icons.delete_outline,color:Colors.red),
-     label:WaffraText(waffraIsEnglish?'Delete all':'حذف كل المعاملات',style:const TextStyle(color:Colors.red))),
+     label:WaffraText(waffraIsEnglish?'Delete all':'حذف كل المعاملات',
+      style:const TextStyle(color:Colors.red))),
    ]),
    const SizedBox(height:12),
    TextField(onChanged:(v)=>setState(()=>search=v),
@@ -2036,34 +2070,78 @@ Future<void> bulkSmsSheet()async {
    ]));
   disposeLater([input]);
  }
+ // System credentials are never saved in plain text. A new PIN must be
+ // entered twice; keep support for checking older 4-8-digit PINs on disable.
+ Future<String?> _askForPin({
+  required String title,required String fieldLabel,bool existing=false,
+ })async{
+  final input=TextEditingController();
+  try{
+   return await showDialog<String>(context:context,builder:(dialogContext)=>AlertDialog(
+    title:WaffraText(title),
+    content:TextField(
+     controller:input,autofocus:true,
+     textDirection:TextDirection.ltr,textAlign:TextAlign.center,
+     keyboardType:TextInputType.number,
+     inputFormatters:[FilteringTextInputFormatter.digitsOnly,
+      LengthLimitingTextInputFormatter(existing?8:4)],
+     obscureText:true,
+     decoration:InputDecoration(labelText:fieldLabel,
+      helperText:existing?'4–8 digits / من 4 إلى 8 أرقام':'4 digits / أربعة أرقام',
+      border:const OutlineInputBorder())),
+    actions:[
+     TextButton(onPressed:()=>Navigator.pop(dialogContext),
+      child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+     FilledButton(onPressed:(){
+      final code=input.text.trim();
+      if(existing?RegExp(r'^\d{4,8}$').hasMatch(code):RegExp(r'^\d{4}$').hasMatch(code)){
+       Navigator.pop(dialogContext,code);
+      }else{
+       ScaffoldMessenger.of(dialogContext).showSnackBar(SnackBar(
+        content:WaffraText(waffraIsEnglish?
+         (existing?'Enter 4 to 8 digits':'Enter exactly 4 digits'):
+         (existing?'أدخل من 4 إلى 8 أرقام':'أدخل أربعة أرقام بالضبط'))));
+      }
+     },child:WaffraText(waffraIsEnglish?'Confirm':'تأكيد')),
+    ],
+   ));
+  }finally{disposeLater([input]);}
+ }
  Future<void> configurePin()async {
-  final c=TextEditingController();
-  final result=await showDialog<String>(context:context,builder:(ctx)=>AlertDialog(
-   title:WaffraText(widget.pinEnabled?'إلغاء رمز القفل':'إنشاء رمز قفل'),
-   content:TextField(controller:c,keyboardType:TextInputType.number,obscureText:true,maxLength:8,
-    decoration:InputDecoration(labelText:widget.pinEnabled?'أدخل الرمز الحالي':'رمز من 4 إلى 8 أرقام')),
-   actions:[
-    TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إلغاء')),
-    FilledButton(onPressed:(){
-     final value=c.text.trim();
-     if(!RegExp(r'^\d{4,8}$').hasMatch(value)){
-      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content:WaffraText('اكتب 4 إلى 8 أرقام')));
-      return;
-     }
-     Navigator.pop(ctx,value);
-    },child:const WaffraText('تأكيد')),
-   ]));
-  disposeLater([c]);
-  if(result==null||!mounted)return;
-  final prefs=await SharedPreferences.getInstance();
   if(widget.pinEnabled){
-   final saved=prefs.getString('waffra_pin_sha256');
-   if(sha256.convert(utf8.encode(result)).toString()!=saved){
-    snack(context,'رمز القفل غير صحيح');return;
+   final oldPin=await _askForPin(
+    title:waffraIsEnglish?'Disable app lock':'إلغاء رمز القفل',
+    fieldLabel:waffraIsEnglish?'Current PIN':'أدخل الرمز الحالي',
+    existing:true);
+   if(oldPin==null||!mounted)return;
+   final prefs=await SharedPreferences.getInstance();
+   final hash=prefs.getString('waffra_pin_sha256');
+   if(sha256.convert(utf8.encode(oldPin)).toString()!=hash){
+    if(mounted)snack(context,waffraIsEnglish?'Incorrect PIN':'رمز القفل غير صحيح');
+    return;
    }
-   await widget.onSetPin(null);if(mounted)snack(context,'تم إلغاء القفل');
-  }else{
-   await widget.onSetPin(result);if(mounted)snack(context,'تم تفعيل قفل التطبيق');
+   await widget.onSetPin(null);
+   if(mounted)snack(context,waffraIsEnglish?'App lock disabled':'تم إلغاء القفل');
+   return;
+  }
+  final firstPin=await _askForPin(
+   title:waffraIsEnglish?'Create a new PIN':'إنشاء رمز قفل',
+   fieldLabel:waffraIsEnglish?'New 4-digit PIN':'رمز PIN من 4 أرقام');
+  if(firstPin==null||!mounted)return;
+  while(mounted){
+   final repeated=await _askForPin(
+    title:waffraIsEnglish?'Confirm your PIN':'أعد إدخال رمز PIN للتأكيد',
+    fieldLabel:waffraIsEnglish?'Repeat PIN':'أعد إدخال الرمز');
+   if(repeated==null||!mounted)return;
+   if(firstPin==repeated){
+    // The existing onSetPin stores only SHA-256 of the confirmed PIN.
+    await widget.onSetPin(firstPin);
+    if(mounted)snack(context,waffraIsEnglish?'App lock enabled':'تم تفعيل قفل التطبيق');
+    return;
+   }
+   if(mounted)snack(context,waffraIsEnglish?
+    'PINs do not match. Re-enter the confirmation.':
+    'رمزا PIN غير متطابقين. أعد إدخال رمز التأكيد.');
   }
  }
  Widget profilePage()=>ListView(padding:const EdgeInsets.all(18),children:[
@@ -2157,12 +2235,12 @@ Future<void> bulkSmsSheet()async {
      child:InkWell(onTap:()=>setState(()=>tab=5),borderRadius:BorderRadius.circular(30),child:saudiAvatar(widget.profile.gender))),
    ]),
   body:!ready?const Center(child:CircularProgressIndicator()):
-   AnimatedSwitcher(duration:const Duration(milliseconds:430),reverseDuration:const Duration(milliseconds:250),
+   AnimatedSwitcher(duration:const Duration(milliseconds:235),reverseDuration:const Duration(milliseconds:190),
     transitionBuilder:(child,animation)=>FadeTransition(opacity:animation,child:SlideTransition(
      position:Tween<Offset>(begin:const Offset(0.035,0),end:Offset.zero).animate(CurvedAnimation(parent:animation,curve:Curves.easeOutCubic)),child:child)),
     child:KeyedSubtree(key:ValueKey(tab),child:[dashboard(),analytics(),categoriesPage(),goalsPage(),recurringPage(),profilePage()][tab])),
-  floatingActionButton:tab==0?FloatingActionButton.extended(
-   onPressed:()=>entrySheet(),icon:const Icon(Icons.add),label:const WaffraText('أضف عملية')):null,
+  // Add-transaction is now an inline button; no overlay over Export PDF.
+  floatingActionButton:null,
   bottomNavigationBar:NavigationBar(height:74,indicatorColor:const Color(0xFFCFE9D9),
    labelBehavior:NavigationDestinationLabelBehavior.alwaysShow,
    selectedIndex:tab,onDestinationSelected:(v)=>setState(()=>tab=v),
