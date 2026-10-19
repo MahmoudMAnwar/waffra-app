@@ -562,11 +562,12 @@ class _WaffraOnboardingState extends State<WaffraOnboarding> {
      child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
       const Icon(Icons.arrow_back_rounded,size:23),
       const SizedBox(width:17),
-      WaffraText(index==3
+      Flexible(child:FittedBox(fit:BoxFit.scaleDown,child:WaffraText(index==3
        ?(waffraIsEnglish?'Start with Waffra':'ابدأ رحلتك مع وفرة')
        :(waffraIsEnglish?'Next':'التالي'),
+       maxLines:1,softWrap:false,
        style:const TextStyle(color:Colors.white,fontSize:19,
-        fontWeight:FontWeight.bold)),
+        fontWeight:FontWeight.bold)))),
      ]))),
     const SizedBox(height:12),
    ]),
