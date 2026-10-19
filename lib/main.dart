@@ -1173,7 +1173,7 @@ Future<void> bulkSmsSheet()async {
    category=categories.any((c)=>c.income==income&&c.name==result.category)?result.category:
     (forType(income).isNotEmpty?forType(income).first.name:'أخرى');
    description.text='${result.title} — ${messages[i].replaceAll(RegExp(r'\s+'),' ').trim()}';
-   amount.text=result.amount==null?'':formatMoney(result.amount!);
+   amount.text=result.amount==null?'':formatWaffraMoney(result.amount!);
   });
  }
  await showModalBottomSheet<void>(context:context,isScrollControlled:true,showDragHandle:true,
@@ -1305,7 +1305,7 @@ Future<void> bulkSmsSheet()async {
 
  Future<void> entrySheet({MoneyEntry? initial,bool sms=false})async {
   final title=TextEditingController(text:initial?.title??'');
-  final value=TextEditingController(text:initial==null?'':formatMoney(initial.amount));
+  final value=TextEditingController(text:initial==null?'':formatWaffraMoney(initial.amount));
   final message=TextEditingController();
   bool income=initial?.income??false,analyzing=false,hasParsed=false;
   String category=initial?.category??'أخرى';
@@ -1329,7 +1329,7 @@ Future<void> bulkSmsSheet()async {
        category=learned!=null&&categories.any((c)=>c.income==p.income&&c.name==learned)
         ?learned:p.suggestedCategory!=null&&categories.any((c)=>c.income==p.income&&c.name==p.suggestedCategory)
         ?p.suggestedCategory!:p.category;
-       title.text=p.title;value.text=p.amount==null?'':formatMoney(p.amount!);
+       title.text=p.title;value.text=p.amount==null?'':formatWaffraMoney(p.amount!);
        suggestion=p.suggestedCategory!=null&&!categories.any((c)=>c.income==p.income&&c.name==p.suggestedCategory)
         ?p.suggestedCategory:null;
        hasParsed=true;analyzing=false;
@@ -1496,7 +1496,7 @@ Future<void> bulkSmsSheet()async {
   if(previousSpent>=threshold||spent<threshold||!mounted)return;
   await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(
    title:const WaffraText('⚠️ ميزانية القسم أوشكت على الانتهاء'),
-   content:WaffraText('وصل صرف قسم «${c.name}» إلى ${formatMoney(spent/c.budget*100)}٪ من الميزانية. صرفت ${cash(spent)} من ${cash(c.budget)}، وحد التنبيه اللي اخترته ${c.alertPercent}٪.'),
+   content:WaffraText('وصل صرف قسم «${c.name}» إلى ${(spent/c.budget*100).toStringAsFixed(0)}٪ من الميزانية. صرفت ${cash(spent)} من ${cash(c.budget)}، وحد التنبيه اللي اخترته ${c.alertPercent}٪.'),
    actions:[FilledButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('حسنًا'))]));
  }
  String expensePieSvg(Map<String,double> totals){
@@ -2319,7 +2319,7 @@ Future<void> bulkSmsSheet()async {
 
  Future<BudgetCategory?> categoryDialog({BudgetCategory? initial,bool income=false,String? suggested})async {
   final name=TextEditingController(text:initial?.name??suggested??'');
-  final budget=TextEditingController(text:initial==null||initial.budget==0?'':formatMoney(initial.budget));
+  final budget=TextEditingController(text:initial==null||initial.budget==0?'':formatWaffraMoney(initial.budget));
   String icon=initial?.icon??'category';int color=initial?.color??colors[0];int alertPercent=initial?.alertPercent??80;
   final result=await showDialog<BudgetCategory>(context:context,
    builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
