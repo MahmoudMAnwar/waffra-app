@@ -19,6 +19,7 @@ import 'package:crypto/crypto.dart';
 import 'waffra_biometrics.dart';
 import 'waffra_amount_formatter.dart';
 import 'waffra_validators.dart';
+import 'waffra_financial_insights.dart';
 import 'waffra_welcome_background.dart';
 import 'currency_converter.dart';
 import 'waffra_i18n.dart';
@@ -1554,16 +1555,23 @@ Future<void> bulkSmsSheet()async {
  }
  Future<void> budgetAlert(MoneyEntry entry,double previousSpent)async {
   if(entry.income)return;
-  final c=categoryFor(entry.category,false);
-  if(c.budget<=0)return;
-  final threshold=c.budget*c.alertPercent/100;
+  final category=categoryFor(entry.category,false);
+  if(category.budget<=0)return;
   final spent=sum(entries.where((e)=>!e.income&&e.category==entry.category&&
    e.date.year==entry.date.year&&e.date.month==entry.date.month),false);
-  if(previousSpent>=threshold||spent<threshold||!mounted)return;
+  final stages=<int>{50,80,100,category.alertPercent}.toList()..sort();
+  int? crossed;
+  for(final stage in stages){
+   if(previousSpent<category.budget*stage/100&&spent>=category.budget*stage/100)crossed=stage;
+  }
+  if(crossed==null||!mounted)return;
   await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(
-   title:const WaffraText('⚠️ ميزانية القسم أوشكت على الانتهاء'),
-   content:WaffraText('وصل صرف قسم «${c.name}» إلى ${(spent/c.budget*100).toStringAsFixed(0)}٪ من الميزانية. صرفت ${cash(spent)} من ${cash(c.budget)}، وحد التنبيه اللي اخترته ${c.alertPercent}٪.'),
-   actions:[FilledButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('حسنًا'))]));
+   title:WaffraText(waffraIsEnglish?'Budget alert':'⚠️ تنبيه ميزانية القسم'),
+   content:WaffraText(waffraIsEnglish?
+    '${category.name} has reached ${(spent/category.budget*100).round()}% of the budget (crossed $crossed%). Spent ${cash(spent)} out of ${cash(category.budget)}.':
+    'وصل صرف قسم «${category.name}» إلى ${(spent/category.budget*100).round()}٪ من الميزانية (تجاوز حد $crossed٪). صرفت ${cash(spent)} من ${cash(category.budget)}.'),
+   actions:[FilledButton(onPressed:()=>Navigator.pop(ctx),
+    child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))]));
  }
  String expensePieSvg(Map<String,double> totals){
   final values=totals.values.where((v)=>v>0).toList();
@@ -2069,6 +2077,64 @@ Future<void> bulkSmsSheet()async {
       style:const TextStyle(color:Colors.grey,fontSize:12))),
    ]));
  }
+ Widget smartMoneyInsightsCard(){
+  final now=DateTime.now();
+  final monthExpenses=entries.where((e)=>!e.income&&e.date.year==now.year&&e.date.month==now.month);
+  final spent=sum(monthExpenses,false);
+  final variableSpent=sum(monthExpenses.where((e)=>!e.id.startsWith('rec_')),false);
+  final remaining=DateTime(now.year,now.month+1,0).day-now.day;
+  final pending=recurring.where((r)=>r.active&&r.day>now.day&&
+   !entries.any((e)=>e.id=='rec_${r.id}_${now.year}_${now.month}'));
+  final pendingIncome=pending.where((r)=>r.income).fold<double>(0,(v,r)=>v+r.amount);
+  final pendingExpense=pending.where((r)=>!r.income).fold<double>(0,(v,r)=>v+r.amount);
+  final balance=sum(entries,true)-sum(entries,false);
+  final projection=WaffraFinancialInsights.projectedEndBalance(
+   currentBalance:balance,variableExpensesSoFar:variableSpent,daysElapsed:now.day,
+   daysInMonth:DateTime(now.year,now.month+1,0).day,
+   pendingRecurringIncome:pendingIncome,pendingRecurringExpense:pendingExpense);
+  final daily=WaffraFinancialInsights.dailyAllowance(
+   monthlyBudget:monthlyBudget,spent:spent,daysRemaining:remaining+1);
+  final prev=DateTime(now.year,now.month-1);
+  final prevTotal=sum(entries.where((e)=>!e.income&&e.date.year==prev.year&&e.date.month==prev.month),false);
+  final delta=WaffraFinancialInsights.comparisonPercent(spent,prevTotal);
+  final warnings=categories.where((c)=>!c.income&&c.budget>0&&
+   WaffraFinancialInsights.budgetAlertStage(
+    sum(monthExpenses.where((e)=>e.category==c.name),false),c.budget)>=80).toList();
+  return Card(
+   elevation:1.0,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(21)),
+   child:Padding(padding:const EdgeInsets.all(15),child:Column(
+    crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    Row(children:[
+     const Icon(Icons.auto_graph,color:emerald),const SizedBox(width:7),
+     Expanded(child:WaffraText(waffraIsEnglish?'Your smart financial snapshot':'نظرتك المالية الذكية',
+      style:const TextStyle(fontWeight:FontWeight.bold,fontSize:17))),
+    ]),
+    const SizedBox(height:12),
+    Row(children:[
+     Expanded(child:_summaryBox(waffraIsEnglish?'End-of-month estimate':'الرصيد المتوقع آخر الشهر',
+      cash(projection),Icons.trending_up,emerald)),
+     const SizedBox(width:8),
+     Expanded(child:_summaryBox(waffraIsEnglish?'Daily spending limit':'الحد اليومي المقترح',
+      monthlyBudget>0?cash(daily):(waffraIsEnglish?'Set a budget':'حدد ميزانية'),
+      Icons.today_outlined,Colors.deepOrange)),
+    ]),
+    const SizedBox(height:9),
+    if(delta!=null)WaffraText(waffraIsEnglish?
+     'Monthly comparison: spending ${delta>=0?'up':'down'} ${delta.abs().toStringAsFixed(1)}%':
+     'مقارنة بالشهر السابق: المصروفات ${delta>=0?'زادت':'قلت'} ${delta.abs().toStringAsFixed(1)}٪',
+     style:const TextStyle(fontSize:12)),
+    if(warnings.isNotEmpty)Padding(padding:const EdgeInsets.only(top:9),
+     child:WaffraText(waffraIsEnglish?
+      'Budget warning: ${warnings.map((c)=>c.name).join('، ')}':
+      'تنبيه: اقتربت ميزانية ${warnings.map((c)=>c.name).join('، ')} من النفاد',
+      style:const TextStyle(color:Colors.deepOrange,fontWeight:FontWeight.bold,fontSize:12))),
+    const SizedBox(height:9),
+    WaffraText(waffraIsEnglish?
+     'Estimate based on recorded spending and upcoming recurring transactions, not a guaranteed balance.':
+     'التوقع تقديري بناءً على الصرف المسجل والعمليات المتكررة القادمة، وليس رصيدًا مضمونًا.',
+     style:TextStyle(fontSize:11,color:Theme.of(context).hintColor)),
+   ])));
+ }
  Future<void> showSummaryTransactions(bool income)async {
   final items=entries.where((e)=>e.income==income).toList()
    ..sort((a,b)=>b.date.compareTo(a.date));
@@ -2239,6 +2305,8 @@ Future<void> bulkSmsSheet()async {
          monthlyBudgetCard(),
          const SizedBox(height:12),
          monthlySummaryCard(),
+         const SizedBox(height:12),
+         smartMoneyInsightsCard(),
          const SizedBox(height:12),
          Container(
           padding:const EdgeInsets.all(12),
