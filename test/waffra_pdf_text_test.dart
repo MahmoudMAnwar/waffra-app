@@ -31,4 +31,16 @@ void main() {
     expect(splitWaffraPdfText('').single.text, 'لا يوجد وصف');
     expect(sanitizeWaffraPdfText('١٬٥٠٠٫٥٠'), '١,٥٠٠.٥٠');
   });
+  test('bank SMS glued currency and masked account numbers are readable', () {
+    const raw = 'حوالة واردة من9288 SARر15.50 شراء PoS عبر:7678';
+    final cleaned = sanitizeWaffraPdfText(raw);
+    expect(cleaned, contains('من 9288'));
+    expect(cleaned, contains('SAR'));
+    expect(cleaned, contains('15.50'));
+    expect(cleaned, contains('عبر:7678'));
+    expect(cleaned, isNot(contains('SARر')));
+    expect(cleaned, isNot(contains('ر15')));
+    expect(splitWaffraPdfText(raw).any((part) => !part.rtl), isTrue);
+  });
+
 }
