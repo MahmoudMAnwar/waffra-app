@@ -3211,7 +3211,7 @@ class WaffraTourShade extends CustomPainter {
 class WaffraPhysicalLeftFab extends FloatingActionButtonLocation {
  const WaffraPhysicalLeftFab();
  @override Offset getOffset(ScaffoldPrelayoutGeometry geometry){
-  final bottom=geometry.bottomNavigationBarTop??geometry.scaffoldSize.height-geometry.minInsets.bottom;
+  final bottom=geometry.contentBottom;
   return Offset(16+geometry.minInsets.left,
    max(16.0,bottom-geometry.floatingActionButtonSize.height-16));
  }
