@@ -2774,48 +2774,127 @@ Future<void> bulkSmsSheet()async {
   if(RegExp(r'مشروع|تجارة').hasMatch(x))return Icons.storefront;
   return Icons.account_balance_wallet;
  }
- Widget goalsPage()=>ListView(padding:const EdgeInsets.all(16),children:[
-  WaffraText('أهداف الادخار',style:Theme.of(context).textTheme.titleLarge),
-  const SizedBox(height:8),
-  const WaffraText('خلّ حلمك هدف وامش له خطوة بخطوة'),
-  const SizedBox(height:12),
-  FilledButton.icon(onPressed:goalDialog,icon:const Icon(Icons.add),label:const WaffraText('هدف جديد')),
-  const SizedBox(height:12),
-  ...goals.map((g)=>Card(child:Padding(padding:const EdgeInsets.all(14),
-   child:Column(children:[
+ Widget goalsPage(){
+  final target=goals.fold<double>(0,(v,g)=>v+g.target);
+  final saved=goals.fold<double>(0,(v,g)=>v+g.saved);
+  final pct=target==0?0.0:(saved/target).clamp(0.0,1.0);
+  final filtered=goals.where((g)=>goalDisplay=='all'||
+   (goalDisplay=='done'?g.saved>=g.target:g.saved<g.target)).toList();
+  return ListView(padding:const EdgeInsets.fromLTRB(16,16,16,24),children:[
+   WaffraText(waffraIsEnglish?'Savings goals':'أهداف الادخار',
+    style:Theme.of(context).textTheme.titleLarge),
+   const SizedBox(height:6),
+   WaffraText(waffraIsEnglish?'Turn your dreams into goals, one step at a time':
+    'حوّل أحلامك إلى خطط واقعية وابدأ رحلتك نحو تحقيقها.',
+    style:const TextStyle(fontSize:13)),
+   const SizedBox(height:14),
+   if(goals.isNotEmpty)...[
     Row(children:[
-     Icon(goalIcon(g.name),color:emerald),const SizedBox(width:8),
-     Expanded(child:WaffraText(g.name,style:const TextStyle(fontWeight:FontWeight.bold))),
-     PopupMenuButton<String>(onSelected:(v)async {
-      if(v=='delete'){
-       final yes=await confirmDeletion(waffraIsEnglish?'Delete savings goal?':'حذف هدف الادخار',
-        waffraIsEnglish?'Delete ${g.name}? This cannot be undone.':'هل تريد حذف هدف الادخار «${g.name}» نهائيًا؟ لا يمكن التراجع عن هذا الإجراء.');
-       if(yes==true&&mounted){setState(()=>goals.removeWhere((x)=>x.id==g.id));await persist();}
-      }
-     },itemBuilder:(_)=>const [PopupMenuItem(value:'delete',child:WaffraText('حذف الهدف'))]),
+     Expanded(child:_summaryBox(waffraIsEnglish?'Total target':'إجمالي المستهدف',cash(target),Icons.flag_outlined,emerald)),
+     const SizedBox(width:8),
+     Expanded(child:_summaryBox(waffraIsEnglish?'Saved':'إجمالي المدخرات',cash(saved),Icons.savings_outlined,emerald)),
+     const SizedBox(width:8),
+     Expanded(child:Container(padding:const EdgeInsets.all(8),
+      decoration:BoxDecoration(color:emerald.withValues(alpha:.08),borderRadius:BorderRadius.circular(18)),
+      child:Column(children:[
+       SizedBox(width:48,height:48,child:Stack(alignment:Alignment.center,children:[
+        CircularProgressIndicator(value:pct,strokeWidth:6,backgroundColor:emerald.withValues(alpha:.13)),
+        WaffraText('${(pct*100).round()}%',style:const TextStyle(fontWeight:FontWeight.bold,fontSize:12))])),
+       const SizedBox(height:7),
+       WaffraText(waffraIsEnglish?'Progress':'الإنجاز',style:const TextStyle(fontSize:11)),
+      ])))),
+    ]),
+    const SizedBox(height:14),
+   ],
+   FilledButton.icon(onPressed:goalDialog,icon:const Icon(Icons.add),label:WaffraText(
+    waffraIsEnglish?'New savings goal':'هدف جديد')),
+   const SizedBox(height:14),
+   if(goals.isNotEmpty)...[
+    Wrap(spacing:7,runSpacing:6,children:[
+     _filterChip(waffraIsEnglish?'All':'الكل',goalDisplay=='all',()=>setState(()=>goalDisplay='all')),
+     _filterChip(waffraIsEnglish?'In progress':'قيد التنفيذ',goalDisplay=='active',()=>setState(()=>goalDisplay='active')),
+     _filterChip(waffraIsEnglish?'Completed':'مكتملة',goalDisplay=='done',()=>setState(()=>goalDisplay='done')),
     ]),
     const SizedBox(height:10),
-    LinearProgressIndicator(value:(g.saved/g.target).clamp(0.0,1.0),
-     minHeight:10,borderRadius:BorderRadius.circular(10)),
-    const SizedBox(height:8),
-    Wrap(crossAxisAlignment:WrapCrossAlignment.center,spacing:6,
-     children:[RiyalAmount(g.saved),const WaffraText('من'),RiyalAmount(g.target)]),
-    if(g.saved>=g.target)
-     const WaffraText('🎉 مبروك! تم تحقيق الهدف',
-      style:TextStyle(fontWeight:FontWeight.bold,color:emerald))
-    else WaffraText('المتبقي للهدف: ${cash((g.target-g.saved).clamp(0.0,double.infinity))}',
-     style:const TextStyle(fontWeight:FontWeight.bold,color:emerald)),
-    TextButton.icon(onPressed:()=>fundGoal(g),icon:const Icon(Icons.add),label:const WaffraText('أضف مبلغ مدّخر')),
-   ])))),
-  if(goals.isEmpty) SizedBox(height:MediaQuery.sizeOf(context).height*0.48,child:Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
-   Icon(Icons.account_balance_wallet_outlined,size:78,color:emerald.withValues(alpha:0.55)),
-   const SizedBox(height:18),
-   WaffraText('ما أضفت أي هدف ادخار للحين',textAlign:TextAlign.center,style:Theme.of(context).textTheme.titleMedium),
-   const SizedBox(height:8),
-   const WaffraText('ابدأ بإضافة أول هدف ادخار لك',textAlign:TextAlign.center),
-  ]))),
-  const SizedBox(height:90),
- ]);
+   ],
+   ...filtered.map((g){
+    final percent=(g.saved/g.target).clamp(0.0,1.0);
+    final shade=goalIcon(g.name)==Icons.flight_takeoff?const Color(0xFF9C56B8):
+     goalIcon(g.name)==Icons.directions_car?const Color(0xFF3867D6):emerald;
+    return Card(
+     margin:const EdgeInsets.only(bottom:11),
+     elevation:1.2,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(20)),
+     child:Padding(padding:const EdgeInsets.all(14),child:Column(children:[
+      Row(children:[
+       CircleAvatar(radius:22,backgroundColor:shade.withValues(alpha:.14),
+        child:Icon(goalIcon(g.name),color:shade)),
+       const SizedBox(width:10),
+       Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        WaffraText(g.name,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:16)),
+        WaffraText(waffraIsEnglish?'Target: ${cash(g.target)}':'المستهدف: ${cash(g.target)}',
+         style:const TextStyle(fontSize:12)),
+       ])),
+       PopupMenuButton<String>(onSelected:(v)async {
+        if(v=='delete'){
+         final yes=await confirmDeletion(waffraIsEnglish?'Delete savings goal?':'حذف هدف الادخار',
+          waffraIsEnglish?'This cannot be undone. Delete ${g.name}?':'هل تريد حذف «${g.name}» نهائيًا؟ لا يمكن التراجع عن هذا الإجراء.');
+         if(yes==true&&mounted){setState(()=>goals.removeWhere((x)=>x.id==g.id));await persist();}
+        }
+       },itemBuilder:(_)=>[PopupMenuItem(value:'delete',child:WaffraText(waffraIsEnglish?'Delete goal':'حذف الهدف'))]),
+      ]),
+      const SizedBox(height:11),
+      Row(children:[
+       WaffraText('${(percent*100).round()}%',style:TextStyle(fontWeight:FontWeight.bold,color:shade)),
+       const SizedBox(width:10),
+       Expanded(child:LinearProgressIndicator(value:percent,minHeight:9,
+        color:shade,backgroundColor:shade.withValues(alpha:.12),
+        borderRadius:BorderRadius.circular(9))),
+      ]),
+      const SizedBox(height:12),
+      Row(children:[
+       Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        WaffraText(waffraIsEnglish?'Saved':'المدّخر',style:const TextStyle(fontSize:11)),
+        WaffraText(cash(g.saved),style:const TextStyle(fontWeight:FontWeight.bold))])),
+       Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        WaffraText(waffraIsEnglish?'Remaining':'المتبقي',style:const TextStyle(fontSize:11)),
+        WaffraText(cash(max(0,g.target-g.saved)),style:const TextStyle(fontWeight:FontWeight.bold))])),
+       if(g.saved<g.target)TextButton.icon(onPressed:()=>fundGoal(g),
+        icon:const Icon(Icons.add,size:18),label:WaffraText(waffraIsEnglish?'Add amount':'إضافة مبلغ')),
+      ]),
+      if(g.saved>=g.target)WaffraText(waffraIsEnglish?'Goal achieved!':'🎉 تم تحقيق الهدف!',
+       style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
+     ]))),
+    );
+   }),
+   if(goals.isEmpty)Padding(padding:const EdgeInsets.only(top:35,bottom:18),
+    child:Column(children:[
+     Container(width:170,height:170,decoration:BoxDecoration(
+      color:emerald.withValues(alpha:.08),borderRadius:BorderRadius.circular(90)),
+      child:const Icon(Icons.savings_outlined,size:100,color:emerald)),
+     const SizedBox(height:20),
+     WaffraText(waffraIsEnglish?'No savings goals yet':'ما أضفت أي هدف ادخاري بعد',
+      style:Theme.of(context).textTheme.titleLarge,textAlign:TextAlign.center),
+     const SizedBox(height:10),
+     WaffraText(waffraIsEnglish?'Set your first savings goal and track your progress':
+      'ابدأ أول هدف ادخاري لك وحدد المبلغ المستهدف وتابع تقدّمك خطوة بخطوة.',
+      textAlign:TextAlign.center),
+     const SizedBox(height:22),
+     OutlinedButton.icon(onPressed:goalDialog,icon:const Icon(Icons.add),
+      label:WaffraText(waffraIsEnglish?'Add first goal':'إضافة أول هدف ادخاري')),
+     const SizedBox(height:22),
+     Row(children:[
+      Expanded(child:_summaryBox(waffraIsEnglish?'Plan ahead':'خطط لمستقبلك','✓',Icons.wallet,emerald)),
+      const SizedBox(width:8),
+      Expanded(child:_summaryBox(waffraIsEnglish?'Stay motivated':'حقق أهدافك','✓',Icons.track_changes,emerald)),
+      const SizedBox(width:8),
+      Expanded(child:_summaryBox(waffraIsEnglish?'Track progress':'تابع تقدمك','✓',Icons.bar_chart,emerald)),
+     ]),
+    ])),
+   if(goals.isNotEmpty&&filtered.isEmpty)Padding(padding:const EdgeInsets.all(34),
+    child:WaffraText(waffraIsEnglish?'No goals in this filter':'لا توجد أهداف في هذا التصنيف',textAlign:TextAlign.center)),
+   const SizedBox(height:30),
+  ]);
+ }
  Future<void> recurringDialog()async {
   final title=TextEditingController(),amount=TextEditingController(),day=TextEditingController(text:'1');
   bool income=false;String category=forType(false).first.name;bool attempted=false;
