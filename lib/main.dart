@@ -28,6 +28,7 @@ import 'currency_converter.dart';
 import 'waffra_i18n.dart';
 import 'waffra_pdf_text.dart';
 import 'waffra_merchant_rules.dart';
+import 'waffra_google_auth.dart';
 
 void main() { WidgetsFlutterBinding.ensureInitialized(); runApp(const WaffraApp()); }
 const emerald=Color(0xFF087A54), forest=Color(0xFF064D3B), sand=Color(0xFFF8F6EF), gold=Color(0xFFD8BA78);
@@ -789,6 +790,21 @@ class _LoginScreenState extends State<LoginScreen> {
    ]))));
   if(!mounted||choice==null)return;
   if(choice=='Phone'){setState(()=>provider='Phone');return;}
+  if(choice=='Google'){
+   if(socialBusy)return;
+   setState(()=>socialBusy=true);
+   try{
+    final result=await WaffraGoogleAuth.signIn();
+    final user=result.user;
+    if(user==null)throw StateError('Google did not return an account');
+    await widget.onSave(Person(name:user.displayName??'',email:user.email??'',
+     phone:user.phoneNumber??'',provider:'Google',gender:'',avatar:'person',birthday:DateTime(2000)));
+   }catch(e){
+    if(mounted)snack(context,waffraIsEnglish?'Google sign-in failed or was cancelled. Please try again.':'تعذر تسجيل الدخول بجوجل أو تم إلغاؤه. حاول مرة أخرى.');
+    debugPrint('Waffra Google sign-in: $e');
+   }finally{if(mounted)setState(()=>socialBusy=false);}
+   return;
+  }
   await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(
    title:WaffraText(waffraIsEnglish?'Sign-in not configured':'تسجيل الدخول غير مفعّل'),
    content:WaffraText(waffraIsEnglish?'Secure $choice sign-in needs authentication setup. No account was created.':'تسجيل الدخول الآمن باستخدام $choice يحتاج إعداد خدمة المصادقة. لم يتم إنشاء حساب.'),
