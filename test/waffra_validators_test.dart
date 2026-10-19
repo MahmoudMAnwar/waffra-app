@@ -9,7 +9,7 @@ void main(){
    expect(WaffraValidators.requiredText('مواصلات'), isNull);
   });
   test('rejects overly long name',(){
-   expect(WaffraValidators.requiredText('a'*101), 'too_long');
+   expect(WaffraValidators.requiredText('a'.padRight(101, 'a')), 'too_long');
   });
   test('rejects missing, zero, negative, nonnumeric amount',(){
    for(final v in ['', '   ', '0', '-10', 'abc', 'NaN']){
