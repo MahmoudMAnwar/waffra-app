@@ -35,7 +35,29 @@ String sanitizeWaffraPdfText(String input) {
       buffer.write(' ');
     }
   }
-  return buffer.toString().replaceAll(RegExp(r'\s+'), ' ').trim();
+  // Bank templates sometimes glue Latin bank codes, Arabic currency
+  // abbreviations and digits into one run (e.g. SARر, من9288, ر15.50).
+  // Add safe boundaries before passing text to the RTL PDF renderer.
+  var clean = buffer.toString().replaceAll(RegExp(r'\s+'), ' ').trim();
+  clean = clean.replaceAllMapped(
+    RegExp(r'([A-Za-z])([\u0621-\u064A\u0671])'),
+    (m) => m[1]! + ' ' + m[2]!);
+  clean = clean.replaceAllMapped(
+    RegExp(r'([\u0621-\u064A\u0671])([A-Za-z])'),
+    (m) => m[1]! + ' ' + m[2]!);
+  clean = clean.replaceAllMapped(
+    RegExp(r'([\u0621-\u064A\u0671])([0-9])'),
+    (m) => m[1]! + ' ' + m[2]!);
+  clean = clean.replaceAllMapped(
+    RegExp(r'([0-9])([\u0621-\u064A\u0671])'),
+    (m) => m[1]! + ' ' + m[2]!);
+  clean = clean.replaceAllMapped(
+    RegExp(r'(^|[\s:;,])ر(?=\s|[0-9]|$)'),
+    (m) => m[1]! + 'ريال ');
+  // Do not print the same currency twice when the SMS contains SAR and ر.
+  clean = clean.replaceAllMapped(
+    RegExp(r'\b(SAR|SR)\s+ريال\b',caseSensitive:false),(m)=>m[1]!);
+  return clean.replaceAll(RegExp(r'\s+'), ' ').trim();
 }
 
 /// One script-direction-safe line/paragraph of a bank transaction description.
