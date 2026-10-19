@@ -11,7 +11,7 @@ class WaffraAmountFormatter extends TextInputFormatter {
    final c=m.group(0)!;final a=arabic.indexOf(c);
    return (a>=0?a:persian.indexOf(c)).toString();
   });
-  final caret=newValue.selection.extentOffset.clamp(0,normalized.length);
+  final caret=newValue.selection.extentOffset.clamp(0,normalized.length).toInt();
   final before=normalized.substring(0,caret).replaceAll(RegExp(r'[^0-9.]'),'').length;
   final filtered=normalized.replaceAll(RegExp(r'[^0-9.]'),'');
   final dot=filtered.indexOf('.');
