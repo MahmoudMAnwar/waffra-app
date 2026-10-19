@@ -75,7 +75,7 @@ List<WaffraSubscriptionCandidate> detectWaffraSubscriptions(List<WaffraCalendarI
   final groups=<String,List<WaffraCalendarItem>>{};
   for(final item in items){
     if(item.income||item.scheduled)continue;
-    final key=item.title.trim().toLowerCase().replaceAll(RegExp(r'\\s+'),' ');
+    final key=item.title.trim().toLowerCase().replaceAll(RegExp(r'\s+'),' ');
     if(key.isEmpty)continue;
     groups.putIfAbsent(key,()=>[]).add(item);
   }
