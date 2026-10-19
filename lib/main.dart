@@ -2069,29 +2069,82 @@ Future<void> bulkSmsSheet()async {
       style:const TextStyle(color:Colors.grey,fontSize:12))),
    ]));
  }
+ Future<void> showSummaryTransactions(bool income)async {
+  final items=entries.where((e)=>e.income==income).toList()
+   ..sort((a,b)=>b.date.compareTo(a.date));
+  await showModalBottomSheet<void>(
+   context:context,isScrollControlled:true,showDragHandle:true,
+   useSafeArea:true,builder:(ctx)=>DraggableScrollableSheet(
+    expand:false,initialChildSize:.58,minChildSize:.32,maxChildSize:.90,
+    builder:(ctx,scroll)=>Column(children:[
+     Padding(padding:const EdgeInsets.fromLTRB(18,4,18,12),
+      child:Row(children:[
+       Icon(income?Icons.trending_up:Icons.trending_down,
+        color:income?emerald:Colors.deepOrange),
+       const SizedBox(width:9),
+       Expanded(child:WaffraText(income?
+        (waffraIsEnglish?'Income transactions':'عمليات الدخل'):
+        (waffraIsEnglish?'Expense transactions':'عمليات المصروفات'),
+        style:Theme.of(ctx).textTheme.titleLarge)),
+       IconButton(onPressed:()=>Navigator.pop(ctx),icon:const Icon(Icons.close)),
+      ])),
+     Container(
+      margin:const EdgeInsets.symmetric(horizontal:16),
+      padding:const EdgeInsets.all(16),
+      width:double.infinity,
+      decoration:BoxDecoration(color:(income?emerald:Colors.deepOrange).withValues(alpha:.10),
+       borderRadius:BorderRadius.circular(18)),
+      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+       WaffraText(waffraIsEnglish?'Total: ${items.length} transactions':
+        'الإجمالي • ${items.length} عملية'),
+       WaffraText(cash(sum(items,income)),
+        style:const TextStyle(fontSize:22,fontWeight:FontWeight.bold)),
+      ])),
+     const SizedBox(height:10),
+     Expanded(child:items.isEmpty?Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+      Icon(income?Icons.savings_outlined:Icons.receipt_long_outlined,
+       size:66,color:emerald.withValues(alpha:.6)),
+      const SizedBox(height:10),
+      WaffraText(waffraIsEnglish?'No transactions yet':'لا توجد عمليات حتى الآن'),
+     ])):ListView.separated(controller:scroll,padding:const EdgeInsets.fromLTRB(16,4,16,24),
+      itemCount:items.length,separatorBuilder:(_,__)=>const Divider(height:1),
+      itemBuilder:(_,index){
+       final e=items[index],cat=categoryFor(e.category,e.income);
+       return ListTile(
+        leading:CircleAvatar(backgroundColor:Color(cat.color).withValues(alpha:.13),
+         child:Icon(categoryIcon(cat.icon),color:Color(cat.color))),
+        title:WaffraText(e.title,maxLines:2,overflow:TextOverflow.ellipsis),
+        subtitle:WaffraText('${e.category} • ${dayText(e.date)}',style:const TextStyle(fontSize:12)),
+        trailing:WaffraText(cash(e.amount),
+         style:TextStyle(fontWeight:FontWeight.bold,color:income?emerald:Colors.deepOrange)));
+      }))),
+    ])));
+ }
  Widget homeSummaryCard(String label,double value,IconData symbol,Color color,Color tint)=>
-  Expanded(child:Container(
-   padding:const EdgeInsets.symmetric(horizontal:12,vertical:14),
-   decoration:BoxDecoration(
-    color:Theme.of(context).brightness==Brightness.dark?
-     Theme.of(context).cardColor:tint,
-    borderRadius:BorderRadius.circular(19),
-    border:Border.all(color:color.withValues(alpha:0.10)),
-    boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:0.04),
-     blurRadius:7,offset:const Offset(0,3))]),
-   child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-    Row(textDirection:TextDirection.rtl,children:[
-     Expanded(child:WaffraText(label,textAlign:TextAlign.right,
-      style:const TextStyle(fontSize:15,fontWeight:FontWeight.bold))),
-     const SizedBox(width:6),
-     CircleAvatar(backgroundColor:color.withValues(alpha:0.12),
-      radius:19,child:Icon(symbol,color:color,size:21)),
-    ]),
-    const SizedBox(height:9),
-    Align(alignment:Alignment.centerRight,
-     child:FittedBox(fit:BoxFit.scaleDown,
-      child:WaffraCurrencyAmount(value,fontSize:19))),
-   ])));
+  Expanded(child:InkWell(
+   onTap:()=>showSummaryTransactions(label=='الدخل'||label=='Income'),
+   borderRadius:BorderRadius.circular(19),
+   child:Container(
+    padding:const EdgeInsets.symmetric(horizontal:12,vertical:14),
+    decoration:BoxDecoration(
+     color:Theme.of(context).brightness==Brightness.dark?Theme.of(context).cardColor:tint,
+     borderRadius:BorderRadius.circular(19),
+     border:Border.all(color:color.withValues(alpha:0.10)),
+     boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:0.04),
+      blurRadius:7,offset:const Offset(0,3))]),
+    child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+     Row(textDirection:TextDirection.rtl,children:[
+      Expanded(child:WaffraText(label,textAlign:TextAlign.right,
+       style:const TextStyle(fontSize:15,fontWeight:FontWeight.bold))),
+      const SizedBox(width:6),
+      CircleAvatar(backgroundColor:color.withValues(alpha:0.12),
+       radius:19,child:Icon(symbol,color:color,size:21)),
+     ]),
+     const SizedBox(height:9),
+     Align(alignment:Alignment.centerRight,
+      child:FittedBox(fit:BoxFit.scaleDown,
+       child:WaffraCurrencyAmount(value,fontSize:19))),
+    ]))));
  Widget compactTransaction(MoneyEntry entry){
   final cat=categoryFor(entry.category,entry.income);
   final valueColor=entry.income?emerald:Colors.deepOrange;
