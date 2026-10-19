@@ -19,6 +19,8 @@ dependencies:
   path_provider: ^2.1.5
   fl_chart: ^0.69.2
   image: ^4.5.4
+  flutter_local_notifications: ^19.5.0
+  timezone: ^0.10.1
   pdf: ^3.11.1
   printing: ^5.13.4
 
