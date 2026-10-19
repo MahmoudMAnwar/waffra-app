@@ -80,6 +80,7 @@ const Map<String,String> _english = {
  'اكتب مبلغ صحيح عشان نحسبه':'Enter a valid amount to convert',
  'ما قدرنا نجيب سعر الصرف الحين. تأكد من الإنترنت وجرّب مرة ثانية.':'Exchange rate unavailable. Check your connection and try again.',
  'المصدر: ExchangeRate-API (open.er-api.com). الأسعار استرشادية وقد تختلف عن أسعار البنوك أو التحويل الفعلي.':'Source: ExchangeRate-API (open.er-api.com). Indicative rates may differ from actual bank rates.',
+ 'المصدر: ExchangeRate-API أو مزود احتياطي عند تعذّر الاتصال. الأسعار استرشادية وقد تختلف عن أسعار البنوك أو التحويل الفعلي.':'Source: ExchangeRate-API or a backup rate provider. Indicative rates may differ from bank rates.',
  'أو':'Or',
  'إعدادات التطبيق':'App settings',
  'الرئيسية': 'Home',
