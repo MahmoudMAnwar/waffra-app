@@ -99,7 +99,7 @@ class _WaffraPdfReaderState extends State<WaffraPdfReader> {
         :'اسحب لأعلى وأسفل، واضغط على الصفحة لتكبيرها',
         maxLines:2,softWrap:true,textAlign:TextAlign.center,
         style:Theme.of(context).textTheme.bodySmall),
-      ))),)),
+      )),
      ]);
     }),
   );
