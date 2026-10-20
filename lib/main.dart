@@ -692,7 +692,7 @@ class _PinLockScreenState extends State<PinLockScreen> {
        constraints:const BoxConstraints(maxWidth:420),
        padding:const EdgeInsets.fromLTRB(17,18,17,20),
        decoration:BoxDecoration(
-        color:forest.withValues(alpha:.96),
+        color:forest, // Solid card masks duplicated title baked into login artwork
         border:Border.all(color:Colors.white.withValues(alpha:.30)),
         borderRadius:BorderRadius.circular(24)),
        child:Column(mainAxisSize:MainAxisSize.min,children:[
@@ -3185,7 +3185,8 @@ Future<void> bulkSmsSheet()async {
    child:Container(
     padding:const EdgeInsets.symmetric(horizontal:12,vertical:14),
     decoration:BoxDecoration(
-     color:Theme.of(context).brightness==Brightness.dark?Theme.of(context).cardColor:tint,
+     color:Theme.of(context).brightness==Brightness.dark?
+      (label=='الدخل'||label=='Income'?const Color(0xFF244C3A):const Color(0xFF49302C)):tint,
      borderRadius:BorderRadius.circular(19),
      border:Border.all(color:color.withValues(alpha:0.10)),
      boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:0.04),
@@ -3353,28 +3354,32 @@ Future<void> bulkSmsSheet()async {
            Row(children:[
             Expanded(child:Container(
              padding:const EdgeInsets.all(12),
-             decoration:BoxDecoration(color:const Color(0xFFE4F4EB),
+             decoration:BoxDecoration(
+              color:Theme.of(context).brightness==Brightness.dark?
+               const Color(0xFF244C3A):const Color(0xFFE4F4EB),
               borderRadius:BorderRadius.circular(15)),
              child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
               WaffraText(waffraIsEnglish?'Income':'الدخل',
-               style:const TextStyle(color:Color(0xFF075B43),fontWeight:FontWeight.bold)),
+               style:TextStyle(color:Theme.of(context).brightness==Brightness.dark?const Color(0xFFA8E8C7):const Color(0xFF075B43),fontWeight:FontWeight.bold)),
               const SizedBox(height:5),
               FittedBox(fit:BoxFit.scaleDown,child:WaffraCurrencyAmount(
                sum(visible.where((e)=>e.income),true),fontSize:18,
-               color:const Color(0xFF075B43))),
+               color:Theme.of(context).brightness==Brightness.dark?const Color(0xFFA8E8C7):const Color(0xFF075B43))),
              ]))),
             const SizedBox(width:9),
             Expanded(child:Container(
              padding:const EdgeInsets.all(12),
-             decoration:BoxDecoration(color:const Color(0xFFFCECE8),
+             decoration:BoxDecoration(
+              color:Theme.of(context).brightness==Brightness.dark?
+               const Color(0xFF49302C):const Color(0xFFFCECE8),
               borderRadius:BorderRadius.circular(15)),
              child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
               WaffraText(waffraIsEnglish?'Expenses':'المصروفات',
-               style:const TextStyle(color:Color(0xFFB34E3C),fontWeight:FontWeight.bold)),
+               style:TextStyle(color:Theme.of(context).brightness==Brightness.dark?const Color(0xFFFFBAB0):const Color(0xFFB34E3C),fontWeight:FontWeight.bold)),
               const SizedBox(height:5),
               FittedBox(fit:BoxFit.scaleDown,child:WaffraCurrencyAmount(
                sum(visible.where((e)=>!e.income),false),fontSize:18,
-               color:const Color(0xFFB34E3C))),
+               color:Theme.of(context).brightness==Brightness.dark?const Color(0xFFFFBAB0):const Color(0xFFB34E3C))),
              ]))),
            ]),
            const SizedBox(height:10),
@@ -4056,9 +4061,10 @@ Future<void> bulkSmsSheet()async {
     margin:const EdgeInsets.only(bottom:11),
     elevation:0,
     color:Theme.of(context).cardColor,
-    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(22),
-     side:BorderSide(color:c.income?
-      const Color(0xFFB8DCC8):const Color(0xFFF1D9D2),width:1)),
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(19),
+     side:BorderSide(color:Theme.of(context).brightness==Brightness.dark?
+      (c.income?const Color(0xFF356D52):const Color(0xFF774E46)):
+      (c.income?const Color(0xFFB8DCC8):const Color(0xFFF1D9D2)),width:1)),
     child:InkWell(borderRadius:BorderRadius.circular(22),onTap:()=>updateCategory(c),
      child:Padding(padding:const EdgeInsets.all(13),child:Column(children:[
       Row(children:[
@@ -5244,8 +5250,7 @@ Future<void> bulkSmsSheet()async {
    ValueListenableBuilder<bool>(
     valueListenable:hideWaffraAmounts,
     builder:(context,hidden,_)=>currentTab()),
-  // Floating plus starts collapsed at the physical bottom-left in both
-  // languages. Expanded menu has two REAL actions, never a dummy label.
+  // Keep the add menu and its original actions above the 6-tab navigation.
   floatingActionButtonLocation:FloatingActionButtonLocation.centerFloat,
   floatingActionButton:!ready||goalsOpened||(tab!=0&&tab!=1)?null:Directionality(
    textDirection:TextDirection.ltr,child:Column(
