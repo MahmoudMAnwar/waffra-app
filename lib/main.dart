@@ -4218,6 +4218,19 @@ Future<void> bulkSmsSheet()async {
     target.right.clamp(4.0,area.maxWidth-4).toDouble(),
     target.bottom.clamp(4.0,area.maxHeight-4).toDouble());
   }
+  // Headings use intrinsic text bounds rather than a full-width row.
+  // Other tour steps retain their actual button/icon target.
+  final headingFocus=tourStep==2||tourStep==4;
+  final headingText=waffraIsEnglish?en[tourStep]:ar[tourStep];
+  if(headingFocus){
+   final style=Theme.of(context).textTheme.titleLarge??const TextStyle(fontSize:23);
+   final painter=TextPainter(text:TextSpan(text:headingText,style:style.copyWith(fontWeight:FontWeight.bold)),
+    textDirection:waffraIsEnglish?TextDirection.ltr:TextDirection.rtl,maxLines:1)..layout(maxWidth:area.maxWidth-40);
+   final desiredWidth=(painter.width+30).clamp(90.0,area.maxWidth-24).toDouble();
+   final right=waffraIsEnglish?target.left+desiredWidth:target.right;
+   target=Rect.fromLTWH((right-desiredWidth).clamp(8.0,area.maxWidth-desiredWidth-8).toDouble(),
+    target.top,desiredWidth,target.height);
+  }
   final width=min(300.0,area.maxWidth-24);
   final popupHeight=min(225.0,max(130.0,area.maxHeight*.56));
   final spaceBelow=area.maxHeight-target.bottom-12;
@@ -4229,6 +4242,18 @@ Future<void> bulkSmsSheet()async {
   return Stack(children:[
    Positioned.fill(child:AnimatedBuilder(animation:_tourGlow,
     builder:(ctx,_)=>CustomPaint(painter:WaffraTourShade(target,glow:_tourGlow.value)))),
+   if(headingFocus)Positioned.fromRect(rect:target,child:IgnorePointer(child:
+    AnimatedBuilder(animation:_tourGlow,builder:(ctx,_){
+     final zoom=waffraAnimationLevel.value=='off'?1.0:1.0+.09*_tourGlow.value;
+     return Center(child:Transform.scale(scale:zoom,child:Container(
+      padding:const EdgeInsets.symmetric(horizontal:12,vertical:6),
+      decoration:BoxDecoration(color:const Color(0xFFF7FFF9),
+       borderRadius:BorderRadius.circular(18),border:Border.all(color:const Color(0xFF7EDAB0),width:1.4),
+       boxShadow:[BoxShadow(color:const Color(0xFF66DDA3).withValues(alpha:.24+.20*_tourGlow.value),
+        blurRadius:15+10*_tourGlow.value)]),
+      child:FittedBox(fit:BoxFit.scaleDown,child:WaffraText(headingText,
+       style:const TextStyle(fontSize:22,fontWeight:FontWeight.bold,color:forest))))));
+    }))),
    AnimatedPositioned(
     duration:waffraMotion(700),
     curve:Curves.easeInOutCubic,top:top,left:left,width:width,
