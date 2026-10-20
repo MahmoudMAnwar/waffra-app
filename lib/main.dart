@@ -3438,9 +3438,7 @@ Future<void> bulkSmsSheet()async {
           const SizedBox(width:8),
           _dashboardShortcut(waffraIsEnglish?'Financial calendar':'التقويم المالي',
            Icons.calendar_month_outlined,openFinancialCalendar),
-          const SizedBox(width:8),
-          _dashboardShortcut(waffraIsEnglish?'Savings goals':'أهداف الادخار',
-           Icons.flag_outlined,()=>setState((){tab=3;goalsOpened=false;})),
+
          ]),
          const SizedBox(height:13),
          monthlyBudgetCard(),
@@ -4314,8 +4312,9 @@ Future<void> bulkSmsSheet()async {
    borderRadius:BorderRadius.circular(18),
    border:Border.all(color:color.withValues(alpha:.16))),
   child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-   Icon(icon,color:color,size:21),const SizedBox(height:5),
-   WaffraText(heading,style:const TextStyle(fontSize:12)),
+   Row(children:[Icon(icon,color:color,size:20),const SizedBox(width:7),
+    Expanded(child:WaffraText(heading,style:const TextStyle(fontSize:12)))]),
+   const SizedBox(height:8),
    FittedBox(fit:BoxFit.scaleDown,alignment:AlignmentDirectional.centerStart,
     child:WaffraText(number,style:const TextStyle(fontSize:17,fontWeight:FontWeight.bold))),
   ]));
@@ -4383,8 +4382,10 @@ Future<void> bulkSmsSheet()async {
     TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
      inputFormatters:[const WaffraAmountFormatter()],onChanged:(_)=>update((){}),
      decoration:InputDecoration(labelText:waffraIsEnglish?'Saved amount *':'المبلغ المدّخر *',
-      errorText:attempted&&WaffraValidators.positiveAmount(amount.text)!=null?
-       (waffraIsEnglish?'Amount must be positive':'المبلغ حقل إجباري ويجب أن يكون أكبر من صفر'):null,
+      errorText:null,
+      helperText:attempted&&WaffraValidators.positiveAmount(amount.text)!=null?
+       (waffraIsEnglish?'Amount is required and must be greater than 0.':'المبلغ حقل إجباري، ويجب أن يكون أكبر من 0.'):null,
+      helperMaxLines:3,
       border:const OutlineInputBorder())),
     const SizedBox(height:12),
     WaffraText(waffraIsEnglish
@@ -4498,7 +4499,7 @@ Future<void> bulkSmsSheet()async {
          onPressed:()async{
           final ok=await confirmDeletion(waffraIsEnglish?'Delete challenge?':'حذف التحدي',
            waffraIsEnglish?'Progress cannot be recovered.':
-            'سيتم حذف التحدي وتقدمه نهائيًا، ولا يمكن استعادته.');
+            'هل أنت متأكد من حذف هذا التحدي؟ سيتم حذف التحدي نهائيًا، ولن تتمكن من استعادته لاحقًا.');
           if(ok==true&&mounted){
            setState(()=>challenges.removeWhere((x)=>x.id==c.id));await persist();
           }
@@ -5349,6 +5350,22 @@ Future<void> bulkSmsSheet()async {
  }
  Future<void> selectFooter(int target)async {
   if(target==2){
+   if(entries.isEmpty){
+    if(!mounted)return;
+    await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+     title:WaffraText(waffraIsEnglish?'No transactions yet':'لا توجد معاملات حالية'),
+     content:WaffraText(waffraIsEnglish?'Add an income or expense transaction first to start financial analysis.':'لا توجد معاملات لتحليلها حاليًا. برجاء إضافة عملية دخل أو مصروف أولًا.'),
+     actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))]));
+    return;
+   }
+   final confirmed=await showWaffraDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Start financial analysis?':'بدء التحليل المالي؟'),
+    content:WaffraText(waffraIsEnglish?'Analyze your recorded transactions now?':'سيتم تحليل معاملاتك المالية المسجلة. هل تريد المتابعة؟'),
+    actions:[
+     TextButton(onPressed:()=>Navigator.pop(ctx,false),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+     FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:WaffraText(waffraIsEnglish?'Start analysis':'بدء التحليل')),
+    ]));
+   if(confirmed!=true||!mounted)return;
    final previous=tab;
    setState((){tab=2;goalsOpened=false;addFabExpanded=false;});
    try{await showAiAnalysis();}finally{
