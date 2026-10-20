@@ -1490,13 +1490,57 @@ Future<void> bulkSmsSheet()async {
   final expenses=valid.where((i)=>!results[i].income).toList();
   final incomeTotal=incomes.fold<double>(0,(v,i)=>v+results[i].amount!);
   final expenseTotal=expenses.fold<double>(0,(v,i)=>v+results[i].amount!);
-  final accepted=await showDialog<bool>(context:ctx,builder:(dialogCtx)=>AlertDialog(
-   title:WaffraText(waffraIsEnglish?'Confirm transactions':'تأكيد إضافة المعاملات'),
-   content:WaffraText(waffraIsEnglish
-    ?'Detected ${valid.length} transactions: ${incomes.length} income (SAR ${incomeTotal.toStringAsFixed(2)}) and ${expenses.length} expenses (SAR ${expenseTotal.toStringAsFixed(2)}). ${invalid.length} unrecognized. Add these transactions?'
-    :'تم اكتشاف ${valid.length} معاملات: ${incomes.length} دخل (${incomeTotal.toStringAsFixed(2)} ر.س) و${expenses.length} مصروفات (${expenseTotal.toStringAsFixed(2)} ر.س). تعذر تحليل ${invalid.length}. هل تريد تأكيد الإضافة؟'),
-   actions:[TextButton(onPressed:()=>Navigator.pop(dialogCtx,false),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
-    FilledButton(onPressed:()=>Navigator.pop(dialogCtx,true),child:WaffraText(waffraIsEnglish?'Confirm and add':'تأكيد وإضافة المعاملات'))]));
+  final accepted=await showDialog<bool>(
+   context:ctx,barrierColor:Colors.black.withValues(alpha:.25),
+   builder:(dialogCtx)=>BackdropFilter(
+    filter:ui.ImageFilter.blur(sigmaX:7,sigmaY:7),
+    child:AlertDialog(
+     title:WaffraText(waffraIsEnglish?'Confirm transactions':'تأكيد إضافة المعاملات'),
+     content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      WaffraText(waffraIsEnglish?
+       'Detected ${valid.length} transactions from bank messages:':
+       'تم اكتشاف ${valid.length} معاملة من الرسائل البنكية:'),
+      const SizedBox(height:16),
+      Container(padding:const EdgeInsets.all(13),
+       decoration:BoxDecoration(color:const Color(0xFFEAF7EF),borderRadius:BorderRadius.circular(15)),
+       child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        WaffraText(waffraIsEnglish?'Income transactions':'معاملات دخل',
+         style:const TextStyle(fontWeight:FontWeight.bold,color:Color(0xFF075B43))),
+        WaffraText(waffraIsEnglish?
+         '${incomes.length} transactions — SAR ${incomeTotal.toStringAsFixed(2)}':
+         '${incomes.length} معاملة — ${incomeTotal.toStringAsFixed(2)} ر.س',
+         style:const TextStyle(color:Color(0xFF075B43))),
+       ])),
+      const SizedBox(height:10),
+      Container(padding:const EdgeInsets.all(13),
+       decoration:BoxDecoration(color:const Color(0xFFFFF0E9),borderRadius:BorderRadius.circular(15)),
+       child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        WaffraText(waffraIsEnglish?'Expense transactions':'معاملات مصروفات',
+         style:const TextStyle(fontWeight:FontWeight.bold,color:Color(0xFF9A4328))),
+        WaffraText(waffraIsEnglish?
+         '${expenses.length} transactions — SAR ${expenseTotal.toStringAsFixed(2)}':
+         '${expenses.length} معاملة — ${expenseTotal.toStringAsFixed(2)} ر.س',
+         style:const TextStyle(color:Color(0xFF9A4328))),
+       ])),
+      if(invalid.isNotEmpty)...[
+       const SizedBox(height:12),
+       WaffraText(waffraIsEnglish?
+        '${invalid.length} messages could not be analyzed.':
+        'تعذر تحليل ${invalid.length} رسالة.',
+        style:const TextStyle(color:Colors.deepOrange)),
+      ],
+      const SizedBox(height:12),
+      WaffraText(waffraIsEnglish?
+       'Confirm adding the detected transactions?':
+       'هل تريد تأكيد إضافة المعاملات المكتشفة؟'),
+     ]),
+     actions:[
+      TextButton(onPressed:()=>Navigator.pop(dialogCtx,false),
+       child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+      FilledButton(onPressed:()=>Navigator.pop(dialogCtx,true),
+       child:WaffraText(waffraIsEnglish?'Confirm and add':'تأكيد وإضافة المعاملات')),
+     ],
+    )));
   if(accepted!=true||!ctx.mounted)return;
   update(() {busy=true;rejectedMessages=invalid.map((i)=>found[i]).toList();});
   final additions=<MoneyEntry>[];
