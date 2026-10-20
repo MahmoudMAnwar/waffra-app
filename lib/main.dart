@@ -1875,7 +1875,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    return when==null||!DateTime.now().isBefore(when.add(const Duration(days:30)));
   });
   // Install catalog once without overwriting custom categories, saved budgets or trash.
-  if(!(p.getBool('waffra_category_catalog_v1_installed')??false)){
+  if(!(p.getBool('waffra_category_catalog_v2_installed')??false)){
    final discarded=<String>{};
    for(final item in deletedCategories){
     final data=item['category'];
@@ -1892,7 +1892,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     categories.add(suggestion);
    }
    await p.setString('waffra_categories_v24',jsonEncode(categories.map((e)=>e.toJson()).toList()));
-   await p.setBool('waffra_category_catalog_v1_installed',true);
+   await p.setBool('waffra_category_catalog_v2_installed',true);
   }
   smsHashes.addAll(p.getStringList('waffra_sms_hashes_v1')??const []);
   monthlyBudget=p.getDouble('waffra_monthly_budget_v1')??0;
