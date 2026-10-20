@@ -499,10 +499,12 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     backgroundColor:Colors.white,
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26),
      side:waffraDialogOutline(Brightness.light))),
-   bottomSheetTheme:const BottomSheetThemeData(
+   bottomSheetTheme:BottomSheetThemeData(
     backgroundColor:Colors.white,modalBackgroundColor:Colors.white,
-    showDragHandle:true,dragHandleColor:Color(0xFFB5D9C6),
-    shape:RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(27)))),
+    showDragHandle:true,dragHandleColor:const Color(0xFFB5D9C6),
+    shape:RoundedRectangleBorder(
+     borderRadius:const BorderRadius.vertical(top:Radius.circular(27)),
+     side:waffraDialogOutline(Brightness.light))),
    popupMenuTheme:PopupMenuThemeData(
     color:Colors.white,elevation:7,
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16))),
@@ -572,9 +574,12 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     backgroundColor:const Color(0xFF191D1B),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26),
      side:waffraDialogOutline(Brightness.dark))),
-   bottomSheetTheme:const BottomSheetThemeData(
-    backgroundColor:Color(0xFF191D1B),modalBackgroundColor:Color(0xFF191D1B),
-    shape:RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(27)))),
+   bottomSheetTheme:BottomSheetThemeData(
+    backgroundColor:const Color(0xFF191D1B),
+    modalBackgroundColor:const Color(0xFF191D1B),
+    shape:RoundedRectangleBorder(
+     borderRadius:const BorderRadius.vertical(top:Radius.circular(27)),
+     side:waffraDialogOutline(Brightness.dark))),
    popupMenuTheme:PopupMenuThemeData(
     color:const Color(0xFF202522),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16))),
