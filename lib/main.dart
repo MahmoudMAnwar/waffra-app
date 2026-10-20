@@ -40,6 +40,12 @@ const waffraMint=Color(0xFFEAF5EE),
  waffraIncomeBackground=Color(0xFFB2D5C2),
  waffraExpenseBackground=Color(0xFFFCECE8),
  waffraInk=Color(0xFF183B33);
+/// Accessible 1.2px emerald outline for both Waffra dialog themes.
+BorderSide waffraDialogOutline(Brightness brightness)=>BorderSide(
+ color:brightness==Brightness.dark?const Color(0xFF74D8A9):const Color(0xFF0C7957),
+ width:1.2,
+);
+
 Color waffraIncomeTone(BuildContext context)=>Theme.of(context).brightness==Brightness.dark?const Color(0xFF6CE0AB):const Color(0xFF075C40);
 final ValueNotifier<int> waffraReturnHome=ValueNotifier<int>(0);
 final ValueNotifier<String> waffraAnimationLevel=ValueNotifier<String>('balanced');
@@ -491,7 +497,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     labelStyle:const TextStyle(fontFamily:'Tajawal',color:forest)),
    dialogTheme:DialogThemeData(
     backgroundColor:Colors.white,
-    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26))),
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26),
+     side:waffraDialogOutline(Brightness.light))),
    bottomSheetTheme:const BottomSheetThemeData(
     backgroundColor:Colors.white,modalBackgroundColor:Colors.white,
     showDragHandle:true,dragHandleColor:Color(0xFFB5D9C6),
@@ -563,7 +570,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     labelStyle:const TextStyle(color:Colors.white)),
    dialogTheme:DialogThemeData(
     backgroundColor:const Color(0xFF191D1B),
-    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26))),
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26),
+     side:waffraDialogOutline(Brightness.dark))),
    bottomSheetTheme:const BottomSheetThemeData(
     backgroundColor:Color(0xFF191D1B),modalBackgroundColor:Color(0xFF191D1B),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(27)))),
@@ -1546,6 +1554,108 @@ class WaffraPageHero extends StatelessWidget {
    )),
  );
 }
+/// Preserves full bank-SMS text while presenting Arabic transaction
+/// details in an explicitly right-to-left, consistently aligned dialog.
+class WaffraTransactionDetailsDialog extends StatelessWidget {
+ final MoneyEntry entry;
+ final VoidCallback onClose;
+ final VoidCallback? onViewReceipt;
+ const WaffraTransactionDetailsDialog({
+  super.key,required this.entry,required this.onClose,this.onViewReceipt,
+ });
+ @override Widget build(BuildContext context){
+  final rtl=!waffraIsEnglish;
+  final dark=Theme.of(context).brightness==Brightness.dark;
+  final accent=entry.income?const Color(0xFF087A54):const Color(0xFFB94838);
+  final lightTone=entry.income?const Color(0xFFE4F4EB):const Color(0xFFFCECE8);
+  final darkTone=entry.income?const Color(0xFF244C3A):const Color(0xFF49302C);
+  final muted=Theme.of(context).colorScheme.onSurface.withValues(alpha:.73);
+  return Directionality(
+   textDirection:rtl?TextDirection.rtl:TextDirection.ltr,
+   child:AlertDialog(
+    title:Row(children:[
+     Icon(Icons.receipt_long_outlined,color:dark?const Color(0xFF74D8A9):emerald),
+     const SizedBox(width:9),
+     Expanded(child:WaffraText(waffraIsEnglish?'Transaction details':'تفاصيل المعاملة',
+      textDirection:rtl?TextDirection.rtl:TextDirection.ltr,
+      textAlign:TextAlign.start,
+      style:const TextStyle(fontWeight:FontWeight.bold,fontSize:20))),
+    ]),
+    content:ConstrainedBox(
+     constraints:const BoxConstraints(maxWidth:440),
+     child:SingleChildScrollView(child:Column(
+      mainAxisSize:MainAxisSize.min,
+      crossAxisAlignment:CrossAxisAlignment.stretch,
+      children:[
+       WaffraText(waffraIsEnglish?'Transaction description':'وصف المعاملة',
+        textAlign:TextAlign.start,style:TextStyle(fontSize:12,color:muted)),
+       const SizedBox(height:7),
+       Container(
+        width:double.infinity,
+        padding:const EdgeInsets.symmetric(horizontal:13,vertical:12),
+        decoration:BoxDecoration(
+         color:dark?const Color(0xFF252A27):const Color(0xFFF1F8F3),
+         borderRadius:BorderRadius.circular(14),
+         border:Border.all(color:dark?const Color(0xFF3B5444):const Color(0xFFD5E8DC))),
+        child:WaffraText(entry.title,
+         textDirection:rtl?TextDirection.rtl:TextDirection.ltr,
+         textAlign:TextAlign.start,
+         softWrap:true,
+         style:const TextStyle(fontSize:14,fontWeight:FontWeight.w600,height:1.5)),
+       ),
+       const SizedBox(height:15),
+       Row(children:[
+        Icon(Icons.category_outlined,color:dark?const Color(0xFF74D8A9):emerald,size:20),
+        const SizedBox(width:8),
+        Expanded(child:WaffraText(waffraTr(entry.category),
+         textDirection:rtl?TextDirection.rtl:TextDirection.ltr,
+         textAlign:TextAlign.start,
+         style:const TextStyle(fontWeight:FontWeight.bold))),
+       ]),
+       const SizedBox(height:13),
+       Row(children:[
+        Icon(Icons.calendar_today_outlined,color:dark?const Color(0xFF74D8A9):emerald,size:19),
+        const SizedBox(width:8),
+        Expanded(child:WaffraText(dayText(entry.date),
+         textAlign:TextAlign.start,
+         textDirection:rtl?TextDirection.rtl:TextDirection.ltr,
+         style:TextStyle(color:muted,fontSize:13))),
+       ]),
+       const SizedBox(height:15),
+       Container(
+        padding:const EdgeInsets.symmetric(horizontal:13,vertical:12),
+        decoration:BoxDecoration(color:dark?darkTone:lightTone,
+         borderRadius:BorderRadius.circular(15)),
+        child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+         WaffraText(entry.income?
+          (waffraIsEnglish?'Income':'الدخل'):
+          (waffraIsEnglish?'Expense':'المصروف'),
+          style:TextStyle(fontSize:12,fontWeight:FontWeight.bold,
+           color:dark?Colors.white:accent)),
+         const SizedBox(height:5),
+         Align(alignment:AlignmentDirectional.centerStart,
+          child:WaffraCurrencyAmount(
+           entry.income?entry.amount:-entry.amount,
+           fontSize:22,color:dark?Colors.white:accent)),
+        ]),
+       ),
+       if(onViewReceipt!=null)...[
+        const SizedBox(height:10),
+        Align(alignment:AlignmentDirectional.centerStart,
+         child:TextButton.icon(
+          onPressed:onViewReceipt,
+          icon:const Icon(Icons.photo_library_outlined),
+          label:WaffraText(waffraIsEnglish?'View attachments':'عرض المرفقات'))),
+       ],
+      ],
+     )),
+    ),
+    actions:[TextButton(onPressed:onClose,
+     child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))],
+   ),
+  );
+ }
+}
 class HomeScreen extends StatefulWidget {
  final Person profile;final bool dark,pinEnabled;
  final Future<void> Function(String?) onSetPin;
@@ -2349,14 +2459,21 @@ Future<void> bulkSmsSheet()async {
     insetPadding:const EdgeInsets.symmetric(horizontal:14,vertical:30),
     child:Column(mainAxisSize:MainAxisSize.min,children:[
      Container(
-      decoration:BoxDecoration(color:const Color(0xFFF6FBF7),
-       borderRadius:BorderRadius.circular(18),border:Border.all(color:emerald,width:2)),
+      decoration:BoxDecoration(
+       color:Theme.of(ctx).brightness==Brightness.dark?
+        const Color(0xFF191D1B):const Color(0xFFF6FBF7),
+       borderRadius:BorderRadius.circular(18),
+       border:Border.fromBorderSide(waffraDialogOutline(Theme.of(ctx).brightness))),
       clipBehavior:Clip.antiAlias,
       child:Column(mainAxisSize:MainAxisSize.min,children:[
        Row(children:[
-        IconButton(onPressed:()=>Navigator.pop(ctx),icon:const Icon(Icons.close,color:emerald)),
+        IconButton(onPressed:()=>Navigator.pop(ctx),
+         icon:Icon(Icons.close,color:Theme.of(ctx).brightness==Brightness.dark?
+          const Color(0xFF74D8A9):emerald)),
         Expanded(child:Center(child:Text('${current+1} / ${available.length}',
-         textDirection:TextDirection.ltr,style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)))),
+         textDirection:TextDirection.ltr,
+         style:TextStyle(color:Theme.of(ctx).brightness==Brightness.dark?
+          const Color(0xFF74D8A9):emerald,fontWeight:FontWeight.bold)))),
         const SizedBox(width:48),
        ]),
        SizedBox(height:MediaQuery.of(ctx).size.height*.68,
@@ -2428,7 +2545,8 @@ Future<void> bulkSmsSheet()async {
       width:MediaQuery.of(dialogContext).size.width*.82,
       padding:const EdgeInsets.all(28),
       decoration:BoxDecoration(color:Theme.of(dialogContext).cardColor,
-       borderRadius:BorderRadius.circular(26)),
+       borderRadius:BorderRadius.circular(26),
+       border:Border.fromBorderSide(waffraDialogOutline(Theme.of(dialogContext).brightness))),
       child:Column(mainAxisSize:MainAxisSize.min,children:[
        const SizedBox(height:8),
        const SizedBox(height:100,width:100,child:Stack(alignment:Alignment.center,children:[
@@ -2641,7 +2759,8 @@ Future<void> bulkSmsSheet()async {
    if(!mounted)return;
    final fileName=analytics?'waffra_analytics.pdf':'waffra_income_expenses.pdf';
    await showWaffraDialog<void>(context:context,builder:(dialogContext)=>AlertDialog(
-    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(24)),
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(24),
+     side:waffraDialogOutline(Theme.of(dialogContext).brightness)),
     title:Column(children:[
      const Icon(Icons.check_circle_rounded,color:emerald,size:58),
      const SizedBox(height:12),
@@ -2747,25 +2866,18 @@ Future<void> bulkSmsSheet()async {
   }
  }
  Future<void> transactionDetails(MoneyEntry entry)async {
-  await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
-   title:WaffraText(waffraIsEnglish?'Transaction details':'تفاصيل المعاملة'),
-   content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-    WaffraText(entry.title,style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold)),
-    const SizedBox(height:12),
-    WaffraText(waffraTr(entry.category)),
-    const SizedBox(height:8),
-    WaffraText(dayText(entry.date)),
-    const SizedBox(height:8),
-    WaffraCurrencyAmount(entry.income?entry.amount:-entry.amount,fontSize:24),
-    if(waffraReceiptPaths(entry.receiptPath).isNotEmpty)
-     TextButton.icon(onPressed:(){Navigator.pop(ctx);showReceipt(entry.receiptPath!);},
-      icon:const Icon(Icons.photo_library_outlined),
-      label:WaffraText(waffraIsEnglish?'View images':'عرض الصور')),
-   ]),
-   actions:[TextButton(onPressed:()=>Navigator.pop(ctx),
-    child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))],
-  ));
+  await showWaffraDialog<void>(
+   context:context,
+   builder:(ctx)=>WaffraTransactionDetailsDialog(
+    entry:entry,
+    onClose:()=>Navigator.pop(ctx),
+    onViewReceipt:waffraReceiptPaths(entry.receiptPath).isNotEmpty
+      ?(){Navigator.pop(ctx);showReceipt(entry.receiptPath!);}
+      :null,
+   ),
+  );
  }
+
  Widget tile(MoneyEntry e){
   final c=categoryFor(e.category,e.income);
   return Card(color:e.income?const Color(0xFFB2D5C2):const Color(0xFFF0F7F2),child:ListTile(
@@ -4823,7 +4935,8 @@ Future<void> bulkSmsSheet()async {
   try{
    return await showWaffraDialog<String>(context:context,builder:(dialogContext)=>Theme(data:Theme.of(dialogContext).copyWith(brightness:Brightness.dark,colorScheme:ColorScheme.fromSeed(seedColor:emerald,brightness:Brightness.dark)),child:AlertDialog(
     backgroundColor:forest,
-    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26),side:const BorderSide(color:Color(0xFF2C9674))),
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26),
+     side:waffraDialogOutline(Brightness.dark)),
     title:Column(mainAxisSize:MainAxisSize.min,children:[
      const CircleAvatar(radius:26,backgroundColor:emerald,child:Icon(Icons.lock_outline,color:Colors.white,size:28)),
      const SizedBox(height:12),WaffraText(title,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold))]),
