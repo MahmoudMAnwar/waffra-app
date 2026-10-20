@@ -287,9 +287,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  String? pinHash;Person? profile;
  @override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);load();launchIntro();}
  Future<void> launchIntro()async{
-  var first=false;
-  try{final p=await SharedPreferences.getInstance();first=p.getBool('waffra_intro_seen')!=true;if(first)await p.setBool('waffra_intro_seen',true);}catch(_){}
-  await Future<void>.delayed(Duration(milliseconds:first?1900:500));
+  // Play the same concise one-second animation on every cold launch.
+  await Future<void>.delayed(const Duration(milliseconds:1000));
   if(mounted)setState(()=>introDone=true);
  }
  DateTime? _backgroundAt;
@@ -564,7 +563,7 @@ class WaffraLaunchIntro extends StatefulWidget {
 }
 class _WaffraLaunchIntroState extends State<WaffraLaunchIntro> with SingleTickerProviderStateMixin {
  late final AnimationController controller;
- @override void initState(){super.initState();controller=AnimationController(vsync:this,duration:const Duration(milliseconds:1700))..forward();}
+ @override void initState(){super.initState();controller=AnimationController(vsync:this,duration:const Duration(milliseconds:950))..forward();}
  @override void dispose(){controller.dispose();super.dispose();}
  @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFF002E25),
   body:Center(child:AnimatedBuilder(animation:controller,builder:(ctx,_) {
@@ -816,17 +815,20 @@ class _LoginScreenState extends State<LoginScreen> {
 
  bool socialBusy=false;
  Widget _socialBorder(BuildContext sheet,String id,Widget icon,{required String label})=>Material(
-  color:Colors.white,borderRadius:BorderRadius.circular(18),child:InkWell(
+  color:const Color(0xFFFEFDF8),borderRadius:BorderRadius.circular(18),child:InkWell(
   borderRadius:BorderRadius.circular(18),onTap:()=>Navigator.pop(sheet,id),
-  child:Container(width:double.infinity,padding:const EdgeInsets.symmetric(horizontal:17,vertical:15),
+  child:Container(width:double.infinity,padding:const EdgeInsets.symmetric(horizontal:19,vertical:19),
    decoration:BoxDecoration(borderRadius:BorderRadius.circular(18),
-    border:Border.all(color:id=='Google'?const Color(0xFF4285F4):id=='Apple'?const Color(0xFF777F8B):forest,width:1.6)),
-   child:Row(children:[icon,const SizedBox(width:15),Expanded(child:WaffraText(label,
-    style:const TextStyle(color:forest,fontSize:16,fontWeight:FontWeight.bold)))]))));
+    border:Border.all(color:forest,width:1.5)),
+   child:Row(children:[icon,const SizedBox(width:16),Expanded(child:WaffraText(label,
+    style:const TextStyle(color:Color(0xFF10191A),fontSize:17,fontWeight:FontWeight.bold))),
+    const SizedBox(width:8),const Icon(Icons.chevron_left_rounded,color:forest,size:29)]))));
  Future<void> chooseRegistration()async {
   final choice=await showModalBottomSheet<String>(context:context,showDragHandle:true,
-   builder:(ctx)=>SafeArea(child:Padding(padding:const EdgeInsets.all(16),child:Column(mainAxisSize:MainAxisSize.min,children:[
-    WaffraText(waffraIsEnglish?'Create account':'إنشاء حساب',style:Theme.of(ctx).textTheme.titleLarge),
+   backgroundColor:const Color(0xFFFEFDF8),
+   shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(30))),
+   builder:(ctx)=>SafeArea(child:Padding(padding:const EdgeInsets.fromLTRB(20,14,20,28),child:Column(mainAxisSize:MainAxisSize.min,children:[
+    WaffraText(waffraIsEnglish?'Create account':'إنشاء حساب',style:const TextStyle(fontSize:29,fontWeight:FontWeight.bold,color:Color(0xFF10191A))),
     const SizedBox(height:15),
     _socialBorder(ctx,'Google',ShaderMask(shaderCallback:(bounds)=>const LinearGradient(colors:[Color(0xFF4285F4),Color(0xFF34A853),Color(0xFFFBBC05),Color(0xFFEA4335)]).createShader(bounds),child:const Text('G',style:TextStyle(fontSize:27,fontWeight:FontWeight.w900,color:Colors.white))),label:waffraIsEnglish?'Continue with Google':'المتابعة باستخدام Google'),
     const SizedBox(height:12),
