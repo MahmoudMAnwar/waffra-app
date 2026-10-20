@@ -3,6 +3,21 @@ part of 'main.dart';
 /// Grouped, searchable category display. Kept in the main library as a part
 /// so it shares the existing home state without copying financial data.
 extension WaffraCategoryScreen on _HomeScreenState {
+ Widget _compactCategoryStat(String heading,String count,IconData icon,Color color)=>
+  Container(
+   padding:const EdgeInsets.symmetric(horizontal:11,vertical:9),
+   decoration:BoxDecoration(
+    color:Theme.of(context).cardColor,
+    borderRadius:BorderRadius.circular(16),
+    border:Border.all(color:color.withValues(alpha:.20))),
+   child:Row(children:[
+    Icon(icon,size:19,color:color),
+    const SizedBox(width:7),
+    Expanded(child:WaffraText(heading,maxLines:1,
+     style:const TextStyle(fontSize:11,fontWeight:FontWeight.w600))),
+    WaffraText(count,style:const TextStyle(fontSize:16,fontWeight:FontWeight.bold)),
+   ]),
+  );
  Widget categoriesPageV2(){
   final now=DateTime.now();
   final recent=entries.where((e)=>e.date.year==now.year&&e.date.month==now.month).toList();
@@ -37,11 +52,11 @@ extension WaffraCategoryScreen on _HomeScreenState {
      side:BorderSide(color:color.withValues(alpha:.32))),
     child:InkWell(onTap:()=>setState((){
      if(opened){expandedCategoryIds.remove(root.id);}else{expandedCategoryIds.add(root.id);}
-    }),child:Padding(padding:const EdgeInsets.all(12),
+    }),child:Padding(padding:const EdgeInsets.all(9),
      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       Row(children:[
-       CircleAvatar(radius:22,backgroundColor:color.withValues(alpha:.14),
-        child:Icon(categoryIcon(root.icon),size:22,color:color)),
+       CircleAvatar(radius:19,backgroundColor:color.withValues(alpha:.14),
+        child:Icon(categoryIcon(root.icon),size:20,color:color)),
        const Spacer(),
        PopupMenuButton<String>(
         tooltip:waffraIsEnglish?'Category actions':'خيارات القسم',
@@ -57,12 +72,12 @@ extension WaffraCategoryScreen on _HomeScreenState {
         ],
         child:const Icon(Icons.more_vert,size:20)),
       ]),
-      const SizedBox(height:10),
+      const SizedBox(height:5),
       WaffraText(root.name,maxLines:2,style:const TextStyle(fontSize:15,fontWeight:FontWeight.w700)),
       const SizedBox(height:5),
       WaffraText(waffraIsEnglish?'${children(root).length} subcategories':'${children(root).length} قسم فرعي',
        style:TextStyle(fontSize:11,color:Theme.of(context).hintColor)),
-      const SizedBox(height:10),
+      const SizedBox(height:5),
       WaffraText(root.income?
        (waffraIsEnglish?'Income: ${cash(amount)}':'الدخل: ${cash(amount)}'):
        (waffraIsEnglish?'Spent: ${cash(amount)}':'المصروف: ${cash(amount)}'),
@@ -74,7 +89,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
         backgroundColor:color.withValues(alpha:.12),
         borderRadius:BorderRadius.circular(8)),
       ],
-      const SizedBox(height:9),
+      const SizedBox(height:3),
       Row(mainAxisAlignment:MainAxisAlignment.end,children:[
        WaffraText(waffraIsEnglish?'Subcategories':'الأقسام الفرعية',style:const TextStyle(fontSize:10)),
        Icon(opened?Icons.keyboard_arrow_up:Icons.keyboard_arrow_down,size:20,color:color),
@@ -122,7 +137,11 @@ extension WaffraCategoryScreen on _HomeScreenState {
     ])));
    for(final root in [left,if(right!=null)right]){
     if(!expandedCategoryIds.contains(root.id))continue;
-    final items=children(root);
+    final items=children(root)..sort((a,b){
+      final aWrap=a.displayName.length>19?1:0;
+      final bWrap=b.displayName.length>19?1:0;
+      return aWrap.compareTo(bWrap);
+     });
     groupRows.add(Container(
      margin:const EdgeInsets.only(bottom:14),
      padding:const EdgeInsets.all(12),
@@ -155,31 +174,21 @@ extension WaffraCategoryScreen on _HomeScreenState {
     subtitle:waffraIsEnglish?'All income and expense types with subcategories':
      'كل أنواع الدخل والمصروفات في أقسام رئيسية وفرعية منظمة.',
     icon:Icons.category_outlined,titleKey:_tourKeys[2]),
-   Row(children:[
-    Expanded(child:OutlinedButton.icon(
-     onPressed:showCategoryTrash,
-     style:OutlinedButton.styleFrom(
-      side:BorderSide(color:Theme.of(context).colorScheme.primary,width:1.4),
-      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15)),
-      padding:const EdgeInsets.symmetric(horizontal:8,vertical:13)),
-     icon:const Icon(Icons.delete_outline,size:19),
-     label:WaffraText(waffraIsEnglish?'Deleted categories':'الأقسام المحذوفة',
-      maxLines:1,style:const TextStyle(fontSize:12,fontWeight:FontWeight.bold)))),
-    const SizedBox(width:9),
-    Expanded(child:FilledButton.icon(onPressed:()=>addCategory(),
-     style:FilledButton.styleFrom(
-      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15)),
-      padding:const EdgeInsets.symmetric(horizontal:8,vertical:13)),
-     icon:const Icon(Icons.add,size:20),
-     label:WaffraText(waffraIsEnglish?'New category':'إضافة قسم',
-      style:const TextStyle(fontWeight:FontWeight.bold)))),
-   ]),
+   SizedBox(width:double.infinity,child:OutlinedButton.icon(
+    onPressed:showCategoryTrash,
+    style:OutlinedButton.styleFrom(
+     side:BorderSide(color:Theme.of(context).colorScheme.primary,width:1.4),
+     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15)),
+     padding:const EdgeInsets.symmetric(horizontal:12,vertical:13)),
+    icon:const Icon(Icons.delete_outline,size:20),
+    label:WaffraText(waffraIsEnglish?'Deleted categories':'الأقسام المحذوفة',
+     style:const TextStyle(fontWeight:FontWeight.bold)))),
    const SizedBox(height:14),
    Row(children:[
-    Expanded(child:_summaryBox(waffraIsEnglish?'Main categories':'الأقسام الرئيسية',
+    Expanded(child:_compactCategoryStat(waffraIsEnglish?'Main categories':'الأقسام الرئيسية',
      roots.length.toString(),Icons.layers,emerald)),
     const SizedBox(width:10),
-    Expanded(child:_summaryBox(waffraIsEnglish?'Subcategories':'الأقسام الفرعية',
+    Expanded(child:_compactCategoryStat(waffraIsEnglish?'Subcategories':'الأقسام الفرعية',
      categories.where((c)=>c.isSubcategory).length.toString(),Icons.account_tree,Colors.deepPurple)),
    ]),
    const SizedBox(height:10),
