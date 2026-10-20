@@ -2565,35 +2565,51 @@ Future<void> bulkSmsSheet()async {
   final controller=PageController(initialPage:initialIndex.clamp(0,available.length-1));
   int current=initialIndex.clamp(0,available.length-1);
   try{
-   await showWaffraDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>Dialog(
-    backgroundColor:Colors.transparent,elevation:0,
-    insetPadding:const EdgeInsets.symmetric(horizontal:14,vertical:30),
-    child:Column(mainAxisSize:MainAxisSize.min,children:[
-     Container(
-      decoration:BoxDecoration(
-       color:Theme.of(ctx).brightness==Brightness.dark?
-        const Color(0xFF191D1B):const Color(0xFFF6FBF7),
-       borderRadius:BorderRadius.circular(18),
-       border:Border.fromBorderSide(waffraDialogOutline(Theme.of(ctx).brightness))),
+   await showWaffraDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update){
+    final isDark=Theme.of(ctx).brightness==Brightness.dark;
+    final accent=isDark?const Color(0xFF74D8A9):emerald;
+    final surface=isDark?const Color(0xFF102A23):const Color(0xFF073F31);
+    final count='${current+1} / ${available.length}';
+    return Dialog(
+     backgroundColor:Colors.transparent,elevation:0,
+     insetPadding:const EdgeInsets.symmetric(horizontal:14,vertical:22),
+     child:Container(
+      constraints:BoxConstraints(maxHeight:MediaQuery.sizeOf(ctx).height*.88),
+      decoration:BoxDecoration(color:surface,borderRadius:BorderRadius.circular(24),
+       border:Border.all(color:accent.withValues(alpha:.85),width:1.2)),
       clipBehavior:Clip.antiAlias,
       child:Column(mainAxisSize:MainAxisSize.min,children:[
-       Row(children:[
-        IconButton(onPressed:()=>Navigator.pop(ctx),
-         icon:Icon(Icons.close,color:Theme.of(ctx).brightness==Brightness.dark?
-          const Color(0xFF74D8A9):emerald)),
-        Expanded(child:Center(child:Text('${current+1} / ${available.length}',
-         textDirection:TextDirection.ltr,
-         style:TextStyle(color:Theme.of(ctx).brightness==Brightness.dark?
-          const Color(0xFF74D8A9):emerald,fontWeight:FontWeight.bold)))),
-        const SizedBox(width:48),
-       ]),
-       SizedBox(height:MediaQuery.of(ctx).size.height*.68,
+       SizedBox(height:54,child:Stack(alignment:Alignment.center,children:[
+        Text(count,textDirection:TextDirection.ltr,
+         style:const TextStyle(color:Colors.white,fontSize:15,fontWeight:FontWeight.bold)),
+        PositionedDirectional(end:7,child:IconButton(
+         tooltip:waffraIsEnglish?'Close':'إغلاق',
+         onPressed:()=>Navigator.pop(ctx),
+         icon:const Icon(Icons.close_rounded,color:Colors.white))),
+       ])),
+       Flexible(child:Container(color:Colors.black,
         child:PageView.builder(controller:controller,itemCount:available.length,
          onPageChanged:(index)=>update(()=>current=index),
          itemBuilder:(ctx,index)=>InteractiveViewer(
-          minScale:0.8,maxScale:5,child:Image.file(File(available[index]),fit:BoxFit.contain)))),
-      ])),
-    ]))));
+          minScale:.8,maxScale:5,
+          child:Center(child:Image.file(File(available[index]),fit:BoxFit.contain)))))),
+       SizedBox(height:58,child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+        IconButton(
+         tooltip:waffraIsEnglish?'Previous image':'الصورة السابقة',
+         onPressed:current>0?()=>controller.previousPage(
+          duration:const Duration(milliseconds:220),curve:Curves.easeInOut):null,
+         icon:Icon(Icons.chevron_left_rounded,color:current>0?Colors.white:Colors.white38)),
+        Text(count,textDirection:TextDirection.ltr,
+         style:const TextStyle(color:Colors.white,fontSize:15,fontWeight:FontWeight.bold)),
+        IconButton(
+         tooltip:waffraIsEnglish?'Next image':'الصورة التالية',
+         onPressed:current<available.length-1?()=>controller.nextPage(
+          duration:const Duration(milliseconds:220),curve:Curves.easeInOut):null,
+         icon:Icon(Icons.chevron_right_rounded,
+          color:current<available.length-1?Colors.white:Colors.white38)),
+       ])),
+      ])));
+   }));
   }finally{controller.dispose();}
  }
  Future<void> budgetAlert(MoneyEntry entry,double previousSpent)async {
