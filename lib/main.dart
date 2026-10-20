@@ -1582,47 +1582,49 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
  final bool english;
  final GlobalKey? focusKey;
  const WaffraBalanceHeader({required this.balance,required this.english,this.focusKey});
- @override double get minExtent=>100;
- @override double get maxExtent=>126;
+ @override double get minExtent=>70;
+ @override double get maxExtent=>86;
  @override Widget build(BuildContext context,double shrinkOffset,bool overlapsContent){
   final progress=(shrinkOffset/(maxExtent-minExtent)).clamp(0.0,1.0);
   final dark=Theme.of(context).brightness==Brightness.dark;
+  final mainColor=dark?Colors.white:forest;
   return Container(
    key:focusKey,
    color:Theme.of(context).scaffoldBackgroundColor,
    padding:const EdgeInsets.fromLTRB(14,0,14,5),
    child:Container(
-    padding:EdgeInsets.symmetric(horizontal:18,vertical:6-2*progress),
+    padding:EdgeInsets.symmetric(horizontal:15,vertical:5-2*progress),
     decoration:BoxDecoration(
      color:Theme.of(context).cardColor,
-     border:Border.all(color:dark?const Color(0xFF385E4B):const Color(0xFFDCEBE2)),
-     boxShadow:dark?null:[BoxShadow(color:forest.withValues(alpha:.055),
-      blurRadius:18,offset:const Offset(0,5))],
-     borderRadius:BorderRadius.circular(24-9*progress)),
-    child:Column(
-     mainAxisAlignment:MainAxisAlignment.center,
-     crossAxisAlignment:CrossAxisAlignment.start,
-     children:[
-      WaffraText(english?'Current balance':'رصيدك الحالي',
-       style:TextStyle(fontSize:15-2*progress,color:dark?Colors.white70:forest,
-        fontWeight:FontWeight.w600)),
-      SizedBox(height:4-2*progress),
-      Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
-       Flexible(child:FittedBox(fit:BoxFit.scaleDown,
-        child:WaffraCurrencyAmount(balance,fontSize:29-7*progress,color:dark?Colors.white:forest))),
-       ValueListenableBuilder<bool>(valueListenable:hideWaffraAmounts,
-        builder:(ctx,hidden,_)=>IconButton(
-         tooltip:hidden?(english?'Show amounts':'إظهار المبالغ'):(english?'Hide amounts':'إخفاء المبالغ'),
-         onPressed:()=>hideWaffraAmounts.value=!hidden,
-         icon:Icon(hidden?Icons.visibility_off_outlined:Icons.visibility_outlined,
-          color:dark?Colors.white:forest,size:23))),
-      ]),
-     ],
-    )),
+     border:Border.all(color:dark?const Color(0xFF303C34):const Color(0xFFDCEBE2)),
+     boxShadow:dark?null:[BoxShadow(color:forest.withValues(alpha:.045),
+      blurRadius:12,offset:const Offset(0,3))],
+     borderRadius:BorderRadius.circular(19-3*progress)),
+    child:Row(children:[
+     Expanded(child:Column(
+      mainAxisSize:MainAxisSize.min,
+      crossAxisAlignment:CrossAxisAlignment.start,
+      children:[
+       WaffraText(english?'Current balance':'رصيدك الحالي',
+        style:TextStyle(fontSize:12-1*progress,color:dark?Colors.white70:forest,
+         fontWeight:FontWeight.w600)),
+       const SizedBox(height:1),
+       FittedBox(fit:BoxFit.scaleDown,alignment:AlignmentDirectional.centerStart,
+        child:WaffraCurrencyAmount(balance,fontSize:23-3*progress,color:mainColor)),
+      ])),
+     ValueListenableBuilder<bool>(valueListenable:hideWaffraAmounts,
+      builder:(ctx,hidden,_)=>IconButton(
+       tooltip:hidden?(english?'Show amounts':'إظهار المبالغ'):
+        (english?'Hide amounts':'إخفاء المبالغ'),
+       onPressed:()=>hideWaffraAmounts.value=!hidden,
+       visualDensity:VisualDensity.compact,
+       icon:Icon(hidden?Icons.visibility_off_outlined:Icons.visibility_outlined,
+        color:mainColor,size:22))),
+    ]),
+   ),
   );
  }
- @override bool shouldRebuild(covariant WaffraBalanceHeader oldDelegate)=>
-  true; // Theme and layout changes must repaint the sliver immediately.
+ @override bool shouldRebuild(covariant WaffraBalanceHeader oldDelegate)=>true;
 }
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
  final smsHashes=<String>{};
@@ -3161,19 +3163,19 @@ Future<void> bulkSmsSheet()async {
   final dark=Theme.of(context).brightness==Brightness.dark;
   return Expanded(child:Material(
    color:Theme.of(context).cardColor,
-   shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(19),
-    side:BorderSide(color:dark?const Color(0xFF396F53):const Color(0xFFDCEAE1))),
+   shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18),
+    side:BorderSide(color:dark?const Color(0xFF354B3E):const Color(0xFFDCEAE1))),
    child:InkWell(
-    onTap:onTap,borderRadius:BorderRadius.circular(19),
-    child:Padding(padding:const EdgeInsets.symmetric(horizontal:11,vertical:12),
-     child:Row(children:[
-      Container(width:35,height:35,
-       decoration:BoxDecoration(color:dark?const Color(0xFF295F45):waffraMint,
+    onTap:onTap,borderRadius:BorderRadius.circular(18),
+    child:Padding(padding:const EdgeInsets.symmetric(horizontal:5,vertical:12),
+     child:Column(mainAxisSize:MainAxisSize.min,children:[
+      Container(width:34,height:34,
+       decoration:BoxDecoration(color:dark?const Color(0xFF214E37):waffraMint,
         borderRadius:BorderRadius.circular(12)),
-       child:Icon(icon,color:dark?Colors.white:forest,size:21)),
-      const SizedBox(width:8),
-      Expanded(child:WaffraText(title,maxLines:2,
-       style:const TextStyle(fontSize:12,fontWeight:FontWeight.bold))),
+       child:Icon(icon,color:dark?const Color(0xFFA2E4C1):forest,size:21)),
+      const SizedBox(height:6),
+      WaffraText(title,maxLines:2,textAlign:TextAlign.center,
+       style:const TextStyle(fontSize:11,fontWeight:FontWeight.bold)),
      ])),
    ),
   ));
@@ -3305,17 +3307,12 @@ Future<void> bulkSmsSheet()async {
           style:const TextStyle(fontSize:17,fontWeight:FontWeight.bold)),
          const SizedBox(height:8),
          Row(children:[
-          _dashboardShortcut(waffraIsEnglish?'Add transaction':'إضافة عملية',
-           Icons.add_circle_outline_rounded,entrySheet),
-          const SizedBox(width:9),
           _dashboardShortcut(waffraIsEnglish?'Export report':'تصدير تقرير',
            Icons.analytics_outlined,()=>exportEntriesPdf(entries,'تقرير عمليات وفرة')),
-         ]),
-         const SizedBox(height:9),
-         Row(children:[
+          const SizedBox(width:8),
           _dashboardShortcut(waffraIsEnglish?'Financial calendar':'التقويم المالي',
            Icons.calendar_month_outlined,openFinancialCalendar),
-          const SizedBox(width:9),
+          const SizedBox(width:8),
           _dashboardShortcut(waffraIsEnglish?'Savings goals':'أهداف الادخار',
            Icons.flag_outlined,()=>setState((){tab=3;goalsOpened=false;})),
          ]),
