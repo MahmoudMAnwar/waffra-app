@@ -33,6 +33,7 @@ import 'waffra_google_auth.dart';
 import 'waffra_category_catalog.dart';
 import 'waffra_goal_catalog.dart';
 import 'waffra_pdf_reader.dart';
+import 'waffra_footer.dart';
 part 'waffra_categories_page.part.dart';
 
 void main() { WidgetsFlutterBinding.ensureInitialized(); runApp(const WaffraApp()); }
@@ -1869,6 +1870,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  double? minTransactionAmount,maxTransactionAmount;
  int tab=0,year=DateTime.now().year,month=DateTime.now().month;
  bool goalsOpened=false;
+ double _swipeTravel=0;
  late final AnimationController _tourGlow;
  Future<void> setAnimationLevel(String next)async {
   if(!{'full','balanced','reduced','off'}.contains(next))return;
@@ -5777,6 +5779,15 @@ Future<void> bulkSmsSheet()async {
    default:return profilePage();
   }
  }
+ void _swipeBetweenSections(DragEndDetails details){
+  if(!ready||goalsOpened||tourActive)return;
+  final velocity=details.primaryVelocity??0;
+  final dx=_swipeTravel.abs()>50?_swipeTravel:velocity/10;
+  if(dx.abs()<65)return;
+  final forward=waffraIsEnglish?dx>0:dx<0;
+  final target=(tab+(forward?1:-1)).clamp(0,5);
+  if(target!=tab)unawaited(selectFooter(target));
+ }
  Future<void> selectFooter(int target)async {
   if(target==2){
    if(entries.isEmpty){
@@ -5845,9 +5856,14 @@ Future<void> bulkSmsSheet()async {
   // Instant content swap avoids building/animating the previous heavy tab
   // alongside the next one (the recurring -> savings navigation hitch).
   body:!ready?const Center(child:CircularProgressIndicator()):
-   ValueListenableBuilder<bool>(
-    valueListenable:hideWaffraAmounts,
-    builder:(context,hidden,_)=>currentTab()),
+   GestureDetector(
+    behavior:HitTestBehavior.translucent,
+    onHorizontalDragStart:(_)=>_swipeTravel=0,
+    onHorizontalDragUpdate:(details)=>_swipeTravel+=details.delta.dx,
+    onHorizontalDragEnd:_swipeBetweenSections,
+    child:ValueListenableBuilder<bool>(
+     valueListenable:hideWaffraAmounts,
+     builder:(context,hidden,_)=>currentTab())),
   // Keep the add menu and its original actions above the 6-tab navigation.
   floatingActionButtonLocation:FloatingActionButtonLocation.centerFloat,
   floatingActionButton:!ready||goalsOpened||(tab!=0&&tab!=1)?null:Directionality(
@@ -5902,21 +5918,14 @@ Future<void> bulkSmsSheet()async {
          color:Colors.white,size:28))),
      )),
    ])),
-  bottomNavigationBar:NavigationBar(height:78,
-   backgroundColor:forest,indicatorColor:const Color(0xFF207B59),
-   labelBehavior:NavigationDestinationLabelBehavior.alwaysShow,
-   selectedIndex:tab,onDestinationSelected:selectFooter,
-   destinations:[
-    NavigationDestination(icon:const Icon(Icons.home_outlined),selectedIcon:const Icon(Icons.home),label:waffraTr('الرئيسية')),
-    NavigationDestination(icon:const Icon(Icons.category_outlined),selectedIcon:const Icon(Icons.category),label:waffraTr('الأقسام')),
-    NavigationDestination(icon:KeyedSubtree(key:_tourKeys[3],child:const Icon(Icons.auto_awesome_rounded)),
-     selectedIcon:const Icon(Icons.auto_awesome_rounded,color:Colors.white),
-     label:waffraIsEnglish?'Analysis':'التحليل',tooltip:waffraIsEnglish?'Analyze income and expenses':'تحليل الدخل والمصروفات'),
-    NavigationDestination(icon:const Icon(Icons.flag_outlined),selectedIcon:const Icon(Icons.flag),label:waffraIsEnglish?'Goals':'الأهداف'),
-    NavigationDestination(icon:const Icon(Icons.repeat),label:waffraTr('المتكررة')),
-    NavigationDestination(icon:KeyedSubtree(key:_tourKeys[5],child:const Icon(Icons.person_outline)),label:waffraTr('حسابي')),
-   ])),
-   if(tourActive&&tourTargetReady)Positioned.fill(child:tourOverlay()),
+  bottomNavigationBar:WaffraFooterNavigation(
+   selectedIndex:tab,
+   english:waffraIsEnglish,
+   onSelected:(selected)=>unawaited(selectFooter(selected)),
+   analysisSpotlightKey:_tourKeys[3],
+   profileSpotlightKey:_tourKeys[5],
+  )),
+  if(tourActive&&tourTargetReady)Positioned.fill(child:tourOverlay()),
   ]);
 }
 /// Positions the expandable plus menu physically on the left in RTL
