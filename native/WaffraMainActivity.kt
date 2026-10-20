@@ -14,6 +14,9 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterFragmentActivity() {
     private val privacyChannel = "waffra/privacy"
     private val messagesChannel = "waffra/messages"
+    private val widgetChannelName = "waffra/widget"
+    private var widgetChannel: MethodChannel? = null
+    private var pendingWidgetAction: String? = null
     private var messageChannel: MethodChannel? = null
     private var pendingShare: String? = null
 
@@ -37,12 +40,21 @@ class MainActivity : FlutterFragmentActivity() {
         val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
         applyScreenshotSetting(prefs.getBoolean("flutter.waffra_allow_screenshots", true))
         receiveSharedText(intent)
+        receiveWidgetAction(intent)
+    }
+
+    private fun receiveWidgetAction(intent: Intent?) {
+        if (intent?.action == "waffra.ADD_TRANSACTION") {
+            pendingWidgetAction = "add"
+            widgetChannel?.invokeMethod("quickAdd", null)
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         receiveSharedText(intent)
+        receiveWidgetAction(intent)
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -56,6 +68,26 @@ class MainActivity : FlutterFragmentActivity() {
                 } else result.notImplemented()
             }
 
+        widgetChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, widgetChannelName)
+        widgetChannel?.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "takeWidgetAction" -> {
+                    val value = pendingWidgetAction
+                    pendingWidgetAction = null
+                    result.success(value)
+                }
+                "updateSummary" -> {
+                    val args = call.arguments as? Map<*, *>
+                    val balance = args?.get("balance") as? String ?: "—"
+                    val expenses = args?.get("expenses") as? String ?: "—"
+                    getSharedPreferences("waffra_widget", MODE_PRIVATE).edit()
+                        .putString("balance", balance).putString("expenses", expenses).apply()
+                    WaffraWidget.updateAll(applicationContext)
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
         messageChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, messagesChannel)
         messageChannel?.setMethodCallHandler { call, result ->
             when (call.method) {
@@ -88,6 +120,7 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun onDestroy() {
         messageChannel = null
+        widgetChannel = null
         super.onDestroy()
     }
 }
