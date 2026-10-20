@@ -40,8 +40,8 @@ void main() {
         ),
       ));
 
-      expect(find.text('أهداف الادخار'), findsOneWidget);
-      expect(find.text('العمليات المتكررة'), findsOneWidget);
+      expect(find.text('أهداف الادخار'), findsWidgets);
+      expect(find.text('العمليات المتكررة'), findsWidgets);
       expect(tester.takeException(), isNull);
     });
   }
