@@ -3952,7 +3952,7 @@ Future<void> bulkSmsSheet()async {
      const SizedBox(height:24),
     ])),
     ]))),
-   )));
+   ));
   });
  }
  Widget _analysisStat(String label,double value,Color color)=>Container(
