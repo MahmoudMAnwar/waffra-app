@@ -4172,20 +4172,27 @@ Future<void> bulkSmsSheet()async {
   ]);
  }
 
- Future<BudgetCategory?> categoryDialog({BudgetCategory? initial,bool income=false,String? suggested})async {
-  final name=TextEditingController(text:initial?.name??suggested??'');
+ Future<BudgetCategory?> categoryDialog({BudgetCategory? initial,bool income=false,String? suggested,String parentId=''})async {
+  final name=TextEditingController(text:initial?.displayName??suggested??'');
+  final effectiveParentId=initial?.parentId??parentId;
+  String fullName(){
+   final text=name.text.trim();
+   if(effectiveParentId.isEmpty)return text;
+   final parent=categories.where((c)=>c.id==effectiveParentId).toList();
+   return parent.isEmpty?text:'${parent.first.name} / $text';
+  }
   final budget=TextEditingController(text:initial==null||initial.budget==0?'':formatWaffraMoney(initial.budget));
   String icon=initial?.icon??'category';int color=initial?.color??colors[0];int alertPercent=initial?.alertPercent??80;
   bool attempted=false;
   final result=await showWaffraDialog<BudgetCategory>(context:context,
    builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
-    title:WaffraText(initial==null?'قسم جديد':'تعديل القسم'),
+    title:WaffraText(initial!=null?'تعديل القسم':effectiveParentId.isNotEmpty?'قسم فرعي جديد':'قسم جديد'),
     content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
      TextField(controller:name,onChanged:(_)=>update((){}),decoration:InputDecoration(
       labelText:waffraIsEnglish?'Category name *':'اسم القسم *',
       errorText:attempted?(
        WaffraValidators.requiredText(name.text)!=null?waffraTextFieldError(name.text):
-       WaffraValidators.uniqueCategory(name.text,categories.where((c)=>c.id!=initial?.id&&c.income==(initial?.income??income)).map((c)=>c.name))!=null?(waffraIsEnglish?'Category already exists':'اسم القسم مستخدم بالفعل'):null):null)),
+       WaffraValidators.uniqueCategory(fullName(),categories.where((c)=>c.id!=initial?.id&&c.income==(initial?.income??income)).map((c)=>c.name))!=null?(waffraIsEnglish?'Category already exists':'اسم القسم مستخدم بالفعل'):null):null)),
      const SizedBox(height:12),const WaffraText('اختر أيقونة'),
      Wrap(spacing:5,children:iconNames.map((x)=>IconButton(
       style:IconButton.styleFrom(backgroundColor:icon==x?emerald.withValues(alpha:.2):null),
@@ -4212,17 +4219,17 @@ Future<void> bulkSmsSheet()async {
      TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إلغاء')),
      FilledButton(onPressed:(){
       final n=name.text.trim();update(()=>attempted=true);
-      if(WaffraValidators.requiredText(n)!=null || WaffraValidators.uniqueCategory(n,
+      if(WaffraValidators.requiredText(n)!=null || WaffraValidators.uniqueCategory(fullName(),
        categories.where((c)=>c.id!=initial?.id&&c.income==(initial?.income??income)).map((c)=>c.name))!=null ||
        WaffraValidators.positiveAmount(budget.text,required:false)!=null)return;
-      Navigator.pop(ctx,BudgetCategory(id:initial?.id??newId(),name:n,icon:icon,color:color,
-       income:initial?.income??income,parentId:initial?.parentId??'',budget:budget.text.trim().isEmpty?0:(amountOf(budget.text)??0),alertPercent:alertPercent));
+      Navigator.pop(ctx,BudgetCategory(id:initial?.id??newId(),name:fullName(),icon:icon,color:color,
+       income:initial?.income??income,parentId:effectiveParentId,budget:budget.text.trim().isEmpty?0:(amountOf(budget.text)??0),alertPercent:alertPercent));
      },child:const WaffraText('حفظ')),
     ])));
   disposeLater([name,budget]);return result;
  }
- Future<void> addCategory({bool income=false})async {
-  final c=await categoryDialog(income:income);
+ Future<void> addCategory({bool income=false,String parentId=''})async {
+  final c=await categoryDialog(income:income,parentId:parentId);
   if(c==null||!mounted)return;
   if(categories.any((x)=>x.income==c.income&&x.name.trim()==c.name.trim())){
    snack(context,'القسم موجود بالفعل');return;
@@ -4230,30 +4237,52 @@ Future<void> bulkSmsSheet()async {
   setState(()=>categories.add(c));await persist();
  }
  Future<void> updateCategory(BudgetCategory c)async {
-  final v=await categoryDialog(initial:c);
-  if(v==null||!mounted)return;
-  if(categories.any((x)=>x.id!=c.id&&x.income==c.income&&x.name==v.name)){
-   snack(context,'اسم القسم مستخدم');return;
+  final revised=await categoryDialog(initial:c);
+  if(revised==null||!mounted)return;
+  if(categories.any((x)=>x.id!=c.id&&x.income==c.income&&x.name==revised.name))return;
+  final renames=<String,String>{c.name:revised.name};
+  if(!c.isSubcategory&&c.name!=revised.name){
+   for(final child in categories.where((x)=>x.parentId==c.id)){
+    renames[child.name]='${revised.name} / ${child.displayName}';
+   }
   }
   setState((){
    final i=categories.indexWhere((x)=>x.id==c.id);
-   if(i>=0)categories[i]=v;
+   if(i>=0)categories[i]=revised;
+   for(var j=0;j<categories.length;j++){
+    final child=categories[j];
+    if(child.parentId==c.id&&renames.containsKey(child.name)){
+     categories[j]=child.copy(name:renames[child.name]);
+    }
+   }
    for(var j=0;j<entries.length;j++){
-    final e=entries[j];
-    if(e.category==c.name&&e.income==c.income){
-     entries[j]=MoneyEntry(id:e.id,title:e.title,category:v.name,amount:e.amount,income:e.income,date:e.date,receiptPath:e.receiptPath);
+    final old=entries[j];
+    final renamed=renames[old.category];
+    if(renamed!=null&&old.income==c.income){
+     entries[j]=MoneyEntry(id:old.id,title:old.title,category:renamed,
+      amount:old.amount,income:old.income,date:old.date,receiptPath:old.receiptPath);
     }
    }
    for(var j=0;j<recurring.length;j++){
-    final r=recurring[j];
-    if(r.category==c.name&&r.income==c.income){
-     recurring[j]=RecurringBill(id:r.id,title:r.title,category:v.name,amount:r.amount,income:r.income,day:r.day,active:r.active);
+    final old=recurring[j];
+    final renamed=renames[old.category];
+    if(renamed!=null&&old.income==c.income){
+     recurring[j]=RecurringBill(id:old.id,title:old.title,category:renamed,
+      amount:old.amount,income:old.income,day:old.day,active:old.active);
     }
    }
   });
   await persist();
  }
  Future<void> deleteCategory(BudgetCategory c)async {
+  final children=categories.where((item)=>item.parentId==c.id).toList();
+  if(children.isNotEmpty){
+   await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Delete subcategories first':'احذف الأقسام الفرعية أولاً'),
+    content:WaffraText(waffraIsEnglish?'This category has ${children.length} subcategories. Delete or move them first to protect your categorization.':'القسم يحتوي على ${children.length} قسم فرعي. احذف الأقسام الفرعية أولاً للحفاظ على تصنيف المعاملات.'),
+    actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))]));
+   return;
+  }
   final linkedEntries=entries.where((e)=>e.category==c.name&&e.income==c.income).length;
   final linkedRecurring=recurring.where((e)=>e.category==c.name&&e.income==c.income).length;
   if(linkedEntries>0||linkedRecurring>0){
