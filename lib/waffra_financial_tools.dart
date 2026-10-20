@@ -143,7 +143,7 @@ class _WaffraFinancialCalendarState extends State<WaffraFinancialCalendar> {
         final hasIncome=matches.any((e)=>e.income);
         final hasExpense=matches.any((e)=>!e.income);
         return Semantics(button:true,selected:active,
-         label='${day}/${selected.month}/${selected.year}',
+         label:'${day}/${selected.month}/${selected.year}',
          child:InkWell(
           onTap:()=>setState(()=>selected=DateTime(selected.year,selected.month,day)),
           borderRadius:BorderRadius.circular(12),
