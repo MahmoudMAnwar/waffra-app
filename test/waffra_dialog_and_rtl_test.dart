@@ -56,7 +56,7 @@ void main() {
     );
     expect(inside, findsWidgets);
     expect(tester.widget<Directionality>(inside.first).textDirection, TextDirection.rtl);
-    await tester.tap(find.text('إغلاق'));
+    await tester.tap(find.widgetWithText(TextButton, 'إغلاق'));
     await tester.pumpAndSettle();
     expect(find.byType(WaffraTransactionDetailsDialog), findsNothing);
   });
