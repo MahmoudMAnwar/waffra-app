@@ -227,7 +227,7 @@ jobs:
               close=xml.find('</activity>',start)
               if start<0 or close<0 or 'MainActivity' not in xml[start:close]:
                   raise SystemExit('Could not locate generated MainActivity')
-              xml=xml[:close]+filter_xml+'\\n    '+xml[close:]
+              xml=xml[:close]+filter_xml+chr(10)+'    '+xml[close:]
               manifest.write_text(xml)
           if re.search(r'<uses-permission[^>]*\\b(?:READ_SMS|RECEIVE_SMS|READ_CALL_LOG)\\b',xml):
               raise SystemExit('SMS inbox permissions must never be requested')
