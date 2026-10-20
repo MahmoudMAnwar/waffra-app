@@ -4937,9 +4937,64 @@ Future<void> bulkSmsSheet()async {
         DropdownMenuItem(value:false,child:WaffraText('مصروف'))],
        onChanged:(v){if(v!=null)update((){income=v;category=forType(v).first.name;});}),
       const SizedBox(height:12),
-      DropdownButtonFormField<String>(key:ValueKey('$income-$selected'),initialValue:selected,
-       items:options.map((c)=>DropdownMenuItem(value:c.name,child:WaffraText(c.name))).toList(),
-       onChanged:(v){if(v!=null)update(()=>category=v);}),
+      InkWell(
+       borderRadius:BorderRadius.circular(14),
+       onTap:()async{
+        final picked=await showWaffraDialog<String>(context:ctx,
+         builder:(searchCtx){
+          String query='';
+          return StatefulBuilder(builder:(searchCtx,refresh){
+           final filtered=options.where((c)=>
+            c.name.toLowerCase().contains(query.trim().toLowerCase())).toList();
+           return AlertDialog(
+            title:WaffraText(waffraIsEnglish?'Search categories':'البحث عن قسم'),
+            content:SizedBox(
+             width:double.maxFinite,
+             height:min(430.0,MediaQuery.sizeOf(searchCtx).height*.58),
+             child:Column(children:[
+              TextField(
+               autofocus:true,
+               onChanged:(value)=>refresh(()=>query=value),
+               decoration:InputDecoration(
+                prefixIcon:const Icon(Icons.search_rounded),
+                hintText:waffraIsEnglish?'Type a category name…':'اكتب اسم القسم للبحث…',
+                border:OutlineInputBorder(borderRadius:BorderRadius.circular(14))),
+              ),
+              const SizedBox(height:10),
+              Expanded(child:filtered.isEmpty
+               ?Center(child:WaffraText(waffraIsEnglish?'No matching categories':'لا توجد أقسام مطابقة'))
+               :ListView.builder(
+                itemCount:filtered.length,
+                itemBuilder:(searchCtx,index){
+                 final option=filtered[index];
+                 return ListTile(
+                  dense:true,
+                  selected:option.name==selected,
+                  leading:Icon(categoryIcon(option.icon),color:Color(option.color),size:21),
+                  title:WaffraText(option.name,maxLines:3),
+                  onTap:()=>Navigator.pop(searchCtx,option.name));
+                })),
+             ]),
+            ),
+           );
+          });
+         });
+        if(picked!=null&&ctx.mounted)update(()=>category=picked);
+       },
+       child:InputDecorator(
+        decoration:InputDecoration(
+         labelText:waffraIsEnglish?'Category *':'القسم *',
+         suffixIcon:const Icon(Icons.search_rounded),
+         border:OutlineInputBorder(borderRadius:BorderRadius.circular(14)),
+         contentPadding:const EdgeInsets.symmetric(horizontal:13,vertical:15)),
+        child:Row(children:[
+         Expanded(child:WaffraText(selected,maxLines:2,
+          style:const TextStyle(fontSize:14,fontWeight:FontWeight.w600))),
+         const SizedBox(width:8),
+         const Icon(Icons.arrow_drop_down_rounded,size:20),
+        ]),
+       ),
+      ),
       const SizedBox(height:12),
       TextField(controller:day,keyboardType:TextInputType.number,onChanged:(_)=>update((){}),
        decoration:InputDecoration(labelText:waffraIsEnglish?'Day of month *':'يوم الشهر *',helperText:waffraIsEnglish?'1–31':'من 1 إلى 31',
