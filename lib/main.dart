@@ -1223,8 +1223,8 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
  final bool english;
  final GlobalKey? focusKey;
  const WaffraBalanceHeader({required this.balance,required this.english,this.focusKey});
- @override double get minExtent=>112;
- @override double get maxExtent=>160;
+ @override double get minExtent=>100;
+ @override double get maxExtent=>126;
  @override Widget build(BuildContext context,double shrinkOffset,bool overlapsContent){
   final progress=(shrinkOffset/(maxExtent-minExtent)).clamp(0.0,1.0);
   return Container(
@@ -1245,15 +1245,16 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
        style:TextStyle(fontSize:15-2*progress,color:Colors.white70,
         fontWeight:FontWeight.w600)),
       SizedBox(height:4-2*progress),
-      Align(alignment:AlignmentDirectional.centerStart,
-       child:FittedBox(fit:BoxFit.scaleDown,
-        child:WaffraCurrencyAmount(balance,
-         fontSize:29-7*progress,color:Colors.white))),
-      if(progress<1)SizedBox(height:25*(1-progress),
-       child:ClipRect(child:Opacity(opacity:1-progress,
-        child:Align(alignment:AlignmentDirectional.centerStart,
-         child:WaffraText(english?'Every riyal counts':'كل ريال تحسب له حساب',
-          style:const TextStyle(fontSize:13,color:Colors.white70)))))),
+      Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
+       Flexible(child:FittedBox(fit:BoxFit.scaleDown,
+        child:WaffraCurrencyAmount(balance,fontSize:29-7*progress,color:Colors.white))),
+       ValueListenableBuilder<bool>(valueListenable:hideWaffraAmounts,
+        builder:(ctx,hidden,_)=>IconButton(
+         tooltip:hidden?(english?'Show amounts':'إظهار المبالغ'):(english?'Hide amounts':'إخفاء المبالغ'),
+         onPressed:()=>hideWaffraAmounts.value=!hidden,
+         icon:Icon(hidden?Icons.visibility_off_outlined:Icons.visibility_outlined,
+          color:Colors.white,size:23))),
+      ]),
      ],
     )),
   );
@@ -2287,7 +2288,7 @@ Future<void> bulkSmsSheet()async {
   String? validation;
   try{
    final next=await showDialog<({bool enabled,double amount})>(
-    context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
+    context:context,builder:(ctx)=>BackdropFilter(filter:ui.ImageFilter.blur(sigmaX:7,sigmaY:7),child:StatefulBuilder(builder:(ctx,update)=>AlertDialog(
      title:WaffraText(waffraIsEnglish?'Monthly budget':'الميزانية الشهرية'),
      content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
       SwitchListTile.adaptive(
@@ -2326,7 +2327,7 @@ Future<void> bulkSmsSheet()async {
        Navigator.pop(ctx,(enabled:enabled,amount:enabled?v!:monthlyBudget));
       },child:WaffraText(waffraIsEnglish?'Save':'حفظ')),
      ],
-    )));
+    ))));
    if(next!=null&&mounted){
     setState((){monthlyBudgetEnabled=next.enabled;monthlyBudget=next.amount;});
     await persist();
@@ -4590,34 +4591,6 @@ Future<void> bulkSmsSheet()async {
     child:WaffraText(waffraIsEnglish?'Waffra':'Waffra | وفرة',
      style:const TextStyle(fontWeight:FontWeight.bold,fontSize:22))),
    actions:[
-    SizedBox(width:42,height:kToolbarHeight,
-     child:Center(child:TextButton(
-      style:TextButton.styleFrom(
-       padding:EdgeInsets.zero,foregroundColor:Colors.white,
-       minimumSize:const Size(42,42),tapTargetSize:MaterialTapTargetSize.shrinkWrap),
-      onPressed:()async{
-       if(mounted)setState(()=>addFabExpanded=false);
-       await widget.onLanguage(waffraIsEnglish?'ar':'en');
-      },
-      child:Text(waffraIsEnglish?'AR':'EN',
-       style:const TextStyle(fontWeight:FontWeight.bold,fontSize:15))))),
-    SizedBox(width:42,height:kToolbarHeight,
-     child:Center(child:ValueListenableBuilder<bool>(
-      valueListenable:hideWaffraAmounts,
-      builder:(ctx,hidden,_)=>IconButton(
-       padding:EdgeInsets.zero,
-       constraints:const BoxConstraints.tightFor(width:42,height:42),
-       tooltip:hidden?(waffraIsEnglish?'Show amounts':'إظهار المبالغ'):
-        (waffraIsEnglish?'Hide amounts':'إخفاء المبالغ'),
-       onPressed:()=>hideWaffraAmounts.value=!hidden,
-       icon:Icon(hidden?Icons.visibility_off_outlined:Icons.visibility_outlined))))),
-    SizedBox(width:42,height:kToolbarHeight,
-     child:Center(child:IconButton(
-      padding:EdgeInsets.zero,
-      constraints:const BoxConstraints.tightFor(width:42,height:42),
-      tooltip:waffraIsEnglish?'Change appearance':'تغيير المظهر',
-      onPressed:widget.onTheme,
-      icon:Icon(widget.dark?Icons.light_mode:Icons.dark_mode)))),
     SizedBox(width:48,height:kToolbarHeight,
      child:Center(child:InkWell(
       onTap:()=>setState((){
