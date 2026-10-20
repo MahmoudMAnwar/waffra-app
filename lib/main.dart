@@ -39,6 +39,7 @@ import 'waffra_recurring_policy.dart';
 import 'waffra_secure_backup.dart';
 import 'waffra_home_widget.dart';
 part 'waffra_categories_page.part.dart';
+part 'waffra_smart_analysis.part.dart';
 
 Future<void> main()async {
  WidgetsFlutterBinding.ensureInitialized();
@@ -3821,6 +3822,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
            exp,Icons.north_east,const Color(0xFFB94838),waffraExpenseBackground),
          ]),
          const SizedBox(height:15),
+          smartAnalysisEntryCard(),
+          const SizedBox(height:15),
          WaffraText(waffraIsEnglish?'Quick actions':'إجراءات سريعة',
           style:const TextStyle(fontSize:17,fontWeight:FontWeight.bold)),
          const SizedBox(height:8),
@@ -5717,7 +5720,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   scheduleTourFocus();
  }
  Widget tourOverlay()=>LayoutBuilder(builder:(overlayCtx,area){
-  const ar=['الرصيد الحالي','إضافة المعاملات','الأقسام','التحليل','العمليات المتكررة','حسابي'];
+  const ar=['الرصيد الحالي','إضافة المعاملات','الأقسام','التحليل الذكي','العمليات المتكررة','حسابي'];
   const en=['Balance','Add transactions','Categories','Analysis','Recurring items','My account'];
   const arHelp=['اعرف رصيدك ودخلك ومصروفاتك.','من زر + أضف عملية أو رسالة بنكية.','نظّم الأقسام وميزانياتها.','اضغط التحليل لعرض تقييمك المالي والرسوم البيانية والتوقعات.','نظّم التكرارات ومواعيد الاستحقاق.','إدارة حسابك وأهداف الادخار وإعدادات التطبيق.'];
   const enHelp=['Your balance, income and expenses.','Use + to add a transaction or SMS.','Manage your categories and budgets.','Tap Analysis for animated scoring, income and expense charts, and forecasts.','See and pause recurring transactions.','Manage your account, goals and settings.'];
