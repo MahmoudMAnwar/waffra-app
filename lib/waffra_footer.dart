@@ -73,7 +73,7 @@ class WaffraFooterNavigation extends StatelessWidget {
                 BoxShadow(color:neon.withValues(alpha:active ? .54 : .30),blurRadius:active?24:14,spreadRadius:active?3:0),
                 const BoxShadow(color:Color(0x55000000),blurRadius:8,offset:Offset(0,4)),
                ]),
-              child:const Icon(Icons.auto_awesome_rounded,color:Colors.white,size:28))),
+              child:const Icon(Icons.auto_awesome_rounded,color:Colors.white,size:28)))),
            else
             AnimatedContainer(
              duration:reduced?Duration.zero:const Duration(milliseconds:190),
