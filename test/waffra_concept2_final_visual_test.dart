@@ -68,7 +68,8 @@ void main() {
           const SliverToBoxAdapter(child: SizedBox(height: 800)),
         ])),
       ));
-      // WaffraText exposes both the translation wrapper and its nested Text.\n      expect(find.text('رصيدك الحالي'), findsWidgets);
+      // WaffraText exposes both the translation wrapper and its nested Text.
+      expect(find.text('رصيدك الحالي'), findsWidgets);
       expect(find.byIcon(Icons.visibility_outlined), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
