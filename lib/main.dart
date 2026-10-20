@@ -385,10 +385,14 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  Future<void> saveUser(Person u)async {
   final p=await SharedPreferences.getInstance();await p.setString('waffra_profile',jsonEncode(u.toJson()));
   if(u.phone.trim().isNotEmpty)await p.setString('waffra_registered_profile',jsonEncode(u.toJson()));
+  await p.setString('waffra_last_login_method',u.provider.toLowerCase().contains('google')?'Google':u.provider.toLowerCase().contains('apple')?'Apple':u.phone.trim().isNotEmpty?'Phone':'Local');
+  if(u.email.trim().isNotEmpty)await p.setString('waffra_last_login_email',u.email.trim());
+  if(u.phone.trim().isNotEmpty)await p.setString('waffra_last_login_phone',u.phone.trim());
   if(mounted)setState((){profile=u;showLogin=false;});
  }
  Future<void> logout()async {
   final p=await SharedPreferences.getInstance();await p.remove('waffra_profile');
+  await p.setBool('waffra_signed_out_explicitly',true);
   if(mounted)setState((){profile=null;showLogin=true;locked=false;});
  }
  Future<void> setPin(String? value)async {
@@ -873,13 +877,21 @@ class _LoginScreenState extends State<LoginScreen> {
  String? provider;
  Person? registered;
  bool signInMode=false,showSignInPassword=false,signingIn=false;
+ bool returnAfterLogout=false;String lastMethod='Local',lastEmail='',lastPhone='';
  final signInPhone=TextEditingController(),signInPassword=TextEditingController();
  @override void initState(){super.initState();_loadRegistered();}
  Future<void> _loadRegistered()async{
   final prefs=await SharedPreferences.getInstance();
+  final signedOut=prefs.getBool('waffra_signed_out_explicitly')??false;
+  if(mounted)setState((){
+   returnAfterLogout=signedOut;
+   lastMethod=prefs.getString('waffra_last_login_method')??'Local';
+   lastEmail=prefs.getString('waffra_last_login_email')??'';
+   lastPhone=prefs.getString('waffra_last_login_phone')??'';
+  });
   final raw=prefs.getString('waffra_registered_profile');
   if(raw==null)return;
-  try{final u=Person.fromJson(Map<String,dynamic>.from(jsonDecode(raw)));if(mounted)setState((){registered=u;signInMode=true;signInPhone.text=u.phone;});}catch(_){ }
+  try{final u=Person.fromJson(Map<String,dynamic>.from(jsonDecode(raw)));if(mounted)setState((){registered=u;signInMode=!signedOut;signInPhone.text=u.phone;});}catch(_){ }
  }
  @override void dispose(){signInPhone.dispose();signInPassword.dispose();super.dispose();}
  Future<void> _signIn()async{
@@ -898,6 +910,70 @@ class _LoginScreenState extends State<LoginScreen> {
   }finally{if(mounted)setState(()=>signingIn=false);}
  }
 
+ String get maskedLastPhone{
+  if(lastPhone.length<6)return lastPhone;
+  return '${lastPhone.substring(0,2)}••••${lastPhone.substring(lastPhone.length-4)}';
+ }
+ Future<void> continueLastLogin()async{
+  if(lastMethod=='Google'){
+   if(socialBusy)return;
+   setState(()=>socialBusy=true);
+   try{
+    final result=await WaffraGoogleAuth.signIn();
+    final user=result.user;
+    if(user==null)throw StateError('Google sign-in cancelled');
+    if(lastEmail.isNotEmpty&&user.email?.toLowerCase()!=lastEmail.toLowerCase()){
+     if(mounted)snack(context,waffraIsEnglish?'Choose your previous Google account':'اختار حساب جوجل المستخدم سابقًا');
+     return;
+    }
+    await widget.onSave(Person(name:user.displayName??'',email:user.email??'',
+     phone:user.phoneNumber??'',provider:'Google',gender:'',avatar:user.photoURL??'person',birthday:DateTime(2000)));
+   }catch(e){
+    if(mounted)snack(context,waffraIsEnglish?'Google sign-in failed. Please try again.':'تعذر تسجيل الدخول بجوجل. حاول مرة أخرى.');
+   }finally{if(mounted)setState(()=>socialBusy=false);}
+  }else if(lastMethod=='Phone'){
+   if(registered!=null){setState(()=>signInMode=true);}
+   else{setState(()=>provider='Phone');}
+  }else if(lastMethod=='Apple'){
+   await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Apple sign-in':'تسجيل الدخول باستخدام Apple'),
+    content:WaffraText(waffraIsEnglish?'Apple sign-in is not configured yet.':'تسجيل الدخول باستخدام Apple غير مفعّل حاليًا.'),
+    actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))]));
+  }else{
+   if(registered!=null)setState(()=>signInMode=true);
+   else setState(()=>returnAfterLogout=false);
+  }
+ }
+ Widget recentLoginCard(){
+  final google=lastMethod=='Google',apple=lastMethod=='Apple',phone=lastMethod=='Phone';
+  final method=google?'Google':apple?'Apple':phone?(waffraIsEnglish?'Phone number':'رقم الجوال'):(waffraIsEnglish?'Local account':'حساب محلي');
+  final detail=google||apple?lastEmail:phone?maskedLastPhone:'';
+  return Container(
+   padding:const EdgeInsets.all(15),
+   decoration:BoxDecoration(color:const Color(0xFFE8F5EE),borderRadius:BorderRadius.circular(23)),
+   child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    WaffraText(waffraIsEnglish?'Last signed in using':'آخر تسجيل دخول كان عبر',
+     textAlign:TextAlign.center,style:const TextStyle(color:forest,fontWeight:FontWeight.bold)),
+    const SizedBox(height:12),
+    Container(padding:const EdgeInsets.all(12),
+     decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(16)),
+     child:Row(children:[
+      if(google)SvgPicture.string(_waffraGoogleLogo,width:29,height:29)
+      else Icon(apple?Icons.apple:phone?Icons.phone_android:Icons.person_outline,color:forest,size:29),
+      const SizedBox(width:12),
+      Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+       WaffraText(method,style:const TextStyle(fontSize:17,fontWeight:FontWeight.bold,color:forest)),
+       if(detail.isNotEmpty)Text(detail,maxLines:1,overflow:TextOverflow.ellipsis,
+        textDirection:TextDirection.ltr,style:const TextStyle(fontSize:12,color:Colors.black54)),
+      ])),
+      const Icon(Icons.chevron_left,color:forest),
+     ])),
+    const SizedBox(height:12),
+    FilledButton(onPressed:socialBusy?null:continueLastLogin,
+     style:FilledButton.styleFrom(backgroundColor:forest,foregroundColor:Colors.white),
+     child:WaffraText(waffraIsEnglish?'Continue with $method':'المتابعة باستخدام $method')),
+   ]));
+ }
  bool socialBusy=false;
  Widget _socialBorder(BuildContext sheet,String id,Widget icon,{required String label})=>Material(
   color:const Color(0xFFFEFDF8),borderRadius:BorderRadius.circular(18),child:InkWell(
@@ -982,7 +1058,19 @@ class _LoginScreenState extends State<LoginScreen> {
         borderRadius:BorderRadius.circular(24)),
        child:Column(mainAxisSize:MainAxisSize.min,
         crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-        if(signInMode&&hasExisting)...[
+        if(returnAfterLogout&&!signInMode)...[
+         WaffraText(waffraIsEnglish?'Welcome back':'مرحبًا بك مجددًا',
+          textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:25,fontWeight:FontWeight.bold)),
+         const SizedBox(height:5),
+         WaffraText(waffraIsEnglish?'Sign in to continue':'سجل دخولك للمتابعة',
+          textAlign:TextAlign.center,style:const TextStyle(color:Colors.white70,fontSize:14)),
+         const SizedBox(height:15),
+         recentLoginCard(),
+         const SizedBox(height:12),
+         TextButton(onPressed:()=>setState(()=>returnAfterLogout=false),
+          child:WaffraText(waffraIsEnglish?'Other sign-in options':'خيارات تسجيل دخول أخرى',
+           style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold))),
+        ]else if(signInMode&&hasExisting)...[
          WaffraText(waffraIsEnglish?'Sign in to Waffra':'تسجيل الدخول إلى وفرة',
           textAlign:TextAlign.center,
           style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold,color:Colors.white)),
