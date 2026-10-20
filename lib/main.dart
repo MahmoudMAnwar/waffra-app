@@ -2758,103 +2758,193 @@ Future<void> bulkSmsSheet()async {
    ])));
  }
 
+
  Future<void> showAiAnalysis()async {
   final now=DateTime.now();
   final recent=entries.where((e)=>e.date.isAfter(now.subtract(const Duration(days:90)))&&!e.date.isAfter(now)).toList();
   final income=sum(recent,true),spending=sum(recent,false);
   final hasEnoughData=recent.length>=3&&income>0;
-  final balanceRatio=income>0?(income-spending)/income:0.0;
-  final score=hasEnoughData?((balanceRatio+1)*50).clamp(0.0,100.0).round():null;
+  final ratio=income>0?(income-spending)/income:0.0;
+  final score=hasEnoughData?((ratio+1)*50).clamp(0.0,100.0).round():null;
   final biggest=<String,double>{};
   for(final e in recent.where((e)=>!e.income)){
    biggest[e.category]=(biggest[e.category]??0)+e.amount;
   }
   final top=biggest.entries.toList()..sort((a,b)=>b.value.compareTo(a.value));
-  final wait=Future<void>.delayed(waffraMotion(1700));
-  final showDetails=await showModalBottomSheet<bool>(
-   context:context,isScrollControlled:true,showDragHandle:true,
-   backgroundColor:Theme.of(context).cardColor,
-   shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
-   builder:(ctx)=>SafeArea(child:Padding(padding:EdgeInsets.fromLTRB(20,10,20,MediaQuery.of(ctx).viewInsets.bottom+20),
-    child:FutureBuilder<void>(future:wait,builder:(dialogCtx,snapshot){
-     if(snapshot.connectionState!=ConnectionState.done){
-      return SizedBox(height:260,child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
-       TweenAnimationBuilder<double>(tween:Tween(begin:.55,end:1),duration:waffraMotion(1300),
-        curve:Curves.easeInOutCubic,builder:(ctx,scale,child)=>Transform.scale(scale:scale,child:child),
-        child:const CircleAvatar(radius:36,backgroundColor:Color(0x2236D1A1),
-         child:Icon(Icons.auto_awesome_rounded,color:emerald,size:40))),
-       const SizedBox(height:16),
-       const CircularProgressIndicator(color:emerald),
-       const SizedBox(height:15),
-       WaffraText(waffraIsEnglish?'Analyzing your transactions...':'جارٍ تحليل معاملاتك الآن...',
-        textAlign:TextAlign.center,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:18)),
-       const SizedBox(height:6),
-       WaffraText(waffraIsEnglish?'Checking income, expenses and categories':
-        'بنراجع الدخل والمصروفات وأقسام الإنفاق',textAlign:TextAlign.center),
-      ]));
-     }
-     final label=score==null?
-      (waffraIsEnglish?'Not enough data':'بيانات غير كافية'):
-      score>=70?(waffraIsEnglish?'Good balance':'توازن مالي جيد'):
-      score>=45?(waffraIsEnglish?'Needs attention':'يحتاج متابعة'):
-      (waffraIsEnglish?'Review your spending':'راجع مصروفاتك');
-     return SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,
-      crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-      const Icon(Icons.auto_awesome_rounded,color:emerald,size:40),
-      const SizedBox(height:9),
-      WaffraText(waffraIsEnglish?'Your smart financial analysis':'نتيجة تحليلك المالي الذكي',
-       textAlign:TextAlign.center,style:const TextStyle(fontSize:20,fontWeight:FontWeight.bold)),
-      const SizedBox(height:15),
-      Container(padding:const EdgeInsets.all(16),decoration:BoxDecoration(
-       color:emerald.withValues(alpha:.10),border:Border.all(color:emerald.withValues(alpha:.4)),
-       borderRadius:BorderRadius.circular(18)),child:Column(children:[
-       WaffraText(label,style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
-       const SizedBox(height:7),
-       Directionality(textDirection:TextDirection.ltr,child:WaffraText(score==null?'—':'$score / 100',
-        style:const TextStyle(color:emerald,fontSize:32,fontWeight:FontWeight.bold))),
-       if(score!=null)LinearProgressIndicator(value:score/100,minHeight:9,
-        color:emerald,borderRadius:BorderRadius.circular(9)),
-       const SizedBox(height:9),
-       WaffraText(waffraIsEnglish?'Indicative cash-flow balance, not a credit score.':
-        'تقييم استرشادي لتوازن الدخل والمصروفات، وليس تصنيفًا ائتمانيًا.',
-        textAlign:TextAlign.center,style:const TextStyle(fontSize:12)),
+  if(!mounted)return;
+  // Blur the underlying screen while the animated analysis indicator runs.
+  await showGeneralDialog<void>(
+   context:context,
+   barrierDismissible:false,
+   barrierColor:Colors.black.withValues(alpha:.18),
+   transitionDuration:waffraMotion(350),
+   pageBuilder:(dialogContext,animation,secondaryAnimation)=>BackdropFilter(
+    filter:ui.ImageFilter.blur(sigmaX:9,sigmaY:9),
+    child:Center(child:Material(color:Colors.transparent,child:Container(
+     width:MediaQuery.of(dialogContext).size.width*.83,
+     padding:const EdgeInsets.symmetric(horizontal:24,vertical:36),
+     decoration:BoxDecoration(color:Theme.of(dialogContext).cardColor,
+      borderRadius:BorderRadius.circular(28)),
+     child:Column(mainAxisSize:MainAxisSize.min,children:[
+      SizedBox(height:112,width:112,child:Stack(alignment:Alignment.center,children:[
+       const SizedBox.expand(child:CircularProgressIndicator(
+        strokeWidth:8,color:emerald,backgroundColor:Color(0xFFD9F1E5))),
+       const Icon(Icons.bar_chart_rounded,size:45,color:emerald),
       ])),
-      const SizedBox(height:16),
-      Row(children:[
-       Expanded(child:WaffraText(waffraIsEnglish?'Income (90 days)':'الدخل خلال 90 يوم')),
-       WaffraText(cash(income),style:TextStyle(color:waffraIncomeTone(context),fontWeight:FontWeight.bold)),
+      const SizedBox(height:22),
+      WaffraText(waffraIsEnglish?'Analyzing your finances...':'يتم الآن تحليل بياناتك المالية',
+       textAlign:TextAlign.center,style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold)),
+      const SizedBox(height:10),
+      WaffraText(waffraIsEnglish?'Reviewing income, expenses and categories for the last 90 days':
+       'جاري مراجعة دخلك ومصروفاتك وأقسام الإنفاق خلال آخر 90 يوم...',
+       textAlign:TextAlign.center),
+      const SizedBox(height:15),
+      const LinearProgressIndicator(color:emerald,backgroundColor:Color(0xFFD9F1E5)),
+     ]),
+    )))),
+   transitionBuilder:(ctx,animation,secondary,child)=>FadeTransition(
+    opacity:animation,child:ScaleTransition(
+     scale:Tween<double>(begin:.90,end:1).animate(CurvedAnimation(parent:animation,curve:Curves.easeOutCubic)),
+     child:child)),
+  ).timeout(const Duration(milliseconds:1),onTimeout:()=>{});
+  // Keep the loader visible long enough to convey progress; calculations are local.
+  if(!mounted)return;
+  await showDialog<void>(
+   context:context,barrierDismissible:false,barrierColor:Colors.transparent,
+   builder:(ctx){
+    Future<void>.delayed(waffraMotion(1500),(){if(ctx.mounted)Navigator.of(ctx).pop();});
+    return BackdropFilter(filter:ui.ImageFilter.blur(sigmaX:9,sigmaY:9),
+     child:Center(child:Material(color:Colors.transparent,child:Container(
+      width:MediaQuery.of(ctx).size.width*.83,
+      padding:const EdgeInsets.symmetric(horizontal:24,vertical:36),
+      decoration:BoxDecoration(color:Theme.of(ctx).cardColor,borderRadius:BorderRadius.circular(28)),
+      child:Column(mainAxisSize:MainAxisSize.min,children:[
+       SizedBox(width:104,height:104,child:Stack(alignment:Alignment.center,children:[
+        const SizedBox.expand(child:CircularProgressIndicator(strokeWidth:8,color:emerald,
+         backgroundColor:Color(0xFFD9F1E5))),
+        const Icon(Icons.bar_chart_rounded,color:emerald,size:44),
+       ])),
+       const SizedBox(height:22),
+       WaffraText(waffraIsEnglish?'Analyzing your finances...':'يتم الآن تحليل بياناتك المالية',
+        style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold),textAlign:TextAlign.center),
+       const SizedBox(height:10),
+       WaffraText(waffraIsEnglish?'Reviewing the last 90 days of transactions':
+        'جاري مراجعة معاملات آخر 90 يوم...',textAlign:TextAlign.center),
       ]),
-      const SizedBox(height:8),
-      Row(children:[
-       Expanded(child:WaffraText(waffraIsEnglish?'Expenses (90 days)':'المصروفات خلال 90 يوم')),
-       WaffraText(cash(spending),style:const TextStyle(color:Colors.deepOrange,fontWeight:FontWeight.bold)),
-      ]),
-      if(top.isNotEmpty)...[
-       const SizedBox(height:14),
-       WaffraText(waffraIsEnglish?'Top expense category':'أعلى قسم مصروفات',
-        style:const TextStyle(fontWeight:FontWeight.bold)),
-       WaffraText('${top.first.key}: ${cash(top.first.value)}'),
-      ],
-      const SizedBox(height:14),
-      WaffraText(recent.isEmpty?
-       (waffraIsEnglish?'Add more transactions to improve the analysis.':'سجل معاملات جديدة للحصول على تحليل أدق.'):
-       (spending>income&&income>0?
-        (waffraIsEnglish?'Your expenses exceed your income; consider lowering optional spending.':
-         'مصروفاتك أعلى من دخلك؛ جرّب تقليل المصروفات الاختيارية.'):
-        (waffraIsEnglish?'Review your largest categories to increase possible savings.':
-         'راجع أكبر أقسام الصرف لزيادة فرص التوفير.'))),
-      const SizedBox(height:16),
-      FilledButton.icon(onPressed:()=>Navigator.pop(dialogCtx,true),
-       icon:const Icon(Icons.bar_chart_rounded),label:WaffraText(waffraIsEnglish?'View detailed analysis':'عرض التحليل التفصيلي')),
-      const SizedBox(height:8),
-     ]));
-    }))));
-  if(showDetails==true&&mounted){
-   await Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>Scaffold(
-    appBar:AppBar(title:WaffraText(waffraIsEnglish?'Detailed analysis':'التحليل التفصيلي')),
-    body:analytics())));
-  }
+     ))));
+   },
+  );
+  if(!mounted)return;
+  await Navigator.of(context).push<void>(MaterialPageRoute(builder:(ctx){
+   final deficit=spending-income;
+   final accent=score==null?Colors.grey:score<45?Colors.red:score<70?Colors.orange:emerald;
+   final periods=List.generate(3,(i){
+    final from=now.subtract(Duration(days:(3-i)*30));
+    final to=now.subtract(Duration(days:(2-i)*30));
+    final items=recent.where((e)=>!e.date.isBefore(from)&&e.date.isBefore(to));
+    return (sum(items,true),sum(items,false));
+   });
+   final highest=periods.fold<double>(1,(v,p)=>max(v,max(p.$1,p.$2)));
+   return Scaffold(
+    appBar:AppBar(title:WaffraText(waffraIsEnglish?'Detailed financial analysis':'التحليل المالي التفصيلي')),
+    body:ListView(padding:const EdgeInsets.all(16),children:[
+     Container(padding:const EdgeInsets.all(20),decoration:BoxDecoration(
+      color:emerald.withValues(alpha:.08),borderRadius:BorderRadius.circular(20)),
+      child:Column(children:[
+       WaffraText(waffraIsEnglish?'Income & expense balance indicator':'مؤشر توازن الدخل والمصروفات',
+        style:const TextStyle(fontWeight:FontWeight.bold,fontSize:17),textAlign:TextAlign.center),
+       const SizedBox(height:12),
+       WaffraText(score==null?'— / 100':'$score / 100',
+        style:TextStyle(color:accent,fontWeight:FontWeight.bold,fontSize:34)),
+       const SizedBox(height:10),
+       LinearProgressIndicator(value:(score??0)/100,minHeight:9,color:accent,
+        borderRadius:BorderRadius.circular(10)),
+       const SizedBox(height:10),
+       WaffraText(score==null?(waffraIsEnglish?'Not enough data':'البيانات غير كافية'):
+        deficit>0?(waffraIsEnglish?'Expenses exceed income. Review your spending.':
+         'مصروفاتك أعلى من دخلك. راجع مصروفاتك لإعادة التوازن.'):
+        (waffraIsEnglish?'Keep tracking your spending to maintain balance.':
+         'واصل متابعة مصروفاتك للحفاظ على التوازن.'),
+        textAlign:TextAlign.center),
+       const SizedBox(height:6),
+       WaffraText(waffraIsEnglish?'Indicative cash-flow measure, not a credit score.':
+        'مؤشر إرشادي مبني على العمليات المسجلة، وليس تصنيفًا ائتمانيًا.',
+        style:const TextStyle(fontSize:11),textAlign:TextAlign.center),
+      ])),
+     const SizedBox(height:22),
+     WaffraText(waffraIsEnglish?'Last 90 days':'ملخص آخر 90 يوم',
+      style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
+     const SizedBox(height:12),
+     Wrap(spacing:8,runSpacing:8,children:[
+      _analysisStat(waffraIsEnglish?'Income':'الدخل',income,emerald),
+      _analysisStat(waffraIsEnglish?'Expenses':'المصروفات',spending,Colors.deepOrange),
+      _analysisStat(deficit>0?(waffraIsEnglish?'Deficit':'العجز'):(waffraIsEnglish?'Surplus':'الفائض'),
+       deficit.abs(),deficit>0?Colors.red:emerald),
+     ]),
+     const SizedBox(height:24),
+     WaffraText(waffraIsEnglish?'Income vs expenses':'اتجاه الدخل والمصروفات',
+      style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
+     const SizedBox(height:12),
+     ...List.generate(3,(i)=>Padding(padding:const EdgeInsets.symmetric(vertical:8),
+      child:Row(children:[
+       SizedBox(width:65,child:WaffraText(waffraIsEnglish?'Period ${i+1}':'فترة ${i+1}')),
+       Expanded(child:Column(children:[
+        LinearProgressIndicator(value:periods[i].$1/highest,minHeight:10,color:emerald,
+         backgroundColor:emerald.withValues(alpha:.08)),
+        const SizedBox(height:5),
+        LinearProgressIndicator(value:periods[i].$2/highest,minHeight:10,color:Colors.deepOrange,
+         backgroundColor:Colors.deepOrange.withValues(alpha:.08)),
+       ])),
+      ]))),
+     Row(children:[
+      const Icon(Icons.circle,color:emerald,size:12),const SizedBox(width:5),
+      WaffraText(waffraIsEnglish?'Income':'الدخل'),
+      const SizedBox(width:15),const Icon(Icons.circle,color:Colors.deepOrange,size:12),
+      const SizedBox(width:5),WaffraText(waffraIsEnglish?'Expenses':'المصروفات'),
+     ]),
+     const SizedBox(height:24),
+     WaffraText(waffraIsEnglish?'Top spending categories':'أعلى أقسام المصروفات',
+      style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
+     const SizedBox(height:10),
+     if(top.isEmpty)WaffraText(waffraIsEnglish?'No expenses recorded.':'لا توجد مصروفات مسجلة.'),
+     ...top.take(5).map((e)=>Padding(padding:const EdgeInsets.symmetric(vertical:7),
+      child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+       Row(children:[Expanded(child:WaffraText(waffraTr(e.key))),
+        WaffraText(cash(e.value),style:const TextStyle(fontWeight:FontWeight.bold))]),
+       const SizedBox(height:5),
+       LinearProgressIndicator(value:spending>0?e.value/spending:0,minHeight:7,
+        color:Colors.deepOrange,borderRadius:BorderRadius.circular(8)),
+      ]))),
+     const SizedBox(height:24),
+     WaffraText(waffraIsEnglish?'Tips for you':'نصائح مخصصة لك',
+      style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
+     const SizedBox(height:10),
+     ListTile(leading:const Icon(Icons.lightbulb_outline,color:emerald),
+      title:WaffraText(deficit>0?
+       (waffraIsEnglish?'Reduce optional spending to close the gap.':'قلّل المصروفات الاختيارية لتقليل العجز.'):
+       (waffraIsEnglish?'Keep your expenses below your income.':'حافظ على مصروفات أقل من دخلك.'))),
+     if(top.isNotEmpty)ListTile(leading:const Icon(Icons.category_outlined,color:emerald),
+      title:WaffraText(waffraIsEnglish?'Review spending in ${waffraTr(top.first.key)}.':
+       'راجع مصروفات قسم «${waffraTr(top.first.key)}».')),
+     ListTile(leading:const Icon(Icons.track_changes_outlined,color:emerald),
+      title:WaffraText(waffraIsEnglish?'Set monthly budgets for your categories.':
+       'حدد ميزانية شهرية لكل قسم للتحكم في الإنفاق.')),
+     const SizedBox(height:24),
+    ]),
+   );
+  }));
  }
+ Widget _analysisStat(String label,double value,Color color)=>Container(
+  width:MediaQuery.of(context).size.width/3-18,
+  padding:const EdgeInsets.symmetric(horizontal:7,vertical:15),
+  decoration:BoxDecoration(color:color.withValues(alpha:.09),borderRadius:BorderRadius.circular(15)),
+  child:Column(children:[
+   WaffraText(label,style:const TextStyle(fontSize:12),textAlign:TextAlign.center),
+   const SizedBox(height:7),
+   FittedBox(fit:BoxFit.scaleDown,child:WaffraText(cash(value),
+    style:TextStyle(color:color,fontWeight:FontWeight.bold,fontSize:15))),
+  ]),
+ );
  Widget analytics(){
   final data=analysisEntries,inc=sum(data,true),exp=sum(data,false);
   final years=<int>{DateTime.now().year,year,...entries.map((e)=>e.date.year)}.toList()..sort((a,b)=>b.compareTo(a));
