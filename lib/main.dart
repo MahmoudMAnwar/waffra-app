@@ -1572,16 +1572,30 @@ void snack(BuildContext context,String text){
  if(!context.mounted)return;
  final messenger=ScaffoldMessenger.of(context);
  messenger.hideCurrentMaterialBanner();
- final notice=messenger.showMaterialBanner(MaterialBanner(
-  backgroundColor:Theme.of(context).colorScheme.surface,
-  leading:Icon(Icons.info_outline,color:Theme.of(context).colorScheme.primary),
-  content:WaffraText(text,maxLines:4),
-  actions:[TextButton(onPressed:()=>messenger.hideCurrentMaterialBanner(),
-   child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))],
-  ));
- Future<void>.delayed(const Duration(seconds:4),()=>notice.close());
+ messenger.hideCurrentSnackBar();
+ final dark=Theme.of(context).brightness==Brightness.dark;
+ final error=RegExp(r'لا يمكن|لا توجد|لا يوجد|تعذر|فشل|خطأ|يجب|مطلوب|غير صالح|غير متاح|لم يتم|cannot|could not|failed|error|invalid|required|must|not found|unavailable|no transactions|no data',caseSensitive:false).hasMatch(text);
+ messenger.showSnackBar(SnackBar(
+  behavior:SnackBarBehavior.floating,
+  margin:const EdgeInsets.fromLTRB(12,8,12,10),
+  duration:const Duration(seconds:5),
+  backgroundColor:error?(dark?const Color(0xFF572629):const Color(0xFFFFE1E2)):
+   (dark?const Color(0xFF173D31):const Color(0xFFE6F5EB)),
+  shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18),
+   side:BorderSide(color:error?const Color(0xFFE56C74):emerald,width:1.1)),
+  content:Row(children:[
+   Icon(error?Icons.error_outline_rounded:Icons.info_outline_rounded,
+    color:error?(dark?const Color(0xFFFF9FA4):const Color(0xFFB4232A)):emerald),
+   const SizedBox(width:10),
+   Expanded(child:WaffraText(text,maxLines:4,
+    style:TextStyle(color:error?(dark?const Color(0xFFFFE5E6):const Color(0xFF9D1D25)):
+     (dark?Colors.white:forest),fontWeight:FontWeight.w600))),
+  ]),
+  action:SnackBarAction(label:waffraIsEnglish?'Close':'إغلاق',
+   textColor:error?(dark?const Color(0xFFFFC5C8):const Color(0xFF9D1D25)):emerald,
+   onPressed:()=>messenger.hideCurrentSnackBar()),
+ ));
 }
-
 
 /* Waffra concept-2 section header. A shared visual component only:
    each existing page retains its interactions, state, and data. */
@@ -3376,6 +3390,37 @@ Future<void> bulkSmsSheet()async {
  Future<void> showSummaryTransactions(bool income)async {
   final items=entries.where((e)=>e.income==income).toList()
    ..sort((a,b)=>b.date.compareTo(a.date));
+  if(items.isEmpty){
+   if(!mounted)return;
+   await showWaffraDialog<void>(context:context,builder:(ctx){
+    final dark=Theme.of(ctx).brightness==Brightness.dark;
+    final accent=income?emerald:const Color(0xFFE57373);
+    return AlertDialog(
+     backgroundColor:dark?const Color(0xFF171D1B):const Color(0xFFF9FDFB),
+     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(24)),
+     contentPadding:const EdgeInsets.fromLTRB(22,25,22,10),
+     content:Column(mainAxisSize:MainAxisSize.min,children:[
+      CircleAvatar(radius:32,backgroundColor:accent.withValues(alpha:.12),
+       child:Icon(income?Icons.account_balance_wallet_outlined:Icons.wallet_outlined,
+        color:accent,size:32)),
+      const SizedBox(height:16),
+      WaffraText(waffraIsEnglish?'No transactions yet':'لا توجد معاملات حالية',
+       textAlign:TextAlign.center,
+       style:Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight:FontWeight.bold)),
+      const SizedBox(height:10),
+      WaffraText(income?
+       (waffraIsEnglish?'No income transactions recorded yet. You can add a new income transaction.':'لا توجد عمليات دخل مسجلة حاليًا. يمكنك إضافة معاملة دخل جديدة.'):
+       (waffraIsEnglish?'No expense transactions recorded yet. You can add a new expense transaction.':'لا توجد عمليات مصروف مسجلة حاليًا. يمكنك إضافة معاملة مصروف جديدة.'),
+       textAlign:TextAlign.center),
+      const SizedBox(height:18),
+      SizedBox(width:double.infinity,child:FilledButton(
+       onPressed:()=>Navigator.pop(ctx),
+       child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))),
+     ]),
+    );
+   });
+   return;
+  }
   await showModalBottomSheet<void>(
    context:context,isScrollControlled:true,showDragHandle:true,
    useSafeArea:true,builder:(ctx)=>DraggableScrollableSheet(
