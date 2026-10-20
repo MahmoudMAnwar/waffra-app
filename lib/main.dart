@@ -980,7 +980,6 @@ class _ProfileFormState extends State<ProfileForm> {
  Future<void> save()async {
   setState(()=>profileAttempted=true);
   if(gender.isEmpty){snack(context,waffraIsEnglish?'Gender is required':'الجنس حقل إجباري');return;}
-   if(birthday.year==2000&&birthday.month==1&&birthday.day==1){snack(context,waffraIsEnglish?'Please select your date of birth':'تاريخ الميلاد حقل إجباري');return;}
   final validEmail=RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email.text.trim());
   final validPhone=RegExp(r'^05[0-9]{8}$').hasMatch(phone.text.trim());
   if(WaffraValidators.requiredText(name.text)!=null||!validPhone){
@@ -1020,7 +1019,7 @@ class _ProfileFormState extends State<ProfileForm> {
      onPressed:editAvatar)),
    ])),
    const SizedBox(height:10),
-   if(widget.provider=='Google'&&(widget.initial?.gender.isEmpty??true))Card(color:emerald.withValues(alpha:.08),child:Padding(padding:const EdgeInsets.all(14),child:WaffraText(waffraIsEnglish?'Complete your profile: mobile number, gender and date of birth are required.':'تبقّى بعض البيانات لاستكمال ملفك الشخصي: رقم الجوال والجنس وتاريخ الميلاد حقول إجبارية.'))),
+   if(widget.provider=='Google'&&(widget.initial?.gender.isEmpty??true))Card(color:emerald.withValues(alpha:.08),child:Padding(padding:const EdgeInsets.all(14),child:WaffraText(waffraIsEnglish?'Complete your profile: mobile number and gender are required. Date of birth is optional.':'تبقّى بعض البيانات لاستكمال ملفك الشخصي: رقم الجوال والجنس حقول إجبارية، وتاريخ الميلاد اختياري.'))),
     Wrap(alignment:WrapAlignment.center,spacing:12,children:['ذكر','أنثى']
     .map((a)=>ChoiceChip(label:Row(mainAxisSize:MainAxisSize.min,children:[saudiAvatar(a,radius:20),const SizedBox(width:6),WaffraText(waffraIsEnglish?(a=='ذكر'?'Male':'Female'):a)]),selected:gender==a,onSelected:(_)=>setState((){gender=a;if(!avatar.startsWith('https://'))avatar=a=='ذكر'?'male':'female';}))).toList()),
    const SizedBox(height:16),
@@ -1039,7 +1038,7 @@ class _ProfileFormState extends State<ProfileForm> {
    TextField(controller:phone,keyboardType:TextInputType.phone,
     onChanged:(_)=>setState((){}),
     inputFormatters:[FilteringTextInputFormatter.digitsOnly,LengthLimitingTextInputFormatter(10)],
-    decoration:InputDecoration(labelText:waffraIsEnglish?'Mobile number starting with 05 *':'رقم جوال يبدأ بـ 05 *',
+    decoration:InputDecoration(labelText:waffraIsEnglish?'Mobile number starting with 05':'رقم جوال يبدأ بـ 05',
      hintText:'05XXXXXXXX',
      errorText:profileAttempted&&WaffraValidators.mobileNumber(phone.text)!=null?
       (waffraIsEnglish?'Enter a valid mobile number starting with 05':'رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام'):null,
@@ -1069,7 +1068,7 @@ class _ProfileFormState extends State<ProfileForm> {
    ],
    const SizedBox(height:12),
    DropdownButtonFormField<String>(initialValue:['ذكر','أنثى'].contains(gender)?gender:null,
-    decoration:InputDecoration(labelText:waffraIsEnglish?'Gender *':'الجنس *',
+    decoration:InputDecoration(labelText:waffraIsEnglish?'Gender':'الجنس',
       errorText:profileAttempted&&gender.isEmpty?(waffraIsEnglish?'Select gender':'الجنس حقل إجباري'):null,
       border:const OutlineInputBorder()),
     items:['ذكر','أنثى'].map((x)=>DropdownMenuItem(value:x,child:WaffraText(waffraIsEnglish?(x=='ذكر'?'Male':'Female'):x))).toList(),
@@ -1078,7 +1077,7 @@ class _ProfileFormState extends State<ProfileForm> {
    OutlinedButton.icon(onPressed:()async {
     final d=await showDatePicker(context:context,initialDate:birthday,firstDate:DateTime(1900),lastDate:DateTime.now());
     if(d!=null)setState(()=>birthday=d);
-   },icon:const Icon(Icons.calendar_month),label:WaffraText('${waffraIsEnglish?'Date of birth *':'تاريخ الميلاد *'}: ${dayText(birthday)}')),
+   },icon:const Icon(Icons.calendar_month),label:WaffraText('${waffraIsEnglish?'Date of birth':'تاريخ الميلاد'}: ${dayText(birthday)}')),
    const SizedBox(height:20),
    FilledButton(onPressed:busy?null:save,child:WaffraText(waffraIsEnglish?'Save profile':'حفظ البيانات')),
   ]));
