@@ -44,8 +44,9 @@ void main(){
  testWidgets('PDF page opens full-screen, navigates and returns to overview',(tester)async{
   await tester.binding.setSurfaceSize(const Size(390,850));
   addTearDown(()=>tester.binding.setSurfaceSize(null));
-  final bytes=await _samplePage();
-  final pages=List<WaffraPdfPage>.generate(3,(_)=>WaffraPdfPage(bytes,.5));
+  final bytes=await tester.runAsync<Uint8List>(_samplePage);
+  expect(bytes,isNotNull);
+  final pages=List<WaffraPdfPage>.generate(3,(_)=>WaffraPdfPage(bytes!,.5));
   await tester.pumpWidget(MaterialApp(home:WaffraPdfReader(
    bytes:Uint8List(0),fileName:'report.pdf',english:false,
    previewPages:Future.value(pages))));
