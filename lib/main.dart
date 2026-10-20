@@ -2093,7 +2093,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 Future<void> bulkSmsSheet({String? initialText})async {
  if(_smsSheetOpen)return;
  _smsSheetOpen=true;
- final pasted=TextEditingController();
+ final pasted=TextEditingController(text:initialText??'');
  final description=TextEditingController();
  final amount=TextEditingController();
  var messages=<String>[];
@@ -2295,6 +2295,47 @@ Future<void> bulkSmsSheet({String? initialText})async {
    amount.text=result.amount==null?'':formatWaffraMoney(result.amount!);
   });
  }
+ BuildContext? activeSmsContext;
+ StateSetter? activeSmsUpdate;
+ bool awaitingMessagesApp=false;
+ bool initialParsed=false;
+ void analyzeSharedText(String text){
+  final ctx=activeSmsContext,update=activeSmsUpdate;
+  if(!sheetActive||ctx==null||!ctx.mounted||update==null||text.trim().isEmpty)return;
+  final input=text.trim();
+  pasted.text=input;
+  pasteTimer?.cancel();
+  update((){analyzingPaste=true;parsed=false;messages=[];statusMessage='';});
+  pasteTimer=Timer(const Duration(milliseconds:600),(){
+   if(!sheetActive||!ctx.mounted||pasted.text.trim()!=input)return;
+   update((){
+    messages=splitBankMessages(input);
+    parsed=true;
+    analyzingPaste=false;
+    statusMessage=noTransactionWarning(input)??'';
+   });
+   if(statusMessage.isEmpty&&messages.isNotEmpty)saveParsedMessages(ctx,update);
+  });
+ }
+ void onSharedDuringSheet(){
+  final input=waffraIncomingSms.value;
+  if(input==null||input.trim().isEmpty)return;
+  waffraIncomingSms.value=null;
+  awaitingMessagesApp=false;
+  analyzeSharedText(input);
+ }
+ final smsLifecycle=AppLifecycleListener(onResume:(){
+  if(!awaitingMessagesApp||!sheetActive)return;
+  awaitingMessagesApp=false;
+  Future<void>(()async{
+   final data=await Clipboard.getData(Clipboard.kTextPlain);
+   final value=data?.text?.trim();
+   if(sheetActive&&value!=null&&value.isNotEmpty&&value!=pasted.text.trim()){
+    analyzeSharedText(value);
+   }
+  });
+ });
+ waffraIncomingSms.addListener(onSharedDuringSheet);
  await showGeneralDialog<void>(context:context,barrierDismissible:true,barrierLabel:'Close',
   barrierColor:Colors.black.withValues(alpha:.45),
   pageBuilder:(dialogContext,animation,secondaryAnimation)=>BackdropFilter(
@@ -2304,6 +2345,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
     borderRadius:const BorderRadius.vertical(top:Radius.circular(28)),
     clipBehavior:Clip.antiAlias,
     child:SafeArea(top:false,child:StatefulBuilder(builder:(ctx,update){
+   activeSmsContext=ctx;
+   activeSmsUpdate=update;
+   if(!initialParsed&&initialText!=null&&initialText.trim().isNotEmpty){
+    initialParsed=true;
+    WidgetsBinding.instance.addPostFrameCallback((_){
+     if(ctx.mounted&&sheetActive)analyzeSharedText(initialText);
+    });
+   }
    final available=forType(income);
    final total=messages.fold<double>(0,(sum,s)=>sum+(BankParser.parse(s).amount??0));
    return Padding(padding:EdgeInsets.fromLTRB(18,8,18,MediaQuery.of(ctx).viewInsets.bottom+24),
@@ -2345,6 +2394,21 @@ Future<void> bulkSmsSheet({String? initialText})async {
          if(statusMessage.isEmpty&&messages.isNotEmpty)saveParsedMessages(ctx,update);
         });
        },label:WaffraText(waffraIsEnglish?'Paste copied SMS':'لصق آخر رسالة نسختها',maxLines:1,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700)))),
+      const SizedBox(height:8),
+      SizedBox(width:double.infinity,child:OutlinedButton.icon(
+       icon:const Icon(Icons.message_outlined),
+       onPressed:busy?null:()async{
+        awaitingMessagesApp=true;
+        final launched=await openWaffraMessagesApp();
+        if(!launched&&ctx.mounted){
+         awaitingMessagesApp=false;
+         update(()=>statusMessage=waffraIsEnglish
+          ?'Could not open Messages. Copy a message and paste it here instead.'
+          :'تعذر فتح تطبيق الرسائل. انسخ الرسالة والصقها هنا بدلًا من ذلك.');
+        }
+       },
+       label:WaffraText(waffraIsEnglish?'Open phone messages':'فتح رسائل الهاتف'),
+      )),
       if(analyzingPaste)...[const SizedBox(height:12),const LinearProgressIndicator(),const SizedBox(height:6),WaffraText(waffraIsEnglish?'Analyzing your bank messages now…':'يتم الآن تحليل الرسائل البنكية واستخراج المعاملات…')],
       
       if(rejectedMessages.isNotEmpty)...[
@@ -2438,7 +2502,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
      ],
     ])));
   }))))));
- sheetActive=false;disposeLater();
+ sheetActive=false;
+ smsLifecycle.dispose();
+ waffraIncomingSms.removeListener(onSharedDuringSheet);
+ _smsSheetOpen=false;
+ disposeLater();
+ _receiveSharedSms();
 }
 
  Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms})async {
