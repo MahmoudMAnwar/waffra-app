@@ -2993,6 +2993,49 @@ Future<void> bulkSmsSheet()async {
              (waffraIsEnglish?'Show less':'عرض أقل'):
              (waffraIsEnglish?'View all':'عرض الكل'))),
            ]),
+           const SizedBox(height:9),
+           Row(children:[
+            Expanded(child:Container(
+             padding:const EdgeInsets.all(12),
+             decoration:BoxDecoration(color:const Color(0xFFE4F4EB),
+              borderRadius:BorderRadius.circular(15)),
+             child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              WaffraText(waffraIsEnglish?'Income':'الدخل',
+               style:const TextStyle(color:Color(0xFF075B43),fontWeight:FontWeight.bold)),
+              const SizedBox(height:5),
+              FittedBox(fit:BoxFit.scaleDown,child:WaffraCurrencyAmount(
+               sum(visible.where((e)=>e.income),true),fontSize:18,
+               color:const Color(0xFF075B43))),
+             ]))),
+            const SizedBox(width:9),
+            Expanded(child:Container(
+             padding:const EdgeInsets.all(12),
+             decoration:BoxDecoration(color:const Color(0xFFFCECE8),
+              borderRadius:BorderRadius.circular(15)),
+             child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              WaffraText(waffraIsEnglish?'Expenses':'المصروفات',
+               style:const TextStyle(color:Color(0xFFB34E3C),fontWeight:FontWeight.bold)),
+              const SizedBox(height:5),
+              FittedBox(fit:BoxFit.scaleDown,child:WaffraCurrencyAmount(
+               sum(visible.where((e)=>!e.income),false),fontSize:18,
+               color:const Color(0xFFB34E3C))),
+             ]))),
+           ]),
+           const SizedBox(height:10),
+           Row(children:['الكل','الدخل','المصروفات'].map((choice)=>
+            Expanded(child:Padding(padding:const EdgeInsets.symmetric(horizontal:2),
+             child:ChoiceChip(
+              label:Center(child:WaffraText(waffraIsEnglish?
+               (choice=='الكل'?'All':choice=='الدخل'?'Income':'Expenses'):choice,
+               style:TextStyle(fontSize:12,color:typeFilter==choice?Colors.white:null))),
+              selected:typeFilter==choice,
+              selectedColor:emerald,
+              showCheckmark:false,
+              onSelected:(_)=>setState((){
+               typeFilter=choice;categoryFilter='الكل';
+              }),
+             )))).toList()),
+           const SizedBox(height:7),
            Divider(color:forest.withValues(alpha:0.10)),
            Row(children:[
             IconButton(
