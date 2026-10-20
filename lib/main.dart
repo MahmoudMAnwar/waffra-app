@@ -457,14 +457,14 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(22),
      side:const BorderSide(color:Color(0xFFE0EDE6),width:.9))),
    navigationBarTheme:NavigationBarThemeData(
-    backgroundColor:Colors.white,elevation:4,height:76,
-    surfaceTintColor:Colors.white,indicatorColor:waffraMint,
+    backgroundColor:forest,elevation:4,height:78,
+    surfaceTintColor:forest,indicatorColor:const Color(0xFF207B59),
     labelTextStyle:WidgetStateProperty.resolveWith((states)=>TextStyle(
-     color:states.contains(WidgetState.selected)?forest:const Color(0xFF58756B),
+     color:states.contains(WidgetState.selected)?Colors.white:const Color(0xFFD1E6DC),
      fontFamily:'Tajawal',fontSize:10.5,
      fontWeight:states.contains(WidgetState.selected)?FontWeight.bold:FontWeight.w500)),
     iconTheme:WidgetStateProperty.resolveWith((states)=>IconThemeData(
-     color:states.contains(WidgetState.selected)?forest:const Color(0xFF608377),size:24))),
+     color:states.contains(WidgetState.selected)?Colors.white:const Color(0xFFD1E6DC),size:24))),
    filledButtonTheme:FilledButtonThemeData(style:FilledButton.styleFrom(
     backgroundColor:forest,foregroundColor:Colors.white,
     minimumSize:const Size(0,46),
@@ -530,8 +530,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(22),
      side:const BorderSide(color:Color(0xFF345A49)))),
    navigationBarTheme:NavigationBarThemeData(
-    backgroundColor:const Color(0xFF12372A),height:76,
-    indicatorColor:const Color(0xFF2B6B4B),
+    backgroundColor:forest,height:78,
+    indicatorColor:const Color(0xFF207B59),
     labelTextStyle:WidgetStateProperty.resolveWith((states)=>TextStyle(
      color:states.contains(WidgetState.selected)?Colors.white:const Color(0xFFC0D5C9),
      fontFamily:'Tajawal',fontSize:10.5,
@@ -1492,6 +1492,51 @@ void snack(BuildContext context,String text){
   content:WaffraText(text,maxLines:4),duration:const Duration(seconds:3)));
 }
 
+
+/* Waffra concept-2 section header. A shared visual component only:
+   each existing page retains its interactions, state, and data. */
+class WaffraPageHero extends StatelessWidget {
+ final String title,subtitle;
+ final IconData icon;
+ final Key? titleKey;
+ const WaffraPageHero({super.key,required this.title,required this.subtitle,
+  required this.icon,this.titleKey});
+ @override Widget build(BuildContext context)=>Padding(
+  padding:const EdgeInsets.fromLTRB(14,12,14,6),
+  child:ClipRRect(borderRadius:BorderRadius.circular(23),
+   child:Container(
+    decoration:const BoxDecoration(gradient:LinearGradient(
+     begin:AlignmentDirectional.topStart,end:AlignmentDirectional.bottomEnd,
+     colors:[Color(0xFF073F31),Color(0xFF0C6B4C)])),
+    child:Stack(children:[
+     PositionedDirectional(top:-49,end:-37,child:Container(
+      width:140,height:140,decoration:BoxDecoration(
+       shape:BoxShape.circle,color:Colors.white.withValues(alpha:.065)))),
+     PositionedDirectional(bottom:-78,start:-51,child:Container(
+      width:163,height:163,decoration:BoxDecoration(
+       shape:BoxShape.circle,
+       border:Border.all(color:Colors.white.withValues(alpha:.085),width:25)))),
+     Padding(padding:const EdgeInsets.fromLTRB(18,18,18,19),
+      child:Row(children:[
+       Container(width:43,height:43,
+        decoration:BoxDecoration(color:Colors.white.withValues(alpha:.12),
+         borderRadius:BorderRadius.circular(14)),
+        child:Icon(icon,color:Colors.white,size:24)),
+       const SizedBox(width:13),
+       Expanded(child:Column(
+        crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,
+        children:[
+         WaffraText(title,key:titleKey,maxLines:2,
+          style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold,fontSize:19)),
+         const SizedBox(height:4),
+         WaffraText(subtitle,maxLines:3,
+          style:const TextStyle(color:Color(0xFFDAF1E6),fontSize:12,height:1.35)),
+        ])),
+      ])),
+    ]),
+   )),
+ );
+}
 class HomeScreen extends StatefulWidget {
  final Person profile;final bool dark,pinEnabled;
  final Future<void> Function(String?) onSetPin;
@@ -5150,6 +5195,11 @@ Future<void> bulkSmsSheet()async {
  }
  @override Widget build(BuildContext context)=>Stack(children:[Scaffold(
   appBar:AppBar(
+   toolbarHeight:64,
+   flexibleSpace:const DecoratedBox(decoration:BoxDecoration(
+    gradient:LinearGradient(begin:AlignmentDirectional.topStart,
+     end:AlignmentDirectional.bottomEnd,
+     colors:[Color(0xFF073F31),Color(0xFF07573F)]))),
    leading:goalsOpened?IconButton(tooltip:waffraIsEnglish?'Back to home':'العودة للرئيسية',
     icon:const Icon(Icons.arrow_back),onPressed:()=>setState(()=>goalsOpened=false)):null,
    titleSpacing:12,
@@ -5242,17 +5292,15 @@ Future<void> bulkSmsSheet()async {
          color:Colors.white,size:28))),
      )),
    ])),
-  bottomNavigationBar:NavigationBar(height:78,backgroundColor:
-    Theme.of(context).brightness==Brightness.dark?const Color(0xFF12372A):Colors.white,
-   indicatorColor:Theme.of(context).brightness==Brightness.dark?
-    const Color(0xFF2B6B4B):waffraMint,
+  bottomNavigationBar:NavigationBar(height:78,
+   backgroundColor:forest,indicatorColor:const Color(0xFF207B59),
    labelBehavior:NavigationDestinationLabelBehavior.alwaysShow,
    selectedIndex:tab,onDestinationSelected:selectFooter,
    destinations:[
     NavigationDestination(icon:const Icon(Icons.home_outlined),selectedIcon:const Icon(Icons.home),label:waffraTr('الرئيسية')),
     NavigationDestination(icon:const Icon(Icons.category_outlined),selectedIcon:const Icon(Icons.category),label:waffraTr('الأقسام')),
     NavigationDestination(icon:KeyedSubtree(key:_tourKeys[3],child:const Icon(Icons.auto_awesome_rounded)),
-     selectedIcon:const Icon(Icons.auto_awesome_rounded,color:emerald),
+     selectedIcon:const Icon(Icons.auto_awesome_rounded,color:Colors.white),
      label:waffraIsEnglish?'Analysis':'التحليل',tooltip:waffraIsEnglish?'Analyze income and expenses':'تحليل الدخل والمصروفات'),
     NavigationDestination(icon:const Icon(Icons.flag_outlined),selectedIcon:const Icon(Icons.flag),label:waffraIsEnglish?'Goals':'الأهداف'),
     NavigationDestination(icon:const Icon(Icons.repeat),label:waffraTr('المتكررة')),
