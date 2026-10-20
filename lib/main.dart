@@ -1502,7 +1502,7 @@ class WaffraPageHero extends StatelessWidget {
  const WaffraPageHero({super.key,required this.title,required this.subtitle,
   required this.icon,this.titleKey});
  @override Widget build(BuildContext context)=>Padding(
-  padding:const EdgeInsets.fromLTRB(14,12,14,6),
+  padding:const EdgeInsets.fromLTRB(0,0,0,7),
   child:ClipRRect(borderRadius:BorderRadius.circular(23),
    child:Container(
     decoration:const BoxDecoration(gradient:LinearGradient(
@@ -3279,10 +3279,12 @@ Future<void> bulkSmsSheet()async {
      physics:const AlwaysScrollableScrollPhysics(),
      slivers:[
       SliverToBoxAdapter(child:Padding(
-       padding:const EdgeInsets.fromLTRB(15,12,15,10),
-       child:Row(children:[Expanded(child:WaffraText(greeting,
-        style:Theme.of(context).textTheme.titleLarge)),
-        const SizedBox.shrink()]))),
+       padding:const EdgeInsets.fromLTRB(14,14,14,4),
+       child:WaffraPageHero(
+        title:greeting,
+        subtitle:waffraIsEnglish?'Your finances at a glance':
+         'تابع رصيدك ومعاملاتك وخططك المالية بسهولة.',
+        icon:Icons.spa_outlined))),
       // Not pinned: the shrinking balance scrolls away without covering data.
       SliverPersistentHeader(
        pinned:false,
@@ -4097,18 +4099,20 @@ Future<void> bulkSmsSheet()async {
       ],
      ]))));
   }
-  return ListView(padding:const EdgeInsets.fromLTRB(16,16,16,20),children:[
-   Row(children:[
-    Expanded(child:Align(alignment:waffraIsEnglish?Alignment.centerLeft:Alignment.centerRight,
-     child:WaffraText(waffraIsEnglish?'Categories & budgets':'أقسامك وميزانياتك',
-      key:_tourKeys[2],style:Theme.of(context).textTheme.titleLarge))),
-    OutlinedButton.icon(onPressed:showCategoryTrash,
-      style:OutlinedButton.styleFrom(padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),visualDensity:VisualDensity.compact,minimumSize:const Size(0,34)),
-     icon:const Icon(Icons.delete_outline,size:16),label:WaffraText(waffraIsEnglish?'Deleted categories':'الأقسام المحذوفة',style:const TextStyle(fontSize:11,fontWeight:FontWeight.bold))),
-   ]),
-   WaffraText(waffraIsEnglish?'Organize spending and set budgets easily':'أضف أقسامًا جديدة لتنظيم دخلك ومصروفاتك بسهولة.',
-    style:const TextStyle(fontSize:13)),
-   const SizedBox(height:14),
+  return ListView(padding:const EdgeInsets.fromLTRB(16,14,16,116),children:[
+   WaffraPageHero(
+    title:waffraIsEnglish?'Categories & budgets':'أقسامك وميزانياتك',
+    subtitle:waffraIsEnglish?'Organize income, spending and budgets':'نظّم الدخل والمصروفات والميزانيات في مكان واحد.',
+    icon:Icons.category_outlined,titleKey:_tourKeys[2]),
+   Align(alignment:AlignmentDirectional.centerEnd,
+    child:OutlinedButton.icon(onPressed:showCategoryTrash,
+     style:OutlinedButton.styleFrom(
+      padding:const EdgeInsets.symmetric(horizontal:10,vertical:5),
+      visualDensity:VisualDensity.compact,minimumSize:const Size(0,34)),
+     icon:const Icon(Icons.delete_outline,size:16),
+     label:WaffraText(waffraIsEnglish?'Deleted categories':'الأقسام المحذوفة',
+      style:const TextStyle(fontSize:11,fontWeight:FontWeight.bold)))),
+   const SizedBox(height:12),
    Row(children:[
     Expanded(child:_summaryBox(waffraIsEnglish?'Categories':'عدد الأقسام',
      categories.length.toString(),Icons.layers,emerald)),
@@ -4397,14 +4401,13 @@ Future<void> bulkSmsSheet()async {
   final pct=target==0?0.0:(saved/target).clamp(0.0,1.0);
   final filtered=goals.where((g)=>goalDisplay=='all'||
    (goalDisplay=='done'?g.saved>=g.target:g.saved<g.target)).toList();
-  return ListView(padding:const EdgeInsets.fromLTRB(16,16,16,24),children:[
-   WaffraText(waffraIsEnglish?'Savings goals':'أهداف الادخار',
-    style:Theme.of(context).textTheme.titleLarge),
-   const SizedBox(height:6),
-   WaffraText(waffraIsEnglish?'Turn your dreams into goals, one step at a time':
-    'حوّل أحلامك إلى خطط واقعية وابدأ رحلتك نحو تحقيقها.',
-    style:const TextStyle(fontSize:13)),
-   const SizedBox(height:14),
+  return ListView(padding:const EdgeInsets.fromLTRB(16,14,16,28),children:[
+   WaffraPageHero(
+    title:waffraIsEnglish?'Savings goals':'أهداف الادخار',
+    subtitle:waffraIsEnglish?'Plan your future and follow every milestone':
+     'حوّل أحلامك إلى أهداف وتابع تقدّمك خطوة بخطوة.',
+    icon:Icons.flag_outlined),
+   const SizedBox(height:13),
    if(goals.isNotEmpty)...[
     Row(children:[
      Expanded(child:_summaryBox(waffraIsEnglish?'Total target':'إجمالي المستهدف',cash(target),Icons.flag_outlined,emerald)),
@@ -4486,12 +4489,12 @@ Future<void> bulkSmsSheet()async {
      ])),
     );
    }),
-   if(goals.isEmpty)Padding(padding:const EdgeInsets.only(top:35,bottom:18),
+   if(goals.isEmpty)Padding(padding:const EdgeInsets.only(top:18,bottom:14),
     child:Column(children:[
-     Container(width:170,height:170,decoration:BoxDecoration(
-      color:emerald.withValues(alpha:.08),borderRadius:BorderRadius.circular(90)),
-      child:const Icon(Icons.account_balance_wallet_outlined,size:100,color:emerald)),
-     const SizedBox(height:20),
+     Container(width:105,height:105,decoration:BoxDecoration(
+      color:emerald.withValues(alpha:.10),borderRadius:BorderRadius.circular(54)),
+      child:const Icon(Icons.account_balance_wallet_outlined,size:55,color:emerald)),
+     const SizedBox(height:13),
      WaffraText(waffraIsEnglish?'No savings goals yet':'ما أضفت أي هدف ادخاري بعد',
       style:Theme.of(context).textTheme.titleLarge,textAlign:TextAlign.center),
      const SizedBox(height:10),
@@ -4575,13 +4578,12 @@ Future<void> bulkSmsSheet()async {
    final days=nextRecurringDue(r).difference(DateTime(DateTime.now().year,DateTime.now().month,DateTime.now().day)).inDays;
    return days>=0&&days<=3;
   }).length;
-  return ListView(padding:const EdgeInsets.fromLTRB(16,16,16,24),children:[
-   KeyedSubtree(key:_tourKeys[4],child:WaffraText(waffraIsEnglish?'Recurring transactions':'العمليات المتكررة',
-    style:Theme.of(context).textTheme.titleLarge)),
-   const SizedBox(height:6),
-   WaffraText(waffraIsEnglish?'Due monthly transactions are recorded once when you open Waffra.':
-    'نسجّل العملية المستحقة مرة واحدة لكل شهر عند فتح التطبيق.',
-    style:const TextStyle(fontSize:13)),
+  return ListView(padding:const EdgeInsets.fromLTRB(16,14,16,28),children:[
+   WaffraPageHero(
+    title:waffraIsEnglish?'Recurring transactions':'العمليات المتكررة',
+    subtitle:waffraIsEnglish?'Track recurring payments and due dates':
+     'نظّم عملياتك الشهرية ومواعيد استحقاقها بسهولة.',
+    icon:Icons.event_repeat_rounded,titleKey:_tourKeys[4]),
    const SizedBox(height:9),
    SwitchListTile.adaptive(
     contentPadding:const EdgeInsets.symmetric(horizontal:5),
@@ -4665,12 +4667,12 @@ Future<void> bulkSmsSheet()async {
        PopupMenuItem(value:'delete',child:WaffraText(waffraIsEnglish?'Delete':'حذف'))]),
      ])));
    }),
-   if(recurring.isEmpty)Padding(padding:const EdgeInsets.only(top:34),
+   if(recurring.isEmpty)Padding(padding:const EdgeInsets.only(top:18),
     child:Column(children:[
-     Container(width:174,height:174,decoration:BoxDecoration(
-      borderRadius:BorderRadius.circular(88),color:emerald.withValues(alpha:.08)),
-      child:const Icon(Icons.event_repeat_rounded,size:100,color:emerald)),
-     const SizedBox(height:18),
+     Container(width:105,height:105,decoration:BoxDecoration(
+      borderRadius:BorderRadius.circular(54),color:emerald.withValues(alpha:.10)),
+      child:const Icon(Icons.event_repeat_rounded,size:56,color:emerald)),
+     const SizedBox(height:12),
      WaffraText(waffraIsEnglish?'No recurring transactions yet':'ما عندك عمليات متكررة',
       style:Theme.of(context).textTheme.titleLarge,textAlign:TextAlign.center),
      const SizedBox(height:12),
@@ -5045,23 +5047,28 @@ Future<void> bulkSmsSheet()async {
   final p=widget.profile;
   void edit(){Navigator.push<void>(context,MaterialPageRoute(
    builder:(_)=>ProfileForm(provider:p.provider,initial:p,onSave:widget.onProfile)));}
-  return ListView(padding:const EdgeInsets.fromLTRB(16,12,16,22),children:[
-   Container(padding:const EdgeInsets.fromLTRB(16,20,16,18),
+  return ListView(padding:const EdgeInsets.fromLTRB(16,14,16,28),children:[
+   WaffraPageHero(
+    title:waffraIsEnglish?'My account':'حسابي',
+    subtitle:waffraIsEnglish?'Your profile, preferences and security':
+     'بياناتك وإعداداتك وخصوصيتك في مكان واحد.',
+    icon:Icons.person_outline_rounded),
+   Container(padding:const EdgeInsets.fromLTRB(16,17,16,17),
     decoration:BoxDecoration(
-     gradient:Theme.of(context).brightness==Brightness.dark?
-      const LinearGradient(colors:[Color(0xFF1C4935),Color(0xFF173829)]):
-      const LinearGradient(colors:[Color(0xFFE4F4EA),Color(0xFFFFFFFF)]),
-     borderRadius:BorderRadius.circular(24),
-     border:Border.all(color:emerald.withValues(alpha:.12))),
+     color:Theme.of(context).cardColor,
+     borderRadius:BorderRadius.circular(22),
+     border:Border.all(color:Theme.of(context).brightness==Brightness.dark?
+      const Color(0xFF375C4A):const Color(0xFFDCEBE2))),
     child:Column(children:[
      InkWell(onTap:edit,child:Stack(alignment:Alignment.bottomRight,children:[
-      waffraAvatar(p.gender,p.avatar,radius:56),
-      const CircleAvatar(radius:16,backgroundColor:forest,
-       child:Icon(Icons.camera_alt,size:18,color:Colors.white)),
+      waffraAvatar(p.gender,p.avatar,radius:42),
+      const CircleAvatar(radius:14,backgroundColor:forest,
+       child:Icon(Icons.camera_alt,size:16,color:Colors.white)),
      ])),
      const SizedBox(height:12),
      WaffraText(p.name.trim().isEmpty?(waffraIsEnglish?'My account':'حسابي'):p.name,
-      textAlign:TextAlign.center,style:Theme.of(context).textTheme.titleLarge),
+      textAlign:TextAlign.center,
+      style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
      if(p.email.trim().isNotEmpty)...[
       const SizedBox(height:5),
       WaffraText(p.email,textAlign:TextAlign.center),
