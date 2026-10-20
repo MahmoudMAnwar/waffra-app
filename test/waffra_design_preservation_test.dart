@@ -45,6 +45,8 @@ void main() {
     });
 
     testWidgets('Calendar does not show zero totals in an empty month', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1000, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
       await tester.pumpWidget(const MaterialApp(
         home: WaffraFinancialCalendar(items: [], english: false),
       ));
@@ -54,6 +56,8 @@ void main() {
     });
 
     testWidgets('Calendar keeps both income and expense transactions', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1000, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
       final now = DateTime.now();
       await tester.pumpWidget(MaterialApp(
         home: WaffraFinancialCalendar(english: false, items: [
