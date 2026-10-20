@@ -3432,9 +3432,10 @@ Future<void> bulkSmsSheet()async {
      ]))));
   }
   return ListView(padding:const EdgeInsets.fromLTRB(16,16,16,20),children:[
-   Row(key:_tourKeys[2],children:[
-    Expanded(child:WaffraText(waffraIsEnglish?'Categories & budgets':'أقسامك وميزانياتك',
-     style:Theme.of(context).textTheme.titleLarge)),
+   Row(children:[
+    Expanded(child:Align(alignment:waffraIsEnglish?Alignment.centerLeft:Alignment.centerRight,
+     child:WaffraText(waffraIsEnglish?'Categories & budgets':'أقسامك وميزانياتك',
+      key:_tourKeys[2],style:Theme.of(context).textTheme.titleLarge))),
     OutlinedButton.icon(onPressed:showCategoryTrash,
       style:OutlinedButton.styleFrom(padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),visualDensity:VisualDensity.compact,minimumSize:const Size(0,34)),
      icon:const Icon(Icons.delete_outline,size:16),label:WaffraText(waffraIsEnglish?'Deleted categories':'الأقسام المحذوفة',style:const TextStyle(fontSize:11,fontWeight:FontWeight.bold))),
@@ -4233,7 +4234,7 @@ Future<void> bulkSmsSheet()async {
   // Headings use intrinsic text bounds rather than a full-width row.
   // Other tour steps retain their actual button/icon target.
   final headingFocus=tourStep==2||tourStep==4;
-  final headingText=waffraIsEnglish?en[tourStep]:ar[tourStep];
+  final headingText=tourStep==2?(waffraIsEnglish?'Categories & budgets':'أقسامك وميزانياتك'):(waffraIsEnglish?en[tourStep]:ar[tourStep]);
   if(headingFocus){
    final style=Theme.of(context).textTheme.titleLarge??const TextStyle(fontSize:23);
    final painter=TextPainter(text:TextSpan(text:headingText,style:style.copyWith(fontWeight:FontWeight.bold)),
