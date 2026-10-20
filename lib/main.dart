@@ -1929,6 +1929,35 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    await p.setString('waffra_categories_v24',jsonEncode(categories.map((e)=>e.toJson()).toList()));
    await p.setBool('waffra_category_catalog_v2_installed',true);
   }
+  // Incremental catalog update: retain existing user budgets, names and deletions.
+  // A subcategory is only added when its main category is present.
+  if(!(p.getBool('waffra_category_catalog_v3_installed')??false)){
+   final deletedIds=<String>{};
+   final deletedNames=<String>{};
+   for(final record in deletedCategories){
+    final raw=record['category'];
+    if(raw is Map){
+     deletedIds.add('${raw['id']}');
+     deletedNames.add('${raw['income']==true}|${raw['name']}');
+    }
+   }
+   var catalogChanged=false;
+   for(final suggestion in defaultCategories()){
+    if(deletedIds.contains(suggestion.id)||
+     deletedNames.contains('${suggestion.income}|${suggestion.name}'))continue;
+    if(categories.any((c)=>c.id==suggestion.id||
+     (c.income==suggestion.income&&c.name==suggestion.name)))continue;
+    if(suggestion.isSubcategory&&
+     !categories.any((c)=>c.id==suggestion.parentId))continue;
+    categories.add(suggestion);
+    catalogChanged=true;
+   }
+   if(catalogChanged){
+    await p.setString('waffra_categories_v24',
+     jsonEncode(categories.map((e)=>e.toJson()).toList()));
+   }
+   await p.setBool('waffra_category_catalog_v3_installed',true);
+  }
   smsHashes.addAll(p.getStringList('waffra_sms_hashes_v1')??const []);
   monthlyBudget=p.getDouble('waffra_monthly_budget_v1')??0;
   monthlyBudgetEnabled=p.getBool('waffra_monthly_budget_enabled_v1')??(monthlyBudget>0);
