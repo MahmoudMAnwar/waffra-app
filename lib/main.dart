@@ -282,9 +282,16 @@ class WaffraApp extends StatefulWidget {
 }
 class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  bool loading=true,onboarded=false,dark=false,locked=false,showLogin=false;
+ bool introDone=false;
  String language='ar';
  String? pinHash;Person? profile;
- @override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);load();}
+ @override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);load();launchIntro();}
+ Future<void> launchIntro()async{
+  var first=false;
+  try{final p=await SharedPreferences.getInstance();first=p.getBool('waffra_intro_seen')!=true;if(first)await p.setBool('waffra_intro_seen',true);}catch(_){}
+  await Future<void>.delayed(Duration(milliseconds:first?1900:500));
+  if(mounted)setState(()=>introDone=true);
+ }
  DateTime? _backgroundAt;
  @override void didChangeAppLifecycleState(AppLifecycleState state){
   if(state==AppLifecycleState.paused||state==AppLifecycleState.hidden){_backgroundAt=DateTime.now();}
@@ -397,7 +404,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
      FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:WaffraText(waffraIsEnglish?'Yes':'نعم'))]));
    if(exit==true)SystemNavigator.pop();
   },child:Directionality(textDirection:language=='ar'?TextDirection.rtl:TextDirection.ltr,child:
-   loading?Scaffold(backgroundColor:forest,body:SizedBox.expand(child:Image.asset('assets/waffra_splash_approved_exact.png',fit:BoxFit.cover))):
+   (loading||!introDone)?const WaffraLaunchIntro():
    startupError!=null?Scaffold(body:Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[
     const Icon(Icons.error_outline,size:48,color:Colors.red),
     const SizedBox(height:12),
@@ -551,6 +558,35 @@ class _PinLockScreenState extends State<PinLockScreen> {
  );
 }
 
+class WaffraLaunchIntro extends StatefulWidget {
+ const WaffraLaunchIntro({super.key});
+ @override State<WaffraLaunchIntro> createState()=>_WaffraLaunchIntroState();
+}
+class _WaffraLaunchIntroState extends State<WaffraLaunchIntro> with SingleTickerProviderStateMixin {
+ late final AnimationController controller;
+ @override void initState(){super.initState();controller=AnimationController(vsync:this,duration:const Duration(milliseconds:1700))..forward();}
+ @override void dispose(){controller.dispose();super.dispose();}
+ @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFF002E25),
+  body:Center(child:AnimatedBuilder(animation:controller,builder:(ctx,_) {
+   final t=Curves.easeOutCubic.transform(controller.value);
+   return Stack(alignment:Alignment.center,children:[
+    Positioned.fill(child:DecoratedBox(decoration:BoxDecoration(gradient:RadialGradient(
+     colors:[Color.lerp(const Color(0xFF087A54),const Color(0xFF002E25),t*.6)!,const Color(0xFF002E25)],radius:1.1)))),
+    Opacity(opacity:(1-(t-.5).abs()*1.9).clamp(0.0,1.0),
+     child:Transform.scale(scale:.65+t*.5,child:Container(width:270,height:270,
+      decoration:BoxDecoration(shape:BoxShape.circle,border:Border.all(color:const Color(0xFF65E8A9),width:2),
+       boxShadow:[BoxShadow(color:const Color(0xFF40DB94).withValues(alpha:.25),blurRadius:50)])))),
+    Opacity(opacity:((t-.1)*2.3).clamp(0.0,1.0),child:Transform.translate(offset:Offset(0,(1-t)*25),
+     child:Column(mainAxisSize:MainAxisSize.min,children:[
+      Image.asset('assets/waffra_app_icon.png',width:140,height:140,
+       errorBuilder:(_,__,___)=>const Icon(Icons.spa_rounded,color:Colors.white,size:100)),
+      const SizedBox(height:12),
+      const Text('Waffra',style:TextStyle(color:Colors.white,fontSize:38,fontWeight:FontWeight.bold)),
+      const Text('وفــــرة',style:TextStyle(color:Colors.white,fontSize:28,fontWeight:FontWeight.bold)),
+     ]))),
+   ]);
+  })));
+}
 class WaffraOnboarding extends StatefulWidget {
  final VoidCallback onFinish;
  const WaffraOnboarding({super.key,required this.onFinish});
