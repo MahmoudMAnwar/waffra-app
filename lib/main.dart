@@ -1541,33 +1541,36 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
  @override double get maxExtent=>126;
  @override Widget build(BuildContext context,double shrinkOffset,bool overlapsContent){
   final progress=(shrinkOffset/(maxExtent-minExtent)).clamp(0.0,1.0);
+  final dark=Theme.of(context).brightness==Brightness.dark;
   return Container(
    key:focusKey,
-   color:Theme.of(context).brightness==Brightness.dark?const Color(0xFF121A15):Theme.of(context).scaffoldBackgroundColor,
+   color:Theme.of(context).scaffoldBackgroundColor,
    padding:const EdgeInsets.fromLTRB(14,0,14,5),
    child:Container(
     padding:EdgeInsets.symmetric(horizontal:18,vertical:6-2*progress),
     decoration:BoxDecoration(
-     gradient:const LinearGradient(colors:[forest,emerald],
-      begin:AlignmentDirectional.centerStart,end:AlignmentDirectional.centerEnd),
+     color:Theme.of(context).cardColor,
+     border:Border.all(color:dark?const Color(0xFF385E4B):const Color(0xFFDCEBE2)),
+     boxShadow:dark?null:[BoxShadow(color:forest.withValues(alpha:.055),
+      blurRadius:18,offset:const Offset(0,5))],
      borderRadius:BorderRadius.circular(24-9*progress)),
     child:Column(
      mainAxisAlignment:MainAxisAlignment.center,
      crossAxisAlignment:CrossAxisAlignment.start,
      children:[
       WaffraText(english?'Current balance':'رصيدك الحالي',
-       style:TextStyle(fontSize:15-2*progress,color:Colors.white70,
+       style:TextStyle(fontSize:15-2*progress,color:dark?Colors.white70:forest,
         fontWeight:FontWeight.w600)),
       SizedBox(height:4-2*progress),
       Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
        Flexible(child:FittedBox(fit:BoxFit.scaleDown,
-        child:WaffraCurrencyAmount(balance,fontSize:29-7*progress,color:Colors.white))),
+        child:WaffraCurrencyAmount(balance,fontSize:29-7*progress,color:dark?Colors.white:forest))),
        ValueListenableBuilder<bool>(valueListenable:hideWaffraAmounts,
         builder:(ctx,hidden,_)=>IconButton(
          tooltip:hidden?(english?'Show amounts':'إظهار المبالغ'):(english?'Hide amounts':'إخفاء المبالغ'),
          onPressed:()=>hideWaffraAmounts.value=!hidden,
          icon:Icon(hidden?Icons.visibility_off_outlined:Icons.visibility_outlined,
-          color:Colors.white,size:23))),
+          color:dark?Colors.white:forest,size:23))),
       ]),
      ],
     )),
@@ -3140,10 +3143,10 @@ Future<void> bulkSmsSheet()async {
   final darkMode=Theme.of(context).brightness==Brightness.dark;
   final rowColor=entry.income?(darkMode?const Color(0xFF244C3A):const Color(0xFFB2D5C2)):
    (darkMode?const Color(0xFF49302C):const Color(0xFFFCECE8));
-  return Padding(padding:const EdgeInsets.symmetric(vertical:3),child:Container(
-   decoration:BoxDecoration(color:rowColor,borderRadius:BorderRadius.circular(12),
+  return Padding(padding:const EdgeInsets.symmetric(vertical:5),child:Container(
+   decoration:BoxDecoration(color:rowColor,borderRadius:BorderRadius.circular(17),
     border:Border.all(color:forest.withValues(alpha:darkMode ? 0.18 : 0.08))),
-   child:Padding(padding:const EdgeInsets.symmetric(horizontal:7,vertical:7),child:Row(children:[
+   child:Padding(padding:const EdgeInsets.symmetric(horizontal:11,vertical:12),child:Row(children:[
     CircleAvatar(radius:18,
      backgroundColor:Color(cat.color).withValues(alpha:0.13),
      child:Icon(categoryIcon(cat.icon),size:19,color:Color(cat.color))),
@@ -3226,7 +3229,7 @@ Future<void> bulkSmsSheet()async {
            inc,Icons.south_west,waffraIncomeTone(context),const Color(0xFFB2D5C2)),
           const SizedBox(width:9),
           homeSummaryCard(waffraIsEnglish?'Expenses':'المصروفات',
-           exp,Icons.north_east,Colors.deepOrange,const Color(0xFFF0F7F2)),
+           exp,Icons.north_east,const Color(0xFFB94838),waffraExpenseBackground),
          ]),
          const SizedBox(height:12),
          monthlyBudgetCard(),
@@ -4056,7 +4059,10 @@ Future<void> bulkSmsSheet()async {
   ]));
  Widget _summaryBox(String heading,String number,IconData icon,Color color)=>Container(
   padding:const EdgeInsets.all(12),
-  decoration:BoxDecoration(color:color.withValues(alpha:.08),borderRadius:BorderRadius.circular(18)),
+  decoration:BoxDecoration(
+   color:Theme.of(context).cardColor,
+   borderRadius:BorderRadius.circular(18),
+   border:Border.all(color:color.withValues(alpha:.16))),
   child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
    Icon(icon,color:color,size:21),const SizedBox(height:5),
    WaffraText(heading,style:const TextStyle(fontSize:12)),
@@ -5093,20 +5099,34 @@ Future<void> bulkSmsSheet()async {
   appBar:AppBar(
    leading:goalsOpened?IconButton(tooltip:waffraIsEnglish?'Back to home':'العودة للرئيسية',
     icon:const Icon(Icons.arrow_back),onPressed:()=>setState(()=>goalsOpened=false)):null,
-   titleSpacing:10,
-   title:FittedBox(fit:BoxFit.scaleDown,
-    alignment:AlignmentDirectional.centerStart,
-    child:WaffraText(waffraIsEnglish?'Waffra':'Waffra | وفرة',
-     style:const TextStyle(fontWeight:FontWeight.bold,fontSize:22))),
+   titleSpacing:12,
+   title:Row(mainAxisSize:MainAxisSize.min,children:[
+    const Icon(Icons.spa_rounded,color:Colors.white,size:26),
+    const SizedBox(width:7),
+    Flexible(child:WaffraText(waffraIsEnglish?'Waffra':'وفرة',
+     maxLines:1,style:const TextStyle(color:Colors.white,
+      fontWeight:FontWeight.bold,fontSize:22))),
+   ]),
    actions:[
-    SizedBox(width:48,height:kToolbarHeight,
+    Tooltip(message:waffraIsEnglish?'Switch to Arabic':'Switch to English',
+     child:TextButton(
+      onPressed:()=>widget.onLanguage(waffraIsEnglish?'ar':'en'),
+      style:TextButton.styleFrom(
+       foregroundColor:Colors.white,minimumSize:const Size(43,37),
+       padding:const EdgeInsets.symmetric(horizontal:8),
+       backgroundColor:Colors.white.withValues(alpha:.11),
+       shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15))),
+      child:Text(waffraIsEnglish?'AR':'EN',
+       style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold)))),
+    const SizedBox(width:7),
+    SizedBox(width:45,height:kToolbarHeight,
      child:Center(child:InkWell(
       onTap:()=>setState((){
        addFabExpanded=false;goalsOpened=false;tab=5;
       }),
       borderRadius:BorderRadius.circular(30),
-      child:waffraAvatar(widget.profile.gender,widget.profile.avatar,radius:19)))),
-    const SizedBox(width:4),
+      child:waffraAvatar(widget.profile.gender,widget.profile.avatar,radius:18)))),
+    const SizedBox(width:7),
    ]),
   // Instant content swap avoids building/animating the previous heavy tab
   // alongside the next one (the recurring -> savings navigation hitch).
@@ -5116,11 +5136,11 @@ Future<void> bulkSmsSheet()async {
     builder:(context,hidden,_)=>currentTab()),
   // Floating plus starts collapsed at the physical bottom-left in both
   // languages. Expanded menu has two REAL actions, never a dummy label.
-  floatingActionButtonLocation:const WaffraPhysicalLeftFab(),
+  floatingActionButtonLocation:FloatingActionButtonLocation.centerFloat,
   floatingActionButton:!ready||goalsOpened||(tab!=0&&tab!=1)?null:Directionality(
    textDirection:TextDirection.ltr,child:Column(
    mainAxisSize:MainAxisSize.min,
-   crossAxisAlignment:CrossAxisAlignment.start,children:[
+   crossAxisAlignment:CrossAxisAlignment.center,children:[
     AnimatedSize(duration:const Duration(milliseconds:210),
      curve:Curves.easeOutCubic,
      alignment:Alignment.bottomLeft,
@@ -5169,7 +5189,10 @@ Future<void> bulkSmsSheet()async {
          color:Colors.white,size:28))),
      )),
    ])),
-  bottomNavigationBar:NavigationBar(height:74,indicatorColor:const Color(0xFFCFE9D9),
+  bottomNavigationBar:NavigationBar(height:78,backgroundColor:
+    Theme.of(context).brightness==Brightness.dark?const Color(0xFF12372A):Colors.white,
+   indicatorColor:Theme.of(context).brightness==Brightness.dark?
+    const Color(0xFF2B6B4B):waffraMint,
    labelBehavior:NavigationDestinationLabelBehavior.alwaysShow,
    selectedIndex:tab,onDestinationSelected:selectFooter,
    destinations:[
