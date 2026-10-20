@@ -2840,27 +2840,32 @@ Future<void> bulkSmsSheet()async {
    ]))));
  Future<void> transactionActions(MoneyEntry entry)async {
   final hasReceipt=waffraReceiptPaths(entry.receiptPath).isNotEmpty;
-  final action=await showWaffraDialog<String>(context:context,builder:(ctx)=>SimpleDialog(
-   title:WaffraText(entry.title,maxLines:2),
-   children:[
-    if(hasReceipt)SimpleDialogOption(
-     onPressed:()=>Navigator.pop(ctx,'receipt'),
-     child:ListTile(leading:const Icon(Icons.photo_library_outlined,color:emerald),
-      title:WaffraText(waffraIsEnglish?'View images':'عرض الصور'))),
-    SimpleDialogOption(onPressed:()=>Navigator.pop(ctx,'open'),
-     child:ListTile(leading:const Icon(Icons.info_outline,color:emerald),
-      title:WaffraText(waffraIsEnglish?'View full transaction':'فتح المعاملة بالكامل'))),
-    SimpleDialogOption(onPressed:()=>Navigator.pop(ctx,'edit'),
-     child:ListTile(leading:const Icon(Icons.edit_outlined,color:emerald),
-      title:WaffraText(waffraIsEnglish?'Edit transaction':'تعديل المعاملة'))),
-    SimpleDialogOption(onPressed:()=>Navigator.pop(ctx,'delete'),
-     child:ListTile(leading:const Icon(Icons.delete_outline,color:Colors.red),
-      title:WaffraText(waffraIsEnglish?'Delete transaction':'حذف المعاملة',
-       style:const TextStyle(color:Colors.red)))),
-    SimpleDialogOption(onPressed:()=>Navigator.pop(ctx,'cancel'),
-     child:ListTile(leading:const Icon(Icons.close),
-      title:WaffraText(waffraIsEnglish?'Cancel':'إلغاء'))),
-   ],
+  final action=await showWaffraDialog<String>(context:context,builder:(ctx)=>AlertDialog(
+   insetPadding:const EdgeInsets.symmetric(horizontal:26,vertical:24),
+   shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(24)),
+   title:WaffraText(entry.title,maxLines:2,
+    style:const TextStyle(fontSize:16,fontWeight:FontWeight.bold),textAlign:TextAlign.center),
+   content:SizedBox(width:340,child:Column(mainAxisSize:MainAxisSize.min,children:[
+    GridView.count(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),
+     crossAxisCount:2,mainAxisSpacing:10,crossAxisSpacing:10,childAspectRatio:1.55,
+     children:[
+      _transactionActionTile(ctx,'open',Icons.open_in_new_rounded,
+       waffraIsEnglish?'View details':'عرض التفاصيل',emerald),
+      _transactionActionTile(ctx,'edit',Icons.edit_outlined,
+       waffraIsEnglish?'Edit':'تعديل',emerald),
+      _transactionActionTile(ctx,'delete',Icons.delete_outline_rounded,
+       waffraIsEnglish?'Delete':'حذف',Colors.red),
+      _transactionActionTile(ctx,'cancel',Icons.close_rounded,
+       waffraIsEnglish?'Cancel':'إلغاء',Theme.of(ctx).colorScheme.onSurface),
+     ]),
+    if(hasReceipt)...[
+     const SizedBox(height:10),
+     SizedBox(width:double.infinity,child:OutlinedButton.icon(
+      onPressed:()=>Navigator.pop(ctx,'receipt'),
+      icon:const Icon(Icons.photo_library_outlined),
+      label:WaffraText(waffraIsEnglish?'View attached images':'عرض الصور المرفقة'))),
+    ],
+   ])),
   ));
   if(!mounted)return;
   switch(action){
@@ -2870,6 +2875,22 @@ Future<void> bulkSmsSheet()async {
    case 'delete':await deleteEntry(entry);break;
   }
  }
+ Widget _transactionActionTile(BuildContext dialogContext,String value,
+  IconData icon,String label,Color color)=>Material(
+   color:color.withValues(alpha:.08),
+   borderRadius:BorderRadius.circular(16),
+   child:InkWell(
+    borderRadius:BorderRadius.circular(16),
+    onTap:()=>Navigator.pop(dialogContext,value),
+    child:Padding(padding:const EdgeInsets.symmetric(horizontal:6,vertical:10),
+     child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
+      Icon(icon,color:color,size:24),
+      const SizedBox(height:6),
+      Flexible(child:WaffraText(label,maxLines:2,textAlign:TextAlign.center,
+       style:TextStyle(color:color,fontWeight:FontWeight.w600,fontSize:13))),
+     ])),
+   ),
+  );
  Future<void> transactionDetails(MoneyEntry entry)async {
   await showWaffraDialog<void>(
    context:context,
