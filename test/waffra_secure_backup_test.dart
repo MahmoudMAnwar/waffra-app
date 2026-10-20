@@ -6,7 +6,7 @@ void main(){
   const content='{"format":"waffra-backup","entries":[{"amount":120.50}]}';
   final encrypted=await WaffraSecureBackup.encrypt(content,'correct horse battery');
   expect(encrypted,contains('waffra-secure-backup'));
-  expect(encrypted,doesNot(contains('120.50')));
+  expect(encrypted,isNot(contains('120.50')));
   expect(await WaffraSecureBackup.decrypt(encrypted,'correct horse battery'),content);
  });
  test('wrong password cannot decrypt',()async{
