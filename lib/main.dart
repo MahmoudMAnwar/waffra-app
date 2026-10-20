@@ -3966,9 +3966,13 @@ Future<void> bulkSmsSheet()async {
    final amount=sum(monthly.where((e)=>e.category==c.name),false);
    final hasBudget=!c.income&&c.budget>0;
    return Card(
-    margin:const EdgeInsets.only(bottom:10),
-    elevation:1.2,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(20)),
-    child:InkWell(borderRadius:BorderRadius.circular(20),onTap:()=>updateCategory(c),
+    margin:const EdgeInsets.only(bottom:11),
+    elevation:0,
+    color:Theme.of(context).cardColor,
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(22),
+     side:BorderSide(color:c.income?
+      const Color(0xFFB8DCC8):const Color(0xFFF1D9D2),width:1)),
+    child:InkWell(borderRadius:BorderRadius.circular(22),onTap:()=>updateCategory(c),
      child:Padding(padding:const EdgeInsets.all(13),child:Column(children:[
       Row(children:[
        CircleAvatar(radius:23,backgroundColor:color.withValues(alpha:.14),
@@ -4351,8 +4355,11 @@ Future<void> bulkSmsSheet()async {
      goalIcon(g.name)==Icons.directions_car?const Color(0xFF3867D6):emerald;
     return Card(
      margin:const EdgeInsets.only(bottom:11),
-     elevation:1.2,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(20)),
-     child:Padding(padding:const EdgeInsets.all(14),child:Column(children:[
+     color:Theme.of(context).cardColor,
+     elevation:0,
+     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(22),
+      side:const BorderSide(color:Color(0xFFCFDFD5),width:1)),
+     child:Padding(padding:const EdgeInsets.all(15),child:Column(children:[
       Row(children:[
        CircleAvatar(radius:22,backgroundColor:shade.withValues(alpha:.14),
         child:Icon(goalIcon(g.name),color:shade)),
@@ -4537,9 +4544,12 @@ Future<void> bulkSmsSheet()async {
    ...shown.map((r){
     final color=Color(categoryFor(r.category,r.income).color);
     final when=nextRecurringDue(r);
-    return Card(elevation:1.1,margin:const EdgeInsets.only(bottom:10),
-     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(19)),
-     child:Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:9),child:Row(children:[
+    return Card(elevation:0,margin:const EdgeInsets.only(bottom:11),
+     color:Theme.of(context).brightness==Brightness.dark?Theme.of(context).cardColor:
+      (r.income?const Color(0xFFEAF6EF):const Color(0xFFFFF0ED)),
+     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(21),
+      side:BorderSide(color:r.income?const Color(0xFFBBDCC9):const Color(0xFFF3DCD7))),
+     child:Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:13),child:Row(children:[
       CircleAvatar(backgroundColor:color.withValues(alpha:.13),
        child:Icon(categoryIcon(categoryFor(r.category,r.income).icon),color:color)),
       const SizedBox(width:10),
@@ -4928,7 +4938,8 @@ Future<void> bulkSmsSheet()async {
    Padding(padding:const EdgeInsets.fromLTRB(4,12,4,7),
     child:Row(children:[Icon(icon,color:emerald),const SizedBox(width:7),
      Expanded(child:WaffraText(heading,style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)))])),
-   Card(shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(20)),
+   Card(shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(21),
+     side:const BorderSide(color:Color(0xFFDCEAE1))),
     child:Column(children:[
      for(var i=0;i<children.length;i++)...[
       children[i],if(i<children.length-1)const Divider(height:1,indent:14,endIndent:14),
@@ -4952,7 +4963,9 @@ Future<void> bulkSmsSheet()async {
   return ListView(padding:const EdgeInsets.fromLTRB(16,12,16,22),children:[
    Container(padding:const EdgeInsets.fromLTRB(16,20,16,18),
     decoration:BoxDecoration(
-     gradient:const LinearGradient(colors:[Color(0xFFE5F4EA),Color(0xFFF8FBF6)]),
+     gradient:Theme.of(context).brightness==Brightness.dark?
+      const LinearGradient(colors:[Color(0xFF1C4935),Color(0xFF173829)]):
+      const LinearGradient(colors:[Color(0xFFE4F4EA),Color(0xFFFFFFFF)]),
      borderRadius:BorderRadius.circular(24),
      border:Border.all(color:emerald.withValues(alpha:.12))),
     child:Column(children:[
