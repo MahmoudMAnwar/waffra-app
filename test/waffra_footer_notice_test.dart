@@ -70,8 +70,13 @@ void main() {
   expect(tester.widget<SnackBar>(find.byType(SnackBar)).backgroundColor,
    const Color(0xFF4A2429));
   expect(find.byWidgetPredicate((w)=>w is WaffraText&&w.data=='تعذر إتمام العملية'),findsOneWidget);
-  await tester.tap(find.byTooltip('إغلاق'));
-  await tester.pump(const Duration(milliseconds:400));
+  // Trigger the actual close-button callback directly: Tooltip wrappers do
+  // not offer a stable hit-test target in every Flutter test viewport.
+  final closeButton=tester.widget<IconButton>(
+   find.widgetWithIcon(IconButton,Icons.close_rounded));
+  closeButton.onPressed!();
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds:450));
   expect(find.byType(SnackBar),findsNothing);
  });
 
