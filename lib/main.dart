@@ -288,8 +288,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  String? pinHash;Person? profile;
  @override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);load();launchIntro();}
  Future<void> launchIntro()async{
-  // Show the approved cinematic launch for two seconds on each cold start.
-  await Future<void>.delayed(const Duration(milliseconds:2000));
+  // Show the approved cinematic launch for three seconds on each cold start.
+  await Future<void>.delayed(const Duration(milliseconds:3000));
   if(mounted)setState(()=>introDone=true);
  }
  DateTime? _backgroundAt;
@@ -573,28 +573,52 @@ class WaffraLaunchIntro extends StatefulWidget {
 }
 class _WaffraLaunchIntroState extends State<WaffraLaunchIntro> with SingleTickerProviderStateMixin {
  late final AnimationController controller;
- @override void initState(){super.initState();controller=AnimationController(vsync:this,duration:const Duration(milliseconds:1900))..forward();}
+ @override void initState(){
+  super.initState();
+  controller=AnimationController(vsync:this,duration:const Duration(milliseconds:2850))..forward();
+ }
  @override void dispose(){controller.dispose();super.dispose();}
- @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFF002E25),
-  body:Center(child:AnimatedBuilder(animation:controller,builder:(ctx,_) {
-   final t=Curves.easeOutCubic.transform(controller.value);
-   return Stack(alignment:Alignment.center,children:[
-    Positioned.fill(child:DecoratedBox(decoration:BoxDecoration(gradient:RadialGradient(
-     colors:[Color.lerp(const Color(0xFF087A54),const Color(0xFF002E25),t*.6)!,const Color(0xFF002E25)],radius:1.1)))),
-    Opacity(opacity:(1-(t-.5).abs()*1.9).clamp(0.0,1.0),
-     child:Transform.scale(scale:.65+t*.5,child:Container(width:270,height:270,
-      decoration:BoxDecoration(shape:BoxShape.circle,border:Border.all(color:const Color(0xFF65E8A9),width:2),
-       boxShadow:[BoxShadow(color:const Color(0xFF40DB94).withValues(alpha:.25),blurRadius:50)])))),
-    Opacity(opacity:((t-.1)*2.3).clamp(0.0,1.0),child:Transform.translate(offset:Offset(0,(1-t)*25),
-     child:Column(mainAxisSize:MainAxisSize.min,children:[
-      Image.asset('assets/waffra_app_icon.png',width:140,height:140,
-       errorBuilder:(_,__,___)=>const Icon(Icons.spa_rounded,color:Colors.white,size:100)),
-      const SizedBox(height:12),
-      const Text('Waffra',style:TextStyle(color:Colors.white,fontSize:38,fontWeight:FontWeight.bold)),
-      const Text('وفــــرة',style:TextStyle(color:Colors.white,fontSize:28,fontWeight:FontWeight.bold)),
-     ]))),
+ double reveal(double t,double start,double end)=>((t-start)/(end-start)).clamp(0.0,1.0);
+ @override Widget build(BuildContext context)=>Scaffold(
+  backgroundColor:const Color(0xFF003C2E),
+  body:AnimatedBuilder(animation:controller,builder:(ctx,_){
+   final t=controller.value;
+   final iconProgress=Curves.easeOutBack.transform(reveal(t,.02,.28));
+   final nameProgress=Curves.easeOutCubic.transform(reveal(t,.26,.48));
+   final sloganProgress=Curves.easeOutCubic.transform(reveal(t,.44,.70));
+   final fadeOut=1-reveal(t,.92,1.0);
+   return Stack(children:[
+    const Positioned.fill(child:DecoratedBox(decoration:BoxDecoration(
+     gradient:RadialGradient(colors:[Color(0xFF075B43),Color(0xFF003C2E)],radius:1.2)))),
+    Center(child:Opacity(opacity:fadeOut,child:Column(mainAxisSize:MainAxisSize.min,children:[
+     SizedBox(width:230,height:230,child:Stack(alignment:Alignment.center,children:[
+      ...List.generate(3,(i){
+       final wave=((t*1.45+i/3)%1.0);
+       return Transform.scale(scale:.45+wave*.9,child:Opacity(
+        opacity:(1-wave)*.22,child:Container(width:210,height:210,
+         decoration:BoxDecoration(shape:BoxShape.circle,
+          border:Border.all(color:const Color(0xFF8CF2C0),width:1.4)))));
+      }),
+      Opacity(opacity:reveal(t,0,.15),child:Transform.scale(
+       scale:.55+.45*iconProgress,child:Image.asset('assets/waffra_app_icon.png',
+        width:128,height:128,errorBuilder:(_,__,___)=>const Icon(
+         Icons.bar_chart_rounded,color:Colors.white,size:100)))),
+     ])),
+     const SizedBox(height:4),
+     Opacity(opacity:reveal(t,.26,.48),child:Transform.translate(
+      offset:Offset(0,14*(1-nameProgress)),child:const Text('وفرة',
+       style:TextStyle(color:Colors.white,fontSize:42,fontWeight:FontWeight.bold)))),
+     const SizedBox(height:9),
+     Opacity(opacity:reveal(t,.44,.70),child:Transform.translate(
+      offset:Offset(0,10*(1-sloganProgress)),child:Padding(
+       padding:const EdgeInsets.symmetric(horizontal:16),
+       child:Text(waffraIsEnglish?'Waffra.. shows you where your money goes':
+        'وفرة.. يعلّمك وين فلوسك تروح',textAlign:TextAlign.center,
+        style:const TextStyle(color:Color(0xFFE8FFF0),fontSize:18,fontWeight:FontWeight.w600))))),
+    ])))),
    ]);
-  })));
+  }),
+ );
 }
 class WaffraOnboarding extends StatefulWidget {
  final VoidCallback onFinish;
@@ -2539,19 +2563,28 @@ Future<void> bulkSmsSheet()async {
         style:Theme.of(ctx).textTheme.titleLarge)),
        IconButton(onPressed:()=>Navigator.pop(ctx),icon:const Icon(Icons.close)),
       ])),
-     Container(
-      margin:const EdgeInsets.symmetric(horizontal:16),
-      padding:const EdgeInsets.all(16),
-      width:double.infinity,
-      decoration:BoxDecoration(color:(income?emerald:Colors.deepOrange).withValues(alpha:.10),
-       borderRadius:BorderRadius.circular(18)),
-      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-       WaffraText(waffraIsEnglish?'Total: ${items.length} transactions':
-        'الإجمالي • ${items.length} عملية'),
-       WaffraText(cash(sum(items,income)),
-        style:const TextStyle(fontSize:22,fontWeight:FontWeight.bold)),
-      ])),
-     const SizedBox(height:10),
+     if(items.isNotEmpty)...[
+      Container(
+       margin:const EdgeInsets.symmetric(horizontal:16),
+       padding:const EdgeInsets.all(16),width:double.infinity,
+       decoration:BoxDecoration(color:(income?emerald:Colors.deepOrange).withValues(alpha:.10),
+        borderRadius:BorderRadius.circular(18)),
+       child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
+         WaffraText(waffraIsEnglish?'Number of transactions':'عدد العمليات'),
+         WaffraText(waffraIsEnglish?'${items.length} transactions':'${items.length} عملية',
+          style:const TextStyle(fontWeight:FontWeight.bold)),
+        ]),
+        const Divider(height:22),
+        Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
+         WaffraText(income?(waffraIsEnglish?'Total income':'إجمالي الدخل'):
+          (waffraIsEnglish?'Total expenses':'إجمالي المصروفات')),
+         Flexible(child:WaffraText(cash(sum(items,income)),
+          textAlign:TextAlign.end,style:const TextStyle(fontSize:20,fontWeight:FontWeight.bold))),
+        ]),
+       ])),
+      const SizedBox(height:10),
+     ],
      Expanded(child:items.isEmpty?Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
       Icon(income?Icons.account_balance_wallet_outlined:Icons.receipt_long_outlined,
        size:66,color:emerald.withValues(alpha:.6)),
