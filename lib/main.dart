@@ -511,11 +511,11 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    brightness:Brightness.dark,
    colorScheme:ColorScheme.fromSeed(seedColor:emerald,brightness:Brightness.dark).copyWith(
     primary:const Color(0xFF74DCAB),onPrimary:forest,
-    secondary:const Color(0xFF8AE0B3),surface:const Color(0xFF19382C),
+    secondary:const Color(0xFF8AE0B3),surface:const Color(0xFF191D1B),
     onSurface:Colors.white),
-   scaffoldBackgroundColor:const Color(0xFF0B241C),
-   canvasColor:const Color(0xFF0B241C),
-   cardColor:const Color(0xFF19382C),
+   scaffoldBackgroundColor:const Color(0xFF080A09),
+   canvasColor:const Color(0xFF080A09),
+   cardColor:const Color(0xFF191D1B),
    fontFamily:'Tajawal',
    textTheme:ThemeData.dark().textTheme.apply(fontFamily:'Tajawal'),
    primaryTextTheme:ThemeData.dark().primaryTextTheme.apply(fontFamily:'Tajawal'),
@@ -525,10 +525,10 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     titleTextStyle:TextStyle(fontFamily:'Tajawal',fontSize:21,
      fontWeight:FontWeight.bold,color:Colors.white)),
    cardTheme:CardThemeData(
-    color:const Color(0xFF19382C),elevation:0,clipBehavior:Clip.antiAlias,
+    color:const Color(0xFF191D1B),elevation:0,clipBehavior:Clip.antiAlias,
     margin:const EdgeInsets.symmetric(vertical:5),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(22),
-     side:const BorderSide(color:Color(0xFF345A49)))),
+     side:const BorderSide(color:Color(0xFF343E36)))),
    navigationBarTheme:NavigationBarThemeData(
     backgroundColor:forest,height:78,
     indicatorColor:const Color(0xFF207B59),
@@ -549,31 +549,31 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     foregroundColor:Colors.white,
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(13)))),
    inputDecorationTheme:InputDecorationTheme(
-    filled:true,fillColor:const Color(0xFF1B4031),
+    filled:true,fillColor:const Color(0xFF202522),
     border:OutlineInputBorder(borderRadius:BorderRadius.circular(15)),
     enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(15),
-     borderSide:const BorderSide(color:Color(0xFF376E56))),
+     borderSide:const BorderSide(color:Color(0xFF4A6052))),
     focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(15),
      borderSide:const BorderSide(color:Color(0xFF8EDDB5),width:1.6)),
     labelStyle:const TextStyle(color:Color(0xFFE6FFF0)),
     hintStyle:const TextStyle(color:Color(0xFFAACBBC))),
    chipTheme:ChipThemeData(
-    backgroundColor:const Color(0xFF214434),selectedColor:const Color(0xFF2D7653),
+    backgroundColor:const Color(0xFF1B241F),selectedColor:const Color(0xFF28533C),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(20)),
     labelStyle:const TextStyle(color:Colors.white)),
    dialogTheme:DialogThemeData(
-    backgroundColor:const Color(0xFF19382C),
+    backgroundColor:const Color(0xFF191D1B),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26))),
    bottomSheetTheme:const BottomSheetThemeData(
-    backgroundColor:Color(0xFF19382C),modalBackgroundColor:Color(0xFF19382C),
+    backgroundColor:Color(0xFF191D1B),modalBackgroundColor:Color(0xFF191D1B),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(27)))),
    popupMenuTheme:PopupMenuThemeData(
-    color:const Color(0xFF214434),
+    color:const Color(0xFF202522),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16))),
    listTileTheme:const ListTileThemeData(iconColor:Colors.white,textColor:Colors.white),
    floatingActionButtonTheme:const FloatingActionButtonThemeData(
     backgroundColor:forest,foregroundColor:Colors.white),
-   dividerTheme:const DividerThemeData(color:Color(0xFF37624C),thickness:.8),
+   dividerTheme:const DividerThemeData(color:Color(0xFF394039),thickness:.8),
   ),
   themeMode:dark?ThemeMode.dark:ThemeMode.light,
   themeAnimationDuration:waffraMotion(250),
@@ -3586,6 +3586,32 @@ Future<void> bulkSmsSheet()async {
  Future<void> showAiAnalysis()async {
   final now=DateTime.now();
   final recent=entries.where((e)=>e.date.isAfter(now.subtract(const Duration(days:90)))&&!e.date.isAfter(now)).toList();
+  // A clear next step is more helpful than displaying empty charts.
+  if(recent.isEmpty){
+   if(!mounted)return;
+   final add=await showWaffraDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
+    title:Row(children:[
+     const Icon(Icons.insights_rounded,color:emerald,size:25),
+     const SizedBox(width:8),
+     Expanded(child:WaffraText(
+      waffraIsEnglish?'No transactions to analyze yet':'لا توجد معاملات لتحليلها بعد',
+      style:const TextStyle(fontWeight:FontWeight.bold,fontSize:18))),
+    ]),
+    content:WaffraText(waffraIsEnglish?
+     'Add an income or expense transaction first, then Waffra can show you your financial insights.':
+     'أضف أول عملية دخل أو مصروف، وبعدها تقدر تشوف تحليلك المالي وتتابع مصروفاتك بوضوح.',
+     textAlign:TextAlign.start),
+    actions:[
+     TextButton(onPressed:()=>Navigator.of(ctx).pop(false),
+      child:WaffraText(waffraIsEnglish?'Later':'لاحقًا')),
+     FilledButton.icon(onPressed:()=>Navigator.of(ctx).pop(true),
+      icon:const Icon(Icons.add_circle_outline),
+      label:WaffraText(waffraIsEnglish?'Add transaction':'إضافة معاملة')),
+    ],
+   ));
+   if(add==true&&mounted)await entrySheet();
+   return;
+  }
   final income=sum(recent,true),spending=sum(recent,false);
   final hasEnoughData=recent.length>=3&&income>0;
   final ratio=income>0?(income-spending)/income:0.0;
