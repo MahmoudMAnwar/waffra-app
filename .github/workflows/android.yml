@@ -37,6 +37,36 @@ jobs:
       - name: Generate Android project
         run: flutter create --platforms=android --project-name=waffra --org com.waffra .
 
+      - name: Match native Android launch background to Waffra emerald
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path('android/app/src/main/res')
+          for drawable in root.glob('drawable*/launch_background.xml'):
+              xml=drawable.read_text()
+              # Keep the native startup window emerald instead of black/white.
+              xml=re.sub(r'<item android:drawable="@android:color/white"\s*/>',
+                         '<item android:drawable="@color/waffra_launch_bg" />',xml)
+              drawable.write_text(xml)
+          values=root/'values'
+          values.mkdir(exist_ok=True)
+          (values/'waffra_launch_colors.xml').write_text(
+              '<resources><color name="waffra_launch_bg">#002E25</color></resources>')
+          for stylefile in root.glob('values*/styles.xml'):
+              xml=stylefile.read_text()
+              # Android 12+ system splash uses this color before Flutter draws.
+              if 'windowSplashScreenBackground' not in xml:
+                  xml=xml.replace('<style name="LaunchTheme"',
+                      '<style name="LaunchTheme"',1)
+                  xml=re.sub(r'(<style name="LaunchTheme"[^>]*>)',
+                      r'\1\n        <item name="android:windowSplashScreenBackground">#002E25</item>'
+                      if 'values-v31' in str(stylefile) else r'\1',xml,count=1)
+              stylefile.write_text(xml)
+          print('Native Waffra launch background configured')
+          PY
+
       - name: Configure Firebase Google Sign-In
         shell: bash
         run: |
