@@ -5141,8 +5141,19 @@ Future<void> bulkSmsSheet({String? initialText})async {
     ]),
     const SizedBox(height:14),
    ],
-   Row(children:[Expanded(child:WaffraText(waffraIsEnglish?'Current goals: ${goals.length}':'عدد الأهداف الحالية: ${goals.length}',style:const TextStyle(fontWeight:FontWeight.bold))),
-    TextButton.icon(onPressed:deletedGoalsDialog,icon:const Icon(Icons.restore_from_trash),label:WaffraText(waffraIsEnglish?'Deleted (${deletedGoals.length})':'المحذوفة (${deletedGoals.length})'))]),
+   SizedBox(width:double.infinity,child:OutlinedButton.icon(
+    onPressed:deletedGoalsDialog,
+    style:OutlinedButton.styleFrom(
+     side:BorderSide(color:Theme.of(context).colorScheme.primary,width:1.4),
+     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15)),
+     padding:const EdgeInsets.symmetric(horizontal:12,vertical:13)),
+    icon:const Icon(Icons.delete_outline,size:20),
+    label:WaffraText(waffraIsEnglish?'Deleted savings goals (${deletedGoals.length})':'الأهداف المحذوفة (${deletedGoals.length})',
+     style:const TextStyle(fontWeight:FontWeight.bold)))),
+   const SizedBox(height:14),
+   WaffraText(waffraIsEnglish?'Current goals: ${goals.length}':'عدد الأهداف الحالية: ${goals.length}',
+    style:const TextStyle(fontWeight:FontWeight.bold)),
+   const SizedBox(height:12),
    FilledButton.icon(onPressed:goalDialog,icon:const Icon(Icons.add),label:WaffraText(
     waffraIsEnglish?'New savings goal':'هدف جديد')),
    const SizedBox(height:14),
