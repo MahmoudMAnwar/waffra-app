@@ -662,14 +662,20 @@ class _PinLockScreenState extends State<PinLockScreen> {
  @override void dispose(){pinController.dispose();super.dispose();}
 
  Widget _padButton(String label,{IconData? icon,required VoidCallback onPressed}){
-  return Semantics(button:true,label:icon==Icons.fingerprint?
+  final fingerprint=icon==Icons.fingerprint;
+  final compact=MediaQuery.sizeOf(context).height<750;
+  final size=compact?54.0:60.0;
+  return Semantics(button:true,label:fingerprint?
     (waffraIsEnglish?'Unlock with fingerprint':'فتح بالبصمة'):label,
-   child:Material(color:const Color(0xFFF9FFFA),elevation:2,
-    shape:CircleBorder(side:BorderSide(color:forest.withValues(alpha:.12))),
+   child:Material(
+    color:fingerprint?const Color(0xFFF1FBF5):const Color(0xFF0A6249),
+    shape:CircleBorder(side:BorderSide(
+     color:fingerprint?Colors.white:const Color(0xFF69BD94),width:1.15)),
     child:InkWell(customBorder:const CircleBorder(),onTap:busy?null:onPressed,
-     child:SizedBox(width:62,height:62,child:Center(child:icon!=null?
-      Icon(icon,color:forest,size:25):
-      Text(label,style:const TextStyle(color:forest,fontWeight:FontWeight.w700,fontSize:25)))))));
+     child:SizedBox(width:size,height:size,child:Center(child:icon!=null?
+      Icon(icon,color:fingerprint?forest:Colors.white,size:compact?22:24):
+      Text(label,style:TextStyle(color:Colors.white,
+       fontWeight:FontWeight.bold,fontSize:compact?22:24)))))));
  }
  void _keyDigit(String digit){
   if(pinController.text.length>=4||busy)return;
@@ -677,96 +683,99 @@ class _PinLockScreenState extends State<PinLockScreen> {
   setState((){error='';});
   if(pinController.text.length==4)verifyPin();
  }
- @override Widget build(BuildContext context)=>Scaffold(
-  backgroundColor:forest,
-  resizeToAvoidBottomInset:false,
-  body:Stack(fit:StackFit.expand,children:[
-   // Use the exact same approved Waffra artwork and framing as the login screen.
-   Image.asset('assets/waffra_login_approved_exact.png',
-    fit:BoxFit.cover,filterQuality:FilterQuality.high),
-   Align(alignment:Alignment.bottomCenter,
-    child:SafeArea(top:false,
-     child:SingleChildScrollView(
-      padding:const EdgeInsets.fromLTRB(18,14,18,18),
-      child:Container(
-       constraints:const BoxConstraints(maxWidth:420),
-       padding:const EdgeInsets.fromLTRB(17,18,17,20),
-       decoration:BoxDecoration(
-        color:forest, // Solid card masks duplicated title baked into login artwork
-        border:Border.all(color:Colors.white.withValues(alpha:.30)),
-        borderRadius:BorderRadius.circular(24)),
-       child:Column(mainAxisSize:MainAxisSize.min,children:[
-        Row(mainAxisAlignment:MainAxisAlignment.center,children:[
-         const CircleAvatar(radius:21,backgroundColor:Color(0xFFE6F5EB),
-          child:Icon(Icons.lock_outline_rounded,color:forest,size:25)),
-         const SizedBox(width:10),
-         Flexible(child:WaffraText(
-          waffraIsEnglish?'Welcome back':'مرحبًا بك مجددًا',
-          textAlign:TextAlign.center,
-          style:const TextStyle(color:Colors.white,fontSize:23,fontWeight:FontWeight.bold))),
-        ]),
-        const SizedBox(height:7),
-        WaffraText(
-         waffraIsEnglish?'Enter your PIN to unlock Waffra':'أدخل رمز القفل لفتح وفرة',
-         textAlign:TextAlign.center,
-         style:const TextStyle(color:Colors.white70,fontSize:14)),
-        const SizedBox(height:16),
-        Row(mainAxisAlignment:MainAxisAlignment.center,children:List.generate(4,(i)=>Container(
-         width:14,height:14,margin:const EdgeInsets.symmetric(horizontal:10),
-         decoration:BoxDecoration(shape:BoxShape.circle,
-          color:i<pinController.text.length?Colors.white:Colors.transparent,
-          border:Border.all(color:Colors.white,width:1.6))))),
-        const SizedBox(height:17),
-       Row(textDirection:TextDirection.ltr,mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
-        _padButton('1',onPressed:()=>_keyDigit('1')),
-        _padButton('2',onPressed:()=>_keyDigit('2')),
-        _padButton('3',onPressed:()=>_keyDigit('3')),
-       ]),
-       const SizedBox(height:7),
-       Row(textDirection:TextDirection.ltr,mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
-        _padButton('4',onPressed:()=>_keyDigit('4')),
-        _padButton('5',onPressed:()=>_keyDigit('5')),
-        _padButton('6',onPressed:()=>_keyDigit('6')),
-       ]),
-       const SizedBox(height:7),
-       Row(textDirection:TextDirection.ltr,mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
-        _padButton('7',onPressed:()=>_keyDigit('7')),
-        _padButton('8',onPressed:()=>_keyDigit('8')),
-        _padButton('9',onPressed:()=>_keyDigit('9')),
-       ]),
-       const SizedBox(height:7),
-       Row(textDirection:TextDirection.ltr,mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
-        _padButton('',icon:Icons.fingerprint,onPressed:biometric),
-        _padButton('0',onPressed:()=>_keyDigit('0')),
-        _padButton('',icon:Icons.backspace_outlined,onPressed:(){
-         if(pinController.text.isNotEmpty){
-          pinController.text=pinController.text.substring(0,pinController.text.length-1);
-          setState(()=>error='');
-         }
-        }),
-       ]),
-       if(error.isNotEmpty)Padding(
-        padding:const EdgeInsets.only(top:12),
-        child:Container(
-         width:double.infinity,
-         padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),
-         decoration:BoxDecoration(
-          color:const Color(0xFF7D3436).withValues(alpha:.72),
-          borderRadius:BorderRadius.circular(12),
-          border:Border.all(color:const Color(0xFFF0B0AA).withValues(alpha:.5))),
-         child:WaffraText(error,textAlign:TextAlign.center,
-          style:const TextStyle(color:Color(0xFFFFE1DA),fontWeight:FontWeight.bold,fontSize:13)))),
-       if(busy)const Padding(
-        padding:EdgeInsets.only(top:12),
-        child:SizedBox(width:23,height:23,
-         child:CircularProgressIndicator(color:Colors.white,strokeWidth:2.3))),
-       ]),
-      ),
-     ),
-    ),
-   ),
-  ]),
- );
+ @override Widget build(BuildContext context){
+  final compact=MediaQuery.sizeOf(context).height<750;
+  return Scaffold(
+   backgroundColor:const Color(0xFF003B2E),
+   resizeToAvoidBottomInset:false,
+   body:Stack(fit:StackFit.expand,children:[
+    const DecoratedBox(decoration:BoxDecoration(
+     gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,
+      colors:[Color(0xFF003528),Color(0xFF07573F),Color(0xFF002E23)]))),
+    Positioned(top:-155,right:-140,
+     child:Container(width:290,height:290,decoration:BoxDecoration(
+      shape:BoxShape.circle,
+      border:Border.all(color:const Color(0xFF26A176).withValues(alpha:.18),width:46)))),
+    Positioned(bottom:-175,left:-100,
+     child:Container(width:315,height:315,decoration:BoxDecoration(
+      shape:BoxShape.circle,
+      color:const Color(0xFF14906B).withValues(alpha:.18)))),
+    SafeArea(child:Center(child:SingleChildScrollView(
+     padding:const EdgeInsets.fromLTRB(24,15,24,22),
+     child:Column(mainAxisSize:MainAxisSize.min,children:[
+      CustomPaint(size:Size(compact?65:78,compact?76:90),
+       painter:_WaffraSplashLogoPainter()),
+      const SizedBox(height:5),
+      Text('Waffra',style:TextStyle(color:Colors.white,
+       fontSize:compact?30:35,fontWeight:FontWeight.bold,height:1.05)),
+      const WaffraText('وفرة',style:TextStyle(color:Colors.white,
+       fontSize:22,fontWeight:FontWeight.bold,height:1.05)),
+      SizedBox(height:compact?23:32),
+      WaffraText(waffraIsEnglish?'Welcome back':'مرحبًا بك مجددًا',
+       textAlign:TextAlign.center,
+       style:TextStyle(color:Colors.white,fontSize:compact?23:27,
+        fontWeight:FontWeight.bold)),
+      const SizedBox(height:6),
+      WaffraText(waffraIsEnglish?'Enter your PIN to unlock Waffra':
+       'أدخل رمز القفل لفتح وفرة',
+       textAlign:TextAlign.center,
+       style:const TextStyle(color:Color(0xFFCFEBDF),fontSize:14)),
+      SizedBox(height:compact?13:18),
+      Row(mainAxisAlignment:MainAxisAlignment.center,
+       children:List.generate(4,(i)=>Container(
+        width:12,height:12,margin:const EdgeInsets.symmetric(horizontal:9),
+        decoration:BoxDecoration(
+         shape:BoxShape.circle,
+         color:i<pinController.text.length?Colors.white:Colors.transparent,
+         border:Border.all(color:Colors.white,width:1.4))))),
+      SizedBox(height:compact?17:24),
+      Row(textDirection:TextDirection.ltr,mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
+       _padButton('1',onPressed:()=>_keyDigit('1')),
+       _padButton('2',onPressed:()=>_keyDigit('2')),
+       _padButton('3',onPressed:()=>_keyDigit('3')),
+      ]),
+      const SizedBox(height:8),
+      Row(textDirection:TextDirection.ltr,mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
+       _padButton('4',onPressed:()=>_keyDigit('4')),
+       _padButton('5',onPressed:()=>_keyDigit('5')),
+       _padButton('6',onPressed:()=>_keyDigit('6')),
+      ]),
+      const SizedBox(height:8),
+      Row(textDirection:TextDirection.ltr,mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
+       _padButton('7',onPressed:()=>_keyDigit('7')),
+       _padButton('8',onPressed:()=>_keyDigit('8')),
+       _padButton('9',onPressed:()=>_keyDigit('9')),
+      ]),
+      const SizedBox(height:8),
+      Row(textDirection:TextDirection.ltr,mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
+       _padButton('',icon:Icons.fingerprint,onPressed:biometric),
+       _padButton('0',onPressed:()=>_keyDigit('0')),
+       _padButton('',icon:Icons.backspace_outlined,onPressed:(){
+        if(pinController.text.isNotEmpty){
+         pinController.text=pinController.text.substring(0,pinController.text.length-1);
+         setState(()=>error='');
+        }
+       }),
+      ]),
+      if(error.isNotEmpty)Padding(
+       padding:const EdgeInsets.only(top:15),
+       child:Container(
+        width:double.infinity,
+        padding:const EdgeInsets.symmetric(horizontal:13,vertical:10),
+        decoration:BoxDecoration(color:const Color(0xFF713132),
+         borderRadius:BorderRadius.circular(13),
+         border:Border.all(color:const Color(0xFFDA807A).withValues(alpha:.6))),
+        child:WaffraText(error,textAlign:TextAlign.center,
+         style:const TextStyle(color:Color(0xFFFFEAE7),
+          fontSize:12,fontWeight:FontWeight.bold)))),
+      if(busy)const Padding(padding:EdgeInsets.only(top:12),
+       child:SizedBox(width:23,height:23,
+        child:CircularProgressIndicator(color:Colors.white,strokeWidth:2.3))),
+     ]),
+    ))),
+   ]),
+  );
+ }
 }
 
 const String _waffraGoogleLogo = '''
