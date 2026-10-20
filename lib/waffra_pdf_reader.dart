@@ -94,12 +94,12 @@ class _WaffraPdfReaderState extends State<WaffraPdfReader> {
        decoration:BoxDecoration(
         color:Theme.of(context).colorScheme.surface,
         border:Border(top:BorderSide(color:Theme.of(context).dividerColor))),
-       child:Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
-        Text(widget.english?'Scroll to view every page':'اسحب لأعلى وأسفل لاستعراض التقرير',
-         style:Theme.of(context).textTheme.bodySmall),
-        Text(widget.english?'Tap a page to expand':'اضغط على أي صفحة لتكبيرها',
-         style:Theme.of(context).textTheme.bodySmall),
-       ]))),
+       child:Text(widget.english
+        ?'Scroll vertically; tap a page to expand'
+        :'اسحب لأعلى وأسفل، واضغط على الصفحة لتكبيرها',
+        maxLines:2,softWrap:true,textAlign:TextAlign.center,
+        style:Theme.of(context).textTheme.bodySmall),
+      ))),)),
      ]);
     }),
   );
