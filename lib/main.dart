@@ -37,11 +37,13 @@ import 'waffra_footer.dart';
 import 'waffra_messages.dart';
 import 'waffra_recurring_policy.dart';
 import 'waffra_secure_backup.dart';
+import 'waffra_home_widget.dart';
 part 'waffra_categories_page.part.dart';
 
 Future<void> main()async {
  WidgetsFlutterBinding.ensureInitialized();
  await initializeWaffraMessages();
+ await initializeWaffraHomeWidget();
  runApp(const WaffraApp());
 }
 // Waffra visual identity / Saudi government-grade accessible emerald palette.
@@ -1907,8 +1909,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  static const tourTabs=<int>[0,0,1,3,4,5];
  bool addFabExpanded=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
- @override void initState(){super.initState();_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);load();}
+ @override void initState(){super.initState();_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraWidgetAction.addListener(_receiveWidgetAction);load();}
  void _returnToHome(){if(mounted)setState((){tab=0;goalsOpened=false;addFabExpanded=false;});}
+ void _receiveWidgetAction(){
+  if(!mounted||!ready||waffraWidgetAction.value!='add')return;
+  waffraWidgetAction.value=null;
+  setState((){tab=0;goalsOpened=false;addFabExpanded=false;});
+  WidgetsBinding.instance.addPostFrameCallback((_){if(mounted)unawaited(entrySheet());});
+ }
  void _receiveSharedSms(){
   if(!mounted||!ready||_smsSheetOpen)return;
   final text=waffraIncomingSms.value;
@@ -1919,7 +1927,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(mounted)unawaited(bulkSmsSheet(initialText:text));
   });
  }
- @override void dispose(){_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);super.dispose();}
+ @override void dispose(){_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraWidgetAction.removeListener(_receiveWidgetAction);super.dispose();}
  Future<void> load()async {
   final p=await SharedPreferences.getInstance();
   try{final raw=p.getString('entries');if(raw!=null)entries.addAll((jsonDecode(raw) as List).map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('entries: $e');}
@@ -2007,7 +2015,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     categories.add(BudgetCategory(id:newId(),name:e.category,icon:'category',color:colors[7],income:e.income));
    }
   }
-  if(!mounted)return;setState(()=>ready=true);_receiveSharedSms();await applyRecurring();
+  if(!mounted)return;setState(()=>ready=true);_receiveSharedSms();_receiveWidgetAction();unawaited(_refreshWidget());
+  WidgetsBinding.instance.addPostFrameCallback((_){if(mounted)unawaited(applyRecurring());});
   if(recurringRemindersEnabled)unawaited(syncRecurringReminders());
   if(trashBefore!=deletedCategories.length)await persist();
   if(!(p.getBool('waffra_in_app_tour_seen_v2')??false)&&mounted){
@@ -2015,6 +2024,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if(mounted){setState((){tourActive=true;tourStep=0;tab=0;goalsOpened=false;addFabExpanded=false;tourTargetReady=false;});if(waffraAnimationLevel.value!='off')_tourGlow.repeat(reverse:true);scheduleTourFocus();}
    });
   }
+ }
+ Future<void> _refreshWidget()async{
+  final now=DateTime.now();
+  final income=entries.where((e)=>e.income).fold<int>(0,(sum,e)=>sum+WaffraRecurringPolicy.toHalalas(e.amount));
+  final expense=entries.where((e)=>!e.income).fold<int>(0,(sum,e)=>sum+WaffraRecurringPolicy.toHalalas(e.amount));
+  final thisMonth=entries.where((e)=>!e.income&&e.date.year==now.year&&e.date.month==now.month)
+   .fold<int>(0,(sum,e)=>sum+WaffraRecurringPolicy.toHalalas(e.amount));
+  await refreshWaffraHomeWidget(
+   balance:hideWaffraAmounts.value?'***':'${formatWaffraMoney((income-expense)/100)} ر.س',
+   monthExpenses:hideWaffraAmounts.value?'***':'${formatWaffraMoney(thisMonth/100)} ر.س');
  }
  Future<void> persist()async {
   final p=await SharedPreferences.getInstance();
@@ -2031,6 +2050,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    p.setBool('waffra_monthly_budget_enabled_v1',monthlyBudgetEnabled),
    p.setString('waffra_learned_merchants_v1',jsonEncode(learnedMerchantCategories))
   ]);
+  unawaited(_refreshWidget());
  }
 
  Future<void> syncRecurringReminders()async {
