@@ -1834,7 +1834,35 @@ Future<void> bulkSmsSheet()async {
     :(waffraIsEnglish?'Cannot export the report. Add an income or expense transaction first.':'لا يمكن تصدير التقرير. يجب إضافة عملية دخل أو مصروف أولاً.'));
    return;
   }
+  bool exportDialogOpen=false;
+  final exportNavigator=Navigator.of(context,rootNavigator:true);
   try{
+   exportDialogOpen=true;
+   unawaited(showDialog<void>(context:context,useRootNavigator:true,barrierDismissible:false,
+    barrierColor:Colors.black.withValues(alpha:.22),
+    builder:(dialogContext)=>PopScope(canPop:false,child:BackdropFilter(
+     filter:ui.ImageFilter.blur(sigmaX:9,sigmaY:9),
+     child:Center(child:Material(color:Colors.transparent,child:Container(
+      width:MediaQuery.of(dialogContext).size.width*.82,
+      padding:const EdgeInsets.all(28),
+      decoration:BoxDecoration(color:Theme.of(dialogContext).cardColor,
+       borderRadius:BorderRadius.circular(26)),
+      child:Column(mainAxisSize:MainAxisSize.min,children:[
+       const SizedBox(height:8),
+       const SizedBox(height:100,width:100,child:Stack(alignment:Alignment.center,children:[
+        CircularProgressIndicator(strokeWidth:7,color:emerald),
+        Icon(Icons.picture_as_pdf_rounded,size:45,color:emerald),
+       ])),
+       const SizedBox(height:22),
+       WaffraText(waffraIsEnglish?'Exporting PDF report...':'يتم الآن تصدير التقرير إلى PDF',
+        textAlign:TextAlign.center,style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold)),
+       const SizedBox(height:9),
+       WaffraText(waffraIsEnglish?'Please wait while your report is prepared.':
+        'يرجى الانتظار أثناء تجهيز التقرير.',textAlign:TextAlign.center),
+      ]),
+     )))),
+    )));
+   await Future<void>.delayed(const Duration(milliseconds:350));
    // Embed a full Arabic Unicode fallback; Tajawal stays the primary typeface.
    final font=pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal-Regular.ttf'));
    final bold=pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal-Bold.ttf'));
@@ -2027,9 +2055,55 @@ Future<void> bulkSmsSheet()async {
     ])));
    }
    final bytes=await doc.save();
-   // Android print dialog can be unavailable on some devices; share the PDF as fallback.
-   await Printing.sharePdf(bytes:bytes,filename:'waffra_report.pdf');
-  }catch(e,st){debugPrint('PDF export error: $e\n$st');if(mounted)snack(context,'تعذّر إنشاء PDF: $e');}
+   if(exportDialogOpen&&exportNavigator.mounted){exportNavigator.pop();exportDialogOpen=false;}
+   if(!mounted)return;
+   final fileName=analytics?'waffra_analytics.pdf':'waffra_income_expenses.pdf';
+   await showDialog<void>(context:context,builder:(dialogContext)=>AlertDialog(
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(24)),
+    title:Column(children:[
+     const Icon(Icons.check_circle_rounded,color:emerald,size:58),
+     const SizedBox(height:12),
+     WaffraText(waffraIsEnglish?'Report ready':'تم تجهيز التقرير بنجاح',
+      textAlign:TextAlign.center),
+    ]),
+    content:Column(mainAxisSize:MainAxisSize.min,children:[
+     const Icon(Icons.picture_as_pdf,color:Colors.red,size:38),
+     const SizedBox(height:8),
+     WaffraText(analytics?(waffraIsEnglish?'Analytics report':'تقرير التحليلات'):
+      (waffraIsEnglish?'Income and expenses report':'تقرير الدخل والمصروفات'),
+      textAlign:TextAlign.center),
+     const SizedBox(height:4),
+     WaffraText('${(bytes.length/1024).toStringAsFixed(1)} KB',
+      textAlign:TextAlign.center,style:const TextStyle(fontSize:12)),
+    ]),
+    actionsAlignment:MainAxisAlignment.center,
+    actions:[
+     SizedBox(width:double.infinity,child:FilledButton.icon(
+      onPressed:(){
+       Navigator.of(dialogContext).pop();
+       Navigator.of(context).push(MaterialPageRoute(builder:(_)=>Scaffold(
+        appBar:AppBar(title:WaffraText(waffraIsEnglish?'PDF preview':'معاينة التقرير')),
+        body:PdfPreview(build:(_)=>bytes,canChangeOrientation:false,
+         canChangePageFormat:false,allowPrinting:false,allowSharing:true,
+         pdfFileName:fileName),
+       )));
+      },
+      icon:const Icon(Icons.visibility_outlined),
+      label:WaffraText(waffraIsEnglish?'Open report':'فتح التقرير'))),
+     SizedBox(width:double.infinity,child:OutlinedButton.icon(
+      onPressed:()async{
+       Navigator.of(dialogContext).pop();
+       await Printing.sharePdf(bytes:bytes,filename:fileName);
+      },
+      icon:const Icon(Icons.share_outlined),
+      label:WaffraText(waffraIsEnglish?'Share report':'مشاركة التقرير'))),
+    ],
+   ));
+  }catch(e,st){
+   debugPrint('PDF export error: $e\n$st');
+   if(exportDialogOpen&&exportNavigator.mounted){exportNavigator.pop();exportDialogOpen=false;}
+   if(mounted)snack(context,waffraIsEnglish?'Could not export the PDF report. Please try again.':'تعذر تصدير تقرير PDF. حاول مرة أخرى.');
+  }
  }
  Future<void> deleteEntry(MoneyEntry e)async {
   final yes=await confirmDeletion(waffraIsEnglish?'Delete transaction':'حذف العملية',
