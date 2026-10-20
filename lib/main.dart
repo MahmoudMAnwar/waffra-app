@@ -2580,8 +2580,6 @@ Future<void> bulkSmsSheet()async {
       clipBehavior:Clip.antiAlias,
       child:Column(mainAxisSize:MainAxisSize.min,children:[
        SizedBox(height:54,child:Stack(alignment:Alignment.center,children:[
-        Text(count,textDirection:TextDirection.ltr,
-         style:const TextStyle(color:Colors.white,fontSize:15,fontWeight:FontWeight.bold)),
         PositionedDirectional(end:7,child:IconButton(
          tooltip:waffraIsEnglish?'Close':'إغلاق',
          onPressed:()=>Navigator.pop(ctx),
