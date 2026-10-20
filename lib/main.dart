@@ -1101,7 +1101,7 @@ class _ProfileFormState extends State<ProfileForm> {
      onPressed:editAvatar)),
    ])),
    const SizedBox(height:10),
-   if(widget.provider=='Google'&&(widget.initial?.gender.isEmpty??true))Card(color:emerald.withValues(alpha:.08),child:Padding(padding:const EdgeInsets.all(14),child:WaffraText(waffraIsEnglish?'Complete your profile: mobile number and gender are required. Date of birth is optional.':'تبقّى بعض البيانات لاستكمال ملفك الشخصي: رقم الجوال والجنس حقول إجبارية، وتاريخ الميلاد اختياري.'))),
+   if(widget.provider=='Google'&&(widget.initial?.gender.isEmpty??true))Card(color:emerald.withValues(alpha:.08),child:Padding(padding:const EdgeInsets.all(14),child:WaffraText(waffraIsEnglish?'Complete your profile: mobile number and gender are required. ':'تبقّى بعض البيانات لاستكمال ملفك الشخصي: رقم الجوال والجنس حقول إجبارية'))),
     Wrap(alignment:WrapAlignment.center,spacing:12,children:['ذكر','أنثى']
     .map((a)=>ChoiceChip(label:Row(mainAxisSize:MainAxisSize.min,children:[saudiAvatar(a,radius:20),const SizedBox(width:6),WaffraText(waffraIsEnglish?(a=='ذكر'?'Male':'Female'):a)]),selected:gender==a,onSelected:(_)=>setState((){gender=a;if(!avatar.startsWith('https://'))avatar=a=='ذكر'?'male':'female';}))).toList()),
    const SizedBox(height:16),
@@ -1266,6 +1266,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // Soft-deleted categories are retained on-device for up to 30 days.
  final deletedCategories=<Map<String,dynamic>>[];
  double monthlyBudget=0;
+ bool monthlyBudgetEnabled=false;
  DateTimeRange? transactionsDateRange;
  double? minTransactionAmount,maxTransactionAmount;
  int tab=0,year=DateTime.now().year,month=DateTime.now().month;
@@ -1314,6 +1315,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   });
   smsHashes.addAll(p.getStringList('waffra_sms_hashes_v1')??const []);
   monthlyBudget=p.getDouble('waffra_monthly_budget_v1')??0;
+  monthlyBudgetEnabled=p.getBool('waffra_monthly_budget_enabled_v1')??(monthlyBudget>0);
   recurringRemindersEnabled=p.getBool('waffra_recurring_reminders_enabled_v1')??false;
   try{
    final rawRules=p.getString('waffra_learned_merchants_v1');
@@ -1349,6 +1351,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    p.setString('waffra_challenges_v1',jsonEncode(challenges.map((e)=>e.toJson()).toList())),
    p.setString('waffra_deleted_categories_v1',jsonEncode(deletedCategories)),
    p.setDouble('waffra_monthly_budget_v1',monthlyBudget),
+   p.setBool('waffra_monthly_budget_enabled_v1',monthlyBudgetEnabled),
    p.setString('waffra_learned_merchants_v1',jsonEncode(learnedMerchantCategories))
   ]);
  }
@@ -2276,34 +2279,56 @@ Future<void> bulkSmsSheet()async {
   }
  }
  Future<void> editMonthlyBudget()async {
-  final amount=TextEditingController(text:monthlyBudget==0?'':monthlyBudget.toStringAsFixed(0));
+  final amount=TextEditingController(text:monthlyBudget>0?monthlyBudget.toStringAsFixed(0):'');
+  bool enabled=monthlyBudgetEnabled;
+  String? validation;
   try{
-   final next=await showDialog<double>(context:context,builder:(ctx)=>AlertDialog(
-    title:WaffraText(waffraIsEnglish?'Monthly budget':'الميزانية الشهرية'),
-    content:TextField(controller:amount,autofocus:true,
-     style:TextStyle(fontSize:20,fontWeight:FontWeight.bold,color:Theme.of(ctx).colorScheme.onSurface),
-     cursorColor:Theme.of(ctx).brightness==Brightness.dark?Colors.white:forest,
-     keyboardType:const TextInputType.numberWithOptions(decimal:true),
+   final next=await showDialog<({bool enabled,double amount})>(
+    context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
+     title:WaffraText(waffraIsEnglish?'Monthly budget':'الميزانية الشهرية'),
+     content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      SwitchListTile.adaptive(
+       contentPadding:EdgeInsets.zero,
+       title:WaffraText(waffraIsEnglish?'Enable monthly budget':'تفعيل الميزانية الشهرية',
+        style:const TextStyle(fontWeight:FontWeight.bold)),
+       value:enabled,activeTrackColor:emerald,
+       onChanged:(value)=>update((){enabled=value;validation=null;}),
+      ),
+      const SizedBox(height:8),
+      WaffraText(enabled?
+       (waffraIsEnglish?'Set the amount allocated for monthly spending.':'حدد المبلغ الذي ترغب في تخصيصه لمصروفاتك الشهرية.'):
+       (waffraIsEnglish?'Monthly spending limit tracking is paused.':'تم إيقاف متابعة حد المصروفات الشهرية.')),
+      const SizedBox(height:16),
+      TextField(controller:amount,enabled:enabled,autofocus:false,
+       onChanged:(_){if(validation!=null)update(()=>validation=null);},
+       style:TextStyle(fontSize:20,fontWeight:FontWeight.bold,color:Theme.of(ctx).colorScheme.onSurface),
+       keyboardType:const TextInputType.numberWithOptions(decimal:true),
        inputFormatters:[const WaffraAmountFormatter()],
-     decoration:InputDecoration(
-      labelText:waffraIsEnglish?'Spending limit (SAR)':'حد المصروفات بالريال',
-      helperText:waffraIsEnglish?'Enter 0 to disable':'أدخل 0 لإيقاف الميزانية',
-      border:OutlineInputBorder(borderRadius:BorderRadius.circular(15)),filled:true,
-      fillColor:Theme.of(ctx).brightness==Brightness.dark?const Color(0xFF1E3A31):Colors.white)),
-    actions:[
-     TextButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
-     FilledButton(onPressed:(){
-      final v=double.tryParse(amount.text.trim().replaceAll(',',''));
-      if(v==null||!v.isFinite||v<0){
-       ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(behavior:SnackBarBehavior.floating,
-        margin:const EdgeInsets.fromLTRB(16,8,16,12),
-        content:WaffraText(waffraIsEnglish?'Enter a valid amount':'أدخل مبلغًا صحيحًا')));
-       return;
-      }
-      Navigator.pop(ctx,v);
-     },child:WaffraText(waffraIsEnglish?'Save':'حفظ')),
-    ]));
-   if(next!=null&&mounted){setState(()=>monthlyBudget=next);await persist();}
+       decoration:InputDecoration(
+        labelText:waffraIsEnglish?'Spending limit (SAR) *':'حد المصروفات بالريال *',
+        hintText:waffraIsEnglish?'Example: 3000':'مثال: 3000',
+        errorText:validation,
+        border:OutlineInputBorder(borderRadius:BorderRadius.circular(15)),
+        filled:true,fillColor:Theme.of(ctx).brightness==Brightness.dark?
+         const Color(0xFF1E3A31):Colors.white)),
+     ]),
+     actions:[
+      TextButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+      FilledButton(onPressed:(){
+       final v=double.tryParse(amount.text.trim().replaceAll(',',''));
+       if(enabled&&(v==null||!v.isFinite||v<=0)){
+        update(()=>validation=waffraIsEnglish?'Enter an amount greater than zero':'أدخل مبلغًا أكبر من صفر');
+        return;
+       }
+       Navigator.pop(ctx,(enabled:enabled,amount:enabled?v!:monthlyBudget));
+      },child:WaffraText(waffraIsEnglish?'Save':'حفظ')),
+     ],
+    )));
+   if(next!=null&&mounted){
+    setState((){monthlyBudgetEnabled=next.enabled;monthlyBudget=next.amount;});
+    await persist();
+    if(mounted)snack(context,waffraIsEnglish?'Monthly budget settings saved':'تم حفظ إعدادات الميزانية الشهرية');
+   }
   }finally{disposeLater([amount]);}
  }
  Future<void> editTransactionFilters()async {
@@ -2369,7 +2394,7 @@ Future<void> bulkSmsSheet()async {
   final today=DateTime.now();
   final monthEntries=entries.where((e)=>e.date.year==today.year&&e.date.month==today.month);
   final spent=sum(monthEntries,false);
-  final used=monthlyBudget>0?(spent/monthlyBudget).clamp(0.0,1.0):0.0;
+  final used=monthlyBudgetEnabled&&monthlyBudget>0?(spent/monthlyBudget).clamp(0.0,1.0):0.0;
   return Container(
    padding:const EdgeInsets.all(15),
    decoration:BoxDecoration(color:Theme.of(context).cardColor,
@@ -2388,7 +2413,7 @@ Future<void> bulkSmsSheet()async {
       label:WaffraText(waffraIsEnglish?'Edit':'تحديد الميزانية')),
     ]),
     const SizedBox(height:7),
-    if(monthlyBudget>0)...[
+    if(monthlyBudgetEnabled&&monthlyBudget>0)...[
      WaffraText(waffraIsEnglish?
       'Used '+(used*100).toStringAsFixed(0)+'% of your budget':
       'تم إنفاق '+(used*100).toStringAsFixed(0)+'٪ من ميزانيتك',
@@ -2524,7 +2549,7 @@ Future<void> bulkSmsSheet()async {
       cash(projection),Icons.trending_up,emerald)),
      const SizedBox(width:8),
      Expanded(child:_summaryBox(waffraIsEnglish?'Daily spending limit':'الحد اليومي المقترح',
-      monthlyBudget>0?cash(daily):(waffraIsEnglish?'Set a budget':'حدد ميزانية'),
+      monthlyBudgetEnabled&&monthlyBudget>0?cash(daily):(waffraIsEnglish?'Set a budget':'حدد ميزانية'),
       Icons.today_outlined,Colors.deepOrange)),
     ]),
     const SizedBox(height:9),
@@ -4062,6 +4087,7 @@ Future<void> bulkSmsSheet()async {
   'challenges':challenges.map((e)=>e.toJson()).toList(),
   'deletedCategories':deletedCategories,
   'monthlyBudget':monthlyBudget,
+  'monthlyBudgetEnabled':monthlyBudgetEnabled,
   'learnedMerchants':learnedMerchantCategories,
   'profile':widget.profile.toJson(),
  });
@@ -4117,6 +4143,7 @@ Future<void> bulkSmsSheet()async {
        challenges..clear()..addAll(newChallenges);
        deletedCategories..clear()..addAll(newTrash);
        monthlyBudget=restoredBudget;
+       monthlyBudgetEnabled=raw['monthlyBudgetEnabled'] is bool?(raw['monthlyBudgetEnabled'] as bool):(restoredBudget>0);
        learnedMerchantCategories..clear()..addAll(restoredRules);
       });
       await persist();
@@ -4362,7 +4389,7 @@ Future<void> bulkSmsSheet()async {
   setState((){
    entries.clear();categories..clear()..addAll(defaultCategories());
    goals.clear();challenges.clear();recurring.clear();deletedCategories.clear();smsHashes.clear();
-   learnedMerchantCategories.clear();monthlyBudget=0;
+   learnedMerchantCategories.clear();monthlyBudget=0;monthlyBudgetEnabled=false;
   });
   final p=await SharedPreferences.getInstance();
   await p.remove('waffra_sms_hashes_v1');await persist();
