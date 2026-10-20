@@ -633,18 +633,15 @@ class _WaffraLaunchIntroState extends State<WaffraLaunchIntro> with SingleTicker
           border:Border.all(color:const Color(0xFF8CF2C0),width:1.4)))));
       }),
       Opacity(opacity:reveal(t,0,.15),child:Transform.scale(
-       scale:.55+.45*iconProgress,child:ClipRRect(
-        borderRadius:BorderRadius.circular(38),
-        child:Image.asset('assets/waffra_app_icon.png',
-         width:128,height:128,fit:BoxFit.cover,
-         errorBuilder:(_,__,___)=>const Icon(
-          Icons.spa_rounded,color:Colors.white,size:100))))),
+       scale:.55+.45*iconProgress,
+       child:CustomPaint(size:const Size(112,135),painter:_WaffraSplashLogoPainter()))),
      ])),
-     const SizedBox(height:4),
      Opacity(opacity:reveal(t,.26,.48),child:Transform.translate(
-      offset:Offset(0,14*(1-nameProgress)),child:const Text('وفرة',
-       style:TextStyle(color:Colors.white,fontSize:42,fontWeight:FontWeight.bold)))),
-     const SizedBox(height:9),
+      offset:Offset(0,14*(1-nameProgress)),child:Column(children:[
+       const Text('Waffra',style:TextStyle(color:Colors.white,fontSize:42,fontWeight:FontWeight.bold,height:1.05)),
+       const Text('وفرة',style:TextStyle(color:Colors.white,fontSize:31,fontWeight:FontWeight.bold,height:1.1)),
+      ]))),
+     const SizedBox(height:15),
      Opacity(opacity:reveal(t,.44,.70),child:Transform.translate(
       offset:Offset(0,10*(1-sloganProgress)),child:Padding(
        padding:const EdgeInsets.symmetric(horizontal:16),
@@ -655,6 +652,24 @@ class _WaffraLaunchIntroState extends State<WaffraLaunchIntro> with SingleTicker
    ]);
   }),
  );
+}
+/// White Waffra leaf emblem drawn directly on the emerald splash.
+/// No raster app-icon background, border or square can appear.
+class _WaffraSplashLogoPainter extends CustomPainter {
+ @override void paint(Canvas canvas,Size size){
+  final paint=Paint()..color=Colors.white..style=PaintingStyle.fill;
+  final w=size.width,h=size.height;
+  Path leaf(List<Offset> points){
+   final p=Path()..moveTo(points[0].dx*w,points[0].dy*h);
+   p.cubicTo(points[1].dx*w,points[1].dy*h,points[2].dx*w,points[2].dy*h,points[3].dx*w,points[3].dy*h);
+   p.cubicTo(points[4].dx*w,points[4].dy*h,points[5].dx*w,points[5].dy*h,points[0].dx*w,points[0].dy*h);
+   return p..close();
+  }
+  canvas.drawPath(leaf([const Offset(.50,.05),const Offset(.18,.30),const Offset(.28,.47),const Offset(.50,.54),const Offset(.72,.46),const Offset(.83,.30)]),paint);
+  canvas.drawPath(leaf([const Offset(.41,.94),const Offset(.18,.76),const Offset(.04,.55),const Offset(.15,.39),const Offset(.29,.51),const Offset(.41,.58)]),paint);
+  canvas.drawPath(leaf([const Offset(.59,.94),const Offset(.82,.76),const Offset(.96,.55),const Offset(.85,.39),const Offset(.71,.51),const Offset(.59,.58)]),paint);
+ }
+ @override bool shouldRepaint(covariant CustomPainter oldDelegate)=>false;
 }
 class WaffraOnboarding extends StatefulWidget {
  final VoidCallback onFinish;
