@@ -785,8 +785,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final choice=await showModalBottomSheet<String>(context:context,showDragHandle:true,
    builder:(ctx)=>SafeArea(child:Padding(padding:const EdgeInsets.all(16),child:Column(mainAxisSize:MainAxisSize.min,children:[
     WaffraText(waffraIsEnglish?'Create account':'إنشاء حساب',style:Theme.of(ctx).textTheme.titleLarge),
-    ListTile(leading:const Icon(Icons.g_mobiledata,size:30),title:WaffraText(waffraIsEnglish?'Continue with Google':'المتابعة باستخدام Google'),onTap:()=>Navigator.pop(ctx,'Google')),
-    ListTile(leading:const Icon(Icons.apple),title:WaffraText(waffraIsEnglish?'Continue with Apple':'المتابعة باستخدام Apple'),onTap:()=>Navigator.pop(ctx,'Apple')),
+    ListTile(leading:ShaderMask(shaderCallback:(bounds)=>const LinearGradient(colors:[Color(0xFF4285F4),Color(0xFF34A853),Color(0xFFFBBC05),Color(0xFFEA4335)]).createShader(bounds),child:const Text('G',style:TextStyle(fontSize:27,fontWeight:FontWeight.w900,color:Colors.white))),title:WaffraText(waffraIsEnglish?'Continue with Google':'المتابعة باستخدام Google'),onTap:()=>Navigator.pop(ctx,'Google')),
+    ListTile(leading:const Icon(Icons.apple,size:29,color:Color(0xFF777F8B)),title:WaffraText(waffraIsEnglish?'Continue with Apple':'المتابعة باستخدام Apple'),onTap:()=>Navigator.pop(ctx,'Apple')),
     ListTile(leading:const Icon(Icons.phone_android),title:WaffraText(waffraIsEnglish?'Register with phone number':'التسجيل برقم الجوال'),onTap:()=>Navigator.pop(ctx,'Phone')),
    ]))));
   if(!mounted||choice==null)return;
@@ -803,7 +803,14 @@ class _LoginScreenState extends State<LoginScreen> {
      if(!mounted)return;
      await Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>ProfileForm(provider:'Google',initial:Person(name:user.displayName??'',email:user.email??'',phone:user.phoneNumber??'',provider:'Google',gender:'',avatar:user.photoURL??'person',birthday:DateTime(2000)),onSave:widget.onSave)));
    }catch(e){
-    if(mounted)snack(context,waffraIsEnglish?'Google sign-in failed or was cancelled. Please try again.':'تعذر تسجيل الدخول بجوجل أو تم إلغاؤه. حاول مرة أخرى.');
+    if(mounted){
+      final message=e.toString().toLowerCase();
+      final offline=e is SocketException||message.contains('network-request-failed')||message.contains('network_error')||message.contains('network error')||message.contains('unable to resolve host')||message.contains('failed host lookup')||message.contains('no internet')||message.contains('connection refused')||message.contains('socketexception');
+      final cancelled=message.contains('canceled')||message.contains('cancelled');
+      snack(context,offline?(waffraIsEnglish?'No internet connection. Check your connection and try again.':'تعذر الاتصال بالإنترنت. تحقق من اتصالك وحاول مرة أخرى.'):
+       cancelled?(waffraIsEnglish?'Google sign-in was cancelled.':'تم إلغاء تسجيل الدخول بجوجل.'):
+       (waffraIsEnglish?'Could not sign in with Google. Please try again.':'تعذر تسجيل الدخول بجوجل. حاول مرة أخرى.'));
+     }
     debugPrint('Waffra Google sign-in: $e');
    }finally{if(mounted)setState(()=>socialBusy=false);}
    return;
