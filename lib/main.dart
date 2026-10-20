@@ -36,6 +36,7 @@ import 'waffra_pdf_reader.dart';
 import 'waffra_footer.dart';
 import 'waffra_messages.dart';
 import 'waffra_recurring_policy.dart';
+import 'waffra_secure_backup.dart';
 part 'waffra_categories_page.part.dart';
 
 Future<void> main()async {
@@ -5498,17 +5499,25 @@ Future<void> bulkSmsSheet({String? initialText})async {
   'profile':widget.profile.toJson(),
  });
  Future<void> backupDialog()async {
-  final input=TextEditingController();
+  final input=TextEditingController(),secret=TextEditingController();
   var attempted=false;String? backupError;
   await showWaffraDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
    title:const WaffraText('نسخ احتياطي واستعادة'),
    content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-    const WaffraText('انسخ بياناتك واحفظها في مكان آمن. للاستعادة، الصق نسخة JSON. الاستعادة تستبدل بيانات العمليات والأقسام والأهداف والتكرار الحالية.'),
+    WaffraText(waffraIsEnglish?'Your backup is protected with a password and AES-256 encryption. Keep your password safe; it cannot be recovered.':'نسختك الاحتياطية مشفّرة بكلمة مرور وتشفير AES-256. احتفظ بكلمة المرور؛ لا يمكن استعادتها إذا فُقدت.'),
+    const SizedBox(height:10),
+    TextField(controller:secret,obscureText:true,onChanged:(_)=>update((){}),
+     decoration:InputDecoration(labelText:waffraIsEnglish?'Backup password (8+ characters) *':'كلمة مرور النسخة الاحتياطية (8 أحرف على الأقل) *',border:const OutlineInputBorder())),
     const SizedBox(height:10),
     FilledButton.icon(onPressed:()async {
-     await Clipboard.setData(ClipboardData(text:exportBackup()));
-     if(ctx.mounted)snackSuccess(ctx,'تم نسخ البيانات، احفظها في مكان آمن');
-    },icon:const Icon(Icons.copy),label:const WaffraText('نسخ النسخة الاحتياطية')),
+     if(secret.text.trim().length<8){update(()=>backupError=waffraIsEnglish?'Password must have at least 8 characters':'كلمة المرور يجب ألا تقل عن 8 أحرف');return;}
+     try{
+      final encrypted=await WaffraSecureBackup.encrypt(exportBackup(),secret.text);
+      await Clipboard.setData(ClipboardData(text:encrypted));
+      if(ctx.mounted)snackSuccess(ctx,waffraIsEnglish?'Encrypted backup copied; keep it and its password safe':'تم نسخ النسخة المشفّرة، احتفظ بها وكلمة مرورها في مكان آمن');
+     }catch(error){if(ctx.mounted)update(()=>backupError=error.toString());}
+    },icon:const Icon(Icons.lock_outline),label:WaffraText(waffraIsEnglish?'Copy encrypted backup':'نسخ النسخة المشفّرة')),
+    if(backupError!=null)WaffraText(backupError!,style:const TextStyle(color:Colors.red)),
     const SizedBox(height:12),
     TextField(controller:input,minLines:4,maxLines:7,onChanged:(_)=>update(()=>backupError=null),
      decoration:InputDecoration(labelText:waffraIsEnglish?'Backup JSON *':'الصق نسخة JSON للاستعادة *',
@@ -5521,7 +5530,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      update(()=>attempted=true);
      if(input.text.trim().isEmpty)return;
      try{
-      final raw=jsonDecode(input.text);
+      final raw=jsonDecode(await WaffraSecureBackup.decrypt(input.text.trim(),secret.text));
       if(raw is! Map||raw['format']!='waffra-backup'||raw['entries'] is! List||
         raw['categories'] is! List||raw['goals'] is! List||raw['recurring'] is! List){
        throw const FormatException('Invalid backup');
@@ -5531,6 +5540,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
       final newGoals=(raw['goals'] as List).map((x)=>SavingGoal.fromJson(Map<String,dynamic>.from(x))).toList();
       final newRecurring=(raw['recurring'] as List).map((x)=>RecurringBill.fromJson(Map<String,dynamic>.from(x))).toList();
       final newChallenges=raw['challenges'] is List?(raw['challenges'] as List).map((x)=>SavingChallenge.fromJson(Map<String,dynamic>.from(x))).toList():<SavingChallenge>[];
+      final newDeletedGoals=raw['deletedGoals'] is List?(raw['deletedGoals'] as List).map((x)=>Map<String,dynamic>.from(x as Map)).toList():<Map<String,dynamic>>[];
+      final newPostponed=raw['recurringPostponed'] is Map?(raw['recurringPostponed'] as Map).map((k,v)=>MapEntry(k.toString(),v.toString())):<String,String>{};
       final newTrash=raw['deletedCategories'] is List?
        (raw['deletedCategories'] as List).map((x)=>Map<String,dynamic>.from(x as Map)).toList():<Map<String,dynamic>>[];
       if(newCategories.isEmpty)throw const FormatException('Empty categories');
@@ -5553,6 +5564,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
        recurring..clear()..addAll(newRecurring);
        challenges..clear()..addAll(newChallenges);
        deletedCategories..clear()..addAll(newTrash);
+       deletedGoals..clear()..addAll(newDeletedGoals);
+       recurringPostponed..clear()..addAll(newPostponed);
        monthlyBudget=restoredBudget;
        monthlyBudgetEnabled=raw['monthlyBudgetEnabled'] is bool?(raw['monthlyBudgetEnabled'] as bool):(restoredBudget>0);
        learnedMerchantCategories..clear()..addAll(restoredRules);
@@ -5566,7 +5579,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      }
     },child:const WaffraText('استعادة')),
    ])));
-  disposeLater([input]);
+  disposeLater([input,secret]);
  }
  // System credentials are never saved in plain text. A new PIN must be
  // entered twice; keep support for checking older 4-8-digit PINs on disable.
