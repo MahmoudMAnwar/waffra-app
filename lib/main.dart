@@ -1292,8 +1292,7 @@ class _LoginScreenState extends State<LoginScreen> {
   try {
    await widget.onSave(Person(name:'',email:'',phone:'',provider:'Local $selected demo',gender:'',avatar:'person',birthday:DateTime(2000)));
    if(!mounted)return;
-   ScaffoldMessenger.of(context).showSnackBar(SnackBar(behavior:SnackBarBehavior.floating,
-    margin:const EdgeInsets.fromLTRB(16,8,16,12),content:Text(waffraIsEnglish?'Local demo profile opened — not authenticated with $selected':'تم الدخول للملف المحلي التجريبي بنجاح — لم تتم المصادقة مع $selected')));
+   snackSuccess(context,waffraIsEnglish?'Local demo profile opened — not authenticated with $selected':'تم الدخول للملف المحلي التجريبي بنجاح — لم تتم المصادقة مع $selected');
   }finally{if(mounted)setState(()=>socialBusy=false);}
  }
 
@@ -1568,34 +1567,56 @@ class _ProfileFormState extends State<ProfileForm> {
 void disposeLater(List<TextEditingController> controllers){
  Future<void>.delayed(const Duration(milliseconds:700),(){for(final c in controllers){c.dispose();}});
 }
-void snack(BuildContext context,String text){
+// All transient notices use the same footer-anchored surface throughout the app.
+// Required-field validation remains inline using InputDecoration.errorText.
+void snack(BuildContext context,String text,{
+ bool isError=true,
+ String? actionLabel,
+ VoidCallback? onAction,
+ Duration duration=const Duration(seconds:5),
+}){
  if(!context.mounted)return;
  final messenger=ScaffoldMessenger.of(context);
  messenger.hideCurrentMaterialBanner();
  messenger.hideCurrentSnackBar();
  final dark=Theme.of(context).brightness==Brightness.dark;
- final error=RegExp(r'لا يمكن|لا توجد|لا يوجد|تعذر|فشل|خطأ|يجب|مطلوب|غير صالح|غير متاح|لم يتم|cannot|could not|failed|error|invalid|required|must|not found|unavailable|no transactions|no data',caseSensitive:false).hasMatch(text);
+ final background=isError
+  ?(dark?const Color(0xFF4A2429):const Color(0xFFFFE1E2))
+  :(dark?const Color(0xFF163F31):const Color(0xFFE6F5EB));
+ final foreground=isError
+  ?(dark?const Color(0xFFFFDEE0):const Color(0xFF9D1D25))
+  :(dark?const Color(0xFFB5F2D4):const Color(0xFF07563B));
+ final outline=isError?const Color(0xFFE67B81):const Color(0xFF0C7957);
  messenger.showSnackBar(SnackBar(
   behavior:SnackBarBehavior.floating,
-  margin:const EdgeInsets.fromLTRB(12,8,12,10),
-  duration:const Duration(seconds:5),
-  backgroundColor:error?(dark?const Color(0xFF572629):const Color(0xFFFFE1E2)):
-   (dark?const Color(0xFF173D31):const Color(0xFFE6F5EB)),
-  shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18),
-   side:BorderSide(color:error?const Color(0xFFE56C74):emerald,width:1.1)),
+  margin:const EdgeInsets.fromLTRB(12,0,12,8),
+  duration:duration,
+  backgroundColor:background,
+  elevation:5,
+  padding:const EdgeInsets.symmetric(horizontal:12,vertical:9),
+  shape:RoundedRectangleBorder(
+   borderRadius:BorderRadius.circular(18),
+   side:BorderSide(color:outline,width:1.2)),
   content:Row(children:[
-   Icon(error?Icons.error_outline_rounded:Icons.info_outline_rounded,
-    color:error?(dark?const Color(0xFFFF9FA4):const Color(0xFFB4232A)):emerald),
-   const SizedBox(width:10),
+   Icon(isError?Icons.error_rounded:Icons.check_circle_rounded,color:foreground,size:25),
+   const SizedBox(width:9),
    Expanded(child:WaffraText(text,maxLines:4,
-    style:TextStyle(color:error?(dark?const Color(0xFFFFE5E6):const Color(0xFF9D1D25)):
-     (dark?Colors.white:forest),fontWeight:FontWeight.w600))),
+    style:TextStyle(color:foreground,fontSize:14,fontWeight:FontWeight.w700))),
+   if(onAction!=null)TextButton(
+    onPressed:(){messenger.hideCurrentSnackBar();onAction();},
+    child:WaffraText(actionLabel??(waffraIsEnglish?'Undo':'تراجع'),
+     style:TextStyle(color:foreground,fontWeight:FontWeight.bold))),
+   IconButton(
+    tooltip:waffraIsEnglish?'Close':'إغلاق',
+    icon:Icon(Icons.close_rounded,color:foreground,size:22),
+    visualDensity:VisualDensity.compact,
+    padding:EdgeInsets.zero,
+    constraints:const BoxConstraints(minWidth:32,minHeight:32),
+    onPressed:()=>messenger.hideCurrentSnackBar()),
   ]),
-  action:SnackBarAction(label:waffraIsEnglish?'Close':'إغلاق',
-   textColor:error?(dark?const Color(0xFFFFC5C8):const Color(0xFF9D1D25)):emerald,
-   onPressed:()=>messenger.hideCurrentSnackBar()),
  ));
 }
+void snackSuccess(BuildContext context,String text)=>snack(context,text,isError:false);
 
 /* Waffra concept-2 section header. A shared visual component only:
    each existing page retains its interactions, state, and data. */
@@ -2362,7 +2383,7 @@ Future<void> bulkSmsSheet()async {
        await budgetAlert(entry,previous);
        if(!ctx.mounted)return;
        savedCount++;
-       if(index+1>=messages.length){Navigator.pop(ctx);if(mounted)snack(context,'تم حفظ $savedCount عملية بنجاح');}
+       if(index+1>=messages.length){Navigator.pop(ctx);if(mounted)snackSuccess(context,'تم حفظ $savedCount عملية بنجاح');}
        else{await prepare(index+1,update);update(()=>busy=false);}
       },child:WaffraText(index+1==messages.length?'إضافة المعاملة وحفظها':'إضافة المعاملة وحفظها ثم التالي')),
       if(index+1<messages.length)TextButton(onPressed:busy?null:()=>prepare(index+1,update),child:const WaffraText('تخطي هذه الرسالة')),
@@ -2952,19 +2973,14 @@ Future<void> bulkSmsSheet()async {
   setState(()=>entries.removeWhere((x)=>x.id==e.id));
   await persist();
   if(!mounted)return;
-  ScaffoldMessenger.of(context).hideCurrentSnackBar();
-  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-   behavior:SnackBarBehavior.floating,margin:const EdgeInsets.fromLTRB(16,8,16,12),
-   duration:const Duration(seconds:6),
-   content:WaffraText(waffraIsEnglish?'Transaction deleted':'تم حذف العملية'),
-   action:SnackBarAction(
-    label:waffraIsEnglish?'Undo':'تراجع',
-    onPressed:()async{
-     if(!mounted||entries.any((x)=>x.id==e.id))return;
-     setState(()=>entries.insert(0,e));
-     await persist();
-    }),
-  ));
+  snack(context,waffraIsEnglish?'Transaction deleted':'تم حذف العملية',
+   isError:false,duration:const Duration(seconds:6),
+   actionLabel:waffraIsEnglish?'Undo':'تراجع',
+   onAction:()async{
+    if(!mounted||entries.any((x)=>x.id==e.id))return;
+    setState(()=>entries.insert(0,e));
+    await persist();
+   });
  }
  Widget stat(String label,double value,IconData icon,Color color)=>Expanded(
   child:Card(child:Padding(padding:const EdgeInsets.all(12),
@@ -3084,7 +3100,7 @@ Future<void> bulkSmsSheet()async {
    final saved=await prefs.setString('entries','[]');
    final cleared=await prefs.setStringList('waffra_sms_hashes_v1',<String>[]);
    if(!saved||!cleared)throw StateError('Failed to persist deletion');
-   if(mounted)snack(context,waffraIsEnglish?'All transactions deleted':'تم حذف جميع المعاملات');
+   if(mounted)snackSuccess(context,waffraIsEnglish?'All transactions deleted':'تم حذف جميع المعاملات');
   }catch(e){
    if(mounted){setState((){entries.addAll(backup);smsHashes.addAll(hashBackup);});snack(context,waffraIsEnglish?'Delete failed':'فشل حذف المعاملات');}
   }
@@ -3138,7 +3154,7 @@ Future<void> bulkSmsSheet()async {
    if(next!=null&&mounted){
     setState((){monthlyBudgetEnabled=next.enabled;monthlyBudget=next.amount;});
     await persist();
-    if(mounted)snack(context,waffraIsEnglish?'Monthly budget settings saved':'تم حفظ إعدادات الميزانية الشهرية');
+    if(mounted)snackSuccess(context,waffraIsEnglish?'Monthly budget settings saved':'تم حفظ إعدادات الميزانية الشهرية');
    }
   }finally{disposeLater([amount]);}
  }
@@ -4381,7 +4397,7 @@ Future<void> bulkSmsSheet()async {
    deletedCategories.add({'category':c.toJson(),'deletedAt':DateTime.now().toIso8601String()});
   });
   await persist();
-  if(mounted)snack(context,waffraIsEnglish?'Category moved to Recently Deleted for 30 days':'تم نقل القسم للمحذوفات لمدة 30 يومًا');
+  if(mounted)snackSuccess(context,waffraIsEnglish?'Category moved to Recently Deleted for 30 days':'تم نقل القسم للمحذوفات لمدة 30 يومًا');
  }
  Future<void> showCategoryTrash()async {
   final before=deletedCategories.length;
@@ -4428,7 +4444,7 @@ Future<void> bulkSmsSheet()async {
              await persist();
              if(!dialogCtx.mounted)return;
              Navigator.pop(dialogCtx);
-             if(mounted)snack(context,waffraIsEnglish
+             if(mounted)snackSuccess(context,waffraIsEnglish
               ?'Category restored with zero balance and no budget. Add new transactions and a budget to use it.'
               :'تم استرجاع القسم بقيمة صفر وبدون ميزانية. سجّل عليه معاملات وميزانية جديدة.');
             },
@@ -4518,7 +4534,7 @@ Future<void> bulkSmsSheet()async {
   disposeLater([name,target]);
   if(g!=null&&mounted){
    setState(()=>goals.add(g));await persist();
-   if(mounted)snack(context,'تمت إضافة الهدف بنجاح');
+   if(mounted)snackSuccess(context,'تمت إضافة الهدف بنجاح');
   }
  }
  Future<void> fundGoal(SavingGoal g)async {
@@ -5036,7 +5052,7 @@ Future<void> bulkSmsSheet()async {
     const SizedBox(height:10),
     FilledButton.icon(onPressed:()async {
      await Clipboard.setData(ClipboardData(text:exportBackup()));
-     if(ctx.mounted)snack(ctx,'تم نسخ البيانات، احفظها في مكان آمن');
+     if(ctx.mounted)snackSuccess(ctx,'تم نسخ البيانات، احفظها في مكان آمن');
     },icon:const Icon(Icons.copy),label:const WaffraText('نسخ النسخة الاحتياطية')),
     const SizedBox(height:12),
     TextField(controller:input,minLines:4,maxLines:7,onChanged:(_)=>update(()=>backupError=null),
@@ -5089,7 +5105,7 @@ Future<void> bulkSmsSheet()async {
       await persist();
       await syncRecurringReminders();
       if(ctx.mounted)Navigator.pop(ctx);
-      if(mounted)snack(context,'تمت استعادة البيانات بنجاح');
+      if(mounted)snackSuccess(context,'تمت استعادة البيانات بنجاح');
      }catch(e){
       if(ctx.mounted)update(()=>backupError=waffraIsEnglish?'Invalid backup. Check the entire JSON text.':'النسخة غير صالحة، تأكد من النص كامل');
      }
@@ -5156,7 +5172,7 @@ Future<void> bulkSmsSheet()async {
     verifyError:waffraIsEnglish?'Incorrect PIN':'رمز القفل غير صحيح');
    if(oldPin==null||!mounted)return;
    await widget.onSetPin(null);
-   if(mounted)snack(context,waffraIsEnglish?'App lock disabled':'تم إلغاء القفل');
+   if(mounted)snackSuccess(context,waffraIsEnglish?'App lock disabled':'تم إلغاء القفل');
    return;
   }
   final firstPin=await _askForPin(
@@ -5173,7 +5189,7 @@ Future<void> bulkSmsSheet()async {
    if(firstPin==repeated){
     // The existing onSetPin stores only SHA-256 of the confirmed PIN.
     await widget.onSetPin(firstPin);
-    if(mounted)snack(context,waffraIsEnglish?'App lock enabled':'تم تفعيل قفل التطبيق');
+    if(mounted)snackSuccess(context,waffraIsEnglish?'App lock enabled':'تم تفعيل قفل التطبيق');
     return;
    }
   }
@@ -5317,7 +5333,7 @@ Future<void> bulkSmsSheet()async {
    verifyError:waffraIsEnglish?'PINs do not match':'الرمزان غير متطابقين');
   if(again==null||!mounted)return;
   await widget.onSetPin(next);
-  if(mounted)snack(context,waffraIsEnglish?'PIN changed':'تم تغيير الرمز بنجاح');
+  if(mounted)snackSuccess(context,waffraIsEnglish?'PIN changed':'تم تغيير الرمز بنجاح');
  }
  Future<void> eraseFinancialData()async {
   final ok=await confirmDeletion(
@@ -5332,7 +5348,7 @@ Future<void> bulkSmsSheet()async {
   });
   final p=await SharedPreferences.getInstance();
   await p.remove('waffra_sms_hashes_v1');await persist();
-  if(mounted)snack(context,waffraIsEnglish?'Financial data deleted':'تم حذف البيانات المالية');
+  if(mounted)snackSuccess(context,waffraIsEnglish?'Financial data deleted':'تم حذف البيانات المالية');
  }
  Widget _accountTile(String label,String subtitle,IconData icon,{VoidCallback? onTap,Widget? trailing,Color tint=emerald})=>
   ListTile(
