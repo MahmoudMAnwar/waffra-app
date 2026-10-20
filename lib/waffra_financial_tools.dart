@@ -152,7 +152,7 @@ class _WaffraFinancialCalendarState extends State<WaffraFinancialCalendar> {
             color:active?(dark?const Color(0xFF246D50):const Color(0xFFADF0C9)):null,
             borderRadius:BorderRadius.circular(12)),
            child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
-            Text('$'+'day',style:TextStyle(fontSize:14,
+            Text('$day',style:TextStyle(fontSize:14,
              fontWeight:active?FontWeight.w800:FontWeight.w500,
              color:active?const Color(0xFF06412E):ink)),
             if(hasIncome||hasExpense)...[
