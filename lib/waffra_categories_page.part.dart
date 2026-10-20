@@ -51,7 +51,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(19),
      side:BorderSide(color:color.withValues(alpha:.32))),
     child:InkWell(onTap:()=>setState((){
-     if(opened){expandedCategoryIds.remove(root.id);}else{expandedCategoryIds.add(root.id);}
+     if(opened){expandedCategoryIds.clear();}else{expandedCategoryIds..clear()..add(root.id);}
     }),child:Padding(padding:const EdgeInsets.all(9),
      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       Row(children:[
