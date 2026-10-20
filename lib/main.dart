@@ -93,6 +93,18 @@ class RiyalAmount extends StatelessWidget {
    ]));
  }
 }
+/// Preserve older single-receipt records while supporting multiple images.
+List<String> waffraReceiptPaths(String? value){
+ if(value==null||value.trim().isEmpty)return [];
+ if(value.startsWith('[')){
+  try{return (jsonDecode(value) as List).map((e)=>e.toString()).where((e)=>e.isNotEmpty).toList();}
+  catch(_){}
+ }
+ return [value];
+}
+String? waffraEncodeReceipts(List<String> paths)=>
+ paths.isEmpty?null:(paths.length==1?paths.first:jsonEncode(paths));
+
 class MoneyEntry {
  final String id,title,category;final double amount;final bool income;final DateTime date;
  final String? receiptPath;
@@ -1865,18 +1877,26 @@ Future<void> bulkSmsSheet()async {
       Row(children:[
        Expanded(child:OutlinedButton.icon(onPressed:()async{
         final file=await ImagePicker().pickImage(source:ImageSource.camera,imageQuality:80);
-        if(file!=null){final path=await saveReceipt(file);if(sheetContext.mounted)update(()=>receiptPath=path);}
+        if(file!=null){final path=await saveReceipt(file);if(sheetContext.mounted)update(()=>receiptPath=waffraEncodeReceipts([...waffraReceiptPaths(receiptPath),path]));}
        },icon:const Icon(Icons.camera_alt_outlined),label:const WaffraText('تصوير فاتورة'))),
        const SizedBox(width:8),
        Expanded(child:OutlinedButton.icon(onPressed:()async{
-        final file=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:80);
-        if(file!=null){final path=await saveReceipt(file);if(sheetContext.mounted)update(()=>receiptPath=path);}
+        final files=await ImagePicker().pickMultiImage(imageQuality:80);
+        if(files.isNotEmpty){final paths=<String>[...waffraReceiptPaths(receiptPath)];
+         for(final file in files){paths.add(await saveReceipt(file));}
+         if(sheetContext.mounted)update(()=>receiptPath=waffraEncodeReceipts(paths));}
        },icon:const Icon(Icons.attach_file),label:const WaffraText('إرفاق صورة'))),
       ]),
-      if(receiptPath!=null)ListTile(
-       title:WaffraText(receiptPath!.split('/').last.replaceFirst(RegExp(r'^\d+__'),'')),leading:const Icon(Icons.image,color:emerald),
-       trailing:IconButton(icon:const Icon(Icons.close),onPressed:()=>update(()=>receiptPath=null)),
-       onTap:()=>showReceipt(receiptPath!)),
+      if(waffraReceiptPaths(receiptPath).isNotEmpty)...[
+       for(final path in waffraReceiptPaths(receiptPath))
+        ListTile(dense:true,
+         title:WaffraText(path.split('/').last.replaceFirst(RegExp(r'^\\d+__'),'')),
+         leading:const Icon(Icons.image,color:emerald),
+         trailing:IconButton(icon:const Icon(Icons.close),onPressed:()=>update((){
+          receiptPath=waffraEncodeReceipts([...waffraReceiptPaths(receiptPath)]..remove(path));
+         })),
+         onTap:()=>showReceipt(receiptPath!,initialIndex:waffraReceiptPaths(receiptPath).indexOf(path))),
+      ],
       const SizedBox(height:12),
       FilledButton(onPressed:analyzing?null:()async {
        update(()=>attempted=true);
@@ -1943,16 +1963,33 @@ Future<void> bulkSmsSheet()async {
   await File(picked.path).copy(target);
   return target;
  }
- Future<void> showReceipt(String path)async {
-  if(!await File(path).exists()){
-   if(mounted)snack(context,'ما لقينا الصورة على الجهاز');return;
-  }
+ Future<void> showReceipt(String encoded,{int initialIndex=0})async {
+  final paths=waffraReceiptPaths(encoded);
+  final available=<String>[];
+  for(final path in paths){if(await File(path).exists())available.add(path);}
+  if(available.isEmpty){if(mounted)snack(context,waffraIsEnglish?'Images not found on this device':'ما لقينا الصور على الجهاز');return;}
   if(!mounted)return;
-  await showWaffraDialog<void>(context:context,builder:(ctx)=>Dialog(child:Column(mainAxisSize:MainAxisSize.min,children:[
-   SizedBox(height:MediaQuery.of(ctx).size.height*.65,width:MediaQuery.of(ctx).size.width*.85,
-    child:InteractiveViewer(child:Image.file(File(path),fit:BoxFit.contain))),
-   TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إغلاق')),
-  ])));
+  final controller=PageController(initialPage:initialIndex.clamp(0,available.length-1));
+  int current=initialIndex.clamp(0,available.length-1);
+  try{
+   await showWaffraDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>Dialog(
+    backgroundColor:Colors.black,
+    insetPadding:const EdgeInsets.symmetric(horizontal:10,vertical:32),
+    child:Column(mainAxisSize:MainAxisSize.min,children:[
+     Row(children:[
+      IconButton(onPressed:()=>Navigator.pop(ctx),icon:const Icon(Icons.close,color:Colors.white)),
+      Expanded(child:Center(child:Text('${current+1} / ${available.length}',
+       style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold)))),
+      const SizedBox(width:48),
+     ]),
+     SizedBox(height:MediaQuery.of(ctx).size.height*.65,
+      child:PageView.builder(controller:controller,itemCount:available.length,
+       onPageChanged:(index)=>update(()=>current=index),
+       itemBuilder:(ctx,index)=>InteractiveViewer(
+        minScale:0.8,maxScale:5,child:Image.file(File(available[index]),fit:BoxFit.contain)))),
+     const SizedBox(height:12),
+    ]))));
+  }finally{controller.dispose();}
  }
  Future<void> budgetAlert(MoneyEntry entry,double previousSpent)async {
   if(entry.income)return;
