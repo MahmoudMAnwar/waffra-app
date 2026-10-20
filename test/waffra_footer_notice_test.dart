@@ -50,7 +50,7 @@ void main() {
   final toast=tester.widget<SnackBar>(find.byType(SnackBar));
   expect(toast.behavior,SnackBarBehavior.floating);
   expect(toast.backgroundColor,const Color(0xFFFFE1E2));
-  expect(find.text(message),findsOneWidget);
+  expect(find.byWidgetPredicate((w)=>w is WaffraText&&w.data==message),findsOneWidget);
   expect(find.byType(MaterialBanner),findsNothing);
   final toastBottom=tester.getBottomLeft(find.byType(SnackBar)).dy;
   final footerTop=tester.getTopLeft(find.byKey(const Key('waffra-footer'))).dy;
@@ -69,7 +69,7 @@ void main() {
   await tester.pump(const Duration(milliseconds:350));
   expect(tester.widget<SnackBar>(find.byType(SnackBar)).backgroundColor,
    const Color(0xFF4A2429));
-  expect(find.text('تعذر إتمام العملية'),findsOneWidget);
+  expect(find.byWidgetPredicate((w)=>w is WaffraText&&w.data=='تعذر إتمام العملية'),findsOneWidget);
   await tester.tap(find.byTooltip('إغلاق'));
   await tester.pump(const Duration(milliseconds:400));
   expect(find.byType(SnackBar),findsNothing);
@@ -88,7 +88,7 @@ void main() {
   await tester.pump(const Duration(milliseconds:350));
   final notice=tester.widget<SnackBar>(find.byType(SnackBar));
   expect(notice.backgroundColor,const Color(0xFFE6F5EB));
-  expect(find.text('تم الحفظ بنجاح'),findsOneWidget);
+  expect(find.byWidgetPredicate((w)=>w is WaffraText&&w.data=='تم الحفظ بنجاح'),findsOneWidget);
   expect(tester.getBottomLeft(find.byType(SnackBar)).dy,
    lessThanOrEqualTo(tester.getTopLeft(find.byKey(const Key('waffra-footer'))).dy+1));
  });
