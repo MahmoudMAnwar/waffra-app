@@ -70,7 +70,7 @@ class WaffraFooterNavigation extends StatelessWidget {
                gradient:const LinearGradient(colors:[Color(0xFF087A54),Color(0xFF003B31)]),
                border:Border.all(color:neon,width:2.4),
                boxShadow:[
-                BoxShadow(color:neon.withValues(alpha:active?.54:.30),blurRadius:active?24:14,spreadRadius:active?3:0),
+                BoxShadow(color:neon.withValues(alpha:active ? .54 : .30),blurRadius:active?24:14,spreadRadius:active?3:0),
                 const BoxShadow(color:Color(0x55000000),blurRadius:8,offset:Offset(0,4)),
                ]),
               child:const Icon(Icons.auto_awesome_rounded,color:Colors.white,size:28))),
