@@ -137,11 +137,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
     ])));
    for(final root in [left,if(right!=null)right]){
     if(!expandedCategoryIds.contains(root.id))continue;
-    final items=children(root)..sort((a,b){
-      final aWrap=a.displayName.length>19?1:0;
-      final bWrap=b.displayName.length>19?1:0;
-      return aWrap.compareTo(bWrap);
-     });
+    final items=children(root);
     groupRows.add(Container(
      margin:const EdgeInsets.only(bottom:14),
      padding:const EdgeInsets.all(12),
@@ -161,8 +157,23 @@ extension WaffraCategoryScreen on _HomeScreenState {
         child:WaffraText(waffraIsEnglish?'No subcategories':'لا توجد أقسام فرعية'))
       else LayoutBuilder(builder:(ctx,size){
        final width=(size.maxWidth-9)/2;
+       final usableLabelWidth=(width-91).clamp(18.0,double.infinity).toDouble();
+       bool needsTwoLines(BudgetCategory sub){
+        final painter=TextPainter(
+         text:TextSpan(text:sub.displayName,
+          style:const TextStyle(fontFamily:'Tajawal',fontSize:12,fontWeight:FontWeight.bold)),
+         maxLines:1,
+         textDirection:waffraIsEnglish?TextDirection.ltr:TextDirection.rtl,
+         textScaler:MediaQuery.textScalerOf(ctx),
+        )..layout(maxWidth:usableLabelWidth);
+        final needsWrap=painter.didExceedMaxLines;
+        painter.dispose();
+        return needsWrap;
+       }
+       final ordered=[...items]..sort((a,b)=>
+        (needsTwoLines(a)?1:0).compareTo(needsTwoLines(b)?1:0));
        return Wrap(spacing:9,runSpacing:9,children:[
-        for(final sub in items)SizedBox(width:width,child:childCard(sub)),
+        for(final sub in ordered)SizedBox(width:width,child:childCard(sub)),
        ]);
       }),
      ])));
