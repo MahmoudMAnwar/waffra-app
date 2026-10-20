@@ -2130,7 +2130,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
  }
  double sum(Iterable<MoneyEntry> list,bool income)=>
-  list.where((e)=>e.income==income).fold(0.0,(v,e)=>v+e.amount);
+  list.where((e)=>e.income==income).fold<int>(0,(v,e)=>v+WaffraRecurringPolicy.toHalalas(e.amount))/100;
  BudgetCategory categoryFor(String name,bool income) {
   for(final c in categories){if(c.name==name&&c.income==income)return c;}
   return BudgetCategory(id:'fallback',name:name,icon:'category',color:colors[7],income:income);
@@ -2632,9 +2632,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
         income=v.first;category=forType(income).isNotEmpty?forType(income).first.name:'أخرى';suggestion=null;
        })),
       const SizedBox(height:12),
-      TextField(controller:title,onChanged:(_)=>update((){}),
+      TextField(controller:title,onChanged:(_)=>update((){}),minLines:1,maxLines:5,
        decoration:InputDecoration(labelText:waffraIsEnglish?'Description *':'وصف العملية *',
-        errorText:attempted?waffraTextFieldError(title.text):null,
+        errorText:attempted&&title.text.trim().isEmpty?waffraRequiredFieldMessage:null,
         border:OutlineInputBorder())),
       const SizedBox(height:12),
       TextField(controller:value,keyboardType:const TextInputType.numberWithOptions(decimal:true),
@@ -2700,7 +2700,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       FilledButton(onPressed:analyzing?null:()async {
        update(()=>attempted=true);
        final n=amountOf(value.text);
-       if(waffraTextFieldError(title.text)!=null||waffraAmountFieldError(value.text)!=null||n==null)return;
+       if(title.text.trim().isEmpty||waffraAmountFieldError(value.text)!=null||n==null)return;
        if(sms){
         if(message.text.trim().isEmpty)return;
         final h=sha256.convert(utf8.encode(digits(message.text).replaceAll(RegExp(r'\s+'),' ').trim().toLowerCase())).toString();
