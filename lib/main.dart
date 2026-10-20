@@ -2279,8 +2279,7 @@ Future<void> bulkSmsSheet()async {
        suffixIcon:pasted.text.isNotEmpty?IconButton(tooltip:waffraIsEnglish?'Clear text':'مسح النص',icon:const Icon(Icons.clear_rounded,color:Colors.redAccent),onPressed:(){pasteTimer?.cancel();pasted.clear();update((){parsed=false;analyzingPaste=false;messages=[];statusMessage='';});}):null,
        border:OutlineInputBorder(borderRadius:BorderRadius.circular(18)))),
       const SizedBox(height:12),
-     Row(children:[
-      Expanded(child:OutlinedButton.icon(icon:const Icon(Icons.content_paste),
+     SizedBox(width:double.infinity,child:OutlinedButton.icon(icon:const Icon(Icons.content_paste),
        onPressed:busy?null:()async {
         final data=await Clipboard.getData(Clipboard.kTextPlain);
         if(!ctx.mounted)return;
@@ -2294,17 +2293,7 @@ Future<void> bulkSmsSheet()async {
          update((){messages=splitBankMessages(text);parsed=true;analyzingPaste=false;statusMessage=noTransactionWarning(text)??'';});
          if(statusMessage.isEmpty&&messages.isNotEmpty)saveParsedMessages(ctx,update);
         });
-       },label:WaffraText(waffraIsEnglish?'Paste copied SMS':'لصق آخر رسالة نسختها',maxLines:1,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700)))),
-      const SizedBox(width:8),
-      Expanded(child:OutlinedButton.icon(onPressed:()async{
-       final yes=await confirmDeletion(
-        waffraIsEnglish?'Clear pasted messages?':'حذف النص بالكامل',
-        waffraIsEnglish?'Clear all pasted text? Unsaved messages will be lost.':'هل تريد حذف النص الملصوق بالكامل؟ ستفقد الرسائل غير المحفوظة.');
-       if(yes!=true||!ctx.mounted)return;
-       pasteTimer?.cancel();pasted.clear();
-       update((){parsed=false;analyzingPaste=false;messages=[];statusMessage='';rejectedMessages=[];});
-      },icon:const Icon(Icons.delete_outline,size:18),label:WaffraText(waffraIsEnglish?'Clear all':'حذف النص بالكامل',maxLines:1,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700)))),
-     ]),
+       },label:WaffraText(waffraIsEnglish?'Paste copied SMS':'لصق آخر رسالة نسختها',maxLines:1,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700))),
       if(analyzingPaste)...[const SizedBox(height:12),const LinearProgressIndicator(),const SizedBox(height:6),WaffraText(waffraIsEnglish?'Analyzing your bank messages now…':'يتم الآن تحليل الرسائل البنكية واستخراج المعاملات…')],
       
       if(rejectedMessages.isNotEmpty)...[
@@ -4304,6 +4293,43 @@ Future<void> bulkSmsSheet()async {
     ])));
   disposeLater([name,budget]);return result;
  }
+ Future<void> chooseCategoryLevel({required bool income})async{
+  final parents=categories.where((c)=>!c.isSubcategory&&c.income==income).toList();
+  final choice=await showWaffraDialog<String>(context:context,
+   builder:(ctx)=>AlertDialog(
+    title:WaffraText(income
+     ?(waffraIsEnglish?'Add income category':'إضافة قسم دخل')
+     :(waffraIsEnglish?'Add expense category':'إضافة قسم مصروفات')),
+    content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+     ListTile(leading:const Icon(Icons.create_new_folder_outlined,color:emerald),
+      title:WaffraText(waffraIsEnglish?'New main category':'إضافة قسم رئيسي'),
+      onTap:()=>Navigator.pop(ctx,'main')),
+     ListTile(leading:const Icon(Icons.account_tree_outlined,color:emerald),
+      title:WaffraText(waffraIsEnglish?'New subcategory':'إضافة قسم فرعي'),
+      onTap:()=>Navigator.pop(ctx,'sub')),
+    ]),
+   ));
+  if(!mounted||choice==null)return;
+  if(choice=='main'){await addCategory(income:income);return;}
+  if(parents.isEmpty){
+   snack(context,waffraIsEnglish?'Create a main category first':'يجب إضافة قسم رئيسي أولًا');
+   return;
+  }
+  final parentId=await showWaffraDialog<String>(context:context,
+   builder:(ctx)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Choose main category':'اختر القسم الرئيسي'),
+    content:SizedBox(width:double.maxFinite,height:min(360.0,MediaQuery.sizeOf(ctx).height*.48),
+     child:ListView.builder(itemCount:parents.length,itemBuilder:(ctx,index){
+      final parent=parents[index];
+      return ListTile(
+       leading:Icon(categoryIcon(parent.icon),color:Color(parent.color)),
+       title:WaffraText(parent.name),
+       onTap:()=>Navigator.pop(ctx,parent.id));
+     })),
+   ));
+  if(!mounted||parentId==null)return;
+  await addCategory(income:income,parentId:parentId);
+ }
  Future<void> addCategory({bool income=false,String parentId=''})async {
   final c=await categoryDialog(income:income,parentId:parentId);
   if(c==null||!mounted)return;
@@ -4436,8 +4462,50 @@ Future<void> bulkSmsSheet()async {
              if(categories.any((c)=>c.name==original.name&&c.income==original.income)){
               snack(dialogCtx,waffraIsEnglish?'A category with this name already exists':'يوجد قسم نشط بنفس الاسم بالفعل');return;
              }
+             BudgetCategory? restoreParent;
+             if(original.isSubcategory&&
+              !categories.any((c)=>c.id==original.parentId)){
+              final deletedParent=deletedCategories.where((record){
+               final raw=record['category'];
+               return raw is Map&&raw['id']==original.parentId;
+              }).toList();
+              if(deletedParent.isEmpty){
+               snack(dialogCtx,waffraIsEnglish
+                ?'Restore the main category first. It is no longer in Recently Deleted.'
+                :'يجب استرجاع القسم الرئيسي أولًا؛ لأنه غير موجود في الأقسام المحذوفة.');
+               return;
+              }
+              restoreParent=BudgetCategory.fromJson(
+               Map<String,dynamic>.from(deletedParent.first['category'] as Map));
+              if(categories.any((c)=>c.income==restoreParent!.income&&c.name==restoreParent.name)){
+               snack(dialogCtx,waffraIsEnglish
+                ?'Cannot restore the parent: another category has the same name.'
+                :'لا يمكن استرجاع القسم الرئيسي لوجود قسم آخر بنفس الاسم.');
+               return;
+              }
+              final approved=await showWaffraDialog<bool>(context:dialogCtx,
+               builder:(confirmCtx)=>AlertDialog(
+                title:WaffraText(waffraIsEnglish?'Restore main category too?':'استرجاع القسم الرئيسي أيضًا؟'),
+                content:WaffraText(waffraIsEnglish
+                 ?'Restoring this subcategory also restores its deleted main category «${restoreParent!.name}». Both budgets will reset to zero. Continue?'
+                 :'استرجاع هذا القسم الفرعي سيؤدي أيضًا إلى استرجاع القسم الرئيسي «${restoreParent!.name}». ستعود الميزانيات بقيمة صفر. هل تريد المتابعة؟'),
+                actions:[
+                 TextButton(onPressed:()=>Navigator.pop(confirmCtx,false),
+                  child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+                 FilledButton(onPressed:()=>Navigator.pop(confirmCtx,true),
+                  child:WaffraText(waffraIsEnglish?'Restore both':'استرجاع الاثنين')),
+                ]));
+              if(approved!=true||!dialogCtx.mounted)return;
+             }
              final restored=original.copy(budget:0);
              setState((){
+              if(restoreParent!=null){
+               categories.add(restoreParent!.copy(budget:0));
+               deletedCategories.removeWhere((record){
+                final raw=record['category'];
+                return raw is Map&&raw['id']==restoreParent!.id;
+               });
+              }
               categories.add(restored);
               deletedCategories.remove(item);
              });
@@ -5628,11 +5696,11 @@ Future<void> bulkSmsSheet()async {
         ]else...[
          _addMenuOption(icon:Icons.trending_up,
           label:waffraIsEnglish?'Income category':'إضافة قسم دخل',
-          onTap:(){setState(()=>addFabExpanded=false);addCategory(income:true);}),
+          onTap:(){setState(()=>addFabExpanded=false);chooseCategoryLevel(income:true);}),
          const SizedBox(height:7),
          _addMenuOption(icon:Icons.trending_down,
           label:waffraIsEnglish?'Expense category':'إضافة قسم مصروفات',
-          onTap:(){setState(()=>addFabExpanded=false);addCategory();}),
+          onTap:(){setState(()=>addFabExpanded=false);chooseCategoryLevel(income:false);}),
         ],
        ])):const SizedBox.shrink()),
     Material(
