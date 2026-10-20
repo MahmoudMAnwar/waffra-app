@@ -30,7 +30,9 @@ void main() {
     for (final item in preserved) {
       expect(source.contains(item), isTrue, reason: 'Preserve: $item');
     }
-    expect(RegExp(r'NavigationDestination\(').allMatches(source).length, 6);
+    expect(source.contains('WaffraFooterNavigation('),isTrue);
+    final footerSource=File('lib/waffra_footer.dart').readAsStringSync();
+    expect(footerSource.contains('static const itemCount=6'),isTrue);
 
     // Keep the floating add action, but not the duplicate dashboard shortcut.
     expect(source.contains('floatingActionButton:'), isTrue);
