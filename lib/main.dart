@@ -1403,13 +1403,11 @@ class _ProfileFormState extends State<ProfileForm> {
   if(gender.isEmpty)return;
   final validEmail=RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email.text.trim());
   final validPhone=RegExp(r'^05[0-9]{8}$').hasMatch(phone.text.trim());
-  if(WaffraValidators.requiredText(name.text)!=null||!validPhone){
-   snack(context,waffraIsEnglish?'Enter a name and valid mobile number starting with 05':'أدخل الاسم ورقم جوال يبدأ بـ 05 من 10 أرقام');return;
-  }
+  if(WaffraValidators.requiredText(name.text)!=null||!validPhone)return;
   if(widget.initial==null){
-   if(!validPhone){snack(context,waffraIsEnglish?'Enter a 10-digit mobile number starting with 05':'أدخل رقم الجوال من 10 أرقام يبدأ بـ 05');return;}
+   if(!validPhone)return;
    if(!RegExp(r'^(?=.*[A-Za-z])(?=.*[0-9]).{8,}$').hasMatch(password.text)||password.text!=confirmPassword.text){
-    snack(context,waffraIsEnglish?'Password must be at least 8 characters, include letters and numbers, and match the confirmation.':'كلمة المرور يجب أن تكون 8 خانات على الأقل وتشمل أحرفًا وأرقامًا وتتطابق في الحقلين');return;
+    return;
    }
   }
   setState(()=>busy=true);
@@ -4762,24 +4760,29 @@ Future<void> bulkSmsSheet()async {
     final options=forType(income);
     final selected=options.any((x)=>x.name==category)?category:options.first.name;
     return AlertDialog(title:const WaffraText('عملية شهرية متكررة'),
-     content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+     content:SizedBox(width:340,child:SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,mainAxisSize:MainAxisSize.min,children:[
+      const SizedBox(height:12),
       TextField(controller:title,onChanged:(_)=>update((){}),decoration:InputDecoration(labelText:waffraIsEnglish?'Description *':'الوصف *',
-       errorText:attempted&&WaffraValidators.requiredText(title.text)!=null?(waffraIsEnglish?'Description is required':'الوصف حقل إجباري'):null)),
+       errorText:attempted&&WaffraValidators.requiredText(title.text)!=null?(waffraIsEnglish?'This field is required':'هذا الحقل مطلوب'):null)),
+      const SizedBox(height:12),
       TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
        inputFormatters:[const WaffraAmountFormatter()],onChanged:(_)=>update((){}),
        decoration:InputDecoration(labelText:waffraIsEnglish?'Amount *':'المبلغ *',
-        errorText:attempted&&WaffraValidators.positiveAmount(amount.text)!=null?(waffraIsEnglish?'Enter an amount greater than zero':'المبلغ حقل إجباري ويجب أن يكون أكبر من صفر'):null)),
+        errorText:attempted&&WaffraValidators.positiveAmount(amount.text)!=null?(waffraIsEnglish?'This field is required':'هذا الحقل مطلوب'):null)),
+      const SizedBox(height:12),
       DropdownButtonFormField<bool>(initialValue:income,
        items:const [DropdownMenuItem(value:true,child:WaffraText('دخل')),
         DropdownMenuItem(value:false,child:WaffraText('مصروف'))],
        onChanged:(v){if(v!=null)update((){income=v;category=forType(v).first.name;});}),
+      const SizedBox(height:12),
       DropdownButtonFormField<String>(key:ValueKey('$income-$selected'),initialValue:selected,
        items:options.map((c)=>DropdownMenuItem(value:c.name,child:WaffraText(c.name))).toList(),
        onChanged:(v){if(v!=null)update(()=>category=v);}),
+      const SizedBox(height:12),
       TextField(controller:day,keyboardType:TextInputType.number,onChanged:(_)=>update((){}),
        decoration:InputDecoration(labelText:waffraIsEnglish?'Day of month *':'يوم الشهر * (1 - 31)',
        errorText:attempted&&WaffraValidators.dayOfMonth(day.text)!=null?(waffraIsEnglish?'Choose a day from 1 to 31':'أدخل يومًا صحيحًا من 1 إلى 31'):null)),
-     ])),
+     ]))),
      actions:[
       TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إلغاء')),
       FilledButton(onPressed:(){
