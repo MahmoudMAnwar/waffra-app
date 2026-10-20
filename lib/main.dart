@@ -2337,6 +2337,58 @@ Future<void> bulkSmsSheet()async {
     Icon(icon,color:color),const SizedBox(height:8),WaffraText(label),const SizedBox(height:6),
     FittedBox(child:RiyalAmount(value,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:16))),
    ]))));
+ Future<void> transactionActions(MoneyEntry entry)async {
+  final hasReceipt=waffraReceiptPaths(entry.receiptPath).isNotEmpty;
+  final action=await showWaffraDialog<String>(context:context,builder:(ctx)=>SimpleDialog(
+   title:WaffraText(entry.title,maxLines:2),
+   children:[
+    if(hasReceipt)SimpleDialogOption(
+     onPressed:()=>Navigator.pop(ctx,'receipt'),
+     child:ListTile(leading:const Icon(Icons.photo_library_outlined,color:emerald),
+      title:WaffraText(waffraIsEnglish?'View images':'عرض الصور'))),
+    SimpleDialogOption(onPressed:()=>Navigator.pop(ctx,'open'),
+     child:ListTile(leading:const Icon(Icons.info_outline,color:emerald),
+      title:WaffraText(waffraIsEnglish?'View full transaction':'فتح المعاملة بالكامل'))),
+    SimpleDialogOption(onPressed:()=>Navigator.pop(ctx,'edit'),
+     child:ListTile(leading:const Icon(Icons.edit_outlined,color:emerald),
+      title:WaffraText(waffraIsEnglish?'Edit transaction':'تعديل المعاملة'))),
+    SimpleDialogOption(onPressed:()=>Navigator.pop(ctx,'delete'),
+     child:ListTile(leading:const Icon(Icons.delete_outline,color:Colors.red),
+      title:WaffraText(waffraIsEnglish?'Delete transaction':'حذف المعاملة',
+       style:const TextStyle(color:Colors.red)))),
+    SimpleDialogOption(onPressed:()=>Navigator.pop(ctx,'cancel'),
+     child:ListTile(leading:const Icon(Icons.close),
+      title:WaffraText(waffraIsEnglish?'Cancel':'إلغاء الإجراء'))),
+   ],
+  ));
+  if(!mounted)return;
+  switch(action){
+   case 'receipt':if(hasReceipt)await showReceipt(entry.receiptPath!);break;
+   case 'open':await transactionDetails(entry);break;
+   case 'edit':await entrySheet(initial:entry);break;
+   case 'delete':await deleteEntry(entry);break;
+  }
+ }
+ Future<void> transactionDetails(MoneyEntry entry)async {
+  await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+   title:WaffraText(waffraIsEnglish?'Transaction details':'تفاصيل المعاملة'),
+   content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    WaffraText(entry.title,style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold)),
+    const SizedBox(height:12),
+    WaffraText(waffraTr(entry.category)),
+    const SizedBox(height:8),
+    WaffraText(dayText(entry.date)),
+    const SizedBox(height:8),
+    WaffraCurrencyAmount(entry.income?entry.amount:-entry.amount,fontSize:24),
+    if(waffraReceiptPaths(entry.receiptPath).isNotEmpty)
+     TextButton.icon(onPressed:(){Navigator.pop(ctx);showReceipt(entry.receiptPath!);},
+      icon:const Icon(Icons.photo_library_outlined),
+      label:WaffraText(waffraIsEnglish?'View images':'عرض الصور')),
+   ]),
+   actions:[TextButton(onPressed:()=>Navigator.pop(ctx),
+    child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))],
+  ));
+ }
  Widget tile(MoneyEntry e){
   final c=categoryFor(e.category,e.income);
   return Card(color:e.income?const Color(0xFFB2D5C2):const Color(0xFFF0F7F2),child:ListTile(
@@ -2344,18 +2396,22 @@ Future<void> bulkSmsSheet()async {
     child:Icon(categoryIcon(c.icon),color:Color(c.color))),
    title:WaffraText(e.title),subtitle:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
     WaffraText('${e.category} • ${dayText(e.date)}'),
-    if(e.receiptPath!=null)InkWell(onTap:()=>showReceipt(e.receiptPath!),
-     child:const Padding(padding:EdgeInsets.only(top:4),child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.attach_file,size:15,color:emerald),WaffraText('عرض الفاتورة',style:TextStyle(color:emerald))]))),
+    if(waffraReceiptPaths(e.receiptPath).isNotEmpty)InkWell(
+     onTap:()=>showReceipt(e.receiptPath!),
+     child:Padding(padding:const EdgeInsets.only(top:4),
+      child:Row(mainAxisSize:MainAxisSize.min,children:[
+       const Icon(Icons.attach_file,size:17,color:emerald),
+       if(waffraReceiptPaths(e.receiptPath).length>1)
+        Text('${waffraReceiptPaths(e.receiptPath).length}',style:const TextStyle(color:emerald)),
+      ]))),
    ]),
    trailing:Row(mainAxisSize:MainAxisSize.min,children:[
     Column(mainAxisSize:MainAxisSize.min,children:[
      Text('${e.income?'+':'-'}${cash(e.amount)}',style:TextStyle(fontFamily:'Tajawal',fontSize:18,fontWeight:FontWeight.w800,color:e.income?waffraIncomeTone(context):null)),
      WaffraText(waffraIsEnglish?'SAR':'ريال',style:TextStyle(fontSize:13,fontWeight:FontWeight.bold,color:e.income?waffraIncomeTone(context):null)),
     ]),
-    PopupMenuButton<String>(onSelected:(v){
-     if(v=='edit')entrySheet(initial:e);else deleteEntry(e);
-    },itemBuilder:(_)=>const [PopupMenuItem(value:'edit',child:WaffraText('تعديل')),
-     PopupMenuItem(value:'delete',child:WaffraText('حذف'))]),
+    IconButton(tooltip:waffraIsEnglish?'Transaction options':'خيارات المعاملة',
+     onPressed:()=>transactionActions(e),icon:const Icon(Icons.more_vert)),
    ])));
  }
  String get greeting {
@@ -2779,10 +2835,15 @@ Future<void> bulkSmsSheet()async {
       Row(children:[
        Expanded(child:WaffraText(entry.title,maxLines:1,
         style:const TextStyle(fontSize:13,fontWeight:FontWeight.w600))),
-       if(entry.receiptPath!=null&&entry.receiptPath!.trim().isNotEmpty)...[
+       if(waffraReceiptPaths(entry.receiptPath).isNotEmpty)...[
         const SizedBox(width:4),
-        Tooltip(message:waffraIsEnglish?'Attachment':'مرفق',child:Icon(Icons.attach_file_rounded,size:16,
-         color:darkMode?Colors.white70:forest)),
+        InkWell(onTap:()=>showReceipt(entry.receiptPath!),
+         child:Row(mainAxisSize:MainAxisSize.min,children:[
+          Icon(Icons.attach_file_rounded,size:17,color:darkMode?Colors.white70:forest),
+          if(waffraReceiptPaths(entry.receiptPath).length>1)
+           Text('${waffraReceiptPaths(entry.receiptPath).length}',
+            style:TextStyle(fontSize:11,color:darkMode?Colors.white70:forest)),
+         ])),
        ],
       ]),
       const SizedBox(height:2),
@@ -2794,20 +2855,8 @@ Future<void> bulkSmsSheet()async {
      child:FittedBox(fit:BoxFit.scaleDown,
       child:WaffraCurrencyAmount(entry.income?entry.amount:-entry.amount,
        fontSize:15,color:valueColor))),
-    PopupMenuButton<String>(
-     tooltip:waffraIsEnglish?'Transaction options':'خيارات العملية',
-     onSelected:(action){
-      if(action=='edit')entrySheet(initial:entry);
-      if(action=='delete')deleteEntry(entry);
-     },
-     icon:const Icon(Icons.more_vert,size:18),
-     itemBuilder:(ctx)=>[
-      PopupMenuItem(value:'edit',
-       child:WaffraText(waffraIsEnglish?'Edit':'تعديل')),
-      PopupMenuItem(value:'delete',
-       child:WaffraText(waffraIsEnglish?'Delete':'حذف',
-        style:const TextStyle(color:Colors.red))),
-     ]),
+    IconButton(tooltip:waffraIsEnglish?'Transaction options':'خيارات المعاملة',
+     onPressed:()=>transactionActions(entry),icon:const Icon(Icons.more_vert,size:18)),
    ]))));
  }
  Widget dashboard(){
