@@ -2243,7 +2243,8 @@ Future<void> bulkSmsSheet()async {
        suffixIcon:pasted.text.isNotEmpty?IconButton(tooltip:waffraIsEnglish?'Clear text':'مسح النص',icon:const Icon(Icons.clear_rounded,color:Colors.redAccent),onPressed:(){pasteTimer?.cancel();pasted.clear();update((){parsed=false;analyzingPaste=false;messages=[];statusMessage='';});}):null,
        border:OutlineInputBorder(borderRadius:BorderRadius.circular(18)))),
       const SizedBox(height:12),
-      OutlinedButton.icon(icon:const Icon(Icons.content_paste),
+      Row(children:[
+      Expanded(child:OutlinedButton.icon(icon:const Icon(Icons.content_paste),
        onPressed:busy?null:()async {
         final data=await Clipboard.getData(Clipboard.kTextPlain);
         if(!ctx.mounted)return;
@@ -2258,27 +2259,8 @@ Future<void> bulkSmsSheet()async {
          if(statusMessage.isEmpty&&messages.isNotEmpty)saveParsedMessages(ctx,update);
         });
        },label:WaffraText(waffraIsEnglish?'Paste last copied message':'لصق آخر رسالة نسختها')),
-      if(analyzingPaste)...[const SizedBox(height:12),const LinearProgressIndicator(),const SizedBox(height:6),WaffraText(waffraIsEnglish?'Analyzing your bank messages now…':'يتم الآن تحليل الرسائل البنكية واستخراج المعاملات…')],
-      
-      if(rejectedMessages.isNotEmpty)...[
-       const SizedBox(height:8),
-       WaffraText(waffraIsEnglish?'Unrecognized messages — edit and retry':'رسائل لم يتم تحليلها — راجعها وأعد المحاولة',style:const TextStyle(fontWeight:FontWeight.bold)),
-       ...rejectedMessages.asMap().entries.map((item)=>Card(child:ListTile(
-        title:WaffraText(waffraIsEnglish?'Message ${item.key+1}':'رسالة ${item.key+1}'),
-        subtitle:SelectableText(item.value,maxLines:4),
-        trailing:IconButton(icon:const Icon(Icons.edit_outlined),tooltip:waffraIsEnglish?'Review manually':'مراجعة يدويًا',onPressed:(){
-         Navigator.pop(ctx);
-         entrySheet(sms:true,initialSms:item.value);
-        })))),
-      ],
-      if(parsed&&statusMessage.isEmpty)...[
-       const SizedBox(height:10),
-       WaffraText(waffraIsEnglish?'Detected ${messages.length} transactions':'تم اكتشاف ${messages.length} معاملة',
-        style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
-       const SizedBox(height:8),
-       WaffraText(waffraIsEnglish?'Analysis completed.':'اكتمل تحليل الرسائل.'),
-      ],
-      TextButton.icon(onPressed:()async{
+       const SizedBox(width:8),
+      Expanded(child:OutlinedButton.icon(onPressed:busy?null:()async{
        final yes=await confirmDeletion(
         waffraIsEnglish?'Clear pasted messages?':'حذف النص بالكامل',
         waffraIsEnglish?'Clear all pasted text? Unsaved messages will be lost.':'هل تريد حذف النص الملصوق بالكامل؟ ستفقد الرسائل غير المحفوظة.');
@@ -5619,7 +5601,30 @@ Future<void> bulkSmsSheet()async {
           setState(()=>addFabExpanded=false);
           bulkSmsSheet();
          }),
-        ]else...[
+        ]),
+      if(analyzingPaste)...[const SizedBox(height:12),const LinearProgressIndicator(),const SizedBox(height:6),WaffraText(waffraIsEnglish?'Analyzing your bank messages now…':'يتم الآن تحليل الرسائل البنكية واستخراج المعاملات…')],
+      
+      if(rejectedMessages.isNotEmpty)...[
+       const SizedBox(height:8),
+       WaffraText(waffraIsEnglish?'Unrecognized messages — edit and retry':'رسائل لم يتم تحليلها — راجعها وأعد المحاولة',style:const TextStyle(fontWeight:FontWeight.bold)),
+       ...rejectedMessages.asMap().entries.map((item)=>Card(child:ListTile(
+        title:WaffraText(waffraIsEnglish?'Message ${item.key+1}':'رسالة ${item.key+1}'),
+        subtitle:SelectableText(item.value,maxLines:4),
+        trailing:IconButton(icon:const Icon(Icons.edit_outlined),tooltip:waffraIsEnglish?'Review manually':'مراجعة يدويًا',onPressed:(){
+         Navigator.pop(ctx);
+         entrySheet(sms:true,initialSms:item.value);
+        })))),
+      ],
+      if(parsed&&statusMessage.isEmpty)...[
+       const SizedBox(height:12),
+       Container(width:double.infinity,padding:const EdgeInsets.symmetric(horizontal:14,vertical:13),
+        decoration:BoxDecoration(color:Theme.of(ctx).brightness==Brightness.dark?const Color(0xFF123E32):const Color(0xFFE8F6EF),
+         border:Border.all(color:emerald.withValues(alpha:.25)),borderRadius:BorderRadius.circular(16)),
+        child:Row(children:[const Icon(Icons.check_circle_outline,color:emerald,size:20),const SizedBox(width:9),
+         Expanded(child:WaffraText(waffraIsEnglish?'Detected ${messages.length} transactions':'تم اكتشاف ${messages.length} معاملة',
+          style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)))])),
+      ],
+      ]else...[
          _addMenuOption(icon:Icons.trending_up,
           label:waffraIsEnglish?'Income category':'إضافة قسم دخل',
           onTap:(){setState(()=>addFabExpanded=false);addCategory(income:true);}),
