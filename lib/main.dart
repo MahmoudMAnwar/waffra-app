@@ -2293,7 +2293,7 @@ Future<void> bulkSmsSheet()async {
          update((){messages=splitBankMessages(text);parsed=true;analyzingPaste=false;statusMessage=noTransactionWarning(text)??'';});
          if(statusMessage.isEmpty&&messages.isNotEmpty)saveParsedMessages(ctx,update);
         });
-       },label:WaffraText(waffraIsEnglish?'Paste copied SMS':'لصق آخر رسالة نسختها',maxLines:1,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700))),
+       },label:WaffraText(waffraIsEnglish?'Paste copied SMS':'لصق آخر رسالة نسختها',maxLines:1,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700)))),
       if(analyzingPaste)...[const SizedBox(height:12),const LinearProgressIndicator(),const SizedBox(height:6),WaffraText(waffraIsEnglish?'Analyzing your bank messages now…':'يتم الآن تحليل الرسائل البنكية واستخراج المعاملات…')],
       
       if(rejectedMessages.isNotEmpty)...[
