@@ -1929,6 +1929,7 @@ Future<void> bulkSmsSheet()async {
  var reviewing=false;
  Timer? pasteTimer;
  var busy=false;
+ var analyzingPaste=false;
  var savedCount=0;
  var statusMessage='';
  var rejectedMessages=<String>[];
@@ -2119,39 +2120,56 @@ Future<void> bulkSmsSheet()async {
    amount.text=result.amount==null?'':formatWaffraMoney(result.amount!);
   });
  }
- await showModalBottomSheet<void>(context:context,isScrollControlled:true,showDragHandle:true,
-  builder:(ctx)=>StatefulBuilder(builder:(ctx,update){
+ await showGeneralDialog<void>(context:context,barrierDismissible:true,barrierLabel:'Close',
+  barrierColor:Colors.black.withValues(alpha:.45),
+  pageBuilder:(dialogContext,animation,secondaryAnimation)=>BackdropFilter(
+   filter:ui.ImageFilter.blur(sigmaX:9,sigmaY:9),
+   child:Align(alignment:Alignment.bottomCenter,child:Material(
+    color:Theme.of(dialogContext).scaffoldBackgroundColor,
+    borderRadius:const BorderRadius.vertical(top:Radius.circular(28)),
+    clipBehavior:Clip.antiAlias,
+    child:SafeArea(top:false,child:StatefulBuilder(builder:(ctx,update){
    final available=forType(income);
    final total=messages.fold<double>(0,(sum,s)=>sum+(BankParser.parse(s).amount??0));
    return Padding(padding:EdgeInsets.fromLTRB(18,8,18,MediaQuery.of(ctx).viewInsets.bottom+24),
     child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-     WaffraText('إضافة رسائل بنكية',style:Theme.of(ctx).textTheme.titleLarge),
+     Row(children:[Expanded(child:WaffraText(waffraIsEnglish?'Add bank message':'إضافة رسالة بنكية',style:Theme.of(ctx).textTheme.titleLarge)),IconButton(onPressed:()=>Navigator.pop(ctx),icon:const Icon(Icons.close_rounded))]),
+     WaffraText(waffraIsEnglish?'Paste messages to analyze them automatically.':'الصق رسائلك البنكية ليتم تحليلها وتصنيفها تلقائيًا.'),
      const SizedBox(height:12),
      if(!reviewing)...[
       TextField(controller:pasted,minLines:5,maxLines:9,onChanged:(text){
        pasteTimer?.cancel();
        if(!sheetActive||!ctx.mounted)return;
-       update((){parsed=false;messages=[];statusMessage='';});
+       update((){parsed=false;analyzingPaste=text.trim().isNotEmpty;messages=[];statusMessage='';});
        if(text.trim().isNotEmpty){
         pasteTimer=Timer(const Duration(milliseconds:650),(){
          if(sheetActive&&ctx.mounted&&pasted.text.trim()==text.trim()){
-          update((){messages=splitBankMessages(pasted.text.trim());parsed=true;statusMessage=noTransactionWarning(pasted.text)??'';});
+          update((){messages=splitBankMessages(pasted.text.trim());parsed=true;analyzingPaste=false;statusMessage=noTransactionWarning(pasted.text)??'';});
+          if(statusMessage.isEmpty&&messages.isNotEmpty)saveParsedMessages(ctx,update);
          }
         });
        }
       },decoration:InputDecoration(labelText:waffraTr('الصق رسالة أو عدة رسائل بنكية'),
-       hintText:waffraIsEnglish?'Paste your bank message here. We’ll analyze it automatically.':'الصق رسالتك البنكية هنا، وبنحلّلها لك تلقائيًا.',hintStyle:const TextStyle(fontSize:13,color:Color(0xFF888F8A)),border:OutlineInputBorder())),
+       hintText:waffraIsEnglish?'Paste your bank message here. We’ll analyze it automatically.':'الصق رسالتك البنكية هنا، وبنحلّلها لك تلقائيًا.',hintStyle:const TextStyle(fontSize:13,color:Color(0xFF888F8A)),
+       suffixIcon:pasted.text.isNotEmpty?IconButton(tooltip:waffraIsEnglish?'Clear text':'مسح النص',icon:const Icon(Icons.clear_rounded,color:Colors.redAccent),onPressed:(){pasteTimer?.cancel();pasted.clear();update((){parsed=false;analyzingPaste=false;messages=[];statusMessage='';});}):null,
+       border:OutlineInputBorder(borderRadius:BorderRadius.circular(18)))),
       const SizedBox(height:12),
       OutlinedButton.icon(icon:const Icon(Icons.content_paste),
        onPressed:busy?null:()async {
         final data=await Clipboard.getData(Clipboard.kTextPlain);
         if(!ctx.mounted)return;
         final text=data?.text?.trim()??'';
-        if(text.isEmpty){snack(ctx,waffraIsEnglish?'Clipboard is empty':'ما فيه رسالة منسوخة حاليًا');return;}
+        if(text.isEmpty){update(()=>statusMessage=waffraIsEnglish?'Clipboard is empty':'ما فيه رسالة منسوخة حاليًا');return;}
         pasted.text=text;
         pasteTimer?.cancel();
-        update((){messages=splitBankMessages(text);parsed=true;statusMessage=noTransactionWarning(text)??'';});
+        update((){analyzingPaste=true;messages=[];parsed=false;statusMessage='';});
+        pasteTimer=Timer(const Duration(milliseconds:650),(){
+         if(!sheetActive||!ctx.mounted)return;
+         update((){messages=splitBankMessages(text);parsed=true;analyzingPaste=false;statusMessage=noTransactionWarning(text)??'';});
+         if(statusMessage.isEmpty&&messages.isNotEmpty)saveParsedMessages(ctx,update);
+        });
        },label:WaffraText(waffraIsEnglish?'Paste last copied message':'لصق آخر رسالة نسختها')),
+      if(analyzingPaste)...[const SizedBox(height:12),const LinearProgressIndicator(),const SizedBox(height:6),WaffraText(waffraIsEnglish?'Analyzing your bank messages now…':'يتم الآن تحليل الرسائل البنكية واستخراج المعاملات…')],
       if(statusMessage.isNotEmpty)...[
        const SizedBox(height:8),
        WaffraText(statusMessage,style:const TextStyle(color:Colors.deepOrange,fontWeight:FontWeight.w600)),
@@ -2172,9 +2190,7 @@ Future<void> bulkSmsSheet()async {
        WaffraText(waffraIsEnglish?'Detected ${messages.length} transactions':'تم اكتشاف ${messages.length} معاملة',
         style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
        const SizedBox(height:8),
-       FilledButton.icon(icon:const Icon(Icons.check_circle_outline),
-        onPressed:busy?null:()=>saveParsedMessages(ctx,update),
-        label:WaffraText(busy?'جارٍ الحفظ...':'تأكيد وحفظ المعاملات')),
+       WaffraText(waffraIsEnglish?'Analysis completed.':'اكتمل تحليل الرسائل.'),
       ],
       TextButton.icon(onPressed:()async{
        final yes=await confirmDeletion(
@@ -2182,7 +2198,7 @@ Future<void> bulkSmsSheet()async {
         waffraIsEnglish?'Clear all pasted text? Unsaved messages will be lost.':'هل تريد حذف النص الملصوق بالكامل؟ ستفقد الرسائل غير المحفوظة.');
        if(yes!=true||!ctx.mounted)return;
        pasteTimer?.cancel();pasted.clear();
-       update((){parsed=false;messages=[];statusMessage='';rejectedMessages=[];});
+       update((){parsed=false;analyzingPaste=false;messages=[];statusMessage='';rejectedMessages=[];});
       },icon:const Icon(Icons.delete_outline),label:const WaffraText('حذف النص بالكامل')),
      ]else...[
       TextButton.icon(onPressed:busy?null:()async{
@@ -2253,7 +2269,7 @@ Future<void> bulkSmsSheet()async {
       },icon:const Icon(Icons.delete_forever_outlined),label:const WaffraText('حذف النص بالكامل وإضافة رسائل أخرى')),
      ],
     ])));
-  }));
+  })))));
  sheetActive=false;disposeLater();
 }
 
