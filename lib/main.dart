@@ -5087,7 +5087,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    ]),
   ));
  }
- String waффraGoalDeleteWarning(String name,bool linked,bool english)=>english
+ String waffraGoalDeleteWarning(String name,bool linked,bool english)=>english
   ?'Move “$name” to Deleted Goals for 30 days. ${linked?'This goal has saved amounts or linked transactions; financial history will stay untouched.':''} Restored goals restart with zero saved balance.'
   :'نقل «$name» إلى الأهداف المحذوفة لمدة 30 يومًا. ${linked?'هذا الهدف مرتبط بمبالغ ادخار أو معاملات مالية؛ ستبقى المعاملات محفوظة.':''} عند الاسترجاع يبدأ رصيد الادخار من صفر.';
  Future<void> deletedGoalsDialog()async{
@@ -5175,7 +5175,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
         if(v=='delete'){
          final linked=g.saved>0||entries.any((e)=>e.category==g.name);
          final yes=await confirmDeletion(waffraIsEnglish?'Delete savings goal?':'حذف هدف الادخار',
-          waффraGoalDeleteWarning(g.name,linked,waffraIsEnglish));
+          waffraGoalDeleteWarning(g.name,linked,waffraIsEnglish));
          if(yes==true&&mounted){setState((){deletedGoals.add({'goal':g.toJson(),'deletedAt':DateTime.now().toIso8601String()});goals.removeWhere((x)=>x.id==g.id);});await persist();}
         }
        },itemBuilder:(_)=>[PopupMenuItem(value:'delete',child:WaffraText(waffraIsEnglish?'Delete goal':'حذف الهدف'))]),
