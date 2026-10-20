@@ -1783,7 +1783,7 @@ Future<void> bulkSmsSheet()async {
   if(category.budget<=0)return;
   final spent=sum(entries.where((e)=>!e.income&&e.category==entry.category&&
    e.date.year==entry.date.year&&e.date.month==entry.date.month),false);
-  final stages=<int>{50,80,100,category.alertPercent}.toList()..sort();
+  final stages=<int>{category.alertPercent,100}.toList()..sort();
   int? crossed;
   for(final stage in stages){
    if(previousSpent<category.budget*stage/100&&spent>=category.budget*stage/100)crossed=stage;
@@ -2224,14 +2224,14 @@ Future<void> bulkSmsSheet()async {
      Row(children:[
       Expanded(child:_budgetFigure(waffraIsEnglish?'Budget':'الميزانية',monthlyBudget)),
       Expanded(child:_budgetFigure(waffraIsEnglish?'Spent':'المصروف',spent)),
-      Expanded(child:_budgetFigure(waffraIsEnglish?'Remaining':'المتبقي',
-       max(0.0,monthlyBudget-spent))),
+      Expanded(child:_budgetFigure(spent>monthlyBudget?(waffraIsEnglish?'Over budget':'التجاوز'):(waffraIsEnglish?'Remaining':'المتبقي'),
+       (monthlyBudget-spent).abs())), 
      ]),
      if(spent>=monthlyBudget*.8)Padding(
       padding:const EdgeInsets.only(top:10),
       child:WaffraText(waffraIsEnglish?
-       (spent>=monthlyBudget?'Monthly budget reached.':'80% of budget used.'):
-       (spent>=monthlyBudget?'وصلت لحد الميزانية الشهرية.':'استهلكت 80٪ من الميزانية.'),
+       (spent>monthlyBudget?'Monthly budget exceeded by ${cash(spent-monthlyBudget)}.':spent==monthlyBudget?'Monthly budget fully used.':'80% of budget used.'):
+       (spent>monthlyBudget?'تجاوزت الميزانية الشهرية بمبلغ ${cash(spent-monthlyBudget)}.':spent==monthlyBudget?'استهلكت الميزانية الشهرية بالكامل.':'استهلكت 80٪ من الميزانية.'),
        style:const TextStyle(color:Colors.deepOrange,fontSize:13))),
     ]else Padding(padding:const EdgeInsets.symmetric(vertical:7),
      child:WaffraText(waffraIsEnglish?
@@ -3192,8 +3192,8 @@ Future<void> bulkSmsSheet()async {
         borderRadius:BorderRadius.circular(8)),
        const SizedBox(height:9),
        Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
-        WaffraText(waffraIsEnglish?'Remaining':'المتبقي',style:const TextStyle(fontSize:12)),
-        WaffraText(cash(max(0,c.budget-amount)),
+        WaffraText(amount>c.budget?(waffraIsEnglish?'Over budget':'تجاوز الميزانية'):(waffraIsEnglish?'Remaining':'المتبقي'),style:TextStyle(fontSize:12,color:amount>c.budget?Colors.red:null)),
+        WaffraText(cash(amount>c.budget?amount-c.budget:c.budget-amount),
          style:TextStyle(fontSize:13,fontWeight:FontWeight.bold,color:amount>c.budget?Colors.red:color)),
        ]),
       ],
