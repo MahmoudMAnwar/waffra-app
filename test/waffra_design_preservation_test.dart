@@ -31,7 +31,7 @@ void main() {
         'waffra_deleted_categories_v1',
         'waffra_sms_hashes_v1',
         "'entries'",
-        'NavigationDestination(',
+        'WaffraFooterNavigation(',
         'selectFooter(',
         'widget.onLogout()',
         'widget.onLanguage(',
@@ -40,8 +40,9 @@ void main() {
       for (final feature in required) {
         expect(source.contains(feature), isTrue, reason: 'Missing existing feature or storage contract: $feature');
       }
-      expect(RegExp(r'NavigationDestination\(').allMatches(source).length, 6,
-        reason: 'The redesign must keep all six original footer destinations');
+      final footer = File('lib/waffra_footer.dart').readAsStringSync();
+      expect(footer, contains('static const itemCount=6'),
+        reason: 'The redesigned footer must keep all six destinations');
     });
 
     testWidgets('Calendar does not show zero totals in an empty month', (tester) async {
