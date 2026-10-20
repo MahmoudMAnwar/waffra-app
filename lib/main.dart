@@ -3751,7 +3751,9 @@ Future<void> bulkSmsSheet()async {
      child:Center(child:Material(color:Colors.transparent,child:Container(
       width:MediaQuery.of(ctx).size.width*.83,
       padding:const EdgeInsets.symmetric(horizontal:24,vertical:36),
-      decoration:BoxDecoration(color:Theme.of(ctx).cardColor,borderRadius:BorderRadius.circular(28)),
+      decoration:BoxDecoration(color:Theme.of(ctx).cardColor,
+       borderRadius:BorderRadius.circular(28),
+       border:Border.fromBorderSide(waffraDialogOutline(Theme.of(ctx).brightness))),
       child:Column(mainAxisSize:MainAxisSize.min,children:[
        SizedBox(width:104,height:104,child:Stack(alignment:Alignment.center,children:[
         const SizedBox.expand(child:CircularProgressIndicator(strokeWidth:8,color:emerald,
