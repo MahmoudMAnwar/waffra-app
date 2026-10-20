@@ -2893,6 +2893,27 @@ Future<void> bulkSmsSheet()async {
         color:Colors.deepOrange,borderRadius:BorderRadius.circular(8)),
       ]))),
      const SizedBox(height:24),
+     WaffraText(waffraIsEnglish?'Spending distribution chart':'الرسم البياني لتوزيع المصروفات',
+      style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
+     const SizedBox(height:12),
+     if(top.isNotEmpty)Card(child:Padding(padding:const EdgeInsets.all(16),
+      child:SizedBox(height:240,child:PieChart(PieChartData(
+       centerSpaceRadius:40,
+       sections:top.map((e){
+        final c=categoryFor(e.key,false);
+        return PieChartSectionData(value:e.value,color:Color(c.color),radius:77,
+         title:'${(e.value/spending*100).toStringAsFixed(0)}%',
+         titleStyle:const TextStyle(fontSize:12,color:Colors.white,fontWeight:FontWeight.bold));
+       }).toList(),
+      ))))),
+     const SizedBox(height:16),
+     OutlinedButton.icon(
+      onPressed:recent.isEmpty?null:()=>exportEntriesPdf(recent,
+       waffraIsEnglish?'Waffra analytics - Last 90 days':'تحليلات وفرة - آخر 90 يوم',
+       analytics:true),
+      icon:const Icon(Icons.picture_as_pdf_outlined),
+      label:WaffraText(waffraIsEnglish?'Export analytics PDF':'تصدير التحليلات إلى PDF')),
+     const SizedBox(height:24),
      WaffraText(waffraIsEnglish?'Tips for you':'نصائح مخصصة لك',
       style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
      const SizedBox(height:10),
