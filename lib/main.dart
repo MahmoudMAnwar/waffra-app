@@ -3795,14 +3795,20 @@ Future<void> bulkSmsSheet()async {
    },
   );
   if(!mounted)return;
-  await showModalBottomSheet<void>(
+  await showGeneralDialog<void>(
    context:context,
-   isScrollControlled:true,
-   useSafeArea:true,
-   showDragHandle:true,
-   backgroundColor:Theme.of(context).scaffoldBackgroundColor,
-   shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
-   builder:(ctx){
+   barrierDismissible:true,
+   barrierLabel:waffraIsEnglish?'Close analysis':'إغلاق التحليل',
+   barrierColor:Colors.black.withValues(alpha:.24),
+   transitionDuration:waffraMotion(300),
+   transitionBuilder:(ctx,animation,secondary,child)=>BackdropFilter(
+    filter:ui.ImageFilter.blur(sigmaX:7*animation.value,sigmaY:7*animation.value),
+    child:SlideTransition(
+     position:Tween<Offset>(begin:const Offset(0,1),end:Offset.zero)
+      .animate(CurvedAnimation(parent:animation,curve:Curves.easeOutCubic)),
+     child:child)),
+   pageBuilder:(ctx,animation,secondary){
+
    final deficit=spending-income;
    final accent=score==null?Colors.grey:score<45?Colors.red:score<70?Colors.orange:emerald;
    final periods=List.generate(3,(i){
@@ -3812,17 +3818,37 @@ Future<void> bulkSmsSheet()async {
     return (sum(items,true),sum(items,false));
    });
    final highest=periods.fold<double>(1,(v,p)=>max(v,max(p.$1,p.$2)));
-   return FractionallySizedBox(
+   return Align(alignment:Alignment.bottomCenter,child:FractionallySizedBox(
     heightFactor:.90,
-    child:Column(children:[
-     Padding(padding:const EdgeInsets.symmetric(horizontal:16,vertical:6),child:Row(children:[
-      Expanded(child:WaffraText(waffraIsEnglish?'Detailed financial analysis':'التحليل المالي التفصيلي',style:const TextStyle(fontSize:20,fontWeight:FontWeight.bold))),
-      IconButton(tooltip:waffraIsEnglish?'Close':'إغلاق',icon:const Icon(Icons.close_rounded),onPressed:()=>Navigator.of(ctx).pop()),
-     ])),
-     const Divider(height:1),
-     Expanded(child:ListView(padding:const EdgeInsets.all(16),children:[
+    child:Material(
+     color:Theme.of(ctx).scaffoldBackgroundColor,
+     clipBehavior:Clip.antiAlias,
+     shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
+     child:SafeArea(top:false,child:Column(children:[
+      const SizedBox(height:12),
+      Center(child:Container(width:48,height:5,decoration:BoxDecoration(
+       color:emerald.withValues(alpha:.28),borderRadius:BorderRadius.circular(12)))),
+      Padding(padding:const EdgeInsets.symmetric(horizontal:18,vertical:14),child:Row(children:[
+       Container(padding:const EdgeInsets.all(10),decoration:BoxDecoration(
+        color:emerald.withValues(alpha:.1),borderRadius:BorderRadius.circular(14)),
+        child:const Icon(Icons.insights_rounded,color:emerald)),
+       const SizedBox(width:10),
+       Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        WaffraText(waffraIsEnglish?'Financial insights':'التحليل المالي التفصيلي',
+         style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold)),
+        WaffraText(waffraIsEnglish?'Your last 90 days at a glance':'نظرة شاملة على آخر 90 يوم',
+         style:const TextStyle(fontSize:12)),
+       ])),
+       IconButton(tooltip:waffraIsEnglish?'Close':'إغلاق',icon:const Icon(Icons.close_rounded),
+        onPressed:()=>Navigator.of(ctx).pop()),
+      ])),
+      const Divider(height:1),
+      Expanded(child:ListView(padding:const EdgeInsets.all(16),children:[
      Container(padding:const EdgeInsets.all(20),decoration:BoxDecoration(
-      color:emerald.withValues(alpha:.08),borderRadius:BorderRadius.circular(20)),
+      color:Theme.of(ctx).cardColor,
+      border:Border.all(color:emerald.withValues(alpha:.18)),
+      boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:.04),blurRadius:14,offset:const Offset(0,5))],
+      borderRadius:BorderRadius.circular(22)),
       child:Column(children:[
        WaffraText(waffraIsEnglish?'Income & expense balance indicator':'مؤشر توازن الدخل والمصروفات',
         style:const TextStyle(fontWeight:FontWeight.bold,fontSize:17),textAlign:TextAlign.center),
@@ -3925,8 +3951,8 @@ Future<void> bulkSmsSheet()async {
        'حدد ميزانية شهرية لكل قسم للتحكم في الإنفاق.')),
      const SizedBox(height:24),
     ])),
-    ]),
-   );
+    ]))),
+   )));
   });
  }
  Widget _analysisStat(String label,double value,Color color)=>Container(
