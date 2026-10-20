@@ -31,6 +31,7 @@ import 'waffra_pdf_text.dart';
 import 'waffra_merchant_rules.dart';
 import 'waffra_google_auth.dart';
 import 'waffra_category_catalog.dart';
+part 'waffra_categories_page.part.dart';
 
 void main() { WidgetsFlutterBinding.ensureInitialized(); runApp(const WaffraApp()); }
 // Waffra visual identity / Saudi government-grade accessible emerald palette.
@@ -1842,7 +1843,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   await p.setString('waffra_animation_level',next);
  }
  String search='',typeFilter='الكل',categoryFilter='الكل',period='شهري';
- String categorySearch='',categoryDisplay='all',goalDisplay='all',recurringDisplay='all';
+ String categorySearch='',categoryDisplay='all',categoryTypeFilter='all',goalDisplay='all',recurringDisplay='all';
   String? forecastCategory;
   int forecastReduction=20;
  bool recurringRemindersEnabled=false;
@@ -4394,111 +4395,7 @@ Future<void> bulkSmsSheet()async {
      child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))],
    )));
  }
- Widget categoriesPage(){
-  final today=DateTime.now();
-  final monthly=entries.where((e)=>!e.income&&e.date.year==today.year&&e.date.month==today.month);
-  final spent=sum(monthly,false);
-  final filtered=categories.where((c){
-   if(categoryDisplay=='budget'&&c.budget<=0)return false;
-   if(categoryDisplay=='none'&&c.budget>0)return false;
-   return c.name.toLowerCase().contains(categorySearch.trim().toLowerCase());
-  }).toList();
-  Widget categoryCard(BudgetCategory c){
-   final color=Color(c.color);
-   final amount=sum(monthly.where((e)=>e.category==c.name),false);
-   final hasBudget=!c.income&&c.budget>0;
-   return Card(
-    margin:const EdgeInsets.only(bottom:11),
-    elevation:0,
-    color:Theme.of(context).cardColor,
-    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(19),
-     side:BorderSide(color:Theme.of(context).brightness==Brightness.dark?
-      (c.income?const Color(0xFF356D52):const Color(0xFF774E46)):
-      (c.income?const Color(0xFFB8DCC8):const Color(0xFFF1D9D2)),width:1)),
-    child:InkWell(borderRadius:BorderRadius.circular(22),onTap:()=>updateCategory(c),
-     child:Padding(padding:const EdgeInsets.all(13),child:Column(children:[
-      Row(children:[
-       CircleAvatar(radius:23,backgroundColor:color.withValues(alpha:.14),
-        child:Icon(categoryIcon(c.icon),color:color)),
-       const SizedBox(width:12),
-       Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        WaffraText(c.name,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:16)),
-        const SizedBox(height:3),
-        WaffraText(c.income?(waffraIsEnglish?'Income category':'قسم دخل'):
-         hasBudget?(waffraIsEnglish?'Budget: ${cash(c.budget)}':'الميزانية: ${cash(c.budget)}'):
-         (waffraIsEnglish?'No budget set':'بدون ميزانية محددة'),
-         style:TextStyle(fontSize:12,color:Theme.of(context).hintColor)),
-       ])),
-       PopupMenuButton<String>(tooltip:waffraIsEnglish?'Category options':'خيارات القسم',
-        onSelected:(v){if(v=='edit')updateCategory(c);else if(v=='delete')deleteCategory(c);},
-        itemBuilder:(_)=>[
-         PopupMenuItem(value:'edit',child:WaffraText(waffraIsEnglish?'Edit':'تعديل')),
-         PopupMenuItem(value:'delete',child:WaffraText(waffraIsEnglish?'Delete':'حذف'))]),
-      ]),
-      if(hasBudget)...[
-       const SizedBox(height:13),
-       Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
-        WaffraText('${((amount/c.budget)*100).round()}%',style:TextStyle(color:color,fontWeight:FontWeight.bold)),
-        WaffraText(waffraIsEnglish?'Spent ${cash(amount)} of ${cash(c.budget)}':'صرفت ${cash(amount)} من ${cash(c.budget)}',
-         style:const TextStyle(fontSize:12))]),
-       const SizedBox(height:7),
-       LinearProgressIndicator(value:(amount/c.budget).clamp(0.0,1.0),minHeight:8,
-        color:amount>c.budget?Colors.red:color,
-        backgroundColor:color.withValues(alpha:.13),
-        borderRadius:BorderRadius.circular(8)),
-       const SizedBox(height:9),
-       Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
-        WaffraText(amount>c.budget?(waffraIsEnglish?'Over budget':'تجاوز الميزانية'):(waffraIsEnglish?'Remaining':'المتبقي'),style:TextStyle(fontSize:12,color:amount>c.budget?Colors.red:null)),
-        WaffraText(cash(amount>c.budget?amount-c.budget:c.budget-amount),
-         style:TextStyle(fontSize:13,fontWeight:FontWeight.bold,color:amount>c.budget?Colors.red:color)),
-       ]),
-      ],
-     ]))));
-  }
-  return ListView(padding:const EdgeInsets.fromLTRB(16,14,16,116),children:[
-   WaffraPageHero(
-    title:waffraIsEnglish?'Categories & budgets':'أقسامك وميزانياتك',
-    subtitle:waffraIsEnglish?'Organize income, spending and budgets':'نظّم الدخل والمصروفات والميزانيات في مكان واحد.',
-    icon:Icons.category_outlined,titleKey:_tourKeys[2]),
-   Align(alignment:AlignmentDirectional.centerEnd,
-    child:OutlinedButton.icon(onPressed:showCategoryTrash,
-     style:OutlinedButton.styleFrom(
-      padding:const EdgeInsets.symmetric(horizontal:10,vertical:5),
-      visualDensity:VisualDensity.compact,minimumSize:const Size(0,34)),
-     icon:const Icon(Icons.delete_outline,size:16),
-     label:WaffraText(waffraIsEnglish?'Deleted categories':'الأقسام المحذوفة',
-      style:const TextStyle(fontSize:11,fontWeight:FontWeight.bold)))),
-   const SizedBox(height:12),
-   Row(children:[
-    Expanded(child:_summaryBox(waffraIsEnglish?'Categories':'عدد الأقسام',
-     categories.length.toString(),Icons.layers,emerald)),
-    const SizedBox(width:10),
-    Expanded(child:_summaryBox(waffraIsEnglish?'Monthly spending':'المصروف الشهري',
-     cash(spent),Icons.trending_up,Colors.deepOrange)),
-   ]),
-   const SizedBox(height:15),
-   Wrap(spacing:8,runSpacing:6,children:[
-    _filterChip(waffraIsEnglish?'All':'الكل',categoryDisplay=='all',()=>setState(()=>categoryDisplay='all')),
-    _filterChip(waffraIsEnglish?'Budgeted':'بميزانية',categoryDisplay=='budget',()=>setState(()=>categoryDisplay='budget')),
-    _filterChip(waffraIsEnglish?'No budget':'بدون ميزانية',categoryDisplay=='none',()=>setState(()=>categoryDisplay='none')),
-   ]),
-   const SizedBox(height:12),
-   TextField(onChanged:(v)=>setState(()=>categorySearch=v),
-    decoration:InputDecoration(prefixIcon:const Icon(Icons.search),
-     hintText:waffraIsEnglish?'Search categories':'البحث عن قسم...',
-     border:OutlineInputBorder(borderRadius:BorderRadius.circular(30)),
-     isDense:true)),
-   const SizedBox(height:14),
-   ...filtered.map(categoryCard),
-   if(filtered.isEmpty)Padding(padding:const EdgeInsets.symmetric(vertical:54),
-    child:Column(children:[
-     const Icon(Icons.search_off_rounded,size:54,color:emerald),
-     const SizedBox(height:12),
-     WaffraText(waffraIsEnglish?'No matching categories':'لا توجد أقسام مطابقة'),
-    ])),
-   const SizedBox(height:120),
-  ]);
- }
+ Widget categoriesPage()=>categoriesPageV2();
  Widget _recurringBenefit(String label,IconData icon)=>Container(
   padding:const EdgeInsets.symmetric(horizontal:6,vertical:14),
   decoration:BoxDecoration(color:emerald.withValues(alpha:.08),borderRadius:BorderRadius.circular(18)),
