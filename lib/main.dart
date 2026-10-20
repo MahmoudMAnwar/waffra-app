@@ -30,6 +30,7 @@ import 'waffra_i18n.dart';
 import 'waffra_pdf_text.dart';
 import 'waffra_merchant_rules.dart';
 import 'waffra_google_auth.dart';
+import 'waffra_category_catalog.dart';
 
 void main() { WidgetsFlutterBinding.ensureInitialized(); runApp(const WaffraApp()); }
 // Waffra visual identity / Saudi government-grade accessible emerald palette.
@@ -132,11 +133,14 @@ class Person {
  factory Person.fromJson(Map<String,dynamic> j)=>Person(name:'${j['name']??''}',email:'${j['email']??''}',provider:'${j['provider']??'محلي'}',gender:['ذكر','أنثى'].contains(j['gender'])?'${j['gender']}':'',avatar:'${j['avatar']??'person'}',phone:'${j['phone']??(j['provider']=='Phone'?j['email']??'':'')}',birthday:DateTime.tryParse('${j['birthday']}')??DateTime(2000));
 }
 class BudgetCategory {
- final String id,name,icon;final int color;final bool income;final double budget;final int alertPercent;
- BudgetCategory({required this.id,required this.name,required this.icon,required this.color,required this.income,this.budget=0,this.alertPercent=80});
- BudgetCategory copy({String? name,String? icon,int? color,double? budget,int? alertPercent})=>BudgetCategory(id:id,name:name??this.name,icon:icon??this.icon,color:color??this.color,income:income,budget:budget??this.budget,alertPercent:alertPercent??this.alertPercent);
- Map<String,dynamic> toJson()=>{'id':id,'name':name,'icon':icon,'color':color,'income':income,'budget':budget,'alertPercent':alertPercent};
- factory BudgetCategory.fromJson(Map<String,dynamic> j)=>BudgetCategory(id:'${j['id']??newId()}',name:'${j['name']??'أخرى'}',icon:'${j['icon']??'category'}',color:(j['color'] as num?)?.toInt()??0xFF087A54,income:j['income']==true,budget:(j['budget'] as num?)?.toDouble()??0,alertPercent:(j['alertPercent'] as num?)?.toInt()??80);
+ final String id,name,icon,parentId;
+ final int color;final bool income;final double budget;final int alertPercent;
+ BudgetCategory({required this.id,required this.name,required this.icon,required this.color,required this.income,this.parentId='',this.budget=0,this.alertPercent=80});
+ bool get isSubcategory=>parentId.isNotEmpty;
+ String get displayName=>isSubcategory?name.split(' / ').last:name;
+ BudgetCategory copy({String? name,String? icon,int? color,double? budget,int? alertPercent,String? parentId})=>BudgetCategory(id:id,name:name??this.name,icon:icon??this.icon,color:color??this.color,income:income,parentId:parentId??this.parentId,budget:budget??this.budget,alertPercent:alertPercent??this.alertPercent);
+ Map<String,dynamic> toJson()=>{'id':id,'name':name,'icon':icon,'color':color,'income':income,'parentId':parentId,'budget':budget,'alertPercent':alertPercent};
+ factory BudgetCategory.fromJson(Map<String,dynamic> j)=>BudgetCategory(id:'${j['id']??newId()}',name:'${j['name']??'أخرى'}',icon:'${j['icon']??'category'}',color:(j['color'] as num?)?.toInt()??0xFF087A54,income:j['income']==true,parentId:'${j['parentId']??''}',budget:(j['budget'] as num?)?.toDouble()??0,alertPercent:(j['alertPercent'] as num?)?.toInt()??80);
 }
 class SavingGoal {
  final String id,name;final double target,saved;
@@ -186,7 +190,30 @@ IconData categoryIcon(String n) {
   case 'salary':return Icons.payments;case 'home':return Icons.home;
   case 'education':return Icons.school;case 'sport':return Icons.fitness_center;
   case 'gift':return Icons.card_giftcard;case 'travel':return Icons.flight;
-  case 'coffee':return Icons.local_cafe;default:return Icons.category;
+  case 'coffee':return Icons.local_cafe;
+  case 'groceries':return Icons.local_grocery_store;
+  case 'family':return Icons.family_restroom;
+  case 'baby':return Icons.child_care;
+  case 'entertainment':return Icons.theaters;
+  case 'subscriptions':return Icons.subscriptions;
+  case 'sadaqat':return Icons.volunteer_activism;
+  case 'charity':return Icons.favorite;
+  case 'zakat':return Icons.mosque;
+  case 'pets':return Icons.pets;
+  case 'insurance':return Icons.verified_user;
+  case 'business':return Icons.business_center;
+  case 'government':return Icons.account_balance;
+  case 'bank':return Icons.account_balance_wallet;
+  case 'wedding':return Icons.celebration;
+  case 'tools':return Icons.handyman;
+  case 'device':return Icons.devices;
+  case 'freelance':return Icons.laptop_mac;
+  case 'gaming':return Icons.sports_esports;
+  case 'tax':return Icons.request_quote;
+  case 'investment':return Icons.show_chart;
+  case 'pension':return Icons.elderly;
+  case 'agriculture':return Icons.agriculture;
+  default:return Icons.category;
  }
 }
 IconData avatarIcon(String s)=>s=='male'?Icons.face:s=='female'?Icons.face_3:s=='smile'?Icons.sentiment_very_satisfied:Icons.person;
@@ -203,17 +230,12 @@ Widget waffraAvatar(String gender,String avatar,{double radius=25}) {
 
 const colors=[0xFF087A54,0xFFED7045,0xFF3867D6,0xFF9C56B8,0xFFDF9C24,0xFF008C9E,0xFFDA5079,0xFF687B42];
 List<BudgetCategory> defaultCategories()=>[
- BudgetCategory(id:'food',name:'مطاعم وكافيهات',icon:'restaurant',color:colors[1],income:false),
- BudgetCategory(id:'shopping',name:'تسوّق',icon:'shopping',color:colors[3],income:false),
- BudgetCategory(id:'transport',name:'مواصلات',icon:'car',color:colors[2],income:false),
- BudgetCategory(id:'bills',name:'فواتير',icon:'receipt',color:colors[4],income:false),
- BudgetCategory(id:'health',name:'صحة',icon:'health',color:colors[6],income:false),
- BudgetCategory(id:'transfers',name:'تحويلات',icon:'transfer',color:colors[5],income:false),
- BudgetCategory(id:'housing',name:'سكن',icon:'home',color:colors[0],income:false),
- BudgetCategory(id:'other',name:'أخرى',icon:'category',color:colors[7],income:false),
- BudgetCategory(id:'salary',name:'راتب',icon:'salary',color:colors[0],income:true),
- BudgetCategory(id:'extra',name:'عمل إضافي',icon:'salary',color:colors[2],income:true),
- BudgetCategory(id:'other-income',name:'دخل آخر',icon:'category',color:colors[5],income:true),
+ for(final group in waffraCategoryCatalog)...[
+  BudgetCategory(id:group.id,name:group.name,icon:group.icon,color:colors[group.colorIndex],income:group.income),
+  for(var i=0;i<group.subcategories.length;i++)
+   BudgetCategory(id:'${group.id}_sub_$i',name:'${group.name} / ${group.subcategories[i]}',
+    icon:group.icon,color:colors[group.colorIndex],income:group.income,parentId:group.id),
+ ],
 ];
 class BankResult {
  final double? amount;final bool income;final String title,category;final String? suggestedCategory;
@@ -1797,6 +1819,7 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
 }
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
  final smsHashes=<String>{};
+ final expandedCategoryIds=<String>{};
  final learnedMerchantCategories=<String,String>{};
  final entries=<MoneyEntry>[],categories=<BudgetCategory>[],goals=<SavingGoal>[],recurring=<RecurringBill>[];
  final challenges=<SavingChallenge>[];
@@ -1850,6 +1873,26 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final when=DateTime.tryParse('${item['deletedAt']??''}');
    return when==null||!DateTime.now().isBefore(when.add(const Duration(days:30)));
   });
+  // Install catalog once without overwriting custom categories, saved budgets or trash.
+  if(!(p.getBool('waffra_category_catalog_v1_installed')??false)){
+   final discarded=<String>{};
+   for(final item in deletedCategories){
+    final data=item['category'];
+    if(data is Map){
+     discarded.add('${data['income']==true}|${data['name']}');
+     discarded.add('id|${data['id']}');
+    }
+   }
+   for(final suggestion in defaultCategories()){
+    if(discarded.contains('${suggestion.income}|${suggestion.name}')||
+       discarded.contains('id|${suggestion.id}'))continue;
+    if(categories.any((existing)=>existing.id==suggestion.id||
+      (existing.income==suggestion.income&&existing.name==suggestion.name)))continue;
+    categories.add(suggestion);
+   }
+   await p.setString('waffra_categories_v24',jsonEncode(categories.map((e)=>e.toJson()).toList()));
+   await p.setBool('waffra_category_catalog_v1_installed',true);
+  }
   smsHashes.addAll(p.getStringList('waffra_sms_hashes_v1')??const []);
   monthlyBudget=p.getDouble('waffra_monthly_budget_v1')??0;
   monthlyBudgetEnabled=p.getBool('waffra_monthly_budget_enabled_v1')??(monthlyBudget>0);
@@ -4168,7 +4211,7 @@ Future<void> bulkSmsSheet()async {
        categories.where((c)=>c.id!=initial?.id&&c.income==(initial?.income??income)).map((c)=>c.name))!=null ||
        WaffraValidators.positiveAmount(budget.text,required:false)!=null)return;
       Navigator.pop(ctx,BudgetCategory(id:initial?.id??newId(),name:n,icon:icon,color:color,
-       income:initial?.income??income,budget:budget.text.trim().isEmpty?0:(amountOf(budget.text)??0),alertPercent:alertPercent));
+       income:initial?.income??income,parentId:initial?.parentId??'',budget:budget.text.trim().isEmpty?0:(amountOf(budget.text)??0),alertPercent:alertPercent));
      },child:const WaffraText('حفظ')),
     ])));
   disposeLater([name,budget]);return result;
