@@ -32,6 +32,7 @@ import 'waffra_merchant_rules.dart';
 import 'waffra_google_auth.dart';
 import 'waffra_category_catalog.dart';
 import 'waffra_goal_catalog.dart';
+import 'waffra_pdf_reader.dart';
 part 'waffra_categories_page.part.dart';
 
 void main() { WidgetsFlutterBinding.ensureInitialized(); runApp(const WaffraApp()); }
@@ -2728,10 +2729,9 @@ Future<void> bulkSmsSheet()async {
        border:Border.fromBorderSide(waffraDialogOutline(Theme.of(dialogContext).brightness))),
       child:Column(mainAxisSize:MainAxisSize.min,children:[
        const SizedBox(height:8),
-       const SizedBox(height:100,width:100,child:Stack(alignment:Alignment.center,children:[
-        CircularProgressIndicator(strokeWidth:7,color:emerald),
-        Icon(Icons.picture_as_pdf_rounded,size:45,color:emerald),
-       ])),
+       const Icon(Icons.picture_as_pdf_rounded,size:63,color:emerald),
+       const SizedBox(height:18),
+       const SizedBox(width:48,height:48,child:CircularProgressIndicator(strokeWidth:4.5,color:emerald)),
        const SizedBox(height:22),
        WaffraText(waffraIsEnglish?'Exporting PDF report...':'يتم الآن تصدير التقرير إلى PDF',
         textAlign:TextAlign.center,style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold)),
@@ -2961,12 +2961,8 @@ Future<void> bulkSmsSheet()async {
      SizedBox(width:double.infinity,child:FilledButton.icon(
       onPressed:(){
        Navigator.of(dialogContext).pop();
-       Navigator.of(context).push(MaterialPageRoute(builder:(_)=>Scaffold(
-        appBar:AppBar(title:WaffraText(waffraIsEnglish?'PDF preview':'معاينة التقرير')),
-        body:PdfPreview(build:(_)=>bytes,canChangeOrientation:false,
-         canChangePageFormat:false,allowPrinting:false,allowSharing:true,
-         pdfFileName:fileName),
-       )));
+       Navigator.of(context).push(MaterialPageRoute(builder:(_)=>
+        WaffraPdfReader(bytes:bytes,fileName:fileName,english:waffraIsEnglish)));
       },
       icon:const Icon(Icons.visibility_outlined),
       label:WaffraText(waffraIsEnglish?'Open report':'فتح التقرير'))),
