@@ -32,8 +32,15 @@ import 'waffra_merchant_rules.dart';
 import 'waffra_google_auth.dart';
 
 void main() { WidgetsFlutterBinding.ensureInitialized(); runApp(const WaffraApp()); }
-const emerald=Color(0xFF087A54), forest=Color(0xFF064D3B), sand=Color(0xFFF8F6EF), gold=Color(0xFFD8BA78);
-Color waffraIncomeTone(BuildContext context)=>Theme.of(context).brightness==Brightness.dark?const Color(0xFF6CE0AB):const Color(0xFF16845B);
+// Waffra visual identity / Saudi government-grade accessible emerald palette.
+// Visual-only constants: do not change financial data, flows, or persistence keys.
+const emerald=Color(0xFF0C7957), forest=Color(0xFF073F31),
+ sand=Color(0xFFF4FAF7), gold=Color(0xFFD8BA78);
+const waffraMint=Color(0xFFEAF5EE),
+ waffraIncomeBackground=Color(0xFFB2D5C2),
+ waffraExpenseBackground=Color(0xFFFCECE8),
+ waffraInk=Color(0xFF183B33);
+Color waffraIncomeTone(BuildContext context)=>Theme.of(context).brightness==Brightness.dark?const Color(0xFF6CE0AB):const Color(0xFF075C40);
 final ValueNotifier<int> waffraReturnHome=ValueNotifier<int>(0);
 final ValueNotifier<String> waffraAnimationLevel=ValueNotifier<String>('balanced');
 Duration waffraMotion(int milliseconds){
@@ -427,8 +434,147 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     child:AnimatedSwitcher(duration:waffraMotion(240),switchInCurve:Curves.easeOutCubic,
      transitionBuilder:(w,a)=>FadeTransition(opacity:a,child:SlideTransition(position:Tween<Offset>(begin:const Offset(0.11,0),end:Offset.zero).animate(a),child:w)),
      child:KeyedSubtree(key:ValueKey(language),child:child??const SizedBox.shrink())))),
-  theme:ThemeData(useMaterial3:true,colorSchemeSeed:emerald,outlinedButtonTheme:OutlinedButtonThemeData(style:OutlinedButton.styleFrom(side:const BorderSide(color:forest,width:1.2),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18)))),filledButtonTheme:FilledButtonThemeData(style:FilledButton.styleFrom(shape:RoundedRectangleBorder(side:const BorderSide(color:forest,width:1.0),borderRadius:BorderRadius.circular(17)))),textButtonTheme:TextButtonThemeData(style:TextButton.styleFrom(shape:RoundedRectangleBorder(side:const BorderSide(color:Color(0x44064D3B)),borderRadius:BorderRadius.circular(14)))),inputDecorationTheme:InputDecorationTheme(filled:true,fillColor:const Color(0xFFF7FBF8),border:OutlineInputBorder(borderRadius:BorderRadius.circular(13)),labelStyle:const TextStyle(color:forest),hintStyle:const TextStyle(color:Color(0xFF63766A))),scaffoldBackgroundColor:sand,appBarTheme:const AppBarTheme(backgroundColor:forest,foregroundColor:Colors.white),navigationBarTheme:NavigationBarThemeData(backgroundColor:forest,labelTextStyle:WidgetStateProperty.all(const TextStyle(color:Colors.white,fontSize:11)),iconTheme:WidgetStateProperty.resolveWith((states)=>IconThemeData(color:states.contains(WidgetState.selected)?forest:Colors.white,size:27))),floatingActionButtonTheme:const FloatingActionButtonThemeData(backgroundColor:forest,foregroundColor:Colors.white),fontFamily:'Tajawal',textTheme:ThemeData.light().textTheme.apply(fontFamily:'Tajawal'),primaryTextTheme:ThemeData.light().primaryTextTheme.apply(fontFamily:'Tajawal')),
-  darkTheme:ThemeData(useMaterial3:true,brightness:Brightness.dark,colorSchemeSeed:emerald,outlinedButtonTheme:OutlinedButtonThemeData(style:OutlinedButton.styleFrom(foregroundColor:Colors.white,side:const BorderSide(color:Color(0xFF77BBA2),width:1.2),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18)))),filledButtonTheme:FilledButtonThemeData(style:FilledButton.styleFrom(shape:RoundedRectangleBorder(side:const BorderSide(color:Color(0xFF77BBA2)),borderRadius:BorderRadius.circular(17)))),textButtonTheme:TextButtonThemeData(style:TextButton.styleFrom(foregroundColor:Colors.white,shape:RoundedRectangleBorder(side:const BorderSide(color:Color(0xFF61937E)),borderRadius:BorderRadius.circular(14)))),inputDecorationTheme:InputDecorationTheme(filled:true,fillColor:const Color(0xFF1E3730),border:OutlineInputBorder(borderRadius:BorderRadius.circular(13)),labelStyle:const TextStyle(color:Color(0xFFDEEDE5)),hintStyle:const TextStyle(color:Color(0xFFBBD2C5))),appBarTheme:const AppBarTheme(backgroundColor:forest,foregroundColor:Colors.white),navigationBarTheme:NavigationBarThemeData(backgroundColor:forest,labelTextStyle:WidgetStateProperty.all(const TextStyle(color:Colors.white,fontSize:11)),iconTheme:WidgetStateProperty.all(const IconThemeData(color:Colors.white))),floatingActionButtonTheme:const FloatingActionButtonThemeData(backgroundColor:forest,foregroundColor:Colors.white),fontFamily:'Tajawal',textTheme:ThemeData.dark().textTheme.apply(fontFamily:'Tajawal'),primaryTextTheme:ThemeData.dark().primaryTextTheme.apply(fontFamily:'Tajawal')),
+
+  theme:ThemeData(
+   useMaterial3:true,
+   colorScheme:ColorScheme.fromSeed(seedColor:forest,brightness:Brightness.light).copyWith(
+    primary:forest,onPrimary:Colors.white,
+    secondary:emerald,surface:Colors.white,onSurface:waffraInk),
+   scaffoldBackgroundColor:sand,
+   canvasColor:sand,
+   cardColor:Colors.white,
+   fontFamily:'Tajawal',
+   textTheme:ThemeData.light().textTheme.apply(fontFamily:'Tajawal',bodyColor:waffraInk,displayColor:waffraInk),
+   primaryTextTheme:ThemeData.light().primaryTextTheme.apply(fontFamily:'Tajawal'),
+   appBarTheme:const AppBarTheme(
+    backgroundColor:forest,foregroundColor:Colors.white,
+    elevation:0,scrolledUnderElevation:0,centerTitle:false,
+    titleTextStyle:TextStyle(fontFamily:'Tajawal',fontSize:21,
+     fontWeight:FontWeight.bold,color:Colors.white)),
+   cardTheme:CardThemeData(
+    color:Colors.white,elevation:0,clipBehavior:Clip.antiAlias,
+    margin:const EdgeInsets.symmetric(vertical:5),
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(22),
+     side:const BorderSide(color:Color(0xFFE0EDE6),width:.9))),
+   navigationBarTheme:NavigationBarThemeData(
+    backgroundColor:Colors.white,elevation:4,height:76,
+    surfaceTintColor:Colors.white,indicatorColor:waffraMint,
+    labelTextStyle:WidgetStateProperty.resolveWith((states)=>TextStyle(
+     color:states.contains(WidgetState.selected)?forest:const Color(0xFF58756B),
+     fontFamily:'Tajawal',fontSize:10.5,
+     fontWeight:states.contains(WidgetState.selected)?FontWeight.bold:FontWeight.w500)),
+    iconTheme:WidgetStateProperty.resolveWith((states)=>IconThemeData(
+     color:states.contains(WidgetState.selected)?forest:const Color(0xFF608377),size:24))),
+   filledButtonTheme:FilledButtonThemeData(style:FilledButton.styleFrom(
+    backgroundColor:forest,foregroundColor:Colors.white,
+    minimumSize:const Size(0,46),
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)))),
+   outlinedButtonTheme:OutlinedButtonThemeData(style:OutlinedButton.styleFrom(
+    foregroundColor:forest,side:const BorderSide(color:Color(0xFFB4D5C5),width:1.1),
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)))),
+   textButtonTheme:TextButtonThemeData(style:TextButton.styleFrom(
+    foregroundColor:forest,
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(13)))),
+   inputDecorationTheme:InputDecorationTheme(
+    filled:true,fillColor:Colors.white,
+    contentPadding:const EdgeInsets.symmetric(horizontal:14,vertical:13),
+    enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(15),
+     borderSide:const BorderSide(color:Color(0xFFCFE3D7))),
+    focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(15),
+     borderSide:const BorderSide(color:emerald,width:1.7)),
+    border:OutlineInputBorder(borderRadius:BorderRadius.circular(15)),
+    labelStyle:const TextStyle(color:forest),hintStyle:const TextStyle(color:Color(0xFF7B9084))),
+   chipTheme:ChipThemeData(
+    backgroundColor:Colors.white,selectedColor:waffraMint,
+    side:const BorderSide(color:Color(0xFFD5E8DD)),
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(20)),
+    labelStyle:const TextStyle(fontFamily:'Tajawal',color:forest)),
+   dialogTheme:DialogThemeData(
+    backgroundColor:Colors.white,
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26))),
+   bottomSheetTheme:const BottomSheetThemeData(
+    backgroundColor:Colors.white,modalBackgroundColor:Colors.white,
+    showDragHandle:true,dragHandleColor:Color(0xFFB5D9C6),
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(27)))),
+   popupMenuTheme:PopupMenuThemeData(
+    color:Colors.white,elevation:7,
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16))),
+   listTileTheme:const ListTileThemeData(
+    iconColor:forest,textColor:waffraInk,
+    contentPadding:EdgeInsets.symmetric(horizontal:15,vertical:2)),
+   floatingActionButtonTheme:const FloatingActionButtonThemeData(
+    backgroundColor:forest,foregroundColor:Colors.white),
+   dividerTheme:const DividerThemeData(color:Color(0xFFE1EDE6),thickness:.8),
+  ),
+  darkTheme:ThemeData(
+   useMaterial3:true,
+   brightness:Brightness.dark,
+   colorScheme:ColorScheme.fromSeed(seedColor:emerald,brightness:Brightness.dark).copyWith(
+    primary:const Color(0xFF74DCAB),onPrimary:forest,
+    secondary:const Color(0xFF8AE0B3),surface:const Color(0xFF19382C),
+    onSurface:Colors.white),
+   scaffoldBackgroundColor:const Color(0xFF0B241C),
+   canvasColor:const Color(0xFF0B241C),
+   cardColor:const Color(0xFF19382C),
+   fontFamily:'Tajawal',
+   textTheme:ThemeData.dark().textTheme.apply(fontFamily:'Tajawal'),
+   primaryTextTheme:ThemeData.dark().primaryTextTheme.apply(fontFamily:'Tajawal'),
+   appBarTheme:const AppBarTheme(
+    backgroundColor:forest,foregroundColor:Colors.white,
+    elevation:0,scrolledUnderElevation:0,
+    titleTextStyle:TextStyle(fontFamily:'Tajawal',fontSize:21,
+     fontWeight:FontWeight.bold,color:Colors.white)),
+   cardTheme:CardThemeData(
+    color:const Color(0xFF19382C),elevation:0,clipBehavior:Clip.antiAlias,
+    margin:const EdgeInsets.symmetric(vertical:5),
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(22),
+     side:const BorderSide(color:Color(0xFF345A49)))),
+   navigationBarTheme:NavigationBarThemeData(
+    backgroundColor:const Color(0xFF12372A),height:76,
+    indicatorColor:const Color(0xFF2B6B4B),
+    labelTextStyle:WidgetStateProperty.resolveWith((states)=>TextStyle(
+     color:states.contains(WidgetState.selected)?Colors.white:const Color(0xFFC0D5C9),
+     fontFamily:'Tajawal',fontSize:10.5,
+     fontWeight:states.contains(WidgetState.selected)?FontWeight.bold:FontWeight.w500)),
+    iconTheme:WidgetStateProperty.resolveWith((states)=>IconThemeData(
+     color:states.contains(WidgetState.selected)?Colors.white:const Color(0xFFBDD7C8),size:24))),
+   filledButtonTheme:FilledButtonThemeData(style:FilledButton.styleFrom(
+    backgroundColor:const Color(0xFF166E4F),foregroundColor:Colors.white,
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)))),
+   outlinedButtonTheme:OutlinedButtonThemeData(style:OutlinedButton.styleFrom(
+    foregroundColor:Colors.white,
+    side:const BorderSide(color:Color(0xFF61967F)),
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)))),
+   textButtonTheme:TextButtonThemeData(style:TextButton.styleFrom(
+    foregroundColor:Colors.white,
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(13)))),
+   inputDecorationTheme:InputDecorationTheme(
+    filled:true,fillColor:const Color(0xFF1B4031),
+    border:OutlineInputBorder(borderRadius:BorderRadius.circular(15)),
+    enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(15),
+     borderSide:const BorderSide(color:Color(0xFF376E56))),
+    focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(15),
+     borderSide:const BorderSide(color:Color(0xFF8EDDB5),width:1.6)),
+    labelStyle:const TextStyle(color:Color(0xFFE6FFF0)),
+    hintStyle:const TextStyle(color:Color(0xFFAACBBC))),
+   chipTheme:ChipThemeData(
+    backgroundColor:const Color(0xFF214434),selectedColor:const Color(0xFF2D7653),
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(20)),
+    labelStyle:const TextStyle(color:Colors.white)),
+   dialogTheme:DialogThemeData(
+    backgroundColor:const Color(0xFF19382C),
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26))),
+   bottomSheetTheme:const BottomSheetThemeData(
+    backgroundColor:Color(0xFF19382C),modalBackgroundColor:Color(0xFF19382C),
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(27)))),
+   popupMenuTheme:PopupMenuThemeData(
+    color:const Color(0xFF214434),
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16))),
+   listTileTheme:const ListTileThemeData(iconColor:Colors.white,textColor:Colors.white),
+   floatingActionButtonTheme:const FloatingActionButtonThemeData(
+    backgroundColor:forest,foregroundColor:Colors.white),
+   dividerTheme:const DividerThemeData(color:Color(0xFF37624C),thickness:.8),
+  ),
   themeMode:dark?ThemeMode.dark:ThemeMode.light,
   themeAnimationDuration:waffraMotion(250),
   themeAnimationCurve:Curves.easeInOutCubic,
