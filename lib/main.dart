@@ -3774,7 +3774,14 @@ Future<void> bulkSmsSheet()async {
    },
   );
   if(!mounted)return;
-  await Navigator.of(context).push<void>(MaterialPageRoute(builder:(ctx){
+  await showModalBottomSheet<void>(
+   context:context,
+   isScrollControlled:true,
+   useSafeArea:true,
+   showDragHandle:true,
+   backgroundColor:Theme.of(context).scaffoldBackgroundColor,
+   shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
+   builder:(ctx){
    final deficit=spending-income;
    final accent=score==null?Colors.grey:score<45?Colors.red:score<70?Colors.orange:emerald;
    final periods=List.generate(3,(i){
@@ -3784,9 +3791,15 @@ Future<void> bulkSmsSheet()async {
     return (sum(items,true),sum(items,false));
    });
    final highest=periods.fold<double>(1,(v,p)=>max(v,max(p.$1,p.$2)));
-   return Scaffold(
-    appBar:AppBar(title:WaffraText(waffraIsEnglish?'Detailed financial analysis':'التحليل المالي التفصيلي')),
-    body:ListView(padding:const EdgeInsets.all(16),children:[
+   return FractionallySizedBox(
+    heightFactor:.90,
+    child:Column(children:[
+     Padding(padding:const EdgeInsets.symmetric(horizontal:16,vertical:6),child:Row(children:[
+      Expanded(child:WaffraText(waffraIsEnglish?'Detailed financial analysis':'التحليل المالي التفصيلي',style:const TextStyle(fontSize:20,fontWeight:FontWeight.bold))),
+      IconButton(tooltip:waffraIsEnglish?'Close':'إغلاق',icon:const Icon(Icons.close_rounded),onPressed:()=>Navigator.of(ctx).pop()),
+     ])),
+     const Divider(height:1),
+     Expanded(child:ListView(padding:const EdgeInsets.all(16),children:[
      Container(padding:const EdgeInsets.all(20),decoration:BoxDecoration(
       color:emerald.withValues(alpha:.08),borderRadius:BorderRadius.circular(20)),
       child:Column(children:[
@@ -3890,9 +3903,10 @@ Future<void> bulkSmsSheet()async {
       title:WaffraText(waffraIsEnglish?'Set monthly budgets for your categories.':
        'حدد ميزانية شهرية لكل قسم للتحكم في الإنفاق.')),
      const SizedBox(height:24),
+    ])),
     ]),
    );
-  }));
+  });
  }
  Widget _analysisStat(String label,double value,Color color)=>Container(
   width:MediaQuery.of(context).size.width/3-18,
