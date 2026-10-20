@@ -166,6 +166,7 @@ IconData categoryIcon(String n) {
 IconData avatarIcon(String s)=>s=='male'?Icons.face:s=='female'?Icons.face_3:s=='smile'?Icons.sentiment_very_satisfied:Icons.person;
 Widget saudiAvatar(String gender,{double radius=25})=>CircleAvatar(radius:radius,backgroundColor:const Color(0xFFE5F1E9),backgroundImage:AssetImage(gender=='أنثى'||gender=='female'?'assets/avatar_saudi_female.png':'assets/avatar_saudi_male.png'));
 Widget waffraAvatar(String gender,String avatar,{double radius=25}) {
+ if(avatar.startsWith('https://'))return CircleAvatar(radius:radius,backgroundColor:const Color(0xFFE5F1E9),backgroundImage:NetworkImage(avatar));
  final file=avatar.startsWith('file:')?File(avatar.substring(5)):null;
  if(file!=null&&file.existsSync()){
   return CircleAvatar(radius:radius,backgroundColor:const Color(0xFFE5F1E9),
@@ -798,7 +799,9 @@ class _LoginScreenState extends State<LoginScreen> {
     final user=result.user;
     if(user==null)throw StateError('Google did not return an account');
     await widget.onSave(Person(name:user.displayName??'',email:user.email??'',
-     phone:user.phoneNumber??'',provider:'Google',gender:'',avatar:'person',birthday:DateTime(2000)));
+     phone:user.phoneNumber??'',provider:'Google',gender:'',avatar:user.photoURL??'person',birthday:DateTime(2000)));
+     if(!mounted)return;
+     await Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>ProfileForm(provider:'Google',initial:Person(name:user.displayName??'',email:user.email??'',phone:user.phoneNumber??'',provider:'Google',gender:'',avatar:user.photoURL??'person',birthday:DateTime(2000)),onSave:widget.onSave)));
    }catch(e){
     if(mounted)snack(context,waffraIsEnglish?'Google sign-in failed or was cancelled. Please try again.':'تعذر تسجيل الدخول بجوجل أو تم إلغاؤه. حاول مرة أخرى.');
     debugPrint('Waffra Google sign-in: $e');
@@ -969,10 +972,11 @@ class _ProfileFormState extends State<ProfileForm> {
  }
  Future<void> save()async {
   setState(()=>profileAttempted=true);
-  if(gender.isEmpty)return;
+  if(gender.isEmpty){snack(context,waffraIsEnglish?'Gender is required':'الجنس حقل إجباري');return;}
+   if(birthday.year==2000&&birthday.month==1&&birthday.day==1){snack(context,waffraIsEnglish?'Please select your date of birth':'تاريخ الميلاد حقل إجباري');return;}
   final validEmail=RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email.text.trim());
   final validPhone=RegExp(r'^05[0-9]{8}$').hasMatch(phone.text.trim());
-  if(WaffraValidators.requiredText(name.text)!=null||(!validPhone && phone.text.trim().isNotEmpty)){
+  if(WaffraValidators.requiredText(name.text)!=null||!validPhone){
    snack(context,waffraIsEnglish?'Enter a name and valid mobile number starting with 05':'أدخل الاسم ورقم جوال يبدأ بـ 05 من 10 أرقام');return;
   }
   if(widget.initial==null){
@@ -993,7 +997,7 @@ class _ProfileFormState extends State<ProfileForm> {
    await widget.onSave(Person(name:name.text.trim(),email:widget.initial?.email??'',
     phone:phone.text.trim(),provider:widget.provider,gender:gender,avatar:avatar,birthday:birthday));
    if(!mounted)return;
-   if(widget.initial!=null)Navigator.pop(context);
+   if(widget.initial!=null&&Navigator.of(context).canPop())Navigator.pop(context);
   }catch(e){if(mounted)snack(context,'تعذر حفظ البيانات: $e');}
   finally{if(mounted)setState(()=>busy=false);}
  }
@@ -1009,8 +1013,9 @@ class _ProfileFormState extends State<ProfileForm> {
      onPressed:editAvatar)),
    ])),
    const SizedBox(height:10),
-   Wrap(alignment:WrapAlignment.center,spacing:12,children:['ذكر','أنثى']
-    .map((a)=>ChoiceChip(label:Row(mainAxisSize:MainAxisSize.min,children:[saudiAvatar(a,radius:20),const SizedBox(width:6),WaffraText(waffraIsEnglish?(a=='ذكر'?'Male':'Female'):a)]),selected:gender==a,onSelected:(_)=>setState((){gender=a;avatar=a=='ذكر'?'male':'female';}))).toList()),
+   if(widget.provider=='Google'&&(widget.initial?.gender.isEmpty??true))Card(color:emerald.withValues(alpha:.08),child:Padding(padding:const EdgeInsets.all(14),child:WaffraText(waffraIsEnglish?'Complete your profile: mobile number, gender and date of birth are required.':'تبقّى بعض البيانات لاستكمال ملفك الشخصي: رقم الجوال والجنس وتاريخ الميلاد حقول إجبارية.'))),
+    Wrap(alignment:WrapAlignment.center,spacing:12,children:['ذكر','أنثى']
+    .map((a)=>ChoiceChip(label:Row(mainAxisSize:MainAxisSize.min,children:[saudiAvatar(a,radius:20),const SizedBox(width:6),WaffraText(waffraIsEnglish?(a=='ذكر'?'Male':'Female'):a)]),selected:gender==a,onSelected:(_)=>setState((){gender=a;if(!avatar.startsWith('https://'))avatar=a=='ذكر'?'male':'female';}))).toList()),
    const SizedBox(height:16),
    TextField(controller:name,onChanged:(_)=>setState((){}),decoration:InputDecoration(
      labelText:waffraIsEnglish?'Name *':'اسمك *',
@@ -1029,7 +1034,7 @@ class _ProfileFormState extends State<ProfileForm> {
     inputFormatters:[FilteringTextInputFormatter.digitsOnly,LengthLimitingTextInputFormatter(10)],
     decoration:InputDecoration(labelText:waffraIsEnglish?'Mobile number starting with 05 *':'رقم جوال يبدأ بـ 05 *',
      hintText:'05XXXXXXXX',
-     errorText:profileAttempted&&((widget.initial==null||phone.text.trim().isNotEmpty)&&WaffraValidators.mobileNumber(phone.text)!=null)?
+     errorText:profileAttempted&&WaffraValidators.mobileNumber(phone.text)!=null?
       (waffraIsEnglish?'Enter a valid mobile number starting with 05':'رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام'):null,
      border:const OutlineInputBorder())),
    if(widget.initial==null) ...[
@@ -1061,12 +1066,12 @@ class _ProfileFormState extends State<ProfileForm> {
       errorText:profileAttempted&&gender.isEmpty?(waffraIsEnglish?'Select gender':'الجنس حقل إجباري'):null,
       border:const OutlineInputBorder()),
     items:['ذكر','أنثى'].map((x)=>DropdownMenuItem(value:x,child:WaffraText(waffraIsEnglish?(x=='ذكر'?'Male':'Female'):x))).toList(),
-    onChanged:(v){if(v!=null)setState((){gender=v;avatar=v=='أنثى'?'female':'male';});}),
+    onChanged:(v){if(v!=null)setState((){gender=v;if(!avatar.startsWith('https://'))avatar=v=='أنثى'?'female':'male';});}),
    const SizedBox(height:12),
    OutlinedButton.icon(onPressed:()async {
     final d=await showDatePicker(context:context,initialDate:birthday,firstDate:DateTime(1900),lastDate:DateTime.now());
     if(d!=null)setState(()=>birthday=d);
-   },icon:const Icon(Icons.calendar_month),label:WaffraText('${waffraIsEnglish?'Date of birth':'تاريخ الميلاد'}: ${dayText(birthday)}')),
+   },icon:const Icon(Icons.calendar_month),label:WaffraText('${waffraIsEnglish?'Date of birth *':'تاريخ الميلاد *'}: ${dayText(birthday)}')),
    const SizedBox(height:20),
    FilledButton(onPressed:busy?null:save,child:WaffraText(waffraIsEnglish?'Save profile':'حفظ البيانات')),
   ]));
@@ -4177,9 +4182,11 @@ Future<void> bulkSmsSheet()async {
      dayText(p.birthday),Icons.cake_outlined,emerald)),
     const SizedBox(width:6),
     Expanded(child:_summaryBox(waffraIsEnglish?'Gender':'الجنس',gender,Icons.people,emerald)),
-    const SizedBox(width:6),
-    Expanded(child:_summaryBox(waffraIsEnglish?'Account':'نوع الحساب',
-     local?(waffraIsEnglish?'Local':'محلي'):p.provider,Icons.person,emerald)),
+    if(p.provider!='Google')...[
+     const SizedBox(width:6),
+     Expanded(child:_summaryBox(waffraIsEnglish?'Account':'نوع الحساب',
+      local?(waffraIsEnglish?'Local':'محلي'):p.provider,Icons.person,emerald)),
+    ],
    ]),
    const SizedBox(height:11),
    OutlinedButton.icon(onPressed:edit,icon:const Icon(Icons.edit_outlined),
