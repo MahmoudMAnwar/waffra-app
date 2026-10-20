@@ -31,6 +31,7 @@ import 'waffra_pdf_text.dart';
 import 'waffra_merchant_rules.dart';
 import 'waffra_google_auth.dart';
 import 'waffra_category_catalog.dart';
+import 'waffra_goal_catalog.dart';
 part 'waffra_categories_page.part.dart';
 
 void main() { WidgetsFlutterBinding.ensureInitialized(); runApp(const WaffraApp()); }
@@ -4595,43 +4596,146 @@ Future<void> bulkSmsSheet()async {
  Future<void> goalDialog()async {
   final name=TextEditingController(),target=TextEditingController();
   final prefs=await SharedPreferences.getInstance();
+  if(!mounted){name.dispose();target.dispose();return;}
   final customGoals=prefs.getStringList('waffra_custom_goals_v1')??<String>[];
-  final suggested=['سيارة','منزل','سفر','زواج','صندوق الطوارئ','تعليم','حج أو عمرة','مشروع خاص',...customGoals];
-  String selectedGoal='';bool attempted=false;
-  final g=await showWaffraDialog<SavingGoal>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,updateGoal)=>AlertDialog(
-   title:const WaffraText('إضافة هدف ادخار'),scrollable:true,
-   content:Column(mainAxisSize:MainAxisSize.min,children:[
-    DropdownButtonFormField<String>(isExpanded:true,decoration:InputDecoration(labelText:waffraIsEnglish?'Savings goal *':'اختر هدف الادخار *',
-      errorText:attempted&&selectedGoal.isEmpty?waffraRequiredFieldMessage:null),
-     items:[...suggested,'هدف آخر'].map((v)=>DropdownMenuItem(value:v,child:WaffraText(v))).toList(),
-     onChanged:(v){if(v==null)return;updateGoal(()=>selectedGoal=v);name.text=v=='هدف آخر'?'':v;}),
-    if(selectedGoal=='هدف آخر')...[
+  final defaults=waffraDefaultGoalNames(waffraIsEnglish);
+  final allDefaultNames={
+   ...waffraDefaultGoalNames(false).map(waffraNormalizeGoal),
+   ...waffraDefaultGoalNames(true).map(waffraNormalizeGoal),
+  };
+  final suggested=<String>[];
+  final seen=<String>{};
+  for(final entry in [...defaults,...customGoals]){
+   final key=waffraNormalizeGoal(entry);
+   if(key.isNotEmpty&&seen.add(key))suggested.add(entry.trim());
+  }
+  const otherGoal='__other_goal__';
+  String selectedGoal='';
+  bool attempted=false;
+  String? validateGoalName(){
+   final issue=waffraGoalNameIssue(name.text,goals.map((g)=>g.name));
+   if(issue=='required'||issue=='too_long')return waffraTextFieldError(name.text);
+   if(issue=='duplicate')return waffraIsEnglish?'A goal with this name already exists':'يوجد هدف بنفس الاسم بالفعل';
+   if(selectedGoal==otherGoal&&suggested.any(
+    (v)=>waffraNormalizeGoal(v)==waffraNormalizeGoal(name.text))){
+    return waffraIsEnglish?'Already suggested. Please choose it from the list.':'هذا الهدف ضمن الاقتراحات. اختره من القائمة.';
+   }
+   return null;
+  }
+  final g=await showWaffraDialog<SavingGoal>(context:context,
+   builder:(ctx)=>StatefulBuilder(builder:(ctx,updateGoal)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Add savings goal':'إضافة هدف ادخار'),
+    scrollable:true,
+    content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+     InkWell(
+      borderRadius:BorderRadius.circular(14),
+      onTap:()async{
+       final picked=await showWaffraDialog<String>(context:ctx,
+        builder:(pickCtx){
+         String query='';
+         return StatefulBuilder(builder:(pickCtx,refresh){
+          final search=waffraNormalizeGoal(query);
+          final matches=suggested.where(
+           (item)=>search.isEmpty||waffraNormalizeGoal(item).contains(search)).toList();
+          return AlertDialog(
+           title:WaffraText(waffraIsEnglish?'Choose savings goal':'اختر هدف الادخار'),
+           content:SizedBox(
+            width:double.maxFinite,
+            height:min(450.0,MediaQuery.sizeOf(pickCtx).height*.60),
+            child:Column(children:[
+             TextField(autofocus:true,onChanged:(value)=>refresh(()=>query=value),
+              decoration:InputDecoration(
+               prefixIcon:const Icon(Icons.search_rounded),
+               hintText:waffraIsEnglish?'Search among suggested goals…':'ابحث بين الأهداف المقترحة…',
+               border:OutlineInputBorder(borderRadius:BorderRadius.circular(14)))),
+             const SizedBox(height:8),
+             ListTile(
+              dense:true,
+              leading:const Icon(Icons.add_circle_outline_rounded,color:emerald),
+              title:WaffraText(waffraIsEnglish?'Other goal (custom name)':'هدف آخر (اسم مخصص)'),
+              onTap:()=>Navigator.pop(pickCtx,otherGoal)),
+             const Divider(height:10),
+             Expanded(child:matches.isEmpty
+              ?Center(child:WaffraText(waffraIsEnglish?'No matching goals':'لا توجد أهداف مطابقة'))
+              :ListView.builder(itemCount:matches.length,itemBuilder:(pickCtx,index)=>
+               ListTile(
+                dense:true,
+                title:WaffraText(matches[index],maxLines:2),
+                onTap:()=>Navigator.pop(pickCtx,matches[index])))),
+            ]),
+           ),
+          );
+         });
+        });
+       if(picked!=null&&ctx.mounted)updateGoal((){
+        selectedGoal=picked;
+        name.text=picked==otherGoal?'':picked;
+       });
+      },
+      child:InputDecorator(
+       decoration:InputDecoration(
+        labelText:waffraIsEnglish?'Savings goal *':'اختر هدف الادخار *',
+        errorText:attempted&&selectedGoal.isEmpty?waffraRequiredFieldMessage:
+         attempted&&selectedGoal!=otherGoal?validateGoalName():null,
+        errorMaxLines:2,
+        suffixIcon:const Icon(Icons.search_rounded),
+        border:OutlineInputBorder(borderRadius:BorderRadius.circular(14))),
+       child:Row(children:[
+        Expanded(child:WaffraText(
+         selectedGoal==otherGoal?(waffraIsEnglish?'Other goal':'هدف آخر'):
+         selectedGoal.isEmpty?(waffraIsEnglish?'Select a goal':'اختر هدفًا'):selectedGoal,
+         maxLines:2,
+         style:TextStyle(fontSize:14,color:selectedGoal.isEmpty?Theme.of(ctx).hintColor:null))),
+        const Icon(Icons.arrow_drop_down_rounded,size:20),
+       ]),
+      ),
+     ),
+     if(selectedGoal==otherGoal)...[
+      const SizedBox(height:12),
+      TextField(controller:name,textInputAction:TextInputAction.next,
+       maxLength:100,onChanged:(_)=>updateGoal((){}),
+       decoration:InputDecoration(
+        labelText:waffraIsEnglish?'Other goal name *':'اسم الهدف الآخر *',
+        hintText:waffraIsEnglish?'e.g. Home renovation':'مثال: تجديد المنزل',
+        errorText:attempted?validateGoalName():null,
+        errorMaxLines:2,
+        border:const OutlineInputBorder())),
+     ],
      const SizedBox(height:12),
-     TextField(controller:name,textInputAction:TextInputAction.next,onChanged:(_)=>updateGoal((){}),
-      decoration:InputDecoration(labelText:waffraIsEnglish?'Goal name *':'اسم الهدف *',hintText:waffraTr('مثال: تجديد المنزل'),
-       errorText:attempted?waffraTextFieldError(name.text):null)),
+     TextField(controller:target,
+      keyboardType:const TextInputType.numberWithOptions(decimal:true),
+      inputFormatters:[const WaffraAmountFormatter()],
+      onChanged:(_)=>updateGoal((){}),
+      decoration:InputDecoration(
+       labelText:waffraIsEnglish?'Target amount *':'المبلغ المستهدف *',
+       hintText:waffraIsEnglish?'e.g. 25000':'مثال: 25000',
+       errorText:attempted?waffraAmountFieldError(target.text):null,
+       border:const OutlineInputBorder())),
+    ]),
+    actions:[
+     TextButton(onPressed:()=>Navigator.pop(ctx),
+      child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+     FilledButton(onPressed:(){
+      updateGoal(()=>attempted=true);
+      final n=amountOf(target.text);
+      if(selectedGoal.isEmpty||validateGoalName()!=null||
+       WaffraValidators.positiveAmount(target.text)!=null||n==null)return;
+      Navigator.pop(ctx,SavingGoal(id:newId(),name:name.text.trim(),target:n,saved:0));
+     },child:WaffraText(waffraIsEnglish?'Add goal':'إضافة الهدف')),
     ],
-    const SizedBox(height:12),
-    TextField(controller:target,keyboardType:const TextInputType.numberWithOptions(decimal:true),
-       inputFormatters:[const WaffraAmountFormatter()],onChanged:(_)=>updateGoal((){}),
-     decoration:InputDecoration(labelText:waffraIsEnglish?'Target amount *':'المبلغ المستهدف *',hintText:waffraTr('مثال: 25000'),
-      errorText:attempted?waffraAmountFieldError(target.text):null)),
-   ]),
-   actions:[
-    TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إلغاء')),
-    FilledButton(onPressed:(){
-     final n=amountOf(target.text);updateGoal(()=>attempted=true);
-     if(WaffraValidators.requiredText(name.text)!=null||WaffraValidators.positiveAmount(target.text)!=null||selectedGoal.isEmpty||n==null)return;
-     if((selectedGoal=='هدف آخر'||!suggested.contains(name.text.trim()))&&!customGoals.contains(name.text.trim())){
-      prefs.setStringList('waffra_custom_goals_v1',[...customGoals,name.text.trim()]);
-     }
-     Navigator.pop(ctx,SavingGoal(id:newId(),name:name.text.trim(),target:n,saved:0));
-    },child:const WaffraText('إضافة الهدف')),
-   ])));
+   )));
   disposeLater([name,target]);
   if(g!=null&&mounted){
+   if(selectedGoal==otherGoal){
+    final key=waffraNormalizeGoal(g.name);
+    if(!allDefaultNames.contains(key)&&!customGoals.any((entry)=>waffraNormalizeGoal(entry)==key)){
+     await prefs.setStringList('waffra_custom_goals_v1',[...customGoals,g.name]);
+    }
+   }
+   if(!mounted)return;
    setState(()=>goals.add(g));await persist();
-   if(mounted)snackSuccess(context,'تمت إضافة الهدف بنجاح');
+   if(mounted)snackSuccess(context,
+    waffraIsEnglish?'Savings goal added successfully':'تمت إضافة الهدف بنجاح');
   }
  }
  Future<void> fundGoal(SavingGoal g)async {
