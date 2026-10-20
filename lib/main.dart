@@ -840,7 +840,7 @@ class _LoginScreenState extends State<LoginScreen> {
    builder:(ctx)=>SafeArea(child:Padding(padding:const EdgeInsets.fromLTRB(20,14,20,28),child:Column(mainAxisSize:MainAxisSize.min,children:[
     WaffraText(waffraIsEnglish?'Create account':'إنشاء حساب',style:const TextStyle(fontSize:29,fontWeight:FontWeight.bold,color:Color(0xFF10191A))),
     const SizedBox(height:15),
-    _socialBorder(ctx,'Google',SvgPicture.string(_waffraGoogleLogo,width:32,height:32)),label:waffraIsEnglish?'Continue with Google':'المتابعة باستخدام Google'),
+    _socialBorder(ctx,'Google',SvgPicture.string(_waffraGoogleLogo,width:32,height:32),label:waffraIsEnglish?'Continue with Google':'المتابعة باستخدام Google'),
     const SizedBox(height:12),
     _socialBorder(ctx,'Apple',const Icon(Icons.apple,size:34,color:Color(0xFF111111)),label:waffraIsEnglish?'Continue with Apple':'المتابعة باستخدام Apple'),
     const SizedBox(height:12),
@@ -1413,11 +1413,23 @@ Future<void> bulkSmsSheet()async {
  var savedCount=0;
  var statusMessage='';
  var rejectedMessages=<String>[];
+ String? noTransactionWarning(String text){
+  final parts=splitBankMessages(text.trim());
+  if(text.trim().isEmpty||parts.isEmpty)return null;
+  final hasTransaction=parts.any((message){
+   final result=BankParser.parse(message);
+   return result.amount!=null&&result.amount!>0;
+  });
+  return hasTransaction?null:(waffraIsEnglish
+   ?'This message contains no financial transactions. Edit the text and it will be analyzed again automatically.'
+   :'هذه الرسالة لا تحتوي على أي معاملات مالية. يمكنك تعديلها وسيتم تحليلها تلقائيًا مرة أخرى.');
+ }
+
  bool sheetActive=true;
  Future<void> saveParsedMessages(BuildContext ctx,StateSetter update)async {
   if(busy)return;
   final found=splitBankMessages(pasted.text.trim());
-  if(found.isEmpty)return;
+  if(found.isEmpty){update(()=>statusMessage=waffraIsEnglish?'No financial transactions found. Edit the message and retry.':'هذه الرسالة لا تحتوي على أي معاملات مالية. عدّلها لإعادة التحليل تلقائيًا.');return;}
   if(found.length>100){update(()=>statusMessage=waffraIsEnglish?'Maximum 100 transactions per paste.':'الحد الأقصى 100 معاملة في كل عملية لصق.');return;}
   final results=found.map(BankParser.parse).toList();
   final valid=<int>[],invalid=<int>[],duplicates=<int>[];
@@ -1442,7 +1454,7 @@ Future<void> bulkSmsSheet()async {
    valid.addAll(duplicates);
    valid.sort();
   }
-  if(valid.isEmpty){update(() {statusMessage=waffraIsEnglish?'No valid transactions were detected. Review the unrecognized messages below.':'لم يتم اكتشاف معاملات صالحة. راجع الرسائل غير المعروفة أدناه.';rejectedMessages=invalid.map((i)=>found[i]).toList();});return;}
+  if(valid.isEmpty){update(() {statusMessage=waffraIsEnglish?'This message contains no financial transactions. Edit it to analyze again automatically.':'هذه الرسالة لا تحتوي على أي معاملات مالية. عدّل النص ليتم تحليله تلقائيًا مرة أخرى.';rejectedMessages=invalid.map((i)=>found[i]).toList();});return;}
   final incomes=valid.where((i)=>results[i].income).toList();
   final expenses=valid.where((i)=>!results[i].income).toList();
   final incomeTotal=incomes.fold<double>(0,(v,i)=>v+results[i].amount!);
@@ -1528,7 +1540,7 @@ Future<void> bulkSmsSheet()async {
        if(text.trim().isNotEmpty){
         pasteTimer=Timer(const Duration(milliseconds:650),(){
          if(sheetActive&&ctx.mounted&&pasted.text.trim()==text.trim()){
-          update((){messages=splitBankMessages(pasted.text.trim());parsed=true;});
+          update((){messages=splitBankMessages(pasted.text.trim());parsed=true;statusMessage=noTransactionWarning(pasted.text)??'';});
          }
         });
        }
@@ -1543,7 +1555,7 @@ Future<void> bulkSmsSheet()async {
         if(text.isEmpty){snack(ctx,waffraIsEnglish?'Clipboard is empty':'ما فيه رسالة منسوخة حاليًا');return;}
         pasted.text=text;
         pasteTimer?.cancel();
-        update((){messages=splitBankMessages(text);parsed=true;statusMessage='';});
+        update((){messages=splitBankMessages(text);parsed=true;statusMessage=noTransactionWarning(text)??'';});
        },label:WaffraText(waffraIsEnglish?'Paste last copied message':'لصق آخر رسالة نسختها')),
       if(statusMessage.isNotEmpty)...[
        const SizedBox(height:8),
@@ -1575,7 +1587,7 @@ Future<void> bulkSmsSheet()async {
         waffraIsEnglish?'Clear all pasted text? Unsaved messages will be lost.':'هل تريد حذف النص الملصوق بالكامل؟ ستفقد الرسائل غير المحفوظة.');
        if(yes!=true||!ctx.mounted)return;
        pasteTimer?.cancel();pasted.clear();
-       update((){parsed=false;messages=[];});
+       update((){parsed=false;messages=[];statusMessage='';rejectedMessages=[];});
       },icon:const Icon(Icons.delete_outline),label:const WaffraText('حذف النص بالكامل')),
      ]else...[
       TextButton.icon(onPressed:busy?null:()async{
