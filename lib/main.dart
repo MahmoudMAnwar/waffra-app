@@ -323,6 +323,41 @@ Future<T?> showWaffraDialog<T>({
   child:builder(dialogContext)),
 );
 
+String get waffraRequiredFieldMessage => waffraIsEnglish?'This field is required':'هذا الحقل مطلوب';
+String? waffraTextFieldError(String? raw,{int maxLength=100}) {
+ final issue=WaffraValidators.requiredText(raw,maxLength:maxLength);
+ if(issue=='required')return waffraRequiredFieldMessage;
+ if(issue=='too_long')return waffraIsEnglish?'Maximum '+maxLength.toString()+' characters':'الحد الأقصى '+maxLength.toString()+' حرف';
+ return null;
+}
+String? waffraAmountFieldError(String? raw,{bool required=true}) {
+ final issue=WaffraValidators.positiveAmount(raw,required:required);
+ if(issue=='required')return waffraRequiredFieldMessage;
+ if(issue!=null)return waffraIsEnglish?'Enter an amount greater than zero':'أدخل مبلغًا صحيحًا أكبر من صفر';
+ return null;
+}
+String? waffraMobileFieldError(String? raw) {
+ if((raw??'').trim().isEmpty)return waffraRequiredFieldMessage;
+ return WaffraValidators.mobileNumber(raw)==null?null:(waffraIsEnglish?'Mobile number must start with 05 and contain 10 digits':'رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام');
+}
+String? waffraPasswordFieldError(String? raw) {
+ if((raw??'').isEmpty)return waffraRequiredFieldMessage;
+ return RegExp(r'^(?=.*[A-Za-z])(?=.*[0-9]).{8,}$').hasMatch(raw!)?null:(waffraIsEnglish?'Use at least 8 characters with letters and numbers':'كلمة المرور يجب أن تكون 8 خانات على الأقل وتشمل أحرفًا وأرقامًا');
+}
+String? waffraConfirmPasswordFieldError(String? raw,String password) {
+ if((raw??'').isEmpty)return waffraRequiredFieldMessage;
+ return raw==password?null:(waffraIsEnglish?'Passwords do not match':'كلمتا المرور غير متطابقتين');
+}
+String? waffraDayFieldError(String? raw) {
+ if((raw??'').trim().isEmpty)return waffraRequiredFieldMessage;
+ return WaffraValidators.dayOfMonth(raw)==null?null:(waffraIsEnglish?'Enter a day between 1 and 31':'أدخل يومًا صحيحًا من 1 إلى 31');
+}
+String? waffraPinFieldError(String? raw,{bool existing=false}) {
+ if((raw??'').isEmpty)return waffraRequiredFieldMessage;
+ final pattern=existing?RegExp(r'^[0-9]{4,8}$'):RegExp(r'^[0-9]{4}$');
+ return pattern.hasMatch(raw!)?null:(waffraIsEnglish?(existing?'PIN must contain 4 to 8 digits':'PIN must contain exactly 4 digits'):(existing?'أدخل من 4 إلى 8 أرقام':'أدخل أربعة أرقام بالضبط'));
+}
+
 class WaffraApp extends StatefulWidget {
  const WaffraApp({super.key});
  @override State<WaffraApp> createState()=>_WaffraAppState();
@@ -1072,7 +1107,8 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
  String? provider;
  Person? registered;
- bool signInMode=false,showSignInPassword=false,signingIn=false;
+ bool signInMode=false,showSignInPassword=false,signingIn=false,signInAttempted=false;
+ String? signInAuthError;
  bool returnAfterLogout=false;String lastMethod='Local',lastEmail='',lastPhone='';
  final signInPhone=TextEditingController(),signInPassword=TextEditingController();
  @override void initState(){super.initState();_loadRegistered();}
@@ -1092,6 +1128,8 @@ class _LoginScreenState extends State<LoginScreen> {
  @override void dispose(){signInPhone.dispose();signInPassword.dispose();super.dispose();}
  Future<void> _signIn()async{
   if(signingIn)return;
+  setState(()=>signInAttempted=true);
+  if(waffraMobileFieldError(signInPhone.text)!=null||signInPassword.text.isEmpty)return;
   setState(()=>signingIn=true);
   try{
    final p=await SharedPreferences.getInstance();
@@ -1100,7 +1138,7 @@ class _LoginScreenState extends State<LoginScreen> {
    final account=registered;
    if(account==null||salt==null||expected==null||signInPhone.text.trim()!=account.phone||
      sha256.convert(utf8.encode('$salt:${signInPassword.text}')).toString()!=expected){
-    if(mounted)snack(context,waffraIsEnglish?'Incorrect phone number or password':'رقم الجوال أو كلمة المرور غير صحيحة');return;
+    if(mounted)setState(()=>signInAuthError=waffraIsEnglish?'Incorrect phone number or password':'رقم الجوال أو كلمة المرور غير صحيحة');return;
    }
    await widget.onSave(account);
   }finally{if(mounted)setState(()=>signingIn=false);}
@@ -1274,17 +1312,21 @@ class _LoginScreenState extends State<LoginScreen> {
          WaffraText(waffraIsEnglish?'Phone number':'رقم الجوال',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold)),
          const SizedBox(height:6),
          TextField(controller:signInPhone,keyboardType:TextInputType.phone,
+          onChanged:(_)=>setState(()=>signInAuthError=null),
           style:const TextStyle(color:forest),textDirection:TextDirection.ltr,
           decoration:InputDecoration(hintText:waffraIsEnglish?'Phone number':'05xxxxxxxx',hintStyle:const TextStyle(color:Colors.black38),
            filled:true,fillColor:Colors.white,
+           errorText:signInAttempted?waffraMobileFieldError(signInPhone.text):null,errorMaxLines:2,
            border:OutlineInputBorder(borderRadius:BorderRadius.circular(13)))),
          const SizedBox(height:10),
          WaffraText(waffraIsEnglish?'Password':'كلمة المرور',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold)),
          const SizedBox(height:6),
          TextField(controller:signInPassword,obscureText:!showSignInPassword,
+          onChanged:(_)=>setState(()=>signInAuthError=null),
           onSubmitted:(_)=>_signIn(),style:const TextStyle(color:forest),
           decoration:InputDecoration(hintText:waffraIsEnglish?'Enter password':'أدخل كلمة المرور',hintStyle:const TextStyle(color:Colors.black38),
            filled:true,fillColor:Colors.white,
+           errorText:signInAttempted?(signInPassword.text.isEmpty?waffraRequiredFieldMessage:signInAuthError):null,errorMaxLines:2,
            border:OutlineInputBorder(borderRadius:BorderRadius.circular(13)),
            suffixIcon:IconButton(onPressed:()=>setState(()=>showSignInPassword=!showSignInPassword),
             icon:Icon(showSignInPassword?Icons.visibility_off:Icons.visibility)))),
@@ -1401,15 +1443,10 @@ class _ProfileFormState extends State<ProfileForm> {
  Future<void> save()async {
   setState(()=>profileAttempted=true);
   if(gender.isEmpty)return;
-  final validEmail=RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email.text.trim());
-  final validPhone=RegExp(r'^05[0-9]{8}$').hasMatch(phone.text.trim());
-  if(WaffraValidators.requiredText(name.text)!=null||!validPhone)return;
-  if(widget.initial==null){
-   if(!validPhone)return;
-   if(!RegExp(r'^(?=.*[A-Za-z])(?=.*[0-9]).{8,}$').hasMatch(password.text)||password.text!=confirmPassword.text){
-    return;
-   }
-  }
+  if(waffraTextFieldError(name.text)!=null||waffraMobileFieldError(phone.text)!=null)return;
+  if(widget.initial==null&&(
+   waffraPasswordFieldError(password.text)!=null||
+   waffraConfirmPasswordFieldError(confirmPassword.text,password.text)!=null))return;
   setState(()=>busy=true);
   try {
    if(widget.initial==null){
@@ -1444,8 +1481,7 @@ class _ProfileFormState extends State<ProfileForm> {
    const SizedBox(height:16),
    TextField(controller:name,onChanged:(_)=>setState((){}),decoration:InputDecoration(
      labelText:waffraIsEnglish?'Name *':'اسمك *',
-     errorText:profileAttempted&&WaffraValidators.requiredText(name.text)!=null?
-      (waffraIsEnglish?'Name is required':'الاسم حقل مطلوب'):null,
+     errorText:profileAttempted?waffraTextFieldError(name.text):null,
      border:const OutlineInputBorder())),
    const SizedBox(height:12),
    if(widget.initial!=null&&email.text.trim().isNotEmpty) ...[
@@ -1457,24 +1493,29 @@ class _ProfileFormState extends State<ProfileForm> {
    TextField(controller:phone,keyboardType:TextInputType.phone,
     onChanged:(_)=>setState((){}),
     inputFormatters:[FilteringTextInputFormatter.digitsOnly,LengthLimitingTextInputFormatter(10)],
-    decoration:InputDecoration(labelText:waffraIsEnglish?'Mobile number starting with 05':'رقم جوال يبدأ بـ 05',
+    decoration:InputDecoration(labelText:waffraIsEnglish?'Mobile number starting with 05 *':'رقم الجوال يبدأ بـ 05 *',
      hintText:'05XXXXXXXX',
-     errorText:profileAttempted&&WaffraValidators.mobileNumber(phone.text)!=null?
-      (waffraIsEnglish?'Enter a valid mobile number starting with 05':'رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام'):null,
+     errorText:profileAttempted?waffraMobileFieldError(phone.text):null,
      border:const OutlineInputBorder())),
    if(widget.initial==null) ...[
     const SizedBox(height:12),
     TextField(controller:password,obscureText:!showPassword,
      onChanged:(_)=>setState((){}),decoration:InputDecoration(
-     suffixIcon:IconButton(tooltip:waffraIsEnglish?(showPassword?'Hide password':'Show password'):(showPassword?'إخفاء كلمة المرور':'إظهار كلمة المرور'),icon:Icon(showPassword?Icons.visibility_off:Icons.visibility),onPressed:()=>setState(()=>showPassword=!showPassword)),labelText:waffraIsEnglish?'Password':'كلمة المرور',
+     suffixIcon:IconButton(tooltip:waffraIsEnglish?(showPassword?'Hide password':'Show password'):(showPassword?'إخفاء كلمة المرور':'إظهار كلمة المرور'),icon:Icon(showPassword?Icons.visibility_off:Icons.visibility),onPressed:()=>setState(()=>showPassword=!showPassword)),labelText:waffraIsEnglish?'Password *':'كلمة المرور *',
+     errorText:profileAttempted?waffraPasswordFieldError(password.text):null,errorMaxLines:3,
+     errorBorder:const OutlineInputBorder(borderSide:BorderSide(color:Colors.red)),
+     focusedErrorBorder:const OutlineInputBorder(borderSide:BorderSide(color:Colors.red,width:2)),
      helperText:waffraIsEnglish?'At least 8 characters, including letters and numbers':'8 خانات على الأقل، تشمل أحرفًا وأرقامًا',
      enabledBorder:passwordBorder(),focusedBorder:passwordBorder(focused:true))),
     const SizedBox(height:12),
     TextField(controller:confirmPassword,obscureText:!showConfirmPassword,
      onChanged:(_)=>setState((){}),decoration:InputDecoration(
-     suffixIcon:IconButton(tooltip:waffraIsEnglish?(showConfirmPassword?'Hide password':'Show password'):(showConfirmPassword?'إخفاء كلمة المرور':'إظهار كلمة المرور'),icon:Icon(showConfirmPassword?Icons.visibility_off:Icons.visibility),onPressed:()=>setState(()=>showConfirmPassword=!showConfirmPassword)),labelText:waffraIsEnglish?'Confirm password':'تأكيد كلمة المرور',
+     suffixIcon:IconButton(tooltip:waffraIsEnglish?(showConfirmPassword?'Hide password':'Show password'):(showConfirmPassword?'إخفاء كلمة المرور':'إظهار كلمة المرور'),icon:Icon(showConfirmPassword?Icons.visibility_off:Icons.visibility),onPressed:()=>setState(()=>showConfirmPassword=!showConfirmPassword)),labelText:waffraIsEnglish?'Confirm password *':'تأكيد كلمة المرور *',
+     errorText:profileAttempted?waffraConfirmPasswordFieldError(confirmPassword.text,password.text):null,errorMaxLines:3,
+     errorBorder:const OutlineInputBorder(borderSide:BorderSide(color:Colors.red)),
+     focusedErrorBorder:const OutlineInputBorder(borderSide:BorderSide(color:Colors.red,width:2)),
      enabledBorder:passwordBorder(),focusedBorder:passwordBorder(focused:true))),
-    if(comparingPasswords)Padding(padding:const EdgeInsets.only(top:8),
+    if(comparingPasswords&&matchingPasswords)Padding(padding:const EdgeInsets.only(top:8),
      child:Row(children:[
       Icon(matchingPasswords?Icons.check_circle_outline:Icons.error_outline,
        color:matchingPasswords?emerald:Colors.red,size:18),
@@ -1488,7 +1529,7 @@ class _ProfileFormState extends State<ProfileForm> {
    const SizedBox(height:12),
    DropdownButtonFormField<String>(initialValue:['ذكر','أنثى'].contains(gender)?gender:null,
     decoration:InputDecoration(labelText:waffraIsEnglish?'Gender':'الجنس',
-      errorText:profileAttempted&&gender.isEmpty?(waffraIsEnglish?'This field is required':'هذا الحقل مطلوب'):null,
+      errorText:profileAttempted&&gender.isEmpty?waffraRequiredFieldMessage:null,
       border:const OutlineInputBorder()),
     items:['ذكر','أنثى'].map((x)=>DropdownMenuItem(value:x,child:WaffraText(waffraIsEnglish?(x=='ذكر'?'Male':'Female'):x))).toList(),
     onChanged:(v){if(v!=null)setState((){gender=v;if(!avatar.startsWith('https://'))avatar=v=='أنثى'?'female':'male';});}),
@@ -1505,11 +1546,17 @@ void disposeLater(List<TextEditingController> controllers){
  Future<void>.delayed(const Duration(milliseconds:700),(){for(final c in controllers){c.dispose();}});
 }
 void snack(BuildContext context,String text){
+ if(!context.mounted)return;
  final messenger=ScaffoldMessenger.of(context);
- messenger.hideCurrentSnackBar();
- messenger.showSnackBar(SnackBar(behavior:SnackBarBehavior.floating,
-  margin:const EdgeInsets.fromLTRB(16,8,16,12),
-  content:WaffraText(text,maxLines:4),duration:const Duration(seconds:3)));
+ messenger.hideCurrentMaterialBanner();
+ final notice=messenger.showMaterialBanner(MaterialBanner(
+  backgroundColor:Theme.of(context).colorScheme.surface,
+  leading:Icon(Icons.info_outline,color:Theme.of(context).colorScheme.primary),
+  content:WaffraText(text,maxLines:4),
+  actions:[TextButton(onPressed:()=>messenger.hideCurrentMaterialBanner(),
+   child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))],
+  ));
+ Future<void>.delayed(const Duration(seconds:4),()=>notice.close());
 }
 
 
@@ -1924,7 +1971,7 @@ Future<void> bulkSmsSheet()async {
  var income=false;
  var category='أخرى';
  var parsed=false;
- var reviewing=false;
+ var reviewing=false,reviewAttempted=false,pasteAttempted=false;
  Timer? pasteTimer;
  var busy=false;
  var analyzingPaste=false;
@@ -2111,7 +2158,7 @@ Future<void> bulkSmsSheet()async {
  Future<void> prepare(int i,StateSetter update)async {
   final result=BankParser.parse(messages[i]);
   update((){
-   index=i;income=result.income;
+   reviewAttempted=false;index=i;income=result.income;
    category=categories.any((c)=>c.income==income&&c.name==result.category)?result.category:
     (forType(income).isNotEmpty?forType(income).first.name:'أخرى');
    description.text='${result.title} — ${messages[i].replaceAll(RegExp(r'\s+'),' ').trim()}';
@@ -2147,7 +2194,8 @@ Future<void> bulkSmsSheet()async {
          }
         });
        }
-      },decoration:InputDecoration(labelText:waffraTr('الصق رسالة أو عدة رسائل بنكية'),
+      },decoration:InputDecoration(labelText:waffraIsEnglish?'Bank SMS *':'الرسالة البنكية *',
+       errorText:statusMessage.isNotEmpty?statusMessage:(pasteAttempted&&pasted.text.trim().isEmpty?waffraRequiredFieldMessage:null),errorMaxLines:3,
        hintText:waffraIsEnglish?'Paste your bank message here. We’ll analyze it automatically.':'الصق رسالتك البنكية هنا، وبنحلّلها لك تلقائيًا.',hintStyle:const TextStyle(fontSize:13,color:Color(0xFF888F8A)),
        suffixIcon:pasted.text.isNotEmpty?IconButton(tooltip:waffraIsEnglish?'Clear text':'مسح النص',icon:const Icon(Icons.clear_rounded,color:Colors.redAccent),onPressed:(){pasteTimer?.cancel();pasted.clear();update((){parsed=false;analyzingPaste=false;messages=[];statusMessage='';});}):null,
        border:OutlineInputBorder(borderRadius:BorderRadius.circular(18)))),
@@ -2157,7 +2205,7 @@ Future<void> bulkSmsSheet()async {
         final data=await Clipboard.getData(Clipboard.kTextPlain);
         if(!ctx.mounted)return;
         final text=data?.text?.trim()??'';
-        if(text.isEmpty){update(()=>statusMessage=waffraIsEnglish?'Clipboard is empty':'ما فيه رسالة منسوخة حاليًا');return;}
+        if(text.isEmpty){update((){pasteAttempted=true;statusMessage=waffraRequiredFieldMessage;});return;}
         pasted.text=text;
         pasteTimer?.cancel();
         update((){analyzingPaste=true;messages=[];parsed=false;statusMessage='';});
@@ -2168,10 +2216,7 @@ Future<void> bulkSmsSheet()async {
         });
        },label:WaffraText(waffraIsEnglish?'Paste last copied message':'لصق آخر رسالة نسختها')),
       if(analyzingPaste)...[const SizedBox(height:12),const LinearProgressIndicator(),const SizedBox(height:6),WaffraText(waffraIsEnglish?'Analyzing your bank messages now…':'يتم الآن تحليل الرسائل البنكية واستخراج المعاملات…')],
-      if(statusMessage.isNotEmpty)...[
-       const SizedBox(height:8),
-       WaffraText(statusMessage,style:const TextStyle(color:Colors.deepOrange,fontWeight:FontWeight.w600)),
-      ],
+      
       if(rejectedMessages.isNotEmpty)...[
        const SizedBox(height:8),
        WaffraText(waffraIsEnglish?'Unrecognized messages — edit and retry':'رسائل لم يتم تحليلها — راجعها وأعد المحاولة',style:const TextStyle(fontWeight:FontWeight.bold)),
@@ -2218,11 +2263,11 @@ Future<void> bulkSmsSheet()async {
         income=v.first;category=forType(income).isNotEmpty?forType(income).first.name:'أخرى';
        })),
       const SizedBox(height:12),
-      TextField(controller:description,maxLines:2,decoration:InputDecoration(labelText:waffraTr('وصف الرسالة'),border:OutlineInputBorder())),
+      TextField(controller:description,maxLines:2,onChanged:(_)=>update((){}),decoration:InputDecoration(labelText:waffraIsEnglish?'Description *':'وصف الرسالة *',errorText:reviewAttempted?waffraTextFieldError(description.text):null,border:OutlineInputBorder())),
       const SizedBox(height:12),
       TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
-       inputFormatters:[const WaffraAmountFormatter()],
-       decoration:InputDecoration(labelText:waffraTr('مبلغ هذه الرسالة بالريال'),border:OutlineInputBorder())),
+       inputFormatters:[const WaffraAmountFormatter()],onChanged:(_)=>update((){}),
+       decoration:InputDecoration(labelText:waffraIsEnglish?'Amount *':'مبلغ هذه الرسالة بالريال *',errorText:reviewAttempted?waffraAmountFieldError(amount.text):null,border:OutlineInputBorder())),
       const SizedBox(height:12),
       DropdownButtonFormField<String>(key:ValueKey('$index-$income'),initialValue:available.any((c)=>c.name==category)?category:(available.isNotEmpty?available.first.name:null),
        items:available.map((c)=>DropdownMenuItem(value:c.name,child:WaffraText(c.name))).toList(),
@@ -2231,7 +2276,8 @@ Future<void> bulkSmsSheet()async {
       const SizedBox(height:12),
       FilledButton(onPressed:busy?null:()async{
        final n=amountOf(amount.text);
-       if(n==null||description.text.trim().isEmpty){update(()=>statusMessage=waffraIsEnglish?'Complete the description and amount fields':'أكمل حقلي الوصف والمبلغ');return;}
+       update(()=>reviewAttempted=true);
+        if(waffraTextFieldError(description.text)!=null||waffraAmountFieldError(amount.text)!=null||n==null)return;
        final hash=bankSmsHash(messages[index]);
        if(smsHashes.contains(hash)){
         final yes=await showWaffraDialog<bool>(context:ctx,builder:(d)=>AlertDialog(
@@ -2267,7 +2313,7 @@ Future<void> bulkSmsSheet()async {
       },icon:const Icon(Icons.delete_forever_outlined),label:const WaffraText('حذف النص بالكامل وإضافة رسائل أخرى')),
      ],
     ])));
-  })))));
+  }))))));
  sheetActive=false;disposeLater();
 }
 
@@ -2318,8 +2364,7 @@ Future<void> bulkSmsSheet()async {
         onChanged:(v){parseNow(v);update((){});},
         decoration:InputDecoration(labelText:waffraIsEnglish?'Bank SMS *':'الرسالة البنكية *',
          hintText:waffraTr('أول ما تلصقها نحلّلها تلقائيًا'),
-         errorText:attempted&&message.text.trim().isEmpty?
-          (waffraIsEnglish?'Bank message is required':'الرسالة البنكية حقل إجباري'):null,
+         errorText:attempted&&message.text.trim().isEmpty?waffraRequiredFieldMessage:null,
          border:OutlineInputBorder())),
        const SizedBox(height:8),
        if(analyzing)const LinearProgressIndicator(),
@@ -2336,15 +2381,13 @@ Future<void> bulkSmsSheet()async {
       const SizedBox(height:12),
       TextField(controller:title,onChanged:(_)=>update((){}),
        decoration:InputDecoration(labelText:waffraIsEnglish?'Description *':'وصف العملية *',
-        errorText:attempted&&WaffraValidators.requiredText(title.text)!=null?
-         (waffraIsEnglish?'Description is required':'وصف العملية حقل إجباري'):null,
+        errorText:attempted?waffraTextFieldError(title.text):null,
         border:OutlineInputBorder())),
       const SizedBox(height:12),
       TextField(controller:value,keyboardType:const TextInputType.numberWithOptions(decimal:true),
        inputFormatters:[const WaffraAmountFormatter()],onChanged:(_)=>update((){}),
        decoration:InputDecoration(labelText:waffraIsEnglish?'Amount *':'المبلغ *',
-        errorText:attempted&&WaffraValidators.positiveAmount(value.text)!=null?
-         (waffraIsEnglish?'Enter an amount greater than zero':'المبلغ حقل إجباري ويجب أن يكون أكبر من صفر'):null,
+        errorText:attempted?waffraAmountFieldError(value.text):null,
         border:OutlineInputBorder())),
       const SizedBox(height:12),
       DropdownButtonFormField<String>(key:ValueKey('$income-$chosen'),initialValue:chosen,
@@ -2402,7 +2445,7 @@ Future<void> bulkSmsSheet()async {
       FilledButton(onPressed:analyzing?null:()async {
        update(()=>attempted=true);
        final n=amountOf(value.text);
-       if(WaffraValidators.requiredText(title.text)!=null||n==null)return;
+       if(waffraTextFieldError(title.text)!=null||waffraAmountFieldError(value.text)!=null||n==null)return;
        if(sms){
         if(message.text.trim().isEmpty)return;
         final h=sha256.convert(utf8.encode(digits(message.text).replaceAll(RegExp(r'\s+'),' ').trim().toLowerCase())).toString();
@@ -3008,7 +3051,7 @@ Future<void> bulkSmsSheet()async {
       FilledButton(onPressed:(){
        final v=double.tryParse(amount.text.trim().replaceAll(',',''));
        if(enabled&&(v==null||!v.isFinite||v<=0)){
-        update(()=>validation=waffraIsEnglish?'Enter an amount greater than zero':'أدخل مبلغًا أكبر من صفر');
+        update(()=>validation=waffraAmountFieldError(amount.text));
         return;
        }
        Navigator.pop(ctx,(enabled:enabled,amount:enabled?v!:monthlyBudget));
@@ -3025,6 +3068,7 @@ Future<void> bulkSmsSheet()async {
  Future<void> editTransactionFilters()async {
   final min=TextEditingController(text:minTransactionAmount?.toStringAsFixed(2)??'');
   final max=TextEditingController(text:maxTransactionAmount?.toStringAsFixed(2)??'');
+  String? minError,maxError;
   DateTimeRange? chosen=transactionsDateRange;
   try{
    await showWaffraDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(
@@ -3032,15 +3076,19 @@ Future<void> bulkSmsSheet()async {
      title:WaffraText(waffraIsEnglish?'Advanced filters':'فلترة بالتاريخ والمبلغ'),
      content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
       TextField(controller:min,keyboardType:const TextInputType.numberWithOptions(decimal:true),
+       onChanged:(_)=>update(()=>minError=null),
        inputFormatters:[const WaffraAmountFormatter()],
        decoration:InputDecoration(
         labelText:waffraIsEnglish?'Minimum amount':'أقل مبلغ',
+        errorText:minError,
         border:const OutlineInputBorder())),
       const SizedBox(height:10),
       TextField(controller:max,keyboardType:const TextInputType.numberWithOptions(decimal:true),
+       onChanged:(_)=>update(()=>maxError=null),
        inputFormatters:[const WaffraAmountFormatter()],
        decoration:InputDecoration(
         labelText:waffraIsEnglish?'Maximum amount':'أعلى مبلغ',
+        errorText:maxError,
         border:const OutlineInputBorder())),
       const SizedBox(height:12),
       OutlinedButton.icon(onPressed:()async{
@@ -3068,9 +3116,11 @@ Future<void> bulkSmsSheet()async {
           (lo!=null&&(!lo.isFinite||lo<0))||
           (hi!=null&&(!hi.isFinite||hi<0))||
           (lo!=null&&hi!=null&&lo>hi)){
-        ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(behavior:SnackBarBehavior.floating,
-         margin:const EdgeInsets.fromLTRB(16,8,16,12),
-         content:WaffraText(waffraIsEnglish?'Check amount limits':'تأكد من حدود المبلغ')));
+        update((){
+         minError=min.text.trim().isNotEmpty&&(lo==null||!lo.isFinite||lo<0)?(waffraIsEnglish?'Enter a valid amount':'أدخل مبلغًا صحيحًا'):null;
+         maxError=max.text.trim().isNotEmpty&&(hi==null||!hi.isFinite||hi<0)?(waffraIsEnglish?'Enter a valid amount':'أدخل مبلغًا صحيحًا'):null;
+         if(lo!=null&&hi!=null&&lo>hi)maxError=waffraIsEnglish?'Maximum must not be less than minimum':'الحد الأعلى يجب ألا يقل عن الحد الأدنى';
+        });
         return;
        }
        setState((){
@@ -4086,7 +4136,7 @@ Future<void> bulkSmsSheet()async {
      TextField(controller:name,onChanged:(_)=>update((){}),decoration:InputDecoration(
       labelText:waffraIsEnglish?'Category name *':'اسم القسم *',
       errorText:attempted?(
-       WaffraValidators.requiredText(name.text)!=null?(waffraIsEnglish?'Category name is required':'اسم القسم حقل إجباري'):
+       WaffraValidators.requiredText(name.text)!=null?waffraTextFieldError(name.text):
        WaffraValidators.uniqueCategory(name.text,categories.where((c)=>c.id!=initial?.id&&c.income==(initial?.income??income)).map((c)=>c.name))!=null?(waffraIsEnglish?'Category already exists':'اسم القسم مستخدم بالفعل'):null):null)),
      const SizedBox(height:12),const WaffraText('اختر أيقونة'),
      Wrap(spacing:5,children:iconNames.map((x)=>IconButton(
@@ -4100,8 +4150,7 @@ Future<void> bulkSmsSheet()async {
      if(!(initial?.income??income))...[
       TextField(controller:budget,onChanged:(_)=>update((){}),
        keyboardType:const TextInputType.numberWithOptions(decimal:true),inputFormatters:[const WaffraAmountFormatter()],decoration:InputDecoration(labelText:waffraTr('ميزانية شهرية (اختياري)'),
-       errorText:attempted&&WaffraValidators.positiveAmount(budget.text,required:false)!=null?
-        (waffraIsEnglish?'Enter a valid amount':'أدخل مبلغًا صحيحًا أكبر من صفر'):null)),
+       errorText:attempted?waffraAmountFieldError(budget.text,required:false):null)),
       const SizedBox(height:10),
       DropdownButtonFormField<int>(initialValue:alertPercent,
        decoration:InputDecoration(labelText:waffraTr('ودّك ننبهك عند كم ٪ من الميزانية؟')),
@@ -4407,20 +4456,20 @@ Future<void> bulkSmsSheet()async {
    title:const WaffraText('إضافة هدف ادخار'),scrollable:true,
    content:Column(mainAxisSize:MainAxisSize.min,children:[
     DropdownButtonFormField<String>(isExpanded:true,decoration:InputDecoration(labelText:waffraIsEnglish?'Savings goal *':'اختر هدف الادخار *',
-      errorText:attempted&&selectedGoal.isEmpty?(waffraIsEnglish?'Goal is required':'الهدف حقل إجباري'):null),
+      errorText:attempted&&selectedGoal.isEmpty?waffraRequiredFieldMessage:null),
      items:[...suggested,'هدف آخر'].map((v)=>DropdownMenuItem(value:v,child:WaffraText(v))).toList(),
      onChanged:(v){if(v==null)return;updateGoal(()=>selectedGoal=v);name.text=v=='هدف آخر'?'':v;}),
     if(selectedGoal=='هدف آخر')...[
      const SizedBox(height:12),
      TextField(controller:name,textInputAction:TextInputAction.next,onChanged:(_)=>updateGoal((){}),
       decoration:InputDecoration(labelText:waffraIsEnglish?'Goal name *':'اسم الهدف *',hintText:waffraTr('مثال: تجديد المنزل'),
-       errorText:attempted&&WaffraValidators.requiredText(name.text)!=null?(waffraIsEnglish?'Goal name is required':'اسم الهدف حقل إجباري'):null)),
+       errorText:attempted?waffraTextFieldError(name.text):null)),
     ],
     const SizedBox(height:12),
     TextField(controller:target,keyboardType:const TextInputType.numberWithOptions(decimal:true),
        inputFormatters:[const WaffraAmountFormatter()],onChanged:(_)=>updateGoal((){}),
      decoration:InputDecoration(labelText:waffraIsEnglish?'Target amount *':'المبلغ المستهدف *',hintText:waffraTr('مثال: 25000'),
-      errorText:attempted&&WaffraValidators.positiveAmount(target.text)!=null?(waffraIsEnglish?'Enter an amount greater than zero':'المبلغ حقل إجباري ويجب أن يكون أكبر من صفر'):null)),
+      errorText:attempted?waffraAmountFieldError(target.text):null)),
    ]),
    actions:[
     TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إلغاء')),
@@ -4457,10 +4506,8 @@ Future<void> bulkSmsSheet()async {
     TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
      inputFormatters:[const WaffraAmountFormatter()],onChanged:(_)=>update((){}),
      decoration:InputDecoration(labelText:waffraIsEnglish?'Saved amount *':'المبلغ المدّخر *',
-      errorText:null,
-      helperText:attempted&&WaffraValidators.positiveAmount(amount.text)!=null?
-       (waffraIsEnglish?'Amount is required and must be greater than 0.':'المبلغ حقل إجباري، ويجب أن يكون أكبر من 0.'):null,
-      helperMaxLines:3,
+      errorText:attempted?waffraAmountFieldError(amount.text):null,
+      errorMaxLines:3,
       border:const OutlineInputBorder())),
     const SizedBox(height:12),
     WaffraText(waffraIsEnglish
@@ -4512,15 +4559,13 @@ Future<void> bulkSmsSheet()async {
     content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
      TextField(controller:name,onChanged:(_)=>update((){}),decoration:InputDecoration(
       labelText:waffraIsEnglish?'Challenge name *':'اسم التحدي *',
-      errorText:attempted&&WaffraValidators.requiredText(name.text)!=null?
-       (waffraIsEnglish?'Name is required':'اسم التحدي حقل إجباري'):null)),
+      errorText:attempted?waffraTextFieldError(name.text):null)),
      const SizedBox(height:12),
      TextField(controller:amount,onChanged:(_)=>update((){}),
       keyboardType:const TextInputType.numberWithOptions(decimal:true),
       inputFormatters:[const WaffraAmountFormatter()],decoration:InputDecoration(
        labelText:waffraIsEnglish?'Daily amount *':'الادخار اليومي *',
-       errorText:attempted&&WaffraValidators.positiveAmount(amount.text)!=null?
-        (waffraIsEnglish?'Enter a positive amount':'المبلغ حقل إجباري ويجب أن يكون أكبر من صفر'):null)),
+       errorText:attempted?waffraAmountFieldError(amount.text):null)),
      const SizedBox(height:12),
      DropdownButtonFormField<int>(initialValue:days,
       decoration:InputDecoration(labelText:waffraIsEnglish?'Duration *':'مدة التحدي *'),
@@ -4763,12 +4808,12 @@ Future<void> bulkSmsSheet()async {
      content:SizedBox(width:340,child:SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,mainAxisSize:MainAxisSize.min,children:[
       const SizedBox(height:12),
       TextField(controller:title,onChanged:(_)=>update((){}),decoration:InputDecoration(labelText:waffraIsEnglish?'Description *':'الوصف *',
-       errorText:attempted&&WaffraValidators.requiredText(title.text)!=null?(waffraIsEnglish?'This field is required':'هذا الحقل مطلوب'):null)),
+       errorText:attempted?waffraTextFieldError(title.text):null)),
       const SizedBox(height:12),
       TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
        inputFormatters:[const WaffraAmountFormatter()],onChanged:(_)=>update((){}),
        decoration:InputDecoration(labelText:waffraIsEnglish?'Amount *':'المبلغ *',
-        errorText:attempted&&WaffraValidators.positiveAmount(amount.text)!=null?(waffraIsEnglish?'This field is required':'هذا الحقل مطلوب'):null)),
+        errorText:attempted?waffraAmountFieldError(amount.text):null)),
       const SizedBox(height:12),
       DropdownButtonFormField<bool>(initialValue:income,
        items:const [DropdownMenuItem(value:true,child:WaffraText('دخل')),
@@ -4781,7 +4826,7 @@ Future<void> bulkSmsSheet()async {
       const SizedBox(height:12),
       TextField(controller:day,keyboardType:TextInputType.number,onChanged:(_)=>update((){}),
        decoration:InputDecoration(labelText:waffraIsEnglish?'Day of month *':'يوم الشهر *',helperText:waffraIsEnglish?'1–31':'من 1 إلى 31',
-       errorText:attempted&&WaffraValidators.dayOfMonth(day.text)!=null?(waffraIsEnglish?'Choose a day from 1 to 31':'أدخل يومًا صحيحًا من 1 إلى 31'):null)),
+       errorText:attempted?waffraDayFieldError(day.text):null)),
      ]))),
      actions:[
       TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إلغاء')),
@@ -4950,7 +4995,8 @@ Future<void> bulkSmsSheet()async {
  });
  Future<void> backupDialog()async {
   final input=TextEditingController();
-  await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+  var attempted=false;String? backupError;
+  await showWaffraDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
    title:const WaffraText('نسخ احتياطي واستعادة'),
    content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
     const WaffraText('انسخ بياناتك واحفظها في مكان آمن. للاستعادة، الصق نسخة JSON. الاستعادة تستبدل بيانات العمليات والأقسام والأهداف والتكرار الحالية.'),
@@ -4960,12 +5006,16 @@ Future<void> bulkSmsSheet()async {
      if(ctx.mounted)snack(ctx,'تم نسخ البيانات، احفظها في مكان آمن');
     },icon:const Icon(Icons.copy),label:const WaffraText('نسخ النسخة الاحتياطية')),
     const SizedBox(height:12),
-    TextField(controller:input,minLines:4,maxLines:7,
-     decoration:InputDecoration(labelText:waffraTr('الصق نسخة JSON للاستعادة'),border:OutlineInputBorder())),
+    TextField(controller:input,minLines:4,maxLines:7,onChanged:(_)=>update(()=>backupError=null),
+     decoration:InputDecoration(labelText:waffraIsEnglish?'Backup JSON *':'الصق نسخة JSON للاستعادة *',
+      errorText:attempted?(input.text.trim().isEmpty?waffraRequiredFieldMessage:backupError):null,
+      errorMaxLines:3,border:OutlineInputBorder())),
    ])),
    actions:[
     TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إغلاق')),
     FilledButton(onPressed:()async {
+     update(()=>attempted=true);
+     if(input.text.trim().isEmpty)return;
      try{
       final raw=jsonDecode(input.text);
       if(raw is! Map||raw['format']!='waffra-backup'||raw['entries'] is! List||
@@ -5008,20 +5058,22 @@ Future<void> bulkSmsSheet()async {
       if(ctx.mounted)Navigator.pop(ctx);
       if(mounted)snack(context,'تمت استعادة البيانات بنجاح');
      }catch(e){
-      if(ctx.mounted)snack(ctx,'النسخة غير صالحة، تأكد من النص كامل');
+      if(ctx.mounted)update(()=>backupError=waffraIsEnglish?'Invalid backup. Check the entire JSON text.':'النسخة غير صالحة، تأكد من النص كامل');
      }
     },child:const WaffraText('استعادة')),
-   ]));
+   ])));
   disposeLater([input]);
  }
  // System credentials are never saved in plain text. A new PIN must be
  // entered twice; keep support for checking older 4-8-digit PINs on disable.
  Future<String?> _askForPin({
   required String title,required String fieldLabel,bool existing=false,
+   bool Function(String)? verify,String? verifyError,
  })async{
   final input=TextEditingController();
+  var attempted=false;String? fieldError;
   try{
-   return await showWaffraDialog<String>(context:context,builder:(dialogContext)=>Theme(data:Theme.of(dialogContext).copyWith(brightness:Brightness.dark,colorScheme:ColorScheme.fromSeed(seedColor:emerald,brightness:Brightness.dark)),child:AlertDialog(
+   return await showWaffraDialog<String>(context:context,builder:(dialogContext)=>StatefulBuilder(builder:(dialogContext,update)=>Theme(data:Theme.of(dialogContext).copyWith(brightness:Brightness.dark,colorScheme:ColorScheme.fromSeed(seedColor:emerald,brightness:Brightness.dark)),child:AlertDialog(
     backgroundColor:forest,
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26),
      side:waffraDialogOutline(Brightness.dark)),
@@ -5032,7 +5084,7 @@ Future<void> bulkSmsSheet()async {
      WaffraText(fieldLabel,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w600)),
      const SizedBox(height:12),
      TextField(
-     controller:input,autofocus:true,
+     controller:input,autofocus:true,onChanged:(_)=>update(()=>fieldError=null),
      textDirection:TextDirection.ltr,textAlign:TextAlign.center,
      keyboardType:TextInputType.number,
      inputFormatters:[FilteringTextInputFormatter.digitsOnly,
@@ -5040,6 +5092,7 @@ Future<void> bulkSmsSheet()async {
      obscureText:true,
      decoration:InputDecoration(hintText:'••••',hintStyle:const TextStyle(color:Colors.white54),
       helperText:existing?(waffraIsEnglish?'4 to 8 digits':'من 4 إلى 8 أرقام'):(waffraIsEnglish?'4 digits':'أربعة أرقام'),
+      errorText:fieldError??(attempted?waffraPinFieldError(input.text,existing:existing):null),errorMaxLines:3,
       border:const OutlineInputBorder())),
     ])),
     actions:[
@@ -5047,33 +5100,28 @@ Future<void> bulkSmsSheet()async {
       child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
      FilledButton(onPressed:(){
       final code=input.text.trim();
-      if(existing?RegExp(r'^\d{4,8}$').hasMatch(code):RegExp(r'^\d{4}$').hasMatch(code)){
-       Navigator.pop(dialogContext,code);
-      }else{
-       ScaffoldMessenger.of(dialogContext).showSnackBar(SnackBar(behavior:SnackBarBehavior.floating,
-        margin:const EdgeInsets.fromLTRB(16,8,16,12),
-        content:WaffraText(waffraIsEnglish?
-         (existing?'Enter 4 to 8 digits':'Enter exactly 4 digits'):
-         (existing?'أدخل من 4 إلى 8 أرقام':'أدخل أربعة أرقام بالضبط'))));
+      update(()=>attempted=true);
+      if(waffraPinFieldError(code,existing:existing)!=null)return;
+      if(verify!=null&&!verify(code)){
+       update(()=>fieldError=verifyError??(waffraIsEnglish?'Incorrect PIN':'رمز القفل غير صحيح'));
+       return;
       }
+      Navigator.pop(dialogContext,code);
      },child:WaffraText(waffraIsEnglish?'Confirm':'تأكيد')),
     ],
-   )));
+   ))));
   }finally{disposeLater([input]);}
  }
  Future<void> configurePin()async {
   if(widget.pinEnabled){
+   final prefs=await SharedPreferences.getInstance();
+   final hash=prefs.getString('waffra_pin_sha256');
    final oldPin=await _askForPin(
     title:waffraIsEnglish?'Disable app lock':'إلغاء رمز القفل',
     fieldLabel:waffraIsEnglish?'Current PIN':'أدخل الرمز الحالي',
-    existing:true);
+    existing:true,verify:(code)=>sha256.convert(utf8.encode(code)).toString()==hash,
+    verifyError:waffraIsEnglish?'Incorrect PIN':'رمز القفل غير صحيح');
    if(oldPin==null||!mounted)return;
-   final prefs=await SharedPreferences.getInstance();
-   final hash=prefs.getString('waffra_pin_sha256');
-   if(sha256.convert(utf8.encode(oldPin)).toString()!=hash){
-    if(mounted)snack(context,waffraIsEnglish?'Incorrect PIN':'رمز القفل غير صحيح');
-    return;
-   }
    await widget.onSetPin(null);
    if(mounted)snack(context,waffraIsEnglish?'App lock disabled':'تم إلغاء القفل');
    return;
@@ -5085,7 +5133,9 @@ Future<void> bulkSmsSheet()async {
   while(mounted){
    final repeated=await _askForPin(
     title:waffraIsEnglish?'Confirm your PIN':'أعد إدخال رمز PIN للتأكيد',
-    fieldLabel:waffraIsEnglish?'Repeat PIN':'أعد إدخال الرمز');
+    fieldLabel:waffraIsEnglish?'Repeat PIN':'أعد إدخال الرمز',
+    verify:(code)=>code==firstPin,
+    verifyError:waffraIsEnglish?'PINs do not match':'رمزا PIN غير متطابقين');
    if(repeated==null||!mounted)return;
    if(firstPin==repeated){
     // The existing onSetPin stores only SHA-256 of the confirmed PIN.
@@ -5093,9 +5143,6 @@ Future<void> bulkSmsSheet()async {
     if(mounted)snack(context,waffraIsEnglish?'App lock enabled':'تم تفعيل قفل التطبيق');
     return;
    }
-   if(mounted)snack(context,waffraIsEnglish?
-    'PINs do not match. Re-enter the confirmation.':
-    'رمزا PIN غير متطابقين. أعد إدخال رمز التأكيد.');
   }
  }
  void scheduleTourFocus(){
@@ -5221,20 +5268,21 @@ Future<void> bulkSmsSheet()async {
  });
  Future<void> changePin()async {
   if(!widget.pinEnabled)return;
-  final previous=await _askForPin(title:waffraIsEnglish?'Current PIN':'رمز القفل الحالي',
-   fieldLabel:waffraIsEnglish?'Enter PIN':'أدخل رمز القفل',existing:true);
-  if(previous==null||!mounted)return;
   final p=await SharedPreferences.getInstance();
-  if(sha256.convert(utf8.encode(previous)).toString()!=p.getString('waffra_pin_sha256')){
-   snack(context,waffraIsEnglish?'Wrong PIN':'رمز القفل غير صحيح');return;
-  }
+  final hash=p.getString('waffra_pin_sha256');
+  final previous=await _askForPin(title:waffraIsEnglish?'Current PIN':'رمز القفل الحالي',
+   fieldLabel:waffraIsEnglish?'Enter PIN':'أدخل رمز القفل',existing:true,
+   verify:(code)=>sha256.convert(utf8.encode(code)).toString()==hash,
+   verifyError:waffraIsEnglish?'Incorrect PIN':'رمز القفل غير صحيح');
+  if(previous==null||!mounted)return;
   final next=await _askForPin(title:waffraIsEnglish?'New PIN':'رمز جديد',
    fieldLabel:waffraIsEnglish?'4 digits':'أربعة أرقام');
   if(next==null||!mounted)return;
   final again=await _askForPin(title:waffraIsEnglish?'Confirm PIN':'تأكيد الرمز',
-   fieldLabel:waffraIsEnglish?'Repeat PIN':'أعد إدخال الرمز');
+   fieldLabel:waffraIsEnglish?'Repeat PIN':'أعد إدخال الرمز',
+   verify:(code)=>code==next,
+   verifyError:waffraIsEnglish?'PINs do not match':'الرمزان غير متطابقين');
   if(again==null||!mounted)return;
-  if(again!=next){snack(context,waffraIsEnglish?'PINs do not match':'الرمزان غير متطابقين');return;}
   await widget.onSetPin(next);
   if(mounted)snack(context,waffraIsEnglish?'PIN changed':'تم تغيير الرمز بنجاح');
  }
