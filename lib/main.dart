@@ -673,9 +673,9 @@ class _PinLockScreenState extends State<PinLockScreen> {
      color:fingerprint?Colors.white:const Color(0xFF69BD94),width:1.15)),
     child:InkWell(customBorder:const CircleBorder(),onTap:busy?null:onPressed,
      child:SizedBox(width:size,height:size,child:Center(child:icon!=null?
-      Icon(icon,color:fingerprint?forest:Colors.white,size:compact?22:24):
+      Icon(icon,color:fingerprint?forest:Colors.white,size:compact?22.0:24.0):
       Text(label,style:TextStyle(color:Colors.white,
-       fontWeight:FontWeight.bold,fontSize:compact?22:24)))))));
+       fontWeight:FontWeight.bold,fontSize:compact?22.0:24.0)))))));
  }
  void _keyDigit(String digit){
   if(pinController.text.length>=4||busy)return;
@@ -703,17 +703,17 @@ class _PinLockScreenState extends State<PinLockScreen> {
     SafeArea(child:Center(child:SingleChildScrollView(
      padding:const EdgeInsets.fromLTRB(24,15,24,22),
      child:Column(mainAxisSize:MainAxisSize.min,children:[
-      CustomPaint(size:Size(compact?65:78,compact?76:90),
+      CustomPaint(size:Size(compact?65.0:78.0,compact?76.0:90.0),
        painter:_WaffraSplashLogoPainter()),
       const SizedBox(height:5),
       Text('Waffra',style:TextStyle(color:Colors.white,
-       fontSize:compact?30:35,fontWeight:FontWeight.bold,height:1.05)),
+       fontSize:compact?30.0:35.0,fontWeight:FontWeight.bold,height:1.05)),
       const WaffraText('وفرة',style:TextStyle(color:Colors.white,
        fontSize:22,fontWeight:FontWeight.bold,height:1.05)),
       SizedBox(height:compact?23:32),
       WaffraText(waffraIsEnglish?'Welcome back':'مرحبًا بك مجددًا',
        textAlign:TextAlign.center,
-       style:TextStyle(color:Colors.white,fontSize:compact?23:27,
+       style:TextStyle(color:Colors.white,fontSize:compact?23.0:27.0,
         fontWeight:FontWeight.bold)),
       const SizedBox(height:6),
       WaffraText(waffraIsEnglish?'Enter your PIN to unlock Waffra':
