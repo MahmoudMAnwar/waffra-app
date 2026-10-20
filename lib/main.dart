@@ -34,9 +34,14 @@ import 'waffra_category_catalog.dart';
 import 'waffra_goal_catalog.dart';
 import 'waffra_pdf_reader.dart';
 import 'waffra_footer.dart';
+import 'waffra_messages.dart';
 part 'waffra_categories_page.part.dart';
 
-void main() { WidgetsFlutterBinding.ensureInitialized(); runApp(const WaffraApp()); }
+Future<void> main()async {
+ WidgetsFlutterBinding.ensureInitialized();
+ await initializeWaffraMessages();
+ runApp(const WaffraApp());
+}
 // Waffra visual identity / Saudi government-grade accessible emerald palette.
 // Visual-only constants: do not change financial data, flows, or persistence keys.
 const emerald=Color(0xFF0C7957), forest=Color(0xFF073F31),
@@ -1870,6 +1875,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  double? minTransactionAmount,maxTransactionAmount;
  int tab=0,year=DateTime.now().year,month=DateTime.now().month;
  bool goalsOpened=false;
+ bool _smsSheetOpen=false;
  double _swipeTravel=0;
  late final AnimationController _tourGlow;
  Future<void> setAnimationLevel(String next)async {
@@ -1894,9 +1900,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  static const tourTabs=<int>[0,0,1,3,4,5];
  bool addFabExpanded=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
- @override void initState(){super.initState();_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);load();}
+ @override void initState(){super.initState();_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);load();}
  void _returnToHome(){if(mounted)setState((){tab=0;goalsOpened=false;addFabExpanded=false;});}
- @override void dispose(){_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);super.dispose();}
+ void _receiveSharedSms(){
+  if(!mounted||!ready||_smsSheetOpen)return;
+  final text=waffraIncomingSms.value;
+  if(text==null||text.trim().isEmpty)return;
+  waffraIncomingSms.value=null;
+  setState((){tab=0;goalsOpened=false;addFabExpanded=false;});
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+   if(mounted)unawaited(bulkSmsSheet(initialText:text));
+  });
+ }
+ @override void dispose(){_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);super.dispose();}
  Future<void> load()async {
   final p=await SharedPreferences.getInstance();
   try{final raw=p.getString('entries');if(raw!=null)entries.addAll((jsonDecode(raw) as List).map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('entries: $e');}
@@ -1981,7 +1997,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     categories.add(BudgetCategory(id:newId(),name:e.category,icon:'category',color:colors[7],income:e.income));
    }
   }
-  if(!mounted)return;setState(()=>ready=true);await applyRecurring();
+  if(!mounted)return;setState(()=>ready=true);_receiveSharedSms();await applyRecurring();
   if(recurringRemindersEnabled)unawaited(syncRecurringReminders());
   if(trashBefore!=deletedCategories.length)await persist();
   if(!(p.getBool('waffra_in_app_tour_seen_v2')??false)&&mounted){
@@ -2074,7 +2090,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      onPressed:()=>Navigator.pop(ctx,true),
      child:WaffraText(waffraIsEnglish?'Confirm delete':'تأكيد الحذف')),
    ]));
-Future<void> bulkSmsSheet()async {
+Future<void> bulkSmsSheet({String? initialText})async {
+ if(_smsSheetOpen)return;
+ _smsSheetOpen=true;
  final pasted=TextEditingController();
  final description=TextEditingController();
  final amount=TextEditingController();
