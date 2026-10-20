@@ -2873,7 +2873,7 @@ Future<void> bulkSmsSheet()async {
   final valueColor=entry.income?waffraIncomeTone(context):Colors.deepOrange;
   final darkMode=Theme.of(context).brightness==Brightness.dark;
   final rowColor=entry.income?(darkMode?const Color(0xFF244C3A):const Color(0xFFB2D5C2)):
-   (darkMode?const Color(0xFF202B26):Colors.white);
+   (darkMode?const Color(0xFF49302C):const Color(0xFFFCECE8));
   return Padding(padding:const EdgeInsets.symmetric(vertical:3),child:Container(
    decoration:BoxDecoration(color:rowColor,borderRadius:BorderRadius.circular(12),
     border:Border.all(color:forest.withValues(alpha:darkMode ? 0.18 : 0.08))),
@@ -2882,7 +2882,7 @@ Future<void> bulkSmsSheet()async {
      backgroundColor:Color(cat.color).withValues(alpha:0.13),
      child:Icon(categoryIcon(cat.icon),size:19,color:Color(cat.color))),
     const SizedBox(width:8),
-    Expanded(child:InkWell(onTap:()=>entrySheet(initial:entry),
+    Expanded(child:InkWell(onTap:()=>transactionDetails(entry),
      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       Row(children:[
        Expanded(child:WaffraText(entry.title,maxLines:1,
@@ -4632,36 +4632,32 @@ Future<void> bulkSmsSheet()async {
   builder:(_)=>WaffraSubscriptionScreen(items:financialCalendarItems,english:waffraIsEnglish)));
  Widget profilePage(){
   final p=widget.profile;
-  final local=p.provider=='محلي'||p.provider.startsWith('Local');
-  final gender=p.gender=='ذكر'?(waffraIsEnglish?'Male':'ذكر'):
-   p.gender=='أنثى'?(waffraIsEnglish?'Female':'أنثى'):
-   (waffraIsEnglish?'Not specified':'غير محدد');
   void edit(){Navigator.push<void>(context,MaterialPageRoute(
    builder:(_)=>ProfileForm(provider:p.provider,initial:p,onSave:widget.onProfile)));}
   return ListView(padding:const EdgeInsets.fromLTRB(16,12,16,22),children:[
-   Center(child:InkWell(onTap:edit,child:Stack(alignment:Alignment.bottomRight,children:[
-    waffraAvatar(p.gender,p.avatar,radius:56),
-    const CircleAvatar(radius:16,backgroundColor:forest,child:Icon(Icons.camera_alt,size:18,color:Colors.white)),
-   ]))),
-   const SizedBox(height:10),
-   WaffraText(p.name.trim().isEmpty?(waffraIsEnglish?'My account':'حسابي'):p.name,
-    textAlign:TextAlign.center,style:Theme.of(context).textTheme.titleLarge),
-   if(p.email.trim().isNotEmpty)WaffraText(p.email,textAlign:TextAlign.center),
-   const SizedBox(height:13),
-   Row(children:[
-    Expanded(child:_summaryBox(waffraIsEnglish?'Birthday':'تاريخ الميلاد',
-     dayText(p.birthday),Icons.cake_outlined,emerald)),
-    const SizedBox(width:6),
-    Expanded(child:_summaryBox(waffraIsEnglish?'Gender':'الجنس',gender,Icons.people,emerald)),
-    if(p.provider!='Google')...[
-     const SizedBox(width:6),
-     Expanded(child:_summaryBox(waffraIsEnglish?'Account':'نوع الحساب',
-      local?(waffraIsEnglish?'Local':'محلي'):p.provider,Icons.person,emerald)),
-    ],
-   ]),
-   const SizedBox(height:11),
+   Container(padding:const EdgeInsets.fromLTRB(16,20,16,18),
+    decoration:BoxDecoration(
+     gradient:const LinearGradient(colors:[Color(0xFFE5F4EA),Color(0xFFF8FBF6)]),
+     borderRadius:BorderRadius.circular(24),
+     border:Border.all(color:emerald.withValues(alpha:.12))),
+    child:Column(children:[
+     InkWell(onTap:edit,child:Stack(alignment:Alignment.bottomRight,children:[
+      waffraAvatar(p.gender,p.avatar,radius:56),
+      const CircleAvatar(radius:16,backgroundColor:forest,
+       child:Icon(Icons.camera_alt,size:18,color:Colors.white)),
+     ])),
+     const SizedBox(height:12),
+     WaffraText(p.name.trim().isEmpty?(waffraIsEnglish?'My account':'حسابي'):p.name,
+      textAlign:TextAlign.center,style:Theme.of(context).textTheme.titleLarge),
+     if(p.email.trim().isNotEmpty)...[
+      const SizedBox(height:5),
+      WaffraText(p.email,textAlign:TextAlign.center),
+     ],
+     const SizedBox(height:15),
    OutlinedButton.icon(onPressed:edit,icon:const Icon(Icons.edit_outlined),
     label:WaffraText(waffraIsEnglish?'Edit profile':'تعديل حسابي')),
+    ])),
+   const SizedBox(height:16),
    _accountSection(waffraIsEnglish?'App settings':'إعدادات التطبيق',Icons.settings_outlined,[
     ListTile(
      leading:const CircleAvatar(child:Icon(Icons.auto_awesome_outlined,color:emerald)),
