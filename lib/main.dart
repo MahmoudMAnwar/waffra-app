@@ -1619,9 +1619,41 @@ Future<void> bulkSmsSheet()async {
      const SizedBox(height:16),
      WaffraText(waffraIsEnglish?'Transactions added successfully':'تمت إضافة المعاملات بنجاح',textAlign:TextAlign.center,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:22)),
     ]),
-    content:WaffraText(waffraIsEnglish
-     ?'Saved: ${additions.length} • Income: ${incomes.length} • Expenses: ${expenses.length} • Not added: ${invalid.length}'
-     :'تم الحفظ: ${additions.length} • دخل: ${incomes.length} • مصروفات: ${expenses.length} • لم تُضف: ${invalid.length}',textAlign:TextAlign.center),
+    content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+     WaffraText(waffraIsEnglish?
+      'Saved ${additions.length} transactions':'تم حفظ ${additions.length} معاملة',
+      textAlign:TextAlign.center,style:const TextStyle(fontWeight:FontWeight.w600)),
+     const SizedBox(height:14),
+     Container(padding:const EdgeInsets.all(13),
+      decoration:BoxDecoration(color:const Color(0xFFE6F4EA),borderRadius:BorderRadius.circular(14)),
+      child:Row(children:[
+       const Icon(Icons.trending_up,color:Color(0xFF087B56)),
+       const SizedBox(width:10),
+       Expanded(child:WaffraText(waffraIsEnglish?'Income':'الدخل',
+        style:const TextStyle(fontWeight:FontWeight.bold,color:Color(0xFF087B56)))),
+       WaffraText('${incomes.length} • ${incomeTotal.toStringAsFixed(2)}',
+        style:const TextStyle(fontWeight:FontWeight.bold,color:Color(0xFF087B56))),
+      ])),
+     const SizedBox(height:9),
+     Container(padding:const EdgeInsets.all(13),
+      decoration:BoxDecoration(color:const Color(0xFFFCECE8),borderRadius:BorderRadius.circular(14)),
+      child:Row(children:[
+       const Icon(Icons.trending_down,color:Color(0xFFD65A45)),
+       const SizedBox(width:10),
+       Expanded(child:WaffraText(waffraIsEnglish?'Expenses':'المصروفات',
+        style:const TextStyle(fontWeight:FontWeight.bold,color:Color(0xFFD65A45)))),
+       WaffraText('${expenses.length} • ${expenseTotal.toStringAsFixed(2)}',
+        style:const TextStyle(fontWeight:FontWeight.bold,color:Color(0xFFD65A45))),
+      ])),
+     if(invalid.isNotEmpty)...[
+      const SizedBox(height:12),
+      WaffraText(waffraIsEnglish?
+       'Could not analyze ${invalid.length} transactions':
+       'تعذر تحليل ${invalid.length} معاملة',
+       textAlign:TextAlign.center,
+       style:const TextStyle(color:Colors.deepOrange)),
+     ],
+    ]),
     actionsAlignment:MainAxisAlignment.center,
     actionsPadding:const EdgeInsets.fromLTRB(24,0,24,18),
     actions:[SizedBox(width:180,child:FilledButton(onPressed:()=>Navigator.pop(dialogCtx),child:WaffraText(waffraIsEnglish?'Done':'تم')))]));
@@ -1988,21 +2020,26 @@ Future<void> bulkSmsSheet()async {
   int current=initialIndex.clamp(0,available.length-1);
   try{
    await showWaffraDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>Dialog(
-    backgroundColor:Colors.black,
-    insetPadding:const EdgeInsets.symmetric(horizontal:10,vertical:32),
+    backgroundColor:Colors.transparent,elevation:0,
+    insetPadding:const EdgeInsets.symmetric(horizontal:14,vertical:30),
     child:Column(mainAxisSize:MainAxisSize.min,children:[
-     Row(children:[
-      IconButton(onPressed:()=>Navigator.pop(ctx),icon:const Icon(Icons.close,color:Colors.white)),
-      Expanded(child:Center(child:Text('${current+1} / ${available.length}',
-       style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold)))),
-      const SizedBox(width:48),
-     ]),
-     SizedBox(height:MediaQuery.of(ctx).size.height*.65,
-      child:PageView.builder(controller:controller,itemCount:available.length,
-       onPageChanged:(index)=>update(()=>current=index),
-       itemBuilder:(ctx,index)=>InteractiveViewer(
-        minScale:0.8,maxScale:5,child:Image.file(File(available[index]),fit:BoxFit.contain)))),
-     const SizedBox(height:12),
+     Container(
+      decoration:BoxDecoration(color:const Color(0xFFF6FBF7),
+       borderRadius:BorderRadius.circular(18),border:Border.all(color:emerald,width:2)),
+      clipBehavior:Clip.antiAlias,
+      child:Column(mainAxisSize:MainAxisSize.min,children:[
+       Row(children:[
+        IconButton(onPressed:()=>Navigator.pop(ctx),icon:const Icon(Icons.close,color:emerald)),
+        Expanded(child:Center(child:Text('${current+1} / ${available.length}',
+         textDirection:TextDirection.ltr,style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)))),
+        const SizedBox(width:48),
+       ]),
+       SizedBox(height:MediaQuery.of(ctx).size.height*.68,
+        child:PageView.builder(controller:controller,itemCount:available.length,
+         onPageChanged:(index)=>update(()=>current=index),
+         itemBuilder:(ctx,index)=>InteractiveViewer(
+          minScale:0.8,maxScale:5,child:Image.file(File(available[index]),fit:BoxFit.contain)))),
+      ])),
     ]))));
   }finally{controller.dispose();}
  }
@@ -2373,7 +2410,7 @@ Future<void> bulkSmsSheet()async {
        style:const TextStyle(color:Colors.red)))),
     SimpleDialogOption(onPressed:()=>Navigator.pop(ctx,'cancel'),
      child:ListTile(leading:const Icon(Icons.close),
-      title:WaffraText(waffraIsEnglish?'Cancel':'إلغاء الإجراء'))),
+      title:WaffraText(waffraIsEnglish?'Cancel':'إلغاء'))),
    ],
   ));
   if(!mounted)return;
