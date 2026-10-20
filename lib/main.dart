@@ -1488,7 +1488,7 @@ class _ProfileFormState extends State<ProfileForm> {
    const SizedBox(height:12),
    DropdownButtonFormField<String>(initialValue:['ذكر','أنثى'].contains(gender)?gender:null,
     decoration:InputDecoration(labelText:waffraIsEnglish?'Gender':'الجنس',
-      errorText:profileAttempted&&gender.isEmpty?(waffraIsEnglish?'Select gender':'الجنس حقل إجباري'):null,
+      errorText:profileAttempted&&gender.isEmpty?(waffraIsEnglish?'This field is required':'هذا الحقل مطلوب'):null,
       border:const OutlineInputBorder()),
     items:['ذكر','أنثى'].map((x)=>DropdownMenuItem(value:x,child:WaffraText(waffraIsEnglish?(x=='ذكر'?'Male':'Female'):x))).toList(),
     onChanged:(v){if(v!=null)setState((){gender=v;if(!avatar.startsWith('https://'))avatar=v=='أنثى'?'female':'male';});}),
@@ -2231,7 +2231,7 @@ Future<void> bulkSmsSheet()async {
       const SizedBox(height:12),
       FilledButton(onPressed:busy?null:()async{
        final n=amountOf(amount.text);
-       if(n==null||description.text.trim().isEmpty){snack(ctx,'راجع وصف الرسالة والمبلغ');return;}
+       if(n==null||description.text.trim().isEmpty){update(()=>statusMessage=waffraIsEnglish?'Complete the description and amount fields':'أكمل حقلي الوصف والمبلغ');return;}
        final hash=bankSmsHash(messages[index]);
        if(smsHashes.contains(hash)){
         final yes=await showWaffraDialog<bool>(context:ctx,builder:(d)=>AlertDialog(
@@ -4780,7 +4780,7 @@ Future<void> bulkSmsSheet()async {
        onChanged:(v){if(v!=null)update(()=>category=v);}),
       const SizedBox(height:12),
       TextField(controller:day,keyboardType:TextInputType.number,onChanged:(_)=>update((){}),
-       decoration:InputDecoration(labelText:waffraIsEnglish?'Day of month *':'يوم الشهر * (1 - 31)',
+       decoration:InputDecoration(labelText:waffraIsEnglish?'Day of month *':'يوم الشهر *',helperText:waffraIsEnglish?'1–31':'من 1 إلى 31',
        errorText:attempted&&WaffraValidators.dayOfMonth(day.text)!=null?(waffraIsEnglish?'Choose a day from 1 to 31':'أدخل يومًا صحيحًا من 1 إلى 31'):null)),
      ]))),
      actions:[
