@@ -1,3 +1,4 @@
+import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -287,8 +288,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  String? pinHash;Person? profile;
  @override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);load();launchIntro();}
  Future<void> launchIntro()async{
-  // Play the same concise one-second animation on every cold launch.
-  await Future<void>.delayed(const Duration(milliseconds:1000));
+  // Show the approved cinematic launch for two seconds on each cold start.
+  await Future<void>.delayed(const Duration(milliseconds:2000));
   if(mounted)setState(()=>introDone=true);
  }
  DateTime? _backgroundAt;
@@ -557,13 +558,22 @@ class _PinLockScreenState extends State<PinLockScreen> {
  );
 }
 
+const String _waffraGoogleLogo = '''
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+<path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+<path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.25 5.48-4.76 7.18l7.73 6C44.42 38.03 46.98 31.89 46.98 24.55z"/>
+<path fill="#FBBC05" d="M10.53 28.59A14.4 14.4 0 0 1 9.75 24c0-1.59.27-3.13.76-4.59l-7.98-6.2A23.9 23.9 0 0 0 0 24c0 3.87.93 7.52 2.56 10.78l7.97-6.19z"/>
+<path fill="#34A853" d="M24 48c6.48 0 11.92-2.13 15.91-5.8l-7.73-6c-2.15 1.45-4.92 2.3-8.18 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+</svg>
+''';
+
 class WaffraLaunchIntro extends StatefulWidget {
  const WaffraLaunchIntro({super.key});
  @override State<WaffraLaunchIntro> createState()=>_WaffraLaunchIntroState();
 }
 class _WaffraLaunchIntroState extends State<WaffraLaunchIntro> with SingleTickerProviderStateMixin {
  late final AnimationController controller;
- @override void initState(){super.initState();controller=AnimationController(vsync:this,duration:const Duration(milliseconds:950))..forward();}
+ @override void initState(){super.initState();controller=AnimationController(vsync:this,duration:const Duration(milliseconds:1900))..forward();}
  @override void dispose(){controller.dispose();super.dispose();}
  @override Widget build(BuildContext context)=>Scaffold(backgroundColor:const Color(0xFF002E25),
   body:Center(child:AnimatedBuilder(animation:controller,builder:(ctx,_) {
@@ -830,9 +840,9 @@ class _LoginScreenState extends State<LoginScreen> {
    builder:(ctx)=>SafeArea(child:Padding(padding:const EdgeInsets.fromLTRB(20,14,20,28),child:Column(mainAxisSize:MainAxisSize.min,children:[
     WaffraText(waffraIsEnglish?'Create account':'إنشاء حساب',style:const TextStyle(fontSize:29,fontWeight:FontWeight.bold,color:Color(0xFF10191A))),
     const SizedBox(height:15),
-    _socialBorder(ctx,'Google',ShaderMask(shaderCallback:(bounds)=>const LinearGradient(colors:[Color(0xFF4285F4),Color(0xFF34A853),Color(0xFFFBBC05),Color(0xFFEA4335)]).createShader(bounds),child:const Text('G',style:TextStyle(fontSize:27,fontWeight:FontWeight.w900,color:Colors.white))),label:waffraIsEnglish?'Continue with Google':'المتابعة باستخدام Google'),
+    _socialBorder(ctx,'Google',SvgPicture.string(_waffraGoogleLogo,width:32,height:32)),label:waffraIsEnglish?'Continue with Google':'المتابعة باستخدام Google'),
     const SizedBox(height:12),
-    _socialBorder(ctx,'Apple',const Icon(Icons.apple,size:29,color:Color(0xFF777F8B)),label:waffraIsEnglish?'Continue with Apple':'المتابعة باستخدام Apple'),
+    _socialBorder(ctx,'Apple',const Icon(Icons.apple,size:34,color:Color(0xFF111111)),label:waffraIsEnglish?'Continue with Apple':'المتابعة باستخدام Apple'),
     const SizedBox(height:12),
     _socialBorder(ctx,'Phone',const Icon(Icons.phone_android,color:forest),label:waffraIsEnglish?'Register with phone number':'التسجيل برقم الجوال'),
     const SizedBox(height:8),
