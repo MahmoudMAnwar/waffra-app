@@ -288,9 +288,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  DateTime? _backgroundAt;
  @override void didChangeAppLifecycleState(AppLifecycleState state){
   if(state==AppLifecycleState.paused||state==AppLifecycleState.hidden){_backgroundAt=DateTime.now();}
-  if(state==AppLifecycleState.resumed&&_backgroundAt!=null){
-   waffraReturnHome.value++;
-  }
+  // Returning from Android notification permission must not change the active tab.
   if(state==AppLifecycleState.resumed&&pinHash!=null&&!locked&&_backgroundAt!=null){
    final away=DateTime.now().difference(_backgroundAt!);
    _backgroundAt=null;
@@ -3328,6 +3326,13 @@ Future<void> bulkSmsSheet()async {
    const SizedBox(height:120),
   ]);
  }
+ Widget _recurringBenefit(String label,IconData icon)=>Container(
+  padding:const EdgeInsets.symmetric(horizontal:6,vertical:14),
+  decoration:BoxDecoration(color:emerald.withValues(alpha:.08),borderRadius:BorderRadius.circular(18)),
+  child:Column(mainAxisSize:MainAxisSize.min,children:[
+   Icon(icon,color:emerald,size:25),const SizedBox(height:9),
+   WaffraText(label,textAlign:TextAlign.center,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w600)),
+  ]));
  Widget _summaryBox(String heading,String number,IconData icon,Color color)=>Container(
   padding:const EdgeInsets.all(12),
   decoration:BoxDecoration(color:color.withValues(alpha:.08),borderRadius:BorderRadius.circular(18)),
@@ -3855,11 +3860,11 @@ Future<void> bulkSmsSheet()async {
       label:WaffraText(waffraIsEnglish?'Add first recurring item':'إضافة أول عملية متكررة')),
      const SizedBox(height:22),
      Row(children:[
-      Expanded(child:_summaryBox(waffraIsEnglish?'Save time':'توفير الوقت','✓',Icons.bolt,emerald)),
+      Expanded(child:_recurringBenefit(waffraIsEnglish?'Save time':'توفير الوقت',Icons.bolt)),
       const SizedBox(width:8),
-      Expanded(child:_summaryBox(waffraIsEnglish?'Stay organized':'تنظيم أفضل','✓',Icons.analytics,emerald)),
+      Expanded(child:_recurringBenefit(waffraIsEnglish?'Stay organized':'تنظيم أفضل',Icons.analytics)),
       const SizedBox(width:8),
-      Expanded(child:_summaryBox(waffraIsEnglish?'Due reminders':'تذكير بالمواعيد','✓',Icons.notifications_none,emerald)),
+      Expanded(child:_recurringBenefit(waffraIsEnglish?'Due reminders':'تذكير بالمواعيد',Icons.notifications_none)),
      ]),
     ])),
    if(recurring.isNotEmpty&&shown.isEmpty)Padding(padding:const EdgeInsets.all(32),
