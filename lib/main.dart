@@ -815,13 +815,25 @@ class _LoginScreenState extends State<LoginScreen> {
  }
 
  bool socialBusy=false;
+ Widget _socialBorder(BuildContext sheet,String id,Widget icon,{required String label})=>Material(
+  color:Colors.white,borderRadius:BorderRadius.circular(18),child:InkWell(
+  borderRadius:BorderRadius.circular(18),onTap:()=>Navigator.pop(sheet,id),
+  child:Container(width:double.infinity,padding:const EdgeInsets.symmetric(horizontal:17,vertical:15),
+   decoration:BoxDecoration(borderRadius:BorderRadius.circular(18),
+    border:Border.all(color:id=='Google'?const Color(0xFF4285F4):id=='Apple'?const Color(0xFF777F8B):forest,width:1.6)),
+   child:Row(children:[icon,const SizedBox(width:15),Expanded(child:WaffraText(label,
+    style:const TextStyle(color:forest,fontSize:16,fontWeight:FontWeight.bold)))]))));
  Future<void> chooseRegistration()async {
   final choice=await showModalBottomSheet<String>(context:context,showDragHandle:true,
    builder:(ctx)=>SafeArea(child:Padding(padding:const EdgeInsets.all(16),child:Column(mainAxisSize:MainAxisSize.min,children:[
     WaffraText(waffraIsEnglish?'Create account':'إنشاء حساب',style:Theme.of(ctx).textTheme.titleLarge),
-    ListTile(leading:ShaderMask(shaderCallback:(bounds)=>const LinearGradient(colors:[Color(0xFF4285F4),Color(0xFF34A853),Color(0xFFFBBC05),Color(0xFFEA4335)]).createShader(bounds),child:const Text('G',style:TextStyle(fontSize:27,fontWeight:FontWeight.w900,color:Colors.white))),title:WaffraText(waffraIsEnglish?'Continue with Google':'المتابعة باستخدام Google'),onTap:()=>Navigator.pop(ctx,'Google')),
-    ListTile(leading:const Icon(Icons.apple,size:29,color:Color(0xFF777F8B)),title:WaffraText(waffraIsEnglish?'Continue with Apple':'المتابعة باستخدام Apple'),onTap:()=>Navigator.pop(ctx,'Apple')),
-    ListTile(leading:const Icon(Icons.phone_android),title:WaffraText(waffraIsEnglish?'Register with phone number':'التسجيل برقم الجوال'),onTap:()=>Navigator.pop(ctx,'Phone')),
+    const SizedBox(height:15),
+    _socialBorder(ctx,'Google',ShaderMask(shaderCallback:(bounds)=>const LinearGradient(colors:[Color(0xFF4285F4),Color(0xFF34A853),Color(0xFFFBBC05),Color(0xFFEA4335)]).createShader(bounds),child:const Text('G',style:TextStyle(fontSize:27,fontWeight:FontWeight.w900,color:Colors.white))),label:waffraIsEnglish?'Continue with Google':'المتابعة باستخدام Google'),
+    const SizedBox(height:12),
+    _socialBorder(ctx,'Apple',const Icon(Icons.apple,size:29,color:Color(0xFF777F8B)),label:waffraIsEnglish?'Continue with Apple':'المتابعة باستخدام Apple'),
+    const SizedBox(height:12),
+    _socialBorder(ctx,'Phone',const Icon(Icons.phone_android,color:forest),label:waffraIsEnglish?'Register with phone number':'التسجيل برقم الجوال'),
+    const SizedBox(height:8),
    ]))));
   if(!mounted||choice==null)return;
   if(choice=='Phone'){setState(()=>provider='Phone');return;}
