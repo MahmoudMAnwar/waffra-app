@@ -3112,6 +3112,27 @@ Future<void> bulkSmsSheet()async {
       })),
     ])));
  }
+ Widget _dashboardShortcut(String title,IconData icon,VoidCallback onTap){
+  final dark=Theme.of(context).brightness==Brightness.dark;
+  return Expanded(child:Material(
+   color:Theme.of(context).cardColor,
+   shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(19),
+    side:BorderSide(color:dark?const Color(0xFF396F53):const Color(0xFFDCEAE1))),
+   child:InkWell(
+    onTap:onTap,borderRadius:BorderRadius.circular(19),
+    child:Padding(padding:const EdgeInsets.symmetric(horizontal:11,vertical:12),
+     child:Row(children:[
+      Container(width:35,height:35,
+       decoration:BoxDecoration(color:dark?const Color(0xFF295F45):waffraMint,
+        borderRadius:BorderRadius.circular(12)),
+       child:Icon(icon,color:dark?Colors.white:forest,size:21)),
+      const SizedBox(width:8),
+      Expanded(child:WaffraText(title,maxLines:2,
+       style:const TextStyle(fontSize:12,fontWeight:FontWeight.bold))),
+     ])),
+   ),
+  ));
+ }
  Widget homeSummaryCard(String label,double value,IconData symbol,Color color,Color tint)=>
   Expanded(child:InkWell(
    onTap:()=>showSummaryTransactions(label=='الدخل'||label=='Income'),
@@ -3231,7 +3252,26 @@ Future<void> bulkSmsSheet()async {
           homeSummaryCard(waffraIsEnglish?'Expenses':'المصروفات',
            exp,Icons.north_east,const Color(0xFFB94838),waffraExpenseBackground),
          ]),
-         const SizedBox(height:12),
+         const SizedBox(height:15),
+         WaffraText(waffraIsEnglish?'Quick actions':'إجراءات سريعة',
+          style:const TextStyle(fontSize:17,fontWeight:FontWeight.bold)),
+         const SizedBox(height:8),
+         Row(children:[
+          _dashboardShortcut(waffraIsEnglish?'Add transaction':'إضافة عملية',
+           Icons.add_circle_outline_rounded,entrySheet),
+          const SizedBox(width:9),
+          _dashboardShortcut(waffraIsEnglish?'Export report':'تصدير تقرير',
+           Icons.analytics_outlined,()=>exportEntriesPdf(entries,'تقرير عمليات وفرة')),
+         ]),
+         const SizedBox(height:9),
+         Row(children:[
+          _dashboardShortcut(waffraIsEnglish?'Financial calendar':'التقويم المالي',
+           Icons.calendar_month_outlined,openFinancialCalendar),
+          const SizedBox(width:9),
+          _dashboardShortcut(waffraIsEnglish?'Savings goals':'أهداف الادخار',
+           Icons.flag_outlined,()=>setState((){tab=3;goalsOpened=false;})),
+         ]),
+         const SizedBox(height:13),
          monthlyBudgetCard(),
          const SizedBox(height:12),
          monthlySummaryCard(),
