@@ -277,6 +277,27 @@ List<String> splitBankMessages(String raw){
  return [clean];
 }
 
+/// Consistent frosted backdrop for all app dialogs.
+Future<T?> showWaffraDialog<T>({
+ required BuildContext context,
+ required WidgetBuilder builder,
+ bool barrierDismissible=true,
+ Color? barrierColor,
+ bool useRootNavigator=true,
+ RouteSettings? routeSettings,
+ Offset? anchorPoint,
+})=>showDialog<T>(
+ context:context,
+ barrierDismissible:barrierDismissible,
+ barrierColor:barrierColor??Colors.black.withValues(alpha:.28),
+ useRootNavigator:useRootNavigator,
+ routeSettings:routeSettings,
+ anchorPoint:anchorPoint,
+ builder:(dialogContext)=>BackdropFilter(
+  filter:ui.ImageFilter.blur(sigmaX:7,sigmaY:7),
+  child:builder(dialogContext)),
+);
+
 class WaffraApp extends StatefulWidget {
  const WaffraApp({super.key});
  @override State<WaffraApp> createState()=>_WaffraAppState();
@@ -397,7 +418,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   themeAnimationCurve:Curves.easeInOutCubic,
   home:Builder(builder:(rootContext)=>PopScope(canPop:false,onPopInvokedWithResult:(didPop,result)async {
    if(didPop||!mounted)return;
-   final exit=await showDialog<bool>(context:rootContext,builder:(ctx)=>AlertDialog(
+   final exit=await showWaffraDialog<bool>(context:rootContext,builder:(ctx)=>AlertDialog(
     title:WaffraText(waffraIsEnglish?'Exit Waffra?':'تبي تطلع من وفرة؟'),
     content:WaffraText(waffraIsEnglish?'Do you want to exit the app?':'متأكد تبي تطلع من التطبيق؟'),
     actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:WaffraText(waffraIsEnglish?'No':'لا')),
@@ -450,7 +471,7 @@ class _PinLockScreenState extends State<PinLockScreen> {
  Future<void> biometric()async {
   if(busy)return;
   if(!biometricAvailable){
-   await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+   await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
     title:const WaffraText('البصمة غير متاحة'),
     content:const WaffraText('تأكد من تسجيل بصمتك في إعدادات الهاتف، وبعدها افتح التطبيق مرة أخرى. يمكنك الدخول برمز PIN الآن.'),
     actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('حسنًا'))]));
@@ -900,7 +921,7 @@ class _LoginScreenState extends State<LoginScreen> {
    }finally{if(mounted)setState(()=>socialBusy=false);}
    return;
   }
-  await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+  await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
    title:WaffraText(waffraIsEnglish?'Sign-in not configured':'تسجيل الدخول غير مفعّل'),
    content:WaffraText(waffraIsEnglish?'Secure $choice sign-in needs authentication setup. No account was created.':'تسجيل الدخول الآمن باستخدام $choice يحتاج إعداد خدمة المصادقة. لم يتم إنشاء حساب.'),
    actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))]));
@@ -1032,7 +1053,7 @@ class _ProfileFormState extends State<ProfileForm> {
   final selected=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:92);
   if(selected==null||!mounted)return;
   final cropKey=GlobalKey();
-  final png=await showDialog<Uint8List>(context:context,builder:(ctx)=>AlertDialog(
+  final png=await showWaffraDialog<Uint8List>(context:context,builder:(ctx)=>AlertDialog(
    title:WaffraText(waffraIsEnglish?'Crop profile photo':'قص صورة الملف الشخصي'),
    content:Column(mainAxisSize:MainAxisSize.min,children:[
     RepaintBoundary(key:cropKey,child:ClipOval(child:SizedBox(width:230,height:230,
@@ -1415,11 +1436,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   return BudgetCategory(id:'fallback',name:name,icon:'category',color:colors[7],income:income);
  }
  List<BudgetCategory> forType(bool income)=>categories.where((c)=>c.income==income).toList();
- Future<bool?> confirm(String title,String body)=>showDialog<bool>(
+ Future<bool?> confirm(String title,String body)=>showWaffraDialog<bool>(
   context:context,builder:(ctx)=>AlertDialog(title:WaffraText(title),content:WaffraText(body),
   actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const WaffraText('إلغاء')),
    FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const WaffraText('تأكيد'))]));
- Future<bool?> confirmDeletion(String title,String body)=>showDialog<bool>(
+ Future<bool?> confirmDeletion(String title,String body)=>showWaffraDialog<bool>(
   context:context,builder:(ctx)=>AlertDialog(
    title:WaffraText(title),content:WaffraText(body),
    actions:[
@@ -1472,7 +1493,7 @@ Future<void> bulkSmsSheet()async {
    valid.add(i);
   }
   if(duplicates.isNotEmpty){
-   final addRepeated=await showDialog<bool>(context:ctx,builder:(d)=>AlertDialog(
+   final addRepeated=await showWaffraDialog<bool>(context:ctx,builder:(d)=>AlertDialog(
     title:WaffraText(waffraIsEnglish?'Duplicate transactions detected':'تم اكتشاف معاملات مكررة'),
     content:WaffraText(waffraIsEnglish
      ?'${duplicates.length} transaction(s) may already exist or repeat within this paste. Add them anyway, along with the new valid transactions?'
@@ -1490,7 +1511,7 @@ Future<void> bulkSmsSheet()async {
   final expenses=valid.where((i)=>!results[i].income).toList();
   final incomeTotal=incomes.fold<double>(0,(v,i)=>v+results[i].amount!);
   final expenseTotal=expenses.fold<double>(0,(v,i)=>v+results[i].amount!);
-  final accepted=await showDialog<bool>(
+  final accepted=await showWaffraDialog<bool>(
    context:ctx,barrierColor:Colors.black.withValues(alpha:.25),
    builder:(dialogCtx)=>BackdropFilter(
     filter:ui.ImageFilter.blur(sigmaX:7,sigmaY:7),
@@ -1565,7 +1586,7 @@ Future<void> bulkSmsSheet()async {
    smsHashes.addAll(newHashes);
    if(!ctx.mounted)return;
    Navigator.pop(ctx);
-   if(mounted)await showDialog<void>(context:context,builder:(dialogCtx)=>AlertDialog(
+   if(mounted)await showWaffraDialog<void>(context:context,builder:(dialogCtx)=>AlertDialog(
     title:Column(mainAxisSize:MainAxisSize.min,children:[
      const Icon(Icons.check_circle_rounded,color:Color(0xFF16805E),size:54),
      const SizedBox(height:16),
@@ -1700,7 +1721,7 @@ Future<void> bulkSmsSheet()async {
        if(n==null||description.text.trim().isEmpty){snack(ctx,'راجع وصف الرسالة والمبلغ');return;}
        final hash=bankSmsHash(messages[index]);
        if(smsHashes.contains(hash)){
-        final yes=await showDialog<bool>(context:ctx,builder:(d)=>AlertDialog(
+        final yes=await showWaffraDialog<bool>(context:ctx,builder:(d)=>AlertDialog(
          title:const WaffraText('⚠️ رسالة مكررة'),content:const WaffraText('هذي الرسالة سبق حفظها. ودّك تضيفها مرة ثانية؟'),
          actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:const WaffraText('إلغاء')),
           FilledButton(onPressed:()=>Navigator.pop(d,true),child:const WaffraText('إضافة على أي حال'))]));
@@ -1865,7 +1886,7 @@ Future<void> bulkSmsSheet()async {
         if(message.text.trim().isEmpty)return;
         final h=sha256.convert(utf8.encode(digits(message.text).replaceAll(RegExp(r'\s+'),' ').trim().toLowerCase())).toString();
         if(smsHashes.contains(h)){
-         final proceed=await showDialog<bool>(context:sheetContext,builder:(dialogContext)=>AlertDialog(
+         final proceed=await showWaffraDialog<bool>(context:sheetContext,builder:(dialogContext)=>AlertDialog(
           title:const WaffraText('⚠️ الرسالة مكررة'),
           content:const WaffraText('هذي الرسالة البنكية أضفتها قبل كذا. ودّك تضيفها مرة ثانية؟'),
           actions:[TextButton(onPressed:()=>Navigator.pop(dialogContext,false),child:const WaffraText('إلغاء')),
@@ -1886,7 +1907,7 @@ Future<void> bulkSmsSheet()async {
     e.title.trim().toLowerCase()==result.title.trim().toLowerCase()&&
     e.category==result.category&&e.date.year==result.date.year&&
     e.date.month==result.date.month&&e.date.day==result.date.day)){
-   final proceed=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
+   final proceed=await showWaffraDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
     title:const WaffraText('⚠️ عملية مكررة'),
     content:WaffraText('يبدو إنك أضفت نفس ${result.income?'الدخل':'المصروف'} من قبل. ودّك تضيفه مرة ثانية؟'),
     actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const WaffraText('إلغاء')),
@@ -1927,7 +1948,7 @@ Future<void> bulkSmsSheet()async {
    if(mounted)snack(context,'ما لقينا الصورة على الجهاز');return;
   }
   if(!mounted)return;
-  await showDialog<void>(context:context,builder:(ctx)=>Dialog(child:Column(mainAxisSize:MainAxisSize.min,children:[
+  await showWaffraDialog<void>(context:context,builder:(ctx)=>Dialog(child:Column(mainAxisSize:MainAxisSize.min,children:[
    SizedBox(height:MediaQuery.of(ctx).size.height*.65,width:MediaQuery.of(ctx).size.width*.85,
     child:InteractiveViewer(child:Image.file(File(path),fit:BoxFit.contain))),
    TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إغلاق')),
@@ -1945,7 +1966,7 @@ Future<void> bulkSmsSheet()async {
    if(previousSpent<category.budget*stage/100&&spent>=category.budget*stage/100)crossed=stage;
   }
   if(crossed==null||!mounted)return;
-  await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+  await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
    title:WaffraText(waffraIsEnglish?'Budget alert':'⚠️ تنبيه ميزانية القسم'),
    content:WaffraText(waffraIsEnglish?
     '${category.name} has reached ${(spent/category.budget*100).round()}% of the budget (crossed $crossed%). Spent ${cash(spent)} out of ${cash(category.budget)}.':
@@ -1985,7 +2006,7 @@ Future<void> bulkSmsSheet()async {
   final exportNavigator=Navigator.of(context,rootNavigator:true);
   try{
    exportDialogOpen=true;
-   unawaited(showDialog<void>(context:context,useRootNavigator:true,barrierDismissible:false,
+   unawaited(showWaffraDialog<void>(context:context,useRootNavigator:true,barrierDismissible:false,
     barrierColor:Colors.black.withValues(alpha:.22),
     builder:(dialogContext)=>PopScope(canPop:false,child:BackdropFilter(
      filter:ui.ImageFilter.blur(sigmaX:9,sigmaY:9),
@@ -2205,7 +2226,7 @@ Future<void> bulkSmsSheet()async {
    if(exportDialogOpen&&exportNavigator.mounted){exportNavigator.pop();exportDialogOpen=false;}
    if(!mounted)return;
    final fileName=analytics?'waffra_analytics.pdf':'waffra_income_expenses.pdf';
-   await showDialog<void>(context:context,builder:(dialogContext)=>AlertDialog(
+   await showWaffraDialog<void>(context:context,builder:(dialogContext)=>AlertDialog(
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(24)),
     title:Column(children:[
      const Icon(Icons.check_circle_rounded,color:emerald,size:58),
@@ -2331,7 +2352,7 @@ Future<void> bulkSmsSheet()async {
   bool enabled=monthlyBudgetEnabled;
   String? validation;
   try{
-   final next=await showDialog<({bool enabled,double amount})>(
+   final next=await showWaffraDialog<({bool enabled,double amount})>(
     context:context,builder:(ctx)=>BackdropFilter(filter:ui.ImageFilter.blur(sigmaX:7,sigmaY:7),child:StatefulBuilder(builder:(ctx,update)=>AlertDialog(
      title:WaffraText(waffraIsEnglish?'Monthly budget':'الميزانية الشهرية'),
      content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
@@ -2384,7 +2405,7 @@ Future<void> bulkSmsSheet()async {
   final max=TextEditingController(text:maxTransactionAmount?.toStringAsFixed(2)??'');
   DateTimeRange? chosen=transactionsDateRange;
   try{
-   await showDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(
+   await showWaffraDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(
     builder:(ctx,update)=>AlertDialog(
      title:WaffraText(waffraIsEnglish?'Advanced filters':'فلترة بالتاريخ والمبلغ'),
      content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
@@ -3036,7 +3057,7 @@ Future<void> bulkSmsSheet()async {
   // Blur the underlying screen while the animated analysis indicator runs.
   // Keep the loader visible long enough to convey progress; calculations are local.
   if(!mounted)return;
-  await showDialog<void>(
+  await showWaffraDialog<void>(
    context:context,barrierDismissible:false,barrierColor:Colors.transparent,
    builder:(ctx){
     Future<void>.delayed(waffraMotion(1500),(){if(ctx.mounted)Navigator.of(ctx).pop();});
@@ -3292,7 +3313,7 @@ Future<void> bulkSmsSheet()async {
   final budget=TextEditingController(text:initial==null||initial.budget==0?'':formatWaffraMoney(initial.budget));
   String icon=initial?.icon??'category';int color=initial?.color??colors[0];int alertPercent=initial?.alertPercent??80;
   bool attempted=false;
-  final result=await showDialog<BudgetCategory>(context:context,
+  final result=await showWaffraDialog<BudgetCategory>(context:context,
    builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
     title:WaffraText(initial==null?'قسم جديد':'تعديل القسم'),
     content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
@@ -3374,7 +3395,7 @@ Future<void> bulkSmsSheet()async {
   final linkedRecurring=recurring.where((e)=>e.category==c.name&&e.income==c.income).length;
   if(linkedEntries>0||linkedRecurring>0){
    if(!mounted)return;
-   await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+   await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
     title:WaffraText(waffraIsEnglish?'Category cannot be deleted':'لا يمكن حذف القسم'),
     content:WaffraText(waffraIsEnglish
      ?'This category has $linkedEntries linked transaction(s) and $linkedRecurring recurring item(s). Delete these linked items first to protect your financial history.'
@@ -3418,7 +3439,7 @@ Future<void> bulkSmsSheet()async {
   });
   if(before!=deletedCategories.length)await persist();
   if(!mounted)return;
-  await showDialog<void>(context:context,builder:(dialogCtx)=>StatefulBuilder(
+  await showWaffraDialog<void>(context:context,builder:(dialogCtx)=>StatefulBuilder(
    builder:(dialogCtx,refresh)=>AlertDialog(
     title:WaffraText(waffraIsEnglish?'Recently deleted categories':'الأقسام المحذوفة'),
     content:SizedBox(width:double.maxFinite,height:min(440.0,MediaQuery.sizeOf(dialogCtx).height*.5),
@@ -3605,7 +3626,7 @@ Future<void> bulkSmsSheet()async {
   final customGoals=prefs.getStringList('waffra_custom_goals_v1')??<String>[];
   final suggested=['سيارة','منزل','سفر','زواج','صندوق الطوارئ','تعليم','حج أو عمرة','مشروع خاص',...customGoals];
   String selectedGoal='';bool attempted=false;
-  final g=await showDialog<SavingGoal>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,updateGoal)=>AlertDialog(
+  final g=await showWaffraDialog<SavingGoal>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,updateGoal)=>AlertDialog(
    title:const WaffraText('إضافة هدف ادخار'),scrollable:true,
    content:Column(mainAxisSize:MainAxisSize.min,children:[
     DropdownButtonFormField<String>(isExpanded:true,decoration:InputDecoration(labelText:waffraIsEnglish?'Savings goal *':'اختر هدف الادخار *',
@@ -3644,7 +3665,7 @@ Future<void> bulkSmsSheet()async {
  Future<void> fundGoal(SavingGoal g)async {
   final amount=TextEditingController();
   bool attempted=false;
-  final n=await showDialog<double>(context:context,builder:(ctx)=>StatefulBuilder(
+  final n=await showWaffraDialog<double>(context:context,builder:(ctx)=>StatefulBuilder(
    builder:(ctx,update)=>AlertDialog(
    title:WaffraText('إضافة ادخار لـ ${g.name}'),
    content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
@@ -3684,7 +3705,7 @@ Future<void> bulkSmsSheet()async {
    });
    await persist();
    if(achieved&&mounted){
-    await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+    await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
      title:const WaffraText('🎉 مبروك!'),
      content:WaffraText('تم تحقيق هدف الادخار «${g.name}» بنجاح!'),
      actions:[FilledButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('رائع'))]));
@@ -3706,7 +3727,7 @@ Future<void> bulkSmsSheet()async {
  Future<void> createSavingChallenge()async {
   final name=TextEditingController(),amount=TextEditingController();
   var attempted=false,days=30;
-  final challenge=await showDialog<SavingChallenge>(
+  final challenge=await showWaffraDialog<SavingChallenge>(
    context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
     title:WaffraText(waffraIsEnglish?'New savings challenge':'تحدي ادخار جديد'),
     content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
@@ -3953,7 +3974,7 @@ Future<void> bulkSmsSheet()async {
  Future<void> recurringDialog()async {
   final title=TextEditingController(),amount=TextEditingController(),day=TextEditingController(text:'1');
   bool income=false;String category=forType(false).first.name;bool attempted=false;
-  final r=await showDialog<RecurringBill>(context:context,
+  final r=await showWaffraDialog<RecurringBill>(context:context,
    builder:(ctx)=>StatefulBuilder(builder:(ctx,update){
     final options=forType(income);
     final selected=options.any((x)=>x.name==category)?category:options.first.name;
@@ -4141,7 +4162,7 @@ Future<void> bulkSmsSheet()async {
  });
  Future<void> backupDialog()async {
   final input=TextEditingController();
-  await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+  await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
    title:const WaffraText('نسخ احتياطي واستعادة'),
    content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
     const WaffraText('انسخ بياناتك واحفظها في مكان آمن. للاستعادة، الصق نسخة JSON. الاستعادة تستبدل بيانات العمليات والأقسام والأهداف والتكرار الحالية.'),
@@ -4212,7 +4233,7 @@ Future<void> bulkSmsSheet()async {
  })async{
   final input=TextEditingController();
   try{
-   return await showDialog<String>(context:context,builder:(dialogContext)=>Theme(data:Theme.of(dialogContext).copyWith(brightness:Brightness.dark,colorScheme:ColorScheme.fromSeed(seedColor:emerald,brightness:Brightness.dark)),child:AlertDialog(
+   return await showWaffraDialog<String>(context:context,builder:(dialogContext)=>Theme(data:Theme.of(dialogContext).copyWith(brightness:Brightness.dark,colorScheme:ColorScheme.fromSeed(seedColor:emerald,brightness:Brightness.dark)),child:AlertDialog(
     backgroundColor:forest,
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26),side:const BorderSide(color:Color(0xFF2C9674))),
     title:Column(mainAxisSize:MainAxisSize.min,children:[
