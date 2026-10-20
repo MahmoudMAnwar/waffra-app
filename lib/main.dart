@@ -2773,40 +2773,6 @@ Future<void> bulkSmsSheet()async {
   final top=biggest.entries.toList()..sort((a,b)=>b.value.compareTo(a.value));
   if(!mounted)return;
   // Blur the underlying screen while the animated analysis indicator runs.
-  await showGeneralDialog<void>(
-   context:context,
-   barrierDismissible:false,
-   barrierColor:Colors.black.withValues(alpha:.18),
-   transitionDuration:waffraMotion(350),
-   pageBuilder:(dialogContext,animation,secondaryAnimation)=>BackdropFilter(
-    filter:ui.ImageFilter.blur(sigmaX:9,sigmaY:9),
-    child:Center(child:Material(color:Colors.transparent,child:Container(
-     width:MediaQuery.of(dialogContext).size.width*.83,
-     padding:const EdgeInsets.symmetric(horizontal:24,vertical:36),
-     decoration:BoxDecoration(color:Theme.of(dialogContext).cardColor,
-      borderRadius:BorderRadius.circular(28)),
-     child:Column(mainAxisSize:MainAxisSize.min,children:[
-      SizedBox(height:112,width:112,child:Stack(alignment:Alignment.center,children:[
-       const SizedBox.expand(child:CircularProgressIndicator(
-        strokeWidth:8,color:emerald,backgroundColor:Color(0xFFD9F1E5))),
-       const Icon(Icons.bar_chart_rounded,size:45,color:emerald),
-      ])),
-      const SizedBox(height:22),
-      WaffraText(waffraIsEnglish?'Analyzing your finances...':'يتم الآن تحليل بياناتك المالية',
-       textAlign:TextAlign.center,style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold)),
-      const SizedBox(height:10),
-      WaffraText(waffraIsEnglish?'Reviewing income, expenses and categories for the last 90 days':
-       'جاري مراجعة دخلك ومصروفاتك وأقسام الإنفاق خلال آخر 90 يوم...',
-       textAlign:TextAlign.center),
-      const SizedBox(height:15),
-      const LinearProgressIndicator(color:emerald,backgroundColor:Color(0xFFD9F1E5)),
-     ]),
-    )))),
-   transitionBuilder:(ctx,animation,secondary,child)=>FadeTransition(
-    opacity:animation,child:ScaleTransition(
-     scale:Tween<double>(begin:.90,end:1).animate(CurvedAnimation(parent:animation,curve:Curves.easeOutCubic)),
-     child:child)),
-  ).timeout(const Duration(milliseconds:1),onTimeout:()=>{});
   // Keep the loader visible long enough to convey progress; calculations are local.
   if(!mounted)return;
   await showDialog<void>(
