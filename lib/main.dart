@@ -1906,7 +1906,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  bool tourActive=false;
  bool tourTargetReady=false;
  int tourStep=0;
- static const tourTabs=<int>[0,0,1,3,4,5];
+ static const tourTabs=<int>[0,0,1,0,3,4];
  bool addFabExpanded=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
  @override void initState(){super.initState();_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraWidgetAction.addListener(_receiveWidgetAction);load();}
@@ -4601,7 +4601,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       });
      },child:WaffraText(waffraIsEnglish?'View transactions':'عرض المعاملات المرتبطة'))
      else TextButton(onPressed:(){
-      Navigator.pop(ctx);setState((){tab=4;goalsOpened=false;addFabExpanded=false;});
+      Navigator.pop(ctx);setState((){tab=3;goalsOpened=false;addFabExpanded=false;});
      },child:WaffraText(waffraIsEnglish?'View recurring':'عرض العمليات المتكررة')),
     ]));
    return;
@@ -6007,9 +6007,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
   switch(tab){
    case 0:return goalsOpened?goalsPage():dashboard();
    case 1:return categoriesPage();
-   case 2:return dashboard(); // Analysis opens in a modal, not a tab page.
-   case 3:return goalsPage();
-   case 4:return recurringPage();
+   case 2:return goalsPage();
+   case 3:return recurringPage();
    default:return profilePage();
   }
  }
@@ -6019,34 +6018,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final dx=_swipeTravel.abs()>50?_swipeTravel:velocity/10;
   if(dx.abs()<65)return;
   final forward=waffraIsEnglish?dx>0:dx<0;
-  final target=(tab+(forward?1:-1)).clamp(0,5);
+  final target=(tab+(forward?1:-1)).clamp(0,4);
   if(target!=tab)unawaited(selectFooter(target));
  }
  Future<void> selectFooter(int target)async {
-  if(target==2){
-   if(entries.isEmpty){
-    if(!mounted)return;
-    await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
-     title:WaffraText(waffraIsEnglish?'No transactions yet':'لا توجد معاملات حالية'),
-     content:WaffraText(waffraIsEnglish?'Add an income or expense transaction first to start financial analysis.':'لا توجد معاملات لتحليلها حاليًا. برجاء إضافة عملية دخل أو مصروف أولًا.'),
-     actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))]));
-    return;
-   }
-   final confirmed=await showWaffraDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
-    title:WaffraText(waffraIsEnglish?'Start financial analysis?':'بدء التحليل المالي؟'),
-    content:WaffraText(waffraIsEnglish?'Analyze your recorded transactions now?':'سيتم تحليل معاملاتك المالية المسجلة. هل تريد المتابعة؟'),
-    actions:[
-     TextButton(onPressed:()=>Navigator.pop(ctx,false),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
-     FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:WaffraText(waffraIsEnglish?'Start analysis':'بدء التحليل')),
-    ]));
-   if(confirmed!=true||!mounted)return;
-   final previous=tab;
-   setState((){tab=2;goalsOpened=false;addFabExpanded=false;});
-   try{await showAiAnalysis();}finally{
-    if(mounted&&tab==2)setState(()=>tab=previous);
-   }
-   return;
-  }
+  if(target<0||target>=WaffraFooterNavigation.itemCount)return;
   if(mounted)setState((){tab=target;goalsOpened=false;addFabExpanded=false;});
  }
  @override Widget build(BuildContext context)=>Stack(children:[Scaffold(
@@ -6081,7 +6057,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     SizedBox(width:45,height:kToolbarHeight,
      child:Center(child:InkWell(
       onTap:()=>setState((){
-       addFabExpanded=false;goalsOpened=false;tab=5;
+       addFabExpanded=false;goalsOpened=false;tab=4;
       }),
       borderRadius:BorderRadius.circular(30),
       child:waffraAvatar(widget.profile.gender,widget.profile.avatar,radius:18)))),
@@ -6098,7 +6074,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     child:ValueListenableBuilder<bool>(
      valueListenable:hideWaffraAmounts,
      builder:(context,hidden,_)=>currentTab())),
-  // Keep the add menu and its original actions above the 6-tab navigation.
+  // Keep the add menu and its original actions above five destinations.
   floatingActionButtonLocation:FloatingActionButtonLocation.centerFloat,
   floatingActionButton:!ready||goalsOpened||(tab!=0&&tab!=1)?null:Directionality(
    textDirection:TextDirection.ltr,child:Column(
@@ -6156,7 +6132,6 @@ Future<void> bulkSmsSheet({String? initialText})async {
    selectedIndex:tab,
    english:waffraIsEnglish,
    onSelected:(selected)=>unawaited(selectFooter(selected)),
-   analysisSpotlightKey:_tourKeys[3],
    profileSpotlightKey:_tourKeys[5],
   )),
   if(tourActive&&tourTargetReady)Positioned.fill(child:tourOverlay()),
