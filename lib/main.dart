@@ -5550,30 +5550,7 @@ Future<void> bulkSmsSheet()async {
           setState(()=>addFabExpanded=false);
           bulkSmsSheet();
          }),
-        ]),
-      if(analyzingPaste)...[const SizedBox(height:12),const LinearProgressIndicator(),const SizedBox(height:6),WaffraText(waffraIsEnglish?'Analyzing your bank messages now…':'يتم الآن تحليل الرسائل البنكية واستخراج المعاملات…')],
-      
-      if(rejectedMessages.isNotEmpty)...[
-       const SizedBox(height:8),
-       WaffraText(waffraIsEnglish?'Unrecognized messages — edit and retry':'رسائل لم يتم تحليلها — راجعها وأعد المحاولة',style:const TextStyle(fontWeight:FontWeight.bold)),
-       ...rejectedMessages.asMap().entries.map((item)=>Card(child:ListTile(
-        title:WaffraText(waffraIsEnglish?'Message ${item.key+1}':'رسالة ${item.key+1}'),
-        subtitle:SelectableText(item.value,maxLines:4),
-        trailing:IconButton(icon:const Icon(Icons.edit_outlined),tooltip:waffraIsEnglish?'Review manually':'مراجعة يدويًا',onPressed:(){
-         Navigator.pop(ctx);
-         entrySheet(sms:true,initialSms:item.value);
-        })))),
-      ],
-      if(parsed&&statusMessage.isEmpty)...[
-       const SizedBox(height:12),
-       Container(width:double.infinity,padding:const EdgeInsets.symmetric(horizontal:14,vertical:13),
-        decoration:BoxDecoration(color:Theme.of(ctx).brightness==Brightness.dark?const Color(0xFF123E32):const Color(0xFFE8F6EF),
-         border:Border.all(color:emerald.withValues(alpha:.25)),borderRadius:BorderRadius.circular(16)),
-        child:Row(children:[const Icon(Icons.check_circle_outline,color:emerald,size:20),const SizedBox(width:9),
-         Expanded(child:WaffraText(waffraIsEnglish?'Detected ${messages.length} transactions':'تم اكتشاف ${messages.length} معاملة',
-          style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)))])),
-      ],
-      ]else...[
+        ]else...[
          _addMenuOption(icon:Icons.trending_up,
           label:waffraIsEnglish?'Income category':'إضافة قسم دخل',
           onTap:(){setState(()=>addFabExpanded=false);addCategory(income:true);}),
