@@ -42,7 +42,9 @@ void main() {
 
     await tester.tap(find.text('Open details'));
     await tester.pumpAndSettle();
-    expect(find.text('تفاصيل المعاملة'), findsOneWidget);
+    expect(find.byWidgetPredicate(
+      (w) => w is WaffraText && w.data == 'تفاصيل المعاملة',
+    ), findsOneWidget);
     final text = tester.widget<WaffraText>(find.byWidgetPredicate(
       (w) => w is WaffraText && w.data == entry.title,
     ));
@@ -75,6 +77,8 @@ void main() {
     ));
     expect(text.textDirection, TextDirection.ltr);
     expect(text.textAlign, TextAlign.start);
-    expect(find.text('Transaction details'), findsOneWidget);
+    expect(find.byWidgetPredicate(
+      (w) => w is WaffraText && w.data == 'Transaction details',
+    ), findsOneWidget);
   });
 }
