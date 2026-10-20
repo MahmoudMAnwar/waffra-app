@@ -198,6 +198,44 @@ jobs:
               print('Configured', styles)
           PY
 
+      - name: Install native messaging share support
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          activity_files=list(Path('android/app/src/main/kotlin').rglob('MainActivity.kt'))
+          if len(activity_files)!=1:
+              raise SystemExit(f'Expected one Kotlin MainActivity, got {len(activity_files)}')
+          activity=activity_files[0]
+          template=Path('native/WaffraMainActivity.kt').read_text()
+          assert 'waffra/privacy' in template and 'waffra/messages' in template
+          assert 'READ_SMS' in template  # Only mentioned in a comment; never granted
+          activity.write_text(template)
+
+          manifest=Path('android/app/src/main/AndroidManifest.xml')
+          xml=manifest.read_text()
+          if 'android.intent.action.SEND' not in xml:
+              filter_xml = '''
+                  <intent-filter>
+                      <action android:name="android.intent.action.SEND" />
+                      <category android:name="android.intent.category.DEFAULT" />
+                      <data android:mimeType="text/plain" />
+                  </intent-filter>
+              '''
+              pattern=r'(<activity\\b[^>]*android:name="\\.MainActivity"[^>]*>)(.*?)(</activity>)'
+              match=re.search(pattern,xml,re.DOTALL)
+              if not match:
+                  raise SystemExit('Could not find MainActivity in generated manifest')
+              block=match.group(0).replace('</activity>',filter_xml+'\\n    </activity>',1)
+              xml=xml[:match.start()]+block+xml[match.end():]
+              manifest.write_text(xml)
+          if re.search(r'<uses-permission[^>]*\\b(?:READ_SMS|RECEIVE_SMS|READ_CALL_LOG)\\b',xml):
+              raise SystemExit('SMS inbox permissions must never be requested')
+          print('Enabled user-triggered text sharing and messaging launch without inbox access')
+          PY
+
       - name: Configure Android scheduled notification support
         shell: bash
         run: |
