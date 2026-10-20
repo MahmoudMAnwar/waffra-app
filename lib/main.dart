@@ -615,7 +615,7 @@ class _WaffraLaunchIntroState extends State<WaffraLaunchIntro> with SingleTicker
        child:Text(waffraIsEnglish?'Waffra.. shows you where your money goes':
         'وفرة.. يعلّمك وين فلوسك تروح',textAlign:TextAlign.center,
         style:const TextStyle(color:Color(0xFFE8FFF0),fontSize:18,fontWeight:FontWeight.w600))))),
-    ])))),
+    ]))),
    ]);
   }),
  );
