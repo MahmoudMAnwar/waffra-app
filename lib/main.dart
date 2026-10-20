@@ -600,9 +600,12 @@ class _WaffraLaunchIntroState extends State<WaffraLaunchIntro> with SingleTicker
           border:Border.all(color:const Color(0xFF8CF2C0),width:1.4)))));
       }),
       Opacity(opacity:reveal(t,0,.15),child:Transform.scale(
-       scale:.55+.45*iconProgress,child:Image.asset('assets/waffra_app_icon.png',
-        width:128,height:128,errorBuilder:(_,__,___)=>const Icon(
-         Icons.bar_chart_rounded,color:Colors.white,size:100)))),
+       scale:.55+.45*iconProgress,child:ClipRRect(
+        borderRadius:BorderRadius.circular(38),
+        child:Image.asset('assets/waffra_app_icon.png',
+         width:128,height:128,fit:BoxFit.cover,
+         errorBuilder:(_,__,___)=>const Icon(
+          Icons.spa_rounded,color:Colors.white,size:100))))),
      ])),
      const SizedBox(height:4),
      Opacity(opacity:reveal(t,.26,.48),child:Transform.translate(
@@ -1101,7 +1104,7 @@ class _ProfileFormState extends State<ProfileForm> {
      onPressed:editAvatar)),
    ])),
    const SizedBox(height:10),
-   if(widget.provider=='Google'&&(widget.initial?.gender.isEmpty??true))Card(color:emerald.withValues(alpha:.08),child:Padding(padding:const EdgeInsets.all(14),child:WaffraText(waffraIsEnglish?'Complete your profile: mobile number and gender are required. ':'تبقّى بعض البيانات لاستكمال ملفك الشخصي: رقم الجوال والجنس حقول إجبارية'))),
+   if(widget.provider=='Google'&&(widget.initial?.gender.isEmpty??true))Card(color:emerald.withValues(alpha:.08),child:Padding(padding:const EdgeInsets.all(14),child:WaffraText(waffraIsEnglish?'Complete your profile: mobile number and gender are required.':'تبقّى بعض البيانات لاستكمال ملفك الشخصي: رقم الجوال والجنس حقول إجبارية.'))),
     Wrap(alignment:WrapAlignment.center,spacing:12,children:['ذكر','أنثى']
     .map((a)=>ChoiceChip(label:Row(mainAxisSize:MainAxisSize.min,children:[saudiAvatar(a,radius:20),const SizedBox(width:6),WaffraText(waffraIsEnglish?(a=='ذكر'?'Male':'Female'):a)]),selected:gender==a,onSelected:(_)=>setState((){gender=a;if(!avatar.startsWith('https://'))avatar=a=='ذكر'?'male':'female';}))).toList()),
    const SizedBox(height:16),
