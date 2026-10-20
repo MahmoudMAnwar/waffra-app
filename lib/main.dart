@@ -35,6 +35,7 @@ import 'waffra_goal_catalog.dart';
 import 'waffra_pdf_reader.dart';
 import 'waffra_footer.dart';
 import 'waffra_messages.dart';
+import 'waffra_recurring_policy.dart';
 part 'waffra_categories_page.part.dart';
 
 Future<void> main()async {
@@ -182,13 +183,15 @@ class SavingChallenge {
 }
 class RecurringBill {
  final String id,title,category;final double amount;final bool income;final int day;final bool active;
- RecurringBill({required this.id,required this.title,required this.category,required this.amount,required this.income,required this.day,this.active=true});
- RecurringBill copy({bool? active})=>RecurringBill(id:id,title:title,category:category,amount:amount,income:income,day:day,active:active??this.active);
- Map<String,dynamic> toJson()=>{'id':id,'title':title,'category':category,'amount':amount,'income':income,'day':day,'active':active};
+ final DateTime startAt;
+ RecurringBill({required this.id,required this.title,required this.category,required this.amount,required this.income,required this.day,this.active=true,DateTime? startAt}):startAt=startAt??DateTime.now();
+ RecurringBill copy({bool? active})=>RecurringBill(id:id,title:title,category:category,amount:amount,income:income,day:day,active:active??this.active,startAt:startAt);
+ Map<String,dynamic> toJson()=>{'id':id,'title':title,'category':category,'amount':amount,'income':income,'day':day,'active':active,'startAt':startAt.toIso8601String()};
  factory RecurringBill.fromJson(Map<String,dynamic> j)=>RecurringBill(id:'${j['id']??newId()}',
   title:'${j['title']??''}',category:'${j['category']??'أخرى'}',
   amount:(j['amount'] as num).toDouble(),income:j['income']==true,
-  day:(j['day'] as num?)?.toInt()??1,active:j['active']!=false);
+  day:(j['day'] as num?)?.toInt()??1,active:j['active']!=false,
+  startAt:DateTime.tryParse('${j['startAt']??''}')??DateTime.now());
 }
 const iconNames=['restaurant','shopping','car','receipt','health','transfer','salary','home','education','sport','gift','travel','coffee','category'];
 IconData categoryIcon(String n) {
@@ -1869,6 +1872,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  final challenges=<SavingChallenge>[];
  // Soft-deleted categories are retained on-device for up to 30 days.
  final deletedCategories=<Map<String,dynamic>>[];
+ final deletedGoals=<Map<String,dynamic>>[];
+ final recurringPostponed=<String,String>{};
+ bool _dueDialogShowing=false;
  double monthlyBudget=0;
  bool monthlyBudgetEnabled=false;
  DateTimeRange? transactionsDateRange;
@@ -1924,6 +1930,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final raw=p.getString('waffra_deleted_categories_v1');
    if(raw!=null)deletedCategories.addAll((jsonDecode(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));
   }catch(e){debugPrint('Deleted categories: $e');}
+  try{final raw=p.getString('waffra_deleted_goals_v1');if(raw!=null)deletedGoals.addAll((jsonDecode(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));}catch(e){debugPrint('Deleted goals: $e');}
+  try{final raw=p.getString('waffra_recurring_postponed_v1');if(raw!=null)recurringPostponed.addAll((jsonDecode(raw) as Map).map((k,v)=>MapEntry(k.toString(),v.toString())));}catch(e){debugPrint('Postponements: $e');}
+  deletedGoals.removeWhere((item){final date=DateTime.tryParse('${item['deletedAt']??''}');return date==null||!DateTime.now().isBefore(date.add(const Duration(days:30)));});
   final trashBefore=deletedCategories.length;
   deletedCategories.removeWhere((item){
    final when=DateTime.tryParse('${item['deletedAt']??''}');
@@ -2015,6 +2024,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    p.setString('waffra_recurring_v24',jsonEncode(recurring.map((e)=>e.toJson()).toList())),
    p.setString('waffra_challenges_v1',jsonEncode(challenges.map((e)=>e.toJson()).toList())),
    p.setString('waffra_deleted_categories_v1',jsonEncode(deletedCategories)),
+   p.setString('waffra_deleted_goals_v1',jsonEncode(deletedGoals)),
+   p.setString('waffra_recurring_postponed_v1',jsonEncode(recurringPostponed)),
    p.setDouble('waffra_monthly_budget_v1',monthlyBudget),
    p.setBool('waffra_monthly_budget_enabled_v1',monthlyBudgetEnabled),
    p.setString('waffra_learned_merchants_v1',jsonEncode(learnedMerchantCategories))
@@ -2055,19 +2066,47 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }catch(e){debugPrint('Reminder toggle failed: $e');}
  }
 
+ // No recurring schedule may post money without a user's explicit confirmation.
  Future<void> applyRecurring()async {
-  final now=DateTime.now();bool changed=false;
+  if(!mounted||!ready||_dueDialogShowing)return;
+  final today=DateTime.now();
   for(final r in recurring){
    if(!r.active)continue;
-   final d=r.day.clamp(1,DateTime(now.year,now.month+1,0).day);
-   final due=DateTime(now.year,now.month,d);
-   if(due.isAfter(now))continue;
-   final id='rec_${r.id}_${now.year}_${now.month}';
-   if(entries.any((e)=>e.id==id))continue;
-   entries.add(MoneyEntry(id:id,title:r.title,category:r.category,amount:r.amount,income:r.income,date:due));
-   changed=true;
+   final due=WaffraRecurringPolicy.dueDate(today.year,today.month,r.day);
+   final id=WaffraRecurringPolicy.entryId(r.id,due);
+   final postponed=DateTime.tryParse(recurringPostponed[id]??'');
+   if(!WaffraRecurringPolicy.isOutstanding(
+       due:due,today:today,startAt:r.startAt,
+       alreadyPaid:entries.any((e)=>e.id==id),postponedUntil:postponed))continue;
+   _dueDialogShowing=true;
+   try{
+    final action=await showWaffraDialog<String>(context:context,builder:(ctx)=>AlertDialog(
+     title:WaffraText(waffraIsEnglish?'Recurring payment due':'عملية متكررة مستحقة'),
+     content:WaffraText(waffraIsEnglish?
+      '${r.title} • ${cash(r.amount)}\\nDue: ${dayText(postponed??due)}\\nWas this paid, or would you like to postpone?':
+      '${r.title} • ${cash(r.amount)}\\nالاستحقاق: ${dayText(postponed??due)}\\nهل تم الدفع أم تريد تأجيل الاستحقاق؟'),
+     actions:[
+      TextButton(onPressed:()=>Navigator.pop(ctx,'later'),
+       child:WaffraText(waffraIsEnglish?'Not now':'ليس الآن')),
+      OutlinedButton(onPressed:()=>Navigator.pop(ctx,'postpone'),
+       child:WaffraText(waffraIsEnglish?'Postpone':'تأجيل')),
+      FilledButton(onPressed:()=>Navigator.pop(ctx,'paid'),
+       child:WaffraText(waffraIsEnglish?'Paid':'تم الدفع')),
+     ]));
+    if(!mounted)return;
+    if(action=='paid'){
+     if(!entries.any((e)=>e.id==id)){
+      setState(()=>entries.insert(0,MoneyEntry(id:id,title:r.title,category:r.category,amount:r.amount,income:r.income,date:DateTime.now())));
+     }
+     recurringPostponed.remove(id);await persist();
+    }else if(action=='postpone'){
+     final selected=await showDatePicker(context:context,initialDate:today.add(const Duration(days:1)),
+      firstDate:DateTime(today.year,today.month,today.day).add(const Duration(days:1)),
+      lastDate:DateTime(today.year+3,12,31));
+     if(selected!=null){recurringPostponed[id]=selected.toIso8601String();await persist();}
+    }else{return;}
+   }finally{_dueDialogShowing=false;}
   }
-  if(changed){if(mounted)setState((){});await persist();}
  }
  double sum(Iterable<MoneyEntry> list,bool income)=>
   list.where((e)=>e.income==income).fold(0.0,(v,e)=>v+e.amount);
@@ -2583,10 +2622,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
         errorText:attempted?waffraAmountFieldError(value.text):null,
         border:OutlineInputBorder())),
       const SizedBox(height:12),
-      DropdownButtonFormField<String>(key:ValueKey('$income-$chosen'),initialValue:chosen,
-       decoration:InputDecoration(labelText:waffraTr('القسم'),border:OutlineInputBorder()),
-       items:available.map((c)=>DropdownMenuItem(value:c.name,child:WaffraText(c.name))).toList(),
-       onChanged:(v){if(v!=null)update(()=>category=v);}),
+      InkWell(onTap:()async{
+       final picked=await chooseTransactionCategory(sheetContext,available,chosen??'');
+       if(picked!=null&&sheetContext.mounted)update(()=>category=picked);
+      },child:InputDecorator(decoration:InputDecoration(labelText:waffraTr('القسم'),
+       border:const OutlineInputBorder(),suffixIcon:const Icon(Icons.search_rounded)),
+       child:WaffraText(chosen??'',maxLines:2))),
       if(suggestion!=null)TextButton.icon(onPressed:()async {
        final c=await categoryDialog(income:income,suggested:suggestion);
        if(c!=null&&mounted){
@@ -2690,6 +2731,23 @@ Future<void> bulkSmsSheet({String? initialText})async {
    await p.setStringList('waffra_sms_hashes_v1',smsHashes.toList());
   }
   if(mounted)await budgetAlert(result,previousSpent);
+ }
+ Future<String?> chooseTransactionCategory(BuildContext ctx,List<BudgetCategory> options,String selected)async{
+  var query='';
+  return showWaffraDialog<String>(context:ctx,builder:(dialogCtx)=>StatefulBuilder(builder:(dialogCtx,refresh){
+   final filtered=options.where((item)=>item.name.toLowerCase().contains(query.trim().toLowerCase())).toList();
+   return AlertDialog(title:WaffraText(waffraIsEnglish?'Search categories':'بحث في الأقسام'),
+    content:SizedBox(width:360,height:min(420.0,MediaQuery.sizeOf(dialogCtx).height*.55),child:Column(children:[
+     TextField(autofocus:true,onChanged:(v)=>refresh(()=>query=v),
+      decoration:InputDecoration(prefixIcon:const Icon(Icons.search),hintText:waffraIsEnglish?'Search…':'اكتب اسم القسم',border:const OutlineInputBorder())),
+     const SizedBox(height:9),
+     Expanded(child:ListView.builder(itemCount:filtered.length,itemBuilder:(ctx,i){
+      final item=filtered[i];return ListTile(selected:selected==item.name,
+       leading:Icon(categoryIcon(item.icon),color:Color(item.color)),
+       title:WaffraText(item.name,maxLines:3),onTap:()=>Navigator.pop(dialogCtx,item.name));
+     })),
+    ])),actions:[TextButton(onPressed:()=>Navigator.pop(dialogCtx),child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))]);
+  }));
  }
  Future<String> saveReceipt(XFile picked)async {
   final directory=Directory('${(await getApplicationDocumentsDirectory()).path}/receipts');
@@ -5008,6 +5066,26 @@ Future<void> bulkSmsSheet({String? initialText})async {
    ]),
   ));
  }
+ String waффraGoalDeleteWarning(String name,bool linked,bool english)=>english
+  ?'Move “$name” to Deleted Goals for 30 days. ${linked?'This goal has saved amounts or linked transactions; financial history will stay untouched.':''} Restored goals restart with zero saved balance.'
+  :'نقل «$name» إلى الأهداف المحذوفة لمدة 30 يومًا. ${linked?'هذا الهدف مرتبط بمبالغ ادخار أو معاملات مالية؛ ستبقى المعاملات محفوظة.':''} عند الاسترجاع يبدأ رصيد الادخار من صفر.';
+ Future<void> deletedGoalsDialog()async{
+  await showWaffraDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh)=>AlertDialog(
+   title:WaffraText(waffraIsEnglish?'Deleted goals':'الأهداف المحذوفة'),
+   content:SizedBox(width:360,height:min(450.0,MediaQuery.sizeOf(ctx).height*.6),
+    child:deletedGoals.isEmpty?Center(child:WaffraText(waffraIsEnglish?'No deleted goals':'لا توجد أهداف محذوفة')):
+    ListView(children:deletedGoals.map((item){
+     final goal=SavingGoal.fromJson(Map<String,dynamic>.from(item['goal'] as Map));
+     final deletedAt=DateTime.tryParse('${item['deletedAt']}')??DateTime.now();
+     final left=max(0,(deletedAt.add(const Duration(days:30)).difference(DateTime.now()).inHours/24).ceil());
+     return ListTile(title:WaffraText(goal.name),subtitle:WaffraText(waffraIsEnglish?'$left days left':'متبقي $left يوم'),
+      trailing:IconButton(icon:const Icon(Icons.restore),tooltip:waffraIsEnglish?'Restore':'استرجاع',onPressed:()async{
+       if(goals.any((g)=>g.id==goal.id||g.name==goal.name)){snack(ctx,waffraIsEnglish?'Goal already exists':'الهدف موجود بالفعل');return;}
+       setState((){goals.add(goal.copy(saved:0));deletedGoals.remove(item);});await persist();
+       if(ctx.mounted)refresh((){});
+      }));
+    }).toList())),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))])));
+ }
  Widget goalsPage(){
   final target=goals.fold<double>(0,(v,g)=>v+g.target);
   final saved=goals.fold<double>(0,(v,g)=>v+g.saved);
@@ -5039,6 +5117,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
     ]),
     const SizedBox(height:14),
    ],
+   Row(children:[Expanded(child:WaffraText(waffraIsEnglish?'Current goals: ${goals.length}':'عدد الأهداف الحالية: ${goals.length}',style:const TextStyle(fontWeight:FontWeight.bold))),
+    TextButton.icon(onPressed:deletedGoalsDialog,icon:const Icon(Icons.restore_from_trash),label:WaffraText(waffraIsEnglish?'Deleted (${deletedGoals.length})':'المحذوفة (${deletedGoals.length})'))]),
    FilledButton.icon(onPressed:goalDialog,icon:const Icon(Icons.add),label:WaffraText(
     waffraIsEnglish?'New savings goal':'هدف جديد')),
    const SizedBox(height:14),
@@ -5072,9 +5152,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
        ])),
        PopupMenuButton<String>(onSelected:(v)async {
         if(v=='delete'){
+         final linked=g.saved>0||entries.any((e)=>e.category==g.name);
          final yes=await confirmDeletion(waffraIsEnglish?'Delete savings goal?':'حذف هدف الادخار',
-          waffraIsEnglish?'This cannot be undone. Delete ${g.name}?':'هل تريد حذف «${g.name}» نهائيًا؟ لا يمكن التراجع عن هذا الإجراء.');
-         if(yes==true&&mounted){setState(()=>goals.removeWhere((x)=>x.id==g.id));await persist();}
+          waффraGoalDeleteWarning(g.name,linked,waffraIsEnglish));
+         if(yes==true&&mounted){setState((){deletedGoals.add({'goal':g.toJson(),'deletedAt':DateTime.now().toIso8601String()});goals.removeWhere((x)=>x.id==g.id);});await persist();}
         }
        },itemBuilder:(_)=>[PopupMenuItem(value:'delete',child:WaffraText(waffraIsEnglish?'Delete goal':'حذف الهدف'))]),
       ]),
@@ -5135,6 +5216,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
  Future<void> recurringDialog()async {
   final title=TextEditingController(),amount=TextEditingController(),day=TextEditingController(text:'1');
   bool income=false;String category=forType(false).first.name;bool attempted=false;
+  DateTime startAt=DateTime.now();
   final r=await showWaffraDialog<RecurringBill>(context:context,
    builder:(ctx)=>StatefulBuilder(builder:(ctx,update){
     final options=forType(income);
@@ -5214,6 +5296,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
        ),
       ),
       const SizedBox(height:12),
+      OutlinedButton.icon(onPressed:()async{
+       final picked=await showDatePicker(context:ctx,initialDate:startAt,firstDate:DateTime.now().subtract(const Duration(days:1)),lastDate:DateTime(DateTime.now().year+5));
+       if(picked!=null)update((){startAt=picked;day.text=picked.day.toString();});
+      },icon:const Icon(Icons.calendar_month_outlined),label:WaffraText(waffraIsEnglish?'First due: ${dayText(startAt)}':'أول استحقاق: ${dayText(startAt)}')),
+      const SizedBox(height:8),
       TextField(controller:day,keyboardType:TextInputType.number,onChanged:(_)=>update((){}),
        decoration:InputDecoration(labelText:waffraIsEnglish?'Day of month *':'يوم الشهر *',helperText:waffraIsEnglish?'1–31':'من 1 إلى 31',
        errorText:attempted?waffraDayFieldError(day.text):null)),
@@ -5224,7 +5311,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        final n=amountOf(amount.text),d=int.tryParse(digits(day.text));update(()=>attempted=true);
        if(WaffraValidators.requiredText(title.text)==null&&WaffraValidators.positiveAmount(amount.text)==null&&WaffraValidators.dayOfMonth(day.text)==null&&n!=null&&d!=null){
         Navigator.pop(ctx,RecurringBill(id:newId(),title:title.text.trim(),category:category,
-         amount:n,income:income,day:d));
+         amount:n,income:income,day:d,startAt:startAt));
        }
       },child:const WaffraText('حفظ')),
      ]);
@@ -5269,6 +5356,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
     secondary:const Icon(Icons.notifications_active_outlined,color:emerald),
     onChanged:toggleRecurringReminders,
    ),
+   const SizedBox(height:9),
+   WaffraText(waffraIsEnglish?'Recurring items: ${recurring.length}':'عدد العمليات المتكررة: ${recurring.length}',style:const TextStyle(fontWeight:FontWeight.bold)),
+   const SizedBox(height:9),
+   OutlinedButton.icon(onPressed:showWaffraFinancialCalendar,icon:const Icon(Icons.calendar_month),label:WaffraText(waffraIsEnglish?'Financial calendar':'التقويم المالي')),
    const SizedBox(height:9),
    if(recurring.isNotEmpty)...[
     Row(children:[
@@ -5370,6 +5461,27 @@ Future<void> bulkSmsSheet({String? initialText})async {
    const SizedBox(height:20),
   ]);
  }
+ Future<void> showWaffraFinancialCalendar()async{
+  DateTime selected=DateTime.now();
+  await showWaffraDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh){
+   final monthEvents=recurring.where((r)=>r.active&&
+    !WaffraRecurringPolicy.dueDate(selected.year,selected.month,r.day).isBefore(DateTime(r.startAt.year,r.startAt.month,r.startAt.day))).toList();
+   return AlertDialog(title:WaffraText(waffraIsEnglish?'Financial calendar':'التقويم المالي'),
+    content:SizedBox(width:380,height:min(460.0,MediaQuery.sizeOf(ctx).height*.6),child:Column(children:[
+     CalendarDatePicker(initialDate:selected,firstDate:DateTime(2020),lastDate:DateTime(2100),
+      onDateChanged:(date)=>refresh(()=>selected=date)),
+     const Divider(),
+     Expanded(child:ListView(children:monthEvents.map((r){
+      final due=WaffraRecurringPolicy.dueDate(selected.year,selected.month,r.day);
+      final id=WaffraRecurringPolicy.entryId(r.id,due);
+      final paid=entries.any((e)=>e.id==id);
+      final postponed=DateTime.tryParse(recurringPostponed[id]??'');
+      return ListTile(dense:true,leading:Icon(paid?Icons.check_circle:Icons.schedule,color:paid?emerald:Colors.orange),
+       title:WaffraText(r.title),subtitle:WaffraText('${dayText(postponed??due)} • ${paid?(waffraIsEnglish?'Paid':'مدفوعة'):(waffraIsEnglish?'Pending':'معلقة')}'),trailing:WaffraText(cash(r.amount)));
+     }).toList()))])),
+    actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))]);
+  }));
+ }
  String exportBackup()=>const JsonEncoder.withIndent('  ').convert({
   'format':'waffra-backup','version':24,'exportedAt':DateTime.now().toIso8601String(),
   'entries':entries.map((e)=>e.toJson()).toList(),
@@ -5378,6 +5490,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
   'recurring':recurring.map((e)=>e.toJson()).toList(),
   'challenges':challenges.map((e)=>e.toJson()).toList(),
   'deletedCategories':deletedCategories,
+  'deletedGoals':deletedGoals,
+  'recurringPostponed':recurringPostponed,
   'monthlyBudget':monthlyBudget,
   'monthlyBudgetEnabled':monthlyBudgetEnabled,
   'learnedMerchants':learnedMerchantCategories,
