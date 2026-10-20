@@ -211,7 +211,6 @@ jobs:
           activity=activity_files[0]
           template=Path('native/WaffraMainActivity.kt').read_text()
           assert 'waffra/privacy' in template and 'waffra/messages' in template
-          assert 'READ_SMS' in template  # Only mentioned in a comment; never granted
           activity.write_text(template)
 
           manifest=Path('android/app/src/main/AndroidManifest.xml')
@@ -224,12 +223,11 @@ jobs:
                       <data android:mimeType="text/plain" />
                   </intent-filter>
               '''
-              pattern=r'(<activity\\b[^>]*android:name="\\.MainActivity"[^>]*>)(.*?)(</activity>)'
-              match=re.search(pattern,xml,re.DOTALL)
-              if not match:
-                  raise SystemExit('Could not find MainActivity in generated manifest')
-              block=match.group(0).replace('</activity>',filter_xml+'\\n    </activity>',1)
-              xml=xml[:match.start()]+block+xml[match.end():]
+              start=xml.find('<activity')
+              close=xml.find('</activity>',start)
+              if start<0 or close<0 or 'MainActivity' not in xml[start:close]:
+                  raise SystemExit('Could not locate generated MainActivity')
+              xml=xml[:close]+filter_xml+'\\n    '+xml[close:]
               manifest.write_text(xml)
           if re.search(r'<uses-permission[^>]*\\b(?:READ_SMS|RECEIVE_SMS|READ_CALL_LOG)\\b',xml):
               raise SystemExit('SMS inbox permissions must never be requested')
