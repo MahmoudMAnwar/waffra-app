@@ -1545,7 +1545,7 @@ Future<void> bulkSmsSheet()async {
         });
        }
       },decoration:InputDecoration(labelText:waffraTr('الصق رسالة أو عدة رسائل بنكية'),
-       hintText:waffraIsEnglish?'Paste your bank messages here. We will analyze them automatically.':'الصق رسالتك البنكية هنا، وخلّ الباقي علينا! بنحلّلها لك تلقائيًا ونرتّب مصروفاتك ودخلك.',border:OutlineInputBorder())),
+       hintText:waffraIsEnglish?'Paste your bank message here. We’ll analyze it automatically.':'الصق رسالتك البنكية هنا، وبنحلّلها لك تلقائيًا.',hintStyle:const TextStyle(fontSize:13,color:Color(0xFF888F8A)),border:OutlineInputBorder())),
       const SizedBox(height:12),
       OutlinedButton.icon(icon:const Icon(Icons.content_paste),
        onPressed:busy?null:()async {
