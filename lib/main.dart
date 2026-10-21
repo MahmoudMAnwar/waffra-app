@@ -6118,19 +6118,30 @@ Future<void> bulkSmsSheet({String? initialText})async {
    title:WaffraText(label,style:const TextStyle(fontWeight:FontWeight.bold)),
    subtitle:WaffraText(subtitle,maxLines:2,overflow:TextOverflow.ellipsis),
    trailing:trailing??(onTap==null?null:const Icon(Icons.chevron_left)),onTap:onTap);
- Widget _accountSection(String heading,IconData icon,List<Widget> children)=>Column(
-  crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-   Padding(padding:const EdgeInsets.fromLTRB(4,12,4,7),
-    child:Row(children:[Icon(icon,color:emerald),const SizedBox(width:7),
-     Expanded(child:WaffraText(heading,style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)))])),
-   Card(shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(21),
-     side:const BorderSide(color:Color(0xFFDCEAE1))),
-    child:Column(children:[
-     for(var i=0;i<children.length;i++)...[
-      children[i],if(i<children.length-1)const Divider(height:1,indent:14,endIndent:14),
-     ],
-    ])),
-  ]);
+ Widget _accountSection(String heading,IconData icon,List<Widget> children,{String searchTerms=''}) {
+  final q=accountSearch.trim().toLowerCase();
+  if(q.isNotEmpty&&!('$heading $searchTerms').toLowerCase().contains(q))return const SizedBox.shrink();
+  final opened=_accountOpenSection==heading;
+  final dim=Theme.of(context).brightness==Brightness.dark;
+  return Card(margin:const EdgeInsets.only(bottom:10),shape:RoundedRectangleBorder(
+   borderRadius:BorderRadius.circular(20),
+   side:BorderSide(color:dim?const Color(0xFF456855):const Color(0xFFDCEAE1))),
+   child:Column(children:[
+    InkWell(onTap:()=>setState(()=>_accountOpenSection=opened?null:heading),
+     borderRadius:BorderRadius.circular(20),
+     child:Padding(padding:const EdgeInsets.all(15),child:Row(children:[
+      CircleAvatar(radius:20,backgroundColor:emerald.withValues(alpha:.12),child:Icon(icon,color:emerald,size:21)),
+      const SizedBox(width:10),Expanded(child:WaffraText(heading,style:const TextStyle(fontSize:16,fontWeight:FontWeight.bold))),
+      AnimatedRotation(turns:opened?.5:0,duration:waffraMotion(200),child:const Icon(Icons.keyboard_arrow_down_rounded)),
+     ]))),
+    AnimatedSize(duration:waffraMotion(220),curve:Curves.easeInOutCubic,
+     child:opened?Column(children:[
+      const Divider(height:1),for(var i=0;i<children.length;i++)...[
+       children[i],if(i<children.length-1)const Divider(height:1,indent:14,endIndent:14),
+      ],
+     ]):const SizedBox(width:double.infinity,height:0)),
+   ]));
+ }
  List<WaffraCalendarItem> get financialCalendarItems=>[
   ...entries.map((e)=>WaffraCalendarItem(e.date,e.title,e.amount,e.income)),
   ...recurring.where((r)=>r.active).map((r)=>WaffraCalendarItem(
@@ -6175,7 +6186,21 @@ Future<void> bulkSmsSheet({String? initialText})async {
    OutlinedButton.icon(onPressed:edit,icon:const Icon(Icons.edit_outlined),
     label:WaffraText(waffraIsEnglish?'Edit profile':'تعديل حسابي')),
     ])),
-   const SizedBox(height:16),
+   const SizedBox(height:13),
+   TextField(key:const Key('waffra-account-settings-search'),onChanged:(value){
+    final q=value.trim().toLowerCase();
+    final groups=<String,String>{
+     waffraIsEnglish?'App settings':'إعدادات التطبيق':'language theme appearance system dark light المظهر اللغة الحركة animation',
+     waffraIsEnglish?'Security & privacy':'الأمان والخصوصية':'privacy biometric fingerprint حماية بصمة قفل إخفاء PIN screenshots المعاينة',
+     waffraIsEnglish?'Data & utilities':'البيانات والأدوات':'backup restore delete calendar subscriptions نسخ احتياطي استعادة حذف بيانات تقويم اشتراكات',
+     waffraIsEnglish?'About the app':'عن التطبيق':'tour help about وفرة الجولة المساعدة',
+    };
+    String? match;
+    if(q.isNotEmpty){for(final item in groups.entries){if(('${item.key} ${item.value}').toLowerCase().contains(q)){match=item.key;break;}}}
+    setState((){accountSearch=q;_accountOpenSection=match;});
+   },decoration:InputDecoration(prefixIcon:const Icon(Icons.search,color:emerald),
+    hintText:waffraIsEnglish?'Find a setting':'ابحث داخل إعدادات حسابي')),
+   const SizedBox(height:12),
    _accountSection(waffraIsEnglish?'App settings':'إعدادات التطبيق',Icons.settings_outlined,[
     ListTile(
      leading:const CircleAvatar(child:Icon(Icons.auto_awesome_outlined,color:emerald)),
@@ -6194,10 +6219,17 @@ Future<void> bulkSmsSheet({String? initialText})async {
       ButtonSegment(value:'ar',label:Text('AR')),ButtonSegment(value:'en',label:Text('EN')),
      ],selected:{waffraLanguage.value},showSelectedIcon:false,
      onSelectionChanged:(v)async{setState(()=>tab=0);await widget.onLanguage(v.first);})),
-    SwitchListTile(secondary:Icon(widget.dark?Icons.dark_mode:Icons.light_mode,color:emerald),
+    ListTile(leading:const Icon(Icons.palette_outlined,color:emerald),
      title:WaffraText(waffraIsEnglish?'Appearance':'المظهر'),
-     subtitle:WaffraText(widget.dark?(waffraIsEnglish?'Dark':'داكن'):(waffraIsEnglish?'Light':'فاتح')),
-     value:widget.dark,onChanged:(_)=>widget.onTheme()),
+     subtitle:WaffraText(widget.appearance=='system'?(waffraIsEnglish?'System default':'حسب إعدادات الجهاز'):
+      widget.appearance=='dark'?(waffraIsEnglish?'Dark':'داكن'):(waffraIsEnglish?'Light':'فاتح')),
+     trailing:DropdownButton<String>(value:widget.appearance,underline:const SizedBox.shrink(),
+      onChanged:(value){if(value!=null)widget.onAppearance(value);},
+      items:[
+       DropdownMenuItem(value:'system',child:WaffraText(waffraIsEnglish?'System default':'حسب الجهاز')),
+       DropdownMenuItem(value:'light',child:WaffraText(waffraIsEnglish?'Light':'فاتح')),
+       DropdownMenuItem(value:'dark',child:WaffraText(waffraIsEnglish?'Dark':'داكن')),
+      ])),
     _accountTile(waffraIsEnglish?'Currency converter':'تحويل العملات',
      waffraIsEnglish?'Saudi Riyal and other currencies':'الريال السعودي والعملات الأخرى',
      Icons.currency_exchange,onTap:()=>Navigator.push<void>(context,MaterialPageRoute(
@@ -6210,6 +6242,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
     if(widget.pinEnabled)_accountTile(waffraIsEnglish?'Change PIN':'تغيير رمز PIN',
      waffraIsEnglish?'Update your lock code':'تحديث رمز القفل',
      Icons.password_outlined,onTap:changePin),
+    SwitchListTile(secondary:const Icon(Icons.preview_outlined,color:emerald),
+     title:WaffraText(waffraIsEnglish?'Protect Recent Apps preview':'حماية معاينة التطبيقات الأخيرة'),
+     value:protectRecentApps,onChanged:_setRecentAppProtection),
     ValueListenableBuilder<bool>(valueListenable:allowWaffraScreenshots,
      builder:(context,allowed,_)=>SwitchListTile(
       secondary:const Icon(Icons.screenshot_outlined,color:emerald),
