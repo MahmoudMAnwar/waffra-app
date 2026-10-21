@@ -6,6 +6,7 @@ on:
       - 'lib/storage/**'
       - 'test/legacy_financial_snapshot_test.dart'
       - 'test/storage/**'
+      - 'pubspec.yaml'
       - 'test/storage/**'
       - 'docs/architecture/**'
       - '.github/workflows/storage-preflight.yml'
