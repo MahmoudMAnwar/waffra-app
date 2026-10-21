@@ -2822,6 +2822,18 @@ Future<void> bulkSmsSheet({String? initialText})async {
    await p.setStringList('waffra_sms_hashes_v1',smsHashes.toList());
   }
   if(mounted)await budgetAlert(result,previousSpent);
+  if(initial!=null&&mounted){
+   snack(context,waffraIsEnglish?'Transaction updated':'تم تعديل المعاملة',
+    isError:false,duration:const Duration(seconds:5),
+    actionLabel:waffraIsEnglish?'Undo':'تراجع',
+    onAction:()async{
+     if(!mounted)return;
+     final index=entries.indexWhere((e)=>e.id==initial.id);
+     if(index<0)return;
+     setState(()=>entries[index]=initial);
+     await persist();
+    });
+  }
  }
  Future<String?> chooseTransactionCategory(BuildContext ctx,List<BudgetCategory> options,String selected)async{
   var query='';
