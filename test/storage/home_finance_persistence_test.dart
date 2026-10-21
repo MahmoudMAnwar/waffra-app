@@ -144,4 +144,48 @@ void main() {
     await prefs.reload();
     expect(prefs.getString('entries'), '[]');
   });
+
+  test('finance values and widget revision load from one guarded snapshot',
+      () async {
+    SharedPreferences.setMockInitialValues({
+      'entries': '[{"id":"widget-transaction"}]',
+      'waffra_widget_last_save_v1': 'revision-after-save',
+      'waffra_sms_hashes_v1': <String>['widget-hash'],
+    });
+    final loaded = await bridge().loadWithWitness();
+    expect(loaded.ledgerRaw, contains('widget-transaction'));
+    expect(loaded.widgetRevision, 'revision-after-save');
+    expect(loaded.finance.getStringList('waffra_sms_hashes_v1'),
+        ['widget-hash']);
+  });
+
+  test('shared live writer preserves widget SMS revision and hashes',
+      () async {
+    SharedPreferences.setMockInitialValues({
+      'entries': '[]',
+      'waffra_sms_hashes_v1': <String>['old-hash'],
+    });
+    final gateway = bridge();
+    await gateway.withLegacyWriter((prefs) async {
+      expect(prefs.getString('entries'), '[]');
+      expect(await prefs.setString('entries', '[{"id":"widget-one"}]'), true);
+      expect(await prefs.setStringList('waffra_sms_hashes_v1',
+          <String>['old-hash', 'new-hash']), true);
+      expect(await prefs.setString('waffra_widget_last_save_v1',
+          'revision-one'), true);
+    });
+    final loaded = await gateway.loadWithWitness();
+    expect(loaded.ledgerRaw, contains('widget-one'));
+    expect(loaded.widgetRevision, 'revision-one');
+    expect(loaded.finance.getStringList('waffra_sms_hashes_v1'),
+        ['old-hash', 'new-hash']);
+    await expectLater(gateway.saveLegacy(
+      snapshot: {'entries': '[]'},
+      expectedLedgerRaw: '[]',
+      expectedWidgetRevision: null,
+    ), throwsA(isA<StateError>()));
+    expect((await gateway.loadWithWitness()).ledgerRaw,
+        contains('widget-one'));
+  });
+
 }

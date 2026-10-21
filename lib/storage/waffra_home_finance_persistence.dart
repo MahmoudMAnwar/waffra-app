@@ -3,8 +3,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'legacy_snapshot_preflight.dart';
 import 'waffra_finance_read_view.dart';
 import 'waffra_legacy_finance_writer_coordinator.dart';
-import 'waffra_legacy_widget_commit_journal.dart';
-import 'waffra_live_legacy_finance_guard.dart';
+
+/// Immutable financial read + independent widget revision captured while
+/// holding the same cross-engine lock used for financial writes.
+class WaffraHomeFinanceLoaded {
+  const WaffraHomeFinanceLoaded({
+    required this.finance,
+    required this.widgetRevision,
+  });
+
+  final WaffraFinanceReadView finance;
+  final String? widgetRevision;
+
+  String? get ledgerRaw => finance.getString('entries');
+}
 
 /// The live HomeScreen's finance persistence boundary.
 ///
@@ -20,22 +32,30 @@ class WaffraHomeFinancePersistence {
 
   final WaffraLegacyFinanceWriterCoordinator coordinator;
 
-  /// Read only the current legacy source. Recover an interrupted widget
-  /// commit under the native writer lock BEFORE taking the screen snapshot.
-  /// A cutover marker fails closed rather than displaying old or empty data.
+  /// Read finance plus widget revision under a single native writer lock.
+  /// The coordinator replays a pending widget journal and blocks cutover
+  /// markers before calling us, so this cannot mix before/after transactions.
+  Future<WaffraHomeFinanceLoaded> loadWithWitness() =>
+      coordinator.withCurrentPreferences((preferences) async {
+        return WaffraHomeFinanceLoaded(
+          finance: WaffraFinanceReadView.fromLegacy(preferences),
+          widgetRevision:
+              preferences.getString('waffra_widget_last_save_v1'),
+        );
+      });
+
+  /// Retained for callers that only need the legacy finance value view.
   Future<WaffraFinanceReadView> loadLegacy(
     SharedPreferences preferences,
-  ) async {
-    await const WaffraLiveLegacyFinanceGuard()
-        .requireLegacySource(preferences);
-    if (preferences.containsKey(WaffraLegacyWidgetCommitJournal.pendingKey)) {
-      await coordinator.withCurrentPreferences((_) async {});
-      await preferences.reload();
-    }
-    await const WaffraLiveLegacyFinanceGuard()
-        .requireLegacySource(preferences, reload: false);
-    return WaffraFinanceReadView.fromLegacy(preferences);
-  }
+  ) async => (await loadWithWitness()).finance;
+
+  /// Single guarded entry for all participating live writers (dashboard,
+  /// widget SMS, catalog, dedupe and recurring settings). Callers must not
+  /// take this lock recursively. The real coordinator recovers interrupted
+  /// widget saves and rejects pending/enabled SQLCipher cutover.
+  Future<T> withLegacyWriter<T>(
+    Future<T> Function(SharedPreferences preferences) writer,
+  ) => coordinator.withCurrentPreferences(writer);
 
   /// Persist the screen's already-captured batch without mixing in profile
   /// settings. The cross-engine lock checks the exact ledger and widget

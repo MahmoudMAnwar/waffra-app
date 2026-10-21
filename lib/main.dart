@@ -2000,25 +2000,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   });
  }
  @override void dispose(){_dashboardScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();super.dispose();}
- Future<void> _recoverPendingWidgetFinance(SharedPreferences prefs)async {
-  if(!prefs.containsKey(WaffraLegacyWidgetCommitJournal.pendingKey))return;
-  // Recovery obtains the same native finance lock used by app and widget,
-  // verifies the pending checksum and refuses any unrecognized conflict.
-  await const WaffraLegacyFinanceWriterCoordinator()
-      .withCurrentPreferences((_) async {});
-  await prefs.reload();
- }
-
  Future<void> _syncWidgetTransactions()async{
   if(!mounted||!ready)return;
   try{
-   final p=await SharedPreferences.getInstance();
-   await p.reload();
-   await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p,reload:false);
-   await _recoverPendingWidgetFinance(p);
-   final revision=p.getString('waffra_widget_last_save_v1');
+   final loadedFinance=await _homeFinancePersistence.loadWithWitness();
+   final revision=loadedFinance.widgetRevision;
    if(revision==null||revision==_lastWidgetRevision)return;
-   final raw=p.getString('entries');
+   final raw=loadedFinance.ledgerRaw;
    if(raw==null)return;
    final loaded=(jsonDecode(raw) as List)
     .map((item)=>MoneyEntry.fromJson(Map<String,dynamic>.from(item as Map))).toList();
@@ -2033,9 +2021,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  Future<void> load()async {
   final p=await SharedPreferences.getInstance();
-  final financeView=await _homeFinancePersistence.loadLegacy(p);
-  _lastWidgetRevision=p.getString('waffra_widget_last_save_v1');
-  _lastLedgerSavedRaw=financeView.getString('entries');
+  final loadedFinance=await _homeFinancePersistence.loadWithWitness();
+  final financeView=loadedFinance.finance;
+  _lastWidgetRevision=loadedFinance.widgetRevision;
+  _lastLedgerSavedRaw=loadedFinance.ledgerRaw;
   try{final raw=financeView.getString('entries');if(raw!=null)entries.addAll((jsonDecode(raw) as List).map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('entries: $e');}
   try{final raw=financeView.getString('waffra_categories_v24');categories.addAll(raw==null?defaultCategories():(jsonDecode(raw) as List).map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('categories: $e');categories.addAll(defaultCategories());}
   try{final raw=financeView.getString('waffra_goals_v24');if(raw!=null)goals.addAll((jsonDecode(raw) as List).map((x)=>SavingGoal.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('goals: $e');}
@@ -2072,9 +2061,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       (existing.income==suggestion.income&&existing.name==suggestion.name)))continue;
     categories.add(suggestion);
    }
-   await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p);
-   await p.setString('waffra_categories_v24',jsonEncode(categories.map((e)=>e.toJson()).toList()));
-   await p.setBool('waffra_category_catalog_v2_installed',true);
+   await _homeFinancePersistence.withLegacyWriter((current) async {
+    final saved=await current.setString('waffra_categories_v24',
+      jsonEncode(categories.map((e)=>e.toJson()).toList()));
+    if(!saved)throw StateError('Could not save category catalog.');
+    if(!await current.setBool('waffra_category_catalog_v2_installed',true)){
+     throw StateError('Could not confirm category catalog installation.');
+    }
+   });
   }
   // Incremental catalog update: retain existing user budgets, names and deletions.
   // A subcategory is only added when its main category is present.
@@ -2099,12 +2093,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     categories.add(suggestion);
     catalogChanged=true;
    }
-   if(catalogChanged){
-    await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p);
-   await p.setString('waffra_categories_v24',
-     jsonEncode(categories.map((e)=>e.toJson()).toList()));
-   }
-   await p.setBool('waffra_category_catalog_v3_installed',true);
+   await _homeFinancePersistence.withLegacyWriter((current) async {
+    if(catalogChanged){
+     final saved=await current.setString('waffra_categories_v24',
+       jsonEncode(categories.map((e)=>e.toJson()).toList()));
+     if(!saved)throw StateError('Could not update category catalog.');
+    }
+    if(!await current.setBool('waffra_category_catalog_v3_installed',true)){
+     throw StateError('Could not confirm category catalog update.');
+    }
+   });
   }
   smsHashes.addAll(financeView.getStringList('waffra_sms_hashes_v1')??const []);
   monthlyBudget=financeView.getDouble('waffra_monthly_budget_v1')??0;
@@ -2179,8 +2177,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
 
  Future<void> _persistSmsHashes(Set<String> hashesToSave)async {
-  await const WaffraLegacyFinanceWriterCoordinator()
-      .withCurrentPreferences((prefs) async {
+  await _homeFinancePersistence.withLegacyWriter((prefs) async {
    // Preserve hashes added by the standalone widget while the dashboard
    // was open. Never replace the newer list with a cached UI copy.
    final combined={
@@ -2218,9 +2215,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     return;
    }
   }
-  final prefs=await SharedPreferences.getInstance();
-  await const WaffraLiveLegacyFinanceGuard().requireLegacySource(prefs);
-   await prefs.setBool('waffra_recurring_reminders_enabled_v1',enabled);
+  await _homeFinancePersistence.withLegacyWriter((prefs) async {
+   if(!await prefs.setBool('waffra_recurring_reminders_enabled_v1',enabled)){
+    throw StateError('Recurring reminder preference could not be saved.');
+   }
+  });
   if(!mounted)return;
   setState(()=>recurringRemindersEnabled=enabled);
   try {
@@ -3439,8 +3438,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final hashBackup=Set<String>.of(smsHashes);
   setState((){entries.clear();smsHashes.clear();});
   try {
-   await const WaffraLegacyFinanceWriterCoordinator()
-       .withCurrentPreferences((prefs) async {
+   await _homeFinancePersistence.withLegacyWriter((prefs) async {
     WaffraLegacyFinanceWriterCoordinator.requireUnchangedLedger(
      prefs, expectedRaw:_lastLedgerSavedRaw,
      expectedWidgetRevision:_lastWidgetRevision,
