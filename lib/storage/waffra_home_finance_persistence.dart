@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'legacy_snapshot_preflight.dart';
 import 'waffra_finance_read_view.dart';
 import 'waffra_legacy_finance_writer_coordinator.dart';
+import 'waffra_legacy_finance_batch_journal.dart';
 
 /// Immutable financial read + independent widget revision captured while
 /// holding the same cross-engine lock used for financial writes.
@@ -62,8 +63,8 @@ class WaffraHomeFinancePersistence {
   /// revision before ANY field is changed. Returns the committed ledger
   /// witness for the next queued HomeScreen write.
   ///
-  /// This preserves legacy behavior; SharedPreferences multi-key writes are
-  /// not atomic. SQLCipher source activation is deliberately not implemented.
+  /// Journaled recovery completes a partially persisted legacy batch after
+  /// process death; SQLCipher source activation is NOT implemented.
   Future<String> saveLegacy({
     required Map<String, Object> snapshot,
     required String? expectedLedgerRaw,
@@ -91,22 +92,9 @@ class WaffraHomeFinancePersistence {
         expectedRaw: expectedLedgerRaw,
         expectedWidgetRevision: expectedWidgetRevision,
       );
-      for (final entry in captured.entries) {
-        final value = entry.value;
-        final bool saved;
-        if (value is String) {
-          saved = await preferences.setString(entry.key, value);
-        } else if (value is double) {
-          saved = await preferences.setDouble(entry.key, value);
-        } else if (value is bool) {
-          saved = await preferences.setBool(entry.key, value);
-        } else {
-          throw StateError('Unsupported legacy financial value.');
-        }
-        if (!saved) {
-          throw StateError('Failed to persist financial preference batch.');
-        }
-      }
+      const batch = WaffraLegacyFinanceBatchJournal();
+      await batch.prepare(prefs: preferences, nextValues: captured);
+      await batch.recover(preferences);
     });
     return entries;
   }
