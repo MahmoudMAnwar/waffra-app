@@ -6192,8 +6192,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
     final groups=<String,String>{
      waffraIsEnglish?'App settings':'إعدادات التطبيق':'language theme appearance system dark light المظهر اللغة الحركة animation',
      waffraIsEnglish?'Security & privacy':'الأمان والخصوصية':'privacy biometric fingerprint حماية بصمة قفل إخفاء PIN screenshots المعاينة',
-     waffraIsEnglish?'Data & utilities':'البيانات والأدوات':'backup restore delete calendar subscriptions نسخ احتياطي استعادة حذف بيانات تقويم اشتراكات',
-     waffraIsEnglish?'About the app':'عن التطبيق':'tour help about وفرة الجولة المساعدة',
+     waffraIsEnglish?'Backup & data':'النسخ الاحتياطي والبيانات':'backup restore delete نسخ احتياطي استعادة حذف بيانات',
+     waffraIsEnglish?'Financial tools':'الأدوات المالية':'calendar subscriptions currency tools التقويم الاشتراكات الأدوات المالية',
+     waffraIsEnglish?'Help & about':'المساعدة وعن وفرة':'tour help about وفرة الجولة المساعدة',
     };
     String? match;
     if(q.isNotEmpty){for(final item in groups.entries){if(('${item.key} ${item.value}').toLowerCase().contains(q)){match=item.key;break;}}}
@@ -6252,27 +6253,28 @@ Future<void> bulkSmsSheet({String? initialText})async {
       subtitle:WaffraText(allowed?(waffraIsEnglish?'Allowed':'مسموح'):(waffraIsEnglish?'Blocked':'ممنوع')),
       value:allowed,onChanged:(v)async{await setWaffraScreenshotsAllowed(v);if(mounted)setState((){});}))
    ]),
-   _accountSection(waffraIsEnglish?'Data & utilities':'البيانات والأدوات',Icons.storage_outlined,[
+   _accountSection(waffraIsEnglish?'Financial tools':'الأدوات المالية',Icons.account_balance_wallet_outlined,[
     _accountTile(waffraIsEnglish?'Financial calendar':'التقويم المالي',
-     waffraIsEnglish?'Transactions and recurring dates':'العمليات ومواعيد المتكررة',
+     waffraIsEnglish?'Transactions and recurring dates':'المعاملات ومواعيد العمليات المتكررة',
      Icons.calendar_month_outlined,onTap:openFinancialCalendar),
     _accountTile(waffraIsEnglish?'Subscription insights':'كشف الاشتراكات',
      waffraIsEnglish?'Recurring costs and possible subscriptions':'المدفوعات الدورية والاشتراكات المحتملة',
      Icons.subscriptions_outlined,onTap:openSubscriptionInsights),
-
-    _accountTile(waffraIsEnglish?'Backup and restore':'النسخ الاحتياطي والاستعادة',
-     lastBackupGeneratedAt==null?(waffraIsEnglish?'No encrypted copy generated yet':'لم يتم إنشاء نسخة مشفرة بعد'):
+   ]),
+   _accountSection(waffraIsEnglish?'Backup & data':'النسخ الاحتياطي والبيانات',Icons.cloud_outlined,[
+    _accountTile(waffraIsEnglish?'Encrypted backup & restore':'النسخ الاحتياطي المشفر والاستعادة',
+     lastBackupGeneratedAt==null?(waffraIsEnglish?'No encrypted backup generated yet':'لم يتم إنشاء نسخة مشفرة بعد'):
       (waffraIsEnglish?'Last encrypted copy: ':'آخر نسخة مشفرة: ')+dayText(DateTime.tryParse(lastBackupGeneratedAt!)?.toLocal()??DateTime.now())+
        ' • ${((lastBackupBytes??0)/1024).toStringAsFixed(1)} KB',
      Icons.backup_outlined,onTap:backupDialog),
+    _accountTile(waffraIsEnglish?'Delete financial data':'حذف البيانات المالية',
+     waffraIsEnglish?'Fingerprint verification and final confirmation required':'يتطلب البصمة وتأكيد الحذف النهائي',
+     Icons.delete_forever,tint:Colors.red,onTap:eraseFinancialData),
+   ]),
+   _accountSection(waffraIsEnglish?'Help & about':'المساعدة وعن وفرة',Icons.help_outline_rounded,[
     _accountTile(waffraIsEnglish?'Replay app tour':'إعادة الجولة التعريفية',
      waffraIsEnglish?'Learn Waffra features':'تعرف على خصائص وفرة',
      Icons.help_outline,onTap:beginTour),
-    _accountTile(waffraIsEnglish?'Delete financial data':'حذف البيانات المالية',
-     waffraIsEnglish?'Permanent and irreversible':'نهائي ولا يمكن التراجع عنه',
-     Icons.delete_forever,tint:Colors.red,onTap:eraseFinancialData),
-   ]),
-   _accountSection(waffraIsEnglish?'About the app':'عن التطبيق',Icons.info_outline,[
     _accountTile(waffraIsEnglish?'About Waffra':'عن وفرة',
      waffraIsEnglish?'On-device financial management':'إدارة مالية تحفظ بياناتك محليًا',
      Icons.info_outline,onTap:()=>showAboutDialog(context:context,applicationName:'وفرة | Waffra',
