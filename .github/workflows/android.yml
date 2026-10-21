@@ -6,7 +6,6 @@ on:
   push:
     branches:
       - main
-      - feature/approved-waffra-oct21
   workflow_dispatch:
 
 # Fast-build concurrency: only the latest pushed revision needs an APK.
