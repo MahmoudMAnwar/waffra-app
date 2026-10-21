@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:waffra/storage/waffra_combined_restore_verifier.dart';
 import 'package:waffra/storage/waffra_disposable_recovery_journal.dart';
 import 'package:waffra/storage/waffra_encrypted_store.dart';
+import 'package:waffra/storage/waffra_ledger_projection.dart';
 import 'package:waffra/storage/waffra_portable_backup_v2.dart';
 
 /// Android/iOS device test; uses only app-private TEMPORARY sandbox files.
@@ -99,7 +100,8 @@ void main() {
 
       vault = WaffraEncryptedStore.openAt(databaseFile,
           key: 'device-test-only-32-byte-restore-key');
-      expect(await vault.stagedRowCount('android-disposable-only'), 2);
+      final projection = await vault.buildRelationalProjection('android-disposable-only');
+      expect(projection.ledgerEntries, 2);
       final reopened = WaffraDisposableRecoveryJournal(
         directory: journalFolder, experimentalEnabled: true);
       expect((await reopened.inspect()).last.sourceChecksum,
