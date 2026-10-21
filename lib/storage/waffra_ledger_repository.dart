@@ -146,6 +146,12 @@ CREATE TABLE IF NOT EXISTS working_ledger_preparations (
     _requireEnabled();
     _id(vaultId, 'vault');
     await gate.runWrite(() => database.transaction(() async {
+      final projectionTable = await database.customSelect(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='projection_runs'",
+      ).get();
+      if (projectionTable.isEmpty) {
+        throw StateError('Verified projection schema does not exist.');
+      }
       final original = await database.customSelect('''
 SELECT source_sha256, source_count, income_minor, expense_minor
 FROM projection_runs WHERE vault_id = ?
