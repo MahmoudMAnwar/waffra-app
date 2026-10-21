@@ -206,6 +206,9 @@ WHERE vault_id = ? AND mutation_id = ? AND document_id = ?
         remote.mutationId == item.envelope.mutationId &&
         remote.deviceId == item.envelope.deviceId &&
         remote.localVersion == item.envelope.localVersion &&
+        remote.ciphertext == item.envelope.ciphertext &&
+        remote.nonce == item.envelope.nonce &&
+        remote.mac == item.envelope.mac &&
         remote.deleted == item.deleted) {
       return WaffraRemoteAction.alreadyApplied;
     }
@@ -268,10 +271,14 @@ class WaffraRemoteRevision {
     required this.mutationId,
     required this.deviceId,
     required this.localVersion,
+    required this.ciphertext,
+    required this.nonce,
+    required this.mac,
     required this.deleted,
   });
 
   final String documentId, kind, mutationId, deviceId;
+  final String ciphertext, nonce, mac;
   final int localVersion;
   final bool deleted;
 }
