@@ -73,6 +73,7 @@ Color waffraIncomeTone(BuildContext context)=>Theme.of(context).brightness==Brig
 final ValueNotifier<int> waffraReturnHome=ValueNotifier<int>(0);
 final ValueNotifier<String> waffraAnimationLevel=ValueNotifier<String>('balanced');
 Duration waffraMotion(int milliseconds){
+ if(WidgetsBinding.instance.platformDispatcher.accessibilityFeatures.disableAnimations)return Duration.zero;
  final factor=switch(waffraAnimationLevel.value){
   'full'=>1.35,'reduced'=>0.45,'off'=>0.0,_=>1.0,
  };
@@ -559,6 +560,10 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
      fontWeight:states.contains(WidgetState.selected)?FontWeight.bold:FontWeight.w500)),
     iconTheme:WidgetStateProperty.resolveWith((states)=>IconThemeData(
      color:states.contains(WidgetState.selected)?Colors.white:const Color(0xFFD1E6DC),size:24))),
+   iconButtonTheme:IconButtonThemeData(style:IconButton.styleFrom(
+    side:const BorderSide(color:Color(0xFF0C7957),width:1),
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12)),
+    minimumSize:const Size(36,36),alignment:Alignment.center)),
    filledButtonTheme:FilledButtonThemeData(style:FilledButton.styleFrom(
     backgroundColor:forest,foregroundColor:Colors.white,
     minimumSize:const Size(0,46),alignment:Alignment.center,
@@ -637,6 +642,10 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
      fontWeight:states.contains(WidgetState.selected)?FontWeight.bold:FontWeight.w500)),
     iconTheme:WidgetStateProperty.resolveWith((states)=>IconThemeData(
      color:states.contains(WidgetState.selected)?Colors.white:const Color(0xFFBDD7C8),size:24))),
+   iconButtonTheme:IconButtonThemeData(style:IconButton.styleFrom(
+    side:const BorderSide(color:Color(0xFF74DCAB),width:1),
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12)),
+    minimumSize:const Size(36,36),alignment:Alignment.center)),
    filledButtonTheme:FilledButtonThemeData(style:FilledButton.styleFrom(
     backgroundColor:const Color(0xFF166E4F),foregroundColor:Colors.white,alignment:Alignment.center,
     side:const BorderSide(color:Color(0xFF74DCAB),width:1.1),
@@ -1922,6 +1931,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  String? _lastWidgetRevision;
  AppLifecycleListener? _widgetReloadListener;
  double _swipeTravel=0;
+ bool _headerCompact=false;
+ final ScrollController _dashboardScrollController=ScrollController();
+ void _handleDashboardScroll(){
+  if(!mounted||tab!=0||goalsOpened||!_dashboardScrollController.hasClients)return;
+  final compact=_dashboardScrollController.offset>96;
+  if(compact==_headerCompact)return;
+  WidgetsBinding.instance.addPostFrameCallback((_){
+   if(mounted&&tab==0&&compact!=_headerCompact)setState(()=>_headerCompact=compact);
+  });
+ }
  late final AnimationController _tourGlow;
  Future<void> setAnimationLevel(String next)async {
   if(!{'full','balanced','reduced','off'}.contains(next))return;
@@ -1951,7 +1970,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  static const tourTargetKeys=<int>[-1,0,1,2,6,4,3,5];
  bool addFabExpanded=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
- @override void initState(){super.initState();_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:()=>unawaited(_syncWidgetTransactions()));load();}
+ @override void initState(){super.initState();_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:()=>unawaited(_syncWidgetTransactions()));load();}
  void _returnToHome(){if(mounted)setState((){tab=0;goalsOpened=false;addFabExpanded=false;});}
  void _receiveWidgetAction(){
   if(!mounted||!ready||waffraWidgetAction.value!='add')return;
@@ -1969,7 +1988,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(mounted)unawaited(bulkSmsSheet(initialText:text));
   });
  }
- @override void dispose(){_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();super.dispose();}
+ @override void dispose(){_dashboardScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();super.dispose();}
  Future<void> _syncWidgetTransactions()async{
   if(!mounted||!ready)return;
   try{
@@ -3889,6 +3908,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      return false;
     },
     child:CustomScrollView(
+     controller:_dashboardScrollController,
      physics:const AlwaysScrollableScrollPhysics(),
      slivers:[
       SliverToBoxAdapter(child:Padding(
@@ -6417,11 +6437,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
  }
  Future<void> selectFooter(int target)async {
   if(target<0||target>=WaffraFooterNavigation.itemCount)return;
-  if(mounted)setState((){tab=target;goalsOpened=false;addFabExpanded=false;});
+  if(mounted)setState((){tab=target;goalsOpened=false;addFabExpanded=false;_headerCompact=false;});
  }
  @override Widget build(BuildContext context)=>Stack(children:[Scaffold(
   appBar:AppBar(
-   toolbarHeight:64,
+   toolbarHeight:_headerCompact?52:64,
    flexibleSpace:const ColoredBox(color:forest),
    leading:goalsOpened?IconButton(tooltip:waffraIsEnglish?'Back to home':'العودة للرئيسية',
     icon:const Icon(Icons.arrow_back),onPressed:()=>setState(()=>goalsOpened=false)):null,
@@ -6431,7 +6451,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     const SizedBox(width:7),
     Flexible(child:WaffraText(waffraIsEnglish?'Waffra':'وفرة',
      maxLines:1,style:const TextStyle(color:Colors.white,
-      fontWeight:FontWeight.bold,fontSize:22))),
+      fontWeight:FontWeight.bold,fontSize:_headerCompact?19:22))),
    ]),
    actions:[
     Tooltip(message:waffraIsEnglish?'Switch to Arabic':'Switch to English',
