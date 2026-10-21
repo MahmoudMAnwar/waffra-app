@@ -40,6 +40,7 @@ import 'waffra_secure_backup.dart';
 import 'waffra_home_widget.dart';
 part 'waffra_categories_page.part.dart';
 part 'waffra_smart_analysis.part.dart';
+part 'waffra_recurring_trash.part.dart';
 
 Future<void> main()async {
  WidgetsFlutterBinding.ensureInitialized();
@@ -189,7 +190,7 @@ class RecurringBill {
  final String id,title,category;final double amount;final bool income;final int day;final bool active;
  final DateTime startAt;
  RecurringBill({required this.id,required this.title,required this.category,required this.amount,required this.income,required this.day,this.active=true,DateTime? startAt}):startAt=startAt??DateTime.now();
- RecurringBill copy({bool? active})=>RecurringBill(id:id,title:title,category:category,amount:amount,income:income,day:day,active:active??this.active,startAt:startAt);
+ RecurringBill copy({bool? active,int? day,DateTime? startAt})=>RecurringBill(id:id,title:title,category:category,amount:amount,income:income,day:day??this.day,active:active??this.active,startAt:startAt??this.startAt);
  Map<String,dynamic> toJson()=>{'id':id,'title':title,'category':category,'amount':amount,'income':income,'day':day,'active':active,'startAt':startAt.toIso8601String()};
  factory RecurringBill.fromJson(Map<String,dynamic> j)=>RecurringBill(id:'${j['id']??newId()}',
   title:'${j['title']??''}',category:'${j['category']??'أخرى'}',
@@ -1877,6 +1878,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // Soft-deleted categories are retained on-device for up to 30 days.
  final deletedCategories=<Map<String,dynamic>>[];
  final deletedGoals=<Map<String,dynamic>>[];
+ final deletedRecurring=<Map<String,dynamic>>[];
  final recurringPostponed=<String,String>{};
  bool _dueDialogShowing=false;
  double monthlyBudget=0;
@@ -1941,8 +1943,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(raw!=null)deletedCategories.addAll((jsonDecode(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));
   }catch(e){debugPrint('Deleted categories: $e');}
   try{final raw=p.getString('waffra_deleted_goals_v1');if(raw!=null)deletedGoals.addAll((jsonDecode(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));}catch(e){debugPrint('Deleted goals: $e');}
+  try{final raw=p.getString('waffra_deleted_recurring_v1');if(raw!=null)deletedRecurring.addAll((jsonDecode(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));}catch(e){debugPrint('Deleted recurring: $e');}
   try{final raw=p.getString('waffra_recurring_postponed_v1');if(raw!=null)recurringPostponed.addAll((jsonDecode(raw) as Map).map((k,v)=>MapEntry(k.toString(),v.toString())));}catch(e){debugPrint('Postponements: $e');}
   deletedGoals.removeWhere((item){final date=DateTime.tryParse('${item['deletedAt']??''}');return date==null||!DateTime.now().isBefore(date.add(const Duration(days:30)));});
+  deletedRecurring.removeWhere((item){final date=DateTime.tryParse('${item['deletedAt']??''}');return date==null||!DateTime.now().isBefore(date.add(const Duration(days:30)));});
   final trashBefore=deletedCategories.length;
   deletedCategories.removeWhere((item){
    final when=DateTime.tryParse('${item['deletedAt']??''}');
@@ -2046,6 +2050,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    p.setString('waffra_challenges_v1',jsonEncode(challenges.map((e)=>e.toJson()).toList())),
    p.setString('waffra_deleted_categories_v1',jsonEncode(deletedCategories)),
    p.setString('waffra_deleted_goals_v1',jsonEncode(deletedGoals)),
+   p.setString('waffra_deleted_recurring_v1',jsonEncode(deletedRecurring)),
    p.setString('waffra_recurring_postponed_v1',jsonEncode(recurringPostponed)),
    p.setDouble('waffra_monthly_budget_v1',monthlyBudget),
    p.setBool('waffra_monthly_budget_enabled_v1',monthlyBudgetEnabled),
@@ -5380,6 +5385,16 @@ Future<void> bulkSmsSheet({String? initialText})async {
      'نظّم عملياتك الشهرية ومواعيد استحقاقها بسهولة.',
     icon:Icons.event_repeat_rounded,titleKey:_tourKeys[4]),
    const SizedBox(height:9),
+   SizedBox(width:double.infinity,child:OutlinedButton.icon(
+    onPressed:deletedRecurringDialog,
+    style:OutlinedButton.styleFrom(
+     side:BorderSide(color:Theme.of(context).colorScheme.primary,width:1.4),
+     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15)),
+     padding:const EdgeInsets.symmetric(horizontal:12,vertical:13)),
+    icon:const Icon(Icons.delete_outline,size:20),
+    label:WaffraText(waffraIsEnglish?'Deleted recurring transactions (${deletedRecurring.length})':'العمليات المتكررة المحذوفة (${deletedRecurring.length})',
+     style:const TextStyle(fontWeight:FontWeight.bold)))),
+   const SizedBox(height:9),
    SwitchListTile.adaptive(
     contentPadding:const EdgeInsets.symmetric(horizontal:5),
     title:WaffraText(waffraIsEnglish?'Remind me before due dates':'ذكرني قبل مواعيد الاستحقاق'),
@@ -5451,17 +5466,31 @@ Future<void> bulkSmsSheet({String? initialText})async {
       Switch(value:r.active,onChanged:(enabled)async {
        final index=recurring.indexWhere((item)=>item.id==r.id);
        if(index<0)return;
-       setState(()=>recurring[index]=r.copy(active:enabled));
+       if(enabled){
+        final chosen=await showDatePicker(context:context,initialDate:DateTime.now().add(const Duration(days:1)),
+         firstDate:DateTime.now(),lastDate:DateTime(DateTime.now().year+5));
+        if(chosen==null||!mounted)return;
+        setState(()=>recurring[index]=r.copy(active:true,startAt:chosen,day:chosen.day));
+       }else{
+        setState(()=>recurring[index]=r.copy(active:false));
+       }
        await persist();
        if(enabled)await applyRecurring();
        await syncRecurringReminders();
       }),
       PopupMenuButton<String>(onSelected:(v)async {
        if(v!='delete')return;
+       final hasHistory=entries.any((e)=>e.id.startsWith('rec_${r.id}_'));
        final ok=await confirmDeletion(waffraIsEnglish?'Delete recurring transaction?':'حذف العملية المتكررة',
-        waffraIsEnglish?'The recurring schedule cannot be recovered. Previous transactions remain.':
-         'هل تريد حذف جدولة العملية نهائيًا؟ ستبقى العمليات السابقة محفوظة ولا يمكن استعادة الجدولة.');
-       if(ok==true&&mounted){setState(()=>recurring.removeWhere((e)=>e.id==r.id));await persist();await syncRecurringReminders();}
+        waффraRecurringDeleteWarning(r.title,hasHistory,waffraIsEnglish));
+       if(ok==true&&mounted){
+        setState((){
+         deletedRecurring.add({'recurring':r.toJson(),'deletedAt':DateTime.now().toIso8601String()});
+         recurring.removeWhere((e)=>e.id==r.id);
+         recurringPostponed.removeWhere((key,value)=>key.startsWith('rec_${r.id}_'));
+        });
+        await persist();await syncRecurringReminders();
+       }
       },itemBuilder:(_)=>[
        PopupMenuItem(value:'delete',child:WaffraText(waffraIsEnglish?'Delete':'حذف'))]),
      ])));
@@ -5526,6 +5555,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   'challenges':challenges.map((e)=>e.toJson()).toList(),
   'deletedCategories':deletedCategories,
   'deletedGoals':deletedGoals,
+  'deletedRecurring':deletedRecurring,
   'recurringPostponed':recurringPostponed,
   'monthlyBudget':monthlyBudget,
   'monthlyBudgetEnabled':monthlyBudgetEnabled,
@@ -5574,6 +5604,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       final newGoals=(raw['goals'] as List).map((x)=>SavingGoal.fromJson(Map<String,dynamic>.from(x))).toList();
       final newRecurring=(raw['recurring'] as List).map((x)=>RecurringBill.fromJson(Map<String,dynamic>.from(x))).toList();
       final newChallenges=raw['challenges'] is List?(raw['challenges'] as List).map((x)=>SavingChallenge.fromJson(Map<String,dynamic>.from(x))).toList():<SavingChallenge>[];
+      final newDeletedRecurring=raw['deletedRecurring'] is List?(raw['deletedRecurring'] as List).map((x)=>Map<String,dynamic>.from(x as Map)).toList():<Map<String,dynamic>>[];
       final newDeletedGoals=raw['deletedGoals'] is List?(raw['deletedGoals'] as List).map((x)=>Map<String,dynamic>.from(x as Map)).toList():<Map<String,dynamic>>[];
       final newPostponed=raw['recurringPostponed'] is Map?(raw['recurringPostponed'] as Map).map((k,v)=>MapEntry(k.toString(),v.toString())):<String,String>{};
       final newTrash=raw['deletedCategories'] is List?
@@ -5599,6 +5630,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        challenges..clear()..addAll(newChallenges);
        deletedCategories..clear()..addAll(newTrash);
        deletedGoals..clear()..addAll(newDeletedGoals);
+       deletedRecurring..clear()..addAll(newDeletedRecurring);
        recurringPostponed..clear()..addAll(newPostponed);
        monthlyBudget=restoredBudget;
        monthlyBudgetEnabled=raw['monthlyBudgetEnabled'] is bool?(raw['monthlyBudgetEnabled'] as bool):(restoredBudget>0);
