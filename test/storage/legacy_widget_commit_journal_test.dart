@@ -99,7 +99,7 @@ void main() {
     final e = jsonDecode(
       prefs.getString(WaffraLegacyWidgetCommitJournal.pendingKey)!,
     ) as Map<String, dynamic>;
-    e['checksum'] = '0' * 64;
+    e['checksum'] = List.filled(64, '0').join();
     await prefs.setString(
       WaffraLegacyWidgetCommitJournal.pendingKey, jsonEncode(e),
     );
