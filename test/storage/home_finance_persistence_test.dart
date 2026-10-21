@@ -1,0 +1,147 @@
+import 'dart:io';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:waffra/storage/waffra_home_finance_persistence.dart';
+import 'package:waffra/storage/waffra_legacy_finance_writer_coordinator.dart';
+import 'package:waffra/storage/waffra_live_legacy_finance_guard.dart';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  late Directory isolated;
+
+  WaffraHomeFinancePersistence bridge() => WaffraHomeFinancePersistence(
+    coordinator: WaffraLegacyFinanceWriterCoordinator(
+      testDirectory: isolated,
+      testBypassNativeLock: true,
+    ),
+  );
+
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    isolated = await Directory.systemTemp.createTemp('waffra-home-bridge-');
+  });
+
+  tearDown(() async {
+    if (await isolated.exists()) await isolated.delete(recursive: true);
+  });
+
+  test('live HomeScreen reads finance without mixing in profile settings',
+      () async {
+    SharedPreferences.setMockInitialValues({
+      'entries': '[{"id":"current-legacy"}]',
+      'waffra_goals_v24': '[]',
+      'waffra_monthly_budget_v1': 125.25,
+      'waffra_sms_hashes_v1': <String>['hash-one'],
+      'waffra_profile': '{"name":"test"}',
+    });
+    final prefs = await SharedPreferences.getInstance();
+    final screen = await bridge().loadLegacy(prefs);
+    expect(screen.getString('entries'), contains('current-legacy'));
+    expect(screen.getString('waffra_goals_v24'), '[]');
+    expect(screen.containsKey('waffra_categories_v24'), isFalse);
+    expect(screen.getDouble('waffra_monthly_budget_v1'), 125.25);
+    expect(screen.getStringList('waffra_sms_hashes_v1'), ['hash-one']);
+    expect(() => screen.getString('waffra_profile'),
+        throwsA(isA<ArgumentError>()));
+    expect(prefs.getString('waffra_profile'), '{"name":"test"}');
+  });
+
+  test('live dashboard batch retains other finance and non-finance fields',
+      () async {
+    SharedPreferences.setMockInitialValues({
+      'entries': '[{"id":"before"}]',
+      'waffra_widget_last_save_v1': 'widget-revision-a',
+      'waffra_sms_hashes_v1': <String>['existing-hash'],
+      'waffra_profile': '{"name":"preserve"}',
+    });
+    final prefs = await SharedPreferences.getInstance();
+    final writer = bridge();
+    final saved = await writer.saveLegacy(
+      snapshot: {
+        'entries': '[{"id":"after"}]',
+        'waffra_goals_v24': '[]',
+        'waffra_monthly_budget_v1': 123.50,
+        'waffra_monthly_budget_enabled_v1': true,
+      },
+      expectedLedgerRaw: '[{"id":"before"}]',
+      expectedWidgetRevision: 'widget-revision-a',
+    );
+    expect(saved, '[{"id":"after"}]');
+    await prefs.reload();
+    expect(prefs.getString('entries'), saved);
+    expect(prefs.getString('waffra_goals_v24'), '[]');
+    expect(prefs.getDouble('waffra_monthly_budget_v1'), 123.50);
+    expect(prefs.getBool('waffra_monthly_budget_enabled_v1'), true);
+    expect(prefs.getStringList('waffra_sms_hashes_v1'), ['existing-hash']);
+    expect(prefs.getString('waffra_profile'), '{"name":"preserve"}');
+    expect(prefs.containsKey(WaffraLiveLegacyFinanceGuard.activeKey), false);
+  });
+
+  test('widget ledger update blocks stale dashboard write before ANY change',
+      () async {
+    SharedPreferences.setMockInitialValues({
+      'entries': '[{"id":"new-from-widget"}]',
+      'waffra_widget_last_save_v1': 'revision-2',
+      'waffra_goals_v24': '[{"id":"saved-goal"}]',
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await expectLater(bridge().saveLegacy(
+      snapshot: {
+        'entries': '[{"id":"stale-dashboard"}]',
+        'waffra_goals_v24': '[]',
+      },
+      expectedLedgerRaw: '[{"id":"old-dashboard"}]',
+      expectedWidgetRevision: 'revision-1',
+    ), throwsA(isA<StateError>()));
+    await prefs.reload();
+    expect(prefs.getString('entries'), contains('new-from-widget'));
+    expect(prefs.getString('waffra_goals_v24'), contains('saved-goal'));
+  });
+
+  test('cutover evidence refuses both legacy reads and writes', () async {
+    for (final marker in [
+      WaffraLiveLegacyFinanceGuard.activeKey,
+      WaffraLiveLegacyFinanceGuard.pendingKey,
+    ]) {
+      SharedPreferences.setMockInitialValues({
+        'entries': '[{"id":"preserve"}]',
+        marker: true,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await expectLater(bridge().loadLegacy(prefs),
+          throwsA(isA<StateError>()));
+      await expectLater(bridge().saveLegacy(
+        snapshot: {'entries': '[]'},
+        expectedLedgerRaw: '[{"id":"preserve"}]',
+        expectedWidgetRevision: null,
+      ), throwsA(isA<StateError>()));
+      await prefs.reload();
+      expect(prefs.getString('entries'), contains('preserve'));
+    }
+  });
+
+  test('unknown preference keys and invalid batch values fail before writes',
+      () async {
+    SharedPreferences.setMockInitialValues({'entries': '[]'});
+    final prefs = await SharedPreferences.getInstance();
+    await expectLater(bridge().saveLegacy(
+      snapshot: {
+        'entries': '[{"id":"new"}]',
+        'waffra_profile': '{}',
+      },
+      expectedLedgerRaw: '[]',
+      expectedWidgetRevision: null,
+    ), throwsA(isA<ArgumentError>()));
+    await expectLater(bridge().saveLegacy(
+      snapshot: {
+        'entries': '[{"id":"new"}]',
+        'waffra_monthly_budget_v1': 2,
+      },
+      expectedLedgerRaw: '[]',
+      expectedWidgetRevision: null,
+    ), throwsA(isA<ArgumentError>()));
+    await prefs.reload();
+    expect(prefs.getString('entries'), '[]');
+  });
+}
