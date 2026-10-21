@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'legacy_financial_snapshot.dart';
+import 'legacy_financial_snapshot.dart' show WaffraLegacySnapshotInspector;
 import 'legacy_snapshot_preflight.dart';
 import 'waffra_portable_backup_v2.dart';
 import 'waffra_receipt_restore_sandbox.dart';
