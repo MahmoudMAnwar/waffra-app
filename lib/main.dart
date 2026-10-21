@@ -38,6 +38,7 @@ import 'waffra_messages.dart';
 import 'waffra_recurring_policy.dart';
 import 'waffra_secure_backup.dart';
 import 'storage/waffra_legacy_write_queue.dart';
+import 'storage/waffra_live_legacy_finance_guard.dart';
 import 'waffra_home_widget.dart';
 part 'waffra_categories_page.part.dart';
 part 'waffra_smart_analysis.part.dart';
@@ -437,6 +438,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  Future<void> load()async {
   try {
    final p=await SharedPreferences.getInstance().timeout(const Duration(seconds:15));
+   await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p);
    Person? u;
    try{final raw=p.getString('waffra_profile');if(raw!=null)u=Person.fromJson(Map<String,dynamic>.from(jsonDecode(raw)));}catch(e){debugPrint('Profile loading: $e');}
    // Screenshot settings are best-effort and must never block application startup.
@@ -1996,6 +1998,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   try{
    final p=await SharedPreferences.getInstance();
    await p.reload();
+   await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p,reload:false);
    final revision=p.getString('waffra_widget_last_save_v1');
    if(revision==null||revision==_lastWidgetRevision)return;
    final raw=p.getString('entries');
@@ -2012,6 +2015,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  Future<void> load()async {
   final p=await SharedPreferences.getInstance();
+  await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p);
   _lastWidgetRevision=p.getString('waffra_widget_last_save_v1');
   try{final raw=p.getString('entries');if(raw!=null)entries.addAll((jsonDecode(raw) as List).map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('entries: $e');}
   try{final raw=p.getString('waffra_categories_v24');categories.addAll(raw==null?defaultCategories():(jsonDecode(raw) as List).map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('categories: $e');categories.addAll(defaultCategories());}
@@ -2049,6 +2053,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       (existing.income==suggestion.income&&existing.name==suggestion.name)))continue;
     categories.add(suggestion);
    }
+   await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p);
    await p.setString('waffra_categories_v24',jsonEncode(categories.map((e)=>e.toJson()).toList()));
    await p.setBool('waffra_category_catalog_v2_installed',true);
   }
@@ -2076,7 +2081,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     catalogChanged=true;
    }
    if(catalogChanged){
-    await p.setString('waffra_categories_v24',
+    await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p);
+   await p.setString('waffra_categories_v24',
      jsonEncode(categories.map((e)=>e.toJson()).toList()));
    }
    await p.setBool('waffra_category_catalog_v3_installed',true);
@@ -2146,6 +2152,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   };
   return _financialWriteQueue.submit(snapshot,(captured)async {
    final p=await SharedPreferences.getInstance();
+   await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p);
    for(final item in captured.entries){
     final value=item.value;
     final bool saved;
@@ -2188,7 +2195,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
   }
   final prefs=await SharedPreferences.getInstance();
-  await prefs.setBool('waffra_recurring_reminders_enabled_v1',enabled);
+  await const WaffraLiveLegacyFinanceGuard().requireLegacySource(prefs);
+   await prefs.setBool('waffra_recurring_reminders_enabled_v1',enabled);
   if(!mounted)return;
   setState(()=>recurringRemindersEnabled=enabled);
   try {
@@ -2395,6 +2403,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    await persist();
    final prefs=await SharedPreferences.getInstance();
    final updatedHashes={...smsHashes,...newHashes};
+   await const WaffraLiveLegacyFinanceGuard().requireLegacySource(prefs);
    await prefs.setStringList('waffra_sms_hashes_v1',updatedHashes.toList());
    smsHashes.addAll(newHashes);
    if(!ctx.mounted)return;
@@ -2652,7 +2661,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
        smsHashes.add(hash);
        await persist();
        final prefs=await SharedPreferences.getInstance();
-       await prefs.setStringList('waffra_sms_hashes_v1',smsHashes.toList());
+       await const WaffraLiveLegacyFinanceGuard().requireLegacySource(prefs);
+   await prefs.setStringList('waffra_sms_hashes_v1',smsHashes.toList());
        if(!ctx.mounted)return;
        await budgetAlert(entry,previous);
        if(!ctx.mounted)return;
@@ -2859,6 +2869,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   if(pendingHash!=null){
    smsHashes.add(pendingHash!);
    final p=await SharedPreferences.getInstance();
+   await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p);
    await p.setStringList('waffra_sms_hashes_v1',smsHashes.toList());
   }
   if(mounted)await budgetAlert(result,previousSpent);
@@ -3413,6 +3424,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   setState((){entries.clear();smsHashes.clear();});
   try {
    final prefs=await SharedPreferences.getInstance();
+   await const WaffraLiveLegacyFinanceGuard().requireLegacySource(prefs);
    final saved=await prefs.setString('entries','[]');
    final cleared=await prefs.setStringList('waffra_sms_hashes_v1',<String>[]);
    if(!saved||!cleared)throw StateError('Failed to persist deletion');
@@ -5082,7 +5094,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
    if(selectedGoal==otherGoal){
     final key=waffraNormalizeGoal(g.name);
     if(!allDefaultNames.contains(key)&&!customGoals.any((entry)=>waffraNormalizeGoal(entry)==key)){
-     await prefs.setStringList('waffra_custom_goals_v1',[...customGoals,g.name]);
+     await const WaffraLiveLegacyFinanceGuard().requireLegacySource(prefs);
+   await prefs.setStringList('waffra_custom_goals_v1',[...customGoals,g.name]);
     }
    }
    if(!mounted)return;

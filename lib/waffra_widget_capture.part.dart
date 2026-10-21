@@ -33,6 +33,7 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
   try{
    final prefs=await SharedPreferences.getInstance();
    await prefs.reload();
+   await const WaffraLiveLegacyFinanceGuard().requireLegacySource(prefs,reload:false);
    if(!mounted)return;
    setState((){
     _english=prefs.getString('waffra_language')=='en';
@@ -114,6 +115,7 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
   try{
    final prefs=await SharedPreferences.getInstance();
    await prefs.reload();
+   await const WaffraLiveLegacyFinanceGuard().requireLegacySource(prefs,reload:false);
    final current=(jsonDecode(prefs.getString('entries')??'[]') as List)
     .map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x as Map))).toList();
    final oldHashes=(prefs.getStringList('waffra_sms_hashes_v1')??[]).toSet();
