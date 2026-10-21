@@ -39,6 +39,7 @@ import 'waffra_recurring_policy.dart';
 import 'waffra_secure_backup.dart';
 import 'storage/waffra_legacy_write_queue.dart';
 import 'storage/waffra_live_legacy_finance_guard.dart';
+import 'storage/waffra_legacy_finance_writer_coordinator.dart';
 import 'waffra_home_widget.dart';
 part 'waffra_categories_page.part.dart';
 part 'waffra_smart_analysis.part.dart';
@@ -2151,8 +2152,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    'waffra_learned_merchants_v1':jsonEncode(learnedMerchantCategories),
   };
   return _financialWriteQueue.submit(snapshot,(captured)async {
-   final p=await SharedPreferences.getInstance();
-   await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p);
+   await const WaffraLegacyFinanceWriterCoordinator()
+       .withCurrentPreferences((p) async {
+   // A widget save after this screen loaded makes its transaction list newer
+   // than our captured UI ledger. Refuse to overwrite it; caller must reload.
+   if(p.getString('waffra_widget_last_save_v1')!=_lastWidgetRevision){
+    throw StateError('Widget saved newer finance. Reload before saving.');
+   }
    for(final item in captured.entries){
     final value=item.value;
     final bool saved;
@@ -2167,7 +2173,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
     if(!saved)throw StateError('Failed to persist financial preference batch.');
    }
+   });
   }).then((_){unawaited(_refreshWidget());});
+ }
+
+ Future<void> _persistSmsHashes(Set<String> hashesToSave)async {
+  await const WaffraLegacyFinanceWriterCoordinator()
+      .withCurrentPreferences((prefs) async {
+   // Preserve hashes added by the standalone widget while the dashboard
+   // was open. Never replace the newer list with a cached UI copy.
+   final combined={
+    ...?prefs.getStringList('waffra_sms_hashes_v1'),
+    ...hashesToSave,
+   };
+   final saved=await prefs.setStringList(
+    'waffra_sms_hashes_v1',combined.toList()..sort());
+   if(!saved)throw StateError('SMS deduplication hash save failed.');
+   smsHashes.addAll(combined);
+  });
  }
 
  Future<void> syncRecurringReminders()async {
@@ -2401,11 +2424,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   try{
    setState(()=>entries.insertAll(0,additions));
    await persist();
-   final prefs=await SharedPreferences.getInstance();
-   final updatedHashes={...smsHashes,...newHashes};
-   await const WaffraLiveLegacyFinanceGuard().requireLegacySource(prefs);
-   await prefs.setStringList('waffra_sms_hashes_v1',updatedHashes.toList());
-   smsHashes.addAll(newHashes);
+   await _persistSmsHashes({...smsHashes,...newHashes});
    if(!ctx.mounted)return;
    Navigator.pop(ctx);
    if(mounted)await showWaffraDialog<void>(context:context,builder:(dialogCtx)=>AlertDialog(
@@ -2660,9 +2679,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        setState(()=>entries.insert(0,entry));
        smsHashes.add(hash);
        await persist();
-       final prefs=await SharedPreferences.getInstance();
-       await const WaffraLiveLegacyFinanceGuard().requireLegacySource(prefs);
-   await prefs.setStringList('waffra_sms_hashes_v1',smsHashes.toList());
+       await _persistSmsHashes(smsHashes);
        if(!ctx.mounted)return;
        await budgetAlert(entry,previous);
        if(!ctx.mounted)return;
@@ -2868,9 +2885,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   await persist();
   if(pendingHash!=null){
    smsHashes.add(pendingHash!);
-   final p=await SharedPreferences.getInstance();
-   await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p);
-   await p.setStringList('waffra_sms_hashes_v1',smsHashes.toList());
+   await _persistSmsHashes(smsHashes);
   }
   if(mounted)await budgetAlert(result,previousSpent);
   if(initial!=null&&mounted){
@@ -3423,11 +3438,16 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final hashBackup=Set<String>.of(smsHashes);
   setState((){entries.clear();smsHashes.clear();});
   try {
-   final prefs=await SharedPreferences.getInstance();
-   await const WaffraLiveLegacyFinanceGuard().requireLegacySource(prefs);
-   final saved=await prefs.setString('entries','[]');
-   final cleared=await prefs.setStringList('waffra_sms_hashes_v1',<String>[]);
-   if(!saved||!cleared)throw StateError('Failed to persist deletion');
+   await const WaffraLegacyFinanceWriterCoordinator()
+       .withCurrentPreferences((prefs) async {
+    if(prefs.getString('waffra_widget_last_save_v1')!=_lastWidgetRevision){
+     throw StateError('Widget changed before delete-all; reload first.');
+    }
+    final saved=await prefs.setString('entries','[]');
+    final cleared=await prefs.setStringList(
+      'waffra_sms_hashes_v1',<String>[]);
+    if(!saved||!cleared)throw StateError('Failed to persist deletion');
+   });
    if(mounted)snackSuccess(context,waffraIsEnglish?'All transactions deleted':'تم حذف جميع المعاملات');
   }catch(e){
    if(mounted){setState((){entries.addAll(backup);smsHashes.addAll(hashBackup);});snack(context,waffraIsEnglish?'Delete failed':'فشل حذف المعاملات');}
