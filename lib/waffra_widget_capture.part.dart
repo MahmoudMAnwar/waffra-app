@@ -157,14 +157,17 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
    }
    if(additions.isEmpty)return null;
    final merged=[...additions,...current];
-   final saved=await prefs.setString('entries',jsonEncode(merged.map((e)=>e.toJson()).toList()));
-   if(!saved)throw StateError('Local persistence did not confirm save');
-   final hashesSaved=await prefs.setStringList('waffra_sms_hashes_v1',
-    {...oldHashes,...newHashes}.toList());
-   if(!hashesSaved)throw StateError('SMS hashes were not committed');
-   final revisionSaved=await prefs.setString(
-    'waffra_widget_last_save_v1',DateTime.now().toIso8601String());
-   if(!revisionSaved)throw StateError('Widget revision did not commit');
+   // Stage all three values in one recoverable preference envelope BEFORE
+   // touching the legacy finance keys. Crash recovery runs under the same
+   // app/widget lock on next use.
+   const journal=WaffraLegacyWidgetCommitJournal();
+   await journal.prepare(
+    prefs:prefs,
+    nextEntries:jsonEncode(merged.map((e)=>e.toJson()).toList()),
+    nextHashes:({...oldHashes,...newHashes}.toList()..sort()),
+    nextRevision:DateTime.now().toIso8601String(),
+   );
+   await journal.recover(prefs);
    return (
     merged:merged,
     hidden:prefs.getBool('waffra_hide_amounts')??false,
