@@ -60,7 +60,7 @@ void main() {
  });
 
  test('Undo actions retain five-second safe recovery for edit and delete', () {
-  expect(RegExp(r'duration:const Duration\\(seconds:5\\)').allMatches(app).length, greaterThanOrEqualTo(2));
+  expect(RegExp(r'duration:const Duration\(seconds:5\)').allMatches(app).length, greaterThanOrEqualTo(2));
   expect(app, contains("actionLabel:waffraIsEnglish?'Undo':'تراجع'"));
   expect(app, contains('entries[index]=initial'));
   expect(app, contains('entries.insert(0,e)'));
