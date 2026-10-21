@@ -19,6 +19,21 @@ class WaffraEncryptedStore extends GeneratedDatabase {
   static const _keyStorageName = 'waffra_vault_encryption_key_v1';
   static const _filename = 'waffra_shadow_v1.sqlite';
 
+  /// A missing key OR missing vault after one was already created is not a
+  /// fresh install. In particular, OS/device restore may bring back a key
+  /// without its SQLCipher database (or a database without its secure key).
+  /// NEVER create an empty replacement ledger in either situation.
+  static void requireConsistentVaultPresence({
+    required bool keyPresent,
+    required bool databasePresent,
+  }) {
+    if (keyPresent != databasePresent) {
+      throw StateError(
+        'Encrypted finance key/database mismatch; recovery is required.',
+      );
+    }
+  }
+
   /// Only call from an explicitly gated migration after write-freeze has been
   /// implemented. This method intentionally doesn't read SharedPreferences.
   static Future<WaffraEncryptedStore> openShadow({
@@ -28,15 +43,24 @@ class WaffraEncryptedStore extends GeneratedDatabase {
   }) async {
     final directory = await getApplicationSupportDirectory();
     await directory.create(recursive: true);
+    final existing = File('${directory.path}/$_filename');
+    final fileType = await FileSystemEntity.type(
+      existing.path, followLinks: false,
+    );
+    if (fileType != FileSystemEntityType.notFound &&
+        fileType != FileSystemEntityType.file) {
+      throw StateError('Encrypted vault path is unsafe.');
+    }
     String? key = await secureStorage.read(key: _keyStorageName);
+    requireConsistentVaultPresence(
+      keyPresent: key != null,
+      databasePresent: fileType == FileSystemEntityType.file,
+    );
     if (key == null) {
       final bytes = List<int>.generate(32, (_) => Random.secure().nextInt(256));
       final proposed = base64UrlEncode(bytes);
-      // On interruption retry, never regenerate over a previously opened DB.
-      final existing = File('${directory.path}/$_filename');
-      if (await existing.exists()) {
-        throw StateError('Encrypted vault exists but its key is unavailable.');
-      }
+      // A failed first-run after writing the key but before creating SQL
+      // requires explicit recovery; the next launch must not silently reset.
       await secureStorage.write(key: _keyStorageName, value: proposed);
       key = await secureStorage.read(key: _keyStorageName);
       if (key != proposed) {
