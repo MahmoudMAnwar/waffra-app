@@ -41,9 +41,15 @@ import 'waffra_home_widget.dart';
 part 'waffra_categories_page.part.dart';
 part 'waffra_smart_analysis.part.dart';
 part 'waffra_recurring_trash.part.dart';
+part 'waffra_widget_capture.part.dart';
 
 Future<void> main()async {
  WidgetsFlutterBinding.ensureInitialized();
+ // Flutter engine started by the circular Android widget, not the normal app.
+ if(WidgetsBinding.instance.platformDispatcher.defaultRouteName=='/waffra-widget'){
+  runApp(const WaffraWidgetCaptureApp());
+  return;
+ }
  await initializeWaffraMessages();
  await initializeWaffraHomeWidget();
  runApp(const WaffraApp());
