@@ -4440,6 +4440,13 @@ Future<void> bulkSmsSheet({String? initialText})async {
       icon:const Icon(Icons.picture_as_pdf_outlined),
       label:WaffraText(waffraIsEnglish?'Export analytics PDF':'تصدير التحليلات إلى PDF')),
      const SizedBox(height:24),
+     ExpansionTile(leading:const Icon(Icons.info_outline,color:emerald),
+      title:WaffraText(waffraIsEnglish?'Why this result?':'ليه النتيجة دي؟'),
+      children:[Padding(padding:const EdgeInsets.all(14),
+       child:WaffraText(waffraIsEnglish?
+        'Based on ${recent.length} recorded transactions in 90 days. Income: ${cash(income)}, expenses: ${cash(spending)}. The score is indicative and is omitted when data is insufficient.':
+        'اعتمدنا على ${recent.length} معاملة من آخر 90 يومًا. الدخل ${cash(income)} والمصروفات ${cash(spending)}. المؤشر إرشادي ولا يظهر بدون بيانات كافية.'))]),
+     const SizedBox(height:20),
      WaffraText(waffraIsEnglish?'Tips for you':'نصائح مخصصة لك',
       style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
      const SizedBox(height:10),
@@ -4448,8 +4455,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
        (waffraIsEnglish?'Reduce optional spending to close the gap.':'قلّل المصروفات الاختيارية لتقليل العجز.'):
        (waffraIsEnglish?'Keep your expenses below your income.':'حافظ على مصروفات أقل من دخلك.'))),
      if(top.isNotEmpty)ListTile(leading:const Icon(Icons.category_outlined,color:emerald),
-      title:WaffraText(waffraIsEnglish?'Review spending in ${waffraTr(top.first.key)}.':
-       'راجع مصروفات قسم «${waffraTr(top.first.key)}».')),
+      title:WaffraText(waffraIsEnglish?
+       'Reduce spending on ${waffraTr(top.first.key)} by 15% to save roughly ${cash(top.first.value*.15)} over this period.':
+       'تقليل مصروفات «${waffraTr(top.first.key)}» بنسبة 15% قد يوفر حوالي ${cash(top.first.value*.15)} خلال فترة التحليل.')),
+     if(goals.isNotEmpty&&income>spending)ListTile(
+      leading:const Icon(Icons.savings_outlined,color:emerald),
+      title:WaffraText(waffraIsEnglish?
+       'You could allocate part of your surplus to ${goals.first.name}; nothing is moved automatically.':
+       'ممكن تخصص جزءًا من الفائض لهدف «${goals.first.name}»، ولن نضيف أي مبالغ تلقائيًا.')),
      ListTile(leading:const Icon(Icons.track_changes_outlined,color:emerald),
       title:WaffraText(waffraIsEnglish?'Set monthly budgets for your categories.':
        'حدد ميزانية شهرية لكل قسم للتحكم في الإنفاق.')),
