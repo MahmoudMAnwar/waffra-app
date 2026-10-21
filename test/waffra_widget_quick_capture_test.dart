@@ -43,9 +43,13 @@ void main(){
  });
 
  testWidgets('Only confirmation writes an SMS transaction and prevents duplicates',(tester)async{
+  final testLockDirectory=await Directory.systemTemp.createTemp('waffra-widget-lock-test-');
+  addTearDown(()async{
+   if(await testLockDirectory.exists())await testLockDirectory.delete(recursive:true);
+  });
   await tester.binding.setSurfaceSize(const Size(430,920));
   addTearDown(()=>tester.binding.setSurfaceSize(null));
-  await tester.pumpWidget(const WaffraWidgetCaptureApp());
+  await tester.pumpWidget(WaffraWidgetCaptureApp(testWriterDirectory:testLockDirectory));
   await tester.pumpAndSettle();
   await tester.enterText(find.byKey(const Key('waffra-widget-bank-message')),
    'شراء PoS\nالمبلغ: 125.50 SAR\nلدى متجر');
