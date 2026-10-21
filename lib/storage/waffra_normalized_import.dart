@@ -377,6 +377,12 @@ AS expense_minor FROM normalized_entries WHERE vault_id = ?
   }
 
   Future<List<NormalizedLedgerEntry>> readEntries(String vaultId) async {
+    // Legacy-only or failed-preflight databases have no normalized tables yet.
+    final initialized = await store.customSelect(
+      "SELECT name FROM sqlite_master WHERE type='table' "
+      "AND name='normalized_entries'",
+    ).get();
+    if (initialized.isEmpty) return const [];
     final rows = await store.customSelect(
       'SELECT entry_id,title,category_snapshot,amount_minor,is_income,'
       'occurred_original_iso FROM normalized_entries WHERE vault_id = ? '
