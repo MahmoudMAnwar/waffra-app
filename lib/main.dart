@@ -5482,7 +5482,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        if(v!='delete')return;
        final hasHistory=entries.any((e)=>e.id.startsWith('rec_${r.id}_'));
        final ok=await confirmDeletion(waffraIsEnglish?'Delete recurring transaction?':'حذف العملية المتكررة',
-        waффraRecurringDeleteWarning(r.title,hasHistory,waffraIsEnglish));
+        waffraRecurringDeleteWarning(r.title,hasHistory,waffraIsEnglish));
        if(ok==true&&mounted){
         setState((){
          deletedRecurring.add({'recurring':r.toJson(),'deletedAt':DateTime.now().toIso8601String()});
