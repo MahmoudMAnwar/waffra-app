@@ -94,7 +94,9 @@ class WaffraLegacyFinanceBatchJournal {
     final field = value['value'];
     if (kind == 'string' && field is String) return _cell(key, field);
     if (kind == 'bool' && field is bool) return _cell(key, field);
-    if (kind == 'double' && field is num && field.isFinite) {
+    if (kind == 'double' && key == 'waffra_monthly_budget_v1' &&
+        field is num && field.isFinite && field >= 0 &&
+        WaffraLegacyPreflight.canRepresentHalalas(field)) {
       return _cell(key, field.toDouble());
     }
     if (kind == 'strings' && field is List &&
@@ -121,6 +123,11 @@ class WaffraLegacyFinanceBatchJournal {
     if (nextValues.isEmpty ||
         nextValues.keys.any((key) => !allowed.contains(key))) {
       throw ArgumentError('Unexpected finance key in dashboard batch.');
+    }
+    final budget = nextValues['waffra_monthly_budget_v1'];
+    if (budget != null &&
+        (budget is! num || !WaffraLegacyPreflight.canRepresentHalalas(budget))) {
+      throw ArgumentError('Invalid financial amount precision.');
     }
     final before = <String, Object?>{};
     final after = <String, Object?>{};
