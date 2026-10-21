@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:drift/drift.dart';
 import 'package:waffra/storage/waffra_encrypted_store.dart';
 import 'package:waffra/storage/waffra_financial_write_gate.dart';
 import 'package:waffra/storage/waffra_ledger_projection.dart';
@@ -133,8 +134,8 @@ void main() {
     final shadow = await db.customSelect(
       "SELECT saved_minor FROM saving_goals WHERE vault_id=? AND goal_id=?",
       variables: [
-        const Variable.withString('vault-one'),
-        const Variable.withString('goal-deleted'),
+        Variable.withString('vault-one'),
+        Variable.withString('goal-deleted'),
       ],
     ).getSingle();
     expect(shadow.read<int>('saved_minor'), 100000);
