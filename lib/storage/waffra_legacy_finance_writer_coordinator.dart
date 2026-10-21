@@ -20,6 +20,21 @@ class WaffraLegacyFinanceWriterCoordinator {
   /// Injectable ONLY in isolated automated tests.
   final Directory? testDirectory;
 
+  /// The exact saved entries value is a stronger witness than the widget's
+  /// optional timestamp. If the process was killed between saving entries
+  /// and saving widget revision, we still refuse a stale dashboard overwrite.
+  static void requireUnchangedLedger(
+    SharedPreferences current, {
+    required String? expectedRaw,
+    required String? expectedWidgetRevision,
+  }) {
+    if (current.getString('entries') != expectedRaw ||
+        current.getString('waffra_widget_last_save_v1') !=
+            expectedWidgetRevision) {
+      throw StateError('Financial ledger changed; reload before saving.');
+    }
+  }
+
   Future<T> withCurrentPreferences<T>(
     Future<T> Function(SharedPreferences current) callback,
   ) async {
