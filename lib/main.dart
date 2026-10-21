@@ -1904,6 +1904,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  int tab=0,year=DateTime.now().year,month=DateTime.now().month;
  bool goalsOpened=false;
  bool _smsSheetOpen=false;
+ String? _lastWidgetRevision;
+ AppLifecycleListener? _widgetReloadListener;
  double _swipeTravel=0;
  late final AnimationController _tourGlow;
  Future<void> setAnimationLevel(String next)async {
@@ -1928,7 +1930,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  static const tourTabs=<int>[0,0,1,0,3,4];
  bool addFabExpanded=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
- @override void initState(){super.initState();_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraWidgetAction.addListener(_receiveWidgetAction);load();}
+ @override void initState(){super.initState();_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:()=>unawaited(_syncWidgetTransactions()));load();}
  void _returnToHome(){if(mounted)setState((){tab=0;goalsOpened=false;addFabExpanded=false;});}
  void _receiveWidgetAction(){
   if(!mounted||!ready||waffraWidgetAction.value!='add')return;
@@ -1946,9 +1948,29 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(mounted)unawaited(bulkSmsSheet(initialText:text));
   });
  }
- @override void dispose(){_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraWidgetAction.removeListener(_receiveWidgetAction);super.dispose();}
+ @override void dispose(){_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();super.dispose();}
+ Future<void> _syncWidgetTransactions()async{
+  if(!mounted||!ready)return;
+  try{
+   final p=await SharedPreferences.getInstance();
+   await p.reload();
+   final revision=p.getString('waffra_widget_last_save_v1');
+   if(revision==null||revision==_lastWidgetRevision)return;
+   final raw=p.getString('entries');
+   if(raw==null)return;
+   final loaded=(jsonDecode(raw) as List)
+    .map((item)=>MoneyEntry.fromJson(Map<String,dynamic>.from(item as Map))).toList();
+   if(!mounted)return;
+   setState((){
+    entries..clear()..addAll(loaded);
+    _lastWidgetRevision=revision;
+   });
+   unawaited(_refreshWidget());
+  }catch(e){debugPrint('Widget ledger sync failed: $e');}
+ }
  Future<void> load()async {
   final p=await SharedPreferences.getInstance();
+  _lastWidgetRevision=p.getString('waffra_widget_last_save_v1');
   try{final raw=p.getString('entries');if(raw!=null)entries.addAll((jsonDecode(raw) as List).map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('entries: $e');}
   try{final raw=p.getString('waffra_categories_v24');categories.addAll(raw==null?defaultCategories():(jsonDecode(raw) as List).map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('categories: $e');categories.addAll(defaultCategories());}
   try{final raw=p.getString('waffra_goals_v24');if(raw!=null)goals.addAll((jsonDecode(raw) as List).map((x)=>SavingGoal.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('goals: $e');}
