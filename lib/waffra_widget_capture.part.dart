@@ -211,7 +211,7 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
      backgroundColor:Colors.transparent,
      resizeToAvoidBottomInset:true,
      body:SafeArea(child:Center(child:SingleChildScrollView(
-      padding:EdgeInsets.fromLTRB(16,20,16,20+MediaQuery.of(context).viewInsets.bottom),
+      padding:const EdgeInsets.fromLTRB(16,20,16,20),
       child:TweenAnimationBuilder<double>(
        duration:const Duration(milliseconds:280),curve:Curves.easeOutBack,
        tween:Tween(begin:.88,end:1.0),
