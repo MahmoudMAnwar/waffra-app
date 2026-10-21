@@ -123,8 +123,8 @@ void main() {
       for (final file in diskFiles) {
         bytes.add(await File(file.path).readAsBytes());
       }
-      expect(bytes, contains([10, 20, 30, 40]));
-      expect(bytes, contains([50, 60, 70]));
+      final contents = bytes.map((part) => part.join(',')).toSet();
+      expect(contents, {'10,20,30,40', '50,60,70'});
     } finally {
       await vault?.close();
       if (await root.exists()) await root.delete(recursive: true);
