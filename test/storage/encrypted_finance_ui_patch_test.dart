@@ -78,16 +78,16 @@ void main() {
     final oldScreen = await screen().readForScreen();
     await screen().saveScreenChanges(
       screenBaseline: oldScreen.values,
-      replacementValues: {'waffra_goals_v24': '[{"id":"new"}]'},
+      replacementValues: {'waffra_goals_v24': '[{"id":"new","name":"New","target":100,"saved":0}]'},
       changedKeys: {'waffra_goals_v24'},
     );
     await expectLater(screen().saveScreenChanges(
       screenBaseline: oldScreen.values,
-      replacementValues: {'waffra_goals_v24': '[{"id":"old"}]'},
+      replacementValues: {'waffra_goals_v24': '[{"id":"old","name":"Old","target":100,"saved":0}]'},
       changedKeys: {'waffra_goals_v24'},
     ), throwsA(isA<StateError>()));
     expect((await snapshot().read()).values['waffra_goals_v24'],
-        '[{"id":"new"}]');
+        '[{"id":"new","name":"New","target":100,"saved":0}]');
   });
 
   test('an older dashboard cannot overwrite the Widget new entry list',
@@ -116,7 +116,7 @@ void main() {
     final result = await screen().saveScreenChanges(
       screenBaseline: original.values,
       replacementValues: {
-        'waffra_categories_v24': '[{"id":"cat","name":"مأكولات","income":false}]',
+        'waffra_categories_v24': '[{"id":"cat","name":"مأكولات","income":false,"budget":0}]',
         'waffra_goals_v24': '[{"id":"goal","name":"رحلة","target":1000,"saved":0}]',
       },
       changedKeys: {'waffra_categories_v24', 'waffra_goals_v24'},
