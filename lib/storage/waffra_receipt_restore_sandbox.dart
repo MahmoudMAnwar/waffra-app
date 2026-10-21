@@ -43,7 +43,7 @@ class WaffraReceiptSandboxStager {
             followLinks: false) != FileSystemEntityType.directory) {
       throw StateError('Sandbox must be an existing real directory.');
     }
-    if (await emptySandboxDirectory.list(followLinks: false).isNotEmpty) {
+    if ((await emptySandboxDirectory.list(followLinks: false).toList()).isNotEmpty) {
       throw StateError('Sandbox must be empty to prevent overwriting data.');
     }
     final valid = strict.WaffraLegacyPreflight.inspect(
@@ -108,7 +108,8 @@ class WaffraReceiptSandboxStager {
         created.add(file); // Also cleanup a partially written file.
         await file.writeAsBytes(item.$4, flush: true);
         final stored = await file.readAsBytes();
-        if (sha256.convert(stored) != sha256.convert(item.$4)) {
+        if (sha256.convert(stored).toString() !=
+            sha256.convert(item.$4).toString()) {
           throw StateError('Receipt bytes changed during sandbox staging.');
         }
         mapped.putIfAbsent(item.$1, () => <int, String>{})[item.$2] = item.$3;
