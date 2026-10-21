@@ -42,6 +42,13 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
    final prefs=await SharedPreferences.getInstance();
    await prefs.reload();
    await const WaffraLiveLegacyFinanceGuard().requireLegacySource(prefs,reload:false);
+   if(prefs.containsKey(WaffraLegacyWidgetCommitJournal.pendingKey)){
+    await WaffraLegacyFinanceWriterCoordinator(
+     testDirectory:widget.testWriterDirectory,
+     testBypassNativeLock:widget.testBypassNativeLock,
+    ).withCurrentPreferences((_) async {});
+    await prefs.reload();
+   }
    if(!mounted)return;
    setState((){
     _english=prefs.getString('waffra_language')=='en';
