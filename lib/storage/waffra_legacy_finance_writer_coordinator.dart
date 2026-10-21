@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'waffra_experimental_writer_gate.dart';
 import 'waffra_live_legacy_finance_guard.dart';
+import 'waffra_legacy_widget_commit_journal.dart';
 
 /// Coordinates CURRENT SharedPreferences finance writes from the full Waffra
 /// dashboard and the separate Android quick-add Flutter engine.
@@ -50,6 +51,7 @@ class WaffraLegacyFinanceWriterCoordinator {
       }
       final prefs = await SharedPreferences.getInstance();
       await const WaffraLiveLegacyFinanceGuard().requireLegacySource(prefs);
+      await const WaffraLegacyWidgetCommitJournal().recover(prefs);
       return callback(prefs);
     }
     final directory = testDirectory ?? await getApplicationSupportDirectory();
@@ -68,6 +70,7 @@ class WaffraLegacyFinanceWriterCoordinator {
       final prefs = await SharedPreferences.getInstance();
       await const WaffraLiveLegacyFinanceGuard()
           .requireLegacySource(prefs);
+      await const WaffraLegacyWidgetCommitJournal().recover(prefs);
       return callback(prefs);
     });
   }

@@ -41,12 +41,16 @@ jobs:
           from pathlib import Path
           main=Path('lib/main.dart').read_text()
           widget=Path('lib/waffra_widget_capture.part.dart').read_text()
+          widget_journal=Path('lib/storage/waffra_legacy_widget_commit_journal.dart').read_text()
           writer=Path('lib/storage/waffra_unified_finance_writer.dart').read_text()
           receipt=Path('lib/storage/waffra_encrypted_receipt_vault.dart').read_text()
           assert 'SharedPreferences.getInstance()' in main
-          assert "prefs.setString('entries'" in widget
+          assert 'await journal.prepare(' in widget
+          assert 'await journal.recover(prefs);' in widget
+          assert "prefs.setString('entries', newEntries)" in widget_journal
+          assert "prefs.setStringList('waffra_sms_hashes_v1', newHashes)" in widget_journal
           assert 'this.experimentalEnabled = false' in writer
           assert 'this.experimentalEnabled = false' in receipt
-          print('Existing live writers remain on SharedPreferences; experimental encrypted writers default off.')
+          print('Widget now journals legacy finance writes; encrypted writers remain default-off.')
           print('IMPORTANT: this is a safe prototype check, NOT proof that the production cutover is complete.')
           PY
