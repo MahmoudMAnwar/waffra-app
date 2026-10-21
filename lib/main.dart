@@ -1935,6 +1935,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  bool goalsOpened=false;
  bool _smsSheetOpen=false;
  String? _lastWidgetRevision;
+ // Exact last finance ledger string seen or committed, including null vs [].
+ // Detect partial widget saves even if the last-save marker never committed.
+ String? _lastLedgerSavedRaw;
  AppLifecycleListener? _widgetReloadListener;
  double _swipeTravel=0;
  bool _headerCompact=false;
@@ -2011,6 +2014,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    setState((){
     entries..clear()..addAll(loaded);
     _lastWidgetRevision=revision;
+    _lastLedgerSavedRaw=raw;
    });
    unawaited(_refreshWidget());
   }catch(e){debugPrint('Widget ledger sync failed: $e');}
@@ -2020,6 +2024,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p);
   final financeView=WaffraFinanceReadView.fromLegacy(p);
   _lastWidgetRevision=p.getString('waffra_widget_last_save_v1');
+  _lastLedgerSavedRaw=financeView.getString('entries');
   try{final raw=financeView.getString('entries');if(raw!=null)entries.addAll((jsonDecode(raw) as List).map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('entries: $e');}
   try{final raw=financeView.getString('waffra_categories_v24');categories.addAll(raw==null?defaultCategories():(jsonDecode(raw) as List).map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('categories: $e');categories.addAll(defaultCategories());}
   try{final raw=financeView.getString('waffra_goals_v24');if(raw!=null)goals.addAll((jsonDecode(raw) as List).map((x)=>SavingGoal.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('goals: $e');}
@@ -2158,8 +2163,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        .withCurrentPreferences((p) async {
    // A widget save after this screen loaded makes its transaction list newer
    // than our captured UI ledger. Refuse to overwrite it; caller must reload.
-   if(p.getString('waffra_widget_last_save_v1')!=_lastWidgetRevision){
-    throw StateError('Widget saved newer finance. Reload before saving.');
+   if(p.getString('waffra_widget_last_save_v1')!=_lastWidgetRevision ||
+       p.getString('entries')!=_lastLedgerSavedRaw){
+    throw StateError('Ledger changed since last load; reload before saving.');
    }
    for(final item in captured.entries){
     final value=item.value;
@@ -2175,6 +2181,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
     if(!saved)throw StateError('Failed to persist financial preference batch.');
    }
+   // Save is complete; future in-app queued writes can now compare against
+   // the last committed ledger even if other finance fields changed.
+   _lastLedgerSavedRaw=captured['entries'] as String;
    });
   }).then((_){unawaited(_refreshWidget());});
  }
@@ -3442,13 +3451,15 @@ Future<void> bulkSmsSheet({String? initialText})async {
   try {
    await const WaffraLegacyFinanceWriterCoordinator()
        .withCurrentPreferences((prefs) async {
-    if(prefs.getString('waffra_widget_last_save_v1')!=_lastWidgetRevision){
-     throw StateError('Widget changed before delete-all; reload first.');
+    if(prefs.getString('waffra_widget_last_save_v1')!=_lastWidgetRevision ||
+        prefs.getString('entries')!=_lastLedgerSavedRaw){
+     throw StateError('Ledger changed before delete-all; reload first.');
     }
     final saved=await prefs.setString('entries','[]');
     final cleared=await prefs.setStringList(
       'waffra_sms_hashes_v1',<String>[]);
     if(!saved||!cleared)throw StateError('Failed to persist deletion');
+    _lastLedgerSavedRaw='[]';
    });
    if(mounted)snackSuccess(context,waffraIsEnglish?'All transactions deleted':'تم حذف جميع المعاملات');
   }catch(e){
