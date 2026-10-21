@@ -244,7 +244,7 @@ FROM working_ledger_entries WHERE vault_id = ? AND is_deleted = 0
 
   @override
   Future<void> saveEntry(
-    String vaultId, WaffraLedgerItem item, {required int expectedVersion},
+    String vaultId, WaffraLedgerItem item, {required int expectedVersion}
   ) async {
     _validate(item);
     if (item.deleted || expectedVersion < 0 || item.version != expectedVersion + 1) {
@@ -291,7 +291,7 @@ WHERE vault_id=? AND entry_id=? AND local_version=? AND is_deleted=0
   }
 
   Future<void> _changeDeletion(
-    String vaultId, String id, {required int expectedVersion, required bool deleted},
+    String vaultId, String id, {required int expectedVersion, required bool deleted}
   ) async {
     _id(id, 'entry id');
     if (expectedVersion < 1) throw ArgumentError('Invalid expected version.');
