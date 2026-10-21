@@ -279,11 +279,18 @@ jobs:
           <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
               android:id="@+id/waffra_widget_root"
               android:layout_width="match_parent" android:layout_height="match_parent"
-              android:padding="2dp" android:background="@drawable/waffra_widget_bg">
+              android:padding="0dp">
+              <!-- Android launcher cells may be tall. Draw inside a fixed
+                   square so oval background cannot stretch to an ellipse. -->
+              <FrameLayout android:id="@+id/waffra_widget_circle"
+                  android:layout_width="80dp" android:layout_height="80dp"
+                  android:layout_gravity="center"
+                  android:background="@drawable/waffra_widget_bg">
               <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
                   android:gravity="center" android:orientation="vertical"
                   android:padding="4dp">
-                  <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                  <TextView android:id="@+id/widget_sparkle"
+                      android:layout_width="wrap_content" android:layout_height="wrap_content"
                       android:text="✦" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/>
                   <TextView android:id="@+id/widget_balance" android:layout_width="match_parent"
                       android:layout_height="wrap_content" android:text="0.00"
@@ -296,19 +303,20 @@ jobs:
                       android:textSize="10sp" android:singleLine="true"
                       android:gravity="center" />
               </LinearLayout>
+              </FrameLayout>
           </FrameLayout>""")
           drawable=root/'res/drawable'
           drawable.mkdir(parents=True,exist_ok=True)
           (drawable/'waffra_widget_bg.xml').write_text("""<?xml version="1.0" encoding="utf-8"?>
           <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
               <solid android:color="#064D3B"/>
-              <stroke android:width="1dp" android:color="#168663"/>
+              <stroke android:width="1dp" android:color="#42C991"/>
           </shape>""")
           info=root/'res/xml'
           info.mkdir(parents=True,exist_ok=True)
           (info/'waffra_widget_info.xml').write_text("""<?xml version="1.0" encoding="utf-8"?>
           <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
-              android:minWidth="72dp" android:minHeight="72dp"
+              android:minWidth="80dp" android:minHeight="80dp"
               android:targetCellWidth="1" android:targetCellHeight="1"
               android:initialLayout="@layout/waffra_widget"
               android:resizeMode="none" android:widgetCategory="home_screen"
