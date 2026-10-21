@@ -64,6 +64,9 @@ void main() {
         mutationId: item.envelope.mutationId,
         deviceId: item.envelope.deviceId,
         localVersion: item.envelope.localVersion,
+        ciphertext: item.envelope.ciphertext,
+        nonce: item.envelope.nonce,
+        mac: item.envelope.mac,
         deleted: item.deleted,
       );
 
@@ -167,9 +170,20 @@ void main() {
     expect(check(null), WaffraRemoteAction.createIfAbsent);
     expect(check(acknowledged(item)), WaffraRemoteAction.alreadyApplied);
     expect(check(WaffraRemoteRevision(
+      documentId: item.documentId, kind: item.envelope.kind,
+      mutationId: item.envelope.mutationId, deviceId: item.envelope.deviceId,
+      localVersion: item.envelope.localVersion,
+      ciphertext: base64Encode([5, 6, 7]),
+      nonce: item.envelope.nonce, mac: item.envelope.mac,
+      deleted: item.deleted,
+    )), WaffraRemoteAction.manualConflict);
+    expect(check(WaffraRemoteRevision(
       documentId: item.documentId, kind: 'entry',
       mutationId: 'other-device-write', deviceId: 'device-B',
-      localVersion: 999, deleted: false,
+      localVersion: 999,
+      ciphertext: item.envelope.ciphertext,
+      nonce: item.envelope.nonce,
+      mac: item.envelope.mac, deleted: false,
     )), WaffraRemoteAction.manualConflict);
   });
 
@@ -180,7 +194,10 @@ void main() {
     final different = WaffraRemoteRevision(
       documentId: item.documentId, kind: 'entry',
       mutationId: 'other-mutation', deviceId: 'device-B',
-      localVersion: 20, deleted: false,
+      localVersion: 20,
+      ciphertext: item.envelope.ciphertext,
+      nonce: item.envelope.nonce,
+      mac: item.envelope.mac, deleted: false,
     );
     await expectLater(
       outbox.acknowledge(item: item, confirmedRemote: different),
