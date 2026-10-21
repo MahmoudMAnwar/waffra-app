@@ -78,10 +78,16 @@ class MainActivity : FlutterFragmentActivity() {
                 }
                 "updateSummary" -> {
                     val args = call.arguments as? Map<*, *>
-                    val balance = args?.get("balance") as? String ?: "—"
-                    val expenses = args?.get("expenses") as? String ?: "—"
+                    val balance = args?.get("balance") as? String ?: "0.00"
+                    val currency = args?.get("currency") as? String ?: "ريال"
+                    val negative = args?.get("negative") as? Boolean ?: false
+                    val hidden = args?.get("hidden") as? Boolean ?: false
                     getSharedPreferences("waffra_widget", MODE_PRIVATE).edit()
-                        .putString("balance", balance).putString("expenses", expenses).apply()
+                        .putString("balance", balance)
+                        .putString("currency", currency)
+                        .putBoolean("negative", negative)
+                        .putBoolean("hidden", hidden)
+                        .apply()
                     WaffraWidget.updateAll(applicationContext)
                     result.success(null)
                 }
