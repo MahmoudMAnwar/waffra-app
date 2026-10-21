@@ -111,11 +111,13 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
 
  Future<void> _confirmAndSave()async{
   if(_saving||_analyzing||_selected.isEmpty)return;
+  final selected=List<_WidgetParsedSms>.of(_selected);
+  final totalDetected=_results.length;
+  final allowDuplicates=_allowDuplicates;
   setState(()=>_saving=true);
   try{
-   final prefs=await SharedPreferences.getInstance();
-   await prefs.reload();
-   await const WaffraLiveLegacyFinanceGuard().requireLegacySource(prefs,reload:false);
+   final outcome=await const WaffraLegacyFinanceWriterCoordinator()
+       .withCurrentPreferences((prefs) async {
    final current=(jsonDecode(prefs.getString('entries')??'[]') as List)
     .map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x as Map))).toList();
    final oldHashes=(prefs.getStringList('waffra_sms_hashes_v1')??[]).toSet();
@@ -126,9 +128,9 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
    final newHashes=<String>{};
    final additions=<MoneyEntry>[];
    int savedInc=0,savedExp=0;
-   for(final entry in _selected){
+   for(final entry in selected){
     final hash=bankSmsHash(entry.raw);
-    if(!_allowDuplicates&&(oldHashes.contains(hash)||newHashes.contains(hash)))continue;
+    if(!allowDuplicates&&(oldHashes.contains(hash)||newHashes.contains(hash)))continue;
     final parsed=entry.result;
     final category=categories.any((c)=>c.income==parsed.income&&c.name==parsed.category)
       ?parsed.category
@@ -143,37 +145,49 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
     if(parsed.income){savedInc++;}else{savedExp++;}
     newHashes.add(hash);
    }
-   if(additions.isEmpty){
-    if(mounted)setState((){
-     _saving=false;
-     _error=_english?'These transactions have already been saved.':'هذه العمليات محفوظة بالفعل.';
-    });
-    return;
-   }
+   if(additions.isEmpty)return null;
    final merged=[...additions,...current];
    final saved=await prefs.setString('entries',jsonEncode(merged.map((e)=>e.toJson()).toList()));
    if(!saved)throw StateError('Local persistence did not confirm save');
    final hashesSaved=await prefs.setStringList('waffra_sms_hashes_v1',
     {...oldHashes,...newHashes}.toList());
    if(!hashesSaved)throw StateError('SMS hashes were not committed');
-   await prefs.setString('waffra_widget_last_save_v1',DateTime.now().toIso8601String());
+   final revisionSaved=await prefs.setString(
+    'waffra_widget_last_save_v1',DateTime.now().toIso8601String());
+   if(!revisionSaved)throw StateError('Widget revision did not commit');
+   return (
+    merged:merged,
+    hidden:prefs.getBool('waffra_hide_amounts')??false,
+    savedIncome:savedInc,
+    savedExpenses:savedExp,
+    skipped:totalDetected-additions.length,
+    knownHashes:{...oldHashes,...newHashes},
+   );
+   });
+   if(outcome==null){
+    if(mounted)setState((){
+     _saving=false;
+     _error=_english?'These transactions have already been saved.':'هذه العمليات محفوظة بالفعل.';
+    });
+    return;
+   }
 
    // Refresh the circular balance immediately without opening the full app.
-   final incomeHalalas=merged.where((e)=>e.income)
+   final incomeHalalas=outcome.merged.where((e)=>e.income)
     .fold<int>(0,(sum,e)=>sum+WaffraRecurringPolicy.toHalalas(e.amount));
-   final expenseHalalas=merged.where((e)=>!e.income)
+   final expenseHalalas=outcome.merged.where((e)=>!e.income)
     .fold<int>(0,(sum,e)=>sum+WaffraRecurringPolicy.toHalalas(e.amount));
    final net=incomeHalalas-expenseHalalas;
-   final hidden=prefs.getBool('waffra_hide_amounts')??false;
+   final hidden=outcome.hidden;
    await refreshWaffraHomeWidget(
     balance:hidden?'***':formatWaffraMoney(net/100),
     negative:net<0,hidden:hidden,currency:_english?'SAR':'ريال');
 
-   final ignored=_results.length-additions.length;
+   final ignored=outcome.skipped;
    if(!mounted)return;
    setState((){
-    _knownHashes={...oldHashes,...newHashes};
-    _savedIncome=savedInc;_savedExpenses=savedExp;_notSaved=ignored;
+    _knownHashes=outcome.knownHashes;
+    _savedIncome=outcome.savedIncome;_savedExpenses=outcome.savedExpenses;_notSaved=ignored;
     _saving=false;_success=true;_error=null;
    });
    // If any message was not added, keep it open for review and retry.
