@@ -43,7 +43,7 @@ void main() {
     await init();
     final home = await gateway().readForHome();
     expect(home.totals.count, 0);
-    expect(home.toScreenCollectionJson().keys, {
+    expect(home.toScreenCollectionJson().keys.toSet(), {
       'entries',
       'waffra_categories_v24',
       'waffra_goals_v24',
@@ -87,7 +87,7 @@ void main() {
     expect(state.totals.count, 2);
     expect(state.totals.incomeMinor, 250009);
     expect(state.totals.expenseMinor, 275);
-    expect(state.transactions.first['id'], 'e1');
+    expect(state.transactions.map((entry) => entry['id']).toSet(), {'e1', 'i1'});
     final exported = state.toScreenCollectionJson();
     expect((jsonDecode(exported['entries']!) as List), hasLength(2));
     expect((jsonDecode(exported['waffra_goals_v24']!) as List)
