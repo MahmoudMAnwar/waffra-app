@@ -1,0 +1,45 @@
+import 'dart:io';
+
+import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'waffra_experimental_writer_gate.dart';
+import 'waffra_live_legacy_finance_guard.dart';
+
+/// Coordinates CURRENT SharedPreferences finance writes from the full Waffra
+/// dashboard and the separate Android quick-add Flutter engine.
+///
+/// This only solves participating-writer overlap. SharedPreferences multi-key
+/// writes are NOT transactional, and this does not itself switch to SQLCipher.
+/// M46's encrypted patch gateway is still disabled until a verified cutover.
+class WaffraLegacyFinanceWriterCoordinator {
+  const WaffraLegacyFinanceWriterCoordinator({
+    this.testDirectory,
+  });
+
+  /// Injectable ONLY in isolated automated tests.
+  final Directory? testDirectory;
+
+  Future<T> withCurrentPreferences<T>(
+    Future<T> Function(SharedPreferences current) callback,
+  ) async {
+    final directory = testDirectory ?? await getApplicationSupportDirectory();
+    if (!await directory.exists()) {
+      // The real app may launch in a newly installed application container.
+      // Do not create the directory in tests when an explicit path is passed.
+      if (testDirectory != null) {
+        throw StateError('Test writer lock directory does not exist.');
+      }
+      await directory.create(recursive: true);
+    }
+    return WaffraExperimentalWriterGate(
+      disposableDirectory: directory,
+      experimentalEnabled: true,
+    ).withExclusiveAccess(() async {
+      final prefs = await SharedPreferences.getInstance();
+      await const WaffraLiveLegacyFinanceGuard()
+          .requireLegacySource(prefs);
+      return callback(prefs);
+    });
+  }
+}
