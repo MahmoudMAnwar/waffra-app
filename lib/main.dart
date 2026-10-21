@@ -4216,6 +4216,20 @@ Future<void> bulkSmsSheet({String? initialText})async {
    biggest[e.category]=(biggest[e.category]??0)+e.amount;
   }
   final top=biggest.entries.toList()..sort((a,b)=>b.value.compareTo(a.value));
+  final monthStart=DateTime(now.year,now.month);
+  final priorStart=DateTime(now.year,now.month-1);
+  final currentExpense=sum(entries.where((e)=>!e.income&&!e.date.isBefore(monthStart)&&!e.date.isAfter(now)),false);
+  final priorExpense=sum(entries.where((e)=>!e.income&&!e.date.isBefore(priorStart)&&e.date.isBefore(monthStart)),false);
+  final hasPrior=entries.any((e)=>!e.date.isBefore(priorStart)&&e.date.isBefore(monthStart));
+  final thisMonthCount=entries.where((e)=>!e.date.isBefore(monthStart)&&!e.date.isAfter(now)).length;
+  final monthDays=DateTime(now.year,now.month+1,0).day;
+  final upcoming=recurring.where((r)=>r.active&&!r.income&&r.day>now.day&&r.day<=monthDays).fold<double>(0,(v,r)=>v+r.amount);
+  final forecast=now.day>=5&&thisMonthCount>=3?(currentExpense/now.day*monthDays+upcoming):null;
+  final weeklySpend=List<double>.generate(4,(i){
+   final from=now.subtract(Duration(days:(4-i)*7));
+   final to=now.subtract(Duration(days:(3-i)*7));
+   return sum(recent.where((e)=>!e.income&&!e.date.isBefore(from)&&e.date.isBefore(to)),false);
+  });
   if(!mounted)return;
   // Blur the underlying screen while the animated analysis indicator runs.
   // Keep the loader visible long enough to convey progress; calculations are local.
@@ -4334,6 +4348,28 @@ Future<void> bulkSmsSheet({String? initialText})async {
        deficit.abs(),deficit>0?Colors.red:emerald),
      ]),
      const SizedBox(height:24),
+     Card(child:Padding(padding:const EdgeInsets.all(15),child:Column(
+      crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+       WaffraText(waffraIsEnglish?'Compared with last month':'مقارنة بالشهر السابق',
+        style:const TextStyle(fontSize:16,fontWeight:FontWeight.bold)),
+       const SizedBox(height:8),
+       WaffraText(!hasPrior?
+        (waffraIsEnglish?'Not enough previous-month data for comparison.':'لا توجد بيانات كافية للشهر السابق للمقارنة.'):
+        priorExpense==0?(waffraIsEnglish?'No expenses last month.':'لم يتم تسجيل مصروفات في الشهر السابق.'):
+        (waffraIsEnglish?'Expenses ${currentExpense<=priorExpense?'decreased':'increased'} by ${((currentExpense-priorExpense).abs()/priorExpense*100).toStringAsFixed(1)}%.':
+         'المصروفات ${currentExpense<=priorExpense?'انخفضت':'ارتفعت'} بنسبة ${((currentExpense-priorExpense).abs()/priorExpense*100).toStringAsFixed(1)}%.')),
+       const SizedBox(height:12),
+       WaffraText(waffraIsEnglish?'Estimated month-end spending':'توقع المصروفات بنهاية الشهر',
+        style:const TextStyle(fontWeight:FontWeight.bold)),
+       WaffraText(forecast==null?
+        (waffraIsEnglish?'At least three transactions and five elapsed days are needed.':'يلزم تسجيل ثلاث معاملات ومرور خمسة أيام على الأقل من الشهر.'):
+        (waffraIsEnglish?'Approximately ${cash(forecast)} at the current pace.':
+         'حوالي ${cash(forecast)} إذا استمر معدل الإنفاق الحالي.')),
+       WaffraText(waffraIsEnglish?'Estimate from recorded transactions and upcoming recurring expenses, not a guarantee.':
+        'تقدير مبني على معاملاتك والعمليات المتكررة القادمة، وليس مبلغًا مؤكدًا.',
+        style:const TextStyle(fontSize:11)),
+      ]))),
+     const SizedBox(height:24),
      WaffraText(waffraIsEnglish?'Income vs expenses':'اتجاه الدخل والمصروفات',
       style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
      const SizedBox(height:12),
@@ -4354,6 +4390,21 @@ Future<void> bulkSmsSheet({String? initialText})async {
       const SizedBox(width:15),const Icon(Icons.circle,color:Colors.deepOrange,size:12),
       const SizedBox(width:5),WaffraText(waffraIsEnglish?'Expenses':'المصروفات'),
      ]),
+     const SizedBox(height:24),
+     WaffraText(waffraIsEnglish?'Weekly spending trend':'اتجاه المصروفات الأسبوعية',
+      style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
+     const SizedBox(height:8),
+     Card(child:Padding(padding:const EdgeInsets.all(16),child:SizedBox(height:170,
+      child:LineChart(LineChartData(minY:0,
+       gridData:const FlGridData(show:true,drawVerticalLine:false),
+       titlesData:const FlTitlesData(show:false),borderData:FlBorderData(show:false),
+       lineBarsData:[LineChartBarData(
+        spots:List.generate(weeklySpend.length,(i)=>FlSpot(i.toDouble(),weeklySpend[i])),
+        isCurved:true,color:emerald,barWidth:3,dotData:const FlDotData(show:true),
+        belowBarData:BarAreaData(show:true,color:emerald.withValues(alpha:.10))),
+       ]))))),
+     const SizedBox(height:10),
+     WaffraText(waffraIsEnglish?'Four weeks from oldest to newest.':'آخر أربعة أسابيع من الأقدم للأحدث.',style:const TextStyle(fontSize:12)),
      const SizedBox(height:24),
      WaffraText(waffraIsEnglish?'Top spending categories':'أعلى أقسام المصروفات',
       style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
