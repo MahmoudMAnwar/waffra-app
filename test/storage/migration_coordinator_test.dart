@@ -54,8 +54,8 @@ void main() {
       openEncryptedStore: () async => WaffraEncryptedStore.openAt(
         dbFile, key: 'test-migration-coordinator-key-32-bytes',
       ),
-      acquireWriteBarrier: () async => acquired = true,
-      releaseWriteBarrier: () async => released = true,
+      acquireWriteBarrier: () async { acquired = true; },
+      releaseWriteBarrier: () async { released = true; },
     );
 
     final summary = await coordinator.stageWithBarrier(vaultId: 'guest-vault');
