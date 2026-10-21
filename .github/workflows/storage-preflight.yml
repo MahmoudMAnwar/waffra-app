@@ -1,6 +1,9 @@
 name: Waffra encrypted storage smoke
 
 on:
+  push:
+    branches:
+      - 'feature/storage-legacy-batch-recovery-m59'
   pull_request:
     paths:
       - 'lib/storage/**'
