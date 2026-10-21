@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
-import 'package:drift/drift.dart';
 
 import 'legacy_snapshot_preflight.dart';
 import 'waffra_encrypted_store.dart';
