@@ -52,3 +52,33 @@ select **Build Waffra Android APK**, click **Run workflow** and enable \`run_smo
 For the first smart-enabled build with no trustworthy cached manifest, all Flutter
 tests are executed, and successful results are stored for future matching runs.
 A documentation-only change is a convenient follow-up to verify that reuse works.
+
+
+## Android incremental build cache experiment
+
+The Android release workflow also enables `org.gradle.caching=true`, using the
+**existing** `gradle/actions/setup-gradle` cache of Gradle User Home and the
+local Gradle task output cache. Dependencies already downloaded are therefore
+not the only reusable part: outputs of Gradle tasks that explicitly support
+caching may be reused when their input fingerprints match.
+
+We additionally restore `.dart_tool/flutter_build` from a compatible prior
+successful build. The cache key includes the Flutter framework/engine revision,
+dependency lockfile, native configuration and workflow. Flutter itself checks
+Dart/asset dependencies and recompiles stale outputs.
+
+These caches **never replace** the final APK build, application signing,
+certificate verification or Flutter tests. No signing keystore or signed APK is
+placed in the explicitly cached Flutter compilation directory.
+
+To prevent upload/download overhead from outweighing benefits, the Flutter
+compilation cache is saved only when it is nonempty and at most 500 MiB.
+GitHub Actions summaries report whether the cache was restored, plus measured
+ARM64 build-command duration. Benchmark successive successful runs using:
+- Cold cache: build after a cache-configuration change.
+- Warm cache: documentation-only follow-up with exactly the same app source.
+- Source-change run: modify an actual Dart/native source and verify rebuild.
+
+For a fair performance comparison, record whole-run time and ARM64 build-command
+time separately. Cached output does not imply all tasks can be skipped;
+correctness always takes priority over apparent speed.
