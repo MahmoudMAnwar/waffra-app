@@ -5,8 +5,9 @@ The Android workflow has two modes:
 - **Fast (default pushes):** validate static analysis, test the cache decision policy,
   run all safety-critical Flutter tests and only re-run other Flutter test files if
   their content or known transitive dependencies changed. Build and sign ARM64 APK.
-- **Full (nightly / manual run with \`run_smoke=true\`):** run *all* Flutter tests,
-  also build x64 and launch Android in an emulator, then build signed ARM64 APK.
+- **Full (`android-full-smoke.yml`, nightly or manual):** run *all* Flutter tests,
+  build an x64 APK and launch Android in an emulator, then build signed ARM64 APK.
+  Full smoke is a separate workflow; regular push jobs do not show skipped emulator steps.
 
 ## How passing test results are reused
 
@@ -35,8 +36,8 @@ and reused. It does not count a cached result as a newly executed test.
   as proof of startup after native Android or Firebase changes.
 - APK signing and integrity checks always run for each newly created APK.
 - Flutter static analysis always runs before APK generation.
-- This cache does **not** imply a financial integration or on-device crash check
-  was run when the job skipped the Android emulator.
+- A successful fast APK run does **not** imply an on-device crash check was run.
+  Full smoke checks Android startup in a separate nightly/on-demand workflow.
 
 ## Safety checks
 
@@ -46,8 +47,10 @@ To test cache invalidation rules, run:
 python3 -m unittest discover -s scripts -p 'test_smart_ci.py' -v
 \`\`\`
 
-To force all Flutter tests and an Android emulator smoke test, open GitHub Actions,
-select **Build Waffra Android APK**, click **Run workflow** and enable \`run_smoke\`.
+To force all Flutter tests and an Android emulator startup smoke check, open GitHub Actions,
+select **Waffra Android Full Startup Smoke (Nightly or Manual)** and click **Run workflow**.
+The normal **Build Waffra Android APK** workflow only generates the fast ARM64 release.
+Neither fast nor full runs use a previously signed APK as the final artifact.
 
 For the first smart-enabled build with no trustworthy cached manifest, all Flutter
 tests are executed, and successful results are stored for future matching runs.
