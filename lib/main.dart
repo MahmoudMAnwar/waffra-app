@@ -6120,7 +6120,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    trailing:trailing??(onTap==null?null:const Icon(Icons.chevron_left)),onTap:onTap);
  Widget _accountSection(String heading,IconData icon,List<Widget> children,{String searchTerms=''}) {
   final q=accountSearch.trim().toLowerCase();
-  if(q.isNotEmpty&&!('$heading $searchTerms').toLowerCase().contains(q))return const SizedBox.shrink();
+  if(q.isNotEmpty&&_accountOpenSection!=heading)return const SizedBox.shrink();
   final opened=_accountOpenSection==heading;
   final dim=Theme.of(context).brightness==Brightness.dark;
   return Card(margin:const EdgeInsets.only(bottom:10),shape:RoundedRectangleBorder(
@@ -6261,7 +6261,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
      Icons.subscriptions_outlined,onTap:openSubscriptionInsights),
 
     _accountTile(waffraIsEnglish?'Backup and restore':'النسخ الاحتياطي والاستعادة',
-     waffraIsEnglish?'Keep your local data safe':'احفظ بياناتك واستعدها',
+     lastBackupGeneratedAt==null?(waffraIsEnglish?'No encrypted copy generated yet':'لم يتم إنشاء نسخة مشفرة بعد'):
+      (waffraIsEnglish?'Last encrypted copy: ':'آخر نسخة مشفرة: ')+dayText(DateTime.tryParse(lastBackupGeneratedAt!)?.toLocal()??DateTime.now())+
+       ' • ${((lastBackupBytes??0)/1024).toStringAsFixed(1)} KB',
      Icons.backup_outlined,onTap:backupDialog),
     _accountTile(waffraIsEnglish?'Replay app tour':'إعادة الجولة التعريفية',
      waffraIsEnglish?'Learn Waffra features':'تعرف على خصائص وفرة',
@@ -6278,14 +6280,18 @@ Future<void> bulkSmsSheet({String? initialText})async {
        'لا يوجد ربط بالحسابات البنكية؛ بياناتك محفوظة على جهازك.')]))
    ]),
    const SizedBox(height:15),
-   OutlinedButton.icon(style:OutlinedButton.styleFrom(foregroundColor:Colors.red,
-    side:const BorderSide(color:Colors.red)),
+   OutlinedButton.icon(style:OutlinedButton.styleFrom(
+    foregroundColor:(p.email.trim().isEmpty&&p.phone.trim().isEmpty)?emerald:Colors.red,
+    side:BorderSide(color:(p.email.trim().isEmpty&&p.phone.trim().isEmpty)?emerald:Colors.red)),
     onPressed:()async{
+     if(p.email.trim().isEmpty&&p.phone.trim().isEmpty){await widget.onLogout();return;}
      final ok=await confirm(waffraIsEnglish?'Sign out?':'تسجيل الخروج',
-      waffraIsEnglish?'Your data remains on this device.':'ستبقى بياناتك على هذا الجهاز.');
+      waffraIsEnglish?'Your financial data stays on this device.':'ستبقى بياناتك المالية محفوظة على الجهاز.');
      if(ok==true&&mounted)await widget.onLogout();
     },
-    icon:const Icon(Icons.logout),label:WaffraText(waffraIsEnglish?'Sign out':'تسجيل الخروج')),
+    icon:Icon((p.email.trim().isEmpty&&p.phone.trim().isEmpty)?Icons.login:Icons.logout),
+    label:WaffraText((p.email.trim().isEmpty&&p.phone.trim().isEmpty)?
+     (waffraIsEnglish?'Sign in':'تسجيل الدخول'):(waffraIsEnglish?'Sign out':'تسجيل الخروج'))),
    const SizedBox(height:13),
    WaffraText(waffraIsEnglish?
     'Your data stays on this device. Make a backup before changing phones or deleting the app.':
