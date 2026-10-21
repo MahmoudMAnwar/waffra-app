@@ -30,7 +30,13 @@ void main(){
  testWidgets('Bank SMS is analyzed as soon as user pastes without an Analyze button',(tester)async{
   await tester.binding.setSurfaceSize(const Size(430,920));
   addTearDown(()=>tester.binding.setSurfaceSize(null));
-  await tester.pumpWidget(const WaffraWidgetCaptureApp());
+  // In FakeAsync, use the explicit test-only lock bypass. Production uses
+  // the real native cross-engine lock, exercised by separate I/O tests.
+  final folder=Directory.systemTemp.createTempSync('waffra-widget-load-test-');
+  addTearDown((){if(folder.existsSync())folder.deleteSync(recursive:true);});
+  await tester.pumpWidget(WaffraWidgetCaptureApp(
+   testWriterDirectory:folder,testBypassNativeLock:true,
+  ));
   await tester.pumpAndSettle();
   expect(find.byKey(const Key('waffra-widget-bank-message')),findsOneWidget);
   await tester.enterText(find.byKey(const Key('waffra-widget-bank-message')),
