@@ -3424,10 +3424,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
   setState((){entries.clear();smsHashes.clear();});
   try {
    final prefs=await SharedPreferences.getInstance();
-   final saved=await const WaffraLiveLegacyFinanceGuard().requireLegacySource(prefs);
-   await prefs.setString('entries','[]');
-   final cleared=await const WaffraLiveLegacyFinanceGuard().requireLegacySource(prefs);
-   await prefs.setStringList('waffra_sms_hashes_v1',<String>[]);
+   await const WaffraLiveLegacyFinanceGuard().requireLegacySource(prefs);
+   final saved=await prefs.setString('entries','[]');
+   final cleared=await prefs.setStringList('waffra_sms_hashes_v1',<String>[]);
    if(!saved||!cleared)throw StateError('Failed to persist deletion');
    if(mounted)snackSuccess(context,waffraIsEnglish?'All transactions deleted':'تم حذف جميع المعاملات');
   }catch(e){
