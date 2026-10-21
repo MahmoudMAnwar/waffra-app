@@ -43,7 +43,7 @@ class WaffraEncryptedStore extends GeneratedDatabase {
         throw StateError('Secure-key persistence could not be confirmed.');
       }
     }
-    return openAt(File('${directory.path}/$_filename'), key: key);
+    return openAt(File('${directory.path}/$_filename'), key: key!);
   }
 
   /// Injectable key + file path allow deterministic tests without mobile APIs.
@@ -74,6 +74,9 @@ class WaffraEncryptedStore extends GeneratedDatabase {
 
   @override
   Iterable<TableInfo<Table, dynamic>> get allSchemaEntities => const [];
+
+  @override
+  List<TableInfo<Table, Object?>> get allTables => const [];
 
   @override
   MigrationStrategy get migration => MigrationStrategy(onCreate: (m) async {
