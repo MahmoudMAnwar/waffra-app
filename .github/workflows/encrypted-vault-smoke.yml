@@ -1,0 +1,52 @@
+name: Waffra Encrypted Vault - Drift and SQLite3MC
+
+on:
+  pull_request:
+    paths:
+      - 'lib/storage/**'
+      - 'test/storage/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - '.github/workflows/encrypted-vault-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sqlite3mc-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain for SQLite native-asset hook
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build pkg-config libssl-dev
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Show Flutter toolchain
+        run: |
+          flutter --version
+          dart --version
+
+      - name: Resolve dependencies and SQLite3MC hook
+        run: flutter pub get
+
+      - name: Analyze new encrypted vault code
+        run: dart analyze lib/storage/waffra_encrypted_database.dart lib/storage/waffra_vault_keys.dart test/storage/waffra_encrypted_database_test.dart
+
+      - name: Test encrypted DB file, wrong password, reopen and vault isolation
+        run: flutter test test/storage/waffra_encrypted_database_test.dart --reporter expanded
+
+      - name: Test legacy preflight gates
+        run: flutter test test/legacy_financial_snapshot_test.dart test/storage/legacy_snapshot_preflight_test.dart --reporter expanded
+
+  # Android install/runtime verification remains a separate mandatory gate.
+  # This job tests native SQLite encryption on the Linux CI runner only.
