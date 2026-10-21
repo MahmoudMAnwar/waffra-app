@@ -42,6 +42,7 @@ import 'storage/waffra_live_legacy_finance_guard.dart';
 import 'storage/waffra_legacy_finance_writer_coordinator.dart';
 import 'storage/waffra_legacy_widget_commit_journal.dart';
 import 'storage/waffra_finance_read_view.dart';
+import 'storage/waffra_home_finance_persistence.dart';
 import 'waffra_home_widget.dart';
 part 'waffra_categories_page.part.dart';
 part 'waffra_smart_analysis.part.dart';
@@ -1917,6 +1918,7 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
 }
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
  final WaffraLegacyWriteQueue _financialWriteQueue=WaffraLegacyWriteQueue();
+ final WaffraHomeFinancePersistence _homeFinancePersistence=const WaffraHomeFinancePersistence();
  final smsHashes=<String>{};
  final expandedCategoryIds=<String>{};
  final learnedMerchantCategories=<String,String>{};
@@ -2032,9 +2034,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  Future<void> load()async {
   final p=await SharedPreferences.getInstance();
-  await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p);
-  await _recoverPendingWidgetFinance(p);
-  final financeView=WaffraFinanceReadView.fromLegacy(p);
+  final financeView=await _homeFinancePersistence.loadLegacy(p);
   _lastWidgetRevision=p.getString('waffra_widget_last_save_v1');
   _lastLedgerSavedRaw=financeView.getString('entries');
   try{final raw=financeView.getString('entries');if(raw!=null)entries.addAll((jsonDecode(raw) as List).map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('entries: $e');}
@@ -2171,32 +2171,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    'waffra_learned_merchants_v1':jsonEncode(learnedMerchantCategories),
   };
   return _financialWriteQueue.submit(snapshot,(captured)async {
-   await const WaffraLegacyFinanceWriterCoordinator()
-       .withCurrentPreferences((p) async {
-   // A widget save after this screen loaded makes its transaction list newer
-   // than our captured UI ledger. Refuse to overwrite it; caller must reload.
-   WaffraLegacyFinanceWriterCoordinator.requireUnchangedLedger(
-    p, expectedRaw:_lastLedgerSavedRaw,
+   _lastLedgerSavedRaw=await _homeFinancePersistence.saveLegacy(
+    snapshot:captured,
+    expectedLedgerRaw:_lastLedgerSavedRaw,
     expectedWidgetRevision:_lastWidgetRevision,
    );
-   for(final item in captured.entries){
-    final value=item.value;
-    final bool saved;
-    if(value is String){
-     saved=await p.setString(item.key,value);
-    }else if(value is double){
-     saved=await p.setDouble(item.key,value);
-    }else if(value is bool){
-     saved=await p.setBool(item.key,value);
-    }else{
-     throw StateError('Unsupported legacy financial value.');
-    }
-    if(!saved)throw StateError('Failed to persist financial preference batch.');
-   }
-   // Save is complete; future in-app queued writes can now compare against
-   // the last committed ledger even if other finance fields changed.
-   _lastLedgerSavedRaw=captured['entries'] as String;
-   });
   }).then((_){unawaited(_refreshWidget());});
  }
 
