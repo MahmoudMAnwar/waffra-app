@@ -515,8 +515,30 @@ jobs:
       - name: Flutter static analysis
         run: flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings
 
-      - name: Run all Flutter tests
-        run: flutter test --no-pub
+      # Validate the cache invalidation logic itself on every build.
+      - name: Verify Smart CI safety policies
+        run: python3 -m unittest discover -s scripts -p 'test_smart_ci.py' -v
+
+      # A test cache contains ONLY fingerprints and previous green results,
+      # never compiled APKs or security secrets. An older successful full
+      # release is used as the reference if the exact run has no cache.
+      - name: Restore verified passing Flutter test fingerprints
+        id: smart_cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .ci_cache/waffra_green_tests.json
+          key: waffra-smart-tests-v2-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            waffra-smart-tests-v2-${{ runner.os }}-
+
+      # Tests touching money, bank messages, due dates, security and backup
+      # always run. Other tests run if their transitive source or environment
+      # changed. Scheduled/full-smoke releases re-run ALL Flutter tests.
+      - name: Run Smart Incremental Flutter tests
+        id: smart_tests
+        env:
+          WAFFRA_FULL_VALIDATION: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.run_smoke == true) }}
+        run: python3 scripts/smart_ci.py
 
       - name: Generate Waffra app icon
         run: dart run flutter_launcher_icons
@@ -632,3 +654,11 @@ jobs:
           name: Waffra-Android-ARM64-Release
           path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
+
+      # Results become reusable ONLY after tests, Android build, signature
+      # verification and APK upload have ALL succeeded in this same job.
+      - name: Save verified green test fingerprints
+        uses: actions/cache/save@v4
+        with:
+          path: .ci_cache/waffra_green_tests.json
+          key: waffra-smart-tests-v2-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
