@@ -51,7 +51,7 @@ jobs:
       - name: Resolve packages and native assets
         run: flutter pub get
       - name: Analyze integration test
-        run: dart analyze integration_test/storage_encryption_android_test.dart integration_test/offline_restore_android_test.dart integration_test/copied_receipt_ledger_android_test.dart integration_test/fresh_vault_first_run_android_test.dart integration_test/offline_finance_e2e_android_test.dart integration_test/finance_release_regressions_android_test.dart
+        run: dart analyze integration_test/storage_encryption_android_test.dart integration_test/offline_restore_android_test.dart integration_test/copied_receipt_ledger_android_test.dart integration_test/fresh_vault_first_run_android_test.dart integration_test/offline_finance_e2e_android_test.dart integration_test/finance_release_regressions_android_test.dart integration_test/live_finance_migration_receipts_android_test.dart
       - name: Enable Linux KVM permissions
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -73,3 +73,4 @@ jobs:
             flutter test integration_test/fresh_vault_first_run_android_test.dart -d emulator-5554 --reporter expanded
             flutter test integration_test/offline_finance_e2e_android_test.dart -d emulator-5554 --reporter expanded
             flutter test integration_test/finance_release_regressions_android_test.dart -d emulator-5554 --reporter expanded
+            flutter test integration_test/live_finance_migration_receipts_android_test.dart -d emulator-5554 --reporter expanded
