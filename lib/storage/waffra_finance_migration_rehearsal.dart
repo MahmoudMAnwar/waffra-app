@@ -60,6 +60,11 @@ class WaffraFinanceMigrationRehearsal {
     return Map<String, Object?>.unmodifiable(result);
   }
 
+  static String _sortedJson(Map<String, Object?> values) {
+    final sorted = values.keys.toList()..sort();
+    return jsonEncode({for (final key in sorted) key: values[key]});
+  }
+
   static int _receiptReferences(Map<String, Object?> finance) {
     final raw = finance['entries'];
     if (raw == null) return 0;
@@ -108,7 +113,7 @@ class WaffraFinanceMigrationRehearsal {
       final reread = await encrypted.read();
       if (reread.generation != 1 ||
           committed.digest != reread.digest ||
-          jsonEncode(original) != jsonEncode(reread.values)) {
+          _sortedJson(original) != _sortedJson(reread.values)) {
         throw StateError('Encrypted finance copy failed byte/value parity.');
       }
       // Re-read native SharedPreferences under the writer lock, proving the
@@ -118,7 +123,7 @@ class WaffraFinanceMigrationRehearsal {
       final newReport = WaffraLegacyPreflight.inspect(after);
       if (!newReport.canStage ||
           newReport.sourceSha256 != report.sourceSha256 ||
-          jsonEncode(after) != jsonEncode(original)) {
+          _sortedJson(after) != _sortedJson(original)) {
         throw StateError('Legacy data changed during rehearsal.');
       }
 
