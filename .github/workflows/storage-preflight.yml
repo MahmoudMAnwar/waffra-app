@@ -1,4 +1,4 @@
-name: Waffra storage preflight tests
+name: Waffra encrypted storage smoke
 
 on:
   pull_request:
@@ -6,7 +6,7 @@ on:
       - 'lib/storage/**'
       - 'test/legacy_financial_snapshot_test.dart'
       - 'test/storage/**'
-      - 'test/storage/**'
+      - 'pubspec.yaml'
       - 'docs/architecture/**'
       - '.github/workflows/storage-preflight.yml'
   workflow_dispatch:
@@ -15,9 +15,9 @@ permissions:
   contents: read
 
 jobs:
-  legacy-snapshot:
+  migration-spike:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -26,7 +26,7 @@ jobs:
           cache: true
       - name: Resolve Flutter dependencies
         run: flutter pub get
-      - name: Analyze migration code and tests
+      - name: Analyze storage code and tests
         run: dart analyze lib/storage test/legacy_financial_snapshot_test.dart test/storage
-      - name: Run migration preflight tests
-        run: flutter test test/legacy_financial_snapshot_test.dart test/storage/legacy_snapshot_preflight_test.dart --reporter expanded test/storage
+      - name: Test read-only migration and encrypted SQLite
+        run: flutter test test/legacy_financial_snapshot_test.dart test/storage --reporter expanded
