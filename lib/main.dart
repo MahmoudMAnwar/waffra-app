@@ -2865,9 +2865,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
     final count='${current+1} / ${available.length}';
     return Dialog(
      backgroundColor:Colors.transparent,elevation:0,
-     insetPadding:const EdgeInsets.symmetric(horizontal:14,vertical:22),
+     insetPadding:const EdgeInsets.symmetric(horizontal:22,vertical:45),
      child:Container(
-      constraints:BoxConstraints(maxHeight:MediaQuery.sizeOf(ctx).height*.88),
+      constraints:BoxConstraints(maxHeight:MediaQuery.sizeOf(ctx).height*.74),
       decoration:BoxDecoration(color:surface,borderRadius:BorderRadius.circular(24),
        border:Border.all(color:accent.withValues(alpha:.85),width:1.2)),
       clipBehavior:Clip.antiAlias,
@@ -2888,7 +2888,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
         IconButton(
          tooltip:waffraIsEnglish?'Previous image':'الصورة السابقة',
          onPressed:current>0?()=>controller.previousPage(
-          duration:const Duration(milliseconds:220),curve:Curves.easeInOut):null,
+          duration:waffraMotion(220),curve:Curves.easeInOut):null,
          icon:Icon(Icons.chevron_left_rounded,color:current>0?Colors.white:Colors.white38)),
         Text(count,textDirection:TextDirection.ltr,
          style:const TextStyle(color:Colors.white,fontSize:15,fontWeight:FontWeight.bold)),
@@ -6410,10 +6410,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
  @override Widget build(BuildContext context)=>Stack(children:[Scaffold(
   appBar:AppBar(
    toolbarHeight:64,
-   flexibleSpace:const DecoratedBox(decoration:BoxDecoration(
-    gradient:LinearGradient(begin:AlignmentDirectional.topStart,
-     end:AlignmentDirectional.bottomEnd,
-     colors:[Color(0xFF073F31),Color(0xFF07573F)]))),
+   flexibleSpace:const ColoredBox(color:forest),
    leading:goalsOpened?IconButton(tooltip:waffraIsEnglish?'Back to home':'العودة للرئيسية',
     icon:const Icon(Icons.arrow_back),onPressed:()=>setState(()=>goalsOpened=false)):null,
    titleSpacing:12,
@@ -6455,7 +6452,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
     onHorizontalDragEnd:_swipeBetweenSections,
     child:ValueListenableBuilder<bool>(
      valueListenable:hideWaffraAmounts,
-     builder:(context,hidden,_)=>currentTab())),
+     builder:(context,hidden,_)=>TweenAnimationBuilder<double>(
+      key:ValueKey('waffra-page-$tab'),tween:Tween<double>(begin:0,end:1),
+      duration:waffraMotion(240),curve:Curves.easeOutCubic,
+      builder:(ctx,progress,child)=>Opacity(opacity:progress,
+       child:Transform.translate(offset:Offset((1-progress)*(waffraIsEnglish?16:-16),0),child:child)),
+      child:currentTab()))),
   // Keep the add menu and its original actions above five destinations.
   floatingActionButtonLocation:FloatingActionButtonLocation.centerFloat,
   floatingActionButton:!ready||goalsOpened||(tab!=0&&tab!=1)?null:Directionality(
