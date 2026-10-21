@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:cryptography/cryptography.dart';
+import 'package:drift/drift.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/storage/waffra_atomic_entry_writer.dart';
 import 'package:waffra/storage/waffra_cloud_cipher.dart';
