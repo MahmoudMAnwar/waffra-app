@@ -3,9 +3,15 @@ part of 'main.dart';
 /// Standalone short-lived widget route: no full Waffra dashboard or navigation.
 /// The user pastes text explicitly; analysis happens automatically (debounced).
 class WaffraWidgetCaptureApp extends StatefulWidget {
- const WaffraWidgetCaptureApp({super.key,this.testWriterDirectory});
+ const WaffraWidgetCaptureApp({
+  super.key,
+  this.testWriterDirectory,
+  this.testBypassNativeLock = false,
+ }) : assert(!testBypassNativeLock || testWriterDirectory != null);
  /// Inject an isolated lock folder for widget tests; production uses app support.
  final Directory? testWriterDirectory;
+ /// FakeAsync UI tests only; native file-lock correctness has separate tests.
+ final bool testBypassNativeLock;
  @override State<WaffraWidgetCaptureApp> createState()=>_WaffraWidgetCaptureState();
 }
 
@@ -120,6 +126,7 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
   try{
    final outcome=await WaffraLegacyFinanceWriterCoordinator(
        testDirectory:widget.testWriterDirectory,
+       testBypassNativeLock:widget.testBypassNativeLock,
       ).withCurrentPreferences((prefs) async {
    final current=(jsonDecode(prefs.getString('entries')??'[]') as List)
     .map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x as Map))).toList();

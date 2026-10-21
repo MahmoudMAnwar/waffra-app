@@ -43,13 +43,18 @@ void main(){
  });
 
  testWidgets('Only confirmation writes an SMS transaction and prevents duplicates',(tester)async{
-  final testLockDirectory=await Directory.systemTemp.createTemp('waffra-widget-lock-test-');
-  addTearDown(()async{
-   if(await testLockDirectory.exists())await testLockDirectory.delete(recursive:true);
+  // Widget tests run in FakeAsync. Create/clean this local-only folder
+  // synchronously or the test can hang before the first frame is pumped.
+  final testLockDirectory=Directory.systemTemp.createTempSync('waffra-widget-lock-test-');
+  addTearDown((){
+   if(testLockDirectory.existsSync())testLockDirectory.deleteSync(recursive:true);
   });
   await tester.binding.setSurfaceSize(const Size(430,920));
   addTearDown(()=>tester.binding.setSurfaceSize(null));
-  await tester.pumpWidget(WaffraWidgetCaptureApp(testWriterDirectory:testLockDirectory));
+  await tester.pumpWidget(WaffraWidgetCaptureApp(
+   testWriterDirectory:testLockDirectory,
+   testBypassNativeLock:true,
+  ));
   await tester.pumpAndSettle();
   await tester.enterText(find.byKey(const Key('waffra-widget-bank-message')),
    'شراء PoS\nالمبلغ: 125.50 SAR\nلدى متجر');
@@ -58,18 +63,10 @@ void main(){
   expect(jsonDecode(p.getString('entries')??'[]'),isEmpty);
   await tester.ensureVisible(find.text('تأكيد إضافة العمليات'));
   await tester.tap(find.text('تأكيد إضافة العمليات'));
-  // Real OS file locks require a real async zone. Flutter widget-test's
-  // FakeAsync clock alone cannot drive pending native lock I/O callbacks.
-  final wrote = await tester.runAsync(() async {
-   for(var attempt=0;attempt<40;attempt++){
-    await Future<void>.delayed(const Duration(milliseconds:75));
-    await p.reload();
-    final current=jsonDecode(p.getString('entries')??'[]') as List;
-    if(current.isNotEmpty)return true;
-   }
-   return false;
-  });
-  expect(wrote,isTrue,reason:'Confirmed SMS should commit through the OS file lock');
+  // UI behavior runs with the test-only in-memory coordinator because
+  // Flutter widget FakeAsync cannot execute native File.lock callbacks.
+  // The production lock is exercised by its separate real-I/O tests.
+  await tester.pump(const Duration(milliseconds:250));
   await tester.pump(const Duration(milliseconds:1350));
   final saved=jsonDecode(p.getString('entries')??'[]') as List;
   expect(saved.length,1);
