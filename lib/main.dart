@@ -3115,7 +3115,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
         ...ordered.asMap().entries.map((row){
          final e=row.value,art=descriptions[row.key];
          return pw.TableRow(
-         decoration:pw.BoxDecoration(color:PdfColor.fromInt(e.income?waffraIncomeBackground.value:waffraExpenseBackground.value)),
+         decoration:pw.BoxDecoration(color:PdfColor.fromInt(e.income?waffraIncomeBackground.toARGB32():waffraExpenseBackground.toARGB32())),
          children:[
           pdfCell('${row.key+1}',center:true),
           pdfCell(dayText(e.date),center:true),
@@ -3343,7 +3343,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    if(attachmentCount>0)PositionedDirectional(top:0,end:0,child:Semantics(
     label:waffraIsEnglish?'$attachmentCount attachments':'عدد المرفقات $attachmentCount',
     button:true,child:InkWell(onTap:()=>showReceipt(e.receiptPath!),
-     borderRadius:const BorderRadiusDirectional.only(topEnd:Radius.circular(19),bottomStart:Radius.circular(13)),
+     borderRadius:BorderRadius.circular(13),
      child:Container(padding:const EdgeInsetsDirectional.fromSTEB(9,4,10,4),
       decoration:const BoxDecoration(color:forest,
        borderRadius:BorderRadiusDirectional.only(topEnd:Radius.circular(19),bottomStart:Radius.circular(13))),
@@ -6195,7 +6195,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    title:WaffraText(label,style:const TextStyle(fontWeight:FontWeight.bold)),
    subtitle:WaffraText(subtitle,maxLines:2,overflow:TextOverflow.ellipsis),
    trailing:trailing??(onTap==null?null:const Icon(Icons.chevron_left)),onTap:onTap);
- Widget _accountSection(String heading,IconData icon,List<Widget> children,{String searchTerms=''}) {
+ Widget _accountSection(String heading,IconData icon,List<Widget> children) {
   final q=accountSearch.trim().toLowerCase();
   if(q.isNotEmpty&&_accountOpenSection!=heading)return const SizedBox.shrink();
   final opened=_accountOpenSection==heading;
@@ -6209,7 +6209,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      child:Padding(padding:const EdgeInsets.all(15),child:Row(children:[
       CircleAvatar(radius:20,backgroundColor:emerald.withValues(alpha:.12),child:Icon(icon,color:emerald,size:21)),
       const SizedBox(width:10),Expanded(child:WaffraText(heading,style:const TextStyle(fontSize:16,fontWeight:FontWeight.bold))),
-      AnimatedRotation(turns:opened?.5:0,duration:waffraMotion(200),child:const Icon(Icons.keyboard_arrow_down_rounded)),
+      AnimatedRotation(turns:opened?0.5:0,duration:waffraMotion(200),child:const Icon(Icons.keyboard_arrow_down_rounded)),
      ]))),
     AnimatedSize(duration:waffraMotion(220),curve:Curves.easeInOutCubic,
      child:opened?Column(children:[
