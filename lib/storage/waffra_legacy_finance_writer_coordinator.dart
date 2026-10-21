@@ -11,9 +11,10 @@ import 'waffra_legacy_finance_batch_journal.dart';
 /// Coordinates CURRENT SharedPreferences finance writes from the full Waffra
 /// dashboard and the separate Android quick-add Flutter engine.
 ///
-/// This only solves participating-writer overlap. SharedPreferences multi-key
-/// writes are NOT transactional, and this does not itself switch to SQLCipher.
-/// M46's encrypted patch gateway is still disabled until a verified cutover.
+/// Every participating read/write first replays verified pending widget
+/// and dashboard journals while holding the same cross-engine lock. This
+/// reduces crash-related partial legacy saves but is NOT encrypted storage,
+/// does not protect unmodified old app versions or activate SQLCipher.
 class WaffraLegacyFinanceWriterCoordinator {
   const WaffraLegacyFinanceWriterCoordinator({
     this.testDirectory,
