@@ -42,7 +42,6 @@ extension WaffraSmartAnalysisCard on _HomeScreenState {
         WaffraText(waffraIsEnglish?'Clear insights into your spending':'رؤية أوضح لقراراتك المالية',
          style:TextStyle(fontSize:12,color:Theme.of(context).hintColor)),
        ])),
-       const Icon(Icons.chevron_left_rounded,color:emerald),
       ]),
       const SizedBox(height:14),
       WaffraText(insight,maxLines:3,style:const TextStyle(fontSize:13,fontWeight:FontWeight.w600)),
