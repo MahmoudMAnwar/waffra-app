@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:io';
 
 /// Advisory cross-isolate/process file lock: only protects writers that choose
 /// to participate. NEVER assume this stops an unmodified Android widget or
 /// older installed app. A real activation must route all writers through it.
 class WaffraExperimentalWriterGate {
+  static final Map<String, Future<void>> _localTails = {};
   const WaffraExperimentalWriterGate({
     required this.disposableDirectory,
     this.experimentalEnabled = false,
@@ -32,13 +34,19 @@ class WaffraExperimentalWriterGate {
       throw StateError('Writer lock path cannot be a link or directory.');
     }
 
-    // The directory must be app-private and must have a trusted, sole owner.
-    // File locks are OS advisory locks; they are NOT a database transaction.
-    final handle = await lockFile.open(mode: FileMode.append);
+    // The local future tail serializes callbacks even on OSes where file
+    // locks from the SAME process are advisory/per-process rather than per-FD.
+    // The native OS lock then coordinates DIFFERENT participating processes.
+    final key = lockFile.absolute.path;
+    final previous = _localTails[key] ?? Future<void>.value();
+    final done = Completer<void>();
+    _localTails[key] = done.future;
+    await previous;
+    RandomAccessFile? handle;
     try {
+      // The directory must be private with one trusted owner.
+      handle = await lockFile.open(mode: FileMode.append);
       await handle.lock(FileLock.exclusive);
-      // Recheck after acquisition. Prevent accidentally continuing if the
-      // lock file was replaced while acquisition waited.
       if (await FileSystemEntity.type(lockFile.path, followLinks: false) !=
           FileSystemEntityType.file) {
         throw StateError('Writer lock file was replaced.');
@@ -46,9 +54,18 @@ class WaffraExperimentalWriterGate {
       return await operation();
     } finally {
       try {
-        await handle.unlock();
+        if (handle != null) {
+          try {
+            await handle.unlock();
+          } finally {
+            await handle.close();
+          }
+        }
       } finally {
-        await handle.close();
+        if (identical(_localTails[key], done.future)) {
+          _localTails.remove(key);
+        }
+        done.complete();
       }
     }
   }
