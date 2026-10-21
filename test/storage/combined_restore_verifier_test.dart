@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/storage/waffra_combined_restore_verifier.dart';
 import 'package:waffra/storage/waffra_encrypted_store.dart';
+import 'package:waffra/storage/waffra_ledger_projection.dart';
 import 'package:waffra/storage/waffra_portable_backup_v2.dart';
 
 void main() {
