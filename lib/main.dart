@@ -39,6 +39,7 @@ import 'waffra_recurring_policy.dart';
 import 'waffra_secure_backup.dart';
 import 'storage/waffra_legacy_write_queue.dart';
 import 'storage/waffra_live_legacy_finance_guard.dart';
+import 'storage/waffra_legacy_finance_writer_coordinator.dart';
 import 'waffra_home_widget.dart';
 part 'waffra_categories_page.part.dart';
 part 'waffra_smart_analysis.part.dart';
@@ -2151,8 +2152,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    'waffra_learned_merchants_v1':jsonEncode(learnedMerchantCategories),
   };
   return _financialWriteQueue.submit(snapshot,(captured)async {
-   final p=await SharedPreferences.getInstance();
-   await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p);
+   await const WaffraLegacyFinanceWriterCoordinator()
+       .withCurrentPreferences((p) async {
+   // A widget save after this screen loaded makes its transaction list newer
+   // than our captured UI ledger. Refuse to overwrite it; caller must reload.
+   if(p.getString('waffra_widget_last_save_v1')!=_lastWidgetRevision){
+    throw StateError('Widget saved newer finance. Reload before saving.');
+   }
    for(final item in captured.entries){
     final value=item.value;
     final bool saved;
@@ -2167,6 +2173,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
     if(!saved)throw StateError('Failed to persist financial preference batch.');
    }
+   });
   }).then((_){unawaited(_refreshWidget());});
  }
 
