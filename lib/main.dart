@@ -38,6 +38,7 @@ import 'waffra_messages.dart';
 import 'waffra_recurring_policy.dart';
 import 'waffra_secure_backup.dart';
 import 'storage/waffra_legacy_write_queue.dart';
+import 'storage/waffra_live_legacy_finance_guard.dart';
 import 'waffra_home_widget.dart';
 part 'waffra_categories_page.part.dart';
 part 'waffra_smart_analysis.part.dart';
@@ -437,6 +438,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  Future<void> load()async {
   try {
    final p=await SharedPreferences.getInstance().timeout(const Duration(seconds:15));
+   await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p);
    Person? u;
    try{final raw=p.getString('waffra_profile');if(raw!=null)u=Person.fromJson(Map<String,dynamic>.from(jsonDecode(raw)));}catch(e){debugPrint('Profile loading: $e');}
    // Screenshot settings are best-effort and must never block application startup.
@@ -1996,6 +1998,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   try{
    final p=await SharedPreferences.getInstance();
    await p.reload();
+   await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p,reload:false);
    final revision=p.getString('waffra_widget_last_save_v1');
    if(revision==null||revision==_lastWidgetRevision)return;
    final raw=p.getString('entries');
@@ -2012,6 +2015,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  Future<void> load()async {
   final p=await SharedPreferences.getInstance();
+  await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p);
   _lastWidgetRevision=p.getString('waffra_widget_last_save_v1');
   try{final raw=p.getString('entries');if(raw!=null)entries.addAll((jsonDecode(raw) as List).map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('entries: $e');}
   try{final raw=p.getString('waffra_categories_v24');categories.addAll(raw==null?defaultCategories():(jsonDecode(raw) as List).map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('categories: $e');categories.addAll(defaultCategories());}
@@ -2146,6 +2150,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   };
   return _financialWriteQueue.submit(snapshot,(captured)async {
    final p=await SharedPreferences.getInstance();
+   await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p);
    for(final item in captured.entries){
     final value=item.value;
     final bool saved;
