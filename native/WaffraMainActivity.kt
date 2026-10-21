@@ -19,10 +19,25 @@ class MainActivity : FlutterFragmentActivity() {
     private var pendingWidgetAction: String? = null
     private var messageChannel: MethodChannel? = null
     private var pendingShare: String? = null
+    private var screenshotsAllowed: Boolean = true
+    private var protectRecents: Boolean = true
 
     private fun applyScreenshotSetting(allowed: Boolean) {
+        screenshotsAllowed = allowed
         if (allowed) window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
         else window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+    }
+
+    // Android's Recent Apps thumbnail is captured while leaving the foreground.
+    // Do not block normal foreground screenshots unless requested separately.
+    override fun onPause() {
+        if (protectRecents) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        super.onPause()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        applyScreenshotSetting(screenshotsAllowed)
     }
 
     private fun receiveSharedText(received: Intent?) {
@@ -38,6 +53,7 @@ class MainActivity : FlutterFragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
+        protectRecents = prefs.getBoolean("flutter.waffra_protect_recents_v1", true)
         applyScreenshotSetting(prefs.getBoolean("flutter.waffra_allow_screenshots", true))
         receiveSharedText(intent)
         receiveWidgetAction(intent)
@@ -64,6 +80,9 @@ class MainActivity : FlutterFragmentActivity() {
                 if (call.method == "setScreenshotsAllowed") {
                     val allowed = call.arguments as? Boolean ?: false
                     applyScreenshotSetting(allowed)
+                    result.success(null)
+                } else if (call.method == "setProtectRecents") {
+                    protectRecents = call.arguments as? Boolean ?: true
                     result.success(null)
                 } else result.notImplemented()
             }

@@ -35,7 +35,7 @@ void main() {
         'selectFooter(',
         'widget.onLogout()',
         'widget.onLanguage(',
-        'widget.onTheme()',
+        'widget.onAppearance(',
       ];
       for (final feature in required) {
         expect(source.contains(feature), isTrue, reason: 'Missing existing feature or storage contract: $feature');

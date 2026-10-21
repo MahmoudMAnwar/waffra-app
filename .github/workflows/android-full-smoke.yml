@@ -294,7 +294,9 @@ jobs:
                   <TextView android:id="@+id/widget_balance" android:layout_width="match_parent"
                       android:layout_height="wrap_content" android:text="0.00"
                       android:textSize="14sp" android:textStyle="bold" android:gravity="center"
-                      android:singleLine="true" android:ellipsize="end"
+                      android:singleLine="true" android:autoSizeTextType="uniform"
+                      android:autoSizeMinTextSize="6sp" android:autoSizeMaxTextSize="14sp"
+                      android:autoSizeStepGranularity="1sp"
                       android:textColor="#B8F5D6"/>
                   <TextView android:id="@+id/widget_currency"
                       android:layout_width="wrap_content" android:layout_height="wrap_content"
