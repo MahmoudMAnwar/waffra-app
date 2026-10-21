@@ -37,6 +37,7 @@ import 'waffra_footer.dart';
 import 'waffra_messages.dart';
 import 'waffra_recurring_policy.dart';
 import 'waffra_secure_backup.dart';
+import 'storage/waffra_legacy_write_queue.dart';
 import 'waffra_home_widget.dart';
 part 'waffra_categories_page.part.dart';
 part 'waffra_smart_analysis.part.dart';
@@ -1910,6 +1911,7 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
  @override bool shouldRebuild(covariant WaffraBalanceHeader oldDelegate)=>true;
 }
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+ final WaffraLegacyWriteQueue _financialWriteQueue=WaffraLegacyWriteQueue();
  final smsHashes=<String>{};
  final expandedCategoryIds=<String>{};
  final learnedMerchantCategories=<String,String>{};
@@ -2123,23 +2125,42 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    hidden:hideWaffraAmounts.value,
    currency:waffraIsEnglish?'SAR':'ريال');
  }
- Future<void> persist()async {
-  final p=await SharedPreferences.getInstance();
-  await Future.wait([
-   p.setString('entries',jsonEncode(entries.map((e)=>e.toJson()).toList())),
-   p.setString('waffra_categories_v24',jsonEncode(categories.map((e)=>e.toJson()).toList())),
-   p.setString('waffra_goals_v24',jsonEncode(goals.map((e)=>e.toJson()).toList())),
-   p.setString('waffra_recurring_v24',jsonEncode(recurring.map((e)=>e.toJson()).toList())),
-   p.setString('waffra_challenges_v1',jsonEncode(challenges.map((e)=>e.toJson()).toList())),
-   p.setString('waffra_deleted_categories_v1',jsonEncode(deletedCategories)),
-   p.setString('waffra_deleted_goals_v1',jsonEncode(deletedGoals)),
-   p.setString('waffra_deleted_recurring_v1',jsonEncode(deletedRecurring)),
-   p.setString('waffra_recurring_postponed_v1',jsonEncode(recurringPostponed)),
-   p.setDouble('waffra_monthly_budget_v1',monthlyBudget),
-   p.setBool('waffra_monthly_budget_enabled_v1',monthlyBudgetEnabled),
-   p.setString('waffra_learned_merchants_v1',jsonEncode(learnedMerchantCategories))
-  ]);
-  unawaited(_refreshWidget());
+ Future<void> persist() {
+  // Freeze a snapshot BEFORE any await. Previously Future.wait launched
+  // overlapping multi-key saves, so a slower old save could finish last.
+  // This protects in-app ordering, not cross-process widget writes or a crash
+  // in the middle of SharedPreferences' non-atomic multi-key update.
+  final snapshot=<String,Object>{
+   'entries':jsonEncode(entries.map((e)=>e.toJson()).toList()),
+   'waffra_categories_v24':jsonEncode(categories.map((e)=>e.toJson()).toList()),
+   'waffra_goals_v24':jsonEncode(goals.map((e)=>e.toJson()).toList()),
+   'waffra_recurring_v24':jsonEncode(recurring.map((e)=>e.toJson()).toList()),
+   'waffra_challenges_v1':jsonEncode(challenges.map((e)=>e.toJson()).toList()),
+   'waffra_deleted_categories_v1':jsonEncode(deletedCategories),
+   'waffra_deleted_goals_v1':jsonEncode(deletedGoals),
+   'waffra_deleted_recurring_v1':jsonEncode(deletedRecurring),
+   'waffra_recurring_postponed_v1':jsonEncode(recurringPostponed),
+   'waffra_monthly_budget_v1':monthlyBudget,
+   'waffra_monthly_budget_enabled_v1':monthlyBudgetEnabled,
+   'waffra_learned_merchants_v1':jsonEncode(learnedMerchantCategories),
+  };
+  return _financialWriteQueue.submit(snapshot,(captured)async {
+   final p=await SharedPreferences.getInstance();
+   for(final item in captured.entries){
+    final value=item.value;
+    final bool saved;
+    if(value is String){
+     saved=await p.setString(item.key,value);
+    }else if(value is double){
+     saved=await p.setDouble(item.key,value);
+    }else if(value is bool){
+     saved=await p.setBool(item.key,value);
+    }else{
+     throw StateError('Unsupported legacy financial value.');
+    }
+    if(!saved)throw StateError('Failed to persist financial preference batch.');
+   }
+  }).then((_){unawaited(_refreshWidget());});
  }
 
  Future<void> syncRecurringReminders()async {
