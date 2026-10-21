@@ -410,6 +410,7 @@ class WaffraApp extends StatefulWidget {
 }
 class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  bool loading=true,onboarded=false,dark=false,locked=false,showLogin=false;
+ String appearance='system';
  bool introDone=false;
  String language='ar';
  String? pinHash;Person? profile;
@@ -457,7 +458,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    if(!mounted)return;
    setState((){
     onboarded=p.getBool('waffra_onboarding_completed')??false;
-    dark=p.getBool('waffra_dark_mode')??false;
+    appearance=p.getString('waffra_appearance_mode_v1')??(p.containsKey('waffra_dark_mode')?(p.getBool('waffra_dark_mode')==true?'dark':'light'):'system');
+    if(!{'light','dark','system'}.contains(appearance))appearance='system';
+    dark=appearance=='dark'||(appearance=='system'&&WidgetsBinding.instance.platformDispatcher.platformBrightness==Brightness.dark);
     profile=u;pinHash=p.getString('waffra_pin_sha256');
     locked=pinHash!=null;startupError=null;loading=false;
    });
@@ -502,11 +505,14 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   waffraLanguage.value=next;
   if(mounted)setState(()=>language=next);
  }
- Future<void> theme()async {
-  final v=!dark;
-  if(mounted)setState(()=>dark=v); // Change appearance immediately, persist asynchronously.
+ Future<void> theme()async => setAppearance(appearance=='dark'?'light':'dark');
+ Future<void> setAppearance(String mode)async {
+  if(!{'light','dark','system'}.contains(mode))return;
+  if(mounted)setState((){appearance=mode;
+   dark=mode=='dark'||(mode=='system'&&WidgetsBinding.instance.platformDispatcher.platformBrightness==Brightness.dark);});
   final p=await SharedPreferences.getInstance();
-  await p.setBool('waffra_dark_mode',v);
+  await p.setString('waffra_appearance_mode_v1',mode);
+  await p.setBool('waffra_dark_mode',dark);
  }
  @override Widget build(BuildContext context)=>MaterialApp(
   debugShowCheckedModeBanner:false,title:'وفرة | Waffra',locale:Locale(language,language=='ar'?'SA':'US'),
@@ -555,13 +561,15 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
      color:states.contains(WidgetState.selected)?Colors.white:const Color(0xFFD1E6DC),size:24))),
    filledButtonTheme:FilledButtonThemeData(style:FilledButton.styleFrom(
     backgroundColor:forest,foregroundColor:Colors.white,
-    minimumSize:const Size(0,46),
+    minimumSize:const Size(0,46),alignment:Alignment.center,
+    side:const BorderSide(color:Color(0xFF0C7957),width:1.2),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)))),
    outlinedButtonTheme:OutlinedButtonThemeData(style:OutlinedButton.styleFrom(
-    foregroundColor:forest,side:const BorderSide(color:Color(0xFFB4D5C5),width:1.1),
+    foregroundColor:forest,alignment:Alignment.center,side:const BorderSide(color:Color(0xFF0C7957),width:1.2),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)))),
    textButtonTheme:TextButtonThemeData(style:TextButton.styleFrom(
-    foregroundColor:forest,
+    foregroundColor:forest,alignment:Alignment.center,
+    side:const BorderSide(color:Color(0xFF0C7957),width:1.1),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(13)))),
    inputDecorationTheme:InputDecorationTheme(
     filled:true,fillColor:Colors.white,
@@ -630,14 +638,16 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     iconTheme:WidgetStateProperty.resolveWith((states)=>IconThemeData(
      color:states.contains(WidgetState.selected)?Colors.white:const Color(0xFFBDD7C8),size:24))),
    filledButtonTheme:FilledButtonThemeData(style:FilledButton.styleFrom(
-    backgroundColor:const Color(0xFF166E4F),foregroundColor:Colors.white,
+    backgroundColor:const Color(0xFF166E4F),foregroundColor:Colors.white,alignment:Alignment.center,
+    side:const BorderSide(color:Color(0xFF74DCAB),width:1.1),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)))),
    outlinedButtonTheme:OutlinedButtonThemeData(style:OutlinedButton.styleFrom(
-    foregroundColor:Colors.white,
-    side:const BorderSide(color:Color(0xFF61967F)),
+    foregroundColor:Colors.white,alignment:Alignment.center,
+    side:const BorderSide(color:Color(0xFF74DCAB)),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)))),
    textButtonTheme:TextButtonThemeData(style:TextButton.styleFrom(
-    foregroundColor:Colors.white,
+    foregroundColor:Colors.white,alignment:Alignment.center,
+    side:const BorderSide(color:Color(0xFF74DCAB)),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(13)))),
    inputDecorationTheme:InputDecorationTheme(
     filled:true,fillColor:const Color(0xFF202522),
@@ -670,7 +680,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     backgroundColor:forest,foregroundColor:Colors.white),
    dividerTheme:const DividerThemeData(color:Color(0xFF394039),thickness:.8),
   ),
-  themeMode:dark?ThemeMode.dark:ThemeMode.light,
+  themeMode:appearance=='system'?ThemeMode.system:(appearance=='dark'?ThemeMode.dark:ThemeMode.light),
   themeAnimationDuration:waffraMotion(250),
   themeAnimationCurve:Curves.easeInOutCubic,
   home:Builder(builder:(rootContext)=>PopScope(canPop:false,onPopInvokedWithResult:(didPop,result)async {
@@ -697,7 +707,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    ])))):
    locked?PinLockScreen(pinHash:pinHash!,onUnlock:()=>setState(()=>locked=false)):
    profile==null||showLogin?LoginScreen(onSave:saveUser):
-   HomeScreen(key:ValueKey(language),profile:profile!,dark:dark,onTheme:theme,onLanguage:setLanguage,onLogout:logout,onProfile:saveUser,onSetPin:setPin,pinEnabled:pinHash!=null)))));
+   HomeScreen(key:ValueKey(language),profile:profile!,
+     dark:appearance=='dark'||(appearance=='system'&&MediaQuery.platformBrightnessOf(rootContext)==Brightness.dark),
+     appearance:appearance,onAppearance:setAppearance,onTheme:theme,onLanguage:setLanguage,onLogout:logout,onProfile:saveUser,onSetPin:setPin,pinEnabled:pinHash!=null)))));
 }
 class PinLockScreen extends StatefulWidget {
  final String pinHash;final VoidCallback onUnlock;
@@ -1789,14 +1801,16 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
  }
 }
 class HomeScreen extends StatefulWidget {
- final Person profile;final bool dark,pinEnabled;
+ final Person profile;final bool dark,pinEnabled;final String appearance;
+ final Future<void> Function(String) onAppearance;
  final Future<void> Function(String?) onSetPin;
  final VoidCallback onTheme;
  final Future<void> Function(String) onLanguage;
  final Future<void> Function() onLogout;
  final Future<void> Function(Person) onProfile;
  const HomeScreen({super.key,required this.profile,required this.dark,required this.pinEnabled,
-  required this.onSetPin,required this.onTheme,required this.onLanguage,required this.onLogout,required this.onProfile});
+  required this.onSetPin,required this.onTheme,required this.onLanguage,required this.onLogout,required this.onProfile,
+   required this.appearance,required this.onAppearance});
  @override State<HomeScreen> createState()=>_HomeScreenState();
 }
 // Scroll-linked, pinned balance summary. Shrinks with the user's gesture;
@@ -3068,20 +3082,21 @@ Future<void> bulkSmsSheet({String? initialText})async {
       heading('تفاصيل العمليات','Transactions'),
       pw.Table(
        border:pw.TableBorder.all(color:PdfColors.grey400,width:0.4),
-       columnWidths:{0:const pw.FixedColumnWidth(90),1:const pw.FixedColumnWidth(65),
-        2:const pw.FixedColumnWidth(95),3:const pw.FlexColumnWidth(3),
-        4:const pw.FixedColumnWidth(85)},
+       columnWidths:{0:const pw.FixedColumnWidth(34),1:const pw.FixedColumnWidth(85),
+        2:const pw.FixedColumnWidth(61),3:const pw.FixedColumnWidth(90),
+        4:const pw.FlexColumnWidth(3),5:const pw.FixedColumnWidth(83)},
        children:[
         pw.TableRow(decoration:const pw.BoxDecoration(color:PdfColors.teal800),
-         children:(english?['Date','Type','Category','Description','Amount (SAR)']:
-          ['التاريخ','النوع','القسم','الوصف','المبلغ (ريال)'])
+         children:(english?['No.','Date','Type','Category','Description','Amount (SAR)']:
+          ['رقم المعاملة','التاريخ','النوع','القسم','الوصف','المبلغ (ريال)'])
           .map((h)=>pw.Padding(padding:const pw.EdgeInsets.all(6),
            child:pw.Text(h,textAlign:pw.TextAlign.center,style:pw.TextStyle(font:bold,fontSize:10,color:PdfColors.white)))).toList()),
         ...ordered.asMap().entries.map((row){
          final e=row.value,art=descriptions[row.key];
          return pw.TableRow(
-         decoration:pw.BoxDecoration(color:e.income?const PdfColor.fromInt(0xFFB2D5C2):const PdfColor.fromInt(0xFFF0F7F2)),
+         decoration:pw.BoxDecoration(color:PdfColor.fromInt(e.income?waffraIncomeBackground.value:waffraExpenseBackground.value)),
          children:[
+          pdfCell('${row.key+1}',center:true),
           pdfCell(dayText(e.date),center:true),
           pdfCell(english?(e.income?'Income':'Expense'):(e.income?'دخل':'مصروف'),rtl:!english),
           pdfCell(waffraTr(e.category),rtl:!english),
@@ -3204,7 +3219,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   await persist();
   if(!mounted)return;
   snack(context,waffraIsEnglish?'Transaction deleted':'تم حذف العملية',
-   isError:false,duration:const Duration(seconds:6),
+   isError:false,duration:const Duration(seconds:5),
    actionLabel:waffraIsEnglish?'Undo':'تراجع',
    onAction:()async{
     if(!mounted||entries.any((x)=>x.id==e.id))return;
@@ -3286,19 +3301,15 @@ Future<void> bulkSmsSheet({String? initialText})async {
 
  Widget tile(MoneyEntry e){
   final c=categoryFor(e.category,e.income);
-  return Card(color:e.income?const Color(0xFFB2D5C2):const Color(0xFFF0F7F2),child:ListTile(
+  final attachmentCount=waffraReceiptPaths(e.receiptPath).length;
+  return Card(color:e.income?waffraIncomeBackground:waffraExpenseBackground,
+   child:Stack(children:[
+    Padding(padding:EdgeInsets.only(top:attachmentCount>0?20:0),child:ListTile(
    leading:CircleAvatar(backgroundColor:Color(c.color).withValues(alpha:.15),
     child:Icon(categoryIcon(c.icon),color:Color(c.color))),
    title:WaffraText(e.title),subtitle:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
     WaffraText('${e.category} • ${dayText(e.date)}'),
-    if(waffraReceiptPaths(e.receiptPath).isNotEmpty)InkWell(
-     onTap:()=>showReceipt(e.receiptPath!),
-     child:Padding(padding:const EdgeInsets.only(top:4),
-      child:Row(mainAxisSize:MainAxisSize.min,children:[
-       const Icon(Icons.attach_file,size:17,color:emerald),
-       if(waffraReceiptPaths(e.receiptPath).length>1)
-        Text('${waffraReceiptPaths(e.receiptPath).length}',style:const TextStyle(color:emerald)),
-      ]))),
+
    ]),
    trailing:Row(mainAxisSize:MainAxisSize.min,children:[
     Column(mainAxisSize:MainAxisSize.min,children:[
@@ -3307,7 +3318,20 @@ Future<void> bulkSmsSheet({String? initialText})async {
     ]),
     IconButton(tooltip:waffraIsEnglish?'Transaction options':'خيارات المعاملة',
      onPressed:()=>transactionActions(e),icon:const Icon(Icons.more_vert)),
-   ])));
+   ]))),
+   if(attachmentCount>0)PositionedDirectional(top:0,end:0,child:Semantics(
+    label:waffraIsEnglish?'$attachmentCount attachments':'عدد المرفقات $attachmentCount',
+    button:true,child:InkWell(onTap:()=>showReceipt(e.receiptPath!),
+     borderRadius:const BorderRadiusDirectional.only(topEnd:Radius.circular(19),bottomStart:Radius.circular(13)),
+     child:Container(padding:const EdgeInsetsDirectional.fromSTEB(9,4,10,4),
+      decoration:const BoxDecoration(color:forest,
+       borderRadius:BorderRadiusDirectional.only(topEnd:Radius.circular(19),bottomStart:Radius.circular(13))),
+      child:Row(mainAxisSize:MainAxisSize.min,children:[
+       const Icon(Icons.attach_file_rounded,color:Colors.white,size:15),
+       const SizedBox(width:3),
+       Text('$attachmentCount',style:const TextStyle(fontFamily:'Tajawal',fontSize:13,color:Colors.white,fontWeight:FontWeight.bold)),
+      ]))))),
+   ]));
  }
  String get greeting {
   final name=widget.profile.name.trim();
