@@ -12,10 +12,10 @@ void main() {
   late WaffraEncryptedStore vault;
   const key='synthetic-unified-writer-key-32-chars';
 
-  WaffraAtomicFinanceSnapshot get snapshot =>
+  WaffraAtomicFinanceSnapshot currentSnapshot() =>
       WaffraAtomicFinanceSnapshot(store:vault,experimentalEnabled:true);
   WaffraUnifiedFinanceWriter writer()=>WaffraUnifiedFinanceWriter(
-    writerDirectory:root,snapshot:snapshot,experimentalEnabled:true,
+    writerDirectory:root,snapshot:currentSnapshot(),experimentalEnabled:true,
   );
   String digest(int n)=>n.toRadixString(16).padLeft(64,'0');
   Map<String,Object?> entry(String id,{bool income=false, num amount=9.50})=> {
@@ -27,10 +27,10 @@ void main() {
     await WaffraFreshEncryptedVaultBootstrap(
       store:vault,experimentalEnabled:true,
     ).initialize(decision:WaffraFirstRunDecision.freshCandidate);
-    await snapshot.initializeEmpty();
+    await currentSnapshot().initializeEmpty();
   }
   Future<int> count() async {
-    final data=(await snapshot.read()).values;
+    final data=(await currentSnapshot().read()).values;
     return (jsonDecode(data['entries'] as String? ?? '[]') as List).length;
   }
 
@@ -51,7 +51,7 @@ void main() {
       records:[entry('a')],messageHashes:[digest(1)],userConfirmed:false,
     ),throwsA(isA<StateError>()));
     expect(await count(),0);
-    expect((await snapshot.read()).generation,0);
+    expect((await currentSnapshot().read()).generation,0);
   });
 
   test('app and standalone widget append concurrently without losing entries',
@@ -67,7 +67,7 @@ void main() {
       ),
     ]);
     expect(results.map((r)=>r.saved).toList(),[1,1]);
-    final state=await snapshot.read();
+    final state=await currentSnapshot().read();
     expect(state.generation,2);
     expect((jsonDecode(state.values['entries'] as String) as List).map(
       (x)=>(x as Map)['id'],
@@ -107,7 +107,7 @@ void main() {
     expect(result.savedExpenses,3);
     expect(result.skippedDuplicates,0);
     expect(await count(),5);
-    expect((await snapshot.read()).generation,1);
+    expect((await currentSnapshot().read()).generation,1);
   });
 
   test('error on duplicate ID rolls back entire batch and SMS hashes',()async{
@@ -117,9 +117,9 @@ void main() {
       messageHashes:[digest(1),digest(2)],
       userConfirmed:true,
     ),throwsA(isA<StateError>()));
-    expect((await snapshot.read()).generation,0);
+    expect((await currentSnapshot().read()).generation,0);
     expect(await count(),0);
-    expect((await snapshot.read()).values.containsKey('waffra_sms_hashes_v1'),
+    expect((await currentSnapshot().read()).values.containsKey('waffra_sms_hashes_v1'),
         false);
   });
 
@@ -133,12 +133,12 @@ void main() {
       'waffra_deleted_categories_v1':deletedCategories,
       'waffra_monthly_budget_v1':350.0,
     };
-    await snapshot.commit(expectedGeneration:0,fullFinanceSnapshot:finance);
+    await currentSnapshot().commit(expectedGeneration:0,fullFinanceSnapshot:finance);
     await writer().appendTransactions(
       records:[entry('widget')],messageHashes:[digest(99)],
       userConfirmed:true,
     );
-    final reread=(await snapshot.read()).values;
+    final reread=(await currentSnapshot().read()).values;
     expect(reread['waffra_goals_v24'],savedGoals);
     expect(reread['waffra_deleted_categories_v1'],deletedCategories);
     expect(reread['waffra_monthly_budget_v1'],350.0);
@@ -156,7 +156,7 @@ void main() {
         records:[invalid],messageHashes:[null],userConfirmed:true,
       ),throwsA(anything));
     }
-    expect((await snapshot.read()).generation,0);
+    expect((await currentSnapshot().read()).generation,0);
   });
 
   test('100 allowed but 101 rejected before writing',()async{
@@ -184,6 +184,6 @@ void main() {
     );
     expect(result.saved,1);
     expect(await count(),2);
-    expect((await snapshot.read()).values['waffra_sms_hashes_v1'],[digest(3)]);
+    expect((await currentSnapshot().read()).values['waffra_sms_hashes_v1'],[digest(3)]);
   });
 }
