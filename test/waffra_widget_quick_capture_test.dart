@@ -58,7 +58,18 @@ void main(){
   expect(jsonDecode(p.getString('entries')??'[]'),isEmpty);
   await tester.ensureVisible(find.text('تأكيد إضافة العمليات'));
   await tester.tap(find.text('تأكيد إضافة العمليات'));
-  await tester.pump(const Duration(milliseconds:250));
+  // Real OS file locks require a real async zone. Flutter widget-test's
+  // FakeAsync clock alone cannot drive pending native lock I/O callbacks.
+  final wrote = await tester.runAsync(() async {
+   for(var attempt=0;attempt<40;attempt++){
+    await Future<void>.delayed(const Duration(milliseconds:75));
+    await p.reload();
+    final current=jsonDecode(p.getString('entries')??'[]') as List;
+    if(current.isNotEmpty)return true;
+   }
+   return false;
+  });
+  expect(wrote,isTrue,reason:'Confirmed SMS should commit through the OS file lock');
   await tester.pump(const Duration(milliseconds:1350));
   final saved=jsonDecode(p.getString('entries')??'[]') as List;
   expect(saved.length,1);
