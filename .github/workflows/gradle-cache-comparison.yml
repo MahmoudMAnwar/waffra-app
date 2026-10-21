@@ -1,0 +1,35 @@
+name: Trigger Waffra Gradle cache comparison
+
+on:
+  workflow_run:
+    workflows:
+      - Build Waffra Android APK
+    types:
+      - completed
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  run-comparison:
+    # Exactly one follow-up: only when the original #492 run succeeds.
+    if: ${{ github.event.workflow_run.id == 39526226984 && github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Start next Android workflow on the same main revision
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          EXPECTED_SHA: "52339f36d28fea394d1213603f9bcd9908b6ba4f"
+        shell: bash
+        run: |
+          set -euo pipefail
+          MAIN_SHA="$(gh api "repos/$REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
+          if [ "$MAIN_SHA" != "$EXPECTED_SHA" ]; then
+            echo "::warning::Main changed since build #492; refusing to benchmark different source code."
+            exit 0
+          fi
+          gh api -X POST "repos/$REPOSITORY/actions/workflows/android.yml/dispatches" \
+            -f ref=main -F run_smoke=false
+          echo "Started comparison run with identical source revision."
