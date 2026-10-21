@@ -3,7 +3,9 @@ part of 'main.dart';
 /// Standalone short-lived widget route: no full Waffra dashboard or navigation.
 /// The user pastes text explicitly; analysis happens automatically (debounced).
 class WaffraWidgetCaptureApp extends StatefulWidget {
- const WaffraWidgetCaptureApp({super.key});
+ const WaffraWidgetCaptureApp({super.key,this.testWriterDirectory});
+ /// Inject an isolated lock folder for widget tests; production uses app support.
+ final Directory? testWriterDirectory;
  @override State<WaffraWidgetCaptureApp> createState()=>_WaffraWidgetCaptureState();
 }
 
@@ -116,8 +118,9 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
   final allowDuplicates=_allowDuplicates;
   setState(()=>_saving=true);
   try{
-   final outcome=await const WaffraLegacyFinanceWriterCoordinator()
-       .withCurrentPreferences((prefs) async {
+   final outcome=await WaffraLegacyFinanceWriterCoordinator(
+       testDirectory:widget.testWriterDirectory,
+      ).withCurrentPreferences((prefs) async {
    final current=(jsonDecode(prefs.getString('entries')??'[]') as List)
     .map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x as Map))).toList();
    final oldHashes=(prefs.getStringList('waffra_sms_hashes_v1')??[]).toSet();
