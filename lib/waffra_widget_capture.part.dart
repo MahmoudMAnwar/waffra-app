@@ -154,6 +154,7 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
    final hashesSaved=await prefs.setStringList('waffra_sms_hashes_v1',
     {...oldHashes,...newHashes}.toList());
    if(!hashesSaved)throw StateError('SMS hashes were not committed');
+   await prefs.setString('waffra_widget_last_save_v1',DateTime.now().toIso8601String());
 
    // Refresh the circular balance immediately without opening the full app.
    final incomeHalalas=merged.where((e)=>e.income)
