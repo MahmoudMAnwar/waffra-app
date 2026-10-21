@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 
 import '../waffra_secure_backup.dart';
-import 'legacy_financial_snapshot.dart';
+import 'legacy_financial_snapshot.dart' show WaffraLegacySnapshotInspector;
 import 'legacy_snapshot_preflight.dart';
 
 /// A receipt represented by its ledger association, never by its device-local
