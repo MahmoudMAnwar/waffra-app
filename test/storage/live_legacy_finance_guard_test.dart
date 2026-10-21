@@ -73,7 +73,11 @@ void main() {
     });
     await tester.binding.setSurfaceSize(const Size(430, 920));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(const WaffraWidgetCaptureApp());
+    final folder=Directory.systemTemp.createTempSync('waffra-guard-ui-');
+    addTearDown((){if(folder.existsSync())folder.deleteSync(recursive:true);});
+    await tester.pumpWidget(WaffraWidgetCaptureApp(
+      testWriterDirectory:folder,testBypassNativeLock:true,
+    ));
     await tester.pumpAndSettle();
     expect(find.textContaining('تعذر فتح البيانات المحلية'), findsOneWidget);
     final prefs = await SharedPreferences.getInstance();
