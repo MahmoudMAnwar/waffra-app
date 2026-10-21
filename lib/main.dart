@@ -4750,8 +4750,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
              if(!dialogCtx.mounted)return;
              Navigator.pop(dialogCtx);
              if(mounted)snackSuccess(context,waffraIsEnglish
-              ?'Category restored with zero balance and no budget. Add new transactions and a budget to use it.'
-              :'تم استرجاع القسم بقيمة صفر وبدون ميزانية. سجّل عليه معاملات وميزانية جديدة.');
+              ?'Category restored with a zero budget. Past linked transactions remain in the financial history unchanged.'
+              :'تم استرجاع القسم بميزانية صفر، وجميع المعاملات القديمة المرتبطة به محفوظة في السجل المالي دون تغيير.');
             },
          onDeleteForever:()async{
              final yes=await confirmDeletion(
@@ -4762,7 +4762,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
               setState(()=>deletedCategories.remove(item));
               refresh((){});
               await persist();
-             },
+             }
+            },
         );
        }).toList())),
     actions:[TextButton(onPressed:()=>Navigator.pop(dialogCtx),
@@ -4970,7 +4971,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
         Container(
          padding:const EdgeInsets.symmetric(horizontal:13,vertical:14),
          decoration:BoxDecoration(
-          color:accent.withValues(alpha:dark?.12:.06),
+          color:accent.withValues(alpha:dark ? 0.12 : 0.06),
           borderRadius:BorderRadius.circular(20),
           border:Border.all(color:accent.withValues(alpha:.14))),
          child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
