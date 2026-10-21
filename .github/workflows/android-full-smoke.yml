@@ -1,0 +1,750 @@
+# Waffra ARM64 release rebuild requested 2026-10-19 - retry missing artifact
+# Re-trigger optimized ARM64 build; preserve Tajawal typography
+name: Waffra Android Full Startup Smoke (Nightly or Manual)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *'
+
+# Nightly and on-demand full Flutter + real Android emulator smoke validation.
+# It is independent of the fast APK workflow and keeps launch coverage.
+concurrency:
+  group: waffra-android-full-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter (SDK and pub cache)
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # Cache the Gradle wrapper, dependency downloads and generated Gradle
+      # accessors across clean GitHub runners (Flutter cache alone does not).
+      # setup-gradle manages cache keys and cleanup; never cache signed APKs.
+      - name: Restore Gradle dependency cache
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-home-cache-cleanup: true
+
+      # Restore Gradle's task output cache across ephemeral GitHub runners.
+      # This is not an APK cache: each build still produces, signs and verifies
+      # a fresh APK. Keys include the toolchain and dependency lockfiles.
+      - name: Restore incremental Gradle task outputs
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/caches/build-cache-1
+          key: waffra-gradle-tasks-v1-${{ runner.os }}-${{ hashFiles('pubspec.lock', 'pubspec.yaml', 'gradle/wrapper/gradle-wrapper.properties', 'android/gradle/wrapper/gradle-wrapper.properties') }}-${{ github.run_id }}
+          restore-keys: |
+            waffra-gradle-tasks-v1-${{ runner.os }}-${{ hashFiles('pubspec.lock', 'pubspec.yaml', 'gradle/wrapper/gradle-wrapper.properties', 'android/gradle/wrapper/gradle-wrapper.properties') }}-
+
+      - name: Enable Gradle task output caching
+        shell: bash
+        run: |
+          mkdir -p ~/.gradle
+          echo 'org.gradle.caching=true' >> ~/.gradle/gradle.properties
+          echo 'org.gradle.parallel=true' >> ~/.gradle/gradle.properties
+          echo 'org.gradle.configuration-cache=false' >> ~/.gradle/gradle.properties
+
+      - name: Generate Android project (without duplicate pub get)
+        run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
+
+      - name: Match native Android launch background to Waffra emerald
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path('android/app/src/main/res')
+          for drawable in root.glob('drawable*/launch_background.xml'):
+              xml=drawable.read_text()
+              # Keep the native startup window emerald instead of black/white.
+              xml=re.sub(r'<item android:drawable="@android:color/white"\s*/>',
+                         '<item android:drawable="@color/waffra_launch_bg" />',xml)
+              drawable.write_text(xml)
+          values=root/'values'
+          values.mkdir(exist_ok=True)
+          (values/'waffra_launch_colors.xml').write_text(
+              '<resources><color name="waffra_launch_bg">#002E25</color></resources>')
+          for stylefile in root.glob('values*/styles.xml'):
+              xml=stylefile.read_text()
+              # Android 12+ system splash uses this color before Flutter draws.
+              if 'windowSplashScreenBackground' not in xml:
+                  xml=xml.replace('<style name="LaunchTheme"',
+                      '<style name="LaunchTheme"',1)
+                  xml=re.sub(r'(<style name="LaunchTheme"[^>]*>)',
+                      r'\1\n        <item name="android:windowSplashScreenBackground">#002E25</item>'
+                      if 'values-v31' in str(stylefile) else r'\1',xml,count=1)
+              stylefile.write_text(xml)
+          print('Native Waffra launch background configured')
+          PY
+
+      - name: Configure Firebase Google Sign-In
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, re, shutil
+          source=Path('firebase/google-services.json')
+          data=json.loads(source.read_text())
+          assert data['project_info']['project_id']=='waffra-app'
+          assert any(c['client_info']['android_client_info']['package_name']=='com.waffra.app' for c in data['client'])
+          # Flutter create --org com.waffra --project-name waffra generates
+          # com.waffra.waffra. Keep the existing generated package identity
+          # aligned with Firebase's registered com.waffra.app client.
+          app_gradle=Path('android/app/build.gradle.kts')
+          gradle=app_gradle.read_text()
+          if 'com.waffra.waffra' not in gradle:
+              raise SystemExit('Unexpected generated Android applicationId; refusing blind replacement')
+          gradle=gradle.replace('com.waffra.waffra','com.waffra.app')
+          app_gradle.write_text(gradle)
+          dest=Path('android/app/google-services.json')
+          dest.parent.mkdir(parents=True,exist_ok=True)
+          shutil.copyfile(source,dest)
+          settings=Path('android/settings.gradle.kts')
+          app=Path('android/app/build.gradle.kts')
+          if not settings.exists() or not app.exists():
+              raise SystemExit('Expected generated Kotlin Gradle files')
+          s=settings.read_text()
+          plugin='id("com.google.gms.google-services") version "4.4.2" apply false'
+          if 'com.google.gms.google-services' not in s:
+              s=s.replace('plugins {','plugins {'+chr(10)+'    '+plugin,1)
+          settings.write_text(s)
+          a=app.read_text()
+          if 'id("com.google.gms.google-services")' not in a:
+              a=a.replace('plugins {','plugins {'+chr(10)+'    id("com.google.gms.google-services")',1)
+          app.write_text(a)
+          print('Firebase Android configuration installed')
+          PY
+
+      - name: Configure Android biometric authentication
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          android = Path('android')
+          manifest = android / 'app/src/main/AndroidManifest.xml'
+          if not manifest.exists():
+              raise SystemExit('Missing generated AndroidManifest.xml')
+          xml = manifest.read_text()
+          for permission in ('INTERNET', 'USE_BIOMETRIC', 'USE_FINGERPRINT'):
+              entry = f'<uses-permission android:name="android.permission.{permission}" />'
+              if entry not in xml:
+                  xml = xml.replace('<application', '    ' + entry + '\n    <application', 1)
+          manifest.write_text(xml)
+
+          kotlin = list((android / 'app/src/main/kotlin').rglob('MainActivity.kt'))
+          java = list((android / 'app/src/main/java').rglob('MainActivity.java'))
+          if kotlin:
+              activity = kotlin[0]
+              original = activity.read_text()
+              import re
+              package_match = re.search(r'^\s*package\s+([\w.]+)', original, re.MULTILINE)
+              if not package_match:
+                  raise SystemExit('Cannot determine Kotlin MainActivity package')
+              package_name = 'com.waffra.app'  # Must match Firebase applicationId and manifest activity
+              source = (
+                  f'package {package_name}\n\n'
+                  'import android.os.Bundle\n'
+                  'import android.view.WindowManager\n'
+                  'import io.flutter.embedding.android.FlutterFragmentActivity\n'
+                  'import io.flutter.embedding.engine.FlutterEngine\n'
+                  'import io.flutter.plugin.common.MethodChannel\n\n'
+                  'class MainActivity : FlutterFragmentActivity() {\n'
+                  '    private val privacyChannel = "waffra/privacy"\n'
+                  '    private fun applyScreenshotSetting(allowed: Boolean) {\n'
+                  '        if (allowed) window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)\n'
+                  '        else window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)\n'
+                  '    }\n'
+                  '    override fun onCreate(savedInstanceState: Bundle?) {\n'
+                  '        super.onCreate(savedInstanceState)\n'
+                  '        val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)\n'
+                  '        applyScreenshotSetting(prefs.getBoolean("flutter.waffra_allow_screenshots", true))\n'
+                  '    }\n'
+                  '    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {\n'
+                  '        super.configureFlutterEngine(flutterEngine)\n'
+                  '        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, privacyChannel)\n'
+                  '            .setMethodCallHandler { call, result ->\n'
+                  '                if (call.method == "setScreenshotsAllowed") {\n'
+                  '                    val allowed = call.arguments as? Boolean ?: false\n'
+                  '                    applyScreenshotSetting(allowed)\n'
+                  '                    result.success(null)\n'
+                  '                } else result.notImplemented()\n'
+                  '            }\n'
+                  '    }\n'
+                  '}\n'
+              )
+              activity.write_text(source)
+              assert 'FLAG_SECURE' in activity.read_text()
+              print('Configured secure Kotlin activity:', activity)
+          elif java:
+              activity = java[0]
+              source = activity.read_text()
+              source = source.replace('import io.flutter.embedding.android.FlutterActivity;',
+                                      'import android.os.Bundle;\\nimport android.view.WindowManager;\\nimport io.flutter.embedding.android.FlutterFragmentActivity;')
+              source = source.replace('extends FlutterActivity', 'extends FlutterFragmentActivity')
+              source = source.replace('extends FlutterFragmentActivity {',
+                  'extends FlutterFragmentActivity {\\n'
+                  '    @Override public void onCreate(Bundle savedInstanceState) {\\n'
+                  '        super.onCreate(savedInstanceState);\\n'
+                  '        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);\\n'
+                  '    }')
+              if 'FLAG_SECURE' not in source:
+                  raise SystemExit('Could not secure Java MainActivity')
+              activity.write_text(source)
+              print('Configured secure Java activity:', activity)
+          else:
+              raise SystemExit('Could not find MainActivity')
+
+          # local_auth requires an AppCompat-based theme for older Android versions.
+          for styles in android.glob('app/src/main/res/values*/styles.xml'):
+              content = styles.read_text()
+              content = content.replace(
+                  '<style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">',
+                  '<style name="NormalTheme" parent="Theme.AppCompat.DayNight.NoActionBar">')
+              content = content.replace(
+                  '<style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">',
+                  '<style name="NormalTheme" parent="Theme.AppCompat.DayNight.NoActionBar">')
+              styles.write_text(content)
+              print('Configured', styles)
+          PY
+
+      - name: Install native messaging share support
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          activity_files=list(Path('android/app/src/main/kotlin').rglob('MainActivity.kt'))
+          if len(activity_files)!=1:
+              raise SystemExit(f'Expected one Kotlin MainActivity, got {len(activity_files)}')
+          activity=activity_files[0]
+          template=Path('native/WaffraMainActivity.kt').read_text()
+          assert 'waffra/privacy' in template and 'waffra/messages' in template
+          activity.write_text(template)
+
+          manifest=Path('android/app/src/main/AndroidManifest.xml')
+          xml=manifest.read_text()
+          if 'android.intent.action.SEND' not in xml:
+              filter_xml = '''
+                  <intent-filter>
+                      <action android:name="android.intent.action.SEND" />
+                      <category android:name="android.intent.category.DEFAULT" />
+                      <data android:mimeType="text/plain" />
+                  </intent-filter>
+              '''
+              start=xml.find('<activity')
+              close=xml.find('</activity>',start)
+              if start<0 or close<0 or 'MainActivity' not in xml[start:close]:
+                  raise SystemExit('Could not locate generated MainActivity')
+              xml=xml[:close]+filter_xml+chr(10)+'    '+xml[close:]
+              manifest.write_text(xml)
+          if re.search(r'<uses-permission[^>]*\\b(?:READ_SMS|RECEIVE_SMS|READ_CALL_LOG)\\b',xml):
+              raise SystemExit('SMS inbox permissions must never be requested')
+          print('Enabled user-triggered text sharing and messaging launch without inbox access')
+          PY
+
+      - name: Install compact circular widget and transparent quick-capture screen
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          root=Path('android/app/src/main')
+          activity=list((root/'kotlin').rglob('MainActivity.kt'))
+          assert len(activity)==1, 'Missing Waffra MainActivity'
+          kotlin=activity[0].parent
+          assert 'waffra/widget' in activity[0].read_text()
+          for filename in ('WaffraWidget.kt','WaffraQuickActivity.kt'):
+              (kotlin/filename).write_text((Path('native')/filename).read_text())
+          layout=root/'res/layout'
+          layout.mkdir(parents=True,exist_ok=True)
+          (layout/'waffra_widget.xml').write_text("""<?xml version="1.0" encoding="utf-8"?>
+          <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:id="@+id/waffra_widget_root"
+              android:layout_width="match_parent" android:layout_height="match_parent"
+              android:padding="2dp" android:background="@drawable/waffra_widget_bg">
+              <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+                  android:gravity="center" android:orientation="vertical"
+                  android:padding="4dp">
+                  <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                      android:text="✦" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/>
+                  <TextView android:id="@+id/widget_balance" android:layout_width="match_parent"
+                      android:layout_height="wrap_content" android:text="0.00"
+                      android:textSize="14sp" android:textStyle="bold" android:gravity="center"
+                      android:singleLine="true" android:ellipsize="end"
+                      android:textColor="#B8F5D6"/>
+                  <TextView android:id="@+id/widget_currency"
+                      android:layout_width="wrap_content" android:layout_height="wrap_content"
+                      android:text="ريال" android:textColor="#FFFFFF"
+                      android:textSize="10sp" android:singleLine="true"
+                      android:gravity="center" />
+              </LinearLayout>
+          </FrameLayout>""")
+          drawable=root/'res/drawable'
+          drawable.mkdir(parents=True,exist_ok=True)
+          (drawable/'waffra_widget_bg.xml').write_text("""<?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+              <solid android:color="#064D3B"/>
+              <stroke android:width="1dp" android:color="#168663"/>
+          </shape>""")
+          info=root/'res/xml'
+          info.mkdir(parents=True,exist_ok=True)
+          (info/'waffra_widget_info.xml').write_text("""<?xml version="1.0" encoding="utf-8"?>
+          <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+              android:minWidth="72dp" android:minHeight="72dp"
+              android:targetCellWidth="1" android:targetCellHeight="1"
+              android:initialLayout="@layout/waffra_widget"
+              android:resizeMode="none" android:widgetCategory="home_screen"
+              android:updatePeriodMillis="1800000"/>
+          """)
+          style=root/'res/values/styles.xml'
+          xml=style.read_text()
+          if 'WaffraWidgetTheme' not in xml:
+              xml=xml.replace('</resources>', """
+              <style name="WaffraWidgetTheme" parent="@android:style/Theme.Translucent.NoTitleBar">
+                  <item name="android:windowIsTranslucent">true</item>
+                  <item name="android:windowBackground">@android:color/transparent</item>
+                  <item name="android:windowNoTitle">true</item>
+                  <item name="android:windowActionModeOverlay">true</item>
+                  <item name="android:backgroundDimEnabled">false</item>
+              </style>
+              </resources>""")
+              style.write_text(xml)
+          manifest=root/'AndroidManifest.xml'
+          xml=manifest.read_text()
+          if 'com.waffra.app.WaffraWidget' not in xml:
+              xml=xml.replace('</application>',"""
+              <receiver android:name="com.waffra.app.WaffraWidget"
+                  android:exported="true" android:label="Waffra • وفرة">
+                  <intent-filter>
+                      <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+                  </intent-filter>
+                  <meta-data android:name="android.appwidget.provider"
+                      android:resource="@xml/waffra_widget_info"/>
+              </receiver>
+              <activity android:name="com.waffra.app.WaffraQuickActivity"
+                  android:theme="@style/WaffraWidgetTheme"
+                  android:exported="false" android:hardwareAccelerated="true"
+                  android:windowSoftInputMode="adjustResize"/>
+              </application>""",1)
+          manifest.write_text(xml)
+          assert 'WaffraQuickActivity' in xml and 'WaffraWidget' in xml
+          print('Circular 1x1 Waffra widget and translucent quick capture activity configured')
+          PY
+
+      - name: Configure Android scheduled notification support
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          manifest=Path('android/app/src/main/AndroidManifest.xml')
+          xml=manifest.read_text()
+          for permission in ('POST_NOTIFICATIONS','RECEIVE_BOOT_COMPLETED'):
+              entry=f'<uses-permission android:name="android.permission.{permission}" />'
+              if entry not in xml:
+                  xml=xml.replace('<application','    '+entry+'\n    <application',1)
+          if 'ScheduledNotificationReceiver' not in xml:
+              receivers = '''
+                  <receiver android:exported="false"
+                      android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+                  <receiver android:exported="false"
+                      android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+                      <intent-filter>
+                          <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                          <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                          <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+                      </intent-filter>
+                  </receiver>
+              '''
+              xml=xml.replace('</application>',receivers+'\n    </application>',1)
+          manifest.write_text(xml)
+          kt=Path('android/app/build.gradle.kts')
+          groovy=Path('android/app/build.gradle')
+          if kt.exists():
+              source=kt.read_text()
+              source=source.replace('compileOptions {',
+                  'compileOptions {\n        isCoreLibraryDesugaringEnabled = true',1)
+              source+='\n// Required by flutter_local_notifications\ndependencies {\n'
+              source+='    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n'
+              kt.write_text(source)
+          elif groovy.exists():
+              source=groovy.read_text()
+              source=source.replace('compileOptions {',
+                  'compileOptions {\n        coreLibraryDesugaringEnabled true',1)
+              source+="\ndependencies { coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4' }\n"
+              groovy.write_text(source)
+          else:
+              raise SystemExit('Missing Android Gradle app file')
+          print('Configured Android receivers and Java API desugaring')
+          PY
+
+      - name: Preserve SharedPreferences Android plugin in Release
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          app = Path('android/app')
+          kt = app / 'build.gradle.kts'
+          groovy = app / 'build.gradle'
+          if kt.exists():
+              path = kt
+              source = path.read_text()
+              needle = 'buildTypes {'
+              if needle not in source:
+                  raise SystemExit('Cannot find Android Kotlin buildTypes')
+              source = source.replace(needle, needle + '''
+                  getByName("release") {
+                      isMinifyEnabled = false
+                      isShrinkResources = false
+                  }
+              ''', 1)
+          elif groovy.exists():
+              path = groovy
+              source = path.read_text()
+              needle = 'buildTypes {'
+              if needle not in source:
+                  raise SystemExit('Cannot find Android Groovy buildTypes')
+              source = source.replace(needle, needle + '''
+                  release {
+                      minifyEnabled false
+                      shrinkResources false
+                  }
+              ''', 1)
+          else:
+              raise SystemExit('Cannot find Android app Gradle build file')
+          path.write_text(source)
+          print('Disabled R8 shrinking and obfuscation for Release:', path)
+          print('Keeping ARM64 and Flutter Dart tree shaking enabled')
+          PY
+
+      # Release builds must use the Firebase-registered production certificate.
+      # Decode only on the runner; never commit the private signing key.
+      - name: Configure and validate Waffra release signing
+        shell: bash
+        env:
+          WAFFRA_RELEASE_KEYSTORE_BASE64: ${{ secrets.WAFFRA_RELEASE_KEYSTORE_BASE64 }}
+          WAFFRA_RELEASE_STORE_PASSWORD: ${{ secrets.WAFFRA_RELEASE_STORE_PASSWORD }}
+          WAFFRA_RELEASE_KEY_PASSWORD: ${{ secrets.WAFFRA_RELEASE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in WAFFRA_RELEASE_KEYSTORE_BASE64 WAFFRA_RELEASE_STORE_PASSWORD WAFFRA_RELEASE_KEY_PASSWORD; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::Required signing secret $name is missing or empty"
+              exit 1
+            fi
+          done
+          umask 077
+          if ! printf '%s' "$WAFFRA_RELEASE_KEYSTORE_BASE64" | base64 --decode > android/app/waffra-release.jks; then
+            echo "::error::Signing keystore Base64 cannot be decoded"
+            exit 1
+          fi
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, subprocess, sys
+
+          key = Path('android/app/waffra-release.jks')
+          if key.stat().st_size < 500:
+              sys.exit('Signing keystore is unexpectedly small')
+          result = subprocess.run(
+              ['keytool', '-list', '-v', '-storetype', 'JKS', '-keystore', str(key),
+               '-alias', 'waffra-release', '-storepass:env', 'WAFFRA_RELEASE_STORE_PASSWORD'],
+              text=True, capture_output=True)
+          if result.returncode:
+              sys.exit('FAIL: cannot unlock the release keystore with the stored password, or signing alias is missing')
+          if 'PrivateKeyEntry' not in result.stdout:
+              sys.exit('FAIL: signing alias is not a private key entry')
+          expected = {
+              'SHA1': '7B:65:B9:0C:A5:1C:0D:EC:5D:36:CB:AB:1A:F7:89:11:9D:9B:43:35',
+              'SHA256': '89:4C:43:6D:C4:27:0D:46:81:57:07:A2:91:47:70:9E:89:CD:42:D4:0F:BF:5D:3A:E2:41:04:29:3B:03:AE:8C',
+          }
+          for label, fingerprint in expected.items():
+              match = re.search(r'\b' + label + r':\s*([0-9A-Fa-f:]+)', result.stdout)
+              if not match or match.group(1).lower() != fingerprint.lower():
+                  sys.exit('FAIL: release signing ' + label + ' does not match the certificate registered in Firebase')
+              print('Verified release signing', label + ':', match.group(1))
+
+          gradle_path = Path('android/app/build.gradle.kts')
+          gradle = gradle_path.read_text()
+          if gradle.count('buildTypes {') != 1:
+              sys.exit('FAIL: cannot find a unique Android buildTypes block')
+          gradle = gradle.replace('buildTypes {', '''signingConfigs {
+                  create("waffraRelease") {
+                      keyAlias = "waffra-release"
+                      keyPassword = System.getenv("WAFFRA_RELEASE_KEY_PASSWORD")
+                      storeFile = file("waffra-release.jks")
+                      storePassword = System.getenv("WAFFRA_RELEASE_STORE_PASSWORD")
+                  }
+              }
+              buildTypes {''', 1)
+          gradle, n = re.subn(
+              r'signingConfig\s*=\s*signingConfigs\.getByName\("debug"\)',
+              'signingConfig = signingConfigs.getByName("waffraRelease")', gradle)
+          if n != 1:
+              sys.exit('FAIL: expected Flutter-generated release signingConfig not found')
+          gradle_path.write_text(gradle)
+          print('Configured Android release build to use validated Waffra private signing key')
+          PY
+
+      # Gradle's dependency cache is already active via setup-gradle.
+      # Enable task output caching too; signed APKs and keystores are excluded.
+      - name: Enable Gradle task output build cache
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f android/gradle.properties
+          if ! grep -q '^org.gradle.caching=true$' android/gradle.properties; then
+            printf '\norg.gradle.caching=true\n' >> android/gradle.properties
+          fi
+          grep -q '^org.gradle.caching=true$' android/gradle.properties
+          echo 'Gradle task output caching enabled.'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Identify Flutter compilation-cache compatibility
+        id: flutter_cache_identity
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json,os,subprocess
+          data=json.loads(subprocess.check_output(['flutter','--version','--machine'],text=True))
+          revision=data['frameworkRevision'][:16]
+          engine=data['engineRevision'][:16]
+          with open(os.environ['GITHUB_OUTPUT'],'a') as output:
+              output.write(f'revision={revision}-{engine}\n')
+          print('Flutter cache framework/engine:',revision,engine)
+          PY
+
+      # Cache only Flutter compilation intermediates. Flutter validates the
+      # source/asset dependency graph for every actual release build.
+      - name: Restore Flutter compilation intermediates
+        id: flutter_compile_cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .dart_tool/flutter_build
+          key: waffra-flutter-compile-v1-${{ runner.os }}-${{ steps.flutter_cache_identity.outputs.revision }}-${{ hashFiles('pubspec.lock', 'pubspec.yaml', 'native/**', 'firebase/google-services.json', '.github/workflows/android.yml') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            waffra-flutter-compile-v1-${{ runner.os }}-${{ steps.flutter_cache_identity.outputs.revision }}-${{ hashFiles('pubspec.lock', 'pubspec.yaml', 'native/**', 'firebase/google-services.json', '.github/workflows/android.yml') }}-
+
+      - name: Record Flutter compilation cache restore
+        shell: bash
+        env:
+          CACHE_MATCH: ${{ steps.flutter_compile_cache.outputs.cache-matched-key }}
+        run: |
+          if [ -n "$CACHE_MATCH" ]; then
+            echo 'Flutter compilation intermediates: restored prior compatible cache.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Flutter compilation intermediates: cold start.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Remove Flutter-generated sample test and stale lint include
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          sample = Path('test/widget_test.dart')
+          if sample.exists() and 'MyApp' in sample.read_text():
+              sample.unlink()
+              print('Removed Flutter create default MyApp sample test')
+          options = Path('analysis_options.yaml')
+          if options.exists():
+              data = options.read_text()
+              data = data.replace('include: package:flutter_lints/flutter.yaml', '')
+              options.write_text(data)
+              print('Removed unresolved generated flutter_lints include')
+          PY
+
+      - name: Flutter static analysis
+        run: flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings
+
+      # Validate the cache invalidation logic itself on every build.
+      - name: Verify Smart CI safety policies
+        run: python3 -m unittest discover -s scripts -p 'test_smart_ci.py' -v
+
+      # A test cache contains ONLY fingerprints and previous green results,
+      # never compiled APKs or security secrets. An older successful full
+      # release is used as the reference if the exact run has no cache.
+      - name: Restore verified passing Flutter test fingerprints
+        id: smart_cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .ci_cache/waffra_green_tests.json
+          key: waffra-smart-tests-v2-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            waffra-smart-tests-v2-${{ runner.os }}-
+
+      # Tests touching money, bank messages, due dates, security and backup
+      # always run. Other tests run if their transitive source or environment
+      # changed. Scheduled/full-smoke releases re-run ALL Flutter tests.
+      - name: Run Smart Incremental Flutter tests
+        id: smart_tests
+        env:
+          WAFFRA_FULL_VALIDATION: 'true'
+        run: python3 scripts/smart_ci.py
+
+      - name: Generate Waffra app icon
+        run: dart run flutter_launcher_icons
+
+      # Fast builds always run flutter analyze + flutter test + signed ARM64.
+      # Full smoke is opt-in on workflow_dispatch and automatic nightly.
+      # The hosted Android emulator uses x86_64, hence an extra x64 APK is
+      # only compiled in full-smoke mode; it must not slow every push.
+      # Upload only the final ARM64 APK for users.
+      - name: Build x64 Release APK for emulator smoke test
+        env:
+          WAFFRA_RELEASE_STORE_PASSWORD: ${{ secrets.WAFFRA_RELEASE_STORE_PASSWORD }}
+          WAFFRA_RELEASE_KEY_PASSWORD: ${{ secrets.WAFFRA_RELEASE_KEY_PASSWORD }}
+        run: flutter build apk --no-pub --release --target-platform android-x64 --tree-shake-icons
+
+      - name: Verify Release startup on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          script: |
+            set -euo pipefail
+            adb install -r build/app/outputs/flutter-apk/app-release.apk
+            PACKAGE=$(adb shell pm list packages -3 | tr -d '\r' | sed -n 's/^package://p' | grep -m1 -E 'waffra' || true)
+            test -n "$PACKAGE" || { echo "Could not find installed Waffra package"; exit 1; }
+            adb logcat -c
+            adb shell monkey -p "$PACKAGE" -c android.intent.category.LAUNCHER 1
+            sleep 18
+            adb shell pidof "$PACKAGE" || { adb logcat -d -t 350; exit 1; }
+            adb shell uiautomator dump /sdcard/waffra-ui.xml || true
+            adb pull /sdcard/waffra-ui.xml /tmp/waffra-ui.xml || true
+            if [ -f /tmp/waffra-ui.xml ]; then
+              if grep -qE 'تعذر تشغيل وفرة|نسخ تفاصيل الخطأ|Retry' /tmp/waffra-ui.xml; then
+                echo "Startup error UI detected"
+                adb logcat -d -t 350
+                exit 1
+              fi
+            fi
+            if adb logcat -d -t 2000 | grep -E 'NoSuchMethodError.*SharedPreferences|FATAL EXCEPTION|Waffra startup failed:'; then
+              echo "Release startup error detected in Android logs"
+              exit 1
+            fi
+            echo "Release app launched without detected startup exception"
+
+      - name: Build optimized ARM64 Release APK
+        shell: bash
+        env:
+          WAFFRA_RELEASE_STORE_PASSWORD: ${{ secrets.WAFFRA_RELEASE_STORE_PASSWORD }}
+          WAFFRA_RELEASE_KEY_PASSWORD: ${{ secrets.WAFFRA_RELEASE_KEY_PASSWORD }}
+        run: |
+          set -o pipefail
+          started=$(date +%s)
+          # Gradle/Maven occasionally answer 429 Too Many Requests on hosted
+          # runners. Retry transient download failures rather than report
+          # them as application or Dart compilation failures.
+          for attempt in 1 2 3 4; do
+            echo "Android ARM64 build attempt ${attempt}/4"
+            if flutter build apk --no-pub --release --target-platform android-arm64 --tree-shake-icons; then
+              elapsed=$(( $(date +%s) - started ))
+              printf 'ARM64 build command: **%s seconds** (including retries, if any).\n' "$elapsed" >> "$GITHUB_STEP_SUMMARY"
+              echo "WAFFRA_ARM64_BUILD_SECONDS=$elapsed"
+              exit 0
+            fi
+            if [ "$attempt" -eq 4 ]; then
+              echo "Android build failed after four attempts"
+              exit 1
+            fi
+            sleep $((15 * attempt))
+          done
+
+      - name: Measure release APK size
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('build/app/outputs/flutter-apk/app-release.apk')
+          print(f'WAFFRA_ARM64_RELEASE_APK_MIB={p.stat().st_size / 1048576:.2f}')
+          PY
+
+      - name: Verify final APK uses Firebase-registered Waffra release signing
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, re, subprocess, sys
+          expected_sha1 = '7b65b90ca51c0dec5d36cbab1af789119d9b4335'
+          expected_sha256 = '894c436dc4270d46815707a29147709e89cd42d40fbf5d3ae24104293b03ae8c'
+          apk = 'build/app/outputs/flutter-apk/app-release.apk'
+          found = subprocess.run(
+              ['bash', '-lc', 'find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1'],
+              text=True, capture_output=True, check=True).stdout.strip()
+          if not found: sys.exit('FAIL: Android apksigner not found')
+          result = subprocess.run([found, 'verify', '--print-certs', apk], text=True, capture_output=True)
+          if result.returncode: sys.exit('FAIL: final APK signature verification failed')
+          for label, expected in [('SHA-1', expected_sha1), ('SHA-256', expected_sha256)]:
+              match = re.search(r'certificate ' + label + r' digest:\s*([0-9a-fA-F:]+)', result.stdout)
+              if not match or match.group(1).replace(':','').lower() != expected:
+                  sys.exit('FAIL: final APK ' + label + ' is not the registered Waffra release certificate')
+              print('Final APK', label, 'matches Firebase registered release certificate')
+          cfg=json.loads(pathlib.Path('firebase/google-services.json').read_text())
+          android_clients = [
+              o for client in cfg['client'] for o in client.get('oauth_client', [])
+              if o.get('client_type') == 1 and
+              o.get('android_info', {}).get('package_name') == 'com.waffra.app'
+          ]
+          if not any(o['android_info'].get('certificate_hash','').replace(':','').lower() == expected_sha1 for o in android_clients):
+              print('NOTICE: checked-in google-services.json predates release SHA-1; refresh it from Firebase to ensure Google Sign-In client data is current')
+          PY
+
+      - name: Upload Waffra Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Waffra-Android-ARM64-Release
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
+
+      # Only save compilation state after the signed APK was built, verified
+      # and uploaded. Skip excessive cache sizes that hurt performance.
+      - name: Measure Flutter compilation cache size
+        id: flutter_cache_size
+        shell: bash
+        run: |
+          if [ ! -d .dart_tool/flutter_build ]; then
+            echo 'eligible=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          bytes=$(du -sb .dart_tool/flutter_build | cut -f1)
+          echo "Flutter compilation intermediates: $bytes bytes"
+          if [ "$bytes" -gt 0 ] && [ "$bytes" -le 524288000 ]; then
+            echo 'eligible=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'eligible=false' >> "$GITHUB_OUTPUT"
+            echo 'Compilation cache upload skipped (empty or above 500 MiB).'
+          fi
+
+      - name: Save Flutter compilation intermediates
+        if: steps.flutter_cache_size.outputs.eligible == 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .dart_tool/flutter_build
+          key: waffra-flutter-compile-v1-${{ runner.os }}-${{ steps.flutter_cache_identity.outputs.revision }}-${{ hashFiles('pubspec.lock', 'pubspec.yaml', 'native/**', 'firebase/google-services.json', '.github/workflows/android.yml') }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+      # Results become reusable ONLY after tests, Android build, signature
+      # verification and APK upload have ALL succeeded in this same job.
+      - name: Save verified green test fingerprints
+        uses: actions/cache/save@v4
+        with:
+          path: .ci_cache/waffra_green_tests.json
+          key: waffra-smart-tests-v2-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
