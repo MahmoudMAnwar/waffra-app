@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.util.TypedValue
+import android.view.View
 import android.widget.RemoteViews
 
 /** Compact 1x1 launcher widget. Explicit taps only; no SMS inbox permission. */
@@ -29,10 +30,10 @@ class WaffraWidget : AppWidgetProvider() {
             val color = if (negative && !hidden) Color.rgb(255, 134, 134)
                         else Color.rgb(187, 245, 215)
             val fontSize = when {
-                balance.length >= 14 -> 9.0f
-                balance.length >= 11 -> 10.5f
-                balance.length >= 9 -> 12.0f
-                else -> 15.0f
+                balance.length >= 14 -> 8.0f
+                balance.length >= 11 -> 9.0f
+                balance.length >= 9 -> 10.5f
+                else -> 13.0f
             }
             val intent = Intent(context, WaffraQuickActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
@@ -43,6 +44,11 @@ class WaffraWidget : AppWidgetProvider() {
             )
             for (id in manager.getAppWidgetIds(component)) {
                 val view = RemoteViews(context.packageName, R.layout.waffra_widget)
+                // The visible widget is an 80dp x 80dp circle, regardless of
+                // the host launcher's non-square 1x1 cell dimensions.
+                // Remove decoration when the complete unshortened balance needs room.
+                view.setViewVisibility(R.id.widget_sparkle,
+                    if (balance.length >= 11) View.GONE else View.VISIBLE)
                 view.setTextViewText(R.id.widget_balance, balance)
                 view.setTextViewText(R.id.widget_currency, currency)
                 view.setTextColor(R.id.widget_balance, color)
