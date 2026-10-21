@@ -1,7 +1,5 @@
 import 'dart:convert';
 
-import 'package:drift/drift.dart';
-
 import 'waffra_atomic_finance_snapshot.dart';
 import 'waffra_encrypted_store.dart';
 import 'waffra_fresh_encrypted_vault_bootstrap.dart';
