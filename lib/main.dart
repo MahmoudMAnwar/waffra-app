@@ -3345,19 +3345,20 @@ Future<void> bulkSmsSheet({String? initialText})async {
   return Card(color:e.income?waffraIncomeBackground:waffraExpenseBackground,
    child:Stack(children:[
     Padding(padding:EdgeInsets.only(top:attachmentCount>0?20:0),child:ListTile(
+   textColor:waffraInk,iconColor:forest,
    leading:CircleAvatar(backgroundColor:Color(c.color).withValues(alpha:.15),
     child:Icon(categoryIcon(c.icon),color:Color(c.color))),
-   title:WaffraText(e.title),subtitle:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
-    WaffraText('${e.category} • ${dayText(e.date)}'),
+   title:WaffraText(e.title,style:const TextStyle(color:waffraInk,fontWeight:FontWeight.w600)),subtitle:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
+    WaffraText('${e.category} • ${dayText(e.date)}',style:const TextStyle(color:waffraInk)),
 
    ]),
    trailing:Row(mainAxisSize:MainAxisSize.min,children:[
     Column(mainAxisSize:MainAxisSize.min,children:[
-     Text('${e.income?'+':'-'}${cash(e.amount)}',style:TextStyle(fontFamily:'Tajawal',fontSize:18,fontWeight:FontWeight.w800,color:e.income?waffraIncomeTone(context):null)),
-     WaffraText(waffraIsEnglish?'SAR':'ريال',style:TextStyle(fontSize:13,fontWeight:FontWeight.bold,color:e.income?waffraIncomeTone(context):null)),
+     Text('${e.income?'+':'-'}${cash(e.amount)}',style:TextStyle(fontFamily:'Tajawal',fontSize:18,fontWeight:FontWeight.w800,color:e.income?const Color(0xFF075C40):waffraInk)),
+     WaffraText(waffraIsEnglish?'SAR':'ريال',style:TextStyle(fontSize:13,fontWeight:FontWeight.bold,color:e.income?const Color(0xFF075C40):waffraInk)),
     ]),
     IconButton(tooltip:waffraIsEnglish?'Transaction options':'خيارات المعاملة',
-     onPressed:()=>transactionActions(e),icon:const Icon(Icons.more_vert)),
+     onPressed:()=>transactionActions(e),icon:const Icon(Icons.more_vert,color:forest)),
    ]))),
    if(attachmentCount>0)PositionedDirectional(top:0,end:0,child:Semantics(
     label:waffraIsEnglish?'$attachmentCount attachments':'عدد المرفقات $attachmentCount',
@@ -6229,7 +6230,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      child:Padding(padding:const EdgeInsets.all(15),child:Row(children:[
       CircleAvatar(radius:20,backgroundColor:emerald.withValues(alpha:.12),child:Icon(icon,color:emerald,size:21)),
       const SizedBox(width:10),Expanded(child:WaffraText(heading,style:const TextStyle(fontSize:16,fontWeight:FontWeight.bold))),
-      AnimatedRotation(turns:opened?0.5:0,duration:waffraMotion(200),child:const Icon(Icons.keyboard_arrow_down_rounded)),
+      AnimatedRotation(turns:opened?0.5:0.0,duration:waffraMotion(200),child:const Icon(Icons.keyboard_arrow_down_rounded)),
      ]))),
     AnimatedSize(duration:waffraMotion(220),curve:Curves.easeInOutCubic,
      child:opened?Column(children:[
