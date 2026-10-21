@@ -1938,6 +1938,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   int forecastReduction=20;
  bool recurringRemindersEnabled=false;
  bool ready=false;
+ String? lastBackupGeneratedAt;
+ int? lastBackupBytes;
+ bool protectRecentApps=true;
+ String? _accountOpenSection;
+ String accountSearch='';
  final _tourKeys=List<GlobalKey>.generate(6,(_)=>GlobalKey());
  bool tourActive=false;
  bool tourTargetReady=false;
@@ -2058,6 +2063,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   monthlyBudget=p.getDouble('waffra_monthly_budget_v1')??0;
   monthlyBudgetEnabled=p.getBool('waffra_monthly_budget_enabled_v1')??(monthlyBudget>0);
   recurringRemindersEnabled=p.getBool('waffra_recurring_reminders_enabled_v1')??false;
+  lastBackupGeneratedAt=p.getString('waffra_backup_last_exported_v1');
+  lastBackupBytes=p.getInt('waffra_backup_last_size_v1');
+  protectRecentApps=p.getBool('waffra_protect_recents_v1')??true;
   try{
    final rawRules=p.getString('waffra_learned_merchants_v1');
    if(rawRules!=null){
@@ -5753,7 +5761,29 @@ Future<void> bulkSmsSheet({String? initialText})async {
   'learnedMerchants':learnedMerchantCategories,
   'profile':widget.profile.toJson(),
  });
+ Future<bool> _authorizeSensitiveAction(String operation)async{
+  if(!await WaffraBiometrics.isAvailable()){
+   if(mounted)await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Fingerprint required':'بصمة الجهاز مطلوبة'),
+    content:WaffraText(waffraIsEnglish?'Enroll a fingerprint in your device settings before $operation. Waffra does not bypass biometric verification with an app PIN.':'يجب تسجيل بصمة على هاتفك أولاً لحماية هذه العملية. لن يسمح وفرة باستخدام رمز التطبيق بدلاً منها.'),
+    actions:[OutlinedButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))]));
+   return false;
+  }
+  final allowed=await WaffraBiometrics.unlock();
+  if(!allowed&&mounted)snack(context,waffraIsEnglish?'Biometric verification required to continue':'يلزم التحقق ببصمة الجهاز للمتابعة');
+  return allowed;
+ }
+ Future<void> _setRecentAppProtection(bool enabled)async{
+  final p=await SharedPreferences.getInstance();
+  await p.setBool('waffra_protect_recents_v1',enabled);
+  if(mounted)setState(()=>protectRecentApps=enabled);
+  if(Platform.isAndroid){
+   try{await _privacyChannel.invokeMethod<void>('setProtectRecents',enabled);}
+   on PlatformException catch(e){debugPrint('Recents privacy: $e');}
+  }
+ }
  Future<void> backupDialog()async {
+  if(!await _authorizeSensitiveAction('backing up or restoring data')||!mounted)return;
   final input=TextEditingController(),secret=TextEditingController();
   var attempted=false;String? backupError;
   await showWaffraDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
@@ -5769,6 +5799,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
      try{
       final encrypted=await WaffraSecureBackup.encrypt(exportBackup(),secret.text);
       await Clipboard.setData(ClipboardData(text:encrypted));
+      final generatedAt=DateTime.now().toIso8601String();
+      final prefs=await SharedPreferences.getInstance();
+      await prefs.setString('waffra_backup_last_exported_v1',generatedAt);
+      await prefs.setInt('waffra_backup_last_size_v1',utf8.encode(encrypted).length);
+      if(mounted)setState((){lastBackupGeneratedAt=generatedAt;lastBackupBytes=utf8.encode(encrypted).length;});
       if(ctx.mounted)snackSuccess(ctx,waffraIsEnglish?'Encrypted backup copied; keep it and its password safe':'تم نسخ النسخة المشفّرة، احتفظ بها وكلمة مرورها في مكان آمن');
      }catch(error){if(ctx.mounted)update(()=>backupError=error.toString());}
     },icon:const Icon(Icons.lock_outline),label:WaffraText(waffraIsEnglish?'Copy encrypted backup':'نسخ النسخة المشفّرة')),
@@ -5813,6 +5848,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        waffraIsEnglish?'Confirm backup restore':'تأكيد الاستعادة',
        waffraIsEnglish?'This will replace all current transactions, categories, savings goals and recurring items with the backup. Make a backup of current data first. Continue?':'سيتم استبدال جميع المعاملات والأقسام وأهداف الادخار والعمليات المتكررة الحالية بمحتويات النسخة الاحتياطية. احفظ نسخة من بياناتك الحالية قبل المتابعة. هل تريد الاستمرار؟');
       if(ok!=true||!mounted)return;
+      if(!await _authorizeSensitiveAction('restoring data')||!mounted)return;
       setState((){
        entries..clear()..addAll(newEntries);
        categories..clear()..addAll(newCategories);
@@ -6061,6 +6097,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   if(mounted)snackSuccess(context,waffraIsEnglish?'PIN changed':'تم تغيير الرمز بنجاح');
  }
  Future<void> eraseFinancialData()async {
+  if(!await _authorizeSensitiveAction('deleting financial data')||!mounted)return;
   final ok=await confirmDeletion(
    waffraIsEnglish?'Permanently delete financial data?':'حذف البيانات المالية نهائيًا',
    waffraIsEnglish?'This deletes transactions, categories, budgets, goals and recurring schedules. It cannot be undone. Your profile and app settings stay.':
@@ -6068,7 +6105,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   if(ok!=true||!mounted)return;
   setState((){
    entries.clear();categories..clear()..addAll(defaultCategories());
-   goals.clear();challenges.clear();recurring.clear();deletedCategories.clear();smsHashes.clear();
+   goals.clear();challenges.clear();recurring.clear();deletedCategories.clear();deletedGoals.clear();deletedRecurring.clear();recurringPostponed.clear();smsHashes.clear();
    learnedMerchantCategories.clear();monthlyBudget=0;monthlyBudgetEnabled=false;
   });
   final p=await SharedPreferences.getInstance();
