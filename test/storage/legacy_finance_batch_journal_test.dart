@@ -116,7 +116,7 @@ void main() {
     final envelope = jsonDecode(
         prefs.getString(WaffraLegacyFinanceBatchJournal.pendingKey)!)
         as Map<String, dynamic>;
-    envelope['checksum'] = '0' * 64;
+    envelope['checksum'] = List.filled(64, '0').join();
     await prefs.setString(WaffraLegacyFinanceBatchJournal.pendingKey,
         jsonEncode(envelope));
     await expectLater(journal.recover(prefs), throwsA(isA<StateError>()));
