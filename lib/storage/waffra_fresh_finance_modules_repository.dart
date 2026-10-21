@@ -35,12 +35,6 @@ class WaffraFreshModulesRepository {
     WaffraFinanceModule.recurring => 'recurring_id',
   };
 
-  static String _sourceKey(WaffraFinanceModule module) => switch (module) {
-    WaffraFinanceModule.categories => 'waffra_categories_v24',
-    WaffraFinanceModule.goals => 'waffra_goals_v24',
-    WaffraFinanceModule.recurring => 'waffra_recurring_v24',
-  };
-
   Future<void> _requireReady() async {
     if (!experimentalEnabled) {
       throw StateError('Encrypted finance modules are disabled by default.');
