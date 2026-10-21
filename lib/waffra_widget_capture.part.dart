@@ -32,6 +32,13 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
  int _savedIncome=0,_savedExpenses=0,_notSaved=0;
  List<_WidgetParsedSms> _results=[];
  Set<String> _knownHashes={};
+ WaffraHomeFinancePersistence get _financePersistence =>
+     WaffraHomeFinancePersistence(
+       coordinator: WaffraLegacyFinanceWriterCoordinator(
+         testDirectory: widget.testWriterDirectory,
+         testBypassNativeLock: widget.testBypassNativeLock,
+       ),
+     );
 
  @override void initState(){
   super.initState();
@@ -39,21 +46,13 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
  }
  Future<void> _loadSettings()async{
   try{
+   final loaded=await _financePersistence.loadWithWitness();
    final prefs=await SharedPreferences.getInstance();
-   await prefs.reload();
-   await const WaffraLiveLegacyFinanceGuard().requireLegacySource(prefs,reload:false);
-   if(prefs.containsKey(WaffraLegacyWidgetCommitJournal.pendingKey)){
-    await WaffraLegacyFinanceWriterCoordinator(
-     testDirectory:widget.testWriterDirectory,
-     testBypassNativeLock:widget.testBypassNativeLock,
-    ).withCurrentPreferences((_) async {});
-    await prefs.reload();
-   }
    if(!mounted)return;
    setState((){
     _english=prefs.getString('waffra_language')=='en';
     _dark=prefs.getBool('waffra_dark_mode')??false;
-    _knownHashes=(prefs.getStringList('waffra_sms_hashes_v1')??[]).toSet();
+    _knownHashes=(loaded.finance.getStringList('waffra_sms_hashes_v1')??[]).toSet();
     _ready=true;
    });
   }catch(e){
@@ -131,10 +130,7 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
   final allowDuplicates=_allowDuplicates;
   setState(()=>_saving=true);
   try{
-   final outcome=await WaffraLegacyFinanceWriterCoordinator(
-       testDirectory:widget.testWriterDirectory,
-       testBypassNativeLock:widget.testBypassNativeLock,
-      ).withCurrentPreferences((prefs) async {
+   final outcome=await _financePersistence.withLegacyWriter((prefs) async {
    final current=(jsonDecode(prefs.getString('entries')??'[]') as List)
     .map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x as Map))).toList();
    final oldHashes=(prefs.getStringList('waffra_sms_hashes_v1')??[]).toSet();
