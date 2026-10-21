@@ -10,29 +10,6 @@ void main() {
     cipher = WaffraCloudCipher();
   });
 
-  Future<WaffraEncryptedCloudRecord> seal(
-      {String vaultId = 'vault-a', Map<String, dynamic>? record}) async {
-    final key = await cipher.newRandomVaultKey();
-    return cipher.encrypt(
-      vaultKey: key,
-      vaultId: vaultId,
-      kind: 'entry',
-      recordId: 'entry-1',
-      deviceId: 'device-a',
-      mutationId: 'mutation-1',
-      localVersion: 1,
-      record: record ?? {
-        'id': 'entry-1',
-        'title': 'فاتورة سرية 💸',
-        'category': 'غذاء',
-        'amount': 12.75,
-        'income': false,
-        'date': '2026-10-21T14:00:00',
-        'receiptPath': '/private/receipt.jpg',
-      },
-    );
-  }
-
   test('record is round-trippable, but envelope contains no financial plaintext',
       () async {
     final key = await cipher.newRandomVaultKey();
