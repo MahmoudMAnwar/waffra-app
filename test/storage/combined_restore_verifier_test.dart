@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/storage/waffra_combined_restore_verifier.dart';
+import 'package:waffra/storage/waffra_disposable_recovery_journal.dart';
 import 'package:waffra/storage/waffra_encrypted_store.dart';
 import 'package:waffra/storage/waffra_ledger_projection.dart';
 import 'package:waffra/storage/waffra_portable_backup_v2.dart';
@@ -92,6 +93,27 @@ void main() {
     final files = await receipts.list().toList();
     expect(files, hasLength(1));
     expect(await File(files.single.path).readAsBytes(), [1, 2, 3, 4, 5]);
+  });
+
+  test('combined verification records all three durable journal phases',
+      () async {
+    final journalDirectory =
+        await Directory('${root.path}/journal').create();
+    final journal = WaffraDisposableRecoveryJournal(
+      directory: journalDirectory, experimentalEnabled: true);
+    final report = await enabled().verify(
+      sandboxVaultId: 'disposable-vault',
+      encryptedArchive: await archive(),
+      password: password,
+      emptyReceiptSandboxDirectory: receipts,
+      journal: journal,
+    );
+    final checkpoints = await journal.inspect();
+    expect(report.transactionCount, 2);
+    expect(checkpoints.map((x) => x.phase).toList(), [0, 1, 2]);
+    expect(checkpoints.last.sourceChecksum, report.sourceChecksum);
+    expect(checkpoints.last.receipts, report.receiptCount);
+    expect(checkpoints.last.entries, report.transactionCount);
   });
 
   test('default disabled mode refuses all mutations', () async {
