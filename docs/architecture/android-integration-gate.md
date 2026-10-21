@@ -1,8 +1,8 @@
 # Android encrypted storage integration gate
 
-The CI workflow **Waffra Android encrypted DB integration** installs an app on
+The CI workflow **Waffra Android Encrypted Storage Integration** installs an app on
 a disposable Android emulator and runs
-`integration_test/storage_encryption_android_test.dart`. It validates:
+`integration_test/encrypted_storage_android_test.dart`. It validates:
 - Flutter + Dart native-assets hook packages SQLite3MultipleCiphers on Android;
 - the `PRAGMA cipher` fail-closed check succeeds;
 - the device secure storage returns the same key across opens;
