@@ -32,7 +32,7 @@ void main() {
     }
     expect(source.contains('WaffraFooterNavigation('),isTrue);
     final footerSource=File('lib/waffra_footer.dart').readAsStringSync();
-    expect(footerSource.contains('static const itemCount=6'),isTrue);
+    expect(footerSource.contains('static const itemCount=5'),isTrue);
 
     // Keep the floating add action, but not the duplicate dashboard shortcut.
     expect(source.contains('floatingActionButton:'), isTrue);
