@@ -6450,7 +6450,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     const Icon(Icons.spa_rounded,color:Colors.white,size:26),
     const SizedBox(width:7),
     Flexible(child:WaffraText(waffraIsEnglish?'Waffra':'وفرة',
-     maxLines:1,style:const TextStyle(color:Colors.white,
+     maxLines:1,style:TextStyle(color:Colors.white,
       fontWeight:FontWeight.bold,fontSize:_headerCompact?19:22))),
    ]),
    actions:[
