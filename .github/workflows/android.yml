@@ -492,8 +492,57 @@ jobs:
           print('Configured Android release build to use validated Waffra private signing key')
           PY
 
+      # Gradle's dependency cache is already active via setup-gradle.
+      # Enable task output caching too; signed APKs and keystores are excluded.
+      - name: Enable Gradle task output build cache
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f android/gradle.properties
+          if ! grep -q '^org.gradle.caching=true$' android/gradle.properties; then
+            printf '\norg.gradle.caching=true\n' >> android/gradle.properties
+          fi
+          grep -q '^org.gradle.caching=true$' android/gradle.properties
+          echo 'Gradle task output caching enabled.'
+
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Identify Flutter compilation-cache compatibility
+        id: flutter_cache_identity
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json,os,subprocess
+          data=json.loads(subprocess.check_output(['flutter','--version','--machine'],text=True))
+          revision=data['frameworkRevision'][:16]
+          engine=data['engineRevision'][:16]
+          with open(os.environ['GITHUB_OUTPUT'],'a') as output:
+              output.write(f'revision={revision}-{engine}\n')
+          print('Flutter cache framework/engine:',revision,engine)
+          PY
+
+      # Cache only Flutter compilation intermediates. Flutter validates the
+      # source/asset dependency graph for every actual release build.
+      - name: Restore Flutter compilation intermediates
+        id: flutter_compile_cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .dart_tool/flutter_build
+          key: waffra-flutter-compile-v1-${{ runner.os }}-${{ steps.flutter_cache_identity.outputs.revision }}-${{ hashFiles('pubspec.lock', 'pubspec.yaml', 'native/**', 'firebase/google-services.json', '.github/workflows/android.yml') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            waffra-flutter-compile-v1-${{ runner.os }}-${{ steps.flutter_cache_identity.outputs.revision }}-${{ hashFiles('pubspec.lock', 'pubspec.yaml', 'native/**', 'firebase/google-services.json', '.github/workflows/android.yml') }}-
+
+      - name: Record Flutter compilation cache restore
+        shell: bash
+        env:
+          CACHE_MATCH: ${{ steps.flutter_compile_cache.outputs.cache-matched-key }}
+        run: |
+          if [ -n "$CACHE_MATCH" ]; then
+            echo 'Flutter compilation intermediates: restored prior compatible cache.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Flutter compilation intermediates: cold start.' >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Remove Flutter-generated sample test and stale lint include
         shell: bash
@@ -595,12 +644,16 @@ jobs:
           WAFFRA_RELEASE_KEY_PASSWORD: ${{ secrets.WAFFRA_RELEASE_KEY_PASSWORD }}
         run: |
           set -o pipefail
+          started=$(date +%s)
           # Gradle/Maven occasionally answer 429 Too Many Requests on hosted
           # runners. Retry transient download failures rather than report
           # them as application or Dart compilation failures.
           for attempt in 1 2 3 4; do
             echo "Android ARM64 build attempt ${attempt}/4"
             if flutter build apk --no-pub --release --target-platform android-arm64 --tree-shake-icons; then
+              elapsed=$(( $(date +%s) - started ))
+              printf 'ARM64 build command: **%s seconds** (including retries, if any).\n' "$elapsed" >> "$GITHUB_STEP_SUMMARY"
+              echo "WAFFRA_ARM64_BUILD_SECONDS=$elapsed"
               exit 0
             fi
             if [ "$attempt" -eq 4 ]; then
@@ -654,6 +707,32 @@ jobs:
           name: Waffra-Android-ARM64-Release
           path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
+
+      # Only save compilation state after the signed APK was built, verified
+      # and uploaded. Skip excessive cache sizes that hurt performance.
+      - name: Measure Flutter compilation cache size
+        id: flutter_cache_size
+        shell: bash
+        run: |
+          if [ ! -d .dart_tool/flutter_build ]; then
+            echo 'eligible=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          bytes=$(du -sb .dart_tool/flutter_build | cut -f1)
+          echo "Flutter compilation intermediates: $bytes bytes"
+          if [ "$bytes" -gt 0 ] && [ "$bytes" -le 524288000 ]; then
+            echo 'eligible=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'eligible=false' >> "$GITHUB_OUTPUT"
+            echo 'Compilation cache upload skipped (empty or above 500 MiB).'
+          fi
+
+      - name: Save Flutter compilation intermediates
+        if: steps.flutter_cache_size.outputs.eligible == 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .dart_tool/flutter_build
+          key: waffra-flutter-compile-v1-${{ runner.os }}-${{ steps.flutter_cache_identity.outputs.revision }}-${{ hashFiles('pubspec.lock', 'pubspec.yaml', 'native/**', 'firebase/google-services.json', '.github/workflows/android.yml') }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       # Results become reusable ONLY after tests, Android build, signature
       # verification and APK upload have ALL succeeded in this same job.
