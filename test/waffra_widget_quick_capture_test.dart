@@ -43,9 +43,11 @@ void main(){
  });
 
  testWidgets('Only confirmation writes an SMS transaction and prevents duplicates',(tester)async{
-  final testLockDirectory=await Directory.systemTemp.createTemp('waffra-widget-lock-test-');
-  addTearDown(()async{
-   if(await testLockDirectory.exists())await testLockDirectory.delete(recursive:true);
+  // Widget tests run in FakeAsync. Create/clean this local-only folder
+  // synchronously or the test can hang before the first frame is pumped.
+  final testLockDirectory=Directory.systemTemp.createTempSync('waffra-widget-lock-test-');
+  addTearDown((){
+   if(testLockDirectory.existsSync())testLockDirectory.deleteSync(recursive:true);
   });
   await tester.binding.setSurfaceSize(const Size(430,920));
   addTearDown(()=>tester.binding.setSurfaceSize(null));
