@@ -2163,10 +2163,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        .withCurrentPreferences((p) async {
    // A widget save after this screen loaded makes its transaction list newer
    // than our captured UI ledger. Refuse to overwrite it; caller must reload.
-   if(p.getString('waffra_widget_last_save_v1')!=_lastWidgetRevision ||
-       p.getString('entries')!=_lastLedgerSavedRaw){
-    throw StateError('Ledger changed since last load; reload before saving.');
-   }
+   WaffraLegacyFinanceWriterCoordinator.requireUnchangedLedger(
+    p, expectedRaw:_lastLedgerSavedRaw,
+    expectedWidgetRevision:_lastWidgetRevision,
+   );
    for(final item in captured.entries){
     final value=item.value;
     final bool saved;
@@ -3451,10 +3451,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
   try {
    await const WaffraLegacyFinanceWriterCoordinator()
        .withCurrentPreferences((prefs) async {
-    if(prefs.getString('waffra_widget_last_save_v1')!=_lastWidgetRevision ||
-        prefs.getString('entries')!=_lastLedgerSavedRaw){
-     throw StateError('Ledger changed before delete-all; reload first.');
-    }
+    WaffraLegacyFinanceWriterCoordinator.requireUnchangedLedger(
+     prefs, expectedRaw:_lastLedgerSavedRaw,
+     expectedWidgetRevision:_lastWidgetRevision,
+    );
     final saved=await prefs.setString('entries','[]');
     final cleared=await prefs.setStringList(
       'waffra_sms_hashes_v1',<String>[]);
