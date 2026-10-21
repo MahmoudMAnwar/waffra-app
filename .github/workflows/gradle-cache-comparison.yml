@@ -25,9 +25,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          MAIN_SHA="$(gh api "repos/$REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
-          if [ "$MAIN_SHA" != "$EXPECTED_SHA" ]; then
-            echo "::warning::Main changed since build #492; refusing to benchmark different source code."
+          # Only the comparison workflow itself may have changed since #492.
+          # Other code changes would make the timing comparison invalid.
+          CHANGED="$(gh api "repos/$REPOSITORY/compare/$EXPECTED_SHA...main" --jq '.files[].filename')"
+          if [ "$CHANGED" != ".github/workflows/gradle-cache-comparison.yml" ]; then
+            echo "::warning::App code changed since #492; refusing to benchmark different source code."
             exit 0
           fi
           gh api -X POST "repos/$REPOSITORY/actions/workflows/android.yml/dispatches" \
