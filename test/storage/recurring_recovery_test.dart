@@ -146,7 +146,10 @@ void main() {
     );
     await recovery.restore('vault', 'rec-active', expectedVersion: 2,
       nextDueLocalDate: '2026-11-10');
-    expect((await recovery.items('vault')).length, 2);
+    final visible = await recovery.items('vault');
+    expect(visible, hasLength(1)); // Other recurring record stays in trash.
+    expect(visible.single.id, 'rec-active');
+    expect(visible.single.active, isTrue);
     expect((await db.readOriginalEntryJson('vault')), hasLength(1));
   });
 
