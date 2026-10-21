@@ -41,7 +41,6 @@ import 'storage/waffra_legacy_write_queue.dart';
 import 'storage/waffra_live_legacy_finance_guard.dart';
 import 'storage/waffra_legacy_finance_writer_coordinator.dart';
 import 'storage/waffra_legacy_widget_commit_journal.dart';
-import 'storage/waffra_finance_read_view.dart';
 import 'storage/waffra_home_finance_persistence.dart';
 import 'waffra_home_widget.dart';
 part 'waffra_categories_page.part.dart';
