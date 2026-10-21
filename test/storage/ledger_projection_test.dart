@@ -198,13 +198,12 @@ void main() {
       db.buildRelationalProjection('vault'),
       throwsA(isA<Exception>()),
     );
+    // Creation and inserts happen inside the same transaction. A failed
+    // CHECK constraint must roll back even the projection schema DDL.
     final projected = await db.customSelect(
-      'SELECT name FROM sqlite_master WHERE type = ? AND name = ?',
-      variables: const [],
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='projection_runs'",
     ).get();
-    // Query verification is intentionally narrow: the failed projection
-    // must NOT be mistaken for a fully imported vault on retry.
-    expect(projected, isA<List<dynamic>>());
+    expect(projected, isEmpty);
     await db.close();
   });
 }
