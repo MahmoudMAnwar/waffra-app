@@ -68,8 +68,7 @@ void main() {
     return (preview, staged, plan);
   }
 
-  WaffraDisposableReceiptCopier get copier =>
-      const WaffraDisposableReceiptCopier(experimentalEnabled: true);
+  const copier = WaffraDisposableReceiptCopier(experimentalEnabled: true);
 
   setUp(() async {
     root = await Directory.systemTemp.createTemp('waffra-disposable-copy-');
