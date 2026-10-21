@@ -6252,6 +6252,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
   builder:(_)=>WaffraSubscriptionScreen(items:financialCalendarItems,english:waffraIsEnglish)));
  Widget profilePage(){
   final p=widget.profile;
+  final provider=p.provider.toLowerCase().trim();
+  final isGuest=(provider=='محلي'||provider=='local'||provider=='guest')&&
+   p.email.trim().isEmpty&&p.phone.trim().isEmpty;
   void edit(){Navigator.push<void>(context,MaterialPageRoute(
    builder:(_)=>ProfileForm(provider:p.provider,initial:p,onSave:widget.onProfile)));}
   return ListView(padding:const EdgeInsets.fromLTRB(16,14,16,28),children:[
@@ -6381,16 +6384,16 @@ Future<void> bulkSmsSheet({String? initialText})async {
    ]),
    const SizedBox(height:15),
    OutlinedButton.icon(style:OutlinedButton.styleFrom(
-    foregroundColor:(p.email.trim().isEmpty&&p.phone.trim().isEmpty)?emerald:Colors.red,
-    side:BorderSide(color:(p.email.trim().isEmpty&&p.phone.trim().isEmpty)?emerald:Colors.red)),
+    foregroundColor:(isGuest)?emerald:Colors.red,
+    side:BorderSide(color:(isGuest)?emerald:Colors.red)),
     onPressed:()async{
-     if(p.email.trim().isEmpty&&p.phone.trim().isEmpty){await widget.onLogout();return;}
+     if(isGuest){await widget.onLogout();return;}
      final ok=await confirm(waffraIsEnglish?'Sign out?':'تسجيل الخروج',
       waffraIsEnglish?'Your financial data stays on this device.':'ستبقى بياناتك المالية محفوظة على الجهاز.');
      if(ok==true&&mounted)await widget.onLogout();
     },
-    icon:Icon((p.email.trim().isEmpty&&p.phone.trim().isEmpty)?Icons.login:Icons.logout),
-    label:WaffraText((p.email.trim().isEmpty&&p.phone.trim().isEmpty)?
+    icon:Icon((isGuest)?Icons.login:Icons.logout),
+    label:WaffraText((isGuest)?
      (waffraIsEnglish?'Sign in':'تسجيل الدخول'):(waffraIsEnglish?'Sign out':'تسجيل الخروج'))),
    const SizedBox(height:13),
    WaffraText(waffraIsEnglish?
