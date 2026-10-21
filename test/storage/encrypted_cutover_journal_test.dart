@@ -208,4 +208,111 @@ void main() {
       allWritersRouted: false,
     ), WaffraCutoverRecoveryStatus.manualReconciliationRequired);
   });
+
+  test('legitimate post-activation finance writes survive cold restart',
+      () async {
+    final target = await initialize();
+    await journal().prepare(
+      sourceDigest: source, targetDigest: target, now: now,
+    );
+    await journal().verify(now: now);
+    final activation = await journal().acknowledgeExternalActivation(
+      externalMarkerVerified: true,
+      allWritersRouted: true,
+      now: now,
+    );
+    expect(activation.phase, WaffraCutoverPhase.active);
+    expect(activation.activatedGeneration, 1);
+    final updated = await snapshot().commit(
+      expectedGeneration: 1,
+      fullFinanceSnapshot: {
+        'entries': jsonEncode([
+          {
+            'id': 'new-after-activation',
+            'title': 'Income',
+            'category': 'Salary',
+            'amount': 150.25,
+            'income': true,
+            'date': '2026-10-21T16:00:00',
+            'receiptPath': null,
+          },
+        ]),
+      },
+    );
+    expect(updated.generation, 2);
+    expect(updated.digest, isNot(target));
+
+    // Idempotent replay of the original cutover must not mark the newer
+    // financial data as corrupt or change activation evidence.
+    final replay = await journal().prepare(
+      sourceDigest: source, targetDigest: target,
+      now: now.add(const Duration(hours: 1)),
+    );
+    expect(replay.activatedGeneration, 1);
+    final idempotentActivation =
+        await journal().acknowledgeExternalActivation(
+      externalMarkerVerified: true,
+      allWritersRouted: true,
+      now: now.add(const Duration(hours: 1)),
+    );
+    expect(idempotentActivation.activatedGeneration, 1);
+
+    await vault.close();
+    vault = WaffraEncryptedStore.openAt(
+      File('${root.path}/vault.sqlite'), key: key,
+    );
+    expect(await journal().recover(
+      externalMarkerPresent: true,
+      encryptedKeyReadable: true,
+      allWritersRouted: true,
+    ), WaffraCutoverRecoveryStatus.encryptedReady);
+    expect((await snapshot().read()).generation, 2);
+    expect((await snapshot().read()).values['entries'], contains('new-after-activation'));
+  });
+
+  test('post-activation checksum corruption remains blocked', () async {
+    final target = await initialize();
+    await journal().prepare(sourceDigest: source,
+        targetDigest: target, now: now);
+    await journal().verify(now: now);
+    await journal().acknowledgeExternalActivation(
+      externalMarkerVerified: true,
+      allWritersRouted: true,
+      now: now,
+    );
+    await snapshot().commit(
+      expectedGeneration: 1,
+      fullFinanceSnapshot: {'entries': '[]', 'waffra_goals_v24': '[]'},
+    );
+    await vault.customStatement(
+      "UPDATE fresh_finance_snapshot_state SET snapshot_json = '{}' "
+      "WHERE singleton = 1",
+    );
+    await expectLater(journal().recover(
+      externalMarkerPresent: true,
+      encryptedKeyReadable: true,
+      allWritersRouted: true,
+    ), throwsA(isA<StateError>()));
+  });
+
+  test('rolled-back generation cannot masquerade as new live finance', () async {
+    final target = await initialize();
+    await journal().prepare(sourceDigest: source,
+        targetDigest: target, now: now);
+    await journal().verify(now: now);
+    await journal().acknowledgeExternalActivation(
+      externalMarkerVerified: true,
+      allWritersRouted: true,
+      now: now,
+    );
+    await vault.customStatement(
+      "UPDATE fresh_finance_snapshot_state SET generation = 0 "
+      "WHERE singleton = 1",
+    );
+    expect(await journal().recover(
+      externalMarkerPresent: true,
+      encryptedKeyReadable: true,
+      allWritersRouted: true,
+    ), WaffraCutoverRecoveryStatus.manualReconciliationRequired);
+  });
 }

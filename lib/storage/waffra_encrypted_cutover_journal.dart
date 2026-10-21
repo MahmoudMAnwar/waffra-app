@@ -17,11 +17,14 @@ class WaffraCutoverCheckpoint {
     required this.sourceDigest,
     required this.encryptedDigest,
     required this.phase,
+    required this.activatedGeneration,
   });
 
   final String sourceDigest;
   final String encryptedDigest;
   final WaffraCutoverPhase phase;
+  /// Commit generation when the external source was switched. Null until active.
+  final int? activatedGeneration;
 }
 
 /// Durable, opt-in *experimental* transition checkpoints inside SQLCipher.
@@ -72,6 +75,7 @@ CREATE TABLE IF NOT EXISTS $_table(
   source_digest TEXT NOT NULL,
   encrypted_digest TEXT NOT NULL,
   phase TEXT NOT NULL CHECK(phase IN ('prepared','verified','active')),
+  activated_generation INTEGER CHECK(activated_generation >= 0),
   modified_at_ms INTEGER NOT NULL
 )''');
   }
@@ -83,7 +87,7 @@ CREATE TABLE IF NOT EXISTS $_table(
     ).get();
     if (found.isEmpty) return null;
     final rows = await store.customSelect(
-      'SELECT source_digest,encrypted_digest,phase FROM $_table '
+      'SELECT source_digest,encrypted_digest,phase,activated_generation FROM $_table '
       'WHERE singleton=1',
     ).get();
     if (rows.isEmpty) return null;
@@ -92,15 +96,21 @@ CREATE TABLE IF NOT EXISTS $_table(
     final source = row.read<String>('source_digest');
     final encrypted = row.read<String>('encrypted_digest');
     final name = row.read<String>('phase');
+    final activatedGeneration = row.readNullable<int>('activated_generation');
     if (!_isDigest(source) || !_isDigest(encrypted)) {
       throw StateError('Invalid cutover checksum encoding.');
     }
     final phase = WaffraCutoverPhase.values.where((e) => e.name == name);
     if (phase.length != 1) throw StateError('Unrecognized cutover phase.');
+    if ((phase.single == WaffraCutoverPhase.active) !=
+        (activatedGeneration != null)) {
+      throw StateError('Cutover activation generation is inconsistent.');
+    }
     return WaffraCutoverCheckpoint(
       sourceDigest: source,
       encryptedDigest: encrypted,
       phase: phase.single,
+      activatedGeneration: activatedGeneration,
     );
   }
 
@@ -122,10 +132,6 @@ CREATE TABLE IF NOT EXISTS $_table(
     }
     return store.transaction(() async {
       await _requireReady();
-      final encrypted = await snapshot.read();
-      if (encrypted.digest != targetDigest) {
-        throw StateError('Encrypted snapshot differs from candidate cutover.');
-      }
       await _ensureTable();
       final existing = await _readOrNull();
       if (existing != null) {
@@ -133,7 +139,15 @@ CREATE TABLE IF NOT EXISTS $_table(
             existing.encryptedDigest != targetDigest) {
           throw StateError('Cannot replace a previous cutover checkpoint.');
         }
+        // Post-activation transactions may legitimately change the current
+        // finance digest. Idempotent replay must preserve the ORIGINAL
+        // immutable checkpoint and verify current snapshot integrity.
+        await snapshot.read();
         return existing;
+      }
+      final encrypted = await snapshot.read();
+      if (encrypted.digest != targetDigest) {
+        throw StateError('Encrypted snapshot differs from candidate cutover.');
       }
       await store.customStatement(
         'INSERT INTO $_table(singleton,source_digest,encrypted_digest,'
@@ -207,13 +221,21 @@ CREATE TABLE IF NOT EXISTS $_table(
         throw StateError('Cannot activate an unverified cutover.');
       }
       final saved = await snapshot.read();
+      if (before.phase == WaffraCutoverPhase.active) {
+        if (saved.generation < before.activatedGeneration! ||
+            (saved.generation == before.activatedGeneration &&
+                saved.digest != before.encryptedDigest)) {
+          throw StateError('Activated finance journal moved backwards.');
+        }
+        return before;
+      }
       if (saved.digest != before.encryptedDigest) {
         throw StateError('Cutover target changed after verification.');
       }
       await store.customStatement(
-        "UPDATE $_table SET phase='active',modified_at_ms=? "
-        "WHERE singleton=1 AND phase IN ('verified','active')",
-        [now.toUtc().millisecondsSinceEpoch],
+        "UPDATE $_table SET phase='active',activated_generation=?,"
+        "modified_at_ms=? WHERE singleton=1 AND phase='verified'",
+        [saved.generation, now.toUtc().millisecondsSinceEpoch],
       );
       return (await _readOrNull())!;
     });
@@ -237,7 +259,14 @@ CREATE TABLE IF NOT EXISTS $_table(
       return WaffraCutoverRecoveryStatus.manualReconciliationRequired;
     }
     final current = await snapshot.read();
-    return current.digest == evidence.encryptedDigest
+    final activationGeneration = evidence.activatedGeneration!;
+    // The initial source digest authenticates only the CUTOVER snapshot.
+    // Subsequent legitimate finance writes MUST change the digest; their
+    // on-disk checksum is verified by snapshot.read() on every cold start.
+    final monotonic = current.generation >= activationGeneration;
+    final originalMatches = current.generation != activationGeneration ||
+        current.digest == evidence.encryptedDigest;
+    return monotonic && originalMatches
         ? WaffraCutoverRecoveryStatus.encryptedReady
         : WaffraCutoverRecoveryStatus.manualReconciliationRequired;
   }
