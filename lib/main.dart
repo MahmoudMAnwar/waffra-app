@@ -41,6 +41,7 @@ import 'waffra_home_widget.dart';
 part 'waffra_categories_page.part.dart';
 part 'waffra_smart_analysis.part.dart';
 part 'waffra_recurring_trash.part.dart';
+part 'waffra_deleted_item_card.part.dart';
 part 'waffra_widget_capture.part.dart';
 
 Future<void> main()async {
@@ -4678,7 +4679,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   await showWaffraDialog<void>(context:context,builder:(dialogCtx)=>StatefulBuilder(
    builder:(dialogCtx,refresh)=>AlertDialog(
     title:WaffraText(waffraIsEnglish?'Recently deleted categories':'الأقسام المحذوفة'),
-    content:SizedBox(width:double.maxFinite,height:min(440.0,MediaQuery.sizeOf(dialogCtx).height*.5),
+    content:SizedBox(width:double.maxFinite,height:waffraDeletedListHeight(dialogCtx,deletedCategories.length),
      child:deletedCategories.isEmpty
       ?Center(child:WaffraText(waffraIsEnglish?'No deleted categories':'لا توجد أقسام محذوفة'))
       :ListView(children:deletedCategories.map((item){
@@ -4686,21 +4687,15 @@ Future<void> bulkSmsSheet({String? initialText})async {
         final deletedAt=DateTime.parse(item['deletedAt'] as String);
         final daysLeft=max(0,(deletedAt.add(const Duration(days:30))
          .difference(DateTime.now()).inHours/24).ceil());
-        return Card(child:Padding(padding:const EdgeInsets.all(9),child:Column(
-         crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-          Row(children:[
-           Icon(categoryIcon(original.icon),color:Color(original.color)),
-           const SizedBox(width:8),
-           Expanded(child:WaffraText(original.name,
-            style:const TextStyle(fontWeight:FontWeight.bold))),
-          ]),
-          WaffraText(waffraIsEnglish
-           ?'${original.income?'Income':'Expense'} • $daysLeft days remaining'
-           :'${original.income?'دخل':'مصروفات'} • متبقي $daysLeft يوم',
-           style:TextStyle(fontSize:12,color:daysLeft<=3?Colors.red:null)),
-          Row(children:[
-           TextButton.icon(icon:const Icon(Icons.restore),
-            onPressed:()async{
+        return waffraDeletedItemCard(
+         context:dialogCtx,
+         icon:categoryIcon(original.icon),
+         iconColor:Color(original.color),
+         title:original.name,
+         subtitle:waffraIsEnglish
+          ?'${original.income?'Income':'Expense'} • $daysLeft days remaining'
+          :'${original.income?'دخل':'مصروفات'} • متبقي $daysLeft يوم',
+         onRestore:()async{
              if(categories.any((c)=>c.name==original.name&&c.income==original.income)){
               snack(dialogCtx,waffraIsEnglish?'A category with this name already exists':'يوجد قسم نشط بنفس الاسم بالفعل');return;
              }
@@ -4758,11 +4753,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
               ?'Category restored with zero balance and no budget. Add new transactions and a budget to use it.'
               :'تم استرجاع القسم بقيمة صفر وبدون ميزانية. سجّل عليه معاملات وميزانية جديدة.');
             },
-            label:WaffraText(waffraIsEnglish?'Restore':'استرجاع')),
-           const Spacer(),
-           IconButton(tooltip:waffraIsEnglish?'Delete forever':'حذف نهائي',
-            icon:const Icon(Icons.delete_forever_outlined,color:Colors.red),
-            onPressed:()async{
+         onDeleteForever:()async{
              final yes=await confirmDeletion(
               waffraIsEnglish?'Permanently delete category?':'حذف القسم نهائيًا',
               waffraIsEnglish?'Delete «${original.name}» forever? You cannot restore it.'
@@ -4771,10 +4762,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
               setState(()=>deletedCategories.remove(item));
               refresh((){});
               await persist();
-             }
-            }),
-          ]),
-         ])));
+             },
+        );
        }).toList())),
     actions:[TextButton(onPressed:()=>Navigator.pop(dialogCtx),
      child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))],
@@ -4953,37 +4942,131 @@ Future<void> bulkSmsSheet({String? initialText})async {
  Future<void> fundGoal(SavingGoal g)async {
   final amount=TextEditingController();
   bool attempted=false;
-  final n=await showWaffraDialog<double>(context:context,builder:(ctx)=>StatefulBuilder(
-   builder:(ctx,update)=>AlertDialog(
-   title:WaffraText('إضافة ادخار لـ ${g.name}'),
-   content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-    WaffraText(waffraIsEnglish?'Target: ${formatWaffraMoney(g.target)} SAR':'المبلغ المستهدف: ${formatWaffraMoney(g.target)} ريال'),
-    WaffraText(waffraIsEnglish?'Already saved: ${formatWaffraMoney(g.saved)} SAR':'المدخر حاليًا: ${formatWaffraMoney(g.saved)} ريال'),
-    const SizedBox(height:8),
-    WaffraText(waffraIsEnglish
-     ?'Remaining: ${formatWaffraMoney(max(0,g.target-g.saved))} SAR'
-     :'المتبقي للهدف: ${formatWaffraMoney(max(0,g.target-g.saved))} ريال',
-     style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
-    const SizedBox(height:14),
-    TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
-     inputFormatters:[const WaffraAmountFormatter()],onChanged:(_)=>update((){}),
-     decoration:InputDecoration(labelText:waffraIsEnglish?'Saved amount *':'المبلغ المدّخر *',
-      errorText:attempted?waffraAmountFieldError(amount.text):null,
-      errorMaxLines:3,
-      border:const OutlineInputBorder())),
-    const SizedBox(height:12),
-    WaffraText(waffraIsEnglish
-     ?'Remaining after adding: ${formatWaffraMoney(max(0,g.target-g.saved-(amountOf(amount.text)??0)))} SAR'
-     :'المتبقي بعد الإضافة: ${formatWaffraMoney(max(0,g.target-g.saved-(amountOf(amount.text)??0)))} ريال',
-     style:const TextStyle(color:emerald,fontWeight:FontWeight.w600)),
-   ]),
-   actions:[
-    TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إلغاء')),
-    FilledButton(onPressed:(){
-     update(()=>attempted=true);
-     final v=amountOf(amount.text);if(v!=null)Navigator.pop(ctx,v);
-    },child:const WaffraText('إضافة')),
-   ])));
+  final n=await showWaffraDialog<double>(
+   context:context,builder:(dialogCtx)=>StatefulBuilder(
+    builder:(dialogCtx,update){
+     final theme=Theme.of(dialogCtx);
+     final dark=theme.brightness==Brightness.dark;
+     final accent=dark?const Color(0xFF82E2B4):emerald;
+     final currentProgress=g.target<=0?0.0:(g.saved/g.target).clamp(0.0,1.0);
+     void addQuickAmount(double increment){
+      final current=amountOf(amount.text)??0;
+      amount.text=formatWaffraMoney(current+increment);
+      amount.selection=TextSelection.collapsed(offset:amount.text.length);
+      update((){});
+     }
+     return AlertDialog(
+      title:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+       WaffraText(waffraIsEnglish?'Add savings':'إضافة ادخار',
+        style:const TextStyle(fontSize:22,fontWeight:FontWeight.bold)),
+       const SizedBox(height:3),
+       WaffraText(waffraIsEnglish?'To ${g.name}':'إلى هدف ${g.name}',
+        maxLines:2,style:TextStyle(fontSize:14,color:theme.hintColor)),
+      ]),
+      content:SingleChildScrollView(child:Column(
+       mainAxisSize:MainAxisSize.min,
+       crossAxisAlignment:CrossAxisAlignment.stretch,
+       children:[
+        Container(
+         padding:const EdgeInsets.symmetric(horizontal:13,vertical:14),
+         decoration:BoxDecoration(
+          color:accent.withValues(alpha:dark?.12:.06),
+          borderRadius:BorderRadius.circular(20),
+          border:Border.all(color:accent.withValues(alpha:.14))),
+         child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          Row(children:[
+           CircleAvatar(radius:20,backgroundColor:accent.withValues(alpha:.15),
+            child:Icon(goalIcon(g.name),color:accent,size:21)),
+           const SizedBox(width:9),
+           Expanded(child:WaffraText(g.name,maxLines:2,
+            style:const TextStyle(fontWeight:FontWeight.bold,fontSize:14))),
+          ]),
+          const SizedBox(height:9),
+          WaffraText(waffraIsEnglish
+           ?'${formatWaffraMoney(g.saved)} of ${formatWaffraMoney(g.target)} SAR'
+           :'${formatWaffraMoney(g.saved)} من ${formatWaffraMoney(g.target)} ريال',
+           textAlign:TextAlign.center,style:const TextStyle(fontSize:13)),
+          const SizedBox(height:9),
+          LinearProgressIndicator(value:currentProgress,minHeight:8,
+           color:accent,backgroundColor:accent.withValues(alpha:.14),
+           borderRadius:BorderRadius.circular(12)),
+          const SizedBox(height:7),
+          WaffraText('${(currentProgress*100).round()}%',
+           textAlign:TextAlign.start,
+           style:TextStyle(fontWeight:FontWeight.bold,fontSize:12,color:accent)),
+         ])),
+        const SizedBox(height:17),
+        WaffraText(waffraIsEnglish?'Amount to add *':'المبلغ المراد إضافته *',
+         style:const TextStyle(fontWeight:FontWeight.bold,fontSize:14)),
+        const SizedBox(height:8),
+        TextField(
+         controller:amount,
+         keyboardType:const TextInputType.numberWithOptions(decimal:true),
+         inputFormatters:[const WaffraAmountFormatter()],
+         onChanged:(_)=>update((){}),
+         decoration:InputDecoration(
+          hintText:'0.00',
+          suffixText:waffraIsEnglish?'SAR':'ريال',
+          errorText:attempted?waffraAmountFieldError(amount.text):null,
+          errorMaxLines:2,
+          enabledBorder:OutlineInputBorder(
+           borderRadius:BorderRadius.circular(15),
+           borderSide:BorderSide(color:accent,width:1.5)),
+          focusedBorder:OutlineInputBorder(
+           borderRadius:BorderRadius.circular(15),
+           borderSide:BorderSide(color:accent,width:2)),
+          border:OutlineInputBorder(borderRadius:BorderRadius.circular(15)),
+         )),
+        const SizedBox(height:10),
+        Row(children:[
+         for(final quick in [500.0,1000.0,2000.0])...[
+          Expanded(child:TextButton(
+           style:TextButton.styleFrom(
+            backgroundColor:accent.withValues(alpha:.08),
+            padding:const EdgeInsets.symmetric(vertical:10,horizontal:2),
+            shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12))),
+           onPressed:()=>addQuickAmount(quick),
+           child:WaffraText('+${quick.toInt()}',
+            style:TextStyle(fontWeight:FontWeight.bold,fontSize:12,color:accent)))),
+          if(quick!=2000.0)const SizedBox(width:7),
+         ],
+        ]),
+        const SizedBox(height:13),
+        Container(
+         padding:const EdgeInsets.all(11),
+         decoration:BoxDecoration(color:accent.withValues(alpha:.09),
+          borderRadius:BorderRadius.circular(15)),
+         child:Row(children:[
+          Icon(Icons.info_outline_rounded,size:19,color:accent),
+          const SizedBox(width:8),
+          Expanded(child:WaffraText(waffraIsEnglish
+           ?'Savings are added to this goal only. Past transactions stay unchanged.'
+           :'سيتم إضافة المبلغ إلى هذا الهدف فقط، ولن يؤثر على معاملاتك السابقة.',
+           style:const TextStyle(fontSize:12))),
+         ])),
+       ],
+      )),
+      actionsPadding:const EdgeInsets.fromLTRB(16,0,16,16),
+      actions:[SizedBox(width:double.infinity,
+       child:Column(children:[
+        SizedBox(width:double.infinity,child:FilledButton(
+         onPressed:(){
+          update(()=>attempted=true);
+          if(waffraAmountFieldError(amount.text)!=null)return;
+          final value=amountOf(amount.text);
+          if(value==null||value<=0)return;
+          Navigator.pop(dialogCtx,value);
+         },
+         child:WaffraText(waffraIsEnglish?'Add amount':'إضافة'))),
+        const SizedBox(height:7),
+        SizedBox(width:double.infinity,child:OutlinedButton(
+         onPressed:()=>Navigator.pop(dialogCtx),
+         child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء'))),
+       ]))],
+     );
+    },
+   ),
+  );
   disposeLater([amount]);
   if(n!=null&&mounted){
    final achieved=g.saved<g.target&&g.saved+n>=g.target;
@@ -4994,9 +5077,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
    await persist();
    if(achieved&&mounted){
     await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
-     title:const WaffraText('🎉 مبروك!'),
-     content:WaffraText('تم تحقيق هدف الادخار «${g.name}» بنجاح!'),
-     actions:[FilledButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('رائع'))]));
+     title:WaffraText(waffraIsEnglish?'🎉 Goal achieved!':'🎉 مبروك!'),
+     content:WaffraText(waffraIsEnglish
+      ?'You achieved your savings goal “${g.name}”!'
+      :'تم تحقيق هدف الادخار «${g.name}» بنجاح!'),
+     actions:[FilledButton(onPressed:()=>Navigator.pop(ctx),
+      child:WaffraText(waffraIsEnglish?'Great':'رائع'))]));
    }
   }
  }
@@ -5139,21 +5225,64 @@ Future<void> bulkSmsSheet({String? initialText})async {
   ?'Move “$name” to Deleted Goals for 30 days. ${linked?'This goal has saved amounts or linked transactions; financial history will stay untouched.':''} Restored goals restart with zero saved balance.'
   :'نقل «$name» إلى الأهداف المحذوفة لمدة 30 يومًا. ${linked?'هذا الهدف مرتبط بمبالغ ادخار أو معاملات مالية؛ ستبقى المعاملات محفوظة.':''} عند الاسترجاع يبدأ رصيد الادخار من صفر.';
  Future<void> deletedGoalsDialog()async{
-  await showWaffraDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh)=>AlertDialog(
-   title:WaffraText(waffraIsEnglish?'Deleted goals':'الأهداف المحذوفة'),
-   content:SizedBox(width:360,height:min(450.0,MediaQuery.sizeOf(ctx).height*.6),
-    child:deletedGoals.isEmpty?Center(child:WaffraText(waffraIsEnglish?'No deleted goals':'لا توجد أهداف محذوفة')):
-    ListView(children:deletedGoals.map((item){
-     final goal=SavingGoal.fromJson(Map<String,dynamic>.from(item['goal'] as Map));
-     final deletedAt=DateTime.tryParse('${item['deletedAt']}')??DateTime.now();
-     final left=max(0,(deletedAt.add(const Duration(days:30)).difference(DateTime.now()).inHours/24).ceil());
-     return ListTile(title:WaffraText(goal.name),subtitle:WaffraText(waffraIsEnglish?'$left days left':'متبقي $left يوم'),
-      trailing:IconButton(icon:const Icon(Icons.restore),tooltip:waffraIsEnglish?'Restore':'استرجاع',onPressed:()async{
-       if(goals.any((g)=>g.id==goal.id||g.name==goal.name)){snack(ctx,waffraIsEnglish?'Goal already exists':'الهدف موجود بالفعل');return;}
-       setState((){goals.add(goal.copy(saved:0));deletedGoals.remove(item);});await persist();
-       if(ctx.mounted)refresh((){});
-      }));
-    }).toList())),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))])));
+  final before=deletedGoals.length;
+  deletedGoals.removeWhere((item){
+   final date=DateTime.tryParse('${item['deletedAt']??''}');
+   return date==null||!DateTime.now().isBefore(date.add(const Duration(days:30)));
+  });
+  if(before!=deletedGoals.length)await persist();
+  if(!mounted)return;
+  await showWaffraDialog<void>(context:context,builder:(ctx)=>
+   StatefulBuilder(builder:(ctx,refresh)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Deleted goals':'الأهداف المحذوفة'),
+    content:SizedBox(width:double.maxFinite,
+     height:waffraDeletedListHeight(ctx,deletedGoals.length),
+     child:deletedGoals.isEmpty
+      ?Center(child:WaffraText(waffraIsEnglish?'No deleted goals':'لا توجد أهداف محذوفة'))
+      :ListView(children:deletedGoals.map((item){
+       final goal=SavingGoal.fromJson(Map<String,dynamic>.from(item['goal'] as Map));
+       final deletedAt=DateTime.tryParse('${item['deletedAt']??''}')??DateTime.now();
+       final left=max(0,(deletedAt.add(const Duration(days:30))
+        .difference(DateTime.now()).inHours/24).ceil());
+       return waffraDeletedItemCard(
+        context:ctx,
+        icon:goalIcon(goal.name),
+        iconColor:emerald,
+        title:goal.name,
+        subtitle:waffraIsEnglish?'Savings goal • $left days remaining':
+         'هدف ادخاري • متبقي $left يوم',
+        onRestore:()async{
+         if(goals.any((g)=>g.id==goal.id||g.name==goal.name)){
+          snack(ctx,waffraIsEnglish?'Goal already exists':'الهدف موجود بالفعل');
+          return;
+         }
+         setState((){
+          goals.add(goal.copy(saved:0));
+          deletedGoals.remove(item);
+         });
+         await persist();
+         if(!ctx.mounted)return;
+         Navigator.pop(ctx);
+         if(mounted)snackSuccess(context,waffraIsEnglish
+          ?'Goal restored with zero savings. All previous linked transactions remain in your financial history.'
+          :'تم استرجاع الهدف بمدخرات صفر. جميع المعاملات القديمة المرتبطة به محفوظة في السجل المالي.');
+        },
+        onDeleteForever:()async{
+         final yes=await confirmDeletion(
+          waffraIsEnglish?'Permanently delete goal?':'حذف الهدف نهائيًا',
+          waffraIsEnglish
+           ?'Delete “${goal.name}” forever? It cannot be restored. Past financial transactions remain untouched.'
+           :'هل تريد حذف الهدف «${goal.name}» نهائيًا؟ لن يمكن استرجاعه، وستظل المعاملات المالية القديمة محفوظة.');
+         if(yes!=true||!mounted)return;
+         setState(()=>deletedGoals.remove(item));
+         await persist();
+         if(ctx.mounted)refresh((){});
+        },
+       );
+      }).toList())),
+    actions:[TextButton(onPressed:()=>Navigator.pop(ctx),
+     child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))],
+   )));
  }
  Widget goalsPage(){
   final target=goals.fold<double>(0,(v,g)=>v+g.target);
@@ -5275,9 +5404,6 @@ Future<void> bulkSmsSheet({String? initialText})async {
      WaffraText(waffraIsEnglish?'Set your first savings goal and track your progress':
       'ابدأ أول هدف ادخاري لك وحدد المبلغ المستهدف وتابع تقدّمك خطوة بخطوة.',
       textAlign:TextAlign.center),
-     const SizedBox(height:22),
-     OutlinedButton.icon(onPressed:goalDialog,icon:const Icon(Icons.add),
-      label:WaffraText(waffraIsEnglish?'Add first goal':'إضافة أول هدف ادخاري')),
      const SizedBox(height:22),
      Row(children:[
       savingsBenefit(waffraIsEnglish?'Plan ahead':'خطط لمستقبلك',Icons.wallet_outlined),
