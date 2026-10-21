@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:io';
 
+import 'waffra_disposable_recovery_journal.dart';
 import 'waffra_encrypted_store.dart';
 import 'waffra_offline_restore_dry_run.dart';
 import 'waffra_portable_backup_v2.dart';
@@ -52,6 +54,7 @@ class WaffraOfflineCombinedRestoreVerifier {
     required String encryptedArchive,
     required String password,
     required Directory emptyReceiptSandboxDirectory,
+    WaffraDisposableRecoveryJournal? journal,
   }) async {
     if (!experimentalEnabled) {
       throw StateError('Combined restoration is disabled by default.');
@@ -79,6 +82,18 @@ class WaffraOfflineCombinedRestoreVerifier {
       encryptedArchive: encryptedArchive,
       password: password,
     );
+    final rawEntries = preview.financialSnapshot['entries'];
+    final entryCount = rawEntries == null
+        ? 0
+        : (jsonDecode(rawEntries as String) as List).length;
+    if (journal != null) {
+      await journal.appendVerifiedPhase(
+        phase: 0,
+        sourceChecksum: preview.sourceChecksum,
+        entries: entryCount,
+        receipts: preview.receiptCount,
+      );
+    }
     final staged = await const WaffraReceiptSandboxStager(
       experimentalEnabled: true,
     ).stage(
@@ -92,6 +107,15 @@ class WaffraOfflineCombinedRestoreVerifier {
       preview: preview,
       staged: staged,
     );
+
+    if (journal != null) {
+      await journal.appendVerifiedPhase(
+        phase: 1,
+        sourceChecksum: preview.sourceChecksum,
+        entries: entryCount,
+        receipts: preview.receiptCount,
+      );
+    }
 
     // The M17 importer re-authenticates the original encrypted archive and
     // runs finance staging + relational parity in one SQLite transaction.
@@ -111,6 +135,14 @@ class WaffraOfflineCombinedRestoreVerifier {
       throw StateError('Combined restoration verification failed.');
     }
 
+    if (journal != null) {
+      await journal.appendVerifiedPhase(
+        phase: 2,
+        sourceChecksum: preview.sourceChecksum,
+        entries: entryCount,
+        receipts: preview.receiptCount,
+      );
+    }
     return WaffraCombinedRestoreReport(
       sourceChecksum: finance.sourceChecksum,
       transactionCount: finance.transactionCount,
