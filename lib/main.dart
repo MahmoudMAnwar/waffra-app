@@ -443,6 +443,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     }catch(e){debugPrint('Screenshot migration: $e');}
    }
    final screenshotsAllowed=p.getBool('waffra_allow_screenshots')??true;
+   hideWaffraAmounts.value=p.getBool('waffra_hide_amounts')??false;
    language=p.getString('waffra_language')=='en'?'en':'ar';
    final animation=p.getString('waffra_animation_level');
    waffraAnimationLevel.value={'full','balanced','reduced','off'}.contains(animation)?animation!:'balanced';
@@ -1865,7 +1866,16 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
       builder:(ctx,hidden,_)=>IconButton(
        tooltip:hidden?(english?'Show amounts':'إظهار المبالغ'):
         (english?'Hide amounts':'إخفاء المبالغ'),
-       onPressed:()=>hideWaffraAmounts.value=!hidden,
+       onPressed:()async{
+        final conceal=!hidden;
+        hideWaffraAmounts.value=conceal;
+        final p=await SharedPreferences.getInstance();
+        await p.setBool('waffra_hide_amounts',conceal);
+        await refreshWaffraHomeWidget(
+         balance:conceal?'***':formatWaffraMoney(balance),
+         negative:balance<0,hidden:conceal,
+         currency:english?'SAR':'ريال');
+       },
        visualDensity:VisualDensity.compact,
        icon:Icon(hidden?Icons.visibility_off_outlined:Icons.visibility_outlined,
         color:mainColor,size:22))),
