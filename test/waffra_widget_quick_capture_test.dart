@@ -55,6 +55,7 @@ void main(){
   await tester.ensureVisible(find.text('تأكيد إضافة العمليات'));
   await tester.tap(find.text('تأكيد إضافة العمليات'));
   await tester.pump(const Duration(milliseconds:250));
+  await tester.pump(const Duration(milliseconds:1350));
   final saved=jsonDecode(p.getString('entries')??'[]') as List;
   expect(saved.length,1);
   expect((saved.first['amount'] as num).toDouble(),125.5);
