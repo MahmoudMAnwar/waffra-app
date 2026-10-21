@@ -1943,11 +1943,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  bool protectRecentApps=true;
  String? _accountOpenSection;
  String accountSearch='';
- final _tourKeys=List<GlobalKey>.generate(6,(_)=>GlobalKey());
+ final _tourKeys=List<GlobalKey>.generate(7,(_)=>GlobalKey());
  bool tourActive=false;
  bool tourTargetReady=false;
  int tourStep=0;
- static const tourTabs=<int>[0,0,1,0,3,4];
+ static const tourTabs=<int>[0,0,0,1,2,3,0,4];
+ static const tourTargetKeys=<int>[-1,0,1,2,6,4,3,5];
  bool addFabExpanded=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
  @override void initState(){super.initState();_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:()=>unawaited(_syncWidgetTransactions()));load();}
@@ -5328,7 +5329,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     title:waffraIsEnglish?'Savings goals':'أهداف الادخار',
     subtitle:waffraIsEnglish?'Plan your future and follow every milestone':
      'حوّل أحلامك إلى أهداف وتابع تقدّمك خطوة بخطوة.',
-    icon:Icons.flag_outlined),
+    icon:Icons.flag_outlined,titleKey:_tourKeys[6]),
    const SizedBox(height:13),
    if(goals.isNotEmpty)...[
     Row(children:[
@@ -5958,14 +5959,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
  void scheduleTourFocus(){
   WidgetsBinding.instance.addPostFrameCallback((_)async {
    if(!mounted||!tourActive)return;
-   final focus=_tourKeys[tourStep].currentContext;
+   final focus=tourTargetKeys[tourStep]<0?null:_tourKeys[tourTargetKeys[tourStep]].currentContext;
    if(focus!=null){
     try{await Scrollable.ensureVisible(focus,
-     duration:waffraMotion(700),alignment:.16,
+     duration:waffraMotion(250),alignment:.16,
      curve:Curves.easeOutCubic);}catch(e){debugPrint('Tour focus: $e');}
    }
-   await Future<void>.delayed(waffraMotion(450));
-   if(mounted&&tourActive)setState(()=>tourTargetReady=focus!=null);
+   await Future<void>.delayed(waffraMotion(200));
+   if(mounted&&tourActive)setState(()=>tourTargetReady=tourStep==0||focus!=null);
   });
  }
  Future<void> completeTour()async {
@@ -5990,11 +5991,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
   scheduleTourFocus();
  }
  Widget tourOverlay()=>LayoutBuilder(builder:(overlayCtx,area){
-  const ar=['الرصيد الحالي','إضافة المعاملات','الأقسام','التحليل الذكي','العمليات المتكررة','حسابي'];
-  const en=['Balance','Add transactions','Categories','Analysis','Recurring items','My account'];
-  const arHelp=['اعرف رصيدك ودخلك ومصروفاتك.','من زر + أضف عملية أو رسالة بنكية.','نظّم الأقسام وميزانياتها.','اضغط التحليل لعرض تقييمك المالي والرسوم البيانية والتوقعات.','نظّم التكرارات ومواعيد الاستحقاق.','إدارة حسابك وأهداف الادخار وإعدادات التطبيق.'];
-  const enHelp=['Your balance, income and expenses.','Use + to add a transaction or SMS.','Manage your categories and budgets.','Tap Analysis for animated scoring, income and expense charts, and forecasts.','See and pause recurring transactions.','Manage your account, goals and settings.'];
-  final element=_tourKeys[tourStep].currentContext?.findRenderObject();
+  const ar=['مرحبًا بك في وفرة','الرئيسية والرصيد','إضافة المعاملات','الأقسام','الأهداف الادخارية','العمليات المتكررة','التحليل المالي الذكي','حسابي وإعداداتي'];
+  const en=['Welcome to Waffra','Home & balance','Add transactions','Categories','Savings goals','Recurring items','Smart analysis','Account & settings'];
+  const arHelp=['ابدأ بدون تسجيل، واحتفظ ببياناتك على هاتفك.','الرصيد والدخل والمصروفات في مكان واحد.','أضف عملية أو الصق رسالة بنكية للتحليل.','نظّم الأقسام الرئيسية والفرعية.','خطط لأهداف الادخار وتابع التقدم.','نظّم الاستحقاقات الشهرية والمتكررة.','اطلع على التوصيات والرسوم والتوقعات.','تحكم بالمظهر واللغة والأمان وأعد الجولة عند الحاجة.'];
+  const enHelp=['Start as a guest and keep data on your phone.','See balance, income and expenses.','Add a transaction or paste a bank message.','Organize categories and budgets.','Create savings goals and follow progress.','Plan recurring payments and due dates.','Explore advice, charts and forecasts.','Change appearance, language, privacy and replay this tour.'];
+  final element=tourTargetKeys[tourStep]<0?null:_tourKeys[tourTargetKeys[tourStep]].currentContext?.findRenderObject();
   final layer=overlayCtx.findRenderObject();
   Rect target=Rect.fromLTWH(16,12,area.maxWidth-32,65);
   if(element is RenderBox&&layer is RenderBox&&element.hasSize){
@@ -6008,8 +6009,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
   }
   // Headings use intrinsic text bounds rather than a full-width row.
   // Other tour steps retain their actual button/icon target.
-  final headingFocus=tourStep==2||tourStep==4;
-  final headingText=tourStep==2?(waffraIsEnglish?'Categories & budgets':'أقسامك وميزانياتك'):(waffraIsEnglish?en[tourStep]:ar[tourStep]);
+  final headingFocus=tourStep==3||tourStep==5;
+  final headingText=tourStep==3?(waffraIsEnglish?'Categories & budgets':'أقسامك وميزانياتك'):(waffraIsEnglish?en[tourStep]:ar[tourStep]);
   if(headingFocus){
    final style=Theme.of(context).textTheme.titleLarge??const TextStyle(fontSize:23);
    final painter=TextPainter(text:TextSpan(text:headingText,style:style.copyWith(fontWeight:FontWeight.bold)),
@@ -6043,7 +6044,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        style:const TextStyle(fontSize:22,fontWeight:FontWeight.bold,color:forest))))));
     }))),
    AnimatedPositioned(
-    duration:waffraMotion(700),
+    duration:waffraMotion(250),
     curve:Curves.easeInOutCubic,top:top,left:left,width:width,
     child:Material(elevation:12,color:Theme.of(context).cardColor,
      borderRadius:BorderRadius.circular(18),
@@ -6053,12 +6054,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
        Row(children:[
         const Icon(Icons.lightbulb_outline,color:emerald,size:18),
         const SizedBox(width:5),
-        Expanded(child:AnimatedSwitcher(duration:waffraMotion(650),
+        Expanded(child:AnimatedSwitcher(duration:waffraMotion(250),
          transitionBuilder:(child,animation)=>FadeTransition(opacity:animation,
           child:SlideTransition(position:Tween<Offset>(begin:const Offset(0,.18),end:Offset.zero).animate(animation),child:child)),
          child:WaffraText(waffraIsEnglish?en[tourStep]:ar[tourStep],key:ValueKey(tourStep),
           style:const TextStyle(fontSize:15,fontWeight:FontWeight.bold)))),
-        WaffraText('${tourStep+1}/6',style:const TextStyle(color:emerald,fontSize:11)),
+        WaffraText('${tourStep+1}/${tourTabs.length}',style:const TextStyle(color:emerald,fontSize:11)),
        ]),
        const SizedBox(height:6),
        WaffraText(waffraIsEnglish?enHelp[tourStep]:arHelp[tourStep],
@@ -6069,7 +6070,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
         if(tourStep>0)TextButton(onPressed:previousTour,
          child:WaffraText(waffraIsEnglish?'Back':'السابق')),
         FilledButton(onPressed:advanceTour,
-         child:WaffraText(tourStep==5?
+         child:WaffraText(tourStep==tourTabs.length-1?
           (waffraIsEnglish?'Finish':'إنهاء'):(waffraIsEnglish?'Next':'التالي'))),
        ]),
       ])))),
