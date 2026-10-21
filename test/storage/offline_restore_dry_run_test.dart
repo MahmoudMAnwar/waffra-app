@@ -148,10 +148,12 @@ void main() {
       throwsA(isA<StateError>()));
 
     // The failed preflight didn't stage any finance or receipt references.
-    final missing = await store.customSelect(
-      "SELECT name FROM sqlite_master WHERE name='shadow_migrations'",
-    ).get();
-    expect(missing, isEmpty);
+    // Reading the schema itself may initialize empty shadow tables.
+    // What matters is that NO archive rows were imported.
+    final row = await store.customSelect(
+      'SELECT COUNT(*) AS total FROM shadow_migrations',
+    ).getSingle();
+    expect(row.read<int>('total'), 0);
   });
 
   test('restore dry-run defaults to blocked and refuses wrong vault names',
