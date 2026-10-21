@@ -40,6 +40,7 @@ import 'waffra_secure_backup.dart';
 import 'storage/waffra_legacy_write_queue.dart';
 import 'storage/waffra_live_legacy_finance_guard.dart';
 import 'storage/waffra_legacy_finance_writer_coordinator.dart';
+import 'storage/waffra_legacy_widget_commit_journal.dart';
 import 'storage/waffra_finance_read_view.dart';
 import 'waffra_home_widget.dart';
 part 'waffra_categories_page.part.dart';
@@ -1998,12 +1999,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   });
  }
  @override void dispose(){_dashboardScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();super.dispose();}
+ Future<void> _recoverPendingWidgetFinance(SharedPreferences prefs)async {
+  if(!prefs.containsKey(WaffraLegacyWidgetCommitJournal.pendingKey))return;
+  // Recovery obtains the same native finance lock used by app and widget,
+  // verifies the pending checksum and refuses any unrecognized conflict.
+  await const WaffraLegacyFinanceWriterCoordinator()
+      .withCurrentPreferences((_) async {});
+  await prefs.reload();
+ }
+
  Future<void> _syncWidgetTransactions()async{
   if(!mounted||!ready)return;
   try{
    final p=await SharedPreferences.getInstance();
    await p.reload();
    await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p,reload:false);
+   await _recoverPendingWidgetFinance(p);
    final revision=p.getString('waffra_widget_last_save_v1');
    if(revision==null||revision==_lastWidgetRevision)return;
    final raw=p.getString('entries');
@@ -2022,6 +2033,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Future<void> load()async {
   final p=await SharedPreferences.getInstance();
   await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p);
+  await _recoverPendingWidgetFinance(p);
   final financeView=WaffraFinanceReadView.fromLegacy(p);
   _lastWidgetRevision=p.getString('waffra_widget_last_save_v1');
   _lastLedgerSavedRaw=financeView.getString('entries');
