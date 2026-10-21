@@ -2037,8 +2037,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final thisMonth=entries.where((e)=>!e.income&&e.date.year==now.year&&e.date.month==now.month)
    .fold<int>(0,(sum,e)=>sum+WaffraRecurringPolicy.toHalalas(e.amount));
   await refreshWaffraHomeWidget(
-   balance:hideWaffraAmounts.value?'***':'${formatWaffraMoney((income-expense)/100)} ر.س',
-   monthExpenses:hideWaffraAmounts.value?'***':'${formatWaffraMoney(thisMonth/100)} ر.س');
+   balance:hideWaffraAmounts.value?'***':formatWaffraMoney((income-expense)/100),
+   negative:income-expense<0,
+   hidden:hideWaffraAmounts.value,
+   currency:waffraIsEnglish?'SAR':'ريال');
  }
  Future<void> persist()async {
   final p=await SharedPreferences.getInstance();
