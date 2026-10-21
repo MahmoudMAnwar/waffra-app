@@ -35,6 +35,23 @@ jobs:
           cache: true
       - name: Generate temporary Android platform project
         run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
+      - name: Configure Java 8 core library desugaring
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('android/app/build.gradle.kts')
+          gradle=path.read_text()
+          if 'compileOptions {' not in gradle:
+              raise SystemExit('Missing Kotlin Android compileOptions')
+          if 'isCoreLibraryDesugaringEnabled = true' not in gradle:
+              gradle=gradle.replace('compileOptions {',
+                'compileOptions {\n        isCoreLibraryDesugaringEnabled = true',1)
+          declaration='coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")'
+          if declaration not in gradle:
+              gradle+='\n// Required by flutter_local_notifications\ndependencies {\n    '+declaration+'\n}\n'
+          path.write_text(gradle)
+          PY
       - name: Install dependencies
         run: flutter pub get
       - name: Run Dart storage analyzer
