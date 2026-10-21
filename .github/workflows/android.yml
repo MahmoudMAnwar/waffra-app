@@ -51,6 +51,25 @@ jobs:
         with:
           gradle-home-cache-cleanup: true
 
+      # Restore Gradle's task output cache across ephemeral GitHub runners.
+      # This is not an APK cache: each build still produces, signs and verifies
+      # a fresh APK. Keys include the toolchain and dependency lockfiles.
+      - name: Restore incremental Gradle task outputs
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/caches/build-cache-1
+          key: waffra-gradle-tasks-v1-${{ runner.os }}-${{ hashFiles('pubspec.lock', 'pubspec.yaml', 'gradle/wrapper/gradle-wrapper.properties', 'android/gradle/wrapper/gradle-wrapper.properties') }}-${{ github.run_id }}
+          restore-keys: |
+            waffra-gradle-tasks-v1-${{ runner.os }}-${{ hashFiles('pubspec.lock', 'pubspec.yaml', 'gradle/wrapper/gradle-wrapper.properties', 'android/gradle/wrapper/gradle-wrapper.properties') }}-
+
+      - name: Enable Gradle task output caching
+        shell: bash
+        run: |
+          mkdir -p ~/.gradle
+          echo 'org.gradle.caching=true' >> ~/.gradle/gradle.properties
+          echo 'org.gradle.parallel=true' >> ~/.gradle/gradle.properties
+          echo 'org.gradle.configuration-cache=false' >> ~/.gradle/gradle.properties
+
       - name: Generate Android project (without duplicate pub get)
         run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
 
