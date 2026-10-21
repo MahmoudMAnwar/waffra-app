@@ -1,0 +1,32 @@
+name: Waffra storage preflight tests
+
+on:
+  pull_request:
+    paths:
+      - 'lib/storage/**'
+      - 'test/legacy_financial_snapshot_test.dart'
+      - 'docs/architecture/**'
+      - '.github/workflows/storage-preflight.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  legacy-snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve Flutter dependencies
+        run: flutter pub get
+      - name: Format check for migration source and tests
+        run: dart format --output=none --set-exit-if-changed lib/storage/legacy_financial_snapshot.dart test/legacy_financial_snapshot_test.dart
+      - name: Analyze migration code and tests
+        run: dart analyze lib/storage/legacy_financial_snapshot.dart test/legacy_financial_snapshot_test.dart
+      - name: Run migration preflight tests
+        run: flutter test test/legacy_financial_snapshot_test.dart
