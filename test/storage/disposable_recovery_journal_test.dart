@@ -101,7 +101,7 @@ void main() {
   });
 
   test('refuses a symlinked journal directory', () async {
-    final link = Link('${root.parent.path}/waffra-journal-link-test');
+    final link = Link('${root.path}-link');
     if (await link.exists()) await link.delete();
     try {
       await link.create(root.path);
