@@ -15,10 +15,16 @@ import 'waffra_live_legacy_finance_guard.dart';
 class WaffraLegacyFinanceWriterCoordinator {
   const WaffraLegacyFinanceWriterCoordinator({
     this.testDirectory,
-  });
+    this.testBypassNativeLock = false,
+  }) : assert(!testBypassNativeLock || testDirectory != null);
 
   /// Injectable ONLY in isolated automated tests.
   final Directory? testDirectory;
+
+  /// For Flutter's FakeAsync widget tests ONLY. OS advisory locks cannot be
+  /// driven by fake timers. Production always uses the real native lock;
+  /// use a disposable testDirectory and this override only in a UI test.
+  final bool testBypassNativeLock;
 
   /// The exact saved entries value is a stronger witness than the widget's
   /// optional timestamp. If the process was killed between saving entries
@@ -38,6 +44,14 @@ class WaffraLegacyFinanceWriterCoordinator {
   Future<T> withCurrentPreferences<T>(
     Future<T> Function(SharedPreferences current) callback,
   ) async {
+    if (testBypassNativeLock) {
+      if (testDirectory == null) {
+        throw StateError('Test-only lock bypass needs a disposable directory.');
+      }
+      final prefs = await SharedPreferences.getInstance();
+      await const WaffraLiveLegacyFinanceGuard().requireLegacySource(prefs);
+      return callback(prefs);
+    }
     final directory = testDirectory ?? await getApplicationSupportDirectory();
     if (!await directory.exists()) {
       // The real app may launch in a newly installed application container.
