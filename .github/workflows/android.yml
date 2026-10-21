@@ -7,11 +7,20 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      run_smoke:
+        description: 'Also build x64 APK and run Android emulator startup smoke test (slow)'
+        type: boolean
+        required: false
+        default: false
+  # Run the thorough release startup check overnight; keep pushes fast.
+  schedule:
+    - cron: '0 2 * * *'
 
 # Only the newest pushed revision needs an APK; avoid competing Gradle
 # downloads and Maven 429 rate limits across superseded builds.
 concurrency:
-  group: waffra-android-${{ github.ref }}
+  group: waffra-android-${{ github.ref }}-${{ (github.event_name == 'schedule' || inputs.run_smoke == true) && 'full' || 'fast' }}
   cancel-in-progress: true
 
 jobs:
@@ -28,14 +37,22 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Flutter
+      - name: Set up Flutter (SDK and pub cache)
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
 
-      - name: Generate Android project
-        run: flutter create --platforms=android --project-name=waffra --org com.waffra .
+      # Cache the Gradle wrapper, dependency downloads and generated Gradle
+      # accessors across clean GitHub runners (Flutter cache alone does not).
+      # setup-gradle manages cache keys and cleanup; never cache signed APKs.
+      - name: Restore Gradle dependency cache
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-home-cache-cleanup: true
+
+      - name: Generate Android project (without duplicate pub get)
+        run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
 
       - name: Match native Android launch background to Waffra emerald
         shell: bash
@@ -496,25 +513,28 @@ jobs:
           PY
 
       - name: Flutter static analysis
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+        run: flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings
 
       - name: Run all Flutter tests
-        run: flutter test
+        run: flutter test --no-pub
 
       - name: Generate Waffra app icon
         run: dart run flutter_launcher_icons
 
-      # The hosted Android emulator uses x86_64. Build an x64 Release APK for
-      # the smoke test; upload only the final ARM64 APK for the user.
+      # Fast builds always run flutter analyze + flutter test + signed ARM64.
+      # Full smoke is opt-in on workflow_dispatch and automatic nightly.
+      # The hosted Android emulator uses x86_64, hence an extra x64 APK is
+      # only compiled in full-smoke mode; it must not slow every push.
+      # Upload only the final ARM64 APK for users.
       - name: Build x64 Release APK for emulator smoke test
-        if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.run_smoke == true)
         env:
           WAFFRA_RELEASE_STORE_PASSWORD: ${{ secrets.WAFFRA_RELEASE_STORE_PASSWORD }}
           WAFFRA_RELEASE_KEY_PASSWORD: ${{ secrets.WAFFRA_RELEASE_KEY_PASSWORD }}
-        run: flutter build apk --release --target-platform android-x64 --tree-shake-icons
+        run: flutter build apk --no-pub --release --target-platform android-x64 --tree-shake-icons
 
       - name: Verify Release startup on Android emulator
-        if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.run_smoke == true)
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -558,7 +578,7 @@ jobs:
           # them as application or Dart compilation failures.
           for attempt in 1 2 3 4; do
             echo "Android ARM64 build attempt ${attempt}/4"
-            if flutter build apk --release --target-platform android-arm64 --tree-shake-icons; then
+            if flutter build apk --no-pub --release --target-platform android-arm64 --tree-shake-icons; then
               exit 0
             fi
             if [ "$attempt" -eq 4 ]; then
