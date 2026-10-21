@@ -40,6 +40,7 @@ import 'waffra_secure_backup.dart';
 import 'storage/waffra_legacy_write_queue.dart';
 import 'storage/waffra_live_legacy_finance_guard.dart';
 import 'storage/waffra_legacy_finance_writer_coordinator.dart';
+import 'storage/waffra_finance_read_view.dart';
 import 'waffra_home_widget.dart';
 part 'waffra_categories_page.part.dart';
 part 'waffra_smart_analysis.part.dart';
@@ -2017,19 +2018,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Future<void> load()async {
   final p=await SharedPreferences.getInstance();
   await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p);
+  final financeView=WaffraFinanceReadView.fromLegacy(p);
   _lastWidgetRevision=p.getString('waffra_widget_last_save_v1');
-  try{final raw=p.getString('entries');if(raw!=null)entries.addAll((jsonDecode(raw) as List).map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('entries: $e');}
-  try{final raw=p.getString('waffra_categories_v24');categories.addAll(raw==null?defaultCategories():(jsonDecode(raw) as List).map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('categories: $e');categories.addAll(defaultCategories());}
-  try{final raw=p.getString('waffra_goals_v24');if(raw!=null)goals.addAll((jsonDecode(raw) as List).map((x)=>SavingGoal.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('goals: $e');}
-  try{final raw=p.getString('waffra_recurring_v24');if(raw!=null)recurring.addAll((jsonDecode(raw) as List).map((x)=>RecurringBill.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('recurring: $e');}
-  try{final raw=p.getString('waffra_challenges_v1');if(raw!=null)challenges.addAll((jsonDecode(raw) as List).map((e)=>SavingChallenge.fromJson(Map<String,dynamic>.from(e))));}catch(e){debugPrint('challenges: $e');}
+  try{final raw=financeView.getString('entries');if(raw!=null)entries.addAll((jsonDecode(raw) as List).map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('entries: $e');}
+  try{final raw=financeView.getString('waffra_categories_v24');categories.addAll(raw==null?defaultCategories():(jsonDecode(raw) as List).map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('categories: $e');categories.addAll(defaultCategories());}
+  try{final raw=financeView.getString('waffra_goals_v24');if(raw!=null)goals.addAll((jsonDecode(raw) as List).map((x)=>SavingGoal.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('goals: $e');}
+  try{final raw=financeView.getString('waffra_recurring_v24');if(raw!=null)recurring.addAll((jsonDecode(raw) as List).map((x)=>RecurringBill.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('recurring: $e');}
+  try{final raw=financeView.getString('waffra_challenges_v1');if(raw!=null)challenges.addAll((jsonDecode(raw) as List).map((e)=>SavingChallenge.fromJson(Map<String,dynamic>.from(e))));}catch(e){debugPrint('challenges: $e');}
   try{
-   final raw=p.getString('waffra_deleted_categories_v1');
+   final raw=financeView.getString('waffra_deleted_categories_v1');
    if(raw!=null)deletedCategories.addAll((jsonDecode(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));
   }catch(e){debugPrint('Deleted categories: $e');}
-  try{final raw=p.getString('waffra_deleted_goals_v1');if(raw!=null)deletedGoals.addAll((jsonDecode(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));}catch(e){debugPrint('Deleted goals: $e');}
-  try{final raw=p.getString('waffra_deleted_recurring_v1');if(raw!=null)deletedRecurring.addAll((jsonDecode(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));}catch(e){debugPrint('Deleted recurring: $e');}
-  try{final raw=p.getString('waffra_recurring_postponed_v1');if(raw!=null)recurringPostponed.addAll((jsonDecode(raw) as Map).map((k,v)=>MapEntry(k.toString(),v.toString())));}catch(e){debugPrint('Postponements: $e');}
+  try{final raw=financeView.getString('waffra_deleted_goals_v1');if(raw!=null)deletedGoals.addAll((jsonDecode(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));}catch(e){debugPrint('Deleted goals: $e');}
+  try{final raw=financeView.getString('waffra_deleted_recurring_v1');if(raw!=null)deletedRecurring.addAll((jsonDecode(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));}catch(e){debugPrint('Deleted recurring: $e');}
+  try{final raw=financeView.getString('waffra_recurring_postponed_v1');if(raw!=null)recurringPostponed.addAll((jsonDecode(raw) as Map).map((k,v)=>MapEntry(k.toString(),v.toString())));}catch(e){debugPrint('Postponements: $e');}
   deletedGoals.removeWhere((item){final date=DateTime.tryParse('${item['deletedAt']??''}');return date==null||!DateTime.now().isBefore(date.add(const Duration(days:30)));});
   deletedRecurring.removeWhere((item){final date=DateTime.tryParse('${item['deletedAt']??''}');return date==null||!DateTime.now().isBefore(date.add(const Duration(days:30)));});
   final trashBefore=deletedCategories.length;
@@ -2088,15 +2090,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
    await p.setBool('waffra_category_catalog_v3_installed',true);
   }
-  smsHashes.addAll(p.getStringList('waffra_sms_hashes_v1')??const []);
-  monthlyBudget=p.getDouble('waffra_monthly_budget_v1')??0;
-  monthlyBudgetEnabled=p.getBool('waffra_monthly_budget_enabled_v1')??(monthlyBudget>0);
-  recurringRemindersEnabled=p.getBool('waffra_recurring_reminders_enabled_v1')??false;
+  smsHashes.addAll(financeView.getStringList('waffra_sms_hashes_v1')??const []);
+  monthlyBudget=financeView.getDouble('waffra_monthly_budget_v1')??0;
+  monthlyBudgetEnabled=financeView.getBool('waffra_monthly_budget_enabled_v1')??(monthlyBudget>0);
+  recurringRemindersEnabled=financeView.getBool('waffra_recurring_reminders_enabled_v1')??false;
   lastBackupGeneratedAt=p.getString('waffra_backup_last_exported_v1');
   lastBackupBytes=p.getInt('waffra_backup_last_size_v1');
   protectRecentApps=p.getBool('waffra_protect_recents_v1')??true;
   try{
-   final rawRules=p.getString('waffra_learned_merchants_v1');
+   final rawRules=financeView.getString('waffra_learned_merchants_v1');
    if(rawRules!=null){
     final data=jsonDecode(rawRules);
     if(data is Map){
