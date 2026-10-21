@@ -136,6 +136,20 @@ void main() {
     expect(prefs.getString('entries'), oldEntries);
   });
 
+  test('invalid halala precision never creates a recovery marker', () async {
+    final prefs = await SharedPreferences.getInstance();
+    await expectLater(
+      journal.prepare(prefs: prefs, nextValues: {
+        'entries': newEntries,
+        'waffra_monthly_budget_v1': 12.345,
+      }),
+      throwsA(isA<ArgumentError>()),
+    );
+    expect(prefs.getString('entries'), oldEntries);
+    expect(prefs.containsKey(WaffraLegacyFinanceBatchJournal.pendingKey),
+        false);
+  });
+
   test('rejects unknown or wrongly typed finance fields without a marker',
       () async {
     final prefs = await SharedPreferences.getInstance();
