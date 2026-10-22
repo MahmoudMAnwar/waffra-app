@@ -1,9 +1,12 @@
+import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'legacy_snapshot_preflight.dart';
 import 'waffra_finance_read_view.dart';
 import 'waffra_legacy_finance_writer_coordinator.dart';
 import 'waffra_legacy_finance_batch_journal.dart';
+import 'waffra_legacy_widget_commit_journal.dart';
 
 /// Immutable financial read + independent widget revision captured while
 /// holding the same cross-engine lock used for financial writes.
@@ -17,6 +20,28 @@ class WaffraHomeFinanceLoaded {
   final String? widgetRevision;
 
   String? get ledgerRaw => finance.getString('entries');
+}
+
+/// Exact persisted result from the shared Home/Widget legacy journal.
+/// This is a safe transitional writer; it is NOT SQLCipher cutover.
+class WaffraConfirmedLegacySmsResult {
+  const WaffraConfirmedLegacySmsResult({
+    required this.savedEntriesRaw,
+    required this.savedHashes,
+    required this.widgetRevision,
+    required this.added,
+    required this.savedIncome,
+    required this.savedExpenses,
+    required this.incomeMinor,
+    required this.expenseMinor,
+    required this.skippedDuplicates,
+  });
+
+  final String savedEntriesRaw;
+  final List<String> savedHashes;
+  final String? widgetRevision;
+  final int added, savedIncome, savedExpenses;
+  final int incomeMinor, expenseMinor, skippedDuplicates;
 }
 
 /// The live HomeScreen's finance persistence boundary.
@@ -107,6 +132,169 @@ class WaffraHomeFinancePersistence {
         throw StateError('Custom saving-goal suggestion could not be saved.');
       }
       return true;
+    });
+  }
+
+  /// Commits the dashboard's confirmed bulk SMS entries and fingerprints
+  /// through the SAME native lock and crash-recovery journal as Android Widget.
+  /// A parsed/cancelled SMS cannot persist even a deduplication marker.
+  ///
+  /// The current shipped app still uses guarded SharedPreferences until a
+  /// separately audited SQLCipher source migration has been activated.
+  Future<WaffraConfirmedLegacySmsResult> commitConfirmedLegacySms({
+    required List<Map<String, Object?>> records,
+    required List<String> messageHashes,
+    required bool userConfirmed,
+    bool allowDuplicateHashes = false,
+  }) async {
+    if (!userConfirmed) {
+      throw StateError('User did not approve the bank transaction batch.');
+    }
+    if (records.isEmpty || records.length > 100 ||
+        messageHashes.length != records.length) {
+      throw ArgumentError('Only 1–100 confirmed aligned SMS entries are allowed.');
+    }
+    // Freeze the user-confirmed forms before waiting on the widget lock.
+    final frozen = records.map((record) =>
+      Map<String, Object?>.unmodifiable(
+        Map<String, Object?>.from(
+          jsonDecode(jsonEncode(record)) as Map<String, dynamic>,
+        ),
+      ),
+    ).toList(growable: false);
+    final hashes = List<String>.unmodifiable(messageHashes);
+    final pattern = RegExp(r'^[a-f0-9]{64}
+  /// settings. The cross-engine lock checks the exact ledger and widget
+  /// revision before ANY field is changed. Returns the committed ledger
+  /// witness for the next queued HomeScreen write.
+  ///
+  /// Journaled recovery completes a partially persisted legacy batch after
+  /// process death; SQLCipher source activation is NOT implemented.
+  Future<String> saveLegacy({
+    required Map<String, Object> snapshot,
+    required String? expectedLedgerRaw,
+    required String? expectedWidgetRevision,
+  }) async {
+    // Defensively copy SMS hash lists before any asynchronous work. The
+    // encrypted/legacy writer must persist exactly the user-confirmed batch.
+    final captured = Map<String, Object>.unmodifiable(snapshot.map(
+      (key, value) => MapEntry(
+        key, value is List<String> ? List<String>.unmodifiable(value) : value,
+      ),
+    ));
+    if (captured.keys.toSet().difference(
+      WaffraLegacyPreflight.allKeys.toSet(),
+    ).isNotEmpty) {
+      throw ArgumentError('Attempted to save non-financial preference keys.');
+    }
+    final entries = captured['entries'];
+    if (entries is! String) {
+      throw ArgumentError('Screen ledger must be a JSON string.');
+    }
+    for (final entry in captured.entries) {
+      final value = entry.value;
+      if (value is! String && value is! double && value is! bool &&
+          !(WaffraLegacyPreflight.financeListOfStringsKeys
+              .contains(entry.key) && value is List<String>)) {
+        throw ArgumentError('Unsupported legacy financial value: ${entry.key}');
+      }
+    }
+    await coordinator.withCurrentPreferences((preferences) async {
+      WaffraLegacyFinanceWriterCoordinator.requireUnchangedLedger(
+        preferences,
+        expectedRaw: expectedLedgerRaw,
+        expectedWidgetRevision: expectedWidgetRevision,
+      );
+      const batch = WaffraLegacyFinanceBatchJournal();
+      await batch.prepare(prefs: preferences, nextValues: captured);
+      await batch.recover(preferences);
+    });
+    return entries;
+  }
+}
+);
+    if (hashes.any((hash) => !pattern.hasMatch(hash))) {
+      throw ArgumentError('Bank SMS hash is not a SHA-256 fingerprint.');
+    }
+    // Validate the new records before entering the mutation journal.
+    if (!WaffraLegacyPreflight.inspect({
+      'entries': jsonEncode(frozen),
+    }).canStage) {
+      throw StateError('Confirmed finance payload failed preflight.');
+    }
+
+    return coordinator.withCurrentPreferences((prefs) async {
+      final currentRaw = prefs.getString('entries') ?? '[]';
+      final currentDecoded = jsonDecode(currentRaw);
+      if (currentDecoded is! List ||
+          currentDecoded.any((row) => row is! Map)) {
+        throw StateError('Existing finance ledger is malformed.');
+      }
+      final current = currentDecoded
+          .map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      final ids = current.map((e) => e['id']).toSet();
+      final known = (prefs.getStringList('waffra_sms_hashes_v1') ??
+          const <String>[]).toSet();
+      final additions = <Map<String, Object?>>[];
+      final newHashes = <String>{};
+      var skipped = 0, income = 0, expense = 0;
+      var incomeMinor = 0, expenseMinor = 0;
+      for (var i = 0; i < frozen.length; i++) {
+        final record = frozen[i];
+        final hash = hashes[i];
+        if (!allowDuplicateHashes &&
+            (known.contains(hash) || newHashes.contains(hash))) {
+          skipped++;
+          continue;
+        }
+        if (!ids.add(record['id'])) {
+          throw StateError('Duplicate transaction identity in confirmed SMS.');
+        }
+        final amount = record['amount'];
+        if (amount is! num || !amount.toDouble().isFinite ||
+            amount <= 0 || ((amount * 100) -
+            (amount * 100).round()).abs() > 1e-7) {
+          throw StateError('Invalid SMS transaction halala precision.');
+        }
+        additions.add(record);
+        newHashes.add(hash);
+        final minor = (amount * 100).round();
+        if (record['income'] == true) {
+          income++;
+          incomeMinor += minor;
+        } else {
+          expense++;
+          expenseMinor += minor;
+        }
+      }
+      if (additions.isNotEmpty) {
+        final merged = [
+          ...additions,
+          ...current,
+        ];
+        final combined = {...known, ...newHashes}.toList()..sort();
+        const journal = WaffraLegacyWidgetCommitJournal();
+        await journal.prepare(
+          prefs: prefs,
+          nextEntries: jsonEncode(merged),
+          nextHashes: combined,
+          nextRevision: DateTime.now().toUtc().toIso8601String(),
+        );
+        await journal.recover(prefs);
+      }
+      return WaffraConfirmedLegacySmsResult(
+        savedEntriesRaw: prefs.getString('entries') ?? currentRaw,
+        savedHashes: List<String>.unmodifiable(
+          prefs.getStringList('waffra_sms_hashes_v1') ?? const <String>[],
+        ),
+        widgetRevision: prefs.getString('waffra_widget_last_save_v1'),
+        added: additions.length,
+        savedIncome: income,
+        savedExpenses: expense,
+        incomeMinor: incomeMinor,
+        expenseMinor: expenseMinor,
+        skippedDuplicates: skipped,
+      );
     });
   }
 
