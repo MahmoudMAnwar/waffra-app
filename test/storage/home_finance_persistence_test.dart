@@ -188,4 +188,50 @@ void main() {
         contains('widget-one'));
   });
 
+  test('transaction deletion journals ledger and SMS hashes together',
+      () async {
+    SharedPreferences.setMockInitialValues({
+      'entries': '[{"id":"before"}]',
+      'waffra_sms_hashes_v1': <String>['old-message'],
+      'waffra_profile': '{"name":"untouched"}',
+    });
+    final saved = await bridge().saveLegacy(
+      snapshot: <String, Object>{
+        'entries': '[]',
+        'waffra_sms_hashes_v1': <String>[],
+      },
+      expectedLedgerRaw: '[{"id":"before"}]',
+      expectedWidgetRevision: null,
+    );
+    expect(saved, '[]');
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.reload();
+    expect(prefs.getString('entries'), '[]');
+    expect(prefs.getStringList('waffra_sms_hashes_v1'), isEmpty);
+    expect(prefs.getString('waffra_profile'), '{"name":"untouched"}');
+    expect(prefs.containsKey('waffra_legacy_finance_batch_pending_v1'), false);
+  });
+
+  test('stale deletion cannot discard a newer widget SMS or dedup hash',
+      () async {
+    SharedPreferences.setMockInitialValues({
+      'entries': '[{"id":"new-widget"}]',
+      'waffra_sms_hashes_v1': <String>['new-widget-message'],
+      'waffra_widget_last_save_v1': 'new-revision',
+    });
+    await expectLater(bridge().saveLegacy(
+      snapshot: <String, Object>{
+        'entries': '[]', 'waffra_sms_hashes_v1': <String>[],
+      },
+      expectedLedgerRaw: '[]',
+      expectedWidgetRevision: null,
+    ), throwsA(isA<StateError>()));
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.reload();
+    expect(prefs.getString('entries'), contains('new-widget'));
+    expect(prefs.getStringList('waffra_sms_hashes_v1'),
+        ['new-widget-message']);
+    expect(prefs.containsKey('waffra_legacy_finance_batch_pending_v1'), false);
+  });
+
 }

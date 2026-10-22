@@ -70,7 +70,13 @@ class WaffraHomeFinancePersistence {
     required String? expectedLedgerRaw,
     required String? expectedWidgetRevision,
   }) async {
-    final captured = Map<String, Object>.unmodifiable(snapshot);
+    // Defensively copy SMS hash lists before any asynchronous work. The
+    // encrypted/legacy writer must persist exactly the user-confirmed batch.
+    final captured = Map<String, Object>.unmodifiable(snapshot.map(
+      (key, value) => MapEntry(
+        key, value is List<String> ? List<String>.unmodifiable(value) : value,
+      ),
+    ));
     if (captured.keys.toSet().difference(
       WaffraLegacyPreflight.allKeys.toSet(),
     ).isNotEmpty) {
@@ -82,7 +88,9 @@ class WaffraHomeFinancePersistence {
     }
     for (final entry in captured.entries) {
       final value = entry.value;
-      if (value is! String && value is! double && value is! bool) {
+      if (value is! String && value is! double && value is! bool &&
+          !(WaffraLegacyPreflight.financeListOfStringsKeys
+              .contains(entry.key) && value is List<String>)) {
         throw ArgumentError('Unsupported legacy financial value: ${entry.key}');
       }
     }

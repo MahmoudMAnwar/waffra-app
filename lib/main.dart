@@ -1968,6 +1968,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   int forecastReduction=20;
  bool recurringRemindersEnabled=false;
  bool ready=false;
+ String? _financeLoadFailure;
  String? lastBackupGeneratedAt;
  int? lastBackupBytes;
  bool protectRecentApps=true;
@@ -1981,7 +1982,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  static const tourTargetKeys=<int>[-1,0,1,2,6,4,3,5];
  bool addFabExpanded=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
- @override void initState(){super.initState();_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:()=>unawaited(_syncWidgetTransactions()));load();}
+ @override void initState(){super.initState();_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:()=>unawaited(_syncWidgetTransactions()));unawaited(_loadFinanceSafely());}
  void _returnToHome(){if(mounted)setState((){tab=0;goalsOpened=false;addFabExpanded=false;});}
  void _receiveWidgetAction(){
   if(!mounted||!ready||waffraWidgetAction.value!='add')return;
@@ -1999,11 +2000,45 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(mounted)unawaited(bulkSmsSheet(initialText:text));
   });
  }
+ Future<void> _loadFinanceSafely()async{
+  if(!mounted)return;
+  setState((){ready=false;_financeLoadFailure=null;});
+  entries.clear();categories.clear();goals.clear();recurring.clear();challenges.clear();
+  deletedCategories.clear();deletedGoals.clear();deletedRecurring.clear();
+  recurringPostponed.clear();smsHashes.clear();learnedMerchantCategories.clear();
+  try{
+   await load();
+  }catch(e){
+   debugPrint('Financial startup integrity/recovery gate blocked access: $e');
+   if(mounted)setState((){
+    ready=false;
+    _financeLoadFailure=waffraIsEnglish?
+     'Your financial data could not be verified. No data was deleted or reset. Please retry, or restore a verified backup.':
+     'تعذر التحقق من سلامة بياناتك المالية. لم يتم حذف أو تصفير أي بيانات. حاول مجددًا أو استرجع نسخة احتياطية موثوقة.';
+   });
+  }
+ }
+ Widget _financialRecoveryScreen()=>Center(child:Padding(
+  padding:const EdgeInsets.all(24),
+  child:Column(mainAxisSize:MainAxisSize.min,children:[
+   const Icon(Icons.shield_outlined,size:50,color:emerald),
+   const SizedBox(height:14),
+   WaffraText(waffraIsEnglish?'Financial data protected':'بياناتك المالية محمية',
+    textAlign:TextAlign.center,style:const TextStyle(fontSize:20,fontWeight:FontWeight.bold)),
+   const SizedBox(height:9),
+   WaffraText(_financeLoadFailure??'',textAlign:TextAlign.center),
+   const SizedBox(height:18),
+   FilledButton.icon(
+    onPressed:()=>unawaited(_loadFinanceSafely()),
+    icon:const Icon(Icons.refresh),
+    label:WaffraText(waffraIsEnglish?'Retry safely':'إعادة المحاولة بأمان')),
+  ])));
  @override void dispose(){_dashboardScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();super.dispose();}
  Future<void> _syncWidgetTransactions()async{
   if(!mounted||!ready)return;
   try{
    final loadedFinance=await _homeFinancePersistence.loadWithWitness();
+   loadedFinance.finance.requireIntegrity();
    final revision=loadedFinance.widgetRevision;
    if(revision==null||revision==_lastWidgetRevision)return;
    final raw=loadedFinance.ledgerRaw;
@@ -2017,26 +2052,35 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _lastLedgerSavedRaw=raw;
    });
    unawaited(_refreshWidget());
-  }catch(e){debugPrint('Widget ledger sync failed: $e');}
+  }catch(e){
+   debugPrint('Widget ledger sync failed safely: $e');
+   if(mounted)setState((){
+    ready=false;
+    _financeLoadFailure=waffraIsEnglish?
+     'Financial data could not be verified after widget activity. Retry safely.':
+     'تعذر التحقق من البيانات بعد إضافة عملية من الويدجت. أعد المحاولة بأمان.';
+   });
+  }
  }
  Future<void> load()async {
   final p=await SharedPreferences.getInstance();
   final loadedFinance=await _homeFinancePersistence.loadWithWitness();
   final financeView=loadedFinance.finance;
+  financeView.requireIntegrity();
   _lastWidgetRevision=loadedFinance.widgetRevision;
   _lastLedgerSavedRaw=loadedFinance.ledgerRaw;
-  try{final raw=financeView.getString('entries');if(raw!=null)entries.addAll((jsonDecode(raw) as List).map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('entries: $e');}
-  try{final raw=financeView.getString('waffra_categories_v24');categories.addAll(raw==null?defaultCategories():(jsonDecode(raw) as List).map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('categories: $e');categories.addAll(defaultCategories());}
-  try{final raw=financeView.getString('waffra_goals_v24');if(raw!=null)goals.addAll((jsonDecode(raw) as List).map((x)=>SavingGoal.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('goals: $e');}
-  try{final raw=financeView.getString('waffra_recurring_v24');if(raw!=null)recurring.addAll((jsonDecode(raw) as List).map((x)=>RecurringBill.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('recurring: $e');}
-  try{final raw=financeView.getString('waffra_challenges_v1');if(raw!=null)challenges.addAll((jsonDecode(raw) as List).map((e)=>SavingChallenge.fromJson(Map<String,dynamic>.from(e))));}catch(e){debugPrint('challenges: $e');}
+  try{final raw=financeView.getString('entries');if(raw!=null)entries.addAll((jsonDecode(raw) as List).map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved transactions cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_categories_v24');categories.addAll(raw==null?defaultCategories():(jsonDecode(raw) as List).map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved categories cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_goals_v24');if(raw!=null)goals.addAll((jsonDecode(raw) as List).map((x)=>SavingGoal.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved goals cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_recurring_v24');if(raw!=null)recurring.addAll((jsonDecode(raw) as List).map((x)=>RecurringBill.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved recurring finance cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_challenges_v1');if(raw!=null)challenges.addAll((jsonDecode(raw) as List).map((e)=>SavingChallenge.fromJson(Map<String,dynamic>.from(e))));}catch(e){throw StateError('Saved challenges cannot be decoded safely: $e');}
   try{
    final raw=financeView.getString('waffra_deleted_categories_v1');
    if(raw!=null)deletedCategories.addAll((jsonDecode(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));
-  }catch(e){debugPrint('Deleted categories: $e');}
-  try{final raw=financeView.getString('waffra_deleted_goals_v1');if(raw!=null)deletedGoals.addAll((jsonDecode(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));}catch(e){debugPrint('Deleted goals: $e');}
-  try{final raw=financeView.getString('waffra_deleted_recurring_v1');if(raw!=null)deletedRecurring.addAll((jsonDecode(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));}catch(e){debugPrint('Deleted recurring: $e');}
-  try{final raw=financeView.getString('waffra_recurring_postponed_v1');if(raw!=null)recurringPostponed.addAll((jsonDecode(raw) as Map).map((k,v)=>MapEntry(k.toString(),v.toString())));}catch(e){debugPrint('Postponements: $e');}
+  }catch(e){throw StateError('Deleted categories cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_deleted_goals_v1');if(raw!=null)deletedGoals.addAll((jsonDecode(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));}catch(e){throw StateError('Deleted goals cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_deleted_recurring_v1');if(raw!=null)deletedRecurring.addAll((jsonDecode(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));}catch(e){throw StateError('Deleted recurring cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_recurring_postponed_v1');if(raw!=null)recurringPostponed.addAll((jsonDecode(raw) as Map).map((k,v)=>MapEntry(k.toString(),v.toString())));}catch(e){throw StateError('Recurring postponements cannot be decoded safely: $e');}
   deletedGoals.removeWhere((item){final date=DateTime.tryParse('${item['deletedAt']??''}');return date==null||!DateTime.now().isBefore(date.add(const Duration(days:30)));});
   deletedRecurring.removeWhere((item){final date=DateTime.tryParse('${item['deletedAt']??''}');return date==null||!DateTime.now().isBefore(date.add(const Duration(days:30)));});
   final trashBefore=deletedCategories.length;
@@ -2119,7 +2163,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      learnedMerchantCategories.addAll(data.map((key,value)=>MapEntry(key.toString(),value.toString())));
     }
    }
-  }catch(e){debugPrint('Learning rules: $e');}
+  }catch(e){throw StateError('Learned merchant rules cannot be decoded safely: $e');}
   if(categories.isEmpty)categories.addAll(defaultCategories());
   for(final e in entries){
    if(!categories.any((c)=>c.name==e.category&&c.income==e.income)){
@@ -3434,24 +3478,29 @@ Future<void> bulkSmsSheet({String? initialText})async {
    waffraIsEnglish?'Delete all transactions?':'حذف كل المعاملات؟',
    waffraIsEnglish?'Delete all ${entries.length} recorded transactions permanently? This cannot be undone.':'سيتم حذف جميع المعاملات المسجلة وعددها ${entries.length} نهائيًا، ولا يمكن التراجع عن هذا الإجراء.');
   if(confirmed!=true||!mounted)return;
-  final backup=List<MoneyEntry>.of(entries);
-  final hashBackup=Set<String>.of(smsHashes);
-  setState((){entries.clear();smsHashes.clear();});
-  try {
-   await _homeFinancePersistence.withLegacyWriter((prefs) async {
-    WaffraLegacyFinanceWriterCoordinator.requireUnchangedLedger(
-     prefs, expectedRaw:_lastLedgerSavedRaw,
+  // Crash journal BOTH the ledger and duplicate hashes as one recoverable
+  // intent. Do not clear in-memory finance until durable storage confirms it.
+  final clear=<String,Object>{
+   'entries':'[]',
+   'waffra_sms_hashes_v1':<String>[],
+  };
+  try{
+   await _financialWriteQueue.submit(clear,(captured)async{
+    _lastLedgerSavedRaw=await _homeFinancePersistence.saveLegacy(
+     snapshot:captured,
+     expectedLedgerRaw:_lastLedgerSavedRaw,
      expectedWidgetRevision:_lastWidgetRevision,
     );
-    final saved=await prefs.setString('entries','[]');
-    final cleared=await prefs.setStringList(
-      'waffra_sms_hashes_v1',<String>[]);
-    if(!saved||!cleared)throw StateError('Failed to persist deletion');
-    _lastLedgerSavedRaw='[]';
    });
-   if(mounted)snackSuccess(context,waffraIsEnglish?'All transactions deleted':'تم حذف جميع المعاملات');
+   if(!mounted)return;
+   setState((){entries.clear();smsHashes.clear();});
+   unawaited(_refreshWidget());
+   snackSuccess(context,waffraIsEnglish?'All transactions deleted':'تم حذف جميع المعاملات');
   }catch(e){
-   if(mounted){setState((){entries.addAll(backup);smsHashes.addAll(hashBackup);});snack(context,waffraIsEnglish?'Delete failed':'فشل حذف المعاملات');}
+   debugPrint('Confirmed transaction deletion could not be verified: $e');
+   if(mounted)snack(context,waffraIsEnglish?
+    'Deletion could not be confirmed. Reload before retrying.':
+    'تعذر تأكيد الحذف. أعد تحميل المعاملات قبل المحاولة مجددًا.');
   }
  }
  Future<void> editMonthlyBudget()async {
@@ -6256,14 +6305,54 @@ Future<void> bulkSmsSheet({String? initialText})async {
    waffraIsEnglish?'This deletes transactions, categories, budgets, goals and recurring schedules. It cannot be undone. Your profile and app settings stay.':
     'سيتم حذف المعاملات والأقسام والميزانيات والأهداف والجدولة المتكررة نهائيًا. لا يمكن التراجع. سيبقى الملف الشخصي وإعدادات التطبيق.');
   if(ok!=true||!mounted)return;
-  setState((){
-   entries.clear();categories..clear()..addAll(defaultCategories());
-   goals.clear();challenges.clear();recurring.clear();deletedCategories.clear();deletedGoals.clear();deletedRecurring.clear();recurringPostponed.clear();smsHashes.clear();
-   learnedMerchantCategories.clear();monthlyBudget=0;monthlyBudgetEnabled=false;
-  });
-  final p=await SharedPreferences.getInstance();
-  await p.remove('waffra_sms_hashes_v1');await persist();
-  if(mounted)snackSuccess(context,waffraIsEnglish?'Financial data deleted':'تم حذف البيانات المالية');
+  final cleanCategories=defaultCategories();
+  // Every recognized financial field is reset through ONE crash-recoverable
+  // journal. SMS hashes must NOT be cleared independently before finance
+  // persistence, and non-finance profile/app settings must remain intact.
+  final clean=<String,Object>{
+   'entries':'[]',
+   'waffra_categories_v24':jsonEncode(cleanCategories.map((e)=>e.toJson()).toList()),
+   'waffra_goals_v24':'[]',
+   'waffra_recurring_v24':'[]',
+   'waffra_challenges_v1':'[]',
+   'waffra_deleted_categories_v1':'[]',
+   'waffra_deleted_goals_v1':'[]',
+   'waffra_deleted_recurring_v1':'[]',
+   'waffra_recurring_postponed_v1':'{}',
+   'waffra_monthly_budget_v1':0.0,
+   'waffra_monthly_budget_enabled_v1':false,
+   'waffra_learned_merchants_v1':'{}',
+   'waffra_sms_hashes_v1':<String>[],
+   'waffra_recurring_reminders_enabled_v1':false,
+  };
+  try{
+   await _financialWriteQueue.submit(clean,(captured)async{
+    _lastLedgerSavedRaw=await _homeFinancePersistence.saveLegacy(
+     snapshot:captured,
+     expectedLedgerRaw:_lastLedgerSavedRaw,
+     expectedWidgetRevision:_lastWidgetRevision,
+    );
+   });
+   if(!mounted)return;
+   setState((){
+    entries.clear();
+    categories..clear()..addAll(cleanCategories);
+    goals.clear();challenges.clear();recurring.clear();
+    deletedCategories.clear();deletedGoals.clear();deletedRecurring.clear();
+    recurringPostponed.clear();smsHashes.clear();learnedMerchantCategories.clear();
+    monthlyBudget=0;monthlyBudgetEnabled=false;recurringRemindersEnabled=false;
+   });
+   unawaited(_refreshWidget());
+   try{await WaffraReminders.clear();}catch(e){
+    debugPrint('Could not clear old recurring reminders: $e');
+   }
+   if(mounted)snackSuccess(context,waffraIsEnglish?'Financial data deleted':'تم حذف البيانات المالية');
+  }catch(e){
+   debugPrint('Financial erase was not fully confirmed: $e');
+   if(mounted)snack(context,waffraIsEnglish?
+    'Deletion could not be verified. Reload before retrying.':
+    'تعذر تأكيد حذف البيانات. أعد التحميل قبل المحاولة مجددًا.');
+  }
  }
  Widget _accountTile(String label,String subtitle,IconData icon,{VoidCallback? onTap,Widget? trailing,Color tint=emerald})=>
   ListTile(
@@ -6535,7 +6624,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
    ]),
   // Instant content swap avoids building/animating the previous heavy tab
   // alongside the next one (the recurring -> savings navigation hitch).
-  body:!ready?const Center(child:CircularProgressIndicator()):
+  body:_financeLoadFailure!=null?_financialRecoveryScreen():
+   !ready?const Center(child:CircularProgressIndicator()):
    GestureDetector(
     behavior:HitTestBehavior.translucent,
     onHorizontalDragStart:(_)=>_swipeTravel=0,

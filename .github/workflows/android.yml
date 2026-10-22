@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - main
+      - 'feature/storage-finance-startup-recovery-m62'
   workflow_dispatch:
 
 # Fast-build concurrency: only the latest pushed revision needs an APK.

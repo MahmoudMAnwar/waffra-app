@@ -40,6 +40,21 @@ class WaffraFinanceReadView {
     return WaffraFinanceReadView._(snapshot.values);
   }
 
+  /// Validate the COMPLETE captured finance source before a live screen uses
+  /// any part of it. Missing finance keys are allowed on first install, but
+  /// malformed transaction, goal, trash, SMS hash or budget values must never
+  /// be silently replaced with defaults and then persisted over old data.
+  ///
+  /// This is read-only and works for both legacy and encrypted snapshots.
+  void requireIntegrity() {
+    final result = WaffraLegacyPreflight.inspect(_values);
+    if (!result.canStage) {
+      throw StateError(
+        'Financial source failed integrity validation; recovery is required.',
+      );
+    }
+  }
+
   bool containsKey(String key) {
     _requireFinanceKey(key);
     return _values.containsKey(key);
