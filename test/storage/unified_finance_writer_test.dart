@@ -86,6 +86,8 @@ void main() {
       userConfirmed:true,
     );
     expect(result.saved,0);
+    expect(result.incomeMinor,0);
+    expect(result.expenseMinor,0);
     expect(result.skippedDuplicates,1);
     expect(result.generation,1);
     expect(await count(),1);
@@ -105,6 +107,8 @@ void main() {
     expect(result.saved,5);
     expect(result.savedIncome,2);
     expect(result.savedExpenses,3);
+    expect(result.incomeMinor,1900);
+    expect(result.expenseMinor,2850);
     expect(result.skippedDuplicates,0);
     expect(await count(),5);
     expect((await currentSnapshot().read()).generation,1);

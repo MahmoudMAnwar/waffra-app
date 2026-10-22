@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:waffra/storage/waffra_finance_read_view.dart';
@@ -68,6 +69,27 @@ class _Legacy extends WaffraHomeFinancePersistence {
       incomeMinor: 0,
       expenseMinor: 125,
       skippedDuplicates: 0,
+    );
+  }
+}
+
+class _PausedSourceInspection extends WaffraProductionFinanceSourceGuard {
+  bool pauseNext = false;
+  final reached = Completer<void>();
+  final resume = Completer<void>();
+
+  @override
+  Future<WaffraProductionFinanceSourceReport> inspect({
+    SharedPreferences? preferences,
+  }) async {
+    if (pauseNext) {
+      pauseNext = false;
+      reached.complete();
+      await resume.future;
+    }
+    return const WaffraProductionFinanceSourceReport(
+      source: WaffraProductionFinanceSource.guardedLegacy,
+      reasonCode: 'legacy_source_verified',
     );
   }
 }
@@ -251,4 +273,38 @@ void main() {
     }
     expect(writer.smsCount, 2);
   });
+  test('M110 freezes queued Home snapshot before async source validation',
+      () async {
+    final probe = _PausedSourceInspection();
+    final writer = _Legacy();
+    final authority = WaffraVerifiedFinanceAuthority(
+      sourceGuard: probe, legacy: writer,
+    );
+    final before = await authority.load(
+      route: WaffraFinanceRoute.dashboardRead,
+    );
+    final captured = <String, Object>{
+      'entries': '[]',
+      'waffra_goals_v24': '[]',
+    };
+    probe.pauseNext = true;
+    final saving = authority.saveCaptured(
+      route: WaffraFinanceRoute.transactionEdit,
+      baseline: before, captured: captured,
+    );
+    await probe.reached.future;
+    // Simulate a UI update racing the OS-backed source inspection.
+    captured['entries'] = 'CORRUPT_AFTER_CAPTURE';
+    captured['waffra_goals_v24'] = 'CORRUPT_AFTER_CAPTURE';
+    probe.resume.complete();
+    final saved = await saving;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.reload();
+    expect(saved.ledgerRaw, '[]');
+    expect(prefs.getString('entries'), '[]');
+    expect(prefs.getString('waffra_goals_v24'), '[]');
+    expect(writer.writeCount, 1);
+  });
+
+
 }

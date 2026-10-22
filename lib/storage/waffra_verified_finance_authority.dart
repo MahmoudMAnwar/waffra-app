@@ -29,10 +29,13 @@ class WaffraFinanceAuthoritySmsCommit {
     required this.saved,
     required this.income,
     required this.expenses,
+    required this.incomeMinor,
+    required this.expenseMinor,
     required this.skippedDuplicates,
     required this.current,
   });
   final int saved, income, expenses, skippedDuplicates;
+  final int incomeMinor, expenseMinor;
   final WaffraFinanceAuthorityRead current;
 }
 
@@ -108,30 +111,34 @@ class WaffraVerifiedFinanceAuthority {
     required WaffraFinanceAuthorityRead baseline,
     required Map<String, Object> captured,
   }) async {
-    final backend = await _requireRoute(route);
-    if (backend != baseline.source) {
-      throw StateError('Finance authority changed while screen was open.');
-    }
+    // Capture caller-owned values synchronously, before ANY awaited source
+    // probe. A queued Home edit can otherwise mutate the map while the OS
+    // key / SQLCipher witness check is pending.
     final frozen = <String, Object>{};
     for (final item in captured.entries) {
       final v = item.value;
       frozen[item.key] = v is List<String>
           ? List<String>.unmodifiable(v) : v;
     }
+    final immutableCapture = Map<String, Object>.unmodifiable(frozen);
+    final backend = await _requireRoute(route);
+    if (backend != baseline.source) {
+      throw StateError('Finance authority changed while screen was open.');
+    }
     if (backend == WaffraRuntimeFinanceBackend.guardedLegacy) {
       await legacy.saveLegacy(
-        snapshot: Map<String, Object>.unmodifiable(frozen),
+        snapshot: immutableCapture,
         expectedLedgerRaw: baseline.ledgerRaw,
         expectedWidgetRevision: baseline.widgetRevision,
       );
     } else {
-      final witness = baseline.encryptedWitness;
-      if (witness == null) {
-        throw StateError('Verified encrypted baseline not available.');
-      }
-      await encryptedSession!.saveDashboardBatch(
-        baseline: witness,
-        captured: frozen,
+      // Do NOT update only the encrypted JSON snapshot here. A live Home
+      // category/goal/transaction edit or full reset must also update each
+      // normalized SQLCipher projection and encrypted receipts atomically.
+      // M110 routes the UI through one authority, but does not pretend the
+      // remaining typed SQL projection writers or migration are complete.
+      throw StateError(
+        'Encrypted screen mutation requires a verified atomic SQL projection writer.',
       );
     }
     // Never publish optimistic UI success before getting durable witness.
@@ -161,7 +168,7 @@ class WaffraVerifiedFinanceAuthority {
     )).toList(growable: false);
     final fingerprints = List<String>.unmodifiable(hashes);
     final backend = await _requireRoute(route);
-    late final int saved, income, expenses, skipped;
+    late final int saved, income, expenses, skipped, incomeMinor, expenseMinor;
     if (backend == WaffraRuntimeFinanceBackend.guardedLegacy) {
       final result = await legacy.commitConfirmedLegacySms(
         records: frozen, messageHashes: fingerprints,
@@ -171,6 +178,8 @@ class WaffraVerifiedFinanceAuthority {
       income = result.savedIncome;
       expenses = result.savedExpenses;
       skipped = result.skippedDuplicates;
+      incomeMinor = result.incomeMinor;
+      expenseMinor = result.expenseMinor;
     } else {
       final result = await encryptedSession!.appendConfirmed(
         records: frozen, hashes: fingerprints.cast<String?>(),
@@ -180,9 +189,12 @@ class WaffraVerifiedFinanceAuthority {
       income = result.savedIncome;
       expenses = result.savedExpenses;
       skipped = result.skippedDuplicates;
+      incomeMinor = result.incomeMinor;
+      expenseMinor = result.expenseMinor;
     }
     return WaffraFinanceAuthoritySmsCommit(
       saved: saved, income: income, expenses: expenses,
+      incomeMinor: incomeMinor, expenseMinor: expenseMinor,
       skippedDuplicates: skipped,
       current: await load(route: route),
     );

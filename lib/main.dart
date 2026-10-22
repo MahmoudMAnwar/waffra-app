@@ -1935,6 +1935,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  final WaffraLegacyWriteQueue _financialWriteQueue=WaffraLegacyWriteQueue();
  final WaffraHomeFinancePersistence _homeFinancePersistence=const WaffraHomeFinancePersistence();
  late final WaffraVerifiedFinanceAuthority _financeAuthority=WaffraVerifiedFinanceAuthority(legacy:_homeFinancePersistence);
+ WaffraFinanceAuthorityRead? _lastFinanceAuthorityRead;
  final smsHashes=<String>{};
  final expandedCategoryIds=<String>{};
  final learnedMerchantCategories=<String,String>{};
@@ -2057,6 +2058,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final loadedFinance=await _financeAuthority.load(route:WaffraFinanceRoute.dashboardRead);
    loadedFinance.finance.requireIntegrity();
    final revision=loadedFinance.widgetRevision;
+   // A newer widget write invalidates the dashboard's previous baseline.
+   // Never carry a pre-widget snapshot into another finance save.
    if(revision==null||revision==_lastWidgetRevision)return;
    final raw=loadedFinance.ledgerRaw;
    if(raw==null)return;
@@ -2067,6 +2070,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     entries..clear()..addAll(loaded);
     _lastWidgetRevision=revision;
     _lastLedgerSavedRaw=raw;
+    _lastFinanceAuthorityRead=loadedFinance;
    });
    unawaited(_refreshWidget());
   }catch(e){
@@ -2082,6 +2086,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Future<void> load()async {
   final p=await SharedPreferences.getInstance();
   final loadedFinance=await _financeAuthority.load(route:WaffraFinanceRoute.dashboardRead);
+  _lastFinanceAuthorityRead=loadedFinance;
   final financeView=loadedFinance.finance;
   financeView.requireIntegrity();
   _lastWidgetRevision=loadedFinance.widgetRevision;
@@ -2228,12 +2233,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    'waffra_monthly_budget_enabled_v1':monthlyBudgetEnabled,
    'waffra_learned_merchants_v1':jsonEncode(learnedMerchantCategories),
   };
+  final baseline=_lastFinanceAuthorityRead;
   return _financialWriteQueue.submit(snapshot,(captured)async {
-   _lastLedgerSavedRaw=await _homeFinancePersistence.saveLegacy(
-    snapshot:captured,
-    expectedLedgerRaw:_lastLedgerSavedRaw,
-    expectedWidgetRevision:_lastWidgetRevision,
+   if(baseline==null){
+    throw StateError('Verified dashboard baseline is unavailable.');
+   }
+   // One source-aware write entry point for the entire Home finance capture.
+   // Every individual category/goal/recurring editor funnels through here.
+   // The selected SQLCipher source and witness are rechecked before writing.
+   final committed=await _financeAuthority.saveCaptured(
+    route:WaffraFinanceRoute.transactionEdit,
+    baseline:baseline,
+    captured:captured,
    );
+   _lastFinanceAuthorityRead=committed;
+   _lastLedgerSavedRaw=committed.ledgerRaw;
+   _lastWidgetRevision=committed.widgetRevision;
   }).then((_){unawaited(_refreshWidget());});
  }
 
@@ -2486,24 +2501,27 @@ Future<void> bulkSmsSheet({String? initialText})async {
    // The dashboard and standalone Android widget now use the SAME locked,
    // crash-recoverable finance+SMS-hash journal on guarded legacy installs.
    // Never claim a save until the durable journal confirms the actual rows.
-   final applied=await _homeFinancePersistence.commitConfirmedLegacySms(
+   final applied=await _financeAuthority.commitConfirmedSms(
+    route:WaffraFinanceRoute.bulkSmsConfirmedSave,
     records:additions.map((e)=>e.toJson()).toList(growable:false),
-    messageHashes:[for(final i in valid)bankSmsHash(found[i])],
+    hashes:[for(final i in valid)bankSmsHash(found[i])],
     userConfirmed:true,
     allowDuplicateHashes:allowRepeatedSms,
    );
    if(!mounted)return;
-   final persisted=(jsonDecode(applied.savedEntriesRaw) as List)
+   final persisted=(jsonDecode(applied.current.ledgerRaw??'[]') as List)
     .map((e)=>MoneyEntry.fromJson(Map<String,dynamic>.from(e as Map)))
     .toList();
    setState((){
     entries..clear()..addAll(persisted);
-    smsHashes..clear()..addAll(applied.savedHashes);
-    _lastLedgerSavedRaw=applied.savedEntriesRaw;
-    _lastWidgetRevision=applied.widgetRevision;
+    smsHashes..clear()..addAll(
+     applied.current.finance.getStringList('waffra_sms_hashes_v1')??const <String>[]);
+    _lastFinanceAuthorityRead=applied.current;
+    _lastLedgerSavedRaw=applied.current.ledgerRaw;
+    _lastWidgetRevision=applied.current.widgetRevision;
    });
    unawaited(_refreshWidget());
-   if(applied.added==0){
+   if(applied.saved==0){
     update(()=>statusMessage=waffraIsEnglish
       ?'These transactions have already been saved.'
       :'هذه العمليات محفوظة بالفعل.');
@@ -2519,7 +2537,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     ]),
     content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
      WaffraText(waffraIsEnglish?
-      'Saved ${applied.added} transactions':'تم حفظ ${applied.added} معاملة',
+      'Saved ${applied.saved} transactions':'تم حفظ ${applied.saved} معاملة',
       textAlign:TextAlign.center,style:const TextStyle(fontWeight:FontWeight.w600)),
      const SizedBox(height:14),
      Container(padding:const EdgeInsets.all(13),
@@ -2529,7 +2547,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        const SizedBox(width:10),
        Expanded(child:WaffraText(waffraIsEnglish?'Income':'الدخل',
         style:const TextStyle(fontWeight:FontWeight.bold,color:Color(0xFF087B56)))),
-       WaffraText('${applied.savedIncome} • ${(applied.incomeMinor/100).toStringAsFixed(2)}',
+       WaffraText('${applied.income} • ${(applied.incomeMinor/100).toStringAsFixed(2)}',
         style:const TextStyle(fontWeight:FontWeight.bold,color:Color(0xFF087B56))),
       ])),
      const SizedBox(height:9),
@@ -2540,7 +2558,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        const SizedBox(width:10),
        Expanded(child:WaffraText(waffraIsEnglish?'Expenses':'المصروفات',
         style:const TextStyle(fontWeight:FontWeight.bold,color:Color(0xFFD65A45)))),
-       WaffraText('${applied.savedExpenses} • ${(applied.expenseMinor/100).toStringAsFixed(2)}',
+       WaffraText('${applied.expenses} • ${(applied.expenseMinor/100).toStringAsFixed(2)}',
         style:const TextStyle(fontWeight:FontWeight.bold,color:Color(0xFFD65A45))),
       ])),
      if(invalid.isNotEmpty||applied.skippedDuplicates>0)...[
@@ -2766,13 +2784,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
        // A parsed SMS is not saved until both the transaction and its
        // fingerprint are crash-journaled under the SAME Home/Widget lock.
        // A stale dashboard must never overwrite a newer widget ledger.
-       final committed=await _homeFinancePersistence.commitConfirmedLegacySms(
+       final committed=await _financeAuthority.commitConfirmedSms(
+        route:WaffraFinanceRoute.bulkSmsConfirmedSave,
         records:[Map<String,Object?>.from(entry.toJson())],
-        messageHashes:[hash],
+        hashes:[hash],
         userConfirmed:true,
         allowDuplicateHashes:explicitlyApprovedDuplicate,
        );
-       if(committed.added!=1){
+       if(committed.saved!=1){
         if(ctx.mounted)update((){
          busy=false;
          statusMessage=waffraIsEnglish
@@ -2781,15 +2800,17 @@ Future<void> bulkSmsSheet({String? initialText})async {
         });
         return;
        }
-       final verified=(jsonDecode(committed.savedEntriesRaw) as List)
+       final verified=(jsonDecode(committed.current.ledgerRaw??'[]') as List)
         .map((item)=>MoneyEntry.fromJson(
          Map<String,dynamic>.from(item as Map))).toList();
        if(!mounted)return;
        setState((){
         entries..clear()..addAll(verified);
-        smsHashes..clear()..addAll(committed.savedHashes);
-        _lastLedgerSavedRaw=committed.savedEntriesRaw;
-        _lastWidgetRevision=committed.widgetRevision;
+        smsHashes..clear()..addAll(
+         committed.current.finance.getStringList('waffra_sms_hashes_v1')??const <String>[]);
+        _lastFinanceAuthorityRead=committed.current;
+        _lastLedgerSavedRaw=committed.current.ledgerRaw;
+        _lastWidgetRevision=committed.current.widgetRevision;
        });
        unawaited(_refreshWidget());
        if(!ctx.mounted)return;
@@ -3553,12 +3574,16 @@ Future<void> bulkSmsSheet({String? initialText})async {
    'waffra_sms_hashes_v1':<String>[],
   };
   try{
+   final baseline=_lastFinanceAuthorityRead;
    await _financialWriteQueue.submit(clear,(captured)async{
-    _lastLedgerSavedRaw=await _homeFinancePersistence.saveLegacy(
-     snapshot:captured,
-     expectedLedgerRaw:_lastLedgerSavedRaw,
-     expectedWidgetRevision:_lastWidgetRevision,
+    if(baseline==null)throw StateError('Finance source baseline unavailable.');
+    final committed=await _financeAuthority.saveCaptured(
+     route:WaffraFinanceRoute.deleteAllTransactions,
+     baseline:baseline,captured:captured,
     );
+    _lastFinanceAuthorityRead=committed;
+    _lastLedgerSavedRaw=committed.ledgerRaw;
+    _lastWidgetRevision=committed.widgetRevision;
    });
    if(!mounted)return;
    setState((){entries.clear();smsHashes.clear();});
@@ -6440,12 +6465,16 @@ Future<void> bulkSmsSheet({String? initialText})async {
    'waffra_recurring_reminders_enabled_v1':false,
   };
   try{
+   final baseline=_lastFinanceAuthorityRead;
    await _financialWriteQueue.submit(clean,(captured)async{
-    _lastLedgerSavedRaw=await _homeFinancePersistence.saveLegacy(
-     snapshot:captured,
-     expectedLedgerRaw:_lastLedgerSavedRaw,
-     expectedWidgetRevision:_lastWidgetRevision,
+    if(baseline==null)throw StateError('Finance reset source baseline unavailable.');
+    final committed=await _financeAuthority.saveCaptured(
+     route:WaffraFinanceRoute.fullFinanceReset,
+     baseline:baseline,captured:captured,
     );
+    _lastFinanceAuthorityRead=committed;
+    _lastLedgerSavedRaw=committed.ledgerRaw;
+    _lastWidgetRevision=committed.widgetRevision;
    });
    if(!mounted)return;
    setState((){
