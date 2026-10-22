@@ -43,7 +43,12 @@ jobs:
           widget = Path('lib/waffra_widget_capture.part.dart').read_text()
           persistence = Path('lib/storage/waffra_home_finance_persistence.dart').read_text()
           assert 'commitConfirmedLegacySms(' in app
-          assert 'commitConfirmedLegacySms(' in widget
+          authority = Path('lib/storage/waffra_verified_finance_authority.dart').read_text()
+          assert '_financeAuthority.commitConfirmedSms(' in widget
+          assert 'WaffraFinanceRoute.widgetSmsConfirmedSave' in widget
+          assert 'legacy.commitConfirmedLegacySms(' in authority
+          assert 'sourceGuard.inspect()' in authority
+          assert 'encryptedSession!.appendConfirmed(' in authority
           assert 'journal.prepare(' not in widget
           assert 'journal.recover(' not in widget
           assert 'withLegacyWriter(' not in widget

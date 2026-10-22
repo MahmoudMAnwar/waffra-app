@@ -9,7 +9,16 @@ void main() {
     final journal=File('lib/storage/waffra_home_finance_persistence.dart')
         .readAsStringSync();
 
-    expect(widget, contains('_financePersistence.commitConfirmedLegacySms('));
+    // M109 additionally sends the widget through the SAME verified source
+    // authority that dispatches to the M108 legacy journal until SQLCipher
+    // has all 24 production route and cross-engine witness proofs.
+    final router=File('lib/storage/waffra_verified_finance_authority.dart')
+        .readAsStringSync();
+    expect(widget, contains('_financeAuthority.commitConfirmedSms('));
+    expect(widget, contains('WaffraFinanceRoute.widgetSmsConfirmedSave'));
+    expect(router, contains('legacy.commitConfirmedLegacySms('));
+    expect(router, contains('sourceGuard.inspect()'));
+    expect(router, contains('encryptedSession!.appendConfirmed('));
     expect(home, contains('_homeFinancePersistence.commitConfirmedLegacySms('));
     // Widget cannot introduce a second custom transaction/journal
     // algorithm whose view of the ledger races against the main app.
