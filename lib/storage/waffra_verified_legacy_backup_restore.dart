@@ -64,17 +64,17 @@ class WaffraVerifiedLegacyBackupRestore {
         requiredFinanceKeys.difference(finance.keys.toSet()).isNotEmpty) {
       throw ArgumentError('Backup restore must include every finance field.');
     }
-    final values = <String, Object?>{
+    final captured = <String, Object>{
       for (final entry in finance.entries)
         entry.key: entry.value is List<String>
             ? List<String>.unmodifiable(entry.value as List<String>)
             : entry.value,
     };
-    final audit = WaffraLegacyPreflight.inspect(values);
+    final audit = WaffraLegacyPreflight.inspect(captured);
     if (!audit.canStage) {
       throw StateError('Backup finance failed integrity preflight.');
     }
-    final rawLedger = values['entries'];
+    final rawLedger = captured['entries'];
     if (rawLedger is! String || _hasReceiptPaths(rawLedger)) {
       // Old JSON-only backups preserve absolute receiptPath strings but NOT
       // their bytes. Never report a recovered invoice unless its bytes are
@@ -83,7 +83,7 @@ class WaffraVerifiedLegacyBackupRestore {
     }
     final entries = jsonDecode(rawLedger) as List;
     final persisted = await persistence.saveLegacy(
-      snapshot: Map<String, Object>.unmodifiable(finance),
+      snapshot: Map<String, Object>.unmodifiable(captured),
       expectedLedgerRaw: expectedLedgerRaw,
       expectedWidgetRevision: expectedWidgetRevision,
     );
