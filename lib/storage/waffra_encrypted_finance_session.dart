@@ -129,6 +129,21 @@ class WaffraEncryptedFinanceSession {
     );
   }
 
+  Future<void> replaceReceiptImage({
+    required String entryId,
+    required int position,
+    required Uint8List image,
+    required String expectedSha256,
+  }) async {
+    _requireEnabled();
+    return bridge.replaceVerifiedReceiptImage(
+      entryId: entryId,
+      position: position,
+      image: image,
+      expectedSha256: expectedSha256,
+    );
+  }
+
   Future<List<Uint8List>> readReceiptImages(String entryId) async {
     _requireEnabled();
     return bridge.loadReceiptImages(entryId: entryId);
