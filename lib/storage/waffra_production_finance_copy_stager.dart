@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
+
+import 'package:crypto/crypto.dart';
 import 'dart:typed_data';
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,6 +17,8 @@ import 'waffra_portable_encrypted_vault_restorer.dart';
 class WaffraProductionCopyStageReport {
   const WaffraProductionCopyStageReport({
     required this.sourceDigest,
+    required this.catalogDigest,
+    required this.receiptManifestDigest,
     required this.transactions,
     required this.receipts,
     required this.receiptBytes,
@@ -22,6 +26,8 @@ class WaffraProductionCopyStageReport {
   });
 
   final String sourceDigest;
+  final String catalogDigest;
+  final String receiptManifestDigest;
   final int transactions, receipts, receiptBytes, targetGeneration;
 }
 
@@ -65,6 +71,32 @@ class WaffraProductionFinanceCopyStager {
           List<String>.unmodifiable(custom);
     }
     return Map<String, Object?>.unmodifiable(snapshot);
+  }
+
+  // A finance snapshot checksum does NOT include the independently saved
+  // custom goal catalog or external receipt images. They must carry their own
+  // witnesses, otherwise a cutover could silently omit a late app edit.
+  static String _catalogDigest(Map<String, Object?> captured) =>
+      sha256.convert(utf8.encode(
+        jsonEncode(captured['waffra_custom_goals_v1']),
+      )).toString();
+
+  static String _receiptManifestDigest(
+      List<WaffraReceiptBackupPart> receipts) {
+    final ordered = receipts.toList()
+      ..sort((a, b) {
+        final owner = a.entryId.compareTo(b.entryId);
+        return owner != 0 ? owner : a.position.compareTo(b.position);
+      });
+    return sha256.convert(utf8.encode(jsonEncode([
+      for (final receipt in ordered)
+        [
+          receipt.entryId,
+          receipt.position,
+          receipt.bytes.length,
+          sha256.convert(receipt.bytes).toString(),
+        ],
+    ]))).toString();
   }
 
   static List<String> _strictPaths(Object? raw) {
@@ -216,6 +248,8 @@ class WaffraProductionFinanceCopyStager {
       }
       return WaffraProductionCopyStageReport(
         sourceDigest: audited.sourceSha256,
+        catalogDigest: _catalogDigest(captured),
+        receiptManifestDigest: _receiptManifestDigest(receipts),
         transactions: restored.transactionCount,
         receipts: restored.receiptCount,
         receiptBytes: restored.receiptBytes,
@@ -224,6 +258,121 @@ class WaffraProductionFinanceCopyStager {
     });
   }
 
+  /// Full post-staging verification. The original financial digest by itself
+  /// does not cover the custom goals catalog or receipt bytes. Recompute all
+  /// THREE witnesses under the native app/Widget lock, and separately verify
+  /// that SQLCipher still contains the same generation and receipt bytes.
+  ///
+  /// This method never mutates user data and is NOT source activation.
+  Future<bool> stageStillMatches(WaffraProductionCopyStageReport report) async {
+    if (!experimentalEnabled) {
+      throw StateError('Verified source comparison is not enabled.');
+    }
+    return coordinator.withCurrentPreferences((prefs) async {
+      final captured = _capture(prefs);
+      final old = WaffraLegacyPreflight.inspect(captured);
+      if (!old.canStage ||
+          old.sourceSha256 != report.sourceDigest ||
+          _catalogDigest(captured) != report.catalogDigest) {
+        return false;
+      }
+      final receiptParts = await _readReceiptBytes(captured);
+      if (_receiptManifestDigest(receiptParts) !=
+              report.receiptManifestDigest ||
+          receiptParts.length != report.receipts ||
+          receiptParts.fold<int>(0, (a, b) => a + b.bytes.length) !=
+              report.receiptBytes) {
+        return false;
+      }
+      final sql = await WaffraAtomicFinanceSnapshot(
+        store: destination,
+        experimentalEnabled: true,
+      ).read();
+      if (sql.generation != report.targetGeneration) return false;
+      final rawOriginal = captured['entries'];
+      final rawEncrypted = sql.values['entries'];
+      if (rawOriginal is! String || rawEncrypted is! String) return false;
+      final original = jsonDecode(rawOriginal);
+      final converted = jsonDecode(rawEncrypted);
+      if (original is! List || converted is! List ||
+          original.length != converted.length ||
+          original.length != report.transactions) {
+        return false;
+      }
+      for (var i = 0; i < original.length; i++) {
+        final oldRow = Map<String, dynamic>.from(original[i] as Map);
+        final sqlRow = Map<String, dynamic>.from(converted[i] as Map);
+        final oldPaths = _strictPaths(oldRow.remove('receiptPath'));
+        final tokenPaths = _strictPaths(sqlRow.remove('receiptPath'));
+        if (jsonEncode(oldRow) != jsonEncode(sqlRow) ||
+            oldPaths.length != tokenPaths.length) {
+          return false;
+        }
+        final entryId = oldRow['id'] as String;
+        final blobs = await WaffraEncryptedReceiptVault(
+          store: destination, experimentalEnabled: true,
+        ).readAll(entryId);
+        if (blobs.length != oldPaths.length) return false;
+        for (var j = 0; j < blobs.length; j++) {
+          if (!WaffraEncryptedReceiptReference.matches(
+                tokenPaths[j], entryId, j)) {
+            return false;
+          }
+          final expected = receiptParts.singleWhere(
+            (part) => part.entryId == entryId && part.position == j,
+          );
+          if (sha256.convert(expected.bytes).toString() !=
+                  sha256.convert(blobs[j].bytes).toString() ||
+              blobs[j].position != j) {
+            return false;
+          }
+        }
+      }
+      final legacyFinance = <String, Object?>{
+        for (final key in WaffraLegacyPreflight.allKeys)
+          if (captured.containsKey(key) && key != 'entries')
+            key: captured[key],
+      };
+      final encryptedFinance = <String, Object?>{
+        for (final key in WaffraLegacyPreflight.allKeys)
+          if (sql.values.containsKey(key) && key != 'entries')
+            key: sql.values[key],
+      };
+      if (jsonEncode(legacyFinance) != jsonEncode(encryptedFinance)) {
+        return false;
+      }
+      final goals = await destination.customSelect(
+        "SELECT name FROM sqlite_master WHERE type='table' "
+        "AND name='fresh_finance_custom_goals'",
+      ).get();
+      final storedSuggestions = <String>[];
+      if (goals.isNotEmpty) {
+        final rows = await destination.customSelect(
+          'SELECT position,suggestion FROM fresh_finance_custom_goals '
+          'ORDER BY position ASC',
+        ).get();
+        for (var i = 0; i < rows.length; i++) {
+          if (rows[i].read<int>('position') != i) return false;
+          storedSuggestions.add(rows[i].read<String>('suggestion'));
+        }
+      }
+      final previousSuggestions = captured['waffra_custom_goals_v1'];
+      if (previousSuggestions == null) {
+        if (storedSuggestions.isNotEmpty) return false;
+      } else if (jsonEncode(previousSuggestions) !=
+          jsonEncode(storedSuggestions)) {
+        return false;
+      }
+      final count = await destination.customSelect(
+        'SELECT count(*) AS n FROM fresh_finance_receipt_blobs',
+      ).getSingle();
+      return count.read<int>('n') == report.receipts;
+    });
+  }
+
+  /// A backwards-compatible finance-only digest check. Incomplete for
+  /// production activation: use stageStillMatches(report) instead.
+  @Deprecated('Does not cover receipt bytes or goal catalog')
   /// Revalidate the LEGACY source after a staging run, before even considering
   /// future activation. All participating writers are serialized by the
   /// native lock. This method NEVER selects an encrypted source.
