@@ -65,9 +65,22 @@ class WaffraUnifiedFinanceWriter {
         messageHashes.length != records.length) {
       throw ArgumentError('A save requires 1 to 100 aligned transactions.');
     }
-    for (var index = 0; index < records.length; index++) {
-      final data = records[index];
-      final hash = messageHashes[index];
+    // Freeze the entire confirmed payload BEFORE awaiting the shared native
+    // lock or source witness. The caller (Home form, SMS parser or widget)
+    // can reuse and mutate both lists and their maps while this runs.
+    // A JSON round-trip also isolates nested JSON data from caller memory.
+    final confirmedRecords = <Map<String, Object?>>[];
+    for (final record in records) {
+      final decoded = jsonDecode(jsonEncode(record));
+      if (decoded is! Map<String, dynamic>) {
+        throw ArgumentError('Invalid confirmed transaction payload.');
+      }
+      confirmedRecords.add(Map<String, Object?>.unmodifiable(decoded));
+    }
+    final confirmedHashes = List<String?>.unmodifiable(messageHashes);
+    for (var index = 0; index < confirmedRecords.length; index++) {
+      final data = confirmedRecords[index];
+      final hash = confirmedHashes[index];
       if (hash != null && !RegExp(r'^[a-f0-9]{64}$').hasMatch(hash)) {
         throw ArgumentError('Invalid SMS digest.');
       }
@@ -112,9 +125,9 @@ class WaffraUnifiedFinanceWriter {
         next['waffra_sms_hashes_v1'] as List<String>? ?? const <String>[],
       );
       var savedIncome = 0, savedExpenses = 0, skipped = 0;
-      for (var i = 0; i < records.length; i++) {
-        final record = Map<String, Object?>.from(records[i]);
-        final hash = messageHashes[i];
+      for (var i = 0; i < confirmedRecords.length; i++) {
+        final record = confirmedRecords[i];
+        final hash = confirmedHashes[i];
         if (hash != null && !allowDuplicateHashes &&
             existingHashes.contains(hash)) {
           skipped++;
@@ -142,7 +155,7 @@ class WaffraUnifiedFinanceWriter {
       // settings. Unlike the existing widget's prefs.setString, this mutation
       // applies to CURRENT persisted finance state, not stale screen state.
       next['entries'] = jsonEncode(list);
-      if (messageHashes.any((hash) => hash != null)) {
+      if (confirmedHashes.any((hash) => hash != null)) {
         next['waffra_sms_hashes_v1'] = existingHashes.toList()..sort();
       }
       final written = await snapshot.commit(
