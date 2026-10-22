@@ -140,6 +140,87 @@ class WaffraVerifiedEncryptedFinanceBridge {
       allowDuplicateHashes: allowDuplicateHashes,
     );
   }
+  /// Merge confirmed SMS deduplication hashes under the SAME cross-engine
+  /// lock, without losing newer hashes written from the quick-add widget.
+  /// The hash list (never a raw SMS body) is committed with a new SQL revision.
+  Future<WaffraFinanceSnapshotState> mergeConfirmedSmsHashes(
+    List<String> additions,
+  ) async {
+    if (!experimentalEnabled) {
+      throw StateError('Encrypted SMS deduplication runtime is disabled.');
+    }
+    if (additions.length > 1000 ||
+        additions.any((hash) =>
+          !RegExp(r'^[a-f0-9]{64}
+  /// encrypted finance snapshot. No arbitrary user-supplied path or receipt
+  /// identifier is accepted; the same native app/widget lock and activation
+  /// witness protect the financial record and the encrypted BLOB read.
+  Future<List<Uint8List>> loadReceiptImages({required String entryId}) async {
+    if (!experimentalEnabled) {
+      throw StateError('Encrypted receipt runtime is disabled by default.');
+    }
+    return WaffraExperimentalWriterGate(
+      disposableDirectory: writerDirectory,
+      experimentalEnabled: true,
+    ).withExclusiveAccess(() async {
+      await _requireActivatedUnderLock();
+      final current = await snapshot.read();
+      final raw = current.values['entries'];
+      if (raw is! String) {
+        throw StateError('Encrypted finance ledger is unavailable.');
+      }
+      final rows = jsonDecode(raw);
+      if (rows is! List) {
+        throw StateError('Encrypted finance ledger is malformed.');
+      }
+      final exact = rows.where((row) =>
+          row is Map && row['id'] == entryId).toList();
+      if (exact.length != 1) {
+        throw StateError('Encrypted receipt owner is missing or duplicated.');
+      }
+      final references = (exact.single as Map)['receiptPath'];
+      if (references != null && references is! String) {
+        throw StateError('Encrypted receipt references are malformed.');
+      }
+      return WaffraEncryptedReceiptReadGateway(
+        receiptVault: WaffraEncryptedReceiptVault(
+          store: snapshot.store, experimentalEnabled: true,
+        ),
+        experimentalEnabled: true,
+        verifyEncryptedSource: _requireActivatedUnderLock,
+      ).read(
+        entryId: entryId,
+        encodedReferences: references as String?,
+      );
+    });
+  }
+
+}
+).hasMatch(hash))) {
+      throw ArgumentError('Only SHA-256 SMS fingerprints are allowed.');
+    }
+    return WaffraExperimentalWriterGate(
+      disposableDirectory: writerDirectory,
+      experimentalEnabled: true,
+    ).withExclusiveAccess(() async {
+      await _requireActivatedUnderLock();
+      final current = await snapshot.read();
+      final existing = Set<String>.from(
+        current.values['waffra_sms_hashes_v1'] as List<String>? ??
+            const <String>[],
+      );
+      final oldCount = existing.length;
+      existing.addAll(additions);
+      if (oldCount == existing.length) return current;
+      final next = Map<String, Object?>.from(current.values);
+      next['waffra_sms_hashes_v1'] = existing.toList()..sort();
+      return snapshot.commit(
+        expectedGeneration: current.generation,
+        fullFinanceSnapshot: next,
+      );
+    });
+  }
+
   /// Loads an attachment ONLY for an entry proven to exist in the current
   /// encrypted finance snapshot. No arbitrary user-supplied path or receipt
   /// identifier is accepted; the same native app/widget lock and activation
