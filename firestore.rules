@@ -43,7 +43,7 @@ service cloud.firestore {
       ])
       && data.kind in [
         'entry', 'category', 'goal', 'recurring', 'challenge',
-        'postponement', 'merchant_rule', 'setting', 'tombstone'
+        'postponement', 'merchant_rule', 'setting', 'tombstone', 'manifest'
       ]
       && data.ciphertext is string
       && data.ciphertext.size() <= 700000
