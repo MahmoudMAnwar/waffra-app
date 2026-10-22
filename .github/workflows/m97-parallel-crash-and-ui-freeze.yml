@@ -1,0 +1,39 @@
+name: Waffra M97 Parallel Journal Recovery and Frozen UI Acceptance
+
+on:
+  pull_request:
+    paths:
+      - 'lib/storage/waffra_home_finance_persistence.dart'
+      - 'lib/storage/waffra_encrypted_finance_ui_patch.dart'
+      - 'test/storage/m97_*.dart'
+      - '.github/workflows/m97-parallel-crash-and-ui-freeze.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-acceptance:
+    name: M97 independently verify ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: crash-recovery-and-duplicate-sms
+            file: test/storage/m97_home_widget_interrupted_commit_test.dart
+          - name: immutable-confirmed-sqlcipher-ui
+            file: test/storage/m97_encrypted_screen_frozen_confirmation_test.dart
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve packages
+        run: flutter pub get
+      - name: Analyze runtime source and this shard
+        run: dart analyze lib/storage/waffra_encrypted_finance_ui_patch.dart ${{ matrix.file }}
+      - name: Run independent synthetic safety shard
+        run: flutter test ${{ matrix.file }} --reporter expanded
