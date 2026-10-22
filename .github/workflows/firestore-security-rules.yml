@@ -7,6 +7,10 @@ on:
       - 'firestore.indexes.json'
       - 'firebase.json'
       - 'test/firebase/**'
+      - 'lib/storage/waffra_cloud_*.dart'
+      - 'lib/storage/waffra_firestore_encrypted_sync_transport.dart'
+      - 'test/storage/cloud_*.dart'
+      - 'integration_test/finance_cloud_final_release_android_test.dart'
       - '.github/workflows/firestore-security-rules.yml'
   workflow_dispatch:
 
