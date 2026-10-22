@@ -110,65 +110,95 @@ class WaffraUnifiedFinanceWriter {
     );
     return gate.withExclusiveAccess(() async {
       await verifySourceUnderLock?.call();
-      final current = await snapshot.read();
-      final next = Map<String, Object?>.from(current.values);
-      final decoded = jsonDecode((next['entries'] as String?) ?? '[]');
-      if (decoded is! List) {
-        throw StateError('Existing finance entries have invalid storage.');
-      }
-      final list = decoded.map<Map<String, Object?>>((item) {
-        if (item is! Map) throw StateError('Invalid saved finance entry.');
-        return Map<String, Object?>.from(item);
-      }).toList();
-      final ids = list.map((item) => item['id']).toSet();
-      final existingHashes = Set<String>.from(
-        next['waffra_sms_hashes_v1'] as List<String>? ?? const <String>[],
-      );
-      var savedIncome = 0, savedExpenses = 0, skipped = 0;
-      for (var i = 0; i < confirmedRecords.length; i++) {
-        final record = confirmedRecords[i];
-        final hash = confirmedHashes[i];
-        if (hash != null && !allowDuplicateHashes &&
-            existingHashes.contains(hash)) {
-          skipped++;
-          continue;
+      return snapshot.store.transaction(() async {
+        final current = await snapshot.read();
+        final next = Map<String, Object?>.from(current.values);
+        final decoded = jsonDecode((next['entries'] as String?) ?? '[]');
+        if (decoded is! List) {
+          throw StateError('Existing finance entries have invalid storage.');
         }
-        if (!ids.add(record['id'])) {
-          throw StateError('Duplicate transaction ID; refusing partial save.');
+        final list = decoded.map<Map<String, Object?>>((item) {
+          if (item is! Map) throw StateError('Invalid saved finance entry.');
+          return Map<String, Object?>.from(item);
+        }).toList();
+        final ids = list.map((item) => item['id']).toSet();
+        // M76 writes normalized SQL and the canonical finance snapshot in
+        // one transaction. The unified Home/widget writer must do the same.
+        // A count-only check can miss equal-sized, mismatched ID sets.
+        final sqlRows = await snapshot.store.customSelect(
+          'SELECT entry_id FROM fresh_finance_entries',
+        ).get();
+        final normalizedIds = sqlRows
+            .map((row) => row.read<String>('entry_id')).toSet();
+        if (sqlRows.length != list.length ||
+            normalizedIds.length != list.length ||
+            !normalizedIds.containsAll(ids) ||
+            !ids.containsAll(normalizedIds)) {
+          throw StateError('Encrypted SQL ledger differs from screen snapshot.');
         }
-        list.add(record);
-        if (hash != null) existingHashes.add(hash);
-        if (record['income'] == true) {
-          savedIncome++;
-        } else {
-          savedExpenses++;
-        }
-      }
-      final saved = savedIncome + savedExpenses;
-      if (saved == 0) {
-        return WaffraUnifiedWriteResult(
-          saved: 0, savedIncome: 0, savedExpenses: 0,
-          skippedDuplicates: skipped, generation: current.generation,
+        final existingHashes = Set<String>.from(
+          next['waffra_sms_hashes_v1'] as List<String>? ?? const <String>[],
         );
-      }
-      // No changes to goals, deleted records, categories, recurring budgets or
-      // settings. Unlike the existing widget's prefs.setString, this mutation
-      // applies to CURRENT persisted finance state, not stale screen state.
-      next['entries'] = jsonEncode(list);
-      if (confirmedHashes.any((hash) => hash != null)) {
-        next['waffra_sms_hashes_v1'] = existingHashes.toList()..sort();
-      }
-      final written = await snapshot.commit(
-        expectedGeneration: current.generation,
-        fullFinanceSnapshot: next,
-      );
-      return WaffraUnifiedWriteResult(
-        saved: saved,
-        savedIncome: savedIncome,
-        savedExpenses: savedExpenses,
-        skippedDuplicates: skipped,
-        generation: written.generation,
-      );
+        var savedIncome = 0, savedExpenses = 0, skipped = 0;
+        for (var i = 0; i < confirmedRecords.length; i++) {
+          final record = confirmedRecords[i];
+          final hash = confirmedHashes[i];
+          if (hash != null && !allowDuplicateHashes &&
+              existingHashes.contains(hash)) {
+            skipped++;
+            continue;
+          }
+          if (!ids.add(record['id'])) {
+            throw StateError('Duplicate transaction ID; refusing partial save.');
+          }
+          // Save both projections under the SAME SQLCipher transaction; if
+          // any row insert or snapshot commit fails, no finance or hash is
+          // persisted. Receipt-bearing records are rejected above.
+          await snapshot.store.customStatement(
+            'INSERT INTO fresh_finance_entries '
+            '(entry_id,title,category_snapshot,amount_minor,is_income,'
+            'occurred_iso,receipt_count,source_json) VALUES(?,?,?,?,?,?,?,?)',
+            [
+              record['id'], record['title'], record['category'],
+              ((record['amount'] as num) * 100).round(),
+              record['income'] == true ? 1 : 0,
+              record['date'], 0, jsonEncode(record),
+            ],
+          );
+          list.add(record);
+          if (hash != null) existingHashes.add(hash);
+          if (record['income'] == true) {
+            savedIncome++;
+          } else {
+            savedExpenses++;
+          }
+        }
+        final saved = savedIncome + savedExpenses;
+        if (saved == 0) {
+          return WaffraUnifiedWriteResult(
+            saved: 0, savedIncome: 0, savedExpenses: 0,
+            skippedDuplicates: skipped, generation: current.generation,
+          );
+        }
+        // No changes to goals, deleted records, categories, recurring budgets or
+        // settings. Unlike the existing widget's prefs.setString, this mutation
+        // applies to CURRENT persisted finance state, not stale screen state.
+        next['entries'] = jsonEncode(list);
+        if (confirmedHashes.any((hash) => hash != null)) {
+          next['waffra_sms_hashes_v1'] = existingHashes.toList()..sort();
+        }
+        final written = await snapshot.commit(
+          expectedGeneration: current.generation,
+          fullFinanceSnapshot: next,
+        );
+        return WaffraUnifiedWriteResult(
+          saved: saved,
+          savedIncome: savedIncome,
+          savedExpenses: savedExpenses,
+          skippedDuplicates: skipped,
+          generation: written.generation,
+        );
+      });
     });
   }
 }
