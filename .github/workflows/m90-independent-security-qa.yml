@@ -1,0 +1,29 @@
+name: Waffra M90 Route Inventory Integrity
+
+on:
+  pull_request:
+    paths:
+      - 'test/storage/m90_finance_route_audit_matrix_test.dart'
+      - '.github/workflows/m90-independent-security-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-finance-qa:
+    name: M90 isolated synthetic safety tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Fetch Flutter dependencies
+        run: flutter pub get
+      - name: Analyze exact test target
+        run: dart analyze test/storage/m90_finance_route_audit_matrix_test.dart
+      - name: Execute synthetic acceptance tests
+        run: flutter test test/storage/m90_finance_route_audit_matrix_test.dart --reporter expanded
