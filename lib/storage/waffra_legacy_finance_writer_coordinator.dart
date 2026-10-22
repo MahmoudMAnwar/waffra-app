@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'waffra_experimental_writer_gate.dart';
 import 'waffra_live_legacy_finance_guard.dart';
+import 'waffra_production_finance_source_guard.dart';
 import 'waffra_legacy_widget_commit_journal.dart';
 import 'waffra_legacy_finance_batch_journal.dart';
 
@@ -19,7 +20,9 @@ class WaffraLegacyFinanceWriterCoordinator {
   const WaffraLegacyFinanceWriterCoordinator({
     this.testDirectory,
     this.testBypassNativeLock = false,
-  }) : assert(!testBypassNativeLock || testDirectory != null);
+    this.sourceProbe,
+  }) : assert(!testBypassNativeLock || testDirectory != null),
+       assert(sourceProbe == null || testDirectory != null);
 
   /// Injectable ONLY in isolated automated tests.
   final Directory? testDirectory;
@@ -28,6 +31,22 @@ class WaffraLegacyFinanceWriterCoordinator {
   /// driven by fake timers. Production always uses the real native lock;
   /// use a disposable testDirectory and this override only in a UI test.
   final bool testBypassNativeLock;
+
+  /// Injectable only alongside an isolated test directory. Production
+  /// always checks OS secure key, encrypted vault and activation witnesses
+  /// INSIDE the same native inter-engine financial write lock.
+  final Future<void> Function(SharedPreferences)? sourceProbe;
+
+  Future<void> _checkSourceInsideLease(SharedPreferences prefs) async {
+    final probe = sourceProbe;
+    if (probe != null) {
+      await probe(prefs);
+    } else if (testDirectory == null) {
+      await const WaffraProductionFinanceSourceGuard()
+          .requireSafeLegacyStartup(preferences: prefs);
+    }
+  }
+
 
   /// The exact saved entries value is a stronger witness than the widget's
   /// optional timestamp. If the process was killed between saving entries
@@ -53,6 +72,7 @@ class WaffraLegacyFinanceWriterCoordinator {
       }
       final prefs = await SharedPreferences.getInstance();
       await const WaffraLiveLegacyFinanceGuard().requireLegacySource(prefs);
+      await _checkSourceInsideLease(prefs);
       await const WaffraLegacyWidgetCommitJournal().recover(prefs);
       await const WaffraLegacyFinanceBatchJournal().recover(prefs);
       return callback(prefs);
@@ -73,6 +93,9 @@ class WaffraLegacyFinanceWriterCoordinator {
       final prefs = await SharedPreferences.getInstance();
       await const WaffraLiveLegacyFinanceGuard()
           .requireLegacySource(prefs);
+      // The SQL witness, OS key and external selector must be checked while
+      // the lock is held. Check BEFORE recovery journals touch finance.
+      await _checkSourceInsideLease(prefs);
       await const WaffraLegacyWidgetCommitJournal().recover(prefs);
       await const WaffraLegacyFinanceBatchJournal().recover(prefs);
       return callback(prefs);
