@@ -14,6 +14,7 @@ on:
       - 'feature/waffra-unified-finance-release-candidate'
       - 'feature/m106-play-privacy-observability-readiness'
       - 'feature/m107-production-account-delete-observability'
+      - 'feature/m108-unified-home-widget-finance-commit'
   workflow_dispatch:
 
 # Fast-build concurrency: only the latest pushed revision needs an APK.
