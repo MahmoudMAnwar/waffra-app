@@ -1,0 +1,35 @@
+name: Waffra M121 Atomic Receipt Screen Witness
+on:
+  pull_request:
+    paths:
+      - 'lib/storage/waffra_verified_encrypted_finance_bridge.dart'
+      - 'test/storage/verified_encrypted_finance_bridge_test.dart'
+      - '.github/workflows/m121-atomic-receipt-screen-witness.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  atomic-receipt-screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Analyze atomic receipt source and race tests
+        run: >-
+          dart analyze
+          lib/storage/waffra_verified_encrypted_finance_bridge.dart
+          test/storage/verified_encrypted_finance_bridge_test.dart
+      - name: Verify same-lock ledger, image and recycle witness with rollback
+        run: >-
+          flutter test
+          test/storage/verified_encrypted_finance_bridge_test.dart
+          test/storage/m119_receipt_screen_authority_test.dart
+          test/m119_verified_receipt_panel_test.dart
+          test/storage/m118_encrypted_receipt_recycle_test.dart
+          test/storage/encrypted_receipt_vault_test.dart
+          --reporter expanded
