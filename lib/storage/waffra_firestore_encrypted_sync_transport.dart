@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import 'waffra_cloud_compare_and_swap.dart';
 import 'waffra_sync_outbox.dart';
 
 /// Consent and key/source proofs must come from a verified, independent
@@ -78,32 +79,15 @@ class WaffraFirestoreEncryptedSyncTransport {
         final remote = current.exists
             ? _decodeRevision(item.documentId, current.data())
             : null;
-        final decision = WaffraEncryptedCloudOutbox.preflight(
+        final decision = WaffraCloudCompareAndSwap.plan(
           item: item,
           remote: remote,
-          consentGiven: authorization.userConsented,
-          identityVerified: true,
-          recoveryReady: authorization.recoveryKeyVerified,
-          atomicRemoteTransportReady: true,
+          expectedPreviousMutationId: expectedPreviousMutationId,
         );
-        if (decision == WaffraRemoteAction.alreadyApplied) {
+        if (decision == WaffraCloudCasAction.alreadyApplied) {
           return WaffraCloudPublishStatus.alreadyApplied;
         }
-        if (decision == WaffraRemoteAction.blocked) {
-          return WaffraCloudPublishStatus.blocked;
-        }
-        if (remote != null) {
-          if (expectedPreviousMutationId == null ||
-              expectedPreviousMutationId != remote.mutationId ||
-              remote.kind != item.envelope.kind ||
-              remote.localVersion + 1 != item.envelope.localVersion ||
-              remote.mutationId == item.envelope.mutationId) {
-            return WaffraCloudPublishStatus.manualConflict;
-          }
-        } else if (item.envelope.localVersion != 1 ||
-            expectedPreviousMutationId != null) {
-          // A missing server document with version >1 is not a new record:
-          // it may be missing an earlier upload or a remote deletion.
+        if (decision == WaffraCloudCasAction.manualConflict) {
           return WaffraCloudPublishStatus.manualConflict;
         }
         tx.set(record, <String, Object>{
