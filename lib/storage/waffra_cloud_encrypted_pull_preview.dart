@@ -3,6 +3,7 @@ import 'package:cryptography/cryptography.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'waffra_cloud_cipher.dart';
+import 'waffra_cloud_recovery_manifest.dart';
 import 'waffra_firestore_encrypted_sync_transport.dart';
 import 'waffra_sync_outbox.dart';
 
@@ -77,6 +78,63 @@ class WaffraCloudEncryptedPullPreview {
       nonce: remote['nonce'] as String,
       mac: remote['mac'] as String,
     );
+  }
+
+  /// A new phone does not know financial record IDs. Decrypt a versioned
+  /// authenticated manifest FIRST, then prove every referenced revision
+  /// exists and authenticates under the recovered vault key.
+  ///
+  /// This is a read-only, all-or-error preview: it NEVER automatically
+  /// merges, deletes or overwrites the existing device's SQLCipher data.
+  /// Publishing the manifest is ordered AFTER all referenced uploads.
+  Future<List<WaffraVerifiedCloudRecordPreview>> previewIndexedVault({
+    required String ownerUid,
+    required String vaultId,
+    required SecretKey recoveredKey,
+    required WaffraCloudSyncAuthorization authorization,
+  }) async {
+    final index = await previewKnownRecord(
+      ownerUid: ownerUid,
+      vaultId: vaultId,
+      kind: WaffraCloudRecoveryManifest.kind,
+      recordId: WaffraCloudRecoveryManifest.recordId,
+      recoveredKey: recoveredKey,
+      authorization: authorization,
+    );
+    if (index == null || index.deleted) {
+      throw StateError('Missing valid encrypted recovery inventory.');
+    }
+    final raw = index.clearRecord['records'];
+    if (raw is! List || raw.length > 1000) {
+      throw StateError('Encrypted recovery inventory is malformed.');
+    }
+    final results = <WaffraVerifiedCloudRecordPreview>[];
+    final seen = <String>{};
+    for (final item in raw) {
+      if (item is! Map<String, dynamic>) {
+        throw StateError('Encrypted recovery pointer is malformed.');
+      }
+      final pointer = WaffraCloudRecordPointer.fromJson(item);
+      if (!seen.add('${pointer.kind}/${pointer.id}')) {
+        throw StateError('Duplicate encrypted record in recovery inventory.');
+      }
+      final candidate = await previewKnownRecord(
+        ownerUid: ownerUid,
+        vaultId: vaultId,
+        kind: pointer.kind,
+        recordId: pointer.id,
+        recoveredKey: recoveredKey,
+        authorization: authorization,
+      );
+      if (candidate == null ||
+          candidate.mutationId != pointer.mutationId ||
+          candidate.remoteVersion != pointer.version ||
+          candidate.deleted != pointer.deleted) {
+        throw StateError('Cloud data diverged from encrypted recovery index.');
+      }
+      results.add(candidate);
+    }
+    return List<WaffraVerifiedCloudRecordPreview>.unmodifiable(results);
   }
 
   Future<WaffraVerifiedCloudRecordPreview?> previewKnownRecord({
