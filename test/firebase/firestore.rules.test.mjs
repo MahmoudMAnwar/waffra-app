@@ -112,7 +112,9 @@ test('a mutation with a lower local version cannot overwrite a newer one', async
   const alice = env.authenticatedContext('alice').firestore();
   await assertSucceeds(setDoc(doc(alice, path), vault('alice')));
   await assertSucceeds(setDoc(doc(alice, recordPath),
-    encryptedRecord({ localVersion: 10 })));
+    encryptedRecord({ localVersion: 1 })));
+  await assertSucceeds(setDoc(doc(alice, recordPath),
+    encryptedRecord({ localVersion: 2, mutationId: 'newer' })));
   await assertFails(setDoc(doc(alice, recordPath),
     encryptedRecord({ localVersion: 2, mutationId: 'older' })));
 });
@@ -165,4 +167,92 @@ test('disabled sync parent refuses new encrypted financial uploads', async () =>
   await assertSucceeds(setDoc(doc(alice, path),
     { ...vault('alice'), syncEnabled: false }));
   await assertFails(setDoc(doc(alice, recordPath), encryptedRecord()));
+});
+
+
+test('M77 first encrypted document must start at revision one, even if owner is authenticated', async () => {
+  const alice = env.authenticatedContext('alice').firestore();
+  await assertSucceeds(setDoc(doc(alice, path), vault('alice')));
+  for (const version of [2, 3, 1000]) {
+    await assertFails(setDoc(doc(alice, recordPath),
+      encryptedRecord({ localVersion: version, mutationId: `first-${version}` })));
+  }
+  await assertSucceeds(setDoc(doc(alice, recordPath), encryptedRecord()));
+  const confirmed = await getDoc(doc(alice, recordPath));
+  assert.equal(confirmed.data().localVersion, 1);
+});
+
+test('M77 confirmed first writer wins an edit collision between two devices', async () => {
+  const mobileA = env.authenticatedContext('alice').firestore();
+  const mobileB = env.authenticatedContext('alice').firestore();
+  await assertSucceeds(setDoc(doc(mobileA, path), vault('alice')));
+  await assertSucceeds(setDoc(doc(mobileA, recordPath), encryptedRecord()));
+  await assertSucceeds(setDoc(doc(mobileA, recordPath), encryptedRecord({
+    localVersion: 2, mutationId: 'mobile-a-2',
+    deviceId: 'mobile-a', ciphertext: 'encrypted-a-2',
+  })));
+  await assertFails(setDoc(doc(mobileB, recordPath), encryptedRecord({
+    localVersion: 2, mutationId: 'mobile-b-2',
+    deviceId: 'mobile-b', ciphertext: 'encrypted-b-2',
+  })));
+  const saved = await assertSucceeds(getDoc(doc(mobileB, recordPath)));
+  assert.equal(saved.data().mutationId, 'mobile-a-2');
+  assert.equal(saved.data().ciphertext, 'encrypted-a-2');
+});
+
+test('M77 disabling cloud sync freezes updates without erasing old ciphertext', async () => {
+  const alice = env.authenticatedContext('alice').firestore();
+  const bob = env.authenticatedContext('bob').firestore();
+  await assertSucceeds(setDoc(doc(alice, path), vault('alice')));
+  await assertSucceeds(setDoc(doc(alice, recordPath), encryptedRecord()));
+  const metadata = await getDoc(doc(alice, path));
+  await assertSucceeds(setDoc(doc(alice, path), {
+    ...vault('alice'),
+    createdAt: metadata.data().createdAt,
+    syncEnabled: false,
+  }));
+  await assertFails(setDoc(doc(alice, recordPath), encryptedRecord({
+    localVersion: 2, mutationId: 'disabled-write',
+  })));
+  await assertFails(setDoc(doc(bob, recordPath), encryptedRecord({
+    localVersion: 2, mutationId: 'foreign-write',
+  })));
+  const stillThere = await getDoc(doc(alice, recordPath));
+  assert.equal(stillThere.data().mutationId, 'mutation-0001');
+  await assertFails(deleteDoc(doc(alice, recordPath)));
+});
+
+test('M77 authenticated user cannot include raw SMS, IBAN or access tokens in cloud envelope', async () => {
+  const alice = env.authenticatedContext('alice').firestore();
+  await assertSucceeds(setDoc(doc(alice, path), vault('alice')));
+  for (const forbidden of ['rawSms', 'iban', 'bankCredentials', 'accessToken',
+                            'receiptPath', 'accountNumber', 'fullName']) {
+    await assertFails(setDoc(doc(alice, recordPath), encryptedRecord({
+      [forbidden]: 'unapproved-plaintext',
+    })));
+  }
+  await assertSucceeds(setDoc(doc(alice, recordPath), encryptedRecord()));
+  const saved = await getDoc(doc(alice, recordPath));
+  assert.deepEqual(
+    Object.keys(saved.data()).sort(),
+    ['kind', 'ciphertext', 'nonce', 'mac', 'encryptionVersion',
+     'deviceId', 'mutationId', 'localVersion', 'updatedAt', 'deleted'].sort(),
+  );
+});
+
+test('M77 old device cannot physically delete a tombstone or recreate the same document', async () => {
+  const alice = env.authenticatedContext('alice').firestore();
+  await assertSucceeds(setDoc(doc(alice, path), vault('alice')));
+  await assertSucceeds(setDoc(doc(alice, recordPath), encryptedRecord()));
+  await assertSucceeds(setDoc(doc(alice, recordPath), encryptedRecord({
+    localVersion: 2, mutationId: 'soft-delete', deleted: true,
+    ciphertext: 'authenticated-encrypted-deletion',
+  })));
+  await assertFails(deleteDoc(doc(alice, recordPath)));
+  await assertFails(setDoc(doc(alice, recordPath), encryptedRecord({
+    localVersion: 1, mutationId: 'stale-undeletion', deleted: false,
+  })));
+  const remote = await getDoc(doc(alice, recordPath));
+  assert.equal(remote.data().deleted, true);
+  assert.equal(remote.data().localVersion, 2);
 });
