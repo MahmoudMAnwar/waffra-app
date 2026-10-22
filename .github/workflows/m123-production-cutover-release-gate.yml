@@ -1,0 +1,31 @@
+name: Waffra M123 Production Cutover Release Gate
+on:
+  pull_request:
+    paths:
+      - 'lib/storage/waffra_production_cutover_release_gate.dart'
+      - 'test/storage/m123_production_cutover_release_gate_test.dart'
+      - '.github/workflows/m123-production-cutover-release-gate.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cutover-release-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Analyze production source release policy
+        run: >-
+          dart analyze
+          lib/storage/waffra_production_cutover_release_gate.dart
+          test/storage/m123_production_cutover_release_gate_test.dart
+      - name: Verify fail-closed release blockers
+        run: >-
+          flutter test
+          test/storage/m123_production_cutover_release_gate_test.dart
+          --reporter expanded
