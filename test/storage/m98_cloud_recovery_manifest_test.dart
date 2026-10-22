@@ -126,7 +126,7 @@ void main() {
       pointer(id: ''),
       pointer(version: 0),
       pointer(mutation: ''),
-      pointer(id: 'x' * 129),
+      pointer(id: 'x'.padRight(129, 'x')),
     ]) {
       await expectLater(manifest(key: key, pointers: [invalid]),
           throwsA(isA<StateError>()));
