@@ -13,6 +13,7 @@ on:
       - 'feature/m99-production-sync-queue-and-android-build'
       - 'feature/waffra-unified-finance-release-candidate'
       - 'feature/m106-play-privacy-observability-readiness'
+      - 'feature/m107-production-account-delete-observability'
   workflow_dispatch:
 
 # Fast-build concurrency: only the latest pushed revision needs an APK.
@@ -137,6 +138,38 @@ jobs:
               a=a.replace('plugins {','plugins {'+chr(10)+'    id("com.google.gms.google-services")',1)
           app.write_text(a)
           print('Firebase Android configuration installed')
+          PY
+
+      - name: Force Firebase Crashlytics OFF before native app startup
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          manifest=Path('android/app/src/main/AndroidManifest.xml')
+          xml=manifest.read_text()
+          if 'firebase_crashlytics_collection_enabled' in xml:
+              raise SystemExit('Crashlytics collection flag already exists; audit required')
+          match=re.search(r'<application\b[^>]*>',xml)
+          if match is None:
+              raise SystemExit('Android application element not found')
+          privacy='<meta-data android:name="firebase_crashlytics_collection_enabled" android:value="false" />'
+          xml=xml[:match.end()]+'\n        '+privacy+xml[match.end():]
+          manifest.write_text(xml)
+          settings=Path('android/settings.gradle.kts')
+          plugins=settings.read_text()
+          signature='id("com.google.firebase.crashlytics") version "3.0.6" apply false'
+          if 'com.google.firebase.crashlytics' not in plugins:
+              plugins=plugins.replace('plugins {','plugins {\n    '+signature,1)
+          settings.write_text(plugins)
+          app=Path('android/app/build.gradle.kts')
+          gradle=app.read_text()
+          if 'id("com.google.firebase.crashlytics")' not in gradle:
+              gradle=gradle.replace('plugins {',
+                  'plugins {\n    id("com.google.firebase.crashlytics")',1)
+          app.write_text(gradle)
+          assert privacy in manifest.read_text()
+          print('Native Firebase Crashlytics collection disabled by default')
           PY
 
       - name: Configure Android biometric authentication

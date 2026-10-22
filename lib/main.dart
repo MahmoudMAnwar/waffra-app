@@ -30,6 +30,9 @@ import 'waffra_i18n.dart';
 import 'waffra_pdf_text.dart';
 import 'waffra_merchant_rules.dart';
 import 'waffra_google_auth.dart';
+import 'waffra_account_deletion.dart';
+import 'diagnostics/waffra_crashlytics_opt_in.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'waffra_category_catalog.dart';
 import 'waffra_goal_catalog.dart';
 import 'waffra_pdf_reader.dart';
@@ -57,6 +60,13 @@ Future<void> main()async {
  if(WidgetsBinding.instance.platformDispatcher.defaultRouteName=='/waffra-widget'){
   runApp(const WaffraWidgetCaptureApp());
   return;
+ }
+ // Native Android manifest disables automatic crash collection on startup.
+ try {
+  if(Firebase.apps.isEmpty)await Firebase.initializeApp();
+  await WaffraCrashlyticsOptIn.synchronize();
+ }catch(_){
+  debugPrint('Optional crash telemetry remains unavailable.');
  }
  await initializeWaffraMessages();
  await initializeWaffraHomeWidget();
@@ -6597,7 +6607,19 @@ Future<void> bulkSmsSheet({String? initialText})async {
       secondary:const Icon(Icons.screenshot_outlined,color:emerald),
       title:WaffraText(waffraIsEnglish?'Allow screenshots':'السماح بلقطات الشاشة'),
       subtitle:WaffraText(allowed?(waffraIsEnglish?'Allowed':'مسموح'):(waffraIsEnglish?'Blocked':'ممنوع')),
-      value:allowed,onChanged:(v)async{await setWaffraScreenshotsAllowed(v);if(mounted)setState((){});}))
+      value:allowed,onChanged:(v)async{await setWaffraScreenshotsAllowed(v);if(mounted)setState((){});})),
+     ValueListenableBuilder<bool>(
+      valueListenable:WaffraCrashlyticsOptIn.consent,
+      builder:(context,allowed,_)=>SwitchListTile(
+       secondary:const Icon(Icons.bug_report_outlined,color:emerald),
+       title:WaffraText(waffraIsEnglish?'Share anonymous crash diagnostics':'مشاركة بيانات الأعطال'),
+       subtitle:WaffraText(!waffraCrashlyticsReviewed
+        ?(waffraIsEnglish?'Available after privacy and release verification':'ستتوفر بعد التحقق من الأمان والخصوصية')
+        :(waffraIsEnglish?'Optional and disabled until you agree':'اختياري ولن يعمل إلا بموافقتك')),
+       value:allowed&&waffraCrashlyticsReviewed,
+       onChanged:waffraCrashlyticsReviewed?(v)async{
+        await WaffraCrashlyticsOptIn.setConsent(v);
+       }:null)),
    ]),
    _accountSection(waffraIsEnglish?'Financial tools':'الأدوات المالية',Icons.account_balance_wallet_outlined,[
     _accountTile(waffraIsEnglish?'Financial calendar':'التقويم المالي',
@@ -6616,6 +6638,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
     _accountTile(waffraIsEnglish?'Delete financial data':'حذف البيانات المالية',
      waffraIsEnglish?'Fingerprint verification and final confirmation required':'يتطلب البصمة وتأكيد الحذف النهائي',
      Icons.delete_forever,tint:Colors.red,onTap:eraseFinancialData),
+    _accountTile(waffraIsEnglish?'Delete account & cloud data':'حذف الحساب وبيانات السحابة',
+     waffraAccountDeletionReleased
+      ?(waffraIsEnglish?'Fresh Google verification required':'يتطلب إعادة التحقق من Google')
+      :(waffraIsEnglish?'Available after deletion verification':'متاح بعد اجتياز اختبارات الحذف الآمن'),
+     Icons.person_remove_outlined,tint:Colors.red,
+     onTap:()=>Navigator.push<void>(context,MaterialPageRoute(
+      builder:(_)=>WaffraAccountDeletionPage(
+       english:waffraIsEnglish,onAccountDeleted:widget.onLogout)))),
    ]),
    _accountSection(waffraIsEnglish?'Help & about':'المساعدة وعن وفرة',Icons.help_outline_rounded,[
     _accountTile(waffraIsEnglish?'Replay app tour':'إعادة الجولة التعريفية',

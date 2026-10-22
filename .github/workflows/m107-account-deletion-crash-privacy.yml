@@ -1,0 +1,124 @@
+name: Waffra M107 Account Deletion and Crash Privacy Integration
+
+on:
+  pull_request:
+    paths:
+      - 'functions/**'
+      - 'firebase.json'
+      - 'firestore.rules'
+      - 'lib/waffra_account_deletion.dart'
+      - 'lib/waffra_google_auth.dart'
+      - 'lib/diagnostics/**'
+      - 'lib/main.dart'
+      - 'pubspec.yaml'
+      - '.github/workflows/android.yml'
+      - '.github/workflows/m107-account-deletion-crash-privacy.yml'
+      - 'test/m107_release_backend_gating_test.dart'
+      - 'test/firebase/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  server-deletion:
+    name: Backend owner reauth, recursive delete and outage replay
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Node synthetic account-deletion acceptance (NO production calls)
+        run: node --test functions/test/*.test.cjs
+      - name: Reject accidental live function activation in source
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          fn=Path('functions/index.js').read_text()
+          assert "process.env.WAFFRA_ACCOUNT_DELETION_ENABLED !== 'true'" in fn
+          assert 'recursiveDelete' in fn
+          rules=Path('firestore.rules').read_text()
+          assert 'accountDeletionRequests' in rules
+          print('Backend callable explicitly disabled without separately configured approval')
+          PY
+
+  firestore-tombstone:
+    name: Firebase emulator rejects two-device account resurrection
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: test/firebase/package.json
+      - run: npm --prefix test/firebase install --no-audit --no-fund
+      - name: E2EE vault, recent conflict, account deletion tombstones (emulator ONLY)
+        run: |
+          ./test/firebase/node_modules/.bin/firebase emulators:exec \
+            --only firestore --project demo-waffra-rules-ci \
+            'npm --prefix test/firebase test'
+
+  flutter-consent:
+    name: Strict Flutter account deletion/privacy source and smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Strict analysis of actual privacy UI, OAuth reauth and crash SDK
+        run: >-
+          dart analyze
+          lib/waffra_account_deletion.dart
+          lib/waffra_google_auth.dart
+          lib/diagnostics/waffra_crashlytics_opt_in.dart
+          lib/diagnostics/waffra_private_release_diagnostics.dart
+          test/m107_release_backend_gating_test.dart
+          test/m106_diagnostics_privacy_gate_test.dart
+      - name: Confirm all destructive and telemetry features remain opt-in
+        run: >-
+          flutter test
+          test/m107_release_backend_gating_test.dart
+          test/m106_diagnostics_privacy_gate_test.dart
+          --reporter expanded
+      - name: Analyze complete app for new Dart errors
+        run: flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings
+      - name: Run full app and finance regression
+        run: flutter test test --reporter expanded
+
+  release-proof:
+    name: No false production approval while live SQLCipher and two-phone QA missing
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          WAFFRA_PLAY_AUDIT_PATH=m107-release-blockers.json python3 scripts/m106_play_release_preflight.py
+          test -s m107-release-blockers.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: waffra-m107-release-blockers
+          path: m107-release-blockers.json
+          retention-days: 30
+      - name: Fail safe if any future code erroneously declares ready from drafts
+        run: |
+          python3 - <<'PY'
+          import json
+          j=json.load(open('m107-release-blockers.json'))
+          assert not j['releaseReady']
+          assert not j['productionDataMigration']
+          assert not j['firebaseRulesDeployed']
+          print('Candidate tests can pass without certifying release or publishing production data.')
+          PY

@@ -30,6 +30,29 @@ class WaffraGoogleAuth {
     return _auth.signInWithCredential(credential);
   }
 
+  /// Required immediately before destructive cloud account deletion.
+  /// Google account identity must match the existing Firebase user;
+  /// opening the app or refreshing an old token is NOT re-authentication.
+  static Future<void> reauthenticateCurrentGoogleUser() async {
+    await initialize();
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw StateError('No authenticated Firebase account.');
+    }
+    final account = await _google.authenticate();
+    if (user.email != null &&
+        account.email.toLowerCase() != user.email!.toLowerCase()) {
+      throw StateError('Please select the same Google account.');
+    }
+    final token = account.authentication.idToken;
+    if (token == null || token.isEmpty) {
+      throw StateError('Fresh Google identity token is unavailable.');
+    }
+    await user.reauthenticateWithCredential(
+      GoogleAuthProvider.credential(idToken: token),
+    );
+  }
+
   static Future<void> signOut() async {
     await _auth.signOut();
     await _google.signOut();
