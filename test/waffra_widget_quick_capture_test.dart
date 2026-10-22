@@ -35,6 +35,7 @@ void main(){
   addTearDown((){if(folder.existsSync())folder.deleteSync(recursive:true);});
   await tester.pumpWidget(WaffraWidgetCaptureApp(
    testWriterDirectory:folder,testBypassNativeLock:true,
+   testSourceProbe:() async {},
   ));
   await tester.pumpAndSettle();
   expect(find.byKey(const Key('waffra-widget-bank-message')),findsOneWidget);
@@ -59,6 +60,7 @@ void main(){
   await tester.pumpWidget(WaffraWidgetCaptureApp(
    testWriterDirectory:testLockDirectory,
    testBypassNativeLock:true,
+   testSourceProbe:() async {},
   ));
   await tester.pumpAndSettle();
   await tester.enterText(find.byKey(const Key('waffra-widget-bank-message')),
