@@ -46,8 +46,10 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
  }
  Future<void> _loadSettings()async{
   try{
-   final loaded=await _financePersistence.loadWithWitness();
    final prefs=await SharedPreferences.getInstance();
+   await const WaffraProductionFinanceSourceGuard()
+    .requireSafeLegacyStartup(preferences:prefs);
+   final loaded=await _financePersistence.loadWithWitness();
    if(!mounted)return;
    setState((){
     _english=prefs.getString('waffra_language')=='en';
