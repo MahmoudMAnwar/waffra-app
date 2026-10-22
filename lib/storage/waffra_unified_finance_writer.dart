@@ -10,6 +10,8 @@ class WaffraUnifiedWriteResult {
     required this.saved,
     required this.savedIncome,
     required this.savedExpenses,
+    this.incomeMinor = 0,
+    this.expenseMinor = 0,
     required this.skippedDuplicates,
     required this.generation,
   });
@@ -17,6 +19,7 @@ class WaffraUnifiedWriteResult {
   final int saved;
   final int savedIncome;
   final int savedExpenses;
+  final int incomeMinor, expenseMinor;
   final int skippedDuplicates;
   final int generation;
 }
@@ -140,6 +143,7 @@ class WaffraUnifiedFinanceWriter {
           next['waffra_sms_hashes_v1'] as List<String>? ?? const <String>[],
         );
         var savedIncome = 0, savedExpenses = 0, skipped = 0;
+        var incomeMinor = 0, expenseMinor = 0;
         for (var i = 0; i < confirmedRecords.length; i++) {
           final record = confirmedRecords[i];
           final hash = confirmedHashes[i];
@@ -167,10 +171,13 @@ class WaffraUnifiedFinanceWriter {
           );
           list.add(record);
           if (hash != null) existingHashes.add(hash);
+          final minor = ((record['amount'] as num) * 100).round();
           if (record['income'] == true) {
             savedIncome++;
+            incomeMinor += minor;
           } else {
             savedExpenses++;
+            expenseMinor += minor;
           }
         }
         final saved = savedIncome + savedExpenses;
@@ -195,6 +202,8 @@ class WaffraUnifiedFinanceWriter {
           saved: saved,
           savedIncome: savedIncome,
           savedExpenses: savedExpenses,
+          incomeMinor: incomeMinor,
+          expenseMinor: expenseMinor,
           skippedDuplicates: skipped,
           generation: written.generation,
         );
