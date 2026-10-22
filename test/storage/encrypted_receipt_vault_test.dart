@@ -177,7 +177,7 @@ void main() {
     await expectLater(vault().replaceExistingImage(
       entryId: 'entry-one', position: 0,
       image: Uint8List.fromList([3, 4]),
-      expectedSha256: '0' * 64,
+      expectedSha256: List.filled(64, '0').join(),
     ), throwsStateError);
     expect((await vault().readAll('entry-one')).single.bytes, [1, 2]);
   });
