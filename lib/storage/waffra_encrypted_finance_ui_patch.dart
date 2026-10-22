@@ -49,31 +49,30 @@ class WaffraEncryptedFinanceUiPatch {
     if (!experimentalEnabled) {
       throw StateError('Encrypted UI finance patching is disabled.');
     }
+    // Capture the exact approved key set synchronously, before waiting on
+    // a cross-engine file lock or the source-integrity witness.
+    final frozenKeys = Set<String>.unmodifiable(changedKeys);
     final known = WaffraLegacyPreflight.allKeys.toSet();
-    if (changedKeys.isEmpty ||
-        changedKeys.any((key) => !known.contains(key))) {
+    if (frozenKeys.isEmpty ||
+        frozenKeys.any((key) => !known.contains(key))) {
       throw ArgumentError('Invalid or missing finance fields to save.');
     }
-    for (final key in changedKeys) {
+    for (final key in frozenKeys) {
       if (!replacementValues.containsKey(key) ||
           replacementValues[key] == null) {
         throw ArgumentError('Cannot silently clear a finance field.');
       }
     }
 
-    return WaffraExperimentalWriterGate(
-      disposableDirectory: writerDirectory,
-      experimentalEnabled: true,
-    ).withExclusiveAccess(() async {
-      await verifySourceUnderLock?.call();
-      // Freeze untrusted UI payload before the SQL transaction. The caller
-      // can clear or alter the edited form while source verification awaits.
-      final frozenBaseline = Map<String, Object?>.from(
-        jsonDecode(jsonEncode(screenBaseline)) as Map<String, dynamic>,
-      );
-      final frozenChanges = Map<String, Object?>.from(
-        jsonDecode(jsonEncode(replacementValues)) as Map<String, dynamic>,
-      );
+    // The values must be frozen BEFORE the first await. In particular,
+    // verifying the source under the native lock can wait for another engine.
+    // The form is allowed to change again after the user tapped Confirm.
+    final frozenBaseline = Map<String, Object?>.from(
+      jsonDecode(jsonEncode(screenBaseline)) as Map<String, dynamic>,
+    );
+    final frozenChanges = Map<String, Object?>.from(
+      jsonDecode(jsonEncode(replacementValues)) as Map<String, dynamic>,
+    );
       // A JSON round-trip loses List<String>'s generic type; restore it
       // explicitly for the finance hash schema before the atomic commit.
       for (final key in WaffraLegacyPreflight.financeListOfStringsKeys) {
@@ -84,9 +83,14 @@ class WaffraEncryptedFinanceUiPatch {
         }
         frozenChanges[key] = List<String>.unmodifiable(values.cast<String>());
       }
+    return WaffraExperimentalWriterGate(
+      disposableDirectory: writerDirectory,
+      experimentalEnabled: true,
+    ).withExclusiveAccess(() async {
+      await verifySourceUnderLock?.call();
       return snapshot.store.transaction(() async {
       final latest = await snapshot.read();
-      for (final key in changedKeys) {
+      for (final key in frozenKeys) {
         final beforeExists = frozenBaseline.containsKey(key);
         final nowExists = latest.values.containsKey(key);
         // Compare the exact JSON-compatible scalar/list value, including
@@ -99,10 +103,10 @@ class WaffraEncryptedFinanceUiPatch {
         }
       }
       final merged = Map<String, Object?>.from(latest.values);
-      for (final key in changedKeys) {
+      for (final key in frozenKeys) {
         merged[key] = frozenChanges[key];
       }
-      if (changedKeys.contains('entries')) {
+      if (frozenKeys.contains('entries')) {
         await WaffraEncryptedEntryProjectionGuard.reconcile(
           store: snapshot.store,
           previousJson: latest.values['entries'] as String?,
