@@ -15,15 +15,15 @@ void main() {
   late WaffraEncryptedStore store;
   const key = 'm114-only-disposable-encrypted-finance-key';
 
-  WaffraAtomicFinanceSnapshot get snapshot => WaffraAtomicFinanceSnapshot(
+  WaffraAtomicFinanceSnapshot snapshot() => WaffraAtomicFinanceSnapshot(
     store: store, experimentalEnabled: true,
   );
-  WaffraEncryptedFinanceUiPatch get editor => WaffraEncryptedFinanceUiPatch(
-    snapshot: snapshot,
+  WaffraEncryptedFinanceUiPatch editor() => WaffraEncryptedFinanceUiPatch(
+    snapshot: snapshot(),
     writerDirectory: root,
     experimentalEnabled: true,
   );
-  WaffraFreshModulesRepository get modules => WaffraFreshModulesRepository(
+  WaffraFreshModulesRepository modules() => WaffraFreshModulesRepository(
     store: store, experimentalEnabled: true,
   );
 
@@ -47,7 +47,7 @@ void main() {
     await WaffraFreshEncryptedVaultBootstrap(
       store: store, experimentalEnabled: true,
     ).initialize(decision: WaffraFirstRunDecision.freshCandidate);
-    await snapshot.initializeEmpty();
+    await snapshot().initializeEmpty();
   });
   tearDown(() async {
     await store.close();
@@ -56,8 +56,8 @@ void main() {
 
   test('three module create operations commit SQL and snapshot in one generation',
       () async {
-    final before = await snapshot.read();
-    final next = await editor.saveScreenChanges(
+    final before = await snapshot().read();
+    final next = await editor().saveScreenChanges(
       screenBaseline: before.values,
       replacementValues: {
         'waffra_categories_v24': jsonEncode([category]),
@@ -70,15 +70,15 @@ void main() {
     );
     expect(next.generation, 1);
     for (final module in WaffraFinanceModule.values) {
-      expect(await modules.list(module), hasLength(1));
+      expect(await modules().list(module), hasLength(1));
     }
-    expect((await modules.list(WaffraFinanceModule.categories)).single['budget'], 250);
-    expect((await modules.list(WaffraFinanceModule.goals)).single['target'], 5000);
+    expect((await modules().list(WaffraFinanceModule.categories)).single['budget'], 250);
+    expect((await modules().list(WaffraFinanceModule.goals)).single['target'], 5000);
   });
 
   test('widget append survives concurrent goal creation and both remain durable',
       () async {
-    final before = await snapshot.read();
+    final before = await snapshot().read();
     final writer = WaffraUnifiedFinanceWriter(
       writerDirectory: root,
       snapshot: snapshot,
@@ -92,43 +92,43 @@ void main() {
       }],
       messageHashes: [null], userConfirmed: true,
     );
-    final updated = await editor.saveScreenChanges(
+    final updated = await editor().saveScreenChanges(
       screenBaseline: before.values,
       replacementValues: {'waffra_goals_v24': jsonEncode([goal])},
       changedKeys: const {'waffra_goals_v24'},
     );
     expect(updated.generation, 2);
     expect(updated.values['entries'], contains('"id":"widget"'));
-    expect(await modules.list(WaffraFinanceModule.goals), hasLength(1));
+    expect(await modules().list(WaffraFinanceModule.goals), hasLength(1));
     await store.close();
     store = WaffraEncryptedStore.openAt(
       File('${root.path}/m114.sqlite'), key: key,
     );
-    expect((await snapshot.read()).values['entries'], contains('"id":"widget"'));
-    expect(await modules.list(WaffraFinanceModule.goals), hasLength(1));
+    expect((await snapshot().read()).values['entries'], contains('"id":"widget"'));
+    expect(await modules().list(WaffraFinanceModule.goals), hasLength(1));
   });
 
   test('removing active module entity fails and retains both projections',
       () async {
-    final empty = await snapshot.read();
-    await editor.saveScreenChanges(
+    final empty = await snapshot().read();
+    await editor().saveScreenChanges(
       screenBaseline: empty.values,
       replacementValues: {'waffra_goals_v24': jsonEncode([goal])},
       changedKeys: const {'waffra_goals_v24'},
     );
-    final baseline = await snapshot.read();
-    await expectLater(editor.saveScreenChanges(
+    final baseline = await snapshot().read();
+    await expectLater(editor().saveScreenChanges(
       screenBaseline: baseline.values,
       replacementValues: const {'waffra_goals_v24': '[]'},
       changedKeys: const {'waffra_goals_v24'},
     ), throwsStateError);
-    expect((await snapshot.read()).generation, 1);
-    expect(await modules.list(WaffraFinanceModule.goals), hasLength(1));
+    expect((await snapshot().read()).generation, 1);
+    expect(await modules().list(WaffraFinanceModule.goals), hasLength(1));
   });
 
   test('mismatched old SQL module refuses UI overwrite', () async {
-    final before = await snapshot.read();
-    await editor.saveScreenChanges(
+    final before = await snapshot().read();
+    await editor().saveScreenChanges(
       screenBaseline: before.values,
       replacementValues: {'waffra_categories_v24': jsonEncode([category])},
       changedKeys: const {'waffra_categories_v24'},
@@ -136,21 +136,21 @@ void main() {
     await store.customStatement(
       "UPDATE fresh_finance_categories SET source_json='{}' WHERE category_id='food'",
     );
-    final stale = await snapshot.read();
-    await expectLater(editor.saveScreenChanges(
+    final stale = await snapshot().read();
+    await expectLater(editor().saveScreenChanges(
       screenBaseline: stale.values,
       replacementValues: {
         'waffra_categories_v24': jsonEncode([{...category, 'budget': 300}]),
       },
       changedKeys: const {'waffra_categories_v24'},
     ), throwsStateError);
-    expect((await snapshot.read()).generation, 1);
+    expect((await snapshot().read()).generation, 1);
   });
 
   test('invalid second module write rolls back successful first projection',
       () async {
-    final before = await snapshot.read();
-    await expectLater(editor.saveScreenChanges(
+    final before = await snapshot().read();
+    await expectLater(editor().saveScreenChanges(
       screenBaseline: before.values,
       replacementValues: {
         'waffra_categories_v24': jsonEncode([category]),
@@ -158,8 +158,8 @@ void main() {
       },
       changedKeys: const {'waffra_categories_v24', 'waffra_recurring_v24'},
     ), throwsA(anyOf(isA<ArgumentError>(), isA<StateError>())));
-    expect((await snapshot.read()).generation, 0);
-    expect(await modules.list(WaffraFinanceModule.categories), isEmpty);
-    expect(await modules.list(WaffraFinanceModule.recurring), isEmpty);
+    expect((await snapshot().read()).generation, 0);
+    expect(await modules().list(WaffraFinanceModule.categories), isEmpty);
+    expect(await modules().list(WaffraFinanceModule.recurring), isEmpty);
   });
 }
