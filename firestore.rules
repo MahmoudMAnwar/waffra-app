@@ -50,8 +50,8 @@ service cloud.firestore {
       && data.nonce is string && data.nonce.size() <= 128
       && data.mac is string && data.mac.size() <= 128
       && data.encryptionVersion == 1
-      && data.deviceId is string && data.deviceId.size() <= 128
-      && data.mutationId is string && data.mutationId.size() <= 128
+      && data.deviceId is string && data.deviceId.size() > 0 && data.deviceId.size() <= 128
+      && data.mutationId is string && data.mutationId.size() > 0 && data.mutationId.size() <= 128
       && data.localVersion is int && data.localVersion > 0
       && data.updatedAt is timestamp
       && data.deleted is bool;
@@ -66,16 +66,32 @@ service cloud.firestore {
         && resource.data.ownerUid == uid
         && hasValidVaultFields(request.resource.data, uid)
         && request.resource.data.createdAt == resource.data.createdAt;
-      allow delete: if signedInAs(uid) && resource.data.ownerUid == uid;
+      // Deleting a parent vault does NOT delete its Firestore subcollection.
+      // Disallow it until a verified wipe protocol can prove child deletion.
+      allow delete: if false;
 
       match /records/{recordId} {
         allow get, list: if ownsExistingVault(uid, vaultId);
-        allow create, update: if ownsExistingVault(uid, vaultId)
-          && recordId.size() <= 128
+        allow create: if ownsExistingVault(uid, vaultId)
+          && get(vaultPath(uid, vaultId)).data.syncEnabled == true
+          && recordId.size() > 0 && recordId.size() <= 128
+          && validCiphertextRecord(request.resource.data);
+        // Compare-and-swap only: concurrent devices attempting to advance
+        // the same previous revision cannot both succeed. This ruleset
+        // forbids last-write-wins and replacing a ciphertext at equal version.
+        // The client must ALSO transact on the latest read document and
+        // raise a manual conflict for a different remote mutation.
+        allow update: if ownsExistingVault(uid, vaultId)
+          && get(vaultPath(uid, vaultId)).data.syncEnabled == true
+          && recordId.size() > 0 && recordId.size() <= 128
           && validCiphertextRecord(request.resource.data)
-          && (!exists(/databases/$(database)/documents/users/$(uid)/vaults/$(vaultId)/records/$(recordId))
-              || request.resource.data.localVersion >= resource.data.localVersion);
-        allow delete: if ownsExistingVault(uid, vaultId);
+          && request.resource.data.kind == resource.data.kind
+          && request.resource.data.encryptionVersion == resource.data.encryptionVersion
+          && request.resource.data.localVersion == resource.data.localVersion + 1
+          && request.resource.data.mutationId != resource.data.mutationId;
+        // Finance deletions use encrypted tombstones with an increasing
+        // revision, never physical Firestore deletes.
+        allow delete: if false;
       }
     }
 
