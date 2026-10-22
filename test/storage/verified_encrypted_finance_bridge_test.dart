@@ -10,6 +10,7 @@ import 'package:waffra/storage/waffra_encrypted_store.dart';
 import 'package:waffra/storage/waffra_fresh_encrypted_vault_bootstrap.dart';
 import 'package:waffra/storage/waffra_live_legacy_finance_guard.dart';
 import 'package:waffra/storage/waffra_verified_encrypted_finance_bridge.dart';
+import 'package:waffra/storage/waffra_encrypted_finance_session.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -278,6 +279,86 @@ void main() {
       bridge().loadReceiptImages(entryId: 'receipt-free'),
       throwsA(isA<StateError>()),
     );
+  });
+
+  test('M67 finance port preserves widget entries during a goals editor save',
+      () async {
+    final home = WaffraEncryptedFinanceSession(
+      bridge: bridge(), experimentalEnabled: true,
+    );
+    final witness = await home.loadForDashboardOrWidget();
+    await home.appendConfirmed(
+      records: [record('widget-m67')],
+      hashes: [hashA],
+      userConfirmed: true,
+    );
+    final persisted = await home.saveDashboardBatch(
+      baseline: witness,
+      captured: <String, Object>{
+        'entries': witness.ledgerRaw!,
+        'waffra_goals_v24':
+            '[{"id":"trip","name":"Trip","target":2500,"saved":400}]',
+      },
+    );
+    expect(persisted.values['entries'], contains('widget-m67'));
+    expect(persisted.values['waffra_goals_v24'], contains('"saved":400'));
+    expect(persisted.values['waffra_sms_hashes_v1'], [hashA]);
+    expect(persisted.generation, 3);
+  });
+
+  test('M67 SMS digest merge never overwrites a widget digest', () async {
+    const hashB =
+        'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+    final port = WaffraEncryptedFinanceSession(
+      bridge: bridge(), experimentalEnabled: true,
+    );
+    await port.appendConfirmed(
+      records: [record('widget-first')], hashes: [hashA],
+      userConfirmed: true,
+    );
+    final merged = await port.addSmsHashes([hashB]);
+    expect(merged.values['waffra_sms_hashes_v1'], [hashA, hashB]);
+    final noOp = await port.addSmsHashes([hashA, hashB]);
+    expect(noOp.generation, merged.generation);
+    expect((await port.loadForDashboardOrWidget())
+        .finance.getStringList('waffra_sms_hashes_v1'), [hashA, hashB]);
+  });
+
+  test('M67 concurrent changes to the SAME ledger reject stale screen writes',
+      () async {
+    final port = WaffraEncryptedFinanceSession(
+      bridge: bridge(), experimentalEnabled: true,
+    );
+    final stale = await port.loadForDashboardOrWidget();
+    await port.appendConfirmed(
+      records: [record('newer-entry')], hashes: [hashA],
+      userConfirmed: true,
+    );
+    await expectLater(port.saveChangedFields(
+      baseline: stale, changedValues: const {'entries': '[]'},
+    ), throwsA(isA<StateError>()));
+    expect((await port.loadForDashboardOrWidget()).ledgerRaw,
+        contains('newer-entry'));
+  });
+
+  test('M67 finance port refuses unactivated source and unexpected fields',
+      () async {
+    final off = WaffraEncryptedFinanceSession(bridge: bridge());
+    await expectLater(off.loadForDashboardOrWidget(),
+        throwsA(isA<StateError>()));
+    final port = WaffraEncryptedFinanceSession(
+      bridge: bridge(), experimentalEnabled: true,
+    );
+    final witness = await port.loadForDashboardOrWidget();
+    await expectLater(port.saveChangedFields(
+      baseline: witness, changedValues: const {'waffra_profile': 'secret'},
+    ), throwsA(isA<ArgumentError>()));
+    await expectLater(port.addSmsHashes(['raw bank SMS']),
+        throwsA(isA<ArgumentError>()));
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(WaffraLiveLegacyFinanceGuard.pendingKey, true);
+    await expectLater(port.loadForDashboardOrWidget(),
+        throwsA(isA<StateError>()));
   });
 
 }

@@ -140,10 +140,43 @@ class WaffraVerifiedEncryptedFinanceBridge {
       allowDuplicateHashes: allowDuplicateHashes,
     );
   }
-  /// Loads an attachment ONLY for an entry proven to exist in the current
-  /// encrypted finance snapshot. No arbitrary user-supplied path or receipt
-  /// identifier is accepted; the same native app/widget lock and activation
-  /// witness protect the financial record and the encrypted BLOB read.
+  /// Merge confirmed SHA-256 SMS fingerprints under one native app/widget lock.
+  /// No raw bank SMS is stored or sent anywhere.
+  Future<WaffraFinanceSnapshotState> mergeConfirmedSmsHashes(
+    List<String> additions,
+  ) async {
+    if (!experimentalEnabled) {
+      throw StateError('Encrypted SMS deduplication runtime is disabled.');
+    }
+    const digits = '0123456789abcdef';
+    if (additions.length > 1000 ||
+        additions.any((hash) => hash.length != 64 ||
+            hash.split('').any((character) => !digits.contains(character)))) {
+      throw ArgumentError('Only SHA-256 SMS fingerprints are allowed.');
+    }
+    return WaffraExperimentalWriterGate(
+      disposableDirectory: writerDirectory,
+      experimentalEnabled: true,
+    ).withExclusiveAccess(() async {
+      await _requireActivatedUnderLock();
+      final current = await snapshot.read();
+      final existing = Set<String>.from(
+        current.values['waffra_sms_hashes_v1'] as List<String>? ??
+            const <String>[],
+      );
+      final oldCount = existing.length;
+      existing.addAll(additions);
+      if (oldCount == existing.length) return current;
+      final next = Map<String, Object?>.from(current.values);
+      next['waffra_sms_hashes_v1'] = existing.toList()..sort();
+      return snapshot.commit(
+        expectedGeneration: current.generation,
+        fullFinanceSnapshot: next,
+      );
+    });
+  }
+
+  /// Read only existing and owner-verified encrypted attachment BLOBs.
   Future<List<Uint8List>> loadReceiptImages({required String entryId}) async {
     if (!experimentalEnabled) {
       throw StateError('Encrypted receipt runtime is disabled by default.');
