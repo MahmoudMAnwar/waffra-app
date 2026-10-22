@@ -10,6 +10,7 @@ on:
       - 'feature/storage-verified-backup-restore-m63'
       - 'feature/storage-portable-sqlcipher-restore-m64'
       - 'feature/cloud-conflict-safe-m65'
+      - 'feature/storage-encrypted-receipt-view-m66'
   pull_request:
     paths:
       - 'lib/storage/**'

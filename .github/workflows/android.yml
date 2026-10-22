@@ -8,6 +8,7 @@ on:
       - main
       - 'feature/storage-finance-startup-recovery-m62'
       - 'feature/storage-verified-backup-restore-m63'
+      - 'feature/storage-encrypted-receipt-view-m66'
   workflow_dispatch:
 
 # Fast-build concurrency: only the latest pushed revision needs an APK.
