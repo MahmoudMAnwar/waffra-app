@@ -147,6 +147,23 @@ CREATE TABLE IF NOT EXISTS fresh_finance_receipt_blobs(
   encrypted_blob BLOB NOT NULL,
   PRIMARY KEY(entry_id,position)
 )''');
+      // Custom goal suggestions exist in legacy exports but are not part
+      // of the strict finance-key snapshot; preserve them separately rather
+      // than silently dropping user data during a portable restore.
+      final suggestions = preview.financialSnapshot['waffra_custom_goals_v1'];
+      await disposableStore.customStatement('''
+CREATE TABLE IF NOT EXISTS fresh_finance_custom_goals(
+  position INTEGER PRIMARY KEY CHECK(position >= 0),
+  suggestion TEXT NOT NULL
+)''');
+      if (suggestions is List<String>) {
+        for (var i = 0; i < suggestions.length; i++) {
+          await disposableStore.customStatement(
+            'INSERT INTO fresh_finance_custom_goals(position,suggestion) '
+            'VALUES (?,?)', [i, suggestions[i]],
+          );
+        }
+      }
       var incomeMinor = 0;
       var expenseMinor = 0;
       for (final row in transformed) {
