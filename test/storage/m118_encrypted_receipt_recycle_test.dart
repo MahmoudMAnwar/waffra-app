@@ -190,7 +190,8 @@ void main() {
     expect((await snapshot().read()).generation, generation);
     permitSource = true;
     await expectLater(recycle(enabled: false).moveToRecycle(
-      entryId: 'first', expectedGeneration: generation,
+      entryId: 'first', expectedImageHashes: await imageDigests('first'),
+      expectedGeneration: generation,
       now: createdAt, userConfirmed: true,
     ), throwsStateError);
   });
