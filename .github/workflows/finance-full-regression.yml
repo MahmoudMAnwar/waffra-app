@@ -61,7 +61,14 @@ jobs:
           # original M108 crash-journaled legacy writer only while legacy is
           # independently verified. Do not reintroduce a local widget journal.
           authority=Path('lib/storage/waffra_verified_finance_authority.dart').read_text()
-          assert 'commitConfirmedLegacySms(' in main
+          # M110 Home confirmation is source-aware. The legacy journal may
+          # only be reached through the verified authority, never directly.
+          assert '_financeAuthority.commitConfirmedSms(' in main
+          assert 'WaffraFinanceRoute.bulkSmsConfirmedSave' in main
+          assert '_homeFinancePersistence.commitConfirmedLegacySms(' not in main
+          assert '_homeFinancePersistence.saveLegacy(' not in main
+          assert '_financeAuthority.saveCaptured(' in main
+          assert 'Encrypted screen mutation requires a verified atomic SQL projection writer.' in authority
           assert 'commitConfirmedLegacySms(' in authority
           assert 'commitConfirmedLegacySms(' not in widget
           assert '_financeAuthority.commitConfirmedSms(' in widget
