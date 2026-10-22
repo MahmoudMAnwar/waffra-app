@@ -17,11 +17,16 @@ class WaffraEncryptedFinanceUiPatch {
     required this.snapshot,
     required this.writerDirectory,
     this.experimentalEnabled = false,
+    this.verifySourceUnderLock,
   });
 
   final WaffraAtomicFinanceSnapshot snapshot;
   final Directory writerDirectory;
   final bool experimentalEnabled;
+
+  /// Runtime selector witness. Must run under the app/widget native lock.
+  /// A disposable test writer may omit this, but an activated app must not.
+  final Future<void> Function()? verifySourceUnderLock;
 
   Future<WaffraFinanceSnapshotState> readForScreen() async {
     if (!experimentalEnabled) {
@@ -59,6 +64,7 @@ class WaffraEncryptedFinanceUiPatch {
       disposableDirectory: writerDirectory,
       experimentalEnabled: true,
     ).withExclusiveAccess(() async {
+      await verifySourceUnderLock?.call();
       final latest = await snapshot.read();
       for (final key in changedKeys) {
         final beforeExists = screenBaseline.containsKey(key);
