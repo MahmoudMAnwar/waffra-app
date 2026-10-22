@@ -1,0 +1,34 @@
+name: Waffra M122 Receipt Expiry Clock Guard
+on:
+  pull_request:
+    paths:
+      - 'lib/storage/waffra_encrypted_receipt_recycle.dart'
+      - 'test/storage/m118_encrypted_receipt_recycle_test.dart'
+      - '.github/workflows/m122-receipt-expiry-clock-guard.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  receipt-clock-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Analyze receipt expiry and boundary checks
+        run: >-
+          dart analyze
+          lib/storage/waffra_encrypted_receipt_recycle.dart
+          test/storage/m118_encrypted_receipt_recycle_test.dart
+      - name: Verify expiry and rollback behavior
+        run: >-
+          flutter test
+          test/storage/m118_encrypted_receipt_recycle_test.dart
+          test/storage/verified_encrypted_finance_bridge_test.dart
+          test/storage/m119_receipt_screen_authority_test.dart
+          test/m119_verified_receipt_panel_test.dart
+          --reporter expanded

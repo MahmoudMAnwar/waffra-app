@@ -169,6 +169,71 @@ void main() {
     expect(archived.read<int>('n'), 2);
   });
 
+  test('M122: clock rolled back before deletion never restores archive',
+      () async {
+    await addWithReceipts('first');
+    final deleted = await recycle().moveToRecycle(
+      entryId: 'first',
+      expectedImageHashes: await imageDigests('first'),
+      expectedGeneration: (await snapshot().read()).generation,
+      now: createdAt, userConfirmed: true,
+    );
+    final before = await snapshot().read();
+    await expectLater(recycle().restore(
+      entryId: 'first', expectedGeneration: deleted.generation,
+      now: createdAt.subtract(const Duration(seconds: 1)),
+    ), throwsStateError);
+    expect((await snapshot().read()).digest, before.digest);
+    expect(await vault().readAll('first'), isEmpty);
+    expect((await recycle().pendingRecoveries()).containsKey('first'), true);
+  });
+
+  test('M122: exact expiry boundary rejects restore; one ms before succeeds',
+      () async {
+    await addWithReceipts('first');
+    final deleted = await recycle().moveToRecycle(
+      entryId: 'first',
+      expectedImageHashes: await imageDigests('first'),
+      expectedGeneration: (await snapshot().read()).generation,
+      now: createdAt, userConfirmed: true,
+    );
+    final expiry = createdAt.add(const Duration(days: 30));
+    await expectLater(recycle().restore(
+      entryId: 'first', expectedGeneration: deleted.generation,
+      now: expiry,
+    ), throwsStateError);
+    expect((await snapshot().read()).generation, deleted.generation);
+    final success = await recycle().restore(
+      entryId: 'first', expectedGeneration: deleted.generation,
+      now: expiry.subtract(const Duration(milliseconds: 1)),
+    );
+    expect(success.receiptCount, 2);
+    expect(await vault().readAll('first'), hasLength(2));
+  });
+
+  test('M122: altered archive expiry cannot extend 30-day recovery',
+      () async {
+    await addWithReceipts('first');
+    final deleted = await recycle().moveToRecycle(
+      entryId: 'first',
+      expectedImageHashes: await imageDigests('first'),
+      expectedGeneration: (await snapshot().read()).generation,
+      now: createdAt, userConfirmed: true,
+    );
+    await store.customStatement(
+      'UPDATE fresh_finance_receipt_recycle SET expires_at_ms=? '
+      "WHERE entry_id='first'",
+      [createdAt.add(const Duration(days: 365)).millisecondsSinceEpoch],
+    );
+    final before = await snapshot().read();
+    await expectLater(recycle().restore(
+      entryId: 'first', expectedGeneration: deleted.generation,
+      now: createdAt.add(const Duration(days: 31)),
+    ), throwsStateError);
+    expect((await snapshot().read()).digest, before.digest);
+    expect(await vault().readAll('first'), isEmpty);
+  });
+
   test('M118: unconfirmed, stale and unavailable source retain pictures',
       () async {
     await addWithReceipts('first');
