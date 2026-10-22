@@ -58,6 +58,58 @@ class WaffraHomeFinancePersistence {
     Future<T> Function(SharedPreferences preferences) writer,
   ) => coordinator.withCurrentPreferences(writer);
 
+  /// Custom saving-goal suggestions live beside the primary financial
+  /// snapshot in legacy installs. They are included in verified SQLCipher
+  /// staging, so all reads and writes must share the native app/widget lock.
+  /// Never touch arbitrary profile or bank settings here.
+  Future<List<String>> loadCustomGoalSuggestions() =>
+      coordinator.withCurrentPreferences((prefs) async {
+        if (!prefs.containsKey('waffra_custom_goals_v1')) {
+          return const <String>[];
+        }
+        final value = prefs.getStringList('waffra_custom_goals_v1');
+        if (value == null || value.length > 1000 ||
+            value.any((name) => name.trim().isEmpty || name.length > 512)) {
+          throw StateError('Saved custom goal suggestions are invalid.');
+        }
+        return List<String>.unmodifiable(value);
+      });
+
+  /// Atomically adds a custom suggestion without overwriting suggestions
+  /// written by another app instance since the goal dialog opened. A future
+  /// fully encrypted runtime will replace this one legacy-only adapter,
+  /// not copy its SharedPreferences implementation into UI code.
+  Future<bool> addCustomGoalSuggestion(String suggestedName) async {
+    final name = suggestedName.trim();
+    if (name.isEmpty || name.length > 100) {
+      throw ArgumentError('Custom savings goal name must be 1–100 characters.');
+    }
+    return coordinator.withCurrentPreferences((prefs) async {
+      final current = prefs.getStringList('waffra_custom_goals_v1') ??
+          const <String>[];
+      if (current.length > 1000 ||
+          current.any((entry) => entry.trim().isEmpty ||
+              entry.length > 512)) {
+        throw StateError('Saved custom goal suggestions are invalid.');
+      }
+      final candidate = name.toLowerCase();
+      if (current.any((existing) =>
+          existing.trim().toLowerCase() == candidate)) {
+        return false;
+      }
+      if (current.length >= 1000) {
+        throw StateError('Custom goal suggestion capacity exceeded.');
+      }
+      final saved = await prefs.setStringList(
+        'waffra_custom_goals_v1', [...current, name],
+      );
+      if (!saved) {
+        throw StateError('Custom saving-goal suggestion could not be saved.');
+      }
+      return true;
+    });
+  }
+
   /// Persist the screen's already-captured batch without mixing in profile
   /// settings. The cross-engine lock checks the exact ledger and widget
   /// revision before ANY field is changed. Returns the committed ledger
