@@ -256,3 +256,68 @@ test('M77 old device cannot physically delete a tombstone or recreate the same d
   assert.equal(remote.data().deleted, true);
   assert.equal(remote.data().localVersion, 2);
 });
+
+
+function wrappedRecovery(extra = {}) {
+  return {
+    schemaVersion: 1,
+    vaultId: 'vault-123',
+    keyVersion: 1,
+    recoveryRevision: 1,
+    wrappedKey: 'encrypted-256-bit-vault-key',
+    nonce: 'encrypted-nonce-b64',
+    mac: 'encrypted-aead-tag-b64',
+    updatedAt: serverTimestamp(),
+    ...extra,
+  };
+}
+
+test('M98 owner can store only recovery-code-wrapped ciphertext; Bob is denied', async () => {
+  const alice = env.authenticatedContext('alice').firestore();
+  const bob = env.authenticatedContext('bob').firestore();
+  const recoveryPath = path + '/recovery/current';
+  await assertSucceeds(setDoc(doc(alice, path), vault('alice')));
+  await assertSucceeds(setDoc(doc(alice, recoveryPath), wrappedRecovery()));
+  await assertSucceeds(getDoc(doc(alice, recoveryPath)));
+  await assertFails(getDoc(doc(bob, recoveryPath)));
+  await assertFails(setDoc(doc(bob, recoveryPath), wrappedRecovery()));
+  await assertFails(setDoc(doc(alice, recoveryPath),
+    wrappedRecovery({ recoveryCode: 'private-recovery-secret' })));
+  await assertFails(setDoc(doc(alice, recoveryPath),
+    wrappedRecovery({ rawVaultKey: 'private-vault-key' })));
+  await assertFails(deleteDoc(doc(alice, recoveryPath)));
+});
+
+test('M98 encrypted recovery-key rotation permits only CAS revision + 1', async () => {
+  const alice = env.authenticatedContext('alice').firestore();
+  const recoveryPath = path + '/recovery/current';
+  await assertSucceeds(setDoc(doc(alice, path), vault('alice')));
+  await assertFails(setDoc(doc(alice, recoveryPath),
+    wrappedRecovery({ recoveryRevision: 2 })));
+  await assertSucceeds(setDoc(doc(alice, recoveryPath), wrappedRecovery()));
+  await assertSucceeds(setDoc(doc(alice, recoveryPath),
+    wrappedRecovery({ recoveryRevision: 2, wrappedKey: 'rotated-key-ciphertext' })));
+  await assertFails(setDoc(doc(alice, recoveryPath),
+    wrappedRecovery({ recoveryRevision: 2, wrappedKey: 'stale-key-ciphertext' })));
+  await assertFails(setDoc(doc(alice, recoveryPath),
+    wrappedRecovery({ recoveryRevision: 4, wrappedKey: 'skip-ahead' })));
+  await assertFails(setDoc(doc(alice, recoveryPath),
+    wrappedRecovery({ recoveryRevision: 3, keyVersion: 2 })));
+  const last = await getDoc(doc(alice, recoveryPath));
+  assert.equal(last.data().recoveryRevision, 2);
+});
+
+test('M98 encrypted inventory is owner-only with no plaintext index', async () => {
+  const alice = env.authenticatedContext('alice').firestore();
+  const bob = env.authenticatedContext('bob').firestore();
+  const inventory = path + '/records/encrypted-index-hash';
+  await assertSucceeds(setDoc(doc(alice, path), vault('alice')));
+  await assertSucceeds(setDoc(doc(alice, inventory),
+    encryptedRecord({ kind: 'manifest' })));
+  await assertSucceeds(getDoc(doc(alice, inventory)));
+  await assertFails(getDoc(doc(bob, inventory)));
+  await assertFails(setDoc(doc(alice, inventory),
+    encryptedRecord({ kind: 'manifest', records: ['private-id'] })));
+  await assertFails(setDoc(doc(alice, inventory),
+    encryptedRecord({ kind: 'manifest', amountMinor: 4500 })));
+});

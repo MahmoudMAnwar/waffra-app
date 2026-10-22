@@ -43,7 +43,7 @@ service cloud.firestore {
       ])
       && data.kind in [
         'entry', 'category', 'goal', 'recurring', 'challenge',
-        'postponement', 'merchant_rule', 'setting', 'tombstone'
+        'postponement', 'merchant_rule', 'setting', 'tombstone', 'manifest'
       ]
       && data.ciphertext is string
       && data.ciphertext.size() <= 700000
@@ -55,6 +55,28 @@ service cloud.firestore {
       && data.localVersion is int && data.localVersion > 0
       && data.updatedAt is timestamp
       && data.deleted is bool;
+    }
+
+    // This is ONLY a wrapped 256-bit vault key authenticated by the user's
+    // recovery code. Neither the recovery code nor plaintext vault key may be
+    // written to Firestore, including on key rotation.
+    function validRecoveryEnvelope(data, vaultId) {
+      return data.keys().hasOnly([
+        'schemaVersion','vaultId','keyVersion','recoveryRevision',
+        'wrappedKey','nonce','mac','updatedAt'
+      ])
+      && data.keys().hasAll([
+        'schemaVersion','vaultId','keyVersion','recoveryRevision',
+        'wrappedKey','nonce','mac','updatedAt'
+      ])
+      && data.schemaVersion == 1
+      && data.vaultId == vaultId
+      && data.keyVersion is int && data.keyVersion > 0
+      && data.recoveryRevision is int && data.recoveryRevision > 0
+      && data.wrappedKey is string && data.wrappedKey.size() <= 200
+      && data.nonce is string && data.nonce.size() <= 128
+      && data.mac is string && data.mac.size() <= 128
+      && data.updatedAt is timestamp;
     }
 
     match /users/{uid}/vaults/{vaultId} {
@@ -69,6 +91,25 @@ service cloud.firestore {
       // Deleting a parent vault does NOT delete its Firestore subcollection.
       // Disallow it until a verified wipe protocol can prove child deletion.
       allow delete: if false;
+
+      match /recovery/{recoveryId} {
+        allow get: if recoveryId == 'current'
+          && ownsExistingVault(uid, vaultId);
+        allow list: if false;
+        allow create: if recoveryId == 'current'
+          && ownsExistingVault(uid, vaultId)
+          && get(vaultPath(uid, vaultId)).data.syncEnabled == true
+          && validRecoveryEnvelope(request.resource.data, vaultId)
+          && request.resource.data.recoveryRevision == 1;
+        allow update: if recoveryId == 'current'
+          && ownsExistingVault(uid, vaultId)
+          && get(vaultPath(uid, vaultId)).data.syncEnabled == true
+          && validRecoveryEnvelope(request.resource.data, vaultId)
+          && request.resource.data.keyVersion == resource.data.keyVersion
+          && request.resource.data.recoveryRevision ==
+            resource.data.recoveryRevision + 1;
+        allow delete: if false;
+      }
 
       match /records/{recordId} {
         allow get, list: if ownsExistingVault(uid, vaultId);
