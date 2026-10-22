@@ -22,8 +22,7 @@ class WaffraHomeFinanceLoaded {
   String? get ledgerRaw => finance.getString('entries');
 }
 
-/// Exact persisted result from the shared Home/Widget legacy journal.
-/// This is a safe transitional writer; it is NOT SQLCipher cutover.
+
 class WaffraConfirmedLegacySmsResult {
   const WaffraConfirmedLegacySmsResult({
     required this.savedEntriesRaw,
@@ -36,7 +35,6 @@ class WaffraConfirmedLegacySmsResult {
     required this.expenseMinor,
     required this.skippedDuplicates,
   });
-
   final String savedEntriesRaw;
   final List<String> savedHashes;
   final String? widgetRevision;
@@ -135,12 +133,9 @@ class WaffraHomeFinancePersistence {
     });
   }
 
-  /// Commits the dashboard's confirmed bulk SMS entries and fingerprints
-  /// through the SAME native lock and crash-recovery journal as Android Widget.
-  /// A parsed/cancelled SMS cannot persist even a deduplication marker.
-  ///
-  /// The current shipped app still uses guarded SharedPreferences until a
-  /// separately audited SQLCipher source migration has been activated.
+
+  /// The Home and Android quick-add widget share this lock and crash journal.
+  /// This bridge remains on guarded legacy storage; it never activates SQLCipher.
   Future<WaffraConfirmedLegacySmsResult> commitConfirmedLegacySms({
     required List<Map<String, Object?>> records,
     required List<String> messageHashes,
@@ -148,147 +143,94 @@ class WaffraHomeFinancePersistence {
     bool allowDuplicateHashes = false,
   }) async {
     if (!userConfirmed) {
-      throw StateError('User did not approve the bank transaction batch.');
+      throw StateError('Bank transaction batch was not confirmed.');
     }
     if (records.isEmpty || records.length > 100 ||
         messageHashes.length != records.length) {
-      throw ArgumentError('Only 1–100 confirmed aligned SMS entries are allowed.');
+      throw ArgumentError('Confirmed SMS batch must contain 1–100 records.');
     }
-    // Freeze the user-confirmed forms before waiting on the widget lock.
-    final frozen = records.map((record) =>
-      Map<String, Object?>.unmodifiable(
+    final copied = <Map<String, Object?>>[];
+    for (final record in records) {
+      copied.add(Map<String, Object?>.unmodifiable(
         Map<String, Object?>.from(
           jsonDecode(jsonEncode(record)) as Map<String, dynamic>,
         ),
-      ),
-    ).toList(growable: false);
+      ));
+    }
     final hashes = List<String>.unmodifiable(messageHashes);
-    final pattern = RegExp(r'^[a-f0-9]{64}
-  /// settings. The cross-engine lock checks the exact ledger and widget
-  /// revision before ANY field is changed. Returns the committed ledger
-  /// witness for the next queued HomeScreen write.
-  ///
-  /// Journaled recovery completes a partially persisted legacy batch after
-  /// process death; SQLCipher source activation is NOT implemented.
-  Future<String> saveLegacy({
-    required Map<String, Object> snapshot,
-    required String? expectedLedgerRaw,
-    required String? expectedWidgetRevision,
-  }) async {
-    // Defensively copy SMS hash lists before any asynchronous work. The
-    // encrypted/legacy writer must persist exactly the user-confirmed batch.
-    final captured = Map<String, Object>.unmodifiable(snapshot.map(
-      (key, value) => MapEntry(
-        key, value is List<String> ? List<String>.unmodifiable(value) : value,
-      ),
-    ));
-    if (captured.keys.toSet().difference(
-      WaffraLegacyPreflight.allKeys.toSet(),
-    ).isNotEmpty) {
-      throw ArgumentError('Attempted to save non-financial preference keys.');
-    }
-    final entries = captured['entries'];
-    if (entries is! String) {
-      throw ArgumentError('Screen ledger must be a JSON string.');
-    }
-    for (final entry in captured.entries) {
-      final value = entry.value;
-      if (value is! String && value is! double && value is! bool &&
-          !(WaffraLegacyPreflight.financeListOfStringsKeys
-              .contains(entry.key) && value is List<String>)) {
-        throw ArgumentError('Unsupported legacy financial value: ${entry.key}');
+    const alphabet = '0123456789abcdef';
+    for (final hash in hashes) {
+      if (hash.length != 64 ||
+          hash.split('').any((digit) => !alphabet.contains(digit))) {
+        throw ArgumentError('Invalid SMS SHA-256 fingerprint.');
       }
     }
-    await coordinator.withCurrentPreferences((preferences) async {
-      WaffraLegacyFinanceWriterCoordinator.requireUnchangedLedger(
-        preferences,
-        expectedRaw: expectedLedgerRaw,
-        expectedWidgetRevision: expectedWidgetRevision,
-      );
-      const batch = WaffraLegacyFinanceBatchJournal();
-      await batch.prepare(prefs: preferences, nextValues: captured);
-      await batch.recover(preferences);
-    });
-    return entries;
-  }
-}
-);
-    if (hashes.any((hash) => !pattern.hasMatch(hash))) {
-      throw ArgumentError('Bank SMS hash is not a SHA-256 fingerprint.');
-    }
-    // Validate the new records before entering the mutation journal.
     if (!WaffraLegacyPreflight.inspect({
-      'entries': jsonEncode(frozen),
+      'entries': jsonEncode(copied),
     }).canStage) {
-      throw StateError('Confirmed finance payload failed preflight.');
+      throw StateError('Confirmed SMS financial records are invalid.');
     }
 
     return coordinator.withCurrentPreferences((prefs) async {
-      final currentRaw = prefs.getString('entries') ?? '[]';
-      final currentDecoded = jsonDecode(currentRaw);
-      if (currentDecoded is! List ||
-          currentDecoded.any((row) => row is! Map)) {
-        throw StateError('Existing finance ledger is malformed.');
+      final previous = prefs.getString('entries') ?? '[]';
+      final decoded = jsonDecode(previous);
+      if (decoded is! List || decoded.any((item) => item is! Map)) {
+        throw StateError('Persisted finance ledger has invalid encoding.');
       }
-      final current = currentDecoded
-          .map((e) => Map<String, dynamic>.from(e as Map)).toList();
-      final ids = current.map((e) => e['id']).toSet();
-      final known = (prefs.getStringList('waffra_sms_hashes_v1') ??
+      final oldEntries = decoded
+          .map((item) => Map<String, dynamic>.from(item as Map)).toList();
+      final existingIds = oldEntries.map((item) => item['id']).toSet();
+      final existingHashes = (prefs.getStringList('waffra_sms_hashes_v1') ??
           const <String>[]).toSet();
-      final additions = <Map<String, Object?>>[];
+      final confirmed = <Map<String, Object?>>[];
       final newHashes = <String>{};
-      var skipped = 0, income = 0, expense = 0;
-      var incomeMinor = 0, expenseMinor = 0;
-      for (var i = 0; i < frozen.length; i++) {
-        final record = frozen[i];
+      var income = 0, expense = 0, incomeMinor = 0, expenseMinor = 0;
+      var skipped = 0;
+      for (var i = 0; i < copied.length; i++) {
+        final item = copied[i];
         final hash = hashes[i];
         if (!allowDuplicateHashes &&
-            (known.contains(hash) || newHashes.contains(hash))) {
+            (existingHashes.contains(hash) || newHashes.contains(hash))) {
           skipped++;
           continue;
         }
-        if (!ids.add(record['id'])) {
-          throw StateError('Duplicate transaction identity in confirmed SMS.');
+        if (!existingIds.add(item['id'])) {
+          throw StateError('Duplicate transaction ID in confirmed batch.');
         }
-        final amount = record['amount'];
-        if (amount is! num || !amount.toDouble().isFinite ||
-            amount <= 0 || ((amount * 100) -
-            (amount * 100).round()).abs() > 1e-7) {
-          throw StateError('Invalid SMS transaction halala precision.');
+        final amount = item['amount'];
+        if (amount is! num || !amount.toDouble().isFinite || amount <= 0 ||
+            ((amount * 100) - (amount * 100).round()).abs() > 1e-7) {
+          throw StateError('Invalid transaction precision.');
         }
-        additions.add(record);
+        confirmed.add(item);
         newHashes.add(hash);
-        final minor = (amount * 100).round();
-        if (record['income'] == true) {
+        if (item['income'] == true) {
           income++;
-          incomeMinor += minor;
+          incomeMinor += (amount * 100).round();
         } else {
           expense++;
-          expenseMinor += minor;
+          expenseMinor += (amount * 100).round();
         }
       }
-      if (additions.isNotEmpty) {
-        final merged = [
-          ...additions,
-          ...current,
-        ];
-        final combined = {...known, ...newHashes}.toList()..sort();
+      if (confirmed.isNotEmpty) {
+        final finalEntries = jsonEncode([...confirmed, ...oldEntries]);
+        final finalHashes = {...existingHashes, ...newHashes}.toList()..sort();
         const journal = WaffraLegacyWidgetCommitJournal();
         await journal.prepare(
           prefs: prefs,
-          nextEntries: jsonEncode(merged),
-          nextHashes: combined,
+          nextEntries: finalEntries,
+          nextHashes: finalHashes,
           nextRevision: DateTime.now().toUtc().toIso8601String(),
         );
         await journal.recover(prefs);
       }
       return WaffraConfirmedLegacySmsResult(
-        savedEntriesRaw: prefs.getString('entries') ?? currentRaw,
+        savedEntriesRaw: prefs.getString('entries') ?? previous,
         savedHashes: List<String>.unmodifiable(
           prefs.getStringList('waffra_sms_hashes_v1') ?? const <String>[],
         ),
         widgetRevision: prefs.getString('waffra_widget_last_save_v1'),
-        added: additions.length,
+        added: confirmed.length,
         savedIncome: income,
         savedExpenses: expense,
         incomeMinor: incomeMinor,
