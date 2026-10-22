@@ -8,6 +8,7 @@ import 'package:waffra/storage/waffra_atomic_finance_snapshot.dart';
 import 'package:waffra/storage/waffra_encrypted_cutover_journal.dart';
 import 'package:waffra/storage/waffra_encrypted_store.dart';
 import 'package:waffra/storage/waffra_fresh_encrypted_vault_bootstrap.dart';
+import 'package:waffra/storage/waffra_fresh_finance_modules_repository.dart';
 import 'package:waffra/storage/waffra_live_legacy_finance_guard.dart';
 import 'package:waffra/storage/waffra_verified_encrypted_finance_bridge.dart';
 import 'package:waffra/storage/waffra_encrypted_finance_session.dart';
@@ -71,6 +72,13 @@ void main() {
             '[{"id":"trip","name":"Trip","target":2500,"saved":200}]',
       },
     );
+    // The production projected-editor contract requires preexisting SQL rows
+    // to match the exact snapshot being edited, not an empty shadow table.
+    await WaffraFreshModulesRepository(
+      store: vault, experimentalEnabled: true,
+    ).save(WaffraFinanceModule.goals, const {
+      'id': 'trip', 'name': 'Trip', 'target': 2500, 'saved': 200,
+    });
     final source = WaffraLegacyPreflight.inspect({'entries': '[]'});
     await journal().prepare(
       sourceDigest: source.sourceSha256,

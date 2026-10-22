@@ -4,6 +4,7 @@ import 'dart:io';
 import 'legacy_snapshot_preflight.dart';
 import 'waffra_atomic_finance_snapshot.dart';
 import 'waffra_encrypted_entry_projection_guard.dart';
+import 'waffra_encrypted_module_projection_guard.dart';
 import 'waffra_experimental_writer_gate.dart';
 
 /// A finance screen must keep the exact *baseline values* it loaded.
@@ -111,6 +112,22 @@ class WaffraEncryptedFinanceUiPatch {
           store: snapshot.store,
           previousJson: latest.values['entries'] as String?,
           updatedJson: merged['entries'] as String?,
+        );
+      }
+      // Keep relational category/goal/recurring projections and the
+      // canonical snapshot under ONE SQLCipher transaction. Any mismatch,
+      // invalid edit or implicit deletion rolls the whole operation back.
+      for (final key in const [
+        'waffra_categories_v24',
+        'waffra_goals_v24',
+        'waffra_recurring_v24',
+      ]) {
+        if (!frozenKeys.contains(key)) continue;
+        await WaffraEncryptedModuleProjectionGuard.reconcile(
+          store: snapshot.store,
+          key: key,
+          previousJson: latest.values[key] as String?,
+          updatedJson: merged[key] as String?,
         );
       }
       return snapshot.commit(
