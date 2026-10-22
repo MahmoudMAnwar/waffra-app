@@ -56,8 +56,19 @@ jobs:
           receipt=Path('lib/storage/waffra_encrypted_receipt_vault.dart').read_text()
           assert 'SharedPreferences.getInstance()' in main
           persistence=Path('lib/storage/waffra_home_finance_persistence.dart').read_text()
+          # M109 now dispatches Widget SMS through the *same* verified
+          # source authority as Home read. That authority delegates to the
+          # original M108 crash-journaled legacy writer only while legacy is
+          # independently verified. Do not reintroduce a local widget journal.
+          authority=Path('lib/storage/waffra_verified_finance_authority.dart').read_text()
           assert 'commitConfirmedLegacySms(' in main
-          assert 'commitConfirmedLegacySms(' in widget
+          assert 'commitConfirmedLegacySms(' in authority
+          assert 'commitConfirmedLegacySms(' not in widget
+          assert '_financeAuthority.commitConfirmedSms(' in widget
+          assert 'WaffraFinanceRoute.widgetSmsConfirmedSave' in widget
+          assert '_financeAuthority.load(route:WaffraFinanceRoute.widgetRead)' in widget
+          assert '_financeAuthority.load(route:WaffraFinanceRoute.dashboardRead)' in main
+          assert 'await legacy.commitConfirmedLegacySms(' in authority
           assert 'await journal.prepare(' in persistence
           assert 'await journal.recover(prefs);' in persistence
           assert 'await journal.prepare(' not in widget
@@ -66,7 +77,7 @@ jobs:
           assert "prefs.setStringList('waffra_sms_hashes_v1', newHashes)" in widget_journal
           assert 'this.experimentalEnabled = false' in writer
           assert 'this.experimentalEnabled = false' in receipt
-          print('Home and Widget share one guarded legacy finance journal; encrypted activation stays off.')
+          print('Home and Widget use verified source reads; widget SMS delegates to atomic guarded legacy journal, with encrypted activation OFF.')
           print('IMPORTANT: this is a safe prototype check, NOT proof that the production cutover is complete.')
           PY
 
