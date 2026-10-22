@@ -1,0 +1,78 @@
+name: Waffra M110 Live Finance Writer Source Authority
+
+on:
+  pull_request:
+    paths:
+      - 'lib/main.dart'
+      - 'lib/storage/waffra_verified_finance_authority.dart'
+      - 'lib/storage/waffra_unified_finance_writer.dart'
+      - 'test/storage/unified_finance_writer_test.dart'
+      - 'test/m108_home_widget_one_finance_writer_test.dart'
+      - 'test/m110_live_finance_authority_writer_test.dart'
+      - '.github/workflows/m110-home-writer-source-authority.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-authority:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    name: One Home/Widget authority, snapshot CAS and exact halala totals
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Strict Dart analyze changed production finance services and tests
+        run: >-
+          dart analyze
+          lib/storage/waffra_verified_finance_authority.dart
+          lib/storage/waffra_unified_finance_writer.dart
+          test/storage/unified_finance_writer_test.dart
+          test/m108_home_widget_one_finance_writer_test.dart
+          test/m110_live_finance_authority_writer_test.dart
+      - name: Home, Widget, SQLCipher and failure/duplicate tests on SAME SHA
+        run: >-
+          flutter test
+          test/m108_home_widget_one_finance_writer_test.dart
+          test/m110_live_finance_authority_writer_test.dart
+          test/storage/m109_verified_finance_authority_test.dart
+          test/storage/unified_finance_writer_test.dart
+          test/storage/m96_home_widget_confirmed_sms_journal_test.dart
+          test/storage/m97_home_widget_interrupted_commit_test.dart
+          test/storage/home_finance_persistence_test.dart
+          test/storage/finance_source_cutover_policy_test.dart
+          --reporter expanded
+      - name: Reject UI direct financial writes that bypass verified source
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          home=Path('lib/main.dart').read_text()
+          assert '_homeFinancePersistence.saveLegacy(' not in home
+          assert '_homeFinancePersistence.commitConfirmedLegacySms(' not in home
+          assert 'WaffraFinanceRoute.deleteAllTransactions' in home
+          assert 'WaffraFinanceRoute.fullFinanceReset' in home
+          assert 'WaffraFinanceRoute.bulkSmsConfirmedSave' in home
+          authority=Path('lib/storage/waffra_verified_finance_authority.dart').read_text()
+          assert 'Encrypted screen mutation requires a verified atomic SQL projection writer.' in authority
+          print('No unsafe active SQLCipher source switch; source-aware Home routing code is present')
+          PY
+
+  production-go-no-go:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    name: Keep final device/recovery/source blockers visible
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          WAFFRA_PLAY_AUDIT_PATH=m110-release-blockers.json python3 scripts/m106_play_release_preflight.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: waffra-m110-production-blockers
+          path: m110-release-blockers.json
+          retention-days: 21
