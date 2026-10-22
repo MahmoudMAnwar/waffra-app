@@ -24,17 +24,17 @@ void main() {
     'receiptPath': null,
   };
 
-  WaffraAtomicFinanceSnapshot get snapshot =>
+  WaffraAtomicFinanceSnapshot currentSnapshot() =>
       WaffraAtomicFinanceSnapshot(store: encrypted, experimentalEnabled: true);
-  WaffraEncryptedReceiptVault get vault =>
+  WaffraEncryptedReceiptVault receiptVault() =>
       WaffraEncryptedReceiptVault(store: encrypted, experimentalEnabled: true);
 
   WaffraAtomicEncryptedReceiptTransactionWriter writer({
     bool enabled = true,
     bool verifiedSource = true,
   }) => WaffraAtomicEncryptedReceiptTransactionWriter(
-    snapshot: snapshot,
-    receiptVault: vault,
+    snapshot: currentSnapshot(),
+    receiptVault: receiptVault(),
     writerDirectory: root,
     experimentalEnabled: enabled,
     verifySourceUnderLock: verifiedSource ? () async {} : null,
@@ -44,7 +44,7 @@ void main() {
     await WaffraFreshEncryptedVaultBootstrap(
       store: encrypted, experimentalEnabled: true,
     ).initialize(decision: WaffraFirstRunDecision.freshCandidate);
-    await snapshot.initializeEmpty();
+    await currentSnapshot().initializeEmpty();
   }
 
   Future<int> normalizedCount() async =>
@@ -66,7 +66,7 @@ void main() {
 
   test('M76 confirmed entry and two invoice images commit in a single SQLCipher generation',
       () async {
-    final initial = await snapshot.read();
+    final initial = await currentSnapshot().read();
     expect(initial.generation, 0);
     final result = await writer().save(
       record: entry('restaurant-1'),
@@ -81,7 +81,7 @@ void main() {
     expect(result.receiptBytes, 7);
     expect(result.generation, 1);
     expect(await normalizedCount(), 1);
-    final state = await snapshot.read();
+    final state = await currentSnapshot().read();
     expect(state.values['waffra_sms_hashes_v1'], [hash(19)]);
     final saved = jsonDecode(state.values['entries'] as String) as List;
     final row = saved.single as Map;
@@ -90,7 +90,7 @@ void main() {
       WaffraEncryptedReceiptReference.of('restaurant-1', 0),
       WaffraEncryptedReceiptReference.of('restaurant-1', 1),
     ]);
-    final attachments = await vault.readAll('restaurant-1');
+    final attachments = await receiptVault().readAll('restaurant-1');
     expect(attachments.map((x) => x.bytes.toList()).toList(),
         [[1, 2, 3, 4], [11, 12, 13]]);
 
@@ -98,8 +98,8 @@ void main() {
     encrypted = WaffraEncryptedStore.openAt(
       File('${root.path}/receipt-finance.sqlite'), key: key,
     );
-    expect((await snapshot.read()).generation, 1);
-    expect((await vault.readAll('restaurant-1')).last.bytes, [11, 12, 13]);
+    expect((await currentSnapshot().read()).generation, 1);
+    expect((await receiptVault().readAll('restaurant-1')).last.bytes, [11, 12, 13]);
   });
 
   test('M76 never writes without user confirmation, a verified source or explicit feature',
@@ -116,7 +116,7 @@ void main() {
       record: record, receiptImages: pictures, userConfirmed: true,
     ), throwsA(isA<StateError>()));
     expect(await normalizedCount(), 0);
-    expect((await snapshot.read()).generation, 0);
+    expect((await currentSnapshot().read()).generation, 0);
   });
 
   test('M76 refuses legacy plaintext file paths, raw bank data and zero amounts',
@@ -134,7 +134,7 @@ void main() {
       ), throwsA(isA<ArgumentError>()));
     }
     expect(await normalizedCount(), 0);
-    expect((await snapshot.read()).generation, 0);
+    expect((await currentSnapshot().read()).generation, 0);
   });
 
   test('M76 duplicate transaction ID and SMS hash never overwrite prior images',
@@ -155,9 +155,9 @@ void main() {
       ), throwsA(isA<StateError>()));
     }
     expect(await normalizedCount(), 1);
-    expect((await snapshot.read()).generation, 1);
-    expect((await vault.readAll('first')).single.bytes, [3, 7]);
-    expect((await snapshot.read()).values['waffra_sms_hashes_v1'], [hash(1)]);
+    expect((await currentSnapshot().read()).generation, 1);
+    expect((await receiptVault().readAll('first')).single.bytes, [3, 7]);
+    expect((await currentSnapshot().read()).values['waffra_sms_hashes_v1'], [hash(1)]);
   });
 
   test('M76 a receipt SQL trigger failure rolls back ledger, hashes and entry row',
@@ -167,7 +167,7 @@ void main() {
       receiptImages: [Uint8List.fromList([8])],
       userConfirmed: true,
     );
-    final before = await snapshot.read();
+    final before = await currentSnapshot().read();
     await encrypted.customStatement('''
 CREATE TRIGGER synthetic_m76_receipt_failure
 BEFORE INSERT ON fresh_finance_receipt_blobs
@@ -180,13 +180,13 @@ END
       receiptImages: [Uint8List.fromList([7, 7])],
       smsHash: hash(7), userConfirmed: true,
     ), throwsA(anything));
-    final after = await snapshot.read();
+    final after = await currentSnapshot().read();
     expect(after.generation, before.generation);
     expect(after.digest, before.digest);
     expect(await normalizedCount(), 1);
     expect((jsonDecode(after.values['entries'] as String) as List).length, 1);
     expect(after.values.containsKey('waffra_sms_hashes_v1'), false);
-    expect((await vault.readAll('existing')).single.bytes, [8]);
+    expect((await receiptVault().readAll('existing')).single.bytes, [8]);
   });
 
   test('M76 protects original image buffer from asynchronous mutation',
@@ -197,12 +197,12 @@ END
       receiptImages: [image], userConfirmed: true,
     );
     image[0] = 99;
-    expect((await vault.readAll('private-photo')).single.bytes, [22, 23, 24]);
+    expect((await receiptVault().readAll('private-photo')).single.bytes, [22, 23, 24]);
   });
 
   test('M76 refuses mixed snapshot-vs-normalized ledger source corruption',
       () async {
-    await snapshot.commit(
+    await currentSnapshot().commit(
       expectedGeneration: 0,
       fullFinanceSnapshot: {
         'entries': jsonEncode([entry('out-of-band')]),
@@ -214,6 +214,6 @@ END
       userConfirmed: true,
     ), throwsA(isA<StateError>()));
     expect(await normalizedCount(), 0);
-    expect((await snapshot.read()).generation, 1);
+    expect((await currentSnapshot().read()).generation, 1);
   });
 }
