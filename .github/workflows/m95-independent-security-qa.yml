@@ -1,0 +1,29 @@
+name: Waffra M95 E2EE Recovery Conflict
+
+on:
+  pull_request:
+    paths:
+      - 'test/storage/m95_recovered_key_offline_conflict_test.dart'
+      - '.github/workflows/m95-independent-security-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-finance-qa:
+    name: M95 isolated synthetic safety tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Fetch Flutter dependencies
+        run: flutter pub get
+      - name: Analyze exact test target
+        run: dart analyze test/storage/m95_recovered_key_offline_conflict_test.dart
+      - name: Execute synthetic acceptance tests
+        run: flutter test test/storage/m95_recovered_key_offline_conflict_test.dart --reporter expanded
