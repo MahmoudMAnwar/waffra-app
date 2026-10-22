@@ -161,51 +161,9 @@ CREATE TABLE IF NOT EXISTS $_table(
     }
     if (entryId.trim().isEmpty || position < 0 ||
         image.isEmpty || image.length > maxReceiptBytes ||
-        !RegExp(r'^[a-f0-9]{64}
-    await _requireReady();
-    final exists = await store.customSelect(
-      "SELECT name FROM sqlite_master WHERE type='table' "
-      "AND name='$_table'",
-    ).get();
-    if (exists.isEmpty) return [];
-    final row = await store.customSelect(
-      'SELECT receipt_count FROM fresh_finance_entries WHERE entry_id=?',
-      variables: [Variable.withString(entryId)],
-    ).get();
-    if (row.length != 1) {
-      throw StateError('Transaction does not exist.');
-    }
-    final count = row.single.read<int>('receipt_count');
-    final records = await store.customSelect(
-      'SELECT position,safe_name,content_sha256,content_bytes,encrypted_blob '
-      'FROM $_table WHERE entry_id=? ORDER BY position',
-      variables: [Variable.withString(entryId)],
-    ).get();
-    if (records.length != count) {
-      throw StateError('Transaction receipt count and saved bytes disagree.');
-    }
-    final decoded = <WaffraEncryptedReceipt>[];
-    for (var i = 0; i < records.length; i++) {
-      final part = records[i];
-      final position = part.read<int>('position');
-      final safeName = part.read<String>('safe_name');
-      final digest = part.read<String>('content_sha256');
-      final bytes = Uint8List.fromList(part.read<Uint8List>('encrypted_blob'));
-      if (position != i ||
-          safeName != _safeName(entryId, position) ||
-          bytes.length != part.read<int>('content_bytes') ||
-          digest != sha256.convert(bytes).toString()) {
-        throw StateError('Encrypted receipt checksum or position mismatch.');
-      }
-      decoded.add(WaffraEncryptedReceipt(
-        entryId: entryId, position: position,
-        safeName: safeName, sha256Hex: digest, bytes: bytes,
-      ));
-    }
-    return List<WaffraEncryptedReceipt>.unmodifiable(decoded);
-  }
-}
-).hasMatch(expectedSha256)) {
+        expectedSha256.length != 64 ||
+        expectedSha256.split('').any(
+          (part) => !'0123456789abcdef'.contains(part))) {
       throw ArgumentError('Invalid encrypted receipt replacement.');
     }
     final captured = Uint8List.fromList(image);
