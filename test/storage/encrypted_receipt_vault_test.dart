@@ -146,6 +146,62 @@ void main() {
     expect(await receiptCount(),0);
   });
 
+  test('verified image replacement survives cold reopen and keeps count', () async {
+    await prepare();
+    await vault().attachNewBatch(entryId: 'entry-one', images: [
+      Uint8List.fromList([1, 2, 3]),
+      Uint8List.fromList([4, 5, 6]),
+    ]);
+    final prior = await vault().readAll('entry-one');
+    await vault().replaceExistingImage(
+      entryId: 'entry-one', position: 0,
+      image: Uint8List.fromList([7, 8, 9]),
+      expectedSha256: prior.first.sha256Hex,
+    );
+    expect(await receiptCount(), 2);
+    expect((await vault().readAll('entry-one'))[1].bytes, [4, 5, 6]);
+    await store.close();
+    store = WaffraEncryptedStore.openAt(
+      File('${root.path}/receipt.sqlite'), key: key,
+    );
+    final recovered = await vault().readAll('entry-one');
+    expect(recovered[0].bytes, [7, 8, 9]);
+    expect(recovered[1].bytes, [4, 5, 6]);
+  });
+
+  test('stale digest fails closed without overwriting existing bytes', () async {
+    await prepare();
+    await vault().attachNewBatch(
+      entryId: 'entry-one', images: [Uint8List.fromList([1, 2])],
+    );
+    await expectLater(vault().replaceExistingImage(
+      entryId: 'entry-one', position: 0,
+      image: Uint8List.fromList([3, 4]),
+      expectedSha256: '0' * 64,
+    ), throwsStateError);
+    expect((await vault().readAll('entry-one')).single.bytes, [1, 2]);
+  });
+
+  test('invalid replacement never changes receipt count or bytes', () async {
+    await prepare();
+    await vault().attachNewBatch(
+      entryId: 'entry-one', images: [Uint8List.fromList([11])],
+    );
+    final old = (await vault().readAll('entry-one')).single;
+    await expectLater(vault().replaceExistingImage(
+      entryId: 'entry-one', position: 1,
+      image: Uint8List.fromList([12]),
+      expectedSha256: old.sha256Hex,
+    ), throwsStateError);
+    await expectLater(vault().replaceExistingImage(
+      entryId: 'entry-one', position: 0,
+      image: Uint8List(0),
+      expectedSha256: old.sha256Hex,
+    ), throwsArgumentError);
+    expect(await receiptCount(), 1);
+    expect((await vault().readAll('entry-one')).single.bytes, [11]);
+  });
+
   test('receipt writing remains disabled by default',()async{
     await prepare();
     await expectLater(vault(enabled:false).attachNewBatch(
