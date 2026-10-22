@@ -13,6 +13,7 @@ on:
       - 'feature/m99-production-sync-queue-and-android-build'
       - 'feature/waffra-unified-finance-release-candidate'
       - 'feature/m106-play-privacy-observability-readiness'
+      - 'feature/m107-production-account-delete-observability'
   workflow_dispatch:
 
 # Fast-build concurrency: only the latest pushed revision needs an APK.
