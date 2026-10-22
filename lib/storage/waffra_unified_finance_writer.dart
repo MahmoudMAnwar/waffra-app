@@ -31,11 +31,17 @@ class WaffraUnifiedFinanceWriter {
     required this.writerDirectory,
     required this.snapshot,
     this.experimentalEnabled = false,
+    this.verifySourceUnderLock,
   });
 
   final Directory writerDirectory;
   final WaffraAtomicFinanceSnapshot snapshot;
   final bool experimentalEnabled;
+
+  /// Optional runtime source verification. Executed while holding the same
+  /// app/widget native lock, before reading or changing finance. Never use
+  /// an unchecked writer in an activated installation.
+  final Future<void> Function()? verifySourceUnderLock;
 
   /// Called AFTER explicit confirmation for bank SMS, or on a manual save.
   /// Hashes align one-to-one with entries, and may be null for manual entries.
@@ -90,6 +96,7 @@ class WaffraUnifiedFinanceWriter {
       experimentalEnabled: true,
     );
     return gate.withExclusiveAccess(() async {
+      await verifySourceUnderLock?.call();
       final current = await snapshot.read();
       final next = Map<String, Object?>.from(current.values);
       final decoded = jsonDecode((next['entries'] as String?) ?? '[]');
