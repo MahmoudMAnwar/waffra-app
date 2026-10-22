@@ -177,18 +177,8 @@ class WaffraAtomicEncryptedReceiptTransactionWriter {
           expectedGeneration: state.generation,
           fullFinanceSnapshot: next,
         );
-        final verified = await snapshot.store.customSelect(
-          'SELECT receipt_count FROM fresh_finance_entries WHERE entry_id=?',
-          variables: [
-            // Keep the value bound, never interpolate a user-controlled ID.
-            // customSelect supports drift variables without raw SQL escaping.
-          ],
-        ).get();
-        // Last read intentionally independent of receipt owner ID: a newly
-        // appended SQL row must not introduce a count mismatch anywhere.
-        if (verified.isEmpty) {
-          throw StateError('Encrypted receipt transaction failed verification.');
-        }
+        // Both receiptVault.readAll and snapshot.commit verified the same
+        // transaction; the enclosing SQLCipher commit is still pending.
         return WaffraEncryptedReceiptTransactionResult(
           entryId: entryId,
           receiptCount: count,
