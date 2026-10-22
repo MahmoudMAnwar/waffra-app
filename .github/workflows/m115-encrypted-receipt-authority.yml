@@ -1,0 +1,32 @@
+name: Waffra M115 Encrypted Receipt Authority
+on:
+  pull_request:
+    paths:
+      - 'lib/storage/waffra_verified_finance_authority.dart'
+      - 'test/storage/m115_encrypted_receipt_authority_test.dart'
+      - '.github/workflows/m115-encrypted-receipt-authority.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  receipt-authority:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Analyze production authority and receipt test
+        run: dart analyze lib/storage/waffra_verified_finance_authority.dart test/storage/m115_encrypted_receipt_authority_test.dart
+      - name: Verify receipt isolation and finance authority regressions
+        run: >-
+          flutter test
+          test/storage/m115_encrypted_receipt_authority_test.dart
+          test/storage/atomic_encrypted_receipt_transaction_writer_test.dart
+          test/storage/encrypted_receipt_read_gateway_test.dart
+          test/storage/m114_sqlcipher_projected_edit_test.dart
+          test/m111_finance_authority_negative_acceptance_test.dart
+          --reporter expanded
