@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'legacy_snapshot_preflight.dart';
 import 'waffra_atomic_finance_snapshot.dart';
+import 'waffra_atomic_encrypted_receipt_transaction_writer.dart';
 import 'waffra_finance_read_view.dart';
 import 'waffra_unified_finance_writer.dart';
 import 'waffra_verified_encrypted_finance_bridge.dart';
@@ -108,6 +109,23 @@ class WaffraEncryptedFinanceSession {
       messageHashes: hashes,
       userConfirmed: userConfirmed,
       allowDuplicateHashes: allowDuplicateHashes,
+    );
+  }
+
+  /// Save normalized transaction + raw picker picture bytes atomically after
+  /// confirmation. Never create legacy plaintext receipt files.
+  Future<WaffraEncryptedReceiptTransactionResult> appendWithReceiptBytes({
+    required Map<String, Object?> record,
+    required List<Uint8List> images,
+    required bool userConfirmed,
+    String? smsHash,
+  }) async {
+    _requireEnabled();
+    return bridge.appendConfirmedWithReceiptBytes(
+      record: record,
+      images: images,
+      userConfirmed: userConfirmed,
+      messageHash: smsHash,
     );
   }
 

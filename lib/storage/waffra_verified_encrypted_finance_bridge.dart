@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'waffra_atomic_finance_snapshot.dart';
+import 'waffra_atomic_encrypted_receipt_transaction_writer.dart';
 import 'waffra_encrypted_cutover_journal.dart';
 import 'waffra_encrypted_finance_ui_patch.dart';
 import 'waffra_experimental_writer_gate.dart';
@@ -140,6 +141,33 @@ class WaffraVerifiedEncryptedFinanceBridge {
       allowDuplicateHashes: allowDuplicateHashes,
     );
   }
+  /// Save a confirmed transaction and its attached images as ONE encrypted
+  /// SQLCipher commit. Uses the same source witness as dashboard and widget.
+  /// No plaintext disk receipt path or separate partial finance update.
+  Future<WaffraEncryptedReceiptTransactionResult>
+      appendConfirmedWithReceiptBytes({
+    required Map<String, Object?> record,
+    required List<Uint8List> images,
+    required bool userConfirmed,
+    String? messageHash,
+  }) {
+    return WaffraAtomicEncryptedReceiptTransactionWriter(
+      snapshot: snapshot,
+      receiptVault: WaffraEncryptedReceiptVault(
+        store: snapshot.store,
+        experimentalEnabled: true,
+      ),
+      writerDirectory: writerDirectory,
+      verifySourceUnderLock: _requireActivatedUnderLock,
+      experimentalEnabled: experimentalEnabled,
+    ).save(
+      record: record,
+      receiptImages: images,
+      userConfirmed: userConfirmed,
+      smsHash: messageHash,
+    );
+  }
+
   /// Merge confirmed SHA-256 SMS fingerprints under one native app/widget lock.
   /// No raw bank SMS is stored or sent anywhere.
   Future<WaffraFinanceSnapshotState> mergeConfirmedSmsHashes(
