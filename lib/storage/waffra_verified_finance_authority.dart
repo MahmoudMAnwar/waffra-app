@@ -132,13 +132,45 @@ class WaffraVerifiedFinanceAuthority {
         expectedWidgetRevision: baseline.widgetRevision,
       );
     } else {
-      // Do NOT update only the encrypted JSON snapshot here. A live Home
-      // category/goal/transaction edit or full reset must also update each
-      // normalized SQLCipher projection and encrypted receipts atomically.
-      // M110 routes the UI through one authority, but does not pretend the
-      // remaining typed SQL projection writers or migration are complete.
-      throw StateError(
-        'Encrypted screen mutation requires a verified atomic SQL projection writer.',
+      // This branch cannot be selected by current production: independent
+      // key recovery, route audit and dual activation witnesses are mandatory.
+      // When a future release selects it, only proven, non-destructive editor
+      // deltas may pass; deletes/resets/receipt mutations need separate writers.
+      final witness = baseline.encryptedWitness;
+      const projectedFields = <String>{
+        'entries',
+        'waffra_categories_v24',
+        'waffra_goals_v24',
+        'waffra_recurring_v24',
+      };
+      const projectedEditorRoutes = <WaffraFinanceRoute>{
+        WaffraFinanceRoute.transactionEdit,
+        WaffraFinanceRoute.categoryCreateEditDeleteRestore,
+        WaffraFinanceRoute.goalCreateEditDeleteRestore,
+        WaffraFinanceRoute.recurringCreateEditDeleteRestore,
+      };
+      final oldValues = witness?.snapshot.values;
+      final unsupportedChange = oldValues == null ||
+          immutableCapture.entries.any((item) {
+            final changed = !oldValues.containsKey(item.key) ||
+                jsonEncode(oldValues[item.key]) != jsonEncode(item.value);
+            return changed && !projectedFields.contains(item.key);
+          });
+      if (witness == null ||
+          !projectedEditorRoutes.contains(route) ||
+          unsupportedChange) {
+        throw StateError(
+          'Encrypted screen mutation requires a verified atomic SQL projection writer.',
+        );
+      }
+      // saveDashboardBatch derives a delta from the exact loaded witness.
+      // The bridge checks the durable source under the shared native lock;
+      // entry and module projection guards reconcile INSIDE its SQL transaction.
+      // Changes to the same key made by the Widget cause a hard conflict.
+      final session = encryptedSession!;
+      await session.saveDashboardBatch(
+        baseline: witness,
+        captured: immutableCapture,
       );
     }
     // Never publish optimistic UI success before getting durable witness.
