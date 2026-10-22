@@ -45,19 +45,39 @@ void main() {
         decision:WaffraFirstRunDecision.freshCandidate,
       )).isNew,true);
 
+      // M79: Seed BOTH projections through the canonical atomic writer.
+      // Direct relational ledger.add() leaves the finance snapshot empty and
+      // is deliberately rejected by the guarded app/widget writer.
       final ledger = WaffraFreshLedgerRepository(
         store:vault,experimentalEnabled:true,
       );
-      await ledger.add(const WaffraFreshLedgerEntry(
-        id:'offline-expense',title:'تجربة',categorySnapshot:'مصروفات',
-        amountMinor:1235,isIncome:false,
-        occurredIso:'2026-10-21T14:00:00',
-      ));
-      await ledger.add(const WaffraFreshLedgerEntry(
-        id:'offline-income',title:'Salary',categorySnapshot:'Salary',
-        amountMinor:120000,isIncome:true,
-        occurredIso:'2026-10-20T13:00:00',
-      ));
+      final fullSnapshot=WaffraAtomicFinanceSnapshot(
+        store:vault,experimentalEnabled:true,
+      );
+      await fullSnapshot.initializeEmpty();
+      final writer=WaffraUnifiedFinanceWriter(
+        writerDirectory:root,
+        snapshot:fullSnapshot,
+        experimentalEnabled:true,
+      );
+      final seeded=await writer.appendTransactions(
+        records:[
+          {
+            'id':'offline-expense','title':'تجربة',
+            'category':'مصروفات','amount':12.35,'income':false,
+            'date':'2026-10-21T14:00:00','receiptPath':null,
+          },
+          {
+            'id':'offline-income','title':'Salary',
+            'category':'Salary','amount':1200.00,'income':true,
+            'date':'2026-10-20T13:00:00','receiptPath':null,
+          },
+        ],
+        messageHashes:[null,null],
+        userConfirmed:true,
+      );
+      expect(seeded.saved,2);
+      expect(seeded.generation,1);
       final goalRepo = WaffraFreshModulesRepository(
         store:vault,experimentalEnabled:true,
       );
@@ -86,17 +106,8 @@ void main() {
       );
       expect((await receipts.readAll('offline-expense')).length,2);
 
-      // The transition snapshot is deliberately separate from the
-      // normalized-relational finance repository. This is NOT live UI cutover.
-      final fullSnapshot=WaffraAtomicFinanceSnapshot(
-        store:vault,experimentalEnabled:true,
-      );
-      await fullSnapshot.initializeEmpty();
-      final writer=WaffraUnifiedFinanceWriter(
-        writerDirectory:root,
-        snapshot:fullSnapshot,
-        experimentalEnabled:true,
-      );
+      // This remains a disposable Android rehearsal, NOT a production
+      // source cutover. New entries must preserve normalized SQL parity.
       final result=await writer.appendTransactions(
         records:[{
           'id':'synthetic-widget','title':'شراء عبر الودجت',
@@ -107,8 +118,8 @@ void main() {
         userConfirmed:true,
       );
       expect(result.saved,1);
-      expect((await fullSnapshot.read()).generation,1);
-      expect((await ledger.totals()).count,2);
+      expect((await fullSnapshot.read()).generation,2);
+      expect((await ledger.totals()).count,3);
 
       // Even with a real encrypted file, active-source routing remains
       // unavailable until TWO activation witnesses are durably committed.
@@ -131,9 +142,9 @@ void main() {
         store:vault,experimentalEnabled:true,
       );
       final totals=await reopenedLedger.totals();
-      expect(totals.count,2);
+      expect(totals.count,3);
       expect(totals.incomeMinor,120000);
-      expect(totals.expenseMinor,1235);
+      expect(totals.expenseMinor,1660);
       expect((await WaffraEncryptedReceiptVault(
         store:vault,experimentalEnabled:true,
       ).readAll('offline-expense')).map((r)=>r.bytes.join(',')).toSet(),
@@ -143,7 +154,7 @@ void main() {
       ).list(WaffraFinanceModule.goals)).single['saved'],0);
       expect((await WaffraAtomicFinanceSnapshot(
         store:vault,experimentalEnabled:true,
-      ).read()).generation,1);
+      ).read()).generation,2);
     } finally {
       await vault?.close();
       if(await root.exists())await root.delete(recursive:true);
