@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cryptography/cryptography.dart';
 
 import 'waffra_cloud_compare_and_swap.dart';
+import 'waffra_cloud_recovery_manifest.dart';
 import 'waffra_sync_outbox.dart';
 
 /// Consent and key/source proofs must come from a verified, independent
@@ -46,6 +48,9 @@ class WaffraFirestoreEncryptedSyncTransport {
     required WaffraCloudQueueItem item,
     required WaffraCloudSyncAuthorization authorization,
     String? expectedPreviousMutationId,
+    // Required for index publication so referenced remote versions can be
+    // verified INSIDE the same Firestore transaction as the index update.
+    SecretKey? manifestVaultKey,
   }) async {
     if (!experimentalEnabled || !authorization.canUpload) {
       return const WaffraCloudPublishResult(
@@ -61,6 +66,19 @@ class WaffraFirestoreEncryptedSyncTransport {
         ) != item.documentId) {
       throw StateError('Authenticated cloud source identity mismatch.');
     }
+    final isIndex = item.envelope.kind == WaffraCloudRecoveryManifest.kind;
+    if (isIndex && (manifestVaultKey == null ||
+        item.envelope.recordId != WaffraCloudRecoveryManifest.recordId ||
+        item.deleted)) {
+      throw StateError('Encrypted recovery manifest needs owner key proof.');
+    }
+    final indexedRecords = isIndex
+        ? await WaffraCloudRecoveryManifest.decrypt(
+            recoveredVaultKey: manifestVaultKey!,
+            vaultId: item.vaultId,
+            manifest: item.envelope,
+          )
+        : const <WaffraCloudRecordPointer>[];
     final vault = firestore.collection('users').doc(ownerUid)
         .collection('vaults').doc(item.vaultId);
     final record = vault.collection('records').doc(item.documentId);
@@ -79,6 +97,24 @@ class WaffraFirestoreEncryptedSyncTransport {
         final remote = current.exists
             ? _decodeRevision(item.documentId, current.data())
             : null;
+        // Every referenced document is read in the *same remote read set*
+        // as the recovery index write. A racing edit invalidates/retries
+        // this transaction rather than publishing a stale snapshot.
+        for (final pointer in indexedRecords) {
+          final ref = vault.collection('records').doc(
+            WaffraEncryptedCloudOutbox.documentId(
+              pointer.kind, pointer.id,
+            ),
+          );
+          final observed = await tx.get(ref);
+          if (!observed.exists) {
+            throw StateError('Encrypted index refers to an absent record.');
+          }
+          final row = _decodeRevision(ref.id, observed.data());
+          if (!matchesIndexedRevision(pointer: pointer, remote: row)) {
+            throw StateError('Encrypted index refers to stale remote data.');
+          }
+        }
         final decision = WaffraCloudCompareAndSwap.plan(
           item: item,
           remote: remote,
@@ -122,6 +158,18 @@ class WaffraFirestoreEncryptedSyncTransport {
     }
     return WaffraCloudPublishResult(status: applied);
   }
+
+  /// Remote CAS predicate exposed for deterministic cross-phone tests.
+  static bool matchesIndexedRevision({
+    required WaffraCloudRecordPointer pointer,
+    required WaffraRemoteRevision remote,
+  }) =>
+      remote.documentId ==
+          WaffraEncryptedCloudOutbox.documentId(pointer.kind, pointer.id) &&
+      remote.kind == pointer.kind &&
+      remote.mutationId == pointer.mutationId &&
+      remote.localVersion == pointer.version &&
+      remote.deleted == pointer.deleted;
 
   static WaffraRemoteRevision _decodeRevision(
     String documentId, Map<String, dynamic>? data,
