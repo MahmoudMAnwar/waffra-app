@@ -77,6 +77,7 @@ void main() {
     addTearDown((){if(folder.existsSync())folder.deleteSync(recursive:true);});
     await tester.pumpWidget(WaffraWidgetCaptureApp(
       testWriterDirectory:folder,testBypassNativeLock:true,
+      testSourceProbe:() async {},
     ));
     await tester.pumpAndSettle();
     expect(find.textContaining('تعذر فتح البيانات المحلية'), findsOneWidget);
