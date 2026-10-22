@@ -211,13 +211,13 @@ void main() {
     await expectLater(authority.commitConfirmedSms(
       route: WaffraFinanceRoute.widgetSmsConfirmedSave,
       records: [<String, Object?>{'id': 'new'}],
-      hashes: ['a' * 64],
+      hashes: [List<String>.filled(64, 'a').join()],
       userConfirmed: false,
     ), throwsStateError);
     await expectLater(authority.commitConfirmedSms(
       route: WaffraFinanceRoute.manualTransactionSave,
       records: [<String, Object?>{'id': 'new'}],
-      hashes: ['a' * 64],
+      hashes: [List<String>.filled(64, 'a').join()],
       userConfirmed: true,
     ), throwsArgumentError);
     expect(writer.smsCount, 0);
@@ -242,7 +242,7 @@ void main() {
       WaffraFinanceRoute.widgetSmsConfirmedSave,
     ]) {
       final result = await authority.commitConfirmedSms(
-        route: route, records: [one], hashes: ['f' * 64],
+        route: route, records: [one], hashes: [List<String>.filled(64, 'f').join()],
         userConfirmed: true,
       );
       expect(result.saved, 1);
