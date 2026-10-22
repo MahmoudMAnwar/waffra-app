@@ -3478,24 +3478,29 @@ Future<void> bulkSmsSheet({String? initialText})async {
    waffraIsEnglish?'Delete all transactions?':'حذف كل المعاملات؟',
    waffraIsEnglish?'Delete all ${entries.length} recorded transactions permanently? This cannot be undone.':'سيتم حذف جميع المعاملات المسجلة وعددها ${entries.length} نهائيًا، ولا يمكن التراجع عن هذا الإجراء.');
   if(confirmed!=true||!mounted)return;
-  final backup=List<MoneyEntry>.of(entries);
-  final hashBackup=Set<String>.of(smsHashes);
-  setState((){entries.clear();smsHashes.clear();});
-  try {
-   await _homeFinancePersistence.withLegacyWriter((prefs) async {
-    WaffraLegacyFinanceWriterCoordinator.requireUnchangedLedger(
-     prefs, expectedRaw:_lastLedgerSavedRaw,
+  // Crash journal BOTH the ledger and duplicate hashes as one recoverable
+  // intent. Do not clear in-memory finance until durable storage confirms it.
+  final clear=<String,Object>{
+   'entries':'[]',
+   'waffra_sms_hashes_v1':<String>[],
+  };
+  try{
+   await _financialWriteQueue.submit(clear,(captured)async{
+    _lastLedgerSavedRaw=await _homeFinancePersistence.saveLegacy(
+     snapshot:captured,
+     expectedLedgerRaw:_lastLedgerSavedRaw,
      expectedWidgetRevision:_lastWidgetRevision,
     );
-    final saved=await prefs.setString('entries','[]');
-    final cleared=await prefs.setStringList(
-      'waffra_sms_hashes_v1',<String>[]);
-    if(!saved||!cleared)throw StateError('Failed to persist deletion');
-    _lastLedgerSavedRaw='[]';
    });
-   if(mounted)snackSuccess(context,waffraIsEnglish?'All transactions deleted':'تم حذف جميع المعاملات');
+   if(!mounted)return;
+   setState((){entries.clear();smsHashes.clear();});
+   unawaited(_refreshWidget());
+   snackSuccess(context,waffraIsEnglish?'All transactions deleted':'تم حذف جميع المعاملات');
   }catch(e){
-   if(mounted){setState((){entries.addAll(backup);smsHashes.addAll(hashBackup);});snack(context,waffraIsEnglish?'Delete failed':'فشل حذف المعاملات');}
+   debugPrint('Confirmed transaction deletion could not be verified: $e');
+   if(mounted)snack(context,waffraIsEnglish?
+    'Deletion could not be confirmed. Reload before retrying.':
+    'تعذر تأكيد الحذف. أعد تحميل المعاملات قبل المحاولة مجددًا.');
   }
  }
  Future<void> editMonthlyBudget()async {
@@ -6300,14 +6305,54 @@ Future<void> bulkSmsSheet({String? initialText})async {
    waffraIsEnglish?'This deletes transactions, categories, budgets, goals and recurring schedules. It cannot be undone. Your profile and app settings stay.':
     'سيتم حذف المعاملات والأقسام والميزانيات والأهداف والجدولة المتكررة نهائيًا. لا يمكن التراجع. سيبقى الملف الشخصي وإعدادات التطبيق.');
   if(ok!=true||!mounted)return;
-  setState((){
-   entries.clear();categories..clear()..addAll(defaultCategories());
-   goals.clear();challenges.clear();recurring.clear();deletedCategories.clear();deletedGoals.clear();deletedRecurring.clear();recurringPostponed.clear();smsHashes.clear();
-   learnedMerchantCategories.clear();monthlyBudget=0;monthlyBudgetEnabled=false;
-  });
-  final p=await SharedPreferences.getInstance();
-  await p.remove('waffra_sms_hashes_v1');await persist();
-  if(mounted)snackSuccess(context,waffraIsEnglish?'Financial data deleted':'تم حذف البيانات المالية');
+  final cleanCategories=defaultCategories();
+  // Every recognized financial field is reset through ONE crash-recoverable
+  // journal. SMS hashes must NOT be cleared independently before finance
+  // persistence, and non-finance profile/app settings must remain intact.
+  final clean=<String,Object>{
+   'entries':'[]',
+   'waffra_categories_v24':jsonEncode(cleanCategories.map((e)=>e.toJson()).toList()),
+   'waffra_goals_v24':'[]',
+   'waffra_recurring_v24':'[]',
+   'waffra_challenges_v1':'[]',
+   'waffra_deleted_categories_v1':'[]',
+   'waffra_deleted_goals_v1':'[]',
+   'waffra_deleted_recurring_v1':'[]',
+   'waffra_recurring_postponed_v1':'{}',
+   'waffra_monthly_budget_v1':0.0,
+   'waffra_monthly_budget_enabled_v1':false,
+   'waffra_learned_merchants_v1':'{}',
+   'waffra_sms_hashes_v1':<String>[],
+   'waffra_recurring_reminders_enabled_v1':false,
+  };
+  try{
+   await _financialWriteQueue.submit(clean,(captured)async{
+    _lastLedgerSavedRaw=await _homeFinancePersistence.saveLegacy(
+     snapshot:captured,
+     expectedLedgerRaw:_lastLedgerSavedRaw,
+     expectedWidgetRevision:_lastWidgetRevision,
+    );
+   });
+   if(!mounted)return;
+   setState((){
+    entries.clear();
+    categories..clear()..addAll(cleanCategories);
+    goals.clear();challenges.clear();recurring.clear();
+    deletedCategories.clear();deletedGoals.clear();deletedRecurring.clear();
+    recurringPostponed.clear();smsHashes.clear();learnedMerchantCategories.clear();
+    monthlyBudget=0;monthlyBudgetEnabled=false;recurringRemindersEnabled=false;
+   });
+   unawaited(_refreshWidget());
+   try{await WaffraReminders.clear();}catch(e){
+    debugPrint('Could not clear old recurring reminders: $e');
+   }
+   if(mounted)snackSuccess(context,waffraIsEnglish?'Financial data deleted':'تم حذف البيانات المالية');
+  }catch(e){
+   debugPrint('Financial erase was not fully confirmed: $e');
+   if(mounted)snack(context,waffraIsEnglish?
+    'Deletion could not be verified. Reload before retrying.':
+    'تعذر تأكيد حذف البيانات. أعد التحميل قبل المحاولة مجددًا.');
+  }
  }
  Widget _accountTile(String label,String subtitle,IconData icon,{VoidCallback? onTap,Widget? trailing,Color tint=emerald})=>
   ListTile(
