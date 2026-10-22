@@ -29,10 +29,13 @@ class WaffraFinanceAuthoritySmsCommit {
     required this.saved,
     required this.income,
     required this.expenses,
+    required this.incomeMinor,
+    required this.expenseMinor,
     required this.skippedDuplicates,
     required this.current,
   });
   final int saved, income, expenses, skippedDuplicates;
+  final int incomeMinor, expenseMinor;
   final WaffraFinanceAuthorityRead current;
 }
 
@@ -161,7 +164,7 @@ class WaffraVerifiedFinanceAuthority {
     )).toList(growable: false);
     final fingerprints = List<String>.unmodifiable(hashes);
     final backend = await _requireRoute(route);
-    late final int saved, income, expenses, skipped;
+    late final int saved, income, expenses, skipped, incomeMinor, expenseMinor;
     if (backend == WaffraRuntimeFinanceBackend.guardedLegacy) {
       final result = await legacy.commitConfirmedLegacySms(
         records: frozen, messageHashes: fingerprints,
@@ -171,6 +174,8 @@ class WaffraVerifiedFinanceAuthority {
       income = result.savedIncome;
       expenses = result.savedExpenses;
       skipped = result.skippedDuplicates;
+      incomeMinor = result.incomeMinor;
+      expenseMinor = result.expenseMinor;
     } else {
       final result = await encryptedSession!.appendConfirmed(
         records: frozen, hashes: fingerprints.cast<String?>(),
@@ -180,9 +185,12 @@ class WaffraVerifiedFinanceAuthority {
       income = result.savedIncome;
       expenses = result.savedExpenses;
       skipped = result.skippedDuplicates;
+      incomeMinor = result.incomeMinor;
+      expenseMinor = result.expenseMinor;
     }
     return WaffraFinanceAuthoritySmsCommit(
       saved: saved, income: income, expenses: expenses,
+      incomeMinor: incomeMinor, expenseMinor: expenseMinor,
       skippedDuplicates: skipped,
       current: await load(route: route),
     );
