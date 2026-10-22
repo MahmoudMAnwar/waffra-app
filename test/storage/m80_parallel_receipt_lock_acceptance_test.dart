@@ -82,7 +82,13 @@ void main() {
     expect(now.generation, original.generation);
     expect(now.digest, original.digest);
     expect(await rowCount('fresh_finance_entries'), 0);
-    expect(await rowCount('fresh_finance_receipt_blobs'), 0);
+    // The receipt table is created lazily on the first successful attach.
+    // A rejected source witness must not create that table at all.
+    final receiptTables = await store.customSelect(
+      "SELECT name FROM sqlite_master WHERE type='table' "
+      "AND name='fresh_finance_receipt_blobs'",
+    ).get();
+    expect(receiptTables, isEmpty);
     expect(await rowCount('fresh_finance_sms_hashes'), 0);
   });
 
