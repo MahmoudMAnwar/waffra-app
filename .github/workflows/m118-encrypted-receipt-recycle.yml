@@ -1,0 +1,36 @@
+name: Waffra M118 Encrypted Receipt Recycle Recovery
+on:
+  pull_request:
+    paths:
+      - 'lib/storage/waffra_encrypted_receipt_recycle.dart'
+      - 'test/storage/m118_encrypted_receipt_recycle_test.dart'
+      - '.github/workflows/m118-encrypted-receipt-recycle.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  receipt-recycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Analyze encrypted recycle implementation and tests
+        run: >-
+          dart analyze
+          lib/storage/waffra_encrypted_receipt_recycle.dart
+          test/storage/m118_encrypted_receipt_recycle_test.dart
+      - name: Run atomic SQLCipher receipt recovery and rollback tests
+        run: >-
+          flutter test
+          test/storage/m118_encrypted_receipt_recycle_test.dart
+          test/storage/encrypted_receipt_vault_test.dart
+          test/storage/atomic_encrypted_receipt_transaction_writer_test.dart
+          test/storage/m115_encrypted_receipt_authority_test.dart
+          test/storage/m114_sqlcipher_projected_edit_test.dart
+          test/m117_receipt_retention_contract_acceptance_test.dart
+          --reporter expanded
