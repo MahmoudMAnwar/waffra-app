@@ -81,7 +81,7 @@ void main() {
     final before = await snapshot().read();
     final writer = WaffraUnifiedFinanceWriter(
       writerDirectory: root,
-      snapshot: snapshot,
+      snapshot: snapshot(),
       experimentalEnabled: true,
     );
     await writer.appendTransactions(
