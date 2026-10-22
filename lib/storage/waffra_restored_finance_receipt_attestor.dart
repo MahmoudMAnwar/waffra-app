@@ -74,8 +74,9 @@ class WaffraRestoredFinanceReceiptAttestor {
           throw StateError('Restored transaction contents changed.');
         }
       }
-      final receipts = expectedReceipts[id] ?? const <WaffraReceiptBackupPart>[];
-      receipts.sort((a, b) => a.position.compareTo(b.position));
+      final receipts = List<WaffraReceiptBackupPart>.of(
+        expectedReceipts[id] ?? const <WaffraReceiptBackupPart>[],
+      )..sort((a, b) => a.position.compareTo(b.position));
       final live = await receiptVault.readAll(id);
       if (live.length != receipts.length) {
         throw StateError('Restored receipt count mismatch.');
