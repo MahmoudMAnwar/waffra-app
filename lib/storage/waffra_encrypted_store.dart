@@ -19,6 +19,12 @@ class WaffraEncryptedStore extends GeneratedDatabase {
   static const _keyStorageName = 'waffra_vault_encryption_key_v1';
   static const _filename = 'waffra_shadow_v1.sqlite';
 
+  /// Stable native locations. Startup guards may inspect these without
+  /// generating a new key or opening a writable database.
+  static const secureKeyStorageName = _keyStorageName;
+  static const encryptedDatabaseFilename = _filename;
+
+
   /// A missing key OR missing vault after one was already created is not a
   /// fresh install. In particular, OS/device restore may bring back a key
   /// without its SQLCipher database (or a database without its secure key).
