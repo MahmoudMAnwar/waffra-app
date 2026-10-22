@@ -74,6 +74,16 @@ class WaffraEncryptedFinanceUiPatch {
       final frozenChanges = Map<String, Object?>.from(
         jsonDecode(jsonEncode(replacementValues)) as Map<String, dynamic>,
       );
+      // A JSON round-trip loses List<String>'s generic type; restore it
+      // explicitly for the finance hash schema before the atomic commit.
+      for (final key in WaffraLegacyPreflight.financeListOfStringsKeys) {
+        if (!frozenChanges.containsKey(key)) continue;
+        final values = frozenChanges[key];
+        if (values is! List || values.any((part) => part is! String)) {
+          throw ArgumentError('Invalid finance SHA-256 fingerprint list.');
+        }
+        frozenChanges[key] = List<String>.unmodifiable(values.cast<String>());
+      }
       return snapshot.store.transaction(() async {
       final latest = await snapshot.read();
       for (final key in changedKeys) {
