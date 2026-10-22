@@ -17,6 +17,9 @@ on:
       - 'feature/m108-unified-home-widget-finance-commit'
       - 'feature/m109-verified-finance-authority-dispatch'
       - 'feature/m110-home-finance-writer-source-authority'
+      # M124: signed pre-merge APK/AAB candidate from the exact cumulative
+      # branch, never a production store deployment or SQLCipher activation.
+      - 'feature/m124-main-integration-merge-preview'
   workflow_dispatch:
 
 # Fast-build concurrency: only the latest pushed revision needs an APK.
