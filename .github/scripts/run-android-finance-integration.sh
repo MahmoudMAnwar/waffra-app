@@ -24,6 +24,7 @@ run_android_test() {
 run_android_test storage_encryption_android_test.dart 720
 run_android_test verified_encrypted_finance_bridge_android_test.dart 240
 run_android_test portable_encrypted_receipts_android_test.dart 240
+run_android_test finance_cloud_final_release_android_test.dart 300
 run_android_test offline_restore_android_test.dart 240
 run_android_test copied_receipt_ledger_android_test.dart 240
 run_android_test fresh_vault_first_run_android_test.dart 240
