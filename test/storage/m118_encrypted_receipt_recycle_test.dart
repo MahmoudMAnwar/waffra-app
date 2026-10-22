@@ -131,7 +131,7 @@ void main() {
       now: createdAt, userConfirmed: true,
     );
     final restored = await recycle().restore(
-      entryId: 'first', expectedImageHashes: await imageDigests('first'), expectedGeneration: deleted.generation,
+      entryId: 'first', expectedGeneration: deleted.generation,
       now: createdAt.add(const Duration(days: 29)),
     );
     expect(restored.generation, deleted.generation + 1);
@@ -158,7 +158,7 @@ void main() {
       now: createdAt, userConfirmed: true,
     );
     await expectLater(recycle().restore(
-      entryId: 'first', expectedImageHashes: await imageDigests('first'), expectedGeneration: deleted.generation,
+      entryId: 'first', expectedGeneration: deleted.generation,
       now: createdAt.add(const Duration(days: 30)),
     ), throwsStateError);
     expect((await snapshot().read()).generation, deleted.generation);
@@ -190,7 +190,7 @@ void main() {
     expect((await snapshot().read()).generation, generation);
     permitSource = true;
     await expectLater(recycle(enabled: false).moveToRecycle(
-      entryId: 'first', expectedImageHashes: await imageDigests('first'), expectedGeneration: generation,
+      entryId: 'first', expectedGeneration: generation,
       now: createdAt, userConfirmed: true,
     ), throwsStateError);
   });
@@ -236,7 +236,7 @@ END
       [Uint8List.fromList([0, 0])],
     );
     await expectLater(recycle().restore(
-      entryId: 'first', expectedImageHashes: await imageDigests('first'), expectedGeneration: deleted.generation,
+      entryId: 'first', expectedGeneration: deleted.generation,
       now: createdAt.add(const Duration(days: 1)),
     ), throwsStateError);
     expect((await snapshot().read()).generation, deleted.generation);
@@ -244,7 +244,7 @@ END
     expect((await recycle().pendingRecoveries()).containsKey('first'), true);
   });
 
-  test('M118: in-place replaced image blocks stale delete despite unchanged ledger revision',
+  test('M118: changed image rejects stale delete despite unchanged generation',
       () async {
     await addWithReceipts('first');
     final loaded = await snapshot().read();
