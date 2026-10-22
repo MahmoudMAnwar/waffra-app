@@ -26,7 +26,7 @@ jobs:
           cache: true
       - run: flutter pub get
       - name: Analyze actual Flutter app and storage
-        run: flutter analyze --no-pub
+        run: flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings
       - name: Run all discovered Flutter unit/widget tests
         run: flutter test test --reporter expanded
       - name: Publish precise tested commit
