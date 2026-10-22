@@ -1,0 +1,41 @@
+name: Waffra M108 Live Home and Widget Shared SMS Commit
+
+on:
+  pull_request:
+    paths:
+      - 'lib/waffra_widget_capture.part.dart'
+      - 'lib/main.dart'
+      - 'lib/storage/waffra_home_finance_persistence.dart'
+      - 'test/m108_home_widget_one_finance_writer_test.dart'
+      - '.github/workflows/m108-home-widget-one-finance-commit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-home-widget:
+    name: Same source, same cross-engine lock, crash journal and 100-SMS limit
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Strict analyze actual widget and main route
+        run: dart analyze lib/waffra_widget_capture.part.dart test/m108_home_widget_one_finance_writer_test.dart
+      - name: Source unity, widget UI, crash journal, 100 messages and races
+        run: >-
+          flutter test
+          test/m108_home_widget_one_finance_writer_test.dart
+          test/waffra_widget_quick_capture_test.dart
+          test/storage/m96_home_widget_confirmed_sms_journal_test.dart
+          test/storage/m97_home_widget_interrupted_commit_test.dart
+          test/storage/legacy_widget_commit_journal_test.dart
+          test/storage/home_finance_persistence_test.dart
+          --reporter expanded
+      - name: Full financial/Widget UI suite on same exact code
+        run: flutter test test --reporter expanded
