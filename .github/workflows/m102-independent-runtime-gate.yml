@@ -1,0 +1,30 @@
+name: Waffra M102 Receipt Cutover Parity
+
+on:
+  pull_request:
+    paths:
+      - 'lib/storage/waffra_restored_finance_receipt_attestor.dart'
+      - 'test/storage/m102_restored_finance_receipt_attestor_test.dart'
+      - '.github/workflows/m102-independent-runtime-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-finance-security:
+    name: M102 read-only synthetic safety validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve Flutter dependencies
+        run: flutter pub get
+      - name: Analyze changed production source plus acceptance suite
+        run: dart analyze lib/storage/waffra_restored_finance_receipt_attestor.dart test/storage/m102_restored_finance_receipt_attestor_test.dart
+      - name: Run safety acceptance on exact PR commit
+        run: flutter test test/storage/m102_restored_finance_receipt_attestor_test.dart --reporter expanded
