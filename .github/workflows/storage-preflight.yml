@@ -6,6 +6,7 @@ on:
       - 'feature/storage-legacy-batch-recovery-m59'
       - 'feature/storage-cutover-readiness-m60'
       - 'feature/storage-verified-encrypted-finance-bridge-m61'
+      - 'feature/storage-finance-startup-recovery-m62'
   pull_request:
     paths:
       - 'lib/storage/**'
