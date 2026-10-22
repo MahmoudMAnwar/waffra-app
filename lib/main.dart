@@ -2233,8 +2233,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    'waffra_monthly_budget_enabled_v1':monthlyBudgetEnabled,
    'waffra_learned_merchants_v1':jsonEncode(learnedMerchantCategories),
   };
+  final baseline=_lastFinanceAuthorityRead;
   return _financialWriteQueue.submit(snapshot,(captured)async {
-   final baseline=_lastFinanceAuthorityRead;
    if(baseline==null){
     throw StateError('Verified dashboard baseline is unavailable.');
    }
@@ -3574,12 +3574,16 @@ Future<void> bulkSmsSheet({String? initialText})async {
    'waffra_sms_hashes_v1':<String>[],
   };
   try{
+   final baseline=_lastFinanceAuthorityRead;
    await _financialWriteQueue.submit(clear,(captured)async{
-    _lastLedgerSavedRaw=await _homeFinancePersistence.saveLegacy(
-     snapshot:captured,
-     expectedLedgerRaw:_lastLedgerSavedRaw,
-     expectedWidgetRevision:_lastWidgetRevision,
+    if(baseline==null)throw StateError('Finance source baseline unavailable.');
+    final committed=await _financeAuthority.saveCaptured(
+     route:WaffraFinanceRoute.deleteAllTransactions,
+     baseline:baseline,captured:captured,
     );
+    _lastFinanceAuthorityRead=committed;
+    _lastLedgerSavedRaw=committed.ledgerRaw;
+    _lastWidgetRevision=committed.widgetRevision;
    });
    if(!mounted)return;
    setState((){entries.clear();smsHashes.clear();});
@@ -6461,12 +6465,16 @@ Future<void> bulkSmsSheet({String? initialText})async {
    'waffra_recurring_reminders_enabled_v1':false,
   };
   try{
+   final baseline=_lastFinanceAuthorityRead;
    await _financialWriteQueue.submit(clean,(captured)async{
-    _lastLedgerSavedRaw=await _homeFinancePersistence.saveLegacy(
-     snapshot:captured,
-     expectedLedgerRaw:_lastLedgerSavedRaw,
-     expectedWidgetRevision:_lastWidgetRevision,
+    if(baseline==null)throw StateError('Finance reset source baseline unavailable.');
+    final committed=await _financeAuthority.saveCaptured(
+     route:WaffraFinanceRoute.fullFinanceReset,
+     baseline:baseline,captured:captured,
     );
+    _lastFinanceAuthorityRead=committed;
+    _lastLedgerSavedRaw=committed.ledgerRaw;
+    _lastWidgetRevision=committed.widgetRevision;
    });
    if(!mounted)return;
    setState((){
