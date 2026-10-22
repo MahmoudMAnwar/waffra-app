@@ -1,0 +1,62 @@
+name: Waffra M98 Encrypted Firebase Recovery Inventory
+
+on:
+  pull_request:
+    paths:
+      - 'lib/storage/waffra_cloud_recovery_manifest.dart'
+      - 'lib/storage/waffra_cloud_recovery_envelope_transport.dart'
+      - 'lib/storage/waffra_cloud_encrypted_pull_preview.dart'
+      - 'lib/storage/waffra_cloud_cipher.dart'
+      - 'test/storage/m98_cloud_recovery_manifest_test.dart'
+      - 'firestore.rules'
+      - 'test/firebase/firestore.rules.test.mjs'
+      - '.github/workflows/m98-encrypted-recovery-inventory.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  encrypted-record-inventory:
+    name: M98 E2EE manifest and new-phone recovery integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Strict analyzer for real Firebase recovery source and tests
+        run: >-
+          dart analyze
+          lib/storage/waffra_cloud_recovery_manifest.dart
+          lib/storage/waffra_cloud_recovery_envelope_transport.dart
+          lib/storage/waffra_cloud_encrypted_pull_preview.dart
+          lib/storage/waffra_cloud_cipher.dart
+          test/storage/m98_cloud_recovery_manifest_test.dart
+      - name: Execute encrypted inventory/authenticity and isolation tests
+        run: flutter test test/storage/m98_cloud_recovery_manifest_test.dart --reporter expanded
+
+  owner-only-firebase-rules:
+    name: M98 Firestore recovery-code/manifest authorization and CAS
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: test/firebase/package.json
+      - run: npm --prefix test/firebase install --no-audit --no-fund
+      - name: Run against local demo Firebase emulator ONLY
+        run: |
+          ./test/firebase/node_modules/.bin/firebase emulators:exec \
+            --only firestore --project demo-waffra-rules-ci \
+            'npm --prefix test/firebase test'
