@@ -74,7 +74,7 @@ class WaffraVerifiedEncryptedFinanceBridge {
     }
   }
 
-  Future<WaffraEncryptedHomeWitness> loadForHomeAndWidget() {
+  Future<WaffraEncryptedHomeWitness> loadForHomeAndWidget() async {
     if (!experimentalEnabled) {
       throw StateError('Encrypted source bridge is disabled by default.');
     }
@@ -97,7 +97,7 @@ class WaffraVerifiedEncryptedFinanceBridge {
     required WaffraEncryptedHomeWitness baseline,
     required Map<String, Object?> replacements,
     required Set<String> changedKeys,
-  }) {
+  }) async {
     if (!experimentalEnabled) {
       throw StateError('Encrypted source bridge is disabled by default.');
     }
@@ -120,7 +120,7 @@ class WaffraVerifiedEncryptedFinanceBridge {
     required List<String?> messageHashes,
     required bool userConfirmed,
     bool allowDuplicateHashes = false,
-  }) {
+  }) async {
     if (!experimentalEnabled) {
       throw StateError('Encrypted source bridge is disabled by default.');
     }
