@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -7,6 +9,8 @@ import 'waffra_encrypted_cutover_journal.dart';
 import 'waffra_encrypted_finance_ui_patch.dart';
 import 'waffra_experimental_writer_gate.dart';
 import 'waffra_finance_read_view.dart';
+import 'waffra_encrypted_receipt_vault.dart';
+import 'waffra_encrypted_receipt_read_gateway.dart';
 import 'waffra_live_legacy_finance_guard.dart';
 import 'waffra_unified_finance_writer.dart';
 
@@ -136,4 +140,48 @@ class WaffraVerifiedEncryptedFinanceBridge {
       allowDuplicateHashes: allowDuplicateHashes,
     );
   }
+  /// Loads an attachment ONLY for an entry proven to exist in the current
+  /// encrypted finance snapshot. No arbitrary user-supplied path or receipt
+  /// identifier is accepted; the same native app/widget lock and activation
+  /// witness protect the financial record and the encrypted BLOB read.
+  Future<List<Uint8List>> loadReceiptImages({required String entryId}) async {
+    if (!experimentalEnabled) {
+      throw StateError('Encrypted receipt runtime is disabled by default.');
+    }
+    return WaffraExperimentalWriterGate(
+      disposableDirectory: writerDirectory,
+      experimentalEnabled: true,
+    ).withExclusiveAccess(() async {
+      await _requireActivatedUnderLock();
+      final current = await snapshot.read();
+      final raw = current.values['entries'];
+      if (raw is! String) {
+        throw StateError('Encrypted finance ledger is unavailable.');
+      }
+      final rows = jsonDecode(raw);
+      if (rows is! List) {
+        throw StateError('Encrypted finance ledger is malformed.');
+      }
+      final exact = rows.where((row) =>
+          row is Map && row['id'] == entryId).toList();
+      if (exact.length != 1) {
+        throw StateError('Encrypted receipt owner is missing or duplicated.');
+      }
+      final references = (exact.single as Map)['receiptPath'];
+      if (references != null && references is! String) {
+        throw StateError('Encrypted receipt references are malformed.');
+      }
+      return WaffraEncryptedReceiptReadGateway(
+        receiptVault: WaffraEncryptedReceiptVault(
+          store: snapshot.store, experimentalEnabled: true,
+        ),
+        experimentalEnabled: true,
+        verifyEncryptedSource: _requireActivatedUnderLock,
+      ).read(
+        entryId: entryId,
+        encodedReferences: references as String?,
+      );
+    });
+  }
+
 }
