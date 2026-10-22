@@ -140,56 +140,43 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
   final allowDuplicates=_allowDuplicates;
   setState(()=>_saving=true);
   try{
-   final outcome=await _financePersistence.withLegacyWriter((prefs) async {
-   final current=(jsonDecode(prefs.getString('entries')??'[]') as List)
-    .map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x as Map))).toList();
-   final oldHashes=(prefs.getStringList('waffra_sms_hashes_v1')??[]).toSet();
-   final categoryRaw=prefs.getString('waffra_categories_v24');
-   final categories=categoryRaw==null?defaultCategories():
-    (jsonDecode(categoryRaw) as List)
-     .map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x as Map))).toList();
-   final newHashes=<String>{};
-   final additions=<MoneyEntry>[];
-   int savedInc=0,savedExp=0;
+   // HomeScreen and the separate Android widget now use ONE crash-journaled
+   // user-confirmed ledger+fingerprint writer; duplicate checks happen under
+   // its shared cross-engine file lock rather than in stale widget state.
+   final loaded=await _financePersistence.loadWithWitness();
+   final categoriesRaw=loaded.finance.getString('waffra_categories_v24');
+   final categories=categoriesRaw==null?defaultCategories():
+    (jsonDecode(categoriesRaw) as List)
+     .map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x as Map)))
+     .toList();
+   final records=<Map<String,Object?>>[];
+   final hashes=<String>[];
    for(final entry in selected){
-    final hash=bankSmsHash(entry.raw);
-    if(!allowDuplicates&&(oldHashes.contains(hash)||newHashes.contains(hash)))continue;
     final parsed=entry.result;
     final category=categories.any((c)=>c.income==parsed.income&&c.name==parsed.category)
       ?parsed.category
       :(categories.where((c)=>c.income==parsed.income).isNotEmpty
-         ?categories.firstWhere((c)=>c.income==parsed.income).name:'أخرى');
-    additions.add(MoneyEntry(
-     id:'${newId()}_${additions.length}',
+        ?categories.firstWhere((c)=>c.income==parsed.income).name:'أخرى');
+    records.add(Map<String,Object?>.from(MoneyEntry(
+     id:'${newId()}_${records.length}',
      title:'${parsed.title} — ${entry.raw.replaceAll(RegExp(r'\s+'),' ').trim()}',
      category:category,amount:parsed.amount!,income:parsed.income,
      date:bankSmsDate(entry.raw)??DateTime.now(),
-    ));
-    if(parsed.income){savedInc++;}else{savedExp++;}
-    newHashes.add(hash);
+    ).toJson()));
+    hashes.add(bankSmsHash(entry.raw));
    }
-   if(additions.isEmpty)return null;
-   final merged=[...additions,...current];
-   // Stage all three values in one recoverable preference envelope BEFORE
-   // touching the legacy finance keys. Crash recovery runs under the same
-   // app/widget lock on next use.
-   const journal=WaffraLegacyWidgetCommitJournal();
-   await journal.prepare(
-    prefs:prefs,
-    nextEntries:jsonEncode(merged.map((e)=>e.toJson()).toList()),
-    nextHashes:({...oldHashes,...newHashes}.toList()..sort()),
-    nextRevision:DateTime.now().toIso8601String(),
+   final committed=await _financePersistence.commitConfirmedLegacySms(
+    records:records,messageHashes:hashes,
+    userConfirmed:true,allowDuplicateHashes:allowDuplicates,
    );
-   await journal.recover(prefs);
-   return (
-    merged:merged,
-    hidden:prefs.getBool('waffra_hide_amounts')??false,
-    savedIncome:savedInc,
-    savedExpenses:savedExp,
-    skipped:totalDetected-additions.length,
-    knownHashes:{...oldHashes,...newHashes},
+   final outcome=committed.added==0?null:(
+    merged:(jsonDecode(committed.savedEntriesRaw) as List)
+     .map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x as Map))).toList(),
+    savedIncome:committed.savedIncome,
+    savedExpenses:committed.savedExpenses,
+    skipped:totalDetected-committed.added,
+    knownHashes:committed.savedHashes.toSet(),
    );
-   });
    if(outcome==null){
     if(mounted)setState((){
      _saving=false;
@@ -204,7 +191,8 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
    final expenseHalalas=outcome.merged.where((e)=>!e.income)
     .fold<int>(0,(sum,e)=>sum+WaffraRecurringPolicy.toHalalas(e.amount));
    final net=incomeHalalas-expenseHalalas;
-   final hidden=outcome.hidden;
+   final hidden=(await SharedPreferences.getInstance())
+    .getBool('waffra_hide_amounts')??false;
    await refreshWaffraHomeWidget(
     balance:hidden?'***':formatWaffraMoney(net/100),
     negative:net<0,hidden:hidden,currency:_english?'SAR':'ريال');

@@ -43,9 +43,13 @@ jobs:
           widget = Path('lib/waffra_widget_capture.part.dart').read_text()
           persistence = Path('lib/storage/waffra_home_finance_persistence.dart').read_text()
           assert 'commitConfirmedLegacySms(' in app
-          assert 'await journal.prepare(' in widget
-          assert 'await journal.recover(prefs);' in widget
+          assert 'commitConfirmedLegacySms(' in widget
+          assert 'journal.prepare(' not in widget
+          assert 'journal.recover(' not in widget
+          assert 'withLegacyWriter(' not in widget
           assert 'WaffraLegacyWidgetCommitJournal()' in persistence
+          assert 'await journal.prepare(' in persistence
+          assert 'await journal.recover(prefs);' in persistence
           assert 'requireSafeLegacyStartup' in widget
           assert 'WaffraProductionFinanceSourceGuard' in app
           assert 'SharedPreferences remains authoritative' in persistence

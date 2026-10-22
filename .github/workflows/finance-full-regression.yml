@@ -55,13 +55,18 @@ jobs:
           writer=Path('lib/storage/waffra_unified_finance_writer.dart').read_text()
           receipt=Path('lib/storage/waffra_encrypted_receipt_vault.dart').read_text()
           assert 'SharedPreferences.getInstance()' in main
-          assert 'await journal.prepare(' in widget
-          assert 'await journal.recover(prefs);' in widget
+          persistence=Path('lib/storage/waffra_home_finance_persistence.dart').read_text()
+          assert 'commitConfirmedLegacySms(' in main
+          assert 'commitConfirmedLegacySms(' in widget
+          assert 'await journal.prepare(' in persistence
+          assert 'await journal.recover(prefs);' in persistence
+          assert 'await journal.prepare(' not in widget
+          assert 'await journal.recover(' not in widget
           assert "prefs.setString('entries', newEntries)" in widget_journal
           assert "prefs.setStringList('waffra_sms_hashes_v1', newHashes)" in widget_journal
           assert 'this.experimentalEnabled = false' in writer
           assert 'this.experimentalEnabled = false' in receipt
-          print('Widget now journals legacy finance writes; encrypted writers remain default-off.')
+          print('Home and Widget share one guarded legacy finance journal; encrypted activation stays off.')
           print('IMPORTANT: this is a safe prototype check, NOT proof that the production cutover is complete.')
           PY
 
