@@ -4,6 +4,7 @@ import 'package:waffra/storage/waffra_cloud_encrypted_pull_preview.dart';
 import 'package:waffra/storage/waffra_cloud_recovery_manifest.dart';
 import 'package:waffra/storage/waffra_cloud_remote_manifest_verifier.dart';
 import 'package:waffra/storage/waffra_sync_outbox.dart';
+import 'package:waffra/storage/waffra_firestore_encrypted_sync_transport.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -123,4 +124,30 @@ void main() {
       ), isFalse);
     }
   });
+  test('Firestore transaction proof rejects wrong mutation, revision and deletion', () {
+    const pointer = WaffraCloudRecordPointer(
+      kind: 'entry', id: 'entry-a',
+      mutationId: 'commit-a', version: 4, deleted: false,
+    );
+    WaffraRemoteRevision row({
+      String mutation = 'commit-a', int version = 4,
+      bool deleted = false, String kind = 'entry',
+    }) => WaffraRemoteRevision(
+      documentId: WaffraEncryptedCloudOutbox.documentId('entry', 'entry-a'),
+      kind: kind, mutationId: mutation, deviceId: 'device-b',
+      localVersion: version, ciphertext: 'only-ciphertext',
+      nonce: 'nonce', mac: 'authentication-tag', deleted: deleted,
+    );
+    bool accepts(WaffraRemoteRevision remote) =>
+        WaffraFirestoreEncryptedSyncTransport.matchesIndexedRevision(
+          pointer: pointer, remote: remote,
+        );
+    expect(accepts(row()), isTrue);
+    expect(accepts(row(version: 3)), isFalse);
+    expect(accepts(row(version: 5)), isFalse);
+    expect(accepts(row(mutation: 'racing-phone')), isFalse);
+    expect(accepts(row(deleted: true)), isFalse);
+    expect(accepts(row(kind: 'goal')), isFalse);
+  });
+
 }
