@@ -1,0 +1,261 @@
+name: Waffra M105 Six-Track Release Acceptance
+
+on:
+  pull_request:
+    paths:
+      - 'lib/**'
+      - 'test/**'
+      - 'integration_test/**'
+      - 'firestore.rules'
+      - '.github/workflows/m105-six-track-release-acceptance.yml'
+      - 'scripts/m105_release_evidence.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Each job checks out the SAME head SHA, uses independent synthetic data,
+# and cannot flip a user's live SQLCipher source pointer or Firebase rules.
+jobs:
+  sqlcipher-home-widget:
+    name: 1/6 SQLCipher, Home and Widget source consistency
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Analyze the real finance source, Home and Widget adapters
+        run: >-
+          dart analyze
+          lib/storage/waffra_home_finance_persistence.dart
+          lib/storage/waffra_runtime_finance_route_contract.dart
+          test/storage/m100_runtime_finance_route_contract_test.dart
+          test/storage/m96_home_widget_confirmed_sms_journal_test.dart
+          test/storage/m97_home_widget_interrupted_commit_test.dart
+      - name: Run cross-engine financial source and crash acceptance
+        run: >-
+          flutter test
+          test/storage/m100_runtime_finance_route_contract_test.dart
+          test/storage/m96_home_widget_confirmed_sms_journal_test.dart
+          test/storage/m97_home_widget_interrupted_commit_test.dart
+          test/storage/home_finance_persistence_test.dart
+          test/storage/legacy_widget_commit_journal_test.dart
+          test/storage/production_finance_routing_gate_test.dart
+          test/storage/finance_source_cutover_policy_test.dart
+          test/storage/fresh_finance_screen_gateway_test.dart
+          test/storage/unified_finance_writer_test.dart
+          --reporter expanded
+
+  firebase-two-device:
+    name: 2/6 E2EE Firebase conflict and cold-phone recovery
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: test/firebase/package.json
+      - run: flutter pub get
+      - name: Verify authenticated encrypted remote revision and consent code
+        run: >-
+          flutter test
+          test/storage/m101_cloud_recovery_revision_gate_test.dart
+          test/storage/unified_cloud_remote_manifest_verifier_test.dart
+          test/storage/m99_manifest_last_upload_test.dart
+          test/storage/m98_cloud_recovery_manifest_test.dart
+          test/storage/cloud_parallel_two_device_acceptance_m77_test.dart
+          test/storage/m82_parallel_cloud_conflict_acceptance_test.dart
+          test/storage/m95_recovered_key_offline_conflict_test.dart
+          test/storage/firestore_encrypted_sync_transport_gate_test.dart
+          --reporter expanded
+      - name: Install Firestore local-emulator harness only
+        run: npm --prefix test/firebase install --no-audit --no-fund
+      - name: Owner authorization/rotation rules on DEMO emulator only
+        run: |
+          ./test/firebase/node_modules/.bin/firebase emulators:exec \
+            --only firestore --project demo-waffra-rules-ci \
+            'npm --prefix test/firebase test'
+
+  migration-and-receipts:
+    name: 3/6 Safe migration, receipts and interruption recovery
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Verify legacy-to-SQLCipher copy, receipts, backup and cold restart
+        run: >-
+          flutter test
+          test/storage/m102_restored_finance_receipt_attestor_test.dart
+          test/storage/live_finance_migration_rehearsal_test.dart
+          test/storage/m81_parallel_recovery_tamper_acceptance_test.dart
+          test/storage/m92_portable_backup_failure_integrity_test.dart
+          test/storage/portable_encrypted_vault_restorer_test.dart
+          test/storage/legacy_receipt_blob_stager_test.dart
+          test/storage/cutover_readiness_gate_test.dart
+          test/storage/encrypted_cutover_journal_test.dart
+          test/storage/offline_restore_dry_run_test.dart
+          --reporter expanded
+
+  negative-security:
+    name: 4/6 Negative cases, key loss, tampering and no silent fallback
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Reject incorrect keys, forged ciphertext and invalid payments
+        run: >-
+          flutter test
+          test/storage/m91_cloud_aead_sensitive_data_test.dart
+          test/storage/cloud_cipher_test.dart
+          test/storage/cloud_compare_and_swap_test.dart
+          test/storage/vault_key_recovery_test.dart
+          test/storage/encrypted_store_test.dart
+          test/storage/production_finance_source_guard_test.dart
+          test/storage/m88_key_recovery_rollback_acceptance_test.dart
+          test/storage/m94_unified_writer_sql_snapshot_reconciliation_test.dart
+          test/storage/confirmed_sms_batch_writer_test.dart
+          test/storage/finance_startup_integrity_test.dart
+          --reporter expanded
+
+  interface-rtl-pdf:
+    name: 5/6 Arabic/English UI, dark theme, Tajawal and PDFs
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Fail on Dart errors without blocking on pre-existing lint warnings
+        run: flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings
+      - name: Verify bilingual navigation and Waffra visual regressions
+        run: >-
+          flutter test
+          test/m93_mandatory_validation_and_mobile_test.dart
+          test/m87_pdf_sms_currency_and_direction_test.dart
+          test/waffra_dialog_and_rtl_test.dart
+          test/waffra_footer_pdf_navigation_test.dart
+          test/waffra_approved_ui_batch_test.dart
+          test/waffra_design_preservation_test.dart
+          test/waffra_oct21_regression_test.dart
+          test/tajawal_font_test.dart
+          test/waffra_pdf_text_test.dart
+          test/waffra_widget_quick_capture_test.dart
+          --reporter expanded
+
+  android-runtime:
+    name: 6/6 Android emulator launch, SQLCipher, restore and crash check
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Provision disposable Android integration target
+        run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
+      - name: Enable Java core library desugaring
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('android/app/build.gradle.kts')
+          txt=p.read_text()
+          if 'compileOptions {' not in txt:
+              raise SystemExit('Missing Android compileOptions')
+          if 'isCoreLibraryDesugaringEnabled = true' not in txt:
+              txt=txt.replace('compileOptions {',
+                  'compileOptions {\n        isCoreLibraryDesugaringEnabled = true',1)
+          entry='coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")'
+          if entry not in txt:
+              txt+='\ndependencies {\n    '+entry+'\n}\n'
+          p.write_text(txt)
+          PY
+      - run: flutter pub get
+      - name: Verify Android integration test sources
+        run: >-
+          dart analyze
+          integration_test/storage_encryption_android_test.dart
+          integration_test/live_finance_migration_receipts_android_test.dart
+          integration_test/finance_cloud_final_release_android_test.dart
+          integration_test/finance_release_regressions_android_test.dart
+      - name: Enable KVM for isolated Android emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Test real Android runtime (synthetic data; no production accounts)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_6
+          target: google_apis
+          disable-animations: true
+          emulator-boot-timeout: 600
+          script: |
+            timeout --signal=TERM --kill-after=20s 720s flutter test integration_test/storage_encryption_android_test.dart -d emulator-5554 --reporter expanded
+            timeout --signal=TERM --kill-after=20s 360s flutter test integration_test/live_finance_migration_receipts_android_test.dart -d emulator-5554 --reporter expanded
+            timeout --signal=TERM --kill-after=20s 360s flutter test integration_test/finance_cloud_final_release_android_test.dart -d emulator-5554 --reporter expanded
+            timeout --signal=TERM --kill-after=20s 360s flutter test integration_test/finance_release_regressions_android_test.dart -d emulator-5554 --reporter expanded
+
+  production-approval-blocker:
+    name: Production approval evidence (intentionally fail until verified)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare audit with explicit live route and device limitations
+        shell: bash
+        run: |
+          WAFFRA_RELEASE_EVIDENCE=six-track-release-audit.json \
+            python3 scripts/m104_release_readiness.py || true
+          test -s six-track-release-audit.json
+      - name: Attach non-sensitive evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: waffra-six-track-production-approval-blockers
+          path: six-track-release-audit.json
+          retention-days: 14
+      - name: Do not approve production release without verified source and physical device tests
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          with open('six-track-release-audit.json') as f:
+              report=json.load(f)
+          print('Outstanding blockers:', report['blockers'])
+          if report['releaseReady'] is not True:
+              raise SystemExit('FINAL RELEASE BLOCKED: production source and physical-device proofs missing.')
+          PY
