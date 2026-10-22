@@ -1,4 +1,5 @@
 import 'waffra_cloud_manifest_last_outbox_drain.dart';
+import 'waffra_cloud_recovery_manifest.dart';
 import 'waffra_cloud_remote_manifest_verifier.dart';
 import 'waffra_firestore_encrypted_sync_transport.dart';
 import 'waffra_sync_outbox.dart';
@@ -58,6 +59,10 @@ class WaffraOptInEncryptedCloudSyncRunner {
         item: item,
         authorization: authorization,
         expectedPreviousMutationId: expectedMutation,
+        manifestVaultKey:
+            item.envelope.kind == WaffraCloudRecoveryManifest.kind
+                ? manifestVerifier.vaultKey
+                : null,
       ),
     ).drain(
       vaultId: vaultId,
