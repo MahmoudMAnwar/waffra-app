@@ -1,0 +1,42 @@
+name: Waffra M114 SQLCipher Projected Finance Editor Writes
+on:
+  pull_request:
+    paths:
+      - 'lib/storage/waffra_encrypted_module_projection_guard.dart'
+      - 'lib/storage/waffra_encrypted_finance_ui_patch.dart'
+      - 'lib/storage/waffra_verified_finance_authority.dart'
+      - 'test/storage/m114_sqlcipher_projected_edit_test.dart'
+      - 'test/storage/verified_encrypted_finance_bridge_test.dart'
+      - '.github/workflows/m114-sqlcipher-projected-editor.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  sqlcipher-projected-editor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Check new production finance code and tests
+        run: >-
+          dart analyze
+          lib/storage/waffra_encrypted_module_projection_guard.dart
+          lib/storage/waffra_encrypted_finance_ui_patch.dart
+          lib/storage/waffra_verified_finance_authority.dart
+          test/storage/m114_sqlcipher_projected_edit_test.dart
+      - name: SQLCipher atomic projection, app widget isolation and stale reads
+        run: >-
+          flutter test
+          test/storage/m114_sqlcipher_projected_edit_test.dart
+          test/storage/encrypted_finance_ui_patch_test.dart
+          test/storage/verified_encrypted_finance_bridge_test.dart
+          test/storage/m109_verified_finance_authority_test.dart
+          test/m110_live_finance_authority_writer_test.dart
+          test/m111_finance_authority_negative_acceptance_test.dart
+          test/m112_finance_source_device_acceptance_gate_test.dart
+          --reporter expanded
