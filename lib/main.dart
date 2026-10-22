@@ -2737,21 +2737,48 @@ Future<void> bulkSmsSheet({String? initialText})async {
        update(()=>reviewAttempted=true);
         if(waffraTextFieldError(description.text)!=null||waffraAmountFieldError(amount.text)!=null||n==null)return;
        final hash=bankSmsHash(messages[index]);
+       var explicitlyApprovedDuplicate=false;
        if(smsHashes.contains(hash)){
         final yes=await showWaffraDialog<bool>(context:ctx,builder:(d)=>AlertDialog(
          title:const WaffraText('⚠️ رسالة مكررة'),content:const WaffraText('هذي الرسالة سبق حفظها. ودّك تضيفها مرة ثانية؟'),
          actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:const WaffraText('إلغاء')),
           FilledButton(onPressed:()=>Navigator.pop(d,true),child:const WaffraText('إضافة على أي حال'))]));
         if(yes!=true||!ctx.mounted)return;
+        explicitlyApprovedDuplicate=true;
        }
        update(()=>busy=true);
        final now=DateTime.now();
        final previous=sum(entries.where((e)=>!e.income&&e.category==category&&e.date.year==now.year&&e.date.month==now.month),false);
        final entry=MoneyEntry(id:newId(),title:description.text.trim(),category:category,amount:n,income:income,date:now);
-       setState(()=>entries.insert(0,entry));
-       smsHashes.add(hash);
-       await persist();
-       await _persistSmsHashes(smsHashes);
+       // A parsed SMS is not saved until both the transaction and its
+       // fingerprint are crash-journaled under the SAME Home/Widget lock.
+       // A stale dashboard must never overwrite a newer widget ledger.
+       final committed=await _homeFinancePersistence.commitConfirmedLegacySms(
+        records:[Map<String,Object?>.from(entry.toJson())],
+        messageHashes:[hash],
+        userConfirmed:true,
+        allowDuplicateHashes:explicitlyApprovedDuplicate,
+       );
+       if(committed.added!=1){
+        if(ctx.mounted)update((){
+         busy=false;
+         statusMessage=waffraIsEnglish
+          ?'This message was already saved. Review before trying again.'
+          :'تم حفظ هذه الرسالة من قبل. راجعها قبل إعادة المحاولة.';
+        });
+        return;
+       }
+       final verified=(jsonDecode(committed.savedEntriesRaw) as List)
+        .map((item)=>MoneyEntry.fromJson(
+         Map<String,dynamic>.from(item as Map))).toList();
+       if(!mounted)return;
+       setState((){
+        entries..clear()..addAll(verified);
+        smsHashes..clear()..addAll(committed.savedHashes);
+        _lastLedgerSavedRaw=committed.savedEntriesRaw;
+        _lastWidgetRevision=committed.widgetRevision;
+       });
+       unawaited(_refreshWidget());
        if(!ctx.mounted)return;
        await budgetAlert(entry,previous);
        if(!ctx.mounted)return;
