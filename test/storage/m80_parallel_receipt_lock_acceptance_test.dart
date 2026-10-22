@@ -146,8 +146,8 @@ void main() {
     final images = await receiptVault().readAll('same-confirmed-id');
     expect(images, hasLength(1));
     expect(
-      [[1, 1, 1], [2, 2, 2]],
-      contains(images.single.bytes.toList()),
+      images.single.bytes.toList(),
+      anyOf(orderedEquals([1, 1, 1]), orderedEquals([2, 2, 2])),
     );
   });
 }
