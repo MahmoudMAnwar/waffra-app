@@ -226,6 +226,55 @@ END
     expect((await receiptVault().readAll('private-photo')).single.bytes, [22, 23, 24]);
   });
 
+  test('M79 caller mutation during source verification cannot split normalized SQL and canonical ledger', () async {
+    final confirmed = entry('frozen-finance');
+    final image = Uint8List.fromList([4, 5, 6]);
+    final atomic = WaffraAtomicEncryptedReceiptTransactionWriter(
+      snapshot: currentSnapshot(),
+      receiptVault: receiptVault(),
+      writerDirectory: root,
+      experimentalEnabled: true,
+      verifySourceUnderLock: () async {
+        // An in-flight form update must never alter the already-confirmed
+        // entry while the app/widget source lock and witness are awaited.
+        confirmed['title'] = 'Changed while waiting';
+        confirmed['category'] = 'Changed';
+        confirmed['amount'] = 999.99;
+        confirmed['income'] = true;
+        confirmed['date'] = '2026-11-01T11:00:00';
+        image[0] = 100;
+      },
+    );
+    final result = await atomic.save(
+      record: confirmed,
+      receiptImages: [image],
+      userConfirmed: true,
+      smsHash: hash(32),
+    );
+    expect(result.generation, 1);
+    final snapshot = await currentSnapshot().read();
+    final canonical = (jsonDecode(snapshot.values['entries'] as String)
+        as List).single as Map<String, dynamic>;
+    expect(canonical['title'], 'Family supplies');
+    expect(canonical['category'], 'مطاعم وكافيهات');
+    expect(canonical['amount'], 84.72);
+    expect(canonical['income'], isFalse);
+    expect(canonical['date'], '2026-10-22T11:00:00');
+    final stored = await encrypted.customSelect(
+      'SELECT title, category_snapshot, amount_minor, is_income, '
+      'occurred_iso FROM fresh_finance_entries WHERE entry_id=?',
+      variables: [Variable.withString('frozen-finance')],
+    ).getSingle();
+    expect(stored.read<String>('title'), canonical['title']);
+    expect(stored.read<String>('category_snapshot'), canonical['category']);
+    expect(stored.read<int>('amount_minor'), 8472);
+    expect(stored.read<int>('is_income'), 0);
+    expect(stored.read<String>('occurred_iso'), canonical['date']);
+    expect((await receiptVault().readAll('frozen-finance')).single.bytes,
+        [4, 5, 6]);
+    expect(snapshot.values['waffra_sms_hashes_v1'], [hash(32)]);
+  });
+
   test('M76 refuses mixed snapshot-vs-normalized ledger source corruption',
       () async {
     await currentSnapshot().commit(
