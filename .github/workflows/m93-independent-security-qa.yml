@@ -1,0 +1,29 @@
+name: Waffra M93 Saudi Input Validation
+
+on:
+  pull_request:
+    paths:
+      - 'test/m93_mandatory_validation_and_mobile_test.dart'
+      - '.github/workflows/m93-independent-security-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-finance-qa:
+    name: M93 isolated synthetic safety tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Fetch Flutter dependencies
+        run: flutter pub get
+      - name: Analyze exact test target
+        run: dart analyze test/m93_mandatory_validation_and_mobile_test.dart
+      - name: Execute synthetic acceptance tests
+        run: flutter test test/m93_mandatory_validation_and_mobile_test.dart --reporter expanded
