@@ -143,6 +143,9 @@ class WaffraCloudSanitizer {
     'merchant_rule': {'merchantKey','category'},
     'setting': {'key','value'},
     'tombstone': {'entityKind','entityId','deletedAt'},
+    // The recovery index contains ONLY encrypted record pointers. The list
+    // is ciphertext; no IDs, merchant names or balances are in Firestore.
+    'manifest': {'id', 'records'},
   };
 
   static const excludedLocalOnly = <String>{
@@ -167,6 +170,40 @@ class WaffraCloudSanitizer {
         !{'monthlyBudget', 'monthlyBudgetEnabled', 'recurringRemindersEnabled'}
             .contains(copied['key'])) {
       throw StateError('This setting must never be synchronized.');
+    }
+    if (kind == 'manifest') {
+      if (copied.keys.toSet().length != 2 ||
+          copied['id'] != 'finance-index' ||
+          copied['records'] is! List ||
+          (copied['records'] as List).length > 1000) {
+        throw StateError('Invalid encrypted recovery index.');
+      }
+      final seen = <String>{};
+      const allowedKinds = {
+        'entry','category','goal','recurring','challenge',
+        'postponement','merchant_rule','setting','tombstone',
+      };
+      for (final item in copied['records'] as List) {
+        if (item is! Map ||
+            item.keys.toSet().difference({
+              'kind','id','mutationId','version','deleted',
+            }).isNotEmpty ||
+            item.length != 5 ||
+            item['kind'] is! String ||
+            !allowedKinds.contains(item['kind']) ||
+            item['id'] is! String ||
+            (item['id'] as String).trim().isEmpty ||
+            (item['id'] as String).length > 128 ||
+            item['mutationId'] is! String ||
+            (item['mutationId'] as String).trim().isEmpty ||
+            (item['mutationId'] as String).length > 128 ||
+            item['version'] is! int ||
+            (item['version'] as int) <= 0 ||
+            item['deleted'] is! bool ||
+            !seen.add(jsonEncode([item['kind'], item['id']]))) {
+          throw StateError('Invalid or duplicate encrypted index record.');
+        }
+      }
     }
     if (kind == 'entry' && copied['id'] is! String) {
       throw StateError('Financial record ID is missing.');
