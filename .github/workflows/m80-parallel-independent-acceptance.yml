@@ -1,0 +1,51 @@
+name: Waffra M80 Parallel Independent Acceptance
+
+on:
+  pull_request:
+    paths:
+      - 'test/storage/m80_parallel_sms_boundary_acceptance_test.dart'
+      - 'test/storage/m80_parallel_receipt_lock_acceptance_test.dart'
+      - '.github/workflows/m80-parallel-independent-acceptance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  confirmed-sms-boundary:
+    name: M80 bank-SMS confirmation, 100-limit, rollback, replay
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout tested revision
+        uses: actions/checkout@v4
+      - name: Configure Flutter stable
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve dependencies and native SQLCipher assets
+        run: flutter pub get
+      - name: Analyze independent SMS acceptance tests
+        run: dart analyze test/storage/m80_parallel_sms_boundary_acceptance_test.dart
+      - name: Verify SMS synthetic acceptance in isolation
+        run: flutter test test/storage/m80_parallel_sms_boundary_acceptance_test.dart --reporter expanded
+
+  atomic-receipt-source-lock:
+    name: M80 encrypted receipt source-guard and concurrent confirmation
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout tested revision
+        uses: actions/checkout@v4
+      - name: Configure Flutter stable
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve dependencies and native SQLCipher assets
+        run: flutter pub get
+      - name: Analyze independent receipt acceptance tests
+        run: dart analyze test/storage/m80_parallel_receipt_lock_acceptance_test.dart
+      - name: Verify receipt and source-guard acceptance in isolation
+        run: flutter test test/storage/m80_parallel_receipt_lock_acceptance_test.dart --reporter expanded
