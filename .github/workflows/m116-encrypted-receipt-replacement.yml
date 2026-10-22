@@ -1,0 +1,41 @@
+name: Waffra M116 Encrypted Receipt Replacement
+on:
+  pull_request:
+    paths:
+      - 'lib/storage/waffra_encrypted_receipt_vault.dart'
+      - 'lib/storage/waffra_verified_encrypted_finance_bridge.dart'
+      - 'lib/storage/waffra_encrypted_finance_session.dart'
+      - 'lib/storage/waffra_verified_finance_authority.dart'
+      - 'test/storage/encrypted_receipt_vault_test.dart'
+      - '.github/workflows/m116-encrypted-receipt-replacement.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  replacement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Analyze receipt replacement and authority
+        run: >-
+          dart analyze
+          lib/storage/waffra_encrypted_receipt_vault.dart
+          lib/storage/waffra_verified_encrypted_finance_bridge.dart
+          lib/storage/waffra_encrypted_finance_session.dart
+          lib/storage/waffra_verified_finance_authority.dart
+          test/storage/encrypted_receipt_vault_test.dart
+      - name: Exercise encrypted receipt CAS, rollback and source isolation
+        run: >-
+          flutter test
+          test/storage/encrypted_receipt_vault_test.dart
+          test/storage/encrypted_receipt_read_gateway_test.dart
+          test/storage/m115_encrypted_receipt_authority_test.dart
+          test/storage/atomic_encrypted_receipt_transaction_writer_test.dart
+          test/storage/m114_sqlcipher_projected_edit_test.dart
+          --reporter expanded

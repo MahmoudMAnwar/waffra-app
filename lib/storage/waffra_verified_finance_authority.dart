@@ -224,6 +224,32 @@ class WaffraVerifiedFinanceAuthority {
     );
   }
 
+  /// Replaces bytes for an existing image; deletion and undo remain blocked
+  /// until an independently tested retention contract exists.
+  Future<void> replaceEncryptedReceiptImage({
+    required WaffraFinanceRoute route,
+    required String entryId,
+    required int position,
+    required Uint8List image,
+    required String expectedSha256,
+  }) async {
+    if (route != WaffraFinanceRoute.receiptCopyAndAttach ||
+        entryId.trim().isEmpty || position < 0) {
+      throw ArgumentError('Invalid encrypted receipt replacement route.');
+    }
+    final captured = Uint8List.fromList(image);
+    final backend = await _requireRoute(route);
+    if (backend != WaffraRuntimeFinanceBackend.verifiedEncrypted) {
+      throw StateError('Receipt replacement requires verified SQLCipher.');
+    }
+    return encryptedSession!.replaceReceiptImage(
+      entryId: entryId,
+      position: position,
+      image: captured,
+      expectedSha256: expectedSha256,
+    );
+  }
+
   /// Read an existing receipt from the SAME verified finance authority as
   /// the Home transaction list. No fallback to a legacy plaintext path.
   Future<List<Uint8List>> loadEncryptedReceiptImages({
