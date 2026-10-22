@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'waffra_encrypted_finance_session.dart';
+import 'waffra_atomic_encrypted_receipt_transaction_writer.dart';
 import 'waffra_finance_read_view.dart';
 import 'waffra_home_finance_persistence.dart';
 import 'waffra_production_finance_routing_gate.dart';
@@ -175,6 +177,68 @@ class WaffraVerifiedFinanceAuthority {
     }
     // Never publish optimistic UI success before getting durable witness.
     return load(route: route);
+  }
+
+  /// A future encrypted-only receipt attachment route. The caller supplies
+  /// picker bytes (never plaintext file paths) and explicitly confirms.
+  /// The source selector and the SQLCipher bridge each independently verify
+  /// the activated source before the atomic entry+receipt commit.
+  ///
+  /// Guarded legacy deliberately rejects this API: existing legacy receipt
+  /// saving continues through its separately audited legacy writer.
+  Future<WaffraEncryptedReceiptTransactionResult> commitWithReceiptBytes({
+    required WaffraFinanceRoute route,
+    required Map<String, Object?> record,
+    required List<Uint8List> images,
+    required bool userConfirmed,
+    String? smsHash,
+  }) async {
+    if (route != WaffraFinanceRoute.receiptCopyAndAttach) {
+      throw ArgumentError('Not a receipt attachment route.');
+    }
+    if (!userConfirmed) {
+      throw StateError('Receipt attachment requires user confirmation.');
+    }
+    // Freeze caller-owned data before awaiting the source witness or lock.
+    // Neither the widget nor a second picker callback may mutate a queued
+    // confirmation while the OS is checking the encrypted source.
+    final capturedRecord = Map<String, Object?>.unmodifiable(
+      Map<String, Object?>.from(
+        jsonDecode(jsonEncode(record)) as Map<String, dynamic>,
+      ),
+    );
+    final capturedImages = List<Uint8List>.unmodifiable(
+      images.map(Uint8List.fromList),
+    );
+    final backend = await _requireRoute(route);
+    if (backend != WaffraRuntimeFinanceBackend.verifiedEncrypted) {
+      throw StateError(
+        'Encrypted receipt attachment requires verified SQLCipher source.',
+      );
+    }
+    return encryptedSession!.appendWithReceiptBytes(
+      record: capturedRecord,
+      images: capturedImages,
+      userConfirmed: true,
+      smsHash: smsHash,
+    );
+  }
+
+  /// Read an existing receipt from the SAME verified finance authority as
+  /// the Home transaction list. No fallback to a legacy plaintext path.
+  Future<List<Uint8List>> loadEncryptedReceiptImages({
+    required WaffraFinanceRoute route,
+    required String entryId,
+  }) async {
+    if (route != WaffraFinanceRoute.receiptView ||
+        entryId.trim().isEmpty || entryId.length > 128) {
+      throw ArgumentError('Invalid encrypted receipt read request.');
+    }
+    final backend = await _requireRoute(route);
+    if (backend != WaffraRuntimeFinanceBackend.verifiedEncrypted) {
+      throw StateError('Encrypted receipt read requires verified SQLCipher.');
+    }
+    return encryptedSession!.readReceiptImages(entryId);
   }
 
   Future<WaffraFinanceAuthoritySmsCommit> commitConfirmedSms({
