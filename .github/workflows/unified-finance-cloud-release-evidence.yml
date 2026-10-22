@@ -32,6 +32,8 @@ jobs:
           lib/storage/waffra_cloud_recovery_revision_gate.dart
           lib/storage/waffra_restored_finance_receipt_attestor.dart
           lib/storage/waffra_cloud_remote_manifest_verifier.dart
+          lib/storage/waffra_opt_in_encrypted_cloud_sync_runner.dart
+          lib/storage/waffra_firestore_encrypted_sync_transport.dart
           test/storage/m100_runtime_finance_route_contract_test.dart
           test/storage/m101_cloud_recovery_revision_gate_test.dart
           test/storage/m102_restored_finance_receipt_attestor_test.dart
