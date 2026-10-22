@@ -75,7 +75,10 @@ service cloud.firestore {
         allow create: if ownsExistingVault(uid, vaultId)
           && get(vaultPath(uid, vaultId)).data.syncEnabled == true
           && recordId.size() > 0 && recordId.size() <= 128
-          && validCiphertextRecord(request.resource.data);
+          && validCiphertextRecord(request.resource.data)
+          // A brand-new document has no predecessor. It must start at one,
+          // never a forged higher revision that would skip conflict checks.
+          && request.resource.data.localVersion == 1;
         // Compare-and-swap only: concurrent devices attempting to advance
         // the same previous revision cannot both succeed. This ruleset
         // forbids last-write-wins and replacing a ciphertext at equal version.
