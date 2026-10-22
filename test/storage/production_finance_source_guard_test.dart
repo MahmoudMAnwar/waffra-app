@@ -110,7 +110,7 @@ void main() {
         'encrypted_source_probe_failed');
 
     final link = Link('${directory.path}/waffra_shadow_v1.sqlite');
-    await link.delete();
+    await File(link.path).delete();
     await link.create('${directory.path}/outside-file.sqlite');
     final report = await guard(secureKey: key).inspect();
     expect(report.reasonCode, 'unsafe_encrypted_vault_path');
