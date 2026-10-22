@@ -7,11 +7,15 @@ class WaffraWidgetCaptureApp extends StatefulWidget {
   super.key,
   this.testWriterDirectory,
   this.testBypassNativeLock = false,
- }) : assert(!testBypassNativeLock || testWriterDirectory != null);
+  this.testSourceProbe,
+ }) : assert(!testBypassNativeLock || testWriterDirectory != null),
+      assert(testSourceProbe == null || testWriterDirectory != null);
  /// Inject an isolated lock folder for widget tests; production uses app support.
  final Directory? testWriterDirectory;
  /// FakeAsync UI tests only; native file-lock correctness has separate tests.
  final bool testBypassNativeLock;
+ /// Only for isolated widget tests. Production always uses native key+DB probe.
+ final Future<void> Function()? testSourceProbe;
  @override State<WaffraWidgetCaptureApp> createState()=>_WaffraWidgetCaptureState();
 }
 
@@ -47,8 +51,12 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
  Future<void> _loadSettings()async{
   try{
    final prefs=await SharedPreferences.getInstance();
-   await const WaffraProductionFinanceSourceGuard()
-    .requireSafeLegacyStartup(preferences:prefs);
+   if(widget.testSourceProbe!=null) {
+    await widget.testSourceProbe!();
+   } else {
+    await const WaffraProductionFinanceSourceGuard()
+     .requireSafeLegacyStartup(preferences:prefs);
+   }
    final loaded=await _financePersistence.loadWithWitness();
    if(!mounted)return;
    setState((){
