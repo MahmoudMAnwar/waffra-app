@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'feature/storage-legacy-batch-recovery-m59'
+      - 'feature/storage-cutover-readiness-m60'
   pull_request:
     paths:
       - 'lib/**'
@@ -56,4 +57,74 @@ jobs:
           assert 'this.experimentalEnabled = false' in receipt
           print('Widget now journals legacy finance writes; encrypted writers remain default-off.')
           print('IMPORTANT: this is a safe prototype check, NOT proof that the production cutover is complete.')
+          PY
+
+  android-finance-migration-rehearsal:
+    name: Android isolated finance and receipt migration rehearsal
+    needs: flutter-ui-and-finance
+    if: ${{ success() && github.ref == 'refs/heads/feature/storage-cutover-readiness-m60' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout revision that passed full regression
+        uses: actions/checkout@v4
+      - name: Install JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Configure Flutter stable
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate Android test harness
+        run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
+      - name: Configure Java core library desugaring
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('android/app/build.gradle.kts')
+          gradle=path.read_text()
+          if 'compileOptions {' not in gradle:
+              raise SystemExit('Missing Kotlin Android compileOptions')
+          if 'isCoreLibraryDesugaringEnabled = true' not in gradle:
+              gradle=gradle.replace('compileOptions {',
+                'compileOptions {\n        isCoreLibraryDesugaringEnabled = true',1)
+          declaration='coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")'
+          if declaration not in gradle:
+              gradle+='\n// Required by flutter_local_notifications\ndependencies {\n    '+declaration+'\n}\n'
+          path.write_text(gradle)
+          PY
+      - name: Resolve packages and SQLCipher native assets
+        run: flutter pub get
+      - name: Analyze isolated Android migration test
+        run: dart analyze integration_test/live_finance_migration_receipts_android_test.dart
+      - name: Enable Linux KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Rehearse legacy to SQLCipher with receipts on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_6
+          target: google_apis
+          disable-animations: true
+          emulator-boot-timeout: 600
+          script: flutter test integration_test/live_finance_migration_receipts_android_test.dart -d emulator-5554 --reporter expanded
+      - name: Confirm production cutover remains disabled
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          main=Path('lib/main.dart').read_text()
+          bridge=Path('lib/storage/waffra_home_finance_persistence.dart').read_text()
+          assert 'WaffraHomeFinancePersistence' in main
+          assert 'loadWithWitness' in bridge
+          assert 'saveLegacy' in bridge
+          assert 'SQLCipher source activation is NOT implemented' in bridge
+          print('PASS: synthetic encrypted migration tested, no production finance activation.')
           PY
