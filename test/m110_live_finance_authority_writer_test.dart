@@ -42,7 +42,7 @@ void main() {
     final code = authority.substring(start, end);
     expect(code, contains('Encrypted screen mutation requires a verified atomic SQL projection writer.'));
     expect(code, isNot(contains('encryptedSession!.saveDashboardBatch(')));
-    expect(code, contains('sourceGuard'));
+    expect(code, contains('_requireRoute(route)'));
   });
 
   test('M110 financial deletion carries baseline, not a fresh post-widget snapshot', () {
