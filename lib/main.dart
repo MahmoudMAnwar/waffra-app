@@ -46,6 +46,8 @@ import 'storage/waffra_production_finance_source_guard.dart';
 import 'storage/waffra_legacy_finance_writer_coordinator.dart';
 import 'storage/waffra_legacy_widget_commit_journal.dart';
 import 'storage/waffra_home_finance_persistence.dart';
+import 'storage/waffra_verified_finance_authority.dart';
+import 'storage/waffra_production_finance_routing_gate.dart';
 import 'storage/waffra_verified_legacy_backup_restore.dart';
 import 'waffra_home_widget.dart';
 part 'waffra_categories_page.part.dart';
@@ -1932,6 +1934,7 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
  final WaffraLegacyWriteQueue _financialWriteQueue=WaffraLegacyWriteQueue();
  final WaffraHomeFinancePersistence _homeFinancePersistence=const WaffraHomeFinancePersistence();
+ late final WaffraVerifiedFinanceAuthority _financeAuthority=WaffraVerifiedFinanceAuthority(legacy:_homeFinancePersistence);
  final smsHashes=<String>{};
  final expandedCategoryIds=<String>{};
  final learnedMerchantCategories=<String,String>{};
@@ -2051,7 +2054,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Future<void> _syncWidgetTransactions()async{
   if(!mounted||!ready)return;
   try{
-   final loadedFinance=await _homeFinancePersistence.loadWithWitness();
+   final loadedFinance=await _financeAuthority.load(route:WaffraFinanceRoute.dashboardRead);
    loadedFinance.finance.requireIntegrity();
    final revision=loadedFinance.widgetRevision;
    if(revision==null||revision==_lastWidgetRevision)return;
@@ -2078,7 +2081,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  Future<void> load()async {
   final p=await SharedPreferences.getInstance();
-  final loadedFinance=await _homeFinancePersistence.loadWithWitness();
+  final loadedFinance=await _financeAuthority.load(route:WaffraFinanceRoute.dashboardRead);
   final financeView=loadedFinance.finance;
   financeView.requireIntegrity();
   _lastWidgetRevision=loadedFinance.widgetRevision;
