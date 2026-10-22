@@ -2377,6 +2377,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   if(found.length>100){update(()=>statusMessage=waffraIsEnglish?'Maximum 100 transactions per paste.':'الحد الأقصى 100 معاملة في كل عملية لصق.');return;}
   final results=found.map(BankParser.parse).toList();
   final valid=<int>[],invalid=<int>[],duplicates=<int>[];
+  var allowRepeatedSms=false;
   final seen=<String>{};
   for(var i=0;i<found.length;i++){
    if(results[i].amount==null||results[i].amount!<=0){invalid.add(i);continue;}
@@ -2395,6 +2396,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      FilledButton(onPressed:()=>Navigator.pop(d,true),child:WaffraText(waffraIsEnglish?'Add anyway':'إضافة على أي حال')),
     ]));
    if(addRepeated!=true||!ctx.mounted)return;
+   allowRepeatedSms=true;
    valid.addAll(duplicates);
    valid.sort();
   }
@@ -2457,7 +2459,6 @@ Future<void> bulkSmsSheet({String? initialText})async {
   if(accepted!=true||!ctx.mounted)return;
   update(() {busy=true;rejectedMessages=invalid.map((i)=>found[i]).toList();});
   final additions=<MoneyEntry>[];
-  final newHashes=<String>{};
   for(final i in valid){
    final result=results[i];
    final merchant=waffraMerchantKey(found[i]);
@@ -2467,12 +2468,34 @@ Future<void> bulkSmsSheet({String? initialText})async {
     ?proposed:(forType(result.income).isNotEmpty?forType(result.income).first.name:'أخرى');
    additions.add(MoneyEntry(id:newId(),title:'${result.title} — ${found[i].replaceAll(RegExp(r'\\s+'),' ').trim()}',
     category:cat,amount:result.amount!,income:result.income,date:bankSmsDate(found[i])??DateTime.now()));
-   newHashes.add(bankSmsHash(found[i]));
   }
   try{
-   setState(()=>entries.insertAll(0,additions));
-   await persist();
-   await _persistSmsHashes({...smsHashes,...newHashes});
+   // The dashboard and standalone Android widget now use the SAME locked,
+   // crash-recoverable finance+SMS-hash journal on guarded legacy installs.
+   // Never claim a save until the durable journal confirms the actual rows.
+   final applied=await _homeFinancePersistence.commitConfirmedLegacySms(
+    records:additions.map((e)=>e.toJson()).toList(growable:false),
+    messageHashes:[for(final i in valid)bankSmsHash(found[i])],
+    userConfirmed:true,
+    allowDuplicateHashes:allowRepeatedSms,
+   );
+   if(!mounted)return;
+   final persisted=(jsonDecode(applied.savedEntriesRaw) as List)
+    .map((e)=>MoneyEntry.fromJson(Map<String,dynamic>.from(e as Map)))
+    .toList();
+   setState((){
+    entries..clear()..addAll(persisted);
+    smsHashes..clear()..addAll(applied.savedHashes);
+    _lastLedgerSavedRaw=applied.savedEntriesRaw;
+    _lastWidgetRevision=applied.widgetRevision;
+   });
+   unawaited(_refreshWidget());
+   if(applied.added==0){
+    update(()=>statusMessage=waffraIsEnglish
+      ?'These transactions have already been saved.'
+      :'هذه العمليات محفوظة بالفعل.');
+    return;
+   }
    if(!ctx.mounted)return;
    Navigator.pop(ctx);
    if(mounted)await showWaffraDialog<void>(context:context,builder:(dialogCtx)=>AlertDialog(
@@ -2483,7 +2506,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     ]),
     content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
      WaffraText(waffraIsEnglish?
-      'Saved ${additions.length} transactions':'تم حفظ ${additions.length} معاملة',
+      'Saved ${applied.added} transactions':'تم حفظ ${applied.added} معاملة',
       textAlign:TextAlign.center,style:const TextStyle(fontWeight:FontWeight.w600)),
      const SizedBox(height:14),
      Container(padding:const EdgeInsets.all(13),
@@ -2493,7 +2516,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        const SizedBox(width:10),
        Expanded(child:WaffraText(waffraIsEnglish?'Income':'الدخل',
         style:const TextStyle(fontWeight:FontWeight.bold,color:Color(0xFF087B56)))),
-       WaffraText('${incomes.length} • ${incomeTotal.toStringAsFixed(2)}',
+       WaffraText('${applied.savedIncome} • ${(applied.incomeMinor/100).toStringAsFixed(2)}',
         style:const TextStyle(fontWeight:FontWeight.bold,color:Color(0xFF087B56))),
       ])),
      const SizedBox(height:9),
@@ -2504,14 +2527,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
        const SizedBox(width:10),
        Expanded(child:WaffraText(waffraIsEnglish?'Expenses':'المصروفات',
         style:const TextStyle(fontWeight:FontWeight.bold,color:Color(0xFFD65A45)))),
-       WaffraText('${expenses.length} • ${expenseTotal.toStringAsFixed(2)}',
+       WaffraText('${applied.savedExpenses} • ${(applied.expenseMinor/100).toStringAsFixed(2)}',
         style:const TextStyle(fontWeight:FontWeight.bold,color:Color(0xFFD65A45))),
       ])),
-     if(invalid.isNotEmpty)...[
+     if(invalid.isNotEmpty||applied.skippedDuplicates>0)...[
       const SizedBox(height:12),
       WaffraText(waffraIsEnglish?
-       'Could not analyze ${invalid.length} transactions':
-       'تعذر تحليل ${invalid.length} معاملة',
+       'Not added: ${invalid.length+applied.skippedDuplicates} transactions':
+       'لم تُحفظ ${invalid.length+applied.skippedDuplicates} معاملة',
        textAlign:TextAlign.center,
        style:const TextStyle(color:Colors.deepOrange)),
      ],
@@ -2520,8 +2543,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
     actionsPadding:const EdgeInsets.fromLTRB(24,0,24,18),
     actions:[SizedBox(width:180,child:FilledButton(onPressed:()=>Navigator.pop(dialogCtx),child:WaffraText(waffraIsEnglish?'Done':'تم')))]));
   }catch(e){
-   setState(()=>entries.removeWhere((entry)=>additions.any((a)=>a.id==entry.id)));
-   if(ctx.mounted){update(()=>busy=false);snack(ctx,waffraIsEnglish?'Failed to save transactions':'فشل حفظ المعاملات');}
+   // A failed journal must be reconciled by the locked coordinator on next
+   // read; never mutate the dashboard as if the save had succeeded.
+   if(ctx.mounted){update(()=>busy=false);snack(ctx,waffraIsEnglish?'Saving could not be confirmed. Please retry safely.':'تعذر تأكيد الحفظ. أعد المحاولة بأمان.');}
   }
  }
 

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'legacy_snapshot_preflight.dart';
 import 'waffra_atomic_finance_snapshot.dart';
+import 'waffra_encrypted_entry_projection_guard.dart';
 import 'waffra_experimental_writer_gate.dart';
 
 /// A finance screen must keep the exact *baseline values* it loaded.
@@ -65,27 +66,54 @@ class WaffraEncryptedFinanceUiPatch {
       experimentalEnabled: true,
     ).withExclusiveAccess(() async {
       await verifySourceUnderLock?.call();
+      // Freeze untrusted UI payload before the SQL transaction. The caller
+      // can clear or alter the edited form while source verification awaits.
+      final frozenBaseline = Map<String, Object?>.from(
+        jsonDecode(jsonEncode(screenBaseline)) as Map<String, dynamic>,
+      );
+      final frozenChanges = Map<String, Object?>.from(
+        jsonDecode(jsonEncode(replacementValues)) as Map<String, dynamic>,
+      );
+      // A JSON round-trip loses List<String>'s generic type; restore it
+      // explicitly for the finance hash schema before the atomic commit.
+      for (final key in WaffraLegacyPreflight.financeListOfStringsKeys) {
+        if (!frozenChanges.containsKey(key)) continue;
+        final values = frozenChanges[key];
+        if (values is! List || values.any((part) => part is! String)) {
+          throw ArgumentError('Invalid finance SHA-256 fingerprint list.');
+        }
+        frozenChanges[key] = List<String>.unmodifiable(values.cast<String>());
+      }
+      return snapshot.store.transaction(() async {
       final latest = await snapshot.read();
       for (final key in changedKeys) {
-        final beforeExists = screenBaseline.containsKey(key);
+        final beforeExists = frozenBaseline.containsKey(key);
         final nowExists = latest.values.containsKey(key);
         // Compare the exact JSON-compatible scalar/list value, including
         // absent-vs-empty distinction, before applying this field's edit.
         if (beforeExists != nowExists ||
             (beforeExists &&
-                jsonEncode(screenBaseline[key]) !=
+                jsonEncode(frozenBaseline[key]) !=
                     jsonEncode(latest.values[key]))) {
           throw StateError('Finance screen has stale $key; reload first.');
         }
       }
       final merged = Map<String, Object?>.from(latest.values);
       for (final key in changedKeys) {
-        merged[key] = replacementValues[key];
+        merged[key] = frozenChanges[key];
+      }
+      if (changedKeys.contains('entries')) {
+        await WaffraEncryptedEntryProjectionGuard.reconcile(
+          store: snapshot.store,
+          previousJson: latest.values['entries'] as String?,
+          updatedJson: merged['entries'] as String?,
+        );
       }
       return snapshot.commit(
         expectedGeneration: latest.generation,
         fullFinanceSnapshot: merged,
       );
+      });
     });
   }
 }
