@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -12,6 +13,8 @@ import 'package:waffra/storage/waffra_fresh_encrypted_vault_bootstrap.dart';
 import 'package:waffra/storage/waffra_fresh_finance_modules_repository.dart';
 import 'package:waffra/storage/waffra_live_legacy_finance_guard.dart';
 import 'package:waffra/storage/waffra_verified_encrypted_finance_bridge.dart';
+import 'package:waffra/storage/waffra_encrypted_receipt_vault.dart';
+import 'package:waffra/storage/waffra_experimental_writer_gate.dart';
 import 'package:waffra/storage/waffra_encrypted_finance_session.dart';
 
 void main() {
@@ -97,6 +100,111 @@ void main() {
   tearDown(() async {
     await vault.close();
     if (await directory.exists()) await directory.delete(recursive: true);
+  });
+
+  test('M121 source lock returns current image after concurrent replacement',
+      () async {
+    await bridge().appendConfirmedWithReceiptBytes(
+      record: record('m121-cas-race'),
+      images: [Uint8List.fromList([10, 20, 30])],
+      userConfirmed: true,
+    );
+    final old = await bridge().loadVerifiedReceiptScreen('m121-cas-race');
+    final lockEntered = Completer<void>();
+    final releaseLock = Completer<void>();
+    final writer = WaffraExperimentalWriterGate(
+      disposableDirectory: directory,
+      experimentalEnabled: true,
+    ).withExclusiveAccess(() async {
+      lockEntered.complete();
+      await releaseLock.future;
+      await WaffraEncryptedReceiptVault(
+        store: vault,
+        experimentalEnabled: true,
+      ).replaceExistingImage(
+        entryId: 'm121-cas-race',
+        position: 0,
+        image: Uint8List.fromList([99, 88, 77]),
+        expectedSha256: old.imageSha256.single,
+      );
+    });
+    await lockEntered.future;
+    final pendingRead = bridge().loadVerifiedReceiptScreen('m121-cas-race');
+    releaseLock.complete();
+    await writer;
+    final screen = await pendingRead;
+    expect(screen.generation, old.generation);
+    expect(screen.images.single, [99, 88, 77]);
+    expect(screen.imageSha256.single, isNot(old.imageSha256.single));
+    await expectLater(bridge().moveReceiptBatchToRecycle(
+      baseline: old,
+      now: DateTime.utc(2026, 10, 23),
+      userConfirmed: true,
+    ), throwsStateError);
+  });
+
+  test('M121 SQL receipt count mismatch refuses to show valid BLOBs', () async {
+    await bridge().appendConfirmedWithReceiptBytes(
+      record: record('m121-sql-count'),
+      images: [Uint8List.fromList([1, 2])],
+      userConfirmed: true,
+    );
+    final before = await snapshot().read();
+    await vault.customStatement(
+      "UPDATE fresh_finance_entries SET receipt_count=0 "
+      "WHERE entry_id='m121-sql-count'",
+    );
+    await expectLater(
+      bridge().loadVerifiedReceiptScreen('m121-sql-count'),
+      throwsStateError,
+    );
+    expect((await snapshot().read()).digest, before.digest);
+  });
+
+  test('M121 normalized finance owner tampering is rejected independently',
+      () async {
+    await bridge().appendConfirmedWithReceiptBytes(
+      record: record('m121-owner'),
+      images: [Uint8List.fromList([4, 5])],
+      userConfirmed: true,
+    );
+    final before = await snapshot().read();
+    await vault.customStatement(
+      "UPDATE fresh_finance_entries SET source_json='{}' "
+      "WHERE entry_id='m121-owner'",
+    );
+    await expectLater(
+      bridge().loadVerifiedReceiptScreen('m121-owner'),
+      throwsStateError,
+    );
+    expect((await snapshot().read()).digest, before.digest);
+  });
+
+  test('M121 damaged 30-day archive witness cannot display restore action',
+      () async {
+    await bridge().appendConfirmedWithReceiptBytes(
+      record: record('m121-archive'),
+      images: [Uint8List.fromList([1, 3, 5])],
+      userConfirmed: true,
+    );
+    final baseline = await bridge().loadVerifiedReceiptScreen('m121-archive');
+    await bridge().moveReceiptBatchToRecycle(
+      baseline: baseline,
+      now: DateTime.utc(2026, 10, 23),
+      userConfirmed: true,
+    );
+    final archived = await bridge().loadVerifiedReceiptScreen('m121-archive');
+    expect(archived.isInRecycleBin, true);
+    final before = await snapshot().read();
+    await vault.customStatement(
+      "UPDATE fresh_finance_receipt_recycle "
+      "SET receipt_count=2 WHERE entry_id='m121-archive'",
+    );
+    await expectLater(
+      bridge().loadVerifiedReceiptScreen('m121-archive'),
+      throwsStateError,
+    );
+    expect((await snapshot().read()).digest, before.digest);
   });
 
   test('M119 receipt screen reads BLOBs, recycles and restores with one source',
