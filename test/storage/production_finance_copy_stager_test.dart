@@ -154,6 +154,54 @@ void main() {
     expect(await makeStager().sourceStillMatches(staged.sourceDigest), isFalse);
   });
 
+  test('M74 validates finance, catalog and encrypted receipt parity after cold staging',
+      () async {
+    final receipt = File('${receiptsDir.path}/invoice-verified.jpg');
+    await receipt.writeAsBytes([3, 6, 9, 12], flush: true);
+    await setEntries([record(path: receipt.path)]);
+    final initial = await makeStager().stage(
+      userChosenBackupPassword: archivePassword,
+    );
+    expect(await makeStager().stageStillMatches(initial), isTrue);
+    await receipt.writeAsBytes([3, 6, 9, 13], flush: true);
+    expect(await makeStager().stageStillMatches(initial), isFalse);
+    // Neither false result nor checksum comparison may delete original bytes.
+    expect(await receipt.readAsBytes(), [3, 6, 9, 13]);
+  });
+
+  test('M74 a custom goal edit cannot pass finance-only staging witness',
+      () async {
+    final initial = await makeStager().stage(
+      userChosenBackupPassword: archivePassword,
+    );
+    final prefs = await SharedPreferences.getInstance();
+    expect(await makeStager().stageStillMatches(initial), isTrue);
+    await prefs.setStringList('waffra_custom_goals_v1', ['بيت']);
+    // Transaction checksum is unchanged, but the complete audit must fail.
+    expect(await makeStager().sourceStillMatches(initial.sourceDigest), isTrue);
+    expect(await makeStager().stageStillMatches(initial), isFalse);
+  });
+
+  test('M74 SQLCipher generation or direct ledger tamper blocks activation readiness',
+      () async {
+    await setEntries([record()]);
+    final initial = await makeStager().stage(
+      userChosenBackupPassword: archivePassword,
+    );
+    expect(await makeStager().stageStillMatches(initial), isTrue);
+    final snapshot = WaffraAtomicFinanceSnapshot(
+      store: candidate, experimentalEnabled: true,
+    );
+    final current = await snapshot.read();
+    await snapshot.commit(
+      expectedGeneration: current.generation,
+      fullFinanceSnapshot: current.values,
+    );
+    expect(await makeStager().stageStillMatches(initial), isFalse);
+    expect((await SharedPreferences.getInstance()).getString('entries'),
+        contains('transaction-with-photo'));
+  });
+
   test('M72 requires explicit opt-in, a password, and an empty destination',
       () async {
     await expectLater(makeStager(enabled: false).stage(
