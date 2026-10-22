@@ -260,4 +260,24 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getString('entries'), '[]');
   });
+  test('encrypted active bridge refuses unowned receipt lookups', () async {
+    await bridge().appendConfirmedTransactions(
+      records: [record('receipt-free')],
+      messageHashes: [null],
+      userConfirmed: true,
+    );
+    final images = await bridge().loadReceiptImages(entryId: 'receipt-free');
+    expect(images, isEmpty);
+    await expectLater(
+      bridge().loadReceiptImages(entryId: 'foreign-entry'),
+      throwsA(isA<StateError>()),
+    );
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(WaffraLiveLegacyFinanceGuard.pendingKey, true);
+    await expectLater(
+      bridge().loadReceiptImages(entryId: 'receipt-free'),
+      throwsA(isA<StateError>()),
+    );
+  });
+
 }
