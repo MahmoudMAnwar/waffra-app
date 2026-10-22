@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:drift/drift.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/storage/waffra_atomic_encrypted_receipt_transaction_writer.dart';
 import 'package:waffra/storage/waffra_atomic_finance_snapshot.dart';
