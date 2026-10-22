@@ -168,6 +168,48 @@ void main() {
     expect(await count(),0);
   });
 
+  test('M79 freezes confirmed widget/SMS payload before awaiting source witness',
+      () async {
+    await prepare();
+    final form = entry('confirmed', income: false, amount: 12.34);
+    final submitted = <Map<String, Object?>>[form];
+    final hashes = <String?>[digest(17)];
+    final checkedWriter = WaffraUnifiedFinanceWriter(
+      writerDirectory: root,
+      snapshot: currentSnapshot(),
+      experimentalEnabled: true,
+      verifySourceUnderLock: () async {
+        // The real Home/widget may clear the pending form or receive a new
+        // bank SMS while the shared native finance lock is being acquired.
+        form['title'] = 'Changed after confirmation';
+        form['amount'] = 999.99;
+        form['income'] = true;
+        form['category'] = 'راتب';
+        form['date'] = '2026-11-22T00:00:00';
+        submitted.add(entry('unconfirmed-extra'));
+        hashes[0] = digest(99);
+        hashes.add(digest(100));
+      },
+    );
+    final result = await checkedWriter.appendTransactions(
+      records: submitted, messageHashes: hashes, userConfirmed: true,
+    );
+    expect(result.saved, 1);
+    expect(result.savedIncome, 0);
+    expect(result.savedExpenses, 1);
+    final saved = await currentSnapshot().read();
+    final row = (jsonDecode(saved.values['entries'] as String) as List)
+        .single as Map<String, dynamic>;
+    expect(row['id'], 'confirmed');
+    expect(row['amount'], 12.34);
+    expect(row['title'], 'تحويل تجريبي confirmed');
+    expect(row['category'], 'طعام');
+    expect(row['income'], false);
+    expect(row['date'], '2026-10-21T13:30:00');
+    expect(saved.values['waffra_sms_hashes_v1'], [digest(17)]);
+    expect(saved.generation, 1);
+  });
+
   test('cold reopening retains user-updated balances and dedupe hashes',
       ()async{
     await prepare();
