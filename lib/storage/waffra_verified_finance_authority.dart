@@ -128,13 +128,13 @@ class WaffraVerifiedFinanceAuthority {
         expectedWidgetRevision: baseline.widgetRevision,
       );
     } else {
-      final witness = baseline.encryptedWitness;
-      if (witness == null) {
-        throw StateError('Verified encrypted baseline not available.');
-      }
-      await encryptedSession!.saveDashboardBatch(
-        baseline: witness,
-        captured: frozen,
+      // Do NOT update only the encrypted JSON snapshot here. A live Home
+      // category/goal/transaction edit or full reset must also update each
+      // normalized SQLCipher projection and encrypted receipts atomically.
+      // M110 routes the UI through one authority, but does not pretend the
+      // remaining typed SQL projection writers or migration are complete.
+      throw StateError(
+        'Encrypted screen mutation requires a verified atomic SQL projection writer.',
       );
     }
     // Never publish optimistic UI success before getting durable witness.
