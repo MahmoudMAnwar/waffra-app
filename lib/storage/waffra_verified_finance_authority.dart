@@ -111,19 +111,23 @@ class WaffraVerifiedFinanceAuthority {
     required WaffraFinanceAuthorityRead baseline,
     required Map<String, Object> captured,
   }) async {
-    final backend = await _requireRoute(route);
-    if (backend != baseline.source) {
-      throw StateError('Finance authority changed while screen was open.');
-    }
+    // Capture caller-owned values synchronously, before ANY awaited source
+    // probe. A queued Home edit can otherwise mutate the map while the OS
+    // key / SQLCipher witness check is pending.
     final frozen = <String, Object>{};
     for (final item in captured.entries) {
       final v = item.value;
       frozen[item.key] = v is List<String>
           ? List<String>.unmodifiable(v) : v;
     }
+    final immutableCapture = Map<String, Object>.unmodifiable(frozen);
+    final backend = await _requireRoute(route);
+    if (backend != baseline.source) {
+      throw StateError('Finance authority changed while screen was open.');
+    }
     if (backend == WaffraRuntimeFinanceBackend.guardedLegacy) {
       await legacy.saveLegacy(
-        snapshot: Map<String, Object>.unmodifiable(frozen),
+        snapshot: immutableCapture,
         expectedLedgerRaw: baseline.ledgerRaw,
         expectedWidgetRevision: baseline.widgetRevision,
       );
