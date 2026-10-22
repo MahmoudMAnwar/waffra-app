@@ -321,3 +321,39 @@ test('M98 encrypted inventory is owner-only with no plaintext index', async () =
   await assertFails(setDoc(doc(alice, inventory),
     encryptedRecord({ kind: 'manifest', amountMinor: 4500 })));
 });
+
+test('M107 account deletion tombstone blocks cached same-owner phone from resurrecting data', async () => {
+  const alice = env.authenticatedContext('alice').firestore();
+  const bob = env.authenticatedContext('bob').firestore();
+  await assertSucceeds(setDoc(doc(alice, path), vault('alice')));
+  await assertSucceeds(setDoc(doc(alice, recordPath), encryptedRecord()));
+  // Only trusted backend may create the tombstone, even for own account.
+  await assertFails(setDoc(doc(alice, 'accountDeletionRequests/alice'),
+    { status: 'deleting' }));
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'accountDeletionRequests/alice'), {
+      status: 'deleting', updatedAt: serverTimestamp(),
+    });
+  });
+  await assertFails(getDoc(doc(alice, recordPath)));
+  await assertFails(getDoc(doc(alice, path)));
+  await assertFails(setDoc(doc(alice, recordPath), encryptedRecord({
+    mutationId: 'stale-phone', localVersion: 2,
+  })));
+  await assertFails(setDoc(doc(alice, path + '/records/new-id'),
+    encryptedRecord()));
+  await assertFails(setDoc(doc(alice, path + '/recovery/current'),
+    wrappedRecovery()));
+  await assertFails(getDoc(doc(bob, recordPath)));
+});
+
+test('M107 completed deletion tombstone also prevents stale token re-creation', async () => {
+  const alice = env.authenticatedContext('alice').firestore();
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'accountDeletionRequests/alice'), {
+      status: 'completed', updatedAt: serverTimestamp(),
+    });
+  });
+  await assertFails(setDoc(doc(alice, path), vault('alice')));
+  await assertFails(getDoc(doc(alice, path)));
+});
