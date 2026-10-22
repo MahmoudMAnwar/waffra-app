@@ -1,0 +1,29 @@
+name: Waffra M92 Backup Integrity
+
+on:
+  pull_request:
+    paths:
+      - 'test/storage/m92_portable_backup_failure_integrity_test.dart'
+      - '.github/workflows/m92-independent-security-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-finance-qa:
+    name: M92 isolated synthetic safety tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Fetch Flutter dependencies
+        run: flutter pub get
+      - name: Analyze exact test target
+        run: dart analyze test/storage/m92_portable_backup_failure_integrity_test.dart
+      - name: Execute synthetic acceptance tests
+        run: flutter test test/storage/m92_portable_backup_failure_integrity_test.dart --reporter expanded
