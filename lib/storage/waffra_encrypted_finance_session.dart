@@ -5,6 +5,8 @@ import 'legacy_snapshot_preflight.dart';
 import 'waffra_atomic_finance_snapshot.dart';
 import 'waffra_atomic_encrypted_receipt_transaction_writer.dart';
 import 'waffra_finance_read_view.dart';
+import 'waffra_receipt_screen_contract.dart';
+import 'waffra_encrypted_receipt_recycle.dart';
 import 'waffra_unified_finance_writer.dart';
 import 'waffra_verified_encrypted_finance_bridge.dart';
 
@@ -141,6 +143,35 @@ class WaffraEncryptedFinanceSession {
       position: position,
       image: image,
       expectedSha256: expectedSha256,
+    );
+  }
+
+  Future<WaffraReceiptScreenState> loadReceiptScreen(String entryId) async {
+    _requireEnabled();
+    return bridge.loadVerifiedReceiptScreen(entryId);
+  }
+
+  Future<WaffraReceiptRecycleResult> moveReceiptBatchToRecycle({
+    required WaffraReceiptScreenState baseline,
+    required bool userConfirmed,
+    required DateTime now,
+  }) async {
+    _requireEnabled();
+    return bridge.moveReceiptBatchToRecycle(
+      baseline: baseline,
+      userConfirmed: userConfirmed,
+      now: now,
+    );
+  }
+
+  Future<WaffraReceiptRecycleResult> restoreReceiptBatchFromRecycle({
+    required WaffraReceiptScreenState baseline,
+    required DateTime now,
+  }) async {
+    _requireEnabled();
+    return bridge.restoreReceiptBatchFromRecycle(
+      baseline: baseline,
+      now: now,
     );
   }
 
