@@ -1,0 +1,29 @@
+name: Waffra M82 Independent E2EE Conflict Acceptance
+
+on:
+  pull_request:
+    paths:
+      - 'test/storage/m82_parallel_cloud_conflict_acceptance_test.dart'
+      - '.github/workflows/m82-independent-cloud-conflict-acceptance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-encrypted-cloud-conflicts:
+    name: M82 encrypted offline queue and two-device conflict retention
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve dependencies and SQLCipher assets
+        run: flutter pub get
+      - name: Analyze E2EE conflict tests
+        run: dart analyze test/storage/m82_parallel_cloud_conflict_acceptance_test.dart
+      - name: Exercise cloud CAS/tombstone/outbox failure safety locally
+        run: flutter test test/storage/m82_parallel_cloud_conflict_acceptance_test.dart --reporter expanded
