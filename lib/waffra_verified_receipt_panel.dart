@@ -187,7 +187,7 @@ class _WaffraVerifiedReceiptPanelState
                     child: Image.memory(
                       Uint8List.fromList(receipt.images[index]),
                       fit: BoxFit.contain,
-                      errorBuilder: (_, _, _) => Icon(
+                      errorBuilder: (context, error, stackTrace) => Icon(
                         Icons.broken_image_outlined, color: primary,
                       ),
                     ),
