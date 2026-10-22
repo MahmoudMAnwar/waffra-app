@@ -1,0 +1,63 @@
+name: Waffra M106 Play, Privacy and Monitoring Preparation
+
+on:
+  pull_request:
+    paths:
+      - 'docs/release/**'
+      - 'lib/diagnostics/**'
+      - 'test/m106_diagnostics_privacy_gate_test.dart'
+      - 'scripts/m106_play_release_preflight.py'
+      - 'scripts/test_m106_play_release_preflight.py'
+      - '.github/workflows/android.yml'
+      - '.github/workflows/m106-play-privacy-preflight.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  play-release-audit:
+    name: Produce Play Console, deletion and signed bundle blockers
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unit test fail-closed Android store compliance audit
+        run: python3 -m unittest discover -s scripts -p 'test_m106_play_release_preflight.py' -v
+      - name: Emit source based review report (not a launch approval)
+        run: |
+          WAFFRA_PLAY_AUDIT_PATH=m106-play-production-audit.json \
+            python3 scripts/m106_play_release_preflight.py
+          test -s m106-play-production-audit.json
+      - name: Attach production review blockers
+        uses: actions/upload-artifact@v4
+        with:
+          name: waffra-m106-google-play-launch-audit
+          path: m106-play-production-audit.json
+          retention-days: 30
+      - name: Show that no Play upload or Firebase prod deployment occurred
+        run: |
+          python3 - <<'PY'
+          import json
+          d=json.load(open('m106-play-production-audit.json'))
+          assert not d['releaseReady'], 'Do not claim production approval from documentation.'
+          assert not d['productionDataMigration']
+          assert not d['firebaseRulesDeployed']
+          print('Staging checklist generated; outstanding launch blockers:', len(d['blockers']))
+          PY
+
+  diagnostics-privacy:
+    name: Privacy-by-default diagnostic allowlist acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Strict analysis of diagnostic data boundary and tests
+        run: dart analyze lib/diagnostics/waffra_private_release_diagnostics.dart test/m106_diagnostics_privacy_gate_test.dart
+      - name: Validate no financial content enters diagnostic interface
+        run: flutter test test/m106_diagnostics_privacy_gate_test.dart --reporter expanded
