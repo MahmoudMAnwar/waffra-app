@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
+
 import 'legacy_snapshot_preflight.dart';
 import 'waffra_atomic_finance_snapshot.dart';
 import 'waffra_encrypted_receipt_vault.dart';
@@ -57,6 +59,9 @@ class WaffraAtomicEncryptedReceiptTransactionWriter {
   }) async {
     if (!experimentalEnabled || verifySourceUnderLock == null) {
       throw StateError('Verified encrypted receipt writing is not enabled.');
+    }
+    if (!identical(snapshot.store, receiptVault.store)) {
+      throw StateError('Finance and encrypted receipt stores differ.');
     }
     if (!userConfirmed) {
       throw StateError('User must confirm the financial transaction.');
@@ -167,6 +172,13 @@ class WaffraAtomicEncryptedReceiptTransactionWriter {
             exact.fold<int>(0, (sum, item) => sum + item.bytes.length) !=
                 totalBytes) {
           throw StateError('Receipt bytes did not match the confirmed batch.');
+        }
+        for (var index = 0; index < count; index++) {
+          if (exact[index].position != index ||
+              sha256.convert(exact[index].bytes) !=
+                  sha256.convert(images[index])) {
+            throw StateError('Encrypted receipt image content changed.');
+          }
         }
         if (smsHash != null) {
           hashes.add(smsHash);
