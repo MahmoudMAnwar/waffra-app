@@ -42,6 +42,7 @@ import 'storage/waffra_live_legacy_finance_guard.dart';
 import 'storage/waffra_legacy_finance_writer_coordinator.dart';
 import 'storage/waffra_legacy_widget_commit_journal.dart';
 import 'storage/waffra_home_finance_persistence.dart';
+import 'storage/waffra_verified_legacy_backup_restore.dart';
 import 'waffra_home_widget.dart';
 part 'waffra_categories_page.part.dart';
 part 'waffra_smart_analysis.part.dart';
@@ -5961,6 +5962,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   'monthlyBudget':monthlyBudget,
   'monthlyBudgetEnabled':monthlyBudgetEnabled,
   'learnedMerchants':learnedMerchantCategories,
+  'smsHashes':(smsHashes.toList()..sort()),
   'profile':widget.profile.toJson(),
  });
  Future<bool> _authorizeSensitiveAction(String operation)async{
@@ -6051,8 +6053,50 @@ Future<void> bulkSmsSheet({String? initialText})async {
        waffraIsEnglish?'This will replace all current transactions, categories, savings goals and recurring items with the backup. Make a backup of current data first. Continue?':'سيتم استبدال جميع المعاملات والأقسام وأهداف الادخار والعمليات المتكررة الحالية بمحتويات النسخة الاحتياطية. احفظ نسخة من بياناتك الحالية قبل المتابعة. هل تريد الاستمرار؟');
       if(ok!=true||!mounted)return;
       if(!await _authorizeSensitiveAction('restoring data')||!mounted)return;
+      // Verify all decrypted finance and journal it BEFORE any in-memory
+      // mutation. A newer widget write must not be overwritten by the backup.
+      final hashes=<String>[];
+      if(raw['smsHashes']!=null){
+       final incoming=raw['smsHashes'];
+       if(incoming is! List||incoming.any((item)=>
+          item is! String||!RegExp(r'^[a-f0-9]{64}$').hasMatch(item))){
+        throw const FormatException('Invalid SMS deduplication hashes');
+       }
+       hashes.addAll((incoming as List).cast<String>().toSet());
+       hashes.sort();
+      }
+      final enabledBudget=raw['monthlyBudgetEnabled'] is bool?
+       (raw['monthlyBudgetEnabled'] as bool):(restoredBudget>0);
+      final finance=<String,Object>{
+       'entries':jsonEncode(newEntries.map((e)=>e.toJson()).toList()),
+       'waffra_categories_v24':jsonEncode(newCategories.map((e)=>e.toJson()).toList()),
+       'waffra_goals_v24':jsonEncode(newGoals.map((e)=>e.toJson()).toList()),
+       'waffra_recurring_v24':jsonEncode(newRecurring.map((e)=>e.toJson()).toList()),
+       'waffra_challenges_v1':jsonEncode(newChallenges.map((e)=>e.toJson()).toList()),
+       'waffra_deleted_categories_v1':jsonEncode(newTrash),
+       'waffra_deleted_goals_v1':jsonEncode(newDeletedGoals),
+       'waffra_deleted_recurring_v1':jsonEncode(newDeletedRecurring),
+       'waffra_recurring_postponed_v1':jsonEncode(newPostponed),
+       'waffra_monthly_budget_v1':restoredBudget,
+       'waffra_monthly_budget_enabled_v1':enabledBudget,
+       'waffra_learned_merchants_v1':jsonEncode(restoredRules),
+       'waffra_sms_hashes_v1':hashes,
+       'waffra_recurring_reminders_enabled_v1':recurringRemindersEnabled,
+      };
+      await WaffraVerifiedLegacyBackupRestore(
+       persistence:_homeFinancePersistence,
+      ).restore(
+       finance:finance,
+       expectedLedgerRaw:_lastLedgerSavedRaw,
+       expectedWidgetRevision:_lastWidgetRevision,
+      );
+      final verified=await _homeFinancePersistence.loadWithWitness();
+      verified.finance.requireIntegrity();
+      final latestEntries=(jsonDecode(verified.ledgerRaw??'[]') as List)
+       .map((e)=>MoneyEntry.fromJson(Map<String,dynamic>.from(e as Map))).toList();
+      if(!mounted)return;
       setState((){
-       entries..clear()..addAll(newEntries);
+       entries..clear()..addAll(latestEntries);
        categories..clear()..addAll(newCategories);
        goals..clear()..addAll(newGoals);
        recurring..clear()..addAll(newRecurring);
@@ -6062,15 +6106,20 @@ Future<void> bulkSmsSheet({String? initialText})async {
        deletedRecurring..clear()..addAll(newDeletedRecurring);
        recurringPostponed..clear()..addAll(newPostponed);
        monthlyBudget=restoredBudget;
-       monthlyBudgetEnabled=raw['monthlyBudgetEnabled'] is bool?(raw['monthlyBudgetEnabled'] as bool):(restoredBudget>0);
+       monthlyBudgetEnabled=enabledBudget;
        learnedMerchantCategories..clear()..addAll(restoredRules);
+       smsHashes..clear()..addAll(
+        verified.finance.getStringList('waffra_sms_hashes_v1')??const <String>[]);
+       _lastLedgerSavedRaw=verified.ledgerRaw;
+       _lastWidgetRevision=verified.widgetRevision;
       });
-      await persist();
       await syncRecurringReminders();
+      unawaited(_refreshWidget());
       if(ctx.mounted)Navigator.pop(ctx);
-      if(mounted)snackSuccess(context,'تمت استعادة البيانات بنجاح');
+      if(mounted)snackSuccess(context,waffraIsEnglish?
+       'Backup restored and verified':'تمت استعادة النسخة والتحقق من البيانات');
      }catch(e){
-      if(ctx.mounted)update(()=>backupError=waffraIsEnglish?'Invalid backup. Check the entire JSON text.':'النسخة غير صالحة، تأكد من النص كامل');
+      if(ctx.mounted)update(()=>backupError=waffraIsEnglish?'Backup validation or save failed. Existing data were not deliberately erased; reload before retrying.':'تعذر التحقق من النسخة أو حفظها. لم تُحذف البيانات القديمة عمدًا؛ أعد التحميل قبل المحاولة مجددًا.');
      }
     },child:const WaffraText('استعادة')),
    ])));
