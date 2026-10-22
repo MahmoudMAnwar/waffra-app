@@ -1,0 +1,31 @@
+name: Waffra M87 PDF Bidirectional Text Acceptance
+
+on:
+  pull_request:
+    paths:
+      - 'test/m87_pdf_sms_currency_and_direction_test.dart'
+      - '.github/workflows/m87-independent-acceptance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  independent-acceptance:
+    name: M87 Arabic/English Saudi bank text and currency rendering
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout tested commit
+        uses: actions/checkout@v4
+      - name: Set up Flutter stable
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve dependencies
+        run: flutter pub get
+      - name: Static-analyze acceptance tests
+        run: dart analyze test/m87_pdf_sms_currency_and_direction_test.dart
+      - name: Run isolated acceptance tests
+        run: flutter test test/m87_pdf_sms_currency_and_direction_test.dart --reporter expanded
