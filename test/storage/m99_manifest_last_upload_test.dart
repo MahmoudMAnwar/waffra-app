@@ -76,7 +76,7 @@ void main() {
   setUp(() async {
     root = await Directory.systemTemp.createTemp('m99-recovery-order-');
     db = WaffraEncryptedStore.openAt(
-      File('${root.path}/local.sqlite'), key: 'm99-synthetic-test-key',
+      File('${root.path}/local.sqlite'), key: 'm99-only-disposable-encrypted-vault-test-key',
     );
     outbox = WaffraEncryptedCloudOutbox(db);
   });
@@ -94,7 +94,7 @@ void main() {
     await outbox.enqueue(vaultId: vault, envelope: await entry('item-b'));
     await db.close();
     db = WaffraEncryptedStore.openAt(
-      File('${root.path}/local.sqlite'), key: 'm99-synthetic-test-key',
+      File('${root.path}/local.sqlite'), key: 'm99-only-disposable-encrypted-vault-test-key',
     );
     outbox = WaffraEncryptedCloudOutbox(db);
     final events = <String>[];
