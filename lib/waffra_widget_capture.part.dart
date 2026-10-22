@@ -1,5 +1,19 @@
 part of 'main.dart';
 
+/// Only disposable Flutter WidgetTests inject a source probe. Production
+/// always uses OS secure-key and existing SQLCipher checkpoint inspection.
+class _WaffraWidgetTestingOnlySourceGuard
+    extends WaffraProductionFinanceSourceGuard {
+ const _WaffraWidgetTestingOnlySourceGuard();
+ @override
+ Future<WaffraProductionFinanceSourceReport> inspect({
+  SharedPreferences? preferences,
+ }) async=>const WaffraProductionFinanceSourceReport(
+  source:WaffraProductionFinanceSource.guardedLegacy,
+  reasonCode:'test_only_disposable_legacy_source',
+ );
+}
+
 /// Standalone short-lived widget route: no full Waffra dashboard or navigation.
 /// The user pastes text explicitly; analysis happens automatically (debounced).
 class WaffraWidgetCaptureApp extends StatefulWidget {
@@ -44,6 +58,15 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
        ),
      );
 
+
+ WaffraVerifiedFinanceAuthority get _financeAuthority=>
+  WaffraVerifiedFinanceAuthority(
+   legacy:_financePersistence,
+   sourceGuard:widget.testSourceProbe==null
+    ?const WaffraProductionFinanceSourceGuard()
+    :const _WaffraWidgetTestingOnlySourceGuard(),
+  );
+
  @override void initState(){
   super.initState();
   _loadSettings();
@@ -57,7 +80,7 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
     await const WaffraProductionFinanceSourceGuard()
      .requireSafeLegacyStartup(preferences:prefs);
    }
-   final loaded=await _financePersistence.loadWithWitness();
+   final loaded=await _financeAuthority.load(route:WaffraFinanceRoute.widgetRead);
    if(!mounted)return;
    setState((){
     _english=prefs.getString('waffra_language')=='en';
@@ -143,7 +166,7 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
    // HomeScreen and the separate Android widget now use ONE crash-journaled
    // user-confirmed ledger+fingerprint writer; duplicate checks happen under
    // its shared cross-engine file lock rather than in stale widget state.
-   final loaded=await _financePersistence.loadWithWitness();
+   final loaded=await _financeAuthority.load(route:WaffraFinanceRoute.widgetRead);
    final categoriesRaw=loaded.finance.getString('waffra_categories_v24');
    final categories=categoriesRaw==null?defaultCategories():
     (jsonDecode(categoriesRaw) as List)
@@ -165,17 +188,23 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
     ).toJson()));
     hashes.add(bankSmsHash(entry.raw));
    }
-   final committed=await _financePersistence.commitConfirmedLegacySms(
-    records:records,messageHashes:hashes,
+   final committed=await _financeAuthority.commitConfirmedSms(
+    route:WaffraFinanceRoute.widgetSmsConfirmedSave,
+    records:records,hashes:hashes,
     userConfirmed:true,allowDuplicateHashes:allowDuplicates,
    );
-   final outcome=committed.added==0?null:(
-    merged:(jsonDecode(committed.savedEntriesRaw) as List)
+   final persisted=committed.current.ledgerRaw;
+   if(persisted==null){
+    throw StateError('Confirmed widget ledger witness is missing.');
+   }
+   final outcome=committed.saved==0?null:(
+    merged:(jsonDecode(persisted) as List)
      .map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x as Map))).toList(),
-    savedIncome:committed.savedIncome,
-    savedExpenses:committed.savedExpenses,
-    skipped:totalDetected-committed.added,
-    knownHashes:committed.savedHashes.toSet(),
+    savedIncome:committed.income,
+    savedExpenses:committed.expenses,
+    skipped:totalDetected-committed.saved,
+    knownHashes:(committed.current.finance.getStringList('waffra_sms_hashes_v1')
+     ??const <String>[]).toSet(),
    );
    if(outcome==null){
     if(mounted)setState((){
