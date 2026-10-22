@@ -1,0 +1,31 @@
+name: Waffra M88 Recovery Key Authentication Acceptance
+
+on:
+  pull_request:
+    paths:
+      - 'test/storage/m88_key_recovery_rollback_acceptance_test.dart'
+      - '.github/workflows/m88-independent-acceptance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  independent-acceptance:
+    name: M88 recovery code rotation, secrecy and cross-vault rejection
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout tested commit
+        uses: actions/checkout@v4
+      - name: Set up Flutter stable
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve dependencies
+        run: flutter pub get
+      - name: Static-analyze acceptance tests
+        run: dart analyze test/storage/m88_key_recovery_rollback_acceptance_test.dart
+      - name: Run isolated acceptance tests
+        run: flutter test test/storage/m88_key_recovery_rollback_acceptance_test.dart --reporter expanded
