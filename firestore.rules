@@ -5,7 +5,11 @@ service cloud.firestore {
     // This is deliberately an E2EE-only *candidate* schema. Do not deploy
     // until emulator tests, client-side encryption and recovery are ready.
     function signedInAs(uid) {
-      return request.auth != null && request.auth.uid == uid;
+      // A privileged backend sets this tombstone BEFORE recursive deletion.
+      // Deny any cached client auth tokens so a second phone cannot recreate
+      // the vault while its owner's account is being removed.
+      return request.auth != null && request.auth.uid == uid
+        && !exists(/databases/$(database)/documents/accountDeletionRequests/$(uid));
     }
 
     function hasValidVaultFields(data, uid) {
