@@ -73,7 +73,7 @@ void main() {
       throwsA(isA<ArgumentError>()),
     );
     await expectLater(
-      persistence.addCustomGoalSuggestion('a' * 101),
+      persistence.addCustomGoalSuggestion(List<String>.filled(101, 'a').join()),
       throwsA(isA<ArgumentError>()),
     );
     expect(await persistence.addCustomGoalSuggestion(' home '), isFalse);
