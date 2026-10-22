@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:drift/drift.dart';
 
 import 'waffra_atomic_finance_snapshot.dart';
 import 'waffra_atomic_encrypted_receipt_transaction_writer.dart';
@@ -252,40 +253,119 @@ class WaffraVerifiedEncryptedFinanceBridge {
         entryId.length > 128) {
       throw StateError('Verified encrypted receipt screen is unavailable.');
     }
-    final before = await loadForHomeAndWidget();
-    final raw = before.ledgerRaw;
-    if (raw == null) {
-      throw StateError('Encrypted financial ledger is missing.');
-    }
-    final decoded = jsonDecode(raw);
-    if (decoded is! List) {
-      throw StateError('Encrypted transaction list is malformed.');
-    }
-    final matching = decoded.where(
-      (item) => item is Map && item['id'] == entryId,
-    ).toList();
-    if (matching.length != 1) {
-      throw StateError('Encrypted receipt owner is missing or duplicated.');
-    }
-    final refs = (matching.single as Map)['receiptPath'];
-    if (refs != null && refs is! String) {
-      throw StateError('Encrypted receipt reference has an invalid type.');
-    }
-    final images = await loadReceiptImages(entryId: entryId);
-    final pending = await _receiptRecycle.pendingRecoveries();
-    final after = await loadForHomeAndWidget();
-    if (before.generation != after.generation ||
-        before.digest != after.digest ||
-        (refs != null && pending.containsKey(entryId)) ||
-        (images.isNotEmpty && refs == null)) {
-      throw StateError('Encrypted receipts changed while being loaded.');
-    }
-    return WaffraReceiptScreenState(
-      entryId: entryId,
-      generation: after.generation,
-      images: images,
-      recoverUntilMs: pending[entryId],
-    );
+
+    // M121: the legacy four-lock sequence could combine an old image set
+    // with a newer recycle status or in-place M116 replacement. A receipt
+    // replacement does not increment the finance generation. Capture the
+    // ledger, normalized SQL owner, BLOB bytes and recycle status beneath
+    // ONE Home/Widget native lock, with no public file or legacy fallback.
+    return WaffraExperimentalWriterGate(
+      disposableDirectory: writerDirectory,
+      experimentalEnabled: true,
+    ).withExclusiveAccess(() async {
+      await _requireActivatedUnderLock();
+      final finance = await snapshot.read();
+      final raw = finance.values['entries'];
+      if (raw is! String) {
+        throw StateError('Encrypted financial ledger is missing.');
+      }
+      final decoded = jsonDecode(raw);
+      if (decoded is! List || decoded.any((item) => item is! Map)) {
+        throw StateError('Encrypted transaction list is malformed.');
+      }
+      final matching = decoded.where(
+        (item) => (item as Map)['id'] == entryId,
+      ).toList();
+      if (matching.length != 1) {
+        throw StateError('Encrypted receipt owner is missing or duplicated.');
+      }
+      final owner = Map<String, dynamic>.from(matching.single as Map);
+      final refs = owner['receiptPath'];
+      if (refs != null && refs is! String) {
+        throw StateError('Encrypted receipt reference has an invalid type.');
+      }
+
+      // Refuse a split-brain ledger even if the JSON snapshot itself is valid.
+      final sqlOwner = await snapshot.store.customSelect(
+        'SELECT source_json,receipt_count FROM fresh_finance_entries '
+        'WHERE entry_id=?',
+        variables: [Variable.withString(entryId)],
+      ).get();
+      if (sqlOwner.length != 1 ||
+          jsonEncode(jsonDecode(sqlOwner.single.read<String>('source_json'))) !=
+              jsonEncode(owner)) {
+        throw StateError('Encrypted receipt SQL owner differs from ledger.');
+      }
+
+      final imageBytes = await WaffraEncryptedReceiptReadGateway(
+        receiptVault: WaffraEncryptedReceiptVault(
+          store: snapshot.store,
+          experimentalEnabled: true,
+        ),
+        experimentalEnabled: true,
+        verifyEncryptedSource: _requireActivatedUnderLock,
+      ).read(entryId: entryId, encodedReferences: refs as String?);
+      if (sqlOwner.single.read<int>('receipt_count') != imageBytes.length) {
+        throw StateError('Encrypted receipt SQL count differs from images.');
+      }
+
+      int? recoverUntilMs;
+      final table = await snapshot.store.customSelect(
+        "SELECT name FROM sqlite_master WHERE type='table' "
+        "AND name='fresh_finance_receipt_recycle'",
+      ).get();
+      if (table.isNotEmpty) {
+        final archived = await snapshot.store.customSelect(
+          'SELECT receipt_count,deleted_at_ms,expires_at_ms '
+          'FROM fresh_finance_receipt_recycle WHERE entry_id=?',
+          variables: [Variable.withString(entryId)],
+        ).get();
+        if (archived.length > 1) {
+          throw StateError('Duplicated encrypted receipt archive.');
+        }
+        final orphanCheck = await snapshot.store.customSelect(
+          'SELECT count(*) AS n FROM fresh_finance_receipt_recycle_blobs '
+          'WHERE entry_id=?',
+          variables: [Variable.withString(entryId)],
+        ).getSingle();
+        final archivedCount = orphanCheck.read<int>('n');
+        if (archived.isEmpty) {
+          if (archivedCount != 0) {
+            throw StateError('Orphaned encrypted receipt archive BLOBs.');
+          }
+        } else {
+          final row = archived.single;
+          final deletedAt = row.read<int>('deleted_at_ms');
+          final expiry = row.read<int>('expires_at_ms');
+          if (refs != null || imageBytes.isNotEmpty ||
+              row.read<int>('receipt_count') != archivedCount ||
+              archivedCount < 1 ||
+              archivedCount > WaffraEncryptedReceiptVault.maxReceiptsPerEntry ||
+              deletedAt < 0 ||
+              expiry - deletedAt !=
+                  WaffraEncryptedReceiptRecycle.retention.inMilliseconds) {
+            throw StateError('Encrypted receipt archive witness mismatch.');
+          }
+          recoverUntilMs = expiry;
+        }
+      }
+
+      // Check the durable source again before publishing UI data. This is
+      // still under the same writer lock, so a cooperating widget cannot
+      // interleave a finance write or an image replacement.
+      await _requireActivatedUnderLock();
+      final unchanged = await snapshot.read();
+      if (unchanged.generation != finance.generation ||
+          unchanged.digest != finance.digest) {
+        throw StateError('Encrypted finance source changed during receipt read.');
+      }
+      return WaffraReceiptScreenState(
+        entryId: entryId,
+        generation: finance.generation,
+        images: imageBytes,
+        recoverUntilMs: recoverUntilMs,
+      );
+    });
   }
 
   Future<WaffraReceiptRecycleResult> moveReceiptBatchToRecycle({
