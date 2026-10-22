@@ -74,8 +74,8 @@ void main() {
     SharedPreferences.setMockInitialValues({
       'entries': '[$record,$record]',
     });
-    expect(() => (await read()).requireIntegrity(),
-        throwsA(isA<StateError>()));
+    final view = await read();
+    expect(() => view.requireIntegrity(), throwsA(isA<StateError>()));
   });
 
   test('corrupt goal cannot be turned into empty goals list', () async {
