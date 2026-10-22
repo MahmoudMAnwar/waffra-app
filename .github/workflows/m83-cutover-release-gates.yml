@@ -1,0 +1,29 @@
+name: Waffra M83 Read-only Production Cutover Gates
+
+on:
+  pull_request:
+    paths:
+      - 'test/storage/m83_cutover_release_gate_matrix_test.dart'
+      - '.github/workflows/m83-cutover-release-gates.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release-blocker-matrix:
+    name: M83 fail-closed finance source and release evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve dependencies
+        run: flutter pub get
+      - name: Analyze release gate scenarios
+        run: dart analyze test/storage/m83_cutover_release_gate_matrix_test.dart
+      - name: Run source witness and cutover blocker acceptance
+        run: flutter test test/storage/m83_cutover_release_gate_matrix_test.dart --reporter expanded
