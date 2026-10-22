@@ -1968,6 +1968,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   int forecastReduction=20;
  bool recurringRemindersEnabled=false;
  bool ready=false;
+ String? _financeLoadFailure;
  String? lastBackupGeneratedAt;
  int? lastBackupBytes;
  bool protectRecentApps=true;
@@ -1981,7 +1982,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  static const tourTargetKeys=<int>[-1,0,1,2,6,4,3,5];
  bool addFabExpanded=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
- @override void initState(){super.initState();_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:()=>unawaited(_syncWidgetTransactions()));load();}
+ @override void initState(){super.initState();_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:()=>unawaited(_syncWidgetTransactions()));unawaited(_loadFinanceSafely());}
  void _returnToHome(){if(mounted)setState((){tab=0;goalsOpened=false;addFabExpanded=false;});}
  void _receiveWidgetAction(){
   if(!mounted||!ready||waffraWidgetAction.value!='add')return;
@@ -1999,11 +2000,45 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(mounted)unawaited(bulkSmsSheet(initialText:text));
   });
  }
+ Future<void> _loadFinanceSafely()async{
+  if(!mounted)return;
+  setState((){ready=false;_financeLoadFailure=null;});
+  entries.clear();categories.clear();goals.clear();recurring.clear();challenges.clear();
+  deletedCategories.clear();deletedGoals.clear();deletedRecurring.clear();
+  recurringPostponed.clear();smsHashes.clear();learnedMerchantCategories.clear();
+  try{
+   await load();
+  }catch(e){
+   debugPrint('Financial startup integrity/recovery gate blocked access: $e');
+   if(mounted)setState((){
+    ready=false;
+    _financeLoadFailure=waffraIsEnglish?
+     'Your financial data could not be verified. No data was deleted or reset. Please retry, or restore a verified backup.':
+     'تعذر التحقق من سلامة بياناتك المالية. لم يتم حذف أو تصفير أي بيانات. حاول مجددًا أو استرجع نسخة احتياطية موثوقة.';
+   });
+  }
+ }
+ Widget _financialRecoveryScreen()=>Center(child:Padding(
+  padding:const EdgeInsets.all(24),
+  child:Column(mainAxisSize:MainAxisSize.min,children:[
+   const Icon(Icons.shield_outlined,size:50,color:emerald),
+   const SizedBox(height:14),
+   WaffraText(waffraIsEnglish?'Financial data protected':'بياناتك المالية محمية',
+    textAlign:TextAlign.center,style:const TextStyle(fontSize:20,fontWeight:FontWeight.bold)),
+   const SizedBox(height:9),
+   WaffraText(_financeLoadFailure??'',textAlign:TextAlign.center),
+   const SizedBox(height:18),
+   FilledButton.icon(
+    onPressed:()=>unawaited(_loadFinanceSafely()),
+    icon:const Icon(Icons.refresh),
+    label:WaffraText(waffraIsEnglish?'Retry safely':'إعادة المحاولة بأمان')),
+  ])));
  @override void dispose(){_dashboardScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();super.dispose();}
  Future<void> _syncWidgetTransactions()async{
   if(!mounted||!ready)return;
   try{
    final loadedFinance=await _homeFinancePersistence.loadWithWitness();
+   loadedFinance.finance.requireIntegrity();
    final revision=loadedFinance.widgetRevision;
    if(revision==null||revision==_lastWidgetRevision)return;
    final raw=loadedFinance.ledgerRaw;
@@ -2017,12 +2052,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _lastLedgerSavedRaw=raw;
    });
    unawaited(_refreshWidget());
-  }catch(e){debugPrint('Widget ledger sync failed: $e');}
+  }catch(e){
+   debugPrint('Widget ledger sync failed safely: $e');
+   if(mounted)setState((){
+    ready=false;
+    _financeLoadFailure=waffraIsEnglish?
+     'Financial data could not be verified after widget activity. Retry safely.':
+     'تعذر التحقق من البيانات بعد إضافة عملية من الويدجت. أعد المحاولة بأمان.';
+   });
+  }
  }
  Future<void> load()async {
   final p=await SharedPreferences.getInstance();
   final loadedFinance=await _homeFinancePersistence.loadWithWitness();
   final financeView=loadedFinance.finance;
+  financeView.requireIntegrity();
   _lastWidgetRevision=loadedFinance.widgetRevision;
   _lastLedgerSavedRaw=loadedFinance.ledgerRaw;
   try{final raw=financeView.getString('entries');if(raw!=null)entries.addAll((jsonDecode(raw) as List).map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x))));}catch(e){debugPrint('entries: $e');}
@@ -6535,7 +6579,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
    ]),
   // Instant content swap avoids building/animating the previous heavy tab
   // alongside the next one (the recurring -> savings navigation hitch).
-  body:!ready?const Center(child:CircularProgressIndicator()):
+  body:_financeLoadFailure!=null?_financialRecoveryScreen():
+   !ready?const Center(child:CircularProgressIndicator()):
    GestureDetector(
     behavior:HitTestBehavior.translucent,
     onHorizontalDragStart:(_)=>_swipeTravel=0,
