@@ -1,0 +1,29 @@
+name: Waffra M81 Independent Recovery Acceptance
+
+on:
+  pull_request:
+    paths:
+      - 'test/storage/m81_parallel_recovery_tamper_acceptance_test.dart'
+      - '.github/workflows/m81-independent-recovery-acceptance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  authenticated-recovery-safety:
+    name: M81 portable encrypted recovery tamper and rollback
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Restore dependencies
+        run: flutter pub get
+      - name: Analyze recovery scenarios
+        run: dart analyze test/storage/m81_parallel_recovery_tamper_acceptance_test.dart
+      - name: Run synthetic authenticated recovery acceptance
+        run: flutter test test/storage/m81_parallel_recovery_tamper_acceptance_test.dart --reporter expanded
