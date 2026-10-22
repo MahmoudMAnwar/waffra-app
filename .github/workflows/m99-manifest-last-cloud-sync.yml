@@ -1,0 +1,33 @@
+name: Waffra M99 Manifest-Last Cloud Sync Integrity
+
+on:
+  pull_request:
+    paths:
+      - 'lib/storage/waffra_cloud_manifest_last_outbox_drain.dart'
+      - 'test/storage/m99_manifest_last_upload_test.dart'
+      - '.github/workflows/m99-manifest-last-cloud-sync.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  encrypted-cloud-publication:
+    name: M99 E2EE queue order, conflict and recovery index safety
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install Flutter dependencies
+        run: flutter pub get
+      - name: Strictly analyze the runtime writer and safety tests
+        run: >-
+          dart analyze
+          lib/storage/waffra_cloud_manifest_last_outbox_drain.dart
+          test/storage/m99_manifest_last_upload_test.dart
+      - name: Verify recovered phone sees index only after committed transactions
+        run: flutter test test/storage/m99_manifest_last_upload_test.dart --reporter expanded

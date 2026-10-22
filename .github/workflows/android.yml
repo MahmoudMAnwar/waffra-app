@@ -10,6 +10,7 @@ on:
       - 'feature/storage-verified-backup-restore-m63'
       - 'feature/storage-encrypted-receipt-view-m66'
       - 'feature/combined-finance-cloud-validation-m70'
+      - 'feature/m99-production-sync-queue-and-android-build'
   workflow_dispatch:
 
 # Fast-build concurrency: only the latest pushed revision needs an APK.

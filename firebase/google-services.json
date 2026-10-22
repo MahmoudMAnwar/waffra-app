@@ -14,11 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "824623621537-875h8h1ltdttdeot8lqerfvndumf6fbr.apps.googleusercontent.com",
+          "client_id": "824623621537-m5necao8sct4tah7glnhkb3iu2fvdkui.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.waffra.app",
-            "certificate_hash": "bcc7215f29abe710ba78d5f3526fc6d669d9957c"
+            "certificate_hash": "7b65b90ca51c0dec5d36cbab1af789119d9b4335"
           }
         },
         {
