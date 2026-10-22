@@ -9,8 +9,8 @@ void main() {
       expect(WaffraValidators.requiredText(name), 'required');
     }
     expect(WaffraValidators.requiredText('قسم رئيسي'), isNull);
-    expect(WaffraValidators.requiredText('x' * 100), isNull);
-    expect(WaffraValidators.requiredText('x' * 101), 'too_long');
+    expect(WaffraValidators.requiredText('x'.padRight(100, 'x')), isNull);
+    expect(WaffraValidators.requiredText('x'.padRight(101, 'x')), 'too_long');
   });
 
   test('M93 valid local Saudi numbers use exactly 05 plus eight digits',
