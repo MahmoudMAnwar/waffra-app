@@ -16,6 +16,7 @@ on:
       - 'feature/m107-production-account-delete-observability'
       - 'feature/m108-unified-home-widget-finance-commit'
       - 'feature/m109-verified-finance-authority-dispatch'
+      - 'feature/m110-home-finance-writer-source-authority'
   workflow_dispatch:
 
 # Fast-build concurrency: only the latest pushed revision needs an APK.
