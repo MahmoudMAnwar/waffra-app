@@ -66,7 +66,8 @@ CREATE TABLE IF NOT EXISTS $_trash (
   original_references TEXT NOT NULL,
   receipt_count INTEGER NOT NULL CHECK(receipt_count BETWEEN 1 AND 10),
   deleted_at_ms INTEGER NOT NULL,
-  expires_at_ms INTEGER NOT NULL
+  expires_at_ms INTEGER NOT NULL,
+  CHECK(deleted_at_ms >= 0 AND expires_at_ms > deleted_at_ms)
 )''');
     await snapshot.store.customStatement('''
 CREATE TABLE IF NOT EXISTS $_blobs (
@@ -333,7 +334,7 @@ CREATE TABLE IF NOT EXISTS $_blobs (
         }
         await _ensureTables();
         final trash = await snapshot.store.customSelect(
-          'SELECT original_references,receipt_count,expires_at_ms '
+          'SELECT original_references,receipt_count,deleted_at_ms,expires_at_ms '
           'FROM $_trash WHERE entry_id=?',
           variables: [Variable.withString(entryId)],
         ).get();
@@ -341,8 +342,18 @@ CREATE TABLE IF NOT EXISTS $_blobs (
           throw StateError('No recoverable encrypted receipt exists.');
         }
         final row = trash.single;
+        final deletedAt = row.read<int>('deleted_at_ms');
         final expiry = row.read<int>('expires_at_ms');
-        if (now.toUtc().millisecondsSinceEpoch >= expiry) {
+        final observed = now.toUtc().millisecondsSinceEpoch;
+        // M122: a rolled-back device clock must never authorize a restore
+        // from BEFORE deletion. A malformed or extended SQL expiry cannot
+        // grant more than the original 30-day retention contract.
+        if (deletedAt < 0 ||
+            expiry - deletedAt != retention.inMilliseconds ||
+            observed < deletedAt) {
+          throw StateError('Encrypted receipt recovery clock is untrusted.');
+        }
+        if (observed >= expiry) {
           throw StateError('Encrypted receipt recovery window expired.');
         }
         final oldEntry = _entry(state, entryId);
