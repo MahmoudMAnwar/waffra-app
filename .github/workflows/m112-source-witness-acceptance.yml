@@ -1,0 +1,23 @@
+name: Waffra M112 Source Witness Acceptance
+on:
+  pull_request:
+    paths:
+      - 'test/m112_finance_source_device_acceptance_gate_test.dart'
+      - 'lib/storage/waffra_verified_finance_authority.dart'
+      - '.github/workflows/m112-source-witness-acceptance.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-witness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart analyze test/m112_finance_source_device_acceptance_gate_test.dart
+      - run: flutter test test/m111_finance_authority_negative_acceptance_test.dart test/m112_finance_source_device_acceptance_gate_test.dart --reporter expanded
