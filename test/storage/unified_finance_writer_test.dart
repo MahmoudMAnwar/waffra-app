@@ -168,6 +168,117 @@ void main() {
     expect(await count(),0);
   });
 
+  test('M79 freezes confirmed widget/SMS payload before awaiting source witness',
+      () async {
+    await prepare();
+    final form = entry('confirmed', income: false, amount: 12.34);
+    final submitted = <Map<String, Object?>>[form];
+    final hashes = <String?>[digest(17)];
+    final checkedWriter = WaffraUnifiedFinanceWriter(
+      writerDirectory: root,
+      snapshot: currentSnapshot(),
+      experimentalEnabled: true,
+      verifySourceUnderLock: () async {
+        // The real Home/widget may clear the pending form or receive a new
+        // bank SMS while the shared native finance lock is being acquired.
+        form['title'] = 'Changed after confirmation';
+        form['amount'] = 999.99;
+        form['income'] = true;
+        form['category'] = 'راتب';
+        form['date'] = '2026-11-22T00:00:00';
+        submitted.add(entry('unconfirmed-extra'));
+        hashes[0] = digest(99);
+        hashes.add(digest(100));
+      },
+    );
+    final result = await checkedWriter.appendTransactions(
+      records: submitted, messageHashes: hashes, userConfirmed: true,
+    );
+    expect(result.saved, 1);
+    expect(result.savedIncome, 0);
+    expect(result.savedExpenses, 1);
+    final saved = await currentSnapshot().read();
+    final row = (jsonDecode(saved.values['entries'] as String) as List)
+        .single as Map<String, dynamic>;
+    expect(row['id'], 'confirmed');
+    expect(row['amount'], 12.34);
+    expect(row['title'], 'تحويل تجريبي confirmed');
+    expect(row['category'], 'طعام');
+    expect(row['income'], false);
+    expect(row['date'], '2026-10-21T13:30:00');
+    expect(saved.values['waffra_sms_hashes_v1'], [digest(17)]);
+    expect(saved.generation, 1);
+  });
+
+  test('M79 manual/widget append also commits normalized SQL row projections',
+      () async {
+    await prepare();
+    final result = await writer().appendTransactions(
+      records: [entry('manual', amount: 84.72), entry('salary', income: true)],
+      messageHashes: [null, digest(11)], userConfirmed: true,
+    );
+    expect(result.saved, 2);
+    final rows = await vault.customSelect(
+      'SELECT entry_id, amount_minor, is_income, receipt_count, source_json '
+      'FROM fresh_finance_entries ORDER BY entry_id',
+    ).get();
+    expect(rows.length, 2);
+    expect(rows[0].read<String>('entry_id'), 'manual');
+    expect(rows[0].read<int>('amount_minor'), 8472);
+    expect(rows[0].read<int>('receipt_count'), 0);
+    expect(jsonDecode(rows[0].read<String>('source_json'))['amount'], 84.72);
+    expect(rows[1].read<String>('entry_id'), 'salary');
+    expect(rows[1].read<int>('is_income'), 1);
+    expect((await currentSnapshot().read()).generation, 1);
+  });
+
+  test('M79 SQL insert failure atomically rolls back both finance and SMS hashes',
+      () async {
+    await prepare();
+    await vault.customStatement('''
+CREATE TRIGGER synthetic_m79_fail_second
+BEFORE INSERT ON fresh_finance_entries
+WHEN NEW.entry_id='failed-row'
+BEGIN
+  SELECT RAISE(ABORT, 'synthetic finance row failure');
+END
+''');
+    await expectLater(writer().appendTransactions(
+      records: [entry('first-row'), entry('failed-row')],
+      messageHashes: [digest(20), digest(21)], userConfirmed: true,
+    ), throwsA(anything));
+    final state = await currentSnapshot().read();
+    expect(state.generation, 0);
+    expect((jsonDecode(state.values['entries'] as String? ?? '[]') as List),
+        isEmpty);
+    expect(state.values.containsKey('waffra_sms_hashes_v1'), false);
+    final sqlCount = await vault.customSelect(
+      'SELECT count(*) AS n FROM fresh_finance_entries',
+    ).getSingle();
+    expect(sqlCount.read<int>('n'), 0);
+  });
+
+  test('M79 refuses equal-size split-brain snapshot and SQL row IDs',
+      () async {
+    await prepare();
+    await writer().appendTransactions(
+      records: [entry('genuine')],
+      messageHashes: [digest(40)], userConfirmed: true,
+    );
+    await vault.customStatement(
+      "UPDATE fresh_finance_entries SET entry_id='imposter' "
+      "WHERE entry_id='genuine'",
+    );
+    await expectLater(writer().appendTransactions(
+      records: [entry('must-not-save')],
+      messageHashes: [digest(41)], userConfirmed: true,
+    ), throwsA(isA<StateError>()));
+    final state = await currentSnapshot().read();
+    expect(state.generation, 1);
+    expect(state.values['waffra_sms_hashes_v1'], [digest(40)]);
+    expect(await count(), 1);
+  });
+
   test('cold reopening retains user-updated balances and dedupe hashes',
       ()async{
     await prepare();

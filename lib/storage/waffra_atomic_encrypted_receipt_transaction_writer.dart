@@ -153,15 +153,19 @@ class WaffraAtomicEncryptedReceiptTransactionWriter {
         if (smsHash != null && hashes.contains(smsHash)) {
           throw StateError('This bank transaction was already confirmed.');
         }
-        final amountMinor = ((record['amount'] as num) * 100).round();
+        // The caller can modify the picker/form map while the native lock
+        // and source witness are awaited. Commit ONLY the immutable,
+        // pre-confirmation snapshot into both normalized SQL and ledger JSON.
+        // Otherwise the two sources can disagree despite one SQL transaction.
+        final amountMinor = ((committedRecord['amount'] as num) * 100).round();
         await snapshot.store.customStatement(
           'INSERT INTO fresh_finance_entries '
           '(entry_id,title,category_snapshot,amount_minor,is_income,'
           'occurred_iso,receipt_count,source_json) VALUES(?,?,?,?,?,?,?,?)',
           [
-            entryId, record['title'], record['category'], amountMinor,
-            record['income'] == true ? 1 : 0, record['date'], 0,
-            jsonEncode(committedRecord),
+            entryId, committedRecord['title'], committedRecord['category'],
+            amountMinor, committedRecord['income'] == true ? 1 : 0,
+            committedRecord['date'], 0, jsonEncode(committedRecord),
           ],
         );
         // Nested drift transactions are savepoints on the SAME SQLCipher DB.

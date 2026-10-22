@@ -8,12 +8,30 @@ run_android_test() {
   seconds="$2"
   echo "::group::Android integration: ${filename}"
   echo "ANDROID_TEST_START:${filename}"
+  # Keep a short crash-only log *before* Flutter connects to its VM service.
+  # If the VM service disappears, adb may be offline by the time test exits.
+  local crash_log crash_pid
+  crash_log="$(mktemp)"
+  adb -s emulator-5554 logcat -c >/dev/null 2>&1 || true
+  adb -s emulator-5554 logcat -v brief \
+    'AndroidRuntime:E' 'libc:F' 'flutter:E' '*:S' \
+    > "${crash_log}" 2>&1 &
+  crash_pid="$!"
   if timeout --signal=TERM --kill-after=20s "${seconds}s" \
     flutter test "integration_test/${filename}" -d emulator-5554 --reporter expanded; then
+    kill "${crash_pid}" 2>/dev/null || true
+    wait "${crash_pid}" 2>/dev/null || true
+    rm -f "${crash_log}"
     echo "ANDROID_TEST_PASS:${filename}"
   else
     code="$?"
     echo "::error title=Android emulator failure::${filename} failed or exceeded ${seconds}s (exit=${code})"
+    kill "${crash_pid}" 2>/dev/null || true
+    wait "${crash_pid}" 2>/dev/null || true
+    echo "Crash-only AndroidRuntime/libc/flutter logs captured before VM disconnect:"
+    tail -n 100 "${crash_log}" || true
+    rm -f "${crash_log}"
+    timeout 10s adb -s emulator-5554 get-state || true
     timeout 20s adb -s emulator-5554 logcat -d -t 120 '*:E' || true
     exit "${code}"
   fi
