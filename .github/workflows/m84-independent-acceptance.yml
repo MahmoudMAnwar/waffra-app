@@ -1,0 +1,31 @@
+name: Waffra M84 Safe Startup Source Evidence
+
+on:
+  pull_request:
+    paths:
+      - 'test/storage/m84_parallel_startup_source_guard_test.dart'
+      - '.github/workflows/m84-independent-acceptance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  independent-acceptance:
+    name: M84 encrypted/legacy source fail-closed startup
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout tested commit
+        uses: actions/checkout@v4
+      - name: Set up Flutter stable
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve dependencies
+        run: flutter pub get
+      - name: Static-analyze acceptance tests
+        run: dart analyze test/storage/m84_parallel_startup_source_guard_test.dart
+      - name: Run isolated acceptance tests
+        run: flutter test test/storage/m84_parallel_startup_source_guard_test.dart --reporter expanded
