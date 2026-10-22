@@ -85,7 +85,7 @@ test('encrypted records work, but Bob cannot read, write or delete them', async 
   await assertFails(getDoc(doc(bob, recordPath)));
   await assertFails(setDoc(doc(bob, recordPath), encryptedRecord()));
   await assertFails(deleteDoc(doc(bob, recordPath)));
-  await assertSucceeds(deleteDoc(doc(alice, recordPath)));
+  await assertFails(deleteDoc(doc(alice, recordPath)));
 });
 
 test('finance plaintext, foreign fields and invalid encryption versions are denied', async () => {
@@ -115,4 +115,54 @@ test('a mutation with a lower local version cannot overwrite a newer one', async
     encryptedRecord({ localVersion: 10 })));
   await assertFails(setDoc(doc(alice, recordPath),
     encryptedRecord({ localVersion: 2, mutationId: 'older' })));
+});
+
+test('equal-version overwrite and replay cannot change financial ciphertext', async () => {
+  const alice = env.authenticatedContext('alice').firestore();
+  await assertSucceeds(setDoc(doc(alice, path), vault('alice')));
+  await assertSucceeds(setDoc(doc(alice, recordPath), encryptedRecord()));
+  await assertFails(setDoc(doc(alice, recordPath),
+    encryptedRecord({ ciphertext: 'forged-replay', mutationId: 'mutation-0002' })));
+  await assertFails(setDoc(doc(alice, recordPath),
+    encryptedRecord({ localVersion: 1, mutationId: 'mutation-0002' })));
+  const current = await getDoc(doc(alice, recordPath));
+  assert.equal(current.data().ciphertext, encryptedRecord().ciphertext);
+});
+
+test('one sequential revision advances but a second same-version writer conflicts', async () => {
+  const alice = env.authenticatedContext('alice').firestore();
+  await assertSucceeds(setDoc(doc(alice, path), vault('alice')));
+  await assertSucceeds(setDoc(doc(alice, recordPath), encryptedRecord()));
+  await assertSucceeds(setDoc(doc(alice, recordPath),
+    encryptedRecord({
+      localVersion: 2, mutationId: 'mutation-device-a',
+      ciphertext: 'ciphertext-from-device-a',
+    })));
+  await assertFails(setDoc(doc(alice, recordPath),
+    encryptedRecord({
+      localVersion: 2, mutationId: 'mutation-device-b',
+      ciphertext: 'ciphertext-from-device-b',
+    })));
+  const winner = await getDoc(doc(alice, recordPath));
+  assert.equal(winner.data().localVersion, 2);
+  assert.equal(winner.data().ciphertext, 'ciphertext-from-device-a');
+});
+
+test('version jumps and deleting either vault or finance record are blocked', async () => {
+  const alice = env.authenticatedContext('alice').firestore();
+  await assertSucceeds(setDoc(doc(alice, path), vault('alice')));
+  await assertSucceeds(setDoc(doc(alice, recordPath), encryptedRecord()));
+  await assertFails(setDoc(doc(alice, recordPath),
+    encryptedRecord({
+      localVersion: 999, mutationId: 'jump-ahead',
+    })));
+  await assertFails(deleteDoc(doc(alice, recordPath)));
+  await assertFails(deleteDoc(doc(alice, path)));
+});
+
+test('disabled sync parent refuses new encrypted financial uploads', async () => {
+  const alice = env.authenticatedContext('alice').firestore();
+  await assertSucceeds(setDoc(doc(alice, path),
+    { ...vault('alice'), syncEnabled: false }));
+  await assertFails(setDoc(doc(alice, recordPath), encryptedRecord()));
 });
