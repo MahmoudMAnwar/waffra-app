@@ -171,10 +171,17 @@ class WaffraEncryptedModuleProjectionGuard {
     for (final item in after.entries) {
       final old = before[item.key];
       if (old != null && _same(old, item.value)) continue;
-      await repository.save(
-        module, item.value,
-        replaceExisting: old != null,
-      );
+      try {
+        await repository.save(
+          module, item.value,
+          replaceExisting: old != null,
+        );
+      } on ArgumentError {
+        // An invalid Home payload is a rejected atomic encrypted mutation,
+        // not a partial create. Keep the existing screen contract: failure
+        // is reported as StateError while the SQL transaction rolls back.
+        throw StateError('Invalid encrypted finance module edit.');
+      }
     }
 
     // A partial SQL update must never be committed as a successful UI save.
