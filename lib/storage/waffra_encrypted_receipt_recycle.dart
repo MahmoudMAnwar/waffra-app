@@ -197,6 +197,7 @@ CREATE TABLE IF NOT EXISTS $_blobs (
   Future<WaffraReceiptRecycleResult> moveToRecycle({
     required String entryId,
     required int expectedGeneration,
+    required List<String> expectedImageHashes,
     required DateTime now,
     required bool userConfirmed,
   }) async {
@@ -205,9 +206,20 @@ CREATE TABLE IF NOT EXISTS $_blobs (
       throw StateError('User must confirm receipt removal.');
     }
     if (entryId.trim().isEmpty || entryId.length > 128 ||
-        expectedGeneration < 0) {
+        expectedGeneration < 0 ||
+        expectedImageHashes.isEmpty ||
+        expectedImageHashes.length >
+            WaffraEncryptedReceiptVault.maxReceiptsPerEntry ||
+        expectedImageHashes.any((digest) =>
+          digest.length != 64 ||
+          digest.split('').any(
+            (character) => !'0123456789abcdef'.contains(character)))) {
       throw ArgumentError('Invalid receipt deletion witness.');
     }
+    // M116 image replacement has its own SHA-256 CAS but intentionally
+    // does not increment the ledger generation. Both witnesses are needed
+    // so a stale delete cannot discard an image replaced in the meantime.
+    final imageWitness = List<String>.unmodifiable(expectedImageHashes);
     return WaffraExperimentalWriterGate(
       disposableDirectory: writerDirectory,
       experimentalEnabled: true,
@@ -227,10 +239,14 @@ CREATE TABLE IF NOT EXISTS $_blobs (
         final originals = await receiptVault.readAll(entryId);
         final references = _references(refs);
         if (originals.length != references.length || originals.isEmpty ||
+            originals.length != imageWitness.length ||
             originals.length > WaffraEncryptedReceiptVault.maxReceiptsPerEntry) {
           throw StateError('Encrypted receipt references and images differ.');
         }
         for (var i = 0; i < originals.length; i++) {
+          if (originals[i].sha256Hex != imageWitness[i]) {
+            throw StateError('Receipt image changed; reload before deleting.');
+          }
           if (originals[i].position != i ||
               !WaffraEncryptedReceiptReference.matches(
                 references[i], entryId, i,
