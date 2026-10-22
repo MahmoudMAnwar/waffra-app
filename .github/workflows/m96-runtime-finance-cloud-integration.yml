@@ -42,7 +42,13 @@ jobs:
           app = Path('lib/main.dart').read_text()
           widget = Path('lib/waffra_widget_capture.part.dart').read_text()
           persistence = Path('lib/storage/waffra_home_finance_persistence.dart').read_text()
-          assert 'commitConfirmedLegacySms(' in app
+          # M110 Home and Widget dispatch confirmed SMS via one verified
+          # backend authority; legacy journal access remains internal.
+          assert '_financeAuthority.commitConfirmedSms(' in app
+          assert 'WaffraFinanceRoute.bulkSmsConfirmedSave' in app
+          assert '_homeFinancePersistence.commitConfirmedLegacySms(' not in app
+          assert '_homeFinancePersistence.saveLegacy(' not in app
+          assert '_financeAuthority.saveCaptured(' in app
           authority = Path('lib/storage/waffra_verified_finance_authority.dart').read_text()
           assert '_financeAuthority.commitConfirmedSms(' in widget
           assert 'WaffraFinanceRoute.widgetSmsConfirmedSave' in widget
