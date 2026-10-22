@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -15,6 +16,7 @@ class WaffraCrashlyticsOptIn {
   WaffraCrashlyticsOptIn._();
 
   static const consentKey = 'waffra_crash_diagnostics_consent_v1';
+  static final ValueNotifier<bool> consent = ValueNotifier<bool>(false);
 
   static bool mayTransmit({
     required bool consent,
@@ -27,6 +29,7 @@ class WaffraCrashlyticsOptIn {
   static Future<bool> synchronize() async {
     if (Firebase.apps.isEmpty) return false;
     final prefs = await SharedPreferences.getInstance();
+    consent.value = prefs.getBool(consentKey) ?? false;
     final allow = mayTransmit(
       consent: prefs.getBool(consentKey) ?? false,
       configReviewed: waffraCrashlyticsReviewed,
@@ -46,6 +49,7 @@ class WaffraCrashlyticsOptIn {
     if (!await prefs.setBool(consentKey, consent)) {
       throw StateError('Diagnostics permission could not be persisted.');
     }
+    WaffraCrashlyticsOptIn.consent.value = consent;
     return synchronize();
   }
 
