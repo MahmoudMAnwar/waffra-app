@@ -12,6 +12,7 @@ on:
       - 'feature/combined-finance-cloud-validation-m70'
       - 'feature/m99-production-sync-queue-and-android-build'
       - 'feature/waffra-unified-finance-release-candidate'
+      - 'feature/m106-play-privacy-observability-readiness'
   workflow_dispatch:
 
 # Fast-build concurrency: only the latest pushed revision needs an APK.
@@ -718,6 +719,58 @@ jobs:
         with:
           name: Waffra-Android-ARM64-Release
           path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
+
+      # AAB is a TEST candidate. Do NOT upload to a Production Play track
+      # until the independent finance/security/physical-device gates pass.
+      - name: Enforce Google Play Android 16 target SDK 36 for candidate AAB
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          path = Path('android/app/build.gradle.kts')
+          text = path.read_text()
+          if 'targetSdk = flutter.targetSdkVersion' in text:
+              text = text.replace('targetSdk = flutter.targetSdkVersion',
+                                  'targetSdk = 36', 1)
+          if 'compileSdk = flutter.compileSdkVersion' in text:
+              text = text.replace('compileSdk = flutter.compileSdkVersion',
+                                  'compileSdk = 36', 1)
+          if not re.search(r'\btargetSdk\s*=\s*36\b', text):
+              raise SystemExit('FAIL: expected Android application targetSdk = 36')
+          if not re.search(r'\bcompileSdk\s*=\s*36\b', text):
+              raise SystemExit('FAIL: expected Android application compileSdk = 36')
+          path.write_text(text)
+          print('Candidate AAB SDK policy: targetSdk = 36; compileSdk = 36')
+          PY
+
+      - name: Build Android App Bundle candidate for Google Play internal testing
+        shell: bash
+        env:
+          WAFFRA_RELEASE_STORE_PASSWORD: ${{ secrets.WAFFRA_RELEASE_STORE_PASSWORD }}
+          WAFFRA_RELEASE_KEY_PASSWORD: ${{ secrets.WAFFRA_RELEASE_KEY_PASSWORD }}
+        run: |
+          flutter build appbundle --no-pub --release --target-platform android-arm64 --tree-shake-icons
+          test -s build/app/outputs/bundle/release/app-release.aab
+
+      - name: Validate signed AAB archive (not a Play approval)
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundle=build/app/outputs/bundle/release/app-release.aab
+          unzip -t "$bundle" > /dev/null
+          jarsigner -verify "$bundle" > /dev/null
+          sha256sum "$bundle" | tee aab_candidate_sha256.txt
+          echo 'Signed candidate AAB built. Store policy and physical-install proof still required.'
+
+      - name: Upload signed Google Play internal-testing AAB candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: Waffra-Android-API36-AAB-Internal-Test-Candidate
+          path: |
+            build/app/outputs/bundle/release/app-release.aab
+            aab_candidate_sha256.txt
           retention-days: 30
 
       # Only save compilation state after the signed APK was built, verified
