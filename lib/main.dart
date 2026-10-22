@@ -5034,9 +5034,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
     color:selected?Colors.white:null,fontWeight:selected?FontWeight.bold:FontWeight.normal));
  Future<void> goalDialog()async {
   final name=TextEditingController(),target=TextEditingController();
-  final prefs=await SharedPreferences.getInstance();
+  final customGoals=await _homeFinancePersistence.loadCustomGoalSuggestions();
   if(!mounted){name.dispose();target.dispose();return;}
-  final customGoals=prefs.getStringList('waffra_custom_goals_v1')??<String>[];
   final defaults=waffraDefaultGoalNames(waffraIsEnglish);
   final allDefaultNames={
    ...waffraDefaultGoalNames(false).map(waffraNormalizeGoal),
@@ -5168,8 +5167,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    if(selectedGoal==otherGoal){
     final key=waffraNormalizeGoal(g.name);
     if(!allDefaultNames.contains(key)&&!customGoals.any((entry)=>waffraNormalizeGoal(entry)==key)){
-     await const WaffraLiveLegacyFinanceGuard().requireLegacySource(prefs);
-   await prefs.setStringList('waffra_custom_goals_v1',[...customGoals,g.name]);
+     await _homeFinancePersistence.addCustomGoalSuggestion(g.name);
     }
    }
    if(!mounted)return;
