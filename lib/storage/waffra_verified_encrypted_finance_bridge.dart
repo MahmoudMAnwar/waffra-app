@@ -168,6 +168,65 @@ class WaffraVerifiedEncryptedFinanceBridge {
     );
   }
 
+  /// Replace one existing image after verifying source and the expected
+  /// previous image digest under the common Home/Widget native lock.
+  /// Never delete, renumber, or modify transaction history in this path.
+  Future<void> replaceVerifiedReceiptImage({
+    required String entryId,
+    required int position,
+    required Uint8List image,
+    required String expectedSha256,
+  }) async {
+    if (!experimentalEnabled) {
+      throw StateError('Encrypted receipt replacement is disabled.');
+    }
+    final captured = Uint8List.fromList(image);
+    return WaffraExperimentalWriterGate(
+      disposableDirectory: writerDirectory,
+      experimentalEnabled: true,
+    ).withExclusiveAccess(() async {
+      await _requireActivatedUnderLock();
+      final current = await snapshot.read();
+      final raw = current.values['entries'];
+      if (raw is! String) {
+        throw StateError('Encrypted finance ledger is unavailable.');
+      }
+      final rows = jsonDecode(raw);
+      if (rows is! List) {
+        throw StateError('Encrypted finance ledger is malformed.');
+      }
+      final matching = rows.where((row) =>
+          row is Map && row['id'] == entryId).toList();
+      if (matching.length != 1) {
+        throw StateError('Encrypted receipt owner is missing or duplicated.');
+      }
+      final refs = (matching.single as Map)['receiptPath'];
+      if (refs is! String || refs.isEmpty) {
+        throw StateError('Encrypted receipt references are missing.');
+      }
+      final vault = WaffraEncryptedReceiptVault(
+        store: snapshot.store, experimentalEnabled: true,
+      );
+      final prior = await vault.readAll(entryId);
+      if (position < 0 || position >= prior.length) {
+        throw StateError('Encrypted receipt position is invalid.');
+      }
+      // The existing verified read gateway checks that references and blobs
+      // belong to this same transaction before any destructive mutation.
+      await WaffraEncryptedReceiptReadGateway(
+        receiptVault: vault,
+        experimentalEnabled: true,
+        verifyEncryptedSource: _requireActivatedUnderLock,
+      ).read(entryId: entryId, encodedReferences: refs);
+      await vault.replaceExistingImage(
+        entryId: entryId,
+        position: position,
+        image: captured,
+        expectedSha256: expectedSha256,
+      );
+    });
+  }
+
   /// Merge confirmed SHA-256 SMS fingerprints under one native app/widget lock.
   /// No raw bank SMS is stored or sent anywhere.
   Future<WaffraFinanceSnapshotState> mergeConfirmedSmsHashes(
