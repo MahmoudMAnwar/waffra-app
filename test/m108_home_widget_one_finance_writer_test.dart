@@ -19,7 +19,9 @@ void main() {
     expect(router, contains('legacy.commitConfirmedLegacySms('));
     expect(router, contains('sourceGuard.inspect()'));
     expect(router, contains('encryptedSession!.appendConfirmed('));
-    expect(home, contains('_homeFinancePersistence.commitConfirmedLegacySms('));
+    expect(home, isNot(contains('_homeFinancePersistence.commitConfirmedLegacySms(')));
+    expect(home, contains('_financeAuthority.commitConfirmedSms('));
+    expect(home, contains('WaffraFinanceRoute.bulkSmsConfirmedSave'));
     // Widget cannot introduce a second custom transaction/journal
     // algorithm whose view of the ledger races against the main app.
     expect(widget, isNot(contains('journal.prepare(')));
