@@ -119,6 +119,32 @@ void main() {
     expect((await currentSnapshot().read()).generation, 0);
   });
 
+  test('M76 refuses separately owned SQLCipher receipt vaults', () async {
+    final other = WaffraEncryptedStore.openAt(
+      File('${root.path}/other-owner.sqlite'), key: key,
+    );
+    try {
+      final split = WaffraAtomicEncryptedReceiptTransactionWriter(
+        snapshot: currentSnapshot(),
+        receiptVault: WaffraEncryptedReceiptVault(
+          store: other, experimentalEnabled: true,
+        ),
+        writerDirectory: root,
+        experimentalEnabled: true,
+        verifySourceUnderLock: () async {},
+      );
+      await expectLater(split.save(
+        record: entry('split-write'),
+        receiptImages: [Uint8List.fromList([99])],
+        userConfirmed: true,
+      ), throwsA(isA<StateError>()));
+      expect(await normalizedCount(), 0);
+      expect((await currentSnapshot().read()).generation, 0);
+    } finally {
+      await other.close();
+    }
+  });
+
   test('M76 refuses legacy plaintext file paths, raw bank data and zero amounts',
       () async {
     for (final invalid in [
