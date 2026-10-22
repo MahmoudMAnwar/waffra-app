@@ -64,6 +64,10 @@ void main() {
       Map<String, dynamic>.from((jsonDecode(values['entries'] as String)
           as List).singleWhere((row) => row['id'] == id) as Map);
 
+  Future<List<String>> imageDigests(String id) async =>
+      (await vault().readAll(id))
+          .map((image) => image.sha256Hex).toList(growable: false);
+
   setUp(() async {
     permitSource = true;
     directory = await Directory.systemTemp.createTemp('waffra-m118-recycle-');
@@ -90,7 +94,7 @@ void main() {
     final savedBytes = (await vault().readAll('first'))
         .map((item) => item.bytes.toList()).toList();
     final result = await recycle().moveToRecycle(
-      entryId: 'first', expectedGeneration: before.generation,
+      entryId: 'first', expectedImageHashes: await imageDigests('first'), expectedGeneration: before.generation,
       now: createdAt, userConfirmed: true,
     );
     expect(result.generation, before.generation + 1);
@@ -123,11 +127,11 @@ void main() {
     final images = (await vault().readAll('first'))
         .map((part) => part.bytes.toList()).toList();
     final deleted = await recycle().moveToRecycle(
-      entryId: 'first', expectedGeneration: original.generation,
+      entryId: 'first', expectedImageHashes: await imageDigests('first'), expectedGeneration: original.generation,
       now: createdAt, userConfirmed: true,
     );
     final restored = await recycle().restore(
-      entryId: 'first', expectedGeneration: deleted.generation,
+      entryId: 'first', expectedImageHashes: await imageDigests('first'), expectedGeneration: deleted.generation,
       now: createdAt.add(const Duration(days: 29)),
     );
     expect(restored.generation, deleted.generation + 1);
@@ -149,12 +153,12 @@ void main() {
   test('M118: expired archive rejects restore and remains encrypted', () async {
     await addWithReceipts('first');
     final deleted = await recycle().moveToRecycle(
-      entryId: 'first',
+      entryId: 'first', expectedImageHashes: await imageDigests('first'),
       expectedGeneration: (await snapshot().read()).generation,
       now: createdAt, userConfirmed: true,
     );
     await expectLater(recycle().restore(
-      entryId: 'first', expectedGeneration: deleted.generation,
+      entryId: 'first', expectedImageHashes: await imageDigests('first'), expectedGeneration: deleted.generation,
       now: createdAt.add(const Duration(days: 30)),
     ), throwsStateError);
     expect((await snapshot().read()).generation, deleted.generation);
@@ -170,23 +174,23 @@ void main() {
     await addWithReceipts('first');
     final generation = (await snapshot().read()).generation;
     await expectLater(recycle().moveToRecycle(
-      entryId: 'first', expectedGeneration: generation,
+      entryId: 'first', expectedImageHashes: await imageDigests('first'), expectedGeneration: generation,
       now: createdAt, userConfirmed: false,
     ), throwsStateError);
     await expectLater(recycle().moveToRecycle(
-      entryId: 'first', expectedGeneration: generation - 1,
+      entryId: 'first', expectedImageHashes: await imageDigests('first'), expectedGeneration: generation - 1,
       now: createdAt, userConfirmed: true,
     ), throwsStateError);
     permitSource = false;
     await expectLater(recycle().moveToRecycle(
-      entryId: 'first', expectedGeneration: generation,
+      entryId: 'first', expectedImageHashes: await imageDigests('first'), expectedGeneration: generation,
       now: createdAt, userConfirmed: true,
     ), throwsStateError);
     expect(await vault().readAll('first'), hasLength(2));
     expect((await snapshot().read()).generation, generation);
     permitSource = true;
     await expectLater(recycle(enabled: false).moveToRecycle(
-      entryId: 'first', expectedGeneration: generation,
+      entryId: 'first', expectedImageHashes: await imageDigests('first'), expectedGeneration: generation,
       now: createdAt, userConfirmed: true,
     ), throwsStateError);
   });
@@ -210,7 +214,7 @@ BEGIN
 END
 ''');
     await expectLater(recycle().moveToRecycle(
-      entryId: 'first', expectedGeneration: before.generation,
+      entryId: 'first', expectedImageHashes: await imageDigests('first'), expectedGeneration: before.generation,
       now: createdAt, userConfirmed: true,
     ), throwsA(anything));
     final after = await snapshot().read();
@@ -222,7 +226,7 @@ END
   test('M118: tampered archive refuses partial recovery', () async {
     await addWithReceipts('first');
     final deleted = await recycle().moveToRecycle(
-      entryId: 'first',
+      entryId: 'first', expectedImageHashes: await imageDigests('first'),
       expectedGeneration: (await snapshot().read()).generation,
       now: createdAt, userConfirmed: true,
     );
@@ -232,12 +236,33 @@ END
       [Uint8List.fromList([0, 0])],
     );
     await expectLater(recycle().restore(
-      entryId: 'first', expectedGeneration: deleted.generation,
+      entryId: 'first', expectedImageHashes: await imageDigests('first'), expectedGeneration: deleted.generation,
       now: createdAt.add(const Duration(days: 1)),
     ), throwsStateError);
     expect((await snapshot().read()).generation, deleted.generation);
     expect(await vault().readAll('first'), isEmpty);
     expect((await recycle().pendingRecoveries()).containsKey('first'), true);
+  });
+
+  test('M118: in-place replaced image blocks stale delete despite unchanged ledger revision',
+      () async {
+    await addWithReceipts('first');
+    final loaded = await snapshot().read();
+    final oldHashes = await imageDigests('first');
+    await vault().replaceExistingImage(
+      entryId: 'first', position: 0,
+      image: Uint8List.fromList([90, 91, 92]),
+      expectedSha256: oldHashes.first,
+    );
+    expect((await snapshot().read()).generation, loaded.generation);
+    await expectLater(recycle().moveToRecycle(
+      entryId: 'first', expectedImageHashes: oldHashes,
+      expectedGeneration: loaded.generation,
+      now: createdAt, userConfirmed: true,
+    ), throwsStateError);
+    expect(await vault().readAll('first'), hasLength(2));
+    expect((await vault().readAll('first')).first.bytes, [90, 91, 92]);
+    expect((await recycle().pendingRecoveries()).containsKey('first'), false);
   });
 
   test('M118: concurrent widget write invalidates stale deletion', () async {
@@ -251,7 +276,7 @@ END
       messageHashes: [null], userConfirmed: true,
     );
     await expectLater(recycle().moveToRecycle(
-      entryId: 'first', expectedGeneration: baseline.generation,
+      entryId: 'first', expectedImageHashes: await imageDigests('first'), expectedGeneration: baseline.generation,
       now: createdAt, userConfirmed: true,
     ), throwsStateError);
     final latest = await snapshot().read();
