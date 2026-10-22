@@ -1,0 +1,42 @@
+name: Waffra M104 Final APK Approval Guard (Fail Closed)
+
+on:
+  pull_request:
+    paths:
+      - 'lib/main.dart'
+      - 'lib/waffra_widget_capture.part.dart'
+      - 'lib/storage/**'
+      - 'scripts/m104_release_readiness.py'
+      - '.github/workflows/m104-apk-release-approval-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  final-release-approval:
+    name: M104 final APK withheld until source and device evidence exists
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect candidate sources and create non-sensitive release audit
+        id: gate
+        continue-on-error: true
+        shell: bash
+        run: |
+          WAFFRA_RELEASE_EVIDENCE=release-readiness.json python3 scripts/m104_release_readiness.py
+      - name: Attach reviewer-readable release blockers (no secrets)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: waffra-m104-release-audit
+          path: release-readiness.json
+          retention-days: 14
+      - name: Fail final-release gate if source or device proof missing
+        shell: bash
+        run: |
+          test "${{ steps.gate.outcome }}" = "success" || {
+            echo "::error::FINAL APK and main merge not approved. Inspect release-readiness artifact."
+            exit 1
+          }
