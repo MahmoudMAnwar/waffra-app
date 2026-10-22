@@ -11,6 +11,8 @@ import 'waffra_encrypted_finance_ui_patch.dart';
 import 'waffra_experimental_writer_gate.dart';
 import 'waffra_finance_read_view.dart';
 import 'waffra_encrypted_receipt_vault.dart';
+import 'waffra_encrypted_receipt_recycle.dart';
+import 'waffra_receipt_screen_contract.dart';
 import 'waffra_encrypted_receipt_read_gateway.dart';
 import 'waffra_live_legacy_finance_guard.dart';
 import 'waffra_unified_finance_writer.dart';
@@ -225,6 +227,98 @@ class WaffraVerifiedEncryptedFinanceBridge {
         expectedSha256: expectedSha256,
       );
     });
+  }
+
+  WaffraEncryptedReceiptRecycle get _receiptRecycle =>
+      WaffraEncryptedReceiptRecycle(
+        snapshot: snapshot,
+        receiptVault: WaffraEncryptedReceiptVault(
+          store: snapshot.store,
+          experimentalEnabled: true,
+        ),
+        writerDirectory: writerDirectory,
+        verifySourceUnderLock: _requireActivatedUnderLock,
+        experimentalEnabled: experimentalEnabled,
+      );
+
+  /// Screen reads always use encrypted in-memory BLOBs, a single finance
+  /// generation and the 30-day recycle witness. No plain file fallback.
+  /// A concurrent writer forces the UI to reload instead of showing a
+  /// mismatched receipt count or archive status.
+  Future<WaffraReceiptScreenState> loadVerifiedReceiptScreen(
+    String entryId,
+  ) async {
+    if (!experimentalEnabled || entryId.trim().isEmpty ||
+        entryId.length > 128) {
+      throw StateError('Verified encrypted receipt screen is unavailable.');
+    }
+    final before = await loadForHomeAndWidget();
+    final raw = before.ledgerRaw;
+    if (raw == null) {
+      throw StateError('Encrypted financial ledger is missing.');
+    }
+    final decoded = jsonDecode(raw);
+    if (decoded is! List) {
+      throw StateError('Encrypted transaction list is malformed.');
+    }
+    final matching = decoded.where(
+      (item) => item is Map && item['id'] == entryId,
+    ).toList();
+    if (matching.length != 1) {
+      throw StateError('Encrypted receipt owner is missing or duplicated.');
+    }
+    final refs = (matching.single as Map)['receiptPath'];
+    if (refs != null && refs is! String) {
+      throw StateError('Encrypted receipt reference has an invalid type.');
+    }
+    final images = await loadReceiptImages(entryId: entryId);
+    final pending = await _receiptRecycle.pendingRecoveries();
+    final after = await loadForHomeAndWidget();
+    if (before.generation != after.generation ||
+        before.digest != after.digest ||
+        (refs != null && pending.containsKey(entryId)) ||
+        (images.isNotEmpty && refs == null)) {
+      throw StateError('Encrypted receipts changed while being loaded.');
+    }
+    return WaffraReceiptScreenState(
+      entryId: entryId,
+      generation: after.generation,
+      images: images,
+      recoverUntilMs: pending[entryId],
+    );
+  }
+
+  Future<WaffraReceiptRecycleResult> moveReceiptBatchToRecycle({
+    required WaffraReceiptScreenState baseline,
+    required bool userConfirmed,
+    required DateTime now,
+  }) {
+    if (!experimentalEnabled || !baseline.hasActiveImages ||
+        baseline.isInRecycleBin) {
+      throw StateError('No verified active receipt batch may be removed.');
+    }
+    return _receiptRecycle.moveToRecycle(
+      entryId: baseline.entryId,
+      expectedGeneration: baseline.generation,
+      expectedImageHashes: List<String>.unmodifiable(baseline.imageSha256),
+      now: now,
+      userConfirmed: userConfirmed,
+    );
+  }
+
+  Future<WaffraReceiptRecycleResult> restoreReceiptBatchFromRecycle({
+    required WaffraReceiptScreenState baseline,
+    required DateTime now,
+  }) {
+    if (!experimentalEnabled || !baseline.isInRecycleBin ||
+        baseline.hasActiveImages) {
+      throw StateError('No archived receipt batch is eligible for restore.');
+    }
+    return _receiptRecycle.restore(
+      entryId: baseline.entryId,
+      expectedGeneration: baseline.generation,
+      now: now,
+    );
   }
 
   /// Merge confirmed SHA-256 SMS fingerprints under one native app/widget lock.

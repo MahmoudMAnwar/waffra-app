@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'waffra_encrypted_finance_session.dart';
+import 'waffra_receipt_screen_contract.dart';
+import 'waffra_encrypted_receipt_recycle.dart';
 import 'waffra_atomic_encrypted_receipt_transaction_writer.dart';
 import 'waffra_finance_read_view.dart';
 import 'waffra_home_finance_persistence.dart';
@@ -265,6 +267,61 @@ class WaffraVerifiedFinanceAuthority {
       throw StateError('Encrypted receipt read requires verified SQLCipher.');
     }
     return encryptedSession!.readReceiptImages(entryId);
+  }
+
+  /// Only the independently verified encrypted source may service the
+  /// encrypted image viewer. No SharedPreferences or file-path fallback.
+  Future<WaffraReceiptScreenState> loadVerifiedReceiptScreen({
+    required WaffraFinanceRoute route,
+    required String entryId,
+  }) async {
+    if (route != WaffraFinanceRoute.receiptView ||
+        entryId.trim().isEmpty || entryId.length > 128) {
+      throw ArgumentError('Invalid verified receipt screen route.');
+    }
+    final backend = await _requireRoute(route);
+    if (backend != WaffraRuntimeFinanceBackend.verifiedEncrypted) {
+      throw StateError('Verified SQLCipher receipt source is required.');
+    }
+    return encryptedSession!.loadReceiptScreen(entryId);
+  }
+
+  Future<WaffraReceiptRecycleResult> moveEncryptedReceiptBatchToRecycle({
+    required WaffraFinanceRoute route,
+    required WaffraReceiptScreenState baseline,
+    required bool userConfirmed,
+    required DateTime now,
+  }) async {
+    if (route != WaffraFinanceRoute.receiptRemoveAndRollback) {
+      throw ArgumentError('Wrong route for encrypted receipt recycle.');
+    }
+    if (!userConfirmed) {
+      throw StateError('Receipt removal requires explicit user approval.');
+    }
+    final backend = await _requireRoute(route);
+    if (backend != WaffraRuntimeFinanceBackend.verifiedEncrypted) {
+      throw StateError('Encrypted receipt removal needs verified SQLCipher.');
+    }
+    return encryptedSession!.moveReceiptBatchToRecycle(
+      baseline: baseline, userConfirmed: true, now: now,
+    );
+  }
+
+  Future<WaffraReceiptRecycleResult> restoreEncryptedReceiptBatchFromRecycle({
+    required WaffraFinanceRoute route,
+    required WaffraReceiptScreenState baseline,
+    required DateTime now,
+  }) async {
+    if (route != WaffraFinanceRoute.receiptRemoveAndRollback) {
+      throw ArgumentError('Wrong route for encrypted receipt restore.');
+    }
+    final backend = await _requireRoute(route);
+    if (backend != WaffraRuntimeFinanceBackend.verifiedEncrypted) {
+      throw StateError('Encrypted receipt restore needs verified SQLCipher.');
+    }
+    return encryptedSession!.restoreReceiptBatchFromRecycle(
+      baseline: baseline, now: now,
+    );
   }
 
   Future<WaffraFinanceAuthoritySmsCommit> commitConfirmedSms({

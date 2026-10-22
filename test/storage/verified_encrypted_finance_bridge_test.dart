@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -96,6 +97,94 @@ void main() {
   tearDown(() async {
     await vault.close();
     if (await directory.exists()) await directory.delete(recursive: true);
+  });
+
+  test('M119 receipt screen reads BLOBs, recycles and restores with one source',
+      () async {
+    await bridge().appendConfirmedWithReceiptBytes(
+      record: record('receipt-screen'),
+      images: [
+        Uint8List.fromList([1, 2, 3]),
+        Uint8List.fromList([4, 5, 6]),
+      ],
+      userConfirmed: true,
+    );
+    final baseline = await bridge().loadVerifiedReceiptScreen('receipt-screen');
+    expect(baseline.images.length, 2);
+    expect(baseline.isInRecycleBin, false);
+    expect(baseline.imageSha256, hasLength(2));
+    final removed = await bridge().moveReceiptBatchToRecycle(
+      baseline: baseline,
+      userConfirmed: true,
+      now: DateTime.utc(2026, 10, 23),
+    );
+    expect(removed.receiptCount, 2);
+    final trash = await bridge().loadVerifiedReceiptScreen('receipt-screen');
+    expect(trash.isInRecycleBin, true);
+    expect(trash.images, isEmpty);
+    expect(trash.recoverUntilMs, greaterThan(0));
+    final restored = await bridge().restoreReceiptBatchFromRecycle(
+      baseline: trash,
+      now: DateTime.utc(2026, 10, 24),
+    );
+    expect(restored.receiptCount, 2);
+    final recovered = await bridge().loadVerifiedReceiptScreen('receipt-screen');
+    expect(recovered.images.map((img) => img.toList()).toList(),
+        [[1, 2, 3], [4, 5, 6]]);
+    expect(recovered.isInRecycleBin, false);
+    expect(recovered.generation, baseline.generation + 2);
+  });
+
+  test('M119 stale receipt image witness refuses encrypted batch deletion',
+      () async {
+    await bridge().appendConfirmedWithReceiptBytes(
+      record: record('replace-after-view'),
+      images: [Uint8List.fromList([1, 2, 3])],
+      userConfirmed: true,
+    );
+    final stale = await bridge().loadVerifiedReceiptScreen('replace-after-view');
+    await bridge().replaceVerifiedReceiptImage(
+      entryId: stale.entryId,
+      position: 0,
+      image: Uint8List.fromList([9, 8, 7]),
+      expectedSha256: stale.imageSha256.first,
+    );
+    await expectLater(
+      bridge().moveReceiptBatchToRecycle(
+        baseline: stale,
+        userConfirmed: true,
+        now: DateTime.utc(2026, 10, 23),
+      ),
+      throwsStateError,
+    );
+    final latest = await bridge().loadVerifiedReceiptScreen('replace-after-view');
+    expect(latest.images.single, [9, 8, 7]);
+    expect(latest.isInRecycleBin, false);
+  });
+
+  test('M119 unverified source blocks receipt panel and archived mutation',
+      () async {
+    await bridge().appendConfirmedWithReceiptBytes(
+      record: record('locked-receipt'),
+      images: [Uint8List.fromList([10, 20])],
+      userConfirmed: true,
+    );
+    final baseline = await bridge().loadVerifiedReceiptScreen('locked-receipt');
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(WaffraLiveLegacyFinanceGuard.pendingKey, true);
+    await expectLater(
+      bridge().loadVerifiedReceiptScreen('locked-receipt'),
+      throwsStateError,
+    );
+    await expectLater(
+      bridge().moveReceiptBatchToRecycle(
+        baseline: baseline,
+        userConfirmed: true,
+        now: DateTime.utc(2026, 10, 23),
+      ),
+      throwsStateError,
+    );
+    expect((await snapshot().read()).generation, baseline.generation);
   });
 
   test('verified encrypted screen reads come solely from SQLCipher', () async {

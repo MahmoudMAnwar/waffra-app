@@ -1,0 +1,50 @@
+name: Waffra M119 Verified Receipt Screen Gateway
+on:
+  pull_request:
+    paths:
+      - 'lib/storage/waffra_receipt_screen_contract.dart'
+      - 'lib/storage/waffra_verified_receipt_screen_gateway.dart'
+      - 'lib/storage/waffra_verified_finance_authority.dart'
+      - 'lib/storage/waffra_encrypted_finance_session.dart'
+      - 'lib/storage/waffra_verified_encrypted_finance_bridge.dart'
+      - 'lib/waffra_verified_receipt_panel.dart'
+      - 'test/storage/m119_receipt_screen_authority_test.dart'
+      - 'test/storage/verified_encrypted_finance_bridge_test.dart'
+      - 'test/m119_verified_receipt_panel_test.dart'
+      - '.github/workflows/m119-verified-receipt-screen-gateway.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verified-receipt-screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Analyze verified receipt UI and authority integration
+        run: >-
+          dart analyze
+          lib/storage/waffra_receipt_screen_contract.dart
+          lib/storage/waffra_verified_receipt_screen_gateway.dart
+          lib/storage/waffra_verified_finance_authority.dart
+          lib/storage/waffra_encrypted_finance_session.dart
+          lib/storage/waffra_verified_encrypted_finance_bridge.dart
+          lib/waffra_verified_receipt_panel.dart
+          test/storage/m119_receipt_screen_authority_test.dart
+          test/storage/verified_encrypted_finance_bridge_test.dart
+          test/m119_verified_receipt_panel_test.dart
+      - name: Test receipt UI, source isolation, 30-day recovery and concurrency
+        run: >-
+          flutter test
+          test/m119_verified_receipt_panel_test.dart
+          test/storage/m119_receipt_screen_authority_test.dart
+          test/storage/verified_encrypted_finance_bridge_test.dart
+          test/storage/m118_encrypted_receipt_recycle_test.dart
+          test/storage/encrypted_receipt_vault_test.dart
+          test/m117_receipt_retention_contract_acceptance_test.dart
+          --reporter expanded
