@@ -8,6 +8,7 @@ on:
       - 'feature/storage-verified-encrypted-finance-bridge-m61'
       - 'feature/storage-finance-startup-recovery-m62'
       - 'feature/storage-verified-backup-restore-m63'
+      - 'feature/storage-portable-sqlcipher-restore-m64'
   pull_request:
     paths:
       - 'lib/**'
