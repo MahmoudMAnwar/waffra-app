@@ -57,8 +57,7 @@ void main() {
         userConfirmed: true,
       ),
     ]);
-    expect(outcomes.map((item) => item.added).toList(),
-        anyOf([1, 0], [0, 1]));
+    expect(outcomes.map((item) => item.added).toSet(), {0, 1});
     expect(outcomes.fold<int>(0, (sum, item) => sum + item.skippedDuplicates),
         1);
     final saved = await home.loadWithWitness();
