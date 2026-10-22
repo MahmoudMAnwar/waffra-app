@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -19,8 +20,23 @@ void main() {
   testWidgets('Android verified SQLCipher home/widget finance survives restart',
       (tester) async {
     expect(Platform.isAndroid, true);
-    final directory = await (await getTemporaryDirectory())
-        .createTemp('m61-isolated-encrypted-bridge-');
+    Future<T> checkpoint<T>(String phase, Future<T> Function() action) async {
+      // Diagnostic breadcrumbs are deliberately free from financial values,
+      // encryption keys and bank SMS data.
+      // ignore: avoid_print
+      print('M66_ANDROID_BRIDGE_START:$phase');
+      final value = await action().timeout(
+        const Duration(seconds: 45),
+        onTimeout: () => throw TimeoutException(
+          'M66 Android bridge timeout at $phase (45 seconds).',
+        ),
+      );
+      // ignore: avoid_print
+      print('M66_ANDROID_BRIDGE_PASS:$phase');
+      return value;
+    }
+    final directory = await checkpoint('private-dir', () async =>
+      (await getTemporaryDirectory()).createTemp('m61-isolated-encrypted-bridge-'));
     final db = File('${directory.path}/finance.sqlite');
     const key = 'android-m61-only-disposable-secret-key';
     const hash =
@@ -33,9 +49,9 @@ void main() {
     WaffraEncryptedStore? vault;
     try {
       vault = WaffraEncryptedStore.openAt(db, key: key);
-      await WaffraFreshEncryptedVaultBootstrap(
-        store: vault, experimentalEnabled: true,
-      ).initialize(decision: WaffraFirstRunDecision.freshCandidate);
+      await checkpoint('bootstrap', () => WaffraFreshEncryptedVaultBootstrap(
+        store: vault!, experimentalEnabled: true,
+      ).initialize(decision: WaffraFirstRunDecision.freshCandidate));
       WaffraAtomicFinanceSnapshot snapshot() => WaffraAtomicFinanceSnapshot(
             store: vault!, experimentalEnabled: true,
           );
@@ -52,33 +68,33 @@ void main() {
             experimentalEnabled: true,
           );
 
-      await snapshot().initializeEmpty();
-      final migration = await snapshot().commit(
+      await checkpoint('initialize-empty', () => snapshot().initializeEmpty());
+      final migration = await checkpoint('commit-migration', () => snapshot().commit(
         expectedGeneration: 0,
         fullFinanceSnapshot: const {
           'entries': '[]',
           'waffra_goals_v24':
               '[{"id":"vacation","name":"Vacation","target":1000,"saved":100}]',
         },
-      );
+      ));
       final oldDigest = WaffraLegacyPreflight.inspect({
         'entries': '[]',
       }).sourceSha256;
-      await cutover().prepare(
+      await checkpoint('prepare-cutover', () => cutover().prepare(
         sourceDigest: oldDigest,
         targetDigest: migration.digest,
         now: DateTime.utc(2026, 10, 22),
-      );
-      await cutover().verify(now: DateTime.utc(2026, 10, 22));
-      await cutover().acknowledgeExternalActivation(
+      ));
+      await checkpoint('verify-cutover', () => cutover().verify(now: DateTime.utc(2026, 10, 22)));
+      await checkpoint('acknowledge-cutover', () => cutover().acknowledgeExternalActivation(
         externalMarkerVerified: true,
         allWritersRouted: true,
         now: DateTime.utc(2026, 10, 22),
-      );
+      ));
 
-      final home = await bridge().loadForHomeAndWidget();
+      final home = await checkpoint('load-home', () => bridge().loadForHomeAndWidget());
       expect(home.generation, 1);
-      final added = await bridge().appendConfirmedTransactions(
+      final added = await checkpoint('widget-sms-save', () => bridge().appendConfirmedTransactions(
         records: [{
           'id': 'android-widget-1',
           'title': 'POS',
@@ -90,22 +106,22 @@ void main() {
         }],
         messageHashes: [hash],
         userConfirmed: true,
-      );
+      ));
       expect(added.saved, 1);
 
-      final edited = await bridge().saveHomeChanges(
+      final edited = await checkpoint('home-goal-save', () => bridge().saveHomeChanges(
         baseline: home,
         replacements: const {
           'waffra_goals_v24':
               '[{"id":"vacation","name":"Vacation","target":1000,"saved":200}]',
         },
         changedKeys: const {'waffra_goals_v24'},
-      );
+      ));
       expect(edited.generation, 3);
       expect(edited.values['entries'], contains('android-widget-1'));
       expect(edited.values['waffra_sms_hashes_v1'], [hash]);
 
-      await vault.close();
+      await checkpoint('cold-close', () => vault!.close());
       vault = null;
       final prefix = await db.openRead(0, 16).toList();
       final bytes = prefix.expand((segment) => segment).toList();
@@ -113,21 +129,24 @@ void main() {
           isNot([83, 81, 76, 105, 116, 101, 32, 102,
                  111, 114, 109, 97, 116, 32, 51, 0]));
       vault = WaffraEncryptedStore.openAt(db, key: key);
-      final cold = await bridge().loadForHomeAndWidget();
+      final cold = await checkpoint('cold-reload', () => bridge().loadForHomeAndWidget());
       expect(cold.generation, 3);
       expect((jsonDecode(cold.ledgerRaw!) as List), hasLength(1));
       expect(cold.finance.getString('waffra_goals_v24'),
           contains('"saved":200'));
 
-      final original = await SharedPreferences.getInstance();
+      final original = await checkpoint('prefs-check', () => SharedPreferences.getInstance());
       expect(original.getString('entries'), '[]');
       expect(original.getString('waffra_language'), 'ar');
       expect(original.getBool(WaffraLiveLegacyFinanceGuard.activeKey), isTrue);
       // The source selector remains a synthetic test witness. No actual
       // user vault, Firebase service, or production marker is touched.
     } finally {
-      await vault?.close();
-      if (await directory.exists()) await directory.delete(recursive: true);
+      final current = vault;
+      if (current != null) await checkpoint('cleanup-db', () => current.close());
+      if (await directory.exists()) {
+        await checkpoint('cleanup-temp-files', () => directory.delete(recursive: true));
+      }
     }
   });
 }
