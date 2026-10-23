@@ -5455,15 +5455,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
     ]),
     const SizedBox(height:14),
    ],
-   SizedBox(width:double.infinity,child:OutlinedButton.icon(
+   SizedBox(width:double.infinity,child:WaffraDeletedItemsButton(
     onPressed:deletedGoalsDialog,
-    style:OutlinedButton.styleFrom(
-     side:BorderSide(color:Theme.of(context).colorScheme.primary,width:1.4),
-     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15)),
-     padding:const EdgeInsets.symmetric(horizontal:12,vertical:13)),
-    icon:const Icon(Icons.delete_outline,size:20),
-    label:WaffraText(waffraIsEnglish?'Deleted savings goals (${deletedGoals.length})':'الأهداف المحذوفة (${deletedGoals.length})',
-     style:const TextStyle(fontWeight:FontWeight.bold)))),
+    label:waffraIsEnglish?'Deleted savings goals (${deletedGoals.length})'
+     :'الأهداف المحذوفة (${deletedGoals.length})')),
    const SizedBox(height:14),
    WaffraText(waffraIsEnglish?'Current goals: ${goals.length}':'عدد الأهداف الحالية: ${goals.length}',
     style:const TextStyle(fontWeight:FontWeight.bold)),
@@ -5690,15 +5685,29 @@ Future<void> bulkSmsSheet({String? initialText})async {
      'نظّم عملياتك الشهرية ومواعيد استحقاقها بسهولة.',
     icon:Icons.event_repeat_rounded,titleKey:_tourKeys[4]),
    const SizedBox(height:9),
-   SizedBox(width:double.infinity,child:OutlinedButton.icon(
-    onPressed:deletedRecurringDialog,
-    style:OutlinedButton.styleFrom(
-     side:BorderSide(color:Theme.of(context).colorScheme.primary,width:1.4),
-     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15)),
-     padding:const EdgeInsets.symmetric(horizontal:12,vertical:13)),
-    icon:const Icon(Icons.delete_outline,size:20),
-    label:WaffraText(waffraIsEnglish?'Deleted recurring transactions (${deletedRecurring.length})':'العمليات المتكررة المحذوفة (${deletedRecurring.length})',
-     style:const TextStyle(fontWeight:FontWeight.bold)))),
+   Row(children:[
+    Expanded(child:WaffraDeletedItemsButton(
+     onPressed:deletedRecurringDialog,
+     label:waffraIsEnglish
+      ?'Deleted recurring (${deletedRecurring.length})'
+      :'العمليات المتكررة المحذوفة (${deletedRecurring.length})')),
+    const SizedBox(width:8),
+    Expanded(child:OutlinedButton(
+     onPressed:showWaffraFinancialCalendar,
+     style:OutlinedButton.styleFrom(
+      foregroundColor:Theme.of(context).colorScheme.primary,
+      minimumSize:const Size(0,60),
+      padding:const EdgeInsets.symmetric(horizontal:7,vertical:9),
+      side:BorderSide(color:Theme.of(context).colorScheme.primary,width:1.4),
+      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15))),
+     child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+      const Icon(Icons.calendar_month,size:18),
+      const SizedBox(width:5),
+      Flexible(child:WaffraText(waffraIsEnglish?'Financial calendar':'التقويم المالي',
+       maxLines:2,textAlign:TextAlign.center,
+       style:const TextStyle(fontSize:11.5,fontWeight:FontWeight.bold))),
+     ]))),
+   ]),
    const SizedBox(height:9),
    SwitchListTile.adaptive(
     contentPadding:const EdgeInsets.symmetric(horizontal:5),
@@ -5713,8 +5722,6 @@ Future<void> bulkSmsSheet({String? initialText})async {
    ),
    const SizedBox(height:9),
    WaffraText(waffraIsEnglish?'Recurring items: ${recurring.length}':'عدد العمليات المتكررة: ${recurring.length}',style:const TextStyle(fontWeight:FontWeight.bold)),
-   const SizedBox(height:9),
-   OutlinedButton.icon(onPressed:showWaffraFinancialCalendar,icon:const Icon(Icons.calendar_month),label:WaffraText(waffraIsEnglish?'Financial calendar':'التقويم المالي')),
    const SizedBox(height:9),
    if(recurring.isNotEmpty)...[
     Row(children:[
