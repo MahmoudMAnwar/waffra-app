@@ -6654,6 +6654,30 @@ class WaffraTourShade extends CustomPainter {
  }
  @override bool shouldRepaint(covariant WaffraTourShade old)=>old.focus!=focus||old.glow!=glow;
 }
+/// Shared red recycle-bin button, readable in dark and light modes.
+class WaffraDeletedItemsButton extends StatelessWidget {
+ final VoidCallback onPressed;
+ final String label;
+ const WaffraDeletedItemsButton({super.key,required this.onPressed,required this.label});
+ @override Widget build(BuildContext context){
+  final dark=Theme.of(context).brightness==Brightness.dark;
+  final red=dark?const Color(0xFFFF9090):const Color(0xFFB42332);
+  return OutlinedButton(
+   onPressed:onPressed,
+   style:OutlinedButton.styleFrom(
+    foregroundColor:red,backgroundColor:dark?const Color(0xFF3C242A):const Color(0xFFFFF4F4),
+    side:BorderSide(color:red,width:1.4),
+    minimumSize:const Size(0,60),
+    padding:const EdgeInsets.symmetric(horizontal:7,vertical:9),
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15))),
+   child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+    Icon(Icons.delete_outline,size:19,color:red),
+    const SizedBox(width:5),
+    Flexible(child:WaffraText(label,maxLines:2,textAlign:TextAlign.center,
+     style:TextStyle(color:red,fontSize:11.5,fontWeight:FontWeight.bold))),
+   ]));
+ }
+}
 class WaffraPhysicalLeftFab extends FloatingActionButtonLocation {
  const WaffraPhysicalLeftFab();
  @override Offset getOffset(ScaffoldPrelayoutGeometry geometry){
