@@ -65,6 +65,6 @@ void main() {
     expect(source, contains("textDirection:language=='ar'?TextDirection.rtl:TextDirection.ltr"));
     expect(source, contains("fontFamily:'Tajawal'"));
     expect(source, contains('accessibilityFeatures.disableAnimations'));
-    expect(source, contains(" 'off'=>0.0"));
+    expect(source, contains("'off'=>0.0"));
   });
 }
