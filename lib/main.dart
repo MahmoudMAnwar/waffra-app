@@ -5985,23 +5985,36 @@ Future<void> bulkSmsSheet({String? initialText})async {
       errorText:restorePasswordError,errorMaxLines:3,
       border:const OutlineInputBorder())),
     const SizedBox(height:10),
-    // Keep large encrypted JSON out of editable TextField rendering and
-    // avoid a dialog-wide rebuild on every pasted character.
-    OutlinedButton.icon(key:const Key('waffra-paste-backup-clipboard'),
+    // Select previously exported archives with Android's SAF document picker.
+    // Contents remain hidden and are never copied to the clipboard on export.
+    OutlinedButton.icon(key:const Key('waffra-open-backup-file'),
      onPressed:restoring?null:()async{
-      final clipboard=await Clipboard.getData(Clipboard.kTextPlain);
-      if(!ctx.mounted)return;
-      final text=clipboard?.text?.trim()??'';
-      if(text.isEmpty){
-       update(()=>restoreError=waffraIsEnglish?
-        'Clipboard is empty. Copy the complete backup first.':
-        'الحافظة فارغة. انسخ النسخة كاملة أولًا.');
-       return;
+      try{
+       final selected=await WaffraBackupFiles.openArchive();
+       if(!ctx.mounted||selected==null)return;
+       update((){
+        stagedBackup=selected;
+        restoreError=null;
+        attempted=false;
+       });
+      }catch(_){
+       if(ctx.mounted)update(()=>restoreError=waffraIsEnglish?
+        'Could not open file. Choose a valid Waffra backup up to 8 MB.':
+        'تعذر فتح الملف. اختر نسخة وفرة احتياطية صحيحة حتى 8 ميجابايت.');
       }
-      if(text.length>8*1024*1024){
+     },icon:const Icon(Icons.file_open_outlined),
+     label:WaffraText(waffraIsEnglish?'Choose .waffra file':'اختيار ملف .waffra من الجهاز')),
+    // Backward compatibility ONLY: opt-in reading of previously exported
+    // clipboard-only text. New exports never put archive data on clipboard.
+    TextButton.icon(key:const Key('waffra-import-legacy-text'),
+     onPressed:restoring?null:()async{
+      final old=await Clipboard.getData(Clipboard.kTextPlain);
+      if(!ctx.mounted)return;
+      final text=old?.text?.trim()??'';
+      if(text.isEmpty||text.length>WaffraBackupFiles.maxArchiveBytes){
        update(()=>restoreError=waffraIsEnglish?
-        'Backup exceeds the 8 MB import limit.':
-        'النسخة تتجاوز حد الاستيراد (8 ميجابايت).');
+        'No valid older backup text in clipboard.':
+        'لا يوجد نص نسخة احتياطية قديمة صالح في الحافظة.');
        return;
       }
       update((){
@@ -6009,12 +6022,13 @@ Future<void> bulkSmsSheet({String? initialText})async {
        restoreError=null;
        attempted=false;
       });
-     },icon:const Icon(Icons.content_paste),
-     label:WaffraText(waffraIsEnglish?'Paste backup from clipboard':'لصق النسخة من الحافظة')),
+     },icon:const Icon(Icons.history_outlined,size:18),
+     label:WaffraText(waffraIsEnglish?
+      'Import older copied backup (legacy)':'استيراد نسخة نصية قديمة (للتوافق فقط)')),
     if(stagedBackup!=null)...[
      const SizedBox(height:8),
      ListTile(dense:true,leading:const Icon(Icons.check_circle_outline,color:Colors.green),
-      title:WaffraText(waffraIsEnglish?'Backup loaded. Ready to verify.':'تم تحميل النسخة وجاهزة للتحقق.'),
+      title:WaffraText(waffraIsEnglish?'Backup file loaded. Ready to verify.':'تم تحميل النسخة الاحتياطية وجاهزة للتحقق.'),
       trailing:IconButton(icon:const Icon(Icons.close),
        tooltip:waffraIsEnglish?'Clear backup':'إزالة النسخة الملصوقة',
        onPressed:restoring?null:()=>update((){
@@ -6022,7 +6036,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        }))),
     ],
     if(attempted&&stagedBackup==null)
-     WaffraText(restoreError??(waffraIsEnglish?'Paste the backup first.':'الصق النسخة أولًا.'),
+     WaffraText(restoreError??(waffraIsEnglish?'Choose a backup file first.':'اختر ملف نسخة احتياطية أولًا.'),
       style:const TextStyle(color:Colors.red)),
     if(restoreError!=null&&stagedBackup!=null)
      WaffraText(restoreError!,style:const TextStyle(color:Colors.red)),
