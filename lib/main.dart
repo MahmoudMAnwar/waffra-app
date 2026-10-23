@@ -2415,6 +2415,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   return BudgetCategory(id:'fallback',name:name,icon:'category',color:colors[7],income:income);
  }
  List<BudgetCategory> forType(bool income)=>categories.where((c)=>c.income==income).toList();
+ // Manual entries may only select leaf categories; stored parent references
+ // in older transactions remain unchanged until a user deliberately edits.
+ List<BudgetCategory> forManualTransactionType(bool income)=>
+  categories.where((c)=>c.income==income&&c.isSubcategory).toList();
  Future<bool?> confirm(String title,String body)=>showWaffraDialog<bool>(
   context:context,builder:(ctx)=>AlertDialog(title:WaffraText(title),content:WaffraText(body),
   actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const WaffraText('إلغاء')),
@@ -5836,15 +5840,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
     ]),
     const SizedBox(height:14),
    ],
-   SizedBox(width:double.infinity,child:OutlinedButton.icon(
+   SizedBox(width:double.infinity,child:WaffraDeletedItemsButton(
     onPressed:deletedGoalsDialog,
-    style:OutlinedButton.styleFrom(
-     side:BorderSide(color:Theme.of(context).colorScheme.primary,width:1.4),
-     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15)),
-     padding:const EdgeInsets.symmetric(horizontal:12,vertical:13)),
-    icon:const Icon(Icons.delete_outline,size:20),
-    label:WaffraText(waffraIsEnglish?'Deleted savings goals (${deletedGoals.length})':'الأهداف المحذوفة (${deletedGoals.length})',
-     style:const TextStyle(fontWeight:FontWeight.bold)))),
+    label:waffraIsEnglish?'Deleted savings goals (${deletedGoals.length})'
+     :'الأهداف المحذوفة (${deletedGoals.length})')),
    const SizedBox(height:14),
    WaffraText(waffraIsEnglish?'Current goals: ${goals.length}':'عدد الأهداف الحالية: ${goals.length}',
     style:const TextStyle(fontWeight:FontWeight.bold)),
@@ -5972,7 +5971,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
           String query='';
           return StatefulBuilder(builder:(searchCtx,refresh){
            final filtered=options.where((c)=>
-            c.name.toLowerCase().contains(query.trim().toLowerCase())).toList();
+            (c.name.toLowerCase().contains(query.trim().toLowerCase())||
+             waffraTr(c.name).toLowerCase().contains(query.trim().toLowerCase()))).toList();
            return AlertDialog(
             title:WaffraText(waffraIsEnglish?'Search categories':'البحث عن قسم'),
             content:SizedBox(
@@ -6072,15 +6072,29 @@ Future<void> bulkSmsSheet({String? initialText})async {
      'نظّم عملياتك الشهرية ومواعيد استحقاقها بسهولة.',
     icon:Icons.event_repeat_rounded,titleKey:_tourKeys[4]),
    const SizedBox(height:9),
-   SizedBox(width:double.infinity,child:OutlinedButton.icon(
-    onPressed:deletedRecurringDialog,
-    style:OutlinedButton.styleFrom(
-     side:BorderSide(color:Theme.of(context).colorScheme.primary,width:1.4),
-     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15)),
-     padding:const EdgeInsets.symmetric(horizontal:12,vertical:13)),
-    icon:const Icon(Icons.delete_outline,size:20),
-    label:WaffraText(waffraIsEnglish?'Deleted recurring transactions (${deletedRecurring.length})':'العمليات المتكررة المحذوفة (${deletedRecurring.length})',
-     style:const TextStyle(fontWeight:FontWeight.bold)))),
+   Row(children:[
+    Expanded(child:WaffraDeletedItemsButton(
+     onPressed:deletedRecurringDialog,
+     label:waffraIsEnglish
+      ?'Deleted recurring (${deletedRecurring.length})'
+      :'العمليات المتكررة المحذوفة (${deletedRecurring.length})')),
+    const SizedBox(width:8),
+    Expanded(child:OutlinedButton(
+     onPressed:showWaffraFinancialCalendar,
+     style:OutlinedButton.styleFrom(
+      foregroundColor:Theme.of(context).colorScheme.primary,
+      minimumSize:const Size(0,60),
+      padding:const EdgeInsets.symmetric(horizontal:7,vertical:9),
+      side:BorderSide(color:Theme.of(context).colorScheme.primary,width:1.4),
+      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15))),
+     child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+      const Icon(Icons.calendar_month,size:18),
+      const SizedBox(width:5),
+      Flexible(child:WaffraText(waffraIsEnglish?'Financial calendar':'التقويم المالي',
+       maxLines:2,textAlign:TextAlign.center,
+       style:const TextStyle(fontSize:11.5,fontWeight:FontWeight.bold))),
+     ]))),
+   ]),
    const SizedBox(height:9),
    SwitchListTile.adaptive(
     contentPadding:const EdgeInsets.symmetric(horizontal:5),
@@ -6095,8 +6109,6 @@ Future<void> bulkSmsSheet({String? initialText})async {
    ),
    const SizedBox(height:9),
    WaffraText(waffraIsEnglish?'Recurring items: ${recurring.length}':'عدد العمليات المتكررة: ${recurring.length}',style:const TextStyle(fontWeight:FontWeight.bold)),
-   const SizedBox(height:9),
-   OutlinedButton.icon(onPressed:showWaffraFinancialCalendar,icon:const Icon(Icons.calendar_month),label:WaffraText(waffraIsEnglish?'Financial calendar':'التقويم المالي')),
    const SizedBox(height:9),
    if(recurring.isNotEmpty)...[
     Row(children:[
@@ -6504,48 +6516,112 @@ Future<void> bulkSmsSheet({String? initialText})async {
  // entered twice; keep support for checking older 4-8-digit PINs on disable.
  Future<String?> _askForPin({
   required String title,required String fieldLabel,bool existing=false,
-   bool Function(String)? verify,String? verifyError,
+  bool autoAdvance=false,bool Function(String)? verify,String? verifyError,
  })async{
   final input=TextEditingController();
   var attempted=false;String? fieldError;
   try{
-   return await showWaffraDialog<String>(context:context,builder:(dialogContext)=>StatefulBuilder(builder:(dialogContext,update)=>Theme(data:Theme.of(dialogContext).copyWith(brightness:Brightness.dark,colorScheme:ColorScheme.fromSeed(seedColor:emerald,brightness:Brightness.dark)),child:AlertDialog(
-    backgroundColor:forest,
-    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26),
-     side:waffraDialogOutline(Brightness.dark)),
-    title:Column(mainAxisSize:MainAxisSize.min,children:[
-     const CircleAvatar(radius:26,backgroundColor:emerald,child:Icon(Icons.lock_outline,color:Colors.white,size:28)),
-     const SizedBox(height:12),WaffraText(title,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold))]),
-    content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-     WaffraText(fieldLabel,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w600)),
-     const SizedBox(height:12),
-     TextField(
-     controller:input,autofocus:true,onChanged:(_)=>update(()=>fieldError=null),
-     textDirection:TextDirection.ltr,textAlign:TextAlign.center,
-     keyboardType:TextInputType.number,
-     inputFormatters:[FilteringTextInputFormatter.digitsOnly,
-      LengthLimitingTextInputFormatter(existing?8:4)],
-     obscureText:true,
-     decoration:InputDecoration(hintText:'••••',hintStyle:const TextStyle(color:Colors.white54),
-      helperText:existing?(waffraIsEnglish?'4 to 8 digits':'من 4 إلى 8 أرقام'):(waffraIsEnglish?'4 digits':'أربعة أرقام'),
-      errorText:fieldError??(attempted?waffraPinFieldError(input.text,existing:existing):null),errorMaxLines:3,
-      border:const OutlineInputBorder())),
-    ])),
-    actions:[
-     TextButton(onPressed:()=>Navigator.pop(dialogContext),
-      child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
-     FilledButton(onPressed:(){
-      final code=input.text.trim();
-      update(()=>attempted=true);
-      if(waffraPinFieldError(code,existing:existing)!=null)return;
-      if(verify!=null&&!verify(code)){
-       update(()=>fieldError=verifyError??(waffraIsEnglish?'Incorrect PIN':'رمز القفل غير صحيح'));
-       return;
-      }
-      Navigator.pop(dialogContext,code);
-     },child:WaffraText(waffraIsEnglish?'Confirm':'تأكيد')),
-    ],
-   ))));
+   return await showWaffraDialog<String>(context:context,
+    builder:(dialogContext)=>StatefulBuilder(builder:(dialogContext,update)=>
+     Theme(data:Theme.of(dialogContext).copyWith(brightness:Brightness.dark,
+      colorScheme:ColorScheme.fromSeed(seedColor:emerald,brightness:Brightness.dark)),
+      child:AlertDialog(
+       backgroundColor:forest,
+       shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26),
+        side:waffraDialogOutline(Brightness.dark)),
+       title:Column(mainAxisSize:MainAxisSize.min,children:[
+        const CircleAvatar(radius:26,backgroundColor:emerald,
+         child:Icon(Icons.lock_outline,color:Colors.white,size:28)),
+        const SizedBox(height:12),
+        WaffraText(title,textAlign:TextAlign.center,
+         style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold)),
+       ]),
+       content:SingleChildScrollView(child:Column(
+        mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,
+        children:[
+         WaffraText(fieldLabel,textAlign:TextAlign.center,
+          style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w600)),
+         const SizedBox(height:12),
+         // In-app digits-only keypad avoids Samsung's punctuation keyboard.
+         TextField(key:const Key('waffra-pin-input'),controller:input,
+          autofocus:false,readOnly:true,showCursor:false,
+          enableInteractiveSelection:false,
+          textDirection:TextDirection.ltr,textAlign:TextAlign.center,
+          keyboardType:TextInputType.number,
+          inputFormatters:[FilteringTextInputFormatter.digitsOnly,
+           LengthLimitingTextInputFormatter(existing?8:4)],
+          obscureText:true,
+          style:const TextStyle(color:Color(0xFF12382D),fontWeight:FontWeight.bold),
+          decoration:InputDecoration(
+           filled:true,fillColor:Colors.white,
+           hintText:'••••',hintStyle:const TextStyle(color:Colors.black38),
+           errorText:fieldError??
+            (attempted?waffraPinFieldError(input.text,existing:existing):null),
+           errorMaxLines:3,
+           border:const OutlineInputBorder())),
+         const SizedBox(height:10),
+         for(final keys in const <List<String>>[
+          ['1','2','3'],['4','5','6'],['7','8','9'],['','0','back']
+         ])Padding(padding:const EdgeInsets.only(bottom:5),child:Row(textDirection:TextDirection.ltr,
+          children:[for(final digit in keys)Expanded(child:Padding(
+           padding:const EdgeInsets.symmetric(horizontal:3),
+           child:digit.isEmpty?const SizedBox(height:42):OutlinedButton(
+            key:Key('waffra-pin-key-$digit'),
+            style:OutlinedButton.styleFrom(
+             minimumSize:const Size(0,42),
+             padding:EdgeInsets.zero,foregroundColor:Colors.white,
+             side:BorderSide(color:Colors.white.withValues(alpha:.23)),
+             shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(10))),
+            onPressed:(){
+             if(digit=='back'){
+              if(input.text.isEmpty)return;
+              input.text=input.text.substring(0,input.text.length-1);
+              update(()=>fieldError=null);
+              return;
+             }
+             if(input.text.length>=(existing?8:4))return;
+             final value=input.text+digit;
+             input.text=value;
+             update(()=>fieldError=null);
+             if(autoAdvance&&value.length==4&&waffraPinFieldError(value)==null){
+              WidgetsBinding.instance.addPostFrameCallback((_){
+               if(dialogContext.mounted&&input.text==value){
+                Navigator.pop(dialogContext,value);
+               }
+              });
+             }
+            },
+            child:digit=='back'
+             ?const Icon(Icons.backspace_outlined,size:20)
+             :Text(digit,style:const TextStyle(fontFamily:'Tajawal',
+               fontSize:19,fontWeight:FontWeight.bold))),
+          ))])),
+        ])),
+       actions:[
+        TextButton(
+         style:TextButton.styleFrom(foregroundColor:Colors.white,
+          backgroundColor:Colors.white.withValues(alpha:.12)),
+         onPressed:()=>Navigator.pop(dialogContext),
+         child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء',
+          style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold))),
+        if(!autoAdvance)FilledButton(
+         style:FilledButton.styleFrom(backgroundColor:emerald,
+          foregroundColor:Colors.white),
+         onPressed:(){
+          final code=input.text.trim();
+          update(()=>attempted=true);
+          if(waffraPinFieldError(code,existing:existing)!=null)return;
+          if(verify!=null&&!verify(code)){
+           update(()=>fieldError=verifyError??
+            (waffraIsEnglish?'Incorrect PIN':'رمز القفل غير صحيح'));
+           return;
+          }
+          Navigator.pop(dialogContext,code);
+         },
+         child:WaffraText(waffraIsEnglish?'Confirm':'تأكيد',
+          style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold))),
+       ],
+      ))));
   }finally{disposeLater([input]);}
  }
  Future<void> configurePin()async {
@@ -6564,12 +6640,13 @@ Future<void> bulkSmsSheet({String? initialText})async {
   }
   final firstPin=await _askForPin(
    title:waffraIsEnglish?'Create a new PIN':'إنشاء رمز قفل',
-   fieldLabel:waffraIsEnglish?'New 4-digit PIN':'رمز PIN من 4 أرقام');
+   fieldLabel:waffraIsEnglish?'Enter a 4-digit PIN':'أدخل رمز القفل من 4 أرقام',
+    autoAdvance:true);
   if(firstPin==null||!mounted)return;
   while(mounted){
    final repeated=await _askForPin(
-    title:waffraIsEnglish?'Confirm your PIN':'أعد إدخال رمز PIN للتأكيد',
-    fieldLabel:waffraIsEnglish?'Repeat PIN':'أعد إدخال الرمز',
+    title:waffraIsEnglish?'Confirm PIN':'تأكيد رمز القفل',
+    fieldLabel:waffraIsEnglish?'Re-enter the same 4 digits':'أدخل رمز القفل المكوّن من 4 أرقام مرة ثانية',
     verify:(code)=>code==firstPin,
     verifyError:waffraIsEnglish?'PINs do not match':'رمزا PIN غير متطابقين');
    if(repeated==null||!mounted)return;
@@ -7179,6 +7256,29 @@ class WaffraTourShade extends CustomPainter {
   canvas.drawRRect(border,Paint()..color=Colors.white..style=PaintingStyle.stroke..strokeWidth=2+glow);
  }
  @override bool shouldRepaint(covariant WaffraTourShade old)=>old.focus!=focus||old.glow!=glow;
+}
+class WaffraDeletedItemsButton extends StatelessWidget {
+ final VoidCallback onPressed;
+ final String label;
+ const WaffraDeletedItemsButton({super.key,required this.onPressed,required this.label});
+ @override Widget build(BuildContext context){
+  final dark=Theme.of(context).brightness==Brightness.dark;
+  final red=dark?const Color(0xFFFF9090):const Color(0xFFB42332);
+  return OutlinedButton(
+   onPressed:onPressed,
+   style:OutlinedButton.styleFrom(
+    foregroundColor:red,backgroundColor:dark?const Color(0xFF3C242A):const Color(0xFFFFF4F4),
+    side:BorderSide(color:red,width:1.4),
+    minimumSize:const Size(0,60),
+    padding:const EdgeInsets.symmetric(horizontal:7,vertical:9),
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15))),
+   child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+    Icon(Icons.delete_outline,size:19,color:red),
+    const SizedBox(width:5),
+    Flexible(child:WaffraText(label,maxLines:2,textAlign:TextAlign.center,
+     style:TextStyle(color:red,fontSize:11.5,fontWeight:FontWeight.bold))),
+   ]));
+ }
 }
 class WaffraPhysicalLeftFab extends FloatingActionButtonLocation {
  const WaffraPhysicalLeftFab();
