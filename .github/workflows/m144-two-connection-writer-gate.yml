@@ -1,0 +1,31 @@
+name: M144 SQLCipher Two-Connection Writer Gate QA
+
+on:
+  pull_request:
+    branches:
+      - 'test/m143-sqlcipher-confirmation-input-freeze-qa'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m144-two-connection-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  isolated-two-connection:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install Flutter dependencies
+        run: flutter pub get
+      - name: Verify M143 input freeze and M144 independent SQLCipher writers
+        run: >-
+          flutter test
+          test/storage/m143_sqlcipher_confirmation_input_freeze_test.dart
+          test/storage/m144_sqlcipher_two_connection_writer_gate_test.dart
