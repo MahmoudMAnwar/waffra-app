@@ -1,0 +1,27 @@
+name: M172 RTL Dark Accessibility and Performance QA
+on:
+  pull_request:
+    branches:
+      - integration/m160-reconcile-main-m158-release-gate-20261023
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  locale-theme-a11y:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - run: python3 -m unittest scripts/qa/test_m172_accessibility_review.py -v
+      - run: python3 scripts/qa/m172_accessibility_review.py
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Arabic/English, theme, large text and existing catalog regression
+        run: >
+          flutter test test/m172_accessibility_rtl_dark_textscale_test.dart
+          test/m148_english_categories_legacy_backup_uat_test.dart
