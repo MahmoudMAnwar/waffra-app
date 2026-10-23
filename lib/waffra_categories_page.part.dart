@@ -39,7 +39,9 @@ extension WaffraCategoryScreen on _HomeScreenState {
    if(categoryDisplay=='none'&&budgeted)return false;
    final query=categorySearch.trim().toLowerCase();
    return query.isEmpty||root.name.toLowerCase().contains(query)||
-    subs.any((c)=>c.displayName.toLowerCase().contains(query));
+    waffraTr(root.name).toLowerCase().contains(query)||
+    subs.any((c)=>c.displayName.toLowerCase().contains(query)||
+     waffraTr(c.displayName).toLowerCase().contains(query));
   }).toList();
 
   Widget rootCard(BudgetCategory root){
@@ -160,7 +162,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
        final usableLabelWidth=(width-91).clamp(18.0,double.infinity).toDouble();
        bool needsTwoLines(BudgetCategory sub){
         final painter=TextPainter(
-         text:TextSpan(text:sub.displayName,
+         text:TextSpan(text:waffraTr(sub.displayName),
           style:const TextStyle(fontFamily:'Tajawal',fontSize:12,fontWeight:FontWeight.bold)),
          maxLines:1,
          textDirection:waffraIsEnglish?TextDirection.ltr:TextDirection.rtl,
@@ -185,15 +187,9 @@ extension WaffraCategoryScreen on _HomeScreenState {
     subtitle:waffraIsEnglish?'All income and expense types with subcategories':
      'كل أنواع الدخل والمصروفات في أقسام رئيسية وفرعية منظمة.',
     icon:Icons.category_outlined,titleKey:_tourKeys[2]),
-   SizedBox(width:double.infinity,child:OutlinedButton.icon(
+   SizedBox(width:double.infinity,child:WaffraDeletedItemsButton(
     onPressed:showCategoryTrash,
-    style:OutlinedButton.styleFrom(
-     side:BorderSide(color:Theme.of(context).colorScheme.primary,width:1.4),
-     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15)),
-     padding:const EdgeInsets.symmetric(horizontal:12,vertical:13)),
-    icon:const Icon(Icons.delete_outline,size:20),
-    label:WaffraText(waffraIsEnglish?'Deleted categories':'الأقسام المحذوفة',
-     style:const TextStyle(fontWeight:FontWeight.bold)))),
+    label:waffraIsEnglish?'Deleted categories (${deletedCategories.length})':'الأقسام المحذوفة (${deletedCategories.length})')),
    const SizedBox(height:14),
    Row(children:[
     Expanded(child:_compactCategoryStat(waffraIsEnglish?'Main categories':'الأقسام الرئيسية',

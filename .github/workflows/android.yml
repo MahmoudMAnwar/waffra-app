@@ -8,6 +8,8 @@ on:
       - main
       # QA-only isolated UI candidate; no automatic merge or store publishing.
       - 'feature/m130-ui-main-isolated-merge-candidate'
+      # Device-retest build after M147 UAT found wrong-icon / JNI-load errors in compiler-only APK.
+      - 'fix/m148-uat-categories-backup-restore-performance'
   workflow_dispatch:
 
 # Fast-build concurrency: only the latest pushed revision needs an APK.

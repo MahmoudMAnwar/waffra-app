@@ -13,6 +13,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'waffra_financial_tools.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -37,12 +38,21 @@ import 'waffra_footer.dart';
 import 'waffra_messages.dart';
 import 'waffra_recurring_policy.dart';
 import 'waffra_secure_backup.dart';
+import 'waffra_backup_files.dart';
 import 'waffra_home_widget.dart';
 part 'waffra_categories_page.part.dart';
 part 'waffra_smart_analysis.part.dart';
 part 'waffra_recurring_trash.part.dart';
 part 'waffra_deleted_item_card.part.dart';
 part 'waffra_widget_capture.part.dart';
+
+/// PBKDF2 decryption and JSON parsing run away from the UI isolate.
+Future<Map<String,dynamic>> waffraDecodeBackupInIsolate(Map<String,String> request) async {
+ final decoded=jsonDecode(await WaffraSecureBackup.decrypt(
+  request['payload']!,request['password']!));
+ if(decoded is! Map)throw const FormatException('Invalid backup document');
+ return Map<String,dynamic>.from(decoded);
+}
 
 Future<void> main()async {
  WidgetsFlutterBinding.ensureInitialized();
@@ -2225,6 +2235,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   return BudgetCategory(id:'fallback',name:name,icon:'category',color:colors[7],income:income);
  }
  List<BudgetCategory> forType(bool income)=>categories.where((c)=>c.income==income).toList();
+ // Manual entries may only select leaf categories; stored parent references
+ // in older transactions remain unchanged until a user deliberately edits.
+ List<BudgetCategory> forManualTransactionType(bool income)=>
+  categories.where((c)=>c.income==income&&c.isSubcategory).toList();
  Future<bool?> confirm(String title,String body)=>showWaffraDialog<bool>(
   context:context,builder:(ctx)=>AlertDialog(title:WaffraText(title),content:WaffraText(body),
   actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const WaffraText('إلغاء')),
@@ -2664,7 +2678,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final value=TextEditingController(text:initial==null?'':formatWaffraMoney(initial.amount));
   final message=TextEditingController(text:initialSms??'');
   bool income=initial?.income??false,analyzing=false,hasParsed=initialSms!=null;
-  String category=initial?.category??'أخرى';
+  String category=initial?.category??(sms?'أخرى':
+   (forManualTransactionType(false).isNotEmpty?forManualTransactionType(false).first.name:''));
   DateTime date=initial?.date??DateTime.now();
    String? suggestion,pendingHash,receiptPath=initial?.receiptPath;
    bool attempted=false;
@@ -2693,8 +2708,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
       });
      });
     }
-    final available=forType(income);
-    final chosen=available.any((c)=>c.name==category)?category:(available.isEmpty?null:available.first.name);
+    final available=sms?forType(income):forManualTransactionType(income);
+    final chosen=available.any((c)=>c.name==category)?category:
+     (initial!=null&&initial.category==category?category:
+      (available.isEmpty?null:available.first.name));
     return Padding(padding:EdgeInsets.fromLTRB(18,10,18,MediaQuery.of(sheetContext).viewInsets.bottom+20),
      child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,
       crossAxisAlignment:CrossAxisAlignment.stretch,children:[
@@ -2718,7 +2735,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
        segments:const [ButtonSegment(value:true,label:WaffraText('دخل')),
         ButtonSegment(value:false,label:WaffraText('مصروف'))],
        selected:{income},onSelectionChanged:(v)=>update((){
-        income=v.first;category=forType(income).isNotEmpty?forType(income).first.name:'أخرى';suggestion=null;
+        income=v.first;
+        final options=sms?forType(income):forManualTransactionType(income);
+        category=options.isNotEmpty?options.first.name:'';suggestion=null;
        })),
       const SizedBox(height:12),
       TextField(controller:title,onChanged:(_)=>update((){}),minLines:1,maxLines:5,
@@ -2738,6 +2757,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
       },child:InputDecorator(decoration:InputDecoration(labelText:waffraTr('القسم'),
        border:const OutlineInputBorder(),suffixIcon:const Icon(Icons.search_rounded)),
        child:WaffraText(chosen??'',maxLines:2))),
+      if(!sms&&available.isEmpty)Padding(
+       padding:const EdgeInsets.only(top:6),
+       child:WaffraText(waffraIsEnglish?
+        'Add an income or expense subcategory before saving.':
+        'أضف قسمًا فرعيًا للدخل أو المصروفات قبل الحفظ.',
+        style:const TextStyle(color:Colors.red))),
       if(suggestion!=null)TextButton.icon(onPressed:()async {
        final c=await categoryDialog(income:income,suggested:suggestion);
        if(c!=null&&mounted){
@@ -2748,14 +2773,25 @@ Future<void> bulkSmsSheet({String? initialText})async {
        }
       },icon:const Icon(Icons.add),label:WaffraText('إضافة قسم $suggestion')),
       OutlinedButton.icon(onPressed:()async {
-       final c=await categoryDialog(income:income);
+       // Create a subcategory under an explicit parent, never a root.
+       final parents=categories.where((c)=>!c.isSubcategory&&c.income==income).toList();
+       if(parents.isEmpty)return;
+       final parentId=await showWaffraDialog<String>(context:sheetContext,builder:(ctx)=>
+        AlertDialog(title:WaffraText(waffraIsEnglish?'Choose main category':'اختر القسم الرئيسي'),
+         content:SizedBox(width:double.maxFinite,height:min(350.0,MediaQuery.sizeOf(ctx).height*.5),
+          child:ListView.builder(itemCount:parents.length,itemBuilder:(ctx,i)=>ListTile(
+           title:WaffraText(parents[i].name),
+           onTap:()=>Navigator.pop(ctx,parents[i].id)))),
+         actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء'))]));
+       if(parentId==null||!sheetContext.mounted)return;
+       final c=await categoryDialog(income:income,parentId:parentId);
        if(c!=null&&mounted){
         if(!categories.any((x)=>x.name==c.name&&x.income==c.income)){
          setState(()=>categories.add(c));await persist();
         }
         update(()=>category=c.name);
        }
-      },icon:const Icon(Icons.add),label:const WaffraText('قسم جديد')),
+      },icon:const Icon(Icons.add),label:WaffraText(waffraIsEnglish?'New subcategory':'قسم فرعي جديد')),
       OutlinedButton.icon(onPressed:()async {
        final d=await showDatePicker(context:sheetContext,initialDate:date,
         firstDate:DateTime(2000),lastDate:DateTime.now());
@@ -2790,6 +2826,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        update(()=>attempted=true);
        final n=amountOf(value.text);
        if(title.text.trim().isEmpty||waffraAmountFieldError(value.text)!=null||n==null)return;
+       if(!sms&&(chosen==null||chosen.isEmpty))return;
        if(sms){
         if(message.text.trim().isEmpty)return;
         final h=sha256.convert(utf8.encode(digits(message.text).replaceAll(RegExp(r'\s+'),' ').trim().toLowerCase())).toString();
@@ -2857,7 +2894,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
  Future<String?> chooseTransactionCategory(BuildContext ctx,List<BudgetCategory> options,String selected)async{
   var query='';
   return showWaffraDialog<String>(context:ctx,builder:(dialogCtx)=>StatefulBuilder(builder:(dialogCtx,refresh){
-   final filtered=options.where((item)=>item.name.toLowerCase().contains(query.trim().toLowerCase())).toList();
+   final filtered=options.where((item)=>(item.name.toLowerCase().contains(query.trim().toLowerCase())||waffraTr(item.name).toLowerCase().contains(query.trim().toLowerCase()))).toList();
    return AlertDialog(title:WaffraText(waffraIsEnglish?'Search categories':'بحث في الأقسام'),
     content:SizedBox(width:360,height:min(420.0,MediaQuery.sizeOf(dialogCtx).height*.55),child:Column(children:[
      TextField(autofocus:true,onChanged:(v)=>refresh(()=>query=v),
@@ -5446,15 +5483,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
     ]),
     const SizedBox(height:14),
    ],
-   SizedBox(width:double.infinity,child:OutlinedButton.icon(
+   SizedBox(width:double.infinity,child:WaffraDeletedItemsButton(
     onPressed:deletedGoalsDialog,
-    style:OutlinedButton.styleFrom(
-     side:BorderSide(color:Theme.of(context).colorScheme.primary,width:1.4),
-     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15)),
-     padding:const EdgeInsets.symmetric(horizontal:12,vertical:13)),
-    icon:const Icon(Icons.delete_outline,size:20),
-    label:WaffraText(waffraIsEnglish?'Deleted savings goals (${deletedGoals.length})':'الأهداف المحذوفة (${deletedGoals.length})',
-     style:const TextStyle(fontWeight:FontWeight.bold)))),
+    label:waffraIsEnglish?'Deleted savings goals (${deletedGoals.length})'
+     :'الأهداف المحذوفة (${deletedGoals.length})')),
    const SizedBox(height:14),
    WaffraText(waffraIsEnglish?'Current goals: ${goals.length}':'عدد الأهداف الحالية: ${goals.length}',
     style:const TextStyle(fontWeight:FontWeight.bold)),
@@ -5581,7 +5613,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
           String query='';
           return StatefulBuilder(builder:(searchCtx,refresh){
            final filtered=options.where((c)=>
-            c.name.toLowerCase().contains(query.trim().toLowerCase())).toList();
+            (c.name.toLowerCase().contains(query.trim().toLowerCase())||waffraTr(c.name).toLowerCase().contains(query.trim().toLowerCase()))).toList();
            return AlertDialog(
             title:WaffraText(waffraIsEnglish?'Search categories':'البحث عن قسم'),
             content:SizedBox(
@@ -5681,15 +5713,29 @@ Future<void> bulkSmsSheet({String? initialText})async {
      'نظّم عملياتك الشهرية ومواعيد استحقاقها بسهولة.',
     icon:Icons.event_repeat_rounded,titleKey:_tourKeys[4]),
    const SizedBox(height:9),
-   SizedBox(width:double.infinity,child:OutlinedButton.icon(
-    onPressed:deletedRecurringDialog,
-    style:OutlinedButton.styleFrom(
-     side:BorderSide(color:Theme.of(context).colorScheme.primary,width:1.4),
-     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15)),
-     padding:const EdgeInsets.symmetric(horizontal:12,vertical:13)),
-    icon:const Icon(Icons.delete_outline,size:20),
-    label:WaffraText(waffraIsEnglish?'Deleted recurring transactions (${deletedRecurring.length})':'العمليات المتكررة المحذوفة (${deletedRecurring.length})',
-     style:const TextStyle(fontWeight:FontWeight.bold)))),
+   Row(children:[
+    Expanded(child:WaffraDeletedItemsButton(
+     onPressed:deletedRecurringDialog,
+     label:waffraIsEnglish
+      ?'Deleted recurring (${deletedRecurring.length})'
+      :'العمليات المتكررة المحذوفة (${deletedRecurring.length})')),
+    const SizedBox(width:8),
+    Expanded(child:OutlinedButton(
+     onPressed:showWaffraFinancialCalendar,
+     style:OutlinedButton.styleFrom(
+      foregroundColor:Theme.of(context).colorScheme.primary,
+      minimumSize:const Size(0,60),
+      padding:const EdgeInsets.symmetric(horizontal:7,vertical:9),
+      side:BorderSide(color:Theme.of(context).colorScheme.primary,width:1.4),
+      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15))),
+     child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+      const Icon(Icons.calendar_month,size:18),
+      const SizedBox(width:5),
+      Flexible(child:WaffraText(waffraIsEnglish?'Financial calendar':'التقويم المالي',
+       maxLines:2,textAlign:TextAlign.center,
+       style:const TextStyle(fontSize:11.5,fontWeight:FontWeight.bold))),
+     ]))),
+   ]),
    const SizedBox(height:9),
    SwitchListTile.adaptive(
     contentPadding:const EdgeInsets.symmetric(horizontal:5),
@@ -5704,8 +5750,6 @@ Future<void> bulkSmsSheet({String? initialText})async {
    ),
    const SizedBox(height:9),
    WaffraText(waffraIsEnglish?'Recurring items: ${recurring.length}':'عدد العمليات المتكررة: ${recurring.length}',style:const TextStyle(fontWeight:FontWeight.bold)),
-   const SizedBox(height:9),
-   OutlinedButton.icon(onPressed:showWaffraFinancialCalendar,icon:const Icon(Icons.calendar_month),label:WaffraText(waffraIsEnglish?'Financial calendar':'التقويم المالي')),
    const SizedBox(height:9),
    if(recurring.isNotEmpty)...[
     Row(children:[
@@ -5879,67 +5923,142 @@ Future<void> bulkSmsSheet({String? initialText})async {
  }
  Future<void> backupDialog()async {
   if(!await _authorizeSensitiveAction('backing up or restoring data')||!mounted)return;
-  final input=TextEditingController(),secret=TextEditingController();
-  var attempted=false;String? backupError;bool legacyRestorePassword=false;
+  final secret=TextEditingController(),restoreSecret=TextEditingController();
+  String? stagedBackup,backupError,restoreError,restorePasswordError;
+  var attempted=false,restoring=false,exporting=false;
   await showWaffraDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
-   title:const WaffraText('نسخ احتياطي واستعادة'),
+   title:WaffraText(waffraIsEnglish?'Encrypted backup and restore':'نسخ احتياطي واستعادة'),
    content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-    WaffraText(waffraIsEnglish?'Your backup is protected with a password and AES-256 encryption. Keep your password safe; it cannot be recovered.':'نسختك الاحتياطية مشفّرة بكلمة مرور وتشفير AES-256. احتفظ بكلمة المرور؛ لا يمكن استعادتها إذا فُقدت.'),
+    WaffraText(waffraIsEnglish?
+     'New encrypted backups require exactly 8 letters and digits. Keep your password safe.':
+     'النسخ الجديدة المشفّرة تتطلب 8 خانات من أحرف وأرقام. احتفظ بكلمة المرور بأمان.'),
     const SizedBox(height:10),
-    TextField(controller:secret,obscureText:true,
-     inputFormatters:legacyRestorePassword?const <TextInputFormatter>[]:
-      <TextInputFormatter>[
-       FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
-       LengthLimitingTextInputFormatter(8),
-      ],
-     onChanged:(_)=>update(()=>backupError=null),
-     decoration:InputDecoration(
-      labelText:legacyRestorePassword?
-       (waffraIsEnglish?'Existing backup password *':'كلمة مرور النسخة القديمة *'):
-       (waffraIsEnglish?'Backup password (exactly 8 letters/digits) *':'كلمة مرور النسخة (8 خانات أحرف وأرقام) *'),
-      errorText:backupError,errorMaxLines:3,
-      border:const OutlineInputBorder())),
-    // Existing archives may have longer passwords; preserve their restore path.
-    SwitchListTile.adaptive(
-     contentPadding:EdgeInsets.zero,
-     title:WaffraText(waffraIsEnglish?
-      'Restore an older backup password':'استعادة نسخة قديمة بكلمة مرور أطول',
-      style:const TextStyle(fontSize:12)),
-     value:legacyRestorePassword,
-     onChanged:(value)=>update((){
-      legacyRestorePassword=value;secret.clear();backupError=null;
-     })),
+    TextField(key:const Key('waffra-new-backup-password'),controller:secret,obscureText:true,
+     inputFormatters:[
+      FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
+      LengthLimitingTextInputFormatter(8),
+     ],decoration:InputDecoration(
+      labelText:waffraIsEnglish?'New backup password (8 characters) *':'كلمة مرور النسخة الجديدة (8 خانات) *',
+      errorText:backupError,errorMaxLines:3,border:const OutlineInputBorder())),
     const SizedBox(height:10),
-    FilledButton.icon(onPressed:()async {
+    FilledButton.icon(onPressed:exporting?null:()async {
      if(!WaffraSecureBackup.isValidNewPassword(secret.text)){
       update(()=>backupError=waffraIsEnglish?'Exactly 8 letters and digits, including one of each.':'كلمة المرور 8 خانات بالضبط من أحرف وأرقام، وبها حرف ورقم على الأقل.');return;
      }
+     update(()=>exporting=true);
      try{
       final encrypted=await WaffraSecureBackup.encryptUserBackup(exportBackup(),secret.text);
-      await Clipboard.setData(ClipboardData(text:encrypted));
+      // Persist the encrypted archive only after system document picker confirms.
+      // Never copy it to the system clipboard on export.
+      final saved=await WaffraBackupFiles.saveEncryptedArchive(encrypted);
+      if(!saved)return;
       final generatedAt=DateTime.now().toIso8601String();
       final prefs=await SharedPreferences.getInstance();
       await prefs.setString('waffra_backup_last_exported_v1',generatedAt);
       await prefs.setInt('waffra_backup_last_size_v1',utf8.encode(encrypted).length);
       if(mounted)setState((){lastBackupGeneratedAt=generatedAt;lastBackupBytes=utf8.encode(encrypted).length;});
-      if(ctx.mounted)snackSuccess(ctx,waffraIsEnglish?'Encrypted backup copied; keep it and its password safe':'تم نسخ النسخة المشفّرة، احتفظ بها وكلمة مرورها في مكان آمن');
-     }catch(error){if(ctx.mounted)update(()=>backupError=error.toString());}
-    },icon:const Icon(Icons.lock_outline),label:WaffraText(waffraIsEnglish?'Copy encrypted backup':'نسخ النسخة المشفّرة')),
-    // Password error shown inline under the input.
-    const SizedBox(height:12),
-    TextField(controller:input,minLines:4,maxLines:7,onChanged:(_)=>update(()=>backupError=null),
-     decoration:InputDecoration(labelText:waffraIsEnglish?'Backup JSON *':'الصق نسخة JSON للاستعادة *',
-      errorText:attempted?(input.text.trim().isEmpty?waffraRequiredFieldMessage:backupError):null,
-      errorMaxLines:3,border:OutlineInputBorder())),
+      if(ctx.mounted)snackSuccess(ctx,waffraIsEnglish?
+       'Encrypted .waffra backup file saved. Keep its password safe.':
+       'تم حفظ ملف .waffra المشفّر بنجاح. احتفظ بكلمة المرور بأمان.');
+     }catch(_){
+      if(ctx.mounted)update(()=>backupError=waffraIsEnglish?
+       'Could not save encrypted backup file. Please retry.':
+       'تعذر حفظ ملف النسخة الاحتياطية المشفّر. حاول مرة أخرى.');
+     }finally{
+      if(ctx.mounted)update(()=>exporting=false);
+     }
+    },icon:const Icon(Icons.file_download_outlined),label:WaffraText(waffraIsEnglish?
+      'Save encrypted .waffra file':'حفظ ملف .waffra المشفّر')),
+    const Divider(height:28),
+    WaffraText(waffraIsEnglish?'Restore an encrypted backup file':'استعادة ملف نسخة احتياطية مشفّر',
+     style:const TextStyle(fontWeight:FontWeight.bold)),
+    const SizedBox(height:10),
+    TextField(controller:restoreSecret,key:const Key('waffra-existing-backup-password'),
+     obscureText:true,
+     inputFormatters:[
+      FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
+      LengthLimitingTextInputFormatter(8),
+     ],
+     onChanged:(_)=>update(()=>restorePasswordError=null),
+     decoration:InputDecoration(
+      labelText:waffraIsEnglish?'Restore password (8 characters) *':'كلمة مرور الاستعادة (8 خانات) *',
+      errorText:restorePasswordError,errorMaxLines:3,
+      border:const OutlineInputBorder())),
+    const SizedBox(height:10),
+    // Select previously exported archives with Android's SAF document picker.
+    // Contents remain hidden and are never copied to the clipboard on export.
+    OutlinedButton.icon(key:const Key('waffra-open-backup-file'),
+     onPressed:restoring?null:()async{
+      try{
+       final selected=await WaffraBackupFiles.openArchive();
+       if(!ctx.mounted||selected==null)return;
+       update((){
+        stagedBackup=selected;
+        restoreError=null;
+        attempted=false;
+       });
+      }catch(_){
+       if(ctx.mounted)update(()=>restoreError=waffraIsEnglish?
+        'Could not open file. Choose a valid Waffra backup up to 8 MB.':
+        'تعذر فتح الملف. اختر نسخة وفرة احتياطية صحيحة حتى 8 ميجابايت.');
+      }
+     },icon:const Icon(Icons.file_open_outlined),
+     label:WaffraText(waffraIsEnglish?'Choose .waffra file':'اختيار ملف .waffra من الجهاز')),
+    // Backward compatibility ONLY: opt-in reading of previously exported
+    // clipboard-only text. New exports never put archive data on clipboard.
+    TextButton.icon(key:const Key('waffra-import-legacy-text'),
+     onPressed:restoring?null:()async{
+      final old=await Clipboard.getData(Clipboard.kTextPlain);
+      if(!ctx.mounted)return;
+      final text=old?.text?.trim()??'';
+      if(text.isEmpty||text.length>WaffraBackupFiles.maxArchiveBytes){
+       update(()=>restoreError=waffraIsEnglish?
+        'No valid older backup text in clipboard.':
+        'لا يوجد نص نسخة احتياطية قديمة صالح في الحافظة.');
+       return;
+      }
+      update((){
+       stagedBackup=text;
+       restoreError=null;
+       attempted=false;
+      });
+     },icon:const Icon(Icons.history_outlined,size:18),
+     label:WaffraText(waffraIsEnglish?
+      'Import older copied backup (legacy)':'استيراد نسخة نصية قديمة (للتوافق فقط)')),
+    if(stagedBackup!=null)...[
+     const SizedBox(height:8),
+     ListTile(dense:true,leading:const Icon(Icons.check_circle_outline,color:Colors.green),
+      title:WaffraText(waffraIsEnglish?'Backup file loaded. Ready to verify.':'تم تحميل النسخة الاحتياطية وجاهزة للتحقق.'),
+      trailing:IconButton(icon:const Icon(Icons.close),
+       tooltip:waffraIsEnglish?'Clear backup':'إزالة النسخة الملصوقة',
+       onPressed:restoring?null:()=>update((){
+        stagedBackup=null;restoreError=null;attempted=false;
+       }))),
+    ],
+    if(attempted&&stagedBackup==null)
+     WaffraText(restoreError??(waffraIsEnglish?'Choose a backup file first.':'اختر ملف نسخة احتياطية أولًا.'),
+      style:const TextStyle(color:Colors.red)),
+    if(restoreError!=null&&stagedBackup!=null)
+     WaffraText(restoreError!,style:const TextStyle(color:Colors.red)),
+    if(restoring)const LinearProgressIndicator(),
    ])),
    actions:[
-    TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إغلاق')),
-    FilledButton(onPressed:()async {
+    TextButton(onPressed:restoring?null:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'Close':'إغلاق')),
+    FilledButton(key:const Key('waffra-confirm-backup-restore'),onPressed:restoring?null:()async {
      update(()=>attempted=true);
-     if(input.text.trim().isEmpty)return;
+     if(!WaffraSecureBackup.isValidNewPassword(restoreSecret.text)){
+      update(()=>restorePasswordError=waffraIsEnglish?
+       'Exactly 8 letters and digits, including at least one of each.':
+       'كلمة المرور 8 خانات بالضبط من أحرف وأرقام، وبها حرف ورقم على الأقل.');
+      return;
+     }
+     if(stagedBackup==null||stagedBackup!.isEmpty)return;
+     update(()=>restoring=true);
      try{
-      final raw=jsonDecode(await WaffraSecureBackup.decrypt(input.text.trim(),secret.text));
-      if(raw is! Map||raw['format']!='waffra-backup'||raw['entries'] is! List||
+      final raw=await compute(waffraDecodeBackupInIsolate,<String,String>{
+       'payload':stagedBackup!,'password':restoreSecret.text,
+      });
+      if(raw['format']!='waffra-backup'||raw['entries'] is! List||
         raw['categories'] is! List||raw['goals'] is! List||raw['recurring'] is! List){
        throw const FormatException('Invalid backup');
       }
@@ -5986,58 +6105,96 @@ Future<void> bulkSmsSheet({String? initialText})async {
       if(ctx.mounted)Navigator.pop(ctx);
       if(mounted)snackSuccess(context,'تمت استعادة البيانات بنجاح');
      }catch(e){
-      if(ctx.mounted)update(()=>backupError=waffraIsEnglish?'Invalid backup. Check the entire JSON text.':'النسخة غير صالحة، تأكد من النص كامل');
+      if(ctx.mounted)update(()=>restoreError=waffraIsEnglish?
+       'Restore failed. Check the original password and complete backup.':
+       'فشلت الاستعادة. تأكد من كلمة المرور الأصلية واكتمال النسخة.');
+     }finally{
+      if(ctx.mounted)update(()=>restoring=false);
      }
-    },child:const WaffraText('استعادة')),
+    },child:WaffraText(waffraIsEnglish?'Restore':'استعادة')),
    ])));
-  disposeLater([input,secret]);
+  disposeLater([secret,restoreSecret]);
  }
  // System credentials are never saved in plain text. A new PIN must be
  // entered twice; keep support for checking older 4-8-digit PINs on disable.
  Future<String?> _askForPin({
   required String title,required String fieldLabel,bool existing=false,
-   bool Function(String)? verify,String? verifyError,
+  bool autoAdvance=false,bool Function(String)? verify,String? verifyError,
  })async{
   final input=TextEditingController();
   var attempted=false;String? fieldError;
   try{
-   return await showWaffraDialog<String>(context:context,builder:(dialogContext)=>StatefulBuilder(builder:(dialogContext,update)=>Theme(data:Theme.of(dialogContext).copyWith(brightness:Brightness.dark,colorScheme:ColorScheme.fromSeed(seedColor:emerald,brightness:Brightness.dark)),child:AlertDialog(
-    backgroundColor:forest,
-    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26),
-     side:waffraDialogOutline(Brightness.dark)),
-    title:Column(mainAxisSize:MainAxisSize.min,children:[
-     const CircleAvatar(radius:26,backgroundColor:emerald,child:Icon(Icons.lock_outline,color:Colors.white,size:28)),
-     const SizedBox(height:12),WaffraText(title,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold))]),
-    content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-     WaffraText(fieldLabel,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w600)),
-     const SizedBox(height:12),
-     TextField(
-     controller:input,autofocus:true,onChanged:(_)=>update(()=>fieldError=null),
-     textDirection:TextDirection.ltr,textAlign:TextAlign.center,
-     keyboardType:TextInputType.number,
-     inputFormatters:[FilteringTextInputFormatter.digitsOnly,
-      LengthLimitingTextInputFormatter(existing?8:4)],
-     obscureText:true,
-     decoration:InputDecoration(hintText:'••••',hintStyle:const TextStyle(color:Colors.white54),
-      helperText:existing?(waffraIsEnglish?'4 to 8 digits':'من 4 إلى 8 أرقام'):(waffraIsEnglish?'4 digits':'أربعة أرقام'),
-      errorText:fieldError??(attempted?waffraPinFieldError(input.text,existing:existing):null),errorMaxLines:3,
-      border:const OutlineInputBorder())),
-    ])),
-    actions:[
-     TextButton(onPressed:()=>Navigator.pop(dialogContext),
-      child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
-     FilledButton(onPressed:(){
-      final code=input.text.trim();
-      update(()=>attempted=true);
-      if(waffraPinFieldError(code,existing:existing)!=null)return;
-      if(verify!=null&&!verify(code)){
-       update(()=>fieldError=verifyError??(waffraIsEnglish?'Incorrect PIN':'رمز القفل غير صحيح'));
-       return;
-      }
-      Navigator.pop(dialogContext,code);
-     },child:WaffraText(waffraIsEnglish?'Confirm':'تأكيد')),
-    ],
-   ))));
+   return await showWaffraDialog<String>(context:context,
+    builder:(dialogContext)=>StatefulBuilder(builder:(dialogContext,update)=>
+     Theme(data:Theme.of(dialogContext).copyWith(brightness:Brightness.dark,
+      colorScheme:ColorScheme.fromSeed(seedColor:emerald,brightness:Brightness.dark)),
+      child:AlertDialog(
+       backgroundColor:forest,
+       shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26),
+        side:waffraDialogOutline(Brightness.dark)),
+       title:Column(mainAxisSize:MainAxisSize.min,children:[
+        const CircleAvatar(radius:26,backgroundColor:emerald,
+         child:Icon(Icons.lock_outline,color:Colors.white,size:28)),
+        const SizedBox(height:12),
+        WaffraText(title,textAlign:TextAlign.center,
+         style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold)),
+       ]),
+       content:SingleChildScrollView(child:Column(
+        mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,
+        children:[
+         WaffraText(fieldLabel,textAlign:TextAlign.center,
+          style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w600)),
+         const SizedBox(height:12),
+         TextField(key:const Key('waffra-pin-input'),controller:input,autofocus:true,
+          textDirection:TextDirection.ltr,textAlign:TextAlign.center,
+          keyboardType:TextInputType.number,
+          inputFormatters:[FilteringTextInputFormatter.digitsOnly,
+           LengthLimitingTextInputFormatter(existing?8:4)],
+          obscureText:true,
+          style:const TextStyle(color:Color(0xFF12382D),fontWeight:FontWeight.bold),
+          onChanged:(value){
+           update(()=>fieldError=null);
+           if(autoAdvance&&value.length==4&&waffraPinFieldError(value)==null){
+            WidgetsBinding.instance.addPostFrameCallback((_){
+             if(dialogContext.mounted&&input.text==value){
+              Navigator.pop(dialogContext,value);
+             }
+            });
+           }
+          },
+          decoration:InputDecoration(
+           filled:true,fillColor:Colors.white,
+           hintText:'••••',hintStyle:const TextStyle(color:Colors.black38),
+           errorText:fieldError??
+            (attempted?waffraPinFieldError(input.text,existing:existing):null),
+           errorMaxLines:3,
+           border:const OutlineInputBorder())),
+        ])),
+       actions:[
+        TextButton(
+         style:TextButton.styleFrom(foregroundColor:Colors.white,
+          backgroundColor:Colors.white.withValues(alpha:.12)),
+         onPressed:()=>Navigator.pop(dialogContext),
+         child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء',
+          style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold))),
+        if(!autoAdvance)FilledButton(
+         style:FilledButton.styleFrom(backgroundColor:emerald,
+          foregroundColor:Colors.white),
+         onPressed:(){
+          final code=input.text.trim();
+          update(()=>attempted=true);
+          if(waffraPinFieldError(code,existing:existing)!=null)return;
+          if(verify!=null&&!verify(code)){
+           update(()=>fieldError=verifyError??
+            (waffraIsEnglish?'Incorrect PIN':'رمز القفل غير صحيح'));
+           return;
+          }
+          Navigator.pop(dialogContext,code);
+         },
+         child:WaffraText(waffraIsEnglish?'Confirm':'تأكيد',
+          style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold))),
+       ],
+      ))));
   }finally{disposeLater([input]);}
  }
  Future<void> configurePin()async {
@@ -6056,12 +6213,13 @@ Future<void> bulkSmsSheet({String? initialText})async {
   }
   final firstPin=await _askForPin(
    title:waffraIsEnglish?'Create a new PIN':'إنشاء رمز قفل',
-   fieldLabel:waffraIsEnglish?'New 4-digit PIN':'رمز PIN من 4 أرقام');
+   fieldLabel:waffraIsEnglish?'Enter a 4-digit PIN':'أدخل رمز القفل من 4 أرقام',
+    autoAdvance:true);
   if(firstPin==null||!mounted)return;
   while(mounted){
    final repeated=await _askForPin(
-    title:waffraIsEnglish?'Confirm your PIN':'أعد إدخال رمز PIN للتأكيد',
-    fieldLabel:waffraIsEnglish?'Repeat PIN':'أعد إدخال الرمز',
+    title:waffraIsEnglish?'Confirm PIN':'تأكيد رمز القفل',
+    fieldLabel:waffraIsEnglish?'Re-enter the same 4 digits':'أدخل رمز القفل المكوّن من 4 أرقام مرة ثانية',
     verify:(code)=>code==firstPin,
     verifyError:waffraIsEnglish?'PINs do not match':'رمزا PIN غير متطابقين');
    if(repeated==null||!mounted)return;
@@ -6208,7 +6366,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    verifyError:waffraIsEnglish?'Incorrect PIN':'رمز القفل غير صحيح');
   if(previous==null||!mounted)return;
   final next=await _askForPin(title:waffraIsEnglish?'New PIN':'رمز جديد',
-   fieldLabel:waffraIsEnglish?'4 digits':'أربعة أرقام');
+   fieldLabel:waffraIsEnglish?'Enter a 4-digit PIN':'أدخل رمز القفل من 4 أرقام',autoAdvance:true);
   if(next==null||!mounted)return;
   final again=await _askForPin(title:waffraIsEnglish?'Confirm PIN':'تأكيد الرمز',
    fieldLabel:waffraIsEnglish?'Repeat PIN':'أعد إدخال الرمز',
@@ -6519,14 +6677,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
        child:Transform.translate(offset:Offset((1-progress)*(waffraIsEnglish?16:-16),0),child:child)),
       child:currentTab()))),
   // Keep the add menu and its original actions above five destinations.
-  floatingActionButtonLocation:const WaffraPhysicalLeftFab(),
+  floatingActionButtonLocation:const WaffraLanguageAwareFabLocation(),
   floatingActionButton:!ready||tab==4?null:Directionality(
    textDirection:TextDirection.ltr,child:Column(
    mainAxisSize:MainAxisSize.min,
-   crossAxisAlignment:CrossAxisAlignment.start,children:[
+   crossAxisAlignment:waffraIsEnglish?CrossAxisAlignment.end:CrossAxisAlignment.start,children:[
     AnimatedSize(duration:const Duration(milliseconds:210),
      curve:Curves.easeOutCubic,
-     alignment:Alignment.bottomLeft,
+     alignment:waffraIsEnglish?Alignment.bottomRight:Alignment.bottomLeft,
      child:addFabExpanded&&(tab==0||tab==1)&&!goalsOpened?Padding(
       padding:const EdgeInsets.only(bottom:9),
       child:Column(mainAxisSize:MainAxisSize.min,
@@ -6603,12 +6761,37 @@ class WaffraTourShade extends CustomPainter {
  }
  @override bool shouldRepaint(covariant WaffraTourShade old)=>old.focus!=focus||old.glow!=glow;
 }
-class WaffraPhysicalLeftFab extends FloatingActionButtonLocation {
- const WaffraPhysicalLeftFab();
+/// Shared red recycle-bin button, readable in dark and light modes.
+class WaffraDeletedItemsButton extends StatelessWidget {
+ final VoidCallback onPressed;
+ final String label;
+ const WaffraDeletedItemsButton({super.key,required this.onPressed,required this.label});
+ @override Widget build(BuildContext context){
+  final dark=Theme.of(context).brightness==Brightness.dark;
+  final red=dark?const Color(0xFFFF9090):const Color(0xFFB42332);
+  return OutlinedButton(
+   onPressed:onPressed,
+   style:OutlinedButton.styleFrom(
+    foregroundColor:red,backgroundColor:dark?const Color(0xFF3C242A):const Color(0xFFFFF4F4),
+    side:BorderSide(color:red,width:1.4),
+    minimumSize:const Size(0,60),
+    padding:const EdgeInsets.symmetric(horizontal:7,vertical:9),
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15))),
+   child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+    Icon(Icons.delete_outline,size:19,color:red),
+    const SizedBox(width:5),
+    Flexible(child:WaffraText(label,maxLines:2,textAlign:TextAlign.center,
+     style:TextStyle(color:red,fontSize:11.5,fontWeight:FontWeight.bold))),
+   ]));
+ }
+}
+class WaffraLanguageAwareFabLocation extends FloatingActionButtonLocation {
+ const WaffraLanguageAwareFabLocation();
  @override Offset getOffset(ScaffoldPrelayoutGeometry geometry){
-  final bottom=geometry.contentBottom;
-  return Offset(16+geometry.minInsets.left,
-   max(16.0,bottom-geometry.floatingActionButtonSize.height-16));
+  final bottom=max(16.0,geometry.contentBottom-geometry.floatingActionButtonSize.height-16);
+  final left=16.0+geometry.minInsets.left;
+  final right=max(left,geometry.scaffoldSize.width-geometry.floatingActionButtonSize.width-16.0-geometry.minInsets.right);
+  return Offset(waffraIsEnglish?right:left,bottom);
  }
 }
 class ChartPoint {

@@ -3,6 +3,11 @@
 name: Waffra Android Full Startup Smoke (Nightly or Manual)
 
 on:
+  # Test the real signed, branded Android app on an emulator before allowing
+  # a previously unverified compiler-only APK to be shared for device QA.
+  push:
+    branches:
+      - 'fix/m148-uat-categories-backup-restore-performance'
   workflow_dispatch:
   schedule:
     - cron: '0 2 * * *'
@@ -622,6 +627,9 @@ jobs:
           WAFFRA_RELEASE_KEY_PASSWORD: ${{ secrets.WAFFRA_RELEASE_KEY_PASSWORD }}
         run: flutter build apk --no-pub --release --target-platform android-x64 --tree-shake-icons
 
+      - name: Test deterministic Android package discovery
+        run: python3 -m unittest discover -s scripts -p 'test_android_emulator_*.py' -v
+
       - name: Verify Release startup on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -631,28 +639,9 @@ jobs:
           profile: pixel_6
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
           script: |
-            set -euo pipefail
-            adb install -r build/app/outputs/flutter-apk/app-release.apk
-            PACKAGE=$(adb shell pm list packages -3 | tr -d '\r' | sed -n 's/^package://p' | grep -m1 -E 'waffra' || true)
-            test -n "$PACKAGE" || { echo "Could not find installed Waffra package"; exit 1; }
-            adb logcat -c
-            adb shell monkey -p "$PACKAGE" -c android.intent.category.LAUNCHER 1
-            sleep 18
-            adb shell pidof "$PACKAGE" || { adb logcat -d -t 350; exit 1; }
-            adb shell uiautomator dump /sdcard/waffra-ui.xml || true
-            adb pull /sdcard/waffra-ui.xml /tmp/waffra-ui.xml || true
-            if [ -f /tmp/waffra-ui.xml ]; then
-              if grep -qE 'تعذر تشغيل وفرة|نسخ تفاصيل الخطأ|Retry' /tmp/waffra-ui.xml; then
-                echo "Startup error UI detected"
-                adb logcat -d -t 350
-                exit 1
-              fi
-            fi
-            if adb logcat -d -t 2000 | grep -E 'NoSuchMethodError.*SharedPreferences|FATAL EXCEPTION|Waffra startup failed:'; then
-              echo "Release startup error detected in Android logs"
-              exit 1
-            fi
-            echo "Release app launched without detected startup exception"
+            # android-emulator-runner executes individual YAML script lines
+            # in separate sh -c processes. Run one file to preserve state.
+            sh scripts/verify_android_emulator_startup.sh
 
       - name: Build optimized ARM64 Release APK
         shell: bash
