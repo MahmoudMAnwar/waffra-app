@@ -40,6 +40,7 @@ import 'waffra_footer.dart';
 import 'waffra_messages.dart';
 import 'waffra_recurring_policy.dart';
 import 'waffra_secure_backup.dart';
+import 'waffra_backup_files.dart';
 import 'storage/waffra_legacy_write_queue.dart';
 import 'storage/waffra_live_legacy_finance_guard.dart';
 import 'storage/waffra_production_finance_source_guard.dart';
@@ -55,6 +56,16 @@ part 'waffra_smart_analysis.part.dart';
 part 'waffra_recurring_trash.part.dart';
 part 'waffra_deleted_item_card.part.dart';
 part 'waffra_widget_capture.part.dart';
+
+Future<Map<String,dynamic>> waffraDecodeBackupInIsolate(Map<String,String> request) async {
+ final decoded=jsonDecode(await WaffraSecureBackup.decrypt(
+  request['payload']!,request['password']!));
+ if(decoded is! Map)throw const FormatException('Invalid backup document');
+ return Map<String,dynamic>.from(decoded);
+}
+
+Future<String> waffraEncryptBackupInIsolate(Map<String,String> request) =>
+ WaffraSecureBackup.encryptUserBackup(request['payload']!,request['password']!);
 
 Future<void> main()async {
  WidgetsFlutterBinding.ensureInitialized();
@@ -6129,70 +6140,177 @@ Future<void> bulkSmsSheet({String? initialText})async {
  }
  Future<void> backupDialog()async {
   if(!await _authorizeSensitiveAction('backing up or restoring data')||!mounted)return;
-  final input=TextEditingController(),secret=TextEditingController();
-  var attempted=false;String? backupError;bool legacyRestorePassword=false;
+  final secret=TextEditingController(),restoreSecret=TextEditingController();
+  String? stagedBackup,backupError,restoreError,restorePasswordError;
+  var attempted=false,restoring=false,exporting=false;
+  int? mode;
+  bool advanced=false;
   await showWaffraDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
-   title:const WaffraText('نسخ احتياطي واستعادة'),
-   content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-    WaffraText(waffraIsEnglish?'Your backup is protected with a password and AES-256 encryption. Keep your password safe; it cannot be recovered.':'نسختك الاحتياطية مشفّرة بكلمة مرور وتشفير AES-256. احتفظ بكلمة المرور؛ لا يمكن استعادتها إذا فُقدت.'),
+   title:WaffraText(waffraIsEnglish?'Secure backup':'نسختك الاحتياطية الآمنة',
+    style:const TextStyle(fontWeight:FontWeight.bold)),
+   content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,
+    crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    WaffraText(waffraIsEnglish?'Your data. Your password.':
+     'بياناتك محفوظة بتشفير قوي. أنت وحدك تملك كلمة المرور.',
+      textAlign:TextAlign.center),
+    const SizedBox(height:15),
+    if(mode==null)...[
+     OutlinedButton.icon(key:const Key('waffra-backup-choose-export'),
+      onPressed:()=>update(()=>mode=0),
+      icon:const Icon(Icons.file_download_rounded),
+      label:WaffraText(waffraIsEnglish?'Save encrypted backup':'حفظ نسخة مشفّرة')),
+     const SizedBox(height:10),
+     OutlinedButton.icon(key:const Key('waffra-backup-choose-restore'),
+      onPressed:()=>update(()=>mode=1),
+      icon:const Icon(Icons.restore_page_outlined),
+      label:WaffraText(waffraIsEnglish?'Restore from my device':'استعادة من الجهاز')),
+     const SizedBox(height:8),
+     Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+      const Icon(Icons.lock_outline,color:Colors.grey,size:15),
+      const SizedBox(width:5),
+      Flexible(child:WaffraText(waffraIsEnglish?'Encrypted • No bank connection':
+       'مشفّرة • بدون ربط بالحسابات البنكية',style:const TextStyle(fontSize:11))),
+     ]),
+    ]else ...[
+     TextButton.icon(onPressed:()=>update(()=>mode=null),
+      icon:const Icon(Icons.arrow_back_ios_new_rounded,size:14),
+      label:WaffraText(waffraIsEnglish?'Back':'رجوع')),
+    ],
+    if(mode==0)...[
     const SizedBox(height:10),
-    TextField(controller:secret,obscureText:true,
-     inputFormatters:legacyRestorePassword?const <TextInputFormatter>[]:
-      <TextInputFormatter>[
-       FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
-       LengthLimitingTextInputFormatter(8),
-      ],
-     onChanged:(_)=>update(()=>backupError=null),
+    TextField(key:const Key('waffra-new-backup-password'),controller:secret,obscureText:true,
+     inputFormatters:[LengthLimitingTextInputFormatter(256)],
      decoration:InputDecoration(
-      labelText:legacyRestorePassword?
-       (waffraIsEnglish?'Existing backup password *':'كلمة مرور النسخة القديمة *'):
-       (waffraIsEnglish?'Backup password (exactly 8 letters/digits) *':'كلمة مرور النسخة (8 خانات أحرف وأرقام) *'),
-      errorText:backupError,errorMaxLines:3,
-      border:const OutlineInputBorder())),
-    // Existing archives may have longer passwords; preserve their restore path.
-    SwitchListTile.adaptive(
-     contentPadding:EdgeInsets.zero,
-     title:WaffraText(waffraIsEnglish?
-      'Restore an older backup password':'استعادة نسخة قديمة بكلمة مرور أطول',
-      style:const TextStyle(fontSize:12)),
-     value:legacyRestorePassword,
-     onChanged:(value)=>update((){
-      legacyRestorePassword=value;secret.clear();backupError=null;
-     })),
+      labelText:waffraIsEnglish?'Backup password (12+ characters) *':'كلمة مرور النسخة (12 حرفًا على الأقل) *',
+      errorText:backupError,errorMaxLines:3,border:const OutlineInputBorder())),
     const SizedBox(height:10),
-    FilledButton.icon(onPressed:()async {
+    FilledButton.icon(onPressed:exporting?null:()async {
      if(!WaffraSecureBackup.isValidNewPassword(secret.text)){
-      update(()=>backupError=waffraIsEnglish?
-       'Exactly 8 letters and digits, including at least one of each.':
-       'كلمة المرور 8 خانات بالضبط من أحرف وأرقام، وبها حرف ورقم على الأقل.');
-      return;
+      update(()=>backupError=waffraIsEnglish?'Use 12 to 256 characters for your backup password.':
+       'استخدم كلمة مرور من 12 إلى 256 حرفًا للنسخة الاحتياطية.');return;
      }
+     update(()=>exporting=true);
      try{
-      final encrypted=await WaffraSecureBackup.encryptUserBackup(exportBackup(),secret.text);
-      await Clipboard.setData(ClipboardData(text:encrypted));
+      final encrypted=await compute(waffraEncryptBackupInIsolate,<String,String>{
+       'payload':exportBackup(),'password':secret.text,
+      });
+      // Persist the encrypted archive only after system document picker confirms.
+      // Never copy it to the system clipboard on export.
+      final saved=await WaffraBackupFiles.saveEncryptedArchive(encrypted);
+      if(!saved)return;
       final generatedAt=DateTime.now().toIso8601String();
       final prefs=await SharedPreferences.getInstance();
       await prefs.setString('waffra_backup_last_exported_v1',generatedAt);
       await prefs.setInt('waffra_backup_last_size_v1',utf8.encode(encrypted).length);
       if(mounted)setState((){lastBackupGeneratedAt=generatedAt;lastBackupBytes=utf8.encode(encrypted).length;});
-      if(ctx.mounted)snackSuccess(ctx,waffraIsEnglish?'Encrypted backup copied; keep it and its password safe':'تم نسخ النسخة المشفّرة، احتفظ بها وكلمة مرورها في مكان آمن');
-     }catch(error){if(ctx.mounted)update(()=>backupError=error.toString());}
-    },icon:const Icon(Icons.lock_outline),label:WaffraText(waffraIsEnglish?'Copy encrypted backup':'نسخ النسخة المشفّرة')),
-    // Password error is inline, directly under the password field.
-    const SizedBox(height:12),
-    TextField(controller:input,minLines:4,maxLines:7,onChanged:(_)=>update(()=>backupError=null),
-     decoration:InputDecoration(labelText:waffraIsEnglish?'Backup JSON *':'الصق نسخة JSON للاستعادة *',
-      errorText:attempted?(input.text.trim().isEmpty?waffraRequiredFieldMessage:backupError):null,
-      errorMaxLines:3,border:OutlineInputBorder())),
+      if(ctx.mounted)snackSuccess(ctx,waffraIsEnglish?
+       'Encrypted .waffra backup file saved. Keep its password safe.':
+       'تم حفظ ملف .waffra المشفّر بنجاح. احتفظ بكلمة المرور بأمان.');
+     }catch(_){
+      if(ctx.mounted)update(()=>backupError=waffraIsEnglish?
+       'Could not save encrypted backup file. Please retry.':
+       'تعذر حفظ ملف النسخة الاحتياطية المشفّر. حاول مرة أخرى.');
+     }finally{
+      if(ctx.mounted)update(()=>exporting=false);
+     }
+    },icon:const Icon(Icons.file_download_outlined),label:WaffraText(waffraIsEnglish?
+      'Save encrypted .waffra file':'حفظ ملف .waffra المشفّر')),
+    ],
+    if(mode==1)...[
+    const SizedBox(height:10),
+    WaffraText(waffraIsEnglish?'Select a Waffra file, then enter its password.':
+     'اختر ملف وفرة، ثم أدخل كلمة مروره.',textAlign:TextAlign.center),
+    const SizedBox(height:10),
+    WaffraText(waffraIsEnglish?'Restore an encrypted backup file':'استعادة ملف نسخة احتياطية مشفّر',
+     style:const TextStyle(fontWeight:FontWeight.bold)),
+    const SizedBox(height:10),
+    TextField(controller:restoreSecret,key:const Key('waffra-existing-backup-password'),
+     obscureText:true,
+     inputFormatters:[LengthLimitingTextInputFormatter(256)],
+     onChanged:(_)=>update(()=>restorePasswordError=null),
+     decoration:InputDecoration(
+      labelText:waffraIsEnglish?'Backup password *':'كلمة مرور النسخة *',
+      errorText:restorePasswordError,errorMaxLines:3,
+      border:const OutlineInputBorder())),
+    const SizedBox(height:10),
+    // Select previously exported archives with Android's SAF document picker.
+    // Contents remain hidden and are never copied to the clipboard on export.
+    OutlinedButton.icon(key:const Key('waffra-open-backup-file'),
+     onPressed:restoring?null:()async{
+      try{
+       final selected=await WaffraBackupFiles.openArchive();
+       if(!ctx.mounted||selected==null)return;
+       update((){
+        stagedBackup=selected;
+        restoreError=null;
+        attempted=false;
+       });
+      }catch(_){
+       if(ctx.mounted)update(()=>restoreError=waffraIsEnglish?
+        'File verification failed. Please choose a valid Waffra backup.':
+        'فشل التحقق من صحة الملف. يرجى اختيار نسخة احتياطية صحيحة من وفرة والمحاولة مرة أخرى.');
+      }
+     },icon:const Icon(Icons.file_open_outlined),
+     label:WaffraText(waffraIsEnglish?'Choose .waffra file':'اختيار ملف .waffra من الجهاز')),
+    // Backward compatibility ONLY: opt-in reading of previously exported
+    // clipboard-only text. New exports never put archive data on clipboard.
+    TextButton.icon(onPressed:()=>update(()=>advanced=!advanced),
+     icon:Icon(advanced?Icons.expand_less:Icons.expand_more),
+     label:WaffraText(waffraIsEnglish?'Advanced options':'خيارات متقدمة')),
+    if(advanced)TextButton.icon(key:const Key('waffra-import-legacy-text'),
+     onPressed:restoring?null:()async{
+      final old=await Clipboard.getData(Clipboard.kTextPlain);
+      if(!ctx.mounted)return;
+      final text=old?.text?.trim()??'';
+      if(text.isEmpty||text.length>WaffraBackupFiles.maxArchiveBytes){
+       update(()=>restoreError=waffraIsEnglish?
+        'No valid older backup text in clipboard.':
+        'لا يوجد نص نسخة احتياطية قديمة صالح في الحافظة.');
+       return;
+      }
+      update((){
+       stagedBackup=text;
+       restoreError=null;
+       attempted=false;
+      });
+     },icon:const Icon(Icons.history_outlined,size:18),
+     label:WaffraText(waffraIsEnglish?
+      'Import older copied backup (legacy)':'استيراد نسخة نصية قديمة (للتوافق فقط)')),
+    if(stagedBackup!=null)...[
+     const SizedBox(height:8),
+     ListTile(dense:true,leading:const Icon(Icons.check_circle_outline,color:Colors.green),
+      title:WaffraText(waffraIsEnglish?'Backup file loaded. Ready to verify.':'تم تحميل النسخة الاحتياطية وجاهزة للتحقق.'),
+      trailing:IconButton(icon:const Icon(Icons.close),
+       tooltip:waffraIsEnglish?'Clear backup':'إزالة النسخة الملصوقة',
+       onPressed:restoring?null:()=>update((){
+        stagedBackup=null;restoreError=null;attempted=false;
+       }))),
+    ],
+    if(attempted&&stagedBackup==null)
+     WaffraText(restoreError??(waffraIsEnglish?'Choose a backup file first.':'اختر ملف نسخة احتياطية أولًا.'),
+      style:const TextStyle(color:Colors.red)),
+    if(restoreError!=null&&stagedBackup!=null)
+     WaffraText(restoreError!,style:const TextStyle(color:Colors.red)),
+    if(restoring)const LinearProgressIndicator(),
+    ],
    ])),
    actions:[
-    TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إغلاق')),
-    FilledButton(onPressed:()async {
+    TextButton(onPressed:restoring?null:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'Close':'إغلاق')),
+    if(mode==1)FilledButton(key:const Key('waffra-confirm-backup-restore'),
+     onPressed:restoring?null:()async {
      update(()=>attempted=true);
-     if(input.text.trim().isEmpty)return;
+     if(restoreSecret.text.isEmpty){
+      update(()=>restorePasswordError=waffraIsEnglish?
+       'Enter the original backup password.':'أدخل كلمة مرور النسخة الأصلية.');
+      return;
+     }
+     if(stagedBackup==null||stagedBackup!.isEmpty)return;
+     update(()=>restoring=true);
      try{
-      final raw=jsonDecode(await WaffraSecureBackup.decrypt(input.text.trim(),secret.text));
-      if(raw is! Map||raw['format']!='waffra-backup'||raw['entries'] is! List||
+      final raw=await compute(waffraDecodeBackupInIsolate,<String,String>{
+       'payload':stagedBackup!,'password':restoreSecret.text,
+      });
+      if(raw['format']!='waffra-backup'||raw['entries'] is! List||
         raw['categories'] is! List||raw['goals'] is! List||raw['recurring'] is! List){
        throw const FormatException('Invalid backup');
       }
@@ -6220,50 +6338,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
        waffraIsEnglish?'This will replace all current transactions, categories, savings goals and recurring items with the backup. Make a backup of current data first. Continue?':'سيتم استبدال جميع المعاملات والأقسام وأهداف الادخار والعمليات المتكررة الحالية بمحتويات النسخة الاحتياطية. احفظ نسخة من بياناتك الحالية قبل المتابعة. هل تريد الاستمرار؟');
       if(ok!=true||!mounted)return;
       if(!await _authorizeSensitiveAction('restoring data')||!mounted)return;
-      // Verify all decrypted finance and journal it BEFORE any in-memory
-      // mutation. A newer widget write must not be overwritten by the backup.
-      final hashes=<String>[];
-      if(raw['smsHashes']!=null){
-       final incoming=raw['smsHashes'];
-       if(incoming is! List||incoming.any((item)=>
-          item is! String||!RegExp(r'^[a-f0-9]{64}$').hasMatch(item))){
-        throw const FormatException('Invalid SMS deduplication hashes');
-       }
-       hashes.addAll((incoming as List).cast<String>().toSet());
-       hashes.sort();
-      }
-      final enabledBudget=raw['monthlyBudgetEnabled'] is bool?
-       (raw['monthlyBudgetEnabled'] as bool):(restoredBudget>0);
-      final finance=<String,Object>{
-       'entries':jsonEncode(newEntries.map((e)=>e.toJson()).toList()),
-       'waffra_categories_v24':jsonEncode(newCategories.map((e)=>e.toJson()).toList()),
-       'waffra_goals_v24':jsonEncode(newGoals.map((e)=>e.toJson()).toList()),
-       'waffra_recurring_v24':jsonEncode(newRecurring.map((e)=>e.toJson()).toList()),
-       'waffra_challenges_v1':jsonEncode(newChallenges.map((e)=>e.toJson()).toList()),
-       'waffra_deleted_categories_v1':jsonEncode(newTrash),
-       'waffra_deleted_goals_v1':jsonEncode(newDeletedGoals),
-       'waffra_deleted_recurring_v1':jsonEncode(newDeletedRecurring),
-       'waffra_recurring_postponed_v1':jsonEncode(newPostponed),
-       'waffra_monthly_budget_v1':restoredBudget,
-       'waffra_monthly_budget_enabled_v1':enabledBudget,
-       'waffra_learned_merchants_v1':jsonEncode(restoredRules),
-       'waffra_sms_hashes_v1':hashes,
-       'waffra_recurring_reminders_enabled_v1':recurringRemindersEnabled,
-      };
-      await WaffraVerifiedLegacyBackupRestore(
-       persistence:_homeFinancePersistence,
-      ).restore(
-       finance:finance,
-       expectedLedgerRaw:_lastLedgerSavedRaw,
-       expectedWidgetRevision:_lastWidgetRevision,
-      );
-      final verified=await _homeFinancePersistence.loadWithWitness();
-      verified.finance.requireIntegrity();
-      final latestEntries=(jsonDecode(verified.ledgerRaw??'[]') as List)
-       .map((e)=>MoneyEntry.fromJson(Map<String,dynamic>.from(e as Map))).toList();
-      if(!mounted)return;
       setState((){
-       entries..clear()..addAll(latestEntries);
+       entries..clear()..addAll(newEntries);
        categories..clear()..addAll(newCategories);
        goals..clear()..addAll(newGoals);
        recurring..clear()..addAll(newRecurring);
@@ -6273,24 +6349,23 @@ Future<void> bulkSmsSheet({String? initialText})async {
        deletedRecurring..clear()..addAll(newDeletedRecurring);
        recurringPostponed..clear()..addAll(newPostponed);
        monthlyBudget=restoredBudget;
-       monthlyBudgetEnabled=enabledBudget;
+       monthlyBudgetEnabled=raw['monthlyBudgetEnabled'] is bool?(raw['monthlyBudgetEnabled'] as bool):(restoredBudget>0);
        learnedMerchantCategories..clear()..addAll(restoredRules);
-       smsHashes..clear()..addAll(
-        verified.finance.getStringList('waffra_sms_hashes_v1')??const <String>[]);
-       _lastLedgerSavedRaw=verified.ledgerRaw;
-       _lastWidgetRevision=verified.widgetRevision;
       });
+      await persist();
       await syncRecurringReminders();
-      unawaited(_refreshWidget());
       if(ctx.mounted)Navigator.pop(ctx);
-      if(mounted)snackSuccess(context,waffraIsEnglish?
-       'Backup restored and verified':'تمت استعادة النسخة والتحقق من البيانات');
+      if(mounted)snackSuccess(context,'تمت استعادة البيانات بنجاح');
      }catch(e){
-      if(ctx.mounted)update(()=>backupError=waffraIsEnglish?'Backup validation or save failed. Existing data were not deliberately erased; reload before retrying.':'تعذر التحقق من النسخة أو حفظها. لم تُحذف البيانات القديمة عمدًا؛ أعد التحميل قبل المحاولة مجددًا.');
+      if(ctx.mounted)update(()=>restoreError=waffraIsEnglish?
+       'Restore failed. Check the original password and complete backup.':
+       'فشلت الاستعادة. تأكد من كلمة المرور الأصلية واكتمال النسخة.');
+     }finally{
+      if(ctx.mounted)update(()=>restoring=false);
      }
-    },child:const WaffraText('استعادة')),
+    },child:WaffraText(waffraIsEnglish?'Restore':'استعادة')),
    ])));
-  disposeLater([input,secret]);
+  disposeLater([secret,restoreSecret]);
  }
  // System credentials are never saved in plain text. A new PIN must be
  // entered twice; keep support for checking older 4-8-digit PINs on disable.
