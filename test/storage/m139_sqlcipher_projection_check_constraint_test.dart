@@ -52,7 +52,8 @@ void main() {
     if(await root.exists())await root.delete(recursive:true);
   });
 
-  // Invalid typed values must fail at SQLite CHECK before the encrypted\n  // snapshot or any projection is changed; a valid atomic save must still work.
+  // Invalid typed values must fail at SQLite CHECK before the encrypted
+  // snapshot or any projection is changed; a valid atomic save must still work.
   Future<void> expectCheckConstraintProtectsState(String sql) async {
     final before=await snapshot().read();
     final categoryRows=await vault.customSelect(
