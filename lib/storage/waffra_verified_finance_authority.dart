@@ -362,13 +362,12 @@ class WaffraVerifiedFinanceAuthority {
       incomeMinor = result.incomeMinor;
       expenseMinor = result.expenseMinor;
     } else {
-      // Missing SQL category+ledger+hash atomic commit must fail closed.
-      if(proposedCategories.isNotEmpty){
-        throw StateError('Encrypted merchant-category provisioning is not yet atomic.');
-      }
+      // The encrypted writer checks category snapshots and SQL projections
+      // under the shared write lock and rolls back the whole SQL transaction.
       final result = await encryptedSession!.appendConfirmed(
         records: frozen, hashes: fingerprints.cast<String?>(),
         userConfirmed: true, allowDuplicateHashes: allowDuplicateHashes,
+        proposedCategories: proposedCategories,
       );
       saved = result.saved;
       income = result.savedIncome;
