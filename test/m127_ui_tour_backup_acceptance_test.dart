@@ -35,13 +35,17 @@ void main() {
     expect(source,contains('if(tourActive&&tourTargetReady)Positioned.fill(child:tourOverlay())'));
   });
 
-  test('backup password field is capped at eight except legacy restore', () {
+  test('new backups use 12–256 character passwords and retain legacy import', () {
     final source=File('lib/main.dart').readAsStringSync();
-    expect(source,contains('LengthLimitingTextInputFormatter(8)'));
-    expect(source,contains("RegExp(r'[A-Za-z0-9]')"));
+    expect(source,contains("key:const Key('waffra-new-backup-password')"));
+    expect(source,contains('LengthLimitingTextInputFormatter(256)'));
+    expect(source,contains('Backup password (12+ characters)'));
     expect(source,contains('if(!WaffraSecureBackup.isValidNewPassword(secret.text))'));
-    expect(source,contains('legacyRestorePassword?const <TextInputFormatter>[]'));
-    expect(source,contains('Restore an older backup password'));
+    expect(source,contains('WaffraBackupFiles.saveEncryptedArchive(encrypted)'));
+    expect(source,contains('WaffraBackupFiles.openArchive()'));
+    expect(source,contains("'Import older copied backup (legacy)'"));
+    expect(source,contains('Clipboard.getData(Clipboard.kTextPlain)'));
+    expect(source,contains('Never copy it to the system clipboard on export.'));
   });
 
   for (final direction in [TextDirection.rtl,TextDirection.ltr]) {

@@ -182,9 +182,12 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
         ?categories.firstWhere((c)=>c.income==parsed.income).name:'أخرى');
     records.add(Map<String,Object?>.from(MoneyEntry(
      id:'${newId()}_${records.length}',
-     title:'${parsed.title} — ${entry.raw.replaceAll(RegExp(r'\s+'),' ').trim()}',
+     title:waffraSafeSmsTransactionTitle(parsed.title,entry.raw,
+      income:parsed.income),
      category:category,amount:parsed.amount!,income:parsed.income,
      date:bankSmsDate(entry.raw)??DateTime.now(),
+     sourceType:'sms',
+     merchantKey:waffraMerchantKey(entry.raw,income:parsed.income)??'',
     ).toJson()));
     hashes.add(bankSmsHash(entry.raw));
    }

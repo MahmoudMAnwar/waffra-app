@@ -1,0 +1,41 @@
+name: M158 Widget SMS Title Privacy
+
+on:
+  push:
+    branches:
+      - 'integration/m158-widget-sms-title-privacy-20261023'
+  pull_request:
+    paths:
+      - 'lib/waffra_widget_capture.part.dart'
+      - 'lib/waffra_merchant_rules.dart'
+      - 'test/waffra_merchant_rules_test.dart'
+      - '.github/workflows/m158-widget-sms-title-privacy.yml'
+  workflow_dispatch:
+
+jobs:
+  widget-sms-private-title:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Analyze shared merchant parser and Widget code
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings lib/main.dart lib/waffra_merchant_rules.dart lib/waffra_widget_capture.part.dart test/waffra_merchant_rules_test.dart
+      - name: Check merchant privacy and finance regression
+        run: flutter test test/waffra_merchant_rules_test.dart test/m155_category_plan_finance_parity_test.dart test/storage/m156_atomic_merchant_category_sms_commit_test.dart
+      - name: Reject raw bank SMS in Widget ledger titles
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          widget=Path('lib/waffra_widget_capture.part.dart').read_text()
+          rules=Path('lib/waffra_merchant_rules.dart').read_text()
+          assert 'waffraSafeSmsTransactionTitle(parsed.title,entry.raw' in widget
+          assert "sourceType:'sms'" in widget
+          assert 'entry.raw.replaceAll' not in widget
+          assert 'final title=' in rules and 'final merchant=waffraMerchantName' in rules
+          print('Widget retains a digest for dedupe, not raw banking text in the transaction title.')
+          PY

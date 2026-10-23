@@ -56,6 +56,7 @@ class _Legacy extends WaffraHomeFinancePersistence {
     required List<String> messageHashes,
     required bool userConfirmed,
     bool allowDuplicateHashes = false,
+    List<Map<String, Object?>> proposedCategories = const [],
   }) async {
     smsCount++;
     if (!userConfirmed) throw StateError('Not confirmed');

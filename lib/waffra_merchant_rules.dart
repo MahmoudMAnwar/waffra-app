@@ -1,6 +1,16 @@
 /// Merchant and counterparty identity extraction for Saudi bank SMS.
 /// Never return a bank account or card suffix; return only the explicitly
 /// printed merchant or person name. No external merchant lookup or bank API.
+/// Refuse bank/card/account identifiers before they become a merchant label.
+bool _waffraSafeMerchantCandidate(String name) {
+  final value=name.trim();
+  if(value.runes.length<2||value.runes.length>100||
+      RegExp(r'^[0-9٠-٩۰-۹]+$').hasMatch(value))return false;
+  if(RegExp(r'[0-9٠-٩۰-۹]{4,}|[*xX]{2,}[0-9٠-٩۰-۹]{2,}|iban|account|acct|card|حساب|بطاقة',
+      caseSensitive:false).hasMatch(value))return false;
+  return true;
+}
+
 String? waffraMerchantName(String raw,{bool income=false}) {
  final text=raw.replaceAll('\u200f','').replaceAll('\u200e','')
   .replaceAll('\u061c','').replaceAll('\r\n','\n');
@@ -23,10 +33,22 @@ String? waffraMerchantName(String raw,{bool income=false}) {
   final name=(match.group(1)??'').trim()
    .replaceAll(RegExp(r'\s+'),' ')
    .replaceAll(RegExp(r'^[;:：\s]+|[;:：\s]+$'),'');
-  if(name.length<2||name.length>100||RegExp(r'^\d+$').hasMatch(name))continue;
+  if(!_waffraSafeMerchantCandidate(name))continue;
   if(RegExp(r'^(?:مدى|mada|mada pay|sr|sar|pos|pay)$',caseSensitive:false).hasMatch(name))continue;
   // A generic payment rail is not a merchant and must not become a category.
   return name;
+ }
+ // Some Saudi POS notifications put the merchant next to the SAR amount,
+ // rather than on a labelled "لدى" line. Extract only that bounded field;
+ // never include the amount, date, card suffix or original SMS in a title.
+ final pos=RegExp(r'شراء\s+pos\s+من\s+مدى\s+([^;\n\r]{2,100})',
+     caseSensitive:false).firstMatch(text);
+ if(pos!=null){
+  final merchant=(pos.group(1)??'')
+   .replaceAll(RegExp(r'\bSAR\s*\d+(?:[.,]\d+)?\b',caseSensitive:false),' ')
+   .replaceAll(RegExp(r'\b\d{1,2}/\d{1,2}/\d{2,4}\b'),' ')
+   .replaceAll(RegExp(r'\s+'),' ').trim();
+  if(_waffraSafeMerchantCandidate(merchant))return merchant;
  }
  return null;
 }
@@ -52,7 +74,9 @@ String? waffraMerchantKey(String raw,{bool income=false}){
  final existing=RegExp(r'(?:شراء|حوالة|شراء نقاط بيع)\s*[—-]\s*([^—\n]{2,100})')
   .firstMatch(raw);
  if(existing!=null){
-  final key=waffraNormalizeMerchantName(existing.group(1)??'');
+  final candidate=(existing.group(1)??'').trim();
+  if(!_waffraSafeMerchantCandidate(candidate))return null;
+  final key=waffraNormalizeMerchantName(candidate);
   return key.isEmpty?null:key;
  }
  return null;
@@ -79,3 +103,21 @@ String? waffraRecognizedMerchantLeaf(String merchant,{required bool income}){
 
 String waffraFallbackSmsParent({required bool income,required bool transfer}) =>
  income?'حوالات واردة':transfer?'تحويلات':'أخرى';
+
+/// Bank SMS titles must NEVER include copied raw messages or account/card
+/// identifiers. The parser supplies one of these fixed operation labels;
+/// unknown labels fall back to a generic kind instead of echoing text.
+String waffraSafeSmsTransactionTitle(String parsedTitle,String rawSms,
+    {required bool income}) {
+  const operations=<String>{
+    'راتب','حوالة واردة','حوالة صادرة','شراء نقاط بيع',
+    'مبلغ وارد','عملية بنكية',
+  };
+  final label=parsedTitle.trim();
+  final base=operations.contains(label)?label:
+    (income?'مبلغ وارد':'عملية بنكية');
+  final merchant=waffraMerchantName(rawSms,income:income);
+  if(merchant==null)return base;
+  final title='$base — $merchant';
+  return title.runes.length<=250?title:base;
+}
