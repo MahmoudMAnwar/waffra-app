@@ -18,12 +18,12 @@ void main(){
   final source=File('lib/main.dart').readAsStringSync();
   expect(source,contains('List<BudgetCategory> forManualTransactionType(bool income)=>'));
   expect(source,contains('c.income==income&&c.isSubcategory'));
-  expect(source,contains('final available=sms?forType(income):forManualTransactionType(income);'));
-  expect(source,contains('category=options.isNotEmpty?options.first.name'));
-  expect(source,contains('parentId:parentId'));
+  expect(source,contains('final mainCategories=waffraManualCategoryParents(available,income);'));
+  expect(source,contains('final subcategories=waffraManualCategoryChildren(available,income,selectedParentId);'));
+  expect(source,contains('parentId:mainId'));
   expect(source,contains("onTap:()=>Navigator.pop(dialogCtx,item.name)"));
   expect(waffraCategoryCatalog.isNotEmpty,isTrue);
-  expect(source,contains('if(!sms&&(chosen==null||chosen.isEmpty))return;'));
+  expect(source,contains('waffraCanAssignManualCategory(categories,'));
  });
 
  test('M150: archive filename is safe and uses .waffra extension',(){
