@@ -36,7 +36,8 @@ void main() {
         await tester.pump();
         expect(tester.takeException(), isNull);
         final translatedText = find.byWidgetPredicate(
-          (widget) => widget is Text && widget.data == expected,
+          // WaffraText extends Text; match only the rendered leaf Text, not its wrapper.
+          (widget) => widget is Text && widget is! WaffraText && widget.data == expected,
         );
         expect(translatedText, findsOneWidget);
         final context = tester.element(translatedText);
