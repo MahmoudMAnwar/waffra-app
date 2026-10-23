@@ -6840,7 +6840,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
   floatingActionButton:!ready||tab==4?null:Directionality(
    textDirection:TextDirection.ltr,child:Column(
    mainAxisSize:MainAxisSize.min,
-   crossAxisAlignment:CrossAxisAlignment.center,children:[
+   // Expanded action labels may be wider than the +; keep the circle
+   // flush left rather than re-centering it under the action menu.
+   crossAxisAlignment:CrossAxisAlignment.start,children:[
     AnimatedSize(duration:const Duration(milliseconds:210),
      curve:Curves.easeOutCubic,
      alignment:Alignment.bottomLeft,
