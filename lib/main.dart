@@ -58,6 +58,9 @@ Future<Map<String,dynamic>> waffraDecodeBackupInIsolate(Map<String,String> reque
  return Map<String,dynamic>.from(decoded);
 }
 
+Future<String> waffraEncryptBackupInIsolate(Map<String,String> request) =>
+ WaffraSecureBackup.encryptUserBackup(request['payload']!,request['password']!);
+
 Future<void> main()async {
  WidgetsFlutterBinding.ensureInitialized();
  // Flutter engine started by the circular Android widget, not the normal app.
@@ -6006,28 +6009,57 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final secret=TextEditingController(),restoreSecret=TextEditingController();
   String? stagedBackup,backupError,restoreError,restorePasswordError;
   var attempted=false,restoring=false,exporting=false;
+  int? mode;
+  bool advanced=false;
   await showWaffraDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
-   title:WaffraText(waffraIsEnglish?'Encrypted backup and restore':'نسخ احتياطي واستعادة'),
-   content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-    WaffraText(waffraIsEnglish?
-     'New encrypted backups require exactly 8 letters and digits. Keep your password safe.':
-     'النسخ الجديدة المشفّرة تتطلب 8 خانات من أحرف وأرقام. احتفظ بكلمة المرور بأمان.'),
+   title:WaffraText(waffraIsEnglish?'Secure backup':'نسختك الاحتياطية الآمنة',
+    style:const TextStyle(fontWeight:FontWeight.bold)),
+   content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,
+    crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    WaffraText(waffraIsEnglish?'Your data. Your password.':
+     'بياناتك محفوظة بتشفير قوي. أنت وحدك تملك كلمة المرور.',
+      textAlign:TextAlign.center),
+    const SizedBox(height:15),
+    if(mode==null)...[
+     OutlinedButton.icon(key:const Key('waffra-backup-choose-export'),
+      onPressed:()=>update(()=>mode=0),
+      icon:const Icon(Icons.file_download_rounded),
+      label:WaffraText(waffraIsEnglish?'Save encrypted backup':'حفظ نسخة مشفّرة')),
+     const SizedBox(height:10),
+     OutlinedButton.icon(key:const Key('waffra-backup-choose-restore'),
+      onPressed:()=>update(()=>mode=1),
+      icon:const Icon(Icons.restore_page_outlined),
+      label:WaffraText(waffraIsEnglish?'Restore from my device':'استعادة من الجهاز')),
+     const SizedBox(height:8),
+     Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+      const Icon(Icons.lock_outline,color:Colors.grey,size:15),
+      const SizedBox(width:5),
+      Flexible(child:WaffraText(waffraIsEnglish?'Encrypted • No bank connection':
+       'مشفّرة • بدون ربط بالحسابات البنكية',style:const TextStyle(fontSize:11))),
+     ]),
+    ]else ...[
+     TextButton.icon(onPressed:()=>update(()=>mode=null),
+      icon:const Icon(Icons.arrow_back_ios_new_rounded,size:14),
+      label:WaffraText(waffraIsEnglish?'Back':'رجوع')),
+    ],
+    if(mode==0)...[
     const SizedBox(height:10),
     TextField(key:const Key('waffra-new-backup-password'),controller:secret,obscureText:true,
-     inputFormatters:[
-      FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
-      LengthLimitingTextInputFormatter(8),
-     ],decoration:InputDecoration(
-      labelText:waffraIsEnglish?'New backup password (8 characters) *':'كلمة مرور النسخة الجديدة (8 خانات) *',
+     inputFormatters:[LengthLimitingTextInputFormatter(256)],
+     decoration:InputDecoration(
+      labelText:waffraIsEnglish?'Backup password (12+ characters) *':'كلمة مرور النسخة (12 حرفًا على الأقل) *',
       errorText:backupError,errorMaxLines:3,border:const OutlineInputBorder())),
     const SizedBox(height:10),
     FilledButton.icon(onPressed:exporting?null:()async {
      if(!WaffraSecureBackup.isValidNewPassword(secret.text)){
-      update(()=>backupError=waffraIsEnglish?'Exactly 8 letters and digits, including one of each.':'كلمة المرور 8 خانات بالضبط من أحرف وأرقام، وبها حرف ورقم على الأقل.');return;
+      update(()=>backupError=waffraIsEnglish?'Use 12 to 256 characters for your backup password.':
+       'استخدم كلمة مرور من 12 إلى 256 حرفًا للنسخة الاحتياطية.');return;
      }
      update(()=>exporting=true);
      try{
-      final encrypted=await WaffraSecureBackup.encryptUserBackup(exportBackup(),secret.text);
+      final encrypted=await compute(waffraEncryptBackupInIsolate,<String,String>{
+       'payload':exportBackup(),'password':secret.text,
+      });
       // Persist the encrypted archive only after system document picker confirms.
       // Never copy it to the system clipboard on export.
       final saved=await WaffraBackupFiles.saveEncryptedArchive(encrypted);
@@ -6049,19 +6081,21 @@ Future<void> bulkSmsSheet({String? initialText})async {
      }
     },icon:const Icon(Icons.file_download_outlined),label:WaffraText(waffraIsEnglish?
       'Save encrypted .waffra file':'حفظ ملف .waffra المشفّر')),
-    const Divider(height:28),
+    ],
+    if(mode==1)...[
+    const SizedBox(height:10),
+    WaffraText(waffraIsEnglish?'Select a Waffra file, then enter its password.':
+     'اختر ملف وفرة، ثم أدخل كلمة مروره.',textAlign:TextAlign.center),
+    const SizedBox(height:10),
     WaffraText(waffraIsEnglish?'Restore an encrypted backup file':'استعادة ملف نسخة احتياطية مشفّر',
      style:const TextStyle(fontWeight:FontWeight.bold)),
     const SizedBox(height:10),
     TextField(controller:restoreSecret,key:const Key('waffra-existing-backup-password'),
      obscureText:true,
-     inputFormatters:[
-      FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
-      LengthLimitingTextInputFormatter(8),
-     ],
+     inputFormatters:[LengthLimitingTextInputFormatter(256)],
      onChanged:(_)=>update(()=>restorePasswordError=null),
      decoration:InputDecoration(
-      labelText:waffraIsEnglish?'Restore password (8 characters) *':'كلمة مرور الاستعادة (8 خانات) *',
+      labelText:waffraIsEnglish?'Backup password *':'كلمة مرور النسخة *',
       errorText:restorePasswordError,errorMaxLines:3,
       border:const OutlineInputBorder())),
     const SizedBox(height:10),
@@ -6079,14 +6113,17 @@ Future<void> bulkSmsSheet({String? initialText})async {
        });
       }catch(_){
        if(ctx.mounted)update(()=>restoreError=waffraIsEnglish?
-        'Could not open file. Choose a valid Waffra backup up to 8 MB.':
-        'تعذر فتح الملف. اختر نسخة وفرة احتياطية صحيحة حتى 8 ميجابايت.');
+        'File verification failed. Please choose a valid Waffra backup.':
+        'فشل التحقق من صحة الملف. يرجى اختيار نسخة احتياطية صحيحة من وفرة والمحاولة مرة أخرى.');
       }
      },icon:const Icon(Icons.file_open_outlined),
      label:WaffraText(waffraIsEnglish?'Choose .waffra file':'اختيار ملف .waffra من الجهاز')),
     // Backward compatibility ONLY: opt-in reading of previously exported
     // clipboard-only text. New exports never put archive data on clipboard.
-    TextButton.icon(key:const Key('waffra-import-legacy-text'),
+    TextButton.icon(onPressed:()=>update(()=>advanced=!advanced),
+     icon:Icon(advanced?Icons.expand_less:Icons.expand_more),
+     label:WaffraText(waffraIsEnglish?'Advanced options':'خيارات متقدمة')),
+    if(advanced)TextButton.icon(key:const Key('waffra-import-legacy-text'),
      onPressed:restoring?null:()async{
       final old=await Clipboard.getData(Clipboard.kTextPlain);
       if(!ctx.mounted)return;
@@ -6121,15 +6158,16 @@ Future<void> bulkSmsSheet({String? initialText})async {
     if(restoreError!=null&&stagedBackup!=null)
      WaffraText(restoreError!,style:const TextStyle(color:Colors.red)),
     if(restoring)const LinearProgressIndicator(),
+    ],
    ])),
    actions:[
     TextButton(onPressed:restoring?null:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'Close':'إغلاق')),
-    FilledButton(key:const Key('waffra-confirm-backup-restore'),onPressed:restoring?null:()async {
+    if(mode==1)FilledButton(key:const Key('waffra-confirm-backup-restore'),
+     onPressed:restoring?null:()async {
      update(()=>attempted=true);
-     if(!WaffraSecureBackup.isValidNewPassword(restoreSecret.text)){
+     if(restoreSecret.text.isEmpty){
       update(()=>restorePasswordError=waffraIsEnglish?
-       'Exactly 8 letters and digits, including at least one of each.':
-       'كلمة المرور 8 خانات بالضبط من أحرف وأرقام، وبها حرف ورقم على الأقل.');
+       'Enter the original backup password.':'أدخل كلمة مرور النسخة الأصلية.');
       return;
      }
      if(stagedBackup==null||stagedBackup!.isEmpty)return;
