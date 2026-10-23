@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'waffra_category_english.dart';
 
 /// Language preference shared by UI and PDF exports. Internal saved values remain unchanged.
 final ValueNotifier<String> waffraLanguage = ValueNotifier<String>('ar');
@@ -236,6 +237,9 @@ const Map<String,String> _english = {
 
 String waffraTr(String source) {
  if(!waffraIsEnglish)return source;
+ // Built-in categories are localized for display only; storage remains stable.
+ final catalogLabel=waffraEnglishCategoryLabel(source);
+ if(catalogLabel!=source)return catalogLabel;
  final exact=_english[source];
  if(exact!=null)return exact;
  final budget=RegExp(r'^الميزانية: (.+) • تنبيه عند (.+)$').firstMatch(source);
