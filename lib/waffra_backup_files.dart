@@ -31,7 +31,7 @@ class WaffraBackupFiles {
 
  /// False means the user cancelled document selection, not a successful save.
  static Future<bool> saveEncryptedArchive(String payload,{String? name}) async {
-  if(!supported)throw const UnsupportedError(
+  if(!supported)throw UnsupportedError(
    'Encrypted file export currently requires Android');
   if(!isEncryptedArchive(payload)){
    throw const FormatException('Only encrypted Waffra archives can be saved');
@@ -48,7 +48,7 @@ class WaffraBackupFiles {
  /// Null means user cancelled picker. Accept both encrypted .waffra and
  /// existing JSON backup documents: the existing decryptor authenticates.
  static Future<String?> openArchive() async {
-  if(!supported)throw const UnsupportedError(
+  if(!supported)throw UnsupportedError(
    'Encrypted file import currently requires Android');
   final raw=await channel.invokeMethod<String>('openEncryptedFile');
   if(raw==null)return null;
