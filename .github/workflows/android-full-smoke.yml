@@ -653,7 +653,9 @@ jobs:
                 exit 1
               fi
             fi
-            if adb logcat -d -t 2000 | grep -E 'NoSuchMethodError.*SharedPreferences|FATAL EXCEPTION|Waffra startup failed:'; then
+            # M148: libdartjni errors can leave the UI process alive with an
+            # error overlay, so checking pidof alone would be a false pass.
+            if adb logcat -d -t 2000 | grep -Ei 'Failed to load dynamic library.*libdartjni\\.so|libdartjni\\.so.*(cannot|failed|not found)|dlopen failed.*dartjni|UnsatisfiedLinkError|NoSuchMethodError.*SharedPreferences|FATAL EXCEPTION|Waffra startup failed:'; then
               echo "Release startup error detected in Android logs"
               exit 1
             fi
