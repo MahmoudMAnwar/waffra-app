@@ -5912,12 +5912,60 @@ Future<void> bulkSmsSheet({String? initialText})async {
       if(ctx.mounted)snackSuccess(ctx,waffraIsEnglish?'Encrypted backup copied; keep it and its password safe':'تم نسخ النسخة المشفّرة، احتفظ بها وكلمة مرورها في مكان آمن');
      }catch(error){if(ctx.mounted)update(()=>backupError=error.toString());}
     },icon:const Icon(Icons.lock_outline),label:WaffraText(waffraIsEnglish?'Copy encrypted backup':'نسخ النسخة المشفّرة')),
-    // Password error shown inline under the input.
-    const SizedBox(height:12),
-    TextField(controller:input,minLines:4,maxLines:7,onChanged:(_)=>update(()=>backupError=null),
-     decoration:InputDecoration(labelText:waffraIsEnglish?'Backup JSON *':'الصق نسخة JSON للاستعادة *',
-      errorText:attempted?(input.text.trim().isEmpty?waffraRequiredFieldMessage:backupError):null,
-      errorMaxLines:3,border:OutlineInputBorder())),
+    const Divider(height:28),
+    WaffraText(waffraIsEnglish?'Restore an existing backup':'استعادة نسخة احتياطية سابقة',
+     style:const TextStyle(fontWeight:FontWeight.bold)),
+    const SizedBox(height:10),
+    TextField(controller:restoreSecret,key:const Key('waffra-existing-backup-password'),
+     obscureText:true,decoration:InputDecoration(
+      labelText:waffraIsEnglish?'Original backup password':'كلمة مرور النسخة الأصلية',
+      helperText:waffraIsEnglish?
+       'Use the original password exactly. Legacy backups can use more than 8 characters.':
+       'اكتب كلمة المرور الأصلية كما هي. النسخ القديمة قد تتجاوز 8 خانات.',
+      helperMaxLines:2,border:const OutlineInputBorder())),
+    const SizedBox(height:10),
+    // Keep large encrypted JSON out of editable TextField rendering and
+    // avoid a dialog-wide rebuild on every pasted character.
+    OutlinedButton.icon(key:const Key('waffra-paste-backup-clipboard'),
+     onPressed:restoring?null:()async{
+      final clipboard=await Clipboard.getData(Clipboard.kTextPlain);
+      if(!ctx.mounted)return;
+      final text=clipboard?.text?.trim()??'';
+      if(text.isEmpty){
+       update(()=>restoreError=waffraIsEnglish?
+        'Clipboard is empty. Copy the complete backup first.':
+        'الحافظة فارغة. انسخ النسخة كاملة أولًا.');
+       return;
+      }
+      if(text.length>8*1024*1024){
+       update(()=>restoreError=waffraIsEnglish?
+        'Backup exceeds the 8 MB import limit.':
+        'النسخة تتجاوز حد الاستيراد (8 ميجابايت).');
+       return;
+      }
+      update((){
+       stagedBackup=text;
+       restoreError=null;
+       attempted=false;
+      });
+     },icon:const Icon(Icons.content_paste),
+     label:WaffraText(waffraIsEnglish?'Paste backup from clipboard':'لصق النسخة من الحافظة')),
+    if(stagedBackup!=null)...[
+     const SizedBox(height:8),
+     ListTile(dense:true,leading:const Icon(Icons.check_circle_outline,color:Colors.green),
+      title:WaffraText(waffraIsEnglish?'Backup loaded. Ready to verify.':'تم تحميل النسخة وجاهزة للتحقق.'),
+      trailing:IconButton(icon:const Icon(Icons.close),
+       tooltip:waffraIsEnglish?'Clear backup':'إزالة النسخة الملصوقة',
+       onPressed:restoring?null:()=>update((){
+        stagedBackup=null;restoreError=null;attempted=false;
+       }))),
+    ],
+    if(attempted&&stagedBackup==null)
+     WaffraText(restoreError??(waffraIsEnglish?'Paste the backup first.':'الصق النسخة أولًا.'),
+      style:const TextStyle(color:Colors.red)),
+    if(restoreError!=null&&stagedBackup!=null)
+     WaffraText(restoreError!,style:const TextStyle(color:Colors.red)),
+    if(restoring)const LinearProgressIndicator(),
    ])),
    actions:[
     TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إغلاق')),
