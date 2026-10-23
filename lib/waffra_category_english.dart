@@ -113,7 +113,7 @@ String waffraEnglishCategoryLabel(String value) {
  final mainEn=_waffraEnglishByArabic[main];
  final subEn=_waffraEnglishByArabic[sub];
  if(mainEn==null||subEn==null)return value;
- return '$'+'{mainEn} / '+'$'+'{subEn}';
+ return '$mainEn / $subEn';
 }
 
 /// Exposed for exhaustive catalog coverage regressions.
