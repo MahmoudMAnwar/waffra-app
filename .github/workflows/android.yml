@@ -6,6 +6,8 @@ on:
   push:
     branches:
       - main
+      # M160 signed APK for owner physical-device QA only; no store release.
+      - 'integration/m160-reconcile-main-m158-release-gate-20261023'
       - 'feature/storage-finance-startup-recovery-m62'
       - 'feature/storage-verified-backup-restore-m63'
       - 'feature/storage-encrypted-receipt-view-m66'
