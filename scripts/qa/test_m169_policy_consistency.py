@@ -35,7 +35,7 @@ class PolicyConsistencyTests(unittest.TestCase):
                                encoding="utf-8")
             path = root / "docs/release/PRIVACY_POLICY_EN_DRAFT.md"
             path.write_text(path.read_text().replace(
-                "The Firebase Crashlytics SDK **is declared**",
+                "The Firebase Crashlytics SDK **is declared in the app's current dependencies**",
                 "Firebase is optional"), encoding="utf-8")
             report = inspect(root)
             self.assertFalse(report["sourceConsistencyPassed"])
