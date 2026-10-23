@@ -357,3 +357,46 @@ test('M107 completed deletion tombstone also prevents stale token re-creation', 
   await assertFails(setDoc(doc(alice, path), vault('alice')));
   await assertFails(getDoc(doc(alice, path)));
 });
+
+
+test('M168 deletion tombstone denies old owner but does not block an unrelated account', async () => {
+  const alicePhoneA = env.authenticatedContext('alice').firestore();
+  const alicePhoneB = env.authenticatedContext('alice').firestore();
+  const bob = env.authenticatedContext('bob').firestore();
+  await assertSucceeds(setDoc(doc(alicePhoneA, path), vault('alice')));
+  await assertSucceeds(setDoc(doc(alicePhoneA, recordPath), encryptedRecord()));
+  const bobPath = 'users/bob/vaults/own-vault';
+  await assertSucceeds(setDoc(doc(bob, bobPath), vault('bob')));
+  await env.withSecurityRulesDisabled(async (admin) => {
+    await setDoc(doc(admin.firestore(), 'accountDeletionRequests/alice'), {
+      status: 'deleting', updatedAt: serverTimestamp(),
+    });
+  });
+  // A second phone's still-signed-in Firebase UID must not resurrect records.
+  await assertFails(getDoc(doc(alicePhoneA, recordPath)));
+  await assertFails(setDoc(doc(alicePhoneB, recordPath),
+    encryptedRecord({ localVersion: 2, mutationId: 'old-device-replay' })));
+  await assertFails(setDoc(doc(alicePhoneB, path + '/records/recreated'),
+    encryptedRecord()));
+  await assertFails(setDoc(doc(alicePhoneA, path + '/recovery/current'),
+    wrappedRecovery()));
+  await assertFails(deleteDoc(doc(alicePhoneA, 'accountDeletionRequests/alice')));
+  await assertFails(setDoc(doc(alicePhoneA, 'accountDeletionRequests/alice'),
+    { status: 'cancelled' }));
+  // The tombstone is UID-scoped; other customers keep using their own vaults.
+  await assertSucceeds(getDoc(doc(bob, bobPath)));
+  await assertSucceeds(setDoc(doc(bob, bobPath + '/records/own-tx'),
+    encryptedRecord({ mutationId: 'bob-1' })));
+  await assertFails(getDoc(doc(bob, path)));
+});
+
+test('M168 an ordinary user cannot forge another account deletion request', async () => {
+  const alice = env.authenticatedContext('alice').firestore();
+  const bob = env.authenticatedContext('bob').firestore();
+  await assertFails(setDoc(doc(alice, 'accountDeletionRequests/bob'),
+    { status: 'deleting' }));
+  await assertFails(setDoc(doc(bob, 'accountDeletionRequests/alice'),
+    { status: 'deleting' }));
+  await assertFails(getDoc(doc(alice, 'accountDeletionRequests/bob')));
+  await assertFails(deleteDoc(doc(alice, 'accountDeletionRequests/bob')));
+});
