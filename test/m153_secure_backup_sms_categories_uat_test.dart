@@ -26,15 +26,15 @@ void main(){
   final records=<String>[];
   // No real bank account numbers or personal messages enter source control.
   for(var i=0;i<11;i++){
-   records.add('حوالة داخلية واردة بـSR 10\\nلـ1111\\nمن2222;شخص مثال '+(i%3).toString()+'\\n26/10/17 12:34');
+   records.add('حوالة داخلية واردة بـSR 10\nلـ1111\nمن2222;شخص مثال '+(i%3).toString()+'\n26/10/17 12:34');
   }
   for(var i=0;i<4;i++){
-   records.add('حوالة داخلية صادرة بـSR 15\\nمن1111\\nلـ2222;مستفيد مثال '+(i%2).toString()+'\\n26/10/16 19:23');
+   records.add('حوالة داخلية صادرة بـSR 15\nمن1111\nلـ2222;مستفيد مثال '+(i%2).toString()+'\n26/10/16 19:23');
   }
   for(var i=0;i<15;i++){
-   records.add('شراء PoS\\nعبر:1111;مدى\\nبـSAR 20\\nلـ'+(i%2==0?'SHAWARMA H':'shawerma h')+'\\n15/10/26 16:09');
+   records.add('شراء PoS\nعبر:1111;مدى\nبـSAR 20\nلـ'+(i%2==0?'SHAWARMA H':'shawerma h')+'\n15/10/26 16:09');
   }
-  final text=records.join('\\n');
+  final text=records.join('\n');
   final messages=splitBankMessages(text);
   expect(messages.length,30);
   final parsed=messages.map(BankParser.parse).toList();
