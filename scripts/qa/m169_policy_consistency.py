@@ -16,7 +16,7 @@ def inspect(root: Path) -> dict:
     checks = {
         "crash_sdk_declared": "firebase_crashlytics:" in pubspec,
         "arabic_crash_sdk_disclosed": "Crashlytics" in ar and "موجودة" in ar,
-        "english_crash_sdk_disclosed": "The Firebase Crashlytics SDK **is declared**" in en,
+        "english_crash_sdk_disclosed": "The Firebase Crashlytics SDK **is declared in the app's current dependencies**" in en,
         "data_safety_reflects_sdk": "`firebase_crashlytics`" in data and "is declared" in data,
         "crash_reporter_review_off": "WAFFRA_CRASHLYTICS_READY" in app and "defaultValue: false" in app,
         "native_collection_default_off": 'firebase_crashlytics_collection_enabled' in manifest_build
