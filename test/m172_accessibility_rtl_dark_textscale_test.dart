@@ -19,8 +19,12 @@ void main() {
         final expected = language == 'ar' ? 'المعاملات' : 'Transactions';
         await tester.pumpWidget(MaterialApp(
           theme: ThemeData(
-            useMaterial3: true, brightness: brightness, fontFamily: 'Tajawal',
+            useMaterial3: true, brightness: Brightness.light, fontFamily: 'Tajawal',
           ),
+          darkTheme: ThemeData(
+            useMaterial3: true, brightness: Brightness.dark, fontFamily: 'Tajawal',
+          ),
+          themeMode: brightness == Brightness.dark ? ThemeMode.dark : ThemeMode.light,
           home: MediaQuery(
             data: const MediaQueryData(
               textScaler: TextScaler.linear(1.75),
