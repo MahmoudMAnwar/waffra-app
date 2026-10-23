@@ -368,14 +368,20 @@ class BankParser {
 }
 DateTime? bankSmsDate(String raw) {
  final normalized=digits(raw).replaceAll('‏','').replaceAll('‎','');
- final match=RegExp(r'(\\d{1,2})[/-](\\d{1,2})[/-](\\d{2,4})\\s+(\\d{1,2}):(\\d{2})').firstMatch(normalized);
+ final match=RegExp(r'(\d{1,2})[/-](\d{1,2})[/-](\d{1,4})\s+(\d{1,2}):(\d{2})').firstMatch(normalized);
  if(match==null)return null;
- final day=int.tryParse(match.group(1)!),month=int.tryParse(match.group(2)!);
- var year=int.tryParse(match.group(3)!);
+ final a=int.tryParse(match.group(1)!),b=int.tryParse(match.group(2)!),
+  c=int.tryParse(match.group(3)!);
  final hour=int.tryParse(match.group(4)!),minute=int.tryParse(match.group(5)!);
- if(day==null||month==null||year==null||hour==null||minute==null)return null;
- if(year<100)year+=2000;
- if(month<1||month>12||day<1||day>31||hour>23||minute>59)return null;
+ if(a==null||b==null||c==null||hour==null||minute==null)return null;
+ // Saudi transfer texts in our accepted bank fixtures use YY/MM/DD.
+ // POS receipts instead use DD/MM/YY. Never force a single ambiguous
+ // date convention across both sources.
+ final isTransfer=RegExp(r'حوال[ةه]|تحويل|transfer',caseSensitive:false).hasMatch(raw);
+ final year=isTransfer?(a<100?2000+a:a):(c<100?2000+c:c);
+ final month=b,day=isTransfer?c:a;
+ if(year<2000||year>2100||month<1||month>12||day<1||day>31||
+  hour>23||minute>59)return null;
  final date=DateTime(year,month,day,hour,minute);
  return date.year==year&&date.month==month&&date.day==day?date:null;
 }
