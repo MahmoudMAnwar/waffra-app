@@ -40,4 +40,9 @@ void main() {
       'Credit card 5432123454329999','عملية مجهولة',income:true),
       'مبلغ وارد');
   });
+  test('M158: historical merchant fallback rejects bank and card IDs', () {
+    expect(waffraMerchantKey('شراء — SHOP CARD 5432123454329999'),isNull);
+    expect(waffraMerchantKey('حوالة — حساب 123456789012'),isNull);
+    expect(waffraMerchantKey('شراء — ALHUSSAIN SHOP'),'alhussain shop');
+  });
 }
