@@ -187,15 +187,9 @@ extension WaffraCategoryScreen on _HomeScreenState {
     subtitle:waffraIsEnglish?'All income and expense types with subcategories':
      'كل أنواع الدخل والمصروفات في أقسام رئيسية وفرعية منظمة.',
     icon:Icons.category_outlined,titleKey:_tourKeys[2]),
-   SizedBox(width:double.infinity,child:OutlinedButton.icon(
+   SizedBox(width:double.infinity,child:WaffraDeletedItemsButton(
     onPressed:showCategoryTrash,
-    style:OutlinedButton.styleFrom(
-     side:BorderSide(color:Theme.of(context).colorScheme.primary,width:1.4),
-     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15)),
-     padding:const EdgeInsets.symmetric(horizontal:12,vertical:13)),
-    icon:const Icon(Icons.delete_outline,size:20),
-    label:WaffraText(waffraIsEnglish?'Deleted categories':'الأقسام المحذوفة',
-     style:const TextStyle(fontWeight:FontWeight.bold)))),
+    label:waffraIsEnglish?'Deleted categories':'الأقسام المحذوفة')),
    const SizedBox(height:14),
    Row(children:[
     Expanded(child:_compactCategoryStat(waffraIsEnglish?'Main categories':'الأقسام الرئيسية',
