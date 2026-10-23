@@ -6118,7 +6118,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       return;
      }
      try{
-      final encrypted=await WaffraSecureBackup.encrypt(exportBackup(),secret.text);
+      final encrypted=await WaffraSecureBackup.encryptUserBackup(exportBackup(),secret.text);
       await Clipboard.setData(ClipboardData(text:encrypted));
       final generatedAt=DateTime.now().toIso8601String();
       final prefs=await SharedPreferences.getInstance();
