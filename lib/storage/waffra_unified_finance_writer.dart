@@ -220,7 +220,15 @@ class WaffraUnifiedFinanceWriter {
           );
           list.add(record);
           usedCategoryNames.add('${record['income']}|${record['category']}'.toLowerCase());
-          if (hash != null) existingHashes.add(hash);
+          if(hash!=null){
+            existingHashes.add(hash);
+            // Keep the canonical finance snapshot and SQL hash projection
+            // in this one transaction, even under allow-duplicates mode.
+            await snapshot.store.customStatement(
+              'INSERT OR IGNORE INTO fresh_finance_sms_hashes '
+              '(message_hash) VALUES (?)',[hash],
+            );
+          }
           final minor = ((record['amount'] as num) * 100).round();
           if (record['income'] == true) {
             savedIncome++;
