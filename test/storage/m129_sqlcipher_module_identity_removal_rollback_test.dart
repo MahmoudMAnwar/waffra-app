@@ -49,7 +49,7 @@ void main() {
     root = await Directory.systemTemp.createTemp('waffra-m129-disposable-');
     vault = WaffraEncryptedStore.openAt(
       File('${root.path}/test.sqlite'),
-      key: 'm129-disposable-only',
+      key: 'm129-disposable-test-key-only-2026',
     );
     await WaffraFreshEncryptedVaultBootstrap(
       store: vault,
