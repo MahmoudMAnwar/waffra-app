@@ -1,0 +1,31 @@
+name: M143 SQLCipher Confirmed Input Freeze QA
+
+on:
+  pull_request:
+    branches:
+      - 'test/m142-sqlcipher-stale-screen-writer-gate-qa'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m143-confirmed-input-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  disposable-confirmation-freeze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install Flutter dependencies
+        run: flutter pub get
+      - name: Run M142 and M143 confirmation race tests
+        run: >-
+          flutter test
+          test/storage/m142_sqlcipher_stale_screen_writer_gate_test.dart
+          test/storage/m143_sqlcipher_confirmation_input_freeze_test.dart
