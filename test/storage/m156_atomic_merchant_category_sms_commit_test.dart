@@ -49,7 +49,7 @@ void main(){
   final prefs=await SharedPreferences.getInstance();await prefs.reload();
   final saved=jsonDecode(prefs.getString('entries')!) as List;
   final cats=jsonDecode(prefs.getString('waffra_categories_v24')!) as List;
-  expect(saved,length(2));expect(cats,length(5));
+  expect(saved,hasLength(2));expect(cats,hasLength(5));
   expect(cats.last['name'],'أخرى / ALHUSSAIN');
   expect(prefs.getStringList('waffra_sms_hashes_v1'),['a'*64,'b'*64]);
   expect(prefs.getString('waffra_widget_last_save_v1'),isNotNull);
@@ -101,7 +101,7 @@ void main(){
   final witness=await bridge().loadWithWitness();
   expect(witness.widgetRevision,'r-123');
   await prefs.reload();
-  expect((jsonDecode(prefs.getString('waffra_categories_v24')!) as List),length(5));
+  expect((jsonDecode(prefs.getString('waffra_categories_v24')!) as List),hasLength(5));
   expect(prefs.getStringList('waffra_sms_hashes_v1'),['a'*64]);
   expect(prefs.containsKey(WaffraLegacyFinanceBatchJournal.pendingKey),false);
  });
