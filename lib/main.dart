@@ -49,6 +49,7 @@ import 'storage/waffra_legacy_finance_writer_coordinator.dart';
 import 'storage/waffra_legacy_widget_commit_journal.dart';
 import 'storage/waffra_home_finance_persistence.dart';
 import 'storage/waffra_verified_finance_authority.dart';
+import 'storage/waffra_m155_category_plan.dart';
 import 'storage/waffra_production_finance_routing_gate.dart';
 import 'storage/waffra_verified_legacy_backup_restore.dart';
 import 'waffra_home_widget.dart';
@@ -2530,15 +2531,41 @@ Future<void> bulkSmsSheet({String? initialText})async {
   if(accepted!=true||!ctx.mounted)return;
   update(() {busy=true;rejectedMessages=invalid.map((i)=>found[i]).toList();});
   final additions=<MoneyEntry>[];
+  final proposed=<BudgetCategory>[];
+  final proposedHashes=<String>[];
   for(final i in valid){
    final result=results[i];
-   final merchant=waffraMerchantKey(found[i]);
-   final learned=merchant==null?null:learnedMerchantCategories[merchant];
-   final proposed=learned??result.category;
-   final cat=categories.any((c)=>c.income==result.income&&c.name==proposed)
-    ?proposed:(forType(result.income).isNotEmpty?forType(result.income).first.name:'أخرى');
-   additions.add(MoneyEntry(id:newId(),title:'${result.title} — ${found[i].replaceAll(RegExp(r'\\s+'),' ').trim()}',
-    category:cat,amount:result.amount!,income:result.income,date:bankSmsDate(found[i])??DateTime.now()));
+   final raw=found[i];
+   final existing=<WaffraM155Category>[
+    for(final c in [...categories,...proposed])
+     WaffraM155Category(id:c.id,name:c.name,income:c.income,parentId:c.parentId),
+   ];
+   final plan=WaffraM155CategoryPlan.propose(rawSms:raw,income:result.income,
+    existing:existing,learned:learnedMerchantCategories);
+   if(plan==null){invalid.add(i);continue;}
+   if(plan.newCategoryRequired){
+    final parentName=plan.categoryName.split(' / ').first;
+    final roots=categories.where((c)=>c.income==result.income&&
+      !c.isSubcategory&&c.name==parentName).toList();
+    if(roots.length!=1){invalid.add(i);continue;}
+    final parent=roots.single;
+    proposed.add(BudgetCategory(id:newId(),name:plan.categoryName,
+     parentId:parent.id,income:result.income,icon:parent.icon,
+     color:parent.color));
+   }
+   final merchant=waffraMerchantName(raw,income:result.income);
+   final title=merchant==null?result.title:result.title+' — '+merchant;
+   additions.add(MoneyEntry(id:newId(),title:title,
+    category:plan.categoryName,amount:result.amount!,income:result.income,
+    date:bankSmsDate(raw)??DateTime.now(),sourceType:'sms',
+    merchantKey:plan.merchantKey));
+   proposedHashes.add(bankSmsHash(raw));
+  }
+  if(additions.isEmpty){
+   update(()=>statusMessage=waffraIsEnglish?
+    'No valid transactions could be saved. Review categories and try again.':
+    'لم يتم العثور على معاملات صالحة للحفظ. راجع الأقسام ثم حاول مرة أخرى.');
+   return;
   }
   try{
    // The dashboard and standalone Android widget now use the SAME locked,
@@ -2547,7 +2574,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
    final applied=await _financeAuthority.commitConfirmedSms(
     route:WaffraFinanceRoute.bulkSmsConfirmedSave,
     records:additions.map((e)=>e.toJson()).toList(growable:false),
-    hashes:[for(final i in valid)bankSmsHash(found[i])],
+    hashes:proposedHashes,
+    proposedCategories:proposed.map((c)=>c.toJson()).toList(),
     userConfirmed:true,
     allowDuplicateHashes:allowRepeatedSms,
    );
@@ -2557,6 +2585,13 @@ Future<void> bulkSmsSheet({String? initialText})async {
     .toList();
    setState((){
     entries..clear()..addAll(persisted);
+    if(proposed.isNotEmpty){
+     final stored=applied.current.finance.getString('waffra_categories_v24');
+     if(stored!=null){
+      categories..clear()..addAll((jsonDecode(stored) as List)
+       .map((e)=>BudgetCategory.fromJson(Map<String,dynamic>.from(e as Map))));
+     }
+    }
     smsHashes..clear()..addAll(
      applied.current.finance.getStringList('waffra_sms_hashes_v1')??const <String>[]);
     _lastFinanceAuthorityRead=applied.current;
