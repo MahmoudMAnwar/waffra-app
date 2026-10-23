@@ -175,6 +175,24 @@ class BudgetCategory {
  Map<String,dynamic> toJson()=>{'id':id,'name':name,'icon':icon,'color':color,'income':income,'parentId':parentId,'budget':budget,'alertPercent':alertPercent};
  factory BudgetCategory.fromJson(Map<String,dynamic> j)=>BudgetCategory(id:'${j['id']??newId()}',name:'${j['name']??'أخرى'}',icon:'${j['icon']??'category'}',color:(j['color'] as num?)?.toInt()??0xFF087A54,income:j['income']==true,parentId:'${j['parentId']??''}',budget:(j['budget'] as num?)?.toDouble()??0,alertPercent:(j['alertPercent'] as num?)?.toInt()??80);
 }
+/// Manual transactions must target an active child category, never a heading.
+List<BudgetCategory> waffraManualCategoryParents(
+ Iterable<BudgetCategory> values,bool income)=>
+ values.where((c)=>c.income==income&&!c.isSubcategory).toList();
+
+List<BudgetCategory> waffraManualCategoryChildren(
+ Iterable<BudgetCategory> values,bool income,String? parentId)=>
+ parentId==null?<BudgetCategory>[]:
+ values.where((c)=>c.income==income&&c.isSubcategory&&c.parentId==parentId).toList();
+
+bool waffraCanAssignManualCategory(Iterable<BudgetCategory> values,
+ bool income,String? parentId,String category){
+ if(parentId==null)return false;
+ return values.any((c)=>c.income==income&&!c.isSubcategory&&c.id==parentId)&&
+  values.any((c)=>c.income==income&&c.isSubcategory&&
+   c.parentId==parentId&&c.name==category);
+}
+
 class SavingGoal {
  final String id,name;final double target,saved;
  SavingGoal({required this.id,required this.name,required this.target,required this.saved});
@@ -2678,8 +2696,19 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final value=TextEditingController(text:initial==null?'':formatWaffraMoney(initial.amount));
   final message=TextEditingController(text:initialSms??'');
   bool income=initial?.income??false,analyzing=false,hasParsed=initialSms!=null;
-  String category=initial?.category??(sms?'أخرى':
-   (forManualTransactionType(false).isNotEmpty?forManualTransactionType(false).first.name:''));
+  String category=initial?.category??'أخرى';
+  String? selectedParentId;
+  if(!sms){
+   // Only leaf categories can be assigned to manually entered transactions.
+   final matchingLeaf=categories.where((c)=>c.income==income&&
+    c.isSubcategory&&c.name==category).toList();
+   if(matchingLeaf.isNotEmpty&&categories.any((c)=>!c.isSubcategory&&
+      c.income==income&&c.id==matchingLeaf.first.parentId)){
+    selectedParentId=matchingLeaf.first.parentId;
+   }else{
+    category='';
+   }
+  }
   DateTime date=initial?.date??DateTime.now();
    String? suggestion,pendingHash,receiptPath=initial?.receiptPath;
    bool attempted=false;
@@ -2708,10 +2737,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
       });
      });
     }
-    final available=sms?forType(income):forManualTransactionType(income);
-    final chosen=available.any((c)=>c.name==category)?category:
-     (initial!=null&&initial.category==category?category:
-      (available.isEmpty?null:available.first.name));
+    final available=forType(income);
+    final chosen=available.any((c)=>c.name==category)?category:(available.isEmpty?null:available.first.name);
+    final mainCategories=waffraManualCategoryParents(available,income);
+    final selectedMain=mainCategories.where((c)=>c.id==selectedParentId).toList();
+    final subcategories=waffraManualCategoryChildren(available,income,selectedParentId);
+    final selectedSub=subcategories.where((c)=>c.name==category).toList();
     return Padding(padding:EdgeInsets.fromLTRB(18,10,18,MediaQuery.of(sheetContext).viewInsets.bottom+20),
      child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,
       crossAxisAlignment:CrossAxisAlignment.stretch,children:[
@@ -2736,8 +2767,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
         ButtonSegment(value:false,label:WaffraText('مصروف'))],
        selected:{income},onSelectionChanged:(v)=>update((){
         income=v.first;
-        final options=sms?forType(income):forManualTransactionType(income);
-        category=options.isNotEmpty?options.first.name:'';suggestion=null;
+        selectedParentId=null;
+        category=sms?(forType(income).isNotEmpty?forType(income).first.name:'أخرى'):'';
+        suggestion=null;
        })),
       const SizedBox(height:12),
       TextField(controller:title,onChanged:(_)=>update((){}),minLines:1,maxLines:5,
@@ -2751,19 +2783,50 @@ Future<void> bulkSmsSheet({String? initialText})async {
         errorText:attempted?waffraAmountFieldError(value.text):null,
         border:OutlineInputBorder())),
       const SizedBox(height:12),
-      InkWell(onTap:()async{
-       final picked=await chooseTransactionCategory(sheetContext,available,chosen??'');
-       if(picked!=null&&sheetContext.mounted)update(()=>category=picked);
-      },child:InputDecorator(decoration:InputDecoration(labelText:waffraTr('القسم'),
-       border:const OutlineInputBorder(),suffixIcon:const Icon(Icons.search_rounded)),
-       child:WaffraText(chosen??'',maxLines:2))),
-      if(!sms&&available.isEmpty)Padding(
-       padding:const EdgeInsets.only(top:6),
-       child:WaffraText(waffraIsEnglish?
-        'Add an income or expense subcategory before saving.':
-        'أضف قسمًا فرعيًا للدخل أو المصروفات قبل الحفظ.',
-        style:const TextStyle(color:Colors.red))),
-      if(suggestion!=null)TextButton.icon(onPressed:()async {
+      if(sms)
+       InkWell(onTap:()async{
+        final picked=await chooseTransactionCategory(sheetContext,available,chosen??'');
+        if(picked!=null&&sheetContext.mounted)update(()=>category=picked);
+       },child:InputDecorator(decoration:InputDecoration(labelText:waffraTr('القسم'),
+        border:const OutlineInputBorder(),suffixIcon:const Icon(Icons.search_rounded)),
+        child:WaffraText(chosen??'',maxLines:2)))
+      else ...[
+       InkWell(onTap:()async{
+        final picked=await chooseTransactionCategory(sheetContext,mainCategories,
+         selectedMain.isEmpty?'':selectedMain.first.name);
+        if(picked==null||!sheetContext.mounted)return;
+        final found=mainCategories.where((c)=>c.name==picked).toList();
+        if(found.isEmpty)return;
+        update((){
+         if(selectedParentId!=found.first.id){selectedParentId=found.first.id;category='';}
+        });
+       },child:InputDecorator(decoration:InputDecoration(
+        labelText:waffraIsEnglish?'Main category *':'القسم الرئيسي *',
+        errorText:attempted&&selectedMain.isEmpty?waffraRequiredFieldMessage:null,
+        border:const OutlineInputBorder(),suffixIcon:const Icon(Icons.arrow_drop_down_rounded)),
+        child:WaffraText(selectedMain.isEmpty?
+         (waffraIsEnglish?'Choose a main category':'اختر القسم الرئيسي'):
+         selectedMain.first.displayName,maxLines:2))),
+       const SizedBox(height:10),
+       InkWell(onTap:selectedMain.isEmpty||subcategories.isEmpty?null:()async{
+        final picked=await chooseTransactionCategory(sheetContext,subcategories,
+         selectedSub.isEmpty?'':selectedSub.first.name,leafLabels:true);
+        if(picked!=null&&sheetContext.mounted)update(()=>category=picked);
+       },child:InputDecorator(decoration:InputDecoration(
+        labelText:waffraIsEnglish?'Subcategory *':'القسم الفرعي *',
+        enabled:selectedMain.isNotEmpty,
+        errorText:attempted&&selectedSub.isEmpty?waffraRequiredFieldMessage:null,
+        border:const OutlineInputBorder(),suffixIcon:const Icon(Icons.arrow_drop_down_rounded)),
+        child:WaffraText(selectedSub.isEmpty?
+         (waffraIsEnglish?'Choose a subcategory':'اختر القسم الفرعي'):
+         selectedSub.first.displayName,maxLines:2))),
+       if(selectedMain.isNotEmpty&&subcategories.isEmpty)
+        Padding(padding:const EdgeInsets.only(top:7),child:WaffraText(
+         waffraIsEnglish?'No subcategories yet. Add one below first.':
+         'لا توجد أقسام فرعية هنا، أضف قسمًا فرعيًا أولًا.',
+         style:const TextStyle(color:Colors.redAccent,fontSize:12))),
+      ],
+      if(sms&&suggestion!=null)TextButton.icon(onPressed:()async {
        final c=await categoryDialog(income:income,suggested:suggestion);
        if(c!=null&&mounted){
         if(!categories.any((x)=>x.name==c.name&&x.income==c.income)){
@@ -2772,26 +2835,27 @@ Future<void> bulkSmsSheet({String? initialText})async {
         update((){category=c.name;suggestion=null;});
        }
       },icon:const Icon(Icons.add),label:WaffraText('إضافة قسم $suggestion')),
-      OutlinedButton.icon(onPressed:()async {
-       // Create a subcategory under an explicit parent, never a root.
-       final parents=categories.where((c)=>!c.isSubcategory&&c.income==income).toList();
-       if(parents.isEmpty)return;
-       final parentId=await showWaffraDialog<String>(context:sheetContext,builder:(ctx)=>
-        AlertDialog(title:WaffraText(waffraIsEnglish?'Choose main category':'اختر القسم الرئيسي'),
-         content:SizedBox(width:double.maxFinite,height:min(350.0,MediaQuery.sizeOf(ctx).height*.5),
-          child:ListView.builder(itemCount:parents.length,itemBuilder:(ctx,i)=>ListTile(
-           title:WaffraText(parents[i].name),
-           onTap:()=>Navigator.pop(ctx,parents[i].id)))),
-         actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء'))]));
-       if(parentId==null||!sheetContext.mounted)return;
-       final c=await categoryDialog(income:income,parentId:parentId);
+      if(sms)OutlinedButton.icon(onPressed:()async {
+       final c=await categoryDialog(income:income);
        if(c!=null&&mounted){
         if(!categories.any((x)=>x.name==c.name&&x.income==c.income)){
          setState(()=>categories.add(c));await persist();
         }
         update(()=>category=c.name);
        }
-      },icon:const Icon(Icons.add),label:WaffraText(waffraIsEnglish?'New subcategory':'قسم فرعي جديد')),
+      },icon:const Icon(Icons.add),label:const WaffraText('قسم جديد'))
+      else if(selectedMain.isNotEmpty)OutlinedButton.icon(onPressed:()async {
+       final mainId=selectedMain.first.id;
+       final c=await categoryDialog(income:income,parentId:mainId);
+       if(c!=null&&mounted&&sheetContext.mounted){
+        if(!categories.any((x)=>x.name==c.name&&x.income==c.income)){
+         setState(()=>categories.add(c));
+         await persist();
+        }
+        if(sheetContext.mounted)update(()=>category=c.name);
+       }
+      },icon:const Icon(Icons.add),
+       label:WaffraText(waffraIsEnglish?'New subcategory':'قسم فرعي جديد')),
       OutlinedButton.icon(onPressed:()async {
        final d=await showDatePicker(context:sheetContext,initialDate:date,
         firstDate:DateTime(2000),lastDate:DateTime.now());
@@ -2826,7 +2890,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
        update(()=>attempted=true);
        final n=amountOf(value.text);
        if(title.text.trim().isEmpty||waffraAmountFieldError(value.text)!=null||n==null)return;
-       if(!sms&&(chosen==null||chosen.isEmpty))return;
+       if(!sms&&!waffraCanAssignManualCategory(categories,
+        income,selectedParentId,category))return;
        if(sms){
         if(message.text.trim().isEmpty)return;
         final h=sha256.convert(utf8.encode(digits(message.text).replaceAll(RegExp(r'\s+'),' ').trim().toLowerCase())).toString();
@@ -2891,10 +2956,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
     });
   }
  }
- Future<String?> chooseTransactionCategory(BuildContext ctx,List<BudgetCategory> options,String selected)async{
+ Future<String?> chooseTransactionCategory(BuildContext ctx,List<BudgetCategory> options,String selected,{bool leafLabels=false})async{
   var query='';
   return showWaffraDialog<String>(context:ctx,builder:(dialogCtx)=>StatefulBuilder(builder:(dialogCtx,refresh){
-   final filtered=options.where((item)=>(item.name.toLowerCase().contains(query.trim().toLowerCase())||waffraTr(item.name).toLowerCase().contains(query.trim().toLowerCase()))).toList();
+   final filtered=options.where((item)=>(leafLabels?item.displayName:item.name).toLowerCase().contains(query.trim().toLowerCase())).toList();
    return AlertDialog(title:WaffraText(waffraIsEnglish?'Search categories':'بحث في الأقسام'),
     content:SizedBox(width:360,height:min(420.0,MediaQuery.sizeOf(dialogCtx).height*.55),child:Column(children:[
      TextField(autofocus:true,onChanged:(v)=>refresh(()=>query=v),
@@ -2903,7 +2968,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      Expanded(child:ListView.builder(itemCount:filtered.length,itemBuilder:(ctx,i){
       final item=filtered[i];return ListTile(selected:selected==item.name,
        leading:Icon(categoryIcon(item.icon),color:Color(item.color)),
-       title:WaffraText(item.name,maxLines:3),onTap:()=>Navigator.pop(dialogCtx,item.name));
+       title:WaffraText(leafLabels?item.displayName:item.name,maxLines:3),onTap:()=>Navigator.pop(dialogCtx,item.name));
      })),
     ])),actions:[TextButton(onPressed:()=>Navigator.pop(dialogCtx),child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))]);
   }));
@@ -3877,32 +3942,24 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final cat=categoryFor(entry.category,entry.income);
   final valueColor=entry.income?waffraIncomeTone(context):Colors.deepOrange;
   final darkMode=Theme.of(context).brightness==Brightness.dark;
+  final attachmentCount=waffraReceiptPaths(entry.receiptPath).length;
   final rowColor=entry.income?(darkMode?const Color(0xFF244C3A):const Color(0xFFB2D5C2)):
    (darkMode?const Color(0xFF49302C):const Color(0xFFFCECE8));
   return Padding(padding:const EdgeInsets.symmetric(vertical:5),child:Container(
    decoration:BoxDecoration(color:rowColor,borderRadius:BorderRadius.circular(17),
     border:Border.all(color:forest.withValues(alpha:darkMode ? 0.18 : 0.08))),
-   child:Padding(padding:const EdgeInsets.symmetric(horizontal:11,vertical:12),child:Row(children:[
+   clipBehavior:Clip.antiAlias,
+   child:Stack(children:[
+    Padding(padding:EdgeInsetsDirectional.only(top:attachmentCount>0?18:0),
+     child:Padding(padding:const EdgeInsets.symmetric(horizontal:11,vertical:12),child:Row(children:[
     CircleAvatar(radius:18,
      backgroundColor:Color(cat.color).withValues(alpha:0.13),
      child:Icon(categoryIcon(cat.icon),size:19,color:Color(cat.color))),
     const SizedBox(width:8),
     Expanded(child:InkWell(onTap:()=>transactionDetails(entry),
      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      Row(children:[
-       Expanded(child:WaffraText(entry.title,maxLines:1,
-        style:const TextStyle(fontSize:13,fontWeight:FontWeight.w600))),
-       if(waffraReceiptPaths(entry.receiptPath).isNotEmpty)...[
-        const SizedBox(width:4),
-        InkWell(onTap:()=>showReceipt(entry.receiptPath!),
-         child:Row(mainAxisSize:MainAxisSize.min,children:[
-          Icon(Icons.attach_file_rounded,size:17,color:darkMode?Colors.white70:forest),
-          if(waffraReceiptPaths(entry.receiptPath).length>1)
-           Text('${waffraReceiptPaths(entry.receiptPath).length}',
-            style:TextStyle(fontSize:11,color:darkMode?Colors.white70:forest)),
-         ])),
-       ],
-      ]),
+      WaffraText(entry.title,maxLines:1,
+       style:const TextStyle(fontSize:13,fontWeight:FontWeight.w600)),
       const SizedBox(height:2),
       WaffraText(waffraTr(entry.category)+' • '+dayText(entry.date),
        maxLines:1,style:const TextStyle(fontSize:11,color:Colors.grey)),
@@ -3914,7 +3971,20 @@ Future<void> bulkSmsSheet({String? initialText})async {
        fontSize:15,color:valueColor))),
     IconButton(tooltip:waffraIsEnglish?'Transaction options':'خيارات المعاملة',
      onPressed:()=>transactionActions(entry),icon:const Icon(Icons.more_vert,size:18)),
-   ]))));
+    ]))),
+    if(attachmentCount>0)PositionedDirectional(top:0,end:0,child:Semantics(
+     label:waffraIsEnglish?'$attachmentCount attachments':'عدد المرفقات $attachmentCount',
+     button:true,child:InkWell(onTap:()=>showReceipt(entry.receiptPath!),
+      borderRadius:BorderRadius.circular(12),
+      child:Container(padding:const EdgeInsetsDirectional.fromSTEB(8,4,9,4),
+       decoration:const BoxDecoration(color:forest,
+        borderRadius:BorderRadiusDirectional.only(topEnd:Radius.circular(17),bottomStart:Radius.circular(12))),
+       child:Row(mainAxisSize:MainAxisSize.min,children:[
+        const Icon(Icons.attach_file_rounded,color:Colors.white,size:14),
+        const SizedBox(width:3),
+        Text('$attachmentCount',style:const TextStyle(fontFamily:'Tajawal',fontSize:12,color:Colors.white,fontWeight:FontWeight.bold)),
+       ]))))),
+   ])));
  }
  Widget dashboard(){
   final inc=sum(entries,true),exp=sum(entries,false);
