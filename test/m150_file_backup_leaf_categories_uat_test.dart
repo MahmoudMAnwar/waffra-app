@@ -35,9 +35,9 @@ void main(){
   const raw='{"format":"waffra-backup","entries":[{"amount":50}]}';
   expect(WaffraBackupFiles.isEncryptedArchive(raw),isFalse);
   expect(WaffraBackupFiles.isEncryptedArchive('invalid-json'),isFalse);
-  final protected=await WaffraSecureBackup.encryptUserBackup(raw,'Abcd1234');
+  final protected=await WaffraSecureBackup.encryptUserBackup(raw,'LongPassphrase123!');
   expect(WaffraBackupFiles.isEncryptedArchive(protected),isTrue);
-  expect(await WaffraSecureBackup.decrypt(protected,'Abcd1234'),raw);
+  expect(await WaffraSecureBackup.decrypt(protected,'LongPassphrase123!'),raw);
  });
 
  test('M150: export never writes encrypted archive to clipboard',(){

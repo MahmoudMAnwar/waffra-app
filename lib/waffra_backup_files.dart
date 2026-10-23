@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/services.dart';
+import 'waffra_secure_backup.dart';
 
 /// User-controlled Android Storage Access Framework backup file handoff.
 /// Encrypted data is never put onto the system clipboard during export.
@@ -21,12 +22,7 @@ class WaffraBackupFiles {
 
  /// Refuse accidental exports of raw financial JSON, also checked natively.
  static bool isEncryptedArchive(String payload) {
-  try{
-   final data=jsonDecode(payload);
-   return data is Map&&data['format']=='waffra-secure-backup'&&
-    data['version']==1&&data['cipher']=='aes-256-gcm'&&
-    data['data'] is String&&data['mac'] is String;
-  }catch(_){return false;}
+  return WaffraSecureBackup.hasValidEncryptedHeader(payload);
  }
 
  /// False means the user cancelled document selection, not a successful save.
@@ -54,6 +50,9 @@ class WaffraBackupFiles {
   if(raw==null)return null;
   if(raw.isEmpty||utf8.encode(raw).length>maxArchiveBytes){
    throw const FormatException('Invalid or oversized backup file');
+  }
+  if(!isEncryptedArchive(raw)){
+   throw const FormatException('Selected file is not a valid encrypted Waffra backup');
   }
   return raw;
  }

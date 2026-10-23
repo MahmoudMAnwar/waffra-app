@@ -66,12 +66,12 @@ void main() {
   expect(categories,contains('TextSpan(text:waffraTr(sub.displayName)'));
  });
 
- test('M148: new passwords remain exactly 8; older backups accept long passwords',()async{
+ test('M148: V2 uses 12+ and historical export remains decryptable',()async{
   const body='{"format":"waffra-backup","version":24,"entries":[],"categories":[],"goals":[],"recurring":[]}';
-  const newPassword='Abcd1234';
+  const newPassword='LongPassphrase123!';
   const oldPassword='OldLegacyPass123456';
   expect(WaffraSecureBackup.isValidNewPassword(newPassword),isTrue);
-  expect(WaffraSecureBackup.isValidNewPassword(oldPassword),isFalse);
+  expect(WaffraSecureBackup.isValidNewPassword(oldPassword),isTrue);
   final newArchive=await WaffraSecureBackup.encryptUserBackup(body,newPassword);
   final oldArchive=await WaffraSecureBackup.encrypt(body,oldPassword);
   final current=await waffraDecodeBackupInIsolate({'payload':newArchive,'password':newPassword});
@@ -92,7 +92,7 @@ void main() {
   expect(source,contains("Key('waffra-existing-backup-password')"));
   expect(source,contains("Key('waffra-open-backup-file')"));
   expect(source,contains("Key('waffra-confirm-backup-restore')"));
-  expect(source,contains('LengthLimitingTextInputFormatter(8)'));
+  expect(source,contains('LengthLimitingTextInputFormatter(256)'));
   expect(source,contains('stagedBackup=text;'));
   expect(source,contains('compute(waffraDecodeBackupInIsolate'));
   expect(source,contains('WaffraBackupFiles.saveEncryptedArchive(encrypted)'));

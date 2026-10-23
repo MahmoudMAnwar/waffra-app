@@ -58,6 +58,9 @@ Future<Map<String,dynamic>> waffraDecodeBackupInIsolate(Map<String,String> reque
  return Map<String,dynamic>.from(decoded);
 }
 
+Future<String> waffraEncryptBackupInIsolate(Map<String,String> request) =>
+ WaffraSecureBackup.encryptUserBackup(request['payload']!,request['password']!);
+
 Future<void> main()async {
  WidgetsFlutterBinding.ensureInitialized();
  // Flutter engine started by the circular Android widget, not the normal app.
@@ -159,10 +162,34 @@ String? waffraEncodeReceipts(List<String> paths)=>
 class MoneyEntry {
  final String id,title,category;final double amount;final bool income;final DateTime date;
  final String? receiptPath;
- MoneyEntry({required this.id,required this.title,required this.category,required this.amount,required this.income,required this.date,this.receiptPath});
- Map<String,dynamic> toJson()=>{'id':id,'title':title,'category':category,'amount':amount,'income':income,'date':date.toIso8601String(),'receiptPath':receiptPath};
- factory MoneyEntry.fromJson(Map<String,dynamic> j)=>MoneyEntry(id:'${j['id']??newId()}',title:'${j['title']??''}',category:'${j['category']??'أخرى'}',amount:(j['amount'] as num).toDouble(),income:j['income']==true,date:DateTime.tryParse('${j['date']}')??DateTime.now(),receiptPath:j['receiptPath']?.toString());
+ /// Internal merchant identifier is a merchant *name*, never a bank/card ID.
+ final String notes,sourceType,merchantKey;
+ MoneyEntry({required this.id,required this.title,required this.category,required this.amount,
+  required this.income,required this.date,this.receiptPath,this.notes='',
+  this.sourceType='manual',this.merchantKey=''});
+ Map<String,dynamic> toJson()=>{'id':id,'title':title,'category':category,
+  'amount':amount,'income':income,'date':date.toIso8601String(),
+  'receiptPath':receiptPath,'notes':notes,'sourceType':sourceType,
+  'merchantKey':merchantKey};
+ factory MoneyEntry.fromJson(Map<String,dynamic> j)=>MoneyEntry(
+  id:'${j['id']??newId()}',title:'${j['title']??''}',
+  category:'${j['category']??'أخرى'}',amount:(j['amount'] as num).toDouble(),
+  income:j['income']==true,date:DateTime.tryParse('${j['date']}')??DateTime.now(),
+  receiptPath:j['receiptPath']?.toString(),
+  notes:'${j['notes']??''}',sourceType:'${j['sourceType']??'legacy'}',
+  merchantKey:'${j['merchantKey']??''}');
 }
+
+/// Legacy messages may already have longer titles. Unchanged titles must
+/// never block edits to an attachment, category or other unrelated field.
+bool waffraTransactionTitleAllowed(String newTitle,{String? oldTitle}) {
+ final trimmed=newTitle.trim();
+ if(trimmed.isEmpty)return false;
+ return trimmed.runes.length<=250||oldTitle!=null&&oldTitle==trimmed;
+}
+bool waffraTransactionNotesAllowed(String notes,{String? oldNotes}) =>
+ notes.runes.length<=2000||oldNotes!=null&&oldNotes==notes;
+
 class Person {
  final String name,email,provider,gender,avatar,phone;final DateTime birthday;
  Person({required this.name,required this.email,required this.provider,required this.gender,required this.avatar,required this.birthday,this.phone=''});
@@ -341,14 +368,20 @@ class BankParser {
 }
 DateTime? bankSmsDate(String raw) {
  final normalized=digits(raw).replaceAll('‏','').replaceAll('‎','');
- final match=RegExp(r'(\\d{1,2})[/-](\\d{1,2})[/-](\\d{2,4})\\s+(\\d{1,2}):(\\d{2})').firstMatch(normalized);
+ final match=RegExp(r'(\d{1,2})[/-](\d{1,2})[/-](\d{1,4})\s+(\d{1,2}):(\d{2})').firstMatch(normalized);
  if(match==null)return null;
- final day=int.tryParse(match.group(1)!),month=int.tryParse(match.group(2)!);
- var year=int.tryParse(match.group(3)!);
+ final a=int.tryParse(match.group(1)!),b=int.tryParse(match.group(2)!),
+  c=int.tryParse(match.group(3)!);
  final hour=int.tryParse(match.group(4)!),minute=int.tryParse(match.group(5)!);
- if(day==null||month==null||year==null||hour==null||minute==null)return null;
- if(year<100)year+=2000;
- if(month<1||month>12||day<1||day>31||hour>23||minute>59)return null;
+ if(a==null||b==null||c==null||hour==null||minute==null)return null;
+ // Saudi transfer texts in our accepted bank fixtures use YY/MM/DD.
+ // POS receipts instead use DD/MM/YY. Never force a single ambiguous
+ // date convention across both sources.
+ final isTransfer=RegExp(r'حوال[ةه]|تحويل|transfer',caseSensitive:false).hasMatch(raw);
+ final year=isTransfer?(a<100?2000+a:a):(c<100?2000+c:c);
+ final month=b,day=isTransfer?c:a;
+ if(year<2000||year>2100||month<1||month>12||day<1||day>31||
+  hour>23||minute>59)return null;
  final date=DateTime(year,month,day,hour,minute);
  return date.year==year&&date.month==month&&date.day==day?date:null;
 }
@@ -2393,20 +2426,68 @@ Future<void> bulkSmsSheet({String? initialText})async {
   if(accepted!=true||!ctx.mounted)return;
   update(() {busy=true;rejectedMessages=invalid.map((i)=>found[i]).toList();});
   final additions=<MoneyEntry>[];
+  final newCategories=<BudgetCategory>[];
   final newHashes=<String>{};
   for(final i in valid){
-   final result=results[i];
-   final merchant=waffraMerchantKey(found[i]);
+   final result=results[i],raw=found[i];
+   final merchantName=waffraMerchantName(raw,income:result.income);
+   final merchant=waffraMerchantKey(raw,income:result.income);
    final learned=merchant==null?null:learnedMerchantCategories[merchant];
-   final proposed=learned??result.category;
-   final cat=categories.any((c)=>c.income==result.income&&c.name==proposed)
-    ?proposed:(forType(result.income).isNotEmpty?forType(result.income).first.name:'أخرى');
-   additions.add(MoneyEntry(id:newId(),title:'${result.title} — ${found[i].replaceAll(RegExp(r'\\s+'),' ').trim()}',
-    category:cat,amount:result.amount!,income:result.income,date:bankSmsDate(found[i])??DateTime.now()));
-   newHashes.add(bankSmsHash(found[i]));
+   final known=merchantName==null?null:waffraRecognizedMerchantLeaf(
+    merchantName,income:result.income);
+   final allCategories=<BudgetCategory>[...categories,...newCategories];
+   String? assigned;
+   for(final candidate in [learned,known]){
+    if(candidate==null)continue;
+    final matches=allCategories.where((c)=>c.income==result.income&&
+     c.isSubcategory&&c.name==candidate&&
+     allCategories.any((p)=>p.id==c.parentId&&!p.isSubcategory)).toList();
+    if(matches.isNotEmpty){assigned=matches.first.name;break;}
+   }
+   if(assigned==null&&merchantName!=null){
+    final transfer=RegExp(r'حوال[ةه]|تحويل|transfer',
+     caseSensitive:false).hasMatch(raw);
+    final parentName=waffraFallbackSmsParent(income:result.income,
+     transfer:transfer);
+    final parents=allCategories.where((c)=>c.income==result.income&&
+     !c.isSubcategory&&c.name==parentName).toList();
+    if(parents.isNotEmpty){
+     final parent=parents.first;
+     final normalized=waffraNormalizeMerchantName(merchantName);
+     final children=allCategories.where((c)=>c.income==result.income&&
+      c.parentId==parent.id&&
+      waffraNormalizeMerchantName(c.displayName)==normalized).toList();
+     if(children.isNotEmpty){
+      assigned=children.first.name;
+     }else{
+      final child=BudgetCategory(id:newId(),
+       name:parent.name+' / '+merchantName,parentId:parent.id,
+       income:result.income,icon:parent.icon,color:parent.color);
+      newCategories.add(child);assigned=child.name;
+     }
+    }
+   }
+   if(assigned==null){
+    final fallback=result.income?'دخل آخر / دخل غير مصنف':'أخرى / مصروف غير مصنف';
+    final existing=allCategories.where((c)=>c.income==result.income&&
+     c.isSubcategory&&c.name==fallback).toList();
+    if(existing.isNotEmpty)assigned=existing.first.name;
+   }
+   // Never re-add a deleted parent without explicit user consent.
+   if(assigned==null){invalid.add(i);continue;}
+   final conciseName=merchantName==null?result.title:
+    result.title+' — '+merchantName;
+   additions.add(MoneyEntry(id:newId(),title:conciseName,
+    category:assigned,amount:result.amount!,income:result.income,
+    date:bankSmsDate(raw)??DateTime.now(),sourceType:'sms',
+    merchantKey:merchant??''));
+   newHashes.add(bankSmsHash(raw));
   }
   try{
-   setState(()=>entries.insertAll(0,additions));
+   setState((){
+    categories.addAll(newCategories);
+    entries.insertAll(0,additions);
+   });
    await persist();
    final prefs=await SharedPreferences.getInstance();
    final updatedHashes={...smsHashes,...newHashes};
@@ -2459,7 +2540,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
     actionsPadding:const EdgeInsets.fromLTRB(24,0,24,18),
     actions:[SizedBox(width:180,child:FilledButton(onPressed:()=>Navigator.pop(dialogCtx),child:WaffraText(waffraIsEnglish?'Done':'تم')))]));
   }catch(e){
-   setState(()=>entries.removeWhere((entry)=>additions.any((a)=>a.id==entry.id)));
+   setState((){
+    entries.removeWhere((entry)=>additions.any((a)=>a.id==entry.id));
+    categories.removeWhere((c)=>newCategories.any((n)=>n.id==c.id));
+   });
+   try{await persist();}catch(_){}
    if(ctx.mounted){update(()=>busy=false);snack(ctx,waffraIsEnglish?'Failed to save transactions':'فشل حفظ المعاملات');}
   }
  }
@@ -2697,6 +2782,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
 
  Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms})async {
   final title=TextEditingController(text:initial?.title??'');
+  final notes=TextEditingController(text:initial?.notes??'');
   final value=TextEditingController(text:initial==null?'':formatWaffraMoney(initial.amount));
   final message=TextEditingController(text:initialSms??'');
   bool income=initial?.income??false,analyzing=false,hasParsed=initialSms!=null;
@@ -2710,6 +2796,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
       c.income==income&&c.id==matchingLeaf.first.parentId)){
     selectedParentId=matchingLeaf.first.parentId;
    }else{
+    final legacyParent=categories.where((c)=>c.income==income&&
+     !c.isSubcategory&&c.name==category).toList();
+    selectedParentId=legacyParent.isEmpty?null:legacyParent.first.id;
     category='';
    }
   }
@@ -2777,9 +2866,20 @@ Future<void> bulkSmsSheet({String? initialText})async {
        })),
       const SizedBox(height:12),
       TextField(controller:title,onChanged:(_)=>update((){}),minLines:1,maxLines:5,
-       decoration:InputDecoration(labelText:waffraIsEnglish?'Description *':'وصف العملية *',
-        errorText:attempted&&title.text.trim().isEmpty?waffraRequiredFieldMessage:null,
+       decoration:InputDecoration(labelText:waffraIsEnglish?'Transaction name *':'اسم العملية *',
+        errorText:attempted&&!waffraTransactionTitleAllowed(title.text,
+         oldTitle:initial?.title)
+         ?(title.text.trim().isEmpty?waffraRequiredFieldMessage:
+           (waffraIsEnglish?'Maximum 250 characters for a new name.':
+            'اسم العملية الجديد لا يزيد عن 250 حرفًا.')):null,
         border:OutlineInputBorder())),
+      const SizedBox(height:10),
+      TextField(controller:notes,onChanged:(_)=>update((){}),minLines:1,maxLines:4,
+       decoration:InputDecoration(labelText:waffraIsEnglish?'Notes (optional)':'ملاحظات (اختياري)',
+        errorText:attempted&&!waffraTransactionNotesAllowed(notes.text,oldNotes:initial?.notes)
+         ?(waffraIsEnglish?'Notes cannot exceed 2,000 characters.':
+           'الملاحظات لا تتجاوز 2000 حرف.'):null,
+        border:const OutlineInputBorder())),
       const SizedBox(height:12),
       TextField(controller:value,keyboardType:const TextInputType.numberWithOptions(decimal:true),
        inputFormatters:[const WaffraAmountFormatter()],onChanged:(_)=>update((){}),
@@ -2893,7 +2993,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
       FilledButton(onPressed:analyzing?null:()async {
        update(()=>attempted=true);
        final n=amountOf(value.text);
-       if(title.text.trim().isEmpty||waffraAmountFieldError(value.text)!=null||n==null)return;
+       if(!waffraTransactionTitleAllowed(title.text,oldTitle:initial?.title)||
+        !waffraTransactionNotesAllowed(notes.text,oldNotes:initial?.notes)||
+        waffraAmountFieldError(value.text)!=null||n==null)return;
        if(!sms&&!waffraCanAssignManualCategory(categories,
         income,selectedParentId,category))return;
        if(sms){
@@ -2909,12 +3011,15 @@ Future<void> bulkSmsSheet({String? initialText})async {
         }
         pendingHash=h;
        }
-       Navigator.pop(sheetContext,MoneyEntry(id:initial?.id??newId(),title:title.text.trim(),
-        category:category,amount:n,income:income,date:date,receiptPath:receiptPath));
+       Navigator.pop(sheetContext,MoneyEntry(id:initial?.id??newId(),
+        title:title.text.trim(),notes:notes.text,category:category,amount:n,
+        income:income,date:date,receiptPath:receiptPath,
+        sourceType:initial?.sourceType??(sms?'sms':'manual'),
+        merchantKey:initial?.merchantKey??(sms?(waffraMerchantKey(message.text)??''):'')));
       },child:const WaffraText('تأكيد وحفظ العملية')),
      ])));
    }));
-  debounce?.cancel();disposeLater([title,value,message]);
+  debounce?.cancel();disposeLater([title,value,notes,message]);
   if(result==null||!mounted)return;
   if(initial==null&&!sms&&entries.any((e)=>
     e.income==result.income&&e.amount==result.amount&&
@@ -2936,8 +3041,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
    // Learn only explicit corrections made by the user, not assumptions
    // generated by bank message parsing.
    if(initial!=null&&initial.category!=result.category){
-    final merchant=waffraMerchantKey(initial.title);
-    if(merchant!=null)learnedMerchantCategories[merchant]=result.category;
+    final merchant=initial.merchantKey.isNotEmpty?
+     initial.merchantKey:waffraMerchantKey(initial.title,income:initial.income);
+    if(merchant!=null&&merchant.isNotEmpty){
+     learnedMerchantCategories[merchant]=result.category;
+    }
    }
   });
   await persist();
@@ -4851,7 +4959,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
     final old=entries[j];
     final renamed=renames[old.category];
     if(renamed!=null&&old.income==c.income){
-     entries[j]=MoneyEntry(id:old.id,title:old.title,category:renamed,
+     entries[j]=MoneyEntry(id:old.id,title:old.title,category:renamed,notes:old.notes,
+     sourceType:old.sourceType,merchantKey:old.merchantKey,
       amount:old.amount,income:old.income,date:old.date,receiptPath:old.receiptPath);
     }
    }
@@ -6006,28 +6115,57 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final secret=TextEditingController(),restoreSecret=TextEditingController();
   String? stagedBackup,backupError,restoreError,restorePasswordError;
   var attempted=false,restoring=false,exporting=false;
+  int? mode;
+  bool advanced=false;
   await showWaffraDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
-   title:WaffraText(waffraIsEnglish?'Encrypted backup and restore':'نسخ احتياطي واستعادة'),
-   content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-    WaffraText(waffraIsEnglish?
-     'New encrypted backups require exactly 8 letters and digits. Keep your password safe.':
-     'النسخ الجديدة المشفّرة تتطلب 8 خانات من أحرف وأرقام. احتفظ بكلمة المرور بأمان.'),
+   title:WaffraText(waffraIsEnglish?'Secure backup':'نسختك الاحتياطية الآمنة',
+    style:const TextStyle(fontWeight:FontWeight.bold)),
+   content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,
+    crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    WaffraText(waffraIsEnglish?'Your data. Your password.':
+     'بياناتك محفوظة بتشفير قوي. أنت وحدك تملك كلمة المرور.',
+      textAlign:TextAlign.center),
+    const SizedBox(height:15),
+    if(mode==null)...[
+     OutlinedButton.icon(key:const Key('waffra-backup-choose-export'),
+      onPressed:()=>update(()=>mode=0),
+      icon:const Icon(Icons.file_download_rounded),
+      label:WaffraText(waffraIsEnglish?'Save encrypted backup':'حفظ نسخة مشفّرة')),
+     const SizedBox(height:10),
+     OutlinedButton.icon(key:const Key('waffra-backup-choose-restore'),
+      onPressed:()=>update(()=>mode=1),
+      icon:const Icon(Icons.restore_page_outlined),
+      label:WaffraText(waffraIsEnglish?'Restore from my device':'استعادة من الجهاز')),
+     const SizedBox(height:8),
+     Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+      const Icon(Icons.lock_outline,color:Colors.grey,size:15),
+      const SizedBox(width:5),
+      Flexible(child:WaffraText(waffraIsEnglish?'Encrypted • No bank connection':
+       'مشفّرة • بدون ربط بالحسابات البنكية',style:const TextStyle(fontSize:11))),
+     ]),
+    ]else ...[
+     TextButton.icon(onPressed:()=>update(()=>mode=null),
+      icon:const Icon(Icons.arrow_back_ios_new_rounded,size:14),
+      label:WaffraText(waffraIsEnglish?'Back':'رجوع')),
+    ],
+    if(mode==0)...[
     const SizedBox(height:10),
     TextField(key:const Key('waffra-new-backup-password'),controller:secret,obscureText:true,
-     inputFormatters:[
-      FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
-      LengthLimitingTextInputFormatter(8),
-     ],decoration:InputDecoration(
-      labelText:waffraIsEnglish?'New backup password (8 characters) *':'كلمة مرور النسخة الجديدة (8 خانات) *',
+     inputFormatters:[LengthLimitingTextInputFormatter(256)],
+     decoration:InputDecoration(
+      labelText:waffraIsEnglish?'Backup password (12+ characters) *':'كلمة مرور النسخة (12 حرفًا على الأقل) *',
       errorText:backupError,errorMaxLines:3,border:const OutlineInputBorder())),
     const SizedBox(height:10),
     FilledButton.icon(onPressed:exporting?null:()async {
      if(!WaffraSecureBackup.isValidNewPassword(secret.text)){
-      update(()=>backupError=waffraIsEnglish?'Exactly 8 letters and digits, including one of each.':'كلمة المرور 8 خانات بالضبط من أحرف وأرقام، وبها حرف ورقم على الأقل.');return;
+      update(()=>backupError=waffraIsEnglish?'Use 12 to 256 characters for your backup password.':
+       'استخدم كلمة مرور من 12 إلى 256 حرفًا للنسخة الاحتياطية.');return;
      }
      update(()=>exporting=true);
      try{
-      final encrypted=await WaffraSecureBackup.encryptUserBackup(exportBackup(),secret.text);
+      final encrypted=await compute(waffraEncryptBackupInIsolate,<String,String>{
+       'payload':exportBackup(),'password':secret.text,
+      });
       // Persist the encrypted archive only after system document picker confirms.
       // Never copy it to the system clipboard on export.
       final saved=await WaffraBackupFiles.saveEncryptedArchive(encrypted);
@@ -6049,19 +6187,21 @@ Future<void> bulkSmsSheet({String? initialText})async {
      }
     },icon:const Icon(Icons.file_download_outlined),label:WaffraText(waffraIsEnglish?
       'Save encrypted .waffra file':'حفظ ملف .waffra المشفّر')),
-    const Divider(height:28),
+    ],
+    if(mode==1)...[
+    const SizedBox(height:10),
+    WaffraText(waffraIsEnglish?'Select a Waffra file, then enter its password.':
+     'اختر ملف وفرة، ثم أدخل كلمة مروره.',textAlign:TextAlign.center),
+    const SizedBox(height:10),
     WaffraText(waffraIsEnglish?'Restore an encrypted backup file':'استعادة ملف نسخة احتياطية مشفّر',
      style:const TextStyle(fontWeight:FontWeight.bold)),
     const SizedBox(height:10),
     TextField(controller:restoreSecret,key:const Key('waffra-existing-backup-password'),
      obscureText:true,
-     inputFormatters:[
-      FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
-      LengthLimitingTextInputFormatter(8),
-     ],
+     inputFormatters:[LengthLimitingTextInputFormatter(256)],
      onChanged:(_)=>update(()=>restorePasswordError=null),
      decoration:InputDecoration(
-      labelText:waffraIsEnglish?'Restore password (8 characters) *':'كلمة مرور الاستعادة (8 خانات) *',
+      labelText:waffraIsEnglish?'Backup password *':'كلمة مرور النسخة *',
       errorText:restorePasswordError,errorMaxLines:3,
       border:const OutlineInputBorder())),
     const SizedBox(height:10),
@@ -6079,14 +6219,17 @@ Future<void> bulkSmsSheet({String? initialText})async {
        });
       }catch(_){
        if(ctx.mounted)update(()=>restoreError=waffraIsEnglish?
-        'Could not open file. Choose a valid Waffra backup up to 8 MB.':
-        'تعذر فتح الملف. اختر نسخة وفرة احتياطية صحيحة حتى 8 ميجابايت.');
+        'File verification failed. Please choose a valid Waffra backup.':
+        'فشل التحقق من صحة الملف. يرجى اختيار نسخة احتياطية صحيحة من وفرة والمحاولة مرة أخرى.');
       }
      },icon:const Icon(Icons.file_open_outlined),
      label:WaffraText(waffraIsEnglish?'Choose .waffra file':'اختيار ملف .waffra من الجهاز')),
     // Backward compatibility ONLY: opt-in reading of previously exported
     // clipboard-only text. New exports never put archive data on clipboard.
-    TextButton.icon(key:const Key('waffra-import-legacy-text'),
+    TextButton.icon(onPressed:()=>update(()=>advanced=!advanced),
+     icon:Icon(advanced?Icons.expand_less:Icons.expand_more),
+     label:WaffraText(waffraIsEnglish?'Advanced options':'خيارات متقدمة')),
+    if(advanced)TextButton.icon(key:const Key('waffra-import-legacy-text'),
      onPressed:restoring?null:()async{
       final old=await Clipboard.getData(Clipboard.kTextPlain);
       if(!ctx.mounted)return;
@@ -6121,15 +6264,16 @@ Future<void> bulkSmsSheet({String? initialText})async {
     if(restoreError!=null&&stagedBackup!=null)
      WaffraText(restoreError!,style:const TextStyle(color:Colors.red)),
     if(restoring)const LinearProgressIndicator(),
+    ],
    ])),
    actions:[
     TextButton(onPressed:restoring?null:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'Close':'إغلاق')),
-    FilledButton(key:const Key('waffra-confirm-backup-restore'),onPressed:restoring?null:()async {
+    if(mode==1)FilledButton(key:const Key('waffra-confirm-backup-restore'),
+     onPressed:restoring?null:()async {
      update(()=>attempted=true);
-     if(!WaffraSecureBackup.isValidNewPassword(restoreSecret.text)){
+     if(restoreSecret.text.isEmpty){
       update(()=>restorePasswordError=waffraIsEnglish?
-       'Exactly 8 letters and digits, including at least one of each.':
-       'كلمة المرور 8 خانات بالضبط من أحرف وأرقام، وبها حرف ورقم على الأقل.');
+       'Enter the original backup password.':'أدخل كلمة مرور النسخة الأصلية.');
       return;
      }
      if(stagedBackup==null||stagedBackup!.isEmpty)return;
