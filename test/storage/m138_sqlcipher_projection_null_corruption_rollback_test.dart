@@ -127,4 +127,28 @@ void main() {
       "UPDATE fresh_finance_recurring SET due_day=NULL WHERE recurring_id='rent'",
     );
   });
+  test('NULL category income flag is rejected before finance writes',() async {
+    await expectNotNullConstraintProtectsState(
+      "UPDATE fresh_finance_categories SET is_income=NULL WHERE category_id='food'",
+    );
+  });
+
+  test('NULL recurring income flag is rejected before finance writes',() async {
+    await expectNotNullConstraintProtectsState(
+      "UPDATE fresh_finance_recurring SET is_income=NULL WHERE recurring_id='rent'",
+    );
+  });
+
+  test('NULL category source witness is rejected before finance writes',() async {
+    await expectNotNullConstraintProtectsState(
+      "UPDATE fresh_finance_categories SET source_json=NULL WHERE category_id='food'",
+    );
+  });
+
+  test('NULL recurring source witness is rejected before finance writes',() async {
+    await expectNotNullConstraintProtectsState(
+      "UPDATE fresh_finance_recurring SET source_json=NULL WHERE recurring_id='rent'",
+    );
+  });
+
 }
