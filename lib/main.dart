@@ -13,6 +13,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'waffra_financial_tools.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -43,6 +44,14 @@ part 'waffra_smart_analysis.part.dart';
 part 'waffra_recurring_trash.part.dart';
 part 'waffra_deleted_item_card.part.dart';
 part 'waffra_widget_capture.part.dart';
+
+/// PBKDF2 decryption and JSON parsing run away from the UI isolate.
+Future<Map<String,dynamic>> waffraDecodeBackupInIsolate(Map<String,String> request) async {
+ final decoded=jsonDecode(await WaffraSecureBackup.decrypt(
+  request['payload']!,request['password']!));
+ if(decoded is! Map)throw const FormatException('Invalid backup document');
+ return Map<String,dynamic>.from(decoded);
+}
 
 Future<void> main()async {
  WidgetsFlutterBinding.ensureInitialized();
@@ -5968,13 +5977,16 @@ Future<void> bulkSmsSheet({String? initialText})async {
     if(restoring)const LinearProgressIndicator(),
    ])),
    actions:[
-    TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إغلاق')),
-    FilledButton(onPressed:()async {
+    TextButton(onPressed:restoring?null:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'Close':'إغلاق')),
+    FilledButton(key:const Key('waffra-confirm-backup-restore'),onPressed:restoring?null:()async {
      update(()=>attempted=true);
-     if(input.text.trim().isEmpty)return;
+     if(stagedBackup==null||stagedBackup!.isEmpty)return;
+     update(()=>restoring=true);
      try{
-      final raw=jsonDecode(await WaffraSecureBackup.decrypt(input.text.trim(),secret.text));
-      if(raw is! Map||raw['format']!='waffra-backup'||raw['entries'] is! List||
+      final raw=await compute(waffraDecodeBackupInIsolate,<String,String>{
+       'payload':stagedBackup!,'password':restoreSecret.text,
+      });
+      if(raw['format']!='waffra-backup'||raw['entries'] is! List||
         raw['categories'] is! List||raw['goals'] is! List||raw['recurring'] is! List){
        throw const FormatException('Invalid backup');
       }
@@ -6021,11 +6033,15 @@ Future<void> bulkSmsSheet({String? initialText})async {
       if(ctx.mounted)Navigator.pop(ctx);
       if(mounted)snackSuccess(context,'تمت استعادة البيانات بنجاح');
      }catch(e){
-      if(ctx.mounted)update(()=>backupError=waffraIsEnglish?'Invalid backup. Check the entire JSON text.':'النسخة غير صالحة، تأكد من النص كامل');
+      if(ctx.mounted)update(()=>restoreError=waffraIsEnglish?
+       'Restore failed. Check the original password and complete backup. Your data was not replaced.':
+       'فشلت الاستعادة. تأكد من كلمة المرور الأصلية واكتمال النسخة. لم تُستبدل البيانات.');
+     }finally{
+      if(ctx.mounted)update(()=>restoring=false);
      }
-    },child:const WaffraText('استعادة')),
+    },child:WaffraText(waffraIsEnglish?'Restore':'استعادة')),
    ])));
-  disposeLater([input,secret]);
+  disposeLater([secret,restoreSecret]);
  }
  // System credentials are never saved in plain text. A new PIN must be
  // entered twice; keep support for checking older 4-8-digit PINs on disable.
