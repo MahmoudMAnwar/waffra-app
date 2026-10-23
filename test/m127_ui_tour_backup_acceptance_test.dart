@@ -40,8 +40,11 @@ void main() {
     expect(source,contains('LengthLimitingTextInputFormatter(8)'));
     expect(source,contains("RegExp(r'[A-Za-z0-9]')"));
     expect(source,contains('if(!WaffraSecureBackup.isValidNewPassword(secret.text))'));
-    expect(source,contains('legacyRestorePassword?const <TextInputFormatter>[]'));
-    expect(source,contains('Restore an older backup password'));
+    expect(source,contains("Key('waffra-existing-backup-password')"));
+    expect(source,contains("Key('waffra-paste-backup-clipboard')"));
+    expect(source,contains('compute(waffraDecodeBackupInIsolate'));
+    expect(source.contains('legacyRestorePassword?'),isFalse);
+    expect(source.contains('TextField(controller:input,minLines:4,maxLines:7'),isFalse);
   });
 
   for (final direction in [TextDirection.rtl,TextDirection.ltr]) {
