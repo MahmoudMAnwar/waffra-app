@@ -1,0 +1,31 @@
+name: M144 Experimental Writer Gate Hostile-Path QA
+
+on:
+  pull_request:
+    branches:
+      - 'test/m143-sqlcipher-confirmation-input-freeze-qa'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m144-writer-gate-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  writer-gate-security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve Flutter dependencies
+        run: flutter pub get
+      - name: Run M143 confirmed input freeze and M144 hostile path tests
+        run: >-
+          flutter test
+          test/storage/m143_sqlcipher_confirmation_input_freeze_test.dart
+          test/storage/m144_writer_gate_hostile_path_recovery_test.dart
