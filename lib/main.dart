@@ -2959,7 +2959,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
  Future<String?> chooseTransactionCategory(BuildContext ctx,List<BudgetCategory> options,String selected,{bool leafLabels=false})async{
   var query='';
   return showWaffraDialog<String>(context:ctx,builder:(dialogCtx)=>StatefulBuilder(builder:(dialogCtx,refresh){
-   final filtered=options.where((item)=>(leafLabels?item.displayName:item.name).toLowerCase().contains(query.trim().toLowerCase())).toList();
+   final filtered=options.where((item){
+    final label=leafLabels?item.displayName:item.name;
+    final text=query.trim().toLowerCase();
+    return label.toLowerCase().contains(text)||waffraTr(label).toLowerCase().contains(text);
+   }).toList();
    return AlertDialog(title:WaffraText(waffraIsEnglish?'Search categories':'بحث في الأقسام'),
     content:SizedBox(width:360,height:min(420.0,MediaQuery.sizeOf(dialogCtx).height*.55),child:Column(children:[
      TextField(autofocus:true,onChanged:(v)=>refresh(()=>query=v),
@@ -2968,7 +2972,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      Expanded(child:ListView.builder(itemCount:filtered.length,itemBuilder:(ctx,i){
       final item=filtered[i];return ListTile(selected:selected==item.name,
        leading:Icon(categoryIcon(item.icon),color:Color(item.color)),
-       title:WaffraText(leafLabels?item.displayName:item.name,maxLines:3),onTap:()=>Navigator.pop(dialogCtx,item.name));
+       title:WaffraText(waffraTr(leafLabels?item.displayName:item.name),maxLines:3),onTap:()=>Navigator.pop(dialogCtx,item.name));
      })),
     ])),actions:[TextButton(onPressed:()=>Navigator.pop(dialogCtx),child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))]);
   }));
