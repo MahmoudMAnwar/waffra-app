@@ -7,14 +7,14 @@ import 'package:waffra/waffra_secure_backup.dart';
 void main() {
   test('new backup round trips with exactly eight alphanumeric characters', () async {
     const content='{"format":"waffra-backup","entries":[{"amount":120.50}]}';
-    final encrypted=await WaffraSecureBackup.encrypt(content,'Abcd1234');
+    final encrypted=await WaffraSecureBackup.encryptUserBackup(content,'Abcd1234');
     expect(encrypted,contains('waffra-secure-backup'));
     expect(encrypted,isNot(contains('120.50')));
     expect(await WaffraSecureBackup.decrypt(encrypted,'Abcd1234'),content);
   });
 
   test('wrong password cannot decrypt eight-slot export', () async {
-    final encrypted=await WaffraSecureBackup.encrypt('secret','Valid123');
+    final encrypted=await WaffraSecureBackup.encryptUserBackup('secret','Valid123');
     await expectLater(WaffraSecureBackup.decrypt(encrypted,'Wrong123'),
         throwsA(isA<Exception>()));
   });
@@ -26,10 +26,17 @@ void main() {
     ]) {
       expect(WaffraSecureBackup.isValidNewPassword(value),false,
           reason:'Rejected: $value');
-      await expectLater(WaffraSecureBackup.encrypt('content',value),
+      await expectLater(WaffraSecureBackup.encryptUserBackup('content',value),
           throwsFormatException);
     }
     expect(WaffraSecureBackup.isValidNewPassword('ABC12345'),true);
+  });
+
+  test('internal portable archive encryption retains long passwords', () async {
+    const archivePassword='very-long-portable-archive-passphrase';
+    const raw='portable finance vault';
+    final encoded=await WaffraSecureBackup.encrypt(raw,archivePassword);
+    expect(await WaffraSecureBackup.decrypt(encoded,archivePassword),raw);
   });
 
   test('old encrypted backups with longer passwords still restore', () async {
