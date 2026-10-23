@@ -627,6 +627,9 @@ jobs:
           WAFFRA_RELEASE_KEY_PASSWORD: ${{ secrets.WAFFRA_RELEASE_KEY_PASSWORD }}
         run: flutter build apk --no-pub --release --target-platform android-x64 --tree-shake-icons
 
+      - name: Test deterministic Android package discovery
+        run: python3 -m unittest discover -s scripts -p 'test_android_emulator_package.py' -v
+
       - name: Verify Release startup on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -640,8 +643,10 @@ jobs:
             # POSIX sh rejects pipefail and aborted the smoke before app launch.
             set -eu
             adb install -r build/app/outputs/flutter-apk/app-release.apk
-            PACKAGE=$(adb shell pm list packages -3 | tr -d '\r' | sed -n 's/^package://p' | grep -m1 -E 'waffra' || true)
-            test -n "$PACKAGE" || { echo "Could not find installed Waffra package"; exit 1; }
+            # Use Firebase-registered applicationId, not pm list packages -3:
+            # a successful install can precede third-party package enumeration.
+            PACKAGE=com.waffra.app
+            sh scripts/verify_android_emulator_package.sh "$PACKAGE"
             adb logcat -c
             adb shell monkey -p "$PACKAGE" -c android.intent.category.LAUNCHER 1
             sleep 18
