@@ -70,7 +70,7 @@ class WaffraSecureBackup {
    return base64Decode(data['salt'] as String).length==16&&
     base64Decode(data['nonce'] as String).length==12&&
     base64Decode(data['mac'] as String).length==16&&
-    (data['data'] as String).isNotEmpty;
+    data['data'] is String;
   }catch(_){return false;}
  }
 
