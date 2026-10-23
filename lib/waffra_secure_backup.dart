@@ -28,12 +28,12 @@ class WaffraSecureBackup {
   if(!isValidNewPassword(password)){
    throw const FormatException('Backup password must contain 12 to 256 characters');
   }
-  return encrypt(plaintext,password);
+  return encryptV2(plaintext,password);
  }
 
  /// Fresh exports only use V2. Isolate encryption in the calling UI to avoid
  /// blocking frames while the memory-hard KDF executes.
- static Future<String> encrypt(String plaintext,String password) async {
+ static Future<String> encryptV2(String plaintext,String password) async {
   if(!isValidNewPassword(password)){
    throw const FormatException('Backup password must contain 12 to 256 characters');
   }
@@ -44,6 +44,25 @@ class WaffraSecureBackup {
    'format':'waffra-secure-backup','version':2,'kdf':'argon2id',
    'memory':_argonMemory,'iterations':_argonIterations,'parallelism':_argonParallelism,
    'cipher':'aes-256-gcm','salt':base64Encode(salt),
+   'nonce':base64Encode(box.nonce),'data':base64Encode(box.cipherText),
+   'mac':base64Encode(box.mac.bytes),
+  });
+ }
+
+ /// Compatibility for the older internal portable-archive API. These
+ /// archives must remain V1; user-facing *new* exports exclusively use V2.
+ static Future<String> encrypt(String plaintext,String password) async {
+  if(password.trim().length<8) {
+   throw const FormatException('Legacy archive password is too short');
+  }
+  final salt=_random(16),nonce=_random(12);
+  final key=await _legacyKdf.deriveKey(
+   secretKey:SecretKey(utf8.encode(password)),nonce:salt);
+  final box=await _cipher.encrypt(
+   utf8.encode(plaintext),secretKey:key,nonce:nonce);
+  return jsonEncode({
+   'format':'waffra-secure-backup','version':1,'kdf':'pbkdf2-sha256',
+   'iterations':120000,'cipher':'aes-256-gcm','salt':base64Encode(salt),
    'nonce':base64Encode(box.nonce),'data':base64Encode(box.cipherText),
    'mac':base64Encode(box.mac.bytes),
   });
