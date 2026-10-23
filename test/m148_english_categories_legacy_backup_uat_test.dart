@@ -29,6 +29,15 @@ void main() {
   }
  });
 
+ test('M148: English roots outrank same-spelled children; compounds use context',(){
+  expect(waffraEnglishCategoryLabel('اشتراكات رقمية'),'Digital Subscriptions');
+  expect(waffraEnglishCategoryLabel('دخل رقمي وتقني / اشتراكات رقمية'),
+   'Digital & Technology Income / Digital subscriptions');
+  expect(waffraEnglishCategoryLabel('هوايات واهتمامات / تصوير'),
+   'Hobbies & Interests / Photography');
+  expect(waffraEnglishCategoryLabel('عمل حر / تصوير'),
+   'Freelance Work / Photography');
+ });
  test('M148: changing the display language never mutates stored Arabic names',(){
   final group=waffraCategoryCatalog.first;
   final mainStored=group.name;
