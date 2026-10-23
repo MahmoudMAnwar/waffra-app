@@ -162,10 +162,34 @@ String? waffraEncodeReceipts(List<String> paths)=>
 class MoneyEntry {
  final String id,title,category;final double amount;final bool income;final DateTime date;
  final String? receiptPath;
- MoneyEntry({required this.id,required this.title,required this.category,required this.amount,required this.income,required this.date,this.receiptPath});
- Map<String,dynamic> toJson()=>{'id':id,'title':title,'category':category,'amount':amount,'income':income,'date':date.toIso8601String(),'receiptPath':receiptPath};
- factory MoneyEntry.fromJson(Map<String,dynamic> j)=>MoneyEntry(id:'${j['id']??newId()}',title:'${j['title']??''}',category:'${j['category']??'أخرى'}',amount:(j['amount'] as num).toDouble(),income:j['income']==true,date:DateTime.tryParse('${j['date']}')??DateTime.now(),receiptPath:j['receiptPath']?.toString());
+ /// Internal merchant identifier is a merchant *name*, never a bank/card ID.
+ final String notes,sourceType,merchantKey;
+ MoneyEntry({required this.id,required this.title,required this.category,required this.amount,
+  required this.income,required this.date,this.receiptPath,this.notes='',
+  this.sourceType='manual',this.merchantKey=''});
+ Map<String,dynamic> toJson()=>{'id':id,'title':title,'category':category,
+  'amount':amount,'income':income,'date':date.toIso8601String(),
+  'receiptPath':receiptPath,'notes':notes,'sourceType':sourceType,
+  'merchantKey':merchantKey};
+ factory MoneyEntry.fromJson(Map<String,dynamic> j)=>MoneyEntry(
+  id:'${j['id']??newId()}',title:'${j['title']??''}',
+  category:'${j['category']??'أخرى'}',amount:(j['amount'] as num).toDouble(),
+  income:j['income']==true,date:DateTime.tryParse('${j['date']}')??DateTime.now(),
+  receiptPath:j['receiptPath']?.toString(),
+  notes:'${j['notes']??''}',sourceType:'${j['sourceType']??'legacy'}',
+  merchantKey:'${j['merchantKey']??''}');
 }
+
+/// Legacy messages may already have longer titles. Unchanged titles must
+/// never block edits to an attachment, category or other unrelated field.
+bool waffraTransactionTitleAllowed(String newTitle,{String? oldTitle}) {
+ final trimmed=newTitle.trim();
+ if(trimmed.isEmpty)return false;
+ return trimmed.runes.length<=250||oldTitle!=null&&oldTitle==trimmed;
+}
+bool waffraTransactionNotesAllowed(String notes,{String? oldNotes}) =>
+ notes.runes.length<=2000||oldNotes!=null&&oldNotes==notes;
+
 class Person {
  final String name,email,provider,gender,avatar,phone;final DateTime birthday;
  Person({required this.name,required this.email,required this.provider,required this.gender,required this.avatar,required this.birthday,this.phone=''});
@@ -2700,6 +2724,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
 
  Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms})async {
   final title=TextEditingController(text:initial?.title??'');
+  final notes=TextEditingController(text:initial?.notes??'');
   final value=TextEditingController(text:initial==null?'':formatWaffraMoney(initial.amount));
   final message=TextEditingController(text:initialSms??'');
   bool income=initial?.income??false,analyzing=false,hasParsed=initialSms!=null;
@@ -2780,9 +2805,20 @@ Future<void> bulkSmsSheet({String? initialText})async {
        })),
       const SizedBox(height:12),
       TextField(controller:title,onChanged:(_)=>update((){}),minLines:1,maxLines:5,
-       decoration:InputDecoration(labelText:waffraIsEnglish?'Description *':'وصف العملية *',
-        errorText:attempted&&title.text.trim().isEmpty?waffraRequiredFieldMessage:null,
+       decoration:InputDecoration(labelText:waffraIsEnglish?'Transaction name *':'اسم العملية *',
+        errorText:attempted&&!waffraTransactionTitleAllowed(title.text,
+         oldTitle:initial?.title)
+         ?(title.text.trim().isEmpty?waffraRequiredFieldMessage:
+           (waffraIsEnglish?'Maximum 250 characters for a new name.':
+            'اسم العملية الجديد لا يزيد عن 250 حرفًا.')):null,
         border:OutlineInputBorder())),
+      const SizedBox(height:10),
+      TextField(controller:notes,onChanged:(_)=>update((){}),minLines:1,maxLines:4,
+       decoration:InputDecoration(labelText:waffraIsEnglish?'Notes (optional)':'ملاحظات (اختياري)',
+        errorText:attempted&&!waffraTransactionNotesAllowed(notes.text,oldNotes:initial?.notes)
+         ?(waffraIsEnglish?'Notes cannot exceed 2,000 characters.':
+           'الملاحظات لا تتجاوز 2000 حرف.'):null,
+        border:const OutlineInputBorder())),
       const SizedBox(height:12),
       TextField(controller:value,keyboardType:const TextInputType.numberWithOptions(decimal:true),
        inputFormatters:[const WaffraAmountFormatter()],onChanged:(_)=>update((){}),
@@ -2896,7 +2932,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
       FilledButton(onPressed:analyzing?null:()async {
        update(()=>attempted=true);
        final n=amountOf(value.text);
-       if(title.text.trim().isEmpty||waffraAmountFieldError(value.text)!=null||n==null)return;
+       if(!waffraTransactionTitleAllowed(title.text,oldTitle:initial?.title)||
+        !waffraTransactionNotesAllowed(notes.text,oldNotes:initial?.notes)||
+        waffraAmountFieldError(value.text)!=null||n==null)return;
        if(!sms&&!waffraCanAssignManualCategory(categories,
         income,selectedParentId,category))return;
        if(sms){
@@ -2912,12 +2950,15 @@ Future<void> bulkSmsSheet({String? initialText})async {
         }
         pendingHash=h;
        }
-       Navigator.pop(sheetContext,MoneyEntry(id:initial?.id??newId(),title:title.text.trim(),
-        category:category,amount:n,income:income,date:date,receiptPath:receiptPath));
+       Navigator.pop(sheetContext,MoneyEntry(id:initial?.id??newId(),
+        title:title.text.trim(),notes:notes.text,category:category,amount:n,
+        income:income,date:date,receiptPath:receiptPath,
+        sourceType:initial?.sourceType??(sms?'sms':'manual'),
+        merchantKey:initial?.merchantKey??(sms?(waffraMerchantKey(message.text)??''):'')));
       },child:const WaffraText('تأكيد وحفظ العملية')),
      ])));
    }));
-  debounce?.cancel();disposeLater([title,value,message]);
+  debounce?.cancel();disposeLater([title,value,notes,message]);
   if(result==null||!mounted)return;
   if(initial==null&&!sms&&entries.any((e)=>
     e.income==result.income&&e.amount==result.amount&&
@@ -4854,7 +4895,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
     final old=entries[j];
     final renamed=renames[old.category];
     if(renamed!=null&&old.income==c.income){
-     entries[j]=MoneyEntry(id:old.id,title:old.title,category:renamed,
+     entries[j]=MoneyEntry(id:old.id,title:old.title,category:renamed,notes:old.notes,
+     sourceType:old.sourceType,merchantKey:old.merchantKey,
       amount:old.amount,income:old.income,date:old.date,receiptPath:old.receiptPath);
     }
    }
