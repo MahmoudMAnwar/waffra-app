@@ -164,10 +164,34 @@ String? waffraEncodeReceipts(List<String> paths)=>
 class MoneyEntry {
  final String id,title,category;final double amount;final bool income;final DateTime date;
  final String? receiptPath;
- MoneyEntry({required this.id,required this.title,required this.category,required this.amount,required this.income,required this.date,this.receiptPath});
- Map<String,dynamic> toJson()=>{'id':id,'title':title,'category':category,'amount':amount,'income':income,'date':date.toIso8601String(),'receiptPath':receiptPath};
- factory MoneyEntry.fromJson(Map<String,dynamic> j)=>MoneyEntry(id:'${j['id']??newId()}',title:'${j['title']??''}',category:'${j['category']??'أخرى'}',amount:(j['amount'] as num).toDouble(),income:j['income']==true,date:DateTime.tryParse('${j['date']}')??DateTime.now(),receiptPath:j['receiptPath']?.toString());
+ /// Internal merchant identifier is a merchant *name*, never a bank/card ID.
+ final String notes,sourceType,merchantKey;
+ MoneyEntry({required this.id,required this.title,required this.category,required this.amount,
+  required this.income,required this.date,this.receiptPath,this.notes='',
+  this.sourceType='manual',this.merchantKey=''});
+ Map<String,dynamic> toJson()=>{'id':id,'title':title,'category':category,
+  'amount':amount,'income':income,'date':date.toIso8601String(),
+  'receiptPath':receiptPath,'notes':notes,'sourceType':sourceType,
+  'merchantKey':merchantKey};
+ factory MoneyEntry.fromJson(Map<String,dynamic> j)=>MoneyEntry(
+  id:'${j['id']??newId()}',title:'${j['title']??''}',
+  category:'${j['category']??'أخرى'}',amount:(j['amount'] as num).toDouble(),
+  income:j['income']==true,date:DateTime.tryParse('${j['date']}')??DateTime.now(),
+  receiptPath:j['receiptPath']?.toString(),
+  notes:'${j['notes']??''}',sourceType:'${j['sourceType']??'legacy'}',
+  merchantKey:'${j['merchantKey']??''}');
 }
+
+/// Legacy messages may already have longer titles. Unchanged titles must
+/// never block edits to an attachment, category or other unrelated field.
+bool waffraTransactionTitleAllowed(String newTitle,{String? oldTitle}) {
+ final trimmed=newTitle.trim();
+ if(trimmed.isEmpty)return false;
+ return trimmed.runes.length<=250||oldTitle!=null&&oldTitle==trimmed;
+}
+bool waffraTransactionNotesAllowed(String notes,{String? oldNotes}) =>
+ notes.runes.length<=2000||oldNotes!=null&&oldNotes==notes;
+
 class Person {
  final String name,email,provider,gender,avatar,phone;final DateTime birthday;
  Person({required this.name,required this.email,required this.provider,required this.gender,required this.avatar,required this.birthday,this.phone=''});
@@ -328,14 +352,20 @@ class BankParser {
 }
 DateTime? bankSmsDate(String raw) {
  final normalized=digits(raw).replaceAll('‏','').replaceAll('‎','');
- final match=RegExp(r'(\\d{1,2})[/-](\\d{1,2})[/-](\\d{2,4})\\s+(\\d{1,2}):(\\d{2})').firstMatch(normalized);
+ final match=RegExp(r'(\d{1,2})[/-](\d{1,2})[/-](\d{1,4})\s+(\d{1,2}):(\d{2})').firstMatch(normalized);
  if(match==null)return null;
- final day=int.tryParse(match.group(1)!),month=int.tryParse(match.group(2)!);
- var year=int.tryParse(match.group(3)!);
+ final a=int.tryParse(match.group(1)!),b=int.tryParse(match.group(2)!),
+  c=int.tryParse(match.group(3)!);
  final hour=int.tryParse(match.group(4)!),minute=int.tryParse(match.group(5)!);
- if(day==null||month==null||year==null||hour==null||minute==null)return null;
- if(year<100)year+=2000;
- if(month<1||month>12||day<1||day>31||hour>23||minute>59)return null;
+ if(a==null||b==null||c==null||hour==null||minute==null)return null;
+ // Saudi transfer texts in our accepted bank fixtures use YY/MM/DD.
+ // POS receipts instead use DD/MM/YY. Never force a single ambiguous
+ // date convention across both sources.
+ final isTransfer=RegExp(r'حوال[ةه]|تحويل|transfer',caseSensitive:false).hasMatch(raw);
+ final year=isTransfer?(a<100?2000+a:a):(c<100?2000+c:c);
+ final month=b,day=isTransfer?c:a;
+ if(year<2000||year>2100||month<1||month>12||day<1||day>31||
+  hour>23||minute>59)return null;
  final date=DateTime(year,month,day,hour,minute);
  return date.year==year&&date.month==month&&date.day==day?date:null;
 }
