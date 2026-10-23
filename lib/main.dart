@@ -2420,20 +2420,68 @@ Future<void> bulkSmsSheet({String? initialText})async {
   if(accepted!=true||!ctx.mounted)return;
   update(() {busy=true;rejectedMessages=invalid.map((i)=>found[i]).toList();});
   final additions=<MoneyEntry>[];
+  final newCategories=<BudgetCategory>[];
   final newHashes=<String>{};
   for(final i in valid){
-   final result=results[i];
-   final merchant=waffraMerchantKey(found[i]);
+   final result=results[i],raw=found[i];
+   final merchantName=waffraMerchantName(raw,income:result.income);
+   final merchant=waffraMerchantKey(raw,income:result.income);
    final learned=merchant==null?null:learnedMerchantCategories[merchant];
-   final proposed=learned??result.category;
-   final cat=categories.any((c)=>c.income==result.income&&c.name==proposed)
-    ?proposed:(forType(result.income).isNotEmpty?forType(result.income).first.name:'أخرى');
-   additions.add(MoneyEntry(id:newId(),title:'${result.title} — ${found[i].replaceAll(RegExp(r'\\s+'),' ').trim()}',
-    category:cat,amount:result.amount!,income:result.income,date:bankSmsDate(found[i])??DateTime.now()));
-   newHashes.add(bankSmsHash(found[i]));
+   final known=merchantName==null?null:waffraRecognizedMerchantLeaf(
+    merchantName,income:result.income);
+   final allCategories=<BudgetCategory>[...categories,...newCategories];
+   String? assigned;
+   for(final candidate in [learned,known]){
+    if(candidate==null)continue;
+    final matches=allCategories.where((c)=>c.income==result.income&&
+     c.isSubcategory&&c.name==candidate&&
+     allCategories.any((p)=>p.id==c.parentId&&!p.isSubcategory)).toList();
+    if(matches.isNotEmpty){assigned=matches.first.name;break;}
+   }
+   if(assigned==null&&merchantName!=null){
+    final transfer=RegExp(r'حوال[ةه]|تحويل|transfer',
+     caseSensitive:false).hasMatch(raw);
+    final parentName=waffraFallbackSmsParent(income:result.income,
+     transfer:transfer);
+    final parents=allCategories.where((c)=>c.income==result.income&&
+     !c.isSubcategory&&c.name==parentName).toList();
+    if(parents.isNotEmpty){
+     final parent=parents.first;
+     final normalized=waffraNormalizeMerchantName(merchantName);
+     final children=allCategories.where((c)=>c.income==result.income&&
+      c.parentId==parent.id&&
+      waffraNormalizeMerchantName(c.displayName)==normalized).toList();
+     if(children.isNotEmpty){
+      assigned=children.first.name;
+     }else{
+      final child=BudgetCategory(id:newId(),
+       name:parent.name+' / '+merchantName,parentId:parent.id,
+       income:result.income,icon:parent.icon,color:parent.color);
+      newCategories.add(child);assigned=child.name;
+     }
+    }
+   }
+   if(assigned==null){
+    final fallback=result.income?'دخل آخر / دخل غير مصنف':'أخرى / مصروف غير مصنف';
+    final existing=allCategories.where((c)=>c.income==result.income&&
+     c.isSubcategory&&c.name==fallback).toList();
+    if(existing.isNotEmpty)assigned=existing.first.name;
+   }
+   // Never re-add a deleted parent without explicit user consent.
+   if(assigned==null){invalid.add(i);continue;}
+   final conciseName=merchantName==null?result.title:
+    result.title+' — '+merchantName;
+   additions.add(MoneyEntry(id:newId(),title:conciseName,
+    category:assigned,amount:result.amount!,income:result.income,
+    date:bankSmsDate(raw)??DateTime.now(),sourceType:'sms',
+    merchantKey:merchant??''));
+   newHashes.add(bankSmsHash(raw));
   }
   try{
-   setState(()=>entries.insertAll(0,additions));
+   setState((){
+    categories.addAll(newCategories);
+    entries.insertAll(0,additions);
+   });
    await persist();
    final prefs=await SharedPreferences.getInstance();
    final updatedHashes={...smsHashes,...newHashes};
@@ -2486,7 +2534,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
     actionsPadding:const EdgeInsets.fromLTRB(24,0,24,18),
     actions:[SizedBox(width:180,child:FilledButton(onPressed:()=>Navigator.pop(dialogCtx),child:WaffraText(waffraIsEnglish?'Done':'تم')))]));
   }catch(e){
-   setState(()=>entries.removeWhere((entry)=>additions.any((a)=>a.id==entry.id)));
+   setState((){
+    entries.removeWhere((entry)=>additions.any((a)=>a.id==entry.id));
+    categories.removeWhere((c)=>newCategories.any((n)=>n.id==c.id));
+   });
+   try{await persist();}catch(_){}
    if(ctx.mounted){update(()=>busy=false);snack(ctx,waffraIsEnglish?'Failed to save transactions':'فشل حفظ المعاملات');}
   }
  }
@@ -2738,6 +2790,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
       c.income==income&&c.id==matchingLeaf.first.parentId)){
     selectedParentId=matchingLeaf.first.parentId;
    }else{
+    final legacyParent=categories.where((c)=>c.income==income&&
+     !c.isSubcategory&&c.name==category).toList();
+    selectedParentId=legacyParent.isEmpty?null:legacyParent.first.id;
     category='';
    }
   }
@@ -2980,8 +3035,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
    // Learn only explicit corrections made by the user, not assumptions
    // generated by bank message parsing.
    if(initial!=null&&initial.category!=result.category){
-    final merchant=waffraMerchantKey(initial.title);
-    if(merchant!=null)learnedMerchantCategories[merchant]=result.category;
+    final merchant=initial.merchantKey.isNotEmpty?
+     initial.merchantKey:waffraMerchantKey(initial.title,income:initial.income);
+    if(merchant!=null&&merchant.isNotEmpty){
+     learnedMerchantCategories[merchant]=result.category;
+    }
    }
   });
   await persist();
