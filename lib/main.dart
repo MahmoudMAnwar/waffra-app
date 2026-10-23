@@ -6225,23 +6225,16 @@ Future<void> bulkSmsSheet({String? initialText})async {
          WaffraText(fieldLabel,textAlign:TextAlign.center,
           style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w600)),
          const SizedBox(height:12),
-         TextField(key:const Key('waffra-pin-input'),controller:input,autofocus:true,
+         // In-app digits-only keypad avoids Samsung's punctuation keyboard.
+         TextField(key:const Key('waffra-pin-input'),controller:input,
+          autofocus:false,readOnly:true,showCursor:false,
+          enableInteractiveSelection:false,
           textDirection:TextDirection.ltr,textAlign:TextAlign.center,
           keyboardType:TextInputType.number,
           inputFormatters:[FilteringTextInputFormatter.digitsOnly,
            LengthLimitingTextInputFormatter(existing?8:4)],
           obscureText:true,
           style:const TextStyle(color:Color(0xFF12382D),fontWeight:FontWeight.bold),
-          onChanged:(value){
-           update(()=>fieldError=null);
-           if(autoAdvance&&value.length==4&&waffraPinFieldError(value)==null){
-            WidgetsBinding.instance.addPostFrameCallback((_){
-             if(dialogContext.mounted&&input.text==value){
-              Navigator.pop(dialogContext,value);
-             }
-            });
-           }
-          },
           decoration:InputDecoration(
            filled:true,fillColor:Colors.white,
            hintText:'••••',hintStyle:const TextStyle(color:Colors.black38),
@@ -6249,6 +6242,43 @@ Future<void> bulkSmsSheet({String? initialText})async {
             (attempted?waffraPinFieldError(input.text,existing:existing):null),
            errorMaxLines:3,
            border:const OutlineInputBorder())),
+         const SizedBox(height:10),
+         for(final keys in const <List<String>>[
+          ['1','2','3'],['4','5','6'],['7','8','9'],['','0','back']
+         ])Padding(padding:const EdgeInsets.only(bottom:5),child:Row(
+          children:[for(final digit in keys)Expanded(child:Padding(
+           padding:const EdgeInsets.symmetric(horizontal:3),
+           child:digit.isEmpty?const SizedBox(height:42):OutlinedButton(
+            key:Key('waffra-pin-key-$digit'),
+            style:OutlinedButton.styleFrom(
+             minimumSize:const Size(0,42),
+             padding:EdgeInsets.zero,foregroundColor:Colors.white,
+             side:BorderSide(color:Colors.white.withValues(alpha:.23)),
+             shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(10))),
+            onPressed:(){
+             if(digit=='back'){
+              if(input.text.isEmpty)return;
+              input.text=input.text.substring(0,input.text.length-1);
+              update(()=>fieldError=null);
+              return;
+             }
+             if(input.text.length>=(existing?8:4))return;
+             final value=input.text+digit;
+             input.text=value;
+             update(()=>fieldError=null);
+             if(autoAdvance&&value.length==4&&waffraPinFieldError(value)==null){
+              WidgetsBinding.instance.addPostFrameCallback((_){
+               if(dialogContext.mounted&&input.text==value){
+                Navigator.pop(dialogContext,value);
+               }
+              });
+             }
+            },
+            child:digit=='back'
+             ?const Icon(Icons.backspace_outlined,size:20)
+             :Text(digit,style:const TextStyle(fontFamily:'Tajawal',
+               fontSize:19,fontWeight:FontWeight.bold))),
+          ))])),
         ])),
        actions:[
         TextButton(
