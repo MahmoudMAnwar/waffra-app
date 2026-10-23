@@ -89,33 +89,27 @@ Map<String,String> _buildEnglishByArabic() {
  for(final group in waffraCategoryCatalog){
   final row=_englishCatalog[group.id];
   if(row==null)throw StateError('Missing English group translation: ${group.id}');
-  final words=row.split('|');
-  if(words.length!=group.subcategories.length+1){
+  final labels=row.split('|');
+  if(labels.length!=group.subcategories.length+1){
    throw StateError('Incorrect English subcategory count for ${group.id}');
   }
-  result[group.name]=words.first;
   for(var i=0;i<group.subcategories.length;i++){
-   result[group.subcategories[i]]=words[i+1];
+   final sub=group.subcategories[i];
+   // Duplicate child labels may occur under different parents.
+   result.putIfAbsent(sub,()=>labels[i+1]);
+   result['${group.name} / $sub']='${labels.first} / ${labels[i+1]}';
   }
+ }
+ // Main category labels outrank identically spelled subcategories.
+ for(final group in waffraCategoryCatalog){
+  result[group.name]=_englishCatalog[group.id]!.split('|').first;
  }
  return Map<String,String>.unmodifiable(result);
 }
 
-/// Translate catalog labels only for display. User-created category titles
-/// remain exactly as entered; NEVER rewrite transactions or saved categories.
-String waffraEnglishCategoryLabel(String value) {
- final exact=_waffraEnglishByArabic[value];
- if(exact!=null)return exact;
- final separator=value.indexOf(' / ');
- if(separator<0)return value;
- final main=value.substring(0,separator);
- final sub=value.substring(separator+3);
- final mainEn=_waffraEnglishByArabic[main];
- final subEn=_waffraEnglishByArabic[sub];
- if(mainEn==null||subEn==null)return value;
- return '$mainEn / $subEn';
-}
-
+/// Translate only official catalog labels. Preserve all stored names/IDs.
+String waffraEnglishCategoryLabel(String value) =>
+ _waffraEnglishByArabic[value]??value;
 /// Exposed for exhaustive catalog coverage regressions.
 bool get waffraEnglishCategoryCatalogComplete =>
  _englishCatalog.length==waffraCategoryCatalog.length &&
