@@ -90,11 +90,13 @@ void main() {
   final source=File('lib/main.dart').readAsStringSync();
   expect(source,contains("Key('waffra-new-backup-password')"));
   expect(source,contains("Key('waffra-existing-backup-password')"));
-  expect(source,contains("Key('waffra-paste-backup-clipboard')"));
+  expect(source,contains("Key('waffra-open-backup-file')"));
   expect(source,contains("Key('waffra-confirm-backup-restore')"));
   expect(source,contains('LengthLimitingTextInputFormatter(8)'));
   expect(source,contains('stagedBackup=text;'));
   expect(source,contains('compute(waffraDecodeBackupInIsolate'));
+  expect(source,contains('WaffraBackupFiles.saveEncryptedArchive(encrypted)'));
+  expect(source.contains('await Clipboard.setData(ClipboardData(text:encrypted))'),isFalse);
   expect(source.contains('TextField(controller:input,minLines:4,maxLines:7'),isFalse);
   expect(source.contains('legacyRestorePassword?'),isFalse);
   expect(source,contains("_authorizeSensitiveAction('restoring data')"));
