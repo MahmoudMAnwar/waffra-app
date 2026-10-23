@@ -3,11 +3,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
+import 'package:waffra/waffra_i18n.dart';
 
 void main() {
-  test('four finance destinations share one bottom-left circular action', () {
+  test('four finance destinations share language-aware circular add action', () {
     final source=File('lib/main.dart').readAsStringSync();
-    expect(source,contains('floatingActionButtonLocation:const WaffraPhysicalLeftFab()'));
+    expect(source,contains('floatingActionButtonLocation:const WaffraLanguageAwareFabLocation()'));
     expect(source,contains('floatingActionButton:!ready||tab==4?null:Directionality('));
     expect(source,contains('if(goalsOpened||tab==2){goalDialog();return;}'));
     expect(source,contains('if(tab==3){recurringDialog();return;}'));
@@ -35,7 +36,7 @@ void main() {
     expect(source,contains('if(tourActive&&tourTargetReady)Positioned.fill(child:tourOverlay())'));
   });
 
-  test('backup password field is capped at eight except legacy restore', () {
+  test('both backup export and restore fields are capped at eight', () {
     final source=File('lib/main.dart').readAsStringSync();
     expect(source,contains('LengthLimitingTextInputFormatter(8)'));
     expect(source,contains("RegExp(r'[A-Za-z0-9]')"));
@@ -47,29 +48,33 @@ void main() {
     expect(source.contains('TextField(controller:input,minLines:4,maxLines:7'),isFalse);
   });
 
-  for (final direction in [TextDirection.rtl,TextDirection.ltr]) {
-    testWidgets('physical left + stays left in $direction',(tester) async {
+  for (final language in ['ar','en']) {
+    testWidgets('floating + goes to the correct physical side in $language',(tester) async {
+      waffraLanguage.value=language;
+      addTearDown(()=>waffraLanguage.value='ar');
       await tester.binding.setSurfaceSize(const Size(390,760));
       addTearDown(()=>tester.binding.setSurfaceSize(null));
       await tester.pumpWidget(MaterialApp(
         home:Directionality(
-          textDirection:direction,
+          textDirection:language=='ar'?TextDirection.rtl:TextDirection.ltr,
           child:Scaffold(
             bottomNavigationBar:const SizedBox(height:85),
-            floatingActionButtonLocation:const WaffraPhysicalLeftFab(),
+            floatingActionButtonLocation:const WaffraLanguageAwareFabLocation(),
             floatingActionButton:FloatingActionButton(
-              key:const Key('waffra-m127-plus'),
-              onPressed:(){},
-              child:const Icon(Icons.add),
-            ),
+              key:const Key('waffra-m127-plus'),onPressed:(){},
+              child:const Icon(Icons.add)),
           ),
         ),
       ));
       await tester.pumpAndSettle();
       final rect=tester.getRect(find.byKey(const Key('waffra-m127-plus')));
-      expect(rect.left,greaterThanOrEqualTo(12));
-      expect(rect.left,lessThanOrEqualTo(40));
-      expect(rect.right,lessThan(120));
+      if(language=='ar'){
+       expect(rect.left,inInclusiveRange(12,45));
+       expect(rect.right,lessThan(120));
+      }else{
+       expect(rect.right,inInclusiveRange(345,390));
+       expect(rect.left,greaterThan(270));
+      }
       expect(tester.takeException(),isNull);
     });
   }
