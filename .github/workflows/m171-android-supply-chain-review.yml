@@ -1,0 +1,21 @@
+name: M171 Signed AAB Supply-Chain Preflight
+on:
+  pull_request:
+    branches:
+      - integration/m160-reconcile-main-m158-release-gate-20261023
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  readonly-source-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Check launch candidate signing and Play guard
+        run: python3 -m unittest scripts/qa/test_m171_release_candidate_source_audit.py -v
+      - run: python3 scripts/qa/m171_release_candidate_source_audit.py
+      - name: Validate offline bundle checker syntax (no keystore or AAB required)
+        run: bash -n scripts/qa/m171_verify_signed_aab.sh
