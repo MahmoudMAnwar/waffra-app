@@ -2665,6 +2665,18 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final message=TextEditingController(text:initialSms??'');
   bool income=initial?.income??false,analyzing=false,hasParsed=initialSms!=null;
   String category=initial?.category??'أخرى';
+  String? selectedParentId;
+  if(!sms){
+   // Only leaf categories can be assigned to manually entered transactions.
+   final matchingLeaf=categories.where((c)=>c.income==income&&
+    c.isSubcategory&&c.name==category).toList();
+   if(matchingLeaf.isNotEmpty&&categories.any((c)=>!c.isSubcategory&&
+      c.income==income&&c.id==matchingLeaf.first.parentId)){
+    selectedParentId=matchingLeaf.first.parentId;
+   }else{
+    category='';
+   }
+  }
   DateTime date=initial?.date??DateTime.now();
    String? suggestion,pendingHash,receiptPath=initial?.receiptPath;
    bool attempted=false;
@@ -2695,6 +2707,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
     }
     final available=forType(income);
     final chosen=available.any((c)=>c.name==category)?category:(available.isEmpty?null:available.first.name);
+    final mainCategories=available.where((c)=>!c.isSubcategory).toList();
+    final selectedMain=mainCategories.where((c)=>c.id==selectedParentId).toList();
+    final subcategories=available.where((c)=>c.isSubcategory&&c.parentId==selectedParentId).toList();
+    final selectedSub=subcategories.where((c)=>c.name==category).toList();
     return Padding(padding:EdgeInsets.fromLTRB(18,10,18,MediaQuery.of(sheetContext).viewInsets.bottom+20),
      child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,
       crossAxisAlignment:CrossAxisAlignment.stretch,children:[
@@ -2718,7 +2734,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
        segments:const [ButtonSegment(value:true,label:WaffraText('دخل')),
         ButtonSegment(value:false,label:WaffraText('مصروف'))],
        selected:{income},onSelectionChanged:(v)=>update((){
-        income=v.first;category=forType(income).isNotEmpty?forType(income).first.name:'أخرى';suggestion=null;
+        income=v.first;
+        selectedParentId=null;
+        category=sms?(forType(income).isNotEmpty?forType(income).first.name:'أخرى'):'';
+        suggestion=null;
        })),
       const SizedBox(height:12),
       TextField(controller:title,onChanged:(_)=>update((){}),minLines:1,maxLines:5,
@@ -2732,13 +2751,50 @@ Future<void> bulkSmsSheet({String? initialText})async {
         errorText:attempted?waffraAmountFieldError(value.text):null,
         border:OutlineInputBorder())),
       const SizedBox(height:12),
-      InkWell(onTap:()async{
-       final picked=await chooseTransactionCategory(sheetContext,available,chosen??'');
-       if(picked!=null&&sheetContext.mounted)update(()=>category=picked);
-      },child:InputDecorator(decoration:InputDecoration(labelText:waffraTr('القسم'),
-       border:const OutlineInputBorder(),suffixIcon:const Icon(Icons.search_rounded)),
-       child:WaffraText(chosen??'',maxLines:2))),
-      if(suggestion!=null)TextButton.icon(onPressed:()async {
+      if(sms)
+       InkWell(onTap:()async{
+        final picked=await chooseTransactionCategory(sheetContext,available,chosen??'');
+        if(picked!=null&&sheetContext.mounted)update(()=>category=picked);
+       },child:InputDecorator(decoration:InputDecoration(labelText:waffraTr('القسم'),
+        border:const OutlineInputBorder(),suffixIcon:const Icon(Icons.search_rounded)),
+        child:WaffraText(chosen??'',maxLines:2)))
+      else ...[
+       InkWell(onTap:()async{
+        final picked=await chooseTransactionCategory(sheetContext,mainCategories,
+         selectedMain.isEmpty?'':selectedMain.first.name);
+        if(picked==null||!sheetContext.mounted)return;
+        final found=mainCategories.where((c)=>c.name==picked).toList();
+        if(found.isEmpty)return;
+        update((){
+         if(selectedParentId!=found.first.id){selectedParentId=found.first.id;category='';}
+        });
+       },child:InputDecorator(decoration:InputDecoration(
+        labelText:waffraIsEnglish?'Main category *':'القسم الرئيسي *',
+        errorText:attempted&&selectedMain.isEmpty?waffraRequiredFieldMessage:null,
+        border:const OutlineInputBorder(),suffixIcon:const Icon(Icons.arrow_drop_down_rounded)),
+        child:WaffraText(selectedMain.isEmpty?
+         (waffraIsEnglish?'Choose a main category':'اختر القسم الرئيسي'):
+         selectedMain.first.displayName,maxLines:2))),
+       const SizedBox(height:10),
+       InkWell(onTap:selectedMain.isEmpty||subcategories.isEmpty?null:()async{
+        final picked=await chooseTransactionCategory(sheetContext,subcategories,
+         selectedSub.isEmpty?'':selectedSub.first.name,leafLabels:true);
+        if(picked!=null&&sheetContext.mounted)update(()=>category=picked);
+       },child:InputDecorator(decoration:InputDecoration(
+        labelText:waffraIsEnglish?'Subcategory *':'القسم الفرعي *',
+        enabled:selectedMain.isNotEmpty,
+        errorText:attempted&&selectedSub.isEmpty?waffraRequiredFieldMessage:null,
+        border:const OutlineInputBorder(),suffixIcon:const Icon(Icons.arrow_drop_down_rounded)),
+        child:WaffraText(selectedSub.isEmpty?
+         (waffraIsEnglish?'Choose a subcategory':'اختر القسم الفرعي'):
+         selectedSub.first.displayName,maxLines:2))),
+       if(selectedMain.isNotEmpty&&subcategories.isEmpty)
+        Padding(padding:const EdgeInsets.only(top:7),child:WaffraText(
+         waffraIsEnglish?'No subcategories yet. Add one below first.':
+         'لا توجد أقسام فرعية هنا، أضف قسمًا فرعيًا أولًا.',
+         style:const TextStyle(color:Colors.redAccent,fontSize:12))),
+      ],
+      if(sms&&suggestion!=null)TextButton.icon(onPressed:()async {
        final c=await categoryDialog(income:income,suggested:suggestion);
        if(c!=null&&mounted){
         if(!categories.any((x)=>x.name==c.name&&x.income==c.income)){
@@ -2747,7 +2803,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
         update((){category=c.name;suggestion=null;});
        }
       },icon:const Icon(Icons.add),label:WaffraText('إضافة قسم $suggestion')),
-      OutlinedButton.icon(onPressed:()async {
+      if(sms)OutlinedButton.icon(onPressed:()async {
        final c=await categoryDialog(income:income);
        if(c!=null&&mounted){
         if(!categories.any((x)=>x.name==c.name&&x.income==c.income)){
@@ -2755,7 +2811,19 @@ Future<void> bulkSmsSheet({String? initialText})async {
         }
         update(()=>category=c.name);
        }
-      },icon:const Icon(Icons.add),label:const WaffraText('قسم جديد')),
+      },icon:const Icon(Icons.add),label:const WaffraText('قسم جديد'))
+      else if(selectedMain.isNotEmpty)OutlinedButton.icon(onPressed:()async {
+       final mainId=selectedMain.first.id;
+       final c=await categoryDialog(income:income,parentId:mainId);
+       if(c!=null&&mounted&&sheetContext.mounted){
+        if(!categories.any((x)=>x.name==c.name&&x.income==c.income)){
+         setState(()=>categories.add(c));
+         await persist();
+        }
+        if(sheetContext.mounted)update(()=>category=c.name);
+       }
+      },icon:const Icon(Icons.add),
+       label:WaffraText(waffraIsEnglish?'New subcategory':'قسم فرعي جديد')),
       OutlinedButton.icon(onPressed:()async {
        final d=await showDatePicker(context:sheetContext,initialDate:date,
         firstDate:DateTime(2000),lastDate:DateTime.now());
@@ -2790,6 +2858,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
        update(()=>attempted=true);
        final n=amountOf(value.text);
        if(title.text.trim().isEmpty||waffraAmountFieldError(value.text)!=null||n==null)return;
+       if(!sms&&!categories.any((c)=>c.income==income&&c.isSubcategory&&
+        c.parentId==selectedParentId&&c.name==category))return;
        if(sms){
         if(message.text.trim().isEmpty)return;
         final h=sha256.convert(utf8.encode(digits(message.text).replaceAll(RegExp(r'\s+'),' ').trim().toLowerCase())).toString();
@@ -2854,10 +2924,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
     });
   }
  }
- Future<String?> chooseTransactionCategory(BuildContext ctx,List<BudgetCategory> options,String selected)async{
+ Future<String?> chooseTransactionCategory(BuildContext ctx,List<BudgetCategory> options,String selected,{bool leafLabels=false})async{
   var query='';
   return showWaffraDialog<String>(context:ctx,builder:(dialogCtx)=>StatefulBuilder(builder:(dialogCtx,refresh){
-   final filtered=options.where((item)=>item.name.toLowerCase().contains(query.trim().toLowerCase())).toList();
+   final filtered=options.where((item)=>(leafLabels?item.displayName:item.name).toLowerCase().contains(query.trim().toLowerCase())).toList();
    return AlertDialog(title:WaffraText(waffraIsEnglish?'Search categories':'بحث في الأقسام'),
     content:SizedBox(width:360,height:min(420.0,MediaQuery.sizeOf(dialogCtx).height*.55),child:Column(children:[
      TextField(autofocus:true,onChanged:(v)=>refresh(()=>query=v),
@@ -2866,7 +2936,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      Expanded(child:ListView.builder(itemCount:filtered.length,itemBuilder:(ctx,i){
       final item=filtered[i];return ListTile(selected:selected==item.name,
        leading:Icon(categoryIcon(item.icon),color:Color(item.color)),
-       title:WaffraText(item.name,maxLines:3),onTap:()=>Navigator.pop(dialogCtx,item.name));
+       title:WaffraText(leafLabels?item.displayName:item.name,maxLines:3),onTap:()=>Navigator.pop(dialogCtx,item.name));
      })),
     ])),actions:[TextButton(onPressed:()=>Navigator.pop(dialogCtx),child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))]);
   }));
