@@ -6,6 +6,8 @@ on:
   push:
     branches:
       - main
+      # QA-only isolated UI candidate; no automatic merge or store publishing.
+      - 'feature/m130-ui-main-isolated-merge-candidate'
   workflow_dispatch:
 
 # Fast-build concurrency: only the latest pushed revision needs an APK.

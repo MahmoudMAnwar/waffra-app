@@ -32,7 +32,8 @@ void main() {
 
  test('Savings dialog is simple, localized and contains one primary goal-create action',(){
   final source=File('lib/main.dart').readAsStringSync();
-  expect(source,contains("waffraIsEnglish?'New savings goal':'هدف جديد'"));
+  expect(source,contains('floatingActionButtonLocation:const WaffraPhysicalLeftFab()'));
+  expect(source.contains('FilledButton.icon(onPressed:goalDialog'),isFalse);
   expect(source.contains('إضافة أول هدف ادخاري'),isFalse);
   expect(source,contains("waffraIsEnglish?'Amount to add *':'المبلغ المراد إضافته *'"));
   expect(source,contains('for(final quick in [500.0,1000.0,2000.0])'));

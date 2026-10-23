@@ -14,6 +14,18 @@ class WaffraSecureBackup {
   return List<int>.generate(length,(_)=>secure.nextInt(256));
  }
 
+ /// Exactly eight ASCII alphanumeric characters for new user-facing backups.
+ /// Legacy/internal portable archives continue to accept existing passwords.
+ static bool isValidNewPassword(String password) =>
+  RegExp(r'^(?=.*[A-Za-z])(?=.*[0-9])[A-Za-z0-9]{8}$').hasMatch(password);
+
+ static Future<String> encryptUserBackup(String plaintext,String password) async {
+  if(!isValidNewPassword(password)) {
+   throw const FormatException('New backup password requires exactly eight letters/digits');
+  }
+  return encrypt(plaintext,password);
+ }
+
  static Future<String> encrypt(String plaintext,String password) async {
   if(password.trim().length<8)throw const FormatException('Password must have at least 8 characters');
   final salt=_random(16),nonce=_random(12);
