@@ -1,0 +1,71 @@
+name: M148 UAT Category Localization and Legacy Backup Regression
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m148-uat-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  category-backup-uat:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve Flutter packages
+        run: flutter pub get
+      - name: Run M148 UAT fixes and historical backup regression tests
+        run: >-
+          flutter test
+          test/m148_english_categories_legacy_backup_uat_test.dart
+          test/m127_ui_tour_backup_acceptance_test.dart
+          test/m131_backup_boundary_tamper_qa_test.dart
+          test/m132_backup_corruption_recovery_negative_test.dart
+          test/m140_backup_utf8_cross_archive_integrity_test.dart
+          test/waffra_secure_backup_test.dart
+      - name: Run complete Flutter regression suite
+        run: flutter test
+
+  compile-arm64-qa:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Fetch packages
+        run: flutter pub get
+      - name: Generate temporary Android project for compile verification
+        run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
+      - name: Build ARM64 release-mode for CI only
+        run: flutter build apk --release --no-pub --target-platform android-arm64
+      - name: Upload unapproved, not production signed, QA APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: m148-arm64-qa-not-production-signed
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
