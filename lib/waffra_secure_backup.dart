@@ -45,10 +45,18 @@ class WaffraSecureBackup {
   // Old unencrypted backups remain importable for backwards compatibility.
   if(decoded['format']=='waffra-backup')return payload;
   if(decoded['format']!='waffra-secure-backup'||decoded['version']!=1||
-    decoded['iterations']!=120000||decoded['cipher']!='aes-256-gcm'){
+    decoded['kdf']!='pbkdf2-sha256'||decoded['iterations']!=120000||
+    decoded['cipher']!='aes-256-gcm'){
    throw const FormatException('Unsupported encrypted backup');
   }
   if(password.isEmpty)throw const FormatException('Password required');
+  // Check all required fields before decoding. Missing or incorrectly typed
+  // metadata must produce a controlled FormatException, not an unchecked cast.
+  for(final field in const ['salt','nonce','data','mac']){
+   if(decoded[field] is! String){
+    throw const FormatException('Corrupted encrypted backup');
+   }
+  }
   final salt=base64Decode(decoded['salt'] as String);
   final nonce=base64Decode(decoded['nonce'] as String);
   final data=base64Decode(decoded['data'] as String);
