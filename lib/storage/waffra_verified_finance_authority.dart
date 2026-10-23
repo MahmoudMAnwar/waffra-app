@@ -330,6 +330,7 @@ class WaffraVerifiedFinanceAuthority {
     required List<String> hashes,
     required bool userConfirmed,
     bool allowDuplicateHashes = false,
+    List<Map<String, Object?>> proposedCategories = const [],
   }) async {
     if (route != WaffraFinanceRoute.bulkSmsConfirmedSave &&
         route != WaffraFinanceRoute.widgetSmsConfirmedSave) {
@@ -352,6 +353,7 @@ class WaffraVerifiedFinanceAuthority {
       final result = await legacy.commitConfirmedLegacySms(
         records: frozen, messageHashes: fingerprints,
         userConfirmed: true, allowDuplicateHashes: allowDuplicateHashes,
+        proposedCategories: proposedCategories,
       );
       saved = result.added;
       income = result.savedIncome;
@@ -360,6 +362,10 @@ class WaffraVerifiedFinanceAuthority {
       incomeMinor = result.incomeMinor;
       expenseMinor = result.expenseMinor;
     } else {
+      // Missing SQL category+ledger+hash atomic commit must fail closed.
+      if(proposedCategories.isNotEmpty){
+        throw StateError('Encrypted merchant-category provisioning is not yet atomic.');
+      }
       final result = await encryptedSession!.appendConfirmed(
         records: frozen, hashes: fingerprints.cast<String?>(),
         userConfirmed: true, allowDuplicateHashes: allowDuplicateHashes,
