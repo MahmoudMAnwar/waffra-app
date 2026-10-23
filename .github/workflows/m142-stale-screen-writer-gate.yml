@@ -1,0 +1,31 @@
+name: M142 SQLCipher Stale Screen and Writer Gate QA
+
+on:
+  pull_request:
+    branches:
+      - 'test/m141-sqlcipher-multi-step-transaction-rollback'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m142-stale-writer-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  disposable-stale-writer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install Flutter dependencies
+        run: flutter pub get
+      - name: Test M141 rollback and M142 stale-writer security cases
+        run: >-
+          flutter test
+          test/storage/m141_sqlcipher_multi_step_transaction_rollback_test.dart
+          test/storage/m142_sqlcipher_stale_screen_writer_gate_test.dart
