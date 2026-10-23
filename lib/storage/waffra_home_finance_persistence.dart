@@ -159,6 +159,21 @@ class WaffraHomeFinancePersistence {
       ));
     }
     final hashes = List<String>.unmodifiable(messageHashes);
+    // A standalone test or future legacy caller can invoke this bridge
+    // without the outer finance authority. Snapshot merchant proposals
+    // BEFORE awaiting the coordinator lock, just like records and hashes.
+    if (proposedCategories.length > 100) {
+      throw ArgumentError('Too many proposed merchant categories.');
+    }
+    final frozenCategories = List<Map<String, Object?>>.unmodifiable(
+      proposedCategories.map((item) {
+        final decoded = jsonDecode(jsonEncode(item));
+        if (decoded is! Map<String, dynamic>) {
+          throw ArgumentError('Invalid merchant category payload.');
+        }
+        return Map<String, Object?>.unmodifiable(decoded);
+      }),
+    );
     const alphabet = '0123456789abcdef';
     for (final hash in hashes) {
       if (hash.length != 64 ||
@@ -235,7 +250,7 @@ class WaffraHomeFinancePersistence {
           final names=live.map((e)=>'${e['income']}|${e['name']}'.toLowerCase()).toSet();
           final used=confirmed.map((e)=>'${e['income']}|${e['category']}'.toLowerCase()).toSet();
           final proposedIds=<String>{};
-          for(final value in proposedCategories){
+          for(final value in frozenCategories){
             final c=Map<String,dynamic>.from(value);
             final id=c['id'],name=c['name'],parentId=c['parentId'];
             final incomeFlag=c['income'],budget=c['budget'];

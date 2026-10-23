@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
@@ -84,6 +85,51 @@ void main(){
   expect(prefs.getString('waffra_categories_v24'),baselineCats);
   expect(prefs.getStringList('waffra_sms_hashes_v1'),isEmpty);
   expect(prefs.getString('waffra_widget_last_save_v1'),isNull);
+ });
+ test('M157: proposal mutation while waiting for writer cannot change confirmed child',()async{
+  final entered=Completer<void>();
+  final release=Completer<void>();
+  final guarded=WaffraHomeFinancePersistence(
+    coordinator:WaffraLegacyFinanceWriterCoordinator(
+      testDirectory:folder,testBypassNativeLock:true,
+      sourceProbe: (_) async {
+        entered.complete();
+        await release.future;
+      },
+    ),
+  );
+  final proposed=child('frozen-merchant','أخرى / ALHUSSAIN','other',false);
+  final pending=guarded.commitConfirmedLegacySms(
+    records:[entry('frozen-entry','أخرى / ALHUSSAIN',false)],
+    messageHashes:['d'*64],userConfirmed:true,
+    proposedCategories:[proposed],
+  );
+  await entered.future;
+  // Simulates the caller editing in-memory UI state during a slow disk/source
+  // check. Only the exact category consented to at invocation may persist.
+  proposed['name']='أخرى / MALICIOUS';
+  proposed['parentId']='missing';
+  release.complete();
+  final committed=await pending;
+  expect(committed.added,1);
+  final prefs=await SharedPreferences.getInstance();
+  await prefs.reload();
+  final children=jsonDecode(prefs.getString('waffra_categories_v24')!) as List;
+  expect(children.last['name'],'أخرى / ALHUSSAIN');
+  expect(children.last['parentId'],'other');
+  expect(children.any((item)=>item['name']=='أخرى / MALICIOUS'),false);
+  expect(prefs.getStringList('waffra_sms_hashes_v1'),['d'*64]);
+ });
+ test('M157: excessive merchant category proposals fail before any write',()async{
+  await expectLater(bridge().commitConfirmedLegacySms(
+    records:[entry('e1','أخرى / ALHUSSAIN',false)],
+    messageHashes:['e'*64],userConfirmed:true,
+    proposedCategories:List.generate(101, (i)=>
+      child('merchant-$i','أخرى / SHOP-$i','other',false)),
+  ),throwsArgumentError);
+  final prefs=await SharedPreferences.getInstance();
+  expect(prefs.getString('entries'),'[]');
+  expect(prefs.containsKey(WaffraLegacyFinanceBatchJournal.pendingKey),false);
  });
  test('M156: interrupted partial multi-key write rolls forward on cold load',()async{
   final prefs=await SharedPreferences.getInstance();

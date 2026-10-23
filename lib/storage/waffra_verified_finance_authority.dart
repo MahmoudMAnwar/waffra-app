@@ -347,13 +347,29 @@ class WaffraVerifiedFinanceAuthority {
       ),
     )).toList(growable: false);
     final fingerprints = List<String>.unmodifiable(hashes);
+    // Freeze every user-confirmed category before the first asynchronous
+    // source check. Home/Widget may still rebuild or edit their category lists
+    // while waiting for the native writer lock; the committed batch must not
+    // silently change beneath the confirmation screen.
+    if (proposedCategories.length > 100) {
+      throw ArgumentError('Merchant category proposals exceed the SMS limit.');
+    }
+    final frozenCategories = List<Map<String, Object?>>.unmodifiable(
+      proposedCategories.map((category) {
+        final decoded = jsonDecode(jsonEncode(category));
+        if (decoded is! Map<String, dynamic>) {
+          throw ArgumentError('Invalid confirmed merchant category.');
+        }
+        return Map<String, Object?>.unmodifiable(decoded);
+      }),
+    );
     final backend = await _requireRoute(route);
     late final int saved, income, expenses, skipped, incomeMinor, expenseMinor;
     if (backend == WaffraRuntimeFinanceBackend.guardedLegacy) {
       final result = await legacy.commitConfirmedLegacySms(
         records: frozen, messageHashes: fingerprints,
         userConfirmed: true, allowDuplicateHashes: allowDuplicateHashes,
-        proposedCategories: proposedCategories,
+        proposedCategories: frozenCategories,
       );
       saved = result.added;
       income = result.savedIncome;
@@ -367,7 +383,7 @@ class WaffraVerifiedFinanceAuthority {
       final result = await encryptedSession!.appendConfirmed(
         records: frozen, hashes: fingerprints.cast<String?>(),
         userConfirmed: true, allowDuplicateHashes: allowDuplicateHashes,
-        proposedCategories: proposedCategories,
+        proposedCategories: frozenCategories,
       );
       saved = result.saved;
       income = result.savedIncome;
