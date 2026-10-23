@@ -38,6 +38,7 @@ import 'waffra_footer.dart';
 import 'waffra_messages.dart';
 import 'waffra_recurring_policy.dart';
 import 'waffra_secure_backup.dart';
+import 'waffra_backup_files.dart';
 import 'waffra_home_widget.dart';
 part 'waffra_categories_page.part.dart';
 part 'waffra_smart_analysis.part.dart';
@@ -5924,7 +5925,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   if(!await _authorizeSensitiveAction('backing up or restoring data')||!mounted)return;
   final secret=TextEditingController(),restoreSecret=TextEditingController();
   String? stagedBackup,backupError,restoreError,restorePasswordError;
-  var attempted=false,restoring=false;
+  var attempted=false,restoring=false,exporting=false;
   await showWaffraDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
    title:WaffraText(waffraIsEnglish?'Encrypted backup and restore':'نسخ احتياطي واستعادة'),
    content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
@@ -5940,23 +5941,36 @@ Future<void> bulkSmsSheet({String? initialText})async {
       labelText:waffraIsEnglish?'New backup password (8 characters) *':'كلمة مرور النسخة الجديدة (8 خانات) *',
       errorText:backupError,errorMaxLines:3,border:const OutlineInputBorder())),
     const SizedBox(height:10),
-    FilledButton.icon(onPressed:()async {
+    FilledButton.icon(onPressed:exporting?null:()async {
      if(!WaffraSecureBackup.isValidNewPassword(secret.text)){
       update(()=>backupError=waffraIsEnglish?'Exactly 8 letters and digits, including one of each.':'كلمة المرور 8 خانات بالضبط من أحرف وأرقام، وبها حرف ورقم على الأقل.');return;
      }
+     update(()=>exporting=true);
      try{
       final encrypted=await WaffraSecureBackup.encryptUserBackup(exportBackup(),secret.text);
-      await Clipboard.setData(ClipboardData(text:encrypted));
+      // Persist the encrypted archive only after system document picker confirms.
+      // Never copy it to the system clipboard on export.
+      final saved=await WaffraBackupFiles.saveEncryptedArchive(encrypted);
+      if(!saved)return;
       final generatedAt=DateTime.now().toIso8601String();
       final prefs=await SharedPreferences.getInstance();
       await prefs.setString('waffra_backup_last_exported_v1',generatedAt);
       await prefs.setInt('waffra_backup_last_size_v1',utf8.encode(encrypted).length);
       if(mounted)setState((){lastBackupGeneratedAt=generatedAt;lastBackupBytes=utf8.encode(encrypted).length;});
-      if(ctx.mounted)snackSuccess(ctx,waffraIsEnglish?'Encrypted backup copied; keep it and its password safe':'تم نسخ النسخة المشفّرة، احتفظ بها وكلمة مرورها في مكان آمن');
-     }catch(error){if(ctx.mounted)update(()=>backupError=error.toString());}
-    },icon:const Icon(Icons.lock_outline),label:WaffraText(waffraIsEnglish?'Copy encrypted backup':'نسخ النسخة المشفّرة')),
+      if(ctx.mounted)snackSuccess(ctx,waffraIsEnglish?
+       'Encrypted .waffra backup file saved. Keep its password safe.':
+       'تم حفظ ملف .waffra المشفّر بنجاح. احتفظ بكلمة المرور بأمان.');
+     }catch(_){
+      if(ctx.mounted)update(()=>backupError=waffraIsEnglish?
+       'Could not save encrypted backup file. Please retry.':
+       'تعذر حفظ ملف النسخة الاحتياطية المشفّر. حاول مرة أخرى.');
+     }finally{
+      if(ctx.mounted)update(()=>exporting=false);
+     }
+    },icon:const Icon(Icons.file_download_outlined),label:WaffraText(waffraIsEnglish?
+      'Save encrypted .waffra file':'حفظ ملف .waffra المشفّر')),
     const Divider(height:28),
-    WaffraText(waffraIsEnglish?'Restore an existing backup':'استعادة نسخة احتياطية سابقة',
+    WaffraText(waffraIsEnglish?'Restore an encrypted backup file':'استعادة ملف نسخة احتياطية مشفّر',
      style:const TextStyle(fontWeight:FontWeight.bold)),
     const SizedBox(height:10),
     TextField(controller:restoreSecret,key:const Key('waffra-existing-backup-password'),
