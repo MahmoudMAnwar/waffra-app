@@ -2866,7 +2866,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
  Future<String?> chooseTransactionCategory(BuildContext ctx,List<BudgetCategory> options,String selected)async{
   var query='';
   return showWaffraDialog<String>(context:ctx,builder:(dialogCtx)=>StatefulBuilder(builder:(dialogCtx,refresh){
-   final filtered=options.where((item)=>item.name.toLowerCase().contains(query.trim().toLowerCase())).toList();
+   final filtered=options.where((item)=>(item.name.toLowerCase().contains(query.trim().toLowerCase())||waffraTr(item.name).toLowerCase().contains(query.trim().toLowerCase()))).toList();
    return AlertDialog(title:WaffraText(waffraIsEnglish?'Search categories':'بحث في الأقسام'),
     content:SizedBox(width:360,height:min(420.0,MediaQuery.sizeOf(dialogCtx).height*.55),child:Column(children:[
      TextField(autofocus:true,onChanged:(v)=>refresh(()=>query=v),
@@ -5590,7 +5590,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
           String query='';
           return StatefulBuilder(builder:(searchCtx,refresh){
            final filtered=options.where((c)=>
-            c.name.toLowerCase().contains(query.trim().toLowerCase())).toList();
+            (c.name.toLowerCase().contains(query.trim().toLowerCase())||waffraTr(c.name).toLowerCase().contains(query.trim().toLowerCase()))).toList();
            return AlertDialog(
             title:WaffraText(waffraIsEnglish?'Search categories':'البحث عن قسم'),
             content:SizedBox(
@@ -6034,8 +6034,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
       if(mounted)snackSuccess(context,'تمت استعادة البيانات بنجاح');
      }catch(e){
       if(ctx.mounted)update(()=>restoreError=waffraIsEnglish?
-       'Restore failed. Check the original password and complete backup. Your data was not replaced.':
-       'فشلت الاستعادة. تأكد من كلمة المرور الأصلية واكتمال النسخة. لم تُستبدل البيانات.');
+       'Restore failed. Check the original password and complete backup.':
+       'فشلت الاستعادة. تأكد من كلمة المرور الأصلية واكتمال النسخة.');
      }finally{
       if(ctx.mounted)update(()=>restoring=false);
      }
