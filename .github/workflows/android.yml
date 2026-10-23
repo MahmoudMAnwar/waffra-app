@@ -11,6 +11,7 @@ on:
       # Device-retest build after M147 UAT found wrong-icon / JNI-load errors in compiler-only APK.
       - 'fix/m148-uat-categories-backup-restore-performance'
       - 'fix/m151-uat-restore-latest-plus-ui-20261023'
+      - 'feature/m153-approved-batch-security-precutover-20261023'
   workflow_dispatch:
 
 # Fast-build concurrency: only the latest pushed revision needs an APK.
