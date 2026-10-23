@@ -12,7 +12,7 @@ void main() {
     expect(source,contains('if(goalsOpened||tab==2){goalDialog();return;}'));
     expect(source,contains('if(tab==3){recurringDialog();return;}'));
     expect(source,contains('child:SizedBox(key:_tourKeys[1],width:58,height:58'));
-    expect(source,contains('onTap:()=>setState(()=>addFabExpanded=!addFabExpanded)'),
+    expect(source.contains('onTap:()=>setState(()=>addFabExpanded=!addFabExpanded)'),
         isFalse);
     final goalsStart=source.indexOf('Widget goalsPage()');
     final recurringStart=source.indexOf('Widget recurringPage()');
