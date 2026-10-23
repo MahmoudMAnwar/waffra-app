@@ -174,11 +174,11 @@ class WaffraUnifiedFinanceWriter {
         final normalizedCategoryRows=await snapshot.store.customSelect(
           'SELECT category_id,source_json FROM fresh_finance_categories',
         ).get();
-        final ids=categoryList.map((c)=>c['id']).toSet();
+        final categoryIds=categoryList.map((c)=>c['id']).toSet();
         final sqlIds=normalizedCategoryRows.map((row)=>
           row.read<String>('category_id')).toSet();
-        if(sqlIds.length!=ids.length||normalizedCategoryRows.length!=categoryList.length||
-           sqlIds.difference(ids).isNotEmpty||ids.difference(sqlIds).isNotEmpty){
+        if(sqlIds.length!=categoryIds.length||normalizedCategoryRows.length!=categoryList.length||
+           sqlIds.difference(categoryIds).isNotEmpty||categoryIds.difference(sqlIds).isNotEmpty){
           throw StateError('Encrypted category projection differs from finance snapshot.');
         }
         final normalizedById={
@@ -265,7 +265,7 @@ class WaffraUnifiedFinanceWriter {
               !name.startsWith('${parent.single['name']} / ')){
               throw StateError('Merchant category parent is absent or invalid.');
             }
-            if(ids.contains(id)||!pendingIds.add(id)){
+            if(categoryIds.contains(id)||!pendingIds.add(id)){
               throw StateError('Duplicate category identifier.');
             }
             final raw=jsonEncode(c);
@@ -276,7 +276,7 @@ class WaffraUnifiedFinanceWriter {
              [id,name,parentId,income?1:0,0,raw],
             );
             categoryList.add(c);
-            categoryNames.add(normalizedName);ids.add(id);
+            categoryNames.add(normalizedName);categoryIds.add(id);
           }
           next['waffra_categories_v24']=jsonEncode(categoryList);
           final count=await snapshot.store.customSelect(
