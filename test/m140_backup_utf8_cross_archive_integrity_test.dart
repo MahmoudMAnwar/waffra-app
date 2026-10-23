@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_secure_backup.dart';
 
 void main() {
-  const newPassword = 'Abcd1234';
+  const newPassword = 'Waffra-2026-Strong';
 
   test('M140: Arabic/English finance and 100 entries round-trip byte-exactly', () async {
     final transactions = List<Map<String, dynamic>>.generate(100, (index) => {
@@ -63,11 +63,11 @@ void main() {
       WaffraSecureBackup.decrypt(archive, 'Wrong123'),
       throwsA(isA<Exception>()),
     );
-    await expectLater(
-      WaffraSecureBackup.encryptUserBackup(payload, legacyPassword),
-      throwsFormatException,
-      reason: 'Legacy restore flexibility must not weaken new export requirements',
-    );
+    final modernArchive = await WaffraSecureBackup.encryptUserBackup(payload,legacyPassword);
+    final modernHeader = jsonDecode(modernArchive) as Map<String,dynamic>;
+    expect(modernHeader['version'],2);
+    expect(modernHeader['kdf'],'argon2id');
+    expect(await WaffraSecureBackup.decrypt(modernArchive,legacyPassword),payload);
   });
 
   test('M140: legacy plaintext finance archive stays exactly compatible', () async {
