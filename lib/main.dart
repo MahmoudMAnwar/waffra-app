@@ -2234,6 +2234,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   return BudgetCategory(id:'fallback',name:name,icon:'category',color:colors[7],income:income);
  }
  List<BudgetCategory> forType(bool income)=>categories.where((c)=>c.income==income).toList();
+ // Manual entries may only select leaf categories; stored parent references
+ // in older transactions remain unchanged until a user deliberately edits.
+ List<BudgetCategory> forManualTransactionType(bool income)=>
+  categories.where((c)=>c.income==income&&c.isSubcategory).toList();
  Future<bool?> confirm(String title,String body)=>showWaffraDialog<bool>(
   context:context,builder:(ctx)=>AlertDialog(title:WaffraText(title),content:WaffraText(body),
   actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const WaffraText('إلغاء')),
@@ -2673,7 +2677,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final value=TextEditingController(text:initial==null?'':formatWaffraMoney(initial.amount));
   final message=TextEditingController(text:initialSms??'');
   bool income=initial?.income??false,analyzing=false,hasParsed=initialSms!=null;
-  String category=initial?.category??'أخرى';
+  String category=initial?.category??(sms?'أخرى':
+   (forManualTransactionType(false).isNotEmpty?forManualTransactionType(false).first.name:''));
   DateTime date=initial?.date??DateTime.now();
    String? suggestion,pendingHash,receiptPath=initial?.receiptPath;
    bool attempted=false;
@@ -2702,8 +2707,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
       });
      });
     }
-    final available=forType(income);
-    final chosen=available.any((c)=>c.name==category)?category:(available.isEmpty?null:available.first.name);
+    final available=sms?forType(income):forManualTransactionType(income);
+    final chosen=available.any((c)=>c.name==category)?category:
+     (initial!=null&&initial.category==category?category:
+      (available.isEmpty?null:available.first.name));
     return Padding(padding:EdgeInsets.fromLTRB(18,10,18,MediaQuery.of(sheetContext).viewInsets.bottom+20),
      child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,
       crossAxisAlignment:CrossAxisAlignment.stretch,children:[
@@ -2727,7 +2734,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
        segments:const [ButtonSegment(value:true,label:WaffraText('دخل')),
         ButtonSegment(value:false,label:WaffraText('مصروف'))],
        selected:{income},onSelectionChanged:(v)=>update((){
-        income=v.first;category=forType(income).isNotEmpty?forType(income).first.name:'أخرى';suggestion=null;
+        income=v.first;
+        final options=sms?forType(income):forManualTransactionType(income);
+        category=options.isNotEmpty?options.first.name:'';suggestion=null;
        })),
       const SizedBox(height:12),
       TextField(controller:title,onChanged:(_)=>update((){}),minLines:1,maxLines:5,
@@ -2747,6 +2756,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
       },child:InputDecorator(decoration:InputDecoration(labelText:waffraTr('القسم'),
        border:const OutlineInputBorder(),suffixIcon:const Icon(Icons.search_rounded)),
        child:WaffraText(chosen??'',maxLines:2))),
+      if(!sms&&available.isEmpty)Padding(
+       padding:const EdgeInsets.only(top:6),
+       child:WaffraText(waffraIsEnglish?
+        'Add an income or expense subcategory before saving.':
+        'أضف قسمًا فرعيًا للدخل أو المصروفات قبل الحفظ.',
+        style:const TextStyle(color:Colors.red))),
       if(suggestion!=null)TextButton.icon(onPressed:()async {
        final c=await categoryDialog(income:income,suggested:suggestion);
        if(c!=null&&mounted){
@@ -2757,14 +2772,25 @@ Future<void> bulkSmsSheet({String? initialText})async {
        }
       },icon:const Icon(Icons.add),label:WaffraText('إضافة قسم $suggestion')),
       OutlinedButton.icon(onPressed:()async {
-       final c=await categoryDialog(income:income);
+       // Create a subcategory under an explicit parent, never a root.
+       final parents=categories.where((c)=>!c.isSubcategory&&c.income==income).toList();
+       if(parents.isEmpty)return;
+       final parentId=await showWaffraDialog<String>(context:sheetContext,builder:(ctx)=>
+        AlertDialog(title:WaffraText(waffraIsEnglish?'Choose main category':'اختر القسم الرئيسي'),
+         content:SizedBox(width:double.maxFinite,height:min(350.0,MediaQuery.sizeOf(ctx).height*.5),
+          child:ListView.builder(itemCount:parents.length,itemBuilder:(ctx,i)=>ListTile(
+           title:WaffraText(parents[i].name),
+           onTap:()=>Navigator.pop(ctx,parents[i].id)))),
+         actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء'))]));
+       if(parentId==null||!sheetContext.mounted)return;
+       final c=await categoryDialog(income:income,parentId:parentId);
        if(c!=null&&mounted){
         if(!categories.any((x)=>x.name==c.name&&x.income==c.income)){
          setState(()=>categories.add(c));await persist();
         }
         update(()=>category=c.name);
        }
-      },icon:const Icon(Icons.add),label:const WaffraText('قسم جديد')),
+      },icon:const Icon(Icons.add),label:WaffraText(waffraIsEnglish?'New subcategory':'قسم فرعي جديد')),
       OutlinedButton.icon(onPressed:()async {
        final d=await showDatePicker(context:sheetContext,initialDate:date,
         firstDate:DateTime(2000),lastDate:DateTime.now());
@@ -2799,6 +2825,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        update(()=>attempted=true);
        final n=amountOf(value.text);
        if(title.text.trim().isEmpty||waffraAmountFieldError(value.text)!=null||n==null)return;
+       if(!sms&&(chosen==null||chosen.isEmpty))return;
        if(sms){
         if(message.text.trim().isEmpty)return;
         final h=sha256.convert(utf8.encode(digits(message.text).replaceAll(RegExp(r'\s+'),' ').trim().toLowerCase())).toString();
