@@ -6577,14 +6577,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
        child:Transform.translate(offset:Offset((1-progress)*(waffraIsEnglish?16:-16),0),child:child)),
       child:currentTab()))),
   // Keep the add menu and its original actions above five destinations.
-  floatingActionButtonLocation:const WaffraPhysicalLeftFab(),
+  floatingActionButtonLocation:const WaffraLanguageAwareFabLocation(),
   floatingActionButton:!ready||tab==4?null:Directionality(
    textDirection:TextDirection.ltr,child:Column(
    mainAxisSize:MainAxisSize.min,
-   crossAxisAlignment:CrossAxisAlignment.start,children:[
+   crossAxisAlignment:waffraIsEnglish?CrossAxisAlignment.end:CrossAxisAlignment.start,children:[
     AnimatedSize(duration:const Duration(milliseconds:210),
      curve:Curves.easeOutCubic,
-     alignment:Alignment.bottomLeft,
+     alignment:waffraIsEnglish?Alignment.bottomRight:Alignment.bottomLeft,
      child:addFabExpanded&&(tab==0||tab==1)&&!goalsOpened?Padding(
       padding:const EdgeInsets.only(bottom:9),
       child:Column(mainAxisSize:MainAxisSize.min,
@@ -6685,12 +6685,13 @@ class WaffraDeletedItemsButton extends StatelessWidget {
    ]));
  }
 }
-class WaffraPhysicalLeftFab extends FloatingActionButtonLocation {
- const WaffraPhysicalLeftFab();
+class WaffraLanguageAwareFabLocation extends FloatingActionButtonLocation {
+ const WaffraLanguageAwareFabLocation();
  @override Offset getOffset(ScaffoldPrelayoutGeometry geometry){
-  final bottom=geometry.contentBottom;
-  return Offset(16+geometry.minInsets.left,
-   max(16.0,bottom-geometry.floatingActionButtonSize.height-16));
+  final bottom=max(16.0,geometry.contentBottom-geometry.floatingActionButtonSize.height-16);
+  final left=16.0+geometry.minInsets.left;
+  final right=max(left,geometry.scaffoldSize.width-geometry.floatingActionButtonSize.width-16.0-geometry.minInsets.right);
+  return Offset(waffraIsEnglish?right:left,bottom);
  }
 }
 class ChartPoint {
