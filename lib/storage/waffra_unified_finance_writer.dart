@@ -57,6 +57,7 @@ class WaffraUnifiedFinanceWriter {
     required List<String?> messageHashes,
     required bool userConfirmed,
     bool allowDuplicateHashes = false,
+    List<Map<String, Object?>> proposedCategories = const [],
   }) async {
     if (!experimentalEnabled) {
       throw StateError('Unified finance writer is disabled by default.');
@@ -81,6 +82,26 @@ class WaffraUnifiedFinanceWriter {
       confirmedRecords.add(Map<String, Object?>.unmodifiable(decoded));
     }
     final confirmedHashes = List<String?>.unmodifiable(messageHashes);
+    if(proposedCategories.length>100) {
+      throw ArgumentError('Merchant categories exceed batch limit.');
+    }
+    // Capture mutable input before awaits; no bank account/card data is used
+    // to generate new category identities or stored as the merchant key.
+    final frozenCategories=proposedCategories.map((raw) =>
+      Map<String,Object?>.unmodifiable(Map<String,Object?>.from(
+        jsonDecode(jsonEncode(raw)) as Map<String,dynamic>)))
+      .toList(growable:false);
+    for(final c in frozenCategories){
+      if(c['id'] is! String||(c['id'] as String).isEmpty||
+         c['name'] is! String||(c['name'] as String).runes.length>300||
+         (c['name'] as String).trim().isEmpty||
+         c['parentId'] is! String||(c['parentId'] as String).isEmpty||
+         c['income'] is! bool||c['budget'] is! num||c['budget']!=0||
+         c['icon'] is! String||c['color'] is! int||
+         c['alertPercent'] is! int){
+        throw ArgumentError('Untrusted merchant category metadata.');
+      }
+    }
     for (var index = 0; index < confirmedRecords.length; index++) {
       final data = confirmedRecords[index];
       final hash = confirmedHashes[index];
@@ -142,7 +163,35 @@ class WaffraUnifiedFinanceWriter {
         final existingHashes = Set<String>.from(
           next['waffra_sms_hashes_v1'] as List<String>? ?? const <String>[],
         );
+        final rawCategories=next['waffra_categories_v24'] as String?;
+        final parsedCategories=jsonDecode(rawCategories??'[]');
+        if(parsedCategories is! List||
+          parsedCategories.any((value)=>value is! Map)){
+          throw StateError('Encrypted category catalog is corrupted.');
+        }
+        final categoryList=parsedCategories.map((raw)=>
+         Map<String,Object?>.from(raw as Map)).toList();
+        final normalizedCategoryRows=await snapshot.store.customSelect(
+          'SELECT category_id,source_json FROM fresh_finance_categories',
+        ).get();
+        final ids=categoryList.map((c)=>c['id']).toSet();
+        final sqlIds=normalizedCategoryRows.map((row)=>
+          row.read<String>('category_id')).toSet();
+        if(sqlIds.length!=ids.length||normalizedCategoryRows.length!=categoryList.length||
+           sqlIds.difference(ids).isNotEmpty||ids.difference(sqlIds).isNotEmpty){
+          throw StateError('Encrypted category projection differs from finance snapshot.');
+        }
+        final normalizedById={
+         for(final row in normalizedCategoryRows)
+          row.read<String>('category_id'):row.read<String>('source_json'),
+        };
+        for(final c in categoryList){
+          if(normalizedById[c['id']]!=jsonEncode(c)){
+            throw StateError('Encrypted category JSON is not identical to ledger snapshot.');
+          }
+        }
         var savedIncome = 0, savedExpenses = 0, skipped = 0;
+        final usedCategoryNames=<String>{};
         var incomeMinor = 0, expenseMinor = 0;
         for (var i = 0; i < confirmedRecords.length; i++) {
           final record = confirmedRecords[i];
@@ -170,6 +219,7 @@ class WaffraUnifiedFinanceWriter {
             ],
           );
           list.add(record);
+          usedCategoryNames.add('${record['income']}|${record['category']}'.toLowerCase());
           if (hash != null) existingHashes.add(hash);
           final minor = ((record['amount'] as num) * 100).round();
           if (record['income'] == true) {
@@ -187,9 +237,47 @@ class WaffraUnifiedFinanceWriter {
             skippedDuplicates: skipped, generation: current.generation,
           );
         }
-        // No changes to goals, deleted records, categories, recurring budgets or
-        // settings. Unlike the existing widget's prefs.setString, this mutation
-        // applies to CURRENT persisted finance state, not stale screen state.
+        // Category child rows and their parent snapshot are inserted under
+        // the exact SAME SQL transaction as normalized ledger rows, hashes
+        // and the canonical finance snapshot. Any failure rolls all back.
+        if(frozenCategories.isNotEmpty){
+          final categoryNames=categoryList.map((c)=>
+           '${c['income']}|${c['name']}'.toLowerCase()).toSet();
+          final pendingIds=<String>{};
+          for(final c in frozenCategories){
+            final name=c['name'] as String,id=c['id'] as String;
+            final income=c['income'] as bool, parentId=c['parentId'] as String;
+            final normalizedName='$income|$name'.toLowerCase();
+            if(!usedCategoryNames.contains(normalizedName))continue;
+            if(categoryNames.contains(normalizedName))continue;
+            final parent=categoryList.where((item)=>item['id']==parentId&&
+              item['income']==income&&
+              (item['parentId']==null||item['parentId']=='')).toList();
+            if(parent.length!=1||
+              !name.startsWith('${parent.single['name']} / ')){
+              throw StateError('Merchant category parent is absent or invalid.');
+            }
+            if(ids.contains(id)||!pendingIds.add(id)){
+              throw StateError('Duplicate category identifier.');
+            }
+            final raw=jsonEncode(c);
+            await snapshot.store.customStatement(
+             'INSERT INTO fresh_finance_categories '
+             '(category_id,name,parent_id,is_income,budget_minor,source_json) '
+             'VALUES (?,?,?,?,?,?)',
+             [id,name,parentId,income?1:0,0,raw],
+            );
+            categoryList.add(c);
+            categoryNames.add(normalizedName);ids.add(id);
+          }
+          next['waffra_categories_v24']=jsonEncode(categoryList);
+          final count=await snapshot.store.customSelect(
+            'SELECT count(*) AS n FROM fresh_finance_categories').getSingle();
+          if(count.read<int>('n')!=categoryList.length){
+            throw StateError('SQLCipher merchant category projection parity failed.');
+          }
+        }
+        // Unrelated goals, recurring, savings and receipts stay byte-identical.
         next['entries'] = jsonEncode(list);
         if (confirmedHashes.any((hash) => hash != null)) {
           next['waffra_sms_hashes_v1'] = existingHashes.toList()..sort();
