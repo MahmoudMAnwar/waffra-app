@@ -28,6 +28,8 @@ void main() {
     expect(pin,contains('enableInteractiveSelection:false'));
     expect(pin,contains('waffra-pin-key-'));
     expect(pin,contains("'1','2','3'"));
+    expect(pin,contains('child:Row(textDirection:TextDirection.ltr,'),
+      reason:'The PIN keys 1-2-3 must remain in physical LTR order in Arabic and English');
     expect(pin,contains('FilteringTextInputFormatter.digitsOnly'));
     expect(pin,contains('if(autoAdvance&&value.length==4'));
     expect(pin,contains('if(!autoAdvance)FilledButton('));
