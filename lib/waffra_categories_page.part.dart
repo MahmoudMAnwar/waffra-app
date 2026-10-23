@@ -189,7 +189,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
     icon:Icons.category_outlined,titleKey:_tourKeys[2]),
    SizedBox(width:double.infinity,child:WaffraDeletedItemsButton(
     onPressed:showCategoryTrash,
-    label:waffraIsEnglish?'Deleted categories':'الأقسام المحذوفة')),
+    label:waffraIsEnglish?'Deleted categories (${deletedCategories.length})':'الأقسام المحذوفة (${deletedCategories.length})')),
    const SizedBox(height:14),
    Row(children:[
     Expanded(child:_compactCategoryStat(waffraIsEnglish?'Main categories':'الأقسام الرئيسية',
