@@ -57,7 +57,12 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Test encrypted vault on real Android runtime
+      # Emulator start-up can intermittently refuse adb TCP 5554 on hosted
+      # runners; a successful static analyzer is not a substitute for the
+      # Android runtime test. Retry once with a fresh, stable API 34 emulator.
+      - name: Test encrypted vault on Android emulator (primary)
+        id: emulator_primary
+        continue-on-error: true
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -66,4 +71,25 @@ jobs:
           target: google_apis
           disable-animations: true
           emulator-boot-timeout: 600
+          script: bash .github/scripts/run-android-finance-integration.sh
+      - name: Reset adb before a clean emulator retry
+        if: steps.emulator_primary.outcome == 'failure'
+        shell: bash
+        run: |
+          adb kill-server || true
+          adb start-server
+      - name: Retry entire Android integration test on API 34 after emulator failure
+        if: steps.emulator_primary.outcome == 'failure'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          profile: pixel_6
+          target: google_apis
+          cores: 2
+          ram-size: 2048M
+          heap-size: 512M
+          disable-animations: true
+          emulator-boot-timeout: 600
+          emulator-options: -no-window -no-audio -no-snapshot -gpu swiftshader_indirect -no-boot-anim
           script: bash .github/scripts/run-android-finance-integration.sh
