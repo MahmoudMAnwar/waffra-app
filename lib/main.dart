@@ -5879,36 +5879,23 @@ Future<void> bulkSmsSheet({String? initialText})async {
  }
  Future<void> backupDialog()async {
   if(!await _authorizeSensitiveAction('backing up or restoring data')||!mounted)return;
-  final input=TextEditingController(),secret=TextEditingController();
-  var attempted=false;String? backupError;bool legacyRestorePassword=false;
+  final secret=TextEditingController(),restoreSecret=TextEditingController();
+  String? stagedBackup,backupError,restoreError;
+  var attempted=false,restoring=false;
   await showWaffraDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
-   title:const WaffraText('نسخ احتياطي واستعادة'),
+   title:WaffraText(waffraIsEnglish?'Encrypted backup and restore':'نسخ احتياطي واستعادة'),
    content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-    WaffraText(waffraIsEnglish?'Your backup is protected with a password and AES-256 encryption. Keep your password safe; it cannot be recovered.':'نسختك الاحتياطية مشفّرة بكلمة مرور وتشفير AES-256. احتفظ بكلمة المرور؛ لا يمكن استعادتها إذا فُقدت.'),
+    WaffraText(waffraIsEnglish?
+     'New encrypted backups require exactly 8 letters and digits. Keep your password safe.':
+     'النسخ الجديدة المشفّرة تتطلب 8 خانات من أحرف وأرقام. احتفظ بكلمة المرور بأمان.'),
     const SizedBox(height:10),
-    TextField(controller:secret,obscureText:true,
-     inputFormatters:legacyRestorePassword?const <TextInputFormatter>[]:
-      <TextInputFormatter>[
-       FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
-       LengthLimitingTextInputFormatter(8),
-      ],
-     onChanged:(_)=>update(()=>backupError=null),
-     decoration:InputDecoration(
-      labelText:legacyRestorePassword?
-       (waffraIsEnglish?'Existing backup password *':'كلمة مرور النسخة القديمة *'):
-       (waffraIsEnglish?'Backup password (exactly 8 letters/digits) *':'كلمة مرور النسخة (8 خانات أحرف وأرقام) *'),
-      errorText:backupError,errorMaxLines:3,
-      border:const OutlineInputBorder())),
-    // Existing archives may have longer passwords; preserve their restore path.
-    SwitchListTile.adaptive(
-     contentPadding:EdgeInsets.zero,
-     title:WaffraText(waffraIsEnglish?
-      'Restore an older backup password':'استعادة نسخة قديمة بكلمة مرور أطول',
-      style:const TextStyle(fontSize:12)),
-     value:legacyRestorePassword,
-     onChanged:(value)=>update((){
-      legacyRestorePassword=value;secret.clear();backupError=null;
-     })),
+    TextField(key:const Key('waffra-new-backup-password'),controller:secret,obscureText:true,
+     inputFormatters:[
+      FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
+      LengthLimitingTextInputFormatter(8),
+     ],decoration:InputDecoration(
+      labelText:waffraIsEnglish?'New backup password (8 characters) *':'كلمة مرور النسخة الجديدة (8 خانات) *',
+      errorText:backupError,errorMaxLines:3,border:const OutlineInputBorder())),
     const SizedBox(height:10),
     FilledButton.icon(onPressed:()async {
      if(!WaffraSecureBackup.isValidNewPassword(secret.text)){
