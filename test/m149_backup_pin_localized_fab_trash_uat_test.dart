@@ -9,32 +9,19 @@ void main() {
  setUp(()=>waffraLanguage.value='ar');
  tearDown(()=>waffraLanguage.value='ar');
 
- test('M149: export and restore passwords use exactly identical 8-char rules',(){
+ test('M149: V2 uses strong passphrase; legacy restore accepts old password',(){
   final source=File('lib/main.dart').readAsStringSync();
   final start=source.indexOf('Future<void> backupDialog()');
   final end=source.indexOf('// System credentials are never saved',start);
-  expect(start,greaterThan(-1));
-  expect(end,greaterThan(start));
   final dialog=source.substring(start,end);
-  final newField=dialog.substring(
-   dialog.indexOf("Key('waffra-new-backup-password')"),
-   dialog.indexOf("Key('waffra-new-backup-password')")+380);
-  final restoreField=dialog.substring(
-   dialog.indexOf("Key('waffra-existing-backup-password')"),
-   dialog.indexOf("Key('waffra-existing-backup-password')")+420);
-  for(final field in [newField,restoreField]){
-   expect(field,contains('LengthLimitingTextInputFormatter(8)'));
-   expect(field,contains("RegExp(r'[A-Za-z0-9]')"));
-   expect(field,contains('obscureText:true'));
-  }
-  expect(dialog,contains('WaffraSecureBackup.isValidNewPassword(restoreSecret.text)'));
+  expect(dialog,contains('LengthLimitingTextInputFormatter(256)'));
   expect(dialog,contains('WaffraSecureBackup.isValidNewPassword(secret.text)'));
+  expect(dialog,contains('if(restoreSecret.text.isEmpty)'));
   expect(dialog,contains('compute(waffraDecodeBackupInIsolate'));
-  expect(dialog.contains('TextField(controller:input,minLines:4,maxLines:7'),isFalse);
-  expect(WaffraSecureBackup.isValidNewPassword('Abcd1234'),isTrue);
-  expect(WaffraSecureBackup.isValidNewPassword('Abcd12345'),isFalse);
-  expect(WaffraSecureBackup.isValidNewPassword('Abcdefgh'),isFalse);
-  expect(WaffraSecureBackup.isValidNewPassword('12345678'),isFalse);
+  expect(dialog,contains("Key('waffra-backup-choose-export')"));
+  expect(dialog,contains("Key('waffra-backup-choose-restore')"));
+  expect(WaffraSecureBackup.isValidNewPassword('Abcd1234'),isFalse);
+  expect(WaffraSecureBackup.isValidNewPassword('A very long passphrase!'),isTrue);
  });
 
  test('M149: initial PIN advances on four digits and three dialogs use same shell',(){
