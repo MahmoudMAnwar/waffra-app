@@ -1,0 +1,47 @@
+name: M145 Review-Only M144 Sibling Integration Audit
+
+on:
+  pull_request:
+    branches:
+      - 'test/m144-writer-gate-hostile-path-recovery-qa'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m145-read-only-integration-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-qa-only-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out review branch with full ancestry
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify sealed sibling sources and read-only merge preview
+        run: python3 scripts/m145_premerge_audit.py
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Run combined M141-M144 disposable regressions
+        run: >-
+          flutter test
+          test/storage/m141_sqlcipher_multi_step_transaction_rollback_test.dart
+          test/storage/m142_sqlcipher_stale_screen_writer_gate_test.dart
+          test/storage/m143_sqlcipher_confirmation_input_freeze_test.dart
+          test/storage/m144_sqlcipher_two_connection_writer_gate_test.dart
+          test/storage/m144_writer_gate_hostile_path_recovery_test.dart
+      - name: Publish read-only review report
+        uses: actions/upload-artifact@v4
+        with:
+          name: m145-review-only-merge-audit
+          path: build/m145-review-report.json
+          if-no-files-found: error
