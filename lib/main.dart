@@ -6080,17 +6080,43 @@ Future<void> bulkSmsSheet({String? initialText})async {
  Future<void> backupDialog()async {
   if(!await _authorizeSensitiveAction('backing up or restoring data')||!mounted)return;
   final input=TextEditingController(),secret=TextEditingController();
-  var attempted=false;String? backupError;
+  var attempted=false;String? backupError;bool legacyRestorePassword=false;
   await showWaffraDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
    title:const WaffraText('نسخ احتياطي واستعادة'),
    content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
     WaffraText(waffraIsEnglish?'Your backup is protected with a password and AES-256 encryption. Keep your password safe; it cannot be recovered.':'نسختك الاحتياطية مشفّرة بكلمة مرور وتشفير AES-256. احتفظ بكلمة المرور؛ لا يمكن استعادتها إذا فُقدت.'),
     const SizedBox(height:10),
-    TextField(controller:secret,obscureText:true,onChanged:(_)=>update((){}),
-     decoration:InputDecoration(labelText:waffraIsEnglish?'Backup password (8+ characters) *':'كلمة مرور النسخة الاحتياطية (8 أحرف على الأقل) *',border:const OutlineInputBorder())),
+    TextField(controller:secret,obscureText:true,
+     inputFormatters:legacyRestorePassword?const <TextInputFormatter>[]:
+      <TextInputFormatter>[
+       FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
+       LengthLimitingTextInputFormatter(8),
+      ],
+     onChanged:(_)=>update(()=>backupError=null),
+     decoration:InputDecoration(
+      labelText:legacyRestorePassword?
+       (waffraIsEnglish?'Existing backup password *':'كلمة مرور النسخة القديمة *'):
+       (waffraIsEnglish?'Backup password (exactly 8 letters/digits) *':'كلمة مرور النسخة (8 خانات أحرف وأرقام) *'),
+      errorText:backupError,errorMaxLines:3,
+      border:const OutlineInputBorder())),
+    // Existing archives may have longer passwords; preserve their restore path.
+    SwitchListTile.adaptive(
+     contentPadding:EdgeInsets.zero,
+     title:WaffraText(waffraIsEnglish?
+      'Restore an older backup password':'استعادة نسخة قديمة بكلمة مرور أطول',
+      style:const TextStyle(fontSize:12)),
+     value:legacyRestorePassword,
+     onChanged:(value)=>update((){
+      legacyRestorePassword=value;secret.clear();backupError=null;
+     })),
     const SizedBox(height:10),
     FilledButton.icon(onPressed:()async {
-     if(secret.text.trim().length<8){update(()=>backupError=waffraIsEnglish?'Password must have at least 8 characters':'كلمة المرور يجب ألا تقل عن 8 أحرف');return;}
+     if(!WaffraSecureBackup.isValidNewPassword(secret.text)){
+      update(()=>backupError=waffraIsEnglish?
+       'Exactly 8 letters and digits, including at least one of each.':
+       'كلمة المرور 8 خانات بالضبط من أحرف وأرقام، وبها حرف ورقم على الأقل.');
+      return;
+     }
      try{
       final encrypted=await WaffraSecureBackup.encrypt(exportBackup(),secret.text);
       await Clipboard.setData(ClipboardData(text:encrypted));
@@ -6102,7 +6128,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       if(ctx.mounted)snackSuccess(ctx,waffraIsEnglish?'Encrypted backup copied; keep it and its password safe':'تم نسخ النسخة المشفّرة، احتفظ بها وكلمة مرورها في مكان آمن');
      }catch(error){if(ctx.mounted)update(()=>backupError=error.toString());}
     },icon:const Icon(Icons.lock_outline),label:WaffraText(waffraIsEnglish?'Copy encrypted backup':'نسخ النسخة المشفّرة')),
-    if(backupError!=null)WaffraText(backupError!,style:const TextStyle(color:Colors.red)),
+    // Password error is inline, directly under the password field.
     const SizedBox(height:12),
     TextField(controller:input,minLines:4,maxLines:7,onChanged:(_)=>update(()=>backupError=null),
      decoration:InputDecoration(labelText:waffraIsEnglish?'Backup JSON *':'الصق نسخة JSON للاستعادة *',
