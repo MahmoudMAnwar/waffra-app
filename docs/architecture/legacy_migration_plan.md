@@ -1,6 +1,6 @@
 # Waffra migration plan: SharedPreferences v24 -> encrypted Drift SQLite v1
 
-**Status:** Implementation specification only. No current user's data has been accessed or changed.  
+**Status:** Implementation specification only. No current user's data has been accessed or changed.<br>
 **Safety principle:** Import a copy, prove parity, then switch reads. Do not delete, mutate or overwrite legacy sources during initial rollout.
 
 ## 1. Source of truth today (audited 2026-10-21)
