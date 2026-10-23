@@ -9,12 +9,12 @@ void main() {
     for(final password in valid){
       expect(WaffraSecureBackup.isValidNewPassword(password),isTrue,reason:password);
     }
-    const invalid=['','Waffra-2026-Strong','12345678901','short'];
+    const invalid=['','Abcd1234','12345678901','short'];
     for(final password in invalid){
       expect(WaffraSecureBackup.isValidNewPassword(password),isFalse,reason:password);
     }
-    expect(WaffraSecureBackup.isValidNewPassword('A'*256),isTrue);
-    expect(WaffraSecureBackup.isValidNewPassword('A'*257),isFalse);
+    expect(WaffraSecureBackup.isValidNewPassword(List<String>.filled(256,'A').join()),isTrue);
+    expect(WaffraSecureBackup.isValidNewPassword(List<String>.filled(257,'A').join()),isFalse);
   });
 
   test('M131: each export has unique random salt and nonce', () async {
