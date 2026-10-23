@@ -35,8 +35,11 @@ void main() {
         ));
         await tester.pump();
         expect(tester.takeException(), isNull);
-        expect(find.text(expected), findsOneWidget);
-        final context = tester.element(find.text(expected));
+        final translatedText = find.byWidgetPredicate(
+          (widget) => widget is Text && widget.data == expected,
+        );
+        expect(translatedText, findsOneWidget);
+        final context = tester.element(translatedText);
         expect(Directionality.of(context), direction);
         expect(MediaQuery.textScalerOf(context).scale(16), closeTo(28, 0.001));
         expect(Theme.of(context).brightness, brightness);
