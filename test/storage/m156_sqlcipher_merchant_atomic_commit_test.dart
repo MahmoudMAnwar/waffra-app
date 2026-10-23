@@ -66,7 +66,7 @@ void main(){
   expect(after.values['waffra_sms_hashes_v1'],[digest(1),digest(2)]);
   expect(await sqlCount('fresh_finance_entries'),2);
   expect(await sqlCount('fresh_finance_categories'),2);
-  expect(await sqlCount('fresh_finance_sms_hashes'),0); // unified snapshot owns hashes
+  expect(await sqlCount('fresh_finance_sms_hashes'),2);
  });
  test('M156 SQL: a repeated SMS cannot create an orphan new category',()async{
   final first=await writer().appendTransactions(
@@ -85,6 +85,7 @@ void main(){
   expect(second.saved,0);expect(second.skippedDuplicates,1);
   expect(await sqlCount('fresh_finance_categories'),2);
   expect(await sqlCount('fresh_finance_entries'),1);
+  expect(await sqlCount('fresh_finance_sms_hashes'),1);
  });
  test('M156 SQL: missing category parent rolls back entries and hashes',()async{
   final previous=await snapshot().read();
