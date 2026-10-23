@@ -2962,7 +2962,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
    final filtered=options.where((item){
     final label=leafLabels?item.displayName:item.name;
     final text=query.trim().toLowerCase();
-    return label.toLowerCase().contains(text)||waffraTr(label).toLowerCase().contains(text);
+    return label.toLowerCase().contains(text)||
+     waffraTr(label).toLowerCase().contains(text)||
+     waffraTr(item.name).toLowerCase().contains(text);
    }).toList();
    return AlertDialog(title:WaffraText(waffraIsEnglish?'Search categories':'بحث في الأقسام'),
     content:SizedBox(width:360,height:min(420.0,MediaQuery.sizeOf(dialogCtx).height*.55),child:Column(children:[
