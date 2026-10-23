@@ -1,0 +1,31 @@
+name: M141 SQLCipher Multi-Step Atomic Rollback QA
+
+on:
+  pull_request:
+    branches:
+      - 'test/m139-sqlcipher-projection-check-constraints'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m141-atomic-rollback-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  disposable-atomic-rollback:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install Flutter dependencies
+        run: flutter pub get
+      - name: Test existing SQLCipher guard and M141 multi-step rollback
+        run: >-
+          flutter test
+          test/storage/m139_sqlcipher_projection_check_constraint_test.dart
+          test/storage/m141_sqlcipher_multi_step_transaction_rollback_test.dart
