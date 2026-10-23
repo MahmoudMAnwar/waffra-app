@@ -635,7 +635,8 @@ jobs:
           # them as application or Dart compilation failures.
           for attempt in 1 2 3 4; do
             echo "Android ARM64 build attempt ${attempt}/4"
-            if flutter build apk --no-pub --release --target-platform android-arm64 --tree-shake-icons; then
+            if flutter build apk --no-pub --release --target-platform android-arm64 --tree-shake-icons \
+              --dart-define="WAFFRA_BUILD_STAMP=Run-${GITHUB_RUN_ID}-${GITHUB_SHA:0:7}"; then
               elapsed=$(( $(date +%s) - started ))
               printf 'ARM64 build command: **%s seconds** (including retries, if any).\n' "$elapsed" >> "$GITHUB_STEP_SUMMARY"
               echo "WAFFRA_ARM64_BUILD_SECONDS=$elapsed"
@@ -686,11 +687,30 @@ jobs:
               print('NOTICE: checked-in google-services.json predates release SHA-1; refresh it from Firebase to ensure Google Sign-In client data is current')
           PY
 
+      # Visible build identity + unique file name prevent installing a stale same-version APK.
+      - name: Name and fingerprint UAT APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd build/app/outputs/flutter-apk
+          apk="Waffra-Run-${GITHUB_RUN_ID}-${GITHUB_SHA:0:7}.apk"
+          cp app-release.apk "$apk"
+          {
+            echo "Waffra verified ARM64 UAT"
+            echo "Run: ${GITHUB_RUN_ID}"
+            echo "Commit: ${GITHUB_SHA}"
+            echo "Visible Build ID: Run-${GITHUB_RUN_ID}-${GITHUB_SHA:0:7}"
+            sha256sum "$apk"
+          } > BUILD-INFO.txt
+          cat BUILD-INFO.txt
+
       - name: Upload Waffra Release APK
         uses: actions/upload-artifact@v4
         with:
-          name: Waffra-Android-ARM64-Release
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: Waffra-Android-ARM64-Release-${{ github.run_id }}
+          path: |
+            build/app/outputs/flutter-apk/Waffra-Run-*.apk
+            build/app/outputs/flutter-apk/BUILD-INFO.txt
           retention-days: 30
 
       # Only save compilation state after the signed APK was built, verified
