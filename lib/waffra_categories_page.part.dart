@@ -39,7 +39,9 @@ extension WaffraCategoryScreen on _HomeScreenState {
    if(categoryDisplay=='none'&&budgeted)return false;
    final query=categorySearch.trim().toLowerCase();
    return query.isEmpty||root.name.toLowerCase().contains(query)||
-    subs.any((c)=>c.displayName.toLowerCase().contains(query));
+    waffraTr(root.name).toLowerCase().contains(query)||
+    subs.any((c)=>c.displayName.toLowerCase().contains(query)||
+     waffraTr(c.displayName).toLowerCase().contains(query));
   }).toList();
 
   Widget rootCard(BudgetCategory root){
@@ -160,7 +162,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
        final usableLabelWidth=(width-91).clamp(18.0,double.infinity).toDouble();
        bool needsTwoLines(BudgetCategory sub){
         final painter=TextPainter(
-         text:TextSpan(text:sub.displayName,
+         text:TextSpan(text:waffraTr(sub.displayName),
           style:const TextStyle(fontFamily:'Tajawal',fontSize:12,fontWeight:FontWeight.bold)),
          maxLines:1,
          textDirection:waffraIsEnglish?TextDirection.ltr:TextDirection.rtl,
