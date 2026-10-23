@@ -11,6 +11,7 @@ import 'package:waffra/storage/waffra_atomic_finance_snapshot.dart';
 import 'package:waffra/storage/waffra_encrypted_cutover_journal.dart';
 import 'package:waffra/storage/waffra_encrypted_store.dart';
 import 'package:waffra/storage/waffra_fresh_encrypted_vault_bootstrap.dart';
+import 'package:waffra/storage/waffra_fresh_finance_modules_repository.dart';
 import 'package:waffra/storage/waffra_live_legacy_finance_guard.dart';
 import 'package:waffra/storage/waffra_verified_encrypted_finance_bridge.dart';
 
@@ -69,14 +70,35 @@ void main() {
           );
 
       await checkpoint('initialize-empty', () => snapshot().initializeEmpty());
-      final migration = await checkpoint('commit-migration', () => snapshot().commit(
-        expectedGeneration: 0,
-        fullFinanceSnapshot: const {
-          'entries': '[]',
-          'waffra_goals_v24':
-              '[{"id":"vacation","name":"Vacation","target":1000,"saved":100}]',
-        },
-      ));
+      // Seed the disposable normalized SQL goal alongside its snapshot.
+      // The UI editor must reject absent/forged rows instead of repairing
+      // them, so a test fixture needs to satisfy that same source contract.
+      final migration = await checkpoint('commit-migration', () =>
+          vault!.transaction(() async {
+            final committed = await snapshot().commit(
+              expectedGeneration: 0,
+              fullFinanceSnapshot: const {
+                'entries': '[]',
+                'waffra_goals_v24':
+                    '[{"id":"vacation","name":"Vacation","target":1000,"saved":100}]',
+              },
+            );
+            await WaffraFreshModulesRepository(
+              store: vault!, experimentalEnabled: true,
+            ).save(WaffraFinanceModule.goals, const {
+              'id': 'vacation', 'name': 'Vacation',
+              'target': 1000, 'saved': 100,
+            });
+            return committed;
+          }));
+      final seededGoals = await checkpoint('verify-goal-projection', () =>
+          WaffraFreshModulesRepository(
+            store: vault!, experimentalEnabled: true,
+          ).list(WaffraFinanceModule.goals));
+      expect(seededGoals, [const {
+        'id': 'vacation', 'name': 'Vacation',
+        'target': 1000, 'saved': 100,
+      }]);
       final oldDigest = WaffraLegacyPreflight.inspect({
         'entries': '[]',
       }).sourceSha256;
@@ -134,6 +156,14 @@ void main() {
       expect((jsonDecode(cold.ledgerRaw!) as List), hasLength(1));
       expect(cold.finance.getString('waffra_goals_v24'),
           contains('"saved":200'));
+      final persistedGoals = await checkpoint('cold-goal-projection', () =>
+          WaffraFreshModulesRepository(
+            store: vault!, experimentalEnabled: true,
+          ).list(WaffraFinanceModule.goals));
+      expect(persistedGoals, [const {
+        'id': 'vacation', 'name': 'Vacation',
+        'target': 1000, 'saved': 200,
+      }]);
 
       final original = await checkpoint('prefs-check', () => SharedPreferences.getInstance());
       expect(original.getString('entries'), '[]');
