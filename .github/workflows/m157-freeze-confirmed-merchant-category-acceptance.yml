@@ -33,9 +33,10 @@ jobs:
           from pathlib import Path
           a=Path('lib/storage/waffra_verified_finance_authority.dart').read_text()
           l=Path('lib/storage/waffra_home_finance_persistence.dart').read_text()
-          for s in [a,l]:
-              assert 'final frozenCategories' in s
-              assert s.index('final frozenCategories') < s.index('for(final value in frozenCategories){') if s is l else 'proposedCategories: frozenCategories,' in s
+          assert 'final frozenCategories' in a
+          assert 'final frozenCategories' in l
+          assert l.index('final frozenCategories') < l.index('for(final value in frozenCategories){')
+          assert a.index('final frozenCategories') < a.index('final backend = await _requireRoute(route);', a.index('final fingerprints'))
           assert a.count('proposedCategories: frozenCategories,') == 2
           assert 'WaffraLegacyFinanceBatchJournal' in l
           print('Verified immutable confirmed merchant proposal paths; no production SQLCipher activation.')
