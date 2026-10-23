@@ -1,0 +1,27 @@
+name: M167 Fresh Finance and Backup Integrity
+on:
+  pull_request:
+    branches:
+      - integration/m160-reconcile-main-m158-release-gate-20261023
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  isolated-finance-backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Fresh empty ledger, cold reopen, V1/V2 and failure integrity
+        run: >
+          flutter test
+          test/storage/m167_fresh_install_finance_backup_test.dart
+          test/m163_atomic_backup_restore_durability_test.dart
+          test/storage/verified_legacy_backup_restore_test.dart
+          test/storage/portable_backup_v2_test.dart
