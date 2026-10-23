@@ -6064,48 +6064,82 @@ Future<void> bulkSmsSheet({String? initialText})async {
  // entered twice; keep support for checking older 4-8-digit PINs on disable.
  Future<String?> _askForPin({
   required String title,required String fieldLabel,bool existing=false,
-   bool Function(String)? verify,String? verifyError,
+  bool autoAdvance=false,bool Function(String)? verify,String? verifyError,
  })async{
   final input=TextEditingController();
   var attempted=false;String? fieldError;
   try{
-   return await showWaffraDialog<String>(context:context,builder:(dialogContext)=>StatefulBuilder(builder:(dialogContext,update)=>Theme(data:Theme.of(dialogContext).copyWith(brightness:Brightness.dark,colorScheme:ColorScheme.fromSeed(seedColor:emerald,brightness:Brightness.dark)),child:AlertDialog(
-    backgroundColor:forest,
-    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26),
-     side:waffraDialogOutline(Brightness.dark)),
-    title:Column(mainAxisSize:MainAxisSize.min,children:[
-     const CircleAvatar(radius:26,backgroundColor:emerald,child:Icon(Icons.lock_outline,color:Colors.white,size:28)),
-     const SizedBox(height:12),WaffraText(title,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold))]),
-    content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-     WaffraText(fieldLabel,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w600)),
-     const SizedBox(height:12),
-     TextField(
-     controller:input,autofocus:true,onChanged:(_)=>update(()=>fieldError=null),
-     textDirection:TextDirection.ltr,textAlign:TextAlign.center,
-     keyboardType:TextInputType.number,
-     inputFormatters:[FilteringTextInputFormatter.digitsOnly,
-      LengthLimitingTextInputFormatter(existing?8:4)],
-     obscureText:true,
-     decoration:InputDecoration(hintText:'••••',hintStyle:const TextStyle(color:Colors.white54),
-      helperText:existing?(waffraIsEnglish?'4 to 8 digits':'من 4 إلى 8 أرقام'):(waffraIsEnglish?'4 digits':'أربعة أرقام'),
-      errorText:fieldError??(attempted?waffraPinFieldError(input.text,existing:existing):null),errorMaxLines:3,
-      border:const OutlineInputBorder())),
-    ])),
-    actions:[
-     TextButton(onPressed:()=>Navigator.pop(dialogContext),
-      child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
-     FilledButton(onPressed:(){
-      final code=input.text.trim();
-      update(()=>attempted=true);
-      if(waffraPinFieldError(code,existing:existing)!=null)return;
-      if(verify!=null&&!verify(code)){
-       update(()=>fieldError=verifyError??(waffraIsEnglish?'Incorrect PIN':'رمز القفل غير صحيح'));
-       return;
-      }
-      Navigator.pop(dialogContext,code);
-     },child:WaffraText(waffraIsEnglish?'Confirm':'تأكيد')),
-    ],
-   ))));
+   return await showWaffraDialog<String>(context:context,
+    builder:(dialogContext)=>StatefulBuilder(builder:(dialogContext,update)=>
+     Theme(data:Theme.of(dialogContext).copyWith(brightness:Brightness.dark,
+      colorScheme:ColorScheme.fromSeed(seedColor:emerald,brightness:Brightness.dark)),
+      child:AlertDialog(
+       backgroundColor:forest,
+       shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26),
+        side:waffraDialogOutline(Brightness.dark)),
+       title:Column(mainAxisSize:MainAxisSize.min,children:[
+        const CircleAvatar(radius:26,backgroundColor:emerald,
+         child:Icon(Icons.lock_outline,color:Colors.white,size:28)),
+        const SizedBox(height:12),
+        WaffraText(title,textAlign:TextAlign.center,
+         style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold)),
+       ]),
+       content:SingleChildScrollView(child:Column(
+        mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,
+        children:[
+         WaffraText(fieldLabel,textAlign:TextAlign.center,
+          style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w600)),
+         const SizedBox(height:12),
+         TextField(key:const Key('waffra-pin-input'),controller:input,autofocus:true,
+          textDirection:TextDirection.ltr,textAlign:TextAlign.center,
+          keyboardType:TextInputType.number,
+          inputFormatters:[FilteringTextInputFormatter.digitsOnly,
+           LengthLimitingTextInputFormatter(existing?8:4)],
+          obscureText:true,
+          style:const TextStyle(color:Color(0xFF12382D),fontWeight:FontWeight.bold),
+          onChanged:(value){
+           update(()=>fieldError=null);
+           if(autoAdvance&&value.length==4&&waffraPinFieldError(value)==null){
+            WidgetsBinding.instance.addPostFrameCallback((_){
+             if(dialogContext.mounted&&input.text==value){
+              Navigator.pop(dialogContext,value);
+             }
+            });
+           }
+          },
+          decoration:InputDecoration(
+           filled:true,fillColor:Colors.white,
+           hintText:'••••',hintStyle:const TextStyle(color:Colors.black38),
+           errorText:fieldError??
+            (attempted?waffraPinFieldError(input.text,existing:existing):null),
+           errorMaxLines:3,
+           border:const OutlineInputBorder())),
+        ])),
+       actions:[
+        TextButton(
+         style:TextButton.styleFrom(foregroundColor:Colors.white,
+          backgroundColor:Colors.white.withValues(alpha:.12)),
+         onPressed:()=>Navigator.pop(dialogContext),
+         child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء',
+          style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold))),
+        if(!autoAdvance)FilledButton(
+         style:FilledButton.styleFrom(backgroundColor:emerald,
+          foregroundColor:Colors.white),
+         onPressed:(){
+          final code=input.text.trim();
+          update(()=>attempted=true);
+          if(waffraPinFieldError(code,existing:existing)!=null)return;
+          if(verify!=null&&!verify(code)){
+           update(()=>fieldError=verifyError??
+            (waffraIsEnglish?'Incorrect PIN':'رمز القفل غير صحيح'));
+           return;
+          }
+          Navigator.pop(dialogContext,code);
+         },
+         child:WaffraText(waffraIsEnglish?'Confirm':'تأكيد',
+          style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold))),
+       ],
+      ))));
   }finally{disposeLater([input]);}
  }
  Future<void> configurePin()async {
@@ -6124,12 +6158,13 @@ Future<void> bulkSmsSheet({String? initialText})async {
   }
   final firstPin=await _askForPin(
    title:waffraIsEnglish?'Create a new PIN':'إنشاء رمز قفل',
-   fieldLabel:waffraIsEnglish?'New 4-digit PIN':'رمز PIN من 4 أرقام');
+   fieldLabel:waffraIsEnglish?'Enter a 4-digit PIN':'أدخل رمز القفل من 4 أرقام',
+    autoAdvance:true);
   if(firstPin==null||!mounted)return;
   while(mounted){
    final repeated=await _askForPin(
-    title:waffraIsEnglish?'Confirm your PIN':'أعد إدخال رمز PIN للتأكيد',
-    fieldLabel:waffraIsEnglish?'Repeat PIN':'أعد إدخال الرمز',
+    title:waffraIsEnglish?'Confirm PIN':'تأكيد رمز القفل',
+    fieldLabel:waffraIsEnglish?'Re-enter the same 4 digits':'أدخل رمز القفل المكوّن من 4 أرقام مرة ثانية',
     verify:(code)=>code==firstPin,
     verifyError:waffraIsEnglish?'PINs do not match':'رمزا PIN غير متطابقين');
    if(repeated==null||!mounted)return;
@@ -6276,7 +6311,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    verifyError:waffraIsEnglish?'Incorrect PIN':'رمز القفل غير صحيح');
   if(previous==null||!mounted)return;
   final next=await _askForPin(title:waffraIsEnglish?'New PIN':'رمز جديد',
-   fieldLabel:waffraIsEnglish?'4 digits':'أربعة أرقام');
+   fieldLabel:waffraIsEnglish?'Enter a 4-digit PIN':'أدخل رمز القفل من 4 أرقام',autoAdvance:true);
   if(next==null||!mounted)return;
   final again=await _askForPin(title:waffraIsEnglish?'Confirm PIN':'تأكيد الرمز',
    fieldLabel:waffraIsEnglish?'Repeat PIN':'أعد إدخال الرمز',
