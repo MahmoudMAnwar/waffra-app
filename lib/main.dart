@@ -5896,7 +5896,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
  Future<void> backupDialog()async {
   if(!await _authorizeSensitiveAction('backing up or restoring data')||!mounted)return;
   final secret=TextEditingController(),restoreSecret=TextEditingController();
-  String? stagedBackup,backupError,restoreError;
+  String? stagedBackup,backupError,restoreError,restorePasswordError;
   var attempted=false,restoring=false;
   await showWaffraDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
    title:WaffraText(waffraIsEnglish?'Encrypted backup and restore':'نسخ احتياطي واستعادة'),
@@ -5933,12 +5933,16 @@ Future<void> bulkSmsSheet({String? initialText})async {
      style:const TextStyle(fontWeight:FontWeight.bold)),
     const SizedBox(height:10),
     TextField(controller:restoreSecret,key:const Key('waffra-existing-backup-password'),
-     obscureText:true,decoration:InputDecoration(
-      labelText:waffraIsEnglish?'Original backup password':'كلمة مرور النسخة الأصلية',
-      helperText:waffraIsEnglish?
-       'Use the original password exactly. Legacy backups can use more than 8 characters.':
-       'اكتب كلمة المرور الأصلية كما هي. النسخ القديمة قد تتجاوز 8 خانات.',
-      helperMaxLines:2,border:const OutlineInputBorder())),
+     obscureText:true,
+     inputFormatters:[
+      FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
+      LengthLimitingTextInputFormatter(8),
+     ],
+     onChanged:(_)=>update(()=>restorePasswordError=null),
+     decoration:InputDecoration(
+      labelText:waffraIsEnglish?'Restore password (8 characters) *':'كلمة مرور الاستعادة (8 خانات) *',
+      errorText:restorePasswordError,errorMaxLines:3,
+      border:const OutlineInputBorder())),
     const SizedBox(height:10),
     // Keep large encrypted JSON out of editable TextField rendering and
     // avoid a dialog-wide rebuild on every pasted character.
@@ -5987,6 +5991,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
     TextButton(onPressed:restoring?null:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'Close':'إغلاق')),
     FilledButton(key:const Key('waffra-confirm-backup-restore'),onPressed:restoring?null:()async {
      update(()=>attempted=true);
+     if(!WaffraSecureBackup.isValidNewPassword(restoreSecret.text)){
+      update(()=>restorePasswordError=waffraIsEnglish?
+       'Exactly 8 letters and digits, including at least one of each.':
+       'كلمة المرور 8 خانات بالضبط من أحرف وأرقام، وبها حرف ورقم على الأقل.');
+      return;
+     }
      if(stagedBackup==null||stagedBackup!.isEmpty)return;
      update(()=>restoring=true);
      try{
