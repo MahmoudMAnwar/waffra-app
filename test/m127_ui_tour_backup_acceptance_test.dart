@@ -36,10 +36,10 @@ void main() {
     expect(source,contains('if(tourActive&&tourTargetReady)Positioned.fill(child:tourOverlay())'));
   });
 
-  test('both backup export and restore fields are capped at eight', () {
+  test('new V2 backup supports 12+ characters and legacy restore', () {
     final source=File('lib/main.dart').readAsStringSync();
-    expect(source,contains('LengthLimitingTextInputFormatter(8)'));
-    expect(source,contains("RegExp(r'[A-Za-z0-9]')"));
+    expect(source,contains('LengthLimitingTextInputFormatter(256)'));
+    expect(source,contains("Key('waffra-backup-choose-export')"));
     expect(source,contains('if(!WaffraSecureBackup.isValidNewPassword(secret.text))'));
     expect(source,contains("Key('waffra-existing-backup-password')"));
     expect(source,contains("Key('waffra-open-backup-file')"));
