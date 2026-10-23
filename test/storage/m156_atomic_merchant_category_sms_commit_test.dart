@@ -115,9 +115,8 @@ void main(){
   final prefs=await SharedPreferences.getInstance();
   await prefs.reload();
   final children=jsonDecode(prefs.getString('waffra_categories_v24')!) as List;
-  expect(children,lastPredicate((item) =>
-    item is Map && item['name']=='أخرى / ALHUSSAIN' &&
-    item['parentId']=='other'));
+  expect(children.last['name'],'أخرى / ALHUSSAIN');
+  expect(children.last['parentId'],'other');
   expect(children.any((item)=>item['name']=='أخرى / MALICIOUS'),false);
   expect(prefs.getStringList('waffra_sms_hashes_v1'),['d'*64]);
  });
