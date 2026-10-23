@@ -43,7 +43,7 @@ void main() {
         expect(Directionality.of(context), direction);
         expect(MediaQuery.textScalerOf(context).scale(16), closeTo(28, 0.001));
         expect(Theme.of(context).brightness, brightness);
-        final rendered = tester.widget<Text>(find.text(expected));
+        final rendered = tester.widget<Text>(translatedText);
         expect(rendered.style?.fontFamily, 'Tajawal');
       }
     }
