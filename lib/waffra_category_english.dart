@@ -4,7 +4,7 @@ import 'waffra_category_catalog.dart';
 /// deduplication keys and exported financial history remain in Arabic.
 /// Each record is parent name followed by the ordered subcategory names.
 const Map<String,String> _englishCatalog = {
-  "food": "Restaurants & Cafes|Local restaurants|Fine dining|Fast food|Food delivery|Cafes|Drinks|Desserts|Bakeries|Buffets|Breakfast|Lunch|Dinner|Work meals|App orders|Tips",
+  "food": "Restaurants & Cafes|Popular restaurants|Fine dining|Fast food|Food delivery|Cafes|Drinks|Desserts|Bakeries|Buffets|Breakfast|Lunch|Dinner|Work meals|App orders|Tips",
   "shopping": "Shopping|Clothing|Shoes|Bags|Perfumes|Cosmetics|Accessories|Online shopping|Household supplies|Purchased gifts|Jewelry|Watches|Stationery|Personal products|Sale purchases",
   "transport": "Transportation|Taxi|Uber and Careem|Public transport|Metro and buses|Parking|Road tolls|Transport tickets|School transport|Order delivery|Car rental|Work commuting|Daily transport",
   "bills": "Bills|Electricity|Water|Gas|Home internet|Mobile phone|Landline|Sewage|Service fees|Government bill|TV subscription|Municipal fees|Other bills",
