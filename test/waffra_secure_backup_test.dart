@@ -5,31 +5,30 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_secure_backup.dart';
 
 void main() {
-  test('new backup round trips with exactly eight alphanumeric characters', () async {
+  test('V2 Argon2id backup encrypts round trip with long password', () async {
     const content='{"format":"waffra-backup","entries":[{"amount":120.50}]}';
-    final encrypted=await WaffraSecureBackup.encryptUserBackup(content,'Abcd1234');
+    final encrypted=await WaffraSecureBackup.encryptUserBackup(content,'StrongPassphrase123!2026');
     expect(encrypted,contains('waffra-secure-backup'));
+    expect(encrypted,contains('"argon2id"'));
+    expect(WaffraSecureBackup.hasValidEncryptedHeader(encrypted),isTrue);
     expect(encrypted,isNot(contains('120.50')));
-    expect(await WaffraSecureBackup.decrypt(encrypted,'Abcd1234'),content);
+    expect(await WaffraSecureBackup.decrypt(encrypted,'StrongPassphrase123!2026'),content);
   });
 
-  test('wrong password cannot decrypt eight-slot export', () async {
-    final encrypted=await WaffraSecureBackup.encryptUserBackup('secret','Valid123');
-    await expectLater(WaffraSecureBackup.decrypt(encrypted,'Wrong123'),
+  test('wrong password cannot decrypt V2 archive', () async {
+    final encrypted=await WaffraSecureBackup.encryptUserBackup('secret','StrongPassphrase123!2026');
+    await expectLater(WaffraSecureBackup.decrypt(encrypted,'CompletelyWrong123!2026'),
         throwsA(isA<Exception>()));
   });
 
-  test('backup export refuses short, long, letters-only, digits-only and symbols', () async {
-    for (final value in [
-      'short', 'Abcd12345', 'abcdefgh', '12345678', 'Abcd12!!',
-      'Abcd 123', 'Abcd123\u00e9',
-    ]) {
-      expect(WaffraSecureBackup.isValidNewPassword(value),false,
-          reason:'Rejected: $value');
-      await expectLater(WaffraSecureBackup.encryptUserBackup('content',value),
-          throwsFormatException);
+  test('backup export requires 12+ characters and accepts international passphrases', () async {
+    for(final value in ['', 'short','Abcd1234567','12345678']){
+     expect(WaffraSecureBackup.isValidNewPassword(value),false);
+     await expectLater(WaffraSecureBackup.encryptUserBackup('content',value),
+      throwsFormatException);
     }
-    expect(WaffraSecureBackup.isValidNewPassword('ABC12345'),true);
+    expect(WaffraSecureBackup.isValidNewPassword('ABC12345!strong'),true);
+    expect(WaffraSecureBackup.isValidNewPassword('عبارة مرور قوية ٢٠٢٦'),true);
   });
 
   test('internal portable archive encryption retains long passwords', () async {
