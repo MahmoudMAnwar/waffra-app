@@ -1,0 +1,31 @@
+name: M131 Backup Security Regression
+
+on:
+  push:
+    branches:
+      - 'test/m131-backup-boundary-and-tamper-qa'
+  pull_request:
+    branches:
+      - 'feature/m130-ui-main-isolated-merge-candidate'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m131-backup-security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backup-security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Verify secure backup regression and UI acceptance
+        run: flutter test test/waffra_secure_backup_test.dart test/m131_backup_boundary_tamper_qa_test.dart test/m127_ui_tour_backup_acceptance_test.dart
