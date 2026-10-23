@@ -128,6 +128,7 @@ class WaffraVerifiedEncryptedFinanceBridge {
     required List<String?> messageHashes,
     required bool userConfirmed,
     bool allowDuplicateHashes = false,
+    List<Map<String,Object?>> proposedCategories = const [],
   }) async {
     if (!experimentalEnabled) {
       throw StateError('Encrypted source bridge is disabled by default.');
@@ -142,6 +143,7 @@ class WaffraVerifiedEncryptedFinanceBridge {
       messageHashes: messageHashes,
       userConfirmed: userConfirmed,
       allowDuplicateHashes: allowDuplicateHashes,
+      proposedCategories: proposedCategories,
     );
   }
   /// Save a confirmed transaction and its attached images as ONE encrypted

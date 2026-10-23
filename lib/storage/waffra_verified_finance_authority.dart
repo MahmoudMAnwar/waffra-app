@@ -330,6 +330,7 @@ class WaffraVerifiedFinanceAuthority {
     required List<String> hashes,
     required bool userConfirmed,
     bool allowDuplicateHashes = false,
+    List<Map<String, Object?>> proposedCategories = const [],
   }) async {
     if (route != WaffraFinanceRoute.bulkSmsConfirmedSave &&
         route != WaffraFinanceRoute.widgetSmsConfirmedSave) {
@@ -352,6 +353,7 @@ class WaffraVerifiedFinanceAuthority {
       final result = await legacy.commitConfirmedLegacySms(
         records: frozen, messageHashes: fingerprints,
         userConfirmed: true, allowDuplicateHashes: allowDuplicateHashes,
+        proposedCategories: proposedCategories,
       );
       saved = result.added;
       income = result.savedIncome;
@@ -360,9 +362,12 @@ class WaffraVerifiedFinanceAuthority {
       incomeMinor = result.incomeMinor;
       expenseMinor = result.expenseMinor;
     } else {
+      // The encrypted writer checks category snapshots and SQL projections
+      // under the shared write lock and rolls back the whole SQL transaction.
       final result = await encryptedSession!.appendConfirmed(
         records: frozen, hashes: fingerprints.cast<String?>(),
         userConfirmed: true, allowDuplicateHashes: allowDuplicateHashes,
+        proposedCategories: proposedCategories,
       );
       saved = result.saved;
       income = result.savedIncome;

@@ -141,6 +141,7 @@ class WaffraHomeFinancePersistence {
     required List<String> messageHashes,
     required bool userConfirmed,
     bool allowDuplicateHashes = false,
+    List<Map<String, Object?>> proposedCategories = const [],
   }) async {
     if (!userConfirmed) {
       throw StateError('Bank transaction batch was not confirmed.');
@@ -215,14 +216,75 @@ class WaffraHomeFinancePersistence {
       if (confirmed.isNotEmpty) {
         final finalEntries = jsonEncode([...confirmed, ...oldEntries]);
         final finalHashes = {...existingHashes, ...newHashes}.toList()..sort();
-        const journal = WaffraLegacyWidgetCommitJournal();
-        await journal.prepare(
-          prefs: prefs,
-          nextEntries: finalEntries,
-          nextHashes: finalHashes,
-          nextRevision: DateTime.now().toUtc().toIso8601String(),
-        );
-        await journal.recover(prefs);
+        final revision = DateTime.now().toUtc().toIso8601String();
+        if(proposedCategories.isEmpty){
+          // Existing Home/Widget journal semantics remain unchanged.
+          const journal = WaffraLegacyWidgetCommitJournal();
+          await journal.prepare(prefs: prefs, nextEntries: finalEntries,
+            nextHashes: finalHashes, nextRevision: revision);
+          await journal.recover(prefs);
+        }else{
+          final rawCategories=prefs.getString('waffra_categories_v24')??'[]';
+          final decodedCats=jsonDecode(rawCategories);
+          if(decodedCats is! List || decodedCats.any((e)=>e is! Map)){
+            throw StateError('Current category catalog is invalid.');
+          }
+          final live=decodedCats.map((e)=>Map<String,dynamic>.from(e as Map))
+            .toList();
+          final ids=live.map((e)=>e['id']).toSet();
+          final names=live.map((e)=>'${e['income']}|${e['name']}'.toLowerCase()).toSet();
+          final used=confirmed.map((e)=>'${e['income']}|${e['category']}'.toLowerCase()).toSet();
+          final proposedIds=<String>{};
+          for(final value in proposedCategories){
+            final c=Map<String,dynamic>.from(value);
+            final id=c['id'],name=c['name'],parentId=c['parentId'];
+            final incomeFlag=c['income'],budget=c['budget'];
+            if(id is! String||id.isEmpty||name is! String||
+             name.trim().isEmpty||name.runes.length>300||
+             parentId is! String||parentId.isEmpty||
+             incomeFlag is! bool||budget is! num||
+             !budget.toDouble().isFinite||budget!=0||
+             c['icon'] is! String||c['color'] is! int||
+             c['alertPercent'] is! int){
+              throw StateError('Invalid auto-generated category.');
+            }
+            final label='$incomeFlag|$name'.toLowerCase();
+            if(!used.contains(label))continue; // Duplicate SMS => no orphan child.
+            if(names.contains(label))continue;
+            final parent=live.where((p)=>p['id']==parentId&&
+              p['income']==incomeFlag&&(p['parentId']==null||
+                p['parentId']=='')).toList();
+            if(parent.length!=1||
+              !name.startsWith('${parent.single['name']} / ')){
+              throw StateError('Unverified or deleted merchant parent.');
+            }
+            if(ids.contains(id)||!proposedIds.add(id)){
+              throw StateError('Duplicate category identifier.');
+            }
+            live.add(c);
+            ids.add(id);
+            names.add(label);
+          }
+          final snapshot=<String,Object>{
+            'entries':finalEntries,
+            'waffra_categories_v24':jsonEncode(live),
+            'waffra_sms_hashes_v1':finalHashes,
+            'waffra_widget_last_save_v1':revision,
+          };
+          final verification=WaffraLegacyPreflight.inspect({
+           'entries':finalEntries,
+           'waffra_categories_v24':jsonEncode(live),
+           'waffra_sms_hashes_v1':finalHashes,
+          });
+          if(!verification.canStage) {
+            throw StateError('Confirmed finance and category snapshot is invalid.');
+          }
+          // One durable intent covers all 4 keys, recovered under the
+          // existing inter-engine file lock on every startup.
+          const journal=WaffraLegacyFinanceBatchJournal();
+          await journal.prepare(prefs:prefs,nextValues:snapshot);
+          await journal.recover(prefs);
+        }
       }
       return WaffraConfirmedLegacySmsResult(
         savedEntriesRaw: prefs.getString('entries') ?? previous,

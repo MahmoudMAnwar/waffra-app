@@ -24,6 +24,7 @@ class WaffraLegacyFinanceBatchJournal {
       sha256.convert(utf8.encode(value)).toString();
 
   static bool _supported(String key, Object? value) {
+    if (key == 'waffra_widget_last_save_v1') return value is String && value.isNotEmpty && value.length <= 128;
     if (WaffraLegacyPreflight.financeListKeys.contains(key) ||
         WaffraLegacyPreflight.financeMapKeys.contains(key)) {
       return value is String;
@@ -119,7 +120,7 @@ class WaffraLegacyFinanceBatchJournal {
     if (prefs.containsKey(pendingKey)) {
       throw StateError('Unfinished dashboard finance batch needs recovery.');
     }
-    final allowed = WaffraLegacyPreflight.allKeys.toSet();
+    final allowed = {...WaffraLegacyPreflight.allKeys, 'waffra_widget_last_save_v1'};
     if (nextValues.isEmpty ||
         nextValues.keys.any((key) => !allowed.contains(key))) {
       throw ArgumentError('Unexpected finance key in dashboard batch.');
@@ -181,7 +182,7 @@ class WaffraLegacyFinanceBatchJournal {
       }
       before = Map<String, Object?>.from(parsed['before'] as Map);
       after = Map<String, Object?>.from(parsed['after'] as Map);
-      final allowed = WaffraLegacyPreflight.allKeys.toSet();
+      final allowed = {...WaffraLegacyPreflight.allKeys, 'waffra_widget_last_save_v1'};
       if (after.isEmpty || before.keys.toSet().length != after.length ||
           before.keys.toSet().difference(after.keys.toSet()).isNotEmpty ||
           after.keys.any((key) => !allowed.contains(key))) {
