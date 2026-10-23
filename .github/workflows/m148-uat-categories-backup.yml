@@ -63,9 +63,13 @@ jobs:
         run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
       - name: Build ARM64 release-mode for CI only
         run: flutter build apk --release --no-pub --target-platform android-arm64
-      - name: Upload unapproved, not production signed, QA APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: m148-arm64-qa-not-production-signed
-          path: build/app/outputs/flutter-apk/app-release.apk
-          if-no-files-found: error
+      # This minimal flutter-create build is compiler evidence only.
+      # It does not configure the real Waffra manifest, Firebase, app icon,
+      # embedded native libraries, widget, or production release signing.
+      # Do NOT distribute this APK: it previously opened with the wrong icon
+      # and failed to load libdartjni.so on an actual Android phone.
+      - name: Mark minimal APK as non-installable compiler-only output
+        run: |
+          echo 'M148 temporary Android compile succeeded.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'No installable artifact is published by this QA job.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'For device QA use signed Waffra-Android-ARM64-Release from the full Waffra Android workflow, after emulator smoke.' >> "$GITHUB_STEP_SUMMARY"
