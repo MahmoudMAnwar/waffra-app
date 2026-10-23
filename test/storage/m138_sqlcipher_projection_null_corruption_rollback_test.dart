@@ -52,9 +52,11 @@ void main() {
     if(await root.exists())await root.delete(recursive:true);
   });
 
-  Future<void> expectNoPartialCommit(String sql) async {
+  // SQLite's NOT NULL constraints reject the attempted corruption before a
+  // malformed typed row can exist. Verify that first-line protection and that
+  // the encrypted finance snapshot remains writable and internally consistent.
+  Future<void> expectNotNullConstraintProtectsState(String sql) async {
     final before=await snapshot().read();
-    await vault.customStatement(sql);
     final categoryRows=await vault.customSelect(
       'SELECT category_id,name,parent_id,is_income,budget_minor,source_json '
       'FROM fresh_finance_categories ORDER BY category_id',
@@ -63,17 +65,13 @@ void main() {
       'SELECT recurring_id,amount_minor,is_income,due_day,source_json '
       'FROM fresh_finance_recurring ORDER BY recurring_id',
     ).get();
+
     await expectLater(
-      editor().saveScreenChanges(
-        screenBaseline:before.values,
-        replacementValues:{
-          'waffra_categories_v24':jsonEncode([{...category,'budget':310}]),
-          'waffra_recurring_v24':jsonEncode([{...recurring,'amount':950}]),
-        },
-        changedKeys:const {'waffra_categories_v24','waffra_recurring_v24'},
-      ),
-      throwsStateError,
+      vault.customStatement(sql),
+      throwsA(predicate((Object error) =>
+        error.toString().contains('NOT NULL constraint failed'))),
     );
+
     final after=await snapshot().read();
     expect(after.generation,before.generation);
     expect(after.digest,before.digest);
@@ -88,28 +86,44 @@ void main() {
     ).get();
     expect(catAfter.map((r)=>r.data).toList(),categoryRows.map((r)=>r.data).toList());
     expect(recAfter.map((r)=>r.data).toList(),recurringRows.map((r)=>r.data).toList());
+
+    // The rejected invalid statement must not poison subsequent legitimate
+    // atomic updates of both modules.
+    final saved=await editor().saveScreenChanges(
+      screenBaseline:before.values,
+      replacementValues:{
+        'waffra_categories_v24':jsonEncode([{...category,'budget':310}]),
+        'waffra_recurring_v24':jsonEncode([{...recurring,'amount':950}]),
+      },
+      changedKeys:const {'waffra_categories_v24','waffra_recurring_v24'},
+    );
+    expect(saved.generation,before.generation+1);
+    final verified=await snapshot().read();
+    expect(verified.generation,saved.generation);
+    expect(verified.digest,saved.digest);
+    expect(verified.values,saved.values);
   }
 
-  test('NULL category name must reject simultaneous edits',() async {
-    await expectNoPartialCommit(
+  test('NULL category name is rejected by SQL NOT NULL constraint',() async {
+    await expectNotNullConstraintProtectsState(
       "UPDATE fresh_finance_categories SET name=NULL WHERE category_id='food'",
     );
   });
 
-  test('NULL category budget must reject simultaneous edits',() async {
-    await expectNoPartialCommit(
+  test('NULL category budget is rejected by SQL NOT NULL constraint',() async {
+    await expectNotNullConstraintProtectsState(
       "UPDATE fresh_finance_categories SET budget_minor=NULL WHERE category_id='food'",
     );
   });
 
-  test('NULL recurring amount must reject simultaneous edits',() async {
-    await expectNoPartialCommit(
+  test('NULL recurring amount is rejected by SQL NOT NULL constraint',() async {
+    await expectNotNullConstraintProtectsState(
       "UPDATE fresh_finance_recurring SET amount_minor=NULL WHERE recurring_id='rent'",
     );
   });
 
-  test('NULL recurring due day must reject simultaneous edits',() async {
-    await expectNoPartialCommit(
+  test('NULL recurring due day is rejected by SQL NOT NULL constraint',() async {
+    await expectNotNullConstraintProtectsState(
       "UPDATE fresh_finance_recurring SET due_day=NULL WHERE recurring_id='rent'",
     );
   });
