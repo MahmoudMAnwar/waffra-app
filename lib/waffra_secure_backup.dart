@@ -14,6 +14,18 @@ class WaffraSecureBackup {
   return List<int>.generate(length,(_)=>secure.nextInt(256));
  }
 
+ /// Exactly eight ASCII alphanumeric characters for new user-facing backups.
+ /// Legacy/internal portable archives continue to accept existing passwords.
+ static bool isValidNewPassword(String password) =>
+  RegExp(r'^(?=.*[A-Za-z])(?=.*[0-9])[A-Za-z0-9]{8}$').hasMatch(password);
+
+ static Future<String> encryptUserBackup(String plaintext,String password) async {
+  if(!isValidNewPassword(password)) {
+   throw const FormatException('New backup password requires exactly eight letters/digits');
+  }
+  return encrypt(plaintext,password);
+ }
+
  static Future<String> encrypt(String plaintext,String password) async {
   if(password.trim().length<8)throw const FormatException('Password must have at least 8 characters');
   final salt=_random(16),nonce=_random(12);
@@ -33,10 +45,18 @@ class WaffraSecureBackup {
   // Old unencrypted backups remain importable for backwards compatibility.
   if(decoded['format']=='waffra-backup')return payload;
   if(decoded['format']!='waffra-secure-backup'||decoded['version']!=1||
-    decoded['iterations']!=120000||decoded['cipher']!='aes-256-gcm'){
+    decoded['kdf']!='pbkdf2-sha256'||decoded['iterations']!=120000||
+    decoded['cipher']!='aes-256-gcm'){
    throw const FormatException('Unsupported encrypted backup');
   }
   if(password.isEmpty)throw const FormatException('Password required');
+  // Check all required fields before decoding. Missing or incorrectly typed
+  // metadata must produce a controlled FormatException, not an unchecked cast.
+  for(final field in const ['salt','nonce','data','mac']){
+   if(decoded[field] is! String){
+    throw const FormatException('Corrupted encrypted backup');
+   }
+  }
   final salt=base64Decode(decoded['salt'] as String);
   final nonce=base64Decode(decoded['nonce'] as String);
   final data=base64Decode(decoded['data'] as String);

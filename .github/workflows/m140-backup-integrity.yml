@@ -1,0 +1,34 @@
+name: M140 Backup UTF-8 and Cross-Archive Integrity QA
+
+on:
+  pull_request:
+    branches:
+      - 'test/m132-backup-corruption-recovery-negative-qa'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m140-backup-integrity-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backup-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install Flutter dependencies
+        run: flutter pub get
+      - name: Run M130-M132 and M140 backup regression suite
+        run: >-
+          flutter test
+          test/waffra_secure_backup_test.dart
+          test/m127_ui_tour_backup_acceptance_test.dart
+          test/m131_backup_boundary_tamper_qa_test.dart
+          test/m132_backup_corruption_recovery_negative_test.dart
+          test/m140_backup_utf8_cross_archive_integrity_test.dart

@@ -1,0 +1,93 @@
+name: M146 Main-Safe UI and Backup Merge Candidate Certification
+
+on:
+  pull_request:
+    branches:
+      - 'test/m140-backup-utf8-cross-archive-integrity-qa'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m146-main-safe-cert-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  certify-main-safe-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full review ancestry
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Audit exact main ancestry and production scope
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import pathlib, subprocess, os
+          def git(*args):
+              return subprocess.check_output(['git', *args], text=True).strip()
+          main = git('rev-parse', 'refs/remotes/origin/main')
+          # The review PR is based on M140, which itself is a direct main descendant.
+          reviewed = git('rev-parse', 'refs/remotes/origin/test/m140-backup-utf8-cross-archive-integrity-qa')
+          ancestor = git('merge-base', main, reviewed)
+          if ancestor != main:
+              raise SystemExit('BLOCKED: M140 is no longer a direct descendant of current main')
+          scope = set(filter(None,git('diff','--name-only',main,'HEAD').splitlines()))
+          permitted = {
+              'lib/main.dart','lib/waffra_secure_backup.dart',
+              '.github/workflows/android.yml',
+              '.github/workflows/m131-backup-security-regression.yml',
+              '.github/workflows/m132-backup-corruption-recovery.yml',
+              '.github/workflows/m140-backup-integrity.yml',
+              '.github/workflows/m146-main-safe-candidate.yml',
+              'test/m127_ui_tour_backup_acceptance_test.dart',
+              'test/waffra_approved_ui_batch_test.dart',
+              'test/waffra_secure_backup_test.dart',
+              'test/m131_backup_boundary_tamper_qa_test.dart',
+              'test/m132_backup_corruption_recovery_negative_test.dart',
+              'test/m140_backup_utf8_cross_archive_integrity_test.dart',
+              'docs/m146-main-safe-candidate.md',
+          }
+          unexpected=scope-permitted
+          if unexpected:
+              raise SystemExit('BLOCKED: unexpected main candidate changes: '+str(sorted(unexpected)))
+          for forbidden in ('lib/storage/','native/WaffraWidget.kt','firebase/'):
+              if any(p.startswith(forbidden) for p in scope):
+                  raise SystemExit('BLOCKED: production storage/Widget/Firebase touched')
+          if not {'lib/main.dart','lib/waffra_secure_backup.dart'} <= scope:
+              raise SystemExit('BLOCKED: UI/backup production changes missing')
+          print('PASS: main-ancestry and strictly allowlisted UI/backup candidate; no SQLCipher production paths')
+          summary=os.environ.get('GITHUB_STEP_SUMMARY')
+          if summary:
+              with open(summary,'a') as out:
+                  out.write('## M146 review-only candidate\n\n'
+                            '- Main lineage verified; no production SQLCipher/Widget/Firebase changes.\n'
+                            '- **No automatic merge or production release authorization.**\n')
+          PY
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve Flutter packages
+        run: flutter pub get
+      - name: Run approved UI and backup regression suites
+        run: >-
+          flutter test
+          test/m127_ui_tour_backup_acceptance_test.dart
+          test/waffra_approved_ui_batch_test.dart
+          test/waffra_secure_backup_test.dart
+          test/m131_backup_boundary_tamper_qa_test.dart
+          test/m132_backup_corruption_recovery_negative_test.dart
+          test/m140_backup_utf8_cross_archive_integrity_test.dart
+      - name: Generate Android project without publishing
+        run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
+      - name: Android release compilation (unsigned; no store publication)
+        run: flutter build apk --release --no-pub --target-platform android-arm64
