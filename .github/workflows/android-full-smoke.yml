@@ -636,7 +636,9 @@ jobs:
           profile: pixel_6
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
           script: |
-            set -euo pipefail
+            # The emulator action executes script with /bin/sh, not bash.
+            # POSIX sh rejects pipefail and aborted the smoke before app launch.
+            set -eu
             adb install -r build/app/outputs/flutter-apk/app-release.apk
             PACKAGE=$(adb shell pm list packages -3 | tr -d '\r' | sed -n 's/^package://p' | grep -m1 -E 'waffra' || true)
             test -n "$PACKAGE" || { echo "Could not find installed Waffra package"; exit 1; }
