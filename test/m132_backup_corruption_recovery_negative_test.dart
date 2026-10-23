@@ -18,13 +18,30 @@ void main() {
     final original=jsonDecode(
       await WaffraSecureBackup.encryptUserBackup('private-finance','Abcd1234'),
     ) as Map<String,dynamic>;
-    for (final field in <String>['format','version','iterations','cipher','salt','nonce','data','mac']) {
+    for (final field in <String>['format','version','kdf','iterations','cipher','salt','nonce','data','mac']) {
       final changed=Map<String,dynamic>.from(original)..remove(field);
       await expectLater(
         WaffraSecureBackup.decrypt(jsonEncode(changed),'Abcd1234'),
-        throwsA(isA<Exception>()),
-        reason:'Missing $field must fail closed',
+        throwsFormatException,
+        reason:'Missing $field must fail with a controlled format error',
       );
+    }
+  });
+
+  test('M132: null, numeric and structured cipher fields fail predictably', () async {
+    final original=jsonDecode(
+      await WaffraSecureBackup.encryptUserBackup('private-finance','Abcd1234'),
+    ) as Map<String,dynamic>;
+    for (final field in <String>['salt','nonce','data','mac']) {
+      for (final wrongType in <dynamic>[null,42,<String,dynamic>{'not':'base64'}]) {
+        final changed=Map<String,dynamic>.from(original);
+        changed[field]=wrongType;
+        await expectLater(
+          WaffraSecureBackup.decrypt(jsonEncode(changed),'Abcd1234'),
+          throwsFormatException,
+          reason:'Malformed field $field with wrong type must throw FormatException',
+        );
+      }
     }
   });
 
