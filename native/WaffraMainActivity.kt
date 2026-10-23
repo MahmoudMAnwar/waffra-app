@@ -199,7 +199,6 @@ class MainActivity : FlutterFragmentActivity() {
                 .setType("application/octet-stream")
                 .putExtra(Intent.EXTRA_TITLE, safeName)
                 .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-            @Suppress("DEPRECATION")
             startActivityForResult(intent, backupWriteRequest)
         } catch (_: Exception) {
             clearPendingBackup()
@@ -220,7 +219,6 @@ class MainActivity : FlutterFragmentActivity() {
                 .addCategory(Intent.CATEGORY_OPENABLE)
                 .setType("*/*")
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            @Suppress("DEPRECATION")
             startActivityForResult(intent, backupReadRequest)
         } catch (_: Exception) {
             clearPendingBackup()
