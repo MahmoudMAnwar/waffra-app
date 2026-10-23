@@ -1,9 +1,10 @@
 name: M147 Final Main-Safe Merge Readiness Review
 
+# Historical M147 audit was SHA-pinned to the pre-merge main baseline.
+# M147 merged on 2026-10-23; running this audit on subsequent PRs
+# incorrectly fails unrelated safe changes and skips their regression jobs.
+# Preserve the historical manual audit without gating new PRs.
 on:
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
