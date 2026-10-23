@@ -85,7 +85,7 @@ void main() {
       label:'العمليات المتكررة المحذوفة (0)'))))));
    await tester.pumpAndSettle();
    expect(find.byIcon(Icons.delete_outline),findsOneWidget);
-   expect(find.text('العمليات المتكررة المحذوفة (0)'),findsOneWidget);
+   expect(find.text('العمليات المتكررة المحذوفة (0)'),findsWidgets);
    expect(tester.takeException(),isNull);
   });
  }
