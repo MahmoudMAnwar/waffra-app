@@ -12,12 +12,12 @@ void main(){
    'futureAttribute':{'flag':true},
   };
   final after=WaffraM154TransactionSchemaBridge.captureLossless(before);
-  expect(after,deepEquals(before));
+  expect(after,equals(before));
   after['title']='new text';
   expect(before['title'],isNot('new text'));
   final array=WaffraM154TransactionSchemaBridge.canonicalList([before]);
   final roundTrip=Map<String,dynamic>.from((jsonDecode(array) as List).single as Map);
-  expect(roundTrip,deepEquals(before));
+  expect(roundTrip,equals(before));
  });
 
  test('M154: no silent loss or coercion of malformed finance entries',(){
