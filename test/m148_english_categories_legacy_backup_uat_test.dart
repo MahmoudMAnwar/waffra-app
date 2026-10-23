@@ -58,7 +58,7 @@ void main() {
   expect(main,contains('waffraTr(item.name).toLowerCase()'));
   expect(main,contains('waffraTr(c.name).toLowerCase()'));
   expect(main,contains('DropdownMenuItem(value:c.name,child:WaffraText(c.name))'));
-  expect(main,contains('title:WaffraText(item.name,maxLines:3)'));
+  expect(main,contains('title:WaffraText(waffraTr(leafLabels?item.displayName:item.name),maxLines:3)'));
   expect(categories,contains('WaffraText(root.name,maxLines:2'));
   expect(categories,contains('WaffraText(sub.displayName,maxLines:2'));
   expect(categories,contains('waffraTr(root.name).toLowerCase()'));
