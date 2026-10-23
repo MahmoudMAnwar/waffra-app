@@ -15,9 +15,9 @@ jobs:
           cache: true
       - run: flutter pub get
       - name: Analyze integration
-        run: flutter analyze --no-fatal-infos lib/main.dart lib/waffra_secure_backup.dart lib/waffra_backup_files.dart lib/waffra_merchant_rules.dart lib/storage/waffra_m154_transaction_schema_bridge.dart lib/storage/waffra_m155_category_plan.dart test/m153_secure_backup_sms_categories_uat_test.dart test/m155_category_plan_finance_parity_test.dart
+        run: flutter analyze --no-fatal-infos lib/main.dart lib/waffra_secure_backup.dart lib/waffra_backup_files.dart lib/waffra_merchant_rules.dart lib/storage/waffra_m154_transaction_schema_bridge.dart lib/storage/waffra_m155_category_plan.dart test/m153_secure_backup_sms_categories_uat_test.dart test/m155_category_plan_finance_parity_test.dart test/storage/m156_atomic_merchant_category_sms_commit_test.dart
       - name: Test source compatibility
-        run: flutter test test/waffra_secure_backup_test.dart test/m153_secure_backup_sms_categories_uat_test.dart test/m154_sqlcipher_m153_transaction_shape_test.dart test/m155_category_plan_finance_parity_test.dart
+        run: flutter test test/waffra_secure_backup_test.dart test/m153_secure_backup_sms_categories_uat_test.dart test/m154_sqlcipher_m153_transaction_shape_test.dart test/m155_category_plan_finance_parity_test.dart test/storage/m156_atomic_merchant_category_sms_commit_test.dart
       - name: Fail closed on source authority or privacy regression
         run: |
           python3 - <<'PY'
