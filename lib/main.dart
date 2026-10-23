@@ -3961,7 +3961,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     if(attachmentCount>0)PositionedDirectional(top:0,end:0,child:Semantics(
      label:waffraIsEnglish?'$attachmentCount attachments':'عدد المرفقات $attachmentCount',
      button:true,child:InkWell(onTap:()=>showReceipt(entry.receiptPath!),
-      borderRadius:const BorderRadiusDirectional.only(topEnd:Radius.circular(17),bottomStart:Radius.circular(12)),
+      borderRadius:BorderRadius.circular(12),
       child:Container(padding:const EdgeInsetsDirectional.fromSTEB(8,4,9,4),
        decoration:const BoxDecoration(color:forest,
         borderRadius:BorderRadiusDirectional.only(topEnd:Radius.circular(17),bottomStart:Radius.circular(12))),
