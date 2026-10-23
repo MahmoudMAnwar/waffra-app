@@ -99,6 +99,44 @@ void main(){
   expect(await sqlCount('fresh_finance_categories'),1);
   expect(after.values.containsKey('waffra_sms_hashes_v1'),false);
  });
+ test('M156 SQL: mutation after user confirmation cannot change saved category',()async{
+  final proposed=Map<String,Object?>.from(merchant);
+  final draft=expense('frozen');
+  final checked=WaffraUnifiedFinanceWriter(
+   writerDirectory:root,snapshot:snapshot(),experimentalEnabled:true,
+   verifySourceUnderLock:()async{
+    proposed['name']='أخرى / UNAPPROVED';
+    proposed['parentId']='missing';
+    draft['amount']=999.99;
+   });
+  final result=await checked.appendTransactions(
+   records:[draft],messageHashes:[digest(13)],
+   userConfirmed:true,proposedCategories:[proposed]);
+  expect(result.saved,1);
+  final state=await snapshot().read();
+  final recorded=(jsonDecode(state.values['entries'] as String) as List).single as Map;
+  final category=(jsonDecode(state.values['waffra_categories_v24'] as String) as List).last as Map;
+  expect(recorded['amount'],72.01);
+  expect(category['name'],'أخرى / ALHUSSAIN');
+  expect(category['parentId'],'other');
+ });
+
+ test('M156 SQL: cold reopening retains confirmed category, entry and hash',()async{
+  await writer().appendTransactions(
+   records:[expense('durable')],messageHashes:[digest(25)],
+   userConfirmed:true,proposedCategories:[merchant]);
+  await db.close();
+  db=WaffraEncryptedStore.openAt(
+   File('${root.path}/finance.sqlite'),key:'m156-test-key-disposable-only');
+  final state=await snapshot().read();
+  expect((jsonDecode(state.values['entries'] as String) as List),hasLength(1));
+  expect((jsonDecode(state.values['waffra_categories_v24'] as String) as List),hasLength(2));
+  expect(state.values['waffra_sms_hashes_v1'],[digest(25)]);
+  expect(await sqlCount('fresh_finance_entries'),1);
+  expect(await sqlCount('fresh_finance_categories'),2);
+  expect(await sqlCount('fresh_finance_sms_hashes'),1);
+ });
+
  test('M156 SQL: category SQL trigger failure rolls back inserted ledger too',()async{
   await db.customStatement('''
 CREATE TRIGGER fail_merchant
