@@ -6245,7 +6245,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
          const SizedBox(height:10),
          for(final keys in const <List<String>>[
           ['1','2','3'],['4','5','6'],['7','8','9'],['','0','back']
-         ])Padding(padding:const EdgeInsets.only(bottom:5),child:Row(
+         ])Padding(padding:const EdgeInsets.only(bottom:5),child:Row(textDirection:TextDirection.ltr,
           children:[for(final digit in keys)Expanded(child:Padding(
            padding:const EdgeInsets.symmetric(horizontal:3),
            child:digit.isEmpty?const SizedBox(height:42):OutlinedButton(
