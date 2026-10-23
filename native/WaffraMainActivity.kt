@@ -4,6 +4,8 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.app.Activity
+import java.io.ByteArrayOutputStream
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -15,6 +17,12 @@ class MainActivity : FlutterFragmentActivity() {
     private val privacyChannel = "waffra/privacy"
     private val messagesChannel = "waffra/messages"
     private val widgetChannelName = "waffra/widget"
+    private val backupChannelName = "waffra/backup_files"
+    private val backupWriteRequest = 7811
+    private val backupReadRequest = 7812
+    private val backupMaxBytes = 8 * 1024 * 1024
+    private var pendingBackupResult: MethodChannel.Result? = null
+    private var pendingBackupBytes: ByteArray? = null
     private var widgetChannel: MethodChannel? = null
     private var pendingWidgetAction: String? = null
     private var messageChannel: MethodChannel? = null
@@ -113,6 +121,18 @@ class MainActivity : FlutterFragmentActivity() {
                 else -> result.notImplemented()
             }
         }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, backupChannelName)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "saveEncryptedFile" -> createEncryptedBackupFile(
+                        call.argument<String>("fileName") ?: "Waffra_Backup.waffra",
+                        call.argument<String>("encryptedPayload") ?: "",
+                        result
+                    )
+                    "openEncryptedFile" -> selectEncryptedBackupFile(result)
+                    else -> result.notImplemented()
+                }
+            }
         messageChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, messagesChannel)
         messageChannel?.setMethodCallHandler { call, result ->
             when (call.method) {
@@ -140,6 +160,121 @@ class MainActivity : FlutterFragmentActivity() {
                 }
                 else -> result.notImplemented()
             }
+        }
+    }
+
+
+    // Android Storage Access Framework: the user chooses the file provider
+    // (local files or Google Drive). No storage permissions or clipboard used.
+    private fun clearPendingBackup() {
+        pendingBackupBytes?.fill(0)
+        pendingBackupBytes = null
+        pendingBackupResult = null
+    }
+
+    private fun createEncryptedBackupFile(fileName: String, payload: String, result: MethodChannel.Result) {
+        if (pendingBackupResult != null) {
+            result.error("BACKUP_BUSY", "A file selection is already active", null)
+            return
+        }
+        val bytes = payload.toByteArray(Charsets.UTF_8)
+        if (bytes.isEmpty() || bytes.size > backupMaxBytes) {
+            bytes.fill(0)
+            result.error("BACKUP_TOO_LARGE", "Invalid or oversized encrypted backup", null)
+            return
+        }
+        // Refuse export of unencrypted data even if the Flutter UI regresses.
+        if (!payload.contains("\"format\":\"waffra-secure-backup\"")) {
+            bytes.fill(0)
+            result.error("BACKUP_NOT_ENCRYPTED", "Only encrypted backups can be exported", null)
+            return
+        }
+        val safeName = fileName.replace(Regex("[^A-Za-z0-9._-]"), "_")
+            .take(100).let { if (it.endsWith(".waffra")) it else "$it.waffra" }
+        pendingBackupResult = result
+        pendingBackupBytes = bytes
+        try {
+            val intent = Intent(Intent.ACTION_CREATE_DOCUMENT)
+                .addCategory(Intent.CATEGORY_OPENABLE)
+                .setType("application/octet-stream")
+                .putExtra(Intent.EXTRA_TITLE, safeName)
+                .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            startActivityForResult(intent, backupWriteRequest)
+        } catch (_: Exception) {
+            clearPendingBackup()
+            result.error("BACKUP_PICKER_UNAVAILABLE", "Unable to open the document picker", null)
+        }
+    }
+
+    private fun selectEncryptedBackupFile(result: MethodChannel.Result) {
+        if (pendingBackupResult != null) {
+            result.error("BACKUP_BUSY", "A file selection is already active", null)
+            return
+        }
+        pendingBackupResult = result
+        try {
+            // Any MIME type supports previously exported .json/.txt and new
+            // .waffra archives. The Dart decryptor authenticates the content.
+            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
+                .addCategory(Intent.CATEGORY_OPENABLE)
+                .setType("*/*")
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            startActivityForResult(intent, backupReadRequest)
+        } catch (_: Exception) {
+            clearPendingBackup()
+            result.error("BACKUP_PICKER_UNAVAILABLE", "Unable to open the document picker", null)
+        }
+    }
+
+    @Deprecated("Using Activity result to support FlutterFragmentActivity without extra dependencies")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != backupWriteRequest && requestCode != backupReadRequest) return
+        val callback = pendingBackupResult
+        try {
+            if (callback == null) return
+            if (resultCode != Activity.RESULT_OK || data?.data == null) {
+                callback.success(if (requestCode == backupWriteRequest) false else null)
+                return
+            }
+            val uri = data.data!!
+            if (uri.scheme != "content") {
+                callback.error("BACKUP_INVALID_LOCATION", "Unsupported document provider", null)
+                return
+            }
+            if (requestCode == backupWriteRequest) {
+                val bytes = pendingBackupBytes ?: throw IllegalStateException("Missing encrypted backup")
+                val stream = contentResolver.openOutputStream(uri, "w")
+                    ?: throw IllegalStateException("Unable to open backup destination")
+                stream.use {
+                    it.write(bytes)
+                    it.flush()
+                }
+                callback.success(true)
+            } else {
+                val stream = contentResolver.openInputStream(uri)
+                    ?: throw IllegalStateException("Unable to open selected backup")
+                val output = ByteArrayOutputStream()
+                stream.use {
+                    val buffer = ByteArray(8192)
+                    while (true) {
+                        val count = it.read(buffer)
+                        if (count < 0) break
+                        if (output.size() + count > backupMaxBytes) {
+                            throw IllegalArgumentException("BACKUP_TOO_LARGE")
+                        }
+                        output.write(buffer, 0, count)
+                    }
+                }
+                callback.success(output.toString(Charsets.UTF_8.name()))
+            }
+        } catch (e: IllegalArgumentException) {
+            callback?.error("BACKUP_TOO_LARGE", "Backup exceeds the 8 MB import limit", null)
+        } catch (_: Exception) {
+            // Never log file content, encryption secrets, or document provider URI.
+            callback?.error("BACKUP_FILE_IO", "Unable to read or write the backup document", null)
+        } finally {
+            clearPendingBackup()
         }
     }
 
