@@ -165,6 +165,24 @@ class BudgetCategory {
  Map<String,dynamic> toJson()=>{'id':id,'name':name,'icon':icon,'color':color,'income':income,'parentId':parentId,'budget':budget,'alertPercent':alertPercent};
  factory BudgetCategory.fromJson(Map<String,dynamic> j)=>BudgetCategory(id:'${j['id']??newId()}',name:'${j['name']??'أخرى'}',icon:'${j['icon']??'category'}',color:(j['color'] as num?)?.toInt()??0xFF087A54,income:j['income']==true,parentId:'${j['parentId']??''}',budget:(j['budget'] as num?)?.toDouble()??0,alertPercent:(j['alertPercent'] as num?)?.toInt()??80);
 }
+/// Manual transactions must target an active child category, never a heading.
+List<BudgetCategory> waffraManualCategoryParents(
+ Iterable<BudgetCategory> values,bool income)=>
+ values.where((c)=>c.income==income&&!c.isSubcategory).toList();
+
+List<BudgetCategory> waffraManualCategoryChildren(
+ Iterable<BudgetCategory> values,bool income,String? parentId)=>
+ parentId==null?<BudgetCategory>[]:
+ values.where((c)=>c.income==income&&c.isSubcategory&&c.parentId==parentId).toList();
+
+bool waffraCanAssignManualCategory(Iterable<BudgetCategory> values,
+ bool income,String? parentId,String category){
+ if(parentId==null)return false;
+ return values.any((c)=>c.income==income&&!c.isSubcategory&&c.id==parentId)&&
+  values.any((c)=>c.income==income&&c.isSubcategory&&
+   c.parentId==parentId&&c.name==category);
+}
+
 class SavingGoal {
  final String id,name;final double target,saved;
  SavingGoal({required this.id,required this.name,required this.target,required this.saved});
@@ -2707,9 +2725,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
     }
     final available=forType(income);
     final chosen=available.any((c)=>c.name==category)?category:(available.isEmpty?null:available.first.name);
-    final mainCategories=available.where((c)=>!c.isSubcategory).toList();
+    final mainCategories=waffraManualCategoryParents(available,income);
     final selectedMain=mainCategories.where((c)=>c.id==selectedParentId).toList();
-    final subcategories=available.where((c)=>c.isSubcategory&&c.parentId==selectedParentId).toList();
+    final subcategories=waffraManualCategoryChildren(available,income,selectedParentId);
     final selectedSub=subcategories.where((c)=>c.name==category).toList();
     return Padding(padding:EdgeInsets.fromLTRB(18,10,18,MediaQuery.of(sheetContext).viewInsets.bottom+20),
      child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,
@@ -2858,8 +2876,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
        update(()=>attempted=true);
        final n=amountOf(value.text);
        if(title.text.trim().isEmpty||waffraAmountFieldError(value.text)!=null||n==null)return;
-       if(!sms&&!categories.any((c)=>c.income==income&&c.isSubcategory&&
-        c.parentId==selectedParentId&&c.name==category))return;
+       if(!sms&&!waffraCanAssignManualCategory(categories,
+        income,selectedParentId,category))return;
        if(sms){
         if(message.text.trim().isEmpty)return;
         final h=sha256.convert(utf8.encode(digits(message.text).replaceAll(RegExp(r'\s+'),' ').trim().toLowerCase())).toString();
