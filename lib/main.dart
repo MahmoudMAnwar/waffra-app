@@ -1656,7 +1656,8 @@ void snack(BuildContext context,String text,{
  final outline=isError?const Color(0xFFE67B81):const Color(0xFF0C7957);
  messenger.showSnackBar(SnackBar(
   behavior:SnackBarBehavior.floating,
-  margin:const EdgeInsets.fromLTRB(12,0,12,8),
+  // Align notices beside the left + above the footer.
+  margin:const EdgeInsets.fromLTRB(82,0,12,16),
   duration:duration,
   backgroundColor:background,
   elevation:5,
@@ -5654,8 +5655,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
    WaffraText(waffraIsEnglish?'Current goals: ${goals.length}':'عدد الأهداف الحالية: ${goals.length}',
     style:const TextStyle(fontWeight:FontWeight.bold)),
    const SizedBox(height:12),
-   FilledButton.icon(onPressed:goalDialog,icon:const Icon(Icons.add),label:WaffraText(
-    waffraIsEnglish?'New savings goal':'هدف جديد')),
+
+   // Savings additions use the same physical-left circular +.
    const SizedBox(height:14),
    if(goals.isNotEmpty)...[
     Wrap(spacing:7,runSpacing:6,children:[
@@ -5923,8 +5924,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
      ))),
     const SizedBox(height:12),
    ],
-   FilledButton.icon(onPressed:recurringDialog,icon:const Icon(Icons.add),
-    label:WaffraText(waffraIsEnglish?'New recurring transaction':'عملية متكررة جديدة')),
+
+   // Recurring additions use the same physical-left circular +.
    const SizedBox(height:13),
    if(recurring.isNotEmpty)...[
     Wrap(spacing:8,runSpacing:6,children:[
@@ -6000,8 +6001,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
       'أضف عملية متكررة لتنظيم مصروفاتك الشهرية ومتابعتها بسهولة.',
       textAlign:TextAlign.center),
      const SizedBox(height:19),
-     OutlinedButton.icon(onPressed:recurringDialog,icon:const Icon(Icons.add),
-      label:WaffraText(waffraIsEnglish?'Add first recurring item':'إضافة أول عملية متكررة')),
+
+     // Empty state keeps the shared left + available.
      const SizedBox(height:22),
      Row(children:[
       Expanded(child:_recurringBenefit(waffraIsEnglish?'Save time':'توفير الوقت',Icons.bolt)),
@@ -6079,19 +6080,45 @@ Future<void> bulkSmsSheet({String? initialText})async {
  Future<void> backupDialog()async {
   if(!await _authorizeSensitiveAction('backing up or restoring data')||!mounted)return;
   final input=TextEditingController(),secret=TextEditingController();
-  var attempted=false;String? backupError;
+  var attempted=false;String? backupError;bool legacyRestorePassword=false;
   await showWaffraDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
    title:const WaffraText('نسخ احتياطي واستعادة'),
    content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
     WaffraText(waffraIsEnglish?'Your backup is protected with a password and AES-256 encryption. Keep your password safe; it cannot be recovered.':'نسختك الاحتياطية مشفّرة بكلمة مرور وتشفير AES-256. احتفظ بكلمة المرور؛ لا يمكن استعادتها إذا فُقدت.'),
     const SizedBox(height:10),
-    TextField(controller:secret,obscureText:true,onChanged:(_)=>update((){}),
-     decoration:InputDecoration(labelText:waffraIsEnglish?'Backup password (8+ characters) *':'كلمة مرور النسخة الاحتياطية (8 أحرف على الأقل) *',border:const OutlineInputBorder())),
+    TextField(controller:secret,obscureText:true,
+     inputFormatters:legacyRestorePassword?const <TextInputFormatter>[]:
+      <TextInputFormatter>[
+       FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
+       LengthLimitingTextInputFormatter(8),
+      ],
+     onChanged:(_)=>update(()=>backupError=null),
+     decoration:InputDecoration(
+      labelText:legacyRestorePassword?
+       (waffraIsEnglish?'Existing backup password *':'كلمة مرور النسخة القديمة *'):
+       (waffraIsEnglish?'Backup password (exactly 8 letters/digits) *':'كلمة مرور النسخة (8 خانات أحرف وأرقام) *'),
+      errorText:backupError,errorMaxLines:3,
+      border:const OutlineInputBorder())),
+    // Existing archives may have longer passwords; preserve their restore path.
+    SwitchListTile.adaptive(
+     contentPadding:EdgeInsets.zero,
+     title:WaffraText(waffraIsEnglish?
+      'Restore an older backup password':'استعادة نسخة قديمة بكلمة مرور أطول',
+      style:const TextStyle(fontSize:12)),
+     value:legacyRestorePassword,
+     onChanged:(value)=>update((){
+      legacyRestorePassword=value;secret.clear();backupError=null;
+     })),
     const SizedBox(height:10),
     FilledButton.icon(onPressed:()async {
-     if(secret.text.trim().length<8){update(()=>backupError=waffraIsEnglish?'Password must have at least 8 characters':'كلمة المرور يجب ألا تقل عن 8 أحرف');return;}
+     if(!WaffraSecureBackup.isValidNewPassword(secret.text)){
+      update(()=>backupError=waffraIsEnglish?
+       'Exactly 8 letters and digits, including at least one of each.':
+       'كلمة المرور 8 خانات بالضبط من أحرف وأرقام، وبها حرف ورقم على الأقل.');
+      return;
+     }
      try{
-      final encrypted=await WaffraSecureBackup.encrypt(exportBackup(),secret.text);
+      final encrypted=await WaffraSecureBackup.encryptUserBackup(exportBackup(),secret.text);
       await Clipboard.setData(ClipboardData(text:encrypted));
       final generatedAt=DateTime.now().toIso8601String();
       final prefs=await SharedPreferences.getInstance();
@@ -6101,7 +6128,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       if(ctx.mounted)snackSuccess(ctx,waffraIsEnglish?'Encrypted backup copied; keep it and its password safe':'تم نسخ النسخة المشفّرة، احتفظ بها وكلمة مرورها في مكان آمن');
      }catch(error){if(ctx.mounted)update(()=>backupError=error.toString());}
     },icon:const Icon(Icons.lock_outline),label:WaffraText(waffraIsEnglish?'Copy encrypted backup':'نسخ النسخة المشفّرة')),
-    if(backupError!=null)WaffraText(backupError!,style:const TextStyle(color:Colors.red)),
+    // Password error is inline, directly under the password field.
     const SizedBox(height:12),
     TextField(controller:input,minLines:4,maxLines:7,onChanged:(_)=>update(()=>backupError=null),
      decoration:InputDecoration(labelText:waffraIsEnglish?'Backup JSON *':'الصق نسخة JSON للاستعادة *',
@@ -6337,7 +6364,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
   const enHelp=['Start as a guest and keep data on your phone.','See balance, income and expenses.','Add a transaction or paste a bank message.','Organize categories and budgets.','Create savings goals and follow progress.','Plan recurring payments and due dates.','Explore advice, charts and forecasts.','Change appearance, language, privacy and replay this tour.'];
   final element=tourTargetKeys[tourStep]<0?null:_tourKeys[tourTargetKeys[tourStep]].currentContext?.findRenderObject();
   final layer=overlayCtx.findRenderObject();
-  Rect target=Rect.fromLTWH(16,12,area.maxWidth-32,65);
+  // Intro doesn't spotlight the header; its first card is centered.
+   Rect target=tourStep==0?Rect.fromLTWH(-40,-40,1,1):
+    Rect.fromLTWH(16,12,area.maxWidth-32,65);
   if(element is RenderBox&&layer is RenderBox&&element.hasSize){
    final offset=element.localToGlobal(Offset.zero)-layer.localToGlobal(Offset.zero);
    target=Rect.fromLTWH(offset.dx,offset.dy,element.size.width,element.size.height).inflate(5);
@@ -6360,14 +6389,17 @@ Future<void> bulkSmsSheet({String? initialText})async {
    target=Rect.fromLTWH((right-desiredWidth).clamp(8.0,area.maxWidth-desiredWidth-8).toDouble(),
     target.top,desiredWidth,target.height);
   }
-  final width=min(300.0,area.maxWidth-24);
-  final popupHeight=min(225.0,max(130.0,area.maxHeight*.56));
-  final spaceBelow=area.maxHeight-target.bottom-12;
-  final spaceAbove=target.top-12;
-  final below=spaceBelow>=popupHeight||(spaceBelow>=spaceAbove&&spaceAbove<popupHeight);
-  final top=(below?target.bottom+12:target.top-popupHeight-12)
-   .clamp(7.0,max(7.0,area.maxHeight-popupHeight-7)).toDouble();
-  final left=(target.center.dx-width/2).clamp(12.0,max(12.0,area.maxWidth-width-12)).toDouble();
+  final width=min(340.0,area.maxWidth-24);
+   final popupHeight=tourStep==0?min(250.0,max(160.0,area.maxHeight*.46)):
+    min(225.0,max(130.0,area.maxHeight*.56));
+   final spaceBelow=area.maxHeight-target.bottom-12;
+   final spaceAbove=target.top-12;
+   final below=spaceBelow>=popupHeight||(spaceBelow>=spaceAbove&&spaceAbove<popupHeight);
+   final suggestedTop=tourStep==0?(area.maxHeight-popupHeight)*.44:
+    (below?target.bottom+12:target.top-popupHeight-12);
+   final top=suggestedTop.clamp(12.0,max(12.0,area.maxHeight-popupHeight-12)).toDouble();
+   final suggestedLeft=tourStep==0?(area.maxWidth-width)/2:target.center.dx-width/2;
+   final left=suggestedLeft.clamp(12.0,max(12.0,area.maxWidth-width-12)).toDouble();
   return Stack(children:[
    Positioned.fill(child:AnimatedBuilder(animation:_tourGlow,
     builder:(ctx,_)=>CustomPaint(painter:WaffraTourShade(target,glow:_tourGlow.value)))),
@@ -6803,19 +6835,22 @@ Future<void> bulkSmsSheet({String? initialText})async {
        child:Transform.translate(offset:Offset((1-progress)*(waffraIsEnglish?16:-16),0),child:child)),
       child:currentTab()))),
   // Keep the add menu and its original actions above five destinations.
-  floatingActionButtonLocation:FloatingActionButtonLocation.centerFloat,
-  floatingActionButton:!ready||goalsOpened||(tab!=0&&tab!=1)?null:Directionality(
+  floatingActionButtonLocation:const WaffraPhysicalLeftFab(),
+  // Home, Categories, Goals and Recurring share a physical-left 58px +.
+  floatingActionButton:!ready||tab==4?null:Directionality(
    textDirection:TextDirection.ltr,child:Column(
    mainAxisSize:MainAxisSize.min,
-   crossAxisAlignment:CrossAxisAlignment.center,children:[
+   // Expanded action labels may be wider than the +; keep the circle
+   // flush left rather than re-centering it under the action menu.
+   crossAxisAlignment:CrossAxisAlignment.start,children:[
     AnimatedSize(duration:const Duration(milliseconds:210),
      curve:Curves.easeOutCubic,
      alignment:Alignment.bottomLeft,
-     child:addFabExpanded?Padding(
+     child:addFabExpanded&&(tab==0||tab==1)&&!goalsOpened?Padding(
       padding:const EdgeInsets.only(bottom:9),
       child:Column(mainAxisSize:MainAxisSize.min,
        crossAxisAlignment:CrossAxisAlignment.start,children:[
-        if(tab==0)...[
+        if(tab==0&&!goalsOpened)...[
         _addMenuOption(
          icon:Icons.edit_note_rounded,
          label:waffraIsEnglish?'Manual transaction':'عملية يدوية',
@@ -6847,8 +6882,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
      shape:const CircleBorder(),
      child:InkWell(
       customBorder:const CircleBorder(),
-      onTap:()=>setState(()=>addFabExpanded=!addFabExpanded),
-      child:SizedBox(key:_tourKeys[1],width:58,height:58,
+      onTap:(){
+    if(goalsOpened||tab==2){goalDialog();return;}
+    if(tab==3){recurringDialog();return;}
+    setState(()=>addFabExpanded=!addFabExpanded);
+   },
+   child:SizedBox(key:_tourKeys[1],width:58,height:58,
        child:AnimatedRotation(
         duration:const Duration(milliseconds:210),
         turns:addFabExpanded?0.125:0,

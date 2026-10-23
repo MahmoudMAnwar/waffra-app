@@ -20,6 +20,8 @@ on:
       # M124: signed pre-merge APK/AAB candidate from the exact cumulative
       # branch, never a production store deployment or SQLCipher activation.
       - 'feature/m124-main-integration-merge-preview'
+      # M127: isolated signed QA artifact only; never auto-release or deploy.
+      - 'feature/m127-approved-ui-and-safe-backup-build'
   workflow_dispatch:
 
 # Fast-build concurrency: only the latest pushed revision needs an APK.
