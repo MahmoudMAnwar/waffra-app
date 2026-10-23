@@ -19,9 +19,19 @@ class WaffraSecureBackup {
  static bool isValidNewPassword(String password) =>
   RegExp(r'^(?=.*[A-Za-z])(?=.*[0-9])[A-Za-z0-9]{8}$').hasMatch(password);
 
- static Future<String> encrypt(String plaintext,String password) async {
+ /// Exact-eight policy for the user-facing new backup export only.
+ /// Internal portable archives and previously created encrypted exports keep
+ /// their existing 8-or-more-character scheme and remain restorable.
+ static Future<String> encryptUserBackup(String plaintext,String password) async {
   if(!isValidNewPassword(password)){
-   throw const FormatException('New backup password requires 8 letters/digits');
+   throw const FormatException('New backup password requires exactly eight letters/digits');
+  }
+  return encrypt(plaintext,password);
+ }
+
+ static Future<String> encrypt(String plaintext,String password) async {
+  if(password.trim().length<8){
+   throw const FormatException('Password must have at least 8 characters');
   }
   final salt=_random(16),nonce=_random(12);
   final key=await _kdf.deriveKey(secretKey:SecretKey(utf8.encode(password)),nonce:salt);
