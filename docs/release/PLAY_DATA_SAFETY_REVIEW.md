@@ -11,7 +11,7 @@ Must be rechecked against the production AAB, all included SDKs, log pipelines, 
 | Bank notification plaintext | User-initiated copy/paste | On-device parsing/categorization | Prove no raw text is logged, sent in telemetry, or uploaded; test clipboard and lifecycle |
 | Receipts/photos | User attaches receipts | Transaction attachments and reports | Verify local file vault, optional backup/cloud behavior and permission scope |
 | Savings goals, recurring and spending analysis | App-entered finance data | Budgets, reminders and analysis | Verify remote sync, backup, processing and retention |
-| Crash and diagnostic telemetry | **Proposed** Crashlytics, not currently listed | Stability and QA | Do not claim SDK integrated; implement SDK with opt-in rules, redact all sensitive labels and review device identifiers |
+| Crash and diagnostic telemetry | `firebase_crashlytics` **is declared** in `pubspec.yaml`; collection guarded OFF by default pending reviewed release flag and consent | Stability and QA if activated | Verify native default OFF in final AAB, SDK automatic device/crash metadata, consent withdrawal, no financial labels, and Play disclosures; source dependency presence does not prove that collection occurs or never occurs |
 | Notifications, biometrics and settings | OS APIs | Reminders and app security | Check permissions and whether any values leave device |
 | Encrypted backups / recovery key | Experimental SQLCipher/E2EE components | Restore user finances | Never upload plaintext user recovery secrets; verify storage and deletion |
 | App installs and performance | Google Play and SDK operational data | Distribution and stability | Review Google Play and Firebase SDK data disclosures separately |
