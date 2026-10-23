@@ -46,6 +46,10 @@ part 'waffra_recurring_trash.part.dart';
 part 'waffra_deleted_item_card.part.dart';
 part 'waffra_widget_capture.part.dart';
 
+/// Unique identity of the installed APK; avoids testing a stale, same-version build.
+const String waffraBuildStamp=String.fromEnvironment(
+ 'WAFFRA_BUILD_STAMP',defaultValue:'local-unverified');
+
 /// PBKDF2 decryption and JSON parsing run away from the UI isolate.
 Future<Map<String,dynamic>> waffraDecodeBackupInIsolate(Map<String,String> request) async {
  final decoded=jsonDecode(await WaffraSecureBackup.decrypt(
@@ -6637,6 +6641,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     _accountTile(waffraIsEnglish?'About Waffra':'عن وفرة',
      waffraIsEnglish?'On-device financial management':'إدارة مالية تحفظ بياناتك محليًا',
      Icons.info_outline,onTap:()=>showAboutDialog(context:context,applicationName:'وفرة | Waffra',
+      applicationVersion:waffraBuildStamp,
       children:[WaffraText(waffraIsEnglish?'No bank account integration. Your data stays on your device.':
        'لا يوجد ربط بالحسابات البنكية؛ بياناتك محفوظة على جهازك.')]))
    ]),
@@ -6658,6 +6663,13 @@ Future<void> bulkSmsSheet({String? initialText})async {
     'Your data stays on this device. Make a backup before changing phones or deleting the app.':
     'بياناتك محفوظة على جهازك. احفظ نسخة احتياطية قبل تغيير الجوال أو حذف التطبيق. ما فيه ربط بالحسابات البنكية.',
     textAlign:TextAlign.center,style:const TextStyle(fontSize:11)),
+   const SizedBox(height:10),
+   Semantics(label:waffraIsEnglish?'Installed app build':'رقم نسخة التطبيق المثبتة',
+    child:WaffraText(
+     waffraIsEnglish?'Build: $waffraBuildStamp':'رقم البيلد: $waffraBuildStamp',
+     textAlign:TextAlign.center,
+     style:TextStyle(fontSize:12,fontWeight:FontWeight.w700,
+      color:Theme.of(context).colorScheme.primary))),
    const SizedBox(height:20),
   ]);
  }
