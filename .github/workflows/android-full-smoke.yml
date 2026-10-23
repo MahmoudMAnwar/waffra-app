@@ -3,6 +3,11 @@
 name: Waffra Android Full Startup Smoke (Nightly or Manual)
 
 on:
+  # Test the real signed, branded Android app on an emulator before allowing
+  # a previously unverified compiler-only APK to be shared for device QA.
+  push:
+    branches:
+      - 'fix/m148-uat-categories-backup-restore-performance'
   workflow_dispatch:
   schedule:
     - cron: '0 2 * * *'
