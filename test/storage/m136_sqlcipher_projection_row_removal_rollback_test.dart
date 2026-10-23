@@ -30,7 +30,7 @@ void main() {
   setUp(() async {
     root=await Directory.systemTemp.createTemp('waffra-m136-disposable-');
     vault=WaffraEncryptedStore.openAt(
-      File('${root.path}/disposable.sqlite'),key:'m136-disposable-encrypted-vault',
+      File('${root.path}/disposable.sqlite'),key:'m136-disposable-qa-key-32-bytes-',
     );
     await WaffraFreshEncryptedVaultBootstrap(
       store:vault,experimentalEnabled:true,
