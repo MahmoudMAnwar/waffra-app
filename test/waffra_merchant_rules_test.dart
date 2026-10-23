@@ -4,9 +4,19 @@ import 'package:waffra/waffra_merchant_rules.dart';
 void main() {
   test('extracts a Latin merchant from Saudi POS SMS', () {
     expect(waffraMerchantKey('شراء PoS من مدى SAR 65.90 Shawerma HJ 8/10/26'),
-        'shawerma hj');
+        'shawarma hj');
     expect(waffraMerchantKey('شراء PoS من مدى PANDA RETJ SAR 25.69'),
         'panda retj');
+  });
+
+  test('M158: POS inline merchant never includes amount, date or bank identifier', () {
+    const sms='شراء PoS من مدى SAR 65.90 Shawerma HJ 8/10/26';
+    expect(waffraSafeSmsTransactionTitle('شراء نقاط بيع',sms,income:false),
+        'شراء نقاط بيع — Shawerma HJ');
+    expect(waffraMerchantKey(sms),'shawarma hj');
+    expect(waffraMerchantName('شراء PoS من مدى SAR 65.90 8/10/26'),isNull);
+    expect(waffraMerchantName(
+        'شراء PoS من مدى SAR 65.90 SHOP 4321123412349999'),isNull);
   });
 
   test('no merchant rules are invented for generic transfers', () {

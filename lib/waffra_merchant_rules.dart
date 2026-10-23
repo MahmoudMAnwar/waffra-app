@@ -38,6 +38,18 @@ String? waffraMerchantName(String raw,{bool income=false}) {
   // A generic payment rail is not a merchant and must not become a category.
   return name;
  }
+ // Some Saudi POS notifications put the merchant next to the SAR amount,
+ // rather than on a labelled "لدى" line. Extract only that bounded field;
+ // never include the amount, date, card suffix or original SMS in a title.
+ final pos=RegExp(r'شراء\s+pos\s+من\s+مدى\s+([^;\n\r]{2,100})',
+     caseSensitive:false).firstMatch(text);
+ if(pos!=null){
+  final merchant=(pos.group(1)??'')
+   .replaceAll(RegExp(r'\bSAR\s*\d+(?:[.,]\d+)?\b',caseSensitive:false),' ')
+   .replaceAll(RegExp(r'\b\d{1,2}/\d{1,2}/\d{2,4}\b'),' ')
+   .replaceAll(RegExp(r'\s+'),' ').trim();
+  if(_waffraSafeMerchantCandidate(merchant))return merchant;
+ }
  return null;
 }
 

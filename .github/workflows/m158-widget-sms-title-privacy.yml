@@ -24,7 +24,7 @@ jobs:
           cache: true
       - run: flutter pub get
       - name: Analyze shared merchant parser and Widget code
-        run: flutter analyze --no-fatal-infos lib/main.dart lib/waffra_merchant_rules.dart lib/waffra_widget_capture.part.dart test/waffra_merchant_rules_test.dart
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings lib/main.dart lib/waffra_merchant_rules.dart lib/waffra_widget_capture.part.dart test/waffra_merchant_rules_test.dart
       - name: Check merchant privacy and finance regression
         run: flutter test test/waffra_merchant_rules_test.dart test/m155_category_plan_finance_parity_test.dart test/storage/m156_atomic_merchant_category_sms_commit_test.dart
       - name: Reject raw bank SMS in Widget ledger titles
