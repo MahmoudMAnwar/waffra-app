@@ -291,7 +291,6 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
                  '${record.result.category} • ${formatWaffraMoney(record.result.amount!)}':
                  (_english?'Unrecognized amount':'لم يتم التعرف على المبلغ'),
                  maxLines:1,overflow:TextOverflow.ellipsis),
-                trailing:record.duplicate?const Icon(Icons.copy,color:Colors.orange,size:19):null,
                ),
              ])),
             const SizedBox(height:9),
