@@ -12,6 +12,7 @@ FILES = {
     "lib/waffra_widget_capture.part.dart",
     "lib/storage/waffra_production_finance_authority_binding.dart",
     "test/storage/production_finance_authority_binding_test.dart",
+    "test/m108_home_widget_one_finance_writer_test.dart",
     "scripts/qa/sqlcipher_home_widget_binding_scope_review.py",
 }
 
