@@ -34,8 +34,105 @@ concurrency:
   group: waffra-android-fast-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
+  verify-all-tests:
+    name: Full mandatory Flutter and Python test suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact SHA
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Flutter with dependency cache
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve Dart packages
+        run: flutter pub get
+      - name: Run Flutter analyzer
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+      - name: Run every Flutter regression including future test files
+        run: flutter test --reporter expanded
+      - name: Run incremental-CI safety policy tests
+        run: python3 -m unittest discover -s scripts -p 'test_smart_ci.py' -v
+      - name: Run every Python QA test including future test files
+        run: python3 -m unittest discover -s test/qa -p '*_test.py' -v
+
+  verify-same-sha-checks:
+    name: Check every independent test workflow on this exact SHA
+    needs: verify-all-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - name: Fail closed on missing, running or failed independent tests
+        shell: bash
+        env:
+          GH_TOKEN: \${{ github.token }}
+          TARGET_SHA: \${{ github.sha }}
+          RUN_ID: \${{ github.run_id }}
+          REPO: \${{ github.repository }}
+          BRANCH_NAME: \${{ github.ref_name }}
+        run: |
+          python3 - <<'PY'
+          import json, os, time, urllib.parse, urllib.request
+          repo, sha = os.environ['REPO'], os.environ['TARGET_SHA']
+          own_run = int(os.environ['RUN_ID'])
+          branch = os.environ['BRANCH_NAME']
+          expected = {
+              'M147 Final Main-Safe Merge Readiness Review',
+              'M160 Main Reconciliation and Backup Regression',
+              'Waffra Full Offline Finance and UI Regression',
+              'Waffra M103 Same-SHA Whole-App Release Certification',
+              'M202 Android SQLCipher Source Binding Dry Run (CI ONLY)',
+          } if branch == 'fix/m206-daylight-tour-sms-notes-motion-20261024' else set()
+          headers = {
+              'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+              'Accept': 'application/vnd.github+json',
+              'X-GitHub-Api-Version': '2022-11-28',
+          }
+          deadline = time.monotonic() + 45 * 60
+          while True:
+              page, found = 1, []
+              while True:
+                  qs = urllib.parse.urlencode({'head_sha': sha, 'per_page': 100, 'page': page})
+                  url = f'https://api.github.com/repos/{repo}/actions/runs?{qs}'
+                  with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=45) as response:
+                      chunk = json.load(response)['workflow_runs']
+                  found.extend(chunk)
+                  if len(chunk) < 100:
+                      break
+                  page += 1
+                  if page > 10:
+                      raise SystemExit('BLOCKED: too many CI runs to audit')
+              checks = {}
+              for item in sorted(found, key=lambda x: (x['created_at'], x['id']), reverse=True):
+                  if item['id'] != own_run and item['head_sha'] == sha:
+                      checks.setdefault(item['name'], item)
+              missing = sorted(expected - checks.keys())
+              pending = [n for n, v in checks.items() if v['status'] != 'completed']
+              failed = [(n, v['conclusion'], v['html_url']) for n, v in checks.items()
+                        if v['status'] == 'completed' and v['conclusion'] != 'success']
+              if failed:
+                  for item in failed:
+                      print('BLOCKED failed external CI:', item, flush=True)
+                  raise SystemExit('No APK: at least one same-SHA workflow failed')
+              if not missing and not pending:
+                  print('CI PASS: all', len(checks), 'same-SHA external workflows succeeded', flush=True)
+                  break
+              print('CI pending:', pending, 'missing:', missing, flush=True)
+              if time.monotonic() >= deadline:
+                  raise SystemExit('BLOCKED: required same-SHA CI never finished')
+              time.sleep(30)
+          PY
+
   build:
+    needs: [verify-all-tests, verify-same-sha-checks]
     runs-on: ubuntu-latest
 
     steps:
@@ -759,13 +856,6 @@ jobs:
               print('NOTICE: checked-in google-services.json predates release SHA-1; refresh it from Firebase to ensure Google Sign-In client data is current')
           PY
 
-      - name: Upload Waffra Release APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: Waffra-Android-ARM64-Release
-          path: build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 30
-
       # AAB is a TEST candidate. Do NOT upload to a Production Play track
       # until the independent finance/security/physical-device gates pass.
       - name: Enforce Google Play Android 16 target SDK 36 for candidate AAB
@@ -851,3 +941,13 @@ jobs:
         with:
           path: .ci_cache/waffra_green_tests.json
           key: waffra-smart-tests-v2-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+      # No APK before ALL mandatory same-SHA tests, signed builds and checks pass.
+      # Publish as the FINAL step, after the candidate AAB and build validation.
+      - name: Publish signed QA APK (FINAL step)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Waffra-Android-ARM64-Release
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 30
