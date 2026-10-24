@@ -1,0 +1,27 @@
+name: M165 SQLCipher No-Cutover Security
+on:
+  pull_request:
+    branches:
+      - integration/m160-reconcile-main-m158-release-gate-20261023
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  disposable-security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: New no-cutover and existing atomic rollback/backup compatibility QA
+        run: >
+          flutter test
+          test/storage/m165_no_auto_cutover_security_test.dart
+          test/storage/m133_sqlcipher_atomic_invalid_values_test.dart
+          test/storage/m141_sqlcipher_multi_step_transaction_rollback_test.dart
+          test/waffra_secure_backup_test.dart
