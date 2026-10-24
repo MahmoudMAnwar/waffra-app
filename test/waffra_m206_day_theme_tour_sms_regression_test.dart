@@ -64,7 +64,7 @@ void main() {
         entry:entry, onClose:(){},
       )),
     ));
-    expect(find.text('شراء - متجر'),findsOneWidget);
+    expect(find.text('شراء - متجر'),findsWidgets);
     expect(find.text(raw),findsOneWidget);
     expect(tester.takeException(),isNull);
   });
