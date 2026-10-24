@@ -34,13 +34,13 @@ void main() {
   );
 
   WaffraRuntimeFinanceRouteContract contract({
-    WaffraProductionFinanceSourceReport source = active,
+    WaffraProductionFinanceSourceReport? source,
     WaffraFinanceRouteAudit? evidence,
     bool sql = true,
     bool external = true,
     bool key = true,
   }) => WaffraRuntimeFinanceRouteContract(
-    source: source,
+    source: source ?? active,
     audit: evidence ?? audit(),
     encryptedSqlWitnessActive: sql,
     externalSourceWitnessActive: external,
