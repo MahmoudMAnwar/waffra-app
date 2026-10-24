@@ -103,7 +103,8 @@ CREATE TABLE IF NOT EXISTS $_images(
     List<Map<String, dynamic>> ledger,
   ) async {
     final rows = await snapshot.store.customSelect(
-      'SELECT entry_id,source_json,receipt_count '
+      'SELECT entry_id,title,category_snapshot,amount_minor,is_income,'
+      'occurred_iso,source_json,receipt_count '
       'FROM fresh_finance_entries',
     ).get();
     if (rows.length != ledger.length) {
@@ -120,7 +121,28 @@ CREATE TABLE IF NOT EXISTS $_images(
               jsonEncode(jsonDecode(row.read<String>('source_json')))) {
         throw StateError('SQLCipher ledger data differs from finance.');
       }
-      final refs = indexed[id]!['receiptPath'];
+      // A matching JSON blob alone is NOT proof of typed SQL parity.
+      // Financial dashboards and backup restore can read these typed numeric
+      // columns independently, so tampering any one must block deletion.
+      final original = indexed[id]!;
+      final amount = original['amount'];
+      final occurredAt = original['date'];
+      final title = original['title'];
+      final category = original['category'];
+      if (amount is! num ||
+          !WaffraLegacyPreflight.canRepresentHalalas(amount) ||
+          original['income'] is! bool ||
+          title is! String || category is! String ||
+          occurredAt is! String ||
+          DateTime.tryParse(occurredAt) == null ||
+          row.read<String>('title') != title ||
+          row.read<String>('category_snapshot') != category ||
+          row.read<int>('amount_minor') != (amount * 100).round() ||
+          row.read<int>('is_income') != (original['income'] == true ? 1 : 0) ||
+          row.read<String>('occurred_iso') != occurredAt) {
+        throw StateError('SQLCipher typed financial values differ from ledger.');
+      }
+      final refs = original['receiptPath'];
       final count = row.read<int>('receipt_count');
       if (count < 0 || count > WaffraEncryptedReceiptVault.maxReceiptsPerEntry ||
           (count == 0 && refs != null && refs != '') ||
