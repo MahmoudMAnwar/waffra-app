@@ -2155,6 +2155,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   _lastFinanceAuthorityRead=loadedFinance;
   final financeView=loadedFinance.finance;
   financeView.requireIntegrity();
+  final verifiedEncryptedStartup=
+   loadedFinance.source==WaffraRuntimeFinanceBackend.verifiedEncrypted;
+  if(verifiedEncryptedStartup&&
+     financeView.getString('waffra_categories_v24')==null){
+   throw StateError('Verified encrypted category source is incomplete.');
+  }
   _lastWidgetRevision=loadedFinance.widgetRevision;
   _lastLedgerSavedRaw=loadedFinance.ledgerRaw;
   try{final raw=financeView.getString('entries');if(raw!=null)entries.addAll((jsonDecode(raw) as List).map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved transactions cannot be decoded safely: $e');}
@@ -2169,15 +2175,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   try{final raw=financeView.getString('waffra_deleted_goals_v1');if(raw!=null)deletedGoals.addAll((jsonDecode(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));}catch(e){throw StateError('Deleted goals cannot be decoded safely: $e');}
   try{final raw=financeView.getString('waffra_deleted_recurring_v1');if(raw!=null)deletedRecurring.addAll((jsonDecode(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));}catch(e){throw StateError('Deleted recurring cannot be decoded safely: $e');}
   try{final raw=financeView.getString('waffra_recurring_postponed_v1');if(raw!=null)recurringPostponed.addAll((jsonDecode(raw) as Map).map((k,v)=>MapEntry(k.toString(),v.toString())));}catch(e){throw StateError('Recurring postponements cannot be decoded safely: $e');}
-  deletedGoals.removeWhere((item){final date=DateTime.tryParse('${item['deletedAt']??''}');return date==null||!DateTime.now().isBefore(date.add(const Duration(days:30)));});
-  deletedRecurring.removeWhere((item){final date=DateTime.tryParse('${item['deletedAt']??''}');return date==null||!DateTime.now().isBefore(date.add(const Duration(days:30)));});
+  // The user's device clock cannot purge or hide encrypted SQL tombstones.
+  // Deletion/expiry requires independently verified encrypted retention.
   final trashBefore=deletedCategories.length;
-  deletedCategories.removeWhere((item){
-   final when=DateTime.tryParse('${item['deletedAt']??''}');
-   return when==null||!DateTime.now().isBefore(when.add(const Duration(days:30)));
-  });
+  if(!verifiedEncryptedStartup){
+   deletedGoals.removeWhere((item){final date=DateTime.tryParse('${item['deletedAt']??''}');return date==null||!DateTime.now().isBefore(date.add(const Duration(days:30)));});
+   deletedRecurring.removeWhere((item){final date=DateTime.tryParse('${item['deletedAt']??''}');return date==null||!DateTime.now().isBefore(date.add(const Duration(days:30)));});
+   deletedCategories.removeWhere((item){
+    final when=DateTime.tryParse('${item['deletedAt']??''}');
+    return when==null||!DateTime.now().isBefore(when.add(const Duration(days:30)));
+   });
+  }
   // Install catalog once without overwriting custom categories, saved budgets or trash.
-  if(!(p.getBool('waffra_category_catalog_v2_installed')??false)){
+  if(!verifiedEncryptedStartup&&
+      !(p.getBool('waffra_category_catalog_v2_installed')??false)){
    final discarded=<String>{};
    for(final item in deletedCategories){
     final data=item['category'];
@@ -2205,7 +2216,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   // Incremental catalog update: retain existing user budgets, names and deletions.
   // A subcategory is only added when its main category is present.
-  if(!(p.getBool('waffra_category_catalog_v3_installed')??false)){
+  if(!verifiedEncryptedStartup&&
+      !(p.getBool('waffra_category_catalog_v3_installed')??false)){
    final deletedIds=<String>{};
    final deletedNames=<String>{};
    for(final record in deletedCategories){
@@ -2252,16 +2264,27 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
    }
   }catch(e){throw StateError('Learned merchant rules cannot be decoded safely: $e');}
-  if(categories.isEmpty)categories.addAll(defaultCategories());
-  for(final e in entries){
+  if(!verifiedEncryptedStartup&&categories.isEmpty){
+   categories.addAll(defaultCategories());
+  }
+  // Archived categories may still be referenced by historic entries.
+  // Never synthesize phantom active categories in SQLCipher.
+  if(!verifiedEncryptedStartup)for(final e in entries){
    if(!categories.any((c)=>c.name==e.category&&c.income==e.income)){
     categories.add(BudgetCategory(id:newId(),name:e.category,icon:'category',color:colors[7],income:e.income));
    }
   }
   if(!mounted)return;setState(()=>ready=true);_receiveSharedSms();_receiveWidgetAction();unawaited(_refreshWidget());
-  WidgetsBinding.instance.addPostFrameCallback((_){if(mounted)unawaited(applyRecurring());});
+  // Home reloading an encrypted ledger must never silently post a due payment.
+  if(!verifiedEncryptedStartup){
+   WidgetsBinding.instance.addPostFrameCallback((_){
+    if(mounted)unawaited(applyRecurring());
+   });
+  }
   if(recurringRemindersEnabled)unawaited(syncRecurringReminders());
-  if(trashBefore!=deletedCategories.length)await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
+  if(!verifiedEncryptedStartup&&trashBefore!=deletedCategories.length){
+   await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
+  }
   if(!(p.getBool('waffra_in_app_tour_seen_v2')??false)&&mounted){
    WidgetsBinding.instance.addPostFrameCallback((_){
     if(mounted){setState((){tourActive=true;tourStep=0;tab=0;goalsOpened=false;addFabExpanded=false;tourTargetReady=false;});if(waffraAnimationLevel.value!='off')_tourGlow.repeat(reverse:true);scheduleTourFocus();}
