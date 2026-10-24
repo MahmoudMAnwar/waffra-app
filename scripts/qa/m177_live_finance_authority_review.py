@@ -71,6 +71,10 @@ def audit() -> dict:
         "records:[Map<String,Object?>.from(result.toJson())]",
         "hashes:[pendingHash!]",
         "allowDuplicateHashes:explicitlyApprovedSmsDuplicate",
+        "await _financialWriteQueue.drain();",
+        "route:WaffraFinanceRoute.backupExport",
+        "final authoritativePayload=exportBackup(fromSource:current);",
+        "'payload':authoritativePayload,'password':secret.text",
     ]
     if any(fragment not in home for fragment in expected_home):
         raise SystemExit("M177 blocked: source-authority UI routing incomplete")
