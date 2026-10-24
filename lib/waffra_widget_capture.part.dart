@@ -51,6 +51,7 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
  List<_WidgetParsedSms> _results=[];
  Set<String> _knownHashes={};
  WaffraProductionFinanceAuthorityBinding? _financeBinding;
+ Future<void>? _pendingWidgetSave;
  WaffraHomeFinancePersistence get _financePersistence =>
      WaffraHomeFinancePersistence(
        coordinator: WaffraLegacyFinanceWriterCoordinator(
@@ -161,7 +162,15 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
   await closeWaffraWidgetWindow();
  }
 
- Future<void> _confirmAndSave()async{
+ Future<void> _confirmAndSave(){
+  final existing=_pendingWidgetSave;
+  if(existing!=null)return existing;
+  final operation=_commitWidgetSms();
+  _pendingWidgetSave=operation;
+  return operation.whenComplete(()=>_pendingWidgetSave=null);
+ }
+
+ Future<void> _commitWidgetSms()async{
   if(_saving||_analyzing||_selected.isEmpty)return;
   final selected=List<_WidgetParsedSms>.of(_selected);
   final totalDetected=_results.length;
@@ -260,7 +269,11 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
   _debounce?.cancel();
   _controller.dispose();
   final binding=_financeBinding;
-  if(binding!=null)unawaited(binding.close());
+  if(binding!=null){
+   final pending=_pendingWidgetSave;
+   if(pending==null)unawaited(binding.close());
+   else unawaited(pending.whenComplete(binding.close));
+  }
   super.dispose();
  }
 
