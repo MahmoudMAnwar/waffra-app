@@ -75,3 +75,13 @@ zeroing and paused recurring restore. **They are not on-device evidence.**
 
 No source markers, real users, Firebase or Play configuration are touched.
 **Release state: NO-GO.**
+
+## Main-targeted review after M185 merge
+
+M185 PR #192 is merged into `main` at `f24502235c090a0165775ebb9acde68aa30d1788`.
+The M186 ten-file delta was replayed on that exact parent; the unused
+synthetic test-only `route` helper was removed after a strict analyzer
+warning. This documentation change triggers a fresh `pull_request`
+`synchronize` event so M147 can review the **actual main-targeted HEAD**,
+run full Flutter tests and compile Android ARM64. Earlier stacked-branch
+CI is not accepted as merge evidence. Production remains **NO-GO**.
