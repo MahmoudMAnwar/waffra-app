@@ -1,0 +1,98 @@
+name: M174 Main SHA Post-Merge SQLCipher Regression
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pinned-no-go-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact reviewed SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Assert checked-out SHA is the CI subject
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - name: Test source guard tamper detection
+        run: python3 -m unittest scripts/qa/test_m173_source_cutover_preflight.py -v
+      - name: Generate non-sensitive NO-GO evidence for exact SHA
+        env:
+          GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python3 scripts/qa/m173_source_cutover_preflight.py > m174-main-sha-no-go.json
+          python3 - <<'PY'
+          import json
+          import os
+          with open("m174-main-sha-no-go.json", encoding="utf-8") as f:
+              report = json.load(f)
+          assert report["reviewedSha"] == os.environ["GITHUB_SHA"]
+          assert report["sourceGatePass"] is True
+          assert report["financeRouteCount"] == 24
+          assert report["auditOnly"] is True
+          assert report["releaseReady"] is False
+          assert report["productionSqlCipherActivated"] is False
+          assert report["userDataMigrationAttempted"] is False
+          assert report["hardBlockers"]
+          PY
+      - name: Archive SHA-scoped NO-GO audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: m174-main-sha-no-go
+          path: m174-main-sha-no-go.json
+          retention-days: 30
+          if-no-files-found: error
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve packages
+        run: flutter pub get
+      - name: Enforce cutover negative matrix on exact SHA
+        run: >
+          flutter test
+          test/storage/m173_production_release_negative_matrix_test.dart
+          test/storage/m123_production_cutover_release_gate_test.dart
+          test/storage/m83_cutover_release_gate_matrix_test.dart
+
+  main-arm64-compile:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Provision Android project for CI (not signed release)
+        run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
+      - name: Compile Android ARM64 release-mode APK on main SHA
+        run: flutter build apk --release --no-pub --target-platform android-arm64
+      - name: Archive CI-only APK, not real-device or store proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: m174-main-arm64-ci-apk-not-production-certified
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 7
