@@ -2081,8 +2081,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  bool tourActive=false;
  bool tourTargetReady=false;
  int tourStep=0;
- static const tourTabs=<int>[0,0,0,1,2,3,0,4];
- static const tourTargetKeys=<int>[-1,0,1,2,6,4,3,5];
+ static const tourTabs=<int>[0,0,0,1,2,3];
+ static const tourTargetKeys=<int>[-1,0,1,2,6,4];
  bool addFabExpanded=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
  @override void initState(){super.initState();_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:()=>unawaited(_syncWidgetTransactions()));unawaited(_loadFinanceSafely());}
@@ -7178,10 +7178,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
   scheduleTourFocus();
  }
  Widget tourOverlay()=>LayoutBuilder(builder:(overlayCtx,area){
-  const ar=['مرحبًا بك في وفرة','الرئيسية والرصيد','إضافة المعاملات','الأقسام','الأهداف الادخارية','العمليات المتكررة','التحليل المالي الذكي','حسابي وإعداداتي'];
-  const en=['Welcome to Waffra','Home & balance','Add transactions','Categories','Savings goals','Recurring items','Smart analysis','Account & settings'];
-  const arHelp=['ابدأ بدون تسجيل، واحتفظ ببياناتك على هاتفك.','الرصيد والدخل والمصروفات في مكان واحد.','أضف عملية أو الصق رسالة بنكية للتحليل.','نظّم الأقسام الرئيسية والفرعية.','خطط لأهداف الادخار وتابع التقدم.','نظّم الاستحقاقات الشهرية والمتكررة.','اطلع على التوصيات والرسوم والتوقعات.','تحكم بالمظهر واللغة والأمان وأعد الجولة عند الحاجة.'];
-  const enHelp=['Start as a guest and keep data on your phone.','See balance, income and expenses.','Add a transaction or paste a bank message.','Organize categories and budgets.','Create savings goals and follow progress.','Plan recurring payments and due dates.','Explore advice, charts and forecasts.','Change appearance, language, privacy and replay this tour.'];
+  const ar=['مرحبًا بك في وفرة','الرئيسية والرصيد','إضافة المعاملات','الأقسام','الأهداف الادخارية','العمليات المتكررة'];
+  const en=['Welcome to Waffra','Home & balance','Add transactions','Categories','Savings goals','Recurring items'];
+  const arHelp=['ابدأ بدون تسجيل، واحتفظ ببياناتك على هاتفك.','الرصيد والدخل والمصروفات في مكان واحد.','أضف عملية أو الصق رسالة بنكية للتحليل.','نظّم الأقسام الرئيسية والفرعية.','خطط لأهداف الادخار وتابع التقدم.','نظّم الاستحقاقات الشهرية والمتكررة.'];
+  const enHelp=['Start as a guest and keep data on your phone.','See balance, income and expenses.','Add a transaction or paste a bank message.','Organize categories and budgets.','Create savings goals and follow progress.','Plan recurring payments and due dates.'];
   final element=tourTargetKeys[tourStep]<0?null:_tourKeys[tourTargetKeys[tourStep]].currentContext?.findRenderObject();
   final layer=overlayCtx.findRenderObject();
   // Intro doesn't spotlight the header; its first card is centered.
