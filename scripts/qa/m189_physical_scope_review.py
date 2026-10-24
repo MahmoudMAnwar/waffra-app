@@ -74,7 +74,7 @@ def main() -> None:
     ):
         raise SystemExit("M189: production source guard was weakened")
 
-    print(json.dumps({
+    report = {
         "milestone": "M189",
         "head": head,
         "base_main": base,
@@ -85,7 +85,11 @@ def main() -> None:
         "production_sqlcipher_activated": False,
         "google_play_last_phase": True,
         "status": "M189_PHYSICAL_PROBE_CI_ONLY_NO_GO",
-    }, indent=2))
+    }
+    output = Path("build/m147-final-review-report.json")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps(report, indent=2))
 
 
 if __name__ == "__main__":
