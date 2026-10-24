@@ -57,7 +57,7 @@ def main() -> None:
         "await _requireNoRecoveryHistory(current.values, tables);",
         "await _verifyCurrentTypedLedger(entries);",
         "await _verifyExactLiveReceipts(",
-        "SQL hash projection differs from saved finance.",
+        "SMS hash projection differs from saved finance.",
         "Unattested finance settings block full reset.",
         "Unknown financial SQL table; reset refused.",
         "await snapshot.store.customStatement('DELETE FROM ' + table);",
