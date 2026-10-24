@@ -23,7 +23,7 @@ Inside **one SQLCipher transaction** it validates:
 - The payment has no receipt path (receipt BLOB installation remains a
   distinct verified transaction writer).
 
-It inserts one normalized SQL row and commits the new canonical ledger and
+A repeat **Paid** confirmation with an unchanged ledger fails closed rather\nthan silently succeeding as a scalar no-op. The existing M175 route intent\ntest now asserts the Paid path contains explicit user confirmation, distinct\nfrom postpone-only.\n\nIt inserts one normalized SQL row and commits the new canonical ledger and
 postponement map in that same SQL transaction. A crash, stale Widget race,
 tampered schedule, duplicate entry or invalid category fails without partial
 finance persistence. Unrelated Widget SMS hashes and transactions are kept.
