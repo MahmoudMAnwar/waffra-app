@@ -51,7 +51,7 @@ def main():
         "await _ensureFinanceBound();",
         "WaffraProductionFinanceAuthorityBinding.bind(",
         "WaffraFinanceRoute.appStartup",
-        "if(binding!=null)unawaited(binding.close());",
+        "if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));",
     ):
         if marker not in home:
             raise SystemExit("BINDING BLOCKED: Home does not bind " + marker)
@@ -59,7 +59,8 @@ def main():
         "WaffraProductionFinanceAuthorityBinding.bind(",
         "WaffraFinanceRoute.widgetStartup",
         "_financeBinding?.authority",
-        "if(binding!=null)unawaited(binding.close());",
+        "if(binding!=null){",
+        "pending.whenComplete(binding.close)",
     ):
         if marker not in widget:
             raise SystemExit("BINDING BLOCKED: widget does not bind " + marker)
