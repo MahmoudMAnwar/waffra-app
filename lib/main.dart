@@ -496,7 +496,7 @@ class WaffraApp extends StatefulWidget {
 }
 class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  bool loading=true,onboarded=false,dark=false,locked=false,showLogin=false;
- String appearance='system';
+ String appearance='light';
  bool introDone=false;
  String language='ar';
  String? pinHash;Person? profile;
@@ -547,8 +547,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    if(!mounted)return;
    setState((){
     onboarded=p.getBool('waffra_onboarding_completed')??false;
-    appearance=p.getString('waffra_appearance_mode_v1')??(p.containsKey('waffra_dark_mode')?(p.getBool('waffra_dark_mode')==true?'dark':'light'):'system');
-    if(!{'light','dark','system'}.contains(appearance))appearance='system';
+    appearance=p.getString('waffra_appearance_mode_v1')??(p.containsKey('waffra_dark_mode')?(p.getBool('waffra_dark_mode')==true?'dark':'light'):'light');
+    if(!{'light','dark','system'}.contains(appearance))appearance='light';
     dark=appearance=='dark'||(appearance=='system'&&WidgetsBinding.instance.platformDispatcher.platformBrightness==Brightness.dark);
     profile=u;pinHash=p.getString('waffra_pin_sha256');
     locked=pinHash!=null;startupError=null;loading=false;
