@@ -28,14 +28,16 @@ void main() {
       'await persist(route:WaffraFinanceRoute.transactionDeleteAndUndo);'));
     expect(home, contains(
       'await persist(route:WaffraFinanceRoute.recurringPostingAndPostponement);'));
-    expect(RegExp(
-      r'await persist\\(route:WaffraFinanceRoute\\.transactionDeleteAndUndo\\);'
-    ).allMatches(home), hasLength(2),
-      reason: 'Both delete AND undo must be tagged.');
-    expect(RegExp(
-      r'await persist\\(route:WaffraFinanceRoute\\.recurringPostingAndPostponement\\);'
-    ).allMatches(home), hasLength(2),
-      reason: 'Both recurring paid AND postponed paths must be tagged.');
+    expect(
+      'await persist(route:WaffraFinanceRoute.transactionDeleteAndUndo);'
+        .allMatches(home).length,
+      2, reason: 'Both delete AND undo must be tagged.',
+    );
+    expect(
+      'await persist(route:WaffraFinanceRoute.recurringPostingAndPostponement);'
+        .allMatches(home).length,
+      2, reason: 'Both recurring paid AND postponed paths must be tagged.',
+    );
   });
 
   test('M175 guarded legacy routes remain eligible, without any cutover', () {
