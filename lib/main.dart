@@ -7721,6 +7721,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
      reverseDuration:waffraMotion(260),
      switchInCurve:Curves.easeOutCubic,
      switchOutCurve:Curves.easeInCubic,
+     // Keep the menu anchored beside the same physical FAB edge in AR/EN.
+     layoutBuilder:(current,previous)=>Stack(
+      alignment:waffraIsEnglish?Alignment.bottomRight:Alignment.bottomLeft,
+      children:[...previous,if(current!=null)current]),
      transitionBuilder:(child,animation)=>SizeTransition(
       sizeFactor:animation,axisAlignment:1.0,
       child:FadeTransition(opacity:animation,child:SlideTransition(
