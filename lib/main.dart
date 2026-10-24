@@ -3966,7 +3966,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final attachmentCount=waffraReceiptPaths(e.receiptPath).length;
   return Card(color:e.income?waffraIncomeBackground:waffraExpenseBackground,
    child:Stack(children:[
-    Padding(padding:EdgeInsets.only(top:attachmentCount>0?20:0),child:ListTile(
+    Padding(padding:EdgeInsets.only(top:attachmentCount>0?37:0),child:ListTile(
    textColor:waffraInk,iconColor:forest,
    leading:CircleAvatar(backgroundColor:Color(c.color).withValues(alpha:.15),
     child:Icon(categoryIcon(c.icon),color:Color(c.color))),
@@ -3985,15 +3985,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    if(attachmentCount>0)PositionedDirectional(top:0,end:0,child:Semantics(
     label:waffraIsEnglish?'$attachmentCount attachments':'عدد المرفقات $attachmentCount',
     button:true,child:InkWell(onTap:()=>showReceipt(e.receiptPath!),
-     borderRadius:BorderRadius.circular(13),
-     child:Container(padding:const EdgeInsetsDirectional.fromSTEB(9,4,10,4),
-      decoration:const BoxDecoration(color:forest,
-       borderRadius:BorderRadiusDirectional.only(topEnd:Radius.circular(19),bottomStart:Radius.circular(13))),
-      child:Row(mainAxisSize:MainAxisSize.min,children:[
-       const Icon(Icons.attach_file_rounded,color:Colors.white,size:15),
-       const SizedBox(width:3),
-       Text('$attachmentCount',style:const TextStyle(fontFamily:'Tajawal',fontSize:13,color:Colors.white,fontWeight:FontWeight.bold)),
-      ]))))),
+     child:WaffraReceiptCornerBadge(count:attachmentCount,english:waffraIsEnglish)))),
    ]));
  }
  String get greeting {
@@ -7663,21 +7655,20 @@ Future<void> bulkSmsSheet({String? initialText})async {
        child:Transform.translate(offset:Offset((1-progress)*(waffraIsEnglish?16:-16),0),child:child)),
       child:currentTab()))),
   // Keep the add menu and its original actions above five destinations.
-  floatingActionButtonLocation:const WaffraPhysicalLeftFab(),
-  // Home, Categories, Goals and Recurring share a physical-left 58px +.
+  floatingActionButtonLocation:WaffraDirectionalFabLocation(english:waffraIsEnglish),
+  // Home, Categories, Goals and Recurring share a 58px +: left in Arabic, right in English.
   floatingActionButton:!ready||tab==4?null:Directionality(
    textDirection:TextDirection.ltr,child:Column(
    mainAxisSize:MainAxisSize.min,
-   // Expanded action labels may be wider than the +; keep the circle
-   // flush left rather than re-centering it under the action menu.
-   crossAxisAlignment:CrossAxisAlignment.start,children:[
+   // The expanded menu is aligned with the + on the active physical side.
+   crossAxisAlignment:waffraIsEnglish?CrossAxisAlignment.end:CrossAxisAlignment.start,children:[
     AnimatedSize(duration:const Duration(milliseconds:210),
      curve:Curves.easeOutCubic,
-     alignment:Alignment.bottomLeft,
+     alignment:waffraIsEnglish?Alignment.bottomRight:Alignment.bottomLeft,
      child:addFabExpanded&&(tab==0||tab==1)&&!goalsOpened?Padding(
       padding:const EdgeInsets.only(bottom:9),
       child:Column(mainAxisSize:MainAxisSize.min,
-       crossAxisAlignment:CrossAxisAlignment.start,children:[
+       crossAxisAlignment:waffraIsEnglish?CrossAxisAlignment.end:CrossAxisAlignment.start,children:[
         if(tab==0&&!goalsOpened)...[
         _addMenuOption(
          icon:Icons.edit_note_rounded,
@@ -7732,8 +7723,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   if(tourActive&&tourTargetReady)Positioned.fill(child:tourOverlay()),
   ]);
 }
-/// Positions the expandable plus menu physically on the left in RTL
-/// and LTR, independent of Scaffold's locale-sensitive start/end anchors.
+/// Tour focus remains tied to the same floating add button across both locales.
 /// A coach-mark scrim with a transparent focus over the current page.
 class WaffraTourShade extends CustomPainter {
  final Rect focus;
@@ -7773,13 +7763,84 @@ class WaffraDeletedItemsButton extends StatelessWidget {
    ]));
  }
 }
-class WaffraPhysicalLeftFab extends FloatingActionButtonLocation {
- const WaffraPhysicalLeftFab();
- @override Offset getOffset(ScaffoldPrelayoutGeometry geometry){
+/// Physically left for Arabic, physically right for English on every tab.
+class WaffraDirectionalFabLocation extends FloatingActionButtonLocation {
+ const WaffraDirectionalFabLocation({required this.english});
+ final bool english;
+
+ static double horizontalOffset({
+  required bool english,
+  required double scaffoldWidth,
+  required double fabWidth,
+  required double leftInset,
+  required double rightInset,
+ }) => english
+   ? max(0.0,scaffoldWidth-fabWidth-rightInset-16)
+   : 16+leftInset;
+
+ @override Offset getOffset(ScaffoldPrelayoutGeometry geometry) {
   final bottom=geometry.contentBottom;
-  return Offset(16+geometry.minInsets.left,
-   max(16.0,bottom-geometry.floatingActionButtonSize.height-16));
+  return Offset(
+   horizontalOffset(
+    english:english,
+    scaffoldWidth:geometry.scaffoldSize.width,
+    fabWidth:geometry.floatingActionButtonSize.width,
+    leftInset:geometry.minInsets.left,
+    rightInset:geometry.minInsets.right,
+   ),
+   max(16.0,bottom-geometry.floatingActionButtonSize.height-16),
+  );
  }
+}
+/// Compact attachment counter pinned INSIDE a clipped card corner,
+/// never inline beside the transaction title or amount.
+class WaffraReceiptCornerBadge extends StatelessWidget {
+ const WaffraReceiptCornerBadge({
+  super.key,required this.count,required this.english,
+ });
+ final int count;
+ final bool english;
+ @override Widget build(BuildContext context){
+  return ClipPath(
+   clipper:WaffraReceiptCornerClipper(english:english),
+   child:Container(
+    width:64,height:43,color:forest,
+    alignment:english?Alignment.topRight:Alignment.topLeft,
+    padding:EdgeInsets.only(
+     top:3,
+     left:english?0:10,
+     right:english?10:0,
+    ),
+    child:Column(mainAxisSize:MainAxisSize.min,children:[
+     const Icon(Icons.attach_file_rounded,color:Colors.white,size:14),
+     Text('$count',style:const TextStyle(
+      fontFamily:'Tajawal',fontSize:13,color:Colors.white,
+      fontWeight:FontWeight.bold,height:1.1)),
+    ]),
+   ),
+  );
+ }
+}
+class WaffraReceiptCornerClipper extends CustomClipper<Path> {
+ const WaffraReceiptCornerClipper({required this.english});
+ final bool english;
+ @override Path getClip(Size size){
+  final path=Path();
+  if(english){
+   path.moveTo(0,0);
+   path.lineTo(size.width,0);
+   path.lineTo(size.width,size.height);
+   path.lineTo(16,size.height);
+  }else{
+   path.moveTo(0,0);
+   path.lineTo(size.width,0);
+   path.lineTo(size.width-16,size.height);
+   path.lineTo(0,size.height);
+  }
+  return path..close();
+ }
+ @override bool shouldReclip(covariant WaffraReceiptCornerClipper oldClipper)=>
+  oldClipper.english!=english;
 }
 class ChartPoint {
  final String label;final double income,expense;
