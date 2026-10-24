@@ -73,11 +73,11 @@ jobs:
       - name: Fail closed on missing, running or failed independent tests
         shell: bash
         env:
-          GH_TOKEN: \${{ github.token }}
-          TARGET_SHA: \${{ github.sha }}
-          RUN_ID: \${{ github.run_id }}
-          REPO: \${{ github.repository }}
-          BRANCH_NAME: \${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          REPO: ${{ github.repository }}
+          BRANCH_NAME: ${{ github.ref_name }}
         run: |
           python3 - <<'PY'
           import json, os, time, urllib.parse, urllib.request
@@ -942,12 +942,55 @@ jobs:
           path: .ci_cache/waffra_green_tests.json
           key: waffra-smart-tests-v2-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
 
-      # No APK before ALL mandatory same-SHA tests, signed builds and checks pass.
-      # Publish as the FINAL step, after the candidate AAB and build validation.
+      # Attach a human-readable receipt to identify the exact verified
+      # APK revision before installation. This is a QA artifact, not a
+      # certification of SQLCipher production cutover or device tests.
+      - name: Generate exact-commit APK checklist and SHA-256 receipt
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          SOURCE_RUN: ${{ github.run_id }}
+          SOURCE_BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          test -s build/app/outputs/flutter-apk/app-release.apk
+          test "$SOURCE_SHA" = "$(git rev-parse HEAD)"
+          python3 - <<'PY'
+          import hashlib, os, pathlib
+          apk = pathlib.Path('build/app/outputs/flutter-apk/app-release.apk')
+          digest = hashlib.sha256(apk.read_bytes()).hexdigest()
+          content = '\n'.join([
+              'WAFFRA QA BUILD RECEIPT - VERIFY BEFORE INSTALL',
+              'Source commit: ' + os.environ['SOURCE_SHA'],
+              'Source branch: ' + os.environ['SOURCE_BRANCH'],
+              'GitHub Actions run: ' + os.environ['SOURCE_RUN'],
+              'APK sha256: ' + digest,
+              'Build: signed ARM64 QA candidate; NOT Google Play release.',
+              'Required before this APK is published: full Flutter/Python tests,',
+              'same-commit independent workflow success and Android build checks.',
+              'Approved UX fixes in this candidate source:',
+              '- Attachment count in transaction corner, AR/EN directional.',
+              '- Original SMS message displayed in transaction Notes when stored.',
+              '- Fixed + button position across pages; slower tap-only animation.',
+              '- New-install Light mode; saved appearance preferences preserved.',
+              '- Revised six-step onboarding tour and recent prior main fixes.',
+              'SECURITY: SQLCipher production cutover is NOT certified.',
+              'Do NOT use real bank SMS or financial data in this test APK.',
+              'Physical-device visual signoff and encrypted storage pending.',
+              'Release policy: QA only until separate real-device/security signoff.',
+              '',
+          ])
+          pathlib.Path('build/waffra-qa-build-receipt.txt').write_text(content, encoding='utf-8')
+          print('APK receipt:', content)
+          PY
+
+      # Only the LAST step publishes the APK and its exact source receipt.
       - name: Publish signed QA APK (FINAL step)
         uses: actions/upload-artifact@v4
         with:
           name: Waffra-Android-ARM64-Release
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: |
+            build/app/outputs/flutter-apk/app-release.apk
+            build/waffra-qa-build-receipt.txt
           if-no-files-found: error
           retention-days: 30
