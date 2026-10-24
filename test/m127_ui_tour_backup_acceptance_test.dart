@@ -5,9 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
 
 void main() {
-  test('four finance destinations share one bottom-left circular action', () {
+  test('four finance destinations share one language-aware circular action', () {
     final source=File('lib/main.dart').readAsStringSync();
-    expect(source,contains('floatingActionButtonLocation:const WaffraPhysicalLeftFab()'));
+    expect(source,contains('floatingActionButtonLocation:WaffraDirectionalFabLocation(english:waffraIsEnglish)'));
     expect(source,contains('floatingActionButton:!ready||tab==4?null:Directionality('));
     expect(source,contains('if(goalsOpened||tab==2){goalDialog();return;}'));
     expect(source,contains('if(tab==3){recurringDialog();return;}'));
@@ -49,7 +49,7 @@ void main() {
   });
 
   for (final direction in [TextDirection.rtl,TextDirection.ltr]) {
-    testWidgets('physical left + stays left in $direction',(tester) async {
+    testWidgets('physical + follows $direction: Arabic left, English right',(tester) async {
       await tester.binding.setSurfaceSize(const Size(390,760));
       addTearDown(()=>tester.binding.setSurfaceSize(null));
       await tester.pumpWidget(MaterialApp(
@@ -57,7 +57,7 @@ void main() {
           textDirection:direction,
           child:Scaffold(
             bottomNavigationBar:const SizedBox(height:85),
-            floatingActionButtonLocation:const WaffraPhysicalLeftFab(),
+            floatingActionButtonLocation:WaffraDirectionalFabLocation(english:direction==TextDirection.ltr),
             floatingActionButton:FloatingActionButton(
               key:const Key('waffra-m127-plus'),
               onPressed:(){},
@@ -68,9 +68,14 @@ void main() {
       ));
       await tester.pumpAndSettle();
       final rect=tester.getRect(find.byKey(const Key('waffra-m127-plus')));
-      expect(rect.left,greaterThanOrEqualTo(12));
-      expect(rect.left,lessThanOrEqualTo(40));
-      expect(rect.right,lessThan(120));
+      if(direction==TextDirection.ltr){
+        expect(rect.left,greaterThan(275));
+        expect(rect.right,lessThanOrEqualTo(390));
+      }else{
+        expect(rect.left,greaterThanOrEqualTo(12));
+        expect(rect.left,lessThanOrEqualTo(40));
+        expect(rect.right,lessThan(120));
+      }
       expect(tester.takeException(),isNull);
     });
   }
