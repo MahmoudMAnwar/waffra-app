@@ -22,7 +22,7 @@ void main() {
       source.indexOf('Future<void> changePin()', source.indexOf('Widget tourOverlay()=>')));
     expect(tour, isNot(contains('التحليل المالي الذكي')));
     expect(tour, isNot(contains('حسابي وإعداداتي')));
-    expect(tour, contains("'${tourStep+1}/${tourTabs.length}'"));
+    expect(tour, contains(r"'${tourStep+1}/${tourTabs.length}'"));
   });
 
   test('all confirmed SMS routes persist full text as notes, not title', () {
