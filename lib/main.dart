@@ -635,9 +635,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    valueListenable:hideWaffraAmounts,
    builder:(context,hidden,_)=>Directionality(
     textDirection:language=='ar'?TextDirection.rtl:TextDirection.ltr,
-    child:AnimatedSwitcher(duration:waffraMotion(240),switchInCurve:Curves.easeOutCubic,
-     transitionBuilder:(w,a)=>FadeTransition(opacity:a,child:SlideTransition(position:Tween<Offset>(begin:const Offset(0.11,0),end:Offset.zero).animate(a),child:w)),
-     child:KeyedSubtree(key:ValueKey(language),child:child??const SizedBox.shrink())))),
+    // Language is an immediate LTR/RTL layout change, never a
+    // navigator replacement or whole-screen slide of the FAB.
+    child:child??const SizedBox.shrink())),
 
   theme:ThemeData(
    useMaterial3:true,
