@@ -7,12 +7,29 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:waffra/storage/waffra_atomic_finance_snapshot.dart';
+import 'package:waffra/storage/legacy_snapshot_preflight.dart';
+import 'package:waffra/storage/waffra_encrypted_cutover_journal.dart';
+import 'package:waffra/storage/waffra_encrypted_finance_session.dart';
+import 'package:waffra/storage/waffra_production_finance_routing_gate.dart';
+import 'package:waffra/storage/waffra_production_finance_source_guard.dart';
+import 'package:waffra/storage/waffra_verified_encrypted_finance_bridge.dart';
+import 'package:waffra/storage/waffra_verified_finance_authority.dart';
 import 'package:waffra/storage/waffra_encrypted_receipt_vault.dart';
 import 'package:waffra/storage/waffra_encrypted_store.dart';
 import 'package:waffra/storage/waffra_encrypted_transaction_recycle.dart';
 import 'package:waffra/storage/waffra_fresh_encrypted_vault_bootstrap.dart';
 import 'package:waffra/storage/waffra_live_legacy_finance_guard.dart';
 import 'package:waffra/storage/waffra_portable_encrypted_vault_restorer.dart';
+
+class _LabEncryptedSource extends WaffraProductionFinanceSourceGuard {
+  @override
+  Future<WaffraProductionFinanceSourceReport> inspect({
+    SharedPreferences? preferences,
+  }) async => const WaffraProductionFinanceSourceReport(
+    source: WaffraProductionFinanceSource.encryptedRoutingRequired,
+    reasonCode: 'synthetic_m183_source_not_os_key',
+  );
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -21,6 +38,8 @@ void main() {
   late WaffraEncryptedStore store;
   late WaffraAtomicFinanceSnapshot snapshot;
   late WaffraEncryptedTransactionRecycle recycle;
+  late WaffraEncryptedFinanceSession session;
+  late WaffraVerifiedFinanceAuthority authority;
   late WaffraEncryptedReceiptVault receipts;
 
   final deletedAt = DateTime.utc(2026, 10, 24, 9, 0);
@@ -101,6 +120,51 @@ void main() {
       store: store, experimentalEnabled: true,
     );
     await snapshot.initializeEmpty();
+    final source = await snapshot.commit(
+      expectedGeneration: 0,
+      fullFinanceSnapshot: const <String, Object?>{'entries': '[]'},
+    );
+    final journal = WaffraEncryptedCutoverJournal(
+      store: store, snapshot: snapshot, experimentalEnabled: true,
+    );
+    final legacy = WaffraLegacyPreflight.inspect(
+      const <String, Object?>{'entries': '[]'},
+    );
+    await journal.prepare(
+      sourceDigest: legacy.sourceSha256,
+      targetDigest: source.digest,
+      now: DateTime.utc(2026, 10, 24),
+    );
+    await journal.verify(now: DateTime.utc(2026, 10, 24));
+    await journal.acknowledgeExternalActivation(
+      externalMarkerVerified: true,
+      allWritersRouted: true,
+      now: DateTime.utc(2026, 10, 24),
+    );
+    session = WaffraEncryptedFinanceSession(
+      bridge: WaffraVerifiedEncryptedFinanceBridge(
+        snapshot: snapshot, cutoverJournal: journal,
+        writerDirectory: temporary, experimentalEnabled: true,
+        allWritersRoutedVerified: true, secureKeyVerified: true,
+      ),
+      experimentalEnabled: true,
+    );
+    authority = WaffraVerifiedFinanceAuthority(
+      sourceGuard: _LabEncryptedSource(),
+      encryptedSession: session,
+      encryptedSqlWitnessActive: true,
+      externalSourceWitnessActive: true,
+      verifiedKeyRecoveryInDevice: true,
+      audit: WaffraFinanceRouteAudit(
+        verifiedRoutes: WaffraFinanceRoute.values.toSet(),
+        keyRecoveryVerified: true,
+        twoWitnessRecoveryVerified: true,
+        receiptRollbackVerified: true,
+        backupRestoreVerified: true,
+        crossEngineLockVerified: true,
+        legacyParityVerified: true,
+      ),
+    );
     receipts = WaffraEncryptedReceiptVault(
       store: store, experimentalEnabled: true,
     );
@@ -345,6 +409,52 @@ void main() {
       now: deletedAt, userConfirmed: true,
     ), throwsStateError);
     expect((await snapshot.read()).digest, before.digest);
+  });
+
+  test('M183 finance authority routes verified SQL transaction delete and undo',
+      () async {
+    await seed();
+    final before = await authority.load(
+      route: WaffraFinanceRoute.transactionDeleteAndUndo,
+    );
+    final deleted = await authority.deleteVerifiedTransactionToRecycle(
+      baseline: before, entryId: id,
+      expectedImageHashes: <String>[hash(imageBytes)],
+      userConfirmed: true, now: deletedAt,
+    );
+    expect(jsonDecode(deleted.ledgerRaw!), isEmpty);
+    expect(await typedCount(), 0);
+    final listed = await authority.listVerifiedDeletedTransactions();
+    expect(listed.containsKey(id), isTrue);
+    final restored = await authority.restoreVerifiedDeletedTransaction(
+      baseline: deleted, entryId: id,
+      now: deletedAt.add(const Duration(minutes: 1)),
+    );
+    expect(jsonDecode(restored.ledgerRaw!), hasLength(1));
+    expect((await receipts.readAll(id)).single.bytes, imageBytes);
+  });
+
+  test('M183 verified authority refuses source-less or stale delete witness',
+      () async {
+    await seed();
+    final before = await authority.load(
+      route: WaffraFinanceRoute.transactionDeleteAndUndo,
+    );
+    await expectLater(authority.deleteVerifiedTransactionToRecycle(
+      baseline: before, entryId: id,
+      expectedImageHashes: <String>[hash(imageBytes)],
+      userConfirmed: false, now: deletedAt,
+    ), throwsStateError);
+    await store.customStatement(
+      'UPDATE fresh_finance_entries SET amount_minor=99999 '
+      'WHERE entry_id=?', [id],
+    );
+    await expectLater(authority.deleteVerifiedTransactionToRecycle(
+      baseline: before, entryId: id,
+      expectedImageHashes: <String>[hash(imageBytes)],
+      userConfirmed: true, now: deletedAt,
+    ), throwsStateError);
+    expect((await snapshot.read()).values['entries'], contains(id));
   });
 
   test('M183 disabled source rejects all deletions and metadata reads',
