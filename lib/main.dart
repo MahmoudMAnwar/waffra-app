@@ -2172,6 +2172,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final when=DateTime.tryParse('${item['deletedAt']??''}');
    return when==null||!DateTime.now().isBefore(when.add(const Duration(days:30)));
   });
+  // Both catalog passes compare the same source witness under the native lock.
+  var catalogBaseline=financeView.getString('waffra_categories_v24');
   // Install catalog once without overwriting custom categories, saved budgets or trash.
   if(!(p.getBool('waffra_category_catalog_v2_installed')??false)){
    final discarded=<String>{};
@@ -2189,14 +2191,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       (existing.income==suggestion.income&&existing.name==suggestion.name)))continue;
     categories.add(suggestion);
    }
-   await _homeFinancePersistence.withLegacyWriter((current) async {
-    final saved=await current.setString('waffra_categories_v24',
-      jsonEncode(categories.map((e)=>e.toJson()).toList()));
-    if(!saved)throw StateError('Could not save category catalog.');
-    if(!await current.setBool('waffra_category_catalog_v2_installed',true)){
-     throw StateError('Could not confirm category catalog installation.');
-    }
-   });
+   final catalogRaw=jsonEncode(categories.map((e)=>e.toJson()).toList());
+   await _financeAuthority.installCategoryCatalog(
+    route:WaffraFinanceRoute.categoryCatalogInstall,
+    version:2,expectedCategoriesRaw:catalogBaseline,
+    serializedCategories:catalogRaw,categoriesChanged:true);
+   catalogBaseline=catalogRaw;
   }
   // Incremental catalog update: retain existing user budgets, names and deletions.
   // A subcategory is only added when its main category is present.
@@ -2221,16 +2221,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     categories.add(suggestion);
     catalogChanged=true;
    }
-   await _homeFinancePersistence.withLegacyWriter((current) async {
-    if(catalogChanged){
-     final saved=await current.setString('waffra_categories_v24',
-       jsonEncode(categories.map((e)=>e.toJson()).toList()));
-     if(!saved)throw StateError('Could not update category catalog.');
-    }
-    if(!await current.setBool('waffra_category_catalog_v3_installed',true)){
-     throw StateError('Could not confirm category catalog update.');
-    }
-   });
+   final catalogRaw=jsonEncode(categories.map((e)=>e.toJson()).toList());
+   await _financeAuthority.installCategoryCatalog(
+    route:WaffraFinanceRoute.categoryCatalogInstall,
+    version:3,expectedCategoriesRaw:catalogBaseline,
+    serializedCategories:catalogRaw,categoriesChanged:catalogChanged);
+   if(catalogChanged)catalogBaseline=catalogRaw;
   }
   smsHashes.addAll(financeView.getStringList('waffra_sms_hashes_v1')??const []);
   monthlyBudget=financeView.getDouble('waffra_monthly_budget_v1')??0;
@@ -2317,18 +2313,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
 
  Future<void> _persistSmsHashes(Set<String> hashesToSave)async {
-  await _homeFinancePersistence.withLegacyWriter((prefs) async {
-   // Preserve hashes added by the standalone widget while the dashboard
-   // was open. Never replace the newer list with a cached UI copy.
-   final combined={
-    ...?prefs.getStringList('waffra_sms_hashes_v1'),
-    ...hashesToSave,
-   };
-   final saved=await prefs.setStringList(
-    'waffra_sms_hashes_v1',combined.toList()..sort());
-   if(!saved)throw StateError('SMS deduplication hash save failed.');
-   smsHashes.addAll(combined);
-  });
+  final saved=await _financeAuthority.mergeSmsFingerprints(
+   route:WaffraFinanceRoute.merchantRulesAndSmsHashes,
+   additions:hashesToSave);
+  smsHashes.addAll(saved);
  }
 
  Future<void> syncRecurringReminders()async {
@@ -2355,11 +2343,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     return;
    }
   }
-  await _homeFinancePersistence.withLegacyWriter((prefs) async {
-   if(!await prefs.setBool('waffra_recurring_reminders_enabled_v1',enabled)){
-    throw StateError('Recurring reminder preference could not be saved.');
-   }
-  });
+  await _financeAuthority.saveRecurringReminderSetting(
+   route:WaffraFinanceRoute.recurringCreateEditDeleteRestore,
+   enabled:enabled);
   if(!mounted)return;
   setState(()=>recurringRemindersEnabled=enabled);
   try {
@@ -5330,7 +5316,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
     color:selected?Colors.white:null,fontWeight:selected?FontWeight.bold:FontWeight.normal));
  Future<void> goalDialog()async {
   final name=TextEditingController(),target=TextEditingController();
-  final customGoals=await _homeFinancePersistence.loadCustomGoalSuggestions();
+  final customGoals=await _financeAuthority.loadCustomGoalSuggestions(
+   route:WaffraFinanceRoute.goalCreateEditDeleteRestore);
   if(!mounted){name.dispose();target.dispose();return;}
   final defaults=waffraDefaultGoalNames(waffraIsEnglish);
   final allDefaultNames={
@@ -5463,7 +5450,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
    if(selectedGoal==otherGoal){
     final key=waffraNormalizeGoal(g.name);
     if(!allDefaultNames.contains(key)&&!customGoals.any((entry)=>waffraNormalizeGoal(entry)==key)){
-     await _homeFinancePersistence.addCustomGoalSuggestion(g.name);
+     await _financeAuthority.addCustomGoalSuggestion(
+      route:WaffraFinanceRoute.goalCreateEditDeleteRestore,name:g.name);
     }
    }
    if(!mounted)return;
