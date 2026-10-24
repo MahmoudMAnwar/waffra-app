@@ -31,6 +31,19 @@ class WaffraEncryptedFinanceSession {
     }
   }
 
+  /// Suggestions live in the independently encrypted typed goals table,
+  /// outside the canonical ledger snapshot. Both methods recheck the actual
+  /// source under the same native Home/Widget lock as finance writes.
+  Future<List<String>> loadCustomGoalSuggestions() async {
+    _requireEnabled();
+    return bridge.loadCustomGoalSuggestions();
+  }
+
+  Future<bool> addCustomGoalSuggestion(String name) async {
+    _requireEnabled();
+    return bridge.addCustomGoalSuggestion(name);
+  }
+
   /// The widget revision is the actual monotonic SQLCipher generation.
   Future<WaffraEncryptedHomeWitness> loadForDashboardOrWidget() async {
     _requireEnabled();

@@ -137,20 +137,20 @@ class WaffraVerifiedFinanceAuthority {
     final backend = await _requireRoute(
       WaffraFinanceRoute.goalCreateEditDeleteRestore,
     );
-    if (backend != WaffraRuntimeFinanceBackend.guardedLegacy) {
-      throw StateError('Encrypted custom goal suggestions are not certified.');
+    if (backend == WaffraRuntimeFinanceBackend.guardedLegacy) {
+      return legacy.loadCustomGoalSuggestions();
     }
-    return legacy.loadCustomGoalSuggestions();
+    return encryptedSession!.loadCustomGoalSuggestions();
   }
 
   Future<bool> addCustomGoalSuggestion(String name) async {
     final backend = await _requireRoute(
       WaffraFinanceRoute.goalCreateEditDeleteRestore,
     );
-    if (backend != WaffraRuntimeFinanceBackend.guardedLegacy) {
-      throw StateError('Encrypted custom goal suggestions are not certified.');
+    if (backend == WaffraRuntimeFinanceBackend.guardedLegacy) {
+      return legacy.addCustomGoalSuggestion(name);
     }
-    return legacy.addCustomGoalSuggestion(name);
+    return encryptedSession!.addCustomGoalSuggestion(name);
   }
 
   /// A guarded startup catalog version install with current-value CAS. The
