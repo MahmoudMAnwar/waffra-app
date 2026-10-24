@@ -3242,8 +3242,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
    });
    // Manual edits remain separately source-gated. No encrypted shortcut.
    await persist(route:initial==null
-    ?WaffraFinanceRoute.manualTransactionSave
-    :WaffraFinanceRoute.transactionEdit);
+   ?WaffraFinanceRoute.manualTransactionSave
+   :WaffraFinanceRoute.transactionEdit);
    if(pendingHash!=null){
     // Existing transaction edits still need independent receipt/SMS review.
     await _persistSmsHashes({pendingHash!});
