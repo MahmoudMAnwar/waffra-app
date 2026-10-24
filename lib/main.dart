@@ -3814,7 +3814,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     if(baseline==null)throw StateError('Finance source baseline unavailable.');
     final committed=await _financeAuthority.saveCaptured(
      route:WaffraFinanceRoute.deleteAllTransactions,
-     baseline:baseline,captured:captured,
+     baseline:baseline,captured:captured,userConfirmed:true,
     );
     _lastFinanceAuthorityRead=committed;
     _lastLedgerSavedRaw=committed.ledgerRaw;
