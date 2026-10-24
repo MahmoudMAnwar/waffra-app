@@ -58,7 +58,7 @@ def main() -> None:
         "Independent expiry clock witnesses disagree.",
         "retention.inMilliseconds",
         "Expired archived financial checksum differs.",
-        "Expired encrypted invoices are incomplete.",
+        "Expired encrypted receipts are incomplete.",
         "DELETE FROM $_images WHERE entry_id=?",
         "DELETE FROM $_trash WHERE entry_id=?",
         "after.digest != current.digest",
