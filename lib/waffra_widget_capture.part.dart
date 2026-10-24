@@ -200,7 +200,7 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
       income:parsed.income),
      category:category,amount:parsed.amount!,income:parsed.income,
      date:bankSmsDate(entry.raw)??DateTime.now(),
-     sourceType:'sms',
+     notes:entry.raw,sourceType:'sms',
      merchantKey:waffraMerchantKey(entry.raw,income:parsed.income)??'',
     ).toJson()));
     hashes.add(bankSmsHash(entry.raw));
