@@ -241,6 +241,90 @@ void main() {
     expect(prefs.containsKey('waffra_categories_v24'), isFalse);
   });
 
+
+  Map<String, Object?> manualEntry(String id) => <String, Object?>{
+    'id': id, 'title': 'Synthetic cash entry', 'category': 'Other',
+    'amount': 12.5, 'income': false, 'date': '2026-10-24T08:00:00.000Z',
+    'receiptPath': null,
+  };
+
+  test('M181 manual Home add uses atomic typed SQL without losing Widget hashes',
+      () async {
+    const fingerprint =
+        'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+    final original = await authority.load(
+      route: WaffraFinanceRoute.manualTransactionSave,
+    );
+    await session.addSmsHashes([fingerprint]);
+    final entry = manualEntry('manual-synthetic-1');
+    final committed = await authority.saveCaptured(
+      route: WaffraFinanceRoute.manualTransactionSave,
+      baseline: original,
+      captured: <String, Object>{
+        'entries': jsonEncode([entry]),
+      },
+    );
+    expect(jsonDecode(committed.ledgerRaw!), hasLength(1));
+    final sql = await vault.customSelect(
+      "SELECT entry_id,amount_minor FROM fresh_finance_entries "
+      "WHERE entry_id='manual-synthetic-1'",
+    ).get();
+    expect(sql.length, 1);
+    expect(sql.single.read<int>('amount_minor'), 1250);
+    final latest = await snapshot.read();
+    expect(latest.values['waffra_sms_hashes_v1'], [fingerprint]);
+  });
+
+  test('M181 manual Home add rejects mixed edits and preserves old SQL', () async {
+    final baseline = await authority.load(
+      route: WaffraFinanceRoute.manualTransactionSave,
+    );
+    final first = manualEntry('manual-synthetic-2');
+    await expectLater(authority.saveCaptured(
+      route: WaffraFinanceRoute.manualTransactionSave,
+      baseline: baseline,
+      captured: <String, Object>{
+        'entries': jsonEncode([first]),
+        'waffra_goals_v24': '[]',
+      },
+    ), throwsStateError);
+    final after = await snapshot.read();
+    expect(after.values['entries'], '[]');
+    final sql = await vault.customSelect(
+      'SELECT count(*) AS n FROM fresh_finance_entries',
+    ).getSingle();
+    expect(sql.read<int>('n'), 0);
+  });
+
+  test('M181 manual Home duplicate ID fails without partial commit', () async {
+    final before = await authority.load(
+      route: WaffraFinanceRoute.manualTransactionSave,
+    );
+    final entry = manualEntry('manual-synthetic-3');
+    await authority.saveCaptured(
+      route: WaffraFinanceRoute.manualTransactionSave,
+      baseline: before,
+      captured: <String, Object>{
+        'entries': jsonEncode([entry]),
+      },
+    );
+    final next = await authority.load(
+      route: WaffraFinanceRoute.manualTransactionSave,
+    );
+    final mutated = Map<String, Object?>.from(entry)..['amount'] = 23.0;
+    await expectLater(authority.saveCaptured(
+      route: WaffraFinanceRoute.manualTransactionSave,
+      baseline: next,
+      captured: <String, Object>{
+        'entries': jsonEncode([mutated]),
+      },
+    ), throwsStateError);
+    final rows = jsonDecode((await snapshot.read()).values['entries'] as String)
+        as List<dynamic>;
+    expect(rows.length, 1);
+    expect((rows.single as Map)['amount'], 12.5);
+  });
+
   test('M181 source is disabled by default in production-like session', () async {
     final disabled = WaffraEncryptedFinanceSession(
       bridge: session.bridge, experimentalEnabled: false,
