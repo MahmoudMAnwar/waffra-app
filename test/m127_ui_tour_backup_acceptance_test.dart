@@ -9,9 +9,9 @@ void main() {
     final source=File('lib/main.dart').readAsStringSync();
     expect(source,contains('floatingActionButtonLocation:WaffraDirectionalFabLocation(english:waffraIsEnglish)'));
     expect(source,contains('floatingActionButton:!ready||tab==4?null:Directionality('));
-    expect(source,contains('if(goalsOpened||tab==2){goalDialog();return;}'));
-    expect(source,contains('if(tab==3){recurringDialog();return;}'));
-    expect(source,contains('child:SizedBox(key:_tourKeys[1],width:58,height:58'));
+    expect(source,contains('if(goalsOpened||tab==2){unawaited(_launchAddAction(()=>goalDialog()));return;}'));
+    expect(source,contains('if(tab==3){unawaited(_launchAddAction(()=>recurringDialog()));return;}'));
+    expect(source,contains('key:_tourKeys[1],'));
     expect(source.contains('onTap:()=>setState(()=>addFabExpanded=!addFabExpanded)'),
         isFalse);
     final goalsStart=source.indexOf('Widget goalsPage()');
