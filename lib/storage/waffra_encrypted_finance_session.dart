@@ -44,6 +44,33 @@ class WaffraEncryptedFinanceSession {
     return bridge.addCustomGoalSuggestion(name);
   }
 
+  /// Set an encrypted catalog version without writing legacy preferences.
+  /// Snapshot, typed category rows and version marker commit atomically.
+  Future<WaffraFinanceSnapshotState> installCategoryCatalog({
+    required int version,
+    required String? expectedCatalogRaw,
+    required String nextCatalogRaw,
+    required bool catalogChanged,
+  }) async {
+    _requireEnabled();
+    return bridge.installCategoryCatalog(
+      version: version,
+      expectedCatalogRaw: expectedCatalogRaw,
+      nextCatalogRaw: nextCatalogRaw,
+      catalogChanged: catalogChanged,
+    );
+  }
+
+  Future<WaffraFinanceSnapshotState> deleteAllUnattachedTransactions({
+    required WaffraEncryptedHomeWitness baseline,
+    required bool userConfirmed,
+  }) async {
+    _requireEnabled();
+    return bridge.deleteAllUnattachedTransactions(
+      baseline: baseline, userConfirmed: userConfirmed,
+    );
+  }
+
   /// The widget revision is the actual monotonic SQLCipher generation.
   Future<WaffraEncryptedHomeWitness> loadForDashboardOrWidget() async {
     _requireEnabled();
