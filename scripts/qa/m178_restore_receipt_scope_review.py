@@ -47,7 +47,7 @@ def main() -> None:
         "newKeys.containsAll(oldKeys)" not in parity or
         "unexpectedArchive" not in parity):
         raise SystemExit("M178: parity fail-closed controls missing")
-    if "rejects injected, missing" not in test or "unexpected restore keys" not in test:
+    if "rejects injected, missing" not in test or "refuses missing, extra and unsupported restore keys" not in test:
         raise SystemExit("M178: negative tests missing")
     if "bool get automaticallyActivateSqlCipher => false;" not in release:
         raise SystemExit("M178: production cutover automatic guard missing")
