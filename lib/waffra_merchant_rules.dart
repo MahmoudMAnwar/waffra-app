@@ -36,114 +36,13 @@ String? waffraMerchantName(String raw,{bool income=false}) {
  for(final pattern in matches){
   final match=pattern.firstMatch(text);
   if(match==null)continue;
-  // Trim only terminal IDs directly attached to an English merchant name.
-  // Keep card, account and terminal numbers out of the merchant label.
   final name=(match.group(1)??'').trim()
    .replaceAll(RegExp(r'\s+'),' ')
    .replaceAll(RegExp(r'^[;:：\s]+|[;:：\s]+$'),'')
-   .replaceAllMapped(RegExp(r'([A-Za-z])\d{4,6}
-  if(!_waffraSafeMerchantCandidate(name))continue;
-  if(RegExp(r'^(?:مدى|mada|mada pay|sr|sar|pos|pay)$',caseSensitive:false).hasMatch(name))continue;
-  // A generic payment rail is not a merchant and must not become a category.
-  return name;
- }
- // Some Saudi POS notifications put the merchant next to the SAR amount,
- // rather than on a labelled "لدى" line. Extract only that bounded field;
- // never include the amount, date, card suffix or original SMS in a title.
- final pos=RegExp(r'شراء\s+pos\s+من\s+مدى\s+([^;\n\r]{2,100})',
-     caseSensitive:false).firstMatch(text);
- if(pos!=null){
-  final merchant=(pos.group(1)??'')
-   .replaceAll(RegExp(r'\bSAR\s*\d+(?:[.,]\d+)?\b',caseSensitive:false),' ')
-   .replaceAll(RegExp(r'\b\d{1,2}/\d{1,2}/\d{2,4}\b'),' ')
-   .replaceAll(RegExp(r'\s+'),' ').trim();
-  if(_waffraSafeMerchantCandidate(merchant))return merchant;
- }
- return null;
-}
-
-String waffraNormalizeMerchantName(String name){
- var key=name.trim().toLowerCase()
-  .replaceAll(RegExp(r'[\u200e\u200f\u061c]'),'')
-  .replaceAll(RegExp(r'[^a-z0-9\u0621-\u064a ]'),' ')
-  .replaceAll(RegExp(r'\s+'),' ');
- key=key.replaceAll('shawerma','shawarma')
-  .replaceAll('shawrma','shawarma');
- return key.trim();
-}
-
-/// Stable merchant-name identity, never derived from the bank/card number.
-String? waffraMerchantKey(String raw,{bool income=false}){
- final extracted=waffraMerchantName(raw,income:income);
- if(extracted!=null){
-  final key=waffraNormalizeMerchantName(extracted);
-  return key.isEmpty?null:key;
- }
- // User-corrected historical transactions may have a descriptive title.
- final existing=RegExp(r'(?:شراء|حوالة|شراء نقاط بيع)\s*[—-]\s*([^—\n]{2,100})')
-  .firstMatch(raw);
- if(existing!=null){
-  final candidate=(existing.group(1)??'').trim();
-  if(!_waffraSafeMerchantCandidate(candidate))return null;
-  final key=waffraNormalizeMerchantName(candidate);
-  return key.isEmpty?null:key;
- }
- return null;
-}
-
-/// Business identity and financial classification are separate. Only
-/// unambiguous names get an automatic leaf prediction; unknowns keep their
-/// own child inside Other / Incoming Transfers / Transfers.
-String? waffraRecognizedMerchantLeaf(String merchant,{required bool income}){
- if(income)return null;
- final key=waffraNormalizeMerchantName(merchant);
- if(key.contains('shawarma')||key.contains('شاورما'))
-  return 'مطاعم وكافيهات / وجبات سريعة';
- if(key.contains('openai')&&key.contains('chatgpt'))
-  return 'اشتراكات رقمية / اشتراكات ذكاء اصطناعي';
- if(key.contains('panda ret')||key.contains('بنده'))
-  return 'بقالة وتموين / سوبرماركت';
- if(key.contains('alothaim')||key.contains('العثيم')||
-    key.contains('lulu hyper')||key.contains('lulu market'))
-  return 'بقالة وتموين / سوبرماركت';
- if(key.contains('alnahdi pharmacy')||key.contains('nahdi pharmacy'))
-  return 'صحة / صيدلية وأدوية';
- if(key.contains('marakez medical')||key.contains('medical compan'))
-  return 'صحة / عيادات';
- if(key=='keeta'||key.startsWith('keeta '))
-  return 'مطاعم وكافيهات / توصيل الطعام';
- if(key=='jeeny'||key.startsWith('jeeny '))
-  return 'مواصلات / تاكسي';
- if(key.contains('shein'))
-  return 'تسوّق / ملابس';
- if(key=='noon'||key.startsWith('noon ')||key=='amazon sa')
-  return 'تسوّق / تسوق إلكتروني';
- if(key.contains('petro')||key.contains('وقود'))
-  return 'السيارة / بنزين ووقود';
- return null;
-}
-
-String waffraFallbackSmsParent({required bool income,required bool transfer}) =>
- income?'حوالات واردة':transfer?'تحويلات':'أخرى';
-
-/// Bank SMS titles must NEVER include copied raw messages or account/card
-/// identifiers. The parser supplies one of these fixed operation labels;
-/// unknown labels fall back to a generic kind instead of echoing text.
-String waffraSafeSmsTransactionTitle(String parsedTitle,String rawSms,
-    {required bool income}) {
-  const operations=<String>{
-    'راتب','حوالة واردة','حوالة صادرة','شراء نقاط بيع',
-    'مبلغ وارد','عملية بنكية',
-  };
-  final label=parsedTitle.trim();
-  final base=operations.contains(label)?label:
-    (income?'مبلغ وارد':'عملية بنكية');
-  final merchant=waffraMerchantName(rawSms,income:income);
-  if(merchant==null)return base;
-  final title='$base — $merchant';
-  return title.runes.length<=250?title:base;
-}
-),(match)=>match.group(1)??'').trim();
+   // Remove a terminal ID only when directly attached to Latin letters.
+   // Dart's replaceAllMapped preserves the captured letter safely.
+   .replaceAllMapped(RegExp(r'([A-Za-z])\d{4,6}$'),
+    (terminal)=>terminal.group(1)??'').trim();
   if(!_waffraSafeMerchantCandidate(name))continue;
   if(RegExp(r'^(?:مدى|mada|mada pay|sr|sar|pos|pay)$',caseSensitive:false).hasMatch(name))continue;
   // A generic payment rail is not a merchant and must not become a category.
