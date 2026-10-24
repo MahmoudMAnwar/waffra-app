@@ -137,7 +137,7 @@ jobs:
         env:
           REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: python3 scripts/qa/m202_source_binder_scope_review.py
-      - name: M206 current-main, 10-file UI/SMS and Release Notes strict scope (NO-GO)
+      - name: M206 exact-SHA 12-file UI/English SMS and Release Notes strict scope (NO-GO)
         if: github.head_ref == 'fix/m206-daylight-tour-sms-notes-motion-20261024'
         env:
           REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}

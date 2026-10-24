@@ -17,6 +17,7 @@ APPROVED = {
     ".github/workflows/m147-final-main-review-gate.yml",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
+    "lib/waffra_merchant_rules.dart",
     "lib/waffra_widget_capture.part.dart",
     "scripts/qa/m206_ui_sms_scope_review.py",
     "test/m127_ui_tour_backup_acceptance_test.dart",
@@ -51,6 +52,7 @@ def main() -> None:
 
     app = Path("lib/main.dart").read_text(encoding="utf-8")
     m202_driver = Path(".github/scripts/run-m202-sqlcipher-binder-android.sh").read_text(encoding="utf-8")
+    merchants = Path("lib/waffra_merchant_rules.dart").read_text(encoding="utf-8")
     widget = Path("lib/waffra_widget_capture.part.dart").read_text(encoding="utf-8")
     approved_notes = Path("docs/release/WAFFRA_APPROVED_CHANGES.txt").read_text(encoding="utf-8")
     apk_workflow = Path(".github/workflows/android.yml").read_text(encoding="utf-8")
@@ -76,6 +78,15 @@ def main() -> None:
         "key:_tourKeys[1]",
     ):
         require(marker in app, "missing approved UI/SMS guard " + marker)
+
+    for marker in ("Online\\s+Purchase", "English MADA and transfers",
+                   "إشعار غير مؤكد", "Credit\\s+Transfer", "Status\\s*[:：]"):
+        require(marker in app, "English bank SMS parsing guard missing: " + marker)
+    for marker in ("From\\s*[:：]", "At|Merchant", "lulu hyper",
+                   "صيدلية وأدوية", "توصيل الطعام"):
+        require(marker in merchants, "English merchant extraction missing: " + marker)
+    require("confirmed.length,56" in tests and "parsed.where((v)=>v.amount==null).length,13" in tests,
+            "69-notice English bank fixture coverage missing")
 
     # Emulator test execution must perform the four real Android integration
     # cases and fail shut on timeout, never report synthetic CI as production.

@@ -19,9 +19,15 @@ String? waffraMerchantName(String raw,{bool income=false}) {
  if(transfer){
   if(income){
    matches.add(RegExp(r'(?:^|\n)\s*من\s*(?:\d{2,6}\s*;\s*)?([^\n\r;]{2,100})',multiLine:true));
+   matches.add(RegExp(r'^\s*From\s*[:：]\s*([^\n\r;]{2,100})',multiLine:true,caseSensitive:false));
   }else{
    matches.add(RegExp(r'(?:^|\n)\s*لـ\s*(?:\d{2,6}\s*;\s*)?([^\n\r;]{2,100})',multiLine:true));
+   matches.add(RegExp(r'^\s*To\s*[:：]\s*([^\n\r;]{2,100})',multiLine:true,caseSensitive:false));
   }
+ }
+ if(!transfer){
+  matches.add(RegExp(r'^\s*(?:At|Merchant)\s*[:：]\s*([^\n\r;]{2,100})',
+   multiLine:true,caseSensitive:false));
  }
  matches.addAll([
   RegExp(r'(?:^|\n)\s*لدى\s*[:：]?\s*([^\n\r;]{2,100})',multiLine:true),
@@ -94,8 +100,21 @@ String? waffraRecognizedMerchantLeaf(String merchant,{required bool income}){
   return 'اشتراكات رقمية / اشتراكات ذكاء اصطناعي';
  if(key.contains('panda ret')||key.contains('بنده'))
   return 'بقالة وتموين / سوبرماركت';
- if(key.contains('alothaim')||key.contains('العثيم'))
+ if(key.contains('alothaim')||key.contains('العثيم')||
+    key.contains('lulu hyper')||key.contains('lulu market'))
   return 'بقالة وتموين / سوبرماركت';
+ if(key.contains('alnahdi pharmacy')||key.contains('nahdi pharmacy'))
+  return 'صحة / صيدلية وأدوية';
+ if(key.contains('marakez medical')||key.contains('medical compan'))
+  return 'صحة / عيادات';
+ if(key=='keeta'||key.startsWith('keeta '))
+  return 'مطاعم وكافيهات / توصيل الطعام';
+ if(key=='jeeny'||key.startsWith('jeeny '))
+  return 'مواصلات / تاكسي';
+ if(key.contains('shein'))
+  return 'تسوّق / ملابس';
+ if(key=='noon'||key.startsWith('noon ')||key=='amazon sa')
+  return 'تسوّق / تسوق إلكتروني';
  if(key.contains('petro')||key.contains('وقود'))
   return 'السيارة / بنزين ووقود';
  return null;

@@ -348,14 +348,34 @@ class BankResult {
 class BankParser {
  static BankResult parse(String original) {
   final s=digits(original).replaceAll('\u200f','').replaceAll('\u200e','').replaceAll('\u00a0',' ');
-  final incoming=RegExp(r'حوال[ةه].{0,25}وارد|تحويل.{0,25}وارد|استلام.{0,25}حوال|credited|deposit|راتب|إيداع|ايداع',caseSensitive:false).hasMatch(s);
-  final outgoing=RegExp(r'حوال[ةه].{0,25}صادر|تحويل.{0,25}صادر|شراء|نقاط\s*بيع|pos\b|مدى|سحب|خصم|دفع|فاتورة|purchase|debit\b',caseSensitive:false).hasMatch(s);
-  final income=incoming&&!outgoing;
-  // Saudi SMS can write currency before or after the amount, with no space:
-  // "84.72SR", "SR 84.72", "84.72ر.س", "بـ84.72SR".
+  // English bank SMS types must be classified from their first line, not
+  // from merchant names, remaining balance, or unrelated message body text.
+  final header=s.trimLeft().split('\n').first.trim();
+  const unconfirmed=r'(?:Online\s+Pre[-\s]?Auth|Pre[-\s]?Authori[sz]ation|Authorization\s+Hold|Please\s+use\s+the\s+code|OTP|Verification\s+Code|Declined\s+Transaction|Transaction\s+Declined|Failed\s+Transaction|Transaction\s+Failed|Unsuccessful\s+Transaction)';
+  final failedStatus=RegExp(r'^\s*(?:Transaction\s+)?Status\s*[:：]\s*(?:Pending|Declined|Failed|Rejected|Cancelled|Canceled)\b',caseSensitive:false,multiLine:true);
+  if(RegExp('^$unconfirmed\\b',caseSensitive:false).hasMatch(header)||failedStatus.hasMatch(s)){
+   return BankResult(null,false,'إشعار غير مؤكد','أخرى',null);
+  }
+  // Credit Transfer is incoming; Credit Card Purchase remains an expense.
+  const credits=r'(?:Credit\s+Transfer|Incoming\s+(?:Bank\s+)?Transfer|Transfer\s+Received|Transfer\s+In|Funds\s+Received|Money\s+Received|Account\s+Credited|Salary\s+(?:Credit|Deposit)|Cash\s+Deposit|Refund\s+(?:Received|Processed)|Refund|Reversal\s+Credit)';
+  const debits=r'(?:Online\s+Purchase(?:\s+Card)?|Purchase\s+Card|Card\s+Purchase|Credit\s+Card\s+Purchase|POS\s+(?:Purchase|Transaction)|Debit\s+Transfer|Outgoing\s+Transfer|Transfer\s+(?:Sent|Out|To)|Money\s+Sent|Debit\s+Card\s+Purchase|Card\s+Payment|ATM\s+Withdrawal|Cash\s+Withdrawal|Bill\s+Payment|Direct\s+Debit|Payment\s+(?:Completed|Successful))';
+  final englishIncoming=RegExp('^$credits\\b',caseSensitive:false).hasMatch(header);
+  final englishOutgoing=RegExp('^$debits\\b',caseSensitive:false).hasMatch(header);
+  final legacyIncoming=RegExp(r'حوال[ةه].{0,25}وارد|تحويل.{0,25}وارد|استلام.{0,25}حوال|credited|deposit|راتب|إيداع|ايداع',caseSensitive:false).hasMatch(s);
+  final legacyOutgoing=RegExp(r'حوال[ةه].{0,25}صادر|تحويل.{0,25}صادر|شراء|نقاط\s*بيع|pos\b|مدى|سحب|خصم|دفع|فاتورة|purchase|debit\b',caseSensitive:false).hasMatch(s);
+  final income=englishIncoming||(legacyIncoming&&!englishOutgoing&&!legacyOutgoing);
+  // Amount-only English notices lack evidence of direction: review, don't
+  // fabricate a confirmed expense.
+  if(!income&&!englishOutgoing&&!legacyOutgoing&&
+     RegExp(r'^(?:Amount|Amt)\s*[:：]',caseSensitive:false).hasMatch(header)){
+   return BankResult(null,false,'عملية تحتاج مراجعة','أخرى',null);
+  }
   const n=r'([0-9][0-9,]*(?:\.[0-9]{1,2})?)';
   const currency=r'(?:SAR|SR|ر\.?\s*س\.?|ريال(?:\s*سعودي)?|﷼|⃁)';
+  // Prefer the explicit transaction amount over remaining balance or fees.
   final patterns=[
+   RegExp('(?:^|\\n)\\s*(?:Amount|Amt|المبلغ|مبلغ)\\s*[:：-]?\\s*$n\\s*$currency',caseSensitive:false,multiLine:true),
+   RegExp('(?:^|\\n)\\s*(?:Amount|Amt|المبلغ|مبلغ)\\s*[:：-]?\\s*$currency\\s*$n',caseSensitive:false,multiLine:true),
    RegExp('$n\\s*$currency',caseSensitive:false),
    RegExp('$currency\\s*[:：-]?\\s*$n',caseSensitive:false),
    RegExp('(?:المبلغ|مبلغ|بقيمة|بمبلغ|amount|amt)\\s*[:：-]?\\s*$n',caseSensitive:false),
@@ -369,10 +389,12 @@ class BankParser {
   }
   var title=income?'مبلغ وارد':'عملية بنكية',cat=income?'دخل آخر':'أخرى';
   String? suggestion;
-  if(RegExp(r'راتب|salary',caseSensitive:false).hasMatch(s)){title='راتب';cat='راتب';}
-  else if(income){title='حوالة واردة';}
-  else if(RegExp(r'شراء|pos\b|مدى|mada',caseSensitive:false).hasMatch(s)){title='شراء نقاط بيع';cat='تسوّق';}
-  else if(RegExp(r'حوال[ةه]|تحويل').hasMatch(s)){title='حوالة صادرة';cat='تحويلات';}
+  if(RegExp(r'راتب|salary',caseSensitive:false).hasMatch(header)){title='راتب';cat='راتب';}
+  else if(income){
+   title=RegExp(r'refund|reversal',caseSensitive:false).hasMatch(header)?'مبلغ وارد':'حوالة واردة';
+  }
+  else if(RegExp(r'شراء|pos\b|مدى|mada|purchase|card\s+payment',caseSensitive:false).hasMatch(header)){title='شراء نقاط بيع';cat='تسوّق';}
+  else if(RegExp(r'حوال[ةه]|تحويل|debit\s+transfer|outgoing\s+transfer|transfer\s+(?:sent|out|to)',caseSensitive:false).hasMatch(header)){title='حوالة صادرة';cat='تحويلات';}
   if(!income) {
    if(RegExp(r'مطعم|كافيه|قهوة|coffee|restaurant|برجر|بيتزا',caseSensitive:false).hasMatch(s))cat='مطاعم وكافيهات';
    else if(RegExp(r'بنزين|وقود|محطة|uber|careem|أوبر|كريم',caseSensitive:false).hasMatch(s))cat='مواصلات';
@@ -388,15 +410,24 @@ class BankParser {
 }
 DateTime? bankSmsDate(String raw) {
  final normalized=digits(raw).replaceAll('‏','').replaceAll('‎','');
+ // English MADA and transfers use ISO YYYY-MM-DD, not legacy DD/MM/YY.
+ final iso=RegExp(r'\b(\d{4})[-/](\d{1,2})[-/](\d{1,2})\s+(\d{1,2}):(\d{2})\b').firstMatch(normalized);
+ if(iso!=null){
+  final year=int.tryParse(iso.group(1)!),month=int.tryParse(iso.group(2)!),
+   day=int.tryParse(iso.group(3)!),hour=int.tryParse(iso.group(4)!),
+   minute=int.tryParse(iso.group(5)!);
+  if(year==null||month==null||day==null||hour==null||minute==null||
+   year<2000||year>2100||month<1||month>12||day<1||day>31||
+   hour>23||minute>59)return null;
+  final date=DateTime(year,month,day,hour,minute);
+  return date.year==year&&date.month==month&&date.day==day?date:null;
+ }
  final match=RegExp(r'(\d{1,2})[/-](\d{1,2})[/-](\d{1,4})\s+(\d{1,2}):(\d{2})').firstMatch(normalized);
  if(match==null)return null;
  final a=int.tryParse(match.group(1)!),b=int.tryParse(match.group(2)!),
   c=int.tryParse(match.group(3)!);
  final hour=int.tryParse(match.group(4)!),minute=int.tryParse(match.group(5)!);
  if(a==null||b==null||c==null||hour==null||minute==null)return null;
- // Saudi transfer texts in our accepted bank fixtures use YY/MM/DD.
- // POS receipts instead use DD/MM/YY. Never force a single ambiguous
- // date convention across both sources.
  final isTransfer=RegExp(r'حوال[ةه]|تحويل|transfer',caseSensitive:false).hasMatch(raw);
  final year=isTransfer?(a<100?2000+a:a):(c<100?2000+c:c);
  final month=b,day=isTransfer?c:a;
@@ -410,7 +441,11 @@ List<String> splitBankMessages(String raw){
  final clean=raw.replaceAll('\r\n','\n').replaceAll('\u200f','').replaceAll('\u200e','').trim();
  if(clean.isEmpty)return [];
  // Bank SMS messages often start with a transaction heading, even without dates.
- final heading=RegExp(r'^\s*(?:شراء(?:\s+PoS)?|حوال[ةه]|تحويل|إيداع|ايداع|راتب|سحب|دفع|نقاط بيع|POS|Purchase|Debit|Credit)(?=\s|$|[:：])',caseSensitive:false,multiLine:true);
+ // Separate all posted and unposted notices by header, without relying
+ // on blank lines (which also occur *inside* one bank SMS).
+ final heading=RegExp(
+  r'^\s*(?:Online\s+Purchase(?:\s+Card)?|Online\s+Pre[-\s]?Auth|Pre[-\s]?Authori[sz]ation|Please\s+use\s+the\s+code|Verification\s+Code|OTP\b|Declined\s+Transaction|Transaction\s+Declined|Failed\s+Transaction|Transaction\s+Failed|Unsuccessful\s+Transaction|Incoming\s+Transfer|Outgoing\s+Transfer|Transfer\s+(?:Received|Sent|In|Out|To)|Funds\s+Received|Money\s+(?:Received|Sent)|Account\s+Credited|Salary\s+(?:Credit|Deposit)|Cash\s+Deposit|Refund|Reversal\s+Credit|ATM\s+Withdrawal|Cash\s+Withdrawal|Bill\s+Payment|Direct\s+Debit|Payment\s+(?:Completed|Successful)|Card\s+(?:Purchase|Payment)|Credit\s+Card\s+Purchase|POS|شراء(?:\s+PoS)?|حوال[ةه]|تحويل|إيداع|ايداع|راتب|سحب|دفع|نقاط بيع|Purchase|Debit|Credit)(?=\s|$|[:：])',
+  caseSensitive:false,multiLine:true);
  final starts=heading.allMatches(clean).map((m)=>m.start).toList();
  if(starts.length>1){
   final result=<String>[];

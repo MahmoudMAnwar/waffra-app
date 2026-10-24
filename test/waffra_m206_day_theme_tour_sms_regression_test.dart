@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
+import 'package:waffra/waffra_merchant_rules.dart';
 
 void main() {
   test('new installs start in light mode while an explicit choice persists', () {
@@ -78,5 +79,115 @@ void main() {
     expect(find.text('شراء - متجر'),findsWidgets);
     expect(find.text(raw),findsOneWidget);
     expect(tester.takeException(),isNull);
+  });
+
+  test('synthetic English Saudi bank batch: 56 confirmed, 13 excluded notices', () {
+    // No actual bank account, card, sender name, OTP or real transaction.
+    final samples=<String>[];
+    for(var i=0;i<37;i++){
+      samples.add('Purchase Card\nCard: **0000 MADA\nAmount: ${i+1}.25 SAR\n'
+        'At: DEMO SHOP\nOn: 2026-10-24 18:53\nRemaining Balance: 13.38 SAR');
+      if(i<16){
+        samples.add('Online Purchase Card\nCard: **0000 MADA\n'
+          'Amount: ${i+1}.75 SAR\nAccount:**0000\nAt: DEMO ONLINE\n'
+          'On: 2026-10-23 20:32\nRemaining Balance: 55.38 SAR');
+      }
+      if(i<3){
+        samples.add('Credit Transfer via Example Bank\nAmount: ${(i+1)*100} SAR\n'
+          'From: SAMPLE SENDER\nIBAN: **0000\nDate: 2026-10-22 23:39');
+      }
+      if(i<4){
+        samples.add('Online Pre-Auth\nCard: MADA 0000\nAmount: 8.57 SAR\n'
+          'Account:**0000\nAt: DEMO RIDE\nOn: 2026-10-21 12:24');
+      }
+      if(i<8){
+        samples.add('Please use the code:0000\nFor card:*0000\n'
+          'Amount:1 SAR\nMerchant:DEMO\nOn:26-10-21 10:58');
+      }
+    }
+    samples.add('Declined Transaction\nReason: Online purchases disabled');
+    expect(samples.length,69);
+    final chunks=splitBankMessages(samples.join('\n'));
+    expect(chunks.length,69);
+    expect(chunks.where((v)=>v.startsWith('Online Purchase Card')).length,16);
+    final parsed=chunks.map(BankParser.parse).toList();
+    final confirmed=parsed.where((v)=>v.amount!=null&&v.amount!>0).toList();
+    expect(confirmed.length,56);
+    expect(confirmed.where((v)=>v.income).length,3);
+    expect(confirmed.where((v)=>!v.income).length,53);
+    expect(parsed.where((v)=>v.amount==null).length,13);
+    expect(confirmed.where((v)=>v.income).fold<double>(0,(sum,v)=>sum+v.amount!),600);
+  });
+
+  test('English bank credit versus debit never reverses transaction direction', () {
+    const incoming=[
+      'Credit Transfer via Example Bank\nAmount: 100 SAR\nFrom: SAMPLE SENDER\nIBAN: **0000\nDate: 2026-10-24 14:58',
+      'Incoming Transfer\nAmount: 20 SAR',
+      'Transfer Received\nAmount: 42 SAR',
+      'Cash Deposit\nAmount: 50 SAR',
+      'Salary Credit\nAmount: 500 SAR',
+      'Refund Received\nAmount: 9 SAR',
+    ];
+    const outgoing=[
+      'Purchase Card\nAmount: 42 SAR\nAt: DEMO STORE',
+      'Online Purchase Card\nAmount: 15.50 SAR\nAt: DEMO STORE',
+      'Credit Card Purchase\nAmount: 12 SAR',
+      'Debit Transfer\nAmount: 100 SAR\nTo: SOMEONE',
+      'Outgoing Transfer\nAmount: 7 SAR',
+      'Transfer Sent\nAmount: 6 SAR',
+      'ATM Withdrawal\nAmount: 20 SAR',
+      'Bill Payment\nAmount: 30 SAR',
+    ];
+    for(final sms in incoming){
+      final parsed=BankParser.parse(sms);
+      expect(parsed.amount,greaterThan(0),reason:sms.split('\n').first);
+      expect(parsed.income,isTrue,reason:sms.split('\n').first);
+    }
+    for(final sms in outgoing){
+      final parsed=BankParser.parse(sms);
+      expect(parsed.amount,greaterThan(0),reason:sms.split('\n').first);
+      expect(parsed.income,isFalse,reason:sms.split('\n').first);
+    }
+    for(final sms in [
+      'Online Pre-Auth\nAmount: 8.57 SAR\nAt: DEMO TAXI',
+      'Please use the code:0000\nAmount: 1 SAR\nMerchant: DEMO',
+      'Declined Transaction\nAmount: 21 SAR',
+      'Transaction Failed\nAmount: 31 SAR',
+      'Purchase Card\nAmount: 1 SAR\nStatus: Declined',
+      'Amount: 3 SAR',
+    ]){
+      expect(BankParser.parse(sms).amount,isNull,reason:sms.split('\n').first);
+    }
+  });
+
+  test('English dates and merchant categories stay safe and accurate', () {
+    expect(bankSmsDate('Purchase Card\nOn: 2026-10-24 18:53'),
+      DateTime(2026,10,24,18,53));
+    expect(bankSmsDate('Credit Transfer\nDate: 2026-10-22 23:39'),
+      DateTime(2026,10,22,23,39));
+    expect(bankSmsDate('شراء POS\n24/10/26 18:53'),
+      DateTime(2026,10,24,18,53));
+    expect(bankSmsDate('Purchase Card\nOn: 2026-13-45 18:53'),isNull);
+    const sms='Online Purchase Card\nAmount: 31.47 SAR\n'
+      'Account:**0000\nAt: Noon\nOn: 2026-10-21 18:44';
+    expect(waffraMerchantName(sms), 'Noon');
+    expect(waffraRecognizedMerchantLeaf('LULU HYPER TEST',income:false),
+      'بقالة وتموين / سوبرماركت');
+    expect(waffraRecognizedMerchantLeaf('ALNAHDI PHARMACY',income:false),
+      'صحة / صيدلية وأدوية');
+    expect(waffraRecognizedMerchantLeaf('Marakez Medical',income:false),
+      'صحة / عيادات');
+    expect(waffraRecognizedMerchantLeaf('Keeta',income:false),
+      'مطاعم وكافيهات / توصيل الطعام');
+    expect(waffraRecognizedMerchantLeaf('Jeeny',income:false),
+      'مواصلات / تاكسي');
+    expect(waffraRecognizedMerchantLeaf('Noon',income:false),
+      'تسوّق / تسوق إلكتروني');
+    expect(waffraMerchantName('Credit Transfer via Example Bank\n'
+      'Amount: 100 SAR\nFrom: SAMPLE SENDER\nIBAN: **0000',income:true),
+      'SAMPLE SENDER');
+    expect(waffraMerchantName('Purchase Card\nAmount: 5 SAR\nAt: Account **0000'),
+      isNull);
+    expect(BankParser.parse(sms).amount,31.47);
   });
 }
