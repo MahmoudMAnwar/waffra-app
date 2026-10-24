@@ -67,7 +67,7 @@ def main():
         "sourceGuard.inspect()",
         "WaffraProductionFinanceSource.manualRecoveryRequired",
         "WaffraProductionFinanceSource.guardedLegacy",
-        "certifiedEvidence == null",
+        "if (evidence == null)",
         "FileSystemEntity.type(path.path, followLinks: false)",
         "WaffraEncryptedStore.openAt(path, key: key)",
         "WaffraEncryptedFinanceSession(",
