@@ -59,6 +59,23 @@ class WaffraEncryptedFinanceSession {
     );
   }
 
+  /// Save only the finance-linked recurring reminder boolean in SQLCipher.
+  /// The immutable witness is captured before the native Home/Widget lock.
+  /// saveChangedFields verifies the same source under the lock and compares
+  /// the exact old scalar before committing; concurrent edits fail closed.
+  Future<WaffraFinanceSnapshotState> saveRecurringReminderPreference({
+    required WaffraEncryptedHomeWitness baseline,
+    required bool enabled,
+  }) async {
+    _requireEnabled();
+    return saveChangedFields(
+      baseline: baseline,
+      changedValues: <String, Object?>{
+        'waffra_recurring_reminders_enabled_v1': enabled,
+      },
+    );
+  }
+
   /// Converts the HomeScreen's full captured batch into a delta against the
   /// exact view originally loaded, so widget SMS changes are never silently
   /// overwritten by stale dashboard fields. Missing keys remain missing.
