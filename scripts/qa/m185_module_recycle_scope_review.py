@@ -54,7 +54,7 @@ def main() -> None:
         "Encrypted module trash checksum or clock differs.",
         "Encrypted module changed after user confirmation.",
         "await snapshot.commit(",
-        "Finance module",
+        "Encrypted module trash checksum or clock differs.",
         "Delete child categories before their parent.",
         "Resolve pending recurring postings before deletion.",
         "Restore the deleted parent category first.",
