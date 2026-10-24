@@ -81,6 +81,73 @@ class WaffraHomeFinancePersistence {
     Future<T> Function(SharedPreferences preferences) writer,
   ) => coordinator.withCurrentPreferences(writer);
 
+  /// Merge *fingerprints*, never original bank messages, under the existing
+  /// Home/Widget native lock. A concurrent widget commit is preserved.
+  Future<List<String>> mergeSmsHashes(Iterable<String> additions) async {
+    final requested = Set<String>.of(additions);
+    const hex = '0123456789abcdef';
+    if (requested.length > 1000 || requested.any((hash) =>
+        hash.length != 64 || hash.split('').any((c) => !hex.contains(c)))) {
+      throw ArgumentError('Only SHA-256 bank SMS fingerprints may be saved.');
+    }
+    return coordinator.withCurrentPreferences((prefs) async {
+      final existing = prefs.getStringList('waffra_sms_hashes_v1') ??
+          const <String>[];
+      final merged = <String>{...existing, ...requested}.toList()..sort();
+      if (merged.length != existing.length ||
+          !Set<String>.from(existing).containsAll(requested)) {
+        if (!await prefs.setStringList('waffra_sms_hashes_v1', merged)) {
+          throw StateError('Failed to persist SMS fingerprints.');
+        }
+      }
+      return List<String>.unmodifiable(merged);
+    });
+  }
+
+  /// Reminder preference is a finance scalar, not an arbitrary UI setting.
+  /// Only a guarded legacy source may use this writer.
+  Future<void> setRecurringReminderPreference(bool enabled) =>
+      coordinator.withCurrentPreferences((prefs) async {
+        if (!await prefs.setBool('waffra_recurring_reminders_enabled_v1',
+            enabled)) {
+          throw StateError('Could not durably save recurring reminders.');
+        }
+      });
+
+  /// Install a catalog version after comparing the exact loaded catalog with
+  /// the current catalog INSIDE the same app/widget lock. The marker comes
+  /// last, so a crash before it can retry without deleting custom entries.
+  Future<void> installCategoryCatalog({
+    required int version,
+    required String? expectedCatalogRaw,
+    required String nextCatalogRaw,
+    required bool catalogChanged,
+  }) async {
+    if (version != 2 && version != 3) {
+      throw ArgumentError('Unsupported category catalog version.');
+    }
+    final preflight = WaffraLegacyPreflight.inspect(
+      <String, Object?>{'waffra_categories_v24': nextCatalogRaw},
+    );
+    if (!preflight.canStage) {
+      throw StateError('Category catalog failed integrity validation.');
+    }
+    await coordinator.withCurrentPreferences((prefs) async {
+      if (prefs.getString('waffra_categories_v24') != expectedCatalogRaw) {
+        throw StateError('Category catalog changed concurrently; reload.');
+      }
+      final marker = 'waffra_category_catalog_v${version}_installed';
+      if (prefs.getBool(marker) == true) return;
+      if (catalogChanged &&
+          !await prefs.setString('waffra_categories_v24', nextCatalogRaw)) {
+        throw StateError('Category catalog could not be persisted.');
+      }
+      if (!await prefs.setBool(marker, true)) {
+        throw StateError('Category catalog version could not be committed.');
+      }
+    });
+  }
+
   /// Custom saving-goal suggestions live beside the primary financial
   /// snapshot in legacy installs. They are included in verified SQLCipher
   /// staging, so all reads and writes must share the native app/widget lock.
