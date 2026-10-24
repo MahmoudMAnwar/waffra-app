@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'integration_test/m202_home_widget_source_binder_android_test.dart'
+      - '.github/scripts/run-m202-sqlcipher-binder-android.sh'
       - '.github/workflows/m202-android-sqlcipher-source-binder-dryrun.yml'
       - '.github/workflows/m147-final-main-review-gate.yml'
       - 'scripts/qa/m202_source_binder_scope_review.py'
@@ -92,12 +93,7 @@ jobs:
           disable-animations: true
           emulator-boot-timeout: 600
           emulator-options: -no-window -no-audio -no-snapshot -gpu swiftshader_indirect -no-boot-anim
-          script: |
-            set -e
-            timeout --signal=TERM --kill-after=20s 1100s flutter test integration_test/m202_home_widget_source_binder_android_test.dart -d emulator-5554 --reporter expanded
-            timeout --signal=TERM --kill-after=20s 700s flutter test integration_test/live_finance_migration_receipts_android_test.dart -d emulator-5554 --reporter expanded
-            timeout --signal=TERM --kill-after=20s 700s flutter test integration_test/m120_verified_receipt_reopen_android_test.dart -d emulator-5554 --reporter expanded
-            timeout --signal=TERM --kill-after=20s 700s flutter test integration_test/portable_encrypted_receipts_android_test.dart -d emulator-5554 --reporter expanded
+          script: bash .github/scripts/run-m202-sqlcipher-binder-android.sh
       - name: Export explicit no-activation test evidence
         if: success()
         env:
