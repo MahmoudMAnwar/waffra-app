@@ -61,6 +61,16 @@ class WaffraEncryptedFinanceSession {
     );
   }
 
+  Future<WaffraFinanceSnapshotState> deleteAllUnattachedTransactions({
+    required WaffraEncryptedHomeWitness baseline,
+    required bool userConfirmed,
+  }) async {
+    _requireEnabled();
+    return bridge.deleteAllUnattachedTransactions(
+      baseline: baseline, userConfirmed: userConfirmed,
+    );
+  }
+
   /// The widget revision is the actual monotonic SQLCipher generation.
   Future<WaffraEncryptedHomeWitness> loadForDashboardOrWidget() async {
     _requireEnabled();
