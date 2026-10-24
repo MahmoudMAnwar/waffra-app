@@ -357,7 +357,7 @@ class BankParser {
    return BankResult(null,false,'إشعار غير مؤكد','أخرى',null);
   }
   // Credit Transfer is incoming; Credit Card Purchase remains an expense.
-  const credits=r'(?:Credit\s+Transfer|Incoming\s+(?:Bank\s+)?Transfer|Transfer\s+Received|Transfer\s+In|Funds\s+Received|Money\s+Received|Account\s+Credited|Salary\s+(?:Credit|Deposit)|Cash\s+Deposit|Refund\s+(?:Received|Processed)|Refund|Reversal\s+Credit)';
+  const credits=r'(?:Credit\s+Transfer|Credit\s+via\s+(?:(?:local|domestic|international|bank|internal)\s+)?transfer|Incoming\s+(?:Bank\s+)?Transfer|Transfer\s+Received|Transfer\s+In|Funds\s+Received|Money\s+Received|Account\s+Credited|Salary\s+(?:Credit|Deposit)|Cash\s+Deposit|Refund\s+(?:Received|Processed)|Refund|Reversal\s+Credit)';
   const debits=r'(?:Online\s+Purchase(?:\s+Card)?|Purchase\s+Card|Card\s+Purchase|Credit\s+Card\s+Purchase|POS\s+(?:Purchase|Transaction)|Debit\s+Transfer|Outgoing\s+Transfer|Transfer\s+(?:Sent|Out|To)|Money\s+Sent|Debit\s+Card\s+Purchase|Card\s+Payment|ATM\s+Withdrawal|Cash\s+Withdrawal|Bill\s+Payment|Direct\s+Debit|Payment\s+(?:Completed|Successful))';
   final englishIncoming=RegExp('^$credits\\b',caseSensitive:false).hasMatch(header);
   final englishOutgoing=RegExp('^$debits\\b',caseSensitive:false).hasMatch(header);
@@ -4058,8 +4058,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final c=categoryFor(e.category,e.income);
   final attachmentCount=waffraReceiptPaths(e.receiptPath).length;
   return Card(color:e.income?waffraIncomeBackground:waffraExpenseBackground,
-   child:Stack(children:[
-    Padding(padding:EdgeInsets.only(top:attachmentCount>0?29:0),child:ListTile(
+   clipBehavior:Clip.antiAlias,child:Stack(children:[
+    Padding(padding:const EdgeInsets.only(top:0),child:ListTile(
    textColor:waffraInk,iconColor:forest,
    leading:CircleAvatar(backgroundColor:Color(c.color).withValues(alpha:.15),
     child:Icon(categoryIcon(c.icon),color:Color(c.color))),
@@ -4075,7 +4075,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     IconButton(tooltip:waffraIsEnglish?'Transaction options':'خيارات المعاملة',
      onPressed:()=>transactionActions(e),icon:const Icon(Icons.more_vert,color:forest)),
    ]))),
-   if(attachmentCount>0)PositionedDirectional(top:0,end:0,child:Semantics(
+   if(attachmentCount>0)PositionedDirectional(top:0,start:0,child:Semantics(
     label:waffraIsEnglish?'$attachmentCount attachments':'عدد المرفقات $attachmentCount',
     button:true,child:InkWell(onTap:()=>showReceipt(e.receiptPath!),
      child:WaffraReceiptCornerBadge(count:attachmentCount,english:waffraIsEnglish)))),
@@ -4569,8 +4569,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
   return Padding(padding:const EdgeInsets.symmetric(vertical:5),child:Container(
    decoration:BoxDecoration(color:rowColor,borderRadius:BorderRadius.circular(17),
     border:Border.all(color:forest.withValues(alpha:darkMode ? 0.18 : 0.08))),
-   child:Stack(children:[
-    Padding(padding:EdgeInsets.fromLTRB(11,count>0?29:12,11,12),child:Row(children:[
+   clipBehavior:Clip.antiAlias,child:Stack(children:[
+    Padding(padding:const EdgeInsets.fromLTRB(11,12,11,12),child:Row(children:[
      CircleAvatar(radius:18,
       backgroundColor:Color(cat.color).withValues(alpha:0.13),
       child:Icon(categoryIcon(cat.icon),size:19,color:Color(cat.color))),
@@ -4591,7 +4591,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      IconButton(tooltip:waffraIsEnglish?'Transaction options':'خيارات المعاملة',
       onPressed:()=>transactionActions(entry),icon:const Icon(Icons.more_vert,size:18)),
     ])),
-    if(count>0)PositionedDirectional(top:0,end:0,
+    if(count>0)PositionedDirectional(top:0,start:0,
      child:Semantics(label:waffraIsEnglish?'$count attachments':'عدد المرفقات $count',
       button:true,child:InkWell(
        onTap:()=>showReceipt(entry.receiptPath!),
@@ -7949,8 +7949,8 @@ class WaffraDirectionalFabLocation extends FloatingActionButtonLocation {
   );
  }
 }
-/// Compact attachment counter pinned INSIDE a clipped card corner,
-/// never inline beside the transaction title or amount.
+/// Approved Design 9: a compact folded triangular attachment corner.
+/// RTL uses the top-right corner; LTR mirrors it to top-left.
 class WaffraReceiptCornerBadge extends StatelessWidget {
  const WaffraReceiptCornerBadge({
   super.key,required this.count,required this.english,
@@ -7961,12 +7961,16 @@ class WaffraReceiptCornerBadge extends StatelessWidget {
   return ClipPath(
    clipper:WaffraReceiptCornerClipper(english:english),
    child:Container(
-    width:54,height:35,color:forest,
-    alignment:Alignment.center,
-    padding:EdgeInsetsDirectional.only(start:english?3:0,end:english?0:3),
-    child:Text('$count',style:const TextStyle(
-     fontFamily:'Tajawal',fontSize:16,color:Colors.white,
-     fontWeight:FontWeight.bold,height:1.1)),
+    width:54,height:48,color:forest,
+    alignment:english?Alignment.topLeft:Alignment.topRight,
+    padding:EdgeInsets.only(top:5,left:english?4:0,right:english?0:4),
+    child:Row(mainAxisSize:MainAxisSize.min,children:[
+     const Icon(Icons.attach_file_rounded,size:13,color:Colors.white),
+     const SizedBox(width:1),
+     Text('$count',style:const TextStyle(
+      fontFamily:'Tajawal',fontSize:13,color:Colors.white,
+      fontWeight:FontWeight.bold,height:1.1)),
+    ]),
    ),
   );
  }
@@ -7979,13 +7983,11 @@ class WaffraReceiptCornerClipper extends CustomClipper<Path> {
   if(english){
    path.moveTo(0,0);
    path.lineTo(size.width,0);
-   path.lineTo(size.width,size.height);
-   path.lineTo(16,size.height);
+   path.lineTo(0,size.height);
   }else{
    path.moveTo(0,0);
    path.lineTo(size.width,0);
-   path.lineTo(size.width-16,size.height);
-   path.lineTo(0,size.height);
+   path.lineTo(size.width,size.height);
   }
   return path..close();
  }

@@ -46,7 +46,7 @@ void main() {
         ),
       ));
       expect(find.text('6'), findsOneWidget);
-      expect(find.byIcon(Icons.attach_file_rounded), findsNothing);
+      expect(find.byIcon(Icons.attach_file_rounded), findsOneWidget);
       final clip = tester.widget<ClipPath>(
         find.ancestor(
           of: find.text('6'),
@@ -55,6 +55,25 @@ void main() {
       );
       expect((clip.clipper as WaffraReceiptCornerClipper).english, english);
     }
+  });
+
+  test('Design 9 badge is a small folded triangle, not a wide ribbon', () {
+    const size=Size(54,48);
+    final ar=const WaffraReceiptCornerClipper(english:false).getClip(size);
+    final en=const WaffraReceiptCornerClipper(english:true).getClip(size);
+    expect(ar.contains(const Offset(51,4)),isTrue);
+    expect(ar.contains(const Offset(4,42)),isFalse);
+    expect(en.contains(const Offset(4,4)),isTrue);
+    expect(en.contains(const Offset(51,42)),isFalse);
+  });
+
+  test('attachment corner mirrors with language without increasing row height', () {
+    final source=File('lib/main.dart').readAsStringSync();
+    expect(source,contains('if(count>0)PositionedDirectional(top:0,start:0'));
+    expect(source,contains('if(attachmentCount>0)PositionedDirectional(top:0,start:0'));
+    expect(source,isNot(contains('count>0?29:12')));
+    expect(source,isNot(contains('attachmentCount>0?29:0')));
+    expect(source,contains('Icons.attach_file_rounded,size:13'));
   });
 
   test('all four tab plus actions use locale switch, with no fixed-left anchor',
@@ -83,7 +102,7 @@ void main() {
   test('attachment marker is anchored in a card corner and contains its count',
       () {
     final source = File('lib/main.dart').readAsStringSync();
-    expect(source, contains('if(attachmentCount>0)PositionedDirectional(top:0,end:0'));
+    expect(source, contains('if(attachmentCount>0)PositionedDirectional(top:0,start:0'));
     expect(source, contains(
       'WaffraReceiptCornerBadge(count:attachmentCount,english:waffraIsEnglish)',
     ));

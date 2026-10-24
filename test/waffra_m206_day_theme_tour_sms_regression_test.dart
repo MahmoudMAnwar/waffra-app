@@ -122,6 +122,7 @@ void main() {
   test('English bank credit versus debit never reverses transaction direction', () {
     const incoming=[
       'Credit Transfer via Example Bank\nAmount: 100 SAR\nFrom: SAMPLE SENDER\nIBAN: **0000\nDate: 2026-10-24 14:58',
+      'Credit via local transfer\nVia:Sample Wallet\nAmount:SAR 1613.00\nFrom:SAMPLE SENDER\nAccount:**0000\nOn:2026-10-03 00:29',
       'Incoming Transfer\nAmount: 20 SAR',
       'Transfer Received\nAmount: 42 SAR',
       'Cash Deposit\nAmount: 50 SAR',
