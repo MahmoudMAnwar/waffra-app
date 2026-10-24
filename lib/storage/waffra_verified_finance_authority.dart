@@ -181,6 +181,120 @@ class WaffraVerifiedFinanceAuthority {
     return load(route: route);
   }
 
+  /// M177: every auxiliary finance write goes through the same source gate.
+  /// A guarded legacy write still uses the native app/widget lock; an
+  /// encrypted source never falls back to SharedPreferences.
+  Future<Set<String>> mergeSmsFingerprints({
+    required WaffraFinanceRoute route,
+    required Iterable<String> additions,
+  }) async {
+    if (route != WaffraFinanceRoute.merchantRulesAndSmsHashes) {
+      throw ArgumentError('Wrong route for SMS fingerprints.');
+    }
+    final frozen = List<String>.unmodifiable(additions);
+    final backend = await _requireRoute(route);
+    if (backend == WaffraRuntimeFinanceBackend.guardedLegacy) {
+      return legacy.withLegacyWriter((prefs) async {
+        final current = prefs.getStringList('waffra_sms_hashes_v1');
+        final merged = <String>{...?current, ...frozen};
+        if (!await prefs.setStringList(
+            'waffra_sms_hashes_v1', merged.toList()..sort())) {
+          throw StateError('SMS fingerprint merge was not persisted.');
+        }
+        return Set<String>.unmodifiable(merged);
+      });
+    }
+    final snapshot = await encryptedSession!.addSmsHashes(frozen);
+    return Set<String>.unmodifiable(
+      snapshot.values['waffra_sms_hashes_v1'] as List<String>? ??
+          const <String>[],
+    );
+  }
+
+  Future<List<String>> loadCustomGoalSuggestions({
+    required WaffraFinanceRoute route,
+  }) async {
+    if (route != WaffraFinanceRoute.goalCreateEditDeleteRestore) {
+      throw ArgumentError('Wrong route for goal suggestions.');
+    }
+    if (await _requireRoute(route) != WaffraRuntimeFinanceBackend.guardedLegacy) {
+      // The custom suggestion key has no independently verified SQL writer.
+      throw StateError('Encrypted custom goal suggestions are not certified.');
+    }
+    return legacy.loadCustomGoalSuggestions();
+  }
+
+  Future<bool> addCustomGoalSuggestion({
+    required WaffraFinanceRoute route,
+    required String name,
+  }) async {
+    if (route != WaffraFinanceRoute.goalCreateEditDeleteRestore) {
+      throw ArgumentError('Wrong route for goal suggestions.');
+    }
+    if (await _requireRoute(route) != WaffraRuntimeFinanceBackend.guardedLegacy) {
+      throw StateError('Encrypted custom goal suggestions are not certified.');
+    }
+    return legacy.addCustomGoalSuggestion(name);
+  }
+
+  Future<void> saveRecurringReminderSetting({
+    required WaffraFinanceRoute route,
+    required bool enabled,
+  }) async {
+    if (route != WaffraFinanceRoute.recurringCreateEditDeleteRestore) {
+      throw ArgumentError('Wrong route for recurring reminders.');
+    }
+    if (await _requireRoute(route) != WaffraRuntimeFinanceBackend.guardedLegacy) {
+      throw StateError('Encrypted reminder settings need verified SQL projection.');
+    }
+    await legacy.withLegacyWriter((prefs) async {
+      if (!await prefs.setBool(
+          'waffra_recurring_reminders_enabled_v1', enabled)) {
+        throw StateError('Recurring reminder preference could not be saved.');
+      }
+    });
+  }
+
+  /// Catalog flags are intentionally kept in legacy app metadata. This is
+  /// only a guarded legacy installer; future encrypted catalogs require
+  /// their own atomic SQL transaction and an independent migration witness.
+  /// Compare the source actually loaded, under the native writer lock, so a
+  /// concurrent category edit cannot be overwritten by stale startup data.
+  Future<void> installCategoryCatalog({
+    required WaffraFinanceRoute route,
+    required int version,
+    required String? expectedCategoriesRaw,
+    required String serializedCategories,
+    required bool categoriesChanged,
+  }) async {
+    if (route != WaffraFinanceRoute.categoryCatalogInstall ||
+        (version != 2 && version != 3)) {
+      throw ArgumentError('Invalid category catalog installation route.');
+    }
+    final decoded = jsonDecode(serializedCategories);
+    if (decoded is! List || decoded.any((item) => item is! Map)) {
+      throw ArgumentError('Invalid serialized category catalog.');
+    }
+    if (await _requireRoute(route) != WaffraRuntimeFinanceBackend.guardedLegacy) {
+      throw StateError('Encrypted catalog installation is not certified.');
+    }
+    final marker = 'waffra_category_catalog_v${version}_installed';
+    await legacy.withLegacyWriter((prefs) async {
+      if (prefs.getString('waffra_categories_v24') != expectedCategoriesRaw ||
+          prefs.getBool(marker) == true) {
+        throw StateError('Catalog source changed while startup was loading.');
+      }
+      if (categoriesChanged &&
+          !await prefs.setString('waffra_categories_v24', serializedCategories)) {
+        throw StateError('Category catalog could not be persisted.');
+      }
+      // Marker last: after an interrupted install the next startup retries.
+      if (!await prefs.setBool(marker, true)) {
+        throw StateError('Category catalog installation marker failed.');
+      }
+    });
+  }
+
   /// A future encrypted-only receipt attachment route. The caller supplies
   /// picker bytes (never plaintext file paths) and explicitly confirms.
   /// The source selector and the SQLCipher bridge each independently verify
