@@ -2276,7 +2276,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    hidden:hideWaffraAmounts.value,
    currency:waffraIsEnglish?'SAR':'ريال');
  }
- Future<void> persist() {
+ Future<void> persist({
+  WaffraFinanceRoute route = WaffraFinanceRoute.transactionEdit,
+ }) {
   // Freeze a snapshot BEFORE any await. Previously Future.wait launched
   // overlapping multi-key saves, so a slower old save could finish last.
   // This protects in-app ordering, not cross-process widget writes or a crash
@@ -2304,7 +2306,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // Every individual category/goal/recurring editor funnels through here.
    // The selected SQLCipher source and witness are rechecked before writing.
    final committed=await _financeAuthority.saveCaptured(
-    route:WaffraFinanceRoute.transactionEdit,
+    route:route,
     baseline:baseline,
     captured:captured,
    );
@@ -2398,12 +2400,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      if(!entries.any((e)=>e.id==id)){
       setState(()=>entries.insert(0,MoneyEntry(id:id,title:r.title,category:r.category,amount:r.amount,income:r.income,date:DateTime.now())));
      }
-     recurringPostponed.remove(id);await persist();
+     recurringPostponed.remove(id);
+     await persist(route:WaffraFinanceRoute.recurringPostingAndPostponement);
     }else if(action=='postpone'){
      final selected=await showDatePicker(context:context,initialDate:today.add(const Duration(days:1)),
       firstDate:DateTime(today.year,today.month,today.day).add(const Duration(days:1)),
       lastDate:DateTime(today.year+3,12,31));
-     if(selected!=null){recurringPostponed[id]=selected.toIso8601String();await persist();}
+     if(selected!=null){recurringPostponed[id]=selected.toIso8601String();
+      await persist(route:WaffraFinanceRoute.recurringPostingAndPostponement);}
     }else{return;}
    }finally{_dueDialogShowing=false;}
   }
@@ -3208,7 +3212,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
     }
    }
   });
-  await persist();
+  // New manual additions and edits have distinct source-gate intents.
+  // Encrypted unsupported routes must fail closed, never masquerade as edits.
+  await persist(route:initial==null
+   ?WaffraFinanceRoute.manualTransactionSave
+   :WaffraFinanceRoute.transactionEdit);
   if(pendingHash!=null){
    smsHashes.add(pendingHash!);
    await _persistSmsHashes(smsHashes);
@@ -3635,7 +3643,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    waffraIsEnglish?'Delete «'+e.title+'»? You can undo for 6 seconds after deletion.':'هل تريد حذف المعاملة «'+e.title+'»؟ يمكنك التراجع خلال 6 ثوانٍ بعد الحذف.');
   if(yes!=true||!mounted)return;
   setState(()=>entries.removeWhere((x)=>x.id==e.id));
-  await persist();
+  await persist(route:WaffraFinanceRoute.transactionDeleteAndUndo);
   if(!mounted)return;
   snack(context,waffraIsEnglish?'Transaction deleted':'تم حذف العملية',
    isError:false,duration:const Duration(seconds:5),
@@ -3643,7 +3651,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    onAction:()async{
     if(!mounted||entries.any((x)=>x.id==e.id))return;
     setState(()=>entries.insert(0,e));
-    await persist();
+    await persist(route:WaffraFinanceRoute.transactionDeleteAndUndo);
    });
  }
  Widget stat(String label,double value,IconData icon,Color color)=>Expanded(
