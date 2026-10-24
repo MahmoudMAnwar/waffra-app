@@ -1,0 +1,49 @@
+name: M173 Production Cutover Evidence and Fail-Closed Gate
+
+on:
+  pull_request:
+    branches:
+      - integration/m160-reconcile-main-m158-release-gate-20261023
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  staging-only-activation-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Negative unit tests for accidental source activation
+        run: python3 -m unittest scripts/qa/test_m173_source_cutover_preflight.py -v
+      - name: Produce machine-readable NO-GO security review
+        run: |
+          python3 scripts/qa/m173_source_cutover_preflight.py | tee m173-release-no-go.json
+          python3 - <<'PY'
+          import json
+          report=json.load(open('m173-release-no-go.json'))
+          assert report['sourceGatePass'] is True
+          assert report['releaseReady'] is False
+          assert report['productionSqlCipherActivated'] is False
+          assert report['userDataMigrationAttempted'] is False
+          assert report['financeRouteCount'] == 24
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: waffra-m173-no-go-evidence
+          path: m173-release-no-go.json
+          retention-days: 14
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Strict 24-route, witness, rollback and prod release safeguards
+        run: >
+          flutter test
+          test/storage/m173_production_release_negative_matrix_test.dart
+          test/storage/m123_production_cutover_release_gate_test.dart
+          test/storage/m83_cutover_release_gate_matrix_test.dart
