@@ -2004,7 +2004,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  late WaffraVerifiedFinanceAuthority _financeAuthority=WaffraVerifiedFinanceAuthority(legacy:_homeFinancePersistence);
  WaffraProductionFinanceAuthorityBinding? _financeBinding;
  Future<void>? _financeBindingFuture;
- Future<void> _ensureFinanceBound()=>_financeBindingFuture??=_bindFinanceSource();
+ Future<void> _ensureFinanceBound()async{
+  if(_financeBinding!=null)return;
+  final pending=_financeBindingFuture??=_bindFinanceSource();
+  try{await pending;}
+  catch(_){if(identical(_financeBindingFuture,pending))_financeBindingFuture=null;rethrow;}
+ }
  Future<void> _bindFinanceSource()async{
   final binding=await WaffraProductionFinanceAuthorityBinding.bind(
    legacy:_homeFinancePersistence,
