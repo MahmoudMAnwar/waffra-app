@@ -1,0 +1,33 @@
+name: M168 Firebase Owner and Deletion Rules QA
+
+on:
+  pull_request:
+    branches:
+      - integration/m160-reconcile-main-m158-release-gate-20261023
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rules-and-deletion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: python3 scripts/qa/m168_firebase_delete_security_review.py
+      - run: npm --prefix test/firebase install --no-audit --no-fund
+      - name: Emulator only; never deploy Firebase to production
+        run: >
+          ./test/firebase/node_modules/.bin/firebase emulators:exec
+          --only firestore --project demo-waffra-rules-ci
+          'npm --prefix test/firebase test'
