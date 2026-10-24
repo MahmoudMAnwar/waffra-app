@@ -124,7 +124,7 @@ void main() {
   test('M180 rejects empty or oversized suggestion before any write', () async {
     await expectLater(authority.addCustomGoalSuggestion('   '),
         throwsArgumentError);
-    await expectLater(authority.addCustomGoalSuggestion('x' * 101),
+    await expectLater(authority.addCustomGoalSuggestion(List<String>.filled(101, 'x').join()),
         throwsArgumentError);
     expect(await authority.loadCustomGoalSuggestions(), isEmpty);
   });
