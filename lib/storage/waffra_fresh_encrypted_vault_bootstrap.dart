@@ -191,6 +191,13 @@ CREATE TABLE IF NOT EXISTS fresh_finance_settings(
   setting_key TEXT PRIMARY KEY NOT NULL,
   value_json TEXT NOT NULL
 )''');
+      // Portable restore and live encrypted suggestions share this typed table.
+      // A fresh candidate starts empty; no legacy preference is imported.
+      await store.customStatement('''
+CREATE TABLE IF NOT EXISTS fresh_finance_custom_goals(
+  position INTEGER PRIMARY KEY CHECK(position >= 0),
+  suggestion TEXT NOT NULL
+)''');
       await store.customStatement('''
 CREATE TABLE IF NOT EXISTS fresh_finance_sms_hashes(
   message_hash TEXT PRIMARY KEY NOT NULL
@@ -218,6 +225,7 @@ ON fresh_finance_entries(occurred_iso)''');
           'fresh_finance_receipts',
           'fresh_finance_settings',
           'fresh_finance_sms_hashes',
+          'fresh_finance_custom_goals',
         ]) {
           final count = await store.customSelect(
             'SELECT count(*) AS n FROM $table',
