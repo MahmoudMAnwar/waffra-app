@@ -46,7 +46,7 @@ void main() {
         ),
       ));
       expect(find.text('6'), findsOneWidget);
-      expect(find.byIcon(Icons.attach_file_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.attach_file_rounded), findsNothing);
       final clip = tester.widget<ClipPath>(
         find.ancestor(
           of: find.text('6'),
@@ -69,8 +69,8 @@ void main() {
     expect(source, contains(
       'alignment:waffraIsEnglish?Alignment.bottomRight:Alignment.bottomLeft',
     ));
-    expect(source, contains('if(goalsOpened||tab==2){goalDialog();return;}'));
-    expect(source, contains('if(tab==3){recurringDialog();return;}'));
+    expect(source, contains('if(goalsOpened||tab==2){unawaited(_launchAddAction(()=>goalDialog()));return;}'));
+    expect(source, contains('if(tab==3){unawaited(_launchAddAction(()=>recurringDialog()));return;}'));
     expect(source, isNot(contains('WaffraPhysicalLeftFab')));
   });
 
