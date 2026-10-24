@@ -49,6 +49,7 @@ import 'storage/waffra_legacy_finance_writer_coordinator.dart';
 import 'storage/waffra_legacy_widget_commit_journal.dart';
 import 'storage/waffra_home_finance_persistence.dart';
 import 'storage/waffra_verified_finance_authority.dart';
+import 'storage/waffra_production_finance_authority_binding.dart';
 import 'storage/waffra_fresh_finance_modules_repository.dart';
 import 'storage/waffra_verified_module_ui_guard.dart';
 import 'storage/waffra_runtime_finance_route_contract.dart';
@@ -2000,7 +2001,20 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
  final WaffraLegacyWriteQueue _financialWriteQueue=WaffraLegacyWriteQueue();
  final WaffraHomeFinancePersistence _homeFinancePersistence=const WaffraHomeFinancePersistence();
- late final WaffraVerifiedFinanceAuthority _financeAuthority=WaffraVerifiedFinanceAuthority(legacy:_homeFinancePersistence);
+ late WaffraVerifiedFinanceAuthority _financeAuthority=WaffraVerifiedFinanceAuthority(legacy:_homeFinancePersistence);
+ WaffraProductionFinanceAuthorityBinding? _financeBinding;
+ Future<void>? _financeBindingFuture;
+ Future<void> _ensureFinanceBound()=>_financeBindingFuture??=_bindFinanceSource();
+ Future<void> _bindFinanceSource()async{
+  final binding=await WaffraProductionFinanceAuthorityBinding.bind(
+   legacy:_homeFinancePersistence,
+   startupRoute:WaffraFinanceRoute.appStartup,
+  );
+  if(!mounted){await binding.close();throw StateError('Home startup was disposed.');}
+  _financeBinding=binding;
+  _financeAuthority=binding.authority;
+ }
+
  WaffraFinanceAuthorityRead? _lastFinanceAuthorityRead;
  final smsHashes=<String>{};
  final expandedCategoryIds=<String>{};
@@ -2117,7 +2131,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     icon:const Icon(Icons.refresh),
     label:WaffraText(waffraIsEnglish?'Retry safely':'إعادة المحاولة بأمان')),
   ])));
- @override void dispose(){_dashboardScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();super.dispose();}
+ @override void dispose(){_dashboardScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();final binding=_financeBinding;if(binding!=null)unawaited(binding.close());super.dispose();}
  Future<void> _syncWidgetTransactions()async{
   if(!mounted||!ready)return;
   try{
@@ -2150,6 +2164,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
  }
  Future<void> load()async {
+  await _ensureFinanceBound();
   final p=await SharedPreferences.getInstance();
   final loadedFinance=await _financeAuthority.load(route:WaffraFinanceRoute.dashboardRead);
   _lastFinanceAuthorityRead=loadedFinance;
