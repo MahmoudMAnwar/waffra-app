@@ -231,6 +231,86 @@ class WaffraVerifiedFinanceAuthority {
     if (backend != baseline.source) {
       throw StateError('Finance authority changed while screen was open.');
     }
+    // A second Paid tap with an already-posted deterministic ID must not be
+    // reported as a successful scalar/no-op save. Postpone-only actions use
+    // userConfirmed=false and are handled separately below.
+    if (backend == WaffraRuntimeFinanceBackend.verifiedEncrypted &&
+        route == WaffraFinanceRoute.recurringPostingAndPostponement &&
+        userConfirmed &&
+        (immutableCapture['entries'] is! String ||
+         immutableCapture['entries'] ==
+             baseline.encryptedWitness?.snapshot.values['entries'])) {
+      throw StateError('This recurring payment has already been posted.');
+    }
+    // A recurring payment is NOT a scalar postponement edit. One confirmed
+    // newly posted deterministic entry plus only its removed postponement
+    // must pass through the combined normalized SQL/snapshot writer.
+    if (backend == WaffraRuntimeFinanceBackend.verifiedEncrypted &&
+        route == WaffraFinanceRoute.recurringPostingAndPostponement &&
+        immutableCapture['entries'] is String &&
+        baseline.encryptedWitness != null &&
+        immutableCapture['entries'] !=
+            baseline.encryptedWitness!.snapshot.values['entries']) {
+      final witness = baseline.encryptedWitness!;
+      if (!userConfirmed ||
+          immutableCapture['waffra_recurring_postponed_v1'] is! String) {
+        throw StateError('Recurring payment requires explicit user confirmation.');
+      }
+      for (final item in immutableCapture.entries) {
+        if (item.key == 'entries' ||
+            item.key == 'waffra_recurring_postponed_v1') {
+          continue;
+        }
+        if (!witness.snapshot.values.containsKey(item.key) ||
+            jsonEncode(item.value) !=
+                jsonEncode(witness.snapshot.values[item.key])) {
+          throw StateError('Recurring posting cannot include other finance edits.');
+        }
+      }
+      List<Map<String, Object?>> ledger(String? raw) {
+        final decoded = jsonDecode(raw ?? '[]');
+        if (decoded is! List || decoded.any((x) => x is! Map)) {
+          throw StateError('Recurring payment ledger is malformed.');
+        }
+        final ids = <String>{};
+        final rows = <Map<String, Object?>>[];
+        for (final entry in decoded) {
+          final row = Map<String, Object?>.from(entry as Map);
+          final id = row['id'];
+          if (id is! String || id.trim().isEmpty || !ids.add(id)) {
+            throw StateError('Recurring payment ledger has duplicate IDs.');
+          }
+          rows.add(row);
+        }
+        return rows;
+      }
+      final previous = ledger(witness.snapshot.values['entries'] as String?);
+      final proposed = ledger(immutableCapture['entries'] as String);
+      final byId = <String, Map<String, Object?>>{
+        for (final row in previous) row['id'] as String: row,
+      };
+      final offered = <String, Map<String, Object?>>{
+        for (final row in proposed) row['id'] as String: row,
+      };
+      final additions = proposed
+          .where((row) => !byId.containsKey(row['id']))
+          .toList(growable: false);
+      if (proposed.length != previous.length + 1 ||
+          additions.length != 1 ||
+          byId.keys.any((id) =>
+              !offered.containsKey(id) ||
+              jsonEncode(byId[id]) != jsonEncode(offered[id]))) {
+        throw StateError('Recurring posting may append only one immutable entry.');
+      }
+      await encryptedSession!.commitRecurringPayment(
+        baseline: witness,
+        record: additions.single,
+        proposedPostponedJson:
+            immutableCapture['waffra_recurring_postponed_v1'] as String,
+        userConfirmed: true,
+      );
+      return await load(route: route);
+    }
     if (backend == WaffraRuntimeFinanceBackend.verifiedEncrypted &&
         (route == WaffraFinanceRoute.challengeAndBudgetUpdate ||
          route == WaffraFinanceRoute.recurringPostingAndPostponement ||
