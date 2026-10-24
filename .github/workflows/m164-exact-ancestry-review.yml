@@ -13,6 +13,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          # Audit the candidate as it would merge into the current integration
+          # branch, not the stale PR head (which predates M164 script landing).
+          ref: ${{ github.sha }}
       - name: Read-only main ancestry and cutover-compatibility checks
         run: bash scripts/qa/m164_validate_m160_ancestry.sh
