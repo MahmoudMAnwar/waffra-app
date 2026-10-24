@@ -7673,7 +7673,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
    actions:[
     Tooltip(message:waffraIsEnglish?'Switch to Arabic':'Switch to English',
      child:TextButton(
-      onPressed:()=>widget.onLanguage(waffraIsEnglish?'ar':'en'),
+      onPressed:(){
+       if(addFabExpanded||_fabPressed)setState((){addFabExpanded=false;_fabPressed=false;});
+       widget.onLanguage(waffraIsEnglish?'ar':'en');
+      },
       style:TextButton.styleFrom(
        foregroundColor:Colors.white,minimumSize:const Size(43,37),
        padding:const EdgeInsets.symmetric(horizontal:8),
@@ -7695,7 +7698,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   // alongside the next one (the recurring -> savings navigation hitch).
   body:_financeLoadFailure!=null?_financialRecoveryScreen():
    !ready?const Center(child:CircularProgressIndicator()):
-   GestureDetector(
+   Stack(clipBehavior:Clip.none,children:[GestureDetector(
     behavior:HitTestBehavior.translucent,
     onHorizontalDragStart:(_)=>_swipeTravel=0,
     onHorizontalDragUpdate:(details)=>_swipeTravel+=details.delta.dx,
@@ -7708,34 +7711,13 @@ Future<void> bulkSmsSheet({String? initialText})async {
       builder:(ctx,progress,child)=>Opacity(opacity:progress,
        child:Transform.translate(offset:Offset((1-progress)*(waffraIsEnglish?16:-16),0),child:child)),
       child:currentTab()))),
-  // Keep the add menu and its original actions above five destinations.
-  floatingActionButtonLocation:WaffraDirectionalFabLocation(english:waffraIsEnglish),
-  // Home, Categories, Goals and Recurring share a 58px +: left in Arabic, right in English.
-  floatingActionButton:!ready||tab==4?null:Directionality(
-   textDirection:TextDirection.ltr,child:Column(
-   mainAxisSize:MainAxisSize.min,
-   // The expanded menu is aligned with the + on the active physical side.
-   crossAxisAlignment:waffraIsEnglish?CrossAxisAlignment.end:CrossAxisAlignment.start,children:[
-    AnimatedSwitcher(
-     duration:waffraMotion(320),
-     reverseDuration:waffraMotion(260),
-     switchInCurve:Curves.easeOutCubic,
-     switchOutCurve:Curves.easeInCubic,
-     // Keep the menu anchored beside the same physical FAB edge in AR/EN.
-     layoutBuilder:(current,previous)=>Stack(
-      alignment:waffraIsEnglish?Alignment.bottomRight:Alignment.bottomLeft,
-      children:[...previous,if(current!=null)current]),
-     transitionBuilder:(child,animation)=>SizeTransition(
-      sizeFactor:animation,axisAlignment:1.0,
-      child:FadeTransition(opacity:animation,child:SlideTransition(
-       position:Tween<Offset>(
-        begin:const Offset(0,.07),end:Offset.zero).animate(animation),
-       child:child))),
-     child:addFabExpanded&&(tab==0||tab==1)&&!goalsOpened?Padding(
-      key:const ValueKey('waffra-fab-menu-open'),
-      padding:const EdgeInsets.only(bottom:9),
-      child:Column(mainAxisSize:MainAxisSize.min,
-       crossAxisAlignment:waffraIsEnglish?CrossAxisAlignment.end:CrossAxisAlignment.start,children:[
+    if(tab==0||tab==1)
+     WaffraFabMenuAnchor(
+      english:waffraIsEnglish,
+      expanded:addFabExpanded&&!goalsOpened,
+      menu:Column(mainAxisSize:MainAxisSize.min,
+       crossAxisAlignment:waffraIsEnglish?CrossAxisAlignment.end:CrossAxisAlignment.start,
+       children:[
         if(tab==0&&!goalsOpened)...[
         _addMenuOption(
          icon:Icons.edit_note_rounded,
@@ -7758,8 +7740,17 @@ Future<void> bulkSmsSheet({String? initialText})async {
          _addMenuOption(icon:Icons.trending_down,
           label:waffraIsEnglish?'Expense category':'إضافة قسم مصروفات',
           onTap:(){unawaited(_launchAddAction(()=>chooseCategoryLevel(income:false),fromMenu:true));}),
-        ],
-       ])):const SizedBox(key:ValueKey('waffra-fab-menu-closed'))),
+        ]
+       ]),
+     ),
+   ]),
+  // A fixed 58x58 FAB: pop-up menu is an independent body overlay.
+  // Never allow a menu width to change Scaffold's floating geometry.
+  floatingActionButtonLocation:WaffraDirectionalFabLocation(english:waffraIsEnglish),
+  floatingActionButtonAnimator:const WaffraStationaryFabAnimator(),
+  floatingActionButton:!ready||tab==4?null:SizedBox(
+   width:58,height:58,
+   child:
     Material(
       key:_tourKeys[1],
       color:forest,elevation:7,
@@ -7794,7 +7785,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        turns:addFabExpanded?0.125:0,
        child:const Icon(Icons.add,color:Colors.white,size:28)))),
      )),
-   ])),
+   ),
   bottomNavigationBar:WaffraFooterNavigation(
    selectedIndex:tab,
    english:waffraIsEnglish,
@@ -7844,6 +7835,56 @@ class WaffraDeletedItemsButton extends StatelessWidget {
    ]));
  }
 }
+/// Independently anchored menu: its width cannot move the 58px FAB.
+/// The menu follows the same *physical* side, regardless of text direction.
+class WaffraFabMenuAnchor extends StatelessWidget {
+ const WaffraFabMenuAnchor({
+  super.key,required this.english,required this.expanded,required this.menu,
+ });
+ final bool english;
+ final bool expanded;
+ final Widget menu;
+
+ @override Widget build(BuildContext context)=>Positioned(
+  left:english?null:16,
+  right:english?16:null,
+  bottom:86, // FAB: 58 high + 16 bottom margin + 12 clear gap
+  child:IgnorePointer(
+   ignoring:!expanded,
+   child:AnimatedSwitcher(
+    duration:waffraMotion(280),
+    reverseDuration:waffraMotion(220),
+    switchInCurve:Curves.easeOutCubic,
+    switchOutCurve:Curves.easeInCubic,
+    layoutBuilder:(current,previous)=>Stack(
+     alignment:english?Alignment.bottomRight:Alignment.bottomLeft,
+     children:[...previous,if(current!=null)current],
+    ),
+    transitionBuilder:(child,animation)=>SizeTransition(
+     sizeFactor:animation,axisAlignment:1.0,
+     child:FadeTransition(opacity:animation,child:child),
+    ),
+    child:expanded
+      ? KeyedSubtree(key:const ValueKey('waffra-fab-menu-open'),child:menu)
+      : const SizedBox(key:ValueKey('waffra-fab-menu-closed')),
+   ),
+  ),
+ );
+}
+
+/// Avoid Scaffold's default size/translation animation when tabs or locale
+/// change. Only the plus icon itself animates on an explicit user tap.
+class WaffraStationaryFabAnimator extends FloatingActionButtonAnimator {
+ const WaffraStationaryFabAnimator();
+ @override Offset getOffset({
+  required Offset begin,required Offset end,required double progress,
+ })=>end;
+ @override Animation<double> getScaleAnimation({required Animation<double> parent})=>
+  const AlwaysStoppedAnimation<double>(1);
+ @override Animation<double> getRotationAnimation({required Animation<double> parent})=>
+  const AlwaysStoppedAnimation<double>(1);
+}
+
 /// Physically left for Arabic, physically right for English on every tab.
 class WaffraDirectionalFabLocation extends FloatingActionButtonLocation {
  const WaffraDirectionalFabLocation({required this.english});
