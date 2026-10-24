@@ -1,3 +1,4 @@
+import 'waffra_encrypted_transaction_recycle.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -86,6 +87,39 @@ class WaffraEncryptedFinanceSession {
       proposedPostponedJson: proposedPostponedJson,
       userConfirmed: userConfirmed,
     );
+  }
+
+  Future<WaffraTransactionRecycleResult> recycleVerifiedTransaction({
+    required WaffraEncryptedHomeWitness baseline,
+    required String entryId,
+    required List<String> expectedImageHashes,
+    required DateTime now,
+    required bool userConfirmed,
+  }) async {
+    _requireEnabled();
+    return bridge.recycleVerifiedTransaction(
+      baseline: baseline,
+      entryId: entryId,
+      expectedImageHashes: expectedImageHashes,
+      now: now,
+      userConfirmed: userConfirmed,
+    );
+  }
+
+  Future<WaffraTransactionRecycleResult> restoreVerifiedTransaction({
+    required WaffraEncryptedHomeWitness baseline,
+    required String entryId,
+    required DateTime now,
+  }) async {
+    _requireEnabled();
+    return bridge.restoreVerifiedTransaction(
+      baseline: baseline, entryId: entryId, now: now,
+    );
+  }
+
+  Future<Map<String, int>> listEncryptedDeletedTransactions() async {
+    _requireEnabled();
+    return bridge.listEncryptedDeletedTransactions();
   }
 
   /// The widget revision is the actual monotonic SQLCipher generation.

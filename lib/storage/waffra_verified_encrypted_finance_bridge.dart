@@ -1,3 +1,4 @@
+import 'waffra_encrypted_transaction_recycle.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -679,6 +680,58 @@ class WaffraVerifiedEncryptedFinanceBridge {
         expectedSha256: expectedSha256,
       );
     });
+  }
+
+  WaffraEncryptedTransactionRecycle get _transactionRecycle =>
+      WaffraEncryptedTransactionRecycle(
+        snapshot: snapshot,
+        writerDirectory: writerDirectory,
+        verifySourceUnderLock: _requireActivatedUnderLock,
+        experimentalEnabled: experimentalEnabled,
+      );
+
+  /// A verified SQLCipher-only transaction deletion. The source witness,
+  /// ledger+typed SQL parity and all image SHA-256 witnesses are checked under
+  /// the shared Home/Widget native lock before a single durable commit.
+  Future<WaffraTransactionRecycleResult> recycleVerifiedTransaction({
+    required WaffraEncryptedHomeWitness baseline,
+    required String entryId,
+    required List<String> expectedImageHashes,
+    required DateTime now,
+    required bool userConfirmed,
+  }) async {
+    if (!experimentalEnabled || !userConfirmed) {
+      throw StateError('Encrypted transaction deletion requires confirmation.');
+    }
+    return _transactionRecycle.delete(
+      baseline: baseline.snapshot,
+      entryId: entryId,
+      expectedImageHashes: List<String>.unmodifiable(expectedImageHashes),
+      now: now,
+      userConfirmed: userConfirmed,
+    );
+  }
+
+  /// Restore exactly one previously deleted transaction with all its
+  /// encrypted invoice bytes. Current finance generation must be unchanged.
+  Future<WaffraTransactionRecycleResult> restoreVerifiedTransaction({
+    required WaffraEncryptedHomeWitness baseline,
+    required String entryId,
+    required DateTime now,
+  }) {
+    if (!experimentalEnabled) {
+      throw StateError('Encrypted transaction recovery is disabled.');
+    }
+    return _transactionRecycle.restore(
+      baseline: baseline.snapshot, entryId: entryId, now: now,
+    );
+  }
+
+  Future<Map<String, int>> listEncryptedDeletedTransactions() {
+    if (!experimentalEnabled) {
+      throw StateError('Encrypted transaction trash is disabled.');
+    }
+    return _transactionRecycle.pendingRecoveries();
   }
 
   WaffraEncryptedReceiptRecycle get _receiptRecycle =>
