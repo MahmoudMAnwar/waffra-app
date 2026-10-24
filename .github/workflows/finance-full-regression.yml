@@ -91,7 +91,9 @@ jobs:
   android-finance-migration-rehearsal:
     name: Android isolated finance and receipt migration rehearsal
     needs: flutter-ui-and-finance
-    if: ${{ success() && github.ref == 'refs/heads/feature/storage-cutover-readiness-m60' }}
+    # M160: run the disposable Android migration rehearsal on the exact
+    # integration PR to main as well. This does not enable production cutover.
+    if: ${{ success() && (github.ref == 'refs/heads/feature/storage-cutover-readiness-m60' || (github.event_name == 'pull_request' && github.head_ref == 'integration/m160-reconcile-main-m158-release-gate-20261023' && github.base_ref == 'main')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
