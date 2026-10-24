@@ -23,7 +23,7 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Original M147 UI-only, SHA-pinned scope review
-        if: github.head_ref != 'integration/m160-reconcile-main-m158-release-gate-20261023' && github.head_ref != 'qa/m174-main-sha-postmerge-20261024' && github.head_ref != 'feature/m175-explicit-finance-intent-routes'
+        if: github.head_ref != 'integration/m160-reconcile-main-m158-release-gate-20261023' && github.head_ref != 'qa/m174-main-sha-postmerge-20261024' && github.head_ref != 'feature/m175-explicit-finance-intent-routes' && github.head_ref != 'feature/m176-module-finance-route-intents'
         env:
           REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: python3 scripts/m147_main_merge_readiness_audit.py
@@ -37,6 +37,11 @@ jobs:
         env:
           REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: python3 scripts/qa/m175_finance_intent_scope_review.py
+      - name: M176 strict module finance route scope and NO-GO review
+        if: github.head_ref == 'feature/m176-module-finance-route-intents'
+        env:
+          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python3 scripts/qa/m176_module_intent_scope_review.py
       - name: M161 guarded experimental integration review (not release approval)
         if: github.head_ref == 'integration/m160-reconcile-main-m158-release-gate-20261023'
         env:

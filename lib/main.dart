@@ -2257,7 +2257,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(!mounted)return;setState(()=>ready=true);_receiveSharedSms();_receiveWidgetAction();unawaited(_refreshWidget());
   WidgetsBinding.instance.addPostFrameCallback((_){if(mounted)unawaited(applyRecurring());});
   if(recurringRemindersEnabled)unawaited(syncRecurringReminders());
-  if(trashBefore!=deletedCategories.length)await persist();
+  if(trashBefore!=deletedCategories.length)await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
   if(!(p.getBool('waffra_in_app_tour_seen_v2')??false)&&mounted){
    WidgetsBinding.instance.addPostFrameCallback((_){
     if(mounted){setState((){tourActive=true;tourStep=0;tab=0;goalsOpened=false;addFabExpanded=false;tourTargetReady=false;});if(waffraAnimationLevel.value!='off')_tourGlow.repeat(reverse:true);scheduleTourFocus();}
@@ -3098,7 +3098,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        final c=await categoryDialog(income:income,suggested:suggestion);
        if(c!=null&&mounted){
         if(!categories.any((x)=>x.name==c.name&&x.income==c.income)){
-         setState(()=>categories.add(c));await persist();
+         setState(()=>categories.add(c));await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
         }
         update((){category=c.name;suggestion=null;});
        }
@@ -3107,7 +3107,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        final c=await categoryDialog(income:income);
        if(c!=null&&mounted){
         if(!categories.any((x)=>x.name==c.name&&x.income==c.income)){
-         setState(()=>categories.add(c));await persist();
+         setState(()=>categories.add(c));await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
         }
         update(()=>category=c.name);
        }
@@ -3118,7 +3118,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        if(c!=null&&mounted&&sheetContext.mounted){
         if(!categories.any((x)=>x.name==c.name&&x.income==c.income)){
          setState(()=>categories.add(c));
-         await persist();
+         await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
         }
         if(sheetContext.mounted)update(()=>category=c.name);
        }
@@ -3851,7 +3851,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     ))));
    if(next!=null&&mounted){
     setState((){monthlyBudgetEnabled=next.enabled;monthlyBudget=next.amount;});
-    await persist();
+    await persist(route:WaffraFinanceRoute.challengeAndBudgetUpdate);
     if(mounted)snackSuccess(context,waffraIsEnglish?'Monthly budget settings saved':'تم حفظ إعدادات الميزانية الشهرية');
    }
   }finally{disposeLater([amount]);}
@@ -5112,7 +5112,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   if(categories.any((x)=>x.income==c.income&&x.name.trim()==c.name.trim())){
    snack(context,'القسم موجود بالفعل');return;
   }
-  setState(()=>categories.add(c));await persist();
+  setState(()=>categories.add(c));await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
  }
  Future<void> updateCategory(BudgetCategory c)async {
   final revised=await categoryDialog(initial:c);
@@ -5150,7 +5150,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     }
    }
   });
-  await persist();
+  await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
  }
  Future<void> deleteCategory(BudgetCategory c)async {
   final children=categories.where((item)=>item.parentId==c.id).toList();
@@ -5198,7 +5198,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    categories.removeWhere((e)=>e.id==c.id);
    deletedCategories.add({'category':c.toJson(),'deletedAt':DateTime.now().toIso8601String()});
   });
-  await persist();
+  await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
   if(mounted)snackSuccess(context,waffraIsEnglish?'Category moved to Recently Deleted for 30 days':'تم نقل القسم للمحذوفات لمدة 30 يومًا');
  }
  Future<void> showCategoryTrash()async {
@@ -5207,7 +5207,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    final when=DateTime.tryParse('${item['deletedAt']??''}');
    return when==null||!DateTime.now().isBefore(when.add(const Duration(days:30)));
   });
-  if(before!=deletedCategories.length)await persist();
+  if(before!=deletedCategories.length)await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
   if(!mounted)return;
   await showWaffraDialog<void>(context:context,builder:(dialogCtx)=>StatefulBuilder(
    builder:(dialogCtx,refresh)=>AlertDialog(
@@ -5279,7 +5279,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
               categories.add(restored);
               deletedCategories.remove(item);
              });
-             await persist();
+             await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
              if(!dialogCtx.mounted)return;
              Navigator.pop(dialogCtx);
              if(mounted)snackSuccess(context,waffraIsEnglish
@@ -5294,7 +5294,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
              if(yes==true&&mounted){
               setState(()=>deletedCategories.remove(item));
               refresh((){});
-              await persist();
+              await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
              }
             },
         );
@@ -5467,7 +5467,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     }
    }
    if(!mounted)return;
-   setState(()=>goals.add(g));await persist();
+   setState(()=>goals.add(g));await persist(route:WaffraFinanceRoute.goalCreateEditDeleteRestore);
    if(mounted)snackSuccess(context,
     waffraIsEnglish?'Savings goal added successfully':'تمت إضافة الهدف بنجاح');
   }
@@ -5607,7 +5607,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     final i=goals.indexWhere((x)=>x.id==g.id);
     if(i>=0)goals[i]=g.copy(saved:g.saved+n);
    });
-   await persist();
+   await persist(route:WaffraFinanceRoute.goalCreateEditDeleteRestore);
    if(achieved&&mounted){
     await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
      title:WaffraText(waffraIsEnglish?'🎉 Goal achieved!':'🎉 مبروك!'),
@@ -5674,7 +5674,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   disposeLater([name,amount]);
   if(challenge==null||!mounted)return;
   setState(()=>challenges.add(challenge));
-  await persist();
+  await persist(route:WaffraFinanceRoute.challengeAndBudgetUpdate);
  }
  Widget savingsChallengesSection()=>Card(
   margin:const EdgeInsets.symmetric(vertical:12),elevation:1,
@@ -5702,7 +5702,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
            waffraIsEnglish?'Progress cannot be recovered.':
             'هل أنت متأكد من حذف هذا التحدي؟ سيتم حذف التحدي نهائيًا، ولن تتمكن من استعادته لاحقًا.');
           if(ok==true&&mounted){
-           setState(()=>challenges.removeWhere((x)=>x.id==c.id));await persist();
+           setState(()=>challenges.removeWhere((x)=>x.id==c.id));await persist(route:WaffraFinanceRoute.challengeAndBudgetUpdate);
           }
          }),
        ]),
@@ -5723,7 +5723,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
           final i=challenges.indexWhere((x)=>x.id==c.id);
           if(i<0||!challenges[i].canComplete(DateTime.now()))return;
           setState(()=>challenges[i]=challenges[i].complete());
-          await persist();
+          await persist(route:WaffraFinanceRoute.challengeAndBudgetUpdate);
          }:null,icon:Icon(completed?Icons.check_circle_outline:Icons.check,size:18),
          label:WaffraText(completed?(waffraIsEnglish?'Complete':'مكتمل'):
           allowed?(waffraIsEnglish?'Saved today':'وفّرت اليوم'):
@@ -5763,7 +5763,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    final date=DateTime.tryParse('${item['deletedAt']??''}');
    return date==null||!DateTime.now().isBefore(date.add(const Duration(days:30)));
   });
-  if(before!=deletedGoals.length)await persist();
+  if(before!=deletedGoals.length)await persist(route:WaffraFinanceRoute.goalCreateEditDeleteRestore);
   if(!mounted)return;
   await showWaffraDialog<void>(context:context,builder:(ctx)=>
    StatefulBuilder(builder:(ctx,refresh)=>AlertDialog(
@@ -5793,7 +5793,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
           goals.add(goal.copy(saved:0));
           deletedGoals.remove(item);
          });
-         await persist();
+         await persist(route:WaffraFinanceRoute.goalCreateEditDeleteRestore);
          if(!ctx.mounted)return;
          Navigator.pop(ctx);
          if(mounted)snackSuccess(context,waffraIsEnglish
@@ -5808,7 +5808,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
            :'هل تريد حذف الهدف «${goal.name}» نهائيًا؟ لن يمكن استرجاعه، وستظل المعاملات المالية القديمة محفوظة.');
          if(yes!=true||!mounted)return;
          setState(()=>deletedGoals.remove(item));
-         await persist();
+         await persist(route:WaffraFinanceRoute.goalCreateEditDeleteRestore);
          if(ctx.mounted)refresh((){});
         },
        );
@@ -5892,7 +5892,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
          final linked=g.saved>0||entries.any((e)=>e.category==g.name);
          final yes=await confirmDeletion(waffraIsEnglish?'Delete savings goal?':'حذف هدف الادخار',
           waffraGoalDeleteWarning(g.name,linked,waffraIsEnglish));
-         if(yes==true&&mounted){setState((){deletedGoals.add({'goal':g.toJson(),'deletedAt':DateTime.now().toIso8601String()});goals.removeWhere((x)=>x.id==g.id);});await persist();}
+         if(yes==true&&mounted){setState((){deletedGoals.add({'goal':g.toJson(),'deletedAt':DateTime.now().toIso8601String()});goals.removeWhere((x)=>x.id==g.id);});await persist(route:WaffraFinanceRoute.goalCreateEditDeleteRestore);}
         }
        },itemBuilder:(_)=>[PopupMenuItem(value:'delete',child:WaffraText(waffraIsEnglish?'Delete goal':'حذف الهدف'))]),
       ]),
@@ -6053,7 +6053,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    }));
   disposeLater([title,amount,day]);
   if(r!=null&&mounted){
-   setState(()=>recurring.add(r));await persist();await applyRecurring();
+   setState(()=>recurring.add(r));await persist(route:WaffraFinanceRoute.recurringCreateEditDeleteRestore);await applyRecurring();
    await syncRecurringReminders();
   }
  }
@@ -6181,7 +6181,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        }else{
         setState(()=>recurring[index]=r.copy(active:false));
        }
-       await persist();
+       await persist(route:WaffraFinanceRoute.recurringCreateEditDeleteRestore);
        if(enabled)await applyRecurring();
        await syncRecurringReminders();
       }),
@@ -6196,7 +6196,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
          recurring.removeWhere((e)=>e.id==r.id);
          recurringPostponed.removeWhere((key,value)=>key.startsWith('rec_${r.id}_'));
         });
-        await persist();await syncRecurringReminders();
+        await persist(route:WaffraFinanceRoute.recurringCreateEditDeleteRestore);await syncRecurringReminders();
        }
       },itemBuilder:(_)=>[
        PopupMenuItem(value:'delete',child:WaffraText(waffraIsEnglish?'Delete':'حذف'))]),
