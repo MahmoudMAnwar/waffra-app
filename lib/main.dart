@@ -2278,6 +2278,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  Future<void> persist({
   WaffraFinanceRoute route = WaffraFinanceRoute.transactionEdit,
+  bool userConfirmed = false,
  }) {
   // Freeze a snapshot BEFORE any await. Previously Future.wait launched
   // overlapping multi-key saves, so a slower old save could finish last.
@@ -2309,6 +2310,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     route:route,
     baseline:baseline,
     captured:captured,
+    userConfirmed:userConfirmed,
    );
    _lastFinanceAuthorityRead=committed;
    _lastLedgerSavedRaw=committed.ledgerRaw;
@@ -2396,7 +2398,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       setState(()=>entries.insert(0,MoneyEntry(id:id,title:r.title,category:r.category,amount:r.amount,income:r.income,date:DateTime.now())));
      }
      recurringPostponed.remove(id);
-     await persist(route:WaffraFinanceRoute.recurringPostingAndPostponement);
+     // 'Paid' is a human-confirmed choice; the SQL writer commits both
+     // the deterministic payment and its postponement in one transaction.
+     await persist(route:WaffraFinanceRoute.recurringPostingAndPostponement,
+      userConfirmed:true);
     }else if(action=='postpone'){
      final selected=await showDatePicker(context:context,initialDate:today.add(const Duration(days:1)),
       firstDate:DateTime(today.year,today.month,today.day).add(const Duration(days:1)),
