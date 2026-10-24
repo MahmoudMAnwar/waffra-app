@@ -12,6 +12,7 @@ ALLOWED = {
     ".github/workflows/m147-final-main-review-gate.yml",
     "docs/qa/m175-finance-route-intent.md",
     "scripts/qa/m175_finance_intent_scope_review.py",
+    "test/m110_live_finance_authority_writer_test.dart",
     "test/storage/m175_live_finance_mutation_intent_test.dart",
 }
 
