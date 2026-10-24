@@ -1,0 +1,65 @@
+name: Waffra Unified M99-M103 Finance Recovery Candidate
+
+on:
+  pull_request:
+    paths:
+      - 'lib/main.dart'
+      - 'lib/storage/**'
+      - 'test/storage/**'
+      - 'firestore.rules'
+      - '.github/workflows/unified-finance-cloud-release-evidence.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  finance-cloud-source-integration:
+    name: Unified Home/Widget finance + Firebase/recovery proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Strict analyze merged production financial source and tests
+        run: >-
+          dart analyze
+          lib/storage/waffra_runtime_finance_route_contract.dart
+          lib/storage/waffra_cloud_recovery_revision_gate.dart
+          lib/storage/waffra_restored_finance_receipt_attestor.dart
+          lib/storage/waffra_cloud_remote_manifest_verifier.dart
+          lib/storage/waffra_opt_in_encrypted_cloud_sync_runner.dart
+          lib/storage/waffra_firestore_encrypted_sync_transport.dart
+          test/storage/m100_runtime_finance_route_contract_test.dart
+          test/storage/m101_cloud_recovery_revision_gate_test.dart
+          test/storage/m102_restored_finance_receipt_attestor_test.dart
+          test/storage/unified_cloud_remote_manifest_verifier_test.dart
+      - name: Run four merged standalone finance and cloud proof suites
+        run: >-
+          flutter test
+          test/storage/m100_runtime_finance_route_contract_test.dart
+          test/storage/m101_cloud_recovery_revision_gate_test.dart
+          test/storage/m102_restored_finance_receipt_attestor_test.dart
+          test/storage/unified_cloud_remote_manifest_verifier_test.dart
+          --reporter expanded
+      - run: echo "Unified candidate SHA $GITHUB_SHA"
+
+  unreleased-source-review:
+    name: Record unresolved real-device deployment blockers (candidate only)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Produce signed-build reviewer source report without claiming ready
+        shell: bash
+        run: |
+          WAFFRA_RELEASE_EVIDENCE=unified-review.json python3 scripts/m104_release_readiness.py || true
+          test -s unified-review.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: waffra-unified-candidate-release-blockers
+          path: unified-review.json
+          retention-days: 14

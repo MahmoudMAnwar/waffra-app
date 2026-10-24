@@ -1,0 +1,34 @@
+name: M154 SQLCipher Staging Metadata Contract
+on:
+  push:
+    branches:
+      - 'integration/m154-m153-sqlcipher-stage-20261023'
+  workflow_dispatch:
+
+jobs:
+  staged-metadata-acceptance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve dependencies
+        run: flutter pub get
+      - name: Check staging schema and type safety
+        run: |
+          flutter analyze lib/storage/waffra_m154_transaction_schema_bridge.dart test/m154_sqlcipher_m153_transaction_shape_test.dart
+          flutter test test/m154_sqlcipher_m153_transaction_shape_test.dart
+      - name: Confirm no SQLCipher activation in this PR
+        shell: bash
+        run: |
+          set -eu
+          python3 - <<'PY'
+          from pathlib import Path
+          text=Path('lib/storage/waffra_m154_transaction_schema_bridge.dart').read_text()
+          assert 'WaffraEncryptedStore.open' not in text
+          assert 'SharedPreferences.set' not in text
+          assert 'captureLossless' in text
+          print('M154 is non-mutating migration schema staging only.')
+          PY

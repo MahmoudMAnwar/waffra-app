@@ -1,0 +1,161 @@
+name: Waffra Full Offline Finance and UI Regression
+
+on:
+  push:
+    branches:
+      - 'feature/storage-legacy-batch-recovery-m59'
+      - 'feature/storage-cutover-readiness-m60'
+      - 'feature/storage-verified-encrypted-finance-bridge-m61'
+      - 'feature/storage-finance-startup-recovery-m62'
+      - 'feature/storage-verified-backup-restore-m63'
+      - 'feature/storage-portable-sqlcipher-restore-m64'
+      - 'feature/cloud-conflict-safe-m65'
+      - 'feature/storage-encrypted-receipt-view-m66'
+  pull_request:
+    paths:
+      - 'lib/**'
+      - 'test/**'
+      - 'integration_test/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - '.github/workflows/finance-full-regression.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  flutter-ui-and-finance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout tested revision
+        uses: actions/checkout@v4
+      - name: Configure Flutter stable
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve Flutter dependencies and SQLCipher native assets
+        run: flutter pub get
+      - name: Strict analysis for encrypted storage layer
+        run: dart analyze lib/storage test/storage
+      - name: Analyze full Flutter application
+        run: flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings
+      - name: Run every existing app and storage unit/widget regression
+        run: flutter test test/ --reporter expanded
+      - name: Verify new offline finance paths remain opt-in
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          main=Path('lib/main.dart').read_text()
+          widget=Path('lib/waffra_widget_capture.part.dart').read_text()
+          widget_journal=Path('lib/storage/waffra_legacy_widget_commit_journal.dart').read_text()
+          writer=Path('lib/storage/waffra_unified_finance_writer.dart').read_text()
+          receipt=Path('lib/storage/waffra_encrypted_receipt_vault.dart').read_text()
+          assert 'SharedPreferences.getInstance()' in main
+          persistence=Path('lib/storage/waffra_home_finance_persistence.dart').read_text()
+          # M109 now dispatches Widget SMS through the *same* verified
+          # source authority as Home read. That authority delegates to the
+          # original M108 crash-journaled legacy writer only while legacy is
+          # independently verified. Do not reintroduce a local widget journal.
+          authority=Path('lib/storage/waffra_verified_finance_authority.dart').read_text()
+          # M110 Home confirmation is source-aware. The legacy journal may
+          # only be reached through the verified authority, never directly.
+          assert '_financeAuthority.commitConfirmedSms(' in main
+          assert 'WaffraFinanceRoute.bulkSmsConfirmedSave' in main
+          assert '_homeFinancePersistence.commitConfirmedLegacySms(' not in main
+          assert '_homeFinancePersistence.saveLegacy(' not in main
+          assert '_financeAuthority.saveCaptured(' in main
+          assert 'Encrypted screen mutation requires a verified atomic SQL projection writer.' in authority
+          assert 'commitConfirmedLegacySms(' in authority
+          assert 'commitConfirmedLegacySms(' not in widget
+          assert '_financeAuthority.commitConfirmedSms(' in widget
+          assert 'WaffraFinanceRoute.widgetSmsConfirmedSave' in widget
+          assert '_financeAuthority.load(route:WaffraFinanceRoute.widgetRead)' in widget
+          assert '_financeAuthority.load(route:WaffraFinanceRoute.dashboardRead)' in main
+          assert 'await legacy.commitConfirmedLegacySms(' in authority
+          assert 'await journal.prepare(' in persistence
+          assert 'await journal.recover(prefs);' in persistence
+          assert 'await journal.prepare(' not in widget
+          assert 'await journal.recover(' not in widget
+          assert "prefs.setString('entries', newEntries)" in widget_journal
+          assert "prefs.setStringList('waffra_sms_hashes_v1', newHashes)" in widget_journal
+          assert 'this.experimentalEnabled = false' in writer
+          assert 'this.experimentalEnabled = false' in receipt
+          print('Home and Widget use verified source reads; widget SMS delegates to atomic guarded legacy journal, with encrypted activation OFF.')
+          print('IMPORTANT: this is a safe prototype check, NOT proof that the production cutover is complete.')
+          PY
+
+  android-finance-migration-rehearsal:
+    name: Android isolated finance and receipt migration rehearsal
+    needs: flutter-ui-and-finance
+    # M160: run the disposable Android migration rehearsal on the exact
+    # integration PR to main as well. This does not enable production cutover.
+    if: ${{ success() && (github.ref == 'refs/heads/feature/storage-cutover-readiness-m60' || (github.event_name == 'pull_request' && github.head_ref == 'integration/m160-reconcile-main-m158-release-gate-20261023' && github.base_ref == 'main')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout revision that passed full regression
+        uses: actions/checkout@v4
+      - name: Install JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Configure Flutter stable
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate Android test harness
+        run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
+      - name: Configure Java core library desugaring
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('android/app/build.gradle.kts')
+          gradle=path.read_text()
+          if 'compileOptions {' not in gradle:
+              raise SystemExit('Missing Kotlin Android compileOptions')
+          if 'isCoreLibraryDesugaringEnabled = true' not in gradle:
+              gradle=gradle.replace('compileOptions {',
+                'compileOptions {\n        isCoreLibraryDesugaringEnabled = true',1)
+          declaration='coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")'
+          if declaration not in gradle:
+              gradle+='\n// Required by flutter_local_notifications\ndependencies {\n    '+declaration+'\n}\n'
+          path.write_text(gradle)
+          PY
+      - name: Resolve packages and SQLCipher native assets
+        run: flutter pub get
+      - name: Analyze isolated Android migration test
+        run: dart analyze integration_test/live_finance_migration_receipts_android_test.dart
+      - name: Enable Linux KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Rehearse legacy to SQLCipher with receipts on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_6
+          target: google_apis
+          disable-animations: true
+          emulator-boot-timeout: 600
+          script: flutter test integration_test/live_finance_migration_receipts_android_test.dart -d emulator-5554 --reporter expanded
+      - name: Confirm production cutover remains disabled
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          main=Path('lib/main.dart').read_text()
+          bridge=Path('lib/storage/waffra_home_finance_persistence.dart').read_text()
+          assert 'WaffraHomeFinancePersistence' in main
+          assert 'loadWithWitness' in bridge
+          assert 'saveLegacy' in bridge
+          assert 'SQLCipher source activation is NOT implemented' in bridge
+          print('PASS: synthetic encrypted migration tested, no production finance activation.')
+          PY

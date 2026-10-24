@@ -1,0 +1,41 @@
+name: Waffra Firestore security rules
+
+on:
+  pull_request:
+    paths:
+      - 'firestore.rules'
+      - 'firestore.indexes.json'
+      - 'firebase.json'
+      - 'test/firebase/**'
+      - 'lib/storage/waffra_cloud_*.dart'
+      - 'lib/storage/waffra_firestore_encrypted_sync_transport.dart'
+      - 'test/storage/cloud_*.dart'
+      - 'integration_test/finance_cloud_final_release_android_test.dart'
+      - '.github/workflows/firestore-security-rules.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  firestore-emulator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: test/firebase/package.json
+      - name: Install isolated Firestore test dependencies
+        run: npm --prefix test/firebase install --no-audit --no-fund
+      - name: Test locked-down rules on local emulator only
+        run: |
+          ./test/firebase/node_modules/.bin/firebase emulators:exec \
+            --only firestore --project demo-waffra-rules-ci \
+            'npm --prefix test/firebase test'

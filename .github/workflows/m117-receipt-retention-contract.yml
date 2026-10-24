@@ -1,0 +1,31 @@
+name: Waffra M117 Receipt Retention Contract
+on:
+  pull_request:
+    paths:
+      - 'lib/storage/waffra_encrypted_receipt_vault.dart'
+      - 'lib/storage/waffra_verified_finance_authority.dart'
+      - 'lib/storage/waffra_verified_encrypted_finance_bridge.dart'
+      - 'lib/storage/waffra_encrypted_entry_projection_guard.dart'
+      - 'test/m117_receipt_retention_contract_acceptance_test.dart'
+      - '.github/workflows/m117-receipt-retention-contract.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  receipt-retention:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Verify fail-closed receipt retention and encrypted replacement
+        run: >-
+          flutter test
+          test/m117_receipt_retention_contract_acceptance_test.dart
+          test/storage/encrypted_receipt_vault_test.dart
+          test/storage/m115_encrypted_receipt_authority_test.dart
+          --reporter expanded

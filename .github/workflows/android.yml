@@ -6,8 +6,24 @@ on:
   push:
     branches:
       - main
-      # QA-only isolated UI candidate; no automatic merge or store publishing.
-      - 'feature/m130-ui-main-isolated-merge-candidate'
+      # M160 signed APK for owner physical-device QA only; no store release.
+      - 'integration/m160-reconcile-main-m158-release-gate-20261023'
+      - 'feature/storage-finance-startup-recovery-m62'
+      - 'feature/storage-verified-backup-restore-m63'
+      - 'feature/storage-encrypted-receipt-view-m66'
+      - 'feature/combined-finance-cloud-validation-m70'
+      - 'feature/m99-production-sync-queue-and-android-build'
+      - 'feature/waffra-unified-finance-release-candidate'
+      - 'feature/m106-play-privacy-observability-readiness'
+      - 'feature/m107-production-account-delete-observability'
+      - 'feature/m108-unified-home-widget-finance-commit'
+      - 'feature/m109-verified-finance-authority-dispatch'
+      - 'feature/m110-home-finance-writer-source-authority'
+      # M124: signed pre-merge APK/AAB candidate from the exact cumulative
+      # branch, never a production store deployment or SQLCipher activation.
+      - 'feature/m124-main-integration-merge-preview'
+      # M127: isolated signed QA artifact only; never auto-release or deploy.
+      - 'feature/m127-approved-ui-and-safe-backup-build'
   workflow_dispatch:
 
 # Fast-build concurrency: only the latest pushed revision needs an APK.
@@ -132,6 +148,38 @@ jobs:
               a=a.replace('plugins {','plugins {'+chr(10)+'    id("com.google.gms.google-services")',1)
           app.write_text(a)
           print('Firebase Android configuration installed')
+          PY
+
+      - name: Force Firebase Crashlytics OFF before native app startup
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          manifest=Path('android/app/src/main/AndroidManifest.xml')
+          xml=manifest.read_text()
+          if 'firebase_crashlytics_collection_enabled' in xml:
+              raise SystemExit('Crashlytics collection flag already exists; audit required')
+          match=re.search(r'<application\b[^>]*>',xml)
+          if match is None:
+              raise SystemExit('Android application element not found')
+          privacy='<meta-data android:name="firebase_crashlytics_collection_enabled" android:value="false" />'
+          xml=xml[:match.end()]+'\n        '+privacy+xml[match.end():]
+          manifest.write_text(xml)
+          settings=Path('android/settings.gradle.kts')
+          plugins=settings.read_text()
+          signature='id("com.google.firebase.crashlytics") version "3.0.6" apply false'
+          if 'com.google.firebase.crashlytics' not in plugins:
+              plugins=plugins.replace('plugins {','plugins {\n    '+signature,1)
+          settings.write_text(plugins)
+          app=Path('android/app/build.gradle.kts')
+          gradle=app.read_text()
+          if 'id("com.google.firebase.crashlytics")' not in gradle:
+              gradle=gradle.replace('plugins {',
+                  'plugins {\n    id("com.google.firebase.crashlytics")',1)
+          app.write_text(gradle)
+          assert privacy in manifest.read_text()
+          print('Native Firebase Crashlytics collection disabled by default')
           PY
 
       - name: Configure Android biometric authentication
@@ -619,6 +667,32 @@ jobs:
       # The hosted Android emulator uses x86_64, hence an extra x64 APK is
       # only compiled in full-smoke mode; it must not slow every push.
       # Upload only the final ARM64 APK for users.
+      # Flutter's integration_test is a dev-only tool. Flutter create/pub
+      # sometimes leave its Java registrar in the release source tree even
+      # though the release classpath correctly excludes the test plugin.
+      # Remove ONLY this debug test registration; keep production plugins.
+      - name: Drop debug-only integration test registration for release
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java')
+          if not path.exists():
+              print('No stale generated Java registrant on this SDK')
+          else:
+              text=path.read_text()
+              statement='flutterEngine.getPlugins().add(new dev.flutter.plugins.integration_test.IntegrationTestPlugin());'
+              if statement in text:
+                  text=text.replace(statement,
+                      '// integration_test is debug/test-only and not on the release classpath.')
+                  path.write_text(text)
+                  print('Excluded test-only registrar from release compilation')
+              elif 'dev.flutter.plugins.integration_test.IntegrationTestPlugin()' in text:
+                  raise SystemExit('Unexpected integration_test registrar form; fail safely')
+              else:
+                  print('No test-only integration plugin in Java registrar')
+          PY
+
       - name: Build optimized ARM64 Release APK
         shell: bash
         env:
@@ -688,6 +762,58 @@ jobs:
         with:
           name: Waffra-Android-ARM64-Release
           path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
+
+      # AAB is a TEST candidate. Do NOT upload to a Production Play track
+      # until the independent finance/security/physical-device gates pass.
+      - name: Enforce Google Play Android 16 target SDK 36 for candidate AAB
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          path = Path('android/app/build.gradle.kts')
+          text = path.read_text()
+          if 'targetSdk = flutter.targetSdkVersion' in text:
+              text = text.replace('targetSdk = flutter.targetSdkVersion',
+                                  'targetSdk = 36', 1)
+          if 'compileSdk = flutter.compileSdkVersion' in text:
+              text = text.replace('compileSdk = flutter.compileSdkVersion',
+                                  'compileSdk = 36', 1)
+          if not re.search(r'\btargetSdk\s*=\s*36\b', text):
+              raise SystemExit('FAIL: expected Android application targetSdk = 36')
+          if not re.search(r'\bcompileSdk\s*=\s*36\b', text):
+              raise SystemExit('FAIL: expected Android application compileSdk = 36')
+          path.write_text(text)
+          print('Candidate AAB SDK policy: targetSdk = 36; compileSdk = 36')
+          PY
+
+      - name: Build Android App Bundle candidate for Google Play internal testing
+        shell: bash
+        env:
+          WAFFRA_RELEASE_STORE_PASSWORD: ${{ secrets.WAFFRA_RELEASE_STORE_PASSWORD }}
+          WAFFRA_RELEASE_KEY_PASSWORD: ${{ secrets.WAFFRA_RELEASE_KEY_PASSWORD }}
+        run: |
+          flutter build appbundle --no-pub --release --target-platform android-arm64 --tree-shake-icons
+          test -s build/app/outputs/bundle/release/app-release.aab
+
+      - name: Validate signed AAB archive (not a Play approval)
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundle=build/app/outputs/bundle/release/app-release.aab
+          unzip -t "$bundle" > /dev/null
+          jarsigner -verify "$bundle" > /dev/null
+          sha256sum "$bundle" | tee aab_candidate_sha256.txt
+          echo 'Signed candidate AAB built. Store policy and physical-install proof still required.'
+
+      - name: Upload signed Google Play internal-testing AAB candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: Waffra-Android-API36-AAB-Internal-Test-Candidate
+          path: |
+            build/app/outputs/bundle/release/app-release.aab
+            aab_candidate_sha256.txt
           retention-days: 30
 
       # Only save compilation state after the signed APK was built, verified

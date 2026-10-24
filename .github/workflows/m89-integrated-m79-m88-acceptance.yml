@@ -1,0 +1,68 @@
+name: Waffra M89 Same-Commit M79-M88 Integrated Acceptance
+
+on:
+  pull_request:
+    paths:
+      - 'test/storage/m8*_*.dart'
+      - 'test/m8*_*.dart'
+      - 'integration_test/offline_finance_e2e_android_test.dart'
+      - '.github/workflows/m89-integrated-m79-m88-acceptance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  combined-acceptance:
+    name: M89 integrated synthetic acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - group: sms-receipts-backup
+            tests: >-
+              test/storage/m80_parallel_sms_boundary_acceptance_test.dart
+              test/storage/m80_parallel_receipt_lock_acceptance_test.dart
+              test/storage/m81_parallel_recovery_tamper_acceptance_test.dart
+          - group: cloud-and-source-gates
+            tests: >-
+              test/storage/m82_parallel_cloud_conflict_acceptance_test.dart
+              test/storage/m83_cutover_release_gate_matrix_test.dart
+              test/storage/m84_parallel_startup_source_guard_test.dart
+          - group: goals-and-recurring
+            tests: >-
+              test/storage/m85_goal_recycle_boundary_test.dart
+              test/m86_recurring_schedule_boundary_test.dart
+          - group: pdf-and-recovery-key
+            tests: >-
+              test/m87_pdf_sms_currency_and_direction_test.dart
+              test/storage/m88_key_recovery_rollback_acceptance_test.dart
+    steps:
+      - name: Checkout exact integration candidate
+        uses: actions/checkout@v4
+      - name: Flutter stable
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install Flutter deps
+        run: flutter pub get
+      - name: Analyze shard
+        run: dart analyze ${{ matrix.tests }}
+      - name: Run integrated acceptance shard
+        run: flutter test ${{ matrix.tests }} --reporter expanded
+
+  release-review-only:
+    name: M89 manual release gates remain closed
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check required source gates
+        shell: bash
+        run: |
+          test -f "lib/storage/waffra_cutover_readiness_gate.dart"
+          test -f "lib/storage/waffra_production_finance_routing_gate.dart"
+          test -f "integration_test/offline_finance_e2e_android_test.dart"
+          echo "Review only. No automatic Firebase deploy, migration, or main merge."

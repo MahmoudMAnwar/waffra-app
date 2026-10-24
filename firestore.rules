@@ -1,0 +1,150 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // This is deliberately an E2EE-only *candidate* schema. Do not deploy
+    // until emulator tests, client-side encryption and recovery are ready.
+    function signedInAs(uid) {
+      // A privileged backend sets this tombstone BEFORE recursive deletion.
+      // Deny any cached client auth tokens so a second phone cannot recreate
+      // the vault while its owner's account is being removed.
+      return request.auth != null && request.auth.uid == uid
+        && !exists(/databases/$(database)/documents/accountDeletionRequests/$(uid));
+    }
+
+    function hasValidVaultFields(data, uid) {
+      return data.keys().hasOnly([
+        'ownerUid', 'schemaVersion', 'syncEnabled', 'createdAt', 'updatedAt'
+      ])
+      && data.keys().hasAll([
+        'ownerUid', 'schemaVersion', 'syncEnabled', 'createdAt', 'updatedAt'
+      ])
+      && data.ownerUid == uid
+      && data.schemaVersion == 1
+      && data.syncEnabled is bool
+      && data.createdAt is timestamp
+      && data.updatedAt is timestamp;
+    }
+
+    function vaultPath(uid, vaultId) {
+      return /databases/$(database)/documents/users/$(uid)/vaults/$(vaultId);
+    }
+
+    function ownsExistingVault(uid, vaultId) {
+      return signedInAs(uid)
+        && exists(vaultPath(uid, vaultId))
+        && get(vaultPath(uid, vaultId)).data.ownerUid == uid;
+    }
+
+    function validCiphertextRecord(data) {
+      return data.keys().hasOnly([
+        'kind', 'ciphertext', 'nonce', 'mac', 'encryptionVersion',
+        'deviceId', 'mutationId', 'localVersion', 'updatedAt', 'deleted'
+      ])
+      && data.keys().hasAll([
+        'kind', 'ciphertext', 'nonce', 'mac', 'encryptionVersion',
+        'deviceId', 'mutationId', 'localVersion', 'updatedAt', 'deleted'
+      ])
+      && data.kind in [
+        'entry', 'category', 'goal', 'recurring', 'challenge',
+        'postponement', 'merchant_rule', 'setting', 'tombstone', 'manifest'
+      ]
+      && data.ciphertext is string
+      && data.ciphertext.size() <= 700000
+      && data.nonce is string && data.nonce.size() <= 128
+      && data.mac is string && data.mac.size() <= 128
+      && data.encryptionVersion == 1
+      && data.deviceId is string && data.deviceId.size() > 0 && data.deviceId.size() <= 128
+      && data.mutationId is string && data.mutationId.size() > 0 && data.mutationId.size() <= 128
+      && data.localVersion is int && data.localVersion > 0
+      && data.updatedAt is timestamp
+      && data.deleted is bool;
+    }
+
+    // This is ONLY a wrapped 256-bit vault key authenticated by the user's
+    // recovery code. Neither the recovery code nor plaintext vault key may be
+    // written to Firestore, including on key rotation.
+    function validRecoveryEnvelope(data, vaultId) {
+      return data.keys().hasOnly([
+        'schemaVersion','vaultId','keyVersion','recoveryRevision',
+        'wrappedKey','nonce','mac','updatedAt'
+      ])
+      && data.keys().hasAll([
+        'schemaVersion','vaultId','keyVersion','recoveryRevision',
+        'wrappedKey','nonce','mac','updatedAt'
+      ])
+      && data.schemaVersion == 1
+      && data.vaultId == vaultId
+      && data.keyVersion is int && data.keyVersion > 0
+      && data.recoveryRevision is int && data.recoveryRevision > 0
+      && data.wrappedKey is string && data.wrappedKey.size() <= 200
+      && data.nonce is string && data.nonce.size() <= 128
+      && data.mac is string && data.mac.size() <= 128
+      && data.updatedAt is timestamp;
+    }
+
+    match /users/{uid}/vaults/{vaultId} {
+      allow get, list: if signedInAs(uid)
+        && resource.data.ownerUid == uid;
+      allow create: if signedInAs(uid)
+        && hasValidVaultFields(request.resource.data, uid);
+      allow update: if signedInAs(uid)
+        && resource.data.ownerUid == uid
+        && hasValidVaultFields(request.resource.data, uid)
+        && request.resource.data.createdAt == resource.data.createdAt;
+      // Deleting a parent vault does NOT delete its Firestore subcollection.
+      // Disallow it until a verified wipe protocol can prove child deletion.
+      allow delete: if false;
+
+      match /recovery/{recoveryId} {
+        allow get: if recoveryId == 'current'
+          && ownsExistingVault(uid, vaultId);
+        allow list: if false;
+        allow create: if recoveryId == 'current'
+          && ownsExistingVault(uid, vaultId)
+          && get(vaultPath(uid, vaultId)).data.syncEnabled == true
+          && validRecoveryEnvelope(request.resource.data, vaultId)
+          && request.resource.data.recoveryRevision == 1;
+        allow update: if recoveryId == 'current'
+          && ownsExistingVault(uid, vaultId)
+          && get(vaultPath(uid, vaultId)).data.syncEnabled == true
+          && validRecoveryEnvelope(request.resource.data, vaultId)
+          && request.resource.data.keyVersion == resource.data.keyVersion
+          && request.resource.data.recoveryRevision ==
+            resource.data.recoveryRevision + 1;
+        allow delete: if false;
+      }
+
+      match /records/{recordId} {
+        allow get, list: if ownsExistingVault(uid, vaultId);
+        allow create: if ownsExistingVault(uid, vaultId)
+          && get(vaultPath(uid, vaultId)).data.syncEnabled == true
+          && recordId.size() > 0 && recordId.size() <= 128
+          && validCiphertextRecord(request.resource.data)
+          // A brand-new document has no predecessor. It must start at one,
+          // never a forged higher revision that would skip conflict checks.
+          && request.resource.data.localVersion == 1;
+        // Compare-and-swap only: concurrent devices attempting to advance
+        // the same previous revision cannot both succeed. This ruleset
+        // forbids last-write-wins and replacing a ciphertext at equal version.
+        // The client must ALSO transact on the latest read document and
+        // raise a manual conflict for a different remote mutation.
+        allow update: if ownsExistingVault(uid, vaultId)
+          && get(vaultPath(uid, vaultId)).data.syncEnabled == true
+          && recordId.size() > 0 && recordId.size() <= 128
+          && validCiphertextRecord(request.resource.data)
+          && request.resource.data.kind == resource.data.kind
+          && request.resource.data.encryptionVersion == resource.data.encryptionVersion
+          && request.resource.data.localVersion == resource.data.localVersion + 1
+          && request.resource.data.mutationId != resource.data.mutationId;
+        // Finance deletions use encrypted tombstones with an increasing
+        // revision, never physical Firestore deletes.
+        allow delete: if false;
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

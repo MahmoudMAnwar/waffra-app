@@ -1,0 +1,20 @@
+name: M164 Exact Main Ancestry Review
+on:
+  pull_request:
+    branches:
+      - integration/m160-reconcile-main-m158-release-gate-20261023
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # Audit the candidate as it would merge into the current integration
+          # branch, not the stale PR head (which predates M164 script landing).
+          ref: ${{ github.sha }}
+      - name: Read-only main ancestry and cutover-compatibility checks
+        run: bash scripts/qa/m164_validate_m160_ancestry.sh

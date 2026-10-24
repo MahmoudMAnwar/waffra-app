@@ -12,6 +12,9 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   shared_preferences: ^2.3.2
+  drift: ^2.32.0
+  sqlite3: ^3.3.3
+  flutter_secure_storage: ^9.2.4
   crypto: ^3.0.6
   cryptography: ^2.7.0
   local_auth: ^2.3.0
@@ -27,13 +30,23 @@ dependencies:
   printing: ^5.13.4
   firebase_core: ^4.0.0
   firebase_auth: ^6.0.0
+  cloud_firestore: ^6.0.0
+  cloud_functions: ^6.5.0
+  firebase_crashlytics: ^5.4.0
   google_sign_in: ^7.0.0
   flutter_svg: ^2.0.10
 
 dev_dependencies:
+  integration_test:
+    sdk: flutter
   flutter_test:
     sdk: flutter
   flutter_launcher_icons: ^0.14.4
+
+hooks:
+  user_defines:
+    sqlite3:
+      source: sqlite3mc
 
 flutter:
   uses-material-design: true

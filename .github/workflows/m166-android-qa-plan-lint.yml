@@ -1,0 +1,30 @@
+name: M166 Android Device QA Plan Validation
+on:
+  pull_request:
+    branches:
+      - integration/m160-reconcile-main-m158-release-gate-20261023
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  lint-offline-preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Ensure executable artifact preflight parses cleanly
+        run: bash -n scripts/qa/m166_verify_android_apk.sh
+      - name: Verify real-phone evidence checklist is not represented as passed
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('docs/qa/m166-android-physical-acceptance.md').read_text()
+          required=('Google','Widget','V1','V2','SHA-256','physical',
+                    'receipt','duplicate','wrong-password','SQLCipher',
+                    'currently unverified')
+          missing=[s for s in required if s not in p]
+          if missing:
+              raise SystemExit('Missing phone acceptance cases: '+', '.join(missing))
+          print('M166 plan complete; NO physical device validation performed by CI.')
+          PY

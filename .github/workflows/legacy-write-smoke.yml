@@ -1,0 +1,34 @@
+name: Waffra live financial write ordering
+
+on:
+  pull_request:
+    paths:
+      - 'lib/main.dart'
+      - 'lib/storage/waffra_legacy_write_queue.dart'
+      - 'test/storage/legacy_write_queue_test.dart'
+      - '.github/workflows/legacy-write-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  legacy-persistence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve dependencies
+        run: flutter pub get
+      - name: Analyze main app and queue
+        run: |
+          dart analyze lib/storage/waffra_legacy_write_queue.dart test/storage/legacy_write_queue_test.dart
+          # Existing main.dart has pre-existing lint warnings, but syntax/errors
+          # must still fail this job without unrelated UI refactoring.
+          dart analyze --no-fatal-warnings lib/main.dart
+      - name: Race regression and existing app tests
+        run: flutter test test/storage/legacy_write_queue_test.dart test/waffra_oct21_regression_test.dart test/waffra_widget_quick_capture_test.dart --reporter expanded

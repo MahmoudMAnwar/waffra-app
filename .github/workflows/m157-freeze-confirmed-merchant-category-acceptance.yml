@@ -1,0 +1,43 @@
+name: M157 Frozen Confirmed Merchant Category Acceptance
+
+on:
+  push:
+    branches:
+      - 'integration/m157-freeze-confirmed-merchant-categories-20261023'
+  pull_request:
+    paths:
+      - 'lib/storage/waffra_verified_finance_authority.dart'
+      - 'lib/storage/waffra_home_finance_persistence.dart'
+      - 'test/storage/m156_atomic_merchant_category_sms_commit_test.dart'
+      - '.github/workflows/m157-freeze-confirmed-merchant-category-acceptance.yml'
+  workflow_dispatch:
+
+jobs:
+  immutable-confirmed-sms:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Analyze frozen finance authority and test
+        run: flutter analyze --no-fatal-infos lib/storage/waffra_verified_finance_authority.dart lib/storage/waffra_home_finance_persistence.dart test/storage/m156_atomic_merchant_category_sms_commit_test.dart
+      - name: Verify atomic confirmed category plus SMS and SQL rollback
+        run: flutter test test/storage/m156_atomic_merchant_category_sms_commit_test.dart test/storage/m156_sqlcipher_merchant_atomic_commit_test.dart test/m155_category_plan_finance_parity_test.dart
+      - name: Inspect fail-closed authority boundaries
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          a=Path('lib/storage/waffra_verified_finance_authority.dart').read_text()
+          l=Path('lib/storage/waffra_home_finance_persistence.dart').read_text()
+          assert 'final frozenCategories' in a
+          assert 'final frozenCategories' in l
+          assert l.index('final frozenCategories') < l.index('for(final value in frozenCategories){')
+          assert a.index('final frozenCategories') < a.index('final backend = await _requireRoute(route);', a.index('final fingerprints'))
+          assert a.count('proposedCategories: frozenCategories,') == 2
+          assert 'WaffraLegacyFinanceBatchJournal' in l
+          print('Verified immutable confirmed merchant proposal paths; no production SQLCipher activation.')
+          PY

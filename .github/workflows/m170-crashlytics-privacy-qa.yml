@@ -1,0 +1,24 @@
+name: M170 Crashlytics Private Diagnostics QA
+on:
+  pull_request:
+    branches:
+      - integration/m160-reconcile-main-m158-release-gate-20261023
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  privacy-by-default:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - run: python3 scripts/qa/m170_diagnostic_source_audit.py
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Strict compilation of diagnostics and safe-tag tests
+        run: flutter test test/m170_crashlytics_no_sensitive_payload_test.dart test/m106_diagnostics_privacy_gate_test.dart test/m107_release_backend_gating_test.dart

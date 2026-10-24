@@ -1,0 +1,23 @@
+name: Waffra M111 Finance Authority Negative Acceptance
+on:
+  pull_request:
+    paths:
+      - 'lib/storage/waffra_verified_finance_authority.dart'
+      - 'test/m111_finance_authority_negative_acceptance_test.dart'
+      - '.github/workflows/m111-finance-negative-acceptance.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  fail-closed-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart analyze test/m111_finance_authority_negative_acceptance_test.dart
+      - run: flutter test test/m111_finance_authority_negative_acceptance_test.dart --reporter expanded

@@ -1,9 +1,35 @@
 part of 'main.dart';
 
+/// Only disposable Flutter WidgetTests inject a source probe. Production
+/// always uses OS secure-key and existing SQLCipher checkpoint inspection.
+class _WaffraWidgetTestingOnlySourceGuard
+    extends WaffraProductionFinanceSourceGuard {
+ const _WaffraWidgetTestingOnlySourceGuard();
+ @override
+ Future<WaffraProductionFinanceSourceReport> inspect({
+  SharedPreferences? preferences,
+ }) async=>const WaffraProductionFinanceSourceReport(
+  source:WaffraProductionFinanceSource.guardedLegacy,
+  reasonCode:'test_only_disposable_legacy_source',
+ );
+}
+
 /// Standalone short-lived widget route: no full Waffra dashboard or navigation.
 /// The user pastes text explicitly; analysis happens automatically (debounced).
 class WaffraWidgetCaptureApp extends StatefulWidget {
- const WaffraWidgetCaptureApp({super.key});
+ const WaffraWidgetCaptureApp({
+  super.key,
+  this.testWriterDirectory,
+  this.testBypassNativeLock = false,
+  this.testSourceProbe,
+ }) : assert(!testBypassNativeLock || testWriterDirectory != null),
+      assert(testSourceProbe == null || testWriterDirectory != null);
+ /// Inject an isolated lock folder for widget tests; production uses app support.
+ final Directory? testWriterDirectory;
+ /// FakeAsync UI tests only; native file-lock correctness has separate tests.
+ final bool testBypassNativeLock;
+ /// Only for isolated widget tests. Production always uses native key+DB probe.
+ final Future<void> Function()? testSourceProbe;
  @override State<WaffraWidgetCaptureApp> createState()=>_WaffraWidgetCaptureState();
 }
 
@@ -24,6 +50,22 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
  int _savedIncome=0,_savedExpenses=0,_notSaved=0;
  List<_WidgetParsedSms> _results=[];
  Set<String> _knownHashes={};
+ WaffraHomeFinancePersistence get _financePersistence =>
+     WaffraHomeFinancePersistence(
+       coordinator: WaffraLegacyFinanceWriterCoordinator(
+         testDirectory: widget.testWriterDirectory,
+         testBypassNativeLock: widget.testBypassNativeLock,
+       ),
+     );
+
+
+ WaffraVerifiedFinanceAuthority get _financeAuthority=>
+  WaffraVerifiedFinanceAuthority(
+   legacy:_financePersistence,
+   sourceGuard:widget.testSourceProbe==null
+    ?const WaffraProductionFinanceSourceGuard()
+    :const _WaffraWidgetTestingOnlySourceGuard(),
+  );
 
  @override void initState(){
   super.initState();
@@ -32,12 +74,18 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
  Future<void> _loadSettings()async{
   try{
    final prefs=await SharedPreferences.getInstance();
-   await prefs.reload();
+   if(widget.testSourceProbe!=null) {
+    await widget.testSourceProbe!();
+   } else {
+    await const WaffraProductionFinanceSourceGuard()
+     .requireSafeLegacyStartup(preferences:prefs);
+   }
+   final loaded=await _financeAuthority.load(route:WaffraFinanceRoute.widgetRead);
    if(!mounted)return;
    setState((){
     _english=prefs.getString('waffra_language')=='en';
     _dark=prefs.getBool('waffra_dark_mode')??false;
-    _knownHashes=(prefs.getStringList('waffra_sms_hashes_v1')??[]).toSet();
+    _knownHashes=(loaded.finance.getStringList('waffra_sms_hashes_v1')??[]).toSet();
     _ready=true;
    });
   }catch(e){
@@ -110,68 +158,82 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
 
  Future<void> _confirmAndSave()async{
   if(_saving||_analyzing||_selected.isEmpty)return;
+  final selected=List<_WidgetParsedSms>.of(_selected);
+  final totalDetected=_results.length;
+  final allowDuplicates=_allowDuplicates;
   setState(()=>_saving=true);
   try{
-   final prefs=await SharedPreferences.getInstance();
-   await prefs.reload();
-   final current=(jsonDecode(prefs.getString('entries')??'[]') as List)
-    .map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x as Map))).toList();
-   final oldHashes=(prefs.getStringList('waffra_sms_hashes_v1')??[]).toSet();
-   final categoryRaw=prefs.getString('waffra_categories_v24');
-   final categories=categoryRaw==null?defaultCategories():
-    (jsonDecode(categoryRaw) as List)
-     .map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x as Map))).toList();
-   final newHashes=<String>{};
-   final additions=<MoneyEntry>[];
-   int savedInc=0,savedExp=0;
-   for(final entry in _selected){
-    final hash=bankSmsHash(entry.raw);
-    if(!_allowDuplicates&&(oldHashes.contains(hash)||newHashes.contains(hash)))continue;
+   // HomeScreen and the separate Android widget now use ONE crash-journaled
+   // user-confirmed ledger+fingerprint writer; duplicate checks happen under
+   // its shared cross-engine file lock rather than in stale widget state.
+   final loaded=await _financeAuthority.load(route:WaffraFinanceRoute.widgetRead);
+   final categoriesRaw=loaded.finance.getString('waffra_categories_v24');
+   final categories=categoriesRaw==null?defaultCategories():
+    (jsonDecode(categoriesRaw) as List)
+     .map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x as Map)))
+     .toList();
+   final records=<Map<String,Object?>>[];
+   final hashes=<String>[];
+   for(final entry in selected){
     final parsed=entry.result;
     final category=categories.any((c)=>c.income==parsed.income&&c.name==parsed.category)
       ?parsed.category
       :(categories.where((c)=>c.income==parsed.income).isNotEmpty
-         ?categories.firstWhere((c)=>c.income==parsed.income).name:'أخرى');
-    additions.add(MoneyEntry(
-     id:'${newId()}_${additions.length}',
-     title:'${parsed.title} — ${entry.raw.replaceAll(RegExp(r'\s+'),' ').trim()}',
+        ?categories.firstWhere((c)=>c.income==parsed.income).name:'أخرى');
+    records.add(Map<String,Object?>.from(MoneyEntry(
+     id:'${newId()}_${records.length}',
+     title:waffraSafeSmsTransactionTitle(parsed.title,entry.raw,
+      income:parsed.income),
      category:category,amount:parsed.amount!,income:parsed.income,
      date:bankSmsDate(entry.raw)??DateTime.now(),
-    ));
-    if(parsed.income){savedInc++;}else{savedExp++;}
-    newHashes.add(hash);
+     sourceType:'sms',
+     merchantKey:waffraMerchantKey(entry.raw,income:parsed.income)??'',
+    ).toJson()));
+    hashes.add(bankSmsHash(entry.raw));
    }
-   if(additions.isEmpty){
+   final committed=await _financeAuthority.commitConfirmedSms(
+    route:WaffraFinanceRoute.widgetSmsConfirmedSave,
+    records:records,hashes:hashes,
+    userConfirmed:true,allowDuplicateHashes:allowDuplicates,
+   );
+   final persisted=committed.current.ledgerRaw;
+   if(persisted==null){
+    throw StateError('Confirmed widget ledger witness is missing.');
+   }
+   final outcome=committed.saved==0?null:(
+    merged:(jsonDecode(persisted) as List)
+     .map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x as Map))).toList(),
+    savedIncome:committed.income,
+    savedExpenses:committed.expenses,
+    skipped:totalDetected-committed.saved,
+    knownHashes:(committed.current.finance.getStringList('waffra_sms_hashes_v1')
+     ??const <String>[]).toSet(),
+   );
+   if(outcome==null){
     if(mounted)setState((){
      _saving=false;
      _error=_english?'These transactions have already been saved.':'هذه العمليات محفوظة بالفعل.';
     });
     return;
    }
-   final merged=[...additions,...current];
-   final saved=await prefs.setString('entries',jsonEncode(merged.map((e)=>e.toJson()).toList()));
-   if(!saved)throw StateError('Local persistence did not confirm save');
-   final hashesSaved=await prefs.setStringList('waffra_sms_hashes_v1',
-    {...oldHashes,...newHashes}.toList());
-   if(!hashesSaved)throw StateError('SMS hashes were not committed');
-   await prefs.setString('waffra_widget_last_save_v1',DateTime.now().toIso8601String());
 
    // Refresh the circular balance immediately without opening the full app.
-   final incomeHalalas=merged.where((e)=>e.income)
+   final incomeHalalas=outcome.merged.where((e)=>e.income)
     .fold<int>(0,(sum,e)=>sum+WaffraRecurringPolicy.toHalalas(e.amount));
-   final expenseHalalas=merged.where((e)=>!e.income)
+   final expenseHalalas=outcome.merged.where((e)=>!e.income)
     .fold<int>(0,(sum,e)=>sum+WaffraRecurringPolicy.toHalalas(e.amount));
    final net=incomeHalalas-expenseHalalas;
-   final hidden=prefs.getBool('waffra_hide_amounts')??false;
+   final hidden=(await SharedPreferences.getInstance())
+    .getBool('waffra_hide_amounts')??false;
    await refreshWaffraHomeWidget(
     balance:hidden?'***':formatWaffraMoney(net/100),
     negative:net<0,hidden:hidden,currency:_english?'SAR':'ريال');
 
-   final ignored=_results.length-additions.length;
+   final ignored=outcome.skipped;
    if(!mounted)return;
    setState((){
-    _knownHashes={...oldHashes,...newHashes};
-    _savedIncome=savedInc;_savedExpenses=savedExp;_notSaved=ignored;
+    _knownHashes=outcome.knownHashes;
+    _savedIncome=outcome.savedIncome;_savedExpenses=outcome.savedExpenses;_notSaved=ignored;
     _saving=false;_success=true;_error=null;
    });
    // If any message was not added, keep it open for review and retry.

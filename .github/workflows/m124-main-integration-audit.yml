@@ -1,0 +1,114 @@
+name: Waffra M124 Main Integration Pre-Merge Audit
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'lib/**'
+      - 'test/**'
+      - 'integration_test/**'
+      - 'firebase/google-services.json'
+      - '.github/workflows/m124-main-integration-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-parity-and-opt-in:
+    name: Preserve main Google configuration and fail-closed storage
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Compare current main Firebase configuration without printing data
+        run: |
+          python3 - <<'PY'
+          import json, subprocess
+          from pathlib import Path
+          candidate = Path('firebase/google-services.json').read_bytes()
+          upstream = subprocess.check_output(
+              ['git', 'show', 'origin/main:firebase/google-services.json'])
+          if candidate != upstream:
+              raise SystemExit(
+                  'Main Google Sign-In configuration diverged. Review before merge.')
+          config = json.loads(candidate)
+          if config['project_info']['project_id'] != 'waffra-app':
+              raise SystemExit('Unexpected Firebase project in merge candidate.')
+          if not any(
+              c['client_info']['android_client_info']['package_name']
+                  == 'com.waffra.app'
+              for c in config['client']):
+              raise SystemExit('Registered Android applicationId missing.')
+          print('PASS: current main Firebase Android config retained.')
+          PY
+      - name: Ensure no implicit SQLCipher switch or unverified receipt UI mount
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          main=Path('lib/main.dart').read_text()
+          widget=Path('lib/waffra_widget_capture.part.dart').read_text()
+          bridge=Path(
+              'lib/storage/waffra_verified_encrypted_finance_bridge.dart'
+          ).read_text()
+          authority=Path(
+              'lib/storage/waffra_verified_finance_authority.dart'
+          ).read_text()
+          release=Path(
+              'lib/storage/waffra_production_cutover_release_gate.dart'
+          ).read_text()
+          assert 'WaffraVerifiedReceiptPanel(' not in main
+          assert 'WaffraEncryptedFinanceSession(' not in main
+          assert 'WaffraEncryptedFinanceSession(' not in widget
+          assert 'this.experimentalEnabled = false' in bridge
+          assert 'this.encryptedSqlWitnessActive = false' in authority
+          assert 'this.externalSourceWitnessActive = false' in authority
+          assert 'this.verifiedKeyRecoveryInDevice = false' in authority
+          assert 'automaticallyActivateSqlCipher => false' in release
+          assert '_financeAuthority.commitConfirmedSms(' in main
+          assert '_financeAuthority.commitConfirmedSms(' in widget
+          print('PASS: experimental SQLCipher remains opt-in; legacy flows retain source authority.')
+          print('NOTICE: safe test gate is NOT real-device production source activation evidence.')
+          PY
+
+  encrypted-finance-regression:
+    name: Finance, receipt ownership and 30-day restore checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Analyze all encrypted source and receipt runtime
+        run: dart analyze lib/storage test/storage
+      - name: Test atomic encrypted finance and receipt transitions
+        run: >-
+          flutter test
+          test/storage/m118_encrypted_receipt_recycle_test.dart
+          test/storage/verified_encrypted_finance_bridge_test.dart
+          test/storage/m123_production_cutover_release_gate_test.dart
+          --reporter expanded
+
+  ui-and-authority-regression:
+    name: Receipt viewer, refusal and home/widget route checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Test UI and source ownership independently
+        run: >-
+          flutter test
+          test/m119_verified_receipt_panel_test.dart
+          test/storage/m119_receipt_screen_authority_test.dart
+          test/m117_receipt_retention_contract_acceptance_test.dart
+          --reporter expanded

@@ -1,0 +1,116 @@
+name: Waffra M96 Runtime Finance and Firebase Safety Integration
+
+on:
+  pull_request:
+    paths:
+      - 'lib/main.dart'
+      - 'lib/waffra_widget_capture.part.dart'
+      - 'lib/storage/**'
+      - 'test/storage/m96_*.dart'
+      - '.github/workflows/m96-runtime-finance-cloud-integration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  atomic-home-widget-and-sqlcipher:
+    name: M96 same-SHA Home/Widget + SQLCipher finance contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve Flutter dependencies
+        run: flutter pub get
+      - name: Analyze actual runtime and storage code
+        run: dart analyze lib/storage test/storage/m96_home_widget_confirmed_sms_journal_test.dart test/storage/m96_encrypted_ui_transaction_projection_test.dart
+      - name: Test live Home/Widget confirmation and encrypted screen projections
+        run: >-
+          flutter test
+          test/storage/m96_home_widget_confirmed_sms_journal_test.dart
+          test/storage/m96_encrypted_ui_transaction_projection_test.dart
+          --reporter expanded
+      - name: Confirm production source remains protected
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          app = Path('lib/main.dart').read_text()
+          widget = Path('lib/waffra_widget_capture.part.dart').read_text()
+          persistence = Path('lib/storage/waffra_home_finance_persistence.dart').read_text()
+          # M110 Home and Widget dispatch confirmed SMS via one verified
+          # backend authority; legacy journal access remains internal.
+          assert '_financeAuthority.commitConfirmedSms(' in app
+          assert 'WaffraFinanceRoute.bulkSmsConfirmedSave' in app
+          assert '_homeFinancePersistence.commitConfirmedLegacySms(' not in app
+          assert '_homeFinancePersistence.saveLegacy(' not in app
+          assert '_financeAuthority.saveCaptured(' in app
+          authority = Path('lib/storage/waffra_verified_finance_authority.dart').read_text()
+          assert '_financeAuthority.commitConfirmedSms(' in widget
+          assert 'WaffraFinanceRoute.widgetSmsConfirmedSave' in widget
+          assert 'legacy.commitConfirmedLegacySms(' in authority
+          assert 'sourceGuard.inspect()' in authority
+          assert 'encryptedSession!.appendConfirmed(' in authority
+          assert 'journal.prepare(' not in widget
+          assert 'journal.recover(' not in widget
+          assert 'withLegacyWriter(' not in widget
+          assert 'WaffraLegacyWidgetCommitJournal()' in persistence
+          assert 'await journal.prepare(' in persistence
+          assert 'await journal.recover(prefs);' in persistence
+          assert 'requireSafeLegacyStartup' in widget
+          assert 'WaffraProductionFinanceSourceGuard' in app
+          assert 'SharedPreferences remains authoritative' in persistence
+          print('Current runtime changes are guarded legacy only; SQLCipher activation stays off.')
+          PY
+
+  firestore-emulator-contract:
+    name: M96 Firebase E2EE rules emulator — no production deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: test/firebase/package.json
+      - name: Install local Firestore rules testing tools
+        run: npm --prefix test/firebase install --no-audit --no-fund
+      - name: Test E2EE-only rules in isolated demo Firebase emulator
+        run: |
+          ./test/firebase/node_modules/.bin/firebase emulators:exec \
+            --only firestore --project demo-waffra-rules-ci \
+            'npm --prefix test/firebase test'
+
+  release-cutover-must-remain-disabled:
+    name: M96 check sources and no automatic production activation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify production cutover is still an explicit future gate
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          check=[
+            'lib/storage/waffra_cutover_readiness_gate.dart',
+            'lib/storage/waffra_production_finance_routing_gate.dart',
+            'lib/storage/waffra_verified_encrypted_finance_bridge.dart',
+            'lib/storage/waffra_firestore_encrypted_sync_transport.dart',
+            'firestore.rules',
+          ]
+          assert all(Path(p).is_file() for p in check)
+          bridge=Path(check[2]).read_text()
+          firestore=Path(check[3]).read_text()
+          assert 'this.experimentalEnabled = false' in bridge
+          assert 'this.experimentalEnabled = false' in firestore
+          print('No Firestore deploy. No activation pointer flip. No real user migration.')
+          PY

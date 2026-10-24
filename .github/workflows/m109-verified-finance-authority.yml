@@ -1,0 +1,63 @@
+name: Waffra M109 Verified Finance Authority
+
+on:
+  pull_request:
+    paths:
+      - 'lib/main.dart'
+      - 'lib/storage/waffra_verified_finance_authority.dart'
+      - 'test/storage/m109_verified_finance_authority_test.dart'
+      - '.github/workflows/m109-verified-finance-authority.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  authority-contract:
+    name: Home, Widget and SQLCipher authority boundary
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Analyze source dispatch and unit boundary strictly
+        run: >-
+          dart analyze
+          lib/storage/waffra_verified_finance_authority.dart
+          test/storage/m109_verified_finance_authority_test.dart
+      - name: Test independent source proofs and stale app/widget writes
+        run: >-
+          flutter test
+          test/storage/m109_verified_finance_authority_test.dart
+          test/storage/m100_runtime_finance_route_contract_test.dart
+          test/storage/m96_home_widget_confirmed_sms_journal_test.dart
+          test/storage/m97_home_widget_interrupted_commit_test.dart
+          test/storage/production_finance_source_guard_test.dart
+          test/storage/production_finance_routing_gate_test.dart
+          test/storage/verified_encrypted_finance_bridge_test.dart
+          --reporter expanded
+      - name: Prevent accidental encrypted cutover in compiled Home/Widget
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          app=Path('lib/main.dart').read_text()
+          router=Path('lib/storage/waffra_verified_finance_authority.dart').read_text()
+          widget=Path('lib/waffra_widget_capture.part.dart').read_text()
+          assert 'WaffraVerifiedFinanceAuthority(legacy:_homeFinancePersistence)' in app
+          assert 'WaffraFinanceRoute.dashboardRead' in app
+          assert 'WaffraProductionFinanceSourceGuard' in widget
+          assert 'WaffraHomeFinancePersistence' in widget
+          assert 'sourceGuard.inspect()' in router
+          assert 'verifiedKeyRecoveryInDevice = false' in router
+          assert 'encryptedSqlWitnessActive = false' in router
+          assert 'externalSourceWitnessActive = false' in router
+          print('Live legacy route protected; encrypted production cutover still BLOCKED')
+          PY
+      - name: Full Flutter app smoke and Dart errors
+        run: |
+          flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings
+          flutter test test --reporter expanded

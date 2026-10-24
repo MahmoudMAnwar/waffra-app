@@ -22,10 +22,17 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - name: Run SHA-pinned, fail-closed read-only final review audit
+      - name: Original M147 UI-only, SHA-pinned scope review
+        if: github.head_ref != 'integration/m160-reconcile-main-m158-release-gate-20261023'
         env:
           REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: python3 scripts/m147_main_merge_readiness_audit.py
+      - name: M161 guarded experimental integration review (not release approval)
+        if: github.head_ref == 'integration/m160-reconcile-main-m158-release-gate-20261023'
+        env:
+          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          REVIEW_HEAD_REF: ${{ github.head_ref }}
+        run: python3 scripts/m161_main_reconciliation_review.py
       - name: Upload non-authorizing review report
         uses: actions/upload-artifact@v4
         with:

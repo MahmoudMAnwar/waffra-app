@@ -1,0 +1,42 @@
+name: Waffra encrypted storage smoke
+
+on:
+  push:
+    branches:
+      - 'feature/storage-legacy-batch-recovery-m59'
+      - 'feature/storage-cutover-readiness-m60'
+      - 'feature/storage-verified-encrypted-finance-bridge-m61'
+      - 'feature/storage-finance-startup-recovery-m62'
+      - 'feature/storage-verified-backup-restore-m63'
+      - 'feature/storage-portable-sqlcipher-restore-m64'
+      - 'feature/cloud-conflict-safe-m65'
+      - 'feature/storage-encrypted-receipt-view-m66'
+  pull_request:
+    paths:
+      - 'lib/storage/**'
+      - 'test/legacy_financial_snapshot_test.dart'
+      - 'test/storage/**'
+      - 'pubspec.yaml'
+      - 'docs/architecture/**'
+      - '.github/workflows/storage-preflight.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  migration-spike:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve Flutter dependencies
+        run: flutter pub get
+      - name: Analyze storage code and tests
+        run: dart analyze lib/storage test/legacy_financial_snapshot_test.dart test/storage
+      - name: Test read-only migration and encrypted SQLite
+        run: flutter test test/legacy_financial_snapshot_test.dart test/storage --reporter expanded

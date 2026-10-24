@@ -1,0 +1,44 @@
+name: M160 Main Reconciliation and Backup Regression
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reconcile-and-regress:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact PR head and full ancestry
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify retained main ancestry and M160 audit scope
+        shell: bash
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor dbd1605d61a8b522e6c0736ca9b1466b563c74aa HEAD
+          git merge-base --is-ancestor c0eef7e2bfb5bb6836750af48d8b499d0ab30e63 HEAD
+          for f in docs/m160-main-reconciliation.md test/m131_backup_boundary_tamper_qa_test.dart test/m132_backup_corruption_recovery_negative_test.dart test/m140_backup_utf8_cross_archive_integrity_test.dart; do test -f "$f"; done
+          test -f .github/workflows/m147-final-main-review-gate.yml
+          if ! git merge-base --is-ancestor origin/main HEAD; then echo 'BLOCKED: main moved after M160 reconciliation'; exit 1; fi
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve dependencies
+        run: flutter pub get
+      - name: Reject compiler errors; report existing UI lints without blocking tests
+        run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - name: Reject storage and encrypted backup warnings
+        run: flutter analyze --no-fatal-infos lib/storage lib/waffra_secure_backup.dart test/m131_backup_boundary_tamper_qa_test.dart test/m132_backup_corruption_recovery_negative_test.dart test/m140_backup_utf8_cross_archive_integrity_test.dart
+      - name: Full Flutter tests including legacy backup compatibility
+        run: flutter test
+      - name: Android release compile (unsigned validation only)
+        run: |
+          flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
+          flutter build apk --release --no-pub --target-platform android-arm64

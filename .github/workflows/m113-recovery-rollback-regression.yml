@@ -1,0 +1,32 @@
+name: Waffra M113 Recovery Rollback Regression
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/m113-recovery-rollback-regression.yml'
+      - 'test/storage/**'
+      - 'lib/storage/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  disposable-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Disposable rollback, tamper and recovery regression
+        run: >-
+          flutter test
+          test/storage/m88_key_recovery_rollback_acceptance_test.dart
+          test/storage/m81_parallel_recovery_tamper_acceptance_test.dart
+          test/storage/offline_restore_dry_run_test.dart
+          test/storage/disposable_recovery_journal_test.dart
+          test/storage/m101_cloud_recovery_revision_gate_test.dart
+          test/storage/m102_restored_finance_receipt_attestor_test.dart
+          test/storage/finance_source_cutover_policy_test.dart
+          --reporter expanded
