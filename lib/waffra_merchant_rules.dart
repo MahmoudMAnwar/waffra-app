@@ -36,9 +36,12 @@ String? waffraMerchantName(String raw,{bool income=false}) {
  for(final pattern in matches){
   final match=pattern.firstMatch(text);
   if(match==null)continue;
+  // Trim only terminal IDs directly attached to an English merchant name.
+  // Keep card, account and terminal numbers out of the merchant label.
   final name=(match.group(1)??'').trim()
    .replaceAll(RegExp(r'\s+'),' ')
-   .replaceAll(RegExp(r'^[;:：\s]+|[;:：\s]+$'),'');
+   .replaceAll(RegExp(r'^[;:：\s]+|[;:：\s]+$'),'')
+   .replaceFirst(RegExp(r'([A-Za-z])\d{4,6}$'),r'$1').trim();
   if(!_waffraSafeMerchantCandidate(name))continue;
   if(RegExp(r'^(?:مدى|mada|mada pay|sr|sar|pos|pay)$',caseSensitive:false).hasMatch(name))continue;
   // A generic payment rail is not a merchant and must not become a category.

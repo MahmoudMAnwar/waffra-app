@@ -175,6 +175,9 @@ void main() {
       'بقالة وتموين / سوبرماركت');
     expect(waffraRecognizedMerchantLeaf('ALNAHDI PHARMACY',income:false),
       'صحة / صيدلية وأدوية');
+    // A synthetic terminal suffix is not part of the merchant identity.
+    expect(waffraMerchantName('Purchase Card\nAmount: 16.27 SAR\n'
+      'At: ALNAHDI PHARMACY9999'),'ALNAHDI PHARMACY');
     expect(waffraRecognizedMerchantLeaf('Marakez Medical',income:false),
       'صحة / عيادات');
     expect(waffraRecognizedMerchantLeaf('Keeta',income:false),
