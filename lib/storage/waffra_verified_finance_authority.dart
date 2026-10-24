@@ -267,11 +267,12 @@ class WaffraVerifiedFinanceAuthority {
           throw StateError('Finance route contains unverified coupled edits.');
         }
       }
-      await encryptedSession!.saveDashboardBatch(
+      final verifiedSession = encryptedSession!;
+      await verifiedSession.saveDashboardBatch(
         baseline: witness,
         captured: immutableCapture,
       );
-      return load(route: route);
+      return await load(route: route);
     }
     if (backend == WaffraRuntimeFinanceBackend.verifiedEncrypted &&
         route == WaffraFinanceRoute.deleteAllTransactions) {
@@ -289,7 +290,7 @@ class WaffraVerifiedFinanceAuthority {
       await encryptedSession!.deleteAllUnattachedTransactions(
         baseline: witness, userConfirmed: true,
       );
-      return load(route: route);
+      return await load(route: route);
     }
     if (backend == WaffraRuntimeFinanceBackend.verifiedEncrypted &&
         route == WaffraFinanceRoute.manualTransactionSave) {
@@ -343,7 +344,7 @@ class WaffraVerifiedFinanceAuthority {
         hashes: const <String?>[null],
         userConfirmed: true,
       );
-      return load(route: route);
+      return await load(route: route);
     }
     if (backend == WaffraRuntimeFinanceBackend.guardedLegacy) {
       await legacy.saveLegacy(
