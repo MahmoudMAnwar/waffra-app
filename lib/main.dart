@@ -7716,10 +7716,19 @@ Future<void> bulkSmsSheet({String? initialText})async {
    mainAxisSize:MainAxisSize.min,
    // The expanded menu is aligned with the + on the active physical side.
    crossAxisAlignment:waffraIsEnglish?CrossAxisAlignment.end:CrossAxisAlignment.start,children:[
-    AnimatedSize(duration:waffraMotion(260),
-      curve:Curves.easeInOutCubic,
-     alignment:waffraIsEnglish?Alignment.bottomRight:Alignment.bottomLeft,
+    AnimatedSwitcher(
+     duration:waffraMotion(320),
+     reverseDuration:waffraMotion(260),
+     switchInCurve:Curves.easeOutCubic,
+     switchOutCurve:Curves.easeInCubic,
+     transitionBuilder:(child,animation)=>SizeTransition(
+      sizeFactor:animation,axisAlignment:1.0,
+      child:FadeTransition(opacity:animation,child:SlideTransition(
+       position:Tween<Offset>(
+        begin:const Offset(0,.07),end:Offset.zero).animate(animation),
+       child:child))),
      child:addFabExpanded&&(tab==0||tab==1)&&!goalsOpened?Padding(
+      key:const ValueKey('waffra-fab-menu-open'),
       padding:const EdgeInsets.only(bottom:9),
       child:Column(mainAxisSize:MainAxisSize.min,
        crossAxisAlignment:waffraIsEnglish?CrossAxisAlignment.end:CrossAxisAlignment.start,children:[
@@ -7746,7 +7755,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
           label:waffraIsEnglish?'Expense category':'إضافة قسم مصروفات',
           onTap:(){unawaited(_launchAddAction(()=>chooseCategoryLevel(income:false),fromMenu:true));}),
         ],
-       ])):const SizedBox.shrink()),
+       ])):const SizedBox(key:ValueKey('waffra-fab-menu-closed'))),
     Material(
       key:_tourKeys[1],
       color:forest,elevation:7,
