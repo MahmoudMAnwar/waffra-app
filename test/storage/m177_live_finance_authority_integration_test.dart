@@ -193,6 +193,12 @@ void main() {
     expect(home, contains('hashes:[pendingHash!]'));
     expect(home, contains('allowDuplicateHashes:explicitlyApprovedSmsDuplicate'));
     expect(home, contains('if(applied.saved!=1){'));
+    // Portable .waffra export must read finance after the latest Widget save.
+    expect(home, contains('await _financialWriteQueue.drain();'));
+    expect(home, contains('route:WaffraFinanceRoute.backupExport'));
+    expect(home, contains('final authoritativePayload=exportBackup(fromSource:current);'));
+    expect(home, contains("'payload':authoritativePayload,'password':secret.text"));
+    expect(home, isNot(contains("'payload':exportBackup(),'password':secret.text")));
     expect(home, contains('route:WaffraFinanceRoute.fullFinanceReset'));
   });
 }
