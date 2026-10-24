@@ -164,15 +164,23 @@ class WaffraVerifiedFinanceAuthority {
     final backend = await _requireRoute(
       WaffraFinanceRoute.categoryCatalogInstall,
     );
-    if (backend != WaffraRuntimeFinanceBackend.guardedLegacy) {
-      throw StateError('Encrypted catalog installation is not certified.');
+    if (backend == WaffraRuntimeFinanceBackend.guardedLegacy) {
+      await legacy.installCategoryCatalog(
+        version: version,
+        expectedCatalogRaw: expectedCatalogRaw,
+        nextCatalogRaw: nextCatalogRaw,
+        catalogChanged: catalogChanged,
+      );
+    } else {
+      // Do not touch legacy prefs after a verified encrypted selection.
+      // The bridge rechecks active source witnesses inside its native lock.
+      await encryptedSession!.installCategoryCatalog(
+        version: version,
+        expectedCatalogRaw: expectedCatalogRaw,
+        nextCatalogRaw: nextCatalogRaw,
+        catalogChanged: catalogChanged,
+      );
     }
-    await legacy.installCategoryCatalog(
-      version: version,
-      expectedCatalogRaw: expectedCatalogRaw,
-      nextCatalogRaw: nextCatalogRaw,
-      catalogChanged: catalogChanged,
-    );
     return load(route: WaffraFinanceRoute.categoryCatalogInstall);
   }
 
