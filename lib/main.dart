@@ -5538,6 +5538,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
     ?'Move «${c.name}» to Recently Deleted for 30 days? You can restore its name, icon and color, but its budget will reset to zero.'
     :'هل تريد نقل القسم «${c.name}» إلى المحذوفات لمدة 30 يومًا؟ عند استرجاعه سيعود بميزانية صفر.');
   if(yes!=true||!mounted)return;
+  if(_lastFinanceAuthorityRead?.source==
+     WaffraRuntimeFinanceBackend.verifiedEncrypted){
+   await _deleteVerifiedModule(
+    module:WaffraFinanceModule.categories,displayed:c.toJson());
+   return;
+  }
   setState((){
    categories.removeWhere((e)=>e.id==c.id);
    deletedCategories.add({'category':c.toJson(),'deletedAt':DateTime.now().toIso8601String()});
@@ -5546,6 +5552,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
   if(mounted)snackSuccess(context,waffraIsEnglish?'Category moved to Recently Deleted for 30 days':'تم نقل القسم للمحذوفات لمدة 30 يومًا');
  }
  Future<void> showCategoryTrash()async {
+  if(_lastFinanceAuthorityRead?.source==
+     WaffraRuntimeFinanceBackend.verifiedEncrypted){
+   await _showVerifiedModuleTrash(WaffraFinanceModule.categories);
+   return;
+  }
   final before=deletedCategories.length;
   deletedCategories.removeWhere((item){
    final when=DateTime.tryParse('${item['deletedAt']??''}');
@@ -6102,6 +6113,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
   ?'Move “$name” to Deleted Goals for 30 days. ${linked?'This goal has saved amounts or linked transactions; financial history will stay untouched.':''} Restored goals restart with zero saved balance.'
   :'نقل «$name» إلى الأهداف المحذوفة لمدة 30 يومًا. ${linked?'هذا الهدف مرتبط بمبالغ ادخار أو معاملات مالية؛ ستبقى المعاملات محفوظة.':''} عند الاسترجاع يبدأ رصيد الادخار من صفر.';
  Future<void> deletedGoalsDialog()async{
+  if(_lastFinanceAuthorityRead?.source==
+     WaffraRuntimeFinanceBackend.verifiedEncrypted){
+   await _showVerifiedModuleTrash(WaffraFinanceModule.goals);
+   return;
+  }
   final before=deletedGoals.length;
   deletedGoals.removeWhere((item){
    final date=DateTime.tryParse('${item['deletedAt']??''}');
@@ -6236,7 +6252,16 @@ Future<void> bulkSmsSheet({String? initialText})async {
          final linked=g.saved>0||entries.any((e)=>e.category==g.name);
          final yes=await confirmDeletion(waffraIsEnglish?'Delete savings goal?':'حذف هدف الادخار',
           waffraGoalDeleteWarning(g.name,linked,waffraIsEnglish));
-         if(yes==true&&mounted){setState((){deletedGoals.add({'goal':g.toJson(),'deletedAt':DateTime.now().toIso8601String()});goals.removeWhere((x)=>x.id==g.id);});await persist(route:WaffraFinanceRoute.goalCreateEditDeleteRestore);}
+         if(yes==true&&mounted){
+          if(_lastFinanceAuthorityRead?.source==
+             WaffraRuntimeFinanceBackend.verifiedEncrypted){
+           await _deleteVerifiedModule(
+            module:WaffraFinanceModule.goals,displayed:g.toJson());
+          }else{
+           setState((){deletedGoals.add({'goal':g.toJson(),'deletedAt':DateTime.now().toIso8601String()});goals.removeWhere((x)=>x.id==g.id);});
+           await persist(route:WaffraFinanceRoute.goalCreateEditDeleteRestore);
+          }
+         }
         }
        },itemBuilder:(_)=>[PopupMenuItem(value:'delete',child:WaffraText(waffraIsEnglish?'Delete goal':'حذف الهدف'))]),
       ]),
@@ -6535,6 +6560,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
        final ok=await confirmDeletion(waffraIsEnglish?'Delete recurring transaction?':'حذف العملية المتكررة',
         waffraRecurringDeleteWarning(r.title,hasHistory,waffraIsEnglish));
        if(ok==true&&mounted){
+        if(_lastFinanceAuthorityRead?.source==
+           WaffraRuntimeFinanceBackend.verifiedEncrypted){
+         await _deleteVerifiedModule(
+          module:WaffraFinanceModule.recurring,displayed:r.toJson());
+         return;
+        }
         setState((){
          deletedRecurring.add({'recurring':r.toJson(),'deletedAt':DateTime.now().toIso8601String()});
          recurring.removeWhere((e)=>e.id==r.id);
