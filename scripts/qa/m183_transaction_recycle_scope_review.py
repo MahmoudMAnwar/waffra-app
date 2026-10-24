@@ -99,6 +99,10 @@ def main() -> None:
         "source_sha256 TEXT NOT NULL",
         "sha256.convert(utf8.encode(archiveJson))",
         "await _requireExactTypedLedger(ledger);",
+        "row.read<int>('amount_minor') != (amount * 100).round()",
+        "row.read<int>('is_income') != (original['income'] == true ? 1 : 0)",
+        "row.read<String>('occurred_iso') != occurredAt",
+        "SQLCipher typed financial values differ from ledger.",
         "await _requireNoOtherArchive(entryId);",
         "Transaction already has pending recovery.",
         "Receipt was replaced since screen confirmation.",
@@ -125,6 +129,7 @@ def main() -> None:
         "expired or rolled-back clock",
         "corrupted archived encrypted receipt",
         "changed archived financial amount",
+        "every tampered typed financial column blocks deleted money",
         "source activation conflict",
         "disabled source rejects",
     ]:
