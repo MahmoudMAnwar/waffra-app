@@ -6,6 +6,13 @@
 - Read-only source review ensures system/light/dark theme, near-black `#080A09` dark scaffold, accessible primary text contrast, system reduced-motion and explicit animation-off mode.
 - Python contrast audit calculates **WCAG relative-luminance** contrast for currently identified primary foreground/background pairs; it is NOT a complete visual audit.
 
+## Theme-transition test reliability
+The 175% widget regression now waits for `MaterialApp`'s animated
+`themeMode` transition to settle before checking inherited brightness.
+A single-frame assertion could incorrectly report a light theme while the
+light-to-dark animation was still in progress. This does not replace real
+phone dark-mode, contrast, TalkBack, or 200% scaling evidence.
+
 ## Known usability issues and unverified paths
 - Base theme icon buttons currently specify a **36dp minimum size**. Verify actual effective 48dp touch target and TalkBack hit box before rollout; do not silently redesign approved navigation in this branch.
 - 200%/large font across the complex Home, categories, savings, recurring, forms and PDF needs real device screenshots/semantics verification.
