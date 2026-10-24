@@ -27,6 +27,32 @@ class WaffraTransactionRecycleResult {
   final bool restored;
 }
 
+/// Synthetic core proof only. A production caller MUST verify two genuinely
+/// independent, authenticated UTC sources before constructing this value.
+/// The SQLCipher core cannot itself attest the OS secure clock or a remote
+/// signed clock. Consequently no production API wires this proof today.
+class WaffraPurgeClockProof {
+  const WaffraPurgeClockProof({
+    required this.osWitnessUtc,
+    required this.independentWitnessUtc,
+  });
+
+  final DateTime osWitnessUtc;
+  final DateTime independentWitnessUtc;
+}
+
+class WaffraEncryptedExpiryPurgeResult {
+  const WaffraEncryptedExpiryPurgeResult({
+    required this.purged,
+    required this.nextVerifiedClockMs,
+    required this.remaining,
+  });
+
+  final int purged;
+  final int nextVerifiedClockMs;
+  final int remaining;
+}
+
 /// Candidate encrypted transaction-level undo, including every receipt byte.
 /// SQLCipher finance and encrypted BLOBs remain recoverable for 30 days.
 ///
@@ -486,6 +512,169 @@ CREATE TABLE IF NOT EXISTS $_images(
           receiptCount: count,
           expiresAtMs: expiry,
           restored: true,
+        );
+      });
+    });
+  }
+
+  /// Permanently erase ONLY expired transaction-trash rows and their
+  /// encrypted invoice BLOBs. No active money, receipts, SMS hashes, canonical
+  /// snapshot or Widget generation are modified. This is opt-in and disabled
+  /// by default; the caller must independently authenticate BOTH UTC sources.
+  ///
+  /// The SQL transaction verifies all selected archive JSON and BLOB digests
+  /// before deleting a single row. A failure rolls back the entire batch.
+  Future<WaffraEncryptedExpiryPurgeResult> purgeExpired({
+    required Future<WaffraPurgeClockProof> Function()
+        verifyIndependentClockUnderLock,
+    int maxBatch = 1,
+  }) async {
+    _requireCandidate();
+    if (maxBatch < 1 || maxBatch > 2) {
+      throw ArgumentError('At most two archived transactions per purge.');
+    }
+    return WaffraExperimentalWriterGate(
+      disposableDirectory: writerDirectory,
+      experimentalEnabled: true,
+    ).withExclusiveAccess(() async {
+      await verifySourceUnderLock();
+      final proof = await verifyIndependentClockUnderLock();
+      final osMs = proof.osWitnessUtc.toUtc().millisecondsSinceEpoch;
+      final otherMs =
+          proof.independentWitnessUtc.toUtc().millisecondsSinceEpoch;
+      if (osMs < 0 || otherMs < 0 ||
+          osMs > 8640000000000000 ||
+          otherMs > 8640000000000000 ||
+          (osMs - otherMs).abs() > const Duration(minutes: 2).inMilliseconds) {
+        throw StateError('Independent expiry clock witnesses disagree.');
+      }
+      // Both authorities must agree that retention has fully elapsed.
+      final trustedMs = osMs < otherMs ? osMs : otherMs;
+      return snapshot.store.transaction(() async {
+        final current = await snapshot.read();
+        final ledger = _decodeLedger(current.values['entries'] as String?);
+        await _requireExactTypedLedger(ledger);
+
+        await _ensureTables();
+        await snapshot.store.customStatement('''
+CREATE TABLE IF NOT EXISTS fresh_finance_transaction_recycle_clock(
+  singleton INTEGER PRIMARY KEY CHECK(singleton=1),
+  last_verified_utc_ms INTEGER NOT NULL CHECK(last_verified_utc_ms >= 0)
+)''');
+        final savedClock = await snapshot.store.customSelect(
+          'SELECT last_verified_utc_ms FROM '
+          'fresh_finance_transaction_recycle_clock WHERE singleton=1',
+        ).get();
+        if (savedClock.length > 1 ||
+            (savedClock.isNotEmpty &&
+             trustedMs <
+                 savedClock.single.read<int>('last_verified_utc_ms'))) {
+          throw StateError('Encrypted expiry clock moved backwards.');
+        }
+
+        final archive = await snapshot.store.customSelect(
+          'SELECT entry_id,source_json,source_sha256,receipt_count,'
+          'deleted_at_ms,expires_at_ms FROM $_trash '
+          'ORDER BY expires_at_ms ASC,entry_id ASC',
+        ).get();
+        final activeIds = ledger.map((row) => row['id'] as String).toSet();
+        final targets = <Map<String, Object?>>[];
+        final archiveIds = <String>{};
+        for (final row in archive) {
+          final id = row.read<String>('entry_id');
+          final deletedAt = row.read<int>('deleted_at_ms');
+          final expiry = row.read<int>('expires_at_ms');
+          if (id.trim().isEmpty || id.length > 128 ||
+              !archiveIds.add(id) ||
+              deletedAt < 0 ||
+              expiry - deletedAt != retention.inMilliseconds ||
+              activeIds.contains(id)) {
+            throw StateError('Encrypted transaction trash metadata is corrupt.');
+          }
+          if (expiry > trustedMs || targets.length >= maxBatch) continue;
+          final raw = row.read<String>('source_json');
+          if (sha256.convert(utf8.encode(raw)).toString() !=
+              row.read<String>('source_sha256')) {
+            throw StateError('Expired archived financial checksum differs.');
+          }
+          final decoded = jsonDecode(raw);
+          if (decoded is! Map<String, dynamic> || decoded['id'] != id ||
+              !WaffraLegacyPreflight.inspect(
+                <String, Object?>{'entries': jsonEncode([decoded])},
+              ).canStage) {
+            throw StateError('Expired encrypted transaction is malformed.');
+          }
+          final count = row.read<int>('receipt_count');
+          if (count < 0 ||
+              count > WaffraEncryptedReceiptVault.maxReceiptsPerEntry) {
+            throw StateError('Expired receipt count is invalid.');
+          }
+          _references(decoded['receiptPath'], id, count);
+          await _requireNoOtherArchive(id);
+          final sqlParts = await snapshot.store.customSelect(
+            'SELECT position,safe_name,sha256_hex,byte_count,encrypted_blob '
+            'FROM $_images WHERE entry_id=? ORDER BY position',
+            variables: [Variable.withString(id)],
+          ).get();
+          if (sqlParts.length != count) {
+            throw StateError('Expired encrypted receipts are incomplete.');
+          }
+          for (var i = 0; i < count; i++) {
+            final part = sqlParts[i];
+            final bytes = part.read<Uint8List>('encrypted_blob');
+            final filename = sha256.convert(
+              utf8.encode(jsonEncode([id, i])),
+            ).toString() + '.bin';
+            if (part.read<int>('position') != i ||
+                part.read<String>('safe_name') != filename ||
+                bytes.isEmpty ||
+                bytes.length > WaffraEncryptedReceiptVault.maxReceiptBytes ||
+                part.read<int>('byte_count') != bytes.length ||
+                part.read<String>('sha256_hex') !=
+                    sha256.convert(bytes).toString()) {
+              throw StateError('Expired encrypted invoice bytes differ.');
+            }
+          }
+          targets.add(<String, Object?>{'id': id, 'count': count});
+        }
+
+        // Nothing is physically deleted before the entire target set passes
+        // financial, receipt-owner and byte-integrity validation.
+        for (final target in targets) {
+          final id = target['id'] as String;
+          await snapshot.store.customStatement(
+            'DELETE FROM $_images WHERE entry_id=?', [id],
+          );
+          await snapshot.store.customStatement(
+            'DELETE FROM $_trash WHERE entry_id=?', [id],
+          );
+          final remainingPart = await snapshot.store.customSelect(
+            'SELECT count(*) AS n FROM $_images WHERE entry_id=?',
+            variables: [Variable.withString(id)],
+          ).getSingle();
+          if (remainingPart.read<int>('n') != 0) {
+            throw StateError('Expired archive BLOB purge was incomplete.');
+          }
+        }
+        await snapshot.store.customStatement(
+          'INSERT INTO fresh_finance_transaction_recycle_clock'
+          '(singleton,last_verified_utc_ms) VALUES (1,?) '
+          'ON CONFLICT(singleton) DO UPDATE SET '
+          'last_verified_utc_ms=excluded.last_verified_utc_ms',
+          [trustedMs],
+        );
+        final after = await snapshot.read();
+        if (after.generation != current.generation ||
+            after.digest != current.digest) {
+          throw StateError('Expiry purge unexpectedly changed active finance.');
+        }
+        final left = await snapshot.store.customSelect(
+          'SELECT count(*) AS n FROM $_trash',
+        ).getSingle();
+        return WaffraEncryptedExpiryPurgeResult(
+          purged: targets.length,
+          remaining: left.read<int>('n'),
+          nextVerifiedClockMs: trustedMs,
         );
       });
     });
