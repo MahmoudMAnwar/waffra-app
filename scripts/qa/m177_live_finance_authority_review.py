@@ -14,6 +14,7 @@ EXPECTED = {
     "lib/storage/waffra_home_finance_persistence.dart",
     "lib/storage/waffra_verified_finance_authority.dart",
     "scripts/qa/m177_live_finance_authority_review.py",
+    "test/m161_manual_category_leaf_routing_test.dart",
     "test/storage/m177_live_finance_authority_integration_test.dart",
 }
 
