@@ -39,7 +39,18 @@ void main() {
     final widget=File('lib/waffra_widget_capture.part.dart').readAsStringSync();
     final main=File('lib/main.dart').readAsStringSync();
 
-    expect(widget, contains('requireSafeLegacyStartup'));
+    final binding=File('lib/storage/waffra_production_finance_authority_binding.dart')
+        .readAsStringSync();
+    // The new shared source guard supersedes the legacy-only widget startup.
+    // It still must reject missing/ambiguous SQLCipher evidence and must never
+    // silently switch to empty legacy data or a new encrypted vault.
+    expect(widget, contains('WaffraProductionFinanceAuthorityBinding.bind('));
+    expect(widget, contains('WaffraFinanceRoute.widgetStartup'));
+    expect(main, contains('await _ensureFinanceBound();'));
+    expect(binding, contains('sourceGuard.inspect()'));
+    expect(binding, contains('WaffraProductionFinanceSource.manualRecoveryRequired'));
+    expect(binding, contains('if (evidence == null)'));
+    expect(binding, isNot(contains('WaffraEncryptedStore.openShadow(')));
     expect(widget, isNot(contains('FirebaseFirestore.instance')));
     expect(main, contains('requireSafeLegacyStartup'));
   });
