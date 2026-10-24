@@ -1881,6 +1881,21 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
            fontSize:22,color:dark?Colors.white:accent)),
         ]),
        ),
+       if(entry.notes.isNotEmpty)...[
+        const SizedBox(height:15),
+        WaffraText(waffraIsEnglish?'Notes':'الملاحظات',
+         textAlign:TextAlign.start,style:TextStyle(fontSize:12,color:muted)),
+        const SizedBox(height:7),
+        Container(width:double.infinity,padding:const EdgeInsets.all(13),
+         decoration:BoxDecoration(
+          color:dark?const Color(0xFF252A27):const Color(0xFFF1F8F3),
+          borderRadius:BorderRadius.circular(14),
+          border:Border.all(color:dark?const Color(0xFF3B5444):const Color(0xFFD5E8DC))),
+         child:SelectableText(entry.notes,
+          textDirection:rtl?TextDirection.rtl:TextDirection.ltr,
+          textAlign:TextAlign.start,
+          style:const TextStyle(fontSize:14,height:1.5))),
+       ],
        if(onViewReceipt!=null)...[
         const SizedBox(height:10),
         Align(alignment:AlignmentDirectional.centerStart,
@@ -2630,7 +2645,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    final title=merchant==null?result.title:result.title+' — '+merchant;
    additions.add(MoneyEntry(id:newId(),title:title,
     category:plan.categoryName,amount:result.amount!,income:result.income,
-    date:bankSmsDate(raw)??DateTime.now(),sourceType:'sms',
+    date:bankSmsDate(raw)??DateTime.now(),notes:raw,sourceType:'sms',
     merchantKey:plan.merchantKey));
    proposedHashes.add(bankSmsHash(raw));
   }
@@ -2931,7 +2946,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        update(()=>busy=true);
        final now=DateTime.now();
        final previous=sum(entries.where((e)=>!e.income&&e.category==category&&e.date.year==now.year&&e.date.month==now.month),false);
-       final entry=MoneyEntry(id:newId(),title:description.text.trim(),category:category,amount:n,income:income,date:now);
+       final entry=MoneyEntry(id:newId(),title:description.text.trim(),category:category,amount:n,income:income,date:now,notes:messages[index],sourceType:'sms');
        // A parsed SMS is not saved until both the transaction and its
        // fingerprint are crash-journaled under the SAME Home/Widget lock.
        // A stale dashboard must never overwrite a newer widget ledger.
@@ -3023,6 +3038,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    builder:(sheetContext)=>StatefulBuilder(builder:(sheetContext,update){
     void parseNow(String text) {
      debounce?.cancel();
+     if(sms)notes.text=text;
      if(text.trim().isEmpty){update((){hasParsed=false;analyzing=false;suggestion=null;});return;}
      update(()=>analyzing=true);
      debounce=Timer(const Duration(milliseconds:300),(){
@@ -3087,6 +3103,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
         border:OutlineInputBorder())),
       const SizedBox(height:10),
       TextField(controller:notes,onChanged:(_)=>update((){}),minLines:1,maxLines:4,
+       readOnly:sms,
        decoration:InputDecoration(labelText:waffraIsEnglish?'Notes (optional)':'ملاحظات (اختياري)',
         errorText:attempted&&!waffraTransactionNotesAllowed(notes.text,oldNotes:initial?.notes)
          ?(waffraIsEnglish?'Notes cannot exceed 2,000 characters.':
@@ -3206,7 +3223,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        update(()=>attempted=true);
        final n=amountOf(value.text);
        if(!waffraTransactionTitleAllowed(title.text,oldTitle:initial?.title)||
-        !waffraTransactionNotesAllowed(notes.text,oldNotes:initial?.notes)||
+        (!sms&&!waffraTransactionNotesAllowed(notes.text,oldNotes:initial?.notes))||
         waffraAmountFieldError(value.text)!=null||n==null)return;
        if(!sms&&!waffraCanAssignManualCategory(categories,
         income,selectedParentId,category))return;
@@ -3225,7 +3242,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
         pendingHash=h;
        }
        Navigator.pop(sheetContext,MoneyEntry(id:initial?.id??newId(),
-        title:title.text.trim(),notes:notes.text,category:category,amount:n,
+        title:title.text.trim(),notes:sms?message.text:notes.text,category:category,amount:n,
         income:income,date:date,receiptPath:receiptPath,
         sourceType:initial?.sourceType??(sms?'sms':'manual'),
         merchantKey:initial?.merchantKey??(sms?(waffraMerchantKey(message.text)??''):'')));
