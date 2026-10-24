@@ -9,6 +9,8 @@ import 'waffra_atomic_finance_snapshot.dart';
 import 'waffra_atomic_encrypted_receipt_transaction_writer.dart';
 import 'waffra_encrypted_cutover_journal.dart';
 import 'waffra_encrypted_finance_ui_patch.dart';
+import 'waffra_encrypted_module_projection_guard.dart';
+import 'legacy_snapshot_preflight.dart';
 import 'waffra_experimental_writer_gate.dart';
 import 'waffra_finance_read_view.dart';
 import 'waffra_encrypted_receipt_vault.dart';
@@ -181,6 +183,189 @@ class WaffraVerifiedEncryptedFinanceBridge {
           throw StateError('Encrypted custom goal durable write is inconsistent.');
         }
         return true;
+      });
+    });
+  }
+
+  /// Install catalog v2/v3 and the exact SQLCipher metadata marker in ONE
+  /// transaction, under the shared Home/Widget writer lock. An unrelated
+  /// Widget transaction survives; a concurrent catalog edit fails closed.
+  Future<WaffraFinanceSnapshotState> installCategoryCatalog({
+    required int version,
+    required String? expectedCatalogRaw,
+    required String nextCatalogRaw,
+    required bool catalogChanged,
+  }) async {
+    if (version != 2 && version != 3) {
+      throw ArgumentError('Unknown encrypted catalog version.');
+    }
+    if (!WaffraLegacyPreflight.inspect(
+      <String, Object?>{'waffra_categories_v24': nextCatalogRaw},
+    ).canStage) {
+      throw StateError('Encrypted category catalog failed validation.');
+    }
+    if (!experimentalEnabled) {
+      throw StateError('Encrypted catalog installer is disabled.');
+    }
+    return WaffraExperimentalWriterGate(
+      disposableDirectory: writerDirectory,
+      experimentalEnabled: true,
+    ).withExclusiveAccess(() async {
+      await _requireActivatedUnderLock();
+      return snapshot.store.transaction(() async {
+        final previous = await snapshot.read();
+        final observed = previous.values['waffra_categories_v24'];
+        if (observed != expectedCatalogRaw) {
+          throw StateError('Category catalog has changed; reload before install.');
+        }
+        if (!catalogChanged && observed != nextCatalogRaw) {
+          throw StateError('Unconfirmed category catalog replacement refused.');
+        }
+        final marker = 'waffra_category_catalog_v${version}_installed';
+        final rows = await snapshot.store.customSelect(
+          'SELECT value_json FROM fresh_finance_settings '
+          'WHERE setting_key=?',
+          variables: [Variable.withString(marker)],
+        ).get();
+        if (rows.length > 1 ||
+            (rows.isNotEmpty && rows.single.read<String>('value_json') != 'true')) {
+          throw StateError('Encrypted catalog install marker is inconsistent.');
+        }
+        if (rows.isNotEmpty) {
+          return previous;
+        }
+        var persisted = previous;
+        if (catalogChanged) {
+          await WaffraEncryptedModuleProjectionGuard.reconcile(
+            store: snapshot.store,
+            key: 'waffra_categories_v24',
+            previousJson: observed as String?,
+            updatedJson: nextCatalogRaw,
+          );
+          final changes = Map<String, Object?>.from(previous.values);
+          changes['waffra_categories_v24'] = nextCatalogRaw;
+          persisted = await snapshot.commit(
+            expectedGeneration: previous.generation,
+            fullFinanceSnapshot: changes,
+          );
+        }
+        // SQLCipher marker is the LAST mutation in the same transaction.
+        // Crash/rollback reverts BOTH the category projection and marker.
+        await snapshot.store.customStatement(
+          'INSERT INTO fresh_finance_settings(setting_key,value_json) '
+          'VALUES (?,?)',
+          [marker, 'true'],
+        );
+        final markerRead = await snapshot.store.customSelect(
+          'SELECT value_json FROM fresh_finance_settings WHERE setting_key=?',
+          variables: [Variable.withString(marker)],
+        ).get();
+        if (markerRead.length != 1 ||
+            markerRead.single.read<String>('value_json') != 'true') {
+          throw StateError('Encrypted category catalog install was not durable.');
+        }
+        return persisted;
+      });
+    });
+  }
+
+  /// Delete a fully witnessed ledger without receipts, and clear its SMS
+  /// dedupe hashes IN THE SAME SQL transaction. Receipt-bearing finance and
+  /// orphan blobs deliberately fail closed until retention is certified.
+  Future<WaffraFinanceSnapshotState> deleteAllUnattachedTransactions({
+    required WaffraEncryptedHomeWitness baseline,
+    required bool userConfirmed,
+  }) async {
+    if (!experimentalEnabled || !userConfirmed) {
+      throw StateError('Confirmed encrypted finance deletion is required.');
+    }
+    return WaffraExperimentalWriterGate(
+      disposableDirectory: writerDirectory,
+      experimentalEnabled: true,
+    ).withExclusiveAccess(() async {
+      await _requireActivatedUnderLock();
+      return snapshot.store.transaction(() async {
+        final current = await snapshot.read();
+        if (current.generation != baseline.generation ||
+            current.digest != baseline.digest) {
+          throw StateError('Finance changed; reload before deleting.');
+        }
+        final raw = current.values['entries'] as String? ?? '[]';
+        final decoded = jsonDecode(raw);
+        if (decoded is! List || decoded.any((row) =>
+            row is! Map || row['id'] is! String ||
+            (row['receiptPath'] != null && row['receiptPath'] != ''))) {
+          throw StateError('Ledger contains unsafe or attached entries.');
+        }
+        final ids = decoded.map((row) => (row as Map)['id']).toSet();
+        if (ids.length != decoded.length) {
+          throw StateError('Ledger contains duplicate identities.');
+        }
+        final sql = await snapshot.store.customSelect(
+          'SELECT entry_id,source_json,receipt_count FROM fresh_finance_entries',
+        ).get();
+        if (sql.length != decoded.length ||
+            sql.any((row) => !ids.contains(row.read<String>('entry_id')) ||
+                row.read<int>('receipt_count') != 0)) {
+          throw StateError('Encrypted ledger projection differs from finance.');
+        }
+        final byId = <String, Object?>{
+          for (final item in decoded) (item as Map)['id'] as String: item,
+        };
+        for (final row in sql) {
+          if (jsonEncode(jsonDecode(row.read<String>('source_json'))) !=
+              jsonEncode(byId[row.read<String>('entry_id')])) {
+            throw StateError('Transaction SQL witness differs from ledger.');
+          }
+        }
+        // NEVER silently discard attached, archived or orphan receipt bytes.
+        for (final name in const <String>[
+          'fresh_finance_receipt_blobs',
+          'fresh_finance_receipt_recycle',
+          'fresh_finance_receipts',
+        ]) {
+          final present = await snapshot.store.customSelect(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+            variables: [Variable.withString(name)],
+          ).get();
+          if (present.isNotEmpty) {
+            final count = await snapshot.store.customSelect(
+              'SELECT count(*) AS n FROM $name',
+            ).getSingle();
+            if (count.read<int>('n') != 0) {
+              throw StateError('Encrypted receipts require retention review.');
+            }
+          }
+        }
+        final hashes = current.values['waffra_sms_hashes_v1'];
+        if (hashes != null && hashes is! List<String>) {
+          throw StateError('Encrypted dedupe hashes are corrupted.');
+        }
+        final sqlHashes = await snapshot.store.customSelect(
+          'SELECT message_hash FROM fresh_finance_sms_hashes',
+        ).get();
+        final actualHashes =
+            sqlHashes.map((row) => row.read<String>('message_hash')).toSet();
+        final expectedHashes = (hashes as List<String>? ?? const <String>[])
+            .toSet();
+        if (actualHashes.length != sqlHashes.length ||
+            actualHashes.length != expectedHashes.length ||
+            !actualHashes.containsAll(expectedHashes)) {
+          throw StateError('SQLCipher hash projection differs from finance.');
+        }
+        await snapshot.store.customStatement(
+          'DELETE FROM fresh_finance_entries',
+        );
+        await snapshot.store.customStatement(
+          'DELETE FROM fresh_finance_sms_hashes',
+        );
+        final replacement = Map<String, Object?>.from(current.values)
+          ..['entries'] = '[]'
+          ..['waffra_sms_hashes_v1'] = <String>[];
+        return snapshot.commit(
+          expectedGeneration: current.generation,
+          fullFinanceSnapshot: replacement,
+        );
       });
     });
   }
@@ -498,9 +683,10 @@ class WaffraVerifiedEncryptedFinanceBridge {
       throw StateError('Encrypted SMS deduplication runtime is disabled.');
     }
     const digits = '0123456789abcdef';
-    if (additions.length > 1000 ||
-        additions.any((hash) => hash.length != 64 ||
-            hash.split('').any((character) => !digits.contains(character)))) {
+    bool validHash(String hash) =>
+        hash.length == 64 &&
+        hash.split('').every((character) => digits.contains(character));
+    if (additions.length > 1000 || additions.any((hash) => !validHash(hash))) {
       throw ArgumentError('Only SHA-256 SMS fingerprints are allowed.');
     }
     return WaffraExperimentalWriterGate(
@@ -508,20 +694,48 @@ class WaffraVerifiedEncryptedFinanceBridge {
       experimentalEnabled: true,
     ).withExclusiveAccess(() async {
       await _requireActivatedUnderLock();
-      final current = await snapshot.read();
-      final existing = Set<String>.from(
-        current.values['waffra_sms_hashes_v1'] as List<String>? ??
-            const <String>[],
-      );
-      final oldCount = existing.length;
-      existing.addAll(additions);
-      if (oldCount == existing.length) return current;
-      final next = Map<String, Object?>.from(current.values);
-      next['waffra_sms_hashes_v1'] = existing.toList()..sort();
-      return snapshot.commit(
-        expectedGeneration: current.generation,
-        fullFinanceSnapshot: next,
-      );
+      // Never update the canonical snapshot without its typed SQL hash
+      // projection: a crash could otherwise leave two authoritative views.
+      return snapshot.store.transaction(() async {
+        final current = await snapshot.read();
+        final legacyTyped = current.values['waffra_sms_hashes_v1'];
+        if (legacyTyped != null && legacyTyped is! List<String>) {
+          throw StateError('Canonical SMS fingerprints have invalid type.');
+        }
+        final prior = legacyTyped as List<String>? ?? const <String>[];
+        final existing = prior.toSet();
+        if (prior.length != existing.length || existing.any((h) => !validHash(h))) {
+          throw StateError('Canonical SMS fingerprints are inconsistent.');
+        }
+        final typedRows = await snapshot.store.customSelect(
+          'SELECT message_hash FROM fresh_finance_sms_hashes',
+        ).get();
+        final typed = typedRows
+            .map((row) => row.read<String>('message_hash')).toSet();
+        if (typedRows.length != typed.length ||
+            typed.length != existing.length ||
+            !typed.containsAll(existing)) {
+          throw StateError('SQLCipher SMS hash projection is inconsistent.');
+        }
+        final nextHashes = <String>{...existing, ...additions};
+        if (nextHashes.length == existing.length) return current;
+        if (nextHashes.length > 100000) {
+          throw StateError('Encrypted SMS fingerprint capacity exceeded.');
+        }
+        for (final hash in nextHashes.difference(existing)) {
+          await snapshot.store.customStatement(
+            'INSERT OR IGNORE INTO fresh_finance_sms_hashes '
+            '(message_hash) VALUES (?)',
+            [hash],
+          );
+        }
+        final next = Map<String, Object?>.from(current.values)
+          ..['waffra_sms_hashes_v1'] = (nextHashes.toList()..sort());
+        return snapshot.commit(
+          expectedGeneration: current.generation,
+          fullFinanceSnapshot: next,
+        );
+      });
     });
   }
 

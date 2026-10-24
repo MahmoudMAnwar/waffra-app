@@ -164,15 +164,23 @@ class WaffraVerifiedFinanceAuthority {
     final backend = await _requireRoute(
       WaffraFinanceRoute.categoryCatalogInstall,
     );
-    if (backend != WaffraRuntimeFinanceBackend.guardedLegacy) {
-      throw StateError('Encrypted catalog installation is not certified.');
+    if (backend == WaffraRuntimeFinanceBackend.guardedLegacy) {
+      await legacy.installCategoryCatalog(
+        version: version,
+        expectedCatalogRaw: expectedCatalogRaw,
+        nextCatalogRaw: nextCatalogRaw,
+        catalogChanged: catalogChanged,
+      );
+    } else {
+      // Do not touch legacy prefs after a verified encrypted selection.
+      // The bridge rechecks active source witnesses inside its native lock.
+      await encryptedSession!.installCategoryCatalog(
+        version: version,
+        expectedCatalogRaw: expectedCatalogRaw,
+        nextCatalogRaw: nextCatalogRaw,
+        catalogChanged: catalogChanged,
+      );
     }
-    await legacy.installCategoryCatalog(
-      version: version,
-      expectedCatalogRaw: expectedCatalogRaw,
-      nextCatalogRaw: nextCatalogRaw,
-      catalogChanged: catalogChanged,
-    );
     return load(route: WaffraFinanceRoute.categoryCatalogInstall);
   }
 
@@ -207,6 +215,7 @@ class WaffraVerifiedFinanceAuthority {
     required WaffraFinanceRoute route,
     required WaffraFinanceAuthorityRead baseline,
     required Map<String, Object> captured,
+    bool userConfirmed = false,
   }) async {
     // Capture caller-owned values synchronously, before ANY awaited source
     // probe. A queued Home edit can otherwise mutate the map while the OS
@@ -221,6 +230,121 @@ class WaffraVerifiedFinanceAuthority {
     final backend = await _requireRoute(route);
     if (backend != baseline.source) {
       throw StateError('Finance authority changed while screen was open.');
+    }
+    if (backend == WaffraRuntimeFinanceBackend.verifiedEncrypted &&
+        (route == WaffraFinanceRoute.challengeAndBudgetUpdate ||
+         route == WaffraFinanceRoute.recurringPostingAndPostponement ||
+         route == WaffraFinanceRoute.merchantRulesAndSmsHashes)) {
+      final witness = baseline.encryptedWitness;
+      if (witness == null) {
+        throw StateError('Scalar finance edit requires an encrypted witness.');
+      }
+      // Typed projections already guard category budget writes. All other
+      // allowlisted changes are strict JSON/scalar finance keys and use the
+      // existing SQLCipher snapshot CAS within the shared Home/Widget lock.
+      // Recurring PAYMENTS with a new transaction are NOT silently accepted:
+      // they need an atomic entry+postponement posting writer separately.
+      final allowed = switch (route) {
+        WaffraFinanceRoute.challengeAndBudgetUpdate => <String>{
+          'waffra_challenges_v1',
+          'waffra_monthly_budget_v1',
+          'waffra_monthly_budget_enabled_v1',
+          'waffra_categories_v24',
+        },
+        WaffraFinanceRoute.recurringPostingAndPostponement => <String>{
+          'waffra_recurring_postponed_v1',
+        },
+        WaffraFinanceRoute.merchantRulesAndSmsHashes => <String>{
+          'waffra_learned_merchants_v1',
+        },
+        _ => const <String>{},
+      };
+      for (final item in immutableCapture.entries) {
+        final previous = witness.snapshot.values;
+        final changed = !previous.containsKey(item.key) ||
+            jsonEncode(previous[item.key]) != jsonEncode(item.value);
+        if (changed && !allowed.contains(item.key)) {
+          throw StateError('Finance route contains unverified coupled edits.');
+        }
+      }
+      final verifiedSession = encryptedSession!;
+      await verifiedSession.saveDashboardBatch(
+        baseline: witness,
+        captured: immutableCapture,
+      );
+      return await load(route: route);
+    }
+    if (backend == WaffraRuntimeFinanceBackend.verifiedEncrypted &&
+        route == WaffraFinanceRoute.deleteAllTransactions) {
+      final witness = baseline.encryptedWitness;
+      final expectedFields = immutableCapture.keys.toSet();
+      if (!userConfirmed || witness == null ||
+          expectedFields.length != 2 ||
+          !expectedFields.contains('entries') ||
+          !expectedFields.contains('waffra_sms_hashes_v1') ||
+          immutableCapture['entries'] != '[]' ||
+          immutableCapture['waffra_sms_hashes_v1'] is! List<String> ||
+          (immutableCapture['waffra_sms_hashes_v1'] as List<String>).isNotEmpty) {
+        throw StateError('Encrypted delete-all requires exact consent and scope.');
+      }
+      await encryptedSession!.deleteAllUnattachedTransactions(
+        baseline: witness, userConfirmed: true,
+      );
+      return await load(route: route);
+    }
+    if (backend == WaffraRuntimeFinanceBackend.verifiedEncrypted &&
+        route == WaffraFinanceRoute.manualTransactionSave) {
+      // A manual form's full Home capture is NOT an authorization to replace
+      // older finance data. Extract exactly one new record, preserve every
+      // previous field and let the atomic SQLCipher entry writer append it
+      // under the Widget lock. Reordering existing records is harmless.
+      final witness = baseline.encryptedWitness;
+      if (witness == null || immutableCapture['entries'] is! String) {
+        throw StateError('Manual save requires its original encrypted witness.');
+      }
+      final original = witness.snapshot.values;
+      for (final item in immutableCapture.entries) {
+        if (item.key == 'entries') continue;
+        if (!original.containsKey(item.key) ||
+            jsonEncode(original[item.key]) != jsonEncode(item.value)) {
+          throw StateError('Manual save includes unrelated finance edits.');
+        }
+      }
+      List<Map<String, Object?>> parseLedger(String? raw) {
+        final decoded = jsonDecode(raw ?? '[]');
+        if (decoded is! List) {
+          throw StateError('Manual finance ledger is malformed.');
+        }
+        final records = <Map<String, Object?>>[];
+        final seen = <String>{};
+        for (final row in decoded) {
+          if (row is! Map || row['id'] is! String ||
+              (row['id'] as String).trim().isEmpty ||
+              !seen.add(row['id'] as String)) {
+            throw StateError('Manual finance ledger has ambiguous IDs.');
+          }
+          records.add(Map<String, Object?>.from(row));
+        }
+        return records;
+      }
+      final before = parseLedger(original['entries'] as String?);
+      final after = parseLedger(immutableCapture['entries'] as String);
+      final prior = {for (final row in before) row['id'] as String: row};
+      final next = {for (final row in after) row['id'] as String: row};
+      final added = after.where((row) => !prior.containsKey(row['id']))
+          .toList(growable: false);
+      if (after.length != before.length + 1 || added.length != 1 ||
+          prior.keys.any((id) =>
+              !next.containsKey(id) ||
+              jsonEncode(prior[id]) != jsonEncode(next[id]))) {
+        throw StateError('Manual save may only append one unchanged transaction.');
+      }
+      await encryptedSession!.appendConfirmed(
+        records: added,
+        hashes: const <String?>[null],
+        userConfirmed: true,
+      );
+      return await load(route: route);
     }
     if (backend == WaffraRuntimeFinanceBackend.guardedLegacy) {
       await legacy.saveLegacy(
