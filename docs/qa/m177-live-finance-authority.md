@@ -27,6 +27,13 @@ Existing transaction edits with an additional SMS fingerprint still follow
 the separate guarded edit and merge routes, so the PR does NOT claim full
 24-route SQLCipher equivalence or new receipt lifecycle certification.
 
+The encrypted `.waffra` backup handler now drains queued Home saves and
+loads the **current authoritative finance snapshot** via the `backupExport`
+route. It serializes finance fields, trash, SMS fingerprints, budget and
+merchant rules from that witnessed read, not the potentially older in-memory
+HomeScreen after a Widget transaction. This is a consistency improvement,
+NOT two-phone recovery or backup portability certification.
+
 ## Race, crash and migration posture
 
 - No raw bank SMS, credentials, receipt data, backup passwords or user data
