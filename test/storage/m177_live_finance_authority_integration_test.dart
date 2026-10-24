@@ -186,6 +186,13 @@ void main() {
     expect(home, contains('_financeAuthority.setRecurringReminderPreference(enabled)'));
     expect(home, contains('_financeAuthority.installCategoryCatalog('));
     expect(home, contains('await _persistSmsHashes({pendingHash!});'));
+    // New single-SMS entry must NOT rely on two independent commits.
+    expect(home, contains('if(pendingHash!=null&&initial==null){'));
+    expect(home, contains('final applied=await _financeAuthority.commitConfirmedSms('));
+    expect(home, contains('records:[Map<String,Object?>.from(result.toJson())]'));
+    expect(home, contains('hashes:[pendingHash!]'));
+    expect(home, contains('allowDuplicateHashes:explicitlyApprovedSmsDuplicate'));
+    expect(home, contains('if(applied.saved!=1){'));
     expect(home, contains('route:WaffraFinanceRoute.fullFinanceReset'));
   });
 }
