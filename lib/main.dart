@@ -7763,20 +7763,32 @@ Future<void> bulkSmsSheet({String? initialText})async {
      shape:const CircleBorder(),
      child:InkWell(
       customBorder:const CircleBorder(),
-      onTap:(){
+      onTap:()async{
      if(!_acceptFabTap())return;
+     final tappedTab=tab;
+     setState(()=>_fabPressed=true);
+     // Give the press a short, visible response before presenting any menu.
+     await Future<void>.delayed(waffraMotion(105));
+     if(!mounted)return;
+     setState(()=>_fabPressed=false);
+     await Future<void>.delayed(waffraMotion(75));
+     if(!mounted||tab!=tappedTab)return;
      if(goalsOpened||tab==2){unawaited(_launchAddAction(()=>goalDialog()));return;}
      if(tab==3){unawaited(_launchAddAction(()=>recurringDialog()));return;}
      setState(()=>addFabExpanded=!addFabExpanded);
     },
     splashFactory:NoSplash.splashFactory,
     highlightColor:Colors.transparent,
-    child:SizedBox(width:58,height:58,
-        child:AnimatedRotation(
-         duration:waffraMotion(260),
-        turns:addFabExpanded?0.125:0,
-        child:Icon(addFabExpanded?Icons.close:Icons.add,
-         color:Colors.white,size:28))),
+    child:AnimatedScale(
+     scale:_fabPressed?0.96:1.0,
+     duration:waffraMotion(150),
+     curve:Curves.easeOutCubic,
+     child:SizedBox(width:58,height:58,
+      child:AnimatedRotation(
+       duration:waffraMotion(320),
+       curve:Curves.easeInOutCubic,
+       turns:addFabExpanded?0.125:0,
+       child:const Icon(Icons.add,color:Colors.white,size:28)))),
      )),
    ])),
   bottomNavigationBar:WaffraFooterNavigation(
