@@ -4,6 +4,8 @@ import 'dart:typed_data';
 
 import 'legacy_snapshot_preflight.dart';
 import 'waffra_atomic_finance_snapshot.dart';
+import 'waffra_encrypted_module_recycle.dart';
+import 'waffra_fresh_finance_modules_repository.dart';
 import 'waffra_atomic_encrypted_receipt_transaction_writer.dart';
 import 'waffra_finance_read_view.dart';
 import 'waffra_receipt_screen_contract.dart';
@@ -120,6 +122,45 @@ class WaffraEncryptedFinanceSession {
   Future<Map<String, int>> listEncryptedDeletedTransactions() async {
     _requireEnabled();
     return bridge.listEncryptedDeletedTransactions();
+  }
+
+  Future<WaffraEncryptedModuleRecycleResult> recycleVerifiedModule({
+    required WaffraEncryptedHomeWitness baseline,
+    required WaffraFinanceModule module,
+    required String entityId,
+    required DateTime now,
+    required bool userConfirmed,
+  }) {
+    _requireEnabled();
+    return bridge.recycleVerifiedModule(
+      baseline: baseline,
+      module: module,
+      entityId: entityId,
+      now: now,
+      userConfirmed: userConfirmed,
+    );
+  }
+
+  Future<WaffraEncryptedModuleRecycleResult> restoreVerifiedModule({
+    required WaffraEncryptedHomeWitness baseline,
+    required WaffraFinanceModule module,
+    required String entityId,
+    required DateTime now,
+  }) {
+    _requireEnabled();
+    return bridge.restoreVerifiedModule(
+      baseline: baseline,
+      module: module,
+      entityId: entityId,
+      now: now,
+    );
+  }
+
+  Future<Map<String, int>> listVerifiedDeletedModules(
+    WaffraFinanceModule module,
+  ) {
+    _requireEnabled();
+    return bridge.listVerifiedDeletedModules(module);
   }
 
   /// The widget revision is the actual monotonic SQLCipher generation.

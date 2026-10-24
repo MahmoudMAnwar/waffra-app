@@ -49,6 +49,8 @@ import 'storage/waffra_legacy_finance_writer_coordinator.dart';
 import 'storage/waffra_legacy_widget_commit_journal.dart';
 import 'storage/waffra_home_finance_persistence.dart';
 import 'storage/waffra_verified_finance_authority.dart';
+import 'storage/waffra_fresh_finance_modules_repository.dart';
+import 'storage/waffra_verified_module_ui_guard.dart';
 import 'storage/waffra_runtime_finance_route_contract.dart';
 import 'storage/waffra_verified_transaction_ui_guard.dart';
 import 'storage/waffra_m155_category_plan.dart';
@@ -2153,6 +2155,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   _lastFinanceAuthorityRead=loadedFinance;
   final financeView=loadedFinance.finance;
   financeView.requireIntegrity();
+  final verifiedEncryptedStartup=
+   loadedFinance.source==WaffraRuntimeFinanceBackend.verifiedEncrypted;
+  if(verifiedEncryptedStartup&&
+     financeView.getString('waffra_categories_v24')==null){
+   throw StateError('Verified encrypted category source is incomplete.');
+  }
   _lastWidgetRevision=loadedFinance.widgetRevision;
   _lastLedgerSavedRaw=loadedFinance.ledgerRaw;
   try{final raw=financeView.getString('entries');if(raw!=null)entries.addAll((jsonDecode(raw) as List).map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved transactions cannot be decoded safely: $e');}
@@ -2167,15 +2175,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   try{final raw=financeView.getString('waffra_deleted_goals_v1');if(raw!=null)deletedGoals.addAll((jsonDecode(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));}catch(e){throw StateError('Deleted goals cannot be decoded safely: $e');}
   try{final raw=financeView.getString('waffra_deleted_recurring_v1');if(raw!=null)deletedRecurring.addAll((jsonDecode(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));}catch(e){throw StateError('Deleted recurring cannot be decoded safely: $e');}
   try{final raw=financeView.getString('waffra_recurring_postponed_v1');if(raw!=null)recurringPostponed.addAll((jsonDecode(raw) as Map).map((k,v)=>MapEntry(k.toString(),v.toString())));}catch(e){throw StateError('Recurring postponements cannot be decoded safely: $e');}
-  deletedGoals.removeWhere((item){final date=DateTime.tryParse('${item['deletedAt']??''}');return date==null||!DateTime.now().isBefore(date.add(const Duration(days:30)));});
-  deletedRecurring.removeWhere((item){final date=DateTime.tryParse('${item['deletedAt']??''}');return date==null||!DateTime.now().isBefore(date.add(const Duration(days:30)));});
+  // The user's device clock cannot purge or hide encrypted SQL tombstones.
+  // Deletion/expiry requires independently verified encrypted retention.
   final trashBefore=deletedCategories.length;
-  deletedCategories.removeWhere((item){
-   final when=DateTime.tryParse('${item['deletedAt']??''}');
-   return when==null||!DateTime.now().isBefore(when.add(const Duration(days:30)));
-  });
+  if(!verifiedEncryptedStartup){
+   deletedGoals.removeWhere((item){final date=DateTime.tryParse('${item['deletedAt']??''}');return date==null||!DateTime.now().isBefore(date.add(const Duration(days:30)));});
+   deletedRecurring.removeWhere((item){final date=DateTime.tryParse('${item['deletedAt']??''}');return date==null||!DateTime.now().isBefore(date.add(const Duration(days:30)));});
+   deletedCategories.removeWhere((item){
+    final when=DateTime.tryParse('${item['deletedAt']??''}');
+    return when==null||!DateTime.now().isBefore(when.add(const Duration(days:30)));
+   });
+  }
   // Install catalog once without overwriting custom categories, saved budgets or trash.
-  if(!(p.getBool('waffra_category_catalog_v2_installed')??false)){
+  if(!verifiedEncryptedStartup&&
+      !(p.getBool('waffra_category_catalog_v2_installed')??false)){
    final discarded=<String>{};
    for(final item in deletedCategories){
     final data=item['category'];
@@ -2203,7 +2216,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   // Incremental catalog update: retain existing user budgets, names and deletions.
   // A subcategory is only added when its main category is present.
-  if(!(p.getBool('waffra_category_catalog_v3_installed')??false)){
+  if(!verifiedEncryptedStartup&&
+      !(p.getBool('waffra_category_catalog_v3_installed')??false)){
    final deletedIds=<String>{};
    final deletedNames=<String>{};
    for(final record in deletedCategories){
@@ -2250,16 +2264,27 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
    }
   }catch(e){throw StateError('Learned merchant rules cannot be decoded safely: $e');}
-  if(categories.isEmpty)categories.addAll(defaultCategories());
-  for(final e in entries){
+  if(!verifiedEncryptedStartup&&categories.isEmpty){
+   categories.addAll(defaultCategories());
+  }
+  // Archived categories may still be referenced by historic entries.
+  // Never synthesize phantom active categories in SQLCipher.
+  if(!verifiedEncryptedStartup)for(final e in entries){
    if(!categories.any((c)=>c.name==e.category&&c.income==e.income)){
     categories.add(BudgetCategory(id:newId(),name:e.category,icon:'category',color:colors[7],income:e.income));
    }
   }
   if(!mounted)return;setState(()=>ready=true);_receiveSharedSms();_receiveWidgetAction();unawaited(_refreshWidget());
-  WidgetsBinding.instance.addPostFrameCallback((_){if(mounted)unawaited(applyRecurring());});
+  // Home reloading an encrypted ledger must never silently post a due payment.
+  if(!verifiedEncryptedStartup){
+   WidgetsBinding.instance.addPostFrameCallback((_){
+    if(mounted)unawaited(applyRecurring());
+   });
+  }
   if(recurringRemindersEnabled)unawaited(syncRecurringReminders());
-  if(trashBefore!=deletedCategories.length)await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
+  if(!verifiedEncryptedStartup&&trashBefore!=deletedCategories.length){
+   await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
+  }
   if(!(p.getBool('waffra_in_app_tour_seen_v2')??false)&&mounted){
    WidgetsBinding.instance.addPostFrameCallback((_){
     if(mounted){setState((){tourActive=true;tourStep=0;tab=0;goalsOpened=false;addFabExpanded=false;tourTargetReady=false;});if(waffraAnimationLevel.value!='off')_tourGlow.repeat(reverse:true);scheduleTourFocus();}
@@ -5351,6 +5376,149 @@ Future<void> bulkSmsSheet({String? initialText})async {
   });
   await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
  }
+ WaffraFinanceRoute _moduleMutationRoute(WaffraFinanceModule module)=>
+  switch(module){
+   WaffraFinanceModule.categories=>WaffraFinanceRoute.categoryCreateEditDeleteRestore,
+   WaffraFinanceModule.goals=>WaffraFinanceRoute.goalCreateEditDeleteRestore,
+   WaffraFinanceModule.recurring=>WaffraFinanceRoute.recurringCreateEditDeleteRestore,
+  };
+
+ Future<void> _deleteVerifiedModule({
+  required WaffraFinanceModule module,
+  required Map<String,dynamic> displayed,
+ })async{
+  try{
+   await _financialWriteQueue.drain();
+   final baseline=await _financeAuthority.load(route:_moduleMutationRoute(module));
+   if(baseline.source!=WaffraRuntimeFinanceBackend.verifiedEncrypted||
+      baseline.encryptedWitness==null){
+    throw StateError('Verified encrypted finance source is unavailable.');
+   }
+   WaffraVerifiedModuleUiGuard.requireUnchanged(
+    activeRaw:baseline.finance.getString(
+     WaffraVerifiedModuleUiGuard.activeKey(module)),
+    selected:displayed,
+   );
+   final id=displayed['id'] as String;
+   await _financialWriteQueue.submit(<String,Object>{'id':id},(_)async{
+    // No optimistic mutation to goals/categories/recurring; only the typed
+    // SQLCipher tombstone writer may remove the source entity.
+    await _financeAuthority.deleteVerifiedModuleToRecycle(
+     baseline:baseline,module:module,entityId:id,
+     now:DateTime.now().toUtc(),userConfirmed:true);
+   });
+   if(!mounted)return;
+   await _loadFinanceSafely();
+   if(module==WaffraFinanceModule.recurring)await syncRecurringReminders();
+   if(mounted&&ready)snackSuccess(context,waffraIsEnglish?
+    'Moved to encrypted Recently Deleted for 30 days':
+    'تم النقل إلى المحذوفات المشفرة لمدة 30 يومًا');
+  }catch(error){
+   debugPrint('Encrypted module delete refused: $error');
+   if(mounted){
+    snack(context,waffraIsEnglish?
+     'Cannot verify deletion. Your financial data was not reset. Reload and retry.':
+     'تعذر التحقق من الحذف. لم يتم تصفير البيانات المالية. أعد التحميل وحاول مجددًا.');
+    unawaited(_loadFinanceSafely());
+   }
+  }
+ }
+
+ Future<void> _restoreVerifiedModule({
+  required WaffraFinanceModule module,
+  required String entityId,
+ })async{
+  try{
+   await _financialWriteQueue.drain();
+   await _financialWriteQueue.submit(<String,Object>{'id':entityId},(_)async{
+    final baseline=await _financeAuthority.load(route:_moduleMutationRoute(module));
+    if(baseline.source!=WaffraRuntimeFinanceBackend.verifiedEncrypted||
+       baseline.encryptedWitness==null){
+     throw StateError('Verified encrypted module restore source is missing.');
+    }
+    await _financeAuthority.restoreVerifiedDeletedModule(
+     baseline:baseline,module:module,entityId:entityId,
+     now:DateTime.now().toUtc());
+   });
+   if(!mounted)return;
+   await _loadFinanceSafely();
+   if(module==WaffraFinanceModule.recurring)await syncRecurringReminders();
+   if(mounted&&ready)snackSuccess(context,waffraIsEnglish?
+    'Encrypted item restored safely':'تم استرجاع العنصر المشفر بأمان');
+  }catch(error){
+   debugPrint('Encrypted finance module restoration blocked safely: $error');
+   if(mounted){
+    snack(context,waffraIsEnglish?
+     'Restore was not verified. Restore the deleted parent first or retry safely.':
+     'تعذر التحقق من الاسترجاع. استرجع القسم الرئيسي أولًا أو حاول مجددًا.');
+    unawaited(_loadFinanceSafely());
+   }
+  }
+ }
+
+ Future<void> _showVerifiedModuleTrash(WaffraFinanceModule module)async{
+  try{
+   final route=_moduleMutationRoute(module);
+   final baseline=await _financeAuthority.load(route:route);
+   if(baseline.source!=WaffraRuntimeFinanceBackend.verifiedEncrypted){
+    throw StateError('Encrypted module trash source was not selected.');
+   }
+   final expiries=await _financeAuthority.listVerifiedDeletedModules(module);
+   final items=WaffraVerifiedModuleUiGuard.verifiedTrash(
+    module:module,
+    trashRaw:baseline.finance.getString(
+     WaffraVerifiedModuleUiGuard.trashKey(module)),
+    encryptedExpiries:expiries,
+   );
+   if(!mounted)return;
+   final labels=module==WaffraFinanceModule.categories
+    ?<String>['Categories','الأقسام']
+    :module==WaffraFinanceModule.goals
+     ?<String>['Savings goals','الأهداف']
+     :<String>['Recurring','المتكررة'];
+   final choice=await showWaffraDialog<String>(
+    context:context,builder:(ctx)=>AlertDialog(
+     title:WaffraText(waffraIsEnglish?
+      'Encrypted Recently Deleted — ${labels[0]}':
+      'المحذوفات المشفرة — ${labels[1]}'),
+     content:SizedBox(
+      width:double.maxFinite,
+      height:min(365.0,items.length*78.0+35.0),
+      child:items.isEmpty
+       ?Center(child:WaffraText(waffraIsEnglish?
+        'No items available to restore':'لا توجد عناصر قابلة للاسترجاع'))
+       :ListView.builder(itemCount:items.length,itemBuilder:(ctx,index){
+        final item=items[index];
+        final body=item[WaffraVerifiedModuleUiGuard.trashPayloadKey(module)]
+          as Map<String,dynamic>;
+        final id=body['id'] as String;
+        final until=expiries[id]!;
+        final expired=DateTime.now().toUtc().millisecondsSinceEpoch>=until;
+        return ListTile(
+         leading:Icon(Icons.restore_rounded,
+          color:expired?Colors.grey:emerald),
+         title:WaffraText('${body['name']??body['title']??id}',maxLines:1),
+         subtitle:WaffraText(expired
+          ?(waffraIsEnglish?'Recovery expired':'انتهت مدة الاسترجاع')
+          :(waffraIsEnglish
+           ?'Restore until ${dayText(DateTime.fromMillisecondsSinceEpoch(until,isUtc:true).toLocal())}'
+           :'الاسترجاع حتى ${dayText(DateTime.fromMillisecondsSinceEpoch(until,isUtc:true).toLocal())}')),
+         enabled:!expired,
+         onTap:expired?null:()=>Navigator.pop(ctx,id),
+        );
+       })),
+     actions:[TextButton(onPressed:()=>Navigator.pop(ctx),
+      child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))]));
+   if(choice!=null&&mounted)await _restoreVerifiedModule(
+    module:module,entityId:choice);
+  }catch(error){
+   debugPrint('Encrypted module trash could not be verified: $error');
+   if(mounted)snack(context,waffraIsEnglish?
+    'Encrypted Recently Deleted is unavailable until source verification succeeds.':
+    'المحذوفات المشفرة غير متاحة حتى ينجح التحقق من المصدر.');
+  }
+ }
+
  Future<void> deleteCategory(BudgetCategory c)async {
   final children=categories.where((item)=>item.parentId==c.id).toList();
   if(children.isNotEmpty){
@@ -5393,6 +5561,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
     ?'Move «${c.name}» to Recently Deleted for 30 days? You can restore its name, icon and color, but its budget will reset to zero.'
     :'هل تريد نقل القسم «${c.name}» إلى المحذوفات لمدة 30 يومًا؟ عند استرجاعه سيعود بميزانية صفر.');
   if(yes!=true||!mounted)return;
+  if(_lastFinanceAuthorityRead?.source==
+     WaffraRuntimeFinanceBackend.verifiedEncrypted){
+   await _deleteVerifiedModule(
+    module:WaffraFinanceModule.categories,displayed:c.toJson());
+   return;
+  }
   setState((){
    categories.removeWhere((e)=>e.id==c.id);
    deletedCategories.add({'category':c.toJson(),'deletedAt':DateTime.now().toIso8601String()});
@@ -5401,6 +5575,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
   if(mounted)snackSuccess(context,waffraIsEnglish?'Category moved to Recently Deleted for 30 days':'تم نقل القسم للمحذوفات لمدة 30 يومًا');
  }
  Future<void> showCategoryTrash()async {
+  if(_lastFinanceAuthorityRead?.source==
+     WaffraRuntimeFinanceBackend.verifiedEncrypted){
+   await _showVerifiedModuleTrash(WaffraFinanceModule.categories);
+   return;
+  }
   final before=deletedCategories.length;
   deletedCategories.removeWhere((item){
    final when=DateTime.tryParse('${item['deletedAt']??''}');
@@ -5957,6 +6136,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
   ?'Move “$name” to Deleted Goals for 30 days. ${linked?'This goal has saved amounts or linked transactions; financial history will stay untouched.':''} Restored goals restart with zero saved balance.'
   :'نقل «$name» إلى الأهداف المحذوفة لمدة 30 يومًا. ${linked?'هذا الهدف مرتبط بمبالغ ادخار أو معاملات مالية؛ ستبقى المعاملات محفوظة.':''} عند الاسترجاع يبدأ رصيد الادخار من صفر.';
  Future<void> deletedGoalsDialog()async{
+  if(_lastFinanceAuthorityRead?.source==
+     WaffraRuntimeFinanceBackend.verifiedEncrypted){
+   await _showVerifiedModuleTrash(WaffraFinanceModule.goals);
+   return;
+  }
   final before=deletedGoals.length;
   deletedGoals.removeWhere((item){
    final date=DateTime.tryParse('${item['deletedAt']??''}');
@@ -6091,7 +6275,16 @@ Future<void> bulkSmsSheet({String? initialText})async {
          final linked=g.saved>0||entries.any((e)=>e.category==g.name);
          final yes=await confirmDeletion(waffraIsEnglish?'Delete savings goal?':'حذف هدف الادخار',
           waffraGoalDeleteWarning(g.name,linked,waffraIsEnglish));
-         if(yes==true&&mounted){setState((){deletedGoals.add({'goal':g.toJson(),'deletedAt':DateTime.now().toIso8601String()});goals.removeWhere((x)=>x.id==g.id);});await persist(route:WaffraFinanceRoute.goalCreateEditDeleteRestore);}
+         if(yes==true&&mounted){
+          if(_lastFinanceAuthorityRead?.source==
+             WaffraRuntimeFinanceBackend.verifiedEncrypted){
+           await _deleteVerifiedModule(
+            module:WaffraFinanceModule.goals,displayed:g.toJson());
+          }else{
+           setState((){deletedGoals.add({'goal':g.toJson(),'deletedAt':DateTime.now().toIso8601String()});goals.removeWhere((x)=>x.id==g.id);});
+           await persist(route:WaffraFinanceRoute.goalCreateEditDeleteRestore);
+          }
+         }
         }
        },itemBuilder:(_)=>[PopupMenuItem(value:'delete',child:WaffraText(waffraIsEnglish?'Delete goal':'حذف الهدف'))]),
       ]),
@@ -6390,6 +6583,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
        final ok=await confirmDeletion(waffraIsEnglish?'Delete recurring transaction?':'حذف العملية المتكررة',
         waffraRecurringDeleteWarning(r.title,hasHistory,waffraIsEnglish));
        if(ok==true&&mounted){
+        if(_lastFinanceAuthorityRead?.source==
+           WaffraRuntimeFinanceBackend.verifiedEncrypted){
+         await _deleteVerifiedModule(
+          module:WaffraFinanceModule.recurring,displayed:r.toJson());
+         return;
+        }
         setState((){
          deletedRecurring.add({'recurring':r.toJson(),'deletedAt':DateTime.now().toIso8601String()});
          recurring.removeWhere((e)=>e.id==r.id);
