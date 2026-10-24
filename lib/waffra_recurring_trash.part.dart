@@ -14,7 +14,7 @@ extension WaffraRecurringRecycleBin on _HomeScreenState {
    final when=DateTime.tryParse('${item['deletedAt']??''}');
    return when==null||!now.isBefore(when.add(const Duration(days:30)));
   });
-  if(deletedRecurring.length!=before)await persist();
+  if(deletedRecurring.length!=before)await persist(route:WaffraFinanceRoute.recurringCreateEditDeleteRestore);
   if(!mounted)return;
   await showWaffraDialog<void>(context:context,builder:(ctx)=>
    StatefulBuilder(builder:(ctx,refresh)=>AlertDialog(
@@ -63,7 +63,7 @@ extension WaffraRecurringRecycleBin on _HomeScreenState {
           recurringPostponed.removeWhere((key,value)=>
            key.startsWith('rec_${original.id}_'));
          });
-         await persist();
+         await persist(route:WaffraFinanceRoute.recurringCreateEditDeleteRestore);
          await syncRecurringReminders();
          if(!ctx.mounted)return;
          Navigator.pop(ctx);
@@ -79,7 +79,7 @@ extension WaffraRecurringRecycleBin on _HomeScreenState {
            :'هل تريد حذف «${original.title}» نهائيًا؟ لن يمكن استرجاع الجدولة، وستبقى المعاملات المالية السابقة محفوظة.');
          if(yes!=true||!mounted)return;
          setState(()=>deletedRecurring.remove(item));
-         await persist();
+         await persist(route:WaffraFinanceRoute.recurringCreateEditDeleteRestore);
          if(ctx.mounted)refresh((){});
         },
        );
