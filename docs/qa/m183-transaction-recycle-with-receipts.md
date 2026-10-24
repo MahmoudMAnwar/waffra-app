@@ -43,18 +43,32 @@ rejection and disabled-by-default behavior.
 These are disposable, synthetic SQLCipher tests; their injected witness is NOT
 OS-backed key attestation or real-device testing.
 
-## NOT YET CONNECTED / unsafe to release
+## Conditionally wired to Home, still unsafe to release
 
-This transaction recycle writer now has an explicit **verified Authority →
-Encrypted Session → Encrypted Bridge** path, including an independent route
-audit, current-source check and a durable post-mutation finance reload. The
-default HomeScreen/Widget is deliberately **not yet wired** to this new port. Production source still uses guarded legacy. Until
-screen-specific deletion/undo UI captures receipt byte witnesses and an
-independent verified authority calls this port, do not advertise live
-transaction deletion under SQLCipher. Other unverified routes remain:
-category/goal/recurring trash+purge; source-backed encrypted backup restore;
-full reset, startup and Widget balance, physical Android key recovery, 2-phone
-restore and receipts.
+The transaction recycle writer has an explicit verified Authority →
+Encrypted Session → Encrypted Bridge path. This change also adds the
+**conditional verified SQLCipher HomeScreen branch**: before consent it
+compares the selected rendered transaction against its exact current
+financial ledger row, captures the independent receipt-screen generation
+and all image SHA-256 witnesses, and then submits the confirmed delete
+through the finance write queue. Only after the verified authority reopens
+the committed source does Home update its ledger, amounts and Widget
+revision. Undo follows the same queue with a fresh source read.
+
+The transactions menu also offers an encrypted Recently Deleted (30 days)
+dialog, whose metadata comes from SQLCipher and whose recover action calls
+the same verified authority. The existing guarded-legacy delete and
+six-second Undo path is unchanged. Unit tests cover stale selected rows,
+receipt-reference modifications, duplicate IDs, malformed finance and
+unrelated Widget inserts.
+
+**This is staged code, NOT active production storage.** The running Home
+still constructs a legacy-only authority by default; it cannot select
+SQLCipher until independent real-device source witnesses are approved.
+This screen conditional is NOT proof that any of the 24 live routes are
+certified. Other routes still needing work include category/goal/recurring
+trash and permanent purge; verified active-source backup restore; full
+reset, startup, real Widget balance and cross-device key recovery.
 
 **Permanent expiry purge of archived bytes** requires a separate monotonic
 clock/recovery contract; current API rejects undo after 30 days but retains
