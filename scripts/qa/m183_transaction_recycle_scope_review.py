@@ -9,6 +9,9 @@ import subprocess
 EXPECTED = {
     ".github/workflows/m147-final-main-review-gate.yml",
     "docs/qa/m183-transaction-recycle-with-receipts.md",
+    "lib/main.dart",
+    "lib/storage/waffra_verified_transaction_ui_guard.dart",
+    "test/storage/m183_transaction_home_ui_guard_test.dart",
     "lib/storage/waffra_encrypted_transaction_recycle.dart",
     "lib/storage/waffra_encrypted_finance_session.dart",
     "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
@@ -47,6 +50,44 @@ def main() -> None:
         "lib/storage/waffra_verified_finance_authority.dart",
     ).read_text()
     tests = Path("test/storage/m183_encrypted_transaction_recycle_test.dart").read_text()
+    home = Path("lib/main.dart").read_text()
+    home_ui = Path("lib/storage/waffra_verified_transaction_ui_guard.dart").read_text()
+    home_tests = Path("test/storage/m183_transaction_home_ui_guard_test.dart").read_text()
+    for symbol in [
+        "WaffraRuntimeFinanceBackend.verifiedEncrypted",
+        "Future<void> _deleteVerifiedEntry(MoneyEntry entry)",
+        "Future<void> _undoVerifiedDeletedEntry(String entryId)",
+        "Future<void> _showVerifiedDeletedTransactions()",
+        "WaffraVerifiedTransactionUiGuard.requireUnchangedSelected(",
+        "await _financeAuthority.loadVerifiedReceiptScreen(",
+        "expectedImageHashes:screen.imageSha256",
+        "await _financeAuthority.deleteVerifiedTransactionToRecycle(",
+        "await _financeAuthority.restoreVerifiedDeletedTransaction(",
+        "await _financeAuthority.listVerifiedDeletedTransactions()",
+        "await _financialWriteQueue.drain()",
+        "await _financialWriteQueue.submit(",
+        "_publishVerifiedTransactionLedger(committed)",
+        "if(_lastFinanceAuthorityRead?.source==",
+    ]:
+        if symbol not in home:
+            raise SystemExit("M183: verified encrypted Home UI bypass: " + symbol)
+    for fragment in [
+        "static List<Map<String, dynamic>> decodeLedger(",
+        "static void requireUnchangedSelected(",
+        "Selected transaction changed; reload before deleting.",
+        "ids.add(id)",
+    ]:
+        if fragment not in home_ui:
+            raise SystemExit("M183: encrypted Home guard missing " + fragment)
+    for scenario in [
+        "stale tile cannot delete",
+        "changing only attached receipt reference blocks",
+        "missing transaction cannot silently delete",
+        "duplicate IDs and malformed finance fail closed",
+        "unrelated new Widget row survives",
+    ]:
+        if scenario not in home_tests:
+            raise SystemExit("M183: selected transaction negative test missing " + scenario)
     source = Path("lib/storage/waffra_production_finance_source_guard.dart").read_text()
     cutover = Path("lib/storage/waffra_production_cutover_release_gate.dart").read_text()
     routes = Path("lib/storage/waffra_production_finance_routing_gate.dart").read_text()
