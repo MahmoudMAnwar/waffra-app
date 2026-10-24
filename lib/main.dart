@@ -434,6 +434,27 @@ List<String> splitBankMessages(String raw){
  return [clean];
 }
 
+/// A gentle, single-stage entrance for the savings-goal dialog.
+Future<T?> showWaffraSmoothDialog<T>({
+ required BuildContext context,required WidgetBuilder builder,
+})=>showGeneralDialog<T>(
+ context:context,
+ barrierDismissible:true,
+ barrierLabel:MaterialLocalizations.of(context).modalBarrierDismissLabel,
+ barrierColor:Colors.black.withValues(alpha:.28),
+ transitionDuration:waffraMotion(320),
+ pageBuilder:(dialogContext,_,__)=>BackdropFilter(
+  filter:ui.ImageFilter.blur(sigmaX:7,sigmaY:7),
+  child:builder(dialogContext)),
+ transitionBuilder:(ctx,animation,secondaryAnimation,child){
+  final curved=CurvedAnimation(parent:animation,
+   curve:Curves.easeOutCubic,reverseCurve:Curves.easeInCubic);
+  return FadeTransition(opacity:curved,child:ScaleTransition(
+   scale:Tween<double>(begin:.975,end:1).animate(curved),
+   child:child));
+ },
+);
+
 /// Consistent frosted backdrop for all app dialogs.
 Future<T?> showWaffraDialog<T>({
  required BuildContext context,
@@ -2100,6 +2121,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  static const tourTargetKeys=<int>[-1,0,1,2,6,4];
  bool addFabExpanded=false;
  bool _addActionOpening=false;
+ bool _fabPressed=false;
  DateTime? _lastFabTapAt;
  Future<void> _launchAddAction(Future<void> Function() action,{bool fromMenu=false})async{
   if(_addActionOpening)return;
@@ -5778,7 +5800,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    }
    return null;
   }
-  final g=await showWaffraDialog<SavingGoal>(context:context,
+  final g=await showWaffraSmoothDialog<SavingGoal>(context:context,
    builder:(ctx)=>StatefulBuilder(builder:(ctx,updateGoal)=>AlertDialog(
     title:WaffraText(waffraIsEnglish?'Add savings goal':'إضافة هدف ادخار'),
     scrollable:true,
