@@ -50,6 +50,7 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
  int _savedIncome=0,_savedExpenses=0,_notSaved=0;
  List<_WidgetParsedSms> _results=[];
  Set<String> _knownHashes={};
+ WaffraProductionFinanceAuthorityBinding? _financeBinding;
  WaffraHomeFinancePersistence get _financePersistence =>
      WaffraHomeFinancePersistence(
        coordinator: WaffraLegacyFinanceWriterCoordinator(
@@ -60,7 +61,7 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
 
 
  WaffraVerifiedFinanceAuthority get _financeAuthority=>
-  WaffraVerifiedFinanceAuthority(
+  _financeBinding?.authority??WaffraVerifiedFinanceAuthority(
    legacy:_financePersistence,
    sourceGuard:widget.testSourceProbe==null
     ?const WaffraProductionFinanceSourceGuard()
@@ -77,8 +78,12 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
    if(widget.testSourceProbe!=null) {
     await widget.testSourceProbe!();
    } else {
-    await const WaffraProductionFinanceSourceGuard()
-     .requireSafeLegacyStartup(preferences:prefs);
+    final binding=await WaffraProductionFinanceAuthorityBinding.bind(
+     legacy:_financePersistence,
+     startupRoute:WaffraFinanceRoute.widgetStartup,
+    );
+    if(!mounted){await binding.close();return;}
+    _financeBinding=binding;
    }
    final loaded=await _financeAuthority.load(route:WaffraFinanceRoute.widgetRead);
    if(!mounted)return;
@@ -254,6 +259,8 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
  @override void dispose(){
   _debounce?.cancel();
   _controller.dispose();
+  final binding=_financeBinding;
+  if(binding!=null)unawaited(binding.close());
   super.dispose();
  }
 
