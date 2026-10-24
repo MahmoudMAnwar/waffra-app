@@ -16,6 +16,7 @@ EXPECTED = {
     "lib/storage/waffra_verified_finance_authority.dart",
     "scripts/qa/m182_recurring_atomic_scope_review.py",
     "test/storage/m182_encrypted_recurring_paid_atomic_test.dart",
+    "test/storage/m175_live_finance_mutation_intent_test.dart",
 }
 
 
@@ -38,7 +39,7 @@ def main() -> None:
     ).splitlines()))
     if paths != EXPECTED:
         raise SystemExit(
-            f"M182: exactly eight reviewed files required: {sorted(paths ^ EXPECTED)}"
+            f"M182: exactly nine reviewed files required: {sorted(paths ^ EXPECTED)}"
         )
     bridge = Path(
         "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
@@ -85,6 +86,7 @@ def main() -> None:
         "if (!userConfirmed ||",
         "await encryptedSession!.commitRecurringPayment(",
         "Recurring posting may append only one immutable entry.",
+        "This recurring payment has already been posted.",
         "return await load(route: route);",
     ]:
         if fragment not in authority:
