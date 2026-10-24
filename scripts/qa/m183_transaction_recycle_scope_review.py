@@ -10,6 +10,9 @@ EXPECTED = {
     ".github/workflows/m147-final-main-review-gate.yml",
     "docs/qa/m183-transaction-recycle-with-receipts.md",
     "lib/storage/waffra_encrypted_transaction_recycle.dart",
+    "lib/storage/waffra_encrypted_finance_session.dart",
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+    "lib/storage/waffra_verified_finance_authority.dart",
     "scripts/qa/m183_transaction_recycle_scope_review.py",
     "test/storage/m183_encrypted_transaction_recycle_test.dart",
 }
@@ -29,10 +32,19 @@ def main() -> None:
         raise SystemExit("M183: underlying main SHA is not an ancestor")
     paths = set(filter(None, git("diff", "--name-only", base, head).splitlines()))
     if paths != EXPECTED:
-        raise SystemExit("M183: unexpected changed scope " +
+        raise SystemExit("M183: eight-file scope mismatch " +
                          repr(sorted(paths ^ EXPECTED)))
     code = Path(
         "lib/storage/waffra_encrypted_transaction_recycle.dart",
+    ).read_text()
+    bridge = Path(
+        "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+    ).read_text()
+    session = Path(
+        "lib/storage/waffra_encrypted_finance_session.dart",
+    ).read_text()
+    authority = Path(
+        "lib/storage/waffra_verified_finance_authority.dart",
     ).read_text()
     tests = Path("test/storage/m183_encrypted_transaction_recycle_test.dart").read_text()
     source = Path("lib/storage/waffra_production_finance_source_guard.dart").read_text()
@@ -77,6 +89,29 @@ def main() -> None:
     ]:
         if scenario not in tests:
             raise SystemExit("M183: missing negative test: " + scenario)
+    for runtime, contract in [
+        (bridge, [
+            "WaffraEncryptedTransactionRecycle get _transactionRecycle",
+            "Future<WaffraTransactionRecycleResult> recycleVerifiedTransaction(",
+            "Future<WaffraTransactionRecycleResult> restoreVerifiedTransaction(",
+            "verifySourceUnderLock: _requireActivatedUnderLock,",
+        ]),
+        (session, [
+            "bridge.recycleVerifiedTransaction(",
+            "bridge.restoreVerifiedTransaction(",
+            "_requireEnabled();",
+        ]),
+        (authority, [
+            "deleteVerifiedTransactionToRecycle(",
+            "restoreVerifiedDeletedTransaction(",
+            "WaffraFinanceRoute.transactionDeleteAndUndo",
+            "baseline.source != backend",
+            "return load(route: WaffraFinanceRoute.transactionDeleteAndUndo)",
+        ]),
+    ]:
+        for needle in contract:
+            if needle not in runtime:
+                raise SystemExit("M183: missing verified source runtime guard: " + needle)
     if "all_live_writers_not_yet_routed" not in source or (
         "bool get automaticallyActivateSqlCipher => false;" not in cutover
     ) or "transactionDeleteAndUndo" not in routes:
@@ -87,7 +122,8 @@ def main() -> None:
         "base_main_sha": base,
         "diff": sorted(paths),
         "synthetic_transaction_receipt_undo_candidate_staged": True,
-        "production_live_route_connected": False,
+        "source_gated_authority_session_bridge_connected": True,
+        "production_home_screen_route_connected": False,
         "all_24_live_routes_attested": False,
         "physical_android_restore_tested": False,
         "automatic_sqlcipher_cutover": False,
