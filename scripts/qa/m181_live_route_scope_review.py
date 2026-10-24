@@ -80,6 +80,9 @@ def main() -> None:
         "DELETE FROM fresh_finance_entries",
         "DELETE FROM fresh_finance_sms_hashes",
         "Finance changed; reload before deleting.",
+        "Future<WaffraFinanceSnapshotState> mergeConfirmedSmsHashes(",
+        "SQLCipher SMS hash projection is inconsistent.",
+        "INSERT OR IGNORE INTO fresh_finance_sms_hashes",
     ], "SQLCipher bridge")
     require_all(session, [
         "bridge.installCategoryCatalog(",
