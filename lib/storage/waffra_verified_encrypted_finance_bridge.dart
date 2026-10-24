@@ -683,9 +683,10 @@ class WaffraVerifiedEncryptedFinanceBridge {
       throw StateError('Encrypted SMS deduplication runtime is disabled.');
     }
     const digits = '0123456789abcdef';
-    if (additions.length > 1000 ||
-        additions.any((hash) => hash.length != 64 ||
-            hash.split('').any((character) => !digits.contains(character)))) {
+    bool validHash(String hash) =>
+        hash.length == 64 &&
+        hash.split('').every((character) => digits.contains(character));
+    if (additions.length > 1000 || additions.any((hash) => !validHash(hash))) {
       throw ArgumentError('Only SHA-256 SMS fingerprints are allowed.');
     }
     return WaffraExperimentalWriterGate(
@@ -693,20 +694,48 @@ class WaffraVerifiedEncryptedFinanceBridge {
       experimentalEnabled: true,
     ).withExclusiveAccess(() async {
       await _requireActivatedUnderLock();
-      final current = await snapshot.read();
-      final existing = Set<String>.from(
-        current.values['waffra_sms_hashes_v1'] as List<String>? ??
-            const <String>[],
-      );
-      final oldCount = existing.length;
-      existing.addAll(additions);
-      if (oldCount == existing.length) return current;
-      final next = Map<String, Object?>.from(current.values);
-      next['waffra_sms_hashes_v1'] = existing.toList()..sort();
-      return snapshot.commit(
-        expectedGeneration: current.generation,
-        fullFinanceSnapshot: next,
-      );
+      // Never update the canonical snapshot without its typed SQL hash
+      // projection: a crash could otherwise leave two authoritative views.
+      return snapshot.store.transaction(() async {
+        final current = await snapshot.read();
+        final legacyTyped = current.values['waffra_sms_hashes_v1'];
+        if (legacyTyped != null && legacyTyped is! List<String>) {
+          throw StateError('Canonical SMS fingerprints have invalid type.');
+        }
+        final prior = legacyTyped as List<String>? ?? const <String>[];
+        final existing = prior.toSet();
+        if (prior.length != existing.length || existing.any((h) => !validHash(h))) {
+          throw StateError('Canonical SMS fingerprints are inconsistent.');
+        }
+        final typedRows = await snapshot.store.customSelect(
+          'SELECT message_hash FROM fresh_finance_sms_hashes',
+        ).get();
+        final typed = typedRows
+            .map((row) => row.read<String>('message_hash')).toSet();
+        if (typedRows.length != typed.length ||
+            typed.length != existing.length ||
+            !typed.containsAll(existing)) {
+          throw StateError('SQLCipher SMS hash projection is inconsistent.');
+        }
+        final nextHashes = <String>{...existing, ...additions};
+        if (nextHashes.length == existing.length) return current;
+        if (nextHashes.length > 100000) {
+          throw StateError('Encrypted SMS fingerprint capacity exceeded.');
+        }
+        for (final hash in nextHashes.difference(existing)) {
+          await snapshot.store.customStatement(
+            'INSERT OR IGNORE INTO fresh_finance_sms_hashes '
+            '(message_hash) VALUES (?)',
+            [hash],
+          );
+        }
+        final next = Map<String, Object?>.from(current.values)
+          ..['waffra_sms_hashes_v1'] = (nextHashes.toList()..sort());
+        return snapshot.commit(
+          expectedGeneration: current.generation,
+          fullFinanceSnapshot: next,
+        );
+      });
     });
   }
 
