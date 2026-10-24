@@ -66,6 +66,11 @@ def audit() -> dict:
         "_financeAuthority.addCustomGoalSuggestion(g.name)",
         "_financeAuthority.installCategoryCatalog(",
         "await _persistSmsHashes({pendingHash!});",
+        "if(pendingHash!=null&&initial==null){",
+        "final applied=await _financeAuthority.commitConfirmedSms(",
+        "records:[Map<String,Object?>.from(result.toJson())]",
+        "hashes:[pendingHash!]",
+        "allowDuplicateHashes:explicitlyApprovedSmsDuplicate",
     ]
     if any(fragment not in home for fragment in expected_home):
         raise SystemExit("M177 blocked: source-authority UI routing incomplete")
