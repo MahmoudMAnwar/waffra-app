@@ -62,6 +62,7 @@ class WaffraEncryptedTransactionRecycle {
 CREATE TABLE IF NOT EXISTS $_trash(
   entry_id TEXT PRIMARY KEY NOT NULL,
   source_json TEXT NOT NULL,
+  source_sha256 TEXT NOT NULL,
   original_index INTEGER NOT NULL CHECK(original_index >= 0),
   receipt_count INTEGER NOT NULL CHECK(receipt_count BETWEEN 0 AND 10),
   deleted_at_ms INTEGER NOT NULL CHECK(deleted_at_ms >= 0),
@@ -243,10 +244,12 @@ CREATE TABLE IF NOT EXISTS $_images(
         }
         final until = at + retention.inMilliseconds;
         await snapshot.store.customStatement(
-          'INSERT INTO $_trash(entry_id,source_json,original_index,'
-          'receipt_count,deleted_at_ms,expires_at_ms) '
-          'VALUES (?,?,?,?,?,?)',
-          [entryId, jsonEncode(record), atIndex, receipts.length, at, until],
+          'INSERT INTO $_trash(entry_id,source_json,source_sha256,'
+          'original_index,receipt_count,deleted_at_ms,expires_at_ms) '
+          'VALUES (?,?,?,?,?,?,?)',
+          [entryId, jsonEncode(record),
+           sha256.convert(utf8.encode(jsonEncode(record))).toString(),
+           atIndex, receipts.length, at, until],
         );
         for (final receipt in receipts) {
           await snapshot.store.customStatement(
@@ -328,7 +331,7 @@ CREATE TABLE IF NOT EXISTS $_images(
         await _requireExactTypedLedger(ledger);
         await _ensureTables();
         final matches = await snapshot.store.customSelect(
-          'SELECT source_json,original_index,receipt_count,'
+          'SELECT source_json,source_sha256,original_index,receipt_count,'
           'deleted_at_ms,expires_at_ms FROM $_trash WHERE entry_id=?',
           variables: [Variable.withString(entryId)],
         ).get();
@@ -343,7 +346,12 @@ CREATE TABLE IF NOT EXISTS $_images(
             observed < deleted || observed >= expiry) {
           throw StateError('Transaction recovery clock expired or rolled back.');
         }
-        final record = jsonDecode(archived.read<String>('source_json'));
+        final archiveJson = archived.read<String>('source_json');
+        if (sha256.convert(utf8.encode(archiveJson)).toString() !=
+            archived.read<String>('source_sha256')) {
+          throw StateError('Archived transaction financial checksum differs.');
+        }
+        final record = jsonDecode(archiveJson);
         if (record is! Map<String, dynamic> || record['id'] != entryId ||
             record['title'] is! String ||
             record['category'] is! String ||
