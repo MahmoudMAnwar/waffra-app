@@ -83,6 +83,90 @@ class WaffraVerifiedFinanceAuthority {
     return backend;
   }
 
+  /// Complete the already-existing encrypted SMS-hash route; the current
+  /// guarded legacy branch merges under the SAME widget/dashboard lock.
+  /// Never accepts raw SMS, never selects a second empty finance source.
+  Future<WaffraFinanceAuthorityRead> mergeSmsHashes(
+      Iterable<String> newHashes) async {
+    final frozen = List<String>.unmodifiable(newHashes);
+    const hex = '0123456789abcdef';
+    if (frozen.length > 1000 || frozen.any((hash) =>
+        hash.length != 64 || hash.split('').any((c) => !hex.contains(c)))) {
+      throw ArgumentError('Only SHA-256 transaction fingerprints are accepted.');
+    }
+    final backend = await _requireRoute(
+      WaffraFinanceRoute.merchantRulesAndSmsHashes,
+    );
+    if (backend == WaffraRuntimeFinanceBackend.guardedLegacy) {
+      await legacy.mergeSmsHashes(frozen);
+    } else {
+      // SQLCipher bridge atomically merges under its verified native lock;
+      // its independent durable source witness must also be active.
+      await encryptedSession!.addSmsHashes(frozen);
+    }
+    return load(route: WaffraFinanceRoute.merchantRulesAndSmsHashes);
+  }
+
+  /// Save finance-linked notification settings without a direct preferences
+  /// escape hatch. SQL backend deliberately blocks this scalar until a
+  /// separately tested, atomic encrypted scalar projection is approved.
+  Future<WaffraFinanceAuthorityRead> setRecurringReminderPreference(
+      bool enabled) async {
+    final backend = await _requireRoute(
+      WaffraFinanceRoute.recurringCreateEditDeleteRestore,
+    );
+    if (backend != WaffraRuntimeFinanceBackend.guardedLegacy) {
+      throw StateError('Encrypted recurring reminder scalar is not certified.');
+    }
+    await legacy.setRecurringReminderPreference(enabled);
+    return load(route: WaffraFinanceRoute.recurringCreateEditDeleteRestore);
+  }
+
+  /// Custom suggestions are outside the canonical encrypted finance snapshot
+  /// today. Never read them from old preferences after source activation.
+  Future<List<String>> loadCustomGoalSuggestions() async {
+    final backend = await _requireRoute(
+      WaffraFinanceRoute.goalCreateEditDeleteRestore,
+    );
+    if (backend != WaffraRuntimeFinanceBackend.guardedLegacy) {
+      throw StateError('Encrypted custom goal suggestions are not certified.');
+    }
+    return legacy.loadCustomGoalSuggestions();
+  }
+
+  Future<bool> addCustomGoalSuggestion(String name) async {
+    final backend = await _requireRoute(
+      WaffraFinanceRoute.goalCreateEditDeleteRestore,
+    );
+    if (backend != WaffraRuntimeFinanceBackend.guardedLegacy) {
+      throw StateError('Encrypted custom goal suggestions are not certified.');
+    }
+    return legacy.addCustomGoalSuggestion(name);
+  }
+
+  /// A guarded startup catalog version install with current-value CAS. The
+  /// existing source and native writer lock are revalidated before mutation.
+  Future<WaffraFinanceAuthorityRead> installCategoryCatalog({
+    required int version,
+    required String? expectedCatalogRaw,
+    required String nextCatalogRaw,
+    required bool catalogChanged,
+  }) async {
+    final backend = await _requireRoute(
+      WaffraFinanceRoute.categoryCatalogInstall,
+    );
+    if (backend != WaffraRuntimeFinanceBackend.guardedLegacy) {
+      throw StateError('Encrypted catalog installation is not certified.');
+    }
+    await legacy.installCategoryCatalog(
+      version: version,
+      expectedCatalogRaw: expectedCatalogRaw,
+      nextCatalogRaw: nextCatalogRaw,
+      catalogChanged: catalogChanged,
+    );
+    return load(route: WaffraFinanceRoute.categoryCatalogInstall);
+  }
+
   Future<WaffraFinanceAuthorityRead> load({
     required WaffraFinanceRoute route,
   }) async {
