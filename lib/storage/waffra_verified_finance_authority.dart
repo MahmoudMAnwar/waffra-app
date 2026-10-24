@@ -115,10 +115,19 @@ class WaffraVerifiedFinanceAuthority {
     final backend = await _requireRoute(
       WaffraFinanceRoute.recurringCreateEditDeleteRestore,
     );
-    if (backend != WaffraRuntimeFinanceBackend.guardedLegacy) {
-      throw StateError('Encrypted recurring reminder scalar is not certified.');
+    if (backend == WaffraRuntimeFinanceBackend.guardedLegacy) {
+      await legacy.setRecurringReminderPreference(enabled);
+    } else {
+      // A real encrypted write only after the independently audited route,
+      // durable SQL/external witnesses and OS-backed key checks agree.
+      // This never falls back to old preferences if the source is uncertain.
+      final baseline = await encryptedSession!.loadForDashboardOrWidget();
+      await encryptedSession!.saveRecurringReminderPreference(
+        baseline: baseline,
+        enabled: enabled,
+      );
     }
-    await legacy.setRecurringReminderPreference(enabled);
+    // Never publish an optimistic toggle before a durable source read.
     return load(route: WaffraFinanceRoute.recurringCreateEditDeleteRestore);
   }
 
