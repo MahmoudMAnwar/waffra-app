@@ -231,6 +231,48 @@ class WaffraVerifiedFinanceAuthority {
       throw StateError('Finance authority changed while screen was open.');
     }
     if (backend == WaffraRuntimeFinanceBackend.verifiedEncrypted &&
+        (route == WaffraFinanceRoute.challengeAndBudgetUpdate ||
+         route == WaffraFinanceRoute.recurringPostingAndPostponement ||
+         route == WaffraFinanceRoute.merchantRulesAndSmsHashes)) {
+      final witness = baseline.encryptedWitness;
+      if (witness == null) {
+        throw StateError('Scalar finance edit requires an encrypted witness.');
+      }
+      // Typed projections already guard category budget writes. All other
+      // allowlisted changes are strict JSON/scalar finance keys and use the
+      // existing SQLCipher snapshot CAS within the shared Home/Widget lock.
+      // Recurring PAYMENTS with a new transaction are NOT silently accepted:
+      // they need an atomic entry+postponement posting writer separately.
+      final allowed = switch (route) {
+        WaffraFinanceRoute.challengeAndBudgetUpdate => <String>{
+          'waffra_challenges_v1',
+          'waffra_monthly_budget_v1',
+          'waffra_monthly_budget_enabled_v1',
+          'waffra_categories_v24',
+        },
+        WaffraFinanceRoute.recurringPostingAndPostponement => <String>{
+          'waffra_recurring_postponed_v1',
+        },
+        WaffraFinanceRoute.merchantRulesAndSmsHashes => <String>{
+          'waffra_learned_merchants_v1',
+        },
+        _ => const <String>{},
+      };
+      for (final item in immutableCapture.entries) {
+        final previous = witness.snapshot.values;
+        final changed = !previous.containsKey(item.key) ||
+            jsonEncode(previous[item.key]) != jsonEncode(item.value);
+        if (changed && !allowed.contains(item.key)) {
+          throw StateError('Finance route contains unverified coupled edits.');
+        }
+      }
+      await encryptedSession!.saveDashboardBatch(
+        baseline: witness,
+        captured: immutableCapture,
+      );
+      return load(route: route);
+    }
+    if (backend == WaffraRuntimeFinanceBackend.verifiedEncrypted &&
         route == WaffraFinanceRoute.manualTransactionSave) {
       // A manual form's full Home capture is NOT an authorization to replace
       // older finance data. Extract exactly one new record, preserve every
