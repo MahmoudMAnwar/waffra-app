@@ -325,6 +325,93 @@ void main() {
     expect((rows.single as Map)['amount'], 12.5);
   });
 
+
+  test('M181 challenge and monthly budget store atomically in SQLCipher',
+      () async {
+    final baseline = await authority.load(
+      route: WaffraFinanceRoute.challengeAndBudgetUpdate,
+    );
+    const challenges =
+        '[{"id":"daily-1","dailyAmount":4.5,"name":"Synthetic"}]';
+    final next = await authority.saveCaptured(
+      route: WaffraFinanceRoute.challengeAndBudgetUpdate,
+      baseline: baseline,
+      captured: const <String, Object>{
+        'waffra_challenges_v1': challenges,
+        'waffra_monthly_budget_v1': 800.25,
+        'waffra_monthly_budget_enabled_v1': true,
+      },
+    );
+    expect(next.finance.getString('waffra_challenges_v1'), challenges);
+    final stored = await snapshot.read();
+    expect(stored.values['waffra_monthly_budget_v1'], 800.25);
+    expect(stored.values['waffra_monthly_budget_enabled_v1'], true);
+  });
+
+  test('M181 stale budget change fails without partial financial write',
+      () async {
+    final route = WaffraFinanceRoute.challengeAndBudgetUpdate;
+    final first = await authority.load(route: route);
+    final second = await authority.load(route: route);
+    await authority.saveCaptured(
+      route: route, baseline: first,
+      captured: const <String, Object>{
+        'waffra_monthly_budget_v1': 1000.0,
+      },
+    );
+    final previous = await snapshot.read();
+    await expectLater(authority.saveCaptured(
+      route: route, baseline: second,
+      captured: const <String, Object>{
+        'waffra_monthly_budget_v1': 500.0,
+      },
+    ), throwsStateError);
+    final after = await snapshot.read();
+    expect(after.digest, previous.digest);
+    expect(after.values['waffra_monthly_budget_v1'], 1000.0);
+  });
+
+  test('M181 recurring postpone-only and merchant rules are source routed',
+      () async {
+    final postpone = WaffraFinanceRoute.recurringPostingAndPostponement;
+    final loaded = await authority.load(route: postpone);
+    final saved = await authority.saveCaptured(
+      route: postpone, baseline: loaded,
+      captured: const <String, Object>{
+        'waffra_recurring_postponed_v1': '{"recurring-1":"2026-11-03"}',
+      },
+    );
+    expect(saved.finance.getString('waffra_recurring_postponed_v1'),
+        '{"recurring-1":"2026-11-03"}');
+    final merchant = WaffraFinanceRoute.merchantRulesAndSmsHashes;
+    final beforeRules = await authority.load(route: merchant);
+    final afterRules = await authority.saveCaptured(
+      route: merchant, baseline: beforeRules,
+      captured: const <String, Object>{
+        'waffra_learned_merchants_v1': '{"test-merchant":"Food"}',
+      },
+    );
+    expect(afterRules.finance.getString('waffra_learned_merchants_v1'),
+        '{"test-merchant":"Food"}');
+  });
+
+  test('M181 recurring payment cannot write ledger via scalar shortcut',
+      () async {
+    final route = WaffraFinanceRoute.recurringPostingAndPostponement;
+    final baseline = await authority.load(route: route);
+    final previous = await snapshot.read();
+    await expectLater(authority.saveCaptured(
+      route: route, baseline: baseline,
+      captured: <String, Object>{
+        'entries': jsonEncode([manualEntry('unsafe-posting')]),
+        'waffra_recurring_postponed_v1': '{}',
+      },
+    ), throwsStateError);
+    final now = await snapshot.read();
+    expect(now.digest, previous.digest);
+    expect(now.values['entries'], '[]');
+  });
+
   test('M181 source is disabled by default in production-like session', () async {
     final disabled = WaffraEncryptedFinanceSession(
       bridge: session.bridge, experimentalEnabled: false,
