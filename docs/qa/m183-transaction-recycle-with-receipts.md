@@ -26,13 +26,15 @@ consumes the trash item within the same transaction.
 
 The existing bank SMS SHA-256 fingerprints intentionally remain untouched.
 The engine never emits temporary plaintext files or places backups on the
-clipboard. Archived BLOBs are encrypted **at rest by SQLCipher**, and stored
+clipboard. The verified authority refuses this new transaction-recycle API
+when the selected finance backend is guarded legacy. Archived BLOBs are encrypted **at rest by SQLCipher**, and stored
 only in that database.
 
 ## Synthetic test coverage
 
 `test/storage/m183_encrypted_transaction_recycle_test.dart` checks
-receipt-backed deletion, full byte-exact undo, deletion without attachments,
+receipt-backed deletion, full byte-exact undo, the verified Authority/Session/
+Bridge round trip, deletion without attachments,
 concurrent Widget/financial revision change, in-place receipt replacement,
 missing confirmation or receipt witnesses, expiry and clock rollback,
 archive BLOB corruption, archived money tampering, pending source marker
@@ -43,8 +45,10 @@ OS-backed key attestation or real-device testing.
 
 ## NOT YET CONNECTED / unsafe to release
 
-This standalone transaction recycle writer is deliberately **not installed in
-HomeScreen/Widget**. Production source still uses guarded legacy. Until
+This transaction recycle writer now has an explicit **verified Authority →
+Encrypted Session → Encrypted Bridge** path, including an independent route
+audit, current-source check and a durable post-mutation finance reload. The
+default HomeScreen/Widget is deliberately **not yet wired** to this new port. Production source still uses guarded legacy. Until
 screen-specific deletion/undo UI captures receipt byte witnesses and an
 independent verified authority calls this port, do not advertise live
 transaction deletion under SQLCipher. Other unverified routes remain:
