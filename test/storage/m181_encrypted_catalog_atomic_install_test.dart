@@ -412,6 +412,126 @@ void main() {
     expect(now.values['entries'], '[]');
   });
 
+
+  test('M181 consented empty-receipt delete-all atomically resets IDs and hashes',
+      () async {
+    final original = await authority.load(
+      route: WaffraFinanceRoute.manualTransactionSave,
+    );
+    final entry = manualEntry('m181-delete-no-receipt');
+    await authority.saveCaptured(
+      route: WaffraFinanceRoute.manualTransactionSave,
+      baseline: original,
+      captured: <String, Object>{'entries': jsonEncode([entry])},
+    );
+    const fingerprint =
+        'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+    await session.addSmsHashes([fingerprint]);
+    final before = await authority.load(
+      route: WaffraFinanceRoute.deleteAllTransactions,
+    );
+    final deleted = await authority.saveCaptured(
+      route: WaffraFinanceRoute.deleteAllTransactions,
+      baseline: before,
+      captured: <String, Object>{
+        'entries': '[]',
+        'waffra_sms_hashes_v1': <String>[],
+      },
+      userConfirmed: true,
+    );
+    expect(deleted.ledgerRaw, '[]');
+    expect(deleted.finance.getStringList('waffra_sms_hashes_v1'), isEmpty);
+    final entries = await vault.customSelect(
+      'SELECT count(*) AS n FROM fresh_finance_entries',
+    ).getSingle();
+    final hashes = await vault.customSelect(
+      'SELECT count(*) AS n FROM fresh_finance_sms_hashes',
+    ).getSingle();
+    expect(entries.read<int>('n'), 0);
+    expect(hashes.read<int>('n'), 0);
+  });
+
+  test('M181 delete-all requires explicit consent and exact capture', () async {
+    final baseline = await authority.load(
+      route: WaffraFinanceRoute.deleteAllTransactions,
+    );
+    final previous = await snapshot.read();
+    for (final payload in <Map<String, Object>>[
+      <String, Object>{'entries': '[]'},
+      <String, Object>{
+        'entries': '[]', 'waffra_sms_hashes_v1': <String>[],
+        'waffra_goals_v24': '[]',
+      },
+    ]) {
+      await expectLater(authority.saveCaptured(
+        route: WaffraFinanceRoute.deleteAllTransactions,
+        baseline: baseline, captured: payload, userConfirmed: true,
+      ), throwsStateError);
+    }
+    await expectLater(authority.saveCaptured(
+      route: WaffraFinanceRoute.deleteAllTransactions,
+      baseline: baseline,
+      captured: <String, Object>{
+        'entries': '[]', 'waffra_sms_hashes_v1': <String>[],
+      },
+    ), throwsStateError);
+    expect((await snapshot.read()).digest, previous.digest);
+  });
+
+  test('M181 delete-all blocks an independent concurrent Widget write', () async {
+    final old = await authority.load(
+      route: WaffraFinanceRoute.deleteAllTransactions,
+    );
+    const fingerprint =
+        'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+    await session.addSmsHashes([fingerprint]);
+    final now = await snapshot.read();
+    await expectLater(authority.saveCaptured(
+      route: WaffraFinanceRoute.deleteAllTransactions,
+      baseline: old,
+      captured: <String, Object>{
+        'entries': '[]', 'waffra_sms_hashes_v1': <String>[],
+      },
+      userConfirmed: true,
+    ), throwsStateError);
+    expect((await snapshot.read()).digest, now.digest);
+  });
+
+  test('M181 delete-all blocks orphan receipt SQL rows and rolls back', () async {
+    final old = await authority.load(
+      route: WaffraFinanceRoute.manualTransactionSave,
+    );
+    final entry = manualEntry('m181-receipt-owned-record');
+    await authority.saveCaptured(
+      route: WaffraFinanceRoute.manualTransactionSave,
+      baseline: old,
+      captured: <String, Object>{'entries': jsonEncode([entry])},
+    );
+    await vault.customStatement(
+      'INSERT INTO fresh_finance_receipts '
+      '(entry_id,position,safe_filename,sha256_hex) VALUES(?,?,?,?)',
+      ['m181-receipt-owned-record', 0, 'synthetic.bin',
+       List<String>.filled(64, 'f').join()],
+    );
+    final before = await authority.load(
+      route: WaffraFinanceRoute.deleteAllTransactions,
+    );
+    final checksum = (await snapshot.read()).digest;
+    await expectLater(authority.saveCaptured(
+      route: WaffraFinanceRoute.deleteAllTransactions,
+      baseline: before,
+      captured: <String, Object>{
+        'entries': '[]', 'waffra_sms_hashes_v1': <String>[],
+      },
+      userConfirmed: true,
+    ), throwsStateError);
+    expect((await snapshot.read()).digest, checksum);
+    final count = await vault.customSelect(
+      'SELECT count(*) AS n FROM fresh_finance_entries',
+    ).getSingle();
+    expect(count.read<int>('n'), 1);
+  });
+
   test('M181 source is disabled by default in production-like session', () async {
     final disabled = WaffraEncryptedFinanceSession(
       bridge: session.bridge, experimentalEnabled: false,
