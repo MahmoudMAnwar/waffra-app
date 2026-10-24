@@ -14,6 +14,17 @@ void main() {
       "if(!{'light','dark','system'}.contains(appearance))appearance='light';"));
   });
 
+  test('AR/EN changes direction instantly without whole-page slide or Navigator replacement', () {
+    final source=File('lib/main.dart').readAsStringSync();
+    final root=source.substring(source.indexOf('builder:(context,child)=>ValueListenableBuilder<bool>('),
+      source.indexOf('theme:ThemeData(',source.indexOf('builder:(context,child)=>ValueListenableBuilder<bool>(')));
+    expect(root,contains("textDirection:language=='ar'?TextDirection.rtl:TextDirection.ltr"));
+    expect(root,isNot(contains('KeyedSubtree(key:ValueKey(language)')));
+    expect(root,isNot(contains('SlideTransition(')));
+    expect(root,isNot(contains('AnimatedSwitcher(')));
+    expect(source,contains('floatingActionButtonAnimator:const WaffraStationaryFabAnimator()'));
+  });
+
   test('replayable tour only includes six core screens', () {
     final source = File('lib/main.dart').readAsStringSync();
     expect(source, contains('static const tourTabs=<int>[0,0,0,1,2,3];'));
