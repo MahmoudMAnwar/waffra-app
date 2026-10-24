@@ -8,6 +8,11 @@ extension WaffraRecurringRecycleBin on _HomeScreenState {
  }
 
  Future<void> deletedRecurringDialog()async {
+  if(_lastFinanceAuthorityRead?.source==
+     WaffraRuntimeFinanceBackend.verifiedEncrypted){
+   await _showVerifiedModuleTrash(WaffraFinanceModule.recurring);
+   return;
+  }
   final now=DateTime.now();
   final before=deletedRecurring.length;
   deletedRecurring.removeWhere((item){
