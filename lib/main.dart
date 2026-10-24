@@ -49,6 +49,8 @@ import 'storage/waffra_legacy_finance_writer_coordinator.dart';
 import 'storage/waffra_legacy_widget_commit_journal.dart';
 import 'storage/waffra_home_finance_persistence.dart';
 import 'storage/waffra_verified_finance_authority.dart';
+import 'storage/waffra_runtime_finance_route_contract.dart';
+import 'storage/waffra_verified_transaction_ui_guard.dart';
 import 'storage/waffra_m155_category_plan.dart';
 import 'storage/waffra_production_finance_routing_gate.dart';
 import 'storage/waffra_verified_legacy_backup_restore.dart';
@@ -3666,7 +3668,162 @@ Future<void> bulkSmsSheet({String? initialText})async {
    if(mounted)snack(context,waffraIsEnglish?'Could not export the PDF report. Please try again.':'تعذر تصدير تقرير PDF. حاول مرة أخرى.');
   }
  }
+ /// Only the independently selected SQLCipher source may use the encrypted
+ /// 30-day trash. A successful delete/undo MUST be reread from the verified
+ /// authority before any balance or transaction tile changes on screen.
+ void _publishVerifiedTransactionLedger(WaffraFinanceAuthorityRead committed){
+  if(committed.source!=WaffraRuntimeFinanceBackend.verifiedEncrypted){
+   throw StateError('Encrypted transaction UI received a legacy source.');
+  }
+  committed.finance.requireIntegrity();
+  final loaded=WaffraVerifiedTransactionUiGuard.decodeLedger(committed.ledgerRaw)
+   .map((json)=>MoneyEntry.fromJson(json)).toList(growable:false);
+  final hashes=committed.finance.getStringList('waffra_sms_hashes_v1')??const <String>[];
+  if(!mounted)return;
+  setState((){
+   entries..clear()..addAll(loaded);
+   smsHashes..clear()..addAll(hashes);
+   _lastFinanceAuthorityRead=committed;
+   _lastLedgerSavedRaw=committed.ledgerRaw;
+   _lastWidgetRevision=committed.widgetRevision;
+  });
+  unawaited(_refreshWidget());
+ }
+
+ Future<void> _deleteVerifiedEntry(MoneyEntry entry)async {
+  try {
+   await _financialWriteQueue.drain();
+   final baseline=await _financeAuthority.load(
+    route:WaffraFinanceRoute.transactionDeleteAndUndo);
+   if(baseline.source!=WaffraRuntimeFinanceBackend.verifiedEncrypted||
+      baseline.encryptedWitness==null){
+    throw StateError('Verified encrypted transaction source is missing.');
+   }
+   // Reject a stale tile, including an edited receipt reference or amount.
+   WaffraVerifiedTransactionUiGuard.requireUnchangedSelected(
+    ledgerRaw:baseline.ledgerRaw,selected:entry.toJson());
+   // A changed receipt image does not increment the finance generation.
+   // The screen must capture every actual BLOB digest BEFORE asking consent.
+   final screen=await _financeAuthority.loadVerifiedReceiptScreen(
+    route:WaffraFinanceRoute.receiptView,entryId:entry.id);
+   if(screen.entryId!=entry.id||
+      screen.generation!=baseline.encryptedWitness!.generation||
+      screen.isInRecycleBin){
+    throw StateError('Receipt and finance screen witnesses disagree.');
+   }
+   if(!mounted)return;
+   final approved=await confirmDeletion(
+    waffraIsEnglish?'Move transaction to recently deleted':
+     'نقل المعاملة إلى المحذوفات',
+    waffraIsEnglish?
+     'Move «${entry.title}» and its attached invoices to encrypted Recently Deleted for 30 days?':
+     'هل تريد نقل المعاملة «${entry.title}» وفواتيرها المشفرة إلى المحذوفات لمدة 30 يومًا؟');
+   if(approved!=true||!mounted)return;
+   await _financialWriteQueue.submit(<String,Object>{'id':entry.id},(_)async{
+    final committed=await _financeAuthority.deleteVerifiedTransactionToRecycle(
+     baseline:baseline,entryId:entry.id,
+     expectedImageHashes:screen.imageSha256,
+     userConfirmed:true,now:DateTime.now().toUtc());
+    _publishVerifiedTransactionLedger(committed);
+   });
+   if(!mounted)return;
+   snack(context,waffraIsEnglish?
+    'Transaction saved in encrypted Recently Deleted for 30 days.':
+    'تم نقل المعاملة إلى المحذوفات المشفرة لمدة 30 يومًا.',
+    isError:false,duration:const Duration(seconds:6),
+    actionLabel:waffraIsEnglish?'Undo':'تراجع',
+    onAction:(){if(mounted)unawaited(_undoVerifiedDeletedEntry(entry.id));});
+  }catch(error){
+   debugPrint('Verified encrypted transaction delete refused: $error');
+   if(mounted){
+    snack(context,waffraIsEnglish?
+     'Deletion could not be verified. Your saved financial data was not reset. Reload before retrying.':
+     'تعذر التحقق من الحذف. لم يتم تصفير بياناتك المالية. أعد تحميل المعاملات قبل المحاولة.');
+    unawaited(_loadFinanceSafely());
+   }
+  }
+ }
+
+ Future<void> _undoVerifiedDeletedEntry(String entryId)async {
+  try {
+   await _financialWriteQueue.submit(<String,Object>{'id':entryId},(_)async{
+    // Reopen the CURRENT source instead of restoring over a stale Home or
+    // Widget snapshot. The SQL recycle enforces its 30-day clock and IDs.
+    final baseline=await _financeAuthority.load(
+     route:WaffraFinanceRoute.transactionDeleteAndUndo);
+    if(baseline.source!=WaffraRuntimeFinanceBackend.verifiedEncrypted){
+     throw StateError('Encrypted undo source is not available.');
+    }
+    final committed=await _financeAuthority.restoreVerifiedDeletedTransaction(
+     baseline:baseline,entryId:entryId,now:DateTime.now().toUtc());
+    _publishVerifiedTransactionLedger(committed);
+   });
+   if(mounted)snackSuccess(context,waffraIsEnglish?
+    'Transaction and invoices restored':'تم استرجاع المعاملة وفواتيرها');
+  }catch(error){
+   debugPrint('Encrypted transaction undo blocked safely: $error');
+   if(mounted){
+    snack(context,waffraIsEnglish?
+     'Could not restore safely. Reload Recently Deleted and try again.':
+     'تعذر الاسترجاع الآمن. أعد فتح المحذوفات وحاول مجددًا.');
+    unawaited(_loadFinanceSafely());
+   }
+  }
+ }
+
+ Future<void> _showVerifiedDeletedTransactions()async {
+  if(_lastFinanceAuthorityRead?.source!=
+     WaffraRuntimeFinanceBackend.verifiedEncrypted)return;
+  try {
+   final deleted=await _financeAuthority.listVerifiedDeletedTransactions();
+   if(!mounted)return;
+   if(deleted.isEmpty){
+    await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+     title:WaffraText(waffraIsEnglish?'Recently deleted transactions':
+      'المعاملات المحذوفة'),
+     content:WaffraText(waffraIsEnglish?
+      'There are no encrypted transactions to restore.':
+      'لا توجد معاملات مشفرة قابلة للاسترجاع.'),
+     actions:[TextButton(onPressed:()=>Navigator.pop(ctx),
+      child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))]));
+    return;
+   }
+   final selection=await showWaffraDialog<String>(
+    context:context,builder:(ctx)=>AlertDialog(
+     title:WaffraText(waffraIsEnglish?'Recently deleted (30 days)':
+      'المعاملات المحذوفة (30 يومًا)'),
+     content:SizedBox(width:360,
+      height:min(360.0,deleted.length*82.0+16.0),
+      child:ListView.builder(itemCount:deleted.length,
+       itemBuilder:(ctx,index){
+        final item=deleted.entries.elementAt(index);
+        final expires=DateTime.fromMillisecondsSinceEpoch(
+         item.value,isUtc:true).toLocal();
+        return ListTile(
+         leading:const Icon(Icons.restore,color:emerald),
+         title:WaffraText(item.key,maxLines:1),
+         subtitle:WaffraText(waffraIsEnglish?
+          'Recover until ${dayText(expires)}':
+          'الاسترجاع متاح حتى ${dayText(expires)}',maxLines:2),
+         onTap:()=>Navigator.pop(ctx,item.key));
+       })),
+     actions:[TextButton(onPressed:()=>Navigator.pop(ctx),
+      child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء'))]));
+   if(selection!=null&&mounted)await _undoVerifiedDeletedEntry(selection);
+  }catch(error){
+   debugPrint('Encrypted transaction trash cannot be verified: $error');
+   if(mounted)snack(context,waffraIsEnglish?
+    'Recently Deleted is unavailable until encrypted source verification succeeds.':
+    'المحذوفات غير متاحة حتى ينجح التحقق من المصدر المشفر.');
+  }
+ }
+
  Future<void> deleteEntry(MoneyEntry e)async {
+  if(_lastFinanceAuthorityRead?.source==
+     WaffraRuntimeFinanceBackend.verifiedEncrypted){
+   await _deleteVerifiedEntry(e);
+   return;
+  }
   final yes=await confirmDeletion(waffraIsEnglish?'Delete transaction':'حذف العملية',
    waffraIsEnglish?'Delete «'+e.title+'»? You can undo for 6 seconds after deletion.':'هل تريد حذف المعاملة «'+e.title+'»؟ يمكنك التراجع خلال 6 ثوانٍ بعد الحذف.');
   if(yes!=true||!mounted)return;
@@ -4480,9 +4637,18 @@ Future<void> bulkSmsSheet({String? initialText})async {
              icon:const Icon(Icons.more_vert),
              onSelected:(action){
               if(action=='delete-all')confirmDeleteAllEntries();
+              if(action=='restore-transactions')_showVerifiedDeletedTransactions();
               if(action=='pdf')exportEntriesPdf(visible,'تقرير عمليات وفرة');
              },
              itemBuilder:(ctx)=>[
+              if(_lastFinanceAuthorityRead?.source==
+                 WaffraRuntimeFinanceBackend.verifiedEncrypted)
+               PopupMenuItem(value:'restore-transactions',child:Row(children:[
+                const Icon(Icons.restore_rounded,color:emerald),
+                const SizedBox(width:8),
+                WaffraText(waffraIsEnglish?
+                 'Recently deleted (30 days)':'المعاملات المحذوفة (30 يومًا)'),
+               ])),
               PopupMenuItem(value:'pdf',child:Row(children:[
                const Icon(Icons.picture_as_pdf_outlined,color:emerald),
                const SizedBox(width:8),
