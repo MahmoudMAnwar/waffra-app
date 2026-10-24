@@ -8,7 +8,7 @@ void main() {
   test('four finance destinations share one language-aware circular action', () {
     final source=File('lib/main.dart').readAsStringSync();
     expect(source,contains('floatingActionButtonLocation:WaffraDirectionalFabLocation(english:waffraIsEnglish)'));
-    expect(source,contains('floatingActionButton:!ready||tab==4?null:Directionality('));
+    expect(source,contains('floatingActionButton:!ready||tab==4?null:SizedBox('));
     expect(source,contains('if(goalsOpened||tab==2){unawaited(_launchAddAction(()=>goalDialog()));return;}'));
     expect(source,contains('if(tab==3){unawaited(_launchAddAction(()=>recurringDialog()));return;}'));
     expect(source,contains('key:_tourKeys[1],'));
