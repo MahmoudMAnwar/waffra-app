@@ -11,6 +11,8 @@ import 'waffra_atomic_encrypted_receipt_transaction_writer.dart';
 import 'waffra_encrypted_cutover_journal.dart';
 import 'waffra_encrypted_finance_ui_patch.dart';
 import 'waffra_encrypted_module_projection_guard.dart';
+import 'waffra_encrypted_module_recycle.dart';
+import 'waffra_fresh_finance_modules_repository.dart';
 import 'legacy_snapshot_preflight.dart';
 import '../waffra_recurring_policy.dart';
 import 'waffra_experimental_writer_gate.dart';
@@ -547,6 +549,62 @@ class WaffraVerifiedEncryptedFinanceBridge {
         );
       });
     });
+  }
+
+  /// Never expose the module recycle against an unverified encrypted source.
+  /// Each call independently rechecks source/key/cutover under the shared
+  /// Home/Widget native writer lock inside the standalone recycle writer.
+  WaffraEncryptedModuleRecycle get _verifiedModuleRecycle =>
+      WaffraEncryptedModuleRecycle(
+        snapshot: snapshot,
+        writerDirectory: writerDirectory,
+        verifySourceUnderLock: _requireActivatedUnderLock,
+        experimentalEnabled: experimentalEnabled,
+      );
+
+  Future<WaffraEncryptedModuleRecycleResult> recycleVerifiedModule({
+    required WaffraEncryptedHomeWitness baseline,
+    required WaffraFinanceModule module,
+    required String entityId,
+    required DateTime now,
+    required bool userConfirmed,
+  }) {
+    if (!experimentalEnabled) {
+      throw StateError('Encrypted module recycle source is not active.');
+    }
+    return _verifiedModuleRecycle.softDelete(
+      module: module,
+      baseline: baseline.snapshot,
+      entityId: entityId,
+      now: now,
+      userConfirmed: userConfirmed,
+    );
+  }
+
+  Future<WaffraEncryptedModuleRecycleResult> restoreVerifiedModule({
+    required WaffraEncryptedHomeWitness baseline,
+    required WaffraFinanceModule module,
+    required String entityId,
+    required DateTime now,
+  }) {
+    if (!experimentalEnabled) {
+      throw StateError('Encrypted module restore source is not active.');
+    }
+    return _verifiedModuleRecycle.restore(
+      module: module,
+      baseline: baseline.snapshot,
+      entityId: entityId,
+      now: now,
+    );
+  }
+
+  Future<Map<String, int>> listVerifiedDeletedModules(
+    WaffraFinanceModule module,
+  ) {
+    if (!experimentalEnabled) {
+      throw StateError('Encrypted module trash source is not active.');
+    }
+    return _verifiedModuleRecycle.pending(module);
   }
 
   /// Applies only user-edited finance keys. If a widget saved an unrelated
