@@ -532,6 +532,39 @@ void main() {
     expect(count.read<int>('n'), 1);
   });
 
+
+  test('M181 SHA hash merge commits typed SQL and canonical snapshot together',
+      () async {
+    const fingerprint =
+        'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+    final before = await snapshot.read();
+    await session.addSmsHashes([fingerprint]);
+    final typed = await vault.customSelect(
+      'SELECT message_hash FROM fresh_finance_sms_hashes',
+    ).get();
+    expect(typed.length, 1);
+    expect(typed.single.read<String>('message_hash'), fingerprint);
+    final committed = await snapshot.read();
+    expect(committed.generation, before.generation + 1);
+    expect(committed.values['waffra_sms_hashes_v1'], [fingerprint]);
+    await session.addSmsHashes([fingerprint]);
+    expect((await snapshot.read()).generation, committed.generation);
+  });
+
+  test('M181 tampered typed SHA hash rejects snapshot overwrite', () async {
+    const fingerprint =
+        'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+    final prior = await snapshot.read();
+    await vault.customStatement(
+      'INSERT INTO fresh_finance_sms_hashes(message_hash) VALUES (?)',
+      [fingerprint],
+    );
+    await expectLater(session.addSmsHashes([fingerprint]), throwsStateError);
+    final after = await snapshot.read();
+    expect(after.digest, prior.digest);
+    expect(after.values.containsKey('waffra_sms_hashes_v1'), isFalse);
+  });
+
   test('M181 source is disabled by default in production-like session', () async {
     final disabled = WaffraEncryptedFinanceSession(
       bridge: session.bridge, experimentalEnabled: false,
