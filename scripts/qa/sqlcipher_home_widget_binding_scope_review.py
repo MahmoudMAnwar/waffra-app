@@ -7,6 +7,7 @@ from pathlib import Path
 
 FILES = {
     ".github/workflows/m147-final-main-review-gate.yml",
+    ".github/workflows/m96-runtime-finance-cloud-integration.yml",
     "docs/qa/sqlcipher-home-widget-authority-binding.md",
     "lib/main.dart",
     "lib/waffra_widget_capture.part.dart",
