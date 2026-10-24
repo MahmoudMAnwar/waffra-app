@@ -21,10 +21,17 @@ void main() {
 
   test('M110 source witness captured before queued write; widget cannot be overwritten', () {
     final main = File('lib/main.dart').readAsStringSync();
-    final start = main.indexOf(' Future<void> persist()');
+    // M175 intentionally makes the route an argument: a stale widget must
+    // still never overwrite the baseline, regardless of mutation intent.
+    final start = main.indexOf(' Future<void> persist({');
+    expect(start, greaterThan(0),
+        reason: 'All Home mutations must share one source-aware persist entry');
     final end = main.indexOf(' Future<void> _persistSmsHashes', start);
-    expect(start, greaterThan(0));
+    expect(end, greaterThan(start), reason: 'Persist boundary must be intact');
     final persist = main.substring(start, end);
+    expect(persist, contains(
+      'WaffraFinanceRoute route = WaffraFinanceRoute.transactionEdit'));
+    expect(persist, contains('route:route,'));
     final witness = persist.indexOf('final baseline=_lastFinanceAuthorityRead;');
     final submit = persist.indexOf('_financialWriteQueue.submit(');
     expect(witness, greaterThan(0));
