@@ -7,6 +7,7 @@ import 'waffra_atomic_encrypted_receipt_transaction_writer.dart';
 import 'waffra_finance_read_view.dart';
 import 'waffra_receipt_screen_contract.dart';
 import 'waffra_encrypted_receipt_recycle.dart';
+import 'waffra_encrypted_transaction_recycle.dart';
 import 'waffra_unified_finance_writer.dart';
 import 'waffra_verified_encrypted_finance_bridge.dart';
 
@@ -69,6 +70,39 @@ class WaffraEncryptedFinanceSession {
     return bridge.deleteAllUnattachedTransactions(
       baseline: baseline, userConfirmed: userConfirmed,
     );
+  }
+
+  Future<WaffraTransactionRecycleResult> recycleVerifiedTransaction({
+    required WaffraEncryptedHomeWitness baseline,
+    required String entryId,
+    required List<String> expectedImageHashes,
+    required DateTime now,
+    required bool userConfirmed,
+  }) async {
+    _requireEnabled();
+    return bridge.recycleVerifiedTransaction(
+      baseline: baseline,
+      entryId: entryId,
+      expectedImageHashes: expectedImageHashes,
+      now: now,
+      userConfirmed: userConfirmed,
+    );
+  }
+
+  Future<WaffraTransactionRecycleResult> restoreVerifiedTransaction({
+    required WaffraEncryptedHomeWitness baseline,
+    required String entryId,
+    required DateTime now,
+  }) async {
+    _requireEnabled();
+    return bridge.restoreVerifiedTransaction(
+      baseline: baseline, entryId: entryId, now: now,
+    );
+  }
+
+  Future<Map<String, int>> listEncryptedDeletedTransactions() async {
+    _requireEnabled();
+    return bridge.listEncryptedDeletedTransactions();
   }
 
   /// The widget revision is the actual monotonic SQLCipher generation.
