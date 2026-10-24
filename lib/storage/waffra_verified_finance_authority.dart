@@ -231,6 +231,17 @@ class WaffraVerifiedFinanceAuthority {
     if (backend != baseline.source) {
       throw StateError('Finance authority changed while screen was open.');
     }
+    // A second Paid tap with an already-posted deterministic ID must not be
+    // reported as a successful scalar/no-op save. Postpone-only actions use
+    // userConfirmed=false and are handled separately below.
+    if (backend == WaffraRuntimeFinanceBackend.verifiedEncrypted &&
+        route == WaffraFinanceRoute.recurringPostingAndPostponement &&
+        userConfirmed &&
+        (immutableCapture['entries'] is! String ||
+         immutableCapture['entries'] ==
+             baseline.encryptedWitness?.snapshot.values['entries'])) {
+      throw StateError('This recurring payment has already been posted.');
+    }
     // A recurring payment is NOT a scalar postponement edit. One confirmed
     // newly posted deterministic entry plus only its removed postponement
     // must pass through the combined normalized SQL/snapshot writer.
