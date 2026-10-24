@@ -11,6 +11,7 @@ import 'waffra_encrypted_cutover_journal.dart';
 import 'waffra_encrypted_finance_ui_patch.dart';
 import 'waffra_encrypted_module_projection_guard.dart';
 import 'legacy_snapshot_preflight.dart';
+import '../waffra_recurring_policy.dart';
 import 'waffra_experimental_writer_gate.dart';
 import 'waffra_finance_read_view.dart';
 import 'waffra_encrypted_receipt_vault.dart';
@@ -365,6 +366,183 @@ class WaffraVerifiedEncryptedFinanceBridge {
         return snapshot.commit(
           expectedGeneration: current.generation,
           fullFinanceSnapshot: replacement,
+        );
+      });
+    });
+  }
+
+  /// Combined recurring payment: the confirmed payment row, typed SQL ledger
+  /// and removal of only that payment's postponement key commit atomically.
+  /// A concurrent unrelated Widget transaction/hash is preserved, while
+  /// changes to this schedule or postponement fail closed. Never use this for
+  /// transactions carrying receipts, for which the BLOB writer is mandatory.
+  Future<WaffraFinanceSnapshotState> commitRecurringPayment({
+    required WaffraEncryptedHomeWitness baseline,
+    required Map<String, Object?> record,
+    required String proposedPostponedJson,
+    required bool userConfirmed,
+  }) async {
+    if (!experimentalEnabled || !userConfirmed) {
+      throw StateError('An explicitly confirmed encrypted payment is required.');
+    }
+    // Freeze the caller-owned map BEFORE any source probe or awaited lock.
+    final frozen = Map<String, Object?>.unmodifiable(
+      Map<String, Object?>.from(
+        jsonDecode(jsonEncode(record)) as Map<String, dynamic>,
+      ),
+    );
+    if (!WaffraLegacyPreflight.inspect(
+      <String, Object?>{'entries': jsonEncode([frozen])},
+    ).canStage || frozen['receiptPath'] != null && frozen['receiptPath'] != '') {
+      throw StateError('Unverified recurring payment or receipt payload.');
+    }
+    final id = frozen['id'];
+    final when = DateTime.tryParse(frozen['date'] is String
+        ? frozen['date'] as String : '');
+    final amount = frozen['amount'];
+    if (id is! String || id.isEmpty || id.length > 256 ||
+        when == null || amount is! num ||
+        !WaffraLegacyPreflight.canRepresentHalalas(amount) ||
+        amount < 0 || frozen['income'] is! bool ||
+        frozen['title'] is! String || frozen['category'] is! String) {
+      throw StateError('Recurring payment record is invalid.');
+    }
+    Map<String, Object?> decodePostponed(String raw) {
+      final data = jsonDecode(raw);
+      if (data is! Map<String, dynamic> ||
+          data.entries.any((e) => e.value is! String)) {
+        throw StateError('Postponed recurring map is malformed.');
+      }
+      return Map<String, Object?>.from(data);
+    }
+    final proposed = decodePostponed(proposedPostponedJson);
+    return WaffraExperimentalWriterGate(
+      disposableDirectory: writerDirectory,
+      experimentalEnabled: true,
+    ).withExclusiveAccess(() async {
+      await _requireActivatedUnderLock();
+      return snapshot.store.transaction(() async {
+        final current = await snapshot.read();
+        if (current.values['waffra_recurring_v24'] !=
+                baseline.snapshot.values['waffra_recurring_v24'] ||
+            current.values['waffra_recurring_postponed_v1'] !=
+                baseline.snapshot.values['waffra_recurring_postponed_v1']) {
+          throw StateError('Recurring schedule or postponement changed.');
+        }
+        final previousPostponed = decodePostponed(
+          (current.values['waffra_recurring_postponed_v1'] as String?) ?? '{}',
+        );
+        final schedulesRaw = jsonDecode(
+          (current.values['waffra_recurring_v24'] as String?) ?? '[]',
+        );
+        if (schedulesRaw is! List || schedulesRaw.any((s) => s is! Map)) {
+          throw StateError('Encrypted recurring schedule is corrupted.');
+        }
+        final schedules = schedulesRaw.map((s) =>
+            Map<String, Object?>.from(s as Map)).toList(growable: false);
+        final scheduleIds = schedules.map((s) => s['id']).toSet();
+        if (scheduleIds.length != schedules.length) {
+          throw StateError('Encrypted recurring identities are ambiguous.');
+        }
+        final relational = await snapshot.store.customSelect(
+          'SELECT recurring_id,source_json,amount_minor,is_income,due_day '
+          'FROM fresh_finance_recurring',
+        ).get();
+        if (relational.length != schedules.length) {
+          throw StateError('Recurring SQL projection count differs.');
+        }
+        final indexed = <String, Map<String, Object?>>{
+          for (final s in schedules) s['id'] as String: s,
+        };
+        for (final row in relational) {
+          final key = row.read<String>('recurring_id');
+          final saved = indexed[key];
+          if (saved == null ||
+              jsonEncode(saved) !=
+                  jsonEncode(jsonDecode(row.read<String>('source_json'))) ||
+              saved['amount'] is! num ||
+              ((saved['amount'] as num) * 100).round() !=
+                  row.read<int>('amount_minor') ||
+              saved['day'] != row.read<int>('due_day') ||
+              (saved['income'] == true ? 1 : 0) !=
+                  row.read<int>('is_income')) {
+            throw StateError('Recurring typed SQL witness differs.');
+          }
+        }
+        final matching = schedules.where((s) {
+          final sid = s['id'];
+          final day = s['day'];
+          if (sid is! String || day is! int || day < 1 || day > 31) {
+            return false;
+          }
+          final due = WaffraRecurringPolicy.dueDate(
+            when.year, when.month, day,
+          );
+          return WaffraRecurringPolicy.entryId(sid, due) == id;
+        }).toList();
+        if (matching.length != 1) {
+          throw StateError('Payment is not linked to one recurring schedule.');
+        }
+        final schedule = matching.single;
+        final startAt = DateTime.tryParse(
+          schedule['startAt'] is String ? schedule['startAt'] as String : '',
+        );
+        final due = WaffraRecurringPolicy.dueDate(
+          when.year, when.month, schedule['day'] as int,
+        );
+        if (schedule['active'] == false || startAt == null ||
+            due.isBefore(DateTime(startAt.year,startAt.month,startAt.day)) ||
+            frozen['title'] != schedule['title'] ||
+            frozen['category'] != schedule['category'] ||
+            frozen['income'] != schedule['income'] ||
+            frozen['amount'] != schedule['amount']) {
+          throw StateError('Recurring posted payment differs from its schedule.');
+        }
+        final expectedPostponed = Map<String, Object?>.from(previousPostponed)
+          ..remove(id);
+        if (jsonEncode(expectedPostponed) != jsonEncode(proposed)) {
+          throw StateError('Recurring payment may only clear its own postponement.');
+        }
+        final snapshotRows = jsonDecode(
+          (current.values['entries'] as String?) ?? '[]',
+        );
+        if (snapshotRows is! List || snapshotRows.any((x) => x is! Map)) {
+          throw StateError('Current recurring payment ledger is malformed.');
+        }
+        final entries = snapshotRows.map((x) =>
+            Map<String, Object?>.from(x as Map)).toList();
+        final ids = entries.map((x) => x['id']).toSet();
+        if (ids.length != entries.length || ids.contains(id)) {
+          throw StateError('Recurring payment is already posted.');
+        }
+        final typed = await snapshot.store.customSelect(
+          'SELECT entry_id,source_json FROM fresh_finance_entries',
+        ).get();
+        final byId = <String, Map<String, Object?>>{
+          for (final item in entries) item['id'] as String: item,
+        };
+        if (typed.length != entries.length || typed.any((row) =>
+            !byId.containsKey(row.read<String>('entry_id')) ||
+            jsonEncode(byId[row.read<String>('entry_id')]) !=
+                jsonEncode(jsonDecode(row.read<String>('source_json'))))) {
+          throw StateError('Recurring payment SQL ledger is out of sync.');
+        }
+        await snapshot.store.customStatement(
+          'INSERT INTO fresh_finance_entries '
+          '(entry_id,title,category_snapshot,amount_minor,is_income,'
+          'occurred_iso,receipt_count,source_json) VALUES (?,?,?,?,?,?,0,?)',
+          [
+            id, frozen['title'], frozen['category'], (amount * 100).round(),
+            frozen['income'] == true ? 1 : 0,
+            frozen['date'], jsonEncode(frozen),
+          ],
+        );
+        final next = Map<String, Object?>.from(current.values)
+          ..['entries'] = jsonEncode([frozen, ...entries])
+          ..['waffra_recurring_postponed_v1'] = proposedPostponedJson;
+        return snapshot.commit(
+          expectedGeneration: current.generation,
+          fullFinanceSnapshot: next,
         );
       });
     });
