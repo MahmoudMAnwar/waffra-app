@@ -415,7 +415,7 @@ CREATE TABLE IF NOT EXISTS $_images(
           );
         }
         final nextLedger = List<Map<String, dynamic>>.from(ledger)
-          ..insert(originalPosition.clamp(0, ledger.length),
+          ..insert(originalPosition > ledger.length ? ledger.length : originalPosition,
               Map<String, dynamic>.from(record));
         final next = Map<String, Object?>.from(current.values)
           ..['entries'] = jsonEncode(nextLedger);
