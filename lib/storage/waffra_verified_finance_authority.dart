@@ -215,6 +215,7 @@ class WaffraVerifiedFinanceAuthority {
     required WaffraFinanceRoute route,
     required WaffraFinanceAuthorityRead baseline,
     required Map<String, Object> captured,
+    bool userConfirmed = false,
   }) async {
     // Capture caller-owned values synchronously, before ANY awaited source
     // probe. A queued Home edit can otherwise mutate the map while the OS
@@ -269,6 +270,24 @@ class WaffraVerifiedFinanceAuthority {
       await encryptedSession!.saveDashboardBatch(
         baseline: witness,
         captured: immutableCapture,
+      );
+      return load(route: route);
+    }
+    if (backend == WaffraRuntimeFinanceBackend.verifiedEncrypted &&
+        route == WaffraFinanceRoute.deleteAllTransactions) {
+      final witness = baseline.encryptedWitness;
+      final expectedFields = immutableCapture.keys.toSet();
+      if (!userConfirmed || witness == null ||
+          expectedFields.length != 2 ||
+          !expectedFields.contains('entries') ||
+          !expectedFields.contains('waffra_sms_hashes_v1') ||
+          immutableCapture['entries'] != '[]' ||
+          immutableCapture['waffra_sms_hashes_v1'] is! List<String> ||
+          (immutableCapture['waffra_sms_hashes_v1'] as List<String>).isNotEmpty) {
+        throw StateError('Encrypted delete-all requires exact consent and scope.');
+      }
+      await encryptedSession!.deleteAllUnattachedTransactions(
+        baseline: witness, userConfirmed: true,
       );
       return load(route: route);
     }
