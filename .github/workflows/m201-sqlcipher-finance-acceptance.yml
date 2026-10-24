@@ -1,0 +1,102 @@
+name: M201 SQLCipher Routes, Migration and Receipt Acceptance (CI ONLY)
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    paths:
+      - 'test/storage/m201_24_route_no_false_production_proof_test.dart'
+      - '.github/workflows/m201-sqlcipher-finance-acceptance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m201-finance-acceptance-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-route-migration-and-receipt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout exact reviewed head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Fail if finance test or evidence policy is changed unexpectedly
+        shell: bash
+        env:
+          REVIEW_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$REVIEW_SHA"
+          python3 scripts/qa/m189_physical_device_source_probe.py --check-contract
+          python3 -m unittest discover -s test/qa -p 'm189_physical_device_source_probe_test.py'
+          python3 - <<'PY'
+          from pathlib import Path
+          src = Path('lib/storage/waffra_production_cutover_release_gate.dart').read_text()
+          assert 'bool get automaticallyActivateSqlCipher => false;' in src
+          doc = Path('docs/qa/m201-24-route-migration-receipt-device-acceptance.md').read_text()
+          assert 'NO-GO' in doc and 'two physical' in doc
+          PY
+      - name: Install Flutter stable
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Get dependencies
+        run: flutter pub get
+      - name: Analyze new route acceptance tests
+        run: dart analyze test/storage/m201_24_route_no_false_production_proof_test.dart
+      - name: Verify source selection, migration, receipts, backup restore and reset
+        shell: bash
+        run: |
+          flutter test --reporter expanded \
+            test/storage/m201_24_route_no_false_production_proof_test.dart \
+            test/storage/m90_finance_route_audit_matrix_test.dart \
+            test/storage/m100_runtime_finance_route_contract_test.dart \
+            test/storage/production_finance_authority_binding_test.dart \
+            test/storage/live_finance_migration_rehearsal_test.dart \
+            test/storage/m178_restore_receipt_parity_test.dart \
+            test/storage/m102_restored_finance_receipt_attestor_test.dart \
+            test/storage/m183_encrypted_transaction_recycle_test.dart \
+            test/storage/m185_encrypted_module_recycle_test.dart \
+            test/storage/m186_module_authority_ui_gate_test.dart \
+            test/storage/m187_active_restore_preflight_test.dart \
+            test/storage/m188_encrypted_full_finance_reset_test.dart \
+            test/storage/portable_encrypted_vault_restorer_test.dart \
+            test/storage/m123_production_cutover_release_gate_test.dart
+      - name: Export non-authorizing CI evidence
+        if: success()
+        env:
+          REVIEW_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          mkdir -p build/m201
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          report = {
+            "reviewed_commit": os.environ["REVIEW_SHA"],
+            "source_route_contract_count": 24,
+            "route_contract_and_synthetic_storage_suite": "PASSED",
+            "migration_receipt_backup_reset_regression": "PASSED",
+            "live_android_route_witnesses": 0,
+            "physical_phones_attested": 0,
+            "two_phone_source_backed_restore": False,
+            "real_key_recovery_attested": False,
+            "source_cutover_approved": False,
+            "production_eligible": False,
+            "google_play_authorized": False,
+            "status": "CI_TESTS_ONLY_PHYSICAL_EVIDENCE_MISSING_NO_GO"
+          }
+          Path("build/m201/acceptance.json").write_text(json.dumps(report, indent=2)+"\n")
+          PY
+      - name: Upload CI-only acceptance result
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m201-finance-acceptance-ci-only-not-live-route-proof
+          path: build/m201/acceptance.json
+          if-no-files-found: error
