@@ -47,7 +47,7 @@ void main() {
     await expectLater(
       persistence.commitConfirmedLegacySms(
         records: [sms('one', notes: 'Sensitive raw bank SMS')],
-        messageHashes: ['a' * 64],
+        messageHashes: [List.filled(64, 'a').join()],
         userConfirmed: true,
       ),
       throwsA(isA<StateError>()),
@@ -63,7 +63,7 @@ void main() {
       () async {
     final result = await persistence.commitConfirmedLegacySms(
       records: [sms('safe')],
-      messageHashes: ['b' * 64],
+      messageHashes: [List.filled(64, 'b').join()],
       userConfirmed: true,
     );
     expect(result.added, 1);
