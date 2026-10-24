@@ -36,8 +36,17 @@ void main() {
     expect(
       'await persist(route:WaffraFinanceRoute.recurringPostingAndPostponement);'
         .allMatches(home).length,
-      2, reason: 'Both recurring paid AND postponed paths must be tagged.',
+      1, reason: 'Only the postpone-only action uses the scalar path.',
     );
+    expect(
+      'await persist(route:WaffraFinanceRoute.recurringPostingAndPostponement,'
+        .allMatches(home).length,
+      1, reason: 'The Paid path must retain its recurring route intent.',
+    );
+    expect(home, contains(
+      'await persist(route:WaffraFinanceRoute.recurringPostingAndPostponement,'
+      '\n      userConfirmed:true);'
+    ), reason: 'Paid requires explicit user confirmation.');
   });
 
   test('M175 guarded legacy routes remain eligible, without any cutover', () {

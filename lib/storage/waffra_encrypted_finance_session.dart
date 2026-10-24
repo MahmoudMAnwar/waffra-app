@@ -71,6 +71,23 @@ class WaffraEncryptedFinanceSession {
     );
   }
 
+  /// Combined recurring transaction and cleared postponement are committed
+  /// through one verified SQLCipher Home/Widget lock and one SQL transaction.
+  Future<WaffraFinanceSnapshotState> commitRecurringPayment({
+    required WaffraEncryptedHomeWitness baseline,
+    required Map<String, Object?> record,
+    required String proposedPostponedJson,
+    required bool userConfirmed,
+  }) async {
+    _requireEnabled();
+    return bridge.commitRecurringPayment(
+      baseline: baseline,
+      record: record,
+      proposedPostponedJson: proposedPostponedJson,
+      userConfirmed: userConfirmed,
+    );
+  }
+
   /// The widget revision is the actual monotonic SQLCipher generation.
   Future<WaffraEncryptedHomeWitness> loadForDashboardOrWidget() async {
     _requireEnabled();
