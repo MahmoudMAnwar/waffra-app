@@ -23,7 +23,7 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Original M147 UI-only, SHA-pinned scope review
-        if: github.head_ref != 'integration/m160-reconcile-main-m158-release-gate-20261023' && github.head_ref != 'qa/m174-main-sha-postmerge-20261024' && github.head_ref != 'feature/m175-explicit-finance-intent-routes' && github.head_ref != 'feature/m176-module-finance-route-intents' && github.head_ref != 'feature/m177-live-finance-authority-completion' && github.head_ref != 'feature/m178-restore-receipt-parity-preflight' && github.head_ref != 'feature/m179-encrypted-recurring-scalar-main' && github.head_ref != 'feature/m180-encrypted-custom-goal-suggestions-main' && github.head_ref != 'feature/m181-sqlcipher-route-coverage-main' && github.head_ref != 'feature/m182-encrypted-recurring-paid-main' && github.head_ref != 'feature/m183-verified-transaction-home-main' && github.head_ref != 'feature/m185-encrypted-module-recycle-main'
+        if: github.head_ref != 'integration/m160-reconcile-main-m158-release-gate-20261023' && github.head_ref != 'qa/m174-main-sha-postmerge-20261024' && github.head_ref != 'feature/m175-explicit-finance-intent-routes' && github.head_ref != 'feature/m176-module-finance-route-intents' && github.head_ref != 'feature/m177-live-finance-authority-completion' && github.head_ref != 'feature/m178-restore-receipt-parity-preflight' && github.head_ref != 'feature/m179-encrypted-recurring-scalar-main' && github.head_ref != 'feature/m180-encrypted-custom-goal-suggestions-main' && github.head_ref != 'feature/m181-sqlcipher-route-coverage-main' && github.head_ref != 'feature/m182-encrypted-recurring-paid-main' && github.head_ref != 'feature/m183-verified-transaction-home-main' && github.head_ref != 'feature/m185-encrypted-module-recycle-main' && github.head_ref != 'feature/m186-verified-module-trash-routing'
         env:
           REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: python3 scripts/m147_main_merge_readiness_audit.py
@@ -82,6 +82,11 @@ jobs:
         env:
           REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: python3 scripts/qa/m185_module_recycle_scope_review.py
+      - name: M186 exact-SHA Home encrypted module trash authority and UI (NO-GO)
+        if: github.head_ref == 'feature/m186-verified-module-trash-routing'
+        env:
+          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python3 scripts/qa/m186_module_home_route_review.py
       - name: M161 guarded experimental integration review (not release approval)
         if: github.head_ref == 'integration/m160-reconcile-main-m158-release-gate-20261023'
         env:
