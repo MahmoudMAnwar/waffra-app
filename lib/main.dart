@@ -3983,7 +3983,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final attachmentCount=waffraReceiptPaths(e.receiptPath).length;
   return Card(color:e.income?waffraIncomeBackground:waffraExpenseBackground,
    child:Stack(children:[
-    Padding(padding:EdgeInsets.only(top:attachmentCount>0?37:0),child:ListTile(
+    Padding(padding:EdgeInsets.only(top:attachmentCount>0?29:0),child:ListTile(
    textColor:waffraInk,iconColor:forest,
    leading:CircleAvatar(backgroundColor:Color(c.color).withValues(alpha:.15),
     child:Icon(categoryIcon(c.icon),color:Color(c.color))),
@@ -4487,44 +4487,40 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final cat=categoryFor(entry.category,entry.income);
   final valueColor=entry.income?waffraIncomeTone(context):Colors.deepOrange;
   final darkMode=Theme.of(context).brightness==Brightness.dark;
+  final count=waffraReceiptPaths(entry.receiptPath).length;
   final rowColor=entry.income?(darkMode?const Color(0xFF244C3A):const Color(0xFFB2D5C2)):
    (darkMode?const Color(0xFF49302C):const Color(0xFFFCECE8));
   return Padding(padding:const EdgeInsets.symmetric(vertical:5),child:Container(
    decoration:BoxDecoration(color:rowColor,borderRadius:BorderRadius.circular(17),
     border:Border.all(color:forest.withValues(alpha:darkMode ? 0.18 : 0.08))),
-   child:Padding(padding:const EdgeInsets.symmetric(horizontal:11,vertical:12),child:Row(children:[
-    CircleAvatar(radius:18,
-     backgroundColor:Color(cat.color).withValues(alpha:0.13),
-     child:Icon(categoryIcon(cat.icon),size:19,color:Color(cat.color))),
-    const SizedBox(width:8),
-    Expanded(child:InkWell(onTap:()=>transactionDetails(entry),
-     child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      Row(children:[
-       Expanded(child:WaffraText(entry.title,maxLines:1,
-        style:const TextStyle(fontSize:13,fontWeight:FontWeight.w600))),
-       if(waffraReceiptPaths(entry.receiptPath).isNotEmpty)...[
-        const SizedBox(width:4),
-        InkWell(onTap:()=>showReceipt(entry.receiptPath!),
-         child:Row(mainAxisSize:MainAxisSize.min,children:[
-          Icon(Icons.attach_file_rounded,size:17,color:darkMode?Colors.white70:forest),
-          if(waffraReceiptPaths(entry.receiptPath).length>1)
-           Text('${waffraReceiptPaths(entry.receiptPath).length}',
-            style:TextStyle(fontSize:11,color:darkMode?Colors.white70:forest)),
-         ])),
-       ],
-      ]),
-      const SizedBox(height:2),
-      WaffraText(waffraTr(entry.category)+' • '+dayText(entry.date),
-       maxLines:1,style:const TextStyle(fontSize:11,color:Colors.grey)),
-     ]))),
-    const SizedBox(width:5),
-    ConstrainedBox(constraints:const BoxConstraints(maxWidth:119),
-     child:FittedBox(fit:BoxFit.scaleDown,
-      child:WaffraCurrencyAmount(entry.income?entry.amount:-entry.amount,
-       fontSize:15,color:valueColor))),
-    IconButton(tooltip:waffraIsEnglish?'Transaction options':'خيارات المعاملة',
-     onPressed:()=>transactionActions(entry),icon:const Icon(Icons.more_vert,size:18)),
-   ]))));
+   child:Stack(children:[
+    Padding(padding:EdgeInsets.fromLTRB(11,count>0?29:12,11,12),child:Row(children:[
+     CircleAvatar(radius:18,
+      backgroundColor:Color(cat.color).withValues(alpha:0.13),
+      child:Icon(categoryIcon(cat.icon),size:19,color:Color(cat.color))),
+     const SizedBox(width:8),
+     Expanded(child:InkWell(onTap:()=>transactionDetails(entry),
+      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+       WaffraText(entry.title,maxLines:1,
+        style:const TextStyle(fontSize:13,fontWeight:FontWeight.w600)),
+       const SizedBox(height:2),
+       WaffraText(waffraTr(entry.category)+' • '+dayText(entry.date),
+        maxLines:1,style:const TextStyle(fontSize:11,color:Colors.grey)),
+      ]))),
+     const SizedBox(width:5),
+     ConstrainedBox(constraints:const BoxConstraints(maxWidth:119),
+      child:FittedBox(fit:BoxFit.scaleDown,
+       child:WaffraCurrencyAmount(entry.income?entry.amount:-entry.amount,
+        fontSize:15,color:valueColor))),
+     IconButton(tooltip:waffraIsEnglish?'Transaction options':'خيارات المعاملة',
+      onPressed:()=>transactionActions(entry),icon:const Icon(Icons.more_vert,size:18)),
+    ])),
+    if(count>0)PositionedDirectional(top:0,end:0,
+     child:Semantics(label:waffraIsEnglish?'$count attachments':'عدد المرفقات $count',
+      button:true,child:InkWell(
+       onTap:()=>showReceipt(entry.receiptPath!),
+       child:WaffraReceiptCornerBadge(count:count,english:waffraIsEnglish)))),
+   ])));
  }
  Widget dashboard(){
   final inc=sum(entries,true),exp=sum(entries,false);
@@ -7821,19 +7817,12 @@ class WaffraReceiptCornerBadge extends StatelessWidget {
   return ClipPath(
    clipper:WaffraReceiptCornerClipper(english:english),
    child:Container(
-    width:64,height:43,color:forest,
-    alignment:english?Alignment.topRight:Alignment.topLeft,
-    padding:EdgeInsets.only(
-     top:3,
-     left:english?0:10,
-     right:english?10:0,
-    ),
-    child:Column(mainAxisSize:MainAxisSize.min,children:[
-     const Icon(Icons.attach_file_rounded,color:Colors.white,size:14),
-     Text('$count',style:const TextStyle(
-      fontFamily:'Tajawal',fontSize:13,color:Colors.white,
-      fontWeight:FontWeight.bold,height:1.1)),
-    ]),
+    width:54,height:35,color:forest,
+    alignment:Alignment.center,
+    padding:EdgeInsetsDirectional.only(start:english?3:0,end:english?0:3),
+    child:Text('$count',style:const TextStyle(
+     fontFamily:'Tajawal',fontSize:16,color:Colors.white,
+     fontWeight:FontWeight.bold,height:1.1)),
    ),
   );
  }
