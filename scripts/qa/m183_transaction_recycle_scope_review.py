@@ -56,7 +56,7 @@ def main() -> None:
         "Financial transaction changed; reload to delete.",
         "Transaction recovery clock expired or rolled back.",
         "Restored receipt images failed byte parity.",
-        "return snapshot.commit(",
+        "await snapshot.commit(",
         "retention = Duration(days: 30)",
         "experimentalEnabled = false",
     ]:
