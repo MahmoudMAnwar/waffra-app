@@ -792,6 +792,29 @@ jobs:
                   print('No test-only integration plugin in Java registrar')
           PY
 
+      # Identity is compiled *inside* the Android package so an external
+      # text receipt alone cannot certify a stale or cached APK.
+      - name: Stamp exact source revision into Android APK assets
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          SOURCE_BRANCH: ${{ github.ref_name }}
+          SOURCE_RUN: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          test "$SOURCE_SHA" = "$(git rev-parse HEAD)"
+          python3 - <<'PY'
+          import json, os, pathlib
+          path = pathlib.Path('android/app/src/main/assets/waffra-build-identity.json')
+          path.parent.mkdir(parents=True, exist_ok=True)
+          path.write_text(json.dumps({
+              'commit_sha': os.environ['SOURCE_SHA'],
+              'branch': os.environ['SOURCE_BRANCH'],
+              'workflow_run': os.environ['SOURCE_RUN'],
+              'build_type': 'qa-android-arm64',
+          }, sort_keys=True) + '\n', encoding='utf-8')
+          PY
+
       - name: Build optimized ARM64 Release APK
         shell: bash
         env:
@@ -942,6 +965,48 @@ jobs:
           path: .ci_cache/waffra_green_tests.json
           key: waffra-smart-tests-v2-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
 
+      # Fail closed if compiled APK differs from checkout, if another
+      # commit was pushed while the build was running, or if APK is invalid.
+      # Previous QA artifacts may still exist but are not current releases.
+      - name: Gate QA APK on embedded SHA and current branch head
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          SOURCE_BRANCH: ${{ github.ref_name }}
+          SOURCE_RUN: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          test "$SOURCE_SHA" = "$(git rev-parse HEAD)"
+          latest=$(git ls-remote origin "refs/heads/$SOURCE_BRANCH" | awk '{print $1}')
+          test -n "$latest"
+          if [ "$latest" != "$SOURCE_SHA" ]; then
+            echo "::error::BLOCKED stale APK: branch moved to $latest from $SOURCE_SHA"
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json, os, pathlib, zipfile
+          p = pathlib.Path('build/app/outputs/flutter-apk/app-release.apk')
+          if not p.is_file() or p.stat().st_size == 0:
+              raise SystemExit('BLOCKED: signed APK missing or empty')
+          with zipfile.ZipFile(p) as z:
+              identity_file = 'assets/waffra-build-identity.json'
+              if identity_file not in z.namelist():
+                  raise SystemExit('BLOCKED: APK missing compiled source identity')
+              actual = json.loads(z.read(identity_file))
+              if z.testzip() is not None:
+                  raise SystemExit('BLOCKED: APK archive is corrupt')
+          expected = {
+              'commit_sha': os.environ['SOURCE_SHA'],
+              'branch': os.environ['SOURCE_BRANCH'],
+              'workflow_run': os.environ['SOURCE_RUN'],
+              'build_type': 'qa-android-arm64',
+          }
+          if actual != expected:
+              raise SystemExit('BLOCKED: packaged APK identity does not match checked-out source and workflow')
+          print('PASS: compiled APK identity exactly matches source commit, branch and build run')
+          PY
+          echo "✅ Exact commit and packaged APK verified: $SOURCE_SHA" >> "$GITHUB_STEP_SUMMARY"
+
       # Attach a human-readable receipt to identify the exact verified
       # APK revision before installation. This is a QA artifact, not a
       # certification of SQLCipher production cutover or device tests.
@@ -965,6 +1030,8 @@ jobs:
               'Source branch: ' + os.environ['SOURCE_BRANCH'],
               'GitHub Actions run: ' + os.environ['SOURCE_RUN'],
               'APK sha256: ' + digest,
+              'Proof: embedded Android asset commit, branch and run were verified.',
+              'Proof: verified SHA was still current branch HEAD before publication.',
               'Build: signed ARM64 QA candidate; NOT Google Play release.',
               'Required before this APK is published: full Flutter/Python tests,',
               'same-commit independent workflow success and Android build checks.',
@@ -988,7 +1055,7 @@ jobs:
       - name: Publish signed QA APK (FINAL step)
         uses: actions/upload-artifact@v4
         with:
-          name: Waffra-Android-ARM64-Release
+          name: Waffra-Android-ARM64-Release-${{ github.sha }}
           path: |
             build/app/outputs/flutter-apk/app-release.apk
             build/waffra-qa-build-receipt.txt
