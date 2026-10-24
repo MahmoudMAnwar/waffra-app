@@ -310,6 +310,29 @@ void main() {
     expect(await typedCount(), 0);
   });
 
+  test('M183 changed archived financial amount cannot silently restore',
+      () async {
+    await seed();
+    await recycle.delete(
+      baseline: await snapshot.read(), entryId: id,
+      expectedImageHashes: <String>[hash(imageBytes)],
+      now: deletedAt, userConfirmed: true,
+    );
+    final altered = entry(hasImage: true)..['amount'] = 955.25;
+    await store.customStatement(
+      'UPDATE fresh_finance_transaction_recycle SET source_json=? '
+      'WHERE entry_id=?',
+      [jsonEncode(altered), id],
+    );
+    final old = await snapshot.read();
+    await expectLater(recycle.restore(
+      baseline: old, entryId: id,
+      now: deletedAt.add(const Duration(hours: 1)),
+    ), throwsStateError);
+    expect((await snapshot.read()).digest, old.digest);
+    expect(await typedCount(), 0);
+  });
+
   test('M183 source activation conflict blocks both delete and restore',
       () async {
     await seed();
