@@ -2189,14 +2189,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       (existing.income==suggestion.income&&existing.name==suggestion.name)))continue;
     categories.add(suggestion);
    }
-   await _homeFinancePersistence.withLegacyWriter((current) async {
-    final saved=await current.setString('waffra_categories_v24',
-      jsonEncode(categories.map((e)=>e.toJson()).toList()));
-    if(!saved)throw StateError('Could not save category catalog.');
-    if(!await current.setBool('waffra_category_catalog_v2_installed',true)){
-     throw StateError('Could not confirm category catalog installation.');
-    }
-   });
+   final committed=await _financeAuthority.installCategoryCatalog(
+    version:2,
+    expectedCatalogRaw:_lastFinanceAuthorityRead?.finance.getString('waffra_categories_v24'),
+    nextCatalogRaw:jsonEncode(categories.map((e)=>e.toJson()).toList()),
+    catalogChanged:true,
+   );
+   _lastFinanceAuthorityRead=committed;
+   _lastLedgerSavedRaw=committed.ledgerRaw;
+   _lastWidgetRevision=committed.widgetRevision;
   }
   // Incremental catalog update: retain existing user budgets, names and deletions.
   // A subcategory is only added when its main category is present.
@@ -2221,16 +2222,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     categories.add(suggestion);
     catalogChanged=true;
    }
-   await _homeFinancePersistence.withLegacyWriter((current) async {
-    if(catalogChanged){
-     final saved=await current.setString('waffra_categories_v24',
-       jsonEncode(categories.map((e)=>e.toJson()).toList()));
-     if(!saved)throw StateError('Could not update category catalog.');
-    }
-    if(!await current.setBool('waffra_category_catalog_v3_installed',true)){
-     throw StateError('Could not confirm category catalog update.');
-    }
-   });
+   final committed=await _financeAuthority.installCategoryCatalog(
+    version:3,
+    expectedCatalogRaw:_lastFinanceAuthorityRead?.finance.getString('waffra_categories_v24'),
+    nextCatalogRaw:jsonEncode(categories.map((e)=>e.toJson()).toList()),
+    catalogChanged:catalogChanged,
+   );
+   _lastFinanceAuthorityRead=committed;
+   _lastLedgerSavedRaw=committed.ledgerRaw;
+   _lastWidgetRevision=committed.widgetRevision;
   }
   smsHashes.addAll(financeView.getStringList('waffra_sms_hashes_v1')??const []);
   monthlyBudget=financeView.getDouble('waffra_monthly_budget_v1')??0;
@@ -2317,18 +2317,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
 
  Future<void> _persistSmsHashes(Set<String> hashesToSave)async {
-  await _homeFinancePersistence.withLegacyWriter((prefs) async {
-   // Preserve hashes added by the standalone widget while the dashboard
-   // was open. Never replace the newer list with a cached UI copy.
-   final combined={
-    ...?prefs.getStringList('waffra_sms_hashes_v1'),
-    ...hashesToSave,
-   };
-   final saved=await prefs.setStringList(
-    'waffra_sms_hashes_v1',combined.toList()..sort());
-   if(!saved)throw StateError('SMS deduplication hash save failed.');
-   smsHashes.addAll(combined);
-  });
+  // Home and Widget now merge only SHA-256 fingerprints through the same
+  // source selector. SQLCipher activation cannot fall back to preferences.
+  final committed=await _financeAuthority.mergeSmsHashes(hashesToSave);
+  _lastFinanceAuthorityRead=committed;
+  _lastLedgerSavedRaw=committed.ledgerRaw;
+  _lastWidgetRevision=committed.widgetRevision;
+  smsHashes..clear()..addAll(
+   committed.finance.getStringList('waffra_sms_hashes_v1')??const <String>[]);
  }
 
  Future<void> syncRecurringReminders()async {
@@ -2355,11 +2351,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     return;
    }
   }
-  await _homeFinancePersistence.withLegacyWriter((prefs) async {
-   if(!await prefs.setBool('waffra_recurring_reminders_enabled_v1',enabled)){
-    throw StateError('Recurring reminder preference could not be saved.');
-   }
-  });
+  final committed=await _financeAuthority.setRecurringReminderPreference(enabled);
+  _lastFinanceAuthorityRead=committed;
+  _lastLedgerSavedRaw=committed.ledgerRaw;
+  _lastWidgetRevision=committed.widgetRevision;
   if(!mounted)return;
   setState(()=>recurringRemindersEnabled=enabled);
   try {
@@ -2969,6 +2964,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   DateTime date=initial?.date??DateTime.now();
    String? suggestion,pendingHash,receiptPath=initial?.receiptPath;
    bool attempted=false;
+   bool explicitlyApprovedSmsDuplicate=false;
   Timer? debounce;
   final result=await showModalBottomSheet<MoneyEntry>(
    context:context,isScrollControlled:true,showDragHandle:true,
@@ -3172,6 +3168,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
           actions:[TextButton(onPressed:()=>Navigator.pop(dialogContext,false),child:const WaffraText('إلغاء')),
            FilledButton(onPressed:()=>Navigator.pop(dialogContext,true),child:const WaffraText('إضافة على أي حال'))]));
          if(proceed!=true||!sheetContext.mounted)return;
+         explicitlyApprovedSmsDuplicate=true;
         }
         pendingHash=h;
        }
@@ -3199,27 +3196,58 @@ Future<void> bulkSmsSheet({String? initialText})async {
   }
   final previousSpent=sum(entries.where((e)=>!e.income&&e.id!=result.id&&
    e.category==result.category&&e.date.year==result.date.year&&e.date.month==result.date.month),false);
-  setState((){
-   final i=entries.indexWhere((e)=>e.id==result.id);
-   if(i>=0)entries[i]=result;else entries.insert(0,result);
-   // Learn only explicit corrections made by the user, not assumptions
-   // generated by bank message parsing.
-   if(initial!=null&&initial.category!=result.category){
-    final merchant=initial.merchantKey.isNotEmpty?
-     initial.merchantKey:waffraMerchantKey(initial.title,income:initial.income);
-    if(merchant!=null&&merchant.isNotEmpty){
-     learnedMerchantCategories[merchant]=result.category;
-    }
+  if(pendingHash!=null&&initial==null){
+   // A single reviewed bank SMS must commit both its transaction and
+   // fingerprint atomically under the same Home/Widget source and journal.
+   // The writer independently checks duplicates again after taking the lock.
+   final applied=await _financeAuthority.commitConfirmedSms(
+    route:WaffraFinanceRoute.bulkSmsConfirmedSave,
+    records:[Map<String,Object?>.from(result.toJson())],
+    hashes:[pendingHash!],
+    userConfirmed:true,
+    allowDuplicateHashes:explicitlyApprovedSmsDuplicate,
+   );
+   if(applied.saved!=1){
+    if(mounted)snack(context,waffraIsEnglish?
+     'This bank transaction was already saved. Review before retrying.':
+     'العملية البنكية محفوظة بالفعل. راجعها قبل المحاولة مجددًا.');
+    return;
    }
-  });
-  // New manual additions and edits have distinct source-gate intents.
-  // Encrypted unsupported routes must fail closed, never masquerade as edits.
-  await persist(route:initial==null
+   final verified=(jsonDecode(applied.current.ledgerRaw??'[]') as List)
+    .map((item)=>MoneyEntry.fromJson(Map<String,dynamic>.from(item as Map)))
+    .toList();
+   if(!mounted)return;
+   setState((){
+    entries..clear()..addAll(verified);
+    smsHashes..clear()..addAll(
+     applied.current.finance.getStringList('waffra_sms_hashes_v1')??const <String>[]);
+    _lastFinanceAuthorityRead=applied.current;
+    _lastLedgerSavedRaw=applied.current.ledgerRaw;
+    _lastWidgetRevision=applied.current.widgetRevision;
+   });
+   unawaited(_refreshWidget());
+  }else{
+   setState((){
+    final i=entries.indexWhere((e)=>e.id==result.id);
+    if(i>=0)entries[i]=result;else entries.insert(0,result);
+    // Learn only explicit corrections made by the user, not assumptions
+    // generated by bank message parsing.
+    if(initial!=null&&initial.category!=result.category){
+     final merchant=initial.merchantKey.isNotEmpty?
+      initial.merchantKey:waffraMerchantKey(initial.title,income:initial.income);
+     if(merchant!=null&&merchant.isNotEmpty){
+      learnedMerchantCategories[merchant]=result.category;
+     }
+    }
+   });
+   // Manual edits remain separately source-gated. No encrypted shortcut.
+   await persist(route:initial==null
    ?WaffraFinanceRoute.manualTransactionSave
    :WaffraFinanceRoute.transactionEdit);
-  if(pendingHash!=null){
-   smsHashes.add(pendingHash!);
-   await _persistSmsHashes(smsHashes);
+   if(pendingHash!=null){
+    // Existing transaction edits still need independent receipt/SMS review.
+    await _persistSmsHashes({pendingHash!});
+   }
   }
   if(mounted)await budgetAlert(result,previousSpent);
   if(initial!=null&&mounted){
@@ -5330,7 +5358,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     color:selected?Colors.white:null,fontWeight:selected?FontWeight.bold:FontWeight.normal));
  Future<void> goalDialog()async {
   final name=TextEditingController(),target=TextEditingController();
-  final customGoals=await _homeFinancePersistence.loadCustomGoalSuggestions();
+  final customGoals=await _financeAuthority.loadCustomGoalSuggestions();
   if(!mounted){name.dispose();target.dispose();return;}
   final defaults=waffraDefaultGoalNames(waffraIsEnglish);
   final allDefaultNames={
@@ -5463,7 +5491,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    if(selectedGoal==otherGoal){
     final key=waffraNormalizeGoal(g.name);
     if(!allDefaultNames.contains(key)&&!customGoals.any((entry)=>waffraNormalizeGoal(entry)==key)){
-     await _homeFinancePersistence.addCustomGoalSuggestion(g.name);
+     await _financeAuthority.addCustomGoalSuggestion(g.name);
     }
    }
    if(!mounted)return;
@@ -6253,23 +6281,37 @@ Future<void> bulkSmsSheet({String? initialText})async {
     actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))]);
   }));
  }
- String exportBackup()=>const JsonEncoder.withIndent('  ').convert({
-  'format':'waffra-backup','version':24,'exportedAt':DateTime.now().toIso8601String(),
-  'entries':entries.map((e)=>e.toJson()).toList(),
-  'categories':categories.map((e)=>e.toJson()).toList(),
-  'goals':goals.map((e)=>e.toJson()).toList(),
-  'recurring':recurring.map((e)=>e.toJson()).toList(),
-  'challenges':challenges.map((e)=>e.toJson()).toList(),
-  'deletedCategories':deletedCategories,
-  'deletedGoals':deletedGoals,
-  'deletedRecurring':deletedRecurring,
-  'recurringPostponed':recurringPostponed,
-  'monthlyBudget':monthlyBudget,
-  'monthlyBudgetEnabled':monthlyBudgetEnabled,
-  'learnedMerchants':learnedMerchantCategories,
-  'smsHashes':(smsHashes.toList()..sort()),
-  'profile':widget.profile.toJson(),
- });
+ String exportBackup({WaffraFinanceAuthorityRead? fromSource}) {
+  // A real backup must reflect a single immutable, verified finance source,
+  // not a cached Home list after a simultaneous Android widget save.
+  final finance=fromSource?.finance;
+  Object listValue(String key,Object fallback)=>
+   finance==null?fallback:jsonDecode(finance.getString(key)??'[]');
+  Object mapValue(String key,Object fallback)=>
+   finance==null?fallback:jsonDecode(finance.getString(key)??'{}');
+  final sourceBudget=finance?.getDouble('waffra_monthly_budget_v1')??0;
+  final payload={
+   'format':'waffra-backup','version':24,
+   'exportedAt':DateTime.now().toIso8601String(),
+   'entries':listValue('entries',entries.map((e)=>e.toJson()).toList()),
+   'categories':listValue('waffra_categories_v24',categories.map((e)=>e.toJson()).toList()),
+   'goals':listValue('waffra_goals_v24',goals.map((e)=>e.toJson()).toList()),
+   'recurring':listValue('waffra_recurring_v24',recurring.map((e)=>e.toJson()).toList()),
+   'challenges':listValue('waffra_challenges_v1',challenges.map((e)=>e.toJson()).toList()),
+   'deletedCategories':listValue('waffra_deleted_categories_v1',deletedCategories),
+   'deletedGoals':listValue('waffra_deleted_goals_v1',deletedGoals),
+   'deletedRecurring':listValue('waffra_deleted_recurring_v1',deletedRecurring),
+   'recurringPostponed':mapValue('waffra_recurring_postponed_v1',recurringPostponed),
+   'monthlyBudget':finance==null?monthlyBudget:sourceBudget,
+   'monthlyBudgetEnabled':finance==null?monthlyBudgetEnabled:
+    (finance.getBool('waffra_monthly_budget_enabled_v1')??(sourceBudget>0)),
+   'learnedMerchants':mapValue('waffra_learned_merchants_v1',learnedMerchantCategories),
+   'smsHashes':(List<String>.from(
+    finance?.getStringList('waffra_sms_hashes_v1')??smsHashes.toList())..sort()),
+   'profile':widget.profile.toJson(),
+  };
+  return const JsonEncoder.withIndent('  ').convert(payload);
+ }
  Future<bool> _authorizeSensitiveAction(String operation)async{
   if(!await WaffraBiometrics.isAvailable()){
    if(mounted)await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
@@ -6344,8 +6386,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
      }
      update(()=>exporting=true);
      try{
+      // Drain in-process saves, then snapshot the latest authoritative
+      // finance after any standalone Widget commit under the shared lock.
+      await _financialWriteQueue.drain();
+      final current=await _financeAuthority.load(
+       route:WaffraFinanceRoute.backupExport);
+      final authoritativePayload=exportBackup(fromSource:current);
       final encrypted=await compute(waffraEncryptBackupInIsolate,<String,String>{
-       'payload':exportBackup(),'password':secret.text,
+       'payload':authoritativePayload,'password':secret.text,
       });
       // Persist the encrypted archive only after system document picker confirms.
       // Never copy it to the system clipboard on export.

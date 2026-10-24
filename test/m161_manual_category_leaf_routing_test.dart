@@ -109,10 +109,20 @@ void main() {
     expect(source, contains('leafLabels:true'));
     expect(source, contains(
       'waffraTr(leafLabels?item.displayName:item.name)'));
-    final start = source.indexOf('if(pendingHash!=null){');
+    // A NEW bank-SMS transaction must atomically persist the entry AND hash
+    // through the same native Home/Widget journal. An older two-step writer
+    // was vulnerable to power loss between ledger and hash commits.
+    final start = source.indexOf('if(pendingHash!=null&&initial==null){');
     expect(start, greaterThanOrEqualTo(0));
-    final scoped = source.substring(start, start + 190);
-    expect(scoped, contains('await _persistSmsHashes(smsHashes)'));
-    expect(scoped, isNot(contains("p.setStringList('waffra_sms_hashes_v1'")));
+    final end = source.indexOf('}else{', start);
+    expect(end, greaterThan(start));
+    final scoped = source.substring(start, end);
+    expect(scoped, contains('_financeAuthority.commitConfirmedSms('));
+    expect(scoped, contains('hashes:[pendingHash!]'));
+    expect(scoped, contains('allowDuplicateHashes:explicitlyApprovedSmsDuplicate'));
+    expect(scoped, contains('if(applied.saved!=1){'));
+    expect(scoped, isNot(contains('await _persistSmsHashes(')));
+    expect(source, contains('await _persistSmsHashes({pendingHash!});'));
+    expect(source, isNot(contains("p.setStringList('waffra_sms_hashes_v1'")));
   });
 }
