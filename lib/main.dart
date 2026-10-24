@@ -2099,6 +2099,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  static const tourTabs=<int>[0,0,0,1,2,3];
  static const tourTargetKeys=<int>[-1,0,1,2,6,4];
  bool addFabExpanded=false;
+ bool _addActionOpening=false;
+ DateTime? _lastFabTapAt;
+ Future<void> _launchAddAction(Future<void> Function() action,{bool fromMenu=false})async{
+  if(_addActionOpening)return;
+  _addActionOpening=true;
+  if(mounted&&addFabExpanded)setState(()=>addFabExpanded=false);
+  try{
+   // Allow the menu to finish collapsing before presenting a sheet.
+   if(fromMenu)await Future<void>.delayed(waffraMotion(260));
+   if(mounted)await action();
+  }finally{_addActionOpening=false;}
+ }
+ bool _acceptFabTap(){
+  final now=DateTime.now();
+  if(_addActionOpening||(_lastFabTapAt!=null&&
+   now.difference(_lastFabTapAt!)<const Duration(milliseconds:280)))return false;
+  _lastFabTapAt=now;
+  return true;
+ }
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
  @override void initState(){super.initState();_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:()=>unawaited(_syncWidgetTransactions()));unawaited(_loadFinanceSafely());}
  void _returnToHome(){if(mounted)setState((){tab=0;goalsOpened=false;addFabExpanded=false;});}
@@ -7675,8 +7694,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
    mainAxisSize:MainAxisSize.min,
    // The expanded menu is aligned with the + on the active physical side.
    crossAxisAlignment:waffraIsEnglish?CrossAxisAlignment.end:CrossAxisAlignment.start,children:[
-    AnimatedSize(duration:const Duration(milliseconds:210),
-     curve:Curves.easeOutCubic,
+    AnimatedSize(duration:waffraMotion(260),
+      curve:Curves.easeInOutCubic,
      alignment:waffraIsEnglish?Alignment.bottomRight:Alignment.bottomLeft,
      child:addFabExpanded&&(tab==0||tab==1)&&!goalsOpened?Padding(
       padding:const EdgeInsets.only(bottom:9),
@@ -7687,41 +7706,43 @@ Future<void> bulkSmsSheet({String? initialText})async {
          icon:Icons.edit_note_rounded,
          label:waffraIsEnglish?'Manual transaction':'عملية يدوية',
          onTap:(){
-          setState(()=>addFabExpanded=false);
-          entrySheet();
+          unawaited(_launchAddAction(()=>entrySheet(),fromMenu:true));
          }),
         const SizedBox(height:7),
         _addMenuOption(
          icon:Icons.sms_outlined,
          label:waffraIsEnglish?'Bank message':'رسالة بنكية',
          onTap:(){
-          setState(()=>addFabExpanded=false);
-          bulkSmsSheet();
+          unawaited(_launchAddAction(()=>bulkSmsSheet(),fromMenu:true));
          }),
         ]else...[
          _addMenuOption(icon:Icons.trending_up,
           label:waffraIsEnglish?'Income category':'إضافة قسم دخل',
-          onTap:(){setState(()=>addFabExpanded=false);chooseCategoryLevel(income:true);}),
+          onTap:(){unawaited(_launchAddAction(()=>chooseCategoryLevel(income:true),fromMenu:true));}),
          const SizedBox(height:7),
          _addMenuOption(icon:Icons.trending_down,
           label:waffraIsEnglish?'Expense category':'إضافة قسم مصروفات',
-          onTap:(){setState(()=>addFabExpanded=false);chooseCategoryLevel(income:false);}),
+          onTap:(){unawaited(_launchAddAction(()=>chooseCategoryLevel(income:false),fromMenu:true));}),
         ],
        ])):const SizedBox.shrink()),
     Material(
-     color:forest,elevation:7,
+      key:_tourKeys[1],
+      color:forest,elevation:7,
      shadowColor:Colors.black26,
      shape:const CircleBorder(),
      child:InkWell(
       customBorder:const CircleBorder(),
       onTap:(){
-    if(goalsOpened||tab==2){goalDialog();return;}
-    if(tab==3){recurringDialog();return;}
-    setState(()=>addFabExpanded=!addFabExpanded);
-   },
-   child:SizedBox(key:_tourKeys[1],width:58,height:58,
-       child:AnimatedRotation(
-        duration:const Duration(milliseconds:210),
+     if(!_acceptFabTap())return;
+     if(goalsOpened||tab==2){unawaited(_launchAddAction(()=>goalDialog()));return;}
+     if(tab==3){unawaited(_launchAddAction(()=>recurringDialog()));return;}
+     setState(()=>addFabExpanded=!addFabExpanded);
+    },
+    splashFactory:NoSplash.splashFactory,
+    highlightColor:Colors.transparent,
+    child:SizedBox(width:58,height:58,
+        child:AnimatedRotation(
+         duration:waffraMotion(260),
         turns:addFabExpanded?0.125:0,
         child:Icon(addFabExpanded?Icons.close:Icons.add,
          color:Colors.white,size:28))),
