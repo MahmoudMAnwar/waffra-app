@@ -3124,7 +3124,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       TextField(controller:notes,onChanged:(_)=>update((){}),minLines:1,maxLines:4,
        readOnly:sms,
        decoration:InputDecoration(labelText:waffraIsEnglish?'Notes (optional)':'ملاحظات (اختياري)',
-        errorText:attempted&&!waffraTransactionNotesAllowed(notes.text,oldNotes:initial?.notes)
+        errorText:attempted&&!sms&&!waffraTransactionNotesAllowed(notes.text,oldNotes:initial?.notes)
          ?(waffraIsEnglish?'Notes cannot exceed 2,000 characters.':
            'الملاحظات لا تتجاوز 2000 حرف.'):null,
         border:const OutlineInputBorder())),
