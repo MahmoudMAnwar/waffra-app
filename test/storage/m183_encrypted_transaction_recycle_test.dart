@@ -434,6 +434,46 @@ void main() {
     expect((await receipts.readAll(id)).single.bytes, imageBytes);
   });
 
+  test('M183 every tampered typed financial column blocks deleted money',
+      () async {
+    await seed();
+    final trusted = await snapshot.read();
+    final cases = <String, Object?>{
+      'amount_minor': 99999,
+      'is_income': 1,
+      'title': 'Forged financial title',
+      'category_snapshot': 'Changed category',
+      'occurred_iso': '2026-10-23T09:00:00.000Z',
+    };
+    final originalValues = <String, Object?>{
+      'amount_minor': 1525,
+      'is_income': 0,
+      'title': 'Synthetic invoice',
+      'category_snapshot': 'Utilities',
+      'occurred_iso': '2026-10-24T09:00:00.000Z',
+    };
+    for (final changed in cases.entries) {
+      // The column name comes only from this static test map, not user input.
+      await store.customStatement(
+        'UPDATE fresh_finance_entries SET ${changed.key}=? WHERE entry_id=?',
+        [changed.value, id],
+      );
+      await expectLater(recycle.delete(
+        baseline: trusted, entryId: id,
+        expectedImageHashes: <String>[hash(imageBytes)],
+        now: deletedAt, userConfirmed: true,
+      ), throwsStateError);
+      expect((await snapshot.read()).digest, trusted.digest);
+      expect(await typedCount(), 1);
+      await store.customStatement(
+        'UPDATE fresh_finance_entries SET ${changed.key}=? WHERE entry_id=?',
+        [originalValues[changed.key], id],
+      );
+    }
+    expect((await receipts.readAll(id)).single.bytes, imageBytes);
+    expect(await recycle.pendingRecoveries(), isEmpty);
+  });
+
   test('M183 verified authority refuses source-less or stale delete witness',
       () async {
     await seed();
