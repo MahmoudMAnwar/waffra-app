@@ -497,6 +497,202 @@ void main() {
     expect((await snapshot.read()).values['entries'], contains(id));
   });
 
+  Future<WaffraPurgeClockProof> expiryProof(
+    DateTime osUtc, {
+    Duration independentOffset = Duration.zero,
+  }) async => WaffraPurgeClockProof(
+    osWitnessUtc: osUtc,
+    independentWitnessUtc: osUtc.add(independentOffset),
+  );
+
+  Future<void> deleteForExpiry({bool withReceipt = true}) async {
+    await seed(withReceipt: withReceipt);
+    await recycle.delete(
+      baseline: await snapshot.read(),
+      entryId: id,
+      expectedImageHashes: withReceipt
+          ? <String>[hash(imageBytes)]
+          : const <String>[],
+      now: deletedAt,
+      userConfirmed: true,
+    );
+  }
+
+  Future<int> archivedCount() async {
+    final rows = await store.customSelect(
+      'SELECT count(*) AS n FROM fresh_finance_transaction_recycle',
+    ).getSingle();
+    return rows.read<int>('n');
+  }
+
+  test('M184 unexpired 30-day transaction and invoice bytes are never purged',
+      () async {
+    await deleteForExpiry();
+    final current = await snapshot.read();
+    final check = await recycle.purgeExpired(
+      verifyIndependentClockUnderLock: () => expiryProof(
+        deletedAt.add(const Duration(days: 29, hours: 23)),
+      ),
+    );
+    expect(check.purged, 0);
+    expect(check.remaining, 1);
+    expect(await archivedCount(), 1);
+    final blobs = await store.customSelect(
+      'SELECT encrypted_blob FROM fresh_finance_transaction_recycle_blobs',
+    ).get();
+    expect(blobs.single.read<Uint8List>('encrypted_blob'), imageBytes);
+    expect((await snapshot.read()).digest, current.digest);
+  });
+
+  test('M184 exactly expired transaction plus invoice purge atomically',
+      () async {
+    await deleteForExpiry();
+    final current = await snapshot.read();
+    final purge = await recycle.purgeExpired(
+      verifyIndependentClockUnderLock: () => expiryProof(
+        deletedAt.add(const Duration(days: 30)),
+      ),
+    );
+    expect(purge.purged, 1);
+    expect(purge.remaining, 0);
+    expect(await archivedCount(), 0);
+    final blobCount = await store.customSelect(
+      'SELECT count(*) AS n FROM fresh_finance_transaction_recycle_blobs',
+    ).getSingle();
+    expect(blobCount.read<int>('n'), 0);
+    expect(await typedCount(), 0);
+    expect((await snapshot.read()).digest, current.digest);
+    final replay = await recycle.purgeExpired(
+      verifyIndependentClockUnderLock: () => expiryProof(
+        deletedAt.add(const Duration(days: 30, minutes: 1)),
+      ),
+    );
+    expect(replay.purged, 0);
+  });
+
+  test('M184 receipt-free expired transaction also purges safely',
+      () async {
+    await deleteForExpiry(withReceipt: false);
+    final result = await recycle.purgeExpired(
+      verifyIndependentClockUnderLock: () => expiryProof(
+        deletedAt.add(const Duration(days: 30, seconds: 1)),
+      ),
+    );
+    expect(result.purged, 1);
+    expect(await archivedCount(), 0);
+    expect(await typedCount(), 0);
+  });
+
+  test('M184 divergent independent clock witness cannot purge finance',
+      () async {
+    await deleteForExpiry();
+    final baseline = await snapshot.read();
+    await expectLater(recycle.purgeExpired(
+      verifyIndependentClockUnderLock: () => expiryProof(
+        deletedAt.add(const Duration(days: 35)),
+        independentOffset: const Duration(minutes: -5),
+      ),
+    ), throwsStateError);
+    expect(await archivedCount(), 1);
+    expect((await snapshot.read()).digest, baseline.digest);
+  });
+
+  test('M184 remembered encrypted expiry watermark blocks clock rollback',
+      () async {
+    await deleteForExpiry();
+    final late = deletedAt.add(const Duration(days: 31));
+    await recycle.purgeExpired(
+      verifyIndependentClockUnderLock: () => expiryProof(late),
+    );
+    final immutable = await snapshot.read();
+    await expectLater(recycle.purgeExpired(
+      verifyIndependentClockUnderLock: () => expiryProof(
+        late.subtract(const Duration(minutes: 1)),
+      ),
+    ), throwsStateError);
+    expect((await snapshot.read()).digest, immutable.digest);
+  });
+
+  test('M184 corrupted encrypted invoice blocks permanent expiry purge',
+      () async {
+    await deleteForExpiry();
+    await store.customStatement(
+      'UPDATE fresh_finance_transaction_recycle_blobs '
+      'SET encrypted_blob=? WHERE entry_id=?',
+      [Uint8List.fromList([1, 2, 3]), id],
+    );
+    final immutable = await snapshot.read();
+    await expectLater(recycle.purgeExpired(
+      verifyIndependentClockUnderLock: () => expiryProof(
+        deletedAt.add(const Duration(days: 32)),
+      ),
+    ), throwsStateError);
+    expect((await snapshot.read()).digest, immutable.digest);
+    expect(await archivedCount(), 1);
+  });
+
+  test('M184 tampered archived financial amount blocks expiry purge',
+      () async {
+    await deleteForExpiry();
+    await store.customStatement(
+      'UPDATE fresh_finance_transaction_recycle '
+      'SET source_json=? WHERE entry_id=?',
+      [jsonEncode(entry(hasImage: true)..['amount'] = 12345), id],
+    );
+    final immutable = await snapshot.read();
+    await expectLater(recycle.purgeExpired(
+      verifyIndependentClockUnderLock: () => expiryProof(
+        deletedAt.add(const Duration(days: 31)),
+      ),
+    ), throwsStateError);
+    expect((await snapshot.read()).digest, immutable.digest);
+    expect(await archivedCount(), 1);
+  });
+
+  test('M184 missing independent clock provider cannot purge data',
+      () async {
+    await deleteForExpiry();
+    final immutable = await snapshot.read();
+    await expectLater(recycle.purgeExpired(
+      verifyIndependentClockUnderLock: () async =>
+          throw StateError('No second independent clock attestor'),
+    ), throwsStateError);
+    expect(await archivedCount(), 1);
+    expect((await snapshot.read()).digest, immutable.digest);
+  });
+
+  test('M184 pending source marker blocks expired invoice purge', () async {
+    await deleteForExpiry();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(WaffraLiveLegacyFinanceGuard.pendingKey, true);
+    await expectLater(recycle.purgeExpired(
+      verifyIndependentClockUnderLock: () => expiryProof(
+        deletedAt.add(const Duration(days: 31)),
+      ),
+    ), throwsStateError);
+    expect(await archivedCount(), 1);
+  });
+
+  test('M184 purge batch bounds and disabled source fail closed', () async {
+    await deleteForExpiry();
+    final fake = () => expiryProof(deletedAt.add(const Duration(days: 31)));
+    await expectLater(recycle.purgeExpired(
+      verifyIndependentClockUnderLock: fake, maxBatch: 0,
+    ), throwsArgumentError);
+    await expectLater(recycle.purgeExpired(
+      verifyIndependentClockUnderLock: fake, maxBatch: 3,
+    ), throwsArgumentError);
+    final disabled = WaffraEncryptedTransactionRecycle(
+      snapshot: snapshot,
+      writerDirectory: temporary,
+      verifySourceUnderLock: sourceWitness,
+    );
+    await expectLater(disabled.purgeExpired(
+      verifyIndependentClockUnderLock: fake,
+    ), throwsStateError);
+    expect(await archivedCount(), 1);
+  });
+
   test('M183 disabled source rejects all deletions and metadata reads',
       () async {
     final disabled = WaffraEncryptedTransactionRecycle(
