@@ -216,6 +216,8 @@ void main() {
     await remove(WaffraFinanceModule.recurring, 'rent-24');
     await restore(WaffraFinanceModule.recurring, 'rent-24');
     expect((await live(WaffraFinanceModule.recurring)).single['day'], 24);
+    expect((await live(WaffraFinanceModule.recurring)).single['active'], false);
+    expect((await repository.list(WaffraFinanceModule.recurring)).single['active'], false);
     expect((await repository.list(WaffraFinanceModule.recurring)).length, 1);
   });
 
