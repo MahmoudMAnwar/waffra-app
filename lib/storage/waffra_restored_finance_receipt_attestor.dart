@@ -4,6 +4,7 @@ import 'package:crypto/crypto.dart';
 
 import 'waffra_atomic_finance_snapshot.dart';
 import 'waffra_encrypted_receipt_vault.dart';
+import 'waffra_restored_finance_parity.dart';
 import 'waffra_encrypted_store.dart';
 import 'waffra_portable_backup_v2.dart';
 import 'waffra_portable_encrypted_vault_restorer.dart';
@@ -33,6 +34,10 @@ class WaffraRestoredFinanceReceiptAttestor {
         reported.sourceChecksum != authenticatedArchive.sourceChecksum) {
       throw StateError('Restore checkpoint and authenticated archive disagree.');
     }
+    WaffraRestoredFinanceParity.requireExactFinanceKeys(
+      archive: authenticatedArchive.financialSnapshot,
+      restored: actual.values,
+    );
     final raw = authenticatedArchive.financialSnapshot['entries'];
     final expected = raw == null ? <dynamic>[] : jsonDecode(raw as String) as List;
     final afterRaw = actual.values['entries'];
@@ -69,11 +74,10 @@ class WaffraRestoredFinanceReceiptAttestor {
         throw StateError('Restored finance row was lost.');
       }
       final original = Map<String, dynamic>.from(old);
-      for (final key in original.keys.where((k) => k != 'receiptPath')) {
-        if (jsonEncode(original[key]) != jsonEncode(restored[key])) {
-          throw StateError('Restored transaction contents changed.');
-        }
-      }
+      WaffraRestoredFinanceParity.requireExactTransactionFields(
+        original: original,
+        restored: restored,
+      );
       final receipts = List<WaffraReceiptBackupPart>.of(
         expectedReceipts[id] ?? const <WaffraReceiptBackupPart>[],
       )..sort((a, b) => a.position.compareTo(b.position));
