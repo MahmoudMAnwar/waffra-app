@@ -64,11 +64,17 @@ void main() {
       'floatingActionButtonLocation:WaffraDirectionalFabLocation(english:waffraIsEnglish)',
     ));
     expect(source, contains(
-      'crossAxisAlignment:waffraIsEnglish?CrossAxisAlignment.end:CrossAxisAlignment.start',
+      'floatingActionButtonAnimator:const WaffraStationaryFabAnimator()',
     ));
     expect(source, contains(
-      'alignment:waffraIsEnglish?Alignment.bottomRight:Alignment.bottomLeft',
+      'floatingActionButton:!ready||tab==4?null:SizedBox(',
     ));
+    expect(source, contains('width:58,height:58'));
+    expect(source, contains('WaffraFabMenuAnchor('));
+    expect(source, contains('expanded:addFabExpanded&&!goalsOpened'));
+    expect(source, isNot(contains(
+      'floatingActionButton:!ready||tab==4?null:Directionality(',
+    )));
     expect(source, contains('if(goalsOpened||tab==2){unawaited(_launchAddAction(()=>goalDialog()));return;}'));
     expect(source, contains('if(tab==3){unawaited(_launchAddAction(()=>recurringDialog()));return;}'));
     expect(source, isNot(contains('WaffraPhysicalLeftFab')));
@@ -84,4 +90,50 @@ void main() {
     expect(source, contains("onTap:()=>showReceipt(e.receiptPath!)"));
     expect(source, contains('child:WaffraReceiptCornerBadge'));
   });
+  testWidgets('expanded menu is above the physical plus on the same side in both languages', (tester) async {
+    Widget harness(bool english) => MaterialApp(
+      home: Scaffold(
+        body: Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: 390,height: 500,
+            child: Stack(children:[
+              WaffraFabMenuAnchor(
+                english:english,expanded:true,
+                menu:Container(key:const Key('menu-anchor-probe'),
+                  width:220,height:96,color:Colors.green),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
+    for (final english in <bool>[true,false]) {
+      await tester.pumpWidget(harness(english));
+      await tester.pumpAndSettle();
+      final rect=tester.getRect(find.byKey(const Key('menu-anchor-probe')));
+      expect(rect.width,220);
+      expect(rect.height,96);
+      expect(rect.left,english?154:16,
+        reason:'Menu must be anchored above English-right/Arabic-left FAB');
+      expect(rect.right,english?374:236,
+        reason:'Menu cannot drift to the opposite physical edge');
+      expect(rect.bottom,414,
+        reason:'Menu ends 12px above the stable 58px plus');
+      expect(tester.takeException(),isNull);
+    }
+  });
+
+  test('FAB location never animates horizontally on tab or language switch', () {
+    const animator=WaffraStationaryFabAnimator();
+    const old=Offset(16,500);
+    const next=Offset(316,500);
+    for (final progress in <double>[0,0.25,0.5,0.75,1]) {
+      expect(animator.getOffset(begin:old,end:next,progress:progress),next);
+    }
+    const incoming=AlwaysStoppedAnimation<double>(0.3);
+    expect(animator.getScaleAnimation(parent:incoming).value,1);
+    expect(animator.getRotationAnimation(parent:incoming).value,1);
+  });
+
 }
