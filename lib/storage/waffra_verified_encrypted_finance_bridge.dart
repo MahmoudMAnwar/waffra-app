@@ -9,6 +9,8 @@ import 'waffra_atomic_finance_snapshot.dart';
 import 'waffra_atomic_encrypted_receipt_transaction_writer.dart';
 import 'waffra_encrypted_cutover_journal.dart';
 import 'waffra_encrypted_finance_ui_patch.dart';
+import 'waffra_encrypted_module_projection_guard.dart';
+import 'legacy_snapshot_preflight.dart';
 import 'waffra_experimental_writer_gate.dart';
 import 'waffra_finance_read_view.dart';
 import 'waffra_encrypted_receipt_vault.dart';
@@ -181,6 +183,88 @@ class WaffraVerifiedEncryptedFinanceBridge {
           throw StateError('Encrypted custom goal durable write is inconsistent.');
         }
         return true;
+      });
+    });
+  }
+
+  /// Install catalog v2/v3 and the exact SQLCipher metadata marker in ONE
+  /// transaction, under the shared Home/Widget writer lock. An unrelated
+  /// Widget transaction survives; a concurrent catalog edit fails closed.
+  Future<WaffraFinanceSnapshotState> installCategoryCatalog({
+    required int version,
+    required String? expectedCatalogRaw,
+    required String nextCatalogRaw,
+    required bool catalogChanged,
+  }) async {
+    if (version != 2 && version != 3) {
+      throw ArgumentError('Unknown encrypted catalog version.');
+    }
+    if (!WaffraLegacyPreflight.inspect(
+      <String, Object?>{'waffra_categories_v24': nextCatalogRaw},
+    ).canStage) {
+      throw StateError('Encrypted category catalog failed validation.');
+    }
+    if (!experimentalEnabled) {
+      throw StateError('Encrypted catalog installer is disabled.');
+    }
+    return WaffraExperimentalWriterGate(
+      disposableDirectory: writerDirectory,
+      experimentalEnabled: true,
+    ).withExclusiveAccess(() async {
+      await _requireActivatedUnderLock();
+      return snapshot.store.transaction(() async {
+        final previous = await snapshot.read();
+        final observed = previous.values['waffra_categories_v24'];
+        if (observed != expectedCatalogRaw) {
+          throw StateError('Category catalog has changed; reload before install.');
+        }
+        if (!catalogChanged && observed != nextCatalogRaw) {
+          throw StateError('Unconfirmed category catalog replacement refused.');
+        }
+        final marker = 'waffra_category_catalog_v${version}_installed';
+        final rows = await snapshot.store.customSelect(
+          'SELECT value_json FROM fresh_finance_settings '
+          'WHERE setting_key=?',
+          variables: [Variable.withString(marker)],
+        ).get();
+        if (rows.length > 1 ||
+            (rows.isNotEmpty && rows.single.read<String>('value_json') != 'true')) {
+          throw StateError('Encrypted catalog install marker is inconsistent.');
+        }
+        if (rows.isNotEmpty) {
+          return previous;
+        }
+        var persisted = previous;
+        if (catalogChanged) {
+          await WaffraEncryptedModuleProjectionGuard.reconcile(
+            store: snapshot.store,
+            key: 'waffra_categories_v24',
+            previousJson: observed as String?,
+            updatedJson: nextCatalogRaw,
+          );
+          final changes = Map<String, Object?>.from(previous.values);
+          changes['waffra_categories_v24'] = nextCatalogRaw;
+          persisted = await snapshot.commit(
+            expectedGeneration: previous.generation,
+            fullFinanceSnapshot: changes,
+          );
+        }
+        // SQLCipher marker is the LAST mutation in the same transaction.
+        // Crash/rollback reverts BOTH the category projection and marker.
+        await snapshot.store.customStatement(
+          'INSERT INTO fresh_finance_settings(setting_key,value_json) '
+          'VALUES (?,?)',
+          [marker, 'true'],
+        );
+        final markerRead = await snapshot.store.customSelect(
+          'SELECT value_json FROM fresh_finance_settings WHERE setting_key=?',
+          variables: [Variable.withString(marker)],
+        ).get();
+        if (markerRead.length != 1 ||
+            markerRead.single.read<String>('value_json') != 'true') {
+          throw StateError('Encrypted category catalog install was not durable.');
+        }
+        return persisted;
       });
     });
   }
