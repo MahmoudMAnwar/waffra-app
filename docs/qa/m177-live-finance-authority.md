@@ -46,7 +46,9 @@ NOT two-phone recovery or backup portability certification.
 - A false, pending, missing-key or corrupted SQL source does **not** select
   old preferences as a fallback. Custom goals and notification booleans
   deliberately have NO uncertified encrypted writer.
-- The new tests use disposable local storage, synthetic hashes and mock
+- The historical M161 negative regression is strengthened to require atomic
+new-SMS ledger+hash confirmation instead of accepting an obsolete two-save
+path. The new tests use disposable local storage, synthetic hashes and mock
   finance source reports. Passing CI is NOT physical-device verification.
 
 ## Remaining production blockers
