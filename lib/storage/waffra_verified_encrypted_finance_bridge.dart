@@ -99,6 +99,92 @@ class WaffraVerifiedEncryptedFinanceBridge {
     });
   }
 
+  /// Reads the typed, encrypted custom goal suggestions under the native
+  /// Home/Widget lock and current dual source witnesses. A missing table or
+  /// malformed position is a recovery incident, never an empty fallback.
+  Future<List<String>> _customGoalRowsUnderLock() async {
+    await snapshot.read();
+    final exists = await snapshot.store.customSelect(
+      "SELECT name FROM sqlite_master WHERE type='table' "
+      "AND name='fresh_finance_custom_goals'",
+    ).get();
+    if (exists.length != 1) {
+      throw StateError('Encrypted custom goals table is unavailable.');
+    }
+    final rows = await snapshot.store.customSelect(
+      'SELECT position,suggestion FROM fresh_finance_custom_goals '
+      'ORDER BY position ASC',
+    ).get();
+    if (rows.length > 1000) {
+      throw StateError('Encrypted custom goal capacity is invalid.');
+    }
+    final normalized = <String>{};
+    final result = <String>[];
+    for (var i = 0; i < rows.length; i++) {
+      final entry = rows[i];
+      final name = entry.read<String>('suggestion');
+      if (entry.read<int>('position') != i ||
+          name.trim().isEmpty || name.length > 512 ||
+          !normalized.add(name.trim().toLowerCase())) {
+        throw StateError('Encrypted custom goal projection is inconsistent.');
+      }
+      result.add(name);
+    }
+    return List<String>.unmodifiable(result);
+  }
+
+  Future<List<String>> loadCustomGoalSuggestions() {
+    if (!experimentalEnabled) {
+      throw StateError('Encrypted custom goals are not active.');
+    }
+    return WaffraExperimentalWriterGate(
+      disposableDirectory: writerDirectory,
+      experimentalEnabled: true,
+    ).withExclusiveAccess(() async {
+      await _requireActivatedUnderLock();
+      return _customGoalRowsUnderLock();
+    });
+  }
+
+  /// Inserts one suggestion after deduplicating with the latest encrypted
+  /// table under the common native lock. SQL is the ONLY selected source.
+  Future<bool> addCustomGoalSuggestion(String suggestion) {
+    final name = suggestion.trim();
+    if (name.isEmpty || name.length > 100) {
+      throw ArgumentError('Custom savings goal name must be 1–100 characters.');
+    }
+    if (!experimentalEnabled) {
+      throw StateError('Encrypted custom goals are not active.');
+    }
+    return WaffraExperimentalWriterGate(
+      disposableDirectory: writerDirectory,
+      experimentalEnabled: true,
+    ).withExclusiveAccess(() async {
+      await _requireActivatedUnderLock();
+      return snapshot.store.transaction(() async {
+        final previous = await _customGoalRowsUnderLock();
+        if (previous.any((item) =>
+            item.trim().toLowerCase() == name.toLowerCase())) {
+          return false;
+        }
+        if (previous.length >= 1000) {
+          throw StateError('Encrypted custom goal capacity exceeded.');
+        }
+        await snapshot.store.customStatement(
+          'INSERT INTO fresh_finance_custom_goals(position,suggestion) '
+          'VALUES (?,?)',
+          [previous.length, name],
+        );
+        final next = await _customGoalRowsUnderLock();
+        if (next.length != previous.length + 1 ||
+            next.last != name) {
+          throw StateError('Encrypted custom goal durable write is inconsistent.');
+        }
+        return true;
+      });
+    });
+  }
+
   /// Applies only user-edited finance keys. If a widget saved an unrelated
   /// field meanwhile, that value survives; a same-key edit fails closed.
   Future<WaffraFinanceSnapshotState> saveHomeChanges({
