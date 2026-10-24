@@ -186,6 +186,19 @@ void main() {
       expect(await dbFile.length(), sizeBefore);
       expect((await SharedPreferences.getInstance()).getString('entries'), '[]');
 
+      // A present encrypted vault is still forbidden to launch without
+      // independently verified release evidence, even on Android.
+      await expectLater(
+        WaffraProductionFinanceAuthorityBinding.bind(
+          legacy: const WaffraHomeFinancePersistence(),
+          sourceGuard: const _DisposableActiveSource(),
+          startupRoute: WaffraFinanceRoute.widgetStartup,
+          directoryProvider: () async => directory,
+          secureKeyReader: () async => testKey,
+        ),
+        throwsStateError,
+      );
+
       // The correct key must still open the same ledger after the failure.
       home = await bind(WaffraFinanceRoute.appStartup);
       final recovered = await home.authority.load(
