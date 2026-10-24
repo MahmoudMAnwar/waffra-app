@@ -7,7 +7,7 @@ import 'package:waffra/main.dart';
 void main() {
   test('four finance destinations share one bottom-left circular action', () {
     final source=File('lib/main.dart').readAsStringSync();
-    expect(source,contains('floatingActionButtonLocation:const WaffraPhysicalLeftFab()'));
+    expect(source,contains('floatingActionButtonLocation:WaffraDirectionalFabLocation(english:waffraIsEnglish)'));
     expect(source,contains('floatingActionButton:!ready||tab==4?null:Directionality('));
     expect(source,contains('if(goalsOpened||tab==2){goalDialog();return;}'));
     expect(source,contains('if(tab==3){recurringDialog();return;}'));
@@ -57,7 +57,7 @@ void main() {
           textDirection:direction,
           child:Scaffold(
             bottomNavigationBar:const SizedBox(height:85),
-            floatingActionButtonLocation:const WaffraPhysicalLeftFab(),
+            floatingActionButtonLocation:WaffraDirectionalFabLocation(english:waffraIsEnglish),
             floatingActionButton:FloatingActionButton(
               key:const Key('waffra-m127-plus'),
               onPressed:(){},
