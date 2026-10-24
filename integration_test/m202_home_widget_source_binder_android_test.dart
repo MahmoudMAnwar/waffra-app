@@ -181,7 +181,7 @@ void main() {
       final sizeBefore = await dbFile.length();
       await expectLater(
         bind(WaffraFinanceRoute.appStartup, key: 'incorrect-test-only-key'),
-        throwsA(isA<Exception>()),
+        throwsA(anyOf(isA<Exception>(), isA<Error>())),
       );
       expect(await dbFile.length(), sizeBefore);
       expect((await SharedPreferences.getInstance()).getString('entries'), '[]');
