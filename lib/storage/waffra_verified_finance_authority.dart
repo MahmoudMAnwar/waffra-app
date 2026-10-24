@@ -6,6 +6,7 @@ import 'waffra_receipt_screen_contract.dart';
 import 'waffra_encrypted_receipt_recycle.dart';
 import 'waffra_atomic_encrypted_receipt_transaction_writer.dart';
 import 'waffra_finance_read_view.dart';
+import 'waffra_fresh_finance_modules_repository.dart';
 import 'waffra_home_finance_persistence.dart';
 import 'waffra_production_finance_routing_gate.dart';
 import 'waffra_production_finance_source_guard.dart';
@@ -243,6 +244,80 @@ class WaffraVerifiedFinanceAuthority {
       throw StateError('Encrypted recycle list cannot expose legacy storage.');
     }
     return encryptedSession!.listEncryptedDeletedTransactions();
+  }
+
+  static WaffraFinanceRoute _verifiedModuleRoute(
+    WaffraFinanceModule module,
+  ) => switch (module) {
+    WaffraFinanceModule.categories =>
+      WaffraFinanceRoute.categoryCreateEditDeleteRestore,
+    WaffraFinanceModule.goals =>
+      WaffraFinanceRoute.goalCreateEditDeleteRestore,
+    WaffraFinanceModule.recurring =>
+      WaffraFinanceRoute.recurringCreateEditDeleteRestore,
+  };
+
+  /// Delete exactly one verified finance entity and ALL of its matching
+  /// active typed projection in one encrypted commit. The guarded legacy
+  /// source is deliberately unsupported; no fallback may silently lose its
+  /// linked financial history or corrupt the pending encrypted trash.
+  Future<WaffraFinanceAuthorityRead> deleteVerifiedModuleToRecycle({
+    required WaffraFinanceAuthorityRead baseline,
+    required WaffraFinanceModule module,
+    required String entityId,
+    required DateTime now,
+    required bool userConfirmed,
+  }) async {
+    final route = _verifiedModuleRoute(module);
+    final backend = await _requireRoute(route);
+    if (backend != WaffraRuntimeFinanceBackend.verifiedEncrypted ||
+        baseline.source != WaffraRuntimeFinanceBackend.verifiedEncrypted ||
+        baseline.encryptedWitness == null || !userConfirmed) {
+      throw StateError('Verified encrypted module deletion is not authorized.');
+    }
+    baseline.finance.requireIntegrity();
+    await encryptedSession!.recycleVerifiedModule(
+      baseline: baseline.encryptedWitness!,
+      module: module,
+      entityId: entityId,
+      now: now,
+      userConfirmed: true,
+    );
+    return await load(route: route);
+  }
+
+  Future<WaffraFinanceAuthorityRead> restoreVerifiedDeletedModule({
+    required WaffraFinanceAuthorityRead baseline,
+    required WaffraFinanceModule module,
+    required String entityId,
+    required DateTime now,
+  }) async {
+    final route = _verifiedModuleRoute(module);
+    final backend = await _requireRoute(route);
+    if (backend != WaffraRuntimeFinanceBackend.verifiedEncrypted ||
+        baseline.source != WaffraRuntimeFinanceBackend.verifiedEncrypted ||
+        baseline.encryptedWitness == null) {
+      throw StateError('Verified encrypted module restore is not authorized.');
+    }
+    baseline.finance.requireIntegrity();
+    await encryptedSession!.restoreVerifiedModule(
+      baseline: baseline.encryptedWitness!,
+      module: module,
+      entityId: entityId,
+      now: now,
+    );
+    return await load(route: route);
+  }
+
+  Future<Map<String, int>> listVerifiedDeletedModules(
+    WaffraFinanceModule module,
+  ) async {
+    final route = _verifiedModuleRoute(module);
+    final backend = await _requireRoute(route);
+    if (backend != WaffraRuntimeFinanceBackend.verifiedEncrypted) {
+      throw StateError('Verified encrypted module trash is not available.');
+    }
+    return encryptedSession!.listVerifiedDeletedModules(module);
   }
 
   Future<WaffraFinanceAuthorityRead> load({
