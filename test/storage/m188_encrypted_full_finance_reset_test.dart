@@ -249,7 +249,12 @@ void main() {
     );
     await expectLater(execute(), throwsStateError);
     expect((await snapshot.read()).digest, original.digest);
-    expect((await receipts.readAll(entryId)).single.bytes, image);
+    // A corrupted receipt_count must make the high-level receipt reader
+    // fail closed. Check the raw encrypted BLOB row survives instead of
+    // bypassing that integrity guard to read it.
+    await expectLater(receipts.readAll(entryId), throwsStateError);
+    expect(await count('fresh_finance_receipt_blobs'), 1);
+    expect(await count('fresh_finance_entries'), 1);
   });
 
   test('M188 typed SMS fingerprints must match backup before resetting',
