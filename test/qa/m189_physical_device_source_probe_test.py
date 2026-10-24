@@ -30,17 +30,17 @@ def mock_adb(args: list[str], *, mode: str = "valid") -> str:
                     "ANDROID_B device")
         return ("List of devices attached\nANDROID_A device usb:1\n"
                 "ANDROID_B device usb:2")
-    serial = args[2]
+    serial = args[1]
     name = args[-1]
     if serial not in ("ANDROID_A", "ANDROID_B"):
         raise AssertionError("ADB serial unexpectedly changed")
-    if args[3:5] == ["getprop", "ro.kernel.qemu"]:
+    if args[2:4] == ["shell", "getprop"] and name == "ro.kernel.qemu":
         return "1" if mode == "emulator" else "0"
-    if args[3:5] == ["getprop", "ro.hardware"]:
+    if args[2:4] == ["shell", "getprop"] and name == "ro.hardware":
         return "ranchu" if mode == "virtualized" else "kalama"
-    if args[3:5] == ["getprop", "ro.build.version.sdk"]:
+    if args[2:4] == ["shell", "getprop"] and name == "ro.build.version.sdk":
         return "35" if mode != "old" else "25"
-    if args[3:5] == ["getprop", "ro.build.fingerprint"]:
+    if args[2:4] == ["shell", "getprop"] and name == "ro.build.fingerprint":
         return ("samsung/physical/phone:16/UP1A/test:user/release-keys"
                 if serial == "ANDROID_A"
                 else "google/physical/phone:16/UP1A/test:user/release-keys")
