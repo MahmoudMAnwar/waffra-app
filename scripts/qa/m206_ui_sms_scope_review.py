@@ -14,6 +14,7 @@ import subprocess
 APPROVED = {
     ".github/workflows/android.yml",
     ".github/workflows/m147-final-main-review-gate.yml",
+    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
     "lib/waffra_widget_capture.part.dart",
     "scripts/qa/m206_ui_sms_scope_review.py",
@@ -49,6 +50,8 @@ def main() -> None:
 
     app = Path("lib/main.dart").read_text(encoding="utf-8")
     widget = Path("lib/waffra_widget_capture.part.dart").read_text(encoding="utf-8")
+    approved_notes = Path("docs/release/WAFFRA_APPROVED_CHANGES.txt").read_text(encoding="utf-8")
+    apk_workflow = Path(".github/workflows/android.yml").read_text(encoding="utf-8")
     tests = Path("test/waffra_m206_day_theme_tour_sms_regression_test.dart").read_text(encoding="utf-8")
     workflow = Path(".github/workflows/m147-final-main-review-gate.yml").read_text(encoding="utf-8")
     release = Path("lib/storage/waffra_production_cutover_release_gate.dart").read_text(encoding="utf-8")
@@ -71,6 +74,27 @@ def main() -> None:
         "key:_tourKeys[1]",
     ):
         require(marker in app, "missing approved UI/SMS guard " + marker)
+
+    # The newly approved release-notes manifest is a *reviewed additional*
+    # file, never a wildcard exception. Require its contents and publication
+    # gate so future APKs cannot silently omit the user-approved checklist.
+    for marker in (
+        "شارة المرفقات",
+        "الملاحظات",
+        "زر الإضافة",
+        "الوضع الفاتح",
+        "SQLCipher",
+    ):
+        require(marker in approved_notes,
+                "approved release notes missing content: " + marker)
+    for marker in (
+        "Generate and validate Waffra Release Notes TXT",
+        "Gate QA APK on embedded SHA and current branch head",
+        "build/Waffra-Release-Notes.txt",
+        "Waffra-Android-ARM64-Release-${{ github.sha }}",
+    ):
+        require(marker in apk_workflow,
+                "APK exact-SHA release-note safeguard missing: " + marker)
 
     require("notes:entry.raw,sourceType:'sms'" in widget,
             "widget bank SMS no longer preserves complete note")
