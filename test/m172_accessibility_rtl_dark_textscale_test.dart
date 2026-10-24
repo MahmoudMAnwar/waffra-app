@@ -37,7 +37,9 @@ void main() {
             ),
           ),
         ));
-        await tester.pump();
+        // ThemeData animates when themeMode switches. Wait until the dark/light
+        // transition settles before asserting the effective inherited Theme.
+        await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
         final translatedText = find.byWidgetPredicate(
           // WaffraText extends Text; match only the rendered leaf Text, not its wrapper.
