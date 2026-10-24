@@ -82,6 +82,6 @@ void main() {
       'WaffraReceiptCornerBadge(count:attachmentCount,english:waffraIsEnglish)',
     ));
     expect(source, contains("onTap:()=>showReceipt(e.receiptPath!)"));
-    expect(source, isNot(contains("Text('$" + "attachmentCount',style:const TextStyle(")));
+    expect(source, contains('child:WaffraReceiptCornerBadge'));
   });
 }
