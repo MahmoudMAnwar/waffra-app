@@ -15,10 +15,17 @@ replaced with `WaffraVerifiedFinanceAuthority` APIs.
 | Custom savings goal suggestions | Home called a legacy-only adapter directly | Both load and add check the source selector; SQLCipher fails closed until custom goal suggestions are included in its verified finance schema |
 | Category catalog v2/v3 | UI wrote catalog and upgrade markers without checking read witness | Authority delegates to a guarded compare-and-swap version installer; stale concurrent catalog edits fail instead of being overwritten; source baseline refreshes after each version commit |
 
-Home's manual SMS correction keeps transaction save and hash merge as
-**two commits**, which is not yet a proven atomic cross-source transaction.
-This PR makes the hash leg safe and explicit but does NOT claim full atomic
-manual+SMS-save parity or mark `merchantRulesAndSmsHashes` production-ready.
+A NEW single bank-SMS entry entered through the Home entry sheet now uses
+the same **atomic** `commitConfirmedSms` journal used by bulk imports and the
+Android widget. The transaction and its fingerprint cannot be partially
+committed: duplicates are rechecked inside the native lock, any explicitly
+approved repeat is carried to the writer, and the Home ledger is updated only
+after the durable result. This closes the earlier two-commit crash window for
+that path.
+
+Existing transaction edits with an additional SMS fingerprint still follow
+the separate guarded edit and merge routes, so the PR does NOT claim full
+24-route SQLCipher equivalence or new receipt lifecycle certification.
 
 ## Race, crash and migration posture
 
