@@ -256,10 +256,18 @@ CREATE TABLE IF NOT EXISTS $_images(
              receipt.sha256Hex, receipt.bytes.length, receipt.bytes],
           );
         }
-        await snapshot.store.customStatement(
-          'DELETE FROM fresh_finance_receipt_blobs WHERE entry_id=?',
-          [entryId],
-        );
+        final activeBlobTable = await snapshot.store.customSelect(
+          "SELECT name FROM sqlite_master WHERE type='table' "
+          "AND name='fresh_finance_receipt_blobs'",
+        ).get();
+        if (activeBlobTable.isNotEmpty) {
+          await snapshot.store.customStatement(
+            'DELETE FROM fresh_finance_receipt_blobs WHERE entry_id=?',
+            [entryId],
+          );
+        } else if (receipts.isNotEmpty) {
+          throw StateError('Verified receipt BLOB table disappeared.');
+        }
         await snapshot.store.customStatement(
           'DELETE FROM fresh_finance_entries WHERE entry_id=?', [entryId],
         );
