@@ -230,6 +230,60 @@ class WaffraVerifiedFinanceAuthority {
     if (backend != baseline.source) {
       throw StateError('Finance authority changed while screen was open.');
     }
+    if (backend == WaffraRuntimeFinanceBackend.verifiedEncrypted &&
+        route == WaffraFinanceRoute.manualTransactionSave) {
+      // A manual form's full Home capture is NOT an authorization to replace
+      // older finance data. Extract exactly one new record, preserve every
+      // previous field and let the atomic SQLCipher entry writer append it
+      // under the Widget lock. Reordering existing records is harmless.
+      final witness = baseline.encryptedWitness;
+      if (witness == null || immutableCapture['entries'] is! String) {
+        throw StateError('Manual save requires its original encrypted witness.');
+      }
+      final original = witness.snapshot.values;
+      for (final item in immutableCapture.entries) {
+        if (item.key == 'entries') continue;
+        if (!original.containsKey(item.key) ||
+            jsonEncode(original[item.key]) != jsonEncode(item.value)) {
+          throw StateError('Manual save includes unrelated finance edits.');
+        }
+      }
+      List<Map<String, Object?>> parseLedger(String? raw) {
+        final decoded = jsonDecode(raw ?? '[]');
+        if (decoded is! List) {
+          throw StateError('Manual finance ledger is malformed.');
+        }
+        final records = <Map<String, Object?>>[];
+        final seen = <String>{};
+        for (final row in decoded) {
+          if (row is! Map || row['id'] is! String ||
+              (row['id'] as String).trim().isEmpty ||
+              !seen.add(row['id'] as String)) {
+            throw StateError('Manual finance ledger has ambiguous IDs.');
+          }
+          records.add(Map<String, Object?>.from(row));
+        }
+        return records;
+      }
+      final before = parseLedger(original['entries'] as String?);
+      final after = parseLedger(immutableCapture['entries'] as String);
+      final prior = {for (final row in before) row['id'] as String: row};
+      final next = {for (final row in after) row['id'] as String: row};
+      final added = after.where((row) => !prior.containsKey(row['id']))
+          .toList(growable: false);
+      if (after.length != before.length + 1 || added.length != 1 ||
+          prior.keys.any((id) =>
+              !next.containsKey(id) ||
+              jsonEncode(prior[id]) != jsonEncode(next[id]))) {
+        throw StateError('Manual save may only append one unchanged transaction.');
+      }
+      await encryptedSession!.appendConfirmed(
+        records: added,
+        hashes: const <String?>[null],
+        userConfirmed: true,
+      );
+      return load(route: route);
+    }
     if (backend == WaffraRuntimeFinanceBackend.guardedLegacy) {
       await legacy.saveLegacy(
         snapshot: immutableCapture,
