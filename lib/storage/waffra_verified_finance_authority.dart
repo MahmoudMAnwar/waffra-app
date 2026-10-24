@@ -184,6 +184,67 @@ class WaffraVerifiedFinanceAuthority {
     return load(route: WaffraFinanceRoute.categoryCatalogInstall);
   }
 
+  /// Encrypted-only transaction delete + 30-day undo. The live legacy UI
+  /// remains on its existing guarded journal until real source cutover.
+  Future<WaffraFinanceAuthorityRead> deleteVerifiedTransactionToRecycle({
+    required WaffraFinanceAuthorityRead baseline,
+    required String entryId,
+    required List<String> expectedImageHashes,
+    required bool userConfirmed,
+    required DateTime now,
+  }) async {
+    if (!userConfirmed || entryId.trim().isEmpty ||
+        entryId.length > 128) {
+      throw StateError('Confirmed transaction deletion is required.');
+    }
+    final hashes = List<String>.unmodifiable(expectedImageHashes);
+    final backend = await _requireRoute(
+      WaffraFinanceRoute.transactionDeleteAndUndo,
+    );
+    if (backend != WaffraRuntimeFinanceBackend.verifiedEncrypted ||
+        baseline.source != backend || baseline.encryptedWitness == null) {
+      throw StateError('Encrypted transaction deletion has no source witness.');
+    }
+    await encryptedSession!.recycleVerifiedTransaction(
+      baseline: baseline.encryptedWitness!,
+      entryId: entryId,
+      expectedImageHashes: hashes,
+      now: now,
+      userConfirmed: userConfirmed,
+    );
+    // A confirmed UI mutation is not successful until source reopens.
+    return load(route: WaffraFinanceRoute.transactionDeleteAndUndo);
+  }
+
+  Future<WaffraFinanceAuthorityRead> restoreVerifiedDeletedTransaction({
+    required WaffraFinanceAuthorityRead baseline,
+    required String entryId,
+    required DateTime now,
+  }) async {
+    final backend = await _requireRoute(
+      WaffraFinanceRoute.transactionDeleteAndUndo,
+    );
+    if (backend != WaffraRuntimeFinanceBackend.verifiedEncrypted ||
+        baseline.source != backend || baseline.encryptedWitness == null ||
+        entryId.trim().isEmpty || entryId.length > 128) {
+      throw StateError('Encrypted transaction undo has no valid source witness.');
+    }
+    await encryptedSession!.restoreVerifiedTransaction(
+      baseline: baseline.encryptedWitness!, entryId: entryId, now: now,
+    );
+    return load(route: WaffraFinanceRoute.transactionDeleteAndUndo);
+  }
+
+  Future<Map<String, int>> listVerifiedDeletedTransactions() async {
+    final backend = await _requireRoute(
+      WaffraFinanceRoute.transactionDeleteAndUndo,
+    );
+    if (backend != WaffraRuntimeFinanceBackend.verifiedEncrypted) {
+      throw StateError('Encrypted recycle list cannot expose legacy storage.');
+    }
+    return encryptedSession!.listEncryptedDeletedTransactions();
+  }
+
   Future<WaffraFinanceAuthorityRead> load({
     required WaffraFinanceRoute route,
   }) async {
