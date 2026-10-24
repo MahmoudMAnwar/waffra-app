@@ -138,6 +138,19 @@ class WaffraEncryptedFullFinanceReset {
     return result;
   }
 
+  static int _receiptSlots(Object? reference) {
+    if (reference == null || reference == '') return 0;
+    if (reference is! String) {
+      throw StateError('Encrypted receipt association is malformed.');
+    }
+    if (!reference.startsWith('[')) return 1;
+    final refs = jsonDecode(reference);
+    if (refs is! List || refs.any((x) => x is! String)) {
+      throw StateError('Encrypted receipt association list is malformed.');
+    }
+    return refs.length;
+  }
+
   static void _requireSameBackupFinance({
     required Map<String, Object?> expected,
     required Map<String, Object?> backedUp,
@@ -179,6 +192,7 @@ class WaffraEncryptedFullFinanceReset {
           (amount * 100).round() != row.read<int>('amount_minor') ||
           (expected['income'] == true ? 1 : 0) != row.read<int>('is_income') ||
           expected['date'] != row.read<String>('occurred_iso') ||
+          row.read<int>('receipt_count') != _receiptSlots(expected['receiptPath']) ||
           jsonEncode(expected) !=
               jsonEncode(jsonDecode(row.read<String>('source_json')))) {
         throw StateError('Typed SQL money and canonical ledger disagree.');
@@ -323,6 +337,25 @@ class WaffraEncryptedFullFinanceReset {
             previousJson: current.values[key] as String?,
             updatedJson: current.values[key] as String?,
           );
+        }
+        // SMS deduplication hashes are separately typed financial history.
+        final originalHashes =
+            current.values['waffra_sms_hashes_v1'] as List<String>? ??
+                const <String>[];
+        final shaRows = await snapshot.store.customSelect(
+          'SELECT message_hash FROM fresh_finance_sms_hashes',
+        ).get();
+        final sqlHashes = shaRows.map((x) =>
+            x.read<String>('message_hash')).toSet();
+        if (sqlHashes.length != shaRows.length ||
+            sqlHashes.length != originalHashes.length ||
+            !sqlHashes.containsAll(originalHashes)) {
+          throw StateError('SMS hash projection differs from saved finance.');
+        }
+        // Financial settings with no authenticated typed backup witness are
+        // NOT silently erased by this deliberately narrow reset candidate.
+        if (await _count('fresh_finance_settings') != 0) {
+          throw StateError('Unattested finance settings block full reset.');
         }
         final entries = _ledger(current.values['entries'] as String?);
         await _verifyCurrentTypedLedger(entries);
