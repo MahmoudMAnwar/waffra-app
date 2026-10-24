@@ -370,6 +370,11 @@ CREATE TABLE IF NOT EXISTS $_table(
         if (module == WaffraFinanceModule.goals) {
           entity['saved'] = 0.0;
         }
+        if (module == WaffraFinanceModule.recurring) {
+          // Undo must NEVER trigger overdue posting or re-enable a schedule.
+          // A user must explicitly choose a new due date and activate later.
+          entity['active'] = false;
+        }
         final repo = WaffraFreshModulesRepository(
           store: snapshot.store, experimentalEnabled: true,
         );
