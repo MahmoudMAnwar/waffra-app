@@ -6281,23 +6281,37 @@ Future<void> bulkSmsSheet({String? initialText})async {
     actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))]);
   }));
  }
- String exportBackup()=>const JsonEncoder.withIndent('  ').convert({
-  'format':'waffra-backup','version':24,'exportedAt':DateTime.now().toIso8601String(),
-  'entries':entries.map((e)=>e.toJson()).toList(),
-  'categories':categories.map((e)=>e.toJson()).toList(),
-  'goals':goals.map((e)=>e.toJson()).toList(),
-  'recurring':recurring.map((e)=>e.toJson()).toList(),
-  'challenges':challenges.map((e)=>e.toJson()).toList(),
-  'deletedCategories':deletedCategories,
-  'deletedGoals':deletedGoals,
-  'deletedRecurring':deletedRecurring,
-  'recurringPostponed':recurringPostponed,
-  'monthlyBudget':monthlyBudget,
-  'monthlyBudgetEnabled':monthlyBudgetEnabled,
-  'learnedMerchants':learnedMerchantCategories,
-  'smsHashes':(smsHashes.toList()..sort()),
-  'profile':widget.profile.toJson(),
- });
+ String exportBackup({WaffraFinanceAuthorityRead? fromSource}) {
+  // A real backup must reflect a single immutable, verified finance source,
+  // not a cached Home list after a simultaneous Android widget save.
+  final finance=fromSource?.finance;
+  Object listValue(String key,Object fallback)=>
+   finance==null?fallback:jsonDecode(finance.getString(key)??'[]');
+  Object mapValue(String key,Object fallback)=>
+   finance==null?fallback:jsonDecode(finance.getString(key)??'{}');
+  final sourceBudget=finance?.getDouble('waffra_monthly_budget_v1')??0;
+  final payload={
+   'format':'waffra-backup','version':24,
+   'exportedAt':DateTime.now().toIso8601String(),
+   'entries':listValue('entries',entries.map((e)=>e.toJson()).toList()),
+   'categories':listValue('waffra_categories_v24',categories.map((e)=>e.toJson()).toList()),
+   'goals':listValue('waffra_goals_v24',goals.map((e)=>e.toJson()).toList()),
+   'recurring':listValue('waffra_recurring_v24',recurring.map((e)=>e.toJson()).toList()),
+   'challenges':listValue('waffra_challenges_v1',challenges.map((e)=>e.toJson()).toList()),
+   'deletedCategories':listValue('waffra_deleted_categories_v1',deletedCategories),
+   'deletedGoals':listValue('waffra_deleted_goals_v1',deletedGoals),
+   'deletedRecurring':listValue('waffra_deleted_recurring_v1',deletedRecurring),
+   'recurringPostponed':mapValue('waffra_recurring_postponed_v1',recurringPostponed),
+   'monthlyBudget':finance==null?monthlyBudget:sourceBudget,
+   'monthlyBudgetEnabled':finance==null?monthlyBudgetEnabled:
+    (finance.getBool('waffra_monthly_budget_enabled_v1')??(sourceBudget>0)),
+   'learnedMerchants':mapValue('waffra_learned_merchants_v1',learnedMerchantCategories),
+   'smsHashes':(List<String>.from(
+    finance?.getStringList('waffra_sms_hashes_v1')??smsHashes.toList())..sort()),
+   'profile':widget.profile.toJson(),
+  };
+  return const JsonEncoder.withIndent('  ').convert(payload);
+ }
  Future<bool> _authorizeSensitiveAction(String operation)async{
   if(!await WaffraBiometrics.isAvailable()){
    if(mounted)await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
@@ -6372,8 +6386,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
      }
      update(()=>exporting=true);
      try{
+      // Drain in-process saves, then snapshot the latest authoritative
+      // finance after any standalone Widget commit under the shared lock.
+      await _financialWriteQueue.drain();
+      final current=await _financeAuthority.load(
+       route:WaffraFinanceRoute.backupExport);
+      final authoritativePayload=exportBackup(fromSource:current);
       final encrypted=await compute(waffraEncryptBackupInIsolate,<String,String>{
-       'payload':exportBackup(),'password':secret.text,
+       'payload':authoritativePayload,'password':secret.text,
       });
       // Persist the encrypted archive only after system document picker confirms.
       // Never copy it to the system clipboard on export.
