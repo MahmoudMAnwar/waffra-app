@@ -49,6 +49,8 @@ import 'storage/waffra_legacy_finance_writer_coordinator.dart';
 import 'storage/waffra_legacy_widget_commit_journal.dart';
 import 'storage/waffra_home_finance_persistence.dart';
 import 'storage/waffra_verified_finance_authority.dart';
+import 'storage/waffra_fresh_finance_modules_repository.dart';
+import 'storage/waffra_verified_module_ui_guard.dart';
 import 'storage/waffra_runtime_finance_route_contract.dart';
 import 'storage/waffra_verified_transaction_ui_guard.dart';
 import 'storage/waffra_m155_category_plan.dart';
@@ -5351,6 +5353,149 @@ Future<void> bulkSmsSheet({String? initialText})async {
   });
   await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
  }
+ WaffraFinanceRoute _moduleMutationRoute(WaffraFinanceModule module)=>
+  switch(module){
+   WaffraFinanceModule.categories=>WaffraFinanceRoute.categoryCreateEditDeleteRestore,
+   WaffraFinanceModule.goals=>WaffraFinanceRoute.goalCreateEditDeleteRestore,
+   WaffraFinanceModule.recurring=>WaffraFinanceRoute.recurringCreateEditDeleteRestore,
+  };
+
+ Future<void> _deleteVerifiedModule({
+  required WaffraFinanceModule module,
+  required Map<String,dynamic> displayed,
+ })async{
+  try{
+   await _financialWriteQueue.drain();
+   final baseline=await _financeAuthority.load(route:_moduleMutationRoute(module));
+   if(baseline.source!=WaffraRuntimeFinanceBackend.verifiedEncrypted||
+      baseline.encryptedWitness==null){
+    throw StateError('Verified encrypted finance source is unavailable.');
+   }
+   WaffraVerifiedModuleUiGuard.requireUnchanged(
+    activeRaw:baseline.finance.getString(
+     WaffraVerifiedModuleUiGuard.activeKey(module)),
+    selected:displayed,
+   );
+   final id=displayed['id'] as String;
+   await _financialWriteQueue.submit(<String,Object>{'id':id},(_)async{
+    // No optimistic mutation to goals/categories/recurring; only the typed
+    // SQLCipher tombstone writer may remove the source entity.
+    await _financeAuthority.deleteVerifiedModuleToRecycle(
+     baseline:baseline,module:module,entityId:id,
+     now:DateTime.now().toUtc(),userConfirmed:true);
+   });
+   if(!mounted)return;
+   await _loadFinanceSafely();
+   if(module==WaffraFinanceModule.recurring)await syncRecurringReminders();
+   if(mounted&&ready)snackSuccess(context,waffraIsEnglish?
+    'Moved to encrypted Recently Deleted for 30 days':
+    'تم النقل إلى المحذوفات المشفرة لمدة 30 يومًا');
+  }catch(error){
+   debugPrint('Encrypted module delete refused: $error');
+   if(mounted){
+    snack(context,waffraIsEnglish?
+     'Cannot verify deletion. Your financial data was not reset. Reload and retry.':
+     'تعذر التحقق من الحذف. لم يتم تصفير البيانات المالية. أعد التحميل وحاول مجددًا.');
+    unawaited(_loadFinanceSafely());
+   }
+  }
+ }
+
+ Future<void> _restoreVerifiedModule({
+  required WaffraFinanceModule module,
+  required String entityId,
+ })async{
+  try{
+   await _financialWriteQueue.drain();
+   await _financialWriteQueue.submit(<String,Object>{'id':entityId},(_)async{
+    final baseline=await _financeAuthority.load(route:_moduleMutationRoute(module));
+    if(baseline.source!=WaffraRuntimeFinanceBackend.verifiedEncrypted||
+       baseline.encryptedWitness==null){
+     throw StateError('Verified encrypted module restore source is missing.');
+    }
+    await _financeAuthority.restoreVerifiedDeletedModule(
+     baseline:baseline,module:module,entityId:entityId,
+     now:DateTime.now().toUtc());
+   });
+   if(!mounted)return;
+   await _loadFinanceSafely();
+   if(module==WaffraFinanceModule.recurring)await syncRecurringReminders();
+   if(mounted&&ready)snackSuccess(context,waffraIsEnglish?
+    'Encrypted item restored safely':'تم استرجاع العنصر المشفر بأمان');
+  }catch(error){
+   debugPrint('Encrypted finance module restoration blocked safely: $error');
+   if(mounted){
+    snack(context,waffraIsEnglish?
+     'Restore was not verified. Restore the deleted parent first or retry safely.':
+     'تعذر التحقق من الاسترجاع. استرجع القسم الرئيسي أولًا أو حاول مجددًا.');
+    unawaited(_loadFinanceSafely());
+   }
+  }
+ }
+
+ Future<void> _showVerifiedModuleTrash(WaffraFinanceModule module)async{
+  try{
+   final route=_moduleMutationRoute(module);
+   final baseline=await _financeAuthority.load(route:route);
+   if(baseline.source!=WaffraRuntimeFinanceBackend.verifiedEncrypted){
+    throw StateError('Encrypted module trash source was not selected.');
+   }
+   final expiries=await _financeAuthority.listVerifiedDeletedModules(module);
+   final items=WaffraVerifiedModuleUiGuard.verifiedTrash(
+    module:module,
+    trashRaw:baseline.finance.getString(
+     WaffraVerifiedModuleUiGuard.trashKey(module)),
+    encryptedExpiries:expiries,
+   );
+   if(!mounted)return;
+   final labels=module==WaffraFinanceModule.categories
+    ?<String>['Categories','الأقسام']
+    :module==WaffraFinanceModule.goals
+     ?<String>['Savings goals','الأهداف']
+     :<String>['Recurring','المتكررة'];
+   final choice=await showWaffraDialog<String>(
+    context:context,builder:(ctx)=>AlertDialog(
+     title:WaffraText(waffraIsEnglish?
+      'Encrypted Recently Deleted — ${labels[0]}':
+      'المحذوفات المشفرة — ${labels[1]}'),
+     content:SizedBox(
+      width:double.maxFinite,
+      height:min(365.0,items.length*78.0+35.0),
+      child:items.isEmpty
+       ?Center(child:WaffraText(waffraIsEnglish?
+        'No items available to restore':'لا توجد عناصر قابلة للاسترجاع'))
+       :ListView.builder(itemCount:items.length,itemBuilder:(ctx,index){
+        final item=items[index];
+        final body=item[WaffraVerifiedModuleUiGuard.trashPayloadKey(module)]
+          as Map<String,dynamic>;
+        final id=body['id'] as String;
+        final until=expiries[id]!;
+        final expired=DateTime.now().toUtc().millisecondsSinceEpoch>=until;
+        return ListTile(
+         leading:Icon(Icons.restore_rounded,
+          color:expired?Colors.grey:emerald),
+         title:WaffraText('${body['name']??body['title']??id}',maxLines:1),
+         subtitle:WaffraText(expired
+          ?(waffraIsEnglish?'Recovery expired':'انتهت مدة الاسترجاع')
+          :(waffraIsEnglish
+           ?'Restore until ${dayText(DateTime.fromMillisecondsSinceEpoch(until,isUtc:true).toLocal())}'
+           :'الاسترجاع حتى ${dayText(DateTime.fromMillisecondsSinceEpoch(until,isUtc:true).toLocal())}')),
+         enabled:!expired,
+         onTap:expired?null:()=>Navigator.pop(ctx,id),
+        );
+       })),
+     actions:[TextButton(onPressed:()=>Navigator.pop(ctx),
+      child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))]));
+   if(choice!=null&&mounted)await _restoreVerifiedModule(
+    module:module,entityId:choice);
+  }catch(error){
+   debugPrint('Encrypted module trash could not be verified: $error');
+   if(mounted)snack(context,waffraIsEnglish?
+    'Encrypted Recently Deleted is unavailable until source verification succeeds.':
+    'المحذوفات المشفرة غير متاحة حتى ينجح التحقق من المصدر.');
+  }
+ }
+
  Future<void> deleteCategory(BudgetCategory c)async {
   final children=categories.where((item)=>item.parentId==c.id).toList();
   if(children.isNotEmpty){
