@@ -3,6 +3,12 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:waffra/storage/waffra_cutover_readiness_gate.dart';
+import 'package:waffra/storage/legacy_snapshot_preflight.dart';
+import 'package:waffra/storage/waffra_atomic_finance_snapshot.dart';
+import 'package:waffra/storage/waffra_encrypted_cutover_journal.dart';
+import 'package:waffra/storage/waffra_encrypted_store.dart';
+import 'package:waffra/storage/waffra_fresh_encrypted_vault_bootstrap.dart';
+import 'package:waffra/storage/waffra_live_legacy_finance_guard.dart';
 import 'package:waffra/storage/waffra_home_finance_persistence.dart';
 import 'package:waffra/storage/waffra_production_cutover_release_gate.dart';
 import 'package:waffra/storage/waffra_production_finance_authority_binding.dart';
@@ -134,6 +140,83 @@ void main() {
       );
       expect(dir.listSync(), isEmpty,
           reason: 'Binding must never create a new empty finance vault.');
+    } finally {
+      await dir.delete(recursive: true);
+    }
+  });
+
+  test('existing activated SQLCipher file binds real Home and Widget reads'
+      ' under synthetic disposable source evidence only', () async {
+    SharedPreferences.setMockInitialValues({
+      WaffraLiveLegacyFinanceGuard.activeKey: true,
+    });
+    final dir = await Directory.systemTemp.createTemp('waffra-real-bind-');
+    const key = 'disposable-home-widget-test-key-not-for-users';
+    final file = File(
+      dir.path + Platform.pathSeparator +
+          WaffraEncryptedStore.encryptedDatabaseFilename,
+    );
+    final seed = WaffraEncryptedStore.openAt(file, key: key);
+    try {
+      await WaffraFreshEncryptedVaultBootstrap(
+        store: seed, experimentalEnabled: true,
+      ).initialize(decision: WaffraFirstRunDecision.freshCandidate);
+      final snapshot = WaffraAtomicFinanceSnapshot(
+        store: seed, experimentalEnabled: true,
+      );
+      await snapshot.initializeEmpty();
+      final state = await snapshot.commit(
+        expectedGeneration: 0,
+        fullFinanceSnapshot: const <String, Object?>{'entries': '[]'},
+      );
+      final journal = WaffraEncryptedCutoverJournal(
+        store: seed, snapshot: snapshot, experimentalEnabled: true,
+      );
+      final legacySource = WaffraLegacyPreflight.inspect(
+        const <String, Object?>{'entries': '[]'},
+      );
+      await journal.prepare(
+        sourceDigest: legacySource.sourceSha256,
+        targetDigest: state.digest,
+        now: DateTime.utc(2026, 10, 24),
+      );
+      await journal.verify(now: DateTime.utc(2026, 10, 24));
+      await journal.acknowledgeExternalActivation(
+        externalMarkerVerified: true,
+        allWritersRouted: true,
+        now: DateTime.utc(2026, 10, 24),
+      );
+    } finally {
+      await seed.close();
+    }
+    try {
+      for (final route in <WaffraFinanceRoute>[
+        WaffraFinanceRoute.appStartup,
+        WaffraFinanceRoute.widgetStartup,
+      ]) {
+        final binding = await WaffraProductionFinanceAuthorityBinding.bind(
+          legacy: const WaffraHomeFinancePersistence(),
+          sourceGuard: const _FixedSourceGuard(
+            WaffraProductionFinanceSource.encryptedRoutingRequired,
+          ),
+          certifiedEvidence: syntheticApprovedEvidence(),
+          startupRoute: route,
+          directoryProvider: () async => dir,
+          secureKeyReader: () async => key,
+        );
+        try {
+          expect(binding.encrypted, isTrue);
+          final finance = await binding.authority.load(
+            route: route == WaffraFinanceRoute.appStartup
+                ? WaffraFinanceRoute.dashboardRead
+                : WaffraFinanceRoute.widgetRead,
+          );
+          expect(finance.encryptedWitness, isNotNull);
+          expect(finance.ledgerRaw, '[]');
+        } finally {
+          await binding.close();
+        }
+      }
     } finally {
       await dir.delete(recursive: true);
     }
