@@ -43,6 +43,15 @@ void main() {
     expect(source, contains('if(!_acceptFabTap())return;'));
     expect(source, contains('splashFactory:NoSplash.splashFactory'));
     expect(source, contains('key:_tourKeys[1]'));
+    expect(source, contains('final tappedTab=tab;'));
+    expect(source, contains('scale:_fabPressed?0.96:1.0'));
+    expect(source, contains('await Future<void>.delayed(waffraMotion(105));'));
+    expect(source, contains('duration:waffraMotion(320)'));
+    expect(source, contains("ValueKey('waffra-fab-menu-open')"));
+    expect(source, contains("ValueKey('waffra-fab-menu-closed')"));
+    expect(source, contains('showWaffraSmoothDialog<SavingGoal>'));
+    expect(source, contains('child:const Icon(Icons.add,color:Colors.white,size:28)'));
+    expect(source, isNot(contains('child:Icon(addFabExpanded?Icons.close:Icons.add')));
   });
 
   testWidgets('details show entire notes and keep concise name', (tester) async {
