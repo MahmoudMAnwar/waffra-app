@@ -138,6 +138,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # Needed to prove approved notes are not older than app-code changes.
+          fetch-depth: 0
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -1051,6 +1054,88 @@ jobs:
           print('APK receipt:', content)
           PY
 
+      # Every APK includes human-readable, Arabic release notes generated
+      # from the approved changes tracked in Git. Future app-code changes
+      # require updating the approval manifest before an APK is published.
+      - name: Generate and validate Waffra Release Notes TXT
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          SOURCE_BRANCH: ${{ github.ref_name }}
+          SOURCE_RUN: ${{ github.run_id }}
+          SOURCE_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          test "$SOURCE_SHA" = "$(git rev-parse HEAD)"
+          NOTES_SOURCE=docs/release/WAFFRA_APPROVED_CHANGES.txt
+          test -s "$NOTES_SOURCE" || { echo "::error::Missing approved release notes"; exit 1; }
+          # Compare ancestry, not timestamps; prevent shipping app changes
+          # that postdate the approved changelog, including future requests.
+          notes_commit=$(git log -1 --format=%H -- "$NOTES_SOURCE")
+          code_commit=$(git log -1 --format=%H -- lib/main.dart lib/waffra_widget_capture.part.dart lib/storage android/app/src/main)
+          test -n "$notes_commit"
+          test -n "$code_commit"
+          if ! git merge-base --is-ancestor "$code_commit" "$notes_commit"; then
+            echo "::error::Approved release notes are older than app-code changes. Update $NOTES_SOURCE before publishing APK."
+            exit 1
+          fi
+          python3 - <<'PY'
+          import hashlib, os, pathlib
+          approved = pathlib.Path('docs/release/WAFFRA_APPROVED_CHANGES.txt')
+          source = approved.read_text(encoding='utf-8')
+          required = ['شارة المرفقات', 'الملاحظات', 'زر الإضافة', 'الوضع الفاتح']
+          for label in required:
+              if label not in source:
+                  raise SystemExit('BLOCKED: approved release notes missing required category: ' + label)
+          apk = pathlib.Path('build/app/outputs/flutter-apk/app-release.apk')
+          receipt = pathlib.Path('build/waffra-qa-build-receipt.txt')
+          if not apk.is_file() or not apk.stat().st_size or not receipt.is_file():
+              raise SystemExit('BLOCKED: APK or its verification receipt is missing')
+          apk_digest = hashlib.sha256(apk.read_bytes()).hexdigest()
+          saved_receipt = receipt.read_text(encoding='utf-8')
+          if 'APK sha256: ' + apk_digest not in saved_receipt:
+              raise SystemExit('BLOCKED: published APK hash differs from QA receipt')
+          sha = os.environ['SOURCE_SHA']
+          if 'Source commit: ' + sha not in saved_receipt:
+              raise SystemExit('BLOCKED: APK receipt points at another source revision')
+          header = '\n'.join([
+              'وفرة - Waffra | Release Notes',
+              '==============================================',
+              'حالة النسخة: APK تجريبي اجتاز بوابات اختبارات CI الخاصة بهذا التشغيل.',
+              'ملاحظة: النجاح الآلي لا يثبت نجاح التجربة على هاتف فعلي.',
+              '',
+              'رقم تشغيل GitHub Actions: ' + os.environ['SOURCE_RUN'],
+              'المستودع: ' + os.environ['SOURCE_REPO'],
+              'الفرع: ' + os.environ['SOURCE_BRANCH'],
+              'Commit SHA: ' + sha,
+              'APK SHA-256: ' + apk_digest,
+              'Approved changes SHA-256: ' + hashlib.sha256(approved.read_bytes()).hexdigest(),
+              'رابط التشغيل: https://github.com/' + os.environ['SOURCE_REPO'] + '/actions/runs/' + os.environ['SOURCE_RUN'],
+              '',
+              '============ RELEASE NOTES / التعديلات ============',
+              '',
+          ])
+          footer = '\n'.join([
+              '',
+              '============ STATUS / حالة الاعتماد ============',
+              'اجتياز بوابات هذا البيلد: مطلوب لإرفاق هذا الملف مع APK.',
+              'الاختبار البصري على هاتف فعلي: غير مثبت بواسطة CI.',
+              'التخزين المشفر SQLCipher في الإنتاج: لم يتم اعتماده.',
+              'حفظ رسائل بنكية حقيقية قبل تفعيل التشفير: غير مسموح.',
+              'التثبيت المقصود: QA ببيانات تجريبية فقط.',
+              'لا تعتبر أي نسخة حالية إذا لم يطابق الـCommit وبصمة APK هذا الملف.',
+              '',
+          ])
+          output = pathlib.Path('build/Waffra-Release-Notes.txt')
+          output.write_text(header + source.rstrip() + '\n' + footer, encoding='utf-8-sig')
+          if output.stat().st_size < 500:
+              raise SystemExit('BLOCKED: Release Notes TXT unexpectedly short')
+          print('PASS: approved release notes packaged for exact commit ' + sha)
+          print('PASS: release notes match APK sha256 ' + apk_digest)
+          PY
+          test -s build/Waffra-Release-Notes.txt
+          echo "✅ Waffra-Release-Notes.txt (same verified commit and APK hash)" >> "$GITHUB_STEP_SUMMARY"
+
       # Only the LAST step publishes the APK and its exact source receipt.
       - name: Publish signed QA APK (FINAL step)
         uses: actions/upload-artifact@v4
@@ -1059,5 +1144,6 @@ jobs:
           path: |
             build/app/outputs/flutter-apk/app-release.apk
             build/waffra-qa-build-receipt.txt
+            build/Waffra-Release-Notes.txt
           if-no-files-found: error
           retention-days: 30
