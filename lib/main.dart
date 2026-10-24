@@ -2136,7 +2136,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     icon:const Icon(Icons.refresh),
     label:WaffraText(waffraIsEnglish?'Retry safely':'إعادة المحاولة بأمان')),
   ])));
- @override void dispose(){_dashboardScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();final binding=_financeBinding;if(binding!=null)unawaited(binding.close());super.dispose();}
+ @override void dispose(){_dashboardScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
  Future<void> _syncWidgetTransactions()async{
   if(!mounted||!ready)return;
   try{
