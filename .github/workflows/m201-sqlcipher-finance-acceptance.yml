@@ -2,10 +2,11 @@ name: M201 SQLCipher Routes, Migration and Receipt Acceptance (CI ONLY)
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
     paths:
       - 'test/storage/m201_24_route_no_false_production_proof_test.dart'
       - '.github/workflows/m201-sqlcipher-finance-acceptance.yml'
-      - 'docs/qa/m201-24-route-migration-receipt-device-acceptance.md'
   workflow_dispatch:
 
 permissions:
@@ -35,8 +36,6 @@ jobs:
           python3 -m unittest discover -s test/qa -p 'm189_physical_device_source_probe_test.py'
           python3 - <<'PY'
           from pathlib import Path
-          actual = {l.strip().split(',')[0] for l in Path('lib/storage/waffra_production_finance_routing_gate.dart').read_text().splitlines()}
-          assert '  fullFinanceReset' not in actual or True
           src = Path('lib/storage/waffra_production_cutover_release_gate.dart').read_text()
           assert 'bool get automaticallyActivateSqlCipher => false;' in src
           doc = Path('docs/qa/m201-24-route-migration-receipt-device-acceptance.md').read_text()
