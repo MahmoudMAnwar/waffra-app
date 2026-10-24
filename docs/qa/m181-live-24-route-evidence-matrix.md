@@ -24,6 +24,11 @@ writes, plus runnable negative tests. It does NOT claim that enumerating all
    still fails until a dedicated combined transactional writer exists.
 5. **merchantRulesAndSmsHashes** — strictly constrain the learned merchant
    mapping update; the separate verified SHA-256 hash merge remains intact.
+The existing encrypted SHA-256 fingerprint merge also now updates BOTH the
+canonical snapshot and `fresh_finance_sms_hashes` typed SQL projection
+atomically, after checking that they matched before the merge. A previously
+split-brain source fails closed rather than being silently repaired.
+
 6. **deleteAllTransactions** — permit a strictly scoped, explicitly approved
    SQLCipher ledger+hash reset **only when there are no receipt blobs, archives,
    orphan receipts or ambiguous SQL/snapshot records**. Reject stale screen
