@@ -13,6 +13,7 @@ import subprocess
 
 APPROVED = {
     ".github/workflows/android.yml",
+    ".github/scripts/run-m202-sqlcipher-binder-android.sh",
     ".github/workflows/m147-final-main-review-gate.yml",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
@@ -49,6 +50,7 @@ def main() -> None:
             " unexpected=" + repr(sorted(changed - APPROVED)))
 
     app = Path("lib/main.dart").read_text(encoding="utf-8")
+    m202_driver = Path(".github/scripts/run-m202-sqlcipher-binder-android.sh").read_text(encoding="utf-8")
     widget = Path("lib/waffra_widget_capture.part.dart").read_text(encoding="utf-8")
     approved_notes = Path("docs/release/WAFFRA_APPROVED_CHANGES.txt").read_text(encoding="utf-8")
     apk_workflow = Path(".github/workflows/android.yml").read_text(encoding="utf-8")
@@ -74,6 +76,21 @@ def main() -> None:
         "key:_tourKeys[1]",
     ):
         require(marker in app, "missing approved UI/SMS guard " + marker)
+
+    # Emulator test execution must perform the four real Android integration
+    # cases and fail shut on timeout, never report synthetic CI as production.
+    for marker in (
+        "flutter drive",
+        "integrationDriver()",
+        "timeout --signal=TERM",
+        "PIPESTATUS[0]",
+        "M202_ANDROID_TEST_PASS:",
+        "m202_home_widget_source_binder_android_test.dart",
+        "live_finance_migration_receipts_android_test.dart",
+        "m120_verified_receipt_reopen_android_test.dart",
+        "portable_encrypted_receipts_android_test.dart",
+    ):
+        require(marker in m202_driver, "M202 emulator fail-closed runner missing: " + marker)
 
     # The newly approved release-notes manifest is a *reviewed additional*
     # file, never a wildcard exception. Require its contents and publication
