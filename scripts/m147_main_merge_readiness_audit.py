@@ -1,146 +1,232 @@
 #!/usr/bin/env python3
-"""M147: fail-closed, read-only audit of the final *review* PR against main.
+"""M147/M224 strict main-bound, exact-head source and review-scope audit.
 
-Never merges, deploys, alters secrets, writes app databases, or publishes APKs.
-All assertions concern repository lineage and changed-file scope only.
+Read-only: NEVER activates finance sources, changes user data, or publishes
+releases. Unlike the historical M147-only candidate, this explicitly reviews
+the M224 financial UI changes against the current pinned main.
 """
 from __future__ import annotations
 
 import json
 import os
-import pathlib
+from pathlib import Path
 import subprocess
-import sys
 
-APPROVED_MAIN = "965e25a0d62ed94401b112086edccb0a4fde790b"
-APPROVED_M146 = "fdad2c55fcc0c6e0676cfa9e4121bee34dfcdc02"
-
-EXPECTED_MAIN_DIFF = {
-    ".github/workflows/android.yml",
-    ".github/workflows/m131-backup-security-regression.yml",
-    ".github/workflows/m132-backup-corruption-recovery.yml",
-    ".github/workflows/m140-backup-integrity.yml",
-    ".github/workflows/m146-main-safe-candidate.yml",
-    ".github/workflows/m147-final-main-review-gate.yml",
-    "docs/m146-main-safe-candidate.md",
-    "docs/m147-final-main-merge-review.md",
+BASE_MAIN = "bd038c40f0ec41e2c25f0ecef8078957e1d06240"
+ALLOWED = {
     "scripts/m147_main_merge_readiness_audit.py",
+    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "lib/waffra_secure_backup.dart",
-    "test/m127_ui_tour_backup_acceptance_test.dart",
-    "test/m131_backup_boundary_tamper_qa_test.dart",
-    "test/m132_backup_corruption_recovery_negative_test.dart",
-    "test/m140_backup_utf8_cross_archive_integrity_test.dart",
-    "test/waffra_approved_ui_batch_test.dart",
-    "test/waffra_secure_backup_test.dart",
+    "lib/waffra_widget_capture.part.dart",
+    "lib/waffra_display_currency.dart",
+    "lib/storage/waffra_encrypted_legacy_sms_reattachment.dart",
+    "lib/currency_converter.dart",
+    "lib/waffra_gold_market_data.dart",
+    "lib/waffra_gold_calculator.dart",
+    "lib/waffra_gold_market_section.dart",
+    "test/waffra_widget_quick_capture_test.dart",
+    "test/waffra_footer_pdf_navigation_test.dart",
+    "test/waffra_m208_bundle_regression_test.dart",
+    "test/waffra_oct21_regression_test.dart",
+    "test/m224_verified_gold_fallback_test.dart",
+    "test/m224_verified_pull_refresh_dialog_test.dart",
+    "test/m224_pdf_verified_display_currency_test.dart",
+    "test/storage/m224_encrypted_legacy_sms_reattachment_test.dart",
+    "test/storage/m224_full_sms_batch_preservation_test.dart",
+    "integration_test/m202_home_widget_source_binder_android_test.dart",
 }
-NEW_M147_ONLY = {
-    ".github/workflows/m147-final-main-review-gate.yml",
-    "docs/m147-final-main-merge-review.md",
-    "scripts/m147_main_merge_readiness_audit.py",
-}
-
+FINANCE_GUARDS = (
+    "if(applied.originalSmsNotesOmittedOnLegacy)",
+    "notes:raw,sourceType:'sms'",
+    "WaffraProductionFinanceAuthorityBinding.bind(",
+    "WaffraFinanceRoute.dashboardRead",
+    "requireIntegrity()",
+)
+GOLD_GUARDS = (
+    "WaffraGoldSpotQuote.fromXausJson",
+    "fallbackEndpoint",
+    "Gold price or UTC update time missing.",
+)
+REFRESH_GUARDS = (
+    "_refreshFromVerifiedFinance",
+    "await _financialWriteQueue.drain();",
+    "onRefresh:_refreshFromVerifiedFinance",
+    "if(tab>0&&tab<4)",
+)
 
 def git(*args: str) -> str:
-    result = subprocess.run(
-        ["git", *args], text=True, capture_output=True, check=True
-    )
-    return result.stdout.strip()
+    return subprocess.check_output(["git", *args], text=True).strip()
 
-
-def paths_between(start: str, end: str) -> set[str]:
-    return set(filter(None, git("diff", "--name-only", start, end).splitlines()))
-
-
-def require(condition: bool, message: str) -> None:
-    if not condition:
-        raise SystemExit("MERGE BLOCKED — " + message)
-
+def require(ok: bool, message: str) -> None:
+    if not ok:
+        raise SystemExit("M147/M224 MERGE BLOCKED — " + message)
 
 def main() -> None:
-    # Checkout is pinned to pull_request.head.sha, not GitHub's synthetic
-    # refs/pull/N/merge commit. Check the exact checkout against the event.
-    actual_head = git("rev-parse", "HEAD")
-    event_head = os.environ.get("REVIEW_HEAD_SHA", "").strip()
-    require(bool(event_head) and actual_head == event_head,
-            "checkout is not the reviewed head SHA")
-    current_main = git("rev-parse", "refs/remotes/origin/main")
-    require(current_main == APPROVED_MAIN,
-            "main advanced since the reviewed baseline; refresh before merging")
-    require(git("merge-base", current_main, actual_head) == current_main,
-            "candidate is not a direct descendant of current main")
-    require(git("merge-base", APPROVED_M146, actual_head) == APPROVED_M146,
-            "M147 diverged from the M146 candidate with successful CI")
+    head = git("rev-parse", "HEAD")
+    origin_main = git("rev-parse", "refs/remotes/origin/main")
+    require(head == os.environ.get("REVIEW_HEAD_SHA", ""),
+            "checked out candidate does not match the event PR head")
+    require(origin_main == BASE_MAIN,
+            "main advanced: rebuild and rerun exact-main audit")
+    require(git("merge-base", BASE_MAIN, head) == BASE_MAIN,
+            "candidate must directly descend from pinned main")
+    behind, ahead = map(int, git("rev-list", "--left-right", "--count",
+                                  f"{BASE_MAIN}...{head}").split())
+    require(behind == 0 and 0 < ahead <= 60,
+            "unexpected candidate ancestry or commit count")
+    changed = set(filter(None,
+        git("diff", "--name-only", BASE_MAIN, head).splitlines()))
+    require(changed == ALLOWED,
+            "changed-file scope mismatch: " + repr(sorted(changed ^ ALLOWED)))
+    require(not any(p.startswith(("native/", "firebase/"))
+                    for p in changed),
+            "Android native and Firebase are out of scope")
+    require(not any(p.startswith("lib/storage/") and p !=
+                    "lib/storage/waffra_encrypted_legacy_sms_reattachment.dart"
+                    for p in changed),
+            "Only the exact disabled-by-default encrypted SMS recovery candidate is approved")
+    require(not any(p.startswith(".github/workflows/") for p in changed),
+            "CI workflow files must stay unmodified")
+    require(not any(p in changed for p in (
+        "pubspec.yaml", "pubspec.lock", "android/app/google-services.json")),
+        "production dependencies and credentials cannot be changed")
+    main_code = Path("lib/main.dart").read_text()
+    gold_code = Path("lib/waffra_gold_market_data.dart").read_text()
+    review_code = Path("test/m224_verified_pull_refresh_dialog_test.dart").read_text()
+    gold_test = Path("test/m224_verified_gold_fallback_test.dart").read_text()
+    sms_code = Path("lib/storage/waffra_encrypted_legacy_sms_reattachment.dart").read_text()
+    sms_qa = Path("test/storage/m224_encrypted_legacy_sms_reattachment_test.dart").read_text()
+    sms_bulk = Path("test/storage/m224_full_sms_batch_preservation_test.dart").read_text()
+    legacy_pdf_reviews = [
+        Path(path).read_text() for path in (
+            "test/waffra_footer_pdf_navigation_test.dart",
+            "test/waffra_m208_bundle_regression_test.dart",
+            "test/waffra_oct21_regression_test.dart",
+        )
+    ]
+    require(all("$pdfCurrency" in source or "$pdfCurrencyAr" in source
+                or "pdfAmount" in source for source in legacy_pdf_reviews),
+            "legacy PDF reviews must check verified selected-currency exports")
+    pdf_qa = Path("test/m224_pdf_verified_display_currency_test.dart").read_text()
+    emulator_proof = Path("integration_test/m202_home_widget_source_binder_android_test.dart").read_text()
+    widget_code = Path("lib/waffra_widget_capture.part.dart").read_text()
+    widget_qa = Path("test/waffra_widget_quick_capture_test.dart").read_text()
+    authority = Path("lib/storage/waffra_verified_finance_authority.dart").read_text()
+    routes = Path("lib/storage/waffra_production_finance_routing_gate.dart").read_text()
+    release_gate = Path("lib/storage/waffra_production_cutover_release_gate.dart").read_text()
+    notes = Path("docs/release/WAFFRA_APPROVED_CHANGES.txt").read_text()
+    require(all(g in main_code for g in FINANCE_GUARDS),
+            "legacy SMS privacy/source guard or verified route missing")
+    require(all(g in main_code for g in REFRESH_GUARDS),
+            "authoritative UI refresh / data protection missing")
+    require(all(g in gold_code for g in GOLD_GUARDS),
+            "gold provider and strict source-time checks missing")
+    require("MockClient" in gold_test and "throwsFormatException" in gold_test
+            and "offline" in gold_test,
+            "independent gold provider negative QA missing")
+    require("if(applied.originalSmsNotesOmittedOnLegacy)" in review_code,
+            "guard must be explicitly covered by a regression")
+    require(all(s in sms_code for s in (
+        "this.experimentalEnabled = false",
+        "verifyEncryptedSourceUnderLock();",
+        "WaffraExperimentalWriterGate(",
+        "snapshot.store.transaction(",
+        "snapshot.commit(",
+        "SELECT source_json FROM fresh_finance_entries WHERE entry_id=?",
+        "bankSmsFingerprint(originalSms) != expectedHash",
+    )), "exact encrypted-only SMS recovery authorization, parity or lock missing")
+    require(all(k in sms_bulk for k in (
+        "all 56 full bank SMS notes survive encrypted batch and cold reopen",
+        "replayed 56 SMS hashes cannot create duplicate transactions",
+        "synthetic failure in one original-SMS row rolls back whole batch",
+        "expect(prefs.getString('entries'),isNull)",
+        "expect(found(encryptedBytes,sample),isFalse",
+    )), "56-bank-SMS lossless SQLCipher batch regression missing")
+    require(all(s in sms_qa for s in (
+        "cold-reopens exact", "SQL failure rolls back",
+        "wrong parser amount", "disabled-by-default",
+    )), "SMS recovery negative / cold reopen QA missing")
+    require(all(marker in emulator_proof for marker in (
+        "originalWidgetSms",
+        "originalHomeSms",
+        "widget.authority.commitConfirmedSms(",
+        "home.authority.commitConfirmedSms(",
+        "expect(recovered.ledgerRaw, finalLedger)",
+        "hasBytes(encryptedBytes, utf8.encode(raw))",
+        "for (final key in legacy.getKeys())",
+        "incorrect-test-only-key",
+    )), "real Android binder original SMS cold-reopen and plaintext leak proof missing")
+    require("Map<String, Object?>.unmodifiable({...record, 'notes': ''})"
+            in authority and
+            "originalSmsNotesOmittedOnLegacy" in authority,
+            "legacy privacy guard cannot be removed")
+    require(all(g in widget_code for g in (
+        "await WaffraDisplayCurrency.initialize();",
+        "final conceal=hidden||display==null;",
+        "currency:WaffraDisplayCurrency.label(_english)",
+    )), "standalone widget engine cannot mislabel SAR as selected FX")
+    require("widget FX must convert SAR or conceal" in widget_qa
+            and "currency:WaffraDisplayCurrency.label(waffraIsEnglish)" in widget_qa,
+            "widget FX/hidden fallback regression is missing")
+    require("automaticallyActivateSqlCipher => false" in release_gate,
+            "production activation would be unsafe")
+    # M224 adds no real-device evidence. A complete route enum is an audit
+    # inventory, not proof any route is live on production SQLCipher.
+    route_lines = routes.split("enum WaffraFinanceRoute {", 1)[1].split("}", 1)[0]
+    inventory = [line.split("//")[0].strip().rstrip(",")
+                 for line in route_lines.splitlines() if line.strip()]
+    require(len(inventory) == 24 and len(set(inventory)) == 24,
+            "SQLCipher route audit inventory does not enumerate exactly 24")
+    require("verifiedRoutes = const <WaffraFinanceRoute>{}" in routes,
+            "unverified routes must not be preapproved")
+    pdf_app = main_code.split("Future<void> exportEntriesPdf(", 1)[1]
+    require(all(x in pdf_app for x in (
+        "final pdfQuote=WaffraDisplayCurrency.active.value",
+        "if(!pdfQuote.verified)",
+        "final n=pdfAmount(number)",
+        "Amount ($pdfCurrency)",
+        "المبلغ ($pdfCurrencyAr)",
+        "svg:weeklySpendSvg(smartData!.weeklySpend.map(pdfAmount).toList())",
+        "svg:pairedBarChartSvg(buckets.map(",
+    )), "PDF must verify one selected FX source across all values and plots")
+    require("primaryRate" in pdf_qa and "stale FX" in pdf_qa,
+            "PDF EGP/FX negative regression missing")
+    require("M224" in notes and "SQLCipher" in notes,
+            "release notes omit verified scope and SQLCipher NO-GO")
+    # Release notes must follow ALL modified application code; don't silently
+    # issue an APK with notes predating the last UI or finance source change.
+    manifest = git("log", "-1", "--format=%H", "--",
+                   "docs/release/WAFFRA_APPROVED_CHANGES.txt")
+    for path in sorted(p for p in ALLOWED if p.startswith("lib/")):
+        latest = git("log", "-1", "--format=%H", "--", path)
+        require(subprocess.run(["git", "merge-base", "--is-ancestor",
+                                latest, manifest]).returncode == 0,
+                "release manifest predates " + path)
 
-    actual_main_diff = paths_between(current_main, actual_head)
-    actual_last_diff = paths_between(APPROVED_M146, actual_head)
-    require(actual_main_diff == EXPECTED_MAIN_DIFF,
-            "unexpected cumulative production diff: missing="
-            + repr(sorted(EXPECTED_MAIN_DIFF - actual_main_diff))
-            + " unexpected=" + repr(sorted(actual_main_diff - EXPECTED_MAIN_DIFF)))
-    require(actual_last_diff == NEW_M147_ONLY,
-            "M147 must add only review script, workflow, and instructions")
-    require(not any(
-        path.startswith(("lib/storage/", "firebase/", "native/"))
-        for path in actual_main_diff
-    ), "SQLCipher implementation, Firebase, or native widget changed")
-    require(not any(
-        path in actual_main_diff
-        for path in ("pubspec.yaml", "pubspec.lock", "android/app/google-services.json")
-    ), "dependencies or Firebase config were modified")
-
-    behind, ahead = [int(n) for n in git(
-        "rev-list", "--left-right", "--count", f"{current_main}...{actual_head}"
-    ).split()]
-    require(behind == 0, "candidate is behind main")
-    require(0 < ahead <= 25, "candidate has an unexpectedly large commit history")
-
-    plan = {
-        "milestone": "M147",
-        "head_sha": actual_head,
-        "approved_m146_sha": APPROVED_M146,
-        "main_baseline_sha": current_main,
-        "main_merge_executed": False,
-        "main_merge_authorized": False,
-        "production_sqlcipher_cutover_authorized": False,
-        "store_release_authorized": False,
-        "changed_paths_against_main": sorted(actual_main_diff),
-        "new_review_only_paths": sorted(actual_last_diff),
-        "ahead_by": ahead,
-        "behind_by": behind,
-        "status": "REVIEWABLE_SAFE_SCOPE_NOT_MERGE_OR_RELEASE_APPROVAL",
-        "still_required": [
-            "Full M147 same-head test and Android compile CI must pass.",
-            "Human diff review and explicit approval before main merge.",
-            "Signed physical-device smoke including Firebase Google Sign-In.",
-            "Legacy backup restore and clean-install device verification.",
-            "Privacy, data safety, crash reporting and store checks before release.",
-            "Do not migrate user data or activate production SQLCipher.",
+    report = {
+        "audit": "M147-M224", "base_main_sha": BASE_MAIN,
+        "reviewed_head_sha": head, "changed_paths": sorted(changed),
+        "behind": behind, "ahead": ahead, "scope_verified": True,
+        "review_status": "STRICT_SOURCE_SCOPE_ONLY_NOT_DEVICE_CERTIFICATION",
+        "sqlcipher_production_activated": False,
+        "real_user_migration_performed": False,
+        "physical_device_backup_restore_verified": False,
+        "routes_in_catalog": len(inventory),
+        "routes_proven_on_two_physical_devices": False,
+        "sms_recovery_experimental_only": True,
+        "release_authorized": False,
+        "required": [
+            "Every workflow for exact PR head must pass, including Android QA.",
+            "Human safety/source review and exact-head merge authorization.",
+            "Post-merge main SHA signed APK and verified artifact metadata.",
+            "24/24 actual SQLCipher finance routes and two physical phones",
+            "separately required before SQLCipher production cutover.",
         ],
-        "proposed_safe_merge_method": "squash via reviewed PR after explicit approval",
-        "proposed_code_rollback": (
-            "Create a new revert PR for the resulting squash-merge commit; "
-            "run the same CI and device checks before deployment. "
-            "Git revert does NOT roll back user data or cloud changes."
-        ),
     }
-    output = pathlib.Path("build/m147-final-review-report.json")
-    output.parent.mkdir(exist_ok=True, parents=True)
-    output.write_text(json.dumps(plan, ensure_ascii=False, indent=2) + "\n",
-                      encoding="utf-8")
-    summary = os.environ.get("GITHUB_STEP_SUMMARY")
-    if summary:
-        with open(summary, "a", encoding="utf-8") as file:
-            file.write(
-                "## M147 main candidate: scope accepted, merge not authorized\n\n"
-                f"- Main: `{current_main[:12]}`, candidate: `{actual_head[:12]}`\n"
-                f"- Changed files: {len(actual_main_diff)}, "
-                f"ahead {ahead}, behind {behind}\n"
-                "- No experimental SQLCipher, Firebase or native Widget paths changed.\n"
-                "- **Still Draft; manual signed-device and explicit merge approval required.**\n"
-            )
-    print(json.dumps(plan, ensure_ascii=False, indent=2))
-
+    out = Path("build/m147-final-review-report.json")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
+    print(json.dumps(report, ensure_ascii=False, indent=2))
 
 if __name__ == "__main__":
     main()

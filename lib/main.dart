@@ -22,6 +22,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:crypto/crypto.dart';
 import 'waffra_biometrics.dart';
 import 'waffra_amount_formatter.dart';
+import 'waffra_display_currency.dart';
 import 'waffra_validators.dart';
 import 'waffra_financial_insights.dart';
 import 'waffra_reminders.dart';
@@ -134,7 +135,7 @@ String formatMoney(num value) {
  if(hideWaffraAmounts.value)return '***';
  return formatWaffraMoney(value);
 }
-String cash(num value)=>hideWaffraAmounts.value?'***':'${formatMoney(value)} ﷼';
+String cash(num value)=>hideWaffraAmounts.value?'***':WaffraDisplayCurrency.money(value,english:waffraIsEnglish);
 String dayText(DateTime d)=>'${d.day}/${d.month}/${d.year}';
 String digits(String s) {
   const a='٠١٢٣٤٥٦٧٨٩',p='۰۱۲۳۴۵۶۷۸۹';
@@ -148,6 +149,16 @@ double? amountOf(String s) {
   final n=double.tryParse(v);
   return n!=null&&n.isFinite&&n>0?n:null;
 }
+/// User-entered display denominations convert back to canonical ledger SAR.
+/// Bank SMS parsing must continue calling amountOf() without FX conversion.
+double? amountOfDisplay(String text){
+ final n=amountOf(text);
+ return n==null?null:WaffraDisplayCurrency.toLedgerSar(n);
+}
+String formatWaffraEditAmount(num sar){
+ final converted=WaffraDisplayCurrency.convert(sar);
+ return converted==null?'':formatWaffraMoney(converted);
+}
 String newId()=>DateTime.now().microsecondsSinceEpoch.toString();
 
 class RiyalAmount extends StatelessWidget {
@@ -160,12 +171,14 @@ class RiyalAmount extends StatelessWidget {
   return ValueListenableBuilder<bool>(
    valueListenable:hideWaffraAmounts,
    builder:(context,hidden,_)=>Row(mainAxisSize:MainAxisSize.min,textDirection:TextDirection.ltr,children:[
-    WaffraText(hidden?'***':'$prefix${formatMoney(amount)}',style:effective),
+    WaffraText(hidden?'***':'$prefix${WaffraDisplayCurrency.amount(amount)}',style:effective),
     if(!hidden)...[
      const SizedBox(width:4),
-     Image.asset('assets/Saudi_Riyal_Symbol-1.png',width:size*.9,height:size*.9,
-      color:color,colorBlendMode:BlendMode.srcIn,
-      errorBuilder:(_,__,___)=>WaffraText('﷼',style:effective)),
+     if(WaffraDisplayCurrency.country.code=='SAR')
+      Image.asset('assets/Saudi_Riyal_Symbol-1.png',width:size*.9,height:size*.9,
+       color:color,colorBlendMode:BlendMode.srcIn,
+       errorBuilder:(_,__,___)=>WaffraText('ريال',style:effective))
+     else WaffraText(WaffraDisplayCurrency.label(waffraIsEnglish),style:effective),
     ],
    ]));
  }
@@ -617,6 +630,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    final animation=p.getString('waffra_animation_level');
    waffraAnimationLevel.value={'full','balanced','reduced','off'}.contains(animation)?animation!:'balanced';
    waffraLanguage.value=language;
+   unawaited(WaffraDisplayCurrency.initialize());
    allowWaffraScreenshots.value=screenshotsAllowed;
    if(Platform.isAndroid){
     try{await _privacyChannel.invokeMethod<void>('setScreenshotsAllowed',screenshotsAllowed).timeout(const Duration(seconds:3));}
@@ -2226,12 +2240,12 @@ class WaffraCurrencyAmount extends StatelessWidget {
    builder:(context,hidden,_)=>Directionality(
     textDirection:TextDirection.ltr,
     child:Row(mainAxisSize:MainAxisSize.min,children:[
-     WaffraText(hidden?'***':formatMoney(amount),
+     WaffraText(hidden?'***':WaffraDisplayCurrency.amount(amount),
       style:TextStyle(fontFamily:'Tajawal',fontSize:fontSize,
        fontWeight:weight,color:color)),
      if(!hidden)...[
       const SizedBox(width:5),
-      WaffraText(waffraIsEnglish?'SAR':'ريال',
+      WaffraText(WaffraDisplayCurrency.label(waffraIsEnglish),
        style:TextStyle(fontFamily:'Tajawal',fontSize:fontSize*.63,
         fontWeight:FontWeight.w600,color:color)),
      ]
@@ -2491,6 +2505,85 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    });
   }
  }
+ /// Refresh from the authoritative source, not an in-memory repaint.
+ /// A failed integrity check never replaces user money with zeroes.
+ Future<void> _refreshFromVerifiedFinance()async {
+  if(!mounted||!ready)return;
+  try {
+   await _financialWriteQueue.drain();
+   await _ensureFinanceBound();
+   final current=await _financeAuthority.load(
+    route:WaffraFinanceRoute.dashboardRead);
+   final view=current.finance;
+   view.requireIntegrity();
+   final ledger=current.ledgerRaw;
+   final catalog=view.getString('waffra_categories_v24');
+   if(ledger==null||catalog==null) {
+    throw StateError('Authoritative finance view is incomplete.');
+   }
+   List<T> readList<T>(String? raw,T Function(Map<String,dynamic>) make) {
+    if(raw==null)return <T>[];
+    final parsed=jsonDecode(raw);
+    if(parsed is! List)throw const FormatException('Invalid finance list.');
+    return parsed.map((e)=>make(Map<String,dynamic>.from(e as Map))).toList();
+   }
+   final nextEntries=readList<MoneyEntry>(ledger,MoneyEntry.fromJson);
+   final nextCategories=readList<BudgetCategory>(catalog,BudgetCategory.fromJson);
+   final nextGoals=readList<SavingGoal>(
+    view.getString('waffra_goals_v24'),SavingGoal.fromJson);
+   final nextRecurring=readList<RecurringBill>(
+    view.getString('waffra_recurring_v24'),RecurringBill.fromJson);
+   final nextChallenges=readList<SavingChallenge>(
+    view.getString('waffra_challenges_v1'),SavingChallenge.fromJson);
+   List<Map<String,dynamic>> readTrash(String key)=>readList<Map<String,dynamic>>(
+    view.getString(key),(row)=>row);
+   final nextCategoryTrash=readTrash('waffra_deleted_categories_v1');
+   final nextGoalTrash=readTrash('waffra_deleted_goals_v1');
+   final nextRecurringTrash=readTrash('waffra_deleted_recurring_v1');
+   Map<String,String> readStringMap(String key) {
+    final raw=view.getString(key);
+    if(raw==null)return <String,String>{};
+    return (jsonDecode(raw) as Map).map((k,v)=>
+     MapEntry(k.toString(),v.toString()));
+   }
+   final nextPostponed=readStringMap('waffra_recurring_postponed_v1');
+   final nextLearned=readStringMap('waffra_learned_merchants_v1');
+   final nextHashes=view.getStringList('waffra_sms_hashes_v1')??<String>[];
+   final nextBudget=view.getDouble('waffra_monthly_budget_v1')??0;
+   final nextBudgetEnabled=view.getBool('waffra_monthly_budget_enabled_v1')
+    ??(nextBudget>0);
+   final nextReminders=view.getBool('waffra_recurring_reminders_enabled_v1')??false;
+   if(!mounted)return;
+   setState((){
+    entries..clear()..addAll(nextEntries);
+    categories..clear()..addAll(nextCategories);
+    goals..clear()..addAll(nextGoals);
+    recurring..clear()..addAll(nextRecurring);
+    challenges..clear()..addAll(nextChallenges);
+    deletedCategories..clear()..addAll(nextCategoryTrash);
+    deletedGoals..clear()..addAll(nextGoalTrash);
+    deletedRecurring..clear()..addAll(nextRecurringTrash);
+    recurringPostponed..clear()..addAll(nextPostponed);
+    learnedMerchantCategories..clear()..addAll(nextLearned);
+    smsHashes..clear()..addAll(nextHashes);
+    monthlyBudget=nextBudget;
+    monthlyBudgetEnabled=nextBudgetEnabled;
+    recurringRemindersEnabled=nextReminders;
+    _lastFinanceAuthorityRead=current;
+    _lastLedgerSavedRaw=ledger;
+    _lastWidgetRevision=current.widgetRevision;
+   });
+   unawaited(_refreshWidget());
+  }catch(error) {
+   debugPrint('Verified pull refresh failed closed: $error');
+   if(mounted)setState((){
+    ready=false;
+    _financeLoadFailure=waffraIsEnglish?
+     'Refreshed financial data could not be verified. Nothing was erased. Retry safely.':
+     'تعذر التحقق من البيانات أثناء التحديث. لم تُحذف أي معاملات. أعد المحاولة بأمان.';
+   });
+  }
+ }
  Future<void> load()async {
   await _ensureFinanceBound();
   final p=await SharedPreferences.getInstance();
@@ -2678,17 +2771,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
    final net=WaffraAuthoritativeWidgetBalance.netHalalas(raw);
    await refreshWaffraHomeWidget(
-    balance:hideWaffraAmounts.value?'***':formatWaffraMoney(net/100),
+    balance:hideWaffraAmounts.value?'***':WaffraDisplayCurrency.amount(net/100),
     negative:net<0,
     hidden:hideWaffraAmounts.value,
-    currency:waffraIsEnglish?'SAR':'ريال');
+    currency:WaffraDisplayCurrency.label(waffraIsEnglish));
   }catch(e){
    // An absent OS key, conflicting source witness, corrupt ledger or
    // interrupted cutover must NEVER display a stale in-memory balance.
    debugPrint('Verified widget balance refresh unavailable: $e');
    await refreshWaffraHomeWidget(
     balance:'***',negative:false,hidden:true,
-    currency:waffraIsEnglish?'SAR':'ريال');
+    currency:WaffraDisplayCurrency.label(waffraIsEnglish));
   }
  }
  Future<void> persist({
@@ -2794,19 +2887,54 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        alreadyPaid:entries.any((e)=>e.id==id),postponedUntil:postponed))continue;
    _dueDialogShowing=true;
    try{
-    final action=await showWaffraDialog<String>(context:context,builder:(ctx)=>AlertDialog(
-     title:WaffraText(waffraIsEnglish?'Recurring payment due':'عملية متكررة مستحقة'),
-     content:WaffraText(waffraIsEnglish?
-      '${r.title} • ${cash(r.amount)}\\nDue: ${dayText(postponed??due)}\\nWas this paid, or would you like to postpone?':
-      '${r.title} • ${cash(r.amount)}\\nالاستحقاق: ${dayText(postponed??due)}\\nهل تم الدفع أم تريد تأجيل الاستحقاق؟'),
-     actions:[
-      TextButton(onPressed:()=>Navigator.pop(ctx,'later'),
-       child:WaffraText(waffraIsEnglish?'Not now':'ليس الآن')),
-      OutlinedButton(onPressed:()=>Navigator.pop(ctx,'postpone'),
-       child:WaffraText(waffraIsEnglish?'Postpone':'تأجيل')),
-      FilledButton(onPressed:()=>Navigator.pop(ctx,'paid'),
-       child:WaffraText(waffraIsEnglish?'Paid':'تم الدفع')),
-     ]));
+    final action=await showWaffraDialog<String>(context:context,
+     builder:(ctx)=>AlertDialog(
+      title:Column(mainAxisSize:MainAxisSize.min,children:[
+       const Icon(Icons.event_repeat_rounded,color:emerald,size:34),
+       const SizedBox(height:8),
+       WaffraText(waffraIsEnglish?'Recurring payment due':'عملية متكررة مستحقة',
+        textAlign:TextAlign.center,
+        style:const TextStyle(fontWeight:FontWeight.w800,fontSize:20)),
+      ]),
+      content:Column(mainAxisSize:MainAxisSize.min,
+       crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+       WaffraText(r.title,textAlign:TextAlign.center,
+        style:const TextStyle(fontSize:17,fontWeight:FontWeight.w700)),
+       const SizedBox(height:12),
+       Directionality(textDirection:TextDirection.ltr,
+        child:Center(child:WaffraText(cash(r.amount),
+         style:const TextStyle(fontSize:22,fontWeight:FontWeight.w900)))),
+       const SizedBox(height:12),
+       Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+        const Icon(Icons.calendar_today_outlined,size:17,color:emerald),
+        const SizedBox(width:7),
+        WaffraText(waffraIsEnglish?'Due: ':'تاريخ الاستحقاق: '),
+        Directionality(textDirection:TextDirection.ltr,
+         child:Text(dayText(postponed??due))),
+       ]),
+       const SizedBox(height:15),
+       WaffraText(waffraIsEnglish?
+        'Have you paid, or would you like to postpone?':
+        'هل تم الدفع، أم ترغب في تأجيل الاستحقاق؟',
+        textAlign:TextAlign.center),
+      ]),
+      actionsAlignment:MainAxisAlignment.center,
+      actionsPadding:const EdgeInsets.fromLTRB(12,0,12,16),
+      actions:[SizedBox(width:min(330.0,MediaQuery.sizeOf(ctx).width-80),
+       child:Row(children:[
+        Expanded(child:OutlinedButton(onPressed:()=>Navigator.pop(ctx,'later'),
+         child:WaffraText(waffraIsEnglish?'Not now':'ليس الآن',
+          maxLines:1,style:const TextStyle(fontSize:11.5)))),
+        const SizedBox(width:5),
+        Expanded(child:OutlinedButton(onPressed:()=>Navigator.pop(ctx,'postpone'),
+         child:WaffraText(waffraIsEnglish?'Postpone':'تأجيل',
+          maxLines:1,style:const TextStyle(fontSize:11.5)))),
+        const SizedBox(width:5),
+        Expanded(child:FilledButton(onPressed:()=>Navigator.pop(ctx,'paid'),
+         child:WaffraText(waffraIsEnglish?'Paid':'تم الدفع',
+          maxLines:1,style:const TextStyle(fontSize:11.5)))),
+       ]))],
+     ));
     if(!mounted)return;
     if(action=='paid'){
      if(!entries.any((e)=>e.id==id)){
@@ -3470,7 +3598,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
  Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms})async {
   final title=TextEditingController(text:initial?.title??'');
   final notes=TextEditingController(text:initial?.notes??'');
-  final value=TextEditingController(text:initial==null?'':formatWaffraMoney(initial.amount));
+  final value=TextEditingController(text:initial==null?'':formatWaffraEditAmount(initial.amount));
   final message=TextEditingController(text:initialSms??'');
   bool income=initial?.income??false,analyzing=false,hasParsed=initialSms!=null;
   String category=initial?.category??'أخرى';
@@ -3682,7 +3810,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       const SizedBox(height:12),
       FilledButton(onPressed:analyzing?null:()async {
        update(()=>attempted=true);
-       final n=amountOf(value.text);
+       final n=sms?amountOf(value.text):amountOfDisplay(value.text);
        if(!waffraTransactionTitleAllowed(title.text,oldTitle:initial?.title)||
         (!sms&&!waffraTransactionNotesAllowed(notes.text,oldNotes:initial?.notes))||
         waffraAmountFieldError(value.text)!=null||n==null)return;
@@ -4028,13 +4156,28 @@ Future<void> bulkSmsSheet({String? initialText})async {
    final font=pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal-Regular.ttf'));
    final bold=pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal-Bold.ttf'));
    final english=waffraIsEnglish;
+   // Capture a single VERIFIED conversion for the entire PDF.
+   // Never relabel stored SAR as EGP/USD when no exchange rate exists.
+   final pdfQuote=WaffraDisplayCurrency.active.value;
+   if(!pdfQuote.verified){
+    throw StateError('Verified display FX rate required for PDF export.');
+   }
+   final pdfCurrency=pdfQuote.code;
+   final pdfCurrencyAr=waffraCountry(pdfCurrency).symbolAr;
+   double pdfAmount(num sar){
+    final result=pdfQuote.fromSar(sar);
+    if(result==null||!result.isFinite){
+     throw StateError('Unverified PDF currency conversion refused.');
+    }
+    return result;
+   }
    final exportedAt=DateTime.now();
    final oldest=items.map((e)=>e.date).reduce((a,b)=>a.isBefore(b)?a:b);
    final newest=items.map((e)=>e.date).reduce((a,b)=>a.isAfter(b)?a:b);
    // Keep stored descriptions unchanged; sanitize only the exported PDF copy.
    String pdfClean(String input)=>sanitizeWaffraPdfText(input);
       String fmt(num number){
-    final n=number.toDouble();
+    final n=pdfAmount(number);
     if(n==n.roundToDouble())return n.toStringAsFixed(0);
     return n.toStringAsFixed(2);
    }
@@ -4060,7 +4203,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     padding:const pw.EdgeInsets.all(10),decoration:pw.BoxDecoration(color:bg,borderRadius:pw.BorderRadius.circular(7)),
     child:pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.start,children:[
      pw.Text(waffraTr(label),style:pw.TextStyle(font:bold,fontSize:10,color:PdfColors.teal900)),
-     pw.SizedBox(height:5),pw.Text('${fmt(value)} SAR',style:pw.TextStyle(font:bold,fontSize:15,color:PdfColors.teal900)),
+     pw.SizedBox(height:5),pw.Text('${fmt(value)} $pdfCurrency',style:pw.TextStyle(font:bold,fontSize:15,color:PdfColors.teal900)),
     ])));
    // Explicit script direction prevents mixed Arabic/Latin SMS text from
    // overlapping or reversing adjacent numbers in the PDF viewer.
@@ -4144,8 +4287,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
          4:const pw.FixedColumnWidth(81),5:const pw.FixedColumnWidth(54)},
        children:[
         pw.TableRow(decoration:const pw.BoxDecoration(color:PdfColors.teal800),
-         children:(english?['No.','Date','Type','Category','Description','Amount (SAR)']:
-          ['المبلغ (ريال)','الوصف','القسم','النوع','التاريخ','رقم المعاملة'])
+         children:(english?['No.','Date','Type','Category','Description','Amount ($pdfCurrency)']:
+          ['المبلغ ($pdfCurrencyAr)','الوصف','القسم','النوع','التاريخ','رقم المعاملة'])
           .map((h)=>pw.Padding(padding:const pw.EdgeInsets.all(6),
            child:pw.Text(h,textAlign:pw.TextAlign.center,style:pw.TextStyle(font:bold,fontSize:10,color:PdfColors.white)))).toList()),
         ...ordered.asMap().entries.map((row){
@@ -4243,8 +4386,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
        pw.Expanded(child:miniTable(labels,rows.skip(6).toList())),
       ]);
     final valueHeaders=english?
-     ['Period','Income (SAR)','Expenses (SAR)']:
-     ['الفترة','الدخل (ريال)','المصروفات (ريال)'];
+     ['Period','Income ($pdfCurrency)','Expenses ($pdfCurrency)']:
+     ['الفترة','الدخل ($pdfCurrencyAr)','المصروفات ($pdfCurrencyAr)'];
     final periodValues=List<List<String>>.generate(buckets.length,(i)=>[
      (english?(yearly?'Month ':'Period '):(yearly?'شهر ':'فترة '))+(i+1).toString(),
      fmt(buckets[i].$1),fmt(buckets[i].$2),
@@ -4281,13 +4424,13 @@ Future<void> bulkSmsSheet({String? initialText})async {
       ]),
       panel('اتجاه المصروفات الأسبوعية','Weekly Spending Trend',[
        pw.Center(child:pw.SvgImage(
-        svg:weeklySpendSvg(smartData!.weeklySpend),width:620,height:130)),
+        svg:weeklySpendSvg(smartData!.weeklySpend.map(pdfAmount).toList()),width:620,height:130)),
        pw.Center(child:pw.Text(english?
         'Four weeks: oldest to newest':'أربعة أسابيع من الأقدم إلى الأحدث',
         style:pw.TextStyle(font:font,fontSize:10))),
        pw.SizedBox(height:8),
-       dataTable(english?['Week','Expenses (SAR)']:
-        ['الأسبوع','المصروفات (ريال)'],
+       dataTable(english?['Week','Expenses ($pdfCurrency)']:
+        ['الأسبوع','المصروفات ($pdfCurrencyAr)'],
         List<List<String>>.generate(smartData.weeklySpend.length,(i)=>[
          (english?'Week ':'الأسبوع ')+(i+1).toString(),
          fmt(smartData.weeklySpend[i]),
@@ -4297,7 +4440,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       panel(yearly?'الدخل والمصروفات حسب الشهر':'الدخل والمصروفات حسب الأسبوع',
        yearly?'Income vs Expenses by Month':'Income vs Expenses by Week',[
        pw.Center(child:pw.SvgImage(
-        svg:pairedBarChartSvg(buckets),width:680,height:155)),
+        svg:pairedBarChartSvg(buckets.map((p)=>(pdfAmount(p.$1),pdfAmount(p.$2))).toList()),width:680,height:155)),
        pw.Row(mainAxisAlignment:pw.MainAxisAlignment.spaceEvenly,
         children:List.generate(buckets.length,(i)=>pw.Expanded(
          child:pw.Text(
@@ -4332,8 +4475,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
         }).toList())),
       ]),
        pw.SizedBox(height:8),
-       dataTable(english?['Category','Amount (SAR)','Share']:
-        ['القسم','المبلغ (ريال)','النسبة'],
+       dataTable(english?['Category','Amount ($pdfCurrency)','Share']:
+        ['القسم','المبلغ ($pdfCurrencyAr)','النسبة'],
         top.map((e)=><String>[
          waffraTr(e.key),fmt(e.value),
          (e.value/totalExpenses*100).toStringAsFixed(1)+'%',
@@ -4667,7 +4810,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    trailing:Row(mainAxisSize:MainAxisSize.min,children:[
     Column(mainAxisSize:MainAxisSize.min,children:[
      Text('${e.income?'+':'-'}${cash(e.amount)}',style:TextStyle(fontFamily:'Tajawal',fontSize:18,fontWeight:FontWeight.w800,color:e.income?const Color(0xFF075C40):waffraInk)),
-     WaffraText(waffraIsEnglish?'SAR':'ريال',style:TextStyle(fontSize:13,fontWeight:FontWeight.bold,color:e.income?const Color(0xFF075C40):waffraInk)),
+     WaffraText(WaffraDisplayCurrency.label(waffraIsEnglish),style:TextStyle(fontSize:13,fontWeight:FontWeight.bold,color:e.income?const Color(0xFF075C40):waffraInk)),
     ]),
     IconButton(tooltip:waffraIsEnglish?'Transaction options':'خيارات المعاملة',
      onPressed:()=>transactionActions(e),icon:const Icon(Icons.more_vert,color:forest)),
@@ -4721,7 +4864,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   }
  }
  Future<void> editMonthlyBudget()async {
-  final amount=TextEditingController(text:monthlyBudget>0?monthlyBudget.toStringAsFixed(0):'');
+  final amount=TextEditingController(text:monthlyBudget>0?formatWaffraEditAmount(monthlyBudget):'');
   bool enabled=monthlyBudgetEnabled;
   String? validation;
   try{
@@ -4747,7 +4890,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        keyboardType:const TextInputType.numberWithOptions(decimal:true),
        inputFormatters:[const WaffraAmountFormatter()],
        decoration:InputDecoration(
-        labelText:waffraIsEnglish?'Spending limit (SAR) *':'حد المصروفات بالريال *',
+        labelText:(waffraIsEnglish?'Spending limit':'حد المصروفات')+' ('+WaffraDisplayCurrency.label(waffraIsEnglish)+') *',
         hintText:waffraIsEnglish?'Example: 3000':'مثال: 3000',
         errorText:validation,
         border:OutlineInputBorder(borderRadius:BorderRadius.circular(15)),
@@ -4757,7 +4900,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      actions:[
       TextButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
       FilledButton(onPressed:(){
-       final v=double.tryParse(amount.text.trim().replaceAll(',',''));
+       final v=amountOfDisplay(amount.text);
        if(enabled&&(v==null||!v.isFinite||v<=0)){
         update(()=>validation=waffraAmountFieldError(amount.text));
         return;
@@ -4774,8 +4917,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
   }finally{disposeLater([amount]);}
  }
  Future<void> editTransactionFilters()async {
-  final min=TextEditingController(text:minTransactionAmount?.toStringAsFixed(2)??'');
-  final max=TextEditingController(text:maxTransactionAmount?.toStringAsFixed(2)??'');
+  final min=TextEditingController(text:minTransactionAmount==null?'':formatWaffraEditAmount(minTransactionAmount!));
+  final max=TextEditingController(text:maxTransactionAmount==null?'':formatWaffraEditAmount(maxTransactionAmount!));
   String? minError,maxError;
   DateTimeRange? chosen=transactionsDateRange;
   try{
@@ -4817,8 +4960,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
        Navigator.pop(ctx);
       },child:WaffraText(waffraIsEnglish?'Clear':'مسح الفلاتر')),
       FilledButton(onPressed:(){
-       final lo=min.text.trim().isEmpty?null:double.tryParse(min.text.trim());
-       final hi=max.text.trim().isEmpty?null:double.tryParse(max.text.trim());
+       final lo=min.text.trim().isEmpty?null:amountOfDisplay(min.text.trim());
+       final hi=max.text.trim().isEmpty?null:amountOfDisplay(max.text.trim());
        if((min.text.trim().isNotEmpty&&lo==null)||
           (max.text.trim().isNotEmpty&&hi==null)||
           (lo!=null&&(!lo.isFinite||lo<0))||
@@ -5211,10 +5354,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final selected=filterCats.contains(categoryFilter)?categoryFilter:'الكل';
   final shown=showAllTransactions?visible:visible.take(5).toList();
   return RefreshIndicator(
-   onRefresh:()async{
-    if(mounted)setState((){});
-    await Future<void>.delayed(const Duration(milliseconds:150));
-   },
+   onRefresh:_refreshFromVerifiedFinance,
    child:NotificationListener<ScrollStartNotification>(
     onNotification:(notification){
      if(addFabExpanded){
@@ -5934,7 +6074,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    final parent=categories.where((c)=>c.id==effectiveParentId).toList();
    return parent.isEmpty?text:'${parent.first.name} / $text';
   }
-  final budget=TextEditingController(text:initial==null||initial.budget==0?'':formatWaffraMoney(initial.budget));
+  final budget=TextEditingController(text:initial==null||initial.budget==0?'':formatWaffraEditAmount(initial.budget));
   String icon=initial?.icon??'category';int color=initial?.color??colors[0];int alertPercent=initial?.alertPercent??80;
   bool attempted=false;
   final result=await showWaffraDialog<BudgetCategory>(context:context,
@@ -5964,8 +6104,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
        decoration:InputDecoration(labelText:waffraTr('ودّك ننبهك عند كم ٪ من الميزانية؟')),
        items:[50,60,70,75,80,85,90,95,100].map((v)=>DropdownMenuItem(value:v,child:WaffraText('$v٪'))).toList(),
        onChanged:(v){if(v!=null)update(()=>alertPercent=v);}),
-      if(amountOf(budget.text)!=null)Padding(padding:const EdgeInsets.only(top:8),
-       child:WaffraText('بننبهك عند صرف ${cash(amountOf(budget.text)!*alertPercent/100)} من ميزانية ${cash(amountOf(budget.text)!)}')),
+      if(amountOfDisplay(budget.text)!=null)Padding(padding:const EdgeInsets.only(top:8),
+       child:WaffraText('بننبهك عند صرف ${cash(amountOfDisplay(budget.text)!*alertPercent/100)} من ميزانية ${cash(amountOfDisplay(budget.text)!)}')),
      ],
     ])),
     actions:[
@@ -5976,7 +6116,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        categories.where((c)=>c.id!=initial?.id&&c.income==(initial?.income??income)).map((c)=>c.name))!=null ||
        WaffraValidators.positiveAmount(budget.text,required:false)!=null)return;
       Navigator.pop(ctx,BudgetCategory(id:initial?.id??newId(),name:fullName(),icon:icon,color:color,
-       income:initial?.income??income,parentId:effectiveParentId,budget:budget.text.trim().isEmpty?0:(amountOf(budget.text)??0),alertPercent:alertPercent,origin:initial?.origin??'user'));
+       income:initial?.income??income,parentId:effectiveParentId,budget:budget.text.trim().isEmpty?0:(amountOfDisplay(budget.text)??0),alertPercent:alertPercent,origin:initial?.origin??'user'));
      },child:const WaffraText('حفظ')),
     ])));
   disposeLater([name,budget]);return result;
@@ -6517,7 +6657,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
      FilledButton(onPressed:(){
       updateGoal(()=>attempted=true);
-      final n=amountOf(target.text);
+      final n=amountOfDisplay(target.text);
       if(selectedGoal.isEmpty||validateGoalName()!=null||
        WaffraValidators.positiveAmount(target.text)!=null||n==null)return;
       Navigator.pop(ctx,SavingGoal(id:newId(),name:name.text.trim(),target:n,saved:0));
@@ -6582,8 +6722,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
           ]),
           const SizedBox(height:9),
           WaffraText(waffraIsEnglish
-           ?'${formatWaffraMoney(g.saved)} of ${formatWaffraMoney(g.target)} SAR'
-           :'${formatWaffraMoney(g.saved)} من ${formatWaffraMoney(g.target)} ريال',
+           ?'${WaffraDisplayCurrency.money(g.saved,english:true)} of ${WaffraDisplayCurrency.money(g.target,english:true)}'
+           :'${WaffraDisplayCurrency.money(g.saved,english:false)} من ${WaffraDisplayCurrency.money(g.target,english:false)}',
            textAlign:TextAlign.center,style:const TextStyle(fontSize:13)),
           const SizedBox(height:9),
           LinearProgressIndicator(value:currentProgress,minHeight:8,
@@ -6605,7 +6745,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
          onChanged:(_)=>update((){}),
          decoration:InputDecoration(
           hintText:'0.00',
-          suffixText:waffraIsEnglish?'SAR':'ريال',
+          suffixText:WaffraDisplayCurrency.label(waffraIsEnglish),
           errorText:attempted?waffraAmountFieldError(amount.text):null,
           errorMaxLines:2,
           enabledBorder:OutlineInputBorder(
@@ -6652,7 +6792,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
          onPressed:(){
           update(()=>attempted=true);
           if(waffraAmountFieldError(amount.text)!=null)return;
-          final value=amountOf(amount.text);
+          final value=amountOfDisplay(amount.text);
           if(value==null||value<=0)return;
           Navigator.pop(dialogCtx,value);
          },
@@ -6731,7 +6871,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       update(()=>attempted=true);
       if(WaffraValidators.requiredText(name.text)!=null||
        WaffraValidators.positiveAmount(amount.text)!=null)return;
-      final value=amountOf(amount.text);
+      final value=amountOfDisplay(amount.text);
       if(value==null)return;
       Navigator.pop(ctx,SavingChallenge(id:newId(),title:name.text.trim(),
        dailyAmount:value,days:days));
@@ -7031,7 +7171,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
  }
  Future<void> recurringDialog({String? suggestedTitle,double? suggestedAmount})async {
   final title=TextEditingController(text:suggestedTitle??''),
-   amount=TextEditingController(text:suggestedAmount==null?'':formatWaffraMoney(suggestedAmount)),
+   amount=TextEditingController(text:suggestedAmount==null?'':formatWaffraEditAmount(suggestedAmount)),
    day=TextEditingController(text:'1');
   bool income=false;String category=forType(false).first.name;bool attempted=false;
   DateTime startAt=DateTime.now();
@@ -7127,7 +7267,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      actions:[
       TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إلغاء')),
       FilledButton(onPressed:(){
-       final n=amountOf(amount.text),d=int.tryParse(digits(day.text));update(()=>attempted=true);
+       final n=amountOfDisplay(amount.text),d=int.tryParse(digits(day.text));update(()=>attempted=true);
        if(WaffraValidators.requiredText(title.text)==null&&WaffraValidators.positiveAmount(amount.text)==null&&WaffraValidators.dayOfMonth(day.text)==null&&n!=null&&d!=null){
         Navigator.pop(ctx,RecurringBill(id:newId(),title:title.text.trim(),category:category,
          amount:n,income:income,day:d,startAt:startAt));
@@ -8094,6 +8234,57 @@ Future<void> bulkSmsSheet({String? initialText})async {
    items:financialCalendarItems,english:waffraIsEnglish,
    onAddRecurring:(candidate)=>recurringDialog(
     suggestedTitle:candidate.title,suggestedAmount:candidate.estimatedMonthly))));
+ Future<void> chooseAppCurrency()async{
+  final searchController=TextEditingController();
+  String query='';
+  try{
+   final chosen=await showWaffraDialog<String>(
+    context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update){
+     final visible=waffraCountryCurrencies.where((country)=>
+      ('${country.countryAr} ${country.countryEn} ${country.nameAr} ${country.nameEn} ${country.code}')
+       .toLowerCase().contains(query.toLowerCase())).toList();
+     return AlertDialog(
+      title:WaffraText(waffraIsEnglish?'Application currency':'العملة الأساسية للتطبيق'),
+      content:SizedBox(width:420,height:410,child:Column(children:[
+       TextField(key:const Key('waffra-country-currency-search'),
+        controller:searchController,autofocus:true,
+        decoration:InputDecoration(prefixIcon:const Icon(Icons.search),
+         hintText:waffraIsEnglish?'Find country or currency':'ابحث عن دولة أو عملة'),
+        onChanged:(v)=>update(()=>query=v)),
+       const SizedBox(height:9),
+       Expanded(child:ListView.builder(itemCount:visible.length,
+        itemBuilder:(context,index){
+         final option=visible[index];
+         return ListTile(
+          key:Key('waffra-country-currency-${option.code}'),
+          selected:WaffraDisplayCurrency.country.code==option.code,
+          title:WaffraText(option.label(waffraIsEnglish)),
+          trailing:WaffraDisplayCurrency.country.code==option.code?
+           const Icon(Icons.check_circle,color:emerald):null,
+          onTap:()=>Navigator.pop(ctx,option.code));
+        })),
+      ])),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx),
+       child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء'))],
+     );
+    }));
+   if(chosen==null||!mounted)return;
+   try{
+    await WaffraDisplayCurrency.setCurrency(chosen);
+    if(!mounted)return;
+    setState((){});
+    await _refreshWidget();
+    if(mounted)snackSuccess(context,waffraIsEnglish?
+      'Currency updated using a verified exchange rate.':
+      'تم تحديث العملة بسعر صرف موثّق.');
+   }catch(error){
+    debugPrint('App country currency rejected safely: $error');
+    if(mounted)snack(context,waffraIsEnglish?
+      'Exchange rate unavailable. Your stored balances and currency were not changed.':
+      'سعر الصرف غير متاح. لم تتغير بياناتك أو عملتك الحالية.');
+   }
+  }finally{searchController.dispose();}
+ }
  Widget profilePage(){
   final p=widget.profile;
   final provider=p.provider.toLowerCase().trim();
@@ -8135,7 +8326,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    TextField(key:const Key('waffra-account-settings-search'),onChanged:(value){
     final q=value.trim().toLowerCase();
     final groups=<String,String>{
-     waffraIsEnglish?'App settings':'إعدادات التطبيق':'language theme appearance system dark light المظهر اللغة الحركة animation',
+     waffraIsEnglish?'App settings':'إعدادات التطبيق':'language theme appearance system dark light currency exchange بلد دولة عملة جنيه مصري مصر SAR EGP المظهر اللغة الحركة animation',
      waffraIsEnglish?'Security & privacy':'الأمان والخصوصية':'privacy biometric fingerprint حماية بصمة قفل إخفاء PIN screenshots المعاينة',
      waffraIsEnglish?'Backup & data':'النسخ الاحتياطي والبيانات':'backup restore delete نسخ احتياطي استعادة حذف بيانات',
      waffraIsEnglish?'Financial tools':'الأدوات المالية':'calendar subscriptions currency tools التقويم الاشتراكات الأدوات المالية',
@@ -8148,6 +8339,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
     hintText:waffraIsEnglish?'Find a setting':'ابحث داخل إعدادات حسابي')),
    const SizedBox(height:12),
    _accountSection(waffraIsEnglish?'App settings':'إعدادات التطبيق',Icons.settings_outlined,[
+    ListTile(
+     key:const Key('waffra-app-base-currency-setting'),
+     leading:const CircleAvatar(child:Icon(Icons.public_rounded,color:emerald)),
+     title:WaffraText(waffraIsEnglish?'App currency by country':'عملة التطبيق حسب الدولة'),
+     subtitle:WaffraText(WaffraDisplayCurrency.country.label(waffraIsEnglish)),
+     trailing:const Icon(Icons.search_rounded),
+     onTap:chooseAppCurrency),
+
     ListTile(
      leading:const CircleAvatar(child:Icon(Icons.auto_awesome_outlined,color:emerald)),
      title:WaffraText(waffraIsEnglish?'Animations & effects':'الحركة والتأثيرات',style:const TextStyle(fontWeight:FontWeight.bold)),
@@ -8287,6 +8486,17 @@ Future<void> bulkSmsSheet({String? initialText})async {
       fontSize:15,fontWeight:FontWeight.bold,color:Theme.of(context).brightness==Brightness.dark?Colors.white:forest)),
     ]))));
  Widget currentTab(){
+  if(tab>0&&tab<4){
+   return RefreshIndicator(
+    onRefresh:_refreshFromVerifiedFinance,
+    child:ScrollConfiguration(
+     behavior:ScrollConfiguration.of(context).copyWith(
+      physics:const AlwaysScrollableScrollPhysics()),
+     child:_currentTabContents()));
+  }
+  return _currentTabContents();
+ }
+ Widget _currentTabContents(){
   switch(tab){
    case 0:return goalsOpened?goalsPage():dashboard();
    case 1:return categoriesPage();

@@ -17,7 +17,10 @@ void main() {
   expect(app, contains("pdfCell('\u0024{row.key+1}',center:true)"));
   expect(app, contains("'رقم المعاملة'"));
   expect(app, contains('children:english?orderedCells:orderedCells.reversed.toList()'));
-  expect(app, contains("['المبلغ (ريال)','الوصف','القسم','النوع','التاريخ','رقم المعاملة']"));
+  expect(app, contains("['المبلغ (\$pdfCurrencyAr)','الوصف','القسم','النوع','التاريخ','رقم المعاملة']"));
+  expect(app, contains("'Amount (\$pdfCurrency)'"));
+  expect(app, contains("final pdfCurrency=pdfQuote.code;"));
+  expect(app, contains("final result=pdfQuote.fromSar(sar);"));
   expect(app, contains("'No.'"));
  });
 

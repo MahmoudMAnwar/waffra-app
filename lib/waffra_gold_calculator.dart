@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'waffra_amount_formatter.dart';
+import 'waffra_gold_market_data.dart';
 import 'waffra_i18n.dart';
 
 /// Spot quotes are USD per troy ounce (31.1034768g), NOT retail shop prices.
@@ -51,21 +52,10 @@ class WaffraGoldPriceService {
     final owns = client == null;
     final api = client ?? http.Client();
     try {
-      final response = await api.get(Uri.parse('https://api.gold-api.com/price/XAU'))
-          .timeout(const Duration(seconds: 12));
-      if (response.statusCode != 200) throw const FormatException('Gold API unavailable');
-      final spot = jsonDecode(response.body);
-      if (spot is! Map || spot['symbol'] != 'XAU' ||
-          spot['currency'] != 'USD' || spot['price'] is! num) {
-        throw const FormatException('Invalid XAU/USD response');
-      }
-      final price = (spot['price'] as num).toDouble();
-      final timestamp = DateTime.tryParse((spot['updatedAt'] ?? '').toString());
-      if (timestamp == null || !price.isFinite || price <= 0 ||
-          timestamp.isAfter(DateTime.now().add(const Duration(minutes: 10))) ||
-          DateTime.now().difference(timestamp.toUtc()) > const Duration(days: 7)) {
-        throw const FormatException('Stale gold quote');
-      }
+      // The market panel and calculator share a verified spot source.
+      final gold = await const WaffraGoldSpotService().fetch(client: api);
+      final price = gold.usdPerTroyOunce;
+      final timestamp = gold.updatedAtUtc;
       Map rates;
       DateTime? fxAt;
       try {

@@ -11,7 +11,9 @@ void main() {
     expect(app,contains('smartData.weeklySpend.length'));
     expect(app,contains('top.map((e)=><String>['));
     expect(app,contains('children:english?orderedCells:orderedCells.reversed.toList()'));
-    expect(app,contains("['المبلغ (ريال)','الوصف','القسم','النوع','التاريخ','رقم المعاملة']"));
+    expect(app,contains("['المبلغ (\$pdfCurrencyAr)','الوصف','القسم','النوع','التاريخ','رقم المعاملة']"));
+    expect(app,contains("final result=pdfQuote.fromSar(sar);"));
+    expect(app,contains("final pdfCurrency=pdfQuote.code;"));
   });
 
   test('Recurring section has count chip, compact reminders and nearest bill', () {

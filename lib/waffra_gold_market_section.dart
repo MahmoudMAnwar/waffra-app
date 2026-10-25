@@ -134,16 +134,20 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                    colors: [Color(0xFFFFD87B), Color(0xFFD4A02C)]),
-                borderRadius: BorderRadius.circular(9),
+            Semantics(
+              label: t('Gold purity $karat karat', 'ذهب عيار $karat'),
+              child: SizedBox(
+                width: 44, height: 32,
+                child: Stack(alignment: Alignment.center, children: [
+                  _barIcon(width: 44, height: 32),
+                  Positioned(
+                    bottom: 7,
+                    child: Text('$karat',
+                      style: const TextStyle(color: _forest,
+                        fontSize: 11, fontWeight: FontWeight.w900)),
+                  ),
+                ]),
               ),
-              child: Text('$karat',
-                  style: const TextStyle(
-                      color: _forest, fontWeight: FontWeight.w900)),
             ),
             const SizedBox(width: 6),
             Expanded(

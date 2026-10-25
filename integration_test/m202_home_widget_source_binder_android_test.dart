@@ -299,6 +299,42 @@ void main() {
       expect(header.expand((chunk) => chunk).toList(),
           isNot([83, 81, 76, 105, 116, 101, 32, 102,
                  111, 114, 109, 97, 116, 32, 51, 0]));
+      // Stronger proof of confidential persistence: the same bank text
+      // must NOT exist verbatim in any legacy preference value or the bytes
+      // of the physically persisted encrypted SQLite file. This is distinct
+      // from merely checking the SQLite header or a single 'entries' key.
+      bool hasBytes(List<int> bytes, List<int> sought) {
+        if (sought.isEmpty || sought.length > bytes.length) return false;
+        outer:
+        for (var start = 0; start <= bytes.length - sought.length; start++) {
+          if (bytes[start] != sought.first) continue;
+          for (var offset = 1; offset < sought.length; offset++) {
+            if (bytes[start + offset] != sought[offset]) continue outer;
+          }
+          return true;
+        }
+        return false;
+      }
+      final encryptedBytes = await dbFile.readAsBytes();
+      for (final raw in [originalWidgetSms, originalHomeSms]) {
+        expect(hasBytes(encryptedBytes, utf8.encode(raw)), isFalse,
+            reason: 'The encrypted database exposed an original SMS');
+      }
+      await legacy.reload();
+      for (final key in legacy.getKeys()) {
+        final value = legacy.get(key);
+        if (value is String) {
+          expect(value.contains(originalWidgetSms), isFalse,
+              reason: 'A preference leaked an original widget SMS');
+          expect(value.contains(originalHomeSms), isFalse,
+              reason: 'A preference leaked an original Home SMS');
+        } else if (value is List<String>) {
+          for (final element in value) {
+            expect(element.contains(originalWidgetSms), isFalse);
+            expect(element.contains(originalHomeSms), isFalse);
+          }
+        }
+      }
       // No real SMS, user records, Firebase tokens or phone files were used.
     } finally {
       await home?.close();
