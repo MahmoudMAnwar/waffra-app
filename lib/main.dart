@@ -341,6 +341,24 @@ List<BudgetCategory> defaultCategories()=>[
     icon:group.icon,color:colors[group.colorIndex],income:group.income,parentId:group.id),
  ],
 ];
+/// Fresh per-paste summary, independent of previous parsing results.
+class WaffraSmsPasteSummary {
+ const WaffraSmsPasteSummary(this.detected,this.fresh,this.duplicates,this.excluded);
+ final int detected,fresh,duplicates,excluded;
+}
+WaffraSmsPasteSummary waffraSummarizeBankPaste(String raw,Set<String> savedHashes){
+ final seen=<String>{};
+ var detected=0,fresh=0,duplicates=0,excluded=0;
+ for(final msg in splitBankMessages(raw.trim())){
+  final result=BankParser.parse(msg);
+  if(result.amount==null||result.amount!<=0){excluded++;continue;}
+  detected++;
+  final hash=bankSmsHash(msg);
+  if(savedHashes.contains(hash)||!seen.add(hash)){duplicates++;continue;}
+  fresh++;
+ }
+ return WaffraSmsPasteSummary(detected,fresh,duplicates,excluded);
+}
 class BankResult {
  final double? amount;final bool income;final String title,category;final String? suggestedCategory;
  BankResult(this.amount,this.income,this.title,this.category,this.suggestedCategory);
@@ -2641,6 +2659,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
  var parsed=false;
  var reviewing=false,reviewAttempted=false,pasteAttempted=false;
  Timer? pasteTimer;
+ var pasteRevision=0;
  var busy=false;
  var analyzingPaste=false;
  var savedCount=0;
@@ -2901,9 +2920,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final input=text.trim();
   pasted.text=input;
   pasteTimer?.cancel();
-  update((){analyzingPaste=true;parsed=false;messages=[];statusMessage='';});
+  final revision=++pasteRevision;
+  update((){analyzingPaste=true;parsed=false;messages=[];statusMessage='';reviewing=false;index=0;});
   pasteTimer=Timer(const Duration(milliseconds:600),(){
-   if(!sheetActive||!ctx.mounted||pasted.text.trim()!=input)return;
+   if(!sheetActive||!ctx.mounted||pasteRevision!=revision||pasted.text.trim()!=input)return;
    update((){
     messages=splitBankMessages(input);
     parsed=true;
@@ -2926,7 +2946,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   Future<void>(()async{
    final data=await Clipboard.getData(Clipboard.kTextPlain);
    final value=data?.text?.trim();
-   if(sheetActive&&value!=null&&value.isNotEmpty&&value!=pasted.text.trim()){
+   if(sheetActive&&value!=null&&value.isNotEmpty){
     analyzeSharedText(value);
    }
   });
@@ -2951,6 +2971,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    }
    final available=forType(income);
    final total=messages.fold<double>(0,(sum,s)=>sum+(BankParser.parse(s).amount??0));
+   final pasteSummary=waffraSummarizeBankPaste(pasted.text,smsHashes);
    return Padding(padding:EdgeInsets.fromLTRB(18,8,18,MediaQuery.of(ctx).viewInsets.bottom+24),
     child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
      Row(children:[Expanded(child:WaffraText(waffraIsEnglish?'Add bank message':'إضافة رسالة بنكية',style:Theme.of(ctx).textTheme.titleLarge)),IconButton(onPressed:()=>Navigator.pop(ctx),icon:const Icon(Icons.close_rounded))]),
@@ -2960,10 +2981,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
       TextField(controller:pasted,minLines:5,maxLines:9,onChanged:(text){
        pasteTimer?.cancel();
        if(!sheetActive||!ctx.mounted)return;
-       update((){parsed=false;analyzingPaste=text.trim().isNotEmpty;messages=[];statusMessage='';});
+       final revision=++pasteRevision;
+       update((){parsed=false;analyzingPaste=text.trim().isNotEmpty;messages=[];statusMessage='';reviewing=false;index=0;});
        if(text.trim().isNotEmpty){
         pasteTimer=Timer(const Duration(milliseconds:650),(){
-         if(sheetActive&&ctx.mounted&&pasted.text.trim()==text.trim()){
+         if(sheetActive&&ctx.mounted&&pasteRevision==revision&&pasted.text.trim()==text.trim()){
           update((){messages=splitBankMessages(pasted.text.trim());parsed=true;analyzingPaste=false;statusMessage=noTransactionWarning(pasted.text)??'';});
           if(statusMessage.isEmpty&&messages.isNotEmpty)saveParsedMessages(ctx,update);
          }
@@ -2983,9 +3005,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
         if(text.isEmpty){update((){pasteAttempted=true;statusMessage=waffraRequiredFieldMessage;});return;}
         pasted.text=text;
         pasteTimer?.cancel();
-        update((){analyzingPaste=true;messages=[];parsed=false;statusMessage='';});
+        final revision=++pasteRevision;
+        update((){analyzingPaste=true;messages=[];parsed=false;statusMessage='';reviewing=false;index=0;});
         pasteTimer=Timer(const Duration(milliseconds:650),(){
-         if(!sheetActive||!ctx.mounted)return;
+         if(!sheetActive||!ctx.mounted||pasteRevision!=revision||pasted.text.trim()!=text)return;
          update((){messages=splitBankMessages(text);parsed=true;analyzingPaste=false;statusMessage=noTransactionWarning(text)??'';});
          if(statusMessage.isEmpty&&messages.isNotEmpty)saveParsedMessages(ctx,update);
         });
@@ -3024,7 +3047,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
        decoration:BoxDecoration(color:Theme.of(ctx).brightness==Brightness.dark?const Color(0xFF123E32):const Color(0xFFE8F6EF),
         border:Border.all(color:emerald.withValues(alpha:.25)),borderRadius:BorderRadius.circular(16)),
        child:Row(children:[const Icon(Icons.check_circle_outline,color:emerald,size:19),const SizedBox(width:8),
-        Expanded(child:WaffraText(waffraIsEnglish?'Detected ${messages.length} transactions':'تم اكتشاف ${messages.length} معاملة',
+        Expanded(child:WaffraText(waffraIsEnglish
+         ?'Detected ${pasteSummary.detected} • New ${pasteSummary.fresh} • Duplicates ${pasteSummary.duplicates}'
+         :'تم اكتشاف ${pasteSummary.detected} معاملة • الجديدة ${pasteSummary.fresh} • المكررة ${pasteSummary.duplicates}',
+         maxLines:2,
          style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)))])),
      ],
      ]else...[
