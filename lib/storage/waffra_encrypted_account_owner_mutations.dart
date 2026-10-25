@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:crypto/crypto.dart';
 
 import 'waffra_encrypted_account_profile_stager.dart';
 import 'waffra_encrypted_store.dart';
@@ -22,7 +21,7 @@ class WaffraEncryptedAccountOwnerMutations {
     required this.writerDirectory,
     required this.sourceGuard,
     required this.currentAuthenticatedUid,
-    required this.readDeviceOwnerKey,
+    required this.signOwnerChallenge,
     this.experimentalEnabled = false,
   });
 
@@ -34,9 +33,10 @@ class WaffraEncryptedAccountOwnerMutations {
   /// never from text entered by the user or their editable profile fields.
   final Future<String?> Function() currentAuthenticatedUid;
 
-  /// Must read an existing, unexportable device-bound 256-bit owner secret;
-  /// caller must never derive it from PIN, backup password or Firebase UID.
-  final Future<List<int>?> Function() readDeviceOwnerKey;
+  /// Must use a provisioned OS-backed HMAC key operation, not export the
+  /// key bytes to Flutter. Returns only the lowercase hexadecimal MAC; do
+  /// not derive the key from PIN, backup password or Firebase UID.
+  final Future<String?> Function(List<int> challenge) signOwnerChallenge;
   final bool experimentalEnabled;
 
   static const Set<String> _personFields = <String>{
@@ -69,20 +69,19 @@ class WaffraEncryptedAccountOwnerMutations {
     }
   }
 
-  static String ownerTag({
-    required List<int> deviceKey,
+  /// Canonical, domain-separated bytes signed by the OS device keystore.
+  static List<int> ownerChallenge({
     required String uid,
     required String vaultId,
     required String sourceSha256,
   }) {
-    if (deviceKey.length != 32 || uid.trim().isEmpty ||
-        vaultId.trim().isEmpty ||
+    if (uid.trim().isEmpty || vaultId.trim().isEmpty ||
         !RegExp(r'^[0-9a-fA-F]{64}$').hasMatch(sourceSha256)) {
-      throw StateError('Cryptographic owner enrollment evidence is invalid.');
+      throw StateError('Account enrollment evidence is invalid.');
     }
-    return Hmac(sha256, deviceKey).convert(utf8.encode(jsonEncode([
+    return List<int>.unmodifiable(utf8.encode(jsonEncode([
       'waffra-profile-owner-v1', vaultId, sourceSha256, uid,
-    ]))).toString();
+    ])));
   }
 
   /// Expected fields come from a previously verified SQLCipher read; a
@@ -124,16 +123,130 @@ class WaffraEncryptedAccountOwnerMutations {
         throw StateError('A certified active SQLCipher source is required.');
       }
       final uid = await currentAuthenticatedUid();
-      final deviceKey = await readDeviceOwnerKey();
-      if (uid == null || deviceKey == null) {
-        throw StateError('Authenticated OS-protected account proof missing.');
+      if (uid == null) {
+        throw StateError('Authenticated account principal is missing.');
       }
-      final tag = ownerTag(
-        deviceKey: deviceKey,
+      // The challenge is signed by an existing Android Keystore owner key.
+      // Never load a raw owner MAC key into Dart or accept UI-supplied proofs.
+      final tag = await signOwnerChallenge(ownerChallenge(
         uid: uid,
         vaultId: expectedVaultId,
         sourceSha256: expectedSourceSha256,
-      );
+      ));
+      if (tag == null || !RegExp(r'^[0-9a-f]{64}
+      return store.transaction(() async {
+        final tables = await store.customSelect(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name IN "
+          "('shadow_migrations','fresh_finance_cutover_checkpoint',"
+          "'fresh_account_profile_staging','fresh_account_profile_stage_marker',"
+          "'fresh_account_profile_principal_binding')",
+        ).get();
+        if (tables.map((row) => row.read<String>('name')).toSet().length != 5) {
+          throw StateError('Encrypted account release schema is incomplete.');
+        }
+        final phase = await store.customSelect(
+          'SELECT phase FROM fresh_finance_cutover_checkpoint',
+        ).get();
+        if (phase.length != 1 ||
+            phase.single.read<String>('phase') != 'active') {
+          throw StateError('Finance source is not durably active.');
+        }
+        final finance = await store.customSelect(
+          'SELECT vault_id,source_sha256 FROM shadow_migrations',
+        ).get();
+        if (finance.length != 1 ||
+            finance.single.read<String>('vault_id') != expectedVaultId ||
+            finance.single.read<String>('source_sha256') !=
+                expectedSourceSha256) {
+          throw StateError('Encrypted account financial source differs.');
+        }
+        final owner = await store.customSelect(
+          'SELECT singleton,owner_hmac FROM '
+          'fresh_account_profile_principal_binding',
+        ).get();
+        if (owner.length != 1 ||
+            owner.single.read<int>('singleton') != 1 ||
+            owner.single.read<String>('owner_hmac') != tag) {
+          throw StateError('Encrypted account owner proof does not match.');
+        }
+        final marker = await store.customSelect(
+          'SELECT singleton,captured_count FROM '
+          'fresh_account_profile_stage_marker',
+        ).get();
+        if (marker.length != 1 ||
+            marker.single.read<int>('singleton') != 1) {
+          throw StateError('Encrypted profile staging witness is missing.');
+        }
+        final raw = await store.customSelect(
+          'SELECT profile_key,profile_value FROM '
+          'fresh_account_profile_staging',
+        ).get();
+        final before = <String, String>{};
+        for (final row in raw) {
+          final key = row.read<String>('profile_key');
+          final value = row.read<String>('profile_value');
+          if (!WaffraEncryptedAccountProfileStager.approvedProfileKeys
+                  .contains(key) || before.containsKey(key)) {
+            throw StateError('Encrypted account staging is unreviewed.');
+          }
+          _requireValidValue(key, value);
+          before[key] = value;
+        }
+        if (before.length != marker.single.read<int>('captured_count') ||
+            before.length != expectedFields.length ||
+            before.entries.any((e) => expectedFields[e.key] != e.value)) {
+          throw StateError('Encrypted account edit has stale source evidence.');
+        }
+        for (final entry in changes.entries) {
+          if (entry.value == null) {
+            await store.customStatement(
+              'DELETE FROM fresh_account_profile_staging '
+              'WHERE profile_key = ?', [entry.key],
+            );
+          } else {
+            await store.customStatement(
+              'INSERT INTO fresh_account_profile_staging '
+              '(profile_key,profile_value) VALUES (?,?) '
+              'ON CONFLICT(profile_key) DO UPDATE SET '
+              'profile_value=excluded.profile_value',
+              [entry.key, entry.value!],
+            );
+          }
+        }
+        final after = <String, String>{...before};
+        for (final entry in changes.entries) {
+          if (entry.value == null) {
+            after.remove(entry.key);
+          } else {
+            after[entry.key] = entry.value!;
+          }
+        }
+        await store.customStatement(
+          'UPDATE fresh_account_profile_stage_marker '
+          'SET captured_count = ? WHERE singleton = 1', [after.length],
+        );
+        // Verify the persisted row set, not merely the caller's proposal.
+        final persisted = await store.customSelect(
+          'SELECT profile_key,profile_value FROM '
+          'fresh_account_profile_staging',
+        ).get();
+        if (persisted.length != after.length ||
+            persisted.any((row) => after[row.read<String>('profile_key')] !=
+                row.read<String>('profile_value'))) {
+          throw StateError('SQLCipher account mutation parity mismatch.');
+        }
+        return WaffraEncryptedAccountProfileCandidate(
+          vaultId: expectedVaultId,
+          sourceSha256: expectedSourceSha256,
+          fields: Map<String, String>.unmodifiable(after),
+        );
+      });
+    });
+  }
+}
+).hasMatch(tag)) {
+        throw StateError('Authenticated OS-protected account proof missing.');
+      }
       return store.transaction(() async {
         final tables = await store.customSelect(
           "SELECT name FROM sqlite_master WHERE type='table' AND name IN "
