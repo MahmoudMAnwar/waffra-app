@@ -232,32 +232,179 @@ List<WaffraSubscriptionCandidate> detectWaffraSubscriptions(List<WaffraCalendarI
   return results..sort((a,b)=>b.payments.compareTo(a.payments));
 }
 
-class WaffraSubscriptionScreen extends StatelessWidget {
-  final List<WaffraCalendarItem> items;
-  final bool english;
-  const WaffraSubscriptionScreen({super.key,required this.items,required this.english});
-  @override Widget build(BuildContext context){
-    final known=items.where((e)=>e.scheduled&&!e.income).toList();
-    final monthly=known.fold<double>(0,(a,e)=>a+e.amount);
-    final possible=detectWaffraSubscriptions(items);
-    return Scaffold(appBar:AppBar(title:Text(english?'Subscriptions':'كشف الاشتراكات')),
-      body:ListView(padding:const EdgeInsets.all(16),children:[
-        Text(english?'Registered recurring expenses':'المصروفات المتكررة المسجلة',
-          style:Theme.of(context).textTheme.titleMedium),
-        Text(english?'Monthly: ${monthly.toStringAsFixed(2)} SAR • Yearly: ${(monthly*12).toStringAsFixed(2)} SAR':
-          'شهريًا: ${monthly.toStringAsFixed(2)} ريال • سنويًا: ${(monthly*12).toStringAsFixed(2)} ريال'),
-        ...known.map((e)=>ListTile(title:Text(e.title),trailing:Text(e.amount.toStringAsFixed(2)))),
-        const Divider(),
-        Text(english?'Possible subscriptions':'اشتراكات محتملة',
-          style:Theme.of(context).textTheme.titleMedium),
-        if(possible.isEmpty)Text(english?'Not enough transaction history':'لا توجد بيانات كافية حاليًا'),
-        ...possible.map((e)=>ListTile(leading:const Icon(Icons.search),
-          title:Text(e.title),
-          subtitle:Text(english?'${e.payments} similar payments':'${e.payments} مدفوعات متشابهة'),
-          trailing:Text('~${e.estimatedMonthly.toStringAsFixed(2)}'))),
-        const SizedBox(height:16),
-        Text(english?'Suggestions are estimates from local transactions only.':
-          'الاقتراحات تقديرية وتعتمد على معاملات الجهاز فقط.'),
-      ]));
-  }
+
+class WaffraSubscriptionScreen extends StatefulWidget {
+ final List<WaffraCalendarItem> items;
+ final bool english;
+ final Future<void> Function(WaffraSubscriptionCandidate)? onAddRecurring;
+ const WaffraSubscriptionScreen({super.key,required this.items,required this.english,this.onAddRecurring});
+ @override State<WaffraSubscriptionScreen> createState()=>_WaffraSubscriptionScreenState();
+}
+
+class _WaffraSubscriptionScreenState extends State<WaffraSubscriptionScreen> {
+ static const forest=Color(0xFF063E32),green=Color(0xFF087A54);
+ final ignored=<String>{};
+ String? adding;
+ String t(String en,String ar)=>widget.english?en:ar;
+ String money(double value)=>value.toStringAsFixed(2)+' '+t('SAR','ريال');
+
+ Widget panel(Widget child,{Color? bg})=>Container(
+  width:double.infinity,padding:const EdgeInsets.all(16),
+  decoration:BoxDecoration(
+   color:bg??Theme.of(context).cardColor,
+   borderRadius:BorderRadius.circular(20),
+   border:Border.all(color:green.withValues(alpha:.22))),
+  child:child);
+
+ Widget section(String name,IconData icon,int count)=>Row(children:[
+  Icon(icon,color:green,size:22),const SizedBox(width:8),
+  Expanded(child:Text(name,style:const TextStyle(fontSize:17,fontWeight:FontWeight.w800))),
+  CircleAvatar(radius:15,backgroundColor:green.withValues(alpha:.12),
+   child:Text(count.toString(),style:const TextStyle(color:green,fontWeight:FontWeight.bold))),
+ ]);
+
+ Widget emptyState(String title,String hint)=>panel(Padding(
+  padding:const EdgeInsets.symmetric(vertical:20),
+  child:Column(children:[
+   CircleAvatar(radius:33,backgroundColor:green.withValues(alpha:.12),
+    child:const Icon(Icons.manage_search_rounded,color:green,size:38)),
+   const SizedBox(height:12),
+   Text(title,textAlign:TextAlign.center,style:const TextStyle(fontWeight:FontWeight.w800,fontSize:17)),
+   const SizedBox(height:7),
+   Text(hint,textAlign:TextAlign.center,style:TextStyle(color:Theme.of(context).hintColor,fontSize:12)),
+  ])));
+
+ Widget candidateTile(WaffraSubscriptionCandidate candidate)=>Padding(
+  padding:const EdgeInsets.only(bottom:10),
+  child:panel(Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+   Row(children:[
+    CircleAvatar(backgroundColor:green.withValues(alpha:.12),
+     child:const Icon(Icons.subscriptions_outlined,color:green)),
+    const SizedBox(width:11),
+    Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+     Text(candidate.title,maxLines:2,overflow:TextOverflow.ellipsis,
+      style:const TextStyle(fontSize:15,fontWeight:FontWeight.bold)),
+     Text(candidate.payments.toString()+t(' similar payments',' مدفوعات متشابهة'),
+      style:TextStyle(fontSize:11,color:Theme.of(context).hintColor)),
+    ])),
+    Text('~'+money(candidate.estimatedMonthly),textDirection:TextDirection.ltr,
+     style:const TextStyle(color:green,fontSize:12,fontWeight:FontWeight.w800)),
+   ]),
+   const SizedBox(height:12),
+   Row(children:[
+    Expanded(child:FilledButton.icon(
+     onPressed:widget.onAddRecurring==null||adding!=null?null:()async{
+      setState(()=>adding=candidate.title);
+      try{await widget.onAddRecurring!(candidate);}
+      finally{if(mounted)setState(()=>adding=null);}
+     },
+     style:FilledButton.styleFrom(backgroundColor:forest,
+      padding:const EdgeInsets.symmetric(vertical:11),
+      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(13))),
+     icon:const Icon(Icons.add_circle_outline,size:17),
+     label:Text(t('Review & add','مراجعة وإضافة'),maxLines:1,
+      style:const TextStyle(fontSize:12,fontWeight:FontWeight.bold)),
+    )),
+    const SizedBox(width:8),
+    OutlinedButton(
+     onPressed:adding!=null?null:()=>setState(()=>ignored.add(candidate.title)),
+     child:Text(t('Ignore','تجاهل'))),
+   ]),
+  ])),
+ );
+
+ Widget registeredTile(WaffraCalendarItem item)=>Padding(
+  padding:const EdgeInsets.only(bottom:9),
+  child:panel(Row(children:[
+   CircleAvatar(backgroundColor:green.withValues(alpha:.10),
+    child:const Icon(Icons.event_repeat_rounded,color:green)),
+   const SizedBox(width:10),
+   Expanded(child:Text(item.title,maxLines:2,overflow:TextOverflow.ellipsis,
+    style:const TextStyle(fontWeight:FontWeight.bold))),
+   const SizedBox(width:5),
+   Text(money(item.amount),textDirection:TextDirection.ltr,
+    style:const TextStyle(color:green,fontWeight:FontWeight.w800)),
+  ])));
+
+ @override Widget build(BuildContext context){
+  final theme=Theme.of(context);
+  final known=widget.items.where((item)=>item.scheduled&&!item.income).toList();
+  final suggestions=detectWaffraSubscriptions(widget.items).where((candidate)=>
+   !ignored.contains(candidate.title)&&
+   !known.any((item)=>item.title.trim().toLowerCase()==candidate.title.trim().toLowerCase())).toList();
+  final monthly=known.fold<double>(0,(sum,item)=>sum+item.amount);
+  return Scaffold(
+   backgroundColor:theme.brightness==Brightness.dark?theme.scaffoldBackgroundColor:const Color(0xFFF4FAF6),
+   appBar:AppBar(backgroundColor:forest,foregroundColor:Colors.white,centerTitle:true,
+    title:Text(t('Subscription insights','كشف الاشتراكات'),
+     style:const TextStyle(fontWeight:FontWeight.w800)),
+    leading:IconButton(onPressed:()=>Navigator.maybePop(context),
+     tooltip:t('Back','رجوع'),icon:const Icon(Icons.arrow_back_ios_new))),
+   body:ListView(padding:const EdgeInsets.fromLTRB(16,18,16,40),children:[
+    Container(
+     padding:const EdgeInsets.all(21),
+     decoration:BoxDecoration(
+      gradient:const LinearGradient(colors:[Color(0xFF087858),forest],
+       begin:AlignmentDirectional.topStart,end:AlignmentDirectional.bottomEnd),
+      borderRadius:BorderRadius.circular(24)),
+     child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+      Row(children:[
+       const Icon(Icons.autorenew_rounded,color:Colors.white),
+       const SizedBox(width:8),
+       Expanded(child:Text(t('Recorded recurring expenses','المصروفات المتكررة المسجلة'),
+        style:const TextStyle(color:Colors.white,fontSize:16,fontWeight:FontWeight.bold))),
+      ]),
+      const SizedBox(height:14),
+      Row(children:[
+       Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Text(t('Monthly','شهريًا'),style:const TextStyle(color:Color(0xFFC5E6D9))),
+        Text(money(monthly),textDirection:TextDirection.ltr,
+         style:const TextStyle(color:Colors.white,fontSize:19,fontWeight:FontWeight.w800)),
+       ])),
+       Container(height:47,width:1,color:Colors.white24),
+       const SizedBox(width:12),
+       Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Text(t('Annual estimate','التقدير السنوي'),style:const TextStyle(color:Color(0xFFC5E6D9))),
+        Text(money(monthly*12),textDirection:TextDirection.ltr,
+         style:const TextStyle(color:Colors.white,fontSize:19,fontWeight:FontWeight.w800)),
+       ])),
+      ]),
+      const SizedBox(height:8),
+      Text(t('Estimated from currently registered monthly recurring payments',
+       'تقدير بناءً على المصروفات المتكررة الشهرية المسجلة'),
+       style:const TextStyle(color:Color(0xFFC5E6D9),fontSize:11)),
+     ])),
+    const SizedBox(height:22),
+    section(t('Potential subscriptions','اشتراكات محتملة'),Icons.saved_search_rounded,suggestions.length),
+    const SizedBox(height:12),
+    if(suggestions.isEmpty)emptyState(
+     t('No patterns detected yet','لا توجد اشتراكات محتملة حاليًا'),
+     t('Add transactions from different months to identify recurring charges.',
+      'أضف معاملات من أشهر مختلفة لاكتشاف المدفوعات المتشابهة.'))
+    else ...suggestions.map(candidateTile),
+    const SizedBox(height:20),
+    section(t('Registered recurring expenses','المصروفات المتكررة المسجلة'),
+     Icons.event_repeat_rounded,known.length),
+    const SizedBox(height:12),
+    if(known.isEmpty)emptyState(
+     t('No recurring payments yet','لا توجد مصروفات متكررة مسجلة'),
+     t('Review a detected payment to add it as a recurring operation.',
+      'راجع الاشتراك المكتشف لإضافته كعملية متكررة.'))
+    else ...known.map(registeredTile),
+    const SizedBox(height:18),
+    panel(Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+     Row(children:[
+      const Icon(Icons.lightbulb_outline,color:green),
+      const SizedBox(width:8),
+      Text(t('Smart insights','ملاحظات ذكية'),
+       style:const TextStyle(fontSize:15,fontWeight:FontWeight.w800)),
+     ]),
+     const SizedBox(height:8),
+     Text(t('Suggestions are estimates based only on transactions stored on this device. Review all details before adding a recurring payment.',
+      'الاقتراحات تقديرية وتعتمد على معاملات الجهاز فقط. راجع التفاصيل قبل إضافة عملية متكررة.'),
+      style:TextStyle(fontSize:12,color:theme.hintColor)),
+    ]),bg:theme.brightness==Brightness.dark?theme.cardColor:const Color(0xFFE8F4ED)),
+   ]),
+  );
+ }
 }
