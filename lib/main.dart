@@ -1938,6 +1938,7 @@ class _WaffraFooterNoticeHostState extends State<WaffraFooterNoticeHost> {
   );
 }
 
+/// The only public way to display transient system feedback.
 void snack(BuildContext context,String text,{
  bool isError=true,
  WaffraSnackKind? kind,
@@ -1947,54 +1948,39 @@ void snack(BuildContext context,String text,{
  Duration duration=const Duration(seconds:5),
 }){
  if(!context.mounted)return;
- final messenger=ScaffoldMessenger.of(context);
+ final notice=WaffraNoticeData(
+  text:text,kind:kind??(isError?WaffraSnackKind.error:WaffraSnackKind.success),
+  duration:duration,requireDismissal:requireDismissal,
+  actionLabel:actionLabel,onAction:onAction,
+ );
+ // Home-screen messages, including modal actions, always occupy a reserved
+ // region directly above the navigation bar. They cannot overlap entries.
+ final inHome=context.widget is HomeScreen||
+  context.findAncestorWidgetOfExactType<HomeScreen>()!=null;
+ final inHomeDialog=ModalRoute.of(context) is PopupRoute;
+ if(_waffraFooterHostCount>0&&(inHome||inHomeDialog)){
+  _waffraShowFooterNotice(notice);
+  return;
+ }
+ // Login, setup and pushed profile routes have no Waffra footer. Reuse
+ // the exact same content/colors with the bottom-aligned fallback Snackbar.
+ final messenger=ScaffoldMessenger.maybeOf(context);
+ if(messenger==null)return;
  messenger.hideCurrentMaterialBanner();
  messenger.hideCurrentSnackBar();
- final dark=Theme.of(context).brightness==Brightness.dark;
- final severity=kind??(isError?WaffraSnackKind.error:WaffraSnackKind.success);
- final isDanger=severity==WaffraSnackKind.error;
- final isWarning=severity==WaffraSnackKind.warning;
- final isInfo=severity==WaffraSnackKind.info;
- final background=isDanger
-  ?(dark?const Color(0xFF4A2429):const Color(0xFFFFE1E2))
-  :isWarning?(dark?const Color(0xFF473515):const Color(0xFFFFF8E5)):
-   isInfo?(dark?const Color(0xFF153551):const Color(0xFFE8F1FE)):
-   (dark?const Color(0xFF163F31):const Color(0xFFE6F5EB));
- final foreground=isDanger
-  ?(dark?const Color(0xFFFFDEE0):const Color(0xFF9D1D25))
-  :isWarning?(dark?const Color(0xFFFFDE94):const Color(0xFF926100)):
-   isInfo?(dark?const Color(0xFFC3DDFF):const Color(0xFF235DB7)):
-   (dark?const Color(0xFFB5F2D4):const Color(0xFF07563B));
- final outline=isDanger?const Color(0xFFE67B81):isWarning?const Color(0xFFB7791F):isInfo?const Color(0xFF2B6CB0):const Color(0xFF0C7957);
+ final palette=waffraNoticePalette(context,notice.kind);
  messenger.showSnackBar(SnackBar(
   behavior:SnackBarBehavior.floating,
-  // Align notices beside the left + above the footer.
-  margin:EdgeInsets.only(left:waffraIsEnglish?12:76,
-    right:waffraIsEnglish?76:12,bottom:8),
+  margin:const EdgeInsets.only(left:12,right:12,bottom:8),
   duration:requireDismissal?const Duration(days:1):duration,
-  backgroundColor:background,
-  elevation:5,
+  backgroundColor:palette.$1,
+  elevation:2,
   padding:const EdgeInsets.symmetric(horizontal:9,vertical:5),
   shape:RoundedRectangleBorder(
    borderRadius:BorderRadius.circular(14),
-   side:BorderSide(color:outline,width:1.0)),
-  content:Row(children:[
-   Icon(isDanger?Icons.error_rounded:isWarning?Icons.warning_rounded:isInfo?Icons.info_rounded:Icons.check_circle_rounded,color:foreground,size:19),
-   const SizedBox(width:9),
-   Expanded(child:WaffraText(text,maxLines:2,overflow:TextOverflow.ellipsis,
-    style:TextStyle(color:foreground,fontSize:12,height:1.1,fontWeight:FontWeight.w700))),
-   if(onAction!=null)TextButton(
-    onPressed:(){messenger.hideCurrentSnackBar();onAction();},
-    child:WaffraText(actionLabel??(waffraIsEnglish?'Undo':'تراجع'),
-     style:TextStyle(color:foreground,fontWeight:FontWeight.bold))),
-   IconButton(
-    tooltip:waffraIsEnglish?'Close':'إغلاق',
-    icon:Icon(Icons.close_rounded,color:foreground,size:17),
-    visualDensity:VisualDensity.compact,
-    padding:EdgeInsets.zero,
-    constraints:const BoxConstraints(minWidth:26,minHeight:26),
-    onPressed:()=>messenger.hideCurrentSnackBar()),
-  ]),
+   side:BorderSide(color:palette.$3,width:1)),
+  content:WaffraNoticeContent(
+   notice:notice,onDismiss:()=>messenger.hideCurrentSnackBar()),
  ));
 }
 void snackSuccess(BuildContext context,String text)=>snack(context,text,isError:false);
