@@ -17,12 +17,14 @@ ALLOWED = {
     "scripts/m147_main_merge_readiness_audit.py",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
+    "lib/waffra_widget_capture.part.dart",
     "lib/waffra_display_currency.dart",
     "lib/storage/waffra_encrypted_legacy_sms_reattachment.dart",
     "lib/currency_converter.dart",
     "lib/waffra_gold_market_data.dart",
     "lib/waffra_gold_calculator.dart",
     "lib/waffra_gold_market_section.dart",
+    "test/waffra_widget_quick_capture_test.dart",
     "test/m224_verified_gold_fallback_test.dart",
     "test/m224_verified_pull_refresh_dialog_test.dart",
     "test/storage/m224_encrypted_legacy_sms_reattachment_test.dart",
@@ -88,6 +90,8 @@ def main() -> None:
     gold_test = Path("test/m224_verified_gold_fallback_test.dart").read_text()
     sms_code = Path("lib/storage/waffra_encrypted_legacy_sms_reattachment.dart").read_text()
     sms_qa = Path("test/storage/m224_encrypted_legacy_sms_reattachment_test.dart").read_text()
+    widget_code = Path("lib/waffra_widget_capture.part.dart").read_text()
+    widget_qa = Path("test/waffra_widget_quick_capture_test.dart").read_text()
     authority = Path("lib/storage/waffra_verified_finance_authority.dart").read_text()
     routes = Path("lib/storage/waffra_production_finance_routing_gate.dart").read_text()
     release_gate = Path("lib/storage/waffra_production_cutover_release_gate.dart").read_text()
@@ -120,6 +124,14 @@ def main() -> None:
             in authority and
             "originalSmsNotesOmittedOnLegacy" in authority,
             "legacy privacy guard cannot be removed")
+    require(all(g in widget_code for g in (
+        "await WaffraDisplayCurrency.initialize();",
+        "final conceal=hidden||display==null;",
+        "currency:WaffraDisplayCurrency.label(_english)",
+    )), "standalone widget engine cannot mislabel SAR as selected FX")
+    require("widget FX must convert SAR or conceal" in widget_qa
+            and "currency:WaffraDisplayCurrency.label(waffraIsEnglish)" in widget_qa,
+            "widget FX/hidden fallback regression is missing")
     require("automaticallyActivateSqlCipher => false" in release_gate,
             "production activation would be unsafe")
     # M224 adds no real-device evidence. A complete route enum is an audit
