@@ -16,6 +16,9 @@ production activation is NOT approved.
   This prevents a two-save bypass (first relabel SMS to manual, then append raw
   bank text as a manual note). Already stored notes are preserved
   byte-for-byte on unrelated updates; no destructive cleanup or migration.
+- Legacy and proposed ledgers with duplicate, missing or blank transaction IDs
+  are rejected before SMS source comparison. Otherwise a duplicate manual row
+  could shadow an existing SMS row and bypass the source/notes guard.
 - Normalized transaction titles, amounts, dates and deduplication hashes may
   still be saved without original SMS notes. Manual user-written notes remain
   allowed for non-SMS entries.
