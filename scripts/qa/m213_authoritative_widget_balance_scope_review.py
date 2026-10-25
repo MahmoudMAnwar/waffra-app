@@ -11,6 +11,7 @@ APPROVED={
     "lib/storage/waffra_authoritative_widget_balance.dart",
     "test/waffra_widget_balance_source_authority_test.dart",
     "test/storage/live_legacy_finance_writer_coordinator_test.dart",
+    "test/waffra_concept2_final_visual_test.dart",
     ".github/workflows/m147-final-main-review-gate.yml",
     "scripts/qa/m213_authoritative_widget_balance_scope_review.py",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
@@ -62,6 +63,9 @@ def main():
             "firstCommitted.complete();" in txt(
                 "test/storage/live_legacy_finance_writer_coordinator_test.dart"),
             "native-lock regression still assumes OS acquisition FIFO ordering")
+    require("refreshVerifiedWidgetBalance: () async {}" in txt(
+                "test/waffra_concept2_final_visual_test.dart"),
+            "visual-only balance header fixture is missing required callback")
     require("[23] M213" in release,"main APK release notes weren't updated")
     require("bool get automaticallyActivateSqlCipher => false;" in no_go,
             "production SQLCipher marker unexpectedly changed")
