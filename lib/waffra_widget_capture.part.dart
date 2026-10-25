@@ -233,17 +233,31 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
     return;
    }
 
-   // Refresh the circular balance immediately without opening the full app.
-   final incomeHalalas=outcome.merged.where((e)=>e.income)
-    .fold<int>(0,(sum,e)=>sum+WaffraRecurringPolicy.toHalalas(e.amount));
-   final expenseHalalas=outcome.merged.where((e)=>!e.income)
-    .fold<int>(0,(sum,e)=>sum+WaffraRecurringPolicy.toHalalas(e.amount));
-   final net=incomeHalalas-expenseHalalas;
-   final hidden=(await SharedPreferences.getInstance())
-    .getBool('waffra_hide_amounts')??false;
-   await refreshWaffraHomeWidget(
-    balance:hidden?'***':formatWaffraMoney(net/100),
-    negative:net<0,hidden:hidden,currency:_english?'SAR':'ريال');
+   // Refresh the circular balance using the ACTUAL authoritative source,
+   // not the previous Widget screen list. Home may have committed after us.
+   // Display a concealed balance on any source/key/SQL ledger failure.
+   try{
+    final verified=await _financeAuthority.load(
+     route:WaffraFinanceRoute.widgetBalanceRefresh);
+    verified.finance.requireIntegrity();
+    if(verified.source!=committed.current.source||verified.ledgerRaw==null){
+     throw StateError('Widget balance source changed during save.');
+    }
+    final net=WaffraAuthoritativeWidgetBalance.netHalalas(verified.ledgerRaw!);
+    final options=await SharedPreferences.getInstance();
+    await options.reload();
+    final hidden=options.getBool('waffra_hide_amounts')??false;
+    await refreshWaffraHomeWidget(
+     balance:hidden?'***':formatWaffraMoney(net/100),
+     negative:net<0,hidden:hidden,currency:_english?'SAR':'ريال');
+   }catch(e){
+    // The confirmed transaction has ALREADY committed. Do not misreport it
+    // as failed or offer the user a duplicate Save; conceal widget instead.
+    debugPrint('Widget balance source could not be verified: $e');
+    await refreshWaffraHomeWidget(
+     balance:'***',negative:false,hidden:true,
+     currency:_english?'SAR':'ريال');
+   }
 
    final ignored=outcome.skipped;
    if(!mounted)return;

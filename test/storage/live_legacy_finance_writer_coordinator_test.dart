@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -47,12 +48,20 @@ void main() {
 
   test('widget and dashboard see latest persisted transaction list in lock',
       () async {
+    // Two simultaneously-started OS lock acquisitions have no ordering
+    // guarantee. The old test was nondeterministic: the second callback
+    // could acquire first and fail even though mutual exclusion worked.
+    // Wait for the first durable write, then start the second while the
+    // first owner may still be releasing the native file lock.
+    final firstCommitted = Completer<void>();
     final first = coordinator().withCurrentPreferences((prefs) async {
       expect(prefs.getString('entries'), isNull);
       final result = await prefs.setString(
         'entries', '[{"id":"first","amount":9.5}]');
       expect(result, isTrue);
+      firstCommitted.complete();
     });
+    await firstCommitted.future;
     final second = coordinator().withCurrentPreferences((prefs) async {
       expect(prefs.getString('entries'), contains('first'));
       final result = await prefs.setString(

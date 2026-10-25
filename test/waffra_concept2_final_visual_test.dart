@@ -65,7 +65,11 @@ void main() {
         home: Scaffold(body: CustomScrollView(slivers: [
           SliverPersistentHeader(
             pinned: false,
-            delegate: WaffraBalanceHeader(balance: 1250, english: false),
+            delegate: WaffraBalanceHeader(
+              balance: 1250, english: false,
+              // Visual-only harness: no app/widget finance authority is mounted.
+              refreshVerifiedWidgetBalance: () async {},
+            ),
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 800)),
         ])),
