@@ -4156,13 +4156,28 @@ Future<void> bulkSmsSheet({String? initialText})async {
    final font=pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal-Regular.ttf'));
    final bold=pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal-Bold.ttf'));
    final english=waffraIsEnglish;
+   // Capture a single VERIFIED conversion for the entire PDF.
+   // Never relabel stored SAR as EGP/USD when no exchange rate exists.
+   final pdfQuote=WaffraDisplayCurrency.active.value;
+   if(!pdfQuote.verified){
+    throw StateError('Verified display FX rate required for PDF export.');
+   }
+   final pdfCurrency=pdfQuote.code;
+   final pdfCurrencyAr=waffraCountry(pdfCurrency).symbolAr;
+   double pdfAmount(num sar){
+    final result=pdfQuote.fromSar(sar);
+    if(result==null||!result.isFinite){
+     throw StateError('Unverified PDF currency conversion refused.');
+    }
+    return result;
+   }
    final exportedAt=DateTime.now();
    final oldest=items.map((e)=>e.date).reduce((a,b)=>a.isBefore(b)?a:b);
    final newest=items.map((e)=>e.date).reduce((a,b)=>a.isAfter(b)?a:b);
    // Keep stored descriptions unchanged; sanitize only the exported PDF copy.
    String pdfClean(String input)=>sanitizeWaffraPdfText(input);
       String fmt(num number){
-    final n=number.toDouble();
+    final n=pdfAmount(number);
     if(n==n.roundToDouble())return n.toStringAsFixed(0);
     return n.toStringAsFixed(2);
    }
@@ -4188,7 +4203,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     padding:const pw.EdgeInsets.all(10),decoration:pw.BoxDecoration(color:bg,borderRadius:pw.BorderRadius.circular(7)),
     child:pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.start,children:[
      pw.Text(waffraTr(label),style:pw.TextStyle(font:bold,fontSize:10,color:PdfColors.teal900)),
-     pw.SizedBox(height:5),pw.Text('${fmt(value)} SAR',style:pw.TextStyle(font:bold,fontSize:15,color:PdfColors.teal900)),
+     pw.SizedBox(height:5),pw.Text('${fmt(value)} $pdfCurrency',style:pw.TextStyle(font:bold,fontSize:15,color:PdfColors.teal900)),
     ])));
    // Explicit script direction prevents mixed Arabic/Latin SMS text from
    // overlapping or reversing adjacent numbers in the PDF viewer.
@@ -4272,8 +4287,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
          4:const pw.FixedColumnWidth(81),5:const pw.FixedColumnWidth(54)},
        children:[
         pw.TableRow(decoration:const pw.BoxDecoration(color:PdfColors.teal800),
-         children:(english?['No.','Date','Type','Category','Description','Amount (SAR)']:
-          ['المبلغ (ريال)','الوصف','القسم','النوع','التاريخ','رقم المعاملة'])
+         children:(english?['No.','Date','Type','Category','Description','Amount ($pdfCurrency)']:
+          ['المبلغ ($pdfCurrencyAr)','الوصف','القسم','النوع','التاريخ','رقم المعاملة'])
           .map((h)=>pw.Padding(padding:const pw.EdgeInsets.all(6),
            child:pw.Text(h,textAlign:pw.TextAlign.center,style:pw.TextStyle(font:bold,fontSize:10,color:PdfColors.white)))).toList()),
         ...ordered.asMap().entries.map((row){
@@ -4371,8 +4386,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
        pw.Expanded(child:miniTable(labels,rows.skip(6).toList())),
       ]);
     final valueHeaders=english?
-     ['Period','Income (SAR)','Expenses (SAR)']:
-     ['الفترة','الدخل (ريال)','المصروفات (ريال)'];
+     ['Period','Income ($pdfCurrency)','Expenses ($pdfCurrency)']:
+     ['الفترة','الدخل ($pdfCurrencyAr)','المصروفات ($pdfCurrencyAr)'];
     final periodValues=List<List<String>>.generate(buckets.length,(i)=>[
      (english?(yearly?'Month ':'Period '):(yearly?'شهر ':'فترة '))+(i+1).toString(),
      fmt(buckets[i].$1),fmt(buckets[i].$2),
@@ -4409,13 +4424,13 @@ Future<void> bulkSmsSheet({String? initialText})async {
       ]),
       panel('اتجاه المصروفات الأسبوعية','Weekly Spending Trend',[
        pw.Center(child:pw.SvgImage(
-        svg:weeklySpendSvg(smartData!.weeklySpend),width:620,height:130)),
+        svg:weeklySpendSvg(smartData!.weeklySpend.map(pdfAmount).toList()),width:620,height:130)),
        pw.Center(child:pw.Text(english?
         'Four weeks: oldest to newest':'أربعة أسابيع من الأقدم إلى الأحدث',
         style:pw.TextStyle(font:font,fontSize:10))),
        pw.SizedBox(height:8),
-       dataTable(english?['Week','Expenses (SAR)']:
-        ['الأسبوع','المصروفات (ريال)'],
+       dataTable(english?['Week','Expenses ($pdfCurrency)']:
+        ['الأسبوع','المصروفات ($pdfCurrencyAr)'],
         List<List<String>>.generate(smartData.weeklySpend.length,(i)=>[
          (english?'Week ':'الأسبوع ')+(i+1).toString(),
          fmt(smartData.weeklySpend[i]),
@@ -4425,7 +4440,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       panel(yearly?'الدخل والمصروفات حسب الشهر':'الدخل والمصروفات حسب الأسبوع',
        yearly?'Income vs Expenses by Month':'Income vs Expenses by Week',[
        pw.Center(child:pw.SvgImage(
-        svg:pairedBarChartSvg(buckets),width:680,height:155)),
+        svg:pairedBarChartSvg(buckets.map((p)=>(pdfAmount(p.$1),pdfAmount(p.$2))).toList()),width:680,height:155)),
        pw.Row(mainAxisAlignment:pw.MainAxisAlignment.spaceEvenly,
         children:List.generate(buckets.length,(i)=>pw.Expanded(
          child:pw.Text(
@@ -4460,8 +4475,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
         }).toList())),
       ]),
        pw.SizedBox(height:8),
-       dataTable(english?['Category','Amount (SAR)','Share']:
-        ['القسم','المبلغ (ريال)','النسبة'],
+       dataTable(english?['Category','Amount ($pdfCurrency)','Share']:
+        ['القسم','المبلغ ($pdfCurrencyAr)','النسبة'],
         top.map((e)=><String>[
          waffraTr(e.key),fmt(e.value),
          (e.value/totalExpenses*100).toStringAsFixed(1)+'%',
