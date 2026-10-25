@@ -79,5 +79,11 @@ void main(){
   expect(saved.length,1);
   expect((saved.first['amount'] as num).toDouble(),125.5);
   expect(saved.first['income'],false);
+  // M207: original banking SMS MUST NOT be written to plaintext preferences.
+  // The guarded legacy bridge still commits safe financial fields and SHA hash.
+  expect(saved.first['notes'],'');
+  final hashes=p.getStringList('waffra_sms_hashes_v1')??<String>[];
+  expect(hashes.length,1);
+  expect(find.textContaining('لم يُحفظ نص الرسالة البنكية الأصلي'),findsOneWidget);
  });
 }

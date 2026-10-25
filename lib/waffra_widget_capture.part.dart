@@ -45,6 +45,7 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
  final _controller=TextEditingController();
  Timer? _debounce;
  bool _ready=false,_saving=false,_analyzing=false,_allowDuplicates=false,_success=false;
+ bool _legacySource=true,_smsNotesOmitted=false;
  bool _english=false,_dark=false;
  String? _error;
  int _savedIncome=0,_savedExpenses=0,_notSaved=0;
@@ -92,6 +93,7 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
     _english=prefs.getString('waffra_language')=='en';
     _dark=prefs.getBool('waffra_dark_mode')??false;
     _knownHashes=(loaded.finance.getStringList('waffra_sms_hashes_v1')??[]).toSet();
+    _legacySource=loaded.source==WaffraRuntimeFinanceBackend.guardedLegacy;
     _ready=true;
    });
   }catch(e){
@@ -103,7 +105,7 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
   _debounce?.cancel();
   setState((){
    _analyzing=value.trim().isNotEmpty;
-   _error=null;_success=false;_results=[];
+   _error=null;_success=false;_smsNotesOmitted=false;_results=[];
   });
   if(value.trim().isEmpty)return;
   _debounce=Timer(const Duration(milliseconds:420),(){
@@ -200,7 +202,7 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
       income:parsed.income),
      category:category,amount:parsed.amount!,income:parsed.income,
      date:bankSmsDate(entry.raw)??DateTime.now(),
-     sourceType:'sms',
+     notes:entry.raw,sourceType:'sms',
      merchantKey:waffraMerchantKey(entry.raw,income:parsed.income)??'',
     ).toJson()));
     hashes.add(bankSmsHash(entry.raw));
@@ -249,9 +251,10 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
     _knownHashes=outcome.knownHashes;
     _savedIncome=outcome.savedIncome;_savedExpenses=outcome.savedExpenses;_notSaved=ignored;
     _saving=false;_success=true;_error=null;
+    _smsNotesOmitted=committed.originalSmsNotesOmittedOnLegacy;
    });
    // If any message was not added, keep it open for review and retry.
-   if(ignored==0){
+   if(ignored==0&&!committed.originalSmsNotesOmittedOnLegacy){
     await Future<void>.delayed(const Duration(milliseconds:1200));
     if(mounted)await _close();
    }
@@ -377,6 +380,13 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
                ),
              ])),
             const SizedBox(height:9),
+            if(_legacySource)Padding(
+             padding:const EdgeInsets.only(bottom:9),
+             child:Text(_english?
+              'Encrypted storage is not yet active. Only transaction details will be saved, NOT the original bank SMS text.':
+              'التخزين المشفر غير مفعّل بعد. سيتم حفظ بيانات المعاملة فقط دون نص الرسالة البنكية الأصلي.',
+              textAlign:TextAlign.center,
+              style:const TextStyle(color:Colors.deepOrange,fontSize:12))),
             FilledButton.icon(
              onPressed:_selected.isEmpty||_saving?null:_confirmAndSave,
              icon:const Icon(Icons.check_circle_outline),
@@ -391,6 +401,11 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
              'Income: $_savedIncome • Expenses: $_savedExpenses • Not added: $_notSaved':
              'الدخل: $_savedIncome • المصروف: $_savedExpenses • لم تُضف: $_notSaved',
              textAlign:TextAlign.center),
+            if(_smsNotesOmitted)Text(
+             _english?'Original bank SMS text was NOT stored. Only the transaction was saved.':
+              'لم يُحفظ نص الرسالة البنكية الأصلي؛ تم حفظ بيانات المعاملة فقط.',
+             textAlign:TextAlign.center,
+             style:const TextStyle(color:Colors.deepOrange)),
             if(_notSaved>0)Text(
              _english?'Review remaining messages before closing.':
              'راجع الرسائل غير المضافة قبل الإغلاق.',

@@ -1,5 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/storage/waffra_m155_category_plan.dart';
+import 'package:waffra/waffra_category_catalog.dart';
+import 'package:waffra/waffra_category_english.dart';
+import 'package:waffra/waffra_i18n.dart';
+import 'package:waffra/main.dart';
 
 void main(){
  const catalog=<WaffraM155Category>[
@@ -76,4 +80,74 @@ void main(){
    income:false,existing:absent,learned:const {});
   expect(item,isNull);
  });
+
+ test('Arabic storage category is stable with English or Arabic UI',(){
+  final full=<WaffraM155Category>[];
+  for(final g in waffraCategoryCatalog){
+   full.add(WaffraM155Category(id:g.id,name:g.name,income:g.income));
+   for(var i=0;i<g.subcategories.length;i++){
+    full.add(WaffraM155Category(
+     id:'${g.id}-${i+1}',
+     name:'${g.name} / ${g.subcategories[i]}',
+     income:g.income,parentId:g.id));
+   }
+  }
+  final cases=<String,String>{
+   'Purchase Card\nAmount: SAR 42\nAt: Keemart':
+    'بقالة وتموين / سوبرماركت',
+   'شراء نقاط بيع\nالمبلغ: 49 ريال\nلدى: كيتا':
+    'مطاعم وكافيهات / توصيل الطعام',
+   'Purchase Card\nAmount: 35 SAR\nAt: DR MOHAMMAD RASHID ALF':
+    'صحة / أطباء',
+   'شراء نقاط بيع\nالمبلغ: 40 ريال\nلدى: صيدلية النهدي':
+    'صحة / صيدلية وأدوية',
+   'Credit via local transfer\nAmount: SAR 1613.00\nFrom: SAMPLE NAME':
+    'حوالات واردة / حوالة محلية',
+   'Refund Received\nAmount: SAR 40.00':
+    'مبالغ مستردة / استرجاع مشتريات',
+  };
+  try{
+   for(final language in ['ar','en']){
+    waffraLanguage.value=language;
+    for(final entry in cases.entries){
+     final parsed=BankParser.parse(entry.key);
+     expect(parsed.amount,isNotNull,reason:entry.key);
+     final assignment=WaffraM155CategoryPlan.propose(
+      rawSms:entry.key,income:parsed.income,
+      existing:full,learned:const {});
+     expect(assignment,isNotNull,reason:entry.key);
+     expect(assignment!.categoryName,entry.value,
+      reason:'Persist same Arabic leaf with UI language $language');
+     expect(assignment.newCategoryRequired,isFalse);
+     if(language=='en'){
+      expect(waffraEnglishCategoryLabel(assignment.categoryName),
+       isNot(equals(assignment.categoryName)));
+     }
+    }
+   }
+  }finally{waffraLanguage.value='ar';}
+ });
+
+ test('user corrections outrank the classifier, deleted leaves not resurrected',(){
+  final all=<WaffraM155Category>[];
+  for(final g in waffraCategoryCatalog){
+   all.add(WaffraM155Category(id:g.id,name:g.name,income:g.income));
+   for(var i=0;i<g.subcategories.length;i++){
+    all.add(WaffraM155Category(id:'${g.id}-$i',parentId:g.id,
+     name:'${g.name} / ${g.subcategories[i]}',income:g.income));
+   }
+  }
+  const sms='Purchase Card\nAmount: 20 SAR\nAt: Keemart';
+  const override='أخرى / مصروف غير مصنف';
+  final learned=WaffraM155CategoryPlan.propose(
+   rawSms:sms,income:false,existing:all,
+   learned:const {'keemart':override});
+  expect(learned?.categoryName,override);
+  final deleted=all.where((c)=>c.name!='بقالة وتموين / سوبرماركت')
+   .toList();
+  final next=WaffraM155CategoryPlan.propose(
+   rawSms:sms,income:false,existing:deleted,learned:const {});
+  expect(next?.categoryName,isNot('بقالة وتموين / سوبرماركت'));
+ });
+
 }

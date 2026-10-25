@@ -6,6 +6,8 @@ on:
   push:
     branches:
       - main
+      # M206 on-branch QA build; no merge, store deploy or SQLCipher activation.
+      - 'fix/m206-daylight-tour-sms-notes-motion-20261024'
       # M160 signed APK for owner physical-device QA only; no store release.
       - 'integration/m160-reconcile-main-m158-release-gate-20261023'
       - 'feature/storage-finance-startup-recovery-m62'
@@ -32,13 +34,113 @@ concurrency:
   group: waffra-android-fast-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
+  verify-all-tests:
+    name: Full mandatory Flutter and Python test suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact SHA
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Flutter with dependency cache
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve Dart packages
+        run: flutter pub get
+      - name: Run Flutter analyzer
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+      - name: Run every Flutter regression including future test files
+        run: flutter test --reporter expanded
+      - name: Run incremental-CI safety policy tests
+        run: python3 -m unittest discover -s scripts -p 'test_smart_ci.py' -v
+      - name: Run every Python QA test including future test files
+        run: python3 -m unittest discover -s test/qa -p '*_test.py' -v
+
+  verify-same-sha-checks:
+    name: Check every independent test workflow on this exact SHA
+    needs: verify-all-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - name: Fail closed on missing, running or failed independent tests
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          REPO: ${{ github.repository }}
+          BRANCH_NAME: ${{ github.ref_name }}
+        run: |
+          python3 - <<'PY'
+          import json, os, time, urllib.parse, urllib.request
+          repo, sha = os.environ['REPO'], os.environ['TARGET_SHA']
+          own_run = int(os.environ['RUN_ID'])
+          branch = os.environ['BRANCH_NAME']
+          expected = {
+              'M147 Final Main-Safe Merge Readiness Review',
+              'M160 Main Reconciliation and Backup Regression',
+              'Waffra Full Offline Finance and UI Regression',
+              'Waffra M103 Same-SHA Whole-App Release Certification',
+              'M202 Android SQLCipher Source Binding Dry Run (CI ONLY)',
+          } if branch == 'fix/m206-daylight-tour-sms-notes-motion-20261024' else set()
+          headers = {
+              'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+              'Accept': 'application/vnd.github+json',
+              'X-GitHub-Api-Version': '2022-11-28',
+          }
+          deadline = time.monotonic() + 45 * 60
+          while True:
+              page, found = 1, []
+              while True:
+                  qs = urllib.parse.urlencode({'head_sha': sha, 'per_page': 100, 'page': page})
+                  url = f'https://api.github.com/repos/{repo}/actions/runs?{qs}'
+                  with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=45) as response:
+                      chunk = json.load(response)['workflow_runs']
+                  found.extend(chunk)
+                  if len(chunk) < 100:
+                      break
+                  page += 1
+                  if page > 10:
+                      raise SystemExit('BLOCKED: too many CI runs to audit')
+              checks = {}
+              for item in sorted(found, key=lambda x: (x['created_at'], x['id']), reverse=True):
+                  if item['id'] != own_run and item['head_sha'] == sha:
+                      checks.setdefault(item['name'], item)
+              missing = sorted(expected - checks.keys())
+              pending = [n for n, v in checks.items() if v['status'] != 'completed']
+              failed = [(n, v['conclusion'], v['html_url']) for n, v in checks.items()
+                        if v['status'] == 'completed' and v['conclusion'] != 'success']
+              if failed:
+                  for item in failed:
+                      print('BLOCKED failed external CI:', item, flush=True)
+                  raise SystemExit('No APK: at least one same-SHA workflow failed')
+              if not missing and not pending:
+                  print('CI PASS: all', len(checks), 'same-SHA external workflows succeeded', flush=True)
+                  break
+              print('CI pending:', pending, 'missing:', missing, flush=True)
+              if time.monotonic() >= deadline:
+                  raise SystemExit('BLOCKED: required same-SHA CI never finished')
+              time.sleep(30)
+          PY
+
   build:
+    needs: [verify-all-tests, verify-same-sha-checks]
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # Needed to prove approved notes are not older than app-code changes.
+          fetch-depth: 0
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -693,6 +795,29 @@ jobs:
                   print('No test-only integration plugin in Java registrar')
           PY
 
+      # Identity is compiled *inside* the Android package so an external
+      # text receipt alone cannot certify a stale or cached APK.
+      - name: Stamp exact source revision into Android APK assets
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          SOURCE_BRANCH: ${{ github.ref_name }}
+          SOURCE_RUN: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          test "$SOURCE_SHA" = "$(git rev-parse HEAD)"
+          python3 - <<'PY'
+          import json, os, pathlib
+          path = pathlib.Path('android/app/src/main/assets/waffra-build-identity.json')
+          path.parent.mkdir(parents=True, exist_ok=True)
+          path.write_text(json.dumps({
+              'commit_sha': os.environ['SOURCE_SHA'],
+              'branch': os.environ['SOURCE_BRANCH'],
+              'workflow_run': os.environ['SOURCE_RUN'],
+              'build_type': 'qa-android-arm64',
+          }, sort_keys=True) + '\n', encoding='utf-8')
+          PY
+
       - name: Build optimized ARM64 Release APK
         shell: bash
         env:
@@ -756,13 +881,6 @@ jobs:
           if not any(o['android_info'].get('certificate_hash','').replace(':','').lower() == expected_sha1 for o in android_clients):
               print('NOTICE: checked-in google-services.json predates release SHA-1; refresh it from Firebase to ensure Google Sign-In client data is current')
           PY
-
-      - name: Upload Waffra Release APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: Waffra-Android-ARM64-Release
-          path: build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 30
 
       # AAB is a TEST candidate. Do NOT upload to a Production Play track
       # until the independent finance/security/physical-device gates pass.
@@ -849,3 +967,183 @@ jobs:
         with:
           path: .ci_cache/waffra_green_tests.json
           key: waffra-smart-tests-v2-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+      # Fail closed if compiled APK differs from checkout, if another
+      # commit was pushed while the build was running, or if APK is invalid.
+      # Previous QA artifacts may still exist but are not current releases.
+      - name: Gate QA APK on embedded SHA and current branch head
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          SOURCE_BRANCH: ${{ github.ref_name }}
+          SOURCE_RUN: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          test "$SOURCE_SHA" = "$(git rev-parse HEAD)"
+          latest=$(git ls-remote origin "refs/heads/$SOURCE_BRANCH" | awk '{print $1}')
+          test -n "$latest"
+          if [ "$latest" != "$SOURCE_SHA" ]; then
+            echo "::error::BLOCKED stale APK: branch moved to $latest from $SOURCE_SHA"
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json, os, pathlib, zipfile
+          p = pathlib.Path('build/app/outputs/flutter-apk/app-release.apk')
+          if not p.is_file() or p.stat().st_size == 0:
+              raise SystemExit('BLOCKED: signed APK missing or empty')
+          with zipfile.ZipFile(p) as z:
+              identity_file = 'assets/waffra-build-identity.json'
+              if identity_file not in z.namelist():
+                  raise SystemExit('BLOCKED: APK missing compiled source identity')
+              actual = json.loads(z.read(identity_file))
+              if z.testzip() is not None:
+                  raise SystemExit('BLOCKED: APK archive is corrupt')
+          expected = {
+              'commit_sha': os.environ['SOURCE_SHA'],
+              'branch': os.environ['SOURCE_BRANCH'],
+              'workflow_run': os.environ['SOURCE_RUN'],
+              'build_type': 'qa-android-arm64',
+          }
+          if actual != expected:
+              raise SystemExit('BLOCKED: packaged APK identity does not match checked-out source and workflow')
+          print('PASS: compiled APK identity exactly matches source commit, branch and build run')
+          PY
+          echo "✅ Exact commit and packaged APK verified: $SOURCE_SHA" >> "$GITHUB_STEP_SUMMARY"
+
+      # Attach a human-readable receipt to identify the exact verified
+      # APK revision before installation. This is a QA artifact, not a
+      # certification of SQLCipher production cutover or device tests.
+      - name: Generate exact-commit APK checklist and SHA-256 receipt
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          SOURCE_RUN: ${{ github.run_id }}
+          SOURCE_BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          test -s build/app/outputs/flutter-apk/app-release.apk
+          test "$SOURCE_SHA" = "$(git rev-parse HEAD)"
+          python3 - <<'PY'
+          import hashlib, os, pathlib
+          apk = pathlib.Path('build/app/outputs/flutter-apk/app-release.apk')
+          digest = hashlib.sha256(apk.read_bytes()).hexdigest()
+          content = '\n'.join([
+              'WAFFRA QA BUILD RECEIPT - VERIFY BEFORE INSTALL',
+              'Source commit: ' + os.environ['SOURCE_SHA'],
+              'Source branch: ' + os.environ['SOURCE_BRANCH'],
+              'GitHub Actions run: ' + os.environ['SOURCE_RUN'],
+              'APK sha256: ' + digest,
+              'Proof: embedded Android asset commit, branch and run were verified.',
+              'Proof: verified SHA was still current branch HEAD before publication.',
+              'Build: signed ARM64 QA candidate; NOT Google Play release.',
+              'Required before this APK is published: full Flutter/Python tests,',
+              'same-commit independent workflow success and Android build checks.',
+              'Approved UX fixes in this candidate source:',
+              '- Attachment count in transaction corner, AR/EN directional.',
+              '- Original SMS message displayed in transaction Notes when stored.',
+              '- Fixed + button position across pages; slower tap-only animation.',
+              '- New-install Light mode; saved appearance preferences preserved.',
+              '- Revised six-step onboarding tour and recent prior main fixes.',
+              'SECURITY: SQLCipher production cutover is NOT certified.',
+              'Do NOT use real bank SMS or financial data in this test APK.',
+              'Physical-device visual signoff and encrypted storage pending.',
+              'Release policy: QA only until separate real-device/security signoff.',
+              '',
+          ])
+          pathlib.Path('build/waffra-qa-build-receipt.txt').write_text(content, encoding='utf-8')
+          print('APK receipt:', content)
+          PY
+
+      # Every APK includes human-readable, Arabic release notes generated
+      # from the approved changes tracked in Git. Future app-code changes
+      # require updating the approval manifest before an APK is published.
+      - name: Generate and validate Waffra Release Notes TXT
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          SOURCE_BRANCH: ${{ github.ref_name }}
+          SOURCE_RUN: ${{ github.run_id }}
+          SOURCE_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          test "$SOURCE_SHA" = "$(git rev-parse HEAD)"
+          NOTES_SOURCE=docs/release/WAFFRA_APPROVED_CHANGES.txt
+          test -s "$NOTES_SOURCE" || { echo "::error::Missing approved release notes"; exit 1; }
+          # Compare ancestry, not timestamps; prevent shipping app changes
+          # that postdate the approved changelog, including future requests.
+          notes_commit=$(git log -1 --format=%H -- "$NOTES_SOURCE")
+          code_commit=$(git log -1 --format=%H -- lib/main.dart lib/waffra_widget_capture.part.dart lib/storage android/app/src/main)
+          test -n "$notes_commit"
+          test -n "$code_commit"
+          if ! git merge-base --is-ancestor "$code_commit" "$notes_commit"; then
+            echo "::error::Approved release notes are older than app-code changes. Update $NOTES_SOURCE before publishing APK."
+            exit 1
+          fi
+          python3 - <<'PY'
+          import hashlib, os, pathlib
+          approved = pathlib.Path('docs/release/WAFFRA_APPROVED_CHANGES.txt')
+          source = approved.read_text(encoding='utf-8')
+          required = ['شارة المرفقات', 'الملاحظات', 'زر الإضافة', 'الوضع الفاتح']
+          for label in required:
+              if label not in source:
+                  raise SystemExit('BLOCKED: approved release notes missing required category: ' + label)
+          apk = pathlib.Path('build/app/outputs/flutter-apk/app-release.apk')
+          receipt = pathlib.Path('build/waffra-qa-build-receipt.txt')
+          if not apk.is_file() or not apk.stat().st_size or not receipt.is_file():
+              raise SystemExit('BLOCKED: APK or its verification receipt is missing')
+          apk_digest = hashlib.sha256(apk.read_bytes()).hexdigest()
+          saved_receipt = receipt.read_text(encoding='utf-8')
+          if 'APK sha256: ' + apk_digest not in saved_receipt:
+              raise SystemExit('BLOCKED: published APK hash differs from QA receipt')
+          sha = os.environ['SOURCE_SHA']
+          if 'Source commit: ' + sha not in saved_receipt:
+              raise SystemExit('BLOCKED: APK receipt points at another source revision')
+          header = '\n'.join([
+              'وفرة - Waffra | Release Notes',
+              '==============================================',
+              'حالة النسخة: APK تجريبي اجتاز بوابات اختبارات CI الخاصة بهذا التشغيل.',
+              'ملاحظة: النجاح الآلي لا يثبت نجاح التجربة على هاتف فعلي.',
+              '',
+              'رقم تشغيل GitHub Actions: ' + os.environ['SOURCE_RUN'],
+              'المستودع: ' + os.environ['SOURCE_REPO'],
+              'الفرع: ' + os.environ['SOURCE_BRANCH'],
+              'Commit SHA: ' + sha,
+              'APK SHA-256: ' + apk_digest,
+              'Approved changes SHA-256: ' + hashlib.sha256(approved.read_bytes()).hexdigest(),
+              'رابط التشغيل: https://github.com/' + os.environ['SOURCE_REPO'] + '/actions/runs/' + os.environ['SOURCE_RUN'],
+              '',
+              '============ RELEASE NOTES / التعديلات ============',
+              '',
+          ])
+          footer = '\n'.join([
+              '',
+              '============ STATUS / حالة الاعتماد ============',
+              'اجتياز بوابات هذا البيلد: مطلوب لإرفاق هذا الملف مع APK.',
+              'الاختبار البصري على هاتف فعلي: غير مثبت بواسطة CI.',
+              'التخزين المشفر SQLCipher في الإنتاج: لم يتم اعتماده.',
+              'حفظ رسائل بنكية حقيقية قبل تفعيل التشفير: غير مسموح.',
+              'التثبيت المقصود: QA ببيانات تجريبية فقط.',
+              'لا تعتبر أي نسخة حالية إذا لم يطابق الـCommit وبصمة APK هذا الملف.',
+              '',
+          ])
+          output = pathlib.Path('build/Waffra-Release-Notes.txt')
+          output.write_text(header + source.rstrip() + '\n' + footer, encoding='utf-8-sig')
+          if output.stat().st_size < 500:
+              raise SystemExit('BLOCKED: Release Notes TXT unexpectedly short')
+          print('PASS: approved release notes packaged for exact commit ' + sha)
+          print('PASS: release notes match APK sha256 ' + apk_digest)
+          PY
+          test -s build/Waffra-Release-Notes.txt
+          echo "✅ Waffra-Release-Notes.txt (same verified commit and APK hash)" >> "$GITHUB_STEP_SUMMARY"
+
+      # Only the LAST step publishes the APK and its exact source receipt.
+      - name: Publish signed QA APK (FINAL step)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Waffra-Android-ARM64-Release-${{ github.sha }}
+          path: |
+            build/app/outputs/flutter-apk/app-release.apk
+            build/waffra-qa-build-receipt.txt
+            build/Waffra-Release-Notes.txt
+          if-no-files-found: error
+          retention-days: 30

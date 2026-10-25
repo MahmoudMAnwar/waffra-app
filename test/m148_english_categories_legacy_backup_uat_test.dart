@@ -10,10 +10,18 @@ void main() {
  setUp(()=>waffraLanguage.value='ar');
  tearDown(()=>waffraLanguage.value='ar');
 
- test('M148: all 76 built-in roots and 690 subcategories have English names',(){
-  expect(waffraCategoryCatalog.length,76);
-  expect(waffraCategoryCatalog.fold<int>(0,(n,g)=>n+g.subcategories.length),690);
+ test('M148: all 79 built-in roots and 973 subcategories have English names',(){
+  expect(waffraCategoryCatalog.length,79);
+  expect(waffraCategoryCatalog.fold<int>(0,(n,g)=>n+g.subcategories.length),973);
   expect(waffraEnglishCategoryCatalogComplete,isTrue);
+  // Existing catalog intentionally has some same-named leaves under
+  // different parents. New proposals were checked against all originals.
+  for(final group in waffraCategoryCatalog){
+   expect(group.subcategories.toSet().length,group.subcategories.length,
+    reason:'Duplicate within ${group.name}');
+  }
+  expect(waffraCategoryCatalog.first.id,'food');
+  expect(waffraCategoryCatalog.first.subcategories.first,'مطاعم شعبية');
   final arabic=RegExp(r'[\u0600-\u06FF]');
   for(final group in waffraCategoryCatalog){
    final en=waffraEnglishCategoryLabel(group.name);
@@ -27,6 +35,15 @@ void main() {
     expect(arabic.hasMatch(compound),isFalse,reason:'Untranslated compound for '+group.id);
    }
   }
+ });
+
+ test('M148: guarded catalog installer explicitly supports v4 upgrade',(){
+  final legacy=File('lib/storage/waffra_home_finance_persistence.dart').readAsStringSync();
+  expect(legacy,contains('version != 2 && version != 3 && version != 4'));
+  final ui=File('lib/main.dart').readAsStringSync();
+  expect(ui,contains('waffra_category_catalog_v4_installed'));
+  expect(ui,contains('version:4'));
+  expect(ui,contains('removedNames.contains'));
  });
 
  test('M148: English roots outrank same-spelled children; compounds use context',(){

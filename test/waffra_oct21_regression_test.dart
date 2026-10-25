@@ -11,9 +11,13 @@ void main() {
  test('Income and expense PDF rows reuse exact transaction color constants', () {
   expect(waffraIncomeBackground.toARGB32(), 0xFFB2D5C2);
   expect(waffraExpenseBackground.toARGB32(), 0xFFFCECE8);
-  expect(app, contains('PdfColor.fromInt(e.income?waffraIncomeBackground.toARGB32():waffraExpenseBackground.toARGB32())'));
+  final normalized=app.replaceAll(RegExp(r'\s+'),'');
+  expect(normalized, contains(
+   'PdfColor.fromInt(e.income?waffraIncomeBackground.toARGB32():waffraExpenseBackground.toARGB32())'));
   expect(app, contains("pdfCell('\u0024{row.key+1}',center:true)"));
   expect(app, contains("'رقم المعاملة'"));
+  expect(app, contains('children:english?orderedCells:orderedCells.reversed.toList()'));
+  expect(app, contains("['المبلغ (ريال)','الوصف','القسم','النوع','التاريخ','رقم المعاملة']"));
   expect(app, contains("'No.'"));
  });
 
@@ -51,8 +55,8 @@ void main() {
   expect(app, contains("'waffra_appearance_mode_v1'"));
  });
 
- test('Tour explains eight sections and supports replay', () {
-  expect(app, contains('static const tourTabs=<int>[0,0,0,1,2,3,0,4]'));
+ test('Tour explains six core sections and supports replay', () {
+  expect(app, contains('static const tourTabs=<int>[0,0,0,1,2,3]'));
   expect(app, contains('List<GlobalKey>.generate(7'));
   expect(app, contains('tourStep==tourTabs.length-1'));
   expect(app, contains('void beginTour()'));

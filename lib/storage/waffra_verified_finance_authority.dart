@@ -38,7 +38,10 @@ class WaffraFinanceAuthoritySmsCommit {
     required this.expenseMinor,
     required this.skippedDuplicates,
     required this.current,
+    this.originalSmsNotesOmittedOnLegacy = false,
   });
+  /// Only structured transaction metadata is saved on unencrypted legacy.
+  final bool originalSmsNotesOmittedOnLegacy;
   final int saved, income, expenses, skippedDuplicates;
   final int incomeMinor, expenseMinor;
   final WaffraFinanceAuthorityRead current;
@@ -799,8 +802,19 @@ class WaffraVerifiedFinanceAuthority {
     final backend = await _requireRoute(route);
     late final int saved, income, expenses, skipped, incomeMinor, expenseMinor;
     if (backend == WaffraRuntimeFinanceBackend.guardedLegacy) {
+      // Save transaction metadata without original SMS text on unencrypted
+      // SharedPreferences. Preserve the strict M207 fail-closed gate on the
+      // locked writer itself. Never send raw notes to that journal.
+      final redacted = List<Map<String, Object?>>.unmodifiable(
+        frozen.map((record) {
+          if (record['sourceType'] != 'sms') {
+            throw StateError('SMS confirmation requires an SMS source.');
+          }
+          return Map<String, Object?>.unmodifiable({...record, 'notes': ''});
+        }),
+      );
       final result = await legacy.commitConfirmedLegacySms(
-        records: frozen, messageHashes: fingerprints,
+        records: redacted, messageHashes: fingerprints,
         userConfirmed: true, allowDuplicateHashes: allowDuplicateHashes,
         proposedCategories: frozenCategories,
       );
@@ -829,6 +843,9 @@ class WaffraVerifiedFinanceAuthority {
       saved: saved, income: income, expenses: expenses,
       incomeMinor: incomeMinor, expenseMinor: expenseMinor,
       skippedDuplicates: skipped,
+      originalSmsNotesOmittedOnLegacy:
+          backend == WaffraRuntimeFinanceBackend.guardedLegacy &&
+          frozen.any((entry) => entry['notes'] != null && entry['notes'] != ''),
       current: await load(route: route),
     );
   }

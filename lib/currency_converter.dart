@@ -13,36 +13,164 @@ class CurrencyConverterPage extends StatefulWidget {
 }
 class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
  late final TextEditingController amount;
- final currencyEnglish=const {'SAR':'Saudi riyal','EGP':'Egyptian pound','USD':'US dollar','AED':'UAE dirham','KWD':'Kuwaiti dinar','EUR':'Euro','GBP':'British pound','BHD':'Bahraini dinar','QAR':'Qatari riyal','OMR':'Omani riyal'};
- final currencies=const {'SAR':'ريال سعودي','EGP':'جنيه مصري','USD':'دولار أمريكي',
-  'AED':'درهم إماراتي','KWD':'دينار كويتي','EUR':'يورو','GBP':'جنيه إسترليني',
-  'BHD':'دينار بحريني','QAR':'ريال قطري','OMR':'ريال عُماني'};
+ final Map<String,String> currencyEnglish=const {
+  'SAR':'Saudi riyal',
+  'EGP':'Egyptian pound',
+  'USD':'US dollar',
+  'EUR':'Euro',
+  'GBP':'British pound',
+  'AED':'UAE dirham',
+  'KWD':'Kuwaiti dinar',
+  'BHD':'Bahraini dinar',
+  'OMR':'Omani riyal',
+  'QAR':'Qatari riyal',
+  'JOD':'Jordanian dinar',
+  'TRY':'Turkish lira',
+  'INR':'Indian rupee',
+  'PKR':'Pakistani rupee',
+  'BDT':'Bangladeshi taka',
+  'JPY':'Japanese yen',
+  'CNY':'Chinese yuan',
+  'CAD':'Canadian dollar',
+  'AUD':'Australian dollar',
+  'CHF':'Swiss franc',
+  'SEK':'Swedish krona',
+  'NOK':'Norwegian krone',
+  'DKK':'Danish krone',
+  'ZAR':'South African rand',
+  'SGD':'Singapore dollar',
+  'HKD':'Hong Kong dollar',
+  'MYR':'Malaysian ringgit',
+  'IDR':'Indonesian rupiah',
+  'KRW':'South Korean won',
+  'THB':'Thai baht',
+  'PHP':'Philippine peso',
+  'MAD':'Moroccan dirham',
+  'TND':'Tunisian dinar',
+  'DZD':'Algerian dinar',
+  'IQD':'Iraqi dinar',
+  'LBP':'Lebanese pound',
+ };
+ final Map<String,String> currencies=const {
+  'SAR':'ريال سعودي',
+  'EGP':'جنيه مصري',
+  'USD':'دولار أمريكي',
+  'EUR':'يورو',
+  'GBP':'جنيه إسترليني',
+  'AED':'درهم إماراتي',
+  'KWD':'دينار كويتي',
+  'BHD':'دينار بحريني',
+  'OMR':'ريال عُماني',
+  'QAR':'ريال قطري',
+  'JOD':'دينار أردني',
+  'TRY':'ليرة تركية',
+  'INR':'روبية هندية',
+  'PKR':'روبية باكستانية',
+  'BDT':'تاكا بنغلاديشي',
+  'JPY':'ين ياباني',
+  'CNY':'يوان صيني',
+  'CAD':'دولار كندي',
+  'AUD':'دولار أسترالي',
+  'CHF':'فرنك سويسري',
+  'SEK':'كرونة سويدية',
+  'NOK':'كرونة نرويجية',
+  'DKK':'كرونة دنماركية',
+  'ZAR':'راند جنوب أفريقي',
+  'SGD':'دولار سنغافوري',
+  'HKD':'دولار هونغ كونغ',
+  'MYR':'رينغيت ماليزي',
+  'IDR':'روبية إندونيسية',
+  'KRW':'وون كوري جنوبي',
+  'THB':'بات تايلندي',
+  'PHP':'بيزو فلبيني',
+  'MAD':'درهم مغربي',
+  'TND':'دينار تونسي',
+  'DZD':'دينار جزائري',
+  'IQD':'دينار عراقي',
+  'LBP':'ليرة لبنانية',
+ };
  String from='SAR',status='';
- String? to;
+ String? to='EGP';
+ int _quoteRevision=0;
  double? result,rate;
  bool busy=false;
  DateTime? updated;
  @override void initState(){super.initState();amount=TextEditingController(text:widget.lastIncomeAmount==null?'':formatWaffraMoney(widget.lastIncomeAmount!));}
  @override void dispose(){amount.dispose();super.dispose();}
+ String currencyLabel(String code)=>'${waffraIsEnglish?currencyEnglish[code]:currencies[code]} ($code)';
+ Future<void> selectCurrency(bool source)async {
+  final filter=TextEditingController();
+  String query='';
+  try {
+   final picked=await showDialog<String>(context:context,builder:(dialogContext)=>
+    StatefulBuilder(builder:(dialogContext,refresh){
+     final listed=currencies.keys.where((code){
+      final text='${currencyEnglish[code]} ${currencies[code]} $code'.toLowerCase();
+      return text.contains(query.toLowerCase());
+     }).toList();
+     return AlertDialog(
+      title:WaffraText(source?(waffraIsEnglish?'From currency':'من عملة'):
+       (waffraIsEnglish?'To currency':'إلى عملة')),
+      content:SizedBox(width:420,height:420,child:Column(children:[
+       TextField(controller:filter,autofocus:true,
+        decoration:InputDecoration(prefixIcon:const Icon(Icons.search),
+         hintText:waffraIsEnglish?'Search code or currency':'ابحث باسم العملة أو رمزها'),
+        onChanged:(v)=>refresh(()=>query=v)),
+       const SizedBox(height:8),
+       Expanded(child:ListView.builder(itemCount:listed.length,itemBuilder:(ctx,index){
+        final code=listed[index];
+        return ListTile(
+         title:WaffraText(currencyLabel(code)),
+         onTap:()=>Navigator.of(dialogContext).pop(code),
+        );
+       })),
+      ])),
+      actions:[TextButton(onPressed:()=>Navigator.pop(dialogContext),
+       child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء'))]);
+    }));
+   if(picked!=null&&mounted){
+    ++_quoteRevision;
+    setState((){
+     if(source){from=picked;}else{to=picked;}
+     rate=null;result=null;updated=null;status='';busy=false;
+    });
+   }
+  }finally{filter.dispose();}
+ }
+ void swapCurrencies(){
+  if(to==null)return;
+  ++_quoteRevision;
+  final previous=from;
+  setState((){
+   from=to!;
+   to=previous;
+   result=null;rate=null;updated=null;status='';busy=false;
+  });
+  // Keep the entered amount; fetch a NEW directional quote, never invert a
+  // cached/stale rate or show a fabricated exchange rate.
+  if(amount.text.trim().isNotEmpty)unawaited(convert());
+ }
  Future<void> convert()async {
-  if(to==null){setState(()=>status='اختر العملة المراد التحويل إليها');return;}
+  final currentQuote=++_quoteRevision;
+  final chosenFrom=from,chosenTo=to;
+  if(chosenTo==null){setState(()=>status=waffraIsEnglish?'Choose the destination currency':'اختر العملة المراد التحويل إليها');return;}
   final input=double.tryParse(amount.text.trim().replaceAll(',',''));
   if(input==null||!input.isFinite||input<0){setState(()=>status='اكتب مبلغ صحيح عشان نحسبه');return;}
   setState((){busy=true;status='';result=null;rate=null;updated=null;});
   try{
-   if(from==to){
-    if(mounted)setState((){rate=1;result=input;updated=DateTime.now();});
+   if(chosenFrom==chosenTo){
+    if(mounted&&currentQuote==_quoteRevision)setState((){rate=1;result=input;updated=null;});
     return;
    }
    late double fetchedRate;
    DateTime? fetchedAt;
    try{
-    final response=await http.get(Uri.parse('https://open.er-api.com/v6/latest/$from'))
+    final response=await http.get(Uri.parse('https://open.er-api.com/v6/latest/$chosenFrom'))
      .timeout(const Duration(seconds:12));
     if(response.statusCode!=200)throw HttpException('Primary service HTTP ${response.statusCode}');
     final data=jsonDecode(response.body) as Map<String,dynamic>;
     if(data['result']!='success'||data['rates'] is! Map)throw const FormatException('Primary rates missing');
-    final r=(data['rates'] as Map)[to];
+    final r=(data['rates'] as Map)[chosenTo];
     if(r is! num||r.toDouble()<=0)throw const FormatException('Currency unavailable');
     fetchedRate=r.toDouble();
     fetchedAt=data['time_last_update_unix'] is num
@@ -52,21 +180,21 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
     // a primary API outage. Never silently use a fabricated exchange rate.
     debugPrint('Primary exchange-rate provider failed: $primaryError');
     final response=await http.get(Uri.parse(
-     'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/${from.toLowerCase()}.json'))
+     'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/${chosenFrom.toLowerCase()}.json'))
      .timeout(const Duration(seconds:12));
     if(response.statusCode!=200)throw HttpException('Backup service HTTP ${response.statusCode}');
     final data=jsonDecode(response.body) as Map<String,dynamic>;
-    final quotes=data[from.toLowerCase()];
+    final quotes=data[chosenFrom.toLowerCase()];
     if(quotes is! Map)throw const FormatException('Backup rates missing');
-    final r=quotes[to!.toLowerCase()];
+    final r=quotes[chosenTo.toLowerCase()];
     if(r is! num||r.toDouble()<=0)throw const FormatException('Currency unavailable');
     fetchedRate=r.toDouble();
     fetchedAt=DateTime.tryParse('${data['date']??''}');
    }
-   if(!mounted)return;
+   if(!mounted||currentQuote!=_quoteRevision||from!=chosenFrom||to!=chosenTo)return;
    setState((){rate=fetchedRate;result=input*fetchedRate;updated=fetchedAt;});
   }on TimeoutException {
-   if(mounted)setState(()=>status=waffraIsEnglish
+   if(mounted&&currentQuote==_quoteRevision)setState(()=>status=waffraIsEnglish
     ?'Exchange-rate services timed out. Please retry.'
     :'انتهت مهلة الاتصال بخدمات أسعار الصرف. حاول مرة أخرى.');
   }on SocketException {
@@ -78,7 +206,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
    if(mounted)setState(()=>status=waffraIsEnglish
     ?'Exchange-rate services are temporarily unavailable. Try again later.'
     :'خدمات أسعار الصرف غير متاحة حاليًا. حاول مرة أخرى لاحقًا.');
-  }finally{if(mounted)setState(()=>busy=false);}
+  }finally{if(mounted&&currentQuote==_quoteRevision)setState(()=>busy=false);}
  }
  @override Widget build(BuildContext context)=>Scaffold(
   appBar:AppBar(title:const WaffraText('تحويل العملات')),
@@ -89,16 +217,34 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
     inputFormatters:[const WaffraAmountFormatter()],
     decoration:InputDecoration(labelText:waffraTr('المبلغ'),border:OutlineInputBorder())),
    const SizedBox(height:14),
-   DropdownButtonFormField<String>(initialValue:from,
-    decoration:InputDecoration(labelText:waffraTr('من عملة'),border:OutlineInputBorder()),
-    items:currencies.entries.map((e)=>DropdownMenuItem(value:e.key,child:WaffraText('${waffraIsEnglish?currencyEnglish[e.key]:e.value} (${e.key})'))).toList(),
-    onChanged:(v){if(v!=null)setState(()=>from=v);}),
-   const SizedBox(height:14),
-   DropdownButtonFormField<String>(initialValue:to,
-    hint:const WaffraText('اختر العملة'),
-    decoration:InputDecoration(labelText:waffraTr('إلى عملة'),border:OutlineInputBorder()),
-    items:currencies.entries.map((e)=>DropdownMenuItem(value:e.key,child:WaffraText('${waffraIsEnglish?currencyEnglish[e.key]:e.value} (${e.key})'))).toList(),
-    onChanged:(v){setState(()=>to=v);}),
+   Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
+    Expanded(child:OutlinedButton(
+     onPressed:busy?null:()=>selectCurrency(true),
+     style:OutlinedButton.styleFrom(padding:const EdgeInsets.symmetric(horizontal:10,vertical:15)),
+     child:Column(mainAxisSize:MainAxisSize.min,children:[
+      WaffraText(waffraIsEnglish?'From':'من عملة'),
+      const SizedBox(height:4),
+      WaffraText('${waffraIsEnglish?currencyEnglish[from]:currencies[from]} ($from)',
+       textAlign:TextAlign.center,maxLines:2),
+     ]))),
+    const SizedBox(width:4),
+    IconButton.filledTonal(
+     key:const Key('waffra-currency-swap'),
+     tooltip:waffraIsEnglish?'Swap currencies':'تبديل العملات',
+     onPressed:busy?null:swapCurrencies,
+     icon:const Icon(Icons.swap_horiz_rounded)),
+    const SizedBox(width:4),
+    Expanded(child:OutlinedButton(
+     onPressed:busy?null:()=>selectCurrency(false),
+     style:OutlinedButton.styleFrom(padding:const EdgeInsets.symmetric(horizontal:10,vertical:15)),
+     child:Column(mainAxisSize:MainAxisSize.min,children:[
+      WaffraText(waffraIsEnglish?'To':'إلى عملة'),
+      const SizedBox(height:4),
+      WaffraText(to==null?(waffraIsEnglish?'Select currency':'اختر العملة'):
+       '${waffraIsEnglish?currencyEnglish[to]:currencies[to]} ($to)',
+       textAlign:TextAlign.center,maxLines:2),
+     ]))),
+   ]),
    const SizedBox(height:20),
    FilledButton.icon(onPressed:busy?null:convert,
     icon:const Icon(Icons.currency_exchange),label:WaffraText(busy?'جاري جلب السعر...':'حوّل الحين')),

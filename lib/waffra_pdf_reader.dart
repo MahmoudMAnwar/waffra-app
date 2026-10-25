@@ -30,7 +30,7 @@ class _WaffraPdfReaderState extends State<WaffraPdfReader> {
  }
  Future<List<WaffraPdfPage>> _renderPages()async{
   final result=<WaffraPdfPage>[];
-  await for(final page in Printing.raster(widget.bytes,dpi:125)){
+  await for(final page in Printing.raster(widget.bytes,dpi:165)){
    final png=await page.toPng();
    result.add(WaffraPdfPage(png,page.width/page.height));
   }
@@ -117,57 +117,144 @@ class _WaffraPdfFullScreen extends StatefulWidget{
 
 class _WaffraPdfFullScreenState extends State<_WaffraPdfFullScreen>{
  late final PageController controller;
+ late final List<TransformationController> transforms;
  late int current;
+ bool _pinching=false,_zoomed=false;
+ TapDownDetails? _tapDown;
  @override void initState(){
   super.initState();
   current=widget.initialIndex;
   controller=PageController(initialPage:current);
+  transforms=List.generate(widget.pages.length,(_)=>TransformationController());
+  for(var i=0;i<transforms.length;i++){
+   final index=i;
+   transforms[index].addListener((){
+    if(!mounted||index!=current)return;
+    final scale=transforms[index].value.getMaxScaleOnAxis();
+    if((scale>1.01)!=_zoomed)setState(()=>_zoomed=scale>1.01);
+   });
+  }
  }
- @override void dispose(){controller.dispose();super.dispose();}
+ @override void dispose(){
+  controller.dispose();
+  for(final transform in transforms)transform.dispose();
+  super.dispose();
+ }
+ void _reset(int page){
+  if(page<0||page>=transforms.length)return;
+  transforms[page].value=Matrix4.identity();
+  if(page==current&&mounted)setState((){
+   _zoomed=false;_pinching=false;
+  });
+ }
  void goTo(int page){
   if(page<0||page>=widget.pages.length)return;
+  _reset(current);
+  _reset(page);
   controller.animateToPage(page,
    duration:const Duration(milliseconds:220),curve:Curves.easeInOut);
  }
- @override Widget build(BuildContext context){
-  return Scaffold(
-   backgroundColor:const Color(0xFF111715),
-   appBar:AppBar(
-    backgroundColor:const Color(0xFF073F31),foregroundColor:Colors.white,
-    leading:IconButton(icon:const Icon(Icons.arrow_back_rounded),
-     tooltip:widget.english?'Back to report':'العودة للتقرير',
-     onPressed:()=>Navigator.pop(context)),
-    title:Text(widget.english?'Back to report':'العودة للتقرير')),
-   body:SafeArea(child:Column(children:[
-    Expanded(child:PageView.builder(
-     controller:controller,
-     itemCount:widget.pages.length,
-     onPageChanged:(index)=>setState(()=>current=index),
-     itemBuilder:(ctx,index)=>InteractiveViewer(
-      key:Key('waffra-pdf-full-page-$index'),
-      panEnabled:true,minScale:1,maxScale:5,
-      child:Center(child:Image.memory(widget.pages[index].png,
-       fit:BoxFit.contain,gaplessPlayback:true))))),
-    Container(
-     padding:const EdgeInsets.symmetric(vertical:9),
-     color:const Color(0xFF073F31),
-     child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
-      IconButton(
-       tooltip:widget.english?'Previous page':'الصفحة السابقة',
-       onPressed:current>0?()=>goTo(current-1):null,
-       icon:Icon(Icons.chevron_left_rounded,color:current>0?Colors.white:Colors.white38)),
-      const SizedBox(width:24),
-      Text('${current+1} / ${widget.pages.length}',
-       textDirection:TextDirection.ltr,
-       style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold,fontSize:17)),
-      const SizedBox(width:24),
-      IconButton(
-       tooltip:widget.english?'Next page':'الصفحة التالية',
-       onPressed:current<widget.pages.length-1?()=>goTo(current+1):null,
-       icon:Icon(Icons.chevron_right_rounded,
-        color:current<widget.pages.length-1?Colors.white:Colors.white38)),
-     ])),
-   ])),
-  );
+ void _doubleTap(int index){
+  final transform=transforms[index];
+  if(transform.value.getMaxScaleOnAxis()>1.01){
+   _reset(index);return;
+  }
+  final focal=_tapDown?.localPosition??Offset.zero;
+  const zoom=2.4;
+  transform.value=Matrix4.identity()
+   ..translate(focal.dx,focal.dy)
+   ..scale(zoom)
+   ..translate(-focal.dx,-focal.dy);
  }
+ void _zoomBy(int index,double factor){
+  final transform=transforms[index];
+  final oldScale=transform.value.getMaxScaleOnAxis();
+  final next=(oldScale*factor).clamp(1.0,6.0);
+  if(next<=1.01){_reset(index);return;}
+  transform.value=transform.value.clone()..scale(next/oldScale);
+ }
+ Widget _page(BuildContext context,int index)=>GestureDetector(
+  behavior:HitTestBehavior.opaque,
+  onDoubleTapDown:(details)=>_tapDown=details,
+  onDoubleTap:()=>_doubleTap(index),
+  child:InteractiveViewer(
+   key:Key('waffra-pdf-full-page-$index'),
+   transformationController:transforms[index],
+   minScale:1,maxScale:6,
+   panEnabled:true,scaleEnabled:true,
+   boundaryMargin:const EdgeInsets.all(18),
+   onInteractionStart:(details){
+    if(index==current&&details.pointerCount>1&&!_pinching){
+     setState(()=>_pinching=true);
+    }
+   },
+   onInteractionEnd:(_){
+    if(index==current&&mounted)setState(()=>_pinching=false);
+   },
+   child:Center(child:Image.memory(widget.pages[index].png,
+    fit:BoxFit.contain,gaplessPlayback:true)),
+  ),
+ );
+ @override Widget build(BuildContext context)=>Scaffold(
+  backgroundColor:const Color(0xFF111715),
+  appBar:AppBar(
+   backgroundColor:const Color(0xFF073F31),foregroundColor:Colors.white,
+   leading:IconButton(icon:const Icon(Icons.arrow_back_rounded),
+    tooltip:widget.english?'Back to report':'العودة للتقرير',
+    onPressed:()=>Navigator.pop(context)),
+   title:Text(widget.english?'Report detail':'تفاصيل التقرير'),
+   actions:[
+    IconButton(tooltip:widget.english?'Zoom out':'تصغير',
+     onPressed:()=>_zoomBy(current,0.67),
+     icon:const Icon(Icons.zoom_out_rounded)),
+    IconButton(tooltip:widget.english?'Zoom in':'تكبير',
+     onPressed:()=>_zoomBy(current,1.5),
+     icon:const Icon(Icons.zoom_in_rounded)),
+    IconButton(tooltip:widget.english?'Reset zoom':'إعادة الحجم الطبيعي',
+     onPressed:()=>_reset(current),
+     icon:const Icon(Icons.fit_screen_rounded)),
+   ]),
+  body:SafeArea(child:Column(children:[
+   Expanded(child:PageView.builder(
+    controller:controller,
+    // Lock horizontal page swipes whenever zooming or pinching.
+    physics:_zoomed||_pinching?
+     const NeverScrollableScrollPhysics():const PageScrollPhysics(),
+    itemCount:widget.pages.length,
+    onPageChanged:(index){
+     _reset(current);
+     if(mounted)setState((){
+      current=index;
+      _zoomed=transforms[index].value.getMaxScaleOnAxis()>1.01;
+      _pinching=false;
+     });
+    },
+    itemBuilder:_page)),
+   Container(padding:const EdgeInsets.symmetric(vertical:7),
+    color:const Color(0xFF073F31),
+    child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+     IconButton(
+      tooltip:widget.english?'Previous page':'الصفحة السابقة',
+      onPressed:current>0?()=>goTo(current-1):null,
+      icon:Icon(Icons.chevron_left_rounded,
+       color:current>0?Colors.white:Colors.white38)),
+     const SizedBox(width:8),
+     Expanded(child:Column(mainAxisSize:MainAxisSize.min,children:[
+      Text('${current+1} / ${widget.pages.length}',
+       textDirection:TextDirection.ltr,textAlign:TextAlign.center,
+       style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold,fontSize:15)),
+      Text(widget.english?'Pinch or double-tap to zoom':'قرّب بإصبعين أو اضغط مرتين للتكبير',
+       textAlign:TextAlign.center,maxLines:1,softWrap:false,
+       overflow:TextOverflow.ellipsis,
+       style:const TextStyle(color:Colors.white70,fontSize:9)),
+     ])),
+     const SizedBox(width:8),
+     IconButton(
+      tooltip:widget.english?'Next page':'الصفحة التالية',
+      onPressed:current<widget.pages.length-1?()=>goTo(current+1):null,
+      icon:Icon(Icons.chevron_right_rounded,
+       color:current<widget.pages.length-1?Colors.white:Colors.white38)),
+    ])),
+  ])),
+ );
 }
