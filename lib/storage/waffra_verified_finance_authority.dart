@@ -872,11 +872,19 @@ class WaffraVerifiedFinanceAuthority {
       // Save transaction metadata without original SMS text on unencrypted
       // SharedPreferences. Preserve the strict M207 fail-closed gate on the
       // locked writer itself. Never send raw notes to that journal.
-      // Fail closed if OS-backed key / SQLCipher is unavailable. Raw SMS is
-      // written and verified inside the separate encrypted note vault BEFORE
-      // any non-sensitive legacy finance metadata is committed.
-      if (protectedSmsNotes != null) {
-        await protectedSmsNotes!.stage(records: frozen, hashes: fingerprints);
+      // Freeze immutable originals here; the legacy writer selects ONLY
+      // confirmed nonduplicate IDs under the Home/Widget native writer lock.
+      // The SQLCipher staging hook is then invoked before any plaintext
+      // metadata journal is prepared. No skipped duplicate's bank text is
+      // staged merely because it appeared in the original paste.
+      final originalsById = <String, (Map<String, Object?>, String)>{};
+      for (var i = 0; i < frozen.length; i++) {
+        final id = frozen[i]['id'];
+        if (id is! String || id.trim().isEmpty ||
+            originalsById.containsKey(id)) {
+          throw StateError('Ambiguous confirmed bank SMS entry ID.');
+        }
+        originalsById[id] = (frozen[i], fingerprints[i]);
       }
       final redacted = List<Map<String, Object?>>.unmodifiable(
         frozen.map((record) {
@@ -890,6 +898,21 @@ class WaffraVerifiedFinanceAuthority {
         records: redacted, messageHashes: fingerprints,
         userConfirmed: true, allowDuplicateHashes: allowDuplicateHashes,
         proposedCategories: frozenCategories,
+        protectedNotesBeforeLegacyCommit: protectedSmsNotes == null
+            ? null
+            : (confirmed, confirmedHashes) async {
+                final originals = <Map<String, Object?>>[];
+                for (var i = 0; i < confirmed.length; i++) {
+                  final id = confirmed[i]['id'];
+                  final matching = originalsById[id];
+                  if (matching == null || matching.$2 != confirmedHashes[i]) {
+                    throw StateError('Bank SMS/finance IDs changed under lock.');
+                  }
+                  originals.add(matching.$1);
+                }
+                await protectedSmsNotes!.stage(
+                  records: originals, hashes: confirmedHashes);
+              },
       );
       saved = result.added;
       income = result.savedIncome;
