@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:waffra/storage/waffra_encrypted_account_owner_mutations.dart';
@@ -42,7 +44,8 @@ void main() {
         writerDirectory: sandbox,
         sourceGuard: _FixedActiveSource(selectedSource),
         currentAuthenticatedUid: () async => currentUid,
-        readDeviceOwnerKey: () async => currentKey,
+        signOwnerChallenge: (challenge) async => currentKey == null
+            ? null : Hmac(sha256, currentKey!).convert(challenge).toString(),
         experimentalEnabled: enabled,
       );
 
@@ -118,9 +121,11 @@ CREATE TABLE fresh_account_profile_principal_binding(
   singleton INTEGER PRIMARY KEY,
   owner_hmac TEXT NOT NULL
 )''');
-    final hmac = WaffraEncryptedAccountOwnerMutations.ownerTag(
-      deviceKey: key, uid: uid, vaultId: vaultId, sourceSha256: digest,
-    );
+    final hmac = Hmac(sha256, key).convert(
+      WaffraEncryptedAccountOwnerMutations.ownerChallenge(
+        uid: uid, vaultId: vaultId, sourceSha256: digest,
+      ),
+    ).toString();
     await store.customStatement(
       'INSERT INTO fresh_account_profile_principal_binding'
       '(singleton,owner_hmac) VALUES (1,?)', [hmac],
