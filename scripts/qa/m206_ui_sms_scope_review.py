@@ -38,6 +38,7 @@ APPROVED = {
     "lib/storage/waffra_verified_finance_authority.dart",
     "test/waffra_widget_quick_capture_test.dart",
     "test/m149_backup_pin_localized_fab_trash_uat_test.dart",
+    "test/storage/m109_verified_finance_authority_test.dart",
 }
 
 
@@ -238,7 +239,8 @@ def main() -> None:
             "records: redacted, messageHashes: fingerprints" in authority and
             "originalSmsNotesOmittedOnLegacy" in authority and
             "WaffraLegacySmsNotesPrivacyGate.rejectConfirmedSmsNotes(copied)" in legacy_catalog and
-            "expect(saved.first['notes'],'')" in wtest,
+            "expect(saved.first['notes'],'')" in wtest and
+            "expect(record['notes'], '')" in Path("test/storage/m109_verified_finance_authority_test.dart").read_text(encoding="utf-8"),
             "SMS plaintext legacy bridge/privacy regression missing")
     require("waffraSafeSmsTransactionTitle(parsed.title,entry.raw" in widget,
             "widget raw SMS must not replace the safe short title")

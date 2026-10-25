@@ -60,6 +60,10 @@ class _Legacy extends WaffraHomeFinancePersistence {
   }) async {
     smsCount++;
     if (!userConfirmed) throw StateError('Not confirmed');
+    for (final record in records) {
+      expect(record['sourceType'], 'sms');
+      expect(record['notes'], '');
+    }
     return const WaffraConfirmedLegacySmsResult(
       savedEntriesRaw: '[]',
       savedHashes: <String>[],
@@ -259,6 +263,8 @@ void main() {
       'income': false,
       'category': 'Test',
       'date': '2026-10-22T12:00:00.000',
+      'sourceType': 'sms',
+      'notes': 'Synthetic raw message: never store in legacy preferences.',
     };
     for (final route in [
       WaffraFinanceRoute.bulkSmsConfirmedSave,
@@ -271,6 +277,7 @@ void main() {
       expect(result.saved, 1);
       expect(result.expenses, 1);
       expect(result.current.ledgerRaw, '[]');
+      expect(result.originalSmsNotesOmittedOnLegacy, isTrue);
     }
     expect(writer.smsCount, 2);
   });
