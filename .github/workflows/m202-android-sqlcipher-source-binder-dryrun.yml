@@ -4,6 +4,8 @@ on:
     branches: [main]
     paths:
       - 'integration_test/m202_home_widget_source_binder_android_test.dart'
+      - 'lib/storage/waffra_unified_finance_writer.dart'
+      - 'test/storage/unified_finance_writer_test.dart'
       - '.github/scripts/run-m202-sqlcipher-binder-android.sh'
       - '.github/workflows/m202-android-sqlcipher-source-binder-dryrun.yml'
       - '.github/workflows/m147-final-main-review-gate.yml'
@@ -108,6 +110,8 @@ jobs:
                 "reviewed_sha": os.environ["REVIEW_HEAD_SHA"],
                 "android_runtime_sqlcipher_binder": "PASSED_SYNTHETIC_VAULT",
                 "widget_route_to_home_cold_read": "PASSED_SYNTHETIC_SOURCE",
+                "original_bank_sms_notes_roundtrip": "PASSED_DISPOSABLE_SQLCIPHER_ANDROID_ONLY",
+                "original_bank_sms_notes_in_legacy": False,
                 "incorrect_key_prevents_finance_read": True,
                 "migration_and_receipt_parity": "PASSED_SYNTHETIC_FIXTURES",
                 "production_real_widget_engine_attested": False,

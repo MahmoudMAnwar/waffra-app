@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:drift/drift.dart' show Variable;
 import 'package:waffra/storage/waffra_atomic_finance_snapshot.dart';
 import 'package:waffra/storage/waffra_encrypted_store.dart';
 import 'package:waffra/storage/waffra_fresh_encrypted_vault_bootstrap.dart';
@@ -281,6 +282,85 @@ END
     expect(state.generation, 1);
     expect(state.values['waffra_sms_hashes_v1'], [digest(40)]);
     expect(await count(), 1);
+  });
+
+  test('M210 encrypted-only original SMS notes remain byte-exact after cold reopen',
+      () async {
+    await prepare();
+    const raw = 'شراء إلكتروني\nالمبلغ: 84.72 ريال\n'
+        'تاريخ: 2026/10/25\nمرجع تجريبي: DEMO-007\n'
+        'English amount SAR 84.72 — لا تستخدم بيانات حقيقية';
+    final confirmed = <String, Object?>{
+      ...entry('m210-sms', amount: 84.72),
+      'sourceType': 'sms',
+      'notes': raw,
+    };
+    final saved = await writer().appendTransactions(
+      records: [confirmed], messageHashes: [digest(210)],
+      userConfirmed: true,
+    );
+    expect(saved.saved, 1);
+    expect(saved.expenseMinor, 8472);
+    final before = await currentSnapshot().read();
+    final canonical = (jsonDecode(before.values['entries'] as String) as List)
+        .single as Map<String, dynamic>;
+    expect(canonical['notes'], raw);
+    expect(canonical['sourceType'], 'sms');
+    expect(before.values['waffra_sms_hashes_v1'], [digest(210)]);
+    final typed = await vault.customSelect(
+      'SELECT source_json FROM fresh_finance_entries WHERE entry_id=?',
+      variables: [Variable.withString('m210-sms')],
+    ).getSingle();
+    expect((jsonDecode(typed.read<String>('source_json')) as Map)['notes'], raw);
+
+    await vault.close();
+    vault = WaffraEncryptedStore.openAt(
+      File('${root.path}/finance.sqlite'), key: key,
+    );
+    final reopened = await currentSnapshot().read();
+    expect(((jsonDecode(reopened.values['entries'] as String) as List).single
+        as Map)['notes'], raw);
+    expect(reopened.values['waffra_sms_hashes_v1'], [digest(210)]);
+    final reread = await vault.customSelect(
+      'SELECT source_json FROM fresh_finance_entries WHERE entry_id=?',
+      variables: [Variable.withString('m210-sms')],
+    ).getSingle();
+    expect((jsonDecode(reread.read<String>('source_json')) as Map)['notes'], raw);
+  });
+
+  test('M210 SQL projection note corruption rolls back transaction and SMS hash',
+      () async {
+    await prepare();
+    await vault.customStatement('''
+CREATE TRIGGER m210_damage_sms_note
+AFTER INSERT ON fresh_finance_entries
+WHEN NEW.entry_id='tampered-sms'
+BEGIN
+  UPDATE fresh_finance_entries SET source_json='{"id":"tampered-sms","notes":""}'
+  WHERE entry_id=NEW.entry_id;
+END
+''');
+    await expectLater(writer().appendTransactions(
+      records: [{
+        ...entry('tampered-sms'),
+        'sourceType': 'sms',
+        'notes': 'Synthetic original bank line\nAmount 9.50 SAR',
+      }],
+      messageHashes: [digest(211)],
+      userConfirmed: true,
+    ), throwsA(isA<StateError>()));
+    final unchanged = await currentSnapshot().read();
+    expect(unchanged.generation, 0);
+    expect(jsonDecode(unchanged.values['entries'] as String? ?? '[]'), isEmpty);
+    expect(unchanged.values.containsKey('waffra_sms_hashes_v1'), isFalse);
+    final count = await vault.customSelect(
+      'SELECT count(*) AS n FROM fresh_finance_entries',
+    ).getSingle();
+    expect(count.read<int>('n'), 0);
+    final hashes = await vault.customSelect(
+      'SELECT count(*) AS n FROM fresh_finance_sms_hashes',
+    ).getSingle();
+    expect(hashes.read<int>('n'), 0);
   });
 
   test('cold reopening retains user-updated balances and dedupe hashes',
