@@ -54,7 +54,7 @@ class WaffraVerifiedEncryptedAccountProfileRead {
   ///
   /// A SQLCipher transaction gives one consistent view of the finance
   /// witness, completion marker and all encrypted account rows. No fallback
-  /// to SharedPreferences exists, even when the candidate is absent.
+  /// to any legacy preference store exists, even when the candidate is absent.
   Future<WaffraEncryptedAccountProfileCandidate> readCandidate({
     required String expectedVaultId,
     required String expectedSourceSha256,
