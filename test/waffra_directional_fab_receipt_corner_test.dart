@@ -157,6 +157,33 @@ void main() {
     notice.dispose();
   });
 
+  testWidgets('the same footer notice mirrors icon and close in Arabic and English',
+      (tester) async {
+    final notice=ValueNotifier<WaffraNoticeData?>(
+      const WaffraNoticeData(
+        text:'رسالة اختبار',kind:WaffraSnackKind.success,
+        duration:Duration(seconds:5),requireDismissal:true));
+    for(final direction in [TextDirection.rtl,TextDirection.ltr]){
+      await tester.pumpWidget(MaterialApp(
+        home:Directionality(textDirection:direction,child:Scaffold(
+          body:const SizedBox.expand(),
+          bottomNavigationBar:Column(mainAxisSize:MainAxisSize.min,children:[
+            WaffraFooterNoticeHost(
+              listenable:notice,onDismiss:()=>notice.value=null),
+            const SizedBox(height:85),
+          ]),
+        )),
+      ));
+      await tester.pumpAndSettle();
+      final statusX=tester.getCenter(find.byIcon(Icons.check_circle_rounded)).dx;
+      final closeX=tester.getCenter(find.byIcon(Icons.close_rounded)).dx;
+      expect(direction==TextDirection.rtl?statusX>closeX:statusX<closeX,isTrue,
+        reason:'Status icon and close action must follow the current direction.');
+    }
+    await tester.pumpWidget(const SizedBox.shrink());
+    notice.dispose();
+  });
+
   test('attachment corner mirrors with language without increasing row height', () {
     final source=File('lib/main.dart').readAsStringSync();
     expect(source,contains('if(count>0)PositionedDirectional(top:0,start:0'));
