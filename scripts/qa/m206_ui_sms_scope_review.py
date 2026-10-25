@@ -117,6 +117,22 @@ def main() -> None:
     require("same clipboard content is reanalyzed" in tests and
             "pasteRevision" in app,"paste isolation regression absent")
 
+    footer_notice_test = Path("test/waffra_directional_fab_receipt_corner_test.dart").read_text(encoding="utf-8")
+    require("class WaffraFooterNoticeHost extends StatefulWidget" in app and
+            "class WaffraNoticeContent extends StatelessWidget" in app and
+            "bottomNavigationBar:Column(mainAxisSize:MainAxisSize.min,children:[" in app,
+            "footer-integrated reusable feedback surface missing")
+    require(app.count(".showSnackBar(") == 1 and
+            app.count("SnackBar(") == 1,
+            "parallel or direct Snackbar presenters detected")
+    require("if(mounted&&addFabExpanded)setState(()=>addFabExpanded=false)" in app and
+            "waffraDismissFooterNotice();" in app and
+            "maxLines:2" in app,
+            "compact notice, consistent location or add-menu closure missing")
+    require("footer notice pushes financial content up" in footer_notice_test and
+            "warning, error and info keep one footprint" in footer_notice_test,
+            "non-overlap and shared-status Flutter regression tests missing")
+
     # Emulator test execution must perform the four real Android integration
     # cases and fail shut on timeout, never report synthetic CI as production.
     for marker in (
