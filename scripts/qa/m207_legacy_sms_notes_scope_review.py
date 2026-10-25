@@ -48,6 +48,7 @@ def main():
         "rejectNewOrModifiedSmsNotes(",
         "previousLedger: preferences.getString('entries')",
         "prior?['sourceType'] == 'sms'",
+        "Original bank SMS source cannot be downgraded in legacy storage.",
         "Original bank SMS notes require verified encrypted storage.",
     ):
         require(marker in source, "missing writer privacy guard " + marker)
@@ -57,6 +58,7 @@ def main():
         "dashboard batch cannot introduce plaintext notes",
         "existing SMS notes are preserved",
         "disguising it as manual is blocked",
+        "two-save SMS source downgrade is blocked",
         "manual transaction notes remain allowed",
     ):
         require(marker in tests, "missing regression " + marker)
