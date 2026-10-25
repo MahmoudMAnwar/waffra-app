@@ -5,7 +5,7 @@ import 'package:waffra/storage/waffra_authoritative_widget_balance.dart';
 
 void main() {
   test('M213 real ledger projection sums each transaction in halalas', () {
-    final net = WaffraAuthoritativeWidgetBalance.netHalalas('''
+    final net = WaffraAuthoritativeWidgetBalance.netHalalas(r'''
 [
  {"id":"incoming","income":true,"amount":225.00,
   "notes":"Synthetic private multilingual SMS\nريال SAR"},
