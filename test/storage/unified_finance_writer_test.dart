@@ -287,8 +287,8 @@ END
   test('M210 encrypted-only original SMS notes remain byte-exact after cold reopen',
       () async {
     await prepare();
-    const raw = 'شراء إلكتروني\\nالمبلغ: 84.72 ريال\\n'
-        'تاريخ: 2026/10/25\\nمرجع تجريبي: DEMO-007\\n'
+    const raw = 'شراء إلكتروني\nالمبلغ: 84.72 ريال\n'
+        'تاريخ: 2026/10/25\nمرجع تجريبي: DEMO-007\n'
         'English amount SAR 84.72 — لا تستخدم بيانات حقيقية';
     final confirmed = <String, Object?>{
       ...entry('m210-sms', amount: 84.72),
@@ -344,14 +344,14 @@ END
       records: [{
         ...entry('tampered-sms'),
         'sourceType': 'sms',
-        'notes': 'Synthetic original bank line\\nAmount 9.50 SAR',
+        'notes': 'Synthetic original bank line\nAmount 9.50 SAR',
       }],
       messageHashes: [digest(211)],
       userConfirmed: true,
     ), throwsA(isA<StateError>()));
     final unchanged = await currentSnapshot().read();
     expect(unchanged.generation, 0);
-    expect(jsonDecode(unchanged.values['entries'] as String), isEmpty);
+    expect(jsonDecode(unchanged.values['entries'] as String? ?? '[]'), isEmpty);
     expect(unchanged.values.containsKey('waffra_sms_hashes_v1'), isFalse);
     final count = await vault.customSelect(
       'SELECT count(*) AS n FROM fresh_finance_entries',

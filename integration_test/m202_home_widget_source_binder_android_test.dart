@@ -79,11 +79,11 @@ void main() {
         'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
     const entryId = 'm202-widget-synthetic-1';
     const homeId = 'm210-home-synthetic-2';
-    const originalWidgetSms = 'شراء تجريبي\\nالمبلغ: 28.75 ريال\\n'
-        'الوقت 2026-10-25 11:30\\nمرجع DEMO-100\\n'
+    const originalWidgetSms = 'شراء تجريبي\nالمبلغ: 28.75 ريال\n'
+        'الوقت 2026-10-25 11:30\nمرجع DEMO-100\n'
         'Long note retained exactly; no real account details';
-    const originalHomeSms = 'حوالة واردة تجريبية\\nمبلغ 16.50 SAR\\n'
-        'مرجع DEMO-101\\nExtra newline\\nLast line';
+    const originalHomeSms = 'حوالة واردة تجريبية\nمبلغ 16.50 SAR\n'
+        'مرجع DEMO-101\nExtra newline\nLast line';
     WaffraEncryptedStore? seed;
     WaffraProductionFinanceAuthorityBinding? widget;
     WaffraProductionFinanceAuthorityBinding? home;
