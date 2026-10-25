@@ -3097,7 +3097,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       :(waffraIsEnglish?'Some transactions need review':'تم حفظ جزء من المعاملات'),
       textAlign:TextAlign.center,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:22)),
     ]),
-    content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
      WaffraText(waffraIsEnglish?
       'Saved ${applied.saved} transactions':'تم حفظ ${applied.saved} معاملة',
       textAlign:TextAlign.center,style:const TextStyle(fontWeight:FontWeight.w600)),
@@ -3154,7 +3154,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
         :'مكررة أو استبعدها الحفظ: ${recovery.unsaved.where((e)=>e.reason==WaffraSmsNotSavedReason.alreadySaved).length}',
         textAlign:TextAlign.center),
      ],
-    ]),
+    ])),
     actionsAlignment:MainAxisAlignment.center,
     actionsPadding:const EdgeInsets.fromLTRB(24,0,24,18),
     actions:[
@@ -3201,7 +3201,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
    reviewAttempted=false;index=i;income=result.income;
    category=categories.any((c)=>c.income==income&&c.name==result.category)?result.category:
     (forType(income).isNotEmpty?forType(income).first.name:'أخرى');
-   description.text='${result.title} — ${messages[i].replaceAll(RegExp(r'\s+'),' ').trim()}';
+   // M220: never paste the full bank SMS into the transaction TITLE.
+   // The original text is shown only in the ephemeral review field; the
+   // guarded legacy writer strips raw SMS notes until SQLCipher is certified.
+   description.text=result.title;
    amount.text=result.amount==null?'':formatWaffraMoney(result.amount!);
   });
  }
