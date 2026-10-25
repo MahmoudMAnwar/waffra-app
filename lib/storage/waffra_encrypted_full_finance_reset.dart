@@ -56,6 +56,8 @@ class WaffraEncryptedFullFinanceReset {
 
   static const _knownTables = <String>{
     'fresh_finance_meta',
+    // Source activation checkpoint is NEVER erased by financial reset.
+    'fresh_finance_cutover_checkpoint',
     'fresh_finance_snapshot_state',
     'fresh_finance_entries',
     'fresh_finance_categories',

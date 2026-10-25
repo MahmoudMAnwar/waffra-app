@@ -187,6 +187,38 @@ void main() {
     expect(await count('fresh_finance_entries'), 0);
   });
 
+  test('M212 reset preserves preexisting encrypted activation checkpoint',
+      () async {
+    // Simulated checkpoint metadata is an internal QA-only witness, NOT
+    // permission to activate customer SQLCipher without physical evidence.
+    await vault.customStatement('''
+CREATE TABLE fresh_finance_cutover_checkpoint(
+  singleton INTEGER PRIMARY KEY CHECK(singleton=1),
+  source_digest TEXT NOT NULL,
+  encrypted_digest TEXT NOT NULL,
+  phase TEXT NOT NULL,
+  activated_generation INTEGER,
+  modified_at_ms INTEGER NOT NULL
+)''');
+    await vault.customStatement(
+      'INSERT INTO fresh_finance_cutover_checkpoint '
+      '(singleton,source_digest,encrypted_digest,phase,'
+      'activated_generation,modified_at_ms) VALUES(1,?,?,?,?,?)',
+      [List<String>.filled(64, 'a').join(),
+       (await snapshot.read()).digest, 'active', 1,
+       DateTime.utc(2026, 10, 25).millisecondsSinceEpoch],
+    );
+    final saved = await execute();
+    expect(saved.transactionsRemoved, 1);
+    final witness = await vault.customSelect(
+      'SELECT phase,activated_generation FROM '
+      'fresh_finance_cutover_checkpoint WHERE singleton=1',
+    ).getSingle();
+    expect(witness.read<String>('phase'), 'active');
+    expect(witness.read<int>('activated_generation'), 1);
+    expect((await snapshot.read()).values['entries'], '[]');
+  });
+
   test('M188 incorrect encrypted backup password cannot erase the original',
       () async {
     final original = await snapshot.read();

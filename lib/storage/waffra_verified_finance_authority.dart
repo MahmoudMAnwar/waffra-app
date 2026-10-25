@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'waffra_encrypted_full_finance_reset.dart';
 import 'waffra_encrypted_finance_session.dart';
 import 'waffra_receipt_screen_contract.dart';
 import 'waffra_encrypted_receipt_recycle.dart';
@@ -348,6 +349,50 @@ class WaffraVerifiedFinanceAuthority {
       ledgerRaw: loaded.ledgerRaw,
       encryptedWitness: loaded,
     );
+  }
+
+  /// The final destructive finance route deliberately has NO legacy
+  /// implementation and no fallback to SharedPreferences. The caller must
+  /// present the same fresh, independently attested SQLCipher read that is
+  /// currently displayed and an externally saved authenticated backup.
+  /// No UI shortcut is allowed to set the encrypted activation marker.
+  Future<WaffraFinanceAuthorityRead> resetVerifiedFinance({
+    required WaffraFinanceRoute route,
+    required WaffraFinanceAuthorityRead baseline,
+    required String encryptedBackup,
+    required String backupPassword,
+    required String confirmationPhrase,
+    required bool userConfirmed,
+    required bool biometricVerified,
+    required bool externalBackupSaved,
+  }) async {
+    if (route != WaffraFinanceRoute.fullFinanceReset) {
+      throw ArgumentError('Wrong route for full finance reset.');
+    }
+    if (!userConfirmed || !biometricVerified || !externalBackupSaved ||
+        confirmationPhrase != WaffraEncryptedFullFinanceReset.confirmation) {
+      throw StateError('Full reset requires biometric, external backup and approval.');
+    }
+    final source = await _requireRoute(route);
+    if (source != WaffraRuntimeFinanceBackend.verifiedEncrypted ||
+        baseline.source != WaffraRuntimeFinanceBackend.verifiedEncrypted ||
+        baseline.encryptedWitness == null) {
+      throw StateError('Full reset requires an active, verified SQLCipher source.');
+    }
+    // Never allow a source switch between the approval UI and delete.
+    final result = await encryptedSession!.resetVerifiedFinance(
+      baseline: baseline.encryptedWitness!,
+      encryptedBackup: encryptedBackup,
+      backupPassword: backupPassword,
+      confirmationPhrase: confirmationPhrase,
+      userConfirmed: true,
+      biometricVerified: true,
+      externalBackupSaved: true,
+    );
+    if (result.newGeneration <= result.previousGeneration) {
+      throw StateError('Encrypted full reset lacked a durable generation update.');
+    }
+    return load(route: route);
   }
 
   Future<WaffraFinanceAuthorityRead> saveCaptured({

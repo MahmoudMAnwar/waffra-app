@@ -1,3 +1,4 @@
+import 'waffra_encrypted_full_finance_reset.dart';
 import 'waffra_encrypted_transaction_recycle.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -86,6 +87,39 @@ class WaffraVerifiedEncryptedFinanceBridge {
     if (recovery != WaffraCutoverRecoveryStatus.encryptedReady) {
       throw StateError('SQLCipher activation witness needs reconciliation.');
     }
+  }
+
+  /// Encrypted-only, explicitly authenticated reset route. The independent
+  /// source selector and the reset engine recheck the active SQLCipher
+  /// checkpoint beneath the same native Home/Widget writer lock. A locally
+  /// generated backup, UI button or in-memory certificate is never enough.
+  Future<WaffraEncryptedFullResetResult> resetVerifiedFinance({
+    required WaffraEncryptedHomeWitness baseline,
+    required String encryptedBackup,
+    required String backupPassword,
+    required String confirmationPhrase,
+    required bool userConfirmed,
+    required bool biometricVerified,
+    required bool externalBackupSaved,
+  }) async {
+    if (!experimentalEnabled || !allWritersRoutedVerified ||
+        !secureKeyVerified) {
+      throw StateError('Verified encrypted source is not available for reset.');
+    }
+    return WaffraEncryptedFullFinanceReset(
+      snapshot: snapshot,
+      writerDirectory: writerDirectory,
+      verifySourceUnderLock: _requireActivatedUnderLock,
+      experimentalEnabled: true,
+    ).reset(
+      baseline: baseline.snapshot,
+      encryptedBackup: encryptedBackup,
+      backupPassword: backupPassword,
+      confirmationPhrase: confirmationPhrase,
+      userConfirmed: userConfirmed,
+      biometricVerified: biometricVerified,
+      externalBackupSaved: externalBackupSaved,
+    );
   }
 
   Future<WaffraEncryptedHomeWitness> loadForHomeAndWidget() async {
