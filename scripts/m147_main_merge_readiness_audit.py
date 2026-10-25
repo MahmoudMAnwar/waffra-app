@@ -20,6 +20,7 @@ ALLOWED = {
     "lib/storage/waffra_production_finance_authority_binding.dart",
     "lib/storage/waffra_verified_finance_authority.dart",
     "lib/storage/waffra_encrypted_sms_notes_vault.dart",
+    "lib/storage/waffra_home_finance_persistence.dart",
     "lib/main.dart",
     "lib/currency_converter.dart",
     "lib/waffra_display_currency.dart",
@@ -85,6 +86,7 @@ def main() -> None:
                     "lib/storage/waffra_production_finance_authority_binding.dart",
                     "lib/storage/waffra_verified_finance_authority.dart",
                     "lib/storage/waffra_encrypted_sms_notes_vault.dart",
+                    "lib/storage/waffra_home_finance_persistence.dart",
                     } for p in changed),
             "M225/M226 may only tighten restore, source binding and encrypted SMS notes")
     require(not any(p.startswith(".github/workflows/") for p in changed),
@@ -181,10 +183,15 @@ def main() -> None:
         "await store.transaction(", "original_sms", "fingerprint(note) != hash",
     )), "M226 independent encrypted bank SMS storage safeguards missing")
     require(all(token in authority for token in (
-        "await protectedSmsNotes!.stage(records: frozen, hashes: fingerprints)",
+        "await protectedSmsNotes!.stage(",
         "Map<String, Object?>.unmodifiable({...record, 'notes': ''})",
         "readProtectedOriginalSms(String entryId)",
     )), "M226 Home/widget must encrypt original SMS before legacy projection")
+    require(all(v in Path("lib/storage/waffra_home_finance_persistence.dart").read_text() for v in (
+        "protectedNotesBeforeLegacyCommit",
+        "await protectedNotesBeforeLegacyCommit(",
+        "confirmedHashes",
+    )), "M226 SQLCipher note stage must follow duplicate exclusion inside native lock")
     require("protectedSmsNotes: const WaffraEncryptedSmsNotesVault()" in binding_code,
             "M226 real Home/widget SQLCipher note vault must be injected")
     require(all(token in sms_new_qa for token in (
