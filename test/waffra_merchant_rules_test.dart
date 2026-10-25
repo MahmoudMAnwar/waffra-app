@@ -55,4 +55,85 @@ void main() {
     expect(waffraMerchantKey('حوالة — حساب 123456789012'),isNull);
     expect(waffraMerchantKey('شراء — ALHUSSAIN SHOP'),'alhussain shop');
   });
+
+  test('Saudi English and Arabic merchants map to the same Arabic leaf', () {
+    final cases=<String,String>{
+      'Keemart':'بقالة وتموين / سوبرماركت',
+      'كيمارت':'بقالة وتموين / سوبرماركت',
+      'LULU HYPER KHURAIS RD':'بقالة وتموين / سوبرماركت',
+      'العثيم - حي الخليج':'بقالة وتموين / سوبرماركت',
+      'TAMIMI MARKETS':'بقالة وتموين / سوبرماركت',
+      'NANA EXPRESS':'بقالة وتموين / سوبرماركت',
+      'PANDA RETAIL':'بقالة وتموين / سوبرماركت',
+      'Keeta':'مطاعم وكافيهات / توصيل الطعام',
+      'كيتا':'مطاعم وكافيهات / توصيل الطعام',
+      'HungerStation':'مطاعم وكافيهات / توصيل الطعام',
+      'جاهز':'مطاعم وكافيهات / توصيل الطعام',
+      'ALNAHDI PHARMACY':'صحة / صيدلية وأدوية',
+      'صيدلية النهدي':'صحة / صيدلية وأدوية',
+      'ALDAWAA PHARMACY':'صحة / صيدلية وأدوية',
+      'DR MOHAMMAD RASHID ALF':'صحة / أطباء',
+      'Dr. Ahmed':'صحة / أطباء',
+      'دكتور خالد':'صحة / أطباء',
+      'Medical Center Riyadh':'صحة / عيادات',
+      'MAR AKEZ MEDICAL COMPAN':'صحة / عيادات',
+      'CLINIC CENTER':'صحة / عيادات',
+      'Dental Clinic':'صحة / عيادات',
+      'Jeeny':'مواصلات / تاكسي',
+      'جيني':'مواصلات / تاكسي',
+      'Uber Trip':'مواصلات / أوبر وكريم',
+      'كارفور':'بقالة وتموين / سوبرماركت',
+      'SHEIN.COM':'تسوّق / ملابس',
+      'Noon':'تسوّق / تسوق إلكتروني',
+      'AMAZON SA':'تسوّق / تسوق إلكتروني',
+      'STARBUCKS Riyadh':'مطاعم وكافيهات / مقاهي',
+      'SHAWARMA HJ':'مطاعم وكافيهات / وجبات سريعة',
+      'ALBAIK':'مطاعم وكافيهات / وجبات سريعة',
+      'McDonalds':'مطاعم وكافيهات / وجبات سريعة',
+      'STC MOBILE':'فواتير / جوال',
+      'MOBILY':'فواتير / جوال',
+      'NETFLIX':'اشتراكات رقمية / بث أفلام',
+      'SPOTIFY':'اشتراكات رقمية / بث موسيقى',
+      'OPENAI':'اشتراكات رقمية / اشتراكات ذكاء اصطناعي',
+      'FITNESS TIME':'رياضة ولياقة / اشتراك نادي',
+      'الخطوط السعودية':'سفر وسياحة / تذاكر طيران',
+    };
+    for(final entry in cases.entries){
+      expect(waffraRecognizedMerchantLeaf(entry.key,income:false),
+       entry.value,reason:entry.key);
+      expect(waffraRecognizedMerchantLeaf(entry.key,income:true),
+       isNull,reason:'Merchant brand cannot turn bank credit into an expense');
+    }
+  });
+
+  test('name collision protections: bank rails and DR inside words never classify', () {
+    for(final merchant in [
+      'AlinmaPay','MADA','DRIVE PARK','ADDRESS SHOP','STC PAY',
+      'PAYMENT GATEWAY','TAMARA','TABBY','PERSONAL TRANSFER',
+    ]){
+      expect(waffraRecognizedMerchantLeaf(merchant,income:false),isNull,
+       reason:'A rail or substring is not enough evidence: $merchant');
+    }
+  });
+
+  test('financial direction and category intent remain separate', () {
+    expect(waffraRecognizedSmsLeaf(
+      'Credit via local transfer\nAmount: SAR 1613.00',income:true),
+      'حوالات واردة / حوالة محلية');
+    expect(waffraRecognizedSmsLeaf(
+      'Refund Received\nAmount: SAR 20.00',income:true),
+      'مبالغ مستردة / استرجاع مشتريات');
+    expect(waffraRecognizedSmsLeaf(
+      'Salary Credit\nAmount: SAR 5000',income:true),
+      'راتب / راتب أساسي');
+    expect(waffraRecognizedSmsLeaf(
+      'Purchase Card\nAmount: SAR 42\nAt: Keemart',
+      income:false,merchant:'Keemart'),
+      'بقالة وتموين / سوبرماركت');
+    expect(waffraRecognizedSmsLeaf(
+      'شراء نقاط بيع\nمبلغ: 23 ريال\nلدى: كيتا',
+      income:false,merchant:'كيتا'),
+      'مطاعم وكافيهات / توصيل الطعام');
+  });
+
 }
