@@ -48,6 +48,8 @@ def main():
         "rejectNewOrModifiedSmsNotes(",
         "previousLedger: preferences.getString('entries')",
         "prior?['sourceType'] == 'sms'",
+        "Legacy finance ledger has ambiguous identities.",
+        "Proposed finance ledger has ambiguous identities.",
         "Original bank SMS source cannot be downgraded in legacy storage.",
         "Original bank SMS notes require verified encrypted storage.",
     ):
@@ -59,6 +61,7 @@ def main():
         "existing SMS notes are preserved",
         "disguising it as manual is blocked",
         "two-save SMS source downgrade is blocked",
+        "duplicate legacy IDs cannot shadow an original SMS source",
         "manual transaction notes remain allowed",
     ):
         require(marker in tests, "missing regression " + marker)
