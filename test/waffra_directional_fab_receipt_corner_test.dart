@@ -119,7 +119,7 @@ void main() {
       reason:'Financial content must reflow above the footer notice.');
     expect(noticeRect.height,lessThanOrEqualTo(66));
     expect(noticeRect.width,lessThanOrEqualTo(440));
-    await tester.tap(find.text('تراجع'));
+    await tester.tap(find.widgetWithText(TextButton,'تراجع'));
     await tester.pumpAndSettle();
     expect(undos,1);
     expect(find.text('تم تعديل المعاملة'),findsNothing);
@@ -148,7 +148,7 @@ void main() {
       final footer=tester.getRect(find.byKey(const Key('waffra-test-footer')));
       expect(panel.bottom,lessThanOrEqualTo(footer.top));
       expect(panel.height,lessThanOrEqualTo(66));
-      expect(find.text('رسالة اختبار'),findsOneWidget);
+      expect(find.byWidgetPredicate((w)=>w is WaffraText && w.data=='رسالة اختبار'),findsOneWidget);
     }
     notice.value=null;
     await tester.pumpAndSettle();

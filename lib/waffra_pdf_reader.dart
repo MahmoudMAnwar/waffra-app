@@ -238,15 +238,17 @@ class _WaffraPdfFullScreenState extends State<_WaffraPdfFullScreen>{
       onPressed:current>0?()=>goTo(current-1):null,
       icon:Icon(Icons.chevron_left_rounded,
        color:current>0?Colors.white:Colors.white38)),
-     const SizedBox(width:16),
-     Column(mainAxisSize:MainAxisSize.min,children:[
+     const SizedBox(width:8),
+     Expanded(child:Column(mainAxisSize:MainAxisSize.min,children:[
       Text('${current+1} / ${widget.pages.length}',
-       textDirection:TextDirection.ltr,
+       textDirection:TextDirection.ltr,textAlign:TextAlign.center,
        style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold,fontSize:15)),
       Text(widget.english?'Pinch or double-tap to zoom':'قرّب بإصبعين أو اضغط مرتين للتكبير',
+       textAlign:TextAlign.center,maxLines:1,softWrap:false,
+       overflow:TextOverflow.ellipsis,
        style:const TextStyle(color:Colors.white70,fontSize:9)),
-     ]),
-     const SizedBox(width:16),
+     ])),
+     const SizedBox(width:8),
      IconButton(
       tooltip:widget.english?'Next page':'الصفحة التالية',
       onPressed:current<widget.pages.length-1?()=>goTo(current+1):null,
