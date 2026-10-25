@@ -3767,23 +3767,86 @@ Future<void> bulkSmsSheet({String? initialText})async {
    actions:[FilledButton(onPressed:()=>Navigator.pop(ctx),
     child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))]));
  }
+ /// Draw the same category-colored donut shown on Smart Analysis.
  String expensePieSvg(Map<String,double> totals){
-  final values=totals.values.where((v)=>v>0).toList();
-  final total=values.fold<double>(0,(a,b)=>a+b);
-  const colors=['#006B5B','#E8AF47','#F08B64','#4D98A3','#9075B8','#9EBF70'];
-  final out=StringBuffer('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">');
-  if(total==0)return '${out}</svg>';
+  final positive=totals.entries.where((e)=>e.value>0).toList();
+  final total=positive.fold<double>(0,(n,e)=>n+e.value);
+  final out=StringBuffer('<svg xmlns="http://www.w3.org/2000/svg" '
+   'width="200" height="200" viewBox="0 0 200 200">');
+  if(total<=0)return '$out</svg>';
   var angle=-pi/2;
-  for(var i=0;i<values.length;i++){
-   final sweep=2*pi*values[i]/total;
+  for(final category in positive){
+   final sweep=2*pi*category.value/total;
    final points=<String>['100,100'];
-   final steps=max(2,(sweep*50).ceil());
+   final steps=max(12,(sweep*70).ceil());
    for(var j=0;j<=steps;j++){
-    final a=angle+sweep*j/steps;
-    points.add('${(100+88*cos(a)).toStringAsFixed(2)},${(100+88*sin(a)).toStringAsFixed(2)}');
+    final theta=angle+sweep*j/steps;
+    points.add('${(100+87*cos(theta)).toStringAsFixed(2)},'
+     '${(100+87*sin(theta)).toStringAsFixed(2)}');
    }
-   out.write('<polygon points="${points.join(' ')}" fill="${colors[i%colors.length]}" stroke="white" stroke-width="1"/>');
+   final hex=(categoryFor(category.key,false).color&0xFFFFFF)
+    .toRadixString(16).padLeft(6,'0');
+   out.write('<polygon points="${points.join(' ')}" '
+    'fill="#$hex" stroke="#FFFFFF" stroke-width=".8"/>');
    angle+=sweep;
+  }
+  out.write('<circle cx="100" cy="100" r="45" fill="#FFFFFF"/>');
+  out.write('</svg>');
+  return out.toString();
+ }
+ /// Same four weekly expense points and green curve as Flutter analysis.
+ String weeklySpendSvg(List<double> amounts){
+  final maximum=amounts.fold<double>(1,(a,b)=>max(a,b));
+  final points=List.generate(amounts.length,(i)=>
+   (32.0+i*168,117.0-94*amounts[i]/maximum));
+  final out=StringBuffer('<svg xmlns="http://www.w3.org/2000/svg" '
+   'width="600" height="150" viewBox="0 0 600 150">');
+  for(var i=0;i<4;i++){
+   final y=23+i*31;
+   out.write('<line x1="30" x2="550" y1="$y" y2="$y" '
+    'stroke="#E5EEEA" stroke-width="1"/>');
+  }
+  final path=StringBuffer();
+  if(points.isNotEmpty){
+   path.write('M ${points[0].$1.toStringAsFixed(1)} ${points[0].$2.toStringAsFixed(1)}');
+   for(var i=1;i<points.length;i++){
+    final prev=points[i-1],next=points[i],cx=(prev.$1+next.$1)/2;
+    path.write(' C ${cx.toStringAsFixed(1)} ${prev.$2.toStringAsFixed(1)}'
+     ' ${cx.toStringAsFixed(1)} ${next.$2.toStringAsFixed(1)}'
+     ' ${next.$1.toStringAsFixed(1)} ${next.$2.toStringAsFixed(1)}');
+   }
+  }
+  out.write('<path d="$path" fill="none" stroke="#0C7957" stroke-width="4"/>');
+  for(final point in points){
+   out.write('<circle cx="${point.$1.toStringAsFixed(1)}" '
+    'cy="${point.$2.toStringAsFixed(1)}" r="5" '
+    'fill="#0C7957" stroke="#FFFFFF" stroke-width="2"/>');
+  }
+  out.write('</svg>');
+  return out.toString();
+ }
+ /// Five weekly or twelve monthly grouped bars match the Analytics tab.
+ String pairedBarChartSvg(List<(double,double)> values){
+  final maximum=values.fold<double>(1,(v,p)=>max(v,max(p.$1,p.$2)));
+  final count=values.length,width=max(520,count*56);
+  final out=StringBuffer('<svg xmlns="http://www.w3.org/2000/svg" '
+   'width="$width" height="160" viewBox="0 0 $width 160">');
+  for(var i=0;i<4;i++){
+   final y=20+i*36;
+   out.write('<line x1="20" x2="${width-12}" y1="$y" y2="$y" '
+    'stroke="#E4EBE7" stroke-width="1"/>');
+  }
+  for(var i=0;i<count;i++){
+   final center=33+(width-60)*(i+.5)/count;
+   for(var j=0;j<2;j++){
+    final amount=j==0?values[i].$1:values[i].$2;
+    final height=(amount/maximum*117).clamp(0.0,117.0);
+    final x=center+(j==0?-13:2);
+    out.write('<rect x="${x.toStringAsFixed(1)}" '
+     'y="${(138-height).toStringAsFixed(1)}" '
+     'width="11" height="${height.toStringAsFixed(1)}" rx="3" '
+     'fill="${j==0?'#075C40':'#FF5722'}"/>');
+   }
   }
   out.write('</svg>');
   return out.toString();
