@@ -17,12 +17,15 @@ ALLOWED = {
     "scripts/m147_main_merge_readiness_audit.py",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
+    "lib/waffra_display_currency.dart",
+    "lib/storage/waffra_encrypted_legacy_sms_reattachment.dart",
     "lib/currency_converter.dart",
     "lib/waffra_gold_market_data.dart",
     "lib/waffra_gold_calculator.dart",
     "lib/waffra_gold_market_section.dart",
     "test/m224_verified_gold_fallback_test.dart",
     "test/m224_verified_pull_refresh_dialog_test.dart",
+    "test/storage/m224_encrypted_legacy_sms_reattachment_test.dart",
 }
 FINANCE_GUARDS = (
     "if(applied.originalSmsNotesOmittedOnLegacy)",
@@ -67,9 +70,13 @@ def main() -> None:
         git("diff", "--name-only", BASE_MAIN, head).splitlines()))
     require(changed == ALLOWED,
             "changed-file scope mismatch: " + repr(sorted(changed ^ ALLOWED)))
-    require(not any(p.startswith(("lib/storage/", "native/", "firebase/"))
+    require(not any(p.startswith(("native/", "firebase/"))
                     for p in changed),
-            "SQLCipher core, Android native and Firebase are out of scope")
+            "Android native and Firebase are out of scope")
+    require(not any(p.startswith("lib/storage/") and p !=
+                    "lib/storage/waffra_encrypted_legacy_sms_reattachment.dart"
+                    for p in changed),
+            "Only the exact disabled-by-default encrypted SMS recovery candidate is approved")
     require(not any(p.startswith(".github/workflows/") for p in changed),
             "CI workflow files must stay unmodified")
     require(not any(p in changed for p in (
@@ -79,6 +86,11 @@ def main() -> None:
     gold_code = Path("lib/waffra_gold_market_data.dart").read_text()
     review_code = Path("test/m224_verified_pull_refresh_dialog_test.dart").read_text()
     gold_test = Path("test/m224_verified_gold_fallback_test.dart").read_text()
+    sms_code = Path("lib/storage/waffra_encrypted_legacy_sms_reattachment.dart").read_text()
+    sms_qa = Path("test/storage/m224_encrypted_legacy_sms_reattachment_test.dart").read_text()
+    authority = Path("lib/storage/waffra_verified_finance_authority.dart").read_text()
+    routes = Path("lib/storage/waffra_production_finance_routing_gate.dart").read_text()
+    release_gate = Path("lib/storage/waffra_production_cutover_release_gate.dart").read_text()
     notes = Path("docs/release/WAFFRA_APPROVED_CHANGES.txt").read_text()
     require(all(g in main_code for g in FINANCE_GUARDS),
             "legacy SMS privacy/source guard or verified route missing")
@@ -91,6 +103,34 @@ def main() -> None:
             "independent gold provider negative QA missing")
     require("if(applied.originalSmsNotesOmittedOnLegacy)" in review_code,
             "guard must be explicitly covered by a regression")
+    require(all(s in sms_code for s in (
+        "this.experimentalEnabled = false",
+        "verifyEncryptedSourceUnderLock();",
+        "WaffraExperimentalWriterGate(",
+        "snapshot.store.transaction(",
+        "snapshot.commit(",
+        "SELECT source_json FROM fresh_finance_entries WHERE entry_id=?",
+        "bankSmsFingerprint(originalSms) != expectedHash",
+    )), "exact encrypted-only SMS recovery authorization, parity or lock missing")
+    require(all(s in sms_qa for s in (
+        "cold-reopens exact", "SQL failure rolls back",
+        "wrong parser amount", "disabled-by-default",
+    )), "SMS recovery negative / cold reopen QA missing")
+    require("Map<String, Object?>.unmodifiable({...record, 'notes': ''})"
+            in authority and
+            "originalSmsNotesOmittedOnLegacy" in authority,
+            "legacy privacy guard cannot be removed")
+    require("automaticallyActivateSqlCipher => false" in release_gate,
+            "production activation would be unsafe")
+    # M224 adds no real-device evidence. A complete route enum is an audit
+    # inventory, not proof any route is live on production SQLCipher.
+    route_lines = routes.split("enum WaffraFinanceRoute {", 1)[1].split("}", 1)[0]
+    inventory = [line.split("//")[0].strip().rstrip(",")
+                 for line in route_lines.splitlines() if line.strip()]
+    require(len(inventory) == 24 and len(set(inventory)) == 24,
+            "SQLCipher route audit inventory does not enumerate exactly 24")
+    require("verifiedRoutes = const <WaffraFinanceRoute>{}" in routes,
+            "unverified routes must not be preapproved")
     require("M224" in notes and "SQLCipher" in notes,
             "release notes omit verified scope and SQLCipher NO-GO")
     # Release notes must follow ALL modified application code; don't silently
@@ -111,6 +151,9 @@ def main() -> None:
         "sqlcipher_production_activated": False,
         "real_user_migration_performed": False,
         "physical_device_backup_restore_verified": False,
+        "routes_in_catalog": len(inventory),
+        "routes_proven_on_two_physical_devices": False,
+        "sms_recovery_experimental_only": True,
         "release_authorized": False,
         "required": [
             "Every workflow for exact PR head must pass, including Android QA.",
