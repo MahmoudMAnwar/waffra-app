@@ -185,6 +185,41 @@ void main() {
     expect(rows, isEmpty);
   });
 
+  test('M214 empty profile stage cannot be reassigned to another user',
+      () async {
+    final prefs = await SharedPreferences.getInstance();
+    for (final key in WaffraEncryptedAccountProfileStager.approvedProfileKeys) {
+      await prefs.remove(key);
+    }
+    final first = await stager().stageLegacyProfile();
+    expect(first.records, 0);
+    final again = await stager().stageLegacyProfile();
+    expect(again.records, 0);
+    final marker = await vault.customSelect(
+      'SELECT captured_count FROM fresh_account_profile_stage_marker',
+    ).getSingle();
+    expect(marker.read<int>('captured_count'), 0);
+    await prefs.setString('waffra_last_login_phone', '0509999999');
+    await expectLater(stager().stageLegacyProfile(), throwsStateError);
+    final rows = await vault.customSelect(
+      'SELECT profile_key FROM fresh_account_profile_staging',
+    ).get();
+    expect(rows, isEmpty);
+  });
+
+  test('M214 missing profile witness never silently adopts staged PII',
+      () async {
+    await stager().stageLegacyProfile();
+    await vault.customStatement(
+      'DELETE FROM fresh_account_profile_stage_marker',
+    );
+    await expectLater(stager().stageLegacyProfile(), throwsStateError);
+    final rows = await vault.customSelect(
+      'SELECT profile_key FROM fresh_account_profile_staging',
+    ).get();
+    expect(rows.length, 6);
+  });
+
   test('M214 disabled staging cannot access source or vault', () async {
     final disabled = WaffraEncryptedAccountProfileStager(
       store: vault,
