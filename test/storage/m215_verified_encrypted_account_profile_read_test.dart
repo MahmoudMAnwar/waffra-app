@@ -138,7 +138,7 @@ void main() {
     await expectLater(
       reader().readCandidate(
         expectedVaultId: vaultId,
-        expectedSourceSha256: '0' * 64,
+        expectedSourceSha256: List<String>.filled(64, '0').join(),
       ),
       throwsStateError,
     );
