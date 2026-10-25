@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:drift/drift.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'waffra_encrypted_store.dart';

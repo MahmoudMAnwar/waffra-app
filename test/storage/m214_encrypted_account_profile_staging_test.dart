@@ -168,7 +168,7 @@ void main() {
   test('M214 changed legacy financial owner cannot stage profile',
       () async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('entries', jsonEncode([<String, Object>{
+    await prefs.setString('entries', jsonEncode([<String, Object?>{
       'id': 'different-owner-transaction',
       'title': 'Synthetic other owner',
       'category': 'Other',
