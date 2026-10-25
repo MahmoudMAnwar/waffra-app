@@ -7,6 +7,7 @@ import 'waffra_atomic_finance_snapshot.dart';
 import 'waffra_encrypted_cutover_journal.dart';
 import 'waffra_encrypted_finance_session.dart';
 import 'waffra_encrypted_store.dart';
+import 'waffra_encrypted_sms_notes_vault.dart';
 import 'waffra_home_finance_persistence.dart';
 import 'waffra_production_cutover_release_gate.dart';
 import 'waffra_production_finance_routing_gate.dart';
@@ -58,6 +59,7 @@ class WaffraProductionFinanceAuthorityBinding {
         authority: WaffraVerifiedFinanceAuthority(
           legacy: legacy,
           sourceGuard: sourceGuard,
+          protectedSmsNotes: const WaffraEncryptedSmsNotesVault(),
         ),
         encrypted: false,
       );
