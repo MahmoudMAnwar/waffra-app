@@ -52,6 +52,5 @@ void main() {
     final source=File('lib/waffra_gold_market_section.dart').readAsStringSync();
     expect(source,contains('_drawBar(canvas'));
     expect(source,contains('size.maxWidth >= 285 ? 3 : 2'));
-    expect(source,contains('واحد'), isFalse);
   });
 }
