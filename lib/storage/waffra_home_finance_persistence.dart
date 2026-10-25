@@ -49,6 +49,77 @@ class WaffraConfirmedLegacySmsResult {
 /// SQLCipher vault nor sets cutover markers or activates Firebase. The future
 /// encrypted implementation must be selected only after all app/widget/SMS
 /// writers share an independently verified, crash-safe source selector.
+/// Never introduce or change raw bank SMS notes in unencrypted legacy storage.
+/// This protects the current Home/Widget writer while SQLCipher production
+/// cutover is NO-GO. Existing legacy notes remain byte-for-byte unchanged
+/// during unrelated edits; they are not silently erased or migrated.
+class WaffraLegacySmsNotesPrivacyGate {
+  const WaffraLegacySmsNotesPrivacyGate._();
+
+  static void rejectConfirmedSmsNotes(List<Map<String, Object?>> records) {
+    for (final record in records) {
+      final notes = record['notes'];
+      if (notes != null && notes != '') {
+        throw StateError(
+          'Original bank SMS notes require verified encrypted storage.',
+        );
+      }
+    }
+  }
+
+  static void rejectNewOrModifiedSmsNotes({
+    required String proposedLedger,
+    required String? previousLedger,
+  }) {
+    final before = jsonDecode(previousLedger ?? '[]');
+    final after = jsonDecode(proposedLedger);
+    if (before is! List || after is! List ||
+        before.any((row) => row is! Map) ||
+        after.any((row) => row is! Map)) {
+      throw StateError('Legacy finance ledger encoding is invalid.');
+    }
+    // Fail closed on malformed or duplicate identities. Otherwise a legacy
+    // ledger containing both SMS and manual rows with the same ID could let
+    // the manual row shadow the original SMS source in this comparison.
+    final priorById = <String, Map>{};
+    for (final row in before) {
+      final record = row as Map;
+      final id = record['id'];
+      if (id is! String || id.trim().isEmpty ||
+          priorById.containsKey(id)) {
+        throw StateError('Legacy finance ledger has ambiguous identities.');
+      }
+      priorById[id] = record;
+    }
+    final proposedIds = <String>{};
+    for (final row in after) {
+      final record = row as Map;
+      final id = record['id'];
+      if (id is! String || id.trim().isEmpty || !proposedIds.add(id)) {
+        throw StateError('Proposed finance ledger has ambiguous identities.');
+      }
+      final prior = priorById[id];
+      // A legacy SMS entry must never be reclassified as manual: doing so
+      // would let a second save add raw bank text to plaintext preferences.
+      // This check runs under the native writer lock, before journal writes.
+      if (prior?['sourceType'] == 'sms' && record['sourceType'] != 'sms') {
+        throw StateError(
+          'Original bank SMS source cannot be downgraded in legacy storage.',
+        );
+      }
+      final isSms = record['sourceType'] == 'sms' ||
+          prior?['sourceType'] == 'sms';
+      final notes = record['notes'];
+      if (isSms && notes != null && notes != '' &&
+          (prior == null || prior['notes'] != notes)) {
+        throw StateError(
+          'Original bank SMS notes require verified encrypted storage.',
+        );
+      }
+    }
+  }
+}
+
 class WaffraHomeFinancePersistence {
   const WaffraHomeFinancePersistence({
     this.coordinator = const WaffraLegacyFinanceWriterCoordinator(),
@@ -225,6 +296,7 @@ class WaffraHomeFinancePersistence {
         ),
       ));
     }
+    WaffraLegacySmsNotesPrivacyGate.rejectConfirmedSmsNotes(copied);
     final hashes = List<String>.unmodifiable(messageHashes);
     // A standalone test or future legacy caller can invoke this bridge
     // without the outer finance authority. Snapshot merchant proposals
@@ -425,6 +497,10 @@ class WaffraHomeFinancePersistence {
         preferences,
         expectedRaw: expectedLedgerRaw,
         expectedWidgetRevision: expectedWidgetRevision,
+      );
+      WaffraLegacySmsNotesPrivacyGate.rejectNewOrModifiedSmsNotes(
+        proposedLedger: entries,
+        previousLedger: preferences.getString('entries'),
       );
       const batch = WaffraLegacyFinanceBatchJournal();
       await batch.prepare(prefs: preferences, nextValues: captured);
