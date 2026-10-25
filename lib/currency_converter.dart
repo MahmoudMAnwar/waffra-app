@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'waffra_i18n.dart';
 import 'waffra_gold_market_section.dart';
+import 'waffra_gold_calculator.dart';
 
 class CurrencyConverterPage extends StatefulWidget {
  const CurrencyConverterPage({super.key,this.lastIncomeAmount});
@@ -269,6 +270,17 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
     style:TextStyle(fontSize:12)),
    const SizedBox(height:22),
    WaffraGoldMarketSection(english:waffraIsEnglish),
+   const SizedBox(height:12),
+   OutlinedButton.icon(
+    key:const Key('waffra-open-gold-calculator'),
+    onPressed:()=>Navigator.of(context).push(MaterialPageRoute(
+     builder:(_)=>WaffraGoldCalculatorPage(
+      arabicCurrencies:currencies,englishCurrencies:currencyEnglish))),
+    icon:const Icon(Icons.currency_exchange),
+    label:WaffraText(waffraIsEnglish?
+     'Convert gold value to SAR, EGP or any currency':
+     'حوّل قيمة الذهب إلى ريال أو جنيه مصري أو أي عملة')),
+
 
   ]));
 }
