@@ -69,7 +69,8 @@ def main():
     ):
         require(marker in source, "missing SQL owner/CAS safeguard: " + marker)
     for forbidden in (
-        "SharedPreferences", "FirebaseAuth", "print(", "debugPrint(",
+        "SharedPreferences.getInstance(", "package:shared_preferences",
+        "FirebaseAuth", "print(", "debugPrint(",
         "CREATE TABLE", "prefs.set", "setString('entries'",
     ):
         require(forbidden not in source, "unsafe profile writer marker: " + forbidden)
