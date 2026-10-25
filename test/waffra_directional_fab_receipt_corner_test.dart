@@ -75,12 +75,84 @@ void main() {
     expect(source,contains('width:36,height:30,color:forest'));
   });
 
-  test('snackbar is compact and clears the floating add button', () {
+  test('all snackbar entry points share one footer-aware presenter', () {
     final source=File('lib/main.dart').readAsStringSync();
     expect(source,contains('enum WaffraSnackKind { success, error, warning, info }'));
-    expect(source,contains('left:waffraIsEnglish?12:76'));
-    expect(source,contains('right:waffraIsEnglish?76:12,bottom:8'));
-    expect(source,contains('maxLines:2,overflow:TextOverflow.ellipsis'));
+    expect(source,contains('class WaffraNoticeContent extends StatelessWidget'));
+    expect(source,contains('class WaffraFooterNoticeHost extends StatefulWidget'));
+    expect(source,contains('bottomNavigationBar:Column(mainAxisSize:MainAxisSize.min,children:['));
+    expect(source,contains('if(mounted&&addFabExpanded)setState(()=>addFabExpanded=false)'));
+    expect(source,contains('maxLines:2,'));
+    expect(source,contains('width:min(MediaQuery.sizeOf(ctx).width*0.87,440.0)'));
+    expect(RegExp(r'\.showSnackBar\s*\(').allMatches(source).length,1);
+  });
+
+
+  testWidgets('footer notice pushes financial content up and stays above footer',
+      (tester) async {
+    final notice=ValueNotifier<WaffraNoticeData?>(null);
+    var undos=0;
+    await tester.pumpWidget(MaterialApp(home:Scaffold(
+      body:const SizedBox.expand(key:Key('finance-body')),
+      bottomNavigationBar:Column(mainAxisSize:MainAxisSize.min,children:[
+        WaffraFooterNoticeHost(
+          listenable:notice,
+          onDismiss:()=>notice.value=null),
+        const SizedBox(
+          key:Key('waffra-test-footer'),height:90,
+          child:ColoredBox(color:Color(0xFF073F31))),
+      ]),
+    )));
+    final oldBottom=tester.getBottomLeft(find.byKey(const Key('finance-body'))).dy;
+    notice.value=WaffraNoticeData(
+      text:'تم تعديل المعاملة',kind:WaffraSnackKind.success,
+      duration:const Duration(seconds:5),requireDismissal:true,
+      actionLabel:'تراجع',onAction:()=>undos++);
+    await tester.pumpAndSettle();
+    final noticeRect=tester.getRect(find.byType(WaffraNoticeContent));
+    final footerRect=tester.getRect(find.byKey(const Key('waffra-test-footer')));
+    final bodyRect=tester.getRect(find.byKey(const Key('finance-body')));
+    expect(noticeRect.bottom,lessThanOrEqualTo(footerRect.top));
+    expect(bodyRect.bottom,lessThanOrEqualTo(noticeRect.top),
+      reason:'The snackbar must not cover a transaction card.');
+    expect(bodyRect.bottom,lessThan(oldBottom),
+      reason:'Financial content must reflow above the footer notice.');
+    expect(noticeRect.height,lessThanOrEqualTo(66));
+    expect(noticeRect.width,lessThanOrEqualTo(440));
+    await tester.tap(find.text('تراجع'));
+    await tester.pumpAndSettle();
+    expect(undos,1);
+    expect(find.text('تم تعديل المعاملة'),findsNothing);
+    notice.dispose();
+  });
+
+  testWidgets('warning, error and info keep one footprint above footer', (tester) async {
+    final notice=ValueNotifier<WaffraNoticeData?>(null);
+    await tester.pumpWidget(MaterialApp(home:Scaffold(
+      body:const SizedBox.expand(),
+      bottomNavigationBar:Column(mainAxisSize:MainAxisSize.min,children:[
+        WaffraFooterNoticeHost(
+          listenable:notice,onDismiss:()=>notice.value=null),
+        const SizedBox(key:Key('waffra-test-footer'),height:85),
+      ]),
+    )));
+    for(final kind in [
+      WaffraSnackKind.error,WaffraSnackKind.warning,WaffraSnackKind.info
+    ]){
+      notice.value=WaffraNoticeData(
+        text:'رسالة اختبار',kind:kind,requireDismissal:true,
+        duration:const Duration(seconds:5));
+      await tester.pumpAndSettle();
+      final panel=tester.getRect(find.byType(WaffraNoticeContent));
+      final footer=tester.getRect(find.byKey(const Key('waffra-test-footer')));
+      expect(panel.bottom,lessThanOrEqualTo(footer.top));
+      expect(panel.height,lessThanOrEqualTo(66));
+      expect(find.text('رسالة اختبار'),findsOneWidget);
+    }
+    notice.value=null;
+    await tester.pumpAndSettle();
+    expect(find.text('رسالة اختبار'),findsNothing);
+    notice.dispose();
   });
 
   test('attachment corner mirrors with language without increasing row height', () {
