@@ -112,8 +112,10 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
         const SizedBox(width: 7),
         Expanded(
           child: Text(title,
-              style: const TextStyle(
-                  fontWeight: FontWeight.w800, fontSize: 17, color: _forest)),
+              style: TextStyle(
+                  fontWeight: FontWeight.w800, fontSize: 17,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Theme.of(context).colorScheme.onSurface : _forest)),
         ),
         if (action != null) action,
       ]);
