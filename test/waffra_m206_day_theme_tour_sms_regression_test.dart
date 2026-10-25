@@ -194,4 +194,24 @@ void main() {
       isNull);
     expect(BankParser.parse(sms).amount,31.47);
   });
+  test('same clipboard content is reanalyzed with new/duplicate counts', () {
+    const sampleA='Purchase Card\nAmount: 15 SAR\nAt: DEMO A\nOn: 2026-10-24 10:10';
+    const sampleB='Online Purchase Card\nAmount: 20 SAR\nAt: DEMO B\nOn: 2026-10-24 11:10';
+    const pasted='$sampleA\n$sampleB';
+    final first=waffraSummarizeBankPaste(pasted,<String>{});
+    expect(first.detected,2);
+    expect(first.fresh,2);
+    expect(first.duplicates,0);
+    final savedHashes=<String>{bankSmsHash(sampleA)};
+    final second=waffraSummarizeBankPaste(pasted,savedHashes);
+    expect(second.detected,2);
+    expect(second.fresh,1);
+    expect(second.duplicates,1);
+    final repeatedAgain=waffraSummarizeBankPaste(pasted,savedHashes);
+    expect(repeatedAgain.detected,2);
+    expect(repeatedAgain.fresh,1);
+    expect(repeatedAgain.duplicates,1);
+    expect(waffraSummarizeBankPaste('Online Pre-Auth\nAmount: 8 SAR',savedHashes).detected,0);
+  });
+
 }

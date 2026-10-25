@@ -17,6 +17,9 @@ APPROVED = {
     ".github/workflows/m147-final-main-review-gate.yml",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
+    "test/m148_english_categories_legacy_backup_uat_test.dart",
+    "lib/waffra_category_english.dart",
+    "lib/waffra_category_catalog.dart",
     "lib/waffra_merchant_rules.dart",
     "lib/waffra_widget_capture.part.dart",
     "scripts/qa/m206_ui_sms_scope_review.py",
@@ -87,6 +90,28 @@ def main() -> None:
         require(marker in merchants, "English merchant extraction missing: " + marker)
     require("confirmed.length,56" in tests and "parsed.where((v)=>v.amount==null).length,13" in tests,
             "69-notice English bank fixture coverage missing")
+
+    category_catalog=Path("lib/waffra_category_catalog.dart").read_text(encoding="utf-8")
+    category_english=Path("lib/waffra_category_english.dart").read_text(encoding="utf-8")
+    catalog_test=Path("test/m148_english_categories_legacy_backup_uat_test.dart").read_text(encoding="utf-8")
+    require(category_catalog.count("WaffraCategoryGroup(id:")==79,
+            "79 reviewed built-in root categories required")
+    require("973 subcategories" in catalog_test and
+            "waffra_category_catalog_v4_installed" in app and
+            "version:4" in app,"category v4 upgrade and counts missing")
+    require("construction-expense" in category_catalog and
+            "safety-expense" in category_catalog and
+            "sustainability-expense" in category_catalog,
+            "new reviewed roots missing")
+    require("Home Sustainability & Energy" in category_english,
+            "English labels for reviewed categories missing")
+    require("WaffraOutlinedItemsCount" in app and
+            "waffraSummarizeBankPaste" in app and
+            "enum WaffraSnackKind" in app and
+            "width:36,height:30,color:forest" in app,
+            "new UI, reanalysis or compact corner absent")
+    require("same clipboard content is reanalyzed" in tests and
+            "pasteRevision" in app,"paste isolation regression absent")
 
     # Emulator test execution must perform the four real Android integration
     # cases and fail shut on timeout, never report synthetic CI as production.

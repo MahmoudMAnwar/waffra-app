@@ -58,13 +58,29 @@ void main() {
   });
 
   test('Design 9 badge is a small folded triangle, not a wide ribbon', () {
-    const size=Size(54,48);
+    const size=Size(36,30);
     final ar=const WaffraReceiptCornerClipper(english:false).getClip(size);
     final en=const WaffraReceiptCornerClipper(english:true).getClip(size);
-    expect(ar.contains(const Offset(51,4)),isTrue);
-    expect(ar.contains(const Offset(4,42)),isFalse);
+    expect(ar.contains(const Offset(33,4)),isTrue);
+    expect(ar.contains(const Offset(4,26)),isFalse);
     expect(en.contains(const Offset(4,4)),isTrue);
-    expect(en.contains(const Offset(51,42)),isFalse);
+    expect(en.contains(const Offset(33,26)),isFalse);
+  });
+
+  test('empty recurring/goals counts stay inside an outlined counter', () {
+    final source=File('lib/main.dart').readAsStringSync();
+    expect(source,contains('class WaffraOutlinedItemsCount'));
+    expect(source,contains('count:goals.length'));
+    expect(source,contains('count:recurring.length'));
+    expect(source,contains('width:36,height:30,color:forest'));
+  });
+
+  test('snackbar is compact and clears the floating add button', () {
+    final source=File('lib/main.dart').readAsStringSync();
+    expect(source,contains('enum WaffraSnackKind { success, error, warning, info }'));
+    expect(source,contains('left:waffraIsEnglish?12:76'));
+    expect(source,contains('right:waffraIsEnglish?76:12,bottom:8'));
+    expect(source,contains('maxLines:2,overflow:TextOverflow.ellipsis'));
   });
 
   test('attachment corner mirrors with language without increasing row height', () {
@@ -73,7 +89,7 @@ void main() {
     expect(source,contains('if(attachmentCount>0)PositionedDirectional(top:0,start:0'));
     expect(source,isNot(contains('count>0?29:12')));
     expect(source,isNot(contains('attachmentCount>0?29:0')));
-    expect(source,contains('Icons.attach_file_rounded,size:13'));
+    expect(source,contains('Icons.attach_file_rounded,size:10'));
   });
 
   test('all four tab plus actions use locale switch, with no fixed-left anchor',
