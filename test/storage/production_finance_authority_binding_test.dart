@@ -208,6 +208,27 @@ void main() {
       final sourceDigest = WaffraLegacyPreflight.inspect(
         const <String, Object?>{'entries': '[]'},
       ).sourceSha256;
+      // A matching finance witness still cannot open the vault when the
+      // Android secure-storage reader has lost its key or supplies a wrong
+      // key. These are simulated readers, NOT Android hardware evidence.
+      for (final badKey in <String?>[null, 'incorrect-test-only-key']) {
+        await expectLater(
+          WaffraProductionFinanceAuthorityBinding.bind(
+            legacy: const WaffraHomeFinancePersistence(),
+            sourceGuard: const _FixedSourceGuard(
+              WaffraProductionFinanceSource.encryptedRoutingRequired,
+            ),
+            certifiedEvidence: syntheticApprovedEvidence(
+              sourceDigest: sourceDigest,
+            ),
+            directoryProvider: () async => dir,
+            secureKeyReader: () async => badKey,
+          ),
+          throwsA(anything),
+        );
+        expect(await file.exists(), isTrue,
+            reason: 'Failed key recovery must not remove existing vault.');
+      }
       for (final route in <WaffraFinanceRoute>[
         WaffraFinanceRoute.appStartup,
         WaffraFinanceRoute.widgetStartup,
