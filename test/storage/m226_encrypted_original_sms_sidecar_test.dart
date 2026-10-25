@@ -74,7 +74,7 @@ void main() {
     await expectLater(
       vault().stage(records: entries, hashes: [
         WaffraEncryptedSmsNotesVault.fingerprint(first),
-        '0' * 64,
+        List.filled(64,'0').join(),
       ]),
       throwsStateError,
     );
