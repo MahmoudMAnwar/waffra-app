@@ -1,7 +1,5 @@
 import 'dart:convert';
 
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'waffra_legacy_finance_writer_coordinator.dart';
 
 /// M217: The shipped login/profile/PIN writer participates in the exact same
