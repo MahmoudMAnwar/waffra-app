@@ -94,6 +94,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
  String from='SAR',status='';
  String? to='EGP';
  int _quoteRevision=0;
+ int _goldRefreshRevision=0;
  double? result,rate;
  bool busy=false;
  DateTime? updated;
@@ -210,9 +211,20 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
     :'خدمات أسعار الصرف غير متاحة حاليًا. حاول مرة أخرى لاحقًا.');
   }finally{if(mounted&&currentQuote==_quoteRevision)setState(()=>busy=false);}
  }
+ Future<void> _pullRefresh()async {
+  if(!mounted)return;
+  ++_quoteRevision;
+  setState((){
+   ++_goldRefreshRevision;
+   result=null;rate=null;updated=null;status='';busy=false;
+  });
+  if(amount.text.trim().isNotEmpty)await convert();
+ }
  @override Widget build(BuildContext context)=>Scaffold(
   appBar:AppBar(title:const WaffraText('تحويل العملات')),
-  body:ListView(padding:const EdgeInsets.all(20),children:[
+  body:RefreshIndicator(onRefresh:_pullRefresh,
+   child:ListView(physics:const AlwaysScrollableScrollPhysics(),
+    padding:const EdgeInsets.all(20),children:[
    const WaffraText('اعرف قيمة راتبك أو أي مبلغ بعملة ثانية، حسب أحدث سعر متاح.'),
    const SizedBox(height:18),
    TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
@@ -269,7 +281,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
    const WaffraText('المصدر: ExchangeRate-API أو مزود احتياطي عند تعذّر الاتصال. الأسعار استرشادية وقد تختلف عن أسعار البنوك أو التحويل الفعلي.',
     style:TextStyle(fontSize:12)),
    const SizedBox(height:22),
-   WaffraGoldMarketSection(english:waffraIsEnglish),
+   WaffraGoldMarketSection(key:ValueKey('gold-refresh-$_goldRefreshRevision'),english:waffraIsEnglish),
    const SizedBox(height:12),
    OutlinedButton.icon(
     key:const Key('waffra-open-gold-calculator'),
@@ -282,5 +294,5 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
      'حوّل قيمة الذهب إلى ريال أو جنيه مصري أو أي عملة')),
 
 
-  ]));
+  ])));
 }
