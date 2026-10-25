@@ -123,7 +123,7 @@ def main() -> None:
             "bottomNavigationBar:Column(mainAxisSize:MainAxisSize.min,children:[" in app,
             "footer-integrated reusable feedback surface missing")
     require(app.count(".showSnackBar(") == 1 and
-            app.count("SnackBar(") == 1,
+            "messenger.showSnackBar(SnackBar(" in app,
             "parallel or direct Snackbar presenters detected")
     require("if(mounted&&addFabExpanded)setState(()=>addFabExpanded=false)" in app and
             "waffraDismissFooterNotice();" in app and
