@@ -22,7 +22,10 @@ void main(){
   expect(source,contains('android:targetCellHeight="1"'));
   final dart=File('lib/main.dart').readAsStringSync();
   expect(dart,contains("currency:waffraIsEnglish?'SAR':'ريال'"));
-  expect(dart,contains('formatWaffraMoney((income-expense)/100)'));
+  expect(dart,contains('WaffraAuthoritativeWidgetBalance.netHalalas(raw)'));
+  final widget=File('lib/waffra_widget_capture.part.dart').readAsStringSync();
+  expect(widget,contains(
+   'WaffraAuthoritativeWidgetBalance.netHalalas(verified.ledgerRaw!)'));
   final native=File('native/WaffraWidget.kt').readAsStringSync();
   expect(native,contains('WaffraQuickActivity::class.java'));
  });
