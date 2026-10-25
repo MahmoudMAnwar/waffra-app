@@ -128,7 +128,7 @@ void main() {
     final old = encode([sms('existing')]);
     SharedPreferences.setMockInitialValues({
       'entries': old,
-      'waffra_sms_hashes_v1': <String>['a' * 64],
+      'waffra_sms_hashes_v1': <String>[List.filled(64, 'a').join()],
     });
     final downgraded = sms('existing');
     downgraded['sourceType'] = 'manual';
@@ -143,7 +143,7 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     await prefs.reload();
     expect(prefs.getString('entries'), old);
-    expect(prefs.getStringList('waffra_sms_hashes_v1'), ['a' * 64]);
+    expect(prefs.getStringList('waffra_sms_hashes_v1'), [List.filled(64, 'a').join()]);
     expect(prefs.getString('waffra_widget_last_save_v1'), isNull);
   });
 
