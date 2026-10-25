@@ -18,8 +18,16 @@ ALLOWED = {
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/storage/waffra_restored_finance_receipt_attestor.dart",
     "lib/storage/waffra_production_finance_authority_binding.dart",
+    "lib/main.dart",
+    "lib/currency_converter.dart",
+    "lib/waffra_display_currency.dart",
+    "lib/waffra_gold_market_data.dart",
+    "lib/waffra_gold_market_section.dart",
     "test/storage/portable_encrypted_vault_restorer_test.dart",
     "test/storage/production_finance_authority_binding_test.dart",
+    "test/m224_pdf_verified_display_currency_test.dart",
+    "test/m224_verified_gold_fallback_test.dart",
+    "test/m225_currency_flags_gold_ui_test.dart",
 }
 FINANCE_GUARDS = (
     "if(applied.originalSmsNotesOmittedOnLegacy)",
@@ -182,6 +190,34 @@ def main() -> None:
             "release notes omit verified scope and SQLCipher NO-GO")
     require("M225" in notes and "SQLCipher" in notes,
             "M225 release notes must preserve encryption and hardware NO-GO")
+    display_source = Path("lib/waffra_display_currency.dart").read_text()
+    converter_source = Path("lib/currency_converter.dart").read_text()
+    gold_source = Path("lib/waffra_gold_market_data.dart").read_text()
+    gold_ui = Path("lib/waffra_gold_market_section.dart").read_text()
+    display_test = Path("test/m224_pdf_verified_display_currency_test.dart").read_text()
+    gold_test_updated = Path("test/m224_verified_gold_fallback_test.dart").read_text()
+    require(all(k in display_source for k in (
+        "provider: 'display-only'",
+        "if(code=='SAR'||displayOnly)return amount.toDouble();",
+        "static Future<void> setCurrency",
+        "active.value=displaySelection(",
+    )), "M225 user-approved display-unit 1:1 behavior missing")
+    require(all(k in converter_source for k in (
+        "waffraCurrencyFlag", "_currencyChoice(from)", "_currencyChoice(to!)",
+        "محوّل العملات وأسعار الذهب العالمية",
+        "open.er-api.com/v6/latest/",
+    )), "M225 real currency conversion and country flags must remain")
+    require(all(k in gold_source for k in (
+        "'troy_oz'", "fromCacheJson", "fromXausJson",
+    )) and all(k in gold_ui for k in (
+        "_publicGoldCacheKey", "_showingCachedQuote",
+        "size.maxWidth >= 285 ? 3 : 2",
+        "_drawBar(canvas",
+    )), "M225 actual gold source, last quote or visual implementation missing")
+    require("app currency relabels 1,000 SAR" in display_test and
+            "M225 XAUS published troy_oz" in gold_test_updated,
+            "M225 market rate vs unit-label regression proof missing")
+
     attestor = Path(
         "lib/storage/waffra_restored_finance_receipt_attestor.dart"
     ).read_text()
