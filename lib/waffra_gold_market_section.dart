@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'waffra_gold_market_data.dart';
 
 /// Read-only global spot price utility under currency conversion.
@@ -19,6 +21,7 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
   static const _gold = Color(0xFFD4AF37);
   static const _goldDark = Color(0xFF9E751B);
   static const _cream = Color(0xFFFFF7E3);
+  static const _publicGoldCacheKey = 'waffra_public_verified_gold_spot_v1';
   static const _weights = <double>[1, 5, 10, 20, 50, 100, waffraTroyOunceGrams];
 
   final _weight = TextEditingController();
@@ -28,6 +31,7 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
   bool _allBars = false;
   int _karat = 21;
   DateTime? _lastSuccessfulRequest;
+  bool _showingCachedQuote = false;
 
   String t(String en, String ar) => widget.english ? en : ar;
   String usd(double amount) => '\$\u00a0${amount.toStringAsFixed(2)}';
@@ -36,8 +40,34 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) unawaited(_fetch());
+      if (mounted) unawaited(_restorePublicQuoteAndFetch());
     });
+  }
+
+  Future<void> _restorePublicQuoteAndFetch() async {
+    // Test providers are deterministic and must not read/write a device cache.
+    if (widget.loadSpot == null) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final raw = prefs.getString(_publicGoldCacheKey);
+        if (raw != null) {
+          final decoded = jsonDecode(raw);
+          if (decoded is Map<String, dynamic>) {
+            final cached = WaffraGoldSpotQuote.fromCacheJson(decoded);
+            if (mounted && (_quote == null ||
+                cached.updatedAtUtc.isAfter(_quote!.updatedAtUtc))) {
+              setState(() {
+                _quote = cached;
+                _showingCachedQuote = true;
+              });
+            }
+          }
+        }
+      } catch (_) {
+        // Corrupt/over-age cache never prevents a fresh network request.
+      }
+    }
+    if (mounted) await _fetch();
   }
 
   @override
@@ -71,15 +101,30 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
         setState(() {
           _quote = result;
           _lastSuccessfulRequest = DateTime.now();
+          _showingCachedQuote = false;
           _error = null;
         });
+        // Save only previously validated public market data, never a user's
+        // finance, account, SMS, or a fabricated fallback value.
+        if (widget.loadSpot == null &&
+            (result.source == 'Gold-API' || result.source == 'XAUS')) {
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString(_publicGoldCacheKey,
+                jsonEncode(result.toCacheJson()));
+          } catch (_) {
+            // Cache failure must not hide a valid fresh quote.
+          }
+        }
       }
     } catch (_) {
       if (mounted) {
         setState(() {
-          _error = t(
-              'Gold prices are unavailable right now. Retry to fetch a verified quote.',
-              'تعذر جلب سعر ذهب موثّق حاليًا. حاول التحديث مرة أخرى.');
+          _error = _quote == null
+              ? t('Gold prices unavailable. No verified previous quote exists.',
+                  'تعذّر جلب أسعار الذهب ولا يوجد سعر سابق موثّق.')
+              : t('Network unavailable: last verified gold price is shown, not live.',
+                  'الاتصال غير متاح: نعرض آخر سعر ذهب موثّق وليس سعرًا مباشرًا.');
         });
       }
     } finally {
@@ -292,7 +337,8 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
             child: Text(
               updated == null
                   ? t('No verified quote yet', 'لا يوجد سعر موثّق بعد')
-                  : t('Source time: ', 'آخر تحديث من المصدر: ') +
+                  : (_showingCachedQuote ? t('Saved quote: ', 'آخر سعر محفوظ: ')
+                      : t('Source time: ', 'آخر تحديث من المصدر: ')) +
                       _stamp(updated) +
                       (quote!.isOlderThan(const Duration(hours: 72),
                               DateTime.now())
