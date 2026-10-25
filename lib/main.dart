@@ -8219,6 +8219,57 @@ Future<void> bulkSmsSheet({String? initialText})async {
    items:financialCalendarItems,english:waffraIsEnglish,
    onAddRecurring:(candidate)=>recurringDialog(
     suggestedTitle:candidate.title,suggestedAmount:candidate.estimatedMonthly))));
+ Future<void> chooseAppCurrency()async{
+  final searchController=TextEditingController();
+  String query='';
+  try{
+   final chosen=await showWaffraDialog<String>(
+    context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update){
+     final visible=waffraCountryCurrencies.where((country)=>
+      ('${country.countryAr} ${country.countryEn} ${country.nameAr} ${country.nameEn} ${country.code}')
+       .toLowerCase().contains(query.toLowerCase())).toList();
+     return AlertDialog(
+      title:WaffraText(waffraIsEnglish?'Application currency':'العملة الأساسية للتطبيق'),
+      content:SizedBox(width:420,height:410,child:Column(children:[
+       TextField(key:const Key('waffra-country-currency-search'),
+        controller:searchController,autofocus:true,
+        decoration:InputDecoration(prefixIcon:const Icon(Icons.search),
+         hintText:waffraIsEnglish?'Find country or currency':'ابحث عن دولة أو عملة'),
+        onChanged:(v)=>update(()=>query=v)),
+       const SizedBox(height:9),
+       Expanded(child:ListView.builder(itemCount:visible.length,
+        itemBuilder:(context,index){
+         final option=visible[index];
+         return ListTile(
+          key:Key('waffra-country-currency-${option.code}'),
+          selected:WaffraDisplayCurrency.country.code==option.code,
+          title:WaffraText(option.label(waffraIsEnglish)),
+          trailing:WaffraDisplayCurrency.country.code==option.code?
+           const Icon(Icons.check_circle,color:emerald):null,
+          onTap:()=>Navigator.pop(ctx,option.code));
+        })),
+      ])),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx),
+       child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء'))],
+     );
+    }));
+   if(chosen==null||!mounted)return;
+   try{
+    await WaffraDisplayCurrency.setCurrency(chosen);
+    if(!mounted)return;
+    setState((){});
+    await _refreshWidget();
+    if(mounted)snackSuccess(context,waffraIsEnglish?
+      'Currency updated using a verified exchange rate.':
+      'تم تحديث العملة بسعر صرف موثّق.');
+   }catch(error){
+    debugPrint('App country currency rejected safely: $error');
+    if(mounted)snack(context,waffraIsEnglish?
+      'Exchange rate unavailable. Your stored balances and currency were not changed.':
+      'سعر الصرف غير متاح. لم تتغير بياناتك أو عملتك الحالية.');
+   }
+  }finally{searchController.dispose();}
+ }
  Widget profilePage(){
   final p=widget.profile;
   final provider=p.provider.toLowerCase().trim();
@@ -8260,7 +8311,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    TextField(key:const Key('waffra-account-settings-search'),onChanged:(value){
     final q=value.trim().toLowerCase();
     final groups=<String,String>{
-     waffraIsEnglish?'App settings':'إعدادات التطبيق':'language theme appearance system dark light المظهر اللغة الحركة animation',
+     waffraIsEnglish?'App settings':'إعدادات التطبيق':'language theme appearance system dark light currency exchange بلد دولة عملة جنيه مصري مصر SAR EGP المظهر اللغة الحركة animation',
      waffraIsEnglish?'Security & privacy':'الأمان والخصوصية':'privacy biometric fingerprint حماية بصمة قفل إخفاء PIN screenshots المعاينة',
      waffraIsEnglish?'Backup & data':'النسخ الاحتياطي والبيانات':'backup restore delete نسخ احتياطي استعادة حذف بيانات',
      waffraIsEnglish?'Financial tools':'الأدوات المالية':'calendar subscriptions currency tools التقويم الاشتراكات الأدوات المالية',
@@ -8273,6 +8324,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
     hintText:waffraIsEnglish?'Find a setting':'ابحث داخل إعدادات حسابي')),
    const SizedBox(height:12),
    _accountSection(waffraIsEnglish?'App settings':'إعدادات التطبيق',Icons.settings_outlined,[
+    ListTile(
+     key:const Key('waffra-app-base-currency-setting'),
+     leading:const CircleAvatar(child:Icon(Icons.public_rounded,color:emerald)),
+     title:WaffraText(waffraIsEnglish?'App currency by country':'عملة التطبيق حسب الدولة'),
+     subtitle:WaffraText(WaffraDisplayCurrency.country.label(waffraIsEnglish)),
+     trailing:const Icon(Icons.search_rounded),
+     onTap:chooseAppCurrency),
+
     ListTile(
      leading:const CircleAvatar(child:Icon(Icons.auto_awesome_outlined,color:emerald)),
      title:WaffraText(waffraIsEnglish?'Animations & effects':'الحركة والتأثيرات',style:const TextStyle(fontWeight:FontWeight.bold)),
