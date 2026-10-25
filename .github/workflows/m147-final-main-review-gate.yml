@@ -248,6 +248,21 @@ jobs:
         run: flutter pub get
       - name: Create Android project (CI only)
         run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
+      - name: M219 compile real native Keystore owner channel with Flutter
+        if: github.head_ref == 'feature/m219-android-keystore-owner-proof-20261025'
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          files=list(Path('android/app/src/main/kotlin').rglob('MainActivity.kt'))
+          if len(files)!=1:
+              raise SystemExit('Expected single generated Kotlin MainActivity')
+          template=Path('native/WaffraMainActivity.kt').read_text()
+          if 'FirebaseAuth.getInstance().currentUser' not in template or 'waffra/account_owner' not in template:
+              raise SystemExit('Missing M219 Android owner proof')
+          # M147 compiles native source; actual release workflow also
+          # applies Firebase appId and manifest integration separately.
+          files[0].write_text(template)
+          PY
       - name: Compile ARM64 release-mode APK (not production certified)
         run: flutter build apk --release --no-pub --target-platform android-arm64
       - name: Attach unapproved-for-production APK for device QA
