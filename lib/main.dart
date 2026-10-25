@@ -8057,12 +8057,23 @@ Future<void> bulkSmsSheet({String? initialText})async {
        child:const Icon(Icons.add,color:Colors.white,size:28)))),
      )),
    ),
-  bottomNavigationBar:WaffraFooterNavigation(
-   selectedIndex:tab,
-   english:waffraIsEnglish,
-   onSelected:(selected)=>unawaited(selectFooter(selected)),
-   profileSpotlightKey:_tourKeys[5],
-  )),
+  // The notice reserves real layout height above the bottom footer.
+  // The transaction list and the floating + reposition instead of being
+  // covered by an overlay. The expanded + menu closes on feedback.
+  bottomNavigationBar:Column(mainAxisSize:MainAxisSize.min,children:[
+   WaffraFooterNoticeHost(onNoticePresented:(){
+    if(mounted&&addFabExpanded)setState(()=>addFabExpanded=false);
+   }),
+   WaffraFooterNavigation(
+    selectedIndex:tab,
+    english:waffraIsEnglish,
+    onSelected:(selected){
+     waffraDismissFooterNotice();
+     unawaited(selectFooter(selected));
+    },
+    profileSpotlightKey:_tourKeys[5],
+   ),
+  ])),
   if(tourActive&&tourTargetReady)Positioned.fill(child:tourOverlay()),
   ]);
 }
