@@ -28,6 +28,7 @@ ALLOWED = {
     "test/m224_pdf_verified_display_currency_test.dart",
     "test/m224_verified_gold_fallback_test.dart",
     "test/m225_currency_flags_gold_ui_test.dart",
+    "test/waffra_widget_quick_capture_test.dart",
 }
 FINANCE_GUARDS = (
     "if(applied.originalSmsNotesOmittedOnLegacy)",
@@ -160,7 +161,7 @@ def main() -> None:
         "final conceal=hidden||display==null;",
         "currency:WaffraDisplayCurrency.label(_english)",
     )), "standalone widget engine cannot mislabel SAR as selected FX")
-    require("widget FX must convert SAR or conceal" in widget_qa
+    require("M225 widget respects display-only label without FX multiplication" in widget_qa
             and "currency:WaffraDisplayCurrency.label(waffraIsEnglish)" in widget_qa,
             "widget FX/hidden fallback regression is missing")
     require("automaticallyActivateSqlCipher => false" in release_gate,
@@ -213,7 +214,8 @@ def main() -> None:
         "_publicGoldCacheKey", "_showingCachedQuote",
         "size.maxWidth >= 285 ? 3 : 2",
         "_drawBar(canvas",
-    )), "M225 actual gold source, last quote or visual implementation missing")
+        "WaffraDisplayCurrency.fetch('USD')",
+    )), "M225 actual gold source, verified USD/SAR, last quote or visual implementation missing")
     require("app currency relabels 1,000 SAR" in display_test and
             "M225 XAUS published troy_oz" in gold_test_updated,
             "M225 market rate vs unit-label regression proof missing")
