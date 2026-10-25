@@ -123,6 +123,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(undos,1);
     expect(find.text('تم تعديل المعاملة'),findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
     notice.dispose();
   });
 
@@ -152,6 +153,7 @@ void main() {
     notice.value=null;
     await tester.pumpAndSettle();
     expect(find.text('رسالة اختبار'),findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
     notice.dispose();
   });
 

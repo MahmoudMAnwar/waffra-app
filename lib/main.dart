@@ -1973,6 +1973,8 @@ void snack(BuildContext context,String text,{
   context.findAncestorWidgetOfExactType<HomeScreen>()!=null;
  final inHomeDialog=ModalRoute.of(context) is PopupRoute;
  if(_waffraFooterHostCount>0&&(inHome||inHomeDialog)){
+  // Switching from a non-footer route must never leave two notices stacked.
+  ScaffoldMessenger.maybeOf(context)?.hideCurrentSnackBar();
   _waffraShowFooterNotice(notice);
   return;
  }
