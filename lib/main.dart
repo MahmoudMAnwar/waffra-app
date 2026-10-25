@@ -220,14 +220,15 @@ class Person {
  factory Person.fromJson(Map<String,dynamic> j)=>Person(name:'${j['name']??''}',email:'${j['email']??''}',provider:'${j['provider']??'محلي'}',gender:['ذكر','أنثى'].contains(j['gender'])?'${j['gender']}':'',avatar:'${j['avatar']??'person'}',phone:'${j['phone']??(j['provider']=='Phone'?j['email']??'':'')}',birthday:DateTime.tryParse('${j['birthday']}')??DateTime(2000));
 }
 class BudgetCategory {
- final String id,name,icon,parentId;
+ final String id,name,icon,parentId,origin;
  final int color;final bool income;final double budget;final int alertPercent;
- BudgetCategory({required this.id,required this.name,required this.icon,required this.color,required this.income,this.parentId='',this.budget=0,this.alertPercent=80});
+ BudgetCategory({required this.id,required this.name,required this.icon,required this.color,required this.income,this.parentId='',this.budget=0,this.alertPercent=80,this.origin='system'});
+ bool get isUserAdded=>origin=='user';
  bool get isSubcategory=>parentId.isNotEmpty;
  String get displayName=>isSubcategory?name.split(' / ').last:name;
- BudgetCategory copy({String? name,String? icon,int? color,double? budget,int? alertPercent,String? parentId})=>BudgetCategory(id:id,name:name??this.name,icon:icon??this.icon,color:color??this.color,income:income,parentId:parentId??this.parentId,budget:budget??this.budget,alertPercent:alertPercent??this.alertPercent);
- Map<String,dynamic> toJson()=>{'id':id,'name':name,'icon':icon,'color':color,'income':income,'parentId':parentId,'budget':budget,'alertPercent':alertPercent};
- factory BudgetCategory.fromJson(Map<String,dynamic> j)=>BudgetCategory(id:'${j['id']??newId()}',name:'${j['name']??'أخرى'}',icon:'${j['icon']??'category'}',color:(j['color'] as num?)?.toInt()??0xFF087A54,income:j['income']==true,parentId:'${j['parentId']??''}',budget:(j['budget'] as num?)?.toDouble()??0,alertPercent:(j['alertPercent'] as num?)?.toInt()??80);
+ BudgetCategory copy({String? name,String? icon,int? color,double? budget,int? alertPercent,String? parentId})=>BudgetCategory(id:id,name:name??this.name,icon:icon??this.icon,color:color??this.color,income:income,parentId:parentId??this.parentId,budget:budget??this.budget,alertPercent:alertPercent??this.alertPercent,origin:origin);
+ Map<String,dynamic> toJson()=>{'id':id,'name':name,'icon':icon,'color':color,'income':income,'parentId':parentId,'budget':budget,'alertPercent':alertPercent,'origin':origin};
+ factory BudgetCategory.fromJson(Map<String,dynamic> j)=>BudgetCategory(id:'${j['id']??newId()}',name:'${j['name']??'أخرى'}',icon:'${j['icon']??'category'}',color:(j['color'] as num?)?.toInt()??0xFF087A54,income:j['income']==true,parentId:'${j['parentId']??''}',budget:(j['budget'] as num?)?.toDouble()??0,alertPercent:(j['alertPercent'] as num?)?.toInt()??80,origin:j['origin']=='user'?'user':j['origin']=='detected'?'detected':'system');
 }
 /// Manual transactions must target an active child category, never a heading.
 List<BudgetCategory> waffraManualCategoryParents(
@@ -2368,6 +2369,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  String search='',typeFilter='الكل',categoryFilter='الكل',period='شهري';
  String categorySearch='',categoryDisplay='all',categoryTypeFilter='all',goalDisplay='all',recurringDisplay='all';
+ bool categoryMineOnly=false;
   String? forecastCategory;
   int forecastReduction=20;
  bool recurringRemindersEnabled=false;
@@ -5974,7 +5976,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        categories.where((c)=>c.id!=initial?.id&&c.income==(initial?.income??income)).map((c)=>c.name))!=null ||
        WaffraValidators.positiveAmount(budget.text,required:false)!=null)return;
       Navigator.pop(ctx,BudgetCategory(id:initial?.id??newId(),name:fullName(),icon:icon,color:color,
-       income:initial?.income??income,parentId:effectiveParentId,budget:budget.text.trim().isEmpty?0:(amountOf(budget.text)??0),alertPercent:alertPercent));
+       income:initial?.income??income,parentId:effectiveParentId,budget:budget.text.trim().isEmpty?0:(amountOf(budget.text)??0),alertPercent:alertPercent,origin:initial?.origin??'user'));
      },child:const WaffraText('حفظ')),
     ])));
   disposeLater([name,budget]);return result;
@@ -6917,12 +6919,15 @@ Future<void> bulkSmsSheet({String? initialText})async {
     ]),
     const SizedBox(height:14),
    ],
-   SizedBox(width:double.infinity,child:WaffraDeletedItemsButton(
-    onPressed:deletedGoalsDialog,
-    label:waffraIsEnglish?'Deleted savings goals (${deletedGoals.length})'
-     :'الأهداف المحذوفة (${deletedGoals.length})')),
-   const SizedBox(height:14),
-   WaffraOutlinedItemsCount(label:waffraIsEnglish?'Current savings goals':'عدد الأهداف الحالية',count:goals.length),
+   Row(children:[
+    Expanded(child:WaffraOutlinedItemsCount(
+     label:waffraIsEnglish?'Current goals':'عدد الأهداف الحالية',count:goals.length)),
+    const SizedBox(width:9),
+    Expanded(child:WaffraDeletedItemsButton(
+     onPressed:deletedGoalsDialog,
+     label:waffraIsEnglish?'Deleted goals (${deletedGoals.length})'
+      :'الأهداف المحذوفة (${deletedGoals.length})')),
+   ]),
    const SizedBox(height:12),
 
    // Savings additions use the same physical-left circular +.
@@ -8420,6 +8425,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       customBorder:const CircleBorder(),
       onTap:()async{
      if(!_acceptFabTap())return;
+     HapticFeedback.lightImpact(); // Only accepted circular + tap triggers haptic feedback.
      final tappedTab=tab;
      setState(()=>_fabPressed=true);
      // Give the press a short, visible response before presenting any menu.
@@ -8495,7 +8501,7 @@ class WaffraDeletedItemsButton extends StatelessWidget {
    style:OutlinedButton.styleFrom(
     foregroundColor:red,backgroundColor:dark?const Color(0xFF3C242A):const Color(0xFFFFF4F4),
     side:BorderSide(color:red,width:1.4),
-    minimumSize:const Size(0,60),
+    minimumSize:const Size(0,52),
     padding:const EdgeInsets.symmetric(horizontal:7,vertical:9),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15))),
    child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
