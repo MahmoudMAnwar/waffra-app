@@ -2491,6 +2491,85 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    });
   }
  }
+ /// Refresh from the authoritative source, not an in-memory repaint.
+ /// A failed integrity check never replaces user money with zeroes.
+ Future<void> _refreshFromVerifiedFinance()async {
+  if(!mounted||!ready)return;
+  try {
+   await _financialWriteQueue.drain();
+   await _ensureFinanceBound();
+   final current=await _financeAuthority.load(
+    route:WaffraFinanceRoute.dashboardRead);
+   final view=current.finance;
+   view.requireIntegrity();
+   final ledger=current.ledgerRaw;
+   final catalog=view.getString('waffra_categories_v24');
+   if(ledger==null||catalog==null) {
+    throw StateError('Authoritative finance view is incomplete.');
+   }
+   List<T> readList<T>(String? raw,T Function(Map<String,dynamic>) make) {
+    if(raw==null)return <T>[];
+    final parsed=jsonDecode(raw);
+    if(parsed is! List)throw const FormatException('Invalid finance list.');
+    return parsed.map((e)=>make(Map<String,dynamic>.from(e as Map))).toList();
+   }
+   final nextEntries=readList<MoneyEntry>(ledger,MoneyEntry.fromJson);
+   final nextCategories=readList<BudgetCategory>(catalog,BudgetCategory.fromJson);
+   final nextGoals=readList<SavingGoal>(
+    view.getString('waffra_goals_v24'),SavingGoal.fromJson);
+   final nextRecurring=readList<RecurringBill>(
+    view.getString('waffra_recurring_v24'),RecurringBill.fromJson);
+   final nextChallenges=readList<SavingChallenge>(
+    view.getString('waffra_challenges_v1'),SavingChallenge.fromJson);
+   List<Map<String,dynamic>> readTrash(String key)=>readList<Map<String,dynamic>>(
+    view.getString(key),(row)=>row);
+   final nextCategoryTrash=readTrash('waffra_deleted_categories_v1');
+   final nextGoalTrash=readTrash('waffra_deleted_goals_v1');
+   final nextRecurringTrash=readTrash('waffra_deleted_recurring_v1');
+   Map<String,String> readStringMap(String key) {
+    final raw=view.getString(key);
+    if(raw==null)return <String,String>{};
+    return (jsonDecode(raw) as Map).map((k,v)=>
+     MapEntry(k.toString(),v.toString()));
+   }
+   final nextPostponed=readStringMap('waffra_recurring_postponed_v1');
+   final nextLearned=readStringMap('waffra_learned_merchants_v1');
+   final nextHashes=view.getStringList('waffra_sms_hashes_v1')??<String>[];
+   final nextBudget=view.getDouble('waffra_monthly_budget_v1')??0;
+   final nextBudgetEnabled=view.getBool('waffra_monthly_budget_enabled_v1')
+    ??(nextBudget>0);
+   final nextReminders=view.getBool('waffra_recurring_reminders_enabled_v1')??false;
+   if(!mounted)return;
+   setState((){
+    entries..clear()..addAll(nextEntries);
+    categories..clear()..addAll(nextCategories);
+    goals..clear()..addAll(nextGoals);
+    recurring..clear()..addAll(nextRecurring);
+    challenges..clear()..addAll(nextChallenges);
+    deletedCategories..clear()..addAll(nextCategoryTrash);
+    deletedGoals..clear()..addAll(nextGoalTrash);
+    deletedRecurring..clear()..addAll(nextRecurringTrash);
+    recurringPostponed..clear()..addAll(nextPostponed);
+    learnedMerchantCategories..clear()..addAll(nextLearned);
+    smsHashes..clear()..addAll(nextHashes);
+    monthlyBudget=nextBudget;
+    monthlyBudgetEnabled=nextBudgetEnabled;
+    recurringRemindersEnabled=nextReminders;
+    _lastFinanceAuthorityRead=current;
+    _lastLedgerSavedRaw=ledger;
+    _lastWidgetRevision=current.widgetRevision;
+   });
+   unawaited(_refreshWidget());
+  }catch(error) {
+   debugPrint('Verified pull refresh failed closed: $error');
+   if(mounted)setState((){
+    ready=false;
+    _financeLoadFailure=waffraIsEnglish?
+     'Refreshed financial data could not be verified. Nothing was erased. Retry safely.':
+     'تعذر التحقق من البيانات أثناء التحديث. لم تُحذف أي معاملات. أعد المحاولة بأمان.';
+   });
+  }
+ }
  Future<void> load()async {
   await _ensureFinanceBound();
   final p=await SharedPreferences.getInstance();
@@ -5246,10 +5325,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final selected=filterCats.contains(categoryFilter)?categoryFilter:'الكل';
   final shown=showAllTransactions?visible:visible.take(5).toList();
   return RefreshIndicator(
-   onRefresh:()async{
-    if(mounted)setState((){});
-    await Future<void>.delayed(const Duration(milliseconds:150));
-   },
+   onRefresh:_refreshFromVerifiedFinance,
    child:NotificationListener<ScrollStartNotification>(
     onNotification:(notification){
      if(addFabExpanded){
@@ -8322,6 +8398,17 @@ Future<void> bulkSmsSheet({String? initialText})async {
       fontSize:15,fontWeight:FontWeight.bold,color:Theme.of(context).brightness==Brightness.dark?Colors.white:forest)),
     ]))));
  Widget currentTab(){
+  if(tab>0&&tab<4){
+   return RefreshIndicator(
+    onRefresh:_refreshFromVerifiedFinance,
+    child:ScrollConfiguration(
+     behavior:ScrollConfiguration.of(context).copyWith(
+      physics:const AlwaysScrollableScrollPhysics()),
+     child:_currentTabContents()));
+  }
+  return _currentTabContents();
+ }
+ Widget _currentTabContents(){
   switch(tab){
    case 0:return goalsOpened?goalsPage():dashboard();
    case 1:return categoriesPage();
