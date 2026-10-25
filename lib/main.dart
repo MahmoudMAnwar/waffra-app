@@ -1779,34 +1779,56 @@ void snack(BuildContext context,String text,{
  messenger.showSnackBar(SnackBar(
   behavior:SnackBarBehavior.floating,
   // Align notices beside the left + above the footer.
-  margin:const EdgeInsets.fromLTRB(82,0,12,16),
+  margin:EdgeInsets.only(left:waffraIsEnglish?12:76,
+    right:waffraIsEnglish?76:12,bottom:8),
   duration:duration,
   backgroundColor:background,
   elevation:5,
-  padding:const EdgeInsets.symmetric(horizontal:12,vertical:9),
+  padding:const EdgeInsets.symmetric(horizontal:9,vertical:5),
   shape:RoundedRectangleBorder(
-   borderRadius:BorderRadius.circular(18),
-   side:BorderSide(color:outline,width:1.2)),
+   borderRadius:BorderRadius.circular(14),
+   side:BorderSide(color:outline,width:1.0)),
   content:Row(children:[
-   Icon(isError?Icons.error_rounded:Icons.check_circle_rounded,color:foreground,size:25),
+   Icon(isError?Icons.error_rounded:Icons.check_circle_rounded,color:foreground,size:19),
    const SizedBox(width:9),
-   Expanded(child:WaffraText(text,maxLines:4,
-    style:TextStyle(color:foreground,fontSize:14,fontWeight:FontWeight.w700))),
+   Expanded(child:WaffraText(text,maxLines:2,overflow:TextOverflow.ellipsis,
+    style:TextStyle(color:foreground,fontSize:12,height:1.1,fontWeight:FontWeight.w700))),
    if(onAction!=null)TextButton(
     onPressed:(){messenger.hideCurrentSnackBar();onAction();},
     child:WaffraText(actionLabel??(waffraIsEnglish?'Undo':'تراجع'),
      style:TextStyle(color:foreground,fontWeight:FontWeight.bold))),
    IconButton(
     tooltip:waffraIsEnglish?'Close':'إغلاق',
-    icon:Icon(Icons.close_rounded,color:foreground,size:22),
+    icon:Icon(Icons.close_rounded,color:foreground,size:17),
     visualDensity:VisualDensity.compact,
     padding:EdgeInsets.zero,
-    constraints:const BoxConstraints(minWidth:32,minHeight:32),
+    constraints:const BoxConstraints(minWidth:26,minHeight:26),
     onPressed:()=>messenger.hideCurrentSnackBar()),
   ]),
  ));
 }
 void snackSuccess(BuildContext context,String text)=>snack(context,text,isError:false);
+
+/// Consistent outlined item count even when there are no records.
+class WaffraOutlinedItemsCount extends StatelessWidget {
+ const WaffraOutlinedItemsCount({super.key,required this.label,required this.count});
+ final String label;final int count;
+ @override Widget build(BuildContext context){
+  final dark=Theme.of(context).brightness==Brightness.dark;
+  return Container(padding:const EdgeInsets.symmetric(horizontal:13,vertical:10),
+   decoration:BoxDecoration(
+    color:dark?Theme.of(context).cardColor:const Color(0xFFF7FBF8),
+    borderRadius:BorderRadius.circular(16),
+    border:Border.all(color:dark?const Color(0xFF5E8A70):const Color(0xFFB4D1C3),width:1.25)),
+   child:Row(children:[
+    Expanded(child:WaffraText(label,style:const TextStyle(fontSize:14,fontWeight:FontWeight.bold))),
+    Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:3),
+     decoration:BoxDecoration(color:forest,borderRadius:BorderRadius.circular(12)),
+     child:Text('$count',style:const TextStyle(color:Colors.white,
+      fontFamily:'Tajawal',fontSize:14,fontWeight:FontWeight.bold))),
+   ]));
+ }
+}
 
 /* Waffra concept-2 section header. A shared visual component only:
    each existing page retains its interactions, state, and data. */
@@ -6337,8 +6359,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     label:waffraIsEnglish?'Deleted savings goals (${deletedGoals.length})'
      :'الأهداف المحذوفة (${deletedGoals.length})')),
    const SizedBox(height:14),
-   WaffraText(waffraIsEnglish?'Current goals: ${goals.length}':'عدد الأهداف الحالية: ${goals.length}',
-    style:const TextStyle(fontWeight:FontWeight.bold)),
+   WaffraOutlinedItemsCount(label:waffraIsEnglish?'Current savings goals':'عدد الأهداف الحالية',count:goals.length),
    const SizedBox(height:12),
 
    // Savings additions use the same physical-left circular +.
@@ -6609,7 +6630,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     onChanged:toggleRecurringReminders,
    ),
    const SizedBox(height:9),
-   WaffraText(waffraIsEnglish?'Recurring items: ${recurring.length}':'عدد العمليات المتكررة: ${recurring.length}',style:const TextStyle(fontWeight:FontWeight.bold)),
+   WaffraOutlinedItemsCount(label:waffraIsEnglish?'Recurring transactions':'عدد العمليات المتكررة',count:recurring.length),
    const SizedBox(height:9),
    if(recurring.isNotEmpty)...[
     Row(children:[
@@ -7961,14 +7982,14 @@ class WaffraReceiptCornerBadge extends StatelessWidget {
   return ClipPath(
    clipper:WaffraReceiptCornerClipper(english:english),
    child:Container(
-    width:54,height:48,color:forest,
+    width:36,height:30,color:forest,
     alignment:english?Alignment.topLeft:Alignment.topRight,
-    padding:EdgeInsets.only(top:5,left:english?4:0,right:english?0:4),
+    padding:EdgeInsets.only(top:3,left:english?2:0,right:english?0:2),
     child:Row(mainAxisSize:MainAxisSize.min,children:[
-     const Icon(Icons.attach_file_rounded,size:13,color:Colors.white),
+     const Icon(Icons.attach_file_rounded,size:10,color:Colors.white),
      const SizedBox(width:1),
      Text('$count',style:const TextStyle(
-      fontFamily:'Tajawal',fontSize:13,color:Colors.white,
+      fontFamily:'Tajawal',fontSize:11,color:Colors.white,
       fontWeight:FontWeight.bold,height:1.1)),
     ]),
    ),
