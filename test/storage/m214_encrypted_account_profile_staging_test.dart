@@ -192,7 +192,7 @@ void main() {
         testDirectory: sandbox,
       ),
     );
-    await expectLater(disabled.stageLegacyProfile(), throwsStateError);
+    expect(() => disabled.stageLegacyProfile(), throwsStateError);
     final tables = await vault.customSelect(
       "SELECT name FROM sqlite_master "
       "WHERE name='fresh_account_profile_staging'",
