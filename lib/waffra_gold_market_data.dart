@@ -56,6 +56,41 @@ class WaffraGoldSpotQuote {
     );
   }
 
+  factory WaffraGoldSpotQuote.fromXausJson(
+    Map<String, dynamic> json, {DateTime? checkedAt}
+  ) {
+    final gold = json['xau'];
+    final state = json['data_state'];
+    if (gold is! Map || state is! Map ||
+        gold['currency'] != 'USD' || gold['unit'] != 'oz' ||
+        !const <String>['fresh', 'stale'].contains(state['status']) ||
+        !const <String>['upstream', 'cache'].contains(state['source'])) {
+      throw const FormatException('Unverified XAU/USD spot source.');
+    }
+    final price = gold['price'], other = json['spot_usd_oz'];
+    final stamp = state['as_of'];
+    if (price is! num || other is! num ||
+        !price.toDouble().isFinite || price <= 0 || price > 1000000 ||
+        !other.toDouble().isFinite ||
+        (price.toDouble() - other.toDouble()).abs() > 0.02 ||
+        stamp is! String ||
+        !RegExp(r'(Z|[+-][0-9]{2}:[0-9]{2})$').hasMatch(stamp)) {
+      throw const FormatException('Gold spot price, source unit or UTC invalid.');
+    }
+    final updated = DateTime.tryParse(stamp)?.toUtc();
+    final now = (checkedAt ?? DateTime.now()).toUtc();
+    if (updated == null ||
+        updated.isAfter(now.add(const Duration(minutes: 10))) ||
+        now.difference(updated) > const Duration(days: 7)) {
+      throw const FormatException('Independent source spot time is stale.');
+    }
+    return WaffraGoldSpotQuote(
+      usdPerTroyOunce: price.toDouble(),
+      updatedAtUtc: updated,
+      source: 'XAUS',
+    );
+  }
+
   double get pureGramUsd => usdPerTroyOunce / waffraTroyOunceGrams;
 
   double gramUsd(int karat) {
@@ -83,23 +118,40 @@ class WaffraGoldSpotService {
   const WaffraGoldSpotService();
 
   static final Uri endpoint = Uri.https('api.gold-api.com', '/price/XAU');
+  static final Uri fallbackEndpoint = Uri.https(
+      'xaus.com', '/api/v1/spot', {'currency':'USD','unit':'oz','compact':'1'});
 
   Future<WaffraGoldSpotQuote> fetch({http.Client? client}) async {
     final owned = client == null;
     final httpClient = client ?? http.Client();
     try {
-      final response = await httpClient.get(
-        endpoint,
-        headers: const <String, String>{'Accept': 'application/json'},
-      ).timeout(const Duration(seconds: 12));
-      if (response.statusCode != 200 || response.bodyBytes.length > 131072) {
-        throw const HttpException('Gold spot source unavailable.');
+      // Prefer the primary provider. Never substitute a fabricated quote.
+      try {
+        final response = await httpClient.get(
+          endpoint, headers: const <String, String>{'Accept': 'application/json'},
+        ).timeout(const Duration(seconds: 12));
+        if (response.statusCode != 200 || response.bodyBytes.length > 131072) {
+          throw const HttpException('Gold spot source unavailable.');
+        }
+        final json = jsonDecode(utf8.decode(response.bodyBytes));
+        if (json is! Map<String, dynamic>) {
+          throw const FormatException('Invalid gold spot data.');
+        }
+        return WaffraGoldSpotQuote.fromJson(json);
+      } catch (_) {
+        // Backup has independently verified units and source timestamp.
+        final response = await httpClient.get(
+          fallbackEndpoint, headers: const <String, String>{'Accept': 'application/json'},
+        ).timeout(const Duration(seconds: 12));
+        if (response.statusCode != 200 || response.bodyBytes.length > 131072) {
+          throw const HttpException('Independent gold source unavailable.');
+        }
+        final json = jsonDecode(utf8.decode(response.bodyBytes));
+        if (json is! Map<String, dynamic>) {
+          throw const FormatException('Independent gold source invalid.');
+        }
+        return WaffraGoldSpotQuote.fromXausJson(json);
       }
-      final json = jsonDecode(utf8.decode(response.bodyBytes));
-      if (json is! Map<String, dynamic>) {
-        throw const FormatException('Invalid gold spot data.');
-      }
-      return WaffraGoldSpotQuote.fromJson(json);
     } finally {
       if (owned) httpClient.close();
     }
