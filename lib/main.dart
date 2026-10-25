@@ -2882,6 +2882,19 @@ Future<void> bulkSmsSheet({String? initialText})async {
  }
 
  bool sheetActive=true;
+ Future<void> prepare(int i,StateSetter update)async {
+  final result=BankParser.parse(messages[i]);
+  update((){
+   reviewAttempted=false;index=i;income=result.income;
+   category=categories.any((c)=>c.income==income&&c.name==result.category)?result.category:
+    (forType(income).isNotEmpty?forType(income).first.name:'أخرى');
+   // M220: never paste the full bank SMS into the transaction TITLE.
+   // The original text is shown only in the ephemeral review field; the
+   // guarded legacy writer strips raw SMS notes until SQLCipher is certified.
+   description.text=result.title;
+   amount.text=result.amount==null?'':formatWaffraMoney(result.amount!);
+  });
+ }
  Future<void> saveParsedMessages(BuildContext ctx,StateSetter update)async {
   if(busy)return;
   final found=splitBankMessages(pasted.text.trim());
@@ -3193,19 +3206,6 @@ Future<void> bulkSmsSheet({String? initialText})async {
   pasteTimer?.cancel();
   Future<void>.delayed(const Duration(milliseconds:500),(){
    pasted.dispose();description.dispose();amount.dispose();
-  });
- }
- Future<void> prepare(int i,StateSetter update)async {
-  final result=BankParser.parse(messages[i]);
-  update((){
-   reviewAttempted=false;index=i;income=result.income;
-   category=categories.any((c)=>c.income==income&&c.name==result.category)?result.category:
-    (forType(income).isNotEmpty?forType(income).first.name:'أخرى');
-   // M220: never paste the full bank SMS into the transaction TITLE.
-   // The original text is shown only in the ephemeral review field; the
-   // guarded legacy writer strips raw SMS notes until SQLCipher is certified.
-   description.text=result.title;
-   amount.text=result.amount==null?'':formatWaffraMoney(result.amount!);
   });
  }
  BuildContext? activeSmsContext;
