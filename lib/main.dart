@@ -1776,8 +1776,11 @@ void disposeLater(List<TextEditingController> controllers){
 }
 // All transient notices use the same footer-anchored surface throughout the app.
 // Required-field validation remains inline using InputDecoration.errorText.
+enum WaffraSnackKind { success, error, warning, info }
 void snack(BuildContext context,String text,{
  bool isError=true,
+ WaffraSnackKind? kind,
+ bool requireDismissal=false,
  String? actionLabel,
  VoidCallback? onAction,
  Duration duration=const Duration(seconds:5),
@@ -1787,19 +1790,27 @@ void snack(BuildContext context,String text,{
  messenger.hideCurrentMaterialBanner();
  messenger.hideCurrentSnackBar();
  final dark=Theme.of(context).brightness==Brightness.dark;
- final background=isError
+ final severity=kind??(isError?WaffraSnackKind.error:WaffraSnackKind.success);
+ final isDanger=severity==WaffraSnackKind.error;
+ final isWarning=severity==WaffraSnackKind.warning;
+ final isInfo=severity==WaffraSnackKind.info;
+ final background=isDanger
   ?(dark?const Color(0xFF4A2429):const Color(0xFFFFE1E2))
-  :(dark?const Color(0xFF163F31):const Color(0xFFE6F5EB));
- final foreground=isError
+  :isWarning?(dark?const Color(0xFF473515):const Color(0xFFFFF8E5)):
+   isInfo?(dark?const Color(0xFF153551):const Color(0xFFE8F1FE)):
+   (dark?const Color(0xFF163F31):const Color(0xFFE6F5EB));
+ final foreground=isDanger
   ?(dark?const Color(0xFFFFDEE0):const Color(0xFF9D1D25))
-  :(dark?const Color(0xFFB5F2D4):const Color(0xFF07563B));
- final outline=isError?const Color(0xFFE67B81):const Color(0xFF0C7957);
+  :isWarning?(dark?const Color(0xFFFFDE94):const Color(0xFF926100)):
+   isInfo?(dark?const Color(0xFFC3DDFF):const Color(0xFF235DB7)):
+   (dark?const Color(0xFFB5F2D4):const Color(0xFF07563B));
+ final outline=isDanger?const Color(0xFFE67B81):isWarning?const Color(0xFFB7791F):isInfo?const Color(0xFF2B6CB0):const Color(0xFF0C7957);
  messenger.showSnackBar(SnackBar(
   behavior:SnackBarBehavior.floating,
   // Align notices beside the left + above the footer.
   margin:EdgeInsets.only(left:waffraIsEnglish?12:76,
     right:waffraIsEnglish?76:12,bottom:8),
-  duration:duration,
+  duration:requireDismissal?const Duration(days:1):duration,
   backgroundColor:background,
   elevation:5,
   padding:const EdgeInsets.symmetric(horizontal:9,vertical:5),
@@ -1807,7 +1818,7 @@ void snack(BuildContext context,String text,{
    borderRadius:BorderRadius.circular(14),
    side:BorderSide(color:outline,width:1.0)),
   content:Row(children:[
-   Icon(isError?Icons.error_rounded:Icons.check_circle_rounded,color:foreground,size:19),
+   Icon(isDanger?Icons.error_rounded:isWarning?Icons.warning_rounded:isInfo?Icons.info_rounded:Icons.check_circle_rounded,color:foreground,size:19),
    const SizedBox(width:9),
    Expanded(child:WaffraText(text,maxLines:2,overflow:TextOverflow.ellipsis,
     style:TextStyle(color:foreground,fontSize:12,height:1.1,fontWeight:FontWeight.w700))),
