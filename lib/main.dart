@@ -5225,11 +5225,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final hasEnoughData=recent.length>=3&&income>0;
   final ratio=income>0?(income-spending)/income:0.0;
   final score=hasEnoughData?((ratio+1)*50).clamp(0.0,100.0).round():null;
-  final biggest=<String,double>{};
-  for(final e in recent.where((e)=>!e.income)){
-   biggest[e.category]=(biggest[e.category]??0)+e.amount;
-  }
-  final top=biggest.entries.toList()..sort((a,b)=>b.value.compareTo(a.value));
+  final smartCharts=waffraSmartChartData(recent,now);
+  final top=smartCharts.topCategories;
   final monthStart=DateTime(now.year,now.month);
   final priorStart=DateTime(now.year,now.month-1);
   final currentExpense=sum(entries.where((e)=>!e.income&&!e.date.isBefore(monthStart)&&!e.date.isAfter(now)),false);
@@ -5239,11 +5236,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final monthDays=DateTime(now.year,now.month+1,0).day;
   final upcoming=recurring.where((r)=>r.active&&!r.income&&r.day>now.day&&r.day<=monthDays).fold<double>(0,(v,r)=>v+r.amount);
   final forecast=now.day>=5&&thisMonthCount>=3?(currentExpense/now.day*monthDays+upcoming):null;
-  final weeklySpend=List<double>.generate(4,(i){
-   final from=now.subtract(Duration(days:(4-i)*7));
-   final to=now.subtract(Duration(days:(3-i)*7));
-   return sum(recent.where((e)=>!e.income&&!e.date.isBefore(from)&&e.date.isBefore(to)),false);
-  });
+  final weeklySpend=smartCharts.weeklySpend;
   if(!mounted)return;
   // Blur the underlying screen while the animated analysis indicator runs.
   // Keep the loader visible long enough to convey progress; calculations are local.
@@ -5292,12 +5285,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
 
    final deficit=spending-income;
    final accent=score==null?Colors.grey:score<45?Colors.red:score<70?Colors.orange:emerald;
-   final periods=List.generate(3,(i){
-    final from=now.subtract(Duration(days:(3-i)*30));
-    final to=now.subtract(Duration(days:(2-i)*30));
-    final items=recent.where((e)=>!e.date.isBefore(from)&&e.date.isBefore(to));
-    return (sum(items,true),sum(items,false));
-   });
+   final periods=smartCharts.periods;
    final highest=periods.fold<double>(1,(v,p)=>max(v,max(p.$1,p.$2)));
    return Align(alignment:Alignment.bottomCenter,child:FractionallySizedBox(
     heightFactor:.90,
@@ -8257,6 +8245,42 @@ class WaffraReceiptCornerClipper extends CustomClipper<Path> {
  @override bool shouldReclip(covariant WaffraReceiptCornerClipper oldClipper)=>
   oldClipper.english!=english;
 }
+/// The Smart Analysis screen and its PDF export use one mathematical model.
+/// It is independent of language, rendering and finance persistence.
+class WaffraSmartChartData {
+ const WaffraSmartChartData({
+  required this.periods,required this.weeklySpend,required this.topCategories,
+ });
+ final List<(double,double)> periods;
+ final List<double> weeklySpend;
+ final List<MapEntry<String,double>> topCategories;
+}
+WaffraSmartChartData waffraSmartChartData(List<MoneyEntry> items,DateTime now){
+ final valid=items.where((e)=>!e.date.isAfter(now)&&
+   e.date.isAfter(now.subtract(const Duration(days:90)))).toList();
+ double total(Iterable<MoneyEntry> rows,bool income)=>rows
+   .where((e)=>e.income==income).fold<double>(0,(a,e)=>a+e.amount);
+ final periods=List<(double,double)>.generate(3,(i){
+  final from=now.subtract(Duration(days:(3-i)*30));
+  final to=now.subtract(Duration(days:(2-i)*30));
+  final rows=valid.where((e)=>!e.date.isBefore(from)&&e.date.isBefore(to));
+  return (total(rows,true),total(rows,false));
+ });
+ final weekly=List<double>.generate(4,(i){
+  final from=now.subtract(Duration(days:(4-i)*7));
+  final to=now.subtract(Duration(days:(3-i)*7));
+  return total(valid.where((e)=>!e.date.isBefore(from)&&e.date.isBefore(to)),false);
+ });
+ final byCategory=<String,double>{};
+ for(final e in valid.where((e)=>!e.income)){
+  byCategory[e.category]=(byCategory[e.category]??0)+e.amount;
+ }
+ final top=byCategory.entries.toList()
+  ..sort((a,b)=>b.value.compareTo(a.value));
+ return WaffraSmartChartData(
+  periods:periods,weeklySpend:weekly,topCategories:top);
+}
+
 class ChartPoint {
  final String label;final double income,expense;
  ChartPoint(this.label,this.income,this.expense);
