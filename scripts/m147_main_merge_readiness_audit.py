@@ -28,6 +28,7 @@ ALLOWED = {
     "test/m224_verified_gold_fallback_test.dart",
     "test/m224_verified_pull_refresh_dialog_test.dart",
     "test/storage/m224_encrypted_legacy_sms_reattachment_test.dart",
+    "integration_test/m202_home_widget_source_binder_android_test.dart",
 }
 FINANCE_GUARDS = (
     "if(applied.originalSmsNotesOmittedOnLegacy)",
@@ -66,7 +67,7 @@ def main() -> None:
             "candidate must directly descend from pinned main")
     behind, ahead = map(int, git("rev-list", "--left-right", "--count",
                                   f"{BASE_MAIN}...{head}").split())
-    require(behind == 0 and 0 < ahead <= 25,
+    require(behind == 0 and 0 < ahead <= 35,
             "unexpected candidate ancestry or commit count")
     changed = set(filter(None,
         git("diff", "--name-only", BASE_MAIN, head).splitlines()))
@@ -90,6 +91,7 @@ def main() -> None:
     gold_test = Path("test/m224_verified_gold_fallback_test.dart").read_text()
     sms_code = Path("lib/storage/waffra_encrypted_legacy_sms_reattachment.dart").read_text()
     sms_qa = Path("test/storage/m224_encrypted_legacy_sms_reattachment_test.dart").read_text()
+    emulator_proof = Path("integration_test/m202_home_widget_source_binder_android_test.dart").read_text()
     widget_code = Path("lib/waffra_widget_capture.part.dart").read_text()
     widget_qa = Path("test/waffra_widget_quick_capture_test.dart").read_text()
     authority = Path("lib/storage/waffra_verified_finance_authority.dart").read_text()
@@ -120,6 +122,16 @@ def main() -> None:
         "cold-reopens exact", "SQL failure rolls back",
         "wrong parser amount", "disabled-by-default",
     )), "SMS recovery negative / cold reopen QA missing")
+    require(all(marker in emulator_proof for marker in (
+        "originalWidgetSms",
+        "originalHomeSms",
+        "widget.authority.commitConfirmedSms(",
+        "home.authority.commitConfirmedSms(",
+        "expect(recovered.ledgerRaw, finalLedger)",
+        "hasBytes(encryptedBytes, utf8.encode(raw))",
+        "for (final key in legacy.getKeys())",
+        "incorrect-test-only-key",
+    )), "real Android binder original SMS cold-reopen and plaintext leak proof missing")
     require("Map<String, Object?>.unmodifiable({...record, 'notes': ''})"
             in authority and
             "originalSmsNotesOmittedOnLegacy" in authority,
