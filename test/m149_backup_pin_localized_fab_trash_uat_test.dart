@@ -54,8 +54,12 @@ void main() {
   expect(main,contains('const Color(0xFFB42332)'));
   expect(main,contains('onPressed:deletedGoalsDialog'));
   expect(main,contains('onPressed:deletedRecurringDialog'));
-  expect(main,contains('Expanded(child:WaffraDeletedItemsButton('));
-  expect(main,contains('Expanded(child:OutlinedButton('));
+  // The new compact recurring cards remain adjacent; legacy recycle-bin
+  // buttons in other sections stay red and independently accessible.
+  expect(main,contains("Key('waffra-recurring-count-badge')"));
+  expect(main,contains('Expanded(child:OutlinedButton.icon('));
+  expect(main,contains('onPressed:deletedRecurringDialog'));
+  expect(main,contains('minimumSize:const Size(0,48)'));
   expect(main,contains('onPressed:showWaffraFinancialCalendar'));
   expect(cats,contains('onPressed:showCategoryTrash'));
   expect(cats,contains('WaffraDeletedItemsButton('));

@@ -3049,6 +3049,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
        WaffraText('${applied.expenses} • ${(applied.expenseMinor/100).toStringAsFixed(2)}',
         style:const TextStyle(fontWeight:FontWeight.bold,color:Color(0xFFD65A45))),
       ])),
+     if(applied.originalSmsNotesOmittedOnLegacy)...[
+      const SizedBox(height:10),
+      WaffraText(waffraIsEnglish?
+       'Original bank SMS text was NOT stored because encrypted storage is not active. Transaction details were saved.':
+       'لم يُحفظ نص الرسالة البنكية الأصلي لأن التخزين المشفر غير مفعّل. تم حفظ بيانات المعاملة فقط.',
+       textAlign:TextAlign.center,
+       style:const TextStyle(color:Color(0xFFAC5700))),
+     ],
      if(invalid.isNotEmpty||applied.skippedDuplicates>0)...[
       const SizedBox(height:12),
       WaffraText(waffraIsEnglish?
@@ -3312,7 +3320,13 @@ Future<void> bulkSmsSheet({String? initialText})async {
        await budgetAlert(entry,previous);
        if(!ctx.mounted)return;
        savedCount++;
-       if(index+1>=messages.length){Navigator.pop(ctx);if(mounted)snackSuccess(context,'تم حفظ $savedCount عملية بنجاح');}
+       if(index+1>=messages.length){
+        Navigator.pop(ctx);
+        if(mounted)snackSuccess(context,committed.originalSmsNotesOmittedOnLegacy?
+         (waffraIsEnglish?'Saved $savedCount transactions; original SMS text was not stored.':
+          'تم حفظ $savedCount عملية دون نص الرسالة البنكية الأصلي.'):
+         'تم حفظ $savedCount عملية بنجاح');
+       }
        else{await prepare(index+1,update);update(()=>busy=false);}
       },child:WaffraText(index+1==messages.length?'إضافة المعاملة وحفظها':'إضافة المعاملة وحفظها ثم التالي')),
       if(index+1<messages.length)TextButton(onPressed:busy?null:()=>prepare(index+1,update),child:const WaffraText('تخطي هذه الرسالة')),
@@ -3624,6 +3638,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
     _lastWidgetRevision=applied.current.widgetRevision;
    });
    unawaited(_refreshWidget());
+   if(applied.originalSmsNotesOmittedOnLegacy&&mounted){
+    snack(context,waffraIsEnglish?
+     'Transaction saved; original bank SMS text was NOT stored.':
+     'تم حفظ بيانات العملية دون نص الرسالة البنكية الأصلي.',isError:false);
+   }
   }else{
    setState((){
     final i=entries.indexWhere((e)=>e.id==result.id);

@@ -35,6 +35,9 @@ APPROVED = {
     "test/waffra_oct21_regression_test.dart",
     "lib/currency_converter.dart",
     "test/waffra_m208_bundle_regression_test.dart",
+    "lib/storage/waffra_verified_finance_authority.dart",
+    "test/waffra_widget_quick_capture_test.dart",
+    "test/m149_backup_pin_localized_fab_trash_uat_test.dart",
 }
 
 
@@ -225,14 +228,24 @@ def main() -> None:
         require(marker in apk_workflow,
                 "APK exact-SHA release-note safeguard missing: " + marker)
 
+    # Parser may stage SMS text for a future encrypted writer, but the M207
+    # guarded-legacy bridge MUST strip notes before the SharedPreferences journal.
+    authority=Path("lib/storage/waffra_verified_finance_authority.dart").read_text(encoding="utf-8")
+    wtest=Path("test/waffra_widget_quick_capture_test.dart").read_text(encoding="utf-8")
     require("notes:entry.raw,sourceType:'sms'" in widget,
-            "widget bank SMS no longer preserves complete note")
+            "widget raw SMS must remain available to a verified encrypted source")
+    require("'notes': ''" in authority and
+            "records: redacted, messageHashes: fingerprints" in authority and
+            "originalSmsNotesOmittedOnLegacy" in authority and
+            "WaffraLegacySmsNotesPrivacyGate.rejectConfirmedSmsNotes(copied)" in legacy_catalog and
+            "expect(saved.first['notes'],'')" in wtest,
+            "SMS plaintext legacy bridge/privacy regression missing")
     require("waffraSafeSmsTransactionTitle(parsed.title,entry.raw" in widget,
             "widget raw SMS must not replace the safe short title")
     require("child:Icon(addFabExpanded?Icons.close:Icons.add" not in app,
             "old double-moving FAB icon was reintroduced")
     for marker in (
-        "all confirmed SMS routes persist full text as notes",
+        "SMS content remains in memory for encrypted source, legacy bridge redacts plaintext",
         "replayable tour only includes six core screens",
         "FAB launch waits for the menu collapse",
     ):

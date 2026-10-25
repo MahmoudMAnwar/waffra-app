@@ -37,7 +37,7 @@ void main() {
     expect(tour, contains(r"'${tourStep+1}/${tourTabs.length}'"));
   });
 
-  test('all confirmed SMS routes persist full text as notes, not title', () {
+  test('SMS content remains in memory for encrypted source, legacy bridge redacts plaintext', () {
     final home = File('lib/main.dart').readAsStringSync();
     final widget = File('lib/waffra_widget_capture.part.dart').readAsStringSync();
     expect(home, contains("date:bankSmsDate(raw)??DateTime.now(),notes:raw,sourceType:'sms'"));
@@ -46,6 +46,11 @@ void main() {
     expect(widget, contains('notes:entry.raw,sourceType:'));
     expect(widget, contains('waffraSafeSmsTransactionTitle(parsed.title,entry.raw'));
     expect(home, contains('child:SelectableText(entry.notes'));
+    final authority=File('lib/storage/waffra_verified_finance_authority.dart').readAsStringSync();
+    expect(authority,contains("return Map<String, Object?>.unmodifiable({...record, 'notes': ''});"));
+    expect(authority,contains('records: redacted, messageHashes: fingerprints'));
+    final legacy=File('lib/storage/waffra_home_finance_persistence.dart').readAsStringSync();
+    expect(legacy,contains('WaffraLegacySmsNotesPrivacyGate.rejectConfirmedSmsNotes(copied)'));
   });
 
   test('FAB launch waits for the menu collapse and suppresses double taps', () {

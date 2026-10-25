@@ -68,11 +68,13 @@ void main() {
     expect(en.contains(const Offset(33,26)),isFalse);
   });
 
-  test('empty recurring/goals counts stay inside an outlined counter', () {
+  test('goals keep outlined counter, recurring uses compact count badge', () {
     final source=File('lib/main.dart').readAsStringSync();
     expect(source,contains('class WaffraOutlinedItemsCount'));
     expect(source,contains('count:goals.length'));
-    expect(source,contains('count:recurring.length'));
+    expect(source,contains("Key('waffra-recurring-count-badge')"));
+    expect(source,contains('nextRecurringDue(nextBill)'));
+    expect(source,isNot(contains("WaffraOutlinedItemsCount(label:waffraIsEnglish?'Recurring transactions'")));
     expect(source,contains('width:36,height:30,color:forest'));
   });
 

@@ -142,7 +142,7 @@ jobs:
         env:
           REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: python3 scripts/qa/m207_legacy_sms_notes_scope_review.py
-      - name: M208 SHA-pinned 23-file bundle review (Flutter/ARM64 in separate required jobs)
+      - name: M208 SHA-pinned 26-file bundle review (Flutter/ARM64 in separate required jobs)
         if: github.head_ref == 'integration/m208-all-approved-bundle-after-m207-20261025'
         env:
           REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}

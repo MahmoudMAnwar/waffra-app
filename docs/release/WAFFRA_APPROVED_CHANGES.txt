@@ -189,3 +189,5 @@ Approved changes for the next QA APK
 - لا تستخدم رسائل بنكية حقيقية أو بيانات مالية حساسة في APK تجريبي
   ما دام تأمين جميع مسارات التخزين لم يتم إثباته إنتاجيًا.
 
+
+M208 encrypted-legacy privacy constraint: When verified SQLCipher is not active, transaction metadata and SHA-256 SMS fingerprints may be saved, but the original complete bank SMS text is intentionally NOT stored in plaintext SharedPreferences. Widget displays the warning before confirmation and preserves it after confirmation; Home shows an explicit post-save notice. Full original SMS notes can only be stored after independently verified encrypted source cutover. This is a release NO-GO, not approval for plaintext notes or Play.

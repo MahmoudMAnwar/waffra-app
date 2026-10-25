@@ -42,6 +42,9 @@ void main() {
     expect(writer,contains('WaffraLegacySmsNotesPrivacyGate.rejectConfirmedSmsNotes(copied)'));
     expect(writer,contains('WaffraLegacySmsNotesPrivacyGate.rejectNewOrModifiedSmsNotes('));
     expect(writer,contains('version != 2 && version != 3 && version != 4'));
+    final bridge=File('lib/storage/waffra_verified_finance_authority.dart').readAsStringSync();
+    expect(bridge,contains("return Map<String, Object?>.unmodifiable({...record, 'notes': ''});"));
+    expect(bridge,contains('originalSmsNotesOmittedOnLegacy'));
     final release=File('lib/storage/waffra_production_cutover_release_gate.dart').readAsStringSync();
     expect(release,contains('bool get automaticallyActivateSqlCipher => false;'));
   });

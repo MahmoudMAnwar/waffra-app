@@ -11,9 +11,13 @@ void main() {
  test('Income and expense PDF rows reuse exact transaction color constants', () {
   expect(waffraIncomeBackground.toARGB32(), 0xFFB2D5C2);
   expect(waffraExpenseBackground.toARGB32(), 0xFFFCECE8);
-  expect(app, contains('PdfColor.fromInt(e.income?waffraIncomeBackground.toARGB32():waffraExpenseBackground.toARGB32())'));
+  final normalized=app.replaceAll(RegExp(r'\s+'),'');
+  expect(normalized, contains(
+   'PdfColor.fromInt(e.income?waffraIncomeBackground.toARGB32():waffraExpenseBackground.toARGB32())'));
   expect(app, contains("pdfCell('\u0024{row.key+1}',center:true)"));
   expect(app, contains("'رقم المعاملة'"));
+  expect(app, contains('children:english?orderedCells:orderedCells.reversed.toList()'));
+  expect(app, contains("['المبلغ (ريال)','الوصف','القسم','النوع','التاريخ','رقم المعاملة']"));
   expect(app, contains("'No.'"));
  });
 
