@@ -57,6 +57,7 @@ import 'storage/waffra_verified_module_ui_guard.dart';
 import 'storage/waffra_runtime_finance_route_contract.dart';
 import 'storage/waffra_verified_transaction_ui_guard.dart';
 import 'storage/waffra_m155_category_plan.dart';
+import 'storage/waffra_sms_partial_save_recovery.dart';
 import 'storage/waffra_production_finance_routing_gate.dart';
 import 'storage/waffra_verified_legacy_backup_restore.dart';
 import 'waffra_home_widget.dart';
@@ -2881,6 +2882,19 @@ Future<void> bulkSmsSheet({String? initialText})async {
  }
 
  bool sheetActive=true;
+ Future<void> prepare(int i,StateSetter update)async {
+  final result=BankParser.parse(messages[i]);
+  update((){
+   reviewAttempted=false;index=i;income=result.income;
+   category=categories.any((c)=>c.income==income&&c.name==result.category)?result.category:
+    (forType(income).isNotEmpty?forType(income).first.name:'أخرى');
+   // M220: never paste the full bank SMS into the transaction TITLE.
+   // The original text is shown only in the ephemeral review field; the
+   // guarded legacy writer strips raw SMS notes until SQLCipher is certified.
+   description.text=result.title;
+   amount.text=result.amount==null?'':formatWaffraMoney(result.amount!);
+  });
+ }
  Future<void> saveParsedMessages(BuildContext ctx,StateSetter update)async {
   if(busy)return;
   final found=splitBankMessages(pasted.text.trim());
@@ -2888,30 +2902,43 @@ Future<void> bulkSmsSheet({String? initialText})async {
   if(found.length>100){update(()=>statusMessage=waffraIsEnglish?'Maximum 100 transactions per paste.':'الحد الأقصى 100 معاملة في كل عملية لصق.');return;}
   final results=found.map(BankParser.parse).toList();
   final valid=<int>[],invalid=<int>[],duplicates=<int>[];
+  final preRejected=<int,WaffraSmsNotSavedReason>{};
   var allowRepeatedSms=false;
   final seen=<String>{};
   for(var i=0;i<found.length;i++){
-   if(results[i].amount==null||results[i].amount!<=0){invalid.add(i);continue;}
+   if(results[i].amount==null||results[i].amount!<=0){
+    invalid.add(i);
+    preRejected[i]=WaffraSmsNotSavedReason.amountUnrecognized;
+    continue;
+   }
    final hash=bankSmsHash(found[i]);
-   if(smsHashes.contains(hash)||!seen.add(hash)){duplicates.add(i);continue;}
+   if(smsHashes.contains(hash)||!seen.add(hash)){
+    duplicates.add(i);
+    preRejected[i]=WaffraSmsNotSavedReason.alreadySaved;
+    continue;
+   }
    valid.add(i);
   }
   if(duplicates.isNotEmpty){
-   final addRepeated=await showWaffraDialog<bool>(context:ctx,builder:(d)=>AlertDialog(
+   final choice=await showWaffraDialog<String>(context:ctx,builder:(d)=>AlertDialog(
     title:WaffraText(waffraIsEnglish?'Duplicate transactions detected':'تم اكتشاف معاملات مكررة'),
     content:WaffraText(waffraIsEnglish
-     ?'${duplicates.length} transaction(s) may already exist or repeat within this paste. Add them anyway, along with the new valid transactions?'
-     :'تم اكتشاف ${duplicates.length} معاملة مكررة، إما مسجلة سابقًا أو مكررة داخل الرسائل الملصوقة. هل تريد إضافتها على أي حال مع المعاملات الجديدة؟'),
+     ?'${duplicates.length} transaction(s) are duplicates. You can safely skip those and save the new ones, or explicitly approve adding the duplicates.'
+     :'تم اكتشاف ${duplicates.length} معاملة مكررة. يمكنك تخطي المكررة وحفظ الجديدة، أو الموافقة صراحةً على إضافة المكررة.'),
     actions:[
-     TextButton(onPressed:()=>Navigator.pop(d,false),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
-     FilledButton(onPressed:()=>Navigator.pop(d,true),child:WaffraText(waffraIsEnglish?'Add anyway':'إضافة على أي حال')),
+     TextButton(onPressed:()=>Navigator.pop(d,'cancel'),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+     OutlinedButton(onPressed:()=>Navigator.pop(d,'skip'),child:WaffraText(waffraIsEnglish?'Skip duplicates':'تخطي المكررة')),
+     FilledButton(onPressed:()=>Navigator.pop(d,'add'),child:WaffraText(waffraIsEnglish?'Add duplicates too':'إضافة المكررة أيضًا')),
     ]));
-   if(addRepeated!=true||!ctx.mounted)return;
-   allowRepeatedSms=true;
-   valid.addAll(duplicates);
-   valid.sort();
+   if(!ctx.mounted||choice==null||choice=='cancel')return;
+   if(choice=='add'){
+    allowRepeatedSms=true;
+    for(final i in duplicates)preRejected.remove(i);
+    valid.addAll(duplicates);
+    valid.sort();
+   }
   }
-  if(valid.isEmpty){update(() {statusMessage=waffraIsEnglish?'This message contains no financial transactions. Edit it to analyze again automatically.':'هذه الرسالة لا تحتوي على أي معاملات مالية. عدّل النص ليتم تحليله تلقائيًا مرة أخرى.';rejectedMessages=invalid.map((i)=>found[i]).toList();});return;}
+  if(valid.isEmpty){update(() {statusMessage=waffraIsEnglish?'No new transactions can be saved. Review the messages below.':'لا توجد معاملات جديدة قابلة للحفظ. راجع الرسائل أدناه.';rejectedMessages=[for(final i in preRejected.keys)found[i]];});return;}
   final incomes=valid.where((i)=>results[i].income).toList();
   final expenses=valid.where((i)=>!results[i].income).toList();
   final incomeTotal=incomes.fold<double>(0,(v,i)=>v+results[i].amount!);
@@ -2968,8 +2995,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
      ],
     )));
   if(accepted!=true||!ctx.mounted)return;
-  update(() {busy=true;rejectedMessages=invalid.map((i)=>found[i]).toList();});
+  update(() {busy=true;rejectedMessages=[];});
   final additions=<MoneyEntry>[];
+  final proposedSourceIndexes=<int>[];
   final proposed=<BudgetCategory>[];
   final proposedHashes=<String>[];
   for(final i in valid){
@@ -2981,12 +3009,18 @@ Future<void> bulkSmsSheet({String? initialText})async {
    ];
    final plan=WaffraM155CategoryPlan.propose(rawSms:raw,income:result.income,
     existing:existing,learned:learnedMerchantCategories);
-   if(plan==null){invalid.add(i);continue;}
+   if(plan==null){
+    preRejected[i]=WaffraSmsNotSavedReason.categoryUnresolved;
+    continue;
+   }
    if(plan.newCategoryRequired){
     final parentName=plan.categoryName.split(' / ').first;
     final roots=categories.where((c)=>c.income==result.income&&
       !c.isSubcategory&&c.name==parentName).toList();
-    if(roots.length!=1){invalid.add(i);continue;}
+    if(roots.length!=1){
+     preRejected[i]=WaffraSmsNotSavedReason.categoryUnresolved;
+     continue;
+    }
     final parent=roots.single;
     proposed.add(BudgetCategory(id:newId(),name:plan.categoryName,
      parentId:parent.id,income:result.income,icon:parent.icon,
@@ -2999,11 +3033,16 @@ Future<void> bulkSmsSheet({String? initialText})async {
     date:bankSmsDate(raw)??DateTime.now(),notes:raw,sourceType:'sms',
     merchantKey:plan.merchantKey));
    proposedHashes.add(bankSmsHash(raw));
+   proposedSourceIndexes.add(i);
   }
   if(additions.isEmpty){
-   update(()=>statusMessage=waffraIsEnglish?
-    'No valid transactions could be saved. Review categories and try again.':
-    'لم يتم العثور على معاملات صالحة للحفظ. راجع الأقسام ثم حاول مرة أخرى.');
+   update((){
+    busy=false;
+    rejectedMessages=[for(final i in preRejected.keys)found[i]];
+    statusMessage=waffraIsEnglish?
+     'No transactions were saved. Review and correct the messages below.':
+     'لم تُحفظ معاملات. راجع الرسائل أدناه وصحّح بياناتها.';
+   });
    return;
   }
   try{
@@ -3022,6 +3061,16 @@ Future<void> bulkSmsSheet({String? initialText})async {
    final persisted=(jsonDecode(applied.current.ledgerRaw??'[]') as List)
     .map((e)=>MoneyEntry.fromJson(Map<String,dynamic>.from(e as Map)))
     .toList();
+   final recovery=WaffraSmsPartialSaveRecovery.reconcile(
+    discovered:found,
+    rejectedBeforeCommit:preRejected,
+    proposedSourceIndexes:proposedSourceIndexes,
+    proposedIds:[for(final e in additions)e.id],
+    persistedIds:{for(final e in persisted)e.id},
+   );
+   if(recovery.saved!=applied.saved){
+    throw StateError('SMS finance journal does not match persisted transaction IDs.');
+   }
    setState((){
     entries..clear()..addAll(persisted);
     if(proposed.isNotEmpty){
@@ -3038,21 +3087,30 @@ Future<void> bulkSmsSheet({String? initialText})async {
     _lastWidgetRevision=applied.current.widgetRevision;
    });
    unawaited(_refreshWidget());
+   if(!ctx.mounted)return;
+   update((){
+    busy=false;
+    rejectedMessages=[for(final item in recovery.unsaved)item.message];
+   });
    if(applied.saved==0){
     update(()=>statusMessage=waffraIsEnglish
-      ?'These transactions have already been saved.'
-      :'هذه العمليات محفوظة بالفعل.');
+     ?'No new transactions were saved. Review the unresolved messages below.'
+     :'لم تُحفظ أي معاملات جديدة. راجع الرسائل المتبقية أدناه.');
     return;
    }
-   if(!ctx.mounted)return;
-   Navigator.pop(ctx);
-   if(mounted)await showWaffraDialog<void>(context:context,builder:(dialogCtx)=>AlertDialog(
+   if(!mounted)return;
+   final reviewMissing=await showWaffraDialog<bool>(context:context,
+    builder:(dialogCtx)=>AlertDialog(
     title:Column(mainAxisSize:MainAxisSize.min,children:[
-     const Icon(Icons.check_circle_rounded,color:Color(0xFF16805E),size:54),
+     Icon(recovery.unsaved.isEmpty?Icons.check_circle_rounded:Icons.warning_amber_rounded,
+      color:recovery.unsaved.isEmpty?const Color(0xFF16805E):const Color(0xFFB56A00),size:54),
      const SizedBox(height:16),
-     WaffraText(waffraIsEnglish?'Transactions added successfully':'تمت إضافة المعاملات بنجاح',textAlign:TextAlign.center,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:22)),
+     WaffraText(recovery.unsaved.isEmpty
+      ?(waffraIsEnglish?'Transactions added successfully':'تمت إضافة المعاملات بنجاح')
+      :(waffraIsEnglish?'Some transactions need review':'تم حفظ جزء من المعاملات'),
+      textAlign:TextAlign.center,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:22)),
     ]),
-    content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
      WaffraText(waffraIsEnglish?
       'Saved ${applied.saved} transactions':'تم حفظ ${applied.saved} معاملة',
       textAlign:TextAlign.center,style:const TextStyle(fontWeight:FontWeight.w600)),
@@ -3086,18 +3144,57 @@ Future<void> bulkSmsSheet({String? initialText})async {
        textAlign:TextAlign.center,
        style:const TextStyle(color:Color(0xFFAC5700))),
      ],
-     if(invalid.isNotEmpty||applied.skippedDuplicates>0)...[
+     if(recovery.unsaved.isNotEmpty)...[
       const SizedBox(height:12),
       WaffraText(waffraIsEnglish?
-       'Not added: ${invalid.length+applied.skippedDuplicates} transactions':
-       'لم تُحفظ ${invalid.length+applied.skippedDuplicates} معاملة',
+       'Not saved: ${recovery.unsaved.length} transactions':
+       'لم تُحفظ ${recovery.unsaved.length} معاملة',
        textAlign:TextAlign.center,
-       style:const TextStyle(color:Colors.deepOrange)),
+       style:const TextStyle(color:Colors.deepOrange,fontWeight:FontWeight.w700)),
+      if(recovery.unsaved.any((e)=>e.reason==WaffraSmsNotSavedReason.amountUnrecognized))
+       WaffraText(waffraIsEnglish
+        ?'Cannot read amount: ${recovery.unsaved.where((e)=>e.reason==WaffraSmsNotSavedReason.amountUnrecognized).length}'
+        :'المبلغ غير واضح: ${recovery.unsaved.where((e)=>e.reason==WaffraSmsNotSavedReason.amountUnrecognized).length}',
+        textAlign:TextAlign.center),
+      if(recovery.unsaved.any((e)=>e.reason==WaffraSmsNotSavedReason.categoryUnresolved))
+       WaffraText(waffraIsEnglish
+        ?'Category needs review: ${recovery.unsaved.where((e)=>e.reason==WaffraSmsNotSavedReason.categoryUnresolved).length}'
+        :'القسم يحتاج مراجعة: ${recovery.unsaved.where((e)=>e.reason==WaffraSmsNotSavedReason.categoryUnresolved).length}',
+        textAlign:TextAlign.center),
+      if(recovery.unsaved.any((e)=>e.reason==WaffraSmsNotSavedReason.alreadySaved))
+       WaffraText(waffraIsEnglish
+        ?'Duplicate or excluded by writer: ${recovery.unsaved.where((e)=>e.reason==WaffraSmsNotSavedReason.alreadySaved).length}'
+        :'مكررة أو استبعدها الحفظ: ${recovery.unsaved.where((e)=>e.reason==WaffraSmsNotSavedReason.alreadySaved).length}',
+        textAlign:TextAlign.center),
      ],
-    ]),
+    ])),
     actionsAlignment:MainAxisAlignment.center,
     actionsPadding:const EdgeInsets.fromLTRB(24,0,24,18),
-    actions:[SizedBox(width:180,child:FilledButton(onPressed:()=>Navigator.pop(dialogCtx),child:WaffraText(waffraIsEnglish?'Done':'تم')))]));
+    actions:[
+     TextButton(onPressed:()=>Navigator.pop(dialogCtx,false),
+      child:WaffraText(waffraIsEnglish?'Done':'تم')),
+     if(recovery.unsaved.isNotEmpty)
+      FilledButton.icon(icon:const Icon(Icons.edit_note_rounded),
+       onPressed:()=>Navigator.pop(dialogCtx,true),
+       label:WaffraText(waffraIsEnglish
+        ?'Review ${recovery.unsaved.length} unsaved'
+        :'مراجعة ${recovery.unsaved.length} غير محفوظة')),
+    ]));
+   if(!ctx.mounted)return;
+   if(reviewMissing==true&&recovery.unsaved.isNotEmpty){
+    update((){
+     messages=[for(final item in recovery.unsaved)item.message];
+     reviewing=true;
+     parsed=true;
+     index=0;
+     savedCount=0;
+     rejectedMessages=[];
+     statusMessage='';
+    });
+    await prepare(0,update);
+   }else{
+    Navigator.pop(ctx);
+   }
   }catch(e){
    // A failed journal must be reconciled by the locked coordinator on next
    // read; never mutate the dashboard as if the save had succeeded.
@@ -3109,16 +3206,6 @@ Future<void> bulkSmsSheet({String? initialText})async {
   pasteTimer?.cancel();
   Future<void>.delayed(const Duration(milliseconds:500),(){
    pasted.dispose();description.dispose();amount.dispose();
-  });
- }
- Future<void> prepare(int i,StateSetter update)async {
-  final result=BankParser.parse(messages[i]);
-  update((){
-   reviewAttempted=false;index=i;income=result.income;
-   category=categories.any((c)=>c.income==income&&c.name==result.category)?result.category:
-    (forType(income).isNotEmpty?forType(income).first.name:'أخرى');
-   description.text='${result.title} — ${messages[i].replaceAll(RegExp(r'\s+'),' ').trim()}';
-   amount.text=result.amount==null?'':formatWaffraMoney(result.amount!);
   });
  }
  BuildContext? activeSmsContext;
