@@ -95,8 +95,9 @@ def main():
     ):
         require(marker in tests, "missing negative regression test: " + marker)
     require("M219 SHA-pinned" in workflow and
-            "m219_android_keystore_owner_scope_review.py" in workflow,
-            "exact-head CI scope hook not installed")
+            "m219_android_keystore_owner_scope_review.py" in workflow and
+            "M219 compile real native Keystore owner channel with Flutter" in workflow,
+            "exact-head native compilation and scope audit not installed")
     require("[29] M219" in release, "release notes not documented")
     require("production NO-GO" in guide and
             "physical Android" in guide and
