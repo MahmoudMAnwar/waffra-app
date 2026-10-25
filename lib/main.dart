@@ -2381,6 +2381,37 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    _lastLedgerSavedRaw=committed.ledgerRaw;
    _lastWidgetRevision=committed.widgetRevision;
   }
+  // Catalog v4 installs only new leaves, preserving user budgets and trash.
+  if(!verifiedEncryptedStartup&&
+     !(p.getBool('waffra_category_catalog_v4_installed')??false)){
+   final removedIds=<String>{},removedNames=<String>{};
+   for(final record in deletedCategories){
+    final data=record['category'];
+    if(data is Map){
+     removedIds.add('${data['id']}');
+     removedNames.add('${data['income']==true}|${data['name']}');
+    }
+   }
+   var changed=false;
+   for(final suggestion in defaultCategories()){
+    if(removedIds.contains(suggestion.id)||
+       removedNames.contains('${suggestion.income}|${suggestion.name}'))continue;
+    if(categories.any((c)=>c.id==suggestion.id||
+      (c.income==suggestion.income&&c.name==suggestion.name)))continue;
+    if(suggestion.isSubcategory&&!categories.any(
+       (c)=>c.id==suggestion.parentId&&!c.isSubcategory))continue;
+    categories.add(suggestion);changed=true;
+   }
+   final committed=await _financeAuthority.installCategoryCatalog(
+    version:4,
+    expectedCatalogRaw:_lastFinanceAuthorityRead?.finance.getString('waffra_categories_v24'),
+    nextCatalogRaw:jsonEncode(categories.map((e)=>e.toJson()).toList()),
+    catalogChanged:changed,
+   );
+   _lastFinanceAuthorityRead=committed;
+   _lastLedgerSavedRaw=committed.ledgerRaw;
+   _lastWidgetRevision=committed.widgetRevision;
+  }
   smsHashes.addAll(financeView.getStringList('waffra_sms_hashes_v1')??const []);
   monthlyBudget=financeView.getDouble('waffra_monthly_budget_v1')??0;
   monthlyBudgetEnabled=financeView.getBool('waffra_monthly_budget_enabled_v1')??(monthlyBudget>0);
