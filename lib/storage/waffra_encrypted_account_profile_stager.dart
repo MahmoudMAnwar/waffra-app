@@ -124,13 +124,28 @@ CREATE TABLE IF NOT EXISTS fresh_account_profile_staging(
  profile_key TEXT PRIMARY KEY NOT NULL,
  profile_value TEXT NOT NULL
 )''');
+        // A one-row marker is required even when the original account has
+        // ZERO profile keys. Without it, an empty stage could later accept
+        // a different account into the same financial candidate.
+        await store.customStatement('''
+CREATE TABLE IF NOT EXISTS fresh_account_profile_stage_marker(
+ singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+ captured_count INTEGER NOT NULL
+)''');
+        final markers = await store.customSelect(
+          'SELECT captured_count FROM fresh_account_profile_stage_marker '
+          'WHERE singleton = 1',
+        ).get();
         final existing = await store.customSelect(
           'SELECT profile_key,profile_value FROM fresh_account_profile_staging',
         ).get();
-        if (existing.isNotEmpty) {
-          // Idempotent re-stage only if *all* stored profile values match the
-          // source exactly. Never overwrite a different staged customer.
-          if (existing.length != frozen.length ||
+        if (markers.isNotEmpty) {
+          // Re-staging is idempotent only for EXACTLY the same snapshot,
+          // including a zero-row snapshot. A new identity must be staged
+          // in a fresh, independently verified encrypted candidate.
+          if (markers.length != 1 ||
+              markers.single.read<int>('captured_count') != frozen.length ||
+              existing.length != frozen.length ||
               existing.any((row) {
                 final key = row.read<String>('profile_key');
                 return !frozen.containsKey(key) ||
@@ -141,6 +156,11 @@ CREATE TABLE IF NOT EXISTS fresh_account_profile_staging(
             );
           }
         } else {
+          // Fail closed on a legacy/partial profile stage without a marker;
+          // never silently claim it belongs to the current account.
+          if (existing.isNotEmpty) {
+            throw StateError('Encrypted profile stage witness is missing.');
+          }
           for (final pair in frozen.entries) {
             await store.customStatement(
               'INSERT INTO fresh_account_profile_staging'
@@ -148,6 +168,11 @@ CREATE TABLE IF NOT EXISTS fresh_account_profile_staging(
               [pair.key, pair.value],
             );
           }
+          await store.customStatement(
+            'INSERT INTO fresh_account_profile_stage_marker'
+            '(singleton,captured_count) VALUES (1,?)',
+            [frozen.length],
+          );
         }
         final saved = await store.customSelect(
           'SELECT profile_key,profile_value FROM fresh_account_profile_staging',
