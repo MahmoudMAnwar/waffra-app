@@ -168,69 +168,57 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
   Widget _priceCard(BuildContext context, int karat, double width) {
     final fine = waffraGoldFineness[karat]!;
     final price = _quote == null ? '—' : usd(_quote!.gramUsd(karat));
-    return SizedBox(
-      width: width,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(10, 14, 10, 12),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: _gold.withValues(alpha: .28)),
-        ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Semantics(
-              label: t('Gold purity $karat karat', 'ذهب عيار $karat'),
-              child: SizedBox(
-                width: 44, height: 32,
-                child: Stack(alignment: Alignment.center, children: [
-                  _barIcon(width: 44, height: 32),
-                  Positioned(
-                    bottom: 7,
-                    child: Text('$karat',
-                      style: const TextStyle(color: _forest,
-                        fontSize: 11, fontWeight: FontWeight.w900)),
-                  ),
-                ]),
-              ),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(t('Karat $karat', 'عيار $karat'),
-                  maxLines: 1,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w800, fontSize: 13)),
-            ),
-          ]),
-          const SizedBox(height: 10),
-          FittedBox(
-            alignment: AlignmentDirectional.centerStart,
-            fit: BoxFit.scaleDown,
-            child: Text(price,
-                key: Key('waffra-gold-karat-$karat-price'),
-                textDirection: TextDirection.ltr,
-                style: TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 18,
-                  color: Theme.of(context).colorScheme.onSurface,
-                )),
-          ),
-          Text(t('USD / gram', 'دولار لكل جرام'),
-              style: TextStyle(
-                  fontSize: 10.5, color: Theme.of(context).hintColor)),
-          const SizedBox(height: 9),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-            decoration: BoxDecoration(
-                color: _cream, borderRadius: BorderRadius.circular(10)),
-            child: Text(
-                t('Purity ', 'نقاء ') +
-                    '${(fine * 100).toStringAsFixed(1)}%',
-                style: const TextStyle(fontSize: 10.5, color: _goldDark)),
-          ),
-        ]),
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return SizedBox(width: width, child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(21),
+        border: Border.all(color: _gold.withValues(alpha: .32)),
+        boxShadow: [BoxShadow(
+          color: _goldDark.withValues(alpha: dark ? .04 : .10),
+          blurRadius: 8, offset: const Offset(0, 3))],
       ),
-    );
+      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 7),
+          decoration: BoxDecoration(
+            color: dark ? const Color(0xFF503F17) : const Color(0xFFFFECC0),
+            borderRadius: BorderRadius.circular(30),
+          ),
+          child: Text(t('Karat $karat', 'عيار $karat'),
+            maxLines: 1, textAlign: TextAlign.center,
+            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12,
+              color: dark ? Colors.white : _forest)),
+        ),
+        const SizedBox(height: 9),
+        Semantics(
+          label: t('Gold purity $karat karat', 'ذهب عيار $karat'),
+          child: SizedBox(height: 56, width: 86,
+            child: Stack(alignment: Alignment.center, children: [
+              _barIcon(width: 80, height: 54),
+              Positioned(bottom: 15,
+                child: Text('${karat}K', style: const TextStyle(
+                  color: Color(0xFF875402), fontSize: 10,
+                  fontWeight: FontWeight.w900))),
+            ])),
+        ),
+        const SizedBox(height: 9),
+        FittedBox(fit: BoxFit.scaleDown,
+          child: Text(price,
+            key: Key('waffra-gold-karat-$karat-price'),
+            textDirection: TextDirection.ltr,
+            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18,
+              color: Theme.of(context).colorScheme.onSurface))),
+        const SizedBox(height: 2),
+        Text(t('USD / gram', 'دولار للجرام'),
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 10, color: Theme.of(context).hintColor)),
+        const SizedBox(height: 3),
+        Text('${(fine * 100).toStringAsFixed(1)}%',
+          style: const TextStyle(fontSize: 9, color: _goldDark)),
+      ]),
+    ));
   }
 
   Widget _bullionCard(BuildContext context, double grams, double width) {
@@ -459,11 +447,12 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
           Container(
-            width: 52, height: 50,
+            width: 75, height: 62,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: _forest, borderRadius: BorderRadius.circular(15)),
-            child: _barIcon(width: 39, height: 30),
+              color: light ? const Color(0xFFFFE5A5) : _forest,
+              borderRadius: BorderRadius.circular(18)),
+            child: _barIcon(width: 69, height: 54),
           ),
           const SizedBox(width: 10),
           Expanded(child: Column(
@@ -496,8 +485,9 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
             Icons.workspace_premium_outlined),
         const SizedBox(height: 10),
         LayoutBuilder(builder: (context, size) {
-          final width = (size.maxWidth - 9) / 2;
-          return Wrap(spacing: 9, runSpacing: 9, children: [
+          final columns = size.maxWidth >= 285 ? 3 : 2;
+          final width = (size.maxWidth - (columns - 1) * 8) / columns;
+          return Wrap(spacing: 8, runSpacing: 8, children: [
             for (final karat in waffraGoldFineness.keys)
               _priceCard(context, karat, width),
           ]);
@@ -540,47 +530,63 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
 }
 
 /// Small metallic gold bullion illustration, entirely local and lightweight.
+/// Three angled, shaded bars painted locally: no remote stock imagery or
+/// images fetched during scrolling. Stays crisp on low-end Android screens.
 class _GoldBarPainter extends CustomPainter {
   const _GoldBarPainter();
 
+  void _drawBar(Canvas canvas, Rect r) {
+    final w = r.width, h = r.height;
+    final body = Path()
+      ..moveTo(r.left + w * .06, r.top + h * .37)
+      ..lineTo(r.left + w * .24, r.top + h * .05)
+      ..lineTo(r.left + w * .76, r.top + h * .05)
+      ..lineTo(r.left + w * .94, r.top + h * .37)
+      ..lineTo(r.left + w, r.top + h * .86)
+      ..lineTo(r.left, r.top + h * .86)
+      ..close();
+    final outline = Paint()
+      ..color = const Color(0xFF98600A)
+      ..strokeWidth = .8
+      ..style = PaintingStyle.stroke;
+    canvas.drawPath(body, Paint()..shader = const LinearGradient(
+      begin: Alignment.topLeft, end: Alignment.bottomRight,
+      colors: [Color(0xFFFFEDAF),Color(0xFFFFD34D),
+        Color(0xFFC17C08),Color(0xFFF6B62B)],
+      stops: [0, .4, .75, 1],
+    ).createShader(r));
+    final top = Path()
+      ..moveTo(r.left + w * .24, r.top + h * .05)
+      ..lineTo(r.left + w * .76, r.top + h * .05)
+      ..lineTo(r.left + w * .94, r.top + h * .37)
+      ..lineTo(r.left + w * .06, r.top + h * .37)
+      ..close();
+    canvas.drawPath(top, Paint()..shader = const LinearGradient(
+      colors: [Color(0xFFFFF5C8), Color(0xFFF7CA45),
+        Color(0xFFE5A317)],
+    ).createShader(r));
+    final right = Path()
+      ..moveTo(r.left + w * .94, r.top + h * .37)
+      ..lineTo(r.left + w, r.top + h * .86)
+      ..lineTo(r.left + w * .87, r.top + h * .86)
+      ..lineTo(r.left + w * .75, r.top + h * .37)
+      ..close();
+    canvas.drawPath(right, Paint()..color = const Color(0xFFBA7607));
+    canvas.drawPath(body, outline);
+    canvas.drawPath(top, outline);
+    canvas.drawLine(Offset(r.left + w * .26,r.top + h * .13),
+      Offset(r.left + w * .61,r.top + h * .13),
+      Paint()..color = const Color(0xFFFFF9E6)..strokeWidth = 1.1);
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
-    final outline = Paint()
-      ..color = const Color(0xFF8C5E0A)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    final body = Path()
-      ..moveTo(size.width * .10, size.height * .46)
-      ..lineTo(size.width * .28, size.height * .16)
-      ..lineTo(size.width * .82, size.height * .16)
-      ..lineTo(size.width * .97, size.height * .46)
-      ..lineTo(size.width * .90, size.height * .87)
-      ..lineTo(size.width * .14, size.height * .87)
-      ..close();
-    final fill = Paint()
-      ..shader = const LinearGradient(colors: [
-        Color(0xFFB8790A), Color(0xFFFFE59A),
-        Color(0xFFFFC447), Color(0xFFB8790A),
-      ]).createShader(Offset.zero & size);
-    canvas.drawPath(body, fill);
-    canvas.drawPath(body, outline);
-    final top = Path()
-      ..moveTo(size.width * .28, size.height * .16)
-      ..lineTo(size.width * .82, size.height * .16)
-      ..lineTo(size.width * .89, size.height * .45)
-      ..lineTo(size.width * .21, size.height * .45)
-      ..close();
-    canvas.drawPath(top, Paint()
-      ..shader = const LinearGradient(
-        colors: [Color(0xFFFFE69C), Color(0xFFD9A01E)],
-      ).createShader(Offset.zero & size));
-    canvas.drawPath(top, outline);
-    final shine = Paint()
-      ..color = const Color(0xFFFFF4C7).withValues(alpha: .9)
-      ..strokeWidth = 1.2;
-    canvas.drawLine(
-      Offset(size.width * .33, size.height * .23),
-      Offset(size.width * .72, size.height * .23), shine);
+    final w = size.width, h = size.height;
+    canvas.drawOval(Rect.fromLTWH(w * .10,h * .87,w * .80,h * .11),
+      Paint()..color = const Color(0xFF9D6718).withValues(alpha: .22));
+    _drawBar(canvas, Rect.fromLTWH(w * .02,h * .32,w * .48,h * .59));
+    _drawBar(canvas, Rect.fromLTWH(w * .47,h * .30,w * .50,h * .59));
+    _drawBar(canvas, Rect.fromLTWH(w * .22,h * .03,w * .60,h * .75));
   }
 
   @override
