@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:waffra/main.dart';
+import 'package:waffra/waffra_display_currency.dart';
 
 void main(){
  setUp((){
@@ -21,13 +22,28 @@ void main(){
   expect(source,contains('android:targetCellWidth="1"'));
   expect(source,contains('android:targetCellHeight="1"'));
   final dart=File('lib/main.dart').readAsStringSync();
-  expect(dart,contains("currency:waffraIsEnglish?'SAR':'ريال'"));
+  expect(dart,contains('currency:WaffraDisplayCurrency.label(waffraIsEnglish)'));
   expect(dart,contains('WaffraAuthoritativeWidgetBalance.netHalalas(raw)'));
   final widget=File('lib/waffra_widget_capture.part.dart').readAsStringSync();
   expect(widget,contains(
    'WaffraAuthoritativeWidgetBalance.netHalalas(verified.ledgerRaw!)'));
+  expect(widget,contains('await WaffraDisplayCurrency.initialize();'));
+  expect(widget,contains('final conceal=hidden||display==null;'));
+  expect(widget,contains('currency:WaffraDisplayCurrency.label(_english)'));
+  expect(widget,contains("balance:conceal?'***':WaffraDisplayCurrency.amount(net/100)"));
+  expect(widget,isNot(contains("currency:_english?'SAR':'ريال'")));
   final native=File('native/WaffraWidget.kt').readAsStringSync();
   expect(native,contains('WaffraQuickActivity::class.java'));
+ });
+
+ test('widget FX must convert SAR or conceal, never relabel raw SAR',(){
+  final verified=WaffraVerifiedDisplayQuote(
+   code:'EGP',sarToSelected:12.5,
+   updatedAtUtc:DateTime.utc(2026,10,25),provider:'test-only');
+  expect(verified.fromSar(100),1250);
+  const unavailable=WaffraVerifiedDisplayQuote(
+   code:'EGP',sarToSelected:null,updatedAtUtc:null,provider:'unavailable');
+  expect(unavailable.fromSar(100),isNull);
  });
 
  testWidgets('Bank SMS is analyzed as soon as user pastes without an Analyze button',(tester)async{
