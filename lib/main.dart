@@ -220,14 +220,15 @@ class Person {
  factory Person.fromJson(Map<String,dynamic> j)=>Person(name:'${j['name']??''}',email:'${j['email']??''}',provider:'${j['provider']??'محلي'}',gender:['ذكر','أنثى'].contains(j['gender'])?'${j['gender']}':'',avatar:'${j['avatar']??'person'}',phone:'${j['phone']??(j['provider']=='Phone'?j['email']??'':'')}',birthday:DateTime.tryParse('${j['birthday']}')??DateTime(2000));
 }
 class BudgetCategory {
- final String id,name,icon,parentId;
+ final String id,name,icon,parentId,origin;
  final int color;final bool income;final double budget;final int alertPercent;
- BudgetCategory({required this.id,required this.name,required this.icon,required this.color,required this.income,this.parentId='',this.budget=0,this.alertPercent=80});
+ BudgetCategory({required this.id,required this.name,required this.icon,required this.color,required this.income,this.parentId='',this.budget=0,this.alertPercent=80,this.origin='system'});
+ bool get isUserAdded=>origin=='user';
  bool get isSubcategory=>parentId.isNotEmpty;
  String get displayName=>isSubcategory?name.split(' / ').last:name;
- BudgetCategory copy({String? name,String? icon,int? color,double? budget,int? alertPercent,String? parentId})=>BudgetCategory(id:id,name:name??this.name,icon:icon??this.icon,color:color??this.color,income:income,parentId:parentId??this.parentId,budget:budget??this.budget,alertPercent:alertPercent??this.alertPercent);
- Map<String,dynamic> toJson()=>{'id':id,'name':name,'icon':icon,'color':color,'income':income,'parentId':parentId,'budget':budget,'alertPercent':alertPercent};
- factory BudgetCategory.fromJson(Map<String,dynamic> j)=>BudgetCategory(id:'${j['id']??newId()}',name:'${j['name']??'أخرى'}',icon:'${j['icon']??'category'}',color:(j['color'] as num?)?.toInt()??0xFF087A54,income:j['income']==true,parentId:'${j['parentId']??''}',budget:(j['budget'] as num?)?.toDouble()??0,alertPercent:(j['alertPercent'] as num?)?.toInt()??80);
+ BudgetCategory copy({String? name,String? icon,int? color,double? budget,int? alertPercent,String? parentId})=>BudgetCategory(id:id,name:name??this.name,icon:icon??this.icon,color:color??this.color,income:income,parentId:parentId??this.parentId,budget:budget??this.budget,alertPercent:alertPercent??this.alertPercent,origin:origin);
+ Map<String,dynamic> toJson()=>{'id':id,'name':name,'icon':icon,'color':color,'income':income,'parentId':parentId,'budget':budget,'alertPercent':alertPercent,'origin':origin};
+ factory BudgetCategory.fromJson(Map<String,dynamic> j)=>BudgetCategory(id:'${j['id']??newId()}',name:'${j['name']??'أخرى'}',icon:'${j['icon']??'category'}',color:(j['color'] as num?)?.toInt()??0xFF087A54,income:j['income']==true,parentId:'${j['parentId']??''}',budget:(j['budget'] as num?)?.toDouble()??0,alertPercent:(j['alertPercent'] as num?)?.toInt()??80,origin:j['origin']=='user'?'user':j['origin']=='detected'?'detected':'system');
 }
 /// Manual transactions must target an active child category, never a heading.
 List<BudgetCategory> waffraManualCategoryParents(
@@ -2368,6 +2369,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  String search='',typeFilter='الكل',categoryFilter='الكل',period='شهري';
  String categorySearch='',categoryDisplay='all',categoryTypeFilter='all',goalDisplay='all',recurringDisplay='all';
+ bool categoryMineOnly=false;
   String? forecastCategory;
   int forecastReduction=20;
  bool recurringRemindersEnabled=false;
@@ -5974,7 +5976,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        categories.where((c)=>c.id!=initial?.id&&c.income==(initial?.income??income)).map((c)=>c.name))!=null ||
        WaffraValidators.positiveAmount(budget.text,required:false)!=null)return;
       Navigator.pop(ctx,BudgetCategory(id:initial?.id??newId(),name:fullName(),icon:icon,color:color,
-       income:initial?.income??income,parentId:effectiveParentId,budget:budget.text.trim().isEmpty?0:(amountOf(budget.text)??0),alertPercent:alertPercent));
+       income:initial?.income??income,parentId:effectiveParentId,budget:budget.text.trim().isEmpty?0:(amountOf(budget.text)??0),alertPercent:alertPercent,origin:initial?.origin??'user'));
      },child:const WaffraText('حفظ')),
     ])));
   disposeLater([name,budget]);return result;
@@ -6917,12 +6919,15 @@ Future<void> bulkSmsSheet({String? initialText})async {
     ]),
     const SizedBox(height:14),
    ],
-   SizedBox(width:double.infinity,child:WaffraDeletedItemsButton(
-    onPressed:deletedGoalsDialog,
-    label:waffraIsEnglish?'Deleted savings goals (${deletedGoals.length})'
-     :'الأهداف المحذوفة (${deletedGoals.length})')),
-   const SizedBox(height:14),
-   WaffraOutlinedItemsCount(label:waffraIsEnglish?'Current savings goals':'عدد الأهداف الحالية',count:goals.length),
+   Row(children:[
+    Expanded(child:WaffraOutlinedItemsCount(
+     label:waffraIsEnglish?'Current goals':'عدد الأهداف الحالية',count:goals.length)),
+    const SizedBox(width:9),
+    Expanded(child:WaffraDeletedItemsButton(
+     onPressed:deletedGoalsDialog,
+     label:waffraIsEnglish?'Deleted goals (${deletedGoals.length})'
+      :'الأهداف المحذوفة (${deletedGoals.length})')),
+   ]),
    const SizedBox(height:12),
 
    // Savings additions use the same physical-left circular +.
@@ -7024,8 +7029,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
    const SizedBox(height:30),
   ]);
  }
- Future<void> recurringDialog()async {
-  final title=TextEditingController(),amount=TextEditingController(),day=TextEditingController(text:'1');
+ Future<void> recurringDialog({String? suggestedTitle,double? suggestedAmount})async {
+  final title=TextEditingController(text:suggestedTitle??''),
+   amount=TextEditingController(text:suggestedAmount==null?'':formatWaffraMoney(suggestedAmount)),
+   day=TextEditingController(text:'1');
   bool income=false;String category=forType(false).first.name;bool attempted=false;
   DateTime startAt=DateTime.now();
   final r=await showWaffraDialog<RecurringBill>(context:context,
@@ -7161,66 +7168,48 @@ Future<void> bulkSmsSheet({String? initialText})async {
     icon:Icons.event_repeat_rounded,titleKey:_tourKeys[4]),
    const SizedBox(height:9),
    Row(children:[
-    Expanded(child:WaffraText(waffraIsEnglish?'Recurring transactions':'العمليات المتكررة',
-     style:const TextStyle(fontSize:15,fontWeight:FontWeight.bold))),
-    Container(key:const Key('waffra-recurring-count-badge'),
-     padding:const EdgeInsets.symmetric(horizontal:12,vertical:5),
-     decoration:BoxDecoration(
-      color:Theme.of(context).brightness==Brightness.dark?
-       const Color(0xFF194A3A):const Color(0xFFE0EFE8),
-      borderRadius:BorderRadius.circular(20)),
-     child:WaffraText('${recurring.length}',
-      style:const TextStyle(fontWeight:FontWeight.bold,color:emerald))),
-   ]),
-   const SizedBox(height:9),
-   Row(children:[
     Expanded(child:OutlinedButton.icon(
      onPressed:showWaffraFinancialCalendar,
      style:OutlinedButton.styleFrom(minimumSize:const Size(0,48),
-      padding:const EdgeInsets.symmetric(horizontal:5,vertical:8),
+      padding:const EdgeInsets.symmetric(horizontal:5,vertical:7),
       side:BorderSide(color:Theme.of(context).colorScheme.primary,width:1.2),
-      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(14))),
+      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15))),
      icon:const Icon(Icons.calendar_month,size:18),
      label:WaffraText(waffraIsEnglish?'Financial calendar':'التقويم المالي',
       maxLines:2,textAlign:TextAlign.center,
       style:const TextStyle(fontSize:11.5,fontWeight:FontWeight.bold)))),
-    const SizedBox(width:8),
-    Expanded(child:OutlinedButton.icon(
+    const SizedBox(width:9),
+    Expanded(child:WaffraDeletedItemsButton(
      onPressed:deletedRecurringDialog,
-     style:OutlinedButton.styleFrom(minimumSize:const Size(0,48),
-      padding:const EdgeInsets.symmetric(horizontal:5,vertical:8),
-      foregroundColor:Theme.of(context).brightness==Brightness.dark?
-       const Color(0xFFFF9090):const Color(0xFFB42332),
-      backgroundColor:Theme.of(context).brightness==Brightness.dark?
-       const Color(0xFF3C242A):const Color(0xFFFFF4F4),
-      side:const BorderSide(color:Color(0xFFB42332),width:1.2),
-      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(14))),
-     icon:const Icon(Icons.delete_outline,size:18),
-     label:WaffraText(waffraIsEnglish?
-      'Deleted (${deletedRecurring.length})':'المحذوفة (${deletedRecurring.length})',
-      maxLines:2,textAlign:TextAlign.center,
-      style:const TextStyle(fontSize:11.5,fontWeight:FontWeight.bold)))),
+     label:waffraIsEnglish?'Deleted recurring (${deletedRecurring.length})':
+      'المتكررة المحذوفة (${deletedRecurring.length})')),
+   ]),
+   const SizedBox(height:10),
+   Row(children:[
+    Expanded(child:WaffraOutlinedItemsCount(
+     key:const Key('waffra-recurring-count-badge'),
+     label:waffraIsEnglish?'Recurring count':'عدد العمليات المتكررة',
+     count:recurring.length)),
+    const SizedBox(width:9),
+    Expanded(child:Container(
+     padding:const EdgeInsets.symmetric(horizontal:7,vertical:7),
+     decoration:BoxDecoration(
+      color:Theme.of(context).cardColor,
+      border:Border.all(color:Theme.of(context).dividerColor.withValues(alpha:.5)),
+      borderRadius:BorderRadius.circular(16)),
+     child:Row(children:[
+      Expanded(child:Column(mainAxisSize:MainAxisSize.min,
+       crossAxisAlignment:CrossAxisAlignment.start,children:[
+       WaffraText(waffraIsEnglish?'Reminders':'التذكير',
+        maxLines:1,style:const TextStyle(fontSize:12,fontWeight:FontWeight.bold)),
+       WaffraText(waffraIsEnglish?'1 day before • 9 AM':'قبل الموعد بيوم',
+        maxLines:2,style:const TextStyle(fontSize:10)),
+      ])),
+      Transform.scale(scale:.82,child:Switch.adaptive(value:recurringRemindersEnabled,
+       onChanged:toggleRecurringReminders)),
+     ]))),
    ]),
    const SizedBox(height:9),
-   Container(
-    padding:const EdgeInsets.symmetric(horizontal:12,vertical:6),
-    decoration:BoxDecoration(color:Theme.of(context).cardColor,
-     border:Border.all(color:Theme.of(context).dividerColor.withValues(alpha:.5)),
-     borderRadius:BorderRadius.circular(16)),
-    child:Row(children:[
-     const Icon(Icons.notifications_active_outlined,color:emerald,size:22),
-     const SizedBox(width:9),
-     Expanded(child:Column(mainAxisSize:MainAxisSize.min,
-      crossAxisAlignment:CrossAxisAlignment.start,children:[
-      WaffraText(waffraIsEnglish?'Remind me before due dates':'تذكير قبل الاستحقاق',
-       style:const TextStyle(fontSize:13,fontWeight:FontWeight.bold)),
-      WaffraText(waffraIsEnglish?'One day before • 9 AM Riyadh time':
-       'قبل الموعد بيوم • ٩ صباحًا بتوقيت الرياض',
-       maxLines:2,style:const TextStyle(fontSize:11.5)),
-     ])),
-     Switch.adaptive(value:recurringRemindersEnabled,
-      onChanged:toggleRecurringReminders),
-    ])),
    if(nextBill!=null)...[
     const SizedBox(height:9),
     Card(child:ListTile(
@@ -8101,7 +8090,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
  void openFinancialCalendar()=>Navigator.push<void>(context,MaterialPageRoute(
   builder:(_)=>WaffraFinancialCalendar(items:financialCalendarItems,english:waffraIsEnglish)));
  void openSubscriptionInsights()=>Navigator.push<void>(context,MaterialPageRoute(
-  builder:(_)=>WaffraSubscriptionScreen(items:financialCalendarItems,english:waffraIsEnglish)));
+  builder:(_)=>WaffraSubscriptionScreen(
+   items:financialCalendarItems,english:waffraIsEnglish,
+   onAddRecurring:(candidate)=>recurringDialog(
+    suggestedTitle:candidate.title,suggestedAmount:candidate.estimatedMonthly))));
  Widget profilePage(){
   final p=widget.profile;
   final provider=p.provider.toLowerCase().trim();
@@ -8420,6 +8412,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       customBorder:const CircleBorder(),
       onTap:()async{
      if(!_acceptFabTap())return;
+     HapticFeedback.lightImpact(); // Only accepted circular + tap triggers haptic feedback.
      final tappedTab=tab;
      setState(()=>_fabPressed=true);
      // Give the press a short, visible response before presenting any menu.
@@ -8495,7 +8488,7 @@ class WaffraDeletedItemsButton extends StatelessWidget {
    style:OutlinedButton.styleFrom(
     foregroundColor:red,backgroundColor:dark?const Color(0xFF3C242A):const Color(0xFFFFF4F4),
     side:BorderSide(color:red,width:1.4),
-    minimumSize:const Size(0,60),
+    minimumSize:const Size(0,48),
     padding:const EdgeInsets.symmetric(horizontal:7,vertical:9),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15))),
    child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[

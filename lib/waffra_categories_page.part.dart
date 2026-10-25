@@ -31,6 +31,8 @@ extension WaffraCategoryScreen on _HomeScreenState {
     .fold<double>(0,(total,e)=>total+e.amount);
   }
   final shown=roots.where((root){
+   if(categoryMineOnly&&!root.isUserAdded&&
+     !children(root).any((sub)=>sub.isUserAdded))return false;
    if(categoryTypeFilter=='income'&&!root.income)return false;
    if(categoryTypeFilter=='expense'&&root.income)return false;
    final subs=children(root);
@@ -40,12 +42,14 @@ extension WaffraCategoryScreen on _HomeScreenState {
    final query=categorySearch.trim().toLowerCase();
    return query.isEmpty||root.name.toLowerCase().contains(query)||
     waffraTr(root.name).toLowerCase().contains(query)||
-    subs.any((c)=>c.displayName.toLowerCase().contains(query)||
-     waffraTr(c.displayName).toLowerCase().contains(query));
+    subs.any((c)=>(!categoryMineOnly||c.isUserAdded)&&
+     (c.displayName.toLowerCase().contains(query)||
+      waffraTr(c.displayName).toLowerCase().contains(query)));
   }).toList();
 
   Widget rootCard(BudgetCategory root){
    final color=Color(root.color);
+   final visibleChildren=children(root).where((c)=>!categoryMineOnly||c.isUserAdded).toList();
    final opened=expandedCategoryIds.contains(root.id);
    final amount=monthlyFor(root);
    return Card(margin:EdgeInsets.zero,elevation:0,clipBehavior:Clip.antiAlias,
@@ -77,7 +81,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
       const SizedBox(height:5),
       WaffraText(root.name,maxLines:2,style:const TextStyle(fontSize:15,fontWeight:FontWeight.w700)),
       const SizedBox(height:5),
-      WaffraText(waffraIsEnglish?'${children(root).length} subcategories':'${children(root).length} قسم فرعي',
+      WaffraText(waffraIsEnglish?'${visibleChildren.length} subcategories':'${visibleChildren.length} قسم فرعي',
        style:TextStyle(fontSize:11,color:Theme.of(context).hintColor)),
       const SizedBox(height:5),
       WaffraText(root.income?
@@ -139,7 +143,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
     ])));
    for(final root in [left,if(right!=null)right]){
     if(!expandedCategoryIds.contains(root.id))continue;
-    final items=children(root);
+    final items=children(root).where((c)=>!categoryMineOnly||c.isUserAdded).toList();
     groupRows.add(Container(
      margin:const EdgeInsets.only(bottom:14),
      padding:const EdgeInsets.all(12),
@@ -187,10 +191,6 @@ extension WaffraCategoryScreen on _HomeScreenState {
     subtitle:waffraIsEnglish?'All income and expense types with subcategories':
      'كل أنواع الدخل والمصروفات في أقسام رئيسية وفرعية منظمة.',
     icon:Icons.category_outlined,titleKey:_tourKeys[2]),
-   SizedBox(width:double.infinity,child:WaffraDeletedItemsButton(
-    onPressed:showCategoryTrash,
-    label:waffraIsEnglish?'Deleted categories (${deletedCategories.length})':'الأقسام المحذوفة (${deletedCategories.length})')),
-   const SizedBox(height:14),
    Row(children:[
     Expanded(child:_compactCategoryStat(waffraIsEnglish?'Main categories':'الأقسام الرئيسية',
      roots.length.toString(),Icons.layers,emerald)),
@@ -198,6 +198,13 @@ extension WaffraCategoryScreen on _HomeScreenState {
     Expanded(child:_compactCategoryStat(waffraIsEnglish?'Subcategories':'الأقسام الفرعية',
      categories.where((c)=>c.isSubcategory).length.toString(),Icons.account_tree,Colors.deepPurple)),
    ]),
+   const SizedBox(height:10),
+   Align(alignment:AlignmentDirectional.centerStart,
+    child:ConstrainedBox(constraints:const BoxConstraints(maxWidth:250),
+     child:WaffraDeletedItemsButton(
+      onPressed:showCategoryTrash,
+      label:waffraIsEnglish?'Deleted categories (${deletedCategories.length})':
+       'الأقسام المحذوفة (${deletedCategories.length})'))),
    const SizedBox(height:10),
    _summaryBox(waffraIsEnglish?'Monthly expenses':'المصروف الشهري',
     cash(expenseTotal),Icons.trending_down,Colors.deepOrange),
@@ -213,6 +220,10 @@ extension WaffraCategoryScreen on _HomeScreenState {
     _filterChip(waffraIsEnglish?'Budgeted':'بميزانية',categoryDisplay=='budget',()=>setState(()=>categoryDisplay='budget')),
     _filterChip(waffraIsEnglish?'No budget':'بدون ميزانية',categoryDisplay=='none',()=>setState(()=>categoryDisplay='none')),
    ]),
+   const SizedBox(height:8),
+   Align(alignment:AlignmentDirectional.centerStart,
+    child:_filterChip(waffraIsEnglish?'Added by me':'مضاف بواسطتي',
+     categoryMineOnly,()=>setState(()=>categoryMineOnly=!categoryMineOnly))),
    const SizedBox(height:12),
    TextField(onChanged:(text)=>setState(()=>categorySearch=text),
     decoration:InputDecoration(prefixIcon:const Icon(Icons.search),
