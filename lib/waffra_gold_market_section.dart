@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'waffra_gold_market_data.dart';
+import 'waffra_display_currency.dart';
 
 /// Read-only global spot price utility under currency conversion.
 /// Never touches the user's financial records or SQLCipher source.
@@ -32,9 +33,12 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
   int _karat = 21;
   DateTime? _lastSuccessfulRequest;
   bool _showingCachedQuote = false;
+  double? _sarPerUsd;
 
   String t(String en, String ar) => widget.english ? en : ar;
   String usd(double amount) => '\$\u00a0${amount.toStringAsFixed(2)}';
+  String sar(double amount) =>
+      '${amount.toStringAsFixed(2)} ${widget.english ? 'SAR' : 'ر.س'}';
 
   @override
   void initState() {
@@ -106,6 +110,9 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
         });
         // Save only previously validated public market data, never a user's
         // finance, account, SMS, or a fabricated fallback value.
+        // Only the GOLD marketplace performs genuine USD/SAR conversion.
+        // App-wide country labels are deliberately fixed-number presentation.
+        if (widget.loadSpot == null) unawaited(_refreshSarRate());
         if (widget.loadSpot == null &&
             (result.source == 'Gold-API' || result.source == 'XAUS')) {
           try {
@@ -129,6 +136,25 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
       }
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _refreshSarRate() async {
+    try {
+      final quote = await WaffraDisplayCurrency.fetch('USD');
+      final sarToUsd = quote.sarToSelected;
+      if (!quote.verified || sarToUsd == null ||
+          !sarToUsd.isFinite || sarToUsd <= 0) {
+        throw const FormatException('Missing independently verified USD/SAR FX');
+      }
+      final usdToSar = 1 / sarToUsd;
+      if (!usdToSar.isFinite || usdToSar <= 0 || usdToSar > 10000) {
+        throw const FormatException('Invalid independent USD/SAR quote');
+      }
+      if (mounted) setState(() => _sarPerUsd = usdToSar);
+    } catch (_) {
+      if (mounted) setState(() => _sarPerUsd = null);
+      // Gold USD quotes remain usable without FX; no invented SAR amounts.
     }
   }
 
@@ -214,6 +240,12 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
         Text(t('USD / gram', 'دولار للجرام'),
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 10, color: Theme.of(context).hintColor)),
+        if (_quote != null && _sarPerUsd != null)
+          FittedBox(fit: BoxFit.scaleDown, child: Text(
+            '≈ ${sar(_quote!.gramUsd(karat) * _sarPerUsd!)}',
+            textDirection: TextDirection.ltr,
+            style: TextStyle(fontSize: 10,
+              color: Theme.of(context).colorScheme.onSurface))),
         const SizedBox(height: 3),
         Text('${(fine * 100).toStringAsFixed(1)}%',
           style: const TextStyle(fontSize: 9, color: _goldDark)),
@@ -293,6 +325,12 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
                         fontWeight: FontWeight.w900,
                         color: textColor)),
               ),
+              if (quote != null && _sarPerUsd != null)
+                FittedBox(fit: BoxFit.scaleDown,
+                  child: Text('≈ ${sar(quote.usdPerTroyOunce * _sarPerUsd!)}',
+                    textDirection: TextDirection.ltr,
+                    style: TextStyle(fontSize: 10.5,
+                      color: Theme.of(context).hintColor))),
             ]),
           ),
           const SizedBox(width: 9),
@@ -314,6 +352,12 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
                         fontWeight: FontWeight.w900,
                         color: textColor)),
               ),
+              if (quote != null && _sarPerUsd != null)
+                FittedBox(fit: BoxFit.scaleDown,
+                  child: Text('≈ ${sar(quote.pureGramUsd * _sarPerUsd!)}',
+                    textDirection: TextDirection.ltr,
+                    style: TextStyle(fontSize: 10.5,
+                      color: Theme.of(context).hintColor))),
             ]),
           ),
         ]),
