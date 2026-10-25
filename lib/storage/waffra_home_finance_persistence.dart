@@ -194,7 +194,7 @@ class WaffraHomeFinancePersistence {
     required String nextCatalogRaw,
     required bool catalogChanged,
   }) async {
-    if (version != 2 && version != 3) {
+    if (version != 2 && version != 3 && version != 4) {
       throw ArgumentError('Unsupported category catalog version.');
     }
     final preflight = WaffraLegacyPreflight.inspect(

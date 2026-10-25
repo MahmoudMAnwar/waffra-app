@@ -35,8 +35,12 @@ class WaffraM155CategoryPlan {
   final merchant=waffraMerchantName(rawSms,income:income);
   final key=merchant==null?'':waffraNormalizeMerchantName(merchant);
   final active=existing.where((c)=>c.income==income).toList();
-  final known=merchant==null?null:waffraRecognizedMerchantLeaf(
-   merchant,income:income);
+  // Catalog identities stay Arabic regardless of the UI or SMS language.
+  // The learned override is strongest, followed by the transaction's
+  // confirmed financial type and the Saudi merchant intelligence rules.
+  // Missing/deleted leaves are NEVER silently resurrected.
+  final known=waffraRecognizedSmsLeaf(rawSms,
+   income:income,merchant:merchant);
   for(final candidate in [if(key.isNotEmpty)learned[key],known]){
    if(candidate==null)continue;
    for(final child in active.where((c)=>c.isLeaf&&c.name==candidate)){
