@@ -12,7 +12,9 @@ production activation is NOT approved.
   Home and Android Widget call this shared confirmed-SMS writer.
 - `saveLegacy` checks the **current locked ledger** before writing. New or
   modified notes for SMS-sourced entries are rejected, including attempts to
-  relabel an existing SMS entry as manual. Already stored notes are preserved
+  relabel an existing SMS entry as manual, **even if the notes are unchanged**.
+  This prevents a two-save bypass (first relabel SMS to manual, then append raw
+  bank text as a manual note). Already stored notes are preserved
   byte-for-byte on unrelated updates; no destructive cleanup or migration.
 - Normalized transaction titles, amounts, dates and deduplication hashes may
   still be saved without original SMS notes. Manual user-written notes remain
