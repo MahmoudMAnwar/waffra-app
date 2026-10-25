@@ -247,16 +247,23 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
     final options=await SharedPreferences.getInstance();
     await options.reload();
     final hidden=options.getBool('waffra_hide_amounts')??false;
+    // The quick-capture route is a separate Flutter engine. Reload the
+    // selected denomination after the verified finance source is loaded.
+    // Never display an unconverted SAR number with an EGP/USD label.
+    await WaffraDisplayCurrency.initialize();
+    final display=WaffraDisplayCurrency.convert(net/100);
+    final conceal=hidden||display==null;
     await refreshWaffraHomeWidget(
-     balance:hidden?'***':formatWaffraMoney(net/100),
-     negative:net<0,hidden:hidden,currency:_english?'SAR':'ريال');
+     balance:conceal?'***':WaffraDisplayCurrency.amount(net/100),
+     negative:net<0,hidden:conceal,
+     currency:WaffraDisplayCurrency.label(_english));
    }catch(e){
     // The confirmed transaction has ALREADY committed. Do not misreport it
     // as failed or offer the user a duplicate Save; conceal widget instead.
     debugPrint('Widget balance source could not be verified: $e');
     await refreshWaffraHomeWidget(
      balance:'***',negative:false,hidden:true,
-     currency:_english?'SAR':'ريال');
+     currency:WaffraDisplayCurrency.label(_english));
    }
 
    final ignored=outcome.skipped;
