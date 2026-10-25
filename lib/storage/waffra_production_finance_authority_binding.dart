@@ -111,6 +111,16 @@ class WaffraProductionFinanceAuthorityBinding {
       final journal = WaffraEncryptedCutoverJournal(
         store: store, snapshot: snapshot, experimentalEnabled: true,
       );
+      // A set of green booleans cannot certify a different user's vault.
+      // Compare the approved LEGACY source checksum with the independently
+      // persisted, immutable cutover checkpoint before binding either engine.
+      // Neither a synthetic report nor a stale migration can grant access.
+      final checkpoint = await journal.read();
+      if (checkpoint == null ||
+          checkpoint.phase != WaffraCutoverPhase.active ||
+          checkpoint.sourceDigest != evidence.storage.sourceDigest) {
+        throw StateError('Encrypted source certification digest mismatches.');
+      }
       final bridge = WaffraVerifiedEncryptedFinanceBridge(
         snapshot: snapshot,
         cutoverJournal: journal,
