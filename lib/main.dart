@@ -1883,31 +1883,45 @@ void _waffraShowFooterNotice(WaffraNoticeData notice){
 /// This sits INSIDE bottomNavigationBar, directly above the navigation.
 /// The financial list is laid out above it instead of being obscured.
 class WaffraFooterNoticeHost extends StatefulWidget {
- const WaffraFooterNoticeHost({super.key,this.onNoticePresented});
+ const WaffraFooterNoticeHost({super.key,this.onNoticePresented,
+  this.listenable,this.onDismiss});
  final VoidCallback? onNoticePresented;
+ final ValueListenable<WaffraNoticeData?>? listenable;
+ final VoidCallback? onDismiss;
  @override State<WaffraFooterNoticeHost> createState()=>
   _WaffraFooterNoticeHostState();
 }
 class _WaffraFooterNoticeHostState extends State<WaffraFooterNoticeHost> {
+ late ValueListenable<WaffraNoticeData?> _source;
  @override void initState(){
   super.initState();
+  _source=widget.listenable??_waffraFooterNotice;
   _waffraFooterHostCount++;
-  _waffraFooterNotice.addListener(_onChanged);
+  _source.addListener(_onChanged);
  }
  void _onChanged(){
-  if(mounted&&_waffraFooterNotice.value!=null){
+  if(mounted&&_source.value!=null){
    widget.onNoticePresented?.call();
   }
  }
+ @override void didUpdateWidget(covariant WaffraFooterNoticeHost oldWidget){
+  super.didUpdateWidget(oldWidget);
+  final next=widget.listenable??_waffraFooterNotice;
+  if(!identical(_source,next)){
+   _source.removeListener(_onChanged);
+   _source=next;
+   _source.addListener(_onChanged);
+  }
+ }
  @override void dispose(){
-  _waffraFooterNotice.removeListener(_onChanged);
+  _source.removeListener(_onChanged);
   _waffraFooterHostCount--;
   if(_waffraFooterHostCount==0)waffraDismissFooterNotice();
   super.dispose();
  }
  @override Widget build(BuildContext context)=>
   ValueListenableBuilder<WaffraNoticeData?>(
-   valueListenable:_waffraFooterNotice,
+   valueListenable:_source,
    builder:(ctx,notice,_)=>AnimatedSize(
     duration:waffraMotion(170),
     curve:Curves.easeOutCubic,
@@ -1929,7 +1943,7 @@ class _WaffraFooterNoticeHostState extends State<WaffraFooterNoticeHost> {
          child:Padding(
           padding:const EdgeInsets.symmetric(horizontal:9,vertical:5),
           child:WaffraNoticeContent(
-           notice:notice,onDismiss:waffraDismissFooterNotice)),
+           notice:notice,onDismiss:widget.onDismiss??waffraDismissFooterNotice)),
         );
        }),
       )),
