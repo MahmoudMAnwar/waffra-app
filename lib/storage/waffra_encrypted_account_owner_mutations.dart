@@ -96,17 +96,21 @@ class WaffraEncryptedAccountOwnerMutations {
     if (!experimentalEnabled) {
       throw StateError('Encrypted account writes are not released.');
     }
-    if (changes.isEmpty) {
+    // Freeze *before* waiting on the cross-engine file lock or OS signer.
+    // A caller may otherwise modify a Map after schema validation.
+    final frozenExpected = Map<String, String>.unmodifiable(expectedFields);
+    final frozenChanges = Map<String, String?>.unmodifiable(changes);
+    if (frozenChanges.isEmpty) {
       throw StateError('No independently confirmed account changes.');
     }
-    for (final entry in changes.entries) {
+    for (final entry in frozenChanges.entries) {
       if (!WaffraEncryptedAccountProfileStager.approvedProfileKeys
               .contains(entry.key)) {
         throw StateError('Unreviewed account field mutation denied.');
       }
       if (entry.value != null) _requireValidValue(entry.key, entry.value!);
     }
-    for (final entry in expectedFields.entries) {
+    for (final entry in frozenExpected.entries) {
       if (!WaffraEncryptedAccountProfileStager.approvedProfileKeys
               .contains(entry.key)) {
         throw StateError('Unreviewed account baseline denied.');
@@ -195,11 +199,11 @@ class WaffraEncryptedAccountOwnerMutations {
           before[key] = value;
         }
         if (before.length != marker.single.read<int>('captured_count') ||
-            before.length != expectedFields.length ||
-            before.entries.any((e) => expectedFields[e.key] != e.value)) {
+            before.length != frozenExpected.length ||
+            before.entries.any((e) => frozenExpected[e.key] != e.value)) {
           throw StateError('Encrypted account edit has stale source evidence.');
         }
-        for (final entry in changes.entries) {
+        for (final entry in frozenChanges.entries) {
           if (entry.value == null) {
             await store.customStatement(
               'DELETE FROM fresh_account_profile_staging '
@@ -216,7 +220,7 @@ class WaffraEncryptedAccountOwnerMutations {
           }
         }
         final after = <String, String>{...before};
-        for (final entry in changes.entries) {
+        for (final entry in frozenChanges.entries) {
           if (entry.value == null) {
             after.remove(entry.key);
           } else {
