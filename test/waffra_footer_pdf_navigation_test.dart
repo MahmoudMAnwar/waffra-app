@@ -128,7 +128,7 @@ void main(){
   final code=File('lib/main.dart').readAsStringSync();
   expect(code,contains('weeklySpendSvg(smartData!.weeklySpend.map(pdfAmount).toList())'));
   expect(code,contains('expensePieSvg(chartSlices)'));
-  expect(code,contains('pairedBarChartSvg(buckets.map((p)=>(pdfAmount(p.$1),pdfAmount(p.$2))).toList())'));
+  expect(code,contains(r'pairedBarChartSvg(buckets.map((p)=>(pdfAmount(p.$1),pdfAmount(p.$2))).toList())'));
   expect(code,contains('row.key+1'));
   expect(code,contains("'رقم المعاملة'"));
   expect(code,contains("'No.'"));
