@@ -266,4 +266,36 @@ CREATE TABLE fresh_account_profile_principal_binding(
       'waffra_signed_out_explicitly': 'maybe',
     }), throwsStateError);
   });
+  test('M218 mutable screen capture cannot change while OS proof awaits',
+      () async {
+    final expected = await readFields();
+    final changes = <String, String?>{
+      'waffra_last_login_method': 'Phone',
+    };
+    final protected = WaffraEncryptedAccountOwnerMutations(
+      store: store,
+      writerDirectory: sandbox,
+      sourceGuard: _FixedActiveSource(selectedSource),
+      currentAuthenticatedUid: () async {
+        // Simulate the UI changing its previously validated maps while
+        // the owner proof is still being fetched.
+        expected.clear();
+        changes['waffra_pin_sha256'] = 'unapproved-secret';
+        return uid;
+      },
+      signOwnerChallenge: (challenge) async =>
+          Hmac(sha256, key).convert(challenge).toString(),
+      experimentalEnabled: true,
+    );
+    final result = await protected.replaceFields(
+      expectedVaultId: vaultId,
+      expectedSourceSha256: digest,
+      expectedFields: expected,
+      changes: changes,
+    );
+    expect(result.fields['waffra_last_login_method'], 'Phone');
+    expect(result.fields.containsKey('waffra_pin_sha256'), isFalse);
+    expect((await readFields()).containsKey('waffra_pin_sha256'), isFalse);
+  });
+
 }
