@@ -121,6 +121,32 @@ void main() {
     expect(prefs.getString('entries'), old);
   });
 
+  test('two-save SMS source downgrade is blocked before plaintext can be added',
+      () async {
+    // Without an immutable SMS source, an attacker could first relabel the
+    // entry with unchanged notes, then save raw SMS as a manual note.
+    final old = encode([sms('existing')]);
+    SharedPreferences.setMockInitialValues({
+      'entries': old,
+      'waffra_sms_hashes_v1': <String>['a' * 64],
+    });
+    final downgraded = sms('existing');
+    downgraded['sourceType'] = 'manual';
+    await expectLater(
+      persistence.saveLegacy(
+        snapshot: {'entries': encode([downgraded])},
+        expectedLedgerRaw: old,
+        expectedWidgetRevision: null,
+      ),
+      throwsA(isA<StateError>()),
+    );
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.reload();
+    expect(prefs.getString('entries'), old);
+    expect(prefs.getStringList('waffra_sms_hashes_v1'), ['a' * 64]);
+    expect(prefs.getString('waffra_widget_last_save_v1'), isNull);
+  });
+
   test('manual transaction notes remain allowed without bank SMS source',
       () async {
     final manual = sms('manual', notes: 'User-written manual note');
