@@ -7,6 +7,7 @@ from pathlib import Path
 
 SCOPE = {
     ".github/workflows/m147-final-main-review-gate.yml",
+    ".github/workflows/android.yml",
     "docs/qa/m219-android-keystore-account-owner-proof.md",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/storage/waffra_android_owner_keystore_signer.dart",
@@ -41,6 +42,7 @@ def main():
     adapter = read("lib/storage/waffra_android_owner_keystore_signer.dart")
     tests = read("test/storage/m219_android_owner_keystore_signer_test.dart")
     workflow = read(".github/workflows/m147-final-main-review-gate.yml")
+    release_workflow = read(".github/workflows/android.yml")
     release = read("docs/release/WAFFRA_APPROVED_CHANGES.txt")
     guide = read("docs/qa/m219-android-keystore-account-owner-proof.md")
     cutover = read("lib/storage/waffra_production_cutover_release_gate.dart")
@@ -96,8 +98,13 @@ def main():
         require(marker in tests, "missing negative regression test: " + marker)
     require("M219 SHA-pinned" in workflow and
             "m219_android_keystore_owner_scope_review.py" in workflow and
-            "M219 compile real native Keystore owner channel with Flutter" in workflow,
+            "M219 compile real native Keystore owner channel with Flutter" in workflow and
+            "com.google.firebase:firebase-auth" in workflow and
+            "WaffraWidget.kt" in workflow,
             "exact-head native compilation and scope audit not installed")
+    require("Install native Firebase Auth SDK dependency (M219)" in release_workflow and
+            'implementation("com.google.firebase:firebase-auth")' in release_workflow,
+            "signed native Android release would be missing Firebase Auth dependency")
     require("[29] M219" in release, "release notes not documented")
     require("production NO-GO" in guide and
             "physical Android" in guide and
