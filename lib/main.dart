@@ -3048,6 +3048,16 @@ Future<void> bulkSmsSheet({String? initialText})async {
    final persisted=(jsonDecode(applied.current.ledgerRaw??'[]') as List)
     .map((e)=>MoneyEntry.fromJson(Map<String,dynamic>.from(e as Map)))
     .toList();
+   final recovery=WaffraSmsPartialSaveRecovery.reconcile(
+    discovered:found,
+    rejectedBeforeCommit:preRejected,
+    proposedSourceIndexes:proposedSourceIndexes,
+    proposedIds:[for(final e in additions)e.id],
+    persistedIds:{for(final e in persisted)e.id},
+   );
+   if(recovery.saved!=applied.saved){
+    throw StateError('SMS finance journal does not match persisted transaction IDs.');
+   }
    setState((){
     entries..clear()..addAll(persisted);
     if(proposed.isNotEmpty){
@@ -3064,19 +3074,28 @@ Future<void> bulkSmsSheet({String? initialText})async {
     _lastWidgetRevision=applied.current.widgetRevision;
    });
    unawaited(_refreshWidget());
+   if(!ctx.mounted)return;
+   update((){
+    busy=false;
+    rejectedMessages=[for(final item in recovery.unsaved)item.message];
+   });
    if(applied.saved==0){
     update(()=>statusMessage=waffraIsEnglish
-      ?'These transactions have already been saved.'
-      :'هذه العمليات محفوظة بالفعل.');
+     ?'No new transactions were saved. Review the unresolved messages below.'
+     :'لم تُحفظ أي معاملات جديدة. راجع الرسائل المتبقية أدناه.');
     return;
    }
-   if(!ctx.mounted)return;
-   Navigator.pop(ctx);
-   if(mounted)await showWaffraDialog<void>(context:context,builder:(dialogCtx)=>AlertDialog(
+   if(!mounted)return;
+   final reviewMissing=await showWaffraDialog<bool>(context:context,
+    builder:(dialogCtx)=>AlertDialog(
     title:Column(mainAxisSize:MainAxisSize.min,children:[
-     const Icon(Icons.check_circle_rounded,color:Color(0xFF16805E),size:54),
+     Icon(recovery.unsaved.isEmpty?Icons.check_circle_rounded:Icons.warning_amber_rounded,
+      color:recovery.unsaved.isEmpty?const Color(0xFF16805E):const Color(0xFFB56A00),size:54),
      const SizedBox(height:16),
-     WaffraText(waffraIsEnglish?'Transactions added successfully':'تمت إضافة المعاملات بنجاح',textAlign:TextAlign.center,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:22)),
+     WaffraText(recovery.unsaved.isEmpty
+      ?(waffraIsEnglish?'Transactions added successfully':'تمت إضافة المعاملات بنجاح')
+      :(waffraIsEnglish?'Some transactions need review':'تم حفظ جزء من المعاملات'),
+      textAlign:TextAlign.center,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:22)),
     ]),
     content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
      WaffraText(waffraIsEnglish?
@@ -3112,18 +3131,57 @@ Future<void> bulkSmsSheet({String? initialText})async {
        textAlign:TextAlign.center,
        style:const TextStyle(color:Color(0xFFAC5700))),
      ],
-     if(invalid.isNotEmpty||applied.skippedDuplicates>0)...[
+     if(recovery.unsaved.isNotEmpty)...[
       const SizedBox(height:12),
       WaffraText(waffraIsEnglish?
-       'Not added: ${invalid.length+applied.skippedDuplicates} transactions':
-       'لم تُحفظ ${invalid.length+applied.skippedDuplicates} معاملة',
+       'Not saved: ${recovery.unsaved.length} transactions':
+       'لم تُحفظ ${recovery.unsaved.length} معاملة',
        textAlign:TextAlign.center,
-       style:const TextStyle(color:Colors.deepOrange)),
+       style:const TextStyle(color:Colors.deepOrange,fontWeight:FontWeight.w700)),
+      if(recovery.unsaved.any((e)=>e.reason==WaffraSmsNotSavedReason.amountUnrecognized))
+       WaffraText(waffraIsEnglish
+        ?'Cannot read amount: ${recovery.unsaved.where((e)=>e.reason==WaffraSmsNotSavedReason.amountUnrecognized).length}'
+        :'المبلغ غير واضح: ${recovery.unsaved.where((e)=>e.reason==WaffraSmsNotSavedReason.amountUnrecognized).length}',
+        textAlign:TextAlign.center),
+      if(recovery.unsaved.any((e)=>e.reason==WaffraSmsNotSavedReason.categoryUnresolved))
+       WaffraText(waffraIsEnglish
+        ?'Category needs review: ${recovery.unsaved.where((e)=>e.reason==WaffraSmsNotSavedReason.categoryUnresolved).length}'
+        :'القسم يحتاج مراجعة: ${recovery.unsaved.where((e)=>e.reason==WaffraSmsNotSavedReason.categoryUnresolved).length}',
+        textAlign:TextAlign.center),
+      if(recovery.unsaved.any((e)=>e.reason==WaffraSmsNotSavedReason.alreadySaved))
+       WaffraText(waffraIsEnglish
+        ?'Duplicate or excluded by writer: ${recovery.unsaved.where((e)=>e.reason==WaffraSmsNotSavedReason.alreadySaved).length}'
+        :'مكررة أو استبعدها الحفظ: ${recovery.unsaved.where((e)=>e.reason==WaffraSmsNotSavedReason.alreadySaved).length}',
+        textAlign:TextAlign.center),
      ],
     ]),
     actionsAlignment:MainAxisAlignment.center,
     actionsPadding:const EdgeInsets.fromLTRB(24,0,24,18),
-    actions:[SizedBox(width:180,child:FilledButton(onPressed:()=>Navigator.pop(dialogCtx),child:WaffraText(waffraIsEnglish?'Done':'تم')))]));
+    actions:[
+     TextButton(onPressed:()=>Navigator.pop(dialogCtx,false),
+      child:WaffraText(waffraIsEnglish?'Done':'تم')),
+     if(recovery.unsaved.isNotEmpty)
+      FilledButton.icon(icon:const Icon(Icons.edit_note_rounded),
+       onPressed:()=>Navigator.pop(dialogCtx,true),
+       label:WaffraText(waffraIsEnglish
+        ?'Review ${recovery.unsaved.length} unsaved'
+        :'مراجعة ${recovery.unsaved.length} غير محفوظة')),
+    ]));
+   if(!ctx.mounted)return;
+   if(reviewMissing==true&&recovery.unsaved.isNotEmpty){
+    update((){
+     messages=[for(final item in recovery.unsaved)item.message];
+     reviewing=true;
+     parsed=true;
+     index=0;
+     savedCount=0;
+     rejectedMessages=[];
+     statusMessage='';
+    });
+    await prepare(0,update);
+   }else{
+    Navigator.pop(ctx);
+   }
   }catch(e){
    // A failed journal must be reconciled by the locked coordinator on next
    // read; never mutate the dashboard as if the save had succeeded.
