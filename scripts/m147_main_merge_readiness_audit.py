@@ -18,6 +18,8 @@ ALLOWED = {
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/storage/waffra_restored_finance_receipt_attestor.dart",
     "lib/storage/waffra_production_finance_authority_binding.dart",
+    "lib/storage/waffra_verified_finance_authority.dart",
+    "lib/storage/waffra_encrypted_sms_notes_vault.dart",
     "lib/main.dart",
     "lib/currency_converter.dart",
     "lib/waffra_display_currency.dart",
@@ -25,6 +27,7 @@ ALLOWED = {
     "lib/waffra_gold_market_section.dart",
     "test/storage/portable_encrypted_vault_restorer_test.dart",
     "test/storage/production_finance_authority_binding_test.dart",
+    "test/storage/m226_encrypted_original_sms_sidecar_test.dart",
     "test/m224_pdf_verified_display_currency_test.dart",
     "test/m224_verified_gold_fallback_test.dart",
     "test/m225_currency_flags_gold_ui_test.dart",
@@ -79,8 +82,10 @@ def main() -> None:
     require(not any(p.startswith("lib/storage/") and p not in {
                     "lib/storage/waffra_restored_finance_receipt_attestor.dart",
                     "lib/storage/waffra_production_finance_authority_binding.dart",
+                    "lib/storage/waffra_verified_finance_authority.dart",
+                    "lib/storage/waffra_encrypted_sms_notes_vault.dart",
                     } for p in changed),
-            "M225 may only tighten restore parity and startup source binding")
+            "M225/M226 may only tighten restore, source binding and encrypted SMS notes")
     require(not any(p.startswith(".github/workflows/") for p in changed),
             "CI workflow files must stay unmodified")
     require(not any(p in changed for p in (
@@ -166,6 +171,26 @@ def main() -> None:
             "widget FX/hidden fallback regression is missing")
     require("automaticallyActivateSqlCipher => false" in release_gate,
             "production activation would be unsafe")
+    sms_store = Path("lib/storage/waffra_encrypted_sms_notes_vault.dart").read_text()
+    sms_new_qa = Path("test/storage/m226_encrypted_original_sms_sidecar_test.dart").read_text()
+    binding_code = Path("lib/storage/waffra_production_finance_authority_binding.dart").read_text()
+    require(all(token in sms_store for token in (
+        "WaffraEncryptedStore.openAt(", "encryptedSharedPreferences: true",
+        "Bank note key/vault mismatch", "FileLock.exclusive",
+        "await store.transaction(", "original_sms", "fingerprint(note) != hash",
+    )), "M226 independent encrypted bank SMS storage safeguards missing")
+    require(all(token in authority for token in (
+        "await protectedSmsNotes!.stage(records: frozen, hashes: fingerprints)",
+        "Map<String, Object?>.unmodifiable({...record, 'notes': ''})",
+        "readProtectedOriginalSms(String entryId)",
+    )), "M226 Home/widget must encrypt original SMS before legacy projection")
+    require("protectedSmsNotes: const WaffraEncryptedSmsNotesVault()" in binding_code,
+            "M226 real Home/widget SQLCipher note vault must be injected")
+    require(all(token in sms_new_qa for token in (
+        "cold reopen", "incorrect fingerprint",
+        "missing Android key", "plaintext preferences",
+    )), "M226 SMS encryption/key negative regressions missing")
+
     # M224 adds no real-device evidence. A complete route enum is an audit
     # inventory, not proof any route is live on production SQLCipher.
     route_lines = routes.split("enum WaffraFinanceRoute {", 1)[1].split("}", 1)[0]
