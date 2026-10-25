@@ -22,6 +22,11 @@ APPROVED = {
     "lib/waffra_category_english.dart",
     "lib/waffra_category_catalog.dart",
     "lib/waffra_merchant_rules.dart",
+    "test/waffra_merchant_rules_test.dart",
+    "test/waffra_footer_pdf_navigation_test.dart",
+    "test/m155_category_plan_finance_parity_test.dart",
+    "lib/waffra_pdf_reader.dart",
+    "lib/storage/waffra_m155_category_plan.dart",
     "lib/waffra_widget_capture.part.dart",
     "scripts/qa/m206_ui_sms_scope_review.py",
     "test/m127_ui_tour_backup_acceptance_test.dart",
@@ -132,6 +137,38 @@ def main() -> None:
     require("footer notice pushes financial content up" in footer_notice_test and
             "warning, error and info keep one footprint" in footer_notice_test,
             "non-overlap and shared-status Flutter regression tests missing")
+
+    planner=Path("lib/storage/waffra_m155_category_plan.dart").read_text(encoding="utf-8")
+    pdf_view=Path("lib/waffra_pdf_reader.dart").read_text(encoding="utf-8")
+    merchant_tests=Path("test/waffra_merchant_rules_test.dart").read_text(encoding="utf-8")
+    category_tests=Path("test/m155_category_plan_finance_parity_test.dart").read_text(encoding="utf-8")
+    pdf_tests=Path("test/waffra_footer_pdf_navigation_test.dart").read_text(encoding="utf-8")
+    require("waffraRecognizedSmsLeaf" in merchants and
+            "waffraRecognizedSmsLeaf(rawSms" in planner and
+            "keemart" in merchants and "keeta" in merchants and
+            "doctor" in merchants and
+            "Arabic storage category is stable" in category_tests and
+            "Saudi English and Arabic merchants" in merchant_tests,
+            "Saudi bilingual bank SMS merchant classification needs regression coverage")
+    require("class WaffraSmartChartData" in app and
+            "waffraSmartChartData(recent,now)" in app and
+            "weeklySpendSvg(smartData!.weeklySpend)" in app and
+            "expensePieSvg(chartSlices)" in app and
+            "pairedBarChartSvg(buckets)" in app and
+            "row.key+1" in app and
+            "رقم المعاملة" in app,
+            "analytics PDF graphs or serial transactions table are not aligned")
+    require("transformationController:transforms[index]" in pdf_view and
+            "onDoubleTap:" in pdf_view and
+            "NeverScrollableScrollPhysics" in pdf_view and
+            "dpi:165" in pdf_view and
+            "PDF zoom works on first tap" in pdf_tests and
+            "90-day chart model" in pdf_tests,
+            "PDF touch zoom, sharpness or graph parity tests are missing")
+    require("WaffraFooterNoticeHost" in app and
+            "bottomNavigationBar:Column" in app and
+            "footer notice pushes financial content up" in footer_notice_test,
+            "previous uniform Snackbar / footer reflow must be retained")
 
     # Emulator test execution must perform the four real Android integration
     # cases and fail shut on timeout, never report synthetic CI as production.
