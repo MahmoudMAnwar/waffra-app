@@ -22,6 +22,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:crypto/crypto.dart';
 import 'waffra_biometrics.dart';
 import 'waffra_amount_formatter.dart';
+import 'waffra_display_currency.dart';
 import 'waffra_validators.dart';
 import 'waffra_financial_insights.dart';
 import 'waffra_reminders.dart';
@@ -134,7 +135,7 @@ String formatMoney(num value) {
  if(hideWaffraAmounts.value)return '***';
  return formatWaffraMoney(value);
 }
-String cash(num value)=>hideWaffraAmounts.value?'***':'${formatMoney(value)} ﷼';
+String cash(num value)=>hideWaffraAmounts.value?'***':WaffraDisplayCurrency.money(value,english:waffraIsEnglish);
 String dayText(DateTime d)=>'${d.day}/${d.month}/${d.year}';
 String digits(String s) {
   const a='٠١٢٣٤٥٦٧٨٩',p='۰۱۲۳۴۵۶۷۸۹';
@@ -148,6 +149,16 @@ double? amountOf(String s) {
   final n=double.tryParse(v);
   return n!=null&&n.isFinite&&n>0?n:null;
 }
+/// User-entered display denominations convert back to canonical ledger SAR.
+/// Bank SMS parsing must continue calling amountOf() without FX conversion.
+double? amountOfDisplay(String text){
+ final n=amountOf(text);
+ return n==null?null:WaffraDisplayCurrency.toLedgerSar(n);
+}
+String formatWaffraEditAmount(num sar){
+ final converted=WaffraDisplayCurrency.convert(sar);
+ return converted==null?'':formatWaffraMoney(converted);
+}
 String newId()=>DateTime.now().microsecondsSinceEpoch.toString();
 
 class RiyalAmount extends StatelessWidget {
@@ -160,12 +171,14 @@ class RiyalAmount extends StatelessWidget {
   return ValueListenableBuilder<bool>(
    valueListenable:hideWaffraAmounts,
    builder:(context,hidden,_)=>Row(mainAxisSize:MainAxisSize.min,textDirection:TextDirection.ltr,children:[
-    WaffraText(hidden?'***':'$prefix${formatMoney(amount)}',style:effective),
+    WaffraText(hidden?'***':'$prefix${WaffraDisplayCurrency.amount(amount)}',style:effective),
     if(!hidden)...[
      const SizedBox(width:4),
-     Image.asset('assets/Saudi_Riyal_Symbol-1.png',width:size*.9,height:size*.9,
-      color:color,colorBlendMode:BlendMode.srcIn,
-      errorBuilder:(_,__,___)=>WaffraText('﷼',style:effective)),
+     if(WaffraDisplayCurrency.country.code=='SAR')
+      Image.asset('assets/Saudi_Riyal_Symbol-1.png',width:size*.9,height:size*.9,
+       color:color,colorBlendMode:BlendMode.srcIn,
+       errorBuilder:(_,__,___)=>WaffraText('ريال',style:effective))
+     else WaffraText(WaffraDisplayCurrency.label(waffraIsEnglish),style:effective),
     ],
    ]));
  }
@@ -617,6 +630,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    final animation=p.getString('waffra_animation_level');
    waffraAnimationLevel.value={'full','balanced','reduced','off'}.contains(animation)?animation!:'balanced';
    waffraLanguage.value=language;
+   unawaited(WaffraDisplayCurrency.initialize());
    allowWaffraScreenshots.value=screenshotsAllowed;
    if(Platform.isAndroid){
     try{await _privacyChannel.invokeMethod<void>('setScreenshotsAllowed',screenshotsAllowed).timeout(const Duration(seconds:3));}
@@ -2226,12 +2240,12 @@ class WaffraCurrencyAmount extends StatelessWidget {
    builder:(context,hidden,_)=>Directionality(
     textDirection:TextDirection.ltr,
     child:Row(mainAxisSize:MainAxisSize.min,children:[
-     WaffraText(hidden?'***':formatMoney(amount),
+     WaffraText(hidden?'***':WaffraDisplayCurrency.amount(amount),
       style:TextStyle(fontFamily:'Tajawal',fontSize:fontSize,
        fontWeight:weight,color:color)),
      if(!hidden)...[
       const SizedBox(width:5),
-      WaffraText(waffraIsEnglish?'SAR':'ريال',
+      WaffraText(WaffraDisplayCurrency.label(waffraIsEnglish),
        style:TextStyle(fontFamily:'Tajawal',fontSize:fontSize*.63,
         fontWeight:FontWeight.w600,color:color)),
      ]
@@ -2757,17 +2771,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
    final net=WaffraAuthoritativeWidgetBalance.netHalalas(raw);
    await refreshWaffraHomeWidget(
-    balance:hideWaffraAmounts.value?'***':formatWaffraMoney(net/100),
+    balance:hideWaffraAmounts.value?'***':WaffraDisplayCurrency.amount(net/100),
     negative:net<0,
     hidden:hideWaffraAmounts.value,
-    currency:waffraIsEnglish?'SAR':'ريال');
+    currency:WaffraDisplayCurrency.label(waffraIsEnglish));
   }catch(e){
    // An absent OS key, conflicting source witness, corrupt ledger or
    // interrupted cutover must NEVER display a stale in-memory balance.
    debugPrint('Verified widget balance refresh unavailable: $e');
    await refreshWaffraHomeWidget(
     balance:'***',negative:false,hidden:true,
-    currency:waffraIsEnglish?'SAR':'ريال');
+    currency:WaffraDisplayCurrency.label(waffraIsEnglish));
   }
  }
  Future<void> persist({
@@ -4781,7 +4795,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    trailing:Row(mainAxisSize:MainAxisSize.min,children:[
     Column(mainAxisSize:MainAxisSize.min,children:[
      Text('${e.income?'+':'-'}${cash(e.amount)}',style:TextStyle(fontFamily:'Tajawal',fontSize:18,fontWeight:FontWeight.w800,color:e.income?const Color(0xFF075C40):waffraInk)),
-     WaffraText(waffraIsEnglish?'SAR':'ريال',style:TextStyle(fontSize:13,fontWeight:FontWeight.bold,color:e.income?const Color(0xFF075C40):waffraInk)),
+     WaffraText(WaffraDisplayCurrency.label(waffraIsEnglish),style:TextStyle(fontSize:13,fontWeight:FontWeight.bold,color:e.income?const Color(0xFF075C40):waffraInk)),
     ]),
     IconButton(tooltip:waffraIsEnglish?'Transaction options':'خيارات المعاملة',
      onPressed:()=>transactionActions(e),icon:const Icon(Icons.more_vert,color:forest)),
