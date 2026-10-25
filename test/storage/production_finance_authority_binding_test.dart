@@ -28,11 +28,12 @@ class _FixedSourceGuard extends WaffraProductionFinanceSourceGuard {
   );
 }
 
-WaffraProductionCutoverEvidence syntheticApprovedEvidence() =>
-    WaffraProductionCutoverEvidence(
-      storage: const WaffraCutoverReadinessReport(
-        sourceDigest: 'synthetic_not_hardware',
-        blockers: <String>[],
+WaffraProductionCutoverEvidence syntheticApprovedEvidence({
+  String sourceDigest = 'synthetic_not_hardware',
+}) => WaffraProductionCutoverEvidence(
+      storage: WaffraCutoverReadinessReport(
+        sourceDigest: sourceDigest,
+        blockers: const <String>[],
       ),
       routes: WaffraFinanceRouteAudit(
         verifiedRoutes: WaffraFinanceRoute.values.toSet(),
@@ -190,6 +191,23 @@ void main() {
       await seed.close();
     }
     try {
+      // Passing every Boolean audit field is insufficient if the approval
+      // belongs to another legacy source. No vault may be bound in that case.
+      await expectLater(
+        WaffraProductionFinanceAuthorityBinding.bind(
+          legacy: const WaffraHomeFinancePersistence(),
+          sourceGuard: const _FixedSourceGuard(
+            WaffraProductionFinanceSource.encryptedRoutingRequired,
+          ),
+          certifiedEvidence: syntheticApprovedEvidence(),
+          directoryProvider: () async => dir,
+          secureKeyReader: () async => key,
+        ),
+        throwsStateError,
+      );
+      final sourceDigest = WaffraLegacyPreflight.inspect(
+        const <String, Object?>{'entries': '[]'},
+      ).sourceSha256;
       for (final route in <WaffraFinanceRoute>[
         WaffraFinanceRoute.appStartup,
         WaffraFinanceRoute.widgetStartup,
@@ -199,7 +217,7 @@ void main() {
           sourceGuard: const _FixedSourceGuard(
             WaffraProductionFinanceSource.encryptedRoutingRequired,
           ),
-          certifiedEvidence: syntheticApprovedEvidence(),
+          certifiedEvidence: syntheticApprovedEvidence(sourceDigest: sourceDigest),
           startupRoute: route,
           directoryProvider: () async => dir,
           secureKeyReader: () async => key,
