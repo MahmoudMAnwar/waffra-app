@@ -3598,7 +3598,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
  Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms})async {
   final title=TextEditingController(text:initial?.title??'');
   final notes=TextEditingController(text:initial?.notes??'');
-  final value=TextEditingController(text:initial==null?'':formatWaffraMoney(initial.amount));
+  final value=TextEditingController(text:initial==null?'':formatWaffraEditAmount(initial.amount));
   final message=TextEditingController(text:initialSms??'');
   bool income=initial?.income??false,analyzing=false,hasParsed=initialSms!=null;
   String category=initial?.category??'أخرى';
@@ -3810,7 +3810,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       const SizedBox(height:12),
       FilledButton(onPressed:analyzing?null:()async {
        update(()=>attempted=true);
-       final n=amountOf(value.text);
+       final n=sms?amountOf(value.text):amountOfDisplay(value.text);
        if(!waffraTransactionTitleAllowed(title.text,oldTitle:initial?.title)||
         (!sms&&!waffraTransactionNotesAllowed(notes.text,oldNotes:initial?.notes))||
         waffraAmountFieldError(value.text)!=null||n==null)return;
@@ -4849,7 +4849,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   }
  }
  Future<void> editMonthlyBudget()async {
-  final amount=TextEditingController(text:monthlyBudget>0?monthlyBudget.toStringAsFixed(0):'');
+  final amount=TextEditingController(text:monthlyBudget>0?formatWaffraEditAmount(monthlyBudget):'');
   bool enabled=monthlyBudgetEnabled;
   String? validation;
   try{
@@ -4875,7 +4875,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        keyboardType:const TextInputType.numberWithOptions(decimal:true),
        inputFormatters:[const WaffraAmountFormatter()],
        decoration:InputDecoration(
-        labelText:waffraIsEnglish?'Spending limit (SAR) *':'حد المصروفات بالريال *',
+        labelText:(waffraIsEnglish?'Spending limit':'حد المصروفات')+' ('+WaffraDisplayCurrency.label(waffraIsEnglish)+') *',
         hintText:waffraIsEnglish?'Example: 3000':'مثال: 3000',
         errorText:validation,
         border:OutlineInputBorder(borderRadius:BorderRadius.circular(15)),
@@ -4885,7 +4885,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      actions:[
       TextButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
       FilledButton(onPressed:(){
-       final v=double.tryParse(amount.text.trim().replaceAll(',',''));
+       final v=amountOfDisplay(amount.text);
        if(enabled&&(v==null||!v.isFinite||v<=0)){
         update(()=>validation=waffraAmountFieldError(amount.text));
         return;
@@ -4902,8 +4902,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
   }finally{disposeLater([amount]);}
  }
  Future<void> editTransactionFilters()async {
-  final min=TextEditingController(text:minTransactionAmount?.toStringAsFixed(2)??'');
-  final max=TextEditingController(text:maxTransactionAmount?.toStringAsFixed(2)??'');
+  final min=TextEditingController(text:minTransactionAmount==null?'':formatWaffraEditAmount(minTransactionAmount!));
+  final max=TextEditingController(text:maxTransactionAmount==null?'':formatWaffraEditAmount(maxTransactionAmount!));
   String? minError,maxError;
   DateTimeRange? chosen=transactionsDateRange;
   try{
@@ -4945,8 +4945,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
        Navigator.pop(ctx);
       },child:WaffraText(waffraIsEnglish?'Clear':'مسح الفلاتر')),
       FilledButton(onPressed:(){
-       final lo=min.text.trim().isEmpty?null:double.tryParse(min.text.trim());
-       final hi=max.text.trim().isEmpty?null:double.tryParse(max.text.trim());
+       final lo=min.text.trim().isEmpty?null:amountOfDisplay(min.text.trim());
+       final hi=max.text.trim().isEmpty?null:amountOfDisplay(max.text.trim());
        if((min.text.trim().isNotEmpty&&lo==null)||
           (max.text.trim().isNotEmpty&&hi==null)||
           (lo!=null&&(!lo.isFinite||lo<0))||
@@ -6059,7 +6059,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    final parent=categories.where((c)=>c.id==effectiveParentId).toList();
    return parent.isEmpty?text:'${parent.first.name} / $text';
   }
-  final budget=TextEditingController(text:initial==null||initial.budget==0?'':formatWaffraMoney(initial.budget));
+  final budget=TextEditingController(text:initial==null||initial.budget==0?'':formatWaffraEditAmount(initial.budget));
   String icon=initial?.icon??'category';int color=initial?.color??colors[0];int alertPercent=initial?.alertPercent??80;
   bool attempted=false;
   final result=await showWaffraDialog<BudgetCategory>(context:context,
@@ -6089,8 +6089,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
        decoration:InputDecoration(labelText:waffraTr('ودّك ننبهك عند كم ٪ من الميزانية؟')),
        items:[50,60,70,75,80,85,90,95,100].map((v)=>DropdownMenuItem(value:v,child:WaffraText('$v٪'))).toList(),
        onChanged:(v){if(v!=null)update(()=>alertPercent=v);}),
-      if(amountOf(budget.text)!=null)Padding(padding:const EdgeInsets.only(top:8),
-       child:WaffraText('بننبهك عند صرف ${cash(amountOf(budget.text)!*alertPercent/100)} من ميزانية ${cash(amountOf(budget.text)!)}')),
+      if(amountOfDisplay(budget.text)!=null)Padding(padding:const EdgeInsets.only(top:8),
+       child:WaffraText('بننبهك عند صرف ${cash(amountOfDisplay(budget.text)!*alertPercent/100)} من ميزانية ${cash(amountOfDisplay(budget.text)!)}')),
      ],
     ])),
     actions:[
@@ -6101,7 +6101,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        categories.where((c)=>c.id!=initial?.id&&c.income==(initial?.income??income)).map((c)=>c.name))!=null ||
        WaffraValidators.positiveAmount(budget.text,required:false)!=null)return;
       Navigator.pop(ctx,BudgetCategory(id:initial?.id??newId(),name:fullName(),icon:icon,color:color,
-       income:initial?.income??income,parentId:effectiveParentId,budget:budget.text.trim().isEmpty?0:(amountOf(budget.text)??0),alertPercent:alertPercent,origin:initial?.origin??'user'));
+       income:initial?.income??income,parentId:effectiveParentId,budget:budget.text.trim().isEmpty?0:(amountOfDisplay(budget.text)??0),alertPercent:alertPercent,origin:initial?.origin??'user'));
      },child:const WaffraText('حفظ')),
     ])));
   disposeLater([name,budget]);return result;
@@ -6642,7 +6642,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
      FilledButton(onPressed:(){
       updateGoal(()=>attempted=true);
-      final n=amountOf(target.text);
+      final n=amountOfDisplay(target.text);
       if(selectedGoal.isEmpty||validateGoalName()!=null||
        WaffraValidators.positiveAmount(target.text)!=null||n==null)return;
       Navigator.pop(ctx,SavingGoal(id:newId(),name:name.text.trim(),target:n,saved:0));
@@ -6707,8 +6707,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
           ]),
           const SizedBox(height:9),
           WaffraText(waffraIsEnglish
-           ?'${formatWaffraMoney(g.saved)} of ${formatWaffraMoney(g.target)} SAR'
-           :'${formatWaffraMoney(g.saved)} من ${formatWaffraMoney(g.target)} ريال',
+           ?'${WaffraDisplayCurrency.money(g.saved,english:true)} of ${WaffraDisplayCurrency.money(g.target,english:true)}'
+           :'${WaffraDisplayCurrency.money(g.saved,english:false)} من ${WaffraDisplayCurrency.money(g.target,english:false)}',
            textAlign:TextAlign.center,style:const TextStyle(fontSize:13)),
           const SizedBox(height:9),
           LinearProgressIndicator(value:currentProgress,minHeight:8,
@@ -6730,7 +6730,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
          onChanged:(_)=>update((){}),
          decoration:InputDecoration(
           hintText:'0.00',
-          suffixText:waffraIsEnglish?'SAR':'ريال',
+          suffixText:WaffraDisplayCurrency.label(waffraIsEnglish),
           errorText:attempted?waffraAmountFieldError(amount.text):null,
           errorMaxLines:2,
           enabledBorder:OutlineInputBorder(
@@ -6777,7 +6777,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
          onPressed:(){
           update(()=>attempted=true);
           if(waffraAmountFieldError(amount.text)!=null)return;
-          final value=amountOf(amount.text);
+          final value=amountOfDisplay(amount.text);
           if(value==null||value<=0)return;
           Navigator.pop(dialogCtx,value);
          },
@@ -6856,7 +6856,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       update(()=>attempted=true);
       if(WaffraValidators.requiredText(name.text)!=null||
        WaffraValidators.positiveAmount(amount.text)!=null)return;
-      final value=amountOf(amount.text);
+      final value=amountOfDisplay(amount.text);
       if(value==null)return;
       Navigator.pop(ctx,SavingChallenge(id:newId(),title:name.text.trim(),
        dailyAmount:value,days:days));
@@ -7156,7 +7156,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
  }
  Future<void> recurringDialog({String? suggestedTitle,double? suggestedAmount})async {
   final title=TextEditingController(text:suggestedTitle??''),
-   amount=TextEditingController(text:suggestedAmount==null?'':formatWaffraMoney(suggestedAmount)),
+   amount=TextEditingController(text:suggestedAmount==null?'':formatWaffraEditAmount(suggestedAmount)),
    day=TextEditingController(text:'1');
   bool income=false;String category=forType(false).first.name;bool attempted=false;
   DateTime startAt=DateTime.now();
@@ -7252,7 +7252,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      actions:[
       TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إلغاء')),
       FilledButton(onPressed:(){
-       final n=amountOf(amount.text),d=int.tryParse(digits(day.text));update(()=>attempted=true);
+       final n=amountOfDisplay(amount.text),d=int.tryParse(digits(day.text));update(()=>attempted=true);
        if(WaffraValidators.requiredText(title.text)==null&&WaffraValidators.positiveAmount(amount.text)==null&&WaffraValidators.dayOfMonth(day.text)==null&&n!=null&&d!=null){
         Navigator.pop(ctx,RecurringBill(id:newId(),title:title.text.trim(),category:category,
          amount:n,income:income,day:d,startAt:startAt));
