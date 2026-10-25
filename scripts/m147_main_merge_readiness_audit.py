@@ -28,6 +28,7 @@ ALLOWED = {
     "test/storage/portable_encrypted_vault_restorer_test.dart",
     "test/storage/production_finance_authority_binding_test.dart",
     "test/storage/m226_encrypted_original_sms_sidecar_test.dart",
+    "test/storage/m226_encrypted_sms_authority_integration_test.dart",
     "test/m224_pdf_verified_display_currency_test.dart",
     "test/m224_verified_gold_fallback_test.dart",
     "test/m225_currency_flags_gold_ui_test.dart",
@@ -268,6 +269,16 @@ def main() -> None:
         "checkpoint.sourceDigest != evidence.storage.sourceDigest",
         "automaticallyActivateSqlCipher",
     )), "M225 binding must pin encrypted startup to immutable source witness")
+    end_to_end = Path(
+        "test/storage/m226_encrypted_sms_authority_integration_test.dart"
+    ).read_text()
+    require(all(marker in end_to_end for marker in (
+        "originalSmsNotesOmittedOnLegacy, isFalse",
+        "readProtectedOriginalSms('expense-one')",
+        "readProtectedOriginalSms('income-one')",
+        "secure-key error aborts BEFORE",
+        "tampered bank hash rejects entire",
+    )), "M226 real finance/SQLCipher notes integration evidence missing")
     require("independent disposable vault B" in attestor_test
             and "changed, extra or missing encrypted" in attestor_test
             and "certifiedEvidence: syntheticApprovedEvidence()" in binding_test,
