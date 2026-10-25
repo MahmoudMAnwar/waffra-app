@@ -3998,20 +3998,22 @@ Future<void> bulkSmsSheet({String? initialText})async {
       heading('تفاصيل العمليات','Transactions'),
       pw.Table(
        border:pw.TableBorder.all(color:PdfColors.grey400,width:0.4),
-       columnWidths:{0:const pw.FixedColumnWidth(54),1:const pw.FixedColumnWidth(81),
-        2:const pw.FixedColumnWidth(61),3:const pw.FixedColumnWidth(90),
-        4:const pw.FlexColumnWidth(3),5:const pw.FixedColumnWidth(83)},
+       columnWidths:english?
+        {0:const pw.FixedColumnWidth(54),1:const pw.FixedColumnWidth(81),
+         2:const pw.FixedColumnWidth(61),3:const pw.FixedColumnWidth(90),
+         4:const pw.FlexColumnWidth(3),5:const pw.FixedColumnWidth(83)}:
+        {0:const pw.FixedColumnWidth(83),1:const pw.FlexColumnWidth(3),
+         2:const pw.FixedColumnWidth(90),3:const pw.FixedColumnWidth(61),
+         4:const pw.FixedColumnWidth(81),5:const pw.FixedColumnWidth(54)},
        children:[
         pw.TableRow(decoration:const pw.BoxDecoration(color:PdfColors.teal800),
          children:(english?['No.','Date','Type','Category','Description','Amount (SAR)']:
-          ['رقم المعاملة','التاريخ','النوع','القسم','الوصف','المبلغ (ريال)'])
+          ['المبلغ (ريال)','الوصف','القسم','النوع','التاريخ','رقم المعاملة'])
           .map((h)=>pw.Padding(padding:const pw.EdgeInsets.all(6),
            child:pw.Text(h,textAlign:pw.TextAlign.center,style:pw.TextStyle(font:bold,fontSize:10,color:PdfColors.white)))).toList()),
         ...ordered.asMap().entries.map((row){
          final e=row.value,art=descriptions[row.key];
-         return pw.TableRow(
-         decoration:pw.BoxDecoration(color:PdfColor.fromInt(e.income?waffraIncomeBackground.toARGB32():waffraExpenseBackground.toARGB32())),
-         children:[
+         final orderedCells=<pw.Widget>[
           pdfCell('${row.key+1}',center:true),
           pdfCell(dayText(e.date),center:true),
           pdfCell(english?(e.income?'Income':'Expense'):(e.income?'دخل':'مصروف'),rtl:!english),
@@ -4025,8 +4027,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
              alignment:english?pw.Alignment.centerLeft:pw.Alignment.centerRight,
              child:pw.Image(art.$1,height:art.$2,fit:pw.BoxFit.scaleDown)))),
           pdfCell('${e.income?'+':'-'}${fmt(e.amount)}',center:true),
-         ],
-        );
+         ];
+         return pw.TableRow(
+          decoration:pw.BoxDecoration(color:PdfColor.fromInt(e.income?
+           waffraIncomeBackground.toARGB32():waffraExpenseBackground.toARGB32())),
+          children:english?orderedCells:orderedCells.reversed.toList(),
+         );
         }),
        ],
       ),
@@ -4074,6 +4080,38 @@ Future<void> bulkSmsSheet({String? initialText})async {
       borderRadius:pw.BorderRadius.circular(8)),
      child:pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.stretch,
       children:[heading(ar,en),...widgets]));
+    // Source-value tables are populated from the same buckets as the charts.
+    pw.Widget miniTable(List<String> labels,List<List<String>> rows){
+     pw.Widget cell(String v,{bool header=false})=>pw.Padding(
+      padding:const pw.EdgeInsets.symmetric(horizontal:5,vertical:4),
+      child:pw.Text(pdfClean(v),
+       textDirection:english?pw.TextDirection.ltr:pw.TextDirection.rtl,
+       textAlign:pw.TextAlign.center,
+       style:pw.TextStyle(font:header?bold:font,fontSize:8,
+        color:header?PdfColors.white:PdfColors.teal900)));
+     return pw.Table(border:pw.TableBorder.all(color:PdfColors.grey300,width:.4),
+      children:[
+       pw.TableRow(decoration:const pw.BoxDecoration(color:PdfColors.teal800),
+        children:(english?labels:labels.reversed.toList())
+         .map((v)=>cell(v,header:true)).toList()),
+       ...rows.map((row)=>pw.TableRow(
+        children:(english?row:row.reversed.toList()).map((v)=>cell(v)).toList())),
+      ]);
+    }
+    pw.Widget dataTable(List<String> labels,List<List<String>> rows)=>
+     rows.length<=6?miniTable(labels,rows):
+      pw.Row(crossAxisAlignment:pw.CrossAxisAlignment.start,children:[
+       pw.Expanded(child:miniTable(labels,rows.take(6).toList())),
+       pw.SizedBox(width:8),
+       pw.Expanded(child:miniTable(labels,rows.skip(6).toList())),
+      ]);
+    final valueHeaders=english?
+     ['Period','Income (SAR)','Expenses (SAR)']:
+     ['الفترة','الدخل (ريال)','المصروفات (ريال)'];
+    final periodValues=List<List<String>>.generate(buckets.length,(i)=>[
+     (english?(yearly?'Month ':'Period '):(yearly?'شهر ':'فترة '))+(i+1).toString(),
+     fmt(buckets[i].$1),fmt(buckets[i].$2),
+    ]);
     final parts=<pw.Widget>[
      heading('تقرير الرسومات والتحليلات المالية','Financial Charts Report'),
      if(smart)...[
@@ -4102,6 +4140,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
          ])),
         ]))),
        pw.SizedBox(height:5),legend(),
+       pw.SizedBox(height:8),dataTable(valueHeaders,periodValues),
       ]),
       panel('اتجاه المصروفات الأسبوعية','Weekly Spending Trend',[
        pw.Center(child:pw.SvgImage(
@@ -4109,6 +4148,13 @@ Future<void> bulkSmsSheet({String? initialText})async {
        pw.Center(child:pw.Text(english?
         'Four weeks: oldest to newest':'أربعة أسابيع من الأقدم إلى الأحدث',
         style:pw.TextStyle(font:font,fontSize:10))),
+       pw.SizedBox(height:8),
+       dataTable(english?['Week','Expenses (SAR)']:
+        ['الأسبوع','المصروفات (ريال)'],
+        List<List<String>>.generate(smartData.weeklySpend.length,(i)=>[
+         (english?'Week ':'الأسبوع ')+(i+1).toString(),
+         fmt(smartData.weeklySpend[i]),
+        ])),
       ]),
      ]else...[
       panel(yearly?'الدخل والمصروفات حسب الشهر':'الدخل والمصروفات حسب الأسبوع',
@@ -4123,6 +4169,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
           textAlign:pw.TextAlign.center,
           style:pw.TextStyle(font:font,fontSize:9))))),
        pw.SizedBox(height:8),legend(),
+       pw.SizedBox(height:8),dataTable(valueHeaders,periodValues),
       ]),
      ],
      if(top.isNotEmpty)panel(
@@ -4147,15 +4194,34 @@ Future<void> bulkSmsSheet({String? initialText})async {
           ]));
         }).toList())),
       ]),
+       pw.SizedBox(height:8),
+       dataTable(english?['Category','Amount (SAR)','Share']:
+        ['القسم','المبلغ (ريال)','النسبة'],
+        top.map((e)=><String>[
+         waffraTr(e.key),fmt(e.value),
+         (e.value/totalExpenses*100).toStringAsFixed(1)+'%',
+        ]).toList()),
      ]),
     ];
-    doc.addPage(pw.MultiPage(
-     pageTheme:pageTheme,
-     footer:(ctx)=>pw.Align(alignment:pw.Alignment.centerRight,
-      child:pw.Text('${ctx.pageNumber} / ${ctx.pagesCount}',
-       style:pw.TextStyle(font:font,fontSize:9,color:PdfColors.teal900))),
-     build:(ctx)=>parts,
-    ));
+    // MultiPage split the chart header and artwork into separate pages,
+    // displaying a framed but apparently empty chart on the previous page.
+    // A chart, its caption and its populated source table are inseparable.
+    final chartPanels=parts.skip(1).toList(growable:false);
+    for(var i=0;i<chartPanels.length;i++){
+     final index=i+1;
+     doc.addPage(pw.Page(pageTheme:pageTheme,
+      build:(ctx)=>pw.Column(
+       crossAxisAlignment:pw.CrossAxisAlignment.stretch,
+       children:[
+        heading('تقرير الرسومات والتحليلات المالية','Financial Charts Report'),
+        chartPanels[i],
+        pw.Spacer(),
+        pw.Align(alignment:pw.Alignment.centerRight,
+         child:pw.Text(index.toString()+' / '+chartPanels.length.toString(),
+          style:pw.TextStyle(font:font,fontSize:9,color:PdfColors.teal900))),
+       ],
+      )));
+    }
    }
    final bytes=await doc.save();
    if(exportDialogOpen&&exportNavigator.mounted){exportNavigator.pop();exportDialogOpen=false;}
