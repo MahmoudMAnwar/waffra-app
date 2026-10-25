@@ -7029,8 +7029,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
    const SizedBox(height:30),
   ]);
  }
- Future<void> recurringDialog()async {
-  final title=TextEditingController(),amount=TextEditingController(),day=TextEditingController(text:'1');
+ Future<void> recurringDialog({String? suggestedTitle,double? suggestedAmount})async {
+  final title=TextEditingController(text:suggestedTitle??''),
+   amount=TextEditingController(text:suggestedAmount==null?'':formatWaffraMoney(suggestedAmount)),
+   day=TextEditingController(text:'1');
   bool income=false;String category=forType(false).first.name;bool attempted=false;
   DateTime startAt=DateTime.now();
   final r=await showWaffraDialog<RecurringBill>(context:context,
@@ -8087,7 +8089,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
  void openFinancialCalendar()=>Navigator.push<void>(context,MaterialPageRoute(
   builder:(_)=>WaffraFinancialCalendar(items:financialCalendarItems,english:waffraIsEnglish)));
  void openSubscriptionInsights()=>Navigator.push<void>(context,MaterialPageRoute(
-  builder:(_)=>WaffraSubscriptionScreen(items:financialCalendarItems,english:waffraIsEnglish)));
+  builder:(_)=>WaffraSubscriptionScreen(
+   items:financialCalendarItems,english:waffraIsEnglish,
+   onAddRecurring:(candidate)=>recurringDialog(
+    suggestedTitle:candidate.title,suggestedAmount:candidate.estimatedMonthly))));
  Widget profilePage(){
   final p=widget.profile;
   final provider=p.provider.toLowerCase().trim();
