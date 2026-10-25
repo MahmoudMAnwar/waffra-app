@@ -10,6 +10,11 @@ import android.view.WindowManager
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import com.google.firebase.auth.FirebaseAuth
+import java.security.KeyStore
+import javax.crypto.Mac
+import javax.crypto.SecretKey
+import org.json.JSONArray
 
 // Share only SMS text explicitly selected by the user. Waffra does not read
 // the SMS inbox or request READ_SMS, RECEIVE_SMS or bank account access.
@@ -18,6 +23,10 @@ class MainActivity : FlutterFragmentActivity() {
     private val messagesChannel = "waffra/messages"
     private val widgetChannelName = "waffra/widget"
     private val backupChannelName = "waffra/backup_files"
+    // M219: read-only access to an independently provisioned Android Keystore
+    // HMAC key. This activity NEVER creates, exports or replaces owner keys.
+    private val ownerProofChannelName = "waffra/account_owner"
+    private val ownerKeyAlias = "waffra_profile_owner_hmac_v1"
     private val backupWriteRequest = 7811
     private val backupReadRequest = 7812
     private val backupMaxBytes = 8 * 1024 * 1024
@@ -29,6 +38,42 @@ class MainActivity : FlutterFragmentActivity() {
     private var pendingShare: String? = null
     private var screenshotsAllowed: Boolean = true
     private var protectRecents: Boolean = true
+
+    private fun signExistingAccountOwnerChallenge(challenge: ByteArray?): String? {
+        // Do not sign arbitrary UI input or secrets with the account owner key.
+        if (challenge == null || challenge.isEmpty() || challenge.size > 2048) {
+            return null
+        }
+        val ownerEnvelope = try {
+            JSONArray(String(challenge, Charsets.UTF_8))
+        } catch (_: Exception) {
+            return null
+        }
+        if (ownerEnvelope.length() != 4 ||
+            ownerEnvelope.optString(0) != "waffra-profile-owner-v1" ||
+            ownerEnvelope.optString(1).isBlank() ||
+            !Regex("[a-fA-F0-9]{64}").matches(ownerEnvelope.optString(2)) ||
+            ownerEnvelope.optString(3).isBlank()) {
+            return null
+        }
+        // The native Firebase SDK independently validates which principal
+        // owns the session. Do not sign arbitrary supplied account UIDs.
+        val authenticatedUser = FirebaseAuth.getInstance().currentUser
+            ?: return null
+        if (authenticatedUser.isAnonymous ||
+            authenticatedUser.uid != ownerEnvelope.optString(3)) {
+            return null
+        }
+        // No key creation, key export, recoverable fallback or PIN-based key.
+        val keystore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+        val key = keystore.getKey(ownerKeyAlias, null) as? SecretKey
+            ?: return null
+        val mac = Mac.getInstance("HmacSHA256")
+        mac.init(key)
+        return mac.doFinal(challenge).joinToString("") { byte ->
+            "%02x".format(byte.toInt() and 0xff)
+        }
+    }
 
     private fun applyScreenshotSetting(allowed: Boolean) {
         screenshotsAllowed = allowed
@@ -93,6 +138,33 @@ class MainActivity : FlutterFragmentActivity() {
                     protectRecents = call.arguments as? Boolean ?: true
                     result.success(null)
                 } else result.notImplemented()
+            }
+
+        // Candidate-only: the missing key remains missing. Do not auto-enroll
+        // an OS key from a profile, UI flag, Firebase UID or a migration test.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, ownerProofChannelName)
+            .setMethodCallHandler { call, result ->
+                if (call.method != "signExistingOwnerChallenge") {
+                    result.notImplemented()
+                } else {
+                    try {
+                        val proof = signExistingAccountOwnerChallenge(
+                            call.argument<ByteArray>("challenge")
+                        )
+                        if (proof == null) {
+                            result.error("OWNER_PROOF_UNAVAILABLE",
+                                "An enrolled Android owner key and verified challenge are required.",
+                                null)
+                        } else {
+                            result.success(proof)
+                        }
+                    } catch (_: Exception) {
+                        // Never log keystore failures, account identifiers,
+                        // signature values or exception details.
+                        result.error("OWNER_PROOF_UNAVAILABLE",
+                            "Device owner proof could not be verified.", null)
+                    }
+                }
             }
 
         widgetChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, widgetChannelName)

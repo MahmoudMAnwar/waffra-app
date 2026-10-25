@@ -23,7 +23,7 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Original M147 UI-only, SHA-pinned scope review
-        if: github.head_ref != 'integration/m160-reconcile-main-m158-release-gate-20261023' && github.head_ref != 'qa/m174-main-sha-postmerge-20261024' && github.head_ref != 'feature/m175-explicit-finance-intent-routes' && github.head_ref != 'feature/m176-module-finance-route-intents' && github.head_ref != 'feature/m177-live-finance-authority-completion' && github.head_ref != 'feature/m178-restore-receipt-parity-preflight' && github.head_ref != 'feature/m179-encrypted-recurring-scalar-main' && github.head_ref != 'feature/m180-encrypted-custom-goal-suggestions-main' && github.head_ref != 'feature/m181-sqlcipher-route-coverage-main' && github.head_ref != 'feature/m182-encrypted-recurring-paid-main' && github.head_ref != 'feature/m183-verified-transaction-home-main' && github.head_ref != 'feature/m184-encrypted-recycle-expiry-main' && github.head_ref != 'feature/m185-encrypted-module-recycle-after-m184' && github.head_ref != 'feature/m186-verified-module-trash-after-m184' && github.head_ref != 'feature/m187-active-source-restore-after-m186' && github.head_ref != 'feature/m188-full-reset-after-m187' && github.head_ref != 'feature/m189-physical-evidence-after-m188' && github.head_ref != 'integration/sqlcipher-home-widget-binding-20261024' && github.head_ref != 'qa/m201-encrypted-route-migration-receipt-acceptance-20261024' && github.head_ref != 'fix/rtl-ltr-fab-receipt-corner-20261024' && github.head_ref != 'feature/m190-signed-apk-preflight-after-m201-ui-20261024' && github.head_ref != 'qa/m202-binder-after-m190-20261024' && github.head_ref != 'security/m207-legacy-sms-notes-fail-closed-20261024' && github.head_ref != 'integration/m208-all-approved-bundle-after-m207-20261025' && github.head_ref != 'feature/m210-encrypted-sms-note-integrity-20261025' && github.head_ref != 'feature/m211-native-lease-encrypted-staging-20261025' && github.head_ref != 'feature/m212-parallel-sqlcipher-route-recovery-physical-apk-20261025' && github.head_ref != 'feature/m213-authoritative-widget-balance-route-20261025' && github.head_ref != 'feature/m214-verified-profile-sqlcipher-staging-20261025' && github.head_ref != 'feature/m215-verified-encrypted-profile-read-20261025' && github.head_ref != 'security/m216-pin-os-secure-stage-20261025' && github.head_ref != 'feature/m217-live-account-write-source-guard-20261025' && github.head_ref != 'feature/m218-owner-bound-encrypted-account-mutations-20261025'
+        if: github.head_ref != 'integration/m160-reconcile-main-m158-release-gate-20261023' && github.head_ref != 'qa/m174-main-sha-postmerge-20261024' && github.head_ref != 'feature/m175-explicit-finance-intent-routes' && github.head_ref != 'feature/m176-module-finance-route-intents' && github.head_ref != 'feature/m177-live-finance-authority-completion' && github.head_ref != 'feature/m178-restore-receipt-parity-preflight' && github.head_ref != 'feature/m179-encrypted-recurring-scalar-main' && github.head_ref != 'feature/m180-encrypted-custom-goal-suggestions-main' && github.head_ref != 'feature/m181-sqlcipher-route-coverage-main' && github.head_ref != 'feature/m182-encrypted-recurring-paid-main' && github.head_ref != 'feature/m183-verified-transaction-home-main' && github.head_ref != 'feature/m184-encrypted-recycle-expiry-main' && github.head_ref != 'feature/m185-encrypted-module-recycle-after-m184' && github.head_ref != 'feature/m186-verified-module-trash-after-m184' && github.head_ref != 'feature/m187-active-source-restore-after-m186' && github.head_ref != 'feature/m188-full-reset-after-m187' && github.head_ref != 'feature/m189-physical-evidence-after-m188' && github.head_ref != 'integration/sqlcipher-home-widget-binding-20261024' && github.head_ref != 'qa/m201-encrypted-route-migration-receipt-acceptance-20261024' && github.head_ref != 'fix/rtl-ltr-fab-receipt-corner-20261024' && github.head_ref != 'feature/m190-signed-apk-preflight-after-m201-ui-20261024' && github.head_ref != 'qa/m202-binder-after-m190-20261024' && github.head_ref != 'security/m207-legacy-sms-notes-fail-closed-20261024' && github.head_ref != 'integration/m208-all-approved-bundle-after-m207-20261025' && github.head_ref != 'feature/m210-encrypted-sms-note-integrity-20261025' && github.head_ref != 'feature/m211-native-lease-encrypted-staging-20261025' && github.head_ref != 'feature/m212-parallel-sqlcipher-route-recovery-physical-apk-20261025' && github.head_ref != 'feature/m213-authoritative-widget-balance-route-20261025' && github.head_ref != 'feature/m214-verified-profile-sqlcipher-staging-20261025' && github.head_ref != 'feature/m215-verified-encrypted-profile-read-20261025' && github.head_ref != 'security/m216-pin-os-secure-stage-20261025' && github.head_ref != 'feature/m217-live-account-write-source-guard-20261025' && github.head_ref != 'feature/m218-owner-bound-encrypted-account-mutations-20261025' && github.head_ref != 'feature/m219-android-keystore-owner-proof-20261025'
         env:
           REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: python3 scripts/m147_main_merge_readiness_audit.py
@@ -195,6 +195,11 @@ jobs:
         env:
           REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: python3 scripts/qa/m218_account_owner_mutation_scope_review.py
+      - name: M219 SHA-pinned native Android Keystore account proof (NO-GO)
+        if: github.head_ref == 'feature/m219-android-keystore-owner-proof-20261025'
+        env:
+          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python3 scripts/qa/m219_android_keystore_owner_scope_review.py
       - name: M161 guarded experimental integration review (not release approval)
         if: github.head_ref == 'integration/m160-reconcile-main-m158-release-gate-20261023'
         env:
@@ -248,6 +253,48 @@ jobs:
         run: flutter pub get
       - name: Create Android project (CI only)
         run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
+      - name: M219 compile real native Keystore owner channel with Flutter
+        if: github.head_ref == 'feature/m219-android-keystore-owner-proof-20261025'
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          files=list(Path('android/app/src/main/kotlin').rglob('MainActivity.kt'))
+          if len(files)!=1:
+              raise SystemExit('Expected single generated Kotlin MainActivity')
+          original=files[0].read_text()
+          match=re.search(r'^package\s+[\w.]+', original, re.MULTILINE)
+          if not match:
+              raise SystemExit('Missing generated MainActivity Kotlin package')
+          template=Path('native/WaffraMainActivity.kt').read_text()
+          if 'FirebaseAuth.getInstance().currentUser' not in template or 'waffra/account_owner' not in template:
+              raise SystemExit('Missing M219 Android owner proof')
+          # Match the generated QA app namespace so the test APK can launch.
+          # The actual release workflow separately binds the signed package.
+          template=re.sub(r'^package\s+[\w.]+', match.group(0),
+                          template, count=1, flags=re.MULTILINE)
+          files[0].write_text(template)
+          # The isolated QA compilation checks the native owner channel.
+          # Widget UI resources belong to the full signed build workflow;
+          # this isolated stub prevents unrelated widget resources from
+          # hiding native owner channel compiler errors.
+          files[0].with_name('WaffraWidget.kt').write_text(
+              match.group(0) + '\n' +
+              'class WaffraWidget {\n' +
+              '  companion object { fun updateAll(context: android.content.Context) {} }\n' +
+              '}\n'
+          )
+          gradle=Path('android/app/build.gradle.kts')
+          kotlin=gradle.read_text()
+          if 'com.google.firebase:firebase-auth' not in kotlin:
+              kotlin += '''
+          dependencies {
+              implementation(platform("com.google.firebase:firebase-bom:34.0.0"))
+              implementation("com.google.firebase:firebase-auth")
+          }
+          '''
+              gradle.write_text(kotlin)
+          PY
       - name: Compile ARM64 release-mode APK (not production certified)
         run: flutter build apk --release --no-pub --target-platform android-arm64
       - name: Attach unapproved-for-production APK for device QA
