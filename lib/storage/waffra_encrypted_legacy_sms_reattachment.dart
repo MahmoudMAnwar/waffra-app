@@ -111,7 +111,8 @@ class WaffraEncryptedLegacySmsReattachment {
 
         // Verify the complete existing SQL/canonical projection before edits.
         final sqlRows = await snapshot.store.customSelect(
-          'SELECT entry_id,source_json,amount_minor,is_income '
+          'SELECT entry_id,source_json,title,category_snapshot,occurred_iso,'
+          'amount_minor,is_income '
           'FROM fresh_finance_entries').get();
         if (sqlRows.length != rows.length) {
           throw StateError('SQL and canonical finance counts differ.');
@@ -124,6 +125,9 @@ class WaffraEncryptedLegacySmsReattachment {
           }
           sqlById[id] = {
             'source': row.read<String>('source_json'),
+            'title': row.read<String>('title'),
+            'category': row.read<String>('category_snapshot'),
+            'date': row.read<String>('occurred_iso'),
             'amount': row.read<int>('amount_minor'),
             'income': row.read<int>('is_income'),
           };
@@ -132,6 +136,9 @@ class WaffraEncryptedLegacySmsReattachment {
           final id = row['id'];
           if (id is! String || !sqlById.containsKey(id) ||
               sqlById[id]!['source'] != jsonEncode(row) ||
+              sqlById[id]!['title'] != row['title'] ||
+              sqlById[id]!['category'] != row['category'] ||
+              sqlById[id]!['date'] != row['date'] ||
               row['amount'] is! num ||
               sqlById[id]!['amount'] != ((row['amount'] as num) * 100).round() ||
               sqlById[id]!['income'] != (row['income'] == true ? 1 : 0)) {
