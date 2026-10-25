@@ -100,7 +100,7 @@ def main():
     require("[29] M219" in release, "release notes not documented")
     require("production NO-GO" in guide and
             "physical Android" in guide and
-            "not a fresh" in guide, "owner enrollment blockers absent")
+            "Firebase ID-token server validation" in guide, "owner enrollment blockers absent")
     require("bool get automaticallyActivateSqlCipher => false;" in cutover,
             "cutover release gate unexpectedly changed")
     require("WaffraAndroidOwnerKeystoreSigner" not in app,
