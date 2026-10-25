@@ -7170,7 +7170,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    Row(children:[
     Expanded(child:OutlinedButton.icon(
      onPressed:showWaffraFinancialCalendar,
-     style:OutlinedButton.styleFrom(minimumSize:const Size(0,52),
+     style:OutlinedButton.styleFrom(minimumSize:const Size(0,48),
       padding:const EdgeInsets.symmetric(horizontal:5,vertical:7),
       side:BorderSide(color:Theme.of(context).colorScheme.primary,width:1.2),
       shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15))),
@@ -7187,6 +7187,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    const SizedBox(height:10),
    Row(children:[
     Expanded(child:WaffraOutlinedItemsCount(
+     key:const Key('waffra-recurring-count-badge'),
      label:waffraIsEnglish?'Recurring count':'عدد العمليات المتكررة',
      count:recurring.length)),
     const SizedBox(width:9),
@@ -7204,8 +7205,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
        WaffraText(waffraIsEnglish?'1 day before • 9 AM':'قبل الموعد بيوم',
         maxLines:2,style:const TextStyle(fontSize:10)),
       ])),
-      Transform.scale(scale:.82,child:Switch.adaptive(
-       value:recurringRemindersEnabled,onChanged:toggleRecurringReminders)),
+      Transform.scale(scale:.82,child:Switch.adaptive(value:recurringRemindersEnabled,
+       onChanged:toggleRecurringReminders)),
      ]))),
    ]),
    const SizedBox(height:9),
@@ -8487,7 +8488,7 @@ class WaffraDeletedItemsButton extends StatelessWidget {
    style:OutlinedButton.styleFrom(
     foregroundColor:red,backgroundColor:dark?const Color(0xFF3C242A):const Color(0xFFFFF4F4),
     side:BorderSide(color:red,width:1.4),
-    minimumSize:const Size(0,52),
+    minimumSize:const Size(0,48),
     padding:const EdgeInsets.symmetric(horizontal:7,vertical:9),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15))),
    child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
