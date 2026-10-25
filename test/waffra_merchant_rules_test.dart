@@ -76,7 +76,7 @@ void main() {
       'Dr. Ahmed':'صحة / أطباء',
       'دكتور خالد':'صحة / أطباء',
       'Medical Center Riyadh':'صحة / عيادات',
-      'MAR AKEZ MEDICAL COMPAN':'صحة / عيادات',
+      'MARAKEZ MEDICAL COMPAN':'صحة / عيادات',
       'CLINIC CENTER':'صحة / عيادات',
       'Dental Clinic':'صحة / عيادات',
       'Jeeny':'مواصلات / تاكسي',
