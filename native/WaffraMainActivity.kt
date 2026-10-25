@@ -10,6 +10,7 @@ import android.view.WindowManager
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import com.google.firebase.auth.FirebaseAuth
 import java.security.KeyStore
 import javax.crypto.Mac
 import javax.crypto.SecretKey
@@ -53,6 +54,14 @@ class MainActivity : FlutterFragmentActivity() {
             ownerEnvelope.optString(1).isBlank() ||
             !Regex("[a-fA-F0-9]{64}").matches(ownerEnvelope.optString(2)) ||
             ownerEnvelope.optString(3).isBlank()) {
+            return null
+        }
+        // The native Firebase SDK independently validates which principal
+        // owns the session. Do not sign arbitrary supplied account UIDs.
+        val authenticatedUser = FirebaseAuth.getInstance().currentUser
+            ?: return null
+        if (authenticatedUser.isAnonymous ||
+            authenticatedUser.uid != ownerEnvelope.optString(3)) {
             return null
         }
         // No key creation, key export, recoverable fallback or PIN-based key.
