@@ -149,8 +149,9 @@ double? amountOf(String s) {
   final n=double.tryParse(v);
   return n!=null&&n.isFinite&&n>0?n:null;
 }
-/// User-entered display denominations convert back to canonical ledger SAR.
-/// Bank SMS parsing must continue calling amountOf() without FX conversion.
+/// App-wide presentation currency changes only the unit caption, never its
+/// numeric value. The currency-converter tool alone performs real FX.
+/// Bank SMS parsing always uses the original unmodified amount.
 double? amountOfDisplay(String text){
  final n=amountOf(text);
  return n==null?null:WaffraDisplayCurrency.toLedgerSar(n);
@@ -8258,6 +8259,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
          return ListTile(
           key:Key('waffra-country-currency-${option.code}'),
           selected:WaffraDisplayCurrency.country.code==option.code,
+          leading:Text(waffraCurrencyFlag(option.code),
+           style:const TextStyle(fontSize:27)),
           title:WaffraText(option.label(waffraIsEnglish)),
           trailing:WaffraDisplayCurrency.country.code==option.code?
            const Icon(Icons.check_circle,color:emerald):null,
@@ -8275,13 +8278,13 @@ Future<void> bulkSmsSheet({String? initialText})async {
     setState((){});
     await _refreshWidget();
     if(mounted)snackSuccess(context,waffraIsEnglish?
-      'Currency updated using a verified exchange rate.':
-      'تم تحديث العملة بسعر صرف موثّق.');
+      'Display currency changed; numbers stay exactly the same.':
+      'تم تغيير عملة العرض مع الحفاظ على قيمة الأرقام كما هي.');
    }catch(error){
     debugPrint('App country currency rejected safely: $error');
     if(mounted)snack(context,waffraIsEnglish?
-      'Exchange rate unavailable. Your stored balances and currency were not changed.':
-      'سعر الصرف غير متاح. لم تتغير بياناتك أو عملتك الحالية.');
+      'Could not save display currency; no financial amount was modified.':
+      'تعذّر حفظ عملة العرض، ولم يتم تعديل أي مبلغ مالي.');
    }
   }finally{searchController.dispose();}
  }
@@ -8406,7 +8409,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
        }:null)),
    ]),
    _accountSection(waffraIsEnglish?'Financial tools':'الأدوات المالية',Icons.account_balance_wallet_outlined,[
-    _accountTile(waffraIsEnglish?'Currency converter':'تحويل العملات',
+    _accountTile(waffraIsEnglish?'Currency converter & global gold prices':
+       'محوّل العملات وأسعار الذهب العالمية',
      waffraIsEnglish?'Search, exchange and swap currencies':'ابحث وحوّل وبدّل بين العملات',
      Icons.currency_exchange,onTap:()=>Navigator.push<void>(context,MaterialPageRoute(
       builder:(_)=>const CurrencyConverterPage()))),
