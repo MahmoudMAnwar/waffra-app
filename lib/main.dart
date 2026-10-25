@@ -57,6 +57,7 @@ import 'storage/waffra_verified_module_ui_guard.dart';
 import 'storage/waffra_runtime_finance_route_contract.dart';
 import 'storage/waffra_verified_transaction_ui_guard.dart';
 import 'storage/waffra_m155_category_plan.dart';
+import 'storage/waffra_sms_partial_save_recovery.dart';
 import 'storage/waffra_production_finance_routing_gate.dart';
 import 'storage/waffra_verified_legacy_backup_restore.dart';
 import 'waffra_home_widget.dart';
@@ -2888,30 +2889,43 @@ Future<void> bulkSmsSheet({String? initialText})async {
   if(found.length>100){update(()=>statusMessage=waffraIsEnglish?'Maximum 100 transactions per paste.':'الحد الأقصى 100 معاملة في كل عملية لصق.');return;}
   final results=found.map(BankParser.parse).toList();
   final valid=<int>[],invalid=<int>[],duplicates=<int>[];
+  final preRejected=<int,WaffraSmsNotSavedReason>{};
   var allowRepeatedSms=false;
   final seen=<String>{};
   for(var i=0;i<found.length;i++){
-   if(results[i].amount==null||results[i].amount!<=0){invalid.add(i);continue;}
+   if(results[i].amount==null||results[i].amount!<=0){
+    invalid.add(i);
+    preRejected[i]=WaffraSmsNotSavedReason.amountUnrecognized;
+    continue;
+   }
    final hash=bankSmsHash(found[i]);
-   if(smsHashes.contains(hash)||!seen.add(hash)){duplicates.add(i);continue;}
+   if(smsHashes.contains(hash)||!seen.add(hash)){
+    duplicates.add(i);
+    preRejected[i]=WaffraSmsNotSavedReason.alreadySaved;
+    continue;
+   }
    valid.add(i);
   }
   if(duplicates.isNotEmpty){
-   final addRepeated=await showWaffraDialog<bool>(context:ctx,builder:(d)=>AlertDialog(
+   final choice=await showWaffraDialog<String>(context:ctx,builder:(d)=>AlertDialog(
     title:WaffraText(waffraIsEnglish?'Duplicate transactions detected':'تم اكتشاف معاملات مكررة'),
     content:WaffraText(waffraIsEnglish
-     ?'${duplicates.length} transaction(s) may already exist or repeat within this paste. Add them anyway, along with the new valid transactions?'
-     :'تم اكتشاف ${duplicates.length} معاملة مكررة، إما مسجلة سابقًا أو مكررة داخل الرسائل الملصوقة. هل تريد إضافتها على أي حال مع المعاملات الجديدة؟'),
+     ?'${duplicates.length} transaction(s) are duplicates. You can safely skip those and save the new ones, or explicitly approve adding the duplicates.'
+     :'تم اكتشاف ${duplicates.length} معاملة مكررة. يمكنك تخطي المكررة وحفظ الجديدة، أو الموافقة صراحةً على إضافة المكررة.'),
     actions:[
-     TextButton(onPressed:()=>Navigator.pop(d,false),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
-     FilledButton(onPressed:()=>Navigator.pop(d,true),child:WaffraText(waffraIsEnglish?'Add anyway':'إضافة على أي حال')),
+     TextButton(onPressed:()=>Navigator.pop(d,'cancel'),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+     OutlinedButton(onPressed:()=>Navigator.pop(d,'skip'),child:WaffraText(waffraIsEnglish?'Skip duplicates':'تخطي المكررة')),
+     FilledButton(onPressed:()=>Navigator.pop(d,'add'),child:WaffraText(waffraIsEnglish?'Add duplicates too':'إضافة المكررة أيضًا')),
     ]));
-   if(addRepeated!=true||!ctx.mounted)return;
-   allowRepeatedSms=true;
-   valid.addAll(duplicates);
-   valid.sort();
+   if(!ctx.mounted||choice==null||choice=='cancel')return;
+   if(choice=='add'){
+    allowRepeatedSms=true;
+    for(final i in duplicates)preRejected.remove(i);
+    valid.addAll(duplicates);
+    valid.sort();
+   }
   }
-  if(valid.isEmpty){update(() {statusMessage=waffraIsEnglish?'This message contains no financial transactions. Edit it to analyze again automatically.':'هذه الرسالة لا تحتوي على أي معاملات مالية. عدّل النص ليتم تحليله تلقائيًا مرة أخرى.';rejectedMessages=invalid.map((i)=>found[i]).toList();});return;}
+  if(valid.isEmpty){update(() {statusMessage=waffraIsEnglish?'No new transactions can be saved. Review the messages below.':'لا توجد معاملات جديدة قابلة للحفظ. راجع الرسائل أدناه.';rejectedMessages=[for(final i in preRejected.keys)found[i]];});return;}
   final incomes=valid.where((i)=>results[i].income).toList();
   final expenses=valid.where((i)=>!results[i].income).toList();
   final incomeTotal=incomes.fold<double>(0,(v,i)=>v+results[i].amount!);
@@ -2968,8 +2982,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
      ],
     )));
   if(accepted!=true||!ctx.mounted)return;
-  update(() {busy=true;rejectedMessages=invalid.map((i)=>found[i]).toList();});
+  update(() {busy=true;rejectedMessages=[];});
   final additions=<MoneyEntry>[];
+  final proposedSourceIndexes=<int>[];
   final proposed=<BudgetCategory>[];
   final proposedHashes=<String>[];
   for(final i in valid){
@@ -2981,12 +2996,18 @@ Future<void> bulkSmsSheet({String? initialText})async {
    ];
    final plan=WaffraM155CategoryPlan.propose(rawSms:raw,income:result.income,
     existing:existing,learned:learnedMerchantCategories);
-   if(plan==null){invalid.add(i);continue;}
+   if(plan==null){
+    preRejected[i]=WaffraSmsNotSavedReason.categoryUnresolved;
+    continue;
+   }
    if(plan.newCategoryRequired){
     final parentName=plan.categoryName.split(' / ').first;
     final roots=categories.where((c)=>c.income==result.income&&
       !c.isSubcategory&&c.name==parentName).toList();
-    if(roots.length!=1){invalid.add(i);continue;}
+    if(roots.length!=1){
+     preRejected[i]=WaffraSmsNotSavedReason.categoryUnresolved;
+     continue;
+    }
     final parent=roots.single;
     proposed.add(BudgetCategory(id:newId(),name:plan.categoryName,
      parentId:parent.id,income:result.income,icon:parent.icon,
@@ -2999,11 +3020,16 @@ Future<void> bulkSmsSheet({String? initialText})async {
     date:bankSmsDate(raw)??DateTime.now(),notes:raw,sourceType:'sms',
     merchantKey:plan.merchantKey));
    proposedHashes.add(bankSmsHash(raw));
+   proposedSourceIndexes.add(i);
   }
   if(additions.isEmpty){
-   update(()=>statusMessage=waffraIsEnglish?
-    'No valid transactions could be saved. Review categories and try again.':
-    'لم يتم العثور على معاملات صالحة للحفظ. راجع الأقسام ثم حاول مرة أخرى.');
+   update((){
+    busy=false;
+    rejectedMessages=[for(final i in preRejected.keys)found[i]];
+    statusMessage=waffraIsEnglish?
+     'No transactions were saved. Review and correct the messages below.':
+     'لم تُحفظ معاملات. راجع الرسائل أدناه وصحّح بياناتها.';
+   });
    return;
   }
   try{
