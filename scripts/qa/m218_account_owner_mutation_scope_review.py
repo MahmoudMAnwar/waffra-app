@@ -62,6 +62,8 @@ def main():
         "shadow_migrations",
         "fresh_account_profile_stage_marker",
         "approvedProfileKeys",
+        "final frozenExpected = Map<String, String>.unmodifiable(expectedFields)",
+        "final frozenChanges = Map<String, String?>.unmodifiable(changes)",
         "store.transaction(() async",
         "ON CONFLICT(profile_key) DO UPDATE SET",
         "SQLCipher account mutation parity mismatch.",
@@ -90,6 +92,7 @@ def main():
         "M218 missing active cutover checkpoint refuses mutation",
         "M218 changed legacy finance witness refuses account writes",
         "M218 invalid signed-out boolean fails before SQL writes",
+        "M218 mutable screen capture cannot change while OS proof awaits",
     )
     for marker in expected_tests:
         require(marker in tests, "negative regression test missing: " + marker)
