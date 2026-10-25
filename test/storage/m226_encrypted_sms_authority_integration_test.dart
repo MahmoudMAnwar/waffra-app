@@ -126,6 +126,31 @@ void main() {
     expect(String.fromCharCodes(bytes).contains('SQLite format 3'), isFalse);
   });
 
+  test('M226 duplicate skipped under finance lock never stages orphan SMS',
+      () async {
+    const original = 'شراء تجريبي\\n125.50 SAR\\nREF: SAME-001';
+    final hash = WaffraEncryptedSmsNotesVault.fingerprint(original);
+    final service = authority(protectedVault());
+    final first = await service.commitConfirmedSms(
+      route: WaffraFinanceRoute.bulkSmsConfirmedSave,
+      records: [record('first-unique-id', original)], hashes: [hash],
+      userConfirmed: true,
+    );
+    expect(first.saved, 1);
+    final repeated = await service.commitConfirmedSms(
+      route: WaffraFinanceRoute.bulkSmsConfirmedSave,
+      records: [record('second-unused-id', original)], hashes: [hash],
+      userConfirmed: true,
+    );
+    expect(repeated.saved, 0);
+    expect(repeated.skippedDuplicates, 1);
+    expect(await protectedVault().readVerifiedEntry('first-unique-id'), original);
+    expect(await protectedVault().readVerifiedEntry('second-unused-id'), isNull);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.reload();
+    expect((jsonDecode(prefs.getString('entries')!) as List).length, 1);
+  });
+
   test('M226 secure-key error aborts BEFORE the legacy finance journal writes',
       () async {
     const original = 'Debit SMS\nAmount: 125.50 SAR\nREF: TEST-001';
