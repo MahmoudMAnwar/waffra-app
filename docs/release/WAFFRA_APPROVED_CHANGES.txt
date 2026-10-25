@@ -176,6 +176,9 @@ Approved changes for the next QA APK
 - لا يُرفع APK أو تُعتبر التعديلات معتمدة إلا بنجاح اختبارات SHA
   الجديد بالكامل وظهور Artifact موقّع مع Release Notes.
 
+- استكمال فحص التحليل: استيراد WaffraText في اختبار Snackbar
+  بشكل صريح لمنع خطأ Dart analyzer المكتشف في #684.
+
 تنبيه إصدار:
 - للاختبارات فقط؛ ليس إصدار Google Play النهائي.
 - اعتماد SQLCipher الإنتاجي، اختبار هاتفين فعليين، والموافقة
