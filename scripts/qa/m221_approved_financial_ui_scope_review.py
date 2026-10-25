@@ -49,7 +49,9 @@ def main():
    "Widget recurringPage(){",
    "WaffraOutlinedItemsCount(",
    "WaffraDeletedItemsButton(",
-   "minimumSize:const Size(0,52)",
+   "minimumSize:const Size(0,48)",
+   "Key('waffra-recurring-count-badge')",
+   "Switch.adaptive(value:recurringRemindersEnabled",
    "onAddRecurring:(candidate)=>recurringDialog(",
  ):
   assert_ok(marker in app,"missing real UI connection: "+marker)
