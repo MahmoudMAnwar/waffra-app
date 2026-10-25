@@ -25,6 +25,9 @@ ALLOWED = {
     "lib/waffra_gold_calculator.dart",
     "lib/waffra_gold_market_section.dart",
     "test/waffra_widget_quick_capture_test.dart",
+    "test/waffra_footer_pdf_navigation_test.dart",
+    "test/waffra_m208_bundle_regression_test.dart",
+    "test/waffra_oct21_regression_test.dart",
     "test/m224_verified_gold_fallback_test.dart",
     "test/m224_verified_pull_refresh_dialog_test.dart",
     "test/m224_pdf_verified_display_currency_test.dart",
@@ -94,6 +97,16 @@ def main() -> None:
     sms_code = Path("lib/storage/waffra_encrypted_legacy_sms_reattachment.dart").read_text()
     sms_qa = Path("test/storage/m224_encrypted_legacy_sms_reattachment_test.dart").read_text()
     sms_bulk = Path("test/storage/m224_full_sms_batch_preservation_test.dart").read_text()
+    legacy_pdf_reviews = [
+        Path(path).read_text() for path in (
+            "test/waffra_footer_pdf_navigation_test.dart",
+            "test/waffra_m208_bundle_regression_test.dart",
+            "test/waffra_oct21_regression_test.dart",
+        )
+    ]
+    require(all("$pdfCurrency" in source or "$pdfCurrencyAr" in source
+                or "pdfAmount" in source for source in legacy_pdf_reviews),
+            "legacy PDF reviews must check verified selected-currency exports")
     pdf_qa = Path("test/m224_pdf_verified_display_currency_test.dart").read_text()
     emulator_proof = Path("integration_test/m202_home_widget_source_binder_android_test.dart").read_text()
     widget_code = Path("lib/waffra_widget_capture.part.dart").read_text()
