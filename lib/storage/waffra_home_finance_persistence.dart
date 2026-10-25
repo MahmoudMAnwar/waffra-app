@@ -86,6 +86,14 @@ class WaffraLegacySmsNotesPrivacyGate {
     for (final row in after) {
       final record = row as Map;
       final prior = priorById[record['id']];
+      // A legacy SMS entry must never be reclassified as manual: doing so
+      // would let a second save add raw bank text to plaintext preferences.
+      // This check runs under the native writer lock, before journal writes.
+      if (prior?['sourceType'] == 'sms' && record['sourceType'] != 'sms') {
+        throw StateError(
+          'Original bank SMS source cannot be downgraded in legacy storage.',
+        );
+      }
       final isSms = record['sourceType'] == 'sms' ||
           prior?['sourceType'] == 'sms';
       final notes = record['notes'];
