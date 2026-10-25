@@ -37,6 +37,15 @@ void main() {
   }
  });
 
+ test('M148: guarded catalog installer explicitly supports v4 upgrade',(){
+  final legacy=File('lib/storage/waffra_home_finance_persistence.dart').readAsStringSync();
+  expect(legacy,contains('version != 2 && version != 3 && version != 4'));
+  final ui=File('lib/main.dart').readAsStringSync();
+  expect(ui,contains('waffra_category_catalog_v4_installed'));
+  expect(ui,contains('version:4'));
+  expect(ui,contains('removedNames.contains'));
+ });
+
  test('M148: English roots outrank same-spelled children; compounds use context',(){
   expect(waffraEnglishCategoryLabel('اشتراكات رقمية'),'Digital Subscriptions');
   expect(waffraEnglishCategoryLabel('دخل رقمي وتقني / اشتراكات رقمية'),
