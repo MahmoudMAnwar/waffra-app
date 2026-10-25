@@ -53,6 +53,8 @@ def main():
         "Encrypted finance owner does not match the profile.",
         "store.transaction(() async",
         "fresh_account_profile_staging",
+        "fresh_account_profile_stage_marker",
+        "Encrypted profile stage witness is missing.",
         "if (!experimentalEnabled)",
         "Map<String, String>.unmodifiable(captured)",
     ):
@@ -73,6 +75,8 @@ def main():
         "M214 unknown/malformed sensitive profile refuses",
         "M214 active finance source marker blocks",
         "M214 changed legacy financial owner cannot stage",
+        "M214 empty profile stage cannot be reassigned to another user",
+        "M214 missing profile witness never silently adopts staged PII",
     ):
         require(marker in test,"missing staged PII safety test: "+marker)
     require("M214 SHA-pinned" in workflow and
