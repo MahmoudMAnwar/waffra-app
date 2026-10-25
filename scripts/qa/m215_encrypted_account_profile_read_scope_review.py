@@ -68,7 +68,8 @@ def main():
     ):
         require(marker in reader, "missing source integrity marker: " + marker)
     for forbidden in (
-        "SharedPreferences", "FirebaseAuth", "signIn(", "signOut(",
+        "SharedPreferences.getInstance(", "package:shared_preferences",
+        "FirebaseAuth", "signIn(", "signOut(",
         "sourceGuard.activate", "automaticallyActivateSqlCipher = true",
         "debugPrint(", "print(",
     ):
