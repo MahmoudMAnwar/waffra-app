@@ -28,6 +28,7 @@ ALLOWED = {
     "lib/waffra_gold_market_section.dart",
     "test/storage/portable_encrypted_vault_restorer_test.dart",
     "test/storage/production_finance_authority_binding_test.dart",
+    "test/storage/m109_verified_finance_authority_test.dart",
     "test/storage/m226_encrypted_original_sms_sidecar_test.dart",
     "test/storage/m226_encrypted_sms_authority_integration_test.dart",
     "test/m224_pdf_verified_display_currency_test.dart",
