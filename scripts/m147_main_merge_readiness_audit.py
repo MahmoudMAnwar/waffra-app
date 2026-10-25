@@ -29,6 +29,7 @@ ALLOWED = {
     "test/m224_verified_pull_refresh_dialog_test.dart",
     "test/m224_pdf_verified_display_currency_test.dart",
     "test/storage/m224_encrypted_legacy_sms_reattachment_test.dart",
+    "test/storage/m224_full_sms_batch_preservation_test.dart",
     "integration_test/m202_home_widget_source_binder_android_test.dart",
 }
 FINANCE_GUARDS = (
@@ -68,7 +69,7 @@ def main() -> None:
             "candidate must directly descend from pinned main")
     behind, ahead = map(int, git("rev-list", "--left-right", "--count",
                                   f"{BASE_MAIN}...{head}").split())
-    require(behind == 0 and 0 < ahead <= 45,
+    require(behind == 0 and 0 < ahead <= 60,
             "unexpected candidate ancestry or commit count")
     changed = set(filter(None,
         git("diff", "--name-only", BASE_MAIN, head).splitlines()))
@@ -92,6 +93,7 @@ def main() -> None:
     gold_test = Path("test/m224_verified_gold_fallback_test.dart").read_text()
     sms_code = Path("lib/storage/waffra_encrypted_legacy_sms_reattachment.dart").read_text()
     sms_qa = Path("test/storage/m224_encrypted_legacy_sms_reattachment_test.dart").read_text()
+    sms_bulk = Path("test/storage/m224_full_sms_batch_preservation_test.dart").read_text()
     pdf_qa = Path("test/m224_pdf_verified_display_currency_test.dart").read_text()
     emulator_proof = Path("integration_test/m202_home_widget_source_binder_android_test.dart").read_text()
     widget_code = Path("lib/waffra_widget_capture.part.dart").read_text()
@@ -120,6 +122,13 @@ def main() -> None:
         "SELECT source_json FROM fresh_finance_entries WHERE entry_id=?",
         "bankSmsFingerprint(originalSms) != expectedHash",
     )), "exact encrypted-only SMS recovery authorization, parity or lock missing")
+    require(all(k in sms_bulk for k in (
+        "all 56 full bank SMS notes survive encrypted batch and cold reopen",
+        "replayed 56 SMS hashes cannot create duplicate transactions",
+        "synthetic failure in one original-SMS row rolls back whole batch",
+        "expect(prefs.getString('entries'),isNull)",
+        "expect(found(encryptedBytes,sample),isFalse",
+    )), "56-bank-SMS lossless SQLCipher batch regression missing")
     require(all(s in sms_qa for s in (
         "cold-reopens exact", "SQL failure rolls back",
         "wrong parser amount", "disabled-by-default",
