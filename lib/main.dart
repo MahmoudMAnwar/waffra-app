@@ -3998,7 +3998,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       heading('تفاصيل العمليات','Transactions'),
       pw.Table(
        border:pw.TableBorder.all(color:PdfColors.grey400,width:0.4),
-       columnWidths:{0:const pw.FixedColumnWidth(34),1:const pw.FixedColumnWidth(85),
+       columnWidths:{0:const pw.FixedColumnWidth(54),1:const pw.FixedColumnWidth(81),
         2:const pw.FixedColumnWidth(61),3:const pw.FixedColumnWidth(90),
         4:const pw.FlexColumnWidth(3),5:const pw.FixedColumnWidth(83)},
        children:[
@@ -4032,52 +4032,130 @@ Future<void> bulkSmsSheet({String? initialText})async {
       ),
      ]));
    }else{
+    // "Financial Analytics" and "Smart Analysis" now render the very
+    // same chart datasets shown by their respective Flutter screens.
+    final smart=title.contains('آخر 90 يوم')||title.contains('Last 90 days');
     final yearly=title.contains('سنوي');
-    final periods=yearly?12:5;
-    final groups=List.generate(periods,(i)=>items.where((e)=>yearly?
-     e.date.month==i+1:((e.date.day-1)~/7)==i).toList());
-    final active=List.generate(periods,(i)=>i).where((i)=>groups[i].isNotEmpty).toList();
-    final maxValue=groups.expand<double>((g)=>[sum(g,true),sum(g,false)]).fold<double>(1.0,(largest,value)=>max(largest,value));
-    pw.Widget bar(double value,PdfColor color)=>pw.Expanded(child:pw.Row(children:[
-     pw.Expanded(flex:max(1,(value/maxValue*100).round()),
-      child:pw.Container(height:13,color:color)),
-     pw.Expanded(flex:max(1,100-(value/maxValue*100).round()),
-      child:pw.SizedBox(height:13)),
-    ]));
-    doc.addPage(pw.Page(pageTheme:pageTheme,build:(ctx)=>pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.stretch,children:[
-     heading('تقرير التحليلات المالية','Financial Analytics'),
-     pw.Container(padding:const pw.EdgeInsets.all(12),decoration:pw.BoxDecoration(border:pw.Border.all(color:PdfColors.grey400,width:1),borderRadius:pw.BorderRadius.circular(9)),child:pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.stretch,children:[
-     heading('الدخل والمصروفات حسب الفترة','Income vs Expenses by Period'),
-     ...active.map((i)=>pw.Padding(padding:const pw.EdgeInsets.symmetric(vertical:7),
-      child:pw.Row(children:[
-       pw.SizedBox(width:65,child:pw.Text(yearly?'${i+1}':'${english?'Week':'أسبوع'} ${i+1}',
-        style:pw.TextStyle(font:font,fontSize:10))),
-       pw.Expanded(child:pw.Column(children:[
-        pw.Row(children:[pw.SizedBox(width:48,child:pw.Text(english?'Income':'دخل',style:pw.TextStyle(font:font,fontSize:9))),
-         bar(sum(groups[i],true),PdfColors.teal),pw.SizedBox(width:62,child:pw.Text(fmt(sum(groups[i],true)),style:pw.TextStyle(font:font,fontSize:9)))]),
-        pw.SizedBox(height:5),
-        pw.Row(children:[pw.SizedBox(width:48,child:pw.Text(english?'Expense':'مصروف',style:pw.TextStyle(font:font,fontSize:9))),
-         bar(sum(groups[i],false),PdfColors.deepOrange),pw.SizedBox(width:62,child:pw.Text(fmt(sum(groups[i],false)),style:pw.TextStyle(font:font,fontSize:9)))]),
-       ])),
-      ]))),
-     ])),
-     if(totalExpenses>0)...[
-      pw.SizedBox(height:12),
-      pw.Container(padding:const pw.EdgeInsets.all(12),decoration:pw.BoxDecoration(border:pw.Border.all(color:PdfColors.grey400,width:1),borderRadius:pw.BorderRadius.circular(9)),child:pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.stretch,children:[
-      heading('توزيع المصروفات حسب الفئات','Expenses by Category'),
-      pw.Center(child:pw.SvgImage(svg:expensePieSvg(categoryTotals),width:150,height:150)),
-      pw.SizedBox(height:10),
-      ...((categoryTotals.entries.toList()..sort((a,b)=>b.value.compareTo(a.value))).take(7)
-       .map((e)=>pw.Padding(padding:const pw.EdgeInsets.symmetric(vertical:4),
+    final smartData=smart?waffraSmartChartData(items,exportedAt):null;
+    final buckets=smart?smartData!.periods:List<(double,double)>.generate(
+     yearly?12:5,(i){
+      final slice=items.where((e)=>yearly?
+       e.date.month==i+1:((e.date.day-1)~/7)==i);
+      return (sum(slice,true),sum(slice,false));
+     });
+    final maximum=buckets.fold<double>(1,(n,p)=>max(n,max(p.$1,p.$2)));
+    final top=(categoryTotals.entries.toList()
+     ..sort((a,b)=>b.value.compareTo(a.value))).take(5).toList();
+    final chartSlices=Map<String,double>.fromEntries(top);
+    pw.Widget legend()=>pw.Row(mainAxisAlignment:pw.MainAxisAlignment.center,
+     children:[
+      pw.Container(width:10,height:10,color:PdfColors.teal800),
+      pw.SizedBox(width:5),
+      pw.Text(english?'Income':'دخل',
+       style:pw.TextStyle(font:font,fontSize:10)),
+      pw.SizedBox(width:18),
+      pw.Container(width:10,height:10,color:PdfColors.deepOrange),
+      pw.SizedBox(width:5),
+      pw.Text(english?'Expenses':'مصروفات',
+       style:pw.TextStyle(font:font,fontSize:10)),
+     ]);
+    pw.Widget progressBar(double value,PdfColor color)=>pw.Expanded(
+     child:pw.Row(children:[
+      pw.Expanded(flex:max(1,(value/maximum*100).round()),
+       child:pw.Container(height:12,color:color)),
+      pw.Expanded(flex:max(1,100-(value/maximum*100).round()),
+       child:pw.SizedBox(height:12)),
+     ]));
+    pw.Widget panel(String ar,String en,List<pw.Widget> widgets)=>pw.Container(
+     margin:const pw.EdgeInsets.only(bottom:10),
+     padding:const pw.EdgeInsets.all(12),
+     decoration:pw.BoxDecoration(
+      border:pw.Border.all(color:PdfColors.grey400,width:.6),
+      borderRadius:pw.BorderRadius.circular(8)),
+     child:pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.stretch,
+      children:[heading(ar,en),...widgets]));
+    final parts=<pw.Widget>[
+     heading('تقرير الرسومات والتحليلات المالية','Financial Charts Report'),
+     if(smart)...[
+      panel('اتجاه الدخل والمصروفات - آخر 90 يوم',
+       'Income vs Expenses - Last 90 Days',[
+       ...List.generate(3,(i)=>pw.Padding(
+        padding:const pw.EdgeInsets.symmetric(vertical:5),
         child:pw.Row(children:[
-         pw.SizedBox(width:145,child:pw.Text(waffraTr(e.key),style:pw.TextStyle(font:font,fontSize:10))),
-         pw.Expanded(child:pw.Row(children:[pw.Expanded(flex:max(1,(e.value/totalExpenses*100).round()),child:pw.Container(height:12,color:PdfColors.teal)),pw.Expanded(flex:max(1,100-(e.value/totalExpenses*100).round()),child:pw.SizedBox(height:12))])),
-         pw.SizedBox(width:90,child:pw.Text('${(e.value/totalExpenses*100).toStringAsFixed(1)}%',
-          style:pw.TextStyle(font:bold,fontSize:10))),
-        ])))),
-      ])),
+         pw.SizedBox(width:72,child:pw.Text(
+          english?'Period ${i+1}':'فترة ${i+1}',
+          style:pw.TextStyle(font:font,fontSize:10))),
+         pw.Expanded(child:pw.Column(children:[
+          pw.Row(children:[
+           pw.SizedBox(width:40,child:pw.Text(english?'Income':'دخل',
+            style:pw.TextStyle(font:font,fontSize:8))),
+           progressBar(buckets[i].$1,PdfColors.teal800),
+           pw.SizedBox(width:61,child:pw.Text(fmt(buckets[i].$1),
+            style:pw.TextStyle(font:font,fontSize:9)))]),
+          pw.SizedBox(height:4),
+          pw.Row(children:[
+           pw.SizedBox(width:40,child:pw.Text(english?'Expense':'مصروف',
+            style:pw.TextStyle(font:font,fontSize:8))),
+           progressBar(buckets[i].$2,PdfColors.deepOrange),
+           pw.SizedBox(width:61,child:pw.Text(fmt(buckets[i].$2),
+            style:pw.TextStyle(font:font,fontSize:9)))]),
+         ])),
+        ]))),
+       pw.SizedBox(height:5),legend(),
+      ]),
+      panel('اتجاه المصروفات الأسبوعية','Weekly Spending Trend',[
+       pw.Center(child:pw.SvgImage(
+        svg:weeklySpendSvg(smartData!.weeklySpend),width:620,height:130)),
+       pw.Center(child:pw.Text(english?
+        'Four weeks: oldest to newest':'أربعة أسابيع من الأقدم إلى الأحدث',
+        style:pw.TextStyle(font:font,fontSize:10))),
+      ]),
+     ]else...[
+      panel(yearly?'الدخل والمصروفات حسب الشهر':'الدخل والمصروفات حسب الأسبوع',
+       yearly?'Income vs Expenses by Month':'Income vs Expenses by Week',[
+       pw.Center(child:pw.SvgImage(
+        svg:pairedBarChartSvg(buckets),width:680,height:155)),
+       pw.Row(mainAxisAlignment:pw.MainAxisAlignment.spaceEvenly,
+        children:List.generate(buckets.length,(i)=>pw.Expanded(
+         child:pw.Text(
+          english?(yearly?'M${i+1}':'W${i+1}'):
+           (yearly?'ش${i+1}':'أ${i+1}'),
+          textAlign:pw.TextAlign.center,
+          style:pw.TextStyle(font:font,fontSize:9))))),
+       pw.SizedBox(height:8),legend(),
+      ]),
      ],
-    ])));
+     if(top.isNotEmpty)panel(
+      'توزيع المصروفات حسب الأقسام','Expenses by Category',[
+      pw.Row(crossAxisAlignment:pw.CrossAxisAlignment.center,children:[
+       pw.SizedBox(width:190,height:160,
+        child:pw.SvgImage(svg:expensePieSvg(chartSlices),width:160,height:160)),
+       pw.SizedBox(width:20),
+       pw.Expanded(child:pw.Column(
+        crossAxisAlignment:pw.CrossAxisAlignment.stretch,
+        children:top.map((entry){
+         final color=PdfColor.fromInt(categoryFor(entry.key,false).color);
+         return pw.Padding(padding:const pw.EdgeInsets.only(bottom:10),
+          child:pw.Row(children:[
+           pw.Container(width:10,height:10,color:color),
+           pw.SizedBox(width:6),
+           pw.Expanded(child:pw.Text(pdfClean(waffraTr(entry.key)),
+            maxLines:2,style:pw.TextStyle(font:font,fontSize:9))),
+           pw.SizedBox(width:7),
+           pw.Text('${(entry.value/totalExpenses*100).toStringAsFixed(1)}%',
+            style:pw.TextStyle(font:bold,fontSize:9)),
+          ]));
+        }).toList())),
+      ]),
+     ]),
+    ];
+    doc.addPage(pw.MultiPage(
+     pageTheme:pageTheme,
+     footer:(ctx)=>pw.Align(alignment:pw.Alignment.centerRight,
+      child:pw.Text('${ctx.pageNumber} / ${ctx.pagesCount}',
+       style:pw.TextStyle(font:font,fontSize:9,color:PdfColors.teal900))),
+     build:(ctx)=>parts,
+    ));
    }
    final bytes=await doc.save();
    if(exportDialogOpen&&exportNavigator.mounted){exportNavigator.pop();exportDialogOpen=false;}
