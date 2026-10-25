@@ -253,14 +253,21 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
           files=list(Path('android/app/src/main/kotlin').rglob('MainActivity.kt'))
           if len(files)!=1:
               raise SystemExit('Expected single generated Kotlin MainActivity')
+          original=files[0].read_text()
+          match=re.search(r'^package\\s+[\\w.]+', original, re.MULTILINE)
+          if not match:
+              raise SystemExit('Missing generated MainActivity Kotlin package')
           template=Path('native/WaffraMainActivity.kt').read_text()
           if 'FirebaseAuth.getInstance().currentUser' not in template or 'waffra/account_owner' not in template:
               raise SystemExit('Missing M219 Android owner proof')
-          # M147 compiles native source; actual release workflow also
-          # applies Firebase appId and manifest integration separately.
+          # Match the generated QA app namespace so the test APK can launch.
+          # The actual release workflow separately binds the signed package.
+          template=re.sub(r'^package\\s+[\\w.]+', match.group(0),
+                          template, count=1, flags=re.MULTILINE)
           files[0].write_text(template)
           PY
       - name: Compile ARM64 release-mode APK (not production certified)
