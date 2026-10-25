@@ -165,7 +165,7 @@ jobs:
           python3 scripts/qa/m212_parallel_cutover_scope_review.py
           python3 scripts/qa/m189_physical_device_source_probe.py --check-contract
           python3 -m unittest discover -s test/qa -p 'm189_physical_device_source_probe_test.py'
-      - name: M213 SHA-pinned Home/Widget authoritative balance route (NO-GO)
+      - name: M213 SHA-pinned widget route and native writer-order QA (NO-GO)
         if: github.head_ref == 'feature/m213-authoritative-widget-balance-route-20261025'
         env:
           REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
