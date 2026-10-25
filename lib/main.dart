@@ -47,6 +47,7 @@ import 'storage/waffra_authoritative_widget_balance.dart';
 import 'storage/waffra_live_legacy_finance_guard.dart';
 import 'storage/waffra_production_finance_source_guard.dart';
 import 'storage/waffra_legacy_finance_writer_coordinator.dart';
+import 'storage/waffra_live_account_write_authority.dart';
 import 'storage/waffra_legacy_widget_commit_journal.dart';
 import 'storage/waffra_home_finance_persistence.dart';
 import 'storage/waffra_verified_finance_authority.dart';
@@ -644,23 +645,33 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   final p=await SharedPreferences.getInstance();await p.setBool('waffra_onboarding_completed',true);
   if(mounted)setState((){onboarded=true;showLogin=true;});
  }
+ // The live account/profile writer must never bypass the same source lock
+ // held by Home and the independent Android Widget finance engine.
+ final WaffraLiveAccountWriteAuthority _accountWriteAuthority=
+     const WaffraLiveAccountWriteAuthority();
  Future<void> saveUser(Person u)async {
-  final p=await SharedPreferences.getInstance();await p.setString('waffra_profile',jsonEncode(u.toJson()));
-  if(u.phone.trim().isNotEmpty)await p.setString('waffra_registered_profile',jsonEncode(u.toJson()));
-  await p.setString('waffra_last_login_method',u.provider.toLowerCase().contains('google')?'Google':u.provider.toLowerCase().contains('apple')?'Apple':u.phone.trim().isNotEmpty?'Phone':'Local');
-  if(u.email.trim().isNotEmpty)await p.setString('waffra_last_login_email',u.email.trim());
-  if(u.phone.trim().isNotEmpty)await p.setString('waffra_last_login_phone',u.phone.trim());
+  await _accountWriteAuthority.saveProfile(
+   profileJson:jsonEncode(u.toJson()),
+   registeredProfileJson:u.phone.trim().isNotEmpty?jsonEncode(u.toJson()):null,
+   loginMethod:u.provider.toLowerCase().contains('google')?'Google':
+    u.provider.toLowerCase().contains('apple')?'Apple':
+    u.phone.trim().isNotEmpty?'Phone':'Local',
+   email:u.email.trim().isNotEmpty?u.email.trim():null,
+   phone:u.phone.trim().isNotEmpty?u.phone.trim():null,
+  );
   if(mounted)setState((){profile=u;showLogin=false;});
  }
  Future<void> logout()async {
-  final p=await SharedPreferences.getInstance();await p.remove('waffra_profile');
-  await p.setBool('waffra_signed_out_explicitly',true);
+  await _accountWriteAuthority.signOut();
   if(mounted)setState((){profile=null;showLogin=true;locked=false;});
  }
  Future<void> setPin(String? value)async {
-  final p=await SharedPreferences.getInstance();
-  if(value==null){await p.remove('waffra_pin_sha256');if(mounted)setState((){pinHash=null;locked=false;});}
-  else{final hash=sha256.convert(utf8.encode(value)).toString();await p.setString('waffra_pin_sha256',hash);if(mounted)setState((){pinHash=hash;locked=false;});}
+  final hash=value==null?null:sha256.convert(utf8.encode(value)).toString();
+  await _accountWriteAuthority.replacePinVerifier(hash);
+  if(mounted)setState((){
+   pinHash=hash;
+   locked=false;
+  });
  }
  Future<void> setLanguage(String next)async {
   if((next!='ar'&&next!='en')||next==language)return;
