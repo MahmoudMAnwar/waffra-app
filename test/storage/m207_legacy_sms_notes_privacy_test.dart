@@ -147,6 +147,32 @@ void main() {
     expect(prefs.getString('waffra_widget_last_save_v1'), isNull);
   });
 
+  test('duplicate legacy IDs cannot shadow an original SMS source', () {
+    final original = sms('same', notes: 'Previously stored SMS');
+    final shadow = sms('same');
+    shadow['sourceType'] = 'manual';
+    final changed = sms('same', notes: 'New raw SMS');
+    changed['sourceType'] = 'manual';
+
+    // Before the guard, the last duplicate manual row masked the SMS row.
+    expect(
+      () => WaffraLegacySmsNotesPrivacyGate.rejectNewOrModifiedSmsNotes(
+        previousLedger: encode([original, shadow]),
+        proposedLedger: encode([changed]),
+      ),
+      throwsA(isA<StateError>()),
+    );
+    // Duplicate proposed identities are rejected even when each row alone
+    // would otherwise pass the legacy SMS-notes check.
+    expect(
+      () => WaffraLegacySmsNotesPrivacyGate.rejectNewOrModifiedSmsNotes(
+        previousLedger: '[]',
+        proposedLedger: encode([sms('same'), shadow]),
+      ),
+      throwsA(isA<StateError>()),
+    );
+  });
+
   test('manual transaction notes remain allowed without bank SMS source',
       () async {
     final manual = sms('manual', notes: 'User-written manual note');
