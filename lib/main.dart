@@ -1777,6 +1777,167 @@ void disposeLater(List<TextEditingController> controllers){
 // All transient notices use the same footer-anchored surface throughout the app.
 // Required-field validation remains inline using InputDecoration.errorText.
 enum WaffraSnackKind { success, error, warning, info }
+
+/// A single notice contract for income, expenses, goals, categories,
+/// recurring schedules, account settings and all other Waffra screens.
+class WaffraNoticeData {
+ const WaffraNoticeData({
+  required this.text,required this.kind,required this.duration,
+  required this.requireDismissal,this.actionLabel,this.onAction,
+ });
+ final String text;
+ final WaffraSnackKind kind;
+ final Duration duration;
+ final bool requireDismissal;
+ final String? actionLabel;
+ final VoidCallback? onAction;
+}
+
+(Color,Color,Color,IconData) waffraNoticePalette(
+ BuildContext context,WaffraSnackKind kind){
+ final dark=Theme.of(context).brightness==Brightness.dark;
+ switch(kind){
+  case WaffraSnackKind.error:
+   return (dark?const Color(0xFF4A2429):const Color(0xFFFFE1E2),
+    dark?const Color(0xFFFFDEE0):const Color(0xFF9D1D25),
+    const Color(0xFFE67B81),Icons.error_rounded);
+  case WaffraSnackKind.warning:
+   return (dark?const Color(0xFF473515):const Color(0xFFFFF8E5),
+    dark?const Color(0xFFFFDE94):const Color(0xFF926100),
+    const Color(0xFFB7791F),Icons.warning_rounded);
+  case WaffraSnackKind.info:
+   return (dark?const Color(0xFF153551):const Color(0xFFE8F1FE),
+    dark?const Color(0xFFC3DDFF):const Color(0xFF235DB7),
+    const Color(0xFF2B6CB0),Icons.info_rounded);
+  case WaffraSnackKind.success:
+   return (dark?const Color(0xFF163F31):const Color(0xFFE6F5EB),
+    dark?const Color(0xFFB5F2D4):const Color(0xFF07563B),
+    const Color(0xFF0C7957),Icons.check_circle_rounded);
+ }
+}
+
+class WaffraNoticeContent extends StatelessWidget {
+ const WaffraNoticeContent({
+  super.key,required this.notice,required this.onDismiss,
+ });
+ final WaffraNoticeData notice;
+ final VoidCallback onDismiss;
+ @override Widget build(BuildContext context){
+  final palette=waffraNoticePalette(context,notice.kind);
+  return ConstrainedBox(constraints:const BoxConstraints(minHeight:38),
+   child:Row(children:[
+    Icon(palette.$4,color:palette.$2,size:19),
+    const SizedBox(width:7),
+    Expanded(child:Tooltip(message:notice.text,
+     child:WaffraText(notice.text,maxLines:2,
+      overflow:TextOverflow.ellipsis,style:TextStyle(
+       color:palette.$2,fontSize:12,height:1.15,
+       fontWeight:FontWeight.w700)))),
+    if(notice.onAction!=null)TextButton(
+     style:TextButton.styleFrom(
+      padding:const EdgeInsets.symmetric(horizontal:4),
+      minimumSize:const Size(36,30),
+      tapTargetSize:MaterialTapTargetSize.shrinkWrap),
+     onPressed:(){
+      onDismiss();
+      notice.onAction?.call();
+     },
+     child:WaffraText(notice.actionLabel??(waffraIsEnglish?'Undo':'تراجع'),
+      maxLines:1,style:TextStyle(
+       color:palette.$2,fontSize:12,fontWeight:FontWeight.bold))),
+    IconButton(
+     tooltip:waffraIsEnglish?'Close':'إغلاق',
+     icon:Icon(Icons.close_rounded,color:palette.$2,size:17),
+     visualDensity:VisualDensity.compact,padding:EdgeInsets.zero,
+     constraints:const BoxConstraints(minWidth:27,minHeight:27),
+     onPressed:onDismiss),
+   ]));
+ }
+}
+
+final ValueNotifier<WaffraNoticeData?> _waffraFooterNotice=
+ ValueNotifier<WaffraNoticeData?>(null);
+Timer? _waffraFooterNoticeTimer;
+int _waffraFooterNoticeGeneration=0;
+int _waffraFooterHostCount=0;
+
+void waffraDismissFooterNotice(){
+ _waffraFooterNoticeGeneration++;
+ _waffraFooterNoticeTimer?.cancel();
+ _waffraFooterNoticeTimer=null;
+ _waffraFooterNotice.value=null;
+}
+void _waffraShowFooterNotice(WaffraNoticeData notice){
+ final generation=++_waffraFooterNoticeGeneration;
+ _waffraFooterNoticeTimer?.cancel();
+ _waffraFooterNotice.value=notice;
+ if(!notice.requireDismissal){
+  _waffraFooterNoticeTimer=Timer(notice.duration,(){
+   if(generation==_waffraFooterNoticeGeneration){
+    waffraDismissFooterNotice();
+   }
+  });
+ }
+}
+
+/// This sits INSIDE bottomNavigationBar, directly above the navigation.
+/// The financial list is laid out above it instead of being obscured.
+class WaffraFooterNoticeHost extends StatefulWidget {
+ const WaffraFooterNoticeHost({super.key,this.onNoticePresented});
+ final VoidCallback? onNoticePresented;
+ @override State<WaffraFooterNoticeHost> createState()=>
+  _WaffraFooterNoticeHostState();
+}
+class _WaffraFooterNoticeHostState extends State<WaffraFooterNoticeHost> {
+ @override void initState(){
+  super.initState();
+  _waffraFooterHostCount++;
+  _waffraFooterNotice.addListener(_onChanged);
+ }
+ void _onChanged(){
+  if(mounted&&_waffraFooterNotice.value!=null){
+   widget.onNoticePresented?.call();
+  }
+ }
+ @override void dispose(){
+  _waffraFooterNotice.removeListener(_onChanged);
+  _waffraFooterHostCount--;
+  if(_waffraFooterHostCount==0)waffraDismissFooterNotice();
+  super.dispose();
+ }
+ @override Widget build(BuildContext context)=>
+  ValueListenableBuilder<WaffraNoticeData?>(
+   valueListenable:_waffraFooterNotice,
+   builder:(ctx,notice,_)=>AnimatedSize(
+    duration:waffraMotion(170),
+    curve:Curves.easeOutCubic,
+    alignment:Alignment.bottomCenter,
+    child:notice==null?const SizedBox(width:double.infinity,height:0):
+     Padding(
+      padding:const EdgeInsets.only(top:4,bottom:8),
+      child:Center(child:SizedBox(
+       width:min(MediaQuery.sizeOf(ctx).width*0.87,440.0),
+       child:Builder(builder:(panelContext){
+        final palette=waffraNoticePalette(panelContext,notice.kind);
+        return Material(
+         color:palette.$1,elevation:2,
+         shadowColor:Colors.black.withValues(alpha:0.13),
+         clipBehavior:Clip.antiAlias,
+         shape:RoundedRectangleBorder(
+          borderRadius:BorderRadius.circular(14),
+          side:BorderSide(color:palette.$3,width:1)),
+         child:Padding(
+          padding:const EdgeInsets.symmetric(horizontal:9,vertical:5),
+          child:WaffraNoticeContent(
+           notice:notice,onDismiss:waffraDismissFooterNotice)),
+        );
+       }),
+      )),
+     ),
+   ),
+  );
+}
+
 void snack(BuildContext context,String text,{
  bool isError=true,
  WaffraSnackKind? kind,
