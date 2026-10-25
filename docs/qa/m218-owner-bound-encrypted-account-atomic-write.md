@@ -21,7 +21,7 @@ The API refuses to mutate unless all of the following independently match:
   verified finance evidence.
 - A pre-existing `fresh_account_profile_principal_binding` owner witness
   matches an HMAC-SHA256 of version, vault ID, source SHA and current auth
-  SDK principal. The 256-bit HMAC key must remain within Android Keystore; the app receives only the signed MAC, never its raw bytes.
+  SDK principal. The 256-bit HMAC key must remain within the OS-protected Android Keystore; the app receives only the signed MAC, never its raw bytes.
   The writer does **not** create or self-approve a principal enrollment or
   key. The owner HMAC cannot be inferred from an editable e-mail address.
 - All rows satisfy M214/M215's six-key allowlist, JSON person schema and
