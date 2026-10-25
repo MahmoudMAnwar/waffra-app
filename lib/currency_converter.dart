@@ -5,6 +5,7 @@ import 'waffra_amount_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'waffra_i18n.dart';
+import 'waffra_gold_market_section.dart';
 
 class CurrencyConverterPage extends StatefulWidget {
  const CurrencyConverterPage({super.key,this.lastIncomeAmount});
@@ -266,5 +267,8 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
    const SizedBox(height:20),
    const WaffraText('المصدر: ExchangeRate-API أو مزود احتياطي عند تعذّر الاتصال. الأسعار استرشادية وقد تختلف عن أسعار البنوك أو التحويل الفعلي.',
     style:TextStyle(fontSize:12)),
+   const SizedBox(height:22),
+   WaffraGoldMarketSection(english:waffraIsEnglish),
+
   ]));
 }
