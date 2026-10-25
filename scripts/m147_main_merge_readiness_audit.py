@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""M147/M224 strict main-bound, exact-head source and review-scope audit.
+"""M147/M225 strict main-bound, exact-head source and review-scope audit.
 
 Read-only: NEVER activates finance sources, changes user data, or publishes
 releases. Unlike the historical M147-only candidate, this explicitly reviews
-the M224 financial UI changes against the current pinned main.
+the M225 SQLCipher rehearsal changes against the current pinned main.
 """
 from __future__ import annotations
 
@@ -12,28 +12,14 @@ import os
 from pathlib import Path
 import subprocess
 
-BASE_MAIN = "bd038c40f0ec41e2c25f0ecef8078957e1d06240"
+BASE_MAIN = "8172232ef233fc685291e3e60da9eac0ec9afc8c"
 ALLOWED = {
     "scripts/m147_main_merge_readiness_audit.py",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/main.dart",
-    "lib/waffra_widget_capture.part.dart",
-    "lib/waffra_display_currency.dart",
-    "lib/storage/waffra_encrypted_legacy_sms_reattachment.dart",
-    "lib/currency_converter.dart",
-    "lib/waffra_gold_market_data.dart",
-    "lib/waffra_gold_calculator.dart",
-    "lib/waffra_gold_market_section.dart",
-    "test/waffra_widget_quick_capture_test.dart",
-    "test/waffra_footer_pdf_navigation_test.dart",
-    "test/waffra_m208_bundle_regression_test.dart",
-    "test/waffra_oct21_regression_test.dart",
-    "test/m224_verified_gold_fallback_test.dart",
-    "test/m224_verified_pull_refresh_dialog_test.dart",
-    "test/m224_pdf_verified_display_currency_test.dart",
-    "test/storage/m224_encrypted_legacy_sms_reattachment_test.dart",
-    "test/storage/m224_full_sms_batch_preservation_test.dart",
-    "integration_test/m202_home_widget_source_binder_android_test.dart",
+    "lib/storage/waffra_restored_finance_receipt_attestor.dart",
+    "lib/storage/waffra_production_finance_authority_binding.dart",
+    "test/storage/portable_encrypted_vault_restorer_test.dart",
+    "test/storage/production_finance_authority_binding_test.dart",
 }
 FINANCE_GUARDS = (
     "if(applied.originalSmsNotesOmittedOnLegacy)",
@@ -59,7 +45,7 @@ def git(*args: str) -> str:
 
 def require(ok: bool, message: str) -> None:
     if not ok:
-        raise SystemExit("M147/M224 MERGE BLOCKED — " + message)
+        raise SystemExit("M147/M225 MERGE BLOCKED — " + message)
 
 def main() -> None:
     head = git("rev-parse", "HEAD")
@@ -81,10 +67,11 @@ def main() -> None:
     require(not any(p.startswith(("native/", "firebase/"))
                     for p in changed),
             "Android native and Firebase are out of scope")
-    require(not any(p.startswith("lib/storage/") and p !=
-                    "lib/storage/waffra_encrypted_legacy_sms_reattachment.dart"
-                    for p in changed),
-            "Only the exact disabled-by-default encrypted SMS recovery candidate is approved")
+    require(not any(p.startswith("lib/storage/") and p not in {
+                    "lib/storage/waffra_restored_finance_receipt_attestor.dart",
+                    "lib/storage/waffra_production_finance_authority_binding.dart",
+                    } for p in changed),
+            "M225 may only tighten restore parity and startup source binding")
     require(not any(p.startswith(".github/workflows/") for p in changed),
             "CI workflow files must stay unmodified")
     require(not any(p in changed for p in (
@@ -193,6 +180,36 @@ def main() -> None:
             "PDF EGP/FX negative regression missing")
     require("M224" in notes and "SQLCipher" in notes,
             "release notes omit verified scope and SQLCipher NO-GO")
+    require("M225" in notes and "SQLCipher" in notes,
+            "M225 release notes must preserve encryption and hardware NO-GO")
+    attestor = Path(
+        "lib/storage/waffra_restored_finance_receipt_attestor.dart"
+    ).read_text()
+    binding = Path(
+        "lib/storage/waffra_production_finance_authority_binding.dart"
+    ).read_text()
+    attestor_test = Path(
+        "test/storage/portable_encrypted_vault_restorer_test.dart"
+    ).read_text()
+    binding_test = Path(
+        "test/storage/production_finance_authority_binding_test.dart"
+    ).read_text()
+    require(all(x in attestor for x in (
+        "fresh_finance_custom_goals",
+        "storedGoals.length != expectedGoals.length",
+        "storedGoals[i].read<int>('position') != i",
+        "storedGoals[i].read<String>('suggestion') != expectedGoals[i]",
+    )), "M225 restored custom goals independent SQL parity missing")
+    require(all(x in binding for x in (
+        "checkpoint.phase != WaffraCutoverPhase.active",
+        "checkpoint.sourceDigest != evidence.storage.sourceDigest",
+        "automaticallyActivateSqlCipher",
+    )), "M225 binding must pin encrypted startup to immutable source witness")
+    require("independent disposable vault B" in attestor_test
+            and "changed, extra or missing encrypted" in attestor_test
+            and "certifiedEvidence: syntheticApprovedEvidence()" in binding_test,
+            "M225 two-vault synthetic rehearsal or forged-digest regression missing")
+
     # Release notes must follow ALL modified application code; don't silently
     # issue an APK with notes predating the last UI or finance source change.
     manifest = git("log", "-1", "--format=%H", "--",
@@ -204,7 +221,7 @@ def main() -> None:
                 "release manifest predates " + path)
 
     report = {
-        "audit": "M147-M224", "base_main_sha": BASE_MAIN,
+        "audit": "M147-M225", "base_main_sha": BASE_MAIN,
         "reviewed_head_sha": head, "changed_paths": sorted(changed),
         "behind": behind, "ahead": ahead, "scope_verified": True,
         "review_status": "STRICT_SOURCE_SCOPE_ONLY_NOT_DEVICE_CERTIFICATION",
