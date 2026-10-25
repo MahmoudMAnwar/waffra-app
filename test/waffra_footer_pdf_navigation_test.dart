@@ -126,9 +126,9 @@ void main(){
   expect(model.topCategories.first.key,'بقالة وتموين / سوبرماركت');
   expect(model.topCategories.first.value,72);
   final code=File('lib/main.dart').readAsStringSync();
-  expect(code,contains('weeklySpendSvg(smartData!.weeklySpend)'));
+  expect(code,contains('weeklySpendSvg(smartData!.weeklySpend.map(pdfAmount).toList())'));
   expect(code,contains('expensePieSvg(chartSlices)'));
-  expect(code,contains('pairedBarChartSvg(buckets)'));
+  expect(code,contains('pairedBarChartSvg(buckets.map((p)=>(pdfAmount(p.$1),pdfAmount(p.$2))).toList())'));
   expect(code,contains('row.key+1'));
   expect(code,contains("'رقم المعاملة'"));
   expect(code,contains("'No.'"));
