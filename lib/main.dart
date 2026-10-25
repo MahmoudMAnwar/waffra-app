@@ -43,6 +43,7 @@ import 'waffra_recurring_policy.dart';
 import 'waffra_secure_backup.dart';
 import 'waffra_backup_files.dart';
 import 'storage/waffra_legacy_write_queue.dart';
+import 'storage/waffra_authoritative_widget_balance.dart';
 import 'storage/waffra_live_legacy_finance_guard.dart';
 import 'storage/waffra_production_finance_source_guard.dart';
 import 'storage/waffra_legacy_finance_writer_coordinator.dart';
@@ -2229,7 +2230,11 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
  final double balance;
  final bool english;
  final GlobalKey? focusKey;
- const WaffraBalanceHeader({required this.balance,required this.english,this.focusKey});
+ final Future<void> Function() refreshVerifiedWidgetBalance;
+ const WaffraBalanceHeader({
+  required this.balance,required this.english,this.focusKey,
+  required this.refreshVerifiedWidgetBalance,
+ });
  @override double get minExtent=>70;
  @override double get maxExtent=>86;
  @override Widget build(BuildContext context,double shrinkOffset,bool overlapsContent){
@@ -2269,10 +2274,9 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
         hideWaffraAmounts.value=conceal;
         final p=await SharedPreferences.getInstance();
         await p.setBool('waffra_hide_amounts',conceal);
-        await refreshWaffraHomeWidget(
-         balance:conceal?'***':formatWaffraMoney(balance),
-         negative:balance<0,hidden:conceal,
-         currency:english?'SAR':'ريال');
+        // Never push the in-memory header balance into the Android widget:
+        // a parallel Widget engine may have committed a newer transaction.
+        await refreshVerifiedWidgetBalance();
        },
        visualDensity:VisualDensity.compact,
        icon:Icon(hidden?Icons.visibility_off_outlined:Icons.visibility_outlined,
@@ -2648,16 +2652,30 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
  }
  Future<void> _refreshWidget()async{
-  final now=DateTime.now();
-  final income=entries.where((e)=>e.income).fold<int>(0,(sum,e)=>sum+WaffraRecurringPolicy.toHalalas(e.amount));
-  final expense=entries.where((e)=>!e.income).fold<int>(0,(sum,e)=>sum+WaffraRecurringPolicy.toHalalas(e.amount));
-  final thisMonth=entries.where((e)=>!e.income&&e.date.year==now.year&&e.date.month==now.month)
-   .fold<int>(0,(sum,e)=>sum+WaffraRecurringPolicy.toHalalas(e.amount));
-  await refreshWaffraHomeWidget(
-   balance:hideWaffraAmounts.value?'***':formatWaffraMoney((income-expense)/100),
-   negative:income-expense<0,
-   hidden:hideWaffraAmounts.value,
-   currency:waffraIsEnglish?'SAR':'ريال');
+  if(!Platform.isAndroid)return;
+  try{
+   await _ensureFinanceBound();
+   final verified=await _financeAuthority.load(
+    route:WaffraFinanceRoute.widgetBalanceRefresh);
+   verified.finance.requireIntegrity();
+   final raw=verified.ledgerRaw;
+   if(raw==null){
+    throw StateError('Financial source returned no verified widget ledger.');
+   }
+   final net=WaffraAuthoritativeWidgetBalance.netHalalas(raw);
+   await refreshWaffraHomeWidget(
+    balance:hideWaffraAmounts.value?'***':formatWaffraMoney(net/100),
+    negative:net<0,
+    hidden:hideWaffraAmounts.value,
+    currency:waffraIsEnglish?'SAR':'ريال');
+  }catch(e){
+   // An absent OS key, conflicting source witness, corrupt ledger or
+   // interrupted cutover must NEVER display a stale in-memory balance.
+   debugPrint('Verified widget balance refresh unavailable: $e');
+   await refreshWaffraHomeWidget(
+    balance:'***',negative:false,hidden:true,
+    currency:waffraIsEnglish?'SAR':'ريال');
+  }
  }
  Future<void> persist({
   WaffraFinanceRoute route = WaffraFinanceRoute.transactionEdit,
@@ -5120,7 +5138,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
       // Not pinned: the shrinking balance scrolls away without covering data.
       SliverPersistentHeader(
        pinned:false,
-       delegate:WaffraBalanceHeader(balance:inc-exp,english:waffraIsEnglish,focusKey:_tourKeys[0])),
+       delegate:WaffraBalanceHeader(
+         balance:inc-exp,english:waffraIsEnglish,focusKey:_tourKeys[0],
+         refreshVerifiedWidgetBalance:_refreshWidget)),
       SliverPadding(padding:const EdgeInsets.fromLTRB(14,10,14,96),
        sliver:SliverToBoxAdapter(child:Column(
         crossAxisAlignment:CrossAxisAlignment.stretch,children:[
