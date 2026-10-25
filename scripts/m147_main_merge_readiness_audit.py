@@ -27,6 +27,7 @@ ALLOWED = {
     "test/waffra_widget_quick_capture_test.dart",
     "test/m224_verified_gold_fallback_test.dart",
     "test/m224_verified_pull_refresh_dialog_test.dart",
+    "test/m224_pdf_verified_display_currency_test.dart",
     "test/storage/m224_encrypted_legacy_sms_reattachment_test.dart",
     "integration_test/m202_home_widget_source_binder_android_test.dart",
 }
@@ -67,7 +68,7 @@ def main() -> None:
             "candidate must directly descend from pinned main")
     behind, ahead = map(int, git("rev-list", "--left-right", "--count",
                                   f"{BASE_MAIN}...{head}").split())
-    require(behind == 0 and 0 < ahead <= 35,
+    require(behind == 0 and 0 < ahead <= 45,
             "unexpected candidate ancestry or commit count")
     changed = set(filter(None,
         git("diff", "--name-only", BASE_MAIN, head).splitlines()))
@@ -91,6 +92,7 @@ def main() -> None:
     gold_test = Path("test/m224_verified_gold_fallback_test.dart").read_text()
     sms_code = Path("lib/storage/waffra_encrypted_legacy_sms_reattachment.dart").read_text()
     sms_qa = Path("test/storage/m224_encrypted_legacy_sms_reattachment_test.dart").read_text()
+    pdf_qa = Path("test/m224_pdf_verified_display_currency_test.dart").read_text()
     emulator_proof = Path("integration_test/m202_home_widget_source_binder_android_test.dart").read_text()
     widget_code = Path("lib/waffra_widget_capture.part.dart").read_text()
     widget_qa = Path("test/waffra_widget_quick_capture_test.dart").read_text()
@@ -155,6 +157,18 @@ def main() -> None:
             "SQLCipher route audit inventory does not enumerate exactly 24")
     require("verifiedRoutes = const <WaffraFinanceRoute>{}" in routes,
             "unverified routes must not be preapproved")
+    pdf_app = main_code.split("Future<void> exportEntriesPdf(", 1)[1]
+    require(all(x in pdf_app for x in (
+        "final pdfQuote=WaffraDisplayCurrency.active.value",
+        "if(!pdfQuote.verified)",
+        "final n=pdfAmount(number)",
+        "Amount ($pdfCurrency)",
+        "المبلغ ($pdfCurrencyAr)",
+        "svg:weeklySpendSvg(smartData!.weeklySpend.map(pdfAmount).toList())",
+        "svg:pairedBarChartSvg(buckets.map(",
+    )), "PDF must verify one selected FX source across all values and plots")
+    require("primaryRate" in pdf_qa and "stale FX" in pdf_qa,
+            "PDF EGP/FX negative regression missing")
     require("M224" in notes and "SQLCipher" in notes,
             "release notes omit verified scope and SQLCipher NO-GO")
     # Release notes must follow ALL modified application code; don't silently
