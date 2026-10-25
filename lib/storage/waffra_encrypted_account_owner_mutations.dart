@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
-import 'package:drift/drift.dart' show Variable;
 
 import 'waffra_encrypted_account_profile_stager.dart';
 import 'waffra_encrypted_store.dart';
