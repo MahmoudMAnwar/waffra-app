@@ -405,3 +405,8 @@ M208 encrypted-legacy privacy constraint: When verified SQLCipher is not active,
 - فشل Waffra live financial write ordering وM109 على PDF tests كانت بتفترض عرض Amount (SAR) والمبلغ (ريال) ورسم weeklySpendSvg(smartData!.weeklySpend) بدون تحويل. الكود صار يفحص quote موثّق ويحوّل جميع القيم الظاهرة قبل رسوم SVG، فعدّلنا الاختبارات لتتأكد من التسميات والتحويل الحقيقي.
 - حدّثنا 3 اختبارات المصدر لتتحقق من Amount ($pdfCurrency) والمبلغ ($pdfCurrencyAr) وتطبيق pdfQuote.fromSar على القيم ومصدر الرسم weeklySpendSvg/pairedBarChartSvg. حافظنا على اختبارات ألوان المعاملات وترقيمها وجميع بقية فحوص PDF.
 - جرى إدخال الملفات الجديدة في قائمة M147 الثابتة؛ رفع التعديل لإعادة CI على آخر SHA. هذا ليس اجتيازًا مضمونًا ولا يفعّل SQLCipher إنتاجيًا.
+
+[37] M224 — إصلاح فشل Flutter analyze في اختبار PDF للعرض بعملة مختارة
+- اختبار test/waffra_footer_pdf_navigation_test.dart استخدم raw Dart string في المطابقة النصية للتعبير record.$1 / record.$2؛ لا يجب أن يعتبر Dart رموز $1 و$2 interpolation داخل literal الاختبار.
+- الفشل السابق لـWaffra Full Offline وM109 كان بسبب analyzer missing_identifier على السطر 131؛ التعديل يمنع الخطأ البنيوي دون إلغاء التحقق من قيم الرسم البياني المحولة.
+- التعديل لا يعد نجاح CI: لا دمج حتى نجاح checks على نفس SHA، وSQLCipher الإنتاجي والهاتفان الحقيقيان ما زالا غير معتمدين.
