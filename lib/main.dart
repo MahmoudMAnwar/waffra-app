@@ -2794,19 +2794,54 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        alreadyPaid:entries.any((e)=>e.id==id),postponedUntil:postponed))continue;
    _dueDialogShowing=true;
    try{
-    final action=await showWaffraDialog<String>(context:context,builder:(ctx)=>AlertDialog(
-     title:WaffraText(waffraIsEnglish?'Recurring payment due':'عملية متكررة مستحقة'),
-     content:WaffraText(waffraIsEnglish?
-      '${r.title} • ${cash(r.amount)}\\nDue: ${dayText(postponed??due)}\\nWas this paid, or would you like to postpone?':
-      '${r.title} • ${cash(r.amount)}\\nالاستحقاق: ${dayText(postponed??due)}\\nهل تم الدفع أم تريد تأجيل الاستحقاق؟'),
-     actions:[
-      TextButton(onPressed:()=>Navigator.pop(ctx,'later'),
-       child:WaffraText(waffraIsEnglish?'Not now':'ليس الآن')),
-      OutlinedButton(onPressed:()=>Navigator.pop(ctx,'postpone'),
-       child:WaffraText(waffraIsEnglish?'Postpone':'تأجيل')),
-      FilledButton(onPressed:()=>Navigator.pop(ctx,'paid'),
-       child:WaffraText(waffraIsEnglish?'Paid':'تم الدفع')),
-     ]));
+    final action=await showWaffraDialog<String>(context:context,
+     builder:(ctx)=>AlertDialog(
+      title:Column(mainAxisSize:MainAxisSize.min,children:[
+       const Icon(Icons.event_repeat_rounded,color:emerald,size:34),
+       const SizedBox(height:8),
+       WaffraText(waffraIsEnglish?'Recurring payment due':'عملية متكررة مستحقة',
+        textAlign:TextAlign.center,
+        style:const TextStyle(fontWeight:FontWeight.w800,fontSize:20)),
+      ]),
+      content:Column(mainAxisSize:MainAxisSize.min,
+       crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+       WaffraText(r.title,textAlign:TextAlign.center,
+        style:const TextStyle(fontSize:17,fontWeight:FontWeight.w700)),
+       const SizedBox(height:12),
+       Directionality(textDirection:TextDirection.ltr,
+        child:Center(child:WaffraText(cash(r.amount),
+         style:const TextStyle(fontSize:22,fontWeight:FontWeight.w900)))),
+       const SizedBox(height:12),
+       Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+        const Icon(Icons.calendar_today_outlined,size:17,color:emerald),
+        const SizedBox(width:7),
+        WaffraText(waffraIsEnglish?'Due: ':'تاريخ الاستحقاق: '),
+        Directionality(textDirection:TextDirection.ltr,
+         child:Text(dayText(postponed??due))),
+       ]),
+       const SizedBox(height:15),
+       WaffraText(waffraIsEnglish?
+        'Have you paid, or would you like to postpone?':
+        'هل تم الدفع، أم ترغب في تأجيل الاستحقاق؟',
+        textAlign:TextAlign.center),
+      ]),
+      actionsAlignment:MainAxisAlignment.center,
+      actionsPadding:const EdgeInsets.fromLTRB(12,0,12,16),
+      actions:[SizedBox(width:min(330.0,MediaQuery.sizeOf(ctx).width-80),
+       child:Row(children:[
+        Expanded(child:OutlinedButton(onPressed:()=>Navigator.pop(ctx,'later'),
+         child:WaffraText(waffraIsEnglish?'Not now':'ليس الآن',
+          maxLines:1,style:const TextStyle(fontSize:11.5)))),
+        const SizedBox(width:5),
+        Expanded(child:OutlinedButton(onPressed:()=>Navigator.pop(ctx,'postpone'),
+         child:WaffraText(waffraIsEnglish?'Postpone':'تأجيل',
+          maxLines:1,style:const TextStyle(fontSize:11.5)))),
+        const SizedBox(width:5),
+        Expanded(child:FilledButton(onPressed:()=>Navigator.pop(ctx,'paid'),
+         child:WaffraText(waffraIsEnglish?'Paid':'تم الدفع',
+          maxLines:1,style:const TextStyle(fontSize:11.5)))),
+       ]))],
+     ));
     if(!mounted)return;
     if(action=='paid'){
      if(!entries.any((e)=>e.id==id)){
