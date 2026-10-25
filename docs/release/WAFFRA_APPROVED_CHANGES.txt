@@ -179,6 +179,9 @@ Approved changes for the next QA APK
 - استكمال فحص التحليل: استيراد WaffraText في اختبار Snackbar
   بشكل صريح لمنع خطأ Dart analyzer المكتشف في #684.
 
+- إصلاح آخر اختبار تراجع: اختيار TextButton نفسه بدل البحث
+  عن نص مكرر داخل WaffraText/Flutter Text.
+
 تنبيه إصدار:
 - للاختبارات فقط؛ ليس إصدار Google Play النهائي.
 - اعتماد SQLCipher الإنتاجي، اختبار هاتفين فعليين، والموافقة

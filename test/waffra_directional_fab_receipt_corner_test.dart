@@ -120,7 +120,10 @@ void main() {
       reason:'Financial content must reflow above the footer notice.');
     expect(noticeRect.height,lessThanOrEqualTo(66));
     expect(noticeRect.width,lessThanOrEqualTo(440));
-    await tester.tap(find.widgetWithText(TextButton,'تراجع'));
+    // WaffraText builds an inner Text with identical content, so text-based
+    // ancestor matchers find the same button twice. Select its widget type.
+    expect(find.byType(TextButton),findsOneWidget);
+    await tester.tap(find.byType(TextButton));
     await tester.pumpAndSettle();
     expect(undos,1);
     expect(find.text('تم تعديل المعاملة'),findsNothing);
