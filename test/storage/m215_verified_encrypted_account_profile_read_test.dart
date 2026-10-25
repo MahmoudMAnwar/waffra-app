@@ -168,8 +168,11 @@ void main() {
       '(profile_key,profile_value) VALUES (?,?)',
       ['waffra_pin_sha256', 'not-a-real-pin'],
     );
+    // Keep the marker count valid; the check must reject the unknown key
+    // itself, not merely a count larger than the six-key allowlist.
     await store.customStatement(
-      'UPDATE fresh_account_profile_stage_marker SET captured_count = 7',
+      'DELETE FROM fresh_account_profile_staging WHERE profile_key = ?',
+      ['waffra_last_login_phone'],
     );
     await expectLater(read(), throwsStateError);
   });
