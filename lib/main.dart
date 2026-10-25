@@ -4783,10 +4783,28 @@ Future<void> bulkSmsSheet({String? initialText})async {
    ),
   );
  Future<void> transactionDetails(MoneyEntry entry)async {
+  // Only after confirming this ID is in the authoritative SMS ledger may
+  // a full original message be loaded from its separate SQLCipher note vault.
+  // The decrypted text remains in this dialog's memory, never preferences.
+  var visibleEntry=entry;
+  if(entry.sourceType=='sms'&&entry.notes.isEmpty){
+   try{
+    final original=await _financeAuthority.readProtectedOriginalSms(entry.id);
+    if(original!=null){
+     visibleEntry=MoneyEntry.fromJson({...entry.toJson(),'notes':original});
+    }
+   }catch(_){
+    if(mounted)snack(context,waffraIsEnglish?
+     'Encrypted bank message cannot be opened. Your transaction is unchanged.':
+     'تعذر فتح الرسالة البنكية المشفّرة. بيانات المعاملة لم تتغير.');
+    return;
+   }
+  }
+  if(!mounted)return;
   await showWaffraDialog<void>(
    context:context,
    builder:(ctx)=>WaffraTransactionDetailsDialog(
-    entry:entry,
+    entry:visibleEntry,
     onClose:()=>Navigator.pop(ctx),
     onViewReceipt:waffraReceiptPaths(entry.receiptPath).isNotEmpty
       ?(){Navigator.pop(ctx);showReceipt(entry.receiptPath!);}
