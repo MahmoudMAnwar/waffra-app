@@ -190,6 +190,9 @@ class WaffraUnifiedFinanceWriter {
             throw StateError('Encrypted category JSON is not identical to ledger snapshot.');
           }
         }
+        // Bank notes must survive BOTH encrypted representations byte-for-byte.
+        // Kept only in memory; never print or copy them to legacy preferences.
+        final newlySavedSmsNotes = <String, String>{};
         var savedIncome = 0, savedExpenses = 0, skipped = 0;
         final usedCategoryNames=<String>{};
         var incomeMinor = 0, expenseMinor = 0;
@@ -219,6 +222,10 @@ class WaffraUnifiedFinanceWriter {
             ],
           );
           list.add(record);
+          if (hash != null && record['notes'] is String &&
+              (record['notes'] as String).isNotEmpty) {
+            newlySavedSmsNotes[record['id'] as String] = record['notes'] as String;
+          }
           usedCategoryNames.add('${record['income']}|${record['category']}'.toLowerCase());
           if(hash!=null){
             existingHashes.add(hash);
@@ -294,6 +301,55 @@ class WaffraUnifiedFinanceWriter {
           expectedGeneration: current.generation,
           fullFinanceSnapshot: next,
         );
+        // A successful insert alone is NOT proof of preservation: the
+        // canonical encrypted ledger and the typed encrypted SQL projection
+        // must contain the exact originally confirmed multiline bank note.
+        // Verify inside the SAME SQLCipher transaction so any source-json
+        // truncation, tampering or projection mismatch rolls back the ledger,
+        // hash and transaction together. Error strings disclose no SMS text.
+        if (newlySavedSmsNotes.isNotEmpty) {
+          final canonicalRaw = written.values['entries'];
+          if (canonicalRaw is! String) {
+            throw StateError('Encrypted SMS note parity is unavailable.');
+          }
+          final decoded = jsonDecode(canonicalRaw);
+          if (decoded is! List) {
+            throw StateError('Encrypted SMS ledger is invalid.');
+          }
+          final canonicalNotes = <String, String>{};
+          for (final item in decoded) {
+            if (item is! Map) {
+              throw StateError('Encrypted SMS ledger row is invalid.');
+            }
+            final id = item['id'];
+            if (id is String && newlySavedSmsNotes.containsKey(id)) {
+              if (canonicalNotes.containsKey(id) || item['notes'] is! String) {
+                throw StateError('Encrypted SMS ledger note mismatch.');
+              }
+              canonicalNotes[id] = item['notes'] as String;
+            }
+          }
+          final sqlRows = await snapshot.store.customSelect(
+            'SELECT entry_id,source_json FROM fresh_finance_entries',
+          ).get();
+          final sqlNotes = <String, String>{};
+          for (final row in sqlRows) {
+            final id = row.read<String>('entry_id');
+            if (!newlySavedSmsNotes.containsKey(id)) continue;
+            final encoded = jsonDecode(row.read<String>('source_json'));
+            if (encoded is! Map || encoded['notes'] is! String ||
+                sqlNotes.containsKey(id)) {
+              throw StateError('Encrypted SMS SQL note mismatch.');
+            }
+            sqlNotes[id] = encoded['notes'] as String;
+          }
+          for (final note in newlySavedSmsNotes.entries) {
+            if (canonicalNotes[note.key] != note.value ||
+                sqlNotes[note.key] != note.value) {
+              throw StateError('Encrypted SMS original note parity failed.');
+            }
+          }
+        }
         return WaffraUnifiedWriteResult(
           saved: saved,
           savedIncome: savedIncome,
