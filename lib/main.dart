@@ -7166,66 +7166,47 @@ Future<void> bulkSmsSheet({String? initialText})async {
     icon:Icons.event_repeat_rounded,titleKey:_tourKeys[4]),
    const SizedBox(height:9),
    Row(children:[
-    Expanded(child:WaffraText(waffraIsEnglish?'Recurring transactions':'العمليات المتكررة',
-     style:const TextStyle(fontSize:15,fontWeight:FontWeight.bold))),
-    Container(key:const Key('waffra-recurring-count-badge'),
-     padding:const EdgeInsets.symmetric(horizontal:12,vertical:5),
-     decoration:BoxDecoration(
-      color:Theme.of(context).brightness==Brightness.dark?
-       const Color(0xFF194A3A):const Color(0xFFE0EFE8),
-      borderRadius:BorderRadius.circular(20)),
-     child:WaffraText('${recurring.length}',
-      style:const TextStyle(fontWeight:FontWeight.bold,color:emerald))),
-   ]),
-   const SizedBox(height:9),
-   Row(children:[
     Expanded(child:OutlinedButton.icon(
      onPressed:showWaffraFinancialCalendar,
-     style:OutlinedButton.styleFrom(minimumSize:const Size(0,48),
-      padding:const EdgeInsets.symmetric(horizontal:5,vertical:8),
+     style:OutlinedButton.styleFrom(minimumSize:const Size(0,52),
+      padding:const EdgeInsets.symmetric(horizontal:5,vertical:7),
       side:BorderSide(color:Theme.of(context).colorScheme.primary,width:1.2),
-      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(14))),
+      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15))),
      icon:const Icon(Icons.calendar_month,size:18),
      label:WaffraText(waffraIsEnglish?'Financial calendar':'التقويم المالي',
       maxLines:2,textAlign:TextAlign.center,
       style:const TextStyle(fontSize:11.5,fontWeight:FontWeight.bold)))),
-    const SizedBox(width:8),
-    Expanded(child:OutlinedButton.icon(
+    const SizedBox(width:9),
+    Expanded(child:WaffraDeletedItemsButton(
      onPressed:deletedRecurringDialog,
-     style:OutlinedButton.styleFrom(minimumSize:const Size(0,48),
-      padding:const EdgeInsets.symmetric(horizontal:5,vertical:8),
-      foregroundColor:Theme.of(context).brightness==Brightness.dark?
-       const Color(0xFFFF9090):const Color(0xFFB42332),
-      backgroundColor:Theme.of(context).brightness==Brightness.dark?
-       const Color(0xFF3C242A):const Color(0xFFFFF4F4),
-      side:const BorderSide(color:Color(0xFFB42332),width:1.2),
-      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(14))),
-     icon:const Icon(Icons.delete_outline,size:18),
-     label:WaffraText(waffraIsEnglish?
-      'Deleted (${deletedRecurring.length})':'المحذوفة (${deletedRecurring.length})',
-      maxLines:2,textAlign:TextAlign.center,
-      style:const TextStyle(fontSize:11.5,fontWeight:FontWeight.bold)))),
+     label:waffraIsEnglish?'Deleted recurring (${deletedRecurring.length})':
+      'المتكررة المحذوفة (${deletedRecurring.length})')),
+   ]),
+   const SizedBox(height:10),
+   Row(children:[
+    Expanded(child:WaffraOutlinedItemsCount(
+     label:waffraIsEnglish?'Recurring count':'عدد العمليات المتكررة',
+     count:recurring.length)),
+    const SizedBox(width:9),
+    Expanded(child:Container(
+     padding:const EdgeInsets.symmetric(horizontal:7,vertical:7),
+     decoration:BoxDecoration(
+      color:Theme.of(context).cardColor,
+      border:Border.all(color:Theme.of(context).dividerColor.withValues(alpha:.5)),
+      borderRadius:BorderRadius.circular(16)),
+     child:Row(children:[
+      Expanded(child:Column(mainAxisSize:MainAxisSize.min,
+       crossAxisAlignment:CrossAxisAlignment.start,children:[
+       WaffraText(waffraIsEnglish?'Reminders':'التذكير',
+        maxLines:1,style:const TextStyle(fontSize:12,fontWeight:FontWeight.bold)),
+       WaffraText(waffraIsEnglish?'1 day before • 9 AM':'قبل الموعد بيوم',
+        maxLines:2,style:const TextStyle(fontSize:10)),
+      ])),
+      Transform.scale(scale:.82,child:Switch.adaptive(
+       value:recurringRemindersEnabled,onChanged:toggleRecurringReminders)),
+     ]))),
    ]),
    const SizedBox(height:9),
-   Container(
-    padding:const EdgeInsets.symmetric(horizontal:12,vertical:6),
-    decoration:BoxDecoration(color:Theme.of(context).cardColor,
-     border:Border.all(color:Theme.of(context).dividerColor.withValues(alpha:.5)),
-     borderRadius:BorderRadius.circular(16)),
-    child:Row(children:[
-     const Icon(Icons.notifications_active_outlined,color:emerald,size:22),
-     const SizedBox(width:9),
-     Expanded(child:Column(mainAxisSize:MainAxisSize.min,
-      crossAxisAlignment:CrossAxisAlignment.start,children:[
-      WaffraText(waffraIsEnglish?'Remind me before due dates':'تذكير قبل الاستحقاق',
-       style:const TextStyle(fontSize:13,fontWeight:FontWeight.bold)),
-      WaffraText(waffraIsEnglish?'One day before • 9 AM Riyadh time':
-       'قبل الموعد بيوم • ٩ صباحًا بتوقيت الرياض',
-       maxLines:2,style:const TextStyle(fontSize:11.5)),
-     ])),
-     Switch.adaptive(value:recurringRemindersEnabled,
-      onChanged:toggleRecurringReminders),
-    ])),
    if(nextBill!=null)...[
     const SizedBox(height:9),
     Card(child:ListTile(
