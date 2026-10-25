@@ -78,14 +78,27 @@ class WaffraLegacySmsNotesPrivacyGate {
         after.any((row) => row is! Map)) {
       throw StateError('Legacy finance ledger encoding is invalid.');
     }
-    final priorById = <Object?, Map>{};
+    // Fail closed on malformed or duplicate identities. Otherwise a legacy
+    // ledger containing both SMS and manual rows with the same ID could let
+    // the manual row shadow the original SMS source in this comparison.
+    final priorById = <String, Map>{};
     for (final row in before) {
       final record = row as Map;
-      priorById[record['id']] = record;
+      final id = record['id'];
+      if (id is! String || id.trim().isEmpty ||
+          priorById.containsKey(id)) {
+        throw StateError('Legacy finance ledger has ambiguous identities.');
+      }
+      priorById[id] = record;
     }
+    final proposedIds = <String>{};
     for (final row in after) {
       final record = row as Map;
-      final prior = priorById[record['id']];
+      final id = record['id'];
+      if (id is! String || id.trim().isEmpty || !proposedIds.add(id)) {
+        throw StateError('Proposed finance ledger has ambiguous identities.');
+      }
+      final prior = priorById[id];
       // A legacy SMS entry must never be reclassified as manual: doing so
       // would let a second save add raw bank text to plaintext preferences.
       // This check runs under the native writer lock, before journal writes.
