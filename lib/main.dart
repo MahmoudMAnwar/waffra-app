@@ -1052,27 +1052,27 @@ class _PinLockScreenState extends State<PinLockScreen> {
          border:Border.all(color:Colors.white,width:1.4))))),
       SizedBox(height:compact?17:24),
       Row(textDirection:TextDirection.ltr,mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
-       _padButton('1',onPressed:WaffraHaptics.tap(()=>_keyDigit('1'))),
-       _padButton('2',onPressed:WaffraHaptics.tap(()=>_keyDigit('2'))),
-       _padButton('3',onPressed:WaffraHaptics.tap(()=>_keyDigit('3'))),
+       _padButton('1',onPressed:WaffraHaptics.tapRequired(()=>_keyDigit('1'))),
+       _padButton('2',onPressed:WaffraHaptics.tapRequired(()=>_keyDigit('2'))),
+       _padButton('3',onPressed:WaffraHaptics.tapRequired(()=>_keyDigit('3'))),
       ]),
       const SizedBox(height:8),
       Row(textDirection:TextDirection.ltr,mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
-       _padButton('4',onPressed:WaffraHaptics.tap(()=>_keyDigit('4'))),
-       _padButton('5',onPressed:WaffraHaptics.tap(()=>_keyDigit('5'))),
-       _padButton('6',onPressed:WaffraHaptics.tap(()=>_keyDigit('6'))),
+       _padButton('4',onPressed:WaffraHaptics.tapRequired(()=>_keyDigit('4'))),
+       _padButton('5',onPressed:WaffraHaptics.tapRequired(()=>_keyDigit('5'))),
+       _padButton('6',onPressed:WaffraHaptics.tapRequired(()=>_keyDigit('6'))),
       ]),
       const SizedBox(height:8),
       Row(textDirection:TextDirection.ltr,mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
-       _padButton('7',onPressed:WaffraHaptics.tap(()=>_keyDigit('7'))),
-       _padButton('8',onPressed:WaffraHaptics.tap(()=>_keyDigit('8'))),
-       _padButton('9',onPressed:WaffraHaptics.tap(()=>_keyDigit('9'))),
+       _padButton('7',onPressed:WaffraHaptics.tapRequired(()=>_keyDigit('7'))),
+       _padButton('8',onPressed:WaffraHaptics.tapRequired(()=>_keyDigit('8'))),
+       _padButton('9',onPressed:WaffraHaptics.tapRequired(()=>_keyDigit('9'))),
       ]),
       const SizedBox(height:8),
       Row(textDirection:TextDirection.ltr,mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
-       _padButton('',icon:Icons.fingerprint,onPressed:WaffraHaptics.tap(biometric)),
-       _padButton('0',onPressed:WaffraHaptics.tap(()=>_keyDigit('0'))),
-       _padButton('',icon:Icons.backspace_outlined,onPressed:WaffraHaptics.tap((){
+       _padButton('',icon:Icons.fingerprint,onPressed:WaffraHaptics.tapRequired(biometric)),
+       _padButton('0',onPressed:WaffraHaptics.tapRequired(()=>_keyDigit('0'))),
+       _padButton('',icon:Icons.backspace_outlined,onPressed:WaffraHaptics.tapRequired((){
         if(pinController.text.isNotEmpty){
          pinController.text=pinController.text.substring(0,pinController.text.length-1);
          setState(()=>error='');
@@ -7150,7 +7150,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      label:waffraIsEnglish?'Current goals':'عدد الأهداف الحالية',count:goals.length)),
     const SizedBox(width:9),
     Expanded(child:WaffraDeletedItemsButton(
-     onPressed:WaffraHaptics.tap(deletedGoalsDialog),
+     onPressed:WaffraHaptics.tapRequired(deletedGoalsDialog),
      label:waffraIsEnglish?'Deleted goals (${deletedGoals.length})'
       :'الأهداف المحذوفة (${deletedGoals.length})')),
    ]),
@@ -7408,7 +7408,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       style:const TextStyle(fontSize:11.5,fontWeight:FontWeight.bold)))),
     const SizedBox(width:9),
     Expanded(child:WaffraDeletedItemsButton(
-     onPressed:WaffraHaptics.tap(deletedRecurringDialog),
+     onPressed:WaffraHaptics.tapRequired(deletedRecurringDialog),
      label:waffraIsEnglish?'Deleted recurring (${deletedRecurring.length})':
       'المتكررة المحذوفة (${deletedRecurring.length})')),
    ]),
@@ -8678,24 +8678,24 @@ Future<void> bulkSmsSheet({String? initialText})async {
         _addMenuOption(
          icon:Icons.edit_note_rounded,
          label:waffraIsEnglish?'Manual transaction':'عملية يدوية',
-         onTap:WaffraHaptics.tap((){
+         onTap:WaffraHaptics.tapRequired((){
           unawaited(_launchAddAction(()=>entrySheet(),fromMenu:true));
          })),
         const SizedBox(height:7),
         _addMenuOption(
          icon:Icons.sms_outlined,
          label:waffraIsEnglish?'Bank message':'رسالة بنكية',
-         onTap:WaffraHaptics.tap((){
+         onTap:WaffraHaptics.tapRequired((){
           unawaited(_launchAddAction(()=>bulkSmsSheet(),fromMenu:true));
          })),
         ]else...[
          _addMenuOption(icon:Icons.trending_up,
           label:waffraIsEnglish?'Income category':'إضافة قسم دخل',
-          onTap:WaffraHaptics.tap((){unawaited(_launchAddAction(()=>chooseCategoryLevel(income:true),fromMenu:true));})),
+          onTap:WaffraHaptics.tapRequired((){unawaited(_launchAddAction(()=>chooseCategoryLevel(income:true),fromMenu:true));})),
          const SizedBox(height:7),
          _addMenuOption(icon:Icons.trending_down,
           label:waffraIsEnglish?'Expense category':'إضافة قسم مصروفات',
-          onTap:WaffraHaptics.tap((){unawaited(_launchAddAction(()=>chooseCategoryLevel(income:false),fromMenu:true));})),
+          onTap:WaffraHaptics.tapRequired((){unawaited(_launchAddAction(()=>chooseCategoryLevel(income:false),fromMenu:true));})),
         ]
        ]),
      ),
@@ -8753,7 +8753,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    WaffraFooterNavigation(
     selectedIndex:tab,
     english:waffraIsEnglish,
-    onSelected:WaffraHaptics.selection((selected){
+    onSelected:WaffraHaptics.selectionRequired((selected){
      waffraDismissFooterNotice();
      unawaited(selectFooter(selected));
     }),
