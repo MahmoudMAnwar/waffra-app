@@ -12,6 +12,7 @@ from pathlib import Path
 BASE_MAIN = "15843e8262dea20a24fbc217d74ceb129029981a"
 APPROVED = {
     ".github/workflows/m147-final-main-review-gate.yml",
+    ".github/workflows/android.yml",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/currency_converter.dart",
     "lib/main.dart",
@@ -67,6 +68,13 @@ def main():
             "maxLines:2,textAlign:TextAlign.center" in market and
             "EdgeInsets.symmetric(horizontal:20,vertical:14)" in market,
             "gold call-to-action spacing or wrapping lost")
+    release = content(".github/workflows/android.yml")
+    require("secrets.WAFFRA_PUBLIC_EIA_KEY" in release and
+            '--dart-define="WAFFRA_PUBLIC_EIA_KEY=' in release,
+            "signed APK must support owner-registered official EIA commodity key")
+    require('::warning::WAFFRA_PUBLIC_EIA_KEY is not configured' in release,
+            "missing key must remain visible as an unverified live quote risk")
+
     oil = content("lib/waffra_oil_market_data.dart")
     require("fred.stlouisfed.org" in oil and "api.eia.gov" in oil,
             "verified public oil sources removed")
