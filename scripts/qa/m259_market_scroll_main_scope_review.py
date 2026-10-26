@@ -94,7 +94,7 @@ def main():
         "apk":"NOT_AUTHORIZED_BY_THIS_REPORT",
         "sqlcipher_production":"NO_GO",
         "physical_device_tests":"REQUIRED",
-    },indent=2)+"\\n",encoding="utf-8")
+    },indent=2)+"\n",encoding="utf-8")
     print("M259 PASS (source scope only): "+head)
 
 if __name__=="__main__":
