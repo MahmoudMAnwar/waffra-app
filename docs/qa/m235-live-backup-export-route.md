@@ -52,7 +52,7 @@ it does not mean that the independent signed real-device route proof passed.
 | 15 | recurringPostingAndPostponement | Existing combined posting/CAS; independent QA pending |
 | 16 | challengeAndBudgetUpdate | Existing encrypted scalar writer; independent QA pending |
 | 17 | merchantRulesAndSmsHashes | Existing hash merge and merchant rule writer; QA pending |
-| 18 | receiptCopyAndAttach | Encrypted byte writer exists; **M235 guards old plaintext picker** until safe in-memory UI attach is wired |
+| 18 | receiptCopyAndAttach | **M235 wires NEW manual form → in-memory picker bytes → one atomic SQLCipher entry+receipt commit**; existing-entry and SMS invoice mutation still fail closed |
 | 19 | receiptView | **M235 wired encrypted ledger ID → receipt blob → Image.memory**; legacy remains source-specific |
 | 20 | receiptRemoveAndRollback | Existing encrypted recycle candidate; complete UI / expiry proof pending |
 | 21 | widgetBalanceRefresh | Existing verified source-backed refresh; hardware Widget proof pending |
@@ -62,8 +62,7 @@ it does not mean that the independent signed real-device route proof passed.
 
 ### Production blockers (still NO-GO)
 
-Implement source-backed in-memory receipt attachment in Home for route 18
-instead of accepting filesystem paths. Complete source-owner locked and
+Complete existing-entry and SMS invoice edits (route 18) through separately audited atomic byte writers, never plaintext filesystem paths. Complete source-owner locked and
 crash-atomic `backupRestore` (23), then fully verified reset and deletion (24,
 10), including protected bank-message originals, profile/account data and
 receipt retention. Validate all 24 independently on two physical signed Android
@@ -72,3 +71,19 @@ Home binding deliberately injects **no production release evidence** and
 does not activate SQLCipher automatically.
 
 M235 CI synthetic successes, if achieved, cannot replace those proofs.
+
+## M235 route 18 atomic in-memory receipt append
+
+The manual add-transaction form uses `XFile.readAsBytes()` and keeps image
+bytes in RAM when the selected source is verifiedEncrypted. User confirmation
+routes the manually validated record and all selected image bytes through
+`WaffraVerifiedFinanceAuthority.commitWithReceiptBytes`, the existing
+single-transaction SQLCipher writer. The app then reloads its authoritative
+ledger instead of showing an optimistic inserted card. Neither images nor
+manual notes are copied to legacy receipt files or omitted from canonical
+transaction JSON. New source-specific unit tests exercise saved notes,
+encrypted BLOB bytes and cancelled no-write behavior.
+
+**Scope limit:** Modifying invoices of existing transactions and combining
+bank SMS with invoice edits remain safely refused on verifiedEncrypted until
+their own complete source/rollback tests. Real-phone acceptance remains NO-GO.
