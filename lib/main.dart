@@ -68,6 +68,7 @@ import 'storage/waffra_sms_source_write_readiness.dart';
 import 'storage/waffra_production_finance_routing_gate.dart';
 import 'storage/waffra_verified_legacy_backup_restore.dart';
 import 'waffra_home_widget.dart';
+import 'waffra_pull_refresh_scroll_settle.dart';
 part 'waffra_categories_page.part.dart';
 part 'waffra_smart_analysis.part.dart';
 part 'waffra_recurring_trash.part.dart';
@@ -2370,6 +2371,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  double _swipeTravel=0;
  bool _headerCompact=false;
  final ScrollController _dashboardScrollController=ScrollController();
+ final ScrollController _categoryScrollController=ScrollController();
+ final ScrollController _goalsScrollController=ScrollController();
+ final ScrollController _recurringScrollController=ScrollController();
  void _handleDashboardScroll(){
   if(!mounted||tab!=0||goalsOpened||!_dashboardScrollController.hasClients)return;
   final compact=_dashboardScrollController.offset>96;
@@ -2481,7 +2485,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     icon:const Icon(Icons.refresh),
     label:WaffraText(waffraIsEnglish?'Retry safely':'إعادة المحاولة بأمان')),
   ])));
- @override void dispose(){_dashboardScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
+ @override void dispose(){_categoryScrollController.dispose();_goalsScrollController.dispose();_recurringScrollController.dispose();_dashboardScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
  Future<void> _syncWidgetTransactions()async{
   if(!mounted||!ready)return;
   try{
@@ -2515,6 +2519,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  /// Refresh from the authoritative source, not an in-memory repaint.
  /// A failed integrity check never replaces user money with zeroes.
+ // M258 only adjusts scroll presentation, never finance writes or source checks.
+ Future<void> _refreshAndSettle(ScrollController controller,int originalTab)=>
+  waffraRefreshAndRestoreScroll(
+   refresh:_refreshFromVerifiedFinance,
+   controller:controller,
+   isStillVisible:()=>mounted&&ready&&_financeLoadFailure==null&&
+    tab==originalTab&&(originalTab!=0||!goalsOpened));
+
  Future<void> _refreshFromVerifiedFinance()async {
   if(!mounted||!ready)return;
   // Multiple overlapping gestures share one read. Never bypass the verified
@@ -5784,7 +5796,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final selected=filterCats.contains(categoryFilter)?categoryFilter:'الكل';
   final shown=showAllTransactions?visible:visible.take(5).toList();
   return RefreshIndicator(
-   onRefresh:_refreshFromVerifiedFinance,
+   onRefresh:()=>_refreshAndSettle(_dashboardScrollController,0),
    child:NotificationListener<ScrollStartNotification>(
     onNotification:(notification){
      if(addFabExpanded){
@@ -5796,7 +5808,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     },
     child:CustomScrollView(
      controller:_dashboardScrollController,
-     physics:const AlwaysScrollableScrollPhysics(),
+     physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
      slivers:[
       SliverToBoxAdapter(child:Padding(
        padding:const EdgeInsets.fromLTRB(14,14,14,4),
@@ -7503,7 +7515,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final pct=target==0?0.0:(saved/target).clamp(0.0,1.0);
   final filtered=goals.where((g)=>goalDisplay=='all'||
    (goalDisplay=='done'?g.saved>=g.target:g.saved<g.target)).toList();
-  return ListView(padding:const EdgeInsets.fromLTRB(16,14,16,28),children:[
+  return ListView(controller:_goalsScrollController,
+   physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
+   padding:const EdgeInsets.fromLTRB(16,14,16,28),children:[
    WaffraPageHero(
     title:waffraIsEnglish?'Savings goals':'أهداف الادخار',
     subtitle:waffraIsEnglish?'Plan your future and follow every milestone':
@@ -7769,7 +7783,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
    final days=nextRecurringDue(r).difference(DateTime(DateTime.now().year,DateTime.now().month,DateTime.now().day)).inDays;
    return days>=0&&days<=3;
   }).length;
-  return ListView(padding:const EdgeInsets.fromLTRB(16,14,16,28),children:[
+  return ListView(controller:_recurringScrollController,
+   physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
+   padding:const EdgeInsets.fromLTRB(16,14,16,28),children:[
    WaffraPageHero(
     title:waffraIsEnglish?'Recurring transactions':'العمليات المتكررة',
     subtitle:waffraIsEnglish?'Track recurring payments and due dates':
@@ -9019,7 +9035,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
  Widget currentTab(){
   if(tab>0&&tab<4){
    return RefreshIndicator(
-    onRefresh:_refreshFromVerifiedFinance,
+    onRefresh:()=>_refreshAndSettle(
+     tab==1?_categoryScrollController:
+     tab==2?_goalsScrollController:_recurringScrollController,tab),
     child:ScrollConfiguration(
      behavior:ScrollConfiguration.of(context).copyWith(
       physics:const AlwaysScrollableScrollPhysics()),
