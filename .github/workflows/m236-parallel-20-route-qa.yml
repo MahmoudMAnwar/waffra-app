@@ -65,7 +65,7 @@ jobs:
           set -euo pipefail
           flutter test test/storage/m236_remaining_20_route_matrix_test.dart \
             --plain-name "M236 ${FINANCE_ROUTE} source boundary and caller wiring QA only"
-      - name: Keep explicit scope: not a production SQLCipher attestation
+      - name: 'Keep explicit scope: not a production SQLCipher attestation'
         shell: bash
         run: |
           echo "Route ${{ matrix.route }} passed synthetic source/caller QA."
