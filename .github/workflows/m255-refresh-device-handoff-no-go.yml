@@ -1,0 +1,56 @@
+name: M255 Verified Refresh + Hardware Handoff (NO APK / NO GO)
+
+on:
+  pull_request:
+    branches:
+      - feature/m254-physical-device-evidence-gate-20261026
+    paths:
+      - 'test/storage/m255_verified_pull_refresh_safety_test.dart'
+      - 'docs/qa/m255-two-phone-handoff-and-refresh-705.md'
+      - '.github/workflows/m255-refresh-device-handoff-no-go.yml'
+      - 'lib/main.dart'
+      - 'lib/storage/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  refresh-and-full-flutter:
+    name: M255 source refresh safety and complete same-SHA Flutter suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: M255 refresh and #705 source-contract regression
+        run: >
+          flutter test
+          test/storage/m255_verified_pull_refresh_safety_test.dart
+          test/m224_verified_pull_refresh_dialog_test.dart
+          --reporter expanded
+      - name: Full Flutter regression at the identical PR head
+        run: flutter test --reporter expanded
+
+  inherited-security-no-go:
+    name: M189 M190 M254 evidence refusals remain NO-GO
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - run: python3 -m unittest discover -s test/qa -p 'm189_physical_device_source_probe_test.py' -v
+      - run: python3 -m unittest discover -s test/qa -p 'm190_signed_apk_preflight_test.py' -v
+      - run: python3 -m unittest discover -s test/qa -p 'm254_physical_release_evidence_review_test.py' -v
+      - run: python3 scripts/qa/m189_physical_device_source_probe.py --check-contract
+
+# This workflow cannot see physical phones, signing keys or private evidence.
+# Do not upload APKs, configure an Android signing keystore, migrate user data,
+# merge to main, select encrypted production source or certify a release.
