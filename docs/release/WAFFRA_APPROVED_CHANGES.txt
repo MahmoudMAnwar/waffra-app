@@ -410,3 +410,10 @@ M208 encrypted-legacy privacy constraint: When verified SQLCipher is not active,
 - اختبار test/waffra_footer_pdf_navigation_test.dart استخدم raw Dart string في المطابقة النصية للتعبير record.$1 / record.$2؛ لا يجب أن يعتبر Dart رموز $1 و$2 interpolation داخل literal الاختبار.
 - الفشل السابق لـWaffra Full Offline وM109 كان بسبب analyzer missing_identifier على السطر 131؛ التعديل يمنع الخطأ البنيوي دون إلغاء التحقق من قيم الرسم البياني المحولة.
 - التعديل لا يعد نجاح CI: لا دمج حتى نجاح checks على نفس SHA، وSQLCipher الإنتاجي والهاتفان الحقيقيان ما زالا غير معتمدين.
+
+[M226] M206 main reconciliation candidate — 2026-10-26
+- Integration merge parentage: main 8172232ef233fc685291e3e60da9eac0ec9afc8c and M206 8c65a3743ccc55e1b228671355e78a88296b4917.
+- Resolve divergent storage, gold/FX, account and Android workflow code in favor of newer main. Keep tested M206 UI and parsing implementations already present in main; do not reinstate obsolete pre-SQLCipher writers.
+- Make the fixed directional FAB press feel slower: press 165 ms, release settle 110 ms, scale 220 ms, double-tap guard 380 ms. Keep stationary tab navigation and RTL/LTR positions unchanged.
+- Preserve M208 refusal to save full bank SMS in unencrypted legacy preferences: full real SMS notes still require independently certified SQLCipher activation. Do not claim production readiness or physical-device QA.
+- Merge candidate is NOT an approved APK. Requires same-SHA workflow checks, release artifact/SHA, signing evidence and on-device visual acceptance before deployment.

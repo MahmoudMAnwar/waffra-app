@@ -2417,7 +2417,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  bool _acceptFabTap(){
   final now=DateTime.now();
   if(_addActionOpening||(_lastFabTapAt!=null&&
-   now.difference(_lastFabTapAt!)<const Duration(milliseconds:280)))return false;
+   now.difference(_lastFabTapAt!)<const Duration(milliseconds:380)))return false;
   _lastFabTapAt=now;
   return true;
  }
@@ -8626,10 +8626,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
      final tappedTab=tab;
      setState(()=>_fabPressed=true);
      // Give the press a short, visible response before presenting any menu.
-     await Future<void>.delayed(waffraMotion(105));
+     await Future<void>.delayed(waffraMotion(165));
      if(!mounted)return;
      setState(()=>_fabPressed=false);
-     await Future<void>.delayed(waffraMotion(75));
+     await Future<void>.delayed(waffraMotion(110));
      if(!mounted||tab!=tappedTab)return;
      if(goalsOpened||tab==2){unawaited(_launchAddAction(()=>goalDialog()));return;}
      if(tab==3){unawaited(_launchAddAction(()=>recurringDialog()));return;}
@@ -8639,7 +8639,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     highlightColor:Colors.transparent,
     child:AnimatedScale(
      scale:_fabPressed?0.96:1.0,
-     duration:waffraMotion(150),
+     duration:waffraMotion(220),
      curve:Curves.easeOutCubic,
      child:SizedBox(width:58,height:58,
       child:AnimatedRotation(
