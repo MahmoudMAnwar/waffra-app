@@ -1,0 +1,45 @@
+name: M241 Real Matrix Dispatch and Encrypted Module QA (NO CUTOVER)
+
+on:
+  pull_request:
+    branches:
+      - qa/m240-m236-complete-inventory-gate-20261026
+    paths:
+      - 'test/storage/m241_actual_route_matrix_dispatch_test.dart'
+      - '.github/workflows/m241-real-dispatch-module-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  exact-dispatched-routes:
+    name: Prove actual M236 workflow dispatches all 20 source-boundary jobs
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter test test/storage/m241_actual_route_matrix_dispatch_test.dart
+
+  disposable-module-projections:
+    name: Real disposable SQLCipher category-goal-recurring write/rollback QA
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Verify native SQL projections, CAS and multi-row atomic rollback
+        run: flutter test test/storage/m114_sqlcipher_projected_edit_test.dart --reporter expanded
