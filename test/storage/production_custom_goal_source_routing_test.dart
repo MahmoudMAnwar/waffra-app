@@ -49,8 +49,14 @@ void main() {
       persistence.addCustomGoalSuggestion('Travel'),
     ]);
     expect(results.where((added) => added).length, 3);
-    expect(await persistence.loadCustomGoalSuggestions(),
-        ['Home', 'سيارة', 'سفر', 'Travel']);
+    // The native cross-writer lock guarantees one complete mutation,
+    // but concurrent call acquisition order is deliberately unspecified.
+    // Prove no missing/duplicate goals without assuming thread scheduling.
+    final persisted = await persistence.loadCustomGoalSuggestions();
+    expect(persisted.length, 4);
+    expect(persisted.first, 'Home');
+    expect(persisted.toSet(), {'Home', 'سيارة', 'سفر', 'Travel'});
+    expect(persisted.where((name) => name == 'سيارة').length, 1);
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getString('entries'), contains('previous-transaction'));
   });

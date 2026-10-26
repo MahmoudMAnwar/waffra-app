@@ -8,7 +8,11 @@ void main() {
     expect(code,contains('await _financialWriteQueue.drain()'));
     expect(code,contains('view.requireIntegrity()'));
     expect(code,contains('route:WaffraFinanceRoute.dashboardRead'));
-    expect(code,contains('onRefresh:_refreshFromVerifiedFinance'));
+    // M258 wraps the original verified read so the scroll position settles
+    // only after successful finance loading; no stale UI read is introduced.
+    expect(code,contains('refresh:_refreshFromVerifiedFinance'));
+    expect(code,contains('onRefresh:()=>_refreshAndSettle('));
+    expect(code,contains('isStillVisible:()=>mounted&&ready&&_financeLoadFailure==null'));
     expect(code,contains('ScrollConfiguration.of(context).copyWith('));
     expect(code,contains('if(tab>0&&tab<4)'));
     expect(code,contains('Refreshed financial data could not be verified'));

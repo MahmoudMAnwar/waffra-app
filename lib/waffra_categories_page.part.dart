@@ -185,7 +185,9 @@ extension WaffraCategoryScreen on _HomeScreenState {
      ])));
    }
   }
-  return ListView(padding:const EdgeInsets.fromLTRB(16,14,16,116),children:[
+  return ListView(controller:_categoryScrollController,
+   physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
+   padding:const EdgeInsets.fromLTRB(16,14,16,116),children:[
    WaffraPageHero(
     title:waffraIsEnglish?'Categories & budgets':'أقسامك وميزانياتك',
     subtitle:waffraIsEnglish?'All income and expense types with subcategories':

@@ -7,6 +7,8 @@ import 'package:http/http.dart' as http;
 import 'waffra_i18n.dart';
 import 'waffra_gold_market_section.dart';
 import 'waffra_gold_calculator.dart';
+import 'waffra_market_accordion.dart';
+import 'waffra_oil_market_section.dart';
 
 /// Cosmetic country markers only. The converter itself uses verified FX.
 /// EUR is a multi-country currency, so use a currency symbol rather than
@@ -110,11 +112,15 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
  String? to='EGP';
  int _quoteRevision=0;
  int _goldRefreshRevision=0;
+ int _oilRefreshRevision=0;
+ String? _openMarket='currency';
+ final ScrollController _marketsScroll=ScrollController();
+ void toggleMarket(String id)=>setState(()=>_openMarket=_openMarket==id?null:id);
  double? result,rate;
  bool busy=false;
  DateTime? updated;
  @override void initState(){super.initState();amount=TextEditingController(text:widget.lastIncomeAmount==null?'':formatWaffraMoney(widget.lastIncomeAmount!));}
- @override void dispose(){amount.dispose();super.dispose();}
+ @override void dispose(){_marketsScroll.dispose();amount.dispose();super.dispose();}
  String currencyLabel(String code)=>'${waffraIsEnglish?currencyEnglish[code]:currencies[code]} ($code)';
  Widget _currencyChoice(String code){
   return Row(mainAxisSize:MainAxisSize.min,children:[
@@ -242,19 +248,28 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
   ++_quoteRevision;
   setState((){
    ++_goldRefreshRevision;
+   ++_oilRefreshRevision;
    result=null;rate=null;updated=null;status='';busy=false;
   });
   if(amount.text.trim().isNotEmpty)await convert();
  }
  @override Widget build(BuildContext context)=>Scaffold(
   appBar:AppBar(title:WaffraText(waffraIsEnglish?
-   'Currency converter & global gold prices':
-   'محوّل العملات وأسعار الذهب العالمية',
+   'Currency, gold & global oil prices':
+   'محوّل العملات وأسعار الذهب العالمية والبترول',
    style:const TextStyle(fontSize:18,fontWeight:FontWeight.w800),maxLines:2)),
   body:RefreshIndicator(onRefresh:_pullRefresh,
-   child:ListView(physics:const AlwaysScrollableScrollPhysics(),
-    padding:const EdgeInsets.all(17),children:[
-   Card(
+   child:ListView(controller:_marketsScroll,
+    physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
+    padding:const EdgeInsets.all(14),children:[
+   WaffraMarketAccordionCard(
+    id:'currency',key:const Key('waffra-market-currency'),
+    title:waffraIsEnglish?'Currency converter':'تحويل العملات',
+    subtitle:waffraIsEnglish?'Quick conversion between global currencies':
+     'تحويل العملات العالمية بسهولة',
+    icon:Icons.currency_exchange_rounded,accent:const Color(0xFF147457),
+    expanded:_openMarket=='currency',onPressed:()=>toggleMarket('currency'),
+    child:Card(
     margin:EdgeInsets.zero,
     color:Theme.of(context).cardColor,
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(24),
@@ -318,20 +333,41 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
    const SizedBox(height:20),
    const WaffraText('المصدر: ExchangeRate-API أو مزود احتياطي عند تعذّر الاتصال. الأسعار استرشادية وقد تختلف عن أسعار البنوك أو التحويل الفعلي.',
     style:TextStyle(fontSize:12)),
-   ]))),
-   const SizedBox(height:22),
-   WaffraGoldMarketSection(key:ValueKey('gold-refresh-$_goldRefreshRevision'),english:waffraIsEnglish),
+   ])))),
    const SizedBox(height:12),
-   OutlinedButton.icon(
-    key:const Key('waffra-open-gold-calculator'),
-    onPressed:()=>Navigator.of(context).push(MaterialPageRoute(
-     builder:(_)=>WaffraGoldCalculatorPage(
-      arabicCurrencies:currencies,englishCurrencies:currencyEnglish))),
-    icon:const Icon(Icons.currency_exchange),
-    label:WaffraText(waffraIsEnglish?
-     'Convert gold value to SAR, EGP or any currency':
-     'حوّل قيمة الذهب إلى ريال أو جنيه مصري أو أي عملة')),
-
-
+   WaffraMarketAccordionCard(
+    id:'gold',key:const Key('waffra-market-gold'),
+    title:waffraIsEnglish?'Global gold prices':'أسعار الذهب العالمية',
+    subtitle:waffraIsEnglish?'Gold karats, bars and weight calculator':
+     'الذهب والسبائك وحاسبة الأوزان',
+    icon:Icons.workspace_premium_rounded,accent:const Color(0xFFC19A36),
+    expanded:_openMarket=='gold',onPressed:()=>toggleMarket('gold'),
+    child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+     WaffraGoldMarketSection(
+      key:ValueKey('gold-refresh-'+_goldRefreshRevision.toString()),
+      english:waffraIsEnglish),
+     const SizedBox(height:12),
+     OutlinedButton.icon(
+      key:const Key('waffra-open-gold-calculator'),
+      onPressed:()=>Navigator.of(context).push(MaterialPageRoute(
+       builder:(_)=>WaffraGoldCalculatorPage(
+        arabicCurrencies:currencies,englishCurrencies:currencyEnglish))),
+      icon:const Icon(Icons.currency_exchange),
+      label:WaffraText(waffraIsEnglish?
+       'Convert gold value to SAR, EGP or any currency':
+       'حوّل قيمة الذهب إلى ريال أو جنيه مصري أو أي عملة')),
+    ])),
+   const SizedBox(height:12),
+   WaffraMarketAccordionCard(
+    id:'oil',key:const Key('waffra-market-oil'),
+    title:waffraIsEnglish?'Global oil prices':'أسعار البترول العالمية',
+    subtitle:waffraIsEnglish?'Brent, WTI, Oman, Dubai and natural gas':
+     'برنت وغرب تكساس وعُمان ودبي والغاز الطبيعي',
+    icon:Icons.oil_barrel_rounded,accent:const Color(0xFF17755E),
+    expanded:_openMarket=='oil',onPressed:()=>toggleMarket('oil'),
+    child:WaffraOilMarketSection(
+     key:ValueKey('waffra-oil-refresh-'+_oilRefreshRevision.toString()),
+     english:waffraIsEnglish)),
+   const SizedBox(height:22),
   ])));
 }
