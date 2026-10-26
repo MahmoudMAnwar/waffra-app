@@ -3805,14 +3805,34 @@ Future<void> bulkSmsSheet({String? initialText})async {
       Row(children:[
        Expanded(child:OutlinedButton.icon(onPressed:()async{
         final file=await ImagePicker().pickImage(source:ImageSource.camera,imageQuality:80);
-        if(file!=null){final path=await saveReceipt(file);if(sheetContext.mounted)update(()=>receiptPath=waffraEncodeReceipts([...waffraReceiptPaths(receiptPath),path]));}
+        if(file!=null){
+         try{
+          final path=await saveReceipt(file);
+          if(sheetContext.mounted)update(()=>receiptPath=waffraEncodeReceipts(
+           [...waffraReceiptPaths(receiptPath),path]));
+         }catch(e){
+          debugPrint('Source-protected receipt picker refused: $e');
+          if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
+           'Secure receipt attachment is unavailable until encrypted saving is verified.':
+           'إرفاق الفواتير مشفرًا غير متاح حتى اكتمال التحقق من الحفظ الآمن.');
+         }
+        }
        },icon:const Icon(Icons.camera_alt_outlined),label:const WaffraText('تصوير فاتورة'))),
        const SizedBox(width:8),
        Expanded(child:OutlinedButton.icon(onPressed:()async{
         final files=await ImagePicker().pickMultiImage(imageQuality:80);
-        if(files.isNotEmpty){final paths=<String>[...waffraReceiptPaths(receiptPath)];
-         for(final file in files){paths.add(await saveReceipt(file));}
-         if(sheetContext.mounted)update(()=>receiptPath=waffraEncodeReceipts(paths));}
+        if(files.isNotEmpty){
+         try{
+          final paths=<String>[...waffraReceiptPaths(receiptPath)];
+          for(final file in files){paths.add(await saveReceipt(file));}
+          if(sheetContext.mounted)update(()=>receiptPath=waffraEncodeReceipts(paths));
+         }catch(e){
+          debugPrint('Source-protected image batch refused: $e');
+          if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
+           'Cannot attach receipts until encrypted source saving is ready.':
+           'لا يمكن إرفاق الفواتير حتى يجهز الحفظ المشفر للمعاملات.');
+         }
+        }
        },icon:const Icon(Icons.attach_file),label:const WaffraText('إرفاق صورة'))),
       ]),
       if(waffraReceiptPaths(receiptPath).isNotEmpty)...[
@@ -3968,6 +3988,15 @@ Future<void> bulkSmsSheet({String? initialText})async {
   }));
  }
  Future<String> saveReceipt(XFile picked)async {
+  await _ensureFinanceBound();
+  // Route #18: never copy newly picked sensitive image bytes to a plaintext
+  // legacy receipt directory after source selection has switched to SQLCipher.
+  // An independently verified atomic SQL entry+receipt writer is required.
+  final current=await _financeAuthority.load(
+   route:WaffraFinanceRoute.receiptCopyAndAttach);
+  if(current.source==WaffraRuntimeFinanceBackend.verifiedEncrypted){
+   throw StateError('Encrypted receipt attachment requires an atomic SQLCipher writer.');
+  }
   final directory=Directory('${(await getApplicationDocumentsDirectory()).path}/receipts');
   if(!await directory.exists())await directory.create(recursive:true);
   final ext=picked.path.toLowerCase().endsWith('.png')?'png':'jpg';
