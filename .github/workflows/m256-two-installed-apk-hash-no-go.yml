@@ -1,0 +1,45 @@
+name: M256 Installed Signed APK Read-Only Hash Preflight (MOCKS ONLY / NO GO)
+
+on:
+  pull_request:
+    branches:
+      - feature/m255-refresh-device-acceptance-prep-20261026
+    paths:
+      - 'scripts/qa/m256_installed_signed_apk_identity_probe.py'
+      - 'test/qa/m256_installed_signed_apk_identity_probe_test.py'
+      - 'docs/qa/m256-installed-signed-apk-identity-preflight.md'
+      - '.github/workflows/m256-two-installed-apk-hash-no-go.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  local-readonly-evidence-tool-tests:
+    name: Refuse mock hardware, APK mismatch, split APKs and fabricated GO
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Compile-only offline evidence scripts
+        run: >
+          python3 -m py_compile
+          scripts/qa/m189_physical_device_source_probe.py
+          scripts/qa/m190_signed_apk_preflight.py
+          scripts/qa/m254_physical_release_evidence_review.py
+          scripts/qa/m256_installed_signed_apk_identity_probe.py
+      - name: M256 synthetic negative/security acceptance (NO PHONES)
+        run: python3 -m unittest discover -s test/qa -p 'm256_installed_signed_apk_identity_probe_test.py' -v
+      - name: All inherited hardware/signing refusal regressions
+        run: |
+          python3 -m unittest discover -s test/qa -p 'm189_physical_device_source_probe_test.py' -v
+          python3 -m unittest discover -s test/qa -p 'm190_signed_apk_preflight_test.py' -v
+          python3 -m unittest discover -s test/qa -p 'm254_physical_release_evidence_review_test.py' -v
+      - name: All 24 financial routes remain structurally required
+        run: python3 scripts/qa/m189_physical_device_source_probe.py --check-contract
+
+# No ADB phones, APKs, signing keys, finance exports or credentials in CI.
+# NEVER infer actual devices, independently pinned source, signing attestation
+# or SQLCipher cutover authorization from synthetic tests.
