@@ -256,7 +256,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
  @override Widget build(BuildContext context)=>Scaffold(
   appBar:AppBar(title:WaffraText(waffraIsEnglish?
    'Currency, gold & global oil prices':
-   'العملات والذهب وأسعار البترول العالمية',
+   'محوّل العملات وأسعار الذهب العالمية والبترول',
    style:const TextStyle(fontSize:18,fontWeight:FontWeight.w800),maxLines:2)),
   body:RefreshIndicator(onRefresh:_pullRefresh,
    child:ListView(controller:_marketsScroll,
