@@ -2637,7 +2637,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    });
   }
   // Install catalog once without overwriting custom categories, saved budgets or trash.
-  if(!verifiedEncryptedStartup&&
+  if(verifiedEncryptedStartup||
       !(p.getBool('waffra_category_catalog_v2_installed')??false)){
    final discarded=<String>{};
    for(final item in deletedCategories){
@@ -2658,7 +2658,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     version:2,
     expectedCatalogRaw:_lastFinanceAuthorityRead?.finance.getString('waffra_categories_v24'),
     nextCatalogRaw:jsonEncode(categories.map((e)=>e.toJson()).toList()),
-    catalogChanged:true,
+    // Installing an encrypted marker for an unchanged catalog must not
+    // rewrite the exact same ledger/catalog snapshot on every cold launch.
+    catalogChanged:!verifiedEncryptedStartup||
+     _lastFinanceAuthorityRead?.finance.getString('waffra_categories_v24')!=
+      jsonEncode(categories.map((e)=>e.toJson()).toList()),
    );
    _lastFinanceAuthorityRead=committed;
    _lastLedgerSavedRaw=committed.ledgerRaw;
@@ -2666,7 +2670,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   // Incremental catalog update: retain existing user budgets, names and deletions.
   // A subcategory is only added when its main category is present.
-  if(!verifiedEncryptedStartup&&
+  if(verifiedEncryptedStartup||
       !(p.getBool('waffra_category_catalog_v3_installed')??false)){
    final deletedIds=<String>{};
    final deletedNames=<String>{};
@@ -2699,7 +2703,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    _lastWidgetRevision=committed.widgetRevision;
   }
   // Catalog v4 installs only new leaves, preserving user budgets and trash.
-  if(!verifiedEncryptedStartup&&
+  if(verifiedEncryptedStartup||
      !(p.getBool('waffra_category_catalog_v4_installed')??false)){
    final removedIds=<String>{},removedNames=<String>{};
    for(final record in deletedCategories){
