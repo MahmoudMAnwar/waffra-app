@@ -10,6 +10,7 @@ import subprocess
 BASE_MAIN = "8a460fa3d537ee7e8343b01e49d794140e66652a"
 APPROVED = {
     ".github/workflows/m147-final-main-review-gate.yml",
+    ".github/workflows/android.yml",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "scripts/qa/m259_market_scroll_main_scope_review.py",
     "lib/main.dart",
@@ -49,6 +50,8 @@ def main():
     check(changed==APPROVED,"unexpected/omitted files: "+repr(sorted(changed^APPROVED)))
     check(not any(p.startswith(("lib/storage/","android/","firebase/")) for p in changed),
           "financial data source or native Android has changed")
+    check("feature/m259-approved-markets-oil-accordion-refresh-20261026" in source(".github/workflows/android.yml"),
+          "signed owner-only QA branch is missing")
     check("pubspec.yaml" not in changed and "pubspec.lock" not in changed,
           "dependencies not authorized for visual-only release")
     main=source("lib/main.dart")
