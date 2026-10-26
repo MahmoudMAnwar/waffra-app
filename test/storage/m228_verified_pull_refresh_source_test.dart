@@ -32,7 +32,7 @@ void main() {
   });
 
   test('M228 saved ledger with missing optional legacy catalog survives pull', () async {
-    const existing = '[{"id":"confirmed","amount":12,"income":false}]';
+    const existing = '[{"id":"confirmed","amount":12,"income":false,"date":"2026-10-26T00:00:00.000"}]';
     final current = await fixture(<String, Object>{'entries': existing});
     final source = WaffraVerifiedPullRefreshSource.fromAuthority(current);
     expect(source.ledgerRaw, existing);
