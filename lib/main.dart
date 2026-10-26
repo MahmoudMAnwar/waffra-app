@@ -52,6 +52,7 @@ import 'storage/waffra_live_account_write_authority.dart';
 import 'storage/waffra_legacy_widget_commit_journal.dart';
 import 'storage/waffra_home_finance_persistence.dart';
 import 'storage/waffra_verified_finance_authority.dart';
+import 'storage/waffra_verified_active_restore_preflight.dart';
 import 'storage/waffra_verified_pull_refresh_source.dart';
 import 'storage/waffra_production_finance_authority_binding.dart';
 import 'storage/waffra_fresh_finance_modules_repository.dart';
@@ -7994,6 +7995,33 @@ Future<void> bulkSmsSheet({String? initialText})async {
      if(stagedBackup==null||stagedBackup!.isEmpty)return;
      update(()=>restoring=true);
      try{
+      // Route #23: verify the currently selected source BEFORE attempting
+      // to interpret any uploaded backup as a legacy replacement snapshot.
+      // A verified SQLCipher restore must run an authenticated, isolated
+      // disposable-vault parity preflight; it cannot replace live money yet.
+      await _financialWriteQueue.drain();
+      await _ensureFinanceBound();
+      final source=await _financeAuthority.load(
+       route:WaffraFinanceRoute.backupRestore);
+      source.finance.requireIntegrity();
+      if(source.source==WaffraRuntimeFinanceBackend.verifiedEncrypted){
+       final inspected=await WaffraVerifiedActiveRestorePreflight(
+        authority:_financeAuthority,experimentalEnabled:true).inspect(
+          selectedSource:source,
+          encryptedArchive:stagedBackup!,password:restoreSecret.text,
+          userConfirmed:true);
+       if(ctx.mounted){
+        update(()=>restoreError=waffraIsEnglish?
+         'Encrypted archive verified: ${inspected.transactionCount} transactions, '
+         '${inspected.receiptCount} receipts. Active restore is locked until '
+         'crash-safe source replacement and device recovery are certified. '
+         'Your current data was not changed.':
+         'تم التحقق من النسخة المشفرة: ${inspected.transactionCount} معاملة '
+         'و${inspected.receiptCount} فاتورة. الاستعادة الفعلية مقفولة حتى '
+         'اكتمال اعتماد تبديل المصدر والاسترجاع الآمن. لم تتغير بياناتك.');
+       }
+       return;
+      }
       final raw=await compute(waffraDecodeBackupInIsolate,<String,String>{
        'payload':stagedBackup!,'password':restoreSecret.text,
       });
@@ -8400,6 +8428,31 @@ Future<void> bulkSmsSheet({String? initialText})async {
    waffraIsEnglish?'This deletes transactions, categories, budgets, goals and recurring schedules. It cannot be undone. Your profile and app settings stay.':
     'سيتم حذف المعاملات والأقسام والميزانيات والأهداف والجدولة المتكررة نهائيًا. لا يمكن التراجع. سيبقى الملف الشخصي وإعدادات التطبيق.');
   if(ok!=true||!mounted)return;
+  // Route #24: unlike guarded legacy, an active SQLCipher source must NOT
+  // be cleared by a JSON preference-style reset. A verified external backup,
+  // owner biometric and source-specific encrypted reset evidence are required.
+  // Keep this UI path read-only until the full proof is collected.
+  try{
+   await _financialWriteQueue.drain();
+   await _ensureFinanceBound();
+   final current=await _financeAuthority.load(
+    route:WaffraFinanceRoute.fullFinanceReset);
+   current.finance.requireIntegrity();
+   if(current.source==WaffraRuntimeFinanceBackend.verifiedEncrypted){
+    if(mounted)snack(context,waffraIsEnglish?
+     'Encrypted finance cannot be reset from this screen until a verified '
+     'external backup and recovery plan are attached. Your data is unchanged.':
+     'لا يمكن إعادة ضبط البيانات المشفرة من هذه الشاشة قبل التحقق من نسخة '
+     'احتياطية خارجية وخطة استرجاع معتمدة. بياناتك لم تتغير.');
+    return;
+   }
+  }catch(error){
+   debugPrint('Full finance reset source verification blocked: $error');
+   if(mounted)snack(context,waffraIsEnglish?
+    'Financial source cannot be verified. No data was deleted.':
+    'تعذر التحقق من مصدر البيانات المالية. لم يتم حذف أي بيانات.');
+   return;
+  }
   final cleanCategories=defaultCategories();
   // Every recognized financial field is reset through ONE crash-recoverable
   // journal. SMS hashes must NOT be cleared independently before finance
