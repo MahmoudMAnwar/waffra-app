@@ -25,6 +25,20 @@ abstract final class WaffraHaptics {
         action();
       };
 
+  /// Required action contract (e.g. InkWell or Semantics callback).
+  /// These constructors cannot accept null and must keep strict Dart types.
+  static VoidCallback tapRequired(VoidCallback action) => () {
+    impact();
+    action();
+  };
+
+  /// Required selection contract (e.g. navigation destination callback).
+  static ValueChanged<T> selectionRequired<T>(ValueChanged<T> action) =>
+      (value) {
+        impact();
+        action(value);
+      };
+
   /// Menu, choice, switch and dropdown selection; NOT TextField.onChanged.
   static ValueChanged<T>? selection<T>(ValueChanged<T>? action) =>
       action == null ? null : (value) {
