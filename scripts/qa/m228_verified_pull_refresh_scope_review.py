@@ -2,6 +2,7 @@
 """M228 exact-main, fail-closed source/diff review; NEVER certifies SQLCipher cutover."""
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -90,6 +91,22 @@ def main() -> None:
     require(subprocess.run(["git", "merge-base", "--is-ancestor",
                             app, note]).returncode == 0,
             "approved notes must be newer than finance app code")
+    report = {
+        "milestone": "M228",
+        "base_main_sha": base,
+        "reviewed_head_sha": head,
+        "changed_paths": sorted(changed),
+        "source_scope_verified": True,
+        "sqlcipher_production_activated": False,
+        "all_24_live_routes_verified": False,
+        "physical_device_verified": False,
+        "production_release_authorized": False,
+        "status": "M228_CODE_SCOPE_ONLY_QA_NOT_PRODUCTION",
+    }
+    output = Path("build/m147-final-review-report.json")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\\n",
+                      encoding="utf8")
     print("M228 REVIEW PASS: exact main ancestry and diff, original privacy, "
           "strict SQLCipher rejection, release notes freshness. "
           "Physical-device/production SQLCipher authorization: NO.")
