@@ -144,7 +144,11 @@ def _load_private_report(path: Path) -> object:
         raise EvidenceRefused("Secure no-follow local evidence reading unavailable.")
     flags = os.O_RDONLY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0)
     # Never echo raw contents, filenames, identities or financial data.
-    with os.fdopen(os.open(path, flags), "r", encoding="utf-8") as f:
+    try:
+        fd = os.open(path, flags)
+    except OSError:
+        raise EvidenceRefused("Evidence path is inaccessible or unsafe.") from None
+    with os.fdopen(fd, "r", encoding="utf-8") as f:
         info = os.fstat(f.fileno())
         if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or
                 info.st_size > 1024 * 1024 or info.st_mode & 0o077 or
