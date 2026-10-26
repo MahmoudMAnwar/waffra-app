@@ -2113,10 +2113,13 @@ class WaffraPageHero extends StatelessWidget {
 /// details in an explicitly right-to-left, consistently aligned dialog.
 class WaffraTransactionDetailsDialog extends StatelessWidget {
  final MoneyEntry entry;
+ /// A verified read-only SMS original from SQLCipher; never write to notes.
+ final String? protectedOriginalSms;
  final VoidCallback onClose;
  final VoidCallback? onViewReceipt;
  const WaffraTransactionDetailsDialog({
   super.key,required this.entry,required this.onClose,this.onViewReceipt,
+  this.protectedOriginalSms,
  });
  @override Widget build(BuildContext context){
   final rtl=!waffraIsEnglish;
@@ -2194,9 +2197,12 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
            fontSize:22,color:dark?Colors.white:accent)),
         ]),
        ),
-       if(entry.notes.isNotEmpty)...[
+       // These are TWO independent fields. Editable user notes are persisted
+       // on the ordinary transaction route; the original SMS is read from
+       // the protected vault and is never substituted into entry.notes.
+       if(entry.sourceType=='sms'||entry.notes.isNotEmpty)...[
         const SizedBox(height:15),
-        WaffraText(waffraIsEnglish?'Notes':'الملاحظات',
+        WaffraText(waffraIsEnglish?'Your notes':'ملاحظاتك',
          textAlign:TextAlign.start,style:TextStyle(fontSize:12,color:muted)),
         const SizedBox(height:7),
         Container(width:double.infinity,padding:const EdgeInsets.all(13),
@@ -2204,10 +2210,42 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
           color:dark?const Color(0xFF252A27):const Color(0xFFF1F8F3),
           borderRadius:BorderRadius.circular(14),
           border:Border.all(color:dark?const Color(0xFF3B5444):const Color(0xFFD5E8DC))),
-         child:SelectableText(entry.notes,
-          textDirection:rtl?TextDirection.rtl:TextDirection.ltr,
-          textAlign:TextAlign.start,
-          style:const TextStyle(fontSize:14,height:1.5))),
+         child:entry.notes.isEmpty?WaffraText(
+           waffraIsEnglish?'No notes added':'لا توجد ملاحظات',
+           style:TextStyle(fontSize:13,color:muted)):
+          SelectableText(entry.notes,
+           textDirection:rtl?TextDirection.rtl:TextDirection.ltr,
+           textAlign:TextAlign.start,
+           style:const TextStyle(fontSize:14,height:1.5))),
+       ],
+       if(entry.sourceType=='sms')...[
+        const SizedBox(height:15),
+        Row(children:[
+         Icon(Icons.lock_outline_rounded,size:17,
+          color:dark?const Color(0xFF74D8A9):emerald),
+         const SizedBox(width:6),
+         Expanded(child:WaffraText(waffraIsEnglish?
+           'Original bank message (encrypted)':'تفاصيل الرسالة البنكية الأصلية (مشفّرة)',
+           textAlign:TextAlign.start,
+           style:TextStyle(fontSize:12,color:muted,fontWeight:FontWeight.w700))),
+        ]),
+        const SizedBox(height:7),
+        Container(width:double.infinity,padding:const EdgeInsets.all(13),
+         decoration:BoxDecoration(
+          color:dark?const Color(0xFF18372E):const Color(0xFFE9F5EF),
+          borderRadius:BorderRadius.circular(14),
+          border:Border.all(color:dark?const Color(0xFF3B7055):const Color(0xFFB8D9C7))),
+         child:protectedOriginalSms==null||protectedOriginalSms!.isEmpty?
+          WaffraText(waffraIsEnglish?
+           'Original encrypted message is unavailable.':
+           'الرسالة البنكية الأصلية غير متاحة من التخزين المشفّر.',
+           textAlign:TextAlign.start,
+           style:TextStyle(fontSize:12,color:muted)):
+          SelectableText(protectedOriginalSms!,
+           key:const Key('waffra-transaction-protected-bank-sms'),
+           textDirection:rtl?TextDirection.rtl:TextDirection.ltr,
+           textAlign:TextAlign.start,
+           style:const TextStyle(fontSize:14,height:1.5))),
        ],
        if(onViewReceipt!=null)...[
         const SizedBox(height:10),
@@ -3653,8 +3691,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    builder:(sheetContext)=>StatefulBuilder(builder:(sheetContext,update){
     void parseNow(String text) {
      debounce?.cancel();
-     if(sms)notes.text=text;
-     if(text.trim().isEmpty){update((){hasParsed=false;analyzing=false;suggestion=null;});return;}
+      if(text.trim().isEmpty){update((){hasParsed=false;analyzing=false;suggestion=null;});return;}
      update(()=>analyzing=true);
      debounce=Timer(const Duration(milliseconds:300),(){
       if(!sheetContext.mounted)return;
@@ -3717,14 +3754,21 @@ Future<void> bulkSmsSheet({String? initialText})async {
             'اسم العملية الجديد لا يزيد عن 250 حرفًا.')):null,
         border:OutlineInputBorder())),
       const SizedBox(height:10),
-      TextField(controller:notes,onChanged:(_)=>update((){}),minLines:1,maxLines:4,
-       readOnly:sms,
-       decoration:InputDecoration(labelText:waffraIsEnglish?'Notes (optional)':'ملاحظات (اختياري)',
-        errorText:attempted&&!sms&&!waffraTransactionNotesAllowed(notes.text,oldNotes:initial?.notes)
-         ?(waffraIsEnglish?'Notes cannot exceed 2,000 characters.':
-           'الملاحظات لا تتجاوز 2000 حرف.'):null,
-        border:const OutlineInputBorder())),
-      const SizedBox(height:12),
+      if(!sms)...[
+       TextField(controller:notes,onChanged:(_)=>update((){}),minLines:1,maxLines:4,
+        decoration:InputDecoration(labelText:waffraIsEnglish?'Your notes (optional)':'ملاحظاتك (اختياري)',
+         errorText:attempted&&!waffraTransactionNotesAllowed(notes.text,oldNotes:initial?.notes)
+          ?(waffraIsEnglish?'Notes cannot exceed 2,000 characters.':
+            'الملاحظات لا تتجاوز 2000 حرف.'):null,
+         border:const OutlineInputBorder())),
+       const SizedBox(height:12),
+      ]else ...[
+       WaffraText(waffraIsEnglish?
+        'The original bank message is stored separately from your notes.':
+        'نص الرسالة البنكية الأصلية يُحفظ منفصلًا عن ملاحظاتك.',
+        style:const TextStyle(fontSize:12,color:emerald)),
+       const SizedBox(height:12),
+      ],
       TextField(controller:value,keyboardType:const TextInputType.numberWithOptions(decimal:true),
        inputFormatters:[const WaffraAmountFormatter()],onChanged:(_)=>update((){}),
        decoration:InputDecoration(labelText:waffraIsEnglish?'Amount *':'المبلغ *',
@@ -4811,13 +4855,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
   // Only after confirming this ID is in the authoritative SMS ledger may
   // a full original message be loaded from its separate SQLCipher note vault.
   // The decrypted text remains in this dialog's memory, never preferences.
-  var visibleEntry=entry;
-  if(entry.sourceType=='sms'&&entry.notes.isEmpty){
+  String? originalBankSms;
+  // Fetch on EVERY SMS detail open, including after user notes are edited.
+  // The vault verifies the saved SMS ID and authorization independently.
+  if(entry.sourceType=='sms'){
    try{
-    final original=await _financeAuthority.readProtectedOriginalSms(entry.id);
-    if(original!=null){
-     visibleEntry=MoneyEntry.fromJson({...entry.toJson(),'notes':original});
-    }
+    originalBankSms=await _financeAuthority.readProtectedOriginalSms(entry.id);
    }catch(_){
     if(mounted)snack(context,waffraIsEnglish?
      'Encrypted bank message cannot be opened. Your transaction is unchanged.':
@@ -4829,7 +4872,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
   await showWaffraDialog<void>(
    context:context,
    builder:(ctx)=>WaffraTransactionDetailsDialog(
-    entry:visibleEntry,
+    entry:entry,
+    protectedOriginalSms:originalBankSms,
     onClose:()=>Navigator.pop(ctx),
     onViewReceipt:waffraReceiptPaths(entry.receiptPath).isNotEmpty
       ?(){Navigator.pop(ctx);showReceipt(entry.receiptPath!);}
