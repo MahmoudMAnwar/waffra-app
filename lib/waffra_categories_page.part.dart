@@ -56,9 +56,9 @@ extension WaffraCategoryScreen on _HomeScreenState {
     color:Theme.of(context).cardColor,
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(19),
      side:BorderSide(color:color.withValues(alpha:.32))),
-    child:InkWell(onTap:()=>setState((){
+    child:InkWell(onTap:WaffraHaptics.tap(()=>setState((){
      if(opened){expandedCategoryIds.clear();}else{expandedCategoryIds..clear()..add(root.id);}
-    }),child:Padding(padding:const EdgeInsets.all(9),
+    })),child:Padding(padding:const EdgeInsets.all(9),
      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       Row(children:[
        CircleAvatar(radius:19,backgroundColor:color.withValues(alpha:.14),
@@ -66,11 +66,11 @@ extension WaffraCategoryScreen on _HomeScreenState {
        const Spacer(),
        PopupMenuButton<String>(
         tooltip:waffraIsEnglish?'Category actions':'خيارات القسم',
-        onSelected:(action){
+        onSelected:WaffraHaptics.selection((action){
          if(action=='add')addCategory(income:root.income,parentId:root.id);
          if(action=='edit')updateCategory(root);
          if(action=='delete')deleteCategory(root);
-        },
+        }),
         itemBuilder:(_)=>[
          PopupMenuItem(value:'add',child:WaffraText(waffraIsEnglish?'Add subcategory':'إضافة قسم فرعي')),
          PopupMenuItem(value:'edit',child:WaffraText(waffraIsEnglish?'Edit':'تعديل')),
@@ -112,7 +112,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15),
      side:BorderSide(color:color.withValues(alpha:.20))),
     child:InkWell(borderRadius:BorderRadius.circular(15),
-     onTap:()=>updateCategory(sub),
+     onTap:WaffraHaptics.tap(()=>updateCategory(sub)),
      child:Padding(padding:const EdgeInsets.all(10),child:Row(children:[
       Icon(categoryIcon(sub.icon),size:17,color:color),
       const SizedBox(width:7),
@@ -123,10 +123,10 @@ extension WaffraCategoryScreen on _HomeScreenState {
         style:TextStyle(fontSize:10,color:Theme.of(context).hintColor)),
       ])),
       PopupMenuButton<String>(tooltip:waffraIsEnglish?'Subcategory actions':'خيارات القسم الفرعي',
-       onSelected:(action){
+       onSelected:WaffraHaptics.selection((action){
         if(action=='edit')updateCategory(sub);
         if(action=='delete')deleteCategory(sub);
-       },itemBuilder:(_)=>[
+       }),itemBuilder:(_)=>[
         PopupMenuItem(value:'edit',child:WaffraText(waffraIsEnglish?'Edit':'تعديل')),
         PopupMenuItem(value:'delete',child:WaffraText(waffraIsEnglish?'Delete':'حذف')),
        ],child:const Icon(Icons.more_vert,size:17)),
@@ -154,7 +154,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
       Row(children:[
        Expanded(child:WaffraText(root.name,
         style:const TextStyle(fontSize:15,fontWeight:FontWeight.bold))),
-       TextButton.icon(onPressed:()=>addCategory(income:root.income,parentId:root.id),
+       TextButton.icon(onPressed:WaffraHaptics.tap(()=>addCategory(income:root.income,parentId:root.id)),
         icon:const Icon(Icons.add,size:16),
         label:WaffraText(waffraIsEnglish?'Add subcategory':'إضافة فرعي')),
       ]),
@@ -204,7 +204,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
    Align(alignment:AlignmentDirectional.centerStart,
     child:ConstrainedBox(constraints:const BoxConstraints(maxWidth:250),
      child:WaffraDeletedItemsButton(
-      onPressed:showCategoryTrash,
+      onPressed:WaffraHaptics.tap(showCategoryTrash),
       label:waffraIsEnglish?'Deleted categories (${deletedCategories.length})':
        'الأقسام المحذوفة (${deletedCategories.length})'))),
    const SizedBox(height:10),
