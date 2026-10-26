@@ -451,3 +451,9 @@ M208 encrypted-legacy privacy constraint: When verified SQLCipher is not active,
 - This market patch does NOT certify FRED public CSV availability on the owner's phone or supply an EIA API key. Oman and Dubai still have no qualified live data provider; their prices remain unavailable rather than invented.
 - Added RTL/LTR and dark-mode widget layout regression plus SHA-pinned file-scope review. A code diff or CI simulation is NOT a signed owner-tested APK; finish exact-main CI and signed APK before UI acceptance.
 - No SQLCipher financial production cutover, no new real-bank-SMS authorization, no Play publication and no two-device physical attestation. Production NO-GO remains.
+
+[M261] Official keyless oil and gas quote recovery — 2026-10-26
+- Fix the all-dashes petroleum card failure when FRED CSV returns HTTP 403 and no EIA API key was provided: prefer the official public EIA DAILY price pages for RBRTE Brent, RWTC WTI and RNGWHHD Henry Hub. Each page is independently fetched, source-title/unit checked and parsed for genuine dated daily observations. Reject stale, future, malformed and fictitious readings.
+- Retain registered EIA API and public FRED as alternate verified routes without overwriting valid official observations. USD/barrel for crude, USD/MMBtu for Henry Hub; unavailable stays unavailable for Oman/Dubai.
+- Add keyless 403, bad units, invalid week, partial-source regression tests and M261 SHA-pinned no-finance scope review. No SQLCipher live cutover or finance write changes.
+- This is a code-side fix, NOT proof of a verified real Android response, completed signed APK, or production security certification. Verify full same-SHA CI and actual phone before marking the symptom resolved.
