@@ -105,7 +105,7 @@ def main() -> None:
     }
     output = Path("build/m147-final-review-report.json")
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\\n",
+    output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n",
                       encoding="utf8")
     print("M228 REVIEW PASS: exact main ancestry and diff, original privacy, "
           "strict SQLCipher rejection, release notes freshness. "
