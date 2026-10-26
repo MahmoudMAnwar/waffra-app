@@ -2535,6 +2535,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Future<void> _syncWidgetTransactions()async{
   if(!mounted||!ready)return;
   try{
+   await _ensureFinanceBound();
    final loadedFinance=await _financeAuthority.load(route:WaffraFinanceRoute.dashboardRead);
    loadedFinance.finance.requireIntegrity();
    final revision=loadedFinance.widgetRevision;
@@ -2880,6 +2881,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // One source-aware write entry point for the entire Home finance capture.
    // Every individual category/goal/recurring editor funnels through here.
    // The selected SQLCipher source and witness are rechecked before writing.
+   await _ensureFinanceBound();
    final committed=await _financeAuthority.saveCaptured(
     route:route,
     baseline:baseline,
@@ -2895,6 +2897,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Future<void> _persistSmsHashes(Set<String> hashesToSave)async {
   // Home and Widget now merge only SHA-256 fingerprints through the same
   // source selector. SQLCipher activation cannot fall back to preferences.
+  await _ensureFinanceBound();
   final committed=await _financeAuthority.mergeSmsHashes(hashesToSave);
   _lastFinanceAuthorityRead=committed;
   _lastLedgerSavedRaw=committed.ledgerRaw;
@@ -2927,6 +2930,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     return;
    }
   }
+  await _ensureFinanceBound();
   final committed=await _financeAuthority.setRecurringReminderPreference(enabled);
   _lastFinanceAuthorityRead=committed;
   _lastLedgerSavedRaw=committed.ledgerRaw;
@@ -6664,6 +6668,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    showCheckmark:false,selectedColor:forest,labelStyle:TextStyle(
     color:selected?Colors.white:null,fontWeight:selected?FontWeight.bold:FontWeight.normal));
  Future<void> goalDialog()async {
+  await _ensureFinanceBound();
   final name=TextEditingController(),target=TextEditingController();
   final customGoals=await _financeAuthority.loadCustomGoalSuggestions();
   if(!mounted){name.dispose();target.dispose();return;}
@@ -7692,6 +7697,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
  }
  Future<void> backupDialog()async {
   if(!await _authorizeSensitiveAction('backing up or restoring data')||!mounted)return;
+  await _ensureFinanceBound();
   final secret=TextEditingController(),restoreSecret=TextEditingController();
   String? stagedBackup,backupError,restoreError,restorePasswordError;
   var attempted=false,restoring=false,exporting=false;
