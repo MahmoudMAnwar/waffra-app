@@ -79,7 +79,7 @@ void main(){
     entries:sample,goals:const [],recurring:const [],english:false)));
    expect(find.byKey(const Key('waffra-m268-feature-runway')),findsOneWidget);
    expect(find.byKey(const Key('waffra-m268-feature-subscription')),findsOneWidget);
-   expect(find.text('١٠ أدوات مالية ذكية'),findsOneWidget);
+   expect(find.text('أدوات وفرة الذكية'),findsOneWidget);
   });
   testWidgets('simulation is interactive but does not change input data',(tester)async{
    await tester.pumpWidget(MaterialApp(home:WaffraSmartFeaturesPage(
