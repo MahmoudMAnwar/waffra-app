@@ -7256,8 +7256,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       side:const BorderSide(color:Color(0xFFCFDFD5),width:1)),
      child:Padding(padding:const EdgeInsets.all(15),child:Column(children:[
       Row(children:[
-       CircleAvatar(radius:22,backgroundColor:shade.withValues(alpha:.14),
-        child:Icon(goalIcon(g.name),color:shade)),
+       WaffraIllustration(topic:g.name,size:44),
        const SizedBox(width:10),
        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         WaffraText(g.name,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:16)),
@@ -7310,7 +7309,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     child:Column(children:[
      Container(width:105,height:105,decoration:BoxDecoration(
       color:emerald.withValues(alpha:.10),borderRadius:BorderRadius.circular(54)),
-      child:const Icon(Icons.account_balance_wallet_outlined,size:55,color:emerald)),
+      child:const WaffraIllustration(topic:'wallet',size:94)),
      const SizedBox(height:13),
      WaffraText(waffraIsEnglish?'No savings goals yet':'ما أضفت أي هدف ادخاري بعد',
       style:Theme.of(context).textTheme.titleLarge,textAlign:TextAlign.center),
