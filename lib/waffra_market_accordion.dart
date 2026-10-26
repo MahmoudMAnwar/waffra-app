@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'waffra_haptic_feedback.dart';
 /// One-open-at-a-time header for the Waffra FX / gold / energy marketplace.
 /// Only the parent holds the selected section. Collapsed children are not built,
 /// so no quote is fetched for hidden markets.
@@ -28,7 +29,7 @@ class WaffraMarketAccordionCard extends StatelessWidget {
    child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
     Material(color:Colors.transparent,child:InkWell(
      key:Key('waffra-market-toggle-'+id),
-     onTap:onPressed,
+     onTap:WaffraHaptics.tap(onPressed),
      child:Container(
       padding:const EdgeInsets.symmetric(horizontal:15,vertical:14),
       decoration:BoxDecoration(gradient:LinearGradient(
