@@ -20,6 +20,7 @@ APPROVED = {
     "lib/waffra_oil_market_data.dart",
     "lib/waffra_oil_market_section.dart",
     "test/m224_verified_pull_refresh_dialog_test.dart",
+    "test/storage/production_custom_goal_source_routing_test.dart",
     "test/m258_pull_refresh_scroll_settle_test.dart",
     "test/m258_finance_refresh_wiring_test.dart",
     "test/m259_oil_quotes_test.dart",
