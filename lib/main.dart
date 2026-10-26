@@ -2214,6 +2214,7 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
            waffraIsEnglish?'No notes added':'لا توجد ملاحظات',
            style:TextStyle(fontSize:13,color:muted)):
           SelectableText(entry.notes,
+           key:const Key('waffra-transaction-personal-notes'),
            textDirection:rtl?TextDirection.rtl:TextDirection.ltr,
            textAlign:TextAlign.start,
            style:const TextStyle(fontSize:14,height:1.5))),
