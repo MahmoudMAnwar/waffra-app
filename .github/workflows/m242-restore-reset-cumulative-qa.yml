@@ -1,0 +1,39 @@
+name: M242 Encrypted Restore-Reset Cumulative QA (NO ACTIVE RESTORE)
+on:
+  pull_request:
+    branches:
+      - feature/m235-authoritative-sqlcipher-backup-export-route-20261026
+    paths:
+      - '.github/workflows/m242-restore-reset-cumulative-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  restored-archive-safety:
+    name: Disposable SQLCipher archive restore and cold-reopen negative QA
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter test test/storage/m187_active_restore_preflight_test.dart --reporter expanded
+  restore-ui-reset-source-gate:
+    name: Independently verify encrypted restore/reset Home UI refuses active overwrite
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter test test/storage/m237_safe_restore_reset_route_ui_test.dart --reporter expanded
