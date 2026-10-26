@@ -28,6 +28,12 @@ APPROVED = UI_FILES | {
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/waffra_haptic_feedback.dart",
     "test/m264_app_wide_action_haptics_test.dart",
+    "test/waffra_directional_fab_receipt_corner_test.dart",
+    "test/waffra_oct21_regression_test.dart",
+    "test/m149_backup_pin_localized_fab_trash_uat_test.dart",
+    "test/m150_file_backup_leaf_categories_uat_test.dart",
+    "test/m224_verified_pull_refresh_dialog_test.dart",
+    "test/m259_market_source_contract_test.dart",
     "scripts/qa/m264_global_action_haptics_scope.py",
 }
 
