@@ -196,9 +196,19 @@ void main() {
     // Portable .waffra export must read finance after the latest Widget save.
     expect(home, contains('await _financialWriteQueue.drain();'));
     expect(home, contains('route:WaffraFinanceRoute.backupExport'));
-    expect(home, contains('final authoritativePayload=exportBackup(fromSource:current);'));
-    expect(home, contains("'payload':authoritativePayload,'password':secret.text"));
-    expect(home, isNot(contains("'payload':exportBackup(),'password':secret.text")));
+    // An activated SQLCipher source MUST use the encrypted ledger+receipt
+    // exporter; only guarded legacy may use a JSON snapshot. This replaces
+    // the old unconditional export text without weakening route coverage.
+    expect(home, contains(
+      'current.source==WaffraRuntimeFinanceBackend.verifiedEncrypted'));
+    expect(home, contains(
+      '_financeAuthority.exportVerifiedEncryptedBackup('));
+    expect(home, contains(
+      'route:WaffraFinanceRoute.backupExport,password:secret.text'));
+    expect(home, contains(
+      "'payload':exportBackup(fromSource:current),'password':secret.text"));
+    expect(home, isNot(contains(
+      "'payload':exportBackup(),'password':secret.text")));
     expect(home, contains('route:WaffraFinanceRoute.fullFinanceReset'));
   });
 }

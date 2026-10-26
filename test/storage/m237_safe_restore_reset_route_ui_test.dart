@@ -36,7 +36,7 @@ void main() {
     final source = home();
     final start = source.indexOf(
       ' Future<void> eraseFinancialData()async {');
-    final end = source.indexOf(' Future<void> openFinancialCalendar(', start);
+    final end = source.indexOf(' Widget _accountTile(', start);
     expect(start, greaterThan(0));
     expect(end, greaterThan(start));
     final reset = source.substring(start, end);
