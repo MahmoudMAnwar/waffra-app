@@ -269,7 +269,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
     subtitle:waffraIsEnglish?'Quick conversion between global currencies':
      'تحويل العملات العالمية بسهولة',
     icon:Icons.currency_exchange_rounded,accent:const Color(0xFF147457),
-    expanded:_openMarket=='currency',onPressed:WaffraHaptics.tap(()=>toggleMarket('currency')),
+    expanded:_openMarket=='currency',onPressed:WaffraHaptics.tapRequired(()=>toggleMarket('currency')),
     child:Card(
     margin:EdgeInsets.zero,
     color:Theme.of(context).cardColor,
@@ -342,7 +342,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
     subtitle:waffraIsEnglish?'Gold karats, bars and weight calculator':
      'الذهب والسبائك وحاسبة الأوزان',
     icon:Icons.workspace_premium_rounded,accent:const Color(0xFFC19A36),
-    expanded:_openMarket=='gold',onPressed:WaffraHaptics.tap(()=>toggleMarket('gold')),
+    expanded:_openMarket=='gold',onPressed:WaffraHaptics.tapRequired(()=>toggleMarket('gold')),
     child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
      WaffraGoldMarketSection(
       key:ValueKey('gold-refresh-'+_goldRefreshRevision.toString()),
@@ -372,7 +372,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
     subtitle:waffraIsEnglish?'Brent, WTI, Oman, Dubai and natural gas':
      'برنت وغرب تكساس وعُمان ودبي والغاز الطبيعي',
     icon:Icons.oil_barrel_rounded,accent:const Color(0xFF17755E),
-    expanded:_openMarket=='oil',onPressed:WaffraHaptics.tap(()=>toggleMarket('oil')),
+    expanded:_openMarket=='oil',onPressed:WaffraHaptics.tapRequired(()=>toggleMarket('oil')),
     child:WaffraOilMarketSection(
      key:ValueKey('waffra-oil-refresh-'+_oilRefreshRevision.toString()),
      english:waffraIsEnglish)),
