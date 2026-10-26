@@ -306,6 +306,35 @@ void main() {
     'receiptPath': null,
   };
 
+  test('M248 encrypted manual append refuses implicit or cancelled approval', () async {
+    final original = await authority.load(
+      route: WaffraFinanceRoute.manualTransactionSave,
+    );
+    final digest = (await snapshot.read()).digest;
+    final entry = manualEntry('m248-unconfirmed-no-write');
+    final captured = <String, Object>{
+      'entries': jsonEncode([entry]),
+    };
+    await expectLater(authority.saveCaptured(
+      route: WaffraFinanceRoute.manualTransactionSave,
+      baseline: original,
+      captured: captured,
+    ), throwsStateError);
+    await expectLater(authority.saveCaptured(
+      route: WaffraFinanceRoute.manualTransactionSave,
+      baseline: original,
+      captured: captured,
+      userConfirmed: false,
+    ), throwsStateError);
+    final unchanged = await snapshot.read();
+    expect(unchanged.digest, digest);
+    expect(unchanged.values['entries'], '[]');
+    final actual = await vault.customSelect(
+      'SELECT count(*) AS n FROM fresh_finance_entries',
+    ).getSingle();
+    expect(actual.read<int>('n'), 0);
+  });
+
   test('M181 manual Home add uses atomic typed SQL without losing Widget hashes',
       () async {
     const fingerprint =
