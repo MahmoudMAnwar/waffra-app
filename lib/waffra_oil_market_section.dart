@@ -231,8 +231,17 @@ class _WaffraOilMarketSectionState extends State<WaffraOilMarketSection>{
     if(loading)const Padding(padding:EdgeInsets.symmetric(vertical:12),
      child:LinearProgressIndicator()),
     if(issue!=null)Padding(padding:const EdgeInsets.symmetric(vertical:12),
-     child:Text(issue!,key:const Key('waffra-oil-price-status'),
-      style:TextStyle(fontSize:12,color:Theme.of(context).colorScheme.error))),
+     child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+      Text(issue!,key:const Key('waffra-oil-price-status'),
+       style:TextStyle(fontSize:12,color:Theme.of(context).colorScheme.error)),
+      const SizedBox(height:8),
+      OutlinedButton.icon(
+       key:const Key('waffra-oil-retry'),
+       onPressed:loading?null:load,
+       icon:const Icon(Icons.refresh_rounded),
+       label:Text(t('Retry verified prices','إعادة محاولة جلب الأسعار')),
+      ),
+     ])),
     const SizedBox(height:12),
     LayoutBuilder(builder:(ctx,box){
      final width=(box.maxWidth-9)/2;

@@ -15,6 +15,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'waffra_financial_tools.dart';
+import 'waffra_action_layout.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
@@ -758,14 +759,20 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     minimumSize:const Size(36,36),alignment:Alignment.center)),
    filledButtonTheme:FilledButtonThemeData(style:FilledButton.styleFrom(
     backgroundColor:forest,foregroundColor:Colors.white,
-    minimumSize:const Size(0,46),alignment:Alignment.center,
+    minimumSize:WaffraActionLayout.minimumSize,
+    padding:WaffraActionLayout.contentPadding,alignment:Alignment.center,
     side:const BorderSide(color:Color(0xFF0C7957),width:1.2),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)))),
    outlinedButtonTheme:OutlinedButtonThemeData(style:OutlinedButton.styleFrom(
-    foregroundColor:forest,alignment:Alignment.center,side:const BorderSide(color:Color(0xFF0C7957),width:1.2),
+    foregroundColor:forest,alignment:Alignment.center,
+    minimumSize:WaffraActionLayout.minimumSize,
+    padding:WaffraActionLayout.contentPadding,
+    side:const BorderSide(color:Color(0xFF0C7957),width:1.2),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)))),
    textButtonTheme:TextButtonThemeData(style:TextButton.styleFrom(
     foregroundColor:forest,alignment:Alignment.center,
+    minimumSize:WaffraActionLayout.minimumSize,
+    padding:WaffraActionLayout.contentPadding,
     side:const BorderSide(color:Color(0xFF0C7957),width:1.1),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(13)))),
    inputDecorationTheme:InputDecorationTheme(
@@ -840,14 +847,20 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     minimumSize:const Size(36,36),alignment:Alignment.center)),
    filledButtonTheme:FilledButtonThemeData(style:FilledButton.styleFrom(
     backgroundColor:const Color(0xFF166E4F),foregroundColor:Colors.white,alignment:Alignment.center,
+    minimumSize:WaffraActionLayout.minimumSize,
+    padding:WaffraActionLayout.contentPadding,
     side:const BorderSide(color:Color(0xFF74DCAB),width:1.1),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)))),
    outlinedButtonTheme:OutlinedButtonThemeData(style:OutlinedButton.styleFrom(
     foregroundColor:Colors.white,alignment:Alignment.center,
+    minimumSize:WaffraActionLayout.minimumSize,
+    padding:WaffraActionLayout.contentPadding,
     side:const BorderSide(color:Color(0xFF74DCAB)),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)))),
    textButtonTheme:TextButtonThemeData(style:TextButton.styleFrom(
     foregroundColor:Colors.white,alignment:Alignment.center,
+    minimumSize:WaffraActionLayout.minimumSize,
+    padding:WaffraActionLayout.contentPadding,
     side:const BorderSide(color:Color(0xFF74DCAB)),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(13)))),
    inputDecorationTheme:InputDecorationTheme(
@@ -7384,8 +7397,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
    Row(children:[
     Expanded(child:OutlinedButton.icon(
      onPressed:showWaffraFinancialCalendar,
-     style:OutlinedButton.styleFrom(minimumSize:const Size(0,48),
-      padding:const EdgeInsets.symmetric(horizontal:5,vertical:7),
+     style:OutlinedButton.styleFrom(minimumSize:WaffraActionLayout.minimumSize,
+      padding:const EdgeInsets.symmetric(horizontal:9,vertical:12),
       side:BorderSide(color:Theme.of(context).colorScheme.primary,width:1.2),
       shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15))),
      icon:const Icon(Icons.calendar_month,size:18),
@@ -8778,8 +8791,8 @@ class WaffraDeletedItemsButton extends StatelessWidget {
    style:OutlinedButton.styleFrom(
     foregroundColor:red,backgroundColor:dark?const Color(0xFF3C242A):const Color(0xFFFFF4F4),
     side:BorderSide(color:red,width:1.4),
-    minimumSize:const Size(0,48),
-    padding:const EdgeInsets.symmetric(horizontal:7,vertical:9),
+    minimumSize:WaffraActionLayout.minimumSize,
+    padding:const EdgeInsets.symmetric(horizontal:10,vertical:12),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15))),
    child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
     Icon(Icons.delete_outline,size:19,color:red),

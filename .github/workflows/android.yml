@@ -842,15 +842,26 @@ jobs:
         env:
           WAFFRA_RELEASE_STORE_PASSWORD: ${{ secrets.WAFFRA_RELEASE_STORE_PASSWORD }}
           WAFFRA_RELEASE_KEY_PASSWORD: ${{ secrets.WAFFRA_RELEASE_KEY_PASSWORD }}
+          # Public read-only commodity API key; never a bank credential.
+          WAFFRA_PUBLIC_EIA_KEY: ${{ secrets.WAFFRA_PUBLIC_EIA_KEY }}
         run: |
           set -o pipefail
           started=$(date +%s)
           # Gradle/Maven occasionally answer 429 Too Many Requests on hosted
           # runners. Retry transient download failures rather than report
           # them as application or Dart compilation failures.
+          eia_define=()
+          if [[ -n "${WAFFRA_PUBLIC_EIA_KEY:-}" ]]; then
+            # Official EIA route uses its own registered public read-only key.
+            # Never print this key or include it in release notes.
+            eia_define+=(--dart-define="WAFFRA_PUBLIC_EIA_KEY=${WAFFRA_PUBLIC_EIA_KEY}")
+            echo "Official EIA live commodity source configured for release APK"
+          else
+            echo "::warning::WAFFRA_PUBLIC_EIA_KEY is not configured; oil quotes will depend on unkeyed FRED CSV availability"
+          fi
           for attempt in 1 2 3 4; do
             echo "Android ARM64 build attempt ${attempt}/4"
-            if flutter build apk --no-pub --release --target-platform android-arm64 --tree-shake-icons; then
+            if flutter build apk --no-pub --release --target-platform android-arm64 --tree-shake-icons "${eia_define[@]}"; then
               elapsed=$(( $(date +%s) - started ))
               printf 'ARM64 build command: **%s seconds** (including retries, if any).\n' "$elapsed" >> "$GITHUB_STEP_SUMMARY"
               echo "WAFFRA_ARM64_BUILD_SECONDS=$elapsed"
@@ -930,8 +941,13 @@ jobs:
         env:
           WAFFRA_RELEASE_STORE_PASSWORD: ${{ secrets.WAFFRA_RELEASE_STORE_PASSWORD }}
           WAFFRA_RELEASE_KEY_PASSWORD: ${{ secrets.WAFFRA_RELEASE_KEY_PASSWORD }}
+          WAFFRA_PUBLIC_EIA_KEY: ${{ secrets.WAFFRA_PUBLIC_EIA_KEY }}
         run: |
-          flutter build appbundle --no-pub --release --target-platform android-arm64 --tree-shake-icons
+          eia_define=()
+          if [[ -n "${WAFFRA_PUBLIC_EIA_KEY:-}" ]]; then
+            eia_define+=(--dart-define="WAFFRA_PUBLIC_EIA_KEY=${WAFFRA_PUBLIC_EIA_KEY}")
+          fi
+          flutter build appbundle --no-pub --release --target-platform android-arm64 --tree-shake-icons "${eia_define[@]}"
           test -s build/app/outputs/bundle/release/app-release.aab
 
       - name: Validate signed AAB archive (not a Play approval)

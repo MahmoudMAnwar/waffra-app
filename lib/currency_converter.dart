@@ -348,6 +348,12 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
       english:waffraIsEnglish),
      const SizedBox(height:12),
      OutlinedButton.icon(
+      style:OutlinedButton.styleFrom(
+       padding:const EdgeInsets.symmetric(horizontal:20,vertical:14),
+       minimumSize:const Size.fromHeight(54),
+       alignment:Alignment.center,
+       shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18)),
+      ),
       key:const Key('waffra-open-gold-calculator'),
       onPressed:()=>Navigator.of(context).push(MaterialPageRoute(
        builder:(_)=>WaffraGoldCalculatorPage(
@@ -355,7 +361,8 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
       icon:const Icon(Icons.currency_exchange),
       label:WaffraText(waffraIsEnglish?
        'Convert gold value to SAR, EGP or any currency':
-       'حوّل قيمة الذهب إلى ريال أو جنيه مصري أو أي عملة')),
+       'حوّل قيمة الذهب إلى ريال أو جنيه مصري أو أي عملة',
+        maxLines:2,textAlign:TextAlign.center,softWrap:true)),
     ])),
    const SizedBox(height:12),
    WaffraMarketAccordionCard(
