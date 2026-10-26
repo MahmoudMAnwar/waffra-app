@@ -321,6 +321,7 @@ void main() {
       captured: <String, Object>{
         'entries': jsonEncode([entry]),
       },
+      userConfirmed: true,
     );
     expect(jsonDecode(committed.ledgerRaw!), hasLength(1));
     final sql = await vault.customSelect(
@@ -345,6 +346,7 @@ void main() {
         'entries': jsonEncode([first]),
         'waffra_goals_v24': '[]',
       },
+      userConfirmed: true,
     ), throwsStateError);
     final after = await snapshot.read();
     expect(after.values['entries'], '[]');
@@ -365,6 +367,7 @@ void main() {
       captured: <String, Object>{
         'entries': jsonEncode([entry]),
       },
+      userConfirmed: true,
     );
     final next = await authority.load(
       route: WaffraFinanceRoute.manualTransactionSave,
@@ -376,6 +379,7 @@ void main() {
       captured: <String, Object>{
         'entries': jsonEncode([mutated]),
       },
+      userConfirmed: true,
     ), throwsStateError);
     final rows = jsonDecode((await snapshot.read()).values['entries'] as String)
         as List<dynamic>;
@@ -532,6 +536,7 @@ void main() {
       captured: <String, Object>{
         'entries': '[]', 'waffra_sms_hashes_v1': <String>[],
       },
+      userConfirmed: true,
     ), throwsStateError);
     expect((await snapshot.read()).digest, previous.digest);
   });
