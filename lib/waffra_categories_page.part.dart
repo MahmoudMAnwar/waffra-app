@@ -204,7 +204,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
    Align(alignment:AlignmentDirectional.centerStart,
     child:ConstrainedBox(constraints:const BoxConstraints(maxWidth:250),
      child:WaffraDeletedItemsButton(
-      onPressed:WaffraHaptics.tap(showCategoryTrash),
+      onPressed:WaffraHaptics.tapRequired(showCategoryTrash),
       label:waffraIsEnglish?'Deleted categories (${deletedCategories.length})':
        'الأقسام المحذوفة (${deletedCategories.length})'))),
    const SizedBox(height:10),
