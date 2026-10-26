@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:printing/printing.dart';
 
+import 'waffra_haptic_feedback.dart';
 /// Display reports as vertically scrollable pages, with one-tap full-screen
 /// reading and horizontal page navigation. Raster images are generated locally;
 /// no report content is uploaded to a server.
@@ -49,7 +50,7 @@ class _WaffraPdfReaderState extends State<WaffraPdfReader> {
     actions:[
      IconButton(
       tooltip:widget.english?'Share PDF':'مشاركة PDF',
-      onPressed:()=>Printing.sharePdf(bytes:widget.bytes,filename:widget.fileName),
+      onPressed:WaffraHaptics.tap(()=>Printing.sharePdf(bytes:widget.bytes,filename:widget.fileName)),
       icon:const Icon(Icons.share_outlined)),
     ]),
    body:FutureBuilder<List<WaffraPdfPage>>(
@@ -77,7 +78,7 @@ class _WaffraPdfReaderState extends State<WaffraPdfReader> {
          :'عرض الصفحة ${index+1} بملء الشاشة',
          child:InkWell(
           key:Key('waffra-pdf-page-$index'),
-          onTap:()=>_openFullScreen(pages,index),
+          onTap:WaffraHaptics.tap(()=>_openFullScreen(pages,index)),
           borderRadius:BorderRadius.circular(12),
           child:Card(margin:EdgeInsets.zero,elevation:4,
            clipBehavior:Clip.antiAlias,
@@ -176,7 +177,7 @@ class _WaffraPdfFullScreenState extends State<_WaffraPdfFullScreen>{
  Widget _page(BuildContext context,int index)=>GestureDetector(
   behavior:HitTestBehavior.opaque,
   onDoubleTapDown:(details)=>_tapDown=details,
-  onDoubleTap:()=>_doubleTap(index),
+  onDoubleTap:WaffraHaptics.tap(()=>_doubleTap(index)),
   child:InteractiveViewer(
    key:Key('waffra-pdf-full-page-$index'),
    transformationController:transforms[index],
@@ -201,17 +202,17 @@ class _WaffraPdfFullScreenState extends State<_WaffraPdfFullScreen>{
    backgroundColor:const Color(0xFF073F31),foregroundColor:Colors.white,
    leading:IconButton(icon:const Icon(Icons.arrow_back_rounded),
     tooltip:widget.english?'Back to report':'العودة للتقرير',
-    onPressed:()=>Navigator.pop(context)),
+    onPressed:WaffraHaptics.tap(()=>Navigator.pop(context))),
    title:Text(widget.english?'Report detail':'تفاصيل التقرير'),
    actions:[
     IconButton(tooltip:widget.english?'Zoom out':'تصغير',
-     onPressed:()=>_zoomBy(current,0.67),
+     onPressed:WaffraHaptics.tap(()=>_zoomBy(current,0.67)),
      icon:const Icon(Icons.zoom_out_rounded)),
     IconButton(tooltip:widget.english?'Zoom in':'تكبير',
-     onPressed:()=>_zoomBy(current,1.5),
+     onPressed:WaffraHaptics.tap(()=>_zoomBy(current,1.5)),
      icon:const Icon(Icons.zoom_in_rounded)),
     IconButton(tooltip:widget.english?'Reset zoom':'إعادة الحجم الطبيعي',
-     onPressed:()=>_reset(current),
+     onPressed:WaffraHaptics.tap(()=>_reset(current)),
      icon:const Icon(Icons.fit_screen_rounded)),
    ]),
   body:SafeArea(child:Column(children:[
@@ -235,7 +236,7 @@ class _WaffraPdfFullScreenState extends State<_WaffraPdfFullScreen>{
     child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
      IconButton(
       tooltip:widget.english?'Previous page':'الصفحة السابقة',
-      onPressed:current>0?()=>goTo(current-1):null,
+      onPressed:WaffraHaptics.tap(current>0?()=>goTo(current-1):null),
       icon:Icon(Icons.chevron_left_rounded,
        color:current>0?Colors.white:Colors.white38)),
      const SizedBox(width:8),
@@ -251,7 +252,7 @@ class _WaffraPdfFullScreenState extends State<_WaffraPdfFullScreen>{
      const SizedBox(width:8),
      IconButton(
       tooltip:widget.english?'Next page':'الصفحة التالية',
-      onPressed:current<widget.pages.length-1?()=>goTo(current+1):null,
+      onPressed:WaffraHaptics.tap(current<widget.pages.length-1?()=>goTo(current+1):null),
       icon:Icon(Icons.chevron_right_rounded,
        color:current<widget.pages.length-1?Colors.white:Colors.white38)),
     ])),

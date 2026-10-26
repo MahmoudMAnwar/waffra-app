@@ -229,7 +229,7 @@ void main() {
     expect(source, contains(
       'WaffraReceiptCornerBadge(count:attachmentCount,english:waffraIsEnglish)',
     ));
-    expect(source, contains("onTap:()=>showReceipt(e.receiptPath!)"));
+    expect(source, contains("onTap:WaffraHaptics.tap(()=>showReceipt(e.receiptPath!)"));
     expect(source, contains('child:WaffraReceiptCornerBadge'));
   });
   testWidgets('expanded menu is above the physical plus on the same side in both languages', (tester) async {

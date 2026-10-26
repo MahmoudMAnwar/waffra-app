@@ -337,7 +337,7 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
            const SizedBox(width:7),
            Expanded(child:Text(_english?'Waffra • Bank SMS':'وفرة • إضافة رسالة بنكية',
             style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold))),
-           IconButton(icon:const Icon(Icons.close),onPressed:_saving?null:_close),
+           IconButton(icon:const Icon(Icons.close),onPressed:WaffraHaptics.tap(_saving?null:_close)),
           ]),
           const SizedBox(height:8),
           Text(_english?'Paste a message for automatic analysis.':
@@ -354,12 +354,12 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
              hintText:_english?'Paste your bank SMS here…':'الصق رسالتك البنكية هنا…',
              border:OutlineInputBorder(borderRadius:BorderRadius.circular(16)),
              suffixIcon:_controller.text.isEmpty?null:IconButton(
-              icon:const Icon(Icons.clear),onPressed:(){
+              icon:const Icon(Icons.clear),onPressed:WaffraHaptics.tap((){
                _controller.clear();_onTextChanged('');
-              })),
+              }))),
            ),
            const SizedBox(height:9),
-           OutlinedButton.icon(onPressed:_saving?null:_pasteClipboard,
+           OutlinedButton.icon(onPressed:WaffraHaptics.tap(_saving?null:_pasteClipboard),
             icon:const Icon(Icons.content_paste),
             label:Text(_english?'Paste from clipboard':'لصق الرسالة المنسوخة')),
            if(_analyzing)...[
@@ -380,7 +380,7 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
              style:const TextStyle(fontSize:12)),
             if(_results.any((r)=>r.duplicate))CheckboxListTile(
              contentPadding:EdgeInsets.zero,
-             value:_allowDuplicates,onChanged:_saving?null:(v)=>setState(()=>_allowDuplicates=v??false),
+             value:_allowDuplicates,onChanged:WaffraHaptics.selection(_saving?null:(v)=>setState(()=>_allowDuplicates=v??false)),
              title:Text(_english?'Allow duplicate SMS transactions':'السماح بإضافة الرسائل المكررة',
               style:const TextStyle(fontSize:12)),
             ),
@@ -409,7 +409,7 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
               textAlign:TextAlign.center,
               style:const TextStyle(color:Colors.deepOrange,fontSize:12))),
             FilledButton.icon(
-             onPressed:_selected.isEmpty||_saving?null:_confirmAndSave,
+             onPressed:WaffraHaptics.tap(_selected.isEmpty||_saving?null:_confirmAndSave),
              icon:const Icon(Icons.check_circle_outline),
              label:Text(_english?'Confirm and save':'تأكيد إضافة العمليات')),
            ],

@@ -5,7 +5,7 @@ void main(){
   final src=File('lib/currency_converter.dart').readAsStringSync();
   for(final id in ['currency','gold','oil']){
    expect(src,contains("id:'"+id+"'"));
-   expect(src,contains("onPressed:()=>toggleMarket('"+id+"')"));
+   expect(src,contains("onPressed:WaffraHaptics.tapRequired(()=>toggleMarket('"+id+"'))"));
   }
   expect(src,contains("String? _openMarket='currency'"));
   expect(src,contains('WaffraGoldMarketSection('));

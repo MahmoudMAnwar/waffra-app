@@ -53,19 +53,19 @@ void main() {
   expect(main,contains('class WaffraDeletedItemsButton extends StatelessWidget'));
   expect(main,contains('const Color(0xFFFF9090)'));
   expect(main,contains('const Color(0xFFB42332)'));
-  expect(main,contains('onPressed:deletedGoalsDialog'));
-  expect(main,contains('onPressed:deletedRecurringDialog'));
+  expect(main,contains('onPressed:WaffraHaptics.tapRequired(deletedGoalsDialog)'));
+  expect(main,contains('onPressed:WaffraHaptics.tapRequired(deletedRecurringDialog)'));
   // The new compact recurring cards remain adjacent; legacy recycle-bin
   // buttons in other sections stay red and independently accessible.
   expect(main,contains("Key('waffra-recurring-count-badge')"));
   expect(main,contains('Expanded(child:OutlinedButton.icon('));
-  expect(main,contains('onPressed:deletedRecurringDialog'));
+  expect(main,contains('onPressed:WaffraHaptics.tapRequired(deletedRecurringDialog)'));
   // M260 raises the minimum touch height so text/icons are not pressed
   // against their outlines. Preserve the behavior, not the retired 48px literal.
   expect(main,contains('minimumSize:WaffraActionLayout.minimumSize'));
   expect(WaffraActionLayout.minimumSize.height,greaterThanOrEqualTo(52));
-  expect(main,contains('onPressed:showWaffraFinancialCalendar'));
-  expect(cats,contains('onPressed:showCategoryTrash'));
+  expect(main,contains('onPressed:WaffraHaptics.tap(showWaffraFinancialCalendar)'));
+  expect(cats,contains('onPressed:WaffraHaptics.tapRequired(showCategoryTrash)'));
   expect(cats,contains('WaffraDeletedItemsButton('));
  });
 
