@@ -111,7 +111,7 @@ double waffraProjectedRecurringOutflows(DateTime today,DateTime until,
     for(final r in recurring){
       if(r.income||r.amount<=0)continue;
       final last=DateTime(month.year,month.month+1,0).day;
-      final at=DateTime(month.year,month.month,math.min(last,r.day.clamp(1,31)));
+      final at=DateTime(month.year,month.month,math.min(last,r.day.clamp(1,31).toInt()));
       if(!at.isBefore(DateTime(today.year,today.month,today.day))&&
          at.isBefore(until))total+=r.amount;
     }
@@ -138,7 +138,7 @@ class WaffraIllustration extends StatelessWidget {
       'business':'💼','government':'🏛️','bank':'🏦',
       'wedding':'💍','tools':'🧰','device':'📱','freelance':'💻',
       'gaming':'🎮','tax':'🧮','investment':'📈','pension':'🪙',
-      'agriculture':'🌾','salary':'💰',
+      'agriculture':'🌾',
       'runway':'👛','subscription':'📺','simulation':'📱',
       'guardian':'🛡️','assistant':'🤖','season':'🌙',
       'wallet':'🧳','challenge':'🏆','flow':'🌿','emergency':'☂️',
@@ -174,7 +174,7 @@ class WaffraIllustration extends StatelessWidget {
             [const Color(0xFFFFF7E7),bottom]),
         borderRadius:BorderRadius.circular(size*.28),
         border:Border.all(color:const Color(0xFF087A54).withValues(alpha:.13)),
-        boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:dark?.18:.08),
+        boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:dark ? .18 : .08),
           blurRadius:12,offset:const Offset(0,5))]),
       child:Center(child:Text(picture(topic),
        style:TextStyle(fontSize:size*.53,height:1.14)))));
@@ -246,9 +246,9 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
     ValueChanged<double> update,{int divisions=20}){
   return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
    _label(title+' — '+current.toStringAsFixed(0),bold:true),
-   Slider(value:current.clamp(lower,upper),min:lower,max:upper,
+   Slider(value:current.clamp(lower,upper).toDouble(),min:lower,max:upper,
     divisions:divisions,activeColor:green,
-    onChanged:WaffraHaptics.selection(update)),
+    onChanged:update),
   ]);
  }
  Widget _head(String title,String topic,String subtitle){
@@ -498,7 +498,7 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
    SegmentedButton<int>(
     segments:[ButtonSegment(value:3,label:_label(t('3 أشهر','3 months'))),
       ButtonSegment(value:6,label:_label(t('6 أشهر','6 months')))],
-    selected:{emergencyMonths},onSelectionChanged:WaffraHaptics.selection(
+    selected:{emergencyMonths},onSelectionChanged:WaffraHaptics.selectionRequired(
       (s)=>setState(()=>emergencyMonths=s.first))),
    const SizedBox(height:10),
    _slider(t('مدخرات الطوارئ الافتراضية (ريال)','Assumed saved buffer (SAR)'),
