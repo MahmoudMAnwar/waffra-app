@@ -26,6 +26,8 @@ on:
       - 'feature/m124-main-integration-merge-preview'
       # M127: isolated signed QA artifact only; never auto-release or deploy.
       - 'feature/m127-approved-ui-and-safe-backup-build'
+      # M257: signed owner QA APK only, includes bounded #705 refresh reread.
+      - 'feature/m257-refresh-recheck-signed-qa-candidate-20261026'
   workflow_dispatch:
 
 # Fast-build concurrency: only the latest pushed revision needs an APK.
@@ -90,7 +92,15 @@ jobs:
               'Waffra Full Offline Finance and UI Regression',
               'Waffra M103 Same-SHA Whole-App Release Certification',
               'M202 Android SQLCipher Source Binding Dry Run (CI ONLY)',
-          } if branch == 'fix/m206-daylight-tour-sms-notes-motion-20261024' else set()
+          } if branch == 'fix/m206-daylight-tour-sms-notes-motion-20261024' else (
+              {
+                  'M257 Bounded Pull Refresh Recheck + Signed QA Readiness (NO CUTOVER)',
+                  'Waffra Full Offline Finance and UI Regression',
+                  'Waffra M103 Same-SHA Whole-App Release Certification',
+              }
+              if branch == 'feature/m257-refresh-recheck-signed-qa-candidate-20261026'
+              else set()
+          )
           headers = {
               'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
               'Accept': 'application/vnd.github+json',
