@@ -74,7 +74,8 @@ def main():
     oil=source("lib/waffra_oil_market_data.dart")
     check("api.eia.gov" in oil and "RBRTE" in oil and "RWTC" in oil,
           "official EIA quote source missing")
-    check("EIA API key not configured" in oil,"missing honest no-key state")
+    check("fred.stlouisfed.org" in oil and "parseFredCsv(" in oil,
+          "missing official keyless source or strict CSV verification")
     check("SharedPreferences" not in oil and "Firebase" not in oil,
           "market UI must remain separate from finance/profile data")
     for file in ("test/m258_pull_refresh_scroll_settle_test.dart",
