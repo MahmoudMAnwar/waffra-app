@@ -4,6 +4,9 @@ from __future__ import annotations
 import datetime as dt
 import importlib.util
 import json
+import os
+import stat
+import tempfile
 from pathlib import Path
 import unittest
 
@@ -125,6 +128,27 @@ class M189PhysicalWitnessTests(unittest.TestCase):
             "shell su" in " ".join(args)
             for args in calls
         ))
+
+
+    def test_private_hardware_evidence_is_exclusive_and_owner_only(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            output = Path(d) / "hardware.json"
+            m._write_private_report(output, {"status": "NO_GO"})
+            self.assertEqual(stat.S_IMODE(output.stat().st_mode), 0o600)
+            self.assertEqual(json.loads(output.read_text(encoding="utf-8")),
+                             {"status": "NO_GO"})
+            with self.assertRaises(FileExistsError):
+                m._write_private_report(output, {"status": "OVERWRITE"})
+
+    def test_hardware_evidence_refuses_symlink_destination(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            target = Path(d) / "existing.json"
+            target.write_text("{}", encoding="utf-8")
+            alias = Path(d) / "link.json"
+            alias.symlink_to(target)
+            with self.assertRaises(OSError):
+                m._write_private_report(alias, {"status": "NO_GO"})
+            self.assertEqual(target.read_text(encoding="utf-8"), "{}")
 
 
 if __name__ == "__main__":
