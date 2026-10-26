@@ -27,7 +27,7 @@ void main() {
  test('Receipt corner reports number of attachments and hides on empty', () {
   expect(app, contains("if(attachmentCount>0)PositionedDirectional"));
   expect(app, contains("'عدد المرفقات \u0024attachmentCount'"));
-  expect(app, contains("onTap:()=>showReceipt(e.receiptPath!)"));
+  expect(app, contains("onTap:WaffraHaptics.tap(()=>showReceipt(e.receiptPath!)"));
   expect(app, isNot(contains("const Icon(Icons.attach_file,size:17,color:emerald)")));
  });
 

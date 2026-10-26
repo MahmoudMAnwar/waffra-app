@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'waffra_gold_market_data.dart';
 import 'waffra_display_currency.dart';
 
+import 'waffra_haptic_feedback.dart';
 /// Read-only global spot price utility under currency conversion.
 /// Never touches the user's financial records or SQLCipher source.
 class WaffraGoldMarketSection extends StatefulWidget {
@@ -382,7 +383,7 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
           ),
           IconButton(
             tooltip: t('Refresh gold spot quote', 'تحديث سعر الذهب'),
-            onPressed: _loading ? null : _fetch,
+            onPressed: WaffraHaptics.tap(_loading ? null : _fetch),
             icon: const Icon(Icons.refresh_rounded, color: _goldDark),
           ),
         ]),
@@ -426,9 +427,9 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
               items: waffraGoldFineness.keys.map((k) => DropdownMenuItem(
                 value: k, child: Text(t('K$k', 'عيار $k')),
               )).toList(),
-              onChanged: (value) {
+              onChanged: WaffraHaptics.selection((value) {
                 if (value != null) setState(() => _karat = value);
-              },
+              }),
             ),
           ),
           const SizedBox(width: 9),
@@ -540,7 +541,7 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
         _title(t('Gold bars', 'أسعار السبائك الذهبية'),
             Icons.inventory_2_outlined,
             action: TextButton(
-              onPressed: () => setState(() => _allBars = !_allBars),
+              onPressed: WaffraHaptics.tap(() => setState(() => _allBars = !_allBars)),
               child: Text(_allBars ? t('Show less', 'عرض أقل') :
                   t('See all', 'عرض الكل'),
                   style: const TextStyle(color: _goldDark)),

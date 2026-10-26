@@ -26,7 +26,7 @@ extension WaffraSmartAnalysisCard on _HomeScreenState {
     border:Border.all(color:dark?const Color(0xFF458566):const Color(0xFFB7DAC8)),
     boxShadow:[BoxShadow(color:emerald.withValues(alpha:.07),blurRadius:12,offset:const Offset(0,3))]),
    child:InkWell(key:const Key('waffra-home-smart-analysis'),
-    onTap:()=>showAiAnalysis(),
+    onTap:WaffraHaptics.tap(()=>showAiAnalysis()),
     borderRadius:BorderRadius.circular(23),
     child:Padding(padding:const EdgeInsets.all(16),
      child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[

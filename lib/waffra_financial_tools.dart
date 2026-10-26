@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'waffra_haptic_feedback.dart';
 /// Read-only financial tools; no bank connection or external data access.
 class WaffraCalendarItem {
   final DateTime date;
@@ -113,12 +114,12 @@ class _WaffraFinancialCalendarState extends State<WaffraFinancialCalendar> {
      child:Column(children:[
       Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
        IconButton(tooltip:widget.english?'Previous month':'الشهر السابق',
-        icon:Icon(Icons.chevron_left,color:ink),onPressed:()=>moveMonth(-1)),
+        icon:Icon(Icons.chevron_left,color:ink),onPressed:WaffraHaptics.tap(()=>moveMonth(-1))),
        Text('${selected.month}/${selected.year}',
         textDirection:TextDirection.ltr,
         style:TextStyle(fontSize:22,fontWeight:FontWeight.w800,color:ink)),
        IconButton(tooltip:widget.english?'Next month':'الشهر التالي',
-        icon:Icon(Icons.chevron_right,color:ink),onPressed:()=>moveMonth(1)),
+        icon:Icon(Icons.chevron_right,color:ink),onPressed:WaffraHaptics.tap(()=>moveMonth(1))),
       ]),
       if(month.isNotEmpty)...[
        const SizedBox(height:9),
@@ -145,7 +146,7 @@ class _WaffraFinancialCalendarState extends State<WaffraFinancialCalendar> {
         return Semantics(button:true,selected:active,
          label:'${day}/${selected.month}/${selected.year}',
          child:InkWell(
-          onTap:()=>setState(()=>selected=DateTime(selected.year,selected.month,day)),
+          onTap:WaffraHaptics.tap(()=>setState(()=>selected=DateTime(selected.year,selected.month,day))),
           borderRadius:BorderRadius.circular(12),
           child:Container(
            decoration:BoxDecoration(
@@ -293,11 +294,11 @@ class _WaffraSubscriptionScreenState extends State<WaffraSubscriptionScreen> {
    const SizedBox(height:12),
    Row(children:[
     Expanded(child:FilledButton.icon(
-     onPressed:widget.onAddRecurring==null||adding!=null?null:()async{
+     onPressed:WaffraHaptics.tap(widget.onAddRecurring==null||adding!=null?null:()async{
       setState(()=>adding=candidate.title);
       try{await widget.onAddRecurring!(candidate);}
       finally{if(mounted)setState(()=>adding=null);}
-     },
+     }),
      style:FilledButton.styleFrom(backgroundColor:forest,
       padding:const EdgeInsets.symmetric(vertical:11),
       shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(13))),
@@ -307,7 +308,7 @@ class _WaffraSubscriptionScreenState extends State<WaffraSubscriptionScreen> {
     )),
     const SizedBox(width:8),
     OutlinedButton(
-     onPressed:adding!=null?null:()=>setState(()=>ignored.add(candidate.title)),
+     onPressed:WaffraHaptics.tap(adding!=null?null:()=>setState(()=>ignored.add(candidate.title))),
      child:Text(t('Ignore','تجاهل'))),
    ]),
   ])),
@@ -338,7 +339,7 @@ class _WaffraSubscriptionScreenState extends State<WaffraSubscriptionScreen> {
    appBar:AppBar(backgroundColor:forest,foregroundColor:Colors.white,centerTitle:true,
     title:Text(t('Subscription insights','كشف الاشتراكات'),
      style:const TextStyle(fontWeight:FontWeight.w800)),
-    leading:IconButton(onPressed:()=>Navigator.maybePop(context),
+    leading:IconButton(onPressed:WaffraHaptics.tap(()=>Navigator.maybePop(context)),
      tooltip:t('Back','رجوع'),icon:const Icon(Icons.arrow_back_ios_new))),
    body:ListView(padding:const EdgeInsets.fromLTRB(16,18,16,40),children:[
     Container(
