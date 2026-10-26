@@ -130,6 +130,7 @@ void main(){
    .subtract(Duration(days:now.weekday-1));
   const months=['Jan','Feb','Mar','Apr','May','Jun','Jul',
    'Aug','Sep','Oct','Nov','Dec'];
+  final friday=monday.add(const Duration(days:4));
   String d(DateTime date)=>'${months[date.month-1]}-${date.day}';
   String fixture(String name,String units,String value)=>'<html><title>'
    '$name ($units)</title><table>'
@@ -138,7 +139,6 @@ void main(){
    '<td>${monday.year} ${d(monday)} to ${d(friday)}</td>'
    '<td>$value</td><td></td><td></td><td></td><td></td>'
    '</tr></table></html>';
-  final friday=monday.add(const Duration(days:4));
   final visited=<Uri>[];
   final mock=MockClient((request)async{
    visited.add(request.url);
