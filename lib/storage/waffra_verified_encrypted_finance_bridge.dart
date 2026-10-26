@@ -247,7 +247,7 @@ class WaffraVerifiedEncryptedFinanceBridge {
     });
   }
 
-  /// Install catalog v2/v3 and the exact SQLCipher metadata marker in ONE
+  /// Install catalog v2/v3/v4 and the exact SQLCipher metadata marker in ONE
   /// transaction, under the shared Home/Widget writer lock. An unrelated
   /// Widget transaction survives; a concurrent catalog edit fails closed.
   Future<WaffraFinanceSnapshotState> installCategoryCatalog({
@@ -256,7 +256,7 @@ class WaffraVerifiedEncryptedFinanceBridge {
     required String nextCatalogRaw,
     required bool catalogChanged,
   }) async {
-    if (version != 2 && version != 3) {
+    if (version != 2 && version != 3 && version != 4) {
       throw ArgumentError('Unknown encrypted catalog version.');
     }
     if (!WaffraLegacyPreflight.inspect(
