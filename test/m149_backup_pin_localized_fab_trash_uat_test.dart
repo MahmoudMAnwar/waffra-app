@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
+import 'package:waffra/waffra_action_layout.dart';
 import 'package:waffra/waffra_i18n.dart';
 import 'package:waffra/waffra_secure_backup.dart';
 
@@ -59,7 +60,10 @@ void main() {
   expect(main,contains("Key('waffra-recurring-count-badge')"));
   expect(main,contains('Expanded(child:OutlinedButton.icon('));
   expect(main,contains('onPressed:deletedRecurringDialog'));
-  expect(main,contains('minimumSize:const Size(0,48)'));
+  // M260 raises the minimum touch height so text/icons are not pressed
+  // against their outlines. Preserve the behavior, not the retired 48px literal.
+  expect(main,contains('minimumSize:WaffraActionLayout.minimumSize'));
+  expect(WaffraActionLayout.minimumSize.height,greaterThanOrEqualTo(52));
   expect(main,contains('onPressed:showWaffraFinancialCalendar'));
   expect(cats,contains('onPressed:showCategoryTrash'));
   expect(cats,contains('WaffraDeletedItemsButton('));
