@@ -22,12 +22,18 @@ finance, touch `main`, or permit an app-store release. M253/M254 remain drafts.
 1. Assert first-install guarded-legacy refresh defaults without inventing
    encrypted records; reject malformed legacy and incomplete encrypted
    financial sources via `test/storage/m255_verified_pull_refresh_safety_test.dart`.
-2. Run all normal app/SQLCipher unit-widget regressions on **the same M255 SHA**
+2. Coalesce overlapping manual pull-to-refresh gestures into one awaited
+   authoritative read. Test concurrent, reentrant, successful and failed
+   reads. Never substitute a cached in-memory ledger or auto-promote source.
+3. Create all M189/M190/M254 evidence reports with **exclusive owner-private
+   (0600) permissions at file creation**, never chmod only after writing.
+   Fail closed on symlink destinations or existing files, and never log paths.
+4. Run all normal app/SQLCipher unit-widget regressions on **the same M255 SHA**
    and verify that M254 forged-device/certificate/GO refusals still pass.
-3. Prepare this immutable 24-route evidence matrix and conservative #705 test.
-4. Identify and quarantine any same-SHA failures on the draft; do not sign or
+5. Prepare this immutable 24-route evidence matrix and conservative #705 test.
+6. Identify and quarantine any same-SHA failures on the draft; do not sign or
    upload an APK, merge or activate the production vault.
-5. Independent local release engineer must later prepare a **signed testing
+7. Independent local release engineer must later prepare a **signed testing
    candidate** linked to an independently reviewed exact source SHA and APK
    SHA-256 / signer certificate SHA-256. CI emulator/debug builds do not count.
 
