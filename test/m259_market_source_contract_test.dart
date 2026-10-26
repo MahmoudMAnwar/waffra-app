@@ -18,7 +18,8 @@ void main(){
   final oil=File('lib/waffra_oil_market_section.dart').readAsStringSync();
   final source=File('lib/waffra_oil_market_data.dart').readAsStringSync();
   expect(oil,contains('quote==null?'));
-  expect(source,contains("throw StateError('EIA API key not configured')"));
+  expect(source,contains("fred.stlouisfed.org"));
+  expect(source,contains("parseFredCsv("));
   expect(source.contains('SharedPreferences'),false);
   expect(source.contains('FirebaseFirestore'),false);
   expect(source.contains('waffra_finance'),false);
