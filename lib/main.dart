@@ -3986,7 +3986,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
    // the optimistic text as if it had been committed.
    final was=List<MoneyEntry>.of(entries);
    final learnedBefore=Map<String,String>.from(learnedMerchantCategories);
-   final changedMetadata=jsonEncode(initial!.toJson())!=jsonEncode(result.toJson());
+   final originalEntry=initial!;
+   final changedMetadata=jsonEncode(originalEntry.toJson())!=jsonEncode(result.toJson());
    final oldUserNote=previousProtectedUserNote??'';
    final nextUserNote=proposedProtectedUserNote??oldUserNote;
    try{
@@ -3995,9 +3996,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
       final i=entries.indexWhere((e)=>e.id==result.id);
       if(i<0)throw StateError('Edited SMS transaction is no longer visible.');
       entries[i]=result;
-      if(initial.category!=result.category){
-       final merchant=initial.merchantKey.isNotEmpty?
-        initial.merchantKey:waffraMerchantKey(initial.title,income:initial.income);
+      if(originalEntry.category!=result.category){
+       final merchant=originalEntry.merchantKey.isNotEmpty?
+        originalEntry.merchantKey:waffraMerchantKey(originalEntry.title,income:originalEntry.income);
        if(merchant!=null&&merchant.isNotEmpty){
         learnedMerchantCategories[merchant]=result.category;
        }
