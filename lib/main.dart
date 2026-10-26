@@ -3047,6 +3047,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
  }
  Future<void> saveParsedMessages(BuildContext ctx,StateSetter update)async {
   if(busy)return;
+  // Recovery mode must not offer another write, even from a still-open
+  // paste sheet after startup/pull-refresh/source verification failed.
+  if(!ready||_financeLoadFailure!=null||_lastFinanceAuthorityRead==null){
+   if(ctx.mounted)update(()=>statusMessage=waffraIsEnglish?
+    'Financial data is being verified. Retry from the protected finance screen before saving bank messages.':
+    'البيانات المالية قيد التحقق. أعد المحاولة من شاشة حماية البيانات قبل حفظ الرسائل البنكية.');
+   return;
+  }
   final found=splitBankMessages(pasted.text.trim());
   if(found.isEmpty){update(()=>statusMessage=waffraIsEnglish?'No financial transactions found. Edit the message and retry.':'هذه الرسالة لا تحتوي على أي معاملات مالية. عدّلها لإعادة التحليل تلقائيًا.');return;}
   if(found.length>100){update(()=>statusMessage=waffraIsEnglish?'Maximum 100 transactions per paste.':'الحد الأقصى 100 معاملة في كل عملية لصق.');return;}
@@ -3145,6 +3153,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
      ],
     )));
   if(accepted!=true||!ctx.mounted)return;
+  // Approval can remain on screen while a separate Widget/Home refresh
+  // changes the source status; never turn that older approval into a write.
+  if(!ready||_financeLoadFailure!=null||_lastFinanceAuthorityRead==null){
+   update(()=>statusMessage=waffraIsEnglish?
+    'Financial source changed during confirmation. Reload verified data and review again.':
+    'تغيّر مصدر البيانات أثناء التأكيد. حدّث البيانات المؤكدة وراجع الرسائل من جديد.');
+   return;
+  }
   update(() {busy=true;rejectedMessages=[];});
   final additions=<MoneyEntry>[];
   final proposedSourceIndexes=<int>[];
@@ -3196,6 +3212,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
    return;
   }
   try{
+   // Finish earlier in-process category/transaction writes before committing
+   // a user-approved SMS batch. The native SQL/Home-Widget authority still
+   // independently validates its current durable source inside its lock.
+   await _financialWriteQueue.drain();
+   if(!mounted||!ready||_financeLoadFailure!=null||
+       _lastFinanceAuthorityRead==null){
+    throw StateError('Finance source was not verified for SMS write.');
+   }
    // The dashboard and standalone Android widget now use the SAME locked,
    // crash-recoverable finance+SMS-hash journal on guarded legacy installs.
    // Never claim a save until the durable journal confirms the actual rows.
@@ -3353,6 +3377,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
    // another review/save. _loadFinanceSafely blocks the whole finance UI
    // if that fresh source cannot be verified; it never resets the vault.
    debugPrint('Bank SMS finance commit could not be verified: $e');
+   // Do not race the authoritative reload with queued Home edits.
+   await _financialWriteQueue.drain();
    if(mounted)await _loadFinanceSafely();
    if(ctx.mounted){
     update((){
