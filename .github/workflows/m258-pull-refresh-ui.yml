@@ -1,0 +1,39 @@
+name: "Waffra M258 Pull Refresh UI Regression"
+
+on:
+  pull_request:
+    paths:
+      - 'lib/main.dart'
+      - 'lib/waffra_categories_page.part.dart'
+      - 'lib/waffra_pull_refresh_scroll_settle.dart'
+      - 'test/m258_*'
+      - '.github/workflows/m258-pull-refresh-ui.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  m258-widget-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Run UI regression tests on checked-out SHA
+        run: flutter test test/m258_pull_refresh_scroll_settle_test.dart test/m258_finance_refresh_wiring_test.dart
+      - name: Analyze changed Flutter implementation
+        run: dart analyze lib/waffra_pull_refresh_scroll_settle.dart test/m258_pull_refresh_scroll_settle_test.dart test/m258_finance_refresh_wiring_test.dart
+      - name: Record exact source SHA
+        run: |
+          echo "M258 tested commit: $(git rev-parse HEAD)"
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}" || {
+            echo 'This is a PR merge-ref, inspect the checkout SHA rather than equating it with PR head.'
+          }
