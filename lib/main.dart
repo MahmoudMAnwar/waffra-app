@@ -2115,8 +2115,11 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
  final MoneyEntry entry;
  final VoidCallback onClose;
  final VoidCallback? onViewReceipt;
+ /// Editable user annotation, kept distinct from the immutable bank SMS.
+ final String? protectedUserNote;
  const WaffraTransactionDetailsDialog({
   super.key,required this.entry,required this.onClose,this.onViewReceipt,
+  this.protectedUserNote,
  });
  @override Widget build(BuildContext context){
   final rtl=!waffraIsEnglish;
@@ -2205,6 +2208,21 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
           borderRadius:BorderRadius.circular(14),
           border:Border.all(color:dark?const Color(0xFF3B5444):const Color(0xFFD5E8DC))),
          child:SelectableText(entry.notes,
+          textDirection:rtl?TextDirection.rtl:TextDirection.ltr,
+          textAlign:TextAlign.start,
+          style:const TextStyle(fontSize:14,height:1.5))),
+       ],
+       if(protectedUserNote!=null&&protectedUserNote!.isNotEmpty)...[
+        const SizedBox(height:15),
+        WaffraText(waffraIsEnglish?'Your notes':'ملاحظاتك',
+         textAlign:TextAlign.start,style:TextStyle(fontSize:12,color:muted)),
+        const SizedBox(height:7),
+        Container(width:double.infinity,padding:const EdgeInsets.all(13),
+         decoration:BoxDecoration(
+          color:dark?const Color(0xFF252A27):const Color(0xFFF1F8F3),
+          borderRadius:BorderRadius.circular(14),
+          border:Border.all(color:dark?const Color(0xFF3B5444):const Color(0xFFD5E8DC))),
+         child:SelectableText(protectedUserNote!,
           textDirection:rtl?TextDirection.rtl:TextDirection.ltr,
           textAlign:TextAlign.start,
           style:const TextStyle(fontSize:14,height:1.5))),
@@ -4812,9 +4830,13 @@ Future<void> bulkSmsSheet({String? initialText})async {
   // a full original message be loaded from its separate SQLCipher note vault.
   // The decrypted text remains in this dialog's memory, never preferences.
   var visibleEntry=entry;
-  if(entry.sourceType=='sms'&&entry.notes.isEmpty){
+  String? protectedUserNote;
+  if(entry.sourceType=='sms'){
    try{
+    // ALWAYS resolve the immutable original from encrypted storage, even if
+    // a local editor previously placed a value in entry.notes.
     final original=await _financeAuthority.readProtectedOriginalSms(entry.id);
+    protectedUserNote=await _financeAuthority.readProtectedSmsUserNote(entry.id);
     if(original!=null){
      visibleEntry=MoneyEntry.fromJson({...entry.toJson(),'notes':original});
     }
@@ -4830,6 +4852,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    context:context,
    builder:(ctx)=>WaffraTransactionDetailsDialog(
     entry:visibleEntry,
+    protectedUserNote:protectedUserNote,
     onClose:()=>Navigator.pop(ctx),
     onViewReceipt:waffraReceiptPaths(entry.receiptPath).isNotEmpty
       ?(){Navigator.pop(ctx);showReceipt(entry.receiptPath!);}
