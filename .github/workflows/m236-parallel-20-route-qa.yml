@@ -1,0 +1,72 @@
+name: M236 Twenty Independent SQLCipher Route Boundaries (QA ONLY)
+
+on:
+  pull_request:
+    branches:
+      - feature/m235-authoritative-sqlcipher-backup-export-route-20261026
+    paths:
+      - 'lib/**'
+      - 'test/storage/m236_remaining_20_route_matrix_test.dart'
+      - '.github/workflows/m236-parallel-20-route-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Every one of the 20 branches of evidence is a separate job. Cap active
+# runners to avoid Gradle/Flutter package registry rate limits on public CI.
+jobs:
+  per-route-source-and-ui-boundary:
+    name: Route ${{ matrix.route }} • no-fallback QA
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix:
+        route:
+          - appStartup
+          - widgetStartup
+          - dashboardRead
+          - widgetRead
+          - manualTransactionSave
+          - bulkSmsConfirmedSave
+          - widgetSmsConfirmedSave
+          - transactionEdit
+          - transactionDeleteAndUndo
+          - deleteAllTransactions
+          - categoryCreateEditDeleteRestore
+          - goalCreateEditDeleteRestore
+          - recurringCreateEditDeleteRestore
+          - recurringPostingAndPostponement
+          - challengeAndBudgetUpdate
+          - merchantRulesAndSmsHashes
+          - receiptRemoveAndRollback
+          - widgetBalanceRefresh
+          - backupRestore
+          - fullFinanceReset
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Set up Flutter stable
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve Flutter dependencies
+        run: flutter pub get
+      - name: Run this route's independently named negative-source and caller test
+        env:
+          FINANCE_ROUTE: ${{ matrix.route }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter test test/storage/m236_remaining_20_route_matrix_test.dart \
+            --plain-name "M236 ${FINANCE_ROUTE} source boundary and caller wiring QA only"
+      - name: Keep explicit scope: not a production SQLCipher attestation
+        shell: bash
+        run: |
+          echo "Route ${{ matrix.route }} passed synthetic source/caller QA."
+          echo "NOT certified: live SQL writes, signed phones, restore or cutover."
