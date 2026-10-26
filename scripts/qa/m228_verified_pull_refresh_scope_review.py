@@ -39,7 +39,20 @@ def main() -> None:
             "main moved or candidate not based on latest main")
     before, after = map(int, git("rev-list", "--left-right",
                                 "--count", base + "..." + head).split())
-    require(before == 0 and 1 <= after <= 3, "unexpected history")
+    # Allow documented iterative QA fix commits, but inspect EVERY commit in
+    # the PR and the exact cumulative file diff. No merge commits or unexpected
+    # file edits can enter through the larger revision allowance.
+    require(before == 0 and 1 <= after <= 12, "unexpected history")
+    commits = git("rev-list", "--reverse", base + ".." + head).splitlines()
+    require(len(commits) == after, "commit history changed during review")
+    for commit in commits:
+        parents = git("rev-list", "--parents", "-n", "1", commit).split()
+        require(len(parents) == 2, "merge commit in reviewed patch history")
+        changed_in_commit = set(filter(None, git(
+            "diff-tree", "--no-commit-id", "--name-only", "-r", commit
+        ).splitlines()))
+        require(bool(changed_in_commit) and changed_in_commit <= EXPECTED,
+                "unreviewed change in commit " + commit[:12])
     changed = set(filter(None, git("diff", "--name-only", base, head).splitlines()))
     require(changed == EXPECTED,
             "reviewed path mismatch: " + repr(sorted(changed ^ EXPECTED)))
