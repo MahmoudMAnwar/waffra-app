@@ -23,7 +23,7 @@ class WaffraMarketAccordionCard extends StatelessWidget {
    decoration:BoxDecoration(
     color:Theme.of(context).cardColor,
     borderRadius:BorderRadius.circular(25),
-    border:Border.all(color:accent.withValues(alpha:dark?.65:.34),width:1.35)),
+    border:Border.all(color:accent.withValues(alpha:dark ? 0.65 : 0.34),width:1.35)),
    clipBehavior:Clip.antiAlias,
    child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
     Material(color:Colors.transparent,child:InkWell(
@@ -38,7 +38,7 @@ class WaffraMarketAccordionCard extends StatelessWidget {
         [accent.withValues(alpha:.12),Theme.of(context).cardColor])),
       child:Row(children:[
        Container(width:56,height:56,
-        decoration:BoxDecoration(color:accent.withValues(alpha:dark?.18:.10),
+        decoration:BoxDecoration(color:accent.withValues(alpha:dark ? 0.18 : 0.10),
          borderRadius:BorderRadius.circular(18)),
         child:Icon(icon,color:accent,size:32)),
        const SizedBox(width:12),
