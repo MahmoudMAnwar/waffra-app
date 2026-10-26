@@ -8,6 +8,8 @@ on:
       - main
       # M206 on-branch QA build; no merge, store deploy or SQLCipher activation.
       - 'fix/m206-daylight-tour-sms-notes-motion-20261024'
+      # M259 signed owner-only QA; never Google Play or SQLCipher cutover.
+      - 'feature/m259-approved-markets-oil-accordion-refresh-20261026'
       # M160 signed APK for owner physical-device QA only; no store release.
       - 'integration/m160-reconcile-main-m158-release-gate-20261023'
       - 'feature/storage-finance-startup-recovery-m62'
