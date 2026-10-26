@@ -92,6 +92,116 @@ class WaffraOilService {
    values.length>14?values.sublist(values.length-14):values));
  }
 
+
+ /// EIA also publishes the same official DAILY spot series as public
+ /// HTML tables without an API key. FRED CSV may return HTTP 403 on mobile.
+ /// Do not substitute futures, estimates or rates from another commodity.
+ static WaffraOilQuote? parseEiaDailyHtml(String benchmark,String html){
+  const headings=<String,String>{
+   'BRENT':'Europe Brent Spot Price FOB',
+   'WTI':'Cushing, OK WTI Spot Price FOB',
+   'GAS':'Henry Hub Natural Gas Spot Price',
+  };
+  final heading=headings[benchmark];
+  final unit=benchmark=='GAS'?'Dollars per Million Btu':'Dollars per Barrel';
+  if(heading==null||!html.contains(heading)||!html.contains(unit)||
+   !html.contains('Week Of')){
+   throw const FormatException('Unexpected official EIA daily table/units');
+  }
+  final months=<String,int>{
+   'Jan':1,'Feb':2,'Mar':3,'Apr':4,'May':5,'Jun':6,
+   'Jul':7,'Aug':8,'Sep':9,'Oct':10,'Nov':11,'Dec':12,
+  };
+  final week=RegExp(
+   r'(\d{4})\s+([A-Za-z]{3})\s*-\s*(\d{1,2})\s+to\s+'
+   r'([A-Za-z]{3})\s*-\s*(\d{1,2})');
+  final rowPattern=RegExp(r'<tr\b[^>]*>(.*?)</tr\s*>',
+   caseSensitive:false,dotAll:true);
+  final cellPattern=RegExp(r'<t[dh]\b[^>]*>(.*?)</t[dh]\s*>',
+   caseSensitive:false,dotAll:true);
+  final tags=RegExp(r'<[^>]*>');
+  final nbsp=RegExp(r'&(?:nbsp|#160|#xA0);',caseSensitive:false);
+  final points=<String,WaffraOilPoint>{};
+  for(final row in rowPattern.allMatches(html)){
+   final cells=cellPattern.allMatches(row.group(1)!).map((m)=>
+    m.group(1)!.replaceAll(tags,' ').replaceAll(nbsp,' ')
+      .replaceAll(RegExp(r'\s+'),' ').trim()).toList();
+   if(cells.length!=6)continue;
+   final match=week.firstMatch(cells[0]);
+   if(match==null)continue;
+   final year=int.parse(match.group(1)!);
+   final month=months[match.group(2)];
+   final day=int.parse(match.group(3)!);
+   final endMonth=months[match.group(4)];
+   final endDay=int.parse(match.group(5)!);
+   if(month==null||endMonth==null)continue;
+   final monday=DateTime.utc(year,month,day);
+   final friday=DateTime.utc(year+(endMonth<month?1:0),endMonth,endDay);
+   if(monday.year!=year||monday.month!=month||monday.day!=day||
+    monday.weekday!=DateTime.monday||friday.difference(monday).inDays!=4){
+    continue;
+   }
+   for(var i=1;i<=5;i++){
+    final price=double.tryParse(cells[i]);
+    if(price==null||!price.isFinite||price<=0||price>=10000)continue;
+    final date=monday.add(Duration(days:i-1));
+    if(date.isAfter(DateTime.now().toUtc().add(const Duration(days:1))))continue;
+    points[date.toIso8601String()]=WaffraOilPoint(date,price);
+   }
+  }
+  if(points.isEmpty)return null;
+  final ordered=points.values.toList()..sort((a,b)=>a.date.compareTo(b.date));
+  return WaffraOilQuote(benchmark,List.unmodifiable(
+   ordered.length>14?ordered.sublist(ordered.length-14):ordered));
+ }
+
+ Future<Map<String,WaffraOilQuote>> _fetchEiaPublicPages(http.Client api)async{
+  const paths=<String,String>{
+   'BRENT':'/dnav/pet/hist/RBRTEd.htm',
+   'WTI':'/dnav/pet/hist/RWTCd.htm',
+   'GAS':'/dnav/ng/hist/RNGWHHDD.htm',
+  };
+  final results=<String,WaffraOilQuote>{};
+  await Future.wait(paths.entries.map((entry)async{
+   try{
+    final response=await api.get(
+     Uri.https('www.eia.gov',entry.value),
+     headers:const {'Accept':'text/html',
+      'User-Agent':'Waffra/3.4 (public EIA spot-price reader)'},
+    ).timeout(const Duration(seconds:12));
+    if(response.statusCode!=200||response.bodyBytes.length>4000000){
+     return;
+    }
+    final quote=parseEiaDailyHtml(entry.key,response.body);
+    if(quote!=null&&!quote.isOld(DateTime.now())){
+     results[entry.key]=quote;
+    }
+   }catch(_){
+    // Another independent spot source may still work; never invent a quote.
+   }
+  }));
+  return results;
+ }
+
+ Future<Map<String,WaffraOilQuote>> _fetchPublicSources(http.Client api)async{
+  // Prefer EIA's own daily pages: no key and no FRED CSV anti-bot 403.
+  final prices=await _fetchEiaPublicPages(api);
+  if(prices.length==3)return prices;
+  try{
+   final fred=await _fetchFred(api);
+   for(final item in fred.entries){
+    // Do not let a later mirror overwrite an authenticated EIA observation.
+    if(!item.value.isOld(DateTime.now()))prices.putIfAbsent(item.key,()=>item.value);
+   }
+  }catch(_){
+   // A failed FRED public CSV must not hide valid official EIA readings.
+  }
+  if(prices.isEmpty){
+   throw StateError('Official EIA daily pages and FRED CSV unavailable');
+  }
+  return prices;
+ }
+
  Future<Map<String,WaffraOilQuote>> _fetchFred(http.Client api)async {
   final start=DateTime.now().toUtc().subtract(const Duration(days:55));
   final date='${start.year.toString().padLeft(4,'0')}-'
@@ -168,7 +278,7 @@ class WaffraOilService {
    // Unlike the registered EIA API, this download does not require a key.
    // Fetch each series independently; one unavailable feed cannot invent or
    // overwrite prices for the other benchmarks.
-   if(publicEiaKey.trim().isEmpty)return await _fetchFred(api);
+   if(publicEiaKey.trim().isEmpty)return await _fetchPublicSources(api);
    final uri=Uri.https('api.eia.gov','/v2/petroleum/pri/spt/data/',{
     'api_key':publicEiaKey,'frequency':'daily','data[0]':'value',
     'facets[series][]':['RBRTE','RWTC'],
@@ -179,7 +289,7 @@ class WaffraOilService {
    if(response.statusCode!=200){
     // Registered EIA service may be temporarily unavailable; use verified
     // public FRED observations instead, without substituting sample prices.
-    return await _fetchFred(api);
+    return await _fetchPublicSources(api);
    }
    final decoded=jsonDecode(response.body);
    if(decoded is! Map<String,dynamic>)throw const FormatException('Invalid EIA JSON');
