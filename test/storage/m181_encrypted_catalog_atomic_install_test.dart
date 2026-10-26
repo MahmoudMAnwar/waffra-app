@@ -14,6 +14,7 @@ import 'package:waffra/storage/waffra_production_finance_routing_gate.dart';
 import 'package:waffra/storage/waffra_production_finance_source_guard.dart';
 import 'package:waffra/storage/waffra_verified_encrypted_finance_bridge.dart';
 import 'package:waffra/storage/waffra_verified_finance_authority.dart';
+import 'package:waffra/storage/waffra_runtime_finance_route_contract.dart';
 
 class _SyntheticSqlOnlySource extends WaffraProductionFinanceSourceGuard {
   @override
@@ -148,6 +149,63 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.containsKey('waffra_categories_v24'), isFalse);
     expect(prefs.containsKey('waffra_category_catalog_v2_installed'), isFalse);
+  });
+
+  test('M235 catalog v4 commits new leaves atomically and skips repeat marker',
+      () async {
+    await authority.installCategoryCatalog(
+      version: 2, expectedCatalogRaw: null, nextCatalogRaw: v2,
+      catalogChanged: true,
+    );
+    await authority.installCategoryCatalog(
+      version: 3, expectedCatalogRaw: v2, nextCatalogRaw: v3,
+      catalogChanged: true,
+    );
+    final v4 = jsonEncode([
+      jsonDecode(first), jsonDecode(second),
+      {'id': 'education', 'name': 'Education',
+       'income': false, 'budget': 0},
+    ]);
+    final verified = await authority.installCategoryCatalog(
+      version: 4, expectedCatalogRaw: v3, nextCatalogRaw: v4,
+      catalogChanged: true,
+    );
+    expect(verified.source, WaffraRuntimeFinanceBackend.verifiedEncrypted);
+    expect(jsonDecode(verified.finance.getString('waffra_categories_v24')!),
+        hasLength(3));
+    final encryptedMarker = await vault.customSelect(
+      "SELECT value_json FROM fresh_finance_settings "
+      "WHERE setting_key='waffra_category_catalog_v4_installed'",
+    ).getSingle();
+    expect(encryptedMarker.read<String>('value_json'), 'true');
+    final before = await snapshot.read();
+    await authority.installCategoryCatalog(
+      version: 4, expectedCatalogRaw: v4, nextCatalogRaw: v4,
+      catalogChanged: false,
+    );
+    final after = await snapshot.read();
+    expect(after.generation, before.generation);
+    expect(after.digest, before.digest);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.containsKey('waffra_category_catalog_v4_installed'), isFalse);
+    expect(prefs.containsKey('waffra_categories_v24'), isFalse);
+  });
+
+  test('M235 SQLCipher catalog v4 refuses stale witness without creating marker',
+      () async {
+    await authority.installCategoryCatalog(
+      version: 2, expectedCatalogRaw: null, nextCatalogRaw: v2,
+      catalogChanged: true,
+    );
+    await expectLater(authority.installCategoryCatalog(
+      version: 4, expectedCatalogRaw: null, nextCatalogRaw: v3,
+      catalogChanged: true,
+    ), throwsStateError);
+    final rows = await vault.customSelect(
+      "SELECT setting_key FROM fresh_finance_settings "
+      "WHERE setting_key='waffra_category_catalog_v4_installed'",
+    ).get();
+    expect(rows, isEmpty);
   });
 
   test('M181 same version retry cannot add duplicate categories', () async {
