@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'waffra_google_auth.dart';
 
+import 'waffra_haptic_feedback.dart';
 /// It is NOT enough to enable this flag in a build. The callable must first
 /// be deployed with verified backend deletion, recursive Firestore cleanup,
 /// Firebase Auth recent-login and a public account-deletion procedure.
@@ -76,9 +77,9 @@ class _WaffraAccountDeletionPageState
             : 'هل تريد حذف حساب وفرة وبيانات السحابة نهائيًا؟ '
               'لا يمكن التراجع. البيانات المالية المحلية لن تُحذف تلقائيًا.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialog, false),
+          TextButton(onPressed: WaffraHaptics.tap(() => Navigator.pop(dialog, false)),
               child: Text(widget.english ? 'Cancel' : 'إلغاء')),
-          FilledButton(onPressed: () => Navigator.pop(dialog, true),
+          FilledButton(onPressed: WaffraHaptics.tap(() => Navigator.pop(dialog, true)),
               child: Text(widget.english ? 'Delete account' : 'حذف الحساب')),
         ],
       ),
@@ -145,8 +146,8 @@ class _WaffraAccountDeletionPageState
         if (_error != null)
           Text(_error!, style: const TextStyle(color: Colors.red)),
         FilledButton.icon(
-          onPressed: !_busy && waffraAccountDeletionReleased &&
-              _confirmation.text.trim() == 'DELETE' ? _perform : null,
+          onPressed: WaffraHaptics.tap(!_busy && waffraAccountDeletionReleased &&
+              _confirmation.text.trim() == 'DELETE' ? _perform : null),
           icon: const Icon(Icons.delete_forever),
           label: Text(english ? 'Permanently delete cloud account' :
               'حذف الحساب السحابي نهائيًا'),
