@@ -6,9 +6,11 @@ on:
       - feature/m254-physical-device-evidence-gate-20261026
     paths:
       - 'test/storage/m255_verified_pull_refresh_safety_test.dart'
+      - 'test/storage/m255_verified_pull_refresh_single_flight_test.dart'
       - 'docs/qa/m255-two-phone-handoff-and-refresh-705.md'
       - '.github/workflows/m255-refresh-device-handoff-no-go.yml'
       - 'lib/main.dart'
+      - 'lib/storage/waffra_verified_refresh_single_flight.dart'
       - 'lib/storage/**'
   workflow_dispatch:
 
@@ -29,10 +31,11 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - name: M255 refresh and #705 source-contract regression
+      - name: 'M255 refresh and build 705 source-contract regression'
         run: >
           flutter test
           test/storage/m255_verified_pull_refresh_safety_test.dart
+          test/storage/m255_verified_pull_refresh_single_flight_test.dart
           test/m224_verified_pull_refresh_dialog_test.dart
           --reporter expanded
       - name: Full Flutter regression at the identical PR head
