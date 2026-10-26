@@ -27,6 +27,8 @@ def main() -> None:
     allowed = {
         "docs/qa/sqlcipher-cutover-readiness-20261027.md",
         "lib/waffra_widget_capture.part.dart",
+        "lib/main.dart",
+        "test/storage/m266_home_bound_source_regression_test.dart",
         "test/storage/m266_widget_source_fail_closed_ui_test.dart",
         ".github/workflows/m266-sqlcipher-precutover-qa.yml",
         ".github/workflows/m147-final-main-review-gate.yml",
@@ -34,6 +36,13 @@ def main() -> None:
     }
     require(changed == allowed,
             "unexpected or missing files: " + repr(sorted(changed ^ allowed)))
+    app = Path("lib/main.dart").read_text()
+    require("await _ensureFinanceBound();\n   final loadedFinance=await _financeAuthority.load(" in app,
+            "Home Widget sync may bypass a bound authority")
+    require("await _ensureFinanceBound();\n   final committed=await _financeAuthority.saveCaptured(" in app,
+            "Home queued finance writer has no explicit source bind")
+    require("await _ensureFinanceBound();\n  final committed=await _financeAuthority.mergeSmsHashes(" in app,
+            "Home SMS merge has no explicit source bind")
     widget = Path("lib/waffra_widget_capture.part.dart").read_text()
     require("if(widget.testSourceProbe!=null){" in widget
             and "throw StateError('Widget finance source has not been verified.')" in widget
