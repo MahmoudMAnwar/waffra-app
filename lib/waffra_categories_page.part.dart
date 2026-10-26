@@ -61,8 +61,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
     })),child:Padding(padding:const EdgeInsets.all(9),
      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       Row(children:[
-       CircleAvatar(radius:19,backgroundColor:color.withValues(alpha:.14),
-        child:Icon(categoryIcon(root.icon),size:20,color:color)),
+       WaffraIllustration(topic:root.icon,size:40),
        const Spacer(),
        PopupMenuButton<String>(
         tooltip:waffraIsEnglish?'Category actions':'خيارات القسم',
@@ -114,7 +113,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
     child:InkWell(borderRadius:BorderRadius.circular(15),
      onTap:WaffraHaptics.tap(()=>updateCategory(sub)),
      child:Padding(padding:const EdgeInsets.all(10),child:Row(children:[
-      Icon(categoryIcon(sub.icon),size:17,color:color),
+      WaffraIllustration(topic:sub.icon,size:30),
       const SizedBox(width:7),
       Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
        WaffraText(sub.displayName,maxLines:2,
