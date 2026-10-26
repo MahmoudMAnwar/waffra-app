@@ -169,6 +169,34 @@ void main() {
     ), throwsStateError);
   });
 
+  test('M235 receiptView only reads encrypted invoice from same activated source',
+      () async {
+    final pixels = await authority.loadEncryptedReceiptImages(
+      route: WaffraFinanceRoute.receiptView, entryId: 'synthetic-sms',
+    );
+    expect(pixels.length, 1);
+    expect(pixels.single.toList(), [137, 80, 78, 71, 13]);
+    await expectLater(authority.loadEncryptedReceiptImages(
+      route: WaffraFinanceRoute.backupExport, entryId: 'synthetic-sms',
+    ), throwsArgumentError);
+    await expectLater(authority.loadEncryptedReceiptImages(
+      route: WaffraFinanceRoute.receiptView, entryId: 'not-a-finance-entry',
+    ), throwsA(anything));
+  });
+
+  test('M235 Home receipt viewer routes encrypted bytes and immutable ledger ID',
+      () async {
+    final code = File('lib/main.dart').readAsStringSync();
+    expect(code, contains(
+      'route:WaffraFinanceRoute.receiptView,entryId:entryId'));
+    expect(code, contains(
+      'Image.memory(securedImages[index],fit:BoxFit.contain)'));
+    expect(code, contains(
+      "linked.single['receiptPath']!=encoded"));
+    expect(code, contains(
+      'showReceipt(e.receiptPath!,entryId:e.id)'));
+  });
+
   test('M235 missing external activation source blocks backup without legacy fallback',
       () async {
     final prefs = await SharedPreferences.getInstance();
