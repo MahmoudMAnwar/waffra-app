@@ -3640,14 +3640,32 @@ Future<void> bulkSmsSheet({String? initialText})async {
 }
 
  Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms})async {
+  // A bank message is immutable and encrypted independently from the user's
+  // editable annotation. Never initialize the note editor with raw SMS or
+  // send a user annotation to the guarded legacy financial preferences.
+  final editingProtectedSms=!sms&&initial?.sourceType=='sms';
+  String? protectedOriginalForEdit,previousProtectedUserNote;
+  if(editingProtectedSms){
+   try{
+    protectedOriginalForEdit=await _financeAuthority.readProtectedOriginalSms(initial!.id);
+    previousProtectedUserNote=await _financeAuthority.readProtectedSmsUserNote(initial.id);
+   }catch(_){
+    if(mounted)snack(context,waffraIsEnglish?
+     'Encrypted bank message is unavailable; no changes were saved.':
+     'تعذر قراءة الرسالة البنكية المشفّرة، ولم تُحفظ أي تعديلات.');
+    return;
+   }
+  }
+  String? proposedProtectedUserNote;
   final title=TextEditingController(text:initial?.title??'');
-  final notes=TextEditingController(text:initial?.notes??'');
+  final notes=TextEditingController(text:editingProtectedSms
+   ?previousProtectedUserNote??'':initial?.notes??'');
   final value=TextEditingController(text:initial==null?'':formatWaffraEditAmount(initial.amount));
   final message=TextEditingController(text:initialSms??'');
   bool income=initial?.income??false,analyzing=false,hasParsed=initialSms!=null;
   String category=initial?.category??'أخرى';
   String? selectedParentId;
-  if(!sms){
+  if(!sms&&!editingProtectedSms){
    // Only leaf categories can be assigned to manually entered transactions.
    final matchingLeaf=categories.where((c)=>c.income==income&&
     c.isSubcategory&&c.name==category).toList();
@@ -3735,9 +3753,30 @@ Future<void> bulkSmsSheet({String? initialText})async {
             'اسم العملية الجديد لا يزيد عن 250 حرفًا.')):null,
         border:OutlineInputBorder())),
       const SizedBox(height:10),
+      if(editingProtectedSms)...[
+       const SizedBox(height:4),
+       WaffraText(waffraIsEnglish?'Original bank SMS • encrypted, read-only':
+        'الرسالة البنكية الأصلية • مشفّرة وللقراءة فقط',
+        style:const TextStyle(fontSize:12,fontWeight:FontWeight.bold)),
+       const SizedBox(height:6),
+       Container(
+        constraints:const BoxConstraints(maxHeight:155),
+        padding:const EdgeInsets.symmetric(horizontal:12,vertical:11),
+        decoration:BoxDecoration(
+         border:Border.all(color:Theme.of(sheetContext).dividerColor),
+         borderRadius:BorderRadius.circular(14)),
+        child:SingleChildScrollView(child:SelectableText(
+         protectedOriginalForEdit??(waffraIsEnglish
+          ?'Original encrypted SMS unavailable':'الرسالة البنكية المشفّرة غير متاحة'),
+         textAlign:TextAlign.start)),
+       ),
+       const SizedBox(height:10),
+      ],
       TextField(controller:notes,onChanged:(_)=>update((){}),minLines:1,maxLines:4,
-       readOnly:sms,
-       decoration:InputDecoration(labelText:waffraIsEnglish?'Notes (optional)':'ملاحظات (اختياري)',
+       readOnly:sms||(editingProtectedSms&&protectedOriginalForEdit==null),
+       decoration:InputDecoration(labelText:editingProtectedSms
+        ?(waffraIsEnglish?'Your notes (encrypted)':'ملاحظاتك (مشفّرة)')
+        :(waffraIsEnglish?'Notes (optional)':'ملاحظات (اختياري)'),
         errorText:attempted&&!sms&&!waffraTransactionNotesAllowed(notes.text,oldNotes:initial?.notes)
          ?(waffraIsEnglish?'Notes cannot exceed 2,000 characters.':
            'الملاحظات لا تتجاوز 2000 حرف.'):null,
@@ -3858,8 +3897,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
        if(!waffraTransactionTitleAllowed(title.text,oldTitle:initial?.title)||
         (!sms&&!waffraTransactionNotesAllowed(notes.text,oldNotes:initial?.notes))||
         waffraAmountFieldError(value.text)!=null||n==null)return;
-       if(!sms&&!waffraCanAssignManualCategory(categories,
+       if(!sms&&!editingProtectedSms&&!waffraCanAssignManualCategory(categories,
         income,selectedParentId,category))return;
+       if(editingProtectedSms){
+        proposedProtectedUserNote=notes.text;
+       }
        if(sms){
         if(message.text.trim().isEmpty)return;
         final h=sha256.convert(utf8.encode(digits(message.text).replaceAll(RegExp(r'\s+'),' ').trim().toLowerCase())).toString();
@@ -3875,7 +3917,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
         pendingHash=h;
        }
        Navigator.pop(sheetContext,MoneyEntry(id:initial?.id??newId(),
-        title:title.text.trim(),notes:sms?message.text:notes.text,category:category,amount:n,
+        title:title.text.trim(),
+        // SMS originals and editable annotations are separate encrypted data:
+        // a legacy ledger edit must retain exactly its previous notes value.
+        notes:editingProtectedSms?initial!.notes:(sms?message.text:notes.text),
+        category:category,amount:n,
         income:income,date:date,receiptPath:receiptPath,
         sourceType:initial?.sourceType??(sms?'sms':'manual'),
         merchantKey:initial?.merchantKey??(sms?(waffraMerchantKey(message.text)??''):'')));
