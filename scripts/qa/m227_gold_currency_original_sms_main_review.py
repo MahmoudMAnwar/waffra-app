@@ -48,9 +48,18 @@ def main() -> None:
     need(head == os.environ.get("REVIEW_HEAD_SHA",""), "head SHA mismatch")
     origin_main = git("rev-parse","refs/remotes/origin/main")
     need(origin_main == MAIN, "main moved; fresh reconciliation required")
-    merge = git("rev-parse","HEAD^")
-    parents = git("rev-list","--parents","-n","1",merge).split()[1:]
-    need(parents == [MAIN,FEATURE], "integration must preserve latest main + M225 ancestry")
+    # Find the explicit original two-parent integration through a bounded
+    # first-parent QA-fix chain, never accepting a branch anchored to old main.
+    merge = head
+    parents = []
+    for _ in range(4):
+        parents = git("rev-list","--parents","-n","1",merge).split()[1:]
+        if len(parents) == 2: break
+        need(len(parents) == 1 and parents[0] != MAIN,
+             "unreviewed merge ancestry")
+        merge = parents[0]
+    need(parents == [MAIN,FEATURE],
+         "integration must preserve latest main + M225 ancestry")
     changed = set(filter(None,git("diff","--name-only",MAIN,head).splitlines()))
     need(changed == ALLOWED, "unreviewed paths: " + repr(sorted(changed ^ ALLOWED)))
     need(not any(x.startswith(("native/","firebase/")) for x in changed),
