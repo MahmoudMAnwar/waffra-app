@@ -76,20 +76,55 @@ class WaffraVerifiedFinanceAuthority {
   /// vault BEFORE the legacy writer sees redacted financial metadata.
   final WaffraEncryptedSmsNotesVault? protectedSmsNotes;
 
+  /// Only an unambiguous, already committed SMS ledger ID may open any
+  /// decrypted original or user annotation. A staged orphan is never enough.
+  Future<bool> _hasAuthoritativeSmsEntry(String entryId) async {
+    if (entryId.trim().isEmpty || entryId.length > 128) return false;
+    final current = await load(route: WaffraFinanceRoute.dashboardRead);
+    final ledger = current.ledgerRaw;
+    if (ledger == null) return false;
+    final rows = jsonDecode(ledger);
+    if (rows is! List) {
+      throw StateError('Invalid authoritative SMS ledger.');
+    }
+    final matches = rows.where((row) =>
+        row is Map && row['id'] == entryId).toList();
+    return matches.length == 1 &&
+        (matches.single as Map)['sourceType'] == 'sms';
+  }
+
   /// Only resolve a protected original for an existing authoritative SMS ID.
   /// A staged-but-not-committed ID must never expose any raw bank note.
   Future<String?> readProtectedOriginalSms(String entryId) async {
-    if (protectedSmsNotes == null) return null;
-    final current = await load(route: WaffraFinanceRoute.dashboardRead);
-    final ledger = current.ledgerRaw;
-    if (ledger == null) return null;
-    final rows = jsonDecode(ledger);
-    if (rows is! List ||
-        !rows.any((row) => row is Map &&
-          row['id'] == entryId && row['sourceType'] == 'sms')) {
-      return null;
-    }
+    if (protectedSmsNotes == null ||
+        !await _hasAuthoritativeSmsEntry(entryId)) return null;
     return protectedSmsNotes!.readVerifiedEntry(entryId);
+  }
+
+  /// A user annotation is distinct from the byte-exact, immutable original
+  /// message. Guarded legacy keeps both inside SQLCipher, never preferences.
+  Future<String?> readProtectedSmsUserNote(String entryId) async {
+    if (protectedSmsNotes == null ||
+        !await _hasAuthoritativeSmsEntry(entryId)) return null;
+    return protectedSmsNotes!.readVerifiedUserNote(entryId);
+  }
+
+  Future<void> updateProtectedSmsUserNote({
+    required String entryId,
+    required String expectedNote,
+    required String nextNote,
+  }) async {
+    if (protectedSmsNotes == null ||
+        await _requireRoute(WaffraFinanceRoute.transactionEdit) !=
+            WaffraRuntimeFinanceBackend.guardedLegacy ||
+        !await _hasAuthoritativeSmsEntry(entryId)) {
+      throw StateError('Verified legacy SMS annotation source unavailable.');
+    }
+    await protectedSmsNotes!.updateVerifiedUserNote(
+      entryId: entryId,
+      expectedNote: expectedNote,
+      nextNote: nextNote,
+    );
   }
 
 
