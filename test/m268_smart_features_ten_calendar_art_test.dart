@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_smart_features.dart';
 import 'package:waffra/waffra_today_picker.dart';
+import 'package:waffra/waffra_financial_tools.dart';
 
 WaffraSmartEntry row(String id,String title,String category,double amount,
  int year,int month,int day,{bool income=false})=>
@@ -66,6 +67,51 @@ void main(){
      now:DateTime(2026,10,27,23)),isTrue);
    expect(waffraCalendarIsToday(DateTime(2026,10,26),
      now:DateTime(2026,10,27)),isFalse);
+  });
+ });
+
+ group('M268: interactive Today actions',(){
+  testWidgets('financial calendar Today jumps to actual current date',(tester)async{
+   await tester.pumpWidget(const MaterialApp(home:
+    WaffraFinancialCalendar(items:[],english:false)));
+   await tester.tap(find.byTooltip('الشهر السابق'));
+   await tester.pumpAndSettle();
+   expect(find.byKey(const Key('waffra-financial-calendar-today')),findsOneWidget);
+   await tester.tap(find.byKey(const Key('waffra-financial-calendar-today')));
+   await tester.pumpAndSettle();
+   expect(find.byKey(const Key('waffra-financial-calendar-today')),findsNothing);
+  });
+  testWidgets('date picker Today returns a valid today and closes',(tester)async{
+   DateTime? chosen;
+   final today=DateUtils.dateOnly(DateTime.now());
+   await tester.pumpWidget(MaterialApp(home:Builder(builder:(ctx)=>Scaffold(
+    body:TextButton(onPressed:()async{
+     chosen=await waffraPickDateWithToday(context:ctx,english:true,
+      initialDate:today.subtract(const Duration(days:2)),
+      firstDate:today.subtract(const Duration(days:5)),
+      lastDate:today.add(const Duration(days:5)));
+    },child:const Text('OPEN PICKER'))))));
+   await tester.tap(find.text('OPEN PICKER'));
+   await tester.pumpAndSettle();
+   expect(find.byKey(const Key('waffra-datepicker-today')),findsOneWidget);
+   await tester.tap(find.byKey(const Key('waffra-datepicker-today')));
+   await tester.pumpAndSettle();
+   expect(chosen,today);
+  });
+  testWidgets('future-only date picker refuses selecting invalid today',(tester)async{
+   final today=DateUtils.dateOnly(DateTime.now());
+   await tester.pumpWidget(MaterialApp(home:Builder(builder:(ctx)=>Scaffold(
+    body:TextButton(onPressed:(){
+     waffraPickDateWithToday(context:ctx,
+      initialDate:today.add(const Duration(days:2)),
+      firstDate:today.add(const Duration(days:1)),
+      lastDate:today.add(const Duration(days:10)));
+    },child:const Text('OPEN FUTURE PICKER'))))));
+   await tester.tap(find.text('OPEN FUTURE PICKER'));
+   await tester.pumpAndSettle();
+   final btn=tester.widget<FilledButton>(find.byKey(
+      const Key('waffra-datepicker-today')));
+   expect(btn.onPressed,isNull);
   });
  });
 
