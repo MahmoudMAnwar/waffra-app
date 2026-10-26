@@ -435,3 +435,22 @@ M208 encrypted-legacy privacy constraint: When verified SQLCipher is not active,
 - Read the same verified finance authority after draining pending Home writes. Default to an empty list only for a truly missing legacy ledger; resolve missing and intentionally empty legacy categories using normal Home defaults, including preserved category names from existing historic records. Do not write, delete or migrate data while refreshing.
 - Keep SQLCipher strict: missing encrypted entries/categories, malformed JSON, invalid financial integrity, pending source transition or mismatched active encryption witnesses continue to FAIL CLOSED with the protected recovery screen.
 - Cover empty legacy install, non-empty legacy ledger, intentionally empty legacy categories, invalid finance JSON and missing encrypted fields in independent regression tests. The fix is not production SQLCipher activation, and Android #705 remains unchanged until new signed exact-SHA QA APK passes and is validated on a phone.
+
+[M257] نسخة اختبار لملاحظة Pull-to-Refresh في بيلد 705
+- عمليات السحب المتداخلة تشترك في قراءة واحدة من مصدر البيانات المالي
+  المعتمد، بدل تكوين طلبات متعارضة بين الرئيسية والأقسام والأهداف.
+- في حالة تعثر القراءة أو التحقق من المصدر مرة واحدة، يُستكمل
+  تفريغ طابور الكتابة وتُجرى إعادة تحقق واحدة من المصدر نفسه.
+- لا تُعرض أي معاملات أو أرصدة من الذاكرة المؤقتة عند فشل القراءة؛
+  ولا تُحفظ أي بيانات أثناء التحديث، ولا يتحول مصدر Legacy إلى SQLCipher
+  أو العكس تلقائيًا بسبب خطأ أو مهلة مؤقتة.
+- لو فشل التحقق مرتين أو ظهرت بيانات مالية غير متسقة، تظهر شاشة
+  حماية البيانات وإعادة المحاولة بأمان، بلا تصفير أو حذف للعمليات.
+- اختبارات مضافة: نجاح القراءة المباشرة، التعثر المؤقت، فشل المصدر
+  المتكرر، فشل سلامة البيانات، التزامن وعدم تجاوز التحقق.
+- إصلاح برمجي موجّه إلى عَرَض بيلد 705، وليس دليلًا على نجاحه
+  على هاتف Android حقيقي؛ الاختبار الفعلي والاعتماد يظلان مطلوبين.
+- البناء المطلوب APK تجريبي ARM64 موقّع ببصمة وفرة المعتمدة،
+  من SHA مثبت داخل الملف، بعد نجاح جميع اختبارات نفس الـCommit.
+- يمنع نشر الإنتاج وتفعيل SQLCipher على بيانات حقيقية قبل اختبار
+  هاتفين حقيقيين والـ24 مسارًا المالي والمرفقات والاستعادة.
