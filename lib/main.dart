@@ -2202,7 +2202,7 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
        // the protected vault and is never substituted into entry.notes.
        if(entry.sourceType=='sms'||entry.notes.isNotEmpty)...[
         const SizedBox(height:15),
-        WaffraText(waffraIsEnglish?'Your notes':'ملاحظاتك',
+        WaffraText(waffraIsEnglish?'Notes':'الملاحظات',
          textAlign:TextAlign.start,style:TextStyle(fontSize:12,color:muted)),
         const SizedBox(height:7),
         Container(width:double.infinity,padding:const EdgeInsets.all(13),
@@ -3757,7 +3757,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       const SizedBox(height:10),
       if(!sms)...[
        TextField(controller:notes,onChanged:(_)=>update((){}),minLines:1,maxLines:4,
-        decoration:InputDecoration(labelText:waffraIsEnglish?'Your notes (optional)':'ملاحظاتك (اختياري)',
+        decoration:InputDecoration(labelText:waffraIsEnglish?'Notes (optional)':'ملاحظات (اختياري)',
          errorText:attempted&&!waffraTransactionNotesAllowed(notes.text,oldNotes:initial?.notes)
           ?(waffraIsEnglish?'Notes cannot exceed 2,000 characters.':
             'الملاحظات لا تتجاوز 2000 حرف.'):null,
