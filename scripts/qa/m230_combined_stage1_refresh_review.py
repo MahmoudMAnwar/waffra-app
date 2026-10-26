@@ -87,6 +87,29 @@ def main() -> None:
         "missing encrypted ledger still fails closed")
     has(".github/workflows/m147-final-main-review-gate.yml",
         "python3 scripts/qa/m230_combined_stage1_refresh_review.py")
+    # Keep the M147 artifact contract: a complete audit must leave a
+    # machine-readable, explicitly non-authorizing QA report for review.
+    import json
+    report = {
+        "milestone": "M230",
+        "reviewed_head_sha": head,
+        "base_main_sha": base,
+        "reviewed_commit_count": len(commits),
+        "changed_paths": sorted(changed),
+        "route_contract_count": len(members),
+        "source_scope_verified": True,
+        "pull_refresh_code_scope_verified": True,
+        "sqlcipher_production_activated": False,
+        "all_24_live_routes_verified": False,
+        "two_physical_phones_verified": False,
+        "original_sms_notes_restore_parity_verified": False,
+        "production_release_authorized": False,
+        "status": "M230_CODE_SCOPE_QA_ONLY_PRODUCTION_NO_GO",
+    }
+    output = Path("build/m147-final-review-report.json")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n",
+                      encoding="utf-8")
     print("M230 PASS: exact-head review of both isolated fixes, no SQLCipher activation; real phones still NO-GO.")
 
 if __name__ == "__main__":
