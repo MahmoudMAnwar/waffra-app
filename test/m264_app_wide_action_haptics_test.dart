@@ -77,7 +77,7 @@ void main() {
           value:value,
           hint:const Text('Select'),
           items:const [DropdownMenuItem(value:'SAR',child:Text('SAR'))],
-          onChanged:WaffraHaptics.selection<String>(
+          onChanged:WaffraHaptics.selection<String?>(
             (next){value=next;},
           ),
         ),
