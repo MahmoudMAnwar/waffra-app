@@ -12,6 +12,7 @@ import json
 import os
 from pathlib import Path
 import re
+import stat
 
 from m189_physical_device_source_probe import ROUTE_SOURCE, routes_from_repo
 
@@ -137,11 +138,31 @@ def _unique_items(pairs: list[tuple[str, object]]) -> dict:
 
 
 def _load_private_report(path: Path) -> object:
-    if path.is_symlink() or not path.is_file() or path.stat().st_size > 1024 * 1024:
-        raise EvidenceRefused("Evidence file must be regular, private and at most 1 MiB.")
+    # Check the opened file descriptor, not the path, to avoid a symlink
+    # substitution between a path check and the eventual read.
+    if not hasattr(os, "O_NOFOLLOW"):
+        raise EvidenceRefused("Secure no-follow local evidence reading unavailable.")
+    flags = os.O_RDONLY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0)
     # Never echo raw contents, filenames, identities or financial data.
-    with path.open("r", encoding="utf-8") as f:
+    with os.fdopen(os.open(path, flags), "r", encoding="utf-8") as f:
+        info = os.fstat(f.fileno())
+        if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or
+                info.st_size > 1024 * 1024 or info.st_mode & 0o077 or
+                (hasattr(os, "getuid") and info.st_uid != os.getuid())):
+            raise EvidenceRefused(
+                "Evidence must be one owner-private regular file (max 1 MiB).")
         return json.load(f, object_pairs_hook=_unique_items)
+
+
+def _write_private_report(path: Path, report: dict[str, object]) -> None:
+    if not hasattr(os, "O_NOFOLLOW"):
+        raise EvidenceRefused("Secure exclusive local evidence writing unavailable.")
+    flags = (os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW |
+             getattr(os, "O_CLOEXEC", 0))
+    # 0600 at creation time: never briefly expose sensitive local report bytes.
+    with os.fdopen(os.open(path, flags, 0o600), "w", encoding="utf-8") as f:
+        json.dump(report, f, indent=2)
+        f.write("\n")
 
 
 def main() -> int:
@@ -159,10 +180,7 @@ def main() -> int:
             expected_routes=routes_from_repo(ROUTE_SOURCE.read_text(encoding="utf-8")),
         )
         args.output.parent.mkdir(parents=True, exist_ok=True)
-        with args.output.open("x", encoding="utf-8") as file:
-            os.chmod(args.output, 0o600)
-            json.dump(report, file, indent=2)
-            file.write("\n")
+        _write_private_report(args.output, report)
         print("M254 local evidence reports consistent; real-phone SQLCipher release remains NO-GO.")
         return 0
     except (EvidenceRefused, OSError, ValueError, FileExistsError) as exc:
