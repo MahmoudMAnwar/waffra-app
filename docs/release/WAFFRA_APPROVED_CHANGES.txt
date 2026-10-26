@@ -451,3 +451,10 @@ M208 encrypted-legacy privacy constraint: When verified SQLCipher is not active,
 - This market patch does NOT certify FRED public CSV availability on the owner's phone or supply an EIA API key. Oman and Dubai still have no qualified live data provider; their prices remain unavailable rather than invented.
 - Added RTL/LTR and dark-mode widget layout regression plus SHA-pinned file-scope review. A code diff or CI simulation is NOT a signed owner-tested APK; finish exact-main CI and signed APK before UI acceptance.
 - No SQLCipher financial production cutover, no new real-bank-SMS authorization, no Play publication and no two-device physical attestation. Production NO-GO remains.
+
+[M262] Notes and original encrypted bank SMS separation — 2026-10-26
+- In transaction details, show two separate fields for SMS transactions: "Notes/الملاحظات" from the ordinary transaction record, and "Original bank message (encrypted)/تفاصيل الرسالة البنكية الأصلية (مشفّرة)" read-only from the verified SQLCipher vault. Keep full selectable text without truncation and distinct light/dark accessible borders.
+- Fix the disappearing original when notes are edited: readProtectedOriginalSms(entry.id) must execute for every confirmed SMS transaction ID, regardless of entry.notes contents. Never copy decrypted vault text into the editable notes field or change encrypted SMS bytes because notes were edited.
+- New single-SMS paste screen no longer displays original SMS as readonly personal notes; original SMS is still provided to the protected confirmation writer, with the pre-existing legacy plaintext-redaction/duplicate guards preserved. User notes can be added or changed later from Edit Transaction.
+- Display explicit no-notes and verified-original-unavailable states without fabricating an original. Preserve the older records without destructive migration or source cutover. Test empty notes, edited notes, unavailable encrypted vault and full original fidelity.
+- UI/source-boundary QA only. No SQLCipher production activation, database migration, new real-user-data claim or signed APK acceptance before full same-SHA test and owner device verification.
