@@ -62,6 +62,7 @@ import 'storage/waffra_runtime_finance_route_contract.dart';
 import 'storage/waffra_verified_transaction_ui_guard.dart';
 import 'storage/waffra_m155_category_plan.dart';
 import 'storage/waffra_sms_partial_save_recovery.dart';
+import 'storage/waffra_sms_source_write_readiness.dart';
 import 'storage/waffra_production_finance_routing_gate.dart';
 import 'storage/waffra_verified_legacy_backup_restore.dart';
 import 'waffra_home_widget.dart';
@@ -3049,7 +3050,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
   if(busy)return;
   // Recovery mode must not offer another write, even from a still-open
   // paste sheet after startup/pull-refresh/source verification failed.
-  if(!ready||_financeLoadFailure!=null||_lastFinanceAuthorityRead==null){
+  if(!waffraCanConfirmSmsWithFinanceSource(
+    dashboardReady:ready,
+    hasVerifiedRead:_lastFinanceAuthorityRead!=null,
+    recoveryActive:_financeLoadFailure!=null,
+   )){
    if(ctx.mounted)update(()=>statusMessage=waffraIsEnglish?
     'Financial data is being verified. Retry from the protected finance screen before saving bank messages.':
     'البيانات المالية قيد التحقق. أعد المحاولة من شاشة حماية البيانات قبل حفظ الرسائل البنكية.');
@@ -3155,7 +3160,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
   if(accepted!=true||!ctx.mounted)return;
   // Approval can remain on screen while a separate Widget/Home refresh
   // changes the source status; never turn that older approval into a write.
-  if(!ready||_financeLoadFailure!=null||_lastFinanceAuthorityRead==null){
+  if(!waffraCanConfirmSmsWithFinanceSource(
+    dashboardReady:ready,
+    hasVerifiedRead:_lastFinanceAuthorityRead!=null,
+    recoveryActive:_financeLoadFailure!=null,
+   )){
    update(()=>statusMessage=waffraIsEnglish?
     'Financial source changed during confirmation. Reload verified data and review again.':
     'تغيّر مصدر البيانات أثناء التأكيد. حدّث البيانات المؤكدة وراجع الرسائل من جديد.');
@@ -3216,8 +3225,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
    // a user-approved SMS batch. The native SQL/Home-Widget authority still
    // independently validates its current durable source inside its lock.
    await _financialWriteQueue.drain();
-   if(!mounted||!ready||_financeLoadFailure!=null||
-       _lastFinanceAuthorityRead==null){
+   if(!mounted||!waffraCanConfirmSmsWithFinanceSource(
+       dashboardReady:ready,
+       hasVerifiedRead:_lastFinanceAuthorityRead!=null,
+       recoveryActive:_financeLoadFailure!=null,
+      )){
     throw StateError('Finance source was not verified for SMS write.');
    }
    // The dashboard and standalone Android widget now use the SAME locked,
