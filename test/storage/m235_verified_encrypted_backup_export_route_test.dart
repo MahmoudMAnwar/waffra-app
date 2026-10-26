@@ -197,6 +197,20 @@ void main() {
       'showReceipt(e.receiptPath!,entryId:e.id)'));
   });
 
+  test('M235 image-picker never copies plaintext files after encrypted source selection',
+      () async {
+    final code = File('lib/main.dart').readAsStringSync();
+    final start = code.indexOf(' Future<String> saveReceipt(XFile picked)async {');
+    final guard = code.indexOf(
+      'route:WaffraFinanceRoute.receiptCopyAndAttach', start);
+    final copy = code.indexOf('await File(picked.path).copy(target);', start);
+    expect(start, greaterThan(0));
+    expect(guard, greaterThan(start));
+    expect(copy, greaterThan(guard));
+    expect(code, contains(
+      'Encrypted receipt attachment requires an atomic SQLCipher writer.'));
+  });
+
   test('M235 missing external activation source blocks backup without legacy fallback',
       () async {
     final prefs = await SharedPreferences.getInstance();
