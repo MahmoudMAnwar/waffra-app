@@ -448,6 +448,12 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
            if(_error!=null)Padding(padding:const EdgeInsets.only(top:9),
             child:Text(_error!,style:const TextStyle(color:Colors.red))),
           ],
+          // Source errors must remain visible even though unsafe input and
+          // confirmation controls are deliberately hidden.
+          if(!_sourceReady&&_error!=null)Padding(
+           padding:const EdgeInsets.only(top:9),
+           child:Text(_error!,style:const TextStyle(color:Colors.red)),
+          ),
          ]),
         ),
        ),
