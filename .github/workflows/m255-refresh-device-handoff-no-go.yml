@@ -7,6 +7,10 @@ on:
     paths:
       - 'test/storage/m255_verified_pull_refresh_safety_test.dart'
       - 'test/storage/m255_verified_pull_refresh_single_flight_test.dart'
+      - 'scripts/qa/m189_physical_device_source_probe.py'
+      - 'scripts/qa/m190_signed_apk_preflight.py'
+      - 'test/qa/m189_physical_device_source_probe_test.py'
+      - 'test/qa/m190_signed_apk_preflight_test.py'
       - 'docs/qa/m255-two-phone-handoff-and-refresh-705.md'
       - '.github/workflows/m255-refresh-device-handoff-no-go.yml'
       - 'lib/main.dart'
