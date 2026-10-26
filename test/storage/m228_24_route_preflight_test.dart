@@ -56,7 +56,7 @@ void main() {
   });
 
   test('M228 never labels normal guarded legacy as verified SQLCipher', () {
-    final report = probe(legacy);
+    final report = probe(legacy, sql: false, external: false);
     expect(report.allContractsAcceptEncrypted, isFalse);
     expect(report.routes.values.toSet(),
         {WaffraRouteSourceOutcome.guardedLegacy});
