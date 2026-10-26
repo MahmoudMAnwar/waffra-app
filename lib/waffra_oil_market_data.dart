@@ -30,7 +30,8 @@ const waffraOilNames=<String,List<String>>{
 
 /// Official EIA daily spot Brent/WTI series. The API key is an EIA public
 /// commodity quota key, supplied through --dart-define (not a bank secret).
-/// Oman/Dubai/Gas remain explicitly unavailable without verified feeds.
+/// Oman/Dubai remain unavailable without independently verified feeds.
+/// Henry Hub gas uses the distinct official EIA daily spot series RNGWHHD.
 class WaffraOilService {
  const WaffraOilService({this.publicEiaKey=const String.fromEnvironment(
   'WAFFRA_PUBLIC_EIA_KEY')});
@@ -64,6 +65,33 @@ class WaffraOilService {
   }
   return result;
  }
+ /// EIA Henry Hub gas spot is on the NATURAL GAS route, not petroleum.
+ /// Units are USD per MMBtu, never USD per crude barrel.
+ static WaffraOilQuote? parseEiaGas(Map<String,dynamic> json){
+  final response=json['response'];
+  if(response is! Map||response['data'] is! List){
+   throw const FormatException('Invalid EIA Henry Hub payload');
+  }
+  final byDay=<String,WaffraOilPoint>{};
+  for(final row in response['data'] as List){
+   if(row is! Map||row['series']?.toString()!='RNGWHHD')continue;
+   final units=row['units']?.toString().toLowerCase()??'';
+   if(units.isNotEmpty &&
+    !(units.contains('mmbtu')||(units.contains('million')&&units.contains('btu'))))continue;
+   final period=DateTime.tryParse(row['period']?.toString()??'');
+   final price=double.tryParse(row['value']?.toString()??'');
+   if(period==null||price==null||!price.isFinite||
+    price<=0||price>=10000)continue;
+   final day=DateTime.utc(period.year,period.month,period.day);
+   if(day.isAfter(DateTime.now().toUtc().add(const Duration(days:1))))continue;
+   byDay[day.toIso8601String()]=WaffraOilPoint(day,price);
+  }
+  if(byDay.isEmpty)return null;
+  final values=byDay.values.toList()..sort((a,b)=>a.date.compareTo(b.date));
+  return WaffraOilQuote('GAS',List.unmodifiable(
+   values.length>14?values.sublist(values.length-14):values));
+ }
+
  Future<Map<String,WaffraOilQuote>> _fetchFred(http.Client api)async {
   final start=DateTime.now().toUtc().subtract(const Duration(days:55));
   final date='${start.year.toString().padLeft(4,'0')}-'
@@ -157,6 +185,26 @@ class WaffraOilService {
    if(decoded is! Map<String,dynamic>)throw const FormatException('Invalid EIA JSON');
    final quotes=parse(decoded);
    if(quotes.isEmpty)throw const FormatException('No valid spot quotes');
+   // Fetch independently: a missing Henry Hub quote must not suppress valid
+   // Brent/WTI prices, and must never be filled using another benchmark.
+   try{
+    final gasUri=Uri.https('api.eia.gov','/v2/natural-gas/pri/fut/data/',{
+     'api_key':publicEiaKey,'frequency':'daily','data[0]':'value',
+     'facets[series][]':'RNGWHHD',
+     'sort[0][column]':'period','sort[0][direction]':'desc',
+     'offset':'0','length':'30',
+    });
+    final gasResponse=await api.get(gasUri).timeout(const Duration(seconds:8));
+    if(gasResponse.statusCode==200&&gasResponse.bodyBytes.length<=512000){
+     final gasData=jsonDecode(gasResponse.body);
+     if(gasData is Map<String,dynamic>){
+      final gas=parseEiaGas(gasData);
+      if(gas!=null)quotes['GAS']=gas;
+     }
+    }
+   }catch(_){
+    // A failed optional gas feed must never block verified crude prices.
+   }
    return quotes;
   }finally{if(owns)api.close();}
  }
