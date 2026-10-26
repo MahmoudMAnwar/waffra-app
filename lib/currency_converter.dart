@@ -10,6 +10,7 @@ import 'waffra_gold_calculator.dart';
 import 'waffra_market_accordion.dart';
 import 'waffra_oil_market_section.dart';
 
+import 'waffra_haptic_feedback.dart';
 /// Cosmetic country markers only. The converter itself uses verified FX.
 /// EUR is a multi-country currency, so use a currency symbol rather than
 /// pretending that it belongs to one nation.
@@ -156,11 +157,11 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
          leading:Text(waffraCurrencyFlag(code),
           style:const TextStyle(fontSize:28)),
          title:WaffraText(currencyLabel(code)),
-         onTap:()=>Navigator.of(dialogContext).pop(code),
+         onTap:WaffraHaptics.tap(()=>Navigator.of(dialogContext).pop(code)),
         );
        })),
       ])),
-      actions:[TextButton(onPressed:()=>Navigator.pop(dialogContext),
+      actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogContext)),
        child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء'))]);
     }));
    if(picked!=null&&mounted){
@@ -268,7 +269,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
     subtitle:waffraIsEnglish?'Quick conversion between global currencies':
      'تحويل العملات العالمية بسهولة',
     icon:Icons.currency_exchange_rounded,accent:const Color(0xFF147457),
-    expanded:_openMarket=='currency',onPressed:()=>toggleMarket('currency'),
+    expanded:_openMarket=='currency',onPressed:WaffraHaptics.tapRequired(()=>toggleMarket('currency')),
     child:Card(
     margin:EdgeInsets.zero,
     color:Theme.of(context).cardColor,
@@ -286,7 +287,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
    const SizedBox(height:14),
    Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
     Expanded(child:OutlinedButton(
-     onPressed:busy?null:()=>selectCurrency(true),
+     onPressed:WaffraHaptics.tap(busy?null:()=>selectCurrency(true)),
      style:OutlinedButton.styleFrom(padding:const EdgeInsets.symmetric(horizontal:10,vertical:15)),
      child:Column(mainAxisSize:MainAxisSize.min,children:[
       WaffraText(waffraIsEnglish?'From':'من عملة'),
@@ -297,11 +298,11 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
     IconButton.filledTonal(
      key:const Key('waffra-currency-swap'),
      tooltip:waffraIsEnglish?'Swap currencies':'تبديل العملات',
-     onPressed:busy?null:swapCurrencies,
+     onPressed:WaffraHaptics.tap(busy?null:swapCurrencies),
      icon:const Icon(Icons.swap_horiz_rounded)),
     const SizedBox(width:4),
     Expanded(child:OutlinedButton(
-     onPressed:busy?null:()=>selectCurrency(false),
+     onPressed:WaffraHaptics.tap(busy?null:()=>selectCurrency(false)),
      style:OutlinedButton.styleFrom(padding:const EdgeInsets.symmetric(horizontal:10,vertical:15)),
      child:Column(mainAxisSize:MainAxisSize.min,children:[
       WaffraText(waffraIsEnglish?'To':'إلى عملة'),
@@ -311,7 +312,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
      ]))),
    ]),
    const SizedBox(height:20),
-   FilledButton.icon(onPressed:busy?null:convert,
+   FilledButton.icon(onPressed:WaffraHaptics.tap(busy?null:convert),
     icon:const Icon(Icons.sync_rounded),label:WaffraText(busy?
      (waffraIsEnglish?'Fetching verified rate...':'جاري جلب السعر...'):
      (waffraIsEnglish?'Convert now':'حوّل الآن'))),
@@ -341,7 +342,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
     subtitle:waffraIsEnglish?'Gold karats, bars and weight calculator':
      'الذهب والسبائك وحاسبة الأوزان',
     icon:Icons.workspace_premium_rounded,accent:const Color(0xFFC19A36),
-    expanded:_openMarket=='gold',onPressed:()=>toggleMarket('gold'),
+    expanded:_openMarket=='gold',onPressed:WaffraHaptics.tapRequired(()=>toggleMarket('gold')),
     child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
      WaffraGoldMarketSection(
       key:ValueKey('gold-refresh-'+_goldRefreshRevision.toString()),
@@ -355,9 +356,9 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
        shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18)),
       ),
       key:const Key('waffra-open-gold-calculator'),
-      onPressed:()=>Navigator.of(context).push(MaterialPageRoute(
+      onPressed:WaffraHaptics.tap(()=>Navigator.of(context).push(MaterialPageRoute(
        builder:(_)=>WaffraGoldCalculatorPage(
-        arabicCurrencies:currencies,englishCurrencies:currencyEnglish))),
+        arabicCurrencies:currencies,englishCurrencies:currencyEnglish)))),
       icon:const Icon(Icons.currency_exchange),
       label:WaffraText(waffraIsEnglish?
        'Convert gold value to SAR, EGP or any currency':
@@ -371,7 +372,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
     subtitle:waffraIsEnglish?'Brent, WTI, Oman, Dubai and natural gas':
      'برنت وغرب تكساس وعُمان ودبي والغاز الطبيعي',
     icon:Icons.oil_barrel_rounded,accent:const Color(0xFF17755E),
-    expanded:_openMarket=='oil',onPressed:()=>toggleMarket('oil'),
+    expanded:_openMarket=='oil',onPressed:WaffraHaptics.tapRequired(()=>toggleMarket('oil')),
     child:WaffraOilMarketSection(
      key:ValueKey('waffra-oil-refresh-'+_oilRefreshRevision.toString()),
      english:waffraIsEnglish)),

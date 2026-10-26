@@ -45,7 +45,8 @@ void main() {
     expect(home, contains('notes:sms?message.text:notes.text'));
     expect(widget, contains('notes:entry.raw,sourceType:'));
     expect(widget, contains('waffraSafeSmsTransactionTitle(parsed.title,entry.raw'));
-    expect(home, contains('child:SelectableText(entry.notes'));
+    expect(home, contains("Key('waffra-transaction-personal-notes')"));
+    expect(home, contains("Key('waffra-transaction-protected-bank-sms')"));
     final authority=File('lib/storage/waffra_verified_finance_authority.dart').readAsStringSync();
     expect(authority,contains("return Map<String, Object?>.unmodifiable({...record, 'notes': ''});"));
     expect(authority,contains('records: redacted, messageHashes: fingerprints'));

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'waffra_haptic_feedback.dart';
 /// Five destinations: analysis is a deliberate action from the home dashboard,
 /// not a page reachable accidentally with a horizontal swipe.
 class WaffraFooterNavigation extends StatelessWidget {
@@ -47,7 +48,7 @@ class WaffraFooterNavigation extends StatelessWidget {
        button:true,selected:active,label:_label(i),
        child:InkWell(key:Key('waffra-nav-$i'),
         borderRadius:BorderRadius.circular(22),
-        onTap:()=>onSelected(i),
+        onTap:WaffraHaptics.tap(()=>onSelected(i)),
         child:Padding(
          padding:const EdgeInsets.symmetric(horizontal:2,vertical:4),
          child:Column(mainAxisSize:MainAxisSize.min,children:[

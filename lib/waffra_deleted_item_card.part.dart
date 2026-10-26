@@ -44,14 +44,14 @@ Widget waffraDeletedItemCard({
     const SizedBox(height:11),
     Row(children:[
      Expanded(child:OutlinedButton.icon(
-      onPressed:onRestore,
+      onPressed:WaffraHaptics.tap(onRestore),
       icon:Icon(Icons.restore_rounded,size:19,color:foreground),
       label:WaffraText(english?'Restore':'استرجاع',
        style:TextStyle(fontSize:13,color:foreground,fontWeight:FontWeight.bold)),
      )),
      const SizedBox(width:6),
      Expanded(child:OutlinedButton.icon(
-      onPressed:onDeleteForever,
+      onPressed:WaffraHaptics.tap(onDeleteForever),
       icon:const Icon(Icons.delete_forever_outlined,size:19,color:Colors.red),
       label:WaffraText(english?'Delete forever':'حذف نهائي',
        style:const TextStyle(fontSize:12,color:Colors.red,fontWeight:FontWeight.bold)),

@@ -64,6 +64,7 @@ import 'storage/waffra_production_finance_routing_gate.dart';
 import 'storage/waffra_verified_legacy_backup_restore.dart';
 import 'waffra_home_widget.dart';
 import 'waffra_pull_refresh_scroll_settle.dart';
+import 'waffra_haptic_feedback.dart';
 part 'waffra_categories_page.part.dart';
 part 'waffra_smart_analysis.part.dart';
 part 'waffra_recurring_trash.part.dart';
@@ -902,8 +903,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    final exit=await showWaffraDialog<bool>(context:rootContext,builder:(ctx)=>AlertDialog(
     title:WaffraText(waffraIsEnglish?'Exit Waffra?':'تبي تطلع من وفرة؟'),
     content:WaffraText(waffraIsEnglish?'Do you want to exit the app?':'متأكد تبي تطلع من التطبيق؟'),
-    actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:WaffraText(waffraIsEnglish?'No':'لا')),
-     FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:WaffraText(waffraIsEnglish?'Yes':'نعم'))]));
+    actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),child:WaffraText(waffraIsEnglish?'No':'لا')),
+     FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),child:WaffraText(waffraIsEnglish?'Yes':'نعم'))]));
    if(exit==true)SystemNavigator.pop();
   },child:Directionality(textDirection:language=='ar'?TextDirection.rtl:TextDirection.ltr,child:
    (loading||!introDone)?const WaffraLaunchIntro():
@@ -914,10 +915,10 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     const SizedBox(height:12),
     SelectableText(startupError??'Unknown startup error',textDirection:TextDirection.ltr,textAlign:TextAlign.center,style:const TextStyle(fontSize:12)),
     const SizedBox(height:12),
-    OutlinedButton.icon(onPressed:()=>Clipboard.setData(ClipboardData(text:startupError??'Unknown startup error')),
+    OutlinedButton.icon(onPressed:WaffraHaptics.tap(()=>Clipboard.setData(ClipboardData(text:startupError??'Unknown startup error'))),
      icon:const Icon(Icons.copy),label:const WaffraText('نسخ تفاصيل الخطأ')),
     const SizedBox(height:8),
-    FilledButton(onPressed:(){setState((){loading=true;startupError=null;});load();},child:const WaffraText('إعادة المحاولة')),
+    FilledButton(onPressed:WaffraHaptics.tap((){setState((){loading=true;startupError=null;});load();}),child:const WaffraText('إعادة المحاولة')),
    ])))):
    locked?PinLockScreen(pinHash:pinHash!,onUnlock:()=>setState(()=>locked=false)):
    profile==null||showLogin?LoginScreen(onSave:saveUser):
@@ -957,7 +958,7 @@ class _PinLockScreenState extends State<PinLockScreen> {
    await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
     title:const WaffraText('البصمة غير متاحة'),
     content:const WaffraText('تأكد من تسجيل بصمتك في إعدادات الهاتف، وبعدها افتح التطبيق مرة أخرى. يمكنك الدخول برمز PIN الآن.'),
-    actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('حسنًا'))]));
+    actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),child:const WaffraText('حسنًا'))]));
    return;
   }
   setState((){busy=true;error='';});
@@ -992,7 +993,7 @@ class _PinLockScreenState extends State<PinLockScreen> {
     color:fingerprint?const Color(0xFFF1FBF5):const Color(0xFF0A6249),
     shape:CircleBorder(side:BorderSide(
      color:fingerprint?Colors.white:const Color(0xFF69BD94),width:1.15)),
-    child:InkWell(customBorder:const CircleBorder(),onTap:busy?null:onPressed,
+    child:InkWell(customBorder:const CircleBorder(),onTap:WaffraHaptics.tap(busy?null:onPressed),
      child:SizedBox(width:size,height:size,child:Center(child:icon!=null?
       Icon(icon,color:fingerprint?forest:Colors.white,size:compact?22.0:24.0):
       Text(label,style:TextStyle(color:Colors.white,
@@ -1051,32 +1052,32 @@ class _PinLockScreenState extends State<PinLockScreen> {
          border:Border.all(color:Colors.white,width:1.4))))),
       SizedBox(height:compact?17:24),
       Row(textDirection:TextDirection.ltr,mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
-       _padButton('1',onPressed:()=>_keyDigit('1')),
-       _padButton('2',onPressed:()=>_keyDigit('2')),
-       _padButton('3',onPressed:()=>_keyDigit('3')),
+       _padButton('1',onPressed:WaffraHaptics.tapRequired(()=>_keyDigit('1'))),
+       _padButton('2',onPressed:WaffraHaptics.tapRequired(()=>_keyDigit('2'))),
+       _padButton('3',onPressed:WaffraHaptics.tapRequired(()=>_keyDigit('3'))),
       ]),
       const SizedBox(height:8),
       Row(textDirection:TextDirection.ltr,mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
-       _padButton('4',onPressed:()=>_keyDigit('4')),
-       _padButton('5',onPressed:()=>_keyDigit('5')),
-       _padButton('6',onPressed:()=>_keyDigit('6')),
+       _padButton('4',onPressed:WaffraHaptics.tapRequired(()=>_keyDigit('4'))),
+       _padButton('5',onPressed:WaffraHaptics.tapRequired(()=>_keyDigit('5'))),
+       _padButton('6',onPressed:WaffraHaptics.tapRequired(()=>_keyDigit('6'))),
       ]),
       const SizedBox(height:8),
       Row(textDirection:TextDirection.ltr,mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
-       _padButton('7',onPressed:()=>_keyDigit('7')),
-       _padButton('8',onPressed:()=>_keyDigit('8')),
-       _padButton('9',onPressed:()=>_keyDigit('9')),
+       _padButton('7',onPressed:WaffraHaptics.tapRequired(()=>_keyDigit('7'))),
+       _padButton('8',onPressed:WaffraHaptics.tapRequired(()=>_keyDigit('8'))),
+       _padButton('9',onPressed:WaffraHaptics.tapRequired(()=>_keyDigit('9'))),
       ]),
       const SizedBox(height:8),
       Row(textDirection:TextDirection.ltr,mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
-       _padButton('',icon:Icons.fingerprint,onPressed:biometric),
-       _padButton('0',onPressed:()=>_keyDigit('0')),
-       _padButton('',icon:Icons.backspace_outlined,onPressed:(){
+       _padButton('',icon:Icons.fingerprint,onPressed:WaffraHaptics.tapRequired(biometric)),
+       _padButton('0',onPressed:WaffraHaptics.tapRequired(()=>_keyDigit('0'))),
+       _padButton('',icon:Icons.backspace_outlined,onPressed:WaffraHaptics.tapRequired((){
         if(pinController.text.isNotEmpty){
          pinController.text=pinController.text.substring(0,pinController.text.length-1);
          setState(()=>error='');
         }
-       }),
+       })),
       ]),
       if(error.isNotEmpty)Padding(
        padding:const EdgeInsets.only(top:15),
@@ -1285,7 +1286,7 @@ class _WaffraOnboardingState extends State<WaffraOnboarding> {
      gradient:LinearGradient(begin:Alignment.bottomCenter,end:Alignment.topCenter,
       colors:[forest.withValues(alpha:.96),forest.withValues(alpha:0)]))))),
    Positioned(top:topSafe+8,left:16,right:16,child:Row(children:[
-    TextButton(onPressed:finish,style:TextButton.styleFrom(foregroundColor:Colors.white),
+    TextButton(onPressed:WaffraHaptics.tap(finish),style:TextButton.styleFrom(foregroundColor:Colors.white),
      child:WaffraText(waffraIsEnglish?'Skip':'تخطي',
       style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold))),
     const Spacer(),
@@ -1304,8 +1305,8 @@ class _WaffraOnboardingState extends State<WaffraOnboarding> {
      const SizedBox(height:15),
      Row(children:[
       if(index>0)...[
-       OutlinedButton.icon(onPressed:()=>controller.previousPage(
-        duration:const Duration(milliseconds:260),curve:Curves.easeInOutCubic),
+       OutlinedButton.icon(onPressed:WaffraHaptics.tap(()=>controller.previousPage(
+        duration:const Duration(milliseconds:260),curve:Curves.easeInOutCubic)),
         style:OutlinedButton.styleFrom(foregroundColor:Colors.white,
          side:const BorderSide(color:Colors.white70),
          padding:const EdgeInsets.symmetric(horizontal:13,vertical:13)),
@@ -1314,7 +1315,7 @@ class _WaffraOnboardingState extends State<WaffraOnboarding> {
        const SizedBox(width:10),
       ],
       Expanded(child:SizedBox(height:51,child:FilledButton.icon(
-       onPressed:next,
+       onPressed:WaffraHaptics.tap(next),
        style:FilledButton.styleFrom(backgroundColor:Colors.white,foregroundColor:forest),
        icon:const Icon(Icons.arrow_forward_rounded),
        label:WaffraText(label,style:const TextStyle(
@@ -1356,12 +1357,12 @@ class _IntroScreenState extends State<IntroScreen> {
     const Spacer(),
     Padding(padding:const EdgeInsets.fromLTRB(24,0,24,20),child:Column(children:[
      SizedBox(width:double.infinity,height:54,child:FilledButton(
-      onPressed:busy?null:()=>proceed(false),
+      onPressed:WaffraHaptics.tap(busy?null:()=>proceed(false)),
       style:FilledButton.styleFrom(backgroundColor:Colors.white,foregroundColor:forest),
       child:const WaffraText('ابدأ الآن',style:TextStyle(fontSize:17,fontWeight:FontWeight.bold)))),
      const SizedBox(height:12),
      SizedBox(width:double.infinity,height:52,child:OutlinedButton(
-      onPressed:busy?null:()=>proceed(true),
+      onPressed:WaffraHaptics.tap(busy?null:()=>proceed(true)),
       style:OutlinedButton.styleFrom(foregroundColor:Colors.white,side:const BorderSide(color:Colors.white70)),
       child:const WaffraText('لديك حساب؟ قم بتسجيل الدخول',style:TextStyle(fontSize:15,fontWeight:FontWeight.w600)))),
      const SizedBox(height:15),
@@ -1445,7 +1446,7 @@ class _LoginScreenState extends State<LoginScreen> {
    await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
     title:WaffraText(waffraIsEnglish?'Apple sign-in':'تسجيل الدخول باستخدام Apple'),
     content:WaffraText(waffraIsEnglish?'Apple sign-in is not configured yet.':'تسجيل الدخول باستخدام Apple غير مفعّل حاليًا.'),
-    actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))]));
+    actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))]));
   }else{
    if(registered!=null)setState(()=>signInMode=true);
    else setState(()=>returnAfterLogout=false);
@@ -1476,7 +1477,7 @@ class _LoginScreenState extends State<LoginScreen> {
       const Icon(Icons.chevron_left,color:forest),
      ])),
     const SizedBox(height:12),
-    FilledButton(onPressed:socialBusy?null:continueLastLogin,
+    FilledButton(onPressed:WaffraHaptics.tap(socialBusy?null:continueLastLogin),
      style:FilledButton.styleFrom(backgroundColor:forest,foregroundColor:Colors.white),
      child:WaffraText(waffraIsEnglish?'Continue with $method':'المتابعة باستخدام $method')),
    ]));
@@ -1484,7 +1485,7 @@ class _LoginScreenState extends State<LoginScreen> {
  bool socialBusy=false;
  Widget _socialBorder(BuildContext sheet,String id,Widget icon,{required String label})=>Material(
   color:const Color(0xFFFEFDF8),borderRadius:BorderRadius.circular(18),child:InkWell(
-  borderRadius:BorderRadius.circular(18),onTap:()=>Navigator.pop(sheet,id),
+  borderRadius:BorderRadius.circular(18),onTap:WaffraHaptics.tap(()=>Navigator.pop(sheet,id)),
   child:Container(width:double.infinity,padding:const EdgeInsets.symmetric(horizontal:19,vertical:19),
    decoration:BoxDecoration(borderRadius:BorderRadius.circular(18),
     border:Border.all(color:forest,width:1.5)),
@@ -1534,7 +1535,7 @@ class _LoginScreenState extends State<LoginScreen> {
   await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
    title:WaffraText(waffraIsEnglish?'Sign-in not configured':'تسجيل الدخول غير مفعّل'),
    content:WaffraText(waffraIsEnglish?'Secure $choice sign-in needs authentication setup. No account was created.':'تسجيل الدخول الآمن باستخدام $choice يحتاج إعداد خدمة المصادقة. لم يتم إنشاء حساب.'),
-   actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))]));
+   actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))]));
  }
  Future<void> demoSocial(String selected)async {
   if(socialBusy)return;
@@ -1573,7 +1574,7 @@ class _LoginScreenState extends State<LoginScreen> {
          const SizedBox(height:15),
          recentLoginCard(),
          const SizedBox(height:12),
-         TextButton(onPressed:()=>setState(()=>returnAfterLogout=false),
+         TextButton(onPressed:WaffraHaptics.tap(()=>setState(()=>returnAfterLogout=false)),
           child:WaffraText(waffraIsEnglish?'Other sign-in options':'خيارات تسجيل دخول أخرى',
            style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold))),
         ]else if(signInMode&&hasExisting)...[
@@ -1600,15 +1601,15 @@ class _LoginScreenState extends State<LoginScreen> {
            filled:true,fillColor:Colors.white,
            errorText:signInAttempted?(signInPassword.text.isEmpty?waffraRequiredFieldMessage:signInAuthError):null,errorMaxLines:2,
            border:OutlineInputBorder(borderRadius:BorderRadius.circular(13)),
-           suffixIcon:IconButton(onPressed:()=>setState(()=>showSignInPassword=!showSignInPassword),
+           suffixIcon:IconButton(onPressed:WaffraHaptics.tap(()=>setState(()=>showSignInPassword=!showSignInPassword)),
             icon:Icon(showSignInPassword?Icons.visibility_off:Icons.visibility)))),
          const SizedBox(height:13),
-         FilledButton(onPressed:signingIn?null:_signIn,
+         FilledButton(onPressed:WaffraHaptics.tap(signingIn?null:_signIn),
           style:FilledButton.styleFrom(backgroundColor:Colors.white,foregroundColor:forest),
           child:WaffraText(signingIn?
            (waffraIsEnglish?'Signing in...':'جارٍ تسجيل الدخول'):
            (waffraIsEnglish?'Sign in':'تسجيل الدخول'))),
-         TextButton(onPressed:()=>setState(()=>signInMode=false),
+         TextButton(onPressed:WaffraHaptics.tap(()=>setState(()=>signInMode=false)),
           child:WaffraText(waffraIsEnglish?'Other options':'خيارات أخرى',
            style:const TextStyle(color:Colors.white))),
         ]else...[
@@ -1616,23 +1617,23 @@ class _LoginScreenState extends State<LoginScreen> {
           style:const TextStyle(color:Colors.white,fontSize:19,fontWeight:FontWeight.bold),
           textAlign:TextAlign.center),
          const SizedBox(height:12),
-         FilledButton.icon(onPressed:signingIn?null:()async{
+         FilledButton.icon(onPressed:WaffraHaptics.tap(signingIn?null:()async{
           if(signingIn)return;
           setState(()=>signingIn=true);
           try{
            await widget.onSave(Person(name:'',email:'',phone:'',provider:'محلي',
             gender:'',avatar:'person',birthday:DateTime(2000)));
           }finally{if(mounted)setState(()=>signingIn=false);}
-         },style:FilledButton.styleFrom(backgroundColor:Colors.white,foregroundColor:forest),
+         }),style:FilledButton.styleFrom(backgroundColor:Colors.white,foregroundColor:forest),
           icon:const Icon(Icons.arrow_forward),
           label:WaffraText(waffraIsEnglish?'Start now — no sign in':'ابدأ الآن بدون تسجيل دخول')),
          const SizedBox(height:8),
-         OutlinedButton.icon(onPressed:chooseRegistration,
+         OutlinedButton.icon(onPressed:WaffraHaptics.tap(chooseRegistration),
           style:OutlinedButton.styleFrom(foregroundColor:Colors.white,
            side:const BorderSide(color:Colors.white70)),
           icon:const Icon(Icons.person_add_alt_1_outlined),
           label:WaffraText(waffraIsEnglish?'Create account':'إنشاء حساب')),
-         if(hasExisting)TextButton(onPressed:()=>setState(()=>signInMode=true),
+         if(hasExisting)TextButton(onPressed:WaffraHaptics.tap(()=>setState(()=>signInMode=true)),
           child:WaffraText(waffraIsEnglish?'Already have an account? Sign in':
            'عندك حساب بالفعل؟ تسجيل الدخول',
            style:const TextStyle(color:Colors.white))),
@@ -1674,8 +1675,8 @@ class _ProfileFormState extends State<ProfileForm> {
  Future<void> editAvatar()async {
   final choice=await showModalBottomSheet<String>(context:context,builder:(ctx)=>SafeArea(
    child:Column(mainAxisSize:MainAxisSize.min,children:[
-    ListTile(leading:const Icon(Icons.photo_library_outlined),title:WaffraText(waffraIsEnglish?'Choose from gallery':'اختيار صورة من المعرض'),onTap:()=>Navigator.pop(ctx,'gallery')),
-    ListTile(leading:const Icon(Icons.restore),title:WaffraText(waffraIsEnglish?'Restore default avatar':'استعادة الصورة الافتراضية'),onTap:()=>Navigator.pop(ctx,'default')),
+    ListTile(leading:const Icon(Icons.photo_library_outlined),title:WaffraText(waffraIsEnglish?'Choose from gallery':'اختيار صورة من المعرض'),onTap:WaffraHaptics.tap(()=>Navigator.pop(ctx,'gallery'))),
+    ListTile(leading:const Icon(Icons.restore),title:WaffraText(waffraIsEnglish?'Restore default avatar':'استعادة الصورة الافتراضية'),onTap:WaffraHaptics.tap(()=>Navigator.pop(ctx,'default'))),
    ])));
   if(choice==null||!mounted)return;
   if(choice=='default'){setState(()=>avatar=gender=='أنثى'?'female':'male');return;}
@@ -1692,8 +1693,8 @@ class _ProfileFormState extends State<ProfileForm> {
     WaffraText(waffraIsEnglish?'Pinch to zoom and drag to position':'كبّر الصورة وحرّكها داخل الدائرة'),
    ]),
    actions:[
-    TextButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
-    FilledButton(onPressed:()async{
+    TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+    FilledButton(onPressed:WaffraHaptics.tap(()async{
      try{
       final boundary=cropKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if(boundary==null)return;
@@ -1701,7 +1702,7 @@ class _ProfileFormState extends State<ProfileForm> {
       final data=await frame.toByteData(format:ui.ImageByteFormat.png);
       if(ctx.mounted&&data!=null)Navigator.pop(ctx,data.buffer.asUint8List());
      }catch(e){debugPrint('Avatar crop: $e');}
-    },child:WaffraText(waffraIsEnglish?'Save photo':'حفظ الصورة')),
+    }),child:WaffraText(waffraIsEnglish?'Save photo':'حفظ الصورة')),
    ]));
   if(png==null||!mounted)return;
   try{
@@ -1737,19 +1738,19 @@ class _ProfileFormState extends State<ProfileForm> {
  }
  @override Widget build(BuildContext context)=>Scaffold(
   appBar:AppBar(title:WaffraText(widget.initial==null?'كمّل بياناتك':'تعديل الحساب'),
-   leading:widget.onBack==null?null:IconButton(onPressed:widget.onBack,icon:const Icon(Icons.arrow_back))),
+   leading:widget.onBack==null?null:IconButton(onPressed:WaffraHaptics.tap(widget.onBack),icon:const Icon(Icons.arrow_back))),
   body:ListView(padding:const EdgeInsets.all(22),children:[
    Center(child:Stack(alignment:Alignment.bottomRight,children:[
     waffraAvatar(gender,avatar,radius:48),
     Material(color:forest,shape:const CircleBorder(),child:IconButton(
      tooltip:waffraIsEnglish?'Edit profile photo':'تعديل الصورة',
      icon:const Icon(Icons.camera_alt,color:Colors.white,size:19),
-     onPressed:editAvatar)),
+     onPressed:WaffraHaptics.tap(editAvatar))),
    ])),
    const SizedBox(height:10),
    if(widget.provider=='Google'&&(widget.initial?.gender.isEmpty??true))Card(color:emerald.withValues(alpha:.08),child:Padding(padding:const EdgeInsets.all(14),child:WaffraText(waffraIsEnglish?'Complete your profile: mobile number and gender are required.':'تبقّى بعض البيانات لاستكمال ملفك الشخصي: رقم الجوال والجنس حقول إجبارية.'))),
     Wrap(alignment:WrapAlignment.center,spacing:12,children:['ذكر','أنثى']
-    .map((a)=>ChoiceChip(label:Row(mainAxisSize:MainAxisSize.min,children:[saudiAvatar(a,radius:20),const SizedBox(width:6),WaffraText(waffraIsEnglish?(a=='ذكر'?'Male':'Female'):a)]),selected:gender==a,onSelected:(_)=>setState((){gender=a;if(!avatar.startsWith('https://'))avatar=a=='ذكر'?'male':'female';}))).toList()),
+    .map((a)=>ChoiceChip(label:Row(mainAxisSize:MainAxisSize.min,children:[saudiAvatar(a,radius:20),const SizedBox(width:6),WaffraText(waffraIsEnglish?(a=='ذكر'?'Male':'Female'):a)]),selected:gender==a,onSelected:WaffraHaptics.selection((_)=>setState((){gender=a;if(!avatar.startsWith('https://'))avatar=a=='ذكر'?'male':'female';})))).toList()),
    const SizedBox(height:16),
    TextField(controller:name,onChanged:(_)=>setState((){}),decoration:InputDecoration(
      labelText:waffraIsEnglish?'Name *':'اسمك *',
@@ -1773,7 +1774,7 @@ class _ProfileFormState extends State<ProfileForm> {
     const SizedBox(height:12),
     TextField(controller:password,obscureText:!showPassword,
      onChanged:(_)=>setState((){}),decoration:InputDecoration(
-     suffixIcon:IconButton(tooltip:waffraIsEnglish?(showPassword?'Hide password':'Show password'):(showPassword?'إخفاء كلمة المرور':'إظهار كلمة المرور'),icon:Icon(showPassword?Icons.visibility_off:Icons.visibility),onPressed:()=>setState(()=>showPassword=!showPassword)),labelText:waffraIsEnglish?'Password *':'كلمة المرور *',
+     suffixIcon:IconButton(tooltip:waffraIsEnglish?(showPassword?'Hide password':'Show password'):(showPassword?'إخفاء كلمة المرور':'إظهار كلمة المرور'),icon:Icon(showPassword?Icons.visibility_off:Icons.visibility),onPressed:WaffraHaptics.tap(()=>setState(()=>showPassword=!showPassword))),labelText:waffraIsEnglish?'Password *':'كلمة المرور *',
      errorText:profileAttempted?waffraPasswordFieldError(password.text):null,errorMaxLines:3,
      errorBorder:const OutlineInputBorder(borderSide:BorderSide(color:Colors.red)),
      focusedErrorBorder:const OutlineInputBorder(borderSide:BorderSide(color:Colors.red,width:2)),
@@ -1782,7 +1783,7 @@ class _ProfileFormState extends State<ProfileForm> {
     const SizedBox(height:12),
     TextField(controller:confirmPassword,obscureText:!showConfirmPassword,
      onChanged:(_)=>setState((){}),decoration:InputDecoration(
-     suffixIcon:IconButton(tooltip:waffraIsEnglish?(showConfirmPassword?'Hide password':'Show password'):(showConfirmPassword?'إخفاء كلمة المرور':'إظهار كلمة المرور'),icon:Icon(showConfirmPassword?Icons.visibility_off:Icons.visibility),onPressed:()=>setState(()=>showConfirmPassword=!showConfirmPassword)),labelText:waffraIsEnglish?'Confirm password *':'تأكيد كلمة المرور *',
+     suffixIcon:IconButton(tooltip:waffraIsEnglish?(showConfirmPassword?'Hide password':'Show password'):(showConfirmPassword?'إخفاء كلمة المرور':'إظهار كلمة المرور'),icon:Icon(showConfirmPassword?Icons.visibility_off:Icons.visibility),onPressed:WaffraHaptics.tap(()=>setState(()=>showConfirmPassword=!showConfirmPassword))),labelText:waffraIsEnglish?'Confirm password *':'تأكيد كلمة المرور *',
      errorText:profileAttempted?waffraConfirmPasswordFieldError(confirmPassword.text,password.text):null,errorMaxLines:3,
      errorBorder:const OutlineInputBorder(borderSide:BorderSide(color:Colors.red)),
      focusedErrorBorder:const OutlineInputBorder(borderSide:BorderSide(color:Colors.red,width:2)),
@@ -1804,14 +1805,14 @@ class _ProfileFormState extends State<ProfileForm> {
       errorText:profileAttempted&&gender.isEmpty?waffraRequiredFieldMessage:null,
       border:const OutlineInputBorder()),
     items:['ذكر','أنثى'].map((x)=>DropdownMenuItem(value:x,child:WaffraText(waffraIsEnglish?(x=='ذكر'?'Male':'Female'):x))).toList(),
-    onChanged:(v){if(v!=null)setState((){gender=v;if(!avatar.startsWith('https://'))avatar=v=='أنثى'?'female':'male';});}),
+    onChanged:WaffraHaptics.selection((v){if(v!=null)setState((){gender=v;if(!avatar.startsWith('https://'))avatar=v=='أنثى'?'female':'male';});})),
    const SizedBox(height:12),
-   OutlinedButton.icon(onPressed:()async {
+   OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async {
     final d=await showDatePicker(context:context,initialDate:birthday,firstDate:DateTime(1900),lastDate:DateTime.now());
     if(d!=null)setState(()=>birthday=d);
-   },icon:const Icon(Icons.calendar_month),label:WaffraText('${waffraIsEnglish?'Date of birth':'تاريخ الميلاد'}: ${dayText(birthday)}')),
+   }),icon:const Icon(Icons.calendar_month),label:WaffraText('${waffraIsEnglish?'Date of birth':'تاريخ الميلاد'}: ${dayText(birthday)}')),
    const SizedBox(height:20),
-   FilledButton(onPressed:busy?null:save,child:WaffraText(waffraIsEnglish?'Save profile':'حفظ البيانات')),
+   FilledButton(onPressed:WaffraHaptics.tap(busy?null:save),child:WaffraText(waffraIsEnglish?'Save profile':'حفظ البيانات')),
   ]));
 }
 void disposeLater(List<TextEditingController> controllers){
@@ -1881,10 +1882,10 @@ class WaffraNoticeContent extends StatelessWidget {
       padding:const EdgeInsets.symmetric(horizontal:4),
       minimumSize:const Size(36,30),
       tapTargetSize:MaterialTapTargetSize.shrinkWrap),
-     onPressed:(){
+     onPressed:WaffraHaptics.tap((){
       onDismiss();
       notice.onAction?.call();
-     },
+     }),
      child:WaffraText(notice.actionLabel??(waffraIsEnglish?'Undo':'تراجع'),
       maxLines:1,style:TextStyle(
        color:palette.$2,fontSize:12,fontWeight:FontWeight.bold))),
@@ -1893,7 +1894,7 @@ class WaffraNoticeContent extends StatelessWidget {
      icon:Icon(Icons.close_rounded,color:palette.$2,size:17),
      visualDensity:VisualDensity.compact,padding:EdgeInsets.zero,
      constraints:const BoxConstraints(minWidth:27,minHeight:27),
-     onPressed:onDismiss),
+     onPressed:WaffraHaptics.tap(onDismiss)),
    ]));
  }
 }
@@ -2113,10 +2114,13 @@ class WaffraPageHero extends StatelessWidget {
 /// details in an explicitly right-to-left, consistently aligned dialog.
 class WaffraTransactionDetailsDialog extends StatelessWidget {
  final MoneyEntry entry;
+ /// A verified read-only SMS original from SQLCipher; never write to notes.
+ final String? protectedOriginalSms;
  final VoidCallback onClose;
  final VoidCallback? onViewReceipt;
  const WaffraTransactionDetailsDialog({
   super.key,required this.entry,required this.onClose,this.onViewReceipt,
+  this.protectedOriginalSms,
  });
  @override Widget build(BuildContext context){
   final rtl=!waffraIsEnglish;
@@ -2194,7 +2198,10 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
            fontSize:22,color:dark?Colors.white:accent)),
         ]),
        ),
-       if(entry.notes.isNotEmpty)...[
+       // These are TWO independent fields. Editable user notes are persisted
+       // on the ordinary transaction route; the original SMS is read from
+       // the protected vault and is never substituted into entry.notes.
+       if(entry.sourceType=='sms'||entry.notes.isNotEmpty)...[
         const SizedBox(height:15),
         WaffraText(waffraIsEnglish?'Notes':'الملاحظات',
          textAlign:TextAlign.start,style:TextStyle(fontSize:12,color:muted)),
@@ -2204,23 +2211,56 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
           color:dark?const Color(0xFF252A27):const Color(0xFFF1F8F3),
           borderRadius:BorderRadius.circular(14),
           border:Border.all(color:dark?const Color(0xFF3B5444):const Color(0xFFD5E8DC))),
-         child:SelectableText(entry.notes,
-          textDirection:rtl?TextDirection.rtl:TextDirection.ltr,
-          textAlign:TextAlign.start,
-          style:const TextStyle(fontSize:14,height:1.5))),
+         child:entry.notes.isEmpty?WaffraText(
+           waffraIsEnglish?'No notes added':'لا توجد ملاحظات',
+           style:TextStyle(fontSize:13,color:muted)):
+          SelectableText(entry.notes,
+           key:const Key('waffra-transaction-personal-notes'),
+           textDirection:rtl?TextDirection.rtl:TextDirection.ltr,
+           textAlign:TextAlign.start,
+           style:const TextStyle(fontSize:14,height:1.5))),
+       ],
+       if(entry.sourceType=='sms')...[
+        const SizedBox(height:15),
+        Row(children:[
+         Icon(Icons.lock_outline_rounded,size:17,
+          color:dark?const Color(0xFF74D8A9):emerald),
+         const SizedBox(width:6),
+         Expanded(child:WaffraText(waffraIsEnglish?
+           'Original bank message (encrypted)':'تفاصيل الرسالة البنكية الأصلية (مشفّرة)',
+           textAlign:TextAlign.start,
+           style:TextStyle(fontSize:12,color:muted,fontWeight:FontWeight.w700))),
+        ]),
+        const SizedBox(height:7),
+        Container(width:double.infinity,padding:const EdgeInsets.all(13),
+         decoration:BoxDecoration(
+          color:dark?const Color(0xFF18372E):const Color(0xFFE9F5EF),
+          borderRadius:BorderRadius.circular(14),
+          border:Border.all(color:dark?const Color(0xFF3B7055):const Color(0xFFB8D9C7))),
+         child:protectedOriginalSms==null||protectedOriginalSms!.isEmpty?
+          WaffraText(waffraIsEnglish?
+           'Original encrypted message is unavailable.':
+           'الرسالة البنكية الأصلية غير متاحة من التخزين المشفّر.',
+           textAlign:TextAlign.start,
+           style:TextStyle(fontSize:12,color:muted)):
+          SelectableText(protectedOriginalSms!,
+           key:const Key('waffra-transaction-protected-bank-sms'),
+           textDirection:rtl?TextDirection.rtl:TextDirection.ltr,
+           textAlign:TextAlign.start,
+           style:const TextStyle(fontSize:14,height:1.5))),
        ],
        if(onViewReceipt!=null)...[
         const SizedBox(height:10),
         Align(alignment:AlignmentDirectional.centerStart,
          child:TextButton.icon(
-          onPressed:onViewReceipt,
+          onPressed:WaffraHaptics.tap(onViewReceipt),
           icon:const Icon(Icons.photo_library_outlined),
           label:WaffraText(waffraIsEnglish?'View attachments':'عرض المرفقات'))),
        ],
       ],
      )),
     ),
-    actions:[TextButton(onPressed:onClose,
+    actions:[TextButton(onPressed:WaffraHaptics.tap(onClose),
      child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))],
    ),
   );
@@ -2311,7 +2351,7 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
       builder:(ctx,hidden,_)=>IconButton(
        tooltip:hidden?(english?'Show amounts':'إظهار المبالغ'):
         (english?'Hide amounts':'إخفاء المبالغ'),
-       onPressed:()async{
+       onPressed:WaffraHaptics.tap(()async{
         final conceal=!hidden;
         hideWaffraAmounts.value=conceal;
         final p=await SharedPreferences.getInstance();
@@ -2319,7 +2359,7 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
         // Never push the in-memory header balance into the Android widget:
         // a parallel Widget engine may have committed a newer transaction.
         await refreshVerifiedWidgetBalance();
-       },
+       }),
        visualDensity:VisualDensity.compact,
        icon:Icon(hidden?Icons.visibility_off_outlined:Icons.visibility_outlined,
         color:mainColor,size:22))),
@@ -2487,7 +2527,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    WaffraText(_financeLoadFailure??'',textAlign:TextAlign.center),
    const SizedBox(height:18),
    FilledButton.icon(
-    onPressed:()=>unawaited(_loadFinanceSafely()),
+    onPressed:WaffraHaptics.tap(()=>unawaited(_loadFinanceSafely())),
     icon:const Icon(Icons.refresh),
     label:WaffraText(waffraIsEnglish?'Retry safely':'إعادة المحاولة بأمان')),
   ])));
@@ -2948,15 +2988,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       actionsPadding:const EdgeInsets.fromLTRB(12,0,12,16),
       actions:[SizedBox(width:min(330.0,MediaQuery.sizeOf(ctx).width-80),
        child:Row(children:[
-        Expanded(child:OutlinedButton(onPressed:()=>Navigator.pop(ctx,'later'),
+        Expanded(child:OutlinedButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,'later')),
          child:WaffraText(waffraIsEnglish?'Not now':'ليس الآن',
           maxLines:1,style:const TextStyle(fontSize:11.5)))),
         const SizedBox(width:5),
-        Expanded(child:OutlinedButton(onPressed:()=>Navigator.pop(ctx,'postpone'),
+        Expanded(child:OutlinedButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,'postpone')),
          child:WaffraText(waffraIsEnglish?'Postpone':'تأجيل',
           maxLines:1,style:const TextStyle(fontSize:11.5)))),
         const SizedBox(width:5),
-        Expanded(child:FilledButton(onPressed:()=>Navigator.pop(ctx,'paid'),
+        Expanded(child:FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,'paid')),
          child:WaffraText(waffraIsEnglish?'Paid':'تم الدفع',
           maxLines:1,style:const TextStyle(fontSize:11.5)))),
        ]))],
@@ -2994,16 +3034,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   categories.where((c)=>c.income==income&&c.isSubcategory).toList();
  Future<bool?> confirm(String title,String body)=>showWaffraDialog<bool>(
   context:context,builder:(ctx)=>AlertDialog(title:WaffraText(title),content:WaffraText(body),
-  actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const WaffraText('إلغاء')),
-   FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const WaffraText('تأكيد'))]));
+  actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),child:const WaffraText('إلغاء')),
+   FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),child:const WaffraText('تأكيد'))]));
  Future<bool?> confirmDeletion(String title,String body)=>showWaffraDialog<bool>(
   context:context,builder:(ctx)=>AlertDialog(
    title:WaffraText(title),content:WaffraText(body),
    actions:[
-    TextButton(onPressed:()=>Navigator.pop(ctx,false),
+    TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),
      child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
     FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),
-     onPressed:()=>Navigator.pop(ctx,true),
+     onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),
      child:WaffraText(waffraIsEnglish?'Confirm delete':'تأكيد الحذف')),
    ]));
 Future<void> bulkSmsSheet({String? initialText})async {
@@ -3082,9 +3122,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
      ?'${duplicates.length} transaction(s) are duplicates. You can safely skip those and save the new ones, or explicitly approve adding the duplicates.'
      :'تم اكتشاف ${duplicates.length} معاملة مكررة. يمكنك تخطي المكررة وحفظ الجديدة، أو الموافقة صراحةً على إضافة المكررة.'),
     actions:[
-     TextButton(onPressed:()=>Navigator.pop(d,'cancel'),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
-     OutlinedButton(onPressed:()=>Navigator.pop(d,'skip'),child:WaffraText(waffraIsEnglish?'Skip duplicates':'تخطي المكررة')),
-     FilledButton(onPressed:()=>Navigator.pop(d,'add'),child:WaffraText(waffraIsEnglish?'Add duplicates too':'إضافة المكررة أيضًا')),
+     TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(d,'cancel')),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+     OutlinedButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(d,'skip')),child:WaffraText(waffraIsEnglish?'Skip duplicates':'تخطي المكررة')),
+     FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(d,'add')),child:WaffraText(waffraIsEnglish?'Add duplicates too':'إضافة المكررة أيضًا')),
     ]));
    if(!ctx.mounted||choice==null||choice=='cancel')return;
    if(choice=='add'){
@@ -3144,9 +3184,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
        'هل تريد تأكيد إضافة المعاملات المكتشفة؟'),
      ]),
      actions:[
-      TextButton(onPressed:()=>Navigator.pop(dialogCtx,false),
+      TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogCtx,false)),
        child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
-      FilledButton(onPressed:()=>Navigator.pop(dialogCtx,true),
+      FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogCtx,true)),
        child:WaffraText(waffraIsEnglish?'Confirm and add':'تأكيد وإضافة المعاملات')),
      ],
     )));
@@ -3327,11 +3367,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
     actionsAlignment:MainAxisAlignment.center,
     actionsPadding:const EdgeInsets.fromLTRB(24,0,24,18),
     actions:[
-     TextButton(onPressed:()=>Navigator.pop(dialogCtx,false),
+     TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogCtx,false)),
       child:WaffraText(waffraIsEnglish?'Done':'تم')),
      if(recovery.unsaved.isNotEmpty)
       FilledButton.icon(icon:const Icon(Icons.edit_note_rounded),
-       onPressed:()=>Navigator.pop(dialogCtx,true),
+       onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogCtx,true)),
        label:WaffraText(waffraIsEnglish
         ?'Review ${recovery.unsaved.length} unsaved'
         :'مراجعة ${recovery.unsaved.length} غير محفوظة')),
@@ -3428,7 +3468,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    final pasteSummary=waffraSummarizeBankPaste(pasted.text,smsHashes);
    return Padding(padding:EdgeInsets.fromLTRB(18,8,18,MediaQuery.of(ctx).viewInsets.bottom+24),
     child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-     Row(children:[Expanded(child:WaffraText(waffraIsEnglish?'Add bank message':'إضافة رسالة بنكية',style:Theme.of(ctx).textTheme.titleLarge)),IconButton(onPressed:()=>Navigator.pop(ctx),icon:const Icon(Icons.close_rounded))]),
+     Row(children:[Expanded(child:WaffraText(waffraIsEnglish?'Add bank message':'إضافة رسالة بنكية',style:Theme.of(ctx).textTheme.titleLarge)),IconButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),icon:const Icon(Icons.close_rounded))]),
      WaffraText(waffraIsEnglish?'Paste messages to analyze them automatically.':'الصق رسائلك البنكية ليتم تحليلها وتصنيفها تلقائيًا.'),
      const SizedBox(height:12),
      if(!reviewing)...[
@@ -3448,11 +3488,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
       },decoration:InputDecoration(labelText:waffraIsEnglish?'Bank SMS *':'الرسالة البنكية *',
        errorText:statusMessage.isNotEmpty?statusMessage:(pasteAttempted&&pasted.text.trim().isEmpty?waffraRequiredFieldMessage:null),errorMaxLines:3,
        hintText:waffraIsEnglish?'Paste your bank message here. We’ll analyze it automatically.':'الصق رسالتك البنكية هنا، وبنحلّلها لك تلقائيًا.',hintStyle:const TextStyle(fontSize:13,color:Color(0xFF888F8A)),
-       suffixIcon:pasted.text.isNotEmpty?IconButton(tooltip:waffraIsEnglish?'Clear text':'مسح النص',icon:const Icon(Icons.clear_rounded,color:Colors.redAccent),onPressed:(){pasteTimer?.cancel();pasted.clear();update((){parsed=false;analyzingPaste=false;messages=[];statusMessage='';});}):null,
+       suffixIcon:pasted.text.isNotEmpty?IconButton(tooltip:waffraIsEnglish?'Clear text':'مسح النص',icon:const Icon(Icons.clear_rounded,color:Colors.redAccent),onPressed:WaffraHaptics.tap((){pasteTimer?.cancel();pasted.clear();update((){parsed=false;analyzingPaste=false;messages=[];statusMessage='';});})):null,
        border:OutlineInputBorder(borderRadius:BorderRadius.circular(18)))),
       const SizedBox(height:12),
      SizedBox(width:double.infinity,child:OutlinedButton.icon(icon:const Icon(Icons.content_paste),
-       onPressed:busy?null:()async {
+       onPressed:WaffraHaptics.tap(busy?null:()async {
         final data=await Clipboard.getData(Clipboard.kTextPlain);
         if(!ctx.mounted)return;
         final text=data?.text?.trim()??'';
@@ -3466,11 +3506,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
          update((){messages=splitBankMessages(text);parsed=true;analyzingPaste=false;statusMessage=noTransactionWarning(text)??'';});
          if(statusMessage.isEmpty&&messages.isNotEmpty)saveParsedMessages(ctx,update);
         });
-       },label:WaffraText(waffraIsEnglish?'Paste copied SMS':'لصق آخر رسالة نسختها',maxLines:1,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700)))),
+       }),label:WaffraText(waffraIsEnglish?'Paste copied SMS':'لصق آخر رسالة نسختها',maxLines:1,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700)))),
       const SizedBox(height:8),
       SizedBox(width:double.infinity,child:OutlinedButton.icon(
        icon:const Icon(Icons.message_outlined),
-       onPressed:busy?null:()async{
+       onPressed:WaffraHaptics.tap(busy?null:()async{
         awaitingMessagesApp=true;
         final launched=await openWaffraMessagesApp();
         if(!launched&&ctx.mounted){
@@ -3479,7 +3519,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
           ?'Could not open Messages. Copy a message and paste it here instead.'
           :'تعذر فتح تطبيق الرسائل. انسخ الرسالة والصقها هنا بدلًا من ذلك.');
         }
-       },
+       }),
        label:WaffraText(waffraIsEnglish?'Open phone messages':'فتح رسائل الهاتف'),
       )),
       if(analyzingPaste)...[const SizedBox(height:12),const LinearProgressIndicator(),const SizedBox(height:6),WaffraText(waffraIsEnglish?'Analyzing your bank messages now…':'يتم الآن تحليل الرسائل البنكية واستخراج المعاملات…')],
@@ -3490,10 +3530,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
        ...rejectedMessages.asMap().entries.map((item)=>Card(child:ListTile(
         title:WaffraText(waffraIsEnglish?'Message ${item.key+1}':'رسالة ${item.key+1}'),
         subtitle:SelectableText(item.value,maxLines:4),
-        trailing:IconButton(icon:const Icon(Icons.edit_outlined),tooltip:waffraIsEnglish?'Review manually':'مراجعة يدويًا',onPressed:(){
+        trailing:IconButton(icon:const Icon(Icons.edit_outlined),tooltip:waffraIsEnglish?'Review manually':'مراجعة يدويًا',onPressed:WaffraHaptics.tap((){
          Navigator.pop(ctx);
          entrySheet(sms:true,initialSms:item.value);
-        })))),
+        }))))),
       ],
      if(parsed&&statusMessage.isEmpty)...[
       const SizedBox(height:10),
@@ -3508,13 +3548,13 @@ Future<void> bulkSmsSheet({String? initialText})async {
          style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)))])),
      ],
      ]else...[
-      TextButton.icon(onPressed:busy?null:()async{
+      TextButton.icon(onPressed:WaffraHaptics.tap(busy?null:()async{
        final yes=await confirmDeletion(
         waffraIsEnglish?'Clear pasted messages?':'حذف الرسائل الملصوقة',
         waffraIsEnglish?'Discard the unsaved pasted text and start again?':'هل تريد حذف الرسائل غير المحفوظة والبدء من جديد؟');
        if(yes!=true||!ctx.mounted)return;
        update((){reviewing=false;parsed=false;messages=[];index=0;pasted.clear();description.clear();amount.clear();});
-      },icon:const Icon(Icons.delete_outline),label:const WaffraText('حذف النص بالكامل ولصق رسائل جديدة')),
+      }),icon:const Icon(Icons.delete_outline),label:const WaffraText('حذف النص بالكامل ولصق رسائل جديدة')),
       WaffraText(waffraIsEnglish?'Transaction ${index+1} of ${messages.length} — Total: ${cash(total)}':'المعاملة ${index+1} من ${messages.length} — إجمالي المبالغ: ${cash(total)}',style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
       const SizedBox(height:6),
       WaffraText(waffraIsEnglish?'Saved $savedCount of ${messages.length} transactions. Review and categorize each transaction before saving.':'تم حفظ $savedCount من ${messages.length} معاملات. راجع كل معاملة وحدد قسمها قبل الحفظ.'),
@@ -3523,9 +3563,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
        child:SelectableText(messages[index])),
       const SizedBox(height:12),
       SegmentedButton<bool>(segments:const [ButtonSegment(value:true,label:WaffraText('دخل')),
-       ButtonSegment(value:false,label:WaffraText('مصروف'))],selected:{income},onSelectionChanged:(v)=>update((){
+       ButtonSegment(value:false,label:WaffraText('مصروف'))],selected:{income},onSelectionChanged:WaffraHaptics.selection((v)=>update((){
         income=v.first;category=forType(income).isNotEmpty?forType(income).first.name:'أخرى';
-       })),
+       }))),
       const SizedBox(height:12),
       TextField(controller:description,maxLines:2,onChanged:(_)=>update((){}),decoration:InputDecoration(labelText:waffraIsEnglish?'Description *':'وصف الرسالة *',errorText:reviewAttempted?waffraTextFieldError(description.text):null,border:OutlineInputBorder())),
       const SizedBox(height:12),
@@ -3536,9 +3576,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
       DropdownButtonFormField<String>(key:ValueKey('$index-$income'),initialValue:available.any((c)=>c.name==category)?category:(available.isNotEmpty?available.first.name:null),
        items:available.map((c)=>DropdownMenuItem(value:c.name,child:WaffraText(c.name))).toList(),
        decoration:InputDecoration(labelText:waffraTr('قسم هذه الرسالة'),border:OutlineInputBorder()),
-       onChanged:(v){if(v!=null)update(()=>category=v);}),
+       onChanged:WaffraHaptics.selection((v){if(v!=null)update(()=>category=v);})),
       const SizedBox(height:12),
-      FilledButton(onPressed:busy?null:()async{
+      FilledButton(onPressed:WaffraHaptics.tap(busy?null:()async{
        final n=amountOf(amount.text);
        update(()=>reviewAttempted=true);
         if(waffraTextFieldError(description.text)!=null||waffraAmountFieldError(amount.text)!=null||n==null)return;
@@ -3547,8 +3587,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
        if(smsHashes.contains(hash)){
         final yes=await showWaffraDialog<bool>(context:ctx,builder:(d)=>AlertDialog(
          title:const WaffraText('⚠️ رسالة مكررة'),content:const WaffraText('هذي الرسالة سبق حفظها. ودّك تضيفها مرة ثانية؟'),
-         actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:const WaffraText('إلغاء')),
-          FilledButton(onPressed:()=>Navigator.pop(d,true),child:const WaffraText('إضافة على أي حال'))]));
+         actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(d,false)),child:const WaffraText('إلغاء')),
+          FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(d,true)),child:const WaffraText('إضافة على أي حال'))]));
         if(yes!=true||!ctx.mounted)return;
         explicitlyApprovedDuplicate=true;
        }
@@ -3600,16 +3640,16 @@ Future<void> bulkSmsSheet({String? initialText})async {
          'تم حفظ $savedCount عملية بنجاح');
        }
        else{await prepare(index+1,update);update(()=>busy=false);}
-      },child:WaffraText(index+1==messages.length?'إضافة المعاملة وحفظها':'إضافة المعاملة وحفظها ثم التالي')),
-      if(index+1<messages.length)TextButton(onPressed:busy?null:()=>prepare(index+1,update),child:const WaffraText('تخطي هذه الرسالة')),
+      }),child:WaffraText(index+1==messages.length?'إضافة المعاملة وحفظها':'إضافة المعاملة وحفظها ثم التالي')),
+      if(index+1<messages.length)TextButton(onPressed:WaffraHaptics.tap(busy?null:()=>prepare(index+1,update)),child:const WaffraText('تخطي هذه الرسالة')),
       const SizedBox(height:8),
-      OutlinedButton.icon(onPressed:busy?null:()async{
+      OutlinedButton.icon(onPressed:WaffraHaptics.tap(busy?null:()async{
        final yes=await confirmDeletion(
         waffraIsEnglish?'Clear pasted messages?':'حذف الرسائل الملصوقة',
         waffraIsEnglish?'Discard all unsaved pasted text? Saved transactions will remain.':'هل تريد حذف النص غير المحفوظ؟ المعاملات المحفوظة ستظل موجودة.');
        if(yes!=true||!ctx.mounted)return;
        update((){reviewing=false;parsed=false;messages=[];index=0;savedCount=0;pasted.clear();description.clear();amount.clear();});
-      },icon:const Icon(Icons.delete_forever_outlined),label:const WaffraText('حذف النص بالكامل وإضافة رسائل أخرى')),
+      }),icon:const Icon(Icons.delete_forever_outlined),label:const WaffraText('حذف النص بالكامل وإضافة رسائل أخرى')),
      ],
     ])));
   }))))));
@@ -3653,8 +3693,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    builder:(sheetContext)=>StatefulBuilder(builder:(sheetContext,update){
     void parseNow(String text) {
      debounce?.cancel();
-     if(sms)notes.text=text;
-     if(text.trim().isEmpty){update((){hasParsed=false;analyzing=false;suggestion=null;});return;}
+      if(text.trim().isEmpty){update((){hasParsed=false;analyzing=false;suggestion=null;});return;}
      update(()=>analyzing=true);
      debounce=Timer(const Duration(milliseconds:300),(){
       if(!sheetContext.mounted)return;
@@ -3701,12 +3740,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
       SegmentedButton<bool>(
        segments:const [ButtonSegment(value:true,label:WaffraText('دخل')),
         ButtonSegment(value:false,label:WaffraText('مصروف'))],
-       selected:{income},onSelectionChanged:(v)=>update((){
+       selected:{income},onSelectionChanged:WaffraHaptics.selection((v)=>update((){
         income=v.first;
         selectedParentId=null;
         category=sms?(forType(income).isNotEmpty?forType(income).first.name:'أخرى'):'';
         suggestion=null;
-       })),
+       }))),
       const SizedBox(height:12),
       TextField(controller:title,onChanged:(_)=>update((){}),minLines:1,maxLines:5,
        decoration:InputDecoration(labelText:waffraIsEnglish?'Transaction name *':'اسم العملية *',
@@ -3717,14 +3756,21 @@ Future<void> bulkSmsSheet({String? initialText})async {
             'اسم العملية الجديد لا يزيد عن 250 حرفًا.')):null,
         border:OutlineInputBorder())),
       const SizedBox(height:10),
-      TextField(controller:notes,onChanged:(_)=>update((){}),minLines:1,maxLines:4,
-       readOnly:sms,
-       decoration:InputDecoration(labelText:waffraIsEnglish?'Notes (optional)':'ملاحظات (اختياري)',
-        errorText:attempted&&!sms&&!waffraTransactionNotesAllowed(notes.text,oldNotes:initial?.notes)
-         ?(waffraIsEnglish?'Notes cannot exceed 2,000 characters.':
-           'الملاحظات لا تتجاوز 2000 حرف.'):null,
-        border:const OutlineInputBorder())),
-      const SizedBox(height:12),
+      if(!sms)...[
+       TextField(controller:notes,onChanged:(_)=>update((){}),minLines:1,maxLines:4,
+        decoration:InputDecoration(labelText:waffraIsEnglish?'Notes (optional)':'ملاحظات (اختياري)',
+         errorText:attempted&&!waffraTransactionNotesAllowed(notes.text,oldNotes:initial?.notes)
+          ?(waffraIsEnglish?'Notes cannot exceed 2,000 characters.':
+            'الملاحظات لا تتجاوز 2000 حرف.'):null,
+         border:const OutlineInputBorder())),
+       const SizedBox(height:12),
+      ]else ...[
+       WaffraText(waffraIsEnglish?
+        'The original bank message is stored separately from your notes.':
+        'نص الرسالة البنكية الأصلية يُحفظ منفصلًا عن ملاحظاتك.',
+        style:const TextStyle(fontSize:12,color:emerald)),
+       const SizedBox(height:12),
+      ],
       TextField(controller:value,keyboardType:const TextInputType.numberWithOptions(decimal:true),
        inputFormatters:[const WaffraAmountFormatter()],onChanged:(_)=>update((){}),
        decoration:InputDecoration(labelText:waffraIsEnglish?'Amount *':'المبلغ *',
@@ -3732,14 +3778,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
         border:OutlineInputBorder())),
       const SizedBox(height:12),
       if(sms)
-       InkWell(onTap:()async{
+       InkWell(onTap:WaffraHaptics.tap(()async{
         final picked=await chooseTransactionCategory(sheetContext,available,chosen??'');
         if(picked!=null&&sheetContext.mounted)update(()=>category=picked);
-       },child:InputDecorator(decoration:InputDecoration(labelText:waffraTr('القسم'),
+       }),child:InputDecorator(decoration:InputDecoration(labelText:waffraTr('القسم'),
         border:const OutlineInputBorder(),suffixIcon:const Icon(Icons.search_rounded)),
         child:WaffraText(chosen??'',maxLines:2)))
       else ...[
-       InkWell(onTap:()async{
+       InkWell(onTap:WaffraHaptics.tap(()async{
         final picked=await chooseTransactionCategory(sheetContext,mainCategories,
          selectedMain.isEmpty?'':selectedMain.first.name);
         if(picked==null||!sheetContext.mounted)return;
@@ -3748,7 +3794,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
         update((){
          if(selectedParentId!=found.first.id){selectedParentId=found.first.id;category='';}
         });
-       },child:InputDecorator(decoration:InputDecoration(
+       }),child:InputDecorator(decoration:InputDecoration(
         labelText:waffraIsEnglish?'Main category *':'القسم الرئيسي *',
         errorText:attempted&&selectedMain.isEmpty?waffraRequiredFieldMessage:null,
         border:const OutlineInputBorder(),suffixIcon:const Icon(Icons.arrow_drop_down_rounded)),
@@ -3756,11 +3802,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
          (waffraIsEnglish?'Choose a main category':'اختر القسم الرئيسي'):
          selectedMain.first.displayName,maxLines:2))),
        const SizedBox(height:10),
-       InkWell(onTap:selectedMain.isEmpty||subcategories.isEmpty?null:()async{
+       InkWell(onTap:WaffraHaptics.tap(selectedMain.isEmpty||subcategories.isEmpty?null:()async{
         final picked=await chooseTransactionCategory(sheetContext,subcategories,
          selectedSub.isEmpty?'':selectedSub.first.name,leafLabels:true);
         if(picked!=null&&sheetContext.mounted)update(()=>category=picked);
-       },child:InputDecorator(decoration:InputDecoration(
+       }),child:InputDecorator(decoration:InputDecoration(
         labelText:waffraIsEnglish?'Subcategory *':'القسم الفرعي *',
         enabled:selectedMain.isNotEmpty,
         errorText:attempted&&selectedSub.isEmpty?waffraRequiredFieldMessage:null,
@@ -3774,7 +3820,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
          'لا توجد أقسام فرعية هنا، أضف قسمًا فرعيًا أولًا.',
          style:const TextStyle(color:Colors.redAccent,fontSize:12))),
       ],
-      if(sms&&suggestion!=null)TextButton.icon(onPressed:()async {
+      if(sms&&suggestion!=null)TextButton.icon(onPressed:WaffraHaptics.tap(()async {
        final c=await categoryDialog(income:income,suggested:suggestion);
        if(c!=null&&mounted){
         if(!categories.any((x)=>x.name==c.name&&x.income==c.income)){
@@ -3782,8 +3828,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
         }
         update((){category=c.name;suggestion=null;});
        }
-      },icon:const Icon(Icons.add),label:WaffraText('إضافة قسم $suggestion')),
-      if(sms)OutlinedButton.icon(onPressed:()async {
+      }),icon:const Icon(Icons.add),label:WaffraText('إضافة قسم $suggestion')),
+      if(sms)OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async {
        final c=await categoryDialog(income:income);
        if(c!=null&&mounted){
         if(!categories.any((x)=>x.name==c.name&&x.income==c.income)){
@@ -3791,8 +3837,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
         }
         update(()=>category=c.name);
        }
-      },icon:const Icon(Icons.add),label:const WaffraText('قسم جديد'))
-      else if(selectedMain.isNotEmpty)OutlinedButton.icon(onPressed:()async {
+      }),icon:const Icon(Icons.add),label:const WaffraText('قسم جديد'))
+      else if(selectedMain.isNotEmpty)OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async {
        final mainId=selectedMain.first.id;
        final c=await categoryDialog(income:income,parentId:mainId);
        if(c!=null&&mounted&&sheetContext.mounted){
@@ -3802,39 +3848,39 @@ Future<void> bulkSmsSheet({String? initialText})async {
         }
         if(sheetContext.mounted)update(()=>category=c.name);
        }
-      },icon:const Icon(Icons.add),
+      }),icon:const Icon(Icons.add),
        label:WaffraText(waffraIsEnglish?'New subcategory':'قسم فرعي جديد')),
-      OutlinedButton.icon(onPressed:()async {
+      OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async {
        final d=await showDatePicker(context:sheetContext,initialDate:date,
         firstDate:DateTime(2000),lastDate:DateTime.now());
        if(d!=null)update(()=>date=d);
-      },icon:const Icon(Icons.calendar_month),label:WaffraText(dayText(date))),
+      }),icon:const Icon(Icons.calendar_month),label:WaffraText(dayText(date))),
       const SizedBox(height:12),
       Row(children:[
-       Expanded(child:OutlinedButton.icon(onPressed:()async{
+       Expanded(child:OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async{
         final file=await ImagePicker().pickImage(source:ImageSource.camera,imageQuality:80);
         if(file!=null){final path=await saveReceipt(file);if(sheetContext.mounted)update(()=>receiptPath=waffraEncodeReceipts([...waffraReceiptPaths(receiptPath),path]));}
-       },icon:const Icon(Icons.camera_alt_outlined),label:const WaffraText('تصوير فاتورة'))),
+       }),icon:const Icon(Icons.camera_alt_outlined),label:const WaffraText('تصوير فاتورة'))),
        const SizedBox(width:8),
-       Expanded(child:OutlinedButton.icon(onPressed:()async{
+       Expanded(child:OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async{
         final files=await ImagePicker().pickMultiImage(imageQuality:80);
         if(files.isNotEmpty){final paths=<String>[...waffraReceiptPaths(receiptPath)];
          for(final file in files){paths.add(await saveReceipt(file));}
          if(sheetContext.mounted)update(()=>receiptPath=waffraEncodeReceipts(paths));}
-       },icon:const Icon(Icons.attach_file),label:const WaffraText('إرفاق صورة'))),
+       }),icon:const Icon(Icons.attach_file),label:const WaffraText('إرفاق صورة'))),
       ]),
       if(waffraReceiptPaths(receiptPath).isNotEmpty)...[
        for(final path in waffraReceiptPaths(receiptPath))
         ListTile(dense:true,
          title:WaffraText(path.split('/').last.replaceFirst(RegExp(r'^\\d+__'),'')),
          leading:const Icon(Icons.image,color:emerald),
-         trailing:IconButton(icon:const Icon(Icons.close),onPressed:()=>update((){
+         trailing:IconButton(icon:const Icon(Icons.close),onPressed:WaffraHaptics.tap(()=>update((){
           receiptPath=waffraEncodeReceipts([...waffraReceiptPaths(receiptPath)]..remove(path));
-         })),
-         onTap:()=>showReceipt(receiptPath!,initialIndex:waffraReceiptPaths(receiptPath).indexOf(path))),
+         }))),
+         onTap:WaffraHaptics.tap(()=>showReceipt(receiptPath!,initialIndex:waffraReceiptPaths(receiptPath).indexOf(path)))),
       ],
       const SizedBox(height:12),
-      FilledButton(onPressed:analyzing?null:()async {
+      FilledButton(onPressed:WaffraHaptics.tap(analyzing?null:()async {
        update(()=>attempted=true);
        final n=sms?amountOf(value.text):amountOfDisplay(value.text);
        if(!waffraTransactionTitleAllowed(title.text,oldTitle:initial?.title)||
@@ -3849,8 +3895,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
          final proceed=await showWaffraDialog<bool>(context:sheetContext,builder:(dialogContext)=>AlertDialog(
           title:const WaffraText('⚠️ الرسالة مكررة'),
           content:const WaffraText('هذي الرسالة البنكية أضفتها قبل كذا. ودّك تضيفها مرة ثانية؟'),
-          actions:[TextButton(onPressed:()=>Navigator.pop(dialogContext,false),child:const WaffraText('إلغاء')),
-           FilledButton(onPressed:()=>Navigator.pop(dialogContext,true),child:const WaffraText('إضافة على أي حال'))]));
+          actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogContext,false)),child:const WaffraText('إلغاء')),
+           FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogContext,true)),child:const WaffraText('إضافة على أي حال'))]));
          if(proceed!=true||!sheetContext.mounted)return;
          explicitlyApprovedSmsDuplicate=true;
         }
@@ -3861,7 +3907,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
         income:income,date:date,receiptPath:receiptPath,
         sourceType:initial?.sourceType??(sms?'sms':'manual'),
         merchantKey:initial?.merchantKey??(sms?(waffraMerchantKey(message.text)??''):'')));
-      },child:const WaffraText('تأكيد وحفظ العملية')),
+      }),child:const WaffraText('تأكيد وحفظ العملية')),
      ])));
    }));
   debounce?.cancel();disposeLater([title,value,notes,message]);
@@ -3874,8 +3920,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
    final proceed=await showWaffraDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
     title:const WaffraText('⚠️ عملية مكررة'),
     content:WaffraText('يبدو إنك أضفت نفس ${result.income?'الدخل':'المصروف'} من قبل. ودّك تضيفه مرة ثانية؟'),
-    actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const WaffraText('إلغاء')),
-     FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const WaffraText('إضافة على أي حال'))]));
+    actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),child:const WaffraText('إلغاء')),
+     FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),child:const WaffraText('إضافة على أي حال'))]));
    if(proceed!=true||!mounted)return;
   }
   final previousSpent=sum(entries.where((e)=>!e.income&&e.id!=result.id&&
@@ -3970,9 +4016,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
      Expanded(child:ListView.builder(itemCount:filtered.length,itemBuilder:(ctx,i){
       final item=filtered[i];return ListTile(selected:selected==item.name,
        leading:Icon(categoryIcon(item.icon),color:Color(item.color)),
-       title:WaffraText(waffraTr(leafLabels?item.displayName:item.name),maxLines:3),onTap:()=>Navigator.pop(dialogCtx,item.name));
+       title:WaffraText(waffraTr(leafLabels?item.displayName:item.name),maxLines:3),onTap:WaffraHaptics.tap(()=>Navigator.pop(dialogCtx,item.name)));
      })),
-    ])),actions:[TextButton(onPressed:()=>Navigator.pop(dialogCtx),child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))]);
+    ])),actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogCtx)),child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))]);
   }));
  }
  Future<String> saveReceipt(XFile picked)async {
@@ -4010,7 +4056,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        SizedBox(height:54,child:Stack(alignment:Alignment.center,children:[
         PositionedDirectional(end:7,child:IconButton(
          tooltip:waffraIsEnglish?'Close':'إغلاق',
-         onPressed:()=>Navigator.pop(ctx),
+         onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
          icon:const Icon(Icons.close_rounded,color:Colors.white))),
        ])),
        Flexible(child:Container(color:Colors.black,
@@ -4022,15 +4068,15 @@ Future<void> bulkSmsSheet({String? initialText})async {
        SizedBox(height:58,child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
         IconButton(
          tooltip:waffraIsEnglish?'Previous image':'الصورة السابقة',
-         onPressed:current>0?()=>controller.previousPage(
-          duration:waffraMotion(220),curve:Curves.easeInOut):null,
+         onPressed:WaffraHaptics.tap(current>0?()=>controller.previousPage(
+          duration:waffraMotion(220),curve:Curves.easeInOut):null),
          icon:Icon(Icons.chevron_left_rounded,color:current>0?Colors.white:Colors.white38)),
         Text(count,textDirection:TextDirection.ltr,
          style:const TextStyle(color:Colors.white,fontSize:15,fontWeight:FontWeight.bold)),
         IconButton(
          tooltip:waffraIsEnglish?'Next image':'الصورة التالية',
-         onPressed:current<available.length-1?()=>controller.nextPage(
-          duration:const Duration(milliseconds:220),curve:Curves.easeInOut):null,
+         onPressed:WaffraHaptics.tap(current<available.length-1?()=>controller.nextPage(
+          duration:const Duration(milliseconds:220),curve:Curves.easeInOut):null),
          icon:Icon(Icons.chevron_right_rounded,
           color:current<available.length-1?Colors.white:Colors.white38)),
        ])),
@@ -4055,7 +4101,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    content:WaffraText(waffraIsEnglish?
     '${category.name} has reached ${(spent/category.budget*100).round()}% of the budget (crossed $crossed%). Spent ${cash(spent)} out of ${cash(category.budget)}.':
     'وصل صرف قسم «${category.name}» إلى ${(spent/category.budget*100).round()}٪ من الميزانية (تجاوز حد $crossed٪). صرفت ${cash(spent)} من ${cash(category.budget)}.'),
-   actions:[FilledButton(onPressed:()=>Navigator.pop(ctx),
+   actions:[FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
     child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))]));
  }
  /// Draw the same category-colored donut shown on Smart Analysis.
@@ -4555,18 +4601,18 @@ Future<void> bulkSmsSheet({String? initialText})async {
     actionsAlignment:MainAxisAlignment.center,
     actions:[
      SizedBox(width:double.infinity,child:FilledButton.icon(
-      onPressed:(){
+      onPressed:WaffraHaptics.tap((){
        Navigator.of(dialogContext).pop();
        Navigator.of(context).push(MaterialPageRoute(builder:(_)=>
         WaffraPdfReader(bytes:bytes,fileName:fileName,english:waffraIsEnglish)));
-      },
+      }),
       icon:const Icon(Icons.visibility_outlined),
       label:WaffraText(waffraIsEnglish?'Open report':'فتح التقرير'))),
      SizedBox(width:double.infinity,child:OutlinedButton.icon(
-      onPressed:()async{
+      onPressed:WaffraHaptics.tap(()async{
        Navigator.of(dialogContext).pop();
        await Printing.sharePdf(bytes:bytes,filename:fileName);
-      },
+      }),
       icon:const Icon(Icons.share_outlined),
       label:WaffraText(waffraIsEnglish?'Share report':'مشاركة التقرير'))),
     ],
@@ -4693,7 +4739,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      content:WaffraText(waffraIsEnglish?
       'There are no encrypted transactions to restore.':
       'لا توجد معاملات مشفرة قابلة للاسترجاع.'),
-     actions:[TextButton(onPressed:()=>Navigator.pop(ctx),
+     actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
       child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))]));
     return;
    }
@@ -4714,9 +4760,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
          subtitle:WaffraText(waffraIsEnglish?
           'Recover until ${dayText(expires)}':
           'الاسترجاع متاح حتى ${dayText(expires)}',maxLines:2),
-         onTap:()=>Navigator.pop(ctx,item.key));
+         onTap:WaffraHaptics.tap(()=>Navigator.pop(ctx,item.key)));
        })),
-     actions:[TextButton(onPressed:()=>Navigator.pop(ctx),
+     actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
       child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء'))]));
    if(selection!=null&&mounted)await _undoVerifiedDeletedEntry(selection);
   }catch(error){
@@ -4777,7 +4823,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     if(hasReceipt)...[
      const SizedBox(height:10),
      SizedBox(width:double.infinity,child:OutlinedButton.icon(
-      onPressed:()=>Navigator.pop(ctx,'receipt'),
+      onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,'receipt')),
       icon:const Icon(Icons.photo_library_outlined),
       label:WaffraText(waffraIsEnglish?'View attached images':'عرض الصور المرفقة'))),
     ],
@@ -4797,7 +4843,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    borderRadius:BorderRadius.circular(16),
    child:InkWell(
     borderRadius:BorderRadius.circular(16),
-    onTap:()=>Navigator.pop(dialogContext,value),
+    onTap:WaffraHaptics.tap(()=>Navigator.pop(dialogContext,value)),
     child:Padding(padding:const EdgeInsets.symmetric(horizontal:6,vertical:10),
      child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
       Icon(icon,color:color,size:24),
@@ -4811,13 +4857,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
   // Only after confirming this ID is in the authoritative SMS ledger may
   // a full original message be loaded from its separate SQLCipher note vault.
   // The decrypted text remains in this dialog's memory, never preferences.
-  var visibleEntry=entry;
-  if(entry.sourceType=='sms'&&entry.notes.isEmpty){
+  String? originalBankSms;
+  // Fetch on EVERY SMS detail open, including after user notes are edited.
+  // The vault verifies the saved SMS ID and authorization independently.
+  if(entry.sourceType=='sms'){
    try{
-    final original=await _financeAuthority.readProtectedOriginalSms(entry.id);
-    if(original!=null){
-     visibleEntry=MoneyEntry.fromJson({...entry.toJson(),'notes':original});
-    }
+    originalBankSms=await _financeAuthority.readProtectedOriginalSms(entry.id);
    }catch(_){
     if(mounted)snack(context,waffraIsEnglish?
      'Encrypted bank message cannot be opened. Your transaction is unchanged.':
@@ -4829,7 +4874,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
   await showWaffraDialog<void>(
    context:context,
    builder:(ctx)=>WaffraTransactionDetailsDialog(
-    entry:visibleEntry,
+    entry:entry,
+    protectedOriginalSms:originalBankSms,
     onClose:()=>Navigator.pop(ctx),
     onViewReceipt:waffraReceiptPaths(entry.receiptPath).isNotEmpty
       ?(){Navigator.pop(ctx);showReceipt(entry.receiptPath!);}
@@ -4857,11 +4903,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
      WaffraText(WaffraDisplayCurrency.label(waffraIsEnglish),style:TextStyle(fontSize:13,fontWeight:FontWeight.bold,color:e.income?const Color(0xFF075C40):waffraInk)),
     ]),
     IconButton(tooltip:waffraIsEnglish?'Transaction options':'خيارات المعاملة',
-     onPressed:()=>transactionActions(e),icon:const Icon(Icons.more_vert,color:forest)),
+     onPressed:WaffraHaptics.tap(()=>transactionActions(e)),icon:const Icon(Icons.more_vert,color:forest)),
    ]))),
    if(attachmentCount>0)PositionedDirectional(top:0,start:0,child:Semantics(
     label:waffraIsEnglish?'$attachmentCount attachments':'عدد المرفقات $attachmentCount',
-    button:true,child:InkWell(onTap:()=>showReceipt(e.receiptPath!),
+    button:true,child:InkWell(onTap:WaffraHaptics.tap(()=>showReceipt(e.receiptPath!)),
      child:WaffraReceiptCornerBadge(count:attachmentCount,english:waffraIsEnglish)))),
    ]));
  }
@@ -4921,7 +4967,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        title:WaffraText(waffraIsEnglish?'Enable monthly budget':'تفعيل الميزانية الشهرية',
         style:const TextStyle(fontWeight:FontWeight.bold)),
        value:enabled,activeTrackColor:emerald,
-       onChanged:(value)=>update((){enabled=value;validation=null;}),
+       onChanged:WaffraHaptics.selection((value)=>update((){enabled=value;validation=null;})),
       ),
       const SizedBox(height:8),
       WaffraText(enabled?
@@ -4942,15 +4988,15 @@ Future<void> bulkSmsSheet({String? initialText})async {
          const Color(0xFF1E3A31):Colors.white)),
      ]),
      actions:[
-      TextButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
-      FilledButton(onPressed:(){
+      TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+      FilledButton(onPressed:WaffraHaptics.tap((){
        final v=amountOfDisplay(amount.text);
        if(enabled&&(v==null||!v.isFinite||v<=0)){
         update(()=>validation=waffraAmountFieldError(amount.text));
         return;
        }
        Navigator.pop(ctx,(enabled:enabled,amount:enabled?v!:monthlyBudget));
-      },child:WaffraText(waffraIsEnglish?'Save':'حفظ')),
+      }),child:WaffraText(waffraIsEnglish?'Save':'حفظ')),
      ],
     ))));
    if(next!=null&&mounted){
@@ -4986,24 +5032,24 @@ Future<void> bulkSmsSheet({String? initialText})async {
         errorText:maxError,
         border:const OutlineInputBorder())),
       const SizedBox(height:12),
-      OutlinedButton.icon(onPressed:()async{
+      OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async{
        final range=await showDateRangePicker(context:ctx,
         firstDate:DateTime(2000),lastDate:DateTime.now(),
         initialDateRange:chosen);
        if(range!=null)update(()=>chosen=range);
-      },icon:const Icon(Icons.date_range),
+      }),icon:const Icon(Icons.date_range),
        label:WaffraText(chosen==null
         ?(waffraIsEnglish?'Choose date range':'حدد فترة زمنية')
         :dayText(chosen!.start)+' - '+dayText(chosen!.end))),
      ])),
      actions:[
-      TextButton(onPressed:(){
+      TextButton(onPressed:WaffraHaptics.tap((){
        setState((){
         transactionsDateRange=null;minTransactionAmount=null;maxTransactionAmount=null;
        });
        Navigator.pop(ctx);
-      },child:WaffraText(waffraIsEnglish?'Clear':'مسح الفلاتر')),
-      FilledButton(onPressed:(){
+      }),child:WaffraText(waffraIsEnglish?'Clear':'مسح الفلاتر')),
+      FilledButton(onPressed:WaffraHaptics.tap((){
        final lo=min.text.trim().isEmpty?null:amountOfDisplay(min.text.trim());
        final hi=max.text.trim().isEmpty?null:amountOfDisplay(max.text.trim());
        if((min.text.trim().isNotEmpty&&lo==null)||
@@ -5022,7 +5068,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
         transactionsDateRange=chosen;minTransactionAmount=lo;maxTransactionAmount=hi;
        });
        Navigator.pop(ctx);
-      },child:WaffraText(waffraIsEnglish?'Apply':'تطبيق')),
+      }),child:WaffraText(waffraIsEnglish?'Apply':'تطبيق')),
      ])));
   }finally{disposeLater([min,max]);}
  }
@@ -5044,7 +5090,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      const SizedBox(width:8),
      Expanded(child:WaffraText(waffraIsEnglish?'Monthly budget':'الميزانية الشهرية',
       style:const TextStyle(fontWeight:FontWeight.bold,fontSize:18))),
-     TextButton.icon(onPressed:editMonthlyBudget,
+     TextButton.icon(onPressed:WaffraHaptics.tap(editMonthlyBudget),
       icon:const Icon(Icons.edit_outlined,size:17),
       label:WaffraText(waffraIsEnglish?'Edit':'تحديد الميزانية')),
     ]),
@@ -5232,7 +5278,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        textAlign:TextAlign.center),
       const SizedBox(height:18),
       SizedBox(width:double.infinity,child:FilledButton(
-       onPressed:()=>Navigator.pop(ctx),
+       onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
        child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))),
      ]),
     );
@@ -5253,7 +5299,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
         (waffraIsEnglish?'Income transactions':'عمليات الدخل'):
         (waffraIsEnglish?'Expense transactions':'عمليات المصروفات'),
         style:Theme.of(ctx).textTheme.titleLarge)),
-       IconButton(onPressed:()=>Navigator.pop(ctx),icon:const Icon(Icons.close)),
+       IconButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),icon:const Icon(Icons.close)),
       ])),
      if(items.isNotEmpty)...[
       Container(
@@ -5303,7 +5349,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18),
     side:BorderSide(color:dark?const Color(0xFF354B3E):const Color(0xFFDCEAE1))),
    child:InkWell(
-    onTap:onTap,borderRadius:BorderRadius.circular(18),
+    onTap:WaffraHaptics.tap(onTap),borderRadius:BorderRadius.circular(18),
     child:Padding(padding:const EdgeInsets.symmetric(horizontal:5,vertical:12),
      child:Column(mainAxisSize:MainAxisSize.min,children:[
       Container(width:34,height:34,
@@ -5319,7 +5365,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
  }
  Widget homeSummaryCard(String label,double value,IconData symbol,Color color,Color tint)=>
   Expanded(child:InkWell(
-   onTap:()=>showSummaryTransactions(label=='الدخل'||label=='Income'),
+   onTap:WaffraHaptics.tap(()=>showSummaryTransactions(label=='الدخل'||label=='Income')),
    borderRadius:BorderRadius.circular(19),
    child:Container(
     padding:const EdgeInsets.symmetric(horizontal:12,vertical:14),
@@ -5359,7 +5405,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       backgroundColor:Color(cat.color).withValues(alpha:0.13),
       child:Icon(categoryIcon(cat.icon),size:19,color:Color(cat.color))),
      const SizedBox(width:8),
-     Expanded(child:InkWell(onTap:()=>transactionDetails(entry),
+     Expanded(child:InkWell(onTap:WaffraHaptics.tap(()=>transactionDetails(entry)),
       child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
        WaffraText(entry.title,maxLines:1,
         style:const TextStyle(fontSize:13,fontWeight:FontWeight.w600)),
@@ -5373,12 +5419,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
        child:WaffraCurrencyAmount(entry.income?entry.amount:-entry.amount,
         fontSize:15,color:valueColor))),
      IconButton(tooltip:waffraIsEnglish?'Transaction options':'خيارات المعاملة',
-      onPressed:()=>transactionActions(entry),icon:const Icon(Icons.more_vert,size:18)),
+      onPressed:WaffraHaptics.tap(()=>transactionActions(entry)),icon:const Icon(Icons.more_vert,size:18)),
     ])),
     if(count>0)PositionedDirectional(top:0,start:0,
      child:Semantics(label:waffraIsEnglish?'$count attachments':'عدد المرفقات $count',
       button:true,child:InkWell(
-       onTap:()=>showReceipt(entry.receiptPath!),
+       onTap:WaffraHaptics.tap(()=>showReceipt(entry.receiptPath!)),
        child:WaffraReceiptCornerBadge(count:count,english:waffraIsEnglish)))),
    ])));
  }
@@ -5443,8 +5489,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
           InkWell(
            key:const Key('waffra-home-gold-currency-entry'),
            borderRadius:BorderRadius.circular(21),
-           onTap:()=>Navigator.of(context).push<void>(MaterialPageRoute(
-            builder:(_)=>const CurrencyConverterPage())),
+           onTap:WaffraHaptics.tap(()=>Navigator.of(context).push<void>(MaterialPageRoute(
+            builder:(_)=>const CurrencyConverterPage()))),
            child:Container(
             padding:const EdgeInsets.symmetric(horizontal:15,vertical:13),
             decoration:BoxDecoration(
@@ -5508,14 +5554,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
             Expanded(child:WaffraText(waffraIsEnglish?
              'Your transactions':'عملياتك المالية',
              style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold))),
-            TextButton(onPressed:()=>setState((){
+            TextButton(onPressed:WaffraHaptics.tap(()=>setState((){
              showAllTransactions=!showAllTransactions;
              if(showAllTransactions){
               typeFilter='الكل';categoryFilter='الكل';search='';
               minTransactionAmount=null;maxTransactionAmount=null;
               transactionsDateRange=null;
              }
-            }),child:WaffraText(showAllTransactions?
+            })),child:WaffraText(showAllTransactions?
              (waffraIsEnglish?'Show less':'عرض أقل'):
              (waffraIsEnglish?'View all':'عرض الكل'))),
            ]),
@@ -5561,24 +5607,24 @@ Future<void> bulkSmsSheet({String? initialText})async {
               selected:typeFilter==choice,
               selectedColor:emerald,
               showCheckmark:false,
-              onSelected:(_)=>setState((){
+              onSelected:WaffraHaptics.selection((_)=>setState((){
                typeFilter=choice;categoryFilter='الكل';
-              }),
+              })),
              )))).toList()),
            const SizedBox(height:7),
            Divider(color:forest.withValues(alpha:0.10)),
            Row(children:[
             IconButton(
              tooltip:waffraIsEnglish?'Filter':'فلترة',
-             onPressed:()=>setState(()=>showTransactionFilters=!showTransactionFilters),
+             onPressed:WaffraHaptics.tap(()=>setState(()=>showTransactionFilters=!showTransactionFilters)),
              icon:Icon(showTransactionFilters?
               Icons.filter_alt:Icons.filter_alt_outlined,color:emerald)),
             IconButton(
              tooltip:waffraIsEnglish?'Search':'بحث',
-             onPressed:()=>setState((){
+             onPressed:WaffraHaptics.tap(()=>setState((){
               showTransactionSearch=!showTransactionSearch;
               if(!showTransactionSearch)search='';
-             }),icon:const Icon(Icons.search)),
+             })),icon:const Icon(Icons.search)),
             if(showTransactionSearch)Expanded(child:TextField(
              onChanged:(v)=>setState(()=>search=v),
              decoration:InputDecoration(isDense:true,
@@ -5588,11 +5634,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
             PopupMenuButton<String>(
              tooltip:waffraIsEnglish?'More actions':'المزيد من الخيارات',
              icon:const Icon(Icons.more_vert),
-             onSelected:(action){
+             onSelected:WaffraHaptics.selection((action){
               if(action=='delete-all')confirmDeleteAllEntries();
               if(action=='restore-transactions')_showVerifiedDeletedTransactions();
               if(action=='pdf')exportEntriesPdf(visible,'تقرير عمليات وفرة');
-             },
+             }),
              itemBuilder:(ctx)=>[
               if(_lastFinanceAuthorityRead?.source==
                  WaffraRuntimeFinanceBackend.verifiedEncrypted)
@@ -5624,18 +5670,18 @@ Future<void> bulkSmsSheet({String? initialText})async {
               selected:typeFilter==choice,
               label:WaffraText(waffraIsEnglish?
                (choice=='الكل'?'All':choice=='الدخل'?'Income':'Expenses'):choice),
-              onSelected:(_)=>setState((){
+              onSelected:WaffraHaptics.selection((_)=>setState((){
                typeFilter=choice;categoryFilter='الكل';
-              }))).toList()),
+              })))).toList()),
             DropdownButtonFormField<String>(
              key:ValueKey(typeFilter+'-'+selected),initialValue:selected,
              decoration:InputDecoration(labelText:waffraIsEnglish?
               'Category':'تصفية حسب القسم'),
              items:filterCats.map((value)=>DropdownMenuItem(
               value:value,child:WaffraText(waffraTr(value)))).toList(),
-             onChanged:(value)=>setState(()=>categoryFilter=value??'الكل')),
+             onChanged:WaffraHaptics.selection((value)=>setState(()=>categoryFilter=value??'الكل'))),
             Align(alignment:AlignmentDirectional.centerStart,
-             child:TextButton.icon(onPressed:editTransactionFilters,
+             child:TextButton.icon(onPressed:WaffraHaptics.tap(editTransactionFilters),
               icon:const Icon(Icons.date_range),
               label:WaffraText(waffraIsEnglish?
                'Date and amount filters':'فلترة بالتاريخ والمبلغ'))),
@@ -5653,7 +5699,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
               'عدد العمليات: '+visible.length.toString(),
               style:const TextStyle(color:Colors.grey,fontSize:12)),
              const Spacer(),
-             TextButton.icon(onPressed:()=>exportEntriesPdf(visible,'تقرير عمليات وفرة'),
+             TextButton.icon(onPressed:WaffraHaptics.tap(()=>exportEntriesPdf(visible,'تقرير عمليات وفرة')),
               icon:const Icon(Icons.picture_as_pdf_outlined,size:18),
               label:WaffraText(waffraIsEnglish?'Export PDF':'تصدير PDF')),
             ])),
@@ -5746,7 +5792,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      DropdownButtonFormField<String>(initialValue:chosen,
       decoration:InputDecoration(labelText:waffraIsEnglish?'Reduce category expenses':'تقليل مصروفات قسم'),
       items:top.map((e)=>DropdownMenuItem(value:e.key,child:WaffraText(e.key))).toList(),
-      onChanged:(v)=>setState((){forecastCategory=v;forecastReduction=20;})),
+      onChanged:WaffraHaptics.selection((v)=>setState((){forecastCategory=v;forecastReduction=20;}))),
      Row(children:[Expanded(child:Slider(value:forecastReduction.toDouble(),min:0,max:50,divisions:10,
       onChanged:(v)=>setState(()=>forecastReduction=v.round()))),WaffraText('${forecastReduction}%')]),
      WaffraText(waffraIsEnglish?'Adjusted expenses: ${cash(nextExpenses-saving)} • Save ${cash(saving)}':
@@ -5780,9 +5826,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
      'أضف أول عملية دخل أو مصروف، وبعدها تقدر تشوف تحليلك المالي وتتابع مصروفاتك بوضوح.',
      textAlign:TextAlign.start),
     actions:[
-     TextButton(onPressed:()=>Navigator.of(ctx).pop(false),
+     TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.of(ctx).pop(false)),
       child:WaffraText(waffraIsEnglish?'Later':'لاحقًا')),
-     FilledButton.icon(onPressed:()=>Navigator.of(ctx).pop(true),
+     FilledButton.icon(onPressed:WaffraHaptics.tap(()=>Navigator.of(ctx).pop(true)),
       icon:const Icon(Icons.add_circle_outline),
       label:WaffraText(waffraIsEnglish?'Add transaction':'إضافة معاملة')),
     ],
@@ -5878,7 +5924,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
          style:const TextStyle(fontSize:12)),
        ])),
        IconButton(tooltip:waffraIsEnglish?'Close':'إغلاق',icon:const Icon(Icons.close_rounded),
-        onPressed:()=>Navigator.of(ctx).pop()),
+        onPressed:WaffraHaptics.tap(()=>Navigator.of(ctx).pop())),
       ])),
       const Divider(height:1),
       Expanded(child:ListView(padding:const EdgeInsets.all(16),children:[
@@ -6005,9 +6051,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
       ))))),
      const SizedBox(height:16),
      OutlinedButton.icon(
-      onPressed:recent.isEmpty?null:()=>exportEntriesPdf(recent,
+      onPressed:WaffraHaptics.tap(recent.isEmpty?null:()=>exportEntriesPdf(recent,
        waffraIsEnglish?'Waffra analytics - Last 90 days':'تحليلات وفرة - آخر 90 يوم',
-       analytics:true),
+       analytics:true)),
       icon:const Icon(Icons.picture_as_pdf_outlined),
       label:WaffraText(waffraIsEnglish?'Export analytics PDF':'تصدير التحليلات إلى PDF')),
      const SizedBox(height:24),
@@ -6073,17 +6119,17 @@ Future<void> bulkSmsSheet({String? initialText})async {
    const SizedBox(height:12),
    SegmentedButton<String>(segments:const [ButtonSegment(value:'شهري',label:WaffraText('شهري')),
     ButtonSegment(value:'سنوي',label:WaffraText('سنوي'))],
-    selected:{period},onSelectionChanged:(v)=>setState(()=>period=v.first)),
+    selected:{period},onSelectionChanged:WaffraHaptics.selection((v)=>setState(()=>period=v.first))),
    const SizedBox(height:12),
    Row(children:[
     Expanded(child:DropdownButtonFormField<int>(initialValue:year,
      decoration:InputDecoration(labelText:waffraTr('السنة')),
      items:years.map((x)=>DropdownMenuItem(value:x,child:WaffraText('$x'))).toList(),
-     onChanged:(v){if(v!=null)setState(()=>year=v);})),
+     onChanged:WaffraHaptics.selection((v){if(v!=null)setState(()=>year=v);}))),
     if(period=='شهري')Expanded(child:DropdownButtonFormField<int>(initialValue:month,
      decoration:InputDecoration(labelText:waffraTr('الشهر')),
      items:List.generate(12,(i)=>DropdownMenuItem(value:i+1,child:WaffraText('شهر ${i+1}'))),
-     onChanged:(v){if(v!=null)setState(()=>month=v);})),
+     onChanged:WaffraHaptics.selection((v){if(v!=null)setState(()=>month=v);}))),
    ]),
    const SizedBox(height:12),
    nextMonthForecast(),
@@ -6094,7 +6140,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     const SizedBox(height:16),FinanceChart(points:points),
    ]))),
    const SizedBox(height:16),
-   OutlinedButton.icon(onPressed:()=>exportEntriesPdf(data,'تحليلات وفرة - $period ${period=='شهري'?'$month/':''}$year',analytics:true),
+   OutlinedButton.icon(onPressed:WaffraHaptics.tap(()=>exportEntriesPdf(data,'تحليلات وفرة - $period ${period=='شهري'?'$month/':''}$year',analytics:true)),
     icon:const Icon(Icons.picture_as_pdf_outlined),label:const WaffraText('تصدير التحليلات إلى PDF')),
    const SizedBox(height:12),
    Card(child:Padding(padding:const EdgeInsets.all(16),
@@ -6172,10 +6218,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
      const SizedBox(height:12),const WaffraText('اختر أيقونة'),
      Wrap(spacing:5,children:iconNames.map((x)=>IconButton(
       style:IconButton.styleFrom(backgroundColor:icon==x?emerald.withValues(alpha:.2):null),
-      onPressed:()=>update(()=>icon=x),icon:Icon(categoryIcon(x),color:icon==x?emerald:null))).toList()),
+      onPressed:WaffraHaptics.tap(()=>update(()=>icon=x)),icon:Icon(categoryIcon(x),color:icon==x?emerald:null))).toList()),
      const WaffraText('اختر لون'),
      Wrap(spacing:7,children:colors.map((x)=>InkWell(
-      onTap:()=>update(()=>color=x),
+      onTap:WaffraHaptics.tap(()=>update(()=>color=x)),
       child:CircleAvatar(radius:15,backgroundColor:Color(x),
        child:color==x?const Icon(Icons.check,color:Colors.white,size:17):null))).toList()),
      if(!(initial?.income??income))...[
@@ -6186,21 +6232,21 @@ Future<void> bulkSmsSheet({String? initialText})async {
       DropdownButtonFormField<int>(initialValue:alertPercent,
        decoration:InputDecoration(labelText:waffraTr('ودّك ننبهك عند كم ٪ من الميزانية؟')),
        items:[50,60,70,75,80,85,90,95,100].map((v)=>DropdownMenuItem(value:v,child:WaffraText('$v٪'))).toList(),
-       onChanged:(v){if(v!=null)update(()=>alertPercent=v);}),
+       onChanged:WaffraHaptics.selection((v){if(v!=null)update(()=>alertPercent=v);})),
       if(amountOfDisplay(budget.text)!=null)Padding(padding:const EdgeInsets.only(top:8),
        child:WaffraText('بننبهك عند صرف ${cash(amountOfDisplay(budget.text)!*alertPercent/100)} من ميزانية ${cash(amountOfDisplay(budget.text)!)}')),
      ],
     ])),
     actions:[
-     TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إلغاء')),
-     FilledButton(onPressed:(){
+     TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),child:const WaffraText('إلغاء')),
+     FilledButton(onPressed:WaffraHaptics.tap((){
       final n=name.text.trim();update(()=>attempted=true);
       if(WaffraValidators.requiredText(n)!=null || WaffraValidators.uniqueCategory(fullName(),
        categories.where((c)=>c.id!=initial?.id&&c.income==(initial?.income??income)).map((c)=>c.name))!=null ||
        WaffraValidators.positiveAmount(budget.text,required:false)!=null)return;
       Navigator.pop(ctx,BudgetCategory(id:initial?.id??newId(),name:fullName(),icon:icon,color:color,
        income:initial?.income??income,parentId:effectiveParentId,budget:budget.text.trim().isEmpty?0:(amountOfDisplay(budget.text)??0),alertPercent:alertPercent,origin:initial?.origin??'user'));
-     },child:const WaffraText('حفظ')),
+     }),child:const WaffraText('حفظ')),
     ])));
   disposeLater([name,budget]);return result;
  }
@@ -6214,10 +6260,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
     content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
      ListTile(leading:const Icon(Icons.create_new_folder_outlined,color:emerald),
       title:WaffraText(waffraIsEnglish?'New main category':'إضافة قسم رئيسي'),
-      onTap:()=>Navigator.pop(ctx,'main')),
+      onTap:WaffraHaptics.tap(()=>Navigator.pop(ctx,'main'))),
      ListTile(leading:const Icon(Icons.account_tree_outlined,color:emerald),
       title:WaffraText(waffraIsEnglish?'New subcategory':'إضافة قسم فرعي'),
-      onTap:()=>Navigator.pop(ctx,'sub')),
+      onTap:WaffraHaptics.tap(()=>Navigator.pop(ctx,'sub'))),
     ]),
    ));
   if(!mounted||choice==null)return;
@@ -6235,7 +6281,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       return ListTile(
        leading:Icon(categoryIcon(parent.icon),color:Color(parent.color)),
        title:WaffraText(parent.name),
-       onTap:()=>Navigator.pop(ctx,parent.id));
+       onTap:WaffraHaptics.tap(()=>Navigator.pop(ctx,parent.id)));
      })),
    ));
   if(!mounted||parentId==null)return;
@@ -6415,10 +6461,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
            ?'Restore until ${dayText(DateTime.fromMillisecondsSinceEpoch(until,isUtc:true).toLocal())}'
            :'الاسترجاع حتى ${dayText(DateTime.fromMillisecondsSinceEpoch(until,isUtc:true).toLocal())}')),
          enabled:!expired,
-         onTap:expired?null:()=>Navigator.pop(ctx,id),
+         onTap:WaffraHaptics.tap(expired?null:()=>Navigator.pop(ctx,id)),
         );
        })),
-     actions:[TextButton(onPressed:()=>Navigator.pop(ctx),
+     actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
       child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))]));
    if(choice!=null&&mounted)await _restoreVerifiedModule(
     module:module,entityId:choice);
@@ -6436,7 +6482,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
     title:WaffraText(waffraIsEnglish?'Delete subcategories first':'احذف الأقسام الفرعية أولاً'),
     content:WaffraText(waffraIsEnglish?'This category has ${children.length} subcategories. Delete or move them first to protect your categorization.':'القسم يحتوي على ${children.length} قسم فرعي. احذف الأقسام الفرعية أولاً للحفاظ على تصنيف المعاملات.'),
-    actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))]));
+    actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))]));
    return;
   }
   final linkedEntries=entries.where((e)=>e.category==c.name&&e.income==c.income).length;
@@ -6449,8 +6495,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
      ?'This category has $linkedEntries linked transaction(s) and $linkedRecurring recurring item(s). Delete these linked items first to protect your financial history.'
      :'هذا القسم مرتبط بعدد $linkedEntries معاملة مالية و$linkedRecurring عملية متكررة. يجب حذف العناصر المرتبطة أولًا قبل حذف القسم.'),
     actions:[
-     TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('حسنًا')),
-     if(linkedEntries>0)TextButton(onPressed:(){
+     TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),child:const WaffraText('حسنًا')),
+     if(linkedEntries>0)TextButton(onPressed:WaffraHaptics.tap((){
       Navigator.pop(ctx);
       setState((){
        tab=0;addFabExpanded=false;showAllTransactions=true;
@@ -6459,10 +6505,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
        search='';transactionsDateRange=null;
        minTransactionAmount=null;maxTransactionAmount=null;
       });
-     },child:WaffraText(waffraIsEnglish?'View transactions':'عرض المعاملات المرتبطة'))
-     else TextButton(onPressed:(){
+     }),child:WaffraText(waffraIsEnglish?'View transactions':'عرض المعاملات المرتبطة'))
+     else TextButton(onPressed:WaffraHaptics.tap((){
       Navigator.pop(ctx);setState((){tab=3;goalsOpened=false;addFabExpanded=false;});
-     },child:WaffraText(waffraIsEnglish?'View recurring':'عرض العمليات المتكررة')),
+     }),child:WaffraText(waffraIsEnglish?'View recurring':'عرض العمليات المتكررة')),
     ]));
    return;
   }
@@ -6549,9 +6595,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
                  ?'Restoring this subcategory also restores its deleted main category «${restoreParent!.name}». Both budgets will reset to zero. Continue?'
                  :'استرجاع هذا القسم الفرعي سيؤدي أيضًا إلى استرجاع القسم الرئيسي «${restoreParent!.name}». ستعود الميزانيات بقيمة صفر. هل تريد المتابعة؟'),
                 actions:[
-                 TextButton(onPressed:()=>Navigator.pop(confirmCtx,false),
+                 TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(confirmCtx,false)),
                   child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
-                 FilledButton(onPressed:()=>Navigator.pop(confirmCtx,true),
+                 FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(confirmCtx,true)),
                   child:WaffraText(waffraIsEnglish?'Restore both':'استرجاع الاثنين')),
                 ]));
               if(approved!=true||!dialogCtx.mounted)return;
@@ -6588,7 +6634,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
             },
         );
        }).toList())),
-    actions:[TextButton(onPressed:()=>Navigator.pop(dialogCtx),
+    actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogCtx)),
      child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))],
    )));
  }
@@ -6614,7 +6660,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     child:WaffraText(number,style:const TextStyle(fontSize:17,fontWeight:FontWeight.bold))),
   ]));
  Widget _filterChip(String label,bool selected,VoidCallback onTap)=>
-  ChoiceChip(label:WaffraText(label),selected:selected,onSelected:(_)=>onTap(),
+  ChoiceChip(label:WaffraText(label),selected:selected,onSelected:WaffraHaptics.selection((_)=>onTap()),
    showCheckmark:false,selectedColor:forest,labelStyle:TextStyle(
     color:selected?Colors.white:null,fontWeight:selected?FontWeight.bold:FontWeight.normal));
  Future<void> goalDialog()async {
@@ -6652,7 +6698,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
      InkWell(
       borderRadius:BorderRadius.circular(14),
-      onTap:()async{
+      onTap:WaffraHaptics.tap(()async{
        final picked=await showWaffraDialog<String>(context:ctx,
         builder:(pickCtx){
          String query='';
@@ -6676,7 +6722,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
               dense:true,
               leading:const Icon(Icons.add_circle_outline_rounded,color:emerald),
               title:WaffraText(waffraIsEnglish?'Other goal (custom name)':'هدف آخر (اسم مخصص)'),
-              onTap:()=>Navigator.pop(pickCtx,otherGoal)),
+              onTap:WaffraHaptics.tap(()=>Navigator.pop(pickCtx,otherGoal))),
              const Divider(height:10),
              Expanded(child:matches.isEmpty
               ?Center(child:WaffraText(waffraIsEnglish?'No matching goals':'لا توجد أهداف مطابقة'))
@@ -6684,7 +6730,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
                ListTile(
                 dense:true,
                 title:WaffraText(matches[index],maxLines:2),
-                onTap:()=>Navigator.pop(pickCtx,matches[index])))),
+                onTap:WaffraHaptics.tap(()=>Navigator.pop(pickCtx,matches[index]))))),
             ]),
            ),
           );
@@ -6694,7 +6740,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
         selectedGoal=picked;
         name.text=picked==otherGoal?'':picked;
        });
-      },
+      }),
       child:InputDecorator(
        decoration:InputDecoration(
         labelText:waffraIsEnglish?'Savings goal *':'اختر هدف الادخار *',
@@ -6736,15 +6782,15 @@ Future<void> bulkSmsSheet({String? initialText})async {
        border:const OutlineInputBorder())),
     ]),
     actions:[
-     TextButton(onPressed:()=>Navigator.pop(ctx),
+     TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
       child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
-     FilledButton(onPressed:(){
+     FilledButton(onPressed:WaffraHaptics.tap((){
       updateGoal(()=>attempted=true);
       final n=amountOfDisplay(target.text);
       if(selectedGoal.isEmpty||validateGoalName()!=null||
        WaffraValidators.positiveAmount(target.text)!=null||n==null)return;
       Navigator.pop(ctx,SavingGoal(id:newId(),name:name.text.trim(),target:n,saved:0));
-     },child:WaffraText(waffraIsEnglish?'Add goal':'إضافة الهدف')),
+     }),child:WaffraText(waffraIsEnglish?'Add goal':'إضافة الهدف')),
     ],
    )));
   disposeLater([name,target]);
@@ -6847,7 +6893,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
             backgroundColor:accent.withValues(alpha:.08),
             padding:const EdgeInsets.symmetric(vertical:10,horizontal:2),
             shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12))),
-           onPressed:()=>addQuickAmount(quick),
+           onPressed:WaffraHaptics.tap(()=>addQuickAmount(quick)),
            child:WaffraText('+${quick.toInt()}',
             style:TextStyle(fontWeight:FontWeight.bold,fontSize:12,color:accent)))),
           if(quick!=2000.0)const SizedBox(width:7),
@@ -6872,17 +6918,17 @@ Future<void> bulkSmsSheet({String? initialText})async {
       actions:[SizedBox(width:double.infinity,
        child:Column(children:[
         SizedBox(width:double.infinity,child:FilledButton(
-         onPressed:(){
+         onPressed:WaffraHaptics.tap((){
           update(()=>attempted=true);
           if(waffraAmountFieldError(amount.text)!=null)return;
           final value=amountOfDisplay(amount.text);
           if(value==null||value<=0)return;
           Navigator.pop(dialogCtx,value);
-         },
+         }),
          child:WaffraText(waffraIsEnglish?'Add amount':'إضافة'))),
         const SizedBox(height:7),
         SizedBox(width:double.infinity,child:OutlinedButton(
-         onPressed:()=>Navigator.pop(dialogCtx),
+         onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogCtx)),
          child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء'))),
        ]))],
      );
@@ -6903,7 +6949,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      content:WaffraText(waffraIsEnglish
       ?'You achieved your savings goal “${g.name}”!'
       :'تم تحقيق هدف الادخار «${g.name}» بنجاح!'),
-     actions:[FilledButton(onPressed:()=>Navigator.pop(ctx),
+     actions:[FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
       child:WaffraText(waffraIsEnglish?'Great':'رائع'))]));
    }
   }
@@ -6941,7 +6987,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       decoration:InputDecoration(labelText:waffraIsEnglish?'Duration *':'مدة التحدي *'),
       items:[7,14,30].map((n)=>DropdownMenuItem<int>(value:n,
        child:WaffraText(waffraIsEnglish?'$n days':'$n يوم'))).toList(),
-      onChanged:(n){if(n!=null)update(()=>days=n);}),
+      onChanged:WaffraHaptics.selection((n){if(n!=null)update(()=>days=n);})),
      const SizedBox(height:12),
      WaffraText(waffraIsEnglish?
       'This tracks your habit manually and never deducts money.':
@@ -6949,8 +6995,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
       style:const TextStyle(color:Colors.grey,fontSize:12)),
     ])),
     actions:[
-     TextButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
-     FilledButton(onPressed:(){
+     TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+     FilledButton(onPressed:WaffraHaptics.tap((){
       update(()=>attempted=true);
       if(WaffraValidators.requiredText(name.text)!=null||
        WaffraValidators.positiveAmount(amount.text)!=null)return;
@@ -6958,7 +7004,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       if(value==null)return;
       Navigator.pop(ctx,SavingChallenge(id:newId(),title:name.text.trim(),
        dailyAmount:value,days:days));
-     },child:WaffraText(waffraIsEnglish?'Save challenge':'إضافة التحدي')),
+     }),child:WaffraText(waffraIsEnglish?'Save challenge':'إضافة التحدي')),
     ])));
   disposeLater([name,amount]);
   if(challenge==null||!mounted)return;
@@ -6986,14 +7032,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
         Expanded(child:WaffraText(c.title,style:const TextStyle(fontWeight:FontWeight.bold))),
         IconButton(icon:const Icon(Icons.delete_outline,size:20),
          tooltip:waffraIsEnglish?'Delete challenge':'حذف التحدي',
-         onPressed:()async{
+         onPressed:WaffraHaptics.tap(()async{
           final ok=await confirmDeletion(waffraIsEnglish?'Delete challenge?':'حذف التحدي',
            waffraIsEnglish?'Progress cannot be recovered.':
             'هل أنت متأكد من حذف هذا التحدي؟ سيتم حذف التحدي نهائيًا، ولن تتمكن من استعادته لاحقًا.');
           if(ok==true&&mounted){
            setState(()=>challenges.removeWhere((x)=>x.id==c.id));await persist(route:WaffraFinanceRoute.challengeAndBudgetUpdate);
           }
-         }),
+         })),
        ]),
        WaffraText(waffraIsEnglish?
         'Daily: ${cash(c.dailyAmount)} • Target: ${cash(c.days*c.dailyAmount)}':
@@ -7008,12 +7054,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
          '${c.completedDays} of ${c.days} days':
          '${c.completedDays} من ${c.days} يوم',
          style:const TextStyle(fontSize:12))),
-        TextButton.icon(onPressed:allowed?()async{
+        TextButton.icon(onPressed:WaffraHaptics.tap(allowed?()async{
           final i=challenges.indexWhere((x)=>x.id==c.id);
           if(i<0||!challenges[i].canComplete(DateTime.now()))return;
           setState(()=>challenges[i]=challenges[i].complete());
           await persist(route:WaffraFinanceRoute.challengeAndBudgetUpdate);
-         }:null,icon:Icon(completed?Icons.check_circle_outline:Icons.check,size:18),
+         }:null),icon:Icon(completed?Icons.check_circle_outline:Icons.check,size:18),
          label:WaffraText(completed?(waffraIsEnglish?'Complete':'مكتمل'):
           allowed?(waffraIsEnglish?'Saved today':'وفّرت اليوم'):
           (waffraIsEnglish?'Marked today':'تم اليوم'))),
@@ -7021,7 +7067,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       ]));
     }),
     Padding(padding:const EdgeInsets.fromLTRB(14,0,14,14),
-     child:OutlinedButton.icon(onPressed:createSavingChallenge,
+     child:OutlinedButton.icon(onPressed:WaffraHaptics.tap(createSavingChallenge),
       icon:const Icon(Icons.add),
       label:WaffraText(waffraIsEnglish?'New challenge':'تحدي جديد'))),
    ],
@@ -7107,7 +7153,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
         },
        );
       }).toList())),
-    actions:[TextButton(onPressed:()=>Navigator.pop(ctx),
+    actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
      child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))],
    )));
  }
@@ -7149,7 +7195,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      label:waffraIsEnglish?'Current goals':'عدد الأهداف الحالية',count:goals.length)),
     const SizedBox(width:9),
     Expanded(child:WaffraDeletedItemsButton(
-     onPressed:deletedGoalsDialog,
+     onPressed:WaffraHaptics.tapRequired(deletedGoalsDialog),
      label:waffraIsEnglish?'Deleted goals (${deletedGoals.length})'
       :'الأهداف المحذوفة (${deletedGoals.length})')),
    ]),
@@ -7185,7 +7231,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
         WaffraText(waffraIsEnglish?'Target: ${cash(g.target)}':'المستهدف: ${cash(g.target)}',
          style:const TextStyle(fontSize:12)),
        ])),
-       PopupMenuButton<String>(onSelected:(v)async {
+       PopupMenuButton<String>(onSelected:WaffraHaptics.selection((v)async {
         if(v=='delete'){
          final linked=g.saved>0||entries.any((e)=>e.category==g.name);
          final yes=await confirmDeletion(waffraIsEnglish?'Delete savings goal?':'حذف هدف الادخار',
@@ -7201,7 +7247,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
           }
          }
         }
-       },itemBuilder:(_)=>[PopupMenuItem(value:'delete',child:WaffraText(waffraIsEnglish?'Delete goal':'حذف الهدف'))]),
+       }),itemBuilder:(_)=>[PopupMenuItem(value:'delete',child:WaffraText(waffraIsEnglish?'Delete goal':'حذف الهدف'))]),
       ]),
       const SizedBox(height:11),
       Row(children:[
@@ -7219,7 +7265,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         WaffraText(waffraIsEnglish?'Remaining':'المتبقي',style:const TextStyle(fontSize:11)),
         WaffraText(cash(max(0,g.target-g.saved)),style:const TextStyle(fontWeight:FontWeight.bold))])),
-       if(g.saved<g.target)TextButton.icon(onPressed:()=>fundGoal(g),
+       if(g.saved<g.target)TextButton.icon(onPressed:WaffraHaptics.tap(()=>fundGoal(g)),
         icon:const Icon(Icons.add,size:18),label:WaffraText(waffraIsEnglish?'Add amount':'إضافة مبلغ')),
       ]),
       if(g.saved>=g.target)WaffraText(waffraIsEnglish?'Goal achieved!':'🎉 تم تحقيق الهدف!',
@@ -7278,11 +7324,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
       DropdownButtonFormField<bool>(initialValue:income,
        items:const [DropdownMenuItem(value:true,child:WaffraText('دخل')),
         DropdownMenuItem(value:false,child:WaffraText('مصروف'))],
-       onChanged:(v){if(v!=null)update((){income=v;category=forType(v).first.name;});}),
+       onChanged:WaffraHaptics.selection((v){if(v!=null)update((){income=v;category=forType(v).first.name;});})),
       const SizedBox(height:12),
       InkWell(
        borderRadius:BorderRadius.circular(14),
-       onTap:()async{
+       onTap:WaffraHaptics.tap(()async{
         final picked=await showWaffraDialog<String>(context:ctx,
          builder:(searchCtx){
           String query='';
@@ -7316,7 +7362,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
                   selected:option.name==selected,
                   leading:Icon(categoryIcon(option.icon),color:Color(option.color),size:21),
                   title:WaffraText(option.name,maxLines:3),
-                  onTap:()=>Navigator.pop(searchCtx,option.name));
+                  onTap:WaffraHaptics.tap(()=>Navigator.pop(searchCtx,option.name)));
                 })),
              ]),
             ),
@@ -7324,7 +7370,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
           });
          });
         if(picked!=null&&ctx.mounted)update(()=>category=picked);
-       },
+       }),
        child:InputDecorator(
         decoration:InputDecoration(
          labelText:waffraIsEnglish?'Category *':'القسم *',
@@ -7340,24 +7386,24 @@ Future<void> bulkSmsSheet({String? initialText})async {
        ),
       ),
       const SizedBox(height:12),
-      OutlinedButton.icon(onPressed:()async{
+      OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async{
        final picked=await showDatePicker(context:ctx,initialDate:startAt,firstDate:DateTime.now().subtract(const Duration(days:1)),lastDate:DateTime(DateTime.now().year+5));
        if(picked!=null)update((){startAt=picked;day.text=picked.day.toString();});
-      },icon:const Icon(Icons.calendar_month_outlined),label:WaffraText(waffraIsEnglish?'First due: ${dayText(startAt)}':'أول استحقاق: ${dayText(startAt)}')),
+      }),icon:const Icon(Icons.calendar_month_outlined),label:WaffraText(waffraIsEnglish?'First due: ${dayText(startAt)}':'أول استحقاق: ${dayText(startAt)}')),
       const SizedBox(height:8),
       TextField(controller:day,keyboardType:TextInputType.number,onChanged:(_)=>update((){}),
        decoration:InputDecoration(labelText:waffraIsEnglish?'Day of month *':'يوم الشهر *',helperText:waffraIsEnglish?'1–31':'من 1 إلى 31',
        errorText:attempted?waffraDayFieldError(day.text):null)),
      ]))),
      actions:[
-      TextButton(onPressed:()=>Navigator.pop(ctx),child:const WaffraText('إلغاء')),
-      FilledButton(onPressed:(){
+      TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),child:const WaffraText('إلغاء')),
+      FilledButton(onPressed:WaffraHaptics.tap((){
        final n=amountOfDisplay(amount.text),d=int.tryParse(digits(day.text));update(()=>attempted=true);
        if(WaffraValidators.requiredText(title.text)==null&&WaffraValidators.positiveAmount(amount.text)==null&&WaffraValidators.dayOfMonth(day.text)==null&&n!=null&&d!=null){
         Navigator.pop(ctx,RecurringBill(id:newId(),title:title.text.trim(),category:category,
          amount:n,income:income,day:d,startAt:startAt));
        }
-      },child:const WaffraText('حفظ')),
+      }),child:const WaffraText('حفظ')),
      ]);
    }));
   disposeLater([title,amount,day]);
@@ -7396,7 +7442,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    const SizedBox(height:9),
    Row(children:[
     Expanded(child:OutlinedButton.icon(
-     onPressed:showWaffraFinancialCalendar,
+     onPressed:WaffraHaptics.tap(showWaffraFinancialCalendar),
      style:OutlinedButton.styleFrom(minimumSize:WaffraActionLayout.minimumSize,
       padding:const EdgeInsets.symmetric(horizontal:9,vertical:12),
       side:BorderSide(color:Theme.of(context).colorScheme.primary,width:1.2),
@@ -7407,7 +7453,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       style:const TextStyle(fontSize:11.5,fontWeight:FontWeight.bold)))),
     const SizedBox(width:9),
     Expanded(child:WaffraDeletedItemsButton(
-     onPressed:deletedRecurringDialog,
+     onPressed:WaffraHaptics.tapRequired(deletedRecurringDialog),
      label:waffraIsEnglish?'Deleted recurring (${deletedRecurring.length})':
       'المتكررة المحذوفة (${deletedRecurring.length})')),
    ]),
@@ -7433,7 +7479,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
         maxLines:2,style:const TextStyle(fontSize:10)),
       ])),
       Transform.scale(scale:.82,child:Switch.adaptive(value:recurringRemindersEnabled,
-       onChanged:toggleRecurringReminders)),
+       onChanged:WaffraHaptics.selection(toggleRecurringReminders))),
      ]))),
    ]),
    const SizedBox(height:9),
@@ -7503,7 +7549,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
         (waffraIsEnglish?'Paused':'متوقفة'),
         style:TextStyle(fontSize:11,color:r.active?Theme.of(context).hintColor:Colors.deepOrange)),
       ])),
-      Switch(value:r.active,onChanged:(enabled)async {
+      Switch(value:r.active,onChanged:WaffraHaptics.selection((enabled)async {
        final index=recurring.indexWhere((item)=>item.id==r.id);
        if(index<0)return;
        if(enabled){
@@ -7517,8 +7563,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
        await persist(route:WaffraFinanceRoute.recurringCreateEditDeleteRestore);
        if(enabled)await applyRecurring();
        await syncRecurringReminders();
-      }),
-      PopupMenuButton<String>(onSelected:(v)async {
+      })),
+      PopupMenuButton<String>(onSelected:WaffraHaptics.selection((v)async {
        if(v!='delete')return;
        final hasHistory=entries.any((e)=>e.id.startsWith('rec_${r.id}_'));
        final ok=await confirmDeletion(waffraIsEnglish?'Delete recurring transaction?':'حذف العملية المتكررة',
@@ -7537,7 +7583,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
         });
         await persist(route:WaffraFinanceRoute.recurringCreateEditDeleteRestore);await syncRecurringReminders();
        }
-      },itemBuilder:(_)=>[
+      }),itemBuilder:(_)=>[
        PopupMenuItem(value:'delete',child:WaffraText(waffraIsEnglish?'Delete':'حذف'))]),
      ])));
    }),
@@ -7589,7 +7635,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       return ListTile(dense:true,leading:Icon(paid?Icons.check_circle:Icons.schedule,color:paid?emerald:Colors.orange),
        title:WaffraText(r.title),subtitle:WaffraText('${dayText(postponed??due)} • ${paid?(waffraIsEnglish?'Paid':'مدفوعة'):(waffraIsEnglish?'Pending':'معلقة')}'),trailing:WaffraText(cash(r.amount)));
      }).toList()))])),
-    actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))]);
+    actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))]);
   }));
  }
  String exportBackup({WaffraFinanceAuthorityRead? fromSource}) {
@@ -7628,7 +7674,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    if(mounted)await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
     title:WaffraText(waffraIsEnglish?'Fingerprint required':'بصمة الجهاز مطلوبة'),
     content:WaffraText(waffraIsEnglish?'Enroll a fingerprint in your device settings before $operation. Waffra does not bypass biometric verification with an app PIN.':'يجب تسجيل بصمة على هاتفك أولاً لحماية هذه العملية. لن يسمح وفرة باستخدام رمز التطبيق بدلاً منها.'),
-    actions:[OutlinedButton(onPressed:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))]));
+    actions:[OutlinedButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))]));
    return false;
   }
   final allowed=await WaffraBiometrics.unlock();
@@ -7662,12 +7708,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
     const SizedBox(height:15),
     if(mode==null)...[
      OutlinedButton.icon(key:const Key('waffra-backup-choose-export'),
-      onPressed:()=>update(()=>mode=0),
+      onPressed:WaffraHaptics.tap(()=>update(()=>mode=0)),
       icon:const Icon(Icons.file_download_rounded),
       label:WaffraText(waffraIsEnglish?'Save encrypted backup':'حفظ نسخة مشفّرة')),
      const SizedBox(height:10),
      OutlinedButton.icon(key:const Key('waffra-backup-choose-restore'),
-      onPressed:()=>update(()=>mode=1),
+      onPressed:WaffraHaptics.tap(()=>update(()=>mode=1)),
       icon:const Icon(Icons.restore_page_outlined),
       label:WaffraText(waffraIsEnglish?'Restore from my device':'استعادة من الجهاز')),
      const SizedBox(height:8),
@@ -7678,7 +7724,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        'مشفّرة • بدون ربط بالحسابات البنكية',style:const TextStyle(fontSize:11))),
      ]),
     ]else ...[
-     TextButton.icon(onPressed:()=>update(()=>mode=null),
+     TextButton.icon(onPressed:WaffraHaptics.tap(()=>update(()=>mode=null)),
       icon:const Icon(Icons.arrow_back_ios_new_rounded,size:14),
       label:WaffraText(waffraIsEnglish?'Back':'رجوع')),
     ],
@@ -7690,7 +7736,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       labelText:waffraIsEnglish?'Backup password (12+ characters) *':'كلمة مرور النسخة (12 حرفًا على الأقل) *',
       errorText:backupError,errorMaxLines:3,border:const OutlineInputBorder())),
     const SizedBox(height:10),
-    FilledButton.icon(onPressed:exporting?null:()async {
+    FilledButton.icon(onPressed:WaffraHaptics.tap(exporting?null:()async {
      if(!WaffraSecureBackup.isValidNewPassword(secret.text)){
       update(()=>backupError=waffraIsEnglish?'Use 12 to 256 characters for your backup password.':
        'استخدم كلمة مرور من 12 إلى 256 حرفًا للنسخة الاحتياطية.');return;
@@ -7725,7 +7771,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      }finally{
       if(ctx.mounted)update(()=>exporting=false);
      }
-    },icon:const Icon(Icons.file_download_outlined),label:WaffraText(waffraIsEnglish?
+    }),icon:const Icon(Icons.file_download_outlined),label:WaffraText(waffraIsEnglish?
       'Save encrypted .waffra file':'حفظ ملف .waffra المشفّر')),
     ],
     if(mode==1)...[
@@ -7748,7 +7794,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     // Select previously exported archives with Android's SAF document picker.
     // Contents remain hidden and are never copied to the clipboard on export.
     OutlinedButton.icon(key:const Key('waffra-open-backup-file'),
-     onPressed:restoring?null:()async{
+     onPressed:WaffraHaptics.tap(restoring?null:()async{
       try{
        final selected=await WaffraBackupFiles.openArchive();
        if(!ctx.mounted||selected==null)return;
@@ -7762,15 +7808,15 @@ Future<void> bulkSmsSheet({String? initialText})async {
         'File verification failed. Please choose a valid Waffra backup.':
         'فشل التحقق من صحة الملف. يرجى اختيار نسخة احتياطية صحيحة من وفرة والمحاولة مرة أخرى.');
       }
-     },icon:const Icon(Icons.file_open_outlined),
+     }),icon:const Icon(Icons.file_open_outlined),
      label:WaffraText(waffraIsEnglish?'Choose .waffra file':'اختيار ملف .waffra من الجهاز')),
     // Backward compatibility ONLY: opt-in reading of previously exported
     // clipboard-only text. New exports never put archive data on clipboard.
-    TextButton.icon(onPressed:()=>update(()=>advanced=!advanced),
+    TextButton.icon(onPressed:WaffraHaptics.tap(()=>update(()=>advanced=!advanced)),
      icon:Icon(advanced?Icons.expand_less:Icons.expand_more),
      label:WaffraText(waffraIsEnglish?'Advanced options':'خيارات متقدمة')),
     if(advanced)TextButton.icon(key:const Key('waffra-import-legacy-text'),
-     onPressed:restoring?null:()async{
+     onPressed:WaffraHaptics.tap(restoring?null:()async{
       final old=await Clipboard.getData(Clipboard.kTextPlain);
       if(!ctx.mounted)return;
       final text=old?.text?.trim()??'';
@@ -7785,7 +7831,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        restoreError=null;
        attempted=false;
       });
-     },icon:const Icon(Icons.history_outlined,size:18),
+     }),icon:const Icon(Icons.history_outlined,size:18),
      label:WaffraText(waffraIsEnglish?
       'Import older copied backup (legacy)':'استيراد نسخة نصية قديمة (للتوافق فقط)')),
     if(stagedBackup!=null)...[
@@ -7794,9 +7840,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
       title:WaffraText(waffraIsEnglish?'Backup file loaded. Ready to verify.':'تم تحميل النسخة الاحتياطية وجاهزة للتحقق.'),
       trailing:IconButton(icon:const Icon(Icons.close),
        tooltip:waffraIsEnglish?'Clear backup':'إزالة النسخة الملصوقة',
-       onPressed:restoring?null:()=>update((){
+       onPressed:WaffraHaptics.tap(restoring?null:()=>update((){
         stagedBackup=null;restoreError=null;attempted=false;
-       }))),
+       })))),
     ],
     if(attempted&&stagedBackup==null)
      WaffraText(restoreError??(waffraIsEnglish?'Choose a backup file first.':'اختر ملف نسخة احتياطية أولًا.'),
@@ -7807,9 +7853,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
     ],
    ])),
    actions:[
-    TextButton(onPressed:restoring?null:()=>Navigator.pop(ctx),child:WaffraText(waffraIsEnglish?'Close':'إغلاق')),
+    TextButton(onPressed:WaffraHaptics.tap(restoring?null:()=>Navigator.pop(ctx)),child:WaffraText(waffraIsEnglish?'Close':'إغلاق')),
     if(mode==1)FilledButton(key:const Key('waffra-confirm-backup-restore'),
-     onPressed:restoring?null:()async {
+     onPressed:WaffraHaptics.tap(restoring?null:()async {
      update(()=>attempted=true);
      if(restoreSecret.text.isEmpty){
       update(()=>restorePasswordError=waffraIsEnglish?
@@ -7922,7 +7968,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      }finally{
       if(ctx.mounted)update(()=>restoring=false);
      }
-    },child:WaffraText(waffraIsEnglish?'Restore':'استعادة')),
+    }),child:WaffraText(waffraIsEnglish?'Restore':'استعادة')),
    ])));
   disposeLater([secret,restoreSecret]);
  }
@@ -7986,7 +8032,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
              padding:EdgeInsets.zero,foregroundColor:Colors.white,
              side:BorderSide(color:Colors.white.withValues(alpha:.23)),
              shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(10))),
-            onPressed:(){
+            onPressed:WaffraHaptics.tap((){
              if(digit=='back'){
               if(input.text.isEmpty)return;
               input.text=input.text.substring(0,input.text.length-1);
@@ -8004,7 +8050,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
                }
               });
              }
-            },
+            }),
             child:digit=='back'
              ?const Icon(Icons.backspace_outlined,size:20)
              :Text(digit,style:const TextStyle(fontFamily:'Tajawal',
@@ -8015,13 +8061,13 @@ Future<void> bulkSmsSheet({String? initialText})async {
         TextButton(
          style:TextButton.styleFrom(foregroundColor:Colors.white,
           backgroundColor:Colors.white.withValues(alpha:.12)),
-         onPressed:()=>Navigator.pop(dialogContext),
+         onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogContext)),
          child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء',
           style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold))),
         if(!autoAdvance)FilledButton(
          style:FilledButton.styleFrom(backgroundColor:emerald,
           foregroundColor:Colors.white),
-         onPressed:(){
+         onPressed:WaffraHaptics.tap((){
           final code=input.text.trim();
           update(()=>attempted=true);
           if(waffraPinFieldError(code,existing:existing)!=null)return;
@@ -8031,7 +8077,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
            return;
           }
           Navigator.pop(dialogContext,code);
-         },
+         }),
          child:WaffraText(waffraIsEnglish?'Confirm':'تأكيد',
           style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold))),
        ],
@@ -8187,10 +8233,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
         style:const TextStyle(fontSize:12)),
        const SizedBox(height:8),
        Wrap(alignment:WrapAlignment.spaceBetween,spacing:5,runSpacing:6,children:[
-        TextButton(onPressed:completeTour,child:WaffraText(waffraIsEnglish?'Skip':'تخطي')),
-        if(tourStep>0)TextButton(onPressed:previousTour,
+        TextButton(onPressed:WaffraHaptics.tap(completeTour),child:WaffraText(waffraIsEnglish?'Skip':'تخطي')),
+        if(tourStep>0)TextButton(onPressed:WaffraHaptics.tap(previousTour),
          child:WaffraText(waffraIsEnglish?'Back':'السابق')),
-        FilledButton(onPressed:advanceTour,
+        FilledButton(onPressed:WaffraHaptics.tap(advanceTour),
          child:WaffraText(tourStep==tourTabs.length-1?
           (waffraIsEnglish?'Finish':'إنهاء'):(waffraIsEnglish?'Next':'التالي'))),
        ]),
@@ -8283,7 +8329,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    leading:CircleAvatar(backgroundColor:tint.withValues(alpha:.12),child:Icon(icon,color:tint,size:21)),
    title:WaffraText(label,style:const TextStyle(fontWeight:FontWeight.bold)),
    subtitle:WaffraText(subtitle,maxLines:2,overflow:TextOverflow.ellipsis),
-   trailing:trailing??(onTap==null?null:const Icon(Icons.chevron_left)),onTap:onTap);
+   trailing:trailing??(onTap==null?null:const Icon(Icons.chevron_left)),onTap:WaffraHaptics.tap(onTap));
  Widget _accountSection(String heading,IconData icon,List<Widget> children) {
   final q=accountSearch.trim().toLowerCase();
   if(q.isNotEmpty&&_accountOpenSection!=heading)return const SizedBox.shrink();
@@ -8293,7 +8339,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    borderRadius:BorderRadius.circular(20),
    side:BorderSide(color:dim?const Color(0xFF456855):const Color(0xFFDCEAE1))),
    child:Column(children:[
-    InkWell(onTap:()=>setState(()=>_accountOpenSection=opened?null:heading),
+    InkWell(onTap:WaffraHaptics.tap(()=>setState(()=>_accountOpenSection=opened?null:heading)),
      borderRadius:BorderRadius.circular(20),
      child:Padding(padding:const EdgeInsets.all(15),child:Row(children:[
       CircleAvatar(radius:20,backgroundColor:emerald.withValues(alpha:.12),child:Icon(icon,color:emerald,size:21)),
@@ -8350,10 +8396,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
           title:WaffraText(option.label(waffraIsEnglish)),
           trailing:WaffraDisplayCurrency.country.code==option.code?
            const Icon(Icons.check_circle,color:emerald):null,
-          onTap:()=>Navigator.pop(ctx,option.code));
+          onTap:WaffraHaptics.tap(()=>Navigator.pop(ctx,option.code)));
         })),
       ])),
-      actions:[TextButton(onPressed:()=>Navigator.pop(ctx),
+      actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
        child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء'))],
      );
     }));
@@ -8394,7 +8440,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      border:Border.all(color:Theme.of(context).brightness==Brightness.dark?
       const Color(0xFF375C4A):const Color(0xFFDCEBE2))),
     child:Column(children:[
-     InkWell(onTap:edit,child:Stack(alignment:Alignment.bottomRight,children:[
+     InkWell(onTap:WaffraHaptics.tap(edit),child:Stack(alignment:Alignment.bottomRight,children:[
       waffraAvatar(p.gender,p.avatar,radius:42),
       const CircleAvatar(radius:14,backgroundColor:forest,
        child:Icon(Icons.camera_alt,size:16,color:Colors.white)),
@@ -8408,7 +8454,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       WaffraText(p.email,textAlign:TextAlign.center),
      ],
      const SizedBox(height:15),
-   OutlinedButton.icon(onPressed:edit,icon:const Icon(Icons.edit_outlined),
+   OutlinedButton.icon(onPressed:WaffraHaptics.tap(edit),icon:const Icon(Icons.edit_outlined),
     label:WaffraText(waffraIsEnglish?'Edit profile':'تعديل حسابي')),
     ])),
    const SizedBox(height:13),
@@ -8434,14 +8480,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
      title:WaffraText(waffraIsEnglish?'App currency by country':'عملة التطبيق حسب الدولة'),
      subtitle:WaffraText(WaffraDisplayCurrency.country.label(waffraIsEnglish)),
      trailing:const Icon(Icons.search_rounded),
-     onTap:chooseAppCurrency),
+     onTap:WaffraHaptics.tap(chooseAppCurrency)),
 
     ListTile(
      leading:const CircleAvatar(child:Icon(Icons.auto_awesome_outlined,color:emerald)),
      title:WaffraText(waffraIsEnglish?'Animations & effects':'الحركة والتأثيرات',style:const TextStyle(fontWeight:FontWeight.bold)),
      subtitle:WaffraText(waffraIsEnglish?'Choose motion intensity':'اختر مستوى الحركة في التطبيق'),
      trailing:DropdownButton<String>(value:waffraAnimationLevel.value,underline:const SizedBox.shrink(),
-      onChanged:(v){if(v!=null)setAnimationLevel(v);},items:[
+      onChanged:WaffraHaptics.selection((v){if(v!=null)setAnimationLevel(v);}),items:[
        DropdownMenuItem(value:'full',child:WaffraText(waffraIsEnglish?'Full':'كاملة')),
        DropdownMenuItem(value:'balanced',child:WaffraText(waffraIsEnglish?'Balanced':'متوازنة')),
        DropdownMenuItem(value:'reduced',child:WaffraText(waffraIsEnglish?'Reduced':'خفيفة')),
@@ -8452,13 +8498,13 @@ Future<void> bulkSmsSheet({String? initialText})async {
      trailing:SegmentedButton<String>(segments:const [
       ButtonSegment(value:'ar',label:Text('AR')),ButtonSegment(value:'en',label:Text('EN')),
      ],selected:{waffraLanguage.value},showSelectedIcon:false,
-     onSelectionChanged:(v)async{setState(()=>tab=0);await widget.onLanguage(v.first);})),
+     onSelectionChanged:WaffraHaptics.selection((v)async{setState(()=>tab=0);await widget.onLanguage(v.first);}))),
     ListTile(leading:const Icon(Icons.palette_outlined,color:emerald),
      title:WaffraText(waffraIsEnglish?'Appearance':'المظهر'),
      subtitle:WaffraText(widget.appearance=='system'?(waffraIsEnglish?'System default':'حسب إعدادات الجهاز'):
       widget.appearance=='dark'?(waffraIsEnglish?'Dark':'داكن'):(waffraIsEnglish?'Light':'فاتح')),
      trailing:DropdownButton<String>(value:widget.appearance,underline:const SizedBox.shrink(),
-      onChanged:(value){if(value!=null)widget.onAppearance(value);},
+      onChanged:WaffraHaptics.selection((value){if(value!=null)widget.onAppearance(value);}),
       items:[
        DropdownMenuItem(value:'system',child:WaffraText(waffraIsEnglish?'System default':'حسب الجهاز')),
        DropdownMenuItem(value:'light',child:WaffraText(waffraIsEnglish?'Light':'فاتح')),
@@ -8468,19 +8514,19 @@ Future<void> bulkSmsSheet({String? initialText})async {
    _accountSection(waffraIsEnglish?'Security & privacy':'الأمان والخصوصية',Icons.shield_outlined,[
     _accountTile(waffraIsEnglish?'PIN app lock':'قفل التطبيق برمز PIN',
      widget.pinEnabled?(waffraIsEnglish?'Enabled':'مفعّل'):(waffraIsEnglish?'Disabled':'غير مفعّل'),
-     widget.pinEnabled?Icons.lock:Icons.lock_open,onTap:configurePin),
+     widget.pinEnabled?Icons.lock:Icons.lock_open,onTap:WaffraHaptics.tap(configurePin)),
     if(widget.pinEnabled)_accountTile(waffraIsEnglish?'Change PIN':'تغيير رمز PIN',
      waffraIsEnglish?'Update your lock code':'تحديث رمز القفل',
-     Icons.password_outlined,onTap:changePin),
+     Icons.password_outlined,onTap:WaffraHaptics.tap(changePin)),
     SwitchListTile(secondary:const Icon(Icons.preview_outlined,color:emerald),
      title:WaffraText(waffraIsEnglish?'Protect Recent Apps preview':'حماية معاينة التطبيقات الأخيرة'),
-     value:protectRecentApps,onChanged:_setRecentAppProtection),
+     value:protectRecentApps,onChanged:WaffraHaptics.selection(_setRecentAppProtection)),
     ValueListenableBuilder<bool>(valueListenable:allowWaffraScreenshots,
      builder:(context,allowed,_)=>SwitchListTile(
       secondary:const Icon(Icons.screenshot_outlined,color:emerald),
       title:WaffraText(waffraIsEnglish?'Allow screenshots':'السماح بلقطات الشاشة'),
       subtitle:WaffraText(allowed?(waffraIsEnglish?'Allowed':'مسموح'):(waffraIsEnglish?'Blocked':'ممنوع')),
-      value:allowed,onChanged:(v)async{await setWaffraScreenshotsAllowed(v);if(mounted)setState((){});})),
+      value:allowed,onChanged:WaffraHaptics.selection((v)async{await setWaffraScreenshotsAllowed(v);if(mounted)setState((){});}))),
      ValueListenableBuilder<bool>(
       valueListenable:WaffraCrashlyticsOptIn.consent,
       builder:(context,allowed,_)=>SwitchListTile(
@@ -8490,62 +8536,62 @@ Future<void> bulkSmsSheet({String? initialText})async {
         ?(waffraIsEnglish?'Available after privacy and release verification':'ستتوفر بعد التحقق من الأمان والخصوصية')
         :(waffraIsEnglish?'Optional and disabled until you agree':'اختياري ولن يعمل إلا بموافقتك')),
        value:allowed&&waffraCrashlyticsReviewed,
-       onChanged:waffraCrashlyticsReviewed?(v)async{
+       onChanged:WaffraHaptics.selection(waffraCrashlyticsReviewed?(v)async{
         await WaffraCrashlyticsOptIn.setConsent(v);
-       }:null)),
+       }:null))),
    ]),
    _accountSection(waffraIsEnglish?'Financial tools':'الأدوات المالية',Icons.account_balance_wallet_outlined,[
     _accountTile(waffraIsEnglish?'Currency converter & global gold prices':
        'محوّل العملات وأسعار الذهب العالمية',
      waffraIsEnglish?'Search, exchange and swap currencies':'ابحث وحوّل وبدّل بين العملات',
-     Icons.currency_exchange,onTap:()=>Navigator.push<void>(context,MaterialPageRoute(
-      builder:(_)=>const CurrencyConverterPage()))),
+     Icons.currency_exchange,onTap:WaffraHaptics.tap(()=>Navigator.push<void>(context,MaterialPageRoute(
+      builder:(_)=>const CurrencyConverterPage())))),
 
     _accountTile(waffraIsEnglish?'Financial calendar':'التقويم المالي',
      waffraIsEnglish?'Transactions and recurring dates':'المعاملات ومواعيد العمليات المتكررة',
-     Icons.calendar_month_outlined,onTap:openFinancialCalendar),
+     Icons.calendar_month_outlined,onTap:WaffraHaptics.tap(openFinancialCalendar)),
     _accountTile(waffraIsEnglish?'Subscription insights':'كشف الاشتراكات',
      waffraIsEnglish?'Recurring costs and possible subscriptions':'المدفوعات الدورية والاشتراكات المحتملة',
-     Icons.subscriptions_outlined,onTap:openSubscriptionInsights),
+     Icons.subscriptions_outlined,onTap:WaffraHaptics.tap(openSubscriptionInsights)),
    ]),
    _accountSection(waffraIsEnglish?'Backup & data':'النسخ الاحتياطي والبيانات',Icons.cloud_outlined,[
     _accountTile(waffraIsEnglish?'Encrypted backup & restore':'النسخ الاحتياطي المشفر والاستعادة',
      lastBackupGeneratedAt==null?(waffraIsEnglish?'No encrypted backup generated yet':'لم يتم إنشاء نسخة مشفرة بعد'):
       (waffraIsEnglish?'Last encrypted copy: ':'آخر نسخة مشفرة: ')+dayText(DateTime.tryParse(lastBackupGeneratedAt!)?.toLocal()??DateTime.now())+
        ' • ${((lastBackupBytes??0)/1024).toStringAsFixed(1)} KB',
-     Icons.backup_outlined,onTap:backupDialog),
+     Icons.backup_outlined,onTap:WaffraHaptics.tap(backupDialog)),
     _accountTile(waffraIsEnglish?'Delete financial data':'حذف البيانات المالية',
      waffraIsEnglish?'Fingerprint verification and final confirmation required':'يتطلب البصمة وتأكيد الحذف النهائي',
-     Icons.delete_forever,tint:Colors.red,onTap:eraseFinancialData),
+     Icons.delete_forever,tint:Colors.red,onTap:WaffraHaptics.tap(eraseFinancialData)),
     _accountTile(waffraIsEnglish?'Delete account & cloud data':'حذف الحساب وبيانات السحابة',
      waffraAccountDeletionReleased
       ?(waffraIsEnglish?'Fresh Google verification required':'يتطلب إعادة التحقق من Google')
       :(waffraIsEnglish?'Available after deletion verification':'متاح بعد اجتياز اختبارات الحذف الآمن'),
      Icons.person_remove_outlined,tint:Colors.red,
-     onTap:()=>Navigator.push<void>(context,MaterialPageRoute(
+     onTap:WaffraHaptics.tap(()=>Navigator.push<void>(context,MaterialPageRoute(
       builder:(_)=>WaffraAccountDeletionPage(
-       english:waffraIsEnglish,onAccountDeleted:widget.onLogout)))),
+       english:waffraIsEnglish,onAccountDeleted:widget.onLogout))))),
    ]),
    _accountSection(waffraIsEnglish?'Help & about':'المساعدة وعن وفرة',Icons.help_outline_rounded,[
     _accountTile(waffraIsEnglish?'Replay app tour':'إعادة الجولة التعريفية',
      waffraIsEnglish?'Learn Waffra features':'تعرف على خصائص وفرة',
-     Icons.help_outline,onTap:beginTour),
+     Icons.help_outline,onTap:WaffraHaptics.tap(beginTour)),
     _accountTile(waffraIsEnglish?'About Waffra':'عن وفرة',
      waffraIsEnglish?'On-device financial management':'إدارة مالية تحفظ بياناتك محليًا',
-     Icons.info_outline,onTap:()=>showAboutDialog(context:context,applicationName:'وفرة | Waffra',
+     Icons.info_outline,onTap:WaffraHaptics.tap(()=>showAboutDialog(context:context,applicationName:'وفرة | Waffra',
       children:[WaffraText(waffraIsEnglish?'No bank account integration. Your data stays on your device.':
-       'لا يوجد ربط بالحسابات البنكية؛ بياناتك محفوظة على جهازك.')]))
+       'لا يوجد ربط بالحسابات البنكية؛ بياناتك محفوظة على جهازك.')])))
    ]),
    const SizedBox(height:15),
    OutlinedButton.icon(style:OutlinedButton.styleFrom(
     foregroundColor:(isGuest)?emerald:Colors.red,
     side:BorderSide(color:(isGuest)?emerald:Colors.red)),
-    onPressed:()async{
+    onPressed:WaffraHaptics.tap(()async{
      if(isGuest){await widget.onLogout();return;}
      final ok=await confirm(waffraIsEnglish?'Sign out?':'تسجيل الخروج',
       waffraIsEnglish?'Your financial data stays on this device.':'ستبقى بياناتك المالية محفوظة على الجهاز.');
      if(ok==true&&mounted)await widget.onLogout();
-    },
+    }),
     icon:Icon((isGuest)?Icons.login:Icons.logout),
     label:WaffraText((isGuest)?
      (waffraIsEnglish?'Sign in':'تسجيل الدخول'):(waffraIsEnglish?'Sign out':'تسجيل الخروج'))),
@@ -8566,7 +8612,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   elevation:7,shadowColor:Colors.black12,
   shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(25),side:BorderSide(color:Theme.of(context).brightness==Brightness.dark?const Color(0xFF89E0BB):forest,width:1.2)),
   child:InkWell(
-   onTap:onTap,
+   onTap:WaffraHaptics.tap(onTap),
    borderRadius:BorderRadius.circular(25),
    child:Padding(padding:const EdgeInsets.symmetric(horizontal:15,vertical:11),
     child:Row(mainAxisSize:MainAxisSize.min,children:[
@@ -8616,7 +8662,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    toolbarHeight:_headerCompact?52:64,
    flexibleSpace:const ColoredBox(color:forest),
    leading:goalsOpened?IconButton(tooltip:waffraIsEnglish?'Back to home':'العودة للرئيسية',
-    icon:const Icon(Icons.arrow_back),onPressed:()=>setState(()=>goalsOpened=false)):null,
+    icon:const Icon(Icons.arrow_back),onPressed:WaffraHaptics.tap(()=>setState(()=>goalsOpened=false))):null,
    titleSpacing:12,
    title:Row(mainAxisSize:MainAxisSize.min,children:[
     const Icon(Icons.spa_rounded,color:Colors.white,size:26),
@@ -8628,10 +8674,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
    actions:[
     Tooltip(message:waffraIsEnglish?'Switch to Arabic':'Switch to English',
      child:TextButton(
-      onPressed:(){
+      onPressed:WaffraHaptics.tap((){
        if(addFabExpanded||_fabPressed)setState((){addFabExpanded=false;_fabPressed=false;});
        widget.onLanguage(waffraIsEnglish?'ar':'en');
-      },
+      }),
       style:TextButton.styleFrom(
        foregroundColor:Colors.white,minimumSize:const Size(43,37),
        padding:const EdgeInsets.symmetric(horizontal:8),
@@ -8642,9 +8688,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
     const SizedBox(width:7),
     SizedBox(width:45,height:kToolbarHeight,
      child:Center(child:InkWell(
-      onTap:()=>setState((){
+      onTap:WaffraHaptics.tap(()=>setState((){
        addFabExpanded=false;goalsOpened=false;tab=4;
-      }),
+      })),
       borderRadius:BorderRadius.circular(30),
       child:waffraAvatar(widget.profile.gender,widget.profile.avatar,radius:18)))),
     const SizedBox(width:7),
@@ -8677,24 +8723,24 @@ Future<void> bulkSmsSheet({String? initialText})async {
         _addMenuOption(
          icon:Icons.edit_note_rounded,
          label:waffraIsEnglish?'Manual transaction':'عملية يدوية',
-         onTap:(){
+         onTap:WaffraHaptics.tapRequired((){
           unawaited(_launchAddAction(()=>entrySheet(),fromMenu:true));
-         }),
+         })),
         const SizedBox(height:7),
         _addMenuOption(
          icon:Icons.sms_outlined,
          label:waffraIsEnglish?'Bank message':'رسالة بنكية',
-         onTap:(){
+         onTap:WaffraHaptics.tapRequired((){
           unawaited(_launchAddAction(()=>bulkSmsSheet(),fromMenu:true));
-         }),
+         })),
         ]else...[
          _addMenuOption(icon:Icons.trending_up,
           label:waffraIsEnglish?'Income category':'إضافة قسم دخل',
-          onTap:(){unawaited(_launchAddAction(()=>chooseCategoryLevel(income:true),fromMenu:true));}),
+          onTap:WaffraHaptics.tapRequired((){unawaited(_launchAddAction(()=>chooseCategoryLevel(income:true),fromMenu:true));})),
          const SizedBox(height:7),
          _addMenuOption(icon:Icons.trending_down,
           label:waffraIsEnglish?'Expense category':'إضافة قسم مصروفات',
-          onTap:(){unawaited(_launchAddAction(()=>chooseCategoryLevel(income:false),fromMenu:true));}),
+          onTap:WaffraHaptics.tapRequired((){unawaited(_launchAddAction(()=>chooseCategoryLevel(income:false),fromMenu:true));})),
         ]
        ]),
      ),
@@ -8752,10 +8798,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
    WaffraFooterNavigation(
     selectedIndex:tab,
     english:waffraIsEnglish,
-    onSelected:(selected){
+    onSelected:WaffraHaptics.selectionRequired((selected){
      waffraDismissFooterNotice();
      unawaited(selectFooter(selected));
-    },
+    }),
     profileSpotlightKey:_tourKeys[5],
    ),
   ])),
@@ -8787,7 +8833,7 @@ class WaffraDeletedItemsButton extends StatelessWidget {
   final dark=Theme.of(context).brightness==Brightness.dark;
   final red=dark?const Color(0xFFFF9090):const Color(0xFFB42332);
   return OutlinedButton(
-   onPressed:onPressed,
+   onPressed:WaffraHaptics.tap(onPressed),
    style:OutlinedButton.styleFrom(
     foregroundColor:red,backgroundColor:dark?const Color(0xFF3C242A):const Color(0xFFFFF4F4),
     side:BorderSide(color:red,width:1.4),

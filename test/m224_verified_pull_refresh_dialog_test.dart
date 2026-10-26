@@ -24,9 +24,9 @@ void main() {
     expect(code,contains("'هل تم الدفع، أم ترغب في تأجيل الاستحقاق؟'"));
     expect(code,contains("Directionality(textDirection:TextDirection.ltr,"));
     expect(code,contains("actions:[SizedBox(width:min(330.0"));
-    expect(code,contains("Expanded(child:FilledButton(onPressed:()=>Navigator.pop(ctx,'paid')"));
-    expect(code,contains("Expanded(child:OutlinedButton(onPressed:()=>Navigator.pop(ctx,'postpone')"));
-    expect(code,contains("Expanded(child:OutlinedButton(onPressed:()=>Navigator.pop(ctx,'later')"));
+    expect(code,contains("Expanded(child:FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,'paid'))"));
+    expect(code,contains("Expanded(child:OutlinedButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,'postpone'))"));
+    expect(code,contains("Expanded(child:OutlinedButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,'later'))"));
   });
 
   test('M224 currency converter refresh invalidates FX and forces gold reload', () {
