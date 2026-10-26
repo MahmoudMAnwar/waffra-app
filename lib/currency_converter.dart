@@ -361,7 +361,8 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
       icon:const Icon(Icons.currency_exchange),
       label:WaffraText(waffraIsEnglish?
        'Convert gold value to SAR, EGP or any currency':
-       'حوّل قيمة الذهب إلى ريال أو جنيه مصري أو أي عملة')),
+       'حوّل قيمة الذهب إلى ريال أو جنيه مصري أو أي عملة',
+        maxLines:2,textAlign:TextAlign.center,softWrap:true)),
     ])),
    const SizedBox(height:12),
    WaffraMarketAccordionCard(
