@@ -88,6 +88,14 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
     _financeBinding=binding;
    }
    final loaded=await _financeAuthority.load(route:WaffraFinanceRoute.widgetRead);
+   // A standalone Android Widget is a separate Flutter engine: it must
+   // validate the canonical finance snapshot exactly like Home does.
+   // A malformed ledger or trashed category is NOT an empty balance.
+   loaded.finance.requireIntegrity();
+   if(loaded.source==WaffraRuntimeFinanceBackend.verifiedEncrypted &&
+      loaded.ledgerRaw==null){
+    throw StateError('Encrypted widget ledger is missing.');
+   }
    if(!mounted)return;
    setState((){
     _english=prefs.getString('waffra_language')=='en';
@@ -183,7 +191,18 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
    // user-confirmed ledger+fingerprint writer; duplicate checks happen under
    // its shared cross-engine file lock rather than in stale widget state.
    final loaded=await _financeAuthority.load(route:WaffraFinanceRoute.widgetRead);
+   loaded.finance.requireIntegrity();
+   // Source changes while this short-lived widget is open require reopening
+   // and fresh duplicate analysis. Never commit an old SMS selection across
+   // a legacy-to-encrypted (or encrypted-to-recovery) transition.
+   if(_legacySource!=(loaded.source==WaffraRuntimeFinanceBackend.guardedLegacy)){
+    throw StateError('Widget finance source changed; reload required.');
+   }
    final categoriesRaw=loaded.finance.getString('waffra_categories_v24');
+   if(loaded.source==WaffraRuntimeFinanceBackend.verifiedEncrypted &&
+      (loaded.ledgerRaw==null||categoriesRaw==null)){
+    throw StateError('Encrypted widget ledger/category catalog is missing.');
+   }
    final categories=categoriesRaw==null?defaultCategories():
     (jsonDecode(categoriesRaw) as List)
      .map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x as Map)))
@@ -192,6 +211,13 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
    final hashes=<String>[];
    for(final entry in selected){
     final parsed=entry.result;
+    // An encrypted catalog with no matching income/expense leaves is a
+    // source-integrity issue. Never invent an 'Other' category and save to
+    // a different financial classification after SQLCipher activation.
+    if(loaded.source==WaffraRuntimeFinanceBackend.verifiedEncrypted &&
+       !categories.any((c)=>c.income==parsed.income)){
+     throw StateError('No verified encrypted category for this transaction.');
+    }
     final category=categories.any((c)=>c.income==parsed.income&&c.name==parsed.category)
       ?parsed.category
       :(categories.where((c)=>c.income==parsed.income).isNotEmpty

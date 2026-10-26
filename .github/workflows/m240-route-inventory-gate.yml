@@ -1,0 +1,61 @@
+name: M240 SQLCipher Route Inventory and Real-Writer Smoke (QA ONLY)
+
+on:
+  pull_request:
+    branches:
+      - qa/m236-parallel-20-route-integration-20261026
+    paths:
+      - '.github/workflows/m240-route-inventory-gate.yml'
+      - 'test/storage/m236_remaining_20_route_matrix_test.dart'
+      - 'test/storage/m235_verified_encrypted_backup_export_route_test.dart'
+      - 'docs/qa/m240-route-inventory-and-runtime-evidence.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# These independent jobs cover evidence that M236's per-route --plain-name
+# jobs do not run. Neither job promotes synthetic CI to a production cutover.
+jobs:
+  exact-24-route-inventory:
+    name: Verify complete 24-route inventory independently
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve dependencies
+        run: flutter pub get
+      - name: Ensure twenty remaining routes plus four M235 routes equal all 24
+        run: |
+          set -euo pipefail
+          flutter test test/storage/m236_remaining_20_route_matrix_test.dart \
+            --plain-name "M236 inventory exactly equals the twenty routes outside M235"
+
+  independent-encrypted-writer-smoke:
+    name: Regress actual disposable SQLCipher receipts and backup writers
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve dependencies
+        run: flutter pub get
+      - name: Run positive encrypted write/read and backup regressions
+        run: |
+          set -euo pipefail
+          flutter test test/storage/m235_verified_encrypted_backup_export_route_test.dart
