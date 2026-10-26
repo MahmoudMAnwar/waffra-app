@@ -457,3 +457,12 @@ M208 encrypted-legacy privacy constraint: When verified SQLCipher is not active,
 - Retain registered EIA API and public FRED as alternate verified routes without overwriting valid official observations. USD/barrel for crude, USD/MMBtu for Henry Hub; unavailable stays unavailable for Oman/Dubai.
 - Add keyless 403, bad units, invalid week, partial-source regression tests and M261 SHA-pinned no-finance scope review. No SQLCipher live cutover or finance write changes.
 - This is a code-side fix, NOT proof of a verified real Android response, completed signed APK, or production security certification. Verify full same-SHA CI and actual phone before marking the symptom resolved.
+
+[M262] Notes and original encrypted bank SMS separation — 2026-10-26
+- In transaction details, show two separate fields for SMS transactions: "Notes/الملاحظات" from the ordinary transaction record, and "Original bank message (encrypted)/تفاصيل الرسالة البنكية الأصلية (مشفّرة)" read-only from the verified SQLCipher vault. Keep full selectable text without truncation and distinct light/dark accessible borders.
+- Fix the disappearing original when notes are edited: readProtectedOriginalSms(entry.id) must execute for every confirmed SMS transaction ID, regardless of entry.notes contents. Never copy decrypted vault text into the editable notes field or change encrypted SMS bytes because notes were edited.
+- New single-SMS paste screen no longer displays original SMS as readonly personal notes; original SMS is still provided to the protected confirmation writer, with the pre-existing legacy plaintext-redaction/duplicate guards preserved. User notes can be added or changed later from Edit Transaction.
+- Display explicit no-notes and verified-original-unavailable states without fabricating an original. Preserve the older records without destructive migration or source cutover. Test empty notes, edited notes, unavailable encrypted vault and full original fidelity.
+- UI/source-boundary QA only. No SQLCipher production activation, database migration, new real-user-data claim or signed APK acceptance before full same-SHA test and owner device verification.
+
+[M263] Same-main consolidated QA candidate for M261 + M262. Do not merge until complete exact head Flutter, Android and independent CI success; no finance migration or SQLCipher production enablement.
