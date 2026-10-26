@@ -68,6 +68,10 @@ class WaffraAtomicEncryptedReceiptTransactionWriter {
     }
     const permitted = {
       'id', 'title', 'category', 'amount', 'income', 'date', 'receiptPath',
+      // Preserve user-entered manual transaction fields in the SAME SQLCipher
+      // snapshot and typed row; discarding notes when attaching an invoice
+      // would silently lose data even if the receipt bytes were encrypted.
+      'notes', 'sourceType', 'merchantKey',
     };
     if (record.keys.any((key) => !permitted.contains(key)) ||
         record['receiptPath'] != null && record['receiptPath'] != '' ||
@@ -85,7 +89,17 @@ class WaffraAtomicEncryptedReceiptTransactionWriter {
         (record['amount'] as num) <= 0 ||
         record['income'] is! bool ||
         record['date'] is! String ||
-        DateTime.tryParse(record['date'] as String) == null) {
+        DateTime.tryParse(record['date'] as String) == null ||
+        (record['notes'] != null &&
+            (record['notes'] is! String ||
+             (record['notes'] as String).runes.length > 16000)) ||
+        (record['sourceType'] != null &&
+            record['sourceType'] != 'manual' &&
+            record['sourceType'] != 'sms') ||
+        (record['merchantKey'] != null &&
+            (record['merchantKey'] is! String ||
+             (record['merchantKey'] as String).length > 256)) ||
+        (record['sourceType'] == 'sms' && smsHash == null)) {
       throw ArgumentError('Untrusted financial entry or legacy receipt path.');
     }
     if (smsHash != null &&
