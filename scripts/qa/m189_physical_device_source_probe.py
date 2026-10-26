@@ -11,6 +11,7 @@ import argparse
 import datetime as dt
 import hashlib
 import json
+import os
 import re
 import secrets
 import subprocess
@@ -155,6 +156,16 @@ def capture(
     }
 
 
+def _write_private_report(path: Path, report: dict[str, object]) -> None:
+    if not hasattr(os, "O_NOFOLLOW"):
+        raise HardwareEvidenceRefused("Secure private evidence creation unavailable.")
+    flags = (os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW |
+             getattr(os, "O_CLOEXEC", 0))
+    with os.fdopen(os.open(path, flags, 0o600), "w", encoding="utf-8") as fp:
+        json.dump(report, fp, indent=2)
+        fp.write("\n")
+
+
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--check-contract", action="store_true",
@@ -178,15 +189,14 @@ def main() -> int:
         output = capture()
         args.output.parent.mkdir(parents=True, exist_ok=True)
         # Private local file, never public CI log nor APK asset.
-        with args.output.open("x", encoding="utf-8") as fp:
-            import os
-            os.chmod(args.output, 0o600)
-            json.dump(output, fp, indent=2)
-            fp.write("\n")
+        _write_private_report(args.output, output)
         print("Captured two physical devices; runtime routes remain NO-GO.")
         return 0
-    except (HardwareEvidenceRefused, FileExistsError) as ex:
+    except HardwareEvidenceRefused as ex:
         print("M189 BLOCKED: " + str(ex))
+        return 2
+    except OSError:
+        print("M189 BLOCKED: private evidence output unavailable or already exists.")
         return 2
 
 
