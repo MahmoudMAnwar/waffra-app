@@ -17,6 +17,7 @@ FILES = {
     "scripts/qa/m268_scope_review.py",
     ".github/workflows/m268-smart-features.yml",
     ".github/workflows/m147-final-main-review-gate.yml",
+    ".github/workflows/m267-android-exact-apk-identity.yml",
 }
 def git(*args):
     return subprocess.check_output(["git",*args],text=True).strip()
@@ -38,6 +39,10 @@ def main():
         "saveCaptured(","commitConfirmedSms(","http.get(","readProtectedOriginalSms("):
         demand(forbidden not in source,"smart tools cannot access persistence or network: "+forbidden)
     demand("production_release_allowed" not in source,"no release certification from UI")
+    foreign=Path(".github/workflows/m267-android-exact-apk-identity.yml").read_text()
+    demand("github.head_ref == 'qa/m267-exact-sha-two-android-identity-20261027'" in foreign,
+           "M267 unrelated-source review must be branch-scoped")
+
     demand("class WaffraSmartFeaturesPage" in source,
            "additive feature screen unavailable")
     for topic in ("runway","subscription","simulation","guardian","assistant",
