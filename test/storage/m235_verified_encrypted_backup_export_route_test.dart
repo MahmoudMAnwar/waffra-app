@@ -13,7 +13,6 @@ import 'package:waffra/storage/waffra_encrypted_store.dart';
 import 'package:waffra/storage/waffra_fresh_encrypted_vault_bootstrap.dart';
 import 'package:waffra/storage/waffra_live_legacy_finance_guard.dart';
 import 'package:waffra/storage/waffra_portable_backup_v2.dart';
-import 'package:waffra/storage/waffra_portable_encrypted_vault_restorer.dart';
 import 'package:waffra/storage/waffra_production_finance_routing_gate.dart';
 import 'package:waffra/storage/waffra_production_finance_source_guard.dart';
 import 'package:waffra/storage/waffra_verified_encrypted_finance_bridge.dart';
