@@ -115,6 +115,16 @@ def attest(
     }
 
 
+def _write_private_report(path: Path, report: dict[str, object]) -> None:
+    if not hasattr(os, "O_NOFOLLOW"):
+        raise SignedApkPreflightRefused("Secure private evidence creation unavailable.")
+    flags = (os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW |
+             getattr(os, "O_CLOEXEC", 0))
+    with os.fdopen(os.open(path, flags, 0o600), "w", encoding="utf-8") as out:
+        json.dump(report, out, indent=2)
+        out.write("\n")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apk", type=Path, required=True)
@@ -129,14 +139,14 @@ def main() -> int:
             expected_cert_sha256=args.expected_cert_sha256,
         )
         args.output.parent.mkdir(parents=True, exist_ok=True)
-        with args.output.open("x", encoding="utf-8") as out:
-            os.chmod(args.output, 0o600)
-            json.dump(report, out, indent=2)
-            out.write("\n")
+        _write_private_report(args.output, report)
         print("M190 signed APK preflight passed; release remains NO-GO.")
         return 0
-    except (SignedApkPreflightRefused, FileExistsError) as exc:
+    except SignedApkPreflightRefused as exc:
         print("M190 BLOCKED: " + str(exc))
+        return 2
+    except OSError:
+        print("M190 BLOCKED: private evidence output unavailable or already exists.")
         return 2
 
 
