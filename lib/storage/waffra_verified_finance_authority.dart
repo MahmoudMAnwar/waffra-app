@@ -600,6 +600,12 @@ class WaffraVerifiedFinanceAuthority {
     }
     if (backend == WaffraRuntimeFinanceBackend.verifiedEncrypted &&
         route == WaffraFinanceRoute.manualTransactionSave) {
+      // Only an explicitly approved form submit can append a new SQLCipher
+      // transaction. The writer must never upgrade a generic persist()
+      // snapshot into consent on behalf of the user.
+      if (!userConfirmed) {
+        throw StateError('Manual SQLCipher transaction requires user confirmation.');
+      }
       // A manual form's full Home capture is NOT an authorization to replace
       // older finance data. Extract exactly one new record, preserve every
       // previous field and let the atomic SQLCipher entry writer append it

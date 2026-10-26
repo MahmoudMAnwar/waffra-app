@@ -413,6 +413,12 @@ class WaffraVerifiedEncryptedFinanceBridge {
             !actualHashes.containsAll(expectedHashes)) {
           throw StateError('SQLCipher hash projection differs from finance.');
         }
+        // An already empty ledger/hash set is not a deletion. Reject the
+        // stale/no-op confirmation instead of reporting success or rotating
+        // the encrypted snapshot generation without changing any data.
+        if (decoded.isEmpty && expectedHashes.isEmpty) {
+          throw StateError('There are no transactions or hashes to delete.');
+        }
         await snapshot.store.customStatement(
           'DELETE FROM fresh_finance_entries',
         );
