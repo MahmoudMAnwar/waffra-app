@@ -3,15 +3,16 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:crypto/crypto.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:waffra/storage/legacy_snapshot_preflight.dart';
 import 'package:waffra/storage/waffra_atomic_finance_snapshot.dart';
 import 'package:waffra/storage/waffra_encrypted_cutover_journal.dart';
 import 'package:waffra/storage/waffra_encrypted_finance_session.dart';
 import 'package:waffra/storage/waffra_encrypted_store.dart';
+import 'package:waffra/storage/waffra_fresh_encrypted_vault_bootstrap.dart';
 import 'package:waffra/storage/waffra_live_legacy_finance_guard.dart';
 import 'package:waffra/storage/waffra_portable_backup_v2.dart';
-import 'package:waffra/storage/waffra_portable_encrypted_vault_restorer.dart';
 import 'package:waffra/storage/waffra_production_finance_routing_gate.dart';
 import 'package:waffra/storage/waffra_production_finance_source_guard.dart';
 import 'package:waffra/storage/waffra_verified_encrypted_finance_bridge.dart';
@@ -46,43 +47,29 @@ void main() {
       File('${directory.path}/already-activated-synthetic.sqlite'),
       key: 'm235-disposable-sqlcipher-key-only',
     );
-    final encrypted = await WaffraPortableBackupV2.create(
-      financialSnapshot: {
-        'entries': jsonEncode([{
-          'id': 'synthetic-sms',
-          'title': 'Safe transfer',
-          'category': 'Income',
-          'amount': 225.0,
-          'income': true,
-          'date': '2026-10-26T00:00:00Z',
-          'sourceType': 'sms',
-          'notes': sms,
-          'receiptPath': '/old-device/synthetic-invoice.png',
-        }]),
-        'waffra_categories_v24': '[]',
-        'waffra_goals_v24': '[]',
-      },
-      receipts: [
-        const WaffraReceiptBackupPart(
-          entryId: 'synthetic-sms', position: 0, bytes: [137, 80, 78, 71, 13],
-        ),
-      ],
-      password: password,
-    );
-    await WaffraPortableEncryptedVaultRestorer(
-      disposableStore: store, experimentalEnabled: true,
-    ).restore(encryptedArchive: encrypted, password: password);
-
+    // Build an EMPTY disposable SQLCipher source first. The cutover journal
+    // must NEVER verify a pre-activation ledger with unaccounted receipts.
+    // Only AFTER the empty source is verified and activated in this synthetic
+    // fixture do we append bank details and invoice bytes atomically.
+    await WaffraFreshEncryptedVaultBootstrap(
+      store: store, experimentalEnabled: true,
+    ).initialize(decision: WaffraFirstRunDecision.freshCandidate);
     final snapshot = WaffraAtomicFinanceSnapshot(
       store: store, experimentalEnabled: true,
     );
     final journal = WaffraEncryptedCutoverJournal(
       store: store, snapshot: snapshot, experimentalEnabled: true,
     );
+    await snapshot.initializeEmpty();
+    final initial = await snapshot.commit(
+      expectedGeneration: 0,
+      fullFinanceSnapshot: const <String, Object?>{'entries': '[]'},
+    );
     final source = WaffraLegacyPreflight.inspect(
       const <String, Object?>{'entries': '[]'},
     );
     final current = await snapshot.read();
+    expect(current.digest, initial.digest);
     await journal.prepare(
       sourceDigest: source.sourceSha256,
       targetDigest: current.digest,
@@ -120,6 +107,28 @@ void main() {
         legacyParityVerified: true,
       ),
     );
+    // This source is already activated in the disposable test fixture.
+    // Injecting the existing financial message and encrypted receipt AFTER
+    // source activation proves the real app/widget native-locked writer.
+    final inserted = await authority.commitWithReceiptBytes(
+      route: WaffraFinanceRoute.receiptCopyAndAttach,
+      record: <String, Object?>{
+        'id': 'synthetic-sms',
+        'title': 'Safe transfer',
+        'category': 'Income',
+        'amount': 225.0,
+        'income': true,
+        'date': '2026-10-26T00:00:00Z',
+        'sourceType': 'sms',
+        'notes': sms,
+        'merchantKey': '',
+        'receiptPath': null,
+      },
+      images: [Uint8List.fromList([137, 80, 78, 71, 13])],
+      userConfirmed: true,
+      smsHash: sha256.convert(utf8.encode(sms)).toString(),
+    );
+    expect(inserted.receiptCount, 1);
   });
 
   tearDown(() async {
