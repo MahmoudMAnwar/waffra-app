@@ -3,6 +3,9 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import json
+import os
+import stat
 from pathlib import Path
 import tempfile
 import unittest
@@ -114,6 +117,25 @@ class M190SignedApkPreflightTest(unittest.TestCase):
                 expected_cert_sha256=CERT,
                 command=command,
             )
+
+
+    def test_signed_evidence_output_is_exclusive_and_owner_only(self):
+        output = Path(self.temp.name) / "signed.json"
+        m190._write_private_report(output, {"status": "NO_GO"})
+        self.assertEqual(stat.S_IMODE(output.stat().st_mode), 0o600)
+        self.assertEqual(json.loads(output.read_text(encoding="utf-8")),
+                         {"status": "NO_GO"})
+        with self.assertRaises(FileExistsError):
+            m190._write_private_report(output, {"status": "FORGED_GO"})
+
+    def test_signed_evidence_output_refuses_symlink(self):
+        target = Path(self.temp.name) / "existing.json"
+        target.write_text("{}", encoding="utf-8")
+        alias = Path(self.temp.name) / "link.json"
+        alias.symlink_to(target)
+        with self.assertRaises(OSError):
+            m190._write_private_report(alias, {"status": "NO_GO"})
+        self.assertEqual(target.read_text(encoding="utf-8"), "{}")
 
 
 if __name__ == "__main__":
