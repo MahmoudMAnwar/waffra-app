@@ -6,6 +6,8 @@ void main() {
     final code=File('lib/main.dart').readAsStringSync();
     expect(code,contains('Future<void> _refreshFromVerifiedFinance()async'));
     expect(code,contains('await _financialWriteQueue.drain()'));
+    expect(code,contains('WaffraVerifiedPullRefreshSource.fromAuthority(current)'));
+    expect(code,contains('final nextCategories=catalog==null'));
     expect(code,contains('view.requireIntegrity()'));
     expect(code,contains('route:WaffraFinanceRoute.dashboardRead'));
     expect(code,contains('onRefresh:_refreshFromVerifiedFinance'));
