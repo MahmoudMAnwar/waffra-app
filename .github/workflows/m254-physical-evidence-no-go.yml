@@ -48,5 +48,17 @@ jobs:
           test/storage/m253_cumulative_production_release_refusal_test.dart
           --reporter expanded
 
+
+      - name: Same-SHA M248-M252 finance/SMS fail-closed regression
+        run: >
+          flutter test
+          test/storage/m175_live_finance_mutation_intent_test.dart
+          test/storage/m181_encrypted_catalog_atomic_install_test.dart
+          test/storage/m249_ui_finance_failure_refusal_test.dart
+          test/storage/m250_bulk_sms_uncertain_commit_ui_test.dart
+          test/storage/m251_sms_source_readiness_test.dart
+          test/storage/m252_single_sms_ui_recovery_test.dart
+          --reporter expanded
+
 # NEVER certify a physical phone from hosted-runner emulator/mock outputs.
 # NEVER sign, upload, install or publish an APK from this workflow.
