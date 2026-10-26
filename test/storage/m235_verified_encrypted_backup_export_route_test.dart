@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -195,6 +196,76 @@ void main() {
       "linked.single['receiptPath']!=encoded"));
     expect(code, contains(
       'showReceipt(e.receiptPath!,entryId:e.id)'));
+  });
+
+  test('M235 new manual transaction and receipts commit together on encrypted authority',
+      () async {
+    final confirmed = await authority.commitWithReceiptBytes(
+      route: WaffraFinanceRoute.receiptCopyAndAttach,
+      record: <String, Object?>{
+        'id': 'manual-new-with-invoice',
+        'title': 'Manual office purchase',
+        'category': 'Office',
+        'amount': 24.75,
+        'income': false,
+        'date': '2026-10-26T10:00:00.000Z',
+        'notes': 'Keep full typed notes on the encrypted ledger',
+        'sourceType': 'manual',
+        'merchantKey': '',
+        'receiptPath': null,
+      },
+      images: [Uint8List.fromList([137, 80, 78, 71, 11, 22])],
+      userConfirmed: true,
+    );
+    expect(confirmed.entryId, 'manual-new-with-invoice');
+    expect(confirmed.receiptCount, 1);
+    final saved = await authority.load(
+      route: WaffraFinanceRoute.dashboardRead);
+    final rows = jsonDecode(saved.ledgerRaw!) as List;
+    final record = rows.cast<Map>().singleWhere(
+      (entry) => entry['id'] == 'manual-new-with-invoice');
+    expect(record['notes'], 'Keep full typed notes on the encrypted ledger');
+    expect(record['sourceType'], 'manual');
+    expect(record['receiptPath'], startsWith('waffra-receipt://'));
+    final exact = await authority.loadEncryptedReceiptImages(
+      route: WaffraFinanceRoute.receiptView,
+      entryId: 'manual-new-with-invoice',
+    );
+    expect(exact.single.toList(), [137, 80, 78, 71, 11, 22]);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('entries'), '[]');
+    expect(prefs.containsKey('waffra_categories_v24'), isFalse);
+  });
+
+  test('M235 cancelled atomic invoice append never writes transaction or image',
+      () async {
+    await expectLater(authority.commitWithReceiptBytes(
+      route: WaffraFinanceRoute.receiptCopyAndAttach,
+      record: <String, Object?>{
+        'id': 'cancelled-invoice',
+        'title': 'Never saved',
+        'category': 'Office',
+        'amount': 12.5,
+        'income': false,
+        'date': '2026-10-26T10:00:00.000Z',
+        'receiptPath': null,
+      },
+      images: [Uint8List.fromList([1, 2, 3])],
+      userConfirmed: false,
+    ), throwsStateError);
+    final state = await authority.load(route: WaffraFinanceRoute.dashboardRead);
+    expect(state.ledgerRaw, isNot(contains('cancelled-invoice')));
+  });
+
+  test('M235 selected manual receipt picker remains in-memory on SQLCipher',
+      () async {
+    final code = File('lib/main.dart').readAsStringSync();
+    expect(code, contains('final pendingEncryptedImages=<Uint8List>[];'));
+    expect(code, contains(
+      'await _financeAuthority.commitWithReceiptBytes('));
+    expect(code, contains('final staged=<Uint8List>[];'));
+    expect(code, contains('Uint8List.fromList(await file.readAsBytes())'));
+    expect(code, contains('WaffraFinanceRoute.receiptCopyAndAttach'));
   });
 
   test('M235 image-picker never copies plaintext files after encrypted source selection',
