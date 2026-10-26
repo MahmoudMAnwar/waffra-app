@@ -47,8 +47,8 @@ class _WaffraOilMarketSectionState extends State<WaffraOilMarketSection>{
   }catch(_){
    if(!mounted||request!=generation)return;
    setState(()=>issue=quotes.isEmpty?
-     t('Official oil price feed is unavailable or not configured. No sample prices are shown.',
-       'مصدر أسعار البترول الرسمي غير متاح أو غير مفعّل. لن نعرض أسعارًا تجريبية.'):
+     t('Published oil prices are unavailable. No sample prices are shown.',
+       'الأسعار المنشورة غير متاحة الآن. لن نعرض أسعارًا تجريبية.'):
      t('Unable to refresh; displaying last read data with its original date.',
        'تعذر التحديث؛ نعرض آخر قراءة بتاريخها الأصلي.'));
   }finally{if(mounted&&request==generation)setState(()=>loading=false);}
@@ -250,8 +250,8 @@ class _WaffraOilMarketSectionState extends State<WaffraOilMarketSection>{
     const SizedBox(height:11),
     calculator(),
     const SizedBox(height:12),
-    Text(t('Source: U.S. EIA daily Brent/WTI spot (when configured). Oman, Dubai and gas require separately verified feeds. Oil estimates exclude taxes, freight, local premiums and fees. Graphs appear only from verified historic observations.',
-      'المصدر: بيانات EIA اليومية لبرنت وغرب تكساس عند تفعيل المصدر. عُمان ودبي والغاز يتطلبون مصدرًا موثّقًا منفصلًا. الأسعار استرشادية ولا تشمل النقل والضرائب والرسوم. لا نعرض رسمًا بيانيًا إلا من قراءات فعلية.'),
+    Text(t('Source: U.S. EIA daily Brent, WTI and Henry Hub gas spot observations via public FRED (or EIA API). Oman and Dubai require verified feeds. Oil estimates exclude taxes, freight, local premiums and fees. Graphs appear only from verified historic observations.',
+      'المصدر: بيانات EIA اليومية لبرنت وغرب تكساس والغاز الطبيعي عبر FRED. خاما عُمان ودبي يحتاجان مصدرًا موثّقًا منفصلًا. الأسعار استرشادية ولا تشمل النقل والضرائب والرسوم. لا نعرض رسمًا بيانيًا إلا من قراءات فعلية.'),
      style:TextStyle(fontSize:10.5,color:Theme.of(context).hintColor)),
    ]),
   );
