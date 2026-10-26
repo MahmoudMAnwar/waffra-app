@@ -96,4 +96,101 @@ void main(){
    throwsStateError);
   fake.close();
  });
+
+ test('official keyless EIA daily HTML parses dates and rejects wrong units',(){
+  final monday=DateTime.utc(2026,10,19);
+  const fixture='<html><title>Europe Brent Spot Price FOB '
+   '(Dollars per Barrel)</title><table><tr>'
+   '<th>Week Of</th><th>Mon</th><th>Tue</th><th>Wed</th>'
+   '<th>Thu</th><th>Fri</th></tr>'
+   '<tr><td>2026 Oct-19 to Oct-23</td><td>118.82</td>'
+   '<td>115.22</td><td></td><td>NA</td><td></td></tr>'
+   '</table></html>';
+  final quote=WaffraOilService.parseEiaDailyHtml('BRENT',fixture);
+  expect(quote, isNotNull);
+  expect(quote!.points.length,2);
+  expect(quote.points.first.date,monday);
+  expect(quote.usd,115.22);
+  expect(quote.updatedAt,DateTime.utc(2026,10,20));
+  expect(()=>WaffraOilService.parseEiaDailyHtml(
+    'GAS',fixture),throwsFormatException);
+  expect(()=>WaffraOilService.parseEiaDailyHtml(
+    'OMAN',fixture),throwsFormatException);
+  const falsePrices='<html><title>Europe Brent Spot Price FOB '
+   '(Dollars per Barrel)</title>Week Of<table><tr>'
+   '<td>2026 Oct-18 to Oct-22</td><td>999.0</td>'
+   '<td>999.0</td><td>999.0</td><td>999.0</td><td>999.0</td>'
+   '</tr></table></html>';
+  expect(WaffraOilService.parseEiaDailyHtml('BRENT',falsePrices),isNull);
+ });
+
+ test('keyless source falls back to official EIA pages on FRED 403',()async{
+  final now=DateTime.now().toUtc();
+  final monday=DateTime.utc(now.year,now.month,now.day)
+   .subtract(Duration(days:now.weekday-1));
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul',
+   'Aug','Sep','Oct','Nov','Dec'];
+  String d(DateTime date)=>'${months[date.month-1]}-${date.day}';
+  String fixture(String name,String units,String value)=>'<html><title>'
+   '$name ($units)</title><table>'
+   '<tr><th>Week Of</th><th>Mon</th><th>Tue</th><th>Wed</th>'
+   '<th>Thu</th><th>Fri</th></tr><tr>'
+   '<td>${monday.year} ${d(monday)} to ${d(friday)}</td>'
+   '<td>$value</td><td></td><td></td><td></td><td></td>'
+   '</tr></table></html>';
+  final friday=monday.add(const Duration(days:4));
+  final visited=<Uri>[];
+  final mock=MockClient((request)async{
+   visited.add(request.url);
+   if(request.url.host=='fred.stlouisfed.org'){
+    return http.Response('Forbidden',403);
+   }
+   expect(request.url.host,'www.eia.gov');
+   switch(request.url.path){
+    case '/dnav/pet/hist/RBRTEd.htm':
+     return http.Response(fixture('Europe Brent Spot Price FOB',
+      'Dollars per Barrel','111.20'),200);
+    case '/dnav/pet/hist/RWTCd.htm':
+     return http.Response(fixture('Cushing, OK WTI Spot Price FOB',
+      'Dollars per Barrel','108.10'),200);
+    case '/dnav/ng/hist/RNGWHHDD.htm':
+     return http.Response(fixture('Henry Hub Natural Gas Spot Price',
+      'Dollars per Million Btu','3.20'),200);
+    default: return http.Response('Not found',404);
+   }
+  });
+  final quotes=await const WaffraOilService(publicEiaKey:'').fetch(client:mock);
+  expect(quotes.keys.toSet(),{'BRENT','WTI','GAS'});
+  expect(quotes['BRENT']!.usd,111.20);
+  expect(quotes['WTI']!.usd,108.10);
+  expect(quotes['GAS']!.usd,3.20);
+  expect(quotes['GAS']!.updatedAt,monday);
+  expect(visited.where((u)=>u.host=='fred.stlouisfed.org'),isEmpty);
+  mock.close();
+ });
+
+ test('partial official EIA response cannot make up a missing oil type',()async{
+  final now=DateTime.now().toUtc();
+  final monday=DateTime.utc(now.year,now.month,now.day)
+   .subtract(Duration(days:now.weekday-1));
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul',
+   'Aug','Sep','Oct','Nov','Dec'];
+  String label(DateTime d)=>'${months[d.month-1]}-${d.day}';
+  final friday=monday.add(const Duration(days:4));
+  final table='<html>Europe Brent Spot Price FOB '
+   '(Dollars per Barrel) Week Of '
+   '<table><tr><td>${monday.year} ${label(monday)} to '
+   '${label(friday)}</td><td>110.0</td><td></td><td></td>'
+   '<td></td><td></td></tr></table></html>';
+  final fake=MockClient((request)async{
+   if(request.url.path=='/dnav/pet/hist/RBRTEd.htm'){
+    return http.Response(table,200);
+   }
+   return http.Response('Forbidden',403);
+  });
+  final quotes=await const WaffraOilService(publicEiaKey:'').fetch(client:fake);
+  expect(quotes.keys.toSet(),{'BRENT'});
+  fake.close();
+ });
+
 }
