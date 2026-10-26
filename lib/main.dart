@@ -55,6 +55,7 @@ import 'storage/waffra_verified_finance_authority.dart';
 import 'storage/waffra_verified_receipt_screen_gateway.dart';
 import 'storage/waffra_verified_active_restore_preflight.dart';
 import 'storage/waffra_verified_pull_refresh_source.dart';
+import 'storage/waffra_verified_refresh_single_flight.dart';
 import 'storage/waffra_production_finance_authority_binding.dart';
 import 'storage/waffra_fresh_finance_modules_repository.dart';
 import 'storage/waffra_verified_module_ui_guard.dart';
@@ -2394,6 +2395,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  bool recurringRemindersEnabled=false;
  bool ready=false;
  String? _financeLoadFailure;
+ final WaffraVerifiedRefreshSingleFlight _verifiedRefreshGate=WaffraVerifiedRefreshSingleFlight();
  String? lastBackupGeneratedAt;
  int? lastBackupBytes;
  bool protectRecentApps=true;
@@ -2514,6 +2516,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  /// A failed integrity check never replaces user money with zeroes.
  Future<void> _refreshFromVerifiedFinance()async {
   if(!mounted||!ready)return;
+  // Multiple overlapping gestures share one read. Never bypass the verified
+  // source/integrity gate or repaint from an unverified in-memory balance.
+  await _verifiedRefreshGate.run(()async {
   try {
    await _financialWriteQueue.drain();
    await _ensureFinanceBound();
@@ -2600,6 +2605,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      'تعذر التحقق من البيانات أثناء التحديث. لم تُحذف أي معاملات. أعد المحاولة بأمان.';
    });
   }
+  });
  }
  Future<void> load()async {
   await _ensureFinanceBound();
