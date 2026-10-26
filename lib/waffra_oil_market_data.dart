@@ -75,6 +75,7 @@ class WaffraOilService {
    'DCOILWTICO':'WTI',
    'DHHNGSP':'GAS',
   };
+  final failures=<String>[];
   await Future.wait(series.entries.map((entry)async{
    try{
     final uri=Uri.https('fred.stlouisfed.org','/graph/fredgraph.csv',{
@@ -86,12 +87,13 @@ class WaffraOilService {
     }
     final quote=parseFredCsv(entry.key,entry.value,response.body);
     if(quote!=null)results[entry.value]=quote;
-   }catch(_){
-    // No fake quote or data copied across benchmarks.
+   }catch(error){
+    // Preserve diagnostic categories; never log a key or full URL.
+    failures.add('${entry.value}: ${error is StateError ? 'HTTP response unavailable' : error is TimeoutException ? 'request timed out' : error is FormatException ? 'unexpected source data' : 'network or source error'}');
    }
   }));
   if(results.isEmpty){
-   throw StateError('FRED daily spot prices could not be verified');
+   throw StateError('FRED daily spot prices could not be verified: ${failures.join('; ')}');
   }
   return results;
  }
@@ -147,7 +149,9 @@ class WaffraOilService {
    });
    final response=await api.get(uri).timeout(const Duration(seconds:14));
    if(response.statusCode!=200){
-    throw StateError('EIA HTTP '+response.statusCode.toString());
+    // Registered EIA service may be temporarily unavailable; use verified
+    // public FRED observations instead, without substituting sample prices.
+    return await _fetchFred(api);
    }
    final decoded=jsonDecode(response.body);
    if(decoded is! Map<String,dynamic>)throw const FormatException('Invalid EIA JSON');
