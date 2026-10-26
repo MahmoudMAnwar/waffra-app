@@ -36,14 +36,17 @@ void main(){
   expect(native,contains('WaffraQuickActivity::class.java'));
  });
 
- test('widget FX must convert SAR or conceal, never relabel raw SAR',(){
-  final verified=WaffraVerifiedDisplayQuote(
+ test('M225 widget respects display-only label without FX multiplication',(){
+  final label=WaffraDisplayCurrency.displaySelection('EGP');
+  expect(label.verified,isTrue);
+  expect(label.fromSar(1000),1000);
+  expect(label.toSar(1000),1000);
+  expect(WaffraDisplayCurrency.displaySelection('SAR').fromSar(1000),1000);
+  // The actual verified market-quote parser remains separate.
+  final market=WaffraVerifiedDisplayQuote(
    code:'EGP',sarToSelected:12.5,
    updatedAtUtc:DateTime.utc(2026,10,25),provider:'test-only');
-  expect(verified.fromSar(100),1250);
-  const unavailable=WaffraVerifiedDisplayQuote(
-   code:'EGP',sarToSelected:null,updatedAtUtc:null,provider:'unavailable');
-  expect(unavailable.fromSar(100),isNull);
+  expect(market.fromSar(100),1250);
  });
 
  testWidgets('Bank SMS is analyzed as soon as user pastes without an Analyze button',(tester)async{

@@ -28,11 +28,12 @@ class _FixedSourceGuard extends WaffraProductionFinanceSourceGuard {
   );
 }
 
-WaffraProductionCutoverEvidence syntheticApprovedEvidence() =>
-    WaffraProductionCutoverEvidence(
-      storage: const WaffraCutoverReadinessReport(
-        sourceDigest: 'synthetic_not_hardware',
-        blockers: <String>[],
+WaffraProductionCutoverEvidence syntheticApprovedEvidence({
+  String sourceDigest = 'synthetic_not_hardware',
+}) => WaffraProductionCutoverEvidence(
+      storage: WaffraCutoverReadinessReport(
+        sourceDigest: sourceDigest,
+        blockers: const <String>[],
       ),
       routes: WaffraFinanceRouteAudit(
         verifiedRoutes: WaffraFinanceRoute.values.toSet(),
@@ -190,6 +191,44 @@ void main() {
       await seed.close();
     }
     try {
+      // Passing every Boolean audit field is insufficient if the approval
+      // belongs to another legacy source. No vault may be bound in that case.
+      await expectLater(
+        WaffraProductionFinanceAuthorityBinding.bind(
+          legacy: const WaffraHomeFinancePersistence(),
+          sourceGuard: const _FixedSourceGuard(
+            WaffraProductionFinanceSource.encryptedRoutingRequired,
+          ),
+          certifiedEvidence: syntheticApprovedEvidence(),
+          directoryProvider: () async => dir,
+          secureKeyReader: () async => key,
+        ),
+        throwsStateError,
+      );
+      final sourceDigest = WaffraLegacyPreflight.inspect(
+        const <String, Object?>{'entries': '[]'},
+      ).sourceSha256;
+      // A matching finance witness still cannot open the vault when the
+      // Android secure-storage reader has lost its key or supplies a wrong
+      // key. These are simulated readers, NOT Android hardware evidence.
+      for (final badKey in <String?>[null, 'incorrect-test-only-key']) {
+        await expectLater(
+          WaffraProductionFinanceAuthorityBinding.bind(
+            legacy: const WaffraHomeFinancePersistence(),
+            sourceGuard: const _FixedSourceGuard(
+              WaffraProductionFinanceSource.encryptedRoutingRequired,
+            ),
+            certifiedEvidence: syntheticApprovedEvidence(
+              sourceDigest: sourceDigest,
+            ),
+            directoryProvider: () async => dir,
+            secureKeyReader: () async => badKey,
+          ),
+          throwsA(anything),
+        );
+        expect(await file.exists(), isTrue,
+            reason: 'Failed key recovery must not remove existing vault.');
+      }
       for (final route in <WaffraFinanceRoute>[
         WaffraFinanceRoute.appStartup,
         WaffraFinanceRoute.widgetStartup,
@@ -199,7 +238,7 @@ void main() {
           sourceGuard: const _FixedSourceGuard(
             WaffraProductionFinanceSource.encryptedRoutingRequired,
           ),
-          certifiedEvidence: syntheticApprovedEvidence(),
+          certifiedEvidence: syntheticApprovedEvidence(sourceDigest: sourceDigest),
           startupRoute: route,
           directoryProvider: () async => dir,
           secureKeyReader: () async => key,

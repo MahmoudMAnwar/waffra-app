@@ -7,6 +7,7 @@ import 'package:waffra/storage/waffra_encrypted_receipt_vault.dart';
 import 'package:waffra/storage/waffra_encrypted_store.dart';
 import 'package:waffra/storage/waffra_portable_backup_v2.dart';
 import 'package:waffra/storage/waffra_portable_encrypted_vault_restorer.dart';
+import 'package:waffra/storage/waffra_restored_finance_receipt_attestor.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -188,4 +189,97 @@ void main() {
     ).get();
     expect(active, isEmpty);
   });
+
+  test('M225 independent attestor detects changed, extra or missing encrypted'
+      ' custom saving-goal suggestions', () async {
+    final encrypted = await archive();
+    final preview = await WaffraPortableBackupV2.verifyAndPreview(
+      encryptedArchive: encrypted, password: password,
+    );
+    final restored = await restorer().restore(
+      encryptedArchive: encrypted, password: password,
+    );
+    final attestor = WaffraRestoredFinanceReceiptAttestor(
+      store: vault, experimentalEnabled: true,
+    );
+    await attestor.attest(authenticatedArchive: preview, reported: restored);
+
+    await vault.customStatement(
+      'UPDATE fresh_finance_custom_goals SET suggestion=? WHERE position=0',
+      ['تغيّر بدون اعتماد'],
+    );
+    await expectLater(
+      attestor.attest(authenticatedArchive: preview, reported: restored),
+      throwsStateError,
+    );
+    await vault.customStatement(
+      'UPDATE fresh_finance_custom_goals SET suggestion=? WHERE position=0',
+      ['شراء سيارة'],
+    );
+    await vault.customStatement(
+      'INSERT INTO fresh_finance_custom_goals(position,suggestion) VALUES (?,?)',
+      [1, 'Unexpected extra suggestion'],
+    );
+    await expectLater(
+      attestor.attest(authenticatedArchive: preview, reported: restored),
+      throwsStateError,
+    );
+    await vault.customStatement(
+      'DELETE FROM fresh_finance_custom_goals WHERE position=1',
+    );
+    await vault.customStatement('DROP TABLE fresh_finance_custom_goals');
+    await expectLater(
+      attestor.attest(authenticatedArchive: preview, reported: restored),
+      throwsStateError,
+    );
+  });
+
+  test('M225 independent disposable vault B restores the identical archive'
+      ' with exact finance, receipt bytes and cold-reopen proof', () async {
+    final encrypted = await archive();
+    final preview = await WaffraPortableBackupV2.verifyAndPreview(
+      encryptedArchive: encrypted, password: password,
+    );
+    final a = await restorer().restore(
+      encryptedArchive: encrypted, password: password,
+    );
+    final sourceSnapshot = await WaffraAtomicFinanceSnapshot(
+      store: vault, experimentalEnabled: true,
+    ).read();
+    final bPath = File(temporary.path + '/independent-phone-B.sqlite');
+    const secondKey = 'm225-isolated-vault-B-not-the-original-key';
+    var second = WaffraEncryptedStore.openAt(bPath, key: secondKey);
+    try {
+      await expectLater(
+        WaffraPortableEncryptedVaultRestorer(
+          disposableStore: second, experimentalEnabled: true,
+        ).restore(encryptedArchive: encrypted, password: 'wrong password'),
+        throwsA(anything),
+      );
+      final b = await WaffraPortableEncryptedVaultRestorer(
+        disposableStore: second, experimentalEnabled: true,
+      ).restore(encryptedArchive: encrypted, password: password);
+      await WaffraRestoredFinanceReceiptAttestor(
+        store: second, experimentalEnabled: true,
+      ).attest(authenticatedArchive: preview, reported: b);
+      final destinationSnapshot = await WaffraAtomicFinanceSnapshot(
+        store: second, experimentalEnabled: true,
+      ).read();
+      expect(destinationSnapshot.digest, sourceSnapshot.digest);
+      expect(b.sourceChecksum, a.sourceChecksum);
+      expect(b.transactionCount, a.transactionCount);
+      expect(b.receiptCount, a.receiptCount);
+      expect(b.receiptBytes, a.receiptBytes);
+      await second.close();
+      second = WaffraEncryptedStore.openAt(bPath, key: secondKey);
+      await WaffraRestoredFinanceReceiptAttestor(
+        store: second, experimentalEnabled: true,
+      ).attest(authenticatedArchive: preview, reported: b);
+      // Two isolated SQLCipher files on one CI runner are NOT two phones.
+      // A real device Keystore and physical A-to-B restore remain NO-GO.
+    } finally {
+      await second.close();
+    }
+  });
+
 }

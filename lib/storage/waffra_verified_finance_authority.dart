@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'waffra_encrypted_sms_notes_vault.dart';
 import 'waffra_encrypted_full_finance_reset.dart';
 import 'waffra_encrypted_finance_session.dart';
 import 'waffra_receipt_screen_contract.dart';
@@ -61,6 +62,7 @@ class WaffraVerifiedFinanceAuthority {
     this.encryptedSqlWitnessActive = false,
     this.externalSourceWitnessActive = false,
     this.verifiedKeyRecoveryInDevice = false,
+    this.protectedSmsNotes,
   });
 
   final WaffraHomeFinancePersistence legacy;
@@ -70,6 +72,26 @@ class WaffraVerifiedFinanceAuthority {
   final bool encryptedSqlWitnessActive;
   final bool externalSourceWitnessActive;
   final bool verifiedKeyRecoveryInDevice;
+  /// Production guarded-legacy paths stage originals in a separate SQLCipher
+  /// vault BEFORE the legacy writer sees redacted financial metadata.
+  final WaffraEncryptedSmsNotesVault? protectedSmsNotes;
+
+  /// Only resolve a protected original for an existing authoritative SMS ID.
+  /// A staged-but-not-committed ID must never expose any raw bank note.
+  Future<String?> readProtectedOriginalSms(String entryId) async {
+    if (protectedSmsNotes == null) return null;
+    final current = await load(route: WaffraFinanceRoute.dashboardRead);
+    final ledger = current.ledgerRaw;
+    if (ledger == null) return null;
+    final rows = jsonDecode(ledger);
+    if (rows is! List ||
+        !rows.any((row) => row is Map &&
+          row['id'] == entryId && row['sourceType'] == 'sms')) {
+      return null;
+    }
+    return protectedSmsNotes!.readVerifiedEntry(entryId);
+  }
+
 
   Future<WaffraRuntimeFinanceBackend> _requireRoute(
       WaffraFinanceRoute route) async {
@@ -850,6 +872,20 @@ class WaffraVerifiedFinanceAuthority {
       // Save transaction metadata without original SMS text on unencrypted
       // SharedPreferences. Preserve the strict M207 fail-closed gate on the
       // locked writer itself. Never send raw notes to that journal.
+      // Freeze immutable originals here; the legacy writer selects ONLY
+      // confirmed nonduplicate IDs under the Home/Widget native writer lock.
+      // The SQLCipher staging hook is then invoked before any plaintext
+      // metadata journal is prepared. No skipped duplicate's bank text is
+      // staged merely because it appeared in the original paste.
+      final originalsById = <String, (Map<String, Object?>, String)>{};
+      for (var i = 0; i < frozen.length; i++) {
+        final id = frozen[i]['id'];
+        if (id is! String || id.trim().isEmpty ||
+            originalsById.containsKey(id)) {
+          throw StateError('Ambiguous confirmed bank SMS entry ID.');
+        }
+        originalsById[id] = (frozen[i], fingerprints[i]);
+      }
       final redacted = List<Map<String, Object?>>.unmodifiable(
         frozen.map((record) {
           if (record['sourceType'] != 'sms') {
@@ -862,6 +898,21 @@ class WaffraVerifiedFinanceAuthority {
         records: redacted, messageHashes: fingerprints,
         userConfirmed: true, allowDuplicateHashes: allowDuplicateHashes,
         proposedCategories: frozenCategories,
+        protectedNotesBeforeLegacyCommit: protectedSmsNotes == null
+            ? null
+            : (confirmed, confirmedHashes) async {
+                final originals = <Map<String, Object?>>[];
+                for (var i = 0; i < confirmed.length; i++) {
+                  final id = confirmed[i]['id'];
+                  final matching = originalsById[id];
+                  if (matching == null || matching.$2 != confirmedHashes[i]) {
+                    throw StateError('Bank SMS/finance IDs changed under lock.');
+                  }
+                  originals.add(matching.$1);
+                }
+                await protectedSmsNotes!.stage(
+                  records: originals, hashes: confirmedHashes);
+              },
       );
       saved = result.added;
       income = result.savedIncome;
@@ -890,6 +941,7 @@ class WaffraVerifiedFinanceAuthority {
       skippedDuplicates: skipped,
       originalSmsNotesOmittedOnLegacy:
           backend == WaffraRuntimeFinanceBackend.guardedLegacy &&
+          protectedSmsNotes == null &&
           frozen.any((entry) => entry['notes'] != null && entry['notes'] != ''),
       current: await load(route: route),
     );

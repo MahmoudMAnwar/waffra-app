@@ -1,0 +1,51 @@
+import 'dart:io';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:waffra/waffra_display_currency.dart';
+
+void main() {
+  test('M227 nominal 1,000 stays 1,000 after changing SAR to EGP', () {
+    final selected = WaffraDisplayCurrency.displaySelection('EGP');
+    expect(selected.displayOnly, isTrue);
+    expect(selected.fromSar(1000), 1000);
+    expect(selected.toSar(1000), 1000);
+    expect(WaffraDisplayCurrency.displaySelection('SAR').fromSar(1000), 1000);
+  });
+
+  test('M227 gold is visible via a new direct Home shortcut', () {
+    final source = File('lib/main.dart').readAsStringSync();
+    expect(source, contains("Key('waffra-home-gold-currency-entry')"));
+    expect(source, contains('الذهب العالمي وتحويل العملات'));
+    expect(source, contains('builder:(_)=>const CurrencyConverterPage()'));
+    final converter = File('lib/currency_converter.dart').readAsStringSync();
+    expect(converter, contains('محوّل العملات وأسعار الذهب العالمية'));
+    expect(converter, contains('WaffraGoldMarketSection('));
+    final gold = File('lib/waffra_gold_market_section.dart').readAsStringSync();
+    expect(gold, contains('أسعار الذهب العالمية'));
+    expect(gold, contains('Gold bars'));
+  });
+
+  test('M227 full SMS is read from protected vault for details', () {
+    final home = File('lib/main.dart').readAsStringSync();
+    final bind = File('lib/storage/waffra_production_finance_authority_binding.dart')
+        .readAsStringSync();
+    final authority = File('lib/storage/waffra_verified_finance_authority.dart')
+        .readAsStringSync();
+    expect(home, contains('readProtectedOriginalSms(entry.id)'));
+    expect(home, contains("entry.sourceType=='sms'&&entry.notes.isEmpty"));
+    expect(home, contains('child:SelectableText(entry.notes'));
+    expect(bind, contains('protectedSmsNotes: const WaffraEncryptedSmsNotesVault()'));
+    expect(authority, contains('protectedNotesBeforeLegacyCommit:'));
+    expect(authority, contains("'notes': ''"));
+    final privacy = File('lib/storage/waffra_home_finance_persistence.dart')
+        .readAsStringSync();
+    expect(privacy, contains('WaffraLegacySmsNotesPrivacyGate.rejectConfirmedSmsNotes(copied)'));
+  });
+
+  test('M227 preserves merged M226 FAB timings', () {
+    final home = File('lib/main.dart').readAsStringSync();
+    expect(home, contains('await Future<void>.delayed(waffraMotion(165));'));
+    expect(home, contains('await Future<void>.delayed(waffraMotion(110));'));
+    expect(home, contains('duration:waffraMotion(220)'));
+    expect(home, contains('Duration(milliseconds:380)'));
+  });
+}

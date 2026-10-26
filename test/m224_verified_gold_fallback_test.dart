@@ -81,4 +81,50 @@ void main() {
     expect(quote.gram(24), closeTo(quote.gram(24, sar:true)*50/3.75,0.00001));
     client.close();
   });
+
+  test('M225 XAUS published troy_oz and oz names both mean one troy ounce', () async {
+    for (final unit in const ['oz', 'troy_oz']) {
+      final response = independentQuote();
+      (response['xau'] as Map<String, dynamic>)['unit'] = unit;
+      final client = MockClient((request) async {
+        if (request.url.host == 'api.gold-api.com') {
+          return http.Response('temporary outage', 503);
+        }
+        expect(request.url.host, 'xaus.com');
+        expect(request.url.queryParameters['unit'], 'oz');
+        return http.Response(jsonEncode(response), 200);
+      });
+      try {
+        final quote = await const WaffraGoldSpotService().fetch(client: client);
+        expect(quote.usdPerTroyOunce, closeTo(3110.35, 0.001));
+        expect(quote.pureGramUsd, closeTo(3110.35 / waffraTroyOunceGrams, 0.001));
+        expect(quote.source, 'XAUS');
+      } finally { client.close(); }
+    }
+  });
+
+  test('M225 last verified gold quote is safe to display offline only with'
+       ' authentic timestamp and permitted XAU/USD shape', () {
+    final now = DateTime.utc(2026, 10, 25, 12);
+    final quote = WaffraGoldSpotQuote(
+      usdPerTroyOunce: 3110.35,
+      updatedAtUtc: now.subtract(const Duration(hours: 2)),
+      source: 'Gold-API',
+    );
+    final cache = Map<String, dynamic>.from(quote.toCacheJson());
+    final restored = WaffraGoldSpotQuote.fromCacheJson(cache, checkedAt: now);
+    expect(restored.usdPerTroyOunce, quote.usdPerTroyOunce);
+    expect(restored.updatedAtUtc, quote.updatedAtUtc);
+    expect(restored.source, 'verified-cache');
+    expect(() => WaffraGoldSpotQuote.fromCacheJson({
+      ...cache, 'updatedAt': now.subtract(const Duration(days: 9)).toIso8601String(),
+    }, checkedAt: now), throwsFormatException);
+    expect(() => WaffraGoldSpotQuote.fromCacheJson({
+      ...cache, 'currency': 'EGP',
+    }, checkedAt: now), throwsFormatException);
+    expect(() => WaffraGoldSpotQuote.fromCacheJson({
+      ...cache, 'price': double.nan,
+    }, checkedAt: now), throwsFormatException);
+  });
+
 }

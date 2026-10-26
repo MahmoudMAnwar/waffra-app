@@ -114,5 +114,38 @@ class WaffraRestoredFinanceReceiptAttestor {
         throw StateError('Restored finance module differs from source.');
       }
     }
+
+    // Custom saving-goal suggestions are stored outside the canonical finance
+    // snapshot. An otherwise green ledger/receipt audit must NOT silently
+    // certify a restore that omitted, reordered or changed these names.
+    // Always inspect the SQL table, including when the archive has zero goals:
+    // unexpected additional rows are also a finance migration mismatch.
+    final rawGoals = authenticatedArchive.financialSnapshot[
+        'waffra_custom_goals_v1'];
+    if (rawGoals != null && rawGoals is! List<String>) {
+      throw StateError('Authenticated custom goal list has invalid type.');
+    }
+    final expectedGoals = rawGoals is List<String>
+        ? rawGoals : const <String>[];
+    final goalTable = await store.customSelect(
+      "SELECT name FROM sqlite_master WHERE type='table' "
+      "AND name='fresh_finance_custom_goals'",
+    ).get();
+    if (goalTable.length != 1) {
+      throw StateError('Restored custom saving-goal table is missing.');
+    }
+    final storedGoals = await store.customSelect(
+      'SELECT position,suggestion FROM fresh_finance_custom_goals '
+      'ORDER BY position ASC',
+    ).get();
+    if (storedGoals.length != expectedGoals.length) {
+      throw StateError('Restored custom saving-goal count differs.');
+    }
+    for (var i = 0; i < expectedGoals.length; i++) {
+      if (storedGoals[i].read<int>('position') != i ||
+          storedGoals[i].read<String>('suggestion') != expectedGoals[i]) {
+        throw StateError('Restored custom saving-goal order or text differs.');
+      }
+    }
   }
 }

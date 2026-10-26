@@ -8,6 +8,21 @@ import 'waffra_i18n.dart';
 import 'waffra_gold_market_section.dart';
 import 'waffra_gold_calculator.dart';
 
+/// Cosmetic country markers only. The converter itself uses verified FX.
+/// EUR is a multi-country currency, so use a currency symbol rather than
+/// pretending that it belongs to one nation.
+const Map<String,String> waffraCurrencyFlags = <String,String>{
+ 'SAR':'🇸🇦','EGP':'🇪🇬','USD':'🇺🇸','EUR':'💶','GBP':'🇬🇧',
+ 'AED':'🇦🇪','KWD':'🇰🇼','BHD':'🇧🇭','OMR':'🇴🇲','QAR':'🇶🇦',
+ 'JOD':'🇯🇴','TRY':'🇹🇷','INR':'🇮🇳','PKR':'🇵🇰','BDT':'🇧🇩',
+ 'JPY':'🇯🇵','CNY':'🇨🇳','CAD':'🇨🇦','AUD':'🇦🇺','CHF':'🇨🇭',
+ 'SEK':'🇸🇪','NOK':'🇳🇴','DKK':'🇩🇰','ZAR':'🇿🇦','SGD':'🇸🇬',
+ 'HKD':'🇭🇰','MYR':'🇲🇾','IDR':'🇮🇩','KRW':'🇰🇷','THB':'🇹🇭',
+ 'PHP':'🇵🇭','MAD':'🇲🇦','TND':'🇹🇳','DZD':'🇩🇿','IQD':'🇮🇶',
+ 'LBP':'🇱🇧',
+};
+String waffraCurrencyFlag(String code) => waffraCurrencyFlags[code] ?? '💱';
+
 class CurrencyConverterPage extends StatefulWidget {
  const CurrencyConverterPage({super.key,this.lastIncomeAmount});
  final double? lastIncomeAmount;
@@ -101,6 +116,15 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
  @override void initState(){super.initState();amount=TextEditingController(text:widget.lastIncomeAmount==null?'':formatWaffraMoney(widget.lastIncomeAmount!));}
  @override void dispose(){amount.dispose();super.dispose();}
  String currencyLabel(String code)=>'${waffraIsEnglish?currencyEnglish[code]:currencies[code]} ($code)';
+ Widget _currencyChoice(String code){
+  return Row(mainAxisSize:MainAxisSize.min,children:[
+   Text(waffraCurrencyFlag(code),key:Key('waffra-currency-flag-$code'),
+    style:const TextStyle(fontSize:25)),
+   const SizedBox(width:7),
+   Flexible(child:WaffraText(currencyLabel(code),
+    textAlign:TextAlign.center,maxLines:2)),
+  ]);
+ }
  Future<void> selectCurrency(bool source)async {
   final filter=TextEditingController();
   String query='';
@@ -123,6 +147,8 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
        Expanded(child:ListView.builder(itemCount:listed.length,itemBuilder:(ctx,index){
         final code=listed[index];
         return ListTile(
+         leading:Text(waffraCurrencyFlag(code),
+          style:const TextStyle(fontSize:28)),
          title:WaffraText(currencyLabel(code)),
          onTap:()=>Navigator.of(dialogContext).pop(code),
         );
@@ -221,11 +247,23 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
   if(amount.text.trim().isNotEmpty)await convert();
  }
  @override Widget build(BuildContext context)=>Scaffold(
-  appBar:AppBar(title:const WaffraText('تحويل العملات')),
+  appBar:AppBar(title:WaffraText(waffraIsEnglish?
+   'Currency converter & global gold prices':
+   'محوّل العملات وأسعار الذهب العالمية',
+   style:const TextStyle(fontSize:18,fontWeight:FontWeight.w800),maxLines:2)),
   body:RefreshIndicator(onRefresh:_pullRefresh,
    child:ListView(physics:const AlwaysScrollableScrollPhysics(),
-    padding:const EdgeInsets.all(20),children:[
-   const WaffraText('اعرف قيمة راتبك أو أي مبلغ بعملة ثانية، حسب أحدث سعر متاح.'),
+    padding:const EdgeInsets.all(17),children:[
+   Card(
+    margin:EdgeInsets.zero,
+    color:Theme.of(context).cardColor,
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(24),
+     side:BorderSide(color:Theme.of(context).dividerColor.withValues(alpha:.6))),
+    child:Padding(padding:const EdgeInsets.all(14),
+     child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+   WaffraText(waffraIsEnglish?
+    'Convert any amount using the latest available verified exchange rate.':
+    'اعرف قيمة راتبك أو أي مبلغ بعملة ثانية، حسب أحدث سعر متاح.'),
    const SizedBox(height:18),
    TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
     inputFormatters:[const WaffraAmountFormatter()],
@@ -238,8 +276,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
      child:Column(mainAxisSize:MainAxisSize.min,children:[
       WaffraText(waffraIsEnglish?'From':'من عملة'),
       const SizedBox(height:4),
-      WaffraText('${waffraIsEnglish?currencyEnglish[from]:currencies[from]} ($from)',
-       textAlign:TextAlign.center,maxLines:2),
+      _currencyChoice(from),
      ]))),
     const SizedBox(width:4),
     IconButton.filledTonal(
@@ -254,14 +291,15 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
      child:Column(mainAxisSize:MainAxisSize.min,children:[
       WaffraText(waffraIsEnglish?'To':'إلى عملة'),
       const SizedBox(height:4),
-      WaffraText(to==null?(waffraIsEnglish?'Select currency':'اختر العملة'):
-       '${waffraIsEnglish?currencyEnglish[to]:currencies[to]} ($to)',
-       textAlign:TextAlign.center,maxLines:2),
+      if(to==null) WaffraText(waffraIsEnglish?'Select currency':'اختر العملة')
+      else _currencyChoice(to!),
      ]))),
    ]),
    const SizedBox(height:20),
    FilledButton.icon(onPressed:busy?null:convert,
-    icon:const Icon(Icons.currency_exchange),label:WaffraText(busy?'جاري جلب السعر...':'حوّل الحين')),
+    icon:const Icon(Icons.sync_rounded),label:WaffraText(busy?
+     (waffraIsEnglish?'Fetching verified rate...':'جاري جلب السعر...'):
+     (waffraIsEnglish?'Convert now':'حوّل الآن'))),
    if(busy)const Padding(padding:EdgeInsets.only(top:14),child:LinearProgressIndicator()),
    if(status.isNotEmpty)Padding(padding:const EdgeInsets.only(top:16),
     child:WaffraText(status,style:TextStyle(color:Theme.of(context).colorScheme.error))),
@@ -280,6 +318,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
    const SizedBox(height:20),
    const WaffraText('المصدر: ExchangeRate-API أو مزود احتياطي عند تعذّر الاتصال. الأسعار استرشادية وقد تختلف عن أسعار البنوك أو التحويل الفعلي.',
     style:TextStyle(fontSize:12)),
+   ]))),
    const SizedBox(height:22),
    WaffraGoldMarketSection(key:ValueKey('gold-refresh-$_goldRefreshRevision'),english:waffraIsEnglish),
    const SizedBox(height:12),
