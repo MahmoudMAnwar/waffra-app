@@ -1,0 +1,49 @@
+name: M257 Bounded Pull Refresh Recheck + Signed QA Readiness (NO CUTOVER)
+
+on:
+  pull_request:
+    branches:
+      - 'feature/m256-offline-installed-apk-identity-no-go-20261026'
+    paths:
+      - 'lib/main.dart'
+      - 'lib/storage/waffra_verified_refresh_read_recheck.dart'
+      - 'lib/storage/waffra_verified_refresh_single_flight.dart'
+      - 'test/storage/m257_verified_pull_refresh_read_recheck_test.dart'
+      - '.github/workflows/m257-verified-refresh-qa.yml'
+      - '.github/workflows/android.yml'
+      - 'docs/release/WAFFRA_APPROVED_CHANGES.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-contract-and-regressions:
+    name: Verify #705 transient source recheck and fail-closed recovery
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Strict refresh source analyzer
+        run: dart analyze lib/storage/waffra_verified_refresh_read_recheck.dart test/storage/m257_verified_pull_refresh_read_recheck_test.dart
+      - name: Behavioral pull-refresh and recovery tests
+        run: >
+          flutter test
+          test/storage/m257_verified_pull_refresh_read_recheck_test.dart
+          test/storage/m255_verified_pull_refresh_safety_test.dart
+          test/storage/m255_verified_pull_refresh_single_flight_test.dart
+          test/m224_verified_pull_refresh_dialog_test.dart
+          --reporter expanded
+      - name: Full same-SHA Flutter suite before considering an APK
+        run: flutter test --reporter expanded
+
+# A green test does not prove the physical Android #705 report resolved.
+# Real signing/source-linked APK is the separate android.yml gated builder;
+# this workflow neither creates artifacts nor activates SQLCipher.

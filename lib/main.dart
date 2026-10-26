@@ -56,6 +56,7 @@ import 'storage/waffra_verified_receipt_screen_gateway.dart';
 import 'storage/waffra_verified_active_restore_preflight.dart';
 import 'storage/waffra_verified_pull_refresh_source.dart';
 import 'storage/waffra_verified_refresh_single_flight.dart';
+import 'storage/waffra_verified_refresh_read_recheck.dart';
 import 'storage/waffra_production_finance_authority_binding.dart';
 import 'storage/waffra_fresh_finance_modules_repository.dart';
 import 'storage/waffra_verified_module_ui_guard.dart';
@@ -2522,8 +2523,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   try {
    await _financialWriteQueue.drain();
    await _ensureFinanceBound();
-   final current=await _financeAuthority.load(
-    route:WaffraFinanceRoute.dashboardRead);
+   // Build #705 symptom: a normal pull sometimes lands on the recovery
+   // screen and a manual retry immediately restores the same saved ledger.
+   // One bounded, independently verified recheck handles a transient read
+   // race without ever publishing stale finance or retrying any write.
+   final current=await WaffraVerifiedRefreshReadRecheck.read(
+    load:()=>_financeAuthority.load(
+     route:WaffraFinanceRoute.dashboardRead),
+    verify:(source){WaffraVerifiedPullRefreshSource.fromAuthority(source);},
+    beforeRetry:()async{
+     await _financialWriteQueue.drain();
+     await Future<void>.delayed(const Duration(milliseconds:120));
+    });
    final view=current.finance;
    view.requireIntegrity();
    // Legacy first installs may legitimately omit an empty ledger/catalog.
