@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import importlib.util
+import os
+import stat
 from pathlib import Path
 import sys
 import tempfile
@@ -161,6 +163,63 @@ class M254IndependentPhysicalEvidenceTest(unittest.TestCase):
         del p["devices"][1]["build_fingerprint_token"]
         with self.assertRaises(m254.EvidenceRefused):
             review(p=p)
+
+
+    def test_owner_private_local_evidence_is_readable(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "evidence.json"
+            path.write_text('{"example": true}', encoding="utf-8")
+            path.chmod(0o600)
+            self.assertEqual(m254._load_private_report(path), {"example": True})
+
+    def test_group_or_world_readable_evidence_is_refused(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "unsafe.json"
+            path.write_text("{}", encoding="utf-8")
+            for mode in (0o644, 0o640, 0o604):
+                with self.subTest(mode=oct(mode)):
+                    path.chmod(mode)
+                    with self.assertRaises(m254.EvidenceRefused):
+                        m254._load_private_report(path)
+
+    def test_hardlinked_private_evidence_is_refused(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "report.json"
+            path.write_text("{}", encoding="utf-8")
+            path.chmod(0o600)
+            alias = Path(d) / "hardlink"
+            os.link(path, alias)
+            with self.assertRaises(m254.EvidenceRefused):
+                m254._load_private_report(alias)
+
+    def test_oversized_private_evidence_is_refused(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "large.json"
+            path.write_bytes(b"x" * (1024 * 1024 + 1))
+            path.chmod(0o600)
+            with self.assertRaises(m254.EvidenceRefused):
+                m254._load_private_report(path)
+
+    def test_private_report_output_exclusive_with_private_permissions(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "m254.json"
+            report = {"status": "REPORTS_CONSISTENT_BUT_PRODUCTION_RELEASE_NO_GO"}
+            m254._write_private_report(path, report)
+            self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
+            self.assertEqual(m254._load_private_report(path), report)
+            with self.assertRaises(FileExistsError):
+                m254._write_private_report(path, report)
+
+    def test_symlink_private_output_is_refused(self):
+        with tempfile.TemporaryDirectory() as d:
+            target = Path(d) / "target.json"
+            target.write_text("{}", encoding="utf-8")
+            target.chmod(0o600)
+            alias = Path(d) / "alias.json"
+            alias.symlink_to(target)
+            with self.assertRaises(FileExistsError):
+                m254._write_private_report(alias, {"unsafe": True})
+            self.assertEqual(target.read_text(encoding="utf-8"), "{}")
 
 
 if __name__ == "__main__":
