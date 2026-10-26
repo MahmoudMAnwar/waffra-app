@@ -21,7 +21,7 @@ void main(){
   expect(source,contains('final mainCategories=waffraManualCategoryParents(available,income);'));
   expect(source,contains('final subcategories=waffraManualCategoryChildren(available,income,selectedParentId);'));
   expect(source,contains('parentId:mainId'));
-  expect(source,contains("onTap:()=>Navigator.pop(dialogCtx,item.name)"));
+  expect(source,contains("onTap:WaffraHaptics.tap(()=>Navigator.pop(dialogCtx,item.name))"));
   expect(waffraCategoryCatalog.isNotEmpty,isTrue);
   expect(source,contains('waffraCanAssignManualCategory(categories,'));
  });
