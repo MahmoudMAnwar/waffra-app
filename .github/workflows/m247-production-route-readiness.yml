@@ -1,0 +1,20 @@
+name: M247 Production Route Readiness (FAIL CLOSED)
+on:
+  pull_request:
+    branches:
+      - integration/m243-sqlcipher-cumulative-qa-no-apk-20261026
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  readiness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter test test/storage/m247_production_route_readiness_test.dart
