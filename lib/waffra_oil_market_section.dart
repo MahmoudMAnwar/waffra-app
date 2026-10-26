@@ -134,7 +134,7 @@ class _WaffraOilMarketSectionState extends State<WaffraOilMarketSection>{
   final q=quotes[benchmark];
   final volume=double.tryParse(units.text.trim().replaceAll(',',''));
   final valid=volume!=null&&volume>0&&volume.isFinite&&volume<=1000000;
-  final usd=valid&&q!=null?volume*q.usd:null;
+  final usd=valid&&q!=null&&!q.isOld(DateTime.now())?volume*q.usd:null;
   final total=usd==null||fx==null?null:usd*fx!;
   return Container(
    padding:const EdgeInsets.all(13),
@@ -152,7 +152,7 @@ class _WaffraOilMarketSectionState extends State<WaffraOilMarketSection>{
      style:TextStyle(fontSize:11,color:Theme.of(context).hintColor)),
     const SizedBox(height:12),
     DropdownButtonFormField<String>(
-     key:const Key('waffra-oil-benchmark-picker'),
+     key:ValueKey('waffra-oil-benchmark-picker-'+benchmark),
      initialValue:benchmark,isExpanded:true,
      decoration:InputDecoration(labelText:t('Benchmark','نوع الخام'),
       border:const OutlineInputBorder()),
@@ -194,12 +194,17 @@ class _WaffraOilMarketSectionState extends State<WaffraOilMarketSection>{
     if(total==null)Padding(padding:const EdgeInsets.only(top:7),
      child:Text(q==null?t('Verified benchmark price is required.',
       'تحتاج إلى سعر موثّق للخام المحدد.'):
+      q.isOld(DateTime.now())?t('Quote is outdated; estimate is blocked.',
+       'السعر قديم؛ لا يمكن حساب القيمة بسعر غير حديث.'):
       !valid?t('Enter a positive quantity.','أدخل كمية صحيحة أكبر من صفر.'):
       t('Verified FX quote is unavailable.','سعر الصرف الموثّق غير متاح.'),
       style:TextStyle(fontSize:11,color:Theme.of(context).hintColor))),
     if(usd!=null&&currency!='USD')Padding(padding:const EdgeInsets.only(top:6),
      child:Text('USD '+usd.toStringAsFixed(2),
       style:TextStyle(fontSize:11,color:Theme.of(context).hintColor))),
+    if(total!=null&&currency!='USD'&&fxDate!=null)
+     Text(t('FX quote: ','سعر الصرف بتاريخ: ')+stamp(fxDate!),
+      style:TextStyle(fontSize:10,color:Theme.of(context).hintColor)),
    ]),
   );
  }
