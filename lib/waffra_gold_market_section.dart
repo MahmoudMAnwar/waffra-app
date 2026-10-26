@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'waffra_gold_market_data.dart';
+import 'waffra_display_currency.dart';
 
 /// Read-only global spot price utility under currency conversion.
 /// Never touches the user's financial records or SQLCipher source.
@@ -19,6 +22,7 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
   static const _gold = Color(0xFFD4AF37);
   static const _goldDark = Color(0xFF9E751B);
   static const _cream = Color(0xFFFFF7E3);
+  static const _publicGoldCacheKey = 'waffra_public_verified_gold_spot_v1';
   static const _weights = <double>[1, 5, 10, 20, 50, 100, waffraTroyOunceGrams];
 
   final _weight = TextEditingController();
@@ -28,16 +32,46 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
   bool _allBars = false;
   int _karat = 21;
   DateTime? _lastSuccessfulRequest;
+  bool _showingCachedQuote = false;
+  double? _sarPerUsd;
 
   String t(String en, String ar) => widget.english ? en : ar;
   String usd(double amount) => '\$\u00a0${amount.toStringAsFixed(2)}';
+  String sar(double amount) =>
+      '${amount.toStringAsFixed(2)} ${widget.english ? 'SAR' : 'ر.س'}';
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) unawaited(_fetch());
+      if (mounted) unawaited(_restorePublicQuoteAndFetch());
     });
+  }
+
+  Future<void> _restorePublicQuoteAndFetch() async {
+    // Test providers are deterministic and must not read/write a device cache.
+    if (widget.loadSpot == null) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final raw = prefs.getString(_publicGoldCacheKey);
+        if (raw != null) {
+          final decoded = jsonDecode(raw);
+          if (decoded is Map<String, dynamic>) {
+            final cached = WaffraGoldSpotQuote.fromCacheJson(decoded);
+            if (mounted && (_quote == null ||
+                cached.updatedAtUtc.isAfter(_quote!.updatedAtUtc))) {
+              setState(() {
+                _quote = cached;
+                _showingCachedQuote = true;
+              });
+            }
+          }
+        }
+      } catch (_) {
+        // Corrupt/over-age cache never prevents a fresh network request.
+      }
+    }
+    if (mounted) await _fetch();
   }
 
   @override
@@ -71,19 +105,56 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
         setState(() {
           _quote = result;
           _lastSuccessfulRequest = DateTime.now();
+          _showingCachedQuote = false;
           _error = null;
         });
+        // Save only previously validated public market data, never a user's
+        // finance, account, SMS, or a fabricated fallback value.
+        // Only the GOLD marketplace performs genuine USD/SAR conversion.
+        // App-wide country labels are deliberately fixed-number presentation.
+        if (widget.loadSpot == null) unawaited(_refreshSarRate());
+        if (widget.loadSpot == null &&
+            (result.source == 'Gold-API' || result.source == 'XAUS')) {
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString(_publicGoldCacheKey,
+                jsonEncode(result.toCacheJson()));
+          } catch (_) {
+            // Cache failure must not hide a valid fresh quote.
+          }
+        }
       }
     } catch (_) {
       if (mounted) {
         setState(() {
-          _error = t(
-              'Gold prices are unavailable right now. Retry to fetch a verified quote.',
-              'تعذر جلب سعر ذهب موثّق حاليًا. حاول التحديث مرة أخرى.');
+          _error = _quote == null
+              ? t('Gold prices unavailable. No verified previous quote exists.',
+                  'تعذّر جلب أسعار الذهب ولا يوجد سعر سابق موثّق.')
+              : t('Network unavailable: last verified gold price is shown, not live.',
+                  'الاتصال غير متاح: نعرض آخر سعر ذهب موثّق وليس سعرًا مباشرًا.');
         });
       }
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _refreshSarRate() async {
+    try {
+      final quote = await WaffraDisplayCurrency.fetch('USD');
+      final sarToUsd = quote.sarToSelected;
+      if (!quote.verified || sarToUsd == null ||
+          !sarToUsd.isFinite || sarToUsd <= 0) {
+        throw const FormatException('Missing independently verified USD/SAR FX');
+      }
+      final usdToSar = 1 / sarToUsd;
+      if (!usdToSar.isFinite || usdToSar <= 0 || usdToSar > 10000) {
+        throw const FormatException('Invalid independent USD/SAR quote');
+      }
+      if (mounted) setState(() => _sarPerUsd = usdToSar);
+    } catch (_) {
+      if (mounted) setState(() => _sarPerUsd = null);
+      // Gold USD quotes remain usable without FX; no invented SAR amounts.
     }
   }
 
@@ -123,69 +194,63 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
   Widget _priceCard(BuildContext context, int karat, double width) {
     final fine = waffraGoldFineness[karat]!;
     final price = _quote == null ? '—' : usd(_quote!.gramUsd(karat));
-    return SizedBox(
-      width: width,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(10, 14, 10, 12),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: _gold.withValues(alpha: .28)),
-        ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Semantics(
-              label: t('Gold purity $karat karat', 'ذهب عيار $karat'),
-              child: SizedBox(
-                width: 44, height: 32,
-                child: Stack(alignment: Alignment.center, children: [
-                  _barIcon(width: 44, height: 32),
-                  Positioned(
-                    bottom: 7,
-                    child: Text('$karat',
-                      style: const TextStyle(color: _forest,
-                        fontSize: 11, fontWeight: FontWeight.w900)),
-                  ),
-                ]),
-              ),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(t('Karat $karat', 'عيار $karat'),
-                  maxLines: 1,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w800, fontSize: 13)),
-            ),
-          ]),
-          const SizedBox(height: 10),
-          FittedBox(
-            alignment: AlignmentDirectional.centerStart,
-            fit: BoxFit.scaleDown,
-            child: Text(price,
-                key: Key('waffra-gold-karat-$karat-price'),
-                textDirection: TextDirection.ltr,
-                style: TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 18,
-                  color: Theme.of(context).colorScheme.onSurface,
-                )),
-          ),
-          Text(t('USD / gram', 'دولار لكل جرام'),
-              style: TextStyle(
-                  fontSize: 10.5, color: Theme.of(context).hintColor)),
-          const SizedBox(height: 9),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-            decoration: BoxDecoration(
-                color: _cream, borderRadius: BorderRadius.circular(10)),
-            child: Text(
-                t('Purity ', 'نقاء ') +
-                    '${(fine * 100).toStringAsFixed(1)}%',
-                style: const TextStyle(fontSize: 10.5, color: _goldDark)),
-          ),
-        ]),
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return SizedBox(width: width, child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(21),
+        border: Border.all(color: _gold.withValues(alpha: .32)),
+        boxShadow: [BoxShadow(
+          color: _goldDark.withValues(alpha: dark ? .04 : .10),
+          blurRadius: 8, offset: const Offset(0, 3))],
       ),
-    );
+      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 7),
+          decoration: BoxDecoration(
+            color: dark ? const Color(0xFF503F17) : const Color(0xFFFFECC0),
+            borderRadius: BorderRadius.circular(30),
+          ),
+          child: Text(t('Karat $karat', 'عيار $karat'),
+            maxLines: 1, textAlign: TextAlign.center,
+            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12,
+              color: dark ? Colors.white : _forest)),
+        ),
+        const SizedBox(height: 9),
+        Semantics(
+          label: t('Gold purity $karat karat', 'ذهب عيار $karat'),
+          child: SizedBox(height: 56, width: 86,
+            child: Stack(alignment: Alignment.center, children: [
+              _barIcon(width: 80, height: 54),
+              Positioned(bottom: 15,
+                child: Text('${karat}K', style: const TextStyle(
+                  color: Color(0xFF875402), fontSize: 10,
+                  fontWeight: FontWeight.w900))),
+            ])),
+        ),
+        const SizedBox(height: 9),
+        FittedBox(fit: BoxFit.scaleDown,
+          child: Text(price,
+            key: Key('waffra-gold-karat-$karat-price'),
+            textDirection: TextDirection.ltr,
+            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18,
+              color: Theme.of(context).colorScheme.onSurface))),
+        const SizedBox(height: 2),
+        Text(t('USD / gram', 'دولار للجرام'),
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 10, color: Theme.of(context).hintColor)),
+        if (_quote != null && _sarPerUsd != null)
+          FittedBox(fit: BoxFit.scaleDown, child: Text(
+            '≈ ${sar(_quote!.gramUsd(karat) * _sarPerUsd!)}',
+            textDirection: TextDirection.ltr,
+            style: TextStyle(fontSize: 10,
+              color: Theme.of(context).colorScheme.onSurface))),
+        const SizedBox(height: 3),
+        Text('${(fine * 100).toStringAsFixed(1)}%',
+          style: const TextStyle(fontSize: 9, color: _goldDark)),
+      ]),
+    ));
   }
 
   Widget _bullionCard(BuildContext context, double grams, double width) {
@@ -260,6 +325,12 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
                         fontWeight: FontWeight.w900,
                         color: textColor)),
               ),
+              if (quote != null && _sarPerUsd != null)
+                FittedBox(fit: BoxFit.scaleDown,
+                  child: Text('≈ ${sar(quote.usdPerTroyOunce * _sarPerUsd!)}',
+                    textDirection: TextDirection.ltr,
+                    style: TextStyle(fontSize: 10.5,
+                      color: Theme.of(context).hintColor))),
             ]),
           ),
           const SizedBox(width: 9),
@@ -281,6 +352,12 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
                         fontWeight: FontWeight.w900,
                         color: textColor)),
               ),
+              if (quote != null && _sarPerUsd != null)
+                FittedBox(fit: BoxFit.scaleDown,
+                  child: Text('≈ ${sar(quote.pureGramUsd * _sarPerUsd!)}',
+                    textDirection: TextDirection.ltr,
+                    style: TextStyle(fontSize: 10.5,
+                      color: Theme.of(context).hintColor))),
             ]),
           ),
         ]),
@@ -292,7 +369,8 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
             child: Text(
               updated == null
                   ? t('No verified quote yet', 'لا يوجد سعر موثّق بعد')
-                  : t('Source time: ', 'آخر تحديث من المصدر: ') +
+                  : (_showingCachedQuote ? t('Saved quote: ', 'آخر سعر محفوظ: ')
+                      : t('Source time: ', 'آخر تحديث من المصدر: ')) +
                       _stamp(updated) +
                       (quote!.isOlderThan(const Duration(hours: 72),
                               DateTime.now())
@@ -413,11 +491,12 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
           Container(
-            width: 52, height: 50,
+            width: 75, height: 62,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: _forest, borderRadius: BorderRadius.circular(15)),
-            child: _barIcon(width: 39, height: 30),
+              color: light ? const Color(0xFFFFE5A5) : _forest,
+              borderRadius: BorderRadius.circular(18)),
+            child: _barIcon(width: 69, height: 54),
           ),
           const SizedBox(width: 10),
           Expanded(child: Column(
@@ -450,8 +529,9 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
             Icons.workspace_premium_outlined),
         const SizedBox(height: 10),
         LayoutBuilder(builder: (context, size) {
-          final width = (size.maxWidth - 9) / 2;
-          return Wrap(spacing: 9, runSpacing: 9, children: [
+          final columns = size.maxWidth >= 285 ? 3 : 2;
+          final width = (size.maxWidth - (columns - 1) * 8) / columns;
+          return Wrap(spacing: 8, runSpacing: 8, children: [
             for (final karat in waffraGoldFineness.keys)
               _priceCard(context, karat, width),
           ]);
@@ -494,47 +574,63 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
 }
 
 /// Small metallic gold bullion illustration, entirely local and lightweight.
+/// Three angled, shaded bars painted locally: no remote stock imagery or
+/// images fetched during scrolling. Stays crisp on low-end Android screens.
 class _GoldBarPainter extends CustomPainter {
   const _GoldBarPainter();
 
+  void _drawBar(Canvas canvas, Rect r) {
+    final w = r.width, h = r.height;
+    final body = Path()
+      ..moveTo(r.left + w * .06, r.top + h * .37)
+      ..lineTo(r.left + w * .24, r.top + h * .05)
+      ..lineTo(r.left + w * .76, r.top + h * .05)
+      ..lineTo(r.left + w * .94, r.top + h * .37)
+      ..lineTo(r.left + w, r.top + h * .86)
+      ..lineTo(r.left, r.top + h * .86)
+      ..close();
+    final outline = Paint()
+      ..color = const Color(0xFF98600A)
+      ..strokeWidth = .8
+      ..style = PaintingStyle.stroke;
+    canvas.drawPath(body, Paint()..shader = const LinearGradient(
+      begin: Alignment.topLeft, end: Alignment.bottomRight,
+      colors: [Color(0xFFFFEDAF),Color(0xFFFFD34D),
+        Color(0xFFC17C08),Color(0xFFF6B62B)],
+      stops: [0, .4, .75, 1],
+    ).createShader(r));
+    final top = Path()
+      ..moveTo(r.left + w * .24, r.top + h * .05)
+      ..lineTo(r.left + w * .76, r.top + h * .05)
+      ..lineTo(r.left + w * .94, r.top + h * .37)
+      ..lineTo(r.left + w * .06, r.top + h * .37)
+      ..close();
+    canvas.drawPath(top, Paint()..shader = const LinearGradient(
+      colors: [Color(0xFFFFF5C8), Color(0xFFF7CA45),
+        Color(0xFFE5A317)],
+    ).createShader(r));
+    final right = Path()
+      ..moveTo(r.left + w * .94, r.top + h * .37)
+      ..lineTo(r.left + w, r.top + h * .86)
+      ..lineTo(r.left + w * .87, r.top + h * .86)
+      ..lineTo(r.left + w * .75, r.top + h * .37)
+      ..close();
+    canvas.drawPath(right, Paint()..color = const Color(0xFFBA7607));
+    canvas.drawPath(body, outline);
+    canvas.drawPath(top, outline);
+    canvas.drawLine(Offset(r.left + w * .26,r.top + h * .13),
+      Offset(r.left + w * .61,r.top + h * .13),
+      Paint()..color = const Color(0xFFFFF9E6)..strokeWidth = 1.1);
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
-    final outline = Paint()
-      ..color = const Color(0xFF8C5E0A)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    final body = Path()
-      ..moveTo(size.width * .10, size.height * .46)
-      ..lineTo(size.width * .28, size.height * .16)
-      ..lineTo(size.width * .82, size.height * .16)
-      ..lineTo(size.width * .97, size.height * .46)
-      ..lineTo(size.width * .90, size.height * .87)
-      ..lineTo(size.width * .14, size.height * .87)
-      ..close();
-    final fill = Paint()
-      ..shader = const LinearGradient(colors: [
-        Color(0xFFB8790A), Color(0xFFFFE59A),
-        Color(0xFFFFC447), Color(0xFFB8790A),
-      ]).createShader(Offset.zero & size);
-    canvas.drawPath(body, fill);
-    canvas.drawPath(body, outline);
-    final top = Path()
-      ..moveTo(size.width * .28, size.height * .16)
-      ..lineTo(size.width * .82, size.height * .16)
-      ..lineTo(size.width * .89, size.height * .45)
-      ..lineTo(size.width * .21, size.height * .45)
-      ..close();
-    canvas.drawPath(top, Paint()
-      ..shader = const LinearGradient(
-        colors: [Color(0xFFFFE69C), Color(0xFFD9A01E)],
-      ).createShader(Offset.zero & size));
-    canvas.drawPath(top, outline);
-    final shine = Paint()
-      ..color = const Color(0xFFFFF4C7).withValues(alpha: .9)
-      ..strokeWidth = 1.2;
-    canvas.drawLine(
-      Offset(size.width * .33, size.height * .23),
-      Offset(size.width * .72, size.height * .23), shine);
+    final w = size.width, h = size.height;
+    canvas.drawOval(Rect.fromLTWH(w * .10,h * .87,w * .80,h * .11),
+      Paint()..color = const Color(0xFF9D6718).withValues(alpha: .22));
+    _drawBar(canvas, Rect.fromLTWH(w * .02,h * .32,w * .48,h * .59));
+    _drawBar(canvas, Rect.fromLTWH(w * .47,h * .30,w * .50,h * .59));
+    _drawBar(canvas, Rect.fromLTWH(w * .22,h * .03,w * .60,h * .75));
   }
 
   @override

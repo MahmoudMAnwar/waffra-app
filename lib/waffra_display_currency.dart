@@ -6,8 +6,9 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Country chooses the DISPLAY and entry denomination; the durable Waffra
-/// finance ledger is still canonical SAR until a separately approved migration.
+/// Country chooses a PRESENTATION UNIT ONLY. Numbers are unchanged (e.g.,
+/// 1,000 SAR is shown as 1,000 EGP when EGP is selected). This is NOT FX.
+/// The separate currency converter quotes genuine market exchange rates.
 class WaffraCountryCurrency {
   const WaffraCountryCurrency(this.countryAr,this.countryEn,this.code,
       this.nameAr,this.nameEn,this.symbolAr);
@@ -68,17 +69,20 @@ class WaffraVerifiedDisplayQuote {
  final String code,provider;
  final double? sarToSelected;
  final DateTime? updatedAtUtc;
- bool get verified => code=='SAR'||(sarToSelected!=null&&
+ // Display-only selection is a unit preference, not an exchange-rate quote.
+ // No FX timestamp or connection is required to rename the presentation unit.
+ bool get displayOnly => provider=='display-only';
+ bool get verified => displayOnly || code=='SAR'||(sarToSelected!=null&&
    sarToSelected!.isFinite&&sarToSelected!>0&&updatedAtUtc!=null);
  double? fromSar(num amount){
   if(!amount.toDouble().isFinite)return null;
-  if(code=='SAR')return amount.toDouble();
+  if(code=='SAR'||displayOnly)return amount.toDouble();
   final rate=sarToSelected;
   return verified&&rate!=null?amount.toDouble()*rate:null;
  }
  double? toSar(num amount){
   if(!amount.toDouble().isFinite)return null;
-  if(code=='SAR')return amount.toDouble();
+  if(code=='SAR'||displayOnly)return amount.toDouble();
   final rate=sarToSelected;
   return verified&&rate!=null?amount.toDouble()/rate:null;
  }
@@ -90,7 +94,7 @@ class WaffraDisplayCurrency {
  static final ValueNotifier<WaffraVerifiedDisplayQuote> active=
   ValueNotifier<WaffraVerifiedDisplayQuote>(
    const WaffraVerifiedDisplayQuote(code:'SAR',sarToSelected:1,
-     updatedAtUtc:null,provider:'base'));
+     updatedAtUtc:null,provider:'display-only'));
  static WaffraCountryCurrency get country=>waffraCountry(active.value.code);
  static String label(bool english)=>english?country.code:country.symbolAr;
  static double? convert(num sar)=>active.value.fromSar(sar);
@@ -193,30 +197,33 @@ class WaffraDisplayCurrency {
    }
   }finally{if(client==null)api.close();}
  }
+ // A country preference NEVER exchanges financial amounts. The separate
+ // CurrencyConverterPage and gold calculator still use genuine market FX.
+ // Keep this signature for existing settings callers; no HTTP request is made.
+ static WaffraVerifiedDisplayQuote displaySelection(String code) {
+  if (!waffraCountryCurrencies.any((item) => item.code == code)) {
+   throw const FormatException('Unsupported currency country.');
+  }
+  return WaffraVerifiedDisplayQuote(
+   code: code, sarToSelected: 1, updatedAtUtc: null,
+   provider: 'display-only');
+ }
  static Future<void> setCurrency(String code,{http.Client? client})async{
-  final quote=await fetch(code,client:client);
-  // Persist UI preference only, never money, a PIN, a bank SMS or a rate.
+  final quote=displaySelection(code);
   final p=await SharedPreferences.getInstance();
-  await p.setString(_preferenceKey,code);
+  if(!await p.setString(_preferenceKey,code)){
+   throw StateError('Currency preference was not stored.');
+  }
   active.value=quote;
  }
  static Future<void> initialize({http.Client? client})async{
   final p=await SharedPreferences.getInstance();
   final saved=p.getString(_preferenceKey)??'SAR';
-  if(saved=='SAR')return;
-  if(!waffraCountryCurrencies.any((x)=>x.code==saved))return;
-  try{active.value=await fetch(saved,client:client);}
-  catch(_){
-   // Honor the selected denomination, but never show old SAR numbers under
-   // an EGP label while source data or internet is unavailable.
-   active.value=WaffraVerifiedDisplayQuote(
-    code:saved,sarToSelected:null,updatedAtUtc:null,provider:'unavailable');
-  }
+  active.value=displaySelection(
+   waffraCountryCurrencies.any((item)=>item.code==saved)?saved:'SAR');
  }
  static Future<void> refresh({http.Client? client})async{
-  final code=active.value.code;
-  if(code=='SAR')return;
-  final quote=await fetch(code,client:client);
-  active.value=quote;
+  // Presentation is independent of the network and never goes stale.
+  // Real FX fetching is deliberately isolated in CurrencyConverterPage.
  }
 }

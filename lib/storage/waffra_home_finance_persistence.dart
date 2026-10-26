@@ -280,6 +280,8 @@ class WaffraHomeFinancePersistence {
     required bool userConfirmed,
     bool allowDuplicateHashes = false,
     List<Map<String, Object?>> proposedCategories = const [],
+    Future<void> Function(List<Map<String, Object?>>, List<String>)?
+        protectedNotesBeforeLegacyCommit,
   }) async {
     if (!userConfirmed) {
       throw StateError('Bank transaction batch was not confirmed.');
@@ -338,6 +340,7 @@ class WaffraHomeFinancePersistence {
       final existingHashes = (prefs.getStringList('waffra_sms_hashes_v1') ??
           const <String>[]).toSet();
       final confirmed = <Map<String, Object?>>[];
+      final confirmedHashes = <String>[];
       final newHashes = <String>{};
       var income = 0, expense = 0, incomeMinor = 0, expenseMinor = 0;
       var skipped = 0;
@@ -358,6 +361,7 @@ class WaffraHomeFinancePersistence {
           throw StateError('Invalid transaction precision.');
         }
         confirmed.add(item);
+        confirmedHashes.add(hash);
         newHashes.add(hash);
         if (item['income'] == true) {
           income++;
@@ -368,6 +372,17 @@ class WaffraHomeFinancePersistence {
         }
       }
       if (confirmed.isNotEmpty) {
+        // The original SMS MUST already be durable in SQLCipher before the
+        // legacy finance intent is prepared. Do this under the SAME Home /
+        // Widget cross-engine lock after duplicate filtering. This prevents
+        // skipped duplicates from collecting orphan bank SMS payloads, and
+        // keeps a keystore/SQLCipher failure from saving metadata-only rows.
+        if (protectedNotesBeforeLegacyCommit != null) {
+          await protectedNotesBeforeLegacyCommit(
+            List<Map<String, Object?>>.unmodifiable(confirmed),
+            List<String>.unmodifiable(confirmedHashes),
+          );
+        }
         final finalEntries = jsonEncode([...confirmed, ...oldEntries]);
         final finalHashes = {...existingHashes, ...newHashes}.toList()..sort();
         final revision = DateTime.now().toUtc().toIso8601String();

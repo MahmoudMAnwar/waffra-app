@@ -62,7 +62,8 @@ class WaffraGoldSpotQuote {
     final gold = json['xau'];
     final state = json['data_state'];
     if (gold is! Map || state is! Map ||
-        gold['currency'] != 'USD' || gold['unit'] != 'oz' ||
+        gold['currency'] != 'USD' ||
+        !const <String>['oz','troy_oz'].contains(gold['unit']) ||
         !const <String>['fresh', 'stale'].contains(state['status']) ||
         !const <String>['upstream', 'cache'].contains(state['source'])) {
       throw const FormatException('Unverified XAU/USD spot source.');
@@ -88,6 +89,24 @@ class WaffraGoldSpotQuote {
       usdPerTroyOunce: price.toDouble(),
       updatedAtUtc: updated,
       source: 'XAUS',
+    );
+  }
+
+  /// Revalidate a previously authenticated spot response before showing it
+  /// offline. A cache is never a live-price source and cannot invent a rate.
+  Map<String, Object?> toCacheJson() => <String, Object?>{
+    'symbol': 'XAU', 'currency': 'USD',
+    'price': usdPerTroyOunce,
+    'updatedAt': updatedAtUtc.toIso8601String(),
+  };
+
+  static WaffraGoldSpotQuote fromCacheJson(Map<String, dynamic> json,
+      {DateTime? checkedAt}) {
+    final quote = WaffraGoldSpotQuote.fromJson(json, checkedAt: checkedAt);
+    return WaffraGoldSpotQuote(
+      usdPerTroyOunce: quote.usdPerTroyOunce,
+      updatedAtUtc: quote.updatedAtUtc,
+      source: 'verified-cache',
     );
   }
 

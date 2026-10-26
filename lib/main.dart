@@ -149,8 +149,9 @@ double? amountOf(String s) {
   final n=double.tryParse(v);
   return n!=null&&n.isFinite&&n>0?n:null;
 }
-/// User-entered display denominations convert back to canonical ledger SAR.
-/// Bank SMS parsing must continue calling amountOf() without FX conversion.
+/// App-wide presentation currency changes only the unit caption, never its
+/// numeric value. The currency-converter tool alone performs real FX.
+/// Bank SMS parsing always uses the original unmodified amount.
 double? amountOfDisplay(String text){
  final n=amountOf(text);
  return n==null?null:WaffraDisplayCurrency.toLedgerSar(n);
@@ -4782,10 +4783,28 @@ Future<void> bulkSmsSheet({String? initialText})async {
    ),
   );
  Future<void> transactionDetails(MoneyEntry entry)async {
+  // Only after confirming this ID is in the authoritative SMS ledger may
+  // a full original message be loaded from its separate SQLCipher note vault.
+  // The decrypted text remains in this dialog's memory, never preferences.
+  var visibleEntry=entry;
+  if(entry.sourceType=='sms'&&entry.notes.isEmpty){
+   try{
+    final original=await _financeAuthority.readProtectedOriginalSms(entry.id);
+    if(original!=null){
+     visibleEntry=MoneyEntry.fromJson({...entry.toJson(),'notes':original});
+    }
+   }catch(_){
+    if(mounted)snack(context,waffraIsEnglish?
+     'Encrypted bank message cannot be opened. Your transaction is unchanged.':
+     'تعذر فتح الرسالة البنكية المشفّرة. بيانات المعاملة لم تتغير.');
+    return;
+   }
+  }
+  if(!mounted)return;
   await showWaffraDialog<void>(
    context:context,
    builder:(ctx)=>WaffraTransactionDetailsDialog(
-    entry:entry,
+    entry:visibleEntry,
     onClose:()=>Navigator.pop(ctx),
     onViewReceipt:waffraReceiptPaths(entry.receiptPath).isNotEmpty
       ?(){Navigator.pop(ctx);showReceipt(entry.receiptPath!);}
@@ -5393,6 +5412,45 @@ Future<void> bulkSmsSheet({String? initialText})async {
          ]),
          const SizedBox(height:15),
           smartAnalysisEntryCard(),
+          const SizedBox(height:12),
+          // Explicit Home entry: the global-gold market cannot remain hidden
+          // behind collapsed Account settings. True FX is only in this tool.
+          InkWell(
+           key:const Key('waffra-home-gold-currency-entry'),
+           borderRadius:BorderRadius.circular(21),
+           onTap:()=>Navigator.of(context).push<void>(MaterialPageRoute(
+            builder:(_)=>const CurrencyConverterPage())),
+           child:Container(
+            padding:const EdgeInsets.symmetric(horizontal:15,vertical:13),
+            decoration:BoxDecoration(
+             gradient:const LinearGradient(
+              colors:[Color(0xFF073F31),Color(0xFF126749)]),
+             borderRadius:BorderRadius.circular(21),
+             border:Border.all(color:const Color(0xFFD4AF37).withValues(alpha:.65))),
+            child:Row(children:[
+             Container(
+              width:48,height:48,
+              decoration:BoxDecoration(
+               color:const Color(0xFFFFE1A0).withValues(alpha:.16),
+               borderRadius:BorderRadius.circular(15)),
+              child:const Icon(Icons.workspace_premium_rounded,
+               color:Color(0xFFFFD36A),size:29)),
+             const SizedBox(width:11),
+             Expanded(child:Column(
+              crossAxisAlignment:CrossAxisAlignment.start,children:[
+               WaffraText(waffraIsEnglish?'Global gold & currency converter':
+                'الذهب العالمي وتحويل العملات',
+                style:const TextStyle(fontSize:16,fontWeight:FontWeight.w800,
+                 color:Colors.white)),
+               const SizedBox(height:3),
+               WaffraText(waffraIsEnglish?'Live 24K / 22K / 21K, gold bars & FX':
+                'عيار ٢٤ و٢٢ و٢١ والسبائك وأسعار الصرف',
+                style:const TextStyle(fontSize:11,color:Color(0xFFFFE1A0))),
+              ])),
+             const Icon(Icons.chevron_right_rounded,
+              color:Color(0xFFFFD36A),size:24),
+            ])),
+          ),
           const SizedBox(height:15),
          WaffraText(waffraIsEnglish?'Quick actions':'إجراءات سريعة',
           style:const TextStyle(fontSize:17,fontWeight:FontWeight.bold)),
@@ -8258,6 +8316,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
          return ListTile(
           key:Key('waffra-country-currency-${option.code}'),
           selected:WaffraDisplayCurrency.country.code==option.code,
+          leading:Text(waffraCurrencyFlag(option.code),
+           style:const TextStyle(fontSize:27)),
           title:WaffraText(option.label(waffraIsEnglish)),
           trailing:WaffraDisplayCurrency.country.code==option.code?
            const Icon(Icons.check_circle,color:emerald):null,
@@ -8275,13 +8335,13 @@ Future<void> bulkSmsSheet({String? initialText})async {
     setState((){});
     await _refreshWidget();
     if(mounted)snackSuccess(context,waffraIsEnglish?
-      'Currency updated using a verified exchange rate.':
-      'تم تحديث العملة بسعر صرف موثّق.');
+      'Display currency changed; numbers stay exactly the same.':
+      'تم تغيير عملة العرض مع الحفاظ على قيمة الأرقام كما هي.');
    }catch(error){
     debugPrint('App country currency rejected safely: $error');
     if(mounted)snack(context,waffraIsEnglish?
-      'Exchange rate unavailable. Your stored balances and currency were not changed.':
-      'سعر الصرف غير متاح. لم تتغير بياناتك أو عملتك الحالية.');
+      'Could not save display currency; no financial amount was modified.':
+      'تعذّر حفظ عملة العرض، ولم يتم تعديل أي مبلغ مالي.');
    }
   }finally{searchController.dispose();}
  }
@@ -8406,7 +8466,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
        }:null)),
    ]),
    _accountSection(waffraIsEnglish?'Financial tools':'الأدوات المالية',Icons.account_balance_wallet_outlined,[
-    _accountTile(waffraIsEnglish?'Currency converter':'تحويل العملات',
+    _accountTile(waffraIsEnglish?'Currency converter & global gold prices':
+       'محوّل العملات وأسعار الذهب العالمية',
      waffraIsEnglish?'Search, exchange and swap currencies':'ابحث وحوّل وبدّل بين العملات',
      Icons.currency_exchange,onTap:()=>Navigator.push<void>(context,MaterialPageRoute(
       builder:(_)=>const CurrencyConverterPage()))),
