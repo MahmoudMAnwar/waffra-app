@@ -3979,6 +3979,51 @@ Future<void> bulkSmsSheet({String? initialText})async {
      'Transaction saved; original bank SMS text was NOT stored.':
      'تم حفظ بيانات العملية دون نص الرسالة البنكية الأصلي.',isError:false);
    }
+  }else if(editingProtectedSms){
+   // An SMS annotation never enters legacy 'entries'. Save transaction
+   // metadata only when it changed, then independently CAS the encrypted
+   // user note against the last protected value. A failed write cannot show
+   // the optimistic text as if it had been committed.
+   final was=List<MoneyEntry>.of(entries);
+   final learnedBefore=Map<String,String>.from(learnedMerchantCategories);
+   final changedMetadata=jsonEncode(initial!.toJson())!=jsonEncode(result.toJson());
+   final oldUserNote=previousProtectedUserNote??'';
+   final nextUserNote=proposedProtectedUserNote??oldUserNote;
+   try{
+    if(changedMetadata){
+     setState((){
+      final i=entries.indexWhere((e)=>e.id==result.id);
+      if(i<0)throw StateError('Edited SMS transaction is no longer visible.');
+      entries[i]=result;
+      if(initial.category!=result.category){
+       final merchant=initial.merchantKey.isNotEmpty?
+        initial.merchantKey:waffraMerchantKey(initial.title,income:initial.income);
+       if(merchant!=null&&merchant.isNotEmpty){
+        learnedMerchantCategories[merchant]=result.category;
+       }
+      }
+     });
+     await persist(route:WaffraFinanceRoute.transactionEdit);
+    }
+    if(nextUserNote!=oldUserNote){
+     await _financeAuthority.updateProtectedSmsUserNote(
+      entryId:result.id,expectedNote:oldUserNote,nextNote:nextUserNote);
+    }
+   }catch(_){
+    if(!mounted)return;
+    setState((){
+     entries..clear()..addAll(was);
+     learnedMerchantCategories..clear()..addAll(learnedBefore);
+    });
+    // A ledger edit may have succeeded before an annotation failed.
+    // Reconcile with the authoritative source instead of showing old UI
+    // or announcing success for either write.
+    await _loadFinanceSafely();
+    if(mounted)snack(context,waffraIsEnglish?
+     'Could not complete the bank transaction edit. Check the saved values before retrying.':
+     'تعذر إكمال تعديل العملية البنكية. راجع القيم المحفوظة قبل إعادة المحاولة.');
+    return;
+   }
   }else{
    setState((){
     final i=entries.indexWhere((e)=>e.id==result.id);
@@ -4002,13 +4047,38 @@ Future<void> bulkSmsSheet({String? initialText})async {
     await _persistSmsHashes({pendingHash!});
    }
   }
-  if(mounted)await budgetAlert(result,previousSpent);
+  if(mounted&&(!editingProtectedSms||
+    jsonEncode(initial!.toJson())!=jsonEncode(result.toJson())))
+   await budgetAlert(result,previousSpent);
   if(initial!=null&&mounted){
    snack(context,waffraIsEnglish?'Transaction updated':'تم تعديل المعاملة',
     isError:false,duration:const Duration(seconds:5),
     actionLabel:waffraIsEnglish?'Undo':'تراجع',
     onAction:()async{
      if(!mounted)return;
+     if(editingProtectedSms){
+      try{
+       final before=previousProtectedUserNote??'';
+       final after=proposedProtectedUserNote??before;
+       if(after!=before){
+        await _financeAuthority.updateProtectedSmsUserNote(
+         entryId:initial.id,expectedNote:after,nextNote:before);
+       }
+       if(jsonEncode(initial.toJson())!=jsonEncode(result.toJson())){
+        final index=entries.indexWhere((e)=>e.id==initial.id);
+        if(index>=0){
+         setState(()=>entries[index]=initial);
+         await persist(route:WaffraFinanceRoute.transactionEdit);
+        }
+       }
+      }catch(_){
+       await _loadFinanceSafely();
+       if(mounted)snack(context,waffraIsEnglish?
+        'Could not undo this encrypted note edit.':
+        'تعذر التراجع عن تعديل الملاحظة المشفّرة.');
+      }
+      return;
+     }
      final index=entries.indexWhere((e)=>e.id==initial.id);
      if(index<0)return;
      setState(()=>entries[index]=initial);
