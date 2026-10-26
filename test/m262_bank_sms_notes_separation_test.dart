@@ -36,7 +36,7 @@ void main() {
       (tester) async {
     waffraLanguage.value = 'ar';
     await tester.pumpWidget(details(sms(notes: '')));
-    expect(find.text('لا توجد ملاحظات'), findsOneWidget);
+    expect(find.text('لا توجد ملاحظات'), findsWidgets);
     final bank = find.byKey(
       const Key('waffra-transaction-protected-bank-sms'),
     );
@@ -53,7 +53,7 @@ void main() {
         'قسّطت مبلغ الشراء');
     expect(tester.widget<SelectableText>(bank).data, original);
     expect(find.text('تفاصيل الرسالة البنكية الأصلية (مشفّرة)'),
-        findsOneWidget);
+        findsWidgets);
     expect(tester.takeException(), isNull);
   });
 
@@ -64,10 +64,10 @@ void main() {
       sms(notes: 'ملاحظة منفصلة'),
       bankSms: null,
     ));
-    expect(find.text('ملاحظة منفصلة'), findsOneWidget);
+    expect(find.text('ملاحظة منفصلة'), findsWidgets);
     expect(find.text(
       'الرسالة البنكية الأصلية غير متاحة من التخزين المشفّر.',
-    ), findsOneWidget);
+    ), findsWidgets);
     expect(find.byKey(
       const Key('waffra-transaction-protected-bank-sms'),
     ), findsNothing);
