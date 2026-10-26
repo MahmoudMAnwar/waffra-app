@@ -31,8 +31,11 @@ void main() {
     final authority = File('lib/storage/waffra_verified_finance_authority.dart')
         .readAsStringSync();
     expect(home, contains('readProtectedOriginalSms(entry.id)'));
-    expect(home, contains("entry.sourceType=='sms'&&entry.notes.isEmpty"));
-    expect(home, contains('child:SelectableText(entry.notes'));
+    expect(home, contains("if(entry.sourceType=='sms'){"));
+    expect(home, contains('protectedOriginalSms:originalBankSms'));
+    expect(home, contains("Key('waffra-transaction-personal-notes')"));
+    expect(home, contains("Key('waffra-transaction-protected-bank-sms')"));
+    expect(home, isNot(contains("entry.sourceType=='sms'&&entry.notes.isEmpty")));
     expect(bind, contains('protectedSmsNotes: const WaffraEncryptedSmsNotesVault()'));
     expect(authority, contains('protectedNotesBeforeLegacyCommit:'));
     expect(authority, contains("'notes': ''"));
