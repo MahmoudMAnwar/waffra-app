@@ -52,6 +52,7 @@ import 'storage/waffra_live_account_write_authority.dart';
 import 'storage/waffra_legacy_widget_commit_journal.dart';
 import 'storage/waffra_home_finance_persistence.dart';
 import 'storage/waffra_verified_finance_authority.dart';
+import 'storage/waffra_verified_receipt_screen_gateway.dart';
 import 'storage/waffra_verified_pull_refresh_source.dart';
 import 'storage/waffra_production_finance_authority_binding.dart';
 import 'storage/waffra_fresh_finance_modules_repository.dart';
@@ -4926,6 +4927,98 @@ Future<void> bulkSmsSheet({String? initialText})async {
     Icon(icon,color:color),const SizedBox(height:8),WaffraText(label),const SizedBox(height:6),
     FittedBox(child:RiyalAmount(value,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:16))),
    ]))));
+ Future<void> _recycleVerifiedReceiptBatch(MoneyEntry entry)async{
+  if(_lastFinanceAuthorityRead?.source!=
+      WaffraRuntimeFinanceBackend.verifiedEncrypted)return;
+  try{
+   await _financialWriteQueue.drain();
+   await _ensureFinanceBound();
+   final current=await _financeAuthority.load(
+    route:WaffraFinanceRoute.receiptView);
+   current.finance.requireIntegrity();
+   if(current.source!=WaffraRuntimeFinanceBackend.verifiedEncrypted||
+      current.ledgerRaw==null){
+    throw StateError('Receipt recycle source changed.');
+   }
+   final parsed=jsonDecode(current.ledgerRaw!);
+   if(parsed is! List)throw StateError('Verified ledger malformed.');
+   final owner=parsed.where((item)=>item is Map&&item['id']==entry.id).toList();
+   if(owner.length!=1||owner.single['receiptPath']!=entry.receiptPath){
+    throw StateError('Receipt owner changed since it was displayed.');
+   }
+   final screen=WaffraVerifiedReceiptScreenGateway(authority:_financeAuthority);
+   final baseline=await screen.load(entry.id);
+   if(!baseline.hasActiveImages||baseline.isInRecycleBin||
+      baseline.images.length!=waffraReceiptPaths(entry.receiptPath).length){
+    throw StateError('Verified receipt reference count mismatched.');
+   }
+   if(!mounted)return;
+   final ok=await confirmDeletion(
+    waffraIsEnglish?'Move attached invoices to Recently Deleted?':
+     'نقل الفواتير إلى المحذوفات؟',
+    waffraIsEnglish?
+     'The invoice photos will remain encrypted and recoverable for 30 days. The transaction and amount will remain unchanged.':
+     'ستظل صور الفواتير مشفرة وقابلة للاسترجاع لمدة 30 يومًا. المعاملة ومبلغها لن يتغيرا.');
+   if(ok!=true||!mounted)return;
+   // The encrypted source and all BLOB digests are rechecked under the
+   // native Home/Widget lock against the immutable baseline image hashes.
+   final moved=await screen.moveToRecycle(
+    baseline:baseline,userConfirmed:true,now:DateTime.now().toUtc());
+   if(!moved.isInRecycleBin||moved.hasActiveImages){
+    throw StateError('Encrypted invoice recycle lacked a durable witness.');
+   }
+   Future<void> reload()async{
+    final verified=await _financeAuthority.load(
+     route:WaffraFinanceRoute.dashboardRead);
+    verified.finance.requireIntegrity();
+    if(verified.source!=WaffraRuntimeFinanceBackend.verifiedEncrypted||
+       verified.ledgerRaw==null){
+     throw StateError('Encrypted finance missing after invoice change.');
+    }
+    final rows=jsonDecode(verified.ledgerRaw!);
+    if(rows is! List)throw StateError('Encrypted finance changed shape.');
+    if(!mounted)return;
+    setState((){
+     entries..clear()..addAll(rows.map((item)=>
+      MoneyEntry.fromJson(Map<String,dynamic>.from(item as Map))));
+     _lastFinanceAuthorityRead=verified;
+     _lastLedgerSavedRaw=verified.ledgerRaw;
+     _lastWidgetRevision=verified.widgetRevision;
+    });
+    unawaited(_refreshWidget());
+   }
+   await reload();
+   if(!mounted)return;
+   snack(context,waffraIsEnglish?
+     'Encrypted invoices moved to Recently Deleted.':
+     'تم نقل الفواتير المشفرة إلى المحذوفات.',
+     isError:false,duration:const Duration(seconds:5),
+     actionLabel:waffraIsEnglish?'Undo':'تراجع',
+     onAction:()async{
+      try{
+       final latest=await screen.load(entry.id);
+       if(!latest.isInRecycleBin||latest.hasActiveImages){
+        throw StateError('Invoice recycle witness expired or changed.');
+       }
+       await screen.restore(baseline:latest,now:DateTime.now().toUtc());
+       await reload();
+      }catch(e){
+       debugPrint('Verified invoice undo blocked: $e');
+       if(mounted)snack(context,waffraIsEnglish?
+        'Cannot restore the invoice safely. Review Recently Deleted.':
+        'تعذر استرجاع الفاتورة بأمان. راجع المحذوفات.');
+      }
+     });
+  }catch(e){
+   debugPrint('Verified SQLCipher invoice recycle blocked: $e');
+   if(mounted){
+    snack(context,waffraIsEnglish?
+     'Invoice removal could not be verified. No transaction was erased.':
+     'تعذر التحقق من حذف الفواتير المشفرة. لم تُحذف المعاملة.');
+    unawaited(_loadFinanceSafely());
+   }
+  }
+ }
  Future<void> transactionActions(MoneyEntry entry)async {
   final hasReceipt=waffraReceiptPaths(entry.receiptPath).isNotEmpty;
   final action=await showWaffraDialog<String>(context:context,builder:(ctx)=>AlertDialog(
@@ -4952,12 +5045,20 @@ Future<void> bulkSmsSheet({String? initialText})async {
       onPressed:()=>Navigator.pop(ctx,'receipt'),
       icon:const Icon(Icons.photo_library_outlined),
       label:WaffraText(waffraIsEnglish?'View attached images':'عرض الصور المرفقة'))),
+     if(_lastFinanceAuthorityRead?.source==
+         WaffraRuntimeFinanceBackend.verifiedEncrypted)
+      SizedBox(width:double.infinity,child:OutlinedButton.icon(
+       onPressed:()=>Navigator.pop(ctx,'receiptRecycle'),
+       icon:const Icon(Icons.delete_outline,color:Colors.red),
+       label:WaffraText(waffraIsEnglish?
+        'Move invoices to Recently Deleted':'نقل الفواتير إلى المحذوفات'))),
     ],
    ])),
   ));
   if(!mounted)return;
   switch(action){
    case 'receipt':if(hasReceipt)await showReceipt(entry.receiptPath!,entryId:entry.id);break;
+   case 'receiptRecycle':await _recycleVerifiedReceiptBatch(entry);break;
    case 'open':await transactionDetails(entry);break;
    case 'edit':await entrySheet(initial:entry);break;
    case 'delete':await deleteEntry(entry);break;
