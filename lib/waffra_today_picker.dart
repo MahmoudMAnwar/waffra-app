@@ -31,7 +31,7 @@ Future<DateTime?> waffraPickDateWithToday({
            ()=>Navigator.of(dialogContext).pop(today)):null,
           icon:const Icon(Icons.today_rounded,size:18),
           label:Text(english?'Today':'اليوم',style:
-           const TextStyle(fontFamily:'Tajawal',fontWeight:FontWeight.w700))))))),
+           const TextStyle(fontFamily:'Tajawal',fontWeight:FontWeight.w700)))))))),
    ]),
   );
 }
