@@ -1,0 +1,64 @@
+name: M254 Physical Android Evidence Preflight (NO APK, NO GO)
+
+on:
+  pull_request:
+    branches:
+      - integration/m253-five-pr-cumulative-certification-no-apk-20261026
+    paths:
+      - 'scripts/qa/m254_physical_release_evidence_review.py'
+      - 'test/qa/m254_physical_release_evidence_review_test.py'
+      - 'docs/qa/m254-physical-signed-device-evidence.md'
+      - '.github/workflows/m254-physical-evidence-no-go.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  private-evidence-refusal-regression:
+    name: Reject forged hardware, signer, duplicate devices and fake production GO
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - run: python3 -m unittest discover -s test/qa -p 'm189_physical_device_source_probe_test.py' -v
+      - run: python3 -m unittest discover -s test/qa -p 'm190_signed_apk_preflight_test.py' -v
+      - run: python3 -m unittest discover -s test/qa -p 'm254_physical_release_evidence_review_test.py' -v
+      - run: python3 scripts/qa/m189_physical_device_source_probe.py --check-contract
+      # Deliberately no ADB credentials, phones, signer keys or APK.
+
+  production-release-no-go:
+    name: SQLCipher 24-route release refusal remains default-off
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: >
+          flutter test
+          test/storage/m247_production_route_readiness_test.dart
+          test/storage/m253_cumulative_production_release_refusal_test.dart
+          --reporter expanded
+
+
+      - name: Same-SHA M248-M252 finance/SMS fail-closed regression
+        run: >
+          flutter test
+          test/storage/m175_live_finance_mutation_intent_test.dart
+          test/storage/m181_encrypted_catalog_atomic_install_test.dart
+          test/storage/m249_ui_finance_failure_refusal_test.dart
+          test/storage/m250_bulk_sms_uncertain_commit_ui_test.dart
+          test/storage/m251_sms_source_readiness_test.dart
+          test/storage/m252_single_sms_ui_recovery_test.dart
+          --reporter expanded
+
+# NEVER certify a physical phone from hosted-runner emulator/mock outputs.
+# NEVER sign, upload, install or publish an APK from this workflow.
