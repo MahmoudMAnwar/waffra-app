@@ -21,6 +21,7 @@ APPROVED = {
     "lib/waffra_oil_market_section.dart",
     "scripts/qa/m260_action_layout_market_scope_review.py",
     "test/m260_action_layout_test.dart",
+    "test/m259_oil_quotes_test.dart",
     "test/m149_backup_pin_localized_fab_trash_uat_test.dart",
 }
 
@@ -80,8 +81,12 @@ def main():
             "verified public oil sources removed")
     require("SharedPreferences" not in oil and "Firebase" not in oil,
             "oil data must not touch financial/user storage")
-    require("WaffraOilPoint" in oil and "parseFredCsv(" in oil,
-            "real dated series validation removed")
+    require("WaffraOilPoint" in oil and "parseFredCsv(" in oil and
+            "parseEiaGas(" in oil and "RNGWHHD" in oil,
+            "official dated crude/Henry Hub series validation removed")
+    require("registered EIA key requests independent crude and gas source routes" in
+            content("test/m259_oil_quotes_test.dart"),
+            "independent EIA commodity HTTP contract test is missing")
     section = content("lib/waffra_oil_market_section.dart")
     require("waffra-oil-retry" in section and "waffra-oil-price-status" in section,
             "failure recovery UI removed")
