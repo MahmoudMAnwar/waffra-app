@@ -15,6 +15,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'waffra_financial_tools.dart';
+import 'waffra_action_layout.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
@@ -758,14 +759,20 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     minimumSize:const Size(36,36),alignment:Alignment.center)),
    filledButtonTheme:FilledButtonThemeData(style:FilledButton.styleFrom(
     backgroundColor:forest,foregroundColor:Colors.white,
-    minimumSize:const Size(0,46),alignment:Alignment.center,
+    minimumSize:WaffraActionLayout.minimumSize,
+    padding:WaffraActionLayout.contentPadding,alignment:Alignment.center,
     side:const BorderSide(color:Color(0xFF0C7957),width:1.2),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)))),
    outlinedButtonTheme:OutlinedButtonThemeData(style:OutlinedButton.styleFrom(
-    foregroundColor:forest,alignment:Alignment.center,side:const BorderSide(color:Color(0xFF0C7957),width:1.2),
+    foregroundColor:forest,alignment:Alignment.center,
+    minimumSize:WaffraActionLayout.minimumSize,
+    padding:WaffraActionLayout.contentPadding,
+    side:const BorderSide(color:Color(0xFF0C7957),width:1.2),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)))),
    textButtonTheme:TextButtonThemeData(style:TextButton.styleFrom(
     foregroundColor:forest,alignment:Alignment.center,
+    minimumSize:WaffraActionLayout.minimumSize,
+    padding:WaffraActionLayout.contentPadding,
     side:const BorderSide(color:Color(0xFF0C7957),width:1.1),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(13)))),
    inputDecorationTheme:InputDecorationTheme(
@@ -840,14 +847,20 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     minimumSize:const Size(36,36),alignment:Alignment.center)),
    filledButtonTheme:FilledButtonThemeData(style:FilledButton.styleFrom(
     backgroundColor:const Color(0xFF166E4F),foregroundColor:Colors.white,alignment:Alignment.center,
+    minimumSize:WaffraActionLayout.minimumSize,
+    padding:WaffraActionLayout.contentPadding,
     side:const BorderSide(color:Color(0xFF74DCAB),width:1.1),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)))),
    outlinedButtonTheme:OutlinedButtonThemeData(style:OutlinedButton.styleFrom(
     foregroundColor:Colors.white,alignment:Alignment.center,
+    minimumSize:WaffraActionLayout.minimumSize,
+    padding:WaffraActionLayout.contentPadding,
     side:const BorderSide(color:Color(0xFF74DCAB)),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)))),
    textButtonTheme:TextButtonThemeData(style:TextButton.styleFrom(
     foregroundColor:Colors.white,alignment:Alignment.center,
+    minimumSize:WaffraActionLayout.minimumSize,
+    padding:WaffraActionLayout.contentPadding,
     side:const BorderSide(color:Color(0xFF74DCAB)),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(13)))),
    inputDecorationTheme:InputDecorationTheme(
