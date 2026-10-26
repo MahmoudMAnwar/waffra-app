@@ -15,6 +15,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'waffra_financial_tools.dart';
+import 'waffra_smart_features.dart';
+import 'waffra_today_picker.dart';
 import 'waffra_action_layout.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -1808,7 +1810,7 @@ class _ProfileFormState extends State<ProfileForm> {
     onChanged:WaffraHaptics.selection((v){if(v!=null)setState((){gender=v;if(!avatar.startsWith('https://'))avatar=v=='أنثى'?'female':'male';});})),
    const SizedBox(height:12),
    OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async {
-    final d=await showDatePicker(context:context,initialDate:birthday,firstDate:DateTime(1900),lastDate:DateTime.now());
+    final d=await waffraPickDateWithToday(english:waffraIsEnglish,context:context,initialDate:birthday,firstDate:DateTime(1900),lastDate:DateTime.now());
     if(d!=null)setState(()=>birthday=d);
    }),icon:const Icon(Icons.calendar_month),label:WaffraText('${waffraIsEnglish?'Date of birth':'تاريخ الميلاد'}: ${dayText(birthday)}')),
    const SizedBox(height:20),
@@ -3016,7 +3018,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      await persist(route:WaffraFinanceRoute.recurringPostingAndPostponement,
       userConfirmed:true);
     }else if(action=='postpone'){
-     final selected=await showDatePicker(context:context,initialDate:today.add(const Duration(days:1)),
+     final selected=await waffraPickDateWithToday(english:waffraIsEnglish,context:context,initialDate:today.add(const Duration(days:1)),
       firstDate:DateTime(today.year,today.month,today.day).add(const Duration(days:1)),
       lastDate:DateTime(today.year+3,12,31));
      if(selected!=null){recurringPostponed[id]=selected.toIso8601String();
@@ -3855,7 +3857,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       }),icon:const Icon(Icons.add),
        label:WaffraText(waffraIsEnglish?'New subcategory':'قسم فرعي جديد')),
       OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async {
-       final d=await showDatePicker(context:sheetContext,initialDate:date,
+       final d=await waffraPickDateWithToday(english:waffraIsEnglish,context:sheetContext,initialDate:date,
         firstDate:DateTime(2000),lastDate:DateTime.now());
        if(d!=null)update(()=>date=d);
       }),icon:const Icon(Icons.calendar_month),label:WaffraText(dayText(date))),
@@ -5407,7 +5409,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     Padding(padding:const EdgeInsets.fromLTRB(11,12,11,12),child:Row(children:[
      CircleAvatar(radius:18,
       backgroundColor:Color(cat.color).withValues(alpha:0.13),
-      child:Icon(categoryIcon(cat.icon),size:19,color:Color(cat.color))),
+      child:WaffraIllustration(topic:cat.icon,size:36)),
      const SizedBox(width:8),
      Expanded(child:InkWell(onTap:WaffraHaptics.tap(()=>transactionDetails(entry)),
       child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -5487,6 +5489,32 @@ Future<void> bulkSmsSheet({String? initialText})async {
          ]),
          const SizedBox(height:15),
           smartAnalysisEntryCard(),
+          const SizedBox(height:12),
+          // M268 only adds a route; existing Home shortcuts remain intact.
+          InkWell(
+           key:const Key('waffra-m268-tools-entry'),
+           borderRadius:BorderRadius.circular(20),
+           onTap:WaffraHaptics.tap(openSmartFeatures),
+           child:Container(
+            padding:const EdgeInsets.all(13),
+            decoration:BoxDecoration(
+             color:Theme.of(context).cardColor,
+             borderRadius:BorderRadius.circular(20),
+             border:Border.all(color:emerald.withValues(alpha:.24))),
+            child:Row(children:[
+             const WaffraIllustration(topic:'assistant',size:52),
+             const SizedBox(width:11),
+             Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              WaffraText(waffraIsEnglish?'10 smart money tools':'١٠ أدوات مالية ذكية',
+               style:const TextStyle(fontSize:16,fontWeight:FontWeight.w800)),
+              WaffraText(waffraIsEnglish?
+               'Plan, simulate and understand your recorded transactions':
+               'خطط وجرّب واعرف تفاصيل معاملاتك برسومات واضحة',
+               style:const TextStyle(fontSize:11)),
+             ])),
+             const Icon(Icons.chevron_right_rounded,color:emerald),
+            ]))),
+          ),
           const SizedBox(height:12),
           // Explicit Home entry: the global-gold market cannot remain hidden
           // behind collapsed Account settings. True FX is only in this tool.
@@ -7392,7 +7420,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       ),
       const SizedBox(height:12),
       OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async{
-       final picked=await showDatePicker(context:ctx,initialDate:startAt,firstDate:DateTime.now().subtract(const Duration(days:1)),lastDate:DateTime(DateTime.now().year+5));
+       final picked=await waffraPickDateWithToday(english:waffraIsEnglish,context:ctx,initialDate:startAt,firstDate:DateTime.now().subtract(const Duration(days:1)),lastDate:DateTime(DateTime.now().year+5));
        if(picked!=null)update((){startAt=picked;day.text=picked.day.toString();});
       }),icon:const Icon(Icons.calendar_month_outlined),label:WaffraText(waffraIsEnglish?'First due: ${dayText(startAt)}':'أول استحقاق: ${dayText(startAt)}')),
       const SizedBox(height:8),
@@ -7558,7 +7586,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        final index=recurring.indexWhere((item)=>item.id==r.id);
        if(index<0)return;
        if(enabled){
-        final chosen=await showDatePicker(context:context,initialDate:DateTime.now().add(const Duration(days:1)),
+        final chosen=await waffraPickDateWithToday(english:waffraIsEnglish,context:context,initialDate:DateTime.now().add(const Duration(days:1)),
          firstDate:DateTime.now(),lastDate:DateTime(DateTime.now().year+5));
         if(chosen==null||!mounted)return;
         setState(()=>recurring[index]=r.copy(active:true,startAt:chosen,day:chosen.day));
@@ -8366,6 +8394,23 @@ Future<void> bulkSmsSheet({String? initialText})async {
    DateTime(DateTime.now().year,DateTime.now().month,r.day.clamp(1,28).toInt()),
    r.title,r.amount,r.income,scheduled:true)),
  ];
+ // Read-only feature hub; freeze verified Home state, no new ledger writes.
+ void openSmartFeatures(){
+  if(!ready||_financeBinding==null||_lastFinanceAuthorityRead==null){
+   snack(context,waffraIsEnglish?'Financial source not ready':'مصدر البيانات المالية غير جاهز');
+   return;
+  }
+  Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>WaffraSmartFeaturesPage(
+   english:waffraIsEnglish,
+   entries:List<WaffraSmartEntry>.unmodifiable(entries.map((e)=>WaffraSmartEntry(
+    id:e.id,title:e.title,category:e.category,amount:e.amount,
+    income:e.income,date:e.date))),
+   goals:List<WaffraSmartGoal>.unmodifiable(goals.map((g)=>
+    WaffraSmartGoal(g.name,g.target,g.saved))),
+   recurring:List<WaffraSmartRecurring>.unmodifiable(recurring.where((r)=>r.active).map((r)=>
+    WaffraSmartRecurring(r.title,r.amount,r.day,r.income))),
+  )));
+ }
  void openFinancialCalendar()=>Navigator.push<void>(context,MaterialPageRoute(
   builder:(_)=>WaffraFinancialCalendar(items:financialCalendarItems,english:waffraIsEnglish)));
  void openSubscriptionInsights()=>Navigator.push<void>(context,MaterialPageRoute(
@@ -8547,6 +8592,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
        }:null))),
    ]),
    _accountSection(waffraIsEnglish?'Financial tools':'الأدوات المالية',Icons.account_balance_wallet_outlined,[
+    _accountTile(waffraIsEnglish?'10 smart money tools':'١٠ أدوات مالية ذكية',
+     waffraIsEnglish?'Budget scenarios, safe daily spending and expense insights':
+      'محاكاة وميزانيات وتدفق الأموال من معاملاتك المحفوظة',
+     Icons.auto_awesome_outlined,onTap:WaffraHaptics.tap(openSmartFeatures)),
     _accountTile(waffraIsEnglish?'Currency converter & global gold prices':
        'محوّل العملات وأسعار الذهب العالمية',
      waffraIsEnglish?'Search, exchange and swap currencies':'ابحث وحوّل وبدّل بين العملات',
