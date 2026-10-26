@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
+import 'package:waffra/waffra_i18n.dart';
 
 void main() {
   const original = 'شراء عبر نقاط بيع\nمن: بنك تجريبي\n'
