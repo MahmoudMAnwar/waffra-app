@@ -7659,6 +7659,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
     content:SizedBox(width:380,height:min(460.0,MediaQuery.sizeOf(ctx).height*.6),child:Column(children:[
      CalendarDatePicker(initialDate:selected,firstDate:DateTime(2020),lastDate:DateTime(2100),
       onDateChanged:(date)=>refresh(()=>selected=date)),
+     if(!waffraCalendarIsToday(selected))
+      Align(alignment:AlignmentDirectional.centerEnd,child:TextButton.icon(
+       key:const Key('waffra-recurring-calendar-today'),
+       onPressed:WaffraHaptics.tap(()=>refresh(()=>selected=DateUtils.dateOnly(DateTime.now()))),
+       icon:const Icon(Icons.today_rounded,size:17),
+       label:WaffraText(waffraIsEnglish?'Today':'اليوم'))),
      const Divider(),
      Expanded(child:ListView(children:monthEvents.map((r){
       final due=WaffraRecurringPolicy.dueDate(selected.year,selected.month,r.day);
