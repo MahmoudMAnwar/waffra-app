@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - 'lib/waffra_widget_capture.part.dart'
+      - 'lib/main.dart'
+      - 'test/storage/m266_home_bound_source_regression_test.dart'
       - 'test/storage/m266_widget_source_fail_closed_ui_test.dart'
       - '.github/workflows/m266-sqlcipher-precutover-qa.yml'
       - '.github/workflows/m147-final-main-review-gate.yml'
@@ -36,10 +38,11 @@ jobs:
           cache: true
       - run: flutter pub get
       - name: Analyze fail-closed Widget UI regression
-        run: dart analyze test/storage/m266_widget_source_fail_closed_ui_test.dart
+        run: dart analyze test/storage/m266_widget_source_fail_closed_ui_test.dart test/storage/m266_home_bound_source_regression_test.dart
       - name: Exercise widget UI, legacy guard and all-24-route negative acceptance
         run: |
           flutter test --reporter expanded \
+            test/storage/m266_home_bound_source_regression_test.dart \
             test/storage/m266_widget_source_fail_closed_ui_test.dart \
             test/waffra_widget_quick_capture_test.dart \
             test/storage/live_legacy_finance_guard_test.dart \
