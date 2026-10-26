@@ -3639,6 +3639,45 @@ Future<void> bulkSmsSheet({String? initialText})async {
    String? suggestion,pendingHash,receiptPath=initial?.receiptPath;
    bool attempted=false;
    bool explicitlyApprovedSmsDuplicate=false;
+  // Images waiting for confirmation remain in memory on verified SQLCipher,
+  // never the old plaintext receipts directory or SharedPreferences.
+  final pendingEncryptedImages=<Uint8List>[];
+  Future<void> addPickedReceipts(
+   List<XFile> files,StateSetter update)async{
+   if(files.isEmpty)return;
+   await _ensureFinanceBound();
+   final selected=await _financeAuthority.load(
+    route:WaffraFinanceRoute.receiptCopyAndAttach);
+   if(selected.source==WaffraRuntimeFinanceBackend.verifiedEncrypted){
+    // Existing-entry receipt editing and SMS+receipt coupling require their
+    // separate verified CAS writers; never convert them to file paths.
+    if(initial!=null||sms){
+     throw StateError('Encrypted existing/SMS invoice edits need a separately verified writer.');
+    }
+    if(pendingEncryptedImages.length+files.length>10){
+     throw StateError('Encrypted receipt limit is ten images.');
+    }
+    final staged=<Uint8List>[];
+    var total=pendingEncryptedImages.fold<int>(0,(n,img)=>n+img.length);
+    for(final file in files){
+     final image=Uint8List.fromList(await file.readAsBytes());
+     if(image.isEmpty||image.length>8*1024*1024){
+      throw StateError('Encrypted receipt image exceeds safe limits.');
+     }
+     total+=image.length;
+     if(total>60*1024*1024){
+      throw StateError('Encrypted receipt batch exceeds safe limits.');
+     }
+     staged.add(image);
+    }
+    update(()=>pendingEncryptedImages.addAll(staged));
+   }else{
+    // The guarded-legacy path remains source-specific and unchanged.
+    final legacyPaths=<String>[...waffraReceiptPaths(receiptPath)];
+    for(final file in files){legacyPaths.add(await saveReceipt(file));}
+    update(()=>receiptPath=waffraEncodeReceipts(legacyPaths));
+   }
+  }
   Timer? debounce;
   final result=await showModalBottomSheet<MoneyEntry>(
    context:context,isScrollControlled:true,showDragHandle:true,
@@ -3806,15 +3845,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
        Expanded(child:OutlinedButton.icon(onPressed:()async{
         final file=await ImagePicker().pickImage(source:ImageSource.camera,imageQuality:80);
         if(file!=null){
-         try{
-          final path=await saveReceipt(file);
-          if(sheetContext.mounted)update(()=>receiptPath=waffraEncodeReceipts(
-           [...waffraReceiptPaths(receiptPath),path]));
-         }catch(e){
+         try{await addPickedReceipts([file],update);}
+         catch(e){
           debugPrint('Source-protected receipt picker refused: $e');
           if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
-           'Secure receipt attachment is unavailable until encrypted saving is verified.':
-           'إرفاق الفواتير مشفرًا غير متاح حتى اكتمال التحقق من الحفظ الآمن.');
+           'Unable to verify encrypted receipt attachment. Your transaction is unchanged.':
+           'تعذر إرفاق الفاتورة المشفرة بأمان. معاملتك لم تتغير.');
          }
         }
        },icon:const Icon(Icons.camera_alt_outlined),label:const WaffraText('تصوير فاتورة'))),
@@ -3822,19 +3858,37 @@ Future<void> bulkSmsSheet({String? initialText})async {
        Expanded(child:OutlinedButton.icon(onPressed:()async{
         final files=await ImagePicker().pickMultiImage(imageQuality:80);
         if(files.isNotEmpty){
-         try{
-          final paths=<String>[...waffraReceiptPaths(receiptPath)];
-          for(final file in files){paths.add(await saveReceipt(file));}
-          if(sheetContext.mounted)update(()=>receiptPath=waffraEncodeReceipts(paths));
-         }catch(e){
+         try{await addPickedReceipts(files,update);}
+         catch(e){
           debugPrint('Source-protected image batch refused: $e');
           if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
-           'Cannot attach receipts until encrypted source saving is ready.':
-           'لا يمكن إرفاق الفواتير حتى يجهز الحفظ المشفر للمعاملات.');
+           'Unable to verify encrypted receipt images. Your transaction is unchanged.':
+           'تعذر التحقق من الصور المشفرة. معاملتك لم تتغير.');
          }
         }
        },icon:const Icon(Icons.attach_file),label:const WaffraText('إرفاق صورة'))),
       ]),
+      if(pendingEncryptedImages.isNotEmpty)...[
+       WaffraText(waffraIsEnglish?
+        'Encrypted receipts selected: ${pendingEncryptedImages.length}':
+        'الفواتير المشفرة المختارة: ${pendingEncryptedImages.length}'),
+       for(var imageIndex=0;imageIndex<pendingEncryptedImages.length;imageIndex++)
+        ListTile(
+         leading:const Icon(Icons.lock_rounded,color:emerald),
+         title:WaffraText(waffraIsEnglish?
+          'Secure image ${imageIndex+1}':'صورة مشفرة ${imageIndex+1}'),
+         trailing:IconButton(icon:const Icon(Icons.close),onPressed:()=>update(
+          ()=>pendingEncryptedImages.removeAt(imageIndex))),
+         onTap:()async{
+          final image=Uint8List.fromList(pendingEncryptedImages[imageIndex]);
+          await showWaffraDialog<void>(context:sheetContext,
+           builder:(previewCtx)=>AlertDialog(
+            content:Image.memory(image,fit:BoxFit.contain),
+            actions:[TextButton(onPressed:()=>Navigator.pop(previewCtx),
+             child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))]));
+         },
+        ),
+      ],
       if(waffraReceiptPaths(receiptPath).isNotEmpty)...[
        for(final path in waffraReceiptPaths(receiptPath))
         ListTile(dense:true,
@@ -3892,6 +3946,66 @@ Future<void> bulkSmsSheet({String? initialText})async {
   }
   final previousSpent=sum(entries.where((e)=>!e.income&&e.id!=result.id&&
    e.category==result.category&&e.date.year==result.date.year&&e.date.month==result.date.month),false);
+  if(pendingEncryptedImages.isNotEmpty){
+   // A new manual transaction and all its original picker bytes are saved
+   // atomically in ONE SQLCipher transaction under the native Widget lock.
+   // An unsuccessful write must never result in an optimistic Home entry.
+   try{
+    if(initial!=null||sms||result.receiptPath!=null){
+     throw StateError('Invalid verified atomic receipt form source.');
+    }
+    await _financialWriteQueue.drain();
+    await _ensureFinanceBound();
+    final selected=await _financeAuthority.load(
+     route:WaffraFinanceRoute.receiptCopyAndAttach);
+    if(selected.source!=WaffraRuntimeFinanceBackend.verifiedEncrypted){
+     throw StateError('Encrypted finance source changed before receipt commit.');
+    }
+    final record=Map<String,Object?>.from(result.toJson())
+     ..['receiptPath']=null;
+    final committed=await _financeAuthority.commitWithReceiptBytes(
+     route:WaffraFinanceRoute.receiptCopyAndAttach,
+     record:record,
+     images:List<Uint8List>.unmodifiable(pendingEncryptedImages.map(
+      Uint8List.fromList)),
+     userConfirmed:true);
+    if(committed.entryId!=result.id||
+       committed.receiptCount!=pendingEncryptedImages.length){
+     throw StateError('Encrypted receipt commit proof did not match the form.');
+    }
+    final fresh=await _financeAuthority.load(
+     route:WaffraFinanceRoute.dashboardRead);
+    fresh.finance.requireIntegrity();
+    final ledger=jsonDecode(fresh.ledgerRaw??'null');
+    if(ledger is! List){
+     throw StateError('Post-commit SQLCipher finance ledger unavailable.');
+    }
+    final saved=ledger.where((item)=>item is Map&&item['id']==result.id).toList();
+    if(saved.length!=1||waffraReceiptPaths(saved.single['receiptPath']?.toString())
+       .length!=pendingEncryptedImages.length){
+     throw StateError('Encrypted invoice ledger association mismatch.');
+    }
+    if(!mounted)return;
+    setState((){
+     entries..clear()..addAll(ledger.map(
+      (item)=>MoneyEntry.fromJson(Map<String,dynamic>.from(item as Map))));
+     _lastFinanceAuthorityRead=fresh;
+     _lastLedgerSavedRaw=fresh.ledgerRaw;
+     _lastWidgetRevision=fresh.widgetRevision;
+    });
+    unawaited(_refreshWidget());
+    await budgetAlert(result,previousSpent);
+   }catch(e){
+    debugPrint('Atomic SQLCipher receipt append could not be verified: $e');
+    if(mounted){
+     snack(context,waffraIsEnglish?
+      'Secure receipt save could not be verified. Review your transactions before retrying.':
+      'تعذر تأكيد حفظ الفواتير المشفرة. راجع معاملاتك قبل إعادة المحاولة.');
+     unawaited(_loadFinanceSafely());
+    }
+   }
+   return;
+  }
   if(pendingHash!=null&&initial==null){
    // A single reviewed bank SMS must commit both its transaction and
    // fingerprint atomically under the same Home/Widget source and journal.
