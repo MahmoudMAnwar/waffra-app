@@ -30,3 +30,13 @@ automatically builds an APK.
   release requirements need separate attestation.
 
 Green CI results alone are not evidence of a user-safe production cutover.
+
+## Android CI dependency-rate-limit repair
+
+The M234 Android emulator job was **inconclusive**, not a SQLCipher logic
+failure, when Maven Central returned HTTP 429 downloading the Kotlin Gradle
+plugins before launching any integration test. The QA workflow now caches
+Gradle artifacts and retries ONLY the `assembleDebug` dependency-download
+HTTP 429 signature up to four attempts with bounded delay. A real application
+failure, SQLCipher failure, missing evidence, or repeated network failure
+still **fails** the job. No test assertion is ignored.

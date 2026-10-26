@@ -6,6 +6,7 @@ on:
       - 'integration_test/**'
       - 'lib/storage/**'
       - 'pubspec.yaml'
+      - '.github/scripts/run-android-finance-integration.sh'
       - '.github/workflows/storage-android-integration.yml'
   workflow_dispatch:
 
@@ -31,6 +32,12 @@ jobs:
           cache: true
       - name: Generate Android project without clobbering user files
         run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
+      # Save resolved Gradle/Kotlin artifacts between QA revisions. This
+      # prevents repeated uncached Maven downloads that may return HTTP 429.
+      - name: Cache Android Gradle dependency resolution
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-home-cache-cleanup: true
       - name: Configure Java 8 core library desugaring
         shell: bash
         run: |

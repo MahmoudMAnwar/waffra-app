@@ -10,7 +10,9 @@ import subprocess
 
 BASE = "8a460fa3d537ee7e8343b01e49d794140e66652a"
 EXPECTED = [
+    ".github/scripts/run-android-finance-integration.sh",
     ".github/workflows/m147-final-main-review-gate.yml",
+    ".github/workflows/storage-android-integration.yml",
     "docs/qa/m228-24-route-source-preflight.md",
     "docs/qa/m230-stage1-consolidation.md",
     "docs/qa/m231-original-sms-recovery-parity.md",
@@ -100,6 +102,11 @@ def main() -> None:
              "WaffraDisposableOriginalSmsRestoreVerifier",
              "WaffraSecureBackup.encryptUserBackup",
              "folder.delete(recursive: true)")
+    contains(".github/scripts/run-android-finance-integration.sh",
+             "Gradle Maven HTTP 429 before runtime test.",
+             'grep -Eq', 'ANDROID_TEST_PASS:')
+    contains(".github/workflows/storage-android-integration.yml",
+             "gradle/actions/setup-gradle@v4")
     contains("lib/storage/waffra_production_cutover_release_gate.dart",
              "bool get automaticallyActivateSqlCipher => false;")
     for name in [
