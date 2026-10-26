@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'waffra_amount_formatter.dart';
 import 'waffra_oil_market_data.dart';
 
+import 'waffra_haptic_feedback.dart';
 /// Crude oil display is isolated from the transaction database.
 class WaffraOilMarketSection extends StatefulWidget {
  const WaffraOilMarketSection({super.key,required this.english,
@@ -99,7 +100,7 @@ class _WaffraOilMarketSectionState extends State<WaffraOilMarketSection>{
      oil.withValues(alpha:.23),width:selected?1.5:1)),
    child:InkWell(
     key:Key('waffra-oil-select-'+code),
-    onTap:()=>setState(()=>benchmark=code),
+    onTap:WaffraHaptics.tap(()=>setState(()=>benchmark=code)),
     borderRadius:BorderRadius.circular(18),
     child:Padding(padding:const EdgeInsets.symmetric(horizontal:9,vertical:11),
      child:Column(children:[
@@ -158,7 +159,7 @@ class _WaffraOilMarketSectionState extends State<WaffraOilMarketSection>{
       border:const OutlineInputBorder()),
      items:waffraOilNames.entries.map((entry)=>DropdownMenuItem<String>(
       value:entry.key,child:Text(widget.english?entry.value[0]:entry.value[1]))).toList(),
-     onChanged:(v){if(v!=null)setState(()=>benchmark=v);}),
+     onChanged:WaffraHaptics.selection((v){if(v!=null)setState(()=>benchmark=v);})),
     const SizedBox(height:9),
     Row(children:[
      Expanded(child:TextField(
@@ -176,7 +177,7 @@ class _WaffraOilMarketSectionState extends State<WaffraOilMarketSection>{
        border:const OutlineInputBorder()),
       items:const ['USD','SAR','EGP','EUR','GBP','AED']
        .map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(),
-      onChanged:(v){if(v!=null)unawaited(setCurrency(v));})),
+      onChanged:WaffraHaptics.selection((v){if(v!=null)unawaited(setCurrency(v));}))),
     ]),
     const SizedBox(height:13),
     Row(children:[
@@ -223,7 +224,7 @@ class _WaffraOilMarketSectionState extends State<WaffraOilMarketSection>{
       style:const TextStyle(fontSize:18,fontWeight:FontWeight.w900))),
      IconButton(tooltip:t('Refresh oil quotes','تحديث أسعار البترول'),
       icon:const Icon(Icons.refresh_rounded,color:oil),
-      onPressed:loading?null:load),
+      onPressed:WaffraHaptics.tap(loading?null:load)),
     ]),
     Text(t('Latest published spot price — not a live exchange tick',
      'أحدث سعر فوري منشور من المصدر، وليس تسعير بورصة لحظيًا'),
@@ -237,7 +238,7 @@ class _WaffraOilMarketSectionState extends State<WaffraOilMarketSection>{
       const SizedBox(height:8),
       OutlinedButton.icon(
        key:const Key('waffra-oil-retry'),
-       onPressed:loading?null:load,
+       onPressed:WaffraHaptics.tap(loading?null:load),
        icon:const Icon(Icons.refresh_rounded),
        label:Text(t('Retry verified prices','إعادة محاولة جلب الأسعار')),
       ),
