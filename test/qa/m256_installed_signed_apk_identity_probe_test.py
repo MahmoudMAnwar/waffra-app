@@ -78,7 +78,7 @@ class FakeAdb:
                 return "package:" + PATH + "\npackage:/data/app/other/split.apk"
             if self.mode == "unsafe_path":
                 return "package:/data/app/unsafe/$(touch hacked)/base.apk"
-            if self.mode == "path_changed" and self.paths > 2:
+            if self.mode == "path_changed" and self.paths > 3:
                 return "package:/data/app/other/else/base.apk"
             return "package:" + PATH
         if argv[3] == "sha256sum":
