@@ -52,4 +52,30 @@ void main(){
    throwsStateError);
   expect(controller.offset,120);
  });
+
+ testWidgets('actual pull gesture clears blank top space on short finance list', (tester)async {
+  final controller=ScrollController();
+  addTearDown(controller.dispose);
+  var refreshes=0;
+  const hero=Key('finance-hero');
+  await tester.pumpWidget(MaterialApp(home:Scaffold(
+   body:RefreshIndicator(
+    onRefresh:()=>waffraRefreshAndRestoreScroll(
+     refresh:()async{refreshes++;},
+     controller:controller,
+     isStillVisible:()=>true),
+    child:ListView(controller:controller,
+     physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
+     children:const [
+      SizedBox(key:hero,height:70),
+      SizedBox(height:140),
+     ]),
+   ))));
+  final originalTop=tester.getTopLeft(find.byKey(hero)).dy;
+  await tester.drag(find.byType(ListView),const Offset(0,470));
+  await tester.pumpAndSettle();
+  expect(refreshes,1);
+  expect(controller.offset,controller.position.minScrollExtent);
+  expect(tester.getTopLeft(find.byKey(hero)).dy,closeTo(originalTop,1.0));
+ });
 }
