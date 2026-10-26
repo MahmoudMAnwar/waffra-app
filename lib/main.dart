@@ -4058,12 +4058,27 @@ Future<void> bulkSmsSheet({String? initialText})async {
     }
    });
    // Manual edits remain separately source-gated. No encrypted shortcut.
-   await persist(route:initial==null
-   ?WaffraFinanceRoute.manualTransactionSave
-   :WaffraFinanceRoute.transactionEdit,
-   // This path is reached only after the manual form's Save action.
-   // Encrypted append must not silently infer user approval.
-   userConfirmed:initial==null);
+   try{
+    await persist(route:initial==null
+    ?WaffraFinanceRoute.manualTransactionSave
+    :WaffraFinanceRoute.transactionEdit,
+    // This path is reached only after the manual form's Save action.
+    // Encrypted append must not silently infer user approval.
+    userConfirmed:initial==null);
+   }catch(e){
+    // The UI was updated optimistically. Rejecting a write MUST NOT leave
+    // a ghost transaction (or a misleading balance) visible in Home.
+    // Reload the actual selected source, including after a commit that
+    // succeeded but whose post-commit read failed.
+    debugPrint('Transaction source commit could not be verified: $e');
+    if(mounted){
+     await _loadFinanceSafely();
+     if(mounted)snack(context,waffraIsEnglish?
+      'Transaction save was not verified. The latest confirmed data was reloaded.':
+      'تعذر التحقق من حفظ العملية. تم تحديث البيانات المؤكدة من المصدر.');
+    }
+    return;
+   }
    if(pendingHash!=null){
     // Existing transaction edits still need independent receipt/SMS review.
     await _persistSmsHashes({pendingHash!});
