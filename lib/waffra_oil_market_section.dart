@@ -259,8 +259,8 @@ class _WaffraOilMarketSectionState extends State<WaffraOilMarketSection>{
     const SizedBox(height:11),
     calculator(),
     const SizedBox(height:12),
-    Text(t('Source: U.S. EIA daily Brent, WTI and Henry Hub gas spot observations via public FRED (or EIA API). Oman and Dubai require verified feeds. Oil estimates exclude taxes, freight, local premiums and fees. Graphs appear only from verified historic observations.',
-      'المصدر: بيانات EIA اليومية لبرنت وغرب تكساس والغاز الطبيعي عبر FRED. خاما عُمان ودبي يحتاجان مصدرًا موثّقًا منفصلًا. الأسعار استرشادية ولا تشمل النقل والضرائب والرسوم. لا نعرض رسمًا بيانيًا إلا من قراءات فعلية.'),
+    Text(t('Source: U.S. EIA official daily spot pages, EIA API (if configured), or FRED backup. Brent and WTI are USD/barrel; Henry Hub gas is USD/MMBtu. Oman and Dubai require independently verified feeds. Graphs use genuine historical observations; estimates exclude taxes and fees.',
+      'المصدر: صفحات الأسعار اليومية الرسمية لهيئة الطاقة الأمريكية EIA، أو واجهة EIA عند إعدادها، مع FRED كمصدر احتياطي. برنت وغرب تكساس بالدولار للبرميل، وغاز هنري هب بالدولار لكل مليون وحدة حرارية. خاما عُمان ودبي يحتاجان مصادر موثوقة مستقلة. الرسوم من أسعار منشورة فعلية، والأسعار لا تشمل الرسوم والضرائب.'),
      style:TextStyle(fontSize:10.5,color:Theme.of(context).hintColor)),
    ]),
   );
