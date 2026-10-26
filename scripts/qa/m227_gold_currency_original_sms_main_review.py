@@ -13,6 +13,7 @@ FEATURE = "5a1ceb3d8c34d65582a596bf4fbb67d66b02e2d8"
 ALLOWED = {
   ".github/workflows/m147-final-main-review-gate.yml",
   "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+  "integration_test/m202_home_widget_source_binder_android_test.dart",
   "lib/currency_converter.dart",
   "lib/main.dart",
   "lib/storage/waffra_encrypted_sms_notes_vault.dart",

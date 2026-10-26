@@ -34,11 +34,11 @@ class _DisposableActiveSource extends WaffraProductionFinanceSourceGuard {
   );
 }
 
-WaffraProductionCutoverEvidence _testOnlyEvidence() =>
+WaffraProductionCutoverEvidence _testOnlyEvidence(String actualSourceDigest) =>
     WaffraProductionCutoverEvidence(
-      storage: const WaffraCutoverReadinessReport(
-        sourceDigest: 'throwaway_android_emulator_not_user_data',
-        blockers: <String>[],
+      storage: WaffraCutoverReadinessReport(
+        sourceDigest: actualSourceDigest,
+        blockers: const <String>[],
       ),
       routes: WaffraFinanceRouteAudit(
         verifiedRoutes: WaffraFinanceRoute.values.toSet(),
@@ -85,6 +85,7 @@ void main() {
     const originalHomeSms = 'حوالة واردة تجريبية\nمبلغ 16.50 SAR\n'
         'مرجع DEMO-101\nExtra newline\nLast line';
     WaffraEncryptedStore? seed;
+    late String verifiedSourceDigest;
     WaffraProductionFinanceAuthorityBinding? widget;
     WaffraProductionFinanceAuthorityBinding? home;
 
@@ -94,7 +95,7 @@ void main() {
     }) => WaffraProductionFinanceAuthorityBinding.bind(
       legacy: const WaffraHomeFinancePersistence(),
       sourceGuard: const _DisposableActiveSource(),
-      certifiedEvidence: _testOnlyEvidence(),
+      certifiedEvidence: _testOnlyEvidence(verifiedSourceDigest),
       startupRoute: startupRoute,
       directoryProvider: () async => directory,
       secureKeyReader: () async => key,
@@ -116,12 +117,12 @@ void main() {
       final journal = WaffraEncryptedCutoverJournal(
         store: seed, snapshot: snapshot, experimentalEnabled: true,
       );
-      final initialDigest = WaffraLegacyPreflight.inspect(
+      verifiedSourceDigest = WaffraLegacyPreflight.inspect(
         const <String, Object?>{'entries': '[]'},
       ).sourceSha256;
       final clock = DateTime.utc(2026, 10, 24);
       await journal.prepare(
-        sourceDigest: initialDigest,
+        sourceDigest: verifiedSourceDigest,
         targetDigest: initial.digest,
         now: clock,
       );
