@@ -82,6 +82,19 @@ def main():
     notes=source("docs/release/WAFFRA_APPROVED_CHANGES.txt")
     check("[M258–M259]" in notes and "SQLCipher" in notes
           and "NO-GO" in notes,"release notes or NO-GO boundary missing")
+    import json
+    report_path=Path("build/m147-final-review-report.json")
+    report_path.parent.mkdir(parents=True,exist_ok=True)
+    report_path.write_text(json.dumps({
+        "milestone":"M259",
+        "head_sha":head,
+        "approved_main_sha":BASE_MAIN,
+        "files_checked":sorted(changed),
+        "scope":"UI_AND_PUBLIC_COMMODITY_DATA_ONLY",
+        "apk":"NOT_AUTHORIZED_BY_THIS_REPORT",
+        "sqlcipher_production":"NO_GO",
+        "physical_device_tests":"REQUIRED",
+    },indent=2)+"\\n",encoding="utf-8")
     print("M259 PASS (source scope only): "+head)
 
 if __name__=="__main__":
