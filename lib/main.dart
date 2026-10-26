@@ -7397,8 +7397,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
    Row(children:[
     Expanded(child:OutlinedButton.icon(
      onPressed:showWaffraFinancialCalendar,
-     style:OutlinedButton.styleFrom(minimumSize:const Size(0,48),
-      padding:const EdgeInsets.symmetric(horizontal:5,vertical:7),
+     style:OutlinedButton.styleFrom(minimumSize:WaffraActionLayout.minimumSize,
+      padding:const EdgeInsets.symmetric(horizontal:9,vertical:12),
       side:BorderSide(color:Theme.of(context).colorScheme.primary,width:1.2),
       shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15))),
      icon:const Icon(Icons.calendar_month,size:18),
@@ -8791,8 +8791,8 @@ class WaffraDeletedItemsButton extends StatelessWidget {
    style:OutlinedButton.styleFrom(
     foregroundColor:red,backgroundColor:dark?const Color(0xFF3C242A):const Color(0xFFFFF4F4),
     side:BorderSide(color:red,width:1.4),
-    minimumSize:const Size(0,48),
-    padding:const EdgeInsets.symmetric(horizontal:7,vertical:9),
+    minimumSize:WaffraActionLayout.minimumSize,
+    padding:const EdgeInsets.symmetric(horizontal:10,vertical:12),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15))),
    child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
     Icon(Icons.delete_outline,size:19,color:red),
