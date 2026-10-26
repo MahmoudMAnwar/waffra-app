@@ -3346,9 +3346,25 @@ Future<void> bulkSmsSheet({String? initialText})async {
     Navigator.pop(ctx);
    }
   }catch(e){
-   // A failed journal must be reconciled by the locked coordinator on next
-   // read; never mutate the dashboard as if the save had succeeded.
-   if(ctx.mounted){update(()=>busy=false);snack(ctx,waffraIsEnglish?'Saving could not be confirmed. Please retry safely.':'تعذر تأكيد الحفظ. أعد المحاولة بأمان.');}
+   // The writer may have committed before an interrupted post-commit read,
+   // parsing or UI reconciliation failed. A retry based on the stale Home
+   // ledger could duplicate money or show a false current balance.
+   // Always reselect the authoritative finance source before permitting
+   // another review/save. _loadFinanceSafely blocks the whole finance UI
+   // if that fresh source cannot be verified; it never resets the vault.
+   debugPrint('Bank SMS finance commit could not be verified: $e');
+   if(mounted)await _loadFinanceSafely();
+   if(ctx.mounted){
+    update((){
+     busy=false;
+     statusMessage=waffraIsEnglish
+      ?'Save status could not be verified. Review your refreshed transactions before retrying.'
+      :'تعذر التحقق من حالة الحفظ. راجع معاملاتك المحدّثة قبل إعادة المحاولة.';
+    });
+    snack(ctx,waffraIsEnglish
+     ?'Bank transaction status is uncertain. Check the confirmed ledger before retrying.'
+     :'حالة حفظ المعاملات البنكية غير مؤكدة. راجع السجل المؤكد قبل إعادة المحاولة.');
+   }
   }
  }
 
