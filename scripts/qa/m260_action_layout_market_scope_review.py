@@ -20,6 +20,7 @@ APPROVED = {
     "lib/waffra_oil_market_section.dart",
     "scripts/qa/m260_action_layout_market_scope_review.py",
     "test/m260_action_layout_test.dart",
+    "test/m149_backup_pin_localized_fab_trash_uat_test.dart",
 }
 
 
@@ -76,6 +77,8 @@ def main():
     section = content("lib/waffra_oil_market_section.dart")
     require("waffra-oil-retry" in section and "waffra-oil-price-status" in section,
             "failure recovery UI removed")
+    require("WaffraActionLayout.minimumSize.height" in content("test/m149_backup_pin_localized_fab_trash_uat_test.dart"),
+            "historic red recycle-bin test not aligned with M260 safe minimum")
     require("testWidgets(" in content("test/m260_action_layout_test.dart"),
             "text/icon alignment regression absent")
     notes = content("docs/release/WAFFRA_APPROVED_CHANGES.txt")
