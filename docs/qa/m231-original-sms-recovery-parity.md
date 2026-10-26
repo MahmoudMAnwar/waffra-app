@@ -16,3 +16,16 @@ and crash-safe cutover remain required separately.
 CI tests use synthetic messages and disposable SQLCipher stores only.
 No production SQLCipher activation, Firebase deploy, real banking access,
 user-facing APK or destructive migration is part of this candidate.
+
+## Optional strong-encrypted transport candidate (not integrated with app backup)
+
+`WaffraOriginalSmsPortablePreflight.exportCandidate` creates a **separate**
+Argon2id/AES-256-GCM archive from ledger-confirmed, OS-keyed originals.
+`verifyAndPreview` rejects unencrypted text and missing/duplicated IDs,
+wrong passwords, mutated source links and missing original SHA-256 fingerprints.
+Only disposable in-memory notes are returned after successful authentication;
+the existing production backup/export UI is unchanged.
+
+No active SQLCipher import, source-pointer swap, receipt reconciler or
+two-device certified restore is implemented here. In particular, this archive
+alone **is not** a complete Waffra financial backup.

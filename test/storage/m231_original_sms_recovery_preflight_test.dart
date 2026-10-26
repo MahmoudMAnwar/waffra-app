@@ -7,6 +7,7 @@ import 'package:waffra/storage/waffra_encrypted_sms_notes_vault.dart';
 import 'package:waffra/storage/waffra_home_finance_persistence.dart';
 import 'package:waffra/storage/waffra_legacy_finance_writer_coordinator.dart';
 import 'package:waffra/storage/waffra_original_sms_recovery_preflight.dart';
+import 'package:waffra/storage/waffra_original_sms_portable_preflight.dart';
 import 'package:waffra/storage/waffra_production_finance_source_guard.dart';
 import 'package:waffra/storage/waffra_production_finance_routing_gate.dart';
 import 'package:waffra/storage/waffra_verified_finance_authority.dart';
@@ -148,5 +149,58 @@ void main() {
     await prefs.setString('entries', jsonEncode([entry('a'), entry('new')]));
     await expectLater(WaffraOriginalSmsRecoveryPreflight(
       authority: service).inspect(baseline: initial), throwsStateError);
+  });
+
+  test('M231 portable staging keeps originals inside strong encrypted envelope',
+      () async {
+    const original = 'شراء تجريبي\\n13.25 SAR';
+    await install(['a'], [original]);
+    final service = authority();
+    final baseline = await service.load(route: WaffraFinanceRoute.dashboardRead);
+    const password = 'very long synthetic test passphrase 2026';
+    final encrypted = await WaffraOriginalSmsPortablePreflight.exportCandidate(
+      authority: service, baseline: baseline, password: password);
+    expect(encrypted, isNot(contains(original)));
+    final outer = jsonDecode(encrypted) as Map;
+    expect(outer['version'], 2);
+    final checked = await WaffraOriginalSmsPortablePreflight.verifyAndPreview(
+      encryptedArchive: encrypted, password: password,
+      expectedLedgerRaw: baseline.ledgerRaw,
+      expectedHashes: baseline.finance.getStringList('waffra_sms_hashes_v1')!,
+    );
+    expect(checked.originalsById['a'], original);
+    expect(checked.activeFinanceRestored, isFalse);
+    expect(checked.portableFinanceBackupComplete, isFalse);
+    expect(checked.productionCutoverAuthorized, isFalse);
+    await expectLater(WaffraOriginalSmsPortablePreflight.verifyAndPreview(
+      encryptedArchive: encrypted, password: 'incorrect long passphrase',
+      expectedLedgerRaw: baseline.ledgerRaw,
+      expectedHashes: baseline.finance.getStringList('waffra_sms_hashes_v1')!,
+    ), throwsA(anything));
+  });
+
+  test('M231 refuses plaintext archive and cross-ledger restore attempts',
+      () async {
+    const original = 'Cash deposit\\n800 SAR';
+    await install(['a'], [original]);
+    final service = authority();
+    final current = await service.load(route: WaffraFinanceRoute.dashboardRead);
+    const password = 'synthetic archive password 123456789';
+    final encrypted = await WaffraOriginalSmsPortablePreflight.exportCandidate(
+      authority: service, baseline: current, password: password);
+    final hashes = current.finance.getStringList('waffra_sms_hashes_v1')!;
+    await expectLater(WaffraOriginalSmsPortablePreflight.verifyAndPreview(
+      encryptedArchive: jsonEncode({
+        'format': 'waffra-original-sms-staging',
+        'version': 1,
+        'records': [],
+      }), password: password,
+      expectedLedgerRaw: current.ledgerRaw, expectedHashes: hashes,
+    ), throwsFormatException);
+    await expectLater(WaffraOriginalSmsPortablePreflight.verifyAndPreview(
+      encryptedArchive: encrypted, password: password,
+      expectedLedgerRaw: jsonEncode([entry('different-id')]),
+      expectedHashes: hashes,
+    ), throwsStateError);
   });
 }

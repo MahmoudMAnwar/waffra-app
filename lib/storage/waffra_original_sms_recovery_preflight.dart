@@ -53,8 +53,8 @@ class WaffraOriginalSmsRecoveryPreflight {
     if (current.source != baseline.source ||
         current.ledgerRaw != baseline.ledgerRaw ||
         current.widgetRevision != baseline.widgetRevision ||
-        current.finance.getStringList('waffra_sms_hashes_v1').toString() !=
-            baseline.finance.getStringList('waffra_sms_hashes_v1').toString()) {
+        jsonEncode(current.finance.getStringList('waffra_sms_hashes_v1')) !=
+            jsonEncode(baseline.finance.getStringList('waffra_sms_hashes_v1'))) {
       throw StateError('Finance changed before original SMS preflight.');
     }
 
@@ -111,8 +111,8 @@ class WaffraOriginalSmsRecoveryPreflight {
     if (after.source != current.source ||
         after.ledgerRaw != current.ledgerRaw ||
         after.widgetRevision != current.widgetRevision ||
-        after.finance.getStringList('waffra_sms_hashes_v1').toString() !=
-            current.finance.getStringList('waffra_sms_hashes_v1').toString()) {
+        jsonEncode(after.finance.getStringList('waffra_sms_hashes_v1')) !=
+            jsonEncode(current.finance.getStringList('waffra_sms_hashes_v1'))) {
       throw StateError('Finance changed during original SMS recovery scan.');
     }
     return WaffraOriginalSmsRecoveryReport(
