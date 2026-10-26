@@ -19,6 +19,7 @@ import '../waffra_recurring_policy.dart';
 import 'waffra_experimental_writer_gate.dart';
 import 'waffra_finance_read_view.dart';
 import 'waffra_encrypted_receipt_vault.dart';
+import 'waffra_portable_encrypted_backup_exporter.dart';
 import 'waffra_encrypted_receipt_recycle.dart';
 import 'waffra_receipt_screen_contract.dart';
 import 'waffra_encrypted_receipt_read_gateway.dart';
@@ -93,6 +94,27 @@ class WaffraVerifiedEncryptedFinanceBridge {
   /// source selector and the reset engine recheck the active SQLCipher
   /// checkpoint beneath the same native Home/Widget writer lock. A locally
   /// generated backup, UI button or in-memory certificate is never enough.
+  /// Runtime backupExport for an ALREADY activated and independently
+  /// certified SQLCipher source. Both source witnesses are checked under the
+  /// same native Home/Widget lock as ledger and receipt writes. Never read
+  /// legacy preferences or silently omit a linked encrypted invoice.
+  Future<String> exportVerifiedFinanceBackup({required String password}) {
+    if (!experimentalEnabled || !allWritersRoutedVerified ||
+        !secureKeyVerified || password.runes.length < 12 ||
+        password.runes.length > 256) {
+      throw StateError('Verified encrypted export requires release evidence and a strong password.');
+    }
+    return WaffraPortableEncryptedBackupExporter(
+      snapshot: snapshot,
+      receiptVault: WaffraEncryptedReceiptVault(
+        store: snapshot.store, experimentalEnabled: true,
+      ),
+      writerDirectory: writerDirectory,
+      verifySourceUnderLock: _requireActivatedUnderLock,
+      experimentalEnabled: true,
+    ).export(password: password);
+  }
+
   Future<WaffraEncryptedFullResetResult> resetVerifiedFinance({
     required WaffraEncryptedHomeWitness baseline,
     required String encryptedBackup,

@@ -378,6 +378,26 @@ class WaffraVerifiedFinanceAuthority {
   /// present the same fresh, independently attested SQLCipher read that is
   /// currently displayed and an externally saved authenticated backup.
   /// No UI shortcut is allowed to set the encrypted activation marker.
+  /// Encrypted-source export has its own 24-route selector and must never
+  /// use the guarded-legacy JSON/clipboard exporter after SQLCipher cutover.
+  /// The bridge attests the exact durable source under the app/widget lock.
+  Future<String> exportVerifiedEncryptedBackup({
+    required WaffraFinanceRoute route,
+    required String password,
+  }) async {
+    if (route != WaffraFinanceRoute.backupExport) {
+      throw ArgumentError('Wrong finance route for encrypted backup export.');
+    }
+    if (password.runes.length < 12 || password.runes.length > 256) {
+      throw ArgumentError('Verified encrypted archive needs a strong password.');
+    }
+    final backend = await _requireRoute(route);
+    if (backend != WaffraRuntimeFinanceBackend.verifiedEncrypted) {
+      throw StateError('Protected finance export requires verified SQLCipher.');
+    }
+    return encryptedSession!.exportVerifiedFinanceBackup(password: password);
+  }
+
   Future<WaffraFinanceAuthorityRead> resetVerifiedFinance({
     required WaffraFinanceRoute route,
     required WaffraFinanceAuthorityRead baseline,

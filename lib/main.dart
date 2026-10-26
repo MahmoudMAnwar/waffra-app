@@ -7686,10 +7686,17 @@ Future<void> bulkSmsSheet({String? initialText})async {
       await _financialWriteQueue.drain();
       final current=await _financeAuthority.load(
        route:WaffraFinanceRoute.backupExport);
-      final authoritativePayload=exportBackup(fromSource:current);
-      final encrypted=await compute(waffraEncryptBackupInIsolate,<String,String>{
-       'payload':authoritativePayload,'password':secret.text,
-      });
+      // Route #22: an activated SQLCipher source must export from the same
+      // verified encrypted ledger+receipt vault, not the legacy JSON
+      // snapshot which cannot certify encrypted receipt blobs.
+      // The exporter independently rechecks the current source under the
+      // Home/Widget native lock. A mismatch blocks, never falls back.
+      final encrypted=current.source==WaffraRuntimeFinanceBackend.verifiedEncrypted
+       ?await _financeAuthority.exportVerifiedEncryptedBackup(
+         route:WaffraFinanceRoute.backupExport,password:secret.text)
+       :await compute(waffraEncryptBackupInIsolate,<String,String>{
+         'payload':exportBackup(fromSource:current),'password':secret.text,
+        });
       // Persist the encrypted archive only after system document picker confirms.
       // Never copy it to the system clipboard on export.
       final saved=await WaffraBackupFiles.saveEncryptedArchive(encrypted);
