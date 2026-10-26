@@ -64,10 +64,81 @@ class WaffraOilService {
   }
   return result;
  }
+ Future<Map<String,WaffraOilQuote>> _fetchFred(http.Client api)async {
+  final start=DateTime.now().toUtc().subtract(const Duration(days:55));
+  final date='${start.year.toString().padLeft(4,'0')}-'
+   '${start.month.toString().padLeft(2,'0')}-'
+   '${start.day.toString().padLeft(2,'0')}';
+  final results=<String,WaffraOilQuote>{};
+  final series=<String,String>{
+   'DCOILBRENTEU':'BRENT',
+   'DCOILWTICO':'WTI',
+   'DHHNGSP':'GAS',
+  };
+  await Future.wait(series.entries.map((entry)async{
+   try{
+    final uri=Uri.https('fred.stlouisfed.org','/graph/fredgraph.csv',{
+     'id':entry.key,'cosd':date,
+    });
+    final response=await api.get(uri).timeout(const Duration(seconds:14));
+    if(response.statusCode!=200||response.bodyBytes.length>512000) {
+     throw StateError('Public FRED commodity download unavailable');
+    }
+    final quote=parseFredCsv(entry.key,entry.value,response.body);
+    if(quote!=null)results[entry.value]=quote;
+   }catch(_){
+    // No fake quote or data copied across benchmarks.
+   }
+  }));
+  if(results.isEmpty){
+   throw StateError('FRED daily spot prices could not be verified');
+  }
+  return results;
+ }
+
+ /// Validate one source-named FRED CSV series, including missing days as ".".
+ /// Only the latest 14 *actual* observations are kept for sparklines.
+ static WaffraOilQuote? parseFredCsv(
+  String seriesId,String benchmark,String csv){
+  if(!const {'DCOILBRENTEU','DCOILWTICO','DHHNGSP'}.contains(seriesId)) {
+   throw const FormatException('Unsupported source series');
+  }
+  final rows=const LineSplitter().convert(csv.trim());
+  if(rows.isEmpty||rows.length>2000){
+   throw const FormatException('Unexpected FRED CSV row count');
+  }
+  final headers=rows.first.trim().split(',');
+  if(headers.length!=2||
+   !const {'observation_date','DATE'}.contains(headers[0])||
+   headers[1].trim()!=seriesId){
+   throw const FormatException('Incorrect FRED source/units');
+  }
+  final values=<String,WaffraOilPoint>{};
+  for(final line in rows.skip(1)){
+   final fields=line.trim().split(',');
+   if(fields.length!=2)continue;
+   final day=DateTime.tryParse(fields[0]);
+   final number=double.tryParse(fields[1]);
+   if(day==null||number==null||!number.isFinite||
+     number<=0||number>=10000)continue;
+   final date=DateTime.utc(day.year,day.month,day.day);
+   if(date.isAfter(DateTime.now().toUtc().add(const Duration(days:1))))continue;
+   values[date.toIso8601String()]=WaffraOilPoint(date,number);
+  }
+  if(values.isEmpty)return null;
+  final points=values.values.toList()..sort((a,b)=>a.date.compareTo(b.date));
+  return WaffraOilQuote(benchmark,List.unmodifiable(
+   points.length>14?points.sublist(points.length-14):points));
+ }
+
  Future<Map<String,WaffraOilQuote>> fetch({http.Client? client})async{
-  if(publicEiaKey.trim().isEmpty)throw StateError('EIA API key not configured');
   final owns=client==null,api=client??http.Client();
   try{
+   // FRED republishes official EIA spot observations as public CSV files.
+   // Unlike the registered EIA API, this download does not require a key.
+   // Fetch each series independently; one unavailable feed cannot invent or
+   // overwrite prices for the other benchmarks.
+   if(publicEiaKey.trim().isEmpty)return await _fetchFred(api);
    final uri=Uri.https('api.eia.gov','/v2/petroleum/pri/spt/data/',{
     'api_key':publicEiaKey,'frequency':'daily','data[0]':'value',
     'facets[series][]':['RBRTE','RWTC'],
