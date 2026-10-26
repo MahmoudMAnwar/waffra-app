@@ -3819,7 +3819,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
          trailing:IconButton(icon:const Icon(Icons.close),onPressed:()=>update((){
           receiptPath=waffraEncodeReceipts([...waffraReceiptPaths(receiptPath)]..remove(path));
          })),
-         onTap:()=>showReceipt(receiptPath!,initialIndex:waffraReceiptPaths(receiptPath).indexOf(path))),
+         onTap:()=>showReceipt(receiptPath!,initialIndex:waffraReceiptPaths(receiptPath).indexOf(path),entryId:initial?.id)),
       ],
       const SizedBox(height:12),
       FilledButton(onPressed:analyzing?null:()async {
@@ -3972,20 +3972,55 @@ Future<void> bulkSmsSheet({String? initialText})async {
   await File(picked.path).copy(target);
   return target;
  }
- Future<void> showReceipt(String encoded,{int initialIndex=0})async {
+ Future<void> showReceipt(String encoded,{int initialIndex=0,String? entryId})async {
   final paths=waffraReceiptPaths(encoded);
   final available=<String>[];
-  for(final path in paths){if(await File(path).exists())available.add(path);}
-  if(available.isEmpty){if(mounted)snack(context,waffraIsEnglish?'Images not found on this device':'ما لقينا الصور على الجهاز');return;}
+  final securedImages=<Uint8List>[];
+  try{
+   await _ensureFinanceBound();
+   // Route #19 must select a fresh source, not a stale tile or cached path.
+   final current=await _financeAuthority.load(route:WaffraFinanceRoute.receiptView);
+   current.finance.requireIntegrity();
+   if(current.source==WaffraRuntimeFinanceBackend.verifiedEncrypted){
+    // The active ledger must still own this exact receipt reference. Do not
+    // permit an arbitrary caller ID to expose another transaction's invoice.
+    if(entryId==null||entryId.trim().isEmpty||paths.isEmpty||current.ledgerRaw==null){
+     throw StateError('Encrypted invoice needs a ledger-linked transaction.');
+    }
+    final rows=jsonDecode(current.ledgerRaw!);
+    if(rows is! List)throw StateError('Encrypted receipt ledger is corrupt.');
+    final linked=rows.where((item)=>item is Map&&item['id']==entryId).toList();
+    if(linked.length!=1||linked.single['receiptPath']!=encoded){
+     throw StateError('Encrypted invoice is not owned by verified ledger entry.');
+    }
+    securedImages.addAll(await _financeAuthority.loadEncryptedReceiptImages(
+     route:WaffraFinanceRoute.receiptView,entryId:entryId));
+    if(securedImages.length!=paths.length||securedImages.isEmpty){
+     throw StateError('Encrypted invoice count differs from verified ledger.');
+    }
+   }else{
+    // Existing guarded legacy receipts remain files; never use this branch
+    // after a verified SQLCipher source is selected.
+    for(final path in paths){if(await File(path).exists())available.add(path);}
+    if(available.isEmpty)throw StateError('No legacy images at saved paths.');
+   }
+  }catch(e){
+   debugPrint('Verified receipt view blocked: $e');
+   if(mounted)snack(context,waffraIsEnglish?
+    'Could not safely verify attached images. Your transaction is unchanged.':
+    'تعذر التحقق من الصور المرفقة بأمان. معاملتك لم تتغير.');
+   return;
+  }
   if(!mounted)return;
-  final controller=PageController(initialPage:initialIndex.clamp(0,available.length-1));
-  int current=initialIndex.clamp(0,available.length-1);
+  final imageCount=securedImages.isNotEmpty?securedImages.length:available.length;
+  final controller=PageController(initialPage:initialIndex.clamp(0,imageCount-1));
+  int current=initialIndex.clamp(0,imageCount-1);
   try{
    await showWaffraDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update){
     final isDark=Theme.of(ctx).brightness==Brightness.dark;
     final accent=isDark?const Color(0xFF74D8A9):emerald;
     final surface=isDark?const Color(0xFF102A23):const Color(0xFF073F31);
-    final count='${current+1} / ${available.length}';
+    final count='${current+1} / ${imageCount}';
     return Dialog(
      backgroundColor:Colors.transparent,elevation:0,
      insetPadding:const EdgeInsets.symmetric(horizontal:22,vertical:45),
@@ -4002,11 +4037,13 @@ Future<void> bulkSmsSheet({String? initialText})async {
          icon:const Icon(Icons.close_rounded,color:Colors.white))),
        ])),
        Flexible(child:Container(color:Colors.black,
-        child:PageView.builder(controller:controller,itemCount:available.length,
+        child:PageView.builder(controller:controller,itemCount:imageCount,
          onPageChanged:(index)=>update(()=>current=index),
          itemBuilder:(ctx,index)=>InteractiveViewer(
           minScale:.8,maxScale:5,
-          child:Center(child:Image.file(File(available[index]),fit:BoxFit.contain)))))),
+          child:Center(child:securedImages.isNotEmpty
+           ?Image.memory(securedImages[index],fit:BoxFit.contain)
+           :Image.file(File(available[index]),fit:BoxFit.contain)))))),
        SizedBox(height:58,child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
         IconButton(
          tooltip:waffraIsEnglish?'Previous image':'الصورة السابقة',
@@ -4017,10 +4054,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
          style:const TextStyle(color:Colors.white,fontSize:15,fontWeight:FontWeight.bold)),
         IconButton(
          tooltip:waffraIsEnglish?'Next image':'الصورة التالية',
-         onPressed:current<available.length-1?()=>controller.nextPage(
+         onPressed:current<imageCount-1?()=>controller.nextPage(
           duration:const Duration(milliseconds:220),curve:Curves.easeInOut):null,
          icon:Icon(Icons.chevron_right_rounded,
-          color:current<available.length-1?Colors.white:Colors.white38)),
+          color:current<imageCount-1?Colors.white:Colors.white38)),
        ])),
       ])));
    }));
@@ -4773,7 +4810,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   ));
   if(!mounted)return;
   switch(action){
-   case 'receipt':if(hasReceipt)await showReceipt(entry.receiptPath!);break;
+   case 'receipt':if(hasReceipt)await showReceipt(entry.receiptPath!,entryId:entry.id);break;
    case 'open':await transactionDetails(entry);break;
    case 'edit':await entrySheet(initial:entry);break;
    case 'delete':await deleteEntry(entry);break;
@@ -4820,7 +4857,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     entry:visibleEntry,
     onClose:()=>Navigator.pop(ctx),
     onViewReceipt:waffraReceiptPaths(entry.receiptPath).isNotEmpty
-      ?(){Navigator.pop(ctx);showReceipt(entry.receiptPath!);}
+      ?(){Navigator.pop(ctx);showReceipt(entry.receiptPath!,entryId:entry.id);}
       :null,
    ),
   );
@@ -4849,7 +4886,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    ]))),
    if(attachmentCount>0)PositionedDirectional(top:0,start:0,child:Semantics(
     label:waffraIsEnglish?'$attachmentCount attachments':'عدد المرفقات $attachmentCount',
-    button:true,child:InkWell(onTap:()=>showReceipt(e.receiptPath!),
+    button:true,child:InkWell(onTap:()=>showReceipt(e.receiptPath!,entryId:e.id),
      child:WaffraReceiptCornerBadge(count:attachmentCount,english:waffraIsEnglish)))),
    ]));
  }
@@ -5366,7 +5403,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     if(count>0)PositionedDirectional(top:0,start:0,
      child:Semantics(label:waffraIsEnglish?'$count attachments':'عدد المرفقات $count',
       button:true,child:InkWell(
-       onTap:()=>showReceipt(entry.receiptPath!),
+       onTap:()=>showReceipt(entry.receiptPath!,entryId:entry.id),
        child:WaffraReceiptCornerBadge(count:count,english:waffraIsEnglish)))),
    ])));
  }
