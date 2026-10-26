@@ -25,6 +25,7 @@ void main() {
       '   ?WaffraFinanceRoute.manualTransactionSave\n'
       '   :WaffraFinanceRoute.transactionEdit,\n'
       '   // This path is reached only after the manual form\'s Save action.'));
+    expect(home, contains('userConfirmed:initial==null);'));
     expect(home, contains(
       'await persist(route:WaffraFinanceRoute.transactionDeleteAndUndo);'));
     expect(home, contains(
