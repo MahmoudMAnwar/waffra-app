@@ -5514,7 +5514,6 @@ Future<void> bulkSmsSheet({String? initialText})async {
              ])),
              const Icon(Icons.chevron_right_rounded,color:emerald),
             ]))),
-          ),
           const SizedBox(height:12),
           // Explicit Home entry: the global-gold market cannot remain hidden
           // behind collapsed Account settings. True FX is only in this tool.
@@ -7656,7 +7655,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     !WaffraRecurringPolicy.dueDate(selected.year,selected.month,r.day).isBefore(DateTime(r.startAt.year,r.startAt.month,r.startAt.day))).toList();
    return AlertDialog(title:WaffraText(waffraIsEnglish?'Financial calendar':'التقويم المالي'),
     content:SizedBox(width:380,height:min(460.0,MediaQuery.sizeOf(ctx).height*.6),child:Column(children:[
-     CalendarDatePicker(initialDate:selected,firstDate:DateTime(2020),lastDate:DateTime(2100),
+     CalendarDatePicker(key:ValueKey('recurring-calendar-'+selected.toIso8601String()),initialDate:selected,firstDate:DateTime(2020),lastDate:DateTime(2100),
       onDateChanged:(date)=>refresh(()=>selected=date)),
      if(!waffraCalendarIsToday(selected))
       Align(alignment:AlignmentDirectional.centerEnd,child:TextButton.icon(
