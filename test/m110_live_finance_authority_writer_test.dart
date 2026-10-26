@@ -54,12 +54,26 @@ void main() {
 
   test('M110 financial deletion carries baseline, not a fresh post-widget snapshot', () {
     final main = File('lib/main.dart').readAsStringSync();
-    for (final route in ['deleteAllTransactions','fullFinanceReset']) {
-      final start = main.indexOf('route:WaffraFinanceRoute.$route');
-      expect(start, greaterThan(0), reason: route);
-      final before = main.substring(start > 440 ? start - 440 : 0, start);
-      expect(before, contains('final baseline=_lastFinanceAuthorityRead;'),
-          reason: route);
-    }
+    final deletion = main.indexOf('route:WaffraFinanceRoute.deleteAllTransactions');
+    expect(deletion, greaterThan(0));
+    expect(main.substring(deletion-440, deletion),
+        contains('final baseline=_lastFinanceAuthorityRead;'));
+    // The full reset now performs source selection FIRST. Verify that the
+    // encrypted path fails closed before building the legacy reset snapshot,
+    // while the guarded-legacy path still carries its original write witness.
+    final begin = main.indexOf(' Future<void> eraseFinancialData()async {');
+    final end = main.indexOf(' Widget _accountTile(', begin);
+    expect(begin, greaterThan(0));
+    expect(end, greaterThan(begin));
+    final reset = main.substring(begin, end);
+    final gate = reset.indexOf('route:WaffraFinanceRoute.fullFinanceReset');
+    final refuse = reset.indexOf(
+      'if(current.source==WaffraRuntimeFinanceBackend.verifiedEncrypted)');
+    final baseline = reset.indexOf('final baseline=_lastFinanceAuthorityRead;');
+    final legacyWrite = reset.indexOf('baseline:baseline,captured:captured');
+    expect(gate, greaterThan(0));
+    expect(refuse, greaterThan(gate));
+    expect(baseline, greaterThan(refuse));
+    expect(legacyWrite, greaterThan(baseline));
   });
 }
