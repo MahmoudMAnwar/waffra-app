@@ -1,0 +1,60 @@
+name: M267 Two-Phone Exact Signed APK Identity Contract (NO-GO)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/qa/m267_signed_two_phone_apk_probe.py'
+      - 'test/qa/m267_signed_two_phone_apk_probe_test.py'
+      - 'scripts/qa/m267_main_scope_review.py'
+      - 'docs/qa/m267-two-physical-signed-apk-identity.md'
+      - '.github/workflows/m267-android-exact-apk-identity.yml'
+      - '.github/workflows/m147-final-main-review-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m267-two-phone-proof-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  signed-apk-contract-negative-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Pin exact main and prevent scope drift
+        env:
+          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          git fetch --no-tags origin main
+          python3 scripts/qa/m267_main_scope_review.py
+      - name: Validate 24-route source inventory (NOT executed routes)
+        run: python3 scripts/qa/m189_physical_device_source_probe.py --check-contract
+      - name: Check Python syntax and exact signed APK negative regressions
+        run: |
+          python3 -m py_compile \
+            scripts/qa/m267_signed_two_phone_apk_probe.py \
+            scripts/qa/m267_main_scope_review.py \
+            test/qa/m267_signed_two_phone_apk_probe_test.py
+          python3 -m unittest discover \
+            -s test/qa -p 'm267_signed_two_phone_apk_probe_test.py' -v
+          python3 -m unittest discover \
+            -s test/qa -p 'm189_physical_device_source_probe_test.py' -v
+      - name: Verify production activation is explicitly disabled
+        run: |
+          grep -F 'bool get automaticallyActivateSqlCipher => false;' lib/storage/waffra_production_cutover_release_gate.dart
+          grep -F 'all_live_writers_not_yet_routed' lib/storage/waffra_production_finance_source_guard.dart
+          echo 'M267 synthetic tests only: no phones, no user data, no SQLCipher cutover.'
+      - name: Attach no-go source review report
+        uses: actions/upload-artifact@v4
+        with:
+          name: m267-two-physical-apk-identity-contract-no-go
+          path: build/m147-final-review-report.json
+          if-no-files-found: error
