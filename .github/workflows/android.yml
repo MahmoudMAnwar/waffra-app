@@ -941,8 +941,13 @@ jobs:
         env:
           WAFFRA_RELEASE_STORE_PASSWORD: ${{ secrets.WAFFRA_RELEASE_STORE_PASSWORD }}
           WAFFRA_RELEASE_KEY_PASSWORD: ${{ secrets.WAFFRA_RELEASE_KEY_PASSWORD }}
+          WAFFRA_PUBLIC_EIA_KEY: ${{ secrets.WAFFRA_PUBLIC_EIA_KEY }}
         run: |
-          flutter build appbundle --no-pub --release --target-platform android-arm64 --tree-shake-icons
+          eia_define=()
+          if [[ -n "${WAFFRA_PUBLIC_EIA_KEY:-}" ]]; then
+            eia_define+=(--dart-define="WAFFRA_PUBLIC_EIA_KEY=${WAFFRA_PUBLIC_EIA_KEY}")
+          fi
+          flutter build appbundle --no-pub --release --target-platform android-arm64 --tree-shake-icons "${eia_define[@]}"
           test -s build/app/outputs/bundle/release/app-release.aab
 
       - name: Validate signed AAB archive (not a Play approval)
