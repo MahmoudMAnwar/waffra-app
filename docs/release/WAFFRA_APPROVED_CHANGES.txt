@@ -474,3 +474,12 @@ M208 encrypted-legacy privacy constraint: When verified SQLCipher is not active,
 - Full CI and signed main APK validation must precede approval. This isolated PR must be integrated with M263 before the final main merge.
 
 [M265] Integrate M261 official oil feed, M262 independent bank SMS and editable notes, and M264 all accepted action haptics. Changes require complete Flutter suite, Android build, independent CI, and signed main APK from post-merge main; no SQLCipher activation or real-phone QA claim.
+
+[M266] حماية ربط مصدر SQLCipher للرئيسية والـWidget — 2026-10-26
+- بعد دمج PR #266 على main، يجب أن تتحقق شاشات الرئيسية وويدجت إدخال الرسائل البنكية من مصدر البيانات المالية قبل القراءة أو الحفظ أو مزامنة رصيد الويدجت.
+- حذف مسار fallback غير الموثق في واجهة الـWidget؛ عند تعذر التحقق من المصدر لا يظهر حقل لصق الرسائل أو زر تأكيد الحفظ، مع ظهور رسالة خطأ واضحة دون تعديل السجل المالي الموجود.
+- ربط مسارات المالية الموجودة (قائمة الأهداف، البصمات SHA-256، الكتابة المتسلسلة والنسخ الاحتياطي) بطبقة المصدر المعتمدة؛ منع استخدام writer قديم من شاشة لم تنهِ التحقق.
+- اختبارات QA محلية معزولة لحالات فشل المفتاح/المصدر، منع إعادة استخدام تخزين قديم عند تفعيل أو انتظار SQLCipher، وعدم فقد بيانات السجل أو رسائل البنك.
+- نجاح 57 اختبارًا في مجموعة M266 الخاصة بسلامة الواجهة ومصدر البيانات، ونجاح اختبار تكامل Android بمحاكي مع بيانات مؤقتة على Commit cf52ade44؛ كذلك تم اجتياز اختبارات حماية نفس الـCommit ودمج PR #266.
+- ملاحظة جوهرية: هذه تحسينات أمان وتجهيز فقط؛ SQLCipher لا يزال غير مفعل إنتاجيًا، ولا يوجد اعتماد فعلي مستقل للمسارات الـ24 على هاتفين Android حقيقيين ولا إذن باستخدام بيانات بنكية حقيقية.
+- تُستخدم نسخة main القادمة لاختبار QA فقط بعد إثبات نتائج GitHub Actions وتوقيع APK ومطابقة رقم الـCommit والبصمة، وإعادة فحص الواجهة على هاتف المالك.
