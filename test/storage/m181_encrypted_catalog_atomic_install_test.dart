@@ -514,6 +514,7 @@ void main() {
       route: WaffraFinanceRoute.manualTransactionSave,
       baseline: original,
       captured: <String, Object>{'entries': jsonEncode([entry])},
+      userConfirmed: true,
     );
     const fingerprint =
         'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
@@ -598,6 +599,7 @@ void main() {
       route: WaffraFinanceRoute.manualTransactionSave,
       baseline: old,
       captured: <String, Object>{'entries': jsonEncode([entry])},
+      userConfirmed: true,
     );
     await vault.customStatement(
       'INSERT INTO fresh_finance_receipts '
