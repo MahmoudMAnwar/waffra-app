@@ -1,0 +1,45 @@
+name: M252 Single SMS Verified Recovery (NO APK)
+
+on:
+  pull_request:
+    branches:
+      - feature/m251-sms-retry-source-readiness-20261026
+    paths:
+      - 'lib/main.dart'
+      - 'test/storage/m252_single_sms_ui_recovery_test.dart'
+      - '.github/workflows/m252-single-sms-source-recovery-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  single-sms-and-manual-source-recovery:
+    name: Single-SMS Home/Widget source recovery & no false ledger
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter test test/storage/m252_single_sms_ui_recovery_test.dart test/storage/m251_sms_source_readiness_test.dart test/storage/m250_bulk_sms_uncertain_commit_ui_test.dart test/storage/m249_ui_finance_failure_refusal_test.dart test/storage/m175_live_finance_mutation_intent_test.dart --reporter expanded
+
+  full-flutter-regression:
+    name: Same SHA full Flutter regression before review
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter test --reporter expanded

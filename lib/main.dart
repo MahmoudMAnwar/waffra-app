@@ -62,6 +62,7 @@ import 'storage/waffra_runtime_finance_route_contract.dart';
 import 'storage/waffra_verified_transaction_ui_guard.dart';
 import 'storage/waffra_m155_category_plan.dart';
 import 'storage/waffra_sms_partial_save_recovery.dart';
+import 'storage/waffra_sms_source_write_readiness.dart';
 import 'storage/waffra_production_finance_routing_gate.dart';
 import 'storage/waffra_verified_legacy_backup_restore.dart';
 import 'waffra_home_widget.dart';
@@ -3047,6 +3048,18 @@ Future<void> bulkSmsSheet({String? initialText})async {
  }
  Future<void> saveParsedMessages(BuildContext ctx,StateSetter update)async {
   if(busy)return;
+  // Recovery mode must not offer another write, even from a still-open
+  // paste sheet after startup/pull-refresh/source verification failed.
+  if(!waffraCanConfirmSmsWithFinanceSource(
+    dashboardReady:ready,
+    hasVerifiedRead:_lastFinanceAuthorityRead!=null,
+    recoveryActive:_financeLoadFailure!=null,
+   )){
+   if(ctx.mounted)update(()=>statusMessage=waffraIsEnglish?
+    'Financial data is being verified. Retry from the protected finance screen before saving bank messages.':
+    'البيانات المالية قيد التحقق. أعد المحاولة من شاشة حماية البيانات قبل حفظ الرسائل البنكية.');
+   return;
+  }
   final found=splitBankMessages(pasted.text.trim());
   if(found.isEmpty){update(()=>statusMessage=waffraIsEnglish?'No financial transactions found. Edit the message and retry.':'هذه الرسالة لا تحتوي على أي معاملات مالية. عدّلها لإعادة التحليل تلقائيًا.');return;}
   if(found.length>100){update(()=>statusMessage=waffraIsEnglish?'Maximum 100 transactions per paste.':'الحد الأقصى 100 معاملة في كل عملية لصق.');return;}
@@ -3145,6 +3158,18 @@ Future<void> bulkSmsSheet({String? initialText})async {
      ],
     )));
   if(accepted!=true||!ctx.mounted)return;
+  // Approval can remain on screen while a separate Widget/Home refresh
+  // changes the source status; never turn that older approval into a write.
+  if(!waffraCanConfirmSmsWithFinanceSource(
+    dashboardReady:ready,
+    hasVerifiedRead:_lastFinanceAuthorityRead!=null,
+    recoveryActive:_financeLoadFailure!=null,
+   )){
+   update(()=>statusMessage=waffraIsEnglish?
+    'Financial source changed during confirmation. Reload verified data and review again.':
+    'تغيّر مصدر البيانات أثناء التأكيد. حدّث البيانات المؤكدة وراجع الرسائل من جديد.');
+   return;
+  }
   update(() {busy=true;rejectedMessages=[];});
   final additions=<MoneyEntry>[];
   final proposedSourceIndexes=<int>[];
@@ -3196,6 +3221,17 @@ Future<void> bulkSmsSheet({String? initialText})async {
    return;
   }
   try{
+   // Finish earlier in-process category/transaction writes before committing
+   // a user-approved SMS batch. The native SQL/Home-Widget authority still
+   // independently validates its current durable source inside its lock.
+   await _financialWriteQueue.drain();
+   if(!mounted||!waffraCanConfirmSmsWithFinanceSource(
+       dashboardReady:ready,
+       hasVerifiedRead:_lastFinanceAuthorityRead!=null,
+       recoveryActive:_financeLoadFailure!=null,
+      )){
+    throw StateError('Finance source was not verified for SMS write.');
+   }
    // The dashboard and standalone Android widget now use the SAME locked,
    // crash-recoverable finance+SMS-hash journal on guarded legacy installs.
    // Never claim a save until the durable journal confirms the actual rows.
@@ -3346,9 +3382,27 @@ Future<void> bulkSmsSheet({String? initialText})async {
     Navigator.pop(ctx);
    }
   }catch(e){
-   // A failed journal must be reconciled by the locked coordinator on next
-   // read; never mutate the dashboard as if the save had succeeded.
-   if(ctx.mounted){update(()=>busy=false);snack(ctx,waffraIsEnglish?'Saving could not be confirmed. Please retry safely.':'تعذر تأكيد الحفظ. أعد المحاولة بأمان.');}
+   // The writer may have committed before an interrupted post-commit read,
+   // parsing or UI reconciliation failed. A retry based on the stale Home
+   // ledger could duplicate money or show a false current balance.
+   // Always reselect the authoritative finance source before permitting
+   // another review/save. _loadFinanceSafely blocks the whole finance UI
+   // if that fresh source cannot be verified; it never resets the vault.
+   debugPrint('Bank SMS finance commit could not be verified: $e');
+   // Do not race the authoritative reload with queued Home edits.
+   await _financialWriteQueue.drain();
+   if(mounted)await _loadFinanceSafely();
+   if(ctx.mounted){
+    update((){
+     busy=false;
+     statusMessage=waffraIsEnglish
+      ?'Save status could not be verified. Review your refreshed transactions before retrying.'
+      :'تعذر التحقق من حالة الحفظ. راجع معاملاتك المحدّثة قبل إعادة المحاولة.';
+    });
+    snack(ctx,waffraIsEnglish
+     ?'Bank transaction status is uncertain. Check the confirmed ledger before retrying.'
+     :'حالة حفظ المعاملات البنكية غير مؤكدة. راجع السجل المؤكد قبل إعادة المحاولة.');
+   }
   }
  }
 
@@ -4009,39 +4063,61 @@ Future<void> bulkSmsSheet({String? initialText})async {
    return;
   }
   if(pendingHash!=null&&initial==null){
-   // A single reviewed bank SMS must commit both its transaction and
-   // fingerprint atomically under the same Home/Widget source and journal.
-   // The writer independently checks duplicates again after taking the lock.
-   final applied=await _financeAuthority.commitConfirmedSms(
-    route:WaffraFinanceRoute.bulkSmsConfirmedSave,
-    records:[Map<String,Object?>.from(result.toJson())],
-    hashes:[pendingHash!],
-    userConfirmed:true,
-    allowDuplicateHashes:explicitlyApprovedSmsDuplicate,
-   );
-   if(applied.saved!=1){
-    if(mounted)snack(context,waffraIsEnglish?
-     'This bank transaction was already saved. Review before retrying.':
-     'العملية البنكية محفوظة بالفعل. راجعها قبل المحاولة مجددًا.');
+   try{
+    // A single reviewed bank SMS must commit its transaction and fingerprint
+    // together. Do not race that lock with pending Home finance edits, and
+    // never turn an older form confirmation into a recovery-mode write.
+    await _financialWriteQueue.drain();
+    if(!waffraCanConfirmSmsWithFinanceSource(
+      dashboardReady:ready,
+      hasVerifiedRead:_lastFinanceAuthorityRead!=null,
+      recoveryActive:_financeLoadFailure!=null,
+    )){
+     throw StateError('Single bank SMS finance source is not ready.');
+    }
+    final applied=await _financeAuthority.commitConfirmedSms(
+     route:WaffraFinanceRoute.bulkSmsConfirmedSave,
+     records:[Map<String,Object?>.from(result.toJson())],
+     hashes:[pendingHash!],
+     userConfirmed:true,
+     allowDuplicateHashes:explicitlyApprovedSmsDuplicate,
+    );
+    if(applied.saved!=1){
+     if(mounted)snack(context,waffraIsEnglish?
+      'This bank transaction was already saved. Review before retrying.':
+      'العملية البنكية محفوظة بالفعل. راجعها قبل المحاولة مجددًا.');
+     return;
+    }
+    final verified=(jsonDecode(applied.current.ledgerRaw??'[]') as List)
+     .map((item)=>MoneyEntry.fromJson(Map<String,dynamic>.from(item as Map)))
+     .toList();
+    if(!mounted)return;
+    setState((){
+     entries..clear()..addAll(verified);
+     smsHashes..clear()..addAll(
+      applied.current.finance.getStringList('waffra_sms_hashes_v1')??const <String>[]);
+     _lastFinanceAuthorityRead=applied.current;
+     _lastLedgerSavedRaw=applied.current.ledgerRaw;
+     _lastWidgetRevision=applied.current.widgetRevision;
+    });
+    unawaited(_refreshWidget());
+    if(applied.originalSmsNotesOmittedOnLegacy&&mounted){
+     snack(context,waffraIsEnglish?
+      'Transaction saved; original bank SMS text was NOT stored.':
+      'تم حفظ بيانات العملية دون نص الرسالة البنكية الأصلي.',isError:false);
+    }
+   }catch(e){
+    // A native journal may have committed before the verification read
+    // failed. Never claim success or retry from a stale visible balance.
+    debugPrint('Single bank SMS commit could not be verified: $e');
+    await _financialWriteQueue.drain();
+    if(mounted){
+     await _loadFinanceSafely();
+     if(mounted)snack(context,waffraIsEnglish?
+      'Bank transaction status is uncertain. Check the refreshed ledger before retrying.':
+      'حالة حفظ العملية البنكية غير مؤكدة. راجع السجل المحدّث قبل إعادة المحاولة.');
+    }
     return;
-   }
-   final verified=(jsonDecode(applied.current.ledgerRaw??'[]') as List)
-    .map((item)=>MoneyEntry.fromJson(Map<String,dynamic>.from(item as Map)))
-    .toList();
-   if(!mounted)return;
-   setState((){
-    entries..clear()..addAll(verified);
-    smsHashes..clear()..addAll(
-     applied.current.finance.getStringList('waffra_sms_hashes_v1')??const <String>[]);
-    _lastFinanceAuthorityRead=applied.current;
-    _lastLedgerSavedRaw=applied.current.ledgerRaw;
-    _lastWidgetRevision=applied.current.widgetRevision;
-   });
-   unawaited(_refreshWidget());
-   if(applied.originalSmsNotesOmittedOnLegacy&&mounted){
-    snack(context,waffraIsEnglish?
-     'Transaction saved; original bank SMS text was NOT stored.':
-     'تم حفظ بيانات العملية دون نص الرسالة البنكية الأصلي.',isError:false);
    }
   }else{
    setState((){
@@ -4058,9 +4134,28 @@ Future<void> bulkSmsSheet({String? initialText})async {
     }
    });
    // Manual edits remain separately source-gated. No encrypted shortcut.
-   await persist(route:initial==null
-   ?WaffraFinanceRoute.manualTransactionSave
-   :WaffraFinanceRoute.transactionEdit);
+   try{
+    await persist(route:initial==null
+    ?WaffraFinanceRoute.manualTransactionSave
+    :WaffraFinanceRoute.transactionEdit,
+    // This path is reached only after the manual form's Save action.
+    // Encrypted append must not silently infer user approval.
+    userConfirmed:initial==null);
+   }catch(e){
+    // The UI was updated optimistically. Rejecting a write MUST NOT leave
+    // a ghost transaction (or a misleading balance) visible in Home.
+    // Reload the actual selected source, including after a commit that
+    // succeeded but whose post-commit read failed.
+    debugPrint('Transaction source commit could not be verified: $e');
+    if(mounted){
+     await _financialWriteQueue.drain();
+     await _loadFinanceSafely();
+     if(mounted)snack(context,waffraIsEnglish?
+      'Transaction save was not verified. The latest confirmed data was reloaded.':
+      'تعذر التحقق من حفظ العملية. تم تحديث البيانات المؤكدة من المصدر.');
+    }
+    return;
+   }
    if(pendingHash!=null){
     // Existing transaction edits still need independent receipt/SMS review.
     await _persistSmsHashes({pendingHash!});
