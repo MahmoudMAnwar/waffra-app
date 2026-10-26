@@ -192,7 +192,7 @@ class WaffraSmartFeaturesPage extends StatefulWidget{
 }
 
 class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
- static const green=Color(0xFF087A54),forest=Color(0xFF073F31);
+ static const green=Color(0xFF087A54);
  static const types=['runway','subscription','simulation','guardian','assistant',
   'season','wallet','challenge','flow','emergency'];
  static const titlesAr=['فلوسك تكفيك؟','صائد الاشتراكات','جرّب قبل ما تصرف',
