@@ -35,6 +35,7 @@ class WaffraEncryptedSmsNotesVault {
   static const filename = 'waffra_bank_sms_notes_v1.sqlite';
   static const keyName = 'waffra_bank_sms_notes_key_v1';
   static const _table = 'waffra_protected_original_sms_notes';
+  static const _userNotesTable = 'waffra_protected_sms_user_notes';
   static const _secure = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
@@ -101,6 +102,13 @@ class WaffraEncryptedSmsNotesVault {
             message_hash TEXT NOT NULL,
             original_sms TEXT NOT NULL,
             created_at_ms INTEGER NOT NULL
+          )
+        ''');
+        await store.customStatement('''
+          CREATE TABLE IF NOT EXISTS $_userNotesTable (
+            entry_id TEXT PRIMARY KEY,
+            user_note TEXT NOT NULL,
+            revision INTEGER NOT NULL
           )
         ''');
         return await action(store);
@@ -201,4 +209,102 @@ class WaffraEncryptedSmsNotesVault {
       rethrow;
     }
   }
+  /// User-entered annotations are separate from immutable original bank SMS.
+  /// They live ONLY inside the same encrypted side vault. An authoritative
+  /// SMS ledger ID must be checked by WaffraVerifiedFinanceAuthority first.
+  Future<String?> readVerifiedUserNote(String entryId) async {
+    if (entryId.trim().isEmpty || entryId.length > 128) {
+      throw ArgumentError('Invalid bank SMS transaction ID.');
+    }
+    try {
+      return await _withEncryptedStore((store) async {
+        final original = await store.customSelect(
+          'SELECT message_hash,original_sms FROM $_table WHERE entry_id=?',
+          variables: [Variable.withString(entryId)],
+        ).get();
+        if (original.isEmpty) return null;
+        if (original.length != 1 ||
+            fingerprint(original.single.read<String>('original_sms')) !=
+                original.single.read<String>('message_hash')) {
+          throw StateError('Invalid encrypted original SMS association.');
+        }
+        final rows = await store.customSelect(
+          'SELECT user_note FROM $_userNotesTable WHERE entry_id=?',
+          variables: [Variable.withString(entryId)],
+        ).get();
+        if (rows.isEmpty) return '';
+        if (rows.length != 1) {
+          throw StateError('Duplicate protected user SMS annotation.');
+        }
+        return rows.single.read<String>('user_note');
+      }, allowFirstCreate: false);
+    } on StateError catch (error) {
+      if (error.message == 'Encrypted bank SMS note vault is not initialized.') {
+        return null;
+      }
+      rethrow;
+    }
+  }
+
+  /// Compare-and-swap protects a more recent edit from stale Home screens.
+  /// Failure never writes user notes to SharedPreferences or overwrites SMS.
+  Future<void> updateVerifiedUserNote({
+    required String entryId,
+    required String expectedNote,
+    required String nextNote,
+  }) async {
+    if (entryId.trim().isEmpty || entryId.length > 128 ||
+        expectedNote.runes.length > 2000 || nextNote.runes.length > 2000) {
+      throw ArgumentError('Invalid protected SMS annotation input.');
+    }
+    await _withEncryptedStore((store) async {
+      await store.transaction(() async {
+        final original = await store.customSelect(
+          'SELECT message_hash,original_sms FROM $_table WHERE entry_id=?',
+          variables: [Variable.withString(entryId)],
+        ).get();
+        if (original.length != 1 ||
+            fingerprint(original.single.read<String>('original_sms')) !=
+                original.single.read<String>('message_hash')) {
+          throw StateError('Original SMS source is missing or unverified.');
+        }
+        final rows = await store.customSelect(
+          'SELECT user_note,revision FROM $_userNotesTable WHERE entry_id=?',
+          variables: [Variable.withString(entryId)],
+        ).get();
+        if (rows.length > 1) {
+          throw StateError('Ambiguous encrypted SMS annotation.');
+        }
+        final old = rows.isEmpty ? '' : rows.single.read<String>('user_note');
+        if (old != expectedNote) {
+          throw StateError('Protected SMS note was edited elsewhere.');
+        }
+        if (nextNote.isEmpty) {
+          await store.customStatement(
+            'DELETE FROM $_userNotesTable WHERE entry_id=?', [entryId],
+          );
+        } else if (rows.isEmpty) {
+          await store.customStatement(
+            'INSERT INTO $_userNotesTable(entry_id,user_note,revision) '
+            'VALUES(?,?,1)', [entryId, nextNote],
+          );
+        } else {
+          await store.customStatement(
+            'UPDATE $_userNotesTable SET user_note=?,revision=? '
+            'WHERE entry_id=?',
+            [nextNote, rows.single.read<int>('revision') + 1, entryId],
+          );
+        }
+        final verified = await store.customSelect(
+          'SELECT user_note FROM $_userNotesTable WHERE entry_id=?',
+          variables: [Variable.withString(entryId)],
+        ).get();
+        if ((verified.isEmpty ? '' :
+             verified.single.read<String>('user_note')) != nextNote) {
+          throw StateError('Encrypted SMS annotation roundtrip mismatch.');
+        }
+      });
+    }, allowFirstCreate: false);
+  }
+
 }
