@@ -644,6 +644,21 @@ class WaffraApp extends StatefulWidget {
  const WaffraApp({super.key});
  @override State<WaffraApp> createState()=>_WaffraAppState();
 }
+/// The one-time country explanation is only eligible after the Google
+/// account finished required profile details, never during sign-in or guest.
+bool waffraGoogleProfileReadyForCountrySetup(Person? user)=>
+ user!=null&&user.provider.toLowerCase()=='google'&&
+ user.email.trim().isNotEmpty&&user.name.trim().isNotEmpty&&
+ user.phone.trim().isNotEmpty&&user.gender.trim().isNotEmpty;
+
+/// Namespace consent separately for each Google account; do not store raw
+/// emails, GPS coordinates or sensitive profile details in preferences.
+String waffraCountrySetupKey(Person user){
+ final fingerprint=sha256.convert(utf8.encode(
+   user.email.trim().toLowerCase())).toString();
+ return 'waffra_google_country_setup_v2_${fingerprint.substring(0,20)}';
+}
+
 class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  bool loading=true,onboarded=false,dark=false,locked=false,showLogin=false;
  bool googleFirstRunSetup=false;
@@ -715,8 +730,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     if(!{'light','dark','system'}.contains(appearance))appearance='light';
     dark=appearance=='dark'||(appearance=='system'&&WidgetsBinding.instance.platformDispatcher.platformBrightness==Brightness.dark);
     profile=u;
-    googleFirstRunSetup=u?.provider.toLowerCase()=='google'&&
-      !(p.getBool('waffra_google_country_setup_completed_v1')??false);
+    googleFirstRunSetup=waffraGoogleProfileReadyForCountrySetup(u)&&
+      !(p.getBool(waffraCountrySetupKey(u!))??false);
     pinHash=p.getString('waffra_pin_sha256');
     locked=pinHash!=null;startupError=null;loading=false;
    });
@@ -751,25 +766,21 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    phone:u.phone.trim().isNotEmpty?u.phone.trim():null,
   );
   final prefs=await SharedPreferences.getInstance();
-  final needsGoogleSetup=u.provider.toLowerCase()=='google'&&
-    !(prefs.getBool('waffra_google_country_setup_completed_v1')??false);
+  final needsGoogleSetup=waffraGoogleProfileReadyForCountrySetup(u)&&
+    !(prefs.getBool(waffraCountrySetupKey(u))??false);
   if(mounted)setState((){
    profile=u;showLogin=false;googleFirstRunSetup=needsGoogleSetup;
   });
  }
- Future<void> completeGoogleCountrySetup(
-   String selectedCurrency,bool remindersGranted)async{
-  // Currency is a display-only selection. No old balance or transaction
-  // amount is converted or overwritten by choosing a location.
+ Future<void> completeGoogleCountrySetup(String selectedCurrency)async{
+  final account=profile;
+  if(!waffraGoogleProfileReadyForCountrySetup(account))return;
+  // Only country/display preferences can change here. Never request
+  // notification access here: Recurring's opt-in toggle already owns it.
   await WaffraDisplayCurrency.setCurrency(selectedCurrency);
   final prefs=await SharedPreferences.getInstance();
-  if(remindersGranted){
-   final accepted=await prefs.setBool(
-     'waffra_google_recurring_reminders_pending_v1',true);
-   if(!accepted)throw StateError('Could not record approved reminder setup.');
-  }
   final complete=await prefs.setBool(
-    'waffra_google_country_setup_completed_v1',true);
+    waffraCountrySetupKey(account!),true);
   if(!complete)throw StateError('Could not save country setup completion.');
   if(mounted)setState(()=>googleFirstRunSetup=false);
  }
