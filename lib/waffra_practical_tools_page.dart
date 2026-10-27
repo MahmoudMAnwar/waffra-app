@@ -203,13 +203,20 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
     ],
   );
 
+  int? exactMinor(String source) {
+    final value = double.tryParse(source.trim().replaceAll(',', '.'));
+    if (value == null || !value.isFinite || value.abs() > 1e12) return null;
+    final halalas = value * 100;
+    if ((halalas - halalas.round()).abs() > 0.000001) return null;
+    return halalas.round();
+  }
+
   Widget monthlyClose() {
-    final balance = double.tryParse(opening.text.replaceAll(',', '.'));
-    final actualBalance = double.tryParse(actual.text.replaceAll(',', '.'));
-    final okay = balance != null && balance.isFinite && balance.abs() <= 1e12;
-    final summary = okay ? WaffraMonthlyClose.preview(widget.entries,
+    final openingMinor = exactMinor(opening.text);
+    final actualMinor = exactMinor(actual.text);
+    final summary = openingMinor != null ? WaffraMonthlyClose.preview(widget.entries,
       year: month.year, month: month.month,
-      openingMinor: (balance * 100).round()) : null;
+      openingMinor: openingMinor) : null;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       notice('معاينة فقط؛ لا حفظ للإقفال إلا بعد اعتماد التخزين المشفر.',
         'Preview only; month-close history requires verified encrypted storage.'),
@@ -243,10 +250,9 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
           keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
           decoration: InputDecoration(labelText: t('الرصيد الفعلي', 'Actual balance'),
             border: const OutlineInputBorder())),
-        if (actualBalance != null && actualBalance.isFinite &&
-            actualBalance.abs() <= 1e12)
+        if (actualMinor != null)
           Text(t('فرق المطابقة: ', 'Reconciliation difference: ') +
-            cash(summary.differenceMinor((actualBalance * 100).round()))),
+            cash(summary.differenceMinor(actualMinor))),
       ],
     ]);
   }
