@@ -21,6 +21,7 @@ import 'waffra_today_picker.dart';
 import 'waffra_action_layout.dart';
 import 'waffra_receipt_filename.dart';
 import 'waffra_sms_intelligence.dart';
+import 'waffra_sms_multicurrency_review.dart';
 import 'waffra_back_navigation.dart';
 import 'waffra_saudi_greetings.dart';
 import 'package:flutter/rendering.dart';
@@ -423,6 +424,14 @@ class BankParser {
   final failedStatus=RegExp(r'^\s*(?:Transaction\s+)?Status\s*[:：]\s*(?:Pending|Declined|Failed|Rejected|Cancelled|Canceled)\b',caseSensitive:false,multiLine:true);
   if(RegExp('^$unconfirmed\\b',caseSensitive:false).hasMatch(header)||failedStatus.hasMatch(s)){
    return BankResult(null,false,'إشعار غير مؤكد','أخرى',null);
+  }
+  // Current finance records lack original currency and a verified FX
+  // witness. Never auto-import a foreign-currency SMS as Saudi riyals.
+  final discoveredCurrencies=WaffraSmsCurrencies.currenciesForMessage(s);
+  if(WaffraSmsCurrencies.requiresReviewForSarLedger(s)){
+   return BankResult(null,false,'معاملة بعملة تحتاج مراجعة','أخرى',null,
+    currencyCode:discoveredCurrencies.isEmpty?null:discoveredCurrencies.first,
+    requiresCurrencyReview:true);
   }
   // Credit Transfer is incoming; Credit Card Purchase remains an expense.
   const credits=r'(?:Credit\s+Transfer|Credit\s+via\s+(?:(?:local|domestic|international|bank|internal)\s+)?transfer|Incoming\s+(?:Bank\s+)?Transfer|Transfer\s+Received|Transfer\s+In|Funds\s+Received|Money\s+Received|Account\s+Credited|Salary\s+(?:Credit|Deposit)|Cash\s+Deposit|Refund\s+(?:Received|Processed)|Refund|Reversal\s+Credit)';
@@ -3311,6 +3320,16 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final found=splitBankMessages(pasted.text.trim());
   if(found.isEmpty){update(()=>statusMessage=waffraIsEnglish?'No financial transactions found. Edit the message and retry.':'هذه الرسالة لا تحتوي على أي معاملات مالية. عدّلها لإعادة التحليل تلقائيًا.');return;}
   if(found.length>100){update(()=>statusMessage=waffraIsEnglish?'Maximum 100 transactions per paste.':'الحد الأقصى 100 معاملة في كل عملية لصق.');return;}
+  final currencyBatch=WaffraSmsCurrencies.summarize(found);
+  if(currencyBatch.needsCurrencyReview){
+   // No partial automatic commit for a mixed-currency paste.
+   update(()=>statusMessage=waffraIsEnglish
+    ?'Currency review required: '+currencyBatch.summary+
+      '. No transactions were saved. Separate SAR messages or review foreign transactions individually.'
+    :'تحتاج العملات إلى مراجعة: '+currencyBatch.summary+
+      '. لم يتم حفظ أي عملية. افصل رسائل الريال أو راجع العمليات الأجنبية يدويًا.');
+   return;
+  }
   // Batch parsing of 20-100 messages must not freeze Android animations
   // or block text/scroll interactions on the Flutter UI isolate.
   final results=found.length>=20
@@ -3690,6 +3709,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    final available=forType(income);
    final total=messages.fold<double>(0,(sum,s)=>sum+(BankParser.parse(s).amount??0));
    final pasteSummary=waffraSummarizeBankPaste(pasted.text,smsHashes);
+   final currencyPreview=WaffraSmsCurrencies.summarize(messages);
    return Padding(padding:EdgeInsets.fromLTRB(18,8,18,MediaQuery.of(ctx).viewInsets.bottom+24),
     child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
      Row(children:[Expanded(child:WaffraText(waffraIsEnglish?'Add bank message':'إضافة رسالة بنكية',style:Theme.of(ctx).textTheme.titleLarge)),IconButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),icon:const Icon(Icons.close_rounded))]),
@@ -3746,6 +3766,24 @@ Future<void> bulkSmsSheet({String? initialText})async {
        }),
        label:WaffraText(waffraIsEnglish?'Open phone messages':'فتح رسائل الهاتف'),
       )),
+      if(currencyPreview.needsCurrencyReview)...[
+       const SizedBox(height:8),
+       Container(
+        key:const Key('m291-bank-sms-currency-warning'),
+        padding:const EdgeInsets.all(11),
+        decoration:BoxDecoration(
+         color:Theme.of(ctx).colorScheme.errorContainer,
+         borderRadius:BorderRadius.circular(14)),
+        child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+         WaffraText(waffraIsEnglish?'Multiple or foreign currencies detected':
+          'تم اكتشاف عملات متعددة أو أجنبية',
+          style:const TextStyle(fontWeight:FontWeight.bold)),
+         WaffraText(currencyPreview.summary),
+         WaffraText(waffraIsEnglish?
+          'The base display currency will not change. Verify each foreign amount and its FX rate before importing.':
+          'لن تتغير عملة التطبيق تلقائيًا. راجع المبلغ الأصلي وسعر الصرف لكل عملة قبل الاستيراد.'),
+        ])),
+      ],
       if(analyzingPaste)...[const SizedBox(height:12),const LinearProgressIndicator(),const SizedBox(height:6),WaffraText(waffraIsEnglish?'Analyzing your bank messages now…':'يتم الآن تحليل الرسائل البنكية واستخراج المعاملات…')],
       // Shared lightweight in-dialog progress while the batch is committed.
       if(busy)Padding(
