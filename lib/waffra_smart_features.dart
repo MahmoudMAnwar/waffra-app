@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'waffra_haptic_feedback.dart';
 import 'waffra_display_currency.dart';
-import 'waffra_i18n.dart';
+import 'waffra_riyal_symbol.dart';
 import 'currency_converter.dart';
 
 /// M268. Read-only finance tools. Never reads SMS originals, keys, or bank data.
@@ -235,9 +235,14 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
  @override void dispose(){input.dispose();super.dispose();}
 
  Widget _label(String value,{double size=14,bool bold=false,Color? color}){
-  return WaffraText(value,currencyEnglish:widget.english,
-   style:TextStyle(fontFamily:'Tajawal',fontSize:size,
-   fontWeight:bold?FontWeight.w800:FontWeight.w500,color:color));
+  final effective=TextStyle(fontFamily:'Tajawal',fontSize:size,
+      fontWeight:bold?FontWeight.w800:FontWeight.w500,color:color);
+  final spans=waffraMoneyCurrencySpans(value,
+      english:widget.english,style:effective);
+  // Do not wrap a WaffraText inside another Text: Flutter's text finder
+  // would double-count unchanged labels in the smart-tool screens.
+  return spans==null?Text(value,style:effective):
+   Text.rich(TextSpan(children:spans),style:effective);
  }
  Widget _paragraph(String v)=>_label(v,size:13,color:Theme.of(context).colorScheme.onSurface.withValues(alpha:.77));
  Widget _tile(String label,String value,{String? note,Color? tint}){
