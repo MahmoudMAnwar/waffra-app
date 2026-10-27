@@ -20,6 +20,7 @@ import 'waffra_tour_plan.dart';
 import 'waffra_today_picker.dart';
 import 'waffra_action_layout.dart';
 import 'waffra_receipt_filename.dart';
+import 'waffra_sms_intelligence.dart';
 import 'waffra_back_navigation.dart';
 import 'waffra_saudi_greetings.dart';
 import 'package:flutter/rendering.dart';
@@ -399,7 +400,12 @@ WaffraSmsPasteSummary waffraSummarizeBankPaste(String raw,Set<String> savedHashe
 }
 class BankResult {
  final double? amount;final bool income;final String title,category;final String? suggestedCategory;
- BankResult(this.amount,this.income,this.title,this.category,this.suggestedCategory);
+ final String? currencyCode;
+ final double? mlConfidence;
+ final bool requiresCurrencyReview;
+ BankResult(this.amount,this.income,this.title,this.category,this.suggestedCategory,{
+  this.currencyCode,this.mlConfidence,this.requiresCurrencyReview=false,
+ });
 }
 /// Pure, batch-only parser used by compute() for larger SMS pastes.
 /// Results and stored bank amounts are identical to the single-message path.
@@ -424,6 +430,21 @@ class BankParser {
   final englishOutgoing=RegExp('^$debits\\b',caseSensitive:false).hasMatch(header);
   final legacyIncoming=RegExp(r'حوال[ةه].{0,25}وارد|تحويل.{0,25}وارد|استلام.{0,25}حوال|credited|deposit|راتب|إيداع|ايداع',caseSensitive:false).hasMatch(s);
   final legacyOutgoing=RegExp(r'حوال[ةه].{0,25}صادر|تحويل.{0,25}صادر|شراء|نقاط\s*بيع|pos\b|مدى|سحب|خصم|دفع|فاتورة|purchase|debit\b',caseSensitive:false).hasMatch(s);
+  // A trainable no-cost offline classifier covers previously unseen global
+  // headings. Existing successful Saudi and English formats remain unchanged.
+  // Currency mismatch never silently corrupts the SAR ledger.
+  if(!englishIncoming&&!englishOutgoing&&!legacyIncoming&&!legacyOutgoing){
+   final smart=WaffraSmsIntelligence.classify(s);
+   if(smart.intent!=WaffraSmsIntent.uncertain){
+    final receive=smart.intent==WaffraSmsIntent.incoming;
+    return BankResult(smart.canAutoSuggestSar?smart.amount:null,receive,
+     receive?'حوالة واردة':'معاملة مالية صادرة',
+     receive?'دخل آخر':'تحويلات',null,
+     currencyCode:smart.currency,
+     mlConfidence:smart.confidence,
+     requiresCurrencyReview:smart.requiresCurrencyReview);
+   }
+  }
   final income=englishIncoming||(legacyIncoming&&!englishOutgoing&&!legacyOutgoing);
   // Amount-only English notices lack evidence of direction: review, don't
   // fabricate a confirmed expense.
@@ -3193,9 +3214,15 @@ Future<void> bulkSmsSheet({String? initialText})async {
    final result=BankParser.parse(message);
    return result.amount!=null&&result.amount!>0;
   });
+  if(!hasTransaction&&parts.any((message)=>
+    BankParser.parse(message).requiresCurrencyReview)){
+   return waffraIsEnglish
+    ?'Foreign currency detected. Review and manually convert to SAR before saving.'
+    :'تم اكتشاف معاملة بعملة أجنبية. راجعها وحوّل المبلغ يدويًا إلى الريال قبل الحفظ.';
+  }
   return hasTransaction?null:(waffraIsEnglish
-   ?'This message contains no financial transactions. Edit the text and it will be analyzed again automatically.'
-   :'هذه الرسالة لا تحتوي على أي معاملات مالية. يمكنك تعديلها وسيتم تحليلها تلقائيًا مرة أخرى.');
+   ?'No confirmed supported-SAR transaction found. Review and retry.'
+   :'لم نجد معاملة مؤكدة بالريال يمكن حفظها تلقائيًا. راجع الرسالة وحاول مجددًا.');
  }
 
  bool sheetActive=true;
@@ -3877,8 +3904,16 @@ Future<void> bulkSmsSheet({String? initialText})async {
          border:OutlineInputBorder())),
        const SizedBox(height:8),
        if(analyzing)const LinearProgressIndicator(),
-       if(hasParsed)WaffraText(value.text.isEmpty?'ما قدرنا نحدد المبلغ. اكتبه يدويًا.':
-        'حلّلنا الرسالة. راجع التفاصيل قبل الحفظ.',style:const TextStyle(color:emerald)),
+       if(hasParsed)WaffraText(
+        BankParser.parse(message.text).requiresCurrencyReview
+         ?(waffraIsEnglish?
+          'Foreign currency: check the original amount and enter a verified SAR value manually. No automatic FX conversion.':
+          'عملة أجنبية: راجع المبلغ وأدخل قيمته المؤكدة بالريال يدويًا. لا يوجد تحويل تلقائي.')
+         :value.text.isEmpty?
+          (waffraIsEnglish?'Amount unclear: enter it manually.':'المبلغ غير واضح؛ أدخله يدويًا.')
+         :(waffraIsEnglish?'Smart analysis suggested fields. Review before saving.':
+          'التحليل الذكي اقترح بيانات. راجعها قبل الحفظ.'),
+        style:const TextStyle(color:emerald)),
        const SizedBox(height:12),
       ],
       SegmentedButton<bool>(
