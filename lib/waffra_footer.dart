@@ -1,31 +1,29 @@
 import 'package:flutter/material.dart';
 
 import 'waffra_haptic_feedback.dart';
-/// Six destinations: planning tools sit after categories; analysis remains on Home.
-/// not a page reachable accidentally with a horizontal swipe.
+/// Five footer destinations: Home, Categories, Smart Tools, Goals and Recurring.
+/// Account settings are opened from the profile avatar in the app bar.
 class WaffraFooterNavigation extends StatelessWidget {
  final int selectedIndex;
  final ValueChanged<int> onSelected;
  final bool english;
- final Key? profileSpotlightKey;
  const WaffraFooterNavigation({
   super.key,required this.selectedIndex,required this.onSelected,
-  required this.english,this.profileSpotlightKey,
+  required this.english,
  });
 
- static const itemCount=6;
+ static const itemCount=5;
  static const _icons=<IconData>[
   Icons.home_rounded,
   Icons.grid_view_rounded,
   Icons.auto_awesome_rounded,
   Icons.track_changes_rounded,
   Icons.repeat_rounded,
-  Icons.person_outline_rounded,
  ];
  String _label(int i){
   final labels=english?
-   <String>['Home','Categories','Smart tools','Goals','Recurring','Account']:
-   <String>['الرئيسية','الأقسام','الأدوات','الأهداف','المتكررة','حسابي'];
+   <String>['Home','Categories','Smart tools','Goals','Recurring']:
+   <String>['الرئيسية','الأقسام','الأدوات','الأهداف','المتكررة'];
   return labels[i];
  }
 
@@ -62,8 +60,7 @@ class WaffraFooterNavigation extends StatelessWidget {
             color:active?emerald.withValues(alpha:.9):Colors.transparent,
             borderRadius:BorderRadius.circular(23),
             border:active?Border.all(color:neon.withValues(alpha:.45),width:1):null),
-           child:KeyedSubtree(key:i==5?profileSpotlightKey:null,
-            child:Icon(_icons[i],color:Colors.white,size:active?26:24))),
+           child:Icon(_icons[i],color:Colors.white,size:active?26:24)),
           const SizedBox(height:4),
           Text(_label(i),maxLines:1,overflow:TextOverflow.ellipsis,
            textAlign:TextAlign.center,
