@@ -20,6 +20,7 @@ dependencies:
   local_auth: ^2.3.0
   http: ^1.2.2
   image_picker: ^1.1.2
+  flutter_tesseract_ocr: ^0.4.31
   path_provider: ^2.1.5
   fl_chart: ^0.69.2
   image: 4.5.4
