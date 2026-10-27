@@ -10,6 +10,7 @@ on:
       - 'lib/waffra_financial_tools.dart'
       - 'lib/waffra_categories_page.part.dart'
       - 'lib/waffra_footer.dart'
+      - 'lib/currency_converter.dart'
       - 'lib/waffra_search.dart'
       - 'lib/currency_converter.dart'
       - 'lib/waffra_gold_calculator.dart'
@@ -60,6 +61,9 @@ jobs:
         run: |
           flutter test --reporter expanded test/m268_smart_features_ten_calendar_art_test.dart
           flutter test --reporter expanded test/waffra_search_normalization_test.dart
+          flutter test --reporter expanded \
+            test/m227_gold_currency_original_sms_home_test.dart \
+            test/waffra_m208_bundle_regression_test.dart
       - name: Preserve security and existing date/UI regressions
         run: |
           flutter test --reporter expanded \
