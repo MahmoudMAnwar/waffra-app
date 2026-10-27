@@ -2348,6 +2348,7 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
   final waveColor=Theme.of(context).scaffoldBackgroundColor;
   final compare=monthlyChangePercent;
   final validCompare=compare!=null&&compare.isFinite;
+  final comparisonValue=validCompare?compare!:0.0;
   return Container(
    key:focusKey,
    color:waveColor,
@@ -2361,7 +2362,7 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
       colors:[Color(0xFF167F5A),Color(0xFF07533E),Color(0xFF00392F)],
       stops:[0,.54,1]),
      border:Border.all(color:const Color(0xFF73CF9A).withValues(alpha:.38)),
-     boxShadow:[BoxShadow(color:const Color(0xFF063B2D).withValues(alpha:dark?.25:.17),
+     boxShadow:[BoxShadow(color:const Color(0xFF063B2D).withValues(alpha:dark ? 0.25 : 0.17),
       blurRadius:15,offset:const Offset(0,5))]),
     child:ClipRRect(
      borderRadius:BorderRadius.circular(22),
@@ -2416,14 +2417,14 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
           key:const Key('waffra-balance-month-comparison'),
           padding:const EdgeInsets.symmetric(horizontal:9,vertical:4),
           decoration:BoxDecoration(
-           color:(compare>=0?const Color(0xFF1BAC70):const Color(0xFFAA403C))
+           color:(comparisonValue>=0?const Color(0xFF1BAC70):const Color(0xFFAA403C))
             .withValues(alpha:.92),
            borderRadius:BorderRadius.circular(17)),
           child:Row(mainAxisSize:MainAxisSize.min,children:[
-           Icon(compare>=0?Icons.trending_up_rounded:Icons.trending_down_rounded,
+           Icon(comparisonValue>=0?Icons.trending_up_rounded:Icons.trending_down_rounded,
             size:13,color:Colors.white),
            const SizedBox(width:4),
-           Text('${compare>=0?'+':''}${compare.toStringAsFixed(0)}%',
+           Text('${comparisonValue>=0?'+':''}${comparisonValue.toStringAsFixed(0)}%',
             style:const TextStyle(color:Colors.white,fontSize:12,
              fontWeight:FontWeight.w800)),
           ])),
