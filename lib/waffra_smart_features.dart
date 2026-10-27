@@ -551,8 +551,8 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
       boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:dark ? 0.09 : 0.055),
        blurRadius:expanded?17:8,offset:const Offset(0,3))]),
      child:Column(mainAxisSize:MainAxisSize.min,children:[
-      Semantics(button:true,expanded:expanded,
-       label:names[i]+' — '+details[i],
+      Semantics(button:true,
+       label:names[i]+' — '+details[i]+(expanded?' — open':' — closed'),
        child:InkWell(
         key:Key('waffra-m268-feature-'+types[i]),
         borderRadius:BorderRadius.circular(22),
