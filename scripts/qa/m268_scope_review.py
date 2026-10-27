@@ -70,6 +70,22 @@ def main():
     demand(preview.index("Refuse APK missing native runtime libraries") <
            preview.index("Attach unapproved-for-production APK for device QA"),
            "cannot publish an unchecked native APK")
+    # The fast PR compile uses an unregistered Android app ID and a preview
+    # signing identity. It MUST not silently advertise working Google login,
+    # Widget/quick share or full native parity in the distributed artifact.
+    for marker in ("WAFFRA_COMPILE_ONLY_PREVIEW=true",
+                   "WAFFRA_PREVIEW_LIMITATIONS.txt",
+                   "Google authentication: NOT SUPPORTED",
+                   "com.waffra.waffra (not registered with Firebase)"):
+        demand(marker in preview,"CI-only APK must be labeled as limited: "+marker)
+    for marker in ("waffraCompileOnlyQaPreview",
+                   "waffraGooglePreviewNotice",
+                   "if(waffraCompileOnlyQaPreview)"):
+        demand(marker in main_text,
+               "user must see an accurate Google-login preview limitation: "+marker)
+    demand("Configure Firebase Google Sign-In" in
+           Path(".github/workflows/android.yml").read_text(),
+           "main signed Google login workflow unexpectedly removed")
     release=Path("lib/storage/waffra_production_cutover_release_gate.dart").read_text()
     demand("bool get automaticallyActivateSqlCipher => false;" in release,
            "production activation guard changed")
