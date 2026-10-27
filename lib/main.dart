@@ -16,6 +16,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'waffra_financial_tools.dart';
 import 'waffra_smart_features.dart';
+import 'waffra_tour_plan.dart';
 import 'waffra_today_picker.dart';
 import 'waffra_action_layout.dart';
 import 'waffra_back_navigation.dart';
@@ -2566,8 +2567,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  bool tourActive=false;
  bool tourTargetReady=false;
  int tourStep=0;
- static const tourTabs=<int>[0,0,0,1,3,4];
- static const tourTargetKeys=<int>[-1,0,1,2,6,4];
+ static const tourTabs=WaffraTourPlan.tabs;
+ static const tourTargetKeys=WaffraTourPlan.targetKeys;
  bool addFabExpanded=false;
  bool _addActionOpening=false;
  bool _fabPressed=false;
@@ -2933,7 +2934,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   if(!(p.getBool('waffra_in_app_tour_seen_v2')??false)&&mounted){
    WidgetsBinding.instance.addPostFrameCallback((_){
-    if(mounted){setState((){tourActive=true;tourStep=0;tab=0;goalsOpened=false;addFabExpanded=false;tourTargetReady=false;});if(waffraAnimationLevel.value!='off')_tourGlow.repeat(reverse:true);scheduleTourFocus();}
+    if(mounted){setState((){tourActive=true;tourStep=0;tab=0;accountOpened=false;_headerCompact=false;goalsOpened=false;addFabExpanded=false;tourTargetReady=false;});if(waffraAnimationLevel.value!='off')_tourGlow.repeat(reverse:true);scheduleTourFocus();}
    });
   }
  }
@@ -8276,16 +8277,28 @@ Future<void> bulkSmsSheet({String? initialText})async {
   }
  }
  void scheduleTourFocus(){
+  final expectedStep=tourStep,expectedTab=tab;
   WidgetsBinding.instance.addPostFrameCallback((_)async {
-   if(!mounted||!tourActive)return;
-   final focus=tourTargetKeys[tourStep]<0?null:_tourKeys[tourTargetKeys[tourStep]].currentContext;
+   if(!mounted||!tourActive||tourStep!=expectedStep||tab!=expectedTab)return;
+   BuildContext? focus=tourTargetKeys[expectedStep]<0?null:
+    _tourKeys[tourTargetKeys[expectedStep]].currentContext;
+   // The selected tab is built lazily, so allow the next animation frame
+   // to mount its heading before calculating the coach-mark target.
+   if(focus==null&&expectedStep>0){
+    await Future<void>.delayed(waffraMotion(120));
+    if(!mounted||!tourActive||tourStep!=expectedStep||tab!=expectedTab)return;
+    focus=_tourKeys[tourTargetKeys[expectedStep]].currentContext;
+   }
    if(focus!=null){
     try{await Scrollable.ensureVisible(focus,
      duration:waffraMotion(250),alignment:.16,
      curve:Curves.easeOutCubic);}catch(e){debugPrint('Tour focus: $e');}
    }
-   await Future<void>.delayed(waffraMotion(200));
-   if(mounted&&tourActive)setState(()=>tourTargetReady=tourStep==0||focus!=null);
+   await Future<void>.delayed(waffraMotion(120));
+   if(mounted&&tourActive&&tourStep==expectedStep&&tab==expectedTab){
+    // Keep controls accessible even if a lazy child is momentarily absent.
+    setState(()=>tourTargetReady=true);
+   }
   });
  }
  Future<void> completeTour()async {
@@ -8295,7 +8308,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   await p.setBool('waffra_in_app_tour_seen_v2',true);
  }
  void beginTour(){
-  setState((){tourStep=0;tourActive=true;tourTargetReady=false;tab=0;goalsOpened=false;addFabExpanded=false;});
+  setState((){tourStep=0;tourActive=true;tourTargetReady=false;tab=0;accountOpened=false;_headerCompact=false;goalsOpened=false;addFabExpanded=false;});
   if(waffraAnimationLevel.value!='off')_tourGlow.repeat(reverse:true);
   scheduleTourFocus();
  }
@@ -8310,10 +8323,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
   scheduleTourFocus();
  }
  Widget tourOverlay()=>LayoutBuilder(builder:(overlayCtx,area){
-  const ar=['مرحبًا بك في وفرة','الرئيسية والرصيد','إضافة المعاملات','الأقسام','الأهداف الادخارية','العمليات المتكررة'];
-  const en=['Welcome to Waffra','Home & balance','Add transactions','Categories','Savings goals','Recurring items'];
-  const arHelp=['ابدأ بدون تسجيل، واحتفظ ببياناتك على هاتفك.','الرصيد والدخل والمصروفات في مكان واحد.','أضف عملية أو الصق رسالة بنكية للتحليل.','نظّم الأقسام الرئيسية والفرعية.','خطط لأهداف الادخار وتابع التقدم.','نظّم الاستحقاقات الشهرية والمتكررة.'];
-  const enHelp=['Start as a guest and keep data on your phone.','See balance, income and expenses.','Add a transaction or paste a bank message.','Organize categories and budgets.','Create savings goals and follow progress.','Plan recurring payments and due dates.'];
+  const ar=WaffraTourPlan.titlesAr;
+  const en=WaffraTourPlan.titlesEn;
+  const arHelp=WaffraTourPlan.helpAr;
+  const enHelp=WaffraTourPlan.helpEn;
   final element=tourTargetKeys[tourStep]<0?null:_tourKeys[tourTargetKeys[tourStep]].currentContext?.findRenderObject();
   final layer=overlayCtx.findRenderObject();
   // Intro doesn't spotlight the header; its first card is centered.
@@ -8330,7 +8343,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   }
   // Headings use intrinsic text bounds rather than a full-width row.
   // Other tour steps retain their actual button/icon target.
-  final headingFocus=tourStep==3||tourStep==5;
+  final headingFocus=tourStep>=3;
   final headingText=tourStep==3?(waffraIsEnglish?'Categories & budgets':'أقسامك وميزانياتك'):(waffraIsEnglish?en[tourStep]:ar[tourStep]);
   if(headingFocus){
    final style=Theme.of(context).textTheme.titleLarge??const TextStyle(fontSize:23);
@@ -8526,6 +8539,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   }
   return WaffraSmartFeaturesPage(
    key:const Key('waffra-m268-footer-page'),
+   tourHeadingKey:_tourKeys[3],
    embedded:true,english:waffraIsEnglish,
    onNotice:(message)=>snack(context,message),
    analysisBuilder:(_)=>Column(crossAxisAlignment:CrossAxisAlignment.stretch,
