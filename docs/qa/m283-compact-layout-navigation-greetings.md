@@ -3,7 +3,7 @@
 Based on **M282 combined PR #282** HEAD `d8661452b1751d023bcc1b07bcb2fd68c93ea4d5`; this PR targets M282, not main. All prior M274–M282 work remains in ancestry.
 
 ## Changes applied
-- Shared `WaffraActionLayout` horizontal padding reduces 18→10 logical pixels and vertical padding 12→8, while maintaining >=48dp tap targets (old min height 52). Borders remain centered on AR/EN labels; no forced full-width buttons. Existing forms and dialogs can grow vertically with accessibility text.
+- Shared `WaffraActionLayout` horizontal padding reduces 18→10 logical pixels and vertical padding 12→10, while maintaining 52dp minimum tap targets (retained for backward compatibility). Borders remain centered on AR/EN labels; no forced full-width buttons. Existing forms and dialogs can grow vertically with accessibility text.
 - Monthly budget **"تحديد الميزانية"** has a compact `TextButton.icon` and `LayoutBuilder` that switches to two lines when narrow or text-scaled, preventing collision with the monthly title.
 - Smart Tools hero no longer explains how accordion sections behave. A short AR/EN user-facing description replaces it; hero and accordion padding are tightened.
 - On tapping an accordion, `Scrollable.ensureVisible` moves the active section toward the **top** after the expansion animation, with stable GlobalKeys, cancellation on new selection, and reduced-motion support.
