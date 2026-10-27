@@ -487,6 +487,17 @@ class BankParser {
    else if(RegExp(r'مدرسة|جامعة|تعليم',caseSensitive:false).hasMatch(s)){cat='تعليم';suggestion=cat;}
    else if(RegExp(r'سفر|طيران|فندق|hotel',caseSensitive:false).hasMatch(s)){cat='سفر';suggestion=cat;}
   }
+  // A recognized foreign-currency amount must never inherit the SAR ledger
+  // unit. Preserve direction and title, but require a human-reviewed SAR
+  // conversion before any writer is allowed to persist an amount.
+  if(value==null){
+   final global=WaffraSmsIntelligence.classify(s);
+   if(global.requiresCurrencyReview){
+    return BankResult(null,income,title,cat,suggestion,
+     currencyCode:global.currency,mlConfidence:global.confidence,
+     requiresCurrencyReview:true);
+   }
+  }
   return BankResult(value,income,title,cat,suggestion);
  }
 }
