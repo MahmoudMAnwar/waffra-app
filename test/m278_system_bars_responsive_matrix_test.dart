@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier, ValueListenableBuilder;
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:waffra/main.dart';
