@@ -186,6 +186,9 @@ jobs:
       - name: Generate Android project (without duplicate pub get)
         run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
 
+      - name: Configure optional approximate location only (no background or SMS)
+        run: python3 scripts/qa/m290_configure_country_permissions.py .
+
       - name: Match native Android launch background to Waffra emerald
         shell: bash
         run: |
