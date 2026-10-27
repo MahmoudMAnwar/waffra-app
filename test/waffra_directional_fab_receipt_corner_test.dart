@@ -97,7 +97,7 @@ void main() {
     var undos=0;
     await tester.pumpWidget(MaterialApp(home:Scaffold(
       body:const SizedBox.expand(key:Key('finance-body')),
-      bottomNavigationBar:accountOpened?null:Column(mainAxisSize:MainAxisSize.min,children:[
+      bottomNavigationBar:Column(mainAxisSize:MainAxisSize.min,children:[
         WaffraFooterNoticeHost(
           listenable:notice,
           onDismiss:()=>notice.value=null),
@@ -137,7 +137,7 @@ void main() {
     final notice=ValueNotifier<WaffraNoticeData?>(null);
     await tester.pumpWidget(MaterialApp(home:Scaffold(
       body:const SizedBox.expand(),
-      bottomNavigationBar:accountOpened?null:Column(mainAxisSize:MainAxisSize.min,children:[
+      bottomNavigationBar:Column(mainAxisSize:MainAxisSize.min,children:[
         WaffraFooterNoticeHost(
           listenable:notice,onDismiss:()=>notice.value=null),
         const SizedBox(key:Key('waffra-test-footer'),height:85),
@@ -173,7 +173,7 @@ void main() {
       await tester.pumpWidget(MaterialApp(
         home:Directionality(textDirection:direction,child:Scaffold(
           body:const SizedBox.expand(),
-          bottomNavigationBar:accountOpened?null:Column(mainAxisSize:MainAxisSize.min,children:[
+          bottomNavigationBar:Column(mainAxisSize:MainAxisSize.min,children:[
             WaffraFooterNoticeHost(
               listenable:notice,onDismiss:()=>notice.value=null),
             const SizedBox(height:85),
