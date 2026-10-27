@@ -153,6 +153,29 @@ void main(){
    expect(waffraSmartBalance(sample),original);
    expect(WaffraDisplayCurrency.toLedgerSar(1000),1000);
   });
+  testWidgets('third footer smart tools expand inline and keep siblings visible',(tester)async{
+   await tester.pumpWidget(MaterialApp(home:WaffraSmartFeaturesPage(
+    embedded:true,entries:sample,goals:const [],recurring:const [],
+    english:false)));
+   expect(find.byKey(const Key('waffra-m268-tools-scroll')),findsOneWidget);
+   expect(find.byKey(const Key('waffra-m268-feature-runway')),findsOneWidget);
+   expect(find.byKey(const Key('waffra-m268-feature-simulation')),findsOneWidget);
+   await tester.ensureVisible(find.byKey(const Key('waffra-m268-feature-simulation')));
+   await tester.tap(find.byKey(const Key('waffra-m268-feature-simulation')));
+   await tester.pumpAndSettle();
+   expect(find.byKey(const Key('waffra-m268-expanded-simulation')),findsOneWidget);
+   expect(find.byKey(const Key('waffra-m268-feature-runway')),findsOneWidget);
+   await tester.ensureVisible(find.byKey(const Key('waffra-m268-feature-runway')));
+   await tester.tap(find.byKey(const Key('waffra-m268-feature-runway')));
+   await tester.pumpAndSettle();
+   expect(find.byKey(const Key('waffra-m268-expanded-simulation')),findsNothing);
+   expect(find.byKey(const Key('waffra-m268-expanded-runway')),findsOneWidget);
+   await tester.tap(find.byKey(const Key('waffra-m268-feature-runway')));
+   await tester.pumpAndSettle();
+   expect(find.byKey(const Key('waffra-m268-expanded-runway')),findsNothing);
+   expect(sample.length,2);
+   expect(waffraSmartBalance(sample),1150);
+  });
   testWidgets('illustrations work with dark theme and local direction',(tester)async{
    await tester.pumpWidget(MaterialApp(theme:ThemeData.dark(),
     home:const Directionality(textDirection:TextDirection.rtl,
