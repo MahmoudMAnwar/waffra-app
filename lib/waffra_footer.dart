@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'waffra_haptic_feedback.dart';
-/// Five destinations: analysis is a deliberate action from the home dashboard,
+/// Six destinations: planning tools sit after categories; analysis remains on Home.
 /// not a page reachable accidentally with a horizontal swipe.
 class WaffraFooterNavigation extends StatelessWidget {
  final int selectedIndex;
@@ -13,18 +13,19 @@ class WaffraFooterNavigation extends StatelessWidget {
   required this.english,this.profileSpotlightKey,
  });
 
- static const itemCount=5;
+ static const itemCount=6;
  static const _icons=<IconData>[
   Icons.home_rounded,
   Icons.grid_view_rounded,
+  Icons.auto_awesome_rounded,
   Icons.track_changes_rounded,
   Icons.repeat_rounded,
   Icons.person_outline_rounded,
  ];
  String _label(int i){
   final labels=english?
-   <String>['Home','Categories','Goals','Recurring','Account']:
-   <String>['الرئيسية','الأقسام','الأهداف','المتكررة','حسابي'];
+   <String>['Home','Categories','Smart tools','Goals','Recurring','Account']:
+   <String>['الرئيسية','الأقسام','الأدوات','الأهداف','المتكررة','حسابي'];
   return labels[i];
  }
 
@@ -61,7 +62,7 @@ class WaffraFooterNavigation extends StatelessWidget {
             color:active?emerald.withValues(alpha:.9):Colors.transparent,
             borderRadius:BorderRadius.circular(23),
             border:active?Border.all(color:neon.withValues(alpha:.45),width:1):null),
-           child:KeyedSubtree(key:i==4?profileSpotlightKey:null,
+           child:KeyedSubtree(key:i==5?profileSpotlightKey:null,
             child:Icon(_icons[i],color:Colors.white,size:active?26:24))),
           const SizedBox(height:4),
           Text(_label(i),maxLines:1,overflow:TextOverflow.ellipsis,
