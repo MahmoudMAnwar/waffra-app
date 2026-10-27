@@ -249,6 +249,16 @@ void main() {
         reason: 'Error dismissal must have an accessible 48dp target');
     expect(closeSize.height, greaterThanOrEqualTo(48),
         reason: 'Error dismissal must have an accessible 48dp target');
+    final closeAction = tester.widget<IconButton>(closeButton);
+    expect(closeAction.onPressed, isNotNull,
+        reason: 'The visible dismiss button must not become disabled after '
+            'switching footer destinations');
+    final closeRect = tester.getRect(closeButton);
+    final noticeHost = tester.getRect(find.byType(WaffraFooterNoticeHost));
+    // These geometry checks isolate a clipped/not-hit-testable notice even
+    // when the close button is visually present at the expected coordinates.
+    expect(noticeHost.contains(closeRect.center), isTrue,
+        reason: 'Close target must lie inside the notice-host hit region');
     await tester.tap(closeButton);
     await tester.pumpAndSettle();
     expect(notice.value, isNull);
