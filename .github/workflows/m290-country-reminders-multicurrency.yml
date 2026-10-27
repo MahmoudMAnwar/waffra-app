@@ -69,9 +69,14 @@ jobs:
           setup=Path('lib/waffra_country_first_run_page.dart').read_text()
           verify=Path('lib/waffra_sms_multicurrency_review.dart').read_text()
           assert "googleFirstRunSetup?WaffraCountryFirstRunPage(" in app
-          assert "waffra_google_country_setup_completed_v1" in app
-          assert "await toggleRecurringReminders(true,permissionAlreadyGranted:true)" in app
-          assert "Wa ffr a" .replace(' ','') not in setup
+          assert "waffraGoogleProfileReadyForCountrySetup(u)" in app
+          assert "waffraCountrySetupKey(" in app
+          assert "WaffraReminders.requestPermission()" in app
+          assert "_financeAuthority.setRecurringReminderPreference(enabled)" in app
+          assert "_applyApprovedGoogleReminderSetup" not in app
+          assert "askNotificationPermission" not in setup
+          assert "WaffraReminders.requestPermission" not in setup
+          assert "WaffraCountrySuggestion.detectCountry()" in setup
           assert "WaffraSmsCurrencies.requiresReviewForSarLedger(s)" in app
           assert "never" in verify.lower()
           native=Path('.github/workflows/android.yml').read_text()
