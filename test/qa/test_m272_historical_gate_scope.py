@@ -13,3 +13,4 @@ def test_historical_sha_pinned_scopes_do_not_block_unrelated_ui_prs():
     apk = Path(".github/workflows/android.yml").read_text()
     assert "Full mandatory Flutter and Python test suite" in apk
     assert "Gate QA APK on embedded SHA and current branch head" in apk
+    assert "if: hashFiles('build/m147-final-review-report.json') != ''" in m147
