@@ -429,15 +429,30 @@ jobs:
         shell: bash
         run: |
           python3 - <<'PY'
+          import os
+          import re
+          import subprocess
           from pathlib import Path
           from zipfile import ZipFile
           apk=Path('build/app/outputs/flutter-apk/app-release.apk')
           if not apk.is_file():
               raise SystemExit('QA APK not generated')
+          # AndroidManifest.xml is compiled binary XML: raw ASCII substring
+          # checks reject otherwise valid packages. Ask Android build-tools
+          # for the *parsed* application ID instead, and fail closed if absent.
+          sdk=os.environ.get('ANDROID_HOME') or os.environ.get('ANDROID_SDK_ROOT')
+          if not sdk:
+              raise SystemExit('QA STARTUP BLOCKED: Android SDK path unavailable')
+          aapt_candidates=sorted((Path(sdk)/'build-tools').glob('*/aapt'))
+          if not aapt_candidates:
+              raise SystemExit('QA STARTUP BLOCKED: Android aapt unavailable')
+          result=subprocess.run([str(aapt_candidates[-1]),'dump','badging',str(apk)],
+                                capture_output=True,text=True,check=True)
+          package=re.search(r"^package:\\s+name='([^']+)'",result.stdout,re.MULTILINE)
+          if package is None or package.group(1)!='com.waffra.waffra':
+              raise SystemExit('QA preview identity mismatch: expected com.waffra.waffra; got '+
+                               (package.group(1) if package else '<unreadable>'))
           with ZipFile(apk) as archive:
-              manifest=archive.read('AndroidManifest.xml')
-              if b'com.waffra.waffra' not in manifest or b'com.waffra.app' in manifest:
-                  raise SystemExit('QA preview identity mismatch; this is not the signed app')
               contents=set(archive.namelist())
               required={'lib/arm64-v8a/'+item for item in
                         ('libapp.so','libflutter.so','libdartjni.so','libsqlite3mc.so')}
