@@ -1,0 +1,104 @@
+name: M290-M291 Google Country, Reminders and Multi-Currency Safe Import
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/m290-country-reminders-multicurrency.yml'
+      - 'lib/main.dart'
+      - 'lib/waffra_country_first_run_page.dart'
+      - 'lib/waffra_country_suggestion.dart'
+      - 'lib/waffra_sms_multicurrency_review.dart'
+      - 'lib/waffra_reminders.dart'
+      - 'pubspec.yaml'
+      - 'scripts/qa/m290_configure_country_permissions.py'
+      - 'test/qa/m290_country_permissions_test.py'
+      - 'test/m290_google_country_reminders_test.dart'
+      - 'test/m291_multicurrency_bank_sms_review_test.dart'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m290-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  currency-country-notifications:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact PR revision
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve location/geocoding/timezone dependencies
+        run: flutter pub get
+      - name: Static analysis for onboarding and bank SMS currency guard
+        run: |
+          flutter analyze --no-pub --no-fatal-warnings --no-fatal-infos \
+            lib/main.dart \
+            lib/waffra_country_first_run_page.dart \
+            lib/waffra_country_suggestion.dart \
+            lib/waffra_sms_multicurrency_review.dart \
+            lib/waffra_reminders.dart \
+            test/m290_google_country_reminders_test.dart \
+            test/m291_multicurrency_bank_sms_review_test.dart
+      - name: Regression tests for country consent and SMS currency safety
+        run: |
+          flutter test --reporter expanded \
+            test/m290_google_country_reminders_test.dart \
+            test/m291_multicurrency_bank_sms_review_test.dart \
+            test/m280_sms_fuzz_and_boundary_test.dart \
+            test/bank_sms_test.dart \
+            test/m262_bank_sms_notes_separation_test.dart
+      - name: Verify permissions manifest injection with Python tests
+        run: |
+          python3 -m unittest discover -s test/qa -p 'm290_country_permissions_test.py' -v
+          python3 - <<'PY'
+          from pathlib import Path
+          app=Path('lib/main.dart').read_text()
+          setup=Path('lib/waffra_country_first_run_page.dart').read_text()
+          verify=Path('lib/waffra_sms_multicurrency_review.dart').read_text()
+          assert "googleFirstRunSetup?WaffraCountryFirstRunPage(" in app
+          assert "waffra_google_country_setup_completed_v1" in app
+          assert "await toggleRecurringReminders(true)" in app
+          assert "Wa ffr a" .replace(' ','') not in setup
+          assert "WaffraSmsCurrencies.requiresReviewForSarLedger(s)" in app
+          assert "never" in verify.lower()
+          native=Path('.github/workflows/android.yml').read_text()
+          assert "m290_configure_country_permissions.py" in native
+          assert "ACCESS_FINE_LOCATION" not in setup
+          print("Opt-in setup and fail-closed multi-currency import source guards passed.")
+          PY
+
+  generated-android-compile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: flutter pub get
+      - name: Generate Android project and configure coarse location only
+        run: |
+          flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
+          python3 scripts/qa/m290_configure_country_permissions.py .
+      - name: Compile Flutter Android debug candidate only
+        run: flutter build apk --debug --no-pub --dart-define=WAFFRA_COMPILE_ONLY_PREVIEW=true
