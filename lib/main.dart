@@ -4560,11 +4560,13 @@ Future<void> bulkSmsSheet({String? initialText})async {
      return pw.Table(border:pw.TableBorder.all(color:PdfColors.grey300,width:.4),
       children:[
        pw.TableRow(decoration:const pw.BoxDecoration(color:PdfColors.teal800),
-        children:labels.asMap().entries
-         .map((e)=>cell(e.value,header:true,monetary:isMoneyColumn(e.value)))
-         .toList()),
+        children:(english?labels.asMap().entries:
+           labels.asMap().entries.toList().reversed)
+         .map((e)=>cell(e.value,header:true,
+          monetary:isMoneyColumn(e.value))).toList()),
        ...rows.map((row)=>pw.TableRow(
-        children:row.asMap().entries.map((e)=>cell(e.value,
+        children:(english?row.asMap().entries:
+           row.asMap().entries.toList().reversed).map((e)=>cell(e.value,
          monetary:isMoneyColumn(labels[e.key]))).toList())),
       ]);
     }
