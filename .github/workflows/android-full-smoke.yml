@@ -718,11 +718,18 @@ jobs:
               print('NOTICE: checked-in google-services.json predates release SHA-1; refresh it from Firebase to ensure Google Sign-In client data is current')
           PY
 
+      - name: Stage verified Waffra.apk for download
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -m 0644 build/app/outputs/flutter-apk/app-release.apk build/Waffra.apk
+          cmp -s build/app/outputs/flutter-apk/app-release.apk build/Waffra.apk
+
       - name: Upload Waffra Release APK
         uses: actions/upload-artifact@v4
         with:
           name: Waffra-Android-ARM64-Release
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: build/Waffra.apk
           retention-days: 30
 
       # Only save compilation state after the signed APK was built, verified
