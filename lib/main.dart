@@ -2437,10 +2437,9 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
    ),
   );
  }
- @override bool shouldRebuild(covariant WaffraBalanceHeader oldDelegate)=>
-  oldDelegate.balance!=balance||oldDelegate.english!=english||
-  oldDelegate.monthlyChangePercent!=monthlyChangePercent||
-  oldDelegate.focusKey!=focusKey;
+ // The cover also depends on inherited light/dark theme and its background.
+ // Preserve the old delegate's rebuild semantics on theme/locale changes.
+ @override bool shouldRebuild(covariant WaffraBalanceHeader oldDelegate)=>true;
 }
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
  final WaffraLegacyWriteQueue _financialWriteQueue=WaffraLegacyWriteQueue();
