@@ -19,7 +19,7 @@ Future<Uint8List> _samplePage()async{
 }
 
 void main(){
- testWidgets('The redesigned footer preserves six tabs and active position',(tester)async{
+ testWidgets('The redesigned footer preserves five finance tabs and active position',(tester)async{
   await tester.binding.setSurfaceSize(const Size(393,852));
   addTearDown(()=>tester.binding.setSurfaceSize(null));
   var selected=0;
@@ -29,7 +29,7 @@ void main(){
      selectedIndex:selected,english:false,
      onSelected:(next)=>update(()=>selected=next))))));
   expect(find.byKey(const Key('waffra-modern-footer')),findsOneWidget);
-  for(var index=0;index<6;index++){
+  for(var index=0;index<5;index++){
    expect(find.byKey(Key('waffra-nav-$index')),findsOneWidget);
   }
   expect(tester.takeException(),isNull);
@@ -43,6 +43,8 @@ void main(){
   expect(find.text('الأدوات'),findsOneWidget);
   expect(find.text('الأهداف'),findsOneWidget);
   expect(find.text('التحليل الذكي'),findsNothing);
+  expect(find.text('حسابي'),findsNothing);
+  expect(find.byKey(const Key('waffra-nav-5')),findsNothing);
  });
 
  testWidgets('PDF page opens full-screen, navigates and returns to overview',(tester)async{
