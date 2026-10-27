@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'waffra_haptic_feedback.dart';
+import 'waffra_display_currency.dart';
 
 /// M268. Read-only finance tools. Never reads SMS originals, keys, or bank data.
 /// User-driven scenarios exist in widget state only and cannot write any ledger.
@@ -219,7 +220,9 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
  final projectsAr=['رحلة','منزل','تعليم'];
  final projectsEn=['Trip','Home','Education'];
  String t(String ar,String en)=>widget.english?en:ar;
- String cash(num v)=>v.toStringAsFixed(2)+' '+t('ريال','SAR');
+ // Honor the app-wide nominal denomination: never apply FX to ledger values.
+ String cash(num v)=>WaffraDisplayCurrency.money(v,english:widget.english);
+ String get currencyLabel=>WaffraDisplayCurrency.label(widget.english);
  double get balance=>waffraSmartBalance(widget.entries);
  List<WaffraSmartEntry> get expenses=>widget.entries.where((e)=>!e.income).toList();
  DateTime get today=>DateTime.now();
@@ -317,7 +320,7 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
   return _column([
    _head(titlesAr[2],'simulation',t('قبل ما تأكد الشراء','Before committing to a purchase')),
    const SizedBox(height:15),
-   _slider(t('مبلغ شراء افتراضي بالريال','Hypothetical purchase (SAR)'),
+   _slider(t('مبلغ شراء افتراضي','Hypothetical purchase')+' ('+currencyLabel+')',
     purchase,0,15000,(v)=>setState(()=>purchase=v),divisions:60),
    _tile(t('المتبقي بعد الشراء','Balance after purchase'),cash(remaining)),
    _tile(t('الشراء من رصيدك المسجل','Purchase as share of recorded balance'),
@@ -403,7 +406,7 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
    _head(titlesAr[5],'season',t('جهز ميزانية للمناسبات السعودية','Plan for local seasonal spending')),
    const SizedBox(height:15),_paragraph(seasonNames),
    const SizedBox(height:12),
-   _slider(t('ميزانية المناسبة بالريال','Season target (SAR)'),
+   _slider(t('ميزانية المناسبة','Season target')+' ('+currencyLabel+')',
     seasonTarget,0,20000,(v)=>setState(()=>seasonTarget=v),divisions:80),
    _slider(t('الأيام المتبقية (تحددها أنت)','Days left (user-supplied)'),
     daysToSeason,7,365,(v)=>setState(()=>daysToSeason=v),divisions:51),
@@ -501,7 +504,7 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
     selected:{emergencyMonths},onSelectionChanged:WaffraHaptics.selectionRequired(
       (s)=>setState(()=>emergencyMonths=s.first))),
    const SizedBox(height:10),
-   _slider(t('مدخرات الطوارئ الافتراضية (ريال)','Assumed saved buffer (SAR)'),
+   _slider(t('مدخرات الطوارئ الافتراضية','Assumed saved buffer')+' ('+currencyLabel+')',
     existingEmergency,0,50000,(v)=>setState(()=>existingEmergency=v),divisions:100),
    _tile(t('أساسيات الشهر (متوسط تقديري)','Monthly essentials estimate'),cash(perMonth)),
    _tile(t('حجم الصندوق المستهدف','Suggested fund'),cash(target)),
