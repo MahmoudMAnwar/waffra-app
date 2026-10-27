@@ -4,17 +4,22 @@ import 'package:image_picker/image_picker.dart';
 
 import 'diagnostics/waffra_private_release_diagnostics.dart';
 import 'waffra_practical_ledger_engine.dart';
+import 'waffra_receipt_ocr.dart';
+import 'waffra_receipt_ocr_parser.dart';
 
 /// Five read-only tools opened from an already verified Home snapshot.
 /// Neither bank SMS nor receipts are uploaded or written to any ledger here.
 class WaffraPracticalToolsPage extends StatefulWidget {
   const WaffraPracticalToolsPage({
     super.key, required this.entries, required this.english,
-    this.onNotice,
+    this.onNotice, this.pickImage, this.scanReceipt,
   });
   final List<WaffraPracticalEntry> entries;
   final bool english;
   final ValueChanged<String>? onNotice;
+  /// Optional seams for pure widget tests; production uses native OCR.
+  final Future<XFile?> Function(ImageSource)? pickImage;
+  final Future<WaffraReceiptOcrFields> Function(String)? scanReceipt;
   @override State<WaffraPracticalToolsPage> createState() =>
       _WaffraPracticalToolsPageState();
 }
@@ -33,6 +38,13 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
   XFile? pickedReceipt;
   bool receiptReviewed = false;
   String? receiptPickerError;
+  String? receiptValidationError;
+  String? recognizedReceiptText;
+  bool receiptOcrBusy = false;
+  bool receiptOcrFinished = false;
+  bool receiptOcrHasSuggestions = false;
+  bool receiptDateRecognized = false;
+  int ocrGeneration = 0;
   WaffraSafeDiagnosticCode? userSelectedIssue;
   int? openSection;
   final ScrollController sectionScroll = ScrollController();
@@ -43,6 +55,7 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
       (widget.english ? ' SAR' : ' ريال');
 
   @override void dispose() {
+    ocrGeneration++;
     query.dispose(); opening.dispose(); actual.dispose();
     merchant.dispose(); amount.dispose(); sectionScroll.dispose(); super.dispose();
   }
@@ -188,31 +201,92 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
     ]);
   }
 
+  String ocrErrorMessage(Object error) {
+    final code = error is WaffraReceiptOcrException ? error.code : '';
+    return switch (code) {
+      'model_download_failed' => t(
+        'تعذر تنزيل ملفات اللغة. تأكد من الإنترنت ثم حاول مجددًا.',
+        'Could not download OCR language files. Check internet and retry.'),
+      'model_integrity_failed' => t(
+        'تعذر التحقق من سلامة ملفات اللغة. أعد المحاولة.',
+        'Language model verification failed. Please retry.'),
+      'image_missing' => t(
+        'ملف الصورة غير متاح. التقط صورة جديدة أو اخترها مرة أخرى.',
+        'Image file unavailable. Choose another image.'),
+      'unsupported_platform' => t(
+        'قراءة الفواتير متاحة حاليًا على Android وiOS فقط.',
+        'Receipt OCR currently requires Android or iOS.'),
+      _ => t('تعذرت قراءة الصورة. جرّب صورة واضحة ومضاءة جيدًا.',
+        'Could not read the image. Try a clear, well-lit picture.'),
+    };
+  }
+
   Future<void> pick(ImageSource source) async {
+    XFile? file;
     try {
-      final file = await ImagePicker().pickImage(
-        source: source, imageQuality: 85, maxWidth: 2048);
-      if (file == null || !mounted) return;
-      setState(() { pickedReceipt = file; receiptReviewed = false;
-        receiptPickerError = null; });
+      file = widget.pickImage != null
+          ? await widget.pickImage!(source)
+          : await ImagePicker().pickImage(
+              source: source, imageQuality: 85, maxWidth: 2048);
     } catch (_) {
       if (!mounted) return;
-      final message = t('تعذر اختيار صورة. راجع أذونات الجهاز.',
-        'Cannot select image. Check device permissions.');
-      if (widget.onNotice != null) {
-        widget.onNotice!(message);
-      } else {
-        // In standalone previews without Home's central notice presenter,
-        // show a local error instead of adding a second SnackBar surface.
-        setState(() => receiptPickerError = message);
-      }
+      setState(() => receiptPickerError = t(
+        'تعذر فتح الكاميرا أو اختيار الصورة. راجع أذونات الجهاز.',
+        'Could not use camera or gallery. Check device permissions.'));
+      return;
+    }
+    if (file == null || !mounted) return;
+    final currentGeneration = ++ocrGeneration;
+    setState(() {
+      pickedReceipt = file;
+      receiptReviewed = false;
+      receiptPickerError = null;
+      receiptValidationError = null;
+      receiptOcrBusy = true;
+      receiptOcrFinished = false;
+      receiptOcrHasSuggestions = false;
+      receiptDateRecognized = false;
+      recognizedReceiptText = null;
+      merchant.clear();
+      amount.clear();
+      receiptDate = DateTime.now();
+    });
+
+    try {
+      // The recognized text stays in memory and is NEVER auto-saved as a
+      // transaction, receipt attachment, or original bank SMS.
+      final result = widget.scanReceipt != null
+          ? await widget.scanReceipt!(file.path)
+          : await WaffraReceiptOcr.scan(file.path);
+      if (!mounted || currentGeneration != ocrGeneration) return;
+      setState(() {
+        receiptOcrBusy = false;
+        receiptOcrFinished = true;
+        receiptOcrHasSuggestions = result.hasSuggestions;
+        recognizedReceiptText = result.rawText;
+        if (result.merchant != null) merchant.text = result.merchant!;
+        if (result.amount != null) {
+          amount.text = result.amount!.toStringAsFixed(2);
+        }
+        if (result.date != null) {
+          receiptDate = result.date!;
+          receiptDateRecognized = true;
+        }
+      });
+    } catch (error) {
+      if (!mounted || currentGeneration != ocrGeneration) return;
+      setState(() {
+        receiptOcrBusy = false;
+        receiptOcrFinished = true;
+        receiptPickerError = ocrErrorMessage(error);
+      });
     }
   }
 
   Widget receiptAssistant() => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      notice('اختر صورة وراجع البيانات يدويًا. التعرف التلقائي OCR لم يُفعّل بعد.',
-        'Choose a photo and review fields manually. Automatic OCR is not enabled.'),
+      notice('اختر صورة فاتورة ليقرأها وفرة تلقائيًا. عند أول استخدام، يتم تنزيل نماذج العربي والإنجليزي مرة واحدة فقط؛ لا تُرسل صورة الفاتورة. راجع البيانات قبل التأكيد.',
+        'Choose a receipt image to scan automatically. On first use, Arabic and English models download once; the image is not uploaded. Review all fields.'),
       Wrap(spacing: 8, children: [
         OutlinedButton.icon(onPressed: () => pick(ImageSource.camera),
           icon: const Icon(Icons.camera_alt_outlined),
@@ -221,22 +295,62 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
           icon: const Icon(Icons.photo_library_outlined),
           label: Text(t('اختيار صورة', 'Choose image'))),
       ]),
-      if (pickedReceipt != null) Text(t(
-        'الصورة للمراجعة فقط، ولن تُضاف لمعاملة أو تُرفع للسحابة. قد يحتفظ النظام بنسخة مؤقتة.',
-        'Review-only image. Not attached to a transaction or uploaded; the OS may keep a temporary copy.')),
-      if (receiptPickerError != null) Text(receiptPickerError!,
-        key: const Key('m281-receipt-picker-error'),
-        style: TextStyle(color: Theme.of(context).colorScheme.error)),
+      if (pickedReceipt != null) notice(
+        'هذه معاينة فقط: لن تُحفظ الفاتورة أو تُنشأ معاملة تلقائيًا.',
+        'Preview only: no receipt or transaction is automatically saved.'),
+      if (receiptOcrBusy) Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(children: [
+          const SizedBox(width: 22, height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2)),
+          const SizedBox(width: 12),
+          Expanded(child: Text(t(
+            'جاري قراءة الفاتورة واستخراج البيانات...',
+            'Reading receipt and extracting details...'),
+            key: const Key('m287-ocr-loading'))),
+        ]),
+      ),
+      if (receiptPickerError != null) Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Text(receiptPickerError!,
+          key: const Key('m281-receipt-picker-error'),
+          style: TextStyle(color: Theme.of(context).colorScheme.error)),
+      ),
+      if (receiptOcrFinished && receiptPickerError == null)
+        Padding(padding: const EdgeInsets.only(bottom: 10),
+          child: Text(
+            receiptOcrHasSuggestions
+              ? t('تم استخراج بيانات مبدئية. تأكد من صحتها قبل المتابعة.',
+                  'Receipt details extracted. Please review their accuracy.')
+              : t('لم نتمكن من تحديد الحقول تلقائيًا. راجع النص إن وُجد، أو أدخل البيانات يدويًا.',
+                  'Could not identify receipt fields. Review available text or enter details manually.'),
+            key: const Key('m287-ocr-result'),
+            style: TextStyle(color: Theme.of(context).colorScheme.primary),
+          )),
+      if (recognizedReceiptText != null &&
+          recognizedReceiptText!.trim().isNotEmpty)
+        ExpansionTile(
+          key: const Key('m287-ocr-raw-text'),
+          title: Text(t('النص المقروء من الفاتورة', 'Recognized receipt text')),
+          children: [
+            Padding(padding: const EdgeInsets.all(10),
+              child: SelectableText(recognizedReceiptText!)),
+          ],
+        ),
       const SizedBox(height: 12),
       TextField(
         key: const Key('m281-receipt-merchant'), controller: merchant,
-        maxLength: 250, onChanged: (_) => setState(() => receiptReviewed = false),
+        maxLength: 250, onChanged: (_) => setState(() {
+          receiptReviewed = false; receiptValidationError = null;
+        }),
         decoration: InputDecoration(labelText: t('اسم المتجر', 'Merchant'),
           border: const OutlineInputBorder())),
       TextField(
         key: const Key('m281-receipt-amount'), controller: amount,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        onChanged: (_) => setState(() => receiptReviewed = false),
+        onChanged: (_) => setState(() {
+          receiptReviewed = false; receiptValidationError = null;
+        }),
         decoration: InputDecoration(labelText: t('المبلغ', 'Amount'),
           border: const OutlineInputBorder())),
       Align(alignment:AlignmentDirectional.centerStart,child:TextButton.icon(icon: const Icon(Icons.event),
@@ -247,17 +361,33 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
             lastDate: DateTime(DateTime.now().year + 1));
           if (day != null && mounted) setState(() {
             receiptDate = day; receiptReviewed = false;
+            receiptDateRecognized = true;
+            receiptValidationError = null;
           });
         })),
+      if (receiptOcrFinished && !receiptDateRecognized)
+        notice('تاريخ الفاتورة لم يُحدد؛ التاريخ المعروض هو اليوم. يُرجى مراجعته.',
+          'Receipt date not recognized; today is shown. Please verify it.'),
       Align(alignment:AlignmentDirectional.centerStart,child:FilledButton(
-        onPressed: () {
-          final raw = double.tryParse(amount.text.replaceAll(',', '.'));
+        onPressed: receiptOcrBusy ? null : () {
+          final parsedAmount = WaffraReceiptOcrParser.amountFromText(
+            amount.text.trim());
           final draft = WaffraReceiptReviewDraft(
-            amount: raw ?? double.nan,
+            amount: parsedAmount ?? double.nan,
             merchant: merchant.text, date: receiptDate);
-          setState(() => receiptReviewed = draft.isValid);
+          setState(() {
+            receiptReviewed = draft.isValid;
+            receiptValidationError = draft.isValid ? null :
+              t('تأكد من اسم المتجر ومبلغ موجب بدقة هللتين فقط.',
+                'Enter a merchant and a positive amount with up to two decimals.');
+          });
         },
         child: Text(t('التحقق من بيانات الفاتورة', 'Validate receipt draft')))),
+      if (receiptValidationError != null)
+        Padding(padding: const EdgeInsets.only(top: 8),
+          child: Text(receiptValidationError!,
+            key: const Key('m287-receipt-validation-error'),
+            style: TextStyle(color: Theme.of(context).colorScheme.error))),
       if (receiptReviewed) Text(
         t('البيانات صالحة. لم نضف أي معاملة؛ أكدها من شاشة إضافة معاملة.',
           'Fields validated; no transaction saved. Confirm in Add Transaction.'),
@@ -357,7 +487,7 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
           const Key('m281-health-tile')),
         section(1, 'البحث الذكي الشامل', 'Advanced financial search',
           Icons.manage_search, advancedSearch(), const Key('m281-search-tile')),
-        section(2, 'مساعد الفواتير (مراجعة يدوية)', 'Receipt review (manual; OCR not enabled)',
+        section(2, 'قارئ الفواتير OCR', 'Receipt OCR scanner',
           Icons.receipt_long_outlined, receiptAssistant(),
           const Key('m281-receipt-tile')),
         section(3, 'الإقفال الشهري', 'Monthly close preview',
