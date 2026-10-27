@@ -8280,6 +8280,18 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final expectedStep=tourStep,expectedTab=tab;
   WidgetsBinding.instance.addPostFrameCallback((_)async {
    if(!mounted||!tourActive||tourStep!=expectedStep||tab!=expectedTab)return;
+   // Reset lazily built list pages before focusing a possibly recycled
+   // sliver header (e.g. Home balance after scrolling down).
+   final ScrollController? pageScroll=switch(expectedTab){
+    0=>_dashboardScrollController,
+    1=>_categoryScrollController,
+    3=>_goalsScrollController,
+    4=>_recurringScrollController,
+    _=>null,
+   };
+   if(pageScroll!=null&&pageScroll.hasClients&&pageScroll.offset!=0){
+    pageScroll.jumpTo(0);
+   }
    BuildContext? focus=tourTargetKeys[expectedStep]<0?null:
     _tourKeys[tourTargetKeys[expectedStep]].currentContext;
    // The selected tab is built lazily, so allow the next animation frame
