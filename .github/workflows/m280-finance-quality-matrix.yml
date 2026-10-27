@@ -1,0 +1,110 @@
+name: M280 Finance Integrity, SMS Fuzz and QA Release Matrix
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/m280-finance-quality-matrix.yml'
+      - 'test/m280_*'
+      - 'lib/main.dart'
+      - 'lib/storage/**'
+      - 'lib/waffra_secure_backup.dart'
+      - 'docs/qa/m280_*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m280-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  encrypted-ledger-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Match source SHA
+        env:
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$SHA"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart analyze test/m280_financial_integrity_fault_injection_test.dart
+      - name: 100-record cent accuracy, concurrent app/widget, rollback and cold restart
+        run: flutter test --reporter expanded test/m280_financial_integrity_fault_injection_test.dart
+      - name: Existing SQLCipher persistence and active restore regression
+        run: |
+          flutter test --reporter expanded \
+            test/storage/unified_finance_writer_test.dart \
+            test/storage/atomic_finance_snapshot_test.dart \
+            test/storage/m187_active_restore_preflight_test.dart
+
+  sms-adversarial:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart analyze test/m280_sms_fuzz_and_boundary_test.dart
+      - name: 100 SMS messages, malformed input and duplicate identity
+        run: flutter test --reporter expanded test/m280_sms_fuzz_and_boundary_test.dart test/bank_sms_test.dart
+      - name: Confirm imported SMS commit paths remain safe
+        run: |
+          flutter test --reporter expanded \
+            test/storage/m224_full_sms_batch_preservation_test.dart \
+            test/storage/m224_encrypted_legacy_sms_reattachment_test.dart
+
+  security-backup-and-restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Backup tampering, wrong keys, document boundary and encrypted profile
+        run: |
+          flutter test --reporter expanded \
+            test/waffra_secure_backup_test.dart \
+            test/storage/cloud_cipher_test.dart \
+            test/storage/m216_pin_os_secure_candidate_stage_test.dart \
+            test/storage/m218_encrypted_account_owner_mutations_test.dart
+
+  source-scope-and-manual-physical-requirements:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Keep ten-domain acceptance and mobile release blockers visible
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          doc=Path('docs/qa/m280-quality-regression-matrix.md').read_text()
+          expected=('financial_integrity','crash_recovery','sqlcipher_24',
+              'two_device_restore','sms_fuzz','rapid_taps','performance',
+              'accessibility','penetration','combined_apk')
+          for item in expected:
+              if item not in doc: raise SystemExit('missing acceptance domain: '+item)
+          if 'NOT DEVICE CERTIFIED' not in doc:
+              raise SystemExit('must not claim phone signoff')
+          print('M280 domain plan intact; device gates remain external to CI.')
+          PY
