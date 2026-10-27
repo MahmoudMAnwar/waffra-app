@@ -72,14 +72,14 @@ void main() {
  test('M148: transaction pickers and category search use translated display labels',(){
   final main=File('lib/main.dart').readAsStringSync();
   final categories=File('lib/waffra_categories_page.part.dart').readAsStringSync();
-  expect(main,contains('waffraTr(item.name).toLowerCase()'));
-  expect(main,contains('waffraTr(c.name).toLowerCase()'));
+  expect(main,contains('waffraSearchAny([label,waffraTr(label),waffraTr(item.name)],query)'));
+  expect(main,contains('waffraSearchAny([c.name,waffraTr(c.name)],query)'));
   expect(main,contains('DropdownMenuItem(value:c.name,child:WaffraText(c.name))'));
   expect(main,contains('title:WaffraText(waffraTr(leafLabels?item.displayName:item.name),maxLines:3)'));
   expect(categories,contains('WaffraText(root.name,maxLines:2'));
   expect(categories,contains('WaffraText(sub.displayName,maxLines:2'));
-  expect(categories,contains('waffraTr(root.name).toLowerCase()'));
-  expect(categories,contains('waffraTr(c.displayName).toLowerCase()'));
+  expect(categories,contains('waffraSearchAny([root.name,waffraTr(root.name)],query)'));
+  expect(categories,contains('waffraSearchAny([c.displayName,waffraTr(c.displayName)],query)'));
   expect(categories,contains('TextSpan(text:waffraTr(sub.displayName)'));
  });
 
