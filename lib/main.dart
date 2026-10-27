@@ -8554,16 +8554,6 @@ Future<void> bulkSmsSheet({String? initialText})async {
        }:null))),
    ]),
    _accountSection(waffraIsEnglish?'Financial tools':'الأدوات المالية',Icons.account_balance_wallet_outlined,[
-    _accountTile(waffraIsEnglish?'10 smart money tools':'١٠ أدوات مالية ذكية',
-     waffraIsEnglish?'Budget scenarios, safe daily spending and expense insights':
-      'محاكاة وميزانيات وتدفق الأموال من معاملاتك المحفوظة',
-     Icons.auto_awesome_outlined,onTap:WaffraHaptics.tap(openSmartFeatures)),
-    _accountTile(waffraIsEnglish?'Currency converter & global gold prices':
-       'محوّل العملات وأسعار الذهب العالمية',
-     waffraIsEnglish?'Search, exchange and swap currencies':'ابحث وحوّل وبدّل بين العملات',
-     Icons.currency_exchange,onTap:WaffraHaptics.tap(()=>Navigator.push<void>(context,MaterialPageRoute(
-      builder:(_)=>const CurrencyConverterPage())))),
-
     _accountTile(waffraIsEnglish?'Financial calendar':'التقويم المالي',
      waffraIsEnglish?'Transactions and recurring dates':'المعاملات ومواعيد العمليات المتكررة',
      Icons.calendar_month_outlined,onTap:WaffraHaptics.tap(openFinancialCalendar)),
