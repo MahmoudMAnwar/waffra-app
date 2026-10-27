@@ -3274,6 +3274,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
     )));
   if(accepted!=true||!ctx.mounted)return;
   update(() {busy=true;rejectedMessages=[];});
+  // Paint the confirmation feedback before preparing a large SMS batch.
+  await WidgetsBinding.instance.endOfFrame;
+  if(!ctx.mounted)return;
   final additions=<MoneyEntry>[];
   final proposedSourceIndexes=<int>[];
   final proposed=<BudgetCategory>[];
@@ -3606,6 +3609,18 @@ Future<void> bulkSmsSheet({String? initialText})async {
        label:WaffraText(waffraIsEnglish?'Open phone messages':'فتح رسائل الهاتف'),
       )),
       if(analyzingPaste)...[const SizedBox(height:12),const LinearProgressIndicator(),const SizedBox(height:6),WaffraText(waffraIsEnglish?'Analyzing your bank messages now…':'يتم الآن تحليل الرسائل البنكية واستخراج المعاملات…')],
+      // Shared lightweight in-dialog progress while the batch is committed.
+      if(busy)Padding(
+       key:const Key('waffra-bank-sms-save-progress'),
+       padding:const EdgeInsets.symmetric(vertical:12),
+       child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+        const SizedBox(width:20,height:20,
+         child:CircularProgressIndicator(strokeWidth:2.5)),
+        const SizedBox(width:10),
+        WaffraText(waffraIsEnglish?'Saving confirmed transactions…':
+         'جارٍ حفظ المعاملات المؤكدة…',
+         style:const TextStyle(fontWeight:FontWeight.w700)),
+       ])),
       
       if(rejectedMessages.isNotEmpty)...[
        const SizedBox(height:8),
@@ -4049,6 +4064,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
      'تم حفظ بيانات العملية دون نص الرسالة البنكية الأصلي.',isError:false);
    }
   }else{
+   // Optimistic in-memory edits must roll back if durable save is rejected.
+   // A spinner is NOT proof of a completed financial write.
+   final previousEntries=List<MoneyEntry>.of(entries);
+   final previousLearned=Map<String,String>.of(learnedMerchantCategories);
    setState((){
     final i=entries.indexWhere((e)=>e.id==result.id);
     if(i>=0)entries[i]=result;else entries.insert(0,result);
@@ -4062,13 +4081,33 @@ Future<void> bulkSmsSheet({String? initialText})async {
      }
     }
    });
-   // Manual edits remain separately source-gated. No encrypted shortcut.
-   await persist(route:initial==null
-   ?WaffraFinanceRoute.manualTransactionSave
-   :WaffraFinanceRoute.transactionEdit);
+   try{
+    // No success message or persisted balance is claimed before the
+    // source-aware writer has acknowledged the commit.
+    await persist(route:initial==null
+     ?WaffraFinanceRoute.manualTransactionSave
+     :WaffraFinanceRoute.transactionEdit);
+   }catch(e){
+    if(mounted){
+     setState((){
+      entries..clear()..addAll(previousEntries);
+      learnedMerchantCategories..clear()..addAll(previousLearned);
+     });
+     snack(context,waffraIsEnglish?
+      'Could not save the transaction. Your previous data is unchanged.':
+      'تعذر حفظ المعاملة. بياناتك السابقة لم تتغير.');
+    }
+    return;
+   }
    if(pendingHash!=null){
     // Existing transaction edits still need independent receipt/SMS review.
-    await _persistSmsHashes({pendingHash!});
+    try{await _persistSmsHashes({pendingHash!});}
+    catch(e){
+     if(mounted)snack(context,waffraIsEnglish?
+      'Transaction saved, but the SMS fingerprint needs verification.':
+      'تم حفظ المعاملة، لكن بصمة الرسالة تحتاج مراجعة.');
+     return;
+    }
    }
   }
   if(mounted)await budgetAlert(result,previousSpent);
