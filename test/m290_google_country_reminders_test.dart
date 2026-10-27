@@ -10,19 +10,19 @@ import 'package:waffra/waffra_display_currency.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('M290 Egypt, Saudi Arabia and other countries map to supported currency', () {
+  test('M290 Egypt, Saudi, UAE and eurozone suggest supported currencies', () {
     expect(WaffraCountrySuggestion.currencyForIsoCountry('EG'), 'EGP');
     expect(WaffraCountrySuggestion.currencyForIsoCountry('sa'), 'SAR');
     expect(WaffraCountrySuggestion.currencyForIsoCountry('AE'), 'AED');
     expect(WaffraCountrySuggestion.currencyForIsoCountry('FR'), 'EUR');
     expect(WaffraCountrySuggestion.currencyForIsoCountry('??'), isNull);
     expect(WaffraCountrySuggestion.currencyForIsoCountry(null), isNull);
-    for (final currency in WaffraCountrySuggestion.byIsoCountry.values) {
-      expect(waffraCountryCurrencies.any((c) => c.code == currency), isTrue);
+    for (final value in WaffraCountrySuggestion.byIsoCountry.values) {
+      expect(waffraCountryCurrencies.any((c) => c.code == value), isTrue);
     }
   });
 
-  test('M290 first-run gate only after completed real Google profile', () {
+  test('M290 shows location setup only for completed Google profiles', () {
     Person profile({
       String provider = 'Google', String phone = '0512345678',
       String gender = 'ذكر', String email = 'fixture@example.com',
@@ -46,170 +46,111 @@ void main() {
       isNot(waffraCountrySetupKey(profile(email: 'other@example.com'))));
   });
 
-  testWidgets('M290 location rationale appears before OS prompt and Egyptian currency suggested',
+  test('M290 Google phone supports Egypt and Saudi international numbers', () {
+    expect(waffraGoogleProfilePhoneError('+201234567890'), isNull);
+    expect(waffraGoogleProfilePhoneError('+966512345678'), isNull);
+    expect(waffraGoogleProfilePhoneError('0512345678'), isNull);
+    expect(waffraGoogleProfilePhoneError(''), isNotNull);
+    expect(waffraGoogleProfilePhoneError('12345'), isNotNull);
+    expect(waffraGoogleProfilePhoneError('++201234567890'), isNotNull);
+    expect(waffraMobileFieldError('+201234567890'), isNotNull,
+      reason: 'Non-Google local phone login still uses approved 05 format.');
+  });
+
+  testWidgets('M290 reason shown first; only tapping location starts detection',
       (tester) async {
     WaffraDisplayCurrency.active.value =
-        WaffraDisplayCurrency.displaySelection('SAR');
+      WaffraDisplayCurrency.displaySelection('SAR');
     addTearDown(() => WaffraDisplayCurrency.active.value =
-        WaffraDisplayCurrency.displaySelection('SAR'));
-    var detectionCalls = 0;
-    String? completedCurrency;
-    await tester.pumpWidget(MaterialApp(
-      home: WaffraCountryFirstRunPage(
-        english: false,
-        detectCountry: () async {
-          detectionCalls++;
-          return 'EG';
-        },
-        onComplete: (currency, enabled) async => completedCurrency = currency,
-      ),
-    ));
+      WaffraDisplayCurrency.displaySelection('SAR'));
+    var gpsCalls = 0;
+    String? savedCurrency;
+    await tester.pumpWidget(MaterialApp(home: WaffraCountryFirstRunPage(
+      english: false,
+      detectCountry: () async { gpsCalls++; return 'EG'; },
+      onComplete: (currency) async { savedCurrency = currency; },
+    )));
     await tester.pumpAndSettle();
-    expect(detectionCalls, 0, reason:
-      'Showing a rationale must not silently call the OS location prompt.');
-    expect(find.textContaining('مرة واحدة'), findsWidgets);
-    expect(find.byKey(const Key('m290-detect-country')), findsOneWidget);
+    expect(gpsCalls, 0);
+    expect(find.textContaining('الموقع'), findsWidgets);
     expect(find.byKey(const Key('m290-recurring-notification-toggle')),
-      findsOneWidget, reason: 'User chooses reminders after Google sign-in.');
+      findsNothing, reason: 'Login never prompts for notifications.');
     await tester.tap(find.byKey(const Key('m290-detect-country')));
     await tester.pumpAndSettle();
-    expect(detectionCalls, 1);
+    expect(gpsCalls, 1);
     expect(find.textContaining('مصر'), findsWidgets);
-    expect(find.byKey(const Key('m290-country-feedback')), findsOneWidget);
     expect(WaffraDisplayCurrency.country.code, 'SAR',
-      reason: 'Location never silently changes app display preference.');
+      reason: 'Detection is a recommendation, not an automatic currency switch.');
     await tester.ensureVisible(find.byKey(const Key('m290-setup-confirm')));
     await tester.tap(find.byKey(const Key('m290-setup-confirm')));
     await tester.pumpAndSettle();
-    expect(completedCurrency, 'EGP');
+    expect(savedCurrency, 'EGP');
   });
 
-  testWidgets('M290 country detection is optional: denial and skip never block app',
+  testWidgets('M290 denying location leaves manual currency and Skip usable',
       (tester) async {
     WaffraDisplayCurrency.active.value =
-        WaffraDisplayCurrency.displaySelection('SAR');
-    var detectionCalls = 0;
-    String? completedCurrency;
-    await tester.pumpWidget(MaterialApp(
-      home: WaffraCountryFirstRunPage(
-        english: true,
-        detectCountry: () async {
-          detectionCalls++;
-          return null;
-        },
-        onComplete: (currency, enabled) async => completedCurrency = currency,
-      ),
-    ));
+      WaffraDisplayCurrency.displaySelection('SAR');
+    String? chosen;
+    var calls = 0;
+    await tester.pumpWidget(MaterialApp(home: WaffraCountryFirstRunPage(
+      english: true,
+      detectCountry: () async { calls++; return null; },
+      onComplete: (currency) async { chosen = currency; },
+    )));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('m290-detect-country')));
     await tester.pumpAndSettle();
+    expect(calls, 1);
     expect(find.textContaining('unavailable or denied'), findsOneWidget);
     await tester.ensureVisible(find.byKey(const Key('m290-setup-skip')));
     await tester.tap(find.byKey(const Key('m290-setup-skip')));
     await tester.pumpAndSettle();
-    expect(detectionCalls, 1);
-    expect(completedCurrency, 'SAR');
+    expect(chosen, 'SAR');
   });
 
-  testWidgets('M290 skip without location access never invokes country provider',
+  testWidgets('M290 Skip does not access GPS or notifications',
       (tester) async {
-    var calls = 0;
+    var locationCalls = 0;
     String? chosen;
-    await tester.pumpWidget(MaterialApp(
-      home: WaffraCountryFirstRunPage(
-        english: false,
-        detectCountry: () async { calls++; return 'SA'; },
-        onComplete: (code, enabled) async => chosen = code,
-      ),
-    ));
+    await tester.pumpWidget(MaterialApp(home: WaffraCountryFirstRunPage(
+      english: true,
+      detectCountry: () async { locationCalls++; return 'SA'; },
+      onComplete: (currency) async { chosen = currency; },
+    )));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const Key('m290-setup-skip')));
     await tester.tap(find.byKey(const Key('m290-setup-skip')));
     await tester.pumpAndSettle();
-    expect(calls, 0);
+    expect(locationCalls, 0);
     expect(chosen, isNotNull);
   });
 
-  test('M290 permission sources never request broad location or media access at boot', () {
+  test('M290 permissions are triggered only by the relevant user action', () {
     final main = File('lib/main.dart').readAsStringSync();
     final onboarding = File('lib/waffra_country_first_run_page.dart')
-        .readAsStringSync();
+      .readAsStringSync();
     final country = File('lib/waffra_country_suggestion.dart')
-        .readAsStringSync();
+      .readAsStringSync();
     final reminders = File('lib/waffra_reminders.dart')
-        .readAsStringSync();
+      .readAsStringSync();
     expect(main, contains('googleFirstRunSetup?WaffraCountryFirstRunPage('));
     expect(main, contains('waffraGoogleProfileReadyForCountrySetup(u)'));
     expect(main, contains('waffraCountrySetupKey('));
-    expect(main, contains('await WaffraDisplayCurrency.setCurrency(selectedCurrency)'));
-    expect(main, contains('await WaffraReminders.requestPermission()'));
-    expect(main, contains('permissionAlreadyGranted:true'));
-    expect(main, contains('waffra_google_recurring_reminders_pending_v1'));
+    expect(main, contains('WaffraDisplayCurrency.setCurrency(selectedCurrency)'));
+    expect(main, contains('WaffraReminders.requestPermission()'));
     expect(main, contains('_financeAuthority.setRecurringReminderPreference(enabled)'));
+    expect(main, isNot(contains('_applyApprovedGoogleReminderSetup()')));
     expect(onboarding, contains('WaffraCountrySuggestion.detectCountry()'));
-    expect(onboarding, contains('WaffraReminders.requestPermission()'));
-    expect(onboarding, contains('askNotificationPermission'));
+    expect(onboarding, isNot(contains('askNotificationPermission')));
+    expect(onboarding, isNot(contains('WaffraReminders.requestPermission()')));
     expect(country, contains('Geolocator.requestPermission()'));
-    expect(country, isNot(contains('LocationAccuracy.best')));
-    expect(country, isNot(contains('LocationAccuracy.high')));
+    expect(country, contains('LocationAccuracy.low'));
     expect(reminders, contains('FlutterTimezone.getLocalTimezone()'));
     expect(reminders, contains('tz.getLocation(identifier)'));
     expect(reminders, isNot(contains("tz.getLocation('Asia/Riyadh')")));
+    expect(main, contains('source:ImageSource.camera,imageQuality:80'));
+    expect(main, contains('await ImagePicker().pickMultiImage(imageQuality:80)'));
+    expect(main, contains('نطلب صلاحية الكاميرا')); // consent wording in UI
   });
-  testWidgets('M290 first-run reminder permission is optional and requested only on confirm',
-      (tester) async {
-    WaffraDisplayCurrency.active.value =
-      WaffraDisplayCurrency.displaySelection('SAR');
-    var requests=0;
-    bool? approved;
-    await tester.pumpWidget(MaterialApp(home: WaffraCountryFirstRunPage(
-      english: true,
-      detectCountry: () async { throw StateError('unused'); },
-      askNotificationPermission: () async { requests++;return true; },
-      onComplete: (currency, reminders) async {
-        expect(currency,'SAR');
-        approved=reminders;
-      },
-    )));
-    await tester.pumpAndSettle();
-    expect(requests, 0);
-    await tester.ensureVisible(find.byKey(
-      const Key('m290-recurring-notification-toggle')));
-    await tester.tap(find.byKey(
-      const Key('m290-recurring-notification-toggle')));
-    await tester.pumpAndSettle();
-    expect(requests, 0);
-    await tester.ensureVisible(find.byKey(const Key('m290-setup-confirm')));
-    await tester.tap(find.byKey(const Key('m290-setup-confirm')));
-    await tester.pumpAndSettle();
-    expect(requests, 1);
-    expect(approved, true);
-  });
-
-  testWidgets('M290 denied notifications do not activate reminders',
-      (tester) async {
-    WaffraDisplayCurrency.active.value =
-      WaffraDisplayCurrency.displaySelection('SAR');
-    var finished=false;
-    await tester.pumpWidget(MaterialApp(home: WaffraCountryFirstRunPage(
-      english: false,
-      askNotificationPermission: () async => false,
-      onComplete: (_, __) async { finished=true; },
-    )));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byKey(
-      const Key('m290-recurring-notification-toggle')));
-    await tester.tap(find.byKey(
-      const Key('m290-recurring-notification-toggle')));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byKey(const Key('m290-setup-confirm')));
-    await tester.tap(find.byKey(const Key('m290-setup-confirm')));
-    await tester.pumpAndSettle();
-    expect(finished,false);
-    expect(find.textContaining('تم رفض إذن الإشعارات'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('m290-setup-confirm')));
-    await tester.pumpAndSettle();
-    expect(finished,true);
-  });
-
 }
