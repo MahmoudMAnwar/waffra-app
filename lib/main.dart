@@ -3619,7 +3619,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        suffixIcon:pasted.text.isNotEmpty?IconButton(tooltip:waffraIsEnglish?'Clear text':'مسح النص',icon:const Icon(Icons.clear_rounded,color:Colors.redAccent),onPressed:WaffraHaptics.tap((){pasteTimer?.cancel();pasted.clear();update((){parsed=false;analyzingPaste=false;messages=[];statusMessage='';});})):null,
        border:OutlineInputBorder(borderRadius:BorderRadius.circular(18)))),
       const SizedBox(height:12),
-     SizedBox(width:double.infinity,child:OutlinedButton.icon(icon:const Icon(Icons.content_paste),
+     Align(alignment:AlignmentDirectional.centerStart,child:OutlinedButton.icon(icon:const Icon(Icons.content_paste),
        onPressed:WaffraHaptics.tap(busy?null:()async {
         final data=await Clipboard.getData(Clipboard.kTextPlain);
         if(!ctx.mounted)return;
@@ -3636,7 +3636,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
         });
        }),label:WaffraText(waffraIsEnglish?'Paste copied SMS':'لصق آخر رسالة نسختها',maxLines:1,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700)))),
       const SizedBox(height:8),
-      SizedBox(width:double.infinity,child:OutlinedButton.icon(
+      Align(alignment:AlignmentDirectional.centerStart,child:OutlinedButton.icon(
        icon:const Icon(Icons.message_outlined),
        onPressed:WaffraHaptics.tap(busy?null:()async{
         awaitingMessagesApp=true;
@@ -4782,7 +4782,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       }),
       icon:const Icon(Icons.visibility_outlined),
       label:WaffraText(waffraIsEnglish?'Open report':'فتح التقرير'))),
-     SizedBox(width:double.infinity,child:OutlinedButton.icon(
+     Align(alignment:AlignmentDirectional.centerStart,child:OutlinedButton.icon(
       onPressed:WaffraHaptics.tap(()async{
        Navigator.of(dialogContext).pop();
        await Printing.sharePdf(bytes:bytes,filename:fileName);
@@ -4996,7 +4996,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      ]),
     if(hasReceipt)...[
      const SizedBox(height:10),
-     SizedBox(width:double.infinity,child:OutlinedButton.icon(
+     Align(alignment:AlignmentDirectional.centerStart,child:OutlinedButton.icon(
       onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,'receipt')),
       icon:const Icon(Icons.photo_library_outlined),
       label:WaffraText(waffraIsEnglish?'View attached images':'عرض الصور المرفقة'))),
