@@ -206,7 +206,8 @@ void main() {
       theme: ThemeData(
         brightness: Brightness.dark, useMaterial3: true, fontFamily: 'Tajawal'),
       home: MediaQuery(
-        data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+        data: MediaQueryData.fromView(tester.view).copyWith(
+          textScaler: const TextScaler.linear(2)),
         child: Directionality(
           textDirection: TextDirection.rtl,
           child: StatefulBuilder(builder: (context, update) => Scaffold(
