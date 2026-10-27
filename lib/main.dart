@@ -2474,7 +2474,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  bool tourActive=false;
  bool tourTargetReady=false;
  int tourStep=0;
- static const tourTabs=<int>[0,0,0,1,2,3];
+ static const tourTabs=<int>[0,0,0,1,3,4];
  static const tourTargetKeys=<int>[-1,0,1,2,6,4];
  bool addFabExpanded=false;
  bool _addActionOpening=false;
@@ -5506,31 +5506,6 @@ Future<void> bulkSmsSheet({String? initialText})async {
          const SizedBox(height:15),
           smartAnalysisEntryCard(),
           const SizedBox(height:12),
-          // M268 only adds a route; existing Home shortcuts remain intact.
-          InkWell(
-           key:const Key('waffra-m268-tools-entry'),
-           borderRadius:BorderRadius.circular(20),
-           onTap:WaffraHaptics.tap(openSmartFeatures),
-           child:Container(
-            padding:const EdgeInsets.all(13),
-            decoration:BoxDecoration(
-             color:Theme.of(context).cardColor,
-             borderRadius:BorderRadius.circular(20),
-             border:Border.all(color:emerald.withValues(alpha:.24))),
-            child:Row(children:[
-             const WaffraIllustration(topic:'assistant',size:52),
-             const SizedBox(width:11),
-             Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-              WaffraText(waffraIsEnglish?'10 smart money tools':'١٠ أدوات مالية ذكية',
-               style:const TextStyle(fontSize:16,fontWeight:FontWeight.w800)),
-              WaffraText(waffraIsEnglish?
-               'Plan, simulate and understand your recorded transactions':
-               'خطط وجرّب واعرف تفاصيل معاملاتك برسومات واضحة',
-               style:const TextStyle(fontSize:11)),
-             ])),
-             const Icon(Icons.chevron_right_rounded,color:emerald),
-            ]))),
-          const SizedBox(height:12),
           // Explicit Home entry: the global-gold market cannot remain hidden
           // behind collapsed Account settings. True FX is only in this tool.
           InkWell(
@@ -6554,7 +6529,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       });
      }),child:WaffraText(waffraIsEnglish?'View transactions':'عرض المعاملات المرتبطة'))
      else TextButton(onPressed:WaffraHaptics.tap((){
-      Navigator.pop(ctx);setState((){tab=3;goalsOpened=false;addFabExpanded=false;});
+      Navigator.pop(ctx);setState((){tab=4;goalsOpened=false;addFabExpanded=false;});
      }),child:WaffraText(waffraIsEnglish?'View recurring':'عرض العمليات المتكررة')),
     ]));
    return;
@@ -8414,14 +8389,16 @@ Future<void> bulkSmsSheet({String? initialText})async {
    DateTime(DateTime.now().year,DateTime.now().month,r.day.clamp(1,28).toInt()),
    r.title,r.amount,r.income,scheduled:true)),
  ];
- // Read-only feature hub; freeze verified Home state, no new ledger writes.
- void openSmartFeatures(){
+ // The third footer tab owns the tool accordion. Finance is read-only:
+ // freeze verified snapshots and never read original SMS or modify the ledger.
+ Widget _smartToolsTab(){
   if(!ready||_financeBinding==null||_lastFinanceAuthorityRead==null){
-   snack(context,waffraIsEnglish?'Financial source not ready':'مصدر البيانات المالية غير جاهز');
-   return;
+   return Center(child:WaffraText(waffraIsEnglish?
+    'Financial source not ready':'مصدر البيانات المالية غير جاهز'));
   }
-  Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>WaffraSmartFeaturesPage(
-   english:waffraIsEnglish,
+  return WaffraSmartFeaturesPage(
+   key:const Key('waffra-m268-footer-page'),
+   embedded:true,english:waffraIsEnglish,
    entries:List<WaffraSmartEntry>.unmodifiable(entries.map((e)=>WaffraSmartEntry(
     id:e.id,title:e.title,category:e.category,amount:e.amount,
     income:e.income,date:e.date))),
@@ -8429,7 +8406,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
     WaffraSmartGoal(g.name,g.target,g.saved))),
    recurring:List<WaffraSmartRecurring>.unmodifiable(recurring.where((r)=>r.active).map((r)=>
     WaffraSmartRecurring(r.title,r.amount,r.day,r.income))),
-  )));
+  );
+ }
+ void openSmartFeatures(){
+  if(!ready||_financeBinding==null||_lastFinanceAuthorityRead==null){
+   snack(context,waffraIsEnglish?'Financial source not ready':'مصدر البيانات المالية غير جاهز');
+   return;
+  }
+  unawaited(selectFooter(2));
  }
  void openFinancialCalendar()=>Navigator.push<void>(context,MaterialPageRoute(
   builder:(_)=>WaffraFinancialCalendar(items:financialCalendarItems,english:waffraIsEnglish)));
@@ -8697,11 +8681,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
       fontSize:15,fontWeight:FontWeight.bold,color:Theme.of(context).brightness==Brightness.dark?Colors.white:forest)),
     ]))));
  Widget currentTab(){
-  if(tab>0&&tab<4){
+  if(tab==1||tab==3||tab==4){
    return RefreshIndicator(
     onRefresh:()=>_refreshAndSettle(
      tab==1?_categoryScrollController:
-     tab==2?_goalsScrollController:_recurringScrollController,tab),
+     tab==3?_goalsScrollController:_recurringScrollController,tab),
     child:ScrollConfiguration(
      behavior:ScrollConfiguration.of(context).copyWith(
       physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
@@ -8714,8 +8698,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
   switch(tab){
    case 0:return goalsOpened?goalsPage():dashboard();
    case 1:return categoriesPage();
-   case 2:return goalsPage();
-   case 3:return recurringPage();
+   case 2:return _smartToolsTab();
+   case 3:return goalsPage();
+   case 4:return recurringPage();
    default:return profilePage();
   }
  }
@@ -8725,7 +8710,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final dx=_swipeTravel.abs()>50?_swipeTravel:velocity/10;
   if(dx.abs()<65)return;
   final forward=waffraIsEnglish?dx>0:dx<0;
-  final target=(tab+(forward?1:-1)).clamp(0,4);
+  final target=(tab+(forward?1:-1)).clamp(0,WaffraFooterNavigation.itemCount-1);
   if(target!=tab)unawaited(selectFooter(target));
  }
  Future<void> selectFooter(int target)async {
@@ -8764,7 +8749,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     SizedBox(width:45,height:kToolbarHeight,
      child:Center(child:InkWell(
       onTap:WaffraHaptics.tap(()=>setState((){
-       addFabExpanded=false;goalsOpened=false;tab=4;
+       addFabExpanded=false;goalsOpened=false;tab=5;
       })),
       borderRadius:BorderRadius.circular(30),
       child:waffraAvatar(widget.profile.gender,widget.profile.avatar,radius:18)))),
@@ -8824,7 +8809,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   // Never allow a menu width to change Scaffold's floating geometry.
   floatingActionButtonLocation:WaffraDirectionalFabLocation(english:waffraIsEnglish),
   floatingActionButtonAnimator:const WaffraStationaryFabAnimator(),
-  floatingActionButton:!ready||tab==4?null:SizedBox(
+  floatingActionButton:!ready||tab==5||tab==2?null:SizedBox(
    width:58,height:58,
    child:
     Material(
@@ -8845,8 +8830,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
      setState(()=>_fabPressed=false);
      await Future<void>.delayed(waffraMotion(110));
      if(!mounted||tab!=tappedTab)return;
-     if(goalsOpened||tab==2){unawaited(_launchAddAction(()=>goalDialog()));return;}
-     if(tab==3){unawaited(_launchAddAction(()=>recurringDialog()));return;}
+     if(goalsOpened||tab==3){unawaited(_launchAddAction(()=>goalDialog()));return;}
+     if(tab==4){unawaited(_launchAddAction(()=>recurringDialog()));return;}
      setState(()=>addFabExpanded=!addFabExpanded);
     },
     splashFactory:NoSplash.splashFactory,
