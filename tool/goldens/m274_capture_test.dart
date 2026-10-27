@@ -30,7 +30,7 @@ void main() {
           throw StateError('MaterialIcons unavailable: FLUTTER_ROOT missing');
         }
         final file = File(
-            '$'+'{flutterRoot}/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf');
+            '$flutterRoot/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf');
         final bytes = await file.readAsBytes();
         return ByteData.view(
             bytes.buffer, bytes.offsetInBytes, bytes.lengthInBytes);
