@@ -29,7 +29,10 @@ void main() {
     final app=File('lib/main.dart').readAsStringSync();
     final converter=File('lib/currency_converter.dart').readAsStringSync();
     expect(app,contains("Financial tools':'الأدوات المالية'"));
-    expect(app,contains("builder:(_)=>const CurrencyConverterPage()"));
+    expect(app,contains('case 2:return _smartToolsTab();'));
+    final tools=File('lib/waffra_smart_features.dart').readAsStringSync();
+    expect(tools,contains('CurrencyConverterPage(embedded:true)'));
+    expect(converter,contains('WaffraMarketAccordionCard('));
     expect(converter,contains("Key('waffra-currency-swap')"));
     expect(converter,contains('void swapCurrencies()'));
     expect(converter,contains('unawaited(convert())'));
