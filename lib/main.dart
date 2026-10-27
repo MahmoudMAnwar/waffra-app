@@ -27,6 +27,7 @@ import 'waffra_biometrics.dart';
 import 'waffra_amount_formatter.dart';
 import 'waffra_display_currency.dart';
 import 'waffra_search.dart';
+import 'waffra_balance_art.dart';
 import 'waffra_validators.dart';
 import 'waffra_financial_insights.dart';
 import 'waffra_reminders.dart';
@@ -2327,66 +2328,118 @@ class WaffraCurrencyAmount extends StatelessWidget {
 }
 // Collapse the balance as the user scrolls, then let it scroll AWAY
 // with the rest of the home page. It is intentionally not pinned.
+/// Home balance cover: approved dark-emerald plant-and-coins design.
+/// Visual only: the value and hide toggle remain bound to verified Home data.
 class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
  final double balance;
  final bool english;
  final GlobalKey? focusKey;
+ final double? monthlyChangePercent;
  final Future<void> Function() refreshVerifiedWidgetBalance;
  const WaffraBalanceHeader({
   required this.balance,required this.english,this.focusKey,
-  required this.refreshVerifiedWidgetBalance,
+  required this.refreshVerifiedWidgetBalance,this.monthlyChangePercent,
  });
- @override double get minExtent=>70;
- @override double get maxExtent=>86;
+ @override double get minExtent=>145;
+ @override double get maxExtent=>165;
  @override Widget build(BuildContext context,double shrinkOffset,bool overlapsContent){
   final progress=(shrinkOffset/(maxExtent-minExtent)).clamp(0.0,1.0);
   final dark=Theme.of(context).brightness==Brightness.dark;
-  final mainColor=dark?Colors.white:forest;
+  final waveColor=Theme.of(context).scaffoldBackgroundColor;
+  final compare=monthlyChangePercent;
+  final validCompare=compare!=null&&compare.isFinite;
   return Container(
    key:focusKey,
-   color:Theme.of(context).scaffoldBackgroundColor,
-   padding:const EdgeInsets.fromLTRB(14,0,14,5),
+   color:waveColor,
+   padding:const EdgeInsets.fromLTRB(14,0,14,4),
    child:Container(
-    padding:EdgeInsets.symmetric(horizontal:15,vertical:5-2*progress),
+    key:const Key('waffra-approved-emerald-balance-card'),
     decoration:BoxDecoration(
-     color:Theme.of(context).cardColor,
-     border:Border.all(color:dark?const Color(0xFF303C34):const Color(0xFFDCEBE2)),
-     boxShadow:dark?null:[BoxShadow(color:forest.withValues(alpha:.045),
-      blurRadius:12,offset:const Offset(0,3))],
-     borderRadius:BorderRadius.circular(19-3*progress)),
-    child:Row(children:[
-     Expanded(child:Column(
-      mainAxisSize:MainAxisSize.min,
-      crossAxisAlignment:CrossAxisAlignment.start,
-      children:[
-       WaffraText(english?'Current balance':'رصيدك الحالي',
-        style:TextStyle(fontSize:12-1*progress,color:dark?Colors.white70:forest,
-         fontWeight:FontWeight.w600)),
-       const SizedBox(height:1),
-       FittedBox(fit:BoxFit.scaleDown,alignment:AlignmentDirectional.centerStart,
-        child:WaffraCurrencyAmount(balance,fontSize:23-3*progress,color:mainColor)),
-      ])),
-     ValueListenableBuilder<bool>(valueListenable:hideWaffraAmounts,
-      builder:(ctx,hidden,_)=>IconButton(
-       tooltip:hidden?(english?'Show amounts':'إظهار المبالغ'):
-        (english?'Hide amounts':'إخفاء المبالغ'),
-       onPressed:WaffraHaptics.tap(()async{
-        final conceal=!hidden;
-        hideWaffraAmounts.value=conceal;
-        final p=await SharedPreferences.getInstance();
-        await p.setBool('waffra_hide_amounts',conceal);
-        // Never push the in-memory header balance into the Android widget:
-        // a parallel Widget engine may have committed a newer transaction.
-        await refreshVerifiedWidgetBalance();
-       }),
-       visualDensity:VisualDensity.compact,
-       icon:Icon(hidden?Icons.visibility_off_outlined:Icons.visibility_outlined,
-        color:mainColor,size:22))),
-    ]),
+     borderRadius:BorderRadius.circular(23),
+     gradient:const LinearGradient(
+      begin:Alignment.topLeft,end:Alignment.bottomRight,
+      colors:[Color(0xFF167F5A),Color(0xFF07533E),Color(0xFF00392F)],
+      stops:[0,.54,1]),
+     border:Border.all(color:const Color(0xFF73CF9A).withValues(alpha:.38)),
+     boxShadow:[BoxShadow(color:const Color(0xFF063B2D).withValues(alpha:dark?.25:.17),
+      blurRadius:15,offset:const Offset(0,5))]),
+    child:ClipRRect(
+     borderRadius:BorderRadius.circular(22),
+     child:Stack(fit:StackFit.expand,children:[
+      Positioned(
+       left:-45,top:-84,width:205,height:175,
+       child:DecoratedBox(decoration:BoxDecoration(
+        border:Border.all(color:const Color(0xFF94EDBC).withValues(alpha:.11)),
+        borderRadius:BorderRadius.circular(120)))),
+      Positioned(right:-35,top:-95,width:185,height:175,
+       child:DecoratedBox(decoration:BoxDecoration(
+        color:const Color(0xFF4CCF92).withValues(alpha:.07),
+        shape:BoxShape.circle))),
+      Positioned(right:0,bottom:-6,width:154,height:148,
+       child:IgnorePointer(child:const WaffraBalanceIllustration())),
+      Positioned.fill(child:IgnorePointer(child:CustomPaint(
+       painter:WaffraBalanceWavePainter(waveColor)))),
+      Positioned(left:7,top:10,
+       child:ValueListenableBuilder<bool>(
+        valueListenable:hideWaffraAmounts,
+        builder:(ctx,hidden,_)=>IconButton(
+         key:const Key('waffra-balance-privacy-eye'),
+         tooltip:hidden?(english?'Show amounts':'إظهار المبالغ'):
+          (english?'Hide amounts':'إخفاء المبالغ'),
+         onPressed:WaffraHaptics.tap(()async{
+          final conceal=!hidden;
+          hideWaffraAmounts.value=conceal;
+          final prefs=await SharedPreferences.getInstance();
+          await prefs.setBool('waffra_hide_amounts',conceal);
+          // Keep the existing verified Widget-authority refresh.
+          await refreshVerifiedWidgetBalance();
+         }),
+         icon:Icon(hidden?Icons.visibility_off_outlined:Icons.visibility_outlined,
+          size:22,color:const Color(0xFFE2FBEF))))),
+      Positioned(left:47,right:112,top:14,bottom:45,
+       child:Column(mainAxisAlignment:MainAxisAlignment.start,
+        crossAxisAlignment:CrossAxisAlignment.center,children:[
+         WaffraText(english?'Total balance':'إجمالي رصيدك',
+          maxLines:1,
+          style:const TextStyle(fontSize:14,fontWeight:FontWeight.w600,
+           color:Color(0xFFD7F1E5))),
+         const SizedBox(height:3),
+         Expanded(child:Center(child:FittedBox(
+          alignment:Alignment.center,fit:BoxFit.scaleDown,
+          child:WaffraCurrencyAmount(balance,fontSize:31-2*progress,
+           color:Colors.white,weight:FontWeight.w800)))),
+        ])),
+      if(validCompare)Positioned(left:18,bottom:14,
+       child:Column(crossAxisAlignment:CrossAxisAlignment.start,
+        mainAxisSize:MainAxisSize.min,children:[
+         Container(
+          key:const Key('waffra-balance-month-comparison'),
+          padding:const EdgeInsets.symmetric(horizontal:9,vertical:4),
+          decoration:BoxDecoration(
+           color:(compare>=0?const Color(0xFF1BAC70):const Color(0xFFAA403C))
+            .withValues(alpha:.92),
+           borderRadius:BorderRadius.circular(17)),
+          child:Row(mainAxisSize:MainAxisSize.min,children:[
+           Icon(compare>=0?Icons.trending_up_rounded:Icons.trending_down_rounded,
+            size:13,color:Colors.white),
+           const SizedBox(width:4),
+           Text('${compare>=0?'+':''}${compare.toStringAsFixed(0)}%',
+            style:const TextStyle(color:Colors.white,fontSize:12,
+             fontWeight:FontWeight.w800)),
+          ])),
+         const SizedBox(height:3),
+         Text(english?'Compared with last month':'مقارنة بالشهر الماضي',
+          style:const TextStyle(fontFamily:'Tajawal',
+           fontSize:10,color:Color(0xFFD3F2E0))),
+        ])),
+     ])),
    ),
   );
  }
- @override bool shouldRebuild(covariant WaffraBalanceHeader oldDelegate)=>true;
+ @override bool shouldRebuild(covariant WaffraBalanceHeader oldDelegate)=>
+  oldDelegate.balance!=balance||oldDelegate.english!=english||
+  oldDelegate.monthlyChangePercent!=monthlyChangePercent||
+  oldDelegate.focusKey!=focusKey;
 }
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
  final WaffraLegacyWriteQueue _financialWriteQueue=WaffraLegacyWriteQueue();
@@ -5452,6 +5505,17 @@ Future<void> bulkSmsSheet({String? initialText})async {
  }
  Widget dashboard(){
   final inc=sum(entries,true),exp=sum(entries,false);
+  // Show the month comparison only when there are genuine prior-month
+  // transactions and a positive comparison base. Never show a fake +12%.
+  final nowBalanceDate=DateTime.now();
+  final monthStart=DateTime(nowBalanceDate.year,nowBalanceDate.month);
+  final priorMonthStart=DateTime(nowBalanceDate.year,nowBalanceDate.month-1);
+  final hasPreviousMonthEntries=entries.any((e)=>
+   !e.date.isBefore(priorMonthStart)&&e.date.isBefore(monthStart));
+  final previousClosingBalance=entries.where((e)=>e.date.isBefore(monthStart))
+   .fold<double>(0,(total,e)=>total+(e.income?e.amount:-e.amount));
+  final monthChange=hasPreviousMonthEntries&&previousClosingBalance>0
+   ?((inc-exp-previousClosingBalance)/previousClosingBalance)*100:null;
   final visible=entries.where((e){
    final q=search.trim();
    return(waffraSearchAny([e.title,e.category,waffraTr(e.category)],q))&&
@@ -5492,6 +5556,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        pinned:false,
        delegate:WaffraBalanceHeader(
          balance:inc-exp,english:waffraIsEnglish,focusKey:_tourKeys[0],
+         monthlyChangePercent:monthChange,
          refreshVerifiedWidgetBalance:_refreshWidget)),
       SliverPadding(padding:const EdgeInsets.fromLTRB(14,10,14,96),
        sliver:SliverToBoxAdapter(child:Column(
