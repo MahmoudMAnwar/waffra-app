@@ -8720,7 +8720,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
           width:2),
          color:accountOpened?Colors.white.withValues(alpha:.13):Colors.transparent),
         child:KeyedSubtree(key:_tourKeys[5],
-         child:waffraAvatar(widget.profile.gender,widget.profile.avatar,radius:18))))),
+         child:waffraAvatar(widget.profile.gender,widget.profile.avatar,radius:18)))))),
     const SizedBox(width:7),
    ]),
   // Instant content swap avoids building/animating the previous heavy tab
