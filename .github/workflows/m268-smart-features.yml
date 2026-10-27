@@ -32,6 +32,8 @@ concurrency:
 
 jobs:
   ten-tools-calendar-illustrations:
+    # Historical M268 exact-file review only applies to M268 branch.
+    if: github.event_name != 'pull_request' || github.head_ref == 'feature/m268-all-ten-smart-finance-illustrations-today-20261027'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
