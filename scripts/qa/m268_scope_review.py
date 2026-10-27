@@ -7,17 +7,25 @@ import subprocess
 from pathlib import Path
 
 FILES = {
-    "lib/main.dart",
-    "lib/waffra_smart_features.dart",
-    "lib/waffra_today_picker.dart",
-    "lib/waffra_financial_tools.dart",
-    "lib/waffra_categories_page.part.dart",
-    "test/m268_smart_features_ten_calendar_art_test.dart",
-    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "scripts/qa/m268_scope_review.py",
-    ".github/workflows/m268-smart-features.yml",
     ".github/workflows/m147-final-main-review-gate.yml",
     ".github/workflows/m267-android-exact-apk-identity.yml",
+    ".github/workflows/m268-smart-features.yml",
+    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "lib/currency_converter.dart",
+    "lib/main.dart",
+    "lib/waffra_categories_page.part.dart",
+    "lib/waffra_financial_tools.dart",
+    "lib/waffra_footer.dart",
+    "lib/waffra_gold_calculator.dart",
+    "lib/waffra_search.dart",
+    "lib/waffra_smart_features.dart",
+    "lib/waffra_today_picker.dart",
+    "scripts/qa/m268_scope_review.py",
+    "test/m268_smart_features_ten_calendar_art_test.dart",
+    "test/waffra_design_preservation_test.dart",
+    "test/waffra_m206_day_theme_tour_sms_regression_test.dart",
+    "test/waffra_oct21_regression_test.dart",
+    "test/waffra_search_normalization_test.dart",
 }
 def git(*args):
     return subprocess.check_output(["git",*args],text=True).strip()
@@ -49,8 +57,31 @@ def main():
                   "season","wallet","challenge","flow","emergency"):
         demand("'"+topic+"'" in source,"missing feature: "+topic)
     main_text=Path("lib/main.dart").read_text()
-    demand("waffra-m268-tools-entry" in main_text and
-           "openSmartFeatures()" in main_text,"Home entry or route missing")
+    footer=Path("lib/waffra_footer.dart").read_text()
+    demand("static const itemCount=6" in footer,
+           "footer must contain six destinations")
+    demand("'الأقسام','الأدوات','الأهداف'" in footer and
+           "'Categories','Smart tools','Goals'" in footer,
+           "smart tools must be in slot three, after categories")
+    demand("case 2:return _smartToolsTab();" in main_text and
+           "embedded:true" in main_text and
+           "waffra-m268-footer-page" in main_text,
+           "smart tools must render in footer, not navigate away")
+    demand("waffra-m268-tools-entry" not in main_text,
+           "Home must not contain a redundant ten-tool entry")
+    demand("waffra-m268-accordion-" in source and
+           "AnimatedSize(" in source and
+           "waffra-m268-expanded-" in source,
+           "missing in-place animated accordion")
+    search=Path("lib/waffra_search.dart").read_text()
+    for marker in ("[أإآٱ]", "waffraSearchMatches", "waffraSearchAny"):
+        demand(marker in search, "Arabic tolerant search utility missing: "+marker)
+    for file in ("lib/main.dart","lib/currency_converter.dart",
+                 "lib/waffra_gold_calculator.dart"):
+        demand("waffraSearchAny(" in Path(file).read_text(),
+               "search field not connected in "+file)
+    demand("waffraSearchAny(" in Path("lib/waffra_categories_page.part.dart").read_text(),
+           "category search must normalize both sides")
     demand(main_text.count("waffraPickDateWithToday(")==5,
            "all 5 existing Material date pickers must keep Today action")
     demand("waffra-recurring-calendar-today" in main_text,
@@ -97,6 +128,7 @@ def main():
     report={"milestone":"M268","head":head,"base":base,
       "scope":sorted(changed),"financial_storage_changed":False,
       "app_feature_screens":10,"material_date_pickers":5,
+      "footer_smart_tools_slot":2,"arabic_search_folded":True,
       "production_sqlcipher_activated":False,"phone_production_attested":False,
       "status":"ILLUSTRATED_PLANNING_UX_QA_ONLY_NO_CUTOVER"}
     p=Path("build/m147-final-review-report.json")
