@@ -192,7 +192,10 @@ void main() {
     // writer; a legacy bypass or split hash/record save is still disallowed.
     expect(home, contains(
       "'commit-confirmed-bank-sms',()=>_financeAuthority.commitConfirmedSms("));
-    expect('_financeAuthority.commitConfirmedSms('.allMatches(home).length, 2);
+    // Three pre-existing, authority-bound entry points are intentional:
+    // bulk pasted SMS, reviewed individual SMS, and single entry sheet SMS.
+    // M275 wraps confirmation UI but must not add a fourth write pathway.
+    expect('_financeAuthority.commitConfirmedSms('.allMatches(home).length, 3);
     expect(home, contains('records:[Map<String,Object?>.from(result.toJson())]'));
     expect(home, contains('hashes:[pendingHash!]'));
     expect(home, contains('allowDuplicateHashes:explicitlyApprovedSmsDuplicate'));
