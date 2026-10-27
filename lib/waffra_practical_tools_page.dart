@@ -192,7 +192,7 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
         onChanged: (_) => setState(() => receiptReviewed = false),
         decoration: InputDecoration(labelText: t('المبلغ', 'Amount'),
           border: const OutlineInputBorder())),
-      TextButton.icon(icon: const Icon(Icons.event),
+      Align(alignment:AlignmentDirectional.centerStart,child:TextButton.icon(icon: const Icon(Icons.event),
         label: Text(t('تاريخ الفاتورة', 'Receipt date')),
         onPressed: () async {
           final day = await showDatePicker(context: context,
@@ -201,8 +201,8 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
           if (day != null && mounted) setState(() {
             receiptDate = day; receiptReviewed = false;
           });
-        }),
-      FilledButton(
+        })),
+      Align(alignment:AlignmentDirectional.centerStart,child:FilledButton(
         onPressed: () {
           final raw = double.tryParse(amount.text.replaceAll(',', '.'));
           final draft = WaffraReceiptReviewDraft(
@@ -210,7 +210,7 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
             merchant: merchant.text, date: receiptDate);
           setState(() => receiptReviewed = draft.isValid);
         },
-        child: Text(t('التحقق من بيانات الفاتورة', 'Validate receipt draft'))),
+        child: Text(t('التحقق من بيانات الفاتورة', 'Validate receipt draft')))),
       if (receiptReviewed) Text(
         t('البيانات صالحة. لم نضف أي معاملة؛ أكدها من شاشة إضافة معاملة.',
           'Fields validated; no transaction saved. Confirm in Add Transaction.'),
@@ -286,7 +286,7 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
             value: code, child: Text(code.name))).toList(),
         onChanged: (code) => setState(() => userSelectedIssue = code),
       ),
-      OutlinedButton.icon(
+      Align(alignment:AlignmentDirectional.centerStart,child:OutlinedButton.icon(
         key: const Key('m281-copy-safe-diagnostics'),
         onPressed: userSelectedIssue == null ? null :
           () => Clipboard.setData(ClipboardData(
@@ -294,7 +294,7 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
               WaffraSafeDiagnosticEvent(userSelectedIssue!).safeTag)),
         icon: const Icon(Icons.copy),
         label: Text(t('نسخ رمز المشكلة المختارة فقط', 'Copy selected safe issue code')),
-      ),
+      )),
     ]);
   }
 
@@ -309,7 +309,7 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
           const Key('m281-health-tile')),
         section('البحث الذكي الشامل', 'Advanced financial search',
           Icons.manage_search, advancedSearch(), const Key('m281-search-tile')),
-        section('مساعد الفواتير', 'Receipt review assistant',
+        section('مساعد الفواتير (مراجعة يدوية)', 'Receipt review (manual; OCR not enabled)',
           Icons.receipt_long_outlined, receiptAssistant(),
           const Key('m281-receipt-tile')),
         section('الإقفال الشهري', 'Monthly close preview',
