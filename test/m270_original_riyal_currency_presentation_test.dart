@@ -37,7 +37,9 @@ void main() {
       home: Scaffold(body: WaffraText('كل ريال تحسب له حساب')),
     ));
     expect(find.byType(Image), findsNothing);
-    expect(find.text('كل ريال تحسب له حساب'), findsOneWidget);
+    expect(find.byWidgetPredicate((widget) =>
+        widget is Text && widget is! WaffraText &&
+        widget.data == 'كل ريال تحسب له حساب'), findsOneWidget);
   });
 
   testWidgets('Other currencies keep their own unit in either language',
