@@ -39,12 +39,10 @@ extension WaffraCategoryScreen on _HomeScreenState {
    final budgeted=root.budget>0||subs.any((c)=>c.budget>0);
    if(categoryDisplay=='budget'&&!budgeted)return false;
    if(categoryDisplay=='none'&&budgeted)return false;
-   final query=categorySearch.trim().toLowerCase();
-   return query.isEmpty||root.name.toLowerCase().contains(query)||
-    waffraTr(root.name).toLowerCase().contains(query)||
+   final query=categorySearch.trim();
+   return waffraSearchAny([root.name,waffraTr(root.name)],query)||
     subs.any((c)=>(!categoryMineOnly||c.isUserAdded)&&
-     (c.displayName.toLowerCase().contains(query)||
-      waffraTr(c.displayName).toLowerCase().contains(query)));
+     waffraSearchAny([c.displayName,waffraTr(c.displayName)],query));
   }).toList();
 
   Widget rootCard(BudgetCategory root){
