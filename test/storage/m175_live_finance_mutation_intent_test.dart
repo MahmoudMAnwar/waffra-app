@@ -20,10 +20,13 @@ void main() {
     expect(home, contains(
       'WaffraFinanceRoute route = WaffraFinanceRoute.transactionEdit,'));
     expect(home, contains('route:route,\n    baseline:baseline,'));
-    expect(home, contains(
-      'await persist(route:initial==null\n'
-      '   ?WaffraFinanceRoute.manualTransactionSave\n'
-      '   :WaffraFinanceRoute.transactionEdit);'));
+    // Retain exact finance route selection while allowing safe formatting
+    // changes around a verified-confirmation feedback wrapper.
+    expect(RegExp(
+      r'await persist\(route:initial==null\s+'
+      r'\?WaffraFinanceRoute\.manualTransactionSave\s+'
+      r':WaffraFinanceRoute\.transactionEdit\);',
+    ).hasMatch(home),isTrue);
     expect(home, contains(
       'await persist(route:WaffraFinanceRoute.transactionDeleteAndUndo);'));
     expect(home, contains(

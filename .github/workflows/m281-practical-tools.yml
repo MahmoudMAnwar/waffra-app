@@ -1,0 +1,63 @@
+name: M281 Five Practical Tools (QA No Finance Write)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/m281-practical-tools.yml'
+      - 'lib/waffra_practical_*'
+      - 'lib/waffra_smart_features.dart'
+      - 'test/m281_*'
+      - 'docs/qa/m281_*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m281-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  engine-and-ux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact HEAD
+        env:
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$SHA"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Analyze genuine production tool modules
+        run: |
+          dart analyze \
+            lib/waffra_practical_ledger_engine.dart \
+            lib/waffra_practical_tools_page.dart \
+            lib/waffra_smart_features.dart \
+            test/m281_practical_tools_test.dart
+      - name: Prove five tools, read-only invariants, search and UI
+        run: flutter test --reporter expanded test/m281_practical_tools_test.dart
+      - name: Existing ten smart tools must not regress
+        run: flutter test --reporter expanded test/m268_smart_features_ten_calendar_art_test.dart
+
+  release-feature-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Full finance regression including all existing tests
+        run: flutter test test --reporter expanded

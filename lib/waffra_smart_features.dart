@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'waffra_practical_tools_page.dart';
+import 'waffra_practical_ledger_engine.dart';
 import 'waffra_haptic_feedback.dart';
 import 'waffra_display_currency.dart';
 import 'currency_converter.dart';
@@ -625,6 +627,25 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
         'Analyze finances, plan and check markets without changing your balance.')),
       ]))])),
     ...tiles,
+    Card(
+     key:const Key('m281-practical-tools-entry'),
+     margin:const EdgeInsets.only(top:9,bottom:14),
+     clipBehavior:Clip.antiAlias,
+     child:ListTile(
+      leading:const WaffraIllustration(topic:'tools',size:46),
+      title:Text(t('أدوات مالية إضافية','Additional finance tools'),
+        style:const TextStyle(fontWeight:FontWeight.w800)),
+      subtitle:Text(t('صحة البيانات • البحث • الفواتير • الإقفال • التشخيص',
+        'Data health • Search • Receipts • Month close • Diagnostics')),
+      trailing:const Icon(Icons.chevron_right),
+      onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(
+       builder:(_)=>WaffraPracticalToolsPage(
+        english:widget.english,
+        entries:List<WaffraPracticalEntry>.unmodifiable(
+         widget.entries.map((entry)=>WaffraPracticalEntry(
+          id:entry.id,title:entry.title,category:entry.category,
+          amount:entry.amount,income:entry.income,date:entry.date)))))),
+     )),
    ]);
  }
  @override Widget build(BuildContext context){

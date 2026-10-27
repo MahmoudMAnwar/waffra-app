@@ -1,0 +1,45 @@
+name: M277 UX Accessibility and Interaction Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'test/m277_ux_accessibility_quality_test.dart'
+      - '.github/workflows/m277-ux-accessibility.yml'
+      - 'lib/waffra_footer.dart'
+      - 'lib/main.dart'
+      - 'lib/waffra_i18n.dart'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m277-ux-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ux-accessibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact proposed source revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Assert exact PR HEAD
+        if: github.event_name == 'pull_request'
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - name: Install Flutter stable
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Restore dependencies
+        run: flutter pub get
+      - name: Analyze M277 UX suite
+        run: dart analyze test/m277_ux_accessibility_quality_test.dart
+      - name: Run bilingual large-text, touch-target, TalkBack semantics, reduced-motion, and error UX tests
+        run: flutter test --reporter expanded test/m277_ux_accessibility_quality_test.dart
