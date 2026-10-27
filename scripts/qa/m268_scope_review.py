@@ -58,6 +58,18 @@ def main():
     calendar=Path("lib/waffra_financial_tools.dart").read_text()
     demand("waffra-financial-calendar-today" in calendar,
            "financial calendar Today missing")
+    # The full app needs JNI in the distributed QA APK. A compilation-only
+    # PR artifact previously omitted libdartjni.so and crashed on startup.
+    # Keep the native-library refusal before any artifact publication.
+    preview=Path(".github/workflows/m147-final-main-review-gate.yml").read_text()
+    for marker in ("Re-resolve plugins after generating Android host",
+                   "Install the approved Waffra launcher artwork",
+                   "Refuse APK missing native runtime libraries",
+                   "'libdartjni.so'","'libsqlite3mc.so'"):
+        demand(marker in preview,"preview APK native startup gate missing: "+marker)
+    demand(preview.index("Refuse APK missing native runtime libraries") <
+           preview.index("Attach unapproved-for-production APK for device QA"),
+           "cannot publish an unchecked native APK")
     release=Path("lib/storage/waffra_production_cutover_release_gate.dart").read_text()
     demand("bool get automaticallyActivateSqlCipher => false;" in release,
            "production activation guard changed")
