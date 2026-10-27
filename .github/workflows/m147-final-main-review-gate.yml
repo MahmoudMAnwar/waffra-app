@@ -323,6 +323,14 @@ jobs:
         run: flutter pub get
       - name: Create Android project (CI only)
         run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
+      # Flutter plugins (including the JNI-backed Android path provider) need
+      # an Android host project at pub resolution time. The earlier PR preview
+      # called pub get before flutter create, silently producing an APK without
+      # libdartjni.so; the app then failed to start on a physical phone.
+      - name: Re-resolve plugins after generating Android host
+        run: flutter pub get
+      - name: Install the approved Waffra launcher artwork
+        run: dart run flutter_launcher_icons
       - name: M219 compile real native Keystore owner channel with Flutter
         if: github.head_ref == 'feature/m219-android-keystore-owner-proof-20261025'
         run: |
@@ -367,6 +375,35 @@ jobs:
           PY
       - name: Compile ARM64 release-mode APK (not production certified)
         run: flutter build apk --release --no-pub --target-platform android-arm64
+      # Do not publish a compile-only preview with missing native bindings:
+      # libdartjni is used by transitive Android plugins on real devices, and
+      # sqlite3mc is required for Waffra's guarded encrypted storage.
+      - name: Refuse APK missing native runtime libraries
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          apk=Path('build/app/outputs/flutter-apk/app-release.apk')
+          if not apk.is_file():
+              raise SystemExit('QA APK not generated')
+          with ZipFile(apk) as archive:
+              contents=set(archive.namelist())
+              required={'lib/arm64-v8a/'+item for item in
+                        ('libapp.so','libflutter.so','libdartjni.so','libsqlite3mc.so')}
+              missing=required-contents
+              if missing:
+                  raise SystemExit('QA STARTUP BLOCKED: missing JNI/native libraries: '+
+                                   ', '.join(sorted(missing)))
+              for item in sorted(required):
+                  meta=archive.getinfo(item)
+                  if meta.file_size < 4096:
+                      raise SystemExit('QA STARTUP BLOCKED: invalid native ELF: '+item)
+                  with archive.open(item) as stream:
+                      if stream.read(4)!=b'\\x7fELF':
+                          raise SystemExit('QA STARTUP BLOCKED: not an ELF: '+item)
+          print('PASS: ARM64 JNI, SQLCipher, Flutter and Dart native ELF bundled')
+          PY
       - name: Attach unapproved-for-production APK for device QA
         uses: actions/upload-artifact@v4
         with:
