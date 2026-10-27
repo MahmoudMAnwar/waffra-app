@@ -120,7 +120,7 @@ void main() {
     output.writeAsStringSync(
       const JsonEncoder.withIndent('  ').convert({
         'milestone': 'M276',
-        'head_sha': Platform.environment['GITHUB_SHA'] ?? 'local',
+        'head_sha': Platform.environment['WAFFRA_EXPECTED_HEAD_SHA'] ?? 'local',
         'environment': 'flutter_test_host_not_physical_android',
         'decision': 'informational_only_no_fixed_latency_gate',
         'warmups_per_scenario': 4,
