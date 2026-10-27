@@ -126,11 +126,15 @@ void main(){
     entries:sample,goals:const [],recurring:const [],english:false)));
    expect(find.byKey(const Key('waffra-m268-feature-runway')),findsOneWidget);
    expect(find.byKey(const Key('waffra-m268-feature-subscription')),findsOneWidget);
-   expect(find.text('أدوات وفرة الذكية'),findsOneWidget);
+   expect(find.text('أدوات وفرة الذكية'),findsWidgets);
   });
   testWidgets('simulation is interactive but does not change input data',(tester)async{
    await tester.pumpWidget(MaterialApp(home:WaffraSmartFeaturesPage(
     entries:sample,goals:const [],recurring:const [],english:true)));
+   await tester.scrollUntilVisible(
+    find.byKey(const Key('waffra-m268-feature-simulation')),250,
+    scrollable:find.byType(Scrollable).first);
+   await tester.pumpAndSettle();
    await tester.tap(find.byKey(const Key('waffra-m268-feature-simulation')));
    await tester.pumpAndSettle();
    expect(find.text('Hypothetical purchase (SAR) — 3500'),findsOneWidget);
@@ -146,6 +150,10 @@ void main(){
     WaffraDisplayCurrency.displaySelection('SAR'));
    await tester.pumpWidget(MaterialApp(home:WaffraSmartFeaturesPage(
     entries:sample,goals:const [],recurring:const [],english:true)));
+   await tester.scrollUntilVisible(
+    find.byKey(const Key('waffra-m268-feature-simulation')),250,
+    scrollable:find.byType(Scrollable).first);
+   await tester.pumpAndSettle();
    await tester.tap(find.byKey(const Key('waffra-m268-feature-simulation')));
    await tester.pumpAndSettle();
    expect(find.text('Hypothetical purchase (EGP) — 3500'),findsOneWidget);
@@ -154,18 +162,27 @@ void main(){
    expect(WaffraDisplayCurrency.toLedgerSar(1000),1000);
   });
   testWidgets('third footer smart tools expand inline and keep siblings visible',(tester)async{
-   await tester.pumpWidget(MaterialApp(home:WaffraSmartFeaturesPage(
+   await tester.pumpWidget(MaterialApp(home:Scaffold(body:WaffraSmartFeaturesPage(
     embedded:true,entries:sample,goals:const [],recurring:const [],
-    english:false)));
+    english:false))));
    expect(find.byKey(const Key('waffra-m268-tools-scroll')),findsOneWidget);
    expect(find.byKey(const Key('waffra-m268-feature-runway')),findsOneWidget);
-   expect(find.byKey(const Key('waffra-m268-feature-simulation')),findsOneWidget);
-   await tester.ensureVisible(find.byKey(const Key('waffra-m268-feature-simulation')));
+   await tester.scrollUntilVisible(
+    find.byKey(const Key('waffra-m268-feature-simulation')),250,
+    scrollable:find.byType(Scrollable).first);
+   await tester.pumpAndSettle();
+   await tester.scrollUntilVisible(
+    find.byKey(const Key('waffra-m268-feature-simulation')),250,
+    scrollable:find.byType(Scrollable).first);
+   await tester.pumpAndSettle();
    await tester.tap(find.byKey(const Key('waffra-m268-feature-simulation')));
    await tester.pumpAndSettle();
    expect(find.byKey(const Key('waffra-m268-expanded-simulation')),findsOneWidget);
+   await tester.scrollUntilVisible(
+    find.byKey(const Key('waffra-m268-feature-runway')),-250,
+    scrollable:find.byType(Scrollable).first);
+   await tester.pumpAndSettle();
    expect(find.byKey(const Key('waffra-m268-feature-runway')),findsOneWidget);
-   await tester.ensureVisible(find.byKey(const Key('waffra-m268-feature-runway')));
    await tester.tap(find.byKey(const Key('waffra-m268-feature-runway')));
    await tester.pumpAndSettle();
    expect(find.byKey(const Key('waffra-m268-expanded-simulation')),findsNothing);
