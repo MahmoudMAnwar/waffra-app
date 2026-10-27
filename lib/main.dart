@@ -1911,9 +1911,9 @@ class WaffraNoticeContent extends StatelessWidget {
        color:palette.$2,fontSize:12,fontWeight:FontWeight.bold))),
     IconButton(
      tooltip:waffraIsEnglish?'Close':'إغلاق',
-     icon:Icon(Icons.close_rounded,color:palette.$2,size:17),
-     visualDensity:VisualDensity.compact,padding:EdgeInsets.zero,
-     constraints:const BoxConstraints(minWidth:27,minHeight:27),
+     icon:Icon(Icons.close_rounded,color:palette.$2,size:19),
+     visualDensity:VisualDensity.standard,padding:EdgeInsets.zero,
+     constraints:const BoxConstraints(minWidth:48,minHeight:48),
      onPressed:WaffraHaptics.tap(onDismiss)),
    ]));
  }
