@@ -1,498 +1,90 @@
-name: M147 Final Main-Safe Merge Readiness Review
+name: M268 Smart Planning, Today and Illustrated UX (NO CUTOVER)
 
 on:
   pull_request:
-    branches:
-      - main
+    branches: [main]
+    paths:
+      - 'lib/main.dart'
+      - 'lib/waffra_balance_art.dart'
+      - 'test/m268_approved_emerald_balance_card_test.dart'
+      - 'lib/waffra_smart_features.dart'
+      - 'lib/waffra_today_picker.dart'
+      - 'lib/waffra_financial_tools.dart'
+      - 'lib/waffra_categories_page.part.dart'
+      - 'lib/waffra_footer.dart'
+      - 'lib/currency_converter.dart'
+      - 'lib/waffra_search.dart'
+      - 'lib/waffra_gold_calculator.dart'
+      - 'test/waffra_search_normalization_test.dart'
+      - 'test/m268_smart_features_ten_calendar_art_test.dart'
+      - 'scripts/qa/m268_scope_review.py'
+      - 'docs/release/WAFFRA_APPROVED_CHANGES.txt'
+      - '.github/workflows/m268-smart-features.yml'
+      - '.github/workflows/m147-final-main-review-gate.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: m147-main-review-${{ github.event.pull_request.number || github.ref }}
+  group: m268-additive-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  review-exact-main-diff:
+  ten-tools-calendar-illustrations:
+    # The M268 exact-file-set reviewer is pinned to its historical PR.
+    # Unrelated future UI PRs remain covered by the full Flutter workflows.
+    if: github.event_name != 'pull_request' || github.head_ref == 'feature/m268-all-ten-smart-finance-illustrations-today-20261027'
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     steps:
-      - name: Checkout exact PR head, not GitHub synthetic merge commit
+      - name: Exact reviewed head (never synthetic merge)
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - name: Original M147 UI-only, SHA-pinned scope review
-        if: github.head_ref != 'integration/m160-reconcile-main-m158-release-gate-20261023' && github.head_ref != 'qa/m174-main-sha-postmerge-20261024' && github.head_ref != 'feature/m175-explicit-finance-intent-routes' && github.head_ref != 'feature/m176-module-finance-route-intents' && github.head_ref != 'feature/m177-live-finance-authority-completion' && github.head_ref != 'feature/m178-restore-receipt-parity-preflight' && github.head_ref != 'feature/m179-encrypted-recurring-scalar-main' && github.head_ref != 'feature/m180-encrypted-custom-goal-suggestions-main' && github.head_ref != 'feature/m181-sqlcipher-route-coverage-main' && github.head_ref != 'feature/m182-encrypted-recurring-paid-main' && github.head_ref != 'feature/m183-verified-transaction-home-main' && github.head_ref != 'feature/m184-encrypted-recycle-expiry-main' && github.head_ref != 'feature/m185-encrypted-module-recycle-after-m184' && github.head_ref != 'feature/m186-verified-module-trash-after-m184' && github.head_ref != 'feature/m187-active-source-restore-after-m186' && github.head_ref != 'feature/m188-full-reset-after-m187' && github.head_ref != 'feature/m189-physical-evidence-after-m188' && github.head_ref != 'integration/sqlcipher-home-widget-binding-20261024' && github.head_ref != 'qa/m201-encrypted-route-migration-receipt-acceptance-20261024' && github.head_ref != 'fix/rtl-ltr-fab-receipt-corner-20261024' && github.head_ref != 'feature/m190-signed-apk-preflight-after-m201-ui-20261024' && github.head_ref != 'qa/m202-binder-after-m190-20261024' && github.head_ref != 'security/m207-legacy-sms-notes-fail-closed-20261024' && github.head_ref != 'integration/m208-all-approved-bundle-after-m207-20261025' && github.head_ref != 'feature/m210-encrypted-sms-note-integrity-20261025' && github.head_ref != 'feature/m211-native-lease-encrypted-staging-20261025' && github.head_ref != 'feature/m212-parallel-sqlcipher-route-recovery-physical-apk-20261025' && github.head_ref != 'feature/m213-authoritative-widget-balance-route-20261025' && github.head_ref != 'feature/m214-verified-profile-sqlcipher-staging-20261025' && github.head_ref != 'feature/m215-verified-encrypted-profile-read-20261025' && github.head_ref != 'security/m216-pin-os-secure-stage-20261025' && github.head_ref != 'feature/m217-live-account-write-source-guard-20261025' && github.head_ref != 'feature/m218-owner-bound-encrypted-account-mutations-20261025' && github.head_ref != 'feature/m219-android-keystore-owner-proof-20261025' && github.head_ref != 'fix/m220-sms-partial-save-review-20261025' && github.head_ref != 'feature/m221-approved-financial-ui-20261025' && github.head_ref != 'feature/m222-world-gold-prices-20261025' && github.head_ref != 'feature/m222-gold-fx-release-notes-20261025' && github.head_ref != 'merge/m206-ui-main-reconciled-20261026' && github.head_ref != 'integration/m227-gold-currency-encrypted-sms-main-20261026' && github.head_ref != 'feature/m259-approved-markets-oil-accordion-refresh-20261026' && github.head_ref != 'fix/m260-oil-source-gold-button-spacing-20261026' && github.head_ref != 'fix/m261-official-eia-keyless-oil-fallback-20261026' && github.head_ref != 'integration/m263-markets-sms-notes-main-candidate-20261026' && github.head_ref != 'integration/m265-prices-sms-haptics-final-20261026' && github.head_ref != 'qa/sqlcipher-cutover-readiness-20261027' && github.head_ref != 'qa/m267-exact-sha-two-android-identity-20261027' && github.head_ref != 'feature/m268-all-ten-smart-finance-illustrations-today-20261027'
+      - name: Match current main and review scope
         env:
           REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: python3 scripts/m147_main_merge_readiness_audit.py
-      - name: M268 additive ten-feature Today+illustrations no-cutover review
-        if: github.head_ref == 'feature/m268-all-ten-smart-finance-illustrations-today-20261027'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m268_scope_review.py
-      - name: M267 two-phone signed APK exact-main scope (NO FINANCE RELEASE)
-        if: github.head_ref == 'qa/m267-exact-sha-two-android-identity-20261027'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m267_main_scope_review.py
-      - name: M266 exact-main scoped Widget fail-closed + Android source QA review (NO CUTOVER)
-        if: github.head_ref == 'qa/sqlcipher-cutover-readiness-20261027'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m266_main_scope_review.py
-      - name: M265 final combined same SHA energy notes and app-wide vibration gate
-        if: github.head_ref == 'integration/m265-prices-sms-haptics-final-20261026'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m265_combined_pr_main_gate.py
-      - name: M263 exact-main combined official oil and encrypted bank SMS notes scope
-        if: github.head_ref == 'integration/m263-markets-sms-notes-main-candidate-20261026'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m263_market_sms_combined_main_scope_review.py
-      - name: M261 official EIA keyless daily source exact-main no-finance scope
-        if: github.head_ref == 'fix/m261-official-eia-keyless-oil-fallback-20261026'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m261_keyless_eia_scope_review.py
-      - name: M260 exact-main action alignment and oil quote error safety scope
-        if: github.head_ref == 'fix/m260-oil-source-gold-button-spacing-20261026'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m260_action_layout_market_scope_review.py
-      - name: M259 exact-main currency gold oil + pull-refresh UI safety scope
-        if: github.head_ref == 'feature/m259-approved-markets-oil-accordion-refresh-20261026'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m259_market_scroll_main_scope_review.py
-      - name: M226 M206 conflict-resolution exact-main + SMS safety scope (QA only)
-        if: github.head_ref == 'merge/m206-ui-main-reconciled-20261026'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m226_m206_main_reconciliation_review.py
-      - name: M227 exact-main gold, nominal currency and encrypted original SMS acceptance
-        if: github.head_ref == 'integration/m227-gold-currency-encrypted-sms-main-20261026'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m227_gold_currency_original_sms_main_review.py
-      - name: M174 SHA-pinned additive QA-only scope review
-        if: github.head_ref == 'qa/m174-main-sha-postmerge-20261024'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m174_main_scope_review.py
-      - name: M175 exact intent route diff and permanent NO-GO review
-        if: github.head_ref == 'feature/m175-explicit-finance-intent-routes'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m175_finance_intent_scope_review.py
-      - name: M176 strict module finance route scope and NO-GO review
-        if: github.head_ref == 'feature/m176-module-finance-route-intents'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m176_module_intent_scope_review.py
-      - name: M177 exact SHA live authority scope and permanent NO-GO
-        if: github.head_ref == 'feature/m177-live-finance-authority-completion'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m177_live_finance_authority_review.py
-      - name: M178 exact SHA restore and receipt parity scope (NOT production)
-        if: github.head_ref == 'feature/m178-restore-receipt-parity-preflight'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m178_restore_receipt_scope_review.py
-      - name: M179 same-SHA source-aware encrypted recurring scalar scope (NO-GO)
-        if: github.head_ref == 'feature/m179-encrypted-recurring-scalar-main'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m179_recurring_scalar_scope_review.py
-      - name: M180 exact-SHA encrypted custom goals scope (release NO-GO)
-        if: github.head_ref == 'feature/m180-encrypted-custom-goal-suggestions-main'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m180_encrypted_custom_goals_scope.py
-      - name: M181 exact-SHA multi-route SQLCipher candidate scope, still NO-GO
-        if: github.head_ref == 'feature/m181-sqlcipher-route-coverage-main'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m181_live_route_scope_review.py
-      - name: M182 SHA-pinned encrypted recurring payment and no-go review
-        if: github.head_ref == 'feature/m182-encrypted-recurring-paid-main'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m182_recurring_atomic_scope_review.py
-      - name: M183 SHA-pinned SQLCipher transaction and receipt recycle NO-GO
-        if: github.head_ref == 'feature/m183-verified-transaction-home-main'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m183_transaction_recycle_scope_review.py
-      - name: M184 exact-SHA expired invoice recycle and two-clock guard (NO-GO)
-        if: github.head_ref == 'feature/m184-encrypted-recycle-expiry-main'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m184_transaction_expiry_scope_review.py
-      - name: M185 exact SHA SQLCipher category goal recurring trash (NO-GO)
-        if: github.head_ref == 'feature/m185-encrypted-module-recycle-after-m184'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m185_module_recycle_scope_review.py
-      - name: M186 SHA-pinned Home module trash authority and UI (NO-GO)
-        if: github.head_ref == 'feature/m186-verified-module-trash-after-m184'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m186_module_home_route_review.py
-      - name: M187 SHA-pinned isolated active restore candidate (NO-GO)
-        if: github.head_ref == 'feature/m187-active-source-restore-after-m186'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m187_active_restore_scope_review.py
-      - name: M188 exact-SHA encrypted reset after M187 review (NO-GO)
-        if: github.head_ref == 'feature/m188-full-reset-after-m187'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m188_full_finance_reset_scope_review.py
-      - name: M189 SHA-pinned two-physical-Android probe scope (still NO-GO)
-        if: github.head_ref == 'feature/m189-physical-evidence-after-m188'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          python3 scripts/qa/m189_physical_scope_review.py
-          python3 scripts/qa/m189_physical_device_source_probe.py --check-contract
-          python3 -m unittest discover -s test/qa -p 'm189_physical_device_source_probe_test.py'
-      - name: SQLCipher Home/Widget existing-source binding, exact-SHA NO-GO review
-        if: github.head_ref == 'integration/sqlcipher-home-widget-binding-20261024'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/sqlcipher_home_widget_binding_scope_review.py
-      - name: M201 exact-SHA finance route, migration, receipt and hardware NO-GO review
-        if: github.head_ref == 'qa/m201-encrypted-route-migration-receipt-acceptance-20261024'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m201_finance_acceptance_scope_review.py
-      - name: Approved Arabic-left English-right FAB and receipt-corner exact-SHA review
-        if: github.head_ref == 'fix/rtl-ltr-fab-receipt-corner-20261024'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/waffra_directional_fab_receipt_scope_review.py
-      - name: M190 SHA-pinned independently signed APK preflight (still NO-GO)
-        if: github.head_ref == 'feature/m190-signed-apk-preflight-after-m201-ui-20261024'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          git fetch --no-tags origin main
+          python3 scripts/qa/m268_scope_review.py
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Strict new-code analyzer and baseline-compatible whole-app analysis
         run: |
-          python3 scripts/qa/m190_signed_apk_scope_review.py
-          python3 -m unittest discover -s test/qa -p 'm190_signed_apk_preflight_test.py'
-      - name: M202 Android SQLCipher binder exact-SHA emulator-only NO-GO review
-        if: github.head_ref == 'qa/m202-binder-after-m190-20261024'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m202_source_binder_scope_review.py
-      - name: M207 SHA-pinned plaintext SMS notes fail-closed scope (release NO-GO)
-        if: github.head_ref == 'security/m207-legacy-sms-notes-fail-closed-20261024'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m207_legacy_sms_notes_scope_review.py
-      - name: M208 SHA-pinned 27-file bundle review (Flutter/ARM64 in separate required jobs)
-        if: github.head_ref == 'integration/m208-all-approved-bundle-after-m207-20261025'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m206_ui_sms_scope_review.py
-      - name: M210 SHA-pinned encrypted SMS original-note atomic parity (NO-GO)
-        if: github.head_ref == 'feature/m210-encrypted-sms-note-integrity-20261025'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m210_encrypted_sms_notes_scope_review.py
-      - name: M211 exact-SHA native-locked SQLCipher migration staging (NO-GO)
-        if: github.head_ref == 'feature/m211-native-lease-encrypted-staging-20261025'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m211_native_locked_migration_scope.py
-      - name: M212 SHA-pinned 24-route, crash-recovery and APK release-note review
-        if: github.head_ref == 'feature/m212-parallel-sqlcipher-route-recovery-physical-apk-20261025'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          dart analyze lib/waffra_smart_features.dart lib/waffra_search.dart \
+            lib/waffra_balance_art.dart \
+            lib/waffra_footer.dart lib/waffra_today_picker.dart \
+            test/m268_smart_features_ten_calendar_art_test.dart \
+            test/waffra_search_normalization_test.dart \
+            test/m268_approved_emerald_balance_card_test.dart
+          flutter analyze --no-fatal-infos --no-fatal-warnings
+      - name: Deterministic no-finance-write tools and UI test
         run: |
-          python3 scripts/qa/m212_parallel_cutover_scope_review.py
-          python3 scripts/qa/m189_physical_device_source_probe.py --check-contract
-          python3 -m unittest discover -s test/qa -p 'm189_physical_device_source_probe_test.py'
-      - name: M213 SHA-pinned widget route and native writer-order QA (NO-GO)
-        if: github.head_ref == 'feature/m213-authoritative-widget-balance-route-20261025'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m213_authoritative_widget_balance_scope_review.py
-      - name: M214 SHA-pinned encrypted personal profile staging (NO-GO)
-        if: github.head_ref == 'feature/m214-verified-profile-sqlcipher-staging-20261025'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m214_account_profile_scope_review.py
-      - name: M215 SHA-pinned encrypted account candidate read (NO-GO)
-        if: github.head_ref == 'feature/m215-verified-encrypted-profile-read-20261025'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m215_encrypted_account_profile_read_scope_review.py
-      - name: M216 SHA-pinned OS-protected PIN verifier stage (NO-GO)
-        if: github.head_ref == 'security/m216-pin-os-secure-stage-20261025'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m216_pin_os_secure_scope_review.py
-      - name: M217 SHA-pinned live account Home/Widget source writer (NO-GO)
-        if: github.head_ref == 'feature/m217-live-account-write-source-guard-20261025'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m217_live_account_write_scope_review.py
-      - name: M218 SHA-pinned SQLCipher account principal/CAS contract (NO-GO)
-        if: github.head_ref == 'feature/m218-owner-bound-encrypted-account-mutations-20261025'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m218_account_owner_mutation_scope_review.py
-      - name: M219 SHA-pinned native Android Keystore account proof (NO-GO)
-        if: github.head_ref == 'feature/m219-android-keystore-owner-proof-20261025'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m219_android_keystore_owner_scope_review.py
-      - name: M220 SHA-pinned bulk SMS partial-save and privacy review (NO-GO)
-        if: github.head_ref == 'fix/m220-sms-partial-save-review-20261025'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m220_sms_partial_import_review.py
-      - name: M221 SHA-pinned approved financial UI scope (NO-GO)
-        if: github.head_ref == 'feature/m221-approved-financial-ui-20261025'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m221_approved_financial_ui_scope_review.py
-      - name: M222 SHA-pinned live gold section and privacy scope (NO-GO)
-        if: github.head_ref == 'feature/m222-world-gold-prices-20261025'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m222_live_global_gold_scope_review.py
-      - name: M222 Gold FX and release-notes exact-head extension
-        if: github.head_ref == 'feature/m222-gold-fx-release-notes-20261025'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/qa/m222_gold_scope_review.py
-      - name: M161 guarded experimental integration review (not release approval)
-        if: github.head_ref == 'integration/m160-reconcile-main-m158-release-gate-20261023'
-        env:
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-          REVIEW_HEAD_REF: ${{ github.head_ref }}
-        run: python3 scripts/m161_main_reconciliation_review.py
-      - name: Upload non-authorizing review report
+          flutter test --reporter expanded test/m268_smart_features_ten_calendar_art_test.dart
+          flutter test --reporter expanded test/m268_approved_emerald_balance_card_test.dart
+          flutter test --reporter expanded test/waffra_search_normalization_test.dart
+          flutter test --reporter expanded \
+            test/m227_gold_currency_original_sms_home_test.dart \
+            test/waffra_m208_bundle_regression_test.dart
+      - name: Preserve security and existing date/UI regressions
+        run: |
+          flutter test --reporter expanded \
+            test/waffra_approved_ui_batch_test.dart \
+            test/m264_app_wide_action_haptics_test.dart \
+            test/waffra_financial_insights_test.dart \
+            test/storage/m201_24_route_no_false_production_proof_test.dart
+      - name: Prove production cutover remains disabled
+        run: |
+          grep -F 'bool get automaticallyActivateSqlCipher => false;' lib/storage/waffra_production_cutover_release_gate.dart
+          grep -F 'all_live_writers_not_yet_routed' lib/storage/waffra_production_finance_source_guard.dart
+      - name: Attach reviewed no-go report without financial content
         uses: actions/upload-artifact@v4
         with:
-          name: m147-main-scope-review
+          name: m268-additive-planning-illustrations-no-go
           path: build/m147-final-review-report.json
-          if-no-files-found: error
-
-  full-flutter-regression:
-    needs: review-exact-main-diff
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout exactly reviewed head
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - name: Install Flutter with cached SDK
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-      - name: Resolve Dart packages
-        run: flutter pub get
-      - name: Run complete Flutter test suite, not only changed tests
-        run: flutter test
-
-  android-arm64-compilation:
-    needs: review-exact-main-diff
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout exactly reviewed head
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-      - name: Set up Flutter SDK
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-      - name: Resolve dependencies
-        run: flutter pub get
-      - name: Create Android project (CI only)
-        run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
-      # Flutter plugins (including the JNI-backed Android path provider) need
-      # an Android host project at pub resolution time. The earlier PR preview
-      # called pub get before flutter create, silently producing an APK without
-      # libdartjni.so; the app then failed to start on a physical phone.
-      - name: Re-resolve plugins after generating Android host
-        run: flutter pub get
-      - name: Install the approved Waffra launcher artwork
-        run: dart run flutter_launcher_icons
-      - name: Enable local notification Java API desugaring for generated Android host
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          gradle=Path('android/app/build.gradle.kts')
-          if not gradle.exists():
-              raise SystemExit('Generated Android Kotlin Gradle configuration missing')
-          source=gradle.read_text()
-          marker='compileOptions {'
-          if marker not in source:
-              raise SystemExit('Cannot find compileOptions for Java desugaring')
-          if 'isCoreLibraryDesugaringEnabled = true' not in source:
-              source=source.replace(marker,marker+'\n        isCoreLibraryDesugaringEnabled = true',1)
-          dependency='coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")'
-          if dependency not in source:
-              source+='\n// Required by flutter_local_notifications\ndependencies {\n    '+dependency+'\n}\n'
-          gradle.write_text(source)
-          assert 'isCoreLibraryDesugaringEnabled = true' in source
-          assert dependency in source
-          print('PASS: generated QA Android host matches main release desugaring')
-          PY
-      - name: M219 compile real native Keystore owner channel with Flutter
-        if: github.head_ref == 'feature/m219-android-keystore-owner-proof-20261025'
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          files=list(Path('android/app/src/main/kotlin').rglob('MainActivity.kt'))
-          if len(files)!=1:
-              raise SystemExit('Expected single generated Kotlin MainActivity')
-          original=files[0].read_text()
-          match=re.search(r'^package\s+[\w.]+', original, re.MULTILINE)
-          if not match:
-              raise SystemExit('Missing generated MainActivity Kotlin package')
-          template=Path('native/WaffraMainActivity.kt').read_text()
-          if 'FirebaseAuth.getInstance().currentUser' not in template or 'waffra/account_owner' not in template:
-              raise SystemExit('Missing M219 Android owner proof')
-          # Match the generated QA app namespace so the test APK can launch.
-          # The actual release workflow separately binds the signed package.
-          template=re.sub(r'^package\s+[\w.]+', match.group(0),
-                          template, count=1, flags=re.MULTILINE)
-          files[0].write_text(template)
-          # The isolated QA compilation checks the native owner channel.
-          # Widget UI resources belong to the full signed build workflow;
-          # this isolated stub prevents unrelated widget resources from
-          # hiding native owner channel compiler errors.
-          files[0].with_name('WaffraWidget.kt').write_text(
-              match.group(0) + '\n' +
-              'class WaffraWidget {\n' +
-              '  companion object { fun updateAll(context: android.content.Context) {} }\n' +
-              '}\n'
-          )
-          gradle=Path('android/app/build.gradle.kts')
-          kotlin=gradle.read_text()
-          if 'com.google.firebase:firebase-auth' not in kotlin:
-              kotlin += '''
-          dependencies {
-              implementation(platform("com.google.firebase:firebase-bom:34.0.0"))
-              implementation("com.google.firebase:firebase-auth")
-          }
-          '''
-              gradle.write_text(kotlin)
-          PY
-      # Flutter integration_test is a dev dependency. Generated Android host
-      # metadata sometimes leaves a debug-only Java plugin registrar that
-      # cannot compile against the release classpath. Match the main release
-      # workflow, removing ONLY that test registration (not real plugins).
-      - name: Remove debug-only integration test plugin from release registrar
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          path=Path('android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java')
-          if not path.exists():
-              print('Generated Java plugin registrant not present')
-          else:
-              text=path.read_text()
-              statement='flutterEngine.getPlugins().add(new dev.flutter.plugins.integration_test.IntegrationTestPlugin());'
-              if statement in text:
-                  text=text.replace(statement,
-                      '// integration_test is debug/test-only and not on release classpath.')
-                  path.write_text(text)
-                  print('Excluded only test plugin from generated release registrar')
-              elif 'dev.flutter.plugins.integration_test.IntegrationTestPlugin()' in text:
-                  raise SystemExit('Unexpected integration_test registrar form')
-              else:
-                  print('No debug-only integration_test registrar')
-          PY
-      - name: Compile ARM64 release-mode APK (limited unsigned-app-identity preview)
-        run: flutter build apk --release --no-pub --target-platform android-arm64 --dart-define=WAFFRA_COMPILE_ONLY_PREVIEW=true
-      # Do not publish a compile-only preview with missing native bindings:
-      # libdartjni is used by transitive Android plugins on real devices, and
-      # sqlite3mc is required for Waffra's guarded encrypted storage.
-      - name: Refuse APK missing native runtime libraries
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          import os
-          import re
-          import subprocess
-          from pathlib import Path
-          from zipfile import ZipFile
-          apk=Path('build/app/outputs/flutter-apk/app-release.apk')
-          if not apk.is_file():
-              raise SystemExit('QA APK not generated')
-          # AndroidManifest.xml is compiled binary XML: raw ASCII substring
-          # checks reject otherwise valid packages. Ask Android build-tools
-          # for the *parsed* application ID instead, and fail closed if absent.
-          sdk=os.environ.get('ANDROID_HOME') or os.environ.get('ANDROID_SDK_ROOT')
-          if not sdk:
-              raise SystemExit('QA STARTUP BLOCKED: Android SDK path unavailable')
-          aapt_candidates=sorted((Path(sdk)/'build-tools').glob('*/aapt'))
-          if not aapt_candidates:
-              raise SystemExit('QA STARTUP BLOCKED: Android aapt unavailable')
-          result=subprocess.run([str(aapt_candidates[-1]),'dump','badging',str(apk)],
-                                capture_output=True,text=True,check=True)
-          package=re.search(r"^package:\s+name='([^']+)'",result.stdout,re.MULTILINE)
-          if package is None or package.group(1)!='com.waffra.waffra':
-              raise SystemExit('QA preview identity mismatch: expected com.waffra.waffra; got '+
-                               (package.group(1) if package else '<unreadable>'))
-          with ZipFile(apk) as archive:
-              contents=set(archive.namelist())
-              required={'lib/arm64-v8a/'+item for item in
-                        ('libapp.so','libflutter.so','libdartjni.so','libsqlite3mc.so')}
-              missing=required-contents
-              if missing:
-                  raise SystemExit('QA STARTUP BLOCKED: missing JNI/native libraries: '+
-                                   ', '.join(sorted(missing)))
-              for item in sorted(required):
-                  meta=archive.getinfo(item)
-                  if meta.file_size < 4096:
-                      raise SystemExit('QA STARTUP BLOCKED: invalid native ELF: '+item)
-                  with archive.open(item) as stream:
-                      if stream.read(4)!=bytes((0x7f,69,76,70)):
-                          raise SystemExit('QA STARTUP BLOCKED: not an ELF: '+item)
-          print('PASS: ARM64 JNI, SQLCipher, Flutter and Dart native ELF bundled')
-          PY
-      # PREVIEW appId is not the Firebase-registered com.waffra.app, and this
-      # workflow does not have production signing credentials or native Widget
-      # parity. Do not represent this artifact as full-feature device QA.
-      - name: Label unsigned-identity offline UI preview limitations
-        shell: bash
-        run: |
-          cat > build/WAFFRA_PREVIEW_LIMITATIONS.txt <<'TXT'
-          Waffra M268 — COMPILE-ONLY UI PREVIEW
-          Application ID: com.waffra.waffra (not registered with Firebase)
-          Google authentication: NOT SUPPORTED in this preview.
-          Native widget / share-to-Waffra / OS notification boot receivers:
-            NOT PRESENT in the generated Android host.
-          Release certificate: NOT the Firebase-registered app certificate.
-          Local preview data is separate from the installed production app.
-          Preview for illustrations, calendars and offline planning tools only.
-          Do not uninstall an existing Waffra installation or delete user data.
-          Require a complete signed, exact-main APK for real device sign-in QA.
-          SQLCipher financial production cutover is NOT authorized.
-          TXT
-      - name: Attach unapproved-for-production APK for device QA
-        uses: actions/upload-artifact@v4
-        with:
-          name: m147-arm64-ci-review-apk-not-production-signed
-          path: |
-            build/app/outputs/flutter-apk/app-release.apk
-            build/WAFFRA_PREVIEW_LIMITATIONS.txt
           if-no-files-found: error
