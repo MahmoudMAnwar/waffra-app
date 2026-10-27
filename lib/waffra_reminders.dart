@@ -46,6 +46,12 @@ class WaffraReminders {
   return await _plugin.resolvePlatformSpecificImplementation<
    AndroidFlutterLocalNotificationsPlugin>()?.requestNotificationsPermission()??false;
  }
+ static Future<bool> alreadyPermitted()async{
+  if(!Platform.isAndroid)return false;
+  await initialize();
+  return await _plugin.resolvePlatformSpecificImplementation<
+   AndroidFlutterLocalNotificationsPlugin>()?.areNotificationsEnabled()??false;
+ }
 
  static int stableId(String id,int monthOffset){
   var hash=0;
