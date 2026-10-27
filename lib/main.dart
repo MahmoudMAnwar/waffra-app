@@ -639,6 +639,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  Future<void> load()async {
   try {
    final p=await SharedPreferences.getInstance().timeout(const Duration(seconds:15));
+   await const WaffraProductionFinanceSourceGuard()
+    .requireSafeLegacyStartup(preferences:p);
+   await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p);
    // Nonfinancial preference only. Rotate once per cold start; retries do not
    // advance the greeting again or bypass the finance source guard.
    if(!_greetingCycleInitialized){
@@ -647,9 +650,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     try{await p.setInt('waffra_greeting_cycle_v1',_greetingCycle);}
     catch(e){debugPrint('Greeting preference persistence unavailable: $e');}
    }
-   await const WaffraProductionFinanceSourceGuard()
-    .requireSafeLegacyStartup(preferences:p);
-   await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p);
+
    Person? u;
    try{final raw=p.getString('waffra_profile');if(raw!=null)u=Person.fromJson(Map<String,dynamic>.from(jsonDecode(raw)));}catch(e){debugPrint('Profile loading: $e');}
    // Screenshot settings are best-effort and must never block application startup.
