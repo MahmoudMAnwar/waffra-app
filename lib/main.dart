@@ -2340,8 +2340,8 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
   required this.balance,required this.english,this.focusKey,
   required this.refreshVerifiedWidgetBalance,this.monthlyChangePercent,
  });
- @override double get minExtent=>145;
- @override double get maxExtent=>165;
+ @override double get minExtent=>130;
+ @override double get maxExtent=>148;
  @override Widget build(BuildContext context,double shrinkOffset,bool overlapsContent){
   final progress=(shrinkOffset/(maxExtent-minExtent)).clamp(0.0,1.0);
   final dark=Theme.of(context).brightness==Brightness.dark;
@@ -2376,7 +2376,7 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
        child:DecoratedBox(decoration:BoxDecoration(
         color:const Color(0xFF4CCF92).withValues(alpha:.07),
         shape:BoxShape.circle))),
-      Positioned(right:0,bottom:-6,width:154,height:148,
+      Positioned(right:0,bottom:-6,width:145,height:137,
        child:IgnorePointer(child:const WaffraBalanceIllustration())),
       Positioned.fill(child:IgnorePointer(child:CustomPaint(
        painter:WaffraBalanceWavePainter(waveColor)))),
