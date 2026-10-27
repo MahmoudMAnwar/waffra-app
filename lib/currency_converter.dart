@@ -5,6 +5,7 @@ import 'waffra_amount_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'waffra_i18n.dart';
+import 'waffra_search.dart';
 import 'waffra_gold_market_section.dart';
 import 'waffra_gold_calculator.dart';
 import 'waffra_market_accordion.dart';
@@ -139,8 +140,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
    final picked=await showDialog<String>(context:context,builder:(dialogContext)=>
     StatefulBuilder(builder:(dialogContext,refresh){
      final listed=currencies.keys.where((code){
-      final text='${currencyEnglish[code]} ${currencies[code]} $code'.toLowerCase();
-      return text.contains(query.toLowerCase());
+      return waffraSearchAny([currencyEnglish[code]??'',currencies[code]??'',code],query);
      }).toList();
      return AlertDialog(
       title:WaffraText(source?(waffraIsEnglish?'From currency':'من عملة'):
