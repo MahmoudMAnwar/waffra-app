@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'waffra_haptic_feedback.dart';
 import 'waffra_today_picker.dart';
 import 'waffra_smart_features.dart';
+import 'waffra_i18n.dart';
+import 'waffra_riyal_symbol.dart';
 /// Read-only financial tools; no bank connection or external data access.
 class WaffraCalendarItem {
   final DateTime date;
@@ -45,7 +47,7 @@ class _WaffraFinancialCalendarState extends State<WaffraFinancialCalendar> {
       style:TextStyle(fontWeight:FontWeight.bold,color:dark?Colors.white:income?incomeInk:expenseInk))),
    ]),
    const SizedBox(height:7),
-   FittedBox(fit:BoxFit.scaleDown,child:Text(
+   FittedBox(fit:BoxFit.scaleDown,child:WaffraText(
     '${amount.toStringAsFixed(2)} ${widget.english?'SAR':'ريال'}',
     textDirection:TextDirection.ltr,
     style:TextStyle(fontWeight:FontWeight.w800,fontSize:18,
@@ -83,8 +85,8 @@ class _WaffraFinancialCalendarState extends State<WaffraFinancialCalendar> {
        textDirection:TextDirection.ltr,
        style:TextStyle(fontSize:17,fontWeight:FontWeight.bold,
         color:dark?Colors.white:ink))),
-      Text(widget.english?'SAR':'ريال',
-       style:TextStyle(fontSize:11,color:dark?Colors.white70:ink)),
+      WaffraCurrencyMark(english:widget.english,
+       size:13,color:dark?Colors.white70:ink),
      ])),
    ]),
   );
@@ -300,7 +302,7 @@ class _WaffraSubscriptionScreenState extends State<WaffraSubscriptionScreen> {
      Text(candidate.payments.toString()+t(' similar payments',' مدفوعات متشابهة'),
       style:TextStyle(fontSize:11,color:Theme.of(context).hintColor)),
     ])),
-    Text('~'+money(candidate.estimatedMonthly),textDirection:TextDirection.ltr,
+    WaffraText('~'+money(candidate.estimatedMonthly),textDirection:TextDirection.ltr,
      style:const TextStyle(color:green,fontSize:12,fontWeight:FontWeight.w800)),
    ]),
    const SizedBox(height:12),
@@ -335,7 +337,7 @@ class _WaffraSubscriptionScreenState extends State<WaffraSubscriptionScreen> {
    Expanded(child:Text(item.title,maxLines:2,overflow:TextOverflow.ellipsis,
     style:const TextStyle(fontWeight:FontWeight.bold))),
    const SizedBox(width:5),
-   Text(money(item.amount),textDirection:TextDirection.ltr,
+   WaffraText(money(item.amount),textDirection:TextDirection.ltr,
     style:const TextStyle(color:green,fontWeight:FontWeight.w800)),
   ])));
 
@@ -371,14 +373,14 @@ class _WaffraSubscriptionScreenState extends State<WaffraSubscriptionScreen> {
       Row(children:[
        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         Text(t('Monthly','شهريًا'),style:const TextStyle(color:Color(0xFFC5E6D9))),
-        Text(money(monthly),textDirection:TextDirection.ltr,
+        WaffraText(money(monthly),textDirection:TextDirection.ltr,
          style:const TextStyle(color:Colors.white,fontSize:19,fontWeight:FontWeight.w800)),
        ])),
        Container(height:47,width:1,color:Colors.white24),
        const SizedBox(width:12),
        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         Text(t('Annual estimate','التقدير السنوي'),style:const TextStyle(color:Color(0xFFC5E6D9))),
-        Text(money(monthly*12),textDirection:TextDirection.ltr,
+        WaffraText(money(monthly*12),textDirection:TextDirection.ltr,
          style:const TextStyle(color:Colors.white,fontSize:19,fontWeight:FontWeight.w800)),
        ])),
       ]),
