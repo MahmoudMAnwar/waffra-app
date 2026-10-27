@@ -33,6 +33,9 @@ void main() {
     expect(source.contains('WaffraFooterNavigation('),isTrue);
     final footerSource=File('lib/waffra_footer.dart').readAsStringSync();
     expect(footerSource.contains('static const itemCount=5'),isTrue);
+    expect(footerSource.contains("'الأدوات','الأهداف','المتكررة'"),isTrue);
+    expect(source.contains("Key('waffra-header-account-entry')"),isTrue);
+    expect(source.contains('Widget profilePage()'),isTrue);
 
     // Keep the floating add action, but not the duplicate dashboard shortcut.
     expect(source.contains('floatingActionButton:'), isTrue);
@@ -75,7 +78,8 @@ void main() {
         ])),
       ));
       // WaffraText exposes both the translation wrapper and its nested Text.
-      expect(find.text('رصيدك الحالي'), findsWidgets);
+      expect(find.text('إجمالي رصيدك'), findsWidgets);
+      expect(find.byKey(const Key('waffra-approved-emerald-balance-card')),findsOneWidget);
       expect(find.byIcon(Icons.visibility_outlined), findsOneWidget);
       expect(tester.takeException(), isNull);
     });

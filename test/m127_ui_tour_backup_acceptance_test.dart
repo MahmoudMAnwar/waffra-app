@@ -5,12 +5,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
 
 void main() {
-  test('four finance destinations share one language-aware circular action', () {
+  test('four finance action destinations share one language-aware circular action', () {
     final source=File('lib/main.dart').readAsStringSync();
     expect(source,contains('floatingActionButtonLocation:WaffraDirectionalFabLocation(english:waffraIsEnglish)'));
-    expect(source,contains('floatingActionButton:!ready||tab==4?null:SizedBox('));
-    expect(source,contains('if(goalsOpened||tab==2){unawaited(_launchAddAction(()=>goalDialog()));return;}'));
-    expect(source,contains('if(tab==3){unawaited(_launchAddAction(()=>recurringDialog()));return;}'));
+    expect(source,contains('floatingActionButton:!ready||accountOpened||tab==2?null:SizedBox('));
+    expect(source,contains('if(goalsOpened||tab==3){unawaited(_launchAddAction(()=>goalDialog()));return;}'));
+    expect(source,contains('if(tab==4){unawaited(_launchAddAction(()=>recurringDialog()));return;}'));
     expect(source,contains('key:_tourKeys[1],'));
     expect(source.contains('onTap:()=>setState(()=>addFabExpanded=!addFabExpanded)'),
         isFalse);

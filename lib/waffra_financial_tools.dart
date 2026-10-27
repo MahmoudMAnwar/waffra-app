@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'waffra_haptic_feedback.dart';
+import 'waffra_today_picker.dart';
+import 'waffra_smart_features.dart';
 /// Read-only financial tools; no bank connection or external data access.
 class WaffraCalendarItem {
   final DateTime date;
@@ -60,10 +62,8 @@ class _WaffraFinancialCalendarState extends State<WaffraFinancialCalendar> {
      (item.income?const Color(0xFFB2D5C2):const Color(0xFFFCECE8)),
     borderRadius:BorderRadius.circular(18)),
    child:Row(children:[
-    CircleAvatar(radius:20,backgroundColor:ink.withValues(alpha:.12),
-     child:Icon(item.scheduled?Icons.repeat:
-      item.income?Icons.south_west:Icons.north_east,
-      color:dark?Colors.white:ink,size:22)),
+    WaffraIllustration(topic:item.scheduled?'subscriptions':
+       item.income?'income':'expense',size:40),
     const SizedBox(width:10),
     Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
      Text(item.title,maxLines:3,overflow:TextOverflow.ellipsis,
@@ -121,6 +121,18 @@ class _WaffraFinancialCalendarState extends State<WaffraFinancialCalendar> {
        IconButton(tooltip:widget.english?'Next month':'الشهر التالي',
         icon:Icon(Icons.chevron_right,color:ink),onPressed:WaffraHaptics.tap(()=>moveMonth(1))),
       ]),
+      AnimatedSize(duration:const Duration(milliseconds:230),
+       curve:Curves.easeOutCubic,
+       child:waffraCalendarIsToday(selected)?const SizedBox.shrink():
+        Padding(padding:const EdgeInsets.only(top:4,bottom:8),
+         child:Align(alignment:AlignmentDirectional.centerEnd,
+          child:FilledButton.tonalIcon(
+           key:const Key('waffra-financial-calendar-today'),
+           onPressed:WaffraHaptics.tap(()=>setState(()=>
+            selected=DateUtils.dateOnly(DateTime.now()))),
+           icon:const Icon(Icons.today_rounded,size:18),
+           label:Text(widget.english?'Today':'اليوم',
+             style:const TextStyle(fontFamily:'Tajawal',fontWeight:FontWeight.w700)))))),
       if(month.isNotEmpty)...[
        const SizedBox(height:9),
        Row(children:[
@@ -178,7 +190,7 @@ class _WaffraFinancialCalendarState extends State<WaffraFinancialCalendar> {
       border:Border.all(color:green.withValues(alpha:.10))),
      child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
       Row(children:[
-       Icon(Icons.event_note_outlined,color:dark?Colors.white:green),
+       WaffraIllustration(topic:'calendar',size:33),
        const SizedBox(width:7),
        Expanded(child:Text(widget.english?'Transactions on this day':'معاملات هذا اليوم',
         style:TextStyle(fontSize:16,fontWeight:FontWeight.bold,color:ink))),

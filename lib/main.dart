@@ -15,6 +15,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'waffra_financial_tools.dart';
+import 'waffra_smart_features.dart';
+import 'waffra_today_picker.dart';
 import 'waffra_action_layout.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -24,6 +26,8 @@ import 'package:crypto/crypto.dart';
 import 'waffra_biometrics.dart';
 import 'waffra_amount_formatter.dart';
 import 'waffra_display_currency.dart';
+import 'waffra_search.dart';
+import 'waffra_balance_art.dart';
 import 'waffra_validators.dart';
 import 'waffra_financial_insights.dart';
 import 'waffra_reminders.dart';
@@ -80,6 +84,14 @@ Future<Map<String,dynamic>> waffraDecodeBackupInIsolate(Map<String,String> reque
 
 Future<String> waffraEncryptBackupInIsolate(Map<String,String> request) =>
  WaffraSecureBackup.encryptUserBackup(request['payload']!,request['password']!);
+
+// CI compile-only preview is NOT a Firebase-registered Waffra Android build.
+// Never imply that its Google sign-in can authenticate a production user.
+const bool waffraCompileOnlyQaPreview =
+ bool.fromEnvironment('WAFFRA_COMPILE_ONLY_PREVIEW',defaultValue:false);
+String waffraGooglePreviewNotice(bool english)=>english
+ ?'Google sign-in requires the Firebase-registered, release-signed Waffra build. Use local guest mode to review this preview.'
+ :'دخول جوجل يحتاج نسخة وفرة الموقعة والمسجلة في Firebase. جرّب المميزات محليًا بدون تسجيل دخول في نسخة المعاينة.';
 
 Future<void> main()async {
  WidgetsFlutterBinding.ensureInitialized();
@@ -1424,6 +1436,10 @@ class _LoginScreenState extends State<LoginScreen> {
  }
  Future<void> continueLastLogin()async{
   if(lastMethod=='Google'){
+   if(waffraCompileOnlyQaPreview){
+    if(mounted)snack(context,waffraGooglePreviewNotice(waffraIsEnglish));
+    return;
+   }
    if(socialBusy)return;
    setState(()=>socialBusy=true);
    try{
@@ -1509,6 +1525,10 @@ class _LoginScreenState extends State<LoginScreen> {
   if(!mounted||choice==null)return;
   if(choice=='Phone'){setState(()=>provider='Phone');return;}
   if(choice=='Google'){
+   if(waffraCompileOnlyQaPreview){
+    if(mounted)snack(context,waffraGooglePreviewNotice(waffraIsEnglish));
+    return;
+   }
    if(socialBusy)return;
    setState(()=>socialBusy=true);
    try{
@@ -1808,7 +1828,7 @@ class _ProfileFormState extends State<ProfileForm> {
     onChanged:WaffraHaptics.selection((v){if(v!=null)setState((){gender=v;if(!avatar.startsWith('https://'))avatar=v=='أنثى'?'female':'male';});})),
    const SizedBox(height:12),
    OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async {
-    final d=await showDatePicker(context:context,initialDate:birthday,firstDate:DateTime(1900),lastDate:DateTime.now());
+    final d=await waffraPickDateWithToday(english:waffraIsEnglish,context:context,initialDate:birthday,firstDate:DateTime(1900),lastDate:DateTime.now());
     if(d!=null)setState(()=>birthday=d);
    }),icon:const Icon(Icons.calendar_month),label:WaffraText('${waffraIsEnglish?'Date of birth':'تاريخ الميلاد'}: ${dayText(birthday)}')),
    const SizedBox(height:20),
@@ -2308,65 +2328,117 @@ class WaffraCurrencyAmount extends StatelessWidget {
 }
 // Collapse the balance as the user scrolls, then let it scroll AWAY
 // with the rest of the home page. It is intentionally not pinned.
+/// Home balance cover: approved dark-emerald plant-and-coins design.
+/// Visual only: the value and hide toggle remain bound to verified Home data.
 class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
  final double balance;
  final bool english;
  final GlobalKey? focusKey;
+ final double? monthlyChangePercent;
  final Future<void> Function() refreshVerifiedWidgetBalance;
  const WaffraBalanceHeader({
   required this.balance,required this.english,this.focusKey,
-  required this.refreshVerifiedWidgetBalance,
+  required this.refreshVerifiedWidgetBalance,this.monthlyChangePercent,
  });
- @override double get minExtent=>70;
- @override double get maxExtent=>86;
+ @override double get minExtent=>130;
+ @override double get maxExtent=>148;
  @override Widget build(BuildContext context,double shrinkOffset,bool overlapsContent){
   final progress=(shrinkOffset/(maxExtent-minExtent)).clamp(0.0,1.0);
   final dark=Theme.of(context).brightness==Brightness.dark;
-  final mainColor=dark?Colors.white:forest;
+  final waveColor=Theme.of(context).scaffoldBackgroundColor;
+  final compare=monthlyChangePercent;
+  final validCompare=compare!=null&&compare.isFinite;
+  final comparisonValue=validCompare?compare!:0.0;
   return Container(
    key:focusKey,
-   color:Theme.of(context).scaffoldBackgroundColor,
-   padding:const EdgeInsets.fromLTRB(14,0,14,5),
+   color:waveColor,
+   padding:const EdgeInsets.fromLTRB(14,0,14,4),
    child:Container(
-    padding:EdgeInsets.symmetric(horizontal:15,vertical:5-2*progress),
+    key:const Key('waffra-approved-emerald-balance-card'),
     decoration:BoxDecoration(
-     color:Theme.of(context).cardColor,
-     border:Border.all(color:dark?const Color(0xFF303C34):const Color(0xFFDCEBE2)),
-     boxShadow:dark?null:[BoxShadow(color:forest.withValues(alpha:.045),
-      blurRadius:12,offset:const Offset(0,3))],
-     borderRadius:BorderRadius.circular(19-3*progress)),
-    child:Row(children:[
-     Expanded(child:Column(
-      mainAxisSize:MainAxisSize.min,
-      crossAxisAlignment:CrossAxisAlignment.start,
-      children:[
-       WaffraText(english?'Current balance':'رصيدك الحالي',
-        style:TextStyle(fontSize:12-1*progress,color:dark?Colors.white70:forest,
-         fontWeight:FontWeight.w600)),
-       const SizedBox(height:1),
-       FittedBox(fit:BoxFit.scaleDown,alignment:AlignmentDirectional.centerStart,
-        child:WaffraCurrencyAmount(balance,fontSize:23-3*progress,color:mainColor)),
-      ])),
-     ValueListenableBuilder<bool>(valueListenable:hideWaffraAmounts,
-      builder:(ctx,hidden,_)=>IconButton(
-       tooltip:hidden?(english?'Show amounts':'إظهار المبالغ'):
-        (english?'Hide amounts':'إخفاء المبالغ'),
-       onPressed:WaffraHaptics.tap(()async{
-        final conceal=!hidden;
-        hideWaffraAmounts.value=conceal;
-        final p=await SharedPreferences.getInstance();
-        await p.setBool('waffra_hide_amounts',conceal);
-        // Never push the in-memory header balance into the Android widget:
-        // a parallel Widget engine may have committed a newer transaction.
-        await refreshVerifiedWidgetBalance();
-       }),
-       visualDensity:VisualDensity.compact,
-       icon:Icon(hidden?Icons.visibility_off_outlined:Icons.visibility_outlined,
-        color:mainColor,size:22))),
-    ]),
+     borderRadius:BorderRadius.circular(23),
+     gradient:const LinearGradient(
+      begin:Alignment.topLeft,end:Alignment.bottomRight,
+      colors:[Color(0xFF167F5A),Color(0xFF07533E),Color(0xFF00392F)],
+      stops:[0,.54,1]),
+     border:Border.all(color:const Color(0xFF73CF9A).withValues(alpha:.38)),
+     boxShadow:[BoxShadow(color:const Color(0xFF063B2D).withValues(alpha:dark ? 0.25 : 0.17),
+      blurRadius:15,offset:const Offset(0,5))]),
+    child:ClipRRect(
+     borderRadius:BorderRadius.circular(22),
+     child:Stack(fit:StackFit.expand,children:[
+      Positioned(
+       left:-45,top:-84,width:205,height:175,
+       child:DecoratedBox(decoration:BoxDecoration(
+        border:Border.all(color:const Color(0xFF94EDBC).withValues(alpha:.11)),
+        borderRadius:BorderRadius.circular(120)))),
+      Positioned(right:-35,top:-95,width:185,height:175,
+       child:DecoratedBox(decoration:BoxDecoration(
+        color:const Color(0xFF4CCF92).withValues(alpha:.07),
+        shape:BoxShape.circle))),
+      Positioned(right:0,bottom:-6,width:145,height:137,
+       child:IgnorePointer(child:const WaffraBalanceIllustration())),
+      Positioned.fill(child:IgnorePointer(child:CustomPaint(
+       painter:WaffraBalanceWavePainter(waveColor)))),
+      Positioned(left:7,top:10,
+       child:ValueListenableBuilder<bool>(
+        valueListenable:hideWaffraAmounts,
+        builder:(ctx,hidden,_)=>IconButton(
+         key:const Key('waffra-balance-privacy-eye'),
+         tooltip:hidden?(english?'Show amounts':'إظهار المبالغ'):
+          (english?'Hide amounts':'إخفاء المبالغ'),
+         onPressed:WaffraHaptics.tap(()async{
+          final conceal=!hidden;
+          hideWaffraAmounts.value=conceal;
+          final prefs=await SharedPreferences.getInstance();
+          await prefs.setBool('waffra_hide_amounts',conceal);
+          // Keep the existing verified Widget-authority refresh.
+          await refreshVerifiedWidgetBalance();
+         }),
+         icon:Icon(hidden?Icons.visibility_off_outlined:Icons.visibility_outlined,
+          size:22,color:const Color(0xFFE2FBEF))))),
+      Positioned(left:47,right:112,top:14,bottom:45,
+       child:Column(mainAxisAlignment:MainAxisAlignment.start,
+        crossAxisAlignment:CrossAxisAlignment.center,children:[
+         WaffraText(english?'Total balance':'إجمالي رصيدك',
+          maxLines:1,
+          style:const TextStyle(fontSize:14,fontWeight:FontWeight.w600,
+           color:Color(0xFFD7F1E5))),
+         const SizedBox(height:3),
+         Expanded(child:Center(child:FittedBox(
+          alignment:Alignment.center,fit:BoxFit.scaleDown,
+          child:WaffraCurrencyAmount(balance,fontSize:31-2*progress,
+           color:Colors.white,weight:FontWeight.w800)))),
+        ])),
+      if(validCompare)Positioned(left:18,bottom:14,
+       child:Column(crossAxisAlignment:CrossAxisAlignment.start,
+        mainAxisSize:MainAxisSize.min,children:[
+         Container(
+          key:const Key('waffra-balance-month-comparison'),
+          padding:const EdgeInsets.symmetric(horizontal:9,vertical:4),
+          decoration:BoxDecoration(
+           color:(comparisonValue>=0?const Color(0xFF1BAC70):const Color(0xFFAA403C))
+            .withValues(alpha:.92),
+           borderRadius:BorderRadius.circular(17)),
+          child:Row(mainAxisSize:MainAxisSize.min,children:[
+           Icon(comparisonValue>=0?Icons.trending_up_rounded:Icons.trending_down_rounded,
+            size:13,color:Colors.white),
+           const SizedBox(width:4),
+           Text('${comparisonValue>=0?'+':''}${comparisonValue.toStringAsFixed(0)}%',
+            style:const TextStyle(color:Colors.white,fontSize:12,
+             fontWeight:FontWeight.w800)),
+          ])),
+         const SizedBox(height:3),
+         Text(english?'Compared with last month':'مقارنة بالشهر الماضي',
+          style:const TextStyle(fontFamily:'Tajawal',
+           fontSize:10,color:Color(0xFFD3F2E0))),
+        ])),
+     ])),
    ),
   );
  }
+ // The cover also depends on inherited light/dark theme and its background.
+ // Preserve the old delegate's rebuild semantics on theme/locale changes.
  @override bool shouldRebuild(covariant WaffraBalanceHeader oldDelegate)=>true;
 }
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
@@ -2456,7 +2528,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  bool tourActive=false;
  bool tourTargetReady=false;
  int tourStep=0;
- static const tourTabs=<int>[0,0,0,1,2,3];
+ static const tourTabs=<int>[0,0,0,1,3,4];
  static const tourTargetKeys=<int>[-1,0,1,2,6,4];
  bool addFabExpanded=false;
  bool _addActionOpening=false;
@@ -2479,9 +2551,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   _lastFabTapAt=now;
   return true;
  }
+ // Account settings open from the app bar instead of a footer destination.
+ bool accountOpened=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
  @override void initState(){super.initState();_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:()=>unawaited(_syncWidgetTransactions()));unawaited(_loadFinanceSafely());}
- void _returnToHome(){if(mounted)setState((){tab=0;goalsOpened=false;addFabExpanded=false;});}
+ void _returnToHome(){if(mounted)setState((){tab=0;accountOpened=false;goalsOpened=false;addFabExpanded=false;});}
  void _receiveWidgetAction(){
   if(!mounted||!ready||waffraWidgetAction.value!='add')return;
   waffraWidgetAction.value=null;
@@ -3016,7 +3090,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      await persist(route:WaffraFinanceRoute.recurringPostingAndPostponement,
       userConfirmed:true);
     }else if(action=='postpone'){
-     final selected=await showDatePicker(context:context,initialDate:today.add(const Duration(days:1)),
+     final selected=await waffraPickDateWithToday(english:waffraIsEnglish,context:context,initialDate:today.add(const Duration(days:1)),
       firstDate:DateTime(today.year,today.month,today.day).add(const Duration(days:1)),
       lastDate:DateTime(today.year+3,12,31));
      if(selected!=null){recurringPostponed[id]=selected.toIso8601String();
@@ -3855,7 +3929,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       }),icon:const Icon(Icons.add),
        label:WaffraText(waffraIsEnglish?'New subcategory':'قسم فرعي جديد')),
       OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async {
-       final d=await showDatePicker(context:sheetContext,initialDate:date,
+       final d=await waffraPickDateWithToday(english:waffraIsEnglish,context:sheetContext,initialDate:date,
         firstDate:DateTime(2000),lastDate:DateTime.now());
        if(d!=null)update(()=>date=d);
       }),icon:const Icon(Icons.calendar_month),label:WaffraText(dayText(date))),
@@ -4007,10 +4081,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   return showWaffraDialog<String>(context:ctx,builder:(dialogCtx)=>StatefulBuilder(builder:(dialogCtx,refresh){
    final filtered=options.where((item){
     final label=leafLabels?item.displayName:item.name;
-    final text=query.trim().toLowerCase();
-    return label.toLowerCase().contains(text)||
-     waffraTr(label).toLowerCase().contains(text)||
-     waffraTr(item.name).toLowerCase().contains(text);
+    return waffraSearchAny([label,waffraTr(label),waffraTr(item.name)],query);
    }).toList();
    return AlertDialog(title:WaffraText(waffraIsEnglish?'Search categories':'بحث في الأقسام'),
     content:SizedBox(width:360,height:min(420.0,MediaQuery.sizeOf(dialogCtx).height*.55),child:Column(children:[
@@ -5407,7 +5478,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     Padding(padding:const EdgeInsets.fromLTRB(11,12,11,12),child:Row(children:[
      CircleAvatar(radius:18,
       backgroundColor:Color(cat.color).withValues(alpha:0.13),
-      child:Icon(categoryIcon(cat.icon),size:19,color:Color(cat.color))),
+      child:WaffraIllustration(topic:cat.icon,size:36)),
      const SizedBox(width:8),
      Expanded(child:InkWell(onTap:WaffraHaptics.tap(()=>transactionDetails(entry)),
       child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -5434,9 +5505,20 @@ Future<void> bulkSmsSheet({String? initialText})async {
  }
  Widget dashboard(){
   final inc=sum(entries,true),exp=sum(entries,false);
+  // Show the month comparison only when there are genuine prior-month
+  // transactions and a positive comparison base. Never show a fake +12%.
+  final nowBalanceDate=DateTime.now();
+  final monthStart=DateTime(nowBalanceDate.year,nowBalanceDate.month);
+  final priorMonthStart=DateTime(nowBalanceDate.year,nowBalanceDate.month-1);
+  final hasPreviousMonthEntries=entries.any((e)=>
+   !e.date.isBefore(priorMonthStart)&&e.date.isBefore(monthStart));
+  final previousClosingBalance=entries.where((e)=>e.date.isBefore(monthStart))
+   .fold<double>(0,(total,e)=>total+(e.income?e.amount:-e.amount));
+  final monthChange=hasPreviousMonthEntries&&previousClosingBalance>0
+   ?((inc-exp-previousClosingBalance)/previousClosingBalance)*100:null;
   final visible=entries.where((e){
-   final q=search.trim().toLowerCase();
-   return(e.title.toLowerCase().contains(q)||e.category.toLowerCase().contains(q))&&
+   final q=search.trim();
+   return(waffraSearchAny([e.title,e.category,waffraTr(e.category)],q))&&
     (transactionsDateRange==null||(e.date.isAfter(transactionsDateRange!.start.subtract(const Duration(days:1)))&&e.date.isBefore(transactionsDateRange!.end.add(const Duration(days:1)))))&&
     (minTransactionAmount==null||e.amount>=minTransactionAmount!)&&
     (maxTransactionAmount==null||e.amount<=maxTransactionAmount!)&&
@@ -5474,6 +5556,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        pinned:false,
        delegate:WaffraBalanceHeader(
          balance:inc-exp,english:waffraIsEnglish,focusKey:_tourKeys[0],
+         monthlyChangePercent:monthChange,
          refreshVerifiedWidgetBalance:_refreshWidget)),
       SliverPadding(padding:const EdgeInsets.fromLTRB(14,10,14,96),
        sliver:SliverToBoxAdapter(child:Column(
@@ -5486,47 +5569,6 @@ Future<void> bulkSmsSheet({String? initialText})async {
            exp,Icons.north_east,const Color(0xFFB94838),waffraExpenseBackground),
          ]),
          const SizedBox(height:15),
-          smartAnalysisEntryCard(),
-          const SizedBox(height:12),
-          // Explicit Home entry: the global-gold market cannot remain hidden
-          // behind collapsed Account settings. True FX is only in this tool.
-          InkWell(
-           key:const Key('waffra-home-gold-currency-entry'),
-           borderRadius:BorderRadius.circular(21),
-           onTap:WaffraHaptics.tap(()=>Navigator.of(context).push<void>(MaterialPageRoute(
-            builder:(_)=>const CurrencyConverterPage()))),
-           child:Container(
-            padding:const EdgeInsets.symmetric(horizontal:15,vertical:13),
-            decoration:BoxDecoration(
-             gradient:const LinearGradient(
-              colors:[Color(0xFF073F31),Color(0xFF126749)]),
-             borderRadius:BorderRadius.circular(21),
-             border:Border.all(color:const Color(0xFFD4AF37).withValues(alpha:.65))),
-            child:Row(children:[
-             Container(
-              width:48,height:48,
-              decoration:BoxDecoration(
-               color:const Color(0xFFFFE1A0).withValues(alpha:.16),
-               borderRadius:BorderRadius.circular(15)),
-              child:const Icon(Icons.workspace_premium_rounded,
-               color:Color(0xFFFFD36A),size:29)),
-             const SizedBox(width:11),
-             Expanded(child:Column(
-              crossAxisAlignment:CrossAxisAlignment.start,children:[
-               WaffraText(waffraIsEnglish?'Global gold & currency converter':
-                'الذهب العالمي وتحويل العملات',
-                style:const TextStyle(fontSize:16,fontWeight:FontWeight.w800,
-                 color:Colors.white)),
-               const SizedBox(height:3),
-               WaffraText(waffraIsEnglish?'Live 24K / 22K / 21K, gold bars & FX':
-                'عيار ٢٤ و٢٢ و٢١ والسبائك وأسعار الصرف',
-                style:const TextStyle(fontSize:11,color:Color(0xFFFFE1A0))),
-              ])),
-             const Icon(Icons.chevron_right_rounded,
-              color:Color(0xFFFFD36A),size:24),
-            ])),
-          ),
-          const SizedBox(height:15),
          WaffraText(waffraIsEnglish?'Quick actions':'إجراءات سريعة',
           style:const TextStyle(fontSize:17,fontWeight:FontWeight.bold)),
          const SizedBox(height:8),
@@ -5543,8 +5585,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
          const SizedBox(height:12),
          monthlySummaryCard(),
          const SizedBox(height:12),
-         smartMoneyInsightsCard(),
-         const SizedBox(height:12),
+
          Container(
           padding:const EdgeInsets.all(12),
           decoration:BoxDecoration(
@@ -6511,7 +6552,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       });
      }),child:WaffraText(waffraIsEnglish?'View transactions':'عرض المعاملات المرتبطة'))
      else TextButton(onPressed:WaffraHaptics.tap((){
-      Navigator.pop(ctx);setState((){tab=3;goalsOpened=false;addFabExpanded=false;});
+      Navigator.pop(ctx);setState((){tab=4;goalsOpened=false;addFabExpanded=false;});
      }),child:WaffraText(waffraIsEnglish?'View recurring':'عرض العمليات المتكررة')),
     ]));
    return;
@@ -6708,9 +6749,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
         builder:(pickCtx){
          String query='';
          return StatefulBuilder(builder:(pickCtx,refresh){
-          final search=waffraNormalizeGoal(query);
           final matches=suggested.where(
-           (item)=>search.isEmpty||waffraNormalizeGoal(item).contains(search)).toList();
+           (item)=>waffraSearchMatches(item,query)).toList();
           return AlertDialog(
            title:WaffraText(waffraIsEnglish?'Choose savings goal':'اختر هدف الادخار'),
            content:SizedBox(
@@ -7228,8 +7268,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       side:const BorderSide(color:Color(0xFFCFDFD5),width:1)),
      child:Padding(padding:const EdgeInsets.all(15),child:Column(children:[
       Row(children:[
-       CircleAvatar(radius:22,backgroundColor:shade.withValues(alpha:.14),
-        child:Icon(goalIcon(g.name),color:shade)),
+       WaffraIllustration(topic:g.name,size:44),
        const SizedBox(width:10),
        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         WaffraText(g.name,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:16)),
@@ -7282,7 +7321,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     child:Column(children:[
      Container(width:105,height:105,decoration:BoxDecoration(
       color:emerald.withValues(alpha:.10),borderRadius:BorderRadius.circular(54)),
-      child:const Icon(Icons.account_balance_wallet_outlined,size:55,color:emerald)),
+      child:const WaffraIllustration(topic:'wallet',size:94)),
      const SizedBox(height:13),
      WaffraText(waffraIsEnglish?'No savings goals yet':'ما أضفت أي هدف ادخاري بعد',
       style:Theme.of(context).textTheme.titleLarge,textAlign:TextAlign.center),
@@ -7339,8 +7378,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
           String query='';
           return StatefulBuilder(builder:(searchCtx,refresh){
            final filtered=options.where((c)=>
-            (c.name.toLowerCase().contains(query.trim().toLowerCase())||
-             waffraTr(c.name).toLowerCase().contains(query.trim().toLowerCase()))).toList();
+            waffraSearchAny([c.name,waffraTr(c.name)],query)).toList();
            return AlertDialog(
             title:WaffraText(waffraIsEnglish?'Search categories':'البحث عن قسم'),
             content:SizedBox(
@@ -7392,7 +7430,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       ),
       const SizedBox(height:12),
       OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async{
-       final picked=await showDatePicker(context:ctx,initialDate:startAt,firstDate:DateTime.now().subtract(const Duration(days:1)),lastDate:DateTime(DateTime.now().year+5));
+       final picked=await waffraPickDateWithToday(english:waffraIsEnglish,context:ctx,initialDate:startAt,firstDate:DateTime.now().subtract(const Duration(days:1)),lastDate:DateTime(DateTime.now().year+5));
        if(picked!=null)update((){startAt=picked;day.text=picked.day.toString();});
       }),icon:const Icon(Icons.calendar_month_outlined),label:WaffraText(waffraIsEnglish?'First due: ${dayText(startAt)}':'أول استحقاق: ${dayText(startAt)}')),
       const SizedBox(height:8),
@@ -7558,7 +7596,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        final index=recurring.indexWhere((item)=>item.id==r.id);
        if(index<0)return;
        if(enabled){
-        final chosen=await showDatePicker(context:context,initialDate:DateTime.now().add(const Duration(days:1)),
+        final chosen=await waffraPickDateWithToday(english:waffraIsEnglish,context:context,initialDate:DateTime.now().add(const Duration(days:1)),
          firstDate:DateTime.now(),lastDate:DateTime(DateTime.now().year+5));
         if(chosen==null||!mounted)return;
         setState(()=>recurring[index]=r.copy(active:true,startAt:chosen,day:chosen.day));
@@ -7629,8 +7667,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
     !WaffraRecurringPolicy.dueDate(selected.year,selected.month,r.day).isBefore(DateTime(r.startAt.year,r.startAt.month,r.startAt.day))).toList();
    return AlertDialog(title:WaffraText(waffraIsEnglish?'Financial calendar':'التقويم المالي'),
     content:SizedBox(width:380,height:min(460.0,MediaQuery.sizeOf(ctx).height*.6),child:Column(children:[
-     CalendarDatePicker(initialDate:selected,firstDate:DateTime(2020),lastDate:DateTime(2100),
+     CalendarDatePicker(key:ValueKey('recurring-calendar-'+selected.toIso8601String()),initialDate:selected,firstDate:DateTime(2020),lastDate:DateTime(2100),
       onDateChanged:(date)=>refresh(()=>selected=date)),
+     if(!waffraCalendarIsToday(selected))
+      Align(alignment:AlignmentDirectional.centerEnd,child:TextButton.icon(
+       key:const Key('waffra-recurring-calendar-today'),
+       onPressed:WaffraHaptics.tap(()=>refresh(()=>selected=DateUtils.dateOnly(DateTime.now()))),
+       icon:const Icon(Icons.today_rounded,size:17),
+       label:WaffraText(waffraIsEnglish?'Today':'اليوم'))),
      const Divider(),
      Expanded(child:ListView(children:monthEvents.map((r){
       final due=WaffraRecurringPolicy.dueDate(selected.year,selected.month,r.day);
@@ -8366,6 +8410,34 @@ Future<void> bulkSmsSheet({String? initialText})async {
    DateTime(DateTime.now().year,DateTime.now().month,r.day.clamp(1,28).toInt()),
    r.title,r.amount,r.income,scheduled:true)),
  ];
+ // The third footer tab owns the tool accordion. Finance is read-only:
+ // freeze verified snapshots and never read original SMS or modify the ledger.
+ Widget _smartToolsTab(){
+  if(!ready||_financeBinding==null||_lastFinanceAuthorityRead==null){
+   return Center(child:WaffraText(waffraIsEnglish?
+    'Financial source not ready':'مصدر البيانات المالية غير جاهز'));
+  }
+  return WaffraSmartFeaturesPage(
+   key:const Key('waffra-m268-footer-page'),
+   embedded:true,english:waffraIsEnglish,
+   analysisBuilder:(_)=>Column(crossAxisAlignment:CrossAxisAlignment.stretch,
+    children:[smartAnalysisEntryCard(),const SizedBox(height:10),smartMoneyInsightsCard()]),
+   entries:List<WaffraSmartEntry>.unmodifiable(entries.map((e)=>WaffraSmartEntry(
+    id:e.id,title:e.title,category:e.category,amount:e.amount,
+    income:e.income,date:e.date))),
+   goals:List<WaffraSmartGoal>.unmodifiable(goals.map((g)=>
+    WaffraSmartGoal(g.name,g.target,g.saved))),
+   recurring:List<WaffraSmartRecurring>.unmodifiable(recurring.where((r)=>r.active).map((r)=>
+    WaffraSmartRecurring(r.title,r.amount,r.day,r.income))),
+  );
+ }
+ void openSmartFeatures(){
+  if(!ready||_financeBinding==null||_lastFinanceAuthorityRead==null){
+   snack(context,waffraIsEnglish?'Financial source not ready':'مصدر البيانات المالية غير جاهز');
+   return;
+  }
+  unawaited(selectFooter(2));
+ }
  void openFinancialCalendar()=>Navigator.push<void>(context,MaterialPageRoute(
   builder:(_)=>WaffraFinancialCalendar(items:financialCalendarItems,english:waffraIsEnglish)));
  void openSubscriptionInsights()=>Navigator.push<void>(context,MaterialPageRoute(
@@ -8380,8 +8452,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
    final chosen=await showWaffraDialog<String>(
     context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update){
      final visible=waffraCountryCurrencies.where((country)=>
-      ('${country.countryAr} ${country.countryEn} ${country.nameAr} ${country.nameEn} ${country.code}')
-       .toLowerCase().contains(query.toLowerCase())).toList();
+      waffraSearchAny([country.countryAr,country.countryEn,country.nameAr,
+       country.nameEn,country.code],query)).toList();
      return AlertDialog(
       title:WaffraText(waffraIsEnglish?'Application currency':'العملة الأساسية للتطبيق'),
       content:SizedBox(width:420,height:410,child:Column(children:[
@@ -8465,7 +8537,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     ])),
    const SizedBox(height:13),
    TextField(key:const Key('waffra-account-settings-search'),onChanged:(value){
-    final q=value.trim().toLowerCase();
+    final q=value.trim();
     final groups=<String,String>{
      waffraIsEnglish?'App settings':'إعدادات التطبيق':'language theme appearance system dark light currency exchange بلد دولة عملة جنيه مصري مصر SAR EGP المظهر اللغة الحركة animation',
      waffraIsEnglish?'Security & privacy':'الأمان والخصوصية':'privacy biometric fingerprint حماية بصمة قفل إخفاء PIN screenshots المعاينة',
@@ -8474,7 +8546,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      waffraIsEnglish?'Help & about':'المساعدة وعن وفرة':'tour help about وفرة الجولة المساعدة',
     };
     String? match;
-    if(q.isNotEmpty){for(final item in groups.entries){if(('${item.key} ${item.value}').toLowerCase().contains(q)){match=item.key;break;}}}
+    if(q.isNotEmpty){for(final item in groups.entries){if(waffraSearchAny([item.key,item.value],q)){match=item.key;break;}}}
     setState((){accountSearch=q;_accountOpenSection=match;});
    },decoration:InputDecoration(prefixIcon:const Icon(Icons.search,color:emerald),
     hintText:waffraIsEnglish?'Find a setting':'ابحث داخل إعدادات حسابي')),
@@ -8547,12 +8619,6 @@ Future<void> bulkSmsSheet({String? initialText})async {
        }:null))),
    ]),
    _accountSection(waffraIsEnglish?'Financial tools':'الأدوات المالية',Icons.account_balance_wallet_outlined,[
-    _accountTile(waffraIsEnglish?'Currency converter & global gold prices':
-       'محوّل العملات وأسعار الذهب العالمية',
-     waffraIsEnglish?'Search, exchange and swap currencies':'ابحث وحوّل وبدّل بين العملات',
-     Icons.currency_exchange,onTap:WaffraHaptics.tap(()=>Navigator.push<void>(context,MaterialPageRoute(
-      builder:(_)=>const CurrencyConverterPage())))),
-
     _accountTile(waffraIsEnglish?'Financial calendar':'التقويم المالي',
      waffraIsEnglish?'Transactions and recurring dates':'المعاملات ومواعيد العمليات المتكررة',
      Icons.calendar_month_outlined,onTap:WaffraHaptics.tap(openFinancialCalendar)),
@@ -8628,11 +8694,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
       fontSize:15,fontWeight:FontWeight.bold,color:Theme.of(context).brightness==Brightness.dark?Colors.white:forest)),
     ]))));
  Widget currentTab(){
-  if(tab>0&&tab<4){
+  if(accountOpened)return profilePage();
+  if(tab==1||tab==3||tab==4){
    return RefreshIndicator(
     onRefresh:()=>_refreshAndSettle(
      tab==1?_categoryScrollController:
-     tab==2?_goalsScrollController:_recurringScrollController,tab),
+     tab==3?_goalsScrollController:_recurringScrollController,tab),
     child:ScrollConfiguration(
      behavior:ScrollConfiguration.of(context).copyWith(
       physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
@@ -8645,29 +8712,40 @@ Future<void> bulkSmsSheet({String? initialText})async {
   switch(tab){
    case 0:return goalsOpened?goalsPage():dashboard();
    case 1:return categoriesPage();
-   case 2:return goalsPage();
-   case 3:return recurringPage();
-   default:return profilePage();
+   case 2:return _smartToolsTab();
+   case 3:return goalsPage();
+   case 4:return recurringPage();
+   default:return dashboard();
   }
  }
  void _swipeBetweenSections(DragEndDetails details){
-  if(!ready||goalsOpened||tourActive)return;
+  if(!ready||goalsOpened||accountOpened||tourActive)return;
   final velocity=details.primaryVelocity??0;
   final dx=_swipeTravel.abs()>50?_swipeTravel:velocity/10;
   if(dx.abs()<65)return;
   final forward=waffraIsEnglish?dx>0:dx<0;
-  final target=(tab+(forward?1:-1)).clamp(0,4);
+  final target=(tab+(forward?1:-1)).clamp(0,WaffraFooterNavigation.itemCount-1);
   if(target!=tab)unawaited(selectFooter(target));
  }
  Future<void> selectFooter(int target)async {
   if(target<0||target>=WaffraFooterNavigation.itemCount)return;
-  if(mounted)setState((){tab=target;goalsOpened=false;addFabExpanded=false;_headerCompact=false;});
+  if(mounted)setState((){tab=target;accountOpened=false;goalsOpened=false;addFabExpanded=false;_headerCompact=false;});
  }
- @override Widget build(BuildContext context)=>Stack(children:[Scaffold(
+ @override Widget build(BuildContext context)=>PopScope(
+  canPop:!accountOpened,
+  onPopInvokedWithResult:(didPop,result){
+   if(!didPop&&accountOpened&&mounted)setState(()=>accountOpened=false);
+  },
+  child:Stack(children:[Scaffold(
   appBar:AppBar(
    toolbarHeight:_headerCompact?52:64,
    flexibleSpace:const ColoredBox(color:forest),
-   leading:goalsOpened?IconButton(tooltip:waffraIsEnglish?'Back to home':'العودة للرئيسية',
+   leading:accountOpened?IconButton(
+    key:const Key('waffra-account-header-back'),
+    tooltip:waffraIsEnglish?'Back to previous tab':'العودة للتبويب السابق',
+    icon:const Icon(Icons.arrow_back_rounded),
+    onPressed:WaffraHaptics.tap(()=>setState(()=>accountOpened=false))):
+    goalsOpened?IconButton(tooltip:waffraIsEnglish?'Back to home':'العودة للرئيسية',
     icon:const Icon(Icons.arrow_back),onPressed:WaffraHaptics.tap(()=>setState(()=>goalsOpened=false))):null,
    titleSpacing:12,
    title:Row(mainAxisSize:MainAxisSize.min,children:[
@@ -8692,13 +8770,22 @@ Future<void> bulkSmsSheet({String? initialText})async {
       child:Text(waffraIsEnglish?'AR':'EN',
        style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold)))),
     const SizedBox(width:7),
-    SizedBox(width:45,height:kToolbarHeight,
-     child:Center(child:InkWell(
-      onTap:WaffraHaptics.tap(()=>setState((){
-       addFabExpanded=false;goalsOpened=false;tab=4;
-      })),
-      borderRadius:BorderRadius.circular(30),
-      child:waffraAvatar(widget.profile.gender,widget.profile.avatar,radius:18)))),
+    Tooltip(message:waffraIsEnglish?'My account and settings':'حسابي والإعدادات',
+     child:Semantics(label:waffraIsEnglish?'Open account settings':'فتح إعدادات الحساب',
+      button:true,child:InkWell(
+       key:const Key('waffra-header-account-entry'),
+       onTap:WaffraHaptics.tap(()=>setState((){
+        addFabExpanded=false;goalsOpened=false;accountOpened=true;_headerCompact=false;
+       })),
+       borderRadius:BorderRadius.circular(30),
+       child:AnimatedContainer(duration:waffraMotion(260),
+        curve:Curves.easeOutCubic,padding:const EdgeInsets.all(3),
+        decoration:BoxDecoration(shape:BoxShape.circle,
+         border:Border.all(color:accountOpened?const Color(0xFF65E5AD):Colors.transparent,
+          width:2),
+         color:accountOpened?Colors.white.withValues(alpha:.13):Colors.transparent),
+        child:KeyedSubtree(key:_tourKeys[5],
+         child:waffraAvatar(widget.profile.gender,widget.profile.avatar,radius:18)))))),
     const SizedBox(width:7),
    ]),
   // Instant content swap avoids building/animating the previous heavy tab
@@ -8713,12 +8800,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
     child:ValueListenableBuilder<bool>(
      valueListenable:hideWaffraAmounts,
      builder:(context,hidden,_)=>TweenAnimationBuilder<double>(
-      key:ValueKey('waffra-page-$tab'),tween:Tween<double>(begin:0,end:1),
-      duration:waffraMotion(240),curve:Curves.easeOutCubic,
+      key:ValueKey(accountOpened?'waffra-page-account':'waffra-page-$tab'),
+      tween:Tween<double>(begin:0,end:1),
+      duration:waffraMotion(accountOpened?340:240),curve:Curves.easeOutCubic,
       builder:(ctx,progress,child)=>Opacity(opacity:progress,
-       child:Transform.translate(offset:Offset((1-progress)*(waffraIsEnglish?16:-16),0),child:child)),
+       child:Transform.translate(offset:Offset((1-progress)*(waffraIsEnglish?26:-26),0),
+        child:Transform.scale(scale:accountOpened?0.985+0.015*progress:1,child:child))),
       child:currentTab()))),
-    if(tab==0||tab==1)
+    if(!accountOpened&&(tab==0||tab==1))
      WaffraFabMenuAnchor(
       english:waffraIsEnglish,
       expanded:addFabExpanded&&!goalsOpened,
@@ -8755,7 +8844,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   // Never allow a menu width to change Scaffold's floating geometry.
   floatingActionButtonLocation:WaffraDirectionalFabLocation(english:waffraIsEnglish),
   floatingActionButtonAnimator:const WaffraStationaryFabAnimator(),
-  floatingActionButton:!ready||tab==4?null:SizedBox(
+  floatingActionButton:!ready||accountOpened||tab==2?null:SizedBox(
    width:58,height:58,
    child:
     Material(
@@ -8776,8 +8865,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
      setState(()=>_fabPressed=false);
      await Future<void>.delayed(waffraMotion(110));
      if(!mounted||tab!=tappedTab)return;
-     if(goalsOpened||tab==2){unawaited(_launchAddAction(()=>goalDialog()));return;}
-     if(tab==3){unawaited(_launchAddAction(()=>recurringDialog()));return;}
+     if(goalsOpened||tab==3){unawaited(_launchAddAction(()=>goalDialog()));return;}
+     if(tab==4){unawaited(_launchAddAction(()=>recurringDialog()));return;}
      setState(()=>addFabExpanded=!addFabExpanded);
     },
     splashFactory:NoSplash.splashFactory,
@@ -8797,7 +8886,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   // The notice reserves real layout height above the bottom footer.
   // The transaction list and the floating + reposition instead of being
   // covered by an overlay. The expanded + menu closes on feedback.
-  bottomNavigationBar:Column(mainAxisSize:MainAxisSize.min,children:[
+  bottomNavigationBar:accountOpened?null:Column(mainAxisSize:MainAxisSize.min,children:[
    WaffraFooterNoticeHost(onNoticePresented:(){
     if(mounted&&addFabExpanded)setState(()=>addFabExpanded=false);
    }),
@@ -8808,11 +8897,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
      waffraDismissFooterNotice();
      unawaited(selectFooter(selected));
     }),
-    profileSpotlightKey:_tourKeys[5],
    ),
   ])),
   if(tourActive&&tourTargetReady)Positioned.fill(child:tourOverlay()),
-  ]);
+  ]));
 }
 /// Tour focus remains tied to the same floating add button across both locales.
 /// A coach-mark scrim with a transparent focus over the current page.

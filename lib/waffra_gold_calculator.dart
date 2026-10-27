@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'waffra_amount_formatter.dart';
 import 'waffra_gold_market_data.dart';
 import 'waffra_i18n.dart';
+import 'waffra_search.dart';
 
 /// Spot quotes are USD per troy ounce (31.1034768g), NOT retail shop prices.
 class WaffraGoldMath {
@@ -147,9 +148,8 @@ class _WaffraGoldCalculatorPageState extends State<WaffraGoldCalculatorPage> {
         context: context,
         builder: (dialog) => StatefulBuilder(builder: (dialog, refresh) {
           final keys = widget.arabicCurrencies.keys.where((code) =>
-              (code + ' ' + (widget.arabicCurrencies[code] ?? '') + ' ' +
-               (widget.englishCurrencies[code] ?? ''))
-                  .toLowerCase().contains(query.toLowerCase())).toList();
+              waffraSearchAny([code,widget.arabicCurrencies[code]??'',
+                widget.englishCurrencies[code]??''],query)).toList();
           return AlertDialog(
             title: Text(t('Gold quotation currency', 'عملة تسعير الذهب')),
             content: SizedBox(width: 400, height: 400, child: Column(children: [

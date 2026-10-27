@@ -14,7 +14,7 @@ void main() {
     expect(code,contains('onRefresh:()=>_refreshAndSettle('));
     expect(code,contains('isStillVisible:()=>mounted&&ready&&_financeLoadFailure==null'));
     expect(code,contains('ScrollConfiguration.of(context).copyWith('));
-    expect(code,contains('if(tab>0&&tab<4)'));
+    expect(code,contains('if(tab==1||tab==3||tab==4)'));
     expect(code,contains('Refreshed financial data could not be verified'));
     expect(code,contains('لم تُحذف أي معاملات'));
   });

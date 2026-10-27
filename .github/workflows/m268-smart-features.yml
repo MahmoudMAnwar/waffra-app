@@ -1,0 +1,87 @@
+name: M268 Smart Planning, Today and Illustrated UX (NO CUTOVER)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'lib/main.dart'
+      - 'lib/waffra_balance_art.dart'
+      - 'test/m268_approved_emerald_balance_card_test.dart'
+      - 'lib/waffra_smart_features.dart'
+      - 'lib/waffra_today_picker.dart'
+      - 'lib/waffra_financial_tools.dart'
+      - 'lib/waffra_categories_page.part.dart'
+      - 'lib/waffra_footer.dart'
+      - 'lib/currency_converter.dart'
+      - 'lib/waffra_search.dart'
+      - 'lib/waffra_gold_calculator.dart'
+      - 'test/waffra_search_normalization_test.dart'
+      - 'test/m268_smart_features_ten_calendar_art_test.dart'
+      - 'scripts/qa/m268_scope_review.py'
+      - 'docs/release/WAFFRA_APPROVED_CHANGES.txt'
+      - '.github/workflows/m268-smart-features.yml'
+      - '.github/workflows/m147-final-main-review-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m268-additive-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ten-tools-calendar-illustrations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Exact reviewed head (never synthetic merge)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Match current main and review scope
+        env:
+          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          git fetch --no-tags origin main
+          python3 scripts/qa/m268_scope_review.py
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Strict new-code analyzer and baseline-compatible whole-app analysis
+        run: |
+          dart analyze lib/waffra_smart_features.dart lib/waffra_search.dart \
+            lib/waffra_balance_art.dart \
+            lib/waffra_footer.dart lib/waffra_today_picker.dart \
+            test/m268_smart_features_ten_calendar_art_test.dart \
+            test/waffra_search_normalization_test.dart \
+            test/m268_approved_emerald_balance_card_test.dart
+          flutter analyze --no-fatal-infos --no-fatal-warnings
+      - name: Deterministic no-finance-write tools and UI test
+        run: |
+          flutter test --reporter expanded test/m268_smart_features_ten_calendar_art_test.dart
+          flutter test --reporter expanded test/m268_approved_emerald_balance_card_test.dart
+          flutter test --reporter expanded test/waffra_search_normalization_test.dart
+          flutter test --reporter expanded \
+            test/m227_gold_currency_original_sms_home_test.dart \
+            test/waffra_m208_bundle_regression_test.dart
+      - name: Preserve security and existing date/UI regressions
+        run: |
+          flutter test --reporter expanded \
+            test/waffra_approved_ui_batch_test.dart \
+            test/m264_app_wide_action_haptics_test.dart \
+            test/waffra_financial_insights_test.dart \
+            test/storage/m201_24_route_no_false_production_proof_test.dart
+      - name: Prove production cutover remains disabled
+        run: |
+          grep -F 'bool get automaticallyActivateSqlCipher => false;' lib/storage/waffra_production_cutover_release_gate.dart
+          grep -F 'all_live_writers_not_yet_routed' lib/storage/waffra_production_finance_source_guard.dart
+      - name: Attach reviewed no-go report without financial content
+        uses: actions/upload-artifact@v4
+        with:
+          name: m268-additive-planning-illustrations-no-go
+          path: build/m147-final-review-report.json
+          if-no-files-found: error

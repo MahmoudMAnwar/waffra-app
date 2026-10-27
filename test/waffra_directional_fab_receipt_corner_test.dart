@@ -83,7 +83,7 @@ void main() {
     expect(source,contains('enum WaffraSnackKind { success, error, warning, info }'));
     expect(source,contains('class WaffraNoticeContent extends StatelessWidget'));
     expect(source,contains('class WaffraFooterNoticeHost extends StatefulWidget'));
-    expect(source,contains('bottomNavigationBar:Column(mainAxisSize:MainAxisSize.min,children:['));
+    expect(source,contains('bottomNavigationBar:accountOpened?null:Column(mainAxisSize:MainAxisSize.min,children:['));
     expect(source,contains('if(mounted&&addFabExpanded)setState(()=>addFabExpanded=false)'));
     expect(source,contains('maxLines:2,'));
     expect(source,contains('width:min(MediaQuery.sizeOf(ctx).width*0.87,440.0)'));
@@ -199,7 +199,7 @@ void main() {
     expect(source,contains('Icons.attach_file_rounded,size:10'));
   });
 
-  test('all four tab plus actions use locale switch, with no fixed-left anchor',
+  test('Home, Categories, Goals and Recurring plus actions preserve locale switch, with no fixed-left anchor',
       () {
     final source = File('lib/main.dart').readAsStringSync();
     expect(source, contains(
@@ -209,7 +209,7 @@ void main() {
       'floatingActionButtonAnimator:const WaffraStationaryFabAnimator()',
     ));
     expect(source, contains(
-      'floatingActionButton:!ready||tab==4?null:SizedBox(',
+      'floatingActionButton:!ready||accountOpened||tab==2?null:SizedBox(',
     ));
     expect(source, contains('width:58,height:58'));
     expect(source, contains('WaffraFabMenuAnchor('));
@@ -217,8 +217,8 @@ void main() {
     expect(source, isNot(contains(
       'floatingActionButton:!ready||tab==4?null:Directionality(',
     )));
-    expect(source, contains('if(goalsOpened||tab==2){unawaited(_launchAddAction(()=>goalDialog()));return;}'));
-    expect(source, contains('if(tab==3){unawaited(_launchAddAction(()=>recurringDialog()));return;}'));
+    expect(source, contains('if(goalsOpened||tab==3){unawaited(_launchAddAction(()=>goalDialog()));return;}'));
+    expect(source, contains('if(tab==4){unawaited(_launchAddAction(()=>recurringDialog()));return;}'));
     expect(source, isNot(contains('WaffraPhysicalLeftFab')));
   });
 

@@ -39,12 +39,10 @@ extension WaffraCategoryScreen on _HomeScreenState {
    final budgeted=root.budget>0||subs.any((c)=>c.budget>0);
    if(categoryDisplay=='budget'&&!budgeted)return false;
    if(categoryDisplay=='none'&&budgeted)return false;
-   final query=categorySearch.trim().toLowerCase();
-   return query.isEmpty||root.name.toLowerCase().contains(query)||
-    waffraTr(root.name).toLowerCase().contains(query)||
+   final query=categorySearch.trim();
+   return waffraSearchAny([root.name,waffraTr(root.name)],query)||
     subs.any((c)=>(!categoryMineOnly||c.isUserAdded)&&
-     (c.displayName.toLowerCase().contains(query)||
-      waffraTr(c.displayName).toLowerCase().contains(query)));
+     waffraSearchAny([c.displayName,waffraTr(c.displayName)],query));
   }).toList();
 
   Widget rootCard(BudgetCategory root){
@@ -61,8 +59,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
     })),child:Padding(padding:const EdgeInsets.all(9),
      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       Row(children:[
-       CircleAvatar(radius:19,backgroundColor:color.withValues(alpha:.14),
-        child:Icon(categoryIcon(root.icon),size:20,color:color)),
+       WaffraIllustration(topic:root.icon,size:40),
        const Spacer(),
        PopupMenuButton<String>(
         tooltip:waffraIsEnglish?'Category actions':'خيارات القسم',
@@ -114,7 +111,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
     child:InkWell(borderRadius:BorderRadius.circular(15),
      onTap:WaffraHaptics.tap(()=>updateCategory(sub)),
      child:Padding(padding:const EdgeInsets.all(10),child:Row(children:[
-      Icon(categoryIcon(sub.icon),size:17,color:color),
+      WaffraIllustration(topic:sub.icon,size:30),
       const SizedBox(width:7),
       Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
        WaffraText(sub.displayName,maxLines:2,

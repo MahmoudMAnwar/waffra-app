@@ -11,14 +11,19 @@ void main() {
     expect(WaffraDisplayCurrency.displaySelection('SAR').fromSar(1000), 1000);
   });
 
-  test('M227 gold is visible via a new direct Home shortcut', () {
+  test('M227 gold stays accessible through the new inline Tools markets accordion', () {
     final source = File('lib/main.dart').readAsStringSync();
-    expect(source, contains("Key('waffra-home-gold-currency-entry')"));
-    expect(source, contains('الذهب العالمي وتحويل العملات'));
-    expect(source, contains('builder:(_)=>const CurrencyConverterPage()'));
+    expect(source, isNot(contains("Key('waffra-home-gold-currency-entry')")));
+    expect(source, contains('case 2:return _smartToolsTab();'));
+    final tools=File('lib/waffra_smart_features.dart').readAsStringSync();
+    expect(tools, contains("'waffra-m268-feature-'+id"));
+    expect(tools, contains("'markets'"));
+    expect(tools, contains('CurrencyConverterPage(embedded:true)'));
     final converter = File('lib/currency_converter.dart').readAsStringSync();
     expect(converter, contains('محوّل العملات وأسعار الذهب العالمية'));
     expect(converter, contains('WaffraGoldMarketSection('));
+    expect(converter,contains('WaffraOilMarketSection('));
+    expect(converter,contains('waffra-inline-world-markets'));
     final gold = File('lib/waffra_gold_market_section.dart').readAsStringSync();
     expect(gold, contains('أسعار الذهب العالمية'));
     expect(gold, contains('Gold bars'));

@@ -5,6 +5,7 @@ import 'waffra_amount_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'waffra_i18n.dart';
+import 'waffra_search.dart';
 import 'waffra_gold_market_section.dart';
 import 'waffra_gold_calculator.dart';
 import 'waffra_market_accordion.dart';
@@ -27,8 +28,10 @@ const Map<String,String> waffraCurrencyFlags = <String,String>{
 String waffraCurrencyFlag(String code) => waffraCurrencyFlags[code] ?? '💱';
 
 class CurrencyConverterPage extends StatefulWidget {
- const CurrencyConverterPage({super.key,this.lastIncomeAmount});
+ const CurrencyConverterPage({super.key,this.lastIncomeAmount,this.embedded=false});
  final double? lastIncomeAmount;
+ /// Render the same three market accordions directly inside Tools.
+ final bool embedded;
  @override State<CurrencyConverterPage> createState()=>_CurrencyConverterPageState();
 }
 class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
@@ -139,8 +142,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
    final picked=await showDialog<String>(context:context,builder:(dialogContext)=>
     StatefulBuilder(builder:(dialogContext,refresh){
      final listed=currencies.keys.where((code){
-      final text='${currencyEnglish[code]} ${currencies[code]} $code'.toLowerCase();
-      return text.contains(query.toLowerCase());
+      return waffraSearchAny([currencyEnglish[code]??'',currencies[code]??'',code],query);
      }).toList();
      return AlertDialog(
       title:WaffraText(source?(waffraIsEnglish?'From currency':'من عملة'):
@@ -254,15 +256,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
   });
   if(amount.text.trim().isNotEmpty)await convert();
  }
- @override Widget build(BuildContext context)=>Scaffold(
-  appBar:AppBar(title:WaffraText(waffraIsEnglish?
-   'Currency, gold & global oil prices':
-   'محوّل العملات وأسعار الذهب العالمية والبترول',
-   style:const TextStyle(fontSize:18,fontWeight:FontWeight.w800),maxLines:2)),
-  body:RefreshIndicator(onRefresh:_pullRefresh,
-   child:ListView(controller:_marketsScroll,
-    physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
-    padding:const EdgeInsets.all(14),children:[
+ List<Widget> _marketCards()=>[
    WaffraMarketAccordionCard(
     id:'currency',key:const Key('waffra-market-currency'),
     title:waffraIsEnglish?'Currency converter':'تحويل العملات',
@@ -377,5 +371,32 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
      key:ValueKey('waffra-oil-refresh-'+_oilRefreshRevision.toString()),
      english:waffraIsEnglish)),
    const SizedBox(height:22),
-  ])));
+  ];
+ @override Widget build(BuildContext context){
+  if(widget.embedded){
+   return Column(
+    key:const Key('waffra-inline-world-markets'),
+    crossAxisAlignment:CrossAxisAlignment.stretch,
+    children:[
+     Align(alignment:AlignmentDirectional.centerEnd,
+      child:OutlinedButton.icon(
+       key:const Key('waffra-market-inline-refresh'),
+       onPressed:WaffraHaptics.tap(()=>unawaited(_pullRefresh())),
+       icon:const Icon(Icons.refresh_rounded),
+       label:WaffraText(waffraIsEnglish?'Refresh market data':'تحديث بيانات الأسواق'))),
+     const SizedBox(height:8),
+     ..._marketCards(),
+    ]);
+  }
+  return Scaffold(
+   appBar:AppBar(title:WaffraText(waffraIsEnglish?
+    'Currency, gold & global oil prices':
+    'محوّل العملات وأسعار الذهب العالمية والبترول',
+    style:const TextStyle(fontSize:18,fontWeight:FontWeight.w800),maxLines:2)),
+   body:RefreshIndicator(onRefresh:_pullRefresh,
+    child:ListView(controller:_marketsScroll,
+     physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
+     padding:const EdgeInsets.all(14),
+     children:_marketCards())));
+ }
 }
