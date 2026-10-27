@@ -84,6 +84,39 @@ jobs:
         run: flutter pub get
       - name: Generate temporary Android host for disposable UI test
         run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
+      - name: Configure Java library desugaring for Android UI emulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          app = Path('android/app/build.gradle.kts')
+          if app.is_file():
+              source = app.read_text()
+              assert 'compileOptions {' in source
+              if 'isCoreLibraryDesugaringEnabled = true' not in source:
+                  source = source.replace('compileOptions {',
+                      'compileOptions {\n        isCoreLibraryDesugaringEnabled = true', 1)
+              if 'coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")' not in source:
+                  if 'dependencies {' in source:
+                      source = source.replace('dependencies {',
+                          'dependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")', 1)
+                  else:
+                      source += '\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n'
+              app.write_text(source)
+          else:
+              app = Path('android/app/build.gradle')
+              assert app.is_file()
+              source = app.read_text()
+              assert 'compileOptions {' in source
+              if 'coreLibraryDesugaringEnabled true' not in source:
+                  source = source.replace('compileOptions {',
+                      'compileOptions {\n        coreLibraryDesugaringEnabled true', 1)
+              if 'coreLibraryDesugaring ' not in source:
+                  source += "\ndependencies { coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4' }\n"
+              app.write_text(source)
+          print('Desugaring enabled for disposable Android UI test host')
+          PY
       - name: Run real Android-engine tap sequence on emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
