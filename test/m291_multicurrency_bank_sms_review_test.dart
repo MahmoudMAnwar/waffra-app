@@ -17,6 +17,21 @@ void main() {
       'Pago realizado\nAmount: MXN 200'), {'UNKNOWN'});
   });
 
+  test('M291 POS and ATM abbreviations are not fake currencies', () {
+    expect(WaffraSmsCurrencies.currenciesForMessage(
+      'POS 84.72 SAR'), {'SAR'});
+    expect(WaffraSmsCurrencies.currenciesForMessage(
+      'ATM 300 SAR'), {'SAR'});
+    expect(BankParser.parse('POS 84.72 SAR').requiresCurrencyReview, isFalse);
+  });
+
+  test('M291 same-line balance does not hide the actual foreign amount', () {
+    final message='Card Purchase: USD 25.00; Available Balance: SAR 500';
+    expect(WaffraSmsCurrencies.currenciesForMessage(message), {'USD'});
+    expect(BankParser.parse(message).amount, isNull);
+    expect(BankParser.parse(message).requiresCurrencyReview, isTrue);
+  });
+
   test('M291 mixed currencies are grouped, never summed', () {
     final result = WaffraSmsCurrencies.summarize([
       'شراء PoS\nAmount 90 SAR',
