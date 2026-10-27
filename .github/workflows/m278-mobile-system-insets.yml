@@ -1,0 +1,122 @@
+name: M278 Android iOS Safe Area and System Bar Compatibility
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'test/m278_system_bars_responsive_matrix_test.dart'
+      - 'integration_test/m278_android_system_bars_smoke_test.dart'
+      - '.github/workflows/m278-mobile-system-insets.yml'
+      - 'lib/main.dart'
+      - 'lib/waffra_footer.dart'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m278-insets-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  responsive-matrix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact revision
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Analyze device/safe-area matrix and Android integration sources
+        run: dart analyze test/m278_system_bars_responsive_matrix_test.dart integration_test/m278_android_system_bars_smoke_test.dart
+      - name: Test 14 Android/iOS display configurations x 2 languages, 5 footer pages
+        run: flutter test --reporter expanded test/m278_system_bars_responsive_matrix_test.dart
+
+  android-actual-os-insets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Create disposable Android host for real emulator
+        run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
+      - name: Enable Android desugaring required by Flutter notifications
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('android/app/build.gradle.kts')
+          assert p.exists(), 'expected Android Kotlin Gradle app'
+          source = p.read_text()
+          if 'isCoreLibraryDesugaringEnabled = true' not in source:
+              assert 'compileOptions {' in source
+              source = source.replace('compileOptions {',
+                  'compileOptions {\n        isCoreLibraryDesugaringEnabled = true', 1)
+          if 'coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")' not in source:
+              source += '\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n'
+          p.write_text(source)
+          PY
+      - name: Enable KVM for Android emulator
+        shell: bash
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run real Android engine and system-bar transitions
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          cores: 2
+          ram-size: 2048M
+          heap-size: 512M
+          disable-animations: false
+          emulator-boot-timeout: 600
+          emulator-options: -no-window -no-audio -no-snapshot -gpu swiftshader_indirect -no-boot-anim
+          script: flutter test --reporter expanded integration_test/m278_android_system_bars_smoke_test.dart -d emulator-5554
+
+  ios-simulator-build-check:
+    runs-on: macos-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact revision
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Record Apple SDK version
+        run: xcodebuild -version
+      - name: Generate temporary iOS Runner (repo does not track one yet)
+        run: flutter create --no-pub --platforms=ios --project-name=waffra --org com.waffra .
+      - run: flutter pub get
+      - name: Re-run responsive matrix on macOS Flutter host (iOS layout emulation)
+        run: flutter test --reporter expanded test/m278_system_bars_responsive_matrix_test.dart
+      - name: Build unsigned iOS simulator app from actual native plugins
+        run: flutter build ios --simulator --debug --no-codesign

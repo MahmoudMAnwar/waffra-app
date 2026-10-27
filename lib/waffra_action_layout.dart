@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 abstract final class WaffraActionLayout {
   static const Size minimumSize = Size(0, 52);
   static const EdgeInsets contentPadding =
-      EdgeInsets.symmetric(horizontal: 18, vertical: 12);
+      EdgeInsets.symmetric(horizontal: 12, vertical: 10);
   static const BorderRadius borderRadius =
       BorderRadius.all(Radius.circular(16));
 }
