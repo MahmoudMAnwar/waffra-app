@@ -1,0 +1,106 @@
+name: M279 App-wide Security Test Matrix (QA Only)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/m279-app-security-gates.yml'
+      - 'scripts/qa/m279_app_security_gate.py'
+      - 'scripts/qa/test_m279_app_security_gate.py'
+      - 'test/m279_app_wide_security_regression_test.dart'
+      - 'firestore.rules'
+      - 'firebase.json'
+      - 'lib/waffra_secure_backup.dart'
+      - 'lib/waffra_backup_files.dart'
+      - 'lib/storage/**'
+      - 'lib/waffra_account_deletion.dart'
+      - 'native/**'
+      - 'android/**'
+      - 'test/firebase/**'
+      - 'test/storage/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m279-security-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static-security-and-mutation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact tested SHA
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - name: Compile security gates before execution
+        run: python3 -m py_compile scripts/qa/m279_app_security_gate.py scripts/qa/test_m279_app_security_gate.py
+      - name: Check Firestore policy, cloud encryption, backup, PIN and Android permissions
+        run: python3 scripts/qa/m279_app_security_gate.py
+      - name: Prove the security gate rejects hostile changes
+        run: python3 -m unittest -v scripts/qa/test_m279_app_security_gate.py
+
+  finance-secrets-encryption:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact tested SHA
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Dart static analysis for new security tests
+        run: dart analyze test/m279_app_wide_security_regression_test.dart
+      - name: Authenticated backup/cloud tampering, PIN and finance-source regression
+        run: |
+          flutter test --reporter expanded \
+            test/m279_app_wide_security_regression_test.dart \
+            test/storage/cloud_cipher_test.dart \
+            test/storage/m216_pin_os_secure_candidate_stage_test.dart \
+            test/storage/m217_live_account_write_authority_test.dart \
+            test/storage/m218_encrypted_account_owner_mutations_test.dart \
+            test/storage/m187_active_restore_preflight_test.dart \
+            test/storage/finance_read_view_test.dart
+
+  firestore-owner-permissions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact tested SHA
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: test/firebase/package.json
+      - name: Install isolated rules emulator tools; no production credentials
+        run: npm --prefix test/firebase install --no-fund
+      - name: Reject high/critical NPM dependency advisories
+        run: npm --prefix test/firebase audit --audit-level=high
+      - name: Execute multi-user Firestore deny-by-default authorization tests
+        run: |
+          ./test/firebase/node_modules/.bin/firebase emulators:exec \
+            --only firestore --project demo-waffra-rules-ci \
+            'npm --prefix test/firebase test'
