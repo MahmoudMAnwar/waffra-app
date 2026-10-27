@@ -188,7 +188,11 @@ void main() {
     expect(home, contains('await _persistSmsHashes({pendingHash!});'));
     // New single-SMS entry must NOT rely on two independent commits.
     expect(home, contains('if(pendingHash!=null&&initial==null){'));
-    expect(home, contains('final applied=await _financeAuthority.commitConfirmedSms('));
+    // Confirmation feedback wraps the SAME atomic SMS source-authorized
+    // writer; a legacy bypass or split hash/record save is still disallowed.
+    expect(home, contains(
+      "'commit-confirmed-bank-sms',()=>_financeAuthority.commitConfirmedSms("));
+    expect('_financeAuthority.commitConfirmedSms('.allMatches(home).length, 2);
     expect(home, contains('records:[Map<String,Object?>.from(result.toJson())]'));
     expect(home, contains('hashes:[pendingHash!]'));
     expect(home, contains('allowDuplicateHashes:explicitlyApprovedSmsDuplicate'));
