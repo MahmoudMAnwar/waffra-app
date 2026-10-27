@@ -238,8 +238,18 @@ void main() {
     await tester.tap(find.byKey(const Key('waffra-nav-2')));
     await tester.pumpAndSettle();
     expect(selected, 2, reason: 'An error may not trap footer navigation');
-    await tester.tap(find.descendant(
-      of: alert, matching: find.byIcon(Icons.close_rounded)));
+    final closeButton = find.ancestor(
+      of: find.descendant(
+        of: alert, matching: find.byIcon(Icons.close_rounded)),
+      matching: find.byType(IconButton),
+    );
+    expect(closeButton, findsOneWidget);
+    final closeSize = tester.getSize(closeButton);
+    expect(closeSize.width, greaterThanOrEqualTo(48),
+        reason: 'Error dismissal must have an accessible 48dp target');
+    expect(closeSize.height, greaterThanOrEqualTo(48),
+        reason: 'Error dismissal must have an accessible 48dp target');
+    await tester.tap(closeButton);
     await tester.pumpAndSettle();
     expect(notice.value, isNull);
     expect(alert, findsNothing);
