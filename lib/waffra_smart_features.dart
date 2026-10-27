@@ -187,8 +187,10 @@ class WaffraSmartFeaturesPage extends StatefulWidget{
  final List<WaffraSmartGoal> goals;
  final List<WaffraSmartRecurring> recurring;
  final bool english;
+ final bool embedded;
  const WaffraSmartFeaturesPage({super.key,required this.entries,
-  required this.goals,required this.recurring,required this.english});
+  required this.goals,required this.recurring,required this.english,
+  this.embedded=false});
  @override State<WaffraSmartFeaturesPage> createState()=>_WaffraSmartFeaturesPageState();
 }
 
@@ -528,65 +530,93 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
   }
  }
  Widget _hub(){
-  final isEnglish=widget.english;
-  final titles=isEnglish?titlesEn:titlesAr;
-  final desc=isEnglish?descEn:descAr;
-  return LayoutBuilder(builder:(ctx,limits){
-    final columns=limits.maxWidth>=520?3:2;
-    return GridView.builder(
-     shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),
-     gridDelegate:SliverGridDelegateWithFixedCrossAxisCount(
-      crossAxisCount:columns,crossAxisSpacing:10,mainAxisSpacing:10,
-      childAspectRatio:columns==3?1.02:.90),
-     itemCount:10,itemBuilder:(ctx,i)=>InkWell(
-      key:Key('waffra-m268-feature-'+types[i]),
-      borderRadius:BorderRadius.circular(20),
-      onTap:WaffraHaptics.tap(()=>setState(()=>active=i)),
-      child:Container(padding:const EdgeInsets.all(11),
-       decoration:BoxDecoration(color:Theme.of(ctx).cardColor,
-        borderRadius:BorderRadius.circular(20),
-        border:Border.all(color:green.withValues(alpha:.17))),
-       child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        WaffraIllustration(topic:types[i],size:58),
-        const SizedBox(height:10),
-        _label(titles[i],bold:true,size:14),
-        const SizedBox(height:4),
-        Flexible(child:_label(desc[i],size:11,
-          color:Theme.of(ctx).colorScheme.onSurface.withValues(alpha:.65))),
-       ])),
-      ));
+  final names=widget.english?titlesEn:titlesAr;
+  final details=widget.english?descEn:descAr;
+  final dark=Theme.of(context).brightness==Brightness.dark;
+  final reduced=MediaQuery.disableAnimationsOf(context);
+  final duration=reduced?Duration.zero:const Duration(milliseconds:330);
+  final tiles=List<Widget>.generate(types.length,(i){
+   final expanded=active==i;
+   return Padding(
+    padding:const EdgeInsets.only(bottom:10),
+    child:AnimatedContainer(
+     key:Key('waffra-m268-accordion-'+types[i]),
+     duration:duration,curve:Curves.easeInOutCubic,
+     decoration:BoxDecoration(
+      color:expanded?(dark?const Color(0xFF153C2D):const Color(0xFFE9F7ED)):
+        Theme.of(context).cardColor,
+      borderRadius:BorderRadius.circular(22),
+      border:Border.all(color:green.withValues(alpha:expanded?.48:.15),
+       width:expanded?1.6:1),
+      boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:dark?.09:.055),
+       blurRadius:expanded?17:8,offset:const Offset(0,3))]),
+     child:Column(mainAxisSize:MainAxisSize.min,children:[
+      Semantics(button:true,expanded:expanded,
+       label:names[i]+' — '+details[i],
+       child:InkWell(
+        key:Key('waffra-m268-feature-'+types[i]),
+        borderRadius:BorderRadius.circular(22),
+        onTap:WaffraHaptics.tap(()=>setState(()=>active=expanded?null:i)),
+        child:Padding(
+         padding:const EdgeInsets.symmetric(horizontal:12,vertical:11),
+         child:Row(children:[
+          WaffraIllustration(topic:types[i],size:49),
+          const SizedBox(width:12),
+          Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,
+           children:[_label(names[i],bold:true,size:15),
+            const SizedBox(height:2),_paragraph(details[i])])),
+          const SizedBox(width:5),
+          AnimatedRotation(turns:expanded?.5:0,duration:duration,
+           child:Icon(Icons.keyboard_arrow_down_rounded,
+             color:green,size:25)),
+         ])))),
+      ClipRect(child:AnimatedSize(
+       duration:duration,curve:Curves.easeInOutCubic,
+       alignment:Alignment.topCenter,
+       child:expanded?Padding(
+        key:Key('waffra-m268-expanded-'+types[i]),
+        padding:const EdgeInsets.fromLTRB(9,0,9,12),
+        child:Column(children:[
+         Divider(color:green.withValues(alpha:.23)),
+         const SizedBox(height:7),
+         _body(i),
+        ])):const SizedBox(width:double.infinity,height:0))),
+     ])));
   });
+  return ListView(
+   key:const Key('waffra-m268-tools-scroll'),
+   padding:const EdgeInsets.fromLTRB(14,16,14,30),
+   physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
+   children:[
+    Container(padding:const EdgeInsets.all(16),
+     margin:const EdgeInsets.only(bottom:15),
+     decoration:BoxDecoration(
+      gradient:LinearGradient(colors:dark?
+       [const Color(0xFF0A4838),const Color(0xFF145640)]:
+       [const Color(0xFFE1F4E8),const Color(0xFFF8F6EF)]),
+      borderRadius:BorderRadius.circular(23),
+      border:Border.all(color:green.withValues(alpha:.20))),
+     child:Row(children:[
+      const WaffraIllustration(topic:'assistant',size:62),
+      const SizedBox(width:12),
+      Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+       _label(t('أدوات وفرة الذكية','Waffra smart tools'),size:20,bold:true),
+       const SizedBox(height:3),
+       _paragraph(t('افتح أي أداة هنا؛ الباقي يفضل ظاهر تحتها.',
+        'Expand any tool here. The others stay on this page.')),
+       const SizedBox(height:3),
+       _paragraph(t('حسابات للقراءة والتجربة فقط — بدون تعديل أرصدتك.',
+        'Read-only planning. No changes to your ledger.')),
+      ]))])),
+    ...tiles,
+   ]);
  }
  @override Widget build(BuildContext context){
-  final title=active==null?t('أدوات وفرة الذكية','Waffra smart tools'):
-    (widget.english?titlesEn[active!]:titlesAr[active!]);
+  if(widget.embedded)return _hub();
   return Scaffold(
-   appBar:AppBar(title:_label(title,size:18,bold:true)),
-   body:SafeArea(child:SingleChildScrollView(
-    padding:const EdgeInsets.fromLTRB(14,15,14,25),
-    child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-     if(active!=null)...[
-      Align(alignment:AlignmentDirectional.centerStart,
-       child:TextButton(
-        onPressed:WaffraHaptics.tap(()=>setState(()=>active=null)),
-        child:_label(t('كل المميزات','All features'),color:green,bold:true))),
-      const SizedBox(height:8),
-      _body(active!),
-     ]else...[
-      _surface(Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-       _label(t('حلّل معاملاتك. خطّط براحتك.','Understand spending. Plan confidently.'),
-        size:20,bold:true),
-       const SizedBox(height:7),
-       _paragraph(t('10 أدوات برسومات واضحة، وكل الحسابات من العمليات المسجلة.',
-        '10 illustrated tools powered only by your recorded transactions.')),
-       const SizedBox(height:6),
-       _paragraph(t('لا حفظ مالي تلقائي، لا ربط بنوك، لا استخدام للرسائل الأصلية.',
-        'No automatic financial writes, bank connections or original SMS access.')),
-      ])),
-      const SizedBox(height:14),_hub(),
-     ],
-    ]))),
-  );
+   appBar:AppBar(title:_label(t('أدوات وفرة الذكية','Waffra smart tools'),
+      bold:true,size:18)),
+   body:SafeArea(child:_hub()));
  }
 }
 
