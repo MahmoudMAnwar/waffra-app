@@ -256,7 +256,8 @@ String waffraTr(String source) {
 
 /// Translates existing Text widgets without changing model/category identifiers.
 class WaffraText extends Text {
- const WaffraText(super.data,{
+ final bool? currencyEnglish;
+ const WaffraText(super.data,{this.currencyEnglish,
   super.key,super.style,super.strutStyle,super.textAlign,super.textDirection,
   super.locale,super.softWrap,super.overflow,super.textScaler,super.maxLines,
   super.semanticsLabel,super.textWidthBasis,super.textHeightBehavior,super.selectionColor,
@@ -267,7 +268,7 @@ class WaffraText extends Text {
   final effective=DefaultTextStyle.of(context).style.merge(style)
       .copyWith(fontFamily:'Tajawal');
   final spans=waffraMoneyCurrencySpans(translated,
-      english:waffraIsEnglish,style:effective);
+      english:currencyEnglish??waffraIsEnglish,style:effective);
   if(spans==null)return Text(translated,
     key:key,style:effective,strutStyle:strutStyle,
     textAlign:textAlign,textDirection:textDirection,locale:locale,
