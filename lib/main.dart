@@ -397,6 +397,11 @@ class BankResult {
  final double? amount;final bool income;final String title,category;final String? suggestedCategory;
  BankResult(this.amount,this.income,this.title,this.category,this.suggestedCategory);
 }
+/// Pure, batch-only parser used by compute() for larger SMS pastes.
+/// Results and stored bank amounts are identical to the single-message path.
+List<BankResult> waffraParseBankSmsBatchInIsolate(List<String> messages)=>
+ messages.map(BankParser.parse).toList(growable:false);
+
 class BankParser {
  static BankResult parse(String original) {
   final s=digits(original).replaceAll('\u200f','').replaceAll('\u200e','').replaceAll('\u00a0',' ');
@@ -3178,7 +3183,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final found=splitBankMessages(pasted.text.trim());
   if(found.isEmpty){update(()=>statusMessage=waffraIsEnglish?'No financial transactions found. Edit the message and retry.':'هذه الرسالة لا تحتوي على أي معاملات مالية. عدّلها لإعادة التحليل تلقائيًا.');return;}
   if(found.length>100){update(()=>statusMessage=waffraIsEnglish?'Maximum 100 transactions per paste.':'الحد الأقصى 100 معاملة في كل عملية لصق.');return;}
-  final results=found.map(BankParser.parse).toList();
+  // Batch parsing of 20-100 messages must not freeze Android animations
+  // or block text/scroll interactions on the Flutter UI isolate.
+  final results=found.length>=20
+   ?await compute(waffraParseBankSmsBatchInIsolate,found)
+   :found.map(BankParser.parse).toList(growable:false);
+  if(!ctx.mounted)return;
   final valid=<int>[],invalid=<int>[],duplicates=<int>[];
   final preRejected=<int,WaffraSmsNotSavedReason>{};
   var allowRepeatedSms=false;
