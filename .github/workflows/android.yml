@@ -1171,13 +1171,22 @@ jobs:
           test -s build/Waffra-Release-Notes.txt
           echo "✅ Waffra-Release-Notes.txt (same verified commit and APK hash)" >> "$GITHUB_STEP_SUMMARY"
 
+      # Keep existing signature, SHA and release-note checks on app-release.apk.
+      # Only the downloadable copy gets the friendly Waffra.apk filename.
+      - name: Stage verified Waffra.apk for download
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -m 0644 build/app/outputs/flutter-apk/app-release.apk build/Waffra.apk
+          cmp -s build/app/outputs/flutter-apk/app-release.apk build/Waffra.apk
+
       # Only the LAST step publishes the APK and its exact source receipt.
       - name: Publish signed QA APK (FINAL step)
         uses: actions/upload-artifact@v4
         with:
           name: Waffra-Android-ARM64-Release-${{ github.sha }}
           path: |
-            build/app/outputs/flutter-apk/app-release.apk
+            build/Waffra.apk
             build/waffra-qa-build-receipt.txt
             build/Waffra-Release-Notes.txt
           if-no-files-found: error
