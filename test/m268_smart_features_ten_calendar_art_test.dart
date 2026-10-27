@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_smart_features.dart';
 import 'package:waffra/waffra_today_picker.dart';
 import 'package:waffra/waffra_financial_tools.dart';
+import 'package:waffra/waffra_display_currency.dart';
 
 WaffraSmartEntry row(String id,String title,String category,double amount,
  int year,int month,int day,{bool income=false})=>
@@ -136,6 +137,21 @@ void main(){
    expect(sample.length,2);
    expect(waffraSmartBalance(sample),1150);
    expect(find.textContaining('Simulation only'),findsOneWidget);
+  });
+  testWidgets('smart tools honor selected nominal currency without FX',(tester)async{
+   final original=waffraSmartBalance(sample);
+   WaffraDisplayCurrency.active.value=
+    WaffraDisplayCurrency.displaySelection('EGP');
+   addTearDown(()=>WaffraDisplayCurrency.active.value=
+    WaffraDisplayCurrency.displaySelection('SAR'));
+   await tester.pumpWidget(MaterialApp(home:WaffraSmartFeaturesPage(
+    entries:sample,goals:const [],recurring:const [],english:true)));
+   await tester.tap(find.byKey(const Key('waffra-m268-feature-simulation')));
+   await tester.pumpAndSettle();
+   expect(find.text('Hypothetical purchase (EGP) — 3500'),findsOneWidget);
+   expect(find.text('-2350.00 EGP'),findsOneWidget);
+   expect(waffraSmartBalance(sample),original);
+   expect(WaffraDisplayCurrency.toLedgerSar(1000),1000);
   });
   testWidgets('illustrations work with dark theme and local direction',(tester)async{
    await tester.pumpWidget(MaterialApp(theme:ThemeData.dark(),
