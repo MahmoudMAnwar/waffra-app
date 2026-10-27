@@ -60,8 +60,22 @@ def main():
         demand("'"+topic+"'" in source,"missing feature: "+topic)
     main_text=Path("lib/main.dart").read_text()
     footer=Path("lib/waffra_footer.dart").read_text()
-    demand("static const itemCount=6" in footer,
-           "footer must contain six destinations")
+    demand("static const itemCount=5" in footer,
+           "footer must contain exactly five finance destinations")
+    demand("'حسابي'" not in footer and "'Account'" not in footer,
+           "account settings must not be a footer destination")
+    demand("waffra-header-account-entry" in main_text and
+           "accountOpened=true" in main_text and
+           "accountOpened?null:Column(" in main_text and
+           "if(accountOpened)return profilePage();" in main_text and
+           "waffra-account-header-back" in main_text and
+           "canPop:!accountOpened" in main_text,
+           "avatar must open full account settings with Android/header back")
+    demand("waffra-page-account" in main_text and "Transform.scale(" in main_text,
+           "account animation and preserved account route missing")
+    for existing in ("Widget profilePage()", "backupDialog()", "configurePin",
+                     "chooseAppCurrency()", "eraseFinancialData"):
+        demand(existing in main_text, "account settings lost functionality: "+existing)
     demand("'الأقسام','الأدوات','الأهداف'" in footer and
            "'Categories','Smart tools','Goals'" in footer,
            "smart tools must be in slot three, after categories")
