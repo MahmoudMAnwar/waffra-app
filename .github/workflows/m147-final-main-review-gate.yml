@@ -344,10 +344,10 @@ jobs:
           if marker not in source:
               raise SystemExit('Cannot find compileOptions for Java desugaring')
           if 'isCoreLibraryDesugaringEnabled = true' not in source:
-              source=source.replace(marker,marker+'\\n        isCoreLibraryDesugaringEnabled = true',1)
+              source=source.replace(marker,marker+'\n        isCoreLibraryDesugaringEnabled = true',1)
           dependency='coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")'
           if dependency not in source:
-              source+='\\n// Required by flutter_local_notifications\\ndependencies {\\n    '+dependency+'\\n}\\n'
+              source+='\n// Required by flutter_local_notifications\ndependencies {\n    '+dependency+'\n}\n'
           gradle.write_text(source)
           assert 'isCoreLibraryDesugaringEnabled = true' in source
           assert dependency in source
