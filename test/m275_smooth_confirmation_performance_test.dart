@@ -136,7 +136,7 @@ void main() {
 
   test('P0: 100-bank-message background parse agrees with UI parser',() async {
     final samples=List<String>.generate(100,(i)=>
-      'شراء PoS\\nبـ${i+1}.25 SR\\nمن 1111\\n16/10/26 00:43');
+      'شراء PoS\nبـ${i+1}.25 SR\nمن 1111\n16/10/26 00:43');
     final direct=samples.map(BankParser.parse).toList(growable:false);
     final background=await compute(waffraParseBankSmsBatchInIsolate,samples);
     expect(background.length,100);
