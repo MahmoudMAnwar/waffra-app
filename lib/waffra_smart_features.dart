@@ -546,9 +546,9 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
       color:expanded?(dark?const Color(0xFF153C2D):const Color(0xFFE9F7ED)):
         Theme.of(context).cardColor,
       borderRadius:BorderRadius.circular(22),
-      border:Border.all(color:green.withValues(alpha:expanded?.48:.15),
+      border:Border.all(color:green.withValues(alpha:expanded ? 0.48 : 0.15),
        width:expanded?1.6:1),
-      boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:dark?.09:.055),
+      boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:dark ? 0.09 : 0.055),
        blurRadius:expanded?17:8,offset:const Offset(0,3))]),
      child:Column(mainAxisSize:MainAxisSize.min,children:[
       Semantics(button:true,expanded:expanded,
@@ -566,7 +566,7 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
            children:[_label(names[i],bold:true,size:15),
             const SizedBox(height:2),_paragraph(details[i])])),
           const SizedBox(width:5),
-          AnimatedRotation(turns:expanded?.5:0,duration:duration,
+          AnimatedRotation(turns:expanded ? 0.5 : 0,duration:duration,
            child:Icon(Icons.keyboard_arrow_down_rounded,
              color:green,size:25)),
          ])))),
