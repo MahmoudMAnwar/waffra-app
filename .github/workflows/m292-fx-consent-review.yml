@@ -1,0 +1,63 @@
+name: M292 Currency-Provenance and FX Consent Tests (Draft Only)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/m292-fx-consent-review.yml'
+      - 'lib/waffra_sms_fx_review.dart'
+      - 'lib/waffra_sms_multicurrency_review.dart'
+      - 'test/m292_sms_fx_review_test.dart'
+      - 'pubspec.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m292-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  safe-multicurrency-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Exact candidate commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact revision
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve dependencies
+        run: flutter pub get
+      - name: Analyze reviewed FX preview and tests
+        run: flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings lib/waffra_sms_fx_review.dart test/m292_sms_fx_review_test.dart
+      - name: Verify FX consent, provenance, rounding and tampering
+        run: flutter test --reporter expanded test/m292_sms_fx_review_test.dart test/m291_multicurrency_bank_sms_review_test.dart
+      - name: Disallow implicit FX finance commits
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          candidate = Path('lib/waffra_sms_fx_review.dart').read_text()
+          assert 'required bool userConfirmed' in candidate
+          assert 'if (!userConfirmed)' in candidate
+          assert 'sourceTimestampUtc' in candidate
+          assert 'originalCurrency' in candidate
+          assert 'originalMinor' in candidate
+          assert 'rateProvider' in candidate
+          assert 'approvedUtc' in candidate
+          assert 'http.Client? client' in candidate
+          assert '_financeAuthority' not in candidate
+          assert 'MoneyEntry(' not in candidate
+          assert 'commitConfirmedSms(' not in candidate
+          assert 'SharedPreferences' not in candidate
+          assert 'Firebase' not in candidate
+          print('PASS: M292 FX provenance is draft-only, consent-bound, no ledger writes.')
+          PY
