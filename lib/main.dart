@@ -18,6 +18,8 @@ import 'waffra_financial_tools.dart';
 import 'waffra_smart_features.dart';
 import 'waffra_today_picker.dart';
 import 'waffra_action_layout.dart';
+import 'waffra_back_navigation.dart';
+import 'waffra_saudi_greetings.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
@@ -611,6 +613,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  bool loading=true,onboarded=false,dark=false,locked=false,showLogin=false;
  String appearance='light';
  bool introDone=false;
+ int _greetingCycle=0;
+ bool _greetingCycleInitialized=false;
+ final WaffraDoubleBackExit _doubleBackExit=WaffraDoubleBackExit();
  String language='ar';
  String? pinHash;Person? profile;
  @override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);load();launchIntro();}
@@ -634,6 +639,14 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  Future<void> load()async {
   try {
    final p=await SharedPreferences.getInstance().timeout(const Duration(seconds:15));
+   // Nonfinancial preference only. Rotate once per cold start; retries do not
+   // advance the greeting again or bypass the finance source guard.
+   if(!_greetingCycleInitialized){
+    _greetingCycle=WaffraSaudiGreetings.nextIndex(p.getInt('waffra_greeting_cycle_v1'));
+    _greetingCycleInitialized=true;
+    try{await p.setInt('waffra_greeting_cycle_v1',_greetingCycle);}
+    catch(e){debugPrint('Greeting preference persistence unavailable: $e');}
+   }
    await const WaffraProductionFinanceSourceGuard()
     .requireSafeLegacyStartup(preferences:p);
    await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p);
@@ -916,14 +929,25 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   themeMode:appearance=='system'?ThemeMode.system:(appearance=='dark'?ThemeMode.dark:ThemeMode.light),
   themeAnimationDuration:waffraMotion(250),
   themeAnimationCurve:Curves.easeInOutCubic,
-  home:Builder(builder:(rootContext)=>PopScope(canPop:false,onPopInvokedWithResult:(didPop,result)async {
+  home:Builder(builder:(rootContext)=>PopScope(canPop:false,onPopInvokedWithResult:(didPop,result){
    if(didPop||!mounted)return;
-   final exit=await showWaffraDialog<bool>(context:rootContext,builder:(ctx)=>AlertDialog(
-    title:WaffraText(waffraIsEnglish?'Exit Waffra?':'تبي تطلع من وفرة؟'),
-    content:WaffraText(waffraIsEnglish?'Do you want to exit the app?':'متأكد تبي تطلع من التطبيق؟'),
-    actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),child:WaffraText(waffraIsEnglish?'No':'لا')),
-     FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),child:WaffraText(waffraIsEnglish?'Yes':'نعم'))]));
-   if(exit==true)SystemNavigator.pop();
+   // Account and non-home tabs consume back before an exit press is armed.
+   if(WaffraBackNavigation.onHomeBack?.call()??false){
+    _doubleBackExit.reset();return;
+   }
+   if(_doubleBackExit.isExitPress(DateTime.now())){
+    SystemNavigator.pop();return;
+   }
+   final message=waffraIsEnglish?'Press back again to exit Waffra':
+       'اضغط رجوع مرة ثانية للخروج من وفرة';
+   if(_waffraFooterHostCount>0){
+    _waffraShowFooterNotice(WaffraNoticeData(text:message,
+     kind:WaffraSnackKind.info,duration:const Duration(milliseconds:2400),
+     requireDismissal:false));
+   }else{
+    snack(rootContext,message,isError:false,kind:WaffraSnackKind.info,
+     duration:const Duration(milliseconds:2400));
+   }
   },child:Directionality(textDirection:language=='ar'?TextDirection.rtl:TextDirection.ltr,child:
    (loading||!introDone)?const WaffraLaunchIntro():
    startupError!=null?Scaffold(body:Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[
@@ -942,7 +966,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    profile==null||showLogin?LoginScreen(onSave:saveUser):
    HomeScreen(key:ValueKey(language),profile:profile!,
      dark:appearance=='dark'||(appearance=='system'&&MediaQuery.platformBrightnessOf(rootContext)==Brightness.dark),
-     appearance:appearance,onAppearance:setAppearance,onTheme:theme,onLanguage:setLanguage,onLogout:logout,onProfile:saveUser,onSetPin:setPin,pinEnabled:pinHash!=null)))));
+     appearance:appearance,onAppearance:setAppearance,onTheme:theme,onLanguage:setLanguage,onLogout:logout,onProfile:saveUser,onSetPin:setPin,pinEnabled:pinHash!=null,greetingIndex:_greetingCycle)))));
 }
 class PinLockScreen extends StatefulWidget {
  final String pinHash;final VoidCallback onUnlock;
@@ -2294,6 +2318,7 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
 }
 class HomeScreen extends StatefulWidget {
  final Person profile;final bool dark,pinEnabled;final String appearance;
+ final int greetingIndex;
  final Future<void> Function(String) onAppearance;
  final Future<void> Function(String?) onSetPin;
  final VoidCallback onTheme;
@@ -2302,7 +2327,8 @@ class HomeScreen extends StatefulWidget {
  final Future<void> Function(Person) onProfile;
  const HomeScreen({super.key,required this.profile,required this.dark,required this.pinEnabled,
   required this.onSetPin,required this.onTheme,required this.onLanguage,required this.onLogout,required this.onProfile,
-   required this.appearance,required this.onAppearance});
+   required this.appearance,required this.onAppearance,
+   required this.greetingIndex});
  @override State<HomeScreen> createState()=>_HomeScreenState();
 }
 // Scroll-linked, pinned balance summary. Shrinks with the user's gesture;
@@ -2562,7 +2588,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // Account settings open from the app bar instead of a footer destination.
  bool accountOpened=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
- @override void initState(){super.initState();_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:()=>unawaited(_syncWidgetTransactions()));unawaited(_loadFinanceSafely());}
+ @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_consumeHomeBack;_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:()=>unawaited(_syncWidgetTransactions()));unawaited(_loadFinanceSafely());}
  void _returnToHome(){if(mounted)setState((){tab=0;accountOpened=false;goalsOpened=false;addFabExpanded=false;});}
  void _receiveWidgetAction(){
   if(!mounted||!ready||waffraWidgetAction.value!='add')return;
@@ -2613,7 +2639,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     icon:const Icon(Icons.refresh),
     label:WaffraText(waffraIsEnglish?'Retry safely':'إعادة المحاولة بأمان')),
   ])));
- @override void dispose(){_dashboardScrollController.dispose();_categoryScrollController.dispose();_goalsScrollController.dispose();_recurringScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();_saveProgress.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
+ @override void dispose(){WaffraBackNavigation.onHomeBack=null;_dashboardScrollController.dispose();_categoryScrollController.dispose();_goalsScrollController.dispose();_recurringScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();_saveProgress.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
  Future<void> _syncWidgetTransactions()async{
   if(!mounted||!ready)return;
   try{
@@ -5055,13 +5081,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
      child:WaffraReceiptCornerBadge(count:attachmentCount,english:waffraIsEnglish)))),
    ]));
  }
- String get greeting {
-  final name=widget.profile.name.trim();
-  if(name=='يا غالي'||name.isEmpty)return waffraTr('يا هلا وغلا 👋');
-  if(waffraIsEnglish)return 'Welcome, $name 👋';
-  final female=widget.profile.gender=='أنثى'||widget.profile.gender.toLowerCase()=='female';
-  return '${female?'يا هلا وغلا ونورتي':'يا هلا وغلا ونورت'} يا $name 👋';
- }
+ String get greeting=>WaffraSaudiGreetings.compose(
+  name:widget.profile.name,gender:widget.profile.gender,
+  english:waffraIsEnglish,greetingIndex:widget.greetingIndex);
  Future<void> confirmDeleteAllEntries() async {
   if(entries.isEmpty){snack(context,waffraIsEnglish?'No transactions to delete':'لا توجد معاملات لحذفها');return;}
   final confirmed=await confirmDeletion(
@@ -5229,15 +5251,27 @@ Future<void> bulkSmsSheet({String? initialText})async {
     boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:0.04),
      blurRadius:8,offset:const Offset(0,3))]),
    child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-    Row(children:[
-     const Icon(Icons.donut_large,color:emerald,size:23),
-     const SizedBox(width:8),
-     Expanded(child:WaffraText(waffraIsEnglish?'Monthly budget':'الميزانية الشهرية',
-      style:const TextStyle(fontWeight:FontWeight.bold,fontSize:18))),
-     TextButton.icon(onPressed:WaffraHaptics.tap(editMonthlyBudget),
+    LayoutBuilder(builder:(context,box){
+     final compact=box.maxWidth<365||MediaQuery.textScalerOf(context).scale(16)>23;
+     final budgetLabel=Row(mainAxisSize:MainAxisSize.min,children:[
+      const Icon(Icons.donut_large,color:emerald,size:23),
+      const SizedBox(width:7),
+      Flexible(child:WaffraText(waffraIsEnglish?'Monthly budget':'الميزانية الشهرية',
+       maxLines:2,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:18))),
+     ]);
+     final edit=TextButton.icon(
+      key:const Key('waffra-month-budget-compact-edit'),
+      style:TextButton.styleFrom(minimumSize:const Size(0,48),
+       padding:const EdgeInsets.symmetric(horizontal:9,vertical:8),
+       tapTargetSize:MaterialTapTargetSize.padded),
+      onPressed:WaffraHaptics.tap(editMonthlyBudget),
       icon:const Icon(Icons.edit_outlined,size:17),
-      label:WaffraText(waffraIsEnglish?'Edit':'تحديد الميزانية')),
-    ]),
+      label:WaffraText(waffraIsEnglish?'Edit':'تحديد الميزانية'));
+     return compact?Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      budgetLabel,const SizedBox(height:6),
+      Align(alignment:AlignmentDirectional.centerStart,child:edit),
+     ]):Row(children:[Expanded(child:budgetLabel),edit]);
+    }),
     const SizedBox(height:7),
     if(monthlyBudgetEnabled&&monthlyBudget>0)...[
      WaffraText(waffraIsEnglish?
@@ -8802,20 +8836,27 @@ Future<void> bulkSmsSheet({String? initialText})async {
   if(target<0||target>=WaffraFooterNavigation.itemCount)return;
   if(mounted)setState((){tab=target;accountOpened=false;goalsOpened=false;addFabExpanded=false;_headerCompact=false;});
  }
+ bool _consumeHomeBack(){
+  if(!mounted)return false;
+  if(accountOpened||goalsOpened||tab!=0||addFabExpanded){
+   setState((){tab=0;accountOpened=false;goalsOpened=false;
+    addFabExpanded=false;_headerCompact=false;});
+   return true;
+  }
+  return false;
+ }
  @override Widget build(BuildContext context)=>PopScope(
-  canPop:!accountOpened,
-  onPopInvokedWithResult:(didPop,result){
-   if(!didPop&&accountOpened&&mounted)setState(()=>accountOpened=false);
-  },
+  // Let the root back policy route account/tabs before double-back exit.
+  canPop:true,
   child:Stack(children:[Scaffold(
   appBar:AppBar(
    toolbarHeight:_headerCompact?52:64,
    flexibleSpace:const ColoredBox(color:forest),
    leading:accountOpened?IconButton(
     key:const Key('waffra-account-header-back'),
-    tooltip:waffraIsEnglish?'Back to previous tab':'العودة للتبويب السابق',
+    tooltip:waffraIsEnglish?'Back to home':'العودة للرئيسية',
     icon:const Icon(Icons.arrow_back_rounded),
-    onPressed:WaffraHaptics.tap(()=>setState(()=>accountOpened=false))):
+    onPressed:WaffraHaptics.tap(_consumeHomeBack)):
     goalsOpened?IconButton(tooltip:waffraIsEnglish?'Back to home':'العودة للرئيسية',
     icon:const Icon(Icons.arrow_back),onPressed:WaffraHaptics.tap(()=>setState(()=>goalsOpened=false))):null,
    titleSpacing:12,
