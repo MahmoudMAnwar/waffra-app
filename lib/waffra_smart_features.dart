@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'waffra_haptic_feedback.dart';
 import 'waffra_display_currency.dart';
+import 'waffra_i18n.dart';
 import 'currency_converter.dart';
 
 /// M268. Read-only finance tools. Never reads SMS originals, keys, or bank data.
@@ -234,7 +235,7 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
  @override void dispose(){input.dispose();super.dispose();}
 
  Widget _label(String value,{double size=14,bool bold=false,Color? color}){
-  return Text(value,style:TextStyle(fontFamily:'Tajawal',fontSize:size,
+  return WaffraText(value,style:TextStyle(fontFamily:'Tajawal',fontSize:size,
    fontWeight:bold?FontWeight.w800:FontWeight.w500,color:color));
  }
  Widget _paragraph(String v)=>_label(v,size:13,color:Theme.of(context).colorScheme.onSurface.withValues(alpha:.77));
