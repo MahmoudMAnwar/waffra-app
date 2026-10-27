@@ -261,13 +261,13 @@ class _WaffraGoldCalculatorPageState extends State<WaffraGoldCalculatorPage> {
                 Text(t('Estimated total', 'الإجمالي التقريبي'),
                   style: TextStyle(color: ink, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                Text(money(WaffraGoldMath.total(quote!.gram(karat), grams), currency),
+                WaffraText(money(WaffraGoldMath.total(quote!.gram(karat), grams), currency),
                   textDirection: TextDirection.ltr,
                   style: Theme.of(context).textTheme.headlineMedium),
                 const SizedBox(height: 9),
-                Text(t('Saudi riyal equivalent: ', 'ما يعادله بالريال: ') +
+                WaffraText(t('Saudi riyal equivalent: ', 'ما يعادله بالريال: ') +
                   money(WaffraGoldMath.total(quote!.gram(karat, sar: true), grams), 'SAR')),
-                if (currency != 'SAR') Text(t('Indicative FX: 1 SAR ≈ ', 'سعر الصرف: 1 ريال ≈ ') +
+                if (currency != 'SAR') WaffraText(t('Indicative FX: 1 SAR ≈ ', 'سعر الصرف: 1 ريال ≈ ') +
                   money(quote!.currencyFx / quote!.sarFx, currency)),
               ]))),
           const SizedBox(height: 12),
@@ -276,8 +276,8 @@ class _WaffraGoldCalculatorPageState extends State<WaffraGoldCalculatorPage> {
           for (final value in WaffraGoldMath.supportedKarats)
             Card(child: ListTile(
               title: Text(t(value.toString() + 'K', 'عيار ' + value.toString())),
-              subtitle: Text(money(quote!.gram(value, sar: true), 'SAR')),
-              trailing: Text(money(quote!.gram(value), currency),
+              subtitle: WaffraText(money(quote!.gram(value, sar: true), 'SAR')),
+              trailing: WaffraText(money(quote!.gram(value), currency),
                 textDirection: TextDirection.ltr,
                 style: TextStyle(fontWeight: FontWeight.bold, color: ink)))),
           const SizedBox(height: 10),
