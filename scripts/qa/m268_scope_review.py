@@ -13,6 +13,7 @@ FILES = {
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/currency_converter.dart",
     "lib/main.dart",
+    "lib/waffra_balance_art.dart",
     "lib/waffra_categories_page.part.dart",
     "lib/waffra_financial_tools.dart",
     "lib/waffra_footer.dart",
@@ -27,6 +28,7 @@ FILES = {
     "test/m224_verified_pull_refresh_dialog_test.dart",
     "test/m227_gold_currency_original_sms_home_test.dart",
     "test/m258_finance_refresh_wiring_test.dart",
+    "test/m268_approved_emerald_balance_card_test.dart",
     "test/m268_smart_features_ten_calendar_art_test.dart",
     "test/waffra_concept2_final_visual_test.dart",
     "test/waffra_design_preservation_test.dart",
@@ -93,6 +95,17 @@ def main():
            "smart tools must render in footer, not navigate away")
     demand("waffra-m268-tools-entry" not in main_text,
            "Home must not contain a redundant ten-tool entry")
+    balance=Path("lib/waffra_balance_art.dart").read_text()
+    for key in ("class WaffraBalanceIllustration", "linearGradient id=\"gold\"",
+                "linearGradient id=\"leaf\"", "class WaffraBalanceWavePainter"):
+        demand(key in balance,"approved savings cover artwork absent: "+key)
+    for key in ("waffra-approved-emerald-balance-card", "waffra-balance-privacy-eye",
+                "إجمالي رصيدك", "monthlyChangePercent:monthChange",
+                "hasPreviousMonthEntries&&previousClosingBalance>0",
+                "await refreshVerifiedWidgetBalance()"):
+        demand(key in main_text,"data-safe reference balance card missing: "+key)
+    demand("test/m268_approved_emerald_balance_card_test.dart" in FILES,
+           "no responsive balance privacy regression coverage")
     demand("waffra-m268-accordion-" in source and
            "AnimatedSize(" in source and
            "waffra-m268-expanded-" in source,
@@ -174,6 +187,7 @@ def main():
       "scope":sorted(changed),"financial_storage_changed":False,
       "app_feature_screens":10,"material_date_pickers":5,
       "footer_smart_tools_slot":2,"arabic_search_folded":True,
+      "approved_emerald_balance_card":True,"balance_month_comparison_factual":True,
       "production_sqlcipher_activated":False,"phone_production_attested":False,
       "status":"ILLUSTRATED_PLANNING_UX_QA_ONLY_NO_CUTOVER"}
     p=Path("build/m147-final-review-report.json")
