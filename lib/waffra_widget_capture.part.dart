@@ -387,7 +387,7 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
              'المكتشفة: ${_results.length} • الدخل: ${_selected.where((r)=>r.result.income).length} • المصروفات: ${_selected.where((r)=>!r.result.income).length}',
              style:const TextStyle(fontWeight:FontWeight.bold)),
             const SizedBox(height:6),
-            Text(_english?
+            WaffraText(_english?
              'Income: ${formatWaffraMoney(_sum(true)/100)} SAR • Expenses: ${formatWaffraMoney(_sum(false)/100)} SAR':
              'الدخل: ${formatWaffraMoney(_sum(true)/100)} ريال • المصروف: ${formatWaffraMoney(_sum(false)/100)} ريال',
              style:const TextStyle(fontSize:12)),
