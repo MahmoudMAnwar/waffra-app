@@ -18,6 +18,9 @@ abstract final class WaffraSmsCurrencies {
     if (token == '£') return 'GBP';
     if (token == '₹') return 'INR';
     if (token == r'$') return 'UNKNOWN'; // Ambiguous in many countries
+    // Common SMS action codes are NOT currencies even beside an amount.
+    if (const <String>{'POS','ATM','OTP','PIN','SMS','REF','TAX','VAT',
+      'FEE','BAL','PAY','P2P','ACH'}.contains(token)) return '';
     return token;
   }
 
@@ -38,13 +41,16 @@ abstract final class WaffraSmsCurrencies {
   static Set<String> currenciesForMessage(String raw) {
     final found = <String>{};
     for (final line in raw.split(RegExp(r'[\r\n]+'))) {
-      if (RegExp(
-        r'available balance|remaining balance|current balance|'
-        r'الرصيد|المتاح|saldo disponible|solde disponible|'
-        r'commission|رسوم|service fee|fee amount|vat|ضريبة',
-        caseSensitive: false).hasMatch(line)) continue;
-      for (final expression in adjacentAmount.allMatches(line)) {
-        for (final token in currencyToken.allMatches(expression.group(0)!)) {
+      // Split combined SMS lines: "Purchase USD 10; Balance SAR 400".
+      // Ignore only the balance/fee clause, never the transaction clause.
+      for (final clause in line.split(RegExp(r'[;|]'))) {
+        if (RegExp(
+          r'available balance|remaining balance|current balance|'
+          r'الرصيد|المتاح|saldo disponible|solde disponible|'
+          r'commission|رسوم|service fee|fee amount|vat|ضريبة',
+          caseSensitive: false).hasMatch(clause)) continue;
+        for (final expression in adjacentAmount.allMatches(clause)) {
+          for (final token in currencyToken.allMatches(expression.group(0)!)) {
           final code = codeFor(token.group(0)!);
           if (supported.contains(code) || code == 'UNKNOWN') {
             found.add(code);
