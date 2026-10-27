@@ -3012,7 +3012,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(recurringRemindersEnabled)unawaited(syncRecurringReminders());
   // A first-use Google consent records an intent, but only the verified
   // finance authority is permitted to enable the recurring reminder flag.
-  unawaited(_applyApprovedGoogleReminderSetup());
+  // The user enables reminders directly on the Recurring switch.
   if(!verifiedEncryptedStartup&&trashBefore!=deletedCategories.length){
    await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
   }
@@ -3106,20 +3106,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    committed.finance.getStringList('waffra_sms_hashes_v1')??const <String>[]);
  }
 
- Future<void> _applyApprovedGoogleReminderSetup()async {
-  try {
-   final preferences=await SharedPreferences.getInstance();
-   if(preferences.getBool('waffra_google_recurring_reminders_pending_v1')!=true)return;
-   if(!mounted||!ready)return;
-   if(!recurringRemindersEnabled)await toggleRecurringReminders(true);
-   if(recurringRemindersEnabled){
-    await preferences.remove('waffra_google_recurring_reminders_pending_v1');
-   }
-  }catch(e){
-   debugPrint('Deferred recurring reminder setup could not be confirmed.');
-   // Keep the pending intention for the next verified finance reload.
-  }
- }
  Future<void> syncRecurringReminders()async {
   if(!recurringRemindersEnabled)return;
   try {
