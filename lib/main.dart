@@ -8424,7 +8424,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
     children:[smartAnalysisEntryCard(),const SizedBox(height:10),smartMoneyInsightsCard()]),
    entries:List<WaffraSmartEntry>.unmodifiable(entries.map((e)=>WaffraSmartEntry(
     id:e.id,title:e.title,category:e.category,amount:e.amount,
-    income:e.income,date:e.date))),
+    income:e.income,date:e.date,notes:e.notes,
+    hasAttachment:e.receiptPath?.isNotEmpty??false))),
    goals:List<WaffraSmartGoal>.unmodifiable(goals.map((g)=>
     WaffraSmartGoal(g.name,g.target,g.saved))),
    recurring:List<WaffraSmartRecurring>.unmodifiable(recurring.where((r)=>r.active).map((r)=>
