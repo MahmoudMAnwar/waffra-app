@@ -83,6 +83,14 @@ Future<Map<String,dynamic>> waffraDecodeBackupInIsolate(Map<String,String> reque
 Future<String> waffraEncryptBackupInIsolate(Map<String,String> request) =>
  WaffraSecureBackup.encryptUserBackup(request['payload']!,request['password']!);
 
+// CI compile-only preview is NOT a Firebase-registered Waffra Android build.
+// Never imply that its Google sign-in can authenticate a production user.
+const bool waffraCompileOnlyQaPreview =
+ bool.fromEnvironment('WAFFRA_COMPILE_ONLY_PREVIEW',defaultValue:false);
+String waffraGooglePreviewNotice(bool english)=>english
+ ?'Google sign-in requires the Firebase-registered, release-signed Waffra build. Use local guest mode to review this preview.'
+ :'دخول جوجل يحتاج نسخة وفرة الموقعة والمسجلة في Firebase. جرّب المميزات محليًا بدون تسجيل دخول في نسخة المعاينة.';
+
 Future<void> main()async {
  WidgetsFlutterBinding.ensureInitialized();
  // Flutter engine started by the circular Android widget, not the normal app.
@@ -1426,6 +1434,10 @@ class _LoginScreenState extends State<LoginScreen> {
  }
  Future<void> continueLastLogin()async{
   if(lastMethod=='Google'){
+   if(waffraCompileOnlyQaPreview){
+    if(mounted)snack(context,waffraGooglePreviewNotice(waffraIsEnglish));
+    return;
+   }
    if(socialBusy)return;
    setState(()=>socialBusy=true);
    try{
@@ -1511,6 +1523,10 @@ class _LoginScreenState extends State<LoginScreen> {
   if(!mounted||choice==null)return;
   if(choice=='Phone'){setState(()=>provider='Phone');return;}
   if(choice=='Google'){
+   if(waffraCompileOnlyQaPreview){
+    if(mounted)snack(context,waffraGooglePreviewNotice(waffraIsEnglish));
+    return;
+   }
    if(socialBusy)return;
    setState(()=>socialBusy=true);
    try{
