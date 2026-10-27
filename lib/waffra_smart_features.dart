@@ -235,7 +235,8 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
  @override void dispose(){input.dispose();super.dispose();}
 
  Widget _label(String value,{double size=14,bool bold=false,Color? color}){
-  return WaffraText(value,style:TextStyle(fontFamily:'Tajawal',fontSize:size,
+  return WaffraText(value,currencyEnglish:widget.english,
+   style:TextStyle(fontFamily:'Tajawal',fontSize:size,
    fontWeight:bold?FontWeight.w800:FontWeight.w500,color:color));
  }
  Widget _paragraph(String v)=>_label(v,size:13,color:Theme.of(context).colorScheme.onSurface.withValues(alpha:.77));
