@@ -61,7 +61,7 @@ void main() {
           detectionCalls++;
           return 'EG';
         },
-        onComplete: (currency) async => completedCurrency = currency,
+        onComplete: (currency, enabled) async => completedCurrency = currency,
       ),
     ));
     await tester.pumpAndSettle();
@@ -70,7 +70,7 @@ void main() {
     expect(find.textContaining('مرة واحدة'), findsWidgets);
     expect(find.byKey(const Key('m290-detect-country')), findsOneWidget);
     expect(find.byKey(const Key('m290-recurring-notification-toggle')),
-      findsNothing, reason: 'Notification consent belongs to Recurring.');
+      findsOneWidget, reason: 'User chooses reminders after Google sign-in.');
     await tester.tap(find.byKey(const Key('m290-detect-country')));
     await tester.pumpAndSettle();
     expect(detectionCalls, 1);
@@ -97,7 +97,7 @@ void main() {
           detectionCalls++;
           return null;
         },
-        onComplete: (currency) async => completedCurrency = currency,
+        onComplete: (currency, enabled) async => completedCurrency = currency,
       ),
     ));
     await tester.pumpAndSettle();
@@ -119,7 +119,7 @@ void main() {
       home: WaffraCountryFirstRunPage(
         english: false,
         detectCountry: () async { calls++; return 'SA'; },
-        onComplete: (code) async => chosen = code,
+        onComplete: (code, enabled) async => chosen = code,
       ),
     ));
     await tester.pumpAndSettle();
@@ -143,10 +143,12 @@ void main() {
     expect(main, contains('waffraCountrySetupKey('));
     expect(main, contains('await WaffraDisplayCurrency.setCurrency(selectedCurrency)'));
     expect(main, contains('await WaffraReminders.requestPermission()'));
+    expect(main, contains('permissionAlreadyGranted:true'));
+    expect(main, contains('waffra_google_recurring_reminders_pending_v1'));
     expect(main, contains('_financeAuthority.setRecurringReminderPreference(enabled)'));
     expect(onboarding, contains('WaffraCountrySuggestion.detectCountry()'));
-    expect(onboarding, isNot(contains('WaffraReminders.requestPermission()')));
-    expect(onboarding, isNot(contains('askNotificationPermission')));
+    expect(onboarding, contains('WaffraReminders.requestPermission()'));
+    expect(onboarding, contains('askNotificationPermission'));
     expect(country, contains('Geolocator.requestPermission()'));
     expect(country, isNot(contains('LocationAccuracy.best')));
     expect(country, isNot(contains('LocationAccuracy.high')));
@@ -154,4 +156,60 @@ void main() {
     expect(reminders, contains('tz.getLocation(identifier)'));
     expect(reminders, isNot(contains("tz.getLocation('Asia/Riyadh')")));
   });
+  testWidgets('M290 first-run reminder permission is optional and requested only on confirm',
+      (tester) async {
+    WaffraDisplayCurrency.active.value =
+      WaffraDisplayCurrency.displaySelection('SAR');
+    var requests=0;
+    bool? approved;
+    await tester.pumpWidget(MaterialApp(home: WaffraCountryFirstRunPage(
+      english: true,
+      detectCountry: () async { throw StateError('unused'); },
+      askNotificationPermission: () async { requests++;return true; },
+      onComplete: (currency, reminders) async {
+        expect(currency,'SAR');
+        approved=reminders;
+      },
+    )));
+    await tester.pumpAndSettle();
+    expect(requests, 0);
+    await tester.ensureVisible(find.byKey(
+      const Key('m290-recurring-notification-toggle')));
+    await tester.tap(find.byKey(
+      const Key('m290-recurring-notification-toggle')));
+    await tester.pumpAndSettle();
+    expect(requests, 0);
+    await tester.ensureVisible(find.byKey(const Key('m290-setup-confirm')));
+    await tester.tap(find.byKey(const Key('m290-setup-confirm')));
+    await tester.pumpAndSettle();
+    expect(requests, 1);
+    expect(approved, true);
+  });
+
+  testWidgets('M290 denied notifications do not activate reminders',
+      (tester) async {
+    WaffraDisplayCurrency.active.value =
+      WaffraDisplayCurrency.displaySelection('SAR');
+    var finished=false;
+    await tester.pumpWidget(MaterialApp(home: WaffraCountryFirstRunPage(
+      english: false,
+      askNotificationPermission: () async => false,
+      onComplete: (_, __) async { finished=true; },
+    )));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(
+      const Key('m290-recurring-notification-toggle')));
+    await tester.tap(find.byKey(
+      const Key('m290-recurring-notification-toggle')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('m290-setup-confirm')));
+    await tester.tap(find.byKey(const Key('m290-setup-confirm')));
+    await tester.pumpAndSettle();
+    expect(finished,false);
+    expect(find.textContaining('تم رفض إذن الإشعارات'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('m290-setup-confirm')));
+    await tester.pumpAndSettle();
+    expect(finished,true);
+  });
+
 }
