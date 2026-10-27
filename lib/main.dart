@@ -1857,7 +1857,7 @@ class _ProfileFormState extends State<ProfileForm> {
    content:Column(mainAxisSize:MainAxisSize.min,children:[
     RepaintBoundary(key:cropKey,child:ClipOval(child:SizedBox(width:230,height:230,
      child:InteractiveViewer(minScale:1,maxScale:5,child:
-      Image.file(File(selected.path),fit:BoxFit.cover))))),
+      Image.file(File(selected!.path),fit:BoxFit.cover))))),
     const SizedBox(height:12),
     WaffraText(waffraIsEnglish?'Pinch to zoom and drag to position':'كبّر الصورة وحرّكها داخل الدائرة'),
    ]),
