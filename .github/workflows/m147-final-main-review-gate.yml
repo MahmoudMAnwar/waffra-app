@@ -277,6 +277,9 @@ jobs:
           REVIEW_HEAD_REF: ${{ github.head_ref }}
         run: python3 scripts/m161_main_reconciliation_review.py
       - name: Upload non-authorizing review report
+        # Modern PRs rely on the general regression jobs and do not generate
+        # a historical M147 SHA-pinned scope report.
+        if: hashFiles('build/m147-final-review-report.json') != ''
         uses: actions/upload-artifact@v4
         with:
           name: m147-main-scope-review
