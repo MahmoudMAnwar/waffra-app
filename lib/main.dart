@@ -5504,47 +5504,6 @@ Future<void> bulkSmsSheet({String? initialText})async {
            exp,Icons.north_east,const Color(0xFFB94838),waffraExpenseBackground),
          ]),
          const SizedBox(height:15),
-          smartAnalysisEntryCard(),
-          const SizedBox(height:12),
-          // Explicit Home entry: the global-gold market cannot remain hidden
-          // behind collapsed Account settings. True FX is only in this tool.
-          InkWell(
-           key:const Key('waffra-home-gold-currency-entry'),
-           borderRadius:BorderRadius.circular(21),
-           onTap:WaffraHaptics.tap(()=>Navigator.of(context).push<void>(MaterialPageRoute(
-            builder:(_)=>const CurrencyConverterPage()))),
-           child:Container(
-            padding:const EdgeInsets.symmetric(horizontal:15,vertical:13),
-            decoration:BoxDecoration(
-             gradient:const LinearGradient(
-              colors:[Color(0xFF073F31),Color(0xFF126749)]),
-             borderRadius:BorderRadius.circular(21),
-             border:Border.all(color:const Color(0xFFD4AF37).withValues(alpha:.65))),
-            child:Row(children:[
-             Container(
-              width:48,height:48,
-              decoration:BoxDecoration(
-               color:const Color(0xFFFFE1A0).withValues(alpha:.16),
-               borderRadius:BorderRadius.circular(15)),
-              child:const Icon(Icons.workspace_premium_rounded,
-               color:Color(0xFFFFD36A),size:29)),
-             const SizedBox(width:11),
-             Expanded(child:Column(
-              crossAxisAlignment:CrossAxisAlignment.start,children:[
-               WaffraText(waffraIsEnglish?'Global gold & currency converter':
-                'الذهب العالمي وتحويل العملات',
-                style:const TextStyle(fontSize:16,fontWeight:FontWeight.w800,
-                 color:Colors.white)),
-               const SizedBox(height:3),
-               WaffraText(waffraIsEnglish?'Live 24K / 22K / 21K, gold bars & FX':
-                'عيار ٢٤ و٢٢ و٢١ والسبائك وأسعار الصرف',
-                style:const TextStyle(fontSize:11,color:Color(0xFFFFE1A0))),
-              ])),
-             const Icon(Icons.chevron_right_rounded,
-              color:Color(0xFFFFD36A),size:24),
-            ])),
-          ),
-          const SizedBox(height:15),
          WaffraText(waffraIsEnglish?'Quick actions':'إجراءات سريعة',
           style:const TextStyle(fontSize:17,fontWeight:FontWeight.bold)),
          const SizedBox(height:8),
@@ -5561,8 +5520,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
          const SizedBox(height:12),
          monthlySummaryCard(),
          const SizedBox(height:12),
-         smartMoneyInsightsCard(),
-         const SizedBox(height:12),
+
          Container(
           padding:const EdgeInsets.all(12),
           decoration:BoxDecoration(
@@ -8397,6 +8355,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
   return WaffraSmartFeaturesPage(
    key:const Key('waffra-m268-footer-page'),
    embedded:true,english:waffraIsEnglish,
+   analysisBuilder:(_)=>Column(crossAxisAlignment:CrossAxisAlignment.stretch,
+    children:[smartAnalysisEntryCard(),const SizedBox(height:10),smartMoneyInsightsCard()]),
    entries:List<WaffraSmartEntry>.unmodifiable(entries.map((e)=>WaffraSmartEntry(
     id:e.id,title:e.title,category:e.category,amount:e.amount,
     income:e.income,date:e.date))),
