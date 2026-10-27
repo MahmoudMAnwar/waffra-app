@@ -75,6 +75,12 @@ jobs:
               source += '\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n'
           p.write_text(source)
           PY
+      - name: Enable KVM for Android emulator
+        shell: bash
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
       - name: Run real Android engine and system-bar transitions
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -82,8 +88,12 @@ jobs:
           target: google_apis
           arch: x86_64
           profile: pixel_6
+          cores: 2
+          ram-size: 2048M
+          heap-size: 512M
           disable-animations: false
-          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          emulator-boot-timeout: 600
+          emulator-options: -no-window -no-audio -no-snapshot -gpu swiftshader_indirect -no-boot-anim
           script: flutter test --reporter expanded integration_test/m278_android_system_bars_smoke_test.dart -d emulator-5554
 
   ios-simulator-build-check:
