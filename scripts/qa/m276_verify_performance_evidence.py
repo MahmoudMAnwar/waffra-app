@@ -26,8 +26,15 @@ assert {s["name"] for s in scenarios} == expected
 for item in scenarios:
     assert item["samples"] == 21
     assert 0 <= item["min_us"] <= item["p50_us"] <= item["p95_us"] <= item["max_us"]
-sha = os.getenv("GITHUB_SHA")
+sha = os.getenv("WAFFRA_EXPECTED_HEAD_SHA")
 if sha:
+    import re
+    import subprocess
+    assert re.fullmatch(r"[0-9a-f]{40}", sha), "invalid expected PR HEAD"
+    actual_checkout = subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], text=True
+    ).strip()
+    assert actual_checkout == sha, "checked-out code is not exact PR HEAD"
     assert report["head_sha"] == sha, "wrong SHA performance result"
 print("M276: 8 verified synthetic performance measurements from exact HEAD.")
 print("Numbers are informational; do not use CI host timing as Android FPS.")
