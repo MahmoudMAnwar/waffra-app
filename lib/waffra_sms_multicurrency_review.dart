@@ -57,6 +57,7 @@ abstract final class WaffraSmsCurrencies {
           } else if (RegExp(r'^[A-Z]{3}$').hasMatch(code)) {
             found.add('UNKNOWN');
           }
+          }
         }
       }
     }
