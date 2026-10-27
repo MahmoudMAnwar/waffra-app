@@ -64,8 +64,8 @@ Future<void> _verifyActionLayout(
   expect(button.height, greaterThanOrEqualTo(48));
   expect(label.top - button.top, greaterThanOrEqualTo(8));
   expect(button.bottom - label.bottom, greaterThanOrEqualTo(8));
-  expect(label.left - button.left, greaterThanOrEqualTo(12));
-  expect(button.right - label.right, greaterThanOrEqualTo(12));
+  expect(label.left - button.left, greaterThanOrEqualTo(10));
+  expect(button.right - label.right, greaterThanOrEqualTo(10));
   expect((label.center.dy - icon.center.dy).abs(), lessThanOrEqualTo(8));
   if (direction == TextDirection.rtl) {
     expect(icon.center.dx, greaterThan(label.center.dx));

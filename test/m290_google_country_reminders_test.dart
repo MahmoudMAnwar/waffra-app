@@ -81,7 +81,9 @@ void main() {
     expect(find.textContaining('مصر'), findsWidgets);
     expect(WaffraDisplayCurrency.country.code, 'SAR',
       reason: 'Detection is a recommendation, not an automatic currency switch.');
-    await tester.ensureVisible(find.byKey(const Key('m290-setup-confirm')));
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('m290-setup-confirm')), 160,
+      scrollable: find.byType(Scrollable).first);
     await tester.tap(find.byKey(const Key('m290-setup-confirm')));
     await tester.pumpAndSettle();
     expect(savedCurrency, 'EGP');
@@ -103,7 +105,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(calls, 1);
     expect(find.textContaining('unavailable or denied'), findsOneWidget);
-    await tester.ensureVisible(find.byKey(const Key('m290-setup-skip')));
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('m290-setup-skip')), 160,
+      scrollable: find.byType(Scrollable).first);
     await tester.tap(find.byKey(const Key('m290-setup-skip')));
     await tester.pumpAndSettle();
     expect(chosen, 'SAR');
@@ -119,7 +123,9 @@ void main() {
       onComplete: (currency) async { chosen = currency; },
     )));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byKey(const Key('m290-setup-skip')));
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('m290-setup-skip')), 160,
+      scrollable: find.byType(Scrollable).first);
     await tester.tap(find.byKey(const Key('m290-setup-skip')));
     await tester.pumpAndSettle();
     expect(locationCalls, 0);

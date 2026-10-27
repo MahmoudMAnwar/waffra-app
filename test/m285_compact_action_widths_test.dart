@@ -39,8 +39,8 @@ void main() {
           );
 
           final heading = english
-              ? 'Receipt review (manual; OCR not enabled)'
-              : 'مساعد الفواتير (مراجعة يدوية)';
+              ? 'Receipt OCR scanner'
+              : 'قارئ الفواتير OCR';
           await tester.pumpWidget(MaterialApp(
             theme: theme,
             home: Directionality(
@@ -51,13 +51,14 @@ void main() {
           ));
           await tester.pumpAndSettle();
           final headingFinder = find.text(heading);
-          await tester.ensureVisible(headingFinder);
+          await tester.scrollUntilVisible(headingFinder, 160,
+            scrollable: find.byType(Scrollable).first);
           await tester.tap(headingFinder);
           await tester.pumpAndSettle();
 
           final notice = english
-              ? 'Automatic OCR is not enabled.'
-              : 'التعرف التلقائي OCR لم يُفعّل بعد.';
+              ? 'Choose a receipt image to scan automatically.'
+              : 'اختر صورة فاتورة ليقرأها وفرة تلقائيًا.';
           expect(find.textContaining(notice), findsOneWidget);
 
           final dateButton = find.widgetWithText(
@@ -65,7 +66,11 @@ void main() {
           final validateButton = find.widgetWithText(
             FilledButton,
             english ? 'Validate receipt draft' : 'التحقق من بيانات الفاتورة');
+          await tester.scrollUntilVisible(dateButton, 160,
+            scrollable: find.byType(Scrollable).first);
           expect(dateButton, findsOneWidget);
+          await tester.scrollUntilVisible(validateButton, 160,
+            scrollable: find.byType(Scrollable).first);
           expect(validateButton, findsOneWidget);
 
           for (final button in <Finder>[dateButton, validateButton]) {

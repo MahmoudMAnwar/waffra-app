@@ -68,8 +68,8 @@ void main() {
       'Incoming Transfer\nAmount: 100 SAR'), isFalse);
   });
 
-  test('M291 undefined $ and multiple currencies do not create debit', () {
-    const ambiguous = 'Outgoing Transfer\nAmount: $100.00';
+  test(r'M291 undefined $ and multiple currencies do not create debit', () {
+    const ambiguous = 'Outgoing Transfer\nAmount: \$100.00';
     expect(WaffraSmsCurrencies.currenciesForMessage(ambiguous),
         {'UNKNOWN'});
     expect(BankParser.parse(ambiguous).amount, isNull);

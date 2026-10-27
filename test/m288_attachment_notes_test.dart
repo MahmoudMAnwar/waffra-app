@@ -105,7 +105,8 @@ void main() {
       expect(tester.takeException(), isNull);
     }
     await tester.pumpWidget(details(record('ملاحظة يدوية')));
-    expect(find.text('الملاحظات'), findsOneWidget);
+    // WaffraText wraps a Text; both nodes match the same visible label.
+    expect(find.text('الملاحظات'), findsWidgets);
     expect(find.byKey(const Key('waffra-transaction-personal-notes')),
         findsOneWidget);
   });

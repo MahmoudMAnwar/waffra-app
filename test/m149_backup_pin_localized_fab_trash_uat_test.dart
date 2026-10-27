@@ -60,10 +60,10 @@ void main() {
   expect(main,contains("Key('waffra-recurring-count-badge')"));
   expect(main,contains('Expanded(child:OutlinedButton.icon('));
   expect(main,contains('onPressed:WaffraHaptics.tapRequired(deletedRecurringDialog)'));
-  // M260 raises the minimum touch height so text/icons are not pressed
-  // against their outlines. Preserve the behavior, not the retired 48px literal.
+  // Compact buttons retain the 48dp minimum touch target
+  // without reintroducing oversized outlines.
   expect(main,contains('minimumSize:WaffraActionLayout.minimumSize'));
-  expect(WaffraActionLayout.minimumSize.height,greaterThanOrEqualTo(52));
+  expect(WaffraActionLayout.minimumSize.height,greaterThanOrEqualTo(48));
   expect(main,contains('onPressed:WaffraHaptics.tap(showWaffraFinancialCalendar)'));
   expect(cats,contains('onPressed:WaffraHaptics.tapRequired(showCategoryTrash)'));
   expect(cats,contains('WaffraDeletedItemsButton('));
