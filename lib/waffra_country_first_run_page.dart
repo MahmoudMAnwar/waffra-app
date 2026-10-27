@@ -2,16 +2,18 @@ import 'package:flutter/material.dart';
 
 import 'waffra_country_suggestion.dart';
 import 'waffra_display_currency.dart';
+import 'waffra_reminders.dart';
 
 /// Explicit first-run currency suggestion. No finance mutation or GPS storage.
 class WaffraCountryFirstRunPage extends StatefulWidget {
   const WaffraCountryFirstRunPage({
     super.key, required this.english, required this.onComplete,
-    this.detectCountry,
+    this.detectCountry, this.askNotificationPermission,
   });
   final bool english;
   final Future<String?> Function()? detectCountry;
-  final Future<void> Function(String currencyCode) onComplete;
+  final Future<bool> Function()? askNotificationPermission;
+  final Future<void> Function(String currencyCode, bool remindersGranted) onComplete;
   @override State<WaffraCountryFirstRunPage> createState() =>
       _WaffraCountryFirstRunPageState();
 }
@@ -20,6 +22,7 @@ class _WaffraCountryFirstRunPageState extends State<WaffraCountryFirstRunPage> {
   static const emerald = Color(0xFF087A54);
   late String currencyCode;
   bool detecting = false, submitting = false;
+  bool enableReminders = false;
   String? detectedIso, message;
   bool isError = false;
   String t(String ar, String en) => widget.english ? en : ar;
@@ -60,9 +63,28 @@ class _WaffraCountryFirstRunPageState extends State<WaffraCountryFirstRunPage> {
     if (detecting || submitting) return;
     setState(() { submitting = true; message = null; isError = false; });
     try {
-      // Never ask for location on Skip; never request notification access
-      // during login, onboarding, or profile completion.
-      await widget.onComplete(currencyCode);
+      // Never ask the OS merely for viewing onboarding. Permissions are
+      // user-initiated; notification consent is separate from location.
+      var notificationsGranted = false;
+      if(!skip && enableReminders){
+       try {
+        notificationsGranted=await (widget.askNotificationPermission?.call() ??
+          WaffraReminders.requestPermission());
+       } catch (_) { notificationsGranted=false; }
+       if(!mounted)return;
+       if(!notificationsGranted){
+        setState((){
+         submitting=false;
+         enableReminders=false;
+         isError=true;
+         message=t(
+          'تم رفض إذن الإشعارات. يمكنك متابعة الإعداد بدونها أو تفعيل التذكيرات من قسم المتكررة لاحقًا.',
+          'Notification permission was denied. Continue without it or enable reminders in Recurring later.');
+        });
+        return;
+       }
+      }
+      await widget.onComplete(currencyCode,notificationsGranted);
     } catch (_) {
       if (mounted) setState(() {
         isError = true;
@@ -136,14 +158,19 @@ class _WaffraCountryFirstRunPageState extends State<WaffraCountryFirstRunPage> {
               style: TextStyle(color: isError
                 ? Theme.of(context).colorScheme.error : emerald))),
           const SizedBox(height: 20),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.notifications_none, color: emerald),
-              title: Text(t('الإشعارات لاحقًا', 'Notifications later')),
-              subtitle: Text(t(
-                'مش هنطلب إذن الإشعارات دلوقتي. هنطلبه فقط لما تفعّل التذكيرات من قسم العمليات المتكررة.',
-                'We will ask for notification access only when you enable reminders in Recurring.')),
-            ),
+          SwitchListTile.adaptive(
+            key: const Key('m290-recurring-notification-toggle'),
+            contentPadding: EdgeInsets.zero,
+            value: enableReminders,
+            onChanged: submitting ? null : (next) =>
+              setState(() => enableReminders = next),
+            secondary: const Icon(Icons.notifications_active_outlined,
+              color: emerald),
+            title: Text(t('تفعيل إشعارات العمليات المتكررة',
+              'Enable recurring payment notifications')),
+            subtitle: Text(t(
+              'اختياري: لو فعلته هتظهر رسالة إذن النظام عند الضغط على متابعة. لا يتم سداد أي دفعات تلقائيًا.',
+              'Optional: the OS asks for notification permission only after you continue. No automatic payments.')),
           ),
           const SizedBox(height: 16),
           FilledButton.icon(
