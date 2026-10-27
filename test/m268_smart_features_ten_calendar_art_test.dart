@@ -149,7 +149,7 @@ void main(){
    await tester.tap(find.byKey(const Key('waffra-m268-feature-simulation')));
    await tester.pumpAndSettle();
    expect(find.text('Hypothetical purchase (EGP) — 3500'),findsOneWidget);
-   expect(find.text('-2350.00 EGP'),findsOneWidget);
+   expect(find.text('-2,350.00 EGP'),findsOneWidget);
    expect(waffraSmartBalance(sample),original);
    expect(WaffraDisplayCurrency.toLedgerSar(1000),1000);
   });
