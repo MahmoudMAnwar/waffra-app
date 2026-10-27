@@ -176,6 +176,28 @@ void main(){
    expect(sample.length,2);
    expect(waffraSmartBalance(sample),1150);
   });
+  testWidgets('analysis and live currency gold oil open inside Tools, not Home',(tester)async{
+   await tester.pumpWidget(MaterialApp(home:Scaffold(
+    body:WaffraSmartFeaturesPage(embedded:true,entries:sample,
+     goals:const [],recurring:const [],english:false,
+     analysisBuilder:(_)=>const Text('Verified financial analysis content')))));
+   expect(find.byKey(const Key('waffra-m268-feature-analysis')),findsOneWidget);
+   expect(find.byKey(const Key('waffra-m268-feature-markets')),findsOneWidget);
+   expect(find.byKey(const Key('waffra-m268-expanded-analysis')),findsNothing);
+   await tester.tap(find.byKey(const Key('waffra-m268-feature-analysis')));
+   await tester.pumpAndSettle();
+   expect(find.text('Verified financial analysis content'),findsOneWidget);
+   expect(find.byKey(const Key('waffra-m268-expanded-analysis')),findsOneWidget);
+   await tester.tap(find.byKey(const Key('waffra-m268-feature-markets')));
+   await tester.pumpAndSettle();
+   expect(find.byKey(const Key('waffra-m268-expanded-analysis')),findsNothing);
+   expect(find.byKey(const Key('waffra-inline-world-markets')),findsOneWidget);
+   expect(find.byKey(const Key('waffra-market-currency')),findsOneWidget);
+   expect(find.byKey(const Key('waffra-market-gold')),findsOneWidget);
+   expect(find.byKey(const Key('waffra-market-oil')),findsOneWidget);
+   expect(find.byType(Scaffold),findsOneWidget);
+   expect(waffraSmartBalance(sample),1150);
+  });
   testWidgets('illustrations work with dark theme and local direction',(tester)async{
    await tester.pumpWidget(MaterialApp(theme:ThemeData.dark(),
     home:const Directionality(textDirection:TextDirection.rtl,
