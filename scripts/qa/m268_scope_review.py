@@ -20,12 +20,15 @@ FILES = {
     "lib/waffra_search.dart",
     "lib/waffra_smart_features.dart",
     "lib/waffra_today_picker.dart",
+    "scripts/qa/m227_gold_currency_original_sms_main_review.py",
     "scripts/qa/m268_scope_review.py",
+    "test/m227_gold_currency_original_sms_home_test.dart",
     "test/m268_smart_features_ten_calendar_art_test.dart",
     "test/waffra_concept2_final_visual_test.dart",
     "test/waffra_design_preservation_test.dart",
     "test/waffra_footer_pdf_navigation_test.dart",
     "test/waffra_m206_day_theme_tour_sms_regression_test.dart",
+    "test/waffra_m208_bundle_regression_test.dart",
     "test/waffra_oct21_regression_test.dart",
     "test/waffra_search_normalization_test.dart",
 }
@@ -89,6 +92,27 @@ def main():
            "AnimatedSize(" in source and
            "waffra-m268-expanded-" in source,
            "missing in-place animated accordion")
+    # Finance analysis and the existing multi-market converter must be in
+    # the same animated Tool tab and absent from the Home dashboard body.
+    home=main_text.split(" Widget dashboard(){",1)[1].split(" Future<void> showAiAnalysis()",1)[0]
+    demand("smartAnalysisEntryCard()," not in home and
+           "smartMoneyInsightsCard()," not in home and
+           "waffra-home-gold-currency-entry" not in main_text,
+           "analysis or world-market shortcut still occupies Home")
+    demand("analysisBuilder:(_)=>Column(" in main_text and
+           "smartAnalysisEntryCard()," in main_text and
+           "smartMoneyInsightsCard()" in main_text,
+           "verified financial analysis was not moved into Tools")
+    demand("'analysis'" in source and "'markets'" in source and
+           "CurrencyConverterPage(embedded:true)" in source and
+           "analysisBuilder?.call(context)" in source,
+           "analytics and markets not accessible through inline accordion")
+    converter=Path("lib/currency_converter.dart").read_text()
+    for marker in ("waffra-inline-world-markets", "WaffraGoldMarketSection(",
+                   "WaffraOilMarketSection(", "waffra-market-currency",
+                   "waffra-market-inline-refresh"):
+        demand(marker in converter,
+               "existing currency gold oil functionality lost: "+marker)
     search=Path("lib/waffra_search.dart").read_text()
     for marker in ("[أإآٱ]", "waffraSearchMatches", "waffraSearchAny"):
         demand(marker in search, "Arabic tolerant search utility missing: "+marker)
