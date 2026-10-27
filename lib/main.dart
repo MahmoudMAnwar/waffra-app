@@ -69,6 +69,7 @@ import 'storage/waffra_verified_legacy_backup_restore.dart';
 import 'waffra_home_widget.dart';
 import 'waffra_pull_refresh_scroll_settle.dart';
 import 'waffra_haptic_feedback.dart';
+import 'waffra_smooth_confirmation.dart';
 part 'waffra_categories_page.part.dart';
 part 'waffra_smart_analysis.part.dart';
 part 'waffra_recurring_trash.part.dart';
@@ -2468,6 +2469,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  final expandedCategoryIds=<String>{};
  final learnedMerchantCategories=<String,String>{};
  final entries=<MoneyEntry>[],categories=<BudgetCategory>[],goals=<SavingGoal>[],recurring=<RecurringBill>[];
+ // One repaint-isolated saving indicator for every confirmed Home finance edit.
+ final WaffraSmoothOperationController _saveProgress=WaffraSmoothOperationController();
  final challenges=<SavingChallenge>[];
  // Soft-deleted categories are retained on-device for up to 30 days.
  final deletedCategories=<Map<String,dynamic>>[];
@@ -2605,7 +2608,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     icon:const Icon(Icons.refresh),
     label:WaffraText(waffraIsEnglish?'Retry safely':'إعادة المحاولة بأمان')),
   ])));
- @override void dispose(){_dashboardScrollController.dispose();_categoryScrollController.dispose();_goalsScrollController.dispose();_recurringScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
+ @override void dispose(){_dashboardScrollController.dispose();_categoryScrollController.dispose();_goalsScrollController.dispose();_recurringScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();_saveProgress.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
  Future<void> _syncWidgetTransactions()async{
   if(!mounted||!ready)return;
   try{
@@ -2948,7 +2951,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    'waffra_learned_merchants_v1':jsonEncode(learnedMerchantCategories),
   };
   final baseline=_lastFinanceAuthorityRead;
-  return _financialWriteQueue.submit(snapshot,(captured)async {
+  return _saveProgress.track<void>(
+   'persist-financial-change',()=>_financialWriteQueue.submit(snapshot,(captured)async {
    if(baseline==null){
     throw StateError('Verified dashboard baseline is unavailable.');
    }
@@ -2965,7 +2969,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    _lastFinanceAuthorityRead=committed;
    _lastLedgerSavedRaw=committed.ledgerRaw;
    _lastWidgetRevision=committed.widgetRevision;
-  }).then((_){unawaited(_refreshWidget());});
+  }).then((_){unawaited(_refreshWidget());}));
  }
 
  Future<void> _persistSmsHashes(Set<String> hashesToSave)async {
@@ -3323,14 +3327,15 @@ Future<void> bulkSmsSheet({String? initialText})async {
    // The dashboard and standalone Android widget now use the SAME locked,
    // crash-recoverable finance+SMS-hash journal on guarded legacy installs.
    // Never claim a save until the durable journal confirms the actual rows.
-   final applied=await _financeAuthority.commitConfirmedSms(
-    route:WaffraFinanceRoute.bulkSmsConfirmedSave,
+   final applied=await _saveProgress.track(
+    'commit-confirmed-bank-sms',()=>_financeAuthority.commitConfirmedSms(
+     route:WaffraFinanceRoute.bulkSmsConfirmedSave,
     records:additions.map((e)=>e.toJson()).toList(growable:false),
     hashes:proposedHashes,
     proposedCategories:proposed.map((c)=>c.toJson()).toList(),
     userConfirmed:true,
     allowDuplicateHashes:allowRepeatedSms,
-   );
+   ));
    if(!mounted)return;
    final persisted=(jsonDecode(applied.current.ledgerRaw??'[]') as List)
     .map((e)=>MoneyEntry.fromJson(Map<String,dynamic>.from(e as Map)))
@@ -3745,6 +3750,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final value=TextEditingController(text:initial==null?'':formatWaffraEditAmount(initial.amount));
   final message=TextEditingController(text:initialSms??'');
   bool income=initial?.income??false,analyzing=false,hasParsed=initialSms!=null;
+  bool submitTapped=false;
   String category=initial?.category??'أخرى';
   String? selectedParentId;
   if(!sms){
@@ -3958,7 +3964,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
          onTap:WaffraHaptics.tap(()=>showReceipt(receiptPath!,initialIndex:waffraReceiptPaths(receiptPath).indexOf(path)))),
       ],
       const SizedBox(height:12),
-      FilledButton(onPressed:WaffraHaptics.tap(analyzing?null:()async {
+      FilledButton(onPressed:WaffraHaptics.tap(analyzing||submitTapped?null:()async {
+       if(submitTapped)return;
        update(()=>attempted=true);
        final n=sms?amountOf(value.text):amountOfDisplay(value.text);
        if(!waffraTransactionTitleAllowed(title.text,oldTitle:initial?.title)||
@@ -3980,6 +3987,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
         }
         pendingHash=h;
        }
+       submitTapped=true; // Synchronous gate: rapid taps cannot post twice.
        Navigator.pop(sheetContext,MoneyEntry(id:initial?.id??newId(),
         title:title.text.trim(),notes:sms?message.text:notes.text,category:category,amount:n,
         income:income,date:date,receiptPath:receiptPath,
@@ -4008,13 +4016,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
    // A single reviewed bank SMS must commit both its transaction and
    // fingerprint atomically under the same Home/Widget source and journal.
    // The writer independently checks duplicates again after taking the lock.
-   final applied=await _financeAuthority.commitConfirmedSms(
-    route:WaffraFinanceRoute.bulkSmsConfirmedSave,
+   final applied=await _saveProgress.track(
+    'commit-confirmed-bank-sms',()=>_financeAuthority.commitConfirmedSms(
+     route:WaffraFinanceRoute.bulkSmsConfirmedSave,
     records:[Map<String,Object?>.from(result.toJson())],
     hashes:[pendingHash!],
     userConfirmed:true,
     allowDuplicateHashes:explicitlyApprovedSmsDuplicate,
-   );
+   ));
    if(applied.saved!=1){
     if(mounted)snack(context,waffraIsEnglish?
      'This bank transaction was already saved. Review before retrying.':
@@ -8900,6 +8909,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
    ),
   ])),
   if(tourActive&&tourTargetReady)Positioned.fill(child:tourOverlay()),
+  // Outside Scaffold so the loading status never rebuilds the finance list.
+  Positioned.fill(child:WaffraSmoothConfirmationOverlay(
+   controller:_saveProgress,english:waffraIsEnglish)),
   ]));
 }
 /// Tour focus remains tied to the same floating add button across both locales.
