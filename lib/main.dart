@@ -31,6 +31,7 @@ import 'package:crypto/crypto.dart';
 import 'waffra_biometrics.dart';
 import 'waffra_amount_formatter.dart';
 import 'waffra_display_currency.dart';
+import 'waffra_country_first_run_page.dart';
 import 'waffra_search.dart';
 import 'waffra_balance_art.dart';
 import 'waffra_validators.dart';
@@ -645,6 +646,7 @@ class WaffraApp extends StatefulWidget {
 }
 class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  bool loading=true,onboarded=false,dark=false,locked=false,showLogin=false;
+ bool googleFirstRunSetup=false;
  String appearance='light';
  bool introDone=false;
  int _greetingCycle=0;
@@ -700,7 +702,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    final animation=p.getString('waffra_animation_level');
    waffraAnimationLevel.value={'full','balanced','reduced','off'}.contains(animation)?animation!:'balanced';
    waffraLanguage.value=language;
-   unawaited(WaffraDisplayCurrency.initialize());
+   await WaffraDisplayCurrency.initialize();
    allowWaffraScreenshots.value=screenshotsAllowed;
    if(Platform.isAndroid){
     try{await _privacyChannel.invokeMethod<void>('setScreenshotsAllowed',screenshotsAllowed).timeout(const Duration(seconds:3));}
@@ -712,7 +714,10 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     appearance=p.getString('waffra_appearance_mode_v1')??(p.containsKey('waffra_dark_mode')?(p.getBool('waffra_dark_mode')==true?'dark':'light'):'light');
     if(!{'light','dark','system'}.contains(appearance))appearance='light';
     dark=appearance=='dark'||(appearance=='system'&&WidgetsBinding.instance.platformDispatcher.platformBrightness==Brightness.dark);
-    profile=u;pinHash=p.getString('waffra_pin_sha256');
+    profile=u;
+    googleFirstRunSetup=u?.provider.toLowerCase()=='google'&&
+      !(p.getBool('waffra_google_country_setup_completed_v1')??false);
+    pinHash=p.getString('waffra_pin_sha256');
     locked=pinHash!=null;startupError=null;loading=false;
    });
   }catch(e){
@@ -745,11 +750,32 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    email:u.email.trim().isNotEmpty?u.email.trim():null,
    phone:u.phone.trim().isNotEmpty?u.phone.trim():null,
   );
-  if(mounted)setState((){profile=u;showLogin=false;});
+  final prefs=await SharedPreferences.getInstance();
+  final needsGoogleSetup=u.provider.toLowerCase()=='google'&&
+    !(prefs.getBool('waffra_google_country_setup_completed_v1')??false);
+  if(mounted)setState((){
+   profile=u;showLogin=false;googleFirstRunSetup=needsGoogleSetup;
+  });
+ }
+ Future<void> completeGoogleCountrySetup(
+   String selectedCurrency,bool remindersGranted)async{
+  // Currency is a display-only selection. No old balance or transaction
+  // amount is converted or overwritten by choosing a location.
+  await WaffraDisplayCurrency.setCurrency(selectedCurrency);
+  final prefs=await SharedPreferences.getInstance();
+  if(remindersGranted){
+   final accepted=await prefs.setBool(
+     'waffra_google_recurring_reminders_pending_v1',true);
+   if(!accepted)throw StateError('Could not record approved reminder setup.');
+  }
+  final complete=await prefs.setBool(
+    'waffra_google_country_setup_completed_v1',true);
+  if(!complete)throw StateError('Could not save country setup completion.');
+  if(mounted)setState(()=>googleFirstRunSetup=false);
  }
  Future<void> logout()async {
   await _accountWriteAuthority.signOut();
-  if(mounted)setState((){profile=null;showLogin=true;locked=false;});
+  if(mounted)setState((){profile=null;showLogin=true;locked=false;googleFirstRunSetup=false;});
  }
  Future<void> setPin(String? value)async {
   final hash=value==null?null:sha256.convert(utf8.encode(value)).toString();
@@ -999,6 +1025,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    ])))):
    locked?PinLockScreen(pinHash:pinHash!,onUnlock:()=>setState(()=>locked=false)):
    profile==null||showLogin?LoginScreen(onSave:saveUser):
+   googleFirstRunSetup?WaffraCountryFirstRunPage(
+     english:language=='en',onComplete:completeGoogleCountrySetup):
    HomeScreen(key:ValueKey(language),profile:profile!,
      dark:appearance=='dark'||(appearance=='system'&&MediaQuery.platformBrightnessOf(rootContext)==Brightness.dark),
      appearance:appearance,onAppearance:setAppearance,onTheme:theme,onLanguage:setLanguage,onLogout:logout,onProfile:saveUser,onSetPin:setPin,pinEnabled:pinHash!=null,greetingIndex:_greetingCycle)))));
@@ -2962,6 +2990,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    });
   }
   if(recurringRemindersEnabled)unawaited(syncRecurringReminders());
+  // A first-use Google consent records an intent, but only the verified
+  // finance authority is permitted to enable the recurring reminder flag.
+  unawaited(_applyApprovedGoogleReminderSetup());
   if(!verifiedEncryptedStartup&&trashBefore!=deletedCategories.length){
    await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
   }
@@ -3055,6 +3086,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    committed.finance.getStringList('waffra_sms_hashes_v1')??const <String>[]);
  }
 
+ Future<void> _applyApprovedGoogleReminderSetup()async {
+  try {
+   final preferences=await SharedPreferences.getInstance();
+   if(preferences.getBool('waffra_google_recurring_reminders_pending_v1')!=true)return;
+   if(!mounted||!ready)return;
+   if(!recurringRemindersEnabled)await toggleRecurringReminders(true);
+   if(recurringRemindersEnabled){
+    await preferences.remove('waffra_google_recurring_reminders_pending_v1');
+   }
+  }catch(e){
+   debugPrint('Deferred recurring reminder setup could not be confirmed.');
+   // Keep the pending intention for the next verified finance reload.
+  }
+ }
  Future<void> syncRecurringReminders()async {
   if(!recurringRemindersEnabled)return;
   try {
