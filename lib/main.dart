@@ -1573,8 +1573,19 @@ class _LoginScreenState extends State<LoginScreen> {
      if(mounted)snack(context,waffraIsEnglish?'Choose your previous Google account':'اختار حساب جوجل المستخدم سابقًا');
      return;
     }
-    await widget.onSave(Person(name:user.displayName??'',email:user.email??'',
-     phone:user.phoneNumber??'',provider:'Google',gender:'',avatar:user.photoURL??'person',birthday:DateTime(2000)));
+    final existing=registered;
+    final googleProfile=Person(name:user.displayName??'',email:user.email??'',
+     phone:user.phoneNumber??'',provider:'Google',gender:'',
+     avatar:user.photoURL??'person',birthday:DateTime(2000));
+    if(existing!=null&&existing.provider.toLowerCase()=='google'&&
+       existing.email.trim().toLowerCase()==(user.email??'').trim().toLowerCase()&&
+       waffraGoogleProfileReadyForCountrySetup(existing)){
+      // Retain completed local profile on a fresh Google re-authentication.
+      await widget.onSave(existing);
+    }else if(mounted){
+      await Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>
+       ProfileForm(provider:'Google',initial:googleProfile,onSave:widget.onSave)));
+    }
    }catch(e){
     if(mounted)snack(context,waffraIsEnglish?'Google sign-in failed. Please try again.':'تعذر تسجيل الدخول بجوجل. حاول مرة أخرى.');
    }finally{if(mounted)setState(()=>socialBusy=false);}
@@ -1658,10 +1669,14 @@ class _LoginScreenState extends State<LoginScreen> {
     final result=await WaffraGoogleAuth.signIn();
     final user=result.user;
     if(user==null)throw StateError('Google did not return an account');
-    await widget.onSave(Person(name:user.displayName??'',email:user.email??'',
-     phone:user.phoneNumber??'',provider:'Google',gender:'',avatar:user.photoURL??'person',birthday:DateTime(2000)));
-     if(!mounted)return;
-     await Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>ProfileForm(provider:'Google',initial:Person(name:user.displayName??'',email:user.email??'',phone:user.phoneNumber??'',provider:'Google',gender:'',avatar:user.photoURL??'person',birthday:DateTime(2000)),onSave:widget.onSave)));
+    // Do not save an incomplete Google profile and tear down LoginScreen
+    // before the required phone/gender form is presented.
+    if(!mounted)return;
+    final firstGoogleProfile=Person(name:user.displayName??'',email:user.email??'',
+     phone:user.phoneNumber??'',provider:'Google',gender:'',
+     avatar:user.photoURL??'person',birthday:DateTime(2000));
+    await Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>
+     ProfileForm(provider:'Google',initial:firstGoogleProfile,onSave:widget.onSave)));
    }catch(e){
     if(mounted){
       final message=e.toString().toLowerCase();
