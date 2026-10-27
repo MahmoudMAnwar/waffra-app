@@ -420,8 +420,8 @@ jobs:
               else:
                   print('No debug-only integration_test registrar')
           PY
-      - name: Compile ARM64 release-mode APK (not production certified)
-        run: flutter build apk --release --no-pub --target-platform android-arm64
+      - name: Compile ARM64 release-mode APK (limited unsigned-app-identity preview)
+        run: flutter build apk --release --no-pub --target-platform android-arm64 --dart-define=WAFFRA_COMPILE_ONLY_PREVIEW=true
       # Do not publish a compile-only preview with missing native bindings:
       # libdartjni is used by transitive Android plugins on real devices, and
       # sqlite3mc is required for Waffra's guarded encrypted storage.
@@ -435,6 +435,9 @@ jobs:
           if not apk.is_file():
               raise SystemExit('QA APK not generated')
           with ZipFile(apk) as archive:
+              manifest=archive.read('AndroidManifest.xml')
+              if b'com.waffra.waffra' not in manifest or b'com.waffra.app' in manifest:
+                  raise SystemExit('QA preview identity mismatch; this is not the signed app')
               contents=set(archive.namelist())
               required={'lib/arm64-v8a/'+item for item in
                         ('libapp.so','libflutter.so','libdartjni.so','libsqlite3mc.so')}
@@ -451,9 +454,30 @@ jobs:
                           raise SystemExit('QA STARTUP BLOCKED: not an ELF: '+item)
           print('PASS: ARM64 JNI, SQLCipher, Flutter and Dart native ELF bundled')
           PY
+      # PREVIEW appId is not the Firebase-registered com.waffra.app, and this
+      # workflow does not have production signing credentials or native Widget
+      # parity. Do not represent this artifact as full-feature device QA.
+      - name: Label unsigned-identity offline UI preview limitations
+        shell: bash
+        run: |
+          cat > build/WAFFRA_PREVIEW_LIMITATIONS.txt <<'TXT'
+          Waffra M268 — COMPILE-ONLY UI PREVIEW
+          Application ID: com.waffra.waffra (not registered with Firebase)
+          Google authentication: NOT SUPPORTED in this preview.
+          Native widget / share-to-Waffra / OS notification boot receivers:
+            NOT PRESENT in the generated Android host.
+          Release certificate: NOT the Firebase-registered app certificate.
+          Local preview data is separate from the installed production app.
+          Preview for illustrations, calendars and offline planning tools only.
+          Do not uninstall an existing Waffra installation or delete user data.
+          Require a complete signed, exact-main APK for real device sign-in QA.
+          SQLCipher financial production cutover is NOT authorized.
+          TXT
       - name: Attach unapproved-for-production APK for device QA
         uses: actions/upload-artifact@v4
         with:
           name: m147-arm64-ci-review-apk-not-production-signed
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: |
+            build/app/outputs/flutter-apk/app-release.apk
+            build/WAFFRA_PREVIEW_LIMITATIONS.txt
           if-no-files-found: error
