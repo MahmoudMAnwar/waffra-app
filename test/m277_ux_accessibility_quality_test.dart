@@ -71,7 +71,6 @@ void main() {
           addTearDown(tester.view.resetPhysicalSize);
           addTearDown(tester.view.resetDevicePixelRatio);
           final handle = tester.ensureSemantics();
-          addTearDown(handle.dispose);
           var selected = 0;
           await tester.pumpWidget(
             StatefulBuilder(builder: (context, update) => footerHarness(
@@ -120,6 +119,7 @@ void main() {
                 reason: 'TalkBack must announce the newly selected tab');
             expect(tester.takeException(), isNull);
           }
+          handle.dispose();
         },
       );
     }
@@ -128,7 +128,6 @@ void main() {
   testWidgets('M277: Reduce Motion removes tab animation durations '
       'but never disables navigation', (tester) async {
     final handle = tester.ensureSemantics();
-    addTearDown(handle.dispose);
     var selected = 0;
     await tester.pumpWidget(StatefulBuilder(builder: (context, update) =>
         footerHarness(
@@ -151,6 +150,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(selected, 3);
     expect(tester.takeException(), isNull);
+    handle.dispose();
   });
 
   testWidgets('M277: footer text contrast across rendered dark-green gradient',
@@ -238,7 +238,8 @@ void main() {
     await tester.tap(find.byKey(const Key('waffra-nav-2')));
     await tester.pumpAndSettle();
     expect(selected, 2, reason: 'An error may not trap footer navigation');
-    await tester.tap(find.byTooltip('إغلاق'));
+    await tester.tap(find.descendant(
+      of: alert, matching: find.byIcon(Icons.close_rounded)));
     await tester.pumpAndSettle();
     expect(notice.value, isNull);
     expect(alert, findsNothing);
