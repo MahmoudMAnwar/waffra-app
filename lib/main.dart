@@ -1813,7 +1813,18 @@ class _ProfileFormState extends State<ProfileForm> {
    ])));
   if(choice==null||!mounted)return;
   if(choice=='default'){setState(()=>avatar=gender=='أنثى'?'female':'male');return;}
-  final selected=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:92);
+  // Android Photo Picker grants access only to selected media at tap time.
+  // Do not request global photo or file permissions at app launch.
+  XFile? selected;
+  try{
+   selected=await ImagePicker().pickImage(
+    source:ImageSource.gallery,imageQuality:92);
+  }catch(_){
+   if(mounted)snack(context,waffraIsEnglish?
+    'Unable to access photos. Check your photo selection permissions.':
+    'تعذر اختيار الصورة. تأكد من صلاحية الوصول للصور المختارة.');
+   return;
+  }
   if(selected==null||!mounted)return;
   final cropKey=GlobalKey();
   final png=await showWaffraDialog<Uint8List>(context:context,builder:(ctx)=>AlertDialog(
@@ -4128,17 +4139,47 @@ Future<void> bulkSmsSheet({String? initialText})async {
       const SizedBox(height:12),
       Row(children:[
        Expanded(child:OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async{
-        final file=await ImagePicker().pickImage(source:ImageSource.camera,imageQuality:80);
-        if(file!=null){final path=await saveReceipt(file);stagedReceiptCopies.add(path);if(sheetContext.mounted)update(()=>receiptPath=waffraEncodeReceipts([...waffraReceiptPaths(receiptPath),path]));}
+        // The native camera permission is requested only when this action
+        // launches the OS camera; never request it during login or startup.
+        try{
+         final file=await ImagePicker().pickImage(
+          source:ImageSource.camera,imageQuality:80);
+         if(file==null)return;
+         final path=await saveReceipt(file);
+         stagedReceiptCopies.add(path);
+         if(sheetContext.mounted)update(()=>receiptPath=waffraEncodeReceipts(
+          [...waffraReceiptPaths(receiptPath),path]));
+        }catch(_){
+         if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
+          'Camera unavailable or permission denied. Review camera access in Settings.':
+          'تعذر فتح الكاميرا أو تم رفض الإذن. راجع إذن الكاميرا من إعدادات الهاتف.');
+        }
        }),icon:const Icon(Icons.camera_alt_outlined),label:const WaffraText('تصوير فاتورة'))),
        const SizedBox(width:8),
        Expanded(child:OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async{
-        final files=await ImagePicker().pickMultiImage(imageQuality:80);
-        if(files.isNotEmpty){final paths=<String>[...waffraReceiptPaths(receiptPath)];
-         for(final file in files){final copied=await saveReceipt(file);stagedReceiptCopies.add(copied);paths.add(copied);}
-         if(sheetContext.mounted)update(()=>receiptPath=waffraEncodeReceipts(paths));}
+        // Use OS limited-photo access only after the user taps Attach.
+        try{
+         final files=await ImagePicker().pickMultiImage(imageQuality:80);
+         if(files.isEmpty)return;
+         final paths=<String>[...waffraReceiptPaths(receiptPath)];
+         for(final file in files){
+          final copied=await saveReceipt(file);
+          stagedReceiptCopies.add(copied);paths.add(copied);
+         }
+         if(sheetContext.mounted)update(()=>
+          receiptPath=waffraEncodeReceipts(paths));
+        }catch(_){
+         if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
+          'Could not open photos. Please check photo selection access.':
+          'تعذر اختيار الصور. راجع صلاحية الوصول للصور المختارة.');
+        }
        }),icon:const Icon(Icons.attach_file),label:const WaffraText('إرفاق صورة'))),
       ]),
+      Padding(padding:const EdgeInsets.only(top:5),
+       child:WaffraText(waffraIsEnglish?
+        'Camera and photo access is requested only when you choose to use it.':
+        'نطلب صلاحية الكاميرا أو اختيار الصور وقت استخدامها فقط.',
+        style:const TextStyle(fontSize:11,color:emerald))),
       if(waffraReceiptPaths(receiptPath).isNotEmpty)...[
        for(final path in waffraReceiptPaths(receiptPath))
         ListTile(dense:true,
