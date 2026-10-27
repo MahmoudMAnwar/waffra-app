@@ -4040,6 +4040,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final previousSpent=sum(entries.where((e)=>!e.income&&e.id!=result.id&&
    e.category==result.category&&e.date.year==result.date.year&&e.date.month==result.date.month),false);
   if(pendingHash!=null&&initial==null){
+   try{
    // A single reviewed bank SMS must commit both its transaction and
    // fingerprint atomically under the same Home/Widget source and journal.
    // The writer independently checks duplicates again after taking the lock.
@@ -4074,6 +4075,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
     snack(context,waffraIsEnglish?
      'Transaction saved; original bank SMS text was NOT stored.':
      'تم حفظ بيانات العملية دون نص الرسالة البنكية الأصلي.',isError:false);
+   }
+   }catch(e){
+    // One rejected source-authorized bank commit must never leave the
+    // user looking at a success screen or an unhandled Flutter exception.
+    if(mounted)snack(context,waffraIsEnglish?
+     'Could not confirm bank transaction save. Review before retrying.':
+     'تعذر تأكيد حفظ المعاملة البنكية. راجعها قبل إعادة المحاولة.');
+    return;
    }
   }else{
    // Optimistic in-memory edits must roll back if durable save is rejected.
