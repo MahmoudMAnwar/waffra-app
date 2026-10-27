@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,6 +19,26 @@ void main() {
     fonts.addFont(rootBundle.load('assets/fonts/Tajawal-Medium.ttf'));
     fonts.addFont(rootBundle.load('assets/fonts/Tajawal-Bold.ttf'));
     await fonts.load();
+    // Flutter tests substitute Ahem for MaterialIcons unless the actual
+    // SDK font is loaded. Never approve empty-square icon screenshots.
+    Future<ByteData> iconBytes() async {
+      try {
+        return await rootBundle.load('fonts/MaterialIcons-Regular.otf');
+      } catch (_) {
+        final flutterRoot = Platform.environment['FLUTTER_ROOT'];
+        if (flutterRoot == null || flutterRoot.isEmpty) {
+          throw StateError('MaterialIcons unavailable: FLUTTER_ROOT missing');
+        }
+        final file = File(
+            '$'+'{flutterRoot}/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf');
+        final bytes = await file.readAsBytes();
+        return ByteData.view(
+            bytes.buffer, bytes.offsetInBytes, bytes.lengthInBytes);
+      }
+    }
+    final icons = FontLoader('MaterialIcons');
+    icons.addFont(iconBytes());
+    await icons.load();
   });
   setUp(() {
     waffraLanguage.value = 'ar';
@@ -61,7 +84,7 @@ void main() {
   for (final dark in [false, true]) {
     final tone = dark ? 'dark' : 'light';
     testWidgets('Approved emerald balance golden Arabic/$tone', (tester) async {
-      tester.view.physicalSize = const Size(393, 290);
+      tester.view.physicalSize = const Size(393, 148);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
@@ -71,15 +94,14 @@ void main() {
             brightness: dark ? Brightness.dark : Brightness.light),
         home: Scaffold(body: RepaintBoundary(
           key: key,
-          child: CustomScrollView(slivers: [
+          child: SizedBox(height: 148, child: CustomScrollView(slivers: [
             SliverPersistentHeader(delegate: WaffraBalanceHeader(
               balance: 1250.75,
               english: false,
               monthlyChangePercent: 5.5,
               refreshVerifiedWidgetBalance: () async {},
             )),
-            const SliverToBoxAdapter(child: SizedBox(height: 180)),
-          ]),
+          ])),
         )),
       ));
       await tester.pumpAndSettle();
