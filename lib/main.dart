@@ -2498,9 +2498,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   _lastFabTapAt=now;
   return true;
  }
+ // Account settings open from the app bar instead of a footer destination.
+ bool accountOpened=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
  @override void initState(){super.initState();_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:()=>unawaited(_syncWidgetTransactions()));unawaited(_loadFinanceSafely());}
- void _returnToHome(){if(mounted)setState((){tab=0;goalsOpened=false;addFabExpanded=false;});}
+ void _returnToHome(){if(mounted)setState((){tab=0;accountOpened=false;goalsOpened=false;addFabExpanded=false;});}
  void _receiveWidgetAction(){
   if(!mounted||!ready||waffraWidgetAction.value!='add')return;
   waffraWidgetAction.value=null;
@@ -8677,6 +8679,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       fontSize:15,fontWeight:FontWeight.bold,color:Theme.of(context).brightness==Brightness.dark?Colors.white:forest)),
     ]))));
  Widget currentTab(){
+  if(accountOpened)return profilePage();
   if(tab==1||tab==3||tab==4){
    return RefreshIndicator(
     onRefresh:()=>_refreshAndSettle(
@@ -8697,11 +8700,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
    case 2:return _smartToolsTab();
    case 3:return goalsPage();
    case 4:return recurringPage();
-   default:return profilePage();
+   default:return dashboard();
   }
  }
  void _swipeBetweenSections(DragEndDetails details){
-  if(!ready||goalsOpened||tourActive)return;
+  if(!ready||goalsOpened||accountOpened||tourActive)return;
   final velocity=details.primaryVelocity??0;
   final dx=_swipeTravel.abs()>50?_swipeTravel:velocity/10;
   if(dx.abs()<65)return;
@@ -8711,13 +8714,23 @@ Future<void> bulkSmsSheet({String? initialText})async {
  }
  Future<void> selectFooter(int target)async {
   if(target<0||target>=WaffraFooterNavigation.itemCount)return;
-  if(mounted)setState((){tab=target;goalsOpened=false;addFabExpanded=false;_headerCompact=false;});
+  if(mounted)setState((){tab=target;accountOpened=false;goalsOpened=false;addFabExpanded=false;_headerCompact=false;});
  }
- @override Widget build(BuildContext context)=>Stack(children:[Scaffold(
+ @override Widget build(BuildContext context)=>PopScope(
+  canPop:!accountOpened,
+  onPopInvokedWithResult:(didPop,result){
+   if(!didPop&&accountOpened&&mounted)setState(()=>accountOpened=false);
+  },
+  child:Stack(children:[Scaffold(
   appBar:AppBar(
    toolbarHeight:_headerCompact?52:64,
    flexibleSpace:const ColoredBox(color:forest),
-   leading:goalsOpened?IconButton(tooltip:waffraIsEnglish?'Back to home':'العودة للرئيسية',
+   leading:accountOpened?IconButton(
+    key:const Key('waffra-account-header-back'),
+    tooltip:waffraIsEnglish?'Back to previous tab':'العودة للتبويب السابق',
+    icon:const Icon(Icons.arrow_back_rounded),
+    onPressed:WaffraHaptics.tap(()=>setState(()=>accountOpened=false))):
+    goalsOpened?IconButton(tooltip:waffraIsEnglish?'Back to home':'العودة للرئيسية',
     icon:const Icon(Icons.arrow_back),onPressed:WaffraHaptics.tap(()=>setState(()=>goalsOpened=false))):null,
    titleSpacing:12,
    title:Row(mainAxisSize:MainAxisSize.min,children:[
@@ -8742,13 +8755,22 @@ Future<void> bulkSmsSheet({String? initialText})async {
       child:Text(waffraIsEnglish?'AR':'EN',
        style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold)))),
     const SizedBox(width:7),
-    SizedBox(width:45,height:kToolbarHeight,
-     child:Center(child:InkWell(
-      onTap:WaffraHaptics.tap(()=>setState((){
-       addFabExpanded=false;goalsOpened=false;tab=5;
-      })),
-      borderRadius:BorderRadius.circular(30),
-      child:waffraAvatar(widget.profile.gender,widget.profile.avatar,radius:18)))),
+    Tooltip(message:waffraIsEnglish?'My account and settings':'حسابي والإعدادات',
+     child:Semantics(label:waffraIsEnglish?'Open account settings':'فتح إعدادات الحساب',
+      button:true,child:InkWell(
+       key:const Key('waffra-header-account-entry'),
+       onTap:WaffraHaptics.tap(()=>setState((){
+        addFabExpanded=false;goalsOpened=false;accountOpened=true;_headerCompact=false;
+       })),
+       borderRadius:BorderRadius.circular(30),
+       child:AnimatedContainer(duration:waffraMotion(260),
+        curve:Curves.easeOutCubic,padding:const EdgeInsets.all(3),
+        decoration:BoxDecoration(shape:BoxShape.circle,
+         border:Border.all(color:accountOpened?const Color(0xFF65E5AD):Colors.transparent,
+          width:2),
+         color:accountOpened?Colors.white.withValues(alpha:.13):Colors.transparent),
+        child:KeyedSubtree(key:_tourKeys[5],
+         child:waffraAvatar(widget.profile.gender,widget.profile.avatar,radius:18))))),
     const SizedBox(width:7),
    ]),
   // Instant content swap avoids building/animating the previous heavy tab
@@ -8763,12 +8785,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
     child:ValueListenableBuilder<bool>(
      valueListenable:hideWaffraAmounts,
      builder:(context,hidden,_)=>TweenAnimationBuilder<double>(
-      key:ValueKey('waffra-page-$tab'),tween:Tween<double>(begin:0,end:1),
-      duration:waffraMotion(240),curve:Curves.easeOutCubic,
+      key:ValueKey(accountOpened?'waffra-page-account':'waffra-page-$tab'),
+      tween:Tween<double>(begin:0,end:1),
+      duration:waffraMotion(accountOpened?340:240),curve:Curves.easeOutCubic,
       builder:(ctx,progress,child)=>Opacity(opacity:progress,
-       child:Transform.translate(offset:Offset((1-progress)*(waffraIsEnglish?16:-16),0),child:child)),
+       child:Transform.translate(offset:Offset((1-progress)*(waffraIsEnglish?26:-26),0),
+        child:Transform.scale(scale:accountOpened?0.985+0.015*progress:1,child:child))),
       child:currentTab()))),
-    if(tab==0||tab==1)
+    if(!accountOpened&&(tab==0||tab==1))
      WaffraFabMenuAnchor(
       english:waffraIsEnglish,
       expanded:addFabExpanded&&!goalsOpened,
@@ -8805,7 +8829,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   // Never allow a menu width to change Scaffold's floating geometry.
   floatingActionButtonLocation:WaffraDirectionalFabLocation(english:waffraIsEnglish),
   floatingActionButtonAnimator:const WaffraStationaryFabAnimator(),
-  floatingActionButton:!ready||tab==5||tab==2?null:SizedBox(
+  floatingActionButton:!ready||accountOpened||tab==2?null:SizedBox(
    width:58,height:58,
    child:
     Material(
@@ -8847,7 +8871,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   // The notice reserves real layout height above the bottom footer.
   // The transaction list and the floating + reposition instead of being
   // covered by an overlay. The expanded + menu closes on feedback.
-  bottomNavigationBar:Column(mainAxisSize:MainAxisSize.min,children:[
+  bottomNavigationBar:accountOpened?null:Column(mainAxisSize:MainAxisSize.min,children:[
    WaffraFooterNoticeHost(onNoticePresented:(){
     if(mounted&&addFabExpanded)setState(()=>addFabExpanded=false);
    }),
@@ -8858,11 +8882,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
      waffraDismissFooterNotice();
      unawaited(selectFooter(selected));
     }),
-    profileSpotlightKey:_tourKeys[5],
    ),
   ])),
   if(tourActive&&tourTargetReady)Positioned.fill(child:tourOverlay()),
-  ]);
+  ]));
 }
 /// Tour focus remains tied to the same floating add button across both locales.
 /// A coach-mark scrim with a transparent focus over the current page.
