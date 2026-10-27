@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 /// Notifications are opt-in. No bank accounts or financial credentials are used.
@@ -14,16 +15,26 @@ class WaffraReminders {
  WaffraReminders._();
  static final FlutterLocalNotificationsPlugin _plugin=FlutterLocalNotificationsPlugin();
  static bool _initialized=false;
+ static String? _lastTimeZone;
  static const _details=NotificationDetails(android:AndroidNotificationDetails(
   'waffra_recurring_due_v1','Waffra recurring reminders',
   channelDescription:'Optional reminders before upcoming recurring obligations',
   importance:Importance.defaultImportance,priority:Priority.defaultPriority));
 
- static Future<void> initialize()async {
-  if(_initialized||!Platform.isAndroid)return;
+ static Future<void> _useDeviceTimeZone()async {
   tz_data.initializeTimeZones();
-  // Waffra's initial Saudi release schedules recurring obligations in Riyadh time.
-  tz.setLocalLocation(tz.getLocation('Asia/Riyadh'));
+  final detected=await FlutterTimezone.getLocalTimezone();
+  final identifier=detected.identifier;
+  if(identifier.isEmpty)throw StateError('Device timezone not available.');
+  // Africa/Cairo observes Egyptian DST; never force Asia/Riyadh globally.
+  final location=tz.getLocation(identifier);
+  tz.setLocalLocation(location);
+  _lastTimeZone=identifier;
+ }
+ static Future<void> initialize()async {
+  if(!Platform.isAndroid)return;
+  await _useDeviceTimeZone();
+  if(_initialized)return;
   await _plugin.initialize(const InitializationSettings(
    android:AndroidInitializationSettings('@mipmap/ic_launcher')));
   _initialized=true;
