@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'waffra_haptic_feedback.dart';
 import 'waffra_display_currency.dart';
+import 'currency_converter.dart';
 
 /// M268. Read-only finance tools. Never reads SMS originals, keys, or bank data.
 /// User-driven scenarios exist in widget state only and cannot write any ledger.
@@ -188,9 +189,11 @@ class WaffraSmartFeaturesPage extends StatefulWidget{
  final List<WaffraSmartRecurring> recurring;
  final bool english;
  final bool embedded;
+ /// Existing full financial analysis entry, supplied by Home's verified state.
+ final WidgetBuilder? analysisBuilder;
  const WaffraSmartFeaturesPage({super.key,required this.entries,
   required this.goals,required this.recurring,required this.english,
-  this.embedded=false});
+  this.embedded=false,this.analysisBuilder});
  @override State<WaffraSmartFeaturesPage> createState()=>_WaffraSmartFeaturesPageState();
 }
 
@@ -535,12 +538,21 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
   final dark=Theme.of(context).brightness==Brightness.dark;
   final reduced=MediaQuery.disableAnimationsOf(context);
   final duration=reduced?Duration.zero:const Duration(milliseconds:330);
-  final tiles=List<Widget>.generate(types.length,(i){
+  // Extra accordion sections reuse the existing analysis and live markets.
+  // Negative indices avoid changing the ten tools' stable names and keys.
+  final tiles=List<Widget>.generate(types.length+2,(slot){
+   final i=slot-2;
+   final id=i==-2?'analysis':i==-1?'markets':types[i];
+   final name=i==-2?t('التحليل المالي الذكي','Smart financial analysis'):
+    i==-1?t('العملات والذهب والبترول','Currency, gold and oil markets'):names[i];
+   final detail=i==-2?t('تحليلك وتوقعاتك المالية الفعلية','Insights and financial forecasts'):
+    i==-1?t('أسعار الذهب والنفط وتحويل العملات','Gold, oil and exchange rates'):details[i];
+   final illustration=i==-2?'investment':i==-1?'bank':types[i];
    final expanded=active==i;
    return Padding(
     padding:const EdgeInsets.only(bottom:10),
     child:AnimatedContainer(
-     key:Key('waffra-m268-accordion-'+types[i]),
+     key:Key('waffra-m268-accordion-'+id),
      duration:duration,curve:Curves.easeInOutCubic,
      decoration:BoxDecoration(
       color:expanded?(dark?const Color(0xFF153C2D):const Color(0xFFE9F7ED)):
@@ -552,19 +564,19 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
        blurRadius:expanded?17:8,offset:const Offset(0,3))]),
      child:Column(mainAxisSize:MainAxisSize.min,children:[
       Semantics(button:true,
-       label:names[i]+' — '+details[i]+(expanded?' — open':' — closed'),
+       label:name+' — '+detail+(expanded?' — open':' — closed'),
        child:InkWell(
-        key:Key('waffra-m268-feature-'+types[i]),
+        key:Key('waffra-m268-feature-'+id),
         borderRadius:BorderRadius.circular(22),
         onTap:WaffraHaptics.tap(()=>setState(()=>active=expanded?null:i)),
         child:Padding(
          padding:const EdgeInsets.symmetric(horizontal:12,vertical:11),
          child:Row(children:[
-          WaffraIllustration(topic:types[i],size:49),
+          WaffraIllustration(topic:illustration,size:49),
           const SizedBox(width:12),
           Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,
-           children:[_label(names[i],bold:true,size:15),
-            const SizedBox(height:2),_paragraph(details[i])])),
+           children:[_label(name,bold:true,size:15),
+            const SizedBox(height:2),_paragraph(detail)])), 
           const SizedBox(width:5),
           AnimatedRotation(turns:expanded ? 0.5 : 0,duration:duration,
            child:Icon(Icons.keyboard_arrow_down_rounded,
@@ -574,12 +586,16 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
        duration:duration,curve:Curves.easeInOutCubic,
        alignment:Alignment.topCenter,
        child:expanded?Padding(
-        key:Key('waffra-m268-expanded-'+types[i]),
+        key:Key('waffra-m268-expanded-'+id),
         padding:const EdgeInsets.fromLTRB(9,0,9,12),
         child:Column(children:[
          Divider(color:green.withValues(alpha:.23)),
          const SizedBox(height:7),
-         _body(i),
+         if(i==-2)(widget.analysisBuilder?.call(context)??
+           _paragraph(t('التحليل متاح بعد فتح التطبيق ببيانات مالية مؤمنة.',
+            'Financial insights require the verified app data source.')))
+         else if(i==-1)const CurrencyConverterPage(embedded:true)
+         else _body(i),
         ])):const SizedBox(width:double.infinity,height:0))),
      ])));
   });
@@ -605,8 +621,8 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
        _paragraph(t('افتح أي أداة هنا؛ الباقي يفضل ظاهر تحتها.',
         'Expand any tool here. The others stay on this page.')),
        const SizedBox(height:3),
-       _paragraph(t('حسابات للقراءة والتجربة فقط — بدون تعديل أرصدتك.',
-        'Read-only planning. No changes to your ledger.')),
+       _paragraph(t('حلّل بياناتك وخطّط وتابع الأسواق من غير تعديل رصيدك.',
+        'Analyze finances, plan and check markets without changing your balance.')),
       ]))])),
     ...tiles,
    ]);
