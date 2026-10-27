@@ -26,6 +26,7 @@ import 'package:crypto/crypto.dart';
 import 'waffra_biometrics.dart';
 import 'waffra_amount_formatter.dart';
 import 'waffra_display_currency.dart';
+import 'waffra_search.dart';
 import 'waffra_validators.dart';
 import 'waffra_financial_insights.dart';
 import 'waffra_reminders.dart';
@@ -4025,10 +4026,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   return showWaffraDialog<String>(context:ctx,builder:(dialogCtx)=>StatefulBuilder(builder:(dialogCtx,refresh){
    final filtered=options.where((item){
     final label=leafLabels?item.displayName:item.name;
-    final text=query.trim().toLowerCase();
-    return label.toLowerCase().contains(text)||
-     waffraTr(label).toLowerCase().contains(text)||
-     waffraTr(item.name).toLowerCase().contains(text);
+    return waffraSearchAny([label,waffraTr(label),waffraTr(item.name)],query);
    }).toList();
    return AlertDialog(title:WaffraText(waffraIsEnglish?'Search categories':'بحث في الأقسام'),
     content:SizedBox(width:360,height:min(420.0,MediaQuery.sizeOf(dialogCtx).height*.55),child:Column(children:[
@@ -5453,8 +5451,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
  Widget dashboard(){
   final inc=sum(entries,true),exp=sum(entries,false);
   final visible=entries.where((e){
-   final q=search.trim().toLowerCase();
-   return(e.title.toLowerCase().contains(q)||e.category.toLowerCase().contains(q))&&
+   final q=search.trim();
+   return(waffraSearchAny([e.title,e.category,waffraTr(e.category)],q))&&
     (transactionsDateRange==null||(e.date.isAfter(transactionsDateRange!.start.subtract(const Duration(days:1)))&&e.date.isBefore(transactionsDateRange!.end.add(const Duration(days:1)))))&&
     (minTransactionAmount==null||e.amount>=minTransactionAmount!)&&
     (maxTransactionAmount==null||e.amount<=maxTransactionAmount!)&&
@@ -6726,9 +6724,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
         builder:(pickCtx){
          String query='';
          return StatefulBuilder(builder:(pickCtx,refresh){
-          final search=waffraNormalizeGoal(query);
           final matches=suggested.where(
-           (item)=>search.isEmpty||waffraNormalizeGoal(item).contains(search)).toList();
+           (item)=>waffraSearchMatches(item,query)).toList();
           return AlertDialog(
            title:WaffraText(waffraIsEnglish?'Choose savings goal':'اختر هدف الادخار'),
            content:SizedBox(
@@ -7356,8 +7353,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
           String query='';
           return StatefulBuilder(builder:(searchCtx,refresh){
            final filtered=options.where((c)=>
-            (c.name.toLowerCase().contains(query.trim().toLowerCase())||
-             waffraTr(c.name).toLowerCase().contains(query.trim().toLowerCase()))).toList();
+            waffraSearchAny([c.name,waffraTr(c.name)],query)).toList();
            return AlertDialog(
             title:WaffraText(waffraIsEnglish?'Search categories':'البحث عن قسم'),
             content:SizedBox(
@@ -8429,8 +8425,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
    final chosen=await showWaffraDialog<String>(
     context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update){
      final visible=waffraCountryCurrencies.where((country)=>
-      ('${country.countryAr} ${country.countryEn} ${country.nameAr} ${country.nameEn} ${country.code}')
-       .toLowerCase().contains(query.toLowerCase())).toList();
+      waffraSearchAny([country.countryAr,country.countryEn,country.nameAr,
+       country.nameEn,country.code],query)).toList();
      return AlertDialog(
       title:WaffraText(waffraIsEnglish?'Application currency':'العملة الأساسية للتطبيق'),
       content:SizedBox(width:420,height:410,child:Column(children:[
@@ -8514,7 +8510,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     ])),
    const SizedBox(height:13),
    TextField(key:const Key('waffra-account-settings-search'),onChanged:(value){
-    final q=value.trim().toLowerCase();
+    final q=value.trim();
     final groups=<String,String>{
      waffraIsEnglish?'App settings':'إعدادات التطبيق':'language theme appearance system dark light currency exchange بلد دولة عملة جنيه مصري مصر SAR EGP المظهر اللغة الحركة animation',
      waffraIsEnglish?'Security & privacy':'الأمان والخصوصية':'privacy biometric fingerprint حماية بصمة قفل إخفاء PIN screenshots المعاينة',
@@ -8523,7 +8519,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      waffraIsEnglish?'Help & about':'المساعدة وعن وفرة':'tour help about وفرة الجولة المساعدة',
     };
     String? match;
-    if(q.isNotEmpty){for(final item in groups.entries){if(('${item.key} ${item.value}').toLowerCase().contains(q)){match=item.key;break;}}}
+    if(q.isNotEmpty){for(final item in groups.entries){if(waffraSearchAny([item.key,item.value],q)){match=item.key;break;}}}
     setState((){accountSearch=q;_accountOpenSection=match;});
    },decoration:InputDecoration(prefixIcon:const Icon(Icons.search,color:emerald),
     hintText:waffraIsEnglish?'Find a setting':'ابحث داخل إعدادات حسابي')),
