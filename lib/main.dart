@@ -781,13 +781,19 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    profile=u;showLogin=false;googleFirstRunSetup=needsGoogleSetup;
   });
  }
- Future<void> completeGoogleCountrySetup(String selectedCurrency)async{
+ Future<void> completeGoogleCountrySetup(
+   String selectedCurrency,bool notificationsGranted)async{
   final account=profile;
   if(!waffraGoogleProfileReadyForCountrySetup(account))return;
-  // Only country/display preferences can change here. Never request
-  // notification access here: Recurring's opt-in toggle already owns it.
+  // Location only changes the display label, never converts historic
+  // financial amounts. Notification consent is user-initiated on first run.
   await WaffraDisplayCurrency.setCurrency(selectedCurrency);
   final prefs=await SharedPreferences.getInstance();
+  if(notificationsGranted){
+   final recorded=await prefs.setBool(
+    'waffra_google_recurring_reminders_pending_v1',true);
+   if(!recorded)throw StateError('Notification consent marker could not be recorded.');
+  }
   final complete=await prefs.setBool(
     waffraCountrySetupKey(account!),true);
   if(!complete)throw StateError('Could not save country setup completion.');
@@ -3021,9 +3027,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    });
   }
   if(recurringRemindersEnabled)unawaited(syncRecurringReminders());
-  // A first-use Google consent records an intent, but only the verified
-  // finance authority is permitted to enable the recurring reminder flag.
-  // The user enables reminders directly on the Recurring switch.
+  // An explicit Google onboarding notification consent may be pending;
+  // enable reminder scheduling only through the verified finance authority.
+  unawaited(_applyApprovedGoogleReminderSetup());
   if(!verifiedEncryptedStartup&&trashBefore!=deletedCategories.length){
    await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
   }
@@ -3117,6 +3123,26 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    committed.finance.getStringList('waffra_sms_hashes_v1')??const <String>[]);
  }
 
+ Future<void> _applyApprovedGoogleReminderSetup()async{
+  try{
+   final prefs=await SharedPreferences.getInstance();
+   if(prefs.getBool('waffra_google_recurring_reminders_pending_v1')!=true||
+      !mounted||!ready)return;
+   // Never prompt twice: the user already approved notifications in onboarding.
+   if(!await WaffraReminders.alreadyPermitted()){
+    await prefs.remove('waffra_google_recurring_reminders_pending_v1');
+    return;
+   }
+   if(!recurringRemindersEnabled){
+    await toggleRecurringReminders(true,permissionAlreadyGranted:true);
+   }
+   if(recurringRemindersEnabled){
+    await prefs.remove('waffra_google_recurring_reminders_pending_v1');
+   }
+  }catch(e){
+   debugPrint('Approved recurring setup could not be confirmed.');
+  }
+ }
  Future<void> syncRecurringReminders()async {
   if(!recurringRemindersEnabled)return;
   try {
@@ -3126,10 +3152,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     english:waffraIsEnglish);
   }catch(e){debugPrint('Reminder scheduling failed: $e');}
  }
- Future<void> toggleRecurringReminders(bool enabled)async {
+ Future<void> toggleRecurringReminders(bool enabled,
+   {bool permissionAlreadyGranted=false})async {
   if(enabled){
    try {
-    final granted=await WaffraReminders.requestPermission();
+    final granted=permissionAlreadyGranted?
+     await WaffraReminders.alreadyPermitted():
+     await WaffraReminders.requestPermission();
     if(!granted){
      if(mounted)snack(context,waffraIsEnglish?
       'Allow notifications in Android settings to enable reminders.':
