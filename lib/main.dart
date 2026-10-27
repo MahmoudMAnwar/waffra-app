@@ -7346,7 +7346,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     Expanded(child:WaffraOutlinedItemsCount(
      label:waffraIsEnglish?'Current goals':'عدد الأهداف الحالية',count:goals.length)),
     const SizedBox(width:9),
-    Expanded(child:WaffraDeletedItemsButton(
+    Flexible(fit:FlexFit.loose,child:WaffraDeletedItemsButton(
      onPressed:WaffraHaptics.tapRequired(deletedGoalsDialog),
      label:waffraIsEnglish?'Deleted goals (${deletedGoals.length})'
       :'الأهداف المحذوفة (${deletedGoals.length})')),
@@ -7602,7 +7602,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       maxLines:2,textAlign:TextAlign.center,
       style:const TextStyle(fontSize:11.5,fontWeight:FontWeight.bold)))),
     const SizedBox(width:9),
-    Expanded(child:WaffraDeletedItemsButton(
+    Flexible(fit:FlexFit.loose,child:WaffraDeletedItemsButton(
      onPressed:WaffraHaptics.tapRequired(deletedRecurringDialog),
      label:waffraIsEnglish?'Deleted recurring (${deletedRecurring.length})':
       'المتكررة المحذوفة (${deletedRecurring.length})')),
