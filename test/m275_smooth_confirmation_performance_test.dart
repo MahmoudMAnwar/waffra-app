@@ -44,11 +44,14 @@ void main() {
       Positioned.fill(child:WaffraSmoothConfirmationOverlay(
           controller:controller,english:true)),
     ]))));
-    final work=controller.track<void>('rejected',()async{
-      throw StateError('source authority rejected save');
-    });
+    final pending=Completer<void>();
+    final work=controller.track<void>('rejected',()=>pending.future);
+    // Attach the failure expectation BEFORE delivering the asynchronous error.
+    // Otherwise Flutter's widget-test zone reports a spurious uncaught error.
+    final checked=expectLater(work,throwsStateError);
     await tester.pump();
-    await expectLater(work,throwsStateError);
+    pending.completeError(StateError('source authority rejected save'));
+    await checked;
     await tester.pumpAndSettle();
     expect(controller.pendingOperations,0);
     expect(find.byKey(const Key('waffra-smooth-save-indicator')),
