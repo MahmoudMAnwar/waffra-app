@@ -195,13 +195,15 @@ class WaffraSmartFeaturesPage extends StatefulWidget{
  final List<WaffraSmartRecurring> recurring;
  final bool english;
  final bool embedded;
+ /// Stable header focus used by the onboarding tour in the tools footer.
+ final Key? tourHeadingKey;
  /// Existing full financial analysis entry, supplied by Home's verified state.
  final WidgetBuilder? analysisBuilder;
  /// Centralized Home footer notice presenter, optional for standalone previews.
  final ValueChanged<String>? onNotice;
  const WaffraSmartFeaturesPage({super.key,required this.entries,
   required this.goals,required this.recurring,required this.english,
-  this.embedded=false,this.analysisBuilder,this.onNotice});
+  this.embedded=false,this.analysisBuilder,this.onNotice,this.tourHeadingKey});
  @override State<WaffraSmartFeaturesPage> createState()=>_WaffraSmartFeaturesPageState();
 }
 
@@ -638,7 +640,7 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
    padding:const EdgeInsets.fromLTRB(14,16,14,30),
    physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
    children:[
-    Container(padding:const EdgeInsets.all(12),
+    Container(key:widget.tourHeadingKey,padding:const EdgeInsets.all(12),
      margin:const EdgeInsets.only(bottom:11),
      decoration:BoxDecoration(
       gradient:LinearGradient(colors:dark?
