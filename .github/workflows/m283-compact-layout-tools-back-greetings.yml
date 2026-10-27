@@ -1,0 +1,101 @@
+name: M283 Compact Borders, Smart Tools Scroll and Saudi Greeting QA
+on:
+  pull_request:
+    branches:
+      - main
+      - integration/m282-all-qa-security-finance-tools-candidate-20261027
+    paths:
+      - '.github/workflows/m283-compact-layout-tools-back-greetings.yml'
+      - 'lib/main.dart'
+      - 'lib/waffra_action_layout.dart'
+      - 'lib/waffra_smart_features.dart'
+      - 'lib/waffra_saudi_greetings.dart'
+      - 'lib/waffra_back_navigation.dart'
+      - 'test/m283_compact_tools_navigation_greetings_test.dart'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+concurrency:
+  group: m283-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compact-tools-navigation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact PR revision
+        env:
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$SHA"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Static analysis including real app and tools
+        run: |
+          dart analyze \
+            lib/main.dart \
+            lib/waffra_action_layout.dart \
+            lib/waffra_back_navigation.dart \
+            lib/waffra_saudi_greetings.dart \
+            lib/waffra_smart_features.dart \
+            test/m283_compact_tools_navigation_greetings_test.dart
+      - name: Seven synthetic M283 UX/navigation/greeting regressions
+        run: flutter test --reporter expanded test/m283_compact_tools_navigation_greetings_test.dart
+      - name: Recheck older tool accordion and Android UI accessibility
+        run: |
+          flutter test --reporter expanded \
+            test/m268_smart_features_ten_calendar_art_test.dart \
+            test/m277_ux_accessibility_quality_test.dart \
+            test/m278_system_bars_responsive_matrix_test.dart
+
+  full-app-no-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Complete repository Flutter unit/widget test corpus
+        run: flutter test test --reporter expanded
+
+  source-coverage-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Guard against regression in layout, back and finance authority
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          app=Path('lib/main.dart').read_text()
+          tools=Path('lib/waffra_smart_features.dart').read_text()
+          buttons=Path('lib/waffra_action_layout.dart').read_text()
+          gates=Path('lib/storage/waffra_production_cutover_release_gate.dart').read_text()
+          must=[
+            ("compact budget", "waffra-month-budget-compact-edit" in app),
+            ("two-back", "WaffraDoubleBackExit" in app),
+            ("account home", "_consumeHomeBack" in app),
+            ("Saudi rotation", "WaffraSaudiGreetings.compose" in app),
+            ("tools scroll", "Scrollable.ensureVisible" in tools),
+            ("remove manual accordion explanation", "افتح أي أداة هنا" not in tools),
+            ("min 48dp", "Size(0, 48)" in buttons),
+            ("no cutover", "bool get automaticallyActivateSqlCipher => false;" in gates),
+          ]
+          for label,ok in must:
+            if not ok: raise SystemExit('M283 source witness failure: '+label)
+          print('M283 source/visual behavior checks present; no production cutover.')
+          PY
