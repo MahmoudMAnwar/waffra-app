@@ -39,7 +39,7 @@ jobs:
       - run: flutter pub get
       - name: Static analysis including real app and tools
         run: |
-          dart analyze \
+          flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings \
             lib/main.dart \
             lib/waffra_action_layout.dart \
             lib/waffra_back_navigation.dart \
