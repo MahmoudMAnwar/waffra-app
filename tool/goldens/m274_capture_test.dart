@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:waffra/main.dart';
 import 'package:waffra/waffra_footer.dart';
 import 'package:waffra/waffra_i18n.dart';
@@ -19,7 +18,6 @@ void main() {
     await fonts.load();
   });
   setUp(() {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
     waffraLanguage.value = 'ar';
     hideWaffraAmounts.value = false;
   });
