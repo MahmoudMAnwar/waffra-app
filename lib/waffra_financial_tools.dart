@@ -49,6 +49,7 @@ class _WaffraFinancialCalendarState extends State<WaffraFinancialCalendar> {
    const SizedBox(height:7),
    FittedBox(fit:BoxFit.scaleDown,child:WaffraText(
     '${amount.toStringAsFixed(2)} ${widget.english?'SAR':'ريال'}',
+    currencyEnglish:widget.english,
     textDirection:TextDirection.ltr,
     style:TextStyle(fontWeight:FontWeight.w800,fontSize:18,
       color:dark?Colors.white:income?incomeInk:expenseInk))),
@@ -302,7 +303,7 @@ class _WaffraSubscriptionScreenState extends State<WaffraSubscriptionScreen> {
      Text(candidate.payments.toString()+t(' similar payments',' مدفوعات متشابهة'),
       style:TextStyle(fontSize:11,color:Theme.of(context).hintColor)),
     ])),
-    WaffraText('~'+money(candidate.estimatedMonthly),textDirection:TextDirection.ltr,
+    WaffraText('~'+money(candidate.estimatedMonthly),currencyEnglish:widget.english,textDirection:TextDirection.ltr,
      style:const TextStyle(color:green,fontSize:12,fontWeight:FontWeight.w800)),
    ]),
    const SizedBox(height:12),
@@ -337,7 +338,7 @@ class _WaffraSubscriptionScreenState extends State<WaffraSubscriptionScreen> {
    Expanded(child:Text(item.title,maxLines:2,overflow:TextOverflow.ellipsis,
     style:const TextStyle(fontWeight:FontWeight.bold))),
    const SizedBox(width:5),
-   WaffraText(money(item.amount),textDirection:TextDirection.ltr,
+   WaffraText(money(item.amount),currencyEnglish:widget.english,textDirection:TextDirection.ltr,
     style:const TextStyle(color:green,fontWeight:FontWeight.w800)),
   ])));
 
@@ -373,14 +374,14 @@ class _WaffraSubscriptionScreenState extends State<WaffraSubscriptionScreen> {
       Row(children:[
        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         Text(t('Monthly','شهريًا'),style:const TextStyle(color:Color(0xFFC5E6D9))),
-        WaffraText(money(monthly),textDirection:TextDirection.ltr,
+        WaffraText(money(monthly),currencyEnglish:widget.english,textDirection:TextDirection.ltr,
          style:const TextStyle(color:Colors.white,fontSize:19,fontWeight:FontWeight.w800)),
        ])),
        Container(height:47,width:1,color:Colors.white24),
        const SizedBox(width:12),
        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         Text(t('Annual estimate','التقدير السنوي'),style:const TextStyle(color:Color(0xFFC5E6D9))),
-        WaffraText(money(monthly*12),textDirection:TextDirection.ltr,
+        WaffraText(money(monthly*12),currencyEnglish:widget.english,textDirection:TextDirection.ltr,
          style:const TextStyle(color:Colors.white,fontSize:19,fontWeight:FontWeight.w800)),
        ])),
       ]),
