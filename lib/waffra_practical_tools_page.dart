@@ -30,6 +30,7 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
   DateTime receiptDate = DateTime.now();
   XFile? pickedReceipt;
   bool receiptReviewed = false;
+  WaffraSafeDiagnosticCode? userSelectedIssue;
 
   String t(String ar, String en) => widget.english ? en : ar;
   String cash(int minor) => (minor / 100).toStringAsFixed(2) +
@@ -163,8 +164,9 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
           icon: const Icon(Icons.photo_library_outlined),
           label: Text(t('اختيار صورة', 'Choose image'))),
       ]),
-      if (pickedReceipt != null) Text(t('صورة جاهزة للمراجعة، لم يتم حفظها.',
-        'Image ready to review; not saved.')),
+      if (pickedReceipt != null) Text(t(
+        'الصورة للمراجعة فقط، ولن تُضاف لمعاملة أو تُرفع للسحابة. قد يحتفظ النظام بنسخة مؤقتة.',
+        'Review-only image. Not attached to a transaction or uploaded; the OS may keep a temporary copy.')),
       const SizedBox(height: 12),
       TextField(
         key: const Key('m281-receipt-merchant'), controller: merchant,
@@ -203,13 +205,20 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
     ],
   );
 
+  int? exactMinor(String source) {
+    final value = double.tryParse(source.trim().replaceAll(',', '.'));
+    if (value == null || !value.isFinite || value.abs() > 1e12) return null;
+    final halalas = value * 100;
+    if ((halalas - halalas.round()).abs() > 0.000001) return null;
+    return halalas.round();
+  }
+
   Widget monthlyClose() {
-    final balance = double.tryParse(opening.text.replaceAll(',', '.'));
-    final actualBalance = double.tryParse(actual.text.replaceAll(',', '.'));
-    final okay = balance != null && balance.isFinite && balance.abs() <= 1e12;
-    final summary = okay ? WaffraMonthlyClose.preview(widget.entries,
+    final openingMinor = exactMinor(opening.text);
+    final actualMinor = exactMinor(actual.text);
+    final summary = openingMinor != null ? WaffraMonthlyClose.preview(widget.entries,
       year: month.year, month: month.month,
-      openingMinor: (balance * 100).round()) : null;
+      openingMinor: openingMinor) : null;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       notice('معاينة فقط؛ لا حفظ للإقفال إلا بعد اعتماد التخزين المشفر.',
         'Preview only; month-close history requires verified encrypted storage.'),
@@ -243,29 +252,36 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
           keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
           decoration: InputDecoration(labelText: t('الرصيد الفعلي', 'Actual balance'),
             border: const OutlineInputBorder())),
-        if (actualBalance != null && actualBalance.isFinite &&
-            actualBalance.abs() <= 1e12)
+        if (actualMinor != null)
           Text(t('فرق المطابقة: ', 'Reconciliation difference: ') +
-            cash(summary.differenceMinor((actualBalance * 100).round()))),
+            cash(summary.differenceMinor(actualMinor))),
       ],
     ]);
   }
 
   Widget diagnostics() {
-    final tags = WaffraSafeDiagnosticCode.values
-      .map((code) => WaffraSafeDiagnosticEvent(code).safeTag).toList();
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      notice('بيانات دعم آمنة فقط؛ لا مبالغ أو رسائل بنكية أو صور أو رموز دخول.',
-        'Safe support codes only: no amounts, bank text, photos or credentials.'),
-      ...tags.map((tag) => ListTile(
-        dense: true, leading: const Icon(Icons.verified_outlined, color: green),
-        title: Text(tag, textDirection: TextDirection.ltr))),
+      notice('اختر نوع المشكلة التي واجهتها. لا نجمع بيانات شخصية أو رسائل بنكية أو ملفات.',
+        'Select the issue you experienced. No personal details, bank SMS or files are collected.'),
+      DropdownButton<WaffraSafeDiagnosticCode>(
+        key: const Key('m281-diagnostic-select'),
+        isExpanded: true,
+        hint: Text(t('نوع المشكلة', 'Problem category')),
+        value: userSelectedIssue,
+        items: WaffraSafeDiagnosticCode.values.map((code) =>
+          DropdownMenuItem<WaffraSafeDiagnosticCode>(
+            value: code, child: Text(code.name))).toList(),
+        onChanged: (code) => setState(() => userSelectedIssue = code),
+      ),
       OutlinedButton.icon(
         key: const Key('m281-copy-safe-diagnostics'),
-        onPressed: () => Clipboard.setData(ClipboardData(
-          text: 'Waffra safe diagnostic codes\n' + tags.join('\n'))),
+        onPressed: userSelectedIssue == null ? null :
+          () => Clipboard.setData(ClipboardData(
+            text: 'Waffra issue category: ' +
+              WaffraSafeDiagnosticEvent(userSelectedIssue!).safeTag)),
         icon: const Icon(Icons.copy),
-        label: Text(t('نسخ رموز التشخيص الآمنة', 'Copy safe diagnostic codes'))),
+        label: Text(t('نسخ رمز المشكلة المختارة فقط', 'Copy selected safe issue code')),
+      ),
     ]);
   }
 

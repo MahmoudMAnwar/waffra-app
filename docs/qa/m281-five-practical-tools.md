@@ -6,9 +6,9 @@ All five tools live under the existing **Smart Tools footer tab** (a new "Additi
 | --- | --- | --- |
 | Data Health Center | Duplicate ID, suspected duplicate transactions within 48h, missing category, malformed amount; no automatic edits | Link warning to actual transaction details; category correction with confirmed writer and undo; receipt & cloud integrity indicators |
 | Advanced transaction search | Local keyword on title/category, amount string, income vs expense, inclusive date range, reusable pure amount/attachment/notes filters in engine | Home must pass notes and attachment flags from the verified encrypted projection before claiming these are live user-visible filter fields; saved preferences require encrypted writer |
-| Receipt review assistant | Image picker camera/gallery plus explicit merchant/amount/date validation, no auto-save | Real on-device OCR plugin and on-device performance/privacy testing; attachment must be committed to verified encrypted vault with explicit confirm; no fake OCR claims |
+| Receipt review assistant | Image picker camera/gallery plus explicit merchant/amount/date validation, no auto-save; OS/image_picker may retain a temporary cached image | Real on-device OCR plugin and on-device performance/privacy testing; attachment must be committed to verified encrypted vault with explicit confirm; no fake OCR claims |
 | Monthly financial close | Halala-accurate monthly income/expenses/count, user-supplied opening balance, actual-vs-expected difference, months navigation | Persist user-approved close history only in verified SQLCipher, validate imported legacy balances and controlled reopening/reconciliation |
-| Safe diagnostics | Show/copy code-only allowlist, no logs with bank SMS, monetary data, paths or PII | Opt-in crash diagnostics and secure support transport only after validated consent and encrypted/privacy review |
+| Safe diagnostics | User selects one issue category and can copy only that allowlisted code; no logs with bank SMS, monetary data, paths or PII | Opt-in crash diagnostics and secure support transport only after validated consent and encrypted/privacy review |
 
 ## Quality requirements
 - Arabic/English, system dark/light and RTL/LTR, scalable text and touch targets.
