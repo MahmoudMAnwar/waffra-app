@@ -2,19 +2,16 @@ import 'package:flutter/material.dart';
 
 import 'waffra_country_suggestion.dart';
 import 'waffra_display_currency.dart';
-import 'waffra_reminders.dart';
 
 /// Explicit first-run currency suggestion. No finance mutation or GPS storage.
 class WaffraCountryFirstRunPage extends StatefulWidget {
   const WaffraCountryFirstRunPage({
     super.key, required this.english, required this.onComplete,
-    this.detectCountry, this.askNotificationPermission,
+    this.detectCountry,
   });
   final bool english;
   final Future<String?> Function()? detectCountry;
-  final Future<bool> Function()? askNotificationPermission;
-  final Future<void> Function(String currencyCode, bool remindersGranted)
-      onComplete;
+  final Future<void> Function(String currencyCode) onComplete;
   @override State<WaffraCountryFirstRunPage> createState() =>
       _WaffraCountryFirstRunPageState();
 }
@@ -22,7 +19,7 @@ class WaffraCountryFirstRunPage extends StatefulWidget {
 class _WaffraCountryFirstRunPageState extends State<WaffraCountryFirstRunPage> {
   static const emerald = Color(0xFF087A54);
   late String currencyCode;
-  bool detecting = false, submitting = false, enableReminders = false;
+  bool detecting = false, submitting = false;
   String? detectedIso, message;
   bool isError = false;
   String t(String ar, String en) => widget.english ? en : ar;
@@ -63,26 +60,9 @@ class _WaffraCountryFirstRunPageState extends State<WaffraCountryFirstRunPage> {
     if (detecting || submitting) return;
     setState(() { submitting = true; message = null; isError = false; });
     try {
-      var granted = false;
-      if (!skip && enableReminders) {
-        try {
-          granted = await (widget.askNotificationPermission?.call() ??
-              WaffraReminders.requestPermission());
-        } catch (_) { granted = false; }
-        if (!mounted) return;
-        if (!granted) {
-          setState(() {
-            submitting = false;
-            enableReminders = false;
-            isError = true;
-            message = t(
-              'لم يتم منح إذن الإشعارات. تابع بدون تذكيرات، أو فعّلها من صفحة المتكررة لاحقًا.',
-              'Notifications not permitted. Continue without reminders; you can enable them from Recurring later.');
-          });
-          return;
-        }
-      }
-      await widget.onComplete(currencyCode, granted);
+      // Never ask for location on Skip; never request notification access
+      // during login, onboarding, or profile completion.
+      await widget.onComplete(currencyCode);
     } catch (_) {
       if (mounted) setState(() {
         isError = true;
@@ -109,8 +89,8 @@ class _WaffraCountryFirstRunPageState extends State<WaffraCountryFirstRunPage> {
             style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 12),
           Text(t(
-            'لو وافقت، هنستخدم موقع تقريبي مرة واحدة فقط لاقتراح عملة بلدك. مش بنحفظ الإحداثيات أو بنتتبع مكانك.',
-            'If you agree, we use your approximate location once to suggest a currency. Coordinates are not saved or tracked.'),
+            'وفرة محتاج إذن الموقع التقريبي مرة واحدة عشان يحدد بلدك ويقترح عملته، مثل الريال في السعودية والجنيه في مصر. اضغط تحديد البلد لمنح الإذن. مش بنحفظ الإحداثيات ولا بنتتبعك.',
+            'Waffra asks for approximate location once to suggest your country currency, such as SAR in Saudi Arabia or EGP in Egypt. Tap Detect country to grant access. We do not store coordinates or track you.'),
             textAlign: TextAlign.center),
           const SizedBox(height: 10),
           OutlinedButton.icon(
@@ -156,19 +136,14 @@ class _WaffraCountryFirstRunPageState extends State<WaffraCountryFirstRunPage> {
               style: TextStyle(color: isError
                 ? Theme.of(context).colorScheme.error : emerald))),
           const SizedBox(height: 20),
-          SwitchListTile.adaptive(
-            key: const Key('m290-recurring-notification-toggle'),
-            contentPadding: EdgeInsets.zero,
-            value: enableReminders,
-            onChanged: submitting ? null :
-                (enabled) => setState(() => enableReminders = enabled),
-            secondary: const Icon(Icons.notifications_active_outlined,
-              color: emerald),
-            title: Text(t('إشعارات العمليات المتكررة',
-              'Recurring payment reminders')),
-            subtitle: Text(t(
-              'اختياري: هنطلب إذن الإشعارات عند المتابعة. التذكيرات لا تنفذ أي مدفوعات.',
-              'Optional permission request when you continue. Reminders never make payments.')),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.notifications_none, color: emerald),
+              title: Text(t('الإشعارات لاحقًا', 'Notifications later')),
+              subtitle: Text(t(
+                'مش هنطلب إذن الإشعارات دلوقتي. هنطلبه فقط لما تفعّل التذكيرات من قسم العمليات المتكررة.',
+                'We will ask for notification access only when you enable reminders in Recurring.')),
+            ),
           ),
           const SizedBox(height: 16),
           FilledButton.icon(
@@ -183,8 +158,8 @@ class _WaffraCountryFirstRunPageState extends State<WaffraCountryFirstRunPage> {
               () => complete(skip: true),
             child: Text(t('تخطي الآن', 'Skip for now'))),
           const SizedBox(height: 8),
-          Text(t('يمكنك تغيير العملة والإشعارات من الإعدادات لاحقًا.',
-            'You can change currency and notifications later.'),
+          Text(t('اختيار الموقع اختياري تمامًا، ويمكنك تغيير عملة العرض لاحقًا من الإعدادات.',
+            'Location is completely optional; you can change your display currency later.'),
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodySmall),
         ],
