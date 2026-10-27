@@ -8489,6 +8489,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   return WaffraSmartFeaturesPage(
    key:const Key('waffra-m268-footer-page'),
    embedded:true,english:waffraIsEnglish,
+   onNotice:(message)=>snack(context,message),
    analysisBuilder:(_)=>Column(crossAxisAlignment:CrossAxisAlignment.stretch,
     children:[smartAnalysisEntryCard(),const SizedBox(height:10),smartMoneyInsightsCard()]),
    entries:List<WaffraSmartEntry>.unmodifiable(entries.map((e)=>WaffraSmartEntry(
