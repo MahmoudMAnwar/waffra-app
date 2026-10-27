@@ -395,6 +395,31 @@ jobs:
           '''
               gradle.write_text(kotlin)
           PY
+      # Flutter integration_test is a dev dependency. Generated Android host
+      # metadata sometimes leaves a debug-only Java plugin registrar that
+      # cannot compile against the release classpath. Match the main release
+      # workflow, removing ONLY that test registration (not real plugins).
+      - name: Remove debug-only integration test plugin from release registrar
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java')
+          if not path.exists():
+              print('Generated Java plugin registrant not present')
+          else:
+              text=path.read_text()
+              statement='flutterEngine.getPlugins().add(new dev.flutter.plugins.integration_test.IntegrationTestPlugin());'
+              if statement in text:
+                  text=text.replace(statement,
+                      '// integration_test is debug/test-only and not on release classpath.')
+                  path.write_text(text)
+                  print('Excluded only test plugin from generated release registrar')
+              elif 'dev.flutter.plugins.integration_test.IntegrationTestPlugin()' in text:
+                  raise SystemExit('Unexpected integration_test registrar form')
+              else:
+                  print('No debug-only integration_test registrar')
+          PY
       - name: Compile ARM64 release-mode APK (not production certified)
         run: flutter build apk --release --no-pub --target-platform android-arm64
       # Do not publish a compile-only preview with missing native bindings:
