@@ -2957,7 +2957,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   };
   final baseline=_lastFinanceAuthorityRead;
   return _saveProgress.track<void>(
-   'persist-financial-change',()=>_financialWriteQueue.submit(snapshot,(captured)async {
+   'persist-financial-change',() {
+   return _financialWriteQueue.submit(snapshot,(captured)async {
    if(baseline==null){
     throw StateError('Verified dashboard baseline is unavailable.');
    }
@@ -2974,7 +2975,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    _lastFinanceAuthorityRead=committed;
    _lastLedgerSavedRaw=committed.ledgerRaw;
    _lastWidgetRevision=committed.widgetRevision;
-  }).then((_){unawaited(_refreshWidget());}));
+  }).then((_){unawaited(_refreshWidget());});
+  });
  }
 
  Future<void> _persistSmsHashes(Set<String> hashesToSave)async {
