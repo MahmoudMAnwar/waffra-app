@@ -580,6 +580,18 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
     i==-1?t('أسعار الذهب والنفط وتحويل العملات','Gold, oil and exchange rates'):details[i];
    final illustration=i==-2?'investment':i==-1?'bank':types[i];
    final expanded=active==i;
+   final sectionBody=expanded?Padding(
+    key:Key('waffra-m268-expanded-'+id),
+    padding:const EdgeInsets.fromLTRB(7,0,7,9),
+    child:Column(children:[
+     Divider(color:green.withValues(alpha:.23)),
+     const SizedBox(height:7),
+     if(i==-2)(widget.analysisBuilder?.call(context)??
+       _paragraph(t('التحليل متاح بعد فتح التطبيق ببيانات مالية مؤمنة.',
+        'Financial insights require the verified app data source.')))
+     else if(i==-1)const CurrencyConverterPage(embedded:true)
+     else _body(i),
+    ])):const SizedBox(width:double.infinity,height:0);
    return Padding(
     key:_sectionKeys[i],
     padding:const EdgeInsets.only(bottom:9),
@@ -614,21 +626,11 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
            child:Icon(Icons.keyboard_arrow_down_rounded,
              color:green,size:25)),
          ])))),
-      ClipRect(child:AnimatedSize(
+      // Reduced motion uses a direct layout swap, not a zero-duration
+      // RenderAnimatedSize which can relayout itself during performLayout.
+      ClipRect(child:reduced?sectionBody:AnimatedSize(
        duration:duration,curve:Curves.easeInOutCubic,
-       alignment:Alignment.topCenter,
-       child:expanded?Padding(
-        key:Key('waffra-m268-expanded-'+id),
-        padding:const EdgeInsets.fromLTRB(7,0,7,9),
-        child:Column(children:[
-         Divider(color:green.withValues(alpha:.23)),
-         const SizedBox(height:7),
-         if(i==-2)(widget.analysisBuilder?.call(context)??
-           _paragraph(t('التحليل متاح بعد فتح التطبيق ببيانات مالية مؤمنة.',
-            'Financial insights require the verified app data source.')))
-         else if(i==-1)const CurrencyConverterPage(embedded:true)
-         else _body(i),
-        ])):const SizedBox(width:double.infinity,height:0))),
+       alignment:Alignment.topCenter,child:sectionBody)),
      ])));
   });
   return ListView(
