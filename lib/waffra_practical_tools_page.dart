@@ -34,6 +34,9 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
   bool receiptReviewed = false;
   String? receiptPickerError;
   WaffraSafeDiagnosticCode? userSelectedIssue;
+  int? openSection;
+  final ScrollController sectionScroll = ScrollController();
+  final sectionKeys = List.generate(5, (_) => GlobalKey());
 
   String t(String ar, String en) => widget.english ? en : ar;
   String cash(int minor) => (minor / 100).toStringAsFixed(2) +
@@ -41,20 +44,64 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
 
   @override void dispose() {
     query.dispose(); opening.dispose(); actual.dispose();
-    merchant.dispose(); amount.dispose(); super.dispose();
+    merchant.dispose(); amount.dispose(); sectionScroll.dispose(); super.dispose();
   }
 
-  Widget section(String ar, String en, IconData icon, Widget child, Key key) =>
-      Card(
-        key: key, margin: const EdgeInsets.only(bottom: 12),
-        clipBehavior: Clip.antiAlias,
-        child: ExpansionTile(
-          leading: Icon(icon, color: green),
-          title: Text(t(ar, en), style: const TextStyle(fontWeight: FontWeight.w800)),
-          childrenPadding: const EdgeInsets.fromLTRB(14, 8, 14, 20),
-          children: [child],
+  void openTool(int index) {
+    setState(() => openSection = openSection == index ? null : index);
+    if (openSection != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final target = sectionKeys[index].currentContext;
+        if (target != null) {
+          Scrollable.ensureVisible(target,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut, alignment: 0.02);
+        }
+      });
+    }
+  }
+
+  Widget section(int index, String ar, String en, IconData icon,
+      Widget child, Key key) => Container(
+        key: sectionKeys[index],
+        child: Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          clipBehavior: Clip.antiAlias,
+          child: Column(children: [
+            ListTile(
+              key: key,
+              leading: Icon(icon, color: green),
+              title: Text(t(ar, en),
+                style: const TextStyle(fontWeight: FontWeight.w800)),
+              trailing: Icon(openSection == index
+                ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down),
+              onTap: () => openTool(index),
+            ),
+            if (openSection == index)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 8, 14, 20),
+                child: child),
+          ]),
         ),
       );
+
+  String diagnosticLabel(WaffraSafeDiagnosticCode code) => switch (code) {
+    WaffraSafeDiagnosticCode.appStartupBlocked =>
+      t('تعذر تشغيل التطبيق', 'App startup blocked'),
+    WaffraSafeDiagnosticCode.financeWitnessMismatch =>
+      t('عدم تطابق البيانات المالية', 'Financial data mismatch'),
+    WaffraSafeDiagnosticCode.encryptedVaultCannotOpen =>
+      t('تعذر فتح الخزنة المشفرة', 'Encrypted vault cannot open'),
+    WaffraSafeDiagnosticCode.widgetJournalRecoveryNeeded =>
+      t('مشكلة استعادة بيانات الويدجت', 'Widget data recovery needed'),
+    WaffraSafeDiagnosticCode.cloudRevisionConflict =>
+      t('تعارض المزامنة السحابية', 'Cloud sync conflict'),
+    WaffraSafeDiagnosticCode.receiptIntegrityFailure =>
+      t('مشكلة في سلامة المرفقات', 'Receipt integrity issue'),
+    WaffraSafeDiagnosticCode.reportRenderFailed =>
+      t('تعذر عرض التقرير', 'Report rendering failed'),
+  };
 
   Widget notice(String ar, String en) => Padding(
     padding: const EdgeInsets.only(bottom: 10),
@@ -283,7 +330,7 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
         value: userSelectedIssue,
         items: WaffraSafeDiagnosticCode.values.map((code) =>
           DropdownMenuItem<WaffraSafeDiagnosticCode>(
-            value: code, child: Text(code.name))).toList(),
+            value: code, child: Text(diagnosticLabel(code)))).toList(),
         onChanged: (code) => setState(() => userSelectedIssue = code),
       ),
       Align(alignment:AlignmentDirectional.centerStart,child:OutlinedButton.icon(
@@ -302,20 +349,21 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: Text(t('أدوات وفرة الإضافية', 'Practical finance tools'))),
     body: SafeArea(child: ListView(
+      controller: sectionScroll,
       key: const Key('m281-practical-tools-screen'),
       padding: const EdgeInsets.all(14), children: [
-        section('مركز صحة البيانات', 'Data health center',
+        section(0, 'مركز صحة البيانات', 'Data health center',
           Icons.health_and_safety_outlined, health(),
           const Key('m281-health-tile')),
-        section('البحث الذكي الشامل', 'Advanced financial search',
+        section(1, 'البحث الذكي الشامل', 'Advanced financial search',
           Icons.manage_search, advancedSearch(), const Key('m281-search-tile')),
-        section('مساعد الفواتير (مراجعة يدوية)', 'Receipt review (manual; OCR not enabled)',
+        section(2, 'مساعد الفواتير (مراجعة يدوية)', 'Receipt review (manual; OCR not enabled)',
           Icons.receipt_long_outlined, receiptAssistant(),
           const Key('m281-receipt-tile')),
-        section('الإقفال الشهري', 'Monthly close preview',
+        section(3, 'الإقفال الشهري', 'Monthly close preview',
           Icons.calendar_month_outlined, monthlyClose(),
           const Key('m281-month-tile')),
-        section('تشخيص الأعطال الآمن', 'Safe support diagnostics',
+        section(4, 'تشخيص الأعطال الآمن', 'Safe support diagnostics',
           Icons.support_agent_outlined, diagnostics(),
           const Key('m281-diagnostics-tile')),
       ],
