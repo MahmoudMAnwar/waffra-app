@@ -28,7 +28,7 @@ void main() {
 
   test('replayable tour only includes six core screens', () {
     final source = File('lib/main.dart').readAsStringSync();
-    expect(source, contains('static const tourTabs=<int>[0,0,0,1,2,3];'));
+    expect(source, contains('static const tourTabs=<int>[0,0,0,1,3,4];'));
     expect(source, contains('static const tourTargetKeys=<int>[-1,0,1,2,6,4];'));
     final tour = source.substring(source.indexOf('Widget tourOverlay()=>'),
       source.indexOf('Future<void> changePin()', source.indexOf('Widget tourOverlay()=>')));
