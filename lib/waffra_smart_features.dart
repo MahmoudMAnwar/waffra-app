@@ -13,9 +13,12 @@ class WaffraSmartEntry {
   final double amount;
   final bool income;
   final DateTime date;
+  /// The Home-verified projection only; never send bank details to the cloud.
+  final String notes;
+  final bool hasAttachment;
   const WaffraSmartEntry({required this.id,required this.title,
     required this.category,required this.amount,required this.income,
-    required this.date});
+    required this.date,this.notes='',this.hasAttachment=false});
 }
 
 class WaffraSmartGoal {
@@ -644,7 +647,8 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
         entries:List<WaffraPracticalEntry>.unmodifiable(
          widget.entries.map((entry)=>WaffraPracticalEntry(
           id:entry.id,title:entry.title,category:entry.category,
-          amount:entry.amount,income:entry.income,date:entry.date)))))),
+          amount:entry.amount,income:entry.income,date:entry.date,
+          notes:entry.notes,hasAttachment:entry.hasAttachment)))))),
      )),
    ]);
  }
