@@ -196,9 +196,11 @@ class WaffraSmartFeaturesPage extends StatefulWidget{
  final bool embedded;
  /// Existing full financial analysis entry, supplied by Home's verified state.
  final WidgetBuilder? analysisBuilder;
+ /// Centralized Home footer notice presenter, optional for standalone previews.
+ final ValueChanged<String>? onNotice;
  const WaffraSmartFeaturesPage({super.key,required this.entries,
   required this.goals,required this.recurring,required this.english,
-  this.embedded=false,this.analysisBuilder});
+  this.embedded=false,this.analysisBuilder,this.onNotice});
  @override State<WaffraSmartFeaturesPage> createState()=>_WaffraSmartFeaturesPageState();
 }
 
@@ -643,7 +645,7 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
       trailing:const Icon(Icons.chevron_right),
       onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(
        builder:(_)=>WaffraPracticalToolsPage(
-        english:widget.english,
+        english:widget.english,onNotice:widget.onNotice,
         entries:List<WaffraPracticalEntry>.unmodifiable(
          widget.entries.map((entry)=>WaffraPracticalEntry(
           id:entry.id,title:entry.title,category:entry.category,
