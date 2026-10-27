@@ -19,6 +19,7 @@ import 'waffra_smart_features.dart';
 import 'waffra_tour_plan.dart';
 import 'waffra_today_picker.dart';
 import 'waffra_action_layout.dart';
+import 'waffra_receipt_filename.dart';
 import 'waffra_back_navigation.dart';
 import 'waffra_saudi_greetings.dart';
 import 'package:flutter/rendering.dart';
@@ -3827,6 +3828,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   }
   DateTime date=initial?.date??DateTime.now();
    String? suggestion,pendingHash,receiptPath=initial?.receiptPath;
+   final stagedReceiptCopies=<String>[];
    bool attempted=false;
    bool explicitlyApprovedSmsDuplicate=false;
   Timer? debounce;
@@ -4001,24 +4003,56 @@ Future<void> bulkSmsSheet({String? initialText})async {
       Row(children:[
        Expanded(child:OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async{
         final file=await ImagePicker().pickImage(source:ImageSource.camera,imageQuality:80);
-        if(file!=null){final path=await saveReceipt(file);if(sheetContext.mounted)update(()=>receiptPath=waffraEncodeReceipts([...waffraReceiptPaths(receiptPath),path]));}
+        if(file!=null){final path=await saveReceipt(file);stagedReceiptCopies.add(path);if(sheetContext.mounted)update(()=>receiptPath=waffraEncodeReceipts([...waffraReceiptPaths(receiptPath),path]));}
        }),icon:const Icon(Icons.camera_alt_outlined),label:const WaffraText('تصوير فاتورة'))),
        const SizedBox(width:8),
        Expanded(child:OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async{
         final files=await ImagePicker().pickMultiImage(imageQuality:80);
         if(files.isNotEmpty){final paths=<String>[...waffraReceiptPaths(receiptPath)];
-         for(final file in files){paths.add(await saveReceipt(file));}
+         for(final file in files){final copied=await saveReceipt(file);stagedReceiptCopies.add(copied);paths.add(copied);}
          if(sheetContext.mounted)update(()=>receiptPath=waffraEncodeReceipts(paths));}
        }),icon:const Icon(Icons.attach_file),label:const WaffraText('إرفاق صورة'))),
       ]),
       if(waffraReceiptPaths(receiptPath).isNotEmpty)...[
        for(final path in waffraReceiptPaths(receiptPath))
         ListTile(dense:true,
-         title:WaffraText(path.split('/').last.replaceFirst(RegExp(r'^\\d+__'),'')),
+         title:WaffraText(WaffraReceiptFilename.displayName(path),maxLines:2),
          leading:const Icon(Icons.image,color:emerald),
-         trailing:IconButton(icon:const Icon(Icons.close),onPressed:WaffraHaptics.tap(()=>update((){
-          receiptPath=waffraEncodeReceipts([...waffraReceiptPaths(receiptPath)]..remove(path));
-         }))),
+         trailing:Row(mainAxisSize:MainAxisSize.min,children:[
+          IconButton(
+           key:Key('waffra-attachment-rename-'+waffraReceiptPaths(receiptPath).indexOf(path).toString()),
+           tooltip:waffraIsEnglish?'Rename attachment':'تعديل اسم المرفق',
+           icon:const Icon(Icons.drive_file_rename_outline,color:emerald),
+           onPressed:WaffraHaptics.tap(()async{
+            final name=await _promptReceiptLabel(sheetContext,path);
+            if(name==null||!sheetContext.mounted)return;
+            try{
+             final directory=Directory(
+              '${(await getApplicationDocumentsDirectory()).path}/receipts');
+             final renamed=await WaffraReceiptFilename.stageCopyWithName(
+              sourcePath:path,appReceiptsDirectory:directory.path,
+              proposedLabel:name);
+             stagedReceiptCopies.add(renamed);
+             if(!sheetContext.mounted)return;
+             update((){
+              final paths=waffraReceiptPaths(receiptPath);
+              final index=paths.indexOf(path);
+              if(index>=0)paths[index]=renamed;
+              receiptPath=waffraEncodeReceipts(paths);
+             });
+            }catch(_){
+             if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
+              'Could not rename attachment. The original image is unchanged.':
+              'تعذر تغيير اسم المرفق. الصورة الأصلية لم تتغير.');
+            }
+           })),
+          IconButton(
+           tooltip:waffraIsEnglish?'Remove attachment':'إزالة المرفق',
+           icon:const Icon(Icons.close),
+           onPressed:WaffraHaptics.tap(()=>update((){
+            receiptPath=waffraEncodeReceipts([...waffraReceiptPaths(receiptPath)]..remove(path));
+           }))),
+         ]),
          onTap:WaffraHaptics.tap(()=>showReceipt(receiptPath!,initialIndex:waffraReceiptPaths(receiptPath).indexOf(path)))),
       ],
       const SizedBox(height:12),
@@ -4055,7 +4089,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
      ])));
    }));
   debounce?.cancel();disposeLater([title,value,notes,message]);
-  if(result==null||!mounted)return;
+  if(result==null||!mounted){
+   for(final copy in stagedReceiptCopies){
+    try{final file=File(copy);if(await file.exists())await file.delete();}catch(_){}
+   }
+   return;
+  }
   if(initial==null&&!sms&&entries.any((e)=>
     e.income==result.income&&e.amount==result.amount&&
     e.title.trim().toLowerCase()==result.title.trim().toLowerCase()&&
@@ -4196,6 +4235,41 @@ Future<void> bulkSmsSheet({String? initialText})async {
     ])),actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogCtx)),child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))]);
   }));
  }
+ Future<String?> _promptReceiptLabel(BuildContext context,String path)async {
+  final name=TextEditingController(text:WaffraReceiptFilename.displayName(path));
+  String? error;
+  try{
+   return await showWaffraDialog<String>(context:context,
+    builder:(dialogContext)=>StatefulBuilder(builder:(dialogContext,setDialogState)=>
+     AlertDialog(
+      title:WaffraText(waffraIsEnglish?'Rename attachment':'تعديل اسم المرفق'),
+      content:TextField(
+       key:const Key('waffra-attachment-name-input'),
+       controller:name,maxLength:WaffraReceiptFilename.maxLabelCharacters,
+       autofocus:true,
+       decoration:InputDecoration(
+        labelText:waffraIsEnglish?'Attachment name':'اسم المرفق',
+        errorText:error,border:const OutlineInputBorder()),
+       onChanged:(_)=>setDialogState(()=>error=null)),
+      actions:[
+       TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogContext)),
+        child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+       FilledButton(onPressed:WaffraHaptics.tap((){
+        final validation=WaffraReceiptFilename.validateLabel(name.text);
+        if(validation!=null){
+         setDialogState(()=>error=waffraIsEnglish?
+          'Enter a valid name (1-80 characters, no slashes).':
+          'اكتب اسمًا من 1 إلى 80 حرفًا بدون شرطات مسار.');
+         return;
+        }
+        final normalized=WaffraReceiptFilename.normalizedLabel(name.text)!;
+        Navigator.pop(dialogContext,
+         normalized==WaffraReceiptFilename.displayName(path)?null:normalized);
+       }),child:WaffraText(waffraIsEnglish?'Save name':'حفظ الاسم')),
+      ],
+     )));
+  }finally{name.dispose();}
+ }
  Future<String> saveReceipt(XFile picked)async {
   final directory=Directory('${(await getApplicationDocumentsDirectory()).path}/receipts');
   if(!await directory.exists())await directory.create(recursive:true);
@@ -4240,6 +4314,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
          itemBuilder:(ctx,index)=>InteractiveViewer(
           minScale:.8,maxScale:5,
           child:Center(child:Image.file(File(available[index]),fit:BoxFit.contain)))))),
+       Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:4),
+        child:WaffraText(WaffraReceiptFilename.displayName(available[current]),
+         maxLines:2,textAlign:TextAlign.center,
+         style:const TextStyle(color:Colors.white,fontSize:13,fontWeight:FontWeight.w700))),
        SizedBox(height:58,child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
         IconButton(
          tooltip:waffraIsEnglish?'Previous image':'الصورة السابقة',
