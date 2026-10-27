@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:waffra/main.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_smooth_confirmation.dart';
 
@@ -132,6 +134,20 @@ void main() {
     expect(tester.takeException(),isNull);
   });
 
+  test('P0: 100-bank-message background parse agrees with UI parser',() async {
+    final samples=List<String>.generate(100,(i)=>
+      'شراء PoS\\nبـ${i+1}.25 SR\\nمن 1111\\n16/10/26 00:43');
+    final direct=samples.map(BankParser.parse).toList(growable:false);
+    final background=await compute(waffraParseBankSmsBatchInIsolate,samples);
+    expect(background.length,100);
+    for(var i=0;i<100;i++){
+      expect(background[i].amount,direct[i].amount);
+      expect(background[i].income,direct[i].income);
+      expect(background[i].title,direct[i].title);
+      expect(background[i].category,direct[i].category);
+    }
+  });
+
   test('P0: all app finance entry points use the safe feedback boundary',(){
     final code=File('lib/main.dart').readAsStringSync();
     expect(code,contains('return _saveProgress.track<void>('));
@@ -142,5 +158,6 @@ void main() {
     expect(code,contains('previousEntries=List<MoneyEntry>.of(entries)'));
     expect(code,contains('entries..clear()..addAll(previousEntries)'));
     expect(code,contains('await WidgetsBinding.instance.endOfFrame;'));
+    expect(code,contains('await compute(waffraParseBankSmsBatchInIsolate,found)'));
   });
 }
