@@ -67,6 +67,11 @@ abstract final class WaffraSmsIntelligence {
     'Incoming NEFT transfer credited',
     'UPI received from another bank',
     'Money added by bank deposit',
+    'Transferencia recibida pago recibido',
+    'Abono recibido transferencia entrante',
+    'Ingreso de dinero recibido a cuenta',
+    'Virement reçu dépôt crédité',
+    'Your transfer incoming successfully credited',
   ];
   static const _expenseSamples = <String>[
     'Debit card purchase completed',
@@ -111,6 +116,14 @@ abstract final class WaffraSmsIntelligence {
     'NEFT transfer sent to beneficiary',
     'Card payment charged your bank account',
     'تم خصم عملية بطاقة من الرصيد',
+    'Transferencia enviada dinero enviado',
+    'Débito tarjeta compra aprobada',
+    'Paiement effectué virement émis',
+    'Your account spent USD amount',
+    'You spent money on a card purchase',
+    'Card spending charge completed',
+    'تم سحب المبلغ بنجاح',
+    'سحب من الحساب الآن',
   ];
 
   static final _model = _TinySmsIntentBayes(
@@ -276,6 +289,20 @@ class _TinySmsIntentBayes {
   final _positive = <String, int>{};
   final _negative = <String, int>{};
   var _positiveTerms = 0, _negativeTerms = 0;
+  static const _stopwords = <String>{
+    'your','account','with','from','into','today','been','has','the',
+    'bank','another','tu','cuenta','de','en','por','sur','votre','vous',
+    'compte','une','des','dans','من','علي','حسابك','حساب','مبلغ','الى',
+    'تم','بنجاح','عبر','عملية','المالي','dinero','virement','transferencia',
+  };
+  static const _actionWords = <String>{
+    'received','incoming','credited','deposit','refund','salary','payroll',
+    'credit','استلام','وارد','ايداع','راتب','استرداد',
+    'reçu','recu','crédité','credite','recibida','abonada','ingreso','abono',
+    'sent','outgoing','debited','withdrawal','purchase','paid','payment',
+    'spent','charge','charged','خصم','سحب','شراء','صادر','دفع',
+    'enviada','debitada','compra','pago','débitée','debite','retrait','émis',
+  };
   Set<String> _features(String sentence) {
     return RegExp(r'[a-zà-ÿ\u0600-\u06FF]+')
         .allMatches(WaffraSmsIntelligence.normalize(sentence))
@@ -297,12 +324,15 @@ class _TinySmsIntentBayes {
     final vocabSize = <String>{..._positive.keys, ..._negative.keys}.length;
     double logOdds = 0;
     for (final word in terms) {
-      // Ignore previously unseen bank and merchant words.
-      if (!_positive.containsKey(word) && !_negative.containsKey(word)) continue;
+      // Ignore generic bank metadata, proper nouns and unseen merchants.
+      // Direction-bearing verbs are learned signals with greater weight.
+      if (_stopwords.contains(word) ||
+          (!_positive.containsKey(word) && !_negative.containsKey(word))) continue;
       final pos = (_positive[word] ?? 0) + 1;
       final neg = (_negative[word] ?? 0) + 1;
-      logOdds += math.log(pos / (_positiveTerms + vocabSize)) -
+      final learnedEvidence = math.log(pos / (_positiveTerms + vocabSize)) -
           math.log(neg / (_negativeTerms + vocabSize));
+      logOdds += (_actionWords.contains(word) ? 2.8 : 1) * learnedEvidence;
     }
     final incomingProbability = logOdds > 40 ? 1.0 :
         logOdds < -40 ? 0.0 : 1 / (1 + math.exp(-logOdds));
