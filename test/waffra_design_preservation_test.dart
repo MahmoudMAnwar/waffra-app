@@ -41,8 +41,8 @@ void main() {
         expect(source.contains(feature), isTrue, reason: 'Missing existing feature or storage contract: $feature');
       }
       final footer = File('lib/waffra_footer.dart').readAsStringSync();
-      expect(footer, contains('static const itemCount=5'),
-        reason: 'The redesigned footer must keep all five destinations');
+      expect(footer, contains('static const itemCount=6'),
+        reason: 'The redesigned footer must keep all six destinations');
     });
 
     testWidgets('Calendar does not show zero totals in an empty month', (tester) async {
