@@ -400,7 +400,7 @@ jobs:
                   if meta.file_size < 4096:
                       raise SystemExit('QA STARTUP BLOCKED: invalid native ELF: '+item)
                   with archive.open(item) as stream:
-                      if stream.read(4)!=b'\\x7fELF':
+                      if stream.read(4)!=bytes((0x7f,69,76,70)):
                           raise SystemExit('QA STARTUP BLOCKED: not an ELF: '+item)
           print('PASS: ARM64 JNI, SQLCipher, Flutter and Dart native ELF bundled')
           PY
