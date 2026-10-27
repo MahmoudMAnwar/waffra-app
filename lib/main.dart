@@ -402,7 +402,7 @@ class BankParser {
   // English bank SMS types must be classified from their first line, not
   // from merchant names, remaining balance, or unrelated message body text.
   final header=s.trimLeft().split('\n').first.trim();
-  const unconfirmed=r'(?:Online\s+Pre[-\s]?Auth|Pre[-\s]?Authori[sz]ation|Authorization\s+Hold|Please\s+use\s+the\s+code|OTP|Verification\s+Code|Declined\s+Transaction|Transaction\s+Declined|Failed\s+Transaction|Transaction\s+Failed|Unsuccessful\s+Transaction)';
+  const unconfirmed=r'(?:Online\s+Pre[-\s]?Auth(?:ori[sz]ation)?|Pre[-\s]?Authori[sz]ation|Authorization\s+Hold|Please\s+use\s+the\s+code|OTP|Verification\s+Code|Declined\s+Transaction|Transaction\s+Declined|Failed\s+Transaction|Transaction\s+Failed|Unsuccessful\s+Transaction)';
   final failedStatus=RegExp(r'^\s*(?:Transaction\s+)?Status\s*[:：]\s*(?:Pending|Declined|Failed|Rejected|Cancelled|Canceled)\b',caseSensitive:false,multiLine:true);
   if(RegExp('^$unconfirmed\\b',caseSensitive:false).hasMatch(header)||failedStatus.hasMatch(s)){
    return BankResult(null,false,'إشعار غير مؤكد','أخرى',null);
