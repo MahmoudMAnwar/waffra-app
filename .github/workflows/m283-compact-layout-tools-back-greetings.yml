@@ -92,7 +92,7 @@ jobs:
             ("Saudi rotation", "WaffraSaudiGreetings.compose" in app),
             ("tools scroll", "Scrollable.ensureVisible" in tools),
             ("remove manual accordion explanation", "افتح أي أداة هنا" not in tools),
-            ("min 48dp", "Size(0, 48)" in buttons),
+            ("min 48dp", "Size(0, 52)" in buttons),
             ("no cutover", "bool get automaticallyActivateSqlCipher => false;" in gates),
           ]
           for label,ok in must:
