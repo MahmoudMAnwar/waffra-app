@@ -10,9 +10,16 @@ class WaffraValidators {
   }
 
   static String? positiveAmount(String? raw, {bool required=true}) {
-    final text=(raw??'').trim().replaceAll(',', '').replaceAll('٬','').replaceAll('٫','.');
+    final text=(raw??'').trim().replaceAll('٬',',').replaceAll('٫','.');
     if(text.isEmpty) return required?'required':null;
-    final parsed=double.tryParse(text);
+    // Reject malformed grouping, multiple decimal points and hidden
+    // fractional halalas instead of silently reinterpreting the amount.
+    final valid=RegExp(r'^(?:[0-9]+|[0-9]{1,3}(?:,[0-9]{3})+)(?:\.[0-9]{1,2})?);
+    if(!valid.hasMatch(text))return 'invalid_amount';
+    final parsed=double.tryParse(text.replaceAll(',',''));
+    if(parsed==null || !parsed.isFinite || parsed<=0) return 'invalid_amount';);
+    if(!valid.hasMatch(text))return 'invalid_amount';
+    final parsed=double.tryParse(text.replaceAll(',',''));
     if(parsed==null || !parsed.isFinite || parsed<=0) return 'invalid_amount';
     return null;
   }
