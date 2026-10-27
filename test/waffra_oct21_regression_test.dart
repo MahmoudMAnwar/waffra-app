@@ -59,7 +59,7 @@ void main() {
  });
 
  test('Tour explains six core sections and supports replay', () {
-  expect(app, contains('static const tourTabs=<int>[0,0,0,1,2,3]'));
+  expect(app, contains('static const tourTabs=<int>[0,0,0,1,3,4]'));
   expect(app, contains('List<GlobalKey>.generate(7'));
   expect(app, contains('tourStep==tourTabs.length-1'));
   expect(app, contains('void beginTour()'));
