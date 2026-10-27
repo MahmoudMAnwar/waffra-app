@@ -14,6 +14,9 @@ on:
 permissions:
   contents: read
 
+env:
+  WAFFRA_EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
 concurrency:
   group: m276-perf-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
