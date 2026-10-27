@@ -10,9 +10,11 @@ import 'waffra_practical_ledger_engine.dart';
 class WaffraPracticalToolsPage extends StatefulWidget {
   const WaffraPracticalToolsPage({
     super.key, required this.entries, required this.english,
+    this.onNotice,
   });
   final List<WaffraPracticalEntry> entries;
   final bool english;
+  final ValueChanged<String>? onNotice;
   @override State<WaffraPracticalToolsPage> createState() =>
       _WaffraPracticalToolsPageState();
 }
@@ -30,6 +32,7 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
   DateTime receiptDate = DateTime.now();
   XFile? pickedReceipt;
   bool receiptReviewed = false;
+  String? receiptPickerError;
   WaffraSafeDiagnosticCode? userSelectedIssue;
 
   String t(String ar, String en) => widget.english ? en : ar;
@@ -143,12 +146,19 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
       final file = await ImagePicker().pickImage(
         source: source, imageQuality: 85, maxWidth: 2048);
       if (file == null || !mounted) return;
-      setState(() { pickedReceipt = file; receiptReviewed = false; });
+      setState(() { pickedReceipt = file; receiptReviewed = false;
+        receiptPickerError = null; });
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(
-        t('تعذر اختيار صورة. راجع أذونات الجهاز.',
-          'Cannot select image. Check device permissions.'))));
+      final message = t('تعذر اختيار صورة. راجع أذونات الجهاز.',
+        'Cannot select image. Check device permissions.');
+      if (widget.onNotice != null) {
+        widget.onNotice!(message);
+      } else {
+        // In standalone previews without Home's central notice presenter,
+        // show a local error instead of adding a second SnackBar surface.
+        setState(() => receiptPickerError = message);
+      }
     }
   }
 
@@ -167,6 +177,9 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
       if (pickedReceipt != null) Text(t(
         'الصورة للمراجعة فقط، ولن تُضاف لمعاملة أو تُرفع للسحابة. قد يحتفظ النظام بنسخة مؤقتة.',
         'Review-only image. Not attached to a transaction or uploaded; the OS may keep a temporary copy.')),
+      if (receiptPickerError != null) Text(receiptPickerError!,
+        key: const Key('m281-receipt-picker-error'),
+        style: TextStyle(color: Theme.of(context).colorScheme.error)),
       const SizedBox(height: 12),
       TextField(
         key: const Key('m281-receipt-merchant'), controller: merchant,
