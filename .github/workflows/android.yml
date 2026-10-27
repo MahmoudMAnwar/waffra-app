@@ -56,7 +56,9 @@ jobs:
           channel: stable
           cache: true
       - name: Resolve Dart packages
-        run: flutter pub get
+        run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
       - name: Run Flutter analyzer
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
       - name: Run every Flutter regression including future test files
@@ -700,7 +702,9 @@ jobs:
           echo 'Gradle task output caching enabled.'
 
       - name: Install dependencies
-        run: flutter pub get
+        run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
 
       - name: Identify Flutter compilation-cache compatibility
         id: flutter_cache_identity

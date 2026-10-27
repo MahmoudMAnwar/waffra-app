@@ -528,7 +528,9 @@ jobs:
           echo 'Gradle task output caching enabled.'
 
       - name: Install dependencies
-        run: flutter pub get
+        run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
 
       - name: Identify Flutter compilation-cache compatibility
         id: flutter_cache_identity

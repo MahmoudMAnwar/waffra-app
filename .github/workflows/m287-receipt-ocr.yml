@@ -37,7 +37,9 @@ jobs:
           channel: stable
           cache: true
       - name: Resolve production OCR native dependency
-        run: flutter pub get
+        run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
       - name: Analyze scanner, parser, UI and tests
         run: |
           flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings \

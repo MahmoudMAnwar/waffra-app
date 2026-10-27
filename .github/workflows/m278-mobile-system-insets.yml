@@ -34,7 +34,9 @@ jobs:
         with:
           channel: stable
           cache: true
-      - run: flutter pub get
+      - run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
       - name: Analyze device/safe-area matrix and Android integration sources
         run: dart analyze test/m278_system_bars_responsive_matrix_test.dart integration_test/m278_android_system_bars_smoke_test.dart
       - name: Test 14 Android/iOS display configurations x 2 languages, 5 footer pages
@@ -55,7 +57,9 @@ jobs:
         with:
           channel: stable
           cache: true
-      - run: flutter pub get
+      - run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
       - name: Create disposable Android host for real emulator
         run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
       - name: Enable Android desugaring required by Flutter notifications
@@ -115,7 +119,9 @@ jobs:
         run: xcodebuild -version
       - name: Generate temporary iOS Runner (repo does not track one yet)
         run: flutter create --no-pub --platforms=ios --project-name=waffra --org com.waffra .
-      - run: flutter pub get
+      - run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
       - name: Re-run responsive matrix on macOS Flutter host (iOS layout emulation)
         run: flutter test --reporter expanded test/m278_system_bars_responsive_matrix_test.dart
       - name: Build unsigned iOS simulator app from actual native plugins

@@ -36,7 +36,9 @@ jobs:
           channel: stable
           cache: true
       - name: Restore dependencies
-        run: flutter pub get
+        run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
       - name: Analyze responsive and pixel snapshot suites
         run: dart analyze test/m274_responsive_ui_journeys_test.dart tool/goldens/m274_capture_test.dart integration_test/m274_ui_tap_smoke_android_test.dart
       - name: Tap through five tabs, account-safe balance hide and inline errors
@@ -81,7 +83,9 @@ jobs:
           channel: stable
           cache: true
       - name: Install dependencies
-        run: flutter pub get
+        run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
       - name: Generate temporary Android host for disposable UI test
         run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
       - name: Configure Java library desugaring for Android UI emulator
