@@ -109,6 +109,22 @@ void main() {
       {...snap, 'originalCurrency': 'XXX'}), throwsFormatException);
   });
 
+  test('M293 restored FX snapshots reject stale approvals and non-UTC stamps',
+      () {
+    final snap = WaffraSmsFxReview.approve(
+      originalAmount: 25, quote: quote('USD', 'SAR'),
+      userConfirmed: true, now: now).toProvenanceJson();
+    expect(() => WaffraSmsFxReview.fromProvenanceJson({
+      ...snap, 'approvedUtc': at.add(const Duration(days: 8)).toIso8601String(),
+    }), throwsFormatException);
+    expect(() => WaffraSmsFxReview.fromProvenanceJson({
+      ...snap, 'approvedUtc': at.subtract(const Duration(days: 2)).toIso8601String(),
+    }), throwsFormatException);
+    expect(() => WaffraSmsFxReview.fromProvenanceJson({
+      ...snap, 'approvedUtc': now.toIso8601String().replaceAll('Z', ''),
+    }), throwsFormatException);
+  });
+
   test('M292 second provider date and audit label are preserved', () {
     final backed = WaffraSmsFxQuote.fromUsdBackup(
       {
