@@ -34,3 +34,13 @@ The draft model uses per-currency fraction precision (e.g. JPY has zero decimals
 - M291: conservative currency detection and safe block for automatic foreign-currency posting on the SAR-only legacy ledger.
 - M292: a pure draft FX quote and audit-snapshot model with deterministic regression tests; **NOT connected to production financial writes**.
 - Follow-on ledger migration and the user-facing multi-currency confirmation experience remain required before marking the feature complete.
+
+## M293 — Encrypted write/backup fail-closed staging (2026-10-28)
+
+- The disconnected `WaffraFreshLedgerRepository` now accepts optional **approved** foreign-currency FX provenance in `source_json` in the **same SQLCipher row/transaction** as the SAR equivalent amount. Historical pre-M293 entries keep their original numeric amount and JSON shape.
+- Every entry with an FX witness must carry an explicit user-approval timestamp, original currency/minor amount, SAR converted amount, rate, provider and quote timestamp. SQL read rejects a mismatch between the original JSON/witness and authoritative integer amount.
+- The experimental screen gateway passes FX metadata through instead of dropping it, and rejects foreign SMS without reviewed provenance. FX entries cannot yet use generic edit or delete: those actions are blocked until audited Undo, receipts and backup parity exist.
+- Portable encrypted restore refuses mismatched original FX witness or converted SAR minor units. Portable backup export refuses FX rows that are not represented identically in its encrypted snapshot rather than silently losing money evidence.
+- Source- and SQLite-backed regression tests include cold reopen, amount tampering, blocked edit/delete, backup omission and timestamp corruption. Exact-HEAD GitHub Actions must complete successfully before acceptance.
+
+**This is NOT the production cutover.** The live Home/Widget still share the guarded legacy finance source. OCR on real iOS devices, two physical Android phones, multicurrency UI confirmation, complete atomic snapshot update, cloud sync, all-report/PDF/CSV/goal/recurring parity, and restore/edit/delete/Undo certification remain blocking. No irreversible migration or automatic foreign-currency SMS save is enabled.
