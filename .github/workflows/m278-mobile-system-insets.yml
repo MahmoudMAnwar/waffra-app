@@ -101,7 +101,11 @@ jobs:
           script: flutter test --reporter expanded integration_test/m278_android_system_bars_smoke_test.dart -d emulator-5554
 
   ios-simulator-build-check:
-    runs-on: macos-latest
+    # SwiftyTesseract 3.x CocoaPods excludes arm64 for the iOS simulator.
+    # Build on a real Intel runner to exercise x86_64 instead of mixing
+    # incompatible simulator slices on an Apple Silicon host.
+    # This does NOT certify iOS arm64 devices or an App Store release.
+    runs-on: macos-15-intel
     timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
@@ -115,8 +119,13 @@ jobs:
         with:
           channel: stable
           cache: true
-      - name: Record Apple SDK version
-        run: xcodebuild -version
+      - name: Verify legacy OCR simulator architecture
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = "x86_64"
+          xcodebuild -version
+          echo "SwiftyTesseract simulator x86_64 smoke; iOS arm64 device QA still required."
       - name: Generate temporary iOS Runner (repo does not track one yet)
         run: flutter create --no-pub --platforms=ios --project-name=waffra --org com.waffra .
       - run: |
