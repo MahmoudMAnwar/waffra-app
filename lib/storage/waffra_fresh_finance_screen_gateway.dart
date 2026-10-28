@@ -1,5 +1,8 @@
 import 'dart:convert';
 
+import '../waffra_sms_fx_review.dart';
+import '../waffra_sms_multicurrency_review.dart';
+
 import 'legacy_snapshot_preflight.dart';
 import 'waffra_encrypted_store.dart';
 import 'waffra_fresh_finance_modules_repository.dart';
@@ -110,11 +113,36 @@ class WaffraFreshFinanceScreenGateway {
     if (receipts != null && receipts != '') {
       throw StateError('Receipt-bearing writes need a safe file installer.');
     }
-    return WaffraFreshLedgerEntry(
+    final fxData = item['waffra_fx_provenance_v1'];
+    WaffraSmsFxReview? fx;
+    if (fxData != null) {
+      if (fxData is! Map<String, dynamic>) {
+        throw ArgumentError('Invalid FX provenance payload.');
+      }
+      fx = WaffraSmsFxReview.fromProvenanceJson(fxData);
+    }
+    final originalCurrency = item['originalCurrency'];
+    if (originalCurrency != null &&
+        (originalCurrency is! String ||
+         (originalCurrency != 'SAR' && fx == null))) {
+      throw StateError('Foreign amount requires verified FX and explicit consent.');
+    }
+    // This bridge must never turn foreign pasted SMS into unlabelled SAR.
+    if (item['sourceType'] == 'sms' && fx == null) {
+      final sms = item['protectedOriginalSms'] ?? item['notes'];
+      if (sms is String &&
+          WaffraSmsCurrencies.requiresReviewForSarLedger(sms)) {
+        throw StateError('Unreviewed foreign SMS cannot enter SAR ledger.');
+      }
+    }
+    final entry = WaffraFreshLedgerEntry(
       id: id, title: title, categorySnapshot: category,
       amountMinor: (amount * 100).round(), isIncome: income,
       occurredIso: date,
+      fxReview: fx,
     );
+    WaffraFreshLedgerRepository.validateExperimentalEntry(entry);
+    return entry;
   }
 
   Future<void> saveTransaction(
