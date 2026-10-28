@@ -46,7 +46,7 @@ preflight_android() {
   local i state boot
   for i in 1 2 3 4 5 6; do
     state="$(timeout 12s adb -s emulator-5554 get-state 2>/dev/null || true)"
-    boot="$(timeout 12s adb -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\\r' || true)"
+    boot="$(timeout 12s adb -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
     if [[ "$state" == "device" && "$boot" == "1" ]]; then
       echo "ANDROID_DEVICE_READY:emulator-5554"
       return 0
