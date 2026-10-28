@@ -124,8 +124,18 @@ class WaffraFreshFinanceScreenGateway {
     final originalCurrency = item['originalCurrency'];
     if (originalCurrency != null &&
         (originalCurrency is! String ||
-         (originalCurrency != 'SAR' && fx == null))) {
-      throw StateError('Foreign amount requires verified FX and explicit consent.');
+         (originalCurrency != 'SAR' && fx == null) ||
+         (fx != null && originalCurrency != fx.originalCurrency))) {
+      throw StateError('Foreign amount requires matching verified FX and consent.');
+    }
+    if (item['sourceType'] == 'sms' && fx != null) {
+      final raw = item['protectedOriginalSms'];
+      final codes = raw is String
+          ? WaffraSmsCurrencies.currenciesForMessage(raw)
+          : const <String>{};
+      if (codes.length != 1 || !codes.contains(fx.originalCurrency)) {
+        throw StateError('FX bank SMS must match original currency evidence.');
+      }
     }
     // This bridge must never turn foreign pasted SMS into unlabelled SAR.
     if (item['sourceType'] == 'sms' && fx == null) {
