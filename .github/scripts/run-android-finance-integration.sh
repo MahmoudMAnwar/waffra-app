@@ -7,6 +7,7 @@ run_android_test() {
   filename="$1"
   seconds="$2"
   echo "::group::Android integration: ${filename}"
+  preflight_android
   echo "ANDROID_TEST_START:${filename}"
   # Keep a short crash-only log *before* Flutter connects to its VM service.
   # If the VM service disappears, adb may be offline by the time test exits.
@@ -36,6 +37,26 @@ run_android_test() {
     exit "${code}"
   fi
   echo '::endgroup::'
+}
+
+# Fail closed on dead ADB/device instead of consuming twelve minutes of
+# Dart Development Service retries and obscuring the infrastructure failure.
+# This preflight proves Android is actually booted before any finance test.
+preflight_android() {
+  local i state boot
+  for i in 1 2 3 4 5 6; do
+    state="$(timeout 12s adb -s emulator-5554 get-state 2>/dev/null || true)"
+    boot="$(timeout 12s adb -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\\r' || true)"
+    if [[ "$state" == "device" && "$boot" == "1" ]]; then
+      echo "ANDROID_DEVICE_READY:emulator-5554"
+      return 0
+    fi
+    echo "::warning::Android emulator preflight attempt $i/6: adb=$state boot=$boot"
+    sleep 5
+  done
+  echo "::error title=Android infrastructure failure::emulator-5554 not ready; no SQLCipher test was executed"
+  adb devices -l || true
+  return 1
 }
 
 # Prioritize problematic bridge & new encrypted receipts after Gradle warmup.
