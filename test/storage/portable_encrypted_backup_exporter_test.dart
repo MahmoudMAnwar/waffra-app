@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/storage/waffra_atomic_finance_snapshot.dart';
 import 'package:waffra/storage/waffra_encrypted_receipt_vault.dart';
 import 'package:waffra/storage/waffra_encrypted_store.dart';
+import 'package:waffra/storage/waffra_fresh_ledger_repository.dart';
+import 'package:waffra/waffra_sms_fx_review.dart';
 import 'package:waffra/storage/waffra_portable_backup_v2.dart';
 import 'package:waffra/storage/waffra_portable_encrypted_backup_exporter.dart';
 import 'package:waffra/storage/waffra_portable_encrypted_vault_restorer.dart';
@@ -121,6 +123,34 @@ void main() {
     } finally {
       await imported.close();
     }
+  });
+
+  test('M293 encrypted backup refuses a foreign-currency SQL row omitted by snapshot',
+      () async {
+    await install();
+    final at = DateTime.utc(2026, 10, 27, 9);
+    final now = DateTime.utc(2026, 10, 28);
+    final quote = WaffraSmsFxQuote.fromUsdRates({
+      'result': 'success',
+      'rates': {'USD': 1.0, 'SAR': 3.75},
+      'time_last_update_unix': at.millisecondsSinceEpoch ~/ 1000,
+    }, originalCurrency: 'USD', targetCurrency: 'SAR', now: now);
+    final fx = WaffraSmsFxReview.approve(
+      originalAmount: 100, quote: quote, userConfirmed: true, now: now);
+    await WaffraFreshLedgerRepository(
+      store: encrypted, experimentalEnabled: true,
+    ).add(WaffraFreshLedgerEntry(
+      id: 'usd-after-snapshot',
+      title: 'International purchase',
+      categorySnapshot: 'Shopping',
+      amountMinor: 37500,
+      isIncome: false,
+      occurredIso: '2026-10-27T18:30:00',
+      fxReview: fx,
+    ));
+    await expectLater(exporter().export(password: password),
+        throwsA(isA<StateError>()),
+        reason: 'Never silently omit foreign-currency approval from backup');
   });
 
   test('M68 refuses export if source is unverified or feature disabled',
