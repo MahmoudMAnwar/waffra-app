@@ -232,7 +232,11 @@ class WaffraSmsFxReview {
         amount <= 0 || convertedAmount <= 0 ||
         !rate.isFinite || rate <= 0 ||
         (data['provider'] as String).trim().isEmpty ||
-        rateAt == null || approved == null) {
+        rateAt == null || approved == null ||
+        !data['rateTimestampUtc'].toString().endsWith('Z') ||
+        !data['approvedUtc'].toString().endsWith('Z') ||
+        rateAt.isAfter(approved.add(const Duration(hours: 1))) ||
+        approved.difference(rateAt) > WaffraSmsFxQuote.maxAge) {
       throw const FormatException('Invalid FX snapshot');
     }
     final expected = (WaffraCurrencyMinor.major(amount, original) * rate *
