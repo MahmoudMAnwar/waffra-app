@@ -149,14 +149,20 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           podfile = Path('ios/Podfile')
-          contents = podfile.read_text()
-          old = '    flutter_additional_ios_build_settings(target)'
-          assert contents.count(old) == 1, 'Unexpected generated Flutter Podfile'
-          addon = """    target.build_configurations.each do |config|
-              config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
-            end"""
-          contents = contents.replace(old, old + '\n' + addon)
-          podfile.write_text(contents)
+          # Flutter 3.47 generates Podfile lazily during the first iOS build.
+          # The temporary Runner project above is pinned to x86_64 already.
+          # Patch existing Podfiles only; never fail before the real build.
+          if podfile.exists():
+              contents = podfile.read_text()
+              old = '    flutter_additional_ios_build_settings(target)'
+              assert contents.count(old) == 1, 'Unexpected generated Flutter Podfile'
+              addon = """    target.build_configurations.each do |config|
+                  config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
+                end"""
+              contents = contents.replace(old, old + '\n' + addon)
+              podfile.write_text(contents)
+          else:
+              print('No generated Podfile yet; Runner x86_64 target settings applied.')
           PY
       - run: |
           flutter pub get
