@@ -59,6 +59,10 @@ void main() {
   expect(source,contains("category:sms?chosen!:category"));
   expect(source,contains("category:selected,"));
   expect(source,contains("category=forType(v).isNotEmpty?forType(v).first.name:'';"));
+  expect(source,contains("waffraIsEnglish?'Gender *':'الجنس *'"));
+  expect(source,contains("waffraIsEnglish?'Attachment name *':'اسم المرفق *'"));
+  expect(source,contains("waffraIsEnglish?'Phone number *':'رقم الجوال *'"));
+  expect(source,contains("waffraIsEnglish?'Password *':'كلمة المرور *'"));
   expect(source,contains("WaffraValidators.requiredCategory(selected,options.map((c)=>c.name))==null"));
   expect(source,contains("WaffraValidators.requiredCategory(category,available.map((c)=>c.name))!=null"));
  });
