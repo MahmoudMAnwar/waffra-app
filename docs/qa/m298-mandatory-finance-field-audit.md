@@ -11,6 +11,10 @@ This PR is isolated from M295–M297 UI/OCR and contains only validation and reg
 | Recurring transaction | `forType(false).first` and income switch `.first` could throw when that direction has no available category. Empty category lacked inline validation | Empty-safe selection; inline required error; block save until a valid category exists; persist the selected category |
 | Recurring day of month | Arabic/Persian numerals were parsed at commit but rejected by the validation function | Normalize these digits before checking 1–31, then preserve same conversion on save |
 
+## UI required-field indicators
+- Login phone/password, profile gender, and attachment rename must visibly show `*` in Arabic and English; all already had non-empty validation at commit, but were missing the required indicator.
+- The required bank-SMS category now also has an asterisk and an inline error; recurring category retains its asterisk and gains the inline gate.
+
 ## Existing protections checked; intentionally unchanged
 
 - Manual transaction: required title, positive valid amount, mandatory parent and leaf selection.
