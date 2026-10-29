@@ -42,6 +42,7 @@ import 'waffra_reminders.dart';
 import 'waffra_welcome_background.dart';
 import 'currency_converter.dart';
 import 'waffra_i18n.dart';
+import 'waffra_riyal_symbol.dart';
 import 'waffra_pdf_text.dart';
 import 'waffra_merchant_rules.dart';
 import 'waffra_google_auth.dart';
@@ -199,11 +200,10 @@ class RiyalAmount extends StatelessWidget {
     WaffraText(hidden?'***':'$prefix${WaffraDisplayCurrency.amount(amount)}',style:effective),
     if(!hidden)...[
      const SizedBox(width:4),
-     if(WaffraDisplayCurrency.country.code=='SAR')
-      Image.asset('assets/Saudi_Riyal_Symbol-1.png',width:size*.9,height:size*.9,
-       color:color,colorBlendMode:BlendMode.srcIn,
-       errorBuilder:(_,__,___)=>WaffraText('ريال',style:effective))
-     else WaffraText(WaffraDisplayCurrency.label(waffraIsEnglish),style:effective),
+     WaffraCurrencyMark(english:waffraIsEnglish,
+      currencyCode:WaffraDisplayCurrency.country.code,
+      arabicLabel:WaffraDisplayCurrency.country.symbolAr,
+      size:size*.9,color:color),
     ],
    ]));
  }
@@ -2478,8 +2478,7 @@ class HomeScreen extends StatefulWidget {
 }
 // Scroll-linked, pinned balance summary. Shrinks with the user's gesture;
 // does not count up money on every tab revisit.
-// Consistent Tajawal currency label on the approved dashboard.
-// The home cards use the WORD ريال, not a bank/SAR currency icon.
+// Shared original Riyal artwork on Arabic dashboards; English uses SAR.
 class WaffraCurrencyAmount extends StatelessWidget {
  final double amount;
  final double fontSize;
@@ -2497,9 +2496,10 @@ class WaffraCurrencyAmount extends StatelessWidget {
        fontWeight:weight,color:color)),
      if(!hidden)...[
       const SizedBox(width:5),
-      WaffraText(WaffraDisplayCurrency.label(waffraIsEnglish),
-       style:TextStyle(fontFamily:'Tajawal',fontSize:fontSize*.63,
-        fontWeight:FontWeight.w600,color:color)),
+      WaffraCurrencyMark(english:waffraIsEnglish,
+       currencyCode:WaffraDisplayCurrency.country.code,
+       arabicLabel:WaffraDisplayCurrency.country.symbolAr,
+       size:fontSize*.78,color:color),
      ]
     ])));
 }
@@ -4732,6 +4732,40 @@ Future<void> bulkSmsSheet({String? initialText})async {
    }
    final pdfCurrency=pdfQuote.code;
    final pdfCurrencyAr=waffraCountry(pdfCurrency).symbolAr;
+   // Embed the exact approved PNG, rather than using a PDF font glyph
+   // that can become an unsupported square in generated reports.
+   final pdfRiyalIcon=pw.MemoryImage(
+    (await rootBundle.load(waffraRiyalAsset)).buffer.asUint8List());
+   pw.Widget pdfCurrencyMark({double size=9,PdfColor color=PdfColors.teal900}) {
+    if(!english&&pdfCurrency=='SAR')return pw.Image(pdfRiyalIcon,
+     width:size,height:size,fit:pw.BoxFit.contain);
+    return pw.Text(english?pdfCurrency:pdfCurrencyAr,
+     style:pw.TextStyle(font:bold,fontSize:size*.8,color:color));
+   }
+   pw.Widget pdfMoney(String text,{double size=9,
+      PdfColor color=PdfColors.teal900})=>pw.Row(
+    mainAxisSize:pw.MainAxisSize.min,
+    mainAxisAlignment:pw.MainAxisAlignment.center,children:[
+     pw.Text(text,style:pw.TextStyle(font:bold,fontSize:size,color:color)),
+     pw.SizedBox(width:3),pdfCurrencyMark(size:size,color:color),
+    ]);
+   pw.Widget pdfMoneyHeader(String header,{double size=9,
+      PdfColor color=PdfColors.white}){
+    if(english||pdfCurrency!='SAR')return pw.Text(header,
+     textAlign:pw.TextAlign.center,
+     style:pw.TextStyle(font:bold,fontSize:size,color:color));
+    final label=header.replaceAll('($pdfCurrencyAr)','').trim();
+    if(label==header)return pw.Text(header,
+     textAlign:pw.TextAlign.center,
+     style:pw.TextStyle(font:bold,fontSize:size,color:color));
+    return pw.Row(mainAxisSize:pw.MainAxisSize.min,
+     mainAxisAlignment:pw.MainAxisAlignment.center,children:[
+      pw.Text(label,style:pw.TextStyle(font:bold,fontSize:size,color:color)),
+      pw.SizedBox(width:3),pw.Container(
+       padding:const pw.EdgeInsets.all(1),color:PdfColors.white,
+       child:pdfCurrencyMark(size:size)),
+     ]);
+   }
    double pdfAmount(num sar){
     final result=pdfQuote.fromSar(sar);
     if(result==null||!result.isFinite){
@@ -4771,13 +4805,15 @@ Future<void> bulkSmsSheet({String? initialText})async {
     padding:const pw.EdgeInsets.all(10),decoration:pw.BoxDecoration(color:bg,borderRadius:pw.BorderRadius.circular(7)),
     child:pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.start,children:[
      pw.Text(waffraTr(label),style:pw.TextStyle(font:bold,fontSize:10,color:PdfColors.teal900)),
-     pw.SizedBox(height:5),pw.Text('${fmt(value)} $pdfCurrency',style:pw.TextStyle(font:bold,fontSize:15,color:PdfColors.teal900)),
+     pw.SizedBox(height:5),pdfMoney(fmt(value),size:15),
     ])));
    // Explicit script direction prevents mixed Arabic/Latin SMS text from
    // overlapping or reversing adjacent numbers in the PDF viewer.
-   pw.Widget pdfCell(String raw,{bool rtl=false,bool center=false})=>
+   pw.Widget pdfCell(String raw,{bool rtl=false,bool center=false,
+      bool monetary=false})=>
     pw.Padding(padding:const pw.EdgeInsets.symmetric(horizontal:5,vertical:7),
-     child:pw.Text(pdfClean(raw),
+     child:monetary?pdfMoney(pdfClean(raw),size:9,color:PdfColors.black):
+     pw.Text(pdfClean(raw),
       textDirection:rtl?pw.TextDirection.rtl:pw.TextDirection.ltr,
       textAlign:center?pw.TextAlign.center:(rtl?pw.TextAlign.right:pw.TextAlign.left),
       style:pw.TextStyle(font:font,fontSize:9,color:PdfColors.black)));
@@ -4858,7 +4894,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
          children:(english?['No.','Date','Type','Category','Description','Amount ($pdfCurrency)']:
           ['المبلغ ($pdfCurrencyAr)','الوصف','القسم','النوع','التاريخ','رقم المعاملة'])
           .map((h)=>pw.Padding(padding:const pw.EdgeInsets.all(6),
-           child:pw.Text(h,textAlign:pw.TextAlign.center,style:pw.TextStyle(font:bold,fontSize:10,color:PdfColors.white)))).toList()),
+           child:pdfMoneyHeader(h,size:10))).toList()),
         ...ordered.asMap().entries.map((row){
          final e=row.value,art=descriptions[row.key];
          final orderedCells=<pw.Widget>[
@@ -4874,7 +4910,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
             child:pw.Align(
              alignment:english?pw.Alignment.centerLeft:pw.Alignment.centerRight,
              child:pw.Image(art.$1,height:art.$2,fit:pw.BoxFit.scaleDown)))),
-          pdfCell('${e.income?'+':'-'}${fmt(e.amount)}',center:true),
+          pdfCell('${e.income?'+':'-'}${fmt(e.amount)}',center:true,monetary:true),
          ];
          return pw.TableRow(
           decoration:pw.BoxDecoration(color:PdfColor.fromInt(e.income?
@@ -4930,20 +4966,29 @@ Future<void> bulkSmsSheet({String? initialText})async {
       children:[heading(ar,en),...widgets]));
     // Source-value tables are populated from the same buckets as the charts.
     pw.Widget miniTable(List<String> labels,List<List<String>> rows){
-     pw.Widget cell(String v,{bool header=false})=>pw.Padding(
+     bool isMoneyColumn(String label)=>[
+      'Income','Expenses','Amount','الدخل','المصروفات','المبلغ',
+     ].any(label.contains);
+     pw.Widget cell(String v,{bool header=false,bool monetary=false})=>pw.Padding(
       padding:const pw.EdgeInsets.symmetric(horizontal:5,vertical:4),
-      child:pw.Text(pdfClean(v),
-       textDirection:english?pw.TextDirection.ltr:pw.TextDirection.rtl,
-       textAlign:pw.TextAlign.center,
-       style:pw.TextStyle(font:header?bold:font,fontSize:8,
-        color:header?PdfColors.white:PdfColors.teal900)));
+      child:header?pdfMoneyHeader(v,size:8):
+       monetary?pdfMoney(pdfClean(v),size:8):
+       pw.Text(pdfClean(v),
+        textDirection:english?pw.TextDirection.ltr:pw.TextDirection.rtl,
+        textAlign:pw.TextAlign.center,
+        style:pw.TextStyle(font:font,fontSize:8,
+         color:PdfColors.teal900)));
      return pw.Table(border:pw.TableBorder.all(color:PdfColors.grey300,width:.4),
       children:[
        pw.TableRow(decoration:const pw.BoxDecoration(color:PdfColors.teal800),
-        children:(english?labels:labels.reversed.toList())
-         .map((v)=>cell(v,header:true)).toList()),
+        children:(english?labels.asMap().entries:
+           labels.asMap().entries.toList().reversed)
+         .map((e)=>cell(e.value,header:true,
+          monetary:isMoneyColumn(e.value))).toList()),
        ...rows.map((row)=>pw.TableRow(
-        children:(english?row:row.reversed.toList()).map((v)=>cell(v)).toList())),
+        children:(english?row.asMap().entries:
+           row.asMap().entries.toList().reversed).map((e)=>cell(e.value,
+         monetary:isMoneyColumn(labels[e.key]))).toList())),
       ]);
     }
     pw.Widget dataTable(List<String> labels,List<List<String>> rows)=>
@@ -4976,15 +5021,13 @@ Future<void> bulkSmsSheet({String? initialText})async {
            pw.SizedBox(width:40,child:pw.Text(english?'Income':'دخل',
             style:pw.TextStyle(font:font,fontSize:8))),
            progressBar(buckets[i].$1,PdfColors.teal800),
-           pw.SizedBox(width:61,child:pw.Text(fmt(buckets[i].$1),
-            style:pw.TextStyle(font:font,fontSize:9)))]),
+           pw.SizedBox(width:61,child:pdfMoney(fmt(buckets[i].$1),size:9))]),
           pw.SizedBox(height:4),
           pw.Row(children:[
            pw.SizedBox(width:40,child:pw.Text(english?'Expense':'مصروف',
             style:pw.TextStyle(font:font,fontSize:8))),
            progressBar(buckets[i].$2,PdfColors.deepOrange),
-           pw.SizedBox(width:61,child:pw.Text(fmt(buckets[i].$2),
-            style:pw.TextStyle(font:font,fontSize:9)))]),
+           pw.SizedBox(width:61,child:pdfMoney(fmt(buckets[i].$2),size:9))]),
          ])),
         ]))),
        pw.SizedBox(height:5),legend(),

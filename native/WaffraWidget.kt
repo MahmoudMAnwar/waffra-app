@@ -50,6 +50,13 @@ class WaffraWidget : AppWidgetProvider() {
                 view.setViewVisibility(R.id.widget_sparkle,
                     if (balance.length >= 11) View.GONE else View.VISIBLE)
                 view.setTextViewText(R.id.widget_balance, balance)
+                // User-approved Riyal artwork for Arabic only. English SAR and
+                // every other nominal currency retain their printed labels.
+                val showArabicRiyal = !hidden && currency.trim() == "ريال"
+                view.setViewVisibility(R.id.widget_riyal_icon,
+                    if (showArabicRiyal) View.VISIBLE else View.GONE)
+                view.setViewVisibility(R.id.widget_currency,
+                    if (showArabicRiyal) View.GONE else View.VISIBLE)
                 view.setTextViewText(R.id.widget_currency, currency)
                 view.setTextColor(R.id.widget_balance, color)
                 view.setTextViewTextSize(R.id.widget_balance, TypedValue.COMPLEX_UNIT_SP, fontSize)
