@@ -3929,15 +3929,21 @@ Future<void> bulkSmsSheet({String? initialText})async {
        inputFormatters:[const WaffraAmountFormatter()],onChanged:(_)=>update((){}),
        decoration:InputDecoration(labelText:waffraIsEnglish?'Amount *':'مبلغ هذه الرسالة بالريال *',errorText:reviewAttempted?waffraAmountFieldError(amount.text):null,border:OutlineInputBorder())),
       const SizedBox(height:12),
-      DropdownButtonFormField<String>(key:ValueKey('$index-$income'),initialValue:available.any((c)=>c.name==category)?category:(available.isNotEmpty?available.first.name:null),
+      DropdownButtonFormField<String>(key:ValueKey('$index-$income'),initialValue:available.any((c)=>c.name==category)?category:null,
        items:available.map((c)=>DropdownMenuItem(value:c.name,child:WaffraText(c.name))).toList(),
-       decoration:InputDecoration(labelText:waffraTr('قسم هذه الرسالة'),border:OutlineInputBorder()),
+       decoration:InputDecoration(
+        labelText:waffraIsEnglish?'Message category *':'قسم هذه الرسالة *',
+        errorText:reviewAttempted&&WaffraValidators.requiredCategory(
+         category,available.map((c)=>c.name))!=null?waffraRequiredFieldMessage:null,
+        border:OutlineInputBorder()),
        onChanged:WaffraHaptics.selection((v){if(v!=null)update(()=>category=v);})),
       const SizedBox(height:12),
       FilledButton(onPressed:WaffraHaptics.tap(busy?null:()async{
        final n=amountOf(amount.text);
        update(()=>reviewAttempted=true);
-        if(waffraTextFieldError(description.text)!=null||waffraAmountFieldError(amount.text)!=null||n==null)return;
+        if(waffraTextFieldError(description.text)!=null||
+        waffraAmountFieldError(amount.text)!=null||n==null||
+        WaffraValidators.requiredCategory(category,available.map((c)=>c.name))!=null)return;
        final hash=bankSmsHash(messages[index]);
        var explicitlyApprovedDuplicate=false;
        if(smsHashes.contains(hash)){
@@ -7995,12 +8001,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final title=TextEditingController(text:suggestedTitle??''),
    amount=TextEditingController(text:suggestedAmount==null?'':formatWaffraEditAmount(suggestedAmount)),
    day=TextEditingController(text:'1');
-  bool income=false;String category=forType(false).first.name;bool attempted=false;
+  bool income=false;String category=forType(false).isNotEmpty?
+    forType(false).first.name:'';bool attempted=false;
   DateTime startAt=DateTime.now();
   final r=await showWaffraDialog<RecurringBill>(context:context,
    builder:(ctx)=>StatefulBuilder(builder:(ctx,update){
     final options=forType(income);
-    final selected=options.any((x)=>x.name==category)?category:options.first.name;
+    final selected=options.any((x)=>x.name==category)?category:
+      (options.isNotEmpty?options.first.name:'');
     return AlertDialog(title:const WaffraText('عملية شهرية متكررة'),
      content:SizedBox(width:340,child:SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,mainAxisSize:MainAxisSize.min,children:[
       const SizedBox(height:12),
@@ -8015,7 +8023,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
       DropdownButtonFormField<bool>(initialValue:income,
        items:const [DropdownMenuItem(value:true,child:WaffraText('دخل')),
         DropdownMenuItem(value:false,child:WaffraText('مصروف'))],
-       onChanged:WaffraHaptics.selection((v){if(v!=null)update((){income=v;category=forType(v).first.name;});})),
+       onChanged:WaffraHaptics.selection((v){if(v!=null)update((){
+         income=v;category=forType(v).isNotEmpty?forType(v).first.name:'';
+        });})),
       const SizedBox(height:12),
       InkWell(
        borderRadius:BorderRadius.circular(14),
@@ -8064,11 +8074,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
        child:InputDecorator(
         decoration:InputDecoration(
          labelText:waffraIsEnglish?'Category *':'القسم *',
+         errorText:attempted&&WaffraValidators.requiredCategory(
+          selected,options.map((c)=>c.name))!=null?waffraRequiredFieldMessage:null,
          suffixIcon:const Icon(Icons.search_rounded),
          border:OutlineInputBorder(borderRadius:BorderRadius.circular(14)),
          contentPadding:const EdgeInsets.symmetric(horizontal:13,vertical:15)),
         child:Row(children:[
-         Expanded(child:WaffraText(selected,maxLines:2,
+         Expanded(child:WaffraText(selected.isEmpty?
+          (waffraIsEnglish?'Choose a category':'اختر قسمًا'):selected,maxLines:2,
           style:const TextStyle(fontSize:14,fontWeight:FontWeight.w600))),
          const SizedBox(width:8),
          const Icon(Icons.arrow_drop_down_rounded,size:20),
@@ -8089,8 +8102,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
       TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),child:const WaffraText('إلغاء')),
       FilledButton(onPressed:WaffraHaptics.tap((){
        final n=amountOfDisplay(amount.text),d=int.tryParse(digits(day.text));update(()=>attempted=true);
-       if(WaffraValidators.requiredText(title.text)==null&&WaffraValidators.positiveAmount(amount.text)==null&&WaffraValidators.dayOfMonth(day.text)==null&&n!=null&&d!=null){
-        Navigator.pop(ctx,RecurringBill(id:newId(),title:title.text.trim(),category:category,
+       if(WaffraValidators.requiredText(title.text)==null&&
+        WaffraValidators.positiveAmount(amount.text)==null&&
+        WaffraValidators.dayOfMonth(day.text)==null&&
+        WaffraValidators.requiredCategory(selected,options.map((c)=>c.name))==null&&
+        n!=null&&d!=null){
+        Navigator.pop(ctx,RecurringBill(id:newId(),title:title.text.trim(),category:selected,
          amount:n,income:income,day:d,startAt:startAt));
        }
       }),child:const WaffraText('حفظ')),
