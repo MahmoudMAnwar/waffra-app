@@ -21,6 +21,9 @@ import 'waffra_today_picker.dart';
 import 'waffra_action_layout.dart';
 import 'waffra_subtle_selection.dart';
 import 'waffra_receipt_filename.dart';
+import 'waffra_receipt_ocr.dart';
+import 'waffra_receipt_ocr_parser.dart';
+import 'waffra_bank_screenshot_parser.dart';
 import 'waffra_sms_intelligence.dart';
 import 'waffra_sms_multicurrency_review.dart';
 import 'waffra_back_navigation.dart';
@@ -3787,25 +3790,42 @@ Future<void> bulkSmsSheet({String? initialText})async {
        suffixIcon:pasted.text.isNotEmpty?IconButton(tooltip:waffraIsEnglish?'Clear text':'مسح النص',icon:const Icon(Icons.clear_rounded,color:Colors.redAccent),onPressed:WaffraHaptics.tap((){pasteTimer?.cancel();pasted.clear();update((){parsed=false;analyzingPaste=false;messages=[];statusMessage='';});})):null,
        border:OutlineInputBorder(borderRadius:BorderRadius.circular(18)))),
       const SizedBox(height:12),
-     Align(alignment:AlignmentDirectional.centerStart,child:OutlinedButton.icon(icon:const Icon(Icons.content_paste),
-       onPressed:WaffraHaptics.tap(busy?null:()async {
+     LayoutBuilder(builder:(layoutContext,constraints){
+      final stack=constraints.maxWidth<318||
+       MediaQuery.textScalerOf(layoutContext).scale(14)>20;
+      final pasteAction=OutlinedButton.icon(
+       key:const Key('waffra-sms-paste-action'),
+       icon:const Icon(Icons.content_paste,size:18),
+       onPressed:WaffraHaptics.tap(busy?null:()async{
         final data=await Clipboard.getData(Clipboard.kTextPlain);
         if(!ctx.mounted)return;
         final text=data?.text?.trim()??'';
-        if(text.isEmpty){update((){pasteAttempted=true;statusMessage=waffraRequiredFieldMessage;});return;}
-        pasted.text=text;
-        pasteTimer?.cancel();
+        if(text.isEmpty){
+         update((){pasteAttempted=true;statusMessage=waffraRequiredFieldMessage;});
+         return;
+        }
+        pasted.text=text;pasteTimer?.cancel();
         final revision=++pasteRevision;
-        update((){analyzingPaste=true;messages=[];parsed=false;statusMessage='';reviewing=false;index=0;});
+        update((){analyzingPaste=true;messages=[];parsed=false;
+         statusMessage='';reviewing=false;index=0;});
         pasteTimer=Timer(const Duration(milliseconds:650),(){
-         if(!sheetActive||!ctx.mounted||pasteRevision!=revision||pasted.text.trim()!=text)return;
-         update((){messages=splitBankMessages(text);parsed=true;analyzingPaste=false;statusMessage=noTransactionWarning(text)??'';});
+         if(!sheetActive||!ctx.mounted||pasteRevision!=revision||
+            pasted.text.trim()!=text)return;
+         update((){
+          messages=splitBankMessages(text);parsed=true;analyzingPaste=false;
+          statusMessage=noTransactionWarning(text)??'';
+         });
          if(statusMessage.isEmpty&&messages.isNotEmpty)saveParsedMessages(ctx,update);
         });
-       }),label:WaffraText(waffraIsEnglish?'Paste copied SMS':'لصق آخر رسالة نسختها',maxLines:1,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700)))),
-      const SizedBox(height:8),
-      Align(alignment:AlignmentDirectional.centerStart,child:OutlinedButton.icon(
-       icon:const Icon(Icons.message_outlined),
+       }),
+       label:WaffraText(stack?
+        (waffraIsEnglish?'Paste copied SMS':'لصق آخر رسالة نسختها'):
+        (waffraIsEnglish?'Paste SMS':'لصق رسالة'),
+        maxLines:2,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700)),
+      );
+      final messagesAction=OutlinedButton.icon(
+       key:const Key('waffra-sms-open-messages-action'),
+       icon:const Icon(Icons.message_outlined,size:18),
        onPressed:WaffraHaptics.tap(busy?null:()async{
         awaitingMessagesApp=true;
         final launched=await openWaffraMessagesApp();
@@ -3816,8 +3836,18 @@ Future<void> bulkSmsSheet({String? initialText})async {
           :'تعذر فتح تطبيق الرسائل. انسخ الرسالة والصقها هنا بدلًا من ذلك.');
         }
        }),
-       label:WaffraText(waffraIsEnglish?'Open phone messages':'فتح رسائل الهاتف'),
-      )),
+       label:WaffraText(stack?
+        (waffraIsEnglish?'Open phone messages':'فتح رسائل الهاتف'):
+        (waffraIsEnglish?'Messages app':'فتح الرسائل'),
+        maxLines:2,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700)),
+      );
+      return stack?Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+       pasteAction,const SizedBox(height:8),messagesAction,
+      ]):Row(children:[
+       Expanded(child:pasteAction),const SizedBox(width:10),
+       Expanded(child:messagesAction),
+      ]);
+     }),
       if(currencyPreview.needsCurrencyReview)...[
        const SizedBox(height:8),
        Container(
@@ -3987,12 +4017,101 @@ Future<void> bulkSmsSheet({String? initialText})async {
  _receiveSharedSms();
 }
 
- Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms})async {
-  final title=TextEditingController(text:initial?.title??'');
+ Future<void> scanAndAddReceipt()async {
+  // Ask only for the exact camera/gallery access the user selected.
+  final source=await showWaffraDialog<ImageSource>(context:context,builder:(dialog)=>AlertDialog(
+   title:WaffraText(waffraIsEnglish?'Add from receipt or image':'إضافة عملية من فاتورة أو صورة'),
+   content:WaffraText(waffraIsEnglish?
+    'Scan a receipt, transfer notice or bank screenshot. Review every amount and type before saving.':
+    'صوّر فاتورة أو اختر إيصال تحويل أو صورة رسائل بنكية. راجع كل مبلغ ونوع عملية قبل الحفظ.'),
+   actions:[
+    TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialog)),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+    OutlinedButton.icon(icon:const Icon(Icons.photo_library_outlined),
+     onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialog,ImageSource.gallery)),
+     label:WaffraText(waffraIsEnglish?'Gallery':'المعرض')),
+    FilledButton.icon(icon:const Icon(Icons.camera_alt_outlined),
+     onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialog,ImageSource.camera)),
+     label:WaffraText(waffraIsEnglish?'Camera':'الكاميرا')),
+   ]));
+  if(source==null||!mounted)return;
+  try{
+   final picked=await ImagePicker().pickImage(source:source,imageQuality:95);
+   if(picked==null||!mounted)return;
+   final extracted=await WaffraReceiptOcr.scan(picked.path);
+   if(!mounted)return;
+   final candidates=WaffraBankScreenshotParser.candidates(extracted.rawText);
+   if(candidates.isEmpty){
+    // Do not reuse speculative OCR merchant/amount for an SMS screenshot.
+    final suggestion=WaffraBankScreenshotParser.looksLikeBankScreenshot(extracted.rawText)?
+     WaffraReceiptOcrFields(rawText:extracted.rawText):extracted;
+    await entrySheet(scannedReceipt:suggestion,scannedImage:picked);
+    return;
+   }
+   if(candidates.length==1){
+    final one=candidates.single;
+    await entrySheet(
+     scannedReceipt:WaffraReceiptOcrFields(rawText:one.sourceText,
+      merchant:one.merchant,amount:one.amount,date:one.date),
+     scannedIncome:one.income,scannedImage:picked);
+    return;
+   }
+   // One screenshot may have independent transactions. Require explicit user
+   // selection, then full review of each via the existing finance entry gate.
+   final chosen=<int>{};
+   final selected=await showWaffraDialog<List<int>>(context:context,
+    builder:(dialog)=>StatefulBuilder(builder:(dialog,update)=>AlertDialog(
+     title:WaffraText(waffraIsEnglish?'Review detected transactions':'مراجعة العمليات المكتشفة'),
+     content:SizedBox(width:420,child:SingleChildScrollView(child:Column(
+      mainAxisSize:MainAxisSize.min,children:[
+       WaffraText(waffraIsEnglish?
+        'Select entries to review one by one. Nothing will be saved automatically.':
+        'اختر العمليات التي تريد مراجعتها واحدة تلو الأخرى؛ لن يُحفظ شيء تلقائيًا.'),
+       for(var i=0;i<candidates.length;i++)
+        CheckboxListTile(
+         value:chosen.contains(i),
+         onChanged:WaffraHaptics.selection((value)=>update((){
+          if(value==true){chosen.add(i);}else{chosen.remove(i);}
+         })),
+         title:WaffraText('${candidates[i].amount.toStringAsFixed(2)} SAR — ${candidates[i].income?(waffraIsEnglish?'Income':'دخل'):(waffraIsEnglish?'Expense':'مصروف')}'),
+         subtitle:WaffraText(candidates[i].merchant??(waffraIsEnglish?'Unconfirmed source':'اسم غير مؤكد')),
+        ),
+      ]))),
+     actions:[
+      TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialog)),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+      FilledButton(onPressed:chosen.isEmpty?null:WaffraHaptics.tap(
+       ()=>Navigator.pop(dialog,chosen.toList()..sort())),
+       child:WaffraText(waffraIsEnglish?'Review selected':'مراجعة المحدد')),
+     ],
+    )));
+   if(selected==null||!mounted)return;
+   for(final index in selected){
+    if(!mounted)return;
+    final candidate=candidates[index];
+    await entrySheet(
+     scannedReceipt:WaffraReceiptOcrFields(rawText:candidate.sourceText,
+      merchant:candidate.merchant,amount:candidate.amount,date:candidate.date),
+     scannedIncome:candidate.income,scannedImage:picked);
+   }
+  }on WaffraReceiptOcrException catch(error){
+   if(mounted)snack(context,waffraIsEnglish?
+    'Image recognition is unavailable (${error.code}). You can add the transaction manually.':
+    'تعذر التعرف على الصورة (${error.code}). يمكنك إضافة العملية يدويًا.');
+  }catch(error){
+   debugPrint('Receipt import review failed without a finance write: $error');
+   if(mounted)snack(context,waffraIsEnglish?
+    'Could not read this image. Try a clearer image or add manually.':
+    'تعذر قراءة الصورة. جرّب صورة أوضح أو أضف العملية يدويًا.');
+  }
+ }
+
+ Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,
+  WaffraReceiptOcrFields? scannedReceipt,XFile? scannedImage,bool? scannedIncome})async {
+  final title=TextEditingController(text:initial?.title??scannedReceipt?.merchant??'');
   final notes=TextEditingController(text:initial?.notes??'');
-  final value=TextEditingController(text:initial==null?'':formatWaffraEditAmount(initial.amount));
+  final value=TextEditingController(text:initial!=null?formatWaffraEditAmount(initial.amount):
+   scannedReceipt?.amount!=null?formatWaffraEditAmount(scannedReceipt!.amount!):'');
   final message=TextEditingController(text:initialSms??'');
-  bool income=initial?.income??false,analyzing=false,hasParsed=initialSms!=null;
+  bool income=initial?.income??scannedIncome??false,analyzing=false,hasParsed=initialSms!=null;
   bool submitTapped=false;
   String category=initial?.category??'أخرى';
   String? selectedParentId;
@@ -4010,9 +4129,21 @@ Future<void> bulkSmsSheet({String? initialText})async {
     category='';
    }
   }
-  DateTime date=initial?.date??DateTime.now();
+  DateTime date=initial?.date??scannedReceipt?.date??DateTime.now();
    String? suggestion,pendingHash,receiptPath=initial?.receiptPath;
    final stagedReceiptCopies=<String>[];
+   if(scannedImage!=null){
+    try{
+     final copy=await saveReceipt(scannedImage);
+     stagedReceiptCopies.add(copy);
+     receiptPath=waffraEncodeReceipts([...waffraReceiptPaths(receiptPath),copy]);
+    }catch(error){
+     debugPrint('Could not stage receipt before confirmed save: $error');
+     if(mounted)snack(context,waffraIsEnglish?'Could not attach the image. Please retry.':
+      'تعذر إرفاق الصورة، حاول مجددًا.');
+     disposeLater([title,value,notes,message]);return;
+    }
+   }
    bool attempted=false;
    bool explicitlyApprovedSmsDuplicate=false;
   Timer? debounce;
@@ -4059,9 +4190,17 @@ Future<void> bulkSmsSheet({String? initialText})async {
      return Padding(padding:EdgeInsets.fromLTRB(18,10,18,MediaQuery.of(sheetContext).viewInsets.bottom+20),
      child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,
       crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-      WaffraText(initial!=null?'تعديل العملية':sms?'إضافة رسالة بنكية':'إضافة عملية',
+      WaffraText(initial!=null?'تعديل العملية':sms?'إضافة رسالة بنكية':
+        scannedReceipt!=null?(waffraIsEnglish?'Review image transaction':'مراجعة عملية من صورة'):'إضافة عملية',
        style:Theme.of(sheetContext).textTheme.titleLarge),
       const SizedBox(height:12),
+      if(scannedReceipt!=null)...[
+       WaffraText(waffraIsEnglish?
+        'OCR suggestions are unverified. Confirm the income/expense type, amount, source and date before saving. The image is attached only after confirmation.':
+        'بيانات الصورة مقترحات غير مؤكدة. راجع الدخل أو المصروف والمبلغ والاسم والتاريخ قبل الحفظ. الصورة تُرفق بعد التأكيد فقط.',
+        style:const TextStyle(color:emerald,fontSize:12)),
+       const SizedBox(height:12),
+      ],
       if(sms)...[
        TextField(controller:message,minLines:3,maxLines:6,
         onChanged:(v){parseNow(v);update((){});},
@@ -4326,7 +4465,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        Navigator.pop(sheetContext,MoneyEntry(id:initial?.id??newId(),
         title:title.text.trim(),notes:sms?message.text:notes.text,category:category,amount:n,
         income:income,date:date,receiptPath:receiptPath,
-        sourceType:initial?.sourceType??(sms?'sms':'manual'),
+        sourceType:initial?.sourceType??(sms?'sms':scannedReceipt!=null?'receipt':'manual'),
         merchantKey:initial?.merchantKey??(sms?(waffraMerchantKey(message.text)??''):'')));
       }),child:const WaffraText('تأكيد وحفظ العملية')),
      ])));
@@ -9369,6 +9508,13 @@ Future<void> bulkSmsSheet({String? initialText})async {
          label:waffraIsEnglish?'Bank message':'رسالة بنكية',
          onTap:WaffraHaptics.tapRequired((){
           unawaited(_launchAddAction(()=>bulkSmsSheet(),fromMenu:true));
+         })),
+        const SizedBox(height:7),
+        _addMenuOption(
+         icon:Icons.document_scanner_outlined,
+         label:waffraIsEnglish?'Scan receipt / image':'تصوير / استخراج فاتورة',
+         onTap:WaffraHaptics.tapRequired((){
+          unawaited(_launchAddAction(scanAndAddReceipt,fromMenu:true));
          })),
         ]else...[
          _addMenuOption(icon:Icons.trending_up,

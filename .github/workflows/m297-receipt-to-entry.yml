@@ -1,0 +1,40 @@
+name: M297 Scan Receipt to Reviewed Finance Entry QA
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'lib/main.dart'
+      - 'lib/waffra_receipt_ocr_parser.dart'
+      - 'lib/waffra_bank_screenshot_parser.dart'
+      - 'test/m297_ocr_to_finance_and_sms_layout_test.dart'
+      - '.github/workflows/m297-receipt-to-entry.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+concurrency:
+  group: m297-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ocr-to-transaction:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Assert exact HEAD of the PR
+        env:
+          EXPECTED: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Analyze OCR bridge and guarded entry UI
+        run: flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings lib/main.dart lib/waffra_receipt_ocr.dart lib/waffra_receipt_ocr_parser.dart lib/waffra_bank_screenshot_parser.dart test/m297_ocr_to_finance_and_sms_layout_test.dart
+      - name: Test multi-SMS, OCR, security, responsiveness and known UI
+        run: |
+          flutter test --reporter expanded test/m297_ocr_to_finance_and_sms_layout_test.dart test/m287_receipt_ocr_test.dart test/m281_practical_tools_test.dart test/m285_compact_action_widths_test.dart test/m280_sms_fuzz_and_boundary_test.dart test/waffra_inline_form_validation_test.dart

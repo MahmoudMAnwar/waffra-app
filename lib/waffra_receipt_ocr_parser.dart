@@ -101,6 +101,20 @@ abstract final class WaffraReceiptOcrParser {
         .map((line) => line.trim()).where((line) => line.isNotEmpty).toList();
     if (lines.isEmpty) return WaffraReceiptOcrFields(rawText: raw);
 
+    // Bank screenshot ≠ one receipt. Never select a phone/card ID as the
+    // invoice amount or the bank sender as the merchant. A separate bank
+    // screenshot review flow can segment and review individual messages.
+    final bankAction = RegExp(
+      r'شراء\s*(?:pos|نقاط)|\bpos\b|card\s+purchase|'
+      r'حوالة\s+واردة|تحويل\s+وارد|salary\s+credit',
+      caseSensitive: false).hasMatch(raw);
+    final bankContext = RegExp(
+      r'\b(?:SAR|SR|Bank|Mada)\b|ريال|مدى|الراجحي',
+      caseSensitive: false).hasMatch(raw);
+    if (bankAction && bankContext) {
+      return WaffraReceiptOcrFields(rawText: raw);
+    }
+
     DateTime? date;
     for (final line in lines) {
       date ??= _date(line);
@@ -118,6 +132,7 @@ abstract final class WaffraReceiptOcrParser {
             'رقم السجل', 'المجموع', 'الإجمالي', 'المبلغ', 'الصافي',
             'receipt', 'invoice', 'vat', 'tax ', 'total', 'date',
             'time:', 'cashier', 'order no', 'رقم الطلب', 'سعر',
+            'bank', 'الراجحي', 'البنك', 'مصرف', 'account', 'sender',
           ])) {
         continue;
       }
@@ -145,7 +160,9 @@ abstract final class WaffraReceiptOcrParser {
         'رقم الطلب', 'order number', 'change', 'الباقي',
       ]);
       if (!total && _date(rawLine) != null) continue;
-      final score = (total ? 100 : 0) - (nonTotal ? 130 : 0);
+      // Without a TOTAL label we cannot safely distinguish an invoice
+      // price from account numbers, receipt references or phone numbers.
+      final score = (total ? 100 : -100) - (nonTotal ? 130 : 0);
       if (score < 0) continue;
       for (final match in candidatePattern.allMatches(rawLine)) {
         if (match.start > 0 &&
