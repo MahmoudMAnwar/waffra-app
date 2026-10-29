@@ -36,7 +36,8 @@ void main() {
       (tester) async {
     waffraLanguage.value = 'ar';
     await tester.pumpWidget(details(sms(notes: '')));
-    expect(find.text('لا توجد ملاحظات'), findsWidgets);
+    expect(find.text('لا توجد ملاحظات'), findsNothing);
+    expect(find.text('الملاحظات'), findsNothing);
     final bank = find.byKey(
       const Key('waffra-transaction-protected-bank-sms'),
     );

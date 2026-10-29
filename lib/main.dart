@@ -16,8 +16,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'waffra_financial_tools.dart';
 import 'waffra_smart_features.dart';
+import 'waffra_tour_plan.dart';
 import 'waffra_today_picker.dart';
 import 'waffra_action_layout.dart';
+import 'waffra_receipt_filename.dart';
+import 'waffra_sms_intelligence.dart';
+import 'waffra_sms_multicurrency_review.dart';
 import 'waffra_back_navigation.dart';
 import 'waffra_saudi_greetings.dart';
 import 'package:flutter/rendering.dart';
@@ -28,6 +32,7 @@ import 'package:crypto/crypto.dart';
 import 'waffra_biometrics.dart';
 import 'waffra_amount_formatter.dart';
 import 'waffra_display_currency.dart';
+import 'waffra_country_first_run_page.dart';
 import 'waffra_search.dart';
 import 'waffra_balance_art.dart';
 import 'waffra_validators.dart';
@@ -397,7 +402,12 @@ WaffraSmsPasteSummary waffraSummarizeBankPaste(String raw,Set<String> savedHashe
 }
 class BankResult {
  final double? amount;final bool income;final String title,category;final String? suggestedCategory;
- BankResult(this.amount,this.income,this.title,this.category,this.suggestedCategory);
+ final String? currencyCode;
+ final double? mlConfidence;
+ final bool requiresCurrencyReview;
+ BankResult(this.amount,this.income,this.title,this.category,this.suggestedCategory,{
+  this.currencyCode,this.mlConfidence,this.requiresCurrencyReview=false,
+ });
 }
 /// Pure, batch-only parser used by compute() for larger SMS pastes.
 /// Results and stored bank amounts are identical to the single-message path.
@@ -415,6 +425,14 @@ class BankParser {
   if(RegExp('^$unconfirmed\\b',caseSensitive:false).hasMatch(header)||failedStatus.hasMatch(s)){
    return BankResult(null,false,'إشعار غير مؤكد','أخرى',null);
   }
+  // Current finance records lack original currency and a verified FX
+  // witness. Never auto-import a foreign-currency SMS as Saudi riyals.
+  final discoveredCurrencies=WaffraSmsCurrencies.currenciesForMessage(s);
+  if(WaffraSmsCurrencies.requiresReviewForSarLedger(s)){
+   return BankResult(null,false,'معاملة بعملة تحتاج مراجعة','أخرى',null,
+    currencyCode:discoveredCurrencies.isEmpty?null:discoveredCurrencies.first,
+    requiresCurrencyReview:true);
+  }
   // Credit Transfer is incoming; Credit Card Purchase remains an expense.
   const credits=r'(?:Credit\s+Transfer|Credit\s+via\s+(?:(?:local|domestic|international|bank|internal)\s+)?transfer|Incoming\s+(?:Bank\s+)?Transfer|Transfer\s+Received|Transfer\s+In|Funds\s+Received|Money\s+Received|Account\s+Credited|Salary\s+(?:Credit|Deposit)|Cash\s+Deposit|Refund\s+(?:Received|Processed)|Refund|Reversal\s+Credit)';
   const debits=r'(?:Online\s+Purchase(?:\s+Card)?|Purchase\s+Card|Card\s+Purchase|Credit\s+Card\s+Purchase|POS\s+(?:Purchase|Transaction)|Debit\s+Transfer|Outgoing\s+Transfer|Transfer\s+(?:Sent|Out|To)|Money\s+Sent|Debit\s+Card\s+Purchase|Card\s+Payment|ATM\s+Withdrawal|Cash\s+Withdrawal|Bill\s+Payment|Direct\s+Debit|Payment\s+(?:Completed|Successful))';
@@ -422,6 +440,21 @@ class BankParser {
   final englishOutgoing=RegExp('^$debits\\b',caseSensitive:false).hasMatch(header);
   final legacyIncoming=RegExp(r'حوال[ةه].{0,25}وارد|تحويل.{0,25}وارد|استلام.{0,25}حوال|credited|deposit|راتب|إيداع|ايداع',caseSensitive:false).hasMatch(s);
   final legacyOutgoing=RegExp(r'حوال[ةه].{0,25}صادر|تحويل.{0,25}صادر|شراء|نقاط\s*بيع|pos\b|مدى|سحب|خصم|دفع|فاتورة|purchase|debit\b',caseSensitive:false).hasMatch(s);
+  // A trainable no-cost offline classifier covers previously unseen global
+  // headings. Existing successful Saudi and English formats remain unchanged.
+  // Currency mismatch never silently corrupts the SAR ledger.
+  if(!englishIncoming&&!englishOutgoing&&!legacyIncoming&&!legacyOutgoing){
+   final smart=WaffraSmsIntelligence.classify(s);
+   if(smart.intent!=WaffraSmsIntent.uncertain){
+    final receive=smart.intent==WaffraSmsIntent.incoming;
+    return BankResult(smart.canAutoSuggestSar?smart.amount:null,receive,
+     receive?'حوالة واردة':'معاملة مالية صادرة',
+     receive?'دخل آخر':'تحويلات',null,
+     currencyCode:smart.currency,
+     mlConfidence:smart.confidence,
+     requiresCurrencyReview:smart.requiresCurrencyReview);
+   }
+  }
   final income=englishIncoming||(legacyIncoming&&!englishOutgoing&&!legacyOutgoing);
   // Amount-only English notices lack evidence of direction: review, don't
   // fabricate a confirmed expense.
@@ -463,6 +496,17 @@ class BankParser {
    else if(RegExp(r'نادي|gym|fitness|رياضة',caseSensitive:false).hasMatch(s)){cat='رياضة ولياقة';suggestion=cat;}
    else if(RegExp(r'مدرسة|جامعة|تعليم',caseSensitive:false).hasMatch(s)){cat='تعليم';suggestion=cat;}
    else if(RegExp(r'سفر|طيران|فندق|hotel',caseSensitive:false).hasMatch(s)){cat='سفر';suggestion=cat;}
+  }
+  // A recognized foreign-currency amount must never inherit the SAR ledger
+  // unit. Preserve direction and title, but require a human-reviewed SAR
+  // conversion before any writer is allowed to persist an amount.
+  if(value==null){
+   final global=WaffraSmsIntelligence.classify(s);
+   if(global.requiresCurrencyReview){
+    return BankResult(null,income,title,cat,suggestion,
+     currencyCode:global.currency,mlConfidence:global.confidence,
+     requiresCurrencyReview:true);
+   }
   }
   return BankResult(value,income,title,cat,suggestion);
  }
@@ -587,6 +631,17 @@ String? waffraMobileFieldError(String? raw) {
  if((raw??'').trim().isEmpty)return waffraRequiredFieldMessage;
  return WaffraValidators.mobileNumber(raw)==null?null:(waffraIsEnglish?'Mobile number must start with 05 and contain 10 digits':'رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام');
 }
+/// Google profiles accept E.164 so Egyptian users can complete signup
+/// before granting location; local Saudi phone login remains unchanged.
+String? waffraGoogleProfilePhoneError(String? value){
+ final raw=(value??'').trim();
+ if(raw.isEmpty)return waffraRequiredFieldMessage;
+ if(RegExp(r'^05[0-9]{8}$').hasMatch(raw)||
+  RegExp(r'^\+[1-9][0-9]{7,14}$').hasMatch(raw))return null;
+ return waffraIsEnglish?
+  'Enter 05xxxxxxxx or international number like +201234567890.':
+  'أدخل 05xxxxxxxx أو رقمًا دوليًا مثل +201234567890.';
+}
 String? waffraPasswordFieldError(String? raw) {
  if((raw??'').isEmpty)return waffraRequiredFieldMessage;
  return RegExp(r'^(?=.*[A-Za-z])(?=.*[0-9]).{8,}$').hasMatch(raw!)?null:(waffraIsEnglish?'Use at least 8 characters with letters and numbers':'كلمة المرور يجب أن تكون 8 خانات على الأقل وتشمل أحرفًا وأرقامًا');
@@ -609,8 +664,24 @@ class WaffraApp extends StatefulWidget {
  const WaffraApp({super.key});
  @override State<WaffraApp> createState()=>_WaffraAppState();
 }
+/// The one-time country explanation is only eligible after the Google
+/// account finished required profile details, never during sign-in or guest.
+bool waffraGoogleProfileReadyForCountrySetup(Person? user)=>
+ user!=null&&user.provider.toLowerCase()=='google'&&
+ user.email.trim().isNotEmpty&&user.name.trim().isNotEmpty&&
+ user.phone.trim().isNotEmpty&&user.gender.trim().isNotEmpty;
+
+/// Namespace consent separately for each Google account; do not store raw
+/// emails, GPS coordinates or sensitive profile details in preferences.
+String waffraCountrySetupKey(Person user){
+ final fingerprint=sha256.convert(utf8.encode(
+   user.email.trim().toLowerCase())).toString();
+ return 'waffra_google_country_setup_v2_${fingerprint.substring(0,20)}';
+}
+
 class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  bool loading=true,onboarded=false,dark=false,locked=false,showLogin=false;
+ bool googleFirstRunSetup=false;
  String appearance='light';
  bool introDone=false;
  int _greetingCycle=0;
@@ -666,7 +737,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    final animation=p.getString('waffra_animation_level');
    waffraAnimationLevel.value={'full','balanced','reduced','off'}.contains(animation)?animation!:'balanced';
    waffraLanguage.value=language;
-   unawaited(WaffraDisplayCurrency.initialize());
+   await WaffraDisplayCurrency.initialize();
    allowWaffraScreenshots.value=screenshotsAllowed;
    if(Platform.isAndroid){
     try{await _privacyChannel.invokeMethod<void>('setScreenshotsAllowed',screenshotsAllowed).timeout(const Duration(seconds:3));}
@@ -678,7 +749,10 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     appearance=p.getString('waffra_appearance_mode_v1')??(p.containsKey('waffra_dark_mode')?(p.getBool('waffra_dark_mode')==true?'dark':'light'):'light');
     if(!{'light','dark','system'}.contains(appearance))appearance='light';
     dark=appearance=='dark'||(appearance=='system'&&WidgetsBinding.instance.platformDispatcher.platformBrightness==Brightness.dark);
-    profile=u;pinHash=p.getString('waffra_pin_sha256');
+    profile=u;
+    googleFirstRunSetup=waffraGoogleProfileReadyForCountrySetup(u)&&
+      !(p.getBool(waffraCountrySetupKey(u!))??false);
+    pinHash=p.getString('waffra_pin_sha256');
     locked=pinHash!=null;startupError=null;loading=false;
    });
   }catch(e){
@@ -711,11 +785,27 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    email:u.email.trim().isNotEmpty?u.email.trim():null,
    phone:u.phone.trim().isNotEmpty?u.phone.trim():null,
   );
-  if(mounted)setState((){profile=u;showLogin=false;});
+  final prefs=await SharedPreferences.getInstance();
+  final needsGoogleSetup=waffraGoogleProfileReadyForCountrySetup(u)&&
+    !(prefs.getBool(waffraCountrySetupKey(u))??false);
+  if(mounted)setState((){
+   profile=u;showLogin=false;googleFirstRunSetup=needsGoogleSetup;
+  });
+ }
+ Future<void> completeGoogleCountrySetup(String selectedCurrency)async{
+  final account=profile;
+  if(!waffraGoogleProfileReadyForCountrySetup(account))return;
+  // One-time country onboarding never obtains notification access.
+  // Recurring's explicit switch owns notification consent.
+  await WaffraDisplayCurrency.setCurrency(selectedCurrency);
+  final prefs=await SharedPreferences.getInstance();
+  final complete=await prefs.setBool(waffraCountrySetupKey(account!),true);
+  if(!complete)throw StateError('Could not save country setup completion.');
+  if(mounted)setState(()=>googleFirstRunSetup=false);
  }
  Future<void> logout()async {
   await _accountWriteAuthority.signOut();
-  if(mounted)setState((){profile=null;showLogin=true;locked=false;});
+  if(mounted)setState((){profile=null;showLogin=true;locked=false;googleFirstRunSetup=false;});
  }
  Future<void> setPin(String? value)async {
   final hash=value==null?null:sha256.convert(utf8.encode(value)).toString();
@@ -965,6 +1055,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    ])))):
    locked?PinLockScreen(pinHash:pinHash!,onUnlock:()=>setState(()=>locked=false)):
    profile==null||showLogin?LoginScreen(onSave:saveUser):
+   googleFirstRunSetup?WaffraCountryFirstRunPage(
+     english:language=='en',onComplete:completeGoogleCountrySetup):
    HomeScreen(key:ValueKey(language),profile:profile!,
      dark:appearance=='dark'||(appearance=='system'&&MediaQuery.platformBrightnessOf(rootContext)==Brightness.dark),
      appearance:appearance,onAppearance:setAppearance,onTheme:theme,onLanguage:setLanguage,onLogout:logout,onProfile:saveUser,onSetPin:setPin,pinEnabled:pinHash!=null,greetingIndex:_greetingCycle)))));
@@ -1481,8 +1573,19 @@ class _LoginScreenState extends State<LoginScreen> {
      if(mounted)snack(context,waffraIsEnglish?'Choose your previous Google account':'اختار حساب جوجل المستخدم سابقًا');
      return;
     }
-    await widget.onSave(Person(name:user.displayName??'',email:user.email??'',
-     phone:user.phoneNumber??'',provider:'Google',gender:'',avatar:user.photoURL??'person',birthday:DateTime(2000)));
+    final existing=registered;
+    final googleProfile=Person(name:user.displayName??'',email:user.email??'',
+     phone:user.phoneNumber??'',provider:'Google',gender:'',
+     avatar:user.photoURL??'person',birthday:DateTime(2000));
+    if(existing!=null&&existing.provider.toLowerCase()=='google'&&
+       existing.email.trim().toLowerCase()==(user.email??'').trim().toLowerCase()&&
+       waffraGoogleProfileReadyForCountrySetup(existing)){
+      // Retain completed local profile on a fresh Google re-authentication.
+      await widget.onSave(existing);
+    }else if(mounted){
+      await Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>
+       ProfileForm(provider:'Google',initial:googleProfile,onSave:widget.onSave)));
+    }
    }catch(e){
     if(mounted)snack(context,waffraIsEnglish?'Google sign-in failed. Please try again.':'تعذر تسجيل الدخول بجوجل. حاول مرة أخرى.');
    }finally{if(mounted)setState(()=>socialBusy=false);}
@@ -1566,10 +1669,14 @@ class _LoginScreenState extends State<LoginScreen> {
     final result=await WaffraGoogleAuth.signIn();
     final user=result.user;
     if(user==null)throw StateError('Google did not return an account');
-    await widget.onSave(Person(name:user.displayName??'',email:user.email??'',
-     phone:user.phoneNumber??'',provider:'Google',gender:'',avatar:user.photoURL??'person',birthday:DateTime(2000)));
-     if(!mounted)return;
-     await Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>ProfileForm(provider:'Google',initial:Person(name:user.displayName??'',email:user.email??'',phone:user.phoneNumber??'',provider:'Google',gender:'',avatar:user.photoURL??'person',birthday:DateTime(2000)),onSave:widget.onSave)));
+    // Do not save an incomplete Google profile and tear down LoginScreen
+    // before the required phone/gender form is presented.
+    if(!mounted)return;
+    final firstGoogleProfile=Person(name:user.displayName??'',email:user.email??'',
+     phone:user.phoneNumber??'',provider:'Google',gender:'',
+     avatar:user.photoURL??'person',birthday:DateTime(2000));
+    await Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>
+     ProfileForm(provider:'Google',initial:firstGoogleProfile,onSave:widget.onSave)));
    }catch(e){
     if(mounted){
       final message=e.toString().toLowerCase();
@@ -1731,7 +1838,18 @@ class _ProfileFormState extends State<ProfileForm> {
    ])));
   if(choice==null||!mounted)return;
   if(choice=='default'){setState(()=>avatar=gender=='أنثى'?'female':'male');return;}
-  final selected=await ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:92);
+  // Android Photo Picker grants access only to selected media at tap time.
+  // Do not request global photo or file permissions at app launch.
+  XFile? selected;
+  try{
+   selected=await ImagePicker().pickImage(
+    source:ImageSource.gallery,imageQuality:92);
+  }catch(_){
+   if(mounted)snack(context,waffraIsEnglish?
+    'Unable to access photos. Check your photo selection permissions.':
+    'تعذر اختيار الصورة. تأكد من صلاحية الوصول للصور المختارة.');
+   return;
+  }
   if(selected==null||!mounted)return;
   final cropKey=GlobalKey();
   final png=await showWaffraDialog<Uint8List>(context:context,builder:(ctx)=>AlertDialog(
@@ -1739,7 +1857,7 @@ class _ProfileFormState extends State<ProfileForm> {
    content:Column(mainAxisSize:MainAxisSize.min,children:[
     RepaintBoundary(key:cropKey,child:ClipOval(child:SizedBox(width:230,height:230,
      child:InteractiveViewer(minScale:1,maxScale:5,child:
-      Image.file(File(selected.path),fit:BoxFit.cover))))),
+      Image.file(File(selected!.path),fit:BoxFit.cover))))),
     const SizedBox(height:12),
     WaffraText(waffraIsEnglish?'Pinch to zoom and drag to position':'كبّر الصورة وحرّكها داخل الدائرة'),
    ]),
@@ -1767,7 +1885,9 @@ class _ProfileFormState extends State<ProfileForm> {
  Future<void> save()async {
   setState(()=>profileAttempted=true);
   if(gender.isEmpty)return;
-  if(waffraTextFieldError(name.text)!=null||waffraMobileFieldError(phone.text)!=null)return;
+  if(waffraTextFieldError(name.text)!=null||
+   (widget.provider=='Google'?waffraGoogleProfilePhoneError(phone.text):
+    waffraMobileFieldError(phone.text))!=null)return;
   if(widget.initial==null&&(
    waffraPasswordFieldError(password.text)!=null||
    waffraConfirmPasswordFieldError(confirmPassword.text,password.text)!=null))return;
@@ -1816,10 +1936,18 @@ class _ProfileFormState extends State<ProfileForm> {
    ],
    TextField(controller:phone,keyboardType:TextInputType.phone,
     onChanged:(_)=>setState((){}),
-    inputFormatters:[FilteringTextInputFormatter.digitsOnly,LengthLimitingTextInputFormatter(10)],
-    decoration:InputDecoration(labelText:waffraIsEnglish?'Mobile number starting with 05 *':'رقم الجوال يبدأ بـ 05 *',
-     hintText:'05XXXXXXXX',
-     errorText:profileAttempted?waffraMobileFieldError(phone.text):null,
+    inputFormatters:widget.provider=='Google'?
+     [FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
+      LengthLimitingTextInputFormatter(16)]:
+     [FilteringTextInputFormatter.digitsOnly,LengthLimitingTextInputFormatter(10)],
+    decoration:InputDecoration(
+     labelText:widget.provider=='Google'?
+      (waffraIsEnglish?'Mobile with country code *':'الجوال مع مفتاح الدولة *'):
+      (waffraIsEnglish?'Mobile number starting with 05 *':'رقم الجوال يبدأ بـ 05 *'),
+     hintText:widget.provider=='Google'?'+201234567890':'05XXXXXXXX',
+     errorText:profileAttempted?
+      (widget.provider=='Google'?waffraGoogleProfilePhoneError(phone.text):
+       waffraMobileFieldError(phone.text)):null,
      border:const OutlineInputBorder())),
    if(widget.initial==null) ...[
     const SizedBox(height:12),
@@ -2252,7 +2380,7 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
        // These are TWO independent fields. Editable user notes are persisted
        // on the ordinary transaction route; the original SMS is read from
        // the protected vault and is never substituted into entry.notes.
-       if(entry.sourceType=='sms'||entry.notes.isNotEmpty)...[
+       if(entry.notes.trim().isNotEmpty)...[
         const SizedBox(height:15),
         WaffraText(waffraIsEnglish?'Notes':'الملاحظات',
          textAlign:TextAlign.start,style:TextStyle(fontSize:12,color:muted)),
@@ -2566,8 +2694,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  bool tourActive=false;
  bool tourTargetReady=false;
  int tourStep=0;
- static const tourTabs=<int>[0,0,0,1,3,4];
- static const tourTargetKeys=<int>[-1,0,1,2,6,4];
+ static const tourTabs=WaffraTourPlan.tabs;
+ static const tourTargetKeys=WaffraTourPlan.targetKeys;
  bool addFabExpanded=false;
  bool _addActionOpening=false;
  bool _fabPressed=false;
@@ -2928,12 +3056,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    });
   }
   if(recurringRemindersEnabled)unawaited(syncRecurringReminders());
+  // An explicit Google onboarding notification consent may be pending;
+  // enable reminder scheduling only through the verified finance authority.
+  // No reminder OS permission at startup; wait for explicit recurring toggle.
   if(!verifiedEncryptedStartup&&trashBefore!=deletedCategories.length){
    await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
   }
   if(!(p.getBool('waffra_in_app_tour_seen_v2')??false)&&mounted){
    WidgetsBinding.instance.addPostFrameCallback((_){
-    if(mounted){setState((){tourActive=true;tourStep=0;tab=0;goalsOpened=false;addFabExpanded=false;tourTargetReady=false;});if(waffraAnimationLevel.value!='off')_tourGlow.repeat(reverse:true);scheduleTourFocus();}
+    if(mounted){setState((){tourActive=true;tourStep=0;tab=0;accountOpened=false;_headerCompact=false;goalsOpened=false;addFabExpanded=false;tourTargetReady=false;});if(waffraAnimationLevel.value!='off')_tourGlow.repeat(reverse:true);scheduleTourFocus();}
    });
   }
  }
@@ -3030,10 +3161,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     english:waffraIsEnglish);
   }catch(e){debugPrint('Reminder scheduling failed: $e');}
  }
- Future<void> toggleRecurringReminders(bool enabled)async {
+ Future<void> toggleRecurringReminders(bool enabled,
+   {bool permissionAlreadyGranted=false})async {
   if(enabled){
    try {
-    final granted=await WaffraReminders.requestPermission();
+    final granted=permissionAlreadyGranted?
+     await WaffraReminders.alreadyPermitted():
+     await WaffraReminders.requestPermission();
     if(!granted){
      if(mounted)snack(context,waffraIsEnglish?
       'Allow notifications in Android settings to enable reminders.':
@@ -3191,9 +3325,15 @@ Future<void> bulkSmsSheet({String? initialText})async {
    final result=BankParser.parse(message);
    return result.amount!=null&&result.amount!>0;
   });
+  if(!hasTransaction&&parts.any((message)=>
+    BankParser.parse(message).requiresCurrencyReview)){
+   return waffraIsEnglish
+    ?'Foreign currency detected. Review and manually convert to SAR before saving.'
+    :'تم اكتشاف معاملة بعملة أجنبية. راجعها وحوّل المبلغ يدويًا إلى الريال قبل الحفظ.';
+  }
   return hasTransaction?null:(waffraIsEnglish
-   ?'This message contains no financial transactions. Edit the text and it will be analyzed again automatically.'
-   :'هذه الرسالة لا تحتوي على أي معاملات مالية. يمكنك تعديلها وسيتم تحليلها تلقائيًا مرة أخرى.');
+   ?'No confirmed supported-SAR transaction found. Review and retry.'
+   :'لم نجد معاملة مؤكدة بالريال يمكن حفظها تلقائيًا. راجع الرسالة وحاول مجددًا.');
  }
 
  bool sheetActive=true;
@@ -3215,6 +3355,16 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final found=splitBankMessages(pasted.text.trim());
   if(found.isEmpty){update(()=>statusMessage=waffraIsEnglish?'No financial transactions found. Edit the message and retry.':'هذه الرسالة لا تحتوي على أي معاملات مالية. عدّلها لإعادة التحليل تلقائيًا.');return;}
   if(found.length>100){update(()=>statusMessage=waffraIsEnglish?'Maximum 100 transactions per paste.':'الحد الأقصى 100 معاملة في كل عملية لصق.');return;}
+  final currencyBatch=WaffraSmsCurrencies.summarize(found);
+  if(currencyBatch.needsCurrencyReview){
+   // No partial automatic commit for a mixed-currency paste.
+   update(()=>statusMessage=waffraIsEnglish
+    ?'Currency review required: '+currencyBatch.summary+
+      '. No transactions were saved. Separate SAR messages or review foreign transactions individually.'
+    :'تحتاج العملات إلى مراجعة: '+currencyBatch.summary+
+      '. لم يتم حفظ أي عملية. افصل رسائل الريال أو راجع العمليات الأجنبية يدويًا.');
+   return;
+  }
   // Batch parsing of 20-100 messages must not freeze Android animations
   // or block text/scroll interactions on the Flutter UI isolate.
   final results=found.length>=20
@@ -3594,6 +3744,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    final available=forType(income);
    final total=messages.fold<double>(0,(sum,s)=>sum+(BankParser.parse(s).amount??0));
    final pasteSummary=waffraSummarizeBankPaste(pasted.text,smsHashes);
+   final currencyPreview=WaffraSmsCurrencies.summarize(messages);
    return Padding(padding:EdgeInsets.fromLTRB(18,8,18,MediaQuery.of(ctx).viewInsets.bottom+24),
     child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
      Row(children:[Expanded(child:WaffraText(waffraIsEnglish?'Add bank message':'إضافة رسالة بنكية',style:Theme.of(ctx).textTheme.titleLarge)),IconButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),icon:const Icon(Icons.close_rounded))]),
@@ -3619,7 +3770,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        suffixIcon:pasted.text.isNotEmpty?IconButton(tooltip:waffraIsEnglish?'Clear text':'مسح النص',icon:const Icon(Icons.clear_rounded,color:Colors.redAccent),onPressed:WaffraHaptics.tap((){pasteTimer?.cancel();pasted.clear();update((){parsed=false;analyzingPaste=false;messages=[];statusMessage='';});})):null,
        border:OutlineInputBorder(borderRadius:BorderRadius.circular(18)))),
       const SizedBox(height:12),
-     SizedBox(width:double.infinity,child:OutlinedButton.icon(icon:const Icon(Icons.content_paste),
+     Align(alignment:AlignmentDirectional.centerStart,child:OutlinedButton.icon(icon:const Icon(Icons.content_paste),
        onPressed:WaffraHaptics.tap(busy?null:()async {
         final data=await Clipboard.getData(Clipboard.kTextPlain);
         if(!ctx.mounted)return;
@@ -3636,7 +3787,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
         });
        }),label:WaffraText(waffraIsEnglish?'Paste copied SMS':'لصق آخر رسالة نسختها',maxLines:1,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700)))),
       const SizedBox(height:8),
-      SizedBox(width:double.infinity,child:OutlinedButton.icon(
+      Align(alignment:AlignmentDirectional.centerStart,child:OutlinedButton.icon(
        icon:const Icon(Icons.message_outlined),
        onPressed:WaffraHaptics.tap(busy?null:()async{
         awaitingMessagesApp=true;
@@ -3650,6 +3801,24 @@ Future<void> bulkSmsSheet({String? initialText})async {
        }),
        label:WaffraText(waffraIsEnglish?'Open phone messages':'فتح رسائل الهاتف'),
       )),
+      if(currencyPreview.needsCurrencyReview)...[
+       const SizedBox(height:8),
+       Container(
+        key:const Key('m291-bank-sms-currency-warning'),
+        padding:const EdgeInsets.all(11),
+        decoration:BoxDecoration(
+         color:Theme.of(ctx).colorScheme.errorContainer,
+         borderRadius:BorderRadius.circular(14)),
+        child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+         WaffraText(waffraIsEnglish?'Multiple or foreign currencies detected':
+          'تم اكتشاف عملات متعددة أو أجنبية',
+          style:const TextStyle(fontWeight:FontWeight.bold)),
+         WaffraText(currencyPreview.summary),
+         WaffraText(waffraIsEnglish?
+          'The base display currency will not change. Verify each foreign amount and its FX rate before importing.':
+          'لن تتغير عملة التطبيق تلقائيًا. راجع المبلغ الأصلي وسعر الصرف لكل عملة قبل الاستيراد.'),
+        ])),
+      ],
       if(analyzingPaste)...[const SizedBox(height:12),const LinearProgressIndicator(),const SizedBox(height:6),WaffraText(waffraIsEnglish?'Analyzing your bank messages now…':'يتم الآن تحليل الرسائل البنكية واستخراج المعاملات…')],
       // Shared lightweight in-dialog progress while the batch is committed.
       if(busy)Padding(
@@ -3826,6 +3995,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   }
   DateTime date=initial?.date??DateTime.now();
    String? suggestion,pendingHash,receiptPath=initial?.receiptPath;
+   final stagedReceiptCopies=<String>[];
    bool attempted=false;
    bool explicitlyApprovedSmsDuplicate=false;
   Timer? debounce;
@@ -3874,8 +4044,16 @@ Future<void> bulkSmsSheet({String? initialText})async {
          border:OutlineInputBorder())),
        const SizedBox(height:8),
        if(analyzing)const LinearProgressIndicator(),
-       if(hasParsed)WaffraText(value.text.isEmpty?'ما قدرنا نحدد المبلغ. اكتبه يدويًا.':
-        'حلّلنا الرسالة. راجع التفاصيل قبل الحفظ.',style:const TextStyle(color:emerald)),
+       if(hasParsed)WaffraText(
+        BankParser.parse(message.text).requiresCurrencyReview
+         ?(waffraIsEnglish?
+          'Foreign currency: check the original amount and enter a verified SAR value manually. No automatic FX conversion.':
+          'عملة أجنبية: راجع المبلغ وأدخل قيمته المؤكدة بالريال يدويًا. لا يوجد تحويل تلقائي.')
+         :value.text.isEmpty?
+          (waffraIsEnglish?'Amount unclear: enter it manually.':'المبلغ غير واضح؛ أدخله يدويًا.')
+         :(waffraIsEnglish?'Smart analysis suggested fields. Review before saving.':
+          'التحليل الذكي اقترح بيانات. راجعها قبل الحفظ.'),
+        style:const TextStyle(color:emerald)),
        const SizedBox(height:12),
       ],
       SegmentedButton<bool>(
@@ -3999,25 +4177,87 @@ Future<void> bulkSmsSheet({String? initialText})async {
       const SizedBox(height:12),
       Row(children:[
        Expanded(child:OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async{
-        final file=await ImagePicker().pickImage(source:ImageSource.camera,imageQuality:80);
-        if(file!=null){final path=await saveReceipt(file);if(sheetContext.mounted)update(()=>receiptPath=waffraEncodeReceipts([...waffraReceiptPaths(receiptPath),path]));}
+        // The native camera permission is requested only when this action
+        // launches the OS camera; never request it during login or startup.
+        try{
+         final file=await ImagePicker().pickImage(
+          source:ImageSource.camera,imageQuality:80);
+         if(file==null)return;
+         final path=await saveReceipt(file);
+         stagedReceiptCopies.add(path);
+         if(sheetContext.mounted)update(()=>receiptPath=waffraEncodeReceipts(
+          [...waffraReceiptPaths(receiptPath),path]));
+        }catch(_){
+         if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
+          'Camera unavailable or permission denied. Review camera access in Settings.':
+          'تعذر فتح الكاميرا أو تم رفض الإذن. راجع إذن الكاميرا من إعدادات الهاتف.');
+        }
        }),icon:const Icon(Icons.camera_alt_outlined),label:const WaffraText('تصوير فاتورة'))),
        const SizedBox(width:8),
        Expanded(child:OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async{
-        final files=await ImagePicker().pickMultiImage(imageQuality:80);
-        if(files.isNotEmpty){final paths=<String>[...waffraReceiptPaths(receiptPath)];
-         for(final file in files){paths.add(await saveReceipt(file));}
-         if(sheetContext.mounted)update(()=>receiptPath=waffraEncodeReceipts(paths));}
+        // Use OS limited-photo access only after the user taps Attach.
+        try{
+         final files=await ImagePicker().pickMultiImage(imageQuality:80);
+         if(files.isEmpty)return;
+         final paths=<String>[...waffraReceiptPaths(receiptPath)];
+         for(final file in files){
+          final copied=await saveReceipt(file);
+          stagedReceiptCopies.add(copied);paths.add(copied);
+         }
+         if(sheetContext.mounted)update(()=>
+          receiptPath=waffraEncodeReceipts(paths));
+        }catch(_){
+         if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
+          'Could not open photos. Please check photo selection access.':
+          'تعذر اختيار الصور. راجع صلاحية الوصول للصور المختارة.');
+        }
        }),icon:const Icon(Icons.attach_file),label:const WaffraText('إرفاق صورة'))),
       ]),
+      Padding(padding:const EdgeInsets.only(top:5),
+       child:WaffraText(waffraIsEnglish?
+        'Camera and photo access is requested only when you choose to use it.':
+        'نطلب صلاحية الكاميرا أو اختيار الصور وقت استخدامها فقط.',
+        style:const TextStyle(fontSize:11,color:emerald))),
       if(waffraReceiptPaths(receiptPath).isNotEmpty)...[
        for(final path in waffraReceiptPaths(receiptPath))
         ListTile(dense:true,
-         title:WaffraText(path.split('/').last.replaceFirst(RegExp(r'^\\d+__'),'')),
+         title:WaffraText(WaffraReceiptFilename.displayName(path),maxLines:2),
          leading:const Icon(Icons.image,color:emerald),
-         trailing:IconButton(icon:const Icon(Icons.close),onPressed:WaffraHaptics.tap(()=>update((){
-          receiptPath=waffraEncodeReceipts([...waffraReceiptPaths(receiptPath)]..remove(path));
-         }))),
+         trailing:Row(mainAxisSize:MainAxisSize.min,children:[
+          IconButton(
+           key:Key('waffra-attachment-rename-'+waffraReceiptPaths(receiptPath).indexOf(path).toString()),
+           tooltip:waffraIsEnglish?'Rename attachment':'تعديل اسم المرفق',
+           icon:const Icon(Icons.drive_file_rename_outline,color:emerald),
+           onPressed:WaffraHaptics.tap(()async{
+            final name=await _promptReceiptLabel(sheetContext,path);
+            if(name==null||!sheetContext.mounted)return;
+            try{
+             final directory=Directory(
+              '${(await getApplicationDocumentsDirectory()).path}/receipts');
+             final renamed=await WaffraReceiptFilename.stageCopyWithName(
+              sourcePath:path,appReceiptsDirectory:directory.path,
+              proposedLabel:name);
+             stagedReceiptCopies.add(renamed);
+             if(!sheetContext.mounted)return;
+             update((){
+              final paths=waffraReceiptPaths(receiptPath);
+              final index=paths.indexOf(path);
+              if(index>=0)paths[index]=renamed;
+              receiptPath=waffraEncodeReceipts(paths);
+             });
+            }catch(_){
+             if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
+              'Could not rename attachment. The original image is unchanged.':
+              'تعذر تغيير اسم المرفق. الصورة الأصلية لم تتغير.');
+            }
+           })),
+          IconButton(
+           tooltip:waffraIsEnglish?'Remove attachment':'إزالة المرفق',
+           icon:const Icon(Icons.close),
+           onPressed:WaffraHaptics.tap(()=>update((){
+            receiptPath=waffraEncodeReceipts([...waffraReceiptPaths(receiptPath)]..remove(path));
+           }))),
+         ]),
          onTap:WaffraHaptics.tap(()=>showReceipt(receiptPath!,initialIndex:waffraReceiptPaths(receiptPath).indexOf(path)))),
       ],
       const SizedBox(height:12),
@@ -4054,7 +4294,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
      ])));
    }));
   debounce?.cancel();disposeLater([title,value,notes,message]);
-  if(result==null||!mounted)return;
+  if(result==null||!mounted){
+   for(final copy in stagedReceiptCopies){
+    try{final file=File(copy);if(await file.exists())await file.delete();}catch(_){}
+   }
+   return;
+  }
   if(initial==null&&!sms&&entries.any((e)=>
     e.income==result.income&&e.amount==result.amount&&
     e.title.trim().toLowerCase()==result.title.trim().toLowerCase()&&
@@ -4195,6 +4440,41 @@ Future<void> bulkSmsSheet({String? initialText})async {
     ])),actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogCtx)),child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))]);
   }));
  }
+ Future<String?> _promptReceiptLabel(BuildContext context,String path)async {
+  final name=TextEditingController(text:WaffraReceiptFilename.displayName(path));
+  String? error;
+  try{
+   return await showWaffraDialog<String>(context:context,
+    builder:(dialogContext)=>StatefulBuilder(builder:(dialogContext,setDialogState)=>
+     AlertDialog(
+      title:WaffraText(waffraIsEnglish?'Rename attachment':'تعديل اسم المرفق'),
+      content:TextField(
+       key:const Key('waffra-attachment-name-input'),
+       controller:name,maxLength:WaffraReceiptFilename.maxLabelCharacters,
+       autofocus:true,
+       decoration:InputDecoration(
+        labelText:waffraIsEnglish?'Attachment name':'اسم المرفق',
+        errorText:error,border:const OutlineInputBorder()),
+       onChanged:(_)=>setDialogState(()=>error=null)),
+      actions:[
+       TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogContext)),
+        child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+       FilledButton(onPressed:WaffraHaptics.tap((){
+        final validation=WaffraReceiptFilename.validateLabel(name.text);
+        if(validation!=null){
+         setDialogState(()=>error=waffraIsEnglish?
+          'Enter a valid name (1-80 characters, no slashes).':
+          'اكتب اسمًا من 1 إلى 80 حرفًا بدون شرطات مسار.');
+         return;
+        }
+        final normalized=WaffraReceiptFilename.normalizedLabel(name.text)!;
+        Navigator.pop(dialogContext,
+         normalized==WaffraReceiptFilename.displayName(path)?null:normalized);
+       }),child:WaffraText(waffraIsEnglish?'Save name':'حفظ الاسم')),
+      ],
+     )));
+  }finally{name.dispose();}
+ }
  Future<String> saveReceipt(XFile picked)async {
   final directory=Directory('${(await getApplicationDocumentsDirectory()).path}/receipts');
   if(!await directory.exists())await directory.create(recursive:true);
@@ -4239,6 +4519,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
          itemBuilder:(ctx,index)=>InteractiveViewer(
           minScale:.8,maxScale:5,
           child:Center(child:Image.file(File(available[index]),fit:BoxFit.contain)))))),
+       Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:4),
+        child:WaffraText(WaffraReceiptFilename.displayName(available[current]),
+         maxLines:2,textAlign:TextAlign.center,
+         style:const TextStyle(color:Colors.white,fontSize:13,fontWeight:FontWeight.w700))),
        SizedBox(height:58,child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
         IconButton(
          tooltip:waffraIsEnglish?'Previous image':'الصورة السابقة',
@@ -4782,7 +5066,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       }),
       icon:const Icon(Icons.visibility_outlined),
       label:WaffraText(waffraIsEnglish?'Open report':'فتح التقرير'))),
-     SizedBox(width:double.infinity,child:OutlinedButton.icon(
+     Align(alignment:AlignmentDirectional.centerStart,child:OutlinedButton.icon(
       onPressed:WaffraHaptics.tap(()async{
        Navigator.of(dialogContext).pop();
        await Printing.sharePdf(bytes:bytes,filename:fileName);
@@ -4996,7 +5280,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      ]),
     if(hasReceipt)...[
      const SizedBox(height:10),
-     SizedBox(width:double.infinity,child:OutlinedButton.icon(
+     Align(alignment:AlignmentDirectional.centerStart,child:OutlinedButton.icon(
       onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,'receipt')),
       icon:const Icon(Icons.photo_library_outlined),
       label:WaffraText(waffraIsEnglish?'View attached images':'عرض الصور المرفقة'))),
@@ -7346,7 +7630,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     Expanded(child:WaffraOutlinedItemsCount(
      label:waffraIsEnglish?'Current goals':'عدد الأهداف الحالية',count:goals.length)),
     const SizedBox(width:9),
-    Expanded(child:WaffraDeletedItemsButton(
+    Flexible(fit:FlexFit.loose,child:WaffraDeletedItemsButton(
      onPressed:WaffraHaptics.tapRequired(deletedGoalsDialog),
      label:waffraIsEnglish?'Deleted goals (${deletedGoals.length})'
       :'الأهداف المحذوفة (${deletedGoals.length})')),
@@ -7602,7 +7886,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       maxLines:2,textAlign:TextAlign.center,
       style:const TextStyle(fontSize:11.5,fontWeight:FontWeight.bold)))),
     const SizedBox(width:9),
-    Expanded(child:WaffraDeletedItemsButton(
+    Flexible(fit:FlexFit.loose,child:WaffraDeletedItemsButton(
      onPressed:WaffraHaptics.tapRequired(deletedRecurringDialog),
      label:waffraIsEnglish?'Deleted recurring (${deletedRecurring.length})':
       'المتكررة المحذوفة (${deletedRecurring.length})')),
@@ -8276,16 +8560,40 @@ Future<void> bulkSmsSheet({String? initialText})async {
   }
  }
  void scheduleTourFocus(){
+  final expectedStep=tourStep,expectedTab=tab;
   WidgetsBinding.instance.addPostFrameCallback((_)async {
-   if(!mounted||!tourActive)return;
-   final focus=tourTargetKeys[tourStep]<0?null:_tourKeys[tourTargetKeys[tourStep]].currentContext;
+   if(!mounted||!tourActive||tourStep!=expectedStep||tab!=expectedTab)return;
+   // Reset lazily built list pages before focusing a possibly recycled
+   // sliver header (e.g. Home balance after scrolling down).
+   final ScrollController? pageScroll=switch(expectedTab){
+    0=>_dashboardScrollController,
+    1=>_categoryScrollController,
+    3=>_goalsScrollController,
+    4=>_recurringScrollController,
+    _=>null,
+   };
+   if(pageScroll!=null&&pageScroll.hasClients&&pageScroll.offset!=0){
+    pageScroll.jumpTo(0);
+   }
+   BuildContext? focus=tourTargetKeys[expectedStep]<0?null:
+    _tourKeys[tourTargetKeys[expectedStep]].currentContext;
+   // The selected tab is built lazily, so allow the next animation frame
+   // to mount its heading before calculating the coach-mark target.
+   if(focus==null&&expectedStep>0){
+    await Future<void>.delayed(waffraMotion(120));
+    if(!mounted||!tourActive||tourStep!=expectedStep||tab!=expectedTab)return;
+    focus=_tourKeys[tourTargetKeys[expectedStep]].currentContext;
+   }
    if(focus!=null){
     try{await Scrollable.ensureVisible(focus,
      duration:waffraMotion(250),alignment:.16,
      curve:Curves.easeOutCubic);}catch(e){debugPrint('Tour focus: $e');}
    }
-   await Future<void>.delayed(waffraMotion(200));
-   if(mounted&&tourActive)setState(()=>tourTargetReady=tourStep==0||focus!=null);
+   await Future<void>.delayed(waffraMotion(120));
+   if(mounted&&tourActive&&tourStep==expectedStep&&tab==expectedTab){
+    // Keep controls accessible even if a lazy child is momentarily absent.
+    setState(()=>tourTargetReady=true);
+   }
   });
  }
  Future<void> completeTour()async {
@@ -8295,7 +8603,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   await p.setBool('waffra_in_app_tour_seen_v2',true);
  }
  void beginTour(){
-  setState((){tourStep=0;tourActive=true;tourTargetReady=false;tab=0;goalsOpened=false;addFabExpanded=false;});
+  setState((){tourStep=0;tourActive=true;tourTargetReady=false;tab=0;accountOpened=false;_headerCompact=false;goalsOpened=false;addFabExpanded=false;});
   if(waffraAnimationLevel.value!='off')_tourGlow.repeat(reverse:true);
   scheduleTourFocus();
  }
@@ -8310,10 +8618,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
   scheduleTourFocus();
  }
  Widget tourOverlay()=>LayoutBuilder(builder:(overlayCtx,area){
-  const ar=['مرحبًا بك في وفرة','الرئيسية والرصيد','إضافة المعاملات','الأقسام','الأهداف الادخارية','العمليات المتكررة'];
-  const en=['Welcome to Waffra','Home & balance','Add transactions','Categories','Savings goals','Recurring items'];
-  const arHelp=['ابدأ بدون تسجيل، واحتفظ ببياناتك على هاتفك.','الرصيد والدخل والمصروفات في مكان واحد.','أضف عملية أو الصق رسالة بنكية للتحليل.','نظّم الأقسام الرئيسية والفرعية.','خطط لأهداف الادخار وتابع التقدم.','نظّم الاستحقاقات الشهرية والمتكررة.'];
-  const enHelp=['Start as a guest and keep data on your phone.','See balance, income and expenses.','Add a transaction or paste a bank message.','Organize categories and budgets.','Create savings goals and follow progress.','Plan recurring payments and due dates.'];
+  const ar=WaffraTourPlan.titlesAr;
+  const en=WaffraTourPlan.titlesEn;
+  const arHelp=WaffraTourPlan.helpAr;
+  const enHelp=WaffraTourPlan.helpEn;
   final element=tourTargetKeys[tourStep]<0?null:_tourKeys[tourTargetKeys[tourStep]].currentContext?.findRenderObject();
   final layer=overlayCtx.findRenderObject();
   // Intro doesn't spotlight the header; its first card is centered.
@@ -8330,7 +8638,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   }
   // Headings use intrinsic text bounds rather than a full-width row.
   // Other tour steps retain their actual button/icon target.
-  final headingFocus=tourStep==3||tourStep==5;
+  final headingFocus=tourStep>=3;
   final headingText=tourStep==3?(waffraIsEnglish?'Categories & budgets':'أقسامك وميزانياتك'):(waffraIsEnglish?en[tourStep]:ar[tourStep]);
   if(headingFocus){
    final style=Theme.of(context).textTheme.titleLarge??const TextStyle(fontSize:23);
@@ -8526,6 +8834,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   }
   return WaffraSmartFeaturesPage(
    key:const Key('waffra-m268-footer-page'),
+   tourHeadingKey:_tourKeys[3],
    embedded:true,english:waffraIsEnglish,
    onNotice:(message)=>snack(context,message),
    analysisBuilder:(_)=>Column(crossAxisAlignment:CrossAxisAlignment.stretch,

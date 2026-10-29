@@ -45,7 +45,7 @@ void main() {
       '_financeAuthority.mergeSmsHashes(',
     );
     ensureBefore(
-      between('Future<void> toggleRecurringReminders(bool enabled)async',
+      between('Future<void> toggleRecurringReminders(bool enabled,',
           'Future<void> applyRecurring()async'),
       '_financeAuthority.setRecurringReminderPreference(',
     );

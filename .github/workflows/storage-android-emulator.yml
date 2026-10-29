@@ -53,7 +53,9 @@ jobs:
           path.write_text(gradle)
           PY
       - name: Install dependencies
-        run: flutter pub get
+        run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
       - name: Run Dart storage analyzer
         run: dart analyze lib/storage integration_test/encrypted_storage_android_test.dart
       - name: Enable KVM for Android emulator

@@ -195,13 +195,15 @@ class WaffraSmartFeaturesPage extends StatefulWidget{
  final List<WaffraSmartRecurring> recurring;
  final bool english;
  final bool embedded;
+ /// Stable header focus used by the onboarding tour in the tools footer.
+ final Key? tourHeadingKey;
  /// Existing full financial analysis entry, supplied by Home's verified state.
  final WidgetBuilder? analysisBuilder;
  /// Centralized Home footer notice presenter, optional for standalone previews.
  final ValueChanged<String>? onNotice;
  const WaffraSmartFeaturesPage({super.key,required this.entries,
   required this.goals,required this.recurring,required this.english,
-  this.embedded=false,this.analysisBuilder,this.onNotice});
+  this.embedded=false,this.analysisBuilder,this.onNotice,this.tourHeadingKey});
  @override State<WaffraSmartFeaturesPage> createState()=>_WaffraSmartFeaturesPageState();
 }
 
@@ -428,8 +430,8 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
     border:const OutlineInputBorder()),
     onChanged:(value)=>question=value),
    const SizedBox(height:10),
-   FilledButton(onPressed:WaffraHaptics.tap(_ask),
-    child:_label(t('اعرض الإجابة','Show answer'),color:Colors.white,bold:true)),
+   Align(alignment:AlignmentDirectional.centerStart,child:FilledButton(onPressed:WaffraHaptics.tap(_ask),
+    child:_label(t('اعرض الإجابة','Show answer'),color:Colors.white,bold:true))),
    if(answer.isNotEmpty)...[const SizedBox(height:12),_tile(t('نتيجة من المعاملات','From recorded transactions'),answer)],
    _paragraph(t('ده بحث حسابي محلي، مش ذكاء اصطناعي سحابي. لا نرسل بياناتك لأي خدمة.',
     'Local rule-based search, not cloud AI. No transaction data is sent out.')),
@@ -638,7 +640,7 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
    padding:const EdgeInsets.fromLTRB(14,16,14,30),
    physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
    children:[
-    Container(padding:const EdgeInsets.all(12),
+    Container(key:widget.tourHeadingKey,padding:const EdgeInsets.all(12),
      margin:const EdgeInsets.only(bottom:11),
      decoration:BoxDecoration(
       gradient:LinearGradient(colors:dark?

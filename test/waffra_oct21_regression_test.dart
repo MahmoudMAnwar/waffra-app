@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
+import 'package:waffra/waffra_tour_plan.dart';
 
 void main() {
  late String app;
@@ -58,8 +59,10 @@ void main() {
   expect(app, contains("'waffra_appearance_mode_v1'"));
  });
 
- test('Tour explains six core sections and supports replay', () {
-  expect(app, contains('static const tourTabs=<int>[0,0,0,1,3,4]'));
+ test('Tour explains seven approved sections and supports replay', () {
+  expect(app, contains('static const tourTabs=WaffraTourPlan.tabs;'));
+  expect(WaffraTourPlan.tabs, <int>[0,0,0,1,2,3,4]);
+  expect(WaffraTourPlan.titlesEn, contains('Smart financial tools'));
   expect(app, contains('List<GlobalKey>.generate(7'));
   expect(app, contains('tourStep==tourTabs.length-1'));
   expect(app, contains('void beginTour()'));

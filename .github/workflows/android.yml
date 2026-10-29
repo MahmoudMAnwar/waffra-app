@@ -56,7 +56,9 @@ jobs:
           channel: stable
           cache: true
       - name: Resolve Dart packages
-        run: flutter pub get
+        run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
       - name: Run Flutter analyzer
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
       - name: Run every Flutter regression including future test files
@@ -185,6 +187,9 @@ jobs:
 
       - name: Generate Android project (without duplicate pub get)
         run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
+
+      - name: Configure optional approximate location only (no background or SMS)
+        run: python3 scripts/qa/m290_configure_country_permissions.py .
 
       - name: Match native Android launch background to Waffra emerald
         shell: bash
@@ -697,7 +702,9 @@ jobs:
           echo 'Gradle task output caching enabled.'
 
       - name: Install dependencies
-        run: flutter pub get
+        run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
 
       - name: Identify Flutter compilation-cache compatibility
         id: flutter_cache_identity

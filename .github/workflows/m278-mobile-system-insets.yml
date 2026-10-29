@@ -34,7 +34,9 @@ jobs:
         with:
           channel: stable
           cache: true
-      - run: flutter pub get
+      - run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
       - name: Analyze device/safe-area matrix and Android integration sources
         run: dart analyze test/m278_system_bars_responsive_matrix_test.dart integration_test/m278_android_system_bars_smoke_test.dart
       - name: Test 14 Android/iOS display configurations x 2 languages, 5 footer pages
@@ -55,7 +57,9 @@ jobs:
         with:
           channel: stable
           cache: true
-      - run: flutter pub get
+      - run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
       - name: Create disposable Android host for real emulator
         run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
       - name: Enable Android desugaring required by Flutter notifications
@@ -97,7 +101,11 @@ jobs:
           script: flutter test --reporter expanded integration_test/m278_android_system_bars_smoke_test.dart -d emulator-5554
 
   ios-simulator-build-check:
-    runs-on: macos-latest
+    # SwiftyTesseract 3.x CocoaPods excludes arm64 for the iOS simulator.
+    # Build on a real Intel runner to exercise x86_64 instead of mixing
+    # incompatible simulator slices on an Apple Silicon host.
+    # This does NOT certify iOS arm64 devices or an App Store release.
+    runs-on: macos-15-intel
     timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
@@ -111,12 +119,71 @@ jobs:
         with:
           channel: stable
           cache: true
-      - name: Record Apple SDK version
-        run: xcodebuild -version
+      - name: Verify legacy OCR simulator architecture
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = "x86_64"
+          xcodebuild -version
+          echo "SwiftyTesseract simulator x86_64 smoke; iOS arm64 device QA still required."
       - name: Generate temporary iOS Runner (repo does not track one yet)
         run: flutter create --no-pub --platforms=ios --project-name=waffra --org com.waffra .
-      - run: flutter pub get
+      - name: Restrict temporary Intel iOS Simulator targets to x86_64
+        # Legacy SwiftyTesseract has only an x86_64 simulator Swift module.
+        # Keep this entirely inside the generated CI Runner and Podfile.
+        # Never modify physical iOS arm64 targets or suppress the build check.
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = x86_64
+          ruby - <<'RUBY'
+          require 'xcodeproj'
+          project = Xcodeproj::Project.open('ios/Runner.xcodeproj')
+          project.targets.each do |target|
+            target.build_configurations.each do |config|
+              config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
+            end
+          end
+          project.save
+          RUBY
+          python3 - <<'PY'
+          from pathlib import Path
+          podfile = Path('ios/Podfile')
+          # Flutter 3.47 generates Podfile lazily during the first iOS build.
+          # The temporary Runner project above is pinned to x86_64 already.
+          # Patch existing Podfiles only; never fail before the real build.
+          if podfile.exists():
+              contents = podfile.read_text()
+              old = '    flutter_additional_ios_build_settings(target)'
+              assert contents.count(old) == 1, 'Unexpected generated Flutter Podfile'
+              addon = """    target.build_configurations.each do |config|
+                  config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
+                end"""
+              contents = contents.replace(old, old + '\n' + addon)
+              podfile.write_text(contents)
+          else:
+              print('No generated Podfile yet; Runner x86_64 target settings applied.')
+          PY
+      - run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
       - name: Re-run responsive matrix on macOS Flutter host (iOS layout emulation)
         run: flutter test --reporter expanded test/m278_system_bars_responsive_matrix_test.dart
       - name: Build unsigned iOS simulator app from actual native plugins
-        run: flutter build ios --simulator --debug --no-codesign
+        # Flutter 3.47 regenerates the CocoaPods project during this step.
+        # Setting only Runner's architecture before pod install is insufficient:
+        # the regenerated flutter_tesseract_ocr target can still compile arm64,
+        # while legacy SwiftyTesseract provides only an x86_64 simulator module.
+        # XCODE_XCCONFIG_FILE applies to all generated Xcode targets for this
+        # disposable Intel-simulator CI job, not device builds or app sources.
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = "x86_64"
+          cat > "$RUNNER_TEMP/waffra-intel-simulator.xcconfig" <<'XCCONFIG'
+          ARCHS = x86_64
+          EXCLUDED_ARCHS[sdk=iphonesimulator*] = arm64
+          ONLY_ACTIVE_ARCH = YES
+          XCCONFIG
+          export XCODE_XCCONFIG_FILE="$RUNNER_TEMP/waffra-intel-simulator.xcconfig"
+          flutter build ios --simulator --debug --no-codesign

@@ -300,7 +300,9 @@ jobs:
           channel: stable
           cache: true
       - name: Resolve Dart packages
-        run: flutter pub get
+        run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
       - name: Run complete Flutter test suite, not only changed tests
         run: flutter test
 
@@ -323,7 +325,9 @@ jobs:
           channel: stable
           cache: true
       - name: Resolve dependencies
-        run: flutter pub get
+        run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
       - name: Create Android project (CI only)
         run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
       # Flutter plugins (including the JNI-backed Android path provider) need
@@ -331,7 +335,9 @@ jobs:
       # called pub get before flutter create, silently producing an APK without
       # libdartjni.so; the app then failed to start on a physical phone.
       - name: Re-resolve plugins after generating Android host
-        run: flutter pub get
+        run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
       - name: Install the approved Waffra launcher artwork
         run: dart run flutter_launcher_icons
       - name: Enable local notification Java API desugaring for generated Android host
