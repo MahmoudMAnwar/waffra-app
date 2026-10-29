@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'waffra_category_english.dart';
+import 'waffra_riyal_symbol.dart';
 
 /// Language preference shared by UI and PDF exports. Internal saved values remain unchanged.
 final ValueNotifier<String> waffraLanguage = ValueNotifier<String>('ar');
@@ -255,17 +256,32 @@ String waffraTr(String source) {
 
 /// Translates existing Text widgets without changing model/category identifiers.
 class WaffraText extends Text {
- const WaffraText(super.data,{
+ final bool? currencyEnglish;
+ const WaffraText(super.data,{this.currencyEnglish,
   super.key,super.style,super.strutStyle,super.textAlign,super.textDirection,
   super.locale,super.softWrap,super.overflow,super.textScaler,super.maxLines,
   super.semanticsLabel,super.textWidthBasis,super.textHeightBehavior,super.selectionColor,
  });
  @override
- Widget build(BuildContext context)=>Text(
-  waffraTr(data??''),
-  key:key,style:DefaultTextStyle.of(context).style.merge(style).copyWith(fontFamily:'Tajawal'),strutStyle:strutStyle,textAlign:textAlign,textDirection:textDirection,
-  locale:locale,softWrap:softWrap,overflow:overflow,textScaler:textScaler,maxLines:maxLines,
-  semanticsLabel:semanticsLabel,textWidthBasis:textWidthBasis,
-  textHeightBehavior:textHeightBehavior,selectionColor:selectionColor,
- );
+ Widget build(BuildContext context){
+  final translated=waffraTr(data??'');
+  final effective=DefaultTextStyle.of(context).style.merge(style)
+      .copyWith(fontFamily:'Tajawal');
+  final spans=waffraMoneyCurrencySpans(translated,
+      english:currencyEnglish??waffraIsEnglish,style:effective);
+  if(spans==null)return Text(translated,
+    key:key,style:effective,strutStyle:strutStyle,
+    textAlign:textAlign,textDirection:textDirection,locale:locale,
+    softWrap:softWrap,overflow:overflow,textScaler:textScaler,
+    maxLines:maxLines,semanticsLabel:semanticsLabel,
+    textWidthBasis:textWidthBasis,textHeightBehavior:textHeightBehavior,
+    selectionColor:selectionColor);
+  return Text.rich(TextSpan(children:spans),
+    key:key,style:effective,strutStyle:strutStyle,
+    textAlign:textAlign,textDirection:textDirection,locale:locale,
+    softWrap:softWrap,overflow:overflow,textScaler:textScaler,
+    maxLines:maxLines,semanticsLabel:semanticsLabel,
+    textWidthBasis:textWidthBasis,textHeightBehavior:textHeightBehavior,
+    selectionColor:selectionColor);
+ }
 }

@@ -263,6 +263,26 @@ jobs:
           print('Enabled user-triggered text sharing and messaging launch without inbox access')
           PY
 
+      # Match the production ARM64 workflow: native WaffraMainActivity.kt
+      # imports com.google.firebase.auth.FirebaseAuth on both ARM64 and x64.
+      - name: Install native Firebase Auth SDK dependency (M219)
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('android/app/build.gradle.kts')
+          kotlin=p.read_text()
+          if 'com.google.firebase:firebase-auth' not in kotlin:
+              kotlin += '''
+          dependencies {
+              implementation(platform("com.google.firebase:firebase-bom:34.0.0"))
+              implementation("com.google.firebase:firebase-auth")
+          }
+          '''
+              p.write_text(kotlin)
+          assert 'com.google.firebase:firebase-auth' in p.read_text()
+          PY
+
       - name: Install compact circular widget and transparent quick-capture screen
         shell: bash
         run: |
@@ -301,6 +321,11 @@ jobs:
                       android:autoSizeMinTextSize="6sp" android:autoSizeMaxTextSize="14sp"
                       android:autoSizeStepGranularity="1sp"
                       android:textColor="#B8F5D6"/>
+                  <ImageView android:id="@+id/widget_riyal_icon"
+                      android:layout_width="14dp" android:layout_height="14dp"
+                      android:src="@drawable/waffra_sar_symbol"
+                      android:tint="#FFFFFF" android:visibility="gone"
+                      android:contentDescription="Saudi Riyal" />
                   <TextView android:id="@+id/widget_currency"
                       android:layout_width="wrap_content" android:layout_height="wrap_content"
                       android:text="ريال" android:textColor="#FFFFFF"
@@ -309,6 +334,12 @@ jobs:
               </LinearLayout>
               </FrameLayout>
           </FrameLayout>""")
+          # The Android widget uses the exact same PNG as Flutter/PDF.
+          riyal=Path('assets/Saudi_Riyal_Symbol-1.png')
+          assert riyal.is_file() and riyal.stat().st_size>0
+          symbol=root/'res/drawable-nodpi/waffra_sar_symbol.png'
+          symbol.parent.mkdir(parents=True,exist_ok=True)
+          symbol.write_bytes(riyal.read_bytes())
           drawable=root/'res/drawable'
           drawable.mkdir(parents=True,exist_ok=True)
           (drawable/'waffra_widget_bg.xml').write_text("""<?xml version="1.0" encoding="utf-8"?>

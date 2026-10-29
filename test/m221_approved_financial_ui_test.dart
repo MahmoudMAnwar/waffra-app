@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
 import 'package:waffra/waffra_financial_tools.dart';
+import 'package:waffra/waffra_riyal_symbol.dart';
 
 void main() {
  TestWidgetsFlutterBinding.ensureInitialized();
@@ -48,7 +49,8 @@ void main() {
   expect(find.text('كشف الاشتراكات'),findsOneWidget);
   expect(find.text('لا توجد اشتراكات محتملة حاليًا'),findsOneWidget);
   expect(find.text('لا توجد مصروفات متكررة مسجلة'),findsOneWidget);
-  expect(find.text('0.00 ريال'),findsWidgets);
+  expect(find.textContaining('0.00'),findsWidgets);
+  expect(find.byType(WaffraCurrencyMark),findsWidgets);
  });
 
  testWidgets('M221 subscription suggestion opens functional recurring form',
