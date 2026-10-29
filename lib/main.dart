@@ -6013,7 +6013,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
                 duration:waffraMotion(180),
                 child:const Icon(Icons.keyboard_arrow_down_rounded,size:23)),
               ]))),
-            )),
+            ),
            AnimatedSize(
             duration:waffraMotion(200),alignment:Alignment.topCenter,
             curve:Curves.easeOutCubic,
