@@ -170,4 +170,20 @@ jobs:
       - name: Re-run responsive matrix on macOS Flutter host (iOS layout emulation)
         run: flutter test --reporter expanded test/m278_system_bars_responsive_matrix_test.dart
       - name: Build unsigned iOS simulator app from actual native plugins
-        run: flutter build ios --simulator --debug --no-codesign
+        # Flutter 3.47 regenerates the CocoaPods project during this step.
+        # Setting only Runner's architecture before pod install is insufficient:
+        # the regenerated flutter_tesseract_ocr target can still compile arm64,
+        # while legacy SwiftyTesseract provides only an x86_64 simulator module.
+        # XCODE_XCCONFIG_FILE applies to all generated Xcode targets for this
+        # disposable Intel-simulator CI job, not device builds or app sources.
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = "x86_64"
+          cat > "$RUNNER_TEMP/waffra-intel-simulator.xcconfig" <<'XCCONFIG'
+          ARCHS = x86_64
+          EXCLUDED_ARCHS[sdk=iphonesimulator*] = arm64
+          ONLY_ACTIVE_ARCH = YES
+          XCCONFIG
+          export XCODE_XCCONFIG_FILE="$RUNNER_TEMP/waffra-intel-simulator.xcconfig"
+          flutter build ios --simulator --debug --no-codesign
