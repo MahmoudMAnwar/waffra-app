@@ -42,7 +42,7 @@ void main() {
 
  test('M298 existing mandatory name and positive money validators remain strict', () {
   expect(WaffraValidators.requiredText('  '),'required');
-  expect(WaffraValidators.requiredText('x'*101),'too_long');
+  expect(WaffraValidators.requiredText(List.filled(101,'x').join()),'too_long');
   expect(WaffraValidators.positiveAmount(''),'required');
   expect(WaffraValidators.positiveAmount('0'),'invalid_amount');
   expect(WaffraValidators.positiveAmount('100.123'),'invalid_amount');
