@@ -1,0 +1,143 @@
+name: M274 Production UI Journeys and Golden Screenshot Review
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'test/m274_responsive_ui_journeys_test.dart'
+      - 'integration_test/m274_ui_tap_smoke_android_test.dart'
+      - 'tool/goldens/**'
+      - 'scripts/qa/m274_verify_golden_candidates.py'
+      - '.github/workflows/m274-production-ui-golden.yml'
+      - 'lib/main.dart'
+      - 'lib/waffra_footer.dart'
+      - 'lib/waffra_balance_art.dart'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m274-ui-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  widget-ui-and-golden-candidates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Restore dependencies
+        run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
+      - name: Analyze responsive and pixel snapshot suites
+        run: dart analyze test/m274_responsive_ui_journeys_test.dart tool/goldens/m274_capture_test.dart integration_test/m274_ui_tap_smoke_android_test.dart
+      - name: Tap through five tabs, account-safe balance hide and inline errors
+        run: flutter test --reporter expanded test/m274_responsive_ui_journeys_test.dart
+      - name: Generate review candidates or strictly compare approved golden baselines
+        shell: bash
+        run: |
+          set -euo pipefail
+          if test -f tool/goldens/baselines/m274-footer-ar-light.png; then
+            echo "APPROVED BASELINES PRESENT: pixel differences now fail CI."
+            flutter test --reporter expanded tool/goldens/m274_capture_test.dart
+          else
+            echo "FIRST RUN: generate candidates only; not design-approved."
+            flutter test --reporter expanded --update-goldens tool/goldens/m274_capture_test.dart
+          fi
+      - name: Verify PNG signatures, dimensions and record exact SHA-256s
+        run: python3 scripts/qa/m274_verify_golden_candidates.py
+      - name: Upload six visual candidates plus fingerprint receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m274-ui-golden-review-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            tool/goldens/baselines/*.png
+            build/m274-golden-candidate-receipt.json
+          if-no-files-found: warn
+
+  android-emulator-ui-taps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install dependencies
+        run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
+      - name: Generate temporary Android host for disposable UI test
+        run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
+      - name: Configure Java library desugaring for Android UI emulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          app = Path('android/app/build.gradle.kts')
+          if app.is_file():
+              source = app.read_text()
+              assert 'compileOptions {' in source
+              if 'isCoreLibraryDesugaringEnabled = true' not in source:
+                  source = source.replace('compileOptions {',
+                      'compileOptions {\n        isCoreLibraryDesugaringEnabled = true', 1)
+              if 'coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")' not in source:
+                  if 'dependencies {' in source:
+                      source = source.replace('dependencies {',
+                          'dependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")', 1)
+                  else:
+                      source += '\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n'
+              app.write_text(source)
+          else:
+              app = Path('android/app/build.gradle')
+              assert app.is_file()
+              source = app.read_text()
+              assert 'compileOptions {' in source
+              if 'coreLibraryDesugaringEnabled true' not in source:
+                  source = source.replace('compileOptions {',
+                      'compileOptions {\n        coreLibraryDesugaringEnabled true', 1)
+              if 'coreLibraryDesugaring ' not in source:
+                  source += "\ndependencies { coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4' }\n"
+              app.write_text(source)
+          print('Desugaring enabled for disposable Android UI test host')
+          PY
+      - name: Enable KVM for Android emulator
+        shell: bash
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run real Android-engine tap sequence on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          cores: 2
+          ram-size: 2048M
+          heap-size: 512M
+          disable-animations: true
+          emulator-boot-timeout: 600
+          emulator-options: -no-window -no-audio -no-snapshot -gpu swiftshader_indirect -no-boot-anim
+          script: flutter test integration_test/m274_ui_tap_smoke_android_test.dart -d emulator-5554 --reporter expanded

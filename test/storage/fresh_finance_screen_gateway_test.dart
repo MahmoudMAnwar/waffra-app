@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/storage/waffra_encrypted_store.dart';
 import 'package:waffra/storage/waffra_fresh_encrypted_vault_bootstrap.dart';
 import 'package:waffra/storage/waffra_fresh_finance_screen_gateway.dart';
+import 'package:waffra/waffra_sms_fx_review.dart';
 
 void main() {
   const key = 'fresh-screen-gateway-disposable-32';
@@ -92,6 +93,45 @@ void main() {
     expect((jsonDecode(exported['entries']!) as List), hasLength(2));
     expect((jsonDecode(exported['waffra_goals_v24']!) as List)
         .first['name'], 'رحلة');
+  });
+
+  test('M293 foreign SMS needs matching signed FX consent, never silent SAR',
+      () async {
+    await init();
+    const sms = 'Card purchase Amount USD 100.00';
+    await expectLater(gateway().saveTransaction({
+      ...tx(amount: 100),
+      'sourceType': 'sms',
+      'protectedOriginalSms': sms,
+    }), throwsStateError);
+
+    final at = DateTime.utc(2026, 10, 27, 9);
+    final now = DateTime.utc(2026, 10, 28);
+    final quote = WaffraSmsFxQuote.fromUsdRates({
+      'result': 'success',
+      'rates': {'USD': 1.0, 'SAR': 3.75},
+      'time_last_update_unix': at.millisecondsSinceEpoch ~/ 1000,
+    }, originalCurrency: 'USD', targetCurrency: 'SAR', now: now);
+    final approval = WaffraSmsFxReview.approve(
+      originalAmount: 100, quote: quote,
+      userConfirmed: true, now: now).toProvenanceJson();
+    await expectLater(gateway().saveTransaction({
+      ...tx(amount: 375),
+      'sourceType': 'sms',
+      'originalCurrency': 'EGP',
+      'protectedOriginalSms': sms,
+      'waffra_fx_provenance_v1': approval,
+    }), throwsStateError);
+    await gateway().saveTransaction({
+      ...tx(amount: 375),
+      'sourceType': 'sms',
+      'originalCurrency': 'USD',
+      'protectedOriginalSms': sms,
+      'waffra_fx_provenance_v1': approval,
+    });
+    final home = await gateway().readForHome();
+    expect(home.totals.expenseMinor, 37500);
+    expect(home.transactions.single['waffra_fx_provenance_v1'], approval);
   });
 
   test('screen edits update exact cash amounts, not create a duplicate',

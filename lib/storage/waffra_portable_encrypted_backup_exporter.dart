@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import '../waffra_sms_fx_review.dart';
+
 import 'legacy_financial_snapshot.dart';
 import 'waffra_atomic_finance_snapshot.dart';
 import 'waffra_encrypted_receipt_vault.dart';
@@ -46,6 +48,55 @@ class WaffraPortableEncryptedBackupExporter {
       final finance = Map<String, Object?>.from(state.values);
       final raw = finance['entries'];
       final rows = raw == null ? <dynamic>[] : jsonDecode(raw as String) as List;
+      // M293: SQLCipher ledger and encrypted snapshot are currently two
+      // independently gated representations. Never export a backup that
+      // silently drops FX provenance present in the authoritative SQL row.
+      final snapshotFx = <String, Map<String, dynamic>>{};
+      for (final rawRow in rows) {
+        final row = Map<String, dynamic>.from(rawRow as Map);
+        if (row.containsKey('waffra_fx_provenance_v1')) {
+          final id = row['id'];
+          if (id is! String || id.isEmpty || snapshotFx.containsKey(id)) {
+            throw StateError('Duplicate or missing FX archive entry ID.');
+          }
+          snapshotFx[id] = row;
+        }
+      }
+      final storedFxIds = <String>{};
+      final table = await snapshot.store.customSelect(
+        "SELECT name FROM sqlite_master WHERE type='table' "
+        "AND name='fresh_finance_entries'",
+      ).get();
+      if (table.isNotEmpty) {
+        final ledgerRows = await snapshot.store.customSelect(
+          'SELECT entry_id,amount_minor,source_json FROM fresh_finance_entries',
+        ).get();
+        for (final ledgerRow in ledgerRows) {
+          final source = jsonDecode(ledgerRow.read<String>('source_json'));
+          if (source is! Map<String, dynamic> ||
+              !source.containsKey('waffra_fx_provenance_v1')) continue;
+          final id = ledgerRow.read<String>('entry_id');
+          final rawWitness = source['waffra_fx_provenance_v1'];
+          final backupWitness = snapshotFx[id]?['waffra_fx_provenance_v1'];
+          if (rawWitness is! Map<String, dynamic> ||
+              backupWitness is! Map<String, dynamic>) {
+            throw StateError('FX provenance missing from encrypted snapshot.');
+          }
+          final verified = WaffraSmsFxReview.fromProvenanceJson(rawWitness);
+          if (verified.convertedCurrency != 'SAR' ||
+              verified.convertedMinor != ledgerRow.read<int>('amount_minor') ||
+              jsonEncode(rawWitness) != jsonEncode(backupWitness) ||
+              snapshotFx[id]?['amount'] !=
+                  ledgerRow.read<int>('amount_minor') / 100) {
+            throw StateError('FX ledger and backup snapshot disagree.');
+          }
+          storedFxIds.add(id);
+        }
+      }
+      if (storedFxIds.length != snapshotFx.length ||
+          snapshotFx.keys.any((id) => !storedFxIds.contains(id))) {
+        throw StateError('Unverified FX data cannot be included in a backup.');
+      }
       final receipts = <WaffraReceiptBackupPart>[];
       for (final rawRow in rows) {
         final row = Map<String, dynamic>.from(rawRow as Map);

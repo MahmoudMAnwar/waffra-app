@@ -9,7 +9,7 @@ eligibility.** This milestone changes no Flutter finance source, data or keys.
 
 - Use one GitHub **Build Waffra Android APK** artifact from the current
   **main** commit after all required jobs are green. The artifact must contain
-  `Waffra.apk` and `waffra-qa-build-receipt.txt`.
+  `app-release.apk` and `waffra-qa-build-receipt.txt`.
 - Verify the known, independent signing **certificate SHA-256 fingerprint**
   against the release keystore / published verification record. **Do not copy
   this value from the untrusted APK** you're about to check.
@@ -24,7 +24,7 @@ eligibility.** This milestone changes no Flutter finance source, data or keys.
 
 ```bash
 python3 scripts/qa/m267_signed_two_phone_apk_probe.py \
-  --apk /private/main-build/Waffra.apk \
+  --apk /private/main-build/app-release.apk \
   --receipt /private/main-build/waffra-qa-build-receipt.txt \
   --main-sha "<exact-40-character-main-commit>" \
   --trusted-signer-sha256 "<independently-known-cert-sha256>" \

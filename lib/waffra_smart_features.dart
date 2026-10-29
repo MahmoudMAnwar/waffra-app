@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'waffra_practical_tools_page.dart';
+import 'waffra_practical_ledger_engine.dart';
 import 'waffra_haptic_feedback.dart';
 import 'waffra_display_currency.dart';
 import 'currency_converter.dart';
@@ -11,9 +14,12 @@ class WaffraSmartEntry {
   final double amount;
   final bool income;
   final DateTime date;
+  /// The Home-verified projection only; never send bank details to the cloud.
+  final String notes;
+  final bool hasAttachment;
   const WaffraSmartEntry({required this.id,required this.title,
     required this.category,required this.amount,required this.income,
-    required this.date});
+    required this.date,this.notes='',this.hasAttachment=false});
 }
 
 class WaffraSmartGoal {
@@ -189,11 +195,15 @@ class WaffraSmartFeaturesPage extends StatefulWidget{
  final List<WaffraSmartRecurring> recurring;
  final bool english;
  final bool embedded;
+ /// Stable header focus used by the onboarding tour in the tools footer.
+ final Key? tourHeadingKey;
  /// Existing full financial analysis entry, supplied by Home's verified state.
  final WidgetBuilder? analysisBuilder;
+ /// Centralized Home footer notice presenter, optional for standalone previews.
+ final ValueChanged<String>? onNotice;
  const WaffraSmartFeaturesPage({super.key,required this.entries,
   required this.goals,required this.recurring,required this.english,
-  this.embedded=false,this.analysisBuilder});
+  this.embedded=false,this.analysisBuilder,this.onNotice,this.tourHeadingKey});
  @override State<WaffraSmartFeaturesPage> createState()=>_WaffraSmartFeaturesPageState();
 }
 
@@ -216,6 +226,29 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
   'Ask about saved transactions','Prepare for local seasons','Group a project budget',
   'Spend a little less','See how your money flows','Plan your safety buffer'];
  int? active;
+ // Stable section anchors; the user-selected accordion is scrolled to top
+ // only after expansion settles, respecting reduced-motion preferences.
+ final Map<int,GlobalKey> _sectionKeys={for(var i=-2;i<10;i++) i:GlobalKey()};
+ int _focusSerial=0;
+ void _activateSection(int section){
+  final next=active==section?null:section;
+  setState(()=>active=next);
+  final token=++_focusSerial;
+  if(next==null)return;
+  final reduced=MediaQuery.disableAnimationsOf(context);
+  final settle=reduced?Duration.zero:const Duration(milliseconds:345);
+  WidgetsBinding.instance.addPostFrameCallback((_){
+   unawaited(Future<void>.delayed(settle,()async{
+    if(!mounted||active!=section||token!=_focusSerial)return;
+    final target=_sectionKeys[section]?.currentContext;
+    if(target==null)return;
+    await Scrollable.ensureVisible(target,
+     alignment:0.02,alignmentPolicy:ScrollPositionAlignmentPolicy.explicit,
+     duration:reduced?Duration.zero:const Duration(milliseconds:275),
+     curve:Curves.easeOutCubic);
+   }));
+  });
+ }
  int payday=27;
  double purchase=3500,seasonTarget=5000,daysToSeason=90;
  double goalAmount=3000,challengePercent=20,existingEmergency=0;
@@ -397,8 +430,8 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
     border:const OutlineInputBorder()),
     onChanged:(value)=>question=value),
    const SizedBox(height:10),
-   FilledButton(onPressed:WaffraHaptics.tap(_ask),
-    child:_label(t('اعرض الإجابة','Show answer'),color:Colors.white,bold:true)),
+   Align(alignment:AlignmentDirectional.centerStart,child:FilledButton(onPressed:WaffraHaptics.tap(_ask),
+    child:_label(t('اعرض الإجابة','Show answer'),color:Colors.white,bold:true))),
    if(answer.isNotEmpty)...[const SizedBox(height:12),_tile(t('نتيجة من المعاملات','From recorded transactions'),answer)],
    _paragraph(t('ده بحث حسابي محلي، مش ذكاء اصطناعي سحابي. لا نرسل بياناتك لأي خدمة.',
     'Local rule-based search, not cloud AI. No transaction data is sent out.')),
@@ -549,8 +582,21 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
     i==-1?t('أسعار الذهب والنفط وتحويل العملات','Gold, oil and exchange rates'):details[i];
    final illustration=i==-2?'investment':i==-1?'bank':types[i];
    final expanded=active==i;
+   final sectionBody=expanded?Padding(
+    key:Key('waffra-m268-expanded-'+id),
+    padding:const EdgeInsets.fromLTRB(7,0,7,9),
+    child:Column(children:[
+     Divider(color:green.withValues(alpha:.23)),
+     const SizedBox(height:7),
+     if(i==-2)(widget.analysisBuilder?.call(context)??
+       _paragraph(t('التحليل متاح بعد فتح التطبيق ببيانات مالية مؤمنة.',
+        'Financial insights require the verified app data source.')))
+     else if(i==-1)const CurrencyConverterPage(embedded:true)
+     else _body(i),
+    ])):const SizedBox(width:double.infinity,height:0);
    return Padding(
-    padding:const EdgeInsets.only(bottom:10),
+    key:_sectionKeys[i],
+    padding:const EdgeInsets.only(bottom:9),
     child:AnimatedContainer(
      key:Key('waffra-m268-accordion-'+id),
      duration:duration,curve:Curves.easeInOutCubic,
@@ -568,12 +614,12 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
        child:InkWell(
         key:Key('waffra-m268-feature-'+id),
         borderRadius:BorderRadius.circular(22),
-        onTap:WaffraHaptics.tap(()=>setState(()=>active=expanded?null:i)),
+        onTap:WaffraHaptics.tap(()=>_activateSection(i)),
         child:Padding(
-         padding:const EdgeInsets.symmetric(horizontal:12,vertical:11),
+         padding:const EdgeInsets.symmetric(horizontal:10,vertical:8),
          child:Row(children:[
-          WaffraIllustration(topic:illustration,size:49),
-          const SizedBox(width:12),
+          WaffraIllustration(topic:illustration,size:45),
+          const SizedBox(width:9),
           Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,
            children:[_label(name,bold:true,size:15),
             const SizedBox(height:2),_paragraph(detail)])), 
@@ -582,21 +628,11 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
            child:Icon(Icons.keyboard_arrow_down_rounded,
              color:green,size:25)),
          ])))),
-      ClipRect(child:AnimatedSize(
+      // Reduced motion uses a direct layout swap, not a zero-duration
+      // RenderAnimatedSize which can relayout itself during performLayout.
+      ClipRect(child:reduced?sectionBody:AnimatedSize(
        duration:duration,curve:Curves.easeInOutCubic,
-       alignment:Alignment.topCenter,
-       child:expanded?Padding(
-        key:Key('waffra-m268-expanded-'+id),
-        padding:const EdgeInsets.fromLTRB(9,0,9,12),
-        child:Column(children:[
-         Divider(color:green.withValues(alpha:.23)),
-         const SizedBox(height:7),
-         if(i==-2)(widget.analysisBuilder?.call(context)??
-           _paragraph(t('التحليل متاح بعد فتح التطبيق ببيانات مالية مؤمنة.',
-            'Financial insights require the verified app data source.')))
-         else if(i==-1)const CurrencyConverterPage(embedded:true)
-         else _body(i),
-        ])):const SizedBox(width:double.infinity,height:0))),
+       alignment:Alignment.topCenter,child:sectionBody)),
      ])));
   });
   return ListView(
@@ -604,8 +640,8 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
    padding:const EdgeInsets.fromLTRB(14,16,14,30),
    physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
    children:[
-    Container(padding:const EdgeInsets.all(16),
-     margin:const EdgeInsets.only(bottom:15),
+    Container(key:widget.tourHeadingKey,padding:const EdgeInsets.all(12),
+     margin:const EdgeInsets.only(bottom:11),
      decoration:BoxDecoration(
       gradient:LinearGradient(colors:dark?
        [const Color(0xFF0A4838),const Color(0xFF145640)]:
@@ -613,18 +649,35 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
       borderRadius:BorderRadius.circular(23),
       border:Border.all(color:green.withValues(alpha:.20))),
      child:Row(children:[
-      const WaffraIllustration(topic:'assistant',size:62),
-      const SizedBox(width:12),
+      const WaffraIllustration(topic:'assistant',size:50),
+      const SizedBox(width:10),
       Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-       _label(t('أدوات وفرة الذكية','Waffra smart tools'),size:20,bold:true),
-       const SizedBox(height:3),
-       _paragraph(t('افتح أي أداة هنا؛ الباقي يفضل ظاهر تحتها.',
-        'Expand any tool here. The others stay on this page.')),
-       const SizedBox(height:3),
-       _paragraph(t('حلّل بياناتك وخطّط وتابع الأسواق من غير تعديل رصيدك.',
-        'Analyze finances, plan and check markets without changing your balance.')),
+       _label(t('أدوات وفرة الذكية','Waffra smart tools'),size:18,bold:true),
+       const SizedBox(height:4),
+       _paragraph(t('خطّط لميزانيتك، حلّل معاملاتك واستكشف أدواتك المالية.',
+        'Plan your budget, analyze spending and explore financial tools.')),
       ]))])),
     ...tiles,
+    Card(
+     key:const Key('m281-practical-tools-entry'),
+     margin:const EdgeInsets.only(top:9,bottom:14),
+     clipBehavior:Clip.antiAlias,
+     child:ListTile(
+      leading:const WaffraIllustration(topic:'tools',size:46),
+      title:Text(t('أدوات مالية إضافية','Additional finance tools'),
+        style:const TextStyle(fontWeight:FontWeight.w800)),
+      subtitle:Text(t('صحة البيانات • البحث • الفواتير • الإقفال • التشخيص',
+        'Data health • Search • Receipts • Month close • Diagnostics')),
+      trailing:const Icon(Icons.chevron_right),
+      onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(
+       builder:(_)=>WaffraPracticalToolsPage(
+        english:widget.english,onNotice:widget.onNotice,
+        entries:List<WaffraPracticalEntry>.unmodifiable(
+         widget.entries.map((entry)=>WaffraPracticalEntry(
+          id:entry.id,title:entry.title,category:entry.category,
+          amount:entry.amount,income:entry.income,date:entry.date,
+          notes:entry.notes,hasAttachment:entry.hasAttachment)))))),
+     )),
    ]);
  }
  @override Widget build(BuildContext context){
