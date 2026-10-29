@@ -628,6 +628,16 @@ String? waffraAmountFieldError(String? raw,{bool required=true}) {
  if(issue!=null)return waffraIsEnglish?'Enter an amount greater than zero':'أدخل مبلغًا صحيحًا أكبر من صفر';
  return null;
 }
+
+// The amount is mandatory whether monthly-budget tracking is enabled or paused.
+String? waffraMonthlyBudgetSaveError(String? raw)=>waffraAmountFieldError(raw);
+
+const int waffraDashboardTransactionPreviewLimit=10;
+bool waffraCanExpandDashboardTransactions(int filteredCount)=>
+ filteredCount>waffraDashboardTransactionPreviewLimit;
+int waffraDashboardTransactionDisplayCount(int filteredCount,{required bool expanded})=>
+ (expanded&&waffraCanExpandDashboardTransactions(filteredCount))
+  ?filteredCount:min(filteredCount,waffraDashboardTransactionPreviewLimit);
 String? waffraMobileFieldError(String? raw) {
  if((raw??'').trim().isEmpty)return waffraRequiredFieldMessage;
  return WaffraValidators.mobileNumber(raw)==null?null:(waffraIsEnglish?'Mobile number must start with 05 and contain 10 digits':'رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام');
@@ -5456,7 +5466,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        (waffraIsEnglish?'Set the amount allocated for monthly spending.':'حدد المبلغ الذي ترغب في تخصيصه لمصروفاتك الشهرية.'):
        (waffraIsEnglish?'Monthly spending limit tracking is paused.':'تم إيقاف متابعة حد المصروفات الشهرية.')),
       const SizedBox(height:16),
-      TextField(controller:amount,enabled:enabled,autofocus:false,
+      TextField(controller:amount,autofocus:false,
        onChanged:(_){if(validation!=null)update(()=>validation=null);},
        style:TextStyle(fontSize:20,fontWeight:FontWeight.bold,color:Theme.of(ctx).colorScheme.onSurface),
        keyboardType:const TextInputType.numberWithOptions(decimal:true),
@@ -5473,11 +5483,13 @@ Future<void> bulkSmsSheet({String? initialText})async {
       TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
       FilledButton(onPressed:WaffraHaptics.tap((){
        final v=amountOfDisplay(amount.text);
-       if(enabled&&(v==null||!v.isFinite||v<=0)){
-        update(()=>validation=waffraAmountFieldError(amount.text));
+       final fieldError=waffraMonthlyBudgetSaveError(amount.text);
+       if(fieldError!=null||v==null||!v.isFinite||v<=0){
+        update(()=>validation=fieldError??(waffraIsEnglish?
+         'Enter an amount greater than zero':'أدخل مبلغًا صحيحًا أكبر من صفر'));
         return;
        }
-       Navigator.pop(ctx,(enabled:enabled,amount:enabled?v!:monthlyBudget));
+       Navigator.pop(ctx,(enabled:enabled,amount:v));
       }),child:WaffraText(waffraIsEnglish?'Save':'حفظ')),
      ],
     ))));
@@ -5947,7 +5959,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final filterCats=<String>{'الكل',...entries.where((e)=>typeFilter=='الكل'||
    (typeFilter=='الدخل'&&e.income)||(typeFilter=='المصروفات'&&!e.income)).map((e)=>e.category)}.toList();
   final selected=filterCats.contains(categoryFilter)?categoryFilter:'الكل';
-  final shown=showAllTransactions?visible:visible.take(5).toList();
+  final shown=visible.take(waffraDashboardTransactionDisplayCount(
+   visible.length,expanded:showAllTransactions)).toList();
   return RefreshIndicator(
    onRefresh:()=>_refreshAndSettle(_dashboardScrollController,0),
    child:NotificationListener<ScrollStartNotification>(
@@ -6047,16 +6060,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
             Expanded(child:WaffraText(waffraIsEnglish?
              'Your transactions':'عملياتك المالية',
              style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold))),
-            TextButton(onPressed:WaffraHaptics.tap(()=>setState((){
-             showAllTransactions=!showAllTransactions;
-             if(showAllTransactions){
-              typeFilter='الكل';categoryFilter='الكل';search='';
-              minTransactionAmount=null;maxTransactionAmount=null;
-              transactionsDateRange=null;
-             }
-            })),child:WaffraText(showAllTransactions?
-             (waffraIsEnglish?'Show less':'عرض أقل'):
-             (waffraIsEnglish?'View all':'عرض الكل'))),
+            if(waffraCanExpandDashboardTransactions(visible.length))
+             TextButton(
+              key:const Key('waffra-dashboard-transactions-expand'),
+              onPressed:WaffraHaptics.tap(
+               ()=>setState(()=>showAllTransactions=!showAllTransactions)),
+              child:WaffraText(showAllTransactions?
+               (waffraIsEnglish?'Show less':'عرض أقل'):
+               (waffraIsEnglish?'Show more':'عرض أكثر'))),
            ]),
            const SizedBox(height:9),
            Row(children:[
