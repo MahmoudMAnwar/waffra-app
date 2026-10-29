@@ -4272,9 +4272,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
        InkWell(onTap:WaffraHaptics.tap(()async{
         final picked=await chooseTransactionCategory(sheetContext,available,chosen??'');
         if(picked!=null&&sheetContext.mounted)update(()=>category=picked);
-       }),child:InputDecorator(decoration:InputDecoration(labelText:waffraTr('القسم'),
+       }),child:InputDecorator(decoration:InputDecoration(
+        labelText:waffraIsEnglish?'Category *':'القسم *',
+        errorText:attempted&&WaffraValidators.requiredCategory(
+         chosen,available.map((c)=>c.name))!=null?waffraRequiredFieldMessage:null,
         border:const OutlineInputBorder(),suffixIcon:const Icon(Icons.search_rounded)),
-        child:WaffraText(chosen??'',maxLines:2)))
+        child:WaffraText(chosen??(waffraIsEnglish?'Choose a category':'اختر قسمًا'),maxLines:2)))
       else ...[
        InkWell(onTap:WaffraHaptics.tap(()async{
         final picked=await chooseTransactionCategory(sheetContext,mainCategories,
@@ -4454,6 +4457,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
        if(!sms&&!waffraCanAssignManualCategory(categories,
         income,selectedParentId,category))return;
        if(sms){
+        if(WaffraValidators.requiredCategory(
+         chosen,available.map((c)=>c.name))!=null)return;
         if(message.text.trim().isEmpty)return;
         final h=sha256.convert(utf8.encode(digits(message.text).replaceAll(RegExp(r'\s+'),' ').trim().toLowerCase())).toString();
         if(smsHashes.contains(h)){
@@ -4469,7 +4474,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
        }
        submitTapped=true; // Synchronous gate: rapid taps cannot post twice.
        Navigator.pop(sheetContext,MoneyEntry(id:initial?.id??newId(),
-        title:title.text.trim(),notes:sms?message.text:notes.text,category:category,amount:n,
+        title:title.text.trim(),notes:sms?message.text:notes.text,
+        category:sms?chosen!:category,amount:n,
         income:income,date:date,receiptPath:receiptPath,
         sourceType:initial?.sourceType??(sms?'sms':scannedReceipt!=null?'receipt':'manual'),
         merchantKey:initial?.merchantKey??(sms?(waffraMerchantKey(message.text)??''):'')));
