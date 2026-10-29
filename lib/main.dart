@@ -3818,7 +3818,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
          if(statusMessage.isEmpty&&messages.isNotEmpty)saveParsedMessages(ctx,update);
         });
        }),
-       label:WaffraText(waffraIsEnglish?'Paste copied SMS':'لصق آخر رسالة نسختها',
+       label:WaffraText(stack?
+        (waffraIsEnglish?'Paste copied SMS':'لصق آخر رسالة نسختها'):
+        (waffraIsEnglish?'Paste SMS':'لصق رسالة'),
         maxLines:2,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700)),
       );
       final messagesAction=OutlinedButton.icon(
@@ -3834,7 +3836,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
           :'تعذر فتح تطبيق الرسائل. انسخ الرسالة والصقها هنا بدلًا من ذلك.');
         }
        }),
-       label:WaffraText(waffraIsEnglish?'Open phone messages':'فتح رسائل الهاتف',
+       label:WaffraText(stack?
+        (waffraIsEnglish?'Open phone messages':'فتح رسائل الهاتف'):
+        (waffraIsEnglish?'Messages app':'فتح الرسائل'),
         maxLines:2,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700)),
       );
       return stack?Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
