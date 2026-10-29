@@ -105,11 +105,11 @@ abstract final class WaffraReceiptOcrParser {
     // invoice amount or the bank sender as the merchant. A separate bank
     // screenshot review flow can segment and review individual messages.
     final bankAction = RegExp(
-      r'شراء\\s*(?:pos|نقاط)|\\bpos\\b|card\\s+purchase|'
-      r'حوالة\\s+واردة|تحويل\\s+وارد|salary\\s+credit',
+      r'شراء\s*(?:pos|نقاط)|\bpos\b|card\s+purchase|'
+      r'حوالة\s+واردة|تحويل\s+وارد|salary\s+credit',
       caseSensitive: false).hasMatch(raw);
     final bankContext = RegExp(
-      r'\\b(?:SAR|SR|Bank|Mada)\\b|ريال|مدى|الراجحي',
+      r'\b(?:SAR|SR|Bank|Mada)\b|ريال|مدى|الراجحي',
       caseSensitive: false).hasMatch(raw);
     if (bankAction && bankContext) {
       return WaffraReceiptOcrFields(rawText: raw);
