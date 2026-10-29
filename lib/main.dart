@@ -2233,13 +2233,16 @@ class WaffraOutlinedItemsCount extends StatelessWidget {
  final String label;final int count;
  @override Widget build(BuildContext context){
   final dark=Theme.of(context).brightness==Brightness.dark;
-  return Container(padding:const EdgeInsets.symmetric(horizontal:13,vertical:10),
+  return Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:7),
    decoration:BoxDecoration(
     color:dark?Theme.of(context).cardColor:const Color(0xFFF7FBF8),
-    borderRadius:BorderRadius.circular(16),
-    border:Border.all(color:dark?const Color(0xFF5E8A70):const Color(0xFFB4D1C3),width:1.25)),
+    borderRadius:BorderRadius.circular(14),
+    border:Border.all(color:dark?const Color(0xFF5E8A70):const Color(0xFFB4D1C3),width:1)),
    child:Row(children:[
-    Expanded(child:WaffraText(label,style:const TextStyle(fontSize:14,fontWeight:FontWeight.bold))),
+    Expanded(child:FittedBox(fit:BoxFit.scaleDown,
+      alignment:AlignmentDirectional.centerStart,
+      child:WaffraText(label,maxLines:1,
+       style:const TextStyle(fontSize:14,fontWeight:FontWeight.bold)))),
     Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:3),
      decoration:BoxDecoration(color:forest,borderRadius:BorderRadius.circular(12)),
      child:Text('$count',style:const TextStyle(color:Colors.white,
@@ -5837,26 +5840,26 @@ Future<void> bulkSmsSheet({String? initialText})async {
    onTap:WaffraHaptics.tap(()=>showSummaryTransactions(label=='الدخل'||label=='Income')),
    borderRadius:BorderRadius.circular(19),
    child:Container(
-    padding:const EdgeInsets.symmetric(horizontal:12,vertical:14),
+    padding:const EdgeInsets.symmetric(horizontal:11,vertical:9),
     decoration:BoxDecoration(
      color:Theme.of(context).brightness==Brightness.dark?
       (label=='الدخل'||label=='Income'?const Color(0xFF244C3A):const Color(0xFF49302C)):tint,
      borderRadius:BorderRadius.circular(19),
-     border:Border.all(color:color.withValues(alpha:0.10)),
+     border:Border.all(color:color.withValues(alpha:0.13)),
      boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:0.04),
       blurRadius:7,offset:const Offset(0,3))]),
     child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
      Row(textDirection:TextDirection.rtl,children:[
       Expanded(child:WaffraText(label,textAlign:TextAlign.right,
-       style:const TextStyle(fontSize:15,fontWeight:FontWeight.bold))),
+       style:const TextStyle(fontSize:14,fontWeight:FontWeight.bold))),
       const SizedBox(width:6),
       CircleAvatar(backgroundColor:color.withValues(alpha:0.12),
-       radius:19,child:Icon(symbol,color:color,size:21)),
+       radius:16,child:Icon(symbol,color:color,size:19)),
      ]),
-     const SizedBox(height:9),
+     const SizedBox(height:5),
      Align(alignment:Alignment.centerRight,
       child:FittedBox(fit:BoxFit.scaleDown,
-       child:WaffraCurrencyAmount(value,fontSize:19))),
+       child:WaffraCurrencyAmount(value,fontSize:17))),
     ]))));
  Widget compactTransaction(MoneyEntry entry){
   final cat=categoryFor(entry.category,entry.income);
@@ -7630,13 +7633,13 @@ Future<void> bulkSmsSheet({String? initialText})async {
     const SizedBox(height:14),
    ],
    Row(children:[
-    Expanded(child:WaffraOutlinedItemsCount(
+    Expanded(flex:3,child:WaffraOutlinedItemsCount(
      label:waffraIsEnglish?'Current goals':'عدد الأهداف الحالية',count:goals.length)),
     const SizedBox(width:9),
-    Flexible(fit:FlexFit.loose,child:WaffraDeletedItemsButton(
+    Flexible(flex:2,fit:FlexFit.loose,child:WaffraDeletedItemsButton(
      onPressed:WaffraHaptics.tapRequired(deletedGoalsDialog),
-     label:waffraIsEnglish?'Deleted goals (${deletedGoals.length})'
-      :'الأهداف المحذوفة (${deletedGoals.length})')),
+     label:waffraIsEnglish?'Deleted (${deletedGoals.length})'
+      :'المحذوفة (${deletedGoals.length})')),
    ]),
    const SizedBox(height:12),
 
