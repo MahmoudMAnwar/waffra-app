@@ -7154,8 +7154,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
   ]));
  Widget _filterChip(String label,bool selected,VoidCallback onTap)=>
   ChoiceChip(label:WaffraText(label),selected:selected,onSelected:WaffraHaptics.selection((_)=>onTap()),
-   showCheckmark:false,selectedColor:forest,labelStyle:TextStyle(
-    color:selected?Colors.white:null,fontWeight:selected?FontWeight.bold:FontWeight.normal));
+   showCheckmark:selected,
+   side:WaffraSubtleSelection.border(selected,Theme.of(context).brightness),
+   selectedColor:Theme.of(context).brightness==Brightness.dark
+    ?const Color(0xFF28533C):waffraMint,
+   labelStyle:TextStyle(
+    color:selected?(Theme.of(context).brightness==Brightness.dark
+     ?const Color(0xFFD9FFE9):forest):null,
+    fontWeight:selected?FontWeight.bold:FontWeight.normal));
  Future<void> goalDialog()async {
   await _ensureFinanceBound();
   final name=TextEditingController(),target=TextEditingController();

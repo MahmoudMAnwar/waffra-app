@@ -1,0 +1,40 @@
+name: M295 Compact UI and Subtle Selection QA
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'lib/main.dart'
+      - 'lib/waffra_footer.dart'
+      - 'lib/waffra_subtle_selection.dart'
+      - 'test/m295_subtle_compact_ui_test.dart'
+      - '.github/workflows/m295-compact-selection-ui.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+concurrency:
+  group: m295-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compact-selection:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Check exact PR HEAD
+        env:
+          EXPECTED: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Analyze modified UI and tests
+        run: flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings lib/main.dart lib/waffra_footer.dart lib/waffra_subtle_selection.dart test/m295_subtle_compact_ui_test.dart
+      - name: Regression selected state, compact goals and app-wide UX
+        run: |
+          flutter test --reporter expanded test/m295_subtle_compact_ui_test.dart test/m260_action_layout_test.dart test/m274_responsive_ui_journeys_test.dart test/m277_ux_accessibility_quality_test.dart test/m283_compact_tools_navigation_greetings_test.dart test/m285_compact_action_widths_test.dart
