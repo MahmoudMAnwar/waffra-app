@@ -4036,7 +4036,17 @@ Future<void> bulkSmsSheet({String? initialText})async {
     final selectedMain=mainCategories.where((c)=>c.id==selectedParentId).toList();
     final subcategories=waffraManualCategoryChildren(available,income,selectedParentId);
     final selectedSub=subcategories.where((c)=>c.name==category).toList();
-    return Padding(padding:EdgeInsets.fromLTRB(18,10,18,MediaQuery.of(sheetContext).viewInsets.bottom+20),
+    Widget dateAction()=>OutlinedButton.icon(
+      key:const Key('waffra-entry-date-action'),
+      onPressed:WaffraHaptics.tap(()async {
+       final d=await waffraPickDateWithToday(english:waffraIsEnglish,
+        context:sheetContext,initialDate:date,
+        firstDate:DateTime(2000),lastDate:DateTime.now());
+       if(d!=null&&sheetContext.mounted)update(()=>date=d);
+      }),
+      icon:const Icon(Icons.calendar_month,size:19),
+      label:WaffraText(dayText(date),maxLines:1));
+     return Padding(padding:EdgeInsets.fromLTRB(18,10,18,MediaQuery.of(sheetContext).viewInsets.bottom+20),
      child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,
       crossAxisAlignment:CrossAxisAlignment.stretch,children:[
       WaffraText(initial!=null?'تعديل العملية':sms?'إضافة رسالة بنكية':'إضافة عملية',
@@ -4164,24 +4174,35 @@ Future<void> bulkSmsSheet({String? initialText})async {
         update(()=>category=c.name);
        }
       }),icon:const Icon(Icons.add),label:const WaffraText('قسم جديد'))
-      else if(selectedMain.isNotEmpty)OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async {
-       final mainId=selectedMain.first.id;
-       final c=await categoryDialog(income:income,parentId:mainId);
-       if(c!=null&&mounted&&sheetContext.mounted){
-        if(!categories.any((x)=>x.name==c.name&&x.income==c.income)){
-         setState(()=>categories.add(c));
-         await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
-        }
-        if(sheetContext.mounted)update(()=>category=c.name);
-       }
-      }),icon:const Icon(Icons.add),
-       label:WaffraText(waffraIsEnglish?'New subcategory':'قسم فرعي جديد')),
-      OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async {
-       final d=await waffraPickDateWithToday(english:waffraIsEnglish,context:sheetContext,initialDate:date,
-        firstDate:DateTime(2000),lastDate:DateTime.now());
-       if(d!=null)update(()=>date=d);
-      }),icon:const Icon(Icons.calendar_month),label:WaffraText(dayText(date))),
-      const SizedBox(height:12),
+      else if(selectedMain.isNotEmpty)LayoutBuilder(builder:(ctx,box){
+        final newCategory=OutlinedButton.icon(
+         key:const Key('waffra-entry-new-subcategory'),
+         onPressed:WaffraHaptics.tap(()async {
+          final mainId=selectedMain.first.id;
+          final c=await categoryDialog(income:income,parentId:mainId);
+          if(c!=null&&mounted&&sheetContext.mounted){
+           if(!categories.any((x)=>x.name==c.name&&x.income==c.income)){
+            setState(()=>categories.add(c));
+            await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
+           }
+           if(sheetContext.mounted)update(()=>category=c.name);
+          }
+         }),icon:const Icon(Icons.add,size:19),
+         label:WaffraText(waffraIsEnglish?'New subcategory':'قسم فرعي جديد',maxLines:1));
+        final stacked=box.maxWidth<360||
+         MediaQuery.textScalerOf(ctx).scale(14)>20;
+        return Padding(padding:const EdgeInsets.only(top:12,bottom:12),
+         child:stacked
+          ?Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+            newCategory,const SizedBox(height:12),dateAction()])
+          :Row(children:[
+            Expanded(child:newCategory),const SizedBox(width:12),
+            Expanded(child:dateAction())]));
+       }),
+       if(sms||selectedMain.isEmpty)Padding(
+        padding:const EdgeInsets.symmetric(vertical:12),
+        child:Align(alignment:AlignmentDirectional.centerStart,child:dateAction())),
+       const SizedBox(height:12),
       Row(children:[
        Expanded(child:OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async{
         // The native camera permission is requested only when this action
