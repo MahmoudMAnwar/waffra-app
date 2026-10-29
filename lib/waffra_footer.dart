@@ -59,7 +59,7 @@ class WaffraFooterNavigation extends StatelessWidget {
            decoration:BoxDecoration(
             color:active?emerald.withValues(alpha:.9):Colors.transparent,
             borderRadius:BorderRadius.circular(23),
-            border:active?Border.all(color:neon.withValues(alpha:.45),width:1):null),
+            border:active?Border.all(color:neon.withValues(alpha:.32),width:1.3):null),
            child:Icon(_icons[i],color:Colors.white,size:active?26:24)),
           const SizedBox(height:4),
           Text(_label(i),maxLines:1,overflow:TextOverflow.ellipsis,
