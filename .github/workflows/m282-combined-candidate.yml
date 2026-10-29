@@ -1,0 +1,118 @@
+name: M282 Combined QA + Features Exact-SHA Acceptance (No Production Cutover)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/m282-combined-candidate.yml'
+      - 'lib/main.dart'
+      - 'lib/waffra_smart_features.dart'
+      - 'lib/waffra_practical_*'
+      - 'lib/waffra_smooth_confirmation.dart'
+      - 'test/m27*'
+      - 'test/m28*'
+      - 'docs/qa/m282-integration-acceptance.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m282-candidate-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-completeness:
+    name: No skipped PR changes; no automatic SQLCipher cutover
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify the exact source under test
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - name: Prove the whole M274 through M281 integration is present
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          sources = {
+              'M274': ('test/m274_responsive_ui_journeys_test.dart',''),
+              'M275': ('lib/main.dart','WaffraSmoothConfirmationOverlay('),
+              'M276': ('tool/performance/m276_finance_microbench_test.dart',''),
+              'M277': ('lib/main.dart','BoxConstraints(minWidth:48,minHeight:48)'),
+              'M278': ('test/m278_system_bars_responsive_matrix_test.dart',''),
+              'M279': ('scripts/qa/m279_app_security_gate.py',''),
+              'M280': ('lib/main.dart',r'Online\s+Pre[-\s]?Auth(?:ori[sz]ation)?'),
+              'M281': ('lib/main.dart','hasAttachment:e.receiptPath?.isNotEmpty??false'),
+          }
+          for milestone,(path,marker) in sources.items():
+              f=Path(path)
+              if not f.is_file() or (marker and marker not in f.read_text()):
+                  raise SystemExit(f'{milestone}: actual production source missing: {path}')
+          for path in (
+              'lib/waffra_smart_features.dart',
+              'lib/waffra_practical_ledger_engine.dart',
+              'lib/waffra_practical_tools_page.dart',
+              'test/m281_practical_tools_test.dart',
+              'test/m280_financial_integrity_fault_injection_test.dart',
+              'test/m279_app_wide_security_regression_test.dart',
+              'test/m277_ux_accessibility_quality_test.dart',
+              'test/m275_smooth_confirmation_performance_test.dart',
+              'test/m278_system_bars_responsive_matrix_test.dart'):
+              if not Path(path).is_file():
+                  raise SystemExit(f'Missing integrated file {path}')
+          release=Path('lib/storage/waffra_production_cutover_release_gate.dart').read_text()
+          if 'bool get automaticallyActivateSqlCipher => false;' not in release:
+              raise SystemExit('Production SQLCipher cutover changed without approval')
+          doc=Path('docs/qa/m282-integration-acceptance.md').read_text()
+          if 'NOT PRODUCTION CERTIFIED' not in doc:
+              raise SystemExit('Physical-device and signing blockers must remain explicit')
+          print('M274–M281 source provenance and no SQLCipher cutover verified')
+          PY
+
+  whole-flutter-regression:
+    name: Analyze and test entire combined Flutter app
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
+      - name: Full Flutter static analysis
+        run: flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings
+      - name: All unit and widget tests including M274–M281
+        run: flutter test test --reporter expanded
+
+  production-risk-contract:
+    name: Audit actual finance storage/backup, not screenshots
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
+      - name: Test integrity, consent, financial recovery and practical tools
+        run: |
+          flutter test --reporter expanded \
+            test/m280_financial_integrity_fault_injection_test.dart \
+            test/m279_app_wide_security_regression_test.dart \
+            test/m281_practical_tools_test.dart \
+            test/storage/unified_finance_writer_test.dart \
+            test/storage/m187_active_restore_preflight_test.dart \
+            test/m277_ux_accessibility_quality_test.dart

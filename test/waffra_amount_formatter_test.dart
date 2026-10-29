@@ -27,6 +27,17 @@ void main() {
    const TextEditingValue(text:'١٠٬٠٠٠٫٥٠',selection:TextSelection.collapsed(offset:9)));
   expect(arabic.text,'10,000.50');
  });
+ test('pasted invalid values remain visible and fail shared validation', () {
+  const formatter=WaffraAmountFormatter();
+  const empty=TextEditingValue();
+  for(final value in ['-100','12a','1e3','1,2','1.2.3']) {
+   final rendered=formatter.formatEditUpdate(empty,
+    TextEditingValue(text:value,
+      selection:TextSelection.collapsed(offset:value.length)));
+   expect(rendered.text,value,
+    reason:'invalid money must never silently change its numeric meaning');
+  }
+ });
  test('limits fractional precision to two digits', () {
   const formatter=WaffraAmountFormatter();
   const empty=TextEditingValue();

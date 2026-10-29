@@ -372,9 +372,9 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
               }))),
            ),
            const SizedBox(height:9),
-           OutlinedButton.icon(onPressed:WaffraHaptics.tap(_saving?null:_pasteClipboard),
+           Align(alignment:AlignmentDirectional.centerStart,child:OutlinedButton.icon(onPressed:WaffraHaptics.tap(_saving?null:_pasteClipboard),
             icon:const Icon(Icons.content_paste),
-            label:Text(_english?'Paste from clipboard':'لصق الرسالة المنسوخة')),
+            label:Text(_english?'Paste from clipboard':'لصق الرسالة المنسوخة'))),
            if(_analyzing)...[
             const SizedBox(height:11),
             const LinearProgressIndicator(),

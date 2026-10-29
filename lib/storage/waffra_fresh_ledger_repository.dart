@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 
+import '../waffra_sms_fx_review.dart';
+
 import 'waffra_encrypted_store.dart';
 import 'waffra_fresh_encrypted_vault_bootstrap.dart';
 
@@ -17,6 +19,7 @@ class WaffraFreshLedgerEntry {
     required this.amountMinor,
     required this.isIncome,
     required this.occurredIso,
+    this.fxReview,
   });
 
   final String id;
@@ -25,6 +28,9 @@ class WaffraFreshLedgerEntry {
   final int amountMinor;
   final bool isIncome;
   final String occurredIso;
+  /// Optional user-approved original currency and FX evidence in the same
+  /// SQLCipher row as the converted SAR amount (source_json).
+  final WaffraSmsFxReview? fxReview;
 
   Map<String, Object?> toLegacyShape() => {
     'id': id,
@@ -34,6 +40,8 @@ class WaffraFreshLedgerEntry {
     'income': isIncome,
     'date': occurredIso,
     'receiptPath': null,
+    if (fxReview != null)
+      'waffra_fx_provenance_v1': fxReview!.toProvenanceJson(),
   };
 }
 
@@ -62,7 +70,7 @@ class WaffraFreshLedgerRepository {
   final WaffraEncryptedStore store;
   final bool experimentalEnabled;
 
-  static void _validate(WaffraFreshLedgerEntry entry) {
+  static void validateExperimentalEntry(WaffraFreshLedgerEntry entry) {
     if (entry.id.trim().isEmpty || entry.id.length > 256 ||
         entry.title.trim().isEmpty ||
         entry.categorySnapshot.trim().isEmpty ||
@@ -71,6 +79,21 @@ class WaffraFreshLedgerRepository {
         entry.occurredIso.length < 10 ||
         DateTime.tryParse(entry.occurredIso) == null) {
       throw ArgumentError('Invalid finance record; refusing encrypted write.');
+    }
+    final fx = entry.fxReview;
+    if (fx != null) {
+      // SAR-only totals must never sum unrelated foreign currency amounts.
+      if (fx.originalCurrency == 'SAR' ||
+          fx.convertedCurrency != 'SAR' ||
+          fx.convertedMinor != entry.amountMinor ||
+          fx.originalMinor <= 0 ||
+          fx.rateTimestampUtc.isAfter(fx.userApprovedAtUtc.add(
+            const Duration(hours: 1))) ||
+          fx.userApprovedAtUtc.difference(fx.rateTimestampUtc) >
+              WaffraSmsFxQuote.maxAge) {
+        throw ArgumentError('Currency evidence does not match SAR ledger amount.');
+      }
+      WaffraSmsFxReview.fromProvenanceJson(fx.toProvenanceJson());
     }
   }
 
@@ -103,7 +126,7 @@ class WaffraFreshLedgerRepository {
 
   Future<void> add(WaffraFreshLedgerEntry entry) async {
     await _requireReady();
-    _validate(entry);
+    validateExperimentalEntry(entry);
     await store.transaction(() async {
       await store.customStatement(
         'INSERT INTO fresh_finance_entries '
@@ -120,17 +143,23 @@ class WaffraFreshLedgerRepository {
 
   Future<void> replace(WaffraFreshLedgerEntry entry) async {
     await _requireReady();
-    _validate(entry);
+    validateExperimentalEntry(entry);
     await store.transaction(() async {
       // Updating transaction attachment associations requires a separate
       // verified installer. Never discard an attached record's file metadata.
       final prior = await store.customSelect(
-        'SELECT receipt_count FROM fresh_finance_entries WHERE entry_id = ?',
+        'SELECT receipt_count,source_json FROM fresh_finance_entries WHERE entry_id = ?',
         variables: [Variable.withString(entry.id)],
       ).get();
       if (prior.length != 1) throw StateError('Entry does not exist.');
       if (prior.single.read<int>('receipt_count') != 0) {
         throw StateError('Attachment-bearing entry cannot be replaced here.');
+      }
+      final original = jsonDecode(prior.single.read<String>('source_json'));
+      if (original is! Map<String, dynamic> ||
+          original.containsKey('waffra_fx_provenance_v1') ||
+          entry.fxReview != null) {
+        throw StateError('FX edits need certified atomic provenance replacement.');
       }
       await store.customStatement(
         'UPDATE fresh_finance_entries SET title=?,category_snapshot=?,'
@@ -150,12 +179,17 @@ class WaffraFreshLedgerRepository {
     if (entryId.trim().isEmpty) throw ArgumentError.value(entryId, 'entryId');
     await store.transaction(() async {
       final rows = await store.customSelect(
-        'SELECT receipt_count FROM fresh_finance_entries WHERE entry_id = ?',
+        'SELECT receipt_count,source_json FROM fresh_finance_entries WHERE entry_id = ?',
         variables: [Variable.withString(entryId)],
       ).get();
       if (rows.length != 1) throw StateError('Entry does not exist.');
       if (rows.single.read<int>('receipt_count') != 0) {
         throw StateError('Attachment-bearing entry must use safe receipt removal.');
+      }
+      final original = jsonDecode(rows.single.read<String>('source_json'));
+      if (original is! Map<String, dynamic> ||
+          original.containsKey('waffra_fx_provenance_v1')) {
+        throw StateError('FX deletion requires encrypted Undo and backup parity.');
       }
       await store.customStatement(
         'DELETE FROM fresh_finance_entries WHERE entry_id = ?',
@@ -168,19 +202,36 @@ class WaffraFreshLedgerRepository {
     await _requireReady();
     final rows = await store.customSelect(
       'SELECT entry_id,title,category_snapshot,amount_minor,is_income,'
-      'occurred_iso FROM fresh_finance_entries '
+      'occurred_iso,source_json FROM fresh_finance_entries '
       'ORDER BY occurred_iso DESC,entry_id DESC',
     ).get();
-    return List<WaffraFreshLedgerEntry>.unmodifiable(rows.map((row) =>
-      WaffraFreshLedgerEntry(
+    return List<WaffraFreshLedgerEntry>.unmodifiable(rows.map((row) {
+      final record = jsonDecode(row.read<String>('source_json'));
+      if (record is! Map<String, dynamic> ||
+          record['id'] != row.read<String>('entry_id') ||
+          record['amount'] != row.read<int>('amount_minor') / 100) {
+        throw StateError('Encrypted entry amount/source mismatch.');
+      }
+      final rawFx = record['waffra_fx_provenance_v1'];
+      WaffraSmsFxReview? fx;
+      if (rawFx != null) {
+        if (rawFx is! Map<String, dynamic>) {
+          throw StateError('Malformed encrypted FX provenance.');
+        }
+        fx = WaffraSmsFxReview.fromProvenanceJson(rawFx);
+      }
+      final entry = WaffraFreshLedgerEntry(
         id: row.read<String>('entry_id'),
         title: row.read<String>('title'),
         categorySnapshot: row.read<String>('category_snapshot'),
         amountMinor: row.read<int>('amount_minor'),
         isIncome: row.read<int>('is_income') == 1,
         occurredIso: row.read<String>('occurred_iso'),
-      ),
-    ));
+        fxReview: fx,
+      );
+      validateExperimentalEntry(entry);
+      return entry;
+    }));
   }
 
   Future<WaffraFreshLedgerTotals> totals() async {

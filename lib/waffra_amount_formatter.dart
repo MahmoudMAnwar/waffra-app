@@ -12,6 +12,18 @@ class WaffraAmountFormatter extends TextInputFormatter {
    return (a>=0?a:persian.indexOf(c)).toString();
   });
   final caret=newValue.selection.extentOffset.clamp(0,normalized.length).toInt();
+  // Invalid pastes must not silently change e.g. -100 into +100.
+  // Preserve invalid input for field-level validation after confirmation.
+  final permitted=RegExp(r'^[0-9,.]*$').hasMatch(normalized);
+  final decimalPoints='.'.allMatches(normalized).length;
+  final grouping=normalized.contains(',')
+      ?RegExp(r'^[0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]*)?$')
+          .hasMatch(normalized)
+      :true;
+  if(!permitted||decimalPoints>1||!grouping) {
+    return TextEditingValue(text:normalized,
+      selection:TextSelection.collapsed(offset:caret));
+  }
   final before=normalized.substring(0,caret).replaceAll(RegExp(r'[^0-9.]'),'').length;
   final filtered=normalized.replaceAll(RegExp(r'[^0-9.]'),'');
   final dot=filtered.indexOf('.');

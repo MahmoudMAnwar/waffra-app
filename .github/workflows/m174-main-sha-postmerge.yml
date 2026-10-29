@@ -59,7 +59,9 @@ jobs:
           channel: stable
           cache: true
       - name: Resolve packages
-        run: flutter pub get
+        run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
       - name: Enforce cutover negative matrix on exact SHA
         run: >
           flutter test
@@ -84,7 +86,9 @@ jobs:
         with:
           channel: stable
           cache: true
-      - run: flutter pub get
+      - run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
       - name: Provision Android project for CI (not signed release)
         run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
       - name: Compile Android ARM64 release-mode APK on main SHA
