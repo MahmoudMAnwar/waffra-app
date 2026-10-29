@@ -2703,6 +2703,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  static const tourTabs=WaffraTourPlan.tabs;
  static const tourTargetKeys=WaffraTourPlan.targetKeys;
  bool addFabExpanded=false;
+ bool quickActionsExpanded=false;
  bool _addActionOpening=false;
  bool _fabPressed=false;
  DateTime? _lastFabTapAt;
@@ -5965,18 +5966,47 @@ Future<void> bulkSmsSheet({String? initialText})async {
           homeSummaryCard(waffraIsEnglish?'Expenses':'المصروفات',
            exp,Icons.north_east,const Color(0xFFB94838),waffraExpenseBackground),
          ]),
-         const SizedBox(height:15),
-         WaffraText(waffraIsEnglish?'Quick actions':'إجراءات سريعة',
-          style:const TextStyle(fontSize:17,fontWeight:FontWeight.bold)),
-         const SizedBox(height:8),
-         Row(children:[
-          _dashboardShortcut(waffraIsEnglish?'Export report':'تصدير تقرير',
-           Icons.analytics_outlined,()=>exportEntriesPdf(entries,'تقرير عمليات وفرة')),
-          const SizedBox(width:8),
-          _dashboardShortcut(waffraIsEnglish?'Financial calendar':'التقويم المالي',
-           Icons.calendar_month_outlined,openFinancialCalendar),
-
-         ]),
+         const SizedBox(height:12),
+         Container(
+          decoration:BoxDecoration(
+           color:Theme.of(context).cardColor,
+           borderRadius:BorderRadius.circular(16),
+           border:Border.all(color:Theme.of(context).brightness==Brightness.dark
+            ?const Color(0xFF506A5A):const Color(0xFFD3E3D9))),
+          child:Column(mainAxisSize:MainAxisSize.min,children:[
+           Semantics(button:true,toggled:quickActionsExpanded,
+            child:InkWell(
+             key:const Key('waffra-quick-actions-toggle'),
+             borderRadius:BorderRadius.circular(16),
+             onTap:WaffraHaptics.tap(
+              ()=>setState(()=>quickActionsExpanded=!quickActionsExpanded)),
+             child:Padding(
+              padding:const EdgeInsets.symmetric(horizontal:13,vertical:12),
+              child:Row(children:[
+               const Icon(Icons.bolt_rounded,color:emerald,size:20),
+               const SizedBox(width:7),
+               Expanded(child:WaffraText(waffraIsEnglish?'Quick actions':'إجراءات سريعة',
+                style:const TextStyle(fontSize:15,fontWeight:FontWeight.bold))),
+               AnimatedRotation(
+                turns:quickActionsExpanded ? 0.5 : 0.0,
+                duration:waffraMotion(180),
+                child:const Icon(Icons.keyboard_arrow_down_rounded,size:23)),
+              ]))),
+            )),
+           AnimatedSize(
+            duration:waffraMotion(200),alignment:Alignment.topCenter,
+            curve:Curves.easeOutCubic,
+            child:quickActionsExpanded
+             ?Padding(padding:const EdgeInsets.fromLTRB(10,0,10,10),
+               child:Row(children:[
+                _dashboardShortcut(waffraIsEnglish?'Export report':'تصدير تقرير',
+                 Icons.analytics_outlined,()=>exportEntriesPdf(entries,'تقرير عمليات وفرة')),
+                const SizedBox(width:10),
+                _dashboardShortcut(waffraIsEnglish?'Financial calendar':'التقويم المالي',
+                 Icons.calendar_month_outlined,openFinancialCalendar),
+               ]))
+             :const SizedBox.shrink()),
+          ])),
          const SizedBox(height:13),
          monthlyBudgetCard(),
          const SizedBox(height:12),
