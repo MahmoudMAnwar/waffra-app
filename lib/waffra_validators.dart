@@ -34,26 +34,15 @@ class WaffraValidators {
       final ar=arabic.indexOf(digit);
       return (ar>=0?ar:persian.indexOf(digit)).toString();
     });
-    if(!RegExp(r'^[0-9]{1,2}
-
-  static String? uniqueCategory(String? value, Iterable<String> existing) {
-    final text=(value??'').trim().toLowerCase();
-    if(text.isEmpty)return 'required';
-    return existing.any((v)=>v.trim().toLowerCase()==text)?'duplicate':null;
-  }
-}
-).hasMatch(value))return 'invalid_day';
+    if(!RegExp(r'^[0-9]{1,2}$').hasMatch(value))return 'invalid_day';
     final day=int.tryParse(value);
     return day==null || day<1 || day>31?'invalid_day':null;
   }
 
-  /// Mandatory categories must actually exist for the selected transaction
-  /// direction. A placeholder ('أخرى') or stale selection is never enough.
+  /// Mandatory categories must exist for the selected income/expense direction.
   static String? requiredCategory(String? selected,Iterable<String> validNames) {
     final category=(selected??'').trim();
-    if(category.isEmpty || !validNames.any((name)=>name==category)) {
-      return 'required';
-    }
+    if(category.isEmpty||!validNames.any((name)=>name==category))return 'required';
     return null;
   }
 
