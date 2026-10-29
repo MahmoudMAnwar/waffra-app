@@ -128,6 +128,36 @@ jobs:
           echo "SwiftyTesseract simulator x86_64 smoke; iOS arm64 device QA still required."
       - name: Generate temporary iOS Runner (repo does not track one yet)
         run: flutter create --no-pub --platforms=ios --project-name=waffra --org com.waffra .
+      - name: Restrict temporary Intel iOS Simulator targets to x86_64
+        # Legacy SwiftyTesseract has only an x86_64 simulator Swift module.
+        # Keep this entirely inside the generated CI Runner and Podfile.
+        # Never modify physical iOS arm64 targets or suppress the build check.
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = x86_64
+          ruby - <<'RUBY'
+          require 'xcodeproj'
+          project = Xcodeproj::Project.open('ios/Runner.xcodeproj')
+          project.targets.each do |target|
+            target.build_configurations.each do |config|
+              config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
+            end
+          end
+          project.save
+          RUBY
+          python3 - <<'PY'
+          from pathlib import Path
+          podfile = Path('ios/Podfile')
+          contents = podfile.read_text()
+          old = '    flutter_additional_ios_build_settings(target)'
+          assert contents.count(old) == 1, 'Unexpected generated Flutter Podfile'
+          addon = """    target.build_configurations.each do |config|
+              config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
+            end"""
+          contents = contents.replace(old, old + '\n' + addon)
+          podfile.write_text(contents)
+          PY
       - run: |
           flutter pub get
           python3 scripts/qa/m287_patch_tesseract_gradle.py
