@@ -19,6 +19,7 @@ import 'waffra_smart_features.dart';
 import 'waffra_tour_plan.dart';
 import 'waffra_today_picker.dart';
 import 'waffra_action_layout.dart';
+import 'waffra_subtle_selection.dart';
 import 'waffra_receipt_filename.dart';
 import 'waffra_sms_intelligence.dart';
 import 'waffra_sms_multicurrency_review.dart';
@@ -890,13 +891,13 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     foregroundColor:forest,alignment:Alignment.center,
     minimumSize:WaffraActionLayout.minimumSize,
     padding:WaffraActionLayout.contentPadding,
-    side:const BorderSide(color:Color(0xFF0C7957),width:1.2),
+    side:const BorderSide(color:Color(0xFFB8CDC1),width:1),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)))),
    textButtonTheme:TextButtonThemeData(style:TextButton.styleFrom(
     foregroundColor:forest,alignment:Alignment.center,
     minimumSize:WaffraActionLayout.minimumSize,
     padding:WaffraActionLayout.contentPadding,
-    side:const BorderSide(color:Color(0xFF0C7957),width:1.1),
+    side:const BorderSide(color:Color(0xFFB8CDC1),width:1),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(13)))),
    inputDecorationTheme:InputDecorationTheme(
     filled:true,fillColor:Colors.white,
@@ -904,9 +905,10 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(15),
      borderSide:const BorderSide(color:Color(0xFFCFE3D7))),
     focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(15),
-     borderSide:const BorderSide(color:emerald,width:1.7)),
+     borderSide:const BorderSide(color:emerald,width:1.5)),
     border:OutlineInputBorder(borderRadius:BorderRadius.circular(15)),
     labelStyle:const TextStyle(color:forest),hintStyle:const TextStyle(color:Color(0xFF7B9084))),
+   segmentedButtonTheme:WaffraSubtleSelection.segmented(Brightness.light),
    chipTheme:ChipThemeData(
     backgroundColor:Colors.white,selectedColor:waffraMint,
     side:const BorderSide(color:Color(0xFFD5E8DD)),
@@ -978,13 +980,13 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     foregroundColor:Colors.white,alignment:Alignment.center,
     minimumSize:WaffraActionLayout.minimumSize,
     padding:WaffraActionLayout.contentPadding,
-    side:const BorderSide(color:Color(0xFF74DCAB)),
+    side:const BorderSide(color:Color(0xFF658475),width:1),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)))),
    textButtonTheme:TextButtonThemeData(style:TextButton.styleFrom(
     foregroundColor:Colors.white,alignment:Alignment.center,
     minimumSize:WaffraActionLayout.minimumSize,
     padding:WaffraActionLayout.contentPadding,
-    side:const BorderSide(color:Color(0xFF74DCAB)),
+    side:const BorderSide(color:Color(0xFF658475),width:1),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(13)))),
    inputDecorationTheme:InputDecorationTheme(
     filled:true,fillColor:const Color(0xFF202522),
@@ -992,9 +994,10 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(15),
      borderSide:const BorderSide(color:Color(0xFF4A6052))),
     focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(15),
-     borderSide:const BorderSide(color:Color(0xFF8EDDB5),width:1.6)),
+     borderSide:const BorderSide(color:Color(0xFF8EDDB5),width:1.5)),
     labelStyle:const TextStyle(color:Color(0xFFE6FFF0)),
     hintStyle:const TextStyle(color:Color(0xFFAACBBC))),
+   segmentedButtonTheme:WaffraSubtleSelection.segmented(Brightness.dark),
    chipTheme:ChipThemeData(
     backgroundColor:const Color(0xFF1B241F),selectedColor:const Color(0xFF28533C),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(20)),
