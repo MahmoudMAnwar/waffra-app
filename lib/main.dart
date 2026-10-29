@@ -4071,7 +4071,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
          title:WaffraText('${candidates[i].amount.toStringAsFixed(2)} SAR — ${candidates[i].income?(waffraIsEnglish?'Income':'دخل'):(waffraIsEnglish?'Expense':'مصروف')}'),
          subtitle:WaffraText(candidates[i].merchant??(waffraIsEnglish?'Unconfirmed source':'اسم غير مؤكد')),
         ),
-      ])))),
+      ]))),
      actions:[
       TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialog)),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
       FilledButton(onPressed:chosen.isEmpty?null:WaffraHaptics.tap(
