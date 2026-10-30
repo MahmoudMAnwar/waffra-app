@@ -154,12 +154,33 @@ void main() {
     ), isFalse);
   });
 
+  test('generic POS-only titles do not wrongly group unrelated purchases', () {
+    expect(possible(
+      candidateMerchant: '',
+      existingMerchant: '',
+      candidateTitle: 'POS Purchase',
+      existingTitle: 'POS purchase',
+      candidateCategory: 'Food',
+      existingCategory: 'Food',
+    ), isFalse);
+    expect(possible(
+      candidateMerchant: '',
+      existingMerchant: '',
+      candidateTitle: 'عملية شراء',
+      existingTitle: 'عملية شراء',
+      candidateCategory: 'أخرى',
+      existingCategory: 'أخرى',
+    ), isFalse);
+  });
+
   test('live confirm shows advisory with explicit override, no auto discard', () {
     final source = File('lib/main.dart').readAsStringSync();
     final anchor = source.indexOf('if(initial==null&&entries.any((e)=>');
     expect(anchor, greaterThanOrEqualTo(0));
     final snippet = source.substring(anchor, anchor + 1800);
     expect(snippet, contains('WaffraCrossSourceDuplicateReview.mightBeSame'));
+    expect(snippet, contains('Possible duplicate'));
+    expect(snippet, contains("'Add anyway'"));
     expect(snippet, contains("Navigator.pop(ctx,true)"));
     expect(snippet, contains('if(proceed!=true||!mounted)'));
     expect(snippet, contains('explicitlyApprovedSmsDuplicate=true'));
