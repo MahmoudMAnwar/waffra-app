@@ -4017,6 +4017,28 @@ Future<void> bulkSmsSheet({String? initialText})async {
  _receiveSharedSms();
 }
 
+ Future<bool> _canReviewOcrAsLedgerTransaction(String raw)async {
+  if(!WaffraBankScreenshotParser.requiresForeignCurrencyReview(raw))return true;
+  if(!mounted)return false;
+  // A foreign OCR image has no verified FX provenance and must NEVER be
+  // relabeled as SAR by allowing manual numeric input in an SAR-only sheet.
+  final currencyCodes=WaffraSmsCurrencies.currenciesForMessage(raw);
+  final label=currencyCodes.isEmpty?
+   (waffraIsEnglish?'foreign currency':'عملة أجنبية'):
+   currencyCodes.join(' / ');
+  await showWaffraDialog<void>(context:context,builder:(dialog)=>AlertDialog(
+   title:WaffraText(waffraIsEnglish?
+    'Foreign currency requires review':'عملية بعملة أجنبية تحتاج مراجعة'),
+   content:WaffraText(waffraIsEnglish?
+    'Detected $label in the bank image. This amount cannot be added as SAR without a verified conversion. No transaction was saved. Other SAR entries can still be reviewed.':
+    'تم اكتشاف $label في صورة البنك. لا يمكن حفظ هذا المبلغ باعتباره ريالًا سعوديًا بدون تحويل موثوق. لم يتم حفظ هذه العملية، ويمكنك متابعة مراجعة عمليات الريال الأخرى.'),
+   actions:[FilledButton(
+    onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialog)),
+    child:WaffraText(waffraIsEnglish?'Understood':'فهمت'))],
+  ));
+  return false;
+ }
+
  Future<void> scanAndAddReceipt()async {
   // Ask only for the exact camera/gallery access the user selected.
   final source=await showWaffraDialog<ImageSource>(context:context,builder:(dialog)=>AlertDialog(
@@ -4041,6 +4063,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    if(!mounted)return;
    final candidates=WaffraBankScreenshotParser.reviewItems(extracted.rawText);
    if(candidates.isEmpty){
+    if(!await _canReviewOcrAsLedgerTransaction(extracted.rawText))return;
     // Do not reuse speculative OCR merchant/amount for an SMS screenshot.
     final suggestion=WaffraBankScreenshotParser.looksLikeBankScreenshot(extracted.rawText)?
      WaffraReceiptOcrFields(rawText:extracted.rawText):extracted;
@@ -4049,6 +4072,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    }
    if(candidates.length==1){
     final one=candidates.single;
+    if(!await _canReviewOcrAsLedgerTransaction(one.sourceText))return;
     await entrySheet(
      scannedReceipt:WaffraReceiptOcrFields(rawText:one.sourceText,
       merchant:one.merchant,amount:one.amount,date:one.date),
@@ -4088,6 +4112,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    for(final index in selected){
     if(!mounted)return;
     final candidate=candidates[index];
+    if(!await _canReviewOcrAsLedgerTransaction(candidate.sourceText))continue;
     await entrySheet(
      scannedReceipt:WaffraReceiptOcrFields(rawText:candidate.sourceText,
       merchant:candidate.merchant,amount:candidate.amount,date:candidate.date),
