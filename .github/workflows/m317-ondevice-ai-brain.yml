@@ -1,0 +1,74 @@
+name: M317-M319 On-Device Qwen Brain Exact-HEAD QA (NO CUTOVER)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/m317-ondevice-ai-brain.yml'
+      - 'lib/waffra_ai_finance_brain.dart'
+      - 'lib/waffra_ai_finance_coach.dart'
+      - 'lib/waffra_ondevice_qwen.dart'
+      - 'test/m317_ai_finance_brain_test.dart'
+      - 'pubspec.yaml'
+      - 'docs/qa/m317-ondevice-ai-brain-rollout.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-evidence-and-private-finance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact source revision
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve pinned local inference and existing SQLCipher runtime
+        run: flutter pub get
+      - name: Analyze read-only brain and optional GGUF adapter
+        run: |
+          flutter analyze --no-pub --no-fatal-warnings --no-fatal-infos \
+            lib/waffra_ai_finance_brain.dart \
+            lib/waffra_ai_finance_coach.dart \
+            lib/waffra_ondevice_qwen.dart \
+            test/m317_ai_finance_brain_test.dart
+      - name: Verify independent amounts, 36 currencies and read-only insights
+        run: |
+          flutter test --reporter expanded \
+            test/m317_ai_finance_brain_test.dart \
+            test/m289_global_sms_intelligence_test.dart \
+            test/m287_receipt_ocr_test.dart \
+            test/waffra_financial_insights_test.dart
+      - name: Ensure model does not auto-write, store raw finance or do cloud inference
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          core=Path('lib/waffra_ai_finance_brain.dart').read_text()
+          coach=Path('lib/waffra_ai_finance_coach.dart').read_text()
+          native=Path('lib/waffra_ondevice_qwen.dart').read_text()
+          manifest=Path('docs/qa/m317-ondevice-ai-brain-rollout.md').read_text()
+          assert 'currencyLabels' not in core or 'currencyNames' in core
+          assert 'exactAmount(' in core and 'exactCurrency(' in core
+          assert 'input.contains' not in core or 'source' in core
+          assert 'quote' in core and 'untrusted_model_output' in core
+          assert 'model_sha256_mismatch' in native
+          assert 'ModelSource.path(' in native
+          assert 'allowDownload' in native
+          assert 'WaffraAiLedgerFact' in coach
+          for source in [core,coach]:
+              assert 'firebase' not in source.lower()
+              assert 'http.get' not in source and 'http.post' not in source
+              assert 'await persist(' not in source
+              assert 'saveTransaction(' not in source
+          assert 'NO production cutover' in manifest
+          print('M317 isolated read-only model processing only; finance authority unchanged.')
+          PY
