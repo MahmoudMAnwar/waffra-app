@@ -82,6 +82,34 @@ Supermarket
     expect(main, contains('تأكيد وحفظ العملية'));
   });
 
+  test('M299 foreign currency OCR stays numbered but not SAR-prefilled', () {
+    for (final currency in ['JOD','USD','EGP','KWD','JPY','EUR']) {
+      final imageText=currency+'198.000 has been credited to an account. '
+          'Balance 201.632'+currency;
+      expect(WaffraBankScreenshotParser.looksLikeBankScreenshot(imageText),
+          isTrue,reason:currency);
+      final rows=WaffraBankScreenshotParser.reviewItems(imageText);
+      expect(rows.length,1,reason:currency);
+      expect(rows.single.position,1,reason:currency);
+      expect(rows.single.income,isTrue,reason:currency);
+      expect(rows.single.amount,isNull,
+          reason:'Foreign OCR must not be saved as unconverted SAR: '+currency);
+      expect(rows.single.sourceText,contains(currency));
+    }
+  });
+
+  test('M299 mixed foreign/SAR entries cannot prefill the balance', () {
+    final rows=WaffraBankScreenshotParser.reviewItems(
+      'شراء POS\nUSD25.50\nBalance SAR 100.00\n'
+      'شراء POS\nSAR 3.00\n30/10/26',
+    );
+    expect(rows.length,2);
+    expect(rows[0].amount,isNull);
+    expect(rows[1].amount,3);
+    expect(rows[0].position,1);
+    expect(rows[1].position,2);
+  });
+
   test('M299 local OCR retries sparse text without uploading image', () {
     final source = File('lib/waffra_receipt_ocr.dart').readAsStringSync();
     expect(source, contains("['11', '6']"));
