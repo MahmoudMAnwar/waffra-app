@@ -155,6 +155,24 @@ void main() {
     }
   });
 
+  test('M316 banking metadata cannot become a second foreign currency', () {
+    for (final source in <String>[
+      'AMT 100 SAR',
+      'SAR 100 WAS DEBITED',
+      'TXN 5234 debit SAR 25.50',
+      'Payment SAR 25.50 VIA BANK',
+    ]) {
+      expect(WaffraSmsCurrencies.currenciesForMessage(source), {'SAR'},
+        reason: source);
+      expect(WaffraSmsCurrencies.requiresReviewForSarLedger(source), isFalse,
+        reason: source);
+    }
+    expect(WaffraSmsCurrencies.currenciesForMessage('Amount MXN 150'),
+      {'UNKNOWN'});
+    expect(WaffraSmsCurrencies.requiresReviewForSarLedger('Amount MXN 150'),
+      isTrue);
+  });
+
   test('14 live bank SMS save rejects foreign amounts before hash generation', () {
     final sheet=method('Future<void> entrySheet(',
         'Future<String?> chooseTransactionCategory(');
