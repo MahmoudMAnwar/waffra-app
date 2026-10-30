@@ -4064,6 +4064,78 @@ Future<void> bulkSmsSheet({String? initialText})async {
   ));
  }
 
+ /// Each image action remains a separate review row. This helper never
+ /// commits a record and cannot post foreign-currency AI output as SAR.
+ Future<bool> _reviewAiScannedTransactions(
+     String sourceText,XFile image)async{
+  if(!WaffraOnDeviceQwen.shared.isReady)return false;
+  final result=await WaffraAiFinanceBrain.imageOcr(sourceText,
+    generate:WaffraOnDeviceQwen.shared.textGenerator);
+  if(!mounted||result.error!=null||result.count==0)return false;
+  final bankImage=WaffraBankScreenshotParser.looksLikeBankScreenshot(sourceText);
+  // Product lines from one shop receipt must not be counted as independent
+  // finance transactions, even if a tiny model hallucinated separate actions.
+  if(!bankImage&&result.count>1)return false;
+  final selected=<int>{};
+  final indices=await showWaffraDialog<List<int>>(context:context,
+   builder:(dialog)=>StatefulBuilder(builder:(dialog,update)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?
+     'AI detected '+result.count.toString()+' transactions':
+     'AI اكتشف '+result.count.toString()+' معاملات'),
+    content:SizedBox(width:420,child:SingleChildScrollView(child:
+     Column(mainAxisSize:MainAxisSize.min,children:[
+      WaffraText(waffraIsEnglish?
+       'Review each proposed transaction. Unverified/foreign amounts '
+       'cannot be saved as Saudi Riyals.':
+       'راجع كل عملية. العمليات غير المؤكدة أو الأجنبية لا يمكن '
+       'حفظها باعتبارها ريالًا سعوديًا.'),
+      for(var i=0;i<result.items.length;i++)
+       CheckboxListTile(
+        value:selected.contains(i),
+        onChanged:result.items[i].needsReview?null:(value)=>update((){
+         if(value==true)selected.add(i);else selected.remove(i);
+        }),
+        title:WaffraText(
+         (i+1).toString()+'. '+
+         (result.items[i].amountText??'—')+' '+
+         (result.items[i].currency??'?')+' • '+
+         (result.items[i].direction==WaffraAiDirection.income?
+          (waffraIsEnglish?'Income':'دخل'):
+          (waffraIsEnglish?'Expense':'مصروف'))),
+        subtitle:WaffraText(result.items[i].needsReview?
+         (waffraIsEnglish?'Review required: ':'تحتاج مراجعة: ')+
+          result.items[i].reason:
+         (result.items[i].merchant??result.items[i].quote),
+         maxLines:3),
+       ),
+     ]))),
+    actions:[
+     TextButton(onPressed:()=>Navigator.pop(dialog),
+      child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+     FilledButton(onPressed:selected.isEmpty?null:()=>
+       Navigator.pop(dialog,selected.toList()..sort()),
+      child:WaffraText(waffraIsEnglish?'Review selected':'مراجعة المحدد')),
+    ],
+   )));
+  if(indices==null||!mounted)return true;
+  for(final index in indices){
+   if(!mounted)return true;
+   final item=result.items[index];
+   if(item.needsReview||item.currency!='SAR')continue;
+   final safeAmount=item.amountText==null?null:
+      WaffraReceiptOcrParser.amountFromText(item.amountText!);
+   await entrySheet(
+    scannedReceipt:WaffraReceiptOcrFields(
+     rawText:item.quote,
+     merchant:item.merchant!=null&&item.quote.contains(item.merchant!)?
+      item.merchant:null,
+     amount:safeAmount),
+    scannedIncome:item.direction==WaffraAiDirection.income,
+    scannedImage:image);
+  }
+  return true;
+ }
+
  Future<void> scanAndAddReceipt()async {
   // Ask only for the exact camera/gallery access the user selected.
   final source=await showWaffraDialog<ImageSource>(context:context,builder:(dialog)=>AlertDialog(
@@ -4085,6 +4157,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
    final picked=await ImagePicker().pickImage(source:source,imageQuality:95);
    if(picked==null||!mounted)return;
    final extracted=await WaffraReceiptOcr.scan(picked.path);
+   if(!mounted)return;
+   // Optional on-device Qwen analyzes OCR text; no photo is uploaded.
+   if(await _reviewAiScannedTransactions(extracted.rawText,picked))return;
    if(!mounted)return;
    final candidates=WaffraBankScreenshotParser.candidates(extracted.rawText);
    if(candidates.isEmpty){
