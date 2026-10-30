@@ -90,10 +90,10 @@ abstract final class WaffraSmsCurrencies {
       caseSensitive:false).firstMatch(normalized);
     final action=footer==null?normalized:normalized.substring(0,footer.start);
     final code=RegExp.escape(currency);
-    const num=r'([0-9]{1,9}(?:\.[0-9]{1,3})?)';
-    final starts=RegExp('(?<![A-Za-z])'+code+r'\s*[:：]?\s*'+num,
+    const moneyPattern=r'([0-9]{1,9}(?:\.[0-9]{1,3})?)';
+    final starts=RegExp('(?<![A-Za-z])'+code+r'\s*[:：]?\s*'+moneyPattern,
       caseSensitive:false);
-    final ends=RegExp(num+r'\s*'+code+r'(?![A-Za-z])',
+    final ends=RegExp(moneyPattern+r'\s*'+code+r'(?![A-Za-z])',
       caseSensitive:false);
     final amounts=<String>[
       ...starts.allMatches(action).map((e)=>e.group(1)!),
