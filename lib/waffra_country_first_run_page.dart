@@ -123,9 +123,8 @@ class _WaffraCountryFirstRunPageState extends State<WaffraCountryFirstRunPage> {
               border:const OutlineInputBorder()),
             items:WaffraRegionalCopy.supportedRegions.entries.map((entry)=>
               DropdownMenuItem<String>(value:entry.key,
-                child:Text(widget.english?
-                  (entry.key.isEmpty?'Not selected / Neutral Arabic':entry.key):
-                  entry.value))),
+                child:Text(WaffraRegionalCopy.regionLabel(
+                  entry.key,english:widget.english)))),
             onChanged:submitting?null:(value){
               if(value!=null)setState(()=>selectedRegionIso=value);
             },
