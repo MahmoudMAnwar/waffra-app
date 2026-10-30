@@ -58,10 +58,15 @@ void main() {
     expect(find.byKey(const Key('waffra-approved-emerald-balance-card')),
         findsOneWidget);
     await tester.tap(find.byKey(const Key('waffra-balance-privacy-eye')));
-    await tester.pumpAndSettle();
+    // Eye visibility changes on the next frame; infinite decorative animations
+    // must never be awaited by an emulator smoke test.
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(hideWaffraAmounts.value, isTrue);
     expect(find.text('***'), findsWidgets);
+    expect(find.byIcon(Icons.visibility_off_outlined), findsOneWidget);
     await tester.tap(find.byKey(const Key('waffra-balance-privacy-eye')));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(hideWaffraAmounts.value, isFalse);
     expect(find.byIcon(Icons.visibility_outlined), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
