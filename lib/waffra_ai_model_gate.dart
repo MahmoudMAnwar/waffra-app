@@ -46,7 +46,10 @@ abstract final class WaffraAiModelGate {
     final installed=await model.installedAndVerified();
     if(!context.mounted)return false;
     final featureRequired=requiredFeature!=null;
-    final agreed=await showDialog<bool>(context:context,builder:(dialog)=>
+    // A previously verified installation has already been consented to.
+    // Reactivate its native runtime after app restart without asking to
+    // download the same ~484 MB model again.
+    final agreed=installed?true:await showDialog<bool>(context:context,builder:(dialog)=>
       AlertDialog(
         title:Text(english?'Waffra private AI model':
           'نموذج الذكاء الاصطناعي في وفرة'),
