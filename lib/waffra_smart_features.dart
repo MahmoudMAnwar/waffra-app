@@ -237,9 +237,12 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
  void _activateSection(int section){
   final next=active==section?null:section;
   setState(()=>active=next);
-  // The first opening of any AI-assisted Tools section explains the
-  // optional model/download and shows a real progress modal.
-  if(next==-2||next==4||next==7){
+  // Analysis is also a non-AI verified dashboard. Opening that panel
+  // must never launch a model consent dialog or block the standard tools;
+  // its dedicated "Enable private Qwen" button remains the explicit first
+  // AI action and still invokes the full consent/download progress gate.
+  // Ask Waffra and AI saving suggestions offer first-use consent on open.
+  if(next==4||next==7){
    if(!WaffraOnDeviceQwen.shared.isReady)unawaited(_enableLocalAi());
   }
   final token=++_focusSerial;
