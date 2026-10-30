@@ -180,7 +180,7 @@ class _WaffraGoldCalculatorPageState extends State<WaffraGoldCalculatorPage> {
   }
 
   Future<void> fetchQuote() async {
-    final grams = double.tryParse(weight.text.trim().replaceAll(',', ''));
+    final grams = waffraStrictNumericInput(weight.text,decimalPlaces:4,maxValue:1000000);
     if (grams == null || !grams.isFinite || grams <= 0 || grams > 1000000) {
       setState(() { quote = null;
         error = t('Enter a valid positive weight in grams.',
@@ -207,7 +207,7 @@ class _WaffraGoldCalculatorPageState extends State<WaffraGoldCalculatorPage> {
 
   @override
   Widget build(BuildContext context) {
-    final grams = double.tryParse(weight.text.trim().replaceAll(',', ''));
+    final grams = waffraStrictNumericInput(weight.text,decimalPlaces:4,maxValue:1000000);
     final valid = quote != null && grams != null &&
         grams.isFinite && grams > 0 && grams <= 1000000;
     final dark = Theme.of(context).brightness == Brightness.dark;
