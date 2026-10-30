@@ -35,15 +35,7 @@ class WaffraValidators {
       final ar=arabic.indexOf(digit);
       return (ar>=0?ar:persian.indexOf(digit)).toString();
     });
-    if(!RegExp(r'^[0-9]{1,2}
-
-  static String? uniqueCategory(String? value, Iterable<String> existing) {
-    final text=waffraSearchKey(value??'');
-    if(text.isEmpty)return 'required';
-    return existing.any((v)=>waffraSearchKey(v)==text)?'duplicate':null;
-  }
-}
-).hasMatch(value))return 'invalid_day';
+    if(!RegExp(r'^[0-9]{1,2}$').hasMatch(value))return 'invalid_day';
     final day=int.tryParse(value);
     return day==null || day<1 || day>31?'invalid_day':null;
   }
@@ -55,6 +47,7 @@ class WaffraValidators {
     return null;
   }
 
+  /// Enforce category-name uniqueness with shared Arabic Unicode normalization.
   static String? uniqueCategory(String? value, Iterable<String> existing) {
     final text=waffraSearchKey(value??'');
     if(text.isEmpty)return 'required';
