@@ -8,6 +8,8 @@ on:
       - 'test/m303_m306_hardening_regression_test.dart'
       - 'test/m304_cross_source_duplicate_review_test.dart'
       - 'lib/waffra_cross_source_duplicate_review.dart'
+      - 'lib/waffra_display_currency.dart'
+      - 'test/m302_display_currency_precision_test.dart'
       - 'docs/qa/m303-m306-hardening-register.md'
       - '.github/workflows/m303-m306-production-hardening.yml'
   workflow_dispatch:
@@ -42,8 +44,10 @@ jobs:
           dart analyze test/m304_cross_source_duplicate_review_test.dart
           dart analyze lib/waffra_cross_source_duplicate_review.dart
           dart analyze lib/storage/waffra_authoritative_widget_balance.dart
+          dart analyze lib/waffra_display_currency.dart
+          dart analyze test/m302_display_currency_precision_test.dart
       - name: Run twelve-feature safety regressions
-        run: flutter test --reporter expanded test/m303_m306_hardening_regression_test.dart test/m304_cross_source_duplicate_review_test.dart
+        run: flutter test --reporter expanded test/m303_m306_hardening_regression_test.dart test/m304_cross_source_duplicate_review_test.dart test/m302_display_currency_precision_test.dart
       - name: Existing fault injection backup recurring and precision
         run: |
           flutter test --reporter expanded \
