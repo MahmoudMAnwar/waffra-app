@@ -10,6 +10,8 @@ on:
       - 'lib/waffra_country_suggestion.dart'
       - 'lib/waffra_sms_multicurrency_review.dart'
       - 'lib/waffra_sms_fx_review.dart'
+      - 'lib/waffra_sms_intelligence.dart'
+      - 'test/m300_all_supported_currency_sms_matrix_test.dart'
       - 'test/m300_jod_cliq_bank_sms_test.dart'
       - 'lib/waffra_reminders.dart'
       - 'pubspec.yaml'
@@ -54,7 +56,10 @@ jobs:
             lib/waffra_country_suggestion.dart \
             lib/waffra_sms_multicurrency_review.dart \
             lib/waffra_sms_fx_review.dart \
+            lib/waffra_sms_intelligence.dart \
+            test/m300_all_supported_currency_sms_matrix_test.dart \
             test/m300_jod_cliq_bank_sms_test.dart \
+            test/m300_all_supported_currency_sms_matrix_test.dart \
             lib/waffra_reminders.dart \
             test/m290_google_country_reminders_test.dart \
             test/m291_multicurrency_bank_sms_review_test.dart \
