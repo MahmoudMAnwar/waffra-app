@@ -2820,7 +2820,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(mounted)setState((){
     ready=false;
     _financeLoadFailure=waffraIsEnglish?
-     'Couldn't verify your financial data. Nothing was deleted. Retry or restore a trusted backup.':
+     'Could not verify your financial data. Nothing was deleted. Retry or restore a trusted backup.':
      'تعذر التحقق من بياناتك. لم يُحذف شيء. حاول مجددًا أو استعد نسخة موثوقة.';
    });
   }
