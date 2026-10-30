@@ -26,6 +26,7 @@ import 'waffra_receipt_ocr_parser.dart';
 import 'waffra_bank_screenshot_parser.dart';
 import 'waffra_ai_finance_brain.dart';
 import 'waffra_ondevice_qwen.dart';
+import 'waffra_ai_model_gate.dart';
 import 'waffra_sms_intelligence.dart';
 import 'waffra_sms_multicurrency_review.dart';
 import 'waffra_back_navigation.dart';
@@ -3325,6 +3326,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      child:WaffraText(waffraIsEnglish?'Confirm delete':'تأكيد الحذف')),
    ]));
 Future<void> bulkSmsSheet({String? initialText})async {
+  // First opening the bank-SMS AI feature discloses the optional model.
+  // Refusal must not block deterministic bank message handling.
+  if(!WaffraOnDeviceQwen.shared.isReady){
+   await WaffraAiModelGate.ensureReady(context,english:waffraIsEnglish);
+   if(!mounted)return;
+  }
  if(_smsSheetOpen)return;
  _smsSheetOpen=true;
  final pasted=TextEditingController(text:initialText??'');
@@ -4140,6 +4147,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
  }
 
  Future<void> scanAndAddReceipt()async {
+  // First-use consent and progress are shared with SMS and Tools.
+  // OCR continues normally even when the optional model is declined.
+  if(!WaffraOnDeviceQwen.shared.isReady){
+   await WaffraAiModelGate.ensureReady(context,english:waffraIsEnglish);
+   if(!mounted)return;
+  }
   // Ask only for the exact camera/gallery access the user selected.
   final source=await showWaffraDialog<ImageSource>(context:context,builder:(dialog)=>AlertDialog(
    title:WaffraText(waffraIsEnglish?'Add from receipt or image':'إضافة عملية من فاتورة أو صورة'),
