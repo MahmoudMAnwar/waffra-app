@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'waffra_bank_screenshot_parser.dart';
 
 typedef WaffraAiTextInference = Future<String> Function(String prompt);
 enum WaffraAiSource { bankSms, imageOcr }
@@ -192,6 +193,16 @@ UNTRUSTED TEXT END''';
             :kind==WaffraAiDirection.unknown?'direction_unknown'
             :'manual_confirmation_required',
         ));
+      }
+      // A small model can split "شراء POS" into multiple invented rows.
+      // Do not present more Qwen rows than independently anchored OCR bank
+      // actions. Abstain and let the guarded deterministic review take over.
+      if(origin==WaffraAiSource.imageOcr&&
+         WaffraBankScreenshotParser.looksLikeBankScreenshot(raw)){
+        final grounded=WaffraBankScreenshotParser.reviewItems(raw);
+        if(grounded.isNotEmpty&&grounded.length!=result.length){
+          throw const FormatException('ai_ocr_action_count_mismatch');
+        }
       }
       return WaffraAiResult(origin,
         List<WaffraAiTransaction>.unmodifiable(result),null);
