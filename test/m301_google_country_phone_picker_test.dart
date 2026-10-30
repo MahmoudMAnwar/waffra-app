@@ -129,7 +129,7 @@ void main(){
   expect(find.text('+966'),findsOneWidget);
   await tester.tap(find.byKey(const Key('waffra-google-phone-country-picker')));
   await tester.pumpAndSettle();
-  await tester.enterText(find.byKey(const Key('waffra-google-country-search')),'Jordan');
+  await tester.enterText(find.byKey(const Key('waffra-google-country-search')),'الاردن');
   await tester.pumpAndSettle();
   expect(find.text('🇯🇴'),findsOneWidget);
   await tester.tap(find.byKey(const Key('waffra-phone-country-JO')));
