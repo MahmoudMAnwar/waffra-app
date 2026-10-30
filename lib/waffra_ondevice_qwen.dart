@@ -214,7 +214,7 @@ class WaffraOnDeviceQwen {
         // requests short task JSON instead of thousands of reasoning tokens.
         await for(final chunk in engine.create([
           LlamaChatMessage.fromText(role:LlamaChatRole.user,
-            text:prompt+'\\n/no_think'),
+            text:prompt+'\n/no_think'),
         ],params:const GenerationParams(maxTokens:768))){
           if(_generationCancelled)throw StateError('ai_generation_cancelled');
           final next=chunk.choices.first.delta.content;
