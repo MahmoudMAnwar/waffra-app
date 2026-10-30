@@ -4478,6 +4478,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
         income,selectedParentId,category))return;
        if(sms){
         if(message.text.trim().isEmpty)return;
+        // A manually typed number is not verified foreign-exchange evidence.
+        // Prevent any foreign/unknown SMS from entering the SAR-only ledger.
+        if(WaffraSmsCurrencies.requiresReviewForSarLedger(message.text)){
+         if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
+          'Foreign or unknown bank currency. Nothing was saved as SAR. A verified FX review is required.':
+          'عملة الرسالة أجنبية أو غير مؤكدة. لم يتم الحفظ بالريال؛ يلزم تحويل موثّق ومراجعة قبل تسجيل العملية.');
+         return;
+        }
         final h=sha256.convert(utf8.encode(digits(message.text).replaceAll(RegExp(r'\s+'),' ').trim().toLowerCase())).toString();
         if(smsHashes.contains(h)){
          final proceed=await showWaffraDialog<bool>(context:sheetContext,builder:(dialogContext)=>AlertDialog(
