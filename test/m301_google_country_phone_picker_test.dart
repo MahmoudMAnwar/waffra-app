@@ -28,6 +28,26 @@ void main(){
   expect(WaffraDisplayCurrency.country.code,previous);
  });
 
+ test('M318 national trunk prefixes do not corrupt E.164 country codes',(){
+  final jordan=WaffraInternationalPhone.byIso('JO');
+  final british=WaffraInternationalPhone.byIso('GB');
+  final italy=WaffraInternationalPhone.byIso('IT');
+  final philippines=WaffraInternationalPhone.byIso('PH');
+  expect(WaffraInternationalPhone.e164(jordan,'0791234567'),
+    '+962791234567');
+  expect(WaffraInternationalPhone.e164(jordan,'791234567'),
+    '+962791234567');
+  expect(WaffraInternationalPhone.e164(british,'07123456789'),
+    '+447123456789');
+  expect(WaffraInternationalPhone.e164(italy,'0212345678'),
+    '+390212345678',
+    reason:'Italian fixed line zero is part of the international number');
+  expect(WaffraInternationalPhone.e164(philippines,'09171234567'),
+    '+639171234567');
+  expect(WaffraInternationalPhone.e164(jordan,'00962791234567'),
+    isNull,reason:'Do not accept 00 international dialing as local');
+ });
+
  test('M301 Saudi/Egypt/Jordan dialing codes are independent of currency',(){
   final sa=WaffraInternationalPhone.byIso('SA');
   final eg=WaffraInternationalPhone.byIso('EG');
