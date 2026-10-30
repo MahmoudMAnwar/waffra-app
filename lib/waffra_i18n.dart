@@ -7,6 +7,18 @@ final ValueNotifier<String> waffraLanguage = ValueNotifier<String>('ar');
 bool get waffraIsEnglish => waffraLanguage.value == 'en';
 
 const Map<String,String> _english = {
+ 'إلغاء': 'Cancel',
+ 'تأكيد': 'Confirm',
+ 'حسنًا': 'OK',
+ 'تأكيد الحذف': 'Confirm delete',
+ 'حذف': 'Delete',
+ 'إعادة المحاولة': 'Retry',
+ 'نسخ تفاصيل الخطأ': 'Copy error details',
+ 'تنبيه': 'Notice',
+ 'تحذير': 'Warning',
+ 'هل أنت متأكد؟': 'Are you sure?',
+ 'الرجوع': 'Back',
+ 'الخروج': 'Exit',
  'بدون ميزانية محددة': 'No budget set',
  'الميزانية': 'Budget',
  'تمت الإضافة بنجاح': 'Added successfully',
@@ -223,7 +235,6 @@ const Map<String,String> _english = {
  'المتابعة باستخدام Google': 'Continue with Google',
  'المتابعة باستخدام Apple': 'Continue with Apple',
  'البصمة غير متاحة': 'Fingerprint unavailable',
- 'حسنًا': 'OK',
  'الدخول برمز PIN': 'Unlock with PIN',
  'إدخال رمز PIN': 'Enter PIN',
  'فتح التطبيق': 'Unlock app',
