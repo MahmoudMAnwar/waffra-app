@@ -15,6 +15,33 @@ void main() {
     expect('static String? originalAmountPreview'.allMatches(source).length, 1);
   });
 
+  test('M316 banking labels and uppercase English never become currencies', () {
+    for (final source in <String>[
+      'AMT 100.00 SAR',
+      'SAR 100.00 WAS DEBITED',
+      'TXN 00546 debit SAR 50.50',
+      'Amount SAR 75.00 VIA BANK',
+      'Amount SAR 20.00 NET PAID',
+    ]) {
+      expect(WaffraSmsCurrencies.currenciesForMessage(source), {'SAR'},
+          reason: source);
+      expect(WaffraSmsCurrencies.requiresReviewForSarLedger(source), isFalse,
+          reason: source);
+    }
+    for (final pair in <String,String>{
+      'TRY':'Payment TRY 100.00',
+      'MAD':'Payment MAD 50.00',
+      'IDR':'Incoming IDR 5000',
+      'USD':'Amount USD 50.00 VIA BANK',
+    }.entries) {
+      expect(WaffraSmsCurrencies.currenciesForMessage(pair.value),
+          {pair.key}, reason: pair.value);
+    }
+    expect(WaffraSmsCurrencies.currenciesForMessage(
+      'AMT 100.00 MXN'), {'UNKNOWN'},
+        reason: 'Filtering bank labels must not hide unsupported FX');
+  });
+
   test('M300 all 36 display currencies have matching SMS coverage', () {
     final display=waffraCountryCurrencies.map((item)=>item.code).toSet();
     expect(display.length, 36);
