@@ -4334,29 +4334,32 @@ Future<void> bulkSmsSheet({String? initialText})async {
       ],
       if(sms&&suggestion!=null)TextButton.icon(onPressed:WaffraHaptics.tap(()async {
        final c=await categoryDialog(income:income,suggested:suggestion);
-       if(c!=null&&mounted){
-        if(!categories.any((x)=>x.name==c.name&&x.income==c.income)){
-         setState(()=>categories.add(c));
-  try{
-   await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
-  }catch(error){
-   debugPrint('Category creation not committed by verified finance source: $error');
-   if(mounted)await _loadFinanceSafely();
-   if(mounted)snack(context,waffraIsEnglish?
-    'Category was not saved. Financial records were reloaded safely.':
-    'لم يتم حفظ القسم. أعدنا تحميل البيانات المالية بشكل آمن.');
-  }
+       if(c!=null&&mounted&&sheetContext.mounted){
+        if(WaffraValidators.uniqueCategory(c.name,
+         categories.where((x)=>x.income==c.income).map((x)=>x.name))=='duplicate'){
+         snack(sheetContext,waffraIsEnglish?'Category already exists':'القسم موجود بالفعل');
+         return;
         }
-        update((){category=c.name;suggestion=null;});
+        setState(()=>categories.add(c));
+        if(!await _persistModuleOrReload(
+         WaffraFinanceRoute.categoryCreateEditDeleteRestore,
+         operation:'bank-category-suggestion'))return;
+        if(sheetContext.mounted)update((){category=c.name;suggestion=null;});
        }
       }),icon:const Icon(Icons.add),label:WaffraText('إضافة قسم $suggestion')),
       if(sms)OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async {
        final c=await categoryDialog(income:income);
-       if(c!=null&&mounted){
-        if(!categories.any((x)=>x.name==c.name&&x.income==c.income)){
-         setState(()=>categories.add(c));await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
+       if(c!=null&&mounted&&sheetContext.mounted){
+        if(WaffraValidators.uniqueCategory(c.name,
+         categories.where((x)=>x.income==c.income).map((x)=>x.name))=='duplicate'){
+         snack(sheetContext,waffraIsEnglish?'Category already exists':'القسم موجود بالفعل');
+         return;
         }
-        update(()=>category=c.name);
+        setState(()=>categories.add(c));
+        if(!await _persistModuleOrReload(
+         WaffraFinanceRoute.categoryCreateEditDeleteRestore,
+         operation:'bank-new-category'))return;
+        if(sheetContext.mounted)update(()=>category=c.name);
        }
       }),icon:const Icon(Icons.add),label:const WaffraText('قسم جديد'))
       else if(selectedMain.isNotEmpty)LayoutBuilder(builder:(ctx,box){
@@ -4366,12 +4369,18 @@ Future<void> bulkSmsSheet({String? initialText})async {
           final mainId=selectedMain.first.id;
           final c=await categoryDialog(income:income,parentId:mainId);
           if(c!=null&&mounted&&sheetContext.mounted){
-           if(!categories.any((x)=>x.name==c.name&&x.income==c.income)){
-            setState(()=>categories.add(c));
-            await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
+           if(WaffraValidators.uniqueCategory(c.name,
+            categories.where((x)=>x.income==c.income).map((x)=>x.name))=='duplicate'){
+            snack(sheetContext,waffraIsEnglish?'Category already exists':'القسم موجود بالفعل');
+            return;
            }
+           setState(()=>categories.add(c));
+           if(!await _persistModuleOrReload(
+            WaffraFinanceRoute.categoryCreateEditDeleteRestore,
+            operation:'manual-new-subcategory'))return;
            if(sheetContext.mounted)update(()=>category=c.name);
           }
+
          }),icon:const Icon(Icons.add,size:19),
          label:WaffraText(waffraIsEnglish?'New subcategory':'قسم فرعي جديد',maxLines:1));
         final stacked=box.maxWidth<360||
