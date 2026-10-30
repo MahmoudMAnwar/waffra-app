@@ -28,6 +28,8 @@ class WaffraOnDeviceQwen {
   static final WaffraOnDeviceQwen shared=WaffraOnDeviceQwen();
   LlamaEngine? _engine;
   bool _opening=false;
+  int _session=0;
+  http.Client? _activeDownload;
 
   bool get isReady=>_engine!=null;
 
@@ -60,15 +62,18 @@ class WaffraOnDeviceQwen {
     if(_engine!=null)return;
     if(_opening)throw StateError('model_initialization_in_progress');
     _opening=true;
+    final session=_session;
     try{
       final file=await _modelFile();
       if(!await _verified(file)){
         if(!allowDownload)throw StateError('local_model_not_installed');
         await _downloadVerified(file,progress);
       }
+      if(session!=_session)throw StateError('account_session_changed');
       final instance=LlamaEngine(LlamaBackend());
       try{
         await instance.loadModelSource(ModelSource.path(file.path));
+        if(session!=_session)throw StateError('account_session_changed');
         _engine=instance;
       }catch(_){
         await instance.dispose();
@@ -83,6 +88,7 @@ class WaffraOnDeviceQwen {
       void Function(int,int?)? progress)async{
     final part=File(destination.path+'.part');
     final client=http.Client();
+    _activeDownload=client;
     try{
       if(await part.exists())await part.delete();
       final request=http.Request('GET',Uri.parse(WaffraAiModelManifest.url));
@@ -113,6 +119,7 @@ class WaffraOnDeviceQwen {
       await part.rename(destination.path);
     }finally{
       client.close();
+      if(identical(_activeDownload,client))_activeDownload=null;
       if(await part.exists())await part.delete();
     }
   }
@@ -138,6 +145,10 @@ class WaffraOnDeviceQwen {
   }
 
   Future<void> dispose()async{
+    // Logout revokes any in-flight model download/load from the old session.
+    _session++;
+    _activeDownload?.close();
+    _activeDownload=null;
     final engine=_engine;
     _engine=null;
     if(engine!=null)await engine.dispose();
