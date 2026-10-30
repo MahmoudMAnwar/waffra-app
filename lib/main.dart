@@ -3993,7 +3993,7 @@ Future<bool> _requireBankSmsAi()=>
            WaffraSmsCurrencies.originalAmountPreview(messages.first)!,
            style:const TextStyle(fontWeight:FontWeight.w700)),
          WaffraText(waffraIsEnglish?
-          'لا تحفظ العملات الأجنبية كريال قبل التحقق من سعر الصرف؛ الرصيد ليس معاملة.':
+          'Foreign currency needs verified conversion before saving as SAR. Balance is not a transaction.':
           'المبلغ الأجنبي لا يُحفظ كريال. راجع القيمة الأصلية وسعر الصرف أولاً؛ الرصيد ليس معاملة.'),
         ])),
       ],
@@ -4391,7 +4391,7 @@ Future<bool> _requireBankSmsAi()=>
      content:SizedBox(width:420,child:SingleChildScrollView(child:Column(
       mainAxisSize:MainAxisSize.min,children:[
        WaffraText(waffraIsEnglish?
-        'راجع العمليات المحددة بنفس ترتيب الصورة. أدخل المبالغ غير الواضحة يدويًا؛ لا حفظ تلقائي.':
+        'Review selected entries in image order. Enter unclear amounts manually; nothing is saved automatically.':
         'راجع العمليات بالترتيب. أدخل المبالغ غير الواضحة يدويًا؛ لا حفظ تلقائي.'),
        for(var i=0;i<candidates.length;i++)
         CheckboxListTile(
