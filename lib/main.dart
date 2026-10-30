@@ -2673,6 +2673,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  int tab=0,year=DateTime.now().year,month=DateTime.now().month;
  bool goalsOpened=false;
  bool _smsSheetOpen=false;
+ bool _bankSmsAiOpening=false,_receiptOcrAiOpening=false;
  String? _lastWidgetRevision;
  // Exact last finance ledger string seen or committed, including null vs [].
  // Detect partial widget saves even if the last-save marker never committed.
@@ -3325,14 +3326,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),
      child:WaffraText(waffraIsEnglish?'Confirm delete':'تأكيد الحذف')),
    ]));
-Future<void> bulkSmsSheet({String? initialText})async {
-  // First opening the bank-SMS AI feature discloses the optional model.
-  // Refusal must not block deterministic bank message handling.
-  if(!WaffraOnDeviceQwen.shared.isReady){
-   await WaffraAiModelGate.ensureReady(context,english:waffraIsEnglish);
-   if(!mounted)return;
-  }
- if(_smsSheetOpen)return;
+Future<bool> _requireBankSmsAi()=>
+  WaffraAiModelGate.requireForFeature(context,
+   english:waffraIsEnglish,featureAr:'تحليل الرسائل البنكية',
+   featureEn:'bank message analysis');
+
+ Future<bool> _requireReceiptOcrAi()=>
+  WaffraAiModelGate.requireForFeature(context,
+   english:waffraIsEnglish,featureAr:'تصوير الفواتير واستخراج البيانات من الصور',
+   featureEn:'receipt and image OCR scanning');
+
+ Future<void> bulkSmsSheet({String? initialText})async {
+  // SMS parsing and review require on-device AI. Both Android share and
+  // the Add menu enter here; refusal always keeps the sheet closed.
+  if(_smsSheetOpen||_bankSmsAiOpening)return;
+  _bankSmsAiOpening=true;
+  bool allowed=false;
+  try{allowed=await _requireBankSmsAi();}
+  finally{_bankSmsAiOpening=false;}
+  if(!allowed||!mounted||_smsSheetOpen)return;
  _smsSheetOpen=true;
  final pasted=TextEditingController(text:initialText??'');
  final description=TextEditingController();
@@ -3383,6 +3395,13 @@ Future<void> bulkSmsSheet({String? initialText})async {
   });
  }
  Future<void> saveParsedMessages(BuildContext ctx,StateSetter update)async {
+  // If the model gets removed while this sheet is open, fail closed.
+  if(!WaffraOnDeviceQwen.shared.isReady){
+   update(()=>statusMessage=waffraIsEnglish
+    ?'Bank-message analysis requires the downloaded AI model. Close and reopen to install it.'
+    :'تحليل الرسائل البنكية يحتاج تنزيل نموذج الذكاء الاصطناعي. اقفل الميزة وافتحها لتنزيله.');
+   return;
+  }
   if(busy)return;
   final found=splitBankMessages(pasted.text.trim());
   if(found.isEmpty){update(()=>statusMessage=waffraIsEnglish?'No financial transactions found. Edit the message and retry.':'هذه الرسالة لا تحتوي على أي معاملات مالية. عدّلها لإعادة التحليل تلقائيًا.');return;}
@@ -4147,12 +4166,13 @@ Future<void> bulkSmsSheet({String? initialText})async {
  }
 
  Future<void> scanAndAddReceipt()async {
-  // First-use consent and progress are shared with SMS and Tools.
-  // OCR continues normally even when the optional model is declined.
-  if(!WaffraOnDeviceQwen.shared.isReady){
-   await WaffraAiModelGate.ensureReady(context,english:waffraIsEnglish);
-   if(!mounted)return;
-  }
+  // Restrict OCR before any camera/gallery permission or image processing.
+  if(_receiptOcrAiOpening)return;
+  _receiptOcrAiOpening=true;
+  bool allowed=false;
+  try{allowed=await _requireReceiptOcrAi();}
+  finally{_receiptOcrAiOpening=false;}
+  if(!allowed||!mounted)return;
   // Ask only for the exact camera/gallery access the user selected.
   final source=await showWaffraDialog<ImageSource>(context:context,builder:(dialog)=>AlertDialog(
    title:WaffraText(waffraIsEnglish?'Add from receipt or image':'إضافة عملية من فاتورة أو صورة'),
@@ -4174,7 +4194,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
    if(picked==null||!mounted)return;
    final extracted=await WaffraReceiptOcr.scan(picked.path);
    if(!mounted)return;
-   // Optional on-device Qwen analyzes OCR text; no photo is uploaded.
+   // The on-device AI model is mandatory. Continue safeguarding currency
+   // and amount reviews, never uploading the user image.
+   if(!WaffraOnDeviceQwen.shared.isReady){
+    if(mounted)snack(context,waffraIsEnglish?
+     'OCR requires an active AI model. Reopen the scanner to download it.':
+     'استخراج بيانات الصور يحتاج نموذج ذكاء اصطناعي فعّال. افتح الماسح لتنزيله.');
+    return;
+   }
    if(await _reviewAiScannedTransactions(extracted.rawText,picked))return;
    if(!mounted)return;
    final candidates=WaffraBankScreenshotParser.candidates(extracted.rawText);
@@ -4244,6 +4271,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
 
  Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,
   WaffraReceiptOcrFields? scannedReceipt,XFile? scannedImage,bool? scannedIncome})async {
+  // Manual entries and edits stay available; new SMS and OCR routes are gated.
+  if(initial==null&&(sms||scannedReceipt!=null||scannedImage!=null)){
+   final allowed=await (sms?_requireBankSmsAi():_requireReceiptOcrAi());
+   if(!allowed||!mounted)return;
+  }
   final title=TextEditingController(text:initial?.title??scannedReceipt?.merchant??'');
   final notes=TextEditingController(text:initial?.notes??'');
   final value=TextEditingController(text:initial!=null?formatWaffraEditAmount(initial.amount):
