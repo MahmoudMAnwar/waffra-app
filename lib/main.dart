@@ -4298,11 +4298,33 @@ Future<bool> _requireBankSmsAi()=>
  Future<bool> _reviewAiScannedTransactions(
      String sourceText,XFile image)async{
   if(!WaffraOnDeviceQwen.shared.isReady)return false;
-  final result=await _withAiWorkProgress(
-   'جاري تحليل بيانات الصورة بالذكاء الاصطناعي…',
-   'Analyzing image text with on-device AI…',
-   ()=>WaffraAiFinanceBrain.imageOcr(sourceText,
-    generate:WaffraOnDeviceQwen.shared.textGenerator));
+  // Cancellation or native timeout must return to the guarded OCR review
+  // path rather than escaping as an unhandled async error.
+  WaffraAiResult result;
+  try{
+   result=await _withAiWorkProgress(
+    'جاري تحليل بيانات الصورة بالذكاء الاصطناعي…',
+    'Analyzing image text with on-device AI…',
+    ()=>WaffraAiFinanceBrain.imageOcr(sourceText,
+     generate:WaffraOnDeviceQwen.shared.textGenerator));
+  }on TimeoutException{
+   if(mounted)snack(context,waffraIsEnglish?
+    'AI timed out. Review the extracted image transactions manually.':
+    'انتهت مهلة تحليل الصورة. راجع العمليات المستخرجة يدويًا.');
+   return false;
+  }on StateError catch(error){
+   if(error.message!='ai_analysis_cancelled'&&mounted){
+    snack(context,waffraIsEnglish?
+     'AI analysis was interrupted. Review the extracted transactions.':
+     'توقف تحليل الذكاء. راجع العمليات المستخرجة.');
+   }
+   return false;
+  }catch(_){
+   if(mounted)snack(context,waffraIsEnglish?
+    'AI analysis unavailable. Review the extracted transactions.':
+    'تعذر تحليل الصورة بالذكاء. راجع العمليات المستخرجة.');
+   return false;
+  }
   if(!mounted)return false;
   if(result.error!=null||result.count==0){
    snack(context,waffraIsEnglish?
