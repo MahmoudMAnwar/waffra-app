@@ -36,6 +36,8 @@ import 'package:crypto/crypto.dart';
 import 'waffra_biometrics.dart';
 import 'waffra_amount_formatter.dart';
 import 'waffra_display_currency.dart';
+import 'waffra_phone_country_codes.dart';
+import 'waffra_google_phone_field.dart';
 import 'waffra_country_first_run_page.dart';
 import 'waffra_search.dart';
 import 'waffra_balance_art.dart';
@@ -1846,11 +1848,14 @@ class _ProfileFormState extends State<ProfileForm> {
   return OutlineInputBorder(borderSide:BorderSide(color:c,width:focused?2:1.4));
  }
  late String gender,avatar;late DateTime birthday;bool busy=false;
+  late WaffraPhoneCountry phoneCountry;
  @override void initState(){super.initState();
   name=TextEditingController(text:widget.initial?.name??'');
   email=TextEditingController(text:widget.initial?.email??'');
   confirmEmail=TextEditingController();
-  phone=TextEditingController(text:widget.initial?.phone??'');
+  final phoneSeed=WaffraInternationalPhone.fromStored(widget.initial?.phone);
+   phoneCountry=phoneSeed.country;
+   phone=TextEditingController(text:widget.provider=='Google'?phoneSeed.local:widget.initial?.phone??'');
   password=TextEditingController();confirmPassword=TextEditingController();
   gender=widget.initial==null?'':(['ذكر','أنثى'].contains(widget.initial?.gender)?widget.initial!.gender:'');avatar=widget.initial?.avatar??'person';
   birthday=widget.initial?.birthday??DateTime(2000);
@@ -1912,8 +1917,8 @@ class _ProfileFormState extends State<ProfileForm> {
   setState(()=>profileAttempted=true);
   if(gender.isEmpty)return;
   if(waffraTextFieldError(name.text)!=null||
-   (widget.provider=='Google'?waffraGoogleProfilePhoneError(phone.text):
-    waffraMobileFieldError(phone.text))!=null)return;
+   (widget.provider=='Google'?WaffraInternationalPhone.error(phoneCountry,phone.text,
+      english:waffraIsEnglish):waffraMobileFieldError(phone.text))!=null)return;
   if(widget.initial==null&&(
    waffraPasswordFieldError(password.text)!=null||
    waffraConfirmPasswordFieldError(confirmPassword.text,password.text)!=null))return;
@@ -1927,7 +1932,8 @@ class _ProfileFormState extends State<ProfileForm> {
     await p.setString('waffra_local_password_hash',sha256.convert(utf8.encode('$saltHex:${password.text}')).toString());
    }
    await widget.onSave(Person(name:name.text.trim(),email:widget.initial?.email??'',
-    phone:phone.text.trim(),provider:widget.provider,gender:gender,avatar:avatar,birthday:birthday));
+    phone:widget.provider=='Google'?WaffraInternationalPhone.e164(phoneCountry,phone.text)!:phone.text.trim(),
+     provider:widget.provider,gender:gender,avatar:avatar,birthday:birthday));
    if(!mounted)return;
    if(widget.initial!=null&&Navigator.of(context).canPop())Navigator.pop(context);
   }catch(e){if(mounted)snack(context,'تعذر حفظ البيانات: $e');}
@@ -1960,20 +1966,21 @@ class _ProfileFormState extends State<ProfileForm> {
       filled:true,fillColor:Colors.grey.withValues(alpha:0.15),border:const OutlineInputBorder())),
     const SizedBox(height:12),
    ],
-   TextField(controller:phone,keyboardType:TextInputType.phone,
+   if(widget.provider=='Google')
+    WaffraGooglePhoneField(
+     controller:phone,country:phoneCountry,english:waffraIsEnglish,
+     onCountryChanged:(chosen)=>setState(()=>phoneCountry=chosen),
+     onChanged:(_)=>setState((){}),
+     errorText:profileAttempted?WaffraInternationalPhone.error(
+      phoneCountry,phone.text,english:waffraIsEnglish):null)
+   else TextField(controller:phone,keyboardType:TextInputType.phone,
     onChanged:(_)=>setState((){}),
-    inputFormatters:widget.provider=='Google'?
-     [FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
-      LengthLimitingTextInputFormatter(16)]:
-     [FilteringTextInputFormatter.digitsOnly,LengthLimitingTextInputFormatter(10)],
+    inputFormatters:[FilteringTextInputFormatter.digitsOnly,
+     LengthLimitingTextInputFormatter(10)],
     decoration:InputDecoration(
-     labelText:widget.provider=='Google'?
-      (waffraIsEnglish?'Mobile with country code *':'الجوال مع مفتاح الدولة *'):
-      (waffraIsEnglish?'Mobile number starting with 05 *':'رقم الجوال يبدأ بـ 05 *'),
-     hintText:widget.provider=='Google'?'+201234567890':'05XXXXXXXX',
-     errorText:profileAttempted?
-      (widget.provider=='Google'?waffraGoogleProfilePhoneError(phone.text):
-       waffraMobileFieldError(phone.text)):null,
+     labelText:waffraIsEnglish?'Mobile number starting with 05 *':'رقم الجوال يبدأ بـ 05 *',
+     hintText:'05XXXXXXXX',
+     errorText:profileAttempted?waffraMobileFieldError(phone.text):null,
      border:const OutlineInputBorder())),
    if(widget.initial==null) ...[
     const SizedBox(height:12),
