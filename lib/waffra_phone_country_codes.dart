@@ -97,9 +97,19 @@ abstract final class WaffraInternationalPhone {
   static String? e164(WaffraPhoneCountry country, String local) {
     var digits = local.trim().replaceAll(RegExp(r'[\s()\-]'), '');
     if (!RegExp(r'^[0-9]+$').hasMatch(digits)) return null;
-    // The SA/EG national trunk zero must not be written into +966 / +20.
-    if (const {'SA','EG'}.contains(country.iso) &&
-        digits.startsWith('0')) digits = digits.substring(1);
+    // This field accepts a NATIONAL number, not 00 international prefix.
+    // Remove the domestic trunk 0 only for countries where it is not part
+    // of the E.164 subscriber number (e.g. +962 79..., not +962 079...).
+    // Italy is intentionally excluded: fixed-line 0 remains significant.
+    if (digits.startsWith('00')) return null;
+    const nationalTrunkZero = <String>{
+      'SA','EG','AE','JO','LB','MA','DZ','TN','GB','FR','DE','ES',
+      'NL','TR','IN','PK','BD','JP','CN','AU','CH','SE','NO',
+      'DK','ZA','MY','ID','KR','TH',
+    };
+    if (nationalTrunkZero.contains(country.iso) && digits.startsWith('0')) {
+      digits = digits.substring(1);
+    }
     if (country.iso == 'SA' && !RegExp(r'^5[0-9]{8}$').hasMatch(digits)) {
       return null;
     }
