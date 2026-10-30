@@ -45,7 +45,7 @@ abstract final class WaffraAiRecordedAnswers {
     final today=now??DateTime.now();
     DateTime? from,to;
     var scope=english?'all recorded transactions':'كل المعاملات المسجلة';
-    final monthMatch=RegExp(r'([0-9٠-٩]{1,2})\s*(?:شهر|شهور|اشهر|months?)')
+    final monthMatch=RegExp(r'([0-9٠-٩]{1,3})\s*(?:شهر|شهور|اشهر|months?)')
         .firstMatch(q);
     int? months;
     if(monthMatch!=null){
@@ -55,7 +55,12 @@ abstract final class WaffraAiRecordedAnswers {
         return i<0?x:i.toString();
       }).join());
     }
-    if(months!=null&&months>=1&&months<=12){
+    // A named period must never silently become "all transactions".
+    if(months!=null&&(months<1||months>120)){
+      return english?'Choose a period of 1 to 120 months.':
+        'حدد فترة من شهر إلى 120 شهر.';
+    }
+    if(months!=null&&months>=1&&months<=120){
       from=DateTime(today.year,today.month-months+1,1);
       to=DateTime(today.year,today.month+1,1);
       scope=english?'last '+months.toString()+' months':
@@ -64,10 +69,20 @@ abstract final class WaffraAiRecordedAnswers {
       from=DateTime(today.year,today.month-1,1);
       to=DateTime(today.year,today.month,1);
       scope=english?'last month':'الشهر الماضي';
+    }else if(_has(q,r'امس|مبارح|yesterday')){
+      from=DateTime(today.year,today.month,today.day-1);
+      to=DateTime(today.year,today.month,today.day);
+      scope=english?'yesterday':'أمس';
     }else if(_has(q,r'النهارده|اليوم|today\b')){
       from=DateTime(today.year,today.month,today.day);
       to=DateTime(today.year,today.month,today.day+1);
       scope=english?'today':'اليوم';
+    }else if(_has(q,r'الاسبوع اللي فات|الاسبوع الماضي|last week')){
+      final weekStart=DateTime(today.year,today.month,today.day)
+          .subtract(Duration(days:today.weekday-1));
+      from=weekStart.subtract(const Duration(days:7));
+      to=weekStart;
+      scope=english?'last calendar week':'الأسبوع الماضي';
     }else if(_has(q,r'الاسبوع|اسبوع|week\b')){
       from=DateTime(today.year,today.month,today.day-6);
       to=DateTime(today.year,today.month,today.day+1);
@@ -76,6 +91,10 @@ abstract final class WaffraAiRecordedAnswers {
       from=DateTime(today.year,today.month,1);
       to=DateTime(today.year,today.month+1,1);
       scope=english?'this month':'الشهر الحالي';
+    }else if(_has(q,r'السنه الماضيه|السنه اللي فاتت|last year')){
+      from=DateTime(today.year-1,1,1);
+      to=DateTime(today.year,1,1);
+      scope=english?'last year':'السنة الماضية';
     }else if(_has(q,r'السنه|السنة|this year|current year')){
       from=DateTime(today.year,1,1);
       to=DateTime(today.year+1,1,1);
