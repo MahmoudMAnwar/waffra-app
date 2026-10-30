@@ -58,6 +58,18 @@ void main() {
         'Transfer received JOD 1,234 Balance 201.632JOD'),
         isNull, reason:'single 3-digit comma is ambiguous');
     expect(WaffraSmsCurrencies.originalAmountPreview(
+        'Transfer received JPY 1,234 Balance 50,000 JPY'),
+        '1234 JPY',reason:'JPY has no fractional units');
+    expect(WaffraSmsCurrencies.originalAmountPreview(
+        'Transfer received KRW1,234 Balance 50,000KRW'),
+        '1234 KRW',reason:'KRW grouped thousands are unambiguous');
+    expect(WaffraSmsCurrencies.originalAmountPreview(
+        'Transfer received JOD 1,234 Balance 500 JOD'),isNull,
+        reason:'3-decimal currency comma remains ambiguous');
+    expect(WaffraSmsCurrencies.originalAmountPreview(
+        'Transfer received USD 1,234 Balance 500 USD'),isNull,
+        reason:'2-decimal currency comma stays conservative');
+    expect(WaffraSmsCurrencies.originalAmountPreview(
         'Transfer received JPY 198.50 Balance 200 JPY'),isNull);
     expect(WaffraSmsCurrencies.originalAmountPreview(
         'Transfer received EUR 19.500 Balance 200 EUR'),isNull);
