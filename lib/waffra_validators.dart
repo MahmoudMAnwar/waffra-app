@@ -26,9 +26,33 @@ class WaffraValidators {
     return RegExp(r'^05[0-9]{8}$').hasMatch((raw??'').trim())?null:'invalid_mobile';
   }
 
+  /// Support required days entered with Arabic or Persian digits.
   static String? dayOfMonth(String? raw) {
-    final day=int.tryParse((raw??'').trim());
+    const arabic='٠١٢٣٤٥٦٧٨٩';
+    const persian='۰۱۲۳۴۵۶۷۸۹';
+    final value=(raw??'').trim().replaceAllMapped(RegExp(r'[٠-٩۰-۹]'),(m){
+      final digit=m.group(0)!;
+      final ar=arabic.indexOf(digit);
+      return (ar>=0?ar:persian.indexOf(digit)).toString();
+    });
+    if(!RegExp(r'^[0-9]{1,2}
+
+  static String? uniqueCategory(String? value, Iterable<String> existing) {
+    final text=waffraSearchKey(value??'');
+    if(text.isEmpty)return 'required';
+    return existing.any((v)=>waffraSearchKey(v)==text)?'duplicate':null;
+  }
+}
+).hasMatch(value))return 'invalid_day';
+    final day=int.tryParse(value);
     return day==null || day<1 || day>31?'invalid_day':null;
+  }
+
+  /// Validate category membership in the active income/expense direction.
+  static String? requiredCategory(String? selected,Iterable<String> validNames) {
+    final category=(selected??'').trim();
+    if(category.isEmpty||!validNames.any((name)=>name==category))return 'required';
+    return null;
   }
 
   static String? uniqueCategory(String? value, Iterable<String> existing) {
