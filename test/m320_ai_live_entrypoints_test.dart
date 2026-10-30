@@ -21,18 +21,23 @@ void main(){
     expect(tools,contains('WaffraAiFinanceCoach.analysis('));
     expect(tools,contains('WaffraAiFinanceCoach.savingSuggestions('));
     expect(tools,contains('WaffraAiModelGate.ensureReady('));
-    expect(home,contains('WaffraAiModelGate.ensureReady('));
+    expect(home,contains('WaffraAiModelGate.requireForFeature('));
     expect(home,contains('await WaffraOnDeviceQwen.shared.dispose()'));
     expect(runner,contains('account_session_changed'));
     expect(runner,contains('_activeDownload?.close()'));
   });
 
-  test('M320 bank SMS and OCR remain unaffected when AI is not enabled',(){
+  test('M324 bank SMS and OCR require local model while manual finance stays available',(){
     final home=File('lib/main.dart').readAsStringSync();
     final tools=File('lib/waffra_smart_features.dart').readAsStringSync();
     expect(home,contains('if(!WaffraOnDeviceQwen.shared.isReady)return false;'));
     expect(home,contains('if(!WaffraOnDeviceQwen.shared.isReady||source.trim().isEmpty)return;'));
     expect(home,contains('final candidates=WaffraBankScreenshotParser.candidates(extracted.rawText);'));
+    expect(home,contains('try{allowed=await _requireBankSmsAi();}'));
+    expect(home,contains('try{allowed=await _requireReceiptOcrAi();}'));
+    expect(home,contains('if(!allowed||!mounted||_smsSheetOpen)return;'));
+    expect(home,contains('if(!allowed||!mounted)return;'));
+    expect(home,contains('if(initial==null&&(sms||scannedReceipt!=null||scannedImage!=null))'));
     expect(home,contains('if(statusMessage.isEmpty&&messages.isNotEmpty)saveParsedMessages(ctx,update);'));
     expect(tools,contains('if(q.isNotEmpty&&WaffraOnDeviceQwen.shared.isReady)'));
     expect(tools,contains("if(q.isEmpty){setState(()=>answer="));
