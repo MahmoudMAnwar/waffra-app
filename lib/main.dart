@@ -4550,10 +4550,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
       existingAmount:e.amount,existingIncome:e.income,
       existingDate:e.date))){
    final proceed=await showWaffraDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
-    title:const WaffraText('⚠️ عملية مكررة'),
-    content:WaffraText('يبدو إنك أضفت نفس ${result.income?'الدخل':'المصروف'} من قبل. ودّك تضيفه مرة ثانية؟'),
-    actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),child:const WaffraText('إلغاء')),
-     FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),child:const WaffraText('إضافة على أي حال'))]));
+    title:WaffraText(waffraIsEnglish?'⚠️ Possible duplicate':'⚠️ عملية مكررة'),
+    content:WaffraText(waffraIsEnglish?
+     'A similar ${result.income?'income':'expense'} was recorded on the same day for the same amount. Add it again?':
+     'يبدو إنك أضفت نفس ${result.income?'الدخل':'المصروف'} من قبل. ودّك تضيفه مرة ثانية؟'),
+    actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),
+     child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+     FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),
+      child:WaffraText(waffraIsEnglish?'Add anyway':'إضافة على أي حال'))]));
    if(proceed!=true||!mounted){
     // The duplicate was refused *before* any finance write. Remove only
     // image copies staged in this sheet; never the original user image.
