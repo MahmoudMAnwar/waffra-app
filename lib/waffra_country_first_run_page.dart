@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 
 import 'waffra_country_suggestion.dart';
 import 'waffra_display_currency.dart';
+import 'waffra_regional_copy.dart';
 
 /// Explicit first-run currency suggestion. No finance mutation or GPS storage.
 class WaffraCountryFirstRunPage extends StatefulWidget {
   const WaffraCountryFirstRunPage({
     super.key, required this.english, required this.onComplete,
-    this.detectCountry,
+    this.detectCountry,this.onCountryConfirmed,
   });
   final bool english;
+  final Future<void> Function(String?)? onCountryConfirmed;
   final Future<String?> Function()? detectCountry;
   final Future<void> Function(String currencyCode) onComplete;
   @override State<WaffraCountryFirstRunPage> createState() =>
@@ -20,13 +22,16 @@ class _WaffraCountryFirstRunPageState extends State<WaffraCountryFirstRunPage> {
   static const emerald = Color(0xFF087A54);
   late String currencyCode;
   bool detecting = false, submitting = false;
+  bool manuallySelected = false;
   String? detectedIso, message;
+  String selectedRegionIso='';
   bool isError = false;
   String t(String ar, String en) => widget.english ? en : ar;
 
   @override void initState() {
     super.initState();
     currencyCode = WaffraDisplayCurrency.country.code;
+    manuallySelected = WaffraDisplayCurrency.hasSavedPreference;
   }
 
   Future<void> detect() async {
@@ -42,9 +47,12 @@ class _WaffraCountryFirstRunPageState extends State<WaffraCountryFirstRunPage> {
     setState(() {
       detecting = false;
       detectedIso = iso;
+      selectedRegionIso=WaffraRegionalCopy.normalized(iso);
       if (suggested != null) {
-        currencyCode = suggested;
-        message = t(
+        if (!manuallySelected) currencyCode = suggested;
+        message = manuallySelected ? t(
+          'الموقع يقترح ${waffraCountry(suggested).label(false)}، لكن احتفظنا بعملتك التي اخترتها بنفسك.',
+          'Your location suggests ${waffraCountry(suggested).label(true)}, but your manual selection is preserved.') : t(
           'تم اقتراح ${waffraCountry(suggested).label(false)} حسب بلدك. راجع الاختيار قبل المتابعة.',
           'Suggested ${waffraCountry(suggested).label(true)} from your country. Review before continuing.');
       } else {
@@ -62,6 +70,11 @@ class _WaffraCountryFirstRunPageState extends State<WaffraCountryFirstRunPage> {
     try {
       // A location decline or Skip must never trigger any OS permission.
       // Notification permission is requested only in Recurring settings.
+      // Region controls only Arabic tone; currency controls only displayed
+      // denomination. Persist them independently and only on confirmation.
+      if(widget.onCountryConfirmed!=null){
+        await widget.onCountryConfirmed!(selectedRegionIso);
+      }
       await widget.onComplete(currencyCode);
     } catch (_) {
       if (mounted) setState(() {
@@ -104,6 +117,33 @@ class _WaffraCountryFirstRunPageState extends State<WaffraCountryFirstRunPage> {
               ? t('جارٍ تحديد البلد...', 'Detecting country...')
               : t('تحديد البلد بالموقع', 'Detect country using location')),
           ),
+          if (message != null) Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Text(message!,
+              key: const Key('m290-country-feedback'),
+              style: TextStyle(color: isError
+                ? Theme.of(context).colorScheme.error : emerald))),
+          const SizedBox(height: 15),
+          DropdownButtonFormField<String>(
+            key:const Key('waffra-region-dialect-country'),
+            value:selectedRegionIso,isExpanded:true,
+            decoration:InputDecoration(
+              labelText:t('بلدك (اللهجة العربية)','Country (Arabic wording)'),
+              prefixIcon:const Icon(Icons.translate),
+              border:const OutlineInputBorder()),
+            items:WaffraRegionalCopy.supportedRegions.entries.map((entry)=>
+              DropdownMenuItem<String>(value:entry.key,
+                child:Text(WaffraRegionalCopy.regionLabel(
+                  entry.key,english:widget.english)))).toList(),
+            onChanged:submitting?null:(value){
+              if(value!=null)setState(()=>selectedRegionIso=value);
+            },
+          ),
+          const SizedBox(height:8),
+          Text(t(
+            'بلدك يحدد لهجة الرسائل فقط، وما يغيّر لغة التطبيق أو العملة.',
+            'Country changes Arabic wording only, not your app language or currency.'),
+            style:Theme.of(context).textTheme.bodySmall),
           const SizedBox(height: 15),
           DropdownButtonFormField<String>(
             key: const Key('m290-currency-select'),
@@ -120,21 +160,16 @@ class _WaffraCountryFirstRunPageState extends State<WaffraCountryFirstRunPage> {
               )).toList(),
             onChanged: submitting ? null : (value) {
               if (value != null) setState(() {
-                currencyCode = value; message = null; isError = false;
+                currencyCode = value; manuallySelected = true;
+                message = null; isError = false;
               });
             },
           ),
           const SizedBox(height: 9),
           Text(t(
-            'عملة العرض لا تحوّل أرصدة المعاملات القديمة، والرسائل بعملات أخرى تحتاج مراجعة سعر الصرف.',
-            'Display currency does not convert historical transactions. Foreign-currency SMS needs exchange-rate review.'),
+            'الموقع يقترح عملة العرض فقط. اختيارك اليدوي له الأولوية، ولا يغيّر كود جوالك أو عملة رسائلك البنكية.',
+            'Location only suggests a display currency. Your manual choice always wins; phone codes and original bank-SMS currencies stay unchanged.'),
             style: Theme.of(context).textTheme.bodySmall),
-          if (message != null) Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: Text(message!,
-              key: const Key('m290-country-feedback'),
-              style: TextStyle(color: isError
-                ? Theme.of(context).colorScheme.error : emerald))),
           const SizedBox(height: 20),
           Card(child:ListTile(
             leading:const Icon(Icons.notifications_none,color:emerald),

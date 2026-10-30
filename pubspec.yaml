@@ -39,6 +39,8 @@ dependencies:
   firebase_crashlytics: ^5.4.0
   google_sign_in: ^7.0.0
   flutter_svg: ^2.0.10
+  # Opt-in local GGUF model; not loaded or downloaded at startup.
+  llamadart: 0.8.24
 
 dev_dependencies:
   integration_test:
@@ -51,6 +53,8 @@ hooks:
   user_defines:
     sqlite3:
       source: sqlite3mc
+    llamadart:
+      llamadart_native_runtimes: [llama_cpp]
 
 flutter:
   uses-material-design: true

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../waffra_recurring_policy.dart';
+import 'legacy_snapshot_preflight.dart';
 
 /// Computes the widget balance from an *independently source-verified*
 /// finance ledger. This class never reads SharedPreferences or a UI cache.
@@ -26,8 +27,11 @@ class WaffraAuthoritativeWidgetBalance {
         throw StateError('Widget balance transaction is malformed.');
       }
       final value = (record['amount'] as num).toDouble();
-      if (!value.isFinite || value < 0 || value > 1000000000000) {
-        throw StateError('Widget balance amount is outside the safe range.');
+      if (!value.isFinite || value < 0 || value > 1000000000000 ||
+          !WaffraLegacyPreflight.canRepresentHalalas(value)) {
+        // Never round invalid sub-halalah values into a seemingly valid
+        // displayed balance. Hide the widget until the source is reconciled.
+        throw StateError('Widget balance amount violates ledger precision.');
       }
       final halalas = WaffraRecurringPolicy.toHalalas(value);
       net += record['income'] == true ? halalas : -halalas;

@@ -7,8 +7,15 @@ on:
       - '.github/workflows/m290-country-reminders-multicurrency.yml'
       - 'lib/main.dart'
       - 'lib/waffra_country_first_run_page.dart'
+      - 'lib/waffra_google_phone_field.dart'
+      - 'lib/waffra_phone_country_codes.dart'
+      - 'test/m301_google_country_phone_picker_test.dart'
       - 'lib/waffra_country_suggestion.dart'
       - 'lib/waffra_sms_multicurrency_review.dart'
+      - 'lib/waffra_sms_fx_review.dart'
+      - 'lib/waffra_sms_intelligence.dart'
+      - 'test/m300_all_supported_currency_sms_matrix_test.dart'
+      - 'test/m300_jod_cliq_bank_sms_test.dart'
       - 'lib/waffra_reminders.dart'
       - 'pubspec.yaml'
       - 'scripts/qa/m290_configure_country_permissions.py'
@@ -49,16 +56,27 @@ jobs:
           flutter analyze --no-pub --no-fatal-warnings --no-fatal-infos \
             lib/main.dart \
             lib/waffra_country_first_run_page.dart \
+            lib/waffra_google_phone_field.dart \
+            lib/waffra_phone_country_codes.dart \
+            test/m301_google_country_phone_picker_test.dart \
             lib/waffra_country_suggestion.dart \
             lib/waffra_sms_multicurrency_review.dart \
+            lib/waffra_sms_fx_review.dart \
+            lib/waffra_sms_intelligence.dart \
+            test/m300_all_supported_currency_sms_matrix_test.dart \
+            test/m300_jod_cliq_bank_sms_test.dart \
             lib/waffra_reminders.dart \
             test/m290_google_country_reminders_test.dart \
+            test/m301_google_country_phone_picker_test.dart \
             test/m291_multicurrency_bank_sms_review_test.dart
       - name: Regression tests for country consent and SMS currency safety
         run: |
           flutter test --reporter expanded \
             test/m290_google_country_reminders_test.dart \
+            test/m301_google_country_phone_picker_test.dart \
             test/m291_multicurrency_bank_sms_review_test.dart \
+            test/m300_all_supported_currency_sms_matrix_test.dart \
+            test/m300_jod_cliq_bank_sms_test.dart \
             test/m280_sms_fuzz_and_boundary_test.dart \
             test/bank_sms_test.dart \
             test/m262_bank_sms_notes_separation_test.dart

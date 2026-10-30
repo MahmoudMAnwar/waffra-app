@@ -12,6 +12,14 @@ abstract final class WaffraSaudiGreetings {
   static const neutral = <String>[
     'يا مرحبا', 'حيّاك الله', 'أهلًا وسهلًا', 'مرحبا بك', 'يا مرحبتين',
   ];
+  static const egyptianGreetings = <String>[
+    'يا أهلاً', 'نورت وفرة', 'أهلاً وسهلاً',
+    'منوّر من تاني', 'أهلاً برجوعك',
+  ];
+  static const standardGreetings = <String>[
+    'مرحبًا بك', 'أهلًا وسهلًا', 'سعداء بعودتك',
+    'أهلًا من جديد', 'نتمنى لك يومًا سعيدًا',
+  ];
   static const englishGreetings = <String>[
     'Welcome back', 'Great to see you', 'A warm welcome',
     'Good to have you back', 'Hello again',
@@ -25,6 +33,7 @@ abstract final class WaffraSaudiGreetings {
     required String gender,
     required bool english,
     required int greetingIndex,
+    String countryIso='SA',
   }) {
     final cleanName = name.trim() == 'يا غالي' ? '' : name.trim();
     final slot = greetingIndex % neutral.length;
@@ -33,8 +42,10 @@ abstract final class WaffraSaudiGreetings {
       return cleanName.isEmpty ? '$welcome 👋' : '$welcome, $cleanName 👋';
     }
     final g = gender.trim().toLowerCase();
-    final greetings = g == 'أنثى' || g == 'female' ? feminine :
-      g == 'ذكر' || g == 'male' ? masculine : neutral;
+    final greetings = countryIso=='SA'
+      ?(g == 'أنثى' || g == 'female' ? feminine :
+        g == 'ذكر' || g == 'male' ? masculine : neutral)
+      :countryIso=='EG'?egyptianGreetings:standardGreetings;
     return cleanName.isEmpty
       ? '${greetings[slot]} 👋'
       : '${greetings[slot]} يا $cleanName 👋';

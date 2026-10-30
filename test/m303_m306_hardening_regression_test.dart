@@ -1,0 +1,197 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:waffra/storage/legacy_snapshot_preflight.dart';
+import 'package:waffra/storage/waffra_authoritative_widget_balance.dart';
+import 'package:waffra/waffra_receipt_filename.dart';
+import 'package:waffra/waffra_recurring_policy.dart';
+import 'package:waffra/waffra_secure_backup.dart';
+import 'package:waffra/waffra_sms_multicurrency_review.dart';
+
+/// M303-M306: focused protections of live routes plus synthetic acceptance
+/// fixtures. Source checks alone are NOT a physical-phone or runtime cutover
+/// certification; the existing M280 SQLCipher and M277 UI suites run in CI.
+void main() {
+  final mainSource = File('lib/main.dart').readAsStringSync();
+
+  String method(String opening, String endMarker) {
+    final start = mainSource.indexOf(opening);
+    final end = mainSource.indexOf(endMarker, start + opening.length);
+    expect(start, greaterThanOrEqualTo(0),
+        reason: 'Expected production route not found: $opening');
+    expect(end, greaterThan(start));
+    return mainSource.substring(start, end);
+  }
+
+  test('01 rapid manual confirmation is synchronously single-submit', () {
+    final route = method(
+      'Future<void> entrySheet(', 'Future<String?> chooseTransactionCategory(');
+    expect(route, contains('if(submitTapped)return'));
+    expect(route, contains('submitTapped=true'));
+    expect(route, contains('commitConfirmedSms('));
+  });
+
+  test('02 locked finance persistence stays source-authoritative', () {
+    final route = method('Future<void> persist(', 'Future<bool> _persistModuleOrReload(');
+    expect(route, contains('_financialWriteQueue.submit('));
+    expect(route, contains('_financeAuthority.saveCaptured('));
+    expect(route, contains('baseline:baseline'));
+  });
+
+  test('03 corrupted encrypted backup header is refused', () {
+    const invalid = '{"format":"waffra-secure-backup","version":2,'
+        '"kdf":"argon2id","cipher":"aes-256-gcm","salt":"",'
+        '"nonce":"","data":"AA==","mac":""}';
+    expect(WaffraSecureBackup.hasValidEncryptedHeader(invalid), isFalse);
+  });
+
+  test('04 account logout must not silently destroy a finance source', () {
+    final source = File('lib/storage/waffra_live_account_write_authority.dart')
+        .readAsStringSync();
+    final signOut = source.substring(source.indexOf('Future<void> signOut()'));
+    expect(signOut, contains("remove('waffra_profile')"));
+    expect(signOut, contains('waffra_signed_out_explicitly'));
+    expect(signOut, isNot(contains("remove('entries')")));
+    // Account A -> B isolation must still pass separate identity/device tests.
+  });
+
+  test('05 fractional halalah must not be rounded into widget balance', () {
+    String ledger(num amount) => jsonEncode([{
+      'id': 'synthetic-1', 'income': false, 'amount': amount,
+    }]);
+    expect(WaffraAuthoritativeWidgetBalance.netHalalas(ledger(1.25)), -125);
+    expect(() => WaffraAuthoritativeWidgetBalance.netHalalas(ledger(1.005)),
+        throwsStateError);
+    expect(() => WaffraAuthoritativeWidgetBalance.netHalalas(ledger(0.001)),
+        throwsStateError);
+  });
+
+  test('06 duplicate finance IDs refuse widget report as corrupted', () {
+    final raw = jsonEncode([
+      {'id': 'same', 'income': true, 'amount': 100.10},
+      {'id': 'same', 'income': false, 'amount': 20},
+    ]);
+    expect(() => WaffraAuthoritativeWidgetBalance.netHalalas(raw),
+        throwsStateError);
+  });
+
+  test('07 paid and postponed recurring writes reload on rejection', () {
+    final route = method('Future<void> applyRecurring(', 'double sum(');
+    expect(route, contains('userConfirmed:true'));
+    expect(route, contains('await _loadFinanceSafely()'));
+    expect(route, contains("operation:'recurring-postpone'"));
+    expect(WaffraRecurringPolicy.entryId('rent', DateTime(2026, 10, 31)),
+        WaffraRecurringPolicy.entryId('rent', DateTime(2026, 10, 1)));
+  });
+
+  test('08 receipt labels reject path traversal and control characters', () {
+    expect(WaffraReceiptFilename.validateLabel('rent/../receipt'), isNotNull);
+    expect(WaffraReceiptFilename.validateLabel('name\\receipt'), isNotNull);
+    expect(WaffraReceiptFilename.validateLabel('a\u0000b'), isNotNull);
+    expect(WaffraReceiptFilename.validateLabel('October rent'), isNull);
+  });
+
+  test('09 income minus expense is exact in widget and recurring policy', () {
+    final raw = jsonEncode([
+      {'id':'income','income':true,'amount':0.10},
+      {'id':'income2','income':true,'amount':0.20},
+      {'id':'expense','income':false,'amount':0.30},
+    ]);
+    expect(WaffraAuthoritativeWidgetBalance.netHalalas(raw), 0);
+    expect(WaffraRecurringPolicy.netHalalas([0.10, 0.20], [0.30]), 0);
+    expect(WaffraLegacyPreflight.canRepresentHalalas(0.001), isFalse);
+  });
+
+  test('10 rejected transaction delete, edit undo and budget save fail closed', () {
+    final deletion = method('Future<void> deleteEntry(', 'Widget stat(');
+    final budget = method('Future<void> editMonthlyBudget(', 'Future<void> editTransactionFilters(');
+    final editor = method('Future<void> entrySheet(', 'Future<String?> chooseTransactionCategory(');
+    expect(deletion, contains("operation:'transaction-delete'"));
+    expect(deletion, contains("operation:'transaction-undo'"));
+    expect(budget, contains("operation:'monthly-budget-save'"));
+    expect(editor, contains("operation:'transaction-edit-undo'"));
+  });
+
+  test('11 smooth overlay has fail-safe completion and isolated repaints', () {
+    final source = File('lib/waffra_smooth_confirmation.dart').readAsStringSync();
+    expect(source, contains('finally {'));
+    expect(source, contains('RepaintBoundary('));
+    expect(source, contains('MediaQuery.disableAnimationsOf(context)'));
+  });
+
+  test('13 same-line balance never hides foreign bank SMS currency', () {
+    const foreign='Incoming transfer USD198.50 Current balance 200.50SAR';
+    expect(WaffraSmsCurrencies.currenciesForMessage(foreign), {'USD'});
+    expect(WaffraSmsCurrencies.requiresReviewForSarLedger(foreign), isTrue);
+    const local='SAR198.50 has been credited Balance 201.50SAR';
+    expect(WaffraSmsCurrencies.currenciesForMessage(local), {'SAR'});
+    expect(WaffraSmsCurrencies.requiresReviewForSarLedger(local), isFalse);
+  });
+
+  test('15 Arabic currency names cannot silently inherit Saudi riyals', () {
+    const sources=<String,String>{
+      'حوالة 100 ريال قطري الرصيد 200 ريال':'QAR',
+      'حوالة 100 دينار أردني الرصيد 200 ريال':'JOD',
+      'تحويل 100 جنيه إسترليني الرصيد 200 ريال':'GBP',
+      'تحويل 100 درهم مغربي الرصيد 200 ريال':'MAD',
+    };
+    for(final entry in sources.entries) {
+      expect(WaffraSmsCurrencies.currenciesForMessage(entry.key),
+        {entry.value});
+      expect(WaffraSmsCurrencies.requiresReviewForSarLedger(entry.key),
+        isTrue);
+    }
+    expect(WaffraSmsCurrencies.currenciesForMessage(
+      'عملية شراء 100 دولار'),contains('UNKNOWN'));
+  });
+
+  test('16 unsupported Arabic qualifiers force a finance review',(){
+    for(final name in ['ريال يمني','جنيه سوداني','درهم غير معروف']) {
+      final message='حوالة واردة 100 '+name+' الرصيد 200 ريال';
+      expect(WaffraSmsCurrencies.currenciesForMessage(message),
+        contains('UNKNOWN'));
+      expect(WaffraSmsCurrencies.requiresReviewForSarLedger(message),isTrue);
+    }
+  });
+
+  test('M316 banking metadata cannot become a second foreign currency', () {
+    for (final source in <String>[
+      'AMT 100 SAR',
+      'SAR 100 WAS DEBITED',
+      'TXN 5234 debit SAR 25.50',
+      'Payment SAR 25.50 VIA BANK',
+    ]) {
+      expect(WaffraSmsCurrencies.currenciesForMessage(source), {'SAR'},
+        reason: source);
+      expect(WaffraSmsCurrencies.requiresReviewForSarLedger(source), isFalse,
+        reason: source);
+    }
+    expect(WaffraSmsCurrencies.currenciesForMessage('Amount MXN 150'),
+      {'UNKNOWN'});
+    expect(WaffraSmsCurrencies.requiresReviewForSarLedger('Amount MXN 150'),
+      isTrue);
+  });
+
+  test('14 live bank SMS save rejects foreign amounts before hash generation', () {
+    final sheet=method('Future<void> entrySheet(',
+        'Future<String?> chooseTransactionCategory(');
+    final guard=sheet.indexOf(
+      'WaffraSmsCurrencies.requiresReviewForSarLedger(message.text)');
+    final hash=sheet.indexOf('final h=sha256.convert');
+    expect(guard, greaterThan(0));
+    expect(hash, greaterThan(guard),
+      reason:'Reject currency before any duplicate/hash write');
+    expect(sheet.substring(guard,hash), contains('return;'));
+  });
+
+  test('12 OS permissions are requested on demand, not at startup', () {
+    final reminders = method('Future<void> toggleRecurringReminders(',
+        'Future<void> applyRecurring(');
+    final editor = method('Future<void> entrySheet(',
+        'Future<String?> chooseTransactionCategory(');
+    expect(reminders, contains('WaffraReminders.requestPermission()'));
+    expect(editor, contains('source:ImageSource.camera'));
+    expect(editor, contains('pickMultiImage('));
+  });
+}

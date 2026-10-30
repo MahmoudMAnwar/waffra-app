@@ -27,29 +27,37 @@ void main() {
       r'\?WaffraFinanceRoute\.manualTransactionSave\s+'
       r':WaffraFinanceRoute\.transactionEdit\);',
     ).hasMatch(home),isTrue);
-    expect(home, contains(
-      'await persist(route:WaffraFinanceRoute.transactionDeleteAndUndo);'));
-    expect(home, contains(
-      'await persist(route:WaffraFinanceRoute.recurringPostingAndPostponement);'));
+    // Delete, undo and postponement now use the same fail-closed wrapper
+    // rather than unguarded direct persistence. Preserve the precise route
+    // intent AND a fresh read after a rejected authoritative write.
+    expect(home, contains('Future<bool> _persistModuleOrReload('));
+    expect(home, contains('await persist(route:route);'));
+    expect(home, contains('if(mounted)await _loadFinanceSafely();'));
+    for(final action in <String>['transaction-delete','transaction-undo']) {
+      expect(RegExp(
+        r'if\(!await _persistModuleOrReload\(\s*'
+        r'WaffraFinanceRoute\.transactionDeleteAndUndo,\s*'
+        "operation:'"+action+r"'\)\)return;"
+      ).hasMatch(home), isTrue,reason:'Missing guarded '+action+' route');
+    }
+    expect(RegExp(
+      r'if\(!await _persistModuleOrReload\(\s*'
+      r'WaffraFinanceRoute\.recurringPostingAndPostponement,\s*'
+      r"operation:'recurring-postpone'\)\)return;"
+    ).hasMatch(home), isTrue, reason:'Postpone needs a guarded route');
     expect(
-      'await persist(route:WaffraFinanceRoute.transactionDeleteAndUndo);'
-        .allMatches(home).length,
-      2, reason: 'Both delete AND undo must be tagged.',
+      'WaffraFinanceRoute.transactionDeleteAndUndo,'
+        .allMatches(home).length, greaterThanOrEqualTo(2),
+      reason: 'Both delete and undo must be tagged separately.',
     );
-    expect(
-      'await persist(route:WaffraFinanceRoute.recurringPostingAndPostponement);'
-        .allMatches(home).length,
-      1, reason: 'Only the postpone-only action uses the scalar path.',
-    );
-    expect(
-      'await persist(route:WaffraFinanceRoute.recurringPostingAndPostponement,'
-        .allMatches(home).length,
-      1, reason: 'The Paid path must retain its recurring route intent.',
-    );
-    expect(home, contains(
-      'await persist(route:WaffraFinanceRoute.recurringPostingAndPostponement,'
-      '\n      userConfirmed:true);'
-    ), reason: 'Paid requires explicit user confirmation.');
+    // Match the same real finance call regardless of indentation or line
+    // wrapping. Do not weaken the route or explicit confirmation requirement.
+    expect(RegExp(
+      r'await\s+persist\s*\(\s*'
+      r'route\s*:\s*WaffraFinanceRoute\.recurringPostingAndPostponement\s*,\s*'
+      r'userConfirmed\s*:\s*true\s*,?\s*\)\s*;'
+    ).hasMatch(home), isTrue,
+      reason: 'Paid requires the recurring route and explicit confirmation.');
   });
 
   test('M175 guarded legacy routes remain eligible, without any cutover', () {

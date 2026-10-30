@@ -98,7 +98,7 @@ jobs:
           disable-animations: false
           emulator-boot-timeout: 600
           emulator-options: -no-window -no-audio -no-snapshot -gpu swiftshader_indirect -no-boot-anim
-          script: flutter test --reporter expanded integration_test/m278_android_system_bars_smoke_test.dart -d emulator-5554
+          script: bash .github/scripts/run-m278-android-insets-ci.sh
 
   ios-simulator-build-check:
     # SwiftyTesseract 3.x CocoaPods excludes arm64 for the iOS simulator.

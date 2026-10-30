@@ -9,6 +9,7 @@ on:
       - 'test/storage/m266_home_bound_source_regression_test.dart'
       - 'test/storage/m266_widget_source_fail_closed_ui_test.dart'
       - '.github/workflows/m266-sqlcipher-precutover-qa.yml'
+      - '.github/scripts/run-m202-sqlcipher-binder-android.sh'
       - '.github/workflows/m147-final-main-review-gate.yml'
       - 'scripts/qa/m266_main_scope_review.py'
   workflow_dispatch:
@@ -64,6 +65,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Check fail-closed Android test runner shell syntax
+        run: |
+          bash -n .github/scripts/run-m202-sqlcipher-binder-android.sh
+          grep -F 'flutter drive' .github/scripts/run-m202-sqlcipher-binder-android.sh
+          grep -F 'M202_ANDROID_TEST_PASS' .github/scripts/run-m202-sqlcipher-binder-android.sh
       - name: Pin original source guard
         run: |
           grep -F 'bool get automaticallyActivateSqlCipher => false;' lib/storage/waffra_production_cutover_release_gate.dart
@@ -95,6 +101,35 @@ jobs:
       - run: |
           flutter pub get
           python3 scripts/qa/m287_patch_tesseract_gradle.py
+      # Flutter's generated Android project requires NDK 28.2.13676358.
+      # Preflight it before booting the emulator; a partially downloaded NDK
+      # can otherwise surface as a misleading integration-test failure.
+      - name: Install and verify required Android NDK with bounded retries
+        shell: bash
+        run: |
+          set -euo pipefail
+          ndk_version=28.2.13676358
+          sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          sdkmanager="$sdk_root/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$sdkmanager"
+          for attempt in 1 2 3; do
+            if test -f "$sdk_root/ndk/$ndk_version/source.properties" &&
+              grep -q "Pkg.Revision = $ndk_version" "$sdk_root/ndk/$ndk_version/source.properties"; then
+              break
+            fi
+            echo "NDK $ndk_version installation attempt $attempt/3"
+            rm -rf "$sdk_root/ndk/$ndk_version"
+            "$sdkmanager" --sdk_root="$sdk_root" "ndk;$ndk_version" || true
+            if test -f "$sdk_root/ndk/$ndk_version/source.properties" &&
+              grep -q "Pkg.Revision = $ndk_version" "$sdk_root/ndk/$ndk_version/source.properties"; then
+              break
+            fi
+            if [ "$attempt" = 3 ]; then
+              echo "::error::Android NDK installation failed; blocking real Android QA" >&2
+              exit 1
+            fi
+          done
+          test -x "$sdk_root/ndk/$ndk_version/ndk-build"
       - name: Enable KVM on runner
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
