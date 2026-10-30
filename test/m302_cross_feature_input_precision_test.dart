@@ -51,6 +51,12 @@ void main(){
   expect(waffraStrictNumericInput('100.0001',decimalPlaces:4),100.0001);
   expect(waffraStrictNumericInput('0',decimalPlaces:3),isNull);
   expect(waffraStrictNumericInput('0',decimalPlaces:3,allowZero:true),0);
+  expect(waffraStrictNumericInput('-120.25',allowNegative:true),-120.25);
+  expect(waffraStrictNumericInput('-1,234.50',allowNegative:true),-1234.5);
+  expect(waffraStrictNumericInput('-1,2',allowNegative:true),isNull);
+  expect(waffraStrictNumericInput('-120.25'),isNull);
+  expect(waffraStrictNumericInput('-1e3',allowNegative:true),isNull);
+
   expect(waffraStrictNumericInput('1000000.0001',decimalPlaces:4,
       maxValue:1000000),isNull);
  });
@@ -96,6 +102,9 @@ void main(){
   final converter=File('lib/currency_converter.dart').readAsStringSync();
   final gold=File('lib/waffra_gold_calculator.dart').readAsStringSync();
   final oil=File('lib/waffra_oil_market_section.dart').readAsStringSync();
+  final goldMarket=File('lib/waffra_gold_market_section.dart').readAsStringSync();
+  final practical=File('lib/waffra_practical_tools_page.dart').readAsStringSync();
+
   expect(converter,contains('WaffraAmountFormatter(decimalPlaces:3,truncateExcess:false)'));
   expect(gold,contains('WaffraAmountFormatter(decimalPlaces:4,truncateExcess:false)'));
   expect(oil,contains('WaffraAmountFormatter(decimalPlaces:3,truncateExcess:false)'));
@@ -106,5 +115,10 @@ void main(){
   expect(gold,contains('waffraCurrencyMinorDigits(code)'));
   expect(oil,contains('waffraCountryCurrencies'));
   expect(oil,contains('waffraCurrencyMinorDigits(currency)'));
+  expect(goldMarket,contains('waffraStrictNumericInput('));
+  expect(goldMarket,contains('truncateExcess:false'));
+  expect(practical,contains('waffraStrictNumericInput(source,'));
+  expect(practical,contains('allowNegative:true'));
+
  });
 }
