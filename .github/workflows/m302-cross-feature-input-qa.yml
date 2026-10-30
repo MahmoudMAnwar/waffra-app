@@ -8,6 +8,8 @@ on:
       - 'lib/waffra_amount_formatter.dart'
       - 'lib/waffra_validators.dart'
       - 'lib/waffra_search.dart'
+      - 'lib/main.dart'
+      - 'test/m302_category_rename_integrity_test.dart'
       - 'lib/currency_converter.dart'
       - 'lib/waffra_gold_calculator.dart'
       - 'lib/waffra_oil_market_section.dart'
@@ -46,6 +48,8 @@ jobs:
             lib/waffra_amount_formatter.dart \
             lib/waffra_validators.dart \
             lib/waffra_search.dart \
+            lib/main.dart \
+            test/m302_category_rename_integrity_test.dart \
             lib/currency_converter.dart \
             lib/waffra_gold_calculator.dart \
             lib/waffra_oil_market_section.dart \
@@ -54,6 +58,7 @@ jobs:
         run: |
           flutter test --reporter expanded \
             test/m302_cross_feature_input_precision_test.dart \
+            test/m302_category_rename_integrity_test.dart \
             test/waffra_amount_formatter_test.dart \
             test/waffra_validators_test.dart \
             test/m93_mandatory_validation_and_mobile_test.dart \
