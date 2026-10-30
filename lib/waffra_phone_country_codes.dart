@@ -103,9 +103,9 @@ abstract final class WaffraInternationalPhone {
     // Italy is intentionally excluded: fixed-line 0 remains significant.
     if (digits.startsWith('00')) return null;
     const nationalTrunkZero = <String>{
-      'SA','EG','AE','JO','LB','MA','DZ','TN','GB','FR','DE','ES',
-      'NL','TR','IN','PK','BD','JP','CN','AU','CH','SE','NO',
-      'DK','ZA','MY','ID','KR','TH',
+      'SA','EG','AE','JO','IQ','LB','MA','DZ','GB','FR','DE',
+      'NL','TR','IN','PK','BD','JP','CN','AU','CH','SE',
+      'ZA','MY','ID','KR','TH','PH',
     };
     if (nationalTrunkZero.contains(country.iso) && digits.startsWith('0')) {
       digits = digits.substring(1);
