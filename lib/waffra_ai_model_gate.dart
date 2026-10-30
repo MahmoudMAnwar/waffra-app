@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'waffra_ondevice_qwen.dart';
 
 /// Shared first-use consent and progress dialog for all Waffra AI entry points.
-/// Cancel keeps the existing deterministic bank/OCR workflow available.
+/// Optional Tools AI retains a non-AI fallback; bank SMS and OCR are gated.
 abstract final class WaffraAiModelGate {
   /// A feature that explicitly requires local AI must never silently fall
   /// back to bank-SMS parsing or image OCR when the model is unavailable.
@@ -52,12 +52,12 @@ abstract final class WaffraAiModelGate {
           'نموذج الذكاء الاصطناعي في وفرة'),
         content:Text(featureRequired?
           (english?
-            'The Waffra AI model is required for '+requiredFeature+
-            '. Download and activate it before using this feature. '
+            'The Waffra AI model is required for '+requiredFeature!+
+            '. Download (~484 MB) and activate it before using this feature. '
             'Declining keeps this feature locked, but manual transactions '
             'remain available. You can delete the model later from My Account.':
-            'نموذج الذكاء الاصطناعي مطلوب لتشغيل '+requiredFeature+
-            '. لازم تنزّله وتفعّله قبل استخدام الميزة. '
+            'نموذج الذكاء الاصطناعي مطلوب لتشغيل '+requiredFeature!+
+            '. لازم تنزّله وتفعّله قبل استخدام الميزة (~484 ميجابايت). '
             'لو اخترت مش دلوقتي هتفضل الميزة مقفولة، '
             'لكن إضافة المعاملات يدويًا هتفضل متاحة. '
             'تقدر تحذف النموذج لاحقًا من حسابي.') :
