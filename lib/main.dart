@@ -4289,6 +4289,12 @@ Future<bool> _requireBankSmsAi()=>
    if(error.message!='ai_analysis_cancelled'&&ctx.mounted){
     snack(ctx,waffraIsEnglish?'AI analysis unavailable.':'التحليل غير متاح.');
    }
+  }catch(_){
+   // Any unexpected native/model/overlay error must fall back to a
+   // reviewable SMS draft, not leave the paste spinner or an unhandled Future.
+   if(ctx.mounted)snack(ctx,waffraIsEnglish?
+    'AI analysis was interrupted. Review bank messages manually.':
+    'توقف تحليل الرسائل. راجع الرسائل البنكية يدويًا.');
   }
   return null;
  }
