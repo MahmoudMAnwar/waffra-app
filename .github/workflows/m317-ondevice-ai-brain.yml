@@ -8,7 +8,10 @@ on:
       - 'lib/waffra_ai_finance_brain.dart'
       - 'lib/waffra_ai_finance_coach.dart'
       - 'lib/waffra_ondevice_qwen.dart'
+      - 'lib/main.dart'
+      - 'lib/waffra_smart_features.dart'
       - 'test/m317_ai_finance_brain_test.dart'
+      - 'test/m320_ai_live_entrypoints_test.dart'
       - 'pubspec.yaml'
       - 'docs/qa/m317-ondevice-ai-brain-rollout.md'
   workflow_dispatch:
@@ -40,7 +43,10 @@ jobs:
             lib/waffra_ai_finance_brain.dart \
             lib/waffra_ai_finance_coach.dart \
             lib/waffra_ondevice_qwen.dart \
-            test/m317_ai_finance_brain_test.dart
+            lib/waffra_smart_features.dart \
+            test/m317_ai_finance_brain_test.dart \
+            test/m320_ai_live_entrypoints_test.dart \
+            test/m320_ai_live_entrypoints_test.dart
       - name: Verify independent amounts, 36 currencies and read-only insights
         run: |
           flutter test --reporter expanded \
