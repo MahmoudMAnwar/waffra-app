@@ -128,6 +128,14 @@ void main() {
     }
     expect(WaffraSmsCurrencies.requiresReviewForSarLedger(
        'Money received MXN 18.25 Balance 999 MXN'),isTrue);
+    expect(WaffraSmsCurrencies.currenciesForMessage(
+       'Money received mxn 18.25 Balance 999 mxn'),{'UNKNOWN'});
+    expect(WaffraSmsCurrencies.requiresReviewForSarLedger(
+       'Money received mxn 18.25 Balance 999 mxn'),isTrue);
+    expect(WaffraSmsCurrencies.currenciesForMessage(
+       'Money received brl 18.25 Balance 999 brl'),{'UNKNOWN'});
+    expect(WaffraSmsCurrencies.currenciesForMessage(
+       'Money has 18 seconds and is ready'),isEmpty);
     expect(WaffraSmsCurrencies.requiresReviewForSarLedger(
        'Money received USD 18.25 and SAR 19.25'),isTrue);
   });
