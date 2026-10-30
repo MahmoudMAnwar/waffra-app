@@ -90,6 +90,9 @@ class WaffraVerifiedDisplayQuote {
 
 class WaffraDisplayCurrency {
  static const _preferenceKey='waffra_display_country_currency_v1';
+ // True only when a currency preference has actually been persisted.
+ // GPS suggestions cannot displace a previously approved preference.
+ static bool hasSavedPreference=false;
  static const _freshness=Duration(days:7);
  static final ValueNotifier<WaffraVerifiedDisplayQuote> active=
   ValueNotifier<WaffraVerifiedDisplayQuote>(
@@ -215,10 +218,13 @@ class WaffraDisplayCurrency {
    throw StateError('Currency preference was not stored.');
   }
   active.value=quote;
+  hasSavedPreference=true;
  }
  static Future<void> initialize({http.Client? client})async{
   final p=await SharedPreferences.getInstance();
   final saved=p.getString(_preferenceKey)??'SAR';
+  hasSavedPreference=p.containsKey(_preferenceKey)&&
+    waffraCountryCurrencies.any((item)=>item.code==saved);
   active.value=displaySelection(
    waffraCountryCurrencies.any((item)=>item.code==saved)?saved:'SAR');
  }
