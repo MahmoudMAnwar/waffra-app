@@ -32,7 +32,13 @@ void main(){
     final tools=File('lib/waffra_smart_features.dart').readAsStringSync();
     expect(home,contains('if(!WaffraOnDeviceQwen.shared.isReady)return false;'));
     expect(home,contains('if(!WaffraOnDeviceQwen.shared.isReady||source.trim().isEmpty)return;'));
-    expect(home,contains('final candidates=WaffraBankScreenshotParser.candidates(extracted.rawText);'));
+    // M299 replaced flattened candidates with ordered OCR review items.
+        // Keep multi-transaction review and the local-AI prerequisite together.
+        expect(home,contains('if(await _reviewAiScannedTransactions(extracted.rawText,picked))return;'));
+        expect(home,contains('final candidates=WaffraBankScreenshotParser.reviewItems(extracted.rawText);'));
+        expect(home,contains('scannedImagePosition:one.position'));
+        expect(home,contains('scannedImagePosition:candidate.position'));
+        expect(home,contains('scannedImageTotal:candidates.length'));
     expect(home,contains('try{allowed=await _requireBankSmsAi();}'));
     expect(home,contains('try{allowed=await _requireReceiptOcrAi();}'));
     expect(home,contains('if(!allowed||!mounted||_smsSheetOpen)return;'));
