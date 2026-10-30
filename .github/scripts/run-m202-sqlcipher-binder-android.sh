@@ -31,17 +31,20 @@ run_check() {
   # while the following application has already been reinstalled.
   local rc=1 attempt=1
   while (( attempt <= 2 )); do
-    adb -s "$device" shell am force-stop com.waffra.waffra >/dev/null 2>&1 || true
-    adb -s "$device" forward --remove-all || true
-    adb -s "$device" reverse --remove-all || true
+    # Preserve the first successful VM-service connection strategy. Only
+    # reset ADB tunnels *between* independent test apps or after a retry.
+    if (( attempt > 1 )) || [[ "$name" != "m202_home_widget_source_binder_android_test.dart" ]]; then
+      adb -s "$device" shell am force-stop com.waffra.waffra >/dev/null 2>&1 || true
+      adb -s "$device" forward --remove-all || true
+      adb -s "$device" reverse --remove-all || true
+    fi
     echo "M202_ANDROID_DRIVER_ATTEMPT:${name}:${attempt}"
 
-    # Disable DDS for integration_test's VMServiceFlutterDriver. The Flutter
-    # integration_test package documents --no-dds for VM service connectivity.
-    # Retain the exit status even though output is streamed through tee.
+    # Use the original known-working Flutter drive transport. Check
+    # integrationDriver's real exit code even while streaming to tee.
     set +e
     timeout --signal=TERM --kill-after=20s "${seconds}s" \
-      flutter drive --no-dds \
+      flutter drive \
         --driver=test_driver/m202_ci_integration_test_driver.dart \
         --target="integration_test/${name}" \
         -d "$device" \
@@ -56,12 +59,19 @@ run_check() {
     # Retry exactly once only if the *driver never attached* to the VM.
     # A test assertion failure, crash, SQLCipher failure, or any case where
     # the driver connected is never retried or turned into a false pass.
-    if (( attempt == 1 && rc == 124 )) \
-      && grep -Fq 'VMServiceFlutterDriver: Connecting to Flutter application' "$log" \
-      && grep -Fq 'VMServiceFlutterDriver: It is taking an unusually long time to connect to the VM' "$log" \
+    if (( attempt == 1 )) \
       && ! grep -Fq 'VMServiceFlutterDriver: Connected to Flutter application.' "$log" \
-      && ! grep -Eq '^[^[:space:]]*.*[+]([1-9]|[0-9]+ -[1-9])' "$log"; then
-      echo "::warning::M202 VM-service connection timed out before test start; resetting Android bridge and retrying once"
+      && ! grep -Fq 'Test failed.' "$log" \
+      && ! grep -Fq 'Expected:' "$log" \
+      && { { (( rc == 124 )) && grep -Fq 'It is taking an unusually long time to connect to the VM' "$log"; } \
+           || { (( rc == 1 )) && grep -Eq 'Service connection disposed|adb: device offline|Failed to stop app' "$log"; }; }; then
+      echo "::warning::M202 Flutter/ADB bridge failed before app assertions; restarting ADB service once"
+      adb kill-server || true
+      adb start-server || true
+      if ! timeout 55s adb -s "$device" wait-for-device; then
+        echo "::error::Emulator did not reconnect; preserving Android CI failure"
+        break
+      fi
       attempt=$((attempt + 1))
       sleep 4
       continue
