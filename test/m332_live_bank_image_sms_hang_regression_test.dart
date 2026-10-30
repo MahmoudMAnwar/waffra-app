@@ -50,10 +50,12 @@ void main(){
 
  test('M332 AI cannot double 3 OCR actions even if quotes come from image',()async{
   final quotes=WaffraBankScreenshotParser.reviewItems(threeBankBubbles);
-  Map<String,Object?> tx(String quote,num amount)=> {
-   'source_quote':quote,'amount_text':amount.toString(),
-   'currency_text':'SAR','direction':'expense','merchant':null
-  };
+  Map<String,Object?> tx(String quote,num amount){
+   final token=RegExp(r'SAR\s*([0-9]+(?:\.[0-9]{1,2})?)',
+     caseSensitive:false).firstMatch(quote)?.group(1)??amount.toString();
+   return {'source_quote':quote,'amount_text':token,
+    'currency_text':'SAR','direction':'expense','merchant':null};
+  }
   final input=threeBankBubbles;
   final six=await WaffraAiFinanceBrain.imageOcr(input,generate:(_)async=>
     jsonEncode({'transactions':[
