@@ -19,6 +19,23 @@ void main(){
     expect(source,isNot(contains('Waffra.. shows you where your money goes')));
   });
 
+  test('M326 shared Arabic texts use selected regional voice',()async{
+    await WaffraRegionalCopy.setCountry('SA');
+    expect(WaffraRegionalCopy.adaptArabicUi('فشلت العملية'),
+      'العملية ما تمت. جرّب مرة ثانية.');
+    expect(WaffraRegionalCopy.adaptArabicUi('دوّر على عملية'),
+      'دوّر على عملية');
+    await WaffraRegionalCopy.setCountry('AE');
+    expect(WaffraRegionalCopy.adaptArabicUi('دوّر على عملية'),
+      'ابحث عن معاملة');
+    expect(WaffraRegionalCopy.adaptArabicUi('فشلت العملية'),
+      'فشلت العملية');
+    final ui=File('lib/waffra_i18n.dart').readAsStringSync();
+    expect(ui,contains('WaffraRegionalCopy.adaptArabicUi(source)'));
+    expect(ui,contains("'إلغاء': 'Cancel'"));
+    expect(ui,contains("'تأكيد': 'Confirm'"));
+  });
+
   test('M326 country and currency preferences never share a storage key',()async{
     final prefs=await SharedPreferences.getInstance();
     await WaffraRegionalCopy.initialize(prefs);
