@@ -94,8 +94,16 @@ abstract final class WaffraAiFinanceBrain {
   }
   static bool competingAmounts(String quote){
     final action=_actionBeforeFooter(quote);
-    final matches=RegExp(r'(?<![0-9])[0-9]{1,12}(?:[.,][0-9]{1,3})?(?![0-9])')
-      .allMatches(action).toList();
+    // A bank SMS routinely contains card suffix, reference, and date/time.
+    // Only competing *currency-labelled* amounts are payment candidates.
+    // Currency-less entries still fail the independent exactCurrency guard.
+    final matches=RegExp(
+      r'(?:(?:SAR|SR|ريال(?:\\s+سعودي)?|ر\\.?\\s*س\\.?)\\s*[:：]?\\s*'
+      r'[0-9]{1,12}(?:[.,][0-9]{1,3})?'
+      r'|[0-9]{1,12}(?:[.,][0-9]{1,3})?\\s*'
+      r'(?:SAR|SR|ريال(?:\\s+سعودي)?|ر\\.?\\s*س\\.?))',
+      caseSensitive:false,
+    ).allMatches(action).toList();
     return matches.length>1;
   }
   static bool exactCurrency(String quote,String text){
