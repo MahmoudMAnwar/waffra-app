@@ -132,6 +132,14 @@ Supermarket
     }
   });
 
+  test('M314 unsupported Arabic foreign OCR label never becomes SAR',(){
+    const message='حوالة واردة 100 ريال يمني الرصيد 900 ريال';
+    expect(WaffraSmsCurrencies.currenciesForMessage(message),
+      contains('UNKNOWN'));
+    expect(WaffraBankScreenshotParser.requiresForeignCurrencyReview(message),
+      isTrue);
+  });
+
   test('M299 finance editor guards every direct OCR caller', () {
     final app=File('lib/main.dart').readAsStringSync();
     final start=app.indexOf('Future<void> entrySheet(');
