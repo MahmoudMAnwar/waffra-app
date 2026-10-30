@@ -28,7 +28,7 @@ void main() {
 
   test('M329 bank SMS AI review displays progress and keeps manual confirmation', () {
     expect(main, contains('()=>WaffraAiFinanceBrain.bankSms(source,'));
-    expect(main, contains('waffra-sms-ai-review'));
+    expect(main, isNot(contains('waffra-sms-ai-review')));
     expect(main, contains('تحليل الرسالة البنكية'));
     expect(main, contains('if(!WaffraOnDeviceQwen.shared.isReady)return false;'));
     expect(main, contains('await entrySheet('));
