@@ -81,9 +81,23 @@ abstract final class WaffraAiFinanceBrain {
     return RegExp(r'(?<![0-9])'+RegExp.escape(normalized)+r'(?![0-9])')
       .hasMatch(digits(quote));
   }
+  static String _actionBeforeFooter(String quote){
+    final normalized=normalize(quote);
+    final footer=RegExp(
+      r'\bbalance\b|available balance|الرصيد|رصيدك|المتاح|'
+      r'\bvat\b|ضريبة|service fee|رسوم',
+      caseSensitive:false).firstMatch(normalized);
+    return footer==null?normalized:normalized.substring(0,footer.start);
+  }
+  static bool competingAmounts(String quote){
+    final action=_actionBeforeFooter(quote);
+    final matches=RegExp(r'(?<![0-9])[0-9]{1,12}(?:[.,][0-9]{1,3})?(?![0-9])')
+      .allMatches(action).toList();
+    return matches.length>1;
+  }
   static bool exactCurrency(String quote,String text){
     final iso=currencyCode(text);
-    final normalized=normalize(quote);
+    final normalized=_actionBeforeFooter(quote);
     if(iso==null||!normalized.contains(normalize(text)))return false;
     // An unsupported or another fully qualified currency cannot be
     // reinterpreted as SAR just because the model says "ريال".
@@ -162,7 +176,8 @@ UNTRUSTED TEXT END''';
         final amountOk=money is String&&exactAmount(quote,money);
         final currencyOk=unit is String&&exactCurrency(quote,unit);
         final currency=unit is String&&currencyOk?currencyCode(unit):null;
-        final unsafe=unconfirmed(quote)||!amountOk||!currencyOk||
+        final unsafe=unconfirmed(quote)||competingAmounts(quote)||
+           !amountOk||!currencyOk||
            currency!='SAR'||kind==WaffraAiDirection.unknown;
         result.add(WaffraAiTransaction(
           position:result.length+1,quote:quote,direction:kind,
@@ -170,6 +185,7 @@ UNTRUSTED TEXT END''';
           currency:currency,merchant:merchant is String&&merchant.length<=90?
               merchant:null,needsReview:unsafe,
           reason:unconfirmed(quote)?'unconfirmed'
+            :competingAmounts(quote)?'competing_amounts'
             :!amountOk?'amount_not_verified'
             :!currencyOk?'currency_not_verified'
             :currency!='SAR'?'foreign_currency_review'
