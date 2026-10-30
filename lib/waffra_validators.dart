@@ -1,3 +1,5 @@
+import 'waffra_search.dart';
+
 /// Shared form validation rules for Waffra.
 class WaffraValidators {
   const WaffraValidators._();
@@ -30,8 +32,8 @@ class WaffraValidators {
   }
 
   static String? uniqueCategory(String? value, Iterable<String> existing) {
-    final text=(value??'').trim().toLowerCase();
+    final text=waffraSearchKey(value??'');
     if(text.isEmpty)return 'required';
-    return existing.any((v)=>v.trim().toLowerCase()==text)?'duplicate':null;
+    return existing.any((v)=>waffraSearchKey(v)==text)?'duplicate':null;
   }
 }

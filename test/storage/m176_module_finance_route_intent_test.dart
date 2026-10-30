@@ -18,16 +18,31 @@ void main() {
   test('M176 every existing category, goal, recurring and budget save is tagged', () {
     final home = File('lib/main.dart').readAsStringSync();
     final trash = File('lib/waffra_recurring_trash.part.dart').readAsStringSync();
-    const routeCountsInHome = <String, int>{
+    // The newer fail-closed _persistModuleOrReload path replaces some
+    // legacy direct persist calls. Count every explicitly tagged live source
+    // route rather than freezing the old number of direct call expressions.
+    const minimumTaggedIntents = <String, int>{
       'categoryCreateEditDeleteRestore': 10,
       'goalCreateEditDeleteRestore': 6,
       'recurringCreateEditDeleteRestore': 3,
       'challengeAndBudgetUpdate': 4,
     };
-    for (final entry in routeCountsInHome.entries) {
-      final tag = 'persist(route:WaffraFinanceRoute.${entry.key})';
-      expect(tag.allMatches(home).length, entry.value,
-        reason: 'Every reviewed Home finance write needs its own source intent');
+    for (final entry in minimumTaggedIntents.entries) {
+      final token = 'WaffraFinanceRoute.${entry.key}';
+      expect(token.allMatches(home).length,
+        greaterThanOrEqualTo(entry.value),
+        reason: 'Existing module writes must retain explicit source intent');
+    }
+    expect(home, contains('Future<bool> _persistModuleOrReload('));
+    expect(home, contains('await persist(route:route);'));
+    expect(home, contains('await _loadFinanceSafely()'));
+    for(final name in <String>[
+      'categoryCreateEditDeleteRestore',
+      'goalCreateEditDeleteRestore',
+      'recurringCreateEditDeleteRestore',
+    ]) {
+      expect(home, contains('_persistModuleOrReload(WaffraFinanceRoute.$name'),
+        reason: 'Edited finance modules must reconcile after rejected commits');
     }
     expect('persist(route:WaffraFinanceRoute.recurringCreateEditDeleteRestore)'
       .allMatches(trash).length, 3,

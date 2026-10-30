@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'waffra_amount_formatter.dart';
+import 'waffra_display_currency.dart';
 import 'waffra_oil_market_data.dart';
 
 import 'waffra_haptic_feedback.dart';
@@ -133,7 +134,7 @@ class _WaffraOilMarketSectionState extends State<WaffraOilMarketSection>{
  }
  Widget calculator(){
   final q=quotes[benchmark];
-  final volume=double.tryParse(units.text.trim().replaceAll(',',''));
+  final volume=waffraStrictNumericInput(units.text,decimalPlaces:3,maxValue:1000000);
   final valid=volume!=null&&volume>0&&volume.isFinite&&volume<=1000000;
   final usd=valid&&q!=null&&!q.isOld(DateTime.now())?volume*q.usd:null;
   final total=usd==null||fx==null?null:usd*fx!;
@@ -166,7 +167,7 @@ class _WaffraOilMarketSectionState extends State<WaffraOilMarketSection>{
       key:const Key('waffra-oil-quantity'),
       controller:units,
       keyboardType:const TextInputType.numberWithOptions(decimal:true),
-      inputFormatters:[const WaffraAmountFormatter()],
+      inputFormatters:[const WaffraAmountFormatter(decimalPlaces:3,truncateExcess:false)],
       decoration:InputDecoration(labelText:t('Quantity','الكمية'),
        border:const OutlineInputBorder()),
       onChanged:(_)=>setState((){}))),
@@ -175,8 +176,8 @@ class _WaffraOilMarketSectionState extends State<WaffraOilMarketSection>{
       key:ValueKey('waffra-oil-currency-'+currency),initialValue:currency,
       decoration:InputDecoration(labelText:t('Currency','العملة'),
        border:const OutlineInputBorder()),
-      items:const ['USD','SAR','EGP','EUR','GBP','AED']
-       .map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(),
+      items:waffraCountryCurrencies
+       .map((v)=>DropdownMenuItem(value:v.code,child:Text(v.code))).toList(),
       onChanged:WaffraHaptics.selection((v){if(v!=null)unawaited(setCurrency(v));}))),
     ]),
     const SizedBox(height:13),
@@ -188,7 +189,7 @@ class _WaffraOilMarketSectionState extends State<WaffraOilMarketSection>{
      if(fxLoading)const SizedBox(width:19,height:19,
       child:CircularProgressIndicator(strokeWidth:2))
      else FittedBox(fit:BoxFit.scaleDown,
-      child:Text(total==null?'—':total.toStringAsFixed(2)+' '+currency,
+      child:Text(total==null?'—':formatWaffraMoney(total,decimalPlaces:waffraCurrencyMinorDigits(currency))+' '+currency,
        key:const Key('waffra-oil-total'),
        style:const TextStyle(fontSize:17,fontWeight:FontWeight.w900))),
     ]),
