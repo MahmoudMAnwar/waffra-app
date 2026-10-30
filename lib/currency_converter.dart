@@ -318,7 +318,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
     Card(child:Padding(padding:const EdgeInsets.all(20),child:Column(children:[
      const WaffraText('المبلغ بعد التحويل'),
      const SizedBox(height:8),
-     WaffraText('${formatWaffraMoney(result!)} $to',
+     WaffraText('${formatWaffraMoney(result!,decimalPlaces:waffraCurrencyMinorDigits(to!))} $to',
       style:Theme.of(context).textTheme.headlineMedium),
      const SizedBox(height:8),
      WaffraText('1 $from = ${rate!.toStringAsFixed(4)} $to'),
