@@ -8323,7 +8323,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
        }else{
         setState(()=>recurring[index]=r.copy(active:false));
        }
-       await persist(route:WaffraFinanceRoute.recurringCreateEditDeleteRestore);
+       if(!await _persistModuleOrReload(
+        WaffraFinanceRoute.recurringCreateEditDeleteRestore,
+        operation:'recurring-active-toggle'))return;
        if(enabled)await applyRecurring();
        await syncRecurringReminders();
       })),
@@ -8344,7 +8346,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
          recurring.removeWhere((e)=>e.id==r.id);
          recurringPostponed.removeWhere((key,value)=>key.startsWith('rec_${r.id}_'));
         });
-        await persist(route:WaffraFinanceRoute.recurringCreateEditDeleteRestore);await syncRecurringReminders();
+        if(!await _persistModuleOrReload(
+         WaffraFinanceRoute.recurringCreateEditDeleteRestore,
+         operation:'recurring-delete'))return;
+        await syncRecurringReminders();
        }
       }),itemBuilder:(_)=>[
        PopupMenuItem(value:'delete',child:WaffraText(waffraIsEnglish?'Delete':'حذف'))]),
