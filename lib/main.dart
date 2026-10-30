@@ -4496,7 +4496,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
     content:WaffraText('يبدو إنك أضفت نفس ${result.income?'الدخل':'المصروف'} من قبل. ودّك تضيفه مرة ثانية؟'),
     actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),child:const WaffraText('إلغاء')),
      FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),child:const WaffraText('إضافة على أي حال'))]));
-   if(proceed!=true||!mounted)return;
+   if(proceed!=true||!mounted){
+    // The duplicate was refused *before* any finance write. Remove only
+    // image copies staged in this sheet; never the original user image.
+    for(final copy in stagedReceiptCopies){
+     try{final file=File(copy);if(await file.exists())await file.delete();}catch(_){}
+    }
+    return;
+   }
   }
   final previousSpent=sum(entries.where((e)=>!e.income&&e.id!=result.id&&
    e.category==result.category&&e.date.year==result.date.year&&e.date.month==result.date.month),false);
