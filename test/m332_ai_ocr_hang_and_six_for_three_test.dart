@@ -81,6 +81,10 @@ void main() {
     expect(engine, contains('maxTokens:768'));
     expect(engine, contains('/no_think'));
     expect(engine, contains('cancelGeneration()'));
+    expect(app, contains('WaffraAiResult result;'));
+    expect(app, contains('AI timed out. Review the extracted image transactions manually.'));
+    expect(app, contains("error.message!='ai_analysis_cancelled'"));
+    expect(app, contains('return false;'));
   });
 
   test('M332: SMS paste/share auto-runs AI; button removed; no AI save', () {
