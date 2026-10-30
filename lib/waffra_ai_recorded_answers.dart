@@ -135,7 +135,7 @@ abstract final class WaffraAiRecordedAnswers {
       .replaceAll(String.fromCharCode(96),'')
       .replaceAll(RegExp(r'^\s*[-_]{3,}\s*$',multiLine:true),'')
       .replaceAll(RegExp(
-        r'all values derived directly from\s*\(?the json data\)?\.?',caseSensitive:false),'')
+        r'all values derived directly from[\s\W]*the json data[\s\W]*',caseSensitive:false),'')
       .replaceAll(RegExp(r'\n{3,}'),'\n\n')
       .replaceAll('*','').trim();
     if(output.isEmpty)return null;
