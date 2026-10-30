@@ -201,14 +201,14 @@ void main(){
    expect(find.byKey(const Key('waffra-m268-feature-analysis')),findsOneWidget);
    expect(find.byKey(const Key('waffra-m268-feature-markets')),findsOneWidget);
    expect(find.byKey(const Key('waffra-m268-expanded-analysis')),findsNothing);
+   expect(find.byKey(const Key('waffra-local-ai-opt-in')),findsOneWidget);
    await tester.tap(find.byKey(const Key('waffra-m268-feature-analysis')));
    await tester.pumpAndSettle();
    expect(find.text('Verified financial analysis content'),findsOneWidget);
    expect(find.byKey(const Key('waffra-m268-expanded-analysis')),findsOneWidget);
-   // Opening verified analysis must not force AI model download consent.
-   // The user can still explicitly opt in to private Qwen when they wish.
+   // Verified analysis stays available without downloading a model.
    expect(find.byKey(const Key('waffra-ai-first-use-consent')),findsNothing);
-   expect(find.byKey(const Key('waffra-local-ai-opt-in')),findsOneWidget);
+   expect(find.byKey(const Key('waffra-ai-financial-analysis')),findsNothing);
    await tester.tap(find.byKey(const Key('waffra-m268-feature-markets')));
    await tester.pumpAndSettle();
    expect(find.byKey(const Key('waffra-m268-expanded-analysis')),findsNothing);
