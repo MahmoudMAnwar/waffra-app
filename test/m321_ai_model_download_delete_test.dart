@@ -48,10 +48,12 @@ void main() {
     expect(home,contains("featureAr:'تحليل الرسائل البنكية'"));
     expect(home,contains("featureEn:'receipt and image OCR scanning'"));
     expect(smart,contains('WaffraAiModelGate.ensureReady(context,english:widget.english)'));
-    // Opening verified analysis never forces an AI download; the user's
-    // explicit opt-in button still invokes the same consent/progress gate.
-    // Only the AI-first Ask Waffra and savings panels prompt on entry.
-    expect(smart,contains('if(next==4||next==7)'));
+    // The Tools installer is explicit. No model-driven tool automatically
+    // prompts on expansion: before first download it is completely hidden.
+    expect(smart,contains('waffra-ai-tools-install-section'));
+    expect(smart,contains('if(i==4&&!_aiToolVisible)return null;'));
+    expect(smart,contains('if(section==4&&!WaffraOnDeviceQwen.shared.isReady)return;'));
+    expect(smart,isNot(contains('if(next==4||next==7)')));
     expect(smart,isNot(contains('if(next==-2||next==4||next==7)')));
     expect(smart,contains("key:const Key('waffra-local-ai-opt-in')"));
     expect(smart,contains('onPressed:aiBusy?null:()=>unawaited(_enableLocalAi())'));
