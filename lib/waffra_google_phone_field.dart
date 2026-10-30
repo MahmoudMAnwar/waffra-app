@@ -51,8 +51,11 @@ class _WaffraGooglePhoneFieldState extends State<WaffraGooglePhoneField> {
        onTap:()=>Navigator.pop(context,item),
       )).toList())),
      ]))))));
-  query.dispose();
   if(selected!=null&&mounted)widget.onCountryChanged(selected);
+  // The sheet is still animating out when showModalBottomSheet resolves.
+  // Dispose its text controller only after the closing route has finished.
+  await Future<void>.delayed(const Duration(milliseconds:450));
+  query.dispose();
  }
  @override Widget build(BuildContext context)=>TextField(
   key:const Key('waffra-profile-mobile-number'),
