@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'waffra_gold_market_data.dart';
+import 'waffra_amount_formatter.dart';
 import 'waffra_display_currency.dart';
 import 'waffra_i18n.dart';
 
@@ -168,8 +169,8 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
   }
 
   double? get _grams {
-    final raw = _weight.text.trim().replaceAll(',', '.');
-    final parsed = double.tryParse(raw);
+    final parsed=waffraStrictNumericInput(
+      _weight.text,decimalPlaces:4,maxValue:1000000);
     if (parsed == null || !parsed.isFinite || parsed <= 0 || parsed > 1000000) {
       return null;
     }
@@ -442,6 +443,8 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
               controller: _weight,
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters:[const WaffraAmountFormatter(
+               decimalPlaces:4,truncateExcess:false)],
               decoration: InputDecoration(
                   labelText: t('Weight (g)', 'الوزن (جرام)'),
                   hintText: t('Enter weight', 'أدخل الوزن'), isDense: true,

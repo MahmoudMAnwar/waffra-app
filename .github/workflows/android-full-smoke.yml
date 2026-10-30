@@ -720,8 +720,10 @@ jobs:
           profile: pixel_6
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
           disable-linux-hw-accel: false
+          # android-emulator-runner executes script with /bin/sh, which has no pipefail.
+          # Enter Bash explicitly so all strict-mode checks remain enforced.
           script: |
-            set -euo pipefail
+            bash -euo pipefail <<'WAFFRA_SMOKE_BASH'
             adb install -r build/app/outputs/flutter-apk/app-release.apk
             PACKAGE=$(adb shell pm list packages -3 | tr -d '\r' | sed -n 's/^package://p' | grep -m1 -E 'waffra' || true)
             test -n "$PACKAGE" || { echo "Could not find installed Waffra package"; exit 1; }
@@ -743,6 +745,7 @@ jobs:
               exit 1
             fi
             echo "Release app launched without detected startup exception"
+            WAFFRA_SMOKE_BASH
 
       - name: Build optimized ARM64 Release APK
         shell: bash

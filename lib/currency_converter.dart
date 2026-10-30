@@ -192,7 +192,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
   final currentQuote=++_quoteRevision;
   final chosenFrom=from,chosenTo=to;
   if(chosenTo==null){setState(()=>status=waffraIsEnglish?'Choose the destination currency':'اختر العملة المراد التحويل إليها');return;}
-  final input=double.tryParse(amount.text.trim().replaceAll(',',''));
+  final input=waffraStrictNumericInput(amount.text,decimalPlaces:3,allowZero:true);
   if(input==null||!input.isFinite||input<0){setState(()=>status='اكتب مبلغ صحيح عشان نحسبه');return;}
   setState((){busy=true;status='';result=null;rate=null;updated=null;});
   try{
@@ -276,7 +276,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
     'اعرف قيمة راتبك أو أي مبلغ بعملة ثانية، حسب أحدث سعر متاح.'),
    const SizedBox(height:18),
    TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
-    inputFormatters:[const WaffraAmountFormatter()],
+    inputFormatters:[const WaffraAmountFormatter(decimalPlaces:3,truncateExcess:false)],
     decoration:InputDecoration(labelText:waffraTr('المبلغ'),border:OutlineInputBorder())),
    const SizedBox(height:14),
    Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
@@ -318,7 +318,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
     Card(child:Padding(padding:const EdgeInsets.all(20),child:Column(children:[
      const WaffraText('المبلغ بعد التحويل'),
      const SizedBox(height:8),
-     WaffraText('${formatWaffraMoney(result!)} $to',
+     WaffraText('${formatWaffraMoney(result!,decimalPlaces:waffraCurrencyMinorDigits(to!))} $to',
       style:Theme.of(context).textTheme.headlineMedium),
      const SizedBox(height:8),
      WaffraText('1 $from = ${rate!.toStringAsFixed(4)} $to'),

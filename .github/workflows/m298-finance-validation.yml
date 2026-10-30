@@ -1,0 +1,41 @@
+name: M298 Mandatory Finance Field Validation
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'lib/main.dart'
+      - 'lib/waffra_validators.dart'
+      - 'test/m298_required_finance_field_validation_test.dart'
+      - '.github/workflows/m298-finance-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m298-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mandatory-fields:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact reviewed SHA
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve dependencies
+        run: flutter pub get
+      - name: Analyzer (errors are blocking)
+        run: flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings lib/main.dart lib/waffra_validators.dart test/m298_required_finance_field_validation_test.dart
+      - name: Validation tests and existing OCR/SMS/UI regressions
+        run: |
+          flutter test --reporter expanded test/m298_required_finance_field_validation_test.dart test/waffra_inline_form_validation_test.dart test/m297_ocr_to_finance_and_sms_layout_test.dart test/m287_receipt_ocr_test.dart test/m280_sms_fuzz_and_boundary_test.dart test/bank_sms_test.dart
