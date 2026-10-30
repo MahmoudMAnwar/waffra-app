@@ -39,12 +39,12 @@ void main() {
     expect(dialog,contains('waffra-ai-download-cancel'));
     expect(dialog,contains('received/total'));
     expect(dialog,contains('model.cancelPendingLoad()'));
-    expect(dialog,contains('You may delete the model anytime in My Account'));
-    expect(dialog,contains('الذكاء الاصطناعي'));
+    expect(dialog,contains('Delete it in My Account'));
+    expect(dialog,contains('تنزيل نموذج الذكاء'));
     expect(home,contains('WaffraAiModelGate.requireForFeature(context,'));
-    expect(dialog,contains('waffra-ai-required-feature-notice'));
-    expect(dialog,contains('Without the model this feature cannot be used'));
-    expect(dialog,contains('من غير النموذج مش هتقدر تستخدم الميزة دي'));
+    expect(dialog,isNot(contains('waffra-ai-required-feature-notice')));
+    expect(dialog,contains('manual entry still works'));
+    expect(dialog,contains('الإضافة اليدوية متاحة'));
     expect(home,contains("featureAr:'تحليل الرسائل البنكية'"));
     expect(home,contains("featureEn:'receipt and image OCR scanning'"));
     expect(smart,contains('WaffraAiModelGate.ensureReady(context,english:widget.english)'));
