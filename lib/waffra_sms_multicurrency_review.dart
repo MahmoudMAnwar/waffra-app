@@ -117,7 +117,12 @@ abstract final class WaffraSmsCurrencies {
             !_namedAdjacentAmount.hasMatch(namedAction)) {
           found.add('UNKNOWN');
         }
-        for (final expression in adjacentAmount.allMatches(action)) {
+        // A full "ريال قطري" or "جنيه إسترليني" is one currency,
+        // not a generic SAR/EGP token followed by an unrelated country.
+        // Remove only *matched amount + full-name* spans from the generic
+        // lexer, retaining all other explicit transaction currencies.
+        final genericAction=namedAction.replaceAll(_namedAdjacentAmount,' ');
+        for (final expression in adjacentAmount.allMatches(genericAction)) {
           for (final token in currencyToken.allMatches(expression.group(0)!)) {
           final code = codeFor(token.group(0)!);
           if (supported.contains(code) || code == 'UNKNOWN') {
