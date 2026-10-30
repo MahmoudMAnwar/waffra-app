@@ -103,7 +103,7 @@ class _WaffraCountryFirstRunPageState extends State<WaffraCountryFirstRunPage> {
           const SizedBox(height: 12),
           Text(t(
             'اسمح بالموقع التقريبي لاقتراح عملة بلدك. لا نحفظ موقعك ولا نتتبعك.',
-            'Allow approximate location to suggest your currency. We don't save or track your location.'),
+            'Allow approximate location to suggest your currency. We do not save or track your location.'),
             textAlign: TextAlign.center),
           const SizedBox(height: 10),
           OutlinedButton.icon(
