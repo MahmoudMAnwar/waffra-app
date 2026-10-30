@@ -84,6 +84,12 @@ void main(){
     expect(clean,isNot(contains('**')));
     expect(clean,isNot(contains('##')));
     expect(clean,isNot(contains('All values derived directly')));
+    final broken=WaffraAiRecordedAnswers.cleanModelAnswer(
+      'مصروفاتك المسجلة: 120 ريال\\n'
+      '*All values derived directly from)*\\n*(the JSON data.');
+    expect(broken,contains('مصروفاتك المسجلة'));
+    expect(broken,isNot(contains('All values derived')));
+    expect(broken,isNot(contains('JSON data')));
     expect(WaffraAiRecordedAnswers.cleanModelAnswer(
       '<think>internal reasoning</think>النتيجة مختصرة'),'النتيجة مختصرة');
     expect(WaffraAiRecordedAnswers.cleanModelAnswer(
