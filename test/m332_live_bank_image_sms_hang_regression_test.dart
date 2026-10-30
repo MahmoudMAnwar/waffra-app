@@ -8,17 +8,17 @@ import 'package:waffra/waffra_sms_multicurrency_review.dart';
 
 void main(){
  const threeBankBubbles='''شراء PoS
- عبر:7678-مدى
+ عبر:9003-مدى
  SAR 4.50
  Merchant Test
  30/10/26 23:49
  شراء PoS
- عبر:7678-مدى
+ عبر:9003-مدى
  SAR 10
  Merchant Test
  30/10/26 00:01
  شراء PoS
- عبر:7678-مدى
+ عبر:9003-مدى
  SAR 4
  Merchant Test
  30/10/26 14:44''';
@@ -39,10 +39,10 @@ void main(){
 
  test('M332 short Arabic inbound and outbound SR amounts ignore account IDs',(){
   const messages=[
-   'حوالة داخلية واردة بSR 15.50\nل9288\nمن4388;مرسل تجريبي\n7/10/26 11:49',
-   'شراء PoS\nعبر:7678;مدى-مدى باي\nبSAR 74\nمتجر تجريبي\n7/10/26 21:59',
-   'حوالة داخلية صادرة بSR 60\nمن9288\nل4643;مستلم تجريبي\n17/10/26 12:34',
-   'حوالة داخلية صادرة بSR 25\nمن9288\nل5077;مستلم تجريبي\n16/10/26 19:23'
+   'حوالة داخلية واردة بSR 15.50\nل9001\nمن9002;مرسل تجريبي\n7/10/26 11:49',
+   'شراء PoS\nعبر:9003;مدى-مدى باي\nبSAR 74\nمتجر تجريبي\n7/10/26 21:59',
+   'حوالة داخلية صادرة بSR 60\nمن9001\nل9004;مستلم تجريبي\n17/10/26 12:34',
+   'حوالة داخلية صادرة بSR 25\nمن9001\nل9005;مستلم تجريبي\n16/10/26 19:23'
   ];
   final results=[for(final s in messages) BankParser.parse(s)];
   expect(results.map((e)=>e.amount).toList(),[15.5,74.0,60.0,25.0]);
