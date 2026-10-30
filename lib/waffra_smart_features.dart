@@ -237,14 +237,8 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
  void _activateSection(int section){
   final next=active==section?null:section;
   setState(()=>active=next);
-  // Analysis is also a non-AI verified dashboard. Opening that panel
-  // must never launch a model consent dialog or block the standard tools;
-  // its dedicated "Enable private Qwen" button remains the explicit first
-  // AI action and still invokes the full consent/download progress gate.
-  // Ask Waffra and AI saving suggestions offer first-use consent on open.
-  if(next==4||next==7){
-   if(!WaffraOnDeviceQwen.shared.isReady)unawaited(_enableLocalAi());
-  }
+  // A deleted model leaves its AI features visible but disabled.
+  if(section==4&&!WaffraOnDeviceQwen.shared.isReady)return;
   final token=++_focusSerial;
   if(next==null)return;
   final reduced=MediaQuery.disableAnimationsOf(context);
@@ -281,13 +275,16 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
  @override void initState(){
   super.initState();
   WaffraOnDeviceQwen.shared.revision.addListener(_onAiRevision);
+  unawaited(WaffraOnDeviceQwen.shared.loadToolVisibilityHistory()
+   .catchError((Object _){}));
  }
  void _onAiRevision(){
   if(!mounted)return;
   setState((){
    if(!WaffraOnDeviceQwen.shared.isReady){
-    // Clear all model-generated prose when the downloaded model is removed.
+    // Clear private model output; collapse an open AI-only panel on delete.
     aiStatus='';aiAnalysis='';aiSavings='';answer='';
+    if(active==4)active=null;
    }
   });
  }
@@ -499,47 +496,68 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
   }
  }
 
- Widget _aiActivation(){
-  return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-   if(!WaffraOnDeviceQwen.shared.isReady)
-    OutlinedButton.icon(
-     key:const Key('waffra-local-ai-opt-in'),
-     onPressed:aiBusy?null:()=>unawaited(_enableLocalAi()),
-     icon:const Icon(Icons.smart_toy_outlined),
-     label:Text(t('تفعيل Qwen على الجهاز (تنزيل اختياري)',
-       'Enable private Qwen (optional download)'))),
-   if(aiStatus.isNotEmpty)Padding(
-    padding:const EdgeInsets.only(top:8),child:_paragraph(aiStatus)),
-   if(aiBusy)const Padding(padding:EdgeInsets.only(top:8),
+ // AI-only features are hidden until activation. Once previously used,
+ // model removal leaves these UI elements visible but disabled.
+ bool get _aiToolVisible=>WaffraOnDeviceQwen.shared.isReady||
+  WaffraOnDeviceQwen.shared.hasEverEnabled;
+
+ Widget _aiActivation()=>Column(
+   key:const Key('waffra-ai-tools-install-section'),
+   crossAxisAlignment:CrossAxisAlignment.start,children:[
+    if(!WaffraOnDeviceQwen.shared.isReady)...[
+     _paragraph(_aiToolVisible?
+      t('نموذج الذكاء الاصطناعي محذوف أو غير مفعّل. ميزات AI معطّلة حتى إعادة تفعيله.',
+        'AI model removed or inactive. AI tools stay disabled until reactivated.'):
+      t('حمّل نموذج الذكاء الاصطناعي على جهازك لتظهر أدوات AI الخاصة بوفرة.',
+        'Download the private AI model to reveal AI-powered tools.')),
+     const SizedBox(height:8),
+     OutlinedButton.icon(
+      key:const Key('waffra-local-ai-opt-in'),
+      onPressed:aiBusy?null:()=>unawaited(_enableLocalAi()),
+      icon:const Icon(Icons.smart_toy_outlined),
+      label:Text(_aiToolVisible?
+       t('إعادة تفعيل نموذج الذكاء الاصطناعي','Reactivate AI model'):
+       t('تنزيل وتفعيل نموذج الذكاء الاصطناعي','Download and activate AI model'))),
+    ],
+    if(aiStatus.isNotEmpty)Padding(
+     padding:const EdgeInsets.only(top:8),child:_paragraph(aiStatus)),
+    if(aiBusy)const Padding(padding:EdgeInsets.only(top:8),
      child:LinearProgressIndicator()),
+   ]);
+
+ Widget _aiAnalysisPanel(){
+  if(!_aiToolVisible)return const SizedBox.shrink();
+  final ready=WaffraOnDeviceQwen.shared.isReady;
+  return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+   OutlinedButton(
+    key:const Key('waffra-ai-financial-analysis'),
+    onPressed:ready&&!aiBusy?()=>unawaited(_generateAiSkill('analysis')):null,
+    child:Text(t('تحليل مالي بالذكاء الاصطناعي المحلي',
+     'Generate on-device financial analysis'))),
+   if(!ready)_paragraph(t('يتطلب إعادة تفعيل نموذج الذكاء الاصطناعي.',
+     'Reactivate the AI model to use this feature.')),
+   if(ready&&aiAnalysis.isNotEmpty)_tile(t('تحليل مقترح','Suggested analysis'),aiAnalysis),
   ]);
  }
 
- Widget _aiAnalysisPanel()=>Column(
-  crossAxisAlignment:CrossAxisAlignment.start,children:[
-   _aiActivation(),
-   if(WaffraOnDeviceQwen.shared.isReady)
-    OutlinedButton(
-     key:const Key('waffra-ai-financial-analysis'),
-     onPressed:aiBusy?null:()=>unawaited(_generateAiSkill('analysis')),
-     child:Text(t('تحليل مالي بالذكاء الاصطناعي المحلي',
-       'Generate on-device financial analysis'))),
-   if(aiAnalysis.isNotEmpty)_tile(t('تحليل مقترح','Suggested analysis'),aiAnalysis),
-  ]);
-
- Widget _aiSavingPanel()=>Column(
-  crossAxisAlignment:CrossAxisAlignment.start,children:[
-   if(WaffraOnDeviceQwen.shared.isReady)
-    OutlinedButton(
-     key:const Key('waffra-ai-saving-suggestions'),
-     onPressed:aiBusy?null:()=>unawaited(_generateAiSkill('savings')),
-     child:Text(t('اقتراحات توفير بالذكاء الاصطناعي',
-       'Generate AI savings suggestions'))),
-   if(aiSavings.isNotEmpty)_tile(t('اقتراحات قابلة للمراجعة',
+ Widget _aiSavingPanel(){
+  if(!_aiToolVisible)return const SizedBox.shrink();
+  final ready=WaffraOnDeviceQwen.shared.isReady;
+  return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+   OutlinedButton(
+    key:const Key('waffra-ai-saving-suggestions'),
+    onPressed:ready&&!aiBusy?()=>unawaited(_generateAiSkill('savings')):null,
+    child:Text(t('اقتراحات توفير بالذكاء الاصطناعي',
+     'Generate AI savings suggestions'))),
+   if(!ready)_paragraph(t('الميزة معطّلة لحين إعادة تفعيل الموديل.',
+     'Disabled until the model is reactivated.')),
+   if(ready&&aiSavings.isNotEmpty)_tile(t('اقتراحات قابلة للمراجعة',
      'Suggestions for review'),aiSavings),
   ]);
+ }
 
  void _ask(){
+  if(!WaffraOnDeviceQwen.shared.isReady)return;
   final q=question.toLowerCase().trim();
   if(q.isNotEmpty&&WaffraOnDeviceQwen.shared.isReady){
    unawaited(_generateAiSkill('ask',questionText:q));return;
@@ -570,7 +588,6 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
  Widget _assistant(){
   return _column([
    _head(titlesAr[4],'assistant',t('إجابات من سجلك المحلي فقط','Answers from verified local records')),
-   _aiActivation(),
    const SizedBox(height:15),
    TextField(controller:input,maxLines:2,decoration:InputDecoration(
     hintText:t('مثال: صرفت كام على المطاعم آخر 3 شهور؟',
