@@ -8114,13 +8114,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
    await syncRecurringReminders();
   }
  }
- DateTime nextRecurringDue(RecurringBill r) {
-  final now=DateTime.now();
-  DateTime due(int y,int m)=>DateTime(y,m,r.day.clamp(1,DateTime(y,m+1,0).day));
-  final thisMonth=due(now.year,now.month);
-  return thisMonth.isBefore(DateTime(now.year,now.month,now.day))
-   ?due(now.year,now.month+1):thisMonth;
- }
+ DateTime nextRecurringDue(RecurringBill r) =>
+  WaffraRecurringPolicy.nextDueDate(
+   today:DateTime.now(),startAt:r.startAt,day:r.day);
  Widget recurringPage(){
   final active=recurring.where((r)=>r.active).toList();
   final orderedActive=active.toList()..sort((a,b)=>
