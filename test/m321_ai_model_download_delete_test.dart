@@ -43,7 +43,13 @@ void main() {
     expect(dialog,contains('الذكاء الاصطناعي'));
     expect(home,contains('WaffraAiModelGate.ensureReady(context,english:waffraIsEnglish)'));
     expect(smart,contains('WaffraAiModelGate.ensureReady(context,english:widget.english)'));
-    expect(smart,contains('if(next==-2||next==4||next==7)'));
+    // Opening verified analysis never forces an AI download; the user's
+    // explicit opt-in button still invokes the same consent/progress gate.
+    // Only the AI-first Ask Waffra and savings panels prompt on entry.
+    expect(smart,contains('if(next==4||next==7)'));
+    expect(smart,isNot(contains('if(next==-2||next==4||next==7)')));
+    expect(smart,contains("key:const Key('waffra-local-ai-opt-in')"));
+    expect(smart,contains('onPressed:aiBusy?null:()=>unawaited(_enableLocalAi())'));
     expect(home,contains('Future<void> bulkSmsSheet('));
     expect(home,contains('Future<void> scanAndAddReceipt()'));
   });
