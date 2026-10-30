@@ -9264,6 +9264,36 @@ Future<void> bulkSmsSheet({String? initialText})async {
       ButtonSegment(value:'ar',label:Text('AR')),ButtonSegment(value:'en',label:Text('EN')),
      ],selected:{waffraLanguage.value},showSelectedIcon:false,
      onSelectionChanged:WaffraHaptics.selection((v)async{setState(()=>tab=0);await widget.onLanguage(v.first);}))),
+    ListTile(
+     key:const Key('waffra-regional-arabic-setting'),
+     leading:const Icon(Icons.public_outlined,color:emerald),
+     title:WaffraText(waffraIsEnglish?'Country / Arabic wording':'البلد واللهجة العربية'),
+     subtitle:WaffraText(waffraIsEnglish?
+      'Country only changes Arabic wording, not your app language or currency.':
+      'اختيار البلد يحدد اللهجة العربية فقط، ولا يغيّر لغة التطبيق أو عملته.'),
+     trailing:DropdownButton<String>(
+      key:const Key('waffra-region-choice'),
+      value:WaffraRegionalCopy.countryIso.value,
+      underline:const SizedBox.shrink(),
+      items:WaffraRegionalCopy.supportedRegions.entries.map((item)=>
+       DropdownMenuItem<String>(value:item.key,
+        child:Text(item.key.isEmpty?
+         (waffraIsEnglish?'Neutral':'عربية عامة'):
+         (waffraIsEnglish?item.key:item.value),
+         maxLines:1,overflow:TextOverflow.ellipsis))).toList(),
+      onChanged:WaffraHaptics.selection((v)async{
+       if(v==null)return;
+       try{
+        await WaffraRegionalCopy.setCountry(v);
+        if(mounted)setState((){});
+       }catch(_){
+        if(mounted)snack(context,waffraIsEnglish?
+          'Could not save country preference. Please retry.':
+          'ما قدرنا نحفظ اختيار البلد. جرّب مرة ثانية.');
+       }
+      }),
+     ),
+    ),
     ListTile(leading:const Icon(Icons.palette_outlined,color:emerald),
      title:WaffraText(waffraIsEnglish?'Appearance':'المظهر'),
      subtitle:WaffraText(widget.appearance=='system'?(waffraIsEnglish?'System default':'حسب إعدادات الجهاز'):
