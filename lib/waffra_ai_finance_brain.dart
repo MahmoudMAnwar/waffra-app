@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'waffra_bank_screenshot_parser.dart';
+import 'waffra_receipt_ocr_parser.dart';
+import 'waffra_bank_screenshot_parser.dart';
 
 typedef WaffraAiTextInference = Future<String> Function(String prompt);
 enum WaffraAiSource { bankSms, imageOcr }
@@ -116,6 +118,32 @@ abstract final class WaffraAiFinanceBrain {
     r'verification code|cancelled|canceled)\b|'
     r'معلق|قيد المعالجه|مرفوض|فاشل|رمز التحقق',
     caseSensitive:false).hasMatch(normalize(quote));
+
+  /// Never let a small LLM invent extra bank-image transactions or amounts.
+  /// Only consider a bank screenshot AI answer usable when each action agrees
+  /// with independently parsed, currency-verified OCR text in source order.
+  /// No finance write is performed by this comparison.
+  static bool matchesVerifiedImageActions(String source,WaffraAiResult ai){
+    if(ai.error!=null||ai.items.isEmpty)return false;
+    final ocr=WaffraBankScreenshotParser.reviewItems(source);
+    if(ocr.isEmpty||ocr.length!=ai.items.length)return false;
+    final fingerprints=<String>{};
+    for(var i=0;i<ocr.length;i++){
+      final row=ocr[i],candidate=ai.items[i];
+      if(row.amount==null||candidate.needsReview||candidate.currency!='SAR'||
+         !row.sourceText.contains(candidate.quote)||
+         !fingerprints.add(row.sourceText.trim())){
+        return false;
+      }
+      final amount=candidate.amountText==null?null:
+        WaffraReceiptOcrParser.amountFromText(candidate.amountText!);
+      if(amount==null||(amount-row.amount!).abs()>0.00001||
+         (candidate.direction==WaffraAiDirection.income)!=row.income){
+        return false;
+      }
+    }
+    return true;
+  }
 
   static Future<WaffraAiResult> bankSms(String text,
       {required WaffraAiTextInference generate})=>
