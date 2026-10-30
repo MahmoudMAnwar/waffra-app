@@ -245,8 +245,29 @@ const Map<String,String> _english = {
  'Waffra': 'Waffra',
 };
 
+// Shorten UI-only copy; preserve original lookup keys and stored records.
+const _compactUiCopy=<String,({String ar,String en})>{
+ 'تأكد من تسجيل بصمتك في إعدادات الهاتف، وبعدها افتح التطبيق مرة أخرى. يمكنك الدخول برمز PIN الآن.':(
+  ar:'فعّل البصمة من إعدادات الهاتف. يمكنك الدخول بالرمز الآن.',
+  en:'Enable fingerprint in phone settings. Use PIN for now.'),
+ 'بياناتك محفوظة على جهازك. المتابعة هنا لإنشاء ملف شخصي محلي، وليست مصادقة فعلية مع Google أو Apple.':(
+  ar:'إنشاء ملف محلي فقط؛ لا يسجّل دخول Google أو Apple.',
+  en:'Local profile only; not Google or Apple sign-in.'),
+ 'انسخ بياناتك واحفظها في مكان آمن. للاستعادة، الصق نسخة JSON. الاستعادة تستبدل بيانات العمليات والأقسام والأهداف والتكرار الحالية.':(
+  ar:'احفظ نسخة JSON بأمان. الاستعادة تستبدل المعاملات والأقسام والأهداف والمتكررة.',
+  en:'Keep your JSON backup safe. Restore replaces transactions, categories, goals and recurring items.'),
+ 'بياناتك محفوظة على جهازك. احفظ نسخة احتياطية قبل تغيير الجوال أو حذف التطبيق. ما فيه ربط بالحسابات البنكية.':(
+  ar:'بياناتك على جهازك. خذ نسخة قبل تغييره أو حذف التطبيق. لا ربط بنكي.',
+  en:'Data stays on-device. Back up before changing phones or uninstalling. No bank link.'),
+ 'المصدر: ExchangeRate-API أو مزود احتياطي عند تعذّر الاتصال. الأسعار استرشادية وقد تختلف عن أسعار البنوك أو التحويل الفعلي.':(
+  ar:'المصدر: ExchangeRate-API أو بديله. أسعار تقريبية تختلف عن البنك.',
+  en:'Source: ExchangeRate-API or backup. Rates may differ from banks.'),
+};
+
 String waffraTr(String source) {
- if(!waffraIsEnglish)return WaffraRegionalCopy.adaptArabicUi(source);
+ final compact=_compactUiCopy[source];
+ if(!waffraIsEnglish)return WaffraRegionalCopy.adaptArabicUi(compact?.ar??source);
+ if(compact!=null)return compact.en;
  // Built-in categories are localized for display only; storage remains stable.
  final catalogLabel=waffraEnglishCategoryLabel(source);
  if(catalogLabel!=source)return catalogLabel;

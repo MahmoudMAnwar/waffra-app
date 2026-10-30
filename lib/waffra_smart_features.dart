@@ -516,18 +516,18 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
    crossAxisAlignment:CrossAxisAlignment.start,children:[
     if(!WaffraOnDeviceQwen.shared.isReady)...[
      _paragraph(_aiToolVisible?
-      t('نموذج الذكاء الاصطناعي محذوف أو غير مفعّل. ميزات AI معطّلة حتى إعادة تفعيله.',
-        'AI model removed or inactive. AI tools stay disabled until reactivated.'):
-      t('حمّل نموذج الذكاء الاصطناعي على جهازك لتظهر أدوات AI الخاصة بوفرة.',
-        'Download the private AI model to reveal AI-powered tools.')),
+      t('نموذج الذكاء غير مفعّل. أعد تشغيله لاستخدام AI.',
+        'AI is off. Reactivate the model to use it.'):
+      t('حمّل النموذج لتفعيل أدوات الذكاء.',
+        'Download the model to enable AI tools.')),
      const SizedBox(height:8),
      OutlinedButton.icon(
       key:const Key('waffra-local-ai-opt-in'),
       onPressed:aiBusy?null:()=>unawaited(_enableLocalAi()),
       icon:const Icon(Icons.smart_toy_outlined),
       label:Text(_aiToolVisible?
-       t('إعادة تفعيل نموذج الذكاء الاصطناعي','Reactivate AI model'):
-       t('تنزيل وتفعيل نموذج الذكاء الاصطناعي','Download and activate AI model'))),
+       t('إعادة تفعيل النموذج','Reactivate AI model'):
+       t('تنزيل نموذج الذكاء','Download and activate AI model'))),
     ],
     if(aiStatus.isNotEmpty)Padding(
      padding:const EdgeInsets.only(top:8),child:_paragraph(aiStatus)),
@@ -608,8 +608,8 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
    Align(alignment:AlignmentDirectional.centerStart,child:FilledButton(onPressed:WaffraHaptics.tap(_ask),
     child:_label(t('اعرض الإجابة','Show answer'),color:Colors.white,bold:true))),
    if(answer.isNotEmpty)...[const SizedBox(height:12),_tile(t('نتيجة من المعاملات','From recorded transactions'),answer)],
-   _paragraph(t('تحليل محلي بنموذج الذكاء الاصطناعي على جهازك فقط؛ لا نرسل بياناتك لأي خدمة.',
-    'Private on-device AI using verified finance data. No data is sent to a cloud service.')),
+   _paragraph(t('تحليل محلي. لا تُرسل بياناتك للخارج.',
+    'Private on-device analysis. No cloud uploads.')),
   ]);
  }
  Widget _seasons(){

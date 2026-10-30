@@ -286,8 +286,8 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
 
   Widget receiptAssistant() => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      notice('اختر صورة فاتورة ليقرأها وفرة تلقائيًا. عند أول استخدام، يتم تنزيل نماذج العربي والإنجليزي مرة واحدة فقط؛ لا تُرسل صورة الفاتورة. راجع البيانات قبل التأكيد.',
-        'Choose a receipt image to scan automatically. On first use, Arabic and English models download once; the image is not uploaded. Review all fields.'),
+      notice('اختر فاتورة أو صوّرها. تُنزّل نماذج القراءة مرة واحدة، دون رفع الصورة. راجع قبل الحفظ.',
+        'Scan a receipt. Reading models download once; your image stays on-device. Review before saving.'),
       Wrap(spacing: 8, children: [
         OutlinedButton.icon(onPressed: () => pick(ImageSource.camera),
           icon: const Icon(Icons.camera_alt_outlined),

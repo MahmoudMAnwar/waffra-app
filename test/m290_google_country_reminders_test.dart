@@ -110,6 +110,8 @@ void main() {
     await tester.scrollUntilVisible(
       find.byKey(const Key('m290-setup-skip')), 160,
       scrollable: find.byType(Scrollable).first);
+    await tester.ensureVisible(find.byKey(const Key('m290-setup-skip')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('m290-setup-skip')));
     await tester.pumpAndSettle();
     expect(chosen, 'SAR');

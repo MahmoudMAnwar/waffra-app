@@ -46,7 +46,7 @@ void main(){
     expect(WaffraRegionalCopy.adaptArabicUi('فشلت العملية'),
       'فشلت العملية');
     final ui=File('lib/waffra_i18n.dart').readAsStringSync();
-    expect(ui,contains('WaffraRegionalCopy.adaptArabicUi(source)'));
+    expect(ui,contains('WaffraRegionalCopy.adaptArabicUi(compact?.ar??source)'));
     expect(ui,contains("'إلغاء': 'Cancel'"));
     expect(ui,contains("'تأكيد': 'Confirm'"));
   });
