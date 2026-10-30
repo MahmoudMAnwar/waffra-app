@@ -9,6 +9,25 @@ import 'package:waffra/waffra_phone_country_codes.dart';
 void main(){
  TestWidgetsFlutterBinding.ensureInitialized();
 
+ test('M315 country search accepts Arabic hamza/ya variants and dialing code',(){
+  final jordan=WaffraInternationalPhone.byIso('JO');
+  final saudi=WaffraInternationalPhone.byIso('SA');
+  final egypt=WaffraInternationalPhone.byIso('EG');
+  expect(WaffraInternationalPhone.matchesQuery(jordan,'الاردن'),isTrue);
+  expect(WaffraInternationalPhone.matchesQuery(jordan,'الأُرْدُن'),isTrue);
+  expect(WaffraInternationalPhone.matchesQuery(jordan,'Jordan'),isTrue);
+  expect(WaffraInternationalPhone.matchesQuery(jordan,'+962'),isTrue);
+  expect(WaffraInternationalPhone.matchesQuery(saudi,'السعوديه'),isTrue);
+  expect(WaffraInternationalPhone.matchesQuery(egypt,'EG'),isTrue);
+  expect(WaffraInternationalPhone.matchesQuery(egypt,'+20'),isTrue);
+  expect(WaffraInternationalPhone.matchesQuery(jordan,'قطر'),isFalse);
+  expect(WaffraInternationalPhone.matchesQuery(jordan,' '),isTrue);
+  // Searching cannot modify the active app display currency.
+  final previous=WaffraDisplayCurrency.country.code;
+  WaffraInternationalPhone.matchesQuery(jordan,'الاردن');
+  expect(WaffraDisplayCurrency.country.code,previous);
+ });
+
  test('M301 Saudi/Egypt/Jordan dialing codes are independent of currency',(){
   final sa=WaffraInternationalPhone.byIso('SA');
   final eg=WaffraInternationalPhone.byIso('EG');
