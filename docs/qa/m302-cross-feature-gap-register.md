@@ -46,8 +46,7 @@ real customer finance data on an unverified cutover.
 
 ## Safe release decision
 
-**NOT PRODUCTION CERTIFIED**. **Physical Android/iOS** acceptance and **Multi-currency
-transaction persistence** with verified conversion consent are not complete.
+**NOT PRODUCTION CERTIFIED**. **Physical Android/iOS** acceptance and **Multi-currency transaction persistence** with verified conversion consent are not complete.
 The app's display-only preference does not implement native multi-currency ledger
 accounting. Never silently reinterpret JOD/EGP/USD amounts as SAR. Do not alter real
 finance data or enable cutover until source/receipt/backup/restore parity evidence,
