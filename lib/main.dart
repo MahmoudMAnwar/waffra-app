@@ -4183,25 +4183,46 @@ Future<bool> _requireBankSmsAi()=>
      Future<T> Function() operation)async{
   if(!mounted)throw StateError('ai_screen_unmounted');
   final overlay=Overlay.of(context,rootOverlay:true);
+  final cancellation=Completer<T>();
+  var completed=false;
+  void cancelAnalysis(){
+   if(completed)return;
+   completed=true;
+   WaffraOnDeviceQwen.shared.cancelCurrentGeneration();
+   cancellation.completeError(StateError('ai_analysis_cancelled'));
+  }
   final item=OverlayEntry(builder:(progressContext)=>Positioned.fill(
    child:Material(
     color:Colors.black54,
     child:Center(child:Semantics(
      liveRegion:true,label:waffraIsEnglish?english:arabic,
      child:Card(child:Padding(
-      padding:const EdgeInsets.symmetric(horizontal:28,vertical:22),
+      padding:const EdgeInsets.symmetric(horizontal:24,vertical:18),
       child:Column(mainAxisSize:MainAxisSize.min,children:[
        const CircularProgressIndicator(
         key:Key('waffra-ai-analysis-progress')),
        const SizedBox(height:16),
-       WaffraText(waffraIsEnglish?english:arabic),
+       WaffraText(waffraIsEnglish?english:arabic,
+        textAlign:TextAlign.center),
+       const SizedBox(height:10),
+       TextButton(
+        key:const Key('waffra-ai-analysis-cancel'),
+        onPressed:cancelAnalysis,
+        child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
       ]))))))));
   overlay.insert(item);
   try{
-   // Give the loading indicator a frame before expensive native work starts.
    await Future<void>.delayed(const Duration(milliseconds:30));
-   return await operation();
+   // Never hold the entire app hostage when a native OCR or LLM operation
+   // stalls. The underlying OCR result is ignored after cancelling.
+   final work=operation();
+   return await Future.any<T>([work,cancellation.future])
+       .timeout(const Duration(seconds:60),onTimeout:(){
+    WaffraOnDeviceQwen.shared.cancelCurrentGeneration();
+    throw TimeoutException('waffra_ai_analysis_timeout');
+   });
   }finally{
+   completed=true;
    item.remove();
    item.dispose();
   }
@@ -4210,11 +4231,24 @@ Future<bool> _requireBankSmsAi()=>
  Future<void> _reviewAiPastedBankMessages(
      BuildContext ctx,String source)async {
   if(!WaffraOnDeviceQwen.shared.isReady||source.trim().isEmpty)return;
-  final result=await _withAiWorkProgress(
-   'جاري تحليل الرسالة البنكية بالذكاء الاصطناعي…',
-   'Analyzing bank messages with on-device AI…',
-   ()=>WaffraAiFinanceBrain.bankSms(source,
-    generate:WaffraOnDeviceQwen.shared.textGenerator));
+  WaffraAiResult result;
+  try{
+   result=await _withAiWorkProgress(
+    'جاري تحليل الرسالة البنكية بالذكاء الاصطناعي…',
+    'Analyzing bank messages with on-device AI…',
+    ()=>WaffraAiFinanceBrain.bankSms(source,
+     generate:WaffraOnDeviceQwen.shared.textGenerator));
+  }on TimeoutException{
+   if(ctx.mounted)snack(ctx,waffraIsEnglish?
+    'AI analysis timed out. Review the original messages.':
+    'انتهت مهلة التحليل. راجع الرسائل الأصلية.');
+   return;
+  }on StateError catch(error){
+   if(error.message!='ai_analysis_cancelled'&&ctx.mounted){
+    snack(ctx,waffraIsEnglish?'AI analysis unavailable.':'التحليل غير متاح.');
+   }
+   return;
+  }
   if(!ctx.mounted)return;
   await showWaffraDialog<void>(context:ctx,builder:(dialog)=>AlertDialog(
    title:WaffraText(waffraIsEnglish?
@@ -4256,8 +4290,41 @@ Future<bool> _requireBankSmsAi()=>
    'Analyzing image text with on-device AI…',
    ()=>WaffraAiFinanceBrain.imageOcr(sourceText,
     generate:WaffraOnDeviceQwen.shared.textGenerator));
-  if(!mounted||result.error!=null||result.count==0)return false;
+  if(!mounted)return false;
+  if(result.error!=null||result.count==0){
+   snack(context,waffraIsEnglish?
+    'AI analysis could not confirm transactions. Check the OCR results.':
+    'لم يتأكد تحليل الذكاء من العمليات. راجع نتائج قراءة الصورة.');
+   return false;
+  }
   final bankImage=WaffraBankScreenshotParser.looksLikeBankScreenshot(sourceText);
+  if(bankImage){
+   final grounded=WaffraBankScreenshotParser.reviewItems(sourceText);
+   // A 3-message screenshot cannot become 6 suggested transactions.
+   // Verify the per-action amount and direction as well as row count.
+   if(grounded.isNotEmpty){
+    var agrees=grounded.length==result.items.length;
+    if(agrees){
+     for(var i=0;i<grounded.length;i++){
+      final ai=result.items[i],ocr=grounded[i];
+      final parsed=ai.amountText==null?null:
+       WaffraReceiptOcrParser.amountFromText(ai.amountText!);
+      if(ai.needsReview||ocr.amount==null||parsed==null||
+         (ocr.amount!-parsed).abs()>0.00001||
+         (ai.direction==WaffraAiDirection.income)!=ocr.income){
+       agrees=false;
+       break;
+      }
+     }
+    }
+    if(!agrees){
+     if(mounted)snack(context,waffraIsEnglish?
+      'AI results did not match the image. Review the verified OCR entries.':
+      'نتائج الذكاء لا تطابق الصورة. راجع العمليات المستخرجة يدويًا.');
+     return false;
+    }
+   }
+  }
   // Product lines from one shop receipt must not be counted as independent
   // finance transactions, even if a tiny model hallucinated separate actions.
   if(!bankImage&&result.count>1)return false;
@@ -4421,6 +4488,15 @@ Future<bool> _requireBankSmsAi()=>
      scannedIncome:candidate.income,scannedImage:picked,
      scannedImagePosition:candidate.position,scannedImageTotal:candidates.length);
    }
+  }on TimeoutException catch(_){
+   if(mounted)snack(context,waffraIsEnglish?
+    'Analysis took too long. Try a smaller image or add manually.':
+    'التحليل استغرق وقتًا طويلًا. جرّب صورة أصغر أو أضف يدويًا.');
+  }on StateError catch(error){
+   if(error.message=='ai_analysis_cancelled')return;
+   if(mounted)snack(context,waffraIsEnglish?
+    'Could not complete analysis. Try again or add manually.':
+    'تعذر إكمال التحليل. حاول مجددًا أو أضف يدويًا.');
   }on WaffraReceiptOcrException catch(error){
    if(mounted)snack(context,waffraIsEnglish?
     'Image recognition is unavailable (${error.code}). You can add the transaction manually.':
