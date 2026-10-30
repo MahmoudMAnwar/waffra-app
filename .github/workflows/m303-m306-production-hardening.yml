@@ -1,0 +1,63 @@
+name: M303-M306 Twelve-Path Production Hardening
+on:
+  pull_request:
+    branches: [main, qa/m302-cross-feature-precision-and-input-hardening]
+    paths:
+      - 'lib/main.dart'
+      - 'lib/storage/waffra_authoritative_widget_balance.dart'
+      - 'test/m303_m306_hardening_regression_test.dart'
+      - 'docs/qa/m303-m306-hardening-register.md'
+      - '.github/workflows/m303-m306-production-hardening.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m303-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-precision-and-live-writes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Exact PR commit check
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Analyze exact changed files
+        run: |
+          dart analyze test/m303_m306_hardening_regression_test.dart
+          dart analyze lib/storage/waffra_authoritative_widget_balance.dart
+      - name: Run twelve-feature safety regressions
+        run: flutter test --reporter expanded test/m303_m306_hardening_regression_test.dart
+      - name: Existing fault injection backup recurring and precision
+        run: |
+          flutter test --reporter expanded \
+            test/m280_financial_integrity_fault_injection_test.dart \
+            test/waffra_secure_backup_test.dart \
+            test/waffra_recurring_policy_test.dart \
+            test/m302_optimistic_module_write_safety_test.dart \
+            test/m302_recurring_first_due_regression_test.dart \
+            test/m302_cross_feature_input_precision_test.dart
+      - name: Protect unresolved release blockers
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          doc=Path('docs/qa/m303-m306-hardening-register.md').read_text().lower()
+          for requirement in ('account a/b isolation', 'cross-source fingerprint',
+                              'sqlcipher 24-route cutover', 'two physical-device',
+                              'no physical certification', 'exact newest head'):
+              if requirement not in doc:
+                  raise SystemExit('missing hardening gate: '+requirement)
+          print('Device and SQLCipher proof still mandatory')
+          PY
