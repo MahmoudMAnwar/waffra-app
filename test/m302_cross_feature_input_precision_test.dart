@@ -66,6 +66,22 @@ void main(){
       decimalPlaces:4),isNull);
  });
  
+ test('M302 currency tool display uses 0, 2 or 3 ISO minor digits',(){
+  for(final code in ['JPY','KRW']){
+   expect(waffraCurrencyMinorDigits(code),0);
+   expect(formatWaffraMoney(1234,decimalPlaces:waffraCurrencyMinorDigits(code)),'1,234');
+  }
+  for(final code in ['BHD','KWD','OMR','TND','JOD','IQD']){
+   expect(waffraCurrencyMinorDigits(code),3);
+   expect(formatWaffraMoney(198.125,decimalPlaces:waffraCurrencyMinorDigits(code)),'198.125');
+  }
+  for(final code in ['SAR','EGP','USD','EUR','GBP','AED','QAR','CAD']){
+   expect(waffraCurrencyMinorDigits(code),2);
+   expect(formatWaffraMoney(198.125,decimalPlaces:waffraCurrencyMinorDigits(code)),'198.13');
+  }
+  expect(formatWaffraMoney(1000),'1,000.00');
+ });
+
  test('M302 identical category names cannot bypass Arabic search normalization',(){
   expect(WaffraValidators.uniqueCategory('ادخار',['إدخار']),'duplicate');
   expect(WaffraValidators.uniqueCategory('  مَصاريف  ',['مصاريف']),'duplicate');
@@ -82,6 +98,13 @@ void main(){
   final oil=File('lib/waffra_oil_market_section.dart').readAsStringSync();
   expect(converter,contains('WaffraAmountFormatter(decimalPlaces:3,truncateExcess:false)'));
   expect(gold,contains('WaffraAmountFormatter(decimalPlaces:4,truncateExcess:false)'));
-  expect(oil,contains('WaffraAmountFormatter(decimalPlaces:3)'));
+  expect(oil,contains('WaffraAmountFormatter(decimalPlaces:3,truncateExcess:false)'));
+  expect(converter,contains('waffraStrictNumericInput(amount.text'));
+  expect(gold,contains('waffraStrictNumericInput(weight.text'));
+  expect(oil,contains('waffraStrictNumericInput(units.text'));
+  expect(converter,contains('waffraCurrencyMinorDigits(to!)'));
+  expect(gold,contains('waffraCurrencyMinorDigits(code)'));
+  expect(oil,contains('waffraCountryCurrencies'));
+  expect(oil,contains('waffraCurrencyMinorDigits(currency)'));
  });
 }
