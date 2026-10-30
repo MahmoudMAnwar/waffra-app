@@ -276,7 +276,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
     'اعرف قيمة راتبك أو أي مبلغ بعملة ثانية، حسب أحدث سعر متاح.'),
    const SizedBox(height:18),
    TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
-    inputFormatters:[const WaffraAmountFormatter()],
+    inputFormatters:[const WaffraAmountFormatter(decimalPlaces:3)],
     decoration:InputDecoration(labelText:waffraTr('المبلغ'),border:OutlineInputBorder())),
    const SizedBox(height:14),
    Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
