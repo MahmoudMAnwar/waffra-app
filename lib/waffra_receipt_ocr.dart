@@ -46,11 +46,18 @@ abstract final class WaffraReceiptOcr {
           try {
             final alternate = await _extract(imagePath, mode);
             final items = WaffraBankScreenshotParser.reviewItems(alternate);
-            final nextScore =
-                items.length * 10 + items.where((e) => e.amount != null).length;
-            final bestScore = bankItems.length * 10 +
-                bankItems.where((e) => e.amount != null).length;
-            if (nextScore > bestScore) {
+            // More keyword matches are NOT proof of more payments.
+            // Avoid choosing a noisy OCR page mode that turns three
+            // real bank bubbles into six partial action markers.
+            final nextVerified=items.where((e)=>e.amount!=null).length;
+            final bestVerified=bankItems.where((e)=>e.amount!=null).length;
+            final nextUncertain=items.length-nextVerified;
+            final bestUncertain=bankItems.length-bestVerified;
+            final improvesVerified=nextVerified>bestVerified&&
+                (bankItems.isEmpty||items.length<=bankItems.length+1);
+            final reducesNoise=nextVerified==bestVerified&&
+                nextUncertain<bestUncertain;
+            if (improvesVerified||reducesNoise) {
               best = alternate;
               bankItems = items;
             }
