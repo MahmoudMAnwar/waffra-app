@@ -28,6 +28,7 @@ class _WaffraCountryFirstRunPageState extends State<WaffraCountryFirstRunPage> {
   @override void initState() {
     super.initState();
     currencyCode = WaffraDisplayCurrency.country.code;
+    manuallySelected = WaffraDisplayCurrency.hasSavedPreference;
   }
 
   Future<void> detect() async {
