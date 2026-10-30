@@ -17,7 +17,7 @@ void main(){
     final end=source.indexOf('};',start);
     expect(start,greaterThanOrEqualTo(0));
     expect(end,greaterThan(start));
-    final pairs=RegExp(r"^\\s*'([^']+)'\\s*:",multiLine:true)
+    final pairs=RegExp(r"^\s*'([^']+)'\s*:",multiLine:true)
       .allMatches(source.substring(start,end))
       .map((match)=>match.group(1)!)
       .toList();
