@@ -41,7 +41,12 @@ void main() {
     expect(dialog,contains('model.cancelPendingLoad()'));
     expect(dialog,contains('You may delete the model anytime in My Account'));
     expect(dialog,contains('الذكاء الاصطناعي'));
-    expect(home,contains('WaffraAiModelGate.ensureReady(context,english:waffraIsEnglish)'));
+    expect(home,contains('WaffraAiModelGate.requireForFeature(context,'));
+    expect(dialog,contains('waffra-ai-required-feature-notice'));
+    expect(dialog,contains('Without the model this feature cannot be used'));
+    expect(dialog,contains('من غير النموذج مش هتقدر تستخدم الميزة دي'));
+    expect(home,contains("featureAr:'تحليل الرسائل البنكية'"));
+    expect(home,contains("featureEn:'receipt and image OCR scanning'"));
     expect(smart,contains('WaffraAiModelGate.ensureReady(context,english:widget.english)'));
     // Opening verified analysis never forces an AI download; the user's
     // explicit opt-in button still invokes the same consent/progress gate.
