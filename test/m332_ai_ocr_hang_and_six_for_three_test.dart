@@ -97,5 +97,9 @@ void main() {
     expect(app, contains('waffra-sms-review-unverified'));
     expect(app, contains('await saveParsedMessages(ctx,update)'));
     expect(app, contains('userConfirmed:true'));
+    // Unexpected native errors must not strand the paste progress state.
+    expect(app, contains('AI analysis was interrupted. Review bank messages manually.'));
+    expect(app, contains('analyzingPaste=false;'));
+    expect(app, contains('Review before saving.'));
   });
 }
