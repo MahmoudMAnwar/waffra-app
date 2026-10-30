@@ -20,7 +20,8 @@ void main(){
     expect(tools,contains('WaffraAiFinanceCoach.askWaffra('));
     expect(tools,contains('WaffraAiFinanceCoach.analysis('));
     expect(tools,contains('WaffraAiFinanceCoach.savingSuggestions('));
-    expect(tools,contains('allowDownload:true'));
+    expect(tools,contains('WaffraAiModelGate.ensureReady('));
+    expect(home,contains('WaffraAiModelGate.ensureReady('));
     expect(home,contains('await WaffraOnDeviceQwen.shared.dispose()'));
     expect(runner,contains('account_session_changed'));
     expect(runner,contains('_activeDownload?.close()'));
