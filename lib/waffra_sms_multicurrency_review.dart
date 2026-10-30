@@ -71,41 +71,107 @@ abstract final class WaffraSmsCurrencies {
     return found;
   }
 
-  /// Safe preview only. Does not authorize a finance write, FX or a debit.
-  static String? originalAmountPreview(String raw) {
-    final found=currenciesForMessage(raw);
-    if(found.length!=1||found.contains('UNKNOWN'))return null;
-    final currency=found.single;
-    final scale=const <String>{'JOD','IQD','KWD','BHD','OMR','TND'}
-      .contains(currency)?3:(const <String>{'JPY','KRW'}.contains(currency)?0:2);
+  /// A pure currency precision table shared by display, FX and SMS parsing.
+  /// This does not authorize money to be posted to a financial ledger.
+  static int minorDigits(String currency) {
+    if (const <String>{'JPY','KRW'}.contains(currency)) return 0;
+    if (const <String>{'BHD','KWD','OMR','TND','JOD','IQD'}
+        .contains(currency)) return 3;
+    return 2;
+  }
+
+  static String _westernDigits(String source) {
     const ar='٠١٢٣٤٥٦٧٨٩', fa='۰۱۲۳۴۵۶۷۸۹';
-    final normalized=raw.replaceAllMapped(RegExp(r'[٠-٩۰-۹]'),(m){
-      final d=m.group(0)!;
-      final i=ar.indexOf(d);
-      return (i>=0?i:fa.indexOf(d)).toString();
+    return source.replaceAllMapped(RegExp(r'[٠-٩۰-۹]'),(match){
+      final ch=match.group(0)!;
+      final i=ar.indexOf(ch);
+      return (i>=0?i:fa.indexOf(ch)).toString();
     }).replaceAll('٫','.').replaceAll('٬',',');
+  }
+
+  /// Never turn an ambiguous 1,234 into 1.234 (or vice versa).
+  /// Decimal punctuation is normalized only when grouping is unambiguous.
+  static String? _canonicalMoney(String raw,int digits) {
+    var value=_westernDigits(raw);
+    if (!RegExp(r'^[0-9][0-9,.]*$').hasMatch(value)) return null;
+    final comma=value.lastIndexOf(','),dot=value.lastIndexOf('.');
+    if (comma>=0 && dot>=0) {
+      final separator=comma>dot?',':'.';
+      final groups=separator==','?'.':',';
+      final pieces=value.split(separator);
+      if (pieces.length!=2 ||
+          !RegExp(r'^[0-9]{1,3}(?:[,.][0-9]{3})+$').hasMatch(pieces.first) ||
+          !RegExp(r'^[0-9]{1,3}$').hasMatch(pieces.last) ||
+          !pieces.first.contains(groups)) return null;
+      final integer=pieces.first.replaceAll(groups,'');
+      value=integer+'.'+pieces.last;
+    } else if (comma>=0 || dot>=0) {
+      final separator=comma>=0?',':'.';
+      final parts=value.split(separator);
+      if(parts.length>2) {
+        if (!RegExp('^[0-9]{1,3}('+RegExp.escape(separator)+r'[0-9]{3})+$')
+            .hasMatch(value)) return null;
+        value=parts.join('');
+      } else {
+        final fraction=parts.last;
+        if (fraction.length==3 && digits<3) {
+          // A grouping marker may mean 1000, but we cannot prove it.
+          return null;
+        }
+        if (fraction.length>digits || digits==0) {
+          // A single comma grouping (1,234) is acceptable only with
+          // unmistakable grouped digits. Otherwise require manual input.
+          return null;
+        }
+        value=parts.first+'.'+fraction;
+      }
+    }
+    if(!RegExp(r'^[0-9]{1,12}(?:\.[0-9]{1,3})?$').hasMatch(value)) {
+      return null;
+    }
+    return value;
+  }
+
+  /// Returns the sole action amount in source units, or null when there is
+  /// insufficient evidence. Never includes a balance, fee or second amount.
+  /// This parser is a *suggestion* and must not write into the SAR ledger.
+  static ({double amount,String currency,String formatted})? originalAmount(
+      String raw) {
+    final found=currenciesForMessage(raw);
+    if(found.length!=1 || found.contains('UNKNOWN'))return null;
+    final currency=found.single;
+    final scale=minorDigits(currency);
+    final normalized=_westernDigits(raw);
     final footer=RegExp(
       r'available balance|remaining balance|current balance|'
-      r'\bbalance\b|الرصيد|المتاح',
+      r'\bbalance\b|الرصيد|المتاح|commission|service fee|'
+      r'fee amount|رسوم|ضريبة|vat\b',
       caseSensitive:false).firstMatch(normalized);
     final action=footer==null?normalized:normalized.substring(0,footer.start);
-    final code=RegExp.escape(currency);
-    const moneyPattern=r'([0-9]{1,9}(?:\.[0-9]{1,3})?)';
-    final starts=RegExp('(?<![A-Za-z])'+code+r'\s*[:：]?\s*'+moneyPattern,
+    final escaped=RegExp.escape(currency);
+    // Explicit codes only: do not treat a random numeral, card or reference
+    // as a financial amount. Currency may touch the number on either side.
+    final pattern=r'([0-9][0-9,.]{0,20})(?![0-9,.])';
+    final before=RegExp('(?<![A-Za-z])'+escaped+r'\s*[:：]?\s*'+pattern,
       caseSensitive:false);
-    final ends=RegExp(moneyPattern+r'\s*'+code+r'(?![A-Za-z])',
+    final after=RegExp(pattern+r'\s*'+escaped+r'(?![A-Za-z])',
       caseSensitive:false);
-    final amounts=<String>[
-      ...starts.allMatches(action).map((e)=>e.group(1)!),
-      ...ends.allMatches(action).map((e)=>e.group(1)!),
+    final matches=<String>[
+      ...before.allMatches(action).map((m)=>m.group(1)!),
+      ...after.allMatches(action).map((m)=>m.group(1)!),
     ];
-    if(amounts.length!=1)return null;
-    final original=amounts.single;
-    final digits=original.contains('.')?original.split('.').last.length:0;
-    final amount=double.tryParse(original);
-    if(digits>scale||amount==null||!amount.isFinite||amount<=0)return null;
-    return original+' '+currency;
+    if(matches.length!=1)return null;
+    final canonical=_canonicalMoney(matches.single,scale);
+    if(canonical==null)return null;
+    final amount=double.tryParse(canonical);
+    if(amount==null||!amount.isFinite||amount<=0||amount>1e9)return null;
+    final factor=scale==3?1000:scale==0?1:100;
+    final minor=amount*factor;
+    if((minor-minor.round()).abs()>0.000001)return null;
+    return (amount:amount,currency:currency,formatted:canonical+' '+currency);
   }
+
+  static String? originalAmountPreview(String raw)=>originalAmount(raw)?.formatted;
 
   static bool requiresReviewForSarLedger(String raw) {
     final currencies = currenciesForMessage(raw);
