@@ -8121,9 +8121,15 @@ Future<void> bulkSmsSheet({String? initialText})async {
    await syncRecurringReminders();
   }
  }
- DateTime nextRecurringDue(RecurringBill r) =>
-  WaffraRecurringPolicy.nextDueDate(
-   today:DateTime.now(),startAt:r.startAt,day:r.day);
+ DateTime nextRecurringDue(RecurringBill r) {
+  final today=DateTime.now();
+  final monthlyDue=WaffraRecurringPolicy.dueDate(today.year,today.month,r.day);
+  final monthId=WaffraRecurringPolicy.entryId(r.id,monthlyDue);
+  return WaffraRecurringPolicy.nextActionableDue(
+   today:today,startAt:r.startAt,day:r.day,
+   currentMonthPaid:entries.any((entry)=>entry.id==monthId),
+   postponedUntil:DateTime.tryParse(recurringPostponed[monthId]??''));
+ }
  Widget recurringPage(){
   final active=recurring.where((r)=>r.active).toList();
   final orderedActive=active.toList()..sort((a,b)=>
