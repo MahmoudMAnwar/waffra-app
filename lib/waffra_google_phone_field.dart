@@ -48,7 +48,14 @@ class _WaffraGooglePhoneFieldState extends State<WaffraGooglePhoneField> {
        onTap:()=>Navigator.pop(context,item),
       )).toList())),
      ]))))));
-  if(selected!=null&&mounted)widget.onCountryChanged(selected);
+  if(selected!=null&&mounted&&selected.iso!=widget.country.iso){
+   // A national number for one country must not silently become a valid
+   // number under another calling prefix (both can pass length checks).
+   // Clear only for an actual country change, not when reselecting it.
+   widget.controller.clear();
+   widget.onCountryChanged(selected);
+   widget.onChanged('');
+  }
   // The sheet is still animating out when showModalBottomSheet resolves.
   // Dispose its text controller only after the closing route has finished.
   await Future<void>.delayed(const Duration(milliseconds:450));
