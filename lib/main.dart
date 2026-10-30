@@ -3309,14 +3309,29 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      recurringPostponed.remove(id);
      // 'Paid' is a human-confirmed choice; the SQL writer commits both
      // the deterministic payment and its postponement in one transaction.
-     await persist(route:WaffraFinanceRoute.recurringPostingAndPostponement,
-      userConfirmed:true);
+     try {
+      await persist(route:WaffraFinanceRoute.recurringPostingAndPostponement,
+       userConfirmed:true);
+     } catch(error) {
+      // A lost acknowledgement may have committed. Reload the source;
+      // never blindly replay a payment or retain a tentative UI entry.
+      debugPrint('Recurring payment commit could not be confirmed: $error');
+      if(mounted)await _loadFinanceSafely();
+      if(mounted)snack(context,waffraIsEnglish?
+       'Payment not confirmed. Records refreshed; check before retrying.':
+       'لم يتم تأكيد الدفع. تم تحديث البيانات؛ تحقق منها قبل إعادة المحاولة.');
+      return;
+     }
     }else if(action=='postpone'){
      final selected=await waffraPickDateWithToday(english:waffraIsEnglish,context:context,initialDate:today.add(const Duration(days:1)),
       firstDate:DateTime(today.year,today.month,today.day).add(const Duration(days:1)),
       lastDate:DateTime(today.year+3,12,31));
-     if(selected!=null){recurringPostponed[id]=selected.toIso8601String();
-      await persist(route:WaffraFinanceRoute.recurringPostingAndPostponement);}
+     if(selected!=null){
+      recurringPostponed[id]=selected.toIso8601String();
+      if(!await _persistModuleOrReload(
+       WaffraFinanceRoute.recurringPostingAndPostponement,
+       operation:'recurring-postpone'))return;
+     }
     }else{return;}
    }finally{_dueDialogShowing=false;}
   }
@@ -4645,7 +4660,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
      final index=entries.indexWhere((e)=>e.id==initial.id);
      if(index<0)return;
      setState(()=>entries[index]=initial);
-     await persist();
+     if(!await _persistModuleOrReload(
+      WaffraFinanceRoute.transactionEdit,
+      operation:'transaction-edit-undo'))return;
+     if(mounted)snackSuccess(context,waffraIsEnglish?
+      'Transaction change reverted':'تم التراجع عن تعديل المعاملة');
     });
   }
  }
@@ -5512,8 +5531,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final yes=await confirmDeletion(waffraIsEnglish?'Delete transaction':'حذف العملية',
    waffraIsEnglish?'Delete «'+e.title+'»? You can undo for 6 seconds after deletion.':'هل تريد حذف المعاملة «'+e.title+'»؟ يمكنك التراجع خلال 6 ثوانٍ بعد الحذف.');
   if(yes!=true||!mounted)return;
+  // A tentative removal is never success until the source acknowledges it.
   setState(()=>entries.removeWhere((x)=>x.id==e.id));
-  await persist(route:WaffraFinanceRoute.transactionDeleteAndUndo);
+  if(!await _persistModuleOrReload(
+   WaffraFinanceRoute.transactionDeleteAndUndo,
+   operation:'transaction-delete'))return;
   if(!mounted)return;
   snack(context,waffraIsEnglish?'Transaction deleted':'تم حذف العملية',
    isError:false,duration:const Duration(seconds:5),
@@ -5521,7 +5543,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
    onAction:()async{
     if(!mounted||entries.any((x)=>x.id==e.id))return;
     setState(()=>entries.insert(0,e));
-    await persist(route:WaffraFinanceRoute.transactionDeleteAndUndo);
+    if(!await _persistModuleOrReload(
+     WaffraFinanceRoute.transactionDeleteAndUndo,
+     operation:'transaction-undo'))return;
+    if(mounted)snackSuccess(context,waffraIsEnglish?
+     'Transaction restored':'تم استرجاع المعاملة');
    });
  }
  Widget stat(String label,double value,IconData icon,Color color)=>Expanded(
@@ -5729,7 +5755,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
     ))));
    if(next!=null&&mounted){
     setState((){monthlyBudgetEnabled=next.enabled;monthlyBudget=next.amount;});
-    await persist(route:WaffraFinanceRoute.challengeAndBudgetUpdate);
+    if(!await _persistModuleOrReload(
+     WaffraFinanceRoute.challengeAndBudgetUpdate,
+     operation:'monthly-budget-save'))return;
     if(mounted)snackSuccess(context,waffraIsEnglish?'Monthly budget settings saved':'تم حفظ إعدادات الميزانية الشهرية');
    }
   }finally{disposeLater([amount]);}
