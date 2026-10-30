@@ -3802,6 +3802,72 @@ Future<bool> _requireBankSmsAi()=>
   }
  }
 
+ // AI runs automatically on paste/share; it never saves money.
+ Future<void> analyzeBankSmsAutomatically(
+    BuildContext ctx,StateSetter update,String input,int revision)async{
+  if(!sheetActive||!ctx.mounted||pasteRevision!=revision||
+     pasted.text.trim()!=input)return;
+  final found=splitBankMessages(input);
+  if(found.isEmpty||found.length>100){
+   update((){
+    analyzingPaste=false;parsed=true;messages=found;
+    statusMessage=found.isEmpty?
+     (waffraIsEnglish?'No bank messages found.':'لم نجد رسائل بنكية.'):
+     (waffraIsEnglish?'Maximum 100 messages per paste.':
+      'الحد الأقصى 100 رسالة لكل لصق.');
+   });
+   return;
+  }
+  final ai=await _reviewAiPastedBankMessages(ctx,input);
+  if(!sheetActive||!ctx.mounted||pasteRevision!=revision||
+     pasted.text.trim()!=input)return;
+  var verified=ai!=null&&ai.error==null&&ai.count==found.length;
+  if(verified){
+   for(var i=0;i<found.length;i++){
+    final draft=BankParser.parse(found[i]);
+    final item=ai!.items[i];
+    final amount=item.amountText==null?null:
+      WaffraReceiptOcrParser.amountFromText(item.amountText!);
+    if(item.needsReview||item.currency!='SAR'||
+       !found[i].contains(item.quote)||
+       draft.amount==null||amount==null||
+       (draft.amount!-amount).abs()>0.00001||
+       draft.income!=(item.direction==WaffraAiDirection.income)){
+     verified=false;
+     break;
+    }
+   }
+  }
+  update((){
+   messages=found;parsed=true;analyzingPaste=false;
+   statusMessage=noTransactionWarning(input)??'';
+   if(statusMessage.isEmpty&&!verified){
+    statusMessage=waffraIsEnglish?
+     'AI could not verify every message. Review before saving.':
+     'الذكاء لم يؤكد كل الرسائل. راجعها قبل الحفظ.';
+   }
+  });
+  if(verified&&statusMessage.isEmpty){
+   // Explicit confirmation and verified encrypted SMS writer remain mandatory.
+   await saveParsedMessages(ctx,update);
+  }
+ }
+ void scheduleBankSmsAnalysis(
+     BuildContext ctx,StateSetter update,String input){
+  pasteTimer?.cancel();
+  final revision=++pasteRevision;
+  update((){
+   parsed=false;analyzingPaste=input.trim().isNotEmpty;
+   messages=[];statusMessage='';reviewing=false;index=0;
+  });
+  if(input.trim().isEmpty)return;
+  pasteTimer=Timer(const Duration(milliseconds:650),(){
+   if(!sheetActive||!ctx.mounted||pasteRevision!=revision||
+      pasted.text.trim()!=input.trim())return;
+   unawaited(analyzeBankSmsAutomatically(ctx,update,input.trim(),revision));
+  });
+ }
+
  void disposeLater(){
   pasteTimer?.cancel();
   Future<void>.delayed(const Duration(milliseconds:500),(){
@@ -3815,22 +3881,10 @@ Future<bool> _requireBankSmsAi()=>
  void analyzeSharedText(String text){
   final ctx=activeSmsContext,update=activeSmsUpdate;
   if(!sheetActive||ctx==null||!ctx.mounted||update==null||text.trim().isEmpty)return;
-  final input=text.trim();
-  pasted.text=input;
-  pasteTimer?.cancel();
-  final revision=++pasteRevision;
-  update((){analyzingPaste=true;parsed=false;messages=[];statusMessage='';reviewing=false;index=0;});
-  pasteTimer=Timer(const Duration(milliseconds:600),(){
-   if(!sheetActive||!ctx.mounted||pasteRevision!=revision||pasted.text.trim()!=input)return;
-   update((){
-    messages=splitBankMessages(input);
-    parsed=true;
-    analyzingPaste=false;
-    statusMessage=noTransactionWarning(input)??'';
-   });
-   if(statusMessage.isEmpty&&messages.isNotEmpty)saveParsedMessages(ctx,update);
-  });
+  pasted.text=text.trim();
+  scheduleBankSmsAnalysis(ctx,update,text.trim());
  }
+
  void onSharedDuringSheet(){
   final input=waffraIncomingSms.value;
   if(input==null||input.trim().isEmpty)return;
@@ -4228,56 +4282,25 @@ Future<bool> _requireBankSmsAi()=>
   }
  }
 
- Future<void> _reviewAiPastedBankMessages(
+ Future<WaffraAiResult?> _reviewAiPastedBankMessages(
      BuildContext ctx,String source)async {
-  if(!WaffraOnDeviceQwen.shared.isReady||source.trim().isEmpty)return;
-  WaffraAiResult result;
+  if(!WaffraOnDeviceQwen.shared.isReady||source.trim().isEmpty)return null;
   try{
-   result=await _withAiWorkProgress(
-    'جاري تحليل الرسالة البنكية بالذكاء الاصطناعي…',
-    'Analyzing bank messages with on-device AI…',
+   return await _withAiWorkProgress(
+    'جاري الآن تحليل الرسائل بالذكاء الاصطناعي…',
+    'Analyzing bank messages with AI…',
     ()=>WaffraAiFinanceBrain.bankSms(source,
      generate:WaffraOnDeviceQwen.shared.textGenerator));
   }on TimeoutException{
    if(ctx.mounted)snack(ctx,waffraIsEnglish?
-    'AI analysis timed out. Review the original messages.':
-    'انتهت مهلة التحليل. راجع الرسائل الأصلية.');
-   return;
+    'AI timed out. Review the original messages manually.':
+    'انتهت مهلة التحليل. راجع الرسائل يدويًا.');
   }on StateError catch(error){
    if(error.message!='ai_analysis_cancelled'&&ctx.mounted){
     snack(ctx,waffraIsEnglish?'AI analysis unavailable.':'التحليل غير متاح.');
    }
-   return;
   }
-  if(!ctx.mounted)return;
-  await showWaffraDialog<void>(context:ctx,builder:(dialog)=>AlertDialog(
-   title:WaffraText(waffraIsEnglish?
-     'AI review — '+result.count.toString()+' transactions':
-     'مراجعة AI — '+result.count.toString()+' معاملات'),
-   content:SizedBox(width:420,child:SingleChildScrollView(child:
-    Column(mainAxisSize:MainAxisSize.min,children:[
-     WaffraText(waffraIsEnglish?
-      'AI suggestions only. None of these results were saved by AI.':
-      'اقتراحات للمراجعة فقط؛ الذكاء الاصطناعي لم يحفظ أي عملية.'),
-     if(result.error!=null)WaffraText(waffraIsEnglish?
-       'Analysis unavailable. Your existing bank messages are unchanged.':
-       'تعذر التحليل؛ لم تتغير رسائلك أو بياناتك المالية.'),
-     for(final item in result.items)
-       ListTile(
-        leading:Text(item.position.toString()),
-        title:WaffraText((item.amountText??'—')+' '+
-          (item.currency??'?')+' • '+(item.direction==WaffraAiDirection.income?
-           (waffraIsEnglish?'Income':'دخل'):item.direction==WaffraAiDirection.expense?
-           (waffraIsEnglish?'Expense':'مصروف'):
-           (waffraIsEnglish?'Review':'مراجعة'))),
-        subtitle:WaffraText(item.needsReview?
-         (waffraIsEnglish?'Needs manual review: ':'تحتاج مراجعة: ')+item.reason:
-         (item.merchant??item.quote),maxLines:3),
-       ),
-    ]))),
-   actions:[TextButton(onPressed:()=>Navigator.pop(dialog),
-     child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))],
-  ));
+  return null;
  }
 
  /// Each image action remains a separate review row. This helper never
