@@ -21,6 +21,65 @@ void main() {
     expect(WaffraSmsCurrencies.supported, display);
   });
 
+  test('M313 all 36 Arabic full currency names remain distinct', () {
+    const named=<String,String>{
+      'ريال سعودي':'SAR','جنيه مصري':'EGP',
+      'درهم إماراتي':'AED','دينار كويتي':'KWD',
+      'دينار بحريني':'BHD','ريال قطري':'QAR',
+      'ريال عماني':'OMR','دينار أردني':'JOD',
+      'دينار عراقي':'IQD','ليرة لبنانية':'LBP',
+      'درهم مغربي':'MAD','دينار جزائري':'DZD',
+      'دينار تونسي':'TND','دولار أمريكي':'USD',
+      'يورو':'EUR','جنيه إسترليني':'GBP',
+      'ليرة تركية':'TRY','روبية هندية':'INR',
+      'روبية باكستانية':'PKR','تاكا بنغلاديشي':'BDT',
+      'ين ياباني':'JPY','يوان صيني':'CNY',
+      'دولار كندي':'CAD','دولار أسترالي':'AUD',
+      'فرنك سويسري':'CHF','كرونة سويدية':'SEK',
+      'كرونة نرويجية':'NOK','كرونة دنماركية':'DKK',
+      'راند جنوب أفريقي':'ZAR','دولار سنغافوري':'SGD',
+      'دولار هونغ كونغ':'HKD','رينغيت ماليزي':'MYR',
+      'روبية إندونيسية':'IDR','وون كوري':'KRW',
+      'بات تايلندي':'THB','بيزو فلبيني':'PHP',
+    };
+    expect(named.length,36);
+    for(final item in named.entries) {
+      final digits=WaffraSmsCurrencies.minorDigits(item.value);
+      final amount=digits==0?'198':digits==3?'198.125':'198.75';
+      for(final raw in <String>[
+        'حوالة واردة '+amount+' '+item.key+' الرصيد 900 ريال',
+        'حوالة واردة '+item.key+' '+amount+' الرصيد 900 ريال',
+      ]) {
+        expect(WaffraSmsCurrencies.currenciesForMessage(raw),{item.value},
+          reason:'localized name '+item.value);
+        expect(WaffraSmsCurrencies.originalAmountPreview(raw),
+          amount+' '+item.value,reason:'localized amount '+item.value);
+        expect(WaffraSmsCurrencies.requiresReviewForSarLedger(raw),
+          item.value!='SAR',reason:'never reinterpret '+item.value+' as SAR');
+      }
+    }
+  });
+
+  test('M313 ambiguous Arabic currency terms require manual correction', () {
+    for(final raw in [
+      'تحويل وارد 100 دينار',
+      'تم شراء بمبلغ 100 دولار',
+      'حوالة 100 ليرة',
+      'تم شراء 100 روبية',
+    ]) {
+      expect(WaffraSmsCurrencies.currenciesForMessage(raw),
+        contains('UNKNOWN'),reason:raw);
+      expect(WaffraSmsCurrencies.requiresReviewForSarLedger(raw),
+        isTrue,reason:raw);
+    }
+    expect(WaffraSmsCurrencies.currenciesForMessage(
+      'حوالة 100 ريال قطري الرصيد 300 ريال'),{'QAR'});
+    expect(WaffraSmsCurrencies.currenciesForMessage(
+      'حوالة 100 جنيه إسترليني الرصيد 300 ريال'),{'GBP'});
+    expect(WaffraSmsCurrencies.currenciesForMessage(
+      'شراء 100 درهم مغربي الرصيد 300 ريال'),{'MAD'});
+  });
+
   test('M300 each currency recognized before and after amount, regardless of balance', () {
     for (final currency in WaffraSmsCurrencies.supported) {
       final precision=WaffraCurrencyMinor.digits(currency);
