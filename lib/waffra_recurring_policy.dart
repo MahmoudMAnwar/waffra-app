@@ -25,6 +25,31 @@ class WaffraRecurringPolicy {
   return due;
  }
 
+ /// Date to show in the recurring overview. Unlike the next calendar
+ /// occurrence, the current month's unpaid charge remains due/overdue.
+ /// A postponement changes the actionable date, never the ledger identity.
+ /// This never creates money or marks a schedule paid.
+ static DateTime nextActionableDue({
+  required DateTime today,required DateTime startAt,required int day,
+  required bool currentMonthPaid,DateTime? postponedUntil,
+ }) {
+  if(day<1||day>31)throw ArgumentError.value(day,'day','Day must be 1..31');
+  final current=DateTime(today.year,today.month,today.day);
+  final first=DateTime(startAt.year,startAt.month,startAt.day);
+  final due=dueDate(current.year,current.month,day);
+  if(currentMonthPaid||due.isBefore(first)) {
+   return nextDueDate(
+    today:DateTime(current.year,current.month+1,1),
+    startAt:first,day:day);
+  }
+  if(postponedUntil!=null) {
+   final moved=DateTime(
+    postponedUntil.year,postponedUntil.month,postponedUntil.day);
+   if(moved.isAfter(due))return moved;
+  }
+  return due;
+ }
+
  static String entryId(String scheduleId,DateTime due)=>
   'rec_${scheduleId}_${due.year}_${due.month}';
 
