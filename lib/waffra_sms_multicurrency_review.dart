@@ -31,10 +31,10 @@ abstract final class WaffraSmsCurrencies {
       'AZN','AMD','BAM','MKD','ALL','ISK','HRK','CUP','TWD','VND',
       'BWP','NAD','MZN','AOA','ZMW','MWK','SDG','LYD','SYP','IRR',
     };
-    if (RegExp(r'^[A-Za-z]{3}\$').hasMatch(original) &&
+    if (RegExp(r'^[A-Za-z]{3}$').hasMatch(original) &&
         !supported.contains(token) && original != token &&
         !externalIsoCodes.contains(token)) return '';
-        if (const <String>{'HAS','FOR','AND','THE','YOU','NEW','NOW','NOT'}
+    if (const <String>{'HAS','FOR','AND','THE','YOU','NEW','NOW','NOT'}
         .contains(token)) return '';
     // Common SMS action codes are NOT currencies even beside an amount.
     if (const <String>{'POS','ATM','OTP','PIN','SMS','REF','TAX','VAT',
@@ -112,7 +112,22 @@ abstract final class WaffraSmsCurrencies {
       final groups=separator==','?'.':',';
       final pieces=value.split(separator);
       if (pieces.length!=2 ||
-          !RegExp(r'^[0-9]{1,3}\$').hasMatch(parts.first)) {
+          !RegExp(r'^[0-9]{1,3}(?:[,.][0-9]{3})+$').hasMatch(pieces.first) ||
+          !RegExp(r'^[0-9]{1,3}$').hasMatch(pieces.last) ||
+          !pieces.first.contains(groups)) return null;
+      final integer=pieces.first.replaceAll(groups,'');
+      value=integer+'.'+pieces.last;
+    } else if (comma>=0 || dot>=0) {
+      final separator=comma>=0?',':'.';
+      final parts=value.split(separator);
+      if(parts.length>2) {
+        if (!RegExp('^[0-9]{1,3}('+RegExp.escape(separator)+r'[0-9]{3})+$')
+            .hasMatch(value)) return null;
+        value=parts.join('');
+      } else {
+        final fraction=parts.last;
+        if (separator==',' && fraction.length==3 && digits==0 &&
+            RegExp(r'^[0-9]{1,3}$').hasMatch(parts.first)) {
           // JPY/KRW cannot represent fractional units. A lone 1,234
           // therefore has one unambiguous interpretation: 1234 units.
           value=parts.first+fraction;
