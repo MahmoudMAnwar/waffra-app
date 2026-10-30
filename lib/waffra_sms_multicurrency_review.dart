@@ -114,16 +114,104 @@ abstract final class WaffraSmsCurrencies {
         value=parts.join('');
       } else {
         final fraction=parts.last;
-        if (fraction.length==3 && (digits<3 || separator==',')) {
-          // A grouping marker may mean 1000, but we cannot prove it.
-          return null;
+        if (separator==',' && fraction.length==3 && digits==0 &&
+            RegExp(r'^[0-9]{1,3}
+      }
+    }
+    if(!RegExp(r'^[0-9]{1,12}(?:\.[0-9]{1,3})?$').hasMatch(value)) {
+      return null;
+    }
+    return value;
+  }
+
+  /// Returns the sole action amount in source units, or null when there is
+  /// insufficient evidence. Never includes a balance, fee or second amount.
+  /// This parser is a *suggestion* and must not write into the SAR ledger.
+  static ({double amount,String currency,String formatted})? originalAmount(
+      String raw) {
+    final found=currenciesForMessage(raw);
+    if(found.length!=1 || found.contains('UNKNOWN'))return null;
+    final currency=found.single;
+    final scale=minorDigits(currency);
+    final normalized=_westernDigits(raw);
+    final footer=RegExp(
+      r'available balance|remaining balance|current balance|'
+      r'\bbalance\b|الرصيد|المتاح|commission|service fee|'
+      r'fee amount|رسوم|ضريبة|vat\b',
+      caseSensitive:false).firstMatch(normalized);
+    final action=footer==null?normalized:normalized.substring(0,footer.start);
+    final escaped=currency=='SAR'?
+      r'(?:SAR|SR|ريال(?:\s+سعودي)?|ر\.?\s*س\.?|﷼|⃁)':
+      currency=='EGP'?
+      r'(?:EGP|ج\.م|جنيه(?:\s+مصري)?)':
+      currency=='AED'?
+      r'(?:AED|د\.إ|درهم(?:\s+إماراتي)?)':
+      currency=='EUR'?r'(?:EUR|€)':
+      currency=='GBP'?r'(?:GBP|£)':
+      currency=='INR'?r'(?:INR|₹)':RegExp.escape(currency);
+    // Explicit codes only: do not treat a random numeral, card or reference
+    // as a financial amount. Currency may touch the number on either side.
+    final pattern=r'([0-9][0-9,.]{0,20})(?![0-9,.])';
+    final before=RegExp('(?<![A-Za-z])'+escaped+r'\s*[:：]?\s*'+pattern,
+      caseSensitive:false);
+    final after=RegExp(pattern+r'\s*'+escaped+r'(?![A-Za-z])',
+      caseSensitive:false);
+    final matches=<String>[
+      ...before.allMatches(action).map((m)=>m.group(1)!),
+      ...after.allMatches(action).map((m)=>m.group(1)!),
+    ];
+    if(matches.length!=1)return null;
+    final canonical=_canonicalMoney(matches.single,scale);
+    if(canonical==null)return null;
+    final amount=double.tryParse(canonical);
+    if(amount==null||!amount.isFinite||amount<=0||amount>1e9)return null;
+    final factor=scale==3?1000:scale==0?1:100;
+    final minor=amount*factor;
+    if((minor-minor.round()).abs()>0.000001)return null;
+    return (amount:amount,currency:currency,formatted:canonical+' '+currency);
+  }
+
+  static String? originalAmountPreview(String raw)=>originalAmount(raw)?.formatted;
+
+  static bool requiresReviewForSarLedger(String raw) {
+    final currencies = currenciesForMessage(raw);
+    return currencies.length > 1 || currencies.any((code) => code != 'SAR');
+  }
+
+  static WaffraSmsCurrencyBatch summarize(List<String> messages) {
+    final counts = <String, int>{};
+    for (final message in messages) {
+      for (final currency in currenciesForMessage(message)) {
+        counts[currency] = (counts[currency] ?? 0) + 1;
+      }
+    }
+    return WaffraSmsCurrencyBatch(Map<String, int>.unmodifiable(counts));
+  }
+}
+
+class WaffraSmsCurrencyBatch {
+  const WaffraSmsCurrencyBatch(this.counts);
+  final Map<String, int> counts;
+  bool get hasMixedCurrencies => counts.keys.length > 1;
+  bool get needsCurrencyReview => counts.keys.any((code) => code != 'SAR');
+  String get summary => (counts.entries.toList()
+    ..sort((a,b) => a.key.compareTo(b.key)))
+    .map((item) => item.key + ': ' + item.value.toString()).join(' • ');
+}
+).hasMatch(parts.first)) {
+          // JPY/KRW cannot represent fractional units. A lone 1,234
+          // therefore has one unambiguous interpretation: 1234 units.
+          value=parts.first+fraction;
+        } else {
+          if (fraction.length==3 && (digits<3 || separator==',')) {
+            // 1,234 in a fractional currency is locale-ambiguous.
+            return null;
+          }
+          if (fraction.length>digits || digits==0) {
+            return null;
+          }
+          value=parts.first+'.'+fraction;
         }
-        if (fraction.length>digits || digits==0) {
-          // A single comma grouping (1,234) is acceptable only with
-          // unmistakable grouped digits. Otherwise require manual input.
-          return null;
-        }
-        value=parts.first+'.'+fraction;
       }
     }
     if(!RegExp(r'^[0-9]{1,12}(?:\.[0-9]{1,3})?$').hasMatch(value)) {
