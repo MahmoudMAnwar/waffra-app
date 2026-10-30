@@ -166,7 +166,7 @@ class _WaffraOilMarketSectionState extends State<WaffraOilMarketSection>{
       key:const Key('waffra-oil-quantity'),
       controller:units,
       keyboardType:const TextInputType.numberWithOptions(decimal:true),
-      inputFormatters:[const WaffraAmountFormatter()],
+      inputFormatters:[const WaffraAmountFormatter(decimalPlaces:3)],
       decoration:InputDecoration(labelText:t('Quantity','الكمية'),
        border:const OutlineInputBorder()),
       onChanged:(_)=>setState((){}))),
