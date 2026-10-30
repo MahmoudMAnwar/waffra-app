@@ -40,9 +40,38 @@ void main(){
    today:DateTime(2026),startAt:DateTime(2026),day:32),throwsArgumentError);
  });
 
+ test('M302 unpaid past due remains visible, not silently moved to next month',(){
+  final today=DateTime(2026,10,30);
+  final due=WaffraRecurringPolicy.nextActionableDue(
+   today:today,startAt:DateTime(2026,1,1),day:10,
+   currentMonthPaid:false);
+  expect(due,DateTime(2026,10,10));
+  expect(due.isBefore(today),isTrue);
+ });
+
+ test('M302 paid due displays next occurrence and future starts stay future',(){
+  expect(WaffraRecurringPolicy.nextActionableDue(
+   today:DateTime(2026,10,30),startAt:DateTime(2026,1,1),day:10,
+   currentMonthPaid:true),DateTime(2026,11,10));
+  expect(WaffraRecurringPolicy.nextActionableDue(
+   today:DateTime(2026,10,30),startAt:DateTime(2026,12,19),day:10,
+   currentMonthPaid:false),DateTime(2027,1,10));
+ });
+
+ test('M302 postponement date appears without mutating this month ledger ID',(){
+  final due=WaffraRecurringPolicy.dueDate(2026,10,10);
+  final id=WaffraRecurringPolicy.entryId('rent',due);
+  expect(WaffraRecurringPolicy.nextActionableDue(
+   today:DateTime(2026,10,30),startAt:DateTime(2026,1,1),day:10,
+   currentMonthPaid:false,postponedUntil:DateTime(2026,11,3)),
+   DateTime(2026,11,3));
+  expect(WaffraRecurringPolicy.entryId('rent',due),id);
+ });
+
  test('M302 real app overview reads the same verified recurring due policy',(){
   final code=File('lib/main.dart').readAsStringSync();
-  expect(code,contains('WaffraRecurringPolicy.nextDueDate('));
-  expect(code,contains('today:DateTime.now(),startAt:r.startAt,day:r.day'));
+  expect(code,contains('WaffraRecurringPolicy.nextActionableDue('));
+  expect(code,contains('currentMonthPaid:entries.any((entry)=>entry.id==monthId)'));
+  expect(code,contains("postponedUntil:DateTime.tryParse(recurringPostponed[monthId]??'')"));
  });
 }
