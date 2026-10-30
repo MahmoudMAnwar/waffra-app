@@ -85,6 +85,75 @@ void main() {
     ), isTrue);
   });
 
+
+  test('SMS merchant key matches manual Arabic purchase title', () {
+    expect(possible(
+      candidateMerchant: 'كيتا',
+      existingMerchant: '',
+      candidateTitle: 'Bank transaction',
+      existingTitle: 'شراء من كيتا',
+      candidateCategory: 'أخرى',
+      existingCategory: 'طعام',
+    ), isTrue);
+  });
+
+  test('reverse merchant matching covers English receipt titles', () {
+    expect(possible(
+      candidateMerchant: '',
+      existingMerchant: 'KEETA',
+      candidateTitle: 'Purchase at Keeta',
+      existingTitle: 'POS purchase',
+      candidateCategory: 'Food',
+      existingCategory: 'Other',
+    ), isTrue);
+  });
+
+  test('recognized purchase prefixes match without explicit merchant keys', () {
+    expect(possible(
+      candidateMerchant: '',
+      existingMerchant: '',
+      candidateTitle: 'POS Purchase Keeta',
+      existingTitle: 'Keeta',
+      candidateCategory: 'Shopping',
+      existingCategory: 'Food',
+    ), isTrue);
+  });
+
+  test('do not confuse partial merchant names or lookalike vendors', () {
+    expect(possible(
+      candidateMerchant: 'KEETA',
+      existingMerchant: '',
+      candidateTitle: 'Bank transaction',
+      existingTitle: 'Purchase at Keeta Mart',
+    ), isFalse);
+  });
+
+  test('different explicit merchant keys override generic identical titles', () {
+    expect(possible(
+      candidateMerchant: 'shop A',
+      existingMerchant: 'shop B',
+      candidateTitle: 'POS Purchase',
+      existingTitle: 'POS Purchase',
+      candidateCategory: 'Shopping',
+      existingCategory: 'Shopping',
+    ), isFalse);
+  });
+
+  test('prefixed merchant on another day or amount remains independent', () {
+    expect(possible(
+      candidateMerchant: 'Keeta',
+      existingMerchant: '',
+      existingTitle: 'Paid to Keeta',
+      existingDate: DateTime(2026, 10, 29),
+    ), isFalse);
+    expect(possible(
+      candidateMerchant: 'Keeta',
+      existingMerchant: '',
+      existingTitle: 'Paid to Keeta',
+      existingAmount: 24.51,
+    ), isFalse);
+  });
+
   test('live confirm shows advisory with explicit override, no auto discard', () {
     final source = File('lib/main.dart').readAsStringSync();
     final anchor = source.indexOf('if(initial==null&&entries.any((e)=>');
