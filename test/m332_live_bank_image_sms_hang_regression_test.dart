@@ -8,20 +8,20 @@ import 'package:waffra/waffra_sms_multicurrency_review.dart';
 
 void main(){
  const threeBankBubbles='''شراء PoS
- عبر:9003-مدى
- SAR 4.50
- Merchant Test
- 30/10/26 23:49
- شراء PoS
- عبر:9003-مدى
- SAR 10
- Merchant Test
- 30/10/26 00:01
- شراء PoS
- عبر:9003-مدى
- SAR 4
- Merchant Test
- 30/10/26 14:44''';
+عبر:9003-مدى
+SAR 4.50
+Merchant Test
+30/10/26 23:49
+شراء PoS
+عبر:9003-مدى
+SAR 10
+Merchant Test
+30/10/26 00:01
+شراء PoS
+عبر:9003-مدى
+SAR 4
+Merchant Test
+30/10/26 14:44''';
 
  test('M332 screenshot with exactly three bank bubbles stays three',(){
   final entries=WaffraBankScreenshotParser.reviewItems(threeBankBubbles);
