@@ -14,7 +14,7 @@
 - Tests: test/m317_ai_finance_brain_test.dart
 - Native dependency pinned: llamadart 0.8.24 with llama.cpp-only hook.
 
-The source AI text inference is injected. These service classes do not contain any database, write, Firebase inference or credential dependency. The active screens are not yet wired to the model. Existing SMS/OCR and read-only Tools behavior remains unchanged until accepted.
+The source AI text inference is injected. These service classes do not contain any database, write, Firebase inference or credential dependency. Opt-in AI buttons are now wired into Tools / Ask Waffra / financial analysis / saving suggestions, the SMS review sheet and the OCR image path. User-facing AI is disabled until an explicit model download and verified local load. Existing deterministic SMS/OCR behavior remains the fallback until accepted.
 
 ## User opt-in and model integrity
 The approximately 484 MB Qwen3-0.6B-Q4_K_M.gguf file is not shipped in the APK, downloaded at login or fetched silently. A user-facing opt-in is required. The public model is downloaded from the pinned smarttasks Hugging Face URL only when explicitly requested and SHA-256 checked before loading. The sha256 pin is 3479875d3e4c726f7a20b2181f5e1536aefe9925f284f9ae9997a39a7e0d8dc9. All bank messages, OCR text, source records and prompts remain on-device.
@@ -28,6 +28,6 @@ The financial coach sees only verified, scoped **integer minor units** aggregate
 - Exact latest HEAD: Dart analyze, M317 core tests and all finance/SQLCipher/legacy tests.
 - Confirm llamadart native runtime compatibility with Android build, iOS target and physical device memory/CPU use.
 - Model checksum failure, interrupted download, low storage, offline reboot and logout/A-B account isolation tests.
-- Integrate model opt-in and feedback UI in bank SMS review, OCR multiple-transaction review, Ask Waffra, analysis and savings sections.
+- Complete on-device UI acceptance tests, progress/cancel/retry flows and visual QA for the opt-in UI now implemented in bank SMS, OCR multiple-action review, Ask Waffra, analysis and savings sections.
 - Every transaction is explicitly confirmed by user and independently committed through existing encrypted authoritative writer.
 - Physical Android and iOS proof, then merged-main smoke tests; NO production cutover or APK release before those gates.
