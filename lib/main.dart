@@ -9171,11 +9171,11 @@ Future<bool> _requireBankSmsAi()=>
     'حذف نموذج الذكاء الاصطناعي من الجهاز؟',
    waffraIsEnglish?
     'This will delete the downloaded model (about 484 MB). You will lose '
-    'AI bank-message analysis, AI receipt analysis, Ask Waffra, AI financial '
+    'Bank-message importing and image OCR scanning, Ask Waffra, AI financial '
     'analysis and AI saving suggestions until you download it again. '
     'Your saved transactions, invoices, backups and regular tools will NOT be deleted.':
     'سيتم حذف نموذج الذكاء الاصطناعي الذي تم تنزيله (حوالي 484 ميجابايت). '
-    'بعد الحذف هتفقد تحليل الرسائل البنكية والفواتير بالذكاء الاصطناعي، '
+    'بعد الحذف مش هتقدر تستخدم الرسائل البنكية أو OCR للفواتير والصور، '
     'واسأل وفرة، والتحليل المالي الذكي واقتراحات التوفير، لحد ما تنزّله تاني. '
     'معاملاتك وفواتيرك ونسخك الاحتياطية والأدوات العادية مش هتتحذف.');
   if(approved!=true||!mounted)return;
@@ -9535,9 +9535,9 @@ Future<bool> _requireBankSmsAi()=>
         present?
          (waffraIsEnglish?
           'Remove downloaded AI (~484 MB) after fingerprint/Face ID verification. '
-          'AI analysis will stop until re-download.':
+          'Bank messages, OCR and AI analysis will stop until re-download.':
           'حذف النموذج (~484 ميجابايت) بعد تأكيد بصمة الجهاز. '
-          'هتتوقف ميزات AI لحد إعادة التنزيل.'):
+          'هتتوقف الرسائل البنكية وOCR وميزات AI لحد إعادة التنزيل.'):
          (waffraIsEnglish?
           'Not downloaded. You can install it again from any AI feature.':
           'النموذج غير منزّل. يمكن تنزيله عند فتح أي ميزة AI.'),
