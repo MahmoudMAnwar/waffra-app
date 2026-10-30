@@ -125,7 +125,8 @@ class _WaffraGoldCalculatorPageState extends State<WaffraGoldCalculatorPage> {
   WaffraGoldQuote? quote;
 
   String t(String en, String ar) => waffraIsEnglish ? en : ar;
-  String money(double value, String code) => value.toStringAsFixed(2) + ' ' + code;
+  String money(double value, String code) =>
+   formatWaffraMoney(value,decimalPlaces:waffraCurrencyMinorDigits(code)) + ' ' + code;
   String stamp(DateTime d) {
     final local = d.toLocal();
     return local.day.toString() + '/' + local.month.toString() + '/' +
@@ -268,7 +269,7 @@ class _WaffraGoldCalculatorPageState extends State<WaffraGoldCalculatorPage> {
                 WaffraText(t('Saudi riyal equivalent: ', 'ما يعادله بالريال: ') +
                   money(WaffraGoldMath.total(quote!.gram(karat, sar: true), grams), 'SAR')),
                 if (currency != 'SAR') WaffraText(t('Indicative FX: 1 SAR ≈ ', 'سعر الصرف: 1 ريال ≈ ') +
-                  money(quote!.currencyFx / quote!.sarFx, currency)),
+                  (quote!.currencyFx / quote!.sarFx).toStringAsFixed(6)+' '+currency),
               ]))),
           const SizedBox(height: 12),
           Text(t('Spot price per gram', 'سعر الجرام العالمي'),
