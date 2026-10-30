@@ -146,6 +146,15 @@ void main() {
       'عملية شراء 100 دولار'),contains('UNKNOWN'));
   });
 
+  test('16 unsupported Arabic qualifiers force a finance review',(){
+    for(final name in ['ريال يمني','جنيه سوداني','درهم غير معروف']) {
+      final message='حوالة واردة 100 '+name+' الرصيد 200 ريال';
+      expect(WaffraSmsCurrencies.currenciesForMessage(message),
+        contains('UNKNOWN'));
+      expect(WaffraSmsCurrencies.requiresReviewForSarLedger(message),isTrue);
+    }
+  });
+
   test('14 live bank SMS save rejects foreign amounts before hash generation', () {
     final sheet=method('Future<void> entrySheet(',
         'Future<String?> chooseTransactionCategory(');
