@@ -52,12 +52,44 @@ abstract final class WaffraCrossSourceDuplicateReview {
 
     final candidateMerchant = _identity(candidateMerchantKey);
     final existingMerchant = _identity(existingMerchantKey);
-    if (candidateMerchant.isNotEmpty && existingMerchant.isNotEmpty &&
-        candidateMerchant == existingMerchant) return true;
+
+    // Two different verified merchant keys are not the same merchant merely
+    // because their generic bank titles and category happen to match.
+    if (candidateMerchant.isNotEmpty && existingMerchant.isNotEmpty) {
+      return candidateMerchant == existingMerchant;
+    }
+
+    // A bank SMS may contain a merchant key while the manual/receipt entry
+    // only has a title such as "Purchase at Keeta" or "شراء من كيتا".
+    // Match the *entire* merchant name, never substrings ("Keeta Mart" is
+    // different from "Keeta"), amounts, card suffixes or generic POS labels.
+    if (candidateMerchant.isNotEmpty &&
+        candidateMerchant == _merchantTitle(existingTitle)) return true;
+    if (existingMerchant.isNotEmpty &&
+        existingMerchant == _merchantTitle(candidateTitle)) return true;
 
     final candidateName = _identity(candidateTitle);
     final existingName = _identity(existingTitle);
-    return candidateName.isNotEmpty && candidateName == existingName &&
-        _identity(candidateCategory) == _identity(existingCategory);
+    if (candidateName.isNotEmpty && candidateName == existingName &&
+        _identity(candidateCategory) == _identity(existingCategory)) return true;
+
+    // Two differently worded titles can still describe a single merchant
+    // when one uses a recognized purchase prefix. This is an advisory only:
+    // the user must explicitly authorize a second financial write.
+    final candidateFromTitle = _merchantTitle(candidateTitle);
+    final existingFromTitle = _merchantTitle(existingTitle);
+    return candidateFromTitle.length >= 3 &&
+        candidateFromTitle == existingFromTitle &&
+        (candidateFromTitle != candidateName ||
+            existingFromTitle != existingName);
+  }
+
+  static String _merchantTitle(String title) {
+    final normalized = _identity(title);
+    return normalized.replaceFirst(
+      RegExp(r'^(?:عملية شراء من|شراء من|شراء لدى|دفع الي|دفع ل|'
+          r'purchase at|purchase from|paid to|payment to|pos purchase)\\s+'),
+      '',
+    );
   }
 }
