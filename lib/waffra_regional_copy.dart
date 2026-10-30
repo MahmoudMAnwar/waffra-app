@@ -23,6 +23,16 @@ abstract final class WaffraRegionalCopy {
     'DZ':'الجزائر',
     'TN':'تونس',
   };
+  static const englishRegions=<String,String>{
+    '':'Not selected / Neutral Arabic',
+    'SA':'Saudi Arabia','EG':'Egypt','AE':'United Arab Emirates',
+    'KW':'Kuwait','BH':'Bahrain','QA':'Qatar','OM':'Oman',
+    'JO':'Jordan','IQ':'Iraq','LB':'Lebanon',
+    'MA':'Morocco','DZ':'Algeria','TN':'Tunisia',
+  };
+  static String regionLabel(String code,{required bool english})=>
+    english?(englishRegions[code]??code):(supportedRegions[code]??code);
+
   static String normalized(String? value){
     final code=value?.trim().toUpperCase()??'';
     return supportedRegions.containsKey(code)?code:'';
