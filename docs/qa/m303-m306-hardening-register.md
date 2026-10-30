@@ -9,7 +9,7 @@ STACKED DRAFT based on M302 PR #294. Not merged into main; not a production APK 
 | 03 Legacy backup | Authenticated encrypted V1 and V2 restore; migration of older backups/attachments needs device proof | Existing, device gate |
 | 04 Account A/B isolation | Sign-out preserves local finance to prevent data loss; proper identity fencing A-to-B not certified | Release blocker, NOT fixed |
 | 05 Currency and widget precision | FIX widget now rejects silent sub-halalah rounding; M302 tools improve 0/2/3 decimal formatting | Implemented, tests pending |
-| 06 OCR/SMS/manual duplicates | FIX live review now warns for same-day matching merchant/title, exact cents and direction across receipt, SMS and manual; explicit override required. Bulk OCR+SMS matching and encrypted-source post-lock proof still open | Partial, added tests |
+| 06 OCR/SMS/manual duplicates | FIX live review checks same-day exact cents and direction, matching explicit merchant keys, or exact merchant names in recognized Arabic/English purchase-title prefixes even across categories; rejects partial names and conflicting keys; explicit override required. Bulk OCR+SMS matching and encrypted-source post-lock proof still open | Partial, M307 tests added |
 | 07 Recurring payments | FIX failed paid/postpone commits reload authority and require explicit confirmation | Implemented, tests pending |
 | 08 Receipts | Existing private staging and label validation; shared-file/orphan retention needs physical fault testing | Existing, device gate |
 | 09 Home/Widget/PDF balance | FIX widget rejects invalid precision. Cross-view same-revision reconciliation remains open | Partial |
