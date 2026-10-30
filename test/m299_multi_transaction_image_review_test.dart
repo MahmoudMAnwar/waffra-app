@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_bank_screenshot_parser.dart';
+import 'package:waffra/waffra_sms_multicurrency_review.dart';
 
 void main() {
   test('M299 numbered entries retain every recognized bank action', () {
@@ -80,6 +81,38 @@ Supermarket
     expect(main, contains('المبلغ غير واضح'));
     expect(main, contains('entrySheet('));
     expect(main, contains('تأكيد وحفظ العملية'));
+  });
+
+  test('M299 all 36 bank currencies are blocked before SAR-only save', () {
+    expect(WaffraSmsCurrencies.supported.length,36);
+    for(final currency in WaffraSmsCurrencies.supported) {
+      final text=currency+'198.50 has been credited to an account. '+
+          'Balance 201.50'+currency;
+      final foreign=currency!='SAR';
+      expect(WaffraBankScreenshotParser.requiresForeignCurrencyReview(text),
+          foreign,reason:currency);
+      expect(WaffraBankScreenshotParser.looksLikeBankScreenshot(text),
+          isTrue,reason:currency);
+      final actions=WaffraBankScreenshotParser.reviewItems(text);
+      expect(actions.length,1,reason:currency);
+      expect(actions.single.income,isTrue,reason:currency);
+      if(foreign) {
+        expect(actions.single.amount,isNull,reason:
+          'No FX-provenance foreign amount can be prefixed as SAR: '+currency);
+      }
+    }
+  });
+
+  test('M299 finance editor guards every direct OCR caller', () {
+    final app=File('lib/main.dart').readAsStringSync();
+    final start=app.indexOf('Future<void> entrySheet(');
+    final end=app.indexOf('final title=',start);
+    expect(start,greaterThan(0));
+    expect(end,greaterThan(start));
+    final gate=app.substring(start,end);
+    expect(gate,contains('WaffraBankScreenshotParser.requiresForeignCurrencyReview('));
+    expect(gate,contains('await _canReviewOcrAsLedgerTransaction('));
+    expect(gate,contains('return;'));
   });
 
   test('M299 foreign currency OCR stays numbered but not SAR-prefilled', () {
