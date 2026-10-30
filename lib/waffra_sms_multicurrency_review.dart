@@ -8,6 +8,39 @@ abstract final class WaffraSmsCurrencies {
     'SGD','HKD','MYR','IDR','KRW','THB','PHP',
   };
 
+  // Full Arabic currency names independent of the app's display setting.
+  // Normalize the names before matching, but never silently convert money.
+  static const _arabicNames=<String,String>{
+    'ريال سعودي':'SAR','جنيه مصري':'EGP',
+    'درهم اماراتي':'AED','دينار كويتي':'KWD',
+    'دينار بحريني':'BHD','ريال قطري':'QAR',
+    'ريال عماني':'OMR','دينار اردني':'JOD',
+    'دينار عراقي':'IQD','ليره لبنانيه':'LBP',
+    'درهم مغربي':'MAD','دينار جزائري':'DZD',
+    'دينار تونسي':'TND','دولار امريكي':'USD',
+    'يورو':'EUR','جنيه استرليني':'GBP',
+    'ليره تركيه':'TRY','روبيه هنديه':'INR',
+    'روبيه باكستانيه':'PKR','تاكا بنغلاديشي':'BDT',
+    'ين ياباني':'JPY','يوان صيني':'CNY',
+    'دولار كندي':'CAD','دولار استرالي':'AUD',
+    'فرنك سويسري':'CHF','كرونه سويديه':'SEK',
+    'كرونه نرويجيه':'NOK','كرونه دنماركيه':'DKK',
+    'راند جنوب افريقي':'ZAR','دولار سنغافوري':'SGD',
+    'دولار هونغ كونغ':'HKD','رينغيت ماليزي':'MYR',
+    'روبيه اندونيسيه':'IDR','وون كوري':'KRW',
+    'بات تايلندي':'THB','بيزو فلبيني':'PHP',
+  };
+  static String _normalizeArabic(String raw)=>raw
+    .replaceAll(RegExp(r'[أإآٱ]'),'ا')
+    .replaceAll('ى','ي').replaceAll('ة','ه')
+    .replaceAll(RegExp(r'[\\u064B-\\u065F\\u0670]'),'');
+  static final _namedAlternatives=_arabicNames.keys
+      .map(RegExp.escape).join('|');
+  static final _namedAdjacentAmount=RegExp(
+    r'(?:(?:[0-9][0-9,.]*\\s*(' + _namedAlternatives +
+      r'))|(?:(' + _namedAlternatives + r')\\s*[0-9][0-9,.]*))'
+  );
+
   static String codeFor(String value) {
     final original = value.trim();
     final token = original.toUpperCase();
@@ -68,6 +101,22 @@ abstract final class WaffraSmsCurrencies {
           r'commission|رسوم|service fee|fee amount|\bvat\b|ضريبة',
           caseSensitive:false).firstMatch(clause);
         final action = footer==null?clause:clause.substring(0,footer.start);
+        // Named Arabic currencies can contain spaces. Scan their full names
+        // beside an amount before the generic ريال/جنيه/درهم token scanner.
+        final namedAction=_normalizeArabic(_westernDigits(action));
+        for (final match in _namedAdjacentAmount.allMatches(namedAction)) {
+          final name=match.group(1)??match.group(2);
+          if(name!=null)found.add(_arabicNames[name]??'UNKNOWN');
+        }
+        // A bare "دينار", "ليرة", etc. remains ambiguous and must not
+        // be posted as SAR even if no specific country was readable.
+        if (RegExp(r'(?<![\\u0600-\\u06FF])(?:دينار|ليره|دولار|روبيه|'
+           r'كرونه|فرنك|راند|رينغيت|يوان|وون|بات|بيزو|تاكا|ين)'
+           r'(?![\\u0600-\\u06FF])').hasMatch(namedAction) &&
+            RegExp(r'[0-9]').hasMatch(namedAction) &&
+            !_namedAdjacentAmount.hasMatch(namedAction)) {
+          found.add('UNKNOWN');
+        }
         for (final expression in adjacentAmount.allMatches(action)) {
           for (final token in currencyToken.allMatches(expression.group(0)!)) {
           final code = codeFor(token.group(0)!);
@@ -158,7 +207,7 @@ abstract final class WaffraSmsCurrencies {
     if(found.length!=1 || found.contains('UNKNOWN'))return null;
     final currency=found.single;
     final scale=minorDigits(currency);
-    final normalized=_westernDigits(raw);
+    final normalized=_normalizeArabic(_westernDigits(raw));
     final footer=RegExp(
       r'available balance|remaining balance|current balance|'
       r'\bbalance\b|الرصيد|المتاح|commission|service fee|'
@@ -174,12 +223,17 @@ abstract final class WaffraSmsCurrencies {
       currency=='EUR'?r'(?:EUR|€)':
       currency=='GBP'?r'(?:GBP|£)':
       currency=='INR'?r'(?:INR|₹)':RegExp.escape(currency);
+    final localizedAliases=_arabicNames.entries
+        .where((entry)=>entry.value==currency)
+        .map((entry)=>RegExp.escape(entry.key)).join('|');
+    final acceptedCurrency=localizedAliases.isEmpty?escaped:
+        '(?:'+escaped+'|'+localizedAliases+')';
     // Explicit codes only: do not treat a random numeral, card or reference
     // as a financial amount. Currency may touch the number on either side.
     final pattern=r'([0-9][0-9,.]{0,20})(?![0-9,.])';
-    final before=RegExp('(?<![A-Za-z])'+escaped+r'\s*[:：]?\s*'+pattern,
+    final before=RegExp('(?<![A-Za-z])'+acceptedCurrency+r'\s*[:：]?\s*'+pattern,
       caseSensitive:false);
-    final after=RegExp(pattern+r'\s*'+escaped+r'(?![A-Za-z])',
+    final after=RegExp(pattern+r'\s*'+acceptedCurrency+r'(?![A-Za-z])',
       caseSensitive:false);
     final matches=<String>[
       ...before.allMatches(action).map((m)=>m.group(1)!),
