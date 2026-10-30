@@ -114,7 +114,7 @@ abstract final class WaffraSmsCurrencies {
         value=parts.join('');
       } else {
         final fraction=parts.last;
-        if (fraction.length==3 && digits<3) {
+        if (fraction.length==3 && (digits<3 || separator==',')) {
           // A grouping marker may mean 1000, but we cannot prove it.
           return null;
         }
@@ -148,7 +148,15 @@ abstract final class WaffraSmsCurrencies {
       r'fee amount|رسوم|ضريبة|vat\b',
       caseSensitive:false).firstMatch(normalized);
     final action=footer==null?normalized:normalized.substring(0,footer.start);
-    final escaped=RegExp.escape(currency);
+    final escaped=currency=='SAR'?
+      r'(?:SAR|SR|ريال(?:\s+سعودي)?|ر\.?\s*س\.?|﷼|⃁)':
+      currency=='EGP'?
+      r'(?:EGP|ج\.م|جنيه(?:\s+مصري)?)':
+      currency=='AED'?
+      r'(?:AED|د\.إ|درهم(?:\s+إماراتي)?)':
+      currency=='EUR'?r'(?:EUR|€)':
+      currency=='GBP'?r'(?:GBP|£)':
+      currency=='INR'?r'(?:INR|₹)':RegExp.escape(currency);
     // Explicit codes only: do not treat a random numeral, card or reference
     // as a financial amount. Currency may touch the number on either side.
     final pattern=r'([0-9][0-9,.]{0,20})(?![0-9,.])';
