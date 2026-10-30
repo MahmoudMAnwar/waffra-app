@@ -6,6 +6,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter_tesseract_ocr/flutter_tesseract_ocr.dart';
 import 'package:http/http.dart' as http;
 
+import 'waffra_bank_screenshot_parser.dart';
 import 'waffra_receipt_ocr_parser.dart';
 
 /// Uses Tesseract entirely on-device after the two language models have been
@@ -32,19 +33,57 @@ abstract final class WaffraReceiptOcr {
     }
     await _installVerifiedModels();
     try {
-      final recognized = await FlutterTesseractOcr.extractText(
-        imagePath,
-        language: 'ara+eng',
-        args: <String, String>{
-          'psm': '3',
-          'preserve_interword_spaces': '1',
-        },
-      );
-      return WaffraReceiptOcrParser.parse(recognized);
+      // Automatic page layout can merge or omit rows from dense bank SMS
+      // screenshots. A sparse-text retry recovers additional independent
+      // actions, without any remote image upload or speculative finance write.
+      final primary = await _extract(imagePath, '3');
+      var best = primary;
+      var bankItems = WaffraBankScreenshotParser.reviewItems(primary);
+      final bankLike = bankItems.isNotEmpty ||
+          WaffraBankScreenshotParser.looksLikeBankScreenshot(primary);
+      if (bankLike) {
+        for (final mode in <String>['11', '6']) {
+          try {
+            final alternate = await _extract(imagePath, mode);
+            final items = WaffraBankScreenshotParser.reviewItems(alternate);
+            final nextScore =
+                items.length * 10 + items.where((e) => e.amount != null).length;
+            final bestScore = bankItems.length * 10 +
+                bankItems.where((e) => e.amount != null).length;
+            if (nextScore > bestScore) {
+              best = alternate;
+              bankItems = items;
+            }
+          } catch (_) {
+            // A failed optional retry never discards a successful first pass.
+          }
+        }
+      } else if (!WaffraReceiptOcrParser.parse(primary).hasSuggestions) {
+        try {
+          final alternate = await _extract(imagePath, '6');
+          if (WaffraReceiptOcrParser.parse(alternate).hasSuggestions ||
+              WaffraBankScreenshotParser.reviewItems(alternate).isNotEmpty) {
+            best = alternate;
+          }
+        } catch (_) {
+          // Retain the first pass for manual review.
+        }
+      }
+      return WaffraReceiptOcrParser.parse(best);
     } catch (_) {
       throw const WaffraReceiptOcrException('recognition_failed');
     }
   }
+
+  static Future<String> _extract(String path, String pageMode) =>
+      FlutterTesseractOcr.extractText(
+        path,
+        language: 'ara+eng',
+        args: <String, String>{
+          'psm': pageMode,
+          'preserve_interword_spaces': '1',
+        },
+      );
 
   static Future<bool> modelsInstalled() async {
     final path = await FlutterTesseractOcr.getTessdataPath();

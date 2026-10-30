@@ -6,6 +6,9 @@ on:
     paths:
       - '.github/workflows/m287-receipt-ocr.yml'
       - 'lib/waffra_receipt_ocr.dart'
+      - 'lib/waffra_bank_screenshot_parser.dart'
+      - 'lib/main.dart'
+      - 'test/m299_multi_transaction_image_review_test.dart'
       - 'lib/waffra_receipt_ocr_parser.dart'
       - 'lib/waffra_practical_tools_page.dart'
       - 'pubspec.yaml'
@@ -44,9 +47,13 @@ jobs:
         run: |
           flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings \
             lib/waffra_receipt_ocr.dart \
+            lib/waffra_bank_screenshot_parser.dart \
+            lib/main.dart \
+            test/m299_multi_transaction_image_review_test.dart \
             lib/waffra_receipt_ocr_parser.dart \
             lib/waffra_practical_tools_page.dart \
             test/m287_receipt_ocr_test.dart \
+            test/m299_multi_transaction_image_review_test.dart \
             test/m281_practical_tools_test.dart
       - name: Bilingual receipts, OCR errors and historical tool regressions
         run: |
