@@ -11,6 +11,21 @@ void main(){
     WaffraRegionalCopy.countryIso.value='';
   });
 
+  test('M326 shared translation map has no duplicate literal keys',(){
+    final source=File('lib/waffra_i18n.dart').readAsStringSync();
+    final start=source.indexOf('const Map<String,String> _english = {');
+    final end=source.indexOf('};',start);
+    expect(start,greaterThanOrEqualTo(0));
+    expect(end,greaterThan(start));
+    final pairs=RegExp(r"^\\s*'([^']+)'\\s*:",multiLine:true)
+      .allMatches(source.substring(start,end))
+      .map((match)=>match.group(1)!)
+      .toList();
+    expect(pairs.length,greaterThan(100));
+    expect(pairs.length,pairs.toSet().length,
+      reason:'Duplicate translations fail Dart const map evaluation');
+  });
+
   test('M326 slogan is universal Arabic and translated when English selected',(){
     final source=File('lib/main.dart').readAsStringSync();
     expect(source,contains('وفرة… فلوسك بوضوح'));
