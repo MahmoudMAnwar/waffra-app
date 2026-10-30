@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'waffra_sms_multicurrency_review.dart';
 
 /// Small no-cost, fully offline, *trained* multinomial Bayes intent model.
 /// Its training examples are synthetic (never users' SMS); it is not a
@@ -255,6 +256,10 @@ abstract final class WaffraSmsIntelligence {
   }
 
   static (double, String)? _extractMoney(String text) {
+    // Shared ISO codes/precision: trained intent and SMS review must agree.
+    final strict=WaffraSmsCurrencies.originalAmount(text);
+    if(strict!=null)return (strict.amount,strict.currency);
+    if(WaffraSmsCurrencies.currenciesForMessage(text).isNotEmpty)return null;
     final clean = _englishDigits(text);
     final pattern = RegExp(
       r'(?:\b(?:SAR|SR|USD|EUR|GBP|AED|EGP|KWD|QAR|BHD|OMR|INR|JPY|CAD|AUD)\b|[$€£₹]|ريال|جنيه|درهم)'
