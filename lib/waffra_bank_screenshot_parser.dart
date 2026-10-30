@@ -135,7 +135,8 @@ abstract final class WaffraBankScreenshotParser {
         // "شراء POS" and "Transfer Received" are often TWO action
         // keywords for ONE payment. A new payment boundary requires
         // an intervening actual transaction amount.
-        if (!_money.hasMatch(segment)) continue;
+        if (!_money.hasMatch(segment) &&
+            !WaffraSmsCurrencies.adjacentAmount.hasMatch(segment)) continue;
         if (segment.isNotEmpty) lines.add(segment);
         start = anchors[i].start;
       }
@@ -160,7 +161,9 @@ abstract final class WaffraBankScreenshotParser {
           // until the current action has a verifiable amount.
           final previous = lines.sublist(i, end);
           final hasTransactionAmount = previous.any((line) =>
-              !_excludedLine.hasMatch(line) && _money.hasMatch(line));
+              !_excludedLine.hasMatch(line) &&
+              (_money.hasMatch(line) ||
+               WaffraSmsCurrencies.adjacentAmount.hasMatch(line)));
           if (hasTransactionAmount) break;
         }
         end++;
