@@ -58,12 +58,13 @@ void main() {
     expect(start,greaterThan(0));
     expect(finish,greaterThan(start));
     final calls=main.substring(start,finish);
-    expect(RegExp(r'catch\(error\)').allMatches(calls).length,
-      greaterThanOrEqualTo(2));
-    expect(RegExp(r'if\(mounted\)await _loadFinanceSafely\(\);')
-      .allMatches(calls).length,2);
+    expect(calls,contains('_persistModuleOrReload('),
+      reason:'Category creation must use the shared authority recovery guard');
+    expect(calls,contains("operation:'category-create'"));
     expect(calls,contains('Category edit not committed by verified finance source'));
-    expect(calls,contains('Category creation not committed by verified finance source'));
+    expect(RegExp(r'if\(mounted\)await _loadFinanceSafely\(\);')
+      .allMatches(calls).length,1,
+      reason:'Category edit must also recover authoritative state on failure');
   });
 
   test('M302 live update path must use field-preserving clones',(){
