@@ -67,8 +67,15 @@ abstract final class WaffraSmsCurrencies {
     if (RegExp(r'^[A-Za-z]{3}$').hasMatch(original) &&
         !supported.contains(token) && original != token &&
         !externalIsoCodes.contains(token)) return '';
-    if (const <String>{'HAS','FOR','AND','THE','YOU','NEW','NOW','NOT'}
-        .contains(token)) return '';
+    // Bank templates often put AMT/TXN labels next to numbers or use
+    // uppercase English prose. They must never be mistaken for a
+    // second unsupported ISO currency alongside a valid SAR amount.
+    // Keep genuine ISO codes (including TRY, MAD, IDR) untouched.
+    if (const <String>{
+      'HAS','FOR','AND','THE','YOU','NEW','NOW','NOT','WAS','ARE',
+      'DID','GET','GOT','ONE','TWO','OUT','PER','VIA','OUR',
+      'AMT','TXN','TRX','NET','DUE',
+    }.contains(token)) return '';
     // Common SMS action codes are NOT currencies even beside an amount.
     if (const <String>{'POS','ATM','OTP','PIN','SMS','REF','TAX','VAT',
       'FEE','BAL','PAY','P2P','ACH'}.contains(token)) return '';
