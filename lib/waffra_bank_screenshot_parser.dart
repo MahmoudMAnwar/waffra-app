@@ -99,6 +99,18 @@ abstract final class WaffraBankScreenshotParser {
         ).hasMatch(normalized));
   }
 
+  /// A scanned foreign/unknown amount may be *reviewed* but it cannot
+  /// reach the SAR-only ledger as an unconverted manual amount.
+  /// Recognize ISO tokens even when bank OCR joins code and digits.
+  static bool requiresForeignCurrencyReview(String raw) {
+    final normalized=WaffraReceiptOcrParser.westernDigits(raw);
+    final detected=WaffraSmsCurrencies.currenciesForMessage(normalized);
+    if(detected.any((code)=>code!='SAR')) return true;
+    return WaffraSmsCurrencies.supported.where((code)=>code!='SAR').any(
+      (code)=>RegExp(RegExp.escape(code)+r'(?=[0-9])',
+        caseSensitive:false).hasMatch(normalized));
+  }
+
   /// Tesseract can collapse two SMS bubbles into one OCR line. Split at each
   /// independent action marker without changing the order in the image text.
   /// Positions refer to OCR reading order, not pixel bounding boxes.
@@ -146,11 +158,7 @@ abstract final class WaffraBankScreenshotParser {
       // A foreign currency in the image cannot be posted as a SAR amount.
       // Keep the full action for manual review and never substitute an SAR
       // balance/fee for the actual foreign transaction amount.
-      final codes = WaffraSmsCurrencies.currenciesForMessage(original);
-      final foreign = codes.any((currency) => currency != 'SAR') ||
-          WaffraSmsCurrencies.supported.where((code) => code != 'SAR').any(
-            (code) => RegExp(RegExp.escape(code) + r'(?=[0-9])',
-              caseSensitive:false).hasMatch(original));
+      final foreign = requiresForeignCurrencyReview(original);
       final amounts = <double>[];
       int? amountAt;
       for (var k = 0; k < chunk.length; k++) {
