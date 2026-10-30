@@ -110,6 +110,30 @@ Supermarket
     expect(rows[1].position,2);
   });
 
+  test('M299 SAR-only bank OCR stays eligible for explicit entry review',(){
+    expect(WaffraBankScreenshotParser.requiresForeignCurrencyReview(
+      'شراء POS SAR 22.50\nمتجر تجريبي'),isFalse);
+    expect(WaffraBankScreenshotParser.requiresForeignCurrencyReview(
+      'Incoming Transfer credited JOD198.125 Balance 201.632 JOD'),isTrue);
+    expect(WaffraBankScreenshotParser.requiresForeignCurrencyReview(
+      'Incoming transfer USD 19.50 Balance SAR 999'),isTrue);
+    expect(WaffraBankScreenshotParser.requiresForeignCurrencyReview(
+      'تحويل وارد EGP 100.00'),isTrue);
+  });
+
+  test('M299 all scanner entry routes use foreign-currency fail-closed guard',(){
+    final main=File('lib/main.dart').readAsStringSync();
+    final start=main.indexOf('Future<void> scanAndAddReceipt()');
+    final end=main.indexOf('Future<void> entrySheet(',start);
+    expect(start,greaterThan(0));
+    expect(end,greaterThan(start));
+    final scanner=main.substring(start,end);
+    expect(scanner,contains('if(!await _canReviewOcrAsLedgerTransaction(extracted.rawText))return;'));
+    expect(scanner,contains('if(!await _canReviewOcrAsLedgerTransaction(one.sourceText))return;'));
+    expect(scanner,contains('if(!await _canReviewOcrAsLedgerTransaction(candidate.sourceText))continue;'));
+    expect(main,contains('لا يمكن حفظ هذا المبلغ باعتباره ريالًا سعوديًا بدون تحويل موثوق'));
+  });
+
   test('M299 local OCR retries sparse text without uploading image', () {
     final source = File('lib/waffra_receipt_ocr.dart').readAsStringSync();
     expect(source, contains("['11', '6']"));
