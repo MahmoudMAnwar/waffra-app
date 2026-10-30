@@ -6,6 +6,8 @@ on:
     paths:
       - '.github/workflows/m302-cross-feature-input-qa.yml'
       - 'lib/waffra_amount_formatter.dart'
+      - 'lib/waffra_display_currency.dart'
+      - 'test/m302_display_currency_precision_test.dart'
       - 'lib/waffra_validators.dart'
       - 'lib/waffra_search.dart'
       - 'lib/main.dart'
@@ -52,6 +54,8 @@ jobs:
         run: |
           flutter analyze --no-pub --no-fatal-warnings --no-fatal-infos \
             lib/waffra_amount_formatter.dart \
+            lib/waffra_display_currency.dart \
+            test/m302_display_currency_precision_test.dart \
             lib/waffra_validators.dart \
             lib/waffra_search.dart \
             lib/main.dart \
@@ -70,6 +74,7 @@ jobs:
         run: |
           flutter test --reporter expanded \
             test/m302_cross_feature_input_precision_test.dart \
+            test/m302_display_currency_precision_test.dart \
             test/m302_category_rename_integrity_test.dart \
             test/m302_optimistic_module_write_safety_test.dart \
             test/m302_recurring_first_due_regression_test.dart \
