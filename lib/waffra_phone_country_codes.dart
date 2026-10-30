@@ -59,11 +59,11 @@ abstract final class WaffraInternationalPhone {
   // common ya/ta marbuta variants. This is ONLY search normalization:
   // it never modifies the selected phone code or app display currency.
   static String _searchable(String value) => value.toLowerCase()
-      .replaceAll(RegExp(r'[\\u064B-\\u065F\\u0670\\u0640]'), '')
+      .replaceAll(RegExp(r'[\u064B-\u065F\u0670\u0640]'), '')
       .replaceAll(RegExp(r'[أإآٱ]'), 'ا')
       .replaceAll('ى', 'ي')
       .replaceAll('ة', 'ه')
-      .replaceAll(RegExp(r'\\s+'), ' ')
+      .replaceAll(RegExp(r'\s+'), ' ')
       .trim();
 
   static bool matchesQuery(WaffraPhoneCountry country, String query) {
