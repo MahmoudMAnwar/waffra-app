@@ -4303,32 +4303,12 @@ Future<bool> _requireBankSmsAi()=>
    return false;
   }
   final bankImage=WaffraBankScreenshotParser.looksLikeBankScreenshot(sourceText);
-  if(bankImage){
-   final grounded=WaffraBankScreenshotParser.reviewItems(sourceText);
-   // A 3-message screenshot cannot become 6 suggested transactions.
-   // Verify the per-action amount and direction as well as row count.
-   if(grounded.isNotEmpty){
-    var agrees=grounded.length==result.items.length;
-    if(agrees){
-     for(var i=0;i<grounded.length;i++){
-      final ai=result.items[i],ocr=grounded[i];
-      final parsed=ai.amountText==null?null:
-       WaffraReceiptOcrParser.amountFromText(ai.amountText!);
-      if(ai.needsReview||ocr.amount==null||parsed==null||
-         (ocr.amount!-parsed).abs()>0.00001||
-         (ai.direction==WaffraAiDirection.income)!=ocr.income){
-       agrees=false;
-       break;
-      }
-     }
-    }
-    if(!agrees){
-     if(mounted)snack(context,waffraIsEnglish?
-      'AI results did not match the image. Review the verified OCR entries.':
-      'نتائج الذكاء لا تطابق الصورة. راجع العمليات المستخرجة يدويًا.');
-     return false;
-    }
-   }
+  if(bankImage&&
+     !WaffraAiFinanceBrain.matchesVerifiedImageActions(sourceText,result)){
+   if(mounted)snack(context,waffraIsEnglish?
+    'AI results do not match the image. Verify each OCR transaction.':
+    'نتائج الذكاء مش مطابقة للصورة. راجع كل عملية من النص المستخرج.');
+   return false;
   }
   // Product lines from one shop receipt must not be counted as independent
   // finance transactions, even if a tiny model hallucinated separate actions.
