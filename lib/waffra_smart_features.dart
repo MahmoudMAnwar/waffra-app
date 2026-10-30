@@ -475,11 +475,14 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
    final generator=WaffraOnDeviceQwen.shared.textGenerator;
    final response=switch(skill){
     'ask'=>await WaffraAiFinanceCoach.askWaffra(
-      questionText,snapshot,generate:generator),
+      questionText,snapshot,generate:generator,
+      displayCurrency:WaffraDisplayCurrency.country.code),
     'analysis'=>await WaffraAiFinanceCoach.analysis(
-      snapshot,generate:generator),
+      snapshot,generate:generator,
+      displayCurrency:WaffraDisplayCurrency.country.code),
     _=>await WaffraAiFinanceCoach.savingSuggestions(
-      snapshot,generate:generator),
+      snapshot,generate:generator,
+      displayCurrency:WaffraDisplayCurrency.country.code),
    };
    if(!mounted)return;
    setState((){
