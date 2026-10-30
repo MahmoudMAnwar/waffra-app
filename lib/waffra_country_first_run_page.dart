@@ -124,7 +124,7 @@ class _WaffraCountryFirstRunPageState extends State<WaffraCountryFirstRunPage> {
             items:WaffraRegionalCopy.supportedRegions.entries.map((entry)=>
               DropdownMenuItem<String>(value:entry.key,
                 child:Text(WaffraRegionalCopy.regionLabel(
-                  entry.key,english:widget.english)))),
+                  entry.key,english:widget.english)))).toList(),
             onChanged:submitting?null:(value){
               if(value!=null)setState(()=>selectedRegionIso=value);
             },
