@@ -7550,7 +7550,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
     }
    }
    if(!mounted)return;
-   setState(()=>goals.add(g));await persist(route:WaffraFinanceRoute.goalCreateEditDeleteRestore);
+   setState(()=>goals.add(g));
+   if(!await _persistModuleOrReload(WaffraFinanceRoute.goalCreateEditDeleteRestore,
+     operation:'goal-create'))return;
    if(mounted)snackSuccess(context,
     waffraIsEnglish?'Savings goal added successfully':'تمت إضافة الهدف بنجاح');
   }
@@ -7690,7 +7692,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
     final i=goals.indexWhere((x)=>x.id==g.id);
     if(i>=0)goals[i]=g.copy(saved:g.saved+n);
    });
-   await persist(route:WaffraFinanceRoute.goalCreateEditDeleteRestore);
+   if(!await _persistModuleOrReload(WaffraFinanceRoute.goalCreateEditDeleteRestore,
+     operation:'goal-funding'))return;
    if(achieved&&mounted){
     await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
      title:WaffraText(waffraIsEnglish?'🎉 Goal achieved!':'🎉 مبروك!'),
@@ -8154,7 +8157,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
    }));
   disposeLater([title,amount,day]);
   if(r!=null&&mounted){
-   setState(()=>recurring.add(r));await persist(route:WaffraFinanceRoute.recurringCreateEditDeleteRestore);await applyRecurring();
+   setState(()=>recurring.add(r));
+   if(!await _persistModuleOrReload(WaffraFinanceRoute.recurringCreateEditDeleteRestore,
+     operation:'recurring-create'))return;
+   await applyRecurring();
    await syncRecurringReminders();
   }
  }
