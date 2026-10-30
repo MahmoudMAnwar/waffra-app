@@ -130,8 +130,8 @@ class _WaffraCountryFirstRunPageState extends State<WaffraCountryFirstRunPage> {
           ),
           const SizedBox(height: 9),
           Text(t(
-            'الموقع يقترح العملة في أول إعداد فقط. اختيارك اليدوي له الأولوية دائمًا، ولا يغيّر رمز هاتفك أو عملة الرسائل البنكية. تغيير عملة العرض يغيّر التسمية دون تحويل المبالغ القديمة.',
-            'Location only suggests a starting currency. Your manual choice always wins and never changes your phone country code or original bank-SMS currency. Display currency does not convert historical amounts.'),
+            'الموقع يقترح عملة العرض فقط. اختيارك اليدوي له الأولوية، ولا يغيّر كود جوالك أو عملة رسائلك البنكية.',
+            'Location only suggests a display currency. Your manual choice always wins; phone codes and original bank-SMS currencies stay unchanged.'),
             style: Theme.of(context).textTheme.bodySmall),
           if (message != null) Padding(
             padding: const EdgeInsets.only(top: 12),
