@@ -3169,6 +3169,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   });
  }
 
+ /// Optimistic UI updates must never masquerade as committed finance.
+ /// A failed verified writer may have left a newer authoritative state, so
+ /// read it back rather than blindly restoring a stale in-memory snapshot.
+ Future<bool> _persistModuleOrReload(
+   WaffraFinanceRoute route,{required String operation})async{
+  try{
+   await persist(route:route);
+   return true;
+  }catch(error){
+   debugPrint('Verified $operation write refused: $error');
+   if(mounted)await _loadFinanceSafely();
+   if(mounted)snack(context,waffraIsEnglish?
+    'Changes were not confirmed. Financial records were reloaded safely.':
+    'لم يتم تأكيد الحفظ. أعدنا تحميل بياناتك المالية بشكل آمن.');
+   return false;
+  }
+ }
+
  Future<void> _persistSmsHashes(Set<String> hashesToSave)async {
   // Home and Widget now merge only SHA-256 fingerprints through the same
   // source selector. SQLCipher activation cannot fall back to preferences.
@@ -7005,7 +7023,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
     categories.where((x)=>x.income==c.income).map((x)=>x.name))=='duplicate'){
    snack(context,'القسم موجود بالفعل');return;
   }
-  setState(()=>categories.add(c));await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
+  setState(()=>categories.add(c));
+  await _persistModuleOrReload(WaffraFinanceRoute.categoryCreateEditDeleteRestore,
+   operation:'category-create');
  }
  Future<void> updateCategory(BudgetCategory c)async {
   final revised=await categoryDialog(initial:c);
