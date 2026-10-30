@@ -55,6 +55,26 @@ class WaffraPhoneSelection {
 }
 
 abstract final class WaffraInternationalPhone {
+  // Match Arabic spellings with/without hamza, diacritics, tatweel and
+  // common ya/ta marbuta variants. This is ONLY search normalization:
+  // it never modifies the selected phone code or app display currency.
+  static String _searchable(String value) => value.toLowerCase()
+      .replaceAll(RegExp(r'[\\u064B-\\u065F\\u0670\\u0640]'), '')
+      .replaceAll(RegExp(r'[أإآٱ]'), 'ا')
+      .replaceAll('ى', 'ي')
+      .replaceAll('ة', 'ه')
+      .replaceAll(RegExp(r'\\s+'), ' ')
+      .trim();
+
+  static bool matchesQuery(WaffraPhoneCountry country, String query) {
+    final key = _searchable(query);
+    if (key.isEmpty) return true;
+    return _searchable(country.ar).contains(key) ||
+        _searchable(country.en).contains(key) ||
+        country.dial.contains(key) ||
+        country.iso.toLowerCase().contains(key);
+  }
+
   static WaffraPhoneCountry byIso(String iso) =>
       waffraPhoneCountries.firstWhere((c) => c.iso == iso,
         orElse: () => waffraPhoneCountries.first);
