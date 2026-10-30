@@ -135,9 +135,34 @@ jobs:
           arch: x86_64
           profile: pixel_6
           cores: 2
-          ram-size: 2048M
+          ram-size: 3072M
           heap-size: 512M
           disable-animations: true
           emulator-boot-timeout: 600
           emulator-options: -no-window -no-audio -no-snapshot -gpu swiftshader_indirect -no-boot-anim
-          script: flutter test integration_test/m274_ui_tap_smoke_android_test.dart -d emulator-5554 --reporter expanded
+          # Only retry an Android tooling/DDS startup failure. Never retry or
+          # mask a failed balance, footer, screen or UI assertion.
+          script: |
+            set -eu
+            for attempt in 1 2; do
+              output="$(mktemp)"
+              if flutter test integration_test/m274_ui_tap_smoke_android_test.dart -d emulator-5554 --reporter expanded > "$output" 2>&1; then
+                cat "$output"
+                rm -f "$output"
+                exit 0
+              fi
+              cat "$output"
+              if ! grep -Fq 'Failed to start Dart Development Service' "$output"; then
+                rm -f "$output"
+                exit 1
+              fi
+              rm -f "$output"
+              if [ "$attempt" -eq 2 ]; then
+                echo "Android DDS startup failed on both attempts; keeping CI red."
+                exit 1
+              fi
+              echo "Android Flutter DDS did not start; resetting ADB forwarding and retrying once."
+              adb -s emulator-5554 forward --remove-all || true
+              adb -s emulator-5554 reverse --remove-all || true
+              sleep 8
+            done
