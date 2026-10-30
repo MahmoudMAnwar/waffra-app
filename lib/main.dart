@@ -820,6 +820,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   if(mounted)setState(()=>googleFirstRunSetup=false);
  }
  Future<void> logout()async {
+  // Drop any in-memory AI prompt context and cancel model download before
+  // a new account can open its verified finance scope.
+  try{await WaffraOnDeviceQwen.shared.dispose();}catch(_){}
   await _accountWriteAuthority.signOut();
   if(mounted)setState((){profile=null;showLogin=true;locked=false;googleFirstRunSetup=false;});
  }
