@@ -739,10 +739,12 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
   final duration=reduced?Duration.zero:const Duration(milliseconds:330);
   // Extra accordion sections reuse the existing analysis and live markets.
   // Negative indices avoid changing the ten tools' stable names and keys.
-  final tiles=List<Widget>.generate(types.length+2,(slot){
+  final tiles=List<Widget?>.generate(types.length+2,(slot){
    final i=slot-2;
+   if(i==4&&!_aiToolVisible)return null;
+   final aiLocked=i==4&&!WaffraOnDeviceQwen.shared.isReady;
    final id=i==-2?'analysis':i==-1?'markets':types[i];
-   final name=i==-2?t('التحليل المالي الذكي','Smart financial analysis'):
+   final name=i==-2?t('التحليل المالي','Financial analysis'):
     i==-1?t('العملات والذهب والبترول','Currency, gold and oil markets'):names[i];
    final detail=i==-2?t('تحليلك وتوقعاتك المالية الفعلية','Insights and financial forecasts'):
     i==-1?t('أسعار الذهب والنفط وتحويل العملات','Gold, oil and exchange rates'):details[i];
@@ -770,7 +772,8 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
      key:Key('waffra-m268-accordion-'+id),
      duration:duration,curve:Curves.easeInOutCubic,
      decoration:BoxDecoration(
-      color:expanded?(dark?const Color(0xFF153C2D):const Color(0xFFE9F7ED)):
+      color:aiLocked?Theme.of(context).disabledColor.withValues(alpha:.10):
+       expanded?(dark?const Color(0xFF153C2D):const Color(0xFFE9F7ED)):
         Theme.of(context).cardColor,
       borderRadius:BorderRadius.circular(22),
       border:Border.all(color:green.withValues(alpha:expanded ? 0.48 : 0.15),
@@ -778,22 +781,28 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
       boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:dark ? 0.09 : 0.055),
        blurRadius:expanded?17:8,offset:const Offset(0,3))]),
      child:Column(mainAxisSize:MainAxisSize.min,children:[
-      Semantics(button:true,
-       label:name+' — '+detail+(expanded?' — open':' — closed'),
+      Semantics(button:true,enabled:!aiLocked,
+       label:name+' — '+detail+(aiLocked?' — disabled':expanded?' — open':' — closed'),
        child:InkWell(
         key:Key('waffra-m268-feature-'+id),
         borderRadius:BorderRadius.circular(22),
-        onTap:WaffraHaptics.tap(()=>_activateSection(i)),
+        onTap:aiLocked?null:WaffraHaptics.tap(()=>_activateSection(i)),
         child:Padding(
          padding:const EdgeInsets.symmetric(horizontal:10,vertical:8),
          child:Row(children:[
-          WaffraIllustration(topic:illustration,size:45),
+          Opacity(opacity:aiLocked?0.42:1,
+            child:WaffraIllustration(topic:illustration,size:45)),
           const SizedBox(width:9),
           Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,
-           children:[_label(name,bold:true,size:15),
-            const SizedBox(height:2),_paragraph(detail)])), 
+           children:[_label(name,bold:true,size:15,
+              color:aiLocked?Theme.of(context).disabledColor:null),
+            const SizedBox(height:2),_paragraph(aiLocked?
+              t('الميزة معطّلة — أعد تفعيل الموديل',
+                'Disabled — reactivate AI model'):detail)])), 
           const SizedBox(width:5),
-          AnimatedRotation(turns:expanded ? 0.5 : 0,duration:duration,
+          if(aiLocked)const Icon(Icons.lock_outline_rounded,
+            color:Colors.grey,size:22)
+          else AnimatedRotation(turns:expanded ? 0.5 : 0,duration:duration,
            child:Icon(Icons.keyboard_arrow_down_rounded,
              color:green,size:25)),
          ])))),
@@ -803,7 +812,7 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
        duration:duration,curve:Curves.easeInOutCubic,
        alignment:Alignment.topCenter,child:sectionBody)),
      ])));
-  });
+  }).whereType<Widget>().toList(growable:false);
   return ListView(
    key:const Key('waffra-m268-tools-scroll'),
    padding:const EdgeInsets.fromLTRB(14,16,14,30),
@@ -826,6 +835,10 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
        _paragraph(t('خطّط لميزانيتك، حلّل معاملاتك واستكشف أدواتك المالية.',
         'Plan your budget, analyze spending and explore financial tools.')),
       ]))])),
+    if(!WaffraOnDeviceQwen.shared.isReady||aiBusy||aiStatus.isNotEmpty)...[
+     _surface(_aiActivation()),
+     const SizedBox(height:10),
+    ],
     ...tiles,
     Card(
      key:const Key('m281-practical-tools-entry'),
