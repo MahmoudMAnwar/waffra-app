@@ -36,6 +36,36 @@ void main(){
   }
  });
 
+ test('M302 safely rejects misgrouped text in all financial tools',(){
+  for(final ambiguous in [
+    '1,2','1,23','12,34','1.234,50','1,234,56','1,,234',
+    '-100','1e3','NaN','Infinity','1.2.3','1,234.5678'
+  ]){
+   expect(waffraStrictNumericInput(ambiguous,decimalPlaces:3),
+     isNull,reason:'Never reinterpret '+ambiguous);
+  }
+  expect(waffraStrictNumericInput('1,234.567',decimalPlaces:3),1234.567);
+  expect(waffraStrictNumericInput('١٬٢٣٤٫٥٦٧',decimalPlaces:3),1234.567);
+  expect(waffraStrictNumericInput('۱۲۳۴٫۵۶',decimalPlaces:2),1234.56);
+  expect(waffraStrictNumericInput('100.0001',decimalPlaces:3),isNull);
+  expect(waffraStrictNumericInput('100.0001',decimalPlaces:4),100.0001);
+  expect(waffraStrictNumericInput('0',decimalPlaces:3),isNull);
+  expect(waffraStrictNumericInput('0',decimalPlaces:3,allowZero:true),0);
+  expect(waffraStrictNumericInput('1000000.0001',decimalPlaces:4,
+      maxValue:1000000),isNull);
+ });
+
+ test('M302 tool users must see overprecision rather than a changed amount',(){
+  const currency=WaffraAmountFormatter(decimalPlaces:3,truncateExcess:false);
+  const gold=WaffraAmountFormatter(decimalPlaces:4,truncateExcess:false);
+  expect(formatted(currency,'123.4567').text,'123.4567');
+  expect(formatted(gold,'123.45678').text,'123.45678');
+  expect(waffraStrictNumericInput(formatted(currency,'123.4567').text,
+      decimalPlaces:3),isNull);
+  expect(waffraStrictNumericInput(formatted(gold,'123.45678').text,
+      decimalPlaces:4),isNull);
+ });
+ 
  test('M302 identical category names cannot bypass Arabic search normalization',(){
   expect(WaffraValidators.uniqueCategory('ادخار',['إدخار']),'duplicate');
   expect(WaffraValidators.uniqueCategory('  مَصاريف  ',['مصاريف']),'duplicate');
@@ -50,8 +80,8 @@ void main(){
   final converter=File('lib/currency_converter.dart').readAsStringSync();
   final gold=File('lib/waffra_gold_calculator.dart').readAsStringSync();
   final oil=File('lib/waffra_oil_market_section.dart').readAsStringSync();
-  expect(converter,contains('WaffraAmountFormatter(decimalPlaces:3)'));
-  expect(gold,contains('WaffraAmountFormatter(decimalPlaces:4)'));
+  expect(converter,contains('WaffraAmountFormatter(decimalPlaces:3,truncateExcess:false)'));
+  expect(gold,contains('WaffraAmountFormatter(decimalPlaces:4,truncateExcess:false)'));
   expect(oil,contains('WaffraAmountFormatter(decimalPlaces:3)'));
  });
 }
