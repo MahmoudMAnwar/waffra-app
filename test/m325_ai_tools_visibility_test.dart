@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:waffra/waffra_smart_features.dart';
+import 'package:waffra/waffra_ondevice_qwen.dart';
 
 void main(){
  test('M325 tri-state visibility: never installed, active, later deleted',(){
@@ -29,6 +30,29 @@ void main(){
   expect(find.byKey(const Key('waffra-m268-feature-markets')),findsOneWidget);
   expect(find.byKey(const Key('waffra-m268-feature-analysis')),findsOneWidget);
   expect(find.byKey(const Key('waffra-m268-feature-runway')),findsOneWidget);
+ });
+
+ test('M325 deleting model retains unlock history across restart',()async{
+  SharedPreferences.setMockInitialValues(<String,Object>{
+   'waffra_ai_model_ever_enabled_v1':true,
+  });
+  final folder=await Directory.systemTemp.createTemp('waffra-m325-');
+  try{
+   final before=WaffraOnDeviceQwen(modelRootProvider:()async=>folder);
+   await before.loadToolVisibilityHistory();
+   expect(before.hasEverEnabled,isTrue);
+   expect(before.isReady,isFalse);
+   await before.deleteDownloadedModel();
+   expect(before.hasEverEnabled,isTrue);
+   expect(waffraAiToolsState(
+    modelReady:before.isReady,activatedBefore:before.hasEverEnabled),
+    WaffraAiToolsState.disabled);
+   final reopened=WaffraOnDeviceQwen(modelRootProvider:()async=>folder);
+   await reopened.loadToolVisibilityHistory();
+   expect(reopened.hasEverEnabled,isTrue);
+  }finally{
+   await folder.delete(recursive:true);
+  }
  });
 
  test('M325 deleted model keeps historical AI tile locked and offers reinstall',(){
