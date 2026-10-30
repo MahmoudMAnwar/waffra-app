@@ -58,6 +58,7 @@ import 'waffra_pdf_reader.dart';
 import 'waffra_footer.dart';
 import 'waffra_messages.dart';
 import 'waffra_recurring_policy.dart';
+import 'waffra_cross_source_duplicate_review.dart';
 import 'waffra_secure_backup.dart';
 import 'waffra_backup_files.dart';
 import 'storage/waffra_legacy_write_queue.dart';
@@ -4537,11 +4538,17 @@ Future<void> bulkSmsSheet({String? initialText})async {
    }
    return;
   }
-  if(initial==null&&!sms&&entries.any((e)=>
-    e.income==result.income&&e.amount==result.amount&&
-    e.title.trim().toLowerCase()==result.title.trim().toLowerCase()&&
-    e.category==result.category&&e.date.year==result.date.year&&
-    e.date.month==result.date.month&&e.date.day==result.date.day)){
+  // Compare OCR, manual and SMS entries across source types before commit.
+  // This is an advisory warning: same-day equal purchases are legitimate.
+  if(initial==null&&entries.any((e)=>
+    WaffraCrossSourceDuplicateReview.mightBeSame(
+      candidateTitle:result.title,candidateCategory:result.category,
+      candidateMerchantKey:result.merchantKey,
+      candidateAmount:result.amount,candidateIncome:result.income,
+      candidateDate:result.date,existingTitle:e.title,
+      existingCategory:e.category,existingMerchantKey:e.merchantKey,
+      existingAmount:e.amount,existingIncome:e.income,
+      existingDate:e.date))){
    final proceed=await showWaffraDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
     title:const WaffraText('⚠️ عملية مكررة'),
     content:WaffraText('يبدو إنك أضفت نفس ${result.income?'الدخل':'المصروف'} من قبل. ودّك تضيفه مرة ثانية؟'),
@@ -4555,6 +4562,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
     }
     return;
    }
+   // The writer still verifies the bank SMS hash under the source lock.
+   // Confirmation here only permits the user's explicitly reviewed overlap.
+   if(pendingHash!=null)explicitlyApprovedSmsDuplicate=true;
   }
   final previousSpent=sum(entries.where((e)=>!e.income&&e.id!=result.id&&
    e.category==result.category&&e.date.year==result.date.year&&e.date.month==result.date.month),false);
