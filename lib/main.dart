@@ -3826,12 +3826,17 @@ Future<bool> _requireBankSmsAi()=>
    for(var i=0;i<found.length;i++){
     final draft=BankParser.parse(found[i]);
     final item=ai!.items[i];
+    final evidence=WaffraSmsCurrencies.originalAmount(found[i]);
     final amount=item.amountText==null?null:
       WaffraReceiptOcrParser.amountFromText(item.amountText!);
+    // Confirm that SAR amount is the transaction, not card ID or balance.
+    // A disagreement never authorizes automatic finance confirmation.
     if(item.needsReview||item.currency!='SAR'||
+       evidence==null||evidence.currency!='SAR'||
        !found[i].contains(item.quote)||
        draft.amount==null||amount==null||
-       (draft.amount!-amount).abs()>0.00001||
+       (evidence.amount-amount).abs()>0.00001||
+       (draft.amount!-evidence.amount).abs()>0.00001||
        draft.income!=(item.direction==WaffraAiDirection.income)){
      verified=false;
      break;
