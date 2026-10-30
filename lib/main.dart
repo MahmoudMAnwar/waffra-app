@@ -4318,7 +4318,16 @@ Future<void> bulkSmsSheet({String? initialText})async {
        final c=await categoryDialog(income:income,suggested:suggestion);
        if(c!=null&&mounted){
         if(!categories.any((x)=>x.name==c.name&&x.income==c.income)){
-         setState(()=>categories.add(c));await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
+         setState(()=>categories.add(c));
+  try{
+   await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
+  }catch(error){
+   debugPrint('Category creation not committed by verified finance source: $error');
+   if(mounted)await _loadFinanceSafely();
+   if(mounted)snack(context,waffraIsEnglish?
+    'Category was not saved. Financial records were reloaded safely.':
+    'لم يتم حفظ القسم. أعدنا تحميل البيانات المالية بشكل آمن.');
+  }
         }
         update((){category=c.name;suggestion=null;});
        }
@@ -7035,7 +7044,15 @@ Future<void> bulkSmsSheet({String? initialText})async {
     }
    }
   });
-  await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
+  try{
+   await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
+  }catch(error){
+   debugPrint('Category edit not committed by verified finance source: $error');
+   if(mounted)await _loadFinanceSafely();
+   if(mounted)snack(context,waffraIsEnglish?
+    'Category edit was not saved. Financial data was reloaded safely.':
+    'لم يتم حفظ تعديل القسم. أعدنا تحميل بياناتك المالية بشكل آمن.');
+  }
  }
  WaffraFinanceRoute _moduleMutationRoute(WaffraFinanceModule module)=>
   switch(module){
