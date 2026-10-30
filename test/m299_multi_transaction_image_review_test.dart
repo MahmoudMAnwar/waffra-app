@@ -76,7 +76,7 @@ Supermarket
     expect(main, contains('scannedImagePosition:one.position'));
     expect(main, contains('scannedImagePosition:candidate.position'));
     expect(main, contains('scannedImageTotal:candidates.length'));
-    expect(main, contains('العملية $scannedImagePosition من $scannedImageTotal في الصورة'));
+    expect(main, contains(r'العملية $scannedImagePosition من $scannedImageTotal في الصورة'));
     expect(main, contains('المبلغ غير واضح'));
     expect(main, contains('entrySheet('));
     expect(main, contains('تأكيد وحفظ العملية'));
