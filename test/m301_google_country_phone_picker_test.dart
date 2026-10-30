@@ -57,6 +57,9 @@ void main(){
   await tester.tap(find.byKey(const Key('m290-detect-country')));
   await tester.pumpAndSettle();
   expect(find.textContaining('manual selection is preserved'),findsWidgets);
+  await tester.scrollUntilVisible(
+   find.byKey(const Key('m290-setup-confirm')),160,
+   scrollable:find.byType(Scrollable).first);
   await tester.ensureVisible(find.byKey(const Key('m290-setup-confirm')));
   await tester.pumpAndSettle();
   await tester.tap(find.byKey(const Key('m290-setup-confirm')));
