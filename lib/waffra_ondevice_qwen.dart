@@ -25,6 +25,7 @@ abstract final class WaffraAiModelManifest {
 /// before any production UI makes this an enabled default.
 class WaffraOnDeviceQwen {
   WaffraOnDeviceQwen();
+  static final WaffraOnDeviceQwen shared=WaffraOnDeviceQwen();
   LlamaEngine? _engine;
   bool _opening=false;
 
