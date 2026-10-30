@@ -9271,9 +9271,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
      subtitle:WaffraText(waffraIsEnglish?
       'Country only changes Arabic wording, not your app language or currency.':
       'اختيار البلد يحدد اللهجة العربية فقط، ولا يغيّر لغة التطبيق أو عملته.'),
-     trailing:DropdownButton<String>(
+     trailing:SizedBox(width:145,child:DropdownButton<String>(
       key:const Key('waffra-region-choice'),
-      value:WaffraRegionalCopy.countryIso.value,
+      value:WaffraRegionalCopy.countryIso.value,isExpanded:true,
       underline:const SizedBox.shrink(),
       items:WaffraRegionalCopy.supportedRegions.entries.map((item)=>
        DropdownMenuItem<String>(value:item.key,
@@ -9291,7 +9291,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
           'ما قدرنا نحفظ اختيار البلد. جرّب مرة ثانية.');
        }
       }),
-     ),
+     )),
     ),
     ListTile(leading:const Icon(Icons.palette_outlined,color:emerald),
      title:WaffraText(waffraIsEnglish?'Appearance':'المظهر'),
