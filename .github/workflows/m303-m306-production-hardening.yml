@@ -8,6 +8,7 @@ on:
       - 'test/m303_m306_hardening_regression_test.dart'
       - 'test/m304_cross_source_duplicate_review_test.dart'
       - 'lib/waffra_cross_source_duplicate_review.dart'
+      - 'lib/waffra_sms_multicurrency_review.dart'
       - 'lib/waffra_display_currency.dart'
       - 'test/m302_display_currency_precision_test.dart'
       - 'docs/qa/m303-m306-hardening-register.md'
@@ -43,6 +44,7 @@ jobs:
           dart analyze test/m303_m306_hardening_regression_test.dart
           dart analyze test/m304_cross_source_duplicate_review_test.dart
           dart analyze lib/waffra_cross_source_duplicate_review.dart
+          dart analyze lib/waffra_sms_multicurrency_review.dart
           dart analyze lib/storage/waffra_authoritative_widget_balance.dart
           dart analyze lib/waffra_display_currency.dart
           dart analyze test/m302_display_currency_precision_test.dart
