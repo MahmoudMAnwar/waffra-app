@@ -124,11 +124,7 @@ class WaffraSmsFxQuote {
 }
 
 abstract final class WaffraCurrencyMinor {
-  static int digits(String currency) {
-    if (const {'JPY', 'KRW'}.contains(currency)) return 0;
-    if (const {'BHD', 'KWD', 'OMR', 'TND', 'JOD', 'IQD'}.contains(currency)) return 3;
-    return 2;
-  }
+  static int digits(String currency) => WaffraSmsCurrencies.minorDigits(currency);
 
   static int? exact(double value, String currency) {
     if (!WaffraSmsCurrencies.supported.contains(currency) ||
