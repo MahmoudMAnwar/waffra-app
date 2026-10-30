@@ -113,4 +113,39 @@ void main(){
     expect(home,contains('size:value.length>140?14:19'));
     expect(home,contains('textDirection:direction'));
   });
+
+  test('M333 calendar-periods never default to all recorded expenses',(){
+    final periodRows=<WaffraAiRecordedFact>[
+      WaffraAiRecordedFact(date:DateTime(2026,10,23),
+        category:'مطاعم',amountMinor:5000,income:false),
+      WaffraAiRecordedFact(date:DateTime(2026,10,29),
+        category:'مطاعم',amountMinor:3000,income:false),
+      WaffraAiRecordedFact(date:DateTime(2025,11,20),
+        category:'مطاعم',amountMinor:7000,income:false),
+      WaffraAiRecordedFact(date:DateTime(2024,10,20),
+        category:'مطاعم',amountMinor:4000,income:false),
+    ];
+    final yesterday=WaffraAiRecordedAnswers.answer(
+      'صرفت كام أمس',periodRows,now:clock)!;
+    expect(yesterday,contains('30.00 SAR'));
+    expect(yesterday,contains('أمس'));
+    final lastWeek=WaffraAiRecordedAnswers.answer(
+      'صرفت كام الأسبوع اللي فات',periodRows,now:clock)!;
+    expect(lastWeek,contains('50.00 SAR'));
+    expect(lastWeek,contains('الأسبوع الماضي'));
+    final rollingWeek=WaffraAiRecordedAnswers.answer(
+      'How much did I spend this week?',periodRows,
+      now:clock,english:true)!;
+    expect(rollingWeek,contains('30.00 SAR'));
+    final lastYear=WaffraAiRecordedAnswers.answer(
+      'صرفت كام السنة الماضية',periodRows,now:clock)!;
+    expect(lastYear,contains('70.00 SAR'));
+    final twoYears=WaffraAiRecordedAnswers.answer(
+      'صرفت كام آخر 24 شهر',periodRows,now:clock)!;
+    expect(twoYears,contains('150.00 SAR'));
+    expect(twoYears,isNot(contains('190.00 SAR')));
+    expect(WaffraAiRecordedAnswers.answer(
+      'صرفت كام آخر 130 شهر',periodRows,now:clock),
+      'حدد فترة من شهر إلى 120 شهر.');
+  });
 }
