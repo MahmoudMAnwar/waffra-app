@@ -106,6 +106,9 @@ void main(){
     expect(method,contains('WaffraAiRecordedAnswers.answer('));
     expect(method.indexOf('if(direct!=null)'),lessThan(
       method.indexOf("_generateAiSkill('ask'")));
+    expect(method.indexOf('if(!WaffraOnDeviceQwen.shared.isReady)'),
+      greaterThan(method.indexOf('if(direct!=null)')));
+    expect(method,contains('Download the AI library to enable advice.'));
     expect(home,contains('WaffraAiRecordedAnswers.cleanModelAnswer(response)'));
     expect(home,contains('size:value.length>140?14:19'));
     expect(home,contains('textDirection:direction'));
