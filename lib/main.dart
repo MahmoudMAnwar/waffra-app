@@ -4134,6 +4134,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
  Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,
   WaffraReceiptOcrFields? scannedReceipt,XFile? scannedImage,bool? scannedIncome,
   int? scannedImagePosition,int? scannedImageTotal})async {
+  // Last defense: every OCR entry must verify the currency *inside* the
+  // editor too, so future callers cannot bypass scanAndAddReceipt's gate.
+  if(scannedReceipt!=null &&
+      WaffraBankScreenshotParser.requiresForeignCurrencyReview(
+          scannedReceipt.rawText)) {
+    await _canReviewOcrAsLedgerTransaction(scannedReceipt.rawText);
+    return;
+  }
   final title=TextEditingController(text:initial?.title??scannedReceipt?.merchant??'');
   final notes=TextEditingController(text:initial?.notes??'');
   final value=TextEditingController(text:initial!=null?formatWaffraEditAmount(initial.amount):
