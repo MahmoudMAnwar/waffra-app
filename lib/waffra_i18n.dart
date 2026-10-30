@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'waffra_category_english.dart';
 import 'waffra_riyal_symbol.dart';
+import 'waffra_regional_copy.dart';
 
 /// Language preference shared by UI and PDF exports. Internal saved values remain unchanged.
 final ValueNotifier<String> waffraLanguage = ValueNotifier<String>('ar');
@@ -248,7 +249,7 @@ const Map<String,String> _english = {
 };
 
 String waffraTr(String source) {
- if(!waffraIsEnglish)return source;
+ if(!waffraIsEnglish)return WaffraRegionalCopy.adaptArabicUi(source);
  // Built-in categories are localized for display only; storage remains stable.
  final catalogLabel=waffraEnglishCategoryLabel(source);
  if(catalogLabel!=source)return catalogLabel;
