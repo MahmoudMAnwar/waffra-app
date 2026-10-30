@@ -57,8 +57,8 @@ void main() {
           await tester.pumpAndSettle();
 
           final notice = english
-              ? 'Choose a receipt image to scan automatically.'
-              : 'اختر صورة فاتورة ليقرأها وفرة تلقائيًا.';
+              ? 'Scan a receipt.'
+              : 'اختر فاتورة أو صوّرها.';
           expect(find.textContaining(notice), findsOneWidget);
 
           final dateButton = find.widgetWithText(
