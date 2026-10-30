@@ -86,6 +86,18 @@ void main() {
       'حوالة 100 دينار أردني وخصم 5 دولار الرصيد 300 ريال'),isNull);
   });
 
+  test('M314 unsupported Arabic riyal/pound/dirham qualifiers are not SAR',(){
+    for(final name in ['ريال يمني','جنيه سوداني','درهم غير معروف']) {
+      for(final raw in ['حوالة 100 '+name,'حوالة '+name+' 100']) {
+        expect(WaffraSmsCurrencies.currenciesForMessage(raw),
+          contains('UNKNOWN'),reason:raw);
+        expect(WaffraSmsCurrencies.requiresReviewForSarLedger(raw),
+          isTrue,reason:raw);
+        expect(WaffraSmsCurrencies.originalAmountPreview(raw),isNull);
+      }
+    }
+  });
+
   test('M300 each currency recognized before and after amount, regardless of balance', () {
     for (final currency in WaffraSmsCurrencies.supported) {
       final precision=WaffraCurrencyMinor.digits(currency);
