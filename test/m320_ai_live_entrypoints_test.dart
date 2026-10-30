@@ -9,7 +9,7 @@ void main(){
     final runner=File('lib/waffra_ondevice_qwen.dart').readAsStringSync();
     expect(home,contains('await _reviewAiScannedTransactions('));
     expect(home,contains('WaffraAiFinanceBrain.imageOcr('));
-    expect(home,contains('waffra-sms-ai-review'));
+    expect(home,isNot(contains('waffra-sms-ai-review')));
     expect(home,contains('WaffraAiFinanceBrain.bankSms('));
     expect(home,contains('result.items[i].needsReview?null:'));
     expect(home,contains('item.currency!='));
@@ -31,7 +31,7 @@ void main(){
     final home=File('lib/main.dart').readAsStringSync();
     final tools=File('lib/waffra_smart_features.dart').readAsStringSync();
     expect(home,contains('if(!WaffraOnDeviceQwen.shared.isReady)return false;'));
-    expect(home,contains('if(!WaffraOnDeviceQwen.shared.isReady||source.trim().isEmpty)return;'));
+    expect(home,contains('if(!WaffraOnDeviceQwen.shared.isReady||source.trim().isEmpty)return null;'))
     // M299 replaced flattened candidates with ordered OCR review items.
         // Keep multi-transaction review and the local-AI prerequisite together.
         expect(home,contains('if(await _reviewAiScannedTransactions(extracted.rawText,picked))return;'));
@@ -44,7 +44,7 @@ void main(){
     expect(home,contains('if(!allowed||!mounted||_smsSheetOpen)return;'));
     expect(home,contains('if(!allowed||!mounted)return;'));
     expect(home,contains('if(initial==null&&(sms||scannedReceipt!=null||scannedImage!=null))'));
-    expect(home,contains('if(statusMessage.isEmpty&&messages.isNotEmpty)saveParsedMessages(ctx,update);'));
+    expect(home,contains('analyzeBankSmsAutomatically(ctx,update,input.trim(),revision)'));
     expect(tools,contains('if(q.isNotEmpty&&WaffraOnDeviceQwen.shared.isReady)'));
     expect(tools,contains("if(q.isEmpty){setState(()=>answer="));
   });
