@@ -87,8 +87,8 @@ abstract final class WaffraCrossSourceDuplicateReview {
   static String _merchantTitle(String title) {
     final normalized = _identity(title);
     return normalized.replaceFirst(
-      RegExp(r'^(?:عملية شراء من|شراء من|شراء لدى|دفع الي|دفع ل|'
-          r'purchase at|purchase from|paid to|payment to|pos purchase)\\s+'),
+      RegExp(r'^(?:عملية شراء من|شراء من|شراء لدي|دفع الي|دفع ل|'
+          r'purchase at|purchase from|paid to|payment to|pos purchase)\s+'),
       '',
     );
   }
