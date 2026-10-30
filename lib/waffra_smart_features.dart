@@ -577,7 +577,7 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
    setState(()=>answer=t('اكتب سؤال عن معاملاتك.','Ask about your transactions.'));
    return;
   }
-  if(!WaffraOnDeviceQwen.shared.isReady)return;
+  // Numeric questions work even when the optional AI model is not installed.
   // Read numeric questions from exact verified records, not Qwen output.
   final facts=<WaffraAiRecordedFact>[];
   for(final item in widget.entries){
@@ -594,7 +594,12 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
    setState(()=>answer=direct);
    return;
   }
-  // Advice questions can still use offline AI, never for arithmetic.
+  // Only open-ended advice needs the optional local model.
+  if(!WaffraOnDeviceQwen.shared.isReady){
+   setState(()=>answer=t('نزّل مكتبة الذكاء الاصطناعي لتفعيل النصائح.',
+    'Download the AI library to enable advice.'));
+   return;
+  }
   unawaited(_generateAiSkill('ask',questionText:q));
  }
  Widget _assistant(){
