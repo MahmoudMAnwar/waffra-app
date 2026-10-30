@@ -102,8 +102,8 @@ class _WaffraCountryFirstRunPageState extends State<WaffraCountryFirstRunPage> {
             style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 12),
           Text(t(
-            'وفرة محتاج إذن الموقع التقريبي مرة واحدة عشان يحدد بلدك ويقترح عملته، مثل الريال في السعودية والجنيه في مصر. اضغط تحديد البلد لمنح الإذن. مش بنحفظ الإحداثيات ولا بنتتبعك.',
-            'Waffra asks for approximate location once to suggest your country currency, such as SAR in Saudi Arabia or EGP in Egypt. Tap Detect country to grant access. We do not store coordinates or track you.'),
+            'اسمح بالموقع التقريبي لاقتراح عملة بلدك. لا نحفظ موقعك ولا نتتبعك.',
+            'Allow approximate location to suggest your currency. We don't save or track your location.'),
             textAlign: TextAlign.center),
           const SizedBox(height: 10),
           OutlinedButton.icon(
@@ -167,8 +167,8 @@ class _WaffraCountryFirstRunPageState extends State<WaffraCountryFirstRunPage> {
           ),
           const SizedBox(height: 9),
           Text(t(
-            'الموقع يقترح عملة العرض فقط. اختيارك اليدوي له الأولوية، ولا يغيّر كود جوالك أو عملة رسائلك البنكية.',
-            'Location only suggests a display currency. Your manual choice always wins; phone codes and original bank-SMS currencies stay unchanged.'),
+            'الموقع يقترح العملة فقط. اختيارك محفوظ، ولا تتغيّر عملة الرسائل أو كود الهاتف.',
+            'Location suggests currency only. Your choice, calling code and bank SMS stay unchanged.'),
             style: Theme.of(context).textTheme.bodySmall),
           const SizedBox(height: 20),
           Card(child:ListTile(
