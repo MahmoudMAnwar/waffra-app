@@ -6,19 +6,62 @@ import 'waffra_ondevice_qwen.dart';
 /// Shared first-use consent and progress dialog for all Waffra AI entry points.
 /// Cancel keeps the existing deterministic bank/OCR workflow available.
 abstract final class WaffraAiModelGate {
+  /// A feature that explicitly requires local AI must never silently fall
+  /// back to bank-SMS parsing or image OCR when the model is unavailable.
+  /// The mandatory notice is shown even after a user declines installation.
+  static Future<bool> requireForFeature(BuildContext context,{
+    required bool english,
+    required String featureAr,
+    required String featureEn,
+  }) async {
+    if(WaffraOnDeviceQwen.shared.isReady)return true;
+    final ready=await ensureReady(context,english:english,
+      requiredFeature:english?featureEn:featureAr);
+    if(!context.mounted)return false;
+    if(ready&&WaffraOnDeviceQwen.shared.isReady)return true;
+    await showDialog<void>(context:context,builder:(dialog)=>AlertDialog(
+      key:const Key('waffra-ai-required-feature-notice'),
+      title:Text(english?'AI model required':'يلزم تنزيل نموذج الذكاء الاصطناعي'),
+      content:Text(english?
+        'You must download and activate the Waffra AI model to use '
+        +featureEn+'. Without the model this feature cannot be used. '
+        'You can still add transactions manually.':
+        'لازم تنزّل وتفعّل نموذج الذكاء الاصطناعي لاستخدام '
+        +featureAr+'. من غير النموذج مش هتقدر تستخدم الميزة دي. '
+        'تقدر تواصل إضافة المعاملات يدويًا.'),
+      actions:[FilledButton(
+        onPressed:()=>Navigator.pop(dialog),
+        child:Text(english?'OK':'فهمت'))],
+    ));
+    return false;
+  }
+
   static Future<bool> ensureReady(BuildContext context,{
     required bool english,
+    String? requiredFeature,
   }) async {
     final model=WaffraOnDeviceQwen.shared;
     if(model.isReady)return true;
     if(model.isBusy)return false;
     final installed=await model.installedAndVerified();
     if(!context.mounted)return false;
+    final featureRequired=requiredFeature!=null;
     final agreed=await showDialog<bool>(context:context,builder:(dialog)=>
       AlertDialog(
         title:Text(english?'Waffra private AI model':
           'نموذج الذكاء الاصطناعي في وفرة'),
-        content:Text(installed?
+        content:Text(featureRequired?
+          (english?
+            'The Waffra AI model is required for '+requiredFeature+
+            '. Download and activate it before using this feature. '
+            'Declining keeps this feature locked, but manual transactions '
+            'remain available. You can delete the model later from My Account.':
+            'نموذج الذكاء الاصطناعي مطلوب لتشغيل '+requiredFeature+
+            '. لازم تنزّله وتفعّله قبل استخدام الميزة. '
+            'لو اخترت مش دلوقتي هتفضل الميزة مقفولة، '
+            'لكن إضافة المعاملات يدويًا هتفضل متاحة. '
+            'تقدر تحذف النموذج لاحقًا من حسابي.') :
+          installed?
           (english?
             'The AI model is already downloaded and will load on this '
             'device. You can delete it later from My Account. Deleting '
