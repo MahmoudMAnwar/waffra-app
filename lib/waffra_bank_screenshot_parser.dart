@@ -2,6 +2,7 @@
 /// offered for review, including actions whose amounts cannot be trusted.
 /// No OCR result is ever authorized to write to the finance ledger.
 import 'waffra_receipt_ocr_parser.dart';
+import 'waffra_sms_multicurrency_review.dart';
 
 class WaffraOcrBankCandidate {
   const WaffraOcrBankCandidate({
@@ -50,12 +51,14 @@ abstract final class WaffraBankScreenshotParser {
     r'إيداع|ايداع|سحب\s+نقدي|تم\s+خصم|'
     r'\bcredit\s+transfer\b|\bdebit\s+transfer\b|'
     r'راتب|salary\s+(?:credit|deposit)|'
-    r'استرداد\s+مبلغ|refund\s+received)',
+    r'استرداد\s+مبلغ|refund\s+received|'
+    r'\bcredited\b|\bdebited\b|\breceived\b|\bwithdrawal\b)',
     caseSensitive: false,
   );
   static final _incoming = RegExp(
     r'(حوالة\s+واردة|تحويل\s+وارد|إيداع|ايداع|راتب|salary|'
-    r'\bcredit\s+transfer\b|refund\s+received|استرداد\s+مبلغ)',
+    r'\bcredit\s+transfer\b|refund\s+received|استرداد\s+مبلغ|'
+    r'\bcredited\b|\breceived\b)',
     caseSensitive: false,
   );
   static final _money = RegExp(
@@ -84,12 +87,16 @@ abstract final class WaffraBankScreenshotParser {
 
   static bool looksLikeBankScreenshot(String text) {
     final normalized = WaffraReceiptOcrParser.westernDigits(text);
+    final hasKnownCurrency = WaffraSmsCurrencies.currenciesForMessage(normalized)
+        .isNotEmpty || WaffraSmsCurrencies.supported.any(
+          (code) => RegExp(RegExp.escape(code) + r'(?=[0-9])',
+              caseSensitive:false).hasMatch(normalized));
     return _action.hasMatch(normalized) &&
-        RegExp(
+        (hasKnownCurrency || RegExp(
           r'\b(?:SAR|SR|POS|Mada)\b|ريال|مدى|bank|'
           r'الراجحي|تحويل|حوالة|بطاقة|إيداع|ايداع',
           caseSensitive: false,
-        ).hasMatch(normalized);
+        ).hasMatch(normalized));
   }
 
   /// Tesseract can collapse two SMS bubbles into one OCR line. Split at each
@@ -135,6 +142,15 @@ abstract final class WaffraBankScreenshotParser {
         end++;
       }
       final chunk = lines.sublist(i, end);
+      final original = chunk.join('\n');
+      // A foreign currency in the image cannot be posted as a SAR amount.
+      // Keep the full action for manual review and never substitute an SAR
+      // balance/fee for the actual foreign transaction amount.
+      final codes = WaffraSmsCurrencies.currenciesForMessage(original);
+      final foreign = codes.any((currency) => currency != 'SAR') ||
+          WaffraSmsCurrencies.supported.where((code) => code != 'SAR').any(
+            (code) => RegExp(RegExp.escape(code) + r'(?=[0-9])',
+              caseSensitive:false).hasMatch(original));
       final amounts = <double>[];
       int? amountAt;
       for (var k = 0; k < chunk.length; k++) {
@@ -189,7 +205,7 @@ abstract final class WaffraBankScreenshotParser {
       found.add(WaffraOcrBankReviewItem(
         position: found.length + 1,
         sourceLine: i + 1,
-        amount: amounts.length == 1 ? amounts.single : null,
+        amount: !foreign && amounts.length == 1 ? amounts.single : null,
         income: _incoming.hasMatch(chunk.first),
         merchant: merchant,
         date: date,
