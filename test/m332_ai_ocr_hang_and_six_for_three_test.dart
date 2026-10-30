@@ -101,5 +101,11 @@ void main() {
     expect(app, contains('AI analysis was interrupted. Review bank messages manually.'));
     expect(app, contains('analyzingPaste=false;'));
     expect(app, contains('Review before saving.'));
+    // Re-paste/clear/close invalidates stale AI results and native inference.
+    expect(app, contains('scheduleBankSmsAnalysis('));
+    expect(app, contains('++pasteRevision;pasted.clear();'));
+    expect(app, contains('++pasteRevision;'));
+    expect(app, contains('WaffraOnDeviceQwen.shared.cancelCurrentGeneration();'));
+    expect(app, contains('analyzingPaste=false;messages=[];index=0;pasted.clear()'));
   });
 }
