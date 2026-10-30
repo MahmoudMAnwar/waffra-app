@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
 import 'package:waffra/waffra_bank_screenshot_parser.dart';
 import 'package:waffra/waffra_ai_finance_brain.dart';
+import 'package:waffra/waffra_sms_multicurrency_review.dart';
 
 void main(){
  const threeBankBubbles='''شراء PoS
@@ -46,6 +47,8 @@ void main(){
   final results=[for(final s in messages) BankParser.parse(s)];
   expect(results.map((e)=>e.amount).toList(),[15.5,74.0,60.0,25.0]);
   expect(results.map((e)=>e.income).toList(),[true,false,false,false]);
+  expect([for(final s in messages)WaffraSmsCurrencies.originalAmount(s)?.amount],
+    [15.5,74.0,60.0,25.0]);
  });
 
  test('M332 AI cannot double 3 OCR actions even if quotes come from image',()async{
@@ -86,6 +89,7 @@ void main(){
   expect(home,contains("Key('waffra-ai-analysis-cancel')"));
   expect(home,contains('scheduleBankSmsAnalysis(ctx,update,text);'));
   expect(home,contains('analyzeBankSmsAutomatically('));
+  expect(home,contains('final evidence=WaffraSmsCurrencies.originalAmount(found[i]);'));
   expect(home,isNot(contains("Key('waffra-sms-ai-review')")));
   expect(engine,contains('cancelCurrentGeneration()'));
   expect(engine,contains('generationTimeLimit'));
