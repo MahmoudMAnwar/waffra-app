@@ -105,8 +105,17 @@ class WaffraDisplayCurrency {
   if(converted==null)return '—';
   // ISO-appropriate presentation precision, not currency conversion.
   // The original numeric balance and stored ledger are unchanged.
-  return formatWaffraMoney(converted,
-   decimalPlaces:waffraCurrencyMinorDigits(country.code));
+  // A display-only unit switch must never hide part of the saved number:
+  // e.g. 100.25 SAR becomes 100.25 JPY, not a rounded 100 JPY.
+  // Keep the normal ISO digits for whole amounts; use additional decimal
+  // places only when reducing them would change the numeric amount.
+  var digits=waffraCurrencyMinorDigits(country.code);
+  if(digits==0&&converted!=converted.roundToDouble())digits=2;
+  while(digits<6&&
+      (double.parse(converted.toStringAsFixed(digits))-converted).abs()>1e-9){
+   digits++;
+  }
+  return formatWaffraMoney(converted,decimalPlaces:digits);
  }
  static String money(num sar,{required bool english}) =>
   '${amount(sar)} ${label(english)}';

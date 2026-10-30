@@ -25,6 +25,24 @@ void main() {
     }
   });
 
+  test('M308 changing only the displayed unit never hides existing cents',(){
+    for(final code in ['JPY','KRW']){
+      WaffraDisplayCurrency.active.value=
+        WaffraDisplayCurrency.displaySelection(code);
+      expect(WaffraDisplayCurrency.amount(1000.25),'1,000.25',reason:code);
+      expect(WaffraDisplayCurrency.amount(-20.50),'-20.50',reason:code);
+      expect(WaffraDisplayCurrency.amount(1000),'1,000',reason:code);
+      expect(WaffraDisplayCurrency.toLedgerSar(1000.25),1000.25,
+        reason:'Label-only selection must not recalculate the ledger');
+    }
+    WaffraDisplayCurrency.active.value=
+      WaffraDisplayCurrency.displaySelection('EGP');
+    expect(WaffraDisplayCurrency.amount(1000.25),'1,000.25');
+    WaffraDisplayCurrency.active.value=
+      WaffraDisplayCurrency.displaySelection('JOD');
+    expect(WaffraDisplayCurrency.amount(1000.25),'1,000.250');
+  });
+
   test('M302 zero and three decimal currencies display independently',(){
     WaffraDisplayCurrency.active.value=
       WaffraDisplayCurrency.displaySelection('JPY');

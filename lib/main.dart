@@ -58,6 +58,7 @@ import 'waffra_pdf_reader.dart';
 import 'waffra_footer.dart';
 import 'waffra_messages.dart';
 import 'waffra_recurring_policy.dart';
+import 'waffra_cross_source_duplicate_review.dart';
 import 'waffra_secure_backup.dart';
 import 'waffra_backup_files.dart';
 import 'storage/waffra_legacy_write_queue.dart';
@@ -3309,14 +3310,29 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      recurringPostponed.remove(id);
      // 'Paid' is a human-confirmed choice; the SQL writer commits both
      // the deterministic payment and its postponement in one transaction.
-     await persist(route:WaffraFinanceRoute.recurringPostingAndPostponement,
-      userConfirmed:true);
+     try {
+      await persist(route:WaffraFinanceRoute.recurringPostingAndPostponement,
+       userConfirmed:true);
+     } catch(error) {
+      // A lost acknowledgement may have committed. Reload the source;
+      // never blindly replay a payment or retain a tentative UI entry.
+      debugPrint('Recurring payment commit could not be confirmed: $error');
+      if(mounted)await _loadFinanceSafely();
+      if(mounted)snack(context,waffraIsEnglish?
+       'Payment not confirmed. Records refreshed; check before retrying.':
+       'لم يتم تأكيد الدفع. تم تحديث البيانات؛ تحقق منها قبل إعادة المحاولة.');
+      return;
+     }
     }else if(action=='postpone'){
      final selected=await waffraPickDateWithToday(english:waffraIsEnglish,context:context,initialDate:today.add(const Duration(days:1)),
       firstDate:DateTime(today.year,today.month,today.day).add(const Duration(days:1)),
       lastDate:DateTime(today.year+3,12,31));
-     if(selected!=null){recurringPostponed[id]=selected.toIso8601String();
-      await persist(route:WaffraFinanceRoute.recurringPostingAndPostponement);}
+     if(selected!=null){
+      recurringPostponed[id]=selected.toIso8601String();
+      if(!await _persistModuleOrReload(
+       WaffraFinanceRoute.recurringPostingAndPostponement,
+       operation:'recurring-postpone'))return;
+     }
     }else{return;}
    }finally{_dueDialogShowing=false;}
   }
@@ -4494,6 +4510,15 @@ Future<void> bulkSmsSheet({String? initialText})async {
         income,selectedParentId,category))return;
        if(sms){
         if(message.text.trim().isEmpty)return;
+        // The display-country setting cannot convert a bank SMS into SAR.
+        // The durable finance record must never inherit an unverified
+        // foreign amount from the manual SMS review screen.
+        if(WaffraSmsCurrencies.requiresReviewForSarLedger(message.text)){
+         if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
+          'Foreign or unknown currency: no transaction was saved as SAR. Verify the source amount and FX first.':
+          'عملة الرسالة أجنبية أو غير مؤكدة؛ لم نحفظ العملية بالريال. يلزم التحقق من المبلغ وسعر الصرف أولًا.');
+         return;
+        }
         final h=sha256.convert(utf8.encode(digits(message.text).replaceAll(RegExp(r'\s+'),' ').trim().toLowerCase())).toString();
         if(smsHashes.contains(h)){
          final proceed=await showWaffraDialog<bool>(context:sheetContext,builder:(dialogContext)=>AlertDialog(
@@ -4522,16 +4547,26 @@ Future<void> bulkSmsSheet({String? initialText})async {
    }
    return;
   }
-  if(initial==null&&!sms&&entries.any((e)=>
-    e.income==result.income&&e.amount==result.amount&&
-    e.title.trim().toLowerCase()==result.title.trim().toLowerCase()&&
-    e.category==result.category&&e.date.year==result.date.year&&
-    e.date.month==result.date.month&&e.date.day==result.date.day)){
+  // Compare OCR, manual and SMS entries across source types before commit.
+  // This is an advisory warning: same-day equal purchases are legitimate.
+  if(initial==null&&entries.any((e)=>
+    WaffraCrossSourceDuplicateReview.mightBeSame(
+      candidateTitle:result.title,candidateCategory:result.category,
+      candidateMerchantKey:result.merchantKey,
+      candidateAmount:result.amount,candidateIncome:result.income,
+      candidateDate:result.date,existingTitle:e.title,
+      existingCategory:e.category,existingMerchantKey:e.merchantKey,
+      existingAmount:e.amount,existingIncome:e.income,
+      existingDate:e.date))){
    final proceed=await showWaffraDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
-    title:const WaffraText('⚠️ عملية مكررة'),
-    content:WaffraText('يبدو إنك أضفت نفس ${result.income?'الدخل':'المصروف'} من قبل. ودّك تضيفه مرة ثانية؟'),
-    actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),child:const WaffraText('إلغاء')),
-     FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),child:const WaffraText('إضافة على أي حال'))]));
+    title:WaffraText(waffraIsEnglish?'⚠️ Possible duplicate':'⚠️ عملية مكررة'),
+    content:WaffraText(waffraIsEnglish?
+     'A similar ${result.income?'income':'expense'} was recorded on the same day for the same amount. Add it again?':
+     'يبدو إنك أضفت نفس ${result.income?'الدخل':'المصروف'} من قبل. ودّك تضيفه مرة ثانية؟'),
+    actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),
+     child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+     FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),
+      child:WaffraText(waffraIsEnglish?'Add anyway':'إضافة على أي حال'))]));
    if(proceed!=true||!mounted){
     // The duplicate was refused *before* any finance write. Remove only
     // image copies staged in this sheet; never the original user image.
@@ -4540,6 +4575,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
     }
     return;
    }
+   // The writer still verifies the bank SMS hash under the source lock.
+   // Confirmation here only permits the user's explicitly reviewed overlap.
+   if(pendingHash!=null)explicitlyApprovedSmsDuplicate=true;
   }
   final previousSpent=sum(entries.where((e)=>!e.income&&e.id!=result.id&&
    e.category==result.category&&e.date.year==result.date.year&&e.date.month==result.date.month),false);
@@ -4645,7 +4683,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
      final index=entries.indexWhere((e)=>e.id==initial.id);
      if(index<0)return;
      setState(()=>entries[index]=initial);
-     await persist();
+     if(!await _persistModuleOrReload(
+      WaffraFinanceRoute.transactionEdit,
+      operation:'transaction-edit-undo'))return;
+     if(mounted)snackSuccess(context,waffraIsEnglish?
+      'Transaction change reverted':'تم التراجع عن تعديل المعاملة');
     });
   }
  }
@@ -5512,8 +5554,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final yes=await confirmDeletion(waffraIsEnglish?'Delete transaction':'حذف العملية',
    waffraIsEnglish?'Delete «'+e.title+'»? You can undo for 6 seconds after deletion.':'هل تريد حذف المعاملة «'+e.title+'»؟ يمكنك التراجع خلال 6 ثوانٍ بعد الحذف.');
   if(yes!=true||!mounted)return;
+  // A tentative removal is never success until the source acknowledges it.
   setState(()=>entries.removeWhere((x)=>x.id==e.id));
-  await persist(route:WaffraFinanceRoute.transactionDeleteAndUndo);
+  if(!await _persistModuleOrReload(
+   WaffraFinanceRoute.transactionDeleteAndUndo,
+   operation:'transaction-delete'))return;
   if(!mounted)return;
   snack(context,waffraIsEnglish?'Transaction deleted':'تم حذف العملية',
    isError:false,duration:const Duration(seconds:5),
@@ -5521,7 +5566,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
    onAction:()async{
     if(!mounted||entries.any((x)=>x.id==e.id))return;
     setState(()=>entries.insert(0,e));
-    await persist(route:WaffraFinanceRoute.transactionDeleteAndUndo);
+    if(!await _persistModuleOrReload(
+     WaffraFinanceRoute.transactionDeleteAndUndo,
+     operation:'transaction-undo'))return;
+    if(mounted)snackSuccess(context,waffraIsEnglish?
+     'Transaction restored':'تم استرجاع المعاملة');
    });
  }
  Widget stat(String label,double value,IconData icon,Color color)=>Expanded(
@@ -5729,7 +5778,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
     ))));
    if(next!=null&&mounted){
     setState((){monthlyBudgetEnabled=next.enabled;monthlyBudget=next.amount;});
-    await persist(route:WaffraFinanceRoute.challengeAndBudgetUpdate);
+    if(!await _persistModuleOrReload(
+     WaffraFinanceRoute.challengeAndBudgetUpdate,
+     operation:'monthly-budget-save'))return;
     if(mounted)snackSuccess(context,waffraIsEnglish?'Monthly budget settings saved':'تم حفظ إعدادات الميزانية الشهرية');
    }
   }finally{disposeLater([amount]);}
