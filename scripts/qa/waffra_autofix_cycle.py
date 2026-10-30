@@ -155,6 +155,13 @@ def select():
     prs.sort(key=lambda pr: pr["updated_at"], reverse=True)
     for pr in prs:
         sha = pr["head"]["sha"]
+        # One paid Codex attempt per exact SHA. New auto-fix commits produce
+        # new SHAs, so they get another cycle (max three rounds).
+        marker = api(f"actions/artifacts?name=m323-attempt-{sha}&per_page=10")
+        if any(not a.get("expired", False)
+               for a in marker.get("artifacts", [])):
+            print(f"Skip #{pr['number']} @ {sha[:12]}: already attempted")
+            continue
         failed, reason = failed_runs_for_sha(sha)
         if not failed:
             print(f"Skip #{pr['number']} @ {sha[:12]}: {reason}")
