@@ -77,7 +77,8 @@ double? waffraStrictNumericInput(
   r'^(?:[0-9]+|[0-9]{1,3}(?:,[0-9]{3})+)'+decimal+r'
  final fixed=amount.toDouble().isFinite?amount.toStringAsFixed(2):'0.00';
  final parts=fixed.split('.');
- return '${parts.first.replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'),(_)=>',')}.${parts.last}';
+ return parts.first.replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'),(_)=>',')+
+  (decimalPlaces==0?'':'.'+parts.last);
 }
 );
  if(!pattern.hasMatch(normalized))return null;
@@ -88,8 +89,20 @@ double? waffraStrictNumericInput(
  return value;
 }
 
-String formatWaffraMoney(num amount) {
- final fixed=amount.toDouble().isFinite?amount.toStringAsFixed(2):'0.00';
+/// ISO 4217 minor-unit presentation for explicit FX/commodity conversions.
+/// Does not alter display-only app currency or underlying ledger amounts.
+int waffraCurrencyMinorDigits(String code) {
+ if(const {'JPY','KRW'}.contains(code))return 0;
+ if(const {'BHD','KWD','OMR','TND','JOD','IQD'}.contains(code))return 3;
+ return 2;
+}
+
+String formatWaffraMoney(num amount,{int decimalPlaces=2}) {
+ if(decimalPlaces<0||decimalPlaces>6)throw ArgumentError.value(
+  decimalPlaces,'decimalPlaces','Expected 0..6');
+ final fallback=decimalPlaces==0?'0':'0.'+'0'*decimalPlaces;
+ final fixed=amount.toDouble().isFinite
+   ?amount.toStringAsFixed(decimalPlaces):fallback;
  final parts=fixed.split('.');
  return '${parts.first.replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'),(_)=>',')}.${parts.last}';
 }
