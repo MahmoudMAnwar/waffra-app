@@ -33,6 +33,11 @@ on:
   schedule:
     - cron: "17 * * * *"
   workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/waffra-autofix-ci.yml'
+      - 'scripts/qa/waffra_autofix_cycle.py'
+      - 'scripts/qa/tests/test_waffra_autofix_cycle.py'
 
 permissions:
   contents: read
@@ -44,11 +49,25 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  configuration-tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Lint auto-fix guard and run isolated negative acceptance
+        run: |
+          python3 -m py_compile scripts/qa/waffra_autofix_cycle.py
+          python3 -m unittest discover -s scripts/qa/tests -p 'test_waffra_autofix_cycle.py' -v
+
   triage:
     if: >-
-      github.event_name != 'workflow_run' ||
-      (github.event.workflow_run.event == 'pull_request' &&
-       github.event.workflow_run.repository.full_name == github.repository)
+      github.event_name != 'pull_request' &&
+      (github.event_name != 'workflow_run' ||
+       (github.event.workflow_run.event == 'pull_request' &&
+        github.event.workflow_run.repository.full_name == github.repository))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     outputs:
@@ -73,6 +92,19 @@ jobs:
         with:
           name: m323-context-${{github.run_id}}
           path: waffra-autofix-context.md
+          retention-days: 3
+          if-no-files-found: error
+      - name: Mark exact SHA attempted to prevent repeated model charges
+        if: steps.select.outputs.selected == 'true'
+        env:
+          TARGET_SHA: ${{steps.select.outputs.sha}}
+        run: |
+          printf 'Attempt on %s\n' "$TARGET_SHA" > m323-attempt.txt
+      - uses: actions/upload-artifact@v4
+        if: steps.select.outputs.selected == 'true'
+        with:
+          name: m323-attempt-${{steps.select.outputs.sha}}
+          path: m323-attempt.txt
           retention-days: 3
           if-no-files-found: error
 
