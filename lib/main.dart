@@ -37,6 +37,7 @@ import 'waffra_biometrics.dart';
 import 'waffra_amount_formatter.dart';
 import 'waffra_display_currency.dart';
 import 'waffra_country_first_run_page.dart';
+import 'waffra_regional_copy.dart';
 import 'waffra_search.dart';
 import 'waffra_balance_art.dart';
 import 'waffra_validators.dart';
@@ -703,7 +704,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  final WaffraDoubleBackExit _doubleBackExit=WaffraDoubleBackExit();
  String language='ar';
  String? pinHash;Person? profile;
- @override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);load();launchIntro();}
+ @override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);
+  WaffraRegionalCopy.countryIso.addListener(_onRegionChanged);load();launchIntro();}
+ void _onRegionChanged(){if(mounted)setState((){});}
  Future<void> launchIntro()async{
   // Show the approved cinematic launch for three seconds on each cold start.
   await Future<void>.delayed(const Duration(milliseconds:3000));
@@ -719,7 +722,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    if(away>=const Duration(seconds:30)&&mounted)setState(()=>locked=true);
   }
  }
- @override void dispose(){WidgetsBinding.instance.removeObserver(this);super.dispose();}
+ @override void dispose(){WaffraRegionalCopy.countryIso.removeListener(_onRegionChanged);
+  WidgetsBinding.instance.removeObserver(this);super.dispose();}
  String? startupError;
  Future<void> load()async {
   try {
@@ -751,6 +755,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    final animation=p.getString('waffra_animation_level');
    waffraAnimationLevel.value={'full','balanced','reduced','off'}.contains(animation)?animation!:'balanced';
    waffraLanguage.value=language;
+   // Location only affects Arabic copy, independently from the display currency.
+   await WaffraRegionalCopy.initialize(p);
    await WaffraDisplayCurrency.initialize();
    allowWaffraScreenshots.value=screenshotsAllowed;
    if(Platform.isAndroid){
@@ -806,6 +812,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    profile=u;showLogin=false;googleFirstRunSetup=needsGoogleSetup;
   });
  }
+ Future<void> setUiCountry(String? iso)async{
+  await WaffraRegionalCopy.setCountry(iso);
+ }
  Future<void> completeGoogleCountrySetup(String selectedCurrency)async{
   final account=profile;
   if(!waffraGoogleProfileReadyForCountrySetup(account))return;
@@ -846,8 +855,11 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   await p.setBool('waffra_dark_mode',dark);
  }
  @override Widget build(BuildContext context)=>MaterialApp(
-  debugShowCheckedModeBanner:false,title:'وفرة | Waffra',locale:Locale(language,language=='ar'?'SA':'US'),
-  supportedLocales:const [Locale('ar','SA'),Locale('en','US')],
+  debugShowCheckedModeBanner:false,title:'وفرة | Waffra',
+  locale:language=='en'?const Locale('en','US'):
+   WaffraRegionalCopy.arabicCountrySubtag.isEmpty?const Locale('ar'):
+    Locale('ar',WaffraRegionalCopy.arabicCountrySubtag),
+  supportedLocales:const [Locale('ar'),Locale('ar','SA'),Locale('ar','EG'),Locale('en','US')],
   localizationsDelegates:const [
    GlobalMaterialLocalizations.delegate,GlobalWidgetsLocalizations.delegate,
    GlobalCupertinoLocalizations.delegate,
@@ -1045,8 +1057,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    if(_doubleBackExit.isExitPress(DateTime.now())){
     SystemNavigator.pop();return;
    }
-   final message=waffraIsEnglish?'Press back again to exit Waffra':
-       'اضغط رجوع مرة ثانية للخروج من وفرة';
+   final message=WaffraRegionalCopy.exitHint(english:waffraIsEnglish);
    if(_waffraFooterHostCount>0){
     _waffraShowFooterNotice(WaffraNoticeData(text:message,
      kind:WaffraSnackKind.info,duration:const Duration(milliseconds:2400),
@@ -1060,7 +1071,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    startupError!=null?Scaffold(body:Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[
     const Icon(Icons.error_outline,size:48,color:Colors.red),
     const SizedBox(height:12),
-    const WaffraText('تعذر تشغيل وفرة. لم يتم حذف بياناتك.'),
+    WaffraText(WaffraRegionalCopy.appError(english:waffraIsEnglish)),
     const SizedBox(height:12),
     SelectableText(startupError??'Unknown startup error',textDirection:TextDirection.ltr,textAlign:TextAlign.center,style:const TextStyle(fontSize:12)),
     const SizedBox(height:12),
@@ -1072,7 +1083,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    locked?PinLockScreen(pinHash:pinHash!,onUnlock:()=>setState(()=>locked=false)):
    profile==null||showLogin?LoginScreen(onSave:saveUser):
    googleFirstRunSetup?WaffraCountryFirstRunPage(
-     english:language=='en',onComplete:completeGoogleCountrySetup):
+     english:language=='en',onComplete:completeGoogleCountrySetup,
+     onCountryConfirmed:setUiCountry):
    HomeScreen(key:ValueKey(language),profile:profile!,
      dark:appearance=='dark'||(appearance=='system'&&MediaQuery.platformBrightnessOf(rootContext)==Brightness.dark),
      appearance:appearance,onAppearance:setAppearance,onTheme:theme,onLanguage:setLanguage,onLogout:logout,onProfile:saveUser,onSetPin:setPin,pinEnabled:pinHash!=null,greetingIndex:_greetingCycle)))));
@@ -1305,8 +1317,8 @@ class _WaffraLaunchIntroState extends State<WaffraLaunchIntro> with SingleTicker
      Opacity(opacity:reveal(t,.44,.70),child:Transform.translate(
       offset:Offset(0,10*(1-sloganProgress)),child:Padding(
        padding:const EdgeInsets.symmetric(horizontal:16),
-       child:Text(waffraIsEnglish?'Waffra.. shows you where your money goes':
-        'وفرة.. يعلّمك وين فلوسك تروح',textAlign:TextAlign.center,
+       child:Text(waffraIsEnglish?'Your money, made clear':
+        'وفرة… فلوسك بوضوح',textAlign:TextAlign.center,
         style:const TextStyle(color:Color(0xFFE8FFF0),fontSize:18,fontWeight:FontWeight.w600))))),
     ]))),
    ]);
@@ -5591,7 +5603,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
  }
  String get greeting=>WaffraSaudiGreetings.compose(
   name:widget.profile.name,gender:widget.profile.gender,
-  english:waffraIsEnglish,greetingIndex:widget.greetingIndex);
+  english:waffraIsEnglish,greetingIndex:widget.greetingIndex,
+  countryIso:WaffraRegionalCopy.countryIso.value);
  Future<void> confirmDeleteAllEntries() async {
   if(entries.isEmpty){snack(context,waffraIsEnglish?'No transactions to delete':'لا توجد معاملات لحذفها');return;}
   final confirmed=await confirmDeletion(
@@ -9334,8 +9347,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
     side:BorderSide(color:(isGuest)?emerald:Colors.red)),
     onPressed:WaffraHaptics.tap(()async{
      if(isGuest){await widget.onLogout();return;}
-     final ok=await confirm(waffraIsEnglish?'Sign out?':'تسجيل الخروج',
-      waffraIsEnglish?'Your financial data stays on this device.':'ستبقى بياناتك المالية محفوظة على الجهاز.');
+     final ok=await confirm(
+      WaffraRegionalCopy.signOutTitle(english:waffraIsEnglish),
+      WaffraRegionalCopy.signOutBody(english:waffraIsEnglish));
      if(ok==true&&mounted)await widget.onLogout();
     }),
     icon:Icon((isGuest)?Icons.login:Icons.logout),
