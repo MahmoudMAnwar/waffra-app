@@ -78,6 +78,12 @@ void main() {
       'حوالة 100 جنيه إسترليني الرصيد 300 ريال'),{'GBP'});
     expect(WaffraSmsCurrencies.currenciesForMessage(
       'شراء 100 درهم مغربي الرصيد 300 ريال'),{'MAD'});
+    expect(WaffraSmsCurrencies.currenciesForMessage(
+      'حوالة 100 دينار أردني وخصم 5 دولار الرصيد 300 ريال'),
+      {'JOD','UNKNOWN'},
+      reason:'An unqualified second currency cannot inherit a named one');
+    expect(WaffraSmsCurrencies.originalAmountPreview(
+      'حوالة 100 دينار أردني وخصم 5 دولار الرصيد 300 ريال'),isNull);
   });
 
   test('M300 each currency recognized before and after amount, regardless of balance', () {
