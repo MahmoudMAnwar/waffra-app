@@ -15,6 +15,8 @@ on:
       - 'test/m302_category_rename_integrity_test.dart'
       - 'lib/currency_converter.dart'
       - 'lib/waffra_gold_calculator.dart'
+      - 'lib/waffra_gold_market_section.dart'
+      - 'lib/waffra_practical_tools_page.dart'
       - 'lib/waffra_oil_market_section.dart'
       - 'test/m302_cross_feature_input_precision_test.dart'
       - 'docs/qa/m302-cross-feature-gap-register.md'
@@ -58,6 +60,8 @@ jobs:
             test/m302_duplicate_receipt_cleanup_test.dart \
             lib/currency_converter.dart \
             lib/waffra_gold_calculator.dart \
+            lib/waffra_gold_market_section.dart \
+            lib/waffra_practical_tools_page.dart \
             lib/waffra_oil_market_section.dart \
             test/m302_cross_feature_input_precision_test.dart
       - name: New and existing input, amount and category regression tests
