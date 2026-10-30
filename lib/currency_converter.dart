@@ -192,7 +192,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
   final currentQuote=++_quoteRevision;
   final chosenFrom=from,chosenTo=to;
   if(chosenTo==null){setState(()=>status=waffraIsEnglish?'Choose the destination currency':'اختر العملة المراد التحويل إليها');return;}
-  final input=double.tryParse(amount.text.trim().replaceAll(',',''));
+  final input=waffraStrictNumericInput(amount.text,decimalPlaces:3,allowZero:true);
   if(input==null||!input.isFinite||input<0){setState(()=>status='اكتب مبلغ صحيح عشان نحسبه');return;}
   setState((){busy=true;status='';result=null;rate=null;updated=null;});
   try{
