@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 /// Formats money as 10,000.00 while editing, preserving the caret position.
 /// Stored values remain numeric; commas are for presentation only.
 class WaffraAmountFormatter extends TextInputFormatter {
- const WaffraAmountFormatter();
+ const WaffraAmountFormatter({this.decimalPlaces=2})
+   : assert(decimalPlaces>=0&&decimalPlaces<=6);
+ final int decimalPlaces;
  @override
  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
   final normalized=newValue.text.replaceAll('٫','.').replaceAll('٬',',').replaceAllMapped(RegExp('[٠-٩۰-۹]'),(m){
@@ -31,7 +33,7 @@ class WaffraAmountFormatter extends TextInputFormatter {
   if(integer.isEmpty&&dot>=0)integer='0';
   final fractional=dot<0?'':filtered.substring(dot+1).replaceAll('.','');
   final grouped=integer.replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'),(_)=>',');
-  final text=grouped+(dot>=0?'.'+(fractional.length>2?fractional.substring(0,2):fractional):'');
+  final text=grouped+(dot>=0?'.'+(fractional.length>decimalPlaces?fractional.substring(0,decimalPlaces):fractional):'');
   var offset=0,seen=0;
   if(before>0){
    while(offset<text.length&&seen<before){
