@@ -4039,7 +4039,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    if(picked==null||!mounted)return;
    final extracted=await WaffraReceiptOcr.scan(picked.path);
    if(!mounted)return;
-   final candidates=WaffraBankScreenshotParser.candidates(extracted.rawText);
+   final candidates=WaffraBankScreenshotParser.reviewItems(extracted.rawText);
    if(candidates.isEmpty){
     // Do not reuse speculative OCR merchant/amount for an SMS screenshot.
     final suggestion=WaffraBankScreenshotParser.looksLikeBankScreenshot(extracted.rawText)?
@@ -4052,27 +4052,28 @@ Future<void> bulkSmsSheet({String? initialText})async {
     await entrySheet(
      scannedReceipt:WaffraReceiptOcrFields(rawText:one.sourceText,
       merchant:one.merchant,amount:one.amount,date:one.date),
-     scannedIncome:one.income,scannedImage:picked);
+     scannedIncome:one.income,scannedImage:picked,
+     scannedImagePosition:one.position,scannedImageTotal:candidates.length);
     return;
    }
    // One screenshot may have independent transactions. Require explicit user
    // selection, then full review of each via the existing finance entry gate.
-   final chosen=<int>{};
+   final chosen=<int>{for(var i=0;i<candidates.length;i++)i};
    final selected=await showWaffraDialog<List<int>>(context:context,
     builder:(dialog)=>StatefulBuilder(builder:(dialog,update)=>AlertDialog(
-     title:WaffraText(waffraIsEnglish?'Review detected transactions':'مراجعة العمليات المكتشفة'),
+     title:WaffraText(waffraIsEnglish?'Detected '+candidates.length.toString()+' transactions':'تم اكتشاف '+candidates.length.toString()+' عمليات'),
      content:SizedBox(width:420,child:SingleChildScrollView(child:Column(
       mainAxisSize:MainAxisSize.min,children:[
        WaffraText(waffraIsEnglish?
-        'Select entries to review one by one. Nothing will be saved automatically.':
-        'اختر العمليات التي تريد مراجعتها واحدة تلو الأخرى؛ لن يُحفظ شيء تلقائيًا.'),
+        'Numbered in image reading order. Review all selected entries, and enter unclear amounts manually. Nothing is saved automatically.':
+        'العمليات مرقمة حسب ترتيب القراءة في الصورة. راجع كل عملية، وأدخل المبلغ يدويًا إذا كان غير واضح. لا يُحفظ شيء تلقائيًا.'),
        for(var i=0;i<candidates.length;i++)
         CheckboxListTile(
          value:chosen.contains(i),
          onChanged:WaffraHaptics.selection((value)=>update((){
           if(value==true){chosen.add(i);}else{chosen.remove(i);}
          })),
-         title:WaffraText('${candidates[i].amount.toStringAsFixed(2)} SAR — ${candidates[i].income?(waffraIsEnglish?'Income':'دخل'):(waffraIsEnglish?'Expense':'مصروف')}'),
+         title:WaffraText((waffraIsEnglish?'Transaction ':'العملية ')+(i+1).toString()+(waffraIsEnglish?' of ':' من ')+candidates.length.toString()+' — '+(candidates[i].amount==null?(waffraIsEnglish?'Amount unclear':'المبلغ غير واضح'):candidates[i].amount!.toStringAsFixed(2)+' SAR')),
          subtitle:WaffraText(candidates[i].merchant??(waffraIsEnglish?'Unconfirmed source':'اسم غير مؤكد')),
         ),
       ]))),
@@ -4090,7 +4091,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
     await entrySheet(
      scannedReceipt:WaffraReceiptOcrFields(rawText:candidate.sourceText,
       merchant:candidate.merchant,amount:candidate.amount,date:candidate.date),
-     scannedIncome:candidate.income,scannedImage:picked);
+     scannedIncome:candidate.income,scannedImage:picked,
+     scannedImagePosition:candidate.position,scannedImageTotal:candidates.length);
    }
   }on WaffraReceiptOcrException catch(error){
    if(mounted)snack(context,waffraIsEnglish?
@@ -4105,7 +4107,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
  }
 
  Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,
-  WaffraReceiptOcrFields? scannedReceipt,XFile? scannedImage,bool? scannedIncome})async {
+  WaffraReceiptOcrFields? scannedReceipt,XFile? scannedImage,bool? scannedIncome,
+  int? scannedImagePosition,int? scannedImageTotal})async {
   final title=TextEditingController(text:initial?.title??scannedReceipt?.merchant??'');
   final notes=TextEditingController(text:initial?.notes??'');
   final value=TextEditingController(text:initial!=null?formatWaffraEditAmount(initial.amount):
@@ -4193,6 +4196,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
       WaffraText(initial!=null?'تعديل العملية':sms?'إضافة رسالة بنكية':
         scannedReceipt!=null?(waffraIsEnglish?'Review image transaction':'مراجعة عملية من صورة'):'إضافة عملية',
        style:Theme.of(sheetContext).textTheme.titleLarge),
+      if(scannedImagePosition!=null&&scannedImageTotal!=null)
+       Padding(padding:const EdgeInsets.only(top:6),child:WaffraText(
+        waffraIsEnglish?
+         'Transaction $scannedImagePosition of $scannedImageTotal in image':
+         'العملية $scannedImagePosition من $scannedImageTotal في الصورة',
+        style:const TextStyle(fontWeight:FontWeight.w600,color:emerald))),
       const SizedBox(height:12),
       if(scannedReceipt!=null)...[
        WaffraText(waffraIsEnglish?
