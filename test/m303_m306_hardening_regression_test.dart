@@ -129,6 +129,23 @@ void main() {
     expect(WaffraSmsCurrencies.requiresReviewForSarLedger(local), isFalse);
   });
 
+  test('15 Arabic currency names cannot silently inherit Saudi riyals', () {
+    const sources=<String,String>{
+      'حوالة 100 ريال قطري الرصيد 200 ريال':'QAR',
+      'حوالة 100 دينار أردني الرصيد 200 ريال':'JOD',
+      'تحويل 100 جنيه إسترليني الرصيد 200 ريال':'GBP',
+      'تحويل 100 درهم مغربي الرصيد 200 ريال':'MAD',
+    };
+    for(final entry in sources.entries) {
+      expect(WaffraSmsCurrencies.currenciesForMessage(entry.key),
+        {entry.value});
+      expect(WaffraSmsCurrencies.requiresReviewForSarLedger(entry.key),
+        isTrue);
+    }
+    expect(WaffraSmsCurrencies.currenciesForMessage(
+      'عملية شراء 100 دولار'),contains('UNKNOWN'));
+  });
+
   test('14 live bank SMS save rejects foreign amounts before hash generation', () {
     final sheet=method('Future<void> entrySheet(',
         'Future<String?> chooseTransactionCategory(');
