@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'waffra_practical_tools_page.dart';
 import 'waffra_practical_ledger_engine.dart';
 import 'waffra_haptic_feedback.dart';
+import 'waffra_ai_finance_coach.dart';
+import 'waffra_ondevice_qwen.dart';
 import 'waffra_display_currency.dart';
 import 'waffra_riyal_symbol.dart';
 import 'currency_converter.dart';
@@ -255,6 +257,8 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
  double goalAmount=3000,challengePercent=20,existingEmergency=0;
  int emergencyMonths=3,projectIndex=0;
  String question='',answer='';
+ bool aiBusy=false;
+ String aiStatus='',aiAnalysis='',aiSavings='';
  final input=TextEditingController();
  final projectsAr=['رحلة','منزل','تعليم'];
  final projectsEn=['Trip','Home','Education'];
@@ -402,8 +406,144 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
    _warning(),
   ]);
  }
+
+ WaffraAiSummary _verifiedAiSummary(){
+  // _smartToolsTab already requires the current account's bound finance
+  // source. Only category + exact minor unit totals reach the local model.
+  final facts=<WaffraAiLedgerFact>[];
+  for(final item in widget.entries){
+   final minor=item.amount*100;
+   if(!minor.isFinite||minor<=0||minor>100000000000||
+      (minor-minor.round()).abs()>0.000001)continue;
+   facts.add(WaffraAiLedgerFact(
+    category:item.category,amountMinor:minor.round(),income:item.income));
+  }
+  return WaffraAiFinanceCoach.summarize(facts);
+ }
+
+ Future<void> _enableLocalAi()async{
+  if(aiBusy||WaffraOnDeviceQwen.shared.isReady)return;
+  final approved=await showDialog<bool>(
+   context:context,builder:(dialog)=>AlertDialog(
+    title:Text(t('تشغيل الذكاء الاصطناعي المحلي','Enable private on-device AI')),
+    content:Text(t(
+     'سيتم تنزيل موديل Qwen بحجم يقارب 484 ميجابايت مرة واحدة. '
+     'التحليل يتم على جهازك ولا يتم رفع الرسائل أو الفواتير. '
+     'يمكنك الاستمرار في استخدام التحليل العادي بدون تنزيل.',
+     'Download about 484 MB once. SMS, receipts and finance summaries '
+     'remain on your device. You can continue using the normal tools without AI.')),
+    actions:[
+     TextButton(onPressed:()=>Navigator.pop(dialog,false),
+       child:Text(t('إلغاء','Cancel'))),
+     FilledButton(onPressed:()=>Navigator.pop(dialog,true),
+       child:Text(t('أوافق على التنزيل','Download model'))),
+    ]));
+  if(approved!=true||!mounted)return;
+  setState((){
+   aiBusy=true;
+   aiStatus=t('جارٍ تنزيل الموديل والتحقق من سلامته...',
+     'Downloading and verifying the local model...');
+  });
+  try{
+   var lastPercent=-1;
+   await WaffraOnDeviceQwen.shared.open(
+    allowDownload:true,progress:(received,total){
+     if(total==null||total<=0||!mounted)return;
+     final percent=((received*100)~/total).clamp(0,100);
+     if(percent~/5==lastPercent~/5)return;
+     lastPercent=percent;
+     setState(()=>aiStatus=t(
+      'تنزيل موديل الذكاء الاصطناعي: '+percent.toString()+'%',
+      'Downloading AI model: '+percent.toString()+'%'));
+    });
+   if(mounted)setState(()=>aiStatus=t('الموديل جاهز للتحليل المحلي.',
+     'The on-device model is ready.'));
+  }catch(_){
+   if(mounted)setState(()=>aiStatus=t(
+    'تعذر تحميل الموديل أو التحقق منه. أدوات وفرة العادية ما زالت تعمل.',
+    'Model unavailable or verification failed. Normal Waffra tools still work.'));
+  }finally{
+   if(mounted)setState(()=>aiBusy=false);
+  }
+ }
+
+ Future<void> _generateAiSkill(String skill,{String questionText=''})async{
+  if(aiBusy||!WaffraOnDeviceQwen.shared.isReady)return;
+  final snapshot=_verifiedAiSummary();
+  setState(()=>aiBusy=true);
+  try{
+   final generator=WaffraOnDeviceQwen.shared.textGenerator;
+   final response=switch(skill){
+    'ask'=>await WaffraAiFinanceCoach.askWaffra(
+      questionText,snapshot,generate:generator),
+    'analysis'=>await WaffraAiFinanceCoach.analysis(
+      snapshot,generate:generator),
+    _=>await WaffraAiFinanceCoach.savingSuggestions(
+      snapshot,generate:generator),
+   };
+   if(!mounted)return;
+   setState((){
+    final text=response??t(
+     'البيانات غير كافية لإجابة موثوقة.',
+     'Insufficient verified data for an AI answer.');
+    if(skill=='ask')answer=text;
+    else if(skill=='analysis')aiAnalysis=text;
+    else aiSavings=text;
+   });
+  }catch(_){
+   if(mounted)setState(()=>aiStatus=t(
+    'لم يكتمل التحليل؛ لم تتغير أي بيانات مالية.',
+    'AI analysis was interrupted; no finance data changed.'));
+  }finally{
+   if(mounted)setState(()=>aiBusy=false);
+  }
+ }
+
+ Widget _aiActivation(){
+  return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+   if(!WaffraOnDeviceQwen.shared.isReady)
+    OutlinedButton.icon(
+     key:const Key('waffra-local-ai-opt-in'),
+     onPressed:aiBusy?null:()=>unawaited(_enableLocalAi()),
+     icon:const Icon(Icons.smart_toy_outlined),
+     label:Text(t('تفعيل Qwen على الجهاز (تنزيل اختياري)',
+       'Enable private Qwen (optional download)'))),
+   if(aiStatus.isNotEmpty)Padding(
+    padding:const EdgeInsets.only(top:8),child:_paragraph(aiStatus)),
+   if(aiBusy)const Padding(padding:EdgeInsets.only(top:8),
+     child:LinearProgressIndicator()),
+  ]);
+ }
+
+ Widget _aiAnalysisPanel()=>Column(
+  crossAxisAlignment:CrossAxisAlignment.start,children:[
+   _aiActivation(),
+   if(WaffraOnDeviceQwen.shared.isReady)
+    OutlinedButton(
+     key:const Key('waffra-ai-financial-analysis'),
+     onPressed:aiBusy?null:()=>unawaited(_generateAiSkill('analysis')),
+     child:Text(t('تحليل مالي بالذكاء الاصطناعي المحلي',
+       'Generate on-device financial analysis'))),
+   if(aiAnalysis.isNotEmpty)_tile(t('تحليل مقترح','Suggested analysis'),aiAnalysis),
+  ]);
+
+ Widget _aiSavingPanel()=>Column(
+  crossAxisAlignment:CrossAxisAlignment.start,children:[
+   if(WaffraOnDeviceQwen.shared.isReady)
+    OutlinedButton(
+     key:const Key('waffra-ai-saving-suggestions'),
+     onPressed:aiBusy?null:()=>unawaited(_generateAiSkill('savings')),
+     child:Text(t('اقتراحات توفير بالذكاء الاصطناعي',
+       'Generate AI savings suggestions'))),
+   if(aiSavings.isNotEmpty)_tile(t('اقتراحات قابلة للمراجعة',
+     'Suggestions for review'),aiSavings),
+  ]);
+
  void _ask(){
   final q=question.toLowerCase().trim();
+  if(q.isNotEmpty&&WaffraOnDeviceQwen.shared.isReady){
+   unawaited(_generateAiSkill('ask',questionText:q));return;
+  }
   if(q.isEmpty){setState(()=>answer=t('اكتب سؤال عن معاملاتك.','Ask about your transactions.'));return;}
   final now=today;
   final monthsBack=q.contains('3')||q.contains('٣')?3:q.contains('6')||q.contains('٦')?6:1;
@@ -429,7 +569,8 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
  }
  Widget _assistant(){
   return _column([
-   _head(titlesAr[4],'assistant',t('إجابات من سجلك المحلي فقط','Deterministic answers from local records')),
+   _head(titlesAr[4],'assistant',t('إجابات من سجلك المحلي فقط','Answers from verified local records')),
+   _aiActivation(),
    const SizedBox(height:15),
    TextField(controller:input,maxLines:2,decoration:InputDecoration(
     hintText:t('مثال: صرفت كام على المطاعم آخر 3 شهور؟',
@@ -504,6 +645,7 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
     cash(goal-currentTotal)),
    if(previousTotal==0)_paragraph(t('لا توجد بيانات للشهر السابق؛ أضف معاملات تجريبية للمقارنة.',
      'No previous month entries yet for a meaningful comparison.')),
+   _aiSavingPanel(),
    _warning(),
   ]);
  }
@@ -595,9 +737,12 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
     child:Column(children:[
      Divider(color:green.withValues(alpha:.23)),
      const SizedBox(height:7),
-     if(i==-2)(widget.analysisBuilder?.call(context)??
+     if(i==-2)...[
+       widget.analysisBuilder?.call(context)??
        _paragraph(t('التحليل متاح بعد فتح التطبيق ببيانات مالية مؤمنة.',
-        'Financial insights require the verified app data source.')))
+        'Financial insights require the verified app data source.')),
+       const SizedBox(height:10),_aiAnalysisPanel(),
+     ]
      else if(i==-1)const CurrencyConverterPage(embedded:true)
      else _body(i),
     ])):const SizedBox(width:double.infinity,height:0);
