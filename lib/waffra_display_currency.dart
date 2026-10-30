@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'waffra_amount_formatter.dart';
 
 /// Country chooses a PRESENTATION UNIT ONLY. Numbers are unchanged (e.g.,
 /// 1,000 SAR is shown as 1,000 EGP when EGP is selected). This is NOT FX.
@@ -102,8 +103,10 @@ class WaffraDisplayCurrency {
  static String amount(num sar) {
   final converted=convert(sar);
   if(converted==null)return '—';
-  final fixed=converted.toStringAsFixed(2).split('.');
-  return '${fixed.first.replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'),(_)=>',')}.${fixed.last}';
+  // ISO-appropriate presentation precision, not currency conversion.
+  // The original numeric balance and stored ledger are unchanged.
+  return formatWaffraMoney(converted,
+   decimalPlaces:waffraCurrencyMinorDigits(country.code));
  }
  static String money(num sar,{required bool english}) =>
   '${amount(sar)} ${label(english)}';
