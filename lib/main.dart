@@ -4176,11 +4176,45 @@ Future<bool> _requireBankSmsAi()=>
   return false;
  }
 
+ /// Show visible, blocking feedback for local OCR/AI work. The overlay is
+ /// always removed on success, cancellation and exceptions; the task cannot
+ /// submit a finance write.
+ Future<T> _withAiWorkProgress<T>(String arabic,String english,
+     Future<T> Function() operation)async{
+  if(!mounted)throw StateError('ai_screen_unmounted');
+  final overlay=Overlay.of(context,rootOverlay:true);
+  final item=OverlayEntry(builder:(progressContext)=>Positioned.fill(
+   child:Material(
+    color:Colors.black54,
+    child:Center(child:Semantics(
+     liveRegion:true,label:waffraIsEnglish?english:arabic,
+     child:Card(child:Padding(
+      padding:const EdgeInsets.symmetric(horizontal:28,vertical:22),
+      child:Column(mainAxisSize:MainAxisSize.min,children:[
+       const CircularProgressIndicator(
+        key:Key('waffra-ai-analysis-progress')),
+       const SizedBox(height:16),
+       WaffraText(waffraIsEnglish?english:arabic),
+      ]))))))));
+  overlay.insert(item);
+  try{
+   // Give the loading indicator a frame before expensive native work starts.
+   await Future<void>.delayed(const Duration(milliseconds:30));
+   return await operation();
+  }finally{
+   item.remove();
+   item.dispose();
+  }
+ }
+
  Future<void> _reviewAiPastedBankMessages(
      BuildContext ctx,String source)async {
   if(!WaffraOnDeviceQwen.shared.isReady||source.trim().isEmpty)return;
-  final result=await WaffraAiFinanceBrain.bankSms(source,
-    generate:WaffraOnDeviceQwen.shared.textGenerator);
+  final result=await _withAiWorkProgress(
+   'جاري تحليل الرسالة البنكية بالذكاء الاصطناعي…',
+   'Analyzing bank messages with on-device AI…',
+   ()=>WaffraAiFinanceBrain.bankSms(source,
+    generate:WaffraOnDeviceQwen.shared.textGenerator));
   if(!ctx.mounted)return;
   await showWaffraDialog<void>(context:ctx,builder:(dialog)=>AlertDialog(
    title:WaffraText(waffraIsEnglish?
@@ -4217,8 +4251,11 @@ Future<bool> _requireBankSmsAi()=>
  Future<bool> _reviewAiScannedTransactions(
      String sourceText,XFile image)async{
   if(!WaffraOnDeviceQwen.shared.isReady)return false;
-  final result=await WaffraAiFinanceBrain.imageOcr(sourceText,
-    generate:WaffraOnDeviceQwen.shared.textGenerator);
+  final result=await _withAiWorkProgress(
+   'جاري تحليل بيانات الصورة بالذكاء الاصطناعي…',
+   'Analyzing image text with on-device AI…',
+   ()=>WaffraAiFinanceBrain.imageOcr(sourceText,
+    generate:WaffraOnDeviceQwen.shared.textGenerator));
   if(!mounted||result.error!=null||result.count==0)return false;
   final bankImage=WaffraBankScreenshotParser.looksLikeBankScreenshot(sourceText);
   // Product lines from one shop receipt must not be counted as independent
@@ -4311,7 +4348,10 @@ Future<bool> _requireBankSmsAi()=>
   try{
    final picked=await ImagePicker().pickImage(source:source,imageQuality:95);
    if(picked==null||!mounted)return;
-   final extracted=await WaffraReceiptOcr.scan(picked.path);
+   final extracted=await _withAiWorkProgress(
+    'جاري قراءة الصورة واستخراج بيانات المعاملات…',
+    'Reading image and extracting transactions…',
+    ()=>WaffraReceiptOcr.scan(picked.path));
    if(!mounted)return;
    // The on-device AI model is mandatory. Continue safeguarding currency
    // and amount reviews, never uploading the user image.
