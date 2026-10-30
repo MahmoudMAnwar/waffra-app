@@ -42,6 +42,29 @@ void main(){
    WaffraDisplayCurrency.displaySelection('SAR');
  });
 
+ testWidgets('M301 previously persisted currency survives different GPS country',(tester)async{
+  SharedPreferences.setMockInitialValues({});
+  await WaffraDisplayCurrency.initialize();
+  await WaffraDisplayCurrency.setCurrency('JOD');
+  expect(WaffraDisplayCurrency.hasSavedPreference,isTrue);
+  String? saved;
+  await tester.pumpWidget(MaterialApp(home:WaffraCountryFirstRunPage(
+   english:true,
+   detectCountry:()async=>'SA',
+   onComplete:(currency)async{saved=currency;},
+  )));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const Key('m290-detect-country')));
+  await tester.pumpAndSettle();
+  expect(find.textContaining('manual selection is preserved'),findsWidgets);
+  await tester.ensureVisible(find.byKey(const Key('m290-setup-confirm')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const Key('m290-setup-confirm')));
+  await tester.pumpAndSettle();
+  expect(saved,'JOD');
+  WaffraDisplayCurrency.hasSavedPreference=false;
+ });
+
  testWidgets('M301 manual currency survives later location detection',(tester)async{
   WaffraDisplayCurrency.active.value=
    WaffraDisplayCurrency.displaySelection('SAR');
