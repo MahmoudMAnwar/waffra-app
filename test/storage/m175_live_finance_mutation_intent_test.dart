@@ -50,10 +50,14 @@ void main() {
         .allMatches(home).length, greaterThanOrEqualTo(2),
       reason: 'Both delete and undo must be tagged separately.',
     );
-    expect(home, contains(
-      'await persist(route:WaffraFinanceRoute.recurringPostingAndPostponement,'
-      '\n      userConfirmed:true);'
-    ), reason: 'Paid requires explicit user confirmation.');
+    // Match the same real finance call regardless of indentation or line
+    // wrapping. Do not weaken the route or explicit confirmation requirement.
+    expect(RegExp(
+      r'await\s+persist\s*\(\s*'
+      r'route\s*:\s*WaffraFinanceRoute\.recurringPostingAndPostponement\s*,\s*'
+      r'userConfirmed\s*:\s*true\s*,?\s*\)\s*;'
+    ).hasMatch(home), isTrue,
+      reason: 'Paid requires the recurring route and explicit confirmation.');
   });
 
   test('M175 guarded legacy routes remain eligible, without any cutover', () {
