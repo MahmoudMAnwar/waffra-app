@@ -568,8 +568,8 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
           const SizedBox(width: 6),
           Expanded(child: Text(
             t(
-              'Source: Gold-API · USD spot per troy ounce. Values are indicative raw gold content; retail premiums, workmanship, bid/ask spread and taxes are excluded.',
-              'المصدر: Gold-API · سعر الأونصة التروي بالدولار. الأرقام قيمة الذهب الخام استرشاديًا فقط، ولا تشمل المصنعية أو فرق البيع والشراء أو الضرائب.',
+              'Source: Gold-API · USD/oz. Estimates exclude making charges, spreads and taxes.',
+              'المصدر: Gold-API · دولار/أونصة. السعر استرشادي دون مصنعية أو ضرائب أو فروق بيع.',
             ),
             style: TextStyle(fontSize: 10.5,
                 color: Theme.of(context).hintColor),
