@@ -17,23 +17,9 @@ abstract final class WaffraAiModelGate {
     if(WaffraOnDeviceQwen.shared.isReady)return true;
     final ready=await ensureReady(context,english:english,
       requiredFeature:english?featureEn:featureAr);
-    if(!context.mounted)return false;
-    if(ready&&WaffraOnDeviceQwen.shared.isReady)return true;
-    await showDialog<void>(context:context,builder:(dialog)=>AlertDialog(
-      key:const Key('waffra-ai-required-feature-notice'),
-      title:Text(english?'AI model required':'يلزم تنزيل نموذج الذكاء الاصطناعي'),
-      content:Text(english?
-        'You must download and activate the Waffra AI model to use '
-        +featureEn+'. Without the model this feature cannot be used. '
-        'You can still add transactions manually.':
-        'لازم تنزّل وتفعّل نموذج الذكاء الاصطناعي لاستخدام '
-        +featureAr+'. من غير النموذج مش هتقدر تستخدم الميزة دي. '
-        'تقدر تواصل إضافة المعاملات يدويًا.'),
-      actions:[FilledButton(
-        onPressed:()=>Navigator.pop(dialog),
-        child:Text(english?'OK':'فهمت'))],
-    ));
-    return false;
+    // The consent screen already explains the requirement. Closing it must
+    // NOT open a second warning dialog.
+    return context.mounted&&ready&&WaffraOnDeviceQwen.shared.isReady;
   }
 
   static Future<bool> ensureReady(BuildContext context,{
@@ -45,54 +31,27 @@ abstract final class WaffraAiModelGate {
     if(model.isBusy)return false;
     final installed=await model.installedAndVerified();
     if(!context.mounted)return false;
-    final featureRequired=requiredFeature!=null;
-    // A previously verified installation has already been consented to.
-    // Reactivate its native runtime after app restart without asking to
-    // download the same ~484 MB model again.
-    final agreed=installed?true:await showDialog<bool>(context:context,builder:(dialog)=>
-      AlertDialog(
-        title:Text(english?'Waffra private AI model':
-          'نموذج الذكاء الاصطناعي في وفرة'),
-        content:Text(featureRequired?
-          (english?
-            'The Waffra AI model is required for '+requiredFeature!+
-            '. Download (~484 MB) and activate it before using this feature. '
-            'Declining keeps this feature locked, but manual transactions '
-            'remain available. You can delete the model later from My Account.':
-            'نموذج الذكاء الاصطناعي مطلوب لتشغيل '+requiredFeature!+
-            '. لازم تنزّله وتفعّله قبل استخدام الميزة (~484 ميجابايت). '
-            'لو اخترت مش دلوقتي هتفضل الميزة مقفولة، '
-            'لكن إضافة المعاملات يدويًا هتفضل متاحة. '
-            'تقدر تحذف النموذج لاحقًا من حسابي.') :
-          installed?
-          (english?
-            'The AI model is already downloaded and will load on this '
-            'device. You can delete it later from My Account. Deleting '
-            'it disables AI analysis until you download it again.':
-            'نموذج الذكاء الاصطناعي موجود على جهازك وسيتم تحميله الآن. '
-            'تقدر تحذفه في أي وقت من حسابي، لكن وقتها هتتوقف '
-            'ميزات التحليل بالذكاء الاصطناعي لحد ما تنزّله تاني.'):
-          (english?
-            'To use private AI analysis, Waffra needs to download a model '
-            '(about 484 MB) to your phone once. Analysis stays on '
-            'your device. You may delete the model anytime in My Account; '
-            'AI analysis will then stop until you download it again. '
-            'The regular Waffra features will keep working.':
-            'علشان تستخدم تحليل الذكاء الاصطناعي، وفرة هينزّل نموذج '
-            'بحجم تقريبي 484 ميجابايت مرة واحدة على جهازك. '
-            'التحليل هيتم محليًا بدون رفع الرسائل أو الصور. '
-            'تقدر تحذف النموذج في أي وقت من حسابي، '
-            'لكن وقتها هتفقد التحليل بالذكاء الاصطناعي '
-            'لحد ما تنزّله تاني. خصائص وفرة العادية هتفضل شغالة.')),
+    // An installed GGUF is verified and reused without another download prompt.
+    final agreed=installed?true:await showDialog<bool>(
+      context:context,builder:(dialog)=>AlertDialog(
+        key:const Key('waffra-ai-first-use-dialog'),
+        title:Text(english?'Download AI model':'تنزيل نموذج الذكاء'),
+        content:Text(english?
+          (requiredFeature!=null?
+           'To use '+requiredFeature+', download the model once (~484 MB). ':
+           'Download the private model once (~484 MB). ')+
+          'Runs on your device. You can delete it in My Account.':
+          (requiredFeature!=null?
+           'لتشغيل '+requiredFeature+'، نزّل النموذج مرة واحدة (~484 MB). ':
+           'نزّل نموذج الذكاء مرة واحدة (~484 MB). ')+
+          'يعمل على جهازك ويمكن حذفه من حسابي.'),
         actions:[
           TextButton(onPressed:()=>Navigator.pop(dialog,false),
-            child:Text(english?'Not now':'مش دلوقتي')),
+            child:Text(english?'Later':'لاحقًا')),
           FilledButton(
             key:const Key('waffra-ai-first-use-consent'),
             onPressed:()=>Navigator.pop(dialog,true),
-            child:Text(installed?
-              (english?'Load model':'تحميل النموذج'):
-              (english?'Download model':'تنزيل النموذج'))),
+            child:Text(english?'Download now':'تنزيل الآن')),
         ],
       ));
     if(agreed!=true||!context.mounted)return false;
@@ -142,44 +101,38 @@ abstract final class WaffraAiModelGate {
             final failed=loading.phase=='failed';
             final loadingNative=loading.phase=='loading';
             return AlertDialog(
-              title:Text(english?
-                'Preparing Waffra AI':'تجهيز ذكاء وفرة الاصطناعي'),
+              title:Text(failed?
+                (english?'Could not load model':'تعذر تحميل النموذج'):
+                loadingNative?
+                (english?'Loading model':'تشغيل النموذج'):
+                (english?'Downloading model':'تنزيل النموذج')),
               content:Column(
                 mainAxisSize:MainAxisSize.min,
                 crossAxisAlignment:CrossAxisAlignment.stretch,
                 children:[
-                  Text(failed?
-                    (english?'Model download or loading failed. '
-                      'Your financial data has not changed.':
-                      'تعذر تنزيل النموذج أو تحميله. '
-                      'بياناتك المالية لم تتغير.'):
-                    loadingNative?
-                    (english?'Loading the AI model on this device…':
-                      'جاري تحميل نموذج الذكاء الاصطناعي على الجهاز…'):
-                    (english?'Downloading the AI model to your device…':
-                      'جاري تنزيل نموذج الذكاء الاصطناعي على جهازك…')),
-                  const SizedBox(height:16),
+                  if(!failed&&loadingNative)
+                    Text(english?'Preparing the AI model…':'جاري تجهيز النموذج…'),
+                  if(failed)
+                    Text(english?
+                      'Could not prepare the model. Try again.':
+                      'تعذر تجهيز النموذج. حاول مرة أخرى.'),
+                  const SizedBox(height:12),
                   if(!failed)...[
                     LinearProgressIndicator(
                       key:const Key('waffra-ai-model-download-progress'),
                       value:loadingNative?null:progress),
                     const SizedBox(height:8),
-                    Text(loadingNative?
-                      (english?'Preparing model…':'جاري تجهيز النموذج…'):
-                      progress!=null?
-                        (progress*100).toStringAsFixed(0)+'% • '+
-                        (received/1048576).toStringAsFixed(1)+' / '+
-                        (total!/1048576).toStringAsFixed(1)+' MB':
-                        (english?'Downloading…':'جارٍ التنزيل…')),
+                    if(!loadingNative)
+                      Directionality(textDirection:TextDirection.ltr,
+                        child:Text(progress!=null?
+                          (progress*100).toStringAsFixed(0)+'% • '+
+                          (received/1048576).toStringAsFixed(1)+' / '+
+                          (total!/1048576).toStringAsFixed(1)+' MB':
+                          (english?'Downloading…':'جارٍ التنزيل…'),
+                          textAlign:TextAlign.center)),
+
                   ],
-                  const SizedBox(height:10),
-                  Text(english?
-                    'You can delete the model later from My Account. '
-                    'Deleting it disables AI analysis only; your '
-                    'regular tools and saved transactions stay available.':
-                    'تقدر تحذف النموذج لاحقًا من حسابي؛ '
-                    'ساعتها هتفقد تحليل الذكاء الاصطناعي فقط، '
-                    'لكن الأدوات العادية ومعاملاتك المحفوظة هتفضل موجودة.'),
+
                 ]),
               actions:[
                 TextButton(
