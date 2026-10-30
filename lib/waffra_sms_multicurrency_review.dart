@@ -33,12 +33,12 @@ abstract final class WaffraSmsCurrencies {
   static String _normalizeArabic(String raw)=>raw
     .replaceAll(RegExp(r'[أإآٱ]'),'ا')
     .replaceAll('ى','ي').replaceAll('ة','ه')
-    .replaceAll(RegExp(r'[\\u064B-\\u065F\\u0670]'),'');
+    .replaceAll(RegExp(r'[\u064B-\u065F\u0670]'),'');
   static final _namedAlternatives=_arabicNames.keys
       .map(RegExp.escape).join('|');
   static final _namedAdjacentAmount=RegExp(
-    r'(?:(?:[0-9][0-9,.]*\\s*(' + _namedAlternatives +
-      r'))|(?:(' + _namedAlternatives + r')\\s*[0-9][0-9,.]*))'
+    r'(?:(?:[0-9][0-9,.]*\s*(' + _namedAlternatives +
+      r'))|(?:(' + _namedAlternatives + r')\s*[0-9][0-9,.]*))'
   );
 
   static String codeFor(String value) {
@@ -110,9 +110,9 @@ abstract final class WaffraSmsCurrencies {
         }
         // A bare "دينار", "ليرة", etc. remains ambiguous and must not
         // be posted as SAR even if no specific country was readable.
-        if (RegExp(r'(?<![\\u0600-\\u06FF])(?:دينار|ليره|دولار|روبيه|'
+        if (RegExp(r'(?<![\u0600-\u06FF])(?:دينار|ليره|دولار|روبيه|'
            r'كرونه|فرنك|راند|رينغيت|يوان|وون|بات|بيزو|تاكا|ين)'
-           r'(?![\\u0600-\\u06FF])').hasMatch(namedAction) &&
+           r'(?![\u0600-\u06FF])').hasMatch(namedAction) &&
             RegExp(r'[0-9]').hasMatch(namedAction) &&
             !_namedAdjacentAmount.hasMatch(namedAction)) {
           found.add('UNKNOWN');
