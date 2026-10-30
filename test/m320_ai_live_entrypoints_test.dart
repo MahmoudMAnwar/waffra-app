@@ -11,7 +11,7 @@ void main(){
     expect(home,contains('WaffraAiFinanceBrain.imageOcr('));
     expect(home,contains('waffra-sms-ai-review'));
     expect(home,contains('WaffraAiFinanceBrain.bankSms('));
-    expect(home,contains('item.needsReview?null:'));
+    expect(home,contains('result.items[i].needsReview?null:'));
     expect(home,contains('item.currency!='));
     expect(home,contains('await entrySheet('));
     expect(tools,contains('waffra-local-ai-opt-in'));
