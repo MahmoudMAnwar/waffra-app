@@ -194,6 +194,7 @@ UNTRUSTED TEXT END''';
       if(list.length>maxItems)throw const FormatException();
       final result=<WaffraAiTransaction>[];
       final observed=<String>{};
+      final claimedSpans=<(int,int)>[];
       for(final element in list){
         if(element is! Map<String,dynamic>)throw const FormatException();
         final quote=element['source_quote'];
@@ -205,6 +206,16 @@ UNTRUSTED TEXT END''';
            (unit!=null&&unit is! String)||
            (merchant!=null&&merchant is! String)||
            direction is! String)throw const FormatException();
+        // Two different quotes may still describe the SAME payment.
+        // Reject nested/overlapping source evidence rather than allowing
+        // "شراء POS SAR 10" and "POS SAR 10" to double the transaction.
+        final quoteAt=raw.indexOf(quote);
+        if(quoteAt<0||
+          claimedSpans.any((span)=>quoteAt<span.$2&&
+            (quoteAt+quote.length)>span.$1)){
+          throw const FormatException('overlapping_action_evidence');
+        }
+        claimedSpans.add((quoteAt,quoteAt+quote.length));
         final kind=switch(direction){
           'income'=>WaffraAiDirection.income,
           'expense'=>WaffraAiDirection.expense,
