@@ -9,6 +9,8 @@ on:
       - 'lib/waffra_country_first_run_page.dart'
       - 'lib/waffra_country_suggestion.dart'
       - 'lib/waffra_sms_multicurrency_review.dart'
+      - 'lib/waffra_sms_fx_review.dart'
+      - 'test/m300_jod_cliq_bank_sms_test.dart'
       - 'lib/waffra_reminders.dart'
       - 'pubspec.yaml'
       - 'scripts/qa/m290_configure_country_permissions.py'
@@ -51,9 +53,12 @@ jobs:
             lib/waffra_country_first_run_page.dart \
             lib/waffra_country_suggestion.dart \
             lib/waffra_sms_multicurrency_review.dart \
+            lib/waffra_sms_fx_review.dart \
+            test/m300_jod_cliq_bank_sms_test.dart \
             lib/waffra_reminders.dart \
             test/m290_google_country_reminders_test.dart \
-            test/m291_multicurrency_bank_sms_review_test.dart
+            test/m291_multicurrency_bank_sms_review_test.dart \
+            test/m300_jod_cliq_bank_sms_test.dart
       - name: Regression tests for country consent and SMS currency safety
         run: |
           flutter test --reporter expanded \
