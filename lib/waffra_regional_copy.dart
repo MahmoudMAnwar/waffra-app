@@ -51,6 +51,35 @@ abstract final class WaffraRegionalCopy {
     countryIso.value=value;
   }
 
+  // Exact UI-message variants only. Never transform user-entered texts,
+  // transaction descriptions, financial identifiers or stored categories.
+  static const _saudiUi=<String,String>{
+    'هل تريد تأكيد الإضافة؟':'ودّك تأكد إضافة العمليات؟',
+    'حدث خطأ أثناء الحفظ':'ما قدرنا نحفظ العملية. جرّب مرة ثانية.',
+    'فشلت العملية':'العملية ما تمت. جرّب مرة ثانية.',
+    'هذه الرسالة محفوظة بالفعل، لن نكرر العملية.':
+      'هذي الرسالة محفوظة من قبل، وما راح نكرر العملية.',
+    'تعذر حفظ الإعدادات. حاول مجددًا.':
+      'ما قدرنا نحفظ الإعدادات. جرّب مرة ثانية.',
+    'هل أنت متأكد؟':'متأكد من هالخطوة؟',
+  };
+  static const _standardUi=<String,String>{
+    'ودّك ننبهك عند كم ٪ من الميزانية؟':
+      'عند أي نسبة من الميزانية تريد تلقّي تنبيه؟',
+    'ما فيه مصروفات في هالفترة':'لا توجد مصروفات خلال هذه الفترة',
+    'ما عندك عمليات متكررة':'لا توجد لديك معاملات متكررة',
+    'ما عندك عمليات مطابقة':'لا توجد معاملات مطابقة',
+    'دوّر على عملية':'ابحث عن معاملة',
+    'هذي الرسالة سبق حفظها. ودّك تضيفها مرة ثانية؟':
+      'هذه الرسالة محفوظة سابقًا. هل ترغب في إضافتها مرة أخرى؟',
+    'هذي الرسالة البنكية أضفتها قبل كذا. ودّك تضيفها مرة ثانية؟':
+      'لقد أضفت هذه الرسالة البنكية سابقًا. هل تريد إضافتها مرة أخرى؟',
+  };
+  static String adaptArabicUi(String source){
+    final variants=isSaudi?_saudiUi:_standardUi;
+    return variants[source]??source;
+  }
+
   static bool get isSaudi=>countryIso.value=='SA';
   static bool get isEgyptian=>countryIso.value=='EG';
 
