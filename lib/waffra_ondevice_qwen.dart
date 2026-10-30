@@ -25,7 +25,9 @@ abstract final class WaffraAiModelManifest {
 /// Native runtime and device memory must pass Android/iOS CI and device QA
 /// before any production UI makes this an enabled default.
 class WaffraOnDeviceQwen {
-  WaffraOnDeviceQwen();
+  WaffraOnDeviceQwen({Future<Directory> Function()? modelRootProvider})
+    : _modelRootProvider=modelRootProvider;
+  final Future<Directory> Function()? _modelRootProvider;
   static final WaffraOnDeviceQwen shared=WaffraOnDeviceQwen();
   LlamaEngine? _engine;
   bool _opening=false;
@@ -51,7 +53,7 @@ class WaffraOnDeviceQwen {
   }
 
   Future<File> _modelFile()async{
-    final folder=await getApplicationSupportDirectory();
+    final folder=await (_modelRootProvider?.call()??getApplicationSupportDirectory());
     final dir=Directory(folder.path+'/waffra_public_ai_models');
     await dir.create(recursive:true);
     return File(dir.path+'/'+WaffraAiModelManifest.filename);
