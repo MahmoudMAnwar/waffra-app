@@ -30,7 +30,7 @@ void main() {
     final receipt=File('lib/waffra_practical_tools_page.dart').readAsStringSync();
     final smart=File('lib/waffra_smart_features.dart').readAsStringSync();
     expect(home,contains('راجع العمليات بالترتيب.'));
-    expect(home,isNot(contains('Detected $label in the bank image. This amount cannot be added as SAR')));
+    expect(home,isNot(contains(r'Detected $label in the bank image. This amount cannot be added as SAR')));
     expect(country,contains('لا نحفظ موقعك ولا نتتبعك.'));
     expect(country,contains("We don't save or track your location."));
     expect(receipt,contains('اختر فاتورة أو صوّرها.'));
