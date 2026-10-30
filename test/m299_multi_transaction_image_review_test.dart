@@ -117,6 +117,21 @@ Supermarket
       isNull);
   });
 
+  test('M313 OCR must reject full Arabic foreign-currency names', () {
+    for(final pair in <(String,String)>[
+      ('ريال قطري','QAR'),
+      ('دينار أردني','JOD'),
+      ('جنيه إسترليني','GBP'),
+      ('درهم مغربي','MAD'),
+      ('دولار أمريكي','USD'),
+    ]) {
+      final raw='حوالة واردة 100 '+pair.$1+' الرصيد 999 ريال';
+      expect(WaffraSmsCurrencies.currenciesForMessage(raw),{pair.$2});
+      expect(WaffraBankScreenshotParser.requiresForeignCurrencyReview(raw),
+        isTrue, reason:pair.$1);
+    }
+  });
+
   test('M299 finance editor guards every direct OCR caller', () {
     final app=File('lib/main.dart').readAsStringSync();
     final start=app.indexOf('Future<void> entrySheet(');
