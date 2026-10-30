@@ -9,6 +9,8 @@ on:
       - 'lib/waffra_validators.dart'
       - 'lib/waffra_search.dart'
       - 'lib/main.dart'
+      - 'lib/waffra_recurring_policy.dart'
+      - 'test/m302_recurring_first_due_regression_test.dart'
       - 'test/m302_category_rename_integrity_test.dart'
       - 'lib/currency_converter.dart'
       - 'lib/waffra_gold_calculator.dart'
@@ -49,7 +51,10 @@ jobs:
             lib/waffra_validators.dart \
             lib/waffra_search.dart \
             lib/main.dart \
+            lib/waffra_recurring_policy.dart \
+            test/m302_recurring_first_due_regression_test.dart \
             test/m302_category_rename_integrity_test.dart \
+            test/m302_recurring_first_due_regression_test.dart \
             lib/currency_converter.dart \
             lib/waffra_gold_calculator.dart \
             lib/waffra_oil_market_section.dart \
