@@ -51,6 +51,21 @@ void main() {
     expect(WaffraValidators.uniqueCategory('سكن',existing),isNull);
   });
 
+  test('M302 rejected category mutation reloads authority, never leaves phantom UI',(){
+    final main=File('lib/main.dart').readAsStringSync();
+    final start=main.indexOf('Future<void> addCategory(');
+    final finish=main.indexOf('WaffraFinanceRoute _moduleMutationRoute',start);
+    expect(start,greaterThan(0));
+    expect(finish,greaterThan(start));
+    final calls=main.substring(start,finish);
+    expect(RegExp(r'catch\(error\)').allMatches(calls).length,
+      greaterThanOrEqualTo(2));
+    expect(RegExp(r'if\(mounted\)await _loadFinanceSafely\(\);')
+      .allMatches(calls).length,2);
+    expect(calls,contains('Category edit not committed by verified finance source'));
+    expect(calls,contains('Category creation not committed by verified finance source'));
+  });
+
   test('M302 live update path must use field-preserving clones',(){
     final source=File('lib/main.dart').readAsStringSync();
     final start=source.indexOf('Future<void> updateCategory(');
