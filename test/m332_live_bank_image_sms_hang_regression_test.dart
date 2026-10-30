@@ -76,7 +76,7 @@ Merchant Test
   expect(WaffraAiFinanceBrain.matchesVerifiedImageActions(input,correct),true);
   final wrong=await WaffraAiFinanceBrain.imageOcr(input,generate:(_)async=>
     jsonEncode({'transactions':[
-      tx(quotes.first.sourceText,10),
+      {...tx(quotes.first.sourceText,quotes.first.amount!), 'amount_text':'10'},
       tx(quotes[1].sourceText,10),
       tx(quotes.last.sourceText,4)
     ]}));
