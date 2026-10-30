@@ -9123,6 +9123,56 @@ Future<void> bulkSmsSheet({String? initialText})async {
   await widget.onSetPin(next);
   if(mounted)snackSuccess(context,waffraIsEnglish?'PIN changed':'تم تغيير الرمز بنجاح');
  }
+ Future<void> deleteAiModel()async {
+  final model=WaffraOnDeviceQwen.shared;
+  final installed=await model.downloadedOnDisk();
+  if(!mounted)return;
+  if(!installed&&!model.isReady){
+   snack(context,waffraIsEnglish?
+    'The AI model is not downloaded. No files need deleting.':
+    'نموذج الذكاء الاصطناعي غير منزّل حاليًا.');
+   return;
+  }
+  // Warn BEFORE requesting the operating-system biometric prompt.
+  final approved=await confirmDeletion(
+   waffraIsEnglish?'Delete the AI model from this phone?':
+    'حذف نموذج الذكاء الاصطناعي من الجهاز؟',
+   waffraIsEnglish?
+    'This will delete the downloaded model (about 484 MB). You will lose '
+    'AI bank-message analysis, AI receipt analysis, Ask Waffra, AI financial '
+    'analysis and AI saving suggestions until you download it again. '
+    'Your saved transactions, invoices, backups and regular tools will NOT be deleted.':
+    'سيتم حذف نموذج الذكاء الاصطناعي الذي تم تنزيله (حوالي 484 ميجابايت). '
+    'بعد الحذف هتفقد تحليل الرسائل البنكية والفواتير بالذكاء الاصطناعي، '
+    'واسأل وفرة، والتحليل المالي الذكي واقتراحات التوفير، لحد ما تنزّله تاني. '
+    'معاملاتك وفواتيرك ونسخك الاحتياطية والأدوات العادية مش هتتحذف.');
+  if(approved!=true||!mounted)return;
+  // No PIN shortcut; a failed, missing or cancelled phone biometric
+  // confirmation always refuses model-file deletion.
+  final biometric=await WaffraBiometrics.confirmAiModelRemoval(
+   english:waffraIsEnglish);
+  if(!mounted)return;
+  if(!biometric){
+   snack(context,waffraIsEnglish?
+    'Biometric confirmation was not completed. The AI model was not deleted.':
+    'لم يتم تأكيد البصمة. نموذج الذكاء الاصطناعي لم يُحذف.');
+   return;
+  }
+  try{
+   await model.deleteDownloadedModel();
+   if(!mounted)return;
+   setState((){});
+   snackSuccess(context,waffraIsEnglish?
+    'AI model deleted. Standard Waffra and your finance data are unchanged.':
+    'تم حذف نموذج الذكاء الاصطناعي. بياناتك المالية والأدوات العادية كما هي.');
+  }catch(error){
+   debugPrint('Local AI model removal could not be verified: $error');
+   if(mounted)snack(context,waffraIsEnglish?
+    'Could not confirm model removal. Please retry from My Account.':
+    'تعذر التأكد من حذف النموذج. حاول مرة أخرى من حسابي.');
+  }
+ }
+
  Future<void> eraseFinancialData()async {
   if(!await _authorizeSensitiveAction('deleting financial data')||!mounted)return;
   final ok=await confirmDeletion(
@@ -9355,6 +9405,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      waffraIsEnglish?'Security & privacy':'الأمان والخصوصية':'privacy biometric fingerprint حماية بصمة قفل إخفاء PIN screenshots المعاينة',
      waffraIsEnglish?'Backup & data':'النسخ الاحتياطي والبيانات':'backup restore delete نسخ احتياطي استعادة حذف بيانات',
      waffraIsEnglish?'Financial tools':'الأدوات المالية':'calendar subscriptions currency tools التقويم الاشتراكات الأدوات المالية',
+     waffraIsEnglish?'AI model':'نموذج الذكاء الاصطناعي':'Qwen AI download remove delete model fingerprint biometric نموذج مكتبة الذكاء الاصطناعي بصمة تنزيل تحميل حذف',
      waffraIsEnglish?'Help & about':'المساعدة وعن وفرة':'tour help about وفرة الجولة المساعدة',
     };
     String? match;
@@ -9437,6 +9488,31 @@ Future<void> bulkSmsSheet({String? initialText})async {
     _accountTile(waffraIsEnglish?'Subscription insights':'كشف الاشتراكات',
      waffraIsEnglish?'Recurring costs and possible subscriptions':'المدفوعات الدورية والاشتراكات المحتملة',
      Icons.subscriptions_outlined,onTap:WaffraHaptics.tap(openSubscriptionInsights)),
+   ]),
+   _accountSection(waffraIsEnglish?'AI model':'نموذج الذكاء الاصطناعي',
+    Icons.psychology_outlined,[
+    ValueListenableBuilder<int>(
+     valueListenable:WaffraOnDeviceQwen.shared.revision,
+     builder:(context,revision,_)=>FutureBuilder<bool>(
+      future:WaffraOnDeviceQwen.shared.downloadedOnDisk(),
+      builder:(context,installed){
+       final present=installed.data==true||
+        WaffraOnDeviceQwen.shared.isReady;
+       return _accountTile(
+        waffraIsEnglish?'Delete AI model':'حذف نموذج الذكاء الاصطناعي',
+        present?
+         (waffraIsEnglish?
+          'Remove downloaded AI (~484 MB) after fingerprint/Face ID verification. '
+          'AI analysis will stop until re-download.':
+          'حذف النموذج (~484 ميجابايت) بعد تأكيد بصمة الجهاز. '
+          'هتتوقف ميزات AI لحد إعادة التنزيل.'):
+         (waffraIsEnglish?
+          'Not downloaded. You can install it again from any AI feature.':
+          'النموذج غير منزّل. يمكن تنزيله عند فتح أي ميزة AI.'),
+        Icons.delete_outline_rounded,
+        tint:present?Colors.red:Colors.grey,
+        onTap:present?WaffraHaptics.tap(deleteAiModel):null);
+      })),
    ]),
    _accountSection(waffraIsEnglish?'Backup & data':'النسخ الاحتياطي والبيانات',Icons.cloud_outlined,[
     _accountTile(waffraIsEnglish?'Encrypted backup & restore':'النسخ الاحتياطي المشفر والاستعادة',
