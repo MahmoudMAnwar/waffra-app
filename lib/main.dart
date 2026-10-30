@@ -110,8 +110,8 @@ Future<String> waffraEncryptBackupInIsolate(Map<String,String> request) =>
 const bool waffraCompileOnlyQaPreview =
  bool.fromEnvironment('WAFFRA_COMPILE_ONLY_PREVIEW',defaultValue:false);
 String waffraGooglePreviewNotice(bool english)=>english
- ?'Google sign-in requires the Firebase-registered, release-signed Waffra build. Use local guest mode to review this preview.'
- :'دخول جوجل يحتاج نسخة وفرة الموقعة والمسجلة في Firebase. جرّب المميزات محليًا بدون تسجيل دخول في نسخة المعاينة.';
+ ?'Google sign-in needs the signed Waffra build. Try guest mode in this preview.'
+ :'دخول جوجل يتطلب نسخة وفرة الموقّعة. استخدم وضع الضيف للمعاينة.';
 
 Future<void> main()async {
  WidgetsFlutterBinding.ensureInitialized();
@@ -2820,8 +2820,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(mounted)setState((){
     ready=false;
     _financeLoadFailure=waffraIsEnglish?
-     'Your financial data could not be verified. No data was deleted or reset. Please retry, or restore a verified backup.':
-     'تعذر التحقق من سلامة بياناتك المالية. لم يتم حذف أو تصفير أي بيانات. حاول مجددًا أو استرجع نسخة احتياطية موثوقة.';
+     'Couldn't verify your financial data. Nothing was deleted. Retry or restore a trusted backup.':
+     'تعذر التحقق من بياناتك. لم يُحذف شيء. حاول مجددًا أو استعد نسخة موثوقة.';
    });
   }
  }
@@ -3520,7 +3520,7 @@ Future<bool> _requireBankSmsAi()=>
     title:WaffraText(waffraIsEnglish?'Duplicate transactions detected':'تم اكتشاف معاملات مكررة'),
     content:WaffraText(waffraIsEnglish
      ?'${duplicates.length} transaction(s) are duplicates. You can safely skip those and save the new ones, or explicitly approve adding the duplicates.'
-     :'تم اكتشاف ${duplicates.length} معاملة مكررة. يمكنك تخطي المكررة وحفظ الجديدة، أو الموافقة صراحةً على إضافة المكررة.'),
+     :'اكتُشفت ${duplicates.length} معاملة مكررة. تخطَّها أو أكّد إضافتها.'),
     actions:[
      TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(d,'cancel')),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
      OutlinedButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(d,'skip')),child:WaffraText(waffraIsEnglish?'Skip duplicates':'تخطي المكررة')),
@@ -3993,7 +3993,7 @@ Future<bool> _requireBankSmsAi()=>
            WaffraSmsCurrencies.originalAmountPreview(messages.first)!,
            style:const TextStyle(fontWeight:FontWeight.w700)),
          WaffraText(waffraIsEnglish?
-          'Foreign money is not saved as SAR. Verify the original value and exchange rate first; balance is not a transaction.':
+          'لا تحفظ العملات الأجنبية كريال قبل التحقق من سعر الصرف؛ الرصيد ليس معاملة.':
           'المبلغ الأجنبي لا يُحفظ كريال. راجع القيمة الأصلية وسعر الصرف أولاً؛ الرصيد ليس معاملة.'),
         ])),
       ],
@@ -4044,7 +4044,7 @@ Future<bool> _requireBankSmsAi()=>
       }),icon:const Icon(Icons.delete_outline),label:const WaffraText('حذف النص بالكامل ولصق رسائل جديدة')),
       WaffraText(waffraIsEnglish?'Transaction ${index+1} of ${messages.length} — Total: ${cash(total)}':'المعاملة ${index+1} من ${messages.length} — إجمالي المبالغ: ${cash(total)}',style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
       const SizedBox(height:6),
-      WaffraText(waffraIsEnglish?'Saved $savedCount of ${messages.length} transactions. Review and categorize each transaction before saving.':'تم حفظ $savedCount من ${messages.length} معاملات. راجع كل معاملة وحدد قسمها قبل الحفظ.'),
+      WaffraText(waffraIsEnglish?'Saved $savedCount / ${messages.length}. Review remaining transactions before saving.':'تم حفظ $savedCount من ${messages.length} معاملات. راجع كل معاملة وحدد قسمها قبل الحفظ.'),
       const SizedBox(height:12),
       InputDecorator(decoration:InputDecoration(labelText:waffraTr('نص الرسالة الحالية'),border:OutlineInputBorder()),
        child:SelectableText(messages[index])),
@@ -4167,8 +4167,8 @@ Future<bool> _requireBankSmsAi()=>
    title:WaffraText(waffraIsEnglish?
     'Foreign currency requires review':'عملية بعملة أجنبية تحتاج مراجعة'),
    content:WaffraText(waffraIsEnglish?
-    'Detected $label in the bank image. This amount cannot be added as SAR without a verified conversion. No transaction was saved. Other SAR entries can still be reviewed.':
-    'تم اكتشاف $label في صورة البنك. لا يمكن حفظ هذا المبلغ باعتباره ريالًا سعوديًا بدون تحويل موثوق. لم يتم حفظ هذه العملية، ويمكنك متابعة مراجعة عمليات الريال الأخرى.'),
+    'Detected $label. This amount cannot be saved as SAR without verified conversion. Review other SAR entries.':
+    'تم اكتشاف $label. لا يمكن حفظ هذا المبلغ باعتباره ريالًا سعوديًا بدون تحويل موثوق. راجع بقية العمليات.'),
    actions:[FilledButton(
     onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialog)),
     child:WaffraText(waffraIsEnglish?'Understood':'فهمت'))],
@@ -4391,8 +4391,8 @@ Future<bool> _requireBankSmsAi()=>
      content:SizedBox(width:420,child:SingleChildScrollView(child:Column(
       mainAxisSize:MainAxisSize.min,children:[
        WaffraText(waffraIsEnglish?
-        'Numbered in image reading order. Review all selected entries, and enter unclear amounts manually. Nothing is saved automatically.':
-        'العمليات مرقمة حسب ترتيب القراءة في الصورة. راجع كل عملية، وأدخل المبلغ يدويًا إذا كان غير واضح. لا يُحفظ شيء تلقائيًا.'),
+        'راجع العمليات المحددة بنفس ترتيب الصورة. أدخل المبالغ غير الواضحة يدويًا؛ لا حفظ تلقائي.':
+        'راجع العمليات بالترتيب. أدخل المبالغ غير الواضحة يدويًا؛ لا حفظ تلقائي.'),
        for(var i=0;i<candidates.length;i++)
         CheckboxListTile(
          value:chosen.contains(i),
@@ -5141,7 +5141,7 @@ Future<bool> _requireBankSmsAi()=>
    title:WaffraText(waffraIsEnglish?'Budget alert':'⚠️ تنبيه ميزانية القسم'),
    content:WaffraText(waffraIsEnglish?
     '${category.name} has reached ${(spent/category.budget*100).round()}% of the budget (crossed $crossed%). Spent ${cash(spent)} out of ${cash(category.budget)}.':
-    'وصل صرف قسم «${category.name}» إلى ${(spent/category.budget*100).round()}٪ من الميزانية (تجاوز حد $crossed٪). صرفت ${cash(spent)} من ${cash(category.budget)}.'),
+    'صرف «${category.name}» ${(spent/category.budget*100).round()}٪ (حد التنبيه $crossed٪). ${cash(spent)} من ${cash(category.budget)}.'),
    actions:[FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
     child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))]));
  }
@@ -6010,7 +6010,7 @@ Future<bool> _requireBankSmsAi()=>
   if(entries.isEmpty){snack(context,waffraIsEnglish?'No transactions to delete':'لا توجد معاملات لحذفها');return;}
   final confirmed=await confirmDeletion(
    waffraIsEnglish?'Delete all transactions?':'حذف كل المعاملات؟',
-   waffraIsEnglish?'Delete all ${entries.length} recorded transactions permanently? This cannot be undone.':'سيتم حذف جميع المعاملات المسجلة وعددها ${entries.length} نهائيًا، ولا يمكن التراجع عن هذا الإجراء.');
+   waffraIsEnglish?'Delete all ${entries.length} recorded transactions permanently? This cannot be undone.':'سيُحذف ${entries.length} معاملة نهائيًا. لا يمكن التراجع.');
   if(confirmed!=true||!mounted)return;
   // Crash journal BOTH the ledger and duplicate hashes as one recoverable
   // intent. Do not clear in-memory finance until durable storage confirms it.
@@ -7163,8 +7163,8 @@ Future<bool> _requireBankSmsAi()=>
       title:WaffraText(waffraIsEnglish?'Why this result?':'ليه النتيجة دي؟'),
       children:[Padding(padding:const EdgeInsets.all(14),
        child:WaffraText(waffraIsEnglish?
-        'Based on ${recent.length} recorded transactions in 90 days. Income: ${cash(income)}, expenses: ${cash(spending)}. The score is indicative and is omitted when data is insufficient.':
-        'اعتمدنا على ${recent.length} معاملة من آخر 90 يومًا. الدخل ${cash(income)} والمصروفات ${cash(spending)}. المؤشر إرشادي ولا يظهر بدون بيانات كافية.'))]),
+        'Last 90 days (${recent.length} transactions): income ${cash(income)}, expenses ${cash(spending)}. Indicative score.':
+        'آخر 90 يومًا: ${recent.length} معاملة، دخل ${cash(income)}، مصروف ${cash(spending)}. مؤشر تقريبي.'))]),
      const SizedBox(height:20),
      WaffraText(waffraIsEnglish?'Tips for you':'نصائح مخصصة لك',
       style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
@@ -7606,8 +7606,8 @@ Future<bool> _requireBankSmsAi()=>
    await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
     title:WaffraText(waffraIsEnglish?'Category cannot be deleted':'لا يمكن حذف القسم'),
     content:WaffraText(waffraIsEnglish
-     ?'This category has $linkedEntries linked transaction(s) and $linkedRecurring recurring item(s). Delete these linked items first to protect your financial history.'
-     :'هذا القسم مرتبط بعدد $linkedEntries معاملة مالية و$linkedRecurring عملية متكررة. يجب حذف العناصر المرتبطة أولًا قبل حذف القسم.'),
+     ?'This category has $linkedEntries transactions and $linkedRecurring recurring items. Remove linked items first.'
+     :'القسم مرتبط بـ$linkedEntries معاملة و$linkedRecurring عملية متكررة. احذف العناصر المرتبطة أولًا.'),
     actions:[
      TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),child:const WaffraText('حسنًا')),
      if(linkedEntries>0)TextButton(onPressed:WaffraHaptics.tap((){
@@ -7629,7 +7629,7 @@ Future<bool> _requireBankSmsAi()=>
   final yes=await confirmDeletion(
    waffraIsEnglish?'Delete category?':'حذف القسم',
    waffraIsEnglish
-    ?'Move «${c.name}» to Recently Deleted for 30 days? You can restore its name, icon and color, but its budget will reset to zero.'
+    ?'Delete «${c.name}» for 30 days? Restore is possible, but its budget resets to zero.'
     :'هل تريد نقل القسم «${c.name}» إلى المحذوفات لمدة 30 يومًا؟ عند استرجاعه سيعود بميزانية صفر.');
   if(yes!=true||!mounted)return;
   if(_lastFinanceAuthorityRead?.source==
@@ -7707,8 +7707,8 @@ Future<bool> _requireBankSmsAi()=>
                builder:(confirmCtx)=>AlertDialog(
                 title:WaffraText(waffraIsEnglish?'Restore main category too?':'استرجاع القسم الرئيسي أيضًا؟'),
                 content:WaffraText(waffraIsEnglish
-                 ?'Restoring this subcategory also restores its deleted main category «${restoreParent!.name}». Both budgets will reset to zero. Continue?'
-                 :'استرجاع هذا القسم الفرعي سيؤدي أيضًا إلى استرجاع القسم الرئيسي «${restoreParent!.name}». ستعود الميزانيات بقيمة صفر. هل تريد المتابعة؟'),
+                 ?'Restoring also restores «${restoreParent!.name}». Both budgets reset to zero. Continue?'
+                 :'سيُسترجع أيضًا القسم الرئيسي «${restoreParent!.name}»، وتُصفّر الميزانيتان. متابعة؟'),
                 actions:[
                  TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(confirmCtx,false)),
                   child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
@@ -7733,8 +7733,8 @@ Future<bool> _requireBankSmsAi()=>
              if(!dialogCtx.mounted)return;
              Navigator.pop(dialogCtx);
              if(mounted)snackSuccess(context,waffraIsEnglish
-              ?'Category restored with a zero budget. Past linked transactions remain in the financial history unchanged.'
-              :'تم استرجاع القسم بميزانية صفر، وجميع المعاملات القديمة المرتبطة به محفوظة في السجل المالي دون تغيير.');
+              ?'Category restored with zero budget. Past transactions are unchanged.'
+              :'تم استرجاع القسم بميزانية صفر. معاملاتك القديمة محفوظة.');
             },
          onDeleteForever:()async{
              final yes=await confirmDeletion(
@@ -8261,15 +8261,15 @@ Future<bool> _requireBankSmsAi()=>
          if(!ctx.mounted)return;
          Navigator.pop(ctx);
          if(mounted)snackSuccess(context,waffraIsEnglish
-          ?'Goal restored with zero savings. All previous linked transactions remain in your financial history.'
+          ?'Goal restored with zero savings. Past transactions are unchanged.'
           :'تم استرجاع الهدف بمدخرات صفر. جميع المعاملات القديمة المرتبطة به محفوظة في السجل المالي.');
         },
         onDeleteForever:()async{
          final yes=await confirmDeletion(
           waffraIsEnglish?'Permanently delete goal?':'حذف الهدف نهائيًا',
           waffraIsEnglish
-           ?'Delete “${goal.name}” forever? It cannot be restored. Past financial transactions remain untouched.'
-           :'هل تريد حذف الهدف «${goal.name}» نهائيًا؟ لن يمكن استرجاعه، وستظل المعاملات المالية القديمة محفوظة.');
+           ?'Permanently delete “${goal.name}”? Cannot undo. Transactions stay saved.'
+           :'حذف الهدف «${goal.name}» نهائيًا؟ لا يمكن التراجع. معاملاتك محفوظة.');
          if(yes!=true||!mounted)return;
          setState(()=>deletedGoals.remove(item));
          await persist(route:WaffraFinanceRoute.goalCreateEditDeleteRestore);
@@ -8822,7 +8822,7 @@ Future<bool> _requireBankSmsAi()=>
   if(!await WaffraBiometrics.isAvailable()){
    if(mounted)await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
     title:WaffraText(waffraIsEnglish?'Fingerprint required':'بصمة الجهاز مطلوبة'),
-    content:WaffraText(waffraIsEnglish?'Enroll a fingerprint in your device settings before $operation. Waffra does not bypass biometric verification with an app PIN.':'يجب تسجيل بصمة على هاتفك أولاً لحماية هذه العملية. لن يسمح وفرة باستخدام رمز التطبيق بدلاً منها.'),
+    content:WaffraText(waffraIsEnglish?'Enable fingerprint in phone settings before $operation. App PIN cannot replace it.':'يجب تسجيل بصمة على هاتفك أولاً لحماية هذه العملية. لن يسمح وفرة باستخدام رمز التطبيق بدلاً منها.'),
     actions:[OutlinedButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))]));
    return false;
   }
