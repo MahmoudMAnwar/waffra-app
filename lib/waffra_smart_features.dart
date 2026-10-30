@@ -11,6 +11,14 @@ import 'waffra_display_currency.dart';
 import 'waffra_riyal_symbol.dart';
 import 'currency_converter.dart';
 
+/// AI-only Tools have three states across download, deletion and restart.
+/// Before first activation no AI feature widgets appear in Tools.
+enum WaffraAiToolsState { hidden, enabled, disabled }
+WaffraAiToolsState waffraAiToolsState({
+ required bool modelReady,required bool activatedBefore,
+})=>modelReady?WaffraAiToolsState.enabled:
+  activatedBefore?WaffraAiToolsState.disabled:WaffraAiToolsState.hidden;
+
 /// M268. Read-only finance tools. Never reads SMS originals, keys, or bank data.
 /// User-driven scenarios exist in widget state only and cannot write any ledger.
 class WaffraSmartEntry {
@@ -498,8 +506,10 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
 
  // AI-only features are hidden until activation. Once previously used,
  // model removal leaves these UI elements visible but disabled.
- bool get _aiToolVisible=>WaffraOnDeviceQwen.shared.isReady||
-  WaffraOnDeviceQwen.shared.hasEverEnabled;
+ WaffraAiToolsState get _aiToolState=>waffraAiToolsState(
+  modelReady:WaffraOnDeviceQwen.shared.isReady,
+  activatedBefore:WaffraOnDeviceQwen.shared.hasEverEnabled);
+ bool get _aiToolVisible=>_aiToolState!=WaffraAiToolsState.hidden;
 
  Widget _aiActivation()=>Column(
    key:const Key('waffra-ai-tools-install-section'),
@@ -598,8 +608,8 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
    Align(alignment:AlignmentDirectional.centerStart,child:FilledButton(onPressed:WaffraHaptics.tap(_ask),
     child:_label(t('اعرض الإجابة','Show answer'),color:Colors.white,bold:true))),
    if(answer.isNotEmpty)...[const SizedBox(height:12),_tile(t('نتيجة من المعاملات','From recorded transactions'),answer)],
-   _paragraph(t('ده بحث حسابي محلي، مش ذكاء اصطناعي سحابي. لا نرسل بياناتك لأي خدمة.',
-    'Local rule-based search, not cloud AI. No transaction data is sent out.')),
+   _paragraph(t('تحليل محلي بنموذج الذكاء الاصطناعي على جهازك فقط؛ لا نرسل بياناتك لأي خدمة.',
+    'Private on-device AI using verified finance data. No data is sent to a cloud service.')),
   ]);
  }
  Widget _seasons(){
@@ -742,7 +752,7 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
   final tiles=List<Widget?>.generate(types.length+2,(slot){
    final i=slot-2;
    if(i==4&&!_aiToolVisible)return null;
-   final aiLocked=i==4&&!WaffraOnDeviceQwen.shared.isReady;
+   final aiLocked=i==4&&_aiToolState==WaffraAiToolsState.disabled;
    final id=i==-2?'analysis':i==-1?'markets':types[i];
    final name=i==-2?t('التحليل المالي','Financial analysis'):
     i==-1?t('العملات والذهب والبترول','Currency, gold and oil markets'):names[i];
