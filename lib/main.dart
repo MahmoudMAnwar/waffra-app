@@ -4248,10 +4248,13 @@ Future<bool> _requireBankSmsAi()=>
       ]))))))));
   overlay.insert(item);
   try{
-   await Future<void>.delayed(const Duration(milliseconds:30));
-   // Never hold the entire app hostage when a native OCR or LLM operation
-   // stalls. The underlying OCR result is ignored after cancelling.
-   final work=operation();
+   // Register the cancel future before the first frame delay, so a fast
+   // user cancellation cannot produce an uncaught asynchronous error.
+   final work=(()async{
+    await Future<void>.delayed(const Duration(milliseconds:30));
+    if(completed)throw StateError('ai_analysis_cancelled');
+    return await operation();
+   })();
    return await Future.any<T>([work,cancellation.future])
        .timeout(const Duration(seconds:60),onTimeout:(){
     WaffraOnDeviceQwen.shared.cancelCurrentGeneration();
