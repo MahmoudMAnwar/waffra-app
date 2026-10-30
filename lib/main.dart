@@ -24,6 +24,8 @@ import 'waffra_receipt_filename.dart';
 import 'waffra_receipt_ocr.dart';
 import 'waffra_receipt_ocr_parser.dart';
 import 'waffra_bank_screenshot_parser.dart';
+import 'waffra_ai_finance_brain.dart';
+import 'waffra_ondevice_qwen.dart';
 import 'waffra_sms_intelligence.dart';
 import 'waffra_sms_multicurrency_review.dart';
 import 'waffra_back_navigation.dart';
@@ -3848,6 +3850,15 @@ Future<void> bulkSmsSheet({String? initialText})async {
        Expanded(child:messagesAction),
       ]);
      }),
+      if(WaffraOnDeviceQwen.shared.isReady&&pasted.text.trim().isNotEmpty)
+       Padding(padding:const EdgeInsets.only(top:10),child:
+        OutlinedButton.icon(
+         key:const Key('waffra-sms-ai-review'),
+         icon:const Icon(Icons.auto_awesome_outlined),
+         onPressed:busy?null:()=>unawaited(
+          _reviewAiPastedBankMessages(ctx,pasted.text.trim())),
+         label:WaffraText(waffraIsEnglish?
+          'AI: analyze bank messages':'AI: تحليل الرسائل البنكية'))),
       if(currencyPreview.needsCurrencyReview)...[
        const SizedBox(height:8),
        Container(
@@ -4016,6 +4027,42 @@ Future<void> bulkSmsSheet({String? initialText})async {
  disposeLater();
  _receiveSharedSms();
 }
+
+ Future<void> _reviewAiPastedBankMessages(
+     BuildContext ctx,String source)async {
+  if(!WaffraOnDeviceQwen.shared.isReady||source.trim().isEmpty)return;
+  final result=await WaffraAiFinanceBrain.bankSms(source,
+    generate:WaffraOnDeviceQwen.shared.textGenerator);
+  if(!ctx.mounted)return;
+  await showWaffraDialog<void>(context:ctx,builder:(dialog)=>AlertDialog(
+   title:WaffraText(waffraIsEnglish?
+     'AI review — '+result.count.toString()+' transactions':
+     'مراجعة AI — '+result.count.toString()+' معاملات'),
+   content:SizedBox(width:420,child:SingleChildScrollView(child:
+    Column(mainAxisSize:MainAxisSize.min,children:[
+     WaffraText(waffraIsEnglish?
+      'AI suggestions only. None of these results were saved by AI.':
+      'اقتراحات للمراجعة فقط؛ الذكاء الاصطناعي لم يحفظ أي عملية.'),
+     if(result.error!=null)WaffraText(waffraIsEnglish?
+       'Analysis unavailable. Your existing bank messages are unchanged.':
+       'تعذر التحليل؛ لم تتغير رسائلك أو بياناتك المالية.'),
+     for(final item in result.items)
+       ListTile(
+        leading:Text(item.position.toString()),
+        title:WaffraText((item.amountText??'—')+' '+
+          (item.currency??'?')+' • '+(item.direction==WaffraAiDirection.income?
+           (waffraIsEnglish?'Income':'دخل'):item.direction==WaffraAiDirection.expense?
+           (waffraIsEnglish?'Expense':'مصروف'):
+           (waffraIsEnglish?'Review':'مراجعة'))),
+        subtitle:WaffraText(item.needsReview?
+         (waffraIsEnglish?'Needs manual review: ':'تحتاج مراجعة: ')+item.reason:
+         (item.merchant??item.quote),maxLines:3),
+       ),
+    ]))),
+   actions:[TextButton(onPressed:()=>Navigator.pop(dialog),
+     child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))],
+  ));
+ }
 
  Future<void> scanAndAddReceipt()async {
   // Ask only for the exact camera/gallery access the user selected.
