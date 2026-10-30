@@ -124,6 +124,17 @@ abstract final class WaffraSmsCurrencies {
             RegExp(r'[0-9]').hasMatch(genericAction)) {
           found.add('UNKNOWN');
         }
+        // Do not collapse an unsupported "ريال يمني", "جنيه سوداني",
+        // or "درهم ..." into the generic SAR, EGP, or AED token. The app
+        // only recognizes complete country-qualified names explicitly.
+        if (RegExp(
+          r'(?:[0-9][0-9,.]*\s*(?:ريال|جنيه|درهم)\s+'
+          r'[\u0600-\u06FF]{3,}|'
+          r'(?:ريال|جنيه|درهم)\s+[\u0600-\u06FF]{3,}'
+          r'\s*[0-9][0-9,.]*)'
+        ).hasMatch(genericAction)) {
+          found.add('UNKNOWN');
+        }
         for (final expression in adjacentAmount.allMatches(genericAction)) {
           for (final token in currencyToken.allMatches(expression.group(0)!)) {
           final code = codeFor(token.group(0)!);
