@@ -690,6 +690,27 @@ jobs:
           WAFFRA_RELEASE_KEY_PASSWORD: ${{ secrets.WAFFRA_RELEASE_KEY_PASSWORD }}
         run: flutter build apk --no-pub --release --target-platform android-x64 --tree-shake-icons
 
+      # The hosted Linux runner exposes /dev/kvm but the unprivileged runner
+      # lacks permission. Require actual hardware acceleration rather than
+      # silently running x86_64 with -accel off until boot timeout.
+      - name: Require KVM access for Android x64 release startup (M308)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -c /dev/kvm ]; then
+            echo "::error::KVM device missing; cannot certify x86_64 emulator startup"
+            exit 1
+          fi
+          # This is an isolated, ephemeral hosted runner. Grant only its
+          # current user access; do not make the device world-writable.
+          sudo chown "$(id -u):$(id -g)" /dev/kvm
+          sudo chmod 0600 /dev/kvm
+          if [ ! -r /dev/kvm ] || [ ! -w /dev/kvm ]; then
+            echo "::error::KVM remains inaccessible; refusing unaccelerated smoke test"
+            exit 1
+          fi
+          echo "KVM device accessible; x86_64 emulator acceleration is mandatory"
+
       - name: Verify Release startup on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -698,6 +719,7 @@ jobs:
           target: google_apis
           profile: pixel_6
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          disable-linux-hw-accel: false
           script: |
             set -euo pipefail
             adb install -r build/app/outputs/flutter-apk/app-release.apk
