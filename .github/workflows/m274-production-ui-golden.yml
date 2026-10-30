@@ -6,6 +6,7 @@ on:
     paths:
       - 'test/m274_responsive_ui_journeys_test.dart'
       - 'integration_test/m274_ui_tap_smoke_android_test.dart'
+      - '.github/scripts/run-m274-android-tap-smoke.sh'
       - 'tool/goldens/**'
       - 'scripts/qa/m274_verify_golden_candidates.py'
       - '.github/workflows/m274-production-ui-golden.yml'
@@ -121,6 +122,8 @@ jobs:
               app.write_text(source)
           print('Desugaring enabled for disposable Android UI test host')
           PY
+      - name: Syntax-check Android emulator test runner
+        run: bash -n .github/scripts/run-m274-android-tap-smoke.sh
       - name: Enable KVM for Android emulator
         shell: bash
         run: |
@@ -135,9 +138,9 @@ jobs:
           arch: x86_64
           profile: pixel_6
           cores: 2
-          ram-size: 2048M
+          ram-size: 3072M
           heap-size: 512M
           disable-animations: true
           emulator-boot-timeout: 600
           emulator-options: -no-window -no-audio -no-snapshot -gpu swiftshader_indirect -no-boot-anim
-          script: flutter test integration_test/m274_ui_tap_smoke_android_test.dart -d emulator-5554 --reporter expanded
+          script: bash .github/scripts/run-m274-android-tap-smoke.sh
