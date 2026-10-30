@@ -78,12 +78,12 @@ abstract final class WaffraSmsCurrencies {
     }.contains(token)) return '';
     // Common SMS action codes are NOT currencies even beside an amount.
     if (const <String>{'POS','ATM','OTP','PIN','SMS','REF','TAX','VAT',
-      'FEE','BAL','PAY','P2P','ACH'}.contains(token)) return '';
+      'FEE','BAL','PAY','P2P','ACH','AMT','TXN'}.contains(token)) return '';
     return token;
   }
 
   static final RegExp adjacentAmount = RegExp(
-    r'(?:(?!(?:POS|ATM|OTP|PIN|SMS|REF|TAX|VAT|FEE|BAL|PAY|P2P|ACH)\b)(?:\b[A-Z]{3}(?=\s*[:：]?\s*[0-9٠-٩۰-۹])|SR\b|ريال(?:\s+سعودي)?|ر\.س|﷼|⃁|'
+    r'(?:(?!(?:POS|ATM|OTP|PIN|SMS|REF|TAX|VAT|FEE|BAL|PAY|P2P|ACH|AMT|TXN)\b)(?:\b[A-Z]{3}(?=\s*[:：]?\s*[0-9٠-٩۰-۹])|SR\b|ريال(?:\s+سعودي)?|ر\.س|﷼|⃁|'
     r'ج\.م|جنيه(?:\s+مصري)?|د\.إ|درهم(?:\s+إماراتي)?|[$€£₹])'
     r'\s*[:：]?\s*[0-9٠-٩۰-۹][0-9٠-٩۰-۹,.\u066B\u066C]*)'
     r'|(?:[0-9٠-٩۰-۹][0-9٠-٩۰-۹,.\u066B\u066C]*\s*'
@@ -136,8 +136,9 @@ abstract final class WaffraSmsCurrencies {
         // only recognizes complete country-qualified names explicitly.
         if (RegExp(
           r'(?:[0-9][0-9,.]*\s*(?:ريال|جنيه|درهم)\s+'
-          r'[\u0600-\u06FF]{3,}|'
-          r'(?:ريال|جنيه|درهم)\s+[\u0600-\u06FF]{3,}'
+          r'[\u0600-\u06FF]{2,}(?:\s+[\u0600-\u06FF]{2,}){0,2}|'
+          r'(?:ريال|جنيه|درهم)\s+[\u0600-\u06FF]{2,}'
+           r'(?:\s+[\u0600-\u06FF]{2,}){0,2}'
           r'\s*[0-9][0-9,.]*)'
         ).hasMatch(genericAction)) {
           found.add('UNKNOWN');
