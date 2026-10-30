@@ -3860,6 +3860,7 @@ Future<bool> _requireBankSmsAi()=>
  void scheduleBankSmsAnalysis(
      BuildContext ctx,StateSetter update,String input){
   pasteTimer?.cancel();
+  WaffraOnDeviceQwen.shared.cancelCurrentGeneration();
   final revision=++pasteRevision;
   update((){
    parsed=false;analyzingPaste=input.trim().isNotEmpty;
@@ -3875,6 +3876,7 @@ Future<bool> _requireBankSmsAi()=>
 
  void disposeLater(){
   pasteTimer?.cancel();
+  WaffraOnDeviceQwen.shared.cancelCurrentGeneration();
   Future<void>.delayed(const Duration(milliseconds:500),(){
    pasted.dispose();description.dispose();amount.dispose();
   });
@@ -3942,7 +3944,7 @@ Future<bool> _requireBankSmsAi()=>
       },decoration:InputDecoration(labelText:waffraIsEnglish?'Bank SMS *':'الرسالة البنكية *',
        errorText:pasteAttempted&&pasted.text.trim().isEmpty?waffraRequiredFieldMessage:null,errorMaxLines:3,
        hintText:waffraIsEnglish?'Paste your bank message here. We’ll analyze it automatically.':'الصق رسالتك البنكية هنا، وبنحلّلها لك تلقائيًا.',hintStyle:const TextStyle(fontSize:13,color:Color(0xFF888F8A)),
-       suffixIcon:pasted.text.isNotEmpty?IconButton(tooltip:waffraIsEnglish?'Clear text':'مسح النص',icon:const Icon(Icons.clear_rounded,color:Colors.redAccent),onPressed:WaffraHaptics.tap((){pasteTimer?.cancel();++pasteRevision;pasted.clear();update((){parsed=false;analyzingPaste=false;messages=[];statusMessage='';});})):null,
+       suffixIcon:pasted.text.isNotEmpty?IconButton(tooltip:waffraIsEnglish?'Clear text':'مسح النص',icon:const Icon(Icons.clear_rounded,color:Colors.redAccent),onPressed:WaffraHaptics.tap((){pasteTimer?.cancel();WaffraOnDeviceQwen.shared.cancelCurrentGeneration();++pasteRevision;pasted.clear();update((){parsed=false;analyzingPaste=false;messages=[];statusMessage='';});})):null,
        border:OutlineInputBorder(borderRadius:BorderRadius.circular(18)))),
       const SizedBox(height:12),
      if(statusMessage.isNotEmpty&&pasted.text.trim().isNotEmpty)...[
@@ -4081,7 +4083,10 @@ Future<bool> _requireBankSmsAi()=>
         waffraIsEnglish?'Clear pasted messages?':'حذف الرسائل الملصوقة',
         waffraIsEnglish?'Discard the unsaved pasted text and start again?':'هل تريد حذف الرسائل غير المحفوظة والبدء من جديد؟');
        if(yes!=true||!ctx.mounted)return;
-       update((){reviewing=false;parsed=false;messages=[];index=0;pasted.clear();description.clear();amount.clear();});
+       pasteTimer?.cancel();
+       WaffraOnDeviceQwen.shared.cancelCurrentGeneration();
+       ++pasteRevision;
+       update((){reviewing=false;parsed=false;analyzingPaste=false;messages=[];index=0;pasted.clear();description.clear();amount.clear();});
       }),icon:const Icon(Icons.delete_outline),label:const WaffraText('حذف النص بالكامل ولصق رسائل جديدة')),
       WaffraText(waffraIsEnglish?'Transaction ${index+1} of ${messages.length} — Total: ${cash(total)}':'المعاملة ${index+1} من ${messages.length} — إجمالي المبالغ: ${cash(total)}',style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
       const SizedBox(height:6),
