@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
 import 'package:waffra/waffra_display_currency.dart';
@@ -106,6 +107,29 @@ void main() {
         'Balance JOD 201.632'),isEmpty);
     expect(WaffraSmsCurrencies.currenciesForMessage(
         'OTP 445566 and balance SAR 999'),isEmpty);
+  });
+
+  test('M300 manual bank SMS editor blocks foreign currency before hashing',(){
+    final app=File('lib/main.dart').readAsStringSync();
+    final editor=app.indexOf('Future<void> entrySheet(');
+    final save=app.indexOf('if(message.text.trim().isEmpty)return;',editor);
+    final hash=app.indexOf('final h=sha256.convert',save);
+    expect(editor,greaterThan(0));
+    expect(save,greaterThan(editor));
+    expect(hash,greaterThan(save));
+    final boundary=app.substring(save,hash);
+    expect(boundary,contains(
+      'WaffraSmsCurrencies.requiresReviewForSarLedger(message.text)'));
+    expect(boundary,contains('return;'));
+    for(final code in WaffraSmsCurrencies.supported) {
+      final text='Transfer received '+code+' 123.50 Balance 900 '+code;
+      expect(WaffraSmsCurrencies.requiresReviewForSarLedger(text),
+        code!='SAR',reason:code);
+    }
+    expect(WaffraSmsCurrencies.requiresReviewForSarLedger(
+       'Money received MXN 18.25 Balance 999 MXN'),isTrue);
+    expect(WaffraSmsCurrencies.requiresReviewForSarLedger(
+       'Money received USD 18.25 and SAR 19.25'),isTrue);
   });
 
   test('M300 original currency and FX minor units are consistent',(){
