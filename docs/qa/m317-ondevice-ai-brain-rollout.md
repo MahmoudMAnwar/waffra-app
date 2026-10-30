@@ -31,3 +31,30 @@ The financial coach sees only verified, scoped **integer minor units** aggregate
 - Complete on-device UI acceptance tests, progress/cancel/retry flows and visual QA for the opt-in UI now implemented in bank SMS, OCR multiple-action review, Ask Waffra, analysis and savings sections.
 - Every transaction is explicitly confirmed by user and independently committed through existing encrypted authoritative writer.
 - Physical Android and iOS proof, then merged-main smoke tests; NO production cutover or APK release before those gates.
+
+
+## M321 user-owned model lifecycle and account deletion
+- Opening a bank-SMS, camera/receipt OCR, Ask Waffra, financial analysis or
+  AI saving feature when the local GGUF is absent triggers the common
+  first-use disclosure from lib/waffra_ai_model_gate.dart.
+- Explicitly disclose the approximately 484 MB model download, on-device
+  execution, storage cost and ability to delete later from My Account.
+- A modal progress bar reports actual bytes and percentage where the
+  server supplies Content-Length; otherwise it remains indeterminate.
+  Existing on-disk verified GGUF is *loaded*, not downloaded again.
+- Decline/cancel retains all existing deterministic, non-AI functionality.
+  Cancelling a download revokes the in-flight session, closes its HTTP
+  client and cleans the .part file.
+- My Account -> AI model -> Delete AI model shows the exact loss of AI
+  features before opening OS **biometric-only** confirmation (fingerprint
+  or Face ID as available). Missing, cancelled or failed biometrics block
+  deletion. No silent PIN fallback or default acceptance.
+- After successful authentication, remove only the verified public GGUF
+  and same-folder partial file, verify both are absent, unload the model,
+  reset ephemeral AI-generated prose and notify the UI.
+- Never open, edit or delete SQLCipher databases, receipts, finance exports,
+  backup archives, profiles, SMS histories or unrelated app files.
+  When the user reopens AI later, an explicit new download is offered.
+- Acceptance evidence: test/m321_ai_model_download_delete_test.dart
+  and exact-head CI; native biometric UI and physical Android/iOS download
+  interruption/deletion must be validated before production cutover.
