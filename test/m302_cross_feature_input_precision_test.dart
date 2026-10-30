@@ -88,6 +88,19 @@ void main(){
   expect(formatWaffraMoney(1000),'1,000.00');
  });
 
+ test('M302 finance inputs retain unrepresentable cents for field validation',(){
+  const noTruncate=WaffraAmountFormatter(truncateExcess:false);
+  final entered=formatted(noTruncate,'1234.567');
+  expect(entered.text,'1234.567');
+  expect(WaffraValidators.positiveAmount(entered.text),'invalid_amount');
+  final main=File('lib/main.dart').readAsStringSync();
+  final all=RegExp(r'inputFormatters:\[const WaffraAmountFormatter\(truncateExcess:false\)\]')
+      .allMatches(main).length;
+  expect(all,greaterThanOrEqualTo(10),
+   reason:'Every live finance field must reject extra digits, not change them');
+  expect(main,isNot(contains('inputFormatters:[const WaffraAmountFormatter()]')));
+ });
+
  test('M302 identical category names cannot bypass Arabic search normalization',(){
   expect(WaffraValidators.uniqueCategory('ادخار',['إدخار']),'duplicate');
   expect(WaffraValidators.uniqueCategory('  مَصاريف  ',['مصاريف']),'duplicate');
