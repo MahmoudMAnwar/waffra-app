@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
@@ -28,10 +29,26 @@ class WaffraOnDeviceQwen {
   static final WaffraOnDeviceQwen shared=WaffraOnDeviceQwen();
   LlamaEngine? _engine;
   bool _opening=false;
+  Future<void>? _openingTask;
+  bool _deleting=false;
   int _session=0;
+  final ValueNotifier<int> revision=ValueNotifier<int>(0);
   http.Client? _activeDownload;
 
   bool get isReady=>_engine!=null;
+  bool get isBusy=>_opening||_deleting;
+
+  Future<bool> downloadedOnDisk()async {
+    try {return await (await _modelFile()).exists();}
+    catch (_) {return false;}
+  }
+
+  /// Closing the account or cancelling a dialog invalidates an in-flight
+  /// download and prevents a stale model load from opening in another session.
+  void cancelPendingLoad(){
+    _session++;
+    _activeDownload?.close();
+  }
 
   Future<File> _modelFile()async{
     final folder=await getApplicationSupportDirectory();
@@ -59,8 +76,16 @@ class WaffraOnDeviceQwen {
   /// There is NO background SMS or image processing and NO cloud inference.
   Future<void> open({required bool allowDownload,
       void Function(int downloaded,int? total)? progress})async{
+    if(_deleting)throw StateError('model_removal_in_progress');
     if(_engine!=null)return;
-    if(_opening)throw StateError('model_initialization_in_progress');
+    if(_openingTask!=null)throw StateError('model_initialization_in_progress');
+    final task=_openVerified(allowDownload:allowDownload,progress:progress);
+    _openingTask=task;
+    try{await task;}finally{_openingTask=null;}
+  }
+
+  Future<void> _openVerified({required bool allowDownload,
+      void Function(int downloaded,int? total)? progress})async{
     _opening=true;
     final session=_session;
     try{
@@ -75,6 +100,7 @@ class WaffraOnDeviceQwen {
         await instance.loadModelSource(ModelSource.path(file.path));
         if(session!=_session)throw StateError('account_session_changed');
         _engine=instance;
+        revision.value++;
       }catch(_){
         await instance.dispose();
         rethrow;
@@ -149,8 +175,35 @@ class WaffraOnDeviceQwen {
     _session++;
     _activeDownload?.close();
     _activeDownload=null;
+    final pending=_openingTask;
+    if(pending!=null){try{await pending;}catch(_){}}
     final engine=_engine;
     _engine=null;
     if(engine!=null)await engine.dispose();
+    revision.value++;
+  }
+
+  /// Removes ONLY the public GGUF and its temporary partial download.
+  /// Financial records, receipts, SQLCipher, and backup directories are
+  /// never opened or modified. Caller must enforce biometric confirmation.
+  Future<void> deleteDownloadedModel()async{
+    if(_deleting)throw StateError('model_removal_in_progress');
+    _deleting=true;
+    try{
+      cancelPendingLoad();
+      final pending=_openingTask;
+      if(pending!=null){try{await pending;}catch(_){}}
+      await dispose();
+      final file=await _modelFile();
+      final partial=File(file.path+'.part');
+      if(await partial.exists())await partial.delete();
+      if(await file.exists())await file.delete();
+      if(await file.exists()||await partial.exists()){
+        throw StateError('model_removal_not_verified');
+      }
+      revision.value++;
+    }finally{
+      _deleting=false;
+    }
   }
 }
