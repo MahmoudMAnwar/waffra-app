@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'waffra_bank_screenshot_parser.dart';
 import 'waffra_receipt_ocr_parser.dart';
-import 'waffra_bank_screenshot_parser.dart';
 
 typedef WaffraAiTextInference = Future<String> Function(String prompt);
 enum WaffraAiSource { bankSms, imageOcr }
