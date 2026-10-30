@@ -31,7 +31,7 @@ void main(){
     final home=File('lib/main.dart').readAsStringSync();
     final tools=File('lib/waffra_smart_features.dart').readAsStringSync();
     expect(home,contains('if(!WaffraOnDeviceQwen.shared.isReady)return false;'));
-    expect(home,contains('if(!WaffraOnDeviceQwen.shared.isReady||source.trim().isEmpty)return null;'))
+    expect(home,contains('if(!WaffraOnDeviceQwen.shared.isReady||source.trim().isEmpty)return null;'));
     // M299 replaced flattened candidates with ordered OCR review items.
         // Keep multi-transaction review and the local-AI prerequisite together.
         expect(home,contains('if(await _reviewAiScannedTransactions(extracted.rawText,picked))return;'));
