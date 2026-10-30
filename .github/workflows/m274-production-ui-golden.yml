@@ -6,6 +6,7 @@ on:
     paths:
       - 'test/m274_responsive_ui_journeys_test.dart'
       - 'integration_test/m274_ui_tap_smoke_android_test.dart'
+      - '.github/scripts/run-m274-android-tap-smoke.sh'
       - 'tool/goldens/**'
       - 'scripts/qa/m274_verify_golden_candidates.py'
       - '.github/workflows/m274-production-ui-golden.yml'
@@ -121,6 +122,8 @@ jobs:
               app.write_text(source)
           print('Desugaring enabled for disposable Android UI test host')
           PY
+      - name: Syntax-check Android emulator test runner
+        run: bash -n .github/scripts/run-m274-android-tap-smoke.sh
       - name: Enable KVM for Android emulator
         shell: bash
         run: |
@@ -140,29 +143,4 @@ jobs:
           disable-animations: true
           emulator-boot-timeout: 600
           emulator-options: -no-window -no-audio -no-snapshot -gpu swiftshader_indirect -no-boot-anim
-          # Only retry an Android tooling/DDS startup failure. Never retry or
-          # mask a failed balance, footer, screen or UI assertion.
-          script: |
-            set -eu
-            for attempt in 1 2; do
-              output="$(mktemp)"
-              if flutter test integration_test/m274_ui_tap_smoke_android_test.dart -d emulator-5554 --reporter expanded > "$output" 2>&1; then
-                cat "$output"
-                rm -f "$output"
-                exit 0
-              fi
-              cat "$output"
-              if ! grep -Fq 'Failed to start Dart Development Service' "$output"; then
-                rm -f "$output"
-                exit 1
-              fi
-              rm -f "$output"
-              if [ "$attempt" -eq 2 ]; then
-                echo "Android DDS startup failed on both attempts; keeping CI red."
-                exit 1
-              fi
-              echo "Android Flutter DDS did not start; resetting ADB forwarding and retrying once."
-              adb -s emulator-5554 forward --remove-all || true
-              adb -s emulator-5554 reverse --remove-all || true
-              sleep 8
-            done
+          script: bash .github/scripts/run-m274-android-tap-smoke.sh
