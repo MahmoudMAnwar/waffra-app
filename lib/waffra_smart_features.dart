@@ -476,13 +476,16 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
    final response=switch(skill){
     'ask'=>await WaffraAiFinanceCoach.askWaffra(
       questionText,snapshot,generate:generator,
-      displayCurrency:WaffraDisplayCurrency.country.code),
+      displayCurrency:WaffraDisplayCurrency.country.code,
+      english:widget.english),
     'analysis'=>await WaffraAiFinanceCoach.analysis(
       snapshot,generate:generator,
-      displayCurrency:WaffraDisplayCurrency.country.code),
+      displayCurrency:WaffraDisplayCurrency.country.code,
+      english:widget.english),
     _=>await WaffraAiFinanceCoach.savingSuggestions(
       snapshot,generate:generator,
-      displayCurrency:WaffraDisplayCurrency.country.code),
+      displayCurrency:WaffraDisplayCurrency.country.code,
+      english:widget.english),
    };
    if(!mounted)return;
    setState((){
