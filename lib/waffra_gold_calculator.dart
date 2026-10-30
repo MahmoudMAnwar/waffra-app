@@ -125,7 +125,8 @@ class _WaffraGoldCalculatorPageState extends State<WaffraGoldCalculatorPage> {
   WaffraGoldQuote? quote;
 
   String t(String en, String ar) => waffraIsEnglish ? en : ar;
-  String money(double value, String code) => value.toStringAsFixed(2) + ' ' + code;
+  String money(double value, String code) =>
+   formatWaffraMoney(value,decimalPlaces:waffraCurrencyMinorDigits(code)) + ' ' + code;
   String stamp(DateTime d) {
     final local = d.toLocal();
     return local.day.toString() + '/' + local.month.toString() + '/' +
@@ -180,7 +181,7 @@ class _WaffraGoldCalculatorPageState extends State<WaffraGoldCalculatorPage> {
   }
 
   Future<void> fetchQuote() async {
-    final grams = double.tryParse(weight.text.trim().replaceAll(',', ''));
+    final grams = waffraStrictNumericInput(weight.text,decimalPlaces:4,maxValue:1000000);
     if (grams == null || !grams.isFinite || grams <= 0 || grams > 1000000) {
       setState(() { quote = null;
         error = t('Enter a valid positive weight in grams.',
@@ -207,7 +208,7 @@ class _WaffraGoldCalculatorPageState extends State<WaffraGoldCalculatorPage> {
 
   @override
   Widget build(BuildContext context) {
-    final grams = double.tryParse(weight.text.trim().replaceAll(',', ''));
+    final grams = waffraStrictNumericInput(weight.text,decimalPlaces:4,maxValue:1000000);
     final valid = quote != null && grams != null &&
         grams.isFinite && grams > 0 && grams <= 1000000;
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -233,7 +234,7 @@ class _WaffraGoldCalculatorPageState extends State<WaffraGoldCalculatorPage> {
             const SizedBox(height: 15),
             TextField(controller: weight,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [const WaffraAmountFormatter()],
+              inputFormatters: [const WaffraAmountFormatter(decimalPlaces:4,truncateExcess:false)],
               decoration: InputDecoration(labelText: t('Weight in grams', 'الوزن بالجرام'),
                 prefixIcon: const Icon(Icons.scale_outlined),
                 border: const OutlineInputBorder()),
@@ -268,7 +269,7 @@ class _WaffraGoldCalculatorPageState extends State<WaffraGoldCalculatorPage> {
                 WaffraText(t('Saudi riyal equivalent: ', 'ما يعادله بالريال: ') +
                   money(WaffraGoldMath.total(quote!.gram(karat, sar: true), grams), 'SAR')),
                 if (currency != 'SAR') WaffraText(t('Indicative FX: 1 SAR ≈ ', 'سعر الصرف: 1 ريال ≈ ') +
-                  money(quote!.currencyFx / quote!.sarFx, currency)),
+                  (quote!.currencyFx / quote!.sarFx).toStringAsFixed(6)+' '+currency),
               ]))),
           const SizedBox(height: 12),
           Text(t('Spot price per gram', 'سعر الجرام العالمي'),
