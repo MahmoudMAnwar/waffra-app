@@ -37,12 +37,9 @@ class _WaffraGooglePhoneFieldState extends State<WaffraGooglePhoneField> {
         prefixIcon:const Icon(Icons.search),
         hintText:widget.english?'Country or dialing code':'ابحث باسم الدولة أو كود الاتصال',
         border:const OutlineInputBorder()))),
-      Expanded(child:ListView(children:waffraPhoneCountries.where((item){
-       final search=query.text.trim().toLowerCase();
-       return search.isEmpty||item.ar.contains(search)||
-        item.en.toLowerCase().contains(search)||
-        item.dial.contains(search)||item.iso.toLowerCase().contains(search);
-      }).map((item)=>ListTile(
+      Expanded(child:ListView(children:waffraPhoneCountries.where(
+       (item)=>WaffraInternationalPhone.matchesQuery(item,query.text)
+      ).map((item)=>ListTile(
        key:Key('waffra-phone-country-'+item.iso),
        leading:Text(item.flag,style:const TextStyle(fontSize:24)),
        title:Text(item.label(widget.english)),
