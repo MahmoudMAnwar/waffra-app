@@ -18,6 +18,11 @@ abstract final class WaffraSmsCurrencies {
     if (token == '£') return 'GBP';
     if (token == '₹') return 'INR';
     if (token == r'$') return 'UNKNOWN'; // Ambiguous in many countries
+    // Ordinary words next to a number are not currency codes.
+    if (const <String>{
+      'HAS','FOR','AND','THE','YOU','NEW','NOW','NOT','WAS','ARE',
+      'DID','GET','GOT','ONE','TWO','ALL','OUT','PER','VIA',
+    }.contains(token)) return '';
     // Common SMS action codes are NOT currencies even beside an amount.
     if (const <String>{'POS','ATM','OTP','PIN','SMS','REF','TAX','VAT',
       'FEE','BAL','PAY','P2P','ACH'}.contains(token)) return '';
@@ -25,7 +30,7 @@ abstract final class WaffraSmsCurrencies {
   }
 
   static final RegExp adjacentAmount = RegExp(
-    r'(?:(?!(?:POS|ATM|OTP|PIN|SMS|REF|TAX|VAT|FEE|BAL|PAY|P2P|ACH)\b)(?:\b[A-Z]{3}\b|SR\b|ريال(?:\s+سعودي)?|ر\.س|﷼|⃁|'
+    r'(?:(?!(?:POS|ATM|OTP|PIN|SMS|REF|TAX|VAT|FEE|BAL|PAY|P2P|ACH)\b)(?:\b[A-Z]{3}(?=\s*[:：]?\s*[0-9٠-٩۰-۹])|SR\b|ريال(?:\s+سعودي)?|ر\.س|﷼|⃁|'
     r'ج\.م|جنيه(?:\s+مصري)?|د\.إ|درهم(?:\s+إماراتي)?|[$€£₹])'
     r'\s*[:：]?\s*[0-9٠-٩۰-۹][0-9٠-٩۰-۹,.\u066B\u066C]*)'
     r'|(?:[0-9٠-٩۰-۹][0-9٠-٩۰-۹,.\u066B\u066C]*\s*'
@@ -34,7 +39,7 @@ abstract final class WaffraSmsCurrencies {
     caseSensitive: false);
 
   static final RegExp currencyToken = RegExp(
-    r'\b[A-Z]{3}\b|SR\b|ريال(?:\s+سعودي)?|ر\.س|﷼|⃁|'
+    r'[A-Z]{3}(?![A-Za-z])|SR\b|ريال(?:\s+سعودي)?|ر\.س|﷼|⃁|'
     r'ج\.م|جنيه(?:\s+مصري)?|د\.إ|درهم(?:\s+إماراتي)?|[$€£₹]',
     caseSensitive: false);
 
@@ -44,12 +49,14 @@ abstract final class WaffraSmsCurrencies {
       // Split combined SMS lines: "Purchase USD 10; Balance SAR 400".
       // Ignore only the balance/fee clause, never the transaction clause.
       for (final clause in line.split(RegExp(r'[;|]'))) {
-        if (RegExp(
+        // Retain the transaction before a same-line balance/fee footer.
+        final footer = RegExp(
           r'available balance|remaining balance|current balance|'
-          r'الرصيد|المتاح|saldo disponible|solde disponible|'
-          r'commission|رسوم|service fee|fee amount|vat|ضريبة',
-          caseSensitive: false).hasMatch(clause)) continue;
-        for (final expression in adjacentAmount.allMatches(clause)) {
+          r'\bbalance\b|الرصيد|المتاح|saldo disponible|solde disponible|'
+          r'commission|رسوم|service fee|fee amount|\bvat\b|ضريبة',
+          caseSensitive: false).firstMatch(clause);
+        final action = footer == null ? clause : clause.substring(0, footer.start);
+        for (final expression in adjacentAmount.allMatches(action)) {
           for (final token in currencyToken.allMatches(expression.group(0)!)) {
           final code = codeFor(token.group(0)!);
           if (supported.contains(code) || code == 'UNKNOWN') {
