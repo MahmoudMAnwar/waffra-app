@@ -233,7 +233,7 @@ class _WaffraGoldCalculatorPageState extends State<WaffraGoldCalculatorPage> {
             const SizedBox(height: 15),
             TextField(controller: weight,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [const WaffraAmountFormatter()],
+              inputFormatters: [const WaffraAmountFormatter(decimalPlaces:4)],
               decoration: InputDecoration(labelText: t('Weight in grams', 'الوزن بالجرام'),
                 prefixIcon: const Icon(Icons.scale_outlined),
                 border: const OutlineInputBorder()),
