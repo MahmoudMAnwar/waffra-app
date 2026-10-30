@@ -52,14 +52,15 @@ class WaffraAmountFormatter extends TextInputFormatter {
  }
 }
 
-/// Strict UI number parsing for tools. Never reinterpret malformed grouping
-/// (such as 1,2) as a different financial value by stripping punctuation.
-/// This helper does NOT change or authorize any encrypted ledger write.
+/// Strict UI number parsing for tools. Reject invalid grouping, exponent
+/// notation, partial numbers, excess precision or a value beyond its bound.
+/// This helper does not mutate stored finance or authorize a ledger write.
 double? waffraStrictNumericInput(
-  String input, {
-  int decimalPlaces=2,
-  bool allowZero=false,
-  double? maxValue,
+ String input, {
+ int decimalPlaces=2,
+ bool allowZero=false,
+ bool allowNegative=false,
+ double? maxValue,
 }) {
  if(decimalPlaces<0||decimalPlaces>6)throw ArgumentError.value(
   decimalPlaces,'decimalPlaces','Expected 0..6');
@@ -71,26 +72,20 @@ double? waffraStrictNumericInput(
    final n=arabic.indexOf(ch);
    return (n>=0?n:persian.indexOf(ch)).toString();
   });
- final decimal=decimalPlaces==0?'':r'(?:\.[0-9]{1,'+
+ final fractional=decimalPlaces==0?'':r'(?:\.[0-9]{1,'+
   decimalPlaces.toString()+r'})?';
- final pattern=RegExp(
-  r'^(?:[0-9]+|[0-9]{1,3}(?:,[0-9]{3})+)'+decimal+r'
- final fixed=amount.toDouble().isFinite?amount.toStringAsFixed(2):'0.00';
- final parts=fixed.split('.');
- return parts.first.replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'),(_)=>',')+
-  (decimalPlaces==0?'':'.'+parts.last);
-}
-);
+ final pattern=RegExp((allowNegative?r'^-?':r'^')+
+  r'(?:[0-9]+|[0-9]{1,3}(?:,[0-9]{3})+)'+fractional+r'$');
  if(!pattern.hasMatch(normalized))return null;
  final value=double.tryParse(normalized.replaceAll(',',''));
- if(value==null||!value.isFinite||value<0||
+ if(value==null||!value.isFinite||(!allowNegative&&value<0)||
     (!allowZero&&value==0)||
-    (maxValue!=null&&value>maxValue))return null;
+    (maxValue!=null&&value.abs()>maxValue))return null;
  return value;
 }
 
-/// ISO 4217 minor-unit presentation for explicit FX/commodity conversions.
-/// Does not alter display-only app currency or underlying ledger amounts.
+/// ISO 4217 display precision for independently verified FX and commodity
+/// estimates. This never converts a saved display-only ledger balance.
 int waffraCurrencyMinorDigits(String code) {
  if(const {'JPY','KRW'}.contains(code))return 0;
  if(const {'BHD','KWD','OMR','TND','JOD','IQD'}.contains(code))return 3;
@@ -102,7 +97,8 @@ String formatWaffraMoney(num amount,{int decimalPlaces=2}) {
   decimalPlaces,'decimalPlaces','Expected 0..6');
  final fallback=decimalPlaces==0?'0':'0.'+List.filled(decimalPlaces,'0').join();
  final fixed=amount.toDouble().isFinite
-   ?amount.toStringAsFixed(decimalPlaces):fallback;
+  ?amount.toStringAsFixed(decimalPlaces):fallback;
  final parts=fixed.split('.');
- return '${parts.first.replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'),(_)=>',')}.${parts.last}';
+ return parts.first.replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'),(_)=>',')+
+  (decimalPlaces==0?'':'.'+parts.last);
 }
