@@ -103,6 +103,20 @@ Supermarket
     }
   });
 
+  test('M311 SAR with same-line balance and bank prose stays SAR', () {
+    const local='SAR198.50 has been credited to an account. Balance 201.50SAR';
+    expect(WaffraSmsCurrencies.currenciesForMessage(local), {'SAR'});
+    expect(WaffraBankScreenshotParser.requiresForeignCurrencyReview(local),
+      isFalse);
+    const foreign='JOD198.125 has been credited to an account. '
+      'Balance 201.632JOD';
+    expect(WaffraSmsCurrencies.currenciesForMessage(foreign), {'JOD'});
+    expect(WaffraBankScreenshotParser.requiresForeignCurrencyReview(foreign),
+      isTrue);
+    expect(WaffraBankScreenshotParser.reviewItems(foreign).single.amount,
+      isNull);
+  });
+
   test('M299 finance editor guards every direct OCR caller', () {
     final app=File('lib/main.dart').readAsStringSync();
     final start=app.indexOf('Future<void> entrySheet(');
