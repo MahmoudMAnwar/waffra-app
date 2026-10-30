@@ -6,6 +6,7 @@ import 'diagnostics/waffra_private_release_diagnostics.dart';
 import 'waffra_practical_ledger_engine.dart';
 import 'waffra_receipt_ocr.dart';
 import 'waffra_receipt_ocr_parser.dart';
+import 'waffra_amount_formatter.dart';
 
 /// Five read-only tools opened from an already verified Home snapshot.
 /// Neither bank SMS nor receipts are uploaded or written to any ledger here.
@@ -396,7 +397,8 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
   );
 
   int? exactMinor(String source) {
-    final value = double.tryParse(source.trim().replaceAll(',', '.'));
+    final value=waffraStrictNumericInput(source,
+      decimalPlaces:2,allowZero:true,allowNegative:true,maxValue:1e12);
     if (value == null || !value.isFinite || value.abs() > 1e12) return null;
     final halalas = value * 100;
     if ((halalas - halalas.round()).abs() > 0.000001) return null;
