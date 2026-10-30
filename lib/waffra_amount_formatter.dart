@@ -45,6 +45,42 @@ class WaffraAmountFormatter extends TextInputFormatter {
  }
 }
 
+/// Strict UI number parsing for tools. Never reinterpret malformed grouping
+/// (such as 1,2) as a different financial value by stripping punctuation.
+/// This helper does NOT change or authorize any encrypted ledger write.
+double? waffraStrictNumericInput(
+  String input, {
+  int decimalPlaces=2,
+  bool allowZero=false,
+  double? maxValue,
+}) {
+ if(decimalPlaces<0||decimalPlaces>6)throw ArgumentError.value(
+  decimalPlaces,'decimalPlaces','Expected 0..6');
+ const arabic='٠١٢٣٤٥٦٧٨٩',persian='۰۱۲۳۴۵۶۷۸۹';
+ final normalized=input.trim()
+  .replaceAll('٫','.').replaceAll('٬',',')
+  .replaceAllMapped(RegExp(r'[٠-٩۰-۹]'),(match){
+   final ch=match.group(0)!;
+   final n=arabic.indexOf(ch);
+   return (n>=0?n:persian.indexOf(ch)).toString();
+  });
+ final decimal=decimalPlaces==0?'':r'(?:\.[0-9]{1,'+
+  decimalPlaces.toString()+r'})?';
+ final pattern=RegExp(
+  r'^(?:[0-9]+|[0-9]{1,3}(?:,[0-9]{3})+)'+decimal+r'
+ final fixed=amount.toDouble().isFinite?amount.toStringAsFixed(2):'0.00';
+ final parts=fixed.split('.');
+ return '${parts.first.replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'),(_)=>',')}.${parts.last}';
+}
+);
+ if(!pattern.hasMatch(normalized))return null;
+ final value=double.tryParse(normalized.replaceAll(',',''));
+ if(value==null||!value.isFinite||value<0||
+    (!allowZero&&value==0)||
+    (maxValue!=null&&value>maxValue))return null;
+ return value;
+}
+
 String formatWaffraMoney(num amount) {
  final fixed=amount.toDouble().isFinite?amount.toStringAsFixed(2):'0.00';
  final parts=fixed.split('.');
