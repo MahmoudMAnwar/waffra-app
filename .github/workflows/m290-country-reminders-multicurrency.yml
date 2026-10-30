@@ -65,6 +65,7 @@ jobs:
         run: |
           flutter test --reporter expanded \
             test/m290_google_country_reminders_test.dart \
+            test/m301_google_country_phone_picker_test.dart \
             test/m291_multicurrency_bank_sms_review_test.dart \
             test/m280_sms_fuzz_and_boundary_test.dart \
             test/bank_sms_test.dart \
