@@ -9277,10 +9277,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
       underline:const SizedBox.shrink(),
       items:WaffraRegionalCopy.supportedRegions.entries.map((item)=>
        DropdownMenuItem<String>(value:item.key,
-        child:Text(item.key.isEmpty?
-         (waffraIsEnglish?'Neutral':'عربية عامة'):
-         (waffraIsEnglish?item.key:item.value),
-         maxLines:1,overflow:TextOverflow.ellipsis))).toList(),
+        child:Text(WaffraRegionalCopy.regionLabel(
+          item.key,english:waffraIsEnglish),
+          maxLines:1,overflow:TextOverflow.ellipsis))).toList(),
       onChanged:WaffraHaptics.selection((v)async{
        if(v==null)return;
        try{
