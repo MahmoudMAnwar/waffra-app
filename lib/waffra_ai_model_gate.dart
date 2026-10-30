@@ -67,7 +67,7 @@ abstract final class WaffraAiModelGate {
                 final old=state.value;
                 final percentage=total==null||total<=0?
                    -1:(received*100~/total).clamp(0,100);
-                final previous=old.total==null||old.total!<=0?
+                final previous=old.total==null||old.total! <= 0?
                    -1:(old.received*100~/old.total!).clamp(0,100);
                 // Update on each percent or meaningful byte movement.
                 if(percentage==previous&&received-old.received<512*1024)return;
