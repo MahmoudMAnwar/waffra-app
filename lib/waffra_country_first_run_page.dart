@@ -113,6 +113,12 @@ class _WaffraCountryFirstRunPageState extends State<WaffraCountryFirstRunPage> {
               ? t('جارٍ تحديد البلد...', 'Detecting country...')
               : t('تحديد البلد بالموقع', 'Detect country using location')),
           ),
+          if (message != null) Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Text(message!,
+              key: const Key('m290-country-feedback'),
+              style: TextStyle(color: isError
+                ? Theme.of(context).colorScheme.error : emerald))),
           const SizedBox(height: 15),
           DropdownButtonFormField<String>(
             key:const Key('waffra-region-dialect-country'),
@@ -159,12 +165,6 @@ class _WaffraCountryFirstRunPageState extends State<WaffraCountryFirstRunPage> {
             'عملة العرض لا تحوّل أرصدة المعاملات القديمة، والرسائل بعملات أخرى تحتاج مراجعة سعر الصرف.',
             'Display currency does not convert historical transactions. Foreign-currency SMS needs exchange-rate review.'),
             style: Theme.of(context).textTheme.bodySmall),
-          if (message != null) Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: Text(message!,
-              key: const Key('m290-country-feedback'),
-              style: TextStyle(color: isError
-                ? Theme.of(context).colorScheme.error : emerald))),
           const SizedBox(height: 20),
           Card(child:ListTile(
             leading:const Icon(Icons.notifications_none,color:emerald),
