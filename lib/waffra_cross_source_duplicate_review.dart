@@ -92,7 +92,7 @@ abstract final class WaffraCrossSourceDuplicateReview {
       !const <String>{
         'pos purchase', 'card purchase', 'purchase', 'payment',
         'bank transaction', 'transfer', 'deposit', 'withdrawal',
-        'شراء', 'عملية شراء', 'عملية بنكيه', 'دفع', 'تحويل', 'ايداع',
+        'شراء', 'عملية شراء', 'عمليه شراء', 'عملية بنكيه', 'عمليه بنكيه', 'دفع', 'تحويل', 'ايداع',
         'سحب', 'نقاط البيع',
       }.contains(normalized);
 
@@ -100,7 +100,7 @@ abstract final class WaffraCrossSourceDuplicateReview {
     final normalized = _identity(title);
     if (!_hasSpecificTitle(normalized)) return '';
     return normalized.replaceFirst(
-      RegExp(r'^(?:عملية شراء من|شراء من|شراء لدي|دفع الي|دفع ل|'
+      RegExp(r'^(?:عملية شراء من|عمليه شراء من|شراء من|شراء لدي|دفع الي|دفع ل|'
           r'purchase at|purchase from|paid to|payment to|pos purchase)\s+'),
       '',
     );
