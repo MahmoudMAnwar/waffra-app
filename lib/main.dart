@@ -3932,22 +3932,12 @@ Future<bool> _requireBankSmsAi()=>
      const SizedBox(height:12),
      if(!reviewing)...[
       TextField(controller:pasted,minLines:5,maxLines:9,onChanged:(text){
-       pasteTimer?.cancel();
        if(!sheetActive||!ctx.mounted)return;
-       final revision=++pasteRevision;
-       update((){parsed=false;analyzingPaste=text.trim().isNotEmpty;messages=[];statusMessage='';reviewing=false;index=0;});
-       if(text.trim().isNotEmpty){
-        pasteTimer=Timer(const Duration(milliseconds:650),(){
-         if(sheetActive&&ctx.mounted&&pasteRevision==revision&&pasted.text.trim()==text.trim()){
-          update((){messages=splitBankMessages(pasted.text.trim());parsed=true;analyzingPaste=false;statusMessage=noTransactionWarning(pasted.text)??'';});
-          if(statusMessage.isEmpty&&messages.isNotEmpty)saveParsedMessages(ctx,update);
-         }
-        });
-       }
+       scheduleBankSmsAnalysis(ctx,update,text);
       },decoration:InputDecoration(labelText:waffraIsEnglish?'Bank SMS *':'الرسالة البنكية *',
        errorText:pasteAttempted&&pasted.text.trim().isEmpty?waffraRequiredFieldMessage:null,errorMaxLines:3,
        hintText:waffraIsEnglish?'Paste your bank message here. We’ll analyze it automatically.':'الصق رسالتك البنكية هنا، وبنحلّلها لك تلقائيًا.',hintStyle:const TextStyle(fontSize:13,color:Color(0xFF888F8A)),
-       suffixIcon:pasted.text.isNotEmpty?IconButton(tooltip:waffraIsEnglish?'Clear text':'مسح النص',icon:const Icon(Icons.clear_rounded,color:Colors.redAccent),onPressed:WaffraHaptics.tap((){pasteTimer?.cancel();pasted.clear();update((){parsed=false;analyzingPaste=false;messages=[];statusMessage='';});})):null,
+       suffixIcon:pasted.text.isNotEmpty?IconButton(tooltip:waffraIsEnglish?'Clear text':'مسح النص',icon:const Icon(Icons.clear_rounded,color:Colors.redAccent),onPressed:WaffraHaptics.tap((){pasteTimer?.cancel();++pasteRevision;pasted.clear();update((){parsed=false;analyzingPaste=false;messages=[];statusMessage='';});})):null,
        border:OutlineInputBorder(borderRadius:BorderRadius.circular(18)))),
       const SizedBox(height:12),
      if(statusMessage.isNotEmpty&&pasted.text.trim().isNotEmpty)...[
@@ -3974,19 +3964,8 @@ Future<bool> _requireBankSmsAi()=>
          update((){pasteAttempted=true;statusMessage=waffraRequiredFieldMessage;});
          return;
         }
-        pasted.text=text;pasteTimer?.cancel();
-        final revision=++pasteRevision;
-        update((){analyzingPaste=true;messages=[];parsed=false;
-         statusMessage='';reviewing=false;index=0;});
-        pasteTimer=Timer(const Duration(milliseconds:650),(){
-         if(!sheetActive||!ctx.mounted||pasteRevision!=revision||
-            pasted.text.trim()!=text)return;
-         update((){
-          messages=splitBankMessages(text);parsed=true;analyzingPaste=false;
-          statusMessage=noTransactionWarning(text)??'';
-         });
-         if(statusMessage.isEmpty&&messages.isNotEmpty)saveParsedMessages(ctx,update);
-        });
+        pasted.text=text;
+        scheduleBankSmsAnalysis(ctx,update,text);
        }),
        label:WaffraText(stack?
         (waffraIsEnglish?'Paste copied SMS':'لصق آخر رسالة نسختها'):
@@ -4018,15 +3997,6 @@ Future<bool> _requireBankSmsAi()=>
        Expanded(child:messagesAction),
       ]);
      }),
-      if(WaffraOnDeviceQwen.shared.isReady&&pasted.text.trim().isNotEmpty)
-       Padding(padding:const EdgeInsets.only(top:10),child:
-        OutlinedButton.icon(
-         key:const Key('waffra-sms-ai-review'),
-         icon:const Icon(Icons.auto_awesome_outlined),
-         onPressed:busy?null:()=>unawaited(
-          _reviewAiPastedBankMessages(ctx,pasted.text.trim())),
-         label:WaffraText(waffraIsEnglish?
-          'AI: analyze bank messages':'AI: تحليل الرسائل البنكية'))),
       if(currencyPreview.needsCurrencyReview)...[
        const SizedBox(height:8),
        Container(
@@ -4051,7 +4021,7 @@ Future<bool> _requireBankSmsAi()=>
           'المبلغ الأجنبي لا يُحفظ كريال. راجع القيمة الأصلية وسعر الصرف أولاً؛ الرصيد ليس معاملة.'),
         ])),
       ],
-      if(analyzingPaste)...[const SizedBox(height:12),const LinearProgressIndicator(),const SizedBox(height:6),WaffraText(waffraIsEnglish?'Analyzing your bank messages now…':'يتم الآن تحليل الرسائل البنكية واستخراج المعاملات…')],
+      if(analyzingPaste)...[const SizedBox(height:12),const LinearProgressIndicator(),const SizedBox(height:6),WaffraText(waffraIsEnglish?'Analyzing bank messages with AI…':'جاري الآن تحليل الرسائل بالذكاء الاصطناعي…')],
       // Shared lightweight in-dialog progress while the batch is committed.
       if(busy)Padding(
        key:const Key('waffra-bank-sms-save-progress'),
@@ -4076,7 +4046,19 @@ Future<bool> _requireBankSmsAi()=>
          entrySheet(sms:true,initialSms:item.value);
         }))))),
       ],
-     if(parsed&&statusMessage.isEmpty)...[
+     if(parsed&&messages.isNotEmpty&&statusMessage.isNotEmpty&&!reviewing)...[
+       const SizedBox(height:10),
+       FilledButton.icon(
+        key:const Key('waffra-sms-review-unverified'),
+        onPressed:busy?null:WaffraHaptics.tap(()async{
+         update(()=>reviewing=true);
+         await prepare(0,update);
+        }),
+        icon:const Icon(Icons.fact_check_outlined),
+        label:WaffraText(waffraIsEnglish?
+         'Review manually':'مراجعة الرسائل يدويًا')),
+      ],
+      if(parsed&&statusMessage.isEmpty)...[
       const SizedBox(height:10),
       Container(width:double.infinity,padding:const EdgeInsets.symmetric(horizontal:12,vertical:13),
        decoration:BoxDecoration(color:Theme.of(ctx).brightness==Brightness.dark?const Color(0xFF123E32):const Color(0xFFE8F6EF),
