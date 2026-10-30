@@ -35,15 +35,15 @@ void main() {
     expect(home, contains('if(mounted)await _loadFinanceSafely();'));
     for(final action in <String>['transaction-delete','transaction-undo']) {
       expect(RegExp(
-        r'if\\(!await _persistModuleOrReload\\(\\s*'
-        r'WaffraFinanceRoute\\.transactionDeleteAndUndo,\\s*'
-        "operation:'"+action+r"'\\)\\)return;"
+        r'if\(!await _persistModuleOrReload\(\s*'
+        r'WaffraFinanceRoute\.transactionDeleteAndUndo,\s*'
+        "operation:'"+action+r"'\)\)return;"
       ).hasMatch(home), isTrue,reason:'Missing guarded '+action+' route');
     }
     expect(RegExp(
-      r'if\\(!await _persistModuleOrReload\\(\\s*'
-      r'WaffraFinanceRoute\\.recurringPostingAndPostponement,\\s*'
-      r"operation:'recurring-postpone'\\)\\)return;"
+      r'if\(!await _persistModuleOrReload\(\s*'
+      r'WaffraFinanceRoute\.recurringPostingAndPostponement,\s*'
+      r"operation:'recurring-postpone'\)\)return;"
     ).hasMatch(home), isTrue, reason:'Postpone needs a guarded route');
     expect(
       'WaffraFinanceRoute.transactionDeleteAndUndo,'
