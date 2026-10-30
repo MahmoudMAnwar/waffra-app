@@ -7,6 +7,7 @@ import 'package:waffra/storage/waffra_authoritative_widget_balance.dart';
 import 'package:waffra/waffra_receipt_filename.dart';
 import 'package:waffra/waffra_recurring_policy.dart';
 import 'package:waffra/waffra_secure_backup.dart';
+import 'package:waffra/waffra_sms_multicurrency_review.dart';
 
 /// M303-M306: focused protections of live routes plus synthetic acceptance
 /// fixtures. Source checks alone are NOT a physical-phone or runtime cutover
@@ -117,6 +118,27 @@ void main() {
     expect(source, contains('finally {'));
     expect(source, contains('RepaintBoundary('));
     expect(source, contains('MediaQuery.disableAnimationsOf(context)'));
+  });
+
+  test('13 same-line balance never hides foreign bank SMS currency', () {
+    const foreign='Incoming transfer USD198.50 Current balance 200.50SAR';
+    expect(WaffraSmsCurrencies.currenciesForMessage(foreign), {'USD'});
+    expect(WaffraSmsCurrencies.requiresReviewForSarLedger(foreign), isTrue);
+    const local='SAR198.50 has been credited Balance 201.50SAR';
+    expect(WaffraSmsCurrencies.currenciesForMessage(local), {'SAR'});
+    expect(WaffraSmsCurrencies.requiresReviewForSarLedger(local), isFalse);
+  });
+
+  test('14 live bank SMS save rejects foreign amounts before hash generation', () {
+    final sheet=method('Future<void> entrySheet(',
+        'Future<String?> chooseTransactionCategory(');
+    final guard=sheet.indexOf(
+      'WaffraSmsCurrencies.requiresReviewForSarLedger(message.text)');
+    final hash=sheet.indexOf('final h=sha256.convert');
+    expect(guard, greaterThan(0));
+    expect(hash, greaterThan(guard),
+      reason:'Reject currency before any duplicate/hash write');
+    expect(sheet.substring(guard,hash), contains('return;'));
   });
 
   test('12 OS permissions are requested on demand, not at startup', () {
