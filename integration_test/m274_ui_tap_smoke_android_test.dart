@@ -58,10 +58,15 @@ void main() {
     expect(find.byKey(const Key('waffra-approved-emerald-balance-card')),
         findsOneWidget);
     await tester.tap(find.byKey(const Key('waffra-balance-privacy-eye')));
-    await tester.pumpAndSettle();
+    // Verify actual state after bounded frames rather than waiting for all
+    // decorative animations to settle on a CPU-constrained emulator.
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(hideWaffraAmounts.value, isTrue);
     expect(find.text('***'), findsWidgets);
+    expect(find.byIcon(Icons.visibility_off_outlined), findsOneWidget);
     await tester.tap(find.byKey(const Key('waffra-balance-privacy-eye')));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(hideWaffraAmounts.value, isFalse);
     expect(find.byIcon(Icons.visibility_outlined), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
