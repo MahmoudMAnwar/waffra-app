@@ -3935,7 +3935,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       TextField(controller:description,maxLines:2,onChanged:(_)=>update((){}),decoration:InputDecoration(labelText:waffraIsEnglish?'Description *':'وصف الرسالة *',errorText:reviewAttempted?waffraTextFieldError(description.text):null,border:OutlineInputBorder())),
       const SizedBox(height:12),
       TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
-       inputFormatters:[const WaffraAmountFormatter()],onChanged:(_)=>update((){}),
+       inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],onChanged:(_)=>update((){}),
        decoration:InputDecoration(labelText:waffraIsEnglish?'Amount *':'مبلغ هذه الرسالة بالريال *',errorText:reviewAttempted?waffraAmountFieldError(amount.text):null,border:OutlineInputBorder())),
       const SizedBox(height:12),
       DropdownButtonFormField<String>(key:ValueKey('$index-$income'),initialValue:available.any((c)=>c.name==category)?category:(available.isNotEmpty?available.first.name:null),
@@ -4266,7 +4266,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        const SizedBox(height:12),
       ],
       TextField(controller:value,keyboardType:const TextInputType.numberWithOptions(decimal:true),
-       inputFormatters:[const WaffraAmountFormatter()],onChanged:(_)=>update((){}),
+       inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],onChanged:(_)=>update((){}),
        decoration:InputDecoration(labelText:waffraIsEnglish?'Amount *':'المبلغ *',
         errorText:attempted?waffraAmountFieldError(value.text):null,
         border:OutlineInputBorder())),
@@ -5668,7 +5668,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        onChanged:(_){if(validation!=null)update(()=>validation=null);},
        style:TextStyle(fontSize:20,fontWeight:FontWeight.bold,color:Theme.of(ctx).colorScheme.onSurface),
        keyboardType:const TextInputType.numberWithOptions(decimal:true),
-       inputFormatters:[const WaffraAmountFormatter()],
+       inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],
        decoration:InputDecoration(
         labelText:(waffraIsEnglish?'Spending limit':'حد المصروفات')+' ('+WaffraDisplayCurrency.label(waffraIsEnglish)+') *',
         hintText:waffraIsEnglish?'Example: 3000':'مثال: 3000',
@@ -5710,7 +5710,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
       TextField(controller:min,keyboardType:const TextInputType.numberWithOptions(decimal:true),
        onChanged:(_)=>update(()=>minError=null),
-       inputFormatters:[const WaffraAmountFormatter()],
+       inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],
        decoration:InputDecoration(
         labelText:waffraIsEnglish?'Minimum amount':'أقل مبلغ',
         errorText:minError,
@@ -5718,7 +5718,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       const SizedBox(height:10),
       TextField(controller:max,keyboardType:const TextInputType.numberWithOptions(decimal:true),
        onChanged:(_)=>update(()=>maxError=null),
-       inputFormatters:[const WaffraAmountFormatter()],
+       inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],
        decoration:InputDecoration(
         labelText:waffraIsEnglish?'Maximum amount':'أعلى مبلغ',
         errorText:maxError,
@@ -6928,7 +6928,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        child:color==x?const Icon(Icons.check,color:Colors.white,size:17):null))).toList()),
      if(!(initial?.income??income))...[
       TextField(controller:budget,onChanged:(_)=>update((){}),
-       keyboardType:const TextInputType.numberWithOptions(decimal:true),inputFormatters:[const WaffraAmountFormatter()],decoration:InputDecoration(labelText:waffraTr('ميزانية شهرية (اختياري)'),
+       keyboardType:const TextInputType.numberWithOptions(decimal:true),inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],decoration:InputDecoration(labelText:waffraTr('ميزانية شهرية (اختياري)'),
        errorText:attempted?waffraAmountFieldError(budget.text,required:false):null)),
       const SizedBox(height:10),
       DropdownButtonFormField<int>(initialValue:alertPercent,
@@ -7484,7 +7484,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      const SizedBox(height:12),
      TextField(controller:target,
       keyboardType:const TextInputType.numberWithOptions(decimal:true),
-      inputFormatters:[const WaffraAmountFormatter()],
+      inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],
       onChanged:(_)=>updateGoal((){}),
       decoration:InputDecoration(
        labelText:waffraIsEnglish?'Target amount *':'المبلغ المستهدف *',
@@ -7581,7 +7581,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
         TextField(
          controller:amount,
          keyboardType:const TextInputType.numberWithOptions(decimal:true),
-         inputFormatters:[const WaffraAmountFormatter()],
+         inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],
          onChanged:(_)=>update((){}),
          decoration:InputDecoration(
           hintText:'0.00',
@@ -7690,7 +7690,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      const SizedBox(height:12),
      TextField(controller:amount,onChanged:(_)=>update((){}),
       keyboardType:const TextInputType.numberWithOptions(decimal:true),
-      inputFormatters:[const WaffraAmountFormatter()],decoration:InputDecoration(
+      inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],decoration:InputDecoration(
        labelText:waffraIsEnglish?'Daily amount *':'الادخار اليومي *',
        errorText:attempted?waffraAmountFieldError(amount.text):null)),
      const SizedBox(height:12),
@@ -8027,7 +8027,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        errorText:attempted?waffraTextFieldError(title.text):null)),
       const SizedBox(height:12),
       TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
-       inputFormatters:[const WaffraAmountFormatter()],onChanged:(_)=>update((){}),
+       inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],onChanged:(_)=>update((){}),
        decoration:InputDecoration(labelText:waffraIsEnglish?'Amount *':'المبلغ *',
         errorText:attempted?waffraAmountFieldError(amount.text):null)),
       const SizedBox(height:12),
