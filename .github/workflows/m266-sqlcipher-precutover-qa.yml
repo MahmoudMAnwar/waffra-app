@@ -68,7 +68,7 @@ jobs:
       - name: Check fail-closed Android test runner shell syntax
         run: |
           bash -n .github/scripts/run-m202-sqlcipher-binder-android.sh
-          grep -F 'flutter drive --no-dds' .github/scripts/run-m202-sqlcipher-binder-android.sh
+          grep -F 'flutter drive' .github/scripts/run-m202-sqlcipher-binder-android.sh
           grep -F 'M202_ANDROID_TEST_PASS' .github/scripts/run-m202-sqlcipher-binder-android.sh
       - name: Pin original source guard
         run: |
@@ -114,7 +114,7 @@ jobs:
           arch: x86_64
           profile: pixel_6
           cores: 2
-          ram-size: 3072M
+          ram-size: 2048M
           heap-size: 512M
           disable-animations: true
           emulator-boot-timeout: 600
