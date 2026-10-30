@@ -17,6 +17,8 @@ STACKED DRAFT based on M302 PR #294. Not merged into main; not a production APK 
 | 11 Arabic/English UI | Existing M277 font scaling/48dp/talkback checks; real keyboard and phone checks open | Regression |
 | 12 Permissions | Existing request-on-action camera/gallery/notifications; denial/revocation/reboot checks pending | Regression, device gate |
 
+Additional M312 safeguard: manual bank-SMS save refuses foreign/unknown currency before creating its hash or posting to the SAR-only finance ledger. The scanner retains an action before a same-line balance/fee, instead of treating ordinary words such as HAS as currency codes. Full 36-currency native-amount and FX provenance still depend on PR #293, exact-head CI and physical device acceptance.
+
 Other LIVE fixes: legacy transaction delete and undo, transaction edit undo, recurring postpone, recurring paid, and budget save now reconcile from the authoritative finance source after failed acknowledgement. A failed acknowledgement might hide a successful commit: reload rather than blindly replay.
 
 ## Mandatory release gates
