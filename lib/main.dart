@@ -433,9 +433,22 @@ class BankParser {
   // witness. Never auto-import a foreign-currency SMS as Saudi riyals.
   final discoveredCurrencies=WaffraSmsCurrencies.currenciesForMessage(s);
   if(WaffraSmsCurrencies.requiresReviewForSarLedger(s)){
-   return BankResult(null,false,'معاملة بعملة تحتاج مراجعة','أخرى',null,
-    currencyCode:discoveredCurrencies.isEmpty?null:discoveredCurrencies.first,
-    requiresCurrencyReview:true);
+    // Preserve direction while blocking foreign amount from SAR-only ledger.
+    final credited=RegExp(
+      r'\b(?:credited|received|incoming|deposited|refund)\b|'
+      r'حوال[ةه].{0,25}وارد|تحويل.{0,25}وارد|إيداع|ايداع|راتب',
+      caseSensitive:false).hasMatch(s);
+    final debited=RegExp(
+      r'\b(?:debited|outgoing|purchase|spent|withdrawn)\b|'
+      r'حوال[ةه].{0,25}صادر|تحويل.{0,25}صادر|شراء|خصم|سحب',
+      caseSensitive:false).hasMatch(s);
+    final incoming=credited&&!debited;
+    return BankResult(null,incoming,
+      incoming?'حوالة واردة':'معاملة بعملة تحتاج مراجعة',
+      incoming?'دخل آخر':'أخرى',null,
+      currencyCode:discoveredCurrencies.length==1
+       ?discoveredCurrencies.single:null,
+      requiresCurrencyReview:true);
   }
   // Credit Transfer is incoming; Credit Card Purchase remains an expense.
   const credits=r'(?:Credit\s+Transfer|Credit\s+via\s+(?:(?:local|domestic|international|bank|internal)\s+)?transfer|Incoming\s+(?:Bank\s+)?Transfer|Transfer\s+Received|Transfer\s+In|Funds\s+Received|Money\s+Received|Account\s+Credited|Salary\s+(?:Credit|Deposit)|Cash\s+Deposit|Refund\s+(?:Received|Processed)|Refund|Reversal\s+Credit)';
@@ -3785,11 +3798,21 @@ Future<void> bulkSmsSheet({String? initialText})async {
         });
        }
       },decoration:InputDecoration(labelText:waffraIsEnglish?'Bank SMS *':'الرسالة البنكية *',
-       errorText:statusMessage.isNotEmpty?statusMessage:(pasteAttempted&&pasted.text.trim().isEmpty?waffraRequiredFieldMessage:null),errorMaxLines:3,
+       errorText:pasteAttempted&&pasted.text.trim().isEmpty?waffraRequiredFieldMessage:null,errorMaxLines:3,
        hintText:waffraIsEnglish?'Paste your bank message here. We’ll analyze it automatically.':'الصق رسالتك البنكية هنا، وبنحلّلها لك تلقائيًا.',hintStyle:const TextStyle(fontSize:13,color:Color(0xFF888F8A)),
        suffixIcon:pasted.text.isNotEmpty?IconButton(tooltip:waffraIsEnglish?'Clear text':'مسح النص',icon:const Icon(Icons.clear_rounded,color:Colors.redAccent),onPressed:WaffraHaptics.tap((){pasteTimer?.cancel();pasted.clear();update((){parsed=false;analyzingPaste=false;messages=[];statusMessage='';});})):null,
        border:OutlineInputBorder(borderRadius:BorderRadius.circular(18)))),
       const SizedBox(height:12),
+     if(statusMessage.isNotEmpty&&pasted.text.trim().isNotEmpty)...[
+      Container(
+       key:const Key('waffra-sms-review-notice'),
+       padding:const EdgeInsets.all(11),
+       decoration:BoxDecoration(
+        color:Theme.of(ctx).colorScheme.surfaceContainerHighest,
+        borderRadius:BorderRadius.circular(12)),
+       child:WaffraText(statusMessage,maxLines:5)),
+      const SizedBox(height:8),
+     ],
      LayoutBuilder(builder:(layoutContext,constraints){
       final stack=constraints.maxWidth<318||
        MediaQuery.textScalerOf(layoutContext).scale(14)>20;
@@ -3857,13 +3880,19 @@ Future<void> bulkSmsSheet({String? initialText})async {
          color:Theme.of(ctx).colorScheme.errorContainer,
          borderRadius:BorderRadius.circular(14)),
         child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-         WaffraText(waffraIsEnglish?'Multiple or foreign currencies detected':
-          'تم اكتشاف عملات متعددة أو أجنبية',
+         WaffraText(currencyPreview.hasMixedCurrencies?
+          (waffraIsEnglish?'Multiple currencies detected':'تم اكتشاف أكثر من عملة'):
+          (waffraIsEnglish?'Foreign currency detected':'تم اكتشاف عملة أجنبية'),
           style:const TextStyle(fontWeight:FontWeight.bold)),
          WaffraText(currencyPreview.summary),
+         if(messages.length==1&&WaffraSmsCurrencies.originalAmountPreview(messages.first)!=null)
+          WaffraText((waffraIsEnglish?
+           'Original transaction amount: ':'المبلغ الأصلي للعملية: ')+
+           WaffraSmsCurrencies.originalAmountPreview(messages.first)!,
+           style:const TextStyle(fontWeight:FontWeight.w700)),
          WaffraText(waffraIsEnglish?
-          'The base display currency will not change. Verify each foreign amount and its FX rate before importing.':
-          'لن تتغير عملة التطبيق تلقائيًا. راجع المبلغ الأصلي وسعر الصرف لكل عملة قبل الاستيراد.'),
+          'Foreign money is not saved as SAR. Verify the original value and exchange rate first; balance is not a transaction.':
+          'المبلغ الأجنبي لا يُحفظ كريال. راجع القيمة الأصلية وسعر الصرف أولاً؛ الرصيد ليس معاملة.'),
         ])),
       ],
       if(analyzingPaste)...[const SizedBox(height:12),const LinearProgressIndicator(),const SizedBox(height:6),WaffraText(waffraIsEnglish?'Analyzing your bank messages now…':'يتم الآن تحليل الرسائل البنكية واستخراج المعاملات…')],
