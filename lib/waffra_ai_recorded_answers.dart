@@ -28,7 +28,7 @@ abstract final class WaffraAiRecordedAnswers {
     final q=_norm(question);
     if(q.isEmpty||q.length>500)return null;
     final incomeQuestion=_has(q,r'دخل|ايراد|راتب|income|earned|salary');
-    final expenseQuestion=_has(q,r'صرف|مصروف|مصاريف|انفق|دفعت|spent|expense|spending|paid');
+    final expenseQuestion=_has(q,r'صرف|مصروف|مصاريف|انفق|دفعت|spend|spent|expense|spending|paid');
     final netQuestion=_has(q,r'صافي|net\b|الفرق|رصيد|balance');
     final rows=facts.where((x)=>x.amountMinor>0&&
         x.amountMinor<=100000000000).toList(growable:false);
@@ -136,7 +136,8 @@ abstract final class WaffraAiRecordedAnswers {
       .replaceAll(RegExp(r'^\s*[-_]{3,}\s*$',multiLine:true),'')
       .replaceAll(RegExp(
         r'all values derived directly from\s*\(?the json data\)?\.?',caseSensitive:false),'')
-      .replaceAll(RegExp(r'\n{3,}'),'\n\n').trim();
+      .replaceAll(RegExp(r'\n{3,}'),'\n\n')
+      .replaceAll('*','').trim();
     if(output.isEmpty)return null;
     if(output.length>850){
       final end=output.lastIndexOf(' ',850);
