@@ -37,11 +37,11 @@ void main() {
 
   test('M324: cancellation explains feature is locked, preserving manual entry',(){
     expect(gate,contains('static Future<bool> requireForFeature('));
-    expect(gate,contains('if(ready&&WaffraOnDeviceQwen.shared.isReady)return true;'));
-    expect(gate,contains('waffra-ai-required-feature-notice'));
-    expect(gate,contains('Without the model this feature cannot be used'));
-    expect(gate,contains('من غير النموذج مش هتقدر تستخدم الميزة دي'));
-    expect(gate,contains('manual transactions'));
+    expect(gate,contains('return context.mounted&&ready&&WaffraOnDeviceQwen.shared.isReady;'));
+    expect(gate,isNot(contains('waffra-ai-required-feature-notice')));
+    expect(gate,contains('manual entry still works'));
+    expect(gate,contains('الإضافة اليدوية متاحة'));
+    expect(gate,contains('waffra-ai-first-use-consent'));
     expect(gate,contains('return false;'));
     expect(home,contains("featureAr:'تحليل الرسائل البنكية'"));
     expect(home,contains("featureEn:'receipt and image OCR scanning'"));
