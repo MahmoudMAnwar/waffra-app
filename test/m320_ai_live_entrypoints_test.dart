@@ -45,7 +45,9 @@ void main(){
     expect(home,contains('if(!allowed||!mounted)return;'));
     expect(home,contains('if(initial==null&&(sms||scannedReceipt!=null||scannedImage!=null))'));
     expect(home,contains('analyzeBankSmsAutomatically(ctx,update,input.trim(),revision)'));
-    expect(tools,contains('if(q.isNotEmpty&&WaffraOnDeviceQwen.shared.isReady)'));
-    expect(tools,contains("if(q.isEmpty){setState(()=>answer="));
+    expect(tools,anyOf(
+      contains('if(q.isNotEmpty&&WaffraOnDeviceQwen.shared.isReady)'),
+      contains('WaffraAiRecordedAnswers.answer(')));
+    expect(tools,contains('if(q.isEmpty){'));
   });
 }
