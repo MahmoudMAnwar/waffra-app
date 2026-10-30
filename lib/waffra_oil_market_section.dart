@@ -133,7 +133,7 @@ class _WaffraOilMarketSectionState extends State<WaffraOilMarketSection>{
  }
  Widget calculator(){
   final q=quotes[benchmark];
-  final volume=double.tryParse(units.text.trim().replaceAll(',',''));
+  final volume=waffraStrictNumericInput(units.text,decimalPlaces:3,maxValue:1000000);
   final valid=volume!=null&&volume>0&&volume.isFinite&&volume<=1000000;
   final usd=valid&&q!=null&&!q.isOld(DateTime.now())?volume*q.usd:null;
   final total=usd==null||fx==null?null:usd*fx!;
