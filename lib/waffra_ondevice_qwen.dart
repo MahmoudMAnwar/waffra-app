@@ -5,6 +5,7 @@ import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:llamadart/llamadart.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'waffra_ai_finance_brain.dart';
 
@@ -35,6 +36,35 @@ class WaffraOnDeviceQwen {
   bool _deleting=false;
   int _session=0;
   final ValueNotifier<int> revision=ValueNotifier<int>(0);
+  static const _everEnabledKey='waffra_ai_model_ever_enabled_v1';
+  bool _everEnabled=false;
+  bool _historyLoaded=false;
+  bool get hasEverEnabled=>_everEnabled;
+
+  /// This records only the installation history, not prompts or finance data.
+  /// Deleting the model intentionally does NOT clear it: previously unlocked
+  /// AI tools remain visible but disabled after deletion or app restart.
+  Future<void> loadToolVisibilityHistory()async{
+    if(_historyLoaded)return;
+    final prefs=await SharedPreferences.getInstance();
+    if(_historyLoaded)return;
+    _everEnabled=prefs.getBool(_everEnabledKey)??false;
+    _historyLoaded=true;
+    revision.value++;
+  }
+
+  Future<void> _recordFirstActivation()async{
+    try{
+      final prefs=await SharedPreferences.getInstance();
+      await prefs.setBool(_everEnabledKey,true);
+      _everEnabled=true;
+      _historyLoaded=true;
+      revision.value++;
+    }catch(_){
+      // A loaded model is immediately usable, even if preference storage
+      // fails; do not claim this unlock will survive an app restart.
+    }
+  }
   http.Client? _activeDownload;
 
   bool get isReady=>_engine!=null;
@@ -103,6 +133,7 @@ class WaffraOnDeviceQwen {
         if(session!=_session)throw StateError('account_session_changed');
         _engine=instance;
         revision.value++;
+        await _recordFirstActivation();
       }catch(_){
         await instance.dispose();
         rethrow;
