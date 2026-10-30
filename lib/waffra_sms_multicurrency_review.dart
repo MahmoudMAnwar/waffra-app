@@ -110,18 +110,20 @@ abstract final class WaffraSmsCurrencies {
         }
         // A bare "دينار", "ليرة", etc. remains ambiguous and must not
         // be posted as SAR even if no specific country was readable.
-        if (RegExp(r'(?<![\u0600-\u06FF])(?:دينار|ليره|دولار|روبيه|'
-           r'كرونه|فرنك|راند|رينغيت|يوان|وون|بات|بيزو|تاكا|ين)'
-           r'(?![\u0600-\u06FF])').hasMatch(namedAction) &&
-            RegExp(r'[0-9]').hasMatch(namedAction) &&
-            !_namedAdjacentAmount.hasMatch(namedAction)) {
-          found.add('UNKNOWN');
-        }
         // A full "ريال قطري" or "جنيه إسترليني" is one currency,
         // not a generic SAR/EGP token followed by an unrelated country.
         // Remove only *matched amount + full-name* spans from the generic
         // lexer, retaining all other explicit transaction currencies.
         final genericAction=namedAction.replaceAll(_namedAdjacentAmount,' ');
+        // More than one clause may share a line. Even if a fully named
+        // currency was found, a *different*, unnamed "5 دينار" must still
+        // force an unknown-currency review.
+        if (RegExp(r'(?<![\u0600-\u06FF])(?:دينار|ليره|دولار|روبيه|'
+           r'كرونه|فرنك|راند|رينغيت|يوان|وون|بات|بيزو|تاكا|ين)'
+           r'(?![\u0600-\u06FF])').hasMatch(genericAction) &&
+            RegExp(r'[0-9]').hasMatch(genericAction)) {
+          found.add('UNKNOWN');
+        }
         for (final expression in adjacentAmount.allMatches(genericAction)) {
           for (final token in currencyToken.allMatches(expression.group(0)!)) {
           final code = codeFor(token.group(0)!);
