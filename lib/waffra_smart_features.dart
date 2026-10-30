@@ -6,6 +6,7 @@ import 'waffra_practical_ledger_engine.dart';
 import 'waffra_haptic_feedback.dart';
 import 'waffra_ai_finance_coach.dart';
 import 'waffra_ondevice_qwen.dart';
+import 'waffra_ai_model_gate.dart';
 import 'waffra_display_currency.dart';
 import 'waffra_riyal_symbol.dart';
 import 'currency_converter.dart';
@@ -236,6 +237,11 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
  void _activateSection(int section){
   final next=active==section?null:section;
   setState(()=>active=next);
+  // The first opening of any AI-assisted Tools section explains the
+  // optional model/download and shows a real progress modal.
+  if(next==-2||next==4||next==7){
+   if(!WaffraOnDeviceQwen.shared.isReady)unawaited(_enableLocalAi());
+  }
   final token=++_focusSerial;
   if(next==null)return;
   final reduced=MediaQuery.disableAnimationsOf(context);
@@ -269,7 +275,23 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
  double get balance=>waffraSmartBalance(widget.entries);
  List<WaffraSmartEntry> get expenses=>widget.entries.where((e)=>!e.income).toList();
  DateTime get today=>DateTime.now();
- @override void dispose(){input.dispose();super.dispose();}
+ @override void initState(){
+  super.initState();
+  WaffraOnDeviceQwen.shared.revision.addListener(_onAiRevision);
+ }
+ void _onAiRevision(){
+  if(!mounted)return;
+  setState((){
+   if(!WaffraOnDeviceQwen.shared.isReady){
+    // Clear all model-generated prose when the downloaded model is removed.
+    aiStatus='';aiAnalysis='';aiSavings='';answer='';
+   }
+  });
+ }
+ @override void dispose(){
+  WaffraOnDeviceQwen.shared.revision.removeListener(_onAiRevision);
+  input.dispose();super.dispose();
+ }
 
  Widget _label(String value,{double size=14,bool bold=false,Color? color}){
   final effective=TextStyle(fontFamily:'Tajawal',fontSize:size,
@@ -423,45 +445,14 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
 
  Future<void> _enableLocalAi()async{
   if(aiBusy||WaffraOnDeviceQwen.shared.isReady)return;
-  final approved=await showDialog<bool>(
-   context:context,builder:(dialog)=>AlertDialog(
-    title:Text(t('تشغيل الذكاء الاصطناعي المحلي','Enable private on-device AI')),
-    content:Text(t(
-     'سيتم تنزيل موديل Qwen بحجم يقارب 484 ميجابايت مرة واحدة. '
-     'التحليل يتم على جهازك ولا يتم رفع الرسائل أو الفواتير. '
-     'يمكنك الاستمرار في استخدام التحليل العادي بدون تنزيل.',
-     'Download about 484 MB once. SMS, receipts and finance summaries '
-     'remain on your device. You can continue using the normal tools without AI.')),
-    actions:[
-     TextButton(onPressed:()=>Navigator.pop(dialog,false),
-       child:Text(t('إلغاء','Cancel'))),
-     FilledButton(onPressed:()=>Navigator.pop(dialog,true),
-       child:Text(t('أوافق على التنزيل','Download model'))),
-    ]));
-  if(approved!=true||!mounted)return;
-  setState((){
-   aiBusy=true;
-   aiStatus=t('جارٍ تنزيل الموديل والتحقق من سلامته...',
-     'Downloading and verifying the local model...');
-  });
+  setState(()=>aiBusy=true);
   try{
-   var lastPercent=-1;
-   await WaffraOnDeviceQwen.shared.open(
-    allowDownload:true,progress:(received,total){
-     if(total==null||total<=0||!mounted)return;
-     final percent=((received*100)~/total).clamp(0,100);
-     if(percent~/5==lastPercent~/5)return;
-     lastPercent=percent;
-     setState(()=>aiStatus=t(
-      'تنزيل موديل الذكاء الاصطناعي: '+percent.toString()+'%',
-      'Downloading AI model: '+percent.toString()+'%'));
-    });
-   if(mounted)setState(()=>aiStatus=t('الموديل جاهز للتحليل المحلي.',
-     'The on-device model is ready.'));
-  }catch(_){
-   if(mounted)setState(()=>aiStatus=t(
-    'تعذر تحميل الموديل أو التحقق منه. أدوات وفرة العادية ما زالت تعمل.',
-    'Model unavailable or verification failed. Normal Waffra tools still work.'));
+   final ready=await WaffraAiModelGate.ensureReady(context,english:widget.english);
+   if(mounted)setState(()=>aiStatus=ready?
+     t('النموذج جاهز للتحليل المحلي. يمكن حذفه من حسابي في أي وقت.',
+       'The model is ready. You can remove it anytime in My Account.'):
+     t('التحليل الذكي غير مفعّل؛ الأدوات العادية ما زالت متاحة.',
+       'AI is not enabled; the usual tools remain available.'));
   }finally{
    if(mounted)setState(()=>aiBusy=false);
   }
