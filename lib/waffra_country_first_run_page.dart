@@ -20,6 +20,7 @@ class _WaffraCountryFirstRunPageState extends State<WaffraCountryFirstRunPage> {
   static const emerald = Color(0xFF087A54);
   late String currencyCode;
   bool detecting = false, submitting = false;
+  bool manuallySelected = false;
   String? detectedIso, message;
   bool isError = false;
   String t(String ar, String en) => widget.english ? en : ar;
@@ -27,6 +28,7 @@ class _WaffraCountryFirstRunPageState extends State<WaffraCountryFirstRunPage> {
   @override void initState() {
     super.initState();
     currencyCode = WaffraDisplayCurrency.country.code;
+    manuallySelected = WaffraDisplayCurrency.hasSavedPreference;
   }
 
   Future<void> detect() async {
@@ -43,8 +45,10 @@ class _WaffraCountryFirstRunPageState extends State<WaffraCountryFirstRunPage> {
       detecting = false;
       detectedIso = iso;
       if (suggested != null) {
-        currencyCode = suggested;
-        message = t(
+        if (!manuallySelected) currencyCode = suggested;
+        message = manuallySelected ? t(
+          'الموقع يقترح ${waffraCountry(suggested).label(false)}، لكن احتفظنا بعملتك التي اخترتها بنفسك.',
+          'Your location suggests ${waffraCountry(suggested).label(true)}, but your manual selection is preserved.') : t(
           'تم اقتراح ${waffraCountry(suggested).label(false)} حسب بلدك. راجع الاختيار قبل المتابعة.',
           'Suggested ${waffraCountry(suggested).label(true)} from your country. Review before continuing.');
       } else {
@@ -120,14 +124,15 @@ class _WaffraCountryFirstRunPageState extends State<WaffraCountryFirstRunPage> {
               )).toList(),
             onChanged: submitting ? null : (value) {
               if (value != null) setState(() {
-                currencyCode = value; message = null; isError = false;
+                currencyCode = value; manuallySelected = true;
+                message = null; isError = false;
               });
             },
           ),
           const SizedBox(height: 9),
           Text(t(
-            'عملة العرض لا تحوّل أرصدة المعاملات القديمة، والرسائل بعملات أخرى تحتاج مراجعة سعر الصرف.',
-            'Display currency does not convert historical transactions. Foreign-currency SMS needs exchange-rate review.'),
+            'الموقع يقترح عملة العرض فقط. اختيارك اليدوي له الأولوية، ولا يغيّر كود جوالك أو عملة رسائلك البنكية.',
+            'Location only suggests a display currency. Your manual choice always wins; phone codes and original bank-SMS currencies stay unchanged.'),
             style: Theme.of(context).textTheme.bodySmall),
           if (message != null) Padding(
             padding: const EdgeInsets.only(top: 12),
