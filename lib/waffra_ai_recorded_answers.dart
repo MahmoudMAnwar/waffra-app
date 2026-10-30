@@ -129,13 +129,13 @@ abstract final class WaffraAiRecordedAnswers {
     if(output.contains('<think>')||output.startsWith('{')||
        output.contains('income_minor')||output.contains('VERIFIED SUMMARY'))return null;
     output=output
-      .replaceAll(RegExp(r'(?m)^\s{0,3}#{1,6}\s*'),'')
-      .replaceAll(RegExp(r'(?m)^\s*[-*]\s+'),'• ')
+      .replaceAll(RegExp(r'^\s{0,3}#{1,6}\s*',multiLine:true),'')
+      .replaceAll(RegExp(r'^\s*[-*]\s+',multiLine:true),'• ')
       .replaceAll(RegExp(r'\*\*|__'),'')
       .replaceAll(String.fromCharCode(96),'')
-      .replaceAll(RegExp(r'(?m)^\s*[-_]{3,}\s*$'),'')
+      .replaceAll(RegExp(r'^\s*[-_]{3,}\s*$',multiLine:true),'')
       .replaceAll(RegExp(
-        r'(?i)all values derived directly from\s*\(?the json data\)?\.?'),'')
+        r'all values derived directly from\s*\(?the json data\)?\.?',caseSensitive:false),'')
       .replaceAll(RegExp(r'\n{3,}'),'\n\n').trim();
     if(output.isEmpty)return null;
     if(output.length>850){
