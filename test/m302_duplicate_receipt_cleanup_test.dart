@@ -5,7 +5,7 @@ void main(){
  test('M302 refuse duplicate means no new finance write and staged receipt removed',(){
   final main=File('lib/main.dart').readAsStringSync();
   final entry=main.indexOf('Future<void> entrySheet(');
-  final duplicate=main.indexOf('if(initial==null&&!sms&&entries.any',entry);
+  final duplicate=main.indexOf('if(initial==null&&entries.any((e)=>',entry);
   final commit=main.indexOf('final previousSpent=sum(',duplicate);
   expect(entry,greaterThan(0));
   expect(duplicate,greaterThan(entry));
