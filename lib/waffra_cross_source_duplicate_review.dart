@@ -70,7 +70,10 @@ abstract final class WaffraCrossSourceDuplicateReview {
 
     final candidateName = _identity(candidateTitle);
     final existingName = _identity(existingTitle);
-    if (candidateName.isNotEmpty && candidateName == existingName &&
+    // A generic title (e.g. "POS purchase") is not a unique transaction
+    // identity; two unrelated purchases can share a date, amount and category.
+    if (_hasSpecificTitle(candidateName) &&
+        candidateName == existingName &&
         _identity(candidateCategory) == _identity(existingCategory)) return true;
 
     // Two differently worded titles can still describe a single merchant
@@ -84,8 +87,18 @@ abstract final class WaffraCrossSourceDuplicateReview {
             existingFromTitle != existingName);
   }
 
+  static bool _hasSpecificTitle(String normalized) =>
+      normalized.isNotEmpty &&
+      !const <String>{
+        'pos purchase', 'card purchase', 'purchase', 'payment',
+        'bank transaction', 'transfer', 'deposit', 'withdrawal',
+        'شراء', 'عملية شراء', 'عملية بنكيه', 'دفع', 'تحويل', 'ايداع',
+        'سحب', 'نقاط البيع',
+      }.contains(normalized);
+
   static String _merchantTitle(String title) {
     final normalized = _identity(title);
+    if (!_hasSpecificTitle(normalized)) return '';
     return normalized.replaceFirst(
       RegExp(r'^(?:عملية شراء من|شراء من|شراء لدي|دفع الي|دفع ل|'
           r'purchase at|purchase from|paid to|payment to|pos purchase)\s+'),
