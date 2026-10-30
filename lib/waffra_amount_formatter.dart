@@ -100,7 +100,7 @@ int waffraCurrencyMinorDigits(String code) {
 String formatWaffraMoney(num amount,{int decimalPlaces=2}) {
  if(decimalPlaces<0||decimalPlaces>6)throw ArgumentError.value(
   decimalPlaces,'decimalPlaces','Expected 0..6');
- final fallback=decimalPlaces==0?'0':'0.'+'0'*decimalPlaces;
+ final fallback=decimalPlaces==0?'0':'0.'+List.filled(decimalPlaces,'0').join();
  final fixed=amount.toDouble().isFinite
    ?amount.toStringAsFixed(decimalPlaces):fallback;
  final parts=fixed.split('.');
