@@ -40,11 +40,11 @@ abstract final class WaffraAiModelGate {
           (requiredFeature!=null?
            'To use '+requiredFeature+', download the model once (~484 MB). ':
            'Download the private model once (~484 MB). ')+
-          'Runs on your device. You can delete it in My Account.':
+          'Stays on your phone. Delete it in My Account; manual entry still works.':
           (requiredFeature!=null?
            'لتشغيل '+requiredFeature+'، نزّل النموذج مرة واحدة (~484 MB). ':
            'نزّل نموذج الذكاء مرة واحدة (~484 MB). ')+
-          'يعمل على جهازك ويمكن حذفه من حسابي.'),
+          'يعمل على جهازك، ويمكن حذفه من حسابي. الإضافة اليدوية متاحة.'),
         actions:[
           TextButton(onPressed:()=>Navigator.pop(dialog,false),
             child:Text(english?'Later':'لاحقًا')),
