@@ -91,6 +91,23 @@ void main() {
     expect(result.items.single.needsReview,isTrue);
   });
 
+  test('M317 currency mentioned only in balance is NOT source evidence',()async{
+    const text='Purchase 100 Balance SAR 250';
+    final result=await WaffraAiFinanceBrain.bankSms(text,generate:(_)async=>
+      model([tx(text,'100','SAR','expense')]));
+    expect(result.count,1);
+    expect(result.items.single.needsReview,isTrue);
+    expect(result.items.single.reason,'currency_not_verified');
+  });
+
+  test('M317 two competing action amounts require review',()async{
+    const text='شراء POS SAR 10.00 SAR 20.00';
+    final result=await WaffraAiFinanceBrain.imageOcr(text,generate:(_)async=>
+      model([tx(text,'10.00','SAR','expense')]));
+    expect(result.items.single.needsReview,isTrue);
+    expect(result.items.single.reason,'competing_amounts');
+  });
+
   test('M317 duplicate model item cannot double-count one payment',()async{
     const text='شراء POS SAR 20.00';
     final result=await WaffraAiFinanceBrain.imageOcr(text,generate:(_)async=>
