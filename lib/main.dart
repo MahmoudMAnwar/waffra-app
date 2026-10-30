@@ -24,6 +24,9 @@ import 'waffra_receipt_filename.dart';
 import 'waffra_receipt_ocr.dart';
 import 'waffra_receipt_ocr_parser.dart';
 import 'waffra_bank_screenshot_parser.dart';
+import 'waffra_ai_finance_brain.dart';
+import 'waffra_ondevice_qwen.dart';
+import 'waffra_ai_model_gate.dart';
 import 'waffra_sms_intelligence.dart';
 import 'waffra_sms_multicurrency_review.dart';
 import 'waffra_back_navigation.dart';
@@ -839,6 +842,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   if(mounted)setState(()=>googleFirstRunSetup=false);
  }
  Future<void> logout()async {
+  // Drop any in-memory AI prompt context and cancel model download before
+  // a new account can open its verified finance scope.
+  try{await WaffraOnDeviceQwen.shared.dispose();}catch(_){}
   await _accountWriteAuthority.signOut();
   if(mounted)setState((){profile=null;showLogin=true;locked=false;googleFirstRunSetup=false;});
  }
@@ -2696,6 +2702,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  int tab=0,year=DateTime.now().year,month=DateTime.now().month;
  bool goalsOpened=false;
  bool _smsSheetOpen=false;
+ bool _bankSmsAiOpening=false,_receiptOcrAiOpening=false;
  String? _lastWidgetRevision;
  // Exact last finance ledger string seen or committed, including null vs [].
  // Detect partial widget saves even if the last-save marker never committed.
@@ -3381,8 +3388,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),
      child:WaffraText(waffraIsEnglish?'Confirm delete':'تأكيد الحذف')),
    ]));
-Future<void> bulkSmsSheet({String? initialText})async {
- if(_smsSheetOpen)return;
+Future<bool> _requireBankSmsAi()=>
+  WaffraAiModelGate.requireForFeature(context,
+   english:waffraIsEnglish,featureAr:'تحليل الرسائل البنكية',
+   featureEn:'bank message analysis');
+
+ Future<bool> _requireReceiptOcrAi()=>
+  WaffraAiModelGate.requireForFeature(context,
+   english:waffraIsEnglish,featureAr:'تصوير الفواتير واستخراج البيانات من الصور',
+   featureEn:'receipt and image OCR scanning');
+
+ Future<void> bulkSmsSheet({String? initialText})async {
+  // SMS parsing and review require on-device AI. Both Android share and
+  // the Add menu enter here; refusal always keeps the sheet closed.
+  if(_smsSheetOpen||_bankSmsAiOpening)return;
+  _bankSmsAiOpening=true;
+  bool allowed=false;
+  try{allowed=await _requireBankSmsAi();}
+  finally{_bankSmsAiOpening=false;}
+  if(!allowed||!mounted||_smsSheetOpen)return;
  _smsSheetOpen=true;
  final pasted=TextEditingController(text:initialText??'');
  final description=TextEditingController();
@@ -3433,6 +3457,13 @@ Future<void> bulkSmsSheet({String? initialText})async {
   });
  }
  Future<void> saveParsedMessages(BuildContext ctx,StateSetter update)async {
+  // If the model gets removed while this sheet is open, fail closed.
+  if(!WaffraOnDeviceQwen.shared.isReady){
+   update(()=>statusMessage=waffraIsEnglish
+    ?'Bank-message analysis requires the downloaded AI model. Close and reopen to install it.'
+    :'تحليل الرسائل البنكية يحتاج تنزيل نموذج الذكاء الاصطناعي. اقفل الميزة وافتحها لتنزيله.');
+   return;
+  }
   if(busy)return;
   final found=splitBankMessages(pasted.text.trim());
   if(found.isEmpty){update(()=>statusMessage=waffraIsEnglish?'No financial transactions found. Edit the message and retry.':'هذه الرسالة لا تحتوي على أي معاملات مالية. عدّلها لإعادة التحليل تلقائيًا.');return;}
@@ -3910,6 +3941,15 @@ Future<void> bulkSmsSheet({String? initialText})async {
        Expanded(child:messagesAction),
       ]);
      }),
+      if(WaffraOnDeviceQwen.shared.isReady&&pasted.text.trim().isNotEmpty)
+       Padding(padding:const EdgeInsets.only(top:10),child:
+        OutlinedButton.icon(
+         key:const Key('waffra-sms-ai-review'),
+         icon:const Icon(Icons.auto_awesome_outlined),
+         onPressed:busy?null:()=>unawaited(
+          _reviewAiPastedBankMessages(ctx,pasted.text.trim())),
+         label:WaffraText(waffraIsEnglish?
+          'AI: analyze bank messages':'AI: تحليل الرسائل البنكية'))),
       if(currencyPreview.needsCurrencyReview)...[
        const SizedBox(height:8),
        Container(
@@ -4101,7 +4141,122 @@ Future<void> bulkSmsSheet({String? initialText})async {
   return false;
  }
 
+ Future<void> _reviewAiPastedBankMessages(
+     BuildContext ctx,String source)async {
+  if(!WaffraOnDeviceQwen.shared.isReady||source.trim().isEmpty)return;
+  final result=await WaffraAiFinanceBrain.bankSms(source,
+    generate:WaffraOnDeviceQwen.shared.textGenerator);
+  if(!ctx.mounted)return;
+  await showWaffraDialog<void>(context:ctx,builder:(dialog)=>AlertDialog(
+   title:WaffraText(waffraIsEnglish?
+     'AI review — '+result.count.toString()+' transactions':
+     'مراجعة AI — '+result.count.toString()+' معاملات'),
+   content:SizedBox(width:420,child:SingleChildScrollView(child:
+    Column(mainAxisSize:MainAxisSize.min,children:[
+     WaffraText(waffraIsEnglish?
+      'AI suggestions only. None of these results were saved by AI.':
+      'اقتراحات للمراجعة فقط؛ الذكاء الاصطناعي لم يحفظ أي عملية.'),
+     if(result.error!=null)WaffraText(waffraIsEnglish?
+       'Analysis unavailable. Your existing bank messages are unchanged.':
+       'تعذر التحليل؛ لم تتغير رسائلك أو بياناتك المالية.'),
+     for(final item in result.items)
+       ListTile(
+        leading:Text(item.position.toString()),
+        title:WaffraText((item.amountText??'—')+' '+
+          (item.currency??'?')+' • '+(item.direction==WaffraAiDirection.income?
+           (waffraIsEnglish?'Income':'دخل'):item.direction==WaffraAiDirection.expense?
+           (waffraIsEnglish?'Expense':'مصروف'):
+           (waffraIsEnglish?'Review':'مراجعة'))),
+        subtitle:WaffraText(item.needsReview?
+         (waffraIsEnglish?'Needs manual review: ':'تحتاج مراجعة: ')+item.reason:
+         (item.merchant??item.quote),maxLines:3),
+       ),
+    ]))),
+   actions:[TextButton(onPressed:()=>Navigator.pop(dialog),
+     child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))],
+  ));
+ }
+
+ /// Each image action remains a separate review row. This helper never
+ /// commits a record and cannot post foreign-currency AI output as SAR.
+ Future<bool> _reviewAiScannedTransactions(
+     String sourceText,XFile image)async{
+  if(!WaffraOnDeviceQwen.shared.isReady)return false;
+  final result=await WaffraAiFinanceBrain.imageOcr(sourceText,
+    generate:WaffraOnDeviceQwen.shared.textGenerator);
+  if(!mounted||result.error!=null||result.count==0)return false;
+  final bankImage=WaffraBankScreenshotParser.looksLikeBankScreenshot(sourceText);
+  // Product lines from one shop receipt must not be counted as independent
+  // finance transactions, even if a tiny model hallucinated separate actions.
+  if(!bankImage&&result.count>1)return false;
+  final selected=<int>{};
+  final indices=await showWaffraDialog<List<int>>(context:context,
+   builder:(dialog)=>StatefulBuilder(builder:(dialog,update)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?
+     'AI detected '+result.count.toString()+' transactions':
+     'AI اكتشف '+result.count.toString()+' معاملات'),
+    content:SizedBox(width:420,child:SingleChildScrollView(child:
+     Column(mainAxisSize:MainAxisSize.min,children:[
+      WaffraText(waffraIsEnglish?
+       'Review each proposed transaction. Unverified/foreign amounts '
+       'cannot be saved as Saudi Riyals.':
+       'راجع كل عملية. العمليات غير المؤكدة أو الأجنبية لا يمكن '
+       'حفظها باعتبارها ريالًا سعوديًا.'),
+      for(var i=0;i<result.items.length;i++)
+       CheckboxListTile(
+        value:selected.contains(i),
+        onChanged:result.items[i].needsReview?null:(value)=>update((){
+         if(value==true)selected.add(i);else selected.remove(i);
+        }),
+        title:WaffraText(
+         (i+1).toString()+'. '+
+         (result.items[i].amountText??'—')+' '+
+         (result.items[i].currency??'?')+' • '+
+         (result.items[i].direction==WaffraAiDirection.income?
+          (waffraIsEnglish?'Income':'دخل'):
+          (waffraIsEnglish?'Expense':'مصروف'))),
+        subtitle:WaffraText(result.items[i].needsReview?
+         (waffraIsEnglish?'Review required: ':'تحتاج مراجعة: ')+
+          result.items[i].reason:
+         (result.items[i].merchant??result.items[i].quote),
+         maxLines:3),
+       ),
+     ]))),
+    actions:[
+     TextButton(onPressed:()=>Navigator.pop(dialog),
+      child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+     FilledButton(onPressed:selected.isEmpty?null:()=>
+       Navigator.pop(dialog,selected.toList()..sort()),
+      child:WaffraText(waffraIsEnglish?'Review selected':'مراجعة المحدد')),
+    ],
+   )));
+  if(indices==null||!mounted)return true;
+  for(final index in indices){
+   if(!mounted)return true;
+   final item=result.items[index];
+   if(item.needsReview||item.currency!='SAR')continue;
+   final safeAmount=item.amountText==null?null:
+      WaffraReceiptOcrParser.amountFromText(item.amountText!);
+   await entrySheet(
+    scannedReceipt:WaffraReceiptOcrFields(
+     rawText:item.quote,
+     merchant:item.merchant!=null&&item.quote.contains(item.merchant!)?
+      item.merchant:null,
+     amount:safeAmount),
+    scannedIncome:item.direction==WaffraAiDirection.income,
+    scannedImage:image);
+  }
+  return true;
+ }
+
  Future<void> scanAndAddReceipt()async {
+  // Restrict OCR before any camera/gallery permission or image processing.
+  if(_receiptOcrAiOpening)return;
+  _receiptOcrAiOpening=true;
+  bool allowed=false;
+  try{allowed=await _requireReceiptOcrAi();}
+  finally{_receiptOcrAiOpening=false;}
+  if(!allowed||!mounted)return;
   // Ask only for the exact camera/gallery access the user selected.
   final source=await showWaffraDialog<ImageSource>(context:context,builder:(dialog)=>AlertDialog(
    title:WaffraText(waffraIsEnglish?'Add from receipt or image':'إضافة عملية من فاتورة أو صورة'),
@@ -4122,6 +4277,16 @@ Future<void> bulkSmsSheet({String? initialText})async {
    final picked=await ImagePicker().pickImage(source:source,imageQuality:95);
    if(picked==null||!mounted)return;
    final extracted=await WaffraReceiptOcr.scan(picked.path);
+   if(!mounted)return;
+   // The on-device AI model is mandatory. Continue safeguarding currency
+   // and amount reviews, never uploading the user image.
+   if(!WaffraOnDeviceQwen.shared.isReady){
+    if(mounted)snack(context,waffraIsEnglish?
+     'OCR requires an active AI model. Reopen the scanner to download it.':
+     'استخراج بيانات الصور يحتاج نموذج ذكاء اصطناعي فعّال. افتح الماسح لتنزيله.');
+    return;
+   }
+   if(await _reviewAiScannedTransactions(extracted.rawText,picked))return;
    if(!mounted)return;
    final candidates=WaffraBankScreenshotParser.reviewItems(extracted.rawText);
    if(candidates.isEmpty){
@@ -4196,6 +4361,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
  Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,
   WaffraReceiptOcrFields? scannedReceipt,XFile? scannedImage,bool? scannedIncome,
   int? scannedImagePosition,int? scannedImageTotal})async {
+  // Manual entries and edits stay available; new SMS and OCR routes are gated.
+  if(initial==null&&(sms||scannedReceipt!=null||scannedImage!=null)){
+   final allowed=await (sms?_requireBankSmsAi():_requireReceiptOcrAi());
+   if(!allowed||!mounted)return;
+  }
   // Last defense: every OCR entry must verify the currency *inside* the
   // editor too, so future callers cannot bypass scanAndAddReceipt's gate.
   if(scannedReceipt!=null &&
@@ -9176,6 +9346,56 @@ Future<void> bulkSmsSheet({String? initialText})async {
   await widget.onSetPin(next);
   if(mounted)snackSuccess(context,waffraIsEnglish?'PIN changed':'تم تغيير الرمز بنجاح');
  }
+ Future<void> deleteAiModel()async {
+  final model=WaffraOnDeviceQwen.shared;
+  final installed=await model.downloadedOnDisk();
+  if(!mounted)return;
+  if(!installed&&!model.isReady){
+   snack(context,waffraIsEnglish?
+    'The AI model is not downloaded. No files need deleting.':
+    'نموذج الذكاء الاصطناعي غير منزّل حاليًا.');
+   return;
+  }
+  // Warn BEFORE requesting the operating-system biometric prompt.
+  final approved=await confirmDeletion(
+   waffraIsEnglish?'Delete the AI model from this phone?':
+    'حذف نموذج الذكاء الاصطناعي من الجهاز؟',
+   waffraIsEnglish?
+    'This will delete the downloaded model (about 484 MB). You will lose '
+    'Bank-message importing and image OCR scanning, Ask Waffra, AI financial '
+    'analysis and AI saving suggestions until you download it again. '
+    'Your saved transactions, invoices, backups and regular tools will NOT be deleted.':
+    'سيتم حذف نموذج الذكاء الاصطناعي الذي تم تنزيله (حوالي 484 ميجابايت). '
+    'بعد الحذف مش هتقدر تستخدم الرسائل البنكية أو OCR للفواتير والصور، '
+    'واسأل وفرة، والتحليل المالي الذكي واقتراحات التوفير، لحد ما تنزّله تاني. '
+    'معاملاتك وفواتيرك ونسخك الاحتياطية والأدوات العادية مش هتتحذف.');
+  if(approved!=true||!mounted)return;
+  // No PIN shortcut; a failed, missing or cancelled phone biometric
+  // confirmation always refuses model-file deletion.
+  final biometric=await WaffraBiometrics.confirmAiModelRemoval(
+   english:waffraIsEnglish);
+  if(!mounted)return;
+  if(!biometric){
+   snack(context,waffraIsEnglish?
+    'Biometric confirmation was not completed. The AI model was not deleted.':
+    'لم يتم تأكيد البصمة. نموذج الذكاء الاصطناعي لم يُحذف.');
+   return;
+  }
+  try{
+   await model.deleteDownloadedModel();
+   if(!mounted)return;
+   setState((){});
+   snackSuccess(context,waffraIsEnglish?
+    'AI model deleted. Standard Waffra and your finance data are unchanged.':
+    'تم حذف نموذج الذكاء الاصطناعي. بياناتك المالية والأدوات العادية كما هي.');
+  }catch(error){
+   debugPrint('Local AI model removal could not be verified: $error');
+   if(mounted)snack(context,waffraIsEnglish?
+    'Could not confirm model removal. Please retry from My Account.':
+    'تعذر التأكد من حذف النموذج. حاول مرة أخرى من حسابي.');
+  }
+ }
+
  Future<void> eraseFinancialData()async {
   if(!await _authorizeSensitiveAction('deleting financial data')||!mounted)return;
   final ok=await confirmDeletion(
@@ -9408,6 +9628,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      waffraIsEnglish?'Security & privacy':'الأمان والخصوصية':'privacy biometric fingerprint حماية بصمة قفل إخفاء PIN screenshots المعاينة',
      waffraIsEnglish?'Backup & data':'النسخ الاحتياطي والبيانات':'backup restore delete نسخ احتياطي استعادة حذف بيانات',
      waffraIsEnglish?'Financial tools':'الأدوات المالية':'calendar subscriptions currency tools التقويم الاشتراكات الأدوات المالية',
+     waffraIsEnglish?'AI model':'نموذج الذكاء الاصطناعي':'Qwen AI download remove delete model fingerprint biometric نموذج مكتبة الذكاء الاصطناعي بصمة تنزيل تحميل حذف',
      waffraIsEnglish?'Help & about':'المساعدة وعن وفرة':'tour help about وفرة الجولة المساعدة',
     };
     String? match;
@@ -9519,6 +9740,31 @@ Future<void> bulkSmsSheet({String? initialText})async {
     _accountTile(waffraIsEnglish?'Subscription insights':'كشف الاشتراكات',
      waffraIsEnglish?'Recurring costs and possible subscriptions':'المدفوعات الدورية والاشتراكات المحتملة',
      Icons.subscriptions_outlined,onTap:WaffraHaptics.tap(openSubscriptionInsights)),
+   ]),
+   _accountSection(waffraIsEnglish?'AI model':'نموذج الذكاء الاصطناعي',
+    Icons.psychology_outlined,[
+    ValueListenableBuilder<int>(
+     valueListenable:WaffraOnDeviceQwen.shared.revision,
+     builder:(context,revision,_)=>FutureBuilder<bool>(
+      future:WaffraOnDeviceQwen.shared.downloadedOnDisk(),
+      builder:(context,installed){
+       final present=installed.data==true||
+        WaffraOnDeviceQwen.shared.isReady;
+       return _accountTile(
+        waffraIsEnglish?'Delete AI model':'حذف نموذج الذكاء الاصطناعي',
+        present?
+         (waffraIsEnglish?
+          'Remove downloaded AI (~484 MB) after fingerprint/Face ID verification. '
+          'Bank messages, OCR and AI analysis will stop until re-download.':
+          'حذف النموذج (~484 ميجابايت) بعد تأكيد بصمة الجهاز. '
+          'هتتوقف الرسائل البنكية وOCR وميزات AI لحد إعادة التنزيل.'):
+         (waffraIsEnglish?
+          'Not downloaded. You can install it again from any AI feature.':
+          'النموذج غير منزّل. يمكن تنزيله عند فتح أي ميزة AI.'),
+        Icons.delete_outline_rounded,
+        tint:present?Colors.red:Colors.grey,
+        onTap:present?WaffraHaptics.tap(deleteAiModel):null);
+      })),
    ]),
    _accountSection(waffraIsEnglish?'Backup & data':'النسخ الاحتياطي والبيانات',Icons.cloud_outlined,[
     _accountTile(waffraIsEnglish?'Encrypted backup & restore':'النسخ الاحتياطي المشفر والاستعادة',

@@ -16,6 +16,26 @@ class WaffraBiometrics {
     }
   }
 
+  /// Biometric-only OS confirmation for deleting the optional public AI
+  /// model. No PIN or password fallback is allowed for this destructive step.
+  static Future<bool> confirmAiModelRemoval({required bool english}) async {
+    try {
+      if (!await isAvailable()) return false;
+      return await _auth.authenticate(
+        localizedReason: english
+          ? 'Confirm removing the downloaded Waffra AI model'
+          : 'أكد ببصمة الجهاز حذف نموذج الذكاء الاصطناعي من وفرة',
+        options: const AuthenticationOptions(
+          biometricOnly: true,
+          stickyAuth: true,
+          useErrorDialogs: true,
+        ),
+      );
+    } on PlatformException {
+      return false;
+    }
+  }
+
   static Future<bool> unlock() async {
     try {
       if (!await isAvailable()) return false;
