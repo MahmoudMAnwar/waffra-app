@@ -242,6 +242,12 @@ class MoneyEntry {
   receiptPath:j['receiptPath']?.toString(),
   notes:'${j['notes']??''}',sourceType:'${j['sourceType']??'legacy'}',
   merchantKey:'${j['merchantKey']??''}');
+ /// Category rename is metadata-only; protect SMS notes, source identity,
+ /// merchant key, original timestamp and receipt references.
+ MoneyEntry withCategory(String next)=>MoneyEntry(
+  id:id,title:title,category:next,amount:amount,income:income,date:date,
+  receiptPath:receiptPath,notes:notes,sourceType:sourceType,
+  merchantKey:merchantKey);
 }
 
 /// Legacy messages may already have longer titles. Unchanged titles must
@@ -323,6 +329,9 @@ class RecurringBill {
  final DateTime startAt;
  RecurringBill({required this.id,required this.title,required this.category,required this.amount,required this.income,required this.day,this.active=true,DateTime? startAt}):startAt=startAt??DateTime.now();
  RecurringBill copy({bool? active,int? day,DateTime? startAt})=>RecurringBill(id:id,title:title,category:category,amount:amount,income:income,day:day??this.day,active:active??this.active,startAt:startAt??this.startAt);
+ RecurringBill withCategory(String next)=>RecurringBill(
+  id:id,title:title,category:next,amount:amount,income:income,day:day,
+  active:active,startAt:startAt);
  Map<String,dynamic> toJson()=>{'id':id,'title':title,'category':category,'amount':amount,'income':income,'day':day,'active':active,'startAt':startAt.toIso8601String()};
  factory RecurringBill.fromJson(Map<String,dynamic> j)=>RecurringBill(id:'${j['id']??newId()}',
   title:'${j['title']??''}',category:'${j['category']??'أخرى'}',
@@ -6976,7 +6985,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
  Future<void> addCategory({bool income=false,String parentId=''})async {
   final c=await categoryDialog(income:income,parentId:parentId);
   if(c==null||!mounted)return;
-  if(categories.any((x)=>x.income==c.income&&x.name.trim()==c.name.trim())){
+  if(WaffraValidators.uniqueCategory(c.name,
+    categories.where((x)=>x.income==c.income).map((x)=>x.name))=='duplicate'){
    snack(context,'القسم موجود بالفعل');return;
   }
   setState(()=>categories.add(c));await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
@@ -6984,7 +6994,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
  Future<void> updateCategory(BudgetCategory c)async {
   final revised=await categoryDialog(initial:c);
   if(revised==null||!mounted)return;
-  if(categories.any((x)=>x.id!=c.id&&x.income==c.income&&x.name==revised.name))return;
+  if(WaffraValidators.uniqueCategory(revised.name,
+    categories.where((x)=>x.id!=c.id&&x.income==c.income).map((x)=>x.name))=='duplicate'){
+   snack(context,waffraIsEnglish?'Category already exists':'القسم موجود بالفعل');return;
+  }
   final renames=<String,String>{c.name:revised.name};
   if(!c.isSubcategory&&c.name!=revised.name){
    for(final child in categories.where((x)=>x.parentId==c.id)){
@@ -7004,16 +7017,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
     final old=entries[j];
     final renamed=renames[old.category];
     if(renamed!=null&&old.income==c.income){
-     entries[j]=MoneyEntry(id:old.id,title:old.title,category:renamed,
-      amount:old.amount,income:old.income,date:old.date,receiptPath:old.receiptPath);
+     entries[j]=old.withCategory(renamed);
     }
    }
    for(var j=0;j<recurring.length;j++){
     final old=recurring[j];
     final renamed=renames[old.category];
     if(renamed!=null&&old.income==c.income){
-     recurring[j]=RecurringBill(id:old.id,title:old.title,category:renamed,
-      amount:old.amount,income:old.income,day:old.day,active:old.active);
+     recurring[j]=old.withCategory(renamed);
     }
    }
   });
@@ -7250,7 +7261,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
           ?'${original.income?'Income':'Expense'} • $daysLeft days remaining'
           :'${original.income?'دخل':'مصروفات'} • متبقي $daysLeft يوم',
          onRestore:()async{
-             if(categories.any((c)=>c.name==original.name&&c.income==original.income)){
+             if(WaffraValidators.uniqueCategory(original.name,
+               categories.where((c)=>c.income==original.income).map((c)=>c.name))=='duplicate'){
               snack(dialogCtx,waffraIsEnglish?'A category with this name already exists':'يوجد قسم نشط بنفس الاسم بالفعل');return;
              }
              BudgetCategory? restoreParent;
