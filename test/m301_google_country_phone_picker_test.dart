@@ -136,6 +136,19 @@ void main(){
   await tester.pumpAndSettle();
   expect(country.iso,'JO');
   expect(find.text('+962'),findsOneWidget);
+  expect(controller.text,isEmpty,
+    reason:'A Saudi national number cannot carry over to Jordan');
+  // Re-selecting the same country must not erase the re-entered number.
+  await tester.enterText(find.byKey(const Key('waffra-profile-mobile-number')),
+    '791234567');
+  await tester.tap(find.byKey(const Key('waffra-google-phone-country-picker')));
+  await tester.pumpAndSettle();
+  await tester.enterText(find.byKey(const Key('waffra-google-country-search')),
+    'Jordan');
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const Key('waffra-phone-country-JO')));
+  await tester.pumpAndSettle();
+  expect(controller.text,'791234567');
   expect(tester.takeException(),isNull);
   controller.dispose();
  });
