@@ -523,7 +523,14 @@ class BankParser {
   // A bare "Amount 150" is NOT evidence of SAR. The phrase could come
   // from any global bank or from a balance. A stored SAR entry requires
   // positive, source-grounded SAR currency evidence, never a UI setting.
-  if(value!=null&&!discoveredCurrencies.contains('SAR'))value=null;
+  // SAR appearing only in a balance or a separate fee is not proof
+  // that the chosen number was the transaction amount. The exact source
+  // amount MUST agree with the conservative action-only currency parser.
+  if(value!=null){
+   final verifiedSource=WaffraSmsCurrencies.originalAmount(s);
+   if(verifiedSource==null||verifiedSource.currency!='SAR'||
+      (verifiedSource.amount-value).abs()>0.00001)value=null;
+  }
   var title=income?'مبلغ وارد':'عملية بنكية',cat=income?'دخل آخر':'أخرى';
   String? suggestion;
   if(RegExp(r'راتب|salary',caseSensitive:false).hasMatch(header)){title='راتب';cat='راتب';}
