@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'waffra_sms_fx_review.dart';
 import 'waffra_sms_multicurrency_review.dart';
@@ -33,11 +34,27 @@ abstract final class WaffraForeignCurrencyPreview {
    return null;
   }
   if(!context.mounted)return null;
-  WaffraSmsFxReview candidate;
-  try{
-   candidate=WaffraSmsFxReview.approve(
-    originalAmount:originalAmount,quote:quote,userConfirmed:true);
-  }catch(_){return null;}
+  // Do not construct an "approved" FX witness before the user acts.
+  // Source rates can be daily rather than tick-by-tick: reject an old quote
+  // and label the publication time instead of claiming an executable rate.
+  final at=DateTime.now().toUtc();
+  if(quote.sourceTimestampUtc.isAfter(at.add(const Duration(hours:1)))||
+      at.difference(quote.sourceTimestampUtc)>const Duration(hours:72)){
+   await showDialog<void>(context:context,builder:(dialog)=>AlertDialog(
+    content:Text(english?
+     'The published rate is too old to approve. Retry when an updated rate is available.':
+     'سعر الصرف المنشور قديم ولا يمكن اعتماده. حاول عند توفر سعر أحدث.'),
+    actions:[TextButton(onPressed:()=>Navigator.pop(dialog),
+     child:Text(english?'OK':'حسنًا'))]));
+   return null;
+  }
+  final sourceMinor=WaffraCurrencyMinor.exact(originalAmount,originalCurrency)!;
+  final digits=WaffraCurrencyMinor.digits(targetCurrency);
+  final minorFactor=math.pow(10,digits).toDouble();
+  final convertedMinor=(WaffraCurrencyMinor.major(sourceMinor,originalCurrency)*
+      quote.targetPerOriginal*minorFactor).round();
+  if(convertedMinor<=0||convertedMinor>1000000000000)return null;
+  final previewAmount=convertedMinor/minorFactor;
   final stamp=quote.sourceTimestampUtc.toUtc().toIso8601String()+' UTC';
   final accepted=await showDialog<bool>(context:context,
    builder:(dialog)=>AlertDialog(
@@ -47,7 +64,7 @@ abstract final class WaffraForeignCurrencyPreview {
      crossAxisAlignment:CrossAxisAlignment.stretch,
      mainAxisSize:MainAxisSize.min,children:[
       Text(english?'Original bank amount':'المبلغ الأصلي للرسالة'),
-      SelectableText(candidate.originalAmount.toStringAsFixed(
+      SelectableText(originalAmount.toStringAsFixed(
        WaffraCurrencyMinor.digits(originalCurrency))+' '+originalCurrency),
       const SizedBox(height:10),
       Text(english?'Latest available exchange rate':'أحدث سعر صرف متاح'),
@@ -57,8 +74,7 @@ abstract final class WaffraForeignCurrencyPreview {
       Text((english?'Last published: ':'آخر تحديث: ')+stamp),
       const SizedBox(height:10),
       Text(english?'Estimated converted amount':'القيمة المتوقعة بعد التحويل'),
-      SelectableText(candidate.convertedAmount.toStringAsFixed(
-        WaffraCurrencyMinor.digits(targetCurrency))+' '+targetCurrency),
+      SelectableText(previewAmount.toStringAsFixed(digits)+' '+targetCurrency),
       const SizedBox(height:12),
       Text(english?
        'Do you approve this quote? Rates are indicative. Converted transactions cannot be saved until their encrypted FX provenance is certified.':
@@ -73,6 +89,11 @@ abstract final class WaffraForeignCurrencyPreview {
       child:Text(english?'Approve preview':'الموافقة على المعاينة')),
     ],
    ));
-  return accepted==true?candidate:null;
+  if(accepted!=true)return null;
+  // Record the user's actual approval time, never the quote-screen open time.
+  try{
+   return WaffraSmsFxReview.approve(
+    originalAmount:originalAmount,quote:quote,userConfirmed:true);
+  }catch(_){return null;}
  }
 }
