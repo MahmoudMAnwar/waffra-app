@@ -3434,8 +3434,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
   if(!hasTransaction&&parts.any((message)=>
     BankParser.parse(message).requiresCurrencyReview)){
    return waffraIsEnglish
-    ?'Foreign currency detected. Review and manually convert to SAR before saving.'
-    :'تم اكتشاف معاملة بعملة أجنبية. راجعها وحوّل المبلغ يدويًا إلى الريال قبل الحفظ.';
+    ?'Foreign currency detected. View its exchange-rate source. FX saving awaits encrypted provenance.'
+    :'تم اكتشاف عملة أجنبية. اعرض سعر الصرف ومصدره؛ الحفظ ينتظر اعتماد بيانات التحويل المشفرة.';
   }
   return hasTransaction?null:(waffraIsEnglish
    ?'No confirmed supported-SAR transaction found. Review and retry.'
@@ -4052,7 +4052,22 @@ Future<void> bulkSmsSheet({String? initialText})async {
             'View current exchange rate and source':'عرض سعر الصرف الحالي ومصدره')),
         ])),
       ],
-      if(analyzingPaste)...[const SizedBox(height:12),const LinearProgressIndicator(),const SizedBox(height:6),WaffraText(waffraIsEnglish?'Analyzing bank messages with AI…':'جاري الآن تحليل الرسائل بالذكاء الاصطناعي…')],
+      // Bank currency vs selected APP display currency are separate concepts.
+      // Never mistake nominal label switching for an actual FX rate.
+      if(messages.length==1&&
+         WaffraSmsCurrencies.originalAmount(messages.first)!=null&&
+         WaffraSmsCurrencies.originalAmount(messages.first)!.currency!=
+          WaffraDisplayCurrency.country.code)...[
+       const SizedBox(height:8),
+       OutlinedButton.icon(
+        key:const Key('waffra-fx-any-currency-preview'),
+        onPressed:busy?null:()=>_previewForeignBankCurrency(messages.first),
+        icon:const Icon(Icons.currency_exchange),
+        label:WaffraText(waffraIsEnglish?
+         'Convert to app currency — rate & source':
+         'تحويل لعملة التطبيق — السعر والمصدر')),
+      ],
+       if(analyzingPaste)...[const SizedBox(height:12),const LinearProgressIndicator(),const SizedBox(height:6),WaffraText(waffraIsEnglish?'Analyzing bank messages with AI…':'جاري الآن تحليل الرسائل بالذكاء الاصطناعي…')],
       // Shared lightweight in-dialog progress while the batch is committed.
       if(busy)Padding(
        key:const Key('waffra-bank-sms-save-progress'),
@@ -4131,7 +4146,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
        inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],onChanged:(_)=>update((){}),
        decoration:InputDecoration(labelText:waffraIsEnglish?'Amount *':'مبلغ هذه الرسالة بالريال *',errorText:reviewAttempted?waffraAmountFieldError(amount.text):null,border:OutlineInputBorder())),
       if(WaffraSmsCurrencies.originalAmount(messages[index])!=null&&
-         WaffraSmsCurrencies.requiresReviewForSarLedger(messages[index]))
+         WaffraSmsCurrencies.originalAmount(messages[index])!.currency!=
+           WaffraDisplayCurrency.country.code)
        OutlinedButton.icon(key:const Key('waffra-fx-transaction-preview'),
         onPressed:busy?null:()=>_previewForeignBankCurrency(messages[index]),
         icon:const Icon(Icons.currency_exchange),
@@ -4275,6 +4291,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
     'عملة الرسالة مطابقة لعملة العرض. حفظ العملات الأجنبية المشفر غير مفعل بعد.');
    return;
   }
+  snack(context,waffraIsEnglish?
+   'Retrieving the latest available exchange rate…':
+   'جاري جلب أحدث سعر صرف متاح…',isError:false);
   final approved=await WaffraForeignCurrencyPreview.show(context,
    originalAmount:source.amount,originalCurrency:source.currency,
    targetCurrency:target,english:waffraIsEnglish);
