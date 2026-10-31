@@ -725,8 +725,16 @@ jobs:
           script: |
             bash -euo pipefail <<'WAFFRA_SMOKE_BASH'
             adb install -r build/app/outputs/flutter-apk/app-release.apk
-            PACKAGE=$(adb shell pm list packages -3 | tr -d '\r' | sed -n 's/^package://p' | grep -m1 -E 'waffra' || true)
-            test -n "$PACKAGE" || { echo "Could not find installed Waffra package"; exit 1; }
+            # Firebase Google Sign-In build above fixes the app ID to this
+            # exact value. Android 15 may omit newly installed apps from
+            # "pm list packages -3"; package enumeration is not launch proof.
+            PACKAGE=com.waffra.app
+            if ! adb shell pm path "$PACKAGE" | tr -d '\r' | grep -q '^package:'; then
+              echo "::error::Expected Waffra package is not installed: $PACKAGE"
+              adb shell pm list packages -u | grep -i waffra || true
+              adb shell dumpsys package "$PACKAGE" | head -60 || true
+              exit 1
+            fi
             adb logcat -c
             adb shell monkey -p "$PACKAGE" -c android.intent.category.LAUNCHER 1
             sleep 18
