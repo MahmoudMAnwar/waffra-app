@@ -112,9 +112,9 @@ jobs:
     steps:
       - name: Block if any required quality job failed or did not run
         env:
-          SOURCE: ${{ needs.source-contract.result }}
-          FINANCE: ${{ needs.critical-finance-tests.result }}
-          ALL_APP: ${{ needs.full-app.result }}
+          SOURCE: ${{ needs['source-contract'].result }}
+          FINANCE: ${{ needs['critical-finance-tests'].result }}
+          ALL_APP: ${{ needs['full-app'].result }}
         run: |
           printf 'Exact SHA: %s\n' "$TESTED_SHA"
           printf 'Source=%s Finance=%s WholeApp=%s\n' "$SOURCE" "$FINANCE" "$ALL_APP"
