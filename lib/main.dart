@@ -257,6 +257,14 @@ class MoneyEntry {
   merchantKey:merchantKey);
 }
 
+/// Flag historical imported placeholders that may already have been
+/// entered as SAR despite an unverified foreign bank currency. This is
+/// read-only: never migrate, silently edit, or delete existing user money.
+bool waffraNeedsLegacyFxReview(MoneyEntry entry) =>
+  const <String>{'sms','receipt'}.contains(entry.sourceType) &&
+  (entry.title.startsWith('معاملة بعملة تحتاج') ||
+   entry.title.toLowerCase().contains('foreign currency needs review'));
+
 /// Legacy messages may already have longer titles. Unchanged titles must
 /// never block edits to an attachment, category or other unrelated field.
 bool waffraTransactionTitleAllowed(String newTitle,{String? oldTitle}) {
@@ -6771,6 +6779,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
  }
  Widget dashboard(){
   final inc=sum(entries,true),exp=sum(entries,false);
+  final unverifiedFxEntries=entries.where(waffraNeedsLegacyFxReview).toList();
   // Show the month comparison only when there are genuine prior-month
   // transactions and a positive comparison base. Never show a fake +12%.
   final nowBalanceDate=DateTime.now();
@@ -6876,6 +6885,23 @@ Future<void> bulkSmsSheet({String? initialText})async {
                ]))
              :const SizedBox.shrink()),
           ])),
+         if(unverifiedFxEntries.isNotEmpty)...[
+          const SizedBox(height:10),
+          Container(
+           key:const Key('waffra-legacy-foreign-currency-review-warning'),
+           padding:const EdgeInsets.all(12),
+           decoration:BoxDecoration(
+            color:Theme.of(context).colorScheme.errorContainer,
+            borderRadius:BorderRadius.circular(12)),
+           child:Row(children:[
+            const Icon(Icons.warning_amber_rounded,size:21),
+            const SizedBox(width:9),
+            Expanded(child:WaffraText(waffraIsEnglish?
+             '${unverifiedFxEntries.length} imported bank transaction(s) need currency review. Current totals may include unverified amounts.':
+             'تحتاج ${unverifiedFxEntries.length} معاملة بنكية قديمة مراجعة العملة. قد تشمل الإجماليات مبالغ غير مؤكدة.',
+             maxLines:3,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w600))),
+           ])),
+         ],
          const SizedBox(height:13),
          monthlyBudgetCard(),
          const SizedBox(height:12),
