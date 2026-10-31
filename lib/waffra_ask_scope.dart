@@ -23,15 +23,15 @@ abstract final class WaffraAskScope {
   static const _arabicRoots = <String>[
     'دخل', 'دخلي', 'ايراد', 'راتب', 'رواتب', 'صرف', 'مصروف',
     'مصاريف', 'انفق', 'انفاق', 'نفق', 'فلوس', 'اموال', 'ماليه',
-    'مالي', 'ميزاني', 'رصيد', 'دين', 'ديون', 'دينار', 'ريال',
+    'مالي', 'ميزاني', 'رصيد', 'ديون', 'دينار', 'ريال',
     'جنيه', 'درهم', 'دولار', 'عمله', 'عملات', 'تحويل',
-    'حواله', 'بنك', 'بنكي', 'حسابي', 'معامل', 'عملي',
+    'حواله', 'بنك', 'بنكي', 'حسابي', 'معامل',
     'فاتور', 'فواتير', 'ايصال', 'مشتري', 'شراء', 'تسوق', 'توفير',
     'وفر', 'ادخار', 'مدخر', 'استثمار', 'سعر', 'اسعار',
     'ذهب', 'نفط', 'بترول', 'اشتراك', 'التزام', 'قسط',
-    'اقساط', 'هدف', 'اهداف', 'فئه', 'تصنيف', 'قسم',
-    'محفظ', 'موسم', 'ضريب', 'رسوم', 'مدفوع', 'دفع',
-    'تقرير', 'تحليل', 'ماليتي',
+    'اقساط', 'اهداف', 'تصنيف',
+    'محفظ', 'ضريب', 'رسوم', 'مدفوع', 'دفع',
+    'ماليتي',
   ];
   static const _englishRoots = <String>[
     'income','salary','earn','expense','spend','spent','cost','money',
@@ -46,6 +46,12 @@ abstract final class WaffraAskScope {
   static bool isRelated(String question) {
     final normalized = _normalized(question).trim();
     if (normalized.isEmpty || normalized.length > 500) return false;
+    // Common false positive: "Real Madrid" contains the Arabic currency
+    // word ريال but is not an in-app money question by itself.
+    if ((normalized.contains('ريال مدريد') ||
+         normalized.contains('real madrid')) &&
+        !RegExp(r'مصروف|صرف|تكلف|ميزاني|توفير|ادخار|spend|budget|cost',
+          caseSensitive:false).hasMatch(normalized)) return false;
     final tokens = normalized.split(RegExp(r'[^a-z\u0600-\u06FF]+'))
         .where((part) => part.isNotEmpty);
     for (final token in tokens) {
