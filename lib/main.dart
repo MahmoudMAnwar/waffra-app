@@ -3428,6 +3428,7 @@ Future<bool> _requireBankSmsAi()=>
  var index=0;
  var income=false;
  var category='أخرى';
+ String? smsParentId;
  var parsed=false;
  var reviewing=false,reviewAttempted=false,pasteAttempted=false;
  Timer? pasteTimer;
@@ -3462,6 +3463,8 @@ Future<bool> _requireBankSmsAi()=>
    reviewAttempted=false;index=i;income=result.income;
    category=categories.any((c)=>c.income==income&&c.name==result.category)?result.category:
     (forType(income).isNotEmpty?forType(income).first.name:'أخرى');
+   final leaves=categories.where((c)=>c.income==income&&c.isSubcategory&&c.name==category).toList();
+   smsParentId=leaves.isEmpty?null:leaves.first.parentId;
    // M220: never paste the full bank SMS into the transaction TITLE.
    // The original text is shown only in the ephemeral review field; the
    // guarded legacy writer strips raw SMS notes until SQLCipher is certified.
@@ -3929,6 +3932,11 @@ Future<bool> _requireBankSmsAi()=>
     });
    }
    final available=forType(income);
+   final smsMainCategories=waffraManualCategoryParents(available,income);
+   final leafSelection=available.where((c)=>c.name==category).toList();
+   final activeSmsParent=smsParentId??(leafSelection.isEmpty?null:leafSelection.first.parentId);
+   final activeSmsMains=smsMainCategories.where((c)=>c.id==activeSmsParent).toList();
+   final smsSubcategories=waffraManualCategoryChildren(available,income,activeSmsParent);
    final total=messages.fold<double>(0,(sum,s)=>sum+(BankParser.parse(s).amount??0));
    final pasteSummary=waffraSummarizeBankPaste(pasted.text,smsHashes);
    final currencyPreview=WaffraSmsCurrencies.summarize(messages);
@@ -4098,6 +4106,7 @@ Future<bool> _requireBankSmsAi()=>
       SegmentedButton<bool>(segments:const [ButtonSegment(value:true,label:WaffraText('دخل')),
        ButtonSegment(value:false,label:WaffraText('مصروف'))],selected:{income},onSelectionChanged:WaffraHaptics.selection((v)=>update((){
         income=v.first;category=forType(income).isNotEmpty?forType(income).first.name:'أخرى';
+        smsParentId=null;
        }))),
       const SizedBox(height:12),
       TextField(controller:description,maxLines:2,onChanged:(_)=>update((){}),decoration:InputDecoration(labelText:waffraIsEnglish?'Description *':'وصف الرسالة *',errorText:reviewAttempted?waffraTextFieldError(description.text):null,border:OutlineInputBorder())),
@@ -4106,14 +4115,38 @@ Future<bool> _requireBankSmsAi()=>
        inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],onChanged:(_)=>update((){}),
        decoration:InputDecoration(labelText:waffraIsEnglish?'Amount *':'مبلغ هذه الرسالة بالريال *',errorText:reviewAttempted?waffraAmountFieldError(amount.text):null,border:OutlineInputBorder())),
       const SizedBox(height:12),
-      DropdownButtonFormField<String>(key:ValueKey('$index-$income'),initialValue:available.any((c)=>c.name==category)?category:null,
-       items:available.map((c)=>DropdownMenuItem(value:c.name,child:WaffraText(c.name))).toList(),
-       decoration:InputDecoration(
-        labelText:waffraIsEnglish?'Message category *':'قسم هذه الرسالة *',
+      // Never display the entire catalog in one unbounded DropdownButton:
+      // select a main category first, then only its searchable child items.
+      InkWell(onTap:WaffraHaptics.tap(()async{
+       final picked=await chooseTransactionCategory(ctx,smsMainCategories,
+        activeSmsMains.isEmpty?'':activeSmsMains.first.name);
+       if(picked==null||!ctx.mounted)return;
+       final chosen=smsMainCategories.where((c)=>c.name==picked).toList();
+       if(chosen.isEmpty)return;
+       update((){smsParentId=chosen.first.id;category='';});
+      }),child:InputDecorator(decoration:InputDecoration(
+        labelText:waffraIsEnglish?'Main category *':'القسم الرئيسي *',
+        errorText:reviewAttempted&&activeSmsMains.isEmpty?waffraRequiredFieldMessage:null,
+        border:const OutlineInputBorder(),
+        suffixIcon:const Icon(Icons.arrow_drop_down_rounded)),
+       child:WaffraText(activeSmsMains.isEmpty?
+        (waffraIsEnglish?'Choose main category':'اختر القسم الرئيسي'):
+        activeSmsMains.first.displayName,maxLines:1))),
+      const SizedBox(height:12),
+      InkWell(onTap:WaffraHaptics.tap(activeSmsMains.isEmpty?null:()async{
+       final picked=await chooseTransactionCategory(ctx,smsSubcategories,
+        category,leafLabels:true);
+       if(picked!=null&&ctx.mounted)update(()=>category=picked);
+      }),child:InputDecorator(decoration:InputDecoration(
+        labelText:waffraIsEnglish?'Subcategory *':'القسم الفرعي *',
+        enabled:activeSmsMains.isNotEmpty,
         errorText:reviewAttempted&&WaffraValidators.requiredCategory(
-         category,available.map((c)=>c.name))!=null?waffraRequiredFieldMessage:null,
-        border:OutlineInputBorder()),
-       onChanged:WaffraHaptics.selection((v){if(v!=null)update(()=>category=v);})),
+         category,smsSubcategories.map((c)=>c.name))!=null?waffraRequiredFieldMessage:null,
+        border:const OutlineInputBorder(),
+        suffixIcon:const Icon(Icons.arrow_drop_down_rounded)),
+       child:WaffraText(smsSubcategories.any((c)=>c.name==category)?
+        smsSubcategories.firstWhere((c)=>c.name==category).displayName:
+        (waffraIsEnglish?'Choose subcategory':'اختر القسم الفرعي'),maxLines:1))),
       const SizedBox(height:12),
       FilledButton(onPressed:WaffraHaptics.tap(busy?null:()async{
        final n=amountOf(amount.text);
