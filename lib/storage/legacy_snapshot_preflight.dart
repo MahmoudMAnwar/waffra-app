@@ -218,7 +218,54 @@ class WaffraLegacyPreflight {
   static void _checkDate(List<WaffraPreflightIssue> issues, String key,
       int index, Map<String, dynamic> item, String field) {
     final value = item[field];
-    if (value is! String || DateTime.tryParse(value) == null) {
+    // DateTime.tryParse normalizes some impossible dates (e.g. 2026-02-30)
+    // to the following month. For a money ledger, that is data corruption:
+    // require the exact ISO calendar date to survive parsing unchanged.
+    bool valid() {
+      if (value is! String) return false;
+      final iso = RegExp(r'^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?
+  }
+
+  /// Avoid silent precision loss or overflow when converting SAR to halalas.
+  static bool canRepresentHalalas(num amount) {
+    if (!amount.isFinite || amount < 0 || amount > 90071992547409) {
+      return false;
+    }
+    final scaled = amount * 100;
+    return (scaled - scaled.roundToDouble()).abs() < 1e-7;
+  }
+}
+
+class WaffraPreflightIssue {
+  const WaffraPreflightIssue(this.sourceKey, this.index, this.code);
+  final String sourceKey;
+  final int index;
+  final String code;
+}
+
+class WaffraPreflightResult {
+  const WaffraPreflightResult({
+    required this.sourceSha256,
+    required this.itemCounts,
+    required this.issues,
+  });
+
+  final String sourceSha256;
+  final Map<String, int> itemCounts;
+  final List<WaffraPreflightIssue> issues;
+
+  bool get canStage => issues.isEmpty;
+}
+)
+          .firstMatch(value);
+      if (iso == null) return false;
+      final parsed = DateTime.tryParse(value);
+      if (parsed == null) return false;
+      return parsed.year == int.parse(iso.group(1)!) &&
+          parsed.month == int.parse(iso.group(2)!) &&
+          parsed.day == int.parse(iso.group(3)!);
+    }
+    if (!valid()) {
       issues.add(WaffraPreflightIssue(key, index, 'invalid_$field'));
     }
   }
