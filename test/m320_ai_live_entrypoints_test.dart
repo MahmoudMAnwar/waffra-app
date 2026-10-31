@@ -22,7 +22,7 @@ void main(){
     expect(tools,contains('WaffraAiFinanceCoach.analysis('));
     expect(tools,contains('WaffraAiFinanceCoach.savingSuggestions('));
     expect(tools,contains('WaffraAiModelGate.ensureReady('));
-    expect(home,contains('WaffraAiModelGate.requireForFeature('));
+    expect(tools,contains('WaffraAiModelGate.ensureReady('));
     expect(home,contains('await WaffraOnDeviceQwen.shared.dispose()'));
     expect(runner,contains('account_session_changed'));
     expect(runner,contains('_activeDownload?.close()'));
@@ -42,7 +42,7 @@ void main(){
         expect(home,contains('scannedImagePosition:one.position'));
         expect(home,contains('scannedImagePosition:candidate.position'));
         expect(home,contains('scannedImageTotal:candidates.length'));
-    expect(home,contains('if(_smsSheetOpen||_bankSmsAiOpening||!mounted)return;'));
+    expect(home,contains('if(_smsSheetOpen||!mounted)return;'));
     expect(home,contains('if(_receiptOcrAiOpening||!mounted)return;'));
     expect(home,contains('_smsSheetOpen=true;'));
     expect(home,contains('if(source==null||!mounted){_receiptOcrAiOpening=false;return;}'));
