@@ -3499,6 +3499,15 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final found=splitBankMessages(pasted.text.trim());
   if(found.isEmpty){update(()=>statusMessage=waffraIsEnglish?'No financial transactions found. Edit the message and retry.':'هذه الرسالة لا تحتوي على أي معاملات مالية. عدّلها لإعادة التحليل تلقائيًا.');return;}
   if(found.length>100){update(()=>statusMessage=waffraIsEnglish?'Maximum 100 transactions per paste.':'الحد الأقصى 100 معاملة في كل عملية لصق.');return;}
+  // A malformed or ambiguous source timestamp must not be silently booked
+  // on today's date during a large finance import.
+  final invalidDates=found.where(bankSmsHasUnverifiedTimestamp).length;
+  if(invalidDates>0){
+   update(()=>statusMessage=waffraIsEnglish?
+    '$invalidDates bank message(s) have an ambiguous or invalid date. Review their dates before saving; nothing was posted.':
+    'توجد $invalidDates رسالة بتاريخ غير واضح أو غير صالح. راجع التواريخ قبل الحفظ؛ لم تُحفظ معاملات.');
+   return;
+  }
   final currencyBatch=WaffraSmsCurrencies.summarize(found);
   if(currencyBatch.needsCurrencyReview){
    // No partial automatic commit for a mixed-currency paste.
