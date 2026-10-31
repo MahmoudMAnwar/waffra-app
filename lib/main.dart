@@ -4054,7 +4054,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       ],
       // Bank currency vs selected APP display currency are separate concepts.
       // Never mistake nominal label switching for an actual FX rate.
-      if(messages.length==1&&
+      if(messages.length==1&&!currencyPreview.needsCurrencyReview&&
          WaffraSmsCurrencies.originalAmount(messages.first)!=null&&
          WaffraSmsCurrencies.originalAmount(messages.first)!.currency!=
           WaffraDisplayCurrency.country.code)...[
@@ -6717,8 +6717,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
      const SizedBox(width:8),
      Expanded(child:InkWell(onTap:WaffraHaptics.tap(()=>transactionDetails(entry)),
       child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-       WaffraText(entry.title,maxLines:3,
-        style:const TextStyle(fontSize:13,fontWeight:FontWeight.w600)),
+       Tooltip(message:entry.title,child:WaffraText(entry.title,maxLines:3,
+        style:const TextStyle(fontSize:13,fontWeight:FontWeight.w600))),
+       if(entry.title.startsWith('معاملة بعملة تحتاج'))
+        Padding(padding:const EdgeInsets.only(top:2,bottom:2),
+         child:WaffraText(waffraIsEnglish?'Review source currency':
+          'راجع عملة المعاملة قبل اعتماد قيمتها',
+          maxLines:2,style:const TextStyle(
+           fontSize:10,color:Colors.deepOrange,fontWeight:FontWeight.w600))),
        const SizedBox(height:2),
        WaffraText(waffraTr(entry.category)+' • '+dayText(entry.date),
         maxLines:1,style:const TextStyle(fontSize:11,color:Colors.grey)),
