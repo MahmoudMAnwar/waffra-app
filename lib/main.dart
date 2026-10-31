@@ -4899,7 +4899,15 @@ Future<void> bulkSmsSheet({String? initialText})async {
          style:const TextStyle(color:Colors.redAccent,fontSize:12))),
       ],
       if(sms&&suggestion!=null)TextButton.icon(onPressed:WaffraHaptics.tap(()async {
-       final c=await categoryDialog(income:income,suggested:suggestion);
+       final mainId=selectedMain.isEmpty?null:selectedMain.first.id;
+       if(mainId==null){
+        snack(sheetContext,waffraIsEnglish?
+         'Select a main category before adding a subcategory.':
+         'اختر القسم الرئيسي أولًا قبل إضافة قسم فرعي.');
+        return;
+       }
+       final c=await categoryDialog(income:income,parentId:mainId,
+        suggested:suggestion);
        if(c!=null&&mounted&&sheetContext.mounted){
         if(WaffraValidators.uniqueCategory(c.name,
          categories.where((x)=>x.income==c.income).map((x)=>x.name))=='duplicate'){
@@ -4910,11 +4918,17 @@ Future<void> bulkSmsSheet({String? initialText})async {
         if(!await _persistModuleOrReload(
          WaffraFinanceRoute.categoryCreateEditDeleteRestore,
          operation:'bank-category-suggestion'))return;
-        if(sheetContext.mounted)update((){category=c.name;suggestion=null;});
+        if(sheetContext.mounted)update((){selectedParentId=mainId;category=c.name;suggestion=null;});
        }
       }),icon:const Icon(Icons.add),label:WaffraText('إضافة قسم $suggestion')),
       if(sms)OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async {
-       final c=await categoryDialog(income:income);
+       final mainId=selectedMain.isEmpty?null:selectedMain.first.id;
+       if(mainId==null){
+        snack(sheetContext,waffraIsEnglish?
+         'Select a main category first.':'اختر القسم الرئيسي أولًا.');
+        return;
+       }
+       final c=await categoryDialog(income:income,parentId:mainId);
        if(c!=null&&mounted&&sheetContext.mounted){
         if(WaffraValidators.uniqueCategory(c.name,
          categories.where((x)=>x.income==c.income).map((x)=>x.name))=='duplicate'){
@@ -4925,9 +4939,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
         if(!await _persistModuleOrReload(
          WaffraFinanceRoute.categoryCreateEditDeleteRestore,
          operation:'bank-new-category'))return;
-        if(sheetContext.mounted)update(()=>category=c.name);
+        if(sheetContext.mounted)update((){selectedParentId=mainId;category=c.name;});
        }
-      }),icon:const Icon(Icons.add),label:const WaffraText('قسم جديد'))
+      }),icon:const Icon(Icons.add),label:const WaffraText('قسم فرعي جديد'))
       else if(selectedMain.isNotEmpty)LayoutBuilder(builder:(ctx,box){
         final newCategory=OutlinedButton.icon(
          key:const Key('waffra-entry-new-subcategory'),
