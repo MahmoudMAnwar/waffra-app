@@ -588,6 +588,10 @@ DateTime? bankSmsDate(String raw, {DateTime? referenceDate}) {
  final ref=referenceDate??DateTime.now();
  final dmyDistance=dmy.difference(ref).inDays.abs();
  final ymdDistance=ymd.difference(ref).inDays.abs();
+ // Two dates within the plausible import-history window are ambiguous:
+ // 26/10/25 could mean 25 Oct 2026 or 26 Oct 2025. Never silently
+ // recast last year's banking transaction as today's or vice versa.
+ if(dmyDistance<=730&&ymdDistance<=730)return null;
  if(dmyDistance<=180&&ymdDistance>540)return dmy;
  if(ymdDistance<=180&&dmyDistance>540)return ymd;
  return null;
