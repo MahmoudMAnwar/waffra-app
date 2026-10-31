@@ -20,7 +20,7 @@ void main() {
       'Payment of SAR 20.00 is pending confirmation',
     ]) {
       final result = WaffraSmsIntelligence.classify(sample);
-      expect(result.safeToSave, isFalse, reason: sample);
+      expect(result.canAutoSuggestSar, isFalse, reason: sample);
     }
   });
 
@@ -31,7 +31,7 @@ void main() {
       'Received USD 10.00. Balance: USD 100.00',
     ]) {
       final result = WaffraSmsIntelligence.classify(sample);
-      expect(result.safeToSave, isFalse, reason: sample);
+      expect(result.canAutoSuggestSar, isFalse, reason: sample);
     }
   });
 }
