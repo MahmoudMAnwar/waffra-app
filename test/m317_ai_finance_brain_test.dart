@@ -179,7 +179,7 @@ void main() {
   test('M318 unknown/empty summary does not invent spending insights',()async{
     final empty=WaffraAiFinanceCoach.summarize(const []);
     expect(await WaffraAiFinanceCoach.askWaffra('Any data?',empty,
-        generate:(_)async=>'made up facts'),contains('inside the app'));
+        generate:(_)async=>'made up facts'),contains('اسأل وفرة'));
   });
 
   test('M317 currency list covers all 36 app display currencies',(){
