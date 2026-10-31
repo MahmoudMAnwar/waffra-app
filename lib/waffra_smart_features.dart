@@ -497,8 +497,13 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
    };
    if(!mounted)return;
    setState((){
-    final text=(response==null?null:
-      WaffraAiRecordedAnswers.cleanModelAnswer(response))??t(
+    final cleaned=response==null?null:
+      WaffraAiRecordedAnswers.cleanModelAnswer(response);
+    // Numeric finance answers come from verified rows in _ask(), NOT
+    // unsolicited amount guesses from a local generative model.
+    final safe=cleaned==null||
+      WaffraAiRecordedAnswers.hasUnverifiedMoneyClaim(cleaned)?null:cleaned;
+    final text=safe??t(
      'ما قدرت أطلع إجابة موثوقة من بياناتك.',
      'Could not produce a reliable answer from your records.');
     if(skill=='ask')answer=text;
