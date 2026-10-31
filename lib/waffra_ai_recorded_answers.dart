@@ -139,6 +139,28 @@ abstract final class WaffraAiRecordedAnswers {
       ' ('+count.toString()+' معاملة).';
   }
 
+  /// A local language model must not invent money totals in free-form
+  /// advice. Deterministic numeric questions are answered from verified
+  /// recorded finance facts before the model is invoked. Block any monetary
+  /// value in generated narrative instead of pretending to verify it.
+  /// Ratios or percentages alone are suggestions, not recorded amounts.
+  static bool hasUnverifiedMoneyClaim(String answer) {
+    final source=answer.trim();
+    if(source.isEmpty)return false;
+    const currencies=r'(?:SAR|EGP|AED|USD|EUR|GBP|QAR|KWD|BHD|OMR|JOD|'
+     r'IQD|JPY|CNY|TRY|INR|CAD|AUD|CHF|PKR|MAD|DZD|TND|'
+     r'LBP|KRW|SGD|HKD|MYR|IDR|ZAR|SEK|NOK|DKK|THB|PHP|BDT)';
+    // Match currency followed by a number or number followed by a
+    // currency (e.g. "AED 136", "136 درهم", "١٠٠ ريال").
+    final arabic=r'(?:ريال|درهم|جنيه|دولار|دينار|يورو|ليرة|روبية)';
+    final numeric=r'[0-9٠-٩۰-۹][0-9٠-٩۰-۹,.٫٬]*';
+    final money=RegExp(
+      '(?:'+currencies+'|'+arabic+')'+r'\\s*[:：]?\\s*'+numeric+
+      '|'+numeric+r'\\s*(?:'+currencies+'|'+arabic+')',
+      caseSensitive:false);
+    return money.hasMatch(source);
+  }
+
   /// Remove raw Markdown/thinking and boilerplate from qualitative LLM output.
   static String? cleanModelAnswer(String raw){
     var output=raw.trim();

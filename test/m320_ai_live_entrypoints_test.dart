@@ -22,7 +22,7 @@ void main(){
     expect(tools,contains('WaffraAiFinanceCoach.analysis('));
     expect(tools,contains('WaffraAiFinanceCoach.savingSuggestions('));
     expect(tools,contains('WaffraAiModelGate.ensureReady('));
-    expect(home,contains('WaffraAiModelGate.requireForFeature('));
+    expect(tools,contains('WaffraAiModelGate.ensureReady('));
     expect(home,contains('await WaffraOnDeviceQwen.shared.dispose()'));
     expect(runner,contains('account_session_changed'));
     expect(runner,contains('_activeDownload?.close()'));
@@ -37,16 +37,16 @@ void main(){
       contains('if(!WaffraOnDeviceQwen.shared.isReady||source.trim().isEmpty)return null;')));
     // M299 replaced flattened candidates with ordered OCR review items.
         // Keep multi-transaction review and the local-AI prerequisite together.
-        expect(home,contains('if(await _reviewAiScannedTransactions(extracted.rawText,picked))return;'));
+        expect(home,contains('await _reviewAiScannedTransactions(extracted.rawText,picked))return;'));
         expect(home,contains('final candidates=WaffraBankScreenshotParser.reviewItems(extracted.rawText);'));
         expect(home,contains('scannedImagePosition:one.position'));
         expect(home,contains('scannedImagePosition:candidate.position'));
         expect(home,contains('scannedImageTotal:candidates.length'));
-    expect(home,contains('try{allowed=await _requireBankSmsAi();}'));
-    expect(home,contains('try{allowed=await _requireReceiptOcrAi();}'));
-    expect(home,contains('if(!allowed||!mounted||_smsSheetOpen)return;'));
-    expect(home,contains('if(!allowed||!mounted)return;'));
-    expect(home,contains('if(initial==null&&(sms||scannedReceipt!=null||scannedImage!=null))'));
+    expect(home,contains('if(_smsSheetOpen||!mounted)return;'));
+    expect(home,contains('if(_receiptOcrAiOpening||!mounted)return;'));
+    expect(home,contains('_smsSheetOpen=true;'));
+    expect(home,contains('if(source==null||!mounted){_receiptOcrAiOpening=false;return;}'));
+    expect(home,contains('Bank SMS and OCR edit forms work offline'));
     expect(home,anyOf(
       contains('if(statusMessage.isEmpty&&messages.isNotEmpty)saveParsedMessages(ctx,update);'),
       contains('analyzeBankSmsAutomatically(ctx,update,input.trim(),revision)')));

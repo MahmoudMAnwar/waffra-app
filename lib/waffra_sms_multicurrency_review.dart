@@ -108,6 +108,18 @@ abstract final class WaffraSmsCurrencies {
           r'commission|رسوم|service fee|fee amount|\bvat\b|ضريبة',
           caseSensitive:false).firstMatch(clause);
         final action = footer==null?clause:clause.substring(0,footer.start);
+        // Some English banks put the ISO code before the debit verb and
+        // the amount after it: "AED debited from account 136.00 ending with
+        // 1001". This still means a FOREIGN transaction: never fall back
+        // to SAR merely because code and amount are not adjacent.
+        final actionVerb=RegExp(
+          r'\b([A-Z]{3})\s+(?:debited|credited|withdrawn|received|paid|spent)\b',
+          caseSensitive:false).firstMatch(action);
+        if(actionVerb!=null){
+          final code=codeFor(actionVerb.group(1)!);
+          if(supported.contains(code))found.add(code);
+          else found.add('UNKNOWN');
+        }
         // Named Arabic currencies can contain spaces. Scan their full names
         // beside an amount before the generic ريال/جنيه/درهم token scanner.
         final namedAction=_normalizeArabic(_westernDigits(action));
@@ -265,6 +277,17 @@ abstract final class WaffraSmsCurrencies {
       ...before.allMatches(action).map((m)=>m.group(1)!),
       ...after.allMatches(action).map((m)=>m.group(1)!),
     ];
+    // Only this constrained "debited from account [amount] ending with ID"
+    // bank layout may suggest its separated amount. Never take account ID
+    // or balance, and the review gate still blocks foreign-as-SAR writes.
+    if(matches.isEmpty){
+      final separated=RegExp(
+        '(?<![A-Za-z])'+acceptedCurrency+
+        r'\s+(?:debited|credited)\s+(?:from|to)\s+account\s+'+
+        pattern+r'\s+ending\s+with\s+[0-9]{3,6}\b',
+        caseSensitive:false).firstMatch(action);
+      if(separated!=null)matches.add(separated.group(1)!);
+    }
     if(matches.length!=1)return null;
     final canonical=_canonicalMoney(matches.single,scale);
     if(canonical==null)return null;
@@ -277,6 +300,25 @@ abstract final class WaffraSmsCurrencies {
   }
 
   static String? originalAmountPreview(String raw)=>originalAmount(raw)?.formatted;
+
+  /// Separate source-currency totals. Never add AED, SAR, JOD etc. together
+  /// or imply that an unresolved amount is zero.
+  static ({Map<String,double> totals,int unresolved}) sourceTotals(
+      List<String> messages) {
+    final totals=<String,double>{};
+    var unresolved=0;
+    for(final message in messages){
+      final original=originalAmount(message);
+      if(original==null){
+        unresolved++;
+        continue;
+      }
+      totals[original.currency]=(totals[original.currency]??0)+original.amount;
+    }
+    return (totals:Map<String,double>.unmodifiable(totals),
+      unresolved:unresolved);
+  }
+
 
   static bool requiresReviewForSarLedger(String raw) {
     final currencies = currenciesForMessage(raw);

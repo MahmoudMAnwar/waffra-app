@@ -259,7 +259,114 @@ abstract final class WaffraSmsIntelligence {
     // Shared ISO codes/precision: trained intent and SMS review must agree.
     final strict=WaffraSmsCurrencies.originalAmount(text);
     if(strict!=null)return (strict.amount,strict.currency);
-    if(WaffraSmsCurrencies.currenciesForMessage(text).isNotEmpty)return null;
+    final discovered=WaffraSmsCurrencies.currenciesForMessage(text);
+    // Only a single explicit Amount SAR line may bypass an overly strict
+    // generic lexer; never guess currency from merchant, balance or card ID.
+    final labelled=RegExp(
+      r'^\s*(?:Amount|Amt)\s*[:：]?\s*SAR\s+([0-9]{1,9}(?:\.[0-9]{1,2})?)\s*$',
+      multiLine:true,caseSensitive:false,
+    ).allMatches(_englishDigits(text)).toList();
+    if(labelled.length==1&&!discovered.any((code)=>code!='SAR')&&
+        !RegExp(r'\b(?:USD|AED|EUR|EGP|GBP|JOD|KWD|QAR|BHD|OMR)\b',
+          caseSensitive:false).hasMatch(text)){
+      final verified=_parseAmount(labelled.single.group(1)!);
+      if(verified!=null)return (verified,'SAR');
+    }
+    if(discovered.isNotEmpty)return null;
+    final clean = _englishDigits(text);
+    final pattern = RegExp(
+      r'(?:\b(?:SAR|SR|USD|EUR|GBP|AED|EGP|KWD|QAR|BHD|OMR|INR|JPY|CAD|AUD)\b|[$€£₹]|ريال|جنيه|درهم)'
+      r'\s*[:：]?\s*([0-9][0-9,.]{0,16})'
+      r'|([0-9][0-9,.]{0,16})\s*(?:\b(?:SAR|SR|USD|EUR|GBP|AED|EGP|KWD|QAR|BHD|OMR|INR|JPY|CAD|AUD)\b|[$€£₹]|ريال|جنيه|درهم)',
+      caseSensitive: false);
+    for (final line in clean.split(RegExp(r'[\r\n]+'))) {
+      final lower = normalize(line);
+      if (RegExp(
+        r'balance|available|الرصيد|رصيدك|المتاح|fee\b|رسوم|ضريبه|tax\b|vat\b|'
+        r'saldo\s+(?:disponible|actual)|solde\s+(?:disponible|actuel)',
+      ).hasMatch(lower)) continue;
+      for (final match in pattern.allMatches(line)) {
+        final number = _parseAmount(match.group(1) ?? match.group(2) ?? '');
+        final currency = _currencyFor(match.group(0)!);
+        if (number != null && currency != null) return (number, currency);
+      }
+    }
+    return null;
+  }
+}
+
+class _TinySmsIntentBayes {
+  _TinySmsIntentBayes({
+    required List<String> incoming,
+    required List<String> outgoing,
+  }) {
+    for (final sample in incoming) _learn(sample, true);
+    for (final sample in outgoing) _learn(sample, false);
+  }
+
+  final _positive = <String, int>{};
+  final _negative = <String, int>{};
+  var _positiveTerms = 0, _negativeTerms = 0;
+  static const _stopwords = <String>{
+    'your','account','with','from','into','today','been','has','the',
+    'bank','another','tu','cuenta','de','en','por','sur','votre','vous',
+    'compte','une','des','dans','من','علي','حسابك','حساب','مبلغ','الى',
+    'تم','بنجاح','عبر','عملية','المالي','dinero','virement','transferencia',
+  };
+  static const _actionWords = <String>{
+    'received','incoming','credited','deposit','refund','salary','payroll',
+    'credit','استلام','وارد','ايداع','راتب','استرداد',
+    'reçu','recu','crédité','credite','recibida','abonada','ingreso','abono',
+    'sent','outgoing','debited','withdrawal','purchase','paid','payment',
+    'spent','charge','charged','خصم','سحب','شراء','صادر','دفع',
+    'enviada','debitada','compra','pago','débitée','debite','retrait','émis',
+  };
+  Set<String> _features(String sentence) {
+    return RegExp(r'[a-zà-ÿ\u0600-\u06FF]+')
+        .allMatches(WaffraSmsIntelligence.normalize(sentence))
+        .map((m) => m.group(0)!)
+        .where((w) => w.length >= 3)
+        .toSet();
+  }
+
+  void _learn(String sample, bool positive) {
+    for (final word in _features(sample)) {
+      final map = positive ? _positive : _negative;
+      map[word] = (map[word] ?? 0) + 1;
+      if (positive) { _positiveTerms++; } else { _negativeTerms++; }
+    }
+  }
+
+  ({double logOdds, double incomingProbability}) score(String sentence) {
+    final terms = _features(sentence);
+    final vocabSize = <String>{..._positive.keys, ..._negative.keys}.length;
+    double logOdds = 0;
+    for (final word in terms) {
+      // Ignore generic bank metadata, proper nouns and unseen merchants.
+      // Direction-bearing verbs are learned signals with greater weight.
+      if (_stopwords.contains(word) ||
+          (!_positive.containsKey(word) && !_negative.containsKey(word))) continue;
+      final pos = (_positive[word] ?? 0) + 1;
+      final neg = (_negative[word] ?? 0) + 1;
+      final learnedEvidence = math.log(pos / (_positiveTerms + vocabSize)) -
+          math.log(neg / (_negativeTerms + vocabSize));
+      logOdds += (_actionWords.contains(word) ? 2.8 : 1) * learnedEvidence;
+    }
+    final incomingProbability = logOdds > 40 ? 1.0 :
+        logOdds < -40 ? 0.0 : 1 / (1 + math.exp(-logOdds));
+    return (logOdds: logOdds, incomingProbability: incomingProbability);
+  }
+}
+,
+      multiLine:true,caseSensitive:false).allMatches(_englishDigits(text)).toList();
+    if(labelled.length==1&&
+       !discovered.any((code)=>code!='SAR')&&
+       !RegExp(r'\b(?:USD|AED|EUR|EGP|GBP|JOD|KWD|QAR|BHD|OMR)\b',
+          caseSensitive:false).hasMatch(text)){
+      final verified=_parseAmount(labelled.single.group(1)!);
+      if(verified!=null)return (verified,'SAR');
+    }
+    if(discovered.isNotEmpty)return null;
     final clean = _englishDigits(text);
     final pattern = RegExp(
       r'(?:\b(?:SAR|SR|USD|EUR|GBP|AED|EGP|KWD|QAR|BHD|OMR|INR|JPY|CAD|AUD)\b|[$€£₹]|ريال|جنيه|درهم)'

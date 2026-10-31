@@ -32,6 +32,6 @@ void main() {
     expect(main, contains('تحليل الرسائل بالذكاء الاصطناعي'));
     expect(main, contains('if(!WaffraOnDeviceQwen.shared.isReady)return false;'));
     expect(main, contains('await entrySheet('));
-    expect(main, contains('if(!allowed||!mounted||_smsSheetOpen)return;'));
+    expect(main, contains('_smsSheetOpen=true;'));
   });
 }
