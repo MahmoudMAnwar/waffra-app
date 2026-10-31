@@ -86,3 +86,21 @@ Additional static findings and code remediations:
 3. Already-saved suspicious bank transactions must not be silently rewritten; show review warnings before trusting dashboards.
 4. Auto-suggestions are not ledger approvals. The original bank amount, currency, provider, published quote, converted amount and user consent must travel atomically through encrypted persistence.
 5. No SQLCipher production activation, no APK release and no claims of physical Android proof from emulators.
+
+## M337 finance-quality deep audit — 31 October 2026
+
+### Confirmed and corrected (not certified until CI)
+- **Critical compile blocker — bank SMS classifier**: `lib/waffra_sms_intelligence.dart` contained a second `_TinySmsIntentBayes` class and a dangling fragment starting `multiLine:true` after the first class's closing brace. Removed only the duplicate trailing portion; retained the intact trained classifier. Added `test/m337_sms_parser_duplicate_integrity_test.dart` with conservative OTP, pending and foreign-currency cases.
+- **High: bank transfer timestamp ambiguity**: non-ISO `DD/MM/YY` was interpreted as `YY/MM/DD` solely when the message contained a transfer keyword. A message `حوالة صادرة 30/10/26 23:49` could become October 26 **2030**, corrupting history and reports. Now evaluate both formats, choose only when sufficiently unambiguous relative to the reference date, otherwise return null. Bulk finance confirmation now refuses an explicit but unverified source timestamp rather than silently using today. Added `test/m337_bank_sms_timestamp_finance_safety_test.dart`.
+- **Medium: localized input validation mismatch**: the numeric formatter/parser supported Arabic and Persian digits but `WaffraValidators.positiveAmount` rejected those digits. Normalized numerals before validating exact two-decimal finance input; still reject zero, negative, malformed grouping and overprecision. Expanded `test/waffra_validators_test.dart`.
+- **High finance source preflight**: added `test/m337_finance_durable_preflight_safety_test.dart` for duplicate/missing transaction IDs, invalid money and dates, non-boolean income flags, damaged receipt references, and unencrypted legacy SMS notes; requires live CI result before any claims of success.
+
+### Remaining finance certification blockers
+1. **Historical malformed or foreign ledger rows**: the live `MoneyEntry.fromJson` currently substitutes `DateTime.now()` for an invalid or missing timestamp. The source preflight rejects invalid dates, but live load paths must be audited end-to-end to prove no invalid record reaches display/reporting. Do not rewrite user dates automatically.
+2. **Production FX conversion**: rate preview is not an atomic approved money write. Encrypted FX provenance, backup/restore, edit/undo/delete, and Home/Widget parity remain unapproved for production.
+3. **Physical-device OCR quality**: text-fixture unit tests cannot prove real-image pixel recognition, no freeze, hardware RAM pressure, or three actual message bubbles being detected accurately; require Android screenshots and profiling.
+4. **Precision/overflow and currency-specific scales**: live legacy finance uses SAR's two minor digits; zero/three-minor-digit source currencies must remain in isolated FX review until all authoritative writers support proper provenance.
+5. **Network and recovery**: verify stale/unavailable FX source, interrupted journal recovery, no duplicate on tap/retry, corrupt backup import, encrypted receipt and standalone Widget races.
+6. **Same-HEAD CI and release readiness**: every relevant workflow must succeed against the exact current PR head. One intentionally skipped M268 alone is allowed. Do not merge or publish on pending/failure.
+
+All M337 findings are code-review or new test changes only; no physical Android validation was performed and no SQLCipher production cutover occurred.
