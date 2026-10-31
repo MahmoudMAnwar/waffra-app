@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
 import 'package:waffra/waffra_sms_multicurrency_review.dart';
@@ -77,7 +78,36 @@ void main(){
   expect(receipt.amount,isNull);
  });
 
- test('M336 exchange approval cannot be forged by zero, NaN or unsupported',(){
+ test('M336 original currency totals are separated and never sum FX',(){
+  final summary=WaffraSmsCurrencies.sourceTotals([
+   'AED debited from account 136.00 ending with 1001 at SARAYA HALAB. Balance: 4857.96 AED',
+   'شراء PoS SAR 4.50',
+   'Incoming Transfer JOD 2.125 Balance 90 JOD',
+   'No financial transaction',
+  ]);
+  expect(summary.totals['AED'],136);
+  expect(summary.totals['SAR'],4.50);
+  expect(summary.totals['JOD'],2.125);
+  expect(summary.totals.length,3);
+  expect(summary.unresolved,1);
+ });
+
+ test('M336 bulk SMS requires currency evidence BEFORE hash and finance commit',(){
+  final app=File('lib/main.dart').readAsStringSync();
+  final start=app.indexOf('Future<void> bulkSmsSheet(');
+  final end=app.indexOf('Future<void> _previewForeignBankCurrency(',start);
+  final bulk=app.substring(start,end);
+  final marker=bulk.indexOf(
+   'WaffraSmsCurrencies.requiresReviewForSarLedger(messages[index])');
+  final hash=bulk.indexOf('final hash=bankSmsHash(messages[index]);',marker);
+  final commit=bulk.indexOf('_financeAuthority.commitConfirmedSms(',hash);
+  expect(marker,greaterThan(0));
+  expect(hash,greaterThan(marker));
+  expect(commit,greaterThan(hash));
+  expect(bulk,contains('sourceTotalsLabel'));
+ });
+
+  test('M336 exchange approval cannot be forged by zero, NaN or unsupported',(){
   expect(WaffraCurrencyMinor.exact(0,'SAR'),isNull);
   expect(WaffraCurrencyMinor.exact(double.nan,'SAR'),isNull);
   expect(WaffraCurrencyMinor.exact(10,'ZZZ'),isNull);
