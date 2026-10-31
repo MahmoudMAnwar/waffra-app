@@ -305,7 +305,10 @@ abstract final class WaffraSmsCurrencies {
   /// or imply that an unresolved amount is zero.
   static ({Map<String,double> totals,int unresolved}) sourceTotals(
       List<String> messages) {
-    final totals=<String,double>{};
+    // Source totals are display-only but must still be summed in exact
+    // 0/2/3-minor-unit integers. Binary double accumulation can misstate
+    // a multi-message finance review (0.10 + 0.20 != exactly 0.30).
+    final minorTotals=<String,int>{};
     var unresolved=0;
     for(final message in messages){
       final original=originalAmount(message);
@@ -313,8 +316,27 @@ abstract final class WaffraSmsCurrencies {
         unresolved++;
         continue;
       }
-      totals[original.currency]=(totals[original.currency]??0)+original.amount;
+      final digits=minorDigits(original.currency);
+      final factor=digits==0?1:digits==3?1000:100;
+      final scaled=original.amount*factor;
+      final minor=scaled.isFinite&&scaled>0&&scaled<9007199254740991
+        ?scaled.round():null;
+      if(minor==null||(scaled-minor).abs()>1e-6){
+        unresolved++;
+        continue;
+      }
+      final previous=minorTotals[original.currency]??0;
+      if(previous>9007199254740991-minor){
+        unresolved++;
+        continue;
+      }
+      minorTotals[original.currency]=previous+minor;
     }
+    final totals=<String,double>{
+      for(final entry in minorTotals.entries)
+        entry.key:entry.value/(minorDigits(entry.key)==0
+          ?1:minorDigits(entry.key)==3?1000:100),
+    };
     return (totals:Map<String,double>.unmodifiable(totals),
       unresolved:unresolved);
   }
