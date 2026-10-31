@@ -552,34 +552,54 @@ class BankParser {
   return BankResult(value,income,title,cat,suggestion);
  }
 }
-DateTime? bankSmsDate(String raw) {
+DateTime? bankSmsDate(String raw, {DateTime? referenceDate}) {
  final normalized=digits(raw).replaceAll('‏','').replaceAll('‎','');
- // English MADA and transfers use ISO YYYY-MM-DD, not legacy DD/MM/YY.
  final iso=RegExp(r'\b(\d{4})[-/](\d{1,2})[-/](\d{1,2})\s+(\d{1,2}):(\d{2})\b').firstMatch(normalized);
- if(iso!=null){
-  final year=int.tryParse(iso.group(1)!),month=int.tryParse(iso.group(2)!),
-   day=int.tryParse(iso.group(3)!),hour=int.tryParse(iso.group(4)!),
-   minute=int.tryParse(iso.group(5)!);
-  if(year==null||month==null||day==null||hour==null||minute==null||
-   year<2000||year>2100||month<1||month>12||day<1||day>31||
-   hour>23||minute>59)return null;
+ DateTime? checked(int year,int month,int day,int hour,int minute){
+  if(year<2000||year>2100||month<1||month>12||day<1||day>31||
+     hour<0||hour>23||minute<0||minute>59)return null;
   final date=DateTime(year,month,day,hour,minute);
   return date.year==year&&date.month==month&&date.day==day?date:null;
  }
+ if(iso!=null){
+  final y=int.tryParse(iso.group(1)!),m=int.tryParse(iso.group(2)!),
+   d=int.tryParse(iso.group(3)!),h=int.tryParse(iso.group(4)!),
+   min=int.tryParse(iso.group(5)!);
+  return y==null||m==null||d==null||h==null||min==null?
+   null:checked(y,m,d,h,min);
+ }
  final match=RegExp(r'(\d{1,2})[/-](\d{1,2})[/-](\d{1,4})\s+(\d{1,2}):(\d{2})').firstMatch(normalized);
  if(match==null)return null;
- final a=int.tryParse(match.group(1)!),b=int.tryParse(match.group(2)!),
-  c=int.tryParse(match.group(3)!);
- final hour=int.tryParse(match.group(4)!),minute=int.tryParse(match.group(5)!);
- if(a==null||b==null||c==null||hour==null||minute==null)return null;
+ final a=int.tryParse(match.group(1)!),month=int.tryParse(match.group(2)!),
+  c=int.tryParse(match.group(3)!),hour=int.tryParse(match.group(4)!),
+  minute=int.tryParse(match.group(5)!);
+ if(a==null||month==null||c==null||hour==null||minute==null)return null;
+ // DD/MM/YY is common for MADA. Two-digit YY/MM/DD also appears in
+ // transfers. The word "transfer" alone does NOT establish that order.
+ final dmy=checked(c<100?2000+c:c,month,a,hour,minute);
  final isTransfer=RegExp(r'حوال[ةه]|تحويل|transfer',caseSensitive:false).hasMatch(raw);
- final year=isTransfer?(a<100?2000+a:a):(c<100?2000+c:c);
- final month=b,day=isTransfer?c:a;
- if(year<2000||year>2100||month<1||month>12||day<1||day>31||
-  hour>23||minute>59)return null;
- final date=DateTime(year,month,day,hour,minute);
- return date.year==year&&date.month==month&&date.day==day?date:null;
+ if(!isTransfer)return dmy;
+ final ymd=checked(a<100?2000+a:a,month,c,hour,minute);
+ if(dmy==null)return ymd;
+ if(ymd==null)return dmy;
+ if(dmy==ymd)return dmy;
+ // A current-year source is more likely than one several years away.
+ // Otherwise reject the ambiguous date instead of fabricating a timestamp.
+ final ref=referenceDate??DateTime.now();
+ final dmyDistance=dmy.difference(ref).inDays.abs();
+ final ymdDistance=ymd.difference(ref).inDays.abs();
+ if(dmyDistance<=180&&ymdDistance>540)return dmy;
+ if(ymdDistance<=180&&dmyDistance>540)return ymd;
+ return null;
 }
+bool bankSmsHasUnverifiedTimestamp(String raw,{DateTime? referenceDate}){
+ final normalized=digits(raw).replaceAll('‏','').replaceAll('‎','');
+ final hasExplicit=RegExp(
+  r'\b(?:\d{4}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}[-/]\d{1,2}[-/]\d{1,4})\s+\d{1,2}:\d{2}\b'
+ ).hasMatch(normalized);
+ return hasExplicit&&bankSmsDate(raw,referenceDate:referenceDate)==null;
+}
+
 String bankSmsHash(String raw)=>sha256.convert(utf8.encode(digits(raw).replaceAll(RegExp(r'\s+'),' ').trim().toLowerCase())).toString();
 List<String> splitBankMessages(String raw){
  final clean=raw.replaceAll('\r\n','\n').replaceAll('\u200f','').replaceAll('\u200e','').trim();
