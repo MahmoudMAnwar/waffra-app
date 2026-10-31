@@ -9,6 +9,9 @@ void main() {
    'Incoming Transfer\nAmount: 30',
    'شراء PoS\nالمبلغ 120\nالرصيد: SAR 3000',
    'Card Purchase\nAmount 20\nAvailable balance: 100 SAR',
+   'Card Purchase\nSAR 0\nBalance: 500 SAR',
+   'شراء PoS\nSAR 0\nالرصيد ٥٠٠ SAR',
+   'Card Purchase\nFee: SAR 1.50\nBalance: SAR 100.00',
   ]){
    final result=BankParser.parse(message);
    expect(result.amount,isNull,reason:message);
@@ -29,6 +32,8 @@ void main() {
   final from=code.indexOf('class BankParser {');
   final end=code.indexOf('DateTime? bankSmsDate(',from);
   final segment=code.substring(from,end);
-  expect(segment,contains("if(value!=null&&!discoveredCurrencies.contains('SAR'))value=null;"));
+  expect(segment,contains("final verifiedSource=WaffraSmsCurrencies.originalAmount(s);"));
+  expect(segment,contains("(verifiedSource.amount-value).abs()>0.00001"));
+  expect(segment,contains("value=null;"));
  });
 }
