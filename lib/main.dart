@@ -4194,6 +4194,15 @@ Future<void> bulkSmsSheet({String? initialText})async {
         if(waffraTextFieldError(description.text)!=null||
         waffraAmountFieldError(amount.text)!=null||n==null||
         !waffraCanAssignManualCategory(available,income,activeSmsParent,category))return;
+       // Never allow a manually entered SAR value to bypass original
+       // currency checks in the batch review and atomic SMS writer.
+       if(WaffraSmsCurrencies.requiresReviewForSarLedger(messages[index])){
+        update(()=>statusMessage=waffraIsEnglish?
+         'Foreign bank currency cannot be saved as SAR. Review its rate; encrypted FX posting is not active.':
+         'لا يمكن حفظ العملة الأجنبية باعتبارها ريال. راجع السعر؛ تسجيل التحويل المشفر غير مفعّل.');
+        await _previewForeignBankCurrency(messages[index]);
+        return;
+       }
        final hash=bankSmsHash(messages[index]);
        var explicitlyApprovedDuplicate=false;
        if(smsHashes.contains(hash)){
