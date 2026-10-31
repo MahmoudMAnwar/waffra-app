@@ -28,6 +28,8 @@ import 'waffra_ai_finance_brain.dart';
 import 'waffra_ondevice_qwen.dart';
 import 'waffra_sms_intelligence.dart';
 import 'waffra_sms_multicurrency_review.dart';
+import 'waffra_foreign_currency_preview.dart';
+import 'waffra_sms_fx_review.dart';
 import 'waffra_back_navigation.dart';
 import 'waffra_saudi_greetings.dart';
 import 'package:flutter/rendering.dart';
@@ -4040,8 +4042,15 @@ Future<void> bulkSmsSheet({String? initialText})async {
            WaffraSmsCurrencies.originalAmountPreview(messages.first)!,
            style:const TextStyle(fontWeight:FontWeight.w700)),
          WaffraText(waffraIsEnglish?
-          'Foreign currency needs verified conversion before saving as SAR. Balance is not a transaction.':
-          'المبلغ الأجنبي لا يُحفظ كريال. راجع القيمة الأصلية وسعر الصرف أولاً؛ الرصيد ليس معاملة.'),
+          'Foreign currency is not stored as SAR without encrypted source/rate evidence. Balance is not a transaction.':
+          'المبلغ الأجنبي لا يُحفظ كريال بدون إثبات العملة والسعر مشفرًا. الرصيد ليس معاملة.'),
+         if(messages.length==1&&WaffraSmsCurrencies.originalAmount(messages.first)!=null)
+          OutlinedButton.icon(
+           key:const Key('waffra-fx-quote-preview-action'),
+           onPressed:busy?null:()=>_previewForeignBankCurrency(messages.first),
+           icon:const Icon(Icons.currency_exchange),
+           label:WaffraText(waffraIsEnglish?
+            'View current exchange rate and source':'عرض سعر الصرف الحالي ومصدره')),
         ])),
       ],
       if(analyzingPaste)...[const SizedBox(height:12),const LinearProgressIndicator(),const SizedBox(height:6),WaffraText(waffraIsEnglish?'Analyzing bank messages with AI…':'جاري الآن تحليل الرسائل بالذكاء الاصطناعي…')],
@@ -4122,6 +4131,13 @@ Future<void> bulkSmsSheet({String? initialText})async {
       TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
        inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],onChanged:(_)=>update((){}),
        decoration:InputDecoration(labelText:waffraIsEnglish?'Amount *':'مبلغ هذه الرسالة بالريال *',errorText:reviewAttempted?waffraAmountFieldError(amount.text):null,border:OutlineInputBorder())),
+      if(WaffraSmsCurrencies.originalAmount(messages[index])!=null&&
+         WaffraSmsCurrencies.requiresReviewForSarLedger(messages[index]))
+       OutlinedButton.icon(key:const Key('waffra-fx-transaction-preview'),
+        onPressed:busy?null:()=>_previewForeignBankCurrency(messages[index]),
+        icon:const Icon(Icons.currency_exchange),
+        label:WaffraText(waffraIsEnglish?
+         'Review current exchange rate':'راجع سعر الصرف الحالي')),
       const SizedBox(height:12),
       // Never display the entire catalog in one unbounded DropdownButton:
       // select a main category first, then only its searchable child items.
@@ -4242,6 +4258,37 @@ Future<void> bulkSmsSheet({String? initialText})async {
  _receiveSharedSms();
 }
 
+ Future<void> _previewForeignBankCurrency(String raw)async {
+  // No bank message contents, personal identifiers, photos or notes are
+  // included in the FX network request: only original and target codes.
+  final source=WaffraSmsCurrencies.originalAmount(raw);
+  if(!mounted)return;
+  if(source==null){
+   snack(context,waffraIsEnglish?
+    'Original currency or amount is uncertain. Check the bank message first.':
+    'العملة أو المبلغ الأصلي غير مؤكد. راجع الرسالة البنكية أولًا.');
+   return;
+  }
+  final target=WaffraDisplayCurrency.country.code;
+  if(source.currency==target){
+   snack(context,waffraIsEnglish?
+    'Bank currency matches the app display currency. Encrypted foreign-currency saving is not enabled yet.':
+    'عملة الرسالة مطابقة لعملة العرض. حفظ العملات الأجنبية المشفر غير مفعل بعد.');
+   return;
+  }
+  final approved=await WaffraForeignCurrencyPreview.show(context,
+   originalAmount:source.amount,originalCurrency:source.currency,
+   targetCurrency:target,english:waffraIsEnglish);
+  if(approved!=null&&mounted){
+   // Do not write an FX amount to the guarded legacy ledger. We can only
+   // persist the conversion together with original currency + approved quote
+   // in the atomically encrypted FX finance source after cutover approval.
+   snack(context,waffraIsEnglish?
+    'Conversion preview approved. No amount was saved; encrypted FX posting is not active.':
+    'تمت الموافقة على معاينة التحويل فقط. لم يُحفظ أي مبلغ؛ تسجيل العملات المحوّلة ينتظر تفعيل التخزين المعتمد.');
+  }
+ }
+
  Future<bool> _canReviewOcrAsLedgerTransaction(String raw)async {
   if(!WaffraBankScreenshotParser.requiresForeignCurrencyReview(raw))return true;
   if(!mounted)return false;
@@ -4251,16 +4298,22 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final label=currencyCodes.isEmpty?
    (waffraIsEnglish?'foreign currency':'عملة أجنبية'):
    currencyCodes.join(' / ');
-  await showWaffraDialog<void>(context:context,builder:(dialog)=>AlertDialog(
-   title:WaffraText(waffraIsEnglish?
-    'Foreign currency requires review':'عملية بعملة أجنبية تحتاج مراجعة'),
-   content:WaffraText(waffraIsEnglish?
-    'Detected $label. This amount cannot be saved as SAR without verified conversion. Review other SAR entries.':
-    'تم اكتشاف $label. لا يمكن حفظ هذا المبلغ باعتباره ريالًا سعوديًا بدون تحويل موثوق. راجع بقية العمليات.'),
-   actions:[FilledButton(
-    onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialog)),
-    child:WaffraText(waffraIsEnglish?'Understood':'فهمت'))],
-  ));
+  // Offer a verified, consented current-rate preview instead of a dead
+  // end, but keep the SAR ledger blocked until FX provenance is atomic.
+  final evidence=WaffraSmsCurrencies.originalAmount(raw);
+  if(evidence!=null){
+   await _previewForeignBankCurrency(raw);
+  }else{
+   await showWaffraDialog<void>(context:context,builder:(dialog)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?
+     'Foreign currency requires review':'عملة أجنبية تحتاج مراجعة'),
+    content:WaffraText(waffraIsEnglish?
+     'Detected $label but cannot verify the original amount. Nothing was saved.':
+     'اكتُشفت عملة $label ولكن المبلغ الأصلي غير واضح. لم تُحفظ المعاملة.'),
+    actions:[TextButton(onPressed:()=>Navigator.pop(dialog),
+     child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))],
+   ));
+  }
   return false;
  }
 
@@ -6646,7 +6699,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      const SizedBox(width:8),
      Expanded(child:InkWell(onTap:WaffraHaptics.tap(()=>transactionDetails(entry)),
       child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-       WaffraText(entry.title,maxLines:1,
+       WaffraText(entry.title,maxLines:3,
         style:const TextStyle(fontSize:13,fontWeight:FontWeight.w600)),
        const SizedBox(height:2),
        WaffraText(waffraTr(entry.category)+' • '+dayText(entry.date),
