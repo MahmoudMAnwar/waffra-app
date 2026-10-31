@@ -158,7 +158,19 @@ abstract final class WaffraAiRecordedAnswers {
       '(?:'+currencies+'|'+arabic+')'+r'\s*[:：]?\s*'+numeric+
       '|'+numeric+r'\s*(?:'+currencies+'|'+arabic+')',
       caseSensitive:false);
-    return money.hasMatch(source);
+    if(money.hasMatch(source))return true;
+    // The model also invents amounts without a unit (e.g. "income 3500")
+    // and can omit the currency symbol altogether. Numeric answers must
+    // always come from verified ledger facts, never from generated advice.
+    // Allow suggestion percentages only; no unverified dates, counts,
+    // prices, totals or financial deltas are presented as fact.
+    for(final match in RegExp(r'[0-9٠-٩۰-۹]+(?:[.,٫٬][0-9٠-٩۰-۹]+)*')
+        .allMatches(source)){
+      final suffix=source.substring(match.end).trimLeft();
+      if(suffix.startsWith('%')||suffix.startsWith('٪'))continue;
+      return true;
+    }
+    return false;
   }
 
   /// Remove raw Markdown/thinking and boilerplate from qualitative LLM output.
