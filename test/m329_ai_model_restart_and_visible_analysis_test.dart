@@ -20,7 +20,7 @@ void main() {
     expect(main, contains("Key('waffra-ai-analysis-progress')"));
     expect(main, contains('item.remove();'));
     expect(main, contains('item.dispose();'));
-    expect(main, contains('}finally{\n   item.remove();'));
+    expect(main, contains('completed=true;\n   item.remove();'));
     expect(main, contains('()=>WaffraReceiptOcr.scan(picked.path)'));
     expect(main, contains('()=>WaffraAiFinanceBrain.imageOcr(sourceText,'));
     expect(main, contains('WaffraBankScreenshotParser.reviewItems(extracted.rawText)'));
@@ -28,8 +28,8 @@ void main() {
 
   test('M329 bank SMS AI review displays progress and keeps manual confirmation', () {
     expect(main, contains('()=>WaffraAiFinanceBrain.bankSms(source,'));
-    expect(main, contains('waffra-sms-ai-review'));
-    expect(main, contains('تحليل الرسالة البنكية'));
+    expect(main, isNot(contains('waffra-sms-ai-review')));
+    expect(main, contains('تحليل الرسائل بالذكاء الاصطناعي'));
     expect(main, contains('if(!WaffraOnDeviceQwen.shared.isReady)return false;'));
     expect(main, contains('await entrySheet('));
     expect(main, contains('if(!allowed||!mounted||_smsSheetOpen)return;'));

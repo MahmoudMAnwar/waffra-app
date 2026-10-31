@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 
@@ -183,27 +184,64 @@ class WaffraOnDeviceQwen {
     }
   }
 
-  /// Same inference entry point for bank SMS, image OCR, Ask Waffra,
-  /// financial analysis, and savings suggestions. Only generates text.
+  /// Native llama.cpp runs in a worker isolate, but long Qwen3 thinking
+  /// output can make low-powered phones appear stuck. One bounded generation
+  /// at a time; cancellation never deletes the verified local GGUF.
+  bool _generationActive=false;
+  bool _generationCancelled=false;
+  static const generationTimeLimit=Duration(seconds:45);
+
+  void cancelCurrentGeneration(){
+    if(!_generationActive)return;
+    _generationCancelled=true;
+    _engine?.cancelGeneration();
+  }
+
+  /// Same inference entry point for SMS, OCR, Ask Waffra and finance tools.
+  /// No finance write occurs here. The model stays installed after timeout.
   WaffraAiTextInference get textGenerator=>generate;
   Future<String> generate(String prompt)async{
     final engine=_engine;
     if(engine==null)throw StateError('local_model_not_ready');
+    if(_generationActive)throw StateError('ai_generation_already_running');
     if(prompt.length>24000)throw const FormatException('prompt_too_long');
+    _generationActive=true;
+    _generationCancelled=false;
     final output=StringBuffer();
-    await for(final chunk in engine.create([
-      LlamaChatMessage.fromText(role:LlamaChatRole.user,text:prompt),
-    ],params:const GenerationParams(maxTokens:1536))){
-      final next=chunk.choices.first.delta.content;
-      if(next!=null){
-        output.write(next);
-        if(output.length>24000)throw const FormatException('model_output_limit');
+    Future<String> readTokens()async{
+      try{
+        // Qwen3 defaults to thinking output. A final /no_think instruction
+        // requests short task JSON instead of thousands of reasoning tokens.
+        await for(final chunk in engine.create([
+          LlamaChatMessage.fromText(role:LlamaChatRole.user,
+            text:prompt+'\n/no_think'),
+        ],params:const GenerationParams(maxTokens:768))){
+          if(_generationCancelled)throw StateError('ai_generation_cancelled');
+          final next=chunk.choices.first.delta.content;
+          if(next!=null){
+            output.write(next);
+            if(output.length>24000){
+              cancelCurrentGeneration();
+              throw const FormatException('model_output_limit');
+            }
+          }
+        }
+        if(_generationCancelled)throw StateError('ai_generation_cancelled');
+        return output.toString();
+      }finally{
+        // Keep busy until the native generation stream really stops, even
+        // if the user-facing timeout returned early.
+        _generationActive=false;
       }
     }
-    return output.toString();
+    return readTokens().timeout(generationTimeLimit,onTimeout:(){
+      cancelCurrentGeneration();
+      throw TimeoutException('ai_generation_timed_out',generationTimeLimit);
+    });
   }
 
   Future<void> dispose()async{
+    cancelCurrentGeneration();
     // Logout revokes any in-flight model download/load from the old session.
     _session++;
     _activeDownload?.close();

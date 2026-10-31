@@ -129,13 +129,19 @@ abstract final class WaffraBankScreenshotParser {
       }
       final leading = line.substring(0, anchors.first.start).trim();
       if (leading.isNotEmpty) lines.add(leading);
-      for (var i = 0; i < anchors.length; i++) {
-        final segment = line.substring(
-          anchors[i].start,
-          i + 1 < anchors.length ? anchors[i + 1].start : line.length,
-        ).trim();
+      var start = anchors.first.start;
+      for (var i = 1; i < anchors.length; i++) {
+        final segment = line.substring(start, anchors[i].start).trim();
+        // "شراء POS" and "Transfer Received" are often TWO action
+        // keywords for ONE payment. A new payment boundary requires
+        // an intervening actual transaction amount.
+        if (!_money.hasMatch(segment) &&
+            !WaffraSmsCurrencies.adjacentAmount.hasMatch(segment)) continue;
         if (segment.isNotEmpty) lines.add(segment);
+        start = anchors[i].start;
       }
+      final last = line.substring(start).trim();
+      if (last.isNotEmpty) lines.add(last);
     }
     return lines;
   }
@@ -148,9 +154,18 @@ abstract final class WaffraBankScreenshotParser {
     for (var i = 0; i < lines.length; i++) {
       if (!_action.hasMatch(lines[i])) continue;
       var end = i + 1;
-      while (end < lines.length &&
-          end < i + 14 &&
-          !_action.hasMatch(lines[end])) {
+      while (end < lines.length && end < i + 14) {
+        if (_action.hasMatch(lines[end])) {
+          // OCR may put a second action label on the following line,
+          // e.g. "شراء" then "POS". Do not fabricate a second record
+          // until the current action has a verifiable amount.
+          final previous = lines.sublist(i, end);
+          final hasTransactionAmount = previous.any((line) =>
+              !_excludedLine.hasMatch(line) &&
+              (_money.hasMatch(line) ||
+               WaffraSmsCurrencies.adjacentAmount.hasMatch(line)));
+          if (hasTransactionAmount) break;
+        }
         end++;
       }
       final chunk = lines.sublist(i, end);

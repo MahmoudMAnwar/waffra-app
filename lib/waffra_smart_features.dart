@@ -5,6 +5,7 @@ import 'waffra_practical_tools_page.dart';
 import 'waffra_practical_ledger_engine.dart';
 import 'waffra_haptic_feedback.dart';
 import 'waffra_ai_finance_coach.dart';
+import 'waffra_ai_recorded_answers.dart';
 import 'waffra_ondevice_qwen.dart';
 import 'waffra_ai_model_gate.dart';
 import 'waffra_display_currency.dart';
@@ -308,8 +309,11 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
       english:widget.english,style:effective);
   // Do not wrap a WaffraText inside another Text: Flutter's text finder
   // would double-count unchanged labels in the smart-tool screens.
-  return spans==null?Text(value,style:effective):
-   Text.rich(TextSpan(children:spans),style:effective);
+  final direction=widget.english?TextDirection.ltr:TextDirection.rtl;
+  return spans==null?Text(value,style:effective,
+   textDirection:direction,textAlign:TextAlign.start):
+   Text.rich(TextSpan(children:spans),style:effective,
+    textDirection:direction,textAlign:TextAlign.start);
  }
  Widget _paragraph(String v)=>_label(v,size:13,color:Theme.of(context).colorScheme.onSurface.withValues(alpha:.77));
  Widget _tile(String label,String value,{String? note,Color? tint}){
@@ -320,7 +324,7 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
     const Color(0xFFEAF5EE)),borderRadius:BorderRadius.circular(18)),
    child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
     _label(label,size:12),const SizedBox(height:4),
-    _label(value,size:19,bold:true),
+    _label(value,size:value.length>140?14:19,bold:value.length<=140),
     if(note!=null)...[const SizedBox(height:4),_paragraph(note)],
    ]));
  }
@@ -488,9 +492,10 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
    };
    if(!mounted)return;
    setState((){
-    final text=response??t(
-     'البيانات غير كافية لإجابة موثوقة.',
-     'Insufficient verified data for an AI answer.');
+    final text=(response==null?null:
+      WaffraAiRecordedAnswers.cleanModelAnswer(response))??t(
+     'ما قدرت أطلع إجابة موثوقة من بياناتك.',
+     'Could not produce a reliable answer from your records.');
     if(skill=='ask')answer=text;
     else if(skill=='analysis')aiAnalysis=text;
     else aiSavings=text;
@@ -567,33 +572,35 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
  }
 
  void _ask(){
-  if(!WaffraOnDeviceQwen.shared.isReady)return;
-  final q=question.toLowerCase().trim();
-  if(q.isNotEmpty&&WaffraOnDeviceQwen.shared.isReady){
-   unawaited(_generateAiSkill('ask',questionText:q));return;
+  final q=question.trim();
+  if(q.isEmpty){
+   setState(()=>answer=t('اكتب سؤال عن معاملاتك.','Ask about your transactions.'));
+   return;
   }
-  if(q.isEmpty){setState(()=>answer=t('اكتب سؤال عن معاملاتك.','Ask about your transactions.'));return;}
-  final now=today;
-  final monthsBack=q.contains('3')||q.contains('٣')?3:q.contains('6')||q.contains('٦')?6:1;
-  final rows=widget.entries.where((e)=>e.date.isAfter(
-   DateTime(now.year,now.month-(monthsBack-1),1))).toList();
-  final categories=widget.entries.map((e)=>e.category).toSet();
-  String? matched;
-  for(final category in categories){
-   if(q.contains(category.toLowerCase().split(' / ').last.toLowerCase())){
-    matched=category;break;
-   }
+  // Numeric questions work even when the optional AI model is not installed.
+  // Read numeric questions from exact verified records, not Qwen output.
+  final facts=<WaffraAiRecordedFact>[];
+  for(final item in widget.entries){
+   final minor=item.amount*100;
+   if(!minor.isFinite||minor<=0||minor>100000000000||
+      (minor-minor.round()).abs()>0.000001)continue;
+   facts.add(WaffraAiRecordedFact(date:item.date,category:item.category,
+     amountMinor:minor.round(),income:item.income));
   }
-  final filtered=matched==null?rows:rows.where((e)=>e.category==matched).toList();
-  final income=q.contains('دخل')||q.contains('income')||q.contains('راتب');
-  final selected=filtered.where((e)=>income?e.income:!e.income).toList();
-  final total=selected.fold<double>(0,(v,e)=>v+e.amount);
-  setState(()=>answer=t('إجمالي '+(income?'الدخل':'المصروفات')+
-   (matched==null?'':' في '+matched)+' خلال '+monthsBack.toString()+
-   ' شهر: '+cash(total)+' ('+selected.length.toString()+' عملية).',
-   'Recorded '+(income?'income':'expenses')+
-   (matched==null?'':' in '+matched)+' over '+monthsBack.toString()+
-   ' month(s): '+cash(total)+' ('+selected.length.toString()+' transactions).'));
+  final direct=WaffraAiRecordedAnswers.answer(q,facts,now:today,
+   english:widget.english,currency:WaffraDisplayCurrency.country.code,
+   formatMoney:(minor)=>cash(minor/100));
+  if(direct!=null){
+   setState(()=>answer=direct);
+   return;
+  }
+  // Only open-ended advice needs the optional local model.
+  if(!WaffraOnDeviceQwen.shared.isReady){
+   setState(()=>answer=t('نزّل مكتبة الذكاء الاصطناعي لتفعيل النصائح.',
+    'Download the AI library to enable advice.'));
+   return;
+  }
+  unawaited(_generateAiSkill('ask',questionText:q));
  }
  Widget _assistant(){
   return _column([

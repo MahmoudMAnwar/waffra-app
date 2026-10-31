@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'waffra_bank_screenshot_parser.dart';
+import 'waffra_receipt_ocr_parser.dart';
 
 typedef WaffraAiTextInference = Future<String> Function(String prompt);
 enum WaffraAiSource { bankSms, imageOcr }
@@ -91,8 +93,16 @@ abstract final class WaffraAiFinanceBrain {
   }
   static bool competingAmounts(String quote){
     final action=_actionBeforeFooter(quote);
-    final matches=RegExp(r'(?<![0-9])[0-9]{1,12}(?:[.,][0-9]{1,3})?(?![0-9])')
-      .allMatches(action).toList();
+    // A bank SMS routinely contains card suffix, reference, and date/time.
+    // Only competing *currency-labelled* amounts are payment candidates.
+    // Currency-less entries still fail the independent exactCurrency guard.
+    final matches=RegExp(
+      r'(?:(?:SAR|SR|ريال(?:\s+سعودي)?|ر\.?\s*س\.?)\s*[:：]?\s*'
+      r'[0-9]{1,12}(?:[.,][0-9]{1,3})?'
+      r'|[0-9]{1,12}(?:[.,][0-9]{1,3})?\s*'
+      r'(?:SAR|SR|ريال(?:\s+سعودي)?|ر\.?\s*س\.?))',
+      caseSensitive:false,
+    ).allMatches(action).toList();
     return matches.length>1;
   }
   static bool exactCurrency(String quote,String text){
@@ -115,6 +125,32 @@ abstract final class WaffraAiFinanceBrain {
     r'verification code|cancelled|canceled)\b|'
     r'معلق|قيد المعالجه|مرفوض|فاشل|رمز التحقق',
     caseSensitive:false).hasMatch(normalize(quote));
+
+  /// Never let a small LLM invent extra bank-image transactions or amounts.
+  /// Only consider a bank screenshot AI answer usable when each action agrees
+  /// with independently parsed, currency-verified OCR text in source order.
+  /// No finance write is performed by this comparison.
+  static bool matchesVerifiedImageActions(String source,WaffraAiResult ai){
+    if(ai.error!=null||ai.items.isEmpty)return false;
+    final ocr=WaffraBankScreenshotParser.reviewItems(source);
+    if(ocr.isEmpty||ocr.length!=ai.items.length)return false;
+    final fingerprints=<String>{};
+    for(var i=0;i<ocr.length;i++){
+      final row=ocr[i],candidate=ai.items[i];
+      if(row.amount==null||candidate.needsReview||candidate.currency!='SAR'||
+         !row.sourceText.contains(candidate.quote)||
+         !fingerprints.add(row.sourceText.trim())){
+        return false;
+      }
+      final amount=candidate.amountText==null?null:
+        WaffraReceiptOcrParser.amountFromText(candidate.amountText!);
+      if(amount==null||(amount-row.amount!).abs()>0.00001||
+         (candidate.direction==WaffraAiDirection.income)!=row.income){
+        return false;
+      }
+    }
+    return true;
+  }
 
   static Future<WaffraAiResult> bankSms(String text,
       {required WaffraAiTextInference generate})=>
@@ -157,6 +193,7 @@ UNTRUSTED TEXT END''';
       if(list.length>maxItems)throw const FormatException();
       final result=<WaffraAiTransaction>[];
       final observed=<String>{};
+      final claimedSpans=<(int,int)>[];
       for(final element in list){
         if(element is! Map<String,dynamic>)throw const FormatException();
         final quote=element['source_quote'];
@@ -168,6 +205,16 @@ UNTRUSTED TEXT END''';
            (unit!=null&&unit is! String)||
            (merchant!=null&&merchant is! String)||
            direction is! String)throw const FormatException();
+        // Two different quotes may still describe the SAME payment.
+        // Reject nested/overlapping source evidence rather than allowing
+        // "شراء POS SAR 10" and "POS SAR 10" to double the transaction.
+        final quoteAt=raw.indexOf(quote);
+        if(quoteAt<0||
+          claimedSpans.any((span)=>quoteAt<span.$2&&
+            (quoteAt+quote.length)>span.$1)){
+          throw const FormatException('overlapping_action_evidence');
+        }
+        claimedSpans.add((quoteAt,quoteAt+quote.length));
         final kind=switch(direction){
           'income'=>WaffraAiDirection.income,
           'expense'=>WaffraAiDirection.expense,
@@ -192,6 +239,16 @@ UNTRUSTED TEXT END''';
             :kind==WaffraAiDirection.unknown?'direction_unknown'
             :'manual_confirmation_required',
         ));
+      }
+      // A small model can split "شراء POS" into multiple invented rows.
+      // Do not present more Qwen rows than independently anchored OCR bank
+      // actions. Abstain and let the guarded deterministic review take over.
+      if(origin==WaffraAiSource.imageOcr&&
+         WaffraBankScreenshotParser.looksLikeBankScreenshot(raw)){
+        final grounded=WaffraBankScreenshotParser.reviewItems(raw);
+        if(grounded.isNotEmpty&&grounded.length!=result.length){
+          throw const FormatException('ai_ocr_action_count_mismatch');
+        }
       }
       return WaffraAiResult(origin,
         List<WaffraAiTransaction>.unmodifiable(result),null);
