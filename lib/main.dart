@@ -26,7 +26,6 @@ import 'waffra_receipt_ocr_parser.dart';
 import 'waffra_bank_screenshot_parser.dart';
 import 'waffra_ai_finance_brain.dart';
 import 'waffra_ondevice_qwen.dart';
-import 'waffra_ai_model_gate.dart';
 import 'waffra_sms_intelligence.dart';
 import 'waffra_sms_multicurrency_review.dart';
 import 'waffra_back_navigation.dart';
@@ -2715,7 +2714,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  int tab=0,year=DateTime.now().year,month=DateTime.now().month;
  bool goalsOpened=false;
  bool _smsSheetOpen=false;
- bool _bankSmsAiOpening=false,_receiptOcrAiOpening=false;
+ bool _receiptOcrAiOpening=false;
  String? _lastWidgetRevision;
  // Exact last finance ledger string seen or committed, including null vs [].
  // Detect partial widget saves even if the last-save marker never committed.
@@ -3401,21 +3400,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),
      child:WaffraText(waffraIsEnglish?'Confirm delete':'تأكيد الحذف')),
    ]));
-Future<bool> _requireBankSmsAi()=>
-  WaffraAiModelGate.requireForFeature(context,
-   english:waffraIsEnglish,featureAr:'تحليل الرسائل البنكية',
-   featureEn:'bank message analysis');
-
- Future<bool> _requireReceiptOcrAi()=>
-  WaffraAiModelGate.requireForFeature(context,
-   english:waffraIsEnglish,featureAr:'تصوير الفواتير واستخراج البيانات من الصور',
-   featureEn:'receipt and image OCR scanning');
-
- Future<void> bulkSmsSheet({String? initialText})async {
+Future<void> bulkSmsSheet({String? initialText})async {
   // Deterministic SMS review is available immediately and offline.
   // Qwen remains optional for ambiguous messages; never block paste on a
   // 484 MB model initialization just to read a supported bank template.
-  if(_smsSheetOpen||_bankSmsAiOpening||!mounted)return;
+  if(_smsSheetOpen||!mounted)return;
   _smsSheetOpen=true;
  final pasted=TextEditingController(text:initialText??'');
  final description=TextEditingController();
