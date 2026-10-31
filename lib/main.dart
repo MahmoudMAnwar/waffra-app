@@ -3464,7 +3464,13 @@ Future<bool> _requireBankSmsAi()=>
    category=categories.any((c)=>c.income==income&&c.name==result.category)?result.category:
     (forType(income).isNotEmpty?forType(income).first.name:'أخرى');
    final leaves=categories.where((c)=>c.income==income&&c.isSubcategory&&c.name==category).toList();
-   smsParentId=leaves.isEmpty?null:leaves.first.parentId;
+   if(leaves.isNotEmpty){
+    smsParentId=leaves.first.parentId;
+   }else{
+    final parents=categories.where((c)=>c.income==income&&!c.isSubcategory&&c.name==category).toList();
+    smsParentId=parents.isEmpty?null:parents.first.id;
+    category='';
+   }
    // M220: never paste the full bank SMS into the transaction TITLE.
    // The original text is shown only in the ephemeral review field; the
    // guarded legacy writer strips raw SMS notes until SQLCipher is certified.
@@ -4140,8 +4146,9 @@ Future<bool> _requireBankSmsAi()=>
       }),child:InputDecorator(decoration:InputDecoration(
         labelText:waffraIsEnglish?'Subcategory *':'القسم الفرعي *',
         enabled:activeSmsMains.isNotEmpty,
-        errorText:reviewAttempted&&WaffraValidators.requiredCategory(
-         category,smsSubcategories.map((c)=>c.name))!=null?waffraRequiredFieldMessage:null,
+        errorText:reviewAttempted&&
+         !waffraCanAssignManualCategory(available,income,activeSmsParent,category)
+         ?waffraRequiredFieldMessage:null,
         border:const OutlineInputBorder(),
         suffixIcon:const Icon(Icons.arrow_drop_down_rounded)),
        child:WaffraText(smsSubcategories.any((c)=>c.name==category)?
@@ -4153,7 +4160,7 @@ Future<bool> _requireBankSmsAi()=>
        update(()=>reviewAttempted=true);
         if(waffraTextFieldError(description.text)!=null||
         waffraAmountFieldError(amount.text)!=null||n==null||
-        WaffraValidators.requiredCategory(category,available.map((c)=>c.name))!=null)return;
+        !waffraCanAssignManualCategory(available,income,activeSmsParent,category))return;
        final hash=bankSmsHash(messages[index]);
        var explicitlyApprovedDuplicate=false;
        if(smsHashes.contains(hash)){
