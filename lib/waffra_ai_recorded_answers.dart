@@ -155,8 +155,8 @@ abstract final class WaffraAiRecordedAnswers {
     final arabic=r'(?:ريال|درهم|جنيه|دولار|دينار|يورو|ليرة|روبية)';
     final numeric=r'[0-9٠-٩۰-۹][0-9٠-٩۰-۹,.٫٬]*';
     final money=RegExp(
-      '(?:'+currencies+'|'+arabic+')'+r'\\s*[:：]?\\s*'+numeric+
-      '|'+numeric+r'\\s*(?:'+currencies+'|'+arabic+')',
+      '(?:'+currencies+'|'+arabic+')'+r'\s*[:：]?\s*'+numeric+
+      '|'+numeric+r'\s*(?:'+currencies+'|'+arabic+')',
       caseSensitive:false);
     return money.hasMatch(source);
   }
