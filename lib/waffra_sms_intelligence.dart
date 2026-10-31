@@ -264,7 +264,7 @@ abstract final class WaffraSmsIntelligence {
     // Never infer the code from the account balance or merchant description.
     // This is a strictly bounded fallback when a generic SMS lexer abstains.
     final labelled=RegExp(
-      r'^\\s*(?:Amount|Amt)\\s*[:：]?\\s*SAR\\s+([0-9]{1,9}(?:\\.[0-9]{1,2})?)\\s*
+      r'^\s*(?:Amount|Amt)\s*[:：]?\s*SAR\s+([0-9]{1,9}(?:\.[0-9]{1,2})?)\s*
     final clean = _englishDigits(text);
     final pattern = RegExp(
       r'(?:\b(?:SAR|SR|USD|EUR|GBP|AED|EGP|KWD|QAR|BHD|OMR|INR|JPY|CAD|AUD)\b|[$€£₹]|ريال|جنيه|درهم)'
@@ -353,7 +353,7 @@ class _TinySmsIntentBayes {
       multiLine:true,caseSensitive:false).allMatches(_englishDigits(text)).toList();
     if(labelled.length==1&&
        !discovered.any((code)=>code!='SAR')&&
-       !RegExp(r'\\b(?:USD|AED|EUR|EGP|GBP|JOD|KWD|QAR|BHD|OMR)\\b',
+       !RegExp(r'\b(?:USD|AED|EUR|EGP|GBP|JOD|KWD|QAR|BHD|OMR)\b',
           caseSensitive:false).hasMatch(text)){
       final verified=_parseAmount(labelled.single.group(1)!);
       if(verified!=null)return (verified,'SAR');
