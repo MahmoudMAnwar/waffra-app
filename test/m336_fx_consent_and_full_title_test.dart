@@ -73,8 +73,7 @@ void main() {
   expect(handler,isNot(contains('commitConfirmedSms(')));
   expect(handler,isNot(contains('entries.insert(')));
   expect(app,contains('WaffraSmsCurrencies.requiresReviewForSarLedger(message.text)'));
-  expect(app,contains('WaffraSmsCurrencies.requiresForeignCurrencyReview(')
-    .or(contains('WaffraBankScreenshotParser.requiresForeignCurrencyReview(')));
+  expect(app,contains('WaffraBankScreenshotParser.requiresForeignCurrencyReview('));
   expect(app,contains("key:const Key('waffra-fx-quote-preview-action')"));
   expect(app,contains("key:const Key('waffra-fx-transaction-preview')"));
  });
