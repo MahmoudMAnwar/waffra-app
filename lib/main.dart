@@ -4607,8 +4607,8 @@ Future<bool> _requireBankSmsAi()=>
   bool submitTapped=false;
   String category=initial?.category??'أخرى';
   String? selectedParentId;
-  if(!sms){
-   // Only leaf categories can be assigned to manually entered transactions.
+  {
+   // All reviewed transactions, including SMS, must use a real child category.
    final matchingLeaf=categories.where((c)=>c.income==income&&
     c.isSubcategory&&c.name==category).toList();
    if(matchingLeaf.isNotEmpty&&categories.any((c)=>!c.isSubcategory&&
@@ -4659,12 +4659,21 @@ Future<bool> _requireBankSmsAi()=>
        title.text=p.title;value.text=p.amount==null?'':formatWaffraMoney(p.amount!);
        suggestion=p.suggestedCategory!=null&&!categories.any((c)=>c.income==p.income&&c.name==p.suggestedCategory)
         ?p.suggestedCategory:null;
+       final matching=categories.where((c)=>c.income==income&&
+        c.isSubcategory&&c.name==category).toList();
+       if(matching.isNotEmpty){
+        selectedParentId=matching.first.parentId;
+       }else{
+        final parent=categories.where((c)=>c.income==income&&
+          !c.isSubcategory&&c.name==category).toList();
+        selectedParentId=parent.isEmpty?null:parent.first.id;
+        category='';
+       }
        hasParsed=true;analyzing=false;
       });
      });
     }
     final available=forType(income);
-    final chosen=available.any((c)=>c.name==category)?category:(available.isEmpty?null:available.first.name);
     final mainCategories=waffraManualCategoryParents(available,income);
     final selectedMain=mainCategories.where((c)=>c.id==selectedParentId).toList();
     final subcategories=waffraManualCategoryChildren(available,income,selectedParentId);
@@ -4726,7 +4735,7 @@ Future<bool> _requireBankSmsAi()=>
        selected:{income},onSelectionChanged:WaffraHaptics.selection((v)=>update((){
         income=v.first;
         selectedParentId=null;
-        category=sms?(forType(income).isNotEmpty?forType(income).first.name:'أخرى'):'';
+        category='';
         suggestion=null;
        }))),
       const SizedBox(height:12),
@@ -4760,17 +4769,7 @@ Future<bool> _requireBankSmsAi()=>
         errorText:attempted?waffraAmountFieldError(value.text):null,
         border:OutlineInputBorder())),
       const SizedBox(height:12),
-      if(sms)
-       InkWell(onTap:WaffraHaptics.tap(()async{
-        final picked=await chooseTransactionCategory(sheetContext,available,chosen??'');
-        if(picked!=null&&sheetContext.mounted)update(()=>category=picked);
-       }),child:InputDecorator(decoration:InputDecoration(
-        labelText:waffraIsEnglish?'Category *':'القسم *',
-        errorText:attempted&&WaffraValidators.requiredCategory(
-         chosen,available.map((c)=>c.name))!=null?waffraRequiredFieldMessage:null,
-        border:const OutlineInputBorder(),suffixIcon:const Icon(Icons.search_rounded)),
-        child:WaffraText(chosen??(waffraIsEnglish?'Choose a category':'اختر قسمًا'),maxLines:2)))
-      else ...[
+      ...[
        InkWell(onTap:WaffraHaptics.tap(()async{
         final picked=await chooseTransactionCategory(sheetContext,mainCategories,
          selectedMain.isEmpty?'':selectedMain.first.name);
@@ -4964,11 +4963,9 @@ Future<bool> _requireBankSmsAi()=>
        if(!waffraTransactionTitleAllowed(title.text,oldTitle:initial?.title)||
         (!sms&&!waffraTransactionNotesAllowed(notes.text,oldNotes:initial?.notes))||
         waffraAmountFieldError(value.text)!=null||n==null)return;
-       if(!sms&&!waffraCanAssignManualCategory(categories,
+       if(!waffraCanAssignManualCategory(categories,
         income,selectedParentId,category))return;
        if(sms){
-        if(WaffraValidators.requiredCategory(
-         chosen,available.map((c)=>c.name))!=null)return;
         if(message.text.trim().isEmpty)return;
         // The display-country setting cannot convert a bank SMS into SAR.
         // The durable finance record must never inherit an unverified
@@ -4994,7 +4991,7 @@ Future<bool> _requireBankSmsAi()=>
        submitTapped=true; // Synchronous gate: rapid taps cannot post twice.
        Navigator.pop(sheetContext,MoneyEntry(id:initial?.id??newId(),
         title:title.text.trim(),notes:sms?message.text:notes.text,
-        category:sms?chosen!:category,amount:n,
+        category:category,amount:n,
         income:income,date:date,receiptPath:receiptPath,
         sourceType:initial?.sourceType??(sms?'sms':scannedReceipt!=null?'receipt':'manual'),
         merchantKey:initial?.merchantKey??(sms?(waffraMerchantKey(message.text)??''):'')));
