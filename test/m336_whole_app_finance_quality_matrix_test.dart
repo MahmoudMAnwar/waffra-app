@@ -78,7 +78,22 @@ void main(){
   expect(receipt.amount,isNull);
  });
 
- test('M336 original currency totals are separated and never sum FX',(){
+ test('M336 previously saved wrong-currency titles are flagged without edits',(){
+   final suspicious=MoneyEntry(id:'legacy',title:'معاملة بعملة تحتاج مراجعة',
+    amount:136,income:false,category:'أخرى',date:DateTime(2026,10,31),
+    sourceType:'sms');
+   expect(waffraNeedsLegacyFxReview(suspicious),isTrue);
+   expect(waffraNeedsLegacyFxReview(
+     MoneyEntry.fromJson(suspicious.toJson())),isTrue);
+   final manual=MoneyEntry(id:'manual',title:suspicious.title,
+    amount:136,income:false,category:'أخرى',date:DateTime(2026,10,31));
+   expect(waffraNeedsLegacyFxReview(manual),isFalse);
+   final app=File('lib/main.dart').readAsStringSync();
+   expect(app,contains("Key('waffra-legacy-foreign-currency-review-warning')"));
+   expect(app,contains('may include unverified amounts'));
+ });
+
+  test('M336 original currency totals are separated and never sum FX',(){
   final summary=WaffraSmsCurrencies.sourceTotals([
    'AED debited from account 136.00 ending with 1001 at SARAYA HALAB. Balance: 4857.96 AED',
    'شراء PoS SAR 4.50',
