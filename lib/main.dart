@@ -520,6 +520,10 @@ class BankParser {
    value=amountOf(m.group(1)??'');
    if(value!=null)break;
   }
+  // A bare "Amount 150" is NOT evidence of SAR. The phrase could come
+  // from any global bank or from a balance. A stored SAR entry requires
+  // positive, source-grounded SAR currency evidence, never a UI setting.
+  if(value!=null&&!discoveredCurrencies.contains('SAR'))value=null;
   var title=income?'مبلغ وارد':'عملية بنكية',cat=income?'دخل آخر':'أخرى';
   String? suggestion;
   if(RegExp(r'راتب|salary',caseSensitive:false).hasMatch(header)){title='راتب';cat='راتب';}
