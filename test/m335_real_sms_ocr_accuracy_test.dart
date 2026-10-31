@@ -60,7 +60,7 @@ Joanna Sa
     expect(section,contains("labelText:waffraIsEnglish?'Main category *':'القسم الرئيسي *'"));
     expect(section,contains("labelText:waffraIsEnglish?'Subcategory *':'القسم الفرعي *'"));
     expect(section,contains('waffraCanAssignManualCategory('));
-    expect(section,isNot(contains("DropdownButtonFormField<String>(key:ValueKey('$index-$income')")));
+    expect(section,isNot(contains("DropdownButtonFormField<String>(key:ValueKey('\$index-\$income')")));
   });
 
   test('M335 fast SMS path never starts Qwen for verified SAR',(){
