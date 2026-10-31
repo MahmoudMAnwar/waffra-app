@@ -60,7 +60,7 @@ def audit_sources(sources: Mapping[str, str]) -> list[str]:
         require(main, marker, reason)
 
     require(curr, "sourceTotals(", "original-currency separated totals missing")
-    require(curr, "minorTotals", "original-currency totals no longer use integer minor units")
+    require(curr, "final minorTotals=<String,int>{};", "original-currency totals no longer use integer minor units")
     require(curr, "requiresReviewForSarLedger(", "foreign SMS review contract missing")
     require(curr, "originalAmount(", "conservative bank amount evidence missing")
 
