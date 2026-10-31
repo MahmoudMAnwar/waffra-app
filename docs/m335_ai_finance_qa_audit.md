@@ -59,3 +59,30 @@
 - New cases wired into M292 exact-HEAD CI plus the Full Offline Finance and UI Regression suite and flutter analyzer.
 - Device QA still pending: no connectivity, slow quotes, background/foreground, physical screen layout at large text sizes, real OCR image, 100-SMS batches and zero duplicate saves.
 - Earlier PR HEAD had a real M317/M319 CI failure in m289_global_sms_intelligence_test: explicitly labelled SAR refund yielded null currency. Must be independently verified or fixed on the latest PR SHA, not excused by old-HEAD results.
+
+## M336 follow-up whole-app audit (unverified until CI/device QA)
+
+Additional static findings and code remediations:
+
+| Workstream | Risk checked | Current change | Proof still required |
+| --- | --- | --- | --- |
+| Ask Waffra | Unrelated questions triggering the model; hallucinated numbers in freeform text | Two scope gates plus rejection of unsolicited currency-coded amount claims; numeric recorded totals still deterministic | M335/M336 tests, actual Arabic-English device conversations |
+| OCR screenshot | Adjacent SMS bubbles can be double-counted; timestamp mistaken for merchant | Deterministic-first review, 3-for-3 bank fixture, ignore chat timestamps | Real on-device screenshots and no ANR |
+| SMS imported currencies | User could type a SAR amount in batch form and bypass the foreign-currency guard | Block foreign currency before hash and verified finance commit | Full offline regression; manually check every supported currency |
+| FX quote | User requested current rate, published timestamp, provider and opt-in | Non-SAR SMS/OCR preview from ExchangeRate-API or backup with time and explicit consent; independent 72h freshness restriction | Live API network/error scenarios, English/Arabic, banking weekends |
+| FX write contract | Current guarded-legacy MoneyEntry stores no atomic original currency/rate/consent | No legacy FX commit; encrypted ledger staging already implements atomic provenance and certified upgrade remains pending | SQLCipher production sign-off + migration/rollback/backup/undo + physical QA |
+| Historical wrong records | Previously saved AED-like transactions rendered as SAR in totals | Read-only warning for suspicious legacy SMS/OCR titles; no automatic mutation | User-led reconciliation of prior test records |
+| Transaction titles | Long Arabic transaction name clipped in home cards | Three-line full-title display + tooltip and detail dialog | Small screen / large text RTL/LTR |
+| Multi-currency totals | Foreign amounts collapsed to zero or summed as SAR | Group source totals by ISO code, display unresolved separately | 36 currency inputs and monetary precision matrix |
+| Categories | Flat list and invalid cross-parent leaf | Searchable parent and children, validated at save | Widget/integration QA on Android |
+| Performance | GGUF warm-up blocked on SMS/OCR path | Unblock deterministic path and never commit on AI output | Measured cold/warm latency and cancel using Android physical device |
+| Storage/backup | New currency evidence could disappear in legacy backup | No write until encrypted atomic approval available | Export+restore/undo+redo parity |
+| General UI | Pull-to-refresh, navigation, localized messages, display currency | Existing regressions still required; no unproven claim of improvement | Full app + accessibility and orientation tests |
+
+### Release blocking principles
+
+1. A PR is not accepted because GitHub reports mergeable: all *same-HEAD* relevant workflows must finish and pass, with only M268 intentionally skipped.
+2. No fake FX quote, no automatic rates when offline, no mixing numeric display-currency relabeling with finance conversion.
+3. Already-saved suspicious bank transactions must not be silently rewritten; show review warnings before trusting dashboards.
+4. Auto-suggestions are not ledger approvals. The original bank amount, currency, provider, published quote, converted amount and user consent must travel atomically through encrypted persistence.
+5. No SQLCipher production activation, no APK release and no claims of physical Android proof from emulators.
