@@ -93,6 +93,17 @@ void main(){
    expect(app,contains('may include unverified amounts'));
  });
 
+  test('M337 newly created SMS category stays under selected parent',(){
+  final app=File('lib/main.dart').readAsStringSync();
+  final from=app.indexOf('Future<void> entrySheet(');
+  final to=app.indexOf('Future<String?> chooseTransactionCategory(',from);
+  final section=app.substring(from,to);
+  expect(section,contains('categoryDialog(income:income,parentId:mainId,'));
+  expect(section,contains('categoryDialog(income:income,parentId:mainId);'));
+  expect(section,contains('selectedParentId=mainId;category=c.name'));
+  expect(section,contains('Select a main category first.'));
+ });
+
   test('M336 original currency totals are separated and never sum FX',(){
   final summary=WaffraSmsCurrencies.sourceTotals([
    'AED debited from account 136.00 ending with 1001 at SARAYA HALAB. Balance: 4857.96 AED',
