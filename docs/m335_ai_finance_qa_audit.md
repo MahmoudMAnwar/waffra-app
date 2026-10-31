@@ -104,3 +104,18 @@ Additional static findings and code remediations:
 6. **Same-HEAD CI and release readiness**: every relevant workflow must succeed against the exact current PR head. One intentionally skipped M268 alone is allowed. Do not merge or publish on pending/failure.
 
 All M337 findings are code-review or new test changes only; no physical Android validation was performed and no SQLCipher production cutover occurred.
+
+## M338 continuous financial QA — current work
+
+- **Qwen text safety:** found an over-escaped Dart regular expression in `hasUnverifiedMoneyClaim` which could fail to recognize amounts with spaces. Fixed the money pattern and added bilingual tests. Conservatively suppress numbers/dates generated in free-form answers unless they are percentage suggestions; numeric account totals remain computed exclusively from verified records.
+- **Currencyless bank SMS:** a legacy fallback could parse an amount after `Amount`/`مبلغ` without any confirmed source-currency token, then treat it as SAR. Now `BankParser.parse` requires explicit SAR evidence before exposing a SAR amount. Added `m338_currency_less_sms_finance_guard_test.dart` to catch balance-only SAR, amounts without currency, and verified SAR/foreign examples.
+- **Historical date ambiguity:** two plausible interpretations of `26/10/25` (2025-10-26 vs 2026-10-25) now force manual date review instead of selecting the closest date for an imported transfer.
+- **Minor-unit totals:** `sourceTotals` now sums exact integer 0/2/3-decimal source minor units with overflow safeguards. It never combines SAR, JPY, KWD etc as a single numeric total. Added 100-repeated-transaction precision regression.
+- **Continuous watch:** test results from a stale HEAD are invalid, and an open/mergeable PR is not evidence of successful tests. Keep monitoring the newest main/PR indefinitely until the user requests stopping; no silent merge and no production SQLCipher cutover.
+
+### Unresolved acceptance evidence
+- CI for current PR head and all required specific workflows must finish and succeed (only M268 intentionally skipped); failures must be investigated from job logs on exact SHA.
+- Real Android evidence for OCR three-for-three extraction, wall-clock latency and ANR, bank SMS paste, FX preview and consent, storage crash recovery, accessibility and RTL layout.
+- Before foreign amounts can be saved as native currency, encrypted atomic FX provenance, backup/restore, edit/delete/undo, report+Widget parity and explicit production approval are mandatory.
+
+None of these newly authored source tests is presented as passing until CI confirms it on the exact commit.
