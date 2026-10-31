@@ -81,7 +81,12 @@ def audit_sources(sources: Mapping[str, str]) -> list[str]:
 
     require(fx, "quote.provider", "FX preview must display quote provider")
     require(fx, "sourceTimestampUtc", "FX preview must display source timestamp")
-    require(fx, "accepted==true", "FX preview consent is no longer explicit")
+    require(fx, "if(accepted!=true)return null;",
+            "FX preview does not refuse unapproved quote")
+    require(fx, "onPressed:()=>Navigator.pop(dialog,true)",
+            "FX preview does not expose an explicit approval action")
+    require(fx, "userConfirmed:true",
+            "FX review witness no longer requires confirmed user approval")
     require(ai, "WaffraAskScope.isRelated(q)",
             "Ask Waffra can send off-topic questions to model")
     require(ai, "hasUnverifiedMoneyClaim(cleaned)",
