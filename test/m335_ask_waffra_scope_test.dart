@@ -8,7 +8,7 @@ void main() {
     for (final question in [
       'ما هي عاصمة فرنسا؟', 'اعمل وصفة مكرونة', 'مين فاز في الماتش؟',
       'How is the weather?', 'Write me a poem', 'Who won the football game?',
-      'احكيلي نكتة', 'حل واجب الفيزياء',
+      'احكيلي نكتة', 'حل واجب الفيزياء', 'امتى ماتش ريال مدريد؟',
     ]) {
       expect(WaffraAskScope.isRelated(question), isFalse,
           reason: question);
