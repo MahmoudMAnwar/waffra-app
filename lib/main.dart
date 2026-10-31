@@ -3412,15 +3412,11 @@ Future<bool> _requireBankSmsAi()=>
    featureEn:'receipt and image OCR scanning');
 
  Future<void> bulkSmsSheet({String? initialText})async {
-  // SMS parsing and review require on-device AI. Both Android share and
-  // the Add menu enter here; refusal always keeps the sheet closed.
-  if(_smsSheetOpen||_bankSmsAiOpening)return;
-  _bankSmsAiOpening=true;
-  bool allowed=false;
-  try{allowed=await _requireBankSmsAi();}
-  finally{_bankSmsAiOpening=false;}
-  if(!allowed||!mounted||_smsSheetOpen)return;
- _smsSheetOpen=true;
+  // Deterministic SMS review is available immediately and offline.
+  // Qwen remains optional for ambiguous messages; never block paste on a
+  // 484 MB model initialization just to read a supported bank template.
+  if(_smsSheetOpen||_bankSmsAiOpening||!mounted)return;
+  _smsSheetOpen=true;
  final pasted=TextEditingController(text:initialText??'');
  final description=TextEditingController();
  final amount=TextEditingController();
@@ -3479,13 +3475,8 @@ Future<bool> _requireBankSmsAi()=>
   });
  }
  Future<void> saveParsedMessages(BuildContext ctx,StateSetter update)async {
-  // If the model gets removed while this sheet is open, fail closed.
-  if(!WaffraOnDeviceQwen.shared.isReady){
-   update(()=>statusMessage=waffraIsEnglish
-    ?'Bank-message analysis requires the downloaded AI model. Close and reopen to install it.'
-    :'تحليل الرسائل البنكية يحتاج تنزيل نموذج الذكاء الاصطناعي. اقفل الميزة وافتحها لتنزيله.');
-   return;
-  }
+  // Saving is governed by parsed amount, currency, category and encrypted
+  // writer checks, never by whether a language model is installed.
   if(busy)return;
   final found=splitBankMessages(pasted.text.trim());
   if(found.isEmpty){update(()=>statusMessage=waffraIsEnglish?'No financial transactions found. Edit the message and retry.':'هذه الرسالة لا تحتوي على أي معاملات مالية. عدّلها لإعادة التحليل تلقائيًا.');return;}
@@ -3827,6 +3818,25 @@ Future<bool> _requireBankSmsAi()=>
    });
    return;
   }
+  // Fast path: a single verified amount in each supported SAR message
+  // does not need 45 seconds of Qwen inference. Make drafts reviewable
+  // immediately, and do NOT commit the ledger without user confirmation.
+  final reliable=found.every((source){
+   final parsed=BankParser.parse(source);
+   final money=WaffraSmsCurrencies.originalAmount(source);
+   return parsed.amount!=null&&parsed.amount!>0&&
+     !parsed.requiresCurrencyReview&&money!=null&&money.currency=='SAR'&&
+     (money.amount-parsed.amount!).abs()<0.00001;
+  });
+  if(reliable||!WaffraOnDeviceQwen.shared.isReady){
+   update((){
+    messages=found;parsed=true;analyzingPaste=false;
+    statusMessage=noTransactionWarning(input)??(waffraIsEnglish?
+     'Amounts extracted. Confirm each transaction before saving.':
+     'تم استخراج المبالغ. راجع نوع كل معاملة وقسمها قبل الحفظ.');
+   });
+   return;
+  }
   final ai=await _reviewAiPastedBankMessages(ctx,input);
   if(!sheetActive||!ctx.mounted||pasteRevision!=revision||
      pasted.text.trim()!=input)return;
@@ -3861,9 +3871,12 @@ Future<bool> _requireBankSmsAi()=>
      'الذكاء لم يؤكد كل الرسائل. راجعها قبل الحفظ.';
    }
   });
+  // Qwen is a read-only suggestion engine. Never commit on paste, even
+  // when model output agrees with the deterministic SAR evidence.
   if(verified&&statusMessage.isEmpty){
-   // Explicit confirmation and verified encrypted SMS writer remain mandatory.
-   await saveParsedMessages(ctx,update);
+   update(()=>statusMessage=waffraIsEnglish?
+    'Transactions verified. Review and confirm before saving.':
+    'تم التحقق من المعاملات. راجعها وأكّد حفظها.');
   }
  }
  void scheduleBankSmsAnalysis(
@@ -4455,13 +4468,10 @@ Future<bool> _requireBankSmsAi()=>
  }
 
  Future<void> scanAndAddReceipt()async {
-  // Restrict OCR before any camera/gallery permission or image processing.
-  if(_receiptOcrAiOpening)return;
+  // Offline OCR itself needs its tiny Tesseract assets, not Qwen.
+  // A slow/removed GGUF must not block the camera and image review.
+  if(_receiptOcrAiOpening||!mounted)return;
   _receiptOcrAiOpening=true;
-  bool allowed=false;
-  try{allowed=await _requireReceiptOcrAi();}
-  finally{_receiptOcrAiOpening=false;}
-  if(!allowed||!mounted)return;
   // Ask only for the exact camera/gallery access the user selected.
   final source=await showWaffraDialog<ImageSource>(context:context,builder:(dialog)=>AlertDialog(
    title:WaffraText(waffraIsEnglish?'Add from receipt or image':'إضافة عملية من فاتورة أو صورة'),
@@ -4477,7 +4487,7 @@ Future<bool> _requireBankSmsAi()=>
      onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialog,ImageSource.camera)),
      label:WaffraText(waffraIsEnglish?'Camera':'الكاميرا')),
    ]));
-  if(source==null||!mounted)return;
+  if(source==null||!mounted){_receiptOcrAiOpening=false;return;}
   try{
    final picked=await ImagePicker().pickImage(source:source,imageQuality:95);
    if(picked==null||!mounted)return;
@@ -4486,15 +4496,13 @@ Future<bool> _requireBankSmsAi()=>
     'Reading image and extracting transactions…',
     ()=>WaffraReceiptOcr.scan(picked.path));
    if(!mounted)return;
-   // The on-device AI model is mandatory. Continue safeguarding currency
-   // and amount reviews, never uploading the user image.
-   if(!WaffraOnDeviceQwen.shared.isReady){
-    if(mounted)snack(context,waffraIsEnglish?
-     'OCR requires an active AI model. Reopen the scanner to download it.':
-     'استخراج بيانات الصور يحتاج نموذج ذكاء اصطناعي فعّال. افتح الماسح لتنزيله.');
-    return;
-   }
-   if(await _reviewAiScannedTransactions(extracted.rawText,picked))return;
+   // Grounded OCR evidence takes priority over a slow 0.6B LLM.
+   // Invoke optional AI only when deterministic receipt and bank reading
+   // cannot produce any suggestions. All saves still need explicit review.
+   if(!extracted.hasSuggestions&&
+      WaffraBankScreenshotParser.reviewItems(extracted.rawText).isEmpty&&
+      WaffraOnDeviceQwen.shared.isReady&&
+      await _reviewAiScannedTransactions(extracted.rawText,picked))return;
    if(!mounted)return;
    final candidates=WaffraBankScreenshotParser.reviewItems(extracted.rawText);
    if(candidates.isEmpty){
@@ -4572,17 +4580,16 @@ Future<bool> _requireBankSmsAi()=>
    if(mounted)snack(context,waffraIsEnglish?
     'Could not read this image. Try a clearer image or add manually.':
     'تعذر قراءة الصورة. جرّب صورة أوضح أو أضف العملية يدويًا.');
+  }finally{
+   _receiptOcrAiOpening=false;
   }
  }
 
  Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,
   WaffraReceiptOcrFields? scannedReceipt,XFile? scannedImage,bool? scannedIncome,
   int? scannedImagePosition,int? scannedImageTotal})async {
-  // Manual entries and edits stay available; new SMS and OCR routes are gated.
-  if(initial==null&&(sms||scannedReceipt!=null||scannedImage!=null)){
-   final allowed=await (sms?_requireBankSmsAi():_requireReceiptOcrAi());
-   if(!allowed||!mounted)return;
-  }
+  // Bank SMS and OCR edit forms work offline without starting Qwen.
+  // Model-dependent finance advice remains gated separately.
   // Last defense: every OCR entry must verify the currency *inside* the
   // editor too, so future callers cannot bypass scanAndAddReceipt's gate.
   if(scannedReceipt!=null &&
