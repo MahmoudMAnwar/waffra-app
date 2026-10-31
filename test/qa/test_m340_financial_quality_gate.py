@@ -57,6 +57,20 @@ class FinancialQualityGateTest(unittest.TestCase):
             "false",
             "unverified model-derived amounts")
 
+    def test_detects_fx_consent_bypass(self):
+        self.assert_detects_change(
+            "lib/waffra_foreign_currency_preview.dart",
+            "if(accepted!=true)return null;",
+            "if(false)return null;",
+            "FX user approval bypass")
+
+    def test_detects_missing_explicit_approval_button(self):
+        self.assert_detects_change(
+            "lib/waffra_foreign_currency_preview.dart",
+            "onPressed:()=>Navigator.pop(dialog,true)",
+            "onPressed:()=>Navigator.pop(dialog,false)",
+            "FX confirmation action removed")
+
     def test_detects_production_sqlcipher_cutover(self):
         self.assert_detects_change(
             "lib/storage/waffra_production_cutover_release_gate.dart",
