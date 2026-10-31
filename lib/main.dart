@@ -3949,6 +3949,15 @@ Future<void> bulkSmsSheet({String? initialText})async {
    final total=messages.fold<double>(0,(sum,s)=>sum+(BankParser.parse(s).amount??0));
    final pasteSummary=waffraSummarizeBankPaste(pasted.text,smsHashes);
    final currencyPreview=WaffraSmsCurrencies.summarize(messages);
+   final sourceTotals=WaffraSmsCurrencies.sourceTotals(messages);
+   final originalTotalsLabel=sourceTotals.totals.entries.map((entry)=>
+     entry.value.toStringAsFixed(
+       WaffraSmsCurrencies.minorDigits(entry.key))+' '+entry.key).join(' • ');
+   final sourceTotalsLabel=originalTotalsLabel.isEmpty?
+     (waffraIsEnglish?'Amount unverified':'المبلغ غير مؤكد'):
+     originalTotalsLabel+(sourceTotals.unresolved>0?
+       (waffraIsEnglish?' • Some amounts unverified':
+        ' • بعض المبالغ غير مؤكدة'):'');
    return Padding(padding:EdgeInsets.fromLTRB(18,8,18,MediaQuery.of(ctx).viewInsets.bottom+24),
     child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
      Row(children:[Expanded(child:WaffraText(waffraIsEnglish?'Add bank message':'إضافة رسالة بنكية',style:Theme.of(ctx).textTheme.titleLarge)),IconButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),icon:const Icon(Icons.close_rounded))]),
@@ -4127,7 +4136,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
        ++pasteRevision;
        update((){reviewing=false;parsed=false;analyzingPaste=false;messages=[];index=0;pasted.clear();description.clear();amount.clear();});
       }),icon:const Icon(Icons.delete_outline),label:const WaffraText('حذف النص بالكامل ولصق رسائل جديدة')),
-      WaffraText(waffraIsEnglish?'Transaction ${index+1} of ${messages.length} — Total: ${cash(total)}':'المعاملة ${index+1} من ${messages.length} — إجمالي المبالغ: ${cash(total)}',style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
+      WaffraText(currencyPreview.needsCurrencyReview?
+       (waffraIsEnglish?
+        'Transaction ${index+1} of ${messages.length} — Original amounts: $sourceTotalsLabel':
+        'المعاملة ${index+1} من ${messages.length} — المبالغ الأصلية: $sourceTotalsLabel'):
+       (waffraIsEnglish?
+        'Transaction ${index+1} of ${messages.length} — Total: ${cash(total)}':
+        'المعاملة ${index+1} من ${messages.length} — إجمالي المبالغ: ${cash(total)}'),
+       style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
       const SizedBox(height:6),
       WaffraText(waffraIsEnglish?'Saved $savedCount / ${messages.length}. Review remaining transactions before saving.':'تم حفظ $savedCount من ${messages.length} معاملات. راجع كل معاملة وحدد قسمها قبل الحفظ.'),
       const SizedBox(height:12),
