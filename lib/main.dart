@@ -29,7 +29,6 @@ import 'waffra_ondevice_qwen.dart';
 import 'waffra_sms_intelligence.dart';
 import 'waffra_sms_multicurrency_review.dart';
 import 'waffra_foreign_currency_preview.dart';
-import 'waffra_sms_fx_review.dart';
 import 'waffra_back_navigation.dart';
 import 'waffra_saudi_greetings.dart';
 import 'package:flutter/rendering.dart';
