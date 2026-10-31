@@ -106,10 +106,12 @@ abstract final class WaffraReceiptOcrParser {
     // screenshot review flow can segment and review individual messages.
     final bankAction = RegExp(
       r'شراء\s*(?:pos|نقاط)|\bpos\b|card\s+purchase|'
-      r'حوالة\s+واردة|تحويل\s+وارد|salary\s+credit',
+      r'حوالة\s+واردة|تحويل\s+وارد|salary\s+credit|'
+      r'\b(?:debited|credited|outgoing\s+transfer|incoming\s+transfer)\b',
       caseSensitive: false).hasMatch(raw);
     final bankContext = RegExp(
-      r'\b(?:SAR|SR|Bank|Mada)\b|ريال|مدى|الراجحي',
+      r'\b(?:SAR|SR|AED|USD|EGP|GBP|EUR|Bank|Mada)\b|'
+      r'ريال|درهم|مدى|الراجحي',
       caseSensitive: false).hasMatch(raw);
     if (bankAction && bankContext) {
       return WaffraReceiptOcrFields(rawText: raw);
@@ -127,6 +129,8 @@ abstract final class WaffraReceiptOcrParser {
       if (line.length < 3 || line.length > 95 ||
           !RegExp(r'[A-Za-z\u0600-\u06FF]{2}').hasMatch(line) ||
           RegExp(r'^\W*\d').hasMatch(westernDigits(line)) ||
+          RegExp(r'\b(?:yesterday|today|tomorrow)\b|\b\d{1,2}:\d{2}\s*(?:am|pm)?\b',
+            caseSensitive:false).hasMatch(line) ||
           _hasAny(lower, [
             'فاتورة', 'ضريبية', 'الرقم الضريبي', 'الرقم المرجعي',
             'رقم السجل', 'المجموع', 'الإجمالي', 'المبلغ', 'الصافي',
