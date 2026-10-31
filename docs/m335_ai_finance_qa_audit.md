@@ -47,3 +47,15 @@
 - End-to-end physical Android evidence (real gallery image pixel recognition, warm start and cold start latency, cancellation, low-memory tests) cannot be inferred from Flutter unit tests.
 - Native GGUF loading can still be slow when a user explicitly chooses AI advice. The correct next step is device profiling and testing a model-quality benchmark before swapping model binaries.
 - Foreign currency persistence requires explicit per-transaction currency provenance and a separate reviewed ledger schema change; this PR will not relabel AED as SAR.
+
+
+## M336 FX consent and whole-application quality extension
+- Existing app currency setting is nominal display choice, NOT actual FX on historical financial records. Current-rate preview uses source ISO code and selected target display currency.
+- Reviewed quote: original amount, provider name, source UTC timestamp, latest available exchange rate, approximate converted amount, explicit approval. Only currency codes are sent to the FX network request.
+- **Safety blocker:** guarded legacy production finance authority cannot atomically persist conversion provenance with source message and amount. This PR intentionally DOES NOT SAVE converted amounts until verified encrypted currency provenance is connected, audited and certified. No SQLCipher production activation or unsafe FX-as-SAR relabeling.
+- Experimental encrypted ledger supports provenance but is not the production cutover. Before enabling posting, certify backup/restore, delete/undo, atomic SMS hashes, physical Android tests and production source selection.
+- Previously incorrect foreign transactions must not be silently edited, since original amount, currency and approval may be missing. The compact card now shows up to three lines of title and a caution for foreign-currency review names.
+- M336 unit/widget cases: AED 136.00 quote consent/decline, provider/timestamp, approved snapshot round-trip, stale quote rejection, no-write source guard, full title, 36 currencies and decimals, hierarchical categories, transaction metadata backup, OCR timestamps.
+- New cases wired into M292 exact-HEAD CI plus the Full Offline Finance and UI Regression suite and flutter analyzer.
+- Device QA still pending: no connectivity, slow quotes, background/foreground, physical screen layout at large text sizes, real OCR image, 100-SMS batches and zero duplicate saves.
+- Earlier PR HEAD had a real M317/M319 CI failure in m289_global_sms_intelligence_test: explicitly labelled SAR refund yielded null currency. Must be independently verified or fixed on the latest PR SHA, not excused by old-HEAD results.
