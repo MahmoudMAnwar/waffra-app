@@ -29,7 +29,7 @@ void main(){
   expect(inspect([record('fine',amount:0.01)]).canStage,isTrue);
  });
  test('M337 financial preflight fails closed on invalid dates and direction',(){
-  for(final bad in ['not-a-date','2026-13-99','']){
+  for(final bad in ['not-a-date','2026-13-99','2026-02-30','']){
    final checked=inspect([record('bad',date:bad)]);
    expect(checked.issues.any((x)=>x.code=='invalid_date'),isTrue);
   }
