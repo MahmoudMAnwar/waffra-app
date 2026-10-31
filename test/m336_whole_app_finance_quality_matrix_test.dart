@@ -104,6 +104,19 @@ void main(){
   expect(section,contains('Select a main category first.'));
  });
 
+  test('M338 repeated SMS totals use exact integer currency units',(){
+   final sar=<String>[for(var i=0;i<100;i++) 'شراء PoS SAR 0.01'];
+   final mixed=<String>[...sar,
+     'شراء PoS KWD 0.125',
+     'شراء PoS KWD 0.375',
+     'شراء PoS JPY 1'];
+   final grouped=WaffraSmsCurrencies.sourceTotals(mixed);
+   expect(grouped.totals['SAR'],1.0);
+   expect(grouped.totals['KWD'],0.5);
+   expect(grouped.totals['JPY'],1);
+   expect(grouped.unresolved,0);
+ });
+
   test('M336 original currency totals are separated and never sum FX',(){
   final summary=WaffraSmsCurrencies.sourceTotals([
    'AED debited from account 136.00 ending with 1001 at SARAYA HALAB. Balance: 4857.96 AED',
