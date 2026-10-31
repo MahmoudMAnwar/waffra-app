@@ -45,6 +45,12 @@ def audit_sources(sources: Mapping[str, str]) -> list[str]:
     encrypted = "lib/storage/waffra_verified_encrypted_finance_bridge.dart"
     production = "lib/storage/waffra_production_cutover_release_gate.dart"
 
+    # All three live SMS confirmation entry points must use the verified
+    # source authority; a single remaining instance is not enough.
+    home = sources.get(main, "")
+    if home.count("_financeAuthority.commitConfirmedSms(") != 3:
+        problems.append(f"{main}: a bank SMS confirmation path bypasses verified source authority")
+
     for marker, reason in (
         ("_financeAuthority.saveCaptured(", "manual save bypasses verified finance authority"),
         ("_financeAuthority.commitConfirmedSms(", "SMS save bypasses verified finance authority"),
