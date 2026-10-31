@@ -5,58 +5,48 @@ void main() {
   final home=File('lib/main.dart').readAsStringSync();
   final gate=File('lib/waffra_ai_model_gate.dart').readAsStringSync();
 
-  test('M324: bank message and Android share routes require local AI first',(){
+  test('M335 bank paste and Android shares open without initializing Qwen',(){
     final entry=home.indexOf('Future<void> bulkSmsSheet({String? initialText})async');
-    final approval=home.indexOf('try{allowed=await _requireBankSmsAi();}',entry);
-    final blocked=home.indexOf('if(!allowed||!mounted||_smsSheetOpen)return;',approval);
-    final sheet=home.indexOf('_smsSheetOpen=true;',blocked);
-    final paste=home.indexOf('final pasted=TextEditingController',sheet);
+    final sheet=home.indexOf('_smsSheetOpen=true;',entry);
+    final pasted=home.indexOf('final pasted=TextEditingController',sheet);
     expect(entry,greaterThan(0));
-    expect(approval,greaterThan(entry));
-    expect(blocked,greaterThan(approval));
-    expect(sheet,greaterThan(blocked));
-    expect(paste,greaterThan(sheet));
+    expect(sheet,greaterThan(entry));
+    expect(pasted,greaterThan(sheet));
+    expect(home.substring(entry,pasted),isNot(contains('await _requireBankSmsAi()')));
     expect(home,contains('unawaited(bulkSmsSheet(initialText:text))'));
     expect(home,contains('unawaited(_launchAddAction(()=>bulkSmsSheet(),fromMenu:true))'));
-    expect(home,contains('if(_smsSheetOpen||_bankSmsAiOpening)return;'));
   });
 
-  test('M324: receipt OCR requires local model BEFORE camera/gallery',(){
+  test('M335 offline OCR opens camera and reviews without GGUF',(){
     final start=home.indexOf('Future<void> scanAndAddReceipt()async');
-    final gateCall=home.indexOf('try{allowed=await _requireReceiptOcrAi();}',start);
-    final blocked=home.indexOf('if(!allowed||!mounted)return;',gateCall);
-    final camera=home.indexOf('ImageSource.camera',blocked);
+    final camera=home.indexOf('ImageSource.camera',start);
     final scan=home.indexOf('WaffraReceiptOcr.scan(picked.path)',camera);
+    final candidates=home.indexOf('WaffraBankScreenshotParser.reviewItems(extracted.rawText)',scan);
     expect(start,greaterThan(0));
-    expect(gateCall,greaterThan(start));
-    expect(blocked,greaterThan(gateCall));
-    expect(camera,greaterThan(blocked));
+    expect(camera,greaterThan(start));
     expect(scan,greaterThan(camera));
-    expect(home,contains('if(!WaffraOnDeviceQwen.shared.isReady){'));
+    expect(candidates,greaterThan(scan));
+    expect(home.substring(start,camera),isNot(contains('_requireReceiptOcrAi()')));
+    expect(home,contains('!extracted.hasSuggestions&&'));
+    expect(home,contains('_receiptOcrAiOpening=false;'));
   });
 
-  test('M324: cancellation explains feature is locked, preserving manual entry',(){
+  test('M335 AI download still requires opt-in for Ask Waffra',(){
     expect(gate,contains('static Future<bool> requireForFeature('));
-    expect(gate,contains('return context.mounted&&ready&&WaffraOnDeviceQwen.shared.isReady;'));
-    expect(gate,isNot(contains('waffra-ai-required-feature-notice')));
+    expect(gate,contains('waffra-ai-first-use-consent'));
     expect(gate,contains('manual entry still works'));
     expect(gate,contains('الإضافة اليدوية متاحة'));
-    expect(gate,contains('waffra-ai-first-use-consent'));
-    expect(gate,contains('return false;'));
-    expect(home,contains("featureAr:'تحليل الرسائل البنكية'"));
-    expect(home,contains("featureEn:'receipt and image OCR scanning'"));
-    expect(home,contains('if(initial==null&&(sms||scannedReceipt!=null||scannedImage!=null))'));
     expect(home,contains('unawaited(_launchAddAction(()=>entrySheet(),fromMenu:true))'));
   });
 
-  test('M324: deletion blocks SMS saves while retaining existing ledger',(){
+  test('M335 deletion cannot suppress deterministic review or bypass writer',(){
     final save=home.indexOf('Future<void> saveParsedMessages(');
-    final localGuard=home.indexOf('if(!WaffraOnDeviceQwen.shared.isReady){',save);
-    final savePath=home.indexOf('final found=splitBankMessages',save);
+    final parse=home.indexOf('final found=splitBankMessages',save);
     expect(save,greaterThan(0));
-    expect(localGuard,greaterThan(save));
-    expect(savePath,greaterThan(localGuard));
-    expect(home,contains('Bank-message importing and image OCR scanning'));
-    expect(home,contains('معاملاتك وفواتيرك ونسخك الاحتياطية'));
+    expect(parse,greaterThan(save));
+    expect(home.substring(save,parse),isNot(contains('if(!WaffraOnDeviceQwen.shared.isReady)')));
+    expect(home,contains('if(results[i].amount==null||results[i].amount!<=0)'));
+    expect(home,contains('WaffraSmsCurrencies.summarize(found)'));
+    expect(home,contains('waffraCanAssignManualCategory('));
   });
 }
