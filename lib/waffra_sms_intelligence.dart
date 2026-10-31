@@ -260,11 +260,19 @@ abstract final class WaffraSmsIntelligence {
     final strict=WaffraSmsCurrencies.originalAmount(text);
     if(strict!=null)return (strict.amount,strict.currency);
     final discovered=WaffraSmsCurrencies.currenciesForMessage(text);
-    // Exact, single-line bank amount format, observed in refund SMS.
-    // Never infer the code from the account balance or merchant description.
-    // This is a strictly bounded fallback when a generic SMS lexer abstains.
+    // Only a single explicit Amount SAR line may bypass an overly strict
+    // generic lexer; never guess currency from merchant, balance or card ID.
     final labelled=RegExp(
-      r'^\s*(?:Amount|Amt)\s*[:：]?\s*SAR\s+([0-9]{1,9}(?:\.[0-9]{1,2})?)\s*
+      r'^\s*(?:Amount|Amt)\s*[:：]?\s*SAR\s+([0-9]{1,9}(?:\.[0-9]{1,2})?)\s*$',
+      multiLine:true,caseSensitive:false,
+    ).allMatches(_englishDigits(text)).toList();
+    if(labelled.length==1&&!discovered.any((code)=>code!='SAR')&&
+        !RegExp(r'\b(?:USD|AED|EUR|EGP|GBP|JOD|KWD|QAR|BHD|OMR)\b',
+          caseSensitive:false).hasMatch(text)){
+      final verified=_parseAmount(labelled.single.group(1)!);
+      if(verified!=null)return (verified,'SAR');
+    }
+    if(discovered.isNotEmpty)return null;
     final clean = _englishDigits(text);
     final pattern = RegExp(
       r'(?:\b(?:SAR|SR|USD|EUR|GBP|AED|EGP|KWD|QAR|BHD|OMR|INR|JPY|CAD|AUD)\b|[$€£₹]|ريال|جنيه|درهم)'
