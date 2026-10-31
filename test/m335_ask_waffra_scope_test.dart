@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_ask_scope.dart';
+import 'package:waffra/waffra_ai_recorded_answers.dart';
 import 'package:waffra/waffra_ai_finance_coach.dart';
 
 void main() {
@@ -43,7 +44,22 @@ void main() {
     expect(method, contains('WaffraAskScope.outsideResponse('));
   });
 
-  test('M335 direct AI helper never invokes Qwen for unrelated questions', () async {
+  test('M336 no invented monetary amounts in generated Ask Waffra advice',(){
+    expect(WaffraAiRecordedAnswers.hasUnverifiedMoneyClaim(
+      'مصروفاتك هذا الشهر ١٢٠ ريال'),isTrue);
+    expect(WaffraAiRecordedAnswers.hasUnverifiedMoneyClaim(
+      'You spent SAR 136.00'),isTrue);
+    expect(WaffraAiRecordedAnswers.hasUnverifiedMoneyClaim(
+      'AED 136.00 at a restaurant'),isTrue);
+    expect(WaffraAiRecordedAnswers.hasUnverifiedMoneyClaim(
+      'Try reducing subscriptions and review your budget'),isFalse);
+    expect(WaffraAiRecordedAnswers.hasUnverifiedMoneyClaim(
+      'Consider a 10% savings challenge'),isFalse);
+    final source=File('lib/waffra_smart_features.dart').readAsStringSync();
+    expect(source,contains('WaffraAiRecordedAnswers.hasUnverifiedMoneyClaim(cleaned)'));
+  });
+
+    test('M335 direct AI helper never invokes Qwen for unrelated questions', () async {
     var called=0;
     final summary=WaffraAiFinanceCoach.summarize([
       const WaffraAiLedgerFact(category:'الراتب',
