@@ -63,6 +63,14 @@ void main() {
     expect(WaffraAiRecordedAnswers.hasUnverifiedMoneyClaim(
       'حاول توفير 10% شهريًا'),isFalse);
     expect(WaffraAiRecordedAnswers.hasUnverifiedMoneyClaim(
+      'إجمالي المصروفات 3500'),isTrue);
+    expect(WaffraAiRecordedAnswers.hasUnverifiedMoneyClaim(
+      'You spent 2026 yesterday'),isTrue);
+    expect(WaffraAiRecordedAnswers.hasUnverifiedMoneyClaim(
+      'Try saving 10 ٪ every month'),isFalse);
+    expect(WaffraAiRecordedAnswers.hasUnverifiedMoneyClaim(
+      'Try spending less on subscriptions'),isFalse);
+    expect(WaffraAiRecordedAnswers.hasUnverifiedMoneyClaim(
       'Try reducing subscriptions and review your budget'),isFalse);
     expect(WaffraAiRecordedAnswers.hasUnverifiedMoneyClaim(
       'Consider a 10% savings challenge'),isFalse);
