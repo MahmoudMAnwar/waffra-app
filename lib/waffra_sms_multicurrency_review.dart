@@ -301,6 +301,25 @@ abstract final class WaffraSmsCurrencies {
 
   static String? originalAmountPreview(String raw)=>originalAmount(raw)?.formatted;
 
+  /// Separate source-currency totals. Never add AED, SAR, JOD etc. together
+  /// or imply that an unresolved amount is zero.
+  static ({Map<String,double> totals,int unresolved}) sourceTotals(
+      List<String> messages) {
+    final totals=<String,double>{};
+    var unresolved=0;
+    for(final message in messages){
+      final original=originalAmount(message);
+      if(original==null){
+        unresolved++;
+        continue;
+      }
+      totals[original.currency]=(totals[original.currency]??0)+original.amount;
+    }
+    return (totals:Map<String,double>.unmodifiable(totals),
+      unresolved:unresolved);
+  }
+
+
   static bool requiresReviewForSarLedger(String raw) {
     final currencies = currenciesForMessage(raw);
     return currencies.length > 1 || currencies.any((code) => code != 'SAR');
