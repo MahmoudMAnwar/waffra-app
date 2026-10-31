@@ -5265,19 +5265,19 @@ Future<void> bulkSmsSheet({String? initialText})async {
       entries..clear()..addAll(previousEntries);
       learnedMerchantCategories..clear()..addAll(previousLearned);
      });
-     // A rejected financial write must not leave copied images unlinked
-     // to any ledger row. Never touch the original picked gallery photo.
-     for(final copy in stagedReceiptCopies){
-      try{
-       final staged=File(copy);
-       if(await staged.exists())await staged.delete();
-      }catch(error){
-       debugPrint('Could not clean staged receipt after finance rejection: $error');
-      }
-     }
      snack(context,waffraIsEnglish?
       'Could not save the transaction. Your previous data is unchanged.':
       'تعذر حفظ المعاملة. بياناتك السابقة لم تتغير.');
+    }
+    // Cleanup must also run if the route disposed while persistence awaited.
+    // These files were created by this editor; never delete original photos.
+    for(final copy in stagedReceiptCopies){
+     try{
+      final staged=File(copy);
+      if(await staged.exists())await staged.delete();
+     }catch(error){
+      debugPrint('Could not clean staged receipt after finance rejection: $error');
+     }
     }
     return;
    }
