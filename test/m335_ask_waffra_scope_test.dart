@@ -51,6 +51,17 @@ void main() {
       'You spent SAR 136.00'),isTrue);
     expect(WaffraAiRecordedAnswers.hasUnverifiedMoneyClaim(
       'AED 136.00 at a restaurant'),isTrue);
+    // Both Arabic and English numbers with spaces must be caught.
+    expect(WaffraAiRecordedAnswers.hasUnverifiedMoneyClaim(
+      'وصل إجمالي المصروفات إلى ١٢٠ ريال'),isTrue);
+    expect(WaffraAiRecordedAnswers.hasUnverifiedMoneyClaim(
+      'You spent 136 AED yesterday'),isTrue);
+    expect(WaffraAiRecordedAnswers.hasUnverifiedMoneyClaim(
+      'Your salary is USD 2,800.50'),isTrue);
+    expect(WaffraAiRecordedAnswers.hasUnverifiedMoneyClaim(
+      'الدخل: ٣٬٥٠٠ جنيه'),isTrue);
+    expect(WaffraAiRecordedAnswers.hasUnverifiedMoneyClaim(
+      'حاول توفير 10% شهريًا'),isFalse);
     expect(WaffraAiRecordedAnswers.hasUnverifiedMoneyClaim(
       'Try reducing subscriptions and review your budget'),isFalse);
     expect(WaffraAiRecordedAnswers.hasUnverifiedMoneyClaim(
