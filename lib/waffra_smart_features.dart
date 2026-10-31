@@ -6,6 +6,7 @@ import 'waffra_practical_ledger_engine.dart';
 import 'waffra_haptic_feedback.dart';
 import 'waffra_ai_finance_coach.dart';
 import 'waffra_ai_recorded_answers.dart';
+import 'waffra_ask_scope.dart';
 import 'waffra_ondevice_qwen.dart';
 import 'waffra_ai_model_gate.dart';
 import 'waffra_display_currency.dart';
@@ -471,6 +472,10 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
  }
 
  Future<void> _generateAiSkill(String skill,{String questionText=''})async{
+  if(skill=='ask'&&!WaffraAskScope.isRelated(questionText)){
+   if(mounted)setState(()=>answer=WaffraAskScope.outsideResponse(english:widget.english));
+   return;
+  }
   if(aiBusy||!WaffraOnDeviceQwen.shared.isReady)return;
   final snapshot=_verifiedAiSummary();
   setState(()=>aiBusy=true);
@@ -575,6 +580,11 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
   final q=question.trim();
   if(q.isEmpty){
    setState(()=>answer=t('اكتب سؤال عن معاملاتك.','Ask about your transactions.'));
+   return;
+  }
+  // Reject unrelated prompts before any account-data lookup or model startup.
+  if(!WaffraAskScope.isRelated(q)){
+   setState(()=>answer=WaffraAskScope.outsideResponse(english:widget.english));
    return;
   }
   // Numeric questions work even when the optional AI model is not installed.
