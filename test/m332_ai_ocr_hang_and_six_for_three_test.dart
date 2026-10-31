@@ -95,7 +95,7 @@ void main() {
     expect(app, contains('جاري الآن تحليل الرسائل بالذكاء الاصطناعي'));
     expect(app, isNot(contains("Key('waffra-sms-ai-review')")));
     expect(app, contains('waffra-sms-review-unverified'));
-    expect(app, contains('await saveParsedMessages(ctx,update)'));
+    expect(app, contains('Never commit on paste'));
     expect(app, contains('userConfirmed:true'));
     // Unexpected native errors must not strand the paste progress state.
     expect(app, contains('AI analysis was interrupted. Review bank messages manually.'));
