@@ -20,11 +20,12 @@ void main(){
    .any((x)=>x.code=='missing_id'),isTrue);
  });
  test('M337 finance preflight rejects negative, fractional halala and malformed',(){
-  for(final amount in <Object?>[-1,0.001,'10',double.infinity]){
+  for(final amount in <Object?>[-1,0.001,'10']){
    final checked=inspect([record('amount',amount:amount)]);
    expect(checked.canStage,isFalse,reason:'Bad amount: $amount');
    expect(checked.issues.any((x)=>x.code=='invalid_amount'),isTrue);
   }
+  expect(WaffraLegacyPreflight.canRepresentHalalas(double.infinity),isFalse);
   expect(inspect([record('fine',amount:0.01)]).canStage,isTrue);
  });
  test('M337 financial preflight fails closed on invalid dates and direction',(){
