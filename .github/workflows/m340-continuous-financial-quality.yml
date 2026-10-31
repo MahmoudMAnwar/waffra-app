@@ -35,7 +35,7 @@ jobs:
       - name: Read-only finance guard
         run: python3 scripts/qa/m340_financial_quality_gate.py --json
       - name: Prove guard rejects hostile finance changes
-        run: python3 -m unittest discover -s test/qa -p 'test_m340_financial_quality_gate.py' -v
+        run: python3 -m unittest discover -s test/qa -p 'test_m34*_*.py' -v
       - name: Device proof disclaimer
         run: echo "PASS is source-only; not a physical Android or production SQLCipher certification."
 
