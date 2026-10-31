@@ -38,7 +38,7 @@ abstract final class WaffraForeignCurrencyPreview {
    candidate=WaffraSmsFxReview.approve(
     originalAmount:originalAmount,quote:quote,userConfirmed:true);
   }catch(_){return null;}
-  final stamp=quote.sourceTimestampUtc.toLocal().toString();
+  final stamp=quote.sourceTimestampUtc.toUtc().toIso8601String()+' UTC';
   final accepted=await showDialog<bool>(context:context,
    builder:(dialog)=>AlertDialog(
     key:const Key('waffra-fx-consent-preview'),
