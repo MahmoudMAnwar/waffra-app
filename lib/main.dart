@@ -7362,7 +7362,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Widget monthlyBudgetCard(){
   final today=DateTime.now();
   final monthEntries=entries.where((e)=>e.date.year==today.year&&e.date.month==today.month);
-  final allBudgets=categories.where((c)=>!c.income&&c.isSubcategory&&c.budget>0).toList();
+  // Include legacy budgets previously saved on main categories in totals;
+  // only *new* budget creation requires a child category.
+  final allBudgets=categories.where((c)=>!c.income&&c.budget>0).toList();
   // Overall monthly budget is a projection, not an additional saved cap.
   // Paused budgets remain part of the total the user has created.
   final overallLimit=allBudgets.fold<double>(0,(total,c)=>total+c.budget);
