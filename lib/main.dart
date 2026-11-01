@@ -10537,6 +10537,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    'exportedAt':DateTime.now().toIso8601String(),
    'entries':listValue('entries',entries.map((e)=>e.toJson()).toList()),
    'categories':listValue('waffra_categories_v24',categories.map((e)=>e.toJson()).toList()),
+   'namedBudgets':listValue('waffra_named_budgets_v1',
+    namedBudgets.map((b)=>b.toJson()).toList()),
    'goals':listValue('waffra_goals_v24',goals.map((e)=>e.toJson()).toList()),
    'recurring':listValue('waffra_recurring_v24',recurring.map((e)=>e.toJson()).toList()),
    'challenges':listValue('waffra_challenges_v1',challenges.map((e)=>e.toJson()).toList()),
@@ -10760,6 +10762,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       }
       final newEntries=(raw['entries'] as List).map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x))).toList();
       final newCategories=(raw['categories'] as List).map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x))).toList();
+      if(raw.containsKey('namedBudgets')&&raw['namedBudgets'] is! List){
+       throw const FormatException('Invalid independent budget backup.');
+      }
+      final newNamedBudgets=(raw['namedBudgets'] as List? ??const [])
+       .map((x)=>WaffraNamedBudget.fromJson(Map<String,dynamic>.from(x)))
+       .toList();
+      // V24 archives without namedBudgets are intentionally supported.
+      for(final c in newCategories.where((c)=>!c.income&&c.budget>0)){
+       if(!newNamedBudgets.any((b)=>b.id==c.id)){
+        newNamedBudgets.add(WaffraNamedBudget.fromLegacy(c));
+       }
+      }
       final newGoals=(raw['goals'] as List).map((x)=>SavingGoal.fromJson(Map<String,dynamic>.from(x))).toList();
       final newRecurring=(raw['recurring'] as List).map((x)=>RecurringBill.fromJson(Map<String,dynamic>.from(x))).toList();
       final newChallenges=raw['challenges'] is List?(raw['challenges'] as List).map((x)=>SavingChallenge.fromJson(Map<String,dynamic>.from(x))).toList():<SavingChallenge>[];
@@ -10797,7 +10811,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        raw['monthlyBudgetEnabled'] as bool:restoredBudget>0;
       final restoreSnapshot=<String,Object>{
        'entries':jsonEncode(newEntries.map((e)=>e.toJson()).toList()),
-       'waffra_categories_v24':jsonEncode(newCategories.map((e)=>e.toJson()).toList()),
+       'waffra_categories_v24':jsonEncode(newCategories.map((c)=>
+        c.budget>0&&newNamedBudgets.any((b)=>b.id==c.id)?
+         c.copy(budget:0,clearBudget:true).toJson():c.toJson()).toList()),
+       'waffra_named_budgets_v1':jsonEncode(
+        newNamedBudgets.map((b)=>b.toJson()).toList()),
        'waffra_goals_v24':jsonEncode(newGoals.map((e)=>e.toJson()).toList()),
        'waffra_recurring_v24':jsonEncode(newRecurring.map((e)=>e.toJson()).toList()),
        'waffra_challenges_v1':jsonEncode(newChallenges.map((e)=>e.toJson()).toList()),
@@ -10831,6 +10849,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       setState((){
        entries..clear()..addAll(newEntries);
        categories..clear()..addAll(newCategories);
+       namedBudgets..clear()..addAll(newNamedBudgets);
        goals..clear()..addAll(newGoals);
        recurring..clear()..addAll(newRecurring);
        challenges..clear()..addAll(newChallenges);
@@ -11238,6 +11257,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final clean=<String,Object>{
    'entries':'[]',
    'waffra_categories_v24':jsonEncode(cleanCategories.map((e)=>e.toJson()).toList()),
+   'waffra_named_budgets_v1':'[]',
    'waffra_goals_v24':'[]',
    'waffra_recurring_v24':'[]',
    'waffra_challenges_v1':'[]',
@@ -11267,6 +11287,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    setState((){
     entries.clear();
     categories..clear()..addAll(cleanCategories);
+    namedBudgets.clear();
     goals.clear();challenges.clear();recurring.clear();
     deletedCategories.clear();deletedGoals.clear();deletedRecurring.clear();
     recurringPostponed.clear();smsHashes.clear();learnedMerchantCategories.clear();
