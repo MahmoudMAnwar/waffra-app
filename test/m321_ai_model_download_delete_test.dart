@@ -50,8 +50,9 @@ void main() {
     expect(dialog,isNot(contains('waffra-ai-required-feature-notice')));
     expect(dialog,contains('manual entry still works'));
     expect(dialog,contains('الإضافة اليدوية متاحة'));
-    expect(home,contains("featureAr:'تحليل الرسائل البنكية'"));
-    expect(home,contains("featureEn:'receipt and image OCR scanning'"));
+    // No implicit model download blocks automatic SMS review or local OCR.
+    expect(home,contains('Future<void> analyzeBankSmsAutomatically('));
+    expect(home,contains('Future<bool> _reviewAiScannedTransactions('));
     expect(smart,contains('WaffraAiModelGate.ensureReady(context,english:widget.english)'));
     // The Tools installer is explicit. No model-driven tool automatically
     // prompts on expansion: before first download it is completely hidden.
