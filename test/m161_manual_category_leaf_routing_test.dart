@@ -111,8 +111,9 @@ void main() {
     expect(source, contains('!waffraCanAssignManualCategory(available,income,activeSmsParent,category)'));
     expect(source, contains('selectedParentId'));
     expect(source, contains('leafLabels:true'));
-    expect(source, contains(
-      'waffraTr(leafLabels?item.displayName:item.name)'));
+    expect(source, contains('title:WaffraText(waffraTr(leafLabels?'));
+    expect(source, contains('item.displayName:item.name),maxLines:3)'));
+    expect(source, contains("operation:'transaction-category-picker-create'"));
     // A NEW bank-SMS transaction must atomically persist the entry AND hash
     // through the same native Home/Widget journal. An older two-step writer
     // was vulnerable to power loss between ledger and hash commits.
