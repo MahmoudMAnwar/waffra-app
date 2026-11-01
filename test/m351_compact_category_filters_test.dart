@@ -65,7 +65,10 @@ void main(){
   expect(ui,contains("key:ValueKey('waffra-category-sort-'"));
   expect(ui,contains("categoryMineOnly=v"));
   expect(ui,contains('monthlyTotals[(root.income,root.name)]'));
-  expect(ui,contains('if(!e.income)expenseTotal+=e.amount'));
+  // M356 keeps M351's semantics through the shared single-pass category summary.
+  expect(ui,contains('WaffraCategoryMonthTotals.build<MoneyEntry>'));
+  expect(ui,contains('final expenseTotal=monthly.expenses;'));
+  expect(ui,contains('onRow:(e){if(!e.income&&e.budgetId==null)unassignedExpenseCount++;}'));
   expect(ui,isNot(contains("Wrap(spacing:7,runSpacing:7,children:[\n    _filterChip")));
  });
 }
