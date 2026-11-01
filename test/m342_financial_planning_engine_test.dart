@@ -129,4 +129,41 @@ void main() {
     expectedDue:DateTime(2026,11,1)),isFalse);
   });
  });
+
+ group('M342 budget amendments — creation after transactions and delete', () {
+  final start=DateTime(2026,11,1),end=DateTime(2026,12,1);
+  test('old expense becomes a review suggestion after budget creation', () {
+   final expenses=[
+    PostedExpense('prior-purchase','fuel',7500,DateTime(2026,11,4)),
+   ];
+   final created=[
+    NamedBudget('my-fuel','ميزانية البنزين','fuel',20000,start,end),
+   ];
+   final proposed=BudgetChangeReview.suggestUnlinked(created,expenses,[]);
+   expect(proposed['prior-purchase'],['my-fuel']);
+   expect(NamedBudgetProjector.review(created,expenses,[])
+       .unassigned['prior-purchase'],7500);
+  });
+  test('budget deletion detaches its links and preserves actual expense', () {
+   final budget=NamedBudget('fuel','وقود','car',20000,start,end);
+   final expense=PostedExpense('p','car',7500,DateTime(2026,11,3));
+   final removal=BudgetChangeReview.deleteBudget('fuel',[budget],
+    [expense],[const BudgetAllocation('p','fuel',7500)]);
+   expect(removal.remainingBudgets,isEmpty);
+   expect(removal.remainingLinks,isEmpty);
+   expect(removal.recalculated.unassigned['p'],7500);
+  });
+  test('duplicate category budgets must not auto-assign by guesswork', () {
+   final budgets=[
+    NamedBudget('fuel','الوقود','car',20000,start,end),
+    NamedBudget('travel','السفر','car',10000,start,end),
+   ];
+   final matches=BudgetChangeReview.suggestUnlinked(budgets,[
+    PostedExpense('p','car',7500,DateTime(2026,11,3)),
+   ],[]);
+   expect(matches['p'],['fuel','travel']);
+   // Multiple valid options are presented for review, never auto-saved.
+  });
+ });
+
 }
