@@ -3554,7 +3554,54 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),
      child:WaffraText(waffraIsEnglish?'Confirm delete':'تأكيد الحذف')),
    ]));
-Future<void> bulkSmsSheet({String? initialText})async {
+/// Every bank expense needs an explicit budget choice. Cancel means no post.
+ Future<List<String?>?> reviewSmsBudgetLinks(List<MoneyEntry> candidates)async{
+  final choices=categories.where((c)=>!c.income&&c.budget>0).toList();
+  final assigned=List<String?>.filled(candidates.length,null);
+  if(!candidates.any((e)=>!e.income))return assigned;
+  return showWaffraDialog<List<String?>>(context:context,
+   builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Choose budgets for expenses':'تسجيل كل مصروف في أي ميزانية؟'),
+    content:SizedBox(width:double.maxFinite,
+     height:min(500.0,MediaQuery.sizeOf(ctx).height*.58),
+     child:ListView(children:[
+      WaffraText(waffraIsEnglish?
+       'Nothing is linked automatically. Review each expense before saving.':
+       'الربط مش تلقائي؛ راجع ميزانية كل مصروف قبل الحفظ.'),
+      const SizedBox(height:12),
+      for(var n=0;n<candidates.length;n++)
+       if(!candidates[n].income)Padding(
+        padding:const EdgeInsets.only(bottom:12),
+        child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+         WaffraText(candidates[n].title+' · '+cash(candidates[n].amount),
+          style:const TextStyle(fontWeight:FontWeight.bold),maxLines:2),
+         const SizedBox(height:5),
+         DropdownButtonFormField<String>(
+          key:ValueKey('waffra-sms-budget-'+n.toString()+'-'+(assigned[n]??'none')),
+          initialValue:assigned[n]??'none',isExpanded:true,
+          decoration:InputDecoration(labelText:waffraIsEnglish?'Budget':'الميزانية',
+           border:const OutlineInputBorder()),
+          items:[
+           DropdownMenuItem(value:'none',child:WaffraText(
+            waffraIsEnglish?'Unassigned':'غير مرتبطة بميزانية')),
+           ...choices.map((c)=>DropdownMenuItem(value:c.id,child:WaffraText(
+            c.budgetLabel??'ميزانية '+c.displayName,maxLines:1))),
+          ],
+          onChanged:WaffraHaptics.selection((value)=>update(
+           ()=>assigned[n]=value=='none'?null:value)),
+         ),
+        ])),
+     ])),
+    actions:[
+     TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
+      child:WaffraText(waffraIsEnglish?'Cancel batch':'إلغاء')),
+     FilledButton(onPressed:WaffraHaptics.tap(()=>
+      Navigator.pop(ctx,List<String?>.from(assigned))),
+      child:WaffraText(waffraIsEnglish?'Confirm budget choices':'تأكيد الميزانيات')),
+    ],
+   )));
+ }
+ Future<void> bulkSmsSheet({String? initialText})async {
   // Deterministic SMS review is available immediately and offline.
   // Qwen remains optional for ambiguous messages; never block paste on a
   // 484 MB model initialization just to read a supported bank template.
@@ -3795,6 +3842,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
      'لم تُحفظ معاملات. راجع الرسائل أدناه وصحّح بياناتها.';
    });
    return;
+  }
+  final reviewedBudgets=await reviewSmsBudgetLinks(additions);
+  if(reviewedBudgets==null){if(ctx.mounted)update(()=>busy=false);return;}
+  for(var n=0;n<additions.length;n++){
+   additions[n]=additions[n].withBudget(reviewedBudgets[n]);
   }
   try{
    // The dashboard and standalone Android widget now use the SAME locked,
