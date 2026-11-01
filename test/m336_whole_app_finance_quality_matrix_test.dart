@@ -93,15 +93,35 @@ void main(){
    expect(app,contains('may include unverified amounts'));
  });
 
-  test('M337 newly created SMS category stays under selected parent',(){
+  test('M337 newly created SMS category keeps selected parent after save',(){
   final app=File('lib/main.dart').readAsStringSync();
   final from=app.indexOf('Future<void> entrySheet(');
   final to=app.indexOf('Future<String?> chooseTransactionCategory(',from);
-  final section=app.substring(from,to);
-  expect(section,contains('categoryDialog(income:income,parentId:mainId,'));
-  expect(section,contains('categoryDialog(income:income,parentId:mainId);'));
-  expect(section,contains('selectedParentId=mainId;category=c.name'));
-  expect(section,contains('Select a main category first.'));
+  expect(from,greaterThan(0));
+  expect(to,greaterThan(from));
+  final manual=app.substring(from,to);
+  expect(manual,contains('allowCreate:true,typeIncome:income,parentId:selectedParentId'));
+  expect(manual,contains('selectedParentId=leaves.single.parentId;'));
+  expect(manual,contains('category=leaves.single.name;'));
+
+  final createFrom=to;
+  final createTo=app.indexOf('Future<String?> _promptReceiptLabel(',createFrom);
+  expect(createTo,greaterThan(createFrom));
+  final picker=app.substring(createFrom,createTo);
+  expect(picker,contains('categoryParentId=chosen.single.id;'));
+  expect(picker,contains('income:typeIncome,parentId:categoryParentId,'));
+  expect(picker,contains("operation:'transaction-category-picker-create'"));
+  expect(picker,contains('))return null;'));
+  expect(picker,contains('return created.name;'));
+
+  final smsFrom=app.indexOf('Future<void> bulkSmsSheet(');
+  final smsTo=app.indexOf('Future<void> _previewForeignBankCurrency(',smsFrom);
+  expect(smsFrom,greaterThan(0));
+  expect(smsTo,greaterThan(smsFrom));
+  final sms=app.substring(smsFrom,smsTo);
+  expect(sms,contains('allowCreate:true,typeIncome:income,parentId:smsParentId'));
+  expect(sms,contains('smsParentId=leaf.single.parentId'));
+  expect(sms,contains('category=leaf.single.name;'));
  });
 
   test('M338 repeated SMS totals use exact integer currency units',(){
