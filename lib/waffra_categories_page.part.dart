@@ -51,9 +51,6 @@ extension WaffraCategoryScreen on _HomeScreenState {
    if(categoryTypeFilter=='income'&&!root.income)return false;
    if(categoryTypeFilter=='expense'&&root.income)return false;
    final subs=children(root);
-   final budgeted=root.budget>0||subs.any((c)=>c.budget>0);
-   if(categoryDisplay=='budget'&&!budgeted)return false;
-   if(categoryDisplay=='none'&&budgeted)return false;
    final query=categorySearch.trim();
    return waffraSearchAny([root.name,waffraTr(root.name)],query)||
     subs.any((c)=>(!categoryMineOnly||c.isUserAdded)&&
@@ -67,8 +64,6 @@ extension WaffraCategoryScreen on _HomeScreenState {
   final filterLabels=<String>[
    if(categoryTypeFilter=='income')(waffraIsEnglish?'Income':'الدخل'),
    if(categoryTypeFilter=='expense')(waffraIsEnglish?'Expenses':'المصروفات'),
-   if(categoryDisplay=='budget')(waffraIsEnglish?'Budgeted':'بميزانية'),
-   if(categoryDisplay=='none')(waffraIsEnglish?'No budget':'بدون ميزانية'),
    if(categorySort=='income')(waffraIsEnglish?'Highest income':'الأكثر دخلًا'),
    if(categorySort=='spent')(waffraIsEnglish?'Highest expenses':'الأكثر مصروفًا'),
    if(categorySort=='alpha')(waffraIsEnglish?'A–Z':'أبجديًا'),
@@ -80,7 +75,6 @@ extension WaffraCategoryScreen on _HomeScreenState {
    final visibleChildren=children(root).where((c)=>!categoryMineOnly||c.isUserAdded).toList();
    final opened=expandedCategoryIds.contains(root.id);
    final amount=monthlyFor(root);
-   final assigned=waffraNamedBudgetSpent(entries,categories,root,now);
    return Card(margin:EdgeInsets.zero,elevation:0,clipBehavior:Clip.antiAlias,
     color:Theme.of(context).cardColor,
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(19),
@@ -96,12 +90,6 @@ extension WaffraCategoryScreen on _HomeScreenState {
       ]),
       const SizedBox(height:5),
       WaffraText(root.name,maxLines:2,style:const TextStyle(fontSize:15,fontWeight:FontWeight.w700)),
-      if(!root.income&&root.budget>0&&!root.budgetActive)
-       Padding(padding:const EdgeInsets.only(top:4),
-        child:WaffraText(waffraIsEnglish?
-         'Budget paused':'الميزانية متوقفة مؤقتًا',
-         style:const TextStyle(fontSize:11,color:Colors.deepOrange,
-          fontWeight:FontWeight.w600))),
       const SizedBox(height:5),
       WaffraText(waffraIsEnglish?'${visibleChildren.length} subcategories':'${visibleChildren.length} قسم فرعي',
        style:TextStyle(fontSize:11,color:Theme.of(context).hintColor)),
@@ -110,13 +98,6 @@ extension WaffraCategoryScreen on _HomeScreenState {
        (waffraIsEnglish?'Income: ${cash(amount)}':'الدخل: ${cash(amount)}'):
        (waffraIsEnglish?'Spent: ${cash(amount)}':'المصروف: ${cash(amount)}'),
        maxLines:1,style:TextStyle(fontSize:11,color:color,fontWeight:FontWeight.bold)),
-      if(!root.income&&root.budget>0&&root.budgetActive)...[
-       const SizedBox(height:6),
-       LinearProgressIndicator(value:(assigned/root.budget).clamp(0.0,1.0),
-        minHeight:5,color:assigned>root.budget?Colors.red:color,
-        backgroundColor:color.withValues(alpha:.12),
-        borderRadius:BorderRadius.circular(8)),
-      ],
       const SizedBox(height:3),
       Row(mainAxisAlignment:MainAxisAlignment.end,children:[
        WaffraText(waffraIsEnglish?'Subcategories':'الأقسام الفرعية',style:const TextStyle(fontSize:10)),
@@ -258,7 +239,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
   }
   final pageRows=<Widget Function()>[
    ()=>WaffraPageHero(
-    title:waffraIsEnglish?'Categories & budgets':'أقسامك وميزانياتك',
+    title:waffraIsEnglish?'Your categories':'أقسامك',
     subtitle:waffraIsEnglish?'All income and expense types with subcategories':
      'كل أنواع الدخل والمصروفات في أقسام رئيسية وفرعية منظمة.',
     icon:Icons.category_outlined,titleKey:_tourKeys[2]),
@@ -322,8 +303,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
      title:WaffraText(waffraIsEnglish?'Filter & sort':'الفلترة والترتيب',
       style:const TextStyle(fontWeight:FontWeight.bold)),
      subtitle:WaffraText(filterLabels.isEmpty?
-       (waffraIsEnglish?'All categories • All budgets':
-         'كل الأقسام • كل الميزانيات'):filterLabels.join(' • '),
+       (waffraIsEnglish?'All categories':'كل الأقسام'):filterLabels.join(' • '),
       maxLines:2,style:TextStyle(fontSize:11,color:Theme.of(context).hintColor)),
      children:[
       LayoutBuilder(builder:(ctx,layout){
@@ -349,18 +329,6 @@ extension WaffraCategoryScreen on _HomeScreenState {
          ],
          onChanged:WaffraHaptics.selection((v){
           if(v!=null)setState(()=>categoryTypeFilter=v);
-         }))),
-        SizedBox(width:cell,child:DropdownButtonFormField<String>(
-         key:ValueKey('waffra-category-budget-'+categoryDisplay),
-         initialValue:categoryDisplay,isExpanded:true,
-         decoration:decor(waffraIsEnglish?'Budget status':'حالة الميزانية'),
-         items:[
-          DropdownMenuItem(value:'all',child:WaffraText(waffraIsEnglish?'All budgets':'كل الميزانيات')),
-          DropdownMenuItem(value:'budget',child:WaffraText(waffraIsEnglish?'Budgeted':'بميزانية')),
-          DropdownMenuItem(value:'none',child:WaffraText(waffraIsEnglish?'No budget':'بدون ميزانية')),
-         ],
-         onChanged:WaffraHaptics.selection((v){
-          if(v!=null)setState(()=>categoryDisplay=v);
          }))),
         SizedBox(width:cell,child:DropdownButtonFormField<String>(
          key:ValueKey('waffra-category-sort-'+categorySort),
