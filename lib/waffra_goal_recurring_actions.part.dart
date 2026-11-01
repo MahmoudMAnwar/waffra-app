@@ -66,7 +66,8 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
        OutlinedButton.icon(
         onPressed:WaffraHaptics.tap(()async{
          final picked=await waffraPickDateWithToday(english:waffraIsEnglish,
-          context:dialog,initialDate:deadline??DateTime.now().add(const Duration(days:1)),
+          context:dialog,initialDate:deadline!=null&&deadline!.isAfter(DateTime.now())?
+           deadline!:DateTime.now().add(const Duration(days:1)),
           firstDate:DateTime.now(),lastDate:DateTime(DateTime.now().year+10));
          if(picked!=null&&dialog.mounted)update((){
           deadline=picked;removeDeadline=false;
