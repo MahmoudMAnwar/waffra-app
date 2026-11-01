@@ -163,6 +163,74 @@ void main() {
     expect(await count('fresh_finance_budget_allocations'),2);
   });
 
+  test('M365 edit, pause, delete and reassign budgets preserve prior money',
+      () async {
+    await bootstrap();
+    await addCategory('car');
+    await addCategory('fuel',parent:'car');
+    await addEntry('expense-1','fuel');
+    expect(await repo().listUnassignedExpenseIds(),['expense-1']);
+    for (final id in ['old','new']) {
+      await repo().createNamedBudget(
+        budgetId:id,name:id,categoryId:'fuel',limitMinor:10000,
+        createdAtIso:'2026-11-01T12:00:00',
+      );
+    }
+    await repo().editNamedBudget(
+      budgetId:'old',name:'ميزانية الوقود',limitMinor:20000,
+      alertPercent:75,userConfirmed:true,
+    );
+    final edited=await db.customSelect(
+      "SELECT name,monthly_limit_minor,alert_percent FROM "
+      "fresh_finance_named_budgets WHERE budget_id='old'",
+    ).getSingle();
+    expect(edited.read<String>('name'),'ميزانية الوقود');
+    expect(edited.read<int>('monthly_limit_minor'),20000);
+    expect(edited.read<int>('alert_percent'),75);
+    await repo().assignExpenseToBudget(
+      allocationId:'allocation-1',entryId:'expense-1',budgetId:'old',
+      allocatedMinor:7500,assignedAtIso:'2026-11-01T13:00:00',
+      userConfirmed:true,
+    );
+    expect(await repo().listUnassignedExpenseIds(),isEmpty);
+    await repo().setBudgetActive('new',false);
+    await expectLater(repo().replaceExpenseBudget(
+      allocationId:'allocation-1',newBudgetId:'new',allocatedMinor:7500,
+      assignedAtIso:'2026-11-01T14:00:00',userConfirmed:true,
+    ),throwsA(isA<StateError>()));
+    final original=await db.customSelect(
+      "SELECT budget_id FROM fresh_finance_budget_allocations "
+      "WHERE allocation_id='allocation-1'",
+    ).getSingle();
+    expect(original.read<String>('budget_id'),'old',
+      reason:'A failed reassignment must roll back its original allocation');
+    await repo().setBudgetActive('new',true);
+    await repo().replaceExpenseBudget(
+      allocationId:'allocation-1',newBudgetId:'new',allocatedMinor:7500,
+      assignedAtIso:'2026-11-01T15:00:00',userConfirmed:true,
+    );
+    final changed=await db.customSelect(
+      "SELECT budget_id FROM fresh_finance_budget_allocations "
+      "WHERE allocation_id='allocation-1'",
+    ).getSingle();
+    expect(changed.read<String>('budget_id'),'new');
+    await repo().deleteNamedBudget(
+      budgetId:'new',deletedAtIso:'2026-11-01T16:00:00',
+      userConfirmed:true,
+    );
+    await expectLater(repo().setBudgetActive('new',true),
+      throwsA(isA<StateError>()));
+    expect(await count('fresh_finance_budget_allocations'),1,
+      reason:'Soft deletion must preserve old allocations for audit');
+    await repo().unassignExpenseBudget(
+      allocationId:'allocation-1',userConfirmed:true);
+    expect(await repo().listUnassignedExpenseIds(),['expense-1']);
+    expect((await db.customSelect(
+      "SELECT amount_minor FROM fresh_finance_entries "
+      "WHERE entry_id='expense-1'",
+    ).getSingle()).read<int>('amount_minor'),7500);
+  });
+
   test('M364 category FK, expense-only and user consent are enforced',
       () async {
     await bootstrap();
