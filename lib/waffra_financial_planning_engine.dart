@@ -72,9 +72,13 @@ class PostedExpense {
   final bool confirmed;
 }
 class BudgetAllocation {
-  const BudgetAllocation(this.expenseId,this.budgetId,this.amountMinor);
+  const BudgetAllocation(this.expenseId,this.budgetId,this.amountMinor,
+    {this.crossCategoryApproved=false});
   final String expenseId,budgetId;
   final int amountMinor;
+  /// A user may explicitly choose a budget outside the inferred category.
+  /// Only that explicit confirmation can override category suggestions.
+  final bool crossCategoryApproved;
 }
 class BudgetPosition {
   const BudgetPosition(this.limitMinor,this.usedMinor);
@@ -113,7 +117,8 @@ abstract final class NamedBudgetProjector {
     if(expense==null||budget==null||!expense.confirmed||
        link.amountMinor<=0||
        !pairs.add(link.expenseId+'|'+link.budgetId)||
-       expense.categoryId!=budget.categoryId||
+       (expense.categoryId!=budget.categoryId&&
+          !link.crossCategoryApproved)||
        expense.date.isBefore(budget.start)||
        !expense.date.isBefore(budget.endExclusive)||
        (allocated[expense.id]??0)+link.amountMinor>expense.amountMinor) {
