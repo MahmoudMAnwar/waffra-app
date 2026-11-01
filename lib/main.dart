@@ -2491,9 +2491,13 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
  final String? protectedOriginalSms;
  final VoidCallback onClose;
  final VoidCallback? onViewReceipt;
+ final VoidCallback? onLinkBudget;
+ final String? linkedBudgetName;
+ final bool linkedBudgetPaused;
  const WaffraTransactionDetailsDialog({
   super.key,required this.entry,required this.onClose,this.onViewReceipt,
-  this.protectedOriginalSms,
+  this.protectedOriginalSms,this.onLinkBudget,this.linkedBudgetName,
+  this.linkedBudgetPaused=false,
  });
  @override Widget build(BuildContext context){
   final rtl=!waffraIsEnglish;
@@ -2553,6 +2557,43 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
          textDirection:rtl?TextDirection.rtl:TextDirection.ltr,
          style:TextStyle(color:muted,fontSize:13))),
        ]),
+       if(!entry.income)...[
+        const SizedBox(height:12),
+        if(entry.budgetId==null)
+         Container(
+          key:const Key('waffra-transaction-budget-unlinked-warning'),
+          padding:const EdgeInsets.all(11),
+          decoration:BoxDecoration(
+           color:Colors.deepOrange.withValues(alpha:dark?.13:.08),
+           borderRadius:BorderRadius.circular(12),
+           border:Border.all(color:Colors.deepOrange.withValues(alpha:.40))),
+          child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+           Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            const Icon(Icons.info_outline_rounded,
+             size:18,color:Colors.deepOrange),
+            const SizedBox(width:7),
+            Expanded(child:WaffraText(waffraIsEnglish?
+             'This expense is not linked to a budget.':
+             'المعاملة دي غير مرتبطة بميزانية.',
+             style:const TextStyle(fontSize:12,fontWeight:FontWeight.w700))),
+           ]),
+           if(onLinkBudget!=null)
+            Align(alignment:AlignmentDirectional.centerStart,
+             child:TextButton.icon(
+              key:const Key('waffra-transaction-link-budget-action'),
+              onPressed:WaffraHaptics.tap(onLinkBudget),
+              icon:const Icon(Icons.link_rounded,size:16),
+              label:WaffraText(waffraIsEnglish?
+               'Link to a budget':'ربط بميزانية'))),
+          ]),
+         )
+        else WaffraText(waffraIsEnglish?
+          'Budget: '+(linkedBudgetName??'Saved budget')+
+            (linkedBudgetPaused?' (paused)':''):
+          'الميزانية: '+(linkedBudgetName??'ميزانية محفوظة')+
+            (linkedBudgetPaused?' (متوقفة مؤقتًا)':''),
+          style:TextStyle(fontSize:12,color:muted)),
+       ],
        const SizedBox(height:15),
        Container(
         padding:const EdgeInsets.symmetric(horizontal:13,vertical:12),
@@ -6513,6 +6554,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    builder:(ctx)=>WaffraTransactionDetailsDialog(
     entry:entry,
     protectedOriginalSms:originalBankSms,
+    linkedBudgetName:categories.where((c)=>c.id==entry.budgetId)
+      .map((c)=>c.budgetLabel??c.name).firstOrNull,
+    linkedBudgetPaused:categories.any((c)=>c.id==entry.budgetId&&
+      c.budget>0&&!c.budgetActive),
+    onLinkBudget:entry.income||entry.budgetId!=null?null:(){
+      Navigator.pop(ctx);
+      unawaited(assignExistingExpenseToBudget(entry));
+    },
     onClose:()=>Navigator.pop(ctx),
     onViewReceipt:waffraReceiptPaths(entry.receiptPath).isNotEmpty
       ?(){Navigator.pop(ctx);showReceipt(entry.receiptPath!);}
