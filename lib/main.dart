@@ -9056,7 +9056,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       DropdownButtonFormField<bool>(initialValue:income,
        items:const [DropdownMenuItem(value:true,child:WaffraText('دخل')),
         DropdownMenuItem(value:false,child:WaffraText('مصروف'))],
-       onChanged:WaffraHaptics.selection((v){if(v!=null)update((){
+       onChanged:initial?.linkedGoalId!=null?null:WaffraHaptics.selection((v){if(v!=null)update((){
          income=v;category=forType(v).isNotEmpty?forType(v).first.name:'';
         });})),
       const SizedBox(height:12),
