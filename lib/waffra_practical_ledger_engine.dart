@@ -4,10 +4,13 @@ class WaffraPracticalEntry {
     required this.id, required this.title, required this.category,
     required this.amount, required this.income, required this.date,
     this.notes = '', this.hasAttachment = false,
+    this.unassignedNamedBudget = false, this.orphanBudgetLink = false,
   });
   final String id, title, category, notes;
   final double amount;
   final bool income, hasAttachment;
+  /// Verified snapshot flags computed by the Home budget/category source.
+  final bool unassignedNamedBudget, orphanBudgetLink;
   final DateTime date;
   int? get minor {
     if (!amount.isFinite || amount < 0 || amount > 1000000000000) return null;
@@ -18,7 +21,8 @@ class WaffraPracticalEntry {
 }
 
 enum WaffraHealthIssueKind {
-  duplicateId, possibleDuplicate, missingCategory, invalidAmount
+  duplicateId, possibleDuplicate, missingCategory, invalidAmount,
+  unassignedNamedBudget, orphanBudgetLink
 }
 class WaffraHealthIssue {
   const WaffraHealthIssue(this.kind, this.entryId);
@@ -39,6 +43,14 @@ class WaffraDataHealth {
     for (final item in rows) {
       if (item.id.trim().isEmpty || !seenIds.add(item.id)) {
         issues.add(WaffraHealthIssue(WaffraHealthIssueKind.duplicateId, item.id));
+      }
+      if (!item.income && item.unassignedNamedBudget) {
+        issues.add(WaffraHealthIssue(
+          WaffraHealthIssueKind.unassignedNamedBudget, item.id));
+      }
+      if (item.orphanBudgetLink) {
+        issues.add(WaffraHealthIssue(
+          WaffraHealthIssueKind.orphanBudgetLink, item.id));
       }
       final cents = item.minor;
       if (cents == null) {
