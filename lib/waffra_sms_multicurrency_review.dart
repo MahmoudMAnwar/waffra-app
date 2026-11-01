@@ -306,6 +306,9 @@ abstract final class WaffraSmsCurrencies {
         caseSensitive:false).hasMatch(action);
     final canonical=_canonicalMoney(matches.single,scale)??
       (labelledSarThousands?matches.single.replaceAll(',',''):null);
+    // Fail closed if the amount format is ambiguous. Do not coerce a
+    // missing canonical amount into a finance preview or source total.
+    if(canonical==null)return null;
     final amount=double.tryParse(canonical);
     if(amount==null||!amount.isFinite||amount<=0||amount>1e9)return null;
     final factor=scale==3?1000:scale==0?1:100;
