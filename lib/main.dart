@@ -5120,6 +5120,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final selectedSub=subcategories.where((c)=>c.name==category).toList();
     final budgetSuggestions=categories.where((c)=>!c.income&&c.budget>0&&c.budgetActive&&
       (c.name==category||c.id==selectedParentId)).toList();
+    void assignBudgetInsideEditor(String? pickedId){
+     selectedBudgetId=pickedId;
+     if(pickedId==null)return;
+     final matches=categories.where((c)=>c.id==pickedId&&
+      !c.income&&c.budget>0&&c.isSubcategory).toList();
+     if(matches.length==1){
+      selectedParentId=matches.single.parentId;
+      category=matches.single.name;
+     }
+    }
     Widget dateAction()=>OutlinedButton.icon(
       key:const Key('waffra-entry-date-action'),
       onPressed:WaffraHaptics.tap(()async {
@@ -5335,7 +5345,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               (waffraIsEnglish?' (paused)':' (متوقفة)'),maxLines:1))),
         ],
         onChanged:WaffraHaptics.selection((v)=>update(
-         ()=>selectedBudgetId=v=='unlinked'?null:v)),
+         ()=>assignBudgetInsideEditor(v=='unlinked'?null:v))),
        ),
        Align(alignment:AlignmentDirectional.centerStart,
         child:TextButton.icon(
@@ -5395,7 +5405,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               ]);
             }));
           if(picked!=null&&sheetContext.mounted){
-           update(()=>selectedBudgetId=picked=='unlinked'?null:picked);
+           update(()=>assignBudgetInsideEditor(picked=='unlinked'?null:picked));
           }
          }),
         )),
