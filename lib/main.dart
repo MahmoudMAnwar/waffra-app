@@ -2911,6 +2911,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  double monthlyBudget=0;
  bool monthlyBudgetEnabled=false;
  String? selectedNamedBudgetCategoryId;
+ String budgetStatusFilter='active'; // UI-only: active budgets by default.
  DateTimeRange? transactionsDateRange;
  double? minTransactionAmount,maxTransactionAmount;
  int tab=0,year=DateTime.now().year,month=DateTime.now().month;
@@ -7126,6 +7127,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   setState((){
    final i=categories.indexWhere((c)=>c.id==selected.id);
    if(i>=0)categories[i]=categories[i].copy(budgetActive:enabled);
+   // A paused budget must immediately disappear from the active picker.
+   if(selectedNamedBudgetCategoryId==selected.id){
+    selectedNamedBudgetCategoryId=null;
+   }
   });
   final saved=await _persistModuleOrReload(
     WaffraFinanceRoute.categoryCreateEditDeleteRestore,
@@ -7312,7 +7317,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Widget monthlyBudgetCard(){
   final today=DateTime.now();
   final monthEntries=entries.where((e)=>e.date.year==today.year&&e.date.month==today.month);
-  final named=categories.where((c)=>!c.income&&c.budget>0).toList();
+  final named=categories.where((c)=>!c.income&&c.budget>0&&
+   (budgetStatusFilter=='active'?c.budgetActive:!c.budgetActive)).toList();
   final selectedRows=named.where((c)=>c.id==selectedNamedBudgetCategoryId).toList();
   final selected=selectedRows.isEmpty?null:selectedRows.single;
   final limit=selected?.budget??monthlyBudget;
@@ -7408,6 +7414,29 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }),
     const SizedBox(height:8),
     DropdownButtonFormField<String>(
+     key:ValueKey('waffra-budget-status-filter-'+budgetStatusFilter),
+     initialValue:budgetStatusFilter,
+     isExpanded:true,
+     decoration:InputDecoration(
+      labelText:waffraIsEnglish?'Budget status':'حالة الميزانيات',
+      border:const OutlineInputBorder(),
+      contentPadding:const EdgeInsets.symmetric(horizontal:12,vertical:12)),
+     items:[
+      DropdownMenuItem(value:'active',
+       child:WaffraText(waffraIsEnglish?'Active budgets':'الميزانيات الفعّالة')),
+      DropdownMenuItem(value:'inactive',
+       child:WaffraText(waffraIsEnglish?'Paused budgets':'الميزانيات غير الفعّالة')),
+     ],
+     onChanged:WaffraHaptics.selection((status){
+      if(status==null)return;
+      setState((){
+       budgetStatusFilter=status;
+       selectedNamedBudgetCategoryId=null;
+      });
+     }),
+    ),
+    const SizedBox(height:14),
+    DropdownButtonFormField<String>(
      key:ValueKey('waffra-budget-picker-'+(selected?.id??'all')),
      menuMaxHeight:min(340.0,MediaQuery.sizeOf(context).height*.48),
      initialValue:selected?.id??'all',isExpanded:true,
@@ -7416,7 +7445,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       contentPadding:const EdgeInsets.symmetric(horizontal:12,vertical:8)),
      items:[
       DropdownMenuItem(value:'all',child:WaffraText(waffraIsEnglish?
-       'General monthly budget':'الميزانية الشهرية العامة')),
+       'Overall monthly spending':'إجمالي مصروفات الشهر')),
       ...named.map((c)=>DropdownMenuItem(value:c.id,
        child:WaffraText((c.budgetLabel??'ميزانية '+c.displayName)+
         (c.budgetActive?'':(waffraIsEnglish?' (paused)':' (متوقفة)')),
