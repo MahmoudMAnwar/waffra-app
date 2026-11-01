@@ -9,10 +9,10 @@ void main(){
   final ledger=[MoneyEntry(id:'cash',title:'راتب',
    category:'الراتب',amount:100,income:true,date:DateTime(2026,11,1))];
   final before=[SavingGoal(id:'goal',name:'رحلة',target:500,saved:80)];
-  expect(waffraAvailableCash(ledger,before),20);
+  expect(waffraAvailableCash(ledger,before),100);
   final after=[before.single.copy(saved:180)];
   expect(waffraGoalWalletBalance(after),180);
-  expect(waffraAvailableCash(ledger,after),-80);
+  expect(waffraAvailableCash(ledger,after),100);
   expect(ledger.length,1,reason:'Earmarking is never an expense');
  });
 
@@ -26,13 +26,15 @@ void main(){
    amount:1000,income:true,date:DateTime(2026,11,1))];
   final after=[...before,MoneyEntry(id:'rec_goal_2026_11',title:'goal paid',
    category:'سكن / إيجار شهري',amount:plan.amount,income:false,
-   date:DateTime(2026,11,15),sourceType:'goal_due')];
+   date:DateTime(2026,11,15),sourceType:'goal_due',
+   goalWalletPaidMinor:plan.fromGoalMinor)];
   final goalBefore=[SavingGoal(id:'g',name:'goal',target:200,saved:300)];
   final goalAfter=[goalBefore.single.copy(saved:plan.remainingGoalSavings)];
-  expect(waffraAvailableCash(before,goalBefore),700);
-  expect(waffraAvailableCash(after,goalAfter),700);
+  expect(waffraAvailableCash(before,goalBefore),1000);
+  expect(waffraAvailableCash(after,goalAfter),1000);
   expect(waffraGoalWalletBalance(goalAfter),100);
   expect(after.length,2);
+  expect(MoneyEntry.fromJson(after.last.toJson()).goalWalletPaidMinor,20000);
  });
 
  test('M362 shortfall only comes from spendable balance',(){
