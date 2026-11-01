@@ -4988,6 +4988,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final selectedMain=mainCategories.where((c)=>c.id==selectedParentId).toList();
     final subcategories=waffraManualCategoryChildren(available,income,selectedParentId);
     final selectedSub=subcategories.where((c)=>c.name==category).toList();
+    final budgetSuggestions=categories.where((c)=>!c.income&&c.budget>0&&
+      (c.name==category||c.id==selectedParentId)).toList();
     Widget dateAction()=>OutlinedButton.icon(
       key:const Key('waffra-entry-date-action'),
       onPressed:WaffraHaptics.tap(()async {
@@ -5116,6 +5118,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          style:const TextStyle(color:Colors.redAccent,fontSize:12))),
       ],
       if(!income)...[
+       if(budgetSuggestions.isNotEmpty)Padding(
+        padding:const EdgeInsets.only(top:8,bottom:5),
+        child:WaffraText(waffraIsEnglish?
+         'Suggested budget: '+(budgetSuggestions.first.budgetLabel??
+           'Budget '+budgetSuggestions.first.displayName):
+         'الميزانية المقترحة: '+(budgetSuggestions.first.budgetLabel??
+           'ميزانية '+budgetSuggestions.first.displayName),
+         style:const TextStyle(fontSize:12,color:emerald))),
        const SizedBox(height:11),
        DropdownButtonFormField<String>(
         key:ValueKey('waffra-entry-budget-'+(selectedBudgetId??'unlinked')),
