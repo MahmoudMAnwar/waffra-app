@@ -112,6 +112,19 @@ class WaffraLegacyPreflight {
               budgetId.length > 256 || item['income']==true)) {
             issues.add(WaffraPreflightIssue(key,i,'invalid_budget_assignment'));
           }
+          // The wallet-funded portion is a verified property of a confirmed
+          // goal-due ledger event, never inferred from mutable notes.
+          final walletMinor=item['goalWalletPaidMinor'];
+          if(walletMinor!=null) {
+            final gross=item['amount'];
+            if(item['sourceType']!='goal_due'||item['income']!=false||
+               walletMinor is! int||walletMinor<0||gross is! num||
+               !gross.isFinite||gross<0||
+               walletMinor>(gross*100).round()) {
+              issues.add(WaffraPreflightIssue(
+                key,i,'invalid_goal_wallet_allocation'));
+            }
+          }
           final receipt = item['receiptPath'];
           if (receipt != null && receipt is! String) {
             issues.add(WaffraPreflightIssue(key, i, 'invalid_receipt_path'));
