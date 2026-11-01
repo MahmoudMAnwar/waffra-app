@@ -8,7 +8,9 @@ import 'package:timezone/timezone.dart' as tz;
 class WaffraReminder {
  final String id,title;
  final int day;
- const WaffraReminder({required this.id,required this.title,required this.day});
+ /// A linked goal may not start its monthly reminders before this date.
+ final DateTime? startAt;
+ const WaffraReminder({required this.id,required this.title,required this.day,this.startAt});
 }
 
 class WaffraReminders {
@@ -70,9 +72,12 @@ class WaffraReminders {
   await _plugin.cancelAll();
   final now=DateTime.now();
   for(final item in items){
-   for(var offset=0;offset<3;offset++){
+   var scheduled=0;
+   for(var offset=0;offset<18&&scheduled<3;offset++){
     final month=DateTime(now.year,now.month+offset,1);
     final due=dueDate(month,item.day);
+    if(item.startAt!=null&&due.isBefore(DateTime(
+      item.startAt!.year,item.startAt!.month,item.startAt!.day)))continue;
     final remindAt=DateTime(due.year,due.month,due.day-1,9);
     if(!remindAt.isAfter(now.add(const Duration(minutes:2))))continue;
     await _plugin.zonedSchedule(
@@ -82,6 +87,7 @@ class WaffraReminders {
       'اقترب موعد «${item.title}» بتاريخ ${due.day}/${due.month}',
      tz.TZDateTime.from(remindAt,tz.local),_details,
      androidScheduleMode:AndroidScheduleMode.inexactAllowWhileIdle);
+    scheduled++;
    }
   }
  }
