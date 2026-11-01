@@ -7444,44 +7444,30 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if(monthlyBudgetDetailsOpen)...[
     const SizedBox(height:12),
     LayoutBuilder(builder:(context,box){
-     final compact=box.maxWidth<300||
+     final compact=box.maxWidth<290||
       MediaQuery.textScalerOf(context).scale(16)>22;
-     final budgetLabel=Row(mainAxisSize:MainAxisSize.min,children:[
-      const Icon(Icons.donut_large,color:emerald,size:23),
-      const SizedBox(width:7),
-      Flexible(child:WaffraText(selected==null?
-       (waffraIsEnglish?'Overall monthly budget':'الميزانية الشهرية العامة'):
-       (selected.budgetLabel??'ميزانية '+selected.displayName),
-       maxLines:2,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:18))),
-     ]);
-     final edit=TextButton.icon(
-      key:const Key('waffra-month-budget-compact-edit'),
-      style:TextButton.styleFrom(minimumSize:const Size(0,48),
-       padding:const EdgeInsets.symmetric(horizontal:6,vertical:8),
-       tapTargetSize:MaterialTapTargetSize.padded),
-      onPressed:WaffraHaptics.tap(()=>editBudgetForCategory(selected!)),
-      icon:const Icon(Icons.edit_outlined,size:17),
-      label:WaffraText(waffraIsEnglish?'Edit budget':'تعديل الميزانية',
-       maxLines:2,style:const TextStyle(fontSize:13)));
-     final create=TextButton.icon(
+     final label=WaffraText(selected==null?
+      (waffraIsEnglish?'Overall monthly budget':'الميزانية الشهرية العامة'):
+      (selected.budgetLabel??'ميزانية '+selected.displayName),
+      maxLines:2,style:const TextStyle(
+       fontWeight:FontWeight.bold,fontSize:16));
+     final add=TextButton.icon(
       key:const Key('waffra-budget-create-action'),
       style:TextButton.styleFrom(minimumSize:const Size(0,48),
-       padding:const EdgeInsets.symmetric(horizontal:6,vertical:8),
+       padding:const EdgeInsets.symmetric(horizontal:8,vertical:8),
        tapTargetSize:MaterialTapTargetSize.padded),
       onPressed:WaffraHaptics.tap(()=>chooseBudgetCategory()),
       icon:const Icon(Icons.add_rounded,size:18),
       label:WaffraText(waffraIsEnglish?'Add budget':'إضافة ميزانية',
        maxLines:2,style:const TextStyle(fontSize:13)));
-     return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-      budgetLabel,
-      const SizedBox(height:6),
-      compact?Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-       if(selected!=null)edit,create,
-      ]):Row(children:[
-       if(selected!=null)...[Expanded(child:edit),const SizedBox(width:8)],
-       Expanded(child:create),
-      ]),
-     ]);
+     return compact?
+      Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+       label,const SizedBox(height:6),
+       Align(alignment:AlignmentDirectional.centerStart,child:add),
+      ]):
+      Row(children:[
+       Expanded(child:label),const SizedBox(width:8),add,
+      ]);
     }),
     const SizedBox(height:8),
     DropdownButtonFormField<String>(
