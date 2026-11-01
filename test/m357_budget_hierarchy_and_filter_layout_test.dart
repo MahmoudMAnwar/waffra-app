@@ -22,7 +22,8 @@ void main() {
     expect(app, contains("'waffra-month-budget-expand-toggle'"));
     expect(app, contains('if(monthlyBudgetDetailsOpen)...['));
     expect(app, contains("'waffra-budget-create-action'"));
-    expect(app, contains("'waffra-month-budget-compact-edit'"));
+    expect(app, isNot(contains("'waffra-month-budget-compact-edit'")));
+    expect(app, contains("'waffra-my-budgets-panel'") == false, isTrue);
     expect(app, contains("'waffra-delete-selected-named-budget'"));
     expect(app, contains('deleteNamedBudget(selected)'));
     expect(app, contains("budgetStatusFilter='active'"));
