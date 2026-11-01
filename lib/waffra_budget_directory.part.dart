@@ -25,7 +25,7 @@ extension WaffraBudgetDirectory on _HomeScreenState {
   refreshFromBudgetDirectory();
  }
  Widget budgetsDirectory(){
-  final count=categories.where((c)=>!c.income&&c.budget>0).length;
+  final count=namedBudgets.where((b)=>!b.deleted).length;
   return Container(
    key:const Key('waffra-my-budgets-entry'),
    decoration:BoxDecoration(
@@ -47,16 +47,13 @@ extension WaffraBudgetDirectory on _HomeScreenState {
  Widget _budgetDirectoryPanel(StateSetter refresh){
 
   final now=DateTime.now();
-  // Preserve the visibility of legacy parent-category budgets on upgrades.
-  final saved=categories.where((c)=>!c.income&&c.budget>0).toList();
-  final parents={for(final c in categories.where((c)=>!c.isSubcategory))c.id:c.name};
+  // Standalone budgets are not filtered by main/subcategory.
+  final saved=namedBudgets.where((b)=>!b.deleted).toList();
   final filtered=saved.where((b){
    if(budgetStatusFilter=='active'&&!b.budgetActive)return false;
    if(budgetStatusFilter=='inactive'&&b.budgetActive)return false;
    return waffraSearchAny([
-    b.budgetLabel??('ميزانية '+b.displayName),b.name,
-    b.displayName,waffraTr(b.name),parents[b.parentId]??'',
-    waffraTr(parents[b.parentId]??''),
+    b.budgetLabel??b.name,b.name,waffraTr(b.name),
    ],budgetSearch);
   }).toList();
   if(budgetSort=='name')filtered.sort((a,b)=>
@@ -67,7 +64,7 @@ extension WaffraBudgetDirectory on _HomeScreenState {
     waffraNamedBudgetSpent(entries,categories,a,now)));
   final templates=waffraBudgetStarterTemplates.where((t)=>
    waffraSearchAny([
-   t.nameAr,t.nameEn,t.subcategoryAr,parents[t.mainCategoryId]??'',
+   t.nameAr,t.nameEn,
   ],budgetSearch)).toList();
   return Container(
    key:const Key('waffra-my-budgets-panel'),
@@ -257,9 +254,7 @@ extension WaffraBudgetDirectory on _HomeScreenState {
            style:const TextStyle(fontSize:12)),
           onPressed:WaffraHaptics.tap(()=>
            chooseBudgetCategory(
-            suggestedName:t.name(waffraIsEnglish),
-            suggestedParentId:t.mainCategoryId,
-            suggestedSubcategory:t.subcategoryAr)),
+            suggestedName:t.name(waffraIsEnglish))),
          ),
        ]),
       ]),
