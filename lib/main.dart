@@ -6670,6 +6670,60 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  /// Edit only budget fields; the category name and transaction history must
  /// never be mutated by the budget editor.
+ /// Ask before assigning historical unbudgeted purchases.
+ Future<void> offerHistoricBudgetLink(BudgetCategory budget)async{
+  if(!mounted||budget.budget<=0)return;
+  final names=<String>{budget.name,
+   if(!budget.isSubcategory)...categories.where((c)=>c.parentId==budget.id).map((c)=>c.name)};
+  final matching=entries.where((e)=>!e.income&&e.budgetId==null&&names.contains(e.category)).toList();
+  if(matching.isEmpty)return;
+  final total=matching.fold<double>(0,(v,e)=>v+e.amount);
+  final ok=await showWaffraDialog<bool>(context:context,
+   builder:(ctx)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Link existing expenses?':'ربط العمليات السابقة بالميزانية؟'),
+    content:WaffraText(waffraIsEnglish?
+     '${matching.length} previously unassigned expense(s), totalling ${cash(total)}, match this category. Link them to ${budget.budgetLabel??budget.name}? This does not create or change payments.':
+     'فيه ${matching.length} عملية قديمة غير مرتبطة، بإجمالي ${cash(total)}، في نفس القسم. تربطها بميزانية «${budget.budgetLabel??budget.name}»؟ مش هنضيف أو نغيّر أي مبلغ.'),
+    actions:[
+     TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),
+      child:WaffraText(waffraIsEnglish?'Not now':'مش دلوقتي')),
+     FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),
+      child:WaffraText(waffraIsEnglish?'Link expenses':'ربط العمليات')),
+    ],
+   ));
+  if(ok!=true||!mounted)return;
+  final ids=matching.map((e)=>e.id).toSet();
+  setState((){
+   for(var i=0;i<entries.length;i++){
+    if(ids.contains(entries[i].id)&&entries[i].budgetId==null){
+     entries[i]=entries[i].withBudget(budget.id);
+    }
+   }
+  });
+  await _persistModuleOrReload(WaffraFinanceRoute.transactionEdit,
+   operation:'link-old-expenses-to-budget');
+ }
+
+ Future<void> deleteNamedBudget(BudgetCategory selected)async{
+  final affected=entries.where((e)=>e.budgetId==selected.id).length;
+  final ok=await confirmDeletion(
+   waffraIsEnglish?'Delete named budget?':'حذف الميزانية',
+   waffraIsEnglish?
+    'Delete only the budget and unlink ${affected} expense(s)? All transactions, amounts, and the expense category will remain.':
+    'هنحذف الميزانية فقط ونفصل ارتباط ${affected} عملية بها، لكن كل المعاملات ومبالغها والقسم نفسه هيفضلوا محفوظين.');
+  if(ok!=true||!mounted)return;
+  setState((){
+   final i=categories.indexWhere((c)=>c.id==selected.id);
+   if(i>=0)categories[i]=categories[i].copy(budget:0,clearBudget:true);
+   for(var j=0;j<entries.length;j++){
+    if(entries[j].budgetId==selected.id)entries[j]=entries[j].withBudget(null);
+   }
+   if(selectedNamedBudgetCategoryId==selected.id)selectedNamedBudgetCategoryId=null;
+  });
+  await _persistModuleOrReload(WaffraFinanceRoute.categoryCreateEditDeleteRestore,
+    operation:'named-budget-delete-and-unlink');
+ }
+
  Future<void> editBudgetForCategory(BudgetCategory selected)async{
   final name=TextEditingController(text:selected.budgetLabel??'ميزانية '+selected.displayName);
   final amount=TextEditingController(text:selected.budget>0?
@@ -6703,6 +6757,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        onChanged:WaffraHaptics.selection((n){if(n!=null)update(()=>alert=n);})),
      ]),
      actions:[
+      if(selected.budget>0)TextButton(
+       onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,
+         (label:'',amount:-1.0,alert:alert))),
+       child:WaffraText(waffraIsEnglish?'Delete budget':'حذف الميزانية',
+        style:const TextStyle(color:Colors.deepOrange))),
       TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
        child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
       FilledButton(onPressed:WaffraHaptics.tap((){
@@ -6722,14 +6781,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      ],
     )));
    if(edited==null||!mounted)return;
+   if(edited.amount<0){await deleteNamedBudget(selected);return;}
+   final wasNew=selected.budget<=0;
    setState((){
     final index=categories.indexWhere((c)=>c.id==selected.id);
     if(index>=0)categories[index]=selected.copy(
      budget:edited.amount,budgetLabel:edited.label,alertPercent:edited.alert);
     selectedNamedBudgetCategoryId=selected.id;
    });
-   await _persistModuleOrReload(WaffraFinanceRoute.categoryCreateEditDeleteRestore,
+   final saved=await _persistModuleOrReload(WaffraFinanceRoute.categoryCreateEditDeleteRestore,
     operation:'named-category-budget-update');
+   if(saved&&wasNew&&mounted){
+    final updated=categories.where((c)=>c.id==selected.id).toList();
+    if(updated.length==1)await offerHistoricBudgetLink(updated.single);
+   }
   }finally{disposeLater([name,amount]);}
  }
  Future<void> chooseBudgetCategory()async{
