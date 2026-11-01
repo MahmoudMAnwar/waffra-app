@@ -3439,7 +3439,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final today=DateTime.now();
   for(final r in recurring){
    if(!r.active)continue;
-   if(r.linkedGoalId!=null&&!goals.any((g)=>g.id==r.linkedGoalId&&g.dueDate!=null))continue;
+   // Linked goal obligations are reminders only. Posting automatically would
+   // subtract spending before the earmark is released, counting it twice.
+   if(r.linkedGoalId!=null)continue;
    final due=WaffraRecurringPolicy.dueDate(today.year,today.month,r.day);
    final id=WaffraRecurringPolicy.entryId(r.id,due);
    final postponed=DateTime.tryParse(recurringPostponed[id]??'');
@@ -8691,6 +8693,51 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
   }
  }
+ /// Release an earmark back to spendable cash. The eventual expense is
+ /// recorded once using the normal finance entry editor, not in this transfer.
+ Future<void> releaseGoalFunds(SavingGoal goal)async{
+  if(goal.saved<=0)return;
+  final ctl=TextEditingController(text:formatWaffraEditAmount(goal.saved));
+  try{
+   final requested=await showWaffraDialog<double>(context:context,
+    builder:(ctx)=>AlertDialog(
+     title:WaffraText(waffraIsEnglish?'Release goal savings':'سحب من محفظة الهدف'),
+     content:Column(mainAxisSize:MainAxisSize.min,children:[
+      WaffraText(waffraIsEnglish?
+       'Move savings back to spendable balance. This is not an income or expense. Record any payment separately.':
+       'تحويل الادخار إلى الرصيد المتاح بدون تسجيل دخل أو مصروف. سجّل الدفع كعملية مصروف منفصلة بعد السحب.'),
+      const SizedBox(height:12),
+      TextField(controller:ctl,
+       keyboardType:const TextInputType.numberWithOptions(decimal:true),
+       inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],
+       decoration:InputDecoration(labelText:waffraIsEnglish?'Amount to release':'مبلغ السحب',
+        border:const OutlineInputBorder())),
+     ]),
+     actions:[
+      TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
+       child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+      FilledButton(onPressed:WaffraHaptics.tap((){
+       final sum=amountOfDisplay(ctl.text);
+       if(sum==null||sum<=0||sum>goal.saved)return;
+       Navigator.pop(ctx,sum);
+      }),child:WaffraText(waffraIsEnglish?'Confirm transfer':'تأكيد التحويل')),
+     ],
+    ));
+   if(requested==null||!mounted)return;
+   final current=goals.where((g)=>g.id==goal.id).toList();
+   if(current.length!=1||current.single.saved<requested){
+    snack(context,waffraIsEnglish?'Goal balance changed; reload first.':
+     'رصيد الهدف اتغير. حدّث الصفحة وأعد المحاولة.');
+    return;
+   }
+   setState((){
+    final idx=goals.indexWhere((g)=>g.id==goal.id);
+    goals[idx]=current.single.copy(saved:current.single.saved-requested);
+   });
+   await _persistModuleOrReload(WaffraFinanceRoute.goalCreateEditDeleteRestore,
+    operation:'release-goal-earmark');
+  }finally{disposeLater([ctl]);}
+ }
  Future<void> fundGoal(SavingGoal g)async {
   final amount=TextEditingController();
   bool attempted=false;
@@ -9134,6 +9181,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        ])),
        PopupMenuButton<String>(onSelected:WaffraHaptics.selection((v)async {
         if(v=='edit'){await this.editGoal(g);return;}
+        if(v=='release'){await releaseGoalFunds(g);return;}
          if(v=='delete'){
          final linked=g.saved>0||entries.any((e)=>e.category==g.name);
          final yes=await confirmDeletion(waffraIsEnglish?'Delete savings goal?':'حذف هدف الادخار',
@@ -9151,6 +9199,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         }
        }),itemBuilder:(_)=>[
          PopupMenuItem(value:'edit',child:WaffraText(waffraIsEnglish?'Edit goal':'تعديل الهدف')),
+         if(g.saved>0)PopupMenuItem(value:'release',child:WaffraText(waffraIsEnglish?'Release savings':'سحب من الهدف')),
          PopupMenuItem(value:'delete',child:WaffraText(waffraIsEnglish?'Delete goal':'حذف الهدف'))]),
       ]),
       if(g.dueDate!=null)Padding(padding:const EdgeInsets.only(top:8),
