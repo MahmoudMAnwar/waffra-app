@@ -3616,6 +3616,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if(!mounted)return;
     if(action=='paid'){
      if(isGoalDue){
+      // SQLCipher's current recurring writer cannot atomically append a
+      // payment and debit a goal earmark. Fail closed until that verified
+      // multi-module operation exists; never run two separate writes.
+      if(_lastFinanceAuthorityRead?.source==
+        WaffraRuntimeFinanceBackend.verifiedEncrypted){
+       snack(context,waffraIsEnglish?
+        'Goal payment needs a verified atomic wallet-and-ledger writer. '
+        'Your data was not changed.':
+        'خصم استحقاق الهدف يتطلب حفظًا مشفرًا ذريًا للمحفظة والعملية. '
+        'لم يتم تغيير أي بيانات مالية.');
+       return;
+      }
       // The same deterministic recurring ID cannot settle a goal twice.
       if(entries.any((e)=>e.id==id))continue;
       final currentGoal=goals.where((g)=>g.id==r.linkedGoalId).toList();
@@ -3628,6 +3640,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       }
       final allocation=WaffraGoalDueAllocation.allocate(
        dueAmount:r.amount,goalSaved:currentGoal.single.saved);
+      if(allocation.fromGoalMinor!=goalPreview!.fromGoalMinor||
+        currentSchedule.single.startAt!=r.startAt){
+       snack(context,waffraIsEnglish?
+        'Wallet allocation changed. Reopen and confirm the new split.':
+        'توزيع الدفع اتغير؛ افتح الاستحقاق وراجع المبالغ قبل التأكيد.');
+       return;
+      }
       // Confirmation is financial authority, not simply a reminder.
       // One transactional snapshot mutates the ledger, goal and schedule.
       setState((){
