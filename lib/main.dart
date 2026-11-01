@@ -5193,8 +5193,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        const SizedBox(height:11),
        DropdownButtonFormField<String>(
         key:ValueKey('waffra-entry-budget-'+(selectedBudgetId??'unlinked')),
+        // An existing record may retain its historical paused budget.
+        // New records can only select active budgets.
         initialValue:categories.any((c)=>!c.income&&c.budget>0&&
-         c.budgetActive&&c.id==selectedBudgetId)?selectedBudgetId:'unlinked',
+         (c.budgetActive||(initial!=null&&initial.budgetId==c.id))&&
+         c.id==selectedBudgetId)?selectedBudgetId:'unlinked',
         isExpanded:true,
         decoration:InputDecoration(
          labelText:waffraIsEnglish?'Assign to budget':'تسجيل العملية في أي ميزانية؟',
@@ -5208,6 +5211,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          ...categories.where((c)=>!c.income&&c.budget>0&&c.budgetActive)
           .map((c)=>DropdownMenuItem(value:c.id,child:WaffraText(
            c.budgetLabel??'ميزانية '+c.displayName,maxLines:1))),
+         if(initial?.budgetId!=null)
+          ...categories.where((c)=>c.id==initial!.budgetId&&
+           !c.income&&c.budget>0&&!c.budgetActive).map(
+            (c)=>DropdownMenuItem(value:c.id,enabled:false,child:WaffraText(
+             (c.budgetLabel??'ميزانية '+c.displayName)+
+              (waffraIsEnglish?' (paused)':' (متوقفة)'),maxLines:1))),
         ],
         onChanged:WaffraHaptics.selection((v)=>update(
          ()=>selectedBudgetId=v=='unlinked'?null:v)),
@@ -5424,7 +5433,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         sourceType:initial?.sourceType??(sms?'sms':scannedReceipt!=null?'receipt':'manual'),
         merchantKey:initial?.merchantKey??(sms?(waffraMerchantKey(message.text)??''):''),
         budgetId:income?null:(categories.any((c)=>c.id==selectedBudgetId&&
-         !c.income&&c.budget>0&&c.budgetActive)?selectedBudgetId:null)));
+         !c.income&&c.budget>0&&
+         (c.budgetActive||(initial!=null&&initial.budgetId==c.id)))
+          ?selectedBudgetId:null)));
       }),child:const WaffraText('تأكيد وحفظ العملية')),
      ])));
    }));
