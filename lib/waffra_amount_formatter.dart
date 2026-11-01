@@ -28,7 +28,12 @@ class WaffraAmountFormatter extends TextInputFormatter {
   // Group separators inserted by the formatter can become displaced when
   // the next digit is typed (e.g. 1,350 + 0 becomes 1,3500 before reformat).
   // Allow trusted single-key edits while retaining malformed pasted values.
-  final validOld=RegExp(r'^[0-9]{1,3}(,[0-9]{3})+').hasMatch(oldValue.text);
+  final oldParts=oldValue.text.split('.');
+  final validOld=oldValue.text.contains(',')&&
+    oldParts.length<=2&&
+    RegExp(r'^[0-9]{1,3}(,[0-9]{3})+').hasMatch(oldParts.first)&&
+    (!oldValue.text.contains('.')||
+     RegExp(r'^[0-9]*').hasMatch(oldParts.last));
   final singleKeyEdit=(normalized.length-oldValue.text.length).abs()<=1;
   final allowRegroup=!grouping&&validOld&&singleKeyEdit&&
     RegExp(r'^[0-9,.]+').hasMatch(normalized);
