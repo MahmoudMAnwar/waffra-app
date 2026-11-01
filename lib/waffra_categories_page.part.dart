@@ -266,8 +266,9 @@ extension WaffraCategoryScreen on _HomeScreenState {
       LayoutBuilder(builder:(ctx,layout){
        // Two columns on normal screens; one on very narrow screens/text
        // scaling. Every selector remains readable in Arabic and English.
-       final cell=layout.maxWidth<325?layout.maxWidth:
-        (layout.maxWidth-10)/2;
+       final singleColumn=layout.maxWidth<325||
+        MediaQuery.textScalerOf(ctx).scale(16)>23;
+       final cell=singleColumn?layout.maxWidth:(layout.maxWidth-10)/2;
        InputDecoration decor(String label)=>InputDecoration(
         labelText:label,isDense:true,
         contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:10),
