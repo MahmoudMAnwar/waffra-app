@@ -7,9 +7,11 @@ import 'waffra_encrypted_store.dart';
 /// Tables for suggestions/history are intentionally EMPTY until the user saves
 /// or confirms real records. Pure UI preferences never become finance rows.
 abstract final class WaffraFreshFinanceDomainSchema {
-  static const version = 1;
+  static const version = 2;
 
   static const domainTables = <String>[
+    'fresh_finance_standalone_budgets',
+    'fresh_finance_standalone_allocations',
     'fresh_finance_named_budgets',
     'fresh_finance_budget_allocations',
     'fresh_finance_goal_opening_balances',
@@ -42,14 +44,17 @@ CREATE TABLE IF NOT EXISTS fresh_finance_domain_revision(
     final current = await store.customSelect(
       "SELECT version FROM fresh_finance_domain_revision WHERE slot='domain'",
     ).get();
-    if (current.isNotEmpty &&
-        (current.length != 1 || current.single.read<int>('version') != version)) {
+    final previous = current.isEmpty ? null : current.single.read<int>('version');
+    if (current.length > 1 || (previous != null &&
+        previous != 1 && previous != version)) {
       throw StateError('Unknown finance-domain schema revision.');
     }
     if (current.isNotEmpty) {
       // A marked SQLCipher vault with a missing domain table is tampered or
       // interrupted. NEVER recreate an empty replacement and claim success.
-      for (final table in domainTables) {
+      for (final table in domainTables.where((t)=>previous==version||
+       !const <String>{'fresh_finance_standalone_budgets',
+          'fresh_finance_standalone_allocations'}.contains(t))) {
         final exists = await store.customSelect(
           "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
           variables: [Variable.withString(table)],
@@ -57,6 +62,19 @@ CREATE TABLE IF NOT EXISTS fresh_finance_domain_revision(
         if (exists.length != 1) {
           throw StateError('Versioned encrypted finance domain is incomplete.');
         }
+      }
+      if(previous==1){
+       // Reject interrupted/partial future schema instead of adopting it.
+       for(final table in const <String>[
+        'fresh_finance_standalone_budgets',
+        'fresh_finance_standalone_allocations',
+       ]){
+        final exists=await store.customSelect(
+         "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+         variables:[Variable.withString(table)]).get();
+        if(exists.isNotEmpty)throw StateError(
+         'Unversioned standalone budget upgrade is incomplete.');
+       }
       }
     }
     if (current.isEmpty) {
@@ -74,6 +92,31 @@ CREATE TABLE IF NOT EXISTS fresh_finance_domain_revision(
     }
 
     const statements = <String>[
+      // Independent budgets are NOT category children and cannot cascade
+      // when a user deletes or renames a category.
+      '''
+CREATE TABLE IF NOT EXISTS fresh_finance_standalone_budgets(
+  budget_id TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL CHECK(length(trim(name)) > 0 AND length(name) <= 80),
+  monthly_limit_minor INTEGER NOT NULL CHECK(monthly_limit_minor > 0),
+  is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0,1)),
+  alert_percent INTEGER NOT NULL DEFAULT 80 CHECK(alert_percent BETWEEN 1 AND 100),
+  archived_at_iso TEXT,
+  created_at_iso TEXT NOT NULL,
+  source_json TEXT NOT NULL
+)''',
+      '''
+CREATE TABLE IF NOT EXISTS fresh_finance_standalone_allocations(
+  allocation_id TEXT PRIMARY KEY NOT NULL,
+  budget_id TEXT NOT NULL REFERENCES fresh_finance_standalone_budgets(budget_id)
+    ON DELETE RESTRICT,
+  entry_id TEXT NOT NULL REFERENCES fresh_finance_entries(entry_id)
+    ON DELETE RESTRICT,
+  amount_minor INTEGER NOT NULL CHECK(amount_minor > 0),
+  assigned_at_iso TEXT NOT NULL,
+  explicitly_confirmed INTEGER NOT NULL CHECK(explicitly_confirmed=1),
+  UNIQUE(entry_id)
+)''',
       '''
 CREATE TABLE IF NOT EXISTS fresh_finance_named_budgets(
   budget_id TEXT PRIMARY KEY NOT NULL,
@@ -216,6 +259,10 @@ CREATE TABLE IF NOT EXISTS fresh_finance_notification_events(
       await store.customStatement(statement);
     }
     await store.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_standalone_allocations_budget '
+      'ON fresh_finance_standalone_allocations(budget_id)',
+    );
+    await store.customStatement(
       'CREATE INDEX IF NOT EXISTS idx_finance_budget_allocations_entry '
       'ON fresh_finance_budget_allocations(entry_id)',
     );
@@ -249,6 +296,16 @@ CREATE TABLE IF NOT EXISTS fresh_finance_notification_events(
         "INSERT INTO fresh_finance_domain_revision(slot,version) VALUES('domain',?)",
         [version],
       );
+    }else if(previous==1){
+      final originalMarker=await store.customSelect(
+       "SELECT version FROM fresh_finance_domain_revision WHERE slot='domain'",
+      ).getSingle();
+      if(originalMarker.read<int>('version')!=1){
+       throw StateError('Domain changed during standalone budget upgrade.');
+      }
+      await store.customStatement(
+       "UPDATE fresh_finance_domain_revision SET version=? "
+       "WHERE slot='domain' AND version=1",[version]);
     }
   }
 
