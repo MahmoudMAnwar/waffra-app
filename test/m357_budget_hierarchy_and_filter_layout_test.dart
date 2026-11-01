@@ -10,8 +10,8 @@ void main() {
     expect(app, contains("'waffra-budget-main-list'"));
     expect(app, contains("'waffra-budget-sub-list'"));
     expect(app, contains("Navigator.pop(ctx,item.id)"));
-    expect(app, contains('if(matches.length!=1)return;'));
-    expect(app, contains('await editBudgetForCategory(selected);'));
+    expect(app, contains('if(matches.length!=1)return null;'));
+    expect(app, contains('await editBudgetForCategory(selected,suggestedName:suggestedName);'));
     expect(app, contains("'waffra-budget-create-subcategory'"));
     expect(app, contains('await addCategory(income:false,parentId:parentId);'));
   });
