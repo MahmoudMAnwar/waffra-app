@@ -37,6 +37,9 @@ void main() {
     expect(source, contains("'waffra-budget-directory-search'"));
     expect(source, contains("budgetStatusFilter=='active'"));
     expect(source, contains("budgetStatusFilter=='inactive'"));
+    expect(source, contains("budgetMainCategoryFilter!='all'"));
+    expect(source, contains("'waffra-budget-directory-category-'"));
+    expect(source, contains("'All main categories'"));
     expect(source, contains("budgetSort=='spent'"));
     expect(source, contains('waffraSearchAny('));
     expect(source, contains('waffraNamedBudgetSpent('));
