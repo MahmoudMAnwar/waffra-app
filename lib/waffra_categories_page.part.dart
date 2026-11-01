@@ -24,7 +24,9 @@ extension WaffraCategoryScreen on _HomeScreenState {
   // ranking choices remain fast even with a large transaction history.
   final monthlyTotals=<(bool,String),double>{};
   var expenseTotal=0.0;
+  var unassignedExpenseCount=0;
   for(final e in entries){
+   if(!e.income&&e.budgetId==null)unassignedExpenseCount++;
    if(e.date.year!=now.year||e.date.month!=now.month)continue;
    final key=(e.income,e.category);
    monthlyTotals[key]=(monthlyTotals[key]??0)+e.amount;
@@ -238,6 +240,26 @@ extension WaffraCategoryScreen on _HomeScreenState {
    const SizedBox(height:10),
    _summaryBox(waffraIsEnglish?'Monthly expenses':'المصروف الشهري',
     cash(expenseTotal),Icons.trending_down,Colors.deepOrange),
+   if(unassignedExpenseCount>0)...[
+    const SizedBox(height:9),
+    Card(
+     key:const Key('waffra-retro-budget-review-banner'),
+     margin:EdgeInsets.zero,
+     child:ListTile(
+      dense:true,contentPadding:const EdgeInsets.symmetric(horizontal:11),
+      leading:const Icon(Icons.link_off_rounded,color:emerald),
+      title:WaffraText(waffraIsEnglish?
+       unassignedExpenseCount.toString()+' saved expenses without a budget':
+       unassignedExpenseCount.toString()+' عملية محفوظة بدون ميزانية',
+       maxLines:2,style:const TextStyle(fontSize:12,fontWeight:FontWeight.bold)),
+      subtitle:WaffraText(waffraIsEnglish?
+       'Optional review; old records remain unchanged':
+       'راجع الربط باختيارك، من غير تعديل بياناتك القديمة',
+       maxLines:2,style:const TextStyle(fontSize:11)),
+      trailing:const Icon(Icons.chevron_right_rounded,size:19),
+      onTap:WaffraHaptics.tap(()=>reviewUnlinkedHistoricalExpenses()),
+     )),
+   ],
    const SizedBox(height:13),
    // Compact by default: the three large rows of chips previously pushed
    // the actual category cards below the fold on smaller phones.
