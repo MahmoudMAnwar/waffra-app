@@ -1,0 +1,92 @@
+name: M367 SQLCipher Schema and Guarded Repositories (Stage 1)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/m367-sqlcipher-schema-stage1.yml'
+      - 'lib/storage/waffra_fresh_finance_domain_schema.dart'
+      - 'lib/storage/waffra_fresh_encrypted_vault_bootstrap.dart'
+      - 'lib/storage/waffra_fresh_finance_domain_repository.dart'
+      - 'lib/storage/waffra_fresh_saved_features_repository.dart'
+      - 'lib/storage/waffra_finance_domain_legacy_importer.dart'
+      - 'lib/storage/waffra_encrypted_full_finance_reset.dart'
+      - 'lib/storage/waffra_verified_goal_due_snapshot_writer.dart'
+      - 'test/storage/m364_sqlcipher_finance_domain_test.dart'
+      - 'test/storage/m364_saved_features_storage_test.dart'
+      - 'test/storage/m364_finance_domain_legacy_import_test.dart'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m367-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verified-schema-and-atomic-writers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Check out exact commit
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Analyze staged SQLCipher schema, repository and tests
+        run: |
+          dart analyze \
+            lib/storage/waffra_fresh_finance_domain_schema.dart \
+            lib/storage/waffra_fresh_encrypted_vault_bootstrap.dart \
+            lib/storage/waffra_fresh_finance_domain_repository.dart \
+            lib/storage/waffra_fresh_saved_features_repository.dart \
+            lib/storage/waffra_finance_domain_legacy_importer.dart \
+            lib/storage/waffra_encrypted_full_finance_reset.dart \
+            lib/storage/waffra_verified_goal_due_snapshot_writer.dart \
+            test/storage/m364_sqlcipher_finance_domain_test.dart \
+            test/storage/m364_saved_features_storage_test.dart \
+            test/storage/m364_finance_domain_legacy_import_test.dart
+      - name: Verify new tables, migration, idempotency and backup/reset baseline
+        run: |
+          flutter test --reporter expanded \
+            test/storage/m364_sqlcipher_finance_domain_test.dart \
+            test/storage/m364_saved_features_storage_test.dart \
+            test/storage/m364_finance_domain_legacy_import_test.dart \
+            test/storage/fresh_encrypted_vault_bootstrap_test.dart \
+            test/storage/fresh_ledger_repository_test.dart \
+            test/storage/m188_encrypted_full_finance_reset_test.dart
+      - name: Confirm production cutover remains blocked
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          gate = Path('lib/storage/waffra_production_cutover_release_gate.dart').read_text()
+          authority = Path('lib/storage/waffra_production_finance_authority_binding.dart').read_text()
+          schema = Path('lib/storage/waffra_fresh_finance_domain_schema.dart').read_text()
+          assert 'bool get automaticallyActivateSqlCipher => false;' in gate
+          assert 'if (decision.automaticallyActivateSqlCipher)' in authority
+          assert 'fresh_finance_goal_due_settlements' in schema
+          print('OK: schema staged, mandatory encrypted production source not switched.')
+          PY
+
+  whole-app-flutter-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Run all existing Flutter unit/widget tests
+        run: flutter test test --reporter expanded
