@@ -6872,6 +6872,53 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     operation:'named-budget-delete-and-unlink');
  }
 
+ /// Pause or resume a named budget without dropping its amount, label, links
+ /// or legacy finance records. Only future explicit budget selections change.
+ Future<void> setNamedBudgetActive(BudgetCategory selected,bool enabled)async{
+  if(!mounted||selected.income||selected.budget<=0)return;
+  final previous=categories.where((c)=>c.id==selected.id).toList();
+  if(previous.length!=1||previous.single.budget<=0||
+     previous.single.budgetActive==enabled)return;
+  final ok=await showWaffraDialog<bool>(context:context,
+   builder:(ctx)=>AlertDialog(
+    title:WaffraText(enabled?
+     (waffraIsEnglish?'Resume named budget?':'إعادة تفعيل الميزانية؟'):
+     (waffraIsEnglish?'Pause named budget?':'إيقاف الميزانية مؤقتًا؟')),
+    content:WaffraText(enabled?
+     (waffraIsEnglish?
+      'Your budget and past links will remain unchanged. Expenses saved while it was paused will NOT be linked automatically. Review those records individually if needed.':
+      'الميزانية وروابط العمليات القديمة هتفضل محفوظة. المصروفات اللي اتسجلت وهي متوقفة مش هترتبط تلقائيًا بعد التفعيل. تقدر تراجعها وتربطها باختيارك.'):
+     (waffraIsEnglish?
+      'The budget will stay saved, but new expenses cannot be assigned to it until you resume. Existing transactions and links will not be changed.':
+      'هنحتفظ بالميزانية وبياناتها، لكن مش هينفع تربط بيها مصروفات جديدة لحد ما تفعلها تاني. العمليات القديمة وروابطها مش هتتغير.')),
+    actions:[
+     TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),
+      child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+     FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),
+      child:WaffraText(enabled?
+       (waffraIsEnglish?'Resume':'تفعيل'):
+       (waffraIsEnglish?'Pause':'إيقاف التفعيل'))),
+    ]));
+  if(ok!=true||!mounted)return;
+  final latest=categories.where((c)=>c.id==selected.id).toList();
+  if(latest.length!=1||latest.single.income||latest.single.budget<=0||
+     latest.single.budgetActive==enabled)return;
+  setState((){
+   final i=categories.indexWhere((c)=>c.id==selected.id);
+   if(i>=0)categories[i]=categories[i].copy(budgetActive:enabled);
+  });
+  final saved=await _persistModuleOrReload(
+    WaffraFinanceRoute.categoryCreateEditDeleteRestore,
+    operation:'named-budget-active-toggle');
+  if(saved&&mounted){
+   snack(context,enabled?
+    (waffraIsEnglish?'Budget resumed. Old unlinked expenses need review.':
+     'تم تفعيل الميزانية. العمليات القديمة غير المرتبطة تحتاج مراجعتك.'):
+    (waffraIsEnglish?'Budget paused without deleting anything.':
+     'تم إيقاف الميزانية مؤقتًا من غير حذف أي بيانات.'));
+  }
+ }
+ 
  Future<void> editBudgetForCategory(BudgetCategory selected)async{
   final name=TextEditingController(text:selected.budgetLabel??'ميزانية '+selected.displayName);
   final amount=TextEditingController(text:selected.budget>0?
