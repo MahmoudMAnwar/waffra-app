@@ -7,10 +7,13 @@ extension WaffraBudgetDirectory on _HomeScreenState {
   final now=DateTime.now();
   // Preserve the visibility of legacy parent-category budgets on upgrades.
   final saved=categories.where((c)=>!c.income&&c.budget>0).toList();
+  final expenseParents=categories.where((c)=>!c.income&&!c.isSubcategory).toList();
   final parents={for(final c in categories.where((c)=>!c.isSubcategory))c.id:c.name};
   final filtered=saved.where((b){
    if(budgetStatusFilter=='active'&&!b.budgetActive)return false;
    if(budgetStatusFilter=='inactive'&&b.budgetActive)return false;
+   if(budgetMainCategoryFilter!='all'&&
+    (b.isSubcategory?b.parentId:b.id)!=budgetMainCategoryFilter)return false;
    return waffraSearchAny([
     b.budgetLabel??('ميزانية '+b.displayName),b.name,
     b.displayName,waffraTr(b.name),parents[b.parentId]??'',
@@ -23,7 +26,9 @@ extension WaffraBudgetDirectory on _HomeScreenState {
   if(budgetSort=='spent')filtered.sort((a,b)=>
    waffraNamedBudgetSpent(entries,categories,b,now).compareTo(
     waffraNamedBudgetSpent(entries,categories,a,now)));
-  final templates=waffraBudgetStarterTemplates.where((t)=>waffraSearchAny([
+  final templates=waffraBudgetStarterTemplates.where((t)=>
+   (budgetMainCategoryFilter=='all'||t.mainCategoryId==budgetMainCategoryFilter)&&
+   waffraSearchAny([
    t.nameAr,t.nameEn,t.subcategoryAr,parents[t.mainCategoryId]??'',
   ],budgetSearch)).toList();
   return Container(
@@ -69,6 +74,8 @@ extension WaffraBudgetDirectory on _HomeScreenState {
         initialValue:budgetStatusFilter,isExpanded:true,
         decoration:decorate(waffraIsEnglish?'Status':'الحالة'),
         items:[
+         DropdownMenuItem(value:'all',child:WaffraText(
+          waffraIsEnglish?'All budgets':'كل الميزانيات')),
          DropdownMenuItem(value:'active',child:WaffraText(
           waffraIsEnglish?'Active budgets':'الميزانيات الفعّالة')),
          DropdownMenuItem(value:'inactive',child:WaffraText(
@@ -79,6 +86,24 @@ extension WaffraBudgetDirectory on _HomeScreenState {
           budgetStatusFilter=v;
           selectedNamedBudgetCategoryId=null;
          });
+        }),
+       )),
+       SizedBox(width:cell,child:DropdownButtonFormField<String>(
+        key:ValueKey('waffra-budget-directory-category-'+budgetMainCategoryFilter),
+        initialValue:expenseParents.any((c)=>c.id==budgetMainCategoryFilter)?
+         budgetMainCategoryFilter:'all',
+        isExpanded:true,
+        menuMaxHeight:min(350.0,MediaQuery.sizeOf(ctx).height*.46),
+        decoration:decorate(waffraIsEnglish?'Main category':'القسم الرئيسي'),
+        items:[
+         DropdownMenuItem(value:'all',child:WaffraText(
+          waffraIsEnglish?'All main categories':'كل الأقسام الرئيسية')),
+         ...expenseParents.map((c)=>DropdownMenuItem(
+          value:c.id,
+          child:WaffraText(waffraTr(c.name),maxLines:2))),
+        ],
+        onChanged:WaffraHaptics.selection((v){
+         if(v!=null)setState(()=>budgetMainCategoryFilter=v);
         }),
        )),
        SizedBox(width:cell,child:DropdownButtonFormField<String>(
