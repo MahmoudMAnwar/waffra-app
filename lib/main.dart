@@ -61,6 +61,7 @@ import 'diagnostics/waffra_crashlytics_opt_in.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'waffra_category_catalog.dart';
 import 'waffra_category_rankings.dart';
+import 'waffra_entry_sheet_safe_layout.dart';
 import 'waffra_goal_catalog.dart';
 import 'waffra_pdf_reader.dart';
 import 'waffra_footer.dart';
@@ -5015,6 +5016,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Timer? debounce;
   final result=await showModalBottomSheet<MoneyEntry>(
    context:context,isScrollControlled:true,showDragHandle:true,
+   useSafeArea:true,
    builder:(sheetContext)=>StatefulBuilder(builder:(sheetContext,update){
     void parseNow(String text) {
      debounce?.cancel();
@@ -5064,9 +5066,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       }),
       icon:const Icon(Icons.calendar_month,size:19),
       label:WaffraText(dayText(date),maxLines:1));
-     return Padding(padding:EdgeInsets.fromLTRB(18,10,18,MediaQuery.of(sheetContext).viewInsets.bottom+20),
-     child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,
-      crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+     // Keep save above Android navigation controls and the keyboard.
+     // Fields scroll independently while the confirmation remains visible.
+     return WaffraEntrySheetSafeLayout(
+      form:SingleChildScrollView(
+       key:const Key('waffra-entry-form-scroll'),
+       padding:const EdgeInsets.fromLTRB(18,10,18,8),
+       child:Column(mainAxisSize:MainAxisSize.min,
+        crossAxisAlignment:CrossAxisAlignment.stretch,children:[
       WaffraText(initial!=null?'تعديل العملية':sms?'إضافة رسالة بنكية':
         scannedReceipt!=null?(waffraIsEnglish?'Review image transaction':'مراجعة عملية من صورة'):'إضافة عملية',
        style:Theme.of(sheetContext).textTheme.titleLarge),
@@ -5392,8 +5399,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          ]),
          onTap:WaffraHaptics.tap(()=>showReceipt(receiptPath!,initialIndex:waffraReceiptPaths(receiptPath).indexOf(path)))),
       ],
-      const SizedBox(height:12),
-      FilledButton(onPressed:WaffraHaptics.tap(analyzing||submitTapped?null:()async {
+       ])),
+      footer:FilledButton(
+       key:const Key('waffra-entry-confirm-save'),
+       onPressed:WaffraHaptics.tap(analyzing||submitTapped?null:()async {
        if(submitTapped)return;
        update(()=>attempted=true);
        final n=sms?amountOf(value.text):amountOfDisplay(value.text);
@@ -5446,7 +5455,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          (c.budgetActive||(initial!=null&&initial.budgetId==c.id)))
           ?selectedBudgetId:null)));
       }),child:const WaffraText('تأكيد وحفظ العملية')),
-     ])));
+     );
    }));
   debounce?.cancel();disposeLater([title,value,notes,message]);
   if(result==null||!mounted){
