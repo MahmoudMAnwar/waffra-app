@@ -27,6 +27,11 @@ void main(){
    expect(loaded.budget,200);
    expect(loaded.budgetLabel,'وقود السيارة');
   });
+  test('corrupt paused flag never silently enables a budget',(){
+   final input=budget().toJson();
+   input['budgetActive']='corrupt';
+   expect(BudgetCategory.fromJson(input).budgetActive,isFalse);
+  });
   test('pausing is metadata-only and retains historic linked transactions',(){
    final enabled=budget();
    final old=expense('existing-1',older,budgetId:enabled.id);
@@ -82,10 +87,10 @@ void main(){
  test('M353 all screens gate NEW budget assignment and retain old links',(){
   final home=File('lib/main.dart').readAsStringSync();
   final cats=File('lib/waffra_categories_page.part.dart').readAsStringSync();
-  expect(home,contains('budgetActive:j[\\'budgetActive\\']!=false'));
+  expect(home,contains('budgetActive:j[\'budgetActive\']==null?true:j[\'budgetActive\']==true'));
   expect(home,contains("budgetActive:budgetActive??this.budgetActive"));
   expect(home,contains('Future<void> setNamedBudgetActive('));
-  expect(home,contains('operation:\\'named-budget-active-toggle\\''));
+  expect(home,contains('operation:\'named-budget-active-toggle\''));
   expect(home,contains("Key('waffra-named-budget-enabled-switch')"));
   expect(home,contains('value:selected.budgetActive'));
   expect(home,contains('onChanged:WaffraHaptics.selection('));
@@ -104,8 +109,8 @@ void main(){
   expect(home,contains("Key('waffra-transaction-link-budget-action')"));
   expect(home,contains('onLinkBudget:entry.income||entry.budgetId!=null?null:()'));
   expect(home,contains('unawaited(assignExistingExpenseToBudget(entry))'));
-  expect(home,contains('budgetActive)&&'));
-  expect(home,contains('operation:\\'retroactive-opt-in-budget-link\\''));
+  expect(home,contains('b.budget>0&&b.budgetActive'));
+  expect(home,contains('operation:\'retroactive-opt-in-budget-link\''));
   expect(home,contains('if(ok!=true||!mounted)return;'));
  });
 
