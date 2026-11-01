@@ -22,7 +22,7 @@ extension WaffraBudgetDirectory on _HomeScreenState {
    ),
   );
   // Refresh the summary card after any modal budget edit/delete/toggle.
-  if(mounted)setState((){});
+  refreshFromBudgetDirectory();
  }
  Widget budgetsDirectory(){
   final count=categories.where((c)=>!c.income&&c.budget>0).length;
@@ -49,13 +49,10 @@ extension WaffraBudgetDirectory on _HomeScreenState {
   final now=DateTime.now();
   // Preserve the visibility of legacy parent-category budgets on upgrades.
   final saved=categories.where((c)=>!c.income&&c.budget>0).toList();
-  final expenseParents=categories.where((c)=>!c.income&&!c.isSubcategory).toList();
   final parents={for(final c in categories.where((c)=>!c.isSubcategory))c.id:c.name};
   final filtered=saved.where((b){
    if(budgetStatusFilter=='active'&&!b.budgetActive)return false;
    if(budgetStatusFilter=='inactive'&&b.budgetActive)return false;
-   if(budgetMainCategoryFilter!='all'&&
-    (b.isSubcategory?b.parentId:b.id)!=budgetMainCategoryFilter)return false;
    return waffraSearchAny([
     b.budgetLabel??('ميزانية '+b.displayName),b.name,
     b.displayName,waffraTr(b.name),parents[b.parentId]??'',
@@ -69,7 +66,6 @@ extension WaffraBudgetDirectory on _HomeScreenState {
    waffraNamedBudgetSpent(entries,categories,b,now).compareTo(
     waffraNamedBudgetSpent(entries,categories,a,now)));
   final templates=waffraBudgetStarterTemplates.where((t)=>
-   (budgetMainCategoryFilter=='all'||t.mainCategoryId==budgetMainCategoryFilter)&&
    waffraSearchAny([
    t.nameAr,t.nameEn,t.subcategoryAr,parents[t.mainCategoryId]??'',
   ],budgetSearch)).toList();
@@ -95,7 +91,7 @@ extension WaffraBudgetDirectory on _HomeScreenState {
      TextFormField(
       key:const Key('waffra-budget-directory-search'),
       initialValue:budgetSearch,
-      onChanged:(v)=>refresh(()=>setState(()=>budgetSearch=v)),
+      onChanged:(v)=>refresh(()=>budgetSearch=v),
       decoration:InputDecoration(
        labelText:waffraIsEnglish?'Search budgets':'ابحث في الميزانيات',
        prefixIcon:const Icon(Icons.search_rounded),
@@ -121,29 +117,10 @@ extension WaffraBudgetDirectory on _HomeScreenState {
          waffraIsEnglish?'Paused budgets':'الميزانيات غير الفعّالة')),
        ],
        onChanged:WaffraHaptics.selection((v){
-        if(v!=null)refresh(()=>setState((){
+        if(v!=null)refresh((){
          budgetStatusFilter=v;
          selectedNamedBudgetCategoryId=null;
-        }));
-       }),
-      ),
-      const SizedBox(height:12),
-      DropdownButtonFormField<String>(
-       key:ValueKey('waffra-budget-directory-category-'+budgetMainCategoryFilter),
-       initialValue:expenseParents.any((c)=>c.id==budgetMainCategoryFilter)?
-        budgetMainCategoryFilter:'all',
-       isExpanded:true,menuMaxHeight:min(350.0,MediaQuery.sizeOf(context).height*.46),
-       decoration:InputDecoration(
-        labelText:waffraIsEnglish?'Main category':'القسم الرئيسي',
-        border:OutlineInputBorder(borderRadius:BorderRadius.circular(13))),
-       items:[
-        DropdownMenuItem(value:'all',child:WaffraText(
-         waffraIsEnglish?'All main categories':'كل الأقسام الرئيسية')),
-        ...expenseParents.map((c)=>DropdownMenuItem(
-         value:c.id,child:WaffraText(waffraTr(c.name),maxLines:2))),
-       ],
-       onChanged:WaffraHaptics.selection((v){
-        if(v!=null)refresh(()=>setState(()=>budgetMainCategoryFilter=v));
+        });
        }),
       ),
       const SizedBox(height:12),
@@ -165,7 +142,7 @@ extension WaffraBudgetDirectory on _HomeScreenState {
          waffraIsEnglish?'Highest spent':'الأكثر صرفًا')),
        ],
        onChanged:WaffraHaptics.selection((v){
-        if(v!=null)refresh(()=>setState(()=>budgetSort=v));
+        if(v!=null)refresh(()=>budgetSort=v);
        }),
       ),
      ]),
@@ -198,9 +175,7 @@ extension WaffraBudgetDirectory on _HomeScreenState {
         child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
          WaffraText(b.budgetLabel??('ميزانية '+b.displayName),
           maxLines:2,style:const TextStyle(fontWeight:FontWeight.bold)),
-         const SizedBox(height:5),
-         WaffraText((parents[b.parentId]??'')+' / '+b.displayName,
-          maxLines:2,style:const TextStyle(fontSize:12)),
+
          const SizedBox(height:8),
          LinearProgressIndicator(value:ratio,minHeight:7,
           color:spent>b.budget?Colors.deepOrange:emerald,
@@ -258,7 +233,7 @@ extension WaffraBudgetDirectory on _HomeScreenState {
      const SizedBox(height:10),
      ExpansionTile(
       key:const PageStorageKey<String>('waffra-budget-starter-templates'),
-      initiallyExpanded:false,
+      initiallyExpanded:true,
       tilePadding:EdgeInsets.zero,
       childrenPadding:const EdgeInsets.only(bottom:8),
       leading:const Icon(Icons.auto_awesome_outlined,color:emerald),
