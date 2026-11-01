@@ -30,7 +30,7 @@ void main() {
   expect(recurrence.withCategory('الأسرة / مصروف البيت').linkedGoalId,linked.id);
  });
 
- test('M343 separate budgets count only assigned expense categories',(){
+ test('M344 assigned budgets count only explicitly linked expenses',(){
   final food=BudgetCategory(id:'food',name:'مطاعم وكافيهات',icon:'restaurant',
    color:0xff087a54,income:false,budget:2500,budgetLabel:'ميزانية الأكل');
   final meal=BudgetCategory(id:'meal',name:'مطاعم وكافيهات / وجبات سريعة',
@@ -38,17 +38,28 @@ void main() {
   final fuel=BudgetCategory(id:'fuel',name:'مواصلات / بنزين',
    icon:'car',color:0xff087a54,income:false,budget:1000,budgetLabel:'ميزانية البنزين');
   final date=DateTime(2026,11,1);
-  MoneyEntry entry(String id,String cat,double n,bool income,{DateTime? when})=>
+  MoneyEntry entry(String id,String cat,double n,bool income,
+      {DateTime? when,String? budgetId})=>
    MoneyEntry(id:id,title:'اختبار',category:cat,amount:n,
-    income:income,date:when??date);
+    income:income,date:when??date,budgetId:budgetId);
   final entries=[
-   entry('1',meal.name,70,false),
-   entry('2',fuel.name,30,false),
-   entry('3',meal.name,900,true),
-   entry('4',meal.name,40,false,when:DateTime(2026,10,30)),
+   entry('1',meal.name,70,false,budgetId:'food'),
+   entry('2',fuel.name,30,false,budgetId:'fuel'),
+   entry('3',meal.name,900,true,budgetId:'food'),
+   entry('4',meal.name,40,false,when:DateTime(2026,10,30),budgetId:'food'),
+   entry('5',meal.name,50,false), // old expense: no retroactive auto-link
+   entry('6',meal.name,20,false,budgetId:'fuel'), // explicitly reassigned
   ];
   expect(waffraNamedBudgetSpent(entries,[food,meal,fuel],food,date),70);
-  expect(waffraNamedBudgetSpent(entries,[food,meal,fuel],fuel,date),30);
+  expect(waffraNamedBudgetSpent(entries,[food,meal,fuel],fuel,date),50);
+  expect(entries[4].budgetId,isNull);
+  final reassigned=entries[4].withBudget('food');
+  expect(reassigned.budgetId,'food');
+  expect(reassigned.amount,50);
+  expect(reassigned.date,date);
+  expect(reassigned.toJson()['budgetId'],'food');
+  expect(MoneyEntry.fromJson(reassigned.toJson()).budgetId,'food');
+  expect(MoneyEntry.fromJson(entries[4].toJson()).budgetId,isNull);
   expect(BudgetCategory.fromJson(food.toJson()).budgetLabel,'ميزانية الأكل');
   expect(food.copy(budget:3000).budgetLabel,'ميزانية الأكل');
  });
@@ -82,5 +93,11 @@ void main() {
   expect(link,contains('operation:\'goal-edit\''));
   expect(link,contains('operation:\'goal-recurring-link\''));
   expect(link,isNot(contains('entries.add(')));
+  expect(app,contains('reviewSmsBudgetLinks(additions)'));
+  expect(app,contains('offerHistoricBudgetLink(updated.single)'));
+  expect(app,contains('deleteNamedBudget(selected)'));
+  expect(app,contains('releaseGoalFunds(SavingGoal goal)'));
+  expect(app,contains('waffraGoalWalletBalance(goals)'));
+  expect(app,contains('waffraAvailableCash(entries,goals)'));
  });
 }
