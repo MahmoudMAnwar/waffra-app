@@ -49,12 +49,12 @@ jobs:
             lib/storage/waffra_fresh_encrypted_vault_bootstrap.dart \
             lib/storage/waffra_encrypted_full_finance_reset.dart \
             test/storage/m364_sqlcipher_finance_domain_test.dart \
-            test/storage/m364_saved_features_storage_test.dart \
             test/storage/m364_saved_features_storage_test.dart
       - name: Exercise new SQLCipher finance domain and existing baseline
         run: |
           flutter test --reporter expanded \
             test/storage/m364_sqlcipher_finance_domain_test.dart \
+            test/storage/m364_saved_features_storage_test.dart \
             test/storage/fresh_encrypted_vault_bootstrap_test.dart \
             test/storage/fresh_ledger_repository_test.dart \
             test/storage/m188_encrypted_full_finance_reset_test.dart
