@@ -7047,7 +7047,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final selectedRows=named.where((c)=>c.id==selectedNamedBudgetCategoryId).toList();
   final selected=selectedRows.isEmpty?null:selectedRows.single;
   final limit=selected?.budget??monthlyBudget;
-  final active=selected!=null||(monthlyBudgetEnabled&&monthlyBudget>0);
+  // Selecting a paused budget must never show it as active or start
+  // charging it again; its former limit and historical links remain.
+  final active=selected!=null?selected.budgetActive:
+    (monthlyBudgetEnabled&&monthlyBudget>0);
   final spent=selected==null?sum(monthEntries,false):
    waffraNamedBudgetSpent(entries,categories,selected,today);
   final used=active&&limit>0?(spent/limit).clamp(0.0,1.0):0.0;
@@ -7109,6 +7112,33 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      onChanged:WaffraHaptics.selection((v)=>setState(
        ()=>selectedNamedBudgetCategoryId=v=='all'?null:v)),
     ),
+    if(selected!=null)...[
+     SwitchListTile.adaptive(
+      key:const Key('waffra-named-budget-enabled-switch'),
+      contentPadding:EdgeInsets.zero,
+      dense:true,
+      title:WaffraText(waffraIsEnglish?
+        'Enable this budget':'تفعيل الميزانية',
+        style:const TextStyle(fontWeight:FontWeight.w700,fontSize:13)),
+      subtitle:WaffraText(waffraIsEnglish?
+        (selected.budgetActive?
+          'Active • new expenses may be linked':'Paused • new expenses stay unassigned'):
+        (selected.budgetActive?
+          'مفعّلة • يمكن ربط المصروفات الجديدة':
+          'متوقفة • المصروفات الجديدة مش هتترابط بيها'),
+        style:const TextStyle(fontSize:11)),
+      value:selected.budgetActive,
+      activeTrackColor:emerald,
+      onChanged:WaffraHaptics.selection(
+       (value)=>setNamedBudgetActive(selected,value)),
+     ),
+     if(!selected.budgetActive)
+      Padding(padding:const EdgeInsets.only(bottom:9),
+       child:WaffraText(waffraIsEnglish?
+        'Budget paused. Existing transactions remain unchanged. To link expenses saved during the pause, resume and review them manually.':
+        'الميزانية متوقفة مؤقتًا، وكل العمليات القديمة محفوظة. بعد التفعيل راجع العمليات اللي اتسجلت أثناء الإيقاف واربطها باختيارك.',
+        style:const TextStyle(fontSize:12,color:Colors.deepOrange))),
+    ],
     Align(alignment:AlignmentDirectional.centerStart,child:TextButton.icon(
       onPressed:WaffraHaptics.tap(chooseBudgetCategory),
       icon:const Icon(Icons.add,size:17),
@@ -7145,9 +7175,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          'حسب متوسط الصرف الحالي، ممكن تتجاوز الميزانية قبل نهاية الشهر.',
          style:const TextStyle(fontSize:12,color:Colors.deepOrange))),
     ]else Padding(padding:const EdgeInsets.symmetric(vertical:7),
-     child:WaffraText(waffraIsEnglish?
-      'Set your monthly budget to track spending here.':
-      'حدّد ميزانية شهرية عشان تتابع مصروفاتك والمتبقي منها.',
+     child:WaffraText(selected!=null&&!selected.budgetActive?
+       (waffraIsEnglish?
+        'This named budget is paused; its original amount and historical links are preserved.':
+        'الميزانية متوقفة؛ حدّها وروابط العمليات القديمة محفوظة.'):
+       (waffraIsEnglish?
+        'Set your monthly budget to track spending here.':
+        'حدّد ميزانية شهرية عشان تتابع مصروفاتك والمتبقي منها.'),
       style:const TextStyle(fontSize:14,color:Colors.grey))),
    ]));
  }
