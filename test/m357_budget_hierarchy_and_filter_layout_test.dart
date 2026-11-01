@@ -23,7 +23,10 @@ void main() {
     expect(app, contains('if(monthlyBudgetDetailsOpen)...['));
     expect(app, contains("'waffra-budget-create-action'"));
     expect(app, isNot(contains("'waffra-month-budget-compact-edit'")));
-    expect(app, contains("'waffra-my-budgets-panel'") == false, isTrue);
+    final directory =
+        File('lib/waffra_budget_directory.part.dart').readAsStringSync();
+    expect(directory, contains("'waffra-my-budgets-panel'"));
+    expect(directory, contains('editBudgetForCategory(b)'));
     expect(app, contains("'waffra-delete-selected-named-budget'"));
     expect(app, contains('deleteNamedBudget(selected)'));
     expect(app, contains("budgetStatusFilter='active'"));
