@@ -52,9 +52,9 @@ CREATE TABLE IF NOT EXISTS fresh_finance_domain_revision(
     if (current.isNotEmpty) {
       // A marked SQLCipher vault with a missing domain table is tampered or
       // interrupted. NEVER recreate an empty replacement and claim success.
-      for (final table in domainTables.where((t)=>previous==version||
-       !const <String>{'fresh_finance_standalone_budgets',
-          'fresh_finance_standalone_allocations'}.contains(t))) {
+      // The first two tables are V2 additions. A V1 candidate may lack
+      // only these; missing ANY other table is corruption, not a migration.
+      for (final table in (previous==1?domainTables.skip(2):domainTables)) {
         final exists = await store.customSelect(
           "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
           variables: [Variable.withString(table)],
