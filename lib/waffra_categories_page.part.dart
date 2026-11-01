@@ -24,14 +24,11 @@ extension WaffraCategoryScreen on _HomeScreenState {
   // Before M343, each root/child card rescanned all finance entries.
   // This preserves the existing name-based legacy source semantics; moving
   // finance history to immutable category IDs needs a separate migration.
-  final totals=<(bool,String),double>{};
-  var expenseTotal=0.0;
-  for(final e in entries){
-   if(e.date.year!=now.year||e.date.month!=now.month)continue;
-   final key=(e.income,e.category);
-   totals[key]=(totals[key]??0)+e.amount;
-   if(!e.income)expenseTotal+=e.amount;
-  }
+  final monthly=WaffraCategoryMonthTotals.build<MoneyEntry>(
+   entries,now,date:(e)=>e.date,income:(e)=>e.income,
+   category:(e)=>e.category,amount:(e)=>e.amount);
+  final totals=monthly.byCategory;
+  final expenseTotal=monthly.expenses;
   final childrenByParent=<String,List<BudgetCategory>>{};
   final roots=<BudgetCategory>[];
   var subcategoryCount=0;
