@@ -96,6 +96,7 @@ import 'waffra_pull_refresh_scroll_settle.dart';
 import 'waffra_haptic_feedback.dart';
 import 'waffra_smooth_confirmation.dart';
 part 'waffra_categories_page.part.dart';
+part 'waffra_budget_directory.part.dart';
 part 'waffra_smart_analysis.part.dart';
 part 'waffra_recurring_trash.part.dart';
 part 'waffra_goal_recurring_actions.part.dart';
