@@ -3571,7 +3571,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ]));
 /// Every bank expense needs an explicit budget choice. Cancel means no post.
  Future<List<String?>?> reviewSmsBudgetLinks(List<MoneyEntry> candidates)async{
-  final choices=categories.where((c)=>!c.income&&c.budget>0).toList();
+  final choices=categories.where((c)=>!c.income&&c.budget>0&&c.budgetActive).toList();
   final assigned=List<String?>.filled(candidates.length,null);
   if(!candidates.any((e)=>!e.income))return assigned;
   return showWaffraDialog<List<String?>>(context:context,
@@ -3860,6 +3860,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   final reviewedBudgets=await reviewSmsBudgetLinks(additions);
   if(reviewedBudgets==null){if(ctx.mounted)update(()=>busy=false);return;}
+  // A paused budget may not receive a newly imported SMS charge.
+  // Refuse the batch if its previously confirmed selection became stale.
+  if(reviewedBudgets.any((id)=>id!=null&&
+     !categories.any((c)=>c.id==id&&!c.income&&c.budget>0&&c.budgetActive))){
+   if(ctx.mounted){
+    update(()=>busy=false);
+    snack(ctx,waffraIsEnglish?
+     'A selected budget was paused. Review the batch again.':
+     'تم إيقاف ميزانية مختارة. راجع العمليات من جديد.');
+   }
+   return;
+  }
   for(var n=0;n<additions.length;n++){
    additions[n]=additions[n].withBudget(reviewedBudgets[n]);
   }
@@ -4999,7 +5011,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final selectedMain=mainCategories.where((c)=>c.id==selectedParentId).toList();
     final subcategories=waffraManualCategoryChildren(available,income,selectedParentId);
     final selectedSub=subcategories.where((c)=>c.name==category).toList();
-    final budgetSuggestions=categories.where((c)=>!c.income&&c.budget>0&&
+    final budgetSuggestions=categories.where((c)=>!c.income&&c.budget>0&&c.budgetActive&&
       (c.name==category||c.id==selectedParentId)).toList();
     Widget dateAction()=>OutlinedButton.icon(
       key:const Key('waffra-entry-date-action'),
@@ -5141,7 +5153,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        DropdownButtonFormField<String>(
         key:ValueKey('waffra-entry-budget-'+(selectedBudgetId??'unlinked')),
         initialValue:categories.any((c)=>!c.income&&c.budget>0&&
-         c.id==selectedBudgetId)?selectedBudgetId:'unlinked',
+         c.budgetActive&&c.id==selectedBudgetId)?selectedBudgetId:'unlinked',
         isExpanded:true,
         decoration:InputDecoration(
          labelText:waffraIsEnglish?'Assign to budget':'تسجيل العملية في أي ميزانية؟',
@@ -5152,7 +5164,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         items:[
          DropdownMenuItem(value:'unlinked',child:WaffraText(
           waffraIsEnglish?'Unassigned — choose later':'غير مرتبطة بميزانية')),
-         ...categories.where((c)=>!c.income&&c.budget>0)
+         ...categories.where((c)=>!c.income&&c.budget>0&&c.budgetActive)
           .map((c)=>DropdownMenuItem(value:c.id,child:WaffraText(
            c.budgetLabel??'ميزانية '+c.displayName,maxLines:1))),
         ],
@@ -5371,7 +5383,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         sourceType:initial?.sourceType??(sms?'sms':scannedReceipt!=null?'receipt':'manual'),
         merchantKey:initial?.merchantKey??(sms?(waffraMerchantKey(message.text)??''):''),
         budgetId:income?null:(categories.any((c)=>c.id==selectedBudgetId&&
-         !c.income&&c.budget>0)?selectedBudgetId:null)));
+         !c.income&&c.budget>0&&c.budgetActive)?selectedBudgetId:null)));
       }),child:const WaffraText('تأكيد وحفظ العملية')),
      ])));
    }));
@@ -6702,7 +6714,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  /// never be mutated by the budget editor.
  /// Ask before assigning historical unbudgeted purchases.
  Future<void> offerHistoricBudgetLink(BudgetCategory budget)async{
-  if(!mounted||budget.budget<=0)return;
+  if(!mounted||budget.budget<=0||!budget.budgetActive)return;
   final names=<String>{budget.name,
    if(!budget.isSubcategory)...categories.where((c)=>c.parentId==budget.id).map((c)=>c.name)};
   final matching=entries.where((e)=>!e.income&&e.budgetId==null&&names.contains(e.category)).toList();
@@ -6783,7 +6795,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     'العملية اتغيرت أو معرفها مكرر. حدّث الصفحة قبل المراجعة.');
    return;
   }
-  final budgets=categories.where((c)=>!c.income&&c.budget>0)
+  final budgets=categories.where((c)=>!c.income&&c.budget>0&&c.budgetActive)
    .toList(growable:false);
   if(budgets.isEmpty){
    snack(context,waffraIsEnglish?'Create a budget first.':
@@ -6839,7 +6851,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      latest.single.notes!=old.notes||
      latest.single.receiptPath!=old.receiptPath||
      latest.single.sourceType!=old.sourceType||
-     !categories.any((b)=>b.id==selected.id&&!b.income&&b.budget>0)){
+     !categories.any((b)=>b.id==selected.id&&!b.income&&b.budget>0&&b.budgetActive)){
    snack(context,waffraIsEnglish?'Record changed; nothing saved.':
     'العملية أو الميزانية اتغيرت. لم يتم حفظ أي ربط.');
    return;
@@ -6988,7 +7000,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     operation:'named-category-budget-update');
    if(saved&&wasNew&&mounted){
     final updated=categories.where((c)=>c.id==selected.id).toList();
-    if(updated.length==1)await offerHistoricBudgetLink(updated.single);
+    if(updated.length==1&&updated.single.budgetActive)
+     await offerHistoricBudgetLink(updated.single);
    }
   }finally{disposeLater([name,amount]);}
  }
