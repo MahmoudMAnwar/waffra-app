@@ -5323,6 +5323,27 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           }
          }),
         )),
+       Align(alignment:AlignmentDirectional.centerStart,
+        child:TextButton.icon(
+         key:const Key('waffra-entry-create-named-budget'),
+         icon:const Icon(Icons.add_circle_outline_rounded,size:19),
+         label:WaffraText(waffraIsEnglish?
+          'Create new budget':'إنشاء ميزانية جديدة'),
+         onPressed:WaffraHaptics.tap(()async{
+          // Only a saved, active child-category budget may be assigned.
+          // Cancelled dialogs never select a stale budget.
+          final id=await chooseBudgetCategory();
+          if(id==null||!sheetContext.mounted)return;
+          final match=categories.where((c)=>c.id==id&&
+           !c.income&&c.isSubcategory&&c.budget>0&&c.budgetActive).toList();
+          if(match.length!=1)return;
+          update((){
+           selectedParentId=match.single.parentId;
+           category=match.single.name;
+           selectedBudgetId=match.single.id;
+          });
+         }),
+        )),
        if(selectedBudgetId==null)Padding(
         padding:const EdgeInsets.only(top:5),
         child:WaffraText(waffraIsEnglish?
@@ -7221,7 +7242,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
   }finally{disposeLater([name,amount]);}
  }
- Future<void> chooseBudgetCategory()async{
+ Future<String?> chooseBudgetCategory()async{
   // A budget is attached to one existing expense subcategory. Never create
   // a budget on a parent heading, or silently change any ledger entry.
   final parents=categories.where((c)=>!c.income&&!c.isSubcategory).toList();
@@ -7299,46 +7320,59 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ])),
     );
    }));
-  if(chosenId==null||!mounted)return;
+  if(chosenId==null||!mounted)return null;
   if(chosenId.startsWith('create-subcategory:')){
    final parentId=chosenId.substring('create-subcategory:'.length);
    final before=categories.map((c)=>c.id).toSet();
    await addCategory(income:false,parentId:parentId);
-   if(!mounted)return;
+   if(!mounted)return null;
    final added=categories.where((c)=>c.parentId==parentId&&
     c.isSubcategory&&!c.income&&!before.contains(c.id)).toList();
-   if(added.length==1)await editBudgetForCategory(added.single);
-   return;
+   if(added.length!=1)return null;
+   await editBudgetForCategory(added.single);
+   final saved=categories.where((c)=>c.id==added.single.id&&
+    c.budget>0&&c.budgetActive).toList();
+   return saved.length==1?saved.single.id:null;
   }
   final matches=categories.where((c)=>c.id==chosenId&&!c.income&&
    c.isSubcategory&&categories.any((p)=>
     p.id==c.parentId&&!p.income&&!p.isSubcategory)).toList();
-  if(matches.length!=1)return;
+  if(matches.length!=1)return null;
   final selected=matches.single;
   await editBudgetForCategory(selected);
   if(mounted&&categories.any((c)=>c.id==selected.id&&c.budget>0)){
    setState(()=>selectedNamedBudgetCategoryId=selected.id);
+   final updated=categories.where((c)=>c.id==selected.id&&c.budgetActive).toList();
+   return updated.length==1?updated.single.id:null;
   }
+  return null;
  }
  Widget monthlyBudgetCard(){
   final today=DateTime.now();
   final monthEntries=entries.where((e)=>e.date.year==today.year&&e.date.month==today.month);
-  final named=categories.where((c)=>!c.income&&c.budget>0&&
-   (budgetStatusFilter=='active'?c.budgetActive:!c.budgetActive)).toList();
+  final allBudgets=categories.where((c)=>!c.income&&c.isSubcategory&&c.budget>0).toList();
+  // Overall monthly budget is a projection, not an additional saved cap.
+  // Paused budgets remain part of the total the user has created.
+  final overallLimit=allBudgets.fold<double>(0,(total,c)=>total+c.budget);
+  final linkedIds=allBudgets.map((c)=>c.id).toSet();
+  final overallSpent=monthEntries.where((e)=>!e.income&&
+   e.budgetId!=null&&linkedIds.contains(e.budgetId))
+   .fold<double>(0,(total,e)=>total+e.amount);
+  final named=allBudgets.where((c)=>
+   budgetStatusFilter=='active'?c.budgetActive:!c.budgetActive).toList();
   final selectedRows=named.where((c)=>c.id==selectedNamedBudgetCategoryId).toList();
   final selected=selectedRows.isEmpty?null:selectedRows.single;
-  final limit=selected?.budget??monthlyBudget;
+  final limit=selected?.budget??overallLimit;
   // Selecting a paused budget must never show it as active or start
   // charging it again; its former limit and historical links remain.
-  final active=selected!=null?selected.budgetActive:
-    (monthlyBudgetEnabled&&monthlyBudget>0);
-  final spent=selected==null?sum(monthEntries,false):
+  final active=selected?.budgetActive??(overallLimit>0);
+  final spent=selected==null?overallSpent:
    waffraNamedBudgetSpent(entries,categories,selected,today);
-  final used=active&&limit>0?(spent/limit).clamp(0.0,1.0):0.0;
+  final used=limit>0?(spent/limit).clamp(0.0,1.0):0.0;
   // Read-only projection. Missing/invalid source amounts must never be
   // converted or rewritten just to display a forecast.
   WaffraBudgetPace? pace;
-  if(active&&limit>0){
+  if(limit>0){
    try{
     pace=WaffraBudgetPace(
      spentMinor:waffraSarMinorChecked(spent),
@@ -7368,7 +7402,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         style:const TextStyle(fontWeight:FontWeight.bold,fontSize:17)),
        const SizedBox(height:3),
        WaffraText(selected==null?
-        (waffraIsEnglish?'Overall monthly spending':'إجمالي مصروفات الشهر'):
+        (waffraIsEnglish?'Sum of all created budgets':'إجمالي الميزانيات المضافة'):
         (selected.budgetLabel??'ميزانية '+selected.displayName),
         maxLines:2,style:const TextStyle(fontSize:12,color:Colors.grey)),
       ])),
@@ -7385,7 +7419,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       const Icon(Icons.donut_large,color:emerald,size:23),
       const SizedBox(width:7),
       Flexible(child:WaffraText(selected==null?
-       (waffraIsEnglish?'Monthly budget':'الميزانية الشهرية'):
+       (waffraIsEnglish?'Overall monthly budget':'الميزانية الشهرية العامة'):
        (selected.budgetLabel??'ميزانية '+selected.displayName),
        maxLines:2,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:18))),
      ]);
@@ -7394,8 +7428,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       style:TextButton.styleFrom(minimumSize:const Size(0,48),
        padding:const EdgeInsets.symmetric(horizontal:6,vertical:8),
        tapTargetSize:MaterialTapTargetSize.padded),
-      onPressed:WaffraHaptics.tap(()=>
-       selected==null?editMonthlyBudget():editBudgetForCategory(selected)),
+      onPressed:WaffraHaptics.tap(()=>editBudgetForCategory(selected!)),
       icon:const Icon(Icons.edit_outlined,size:17),
       label:WaffraText(waffraIsEnglish?'Edit budget':'تعديل الميزانية',
        maxLines:2,style:const TextStyle(fontSize:13)));
@@ -7404,7 +7437,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       style:TextButton.styleFrom(minimumSize:const Size(0,48),
        padding:const EdgeInsets.symmetric(horizontal:6,vertical:8),
        tapTargetSize:MaterialTapTargetSize.padded),
-      onPressed:WaffraHaptics.tap(chooseBudgetCategory),
+      onPressed:WaffraHaptics.tap(()=>chooseBudgetCategory()),
       icon:const Icon(Icons.add_rounded,size:18),
       label:WaffraText(waffraIsEnglish?'Add budget':'إضافة ميزانية',
        maxLines:2,style:const TextStyle(fontSize:13)));
@@ -7412,9 +7445,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       budgetLabel,
       const SizedBox(height:6),
       compact?Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-       edit,create,
+       if(selected!=null)edit,create,
       ]):Row(children:[
-       Expanded(child:edit),const SizedBox(width:8),Expanded(child:create),
+       if(selected!=null)...[Expanded(child:edit),const SizedBox(width:8)],
+       Expanded(child:create),
       ]),
      ]);
     }),
@@ -7451,7 +7485,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       contentPadding:const EdgeInsets.symmetric(horizontal:12,vertical:8)),
      items:[
       DropdownMenuItem(value:'all',child:WaffraText(waffraIsEnglish?
-       'Overall monthly spending':'إجمالي مصروفات الشهر')),
+       'Overall monthly budget':'الميزانية الشهرية العامة')),
       ...named.map((c)=>DropdownMenuItem(value:c.id,
        child:WaffraText((c.budgetLabel??'ميزانية '+c.displayName)+
         (c.budgetActive?'':(waffraIsEnglish?' (paused)':' (متوقفة)')),
@@ -7496,7 +7530,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         style:const TextStyle(fontSize:12,color:Colors.deepOrange))),
     ],
     const SizedBox(height:7),
-    if(active&&limit>0)...[
+    if(limit>0)...[
      WaffraText(waffraIsEnglish?
       'Used '+(used*100).toStringAsFixed(0)+'% of your budget':
       'تم إنفاق '+(used*100).toStringAsFixed(0)+'٪ من ميزانيتك',
