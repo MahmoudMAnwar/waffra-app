@@ -6568,6 +6568,70 @@ Future<void> bulkSmsSheet({String? initialText})async {
      ])));
   }finally{disposeLater([min,max]);}
  }
+ /// Edit only budget fields; the category name and transaction history must
+ /// never be mutated by the budget editor.
+ Future<void> editBudgetForCategory(BudgetCategory selected)async{
+  final name=TextEditingController(text:selected.budgetLabel??'ميزانية '+selected.displayName);
+  final amount=TextEditingController(text:selected.budget>0?
+   formatWaffraEditAmount(selected.budget):'');
+  var alert=selected.alertPercent;
+  String? nameError,amountError;
+  try{
+   final edited=await showWaffraDialog<({String label,double amount,int alert})>(
+    context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
+     title:WaffraText(waffraIsEnglish?'Set named budget':'تحديد ميزانية باسم'),
+     scrollable:true,
+     content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      WaffraText(selected.name,style:const TextStyle(fontWeight:FontWeight.w700)),
+      const SizedBox(height:12),
+      TextField(controller:name,maxLength:80,
+       onChanged:(_)=>update(()=>nameError=null),
+       decoration:InputDecoration(labelText:waffraIsEnglish?'Budget name *':'اسم الميزانية *',
+        errorText:nameError,border:const OutlineInputBorder())),
+      const SizedBox(height:12),
+      TextField(controller:amount,
+       keyboardType:const TextInputType.numberWithOptions(decimal:true),
+       inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],
+       onChanged:(_)=>update(()=>amountError=null),
+       decoration:InputDecoration(labelText:waffraIsEnglish?'Monthly limit *':'الحد الشهري *',
+        errorText:amountError,border:const OutlineInputBorder())),
+      const SizedBox(height:12),
+      DropdownButtonFormField<int>(initialValue:alert,
+       decoration:InputDecoration(labelText:waffraIsEnglish?'Budget alert at':'التنبيه عند نسبة'),
+       items:[50,60,70,75,80,85,90,95,100]
+        .map((n)=>DropdownMenuItem(value:n,child:WaffraText(n.toString()+'٪'))).toList(),
+       onChanged:WaffraHaptics.selection((n){if(n!=null)update(()=>alert=n);})),
+     ]),
+     actions:[
+      TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
+       child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+      FilledButton(onPressed:WaffraHaptics.tap((){
+       final label=name.text.trim(),value=amountOfDisplay(amount.text);
+       update((){
+        nameError=label.isEmpty?waffraRequiredFieldMessage:
+         categories.any((c)=>c.id!=selected.id&&c.budget>0&&
+           (c.budgetLabel??'ميزانية '+c.displayName).trim().toLowerCase()==
+              label.toLowerCase())?
+          (waffraIsEnglish?'A budget with this name already exists':
+           'اسم الميزانية مستخدم بالفعل'):null;
+        amountError=waffraAmountFieldError(amount.text);
+       });
+       if(nameError!=null||amountError!=null||value==null||value<=0)return;
+       Navigator.pop(ctx,(label:label,amount:value,alert:alert));
+      }),child:WaffraText(waffraIsEnglish?'Save budget':'حفظ الميزانية')),
+     ],
+    )));
+   if(edited==null||!mounted)return;
+   setState((){
+    final index=categories.indexWhere((c)=>c.id==selected.id);
+    if(index>=0)categories[index]=selected.copy(
+     budget:edited.amount,budgetLabel:edited.label,alertPercent:edited.alert);
+    selectedNamedBudgetCategoryId=selected.id;
+   });
+   await _persistModuleOrReload(WaffraFinanceRoute.categoryCreateEditDeleteRestore,
+    operation:'named-category-budget-update');
+  }finally{disposeLater([name,amount]);}
+ }
  Future<void> chooseBudgetCategory()async{
   final choices=categories.where((c)=>!c.income).toList();
   String query='';
@@ -6598,7 +6662,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
     );
    }));
   if(selected==null||!mounted)return;
-  await updateCategory(selected);
+  await editBudgetForCategory(selected);
   if(mounted&&categories.any((c)=>c.id==selected.id&&c.budget>0)){
    setState(()=>selectedNamedBudgetCategoryId=selected.id);
   }
@@ -6635,7 +6699,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       style:TextButton.styleFrom(minimumSize:const Size(0,48),
        padding:const EdgeInsets.symmetric(horizontal:9,vertical:8),
        tapTargetSize:MaterialTapTargetSize.padded),
-      onPressed:WaffraHaptics.tap(()=>selected==null?editMonthlyBudget():updateCategory(selected)),
+      onPressed:WaffraHaptics.tap(()=>selected==null?editMonthlyBudget():editBudgetForCategory(selected)),
       icon:const Icon(Icons.edit_outlined,size:17),
       label:WaffraText(waffraIsEnglish?'Edit':'تحديد الميزانية'));
      return compact?Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
