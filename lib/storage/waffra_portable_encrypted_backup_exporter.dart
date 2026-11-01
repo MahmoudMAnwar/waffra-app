@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:drift/drift.dart';
+
 import '../waffra_sms_fx_review.dart';
 
 import 'legacy_financial_snapshot.dart';
@@ -53,6 +55,17 @@ class WaffraPortableEncryptedBackupExporter {
         "SELECT name FROM sqlite_master WHERE type='table' "
         "AND name='fresh_finance_domain_revision'",
       ).get();
+      if (domainMarker.isEmpty) {
+        for (final table in WaffraFreshFinanceDomainSchema.domainTables) {
+          final stray = await snapshot.store.customSelect(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+            variables: [Variable.withString(table)],
+          ).get();
+          if (stray.isNotEmpty) {
+            throw StateError('Unversioned SQLCipher domain data blocks backup.');
+          }
+        }
+      }
       if (domainMarker.isNotEmpty) {
         await WaffraFreshFinanceDomainSchema.requireReady(snapshot.store);
         for (final table in WaffraFreshFinanceDomainSchema.domainTables) {
