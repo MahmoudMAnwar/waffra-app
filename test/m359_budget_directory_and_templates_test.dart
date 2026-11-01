@@ -46,8 +46,8 @@ void main() {
     expect(source, contains('setNamedBudgetActive(b,!b.budgetActive)'));
     expect(source, contains('deleteNamedBudget(b)'));
     expect(source, contains('waffraBudgetStarterTemplates'));
-    expect(source, contains('suggestedParentId:t.mainCategoryId'));
-    expect(source, contains('suggestedSubcategory:t.subcategoryAr'));
+    expect(source, contains('suggestedName:t.name(waffraIsEnglish)'));
+    expect(source, isNot(contains('suggestedSubcategory:t.subcategoryAr')));
   });
 
   test('M359: overall budget is computed, transaction review can create budget', () {
@@ -59,7 +59,7 @@ void main() {
     expect(app, contains('final id=await chooseBudgetCategory();'));
     expect(app, contains('assignBudgetInsideEditor(b.single.id)'));
     expect(app, contains('if(b.length==1)assignBudgetInsideEditor'));
-    expect(app, contains('if(selected.budget>0){'));
-    expect(app, contains('final allBudgets=categories.where((c)=>!c.income&&c.budget>0)'));
+    expect(app, contains('WaffraNamedBudget('));
+    expect(app, contains('final allBudgets=namedBudgets.where((b)=>b.budget>0&&!b.deleted)'));
   });
 }
