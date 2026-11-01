@@ -117,7 +117,7 @@ void main() {
   expect(app,contains("sourceType:'goal_due'"));
   expect(app,contains('WaffraGoalDueAllocation.allocate('));
   expect(app,contains('reviewSmsBudgetLinks(additions)'));
-  expect(app,contains('offerHistoricBudgetLink(updated.single)'));
+  expect(app,contains('WaffraNamedBudget.fromLegacy(c)'));
   expect(directory,contains('deleteNamedBudget(b)'));
   expect(app,contains('releaseGoalFunds(SavingGoal goal)'));
   expect(app,contains('waffraGoalWalletBalance(goals)'));
