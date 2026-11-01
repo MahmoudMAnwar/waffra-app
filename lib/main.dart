@@ -5388,8 +5388,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // Confirmation here only permits the user's explicitly reviewed overlap.
    if(pendingHash!=null)explicitlyApprovedSmsDuplicate=true;
   }
-  final previousSpent=sum(entries.where((e)=>!e.income&&e.id!=result.id&&
-   e.category==result.category&&e.date.year==result.date.year&&e.date.month==result.date.month),false);
+  final linkedBudget=categories.where((c)=>c.id==result.budgetId&&c.budget>0&&!c.income).toList();
+  final previousSpent=linkedBudget.isEmpty?0:waffraNamedBudgetSpent(
+    entries.where((e)=>e.id!=result.id),categories,linkedBudget.single,result.date);
   if(pendingHash!=null&&initial==null){
    try{
    // A single reviewed bank SMS must commit both its transaction and
@@ -5634,10 +5635,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  Future<void> budgetAlert(MoneyEntry entry,double previousSpent)async {
   if(entry.income)return;
-  final category=categoryFor(entry.category,false);
-  if(category.budget<=0)return;
-  final spent=sum(entries.where((e)=>!e.income&&e.category==entry.category&&
-   e.date.year==entry.date.year&&e.date.month==entry.date.month),false);
+  final budgets=categories.where((c)=>!c.income&&c.budget>0&&c.id==entry.budgetId).toList();
+  if(budgets.length!=1)return;
+  final category=budgets.single;
+  final spent=waffraNamedBudgetSpent(entries,categories,category,entry.date);
   final stages=<int>{category.alertPercent,100}.toList()..sort();
   int? crossed;
   for(final stage in stages){
