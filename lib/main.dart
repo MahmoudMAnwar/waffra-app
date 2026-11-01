@@ -3640,13 +3640,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Future<bool?> confirmDeletion(String title,String body)=>showWaffraDialog<bool>(
   context:context,builder:(ctx)=>AlertDialog(
    title:WaffraText(title),content:WaffraText(body),
-   actions:[
-    TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),
-     child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
-    FilledButton(style:FilledButton.styleFrom(backgroundColor:Colors.red),
+   actionsPadding:const EdgeInsets.fromLTRB(14,6,14,14),
+   actions:[SizedBox(width:double.maxFinite,child:Row(children:[
+    Expanded(child:OutlinedButton(
+     onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),
+     child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء',maxLines:2,
+      textAlign:TextAlign.center))),
+    const SizedBox(width:10),
+    Expanded(child:FilledButton(
+     style:FilledButton.styleFrom(backgroundColor:Colors.red),
      onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),
-     child:WaffraText(waffraIsEnglish?'Confirm delete':'تأكيد الحذف')),
-   ]));
+     child:WaffraText(waffraIsEnglish?'Confirm delete':'تأكيد الحذف',
+      maxLines:2,textAlign:TextAlign.center))),
+   ]))]));
 /// Every bank expense needs an explicit budget choice. Cancel means no post.
  Future<List<String?>?> reviewSmsBudgetLinks(List<MoneyEntry> candidates)async{
   final choices=categories.where((c)=>!c.income&&c.budget>0&&c.budgetActive).toList();
