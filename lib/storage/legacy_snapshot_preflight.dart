@@ -228,9 +228,18 @@ class WaffraLegacyPreflight {
       if (iso == null) return false;
       final parsed = DateTime.tryParse(value);
       if (parsed == null) return false;
-      return parsed.year == int.parse(iso.group(1)!) &&
-          parsed.month == int.parse(iso.group(2)!) &&
-          parsed.day == int.parse(iso.group(3)!);
+      // DateTime.tryParse converts offset-bearing timestamps to UTC.
+      // Compare the recorded *calendar date* instead: a valid local
+      // 2026-11-01T00:15:00+03:00 becomes 2026-10-31 in UTC.
+      // A UTC calendar constructor still rejects normalized impossible
+      // dates such as 2026-02-30 by checking the exact components.
+      final year = int.parse(iso.group(1)!);
+      final month = int.parse(iso.group(2)!);
+      final day = int.parse(iso.group(3)!);
+      final calendar = DateTime.utc(year, month, day);
+      return calendar.year == year &&
+          calendar.month == month &&
+          calendar.day == day;
     }
     if (!valid()) {
       issues.add(WaffraPreflightIssue(key, index, 'invalid_$field'));
