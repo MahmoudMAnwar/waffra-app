@@ -108,8 +108,9 @@ void main() {
     expect(home,contains('waffraSearchAny('));
     expect(home,contains('entryQuery'));
     expect(home,contains('budgetQuery'));
-    expect(home,contains("Key('waffra-entry-search-budgets')"));
-    expect(home,contains("Key('waffra-entry-budget-search-field')"));
+    expect(home,contains("'__create_budget__'"));
+    expect(home,contains("'__manage_budgets__'"));
+    expect(home,isNot(contains("Key('waffra-entry-search-budgets')")));
     expect(home,contains('menuMaxHeight:min(340.0'));
     // Search must not change any stored finance record, import or amount.
     final section=home.split('Future<void> reviewUnlinkedHistoricalExpenses()')
