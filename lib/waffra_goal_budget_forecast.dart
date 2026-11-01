@@ -40,7 +40,7 @@ class WaffraGoalPlan {
     final months=(remainingMinor+monthlyPledgeMinor-1)~/monthlyPledgeMinor;
     if(months>1200)return null; // avoid misleading centuries-ahead forecasts
     return DateTime(today.year,today.month+months-1,
-        today.day.clamp(1,DateTime(today.year,today.month+months,0).day));
+        today.day.clamp(1,DateTime(today.year,today.month+months,0).day).toInt());
   }
 }
 
