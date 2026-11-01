@@ -46,6 +46,19 @@ CREATE TABLE IF NOT EXISTS fresh_finance_domain_revision(
         (current.length != 1 || current.single.read<int>('version') != version)) {
       throw StateError('Unknown finance-domain schema revision.');
     }
+    if (current.isNotEmpty) {
+      // A marked SQLCipher vault with a missing domain table is tampered or
+      // interrupted. NEVER recreate an empty replacement and claim success.
+      for (final table in domainTables) {
+        final exists = await store.customSelect(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+          variables: [Variable.withString(table)],
+        ).get();
+        if (exists.length != 1) {
+          throw StateError('Versioned encrypted finance domain is incomplete.');
+        }
+      }
+    }
     if (current.isEmpty) {
       // No version marker + pre-existing domain rows is an incomplete or
       // externally modified database. Never silently adopt or overwrite it.
@@ -252,6 +265,15 @@ CREATE TABLE IF NOT EXISTS fresh_finance_notification_events(
     ).get();
     if (marker.length != 1 || marker.single.read<int>('version') != version) {
       throw StateError('Unsupported SQLCipher finance domain revision.');
+    }
+    for (final table in domainTables) {
+      final exists = await store.customSelect(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+        variables: [Variable.withString(table)],
+      ).get();
+      if (exists.length != 1) {
+        throw StateError('An encrypted finance-domain table is missing.');
+      }
     }
   }
 }
