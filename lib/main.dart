@@ -3365,8 +3365,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(!recurringRemindersEnabled)return;
   try {
    await WaffraReminders.schedule(
-    recurring.where((r)=>r.active).map((r)=>
-     WaffraReminder(id:r.id,title:r.title,day:r.day)).toList(),
+    recurring.where((r)=>r.active&&(r.linkedGoalId==null||
+      goals.any((g)=>g.id==r.linkedGoalId&&g.dueDate!=null)))
+     .map((r)=>WaffraReminder(id:r.id,title:r.title,day:r.day,
+      startAt:r.linkedGoalId==null?null:r.startAt)).toList(),
     english:waffraIsEnglish);
   }catch(e){debugPrint('Reminder scheduling failed: $e');}
  }
@@ -3407,6 +3409,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final today=DateTime.now();
   for(final r in recurring){
    if(!r.active)continue;
+   if(r.linkedGoalId!=null&&!goals.any((g)=>g.id==r.linkedGoalId&&g.dueDate!=null))continue;
    final due=WaffraRecurringPolicy.dueDate(today.year,today.month,r.day);
    final id=WaffraRecurringPolicy.entryId(r.id,due);
    final postponed=DateTime.tryParse(recurringPostponed[id]??'');
@@ -9058,7 +9061,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final orderedActive=active.toList()..sort((a,b)=>
    nextRecurringDue(a).compareTo(nextRecurringDue(b)));
   final nextBill=orderedActive.isEmpty?null:orderedActive.first;
-  final monthly=active.where((r)=>!r.income).fold<double>(0,(v,r)=>v+r.amount);
+  final lastOfCurrentMonth=DateTime(DateTime.now().year,DateTime.now().month+1,0);
+  final monthly=active.where((r)=>!r.income&&!r.startAt.isAfter(lastOfCurrentMonth))
+   .fold<double>(0,(v,r)=>v+r.amount);
   final shown=recurring.where((r)=>recurringDisplay=='all'||
    (recurringDisplay=='active'?r.active:!r.active)).toList();
   final upcoming=active.where((r){
