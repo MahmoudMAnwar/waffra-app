@@ -128,8 +128,11 @@ class WaffraFreshFinanceDomainRepository {
         variables: [Variable.withString(budgetId)],
       ).get();
       if (rows.length != 1) throw StateError('Budget does not exist.');
-      final source = _decoded(rows.single.read<String>('source_json'))
-        ..['active'] = active;
+      final source = _decoded(rows.single.read<String>('source_json'));
+      if (source['deletedAt'] != null) {
+        throw StateError('Deleted budget cannot be re-enabled.');
+      }
+      source['active'] = active;
       await store.customStatement(
         'UPDATE fresh_finance_named_budgets SET is_active=?,source_json=? '
         'WHERE budget_id=?',
@@ -159,7 +162,7 @@ class WaffraFreshFinanceDomainRepository {
     }
     await store.transaction(() async {
       final budget = await store.customSelect(
-        'SELECT category_id,is_active FROM fresh_finance_named_budgets '
+        'SELECT category_id,is_active,source_json FROM fresh_finance_named_budgets '
         'WHERE budget_id=?',
         variables: [Variable.withString(budgetId)],
       ).get();
@@ -170,6 +173,10 @@ class WaffraFreshFinanceDomainRepository {
       ).get();
       if (budget.length != 1 || budget.single.read<int>('is_active') != 1) {
         throw StateError('Budget is missing or paused.');
+      }
+      if (budget.single.read<String>('source_json').isNotEmpty &&
+          _decoded(budget.single.read<String>('source_json'))['deletedAt'] != null) {
+        throw StateError('Deleted budget cannot receive transactions.');
       }
       if (entry.length != 1 || entry.single.read<int>('is_income') != 0) {
         throw StateError('Only saved expenses may use a budget.');
@@ -193,6 +200,145 @@ class WaffraFreshFinanceDomainRepository {
         '(allocation_id,budget_id,entry_id,amount_minor,'
         'explicitly_confirmed,assigned_at_iso) VALUES (?,?,?,?,1,?)',
         [allocationId,budgetId,entryId,allocatedMinor,assignedAtIso],
+      );
+    });
+  }
+
+  /// Rename, change monthly cap and alert without rewriting any transactions.
+  /// Existing expense allocations remain attached to the stable budget ID.
+  Future<void> editNamedBudget({
+    required String budgetId,
+    required String name,
+    required int limitMinor,
+    required int alertPercent,
+    required bool userConfirmed,
+  }) async {
+    await _requireReady();
+    _id(budgetId,'budgetId');
+    if(!userConfirmed || name.trim().isEmpty || name.length>80 ||
+        limitMinor<=0 || alertPercent<1 || alertPercent>100) {
+      throw StateError('Explicitly approved budget edits are required.');
+    }
+    await store.transaction(() async {
+      final rows=await store.customSelect(
+        'SELECT source_json FROM fresh_finance_named_budgets WHERE budget_id=?',
+        variables:[Variable.withString(budgetId)],
+      ).get();
+      if(rows.length!=1)throw StateError('Budget does not exist.');
+      final source=_decoded(rows.single.read<String>('source_json'));
+      if(source['deletedAt']!=null) {
+        throw StateError('Deleted budget is immutable.');
+      }
+      source['name']=name.trim();
+      source['budgetMinor']=limitMinor;
+      source['alertPercent']=alertPercent;
+      await store.customStatement(
+        'UPDATE fresh_finance_named_budgets SET name=?,monthly_limit_minor=?,'
+        'alert_percent=?,source_json=? WHERE budget_id=?',
+        [name.trim(),limitMinor,alertPercent,jsonEncode(source),budgetId],
+      );
+    });
+  }
+
+  /// Soft deletion retains history and prevents future allocations.
+  /// A disabled budget is NOT deleted and can be reactivated separately.
+  Future<void> deleteNamedBudget({
+    required String budgetId,
+    required String deletedAtIso,
+    required bool userConfirmed,
+  }) async {
+    await _requireReady();
+    _id(budgetId,'budgetId');
+    _iso(deletedAtIso);
+    if(!userConfirmed)throw StateError('Budget deletion needs confirmation.');
+    await store.transaction(() async {
+      final rows=await store.customSelect(
+        'SELECT source_json FROM fresh_finance_named_budgets WHERE budget_id=?',
+        variables:[Variable.withString(budgetId)],
+      ).get();
+      if(rows.length!=1)throw StateError('Budget does not exist.');
+      final source=_decoded(rows.single.read<String>('source_json'));
+      if(source['deletedAt']!=null) {
+        throw StateError('Budget was already deleted.');
+      }
+      source['active']=false;
+      source['deletedAt']=deletedAtIso;
+      await store.customStatement(
+        'UPDATE fresh_finance_named_budgets SET is_active=0,source_json=? '
+        'WHERE budget_id=?',
+        [jsonEncode(source),budgetId],
+      );
+    });
+  }
+
+  /// Historical expenses with no explicit link remain unlinked after the
+  /// user creates a budget. These are shown for user-driven reconciliation.
+  Future<List<String>> listUnassignedExpenseIds() async {
+    await _requireReady();
+    final rows=await store.customSelect(
+      'SELECT e.entry_id FROM fresh_finance_entries e '
+      'WHERE e.is_income=0 AND NOT EXISTS '
+      '(SELECT 1 FROM fresh_finance_budget_allocations a '
+      ' WHERE a.entry_id=e.entry_id) ORDER BY e.occurred_iso,e.entry_id',
+    ).get();
+    return List<String>.unmodifiable(
+      rows.map((row)=>row.read<String>('entry_id')),
+    );
+  }
+
+  /// Detach and reattach a budget in transaction-edit without changing the
+  /// underlying finance ledger or silently linking records from a paused cap.
+  Future<void> replaceExpenseBudget({
+    required String allocationId,
+    required String newBudgetId,
+    required int allocatedMinor,
+    required String assignedAtIso,
+    required bool userConfirmed,
+    bool crossCategoryApproved=false,
+  }) async {
+    await _requireReady();
+    _id(allocationId,'allocationId');
+    if(!userConfirmed)throw StateError('Budget reassignment not confirmed.');
+    await store.transaction(() async {
+      final previous=await store.customSelect(
+        'SELECT entry_id FROM fresh_finance_budget_allocations '
+        'WHERE allocation_id=?',
+        variables:[Variable.withString(allocationId)],
+      ).get();
+      if(previous.length!=1) {
+        throw StateError('Previous expense budget assignment missing.');
+      }
+      final entryId=previous.single.read<String>('entry_id');
+      await store.customStatement(
+        'DELETE FROM fresh_finance_budget_allocations WHERE allocation_id=?',
+        [allocationId],
+      );
+      await assignExpenseToBudget(
+        allocationId:allocationId,entryId:entryId,
+        budgetId:newBudgetId,allocatedMinor:allocatedMinor,
+        assignedAtIso:assignedAtIso,userConfirmed:true,
+        crossCategoryApproved:crossCategoryApproved,
+      );
+    });
+  }
+
+  Future<void> unassignExpenseBudget({
+    required String allocationId,
+    required bool userConfirmed,
+  }) async {
+    await _requireReady();
+    _id(allocationId,'allocationId');
+    if(!userConfirmed)throw StateError('Unlinking budget needs confirmation.');
+    await store.transaction(() async {
+      final previous=await store.customSelect(
+        'SELECT allocation_id FROM fresh_finance_budget_allocations '
+        'WHERE allocation_id=?',
+        variables:[Variable.withString(allocationId)],
+      ).get();
+      if(previous.length!=1)throw StateError('Budget assignment not found.');
+      await store.customStatement(
+        'DELETE FROM fresh_finance_budget_allocations WHERE allocation_id=?',
+        [allocationId],
       );
     });
   }
