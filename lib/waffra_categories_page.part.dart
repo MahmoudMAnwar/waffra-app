@@ -20,15 +20,31 @@ extension WaffraCategoryScreen on _HomeScreenState {
   );
  Widget categoriesPageV2(){
   final now=DateTime.now();
-  final recent=entries.where((e)=>e.date.year==now.year&&e.date.month==now.month).toList();
-  final expenseTotal=recent.where((e)=>!e.income).fold<double>(0,(total,e)=>total+e.amount);
-  final roots=categories.where((c)=>!c.isSubcategory).toList();
+  // Monthly income/expense totals are computed in a single pass so both
+  // ranking choices remain fast even with a large transaction history.
+  final monthlyTotals=<(bool,String),double>{};
+  var expenseTotal=0.0;
+  for(final e in entries){
+   if(e.date.year!=now.year||e.date.month!=now.month)continue;
+   final key=(e.income,e.category);
+   monthlyTotals[key]=(monthlyTotals[key]??0)+e.amount;
+   if(!e.income)expenseTotal+=e.amount;
+  }
+  final roots=<BudgetCategory>[];
+  final childrenByParent=<String,List<BudgetCategory>>{};
+  for(final c in categories){
+   if(c.isSubcategory){
+    (childrenByParent[c.parentId]??=<BudgetCategory>[]).add(c);
+   }else{roots.add(c);}
+  }
   List<BudgetCategory> children(BudgetCategory root)=>
-   categories.where((c)=>c.parentId==root.id).toList();
+   childrenByParent[root.id]??const <BudgetCategory>[];
   double monthlyFor(BudgetCategory root){
-   final names={root.name,...children(root).map((c)=>c.name)};
-   return recent.where((e)=>e.income==root.income&&names.contains(e.category))
-    .fold<double>(0,(total,e)=>total+e.amount);
+   var amount=monthlyTotals[(root.income,root.name)]??0;
+   for(final child in children(root)){
+    amount+=monthlyTotals[(child.income,child.name)]??0;
+   }
+   return amount;
   }
   final shown=roots.where((root){
    if(categoryMineOnly&&!root.isUserAdded&&
@@ -44,17 +60,11 @@ extension WaffraCategoryScreen on _HomeScreenState {
     subs.any((c)=>(!categoryMineOnly||c.isUserAdded)&&
      waffraSearchAny([c.displayName,waffraTr(c.displayName)],query));
   }).toList();
-  if(categorySort=='alpha'){
-   shown.sort((a,b)=>waffraTr(a.name).compareTo(waffraTr(b.name)));
-  }else if(categorySort=='spent'){
-   // Cache each group total once during this sort; never invoke the ledger
-   // scanner from the comparator itself.
-   final spentById={for(final root in shown)root.id:monthlyFor(root)};
-   shown.sort((a,b){
-    final order=(spentById[b.id]??0).compareTo(spentById[a.id]??0);
-    return order!=0?order:waffraTr(a.name).compareTo(waffraTr(b.name));
-   });
-  }
+  // Income sort prioritizes income roots, expense sort prioritizes expense
+  // roots, using posted current-month totals including each root's children.
+  final sorted=waffraRankCategoryRoots<BudgetCategory>(shown,
+   mode:categorySort,label:(c)=>waffraTr(c.name),
+   isIncome:(c)=>c.income,monthlyTotal:monthlyFor);
 
   Widget rootCard(BudgetCategory root){
    final color=Color(root.color);
@@ -114,8 +124,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
 
   Widget childCard(BudgetCategory sub){
    final color=Color(sub.color);
-   final total=recent.where((e)=>e.category==sub.name&&e.income==sub.income)
-    .fold<double>(0,(value,e)=>value+e.amount);
+   final total=monthlyTotals[(sub.income,sub.name)]??0;
    return Card(margin:EdgeInsets.zero,elevation:0,
     color:color.withValues(alpha:.08),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15),
@@ -142,9 +151,9 @@ extension WaffraCategoryScreen on _HomeScreenState {
      ]))));
   }
   final groupRows=<Widget>[];
-  for(var i=0;i<shown.length;i+=2){
-   final left=shown[i];
-   final right=i+1<shown.length?shown[i+1]:null;
+  for(var i=0;i<sorted.length;i+=2){
+   final left=sorted[i];
+   final right=i+1<sorted.length?sorted[i+1]:null;
    groupRows.add(Padding(padding:const EdgeInsets.only(bottom:10),
     child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
      Expanded(child:rootCard(left)),const SizedBox(width:10),
