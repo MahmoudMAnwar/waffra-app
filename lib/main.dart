@@ -5767,25 +5767,111 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     });
   }
  }
- Future<String?> chooseTransactionCategory(BuildContext ctx,List<BudgetCategory> options,String selected,{bool leafLabels=false})async{
+ Future<String?> chooseTransactionCategory(
+  BuildContext ctx,List<BudgetCategory> options,String selected,{
+  bool leafLabels=false,bool allowCreate=false,bool typeIncome=false,
+  String? parentId,String? suggested,
+ })async{
   var query='';
-  return showWaffraDialog<String>(context:ctx,builder:(dialogCtx)=>StatefulBuilder(builder:(dialogCtx,refresh){
-   final filtered=options.where((item){
-    final label=leafLabels?item.displayName:item.name;
-    return waffraSearchAny([label,waffraTr(label),waffraTr(item.name)],query);
-   }).toList();
-   return AlertDialog(title:WaffraText(waffraIsEnglish?'Search categories':'بحث في الأقسام'),
-    content:SizedBox(width:360,height:min(420.0,MediaQuery.sizeOf(dialogCtx).height*.55),child:Column(children:[
-     TextField(autofocus:true,onChanged:(v)=>refresh(()=>query=v),
-      decoration:InputDecoration(prefixIcon:const Icon(Icons.search),hintText:waffraIsEnglish?'Search…':'اكتب اسم القسم',border:const OutlineInputBorder())),
-     const SizedBox(height:9),
-     Expanded(child:ListView.builder(itemCount:filtered.length,itemBuilder:(ctx,i){
-      final item=filtered[i];return ListTile(selected:selected==item.name,
-       leading:Icon(categoryIcon(item.icon),color:Color(item.color)),
-       title:WaffraText(waffraTr(leafLabels?item.displayName:item.name),maxLines:3),onTap:WaffraHaptics.tap(()=>Navigator.pop(dialogCtx,item.name)));
-     })),
-    ])),actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogCtx)),child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))]);
-  }));
+  const createMain='__waffra_category_picker_new_main__';
+  const createSub='__waffra_category_picker_new_sub__';
+  final picked=await showWaffraDialog<String>(
+   context:ctx,builder:(dialogCtx)=>StatefulBuilder(
+    builder:(dialogCtx,refresh){
+     final filtered=options.where((item){
+      final label=leafLabels?item.displayName:item.name;
+      return waffraSearchAny([label,waffraTr(label),waffraTr(item.name)],query);
+     }).toList();
+     return AlertDialog(
+      title:WaffraText(waffraIsEnglish?'Search categories':'بحث في الأقسام'),
+      content:SizedBox(
+       width:360,height:min(490.0,MediaQuery.sizeOf(dialogCtx).height*.62),
+       child:Column(children:[
+        TextField(autofocus:true,onChanged:(v)=>refresh(()=>query=v),
+         decoration:InputDecoration(
+          prefixIcon:const Icon(Icons.search),
+          hintText:waffraIsEnglish?'Search…':'اكتب اسم القسم',
+          border:const OutlineInputBorder())),
+        if(allowCreate)...[
+         const SizedBox(height:6),
+         ListTile(
+          key:const Key('waffra-inline-create-main-category'),
+          dense:true,
+          leading:const Icon(Icons.create_new_folder_outlined,color:emerald),
+          title:WaffraText(waffraIsEnglish?
+           'New main category':'إضافة قسم رئيسي جديد'),
+          onTap:WaffraHaptics.tap(()=>
+           Navigator.pop(dialogCtx,createMain))),
+         ListTile(
+          key:const Key('waffra-inline-create-subcategory'),
+          dense:true,
+          leading:const Icon(Icons.account_tree_outlined,color:emerald),
+          title:WaffraText(waffraIsEnglish?
+           'New subcategory':'إضافة قسم فرعي جديد'),
+          onTap:WaffraHaptics.tap(()=>
+           Navigator.pop(dialogCtx,createSub))),
+         const Divider(height:8),
+        ],
+        Expanded(child:filtered.isEmpty?
+         Center(child:WaffraText(waffraIsEnglish?
+          'No matching categories':'لا توجد أقسام مطابقة')):
+         ListView.builder(itemCount:filtered.length,itemBuilder:(ctx,i){
+          final item=filtered[i];
+          return ListTile(
+           selected:selected==item.name,
+           leading:Icon(categoryIcon(item.icon),color:Color(item.color)),
+           title:WaffraText(waffraTr(leafLabels?
+            item.displayName:item.name),maxLines:3),
+           onTap:WaffraHaptics.tap(()=>
+            Navigator.pop(dialogCtx,item.name)));
+         })),
+       ])),
+      actions:[TextButton(
+       onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogCtx)),
+       child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))],
+     );
+    }));
+  if(picked==null||!mounted||!ctx.mounted)return null;
+  if(picked!=createMain&&picked!=createSub)return picked;
+  var categoryParentId='';
+  if(picked==createSub){
+   final root=categories.where((c)=>c.id==parentId&&
+    !c.isSubcategory&&c.income==typeIncome).toList();
+   if(root.isNotEmpty){
+    categoryParentId=root.single.id;
+   }else{
+    final parents=categories.where((c)=>
+     !c.isSubcategory&&c.income==typeIncome).toList();
+    if(parents.isEmpty){
+     snack(ctx,waffraIsEnglish?
+      'Create a main category first':'أضف قسمًا رئيسيًا أولًا');
+     return null;
+    }
+    final selectedParent=await chooseTransactionCategory(ctx,parents,'');
+    if(selectedParent==null||!mounted||!ctx.mounted)return null;
+    final chosen=parents.where((c)=>c.name==selectedParent).toList();
+    if(chosen.length!=1)return null;
+    categoryParentId=chosen.single.id;
+   }
+  }
+  // The exact same icon/color/name dialog used by Categories handles both
+  // new main and new child categories. No parallel incomplete form exists.
+  final created=await categoryDialog(
+   income:typeIncome,parentId:categoryParentId,
+   suggested:picked==createSub?suggested:null);
+  if(created==null||!mounted||!ctx.mounted)return null;
+  if(WaffraValidators.uniqueCategory(created.name,
+    categories.where((c)=>c.income==created.income).map((c)=>c.name))
+    !=null){
+   snack(ctx,waffraIsEnglish?
+    'Category name already exists':'اسم القسم موجود بالفعل');
+   return null;
+  }
+  setState(()=>categories.add(created));
+  if(!await _persistModuleOrReload(
+   WaffraFinanceRoute.categoryCreateEditDeleteRestore,
+   operation:'transaction-category-picker-create'))return null;
+  return created.name;
  }
  Future<String?> _promptReceiptLabel(BuildContext context,String path)async {
   final name=TextEditingController(text:WaffraReceiptFilename.displayName(path));
