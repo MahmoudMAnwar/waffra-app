@@ -10519,6 +10519,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    return Center(child:WaffraText(waffraIsEnglish?
     'Financial source not ready':'مصدر البيانات المالية غير جاهز'));
   }
+  // Build named-budget lookup once: avoid a categories scan for each row.
+  final childNames=<String,Set<String>>{};
+  for(final c in categories){
+   if(c.isSubcategory)(childNames[c.parentId]??=<String>{}).add(c.name);
+  }
+  final eligibleNames=<String>{},liveBudgetIds=<String>{};
+  for(final c in categories){
+   if(c.income||c.budget<=0)continue;
+   liveBudgetIds.add(c.id);
+   eligibleNames.add(c.name);
+   eligibleNames.addAll(childNames[c.id]??const <String>{});
+  }
   return WaffraSmartFeaturesPage(
    key:const Key('waffra-m268-footer-page'),
    tourHeadingKey:_tourKeys[3],
@@ -10529,7 +10541,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    entries:List<WaffraSmartEntry>.unmodifiable(entries.map((e)=>WaffraSmartEntry(
     id:e.id,title:e.title,category:e.category,amount:e.amount,
     income:e.income,date:e.date,notes:e.notes,
-    hasAttachment:e.receiptPath?.isNotEmpty??false))),
+    hasAttachment:e.receiptPath?.isNotEmpty??false,
+    unassignedNamedBudget:!e.income&&e.budgetId==null&&
+      eligibleNames.contains(e.category),
+    orphanBudgetLink:e.budgetId!=null&&!liveBudgetIds.contains(e.budgetId)))),
    goals:List<WaffraSmartGoal>.unmodifiable(goals.map((g)=>
     WaffraSmartGoal(g.name,g.target,g.saved))),
    recurring:List<WaffraSmartRecurring>.unmodifiable(recurring.where((r)=>r.active).map((r)=>
