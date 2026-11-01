@@ -64,6 +64,26 @@ void main() {
   expect(food.copy(budget:3000).budgetLabel,'ميزانية الأكل');
  });
 
+ test('M344 goal earmarks move between available and goals wallet without double expense',(){
+  final now=DateTime(2026,11,1);
+  MoneyEntry tx(String id,double amount,bool income)=>MoneyEntry(
+   id:id,title:'test',category:income?'حوالات واردة':'سكن / إيجار شهري',
+   amount:amount,income:income,date:now);
+  final ledger=[tx('income',5000,true)];
+  final initial=[SavingGoal(id:'rent',name:'إيجار',target:5000,saved:0)];
+  expect(waffraGoalWalletBalance(initial),0);
+  expect(waffraAvailableCash(ledger,initial),5000);
+  final allocated=[initial.single.copy(saved:1000)];
+  expect(waffraGoalWalletBalance(allocated),1000);
+  expect(waffraAvailableCash(ledger,allocated),4000);
+  final released=[allocated.single.copy(saved:0)];
+  expect(waffraAvailableCash(ledger,released),5000);
+  final paid=[...ledger,tx('paid-rent',1000,false)];
+  expect(waffraAvailableCash(paid,released),4000);
+  // Earmarking does NOT generate a second ledger transaction.
+  expect(ledger.length,1);
+ });
+
  test('M343 official household labels are bilingual and do not add roots',(){
   expect(waffraCategoryCatalog.length,79);
   expect(waffraCategoryCatalog.fold<int>(0,(n,g)=>n+g.subcategories.length),975);
