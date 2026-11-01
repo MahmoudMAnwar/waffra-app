@@ -6,6 +6,8 @@ import 'package:waffra/storage/waffra_encrypted_store.dart';
 import 'package:waffra/storage/waffra_fresh_encrypted_vault_bootstrap.dart';
 import 'package:waffra/storage/waffra_fresh_finance_domain_schema.dart';
 import 'package:waffra/storage/waffra_fresh_finance_domain_repository.dart';
+import 'package:waffra/storage/waffra_atomic_finance_snapshot.dart';
+import 'package:waffra/storage/waffra_verified_goal_due_snapshot_writer.dart';
 
 void main() {
   late Directory directory;
@@ -303,4 +305,97 @@ void main() {
     ).getSingle();
     expect(saved.read<int>('saved_minor'),15000);
   });
+  test('M365 atomic goal due updates typed SQL and Home/Widget snapshot once',
+      () async {
+    await bootstrap();
+    await addGoal();
+    await addRecurring();
+    final snapshot=WaffraAtomicFinanceSnapshot(
+      store:db,experimentalEnabled:true);
+    await snapshot.initializeEmpty();
+    final goalSource=await db.customSelect(
+      "SELECT source_json FROM fresh_finance_goals WHERE goal_id='goal'",
+    ).getSingle();
+    final scheduleSource=await db.customSelect(
+      "SELECT source_json FROM fresh_finance_recurring WHERE recurring_id='rent'",
+    ).getSingle();
+    await snapshot.commit(
+      expectedGeneration:0,fullFinanceSnapshot:{
+        'entries':'[]',
+        'waffra_goals_v24':jsonEncode([
+          jsonDecode(goalSource.read<String>('source_json')),
+        ]),
+        'waffra_recurring_v24':jsonEncode([
+          jsonDecode(scheduleSource.read<String>('source_json')),
+        ]),
+      },
+    );
+    final writer=WaffraVerifiedGoalDueSnapshotWriter(
+      store:db,snapshot:snapshot,experimentalEnabled:true);
+    final receipt=await writer.settle(
+      goalId:'goal',recurringId:'rent',dueKey:'rec_rent_2026_11',
+      amountMinor:20000,confirmedAtIso:'2026-11-02T12:00:00',
+      userConfirmed:true,
+    );
+    expect(receipt.alreadySettled,false);
+    expect(receipt.fromGoalMinor,15000);
+    expect(receipt.fromCurrentMinor,5000);
+    expect(await count('fresh_finance_entries'),1);
+    expect(await count('fresh_finance_goal_due_settlements'),1);
+    final after=await snapshot.read();
+    expect(after.generation,2);
+    final entries=jsonDecode(after.values['entries'] as String) as List;
+    expect(entries.length,1);
+    expect(entries.single['sourceType'],'goal_due');
+    final goals=jsonDecode(after.values['waffra_goals_v24'] as String) as List;
+    expect(goals.single['saved'],0.0);
+    final recurring=jsonDecode(after.values['waffra_recurring_v24'] as String)
+      as List;
+    expect(recurring.single['active'],false);
+    final repeated=await writer.settle(
+      goalId:'goal',recurringId:'rent',dueKey:'rec_rent_2026_11',
+      amountMinor:20000,confirmedAtIso:'2026-11-02T13:00:00',
+      userConfirmed:true,
+    );
+    expect(repeated.alreadySettled,true);
+    expect((await snapshot.read()).generation,2);
+    expect(await count('fresh_finance_entries'),1);
+  });
+
+  test('M365 stale snapshot denies goal due and leaves both stores unchanged',
+      () async {
+    await bootstrap();
+    await addGoal();
+    await addRecurring();
+    final snapshot=WaffraAtomicFinanceSnapshot(
+      store:db,experimentalEnabled:true);
+    await snapshot.initializeEmpty();
+    await snapshot.commit(expectedGeneration:0,fullFinanceSnapshot:{
+      'entries':'[]',
+      'waffra_goals_v24':jsonEncode([
+        {'id':'goal','name':'هدف الادخار',
+         'target':300.0,'saved':149.99},
+      ]),
+      'waffra_recurring_v24':jsonEncode([
+        {'id':'rent','title':'سداد الهدف','category':'سكن / إيجار',
+         'amount':200.0,'income':false,'day':1,'active':true,
+         'startAt':'2026-11-01T00:00:00','linkedGoalId':'goal'},
+      ]),
+    });
+    final writer=WaffraVerifiedGoalDueSnapshotWriter(
+      store:db,snapshot:snapshot,experimentalEnabled:true);
+    await expectLater(writer.settle(
+      goalId:'goal',recurringId:'rent',dueKey:'rec_rent_2026_11',
+      amountMinor:20000,confirmedAtIso:'2026-11-02T12:00:00',
+      userConfirmed:true,
+    ),throwsA(isA<StateError>()));
+    expect(await count('fresh_finance_entries'),0);
+    expect(await count('fresh_finance_goal_due_settlements'),0);
+    expect(await count('fresh_finance_goal_wallet_movements'),0);
+    expect((await snapshot.read()).generation,1);
+    expect((await db.customSelect(
+      "SELECT saved_minor FROM fresh_finance_goals WHERE goal_id='goal'",
+    ).getSingle()).read<int>('saved_minor'),15000);
+  });
+
 }
