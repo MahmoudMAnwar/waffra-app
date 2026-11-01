@@ -8876,25 +8876,29 @@ Future<void> bulkSmsSheet({String? initialText})async {
    const SizedBox(height:30),
   ]);
  }
- Future<void> recurringDialog({String? suggestedTitle,double? suggestedAmount})async {
-  final title=TextEditingController(text:suggestedTitle??''),
-   amount=TextEditingController(text:suggestedAmount==null?'':formatWaffraEditAmount(suggestedAmount)),
-   day=TextEditingController(text:'1');
-  bool income=false;String category=forType(false).isNotEmpty?
-    forType(false).first.name:'';bool attempted=false;
-  DateTime startAt=DateTime.now();
+ Future<void> recurringDialog({String? suggestedTitle,double? suggestedAmount,RecurringBill? initial})async {
+  final title=TextEditingController(text:initial?.title??suggestedTitle??''),
+   amount=TextEditingController(text:initial!=null?formatWaffraEditAmount(initial.amount):suggestedAmount==null?'':formatWaffraEditAmount(suggestedAmount)),
+   day=TextEditingController(text:(initial?.day??1).toString());
+  bool income=initial?.income??false;String category=initial?.category??(forType(false).isNotEmpty?
+    forType(false).first.name:'');bool attempted=false;
+  DateTime startAt=initial?.startAt??DateTime.now();
   final r=await showWaffraDialog<RecurringBill>(context:context,
    builder:(ctx)=>StatefulBuilder(builder:(ctx,update){
     final options=forType(income);
     final selected=options.any((x)=>x.name==category)?category:
       (options.isNotEmpty?options.first.name:'');
-    return AlertDialog(title:const WaffraText('عملية شهرية متكررة'),
+    return AlertDialog(title:WaffraText(initial==null?(waffraIsEnglish?'New recurring item':'عملية شهرية متكررة'):(waffraIsEnglish?'Edit recurring item':'تعديل العملية المتكررة')),
      content:SizedBox(width:340,child:SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,mainAxisSize:MainAxisSize.min,children:[
       const SizedBox(height:12),
       TextField(controller:title,onChanged:(_)=>update((){}),decoration:InputDecoration(labelText:waffraIsEnglish?'Description *':'الوصف *',
        errorText:attempted?waffraTextFieldError(title.text):null)),
+      if(initial?.linkedGoalId!=null)WaffraText(waffraIsEnglish?
+       'Edit target and due date from the linked goal in Goals.':
+       'تعديل المبلغ والاستحقاق يكون من الهدف المرتبط في الأهداف.',
+       style:const TextStyle(fontSize:12,color:emerald)),
       const SizedBox(height:12),
-      TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
+      TextField(controller:amount,readOnly:initial?.linkedGoalId!=null,keyboardType:const TextInputType.numberWithOptions(decimal:true),
        inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],onChanged:(_)=>update((){}),
        decoration:InputDecoration(labelText:waffraIsEnglish?'Amount *':'المبلغ *',
         errorText:attempted?waffraAmountFieldError(amount.text):null)),
@@ -8968,12 +8972,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
        ),
       ),
       const SizedBox(height:12),
-      OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async{
+      OutlinedButton.icon(onPressed:initial?.linkedGoalId!=null?null:WaffraHaptics.tap(()async{
        final picked=await waffraPickDateWithToday(english:waffraIsEnglish,context:ctx,initialDate:startAt,firstDate:DateTime.now().subtract(const Duration(days:1)),lastDate:DateTime(DateTime.now().year+5));
        if(picked!=null)update((){startAt=picked;day.text=picked.day.toString();});
       }),icon:const Icon(Icons.calendar_month_outlined),label:WaffraText(waffraIsEnglish?'First due: ${dayText(startAt)}':'أول استحقاق: ${dayText(startAt)}')),
       const SizedBox(height:8),
-      TextField(controller:day,keyboardType:TextInputType.number,onChanged:(_)=>update((){}),
+      TextField(controller:day,readOnly:initial?.linkedGoalId!=null,keyboardType:TextInputType.number,onChanged:(_)=>update((){}),
        decoration:InputDecoration(labelText:waffraIsEnglish?'Day of month *':'يوم الشهر *',helperText:waffraIsEnglish?'1–31':'من 1 إلى 31',
        errorText:attempted?waffraDayFieldError(day.text):null)),
      ]))),
@@ -8986,17 +8990,25 @@ Future<void> bulkSmsSheet({String? initialText})async {
         WaffraValidators.dayOfMonth(day.text)==null&&
         WaffraValidators.requiredCategory(selected,options.map((c)=>c.name))==null&&
         n!=null&&d!=null){
-        Navigator.pop(ctx,RecurringBill(id:newId(),title:title.text.trim(),category:selected,
-         amount:n,income:income,day:d,startAt:startAt));
+        Navigator.pop(ctx,RecurringBill(id:initial?.id??newId(),title:title.text.trim(),category:selected,
+         amount:initial?.linkedGoalId!=null?initial!.amount:n,income:income,
+         day:initial?.linkedGoalId!=null?initial!.day:d,
+         startAt:initial?.linkedGoalId!=null?initial!.startAt:startAt,
+         active:initial?.active??true,linkedGoalId:initial?.linkedGoalId));
        }
       }),child:const WaffraText('حفظ')),
      ]);
    }));
   disposeLater([title,amount,day]);
   if(r!=null&&mounted){
-   setState(()=>recurring.add(r));
+   setState((){
+    if(initial==null){recurring.add(r);}else{
+     final index=recurring.indexWhere((e)=>e.id==initial.id);
+     if(index>=0)recurring[index]=r;
+    }
+   });
    if(!await _persistModuleOrReload(WaffraFinanceRoute.recurringCreateEditDeleteRestore,
-     operation:'recurring-create'))return;
+     operation:initial==null?'recurring-create':'recurring-edit'))return;
    await applyRecurring();
    await syncRecurringReminders();
   }
