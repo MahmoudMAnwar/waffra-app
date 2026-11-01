@@ -50,6 +50,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
    final visibleChildren=children(root).where((c)=>!categoryMineOnly||c.isUserAdded).toList();
    final opened=expandedCategoryIds.contains(root.id);
    final amount=monthlyFor(root);
+   final assigned=waffraNamedBudgetSpent(entries,categories,root,now);
    return Card(margin:EdgeInsets.zero,elevation:0,clipBehavior:Clip.antiAlias,
     color:Theme.of(context).cardColor,
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(19),
@@ -87,8 +88,8 @@ extension WaffraCategoryScreen on _HomeScreenState {
        maxLines:1,style:TextStyle(fontSize:11,color:color,fontWeight:FontWeight.bold)),
       if(!root.income&&root.budget>0)...[
        const SizedBox(height:6),
-       LinearProgressIndicator(value:(amount/root.budget).clamp(0.0,1.0),
-        minHeight:5,color:amount>root.budget?Colors.red:color,
+       LinearProgressIndicator(value:(assigned/root.budget).clamp(0.0,1.0),
+        minHeight:5,color:assigned>root.budget?Colors.red:color,
         backgroundColor:color.withValues(alpha:.12),
         borderRadius:BorderRadius.circular(8)),
       ],
