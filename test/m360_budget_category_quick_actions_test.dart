@@ -33,7 +33,7 @@ void main() {
 
  test('M360 bank SMS batch review also permits creating a new budget',(){
   final app=File('lib/main.dart').readAsStringSync();
-  expect(app,contains("'waffra-entry-create-named-budget'"));
+  expect(app,contains("'__create_budget__'"));
   expect(app,contains("'waffra-sms-batch-create-budget-'"));
   expect(app,contains('assigned[n]=id;'));
   expect(app,contains('choices\n              ..clear()'));
