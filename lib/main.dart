@@ -5402,6 +5402,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         waffraAmountFieldError(value.text)!=null||n==null)return;
        if(!waffraCanAssignManualCategory(categories,
         income,selectedParentId,category))return;
+       if(!income&&selectedBudgetId!=null&&
+          !categories.any((c)=>c.id==selectedBudgetId&&
+            !c.income&&c.budget>0&&
+            (c.budgetActive||(initial!=null&&initial.budgetId==c.id)))){
+        if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
+         'This budget is currently paused. Pick another budget or choose Unassigned.':
+         'الميزانية دي متوقفة حاليًا. اختار ميزانية مفعّلة أو خلّي العملية بدون ربط.');
+        return;
+       }
        if(sms){
         if(message.text.trim().isEmpty)return;
         // The display-country setting cannot convert a bank SMS into SAR.
