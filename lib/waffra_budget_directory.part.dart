@@ -165,7 +165,16 @@ extension WaffraBudgetDirectory on _HomeScreenState {
           'الحد: '+cash(b.budget)+'  •  المصروف: '+cash(spent)+'  •  المتبقي: '+cash(b.budget-spent),
           maxLines:3,style:const TextStyle(fontSize:12)),
          const SizedBox(height:8),
-         Wrap(spacing:8,runSpacing:6,children:[
+         ExpansionTile(
+          key:PageStorageKey<String>('waffra-budget-quick-actions-'+b.id),
+          initiallyExpanded:false,
+          tilePadding:EdgeInsets.zero,
+          childrenPadding:const EdgeInsets.only(bottom:8),
+          leading:const Icon(Icons.settings_rounded,color:emerald,size:20),
+          title:WaffraText(waffraIsEnglish?'Quick actions':'إجراءات سريعة',
+           style:const TextStyle(fontWeight:FontWeight.w700,fontSize:13)),
+          children:[
+           Wrap(spacing:8,runSpacing:8,children:[
           TextButton.icon(
            onPressed:WaffraHaptics.tap(()=>editBudgetForCategory(b)),
            icon:const Icon(Icons.edit_outlined,size:17),
@@ -183,8 +192,10 @@ extension WaffraBudgetDirectory on _HomeScreenState {
             color:Colors.deepOrange),
            label:WaffraText(waffraIsEnglish?'Delete':'حذف',
             style:const TextStyle(color:Colors.deepOrange))),
-         ]),
-        ]),
+
+           ]),
+          ],
+         ),     ]),
        ),
       );
      }),
