@@ -6570,18 +6570,33 @@ Future<void> bulkSmsSheet({String? initialText})async {
  }
  Future<void> chooseBudgetCategory()async{
   final choices=categories.where((c)=>!c.income).toList();
+  String query='';
   final selected=await showWaffraDialog<BudgetCategory>(context:context,
-   builder:(ctx)=>AlertDialog(
-    title:WaffraText(waffraIsEnglish?'Choose category for budget':'اختر قسم الميزانية'),
-    content:SizedBox(width:double.maxFinite,
-     height:min(470.0,MediaQuery.sizeOf(ctx).height*.60),
-     child:ListView.builder(itemCount:choices.length,
-      itemBuilder:(ctx,i)=>ListTile(
-       title:WaffraText(choices[i].name),
-       subtitle:choices[i].budget>0?WaffraText(waffraIsEnglish?
-        'Edit existing budget':'تعديل الميزانية الموجودة'):null,
-       onTap:WaffraHaptics.tap(()=>Navigator.pop(ctx,choices[i]))))),
-   ));
+   builder:(ctx)=>StatefulBuilder(builder:(ctx,update){
+    final shown=choices.where((c)=>waffraSearchAny(
+      [c.name,waffraTr(c.name)],query)).toList();
+    return AlertDialog(
+     title:WaffraText(waffraIsEnglish?'Choose category for budget':'اختر قسم الميزانية'),
+     content:SizedBox(width:double.maxFinite,
+      height:min(470.0,MediaQuery.sizeOf(ctx).height*.60),
+      child:Column(children:[
+       TextField(autofocus:true,onChanged:(v)=>update(()=>query=v),
+        decoration:InputDecoration(
+         prefixIcon:const Icon(Icons.search_rounded),
+         hintText:waffraIsEnglish?'Search expense categories':'ابحث في أقسام المصروفات',
+         border:const OutlineInputBorder())),
+       const SizedBox(height:8),
+       Expanded(child:shown.isEmpty?Center(child:WaffraText(
+        waffraIsEnglish?'No matching categories':'لا توجد أقسام مطابقة')):
+        ListView.builder(itemCount:shown.length,
+         itemBuilder:(ctx,i)=>ListTile(
+          title:WaffraText(shown[i].name,maxLines:2),
+          subtitle:shown[i].budget>0?WaffraText(waffraIsEnglish?
+           'Edit existing budget':'تعديل الميزانية الموجودة'):null,
+          onTap:WaffraHaptics.tap(()=>Navigator.pop(ctx,shown[i]))))),
+      ])),
+    );
+   }));
   if(selected==null||!mounted)return;
   await updateCategory(selected);
   if(mounted&&categories.any((c)=>c.id==selected.id&&c.budget>0)){
