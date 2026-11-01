@@ -176,6 +176,17 @@ void main() {
     expect(stillThere.read<String>('scenario_id'), 'saved-plan');
   });
 
+  test('M365 unversioned domain tables block misleading V2 export',
+      () async {
+    await install();
+    await encrypted.customStatement(
+      'DROP TABLE fresh_finance_domain_revision',
+    );
+    await expectLater(exporter().export(password:password),
+      throwsA(isA<StateError>()),
+      reason:'An incomplete SQLCipher domain must not be ignored');
+  });
+
   test('M68 refuses export if source is unverified or feature disabled',
       () async {
     await install();
