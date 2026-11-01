@@ -55,7 +55,7 @@ void main() {
   test('M372: keyboard-sensitive list dialogs share viewport height', () {
     expect(source, contains('media.size.height-media.viewInsets.bottom-'));
     expect(source, contains('waffraKeyboardDialogListHeight(ctx,desired:500)'));
-    expect(source, contains('waffraKeyboardDialogListHeight(ctx,desired:470)'));
+    expect(source, contains("key:const Key('waffra-independent-budget-create')"));
     expect(source, contains('waffraKeyboardDialogListHeight(ctx,desired:360)'));
     expect(source, contains('waffraKeyboardDialogListHeight(ctx,desired:460)'));
   });
