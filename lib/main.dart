@@ -92,6 +92,7 @@ import 'waffra_smooth_confirmation.dart';
 part 'waffra_categories_page.part.dart';
 part 'waffra_smart_analysis.part.dart';
 part 'waffra_recurring_trash.part.dart';
+part 'waffra_goal_recurring_actions.part.dart';
 part 'waffra_deleted_item_card.part.dart';
 part 'waffra_widget_capture.part.dart';
 
@@ -8372,7 +8373,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    if(!await _persistModuleOrReload(WaffraFinanceRoute.goalCreateEditDeleteRestore,
      operation:'goal-create'))return;
    if(g.dueDate!=null){
-    await _ensureLinkedRecurringForGoal(g);
+    await this._ensureLinkedRecurringForGoal(g);
    }
    if(mounted)snackSuccess(context,g.dueDate!=null?
      (waffraIsEnglish?'Goal and linked recurring due date created.':'تم إنشاء الهدف وربط استحقاقه بالمتكررة.'):
@@ -8804,7 +8805,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
          style:const TextStyle(fontSize:12)),
        ])),
        PopupMenuButton<String>(onSelected:WaffraHaptics.selection((v)async {
-        if(v=='delete'){
+        if(v=='edit'){await this.editGoal(g);return;}
+         if(v=='delete'){
          final linked=g.saved>0||entries.any((e)=>e.category==g.name);
          final yes=await confirmDeletion(waffraIsEnglish?'Delete savings goal?':'حذف هدف الادخار',
           waffraGoalDeleteWarning(g.name,linked,waffraIsEnglish));
@@ -8819,7 +8821,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
           }
          }
         }
-       }),itemBuilder:(_)=>[PopupMenuItem(value:'delete',child:WaffraText(waffraIsEnglish?'Delete goal':'حذف الهدف'))]),
+       }),itemBuilder:(_)=>[
+         PopupMenuItem(value:'edit',child:WaffraText(waffraIsEnglish?'Edit goal':'تعديل الهدف')),
+         PopupMenuItem(value:'delete',child:WaffraText(waffraIsEnglish?'Delete goal':'حذف الهدف'))]),
       ]),
       const SizedBox(height:11),
       Row(children:[
