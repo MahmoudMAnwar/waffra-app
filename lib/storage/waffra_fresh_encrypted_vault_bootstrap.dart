@@ -1,5 +1,6 @@
 import 'legacy_snapshot_preflight.dart';
 import 'waffra_encrypted_store.dart';
+import 'waffra_fresh_finance_domain_schema.dart';
 
 /// Conservative eligibility check for a new installation.
 /// Never equate "0 transactions" with "nothing worth preserving".
@@ -214,6 +215,10 @@ ON fresh_finance_entries(occurred_iso)''');
         );
       }
 
+      // Install additive relational finance entities in the same SQLCipher
+      // transaction. This does not activate or silently migrate a device.
+      await WaffraFreshFinanceDomainSchema.install(store);
+
       // A freshly initialized vault must contain NO financial transactions
       // or prior user entities. Reinitialization is idempotent and non-erasing.
       if (existing.isEmpty) {
@@ -226,6 +231,7 @@ ON fresh_finance_entries(occurred_iso)''');
           'fresh_finance_settings',
           'fresh_finance_sms_hashes',
           'fresh_finance_custom_goals',
+          ...WaffraFreshFinanceDomainSchema.domainTables,
         ]) {
           final count = await store.customSelect(
             'SELECT count(*) AS n FROM $table',

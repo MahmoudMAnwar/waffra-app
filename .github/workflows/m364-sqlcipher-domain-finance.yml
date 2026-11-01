@@ -1,0 +1,115 @@
+name: M364 SQLCipher Relational Finance Domain and Atomic Goal Due
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/m364-sqlcipher-domain-finance.yml'
+      - 'lib/storage/waffra_fresh_finance_domain_schema.dart'
+      - 'lib/storage/waffra_fresh_finance_domain_repository.dart'
+      - 'lib/storage/waffra_fresh_saved_features_repository.dart'
+      - 'lib/storage/waffra_finance_domain_legacy_importer.dart'
+      - 'lib/storage/waffra_fresh_encrypted_vault_bootstrap.dart'
+      - 'lib/storage/waffra_encrypted_full_finance_reset.dart'
+      - 'lib/storage/waffra_portable_encrypted_backup_exporter.dart'
+      - 'lib/storage/waffra_finance_domain_supplement.dart'
+      - 'lib/storage/waffra_verified_goal_due_snapshot_writer.dart'
+      - 'test/storage/m365_domain_supplement_roundtrip_test.dart'
+      - 'test/storage/portable_encrypted_backup_exporter_test.dart'
+      - 'test/storage/m364_sqlcipher_finance_domain_test.dart'
+      - 'test/storage/m364_saved_features_storage_test.dart'
+      - 'test/storage/m364_finance_domain_legacy_import_test.dart'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m364-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  encrypted-schema-and-atomic-writer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out EXACT PR commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify commit SHA
+        env:
+          EXPECTED: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED"
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve SQLCipher-enabled dependencies
+        run: flutter pub get
+      - name: Analyze finance schema and writer
+        run: |
+          dart analyze lib/storage/waffra_fresh_finance_domain_schema.dart \
+            lib/storage/waffra_fresh_finance_domain_repository.dart \
+            lib/storage/waffra_fresh_saved_features_repository.dart \
+            lib/storage/waffra_finance_domain_legacy_importer.dart \
+            lib/storage/waffra_fresh_encrypted_vault_bootstrap.dart \
+            lib/storage/waffra_encrypted_full_finance_reset.dart \
+            lib/storage/waffra_portable_encrypted_backup_exporter.dart \
+            lib/storage/waffra_finance_domain_supplement.dart \
+            lib/storage/waffra_verified_goal_due_snapshot_writer.dart \
+            test/storage/m364_sqlcipher_finance_domain_test.dart \
+            test/storage/m364_saved_features_storage_test.dart \
+            test/storage/m364_finance_domain_legacy_import_test.dart \
+            test/storage/portable_encrypted_backup_exporter_test.dart \
+            test/storage/m365_domain_supplement_roundtrip_test.dart
+      - name: Exercise new SQLCipher finance domain and existing baseline
+        run: |
+          flutter test --reporter expanded \
+            test/storage/m364_sqlcipher_finance_domain_test.dart \
+            test/storage/m364_saved_features_storage_test.dart \
+            test/storage/m364_finance_domain_legacy_import_test.dart \
+            test/storage/portable_encrypted_backup_exporter_test.dart \
+            test/storage/m365_domain_supplement_roundtrip_test.dart \
+            test/storage/fresh_encrypted_vault_bootstrap_test.dart \
+            test/storage/fresh_ledger_repository_test.dart \
+            test/storage/m188_encrypted_full_finance_reset_test.dart
+
+  whole-app-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: All existing finance, UI, SMS, OCR and AI unit/widget tests
+        run: flutter test test --reporter expanded
+
+  no-premature-production-activation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Block encrypted cutover until all live writers are proved safe
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          main=Path('lib/main.dart').read_text()
+          release=Path('lib/storage/waffra_production_cutover_release_gate.dart').read_text()
+          schema=Path('lib/storage/waffra_fresh_finance_domain_schema.dart').read_text()
+          writer=Path('lib/storage/waffra_fresh_finance_domain_repository.dart').read_text()
+          assert 'bool get automaticallyActivateSqlCipher => false;' in release
+          assert "'waffra_goals_v24':jsonEncode" in main
+          assert 'fresh_finance_goal_due_settlements' in schema
+          assert 'return store.transaction(() async {' in writer
+          assert 'goal_wallet_minor + current_cash_minor' in schema
+          print('M364 additive schema only; production source switch intentionally blocked.')
+          PY

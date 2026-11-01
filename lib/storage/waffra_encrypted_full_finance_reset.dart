@@ -5,6 +5,7 @@ import 'package:crypto/crypto.dart';
 
 import 'legacy_snapshot_preflight.dart';
 import 'waffra_atomic_finance_snapshot.dart';
+import 'waffra_fresh_finance_domain_schema.dart';
 import 'waffra_encrypted_module_projection_guard.dart';
 import 'waffra_encrypted_receipt_vault.dart';
 import 'waffra_experimental_writer_gate.dart';
@@ -74,6 +75,8 @@ class WaffraEncryptedFullFinanceReset {
     'fresh_finance_custom_goals',
     'fresh_finance_sms_hashes',
     'fresh_finance_settings',
+    'fresh_finance_domain_revision',
+    ...WaffraFreshFinanceDomainSchema.domainTables,
   };
 
   static const _recoveryTables = <String>[
@@ -105,6 +108,15 @@ class WaffraEncryptedFullFinanceReset {
         name.startsWith('fresh_finance_') && !_knownTables.contains(name));
     if (unknown.isNotEmpty) {
       throw StateError('Unknown financial SQL table; reset refused.');
+    }
+    // Domain tables are not yet covered by portable encrypted backup/restore.
+    // The reset must REFUSE to erase old records while leaving referenced
+    // budget/goal/project/subscription/AI history orphaned or unbacked-up.
+    // Once parity covers these rows, implement child-first verified deletion.
+    for (final table in WaffraFreshFinanceDomainSchema.domainTables) {
+      if (found.contains(table) && await _count(table) != 0) {
+        throw StateError('Domain finance data needs verified backup/reset support.');
+      }
     }
     if (!_erasedTables.where((name) =>
         name != 'fresh_finance_receipt_blobs').every(found.contains)) {

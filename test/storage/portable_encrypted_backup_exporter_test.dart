@@ -153,6 +153,40 @@ void main() {
         reason: 'Never silently omit foreign-currency approval from backup');
   });
 
+  test('M364 V2 backup refuses to omit independent SQLCipher domain records',
+      () async {
+    await install();
+    // All domain tables exist after a clean restore, but V2 cannot carry
+    // newly saved scenario/budget/goal-movement rows.
+    await encrypted.customStatement(
+      'INSERT INTO fresh_finance_saved_scenarios '
+      '(scenario_id,kind,name,payload_json,saved_at_iso) '
+      'VALUES (?,?,?,?,?)',
+      ['saved-plan','before_spend','My saved plan','{}',
+       '2026-11-01T12:00:00'],
+    );
+    await expectLater(
+      exporter().export(password: password), throwsA(isA<StateError>()),
+      reason: 'An apparently successful backup must never omit saved features',
+    );
+    final stillThere = await encrypted.customSelect(
+      "SELECT scenario_id FROM fresh_finance_saved_scenarios "
+      "WHERE scenario_id='saved-plan'",
+    ).getSingle();
+    expect(stillThere.read<String>('scenario_id'), 'saved-plan');
+  });
+
+  test('M365 unversioned domain tables block misleading V2 export',
+      () async {
+    await install();
+    await encrypted.customStatement(
+      'DROP TABLE fresh_finance_domain_revision',
+    );
+    await expectLater(exporter().export(password:password),
+      throwsA(isA<StateError>()),
+      reason:'An incomplete SQLCipher domain must not be ignored');
+  });
+
   test('M68 refuses export if source is unverified or feature disabled',
       () async {
     await install();
