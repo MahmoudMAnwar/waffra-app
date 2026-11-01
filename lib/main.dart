@@ -7644,8 +7644,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    currentBalance:balance,variableExpensesSoFar:variableSpent,daysElapsed:now.day,
    daysInMonth:DateTime(now.year,now.month+1,0).day,
    pendingRecurringIncome:pendingIncome,pendingRecurringExpense:pendingExpense);
+  // The old separately-entered monthly cap is legacy-only. Daily allowance
+  // follows the active user-created budgets and their explicitly linked spend.
+  final activeBudgets=categories.where((c)=>
+   !c.income&&c.budget>0&&c.budgetActive).toList();
+  final activeCap=activeBudgets.fold<double>(0,(v,c)=>v+c.budget);
+  final activeIds=activeBudgets.map((c)=>c.id).toSet();
+  final activeBudgetSpent=monthExpenses.where((e)=>
+   e.budgetId!=null&&activeIds.contains(e.budgetId))
+   .fold<double>(0,(v,e)=>v+e.amount);
   final daily=WaffraFinancialInsights.dailyAllowance(
-   monthlyBudget:monthlyBudget,spent:spent,daysRemaining:remaining+1);
+   monthlyBudget:activeCap,spent:activeBudgetSpent,daysRemaining:remaining+1);
   final prev=DateTime(now.year,now.month-1);
   final prevTotal=sum(entries.where((e)=>!e.income&&e.date.year==prev.year&&e.date.month==prev.month),false);
   final delta=WaffraFinancialInsights.comparisonPercent(spent,prevTotal);
@@ -7667,7 +7676,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       cash(projection),Icons.trending_up,emerald)),
      const SizedBox(width:8),
      Expanded(child:_summaryBox(waffraIsEnglish?'Daily spending limit':'الحد اليومي المقترح',
-      monthlyBudgetEnabled&&monthlyBudget>0?cash(daily):(waffraIsEnglish?'Set a budget':'حدد ميزانية'),
+      activeCap>0?cash(daily):(waffraIsEnglish?'Set a budget':'حدد ميزانية'),
       Icons.today_outlined,Colors.deepOrange)),
     ]),
     const SizedBox(height:9),
