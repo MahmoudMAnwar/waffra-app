@@ -265,7 +265,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
      )),
    ],
    ()=>const SizedBox(height:13),
-   ()=>budgetsDirectory(),
+   ()=>this.budgetsDirectory(),
    ()=>const SizedBox(height:13),
    // Compact by default: the three large rows of chips previously pushed
    // the actual category cards below the fold on smaller phones.
