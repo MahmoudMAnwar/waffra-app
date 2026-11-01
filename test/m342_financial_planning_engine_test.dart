@@ -237,4 +237,33 @@ void main() {
   });
  });
 
+
+ group('M342 goal wallet health audit: do not mutate legacy snapshots', () {
+  test('goal allocations are independent of consumer expenses', () {
+   final result=GoalWalletHealthAudit.inspect(300000,[
+    const GoalAmountEvidence('car',500000,100000),
+   ]);
+   expect(result.availableMinor,200000);
+   expect(result.reservedMinor,100000);
+   expect(result.reconciled,isTrue);
+   expect(result.netLedgerMinor,300000);
+  });
+  test('more reserved than ledger cash is a warning, never clamped', () {
+   final result=GoalWalletHealthAudit.inspect(50000,[
+    const GoalAmountEvidence('car',200000,100000),
+   ]);
+   expect(result.availableMinor,-50000);
+   expect(result.issues,contains('goals_exceed_spendable_ledger'));
+  });
+  test('duplicate goal IDs and malformed snapshots are surfaced', () {
+   final result=GoalWalletHealthAudit.inspect(100000,[
+    const GoalAmountEvidence('a',5000,1000),
+    const GoalAmountEvidence('a',5000,1000),
+    const GoalAmountEvidence('b',-10,-20),
+   ]);
+   expect(result.issues,contains('duplicate_or_missing_goal_id'));
+   expect(result.issues,contains('invalid_goal_amount'));
+  });
+ });
+
 }
