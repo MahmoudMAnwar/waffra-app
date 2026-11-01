@@ -308,6 +308,20 @@ abstract final class WaffraSmsCurrencies {
 
   static String? originalAmountPreview(String raw)=>originalAmount(raw)?.formatted;
 
+  /// Pending authorizations, one-time codes and failed notices do not
+  /// represent settled transactions, even when they repeat a card amount.
+  static bool isUnpostedNotice(String raw) => RegExp(
+    r'^\s*(?:Online\s+Pre[-\s]?Auth(?:ori[sz]ation)?|'
+    r'Pre[-\s]?Authori[sz]ation|Authorization\s+Hold|'
+    r'Please\s+use\s+the\s+code|OTP\b|Verification\s+Code|'
+    r'Declined\s+Transaction|Transaction\s+Declined|'
+    r'Failed\s+Transaction|Transaction\s+Failed|'
+    r'Unsuccessful\s+Transaction)\b|'
+    r'^\s*(?:Transaction\s+)?Status\s*[:：]\s*'
+    r'(?:Pending|Declined|Failed|Rejected|Cancelled|Canceled)\b',
+    caseSensitive:false,multiLine:true,
+  ).hasMatch(raw);
+
   /// Separate source-currency totals. Never add AED, SAR, JOD etc. together
   /// or imply that an unresolved amount is zero.
   static ({Map<String,double> totals,int unresolved}) sourceTotals(
@@ -318,6 +332,9 @@ abstract final class WaffraSmsCurrencies {
     final minorTotals=<String,int>{};
     var unresolved=0;
     for(final message in messages){
+      // Exclude non-posted notices entirely, rather than reporting their
+      // quoted amount as spend or as an unresolved financial transaction.
+      if(isUnpostedNotice(message))continue;
       final original=originalAmount(message);
       if(original==null){
         unresolved++;
@@ -357,6 +374,7 @@ abstract final class WaffraSmsCurrencies {
   static WaffraSmsCurrencyBatch summarize(List<String> messages) {
     final counts = <String, int>{};
     for (final message in messages) {
+      if(isUnpostedNotice(message))continue;
       for (final currency in currenciesForMessage(message)) {
         counts[currency] = (counts[currency] ?? 0) + 1;
       }
