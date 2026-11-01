@@ -278,4 +278,18 @@ void main() {
    throwsStateError);
  });
 
+
+ test('M342 user-approved cross-category budget assignment is explicit',(){
+  final budget=NamedBudget('holiday','Holiday travel','travel',
+    20000,DateTime(2026,11,1),DateTime(2026,12,1));
+  final expense=PostedExpense('fuel','car-fuel',7500,DateTime(2026,11,10));
+  expect(()=>NamedBudgetProjector.review([budget],[expense],[
+    const BudgetAllocation('fuel','holiday',7500)]),throwsStateError);
+  final approved=NamedBudgetProjector.review([budget],[expense],[
+    const BudgetAllocation('fuel','holiday',7500,
+      crossCategoryApproved:true)]);
+  expect(approved.positions['holiday']!.usedMinor,7500);
+  expect(approved.unassigned,isEmpty);
+ });
+
 }
