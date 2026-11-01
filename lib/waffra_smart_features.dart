@@ -86,20 +86,48 @@ Map<String,double> waffraCategoryOutflows(Iterable<WaffraSmartEntry> entries,
 
 List<WaffraSmartSubscription> waffraSmartSubscriptions(
  Iterable<WaffraSmartEntry> entries) {
-  final grouped=<String,List<WaffraSmartEntry>>{};
-  for(final e in entries){
-    if(e.income||e.amount<=0||e.title.trim().isEmpty)continue;
-    grouped.putIfAbsent(e.title.trim().toLowerCase(),()=>[]).add(e);
+ // Precision over recall: repeated generic POS notifications, household
+ // shopping, and multiple same-month charges are not evidence of a
+ // subscription. A three-month streak is still only a review suggestion.
+ String key(String title)=>title.trim().toLowerCase()
+   .replaceAll(RegExp(r'\s+'),' ');
+ final grouped=<String,List<WaffraSmartEntry>>{};
+ final generic=RegExp(r'^(?:purchase|payment|pos|mada|transfer|credit|debit|'
+   r'شراء|دفع|مدى|حوالة|تحويل|مصروف)$',caseSensitive:false);
+ for(final e in entries){
+  if(e.income||!e.amount.isFinite||e.amount<=0)continue;
+  final normalized=key(e.title);
+  if(normalized.length<3||generic.hasMatch(normalized)||
+    RegExp(r'\b\d{4,}\b').hasMatch(normalized))continue;
+  grouped.putIfAbsent(normalized,()=>[]).add(e);
+ }
+ final output=<WaffraSmartSubscription>[];
+ for(final group in grouped.values) {
+  // Require three independent, consecutive billing months, one posted
+  // charge per month. Otherwise the relationship remains ambiguous.
+  final byMonth=<int,WaffraSmartEntry>{};
+  var ambiguous=false;
+  for(final item in group){
+   final month=item.date.year*12+item.date.month;
+   if(byMonth.containsKey(month)){ambiguous=true;break;}
+   byMonth[month]=item;
   }
-  final output=<WaffraSmartSubscription>[];
-  for(final group in grouped.values) {
-    final monthly=group.map((e)=>e.date.year*12+e.date.month).toSet();
-    if(monthly.length<2)continue;
-    final avg=group.fold<double>(0,(v,e)=>v+e.amount)/group.length;
-    if(group.any((e)=>(e.amount-avg).abs()>avg*.2))continue;
-    output.add(WaffraSmartSubscription(group.first.title,avg,monthly.length));
-  }
-  return output..sort((a,b)=>b.months.compareTo(a.months));
+  if(ambiguous||byMonth.length<3)continue;
+  final months=byMonth.keys.toList()..sort();
+  if(months.last-months.first!=months.length-1)continue;
+  final charges=[for(final month in months)byMonth[month]!];
+  // Day-of-month can clamp for Feb 28, but cannot wander weeks apart.
+  final chargeDays=[for(final e in charges)math.min(e.date.day,28)];
+  if(chargeDays.reduce(math.max)-chargeDays.reduce(math.min)>8)continue;
+  final amounts=[for(final e in charges)e.amount]..sort();
+  final median=amounts[amounts.length~/2];
+  if(median<=0||charges.any((e)=>(e.amount-median).abs()>median*.15))continue;
+  output.add(WaffraSmartSubscription(
+    charges.first.title,
+    charges.fold<double>(0,(sum,e)=>sum+e.amount)/charges.length,
+    months.length));
+ }
+ return output..sort((a,b)=>b.months.compareTo(a.months));
 }
 
 List<WaffraSmartEntry> waffraPotentialDuplicates(
