@@ -3782,7 +3782,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
     title:WaffraText(waffraIsEnglish?'Choose budgets for expenses':'تسجيل كل مصروف في أي ميزانية؟'),
     content:SizedBox(width:double.maxFinite,
-     height:min(500.0,MediaQuery.sizeOf(ctx).height*.58),
+     height:waffraKeyboardDialogListHeight(ctx,desired:500),
      child:ListView(children:[
       WaffraText(waffraIsEnglish?
        'Nothing is linked automatically. Review each expense before saving.':
@@ -5189,6 +5189,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   String category=initial?.category??'أخرى';
   String? selectedParentId;
   String? selectedBudgetId=initial?.budgetId;
+  int budgetMenuRevision=0; // reset action-only dropdown selections
   {
    // All reviewed transactions, including SMS, must use a real child category.
    final matchingLeaf=categories.where((c)=>c.income==income&&
@@ -5457,7 +5458,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        // Budget and transaction date share one compact, keyboard-safe row.
        Row(children:[
         Expanded(child:DropdownButtonFormField<String>(
-         key:ValueKey('waffra-entry-budget-'+(selectedBudgetId??'unlinked')),
+         key:ValueKey('waffra-entry-budget-'+(selectedBudgetId??'unlinked')+'-$budgetMenuRevision'),
          menuMaxHeight:min(340.0,MediaQuery.sizeOf(sheetContext).height*.48),
          initialValue:categories.any((c)=>!c.income&&c.budget>0&&
           (c.budgetActive||(initial!=null&&initial.budgetId==c.id))&&
@@ -5502,12 +5503,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            if(!sheetContext.mounted)return;
            final b=categories.where((c)=>c.id==id&&!c.income&&
             c.isSubcategory&&c.budget>0&&c.budgetActive).toList();
-           if(b.length==1)update(()=>assignBudgetInsideEditor(b.single.id));
+           update((){
+            budgetMenuRevision++;
+            if(b.length==1)assignBudgetInsideEditor(b.single.id);
+           });
            return;
           }
           if(v=='__manage_budgets__'){
            await showBudgetsDirectorySheet();
-           if(sheetContext.mounted)update((){});
+           if(sheetContext.mounted)update(()=>budgetMenuRevision++);
            return;
           }
           if(sheetContext.mounted)update(
@@ -7478,7 +7482,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       (waffraIsEnglish?'Choose main expense category':'اختر القسم الرئيسي'):
       (waffraIsEnglish?'Choose subcategory':'اختر القسم الفرعي')),
      content:SizedBox(width:double.maxFinite,
-      height:min(470.0,MediaQuery.sizeOf(ctx).height*.60),
+      height:waffraKeyboardDialogListHeight(ctx,desired:470),
       child:Column(children:[
        if(parent!=null)Row(children:[
         IconButton(
@@ -8944,7 +8948,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final parentId=await showWaffraDialog<String>(context:context,
    builder:(ctx)=>AlertDialog(
     title:WaffraText(waffraIsEnglish?'Choose main category':'اختر القسم الرئيسي'),
-    content:SizedBox(width:double.maxFinite,height:min(360.0,MediaQuery.sizeOf(ctx).height*.48),
+    content:SizedBox(width:double.maxFinite,height:waffraKeyboardDialogListHeight(ctx,desired:360),
      child:ListView.builder(itemCount:parents.length,itemBuilder:(ctx,index){
       final parent=parents[index];
       return ListTile(
@@ -10528,7 +10532,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final monthEvents=recurring.where((r)=>r.active&&
     !WaffraRecurringPolicy.dueDate(selected.year,selected.month,r.day).isBefore(DateTime(r.startAt.year,r.startAt.month,r.startAt.day))).toList();
    return AlertDialog(title:WaffraText(waffraIsEnglish?'Financial calendar':'التقويم المالي'),
-    content:SizedBox(width:380,height:min(460.0,MediaQuery.sizeOf(ctx).height*.6),child:Column(children:[
+    content:SizedBox(width:380,height:waffraKeyboardDialogListHeight(ctx,desired:460),child:Column(children:[
      CalendarDatePicker(key:ValueKey('recurring-calendar-'+selected.toIso8601String()),initialDate:selected,firstDate:DateTime(2020),lastDate:DateTime(2100),
       onDateChanged:(date)=>refresh(()=>selected=date)),
      if(!waffraCalendarIsToday(selected))
