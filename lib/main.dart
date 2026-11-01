@@ -2808,7 +2808,7 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
   final waveColor=Theme.of(context).scaffoldBackgroundColor;
   final compare=monthlyChangePercent;
   final validCompare=compare!=null&&compare.isFinite;
-  final comparisonValue=validCompare?compare!:0.0;
+  final comparisonValue=validCompare?compare:0.0;
   return Container(
    key:focusKey,
    color:waveColor,
@@ -4307,7 +4307,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(verified){
    for(var i=0;i<found.length;i++){
     final draft=BankParser.parse(found[i]);
-    final item=ai!.items[i];
+    final item=ai.items[i];
     final evidence=WaffraSmsCurrencies.originalAmount(found[i]);
     final amount=item.amountText==null?null:
       WaffraReceiptOcrParser.amountFromText(item.amountText!);
@@ -5638,7 +5638,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        if(initial?.sourceType=='goal_due'&&
         (WaffraRecurringPolicy.toHalalas(n)!=
          WaffraRecurringPolicy.toHalalas(initial!.amount)||
-         income!=initial!.income)){
+         income!=initial.income)){
         snack(sheetContext,waffraIsEnglish?
          'Goal payment amount/type cannot be changed without reversing the wallet.':
          'مبلغ ونوع استحقاق الهدف ثابتان لحماية رصيد محفظة الهدف.');
@@ -9293,7 +9293,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
              final restored=original.copy(budget:0);
              setState((){
               if(restoreParent!=null){
-               categories.add(restoreParent!.copy(budget:0));
+               categories.add(restoreParent.copy(budget:0));
                deletedCategories.removeWhere((record){
                 final raw=record['category'];
                 return raw is Map&&raw['id']==restoreParent!.id;
