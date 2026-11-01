@@ -5230,6 +5230,68 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         onChanged:WaffraHaptics.selection((v)=>update(
          ()=>selectedBudgetId=v=='unlinked'?null:v)),
        ),
+       Align(alignment:AlignmentDirectional.centerStart,
+        child:TextButton.icon(
+         key:const Key('waffra-entry-search-budgets'),
+         icon:const Icon(Icons.search_rounded,size:17),
+         label:WaffraText(waffraIsEnglish?
+           'Search budgets':'بحث في الميزانيات'),
+         onPressed:WaffraHaptics.tap(()async{
+          final activeBudgets=categories.where((c)=>
+           !c.income&&c.budget>0&&c.budgetActive).toList();
+          String budgetQuery='';
+          final picked=await showWaffraDialog<String>(context:sheetContext,
+           builder:(dialogContext)=>StatefulBuilder(
+            builder:(dialogContext,refresh){
+             final shown=activeBudgets.where((c)=>waffraSearchAny(
+               [c.name,c.displayName,c.budgetLabel??''],budgetQuery))
+              .toList();
+             return AlertDialog(
+              title:WaffraText(waffraIsEnglish?
+               'Find a budget':'ابحث عن ميزانية'),
+              content:SizedBox(width:400,
+               height:min(420.0,MediaQuery.sizeOf(dialogContext).height*.55),
+               child:Column(children:[
+                TextField(
+                 key:const Key('waffra-entry-budget-search-field'),
+                 onChanged:(v)=>refresh(()=>budgetQuery=v),
+                 decoration:InputDecoration(
+                  prefixIcon:const Icon(Icons.search),
+                  hintText:waffraIsEnglish?
+                   'Search active budgets':'ابحث بالاسم أو القسم',
+                  border:const OutlineInputBorder())),
+                const SizedBox(height:8),
+                Expanded(child:shown.isEmpty?
+                 Center(child:WaffraText(waffraIsEnglish?
+                  'No matching budgets':'ما فيه ميزانيات مطابقة')):
+                 ListView.builder(
+                  itemCount:shown.length,itemBuilder:(_,i){
+                   final budget=shown[i];
+                   return ListTile(
+                    dense:true,
+                    title:WaffraText(budget.budgetLabel??budget.name,
+                     maxLines:2),
+                    onTap:WaffraHaptics.tap(()=>
+                     Navigator.pop(dialogContext,budget.id)));
+                  })),
+               ])),
+              actions:[
+               TextButton(
+                onPressed:WaffraHaptics.tap(()=>
+                 Navigator.pop(dialogContext,'unlinked')),
+                child:WaffraText(waffraIsEnglish?
+                 'Leave unassigned':'بدون ربط')),
+               TextButton(
+                onPressed:WaffraHaptics.tap(()=>
+                 Navigator.pop(dialogContext)),
+                child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+              ]);
+            }));
+          if(picked!=null&&sheetContext.mounted){
+           update(()=>selectedBudgetId=picked=='unlinked'?null:picked);
+          }
+         }),
+        )),
        if(selectedBudgetId==null)Padding(
         padding:const EdgeInsets.only(top:5),
         child:WaffraText(waffraIsEnglish?
