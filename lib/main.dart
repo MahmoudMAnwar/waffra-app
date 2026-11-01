@@ -4594,11 +4594,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       // select a main category first, then only its searchable child items.
       InkWell(onTap:WaffraHaptics.tap(()async{
        final picked=await chooseTransactionCategory(ctx,smsMainCategories,
-        activeSmsMains.isEmpty?'':activeSmsMains.first.name);
+        activeSmsMains.isEmpty?'':activeSmsMains.first.name,
+        allowCreate:true,typeIncome:income,parentId:smsParentId);
        if(picked==null||!ctx.mounted)return;
-       final chosen=smsMainCategories.where((c)=>c.name==picked).toList();
-       if(chosen.isEmpty)return;
-       update((){smsParentId=chosen.first.id;category='';});
+       final root=categories.where((c)=>c.name==picked&&
+        c.income==income&&!c.isSubcategory).toList();
+       final leaf=categories.where((c)=>c.name==picked&&
+        c.income==income&&c.isSubcategory).toList();
+       if(root.length==1)update((){
+        smsParentId=root.single.id;
+        category='';
+       });
+       else if(leaf.length==1)update((){
+        smsParentId=leaf.single.parentId;
+        category=leaf.single.name;
+       });
       }),child:InputDecorator(decoration:InputDecoration(
         labelText:waffraIsEnglish?'Main category *':'القسم الرئيسي *',
         errorText:reviewAttempted&&activeSmsMains.isEmpty?waffraRequiredFieldMessage:null,
@@ -4608,13 +4618,26 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         (waffraIsEnglish?'Choose main category':'اختر القسم الرئيسي'):
         activeSmsMains.first.displayName,maxLines:1))),
       const SizedBox(height:12),
-      InkWell(onTap:WaffraHaptics.tap(activeSmsMains.isEmpty?null:()async{
+      InkWell(onTap:WaffraHaptics.tap(()async{
        final picked=await chooseTransactionCategory(ctx,smsSubcategories,
-        category,leafLabels:true);
-       if(picked!=null&&ctx.mounted)update(()=>category=picked);
+        category,leafLabels:true,allowCreate:true,
+        typeIncome:income,parentId:smsParentId);
+       if(picked==null||!ctx.mounted)return;
+       final root=categories.where((c)=>c.name==picked&&
+        c.income==income&&!c.isSubcategory).toList();
+       final leaf=categories.where((c)=>c.name==picked&&
+        c.income==income&&c.isSubcategory).toList();
+       if(root.length==1)update((){
+        smsParentId=root.single.id;
+        category='';
+       });
+       else if(leaf.length==1)update((){
+        smsParentId=leaf.single.parentId;
+        category=leaf.single.name;
+       });
       }),child:InputDecorator(decoration:InputDecoration(
         labelText:waffraIsEnglish?'Subcategory *':'القسم الفرعي *',
-        enabled:activeSmsMains.isNotEmpty,
+        enabled:true,
         errorText:reviewAttempted&&
          !waffraCanAssignManualCategory(available,income,activeSmsParent,category)
          ?waffraRequiredFieldMessage:null,
