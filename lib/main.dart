@@ -48,6 +48,7 @@ import 'waffra_balance_art.dart';
 import 'waffra_validators.dart';
 import 'waffra_financial_insights.dart';
 import 'waffra_goal_budget_forecast.dart';
+import 'waffra_goal_due_policy.dart';
 import 'waffra_reminders.dart';
 import 'waffra_welcome_background.dart';
 import 'currency_converter.dart';
@@ -3528,10 +3529,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final today=DateTime.now();
   for(final r in recurring){
    if(!r.active)continue;
-   // Linked goal obligations are reminders only. Posting automatically would
-   // subtract spending before the earmark is released, counting it twice.
-   if(r.linkedGoalId!=null)continue;
-   final due=WaffraRecurringPolicy.dueDate(today.year,today.month,r.day);
+   // A goal is a one-time obligation. Its immutable original due month
+   // remains the same even when the user returns to the app much later.
+   final isGoalDue=r.linkedGoalId!=null;
+   final linkedGoals=isGoalDue?
+    goals.where((g)=>g.id==r.linkedGoalId&&g.dueDate!=null).toList():
+    <SavingGoal>[];
+   if(isGoalDue&&linkedGoals.length!=1)continue;
+   final due=isGoalDue?
+    DateTime(r.startAt.year,r.startAt.month,r.startAt.day):
+    WaffraRecurringPolicy.dueDate(today.year,today.month,r.day);
+   final goalPreview=isGoalDue?WaffraGoalDueAllocation.allocate(
+    dueAmount:r.amount,goalSaved:linkedGoals.single.saved):null;
    final id=WaffraRecurringPolicy.entryId(r.id,due);
    final postponed=DateTime.tryParse(recurringPostponed[id]??'');
    if(!WaffraRecurringPolicy.isOutstanding(
@@ -3544,7 +3553,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       title:Column(mainAxisSize:MainAxisSize.min,children:[
        const Icon(Icons.event_repeat_rounded,color:emerald,size:34),
        const SizedBox(height:8),
-       WaffraText(waffraIsEnglish?'Recurring payment due':'عملية متكررة مستحقة',
+       WaffraText(isGoalDue?
+        (waffraIsEnglish?'Savings goal payment due':'استحقاق هدف ادخار'):
+        (waffraIsEnglish?'Recurring payment due':'عملية متكررة مستحقة'),
         textAlign:TextAlign.center,
         style:const TextStyle(fontWeight:FontWeight.w800,fontSize:20)),
       ]),
@@ -3565,9 +3576,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          child:Text(dayText(postponed??due))),
        ]),
        const SizedBox(height:15),
-       WaffraText(waffraIsEnglish?
-        'Have you paid, or would you like to postpone?':
-        'هل تم الدفع، أم ترغب في تأجيل الاستحقاق؟',
+       if(goalPreview!=null)...[
+        const SizedBox(height:8),
+        WaffraText(waffraIsEnglish?
+         'Goal wallet: ${cash(goalPreview.fromGoalWallet)} • '
+         'Spendable cash: ${cash(goalPreview.fromCurrentBalance)}':
+         'من محفظة الهدف: ${cash(goalPreview.fromGoalWallet)} • '
+         'من الرصيد الحالي: ${cash(goalPreview.fromCurrentBalance)}',
+         textAlign:TextAlign.center,
+         style:const TextStyle(fontSize:12,color:emerald)),
+        const SizedBox(height:8),
+       ],
+       WaffraText(isGoalDue?
+        (waffraIsEnglish?
+         'Record this goal payment once, or postpone it?':
+         'هل تم دفع استحقاق الهدف؟ أكّد الخصم مرة واحدة أو أجّل الموعد.'):
+        (waffraIsEnglish?
+         'Have you paid, or would you like to postpone?':
+         'هل تم الدفع، أم ترغب في تأجيل الاستحقاق؟'),
         textAlign:TextAlign.center),
       ]),
       actionsAlignment:MainAxisAlignment.center,
@@ -3589,24 +3615,71 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      ));
     if(!mounted)return;
     if(action=='paid'){
-     if(!entries.any((e)=>e.id==id)){
-      setState(()=>entries.insert(0,MoneyEntry(id:id,title:r.title,category:r.category,amount:r.amount,income:r.income,date:DateTime.now())));
-     }
-     recurringPostponed.remove(id);
-     // 'Paid' is a human-confirmed choice; the SQL writer commits both
-     // the deterministic payment and its postponement in one transaction.
-     try {
-      await persist(route:WaffraFinanceRoute.recurringPostingAndPostponement,
-       userConfirmed:true);
-     } catch(error) {
-      // A lost acknowledgement may have committed. Reload the source;
-      // never blindly replay a payment or retain a tentative UI entry.
-      debugPrint('Recurring payment commit could not be confirmed: $error');
-      if(mounted)await _loadFinanceSafely();
-      if(mounted)snack(context,waffraIsEnglish?
-       'Payment not confirmed. Records refreshed; check before retrying.':
-       'لم يتم تأكيد الدفع. تم تحديث البيانات؛ تحقق منها قبل إعادة المحاولة.');
-      return;
+     if(isGoalDue){
+      // The same deterministic recurring ID cannot settle a goal twice.
+      if(entries.any((e)=>e.id==id))continue;
+      final currentGoal=goals.where((g)=>g.id==r.linkedGoalId).toList();
+      final currentSchedule=recurring.where((x)=>x.id==r.id&&x.active).toList();
+      if(currentGoal.length!=1||currentSchedule.length!=1){
+       snack(context,waffraIsEnglish?
+        'Goal or due date changed; refresh before paying.':
+        'الهدف أو موعده اتغير؛ حدّث البيانات قبل تسجيل الدفع.');
+       return;
+      }
+      final allocation=WaffraGoalDueAllocation.allocate(
+       dueAmount:r.amount,goalSaved:currentGoal.single.saved);
+      // Confirmation is financial authority, not simply a reminder.
+      // One transactional snapshot mutates the ledger, goal and schedule.
+      setState((){
+       final goalIndex=goals.indexWhere((g)=>g.id==r.linkedGoalId);
+       final scheduleIndex=recurring.indexWhere((x)=>x.id==r.id);
+       goals[goalIndex]=currentGoal.single.copy(
+        saved:allocation.remainingGoalSavings);
+       recurring[scheduleIndex]=currentSchedule.single.copy(active:false);
+       entries.insert(0,MoneyEntry(
+        id:id,title:r.title,category:r.category,
+        amount:allocation.amount,income:false,date:DateTime.now(),
+        sourceType:'goal_due',
+        notes:waffraIsEnglish?
+         'From goal wallet: ${cash(allocation.fromGoalWallet)}; '
+         'from current balance: ${cash(allocation.fromCurrentBalance)}':
+         'من محفظة الهدف: ${cash(allocation.fromGoalWallet)}؛ '
+         'من الرصيد الحالي: ${cash(allocation.fromCurrentBalance)}'));
+      });
+      try{
+       // Unlike a recurring-only append, a linked goal settlement updates
+       // three projections together. The transaction editor route carries
+       // their atomic SQLCipher snapshot with an unchanged finance baseline.
+       await persist(route:WaffraFinanceRoute.transactionEdit,
+        userConfirmed:true);
+       if(mounted)await syncRecurringReminders();
+      }catch(error){
+       debugPrint('Goal due settlement could not be confirmed: $error');
+       if(mounted)await _loadFinanceSafely();
+       if(mounted)snack(context,waffraIsEnglish?
+        'Goal payment not confirmed. Records refreshed safely.':
+        'لم يتم تأكيد خصم استحقاق الهدف؛ أعدنا تحميل البيانات بأمان.');
+       return;
+      }
+     }else{
+      if(!entries.any((e)=>e.id==id)){
+       setState(()=>entries.insert(0,MoneyEntry(
+        id:id,title:r.title,category:r.category,amount:r.amount,
+        income:r.income,date:DateTime.now())));
+      }
+      recurringPostponed.remove(id);
+      // Normal income adds to cash; normal expenses reduce it.
+      try{
+       await persist(route:WaffraFinanceRoute.recurringPostingAndPostponement,
+        userConfirmed:true);
+      }catch(error){
+       debugPrint('Recurring payment commit could not be confirmed: $error');
+       if(mounted)await _loadFinanceSafely();
+       if(mounted)snack(context,waffraIsEnglish?
+        'Payment not confirmed. Records refreshed; check before retrying.':
+        'لم يتم تأكيد الدفع. تم تحديث البيانات؛ تحقق منها قبل إعادة المحاولة.');
+       return;
+      }
      }
     }else if(action=='postpone'){
      final selected=await waffraPickDateWithToday(english:waffraIsEnglish,context:context,initialDate:today.add(const Duration(days:1)),
