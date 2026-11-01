@@ -60,6 +60,7 @@ import 'waffra_account_deletion.dart';
 import 'diagnostics/waffra_crashlytics_opt_in.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'waffra_category_catalog.dart';
+import 'waffra_category_month_totals.dart';
 import 'waffra_category_rankings.dart';
 import 'waffra_entry_sheet_safe_layout.dart';
 import 'waffra_visible_scroll_behavior.dart';
