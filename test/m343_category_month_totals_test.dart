@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_category_month_totals.dart';
 
@@ -56,4 +57,17 @@ void main() {
   expect(prior.expenses,updated.expenses);
   expect(updated.amountFor(false,'بنزين'),75);
  });
+
+ test('M343 live categories screen uses one month aggregation and lazy factories', () {
+  final live=File('lib/waffra_categories_page.part.dart').readAsStringSync();
+  expect(live,contains('WaffraCategoryMonthTotals.build<MoneyEntry>'));
+  expect(live,contains('final groupRows=<Widget Function()>[]'));
+  expect(live,contains('final pageRows=<Widget Function()>['));
+  expect(live,contains('return ListView.builder('));
+  expect(live,contains('itemBuilder:(context,index)=>pageRows[index]()'));
+  expect(live,isNot(contains('recent.where((e)=>')));
+  expect(live,isNot(contains('entries.where((e)=>e.date.year==now.year')));
+  expect(live,contains('TextFormField(initialValue:categorySearch'));
+ });
+
 }
