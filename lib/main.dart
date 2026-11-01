@@ -47,6 +47,7 @@ import 'waffra_search.dart';
 import 'waffra_balance_art.dart';
 import 'waffra_validators.dart';
 import 'waffra_financial_insights.dart';
+import 'waffra_goal_budget_forecast.dart';
 import 'waffra_reminders.dart';
 import 'waffra_welcome_background.dart';
 import 'currency_converter.dart';
@@ -6862,6 +6863,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final spent=selected==null?sum(monthEntries,false):
    waffraNamedBudgetSpent(entries,categories,selected,today);
   final used=active&&limit>0?(spent/limit).clamp(0.0,1.0):0.0;
+  // Read-only projection. Missing/invalid source amounts must never be
+  // converted or rewritten just to display a forecast.
+  WaffraBudgetPace? pace;
+  if(active&&limit>0){
+   try{
+    pace=WaffraBudgetPace(
+     spentMinor:waffraSarMinorChecked(spent),
+     limitMinor:waffraSarMinorChecked(limit),
+     dayOfPeriod:today.day,
+     daysInPeriod:DateTime(today.year,today.month+1,0).day);
+   }catch(_){/* Hide unverified forecast; ledger is unchanged. */}
+  }
+  final alertAt=selected?.alertPercent??80;
   return Container(
    padding:const EdgeInsets.all(15),
    decoration:BoxDecoration(color:Theme.of(context).cardColor,
@@ -6930,12 +6944,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       Expanded(child:_budgetFigure(spent>limit?(waffraIsEnglish?'Over budget':'التجاوز'):(waffraIsEnglish?'Remaining':'المتبقي'),
        (limit-spent).abs())), 
      ]),
-     if(spent>=limit*.8)Padding(
+     if(spent>=limit*alertAt/100)Padding(
       padding:const EdgeInsets.only(top:10),
       child:WaffraText(waffraIsEnglish?
-       (spent>limit?'Monthly budget exceeded by ${cash(spent-limit)}.':spent==limit?'Monthly budget fully used.':'80% of budget used.'):
-       (spent>limit?'تجاوزت الميزانية الشهرية بمبلغ ${cash(spent-limit)}.':spent==limit?'استهلكت الميزانية الشهرية بالكامل.':'استهلكت 80٪ من الميزانية.'),
+       (spent>limit?'Monthly budget exceeded by ${cash(spent-limit)}.':spent==limit?'Monthly budget fully used.':'Budget warning: ${alertAt}% threshold reached.'):
+       (spent>limit?'تجاوزت الميزانية الشهرية بمبلغ ${cash(spent-limit)}.':spent==limit?'استهلكت الميزانية الشهرية بالكامل.':'تنبيه الميزانية: وصلت إلى حد ${alertAt}٪.'),
        style:const TextStyle(color:Colors.deepOrange,fontSize:13))),
+     if(pace?.projectedOverBudget==true && spent<limit)
+      Padding(padding:const EdgeInsets.only(top:6),
+       child:WaffraText(waffraIsEnglish?
+         'At the current spending pace, this month may exceed the limit.':
+         'حسب متوسط الصرف الحالي، ممكن تتجاوز الميزانية قبل نهاية الشهر.',
+         style:const TextStyle(fontSize:12,color:Colors.deepOrange))),
     ]else Padding(padding:const EdgeInsets.symmetric(vertical:7),
      child:WaffraText(waffraIsEnglish?
       'Set your monthly budget to track spending here.':
@@ -9174,6 +9194,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     const SizedBox(height:10),
    ],
    ...filtered.map((g){
+    int? monthlyRequired;
+    bool overdue=false;
+    if(g.dueDate!=null){
+      try{
+       final forecast=WaffraGoalPlan(
+        targetMinor:waffraSarMinorChecked(g.target),
+        savedMinor:waffraSarMinorChecked(g.saved),
+        today:DateTime.now(),dueDate:g.dueDate!);
+       monthlyRequired=forecast.monthlyRequiredMinor;
+       overdue=forecast.overdue;
+      }catch(_){/* Show no invented target guidance. */}
+    }
     final percent=(g.saved/g.target).clamp(0.0,1.0);
     final shade=goalIcon(g.name)==Icons.flight_takeoff?const Color(0xFF9C56B8):
      goalIcon(g.name)==Icons.directions_car?const Color(0xFF3867D6):emerald;
@@ -9223,6 +9255,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          (waffraIsEnglish?'Due date: ':'تاريخ الاستحقاق: ')+dayText(g.dueDate!),
          style:const TextStyle(fontSize:12,color:emerald))),
        ])),
+      if(monthlyRequired!=null&&monthlyRequired>0)
+       Padding(padding:const EdgeInsets.only(top:7),
+        child:WaffraText(waffraIsEnglish?
+         'To reach your goal on time, plan to save ${cash(monthlyRequired/100)} monthly.':
+         'علشان تحقق هدفك في معاده، خطط لادخار ${cash(monthlyRequired/100)} شهريًا.',
+         style:const TextStyle(fontSize:12,color:emerald))),
+      if(overdue)
+       Padding(padding:const EdgeInsets.only(top:7),
+        child:WaffraText(waffraIsEnglish?
+         'The goal due date has passed. Update it to get a new monthly plan.':
+         'موعد الهدف فات. عدّل التاريخ علشان تحصل على خطة ادخار جديدة.',
+         style:const TextStyle(fontSize:12,color:Colors.deepOrange))),
       const SizedBox(height:11),
       Row(children:[
        WaffraText('${(percent*100).round()}%',style:TextStyle(fontWeight:FontWeight.bold,color:shade)),
