@@ -5,7 +5,8 @@ part of 'main.dart';
 extension WaffraBudgetDirectory on _HomeScreenState {
  Widget budgetsDirectory(){
   final now=DateTime.now();
-  final saved=categories.where((c)=>!c.income&&c.isSubcategory&&c.budget>0).toList();
+  // Preserve the visibility of legacy parent-category budgets on upgrades.
+  final saved=categories.where((c)=>!c.income&&c.budget>0).toList();
   final parents={for(final c in categories.where((c)=>!c.isSubcategory))c.id:c.name};
   final filtered=saved.where((b){
    if(budgetStatusFilter=='active'&&!b.budgetActive)return false;
