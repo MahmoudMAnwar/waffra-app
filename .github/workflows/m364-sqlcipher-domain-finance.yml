@@ -11,6 +11,8 @@ on:
       - 'lib/storage/waffra_finance_domain_legacy_importer.dart'
       - 'lib/storage/waffra_fresh_encrypted_vault_bootstrap.dart'
       - 'lib/storage/waffra_encrypted_full_finance_reset.dart'
+      - 'lib/storage/waffra_portable_encrypted_backup_exporter.dart'
+      - 'test/storage/portable_encrypted_backup_exporter_test.dart'
       - 'test/storage/m364_sqlcipher_finance_domain_test.dart'
       - 'test/storage/m364_saved_features_storage_test.dart'
       - 'test/storage/m364_finance_domain_legacy_import_test.dart'
@@ -51,6 +53,7 @@ jobs:
             lib/storage/waffra_finance_domain_legacy_importer.dart \
             lib/storage/waffra_fresh_encrypted_vault_bootstrap.dart \
             lib/storage/waffra_encrypted_full_finance_reset.dart \
+            lib/storage/waffra_portable_encrypted_backup_exporter.dart \
             test/storage/m364_sqlcipher_finance_domain_test.dart \
             test/storage/m364_saved_features_storage_test.dart \
             test/storage/m364_finance_domain_legacy_import_test.dart
@@ -60,6 +63,7 @@ jobs:
             test/storage/m364_sqlcipher_finance_domain_test.dart \
             test/storage/m364_saved_features_storage_test.dart \
             test/storage/m364_finance_domain_legacy_import_test.dart \
+            test/storage/portable_encrypted_backup_exporter_test.dart \
             test/storage/fresh_encrypted_vault_bootstrap_test.dart \
             test/storage/fresh_ledger_repository_test.dart \
             test/storage/m188_encrypted_full_finance_reset_test.dart
