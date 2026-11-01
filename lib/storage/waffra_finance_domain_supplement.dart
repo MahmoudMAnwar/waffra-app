@@ -62,6 +62,32 @@ class WaffraFinanceDomainSupplement {
     return columns;
   }
 
+  /// Bind every supplemental archive to the exact typed parent finance rows.
+  /// Prevent applying saved budget/goal links to another person's vault even
+  /// when an unrelated account happens to reuse the same category IDs.
+  Future<String> _parentFingerprint() async {
+    const sources = <String, String>{
+      'entries':
+        'SELECT entry_id,amount_minor,is_income,occurred_iso '
+        'FROM fresh_finance_entries ORDER BY entry_id',
+      'categories':
+        'SELECT category_id,name,parent_id,is_income '
+        'FROM fresh_finance_categories ORDER BY category_id',
+      'goals':
+        'SELECT goal_id,target_minor,saved_minor '
+        'FROM fresh_finance_goals ORDER BY goal_id',
+      'recurring':
+        'SELECT recurring_id,amount_minor,is_income,due_day '
+        'FROM fresh_finance_recurring ORDER BY recurring_id',
+    };
+    final parents=<String,Object?>{};
+    for(final entry in sources.entries) {
+      final rows=await store.customSelect(entry.value).get();
+      parents[entry.key]=[for(final row in rows)row.data];
+    }
+    return _digest(parents);
+  }
+
   Future<String> export({
     required String password,
     required bool explicitlyApproved,
@@ -114,6 +140,7 @@ class WaffraFinanceDomainSupplement {
       'format': _format,
       'version': _archiveVersion,
       'domainVersion': WaffraFreshFinanceDomainSchema.version,
+      'parentFingerprint': await _parentFingerprint(),
       'tables': tables,
     };
     final envelope = jsonEncode({...body, 'sha256': _digest(body)});
@@ -150,13 +177,15 @@ class WaffraFinanceDomainSupplement {
     final payload = jsonDecode(clear);
     if (payload is! Map ||
         payload.keys.toSet().difference(
-          {'format', 'version', 'domainVersion', 'tables', 'sha256'},
+          {'format', 'version', 'domainVersion', 'parentFingerprint',
+           'tables', 'sha256'},
         ).isNotEmpty ||
-        payload.length != 5 ||
+        payload.length != 6 ||
         payload['format'] != _format ||
         payload['version'] != _archiveVersion ||
         payload['domainVersion'] != WaffraFreshFinanceDomainSchema.version ||
         payload['sha256'] is! String ||
+        payload['parentFingerprint'] is! String ||
         payload['tables'] is! Map) {
       throw const FormatException('Unrecognized finance-domain supplement.');
     }
@@ -170,10 +199,15 @@ class WaffraFinanceDomainSupplement {
       'format': payload['format'],
       'version': payload['version'],
       'domainVersion': payload['domainVersion'],
+      'parentFingerprint': payload['parentFingerprint'],
       'tables': tables,
     };
     if (_digest(body) != payload['sha256']) {
       throw StateError('Finance-domain backup content checksum mismatch.');
+    }
+
+    if (await _parentFingerprint() != payload['parentFingerprint']) {
+      throw StateError('Encrypted finance parent ledger does not match archive.');
     }
 
     var total = 0;
