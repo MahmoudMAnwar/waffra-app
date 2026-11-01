@@ -2,10 +2,9 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_budget_template_catalog.dart';
-import 'package:waffra/waffra_category_catalog.dart';
 
 void main() {
-  test('M359: 24 optional templates have unique names and real expense leaves', () {
+  test('M359: 24 independent budget templates have unique names without category links', () {
     expect(waffraBudgetStarterTemplates.length, 24);
     final namesAr = <String>{};
     final namesEn = <String>{};
@@ -14,11 +13,8 @@ void main() {
       expect(template.nameEn.trim(), isNotEmpty);
       expect(namesAr.add(template.nameAr), isTrue);
       expect(namesEn.add(template.nameEn), isTrue);
-      final root = waffraCategoryCatalog.singleWhere(
-        (g) => g.id == template.mainCategoryId,
-      );
-      expect(root.income, isFalse);
-      expect(root.subcategories, contains(template.subcategoryAr));
+      expect(template.nameAr, isNot(contains(' / ')));
+      expect(template.nameEn, isNot(contains(' / ')));
     }
   });
 
@@ -27,6 +23,8 @@ void main() {
     expect(source, isNot(contains('MoneyEntry(')));
     expect(source, isNot(contains('monthlyLimit:')));
     expect(source, isNot(contains('budget:')));
+    expect(source, isNot(contains('mainCategoryId')));
+    expect(source, isNot(contains('subcategoryAr')));
   });
 
   test('M359: My Budgets is separate from income/expense category filters', () {
