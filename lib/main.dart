@@ -3656,6 +3656,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        goals[goalIndex]=currentGoal.single.copy(
         saved:allocation.remainingGoalSavings);
        recurring[scheduleIndex]=currentSchedule.single.copy(active:false);
+       recurringPostponed.remove(id);
        entries.insert(0,MoneyEntry(
         id:id,title:r.title,category:r.category,
         amount:allocation.amount,income:false,date:DateTime.now(),
