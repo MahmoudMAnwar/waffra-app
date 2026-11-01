@@ -36,6 +36,27 @@ void main(){
   expect(inspect([record('direction',income:'false')]).issues
    .any((x)=>x.code=='invalid_income_flag'),isTrue);
  });
+ test('M342 valid ISO offsets retain the original ledger calendar day',(){
+  // Parsing as a UTC instant changes the displayed day for these times,
+  // but the serialized source calendar date is still valid.
+  for(final date in <String>[
+    '2026-11-01T00:15:00+03:00',
+    '2026-11-01T23:45:00-03:00',
+    '2026-11-01T00:00:00Z',
+  ]){
+   expect(inspect([record('offset',date:date)]).canStage,isTrue,
+     reason:'Do not reject a valid source date due to timezone shift: $date');
+  }
+  for(final date in <String>[
+    '2026-02-30T00:15:00+03:00',
+    '2026-13-01T23:45:00-03:00',
+  ]){
+   final checked=inspect([record('bad-date',date:date)]);
+   expect(checked.issues.any((x)=>x.code=='invalid_date'),isTrue,
+     reason:'Impossible calendar dates must fail closed: $date');
+  }
+ });
+ 
  test('M337 damaged receipt references cannot pass storage preflight',(){
   final checked=inspect([record('receipt',receiptPath:'["",42]')]);
   expect(checked.issues.any((x)=>x.code=='invalid_receipt_list'),isTrue);
