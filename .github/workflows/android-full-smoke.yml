@@ -711,6 +711,10 @@ jobs:
           fi
           echo "KVM device accessible; x86_64 emulator acceleration is mandatory"
 
+      - name: Verify Android release startup script syntax
+        shell: bash
+        run: bash -n scripts/qa/verify_android_release_startup.sh
+
       - name: Verify Release startup on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -720,40 +724,9 @@ jobs:
           profile: pixel_6
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
           disable-linux-hw-accel: false
-          # android-emulator-runner executes script with /bin/sh, which has no pipefail.
-          # Enter Bash explicitly so all strict-mode checks remain enforced.
-          script: |
-            bash -euo pipefail <<'WAFFRA_SMOKE_BASH'
-            adb install -r build/app/outputs/flutter-apk/app-release.apk
-            # Firebase Google Sign-In build above fixes the app ID to this
-            # exact value. Android 15 may omit newly installed apps from
-            # "pm list packages -3"; package enumeration is not launch proof.
-            PACKAGE=com.waffra.app
-            if ! adb shell pm path "$PACKAGE" | tr -d '\r' | grep -q '^package:'; then
-              echo "::error::Expected Waffra package is not installed: $PACKAGE"
-              adb shell pm list packages -u | grep -i waffra || true
-              adb shell dumpsys package "$PACKAGE" | head -60 || true
-              exit 1
-            fi
-            adb logcat -c
-            adb shell monkey -p "$PACKAGE" -c android.intent.category.LAUNCHER 1
-            sleep 18
-            adb shell pidof "$PACKAGE" || { adb logcat -d -t 350; exit 1; }
-            adb shell uiautomator dump /sdcard/waffra-ui.xml || true
-            adb pull /sdcard/waffra-ui.xml /tmp/waffra-ui.xml || true
-            if [ -f /tmp/waffra-ui.xml ]; then
-              if grep -qE 'تعذر تشغيل وفرة|نسخ تفاصيل الخطأ|Retry' /tmp/waffra-ui.xml; then
-                echo "Startup error UI detected"
-                adb logcat -d -t 350
-                exit 1
-              fi
-            fi
-            if adb logcat -d -t 2000 | grep -E 'NoSuchMethodError.*SharedPreferences|FATAL EXCEPTION|Waffra startup failed:'; then
-              echo "Release startup error detected in Android logs"
-              exit 1
-            fi
-            echo "Release app launched without detected startup exception"
-            WAFFRA_SMOKE_BASH
+          # Runner executes each script line independently with /bin/sh -c.
+          # Invoke our entire strict-mode Bash program as a single command.
+          script: bash -euo pipefail scripts/qa/verify_android_release_startup.sh
 
       - name: Build optimized ARM64 Release APK
         shell: bash
