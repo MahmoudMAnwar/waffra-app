@@ -31,6 +31,14 @@ void main() {
   expect(app,contains("'waffra-month-budget-expand-toggle'"));
  });
 
+ test('M360 bank SMS batch review also permits creating a new budget',(){
+  final app=File('lib/main.dart').readAsStringSync();
+  expect(app,contains("'waffra-entry-create-named-budget'"));
+  expect(app,contains("'waffra-sms-batch-create-budget-'"));
+  expect(app,contains('assigned[n]=id;'));
+  expect(app,contains('choices\n              ..clear()'));
+ });
+
  test('M360 overall budget and allowance are projections of saved budgets',(){
   final app=File('lib/main.dart').readAsStringSync();
   expect(app,contains('final overallLimit=allBudgets.fold<double>'));
