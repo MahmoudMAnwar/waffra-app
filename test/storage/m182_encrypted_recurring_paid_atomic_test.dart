@@ -264,6 +264,73 @@ void main() {
     expect((await snapshot.read()).digest, previous.digest);
   });
 
+  test('M368 linked goal due through real authority is atomic and idempotent',
+      () async {
+    final before = await source();
+    await session.saveChangedFields(
+      baseline: before.encryptedWitness!,
+      changedValues: <String,Object?>{
+        'waffra_goals_v24': jsonEncode([
+          {'id':'goal','name':'Rent goal','target':2500.0,'saved':200.0,
+           'dueDate':'2026-10-24T00:00:00'},
+        ]),
+        'waffra_recurring_v24': jsonEncode([
+          {...recurring,'linkedGoalId':'goal'},
+        ]),
+      },
+    );
+    final fresh = await source();
+    final confirmed = await authority.settleLinkedGoalDue(
+      baseline:fresh,goalId:'goal',recurringId:'rent',
+      dueKey:'rec_rent_2026_10',amountMinor:12550,
+      confirmedAtIso:'2026-10-24T12:00:00',userConfirmed:true,
+    );
+    final ledger=jsonDecode(confirmed.ledgerRaw!) as List;
+    expect(ledger,hasLength(1));
+    expect(ledger.single['sourceType'],'goal_due');
+    final rows=await vault.customSelect(
+      'SELECT count(*) AS n FROM fresh_finance_goal_due_settlements',
+    ).getSingle();
+    expect(rows.read<int>('n'),1);
+    final goals=jsonDecode(
+      confirmed.finance.getString('waffra_goals_v24')!) as List;
+    expect(goals.single['saved'],74.5);
+    final stopped=jsonDecode(
+      confirmed.finance.getString('waffra_recurring_v24')!) as List;
+    expect(stopped.single['active'],false);
+    final again=await authority.settleLinkedGoalDue(
+      baseline:confirmed,goalId:'goal',recurringId:'rent',
+      dueKey:'rec_rent_2026_10',amountMinor:12550,
+      confirmedAtIso:'2026-10-24T12:01:00',userConfirmed:true,
+    );
+    expect(again.ledgerRaw,confirmed.ledgerRaw);
+    expect((await vault.customSelect(
+      'SELECT count(*) AS n FROM fresh_finance_entries',
+    ).getSingle()).read<int>('n'),1);
+  });
+
+  test('M368 stale or unconfirmed linked goal due never changes any money',
+      () async {
+    final before=await source();
+    await expectLater(authority.settleLinkedGoalDue(
+      baseline:before,goalId:'goal',recurringId:'rent',
+      dueKey:'rec_rent_2026_10',amountMinor:12550,
+      confirmedAtIso:'2026-10-24T12:00:00',userConfirmed:false,
+    ),throwsStateError);
+    await session.saveChangedFields(
+      baseline:before.encryptedWitness!,
+      changedValues:const {'waffra_monthly_budget_v1': 500.0},
+    );
+    await expectLater(authority.settleLinkedGoalDue(
+      baseline:before,goalId:'goal',recurringId:'rent',
+      dueKey:'rec_rent_2026_10',amountMinor:12550,
+      confirmedAtIso:'2026-10-24T12:00:00',userConfirmed:true,
+    ),throwsStateError);
+    expect((await vault.customSelect(
+      'SELECT count(*) AS n FROM fresh_finance_entries',
+    ).getSingle()).read<int>('n'),0);
+  });
+
   test('M182 disabled encrypted finance session refuses a payment', () async {
     final witness = await session.loadForDashboardOrWidget();
     final disabled = WaffraEncryptedFinanceSession(bridge: session.bridge);
