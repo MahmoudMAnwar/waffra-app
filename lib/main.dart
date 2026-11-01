@@ -2567,7 +2567,7 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
           key:const Key('waffra-transaction-budget-unlinked-warning'),
           padding:const EdgeInsets.all(11),
           decoration:BoxDecoration(
-           color:Colors.deepOrange.withValues(alpha:dark?.13:.08),
+           color:Colors.deepOrange.withValues(alpha:dark ? 0.13 : 0.08),
            borderRadius:BorderRadius.circular(12),
            border:Border.all(color:Colors.deepOrange.withValues(alpha:.40))),
           child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -5563,7 +5563,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(pendingHash!=null)explicitlyApprovedSmsDuplicate=true;
   }
   final linkedBudget=categories.where((c)=>c.id==result.budgetId&&c.budget>0&&!c.income).toList();
-  final previousSpent=linkedBudget.isEmpty?0:waffraNamedBudgetSpent(
+  final previousSpent=linkedBudget.isEmpty?0.0:waffraNamedBudgetSpent(
     entries.where((e)=>e.id!=result.id),categories,linkedBudget.single,result.date);
   if(pendingHash!=null&&initial==null){
    try{
