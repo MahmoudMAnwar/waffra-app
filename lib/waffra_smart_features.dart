@@ -887,7 +887,8 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
       onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(
        builder:(_)=>WaffraPracticalToolsPage(
         english:widget.english,onNotice:widget.onNotice,
-        goalOverallocated:widget.goals.fold<double>(0,(sum,g)=>sum+g.saved) > balance,
+        goalOverallocated:widget.goals.any((g)=>g.saved>0) &&
+          widget.goals.fold<double>(0,(sum,g)=>sum+g.saved) > balance,
         entries:List<WaffraPracticalEntry>.unmodifiable(
          widget.entries.map((entry)=>WaffraPracticalEntry(
           id:entry.id,title:entry.title,category:entry.category,
