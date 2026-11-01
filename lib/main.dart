@@ -6518,11 +6518,41 @@ Future<void> bulkSmsSheet({String? initialText})async {
      ])));
   }finally{disposeLater([min,max]);}
  }
+ Future<void> chooseBudgetCategory()async{
+  final choices=categories.where((c)=>!c.income).toList();
+  final selected=await showWaffraDialog<BudgetCategory>(context:context,
+   builder:(ctx)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Choose category for budget':'اختر قسم الميزانية'),
+    content:SizedBox(width:double.maxFinite,
+     height:min(470.0,MediaQuery.sizeOf(ctx).height*.60),
+     child:ListView.builder(itemCount:choices.length,
+      itemBuilder:(ctx,i)=>ListTile(
+       title:WaffraText(choices[i].name),
+       subtitle:choices[i].budget>0?WaffraText(waffraIsEnglish?
+        'Edit existing budget':'تعديل الميزانية الموجودة'):null,
+       onTap:WaffraHaptics.tap(()=>Navigator.pop(ctx,choices[i]))))),
+   ));
+  if(selected==null||!mounted)return;
+  await updateCategory(selected);
+  if(mounted&&categories.any((c)=>c.id==selected.id&&c.budget>0)){
+   setState(()=>selectedNamedBudgetCategoryId=selected.id);
+  }
+ }
  Widget monthlyBudgetCard(){
   final today=DateTime.now();
   final monthEntries=entries.where((e)=>e.date.year==today.year&&e.date.month==today.month);
-  final spent=sum(monthEntries,false);
-  final used=monthlyBudgetEnabled&&monthlyBudget>0?(spent/monthlyBudget).clamp(0.0,1.0):0.0;
+  final named=categories.where((c)=>!c.income&&c.budget>0).toList();
+  final selectedRows=named.where((c)=>c.id==selectedNamedBudgetCategoryId).toList();
+  final selected=selectedRows.isEmpty?null:selectedRows.single;
+  final limit=selected?.budget??monthlyBudget;
+  final active=selected!=null||(monthlyBudgetEnabled&&monthlyBudget>0);
+  final relevant=selected==null?<String>{}:<String>{
+   selected.name,
+   ...categories.where((c)=>!selected.isSubcategory&&c.parentId==selected.id).map((c)=>c.name)};
+  final spent=selected==null?sum(monthEntries,false):monthEntries
+   .where((e)=>!e.income&&relevant.contains(e.category))
+   .fold<double>(0,(v,e)=>v+e.amount);
+  final used=active&&limit>0?(spent/limit).clamp(0.0,1.0):0.0;
   return Container(
    padding:const EdgeInsets.all(15),
    decoration:BoxDecoration(color:Theme.of(context).cardColor,
@@ -6536,7 +6566,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
      final budgetLabel=Row(mainAxisSize:MainAxisSize.min,children:[
       const Icon(Icons.donut_large,color:emerald,size:23),
       const SizedBox(width:7),
-      Flexible(child:WaffraText(waffraIsEnglish?'Monthly budget':'الميزانية الشهرية',
+      Flexible(child:WaffraText(selected==null?(waffraIsEnglish?'Monthly budget':'الميزانية الشهرية'):(selected.budgetLabel??'ميزانية '+selected.displayName),
        maxLines:2,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:18))),
      ]);
      final edit=TextButton.icon(
@@ -6544,7 +6574,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       style:TextButton.styleFrom(minimumSize:const Size(0,48),
        padding:const EdgeInsets.symmetric(horizontal:9,vertical:8),
        tapTargetSize:MaterialTapTargetSize.padded),
-      onPressed:WaffraHaptics.tap(editMonthlyBudget),
+      onPressed:WaffraHaptics.tap(()=>selected==null?editMonthlyBudget():updateCategory(selected)),
       icon:const Icon(Icons.edit_outlined,size:17),
       label:WaffraText(waffraIsEnglish?'Edit':'تحديد الميزانية'));
      return compact?Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
@@ -6552,8 +6582,28 @@ Future<void> bulkSmsSheet({String? initialText})async {
       Align(alignment:AlignmentDirectional.centerStart,child:edit),
      ]):Row(children:[Expanded(child:budgetLabel),edit]);
     }),
+    const SizedBox(height:8),
+    DropdownButtonFormField<String>(
+     key:ValueKey('waffra-budget-picker-'+(selected?.id??'all')),
+     initialValue:selected?.id??'all',isExpanded:true,
+     decoration:InputDecoration(labelText:waffraIsEnglish?'Choose budget':'اختر الميزانية',
+      border:const OutlineInputBorder(),
+      contentPadding:const EdgeInsets.symmetric(horizontal:12,vertical:8)),
+     items:[
+      DropdownMenuItem(value:'all',child:WaffraText(waffraIsEnglish?
+       'General monthly budget':'الميزانية الشهرية العامة')),
+      ...named.map((c)=>DropdownMenuItem(value:c.id,
+       child:WaffraText(c.budgetLabel??'ميزانية '+c.displayName,maxLines:1))),
+     ],
+     onChanged:WaffraHaptics.selection((v)=>setState(
+       ()=>selectedNamedBudgetCategoryId=v=='all'?null:v)),
+    ),
+    Align(alignment:AlignmentDirectional.centerStart,child:TextButton.icon(
+      onPressed:WaffraHaptics.tap(chooseBudgetCategory),
+      icon:const Icon(Icons.add,size:17),
+      label:WaffraText(waffraIsEnglish?'Add named budget':'إضافة ميزانية باسم'))),
     const SizedBox(height:7),
-    if(monthlyBudgetEnabled&&monthlyBudget>0)...[
+    if(active&&limit>0)...[
      WaffraText(waffraIsEnglish?
       'Used '+(used*100).toStringAsFixed(0)+'% of your budget':
       'تم إنفاق '+(used*100).toStringAsFixed(0)+'٪ من ميزانيتك',
@@ -6563,19 +6613,19 @@ Future<void> bulkSmsSheet({String? initialText})async {
       child:LinearProgressIndicator(value:used,minHeight:9,
        backgroundColor:emerald.withValues(alpha:0.10),
        valueColor:AlwaysStoppedAnimation<Color>(
-        spent>=monthlyBudget?Colors.deepOrange:emerald))),
+        spent>=limit?Colors.deepOrange:emerald))),
      const SizedBox(height:14),
      Row(children:[
-      Expanded(child:_budgetFigure(waffraIsEnglish?'Budget':'الميزانية',monthlyBudget)),
+      Expanded(child:_budgetFigure(waffraIsEnglish?'Budget':'الميزانية',limit)),
       Expanded(child:_budgetFigure(waffraIsEnglish?'Spent':'المصروف',spent)),
-      Expanded(child:_budgetFigure(spent>monthlyBudget?(waffraIsEnglish?'Over budget':'التجاوز'):(waffraIsEnglish?'Remaining':'المتبقي'),
-       (monthlyBudget-spent).abs())), 
+      Expanded(child:_budgetFigure(spent>limit?(waffraIsEnglish?'Over budget':'التجاوز'):(waffraIsEnglish?'Remaining':'المتبقي'),
+       (limit-spent).abs())), 
      ]),
-     if(spent>=monthlyBudget*.8)Padding(
+     if(spent>=limit*.8)Padding(
       padding:const EdgeInsets.only(top:10),
       child:WaffraText(waffraIsEnglish?
-       (spent>monthlyBudget?'Monthly budget exceeded by ${cash(spent-monthlyBudget)}.':spent==monthlyBudget?'Monthly budget fully used.':'80% of budget used.'):
-       (spent>monthlyBudget?'تجاوزت الميزانية الشهرية بمبلغ ${cash(spent-monthlyBudget)}.':spent==monthlyBudget?'استهلكت الميزانية الشهرية بالكامل.':'استهلكت 80٪ من الميزانية.'),
+       (spent>limit?'Monthly budget exceeded by ${cash(spent-limit)}.':spent==limit?'Monthly budget fully used.':'80% of budget used.'):
+       (spent>limit?'تجاوزت الميزانية الشهرية بمبلغ ${cash(spent-limit)}.':spent==limit?'استهلكت الميزانية الشهرية بالكامل.':'استهلكت 80٪ من الميزانية.'),
        style:const TextStyle(color:Colors.deepOrange,fontSize:13))),
     ]else Padding(padding:const EdgeInsets.symmetric(vertical:7),
      child:WaffraText(waffraIsEnglish?
