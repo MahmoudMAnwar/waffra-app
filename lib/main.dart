@@ -2951,6 +2951,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  String categorySort='default'; // Presentation-only; never rewrites finance categories.
  bool categoryMineOnly=false;
  bool categoryFiltersOpen=false; // Compact category-filter accordion; UI-only state.
+ bool monthlyBudgetDetailsOpen=false; // Monthly budget accordion, presentation only.
   String? forecastCategory;
   int forecastReduction=20;
  bool recurringRemindersEnabled=false;
@@ -7343,6 +7344,28 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:0.04),
      blurRadius:8,offset:const Offset(0,3))]),
    child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    InkWell(
+     key:const Key('waffra-month-budget-expand-toggle'),
+     borderRadius:BorderRadius.circular(12),
+     onTap:WaffraHaptics.tap(()=>setState(()=>(monthlyBudgetDetailsOpen=!monthlyBudgetDetailsOpen))),
+     child:Padding(padding:const EdgeInsets.symmetric(vertical:6),child:Row(children:[
+      const Icon(Icons.donut_large,color:emerald,size:23),
+      const SizedBox(width:9),
+      Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+       WaffraText(waffraIsEnglish?'Monthly budgets':'الميزانيات الشهرية',
+        style:const TextStyle(fontWeight:FontWeight.bold,fontSize:17)),
+       const SizedBox(height:3),
+       WaffraText(selected==null?
+        (waffraIsEnglish?'Overall monthly spending':'إجمالي مصروفات الشهر'):
+        (selected.budgetLabel??'ميزانية '+selected.displayName),
+        maxLines:2,style:const TextStyle(fontSize:12,color:Colors.grey)),
+      ])),
+      Icon(monthlyBudgetDetailsOpen?
+       Icons.keyboard_arrow_up_rounded:Icons.keyboard_arrow_down_rounded,
+       color:emerald,size:26),
+     ]))),
+    if(monthlyBudgetDetailsOpen)...[
+    const SizedBox(height:12),
     LayoutBuilder(builder:(context,box){
      final compact=box.maxWidth<300||
       MediaQuery.textScalerOf(context).scale(16)>22;
@@ -7362,7 +7385,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       onPressed:WaffraHaptics.tap(()=>
        selected==null?editMonthlyBudget():editBudgetForCategory(selected)),
       icon:const Icon(Icons.edit_outlined,size:17),
-      label:WaffraText(waffraIsEnglish?'Edit':'تحديد الميزانية',
+      label:WaffraText(waffraIsEnglish?'Edit budget':'تعديل الميزانية',
        maxLines:2,style:const TextStyle(fontSize:13)));
      final create=TextButton.icon(
       key:const Key('waffra-budget-create-action'),
@@ -7403,6 +7426,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        ()=>selectedNamedBudgetCategoryId=v=='all'?null:v)),
     ),
     if(selected!=null)...[
+     Align(alignment:AlignmentDirectional.centerEnd,child:TextButton.icon(
+      key:const Key('waffra-delete-selected-named-budget'),
+      onPressed:WaffraHaptics.tap(()=>deleteNamedBudget(selected)),
+      icon:const Icon(Icons.delete_outline_rounded,size:18,color:Colors.deepOrange),
+      label:WaffraText(waffraIsEnglish?'Delete budget':'حذف الميزانية',
+       style:const TextStyle(color:Colors.deepOrange)),
+     )),
+     const SizedBox(height:8),
      SwitchListTile.adaptive(
       key:const Key('waffra-named-budget-enabled-switch'),
       contentPadding:EdgeInsets.zero,
@@ -7469,6 +7500,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         'Set your monthly budget to track spending here.':
         'حدّد ميزانية شهرية عشان تتابع مصروفاتك والمتبقي منها.'),
       style:const TextStyle(fontSize:14,color:Colors.grey))),
+    ],
    ]));
  }
  Widget _budgetFigure(String label,double amount)=>Column(
