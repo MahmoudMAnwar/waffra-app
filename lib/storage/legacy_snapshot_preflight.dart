@@ -10,6 +10,7 @@ class WaffraLegacyPreflight {
   static const financeListKeys = <String>[
     'entries',
     'waffra_categories_v24',
+    'waffra_named_budgets_v1',
     'waffra_goals_v24',
     'waffra_recurring_v24',
     'waffra_challenges_v1',
@@ -166,6 +167,20 @@ class WaffraLegacyPreflight {
              (item['budgetLabel'] is! String ||
               (item['budgetLabel'] as String).length > 80)){
             issues.add(WaffraPreflightIssue(key,i,'invalid_budget_label'));
+          }
+        } else if (key == 'waffra_named_budgets_v1') {
+          _checkMoney(issues, key, i, item, 'budget', positive: true);
+          final name = item['name'];
+          if (name is! String || name.trim().isEmpty ||
+              name.runes.length > 80 || item['income'] != false ||
+              item['parentId'] != '') {
+            issues.add(WaffraPreflightIssue(key, i, 'invalid_standalone_budget'));
+          }
+          if (item['budgetActive'] is! bool ||
+              item['alertPercent'] is! int ||
+              (item['alertPercent'] as int) < 1 ||
+              (item['alertPercent'] as int) > 100) {
+            issues.add(WaffraPreflightIssue(key, i, 'invalid_budget_controls'));
           }
         } else if (key == 'waffra_challenges_v1') {
           _checkMoney(issues, key, i, item, 'dailyAmount');
