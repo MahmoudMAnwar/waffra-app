@@ -8938,9 +8938,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final parent=categories.where((c)=>c.id==effectiveParentId).toList();
    return parent.isEmpty?text:'${parent.first.name} / $text';
   }
-  final budget=TextEditingController(text:initial==null||initial.budget==0?'':formatWaffraEditAmount(initial.budget));
-   final budgetName=TextEditingController(text:initial?.budgetLabel??'');
-  String icon=initial?.icon??'category';int color=initial?.color??colors[0];int alertPercent=initial?.alertPercent??80;
+  // Category appearance and hierarchy are independent of budget setup.
+  // Existing legacy limits/labels must survive editing this category.
+  String icon=initial?.icon??'category';int color=initial?.color??colors[0];
   bool attempted=false;
   final result=await showWaffraDialog<BudgetCategory>(context:context,
    builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
@@ -8963,46 +8963,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       onTap:WaffraHaptics.tap(()=>update(()=>color=x)),
       child:CircleAvatar(radius:15,backgroundColor:Color(x),
        child:color==x?const Icon(Icons.check,color:Colors.white,size:17):null))).toList()),
-     if(!(initial?.income??income))...[
-      TextField(controller:budgetName,maxLength:80,
-       decoration:InputDecoration(labelText:waffraIsEnglish?'Budget name (optional)':'اسم الميزانية (اختياري)',
-        hintText:waffraIsEnglish?'Food budget':'ميزانية الأكل',
-        errorText:attempted&&budgetName.text.trim().isNotEmpty&&
-          categories.any((c)=>c.id!=initial?.id&&c.budget>0&&
-            (c.budgetLabel??'ميزانية '+c.displayName).trim().toLowerCase()==
-             budgetName.text.trim().toLowerCase())?
-         (waffraIsEnglish?'Budget name already exists':'اسم الميزانية مستخدم بالفعل'):null,
-        border:const OutlineInputBorder())),
-      const SizedBox(height:8),
-      TextField(controller:budget,onChanged:(_)=>update((){}),
-       keyboardType:const TextInputType.numberWithOptions(decimal:true),inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],decoration:InputDecoration(labelText:waffraTr('ميزانية شهرية (اختياري)'),
-       errorText:attempted?waffraAmountFieldError(budget.text,required:false):null)),
-      const SizedBox(height:10),
-      DropdownButtonFormField<int>(initialValue:alertPercent,
-       decoration:InputDecoration(labelText:waffraTr('ودّك ننبهك عند كم ٪ من الميزانية؟')),
-       items:[50,60,70,75,80,85,90,95,100].map((v)=>DropdownMenuItem(value:v,child:WaffraText('$v٪'))).toList(),
-       onChanged:WaffraHaptics.selection((v){if(v!=null)update(()=>alertPercent=v);})),
-      if(amountOfDisplay(budget.text)!=null)Padding(padding:const EdgeInsets.only(top:8),
-       child:WaffraText('بننبهك عند صرف ${cash(amountOfDisplay(budget.text)!*alertPercent/100)} من ميزانية ${cash(amountOfDisplay(budget.text)!)}')),
-     ],
     ]),
     actions:[
      TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),child:const WaffraText('إلغاء')),
      FilledButton(onPressed:WaffraHaptics.tap((){
       final n=name.text.trim();update(()=>attempted=true);
-      if(budget.text.trim().isNotEmpty&&budgetName.text.trim().isNotEmpty&&
-        categories.any((c)=>c.id!=initial?.id&&c.budget>0&&
-         (c.budgetLabel??'ميزانية '+c.displayName).trim().toLowerCase()==
-           budgetName.text.trim().toLowerCase()))return;
-      if(WaffraValidators.requiredText(n)!=null || WaffraValidators.uniqueCategory(fullName(),
-       categories.where((c)=>c.id!=initial?.id&&c.income==(initial?.income??income)).map((c)=>c.name))!=null ||
-       WaffraValidators.positiveAmount(budget.text,required:false)!=null)return;
+      if(WaffraValidators.requiredText(n)!=null||
+       WaffraValidators.uniqueCategory(fullName(),
+        categories.where((c)=>c.id!=initial?.id&&
+         c.income==(initial?.income??income)).map((c)=>c.name))!=null)return;
       Navigator.pop(ctx,BudgetCategory(id:initial?.id??newId(),name:fullName(),icon:icon,color:color,
-       income:initial?.income??income,parentId:effectiveParentId,budget:budget.text.trim().isEmpty?0:(amountOfDisplay(budget.text)??0),alertPercent:alertPercent,origin:initial?.origin??'user',
-        budgetLabel:budgetName.text.trim().isEmpty?null:budgetName.text.trim()));
+       income:initial?.income??income,parentId:effectiveParentId,
+       budget:initial?.budget??0,alertPercent:initial?.alertPercent??80,
+       budgetActive:initial?.budgetActive??true,
+       origin:initial?.origin??'user',budgetLabel:initial?.budgetLabel));
      }),child:const WaffraText('حفظ')),
     ])));
-  disposeLater([name,budget,budgetName]);return result;
+  disposeLater([name]);return result;
  }
  Future<void> chooseCategoryLevel({required bool income})async{
   final parents=categories.where((c)=>!c.isSubcategory&&c.income==income).toList();
