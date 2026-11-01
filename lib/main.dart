@@ -821,6 +821,17 @@ Future<T?> showWaffraDialog<T>({
   child:builder(dialogContext)),
 );
 
+/// Fit searchable dialogs into the actual viewport after the Android keyboard
+/// opens. Fixed fractions of the *full* screen caused RenderFlex overflow.
+double waffraKeyboardDialogListHeight(BuildContext context,{
+ double desired=490,double reserved=190,
+}){
+ final media=MediaQuery.of(context);
+ final usable=media.size.height-media.viewInsets.bottom-
+  media.padding.top-media.padding.bottom;
+ return min(desired,max(110.0,usable-reserved));
+}
+
 String get waffraRequiredFieldMessage => waffraIsEnglish?'This field is required':'هذا الحقل مطلوب';
 String? waffraTextFieldError(String? raw,{int maxLength=100}) {
  final issue=WaffraValidators.requiredText(raw,maxLength:maxLength);
@@ -5916,14 +5927,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      return AlertDialog(
       title:WaffraText(waffraIsEnglish?'Search categories':'بحث في الأقسام'),
       content:SizedBox(
-       width:360,height:min(490.0,MediaQuery.sizeOf(dialogCtx).height*.62),
+       width:360,height:waffraKeyboardDialogListHeight(dialogCtx),
        child:Column(children:[
-        TextField(autofocus:true,onChanged:(v)=>refresh(()=>query=v),
+        TextField(onChanged:(v)=>refresh(()=>query=v),
          decoration:InputDecoration(
           prefixIcon:const Icon(Icons.search),
           hintText:waffraIsEnglish?'Search…':'اكتب اسم القسم',
           border:const OutlineInputBorder())),
-        if(allowCreate)...[
+        if(allowCreate&&!leafLabels)...[
          const SizedBox(height:6),
          ListTile(
           key:const Key('waffra-inline-create-main-category'),
@@ -5933,6 +5944,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            'New main category':'إضافة قسم رئيسي جديد'),
           onTap:WaffraHaptics.tap(()=>
            Navigator.pop(dialogCtx,createMain))),
+        ],
+        if(allowCreate&&leafLabels)...[
+         const SizedBox(height:6),
          ListTile(
           key:const Key('waffra-inline-create-subcategory'),
           dense:true,
@@ -8930,19 +8944,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   bool attempted=false;
   final result=await showWaffraDialog<BudgetCategory>(context:context,
    builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
-    title:WaffraText(initial!=null?'تعديل القسم':effectiveParentId.isNotEmpty?'قسم فرعي جديد':'قسم جديد'),
-    content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+    scrollable:true,
+    insetPadding:const EdgeInsets.symmetric(horizontal:20,vertical:16),
+    title:WaffraText(initial!=null?'تعديل القسم':effectiveParentId.isNotEmpty?'قسم فرعي جديد':'قسم رئيسي جديد'),
+    content:Column(mainAxisSize:MainAxisSize.min,children:[
      TextField(controller:name,onChanged:(_)=>update((){}),decoration:InputDecoration(
       labelText:waffraIsEnglish?'Category name *':'اسم القسم *',
       errorText:attempted?(
        WaffraValidators.requiredText(name.text)!=null?waffraTextFieldError(name.text):
        WaffraValidators.uniqueCategory(fullName(),categories.where((c)=>c.id!=initial?.id&&c.income==(initial?.income??income)).map((c)=>c.name))!=null?(waffraIsEnglish?'Category already exists':'اسم القسم مستخدم بالفعل'):null):null)),
      const SizedBox(height:12),const WaffraText('اختر أيقونة'),
-     Wrap(spacing:5,children:iconNames.map((x)=>IconButton(
+     Wrap(spacing:8,runSpacing:9,alignment:WrapAlignment.center,children:iconNames.map((x)=>IconButton(
       style:IconButton.styleFrom(backgroundColor:icon==x?emerald.withValues(alpha:.2):null),
       onPressed:WaffraHaptics.tap(()=>update(()=>icon=x)),icon:Icon(categoryIcon(x),color:icon==x?emerald:null))).toList()),
      const WaffraText('اختر لون'),
-     Wrap(spacing:7,children:colors.map((x)=>InkWell(
+     const SizedBox(height:12),
+     Wrap(spacing:12,runSpacing:12,alignment:WrapAlignment.center,children:colors.map((x)=>InkWell(
       onTap:WaffraHaptics.tap(()=>update(()=>color=x)),
       child:CircleAvatar(radius:15,backgroundColor:Color(x),
        child:color==x?const Icon(Icons.check,color:Colors.white,size:17):null))).toList()),
@@ -8968,7 +8985,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       if(amountOfDisplay(budget.text)!=null)Padding(padding:const EdgeInsets.only(top:8),
        child:WaffraText('بننبهك عند صرف ${cash(amountOfDisplay(budget.text)!*alertPercent/100)} من ميزانية ${cash(amountOfDisplay(budget.text)!)}')),
      ],
-    ])),
+    ]),
     actions:[
      TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),child:const WaffraText('إلغاء')),
      FilledButton(onPressed:WaffraHaptics.tap((){
