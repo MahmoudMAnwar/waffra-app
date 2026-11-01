@@ -284,13 +284,33 @@ class Person {
 class BudgetCategory {
  final String id,name,icon,parentId,origin;
  final int color;final bool income;final double budget;final int alertPercent;
- BudgetCategory({required this.id,required this.name,required this.icon,required this.color,required this.income,this.parentId='',this.budget=0,this.alertPercent=80,this.origin='system'});
+ // Optional label for a category-scoped named monthly budget.
+ final String? budgetLabel;
+ BudgetCategory({required this.id,required this.name,required this.icon,required this.color,
+  required this.income,this.parentId='',this.budget=0,this.alertPercent=80,
+  this.origin='system',this.budgetLabel});
  bool get isUserAdded=>origin=='user';
  bool get isSubcategory=>parentId.isNotEmpty;
  String get displayName=>isSubcategory?name.split(' / ').last:name;
- BudgetCategory copy({String? name,String? icon,int? color,double? budget,int? alertPercent,String? parentId})=>BudgetCategory(id:id,name:name??this.name,icon:icon??this.icon,color:color??this.color,income:income,parentId:parentId??this.parentId,budget:budget??this.budget,alertPercent:alertPercent??this.alertPercent,origin:origin);
- Map<String,dynamic> toJson()=>{'id':id,'name':name,'icon':icon,'color':color,'income':income,'parentId':parentId,'budget':budget,'alertPercent':alertPercent,'origin':origin};
- factory BudgetCategory.fromJson(Map<String,dynamic> j)=>BudgetCategory(id:'${j['id']??newId()}',name:'${j['name']??'أخرى'}',icon:'${j['icon']??'category'}',color:(j['color'] as num?)?.toInt()??0xFF087A54,income:j['income']==true,parentId:'${j['parentId']??''}',budget:(j['budget'] as num?)?.toDouble()??0,alertPercent:(j['alertPercent'] as num?)?.toInt()??80,origin:j['origin']=='user'?'user':j['origin']=='detected'?'detected':'system');
+ BudgetCategory copy({String? name,String? icon,int? color,double? budget,
+  int? alertPercent,String? parentId,String? budgetLabel})=>BudgetCategory(
+   id:id,name:name??this.name,icon:icon??this.icon,color:color??this.color,
+   income:income,parentId:parentId??this.parentId,budget:budget??this.budget,
+   alertPercent:alertPercent??this.alertPercent,origin:origin,
+   budgetLabel:budgetLabel??this.budgetLabel);
+ Map<String,dynamic> toJson()=>{'id':id,'name':name,'icon':icon,'color':color,
+  'income':income,'parentId':parentId,'budget':budget,'alertPercent':alertPercent,
+  'origin':origin,if(budgetLabel!=null)'budgetLabel':budgetLabel};
+ factory BudgetCategory.fromJson(Map<String,dynamic> j)=>BudgetCategory(
+  id:'${j['id']??newId()}',name:'${j['name']??'أخرى'}',
+  icon:'${j['icon']??'category'}',color:(j['color'] as num?)?.toInt()??0xFF087A54,
+  income:j['income']==true,parentId:'${j['parentId']??''}',
+  budget:(j['budget'] as num?)?.toDouble()??0,
+  alertPercent:(j['alertPercent'] as num?)?.toInt()??80,
+  origin:j['origin']=='user'?'user':j['origin']=='detected'?'detected':'system',
+  budgetLabel:j['budgetLabel'] is String&&
+    (j['budgetLabel'] as String).trim().isNotEmpty
+    ?(j['budgetLabel'] as String).trim():null);
 }
 /// Manual transactions must target an active child category, never a heading.
 List<BudgetCategory> waffraManualCategoryParents(
@@ -311,11 +331,22 @@ bool waffraCanAssignManualCategory(Iterable<BudgetCategory> values,
 }
 
 class SavingGoal {
- final String id,name;final double target,saved;
- SavingGoal({required this.id,required this.name,required this.target,required this.saved});
- SavingGoal copy({double? saved})=>SavingGoal(id:id,name:name,target:target,saved:saved??this.saved);
- Map<String,dynamic> toJson()=>{'id':id,'name':name,'target':target,'saved':saved};
- factory SavingGoal.fromJson(Map<String,dynamic> j)=>SavingGoal(id:'${j['id']??newId()}',name:'${j['name']??''}',target:(j['target'] as num).toDouble(),saved:(j['saved'] as num?)?.toDouble()??0);
+ final String id,name;
+ final double target,saved;
+ /// A deadline is a reminder, never a new ledger transaction.
+ final DateTime? dueDate;
+ SavingGoal({required this.id,required this.name,required this.target,
+  required this.saved,this.dueDate});
+ SavingGoal copy({String? name,double? target,double? saved,DateTime? dueDate})=>
+  SavingGoal(id:id,name:name??this.name,target:target??this.target,
+   saved:saved??this.saved,dueDate:dueDate??this.dueDate);
+ Map<String,dynamic> toJson()=>{'id':id,'name':name,'target':target,'saved':saved,
+  if(dueDate!=null)'dueDate':dueDate!.toIso8601String()};
+ factory SavingGoal.fromJson(Map<String,dynamic> j)=>SavingGoal(
+  id:'${j['id']??newId()}',name:'${j['name']??''}',
+  target:(j['target'] as num).toDouble(),
+  saved:(j['saved'] as num?)?.toDouble()??0,
+  dueDate:DateTime.tryParse('${j['dueDate']??''}'));
 }
 class SavingChallenge {
  final String id,title;final double dailyAmount;
@@ -340,19 +371,34 @@ class SavingChallenge {
   lastDone:DateTime.tryParse('${json['lastDone']}'));
 }
 class RecurringBill {
- final String id,title,category;final double amount;final bool income;final int day;final bool active;
+ final String id,title,category;
+ final double amount;final bool income;
+ final int day;final bool active;
  final DateTime startAt;
- RecurringBill({required this.id,required this.title,required this.category,required this.amount,required this.income,required this.day,this.active=true,DateTime? startAt}):startAt=startAt??DateTime.now();
- RecurringBill copy({bool? active,int? day,DateTime? startAt})=>RecurringBill(id:id,title:title,category:category,amount:amount,income:income,day:day??this.day,active:active??this.active,startAt:startAt??this.startAt);
- RecurringBill withCategory(String next)=>RecurringBill(
-  id:id,title:title,category:next,amount:amount,income:income,day:day,
-  active:active,startAt:startAt);
- Map<String,dynamic> toJson()=>{'id':id,'title':title,'category':category,'amount':amount,'income':income,'day':day,'active':active,'startAt':startAt.toIso8601String()};
- factory RecurringBill.fromJson(Map<String,dynamic> j)=>RecurringBill(id:'${j['id']??newId()}',
-  title:'${j['title']??''}',category:'${j['category']??'أخرى'}',
+ /// Link to an existing savings goal, without mirroring its saved amount.
+ final String? linkedGoalId;
+ RecurringBill({required this.id,required this.title,required this.category,
+  required this.amount,required this.income,required this.day,this.active=true,
+  DateTime? startAt,this.linkedGoalId}):startAt=startAt??DateTime.now();
+ RecurringBill copy({String? title,String? category,double? amount,bool? active,
+  int? day,DateTime? startAt})=>RecurringBill(id:id,title:title??this.title,
+   category:category??this.category,amount:amount??this.amount,income:income,
+   day:day??this.day,active:active??this.active,
+   startAt:startAt??this.startAt,linkedGoalId:linkedGoalId);
+ RecurringBill withCategory(String next)=>copy(category:next);
+ Map<String,dynamic> toJson()=>{'id':id,'title':title,'category':category,
+  'amount':amount,'income':income,'day':day,'active':active,
+  'startAt':startAt.toIso8601String(),
+  if(linkedGoalId!=null)'linkedGoalId':linkedGoalId};
+ factory RecurringBill.fromJson(Map<String,dynamic> j)=>RecurringBill(
+  id:'${j['id']??newId()}',title:'${j['title']??''}',
+  category:'${j['category']??'أخرى'}',
   amount:(j['amount'] as num).toDouble(),income:j['income']==true,
   day:(j['day'] as num?)?.toInt()??1,active:j['active']!=false,
-  startAt:DateTime.tryParse('${j['startAt']??''}')??DateTime.now());
+  startAt:DateTime.tryParse('${j['startAt']??''}')??DateTime.now(),
+  linkedGoalId:j['linkedGoalId'] is String&&
+    (j['linkedGoalId'] as String).trim().isNotEmpty
+    ?(j['linkedGoalId'] as String).trim():null);
 }
 const iconNames=['restaurant','shopping','car','receipt','health','transfer','salary','home','education','sport','gift','travel','coffee','category'];
 IconData categoryIcon(String n) {
@@ -2753,6 +2799,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  bool _dueDialogShowing=false;
  double monthlyBudget=0;
  bool monthlyBudgetEnabled=false;
+ String? selectedNamedBudgetCategoryId;
  DateTimeRange? transactionsDateRange;
  double? minTransactionAmount,maxTransactionAmount;
  int tab=0,year=DateTime.now().year,month=DateTime.now().month;
