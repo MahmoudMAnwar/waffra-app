@@ -457,6 +457,21 @@ List<BudgetCategory> defaultCategories()=>[
     icon:group.icon,color:colors[group.colorIndex],income:group.income,parentId:group.id),
  ],
 ];
+/// Category-scoped monthly budgets never include income, goals, or
+/// scheduled-but-unpaid recurring items. No money is created by a budget.
+double waffraNamedBudgetSpent(Iterable<MoneyEntry> records,
+ Iterable<BudgetCategory> catalog,BudgetCategory budget,DateTime month){
+ if(budget.income)return 0;
+ final names=<String>{
+  budget.name,
+  if(!budget.isSubcategory)
+   ...catalog.where((c)=>c.parentId==budget.id).map((c)=>c.name),
+ };
+ return records.where((entry)=>!entry.income&&
+   entry.date.year==month.year&&entry.date.month==month.month&&
+   names.contains(entry.category)).fold<double>(0,(sum,e)=>sum+e.amount);
+}
+
 /// Fresh per-paste summary, independent of previous parsing results.
 class WaffraSmsPasteSummary {
  const WaffraSmsPasteSummary(this.detected,this.fresh,this.duplicates,this.excluded);
@@ -6581,12 +6596,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
   final selected=selectedRows.isEmpty?null:selectedRows.single;
   final limit=selected?.budget??monthlyBudget;
   final active=selected!=null||(monthlyBudgetEnabled&&monthlyBudget>0);
-  final relevant=selected==null?<String>{}:<String>{
-   selected.name,
-   ...categories.where((c)=>!selected.isSubcategory&&c.parentId==selected.id).map((c)=>c.name)};
-  final spent=selected==null?sum(monthEntries,false):monthEntries
-   .where((e)=>!e.income&&relevant.contains(e.category))
-   .fold<double>(0,(v,e)=>v+e.amount);
+  final spent=selected==null?sum(monthEntries,false):
+   waffraNamedBudgetSpent(entries,categories,selected,today);
   final used=active&&limit>0?(spent/limit).clamp(0.0,1.0):0.0;
   return Container(
    padding:const EdgeInsets.all(15),
