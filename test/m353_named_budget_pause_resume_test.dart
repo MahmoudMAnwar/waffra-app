@@ -33,6 +33,8 @@ void main(){
    final input=budget().toJson();
    input['budgetActive']='corrupt';
    expect(BudgetCategory.fromJson(input).budgetActive,isFalse);
+   input['budgetActive']=null;
+   expect(BudgetCategory.fromJson(input).budgetActive,isFalse);
   });
   test('pausing is metadata-only and retains historic linked transactions',(){
    final enabled=budget();
@@ -89,7 +91,7 @@ void main(){
  test('M353 all screens gate NEW budget assignment and retain old links',(){
   final home=File('lib/main.dart').readAsStringSync();
   final cats=File('lib/waffra_categories_page.part.dart').readAsStringSync();
-  expect(home,contains('budgetActive:j[\'budgetActive\']==null?true:j[\'budgetActive\']==true'));
+  expect(home,contains('budgetActive:!j.containsKey(\'budgetActive\')||j[\'budgetActive\']==true'));
   expect(home,contains("budgetActive:budgetActive??this.budgetActive"));
   expect(home,contains('Future<void> setNamedBudgetActive('));
   expect(home,contains('operation:\'named-budget-active-toggle\''));
