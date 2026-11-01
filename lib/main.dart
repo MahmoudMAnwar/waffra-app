@@ -6795,9 +6795,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         filled:true,fillColor:Theme.of(ctx).brightness==Brightness.dark?
          const Color(0xFF1E3A31):Colors.white)),
      ]),
-     actions:[
-      TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
-      FilledButton(onPressed:WaffraHaptics.tap((){
+     actionsPadding:const EdgeInsets.fromLTRB(16,4,16,14),
+     actions:[SizedBox(width:double.maxFinite,child:Row(children:[
+      Expanded(child:OutlinedButton(
+       onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
+       child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء',maxLines:1))),
+      const SizedBox(width:12),
+      Expanded(child:FilledButton(onPressed:WaffraHaptics.tap((){
        final v=amountOfDisplay(amount.text);
        final fieldError=waffraMonthlyBudgetSaveError(amount.text);
        if(fieldError!=null||v==null||!v.isFinite||v<=0){
@@ -6806,8 +6810,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         return;
        }
        Navigator.pop(ctx,(enabled:enabled,amount:v));
-      }),child:WaffraText(waffraIsEnglish?'Save':'حفظ')),
-     ],
+      }),child:WaffraText(waffraIsEnglish?'Save':'حفظ',maxLines:1))),
+     ]))],
     ))));
    if(next!=null&&mounted){
     setState((){monthlyBudgetEnabled=next.enabled;monthlyBudget=next.amount;});
