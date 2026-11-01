@@ -3637,6 +3637,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          const SizedBox(height:5),
          DropdownButtonFormField<String>(
           key:ValueKey('waffra-sms-budget-'+n.toString()+'-'+(assigned[n]??'none')),
+          menuMaxHeight:min(340.0,MediaQuery.sizeOf(ctx).height*.48),
           initialValue:assigned[n]??'none',isExpanded:true,
           decoration:InputDecoration(labelText:waffraIsEnglish?'Budget':'الميزانية',
            border:const OutlineInputBorder()),
@@ -5202,6 +5203,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        const SizedBox(height:11),
        DropdownButtonFormField<String>(
         key:ValueKey('waffra-entry-budget-'+(selectedBudgetId??'unlinked')),
+        menuMaxHeight:min(340.0,MediaQuery.sizeOf(sheetContext).height*.48),
         // An existing record may retain its historical paused budget.
         // New records can only select active budgets.
         initialValue:categories.any((c)=>!c.income&&c.budget>0&&
@@ -7277,6 +7279,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     const SizedBox(height:8),
     DropdownButtonFormField<String>(
      key:ValueKey('waffra-budget-picker-'+(selected?.id??'all')),
+     menuMaxHeight:min(340.0,MediaQuery.sizeOf(context).height*.48),
      initialValue:selected?.id??'all',isExpanded:true,
      decoration:InputDecoration(labelText:waffraIsEnglish?'Choose budget':'اختر الميزانية',
       border:const OutlineInputBorder(),
