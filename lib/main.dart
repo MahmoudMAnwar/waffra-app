@@ -2679,11 +2679,13 @@ class WaffraCurrencyAmount extends StatelessWidget {
 class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
  final double balance;
  final bool english;
+ final String? heading;
+ final bool goalWallet;
  final GlobalKey? focusKey;
  final double? monthlyChangePercent;
  final Future<void> Function() refreshVerifiedWidgetBalance;
  const WaffraBalanceHeader({
-  required this.balance,required this.english,this.focusKey,
+  required this.balance,required this.english,this.focusKey,this.heading,this.goalWallet=false,
   required this.refreshVerifiedWidgetBalance,this.monthlyChangePercent,
  });
  @override double get minExtent=>130;
@@ -2700,7 +2702,7 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
    color:waveColor,
    padding:const EdgeInsets.fromLTRB(14,0,14,4),
    child:Container(
-    key:const Key('waffra-approved-emerald-balance-card'),
+    key:Key(goalWallet?'waffra-goal-wallet-balance-card':'waffra-approved-emerald-balance-card'),
     decoration:BoxDecoration(
      borderRadius:BorderRadius.circular(23),
      gradient:const LinearGradient(
@@ -2746,7 +2748,7 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
       Positioned(left:47,right:112,top:14,bottom:45,
        child:Column(mainAxisAlignment:MainAxisAlignment.start,
         crossAxisAlignment:CrossAxisAlignment.center,children:[
-         WaffraText(english?'Total balance':'إجمالي رصيدك',
+         WaffraText(heading??(english?'Available balance':'الرصيد المتاح للصرف'),
           maxLines:1,
           style:const TextStyle(fontSize:14,fontWeight:FontWeight.w600,
            color:Color(0xFFD7F1E5))),
@@ -7219,7 +7221,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       SliverPersistentHeader(
        pinned:false,
        delegate:WaffraBalanceHeader(
-         balance:inc-exp,english:waffraIsEnglish,focusKey:_tourKeys[0],
+         balance:inc-exp-waffraGoalWalletBalance(goals),english:waffraIsEnglish,focusKey:_tourKeys[0],
          monthlyChangePercent:monthChange,
          refreshVerifiedWidgetBalance:_refreshWidget)),
       SliverPadding(padding:const EdgeInsets.fromLTRB(14,10,14,96),
@@ -8722,7 +8724,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           const SizedBox(width:8),
           Expanded(child:WaffraText(waffraIsEnglish
            ?'Savings are added to this goal only. Past transactions stay unchanged.'
-           :'سيتم إضافة المبلغ إلى هذا الهدف فقط، ولن يؤثر على معاملاتك السابقة.',
+           :'يُحجز المبلغ في محفظة الأهداف ويُخصم من رصيدك المتاح دون احتسابه مصروفًا مرتين.',
            style:const TextStyle(fontSize:12))),
          ])),
        ],
@@ -8750,6 +8752,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   );
   disposeLater([amount]);
   if(n!=null&&mounted){
+   if(n>waffraAvailableCash(entries,goals)){
+    snack(context,waffraIsEnglish?
+     'Insufficient available balance to allocate this savings amount.':
+     'الرصيد المتاح للصرف لا يكفي لتحويل المبلغ لمحفظة الأهداف.');
+    return;
+   }
    final achieved=g.saved<g.target&&g.saved+n>=g.target;
    setState((){
     final i=goals.indexWhere((x)=>x.id==g.id);
@@ -8985,6 +8993,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     subtitle:waffraIsEnglish?'Plan your future and follow every milestone':
      'حوّل أحلامك إلى أهداف وتابع تقدّمك خطوة بخطوة.',
     icon:Icons.flag_outlined,titleKey:_tourKeys[6]),
+   SizedBox(height:148,
+    child:WaffraBalanceHeader(
+     balance:waffraGoalWalletBalance(goals),
+     english:waffraIsEnglish,goalWallet:true,
+     heading:waffraIsEnglish?'Goals wallet':'محفظة الأهداف',
+     refreshVerifiedWidgetBalance:_refreshWidget).build(context,0,false)),
+   Padding(padding:const EdgeInsets.symmetric(horizontal:14,vertical:7),
+    child:WaffraText(waffraIsEnglish?
+     'Goals wallet + spendable balance = total recorded net cash. Allocations are not expenses until paid.':
+     'محفظة الأهداف + الرصيد المتاح = إجمالي رصيدك. الادخار حجز للفلوس وليس مصروفًا نهائيًا.',
+     textAlign:TextAlign.center,style:const TextStyle(fontSize:12,color:emerald))),
    const SizedBox(height:13),
    if(goals.isNotEmpty)...[
     Row(children:[
