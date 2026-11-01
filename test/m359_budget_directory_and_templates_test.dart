@@ -37,9 +37,8 @@ void main() {
     expect(source, contains("'waffra-budget-directory-search'"));
     expect(source, contains("budgetStatusFilter=='active'"));
     expect(source, contains("budgetStatusFilter=='inactive'"));
-    expect(source, contains("budgetMainCategoryFilter!='all'"));
-    expect(source, contains("'waffra-budget-directory-category-'"));
-    expect(source, contains("'All main categories'"));
+    expect(source, isNot(contains("budgetMainCategoryFilter!='all'")));
+    expect(source, isNot(contains("'waffra-budget-directory-category-'")));
     expect(source, contains("budgetSort=='spent'"));
     expect(source, contains('waffraSearchAny('));
     expect(source, contains('waffraNamedBudgetSpent('));
@@ -56,10 +55,10 @@ void main() {
     expect(app, contains('final overallLimit=allBudgets.fold<double>'));
     expect(app, contains('final overallSpent=monthEntries.where('));
     expect(app, contains("'الميزانية الشهرية العامة'"));
-    expect(app, contains("'waffra-entry-create-named-budget'"));
+    expect(app, contains("'__create_budget__'"));
     expect(app, contains('final id=await chooseBudgetCategory();'));
-    expect(app, contains('selectedBudgetId=match.single.id;'));
-    expect(app, contains('if(match.length!=1)return;'));
+    expect(app, contains('assignBudgetInsideEditor(b.single.id)'));
+    expect(app, contains('if(b.length==1)assignBudgetInsideEditor'));
     expect(app, contains('if(selected.budget>0){'));
     expect(app, contains('final allBudgets=categories.where((c)=>!c.income&&c.budget>0)'));
   });
