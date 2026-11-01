@@ -7804,7 +7804,13 @@ Future<void> bulkSmsSheet({String? initialText})async {
      if(!(initial?.income??income))...[
       TextField(controller:budgetName,maxLength:80,
        decoration:InputDecoration(labelText:waffraIsEnglish?'Budget name (optional)':'اسم الميزانية (اختياري)',
-        hintText:waffraIsEnglish?'Food budget':'ميزانية الأكل',border:const OutlineInputBorder())),
+        hintText:waffraIsEnglish?'Food budget':'ميزانية الأكل',
+        errorText:attempted&&budgetName.text.trim().isNotEmpty&&
+          categories.any((c)=>c.id!=initial?.id&&c.budget>0&&
+            (c.budgetLabel??'ميزانية '+c.displayName).trim().toLowerCase()==
+             budgetName.text.trim().toLowerCase())?
+         (waffraIsEnglish?'Budget name already exists':'اسم الميزانية مستخدم بالفعل'):null,
+        border:const OutlineInputBorder())),
       const SizedBox(height:8),
       TextField(controller:budget,onChanged:(_)=>update((){}),
        keyboardType:const TextInputType.numberWithOptions(decimal:true),inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],decoration:InputDecoration(labelText:waffraTr('ميزانية شهرية (اختياري)'),
@@ -7822,6 +7828,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
      TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),child:const WaffraText('إلغاء')),
      FilledButton(onPressed:WaffraHaptics.tap((){
       final n=name.text.trim();update(()=>attempted=true);
+      if(budget.text.trim().isNotEmpty&&budgetName.text.trim().isNotEmpty&&
+        categories.any((c)=>c.id!=initial?.id&&c.budget>0&&
+         (c.budgetLabel??'ميزانية '+c.displayName).trim().toLowerCase()==
+           budgetName.text.trim().toLowerCase()))return;
       if(WaffraValidators.requiredText(n)!=null || WaffraValidators.uniqueCategory(fullName(),
        categories.where((c)=>c.id!=initial?.id&&c.income==(initial?.income??income)).map((c)=>c.name))!=null ||
        WaffraValidators.positiveAmount(budget.text,required:false)!=null)return;
