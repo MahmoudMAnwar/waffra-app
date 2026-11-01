@@ -5182,6 +5182,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        selected:{income},onSelectionChanged:WaffraHaptics.selection((v)=>update((){
         income=v.first;
         selectedParentId=null;
+        selectedBudgetId=null;
         category='';
         suggestion=null;
        }))),
@@ -5218,39 +5219,82 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       const SizedBox(height:12),
       ...[
        InkWell(onTap:WaffraHaptics.tap(()async{
-        final picked=await chooseTransactionCategory(sheetContext,mainCategories,
-         selectedMain.isEmpty?'':selectedMain.first.name);
+        final picked=await chooseTransactionCategory(
+         sheetContext,mainCategories,
+         selectedMain.isEmpty?'':selectedMain.first.name,
+         allowCreate:true,typeIncome:income,parentId:selectedParentId,
+         suggested:suggestion);
         if(picked==null||!sheetContext.mounted)return;
-        final found=mainCategories.where((c)=>c.name==picked).toList();
-        if(found.isEmpty)return;
-        update((){
-         if(selectedParentId!=found.first.id){selectedParentId=found.first.id;category='';}
-        });
+        final roots=categories.where((c)=>c.income==income&&
+         !c.isSubcategory&&c.name==picked).toList();
+        final leaves=categories.where((c)=>c.income==income&&
+         c.isSubcategory&&c.name==picked).toList();
+        if(roots.length==1){
+         update((){
+          if(selectedParentId!=roots.single.id){
+           selectedParentId=roots.single.id;
+           category='';
+           selectedBudgetId=null;
+          }
+         });
+        }else if(leaves.length==1){
+         update((){
+          selectedParentId=leaves.single.parentId;
+          category=leaves.single.name;
+          selectedBudgetId=null;
+          suggestion=null;
+         });
+        }
        }),child:InputDecorator(decoration:InputDecoration(
         labelText:waffraIsEnglish?'Main category *':'القسم الرئيسي *',
         errorText:attempted&&selectedMain.isEmpty?waffraRequiredFieldMessage:null,
-        border:const OutlineInputBorder(),suffixIcon:const Icon(Icons.arrow_drop_down_rounded)),
+        border:const OutlineInputBorder(),
+        suffixIcon:const Icon(Icons.arrow_drop_down_rounded)),
         child:WaffraText(selectedMain.isEmpty?
          (waffraIsEnglish?'Choose a main category':'اختر القسم الرئيسي'):
          selectedMain.first.displayName,maxLines:2))),
        const SizedBox(height:10),
-       InkWell(onTap:WaffraHaptics.tap(selectedMain.isEmpty||subcategories.isEmpty?null:()async{
-        final picked=await chooseTransactionCategory(sheetContext,subcategories,
-         selectedSub.isEmpty?'':selectedSub.first.name,leafLabels:true);
-        if(picked!=null&&sheetContext.mounted)update(()=>category=picked);
+       InkWell(onTap:WaffraHaptics.tap(()async{
+        final picked=await chooseTransactionCategory(
+         sheetContext,subcategories,
+         selectedSub.isEmpty?'':selectedSub.first.name,
+         leafLabels:true,allowCreate:true,typeIncome:income,
+         parentId:selectedParentId,suggested:suggestion);
+        if(picked==null||!sheetContext.mounted)return;
+        final leaves=categories.where((c)=>c.income==income&&
+         c.isSubcategory&&c.name==picked).toList();
+        final roots=categories.where((c)=>c.income==income&&
+         !c.isSubcategory&&c.name==picked).toList();
+        if(leaves.length==1){
+         update((){
+          if(category!=leaves.single.name){
+           category=leaves.single.name;
+           selectedBudgetId=null;
+          }
+          selectedParentId=leaves.single.parentId;
+          suggestion=null;
+         });
+        }else if(roots.length==1){
+         update((){
+          selectedParentId=roots.single.id;
+          category='';
+          selectedBudgetId=null;
+         });
+        }
        }),child:InputDecorator(decoration:InputDecoration(
         labelText:waffraIsEnglish?'Subcategory *':'القسم الفرعي *',
-        enabled:selectedMain.isNotEmpty,
         errorText:attempted&&selectedSub.isEmpty?waffraRequiredFieldMessage:null,
-        border:const OutlineInputBorder(),suffixIcon:const Icon(Icons.arrow_drop_down_rounded)),
+        border:const OutlineInputBorder(),
+        suffixIcon:const Icon(Icons.arrow_drop_down_rounded)),
         child:WaffraText(selectedSub.isEmpty?
-         (waffraIsEnglish?'Choose a subcategory':'اختر القسم الفرعي'):
+         (waffraIsEnglish?'Choose or create a subcategory':'اختر أو أضف قسمًا فرعيًا'):
          selectedSub.first.displayName,maxLines:2))),
        if(selectedMain.isNotEmpty&&subcategories.isEmpty)
         Padding(padding:const EdgeInsets.only(top:7),child:WaffraText(
-         waffraIsEnglish?'No subcategories yet. Add one below first.':
-         'لا توجد أقسام فرعية هنا، أضف قسمًا فرعيًا أولًا.',
-         style:const TextStyle(color:Colors.redAccent,fontSize:12))),
+         waffraIsEnglish?
+          'No subcategories yet. Open the list to add one.':
+          'لا توجد أقسام فرعية؛ افتح القائمة لإضافة قسم.',
+         style:const TextStyle(color:Colors.deepOrange,fontSize:12))),
       ],
       if(!income)...[
        if(budgetSuggestions.isNotEmpty)Padding(
@@ -5298,7 +5342,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          key:const Key('waffra-entry-search-budgets'),
          icon:const Icon(Icons.search_rounded,size:17),
          label:WaffraText(waffraIsEnglish?
-           'Search budgets':'بحث في الميزانيات'),
+           'Select budget':'تحديد الميزانية'),
          onPressed:WaffraHaptics.tap(()async{
           final activeBudgets=categories.where((c)=>
            !c.income&&c.budget>0&&c.budgetActive).toList();
@@ -5383,85 +5427,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          'هذه العملية غير مرتبطة بميزانية؛ تقدر تربطها لاحقًا.',
          style:const TextStyle(color:Colors.deepOrange,fontSize:11))),
       ],
-      if(sms&&suggestion!=null)TextButton.icon(onPressed:WaffraHaptics.tap(()async {
-       final mainId=selectedMain.isEmpty?null:selectedMain.first.id;
-       if(mainId==null){
-        snack(sheetContext,waffraIsEnglish?
-         'Select a main category before adding a subcategory.':
-         'اختر القسم الرئيسي أولًا قبل إضافة قسم فرعي.');
-        return;
-       }
-       final c=await categoryDialog(income:income,parentId:mainId,
-        suggested:suggestion);
-       if(c!=null&&mounted&&sheetContext.mounted){
-        if(WaffraValidators.uniqueCategory(c.name,
-         categories.where((x)=>x.income==c.income).map((x)=>x.name))=='duplicate'){
-         snack(sheetContext,waffraIsEnglish?'Category already exists':'القسم موجود بالفعل');
-         return;
-        }
-        setState(()=>categories.add(c));
-        if(!await _persistModuleOrReload(
-         WaffraFinanceRoute.categoryCreateEditDeleteRestore,
-         operation:'bank-category-suggestion'))return;
-        if(sheetContext.mounted)update((){selectedParentId=mainId;category=c.name;suggestion=null;});
-       }
-      }),icon:const Icon(Icons.add),label:WaffraText('إضافة قسم $suggestion')),
-      if(sms)OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async {
-       final mainId=selectedMain.isEmpty?null:selectedMain.first.id;
-       if(mainId==null){
-        snack(sheetContext,waffraIsEnglish?
-         'Select a main category first.':'اختر القسم الرئيسي أولًا.');
-        return;
-       }
-       final c=await categoryDialog(income:income,parentId:mainId);
-       if(c!=null&&mounted&&sheetContext.mounted){
-        if(WaffraValidators.uniqueCategory(c.name,
-         categories.where((x)=>x.income==c.income).map((x)=>x.name))=='duplicate'){
-         snack(sheetContext,waffraIsEnglish?'Category already exists':'القسم موجود بالفعل');
-         return;
-        }
-        setState(()=>categories.add(c));
-        if(!await _persistModuleOrReload(
-         WaffraFinanceRoute.categoryCreateEditDeleteRestore,
-         operation:'bank-new-category'))return;
-        if(sheetContext.mounted)update((){selectedParentId=mainId;category=c.name;});
-       }
-      }),icon:const Icon(Icons.add),label:const WaffraText('قسم فرعي جديد'))
-      else if(selectedMain.isNotEmpty)LayoutBuilder(builder:(ctx,box){
-        final newCategory=OutlinedButton.icon(
-         key:const Key('waffra-entry-new-subcategory'),
-         onPressed:WaffraHaptics.tap(()async {
-          final mainId=selectedMain.first.id;
-          final c=await categoryDialog(income:income,parentId:mainId);
-          if(c!=null&&mounted&&sheetContext.mounted){
-           if(WaffraValidators.uniqueCategory(c.name,
-            categories.where((x)=>x.income==c.income).map((x)=>x.name))=='duplicate'){
-            snack(sheetContext,waffraIsEnglish?'Category already exists':'القسم موجود بالفعل');
-            return;
-           }
-           setState(()=>categories.add(c));
-           if(!await _persistModuleOrReload(
-            WaffraFinanceRoute.categoryCreateEditDeleteRestore,
-            operation:'manual-new-subcategory'))return;
-           if(sheetContext.mounted)update(()=>category=c.name);
-          }
-
-         }),icon:const Icon(Icons.add,size:19),
-         label:WaffraText(waffraIsEnglish?'New subcategory':'قسم فرعي جديد',maxLines:1));
-        final stacked=box.maxWidth<360||
-         MediaQuery.textScalerOf(ctx).scale(14)>20;
-        return Padding(padding:const EdgeInsets.only(top:12,bottom:12),
-         child:stacked
-          ?Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-            newCategory,const SizedBox(height:12),dateAction()])
-          :Row(children:[
-            Expanded(child:newCategory),const SizedBox(width:12),
-            Expanded(child:dateAction())]));
-       }),
-       if(sms||selectedMain.isEmpty)Padding(
-        padding:const EdgeInsets.symmetric(vertical:12),
-        child:Align(alignment:AlignmentDirectional.centerStart,child:dateAction())),
-       const SizedBox(height:12),
+      Padding(padding:const EdgeInsets.symmetric(vertical:12),
+       child:Align(alignment:AlignmentDirectional.centerStart,
+        child:dateAction())),
+      const SizedBox(height:12),
       Row(children:[
        Expanded(child:OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async{
         // The native camera permission is requested only when this action
