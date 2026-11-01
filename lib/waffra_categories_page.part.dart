@@ -65,6 +65,16 @@ extension WaffraCategoryScreen on _HomeScreenState {
   final sorted=waffraRankCategoryRoots<BudgetCategory>(shown,
    mode:categorySort,label:(c)=>waffraTr(c.name),
    isIncome:(c)=>c.income,monthlyTotal:monthlyFor);
+  final filterLabels=<String>[
+   if(categoryTypeFilter=='income')(waffraIsEnglish?'Income':'الدخل'),
+   if(categoryTypeFilter=='expense')(waffraIsEnglish?'Expenses':'المصروفات'),
+   if(categoryDisplay=='budget')(waffraIsEnglish?'Budgeted':'بميزانية'),
+   if(categoryDisplay=='none')(waffraIsEnglish?'No budget':'بدون ميزانية'),
+   if(categorySort=='income')(waffraIsEnglish?'Highest income':'الأكثر دخلًا'),
+   if(categorySort=='spent')(waffraIsEnglish?'Highest expenses':'الأكثر مصروفًا'),
+   if(categorySort=='alpha')(waffraIsEnglish?'A–Z':'أبجديًا'),
+   if(categoryMineOnly)(waffraIsEnglish?'Added by me':'مضاف بواسطتي'),
+  ];
 
   Widget rootCard(BudgetCategory root){
    final color=Color(root.color);
@@ -248,26 +258,9 @@ extension WaffraCategoryScreen on _HomeScreenState {
      childrenPadding:const EdgeInsets.fromLTRB(12,0,12,12),
      title:WaffraText(waffraIsEnglish?'Filter & sort':'الفلترة والترتيب',
       style:const TextStyle(fontWeight:FontWeight.bold)),
-     subtitle:WaffraText([
-      if(categoryTypeFilter=='income')(waffraIsEnglish?'Income':'الدخل'),
-      if(categoryTypeFilter=='expense')(waffraIsEnglish?'Expenses':'المصروفات'),
-      if(categoryDisplay=='budget')(waffraIsEnglish?'Budgeted':'بميزانية'),
-      if(categoryDisplay=='none')(waffraIsEnglish?'No budget':'بدون ميزانية'),
-      if(categorySort=='income')(waffraIsEnglish?'Highest income':'الأكثر دخلًا'),
-      if(categorySort=='spent')(waffraIsEnglish?'Highest expense':'الأكثر مصروفًا'),
-      if(categorySort=='alpha')(waffraIsEnglish?'A–Z':'أبجديًا'),
-      if(categoryMineOnly)(waffraIsEnglish?'Added by me':'مضاف بواسطتي'),
-     ].isEmpty?(waffraIsEnglish?'All categories • All budgets':
-      'كل الأقسام • كل الميزانيات'):[
-      if(categoryTypeFilter=='income')(waffraIsEnglish?'Income':'الدخل'),
-      if(categoryTypeFilter=='expense')(waffraIsEnglish?'Expenses':'المصروفات'),
-      if(categoryDisplay=='budget')(waffraIsEnglish?'Budgeted':'بميزانية'),
-      if(categoryDisplay=='none')(waffraIsEnglish?'No budget':'بدون ميزانية'),
-      if(categorySort=='income')(waffraIsEnglish?'Highest income':'الأكثر دخلًا'),
-      if(categorySort=='spent')(waffraIsEnglish?'Highest expense':'الأكثر مصروفًا'),
-      if(categorySort=='alpha')(waffraIsEnglish?'A–Z':'أبجديًا'),
-      if(categoryMineOnly)(waffraIsEnglish?'Added by me':'مضاف بواسطتي'),
-     ].join(' • '),
+     subtitle:WaffraText(filterLabels.isEmpty?
+       (waffraIsEnglish?'All categories • All budgets':
+         'كل الأقسام • كل الميزانيات'):filterLabels.join(' • '),
       maxLines:2,style:TextStyle(fontSize:11,color:Theme.of(context).hintColor)),
      children:[
       LayoutBuilder(builder:(ctx,layout){
