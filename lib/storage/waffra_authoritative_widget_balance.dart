@@ -34,7 +34,20 @@ class WaffraAuthoritativeWidgetBalance {
         throw StateError('Widget balance amount violates ledger precision.');
       }
       final halalas = WaffraRecurringPolicy.toHalalas(value);
-      net += record['income'] == true ? halalas : -halalas;
+      final attributed = record['goalWalletPaidMinor'];
+      var walletMinor = 0;
+      if (attributed != null) {
+        if (record['sourceType'] != 'goal_due' ||
+            record['income'] != false ||
+            attributed is! int ||
+            attributed < 0 || attributed > halalas) {
+          // No guess from free-text notes. Missing or forged transfer metadata
+          // must never make the Android Widget show a fabricated cash balance.
+          throw StateError('Goal due wallet allocation is invalid.');
+        }
+        walletMinor = attributed;
+      }
+      net += record['income'] == true ? halalas : -halalas + walletMinor;
       if (net.abs() > 9000000000000000) {
         throw StateError('Widget balance total exceeds safe precision.');
       }
