@@ -234,29 +234,39 @@ String? waffraEncodeReceipts(List<String> paths)=>
 class MoneyEntry {
  final String id,title,category;final double amount;final bool income;final DateTime date;
  final String? receiptPath;
+ /// Explicitly chosen budget category ID. Null means not assigned.
+ final String? budgetId;
  /// Internal merchant identifier is a merchant *name*, never a bank/card ID.
  final String notes,sourceType,merchantKey;
  MoneyEntry({required this.id,required this.title,required this.category,required this.amount,
   required this.income,required this.date,this.receiptPath,this.notes='',
-  this.sourceType='manual',this.merchantKey=''});
+  this.sourceType='manual',this.merchantKey='',this.budgetId});
  Map<String,dynamic> toJson()=>{'id':id,'title':title,'category':category,
   'amount':amount,'income':income,'date':date.toIso8601String(),
   'receiptPath':receiptPath,'notes':notes,'sourceType':sourceType,
-  'merchantKey':merchantKey};
+  'merchantKey':merchantKey,if(budgetId!=null)'budgetId':budgetId};
  factory MoneyEntry.fromJson(Map<String,dynamic> j)=>MoneyEntry(
   id:'${j['id']??newId()}',title:'${j['title']??''}',
   category:'${j['category']??'أخرى'}',amount:(j['amount'] as num).toDouble(),
   income:j['income']==true,date:DateTime.tryParse('${j['date']}')??DateTime.now(),
   receiptPath:j['receiptPath']?.toString(),
   notes:'${j['notes']??''}',sourceType:'${j['sourceType']??'legacy'}',
-  merchantKey:'${j['merchantKey']??''}');
+  merchantKey:'${j['merchantKey']??''}',
+  budgetId:j['budgetId'] is String&&((j['budgetId'] as String).trim().isNotEmpty)?
+   j['budgetId'] as String:null);
  /// Category rename is metadata-only; protect SMS notes, source identity,
  /// merchant key, original timestamp and receipt references.
  MoneyEntry withCategory(String next)=>MoneyEntry(
   id:id,title:title,category:next,amount:amount,income:income,date:date,
   receiptPath:receiptPath,notes:notes,sourceType:sourceType,
-  merchantKey:merchantKey);
+  merchantKey:merchantKey,budgetId:budgetId);
+ /// Reassigning a budget must not mutate the amount, date, SMS, merchant or receipt.
+ MoneyEntry withBudget(String? budget)=>MoneyEntry(
+  id:id,title:title,category:category,amount:amount,income:income,
+  date:date,receiptPath:receiptPath,notes:notes,
+  sourceType:sourceType,merchantKey:merchantKey,budgetId:income?null:budget);
 }
+
 
 /// Flag historical imported placeholders that may already have been
 /// entered as SAR despite an unverified foreign bank currency. This is
@@ -459,18 +469,21 @@ List<BudgetCategory> defaultCategories()=>[
 ];
 /// Category-scoped monthly budgets never include income, goals, or
 /// scheduled-but-unpaid recurring items. No money is created by a budget.
+/// Only explicitly budget-linked expense records contribute to a named budget.
+/// Legacy transactions are unassigned until the user opts into retrospective linking.
 double waffraNamedBudgetSpent(Iterable<MoneyEntry> records,
  Iterable<BudgetCategory> catalog,BudgetCategory budget,DateTime month){
  if(budget.income)return 0;
- final names=<String>{
-  budget.name,
-  if(!budget.isSubcategory)
-   ...catalog.where((c)=>c.parentId==budget.id).map((c)=>c.name),
- };
- return records.where((entry)=>!entry.income&&
-   entry.date.year==month.year&&entry.date.month==month.month&&
-   names.contains(entry.category)).fold<double>(0,(sum,e)=>sum+e.amount);
+ return records.where((e)=>!e.income&&e.budgetId==budget.id&&
+  e.date.year==month.year&&e.date.month==month.month)
+  .fold<double>(0,(sum,e)=>sum+e.amount);
 }
+/// Earmarked goal savings reduce available cash, not total net worth.
+double waffraGoalWalletBalance(Iterable<SavingGoal> goals)=>
+ goals.fold<double>(0,(sum,g)=>sum+g.saved);
+double waffraAvailableCash(Iterable<MoneyEntry> ledger,Iterable<SavingGoal> goals)=>
+ ledger.fold<double>(0,(total,e)=>total+(e.income?e.amount:-e.amount))-
+ waffraGoalWalletBalance(goals);
 
 /// Fresh per-paste summary, independent of previous parsing results.
 class WaffraSmsPasteSummary {
