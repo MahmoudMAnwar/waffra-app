@@ -10,9 +10,9 @@ void main() {
  setUp(()=>waffraLanguage.value='ar');
  tearDown(()=>waffraLanguage.value='ar');
 
- test('M148: all 79 built-in roots and 973 subcategories have English names',(){
+ test('M148: all 79 built-in roots and 975 subcategories have English names',(){
   expect(waffraCategoryCatalog.length,79);
-  expect(waffraCategoryCatalog.fold<int>(0,(n,g)=>n+g.subcategories.length),973);
+  expect(waffraCategoryCatalog.fold<int>(0,(n,g)=>n+g.subcategories.length),975);
   expect(waffraEnglishCategoryCatalogComplete,isTrue);
   // Existing catalog intentionally has some same-named leaves under
   // different parents. New proposals were checked against all originals.
@@ -39,9 +39,10 @@ void main() {
 
  test('M148: guarded catalog installer explicitly supports v4 upgrade',(){
   final legacy=File('lib/storage/waffra_home_finance_persistence.dart').readAsStringSync();
-  expect(legacy,contains('version != 2 && version != 3 && version != 4'));
+  expect(legacy,contains('version != 2 && version != 3 && version != 4 && version != 5'));
   final ui=File('lib/main.dart').readAsStringSync();
   expect(ui,contains('waffra_category_catalog_v4_installed'));
+  expect(ui,contains('waffra_category_catalog_v5_installed'));
   expect(ui,contains('version:4'));
   expect(ui,contains('removedNames.contains'));
  });

@@ -45,7 +45,7 @@ void main(){
    await tester.pumpAndSettle();
    expect(find.byKey(const Key('waffra-approved-emerald-balance-card')),findsOneWidget);
    expect(find.byType(WaffraBalanceIllustration),findsOneWidget);
-   expect(find.text('إجمالي رصيدك'),findsWidgets);
+   expect(find.text('الرصيد المتاح للصرف'),findsWidgets);
    expect(find.byIcon(Icons.visibility_outlined),findsOneWidget);
    expect(find.byKey(const Key('waffra-balance-month-comparison')),findsOneWidget);
    expect(find.text('+13%'),findsOneWidget);
@@ -68,7 +68,7 @@ void main(){
      balance:300,english:true,refreshVerifiedWidgetBalance:()async{})),
     const SliverToBoxAdapter(child:SizedBox(height:700)),
    ]))));
-  expect(find.text('Total balance'),findsWidgets);
+  expect(find.text('Available balance'),findsWidgets);
   expect(find.byKey(const Key('waffra-balance-month-comparison')),findsNothing);
   expect(tester.takeException(),isNull);
  });

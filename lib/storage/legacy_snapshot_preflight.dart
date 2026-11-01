@@ -106,6 +106,12 @@ class WaffraLegacyPreflight {
           if (item['income'] is! bool) {
             issues.add(WaffraPreflightIssue(key, i, 'invalid_income_flag'));
           }
+          final budgetId=item['budgetId'];
+          if(budgetId != null &&
+             (budgetId is! String || budgetId.trim().isEmpty ||
+              budgetId.length > 256 || item['income']==true)) {
+            issues.add(WaffraPreflightIssue(key,i,'invalid_budget_assignment'));
+          }
           final receipt = item['receiptPath'];
           if (receipt != null && receipt is! String) {
             issues.add(WaffraPreflightIssue(key, i, 'invalid_receipt_path'));
@@ -123,15 +129,31 @@ class WaffraLegacyPreflight {
         } else if (key == 'waffra_goals_v24') {
           _checkMoney(issues, key, i, item, 'target', positive: true);
           _checkMoney(issues, key, i, item, 'saved');
+          if (item['dueDate'] != null &&
+              (item['dueDate'] is! String ||
+               DateTime.tryParse(item['dueDate'] as String) == null)) {
+            issues.add(WaffraPreflightIssue(key,i,'invalid_goal_due_date'));
+          }
         } else if (key == 'waffra_recurring_v24') {
           _checkMoney(issues, key, i, item, 'amount');
           _checkDate(issues, key, i, item, 'startAt');
+          if(item['linkedGoalId'] != null &&
+             (item['linkedGoalId'] is! String ||
+              (item['linkedGoalId'] as String).trim().isEmpty ||
+              (item['linkedGoalId'] as String).length > 256)){
+            issues.add(WaffraPreflightIssue(key,i,'invalid_linked_goal_id'));
+          }
           final day = item['day'];
           if (day is! int || day < 1 || day > 31) {
             issues.add(WaffraPreflightIssue(key, i, 'invalid_due_day'));
           }
         } else if (key == 'waffra_categories_v24') {
           _checkMoney(issues, key, i, item, 'budget');
+          if(item['budgetLabel'] != null &&
+             (item['budgetLabel'] is! String ||
+              (item['budgetLabel'] as String).length > 80)){
+            issues.add(WaffraPreflightIssue(key,i,'invalid_budget_label'));
+          }
         } else if (key == 'waffra_challenges_v1') {
           _checkMoney(issues, key, i, item, 'dailyAmount');
         }

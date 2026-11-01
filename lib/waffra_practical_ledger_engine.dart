@@ -1,13 +1,17 @@
+import 'dart:collection';
 /// Pure, read-only financial tools. No access to cloud, bank SMS or stores.
 class WaffraPracticalEntry {
   const WaffraPracticalEntry({
     required this.id, required this.title, required this.category,
     required this.amount, required this.income, required this.date,
     this.notes = '', this.hasAttachment = false,
+    this.unassignedNamedBudget = false, this.orphanBudgetLink = false,
   });
   final String id, title, category, notes;
   final double amount;
   final bool income, hasAttachment;
+  /// Verified snapshot flags computed by the Home budget/category source.
+  final bool unassignedNamedBudget, orphanBudgetLink;
   final DateTime date;
   int? get minor {
     if (!amount.isFinite || amount < 0 || amount > 1000000000000) return null;
@@ -18,7 +22,8 @@ class WaffraPracticalEntry {
 }
 
 enum WaffraHealthIssueKind {
-  duplicateId, possibleDuplicate, missingCategory, invalidAmount
+  duplicateId, possibleDuplicate, missingCategory, invalidAmount,
+  unassignedNamedBudget, orphanBudgetLink
 }
 class WaffraHealthIssue {
   const WaffraHealthIssue(this.kind, this.entryId);
@@ -35,10 +40,23 @@ class WaffraDataHealth {
   static List<WaffraHealthIssue> inspect(Iterable<WaffraPracticalEntry> rows) {
     final issues = <WaffraHealthIssue>[];
     final seenIds = <String>{};
-    final candidates = <String, List<WaffraPracticalEntry>>{};
-    for (final item in rows) {
+    // Latest-first read-only review. Per-key rolling 48-hour windows avoid
+    // O(N²) duplicate scans for long financial histories.
+    final sorted = rows.toList(growable:false)
+      ..sort((a,b)=>b.date.compareTo(a.date));
+    final recent = <String,Queue<WaffraPracticalEntry>>{};
+    final recentIds = <String,Map<String,int>>{};
+    for (final item in sorted) {
       if (item.id.trim().isEmpty || !seenIds.add(item.id)) {
         issues.add(WaffraHealthIssue(WaffraHealthIssueKind.duplicateId, item.id));
+      }
+      if (!item.income && item.unassignedNamedBudget) {
+        issues.add(WaffraHealthIssue(
+          WaffraHealthIssueKind.unassignedNamedBudget, item.id));
+      }
+      if (item.orphanBudgetLink) {
+        issues.add(WaffraHealthIssue(
+          WaffraHealthIssueKind.orphanBudgetLink, item.id));
       }
       final cents = item.minor;
       if (cents == null) {
@@ -49,15 +67,23 @@ class WaffraDataHealth {
         issues.add(WaffraHealthIssue(WaffraHealthIssueKind.missingCategory, item.id));
       }
       final name = normalized(item.title);
-      if (cents != null && name.isNotEmpty) {
-        final key = '$name:$cents:${item.income}';
-        final previous = candidates.putIfAbsent(key, () => []);
-        if (previous.any((older) => older.id != item.id &&
-            older.date.difference(item.date).inHours.abs() <= 48)) {
-          issues.add(WaffraHealthIssue(WaffraHealthIssueKind.possibleDuplicate, item.id));
-        }
-        previous.add(item);
+      if (cents == null || name.isEmpty) continue;
+      final key = name+':'+cents.toString()+':'+item.income.toString();
+      final window = recent.putIfAbsent(key, () => Queue<WaffraPracticalEntry>());
+      final counts = recentIds.putIfAbsent(key, () => <String,int>{});
+      while (window.isNotEmpty &&
+             window.first.date.difference(item.date).inHours > 48) {
+        final expired=window.removeFirst();
+        final next=(counts[expired.id]??0)-1;
+        if(next<=0){counts.remove(expired.id);}
+        else{counts[expired.id]=next;}
       }
+      if (counts.length>1||(counts.length==1&&!counts.containsKey(item.id))) {
+        issues.add(WaffraHealthIssue(
+          WaffraHealthIssueKind.possibleDuplicate, item.id));
+      }
+      window.addLast(item);
+      counts[item.id]=(counts[item.id]??0)+1;
     }
     return List<WaffraHealthIssue>.unmodifiable(issues);
   }

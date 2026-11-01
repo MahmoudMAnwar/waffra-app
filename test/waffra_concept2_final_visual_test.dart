@@ -78,7 +78,7 @@ void main() {
         ])),
       ));
       // WaffraText exposes both the translation wrapper and its nested Text.
-      expect(find.text('إجمالي رصيدك'), findsWidgets);
+      expect(find.text('الرصيد المتاح للصرف'), findsWidgets);
       expect(find.byKey(const Key('waffra-approved-emerald-balance-card')),findsOneWidget);
       expect(find.byIcon(Icons.visibility_outlined), findsOneWidget);
       expect(tester.takeException(), isNull);
