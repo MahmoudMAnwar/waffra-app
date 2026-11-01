@@ -359,7 +359,7 @@ bool waffraCanAssignManualCategory(Iterable<BudgetCategory> values,
 class SavingGoal {
  final String id,name;
  final double target,saved;
- /// A deadline is a reminder, never a new ledger transaction.
+ /// Deadline alone never posts money; payment needs user confirmation.
  final DateTime? dueDate;
  SavingGoal({required this.id,required this.name,required this.target,
   required this.saved,this.dueDate});
@@ -3747,7 +3747,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ]))]));
 /// Every bank expense needs an explicit budget choice. Cancel means no post.
  Future<List<String?>?> reviewSmsBudgetLinks(List<MoneyEntry> candidates)async{
-  final choices=categories.where((c)=>!c.income&&c.budget>0&&c.budgetActive).toList();
+  final choices=categories.where((c)=>
+   !c.income&&c.isSubcategory&&c.budget>0&&c.budgetActive).toList();
   final assigned=List<String?>.filled(candidates.length,null);
   if(!candidates.any((e)=>!e.income))return assigned;
   return showWaffraDialog<List<String?>>(context:context,
@@ -3798,7 +3799,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
              choices
               ..clear()
               ..addAll(categories.where((c)=>
-               !c.income&&c.budget>0&&c.budgetActive));
+               !c.income&&c.isSubcategory&&c.budget>0&&c.budgetActive));
              assigned[n]=id;
             });
            }),
@@ -5664,7 +5665,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        if(initial?.sourceType=='goal_due'&&
         (WaffraRecurringPolicy.toHalalas(n)!=
          WaffraRecurringPolicy.toHalalas(initial!.amount)||
-         income!=initial.income)){
+         income!=initial!.income)){
         snack(sheetContext,waffraIsEnglish?
          'Goal payment amount/type cannot be changed without reversing the wallet.':
          'مبلغ ونوع استحقاق الهدف ثابتان لحماية رصيد محفظة الهدف.');
