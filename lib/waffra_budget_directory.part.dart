@@ -195,7 +195,8 @@ extension WaffraBudgetDirectory on _HomeScreenState {
 
            ]),
           ],
-         ),     ]),
+         ),
+        ]),
        ),
       );
      }),
