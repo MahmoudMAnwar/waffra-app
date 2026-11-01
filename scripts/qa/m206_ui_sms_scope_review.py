@@ -107,11 +107,11 @@ def main() -> None:
     category_english=Path("lib/waffra_category_english.dart").read_text(encoding="utf-8")
     catalog_test=Path("test/m148_english_categories_legacy_backup_uat_test.dart").read_text(encoding="utf-8")
     legacy_catalog=Path("lib/storage/waffra_home_finance_persistence.dart").read_text(encoding="utf-8")
-    require("version != 2 && version != 3 && version != 4" in legacy_catalog,
+    require("version != 2 && version != 3 && version != 4 && version != 5" in legacy_catalog,
             "secured catalog writer must explicitly accept version 4")
     require(category_catalog.count("WaffraCategoryGroup(id:")==79,
             "79 reviewed built-in root categories required")
-    require("973 subcategories" in catalog_test and
+    require("975 subcategories" in catalog_test and
             "waffra_category_catalog_v4_installed" in app and
             "version:4" in app,"category v4 upgrade and counts missing")
     require("construction-expense" in category_catalog and
