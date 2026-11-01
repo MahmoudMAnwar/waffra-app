@@ -74,6 +74,8 @@ void main() {
   expect(app,contains('await this._ensureLinkedRecurringForGoal(g);'));
   expect(app,contains('this.editGoal(g)'));
   expect(app,contains('recurringDialog(initial:r)'));
+  expect(app,contains('onChanged:initial?.linkedGoalId!=null?null'));
+  expect(app,contains('editBudgetForCategory(selected)'));
   expect(app,contains('goal.saved/goal.target'));
   expect(app,contains('waffraNamedBudgetSpent(entries,categories,selected,today)'));
   expect(link,contains('linkedGoalId:goal.id'));
