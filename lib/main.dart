@@ -7176,15 +7176,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         .map((n)=>DropdownMenuItem(value:n,child:WaffraText(n.toString()+'٪'))).toList(),
        onChanged:WaffraHaptics.selection((n){if(n!=null)update(()=>alert=n);})),
      ]),
-     actions:[
-      if(selected.budget>0)TextButton(
-       onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,
-         (label:'',amount:-1.0,alert:alert))),
-       child:WaffraText(waffraIsEnglish?'Delete budget':'حذف الميزانية',
-        style:const TextStyle(color:Colors.deepOrange))),
-      TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
-       child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
-      FilledButton(onPressed:WaffraHaptics.tap((){
+     actionsPadding:const EdgeInsets.fromLTRB(16,4,16,14),
+     actions:[SizedBox(width:double.maxFinite,child:Row(children:[
+      Expanded(child:OutlinedButton(
+       onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
+       child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء',maxLines:1))),
+      const SizedBox(width:12),
+      Expanded(child:FilledButton(onPressed:WaffraHaptics.tap((){
        final label=name.text.trim(),value=amountOfDisplay(amount.text);
        update((){
         nameError=label.isEmpty?waffraRequiredFieldMessage:
@@ -7197,8 +7195,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        });
        if(nameError!=null||amountError!=null||value==null||value<=0)return;
        Navigator.pop(ctx,(label:label,amount:value,alert:alert));
-      }),child:WaffraText(waffraIsEnglish?'Save budget':'حفظ الميزانية')),
-     ],
+      }),child:WaffraText(waffraIsEnglish?'Save budget':'حفظ الميزانية',
+       maxLines:1))),
+     ]))],
     )));
    if(edited==null||!mounted)return;
    if(edited.amount<0){await deleteNamedBudget(selected);return;}
