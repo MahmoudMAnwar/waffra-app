@@ -4448,7 +4448,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        update(()=>busy=true);
        final now=DateTime.now();
        final previous=sum(entries.where((e)=>!e.income&&e.category==category&&e.date.year==now.year&&e.date.month==now.month),false);
-       final entry=MoneyEntry(id:newId(),title:description.text.trim(),category:category,amount:n,income:income,date:now,notes:messages[index],sourceType:'sms');
+       var entry=MoneyEntry(id:newId(),title:description.text.trim(),category:category,amount:n,income:income,date:now,notes:messages[index],sourceType:'sms');
+       final budgetSelection=await reviewSmsBudgetLinks([entry]);
+       if(budgetSelection==null){if(ctx.mounted)update(()=>busy=false);return;}
+       entry=entry.withBudget(budgetSelection.single);
        // A parsed SMS is not saved until both the transaction and its
        // fingerprint are crash-journaled under the SAME Home/Widget lock.
        // A stale dashboard must never overwrite a newer widget ledger.
