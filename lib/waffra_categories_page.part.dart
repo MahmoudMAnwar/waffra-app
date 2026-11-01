@@ -229,30 +229,112 @@ extension WaffraCategoryScreen on _HomeScreenState {
    _summaryBox(waffraIsEnglish?'Monthly expenses':'المصروف الشهري',
     cash(expenseTotal),Icons.trending_down,Colors.deepOrange),
    const SizedBox(height:13),
-   Wrap(spacing:7,runSpacing:7,children:[
-    _filterChip(waffraIsEnglish?'All':'الكل',categoryTypeFilter=='all',()=>setState(()=>categoryTypeFilter='all')),
-    _filterChip(waffraIsEnglish?'Expenses':'المصروفات',categoryTypeFilter=='expense',()=>setState(()=>categoryTypeFilter='expense')),
-    _filterChip(waffraIsEnglish?'Income':'الدخل',categoryTypeFilter=='income',()=>setState(()=>categoryTypeFilter='income')),
-   ]),
-   const SizedBox(height:7),
-   Wrap(spacing:7,runSpacing:7,children:[
-    _filterChip(waffraIsEnglish?'All budgets':'كل الميزانيات',categoryDisplay=='all',()=>setState(()=>categoryDisplay='all')),
-    _filterChip(waffraIsEnglish?'Budgeted':'بميزانية',categoryDisplay=='budget',()=>setState(()=>categoryDisplay='budget')),
-    _filterChip(waffraIsEnglish?'No budget':'بدون ميزانية',categoryDisplay=='none',()=>setState(()=>categoryDisplay='none')),
-   ]),
-   const SizedBox(height:8),
-   Wrap(spacing:7,runSpacing:6,children:[
-    _filterChip(waffraIsEnglish?'Default order':'الترتيب الافتراضي',
-     categorySort=='default',()=>setState(()=>categorySort='default')),
-    _filterChip(waffraIsEnglish?'Most spent':'الأكثر صرفًا',
-     categorySort=='spent',()=>setState(()=>categorySort='spent')),
-    _filterChip(waffraIsEnglish?'A–Z':'أبجديًا',
-     categorySort=='alpha',()=>setState(()=>categorySort='alpha')),
-   ]),
-   const SizedBox(height:8),
-   Align(alignment:AlignmentDirectional.centerStart,
-    child:_filterChip(waffraIsEnglish?'Added by me':'مضاف بواسطتي',
-     categoryMineOnly,()=>setState(()=>categoryMineOnly=!categoryMineOnly))),
+   // Compact by default: the three large rows of chips previously pushed
+   // the actual category cards below the fold on smaller phones.
+   Container(
+    key:const Key('waffra-category-filter-accordion'),
+    decoration:BoxDecoration(
+     color:Theme.of(context).cardColor,
+     borderRadius:BorderRadius.circular(18),
+     border:Border.all(color:emerald.withValues(alpha:.24))),
+    child:ExpansionTile(
+     key:const PageStorageKey<String>('waffra-category-filter-dropdown'),
+     initiallyExpanded:categoryFiltersOpen,
+     onExpansionChanged:(open)=>setState(()=>categoryFiltersOpen=open),
+     leading:const Icon(Icons.tune_rounded,color:emerald,size:23),
+     shape:const RoundedRectangleBorder(side:BorderSide.none),
+     collapsedShape:const RoundedRectangleBorder(side:BorderSide.none),
+     tilePadding:const EdgeInsets.symmetric(horizontal:12),
+     childrenPadding:const EdgeInsets.fromLTRB(12,0,12,12),
+     title:WaffraText(waffraIsEnglish?'Filter & sort':'الفلترة والترتيب',
+      style:const TextStyle(fontWeight:FontWeight.bold)),
+     subtitle:WaffraText([
+      if(categoryTypeFilter=='income')(waffraIsEnglish?'Income':'الدخل'),
+      if(categoryTypeFilter=='expense')(waffraIsEnglish?'Expenses':'المصروفات'),
+      if(categoryDisplay=='budget')(waffraIsEnglish?'Budgeted':'بميزانية'),
+      if(categoryDisplay=='none')(waffraIsEnglish?'No budget':'بدون ميزانية'),
+      if(categorySort=='income')(waffraIsEnglish?'Highest income':'الأكثر دخلًا'),
+      if(categorySort=='spent')(waffraIsEnglish?'Highest expense':'الأكثر مصروفًا'),
+      if(categorySort=='alpha')(waffraIsEnglish?'A–Z':'أبجديًا'),
+      if(categoryMineOnly)(waffraIsEnglish?'Added by me':'مضاف بواسطتي'),
+     ].isEmpty?(waffraIsEnglish?'All categories • All budgets':
+      'كل الأقسام • كل الميزانيات'):[
+      if(categoryTypeFilter=='income')(waffraIsEnglish?'Income':'الدخل'),
+      if(categoryTypeFilter=='expense')(waffraIsEnglish?'Expenses':'المصروفات'),
+      if(categoryDisplay=='budget')(waffraIsEnglish?'Budgeted':'بميزانية'),
+      if(categoryDisplay=='none')(waffraIsEnglish?'No budget':'بدون ميزانية'),
+      if(categorySort=='income')(waffraIsEnglish?'Highest income':'الأكثر دخلًا'),
+      if(categorySort=='spent')(waffraIsEnglish?'Highest expense':'الأكثر مصروفًا'),
+      if(categorySort=='alpha')(waffraIsEnglish?'A–Z':'أبجديًا'),
+      if(categoryMineOnly)(waffraIsEnglish?'Added by me':'مضاف بواسطتي'),
+     ].join(' • '),
+      maxLines:2,style:TextStyle(fontSize:11,color:Theme.of(context).hintColor)),
+     children:[
+      LayoutBuilder(builder:(ctx,layout){
+       // Two columns on normal screens; one on very narrow screens/text
+       // scaling. Every selector remains readable in Arabic and English.
+       final cell=layout.maxWidth<325?layout.maxWidth:
+        (layout.maxWidth-10)/2;
+       InputDecoration decor(String label)=>InputDecoration(
+        labelText:label,isDense:true,
+        contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:10),
+        border:OutlineInputBorder(borderRadius:BorderRadius.circular(13)));
+       return Wrap(spacing:10,runSpacing:10,children:[
+        SizedBox(width:cell,child:DropdownButtonFormField<String>(
+         key:ValueKey('waffra-category-type-'+categoryTypeFilter),
+         initialValue:categoryTypeFilter,isExpanded:true,
+         decoration:decor(waffraIsEnglish?'Transaction type':'نوع العملية'),
+         items:[
+          DropdownMenuItem(value:'all',child:WaffraText(waffraIsEnglish?'All':'الكل')),
+          DropdownMenuItem(value:'expense',child:WaffraText(waffraIsEnglish?'Expenses':'المصروفات')),
+          DropdownMenuItem(value:'income',child:WaffraText(waffraIsEnglish?'Income':'الدخل')),
+         ],
+         onChanged:WaffraHaptics.selection((v){
+          if(v!=null)setState(()=>categoryTypeFilter=v);
+         }))),
+        SizedBox(width:cell,child:DropdownButtonFormField<String>(
+         key:ValueKey('waffra-category-budget-'+categoryDisplay),
+         initialValue:categoryDisplay,isExpanded:true,
+         decoration:decor(waffraIsEnglish?'Budget status':'حالة الميزانية'),
+         items:[
+          DropdownMenuItem(value:'all',child:WaffraText(waffraIsEnglish?'All budgets':'كل الميزانيات')),
+          DropdownMenuItem(value:'budget',child:WaffraText(waffraIsEnglish?'Budgeted':'بميزانية')),
+          DropdownMenuItem(value:'none',child:WaffraText(waffraIsEnglish?'No budget':'بدون ميزانية')),
+         ],
+         onChanged:WaffraHaptics.selection((v){
+          if(v!=null)setState(()=>categoryDisplay=v);
+         }))),
+        SizedBox(width:cell,child:DropdownButtonFormField<String>(
+         key:ValueKey('waffra-category-sort-'+categorySort),
+         initialValue:categorySort,isExpanded:true,
+         decoration:decor(waffraIsEnglish?'Sort by':'الترتيب حسب'),
+         items:[
+          DropdownMenuItem(value:'default',child:WaffraText(waffraIsEnglish?'Default':'الافتراضي')),
+          DropdownMenuItem(value:'income',child:WaffraText(waffraIsEnglish?'Highest income':'الأكثر دخلًا')),
+          DropdownMenuItem(value:'spent',child:WaffraText(waffraIsEnglish?'Highest expenses':'الأكثر مصروفًا')),
+          DropdownMenuItem(value:'alpha',child:WaffraText(waffraIsEnglish?'A–Z':'أبجديًا')),
+         ],
+         onChanged:WaffraHaptics.selection((v){
+          if(v!=null)setState(()=>categorySort=v);
+         }))),
+        SizedBox(width:cell,child:SwitchListTile.adaptive(
+         contentPadding:EdgeInsets.zero,dense:true,
+         title:WaffraText(waffraIsEnglish?'Added by me':'مضاف بواسطتي',
+          style:const TextStyle(fontSize:12)),
+         value:categoryMineOnly,
+         onChanged:WaffraHaptics.selection((v)=>setState(()=>categoryMineOnly=v)))),
+       ]);
+      }),
+      Align(alignment:AlignmentDirectional.centerEnd,
+       child:TextButton.icon(
+        onPressed:WaffraHaptics.tap(()=>setState((){
+         categoryTypeFilter='all';categoryDisplay='all';
+         categorySort='default';categoryMineOnly=false;
+        })),
+        icon:const Icon(Icons.restart_alt_rounded,size:17),
+        label:WaffraText(waffraIsEnglish?'Reset filters':'إعادة ضبط الفلاتر'))),
+     ],
+    )),
    const SizedBox(height:12),
    TextField(onChanged:(text)=>setState(()=>categorySearch=text),
     decoration:InputDecoration(prefixIcon:const Icon(Icons.search),
