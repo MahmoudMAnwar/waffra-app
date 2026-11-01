@@ -135,7 +135,7 @@ void main() {
       targetCurrency: 'EGP',
       now: now,
     );
-    expect(backed.provider, 'Independent FX');
+    expect(backed.provider, 'fawazahmed0 Currency API');
     expect(backed.targetPerOriginal, 48);
   });
 

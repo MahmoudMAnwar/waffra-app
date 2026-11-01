@@ -108,6 +108,18 @@ abstract final class WaffraSmsCurrencies {
           r'commission|رسوم|service fee|fee amount|\bvat\b|ضريبة',
           caseSensitive:false).firstMatch(clause);
         final action = footer==null?clause:clause.substring(0,footer.start);
+        // Some English banks put the ISO code before the debit verb and
+        // the amount after it: "AED debited from account 136.00 ending with
+        // 1001". This still means a FOREIGN transaction: never fall back
+        // to SAR merely because code and amount are not adjacent.
+        final actionVerb=RegExp(
+          r'\b([A-Z]{3})\s+(?:debited|credited|withdrawn|received|paid|spent)\b',
+          caseSensitive:false).firstMatch(action);
+        if(actionVerb!=null){
+          final code=codeFor(actionVerb.group(1)!);
+          if(supported.contains(code))found.add(code);
+          else if(code.isNotEmpty)found.add('UNKNOWN');
+        }
         // Named Arabic currencies can contain spaces. Scan their full names
         // beside an amount before the generic ريال/جنيه/درهم token scanner.
         final namedAction=_normalizeArabic(_westernDigits(action));
@@ -239,7 +251,12 @@ abstract final class WaffraSmsCurrencies {
       r'\bbalance\b|الرصيد|المتاح|commission|service fee|'
       r'fee amount|رسوم|ضريبة|vat\b',
       caseSensitive:false).firstMatch(normalized);
-    final action=footer==null?normalized:normalized.substring(0,footer.start);
+    final beforeBalance=footer==null?normalized:normalized.substring(0,footer.start);
+    // Service fees are not the original posted transaction amount. Avoid
+    // ever selecting a fee when the action contains no verified debit/credit.
+    final action=beforeBalance.split(RegExp(r'[\r\n]+')).where((line)=>
+      !RegExp(r'^\s*(?:fees?|service\s+fee|commission|رسوم|الرسوم|ضريبة|vat)\s*[:：-]?',
+        caseSensitive:false).hasMatch(line)).join('\n');
     final escaped=currency=='SAR'?
       r'(?:SAR|SR|ريال(?:\s+سعودي)?|ر\.?\s*س\.?|﷼|⃁)':
       currency=='EGP'?
@@ -257,14 +274,27 @@ abstract final class WaffraSmsCurrencies {
     // Explicit codes only: do not treat a random numeral, card or reference
     // as a financial amount. Currency may touch the number on either side.
     final pattern=r'([0-9][0-9,.]{0,20})(?![0-9,.])';
-    final before=RegExp('(?<![A-Za-z])'+acceptedCurrency+r'\s*[:：]?\s*'+pattern,
+    // Horizontal whitespace only: SR on one line must NOT bind to
+    // the next line's date, card suffix or merchant number.
+    final before=RegExp('(?<![A-Za-z])'+acceptedCurrency+r'[ \t]*[:：]?[ \t]*'+pattern,
       caseSensitive:false);
-    final after=RegExp(pattern+r'\s*'+acceptedCurrency+r'(?![A-Za-z])',
+    final after=RegExp(pattern+r'[ \t]*'+acceptedCurrency+r'(?![A-Za-z])',
       caseSensitive:false);
     final matches=<String>[
       ...before.allMatches(action).map((m)=>m.group(1)!),
       ...after.allMatches(action).map((m)=>m.group(1)!),
     ];
+    // Only this constrained "debited from account [amount] ending with ID"
+    // bank layout may suggest its separated amount. Never take account ID
+    // or balance, and the review gate still blocks foreign-as-SAR writes.
+    if(matches.isEmpty){
+      final separated=RegExp(
+        '(?<![A-Za-z])'+acceptedCurrency+
+        r'\s+(?:debited|credited)\s+(?:from|to)\s+account\s+'+
+        pattern+r'\s+ending\s+with\s+[0-9]{3,6}\b',
+        caseSensitive:false).firstMatch(action);
+      if(separated!=null)matches.add(separated.group(1)!);
+    }
     if(matches.length!=1)return null;
     final canonical=_canonicalMoney(matches.single,scale);
     if(canonical==null)return null;
@@ -277,6 +307,47 @@ abstract final class WaffraSmsCurrencies {
   }
 
   static String? originalAmountPreview(String raw)=>originalAmount(raw)?.formatted;
+
+  /// Separate source-currency totals. Never add AED, SAR, JOD etc. together
+  /// or imply that an unresolved amount is zero.
+  static ({Map<String,double> totals,int unresolved}) sourceTotals(
+      List<String> messages) {
+    // Source totals are display-only but must still be summed in exact
+    // 0/2/3-minor-unit integers. Binary double accumulation can misstate
+    // a multi-message finance review (0.10 + 0.20 != exactly 0.30).
+    final minorTotals=<String,int>{};
+    var unresolved=0;
+    for(final message in messages){
+      final original=originalAmount(message);
+      if(original==null){
+        unresolved++;
+        continue;
+      }
+      final digits=minorDigits(original.currency);
+      final factor=digits==0?1:digits==3?1000:100;
+      final scaled=original.amount*factor;
+      final minor=scaled.isFinite&&scaled>0&&scaled<9007199254740991
+        ?scaled.round():null;
+      if(minor==null||(scaled-minor).abs()>1e-6){
+        unresolved++;
+        continue;
+      }
+      final previous=minorTotals[original.currency]??0;
+      if(previous>9007199254740991-minor){
+        unresolved++;
+        continue;
+      }
+      minorTotals[original.currency]=previous+minor;
+    }
+    final totals=<String,double>{
+      for(final entry in minorTotals.entries)
+        entry.key:entry.value/(minorDigits(entry.key)==0
+          ?1:minorDigits(entry.key)==3?1000:100),
+    };
+    return (totals:Map<String,double>.unmodifiable(totals),
+      unresolved:unresolved);
+  }
+
 
   static bool requiresReviewForSarLedger(String raw) {
     final currencies = currenciesForMessage(raw);

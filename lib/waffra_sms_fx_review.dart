@@ -76,7 +76,7 @@ class WaffraSmsFxQuote {
       },
       'time_last_update_unix': stamp.millisecondsSinceEpoch ~/ 1000,
     }, originalCurrency: originalCurrency, targetCurrency: targetCurrency,
-      provider: 'Independent FX', now: now);
+      provider: 'fawazahmed0 Currency API', now: now);
   }
 
   static Future<WaffraSmsFxQuote> fetch({

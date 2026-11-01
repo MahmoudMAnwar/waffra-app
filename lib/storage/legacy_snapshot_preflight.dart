@@ -218,7 +218,30 @@ class WaffraLegacyPreflight {
   static void _checkDate(List<WaffraPreflightIssue> issues, String key,
       int index, Map<String, dynamic> item, String field) {
     final value = item[field];
-    if (value is! String || DateTime.tryParse(value) == null) {
+    // DateTime.tryParse normalizes some impossible dates (e.g. 2026-02-30)
+    // to the following month. For a money ledger, that is data corruption:
+    // require the exact ISO calendar date to survive parsing unchanged.
+    bool valid() {
+      if (value is! String) return false;
+      final iso = RegExp(r'^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$')
+          .firstMatch(value);
+      if (iso == null) return false;
+      final parsed = DateTime.tryParse(value);
+      if (parsed == null) return false;
+      // DateTime.tryParse converts offset-bearing timestamps to UTC.
+      // Compare the recorded *calendar date* instead: a valid local
+      // 2026-11-01T00:15:00+03:00 becomes 2026-10-31 in UTC.
+      // A UTC calendar constructor still rejects normalized impossible
+      // dates such as 2026-02-30 by checking the exact components.
+      final year = int.parse(iso.group(1)!);
+      final month = int.parse(iso.group(2)!);
+      final day = int.parse(iso.group(3)!);
+      final calendar = DateTime.utc(year, month, day);
+      return calendar.year == year &&
+          calendar.month == month &&
+          calendar.day == day;
+    }
+    if (!valid()) {
       issues.add(WaffraPreflightIssue(key, index, 'invalid_$field'));
     }
   }

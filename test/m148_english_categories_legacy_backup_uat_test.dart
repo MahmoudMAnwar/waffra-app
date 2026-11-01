@@ -74,7 +74,11 @@ void main() {
   final categories=File('lib/waffra_categories_page.part.dart').readAsStringSync();
   expect(main,contains('waffraSearchAny([label,waffraTr(label),waffraTr(item.name)],query)'));
   expect(main,contains('waffraSearchAny([c.name,waffraTr(c.name)],query)'));
-  expect(main,contains('DropdownMenuItem(value:c.name,child:WaffraText(c.name))'));
+  // M335 uses a searchable hierarchical picker rather than a flat dropdown.
+  expect(main,contains('Future<String?> chooseTransactionCategory('));
+  expect(main,contains('final label=leafLabels?item.displayName:item.name;'));
+  expect(main,contains('waffraSearchAny([label,waffraTr(label),waffraTr(item.name)],query)'));
+  expect(main,contains('title:WaffraText(waffraTr(leafLabels?item.displayName:item.name),maxLines:3)'));
   expect(main,contains('title:WaffraText(waffraTr(leafLabels?item.displayName:item.name),maxLines:3)'));
   expect(categories,contains('WaffraText(root.name,maxLines:2'));
   expect(categories,contains('WaffraText(sub.displayName,maxLines:2'));

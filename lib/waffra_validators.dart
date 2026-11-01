@@ -12,7 +12,13 @@ class WaffraValidators {
   }
 
   static String? positiveAmount(String? raw, {bool required=true}) {
-    final text=(raw??'').trim().replaceAll('٬',',').replaceAll('٫','.');
+    const arabicDigits='٠١٢٣٤٥٦٧٨٩',persianDigits='۰۱۲۳۴۵۶۷۸۹';
+    final text=(raw??'').trim().replaceAllMapped(
+      RegExp(r'[٠-٩۰-۹]'),(match){
+       final value=match.group(0)!;
+       final ar=arabicDigits.indexOf(value);
+       return (ar>=0?ar:persianDigits.indexOf(value)).toString();
+      }).replaceAll('٬',',').replaceAll('٫','.');
     if(text.isEmpty) return required?'required':null;
     // Parse displayed decimal amounts, not malformed grouping or hidden cents.
     final valid=RegExp(r'^(?:[0-9]+|[0-9]{1,3}(?:,[0-9]{3})+)(?:\.[0-9]{1,2})?$');

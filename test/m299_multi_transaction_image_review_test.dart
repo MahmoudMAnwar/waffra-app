@@ -201,7 +201,17 @@ Supermarket
     expect(scanner,contains('if(!await _canReviewOcrAsLedgerTransaction(extracted.rawText))return;'));
     expect(scanner,contains('if(!await _canReviewOcrAsLedgerTransaction(one.sourceText))return;'));
     expect(scanner,contains('if(!await _canReviewOcrAsLedgerTransaction(candidate.sourceText))continue;'));
-    expect(main,contains('لا يمكن حفظ هذا المبلغ باعتباره ريالًا سعوديًا بدون تحويل موثوق'));
+    // The new localized review screen offers FX preview, but never posts
+    // an unproven foreign OCR amount to the SAR ledger.
+    final guardStart=main.indexOf('Future<bool> _canReviewOcrAsLedgerTransaction(');
+    final guardEnd=main.indexOf('/// Show visible, blocking feedback',guardStart);
+    expect(guardStart,greaterThan(0));
+    expect(guardEnd,greaterThan(guardStart));
+    final guard=main.substring(guardStart,guardEnd);
+    expect(guard,contains('WaffraBankScreenshotParser.requiresForeignCurrencyReview(raw)'));
+    expect(guard,contains('await _previewForeignBankCurrency(raw);'));
+    expect(guard,contains('لم تُحفظ المعاملة.'));
+    expect(guard,contains('return false;'));
   });
 
   test('M299 local OCR retries sparse text without uploading image', () {

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'waffra_ai_finance_brain.dart';
+import 'waffra_ask_scope.dart';
 
 /// A strictly read-only, account-scoped snapshot assembled by the caller
 /// AFTER a verified finance-source read. Never provide this class the raw
@@ -62,8 +63,13 @@ abstract final class WaffraAiFinanceCoach {
   }
 
   static Future<String?> askWaffra(String question,WaffraAiSummary summary,
-      {required WaffraAiTextInference generate,String displayCurrency='SAR',bool english=false})=>
-    _explain('Answer the budgeting question',question,summary,generate,displayCurrency,english);
+      {required WaffraAiTextInference generate,String displayCurrency='SAR',bool english=false}){
+    if(!WaffraAskScope.isRelated(question)){
+      return Future<String?>.value(WaffraAskScope.outsideResponse(english:english));
+    }
+    return _explain('Answer the budgeting question',question,summary,
+      generate,displayCurrency,english);
+  }
   static Future<String?> analysis(WaffraAiSummary summary,
       {required WaffraAiTextInference generate,String displayCurrency='SAR',bool english=false})=>
     _explain('Explain the expense and income pattern','',summary,generate,displayCurrency,english);

@@ -41,12 +41,18 @@ void main() {
     expect(dialog,contains('model.cancelPendingLoad()'));
     expect(dialog,contains('Delete it in My Account'));
     expect(dialog,contains('تنزيل نموذج الذكاء'));
-    expect(home,contains('WaffraAiModelGate.requireForFeature(context,'));
+    // Financial SMS/OCR must remain available even if the optional ~484 MB
+    // model was not downloaded. Only explicit AI activation asks for consent.
+    expect(home,isNot(contains('WaffraAiModelGate.requireForFeature(context,')));
+    expect(home,contains('if(reliable||!WaffraOnDeviceQwen.shared.isReady){'));
+    expect(home,contains('if(!WaffraOnDeviceQwen.shared.isReady)return false;'));
+    expect(home,contains('if(!WaffraOnDeviceQwen.shared.isReady||source.trim().isEmpty)return null;'));
     expect(dialog,isNot(contains('waffra-ai-required-feature-notice')));
     expect(dialog,contains('manual entry still works'));
     expect(dialog,contains('الإضافة اليدوية متاحة'));
-    expect(home,contains("featureAr:'تحليل الرسائل البنكية'"));
-    expect(home,contains("featureEn:'receipt and image OCR scanning'"));
+    // No implicit model download blocks automatic SMS review or local OCR.
+    expect(home,contains('Future<void> analyzeBankSmsAutomatically('));
+    expect(home,contains('Future<bool> _reviewAiScannedTransactions('));
     expect(smart,contains('WaffraAiModelGate.ensureReady(context,english:widget.english)'));
     // The Tools installer is explicit. No model-driven tool automatically
     // prompts on expansion: before first download it is completely hidden.

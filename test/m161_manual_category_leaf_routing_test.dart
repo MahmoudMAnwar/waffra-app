@@ -104,7 +104,11 @@ void main() {
 
   test('M161 manual leaf routing retains source-gated SMS hash persistence', () {
     final source = File('lib/main.dart').readAsStringSync();
-    expect(source, contains('if(!sms&&!waffraCanAssignManualCategory('));
+    // Both manual and bank-SMS entry paths now share the same leaf guard;
+    // no financial write may bypass main/child category validation.
+    expect(source, contains('if(!waffraCanAssignManualCategory(categories,'));
+    expect(source, contains('income,selectedParentId,category))return;'));
+    expect(source, contains('!waffraCanAssignManualCategory(available,income,activeSmsParent,category)'));
     expect(source, contains('selectedParentId'));
     expect(source, contains('leafLabels:true'));
     expect(source, contains(

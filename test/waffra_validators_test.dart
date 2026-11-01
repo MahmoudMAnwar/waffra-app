@@ -25,7 +25,15 @@ void main(){
    expect(WaffraValidators.positiveAmount('1,234,567.89'), isNull);
    expect(WaffraValidators.positiveAmount('',required:false), isNull);
   });
-  test('rejects duplicate category regardless of casing or whitespace',(){
+  test('M337 financial amount digits match Arabic/Persian parser without rounding',(){
+   for(final valid in ['١٬٢٣٤٫٥٦','۱۲۳۴٫۵۶','٣٫٥٠','٠٫٠١']){
+    expect(WaffraValidators.positiveAmount(valid),isNull,reason:valid);
+   }
+   for(final invalid in ['١٫٢٣٤','٠','۰٫۰۰','١٬٢٣','۱۲,۳۴,۵۶']){
+    expect(WaffraValidators.positiveAmount(invalid),'invalid_amount',reason:invalid);
+   }
+  });
+   test('rejects duplicate category regardless of casing or whitespace',(){
    expect(WaffraValidators.uniqueCategory(' تسوّق ',['تسوّق']), 'duplicate');
    expect(WaffraValidators.uniqueCategory('Food',['food']), 'duplicate');
    expect(WaffraValidators.uniqueCategory('نقل',['تسوّق']), isNull);
