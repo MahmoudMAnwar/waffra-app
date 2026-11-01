@@ -166,4 +166,75 @@ void main() {
   });
  });
 
+
+ group('M342 cautious multi-obligation bank matching', () {
+  test('one confirmed merchant payment is uniquely suggested', () {
+   final plan=RecurringPlan('bill',DateTime(2026,11,1),
+     RecurringFrequency.monthly,4000,'utilities',merchantKey:'power');
+   final result=RecurringBatchMatcher.review(plans:[plan],
+    dues:[RecurringDueObligation('bill',DateTime(2026,11,1))],
+    payments:[
+     BankPaymentEvidence('bank-1',DateTime(2026,11,2),
+      4000,'utilities',merchantKey:'power',confirmed:true),
+    ]);
+   expect(result.uniqueSuggestions,{'bill@2026-11-01':'bank-1'});
+   expect(result.ambiguousOccurrences,isEmpty);
+   expect(result.unmatchedPaymentIds,isEmpty);
+  });
+  test('one payment matching two standing orders must abstain', () {
+   final plans=[
+    RecurringPlan('a',DateTime(2026,11,1),RecurringFrequency.monthly,
+      1000,'digital',merchantKey:'streaming'),
+    RecurringPlan('b',DateTime(2026,11,1),RecurringFrequency.monthly,
+      1000,'digital',merchantKey:'streaming'),
+   ];
+   final result=RecurringBatchMatcher.review(plans:plans,
+    dues:[
+     RecurringDueObligation('a',DateTime(2026,11,1)),
+     RecurringDueObligation('b',DateTime(2026,11,1))],
+    payments:[BankPaymentEvidence('one-payment',
+     DateTime(2026,11,1),1000,'digital',
+     merchantKey:'streaming',confirmed:true)]);
+   expect(result.uniqueSuggestions,isEmpty);
+   expect(result.ambiguousOccurrences,
+      {'a@2026-11-01','b@2026-11-01'});
+   expect(result.unmatchedPaymentIds,{'one-payment'});
+  });
+  test('two matching bank payments for one due must abstain', () {
+   final plan=RecurringPlan('fuel',DateTime(2026,11,1),
+     RecurringFrequency.monthly,5000,'fuel',merchantKey:'station');
+   final result=RecurringBatchMatcher.review(plans:[plan],
+    dues:[RecurringDueObligation('fuel',DateTime(2026,11,1))],
+    payments:[
+     BankPaymentEvidence('a',DateTime(2026,11,1),
+       5000,'fuel',merchantKey:'station',confirmed:true),
+     BankPaymentEvidence('b',DateTime(2026,11,2),
+       5000,'fuel',merchantKey:'station',confirmed:true)]);
+   expect(result.uniqueSuggestions,isEmpty);
+   expect(result.ambiguousOccurrences,{'fuel@2026-11-01'});
+  });
+  test('paid occurrence is not matched again', () {
+   final plan=RecurringPlan('rent',DateTime(2026,11,1),
+     RecurringFrequency.monthly,200000,'housing',merchantKey:'landlord');
+   final result=RecurringBatchMatcher.review(plans:[plan],
+    dues:[RecurringDueObligation('rent',DateTime(2026,11,1),
+      alreadyPaid:true)],
+    payments:[BankPaymentEvidence('bank',DateTime(2026,11,1),
+      200000,'housing',merchantKey:'landlord',confirmed:true)]);
+   expect(result.uniqueSuggestions,isEmpty);
+   expect(result.unmatchedPaymentIds,{'bank'});
+  });
+  test('duplicate bank ids cannot create two matches', () {
+   final plan=RecurringPlan('x',DateTime(2026,11,1),
+      RecurringFrequency.monthly,5000,'bill',merchantKey:'provider');
+   expect(()=>RecurringBatchMatcher.review(plans:[plan],dues:[
+     RecurringDueObligation('x',DateTime(2026,11,1))],payments:[
+     BankPaymentEvidence('dup',DateTime(2026,11,1),5000,'bill',
+       merchantKey:'provider',confirmed:true),
+     BankPaymentEvidence('dup',DateTime(2026,11,1),5000,'bill',
+       merchantKey:'provider',confirmed:true),
+   ]),throwsStateError);
+  });
+ });
+
 }
