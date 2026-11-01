@@ -2,13 +2,11 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:pdf/pdf.dart';
-import 'package:image/image.dart' as img;
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'dart:math';
@@ -50,7 +48,6 @@ import 'waffra_financial_insights.dart';
 import 'waffra_goal_budget_forecast.dart';
 import 'waffra_goal_due_policy.dart';
 import 'waffra_reminders.dart';
-import 'waffra_welcome_background.dart';
 import 'currency_converter.dart';
 import 'waffra_i18n.dart';
 import 'waffra_riyal_symbol.dart';
@@ -80,7 +77,6 @@ import 'storage/waffra_live_legacy_finance_guard.dart';
 import 'storage/waffra_production_finance_source_guard.dart';
 import 'storage/waffra_legacy_finance_writer_coordinator.dart';
 import 'storage/waffra_live_account_write_authority.dart';
-import 'storage/waffra_legacy_widget_commit_journal.dart';
 import 'storage/waffra_home_finance_persistence.dart';
 import 'storage/waffra_verified_finance_authority.dart';
 import 'storage/waffra_production_finance_authority_binding.dart';
@@ -91,7 +87,6 @@ import 'storage/waffra_verified_transaction_ui_guard.dart';
 import 'storage/waffra_m155_category_plan.dart';
 import 'storage/waffra_sms_partial_save_recovery.dart';
 import 'storage/waffra_production_finance_routing_gate.dart';
-import 'storage/waffra_verified_legacy_backup_restore.dart';
 import 'waffra_home_widget.dart';
 import 'waffra_pull_refresh_scroll_settle.dart';
 import 'waffra_haptic_feedback.dart';
@@ -1570,24 +1565,32 @@ class _WaffraOnboardingState extends State<WaffraOnboarding> {
  int current=0;
  bool nextPressed=false;
  static const sourceWidth=<double>[360,363,362,363];
+ // Retained for the planned localized native onboarding fallback.
+ // ignore: unused_field
  static const titleAr=<String>[
   'إدارة أموالك\nبكل سهولة',
   'سجّل معاملاتك\nبسهولة',
   'افهم نمط\nإنفاقك',
   'حقق أهدافك\nالمالية',
  ];
+ // Retained for the planned localized native onboarding fallback.
+ // ignore: unused_field
  static const subtitleAr=<String>[
   'تابع دخلك ومصروفاتك بسهولة\nوشوف رصيدك الحالي دائمًا.',
   'انسخ رسائلك البنكية والصقها في وفرة،\nونساعدك تصنّف معاملاتك تلقائيًا.',
   'اكتشف عادات صرفك من خلال\nرسوم بيانية وتقارير واضحة وسهلة الفهم.',
   'سواء تدخر لمنزل، سيارة، سفر أو أي هدف آخر.\nحدد هدفك وتابع تقدمك بكل سهولة.',
  ];
+ // Retained for the planned localized native onboarding fallback.
+ // ignore: unused_field
  static const titleEn=<String>[
   'All your transactions\nin one place',
   'Paste your messages,\nwe handle the rest',
   'Simple analytics,\nsmarter decisions',
   'Reach your goals\nstep by step',
  ];
+ // Retained for the planned localized native onboarding fallback.
+ // ignore: unused_field
  static const subtitleEn=<String>[
   'Track income, expenses and your balance, all in one place.',
   'Paste your bank messages and let Waffra categorize your transactions.',
@@ -2943,7 +2946,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  String budgetStatusFilter='active'; // UI-only: active budgets by default.
  String budgetSearch='';
  String budgetSort='default'; // name, limit or spending, UI-only.
- String budgetMainCategoryFilter='all'; // Budget directory category filter.
  DateTimeRange? transactionsDateRange;
  double? minTransactionAmount,maxTransactionAmount;
  int tab=0,year=DateTime.now().year,month=DateTime.now().month;
@@ -2953,6 +2955,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  String? _lastWidgetRevision;
  // Exact last finance ledger string seen or committed, including null vs [].
  // Detect partial widget saves even if the last-save marker never committed.
+ // Snapshot marker is intentionally held for legacy crash forensics.
+ // ignore: unused_field
  String? _lastLedgerSavedRaw;
  AppLifecycleListener? _widgetReloadListener;
  double _swipeTravel=0;
@@ -3905,6 +3909,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    amount.text=result.amount==null?'':formatWaffraMoney(result.amount!);
   });
  }
+ // Kept for staged SMS migration; active path uses the verified batch writer.
+ // ignore: unused_element
  Future<void> saveParsedMessages(BuildContext ctx,StateSetter update)async {
   // Saving is governed by parsed amount, currency, category and encrypted
   // writer checks, never by whether a language model is installed.
@@ -5996,7 +6002,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Future<String> saveReceipt(XFile picked)async {
   final directory=Directory('${(await getApplicationDocumentsDirectory()).path}/receipts');
   if(!await directory.exists())await directory.create(recursive:true);
-  final ext=picked.path.toLowerCase().endsWith('.png')?'png':'jpg';
   final original=picked.name.replaceAll(RegExp(r'[^a-zA-Z0-9_\-.\u0600-\u06FF ]'),'_');
   final target='${directory.path}/${newId()}__$original';
   await File(picked.path).copy(target);
@@ -6255,8 +6260,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     return result;
    }
    final exportedAt=DateTime.now();
-   final oldest=items.map((e)=>e.date).reduce((a,b)=>a.isBefore(b)?a:b);
-   final newest=items.map((e)=>e.date).reduce((a,b)=>a.isAfter(b)?a:b);
    // Keep stored descriptions unchanged; sanitize only the exported PDF copy.
    String pdfClean(String input)=>sanitizeWaffraPdfText(input);
       String fmt(num number){
@@ -7606,7 +7609,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final limit=selected?.budget??overallLimit;
   // Selecting a paused budget must never show it as active or start
   // charging it again; its former limit and historical links remain.
-  final active=selected?.budgetActive??(overallLimit>0);
   final spent=selected==null?overallSpent:
    waffraNamedBudgetSpent(entries,categories,selected,today);
   final used=limit>0?(spent/limit).clamp(0.0,1.0):0.0;
@@ -11999,7 +12001,7 @@ class WaffraFabMenuAnchor extends StatelessWidget {
      children:[...previous,if(current!=null)current],
     ),
     transitionBuilder:(child,animation)=>SizeTransition(
-     sizeFactor:animation,axisAlignment:1.0,
+     sizeFactor:animation,alignment:Alignment.bottomCenter,
      child:FadeTransition(opacity:animation,child:child),
     ),
     child:expanded
