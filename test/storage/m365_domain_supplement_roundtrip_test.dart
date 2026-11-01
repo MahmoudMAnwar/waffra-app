@@ -146,6 +146,24 @@ void main() {
     }
   });
 
+  test('M365 refuses another vault with same IDs but different owner ledger',
+      () async {
+    await category(source);
+    await category(destination);
+    await savedBudget(source);
+    await destination.customStatement(
+      "UPDATE fresh_finance_categories SET name='Different owner' "
+      "WHERE category_id='fuel'",
+    );
+    final encrypted=await backup(source).export(
+      password:password,explicitlyApproved:true);
+    await expectLater(backup(destination).restore(
+      encryptedArchive:encrypted,password:password,explicitlyApproved:true),
+      throwsA(isA<StateError>()),
+      reason:'Matching identifiers are not sufficient account ownership proof');
+    expect(await count(destination,'fresh_finance_named_budgets'),0);
+  });
+
   test('M365 consent, strong password and experimental activation are required',
       () async {
     await expectLater(backup(source).export(
