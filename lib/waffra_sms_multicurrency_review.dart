@@ -296,7 +296,206 @@ abstract final class WaffraSmsCurrencies {
       if(separated!=null)matches.add(separated.group(1)!);
     }
     if(matches.length!=1)return null;
-    final canonical=_canonicalMoney(matches.single,scale);
+    // A comma-grouped integer in a specifically labelled English SAR
+    // Amount field is unambiguous in this bank template: "Amount: 1,900 SAR".
+    // Do not loosen generic "USD 1,234" or 3-decimal JOD ambiguity.
+    final labelledSarThousands=currency=='SAR'&&
+      RegExp(r'^[0-9]{1,3}(?:,[0-9]{3})+
+    final amount=double.tryParse(canonical);
+    if(amount==null||!amount.isFinite||amount<=0||amount>1e9)return null;
+    final factor=scale==3?1000:scale==0?1:100;
+    final minor=amount*factor;
+    if((minor-minor.round()).abs()>0.000001)return null;
+    return (amount:amount,currency:currency,formatted:canonical+' '+currency);
+  }
+
+  static String? originalAmountPreview(String raw)=>originalAmount(raw)?.formatted;
+
+  /// Pending authorizations, one-time codes and failed notices do not
+  /// represent settled transactions, even when they repeat a card amount.
+  static bool isUnpostedNotice(String raw) => RegExp(
+    r'^\s*(?:Online\s+Pre[-\s]?Auth(?:ori[sz]ation)?|'
+    r'Pre[-\s]?Authori[sz]ation|Authorization\s+Hold|'
+    r'Please\s+use\s+the\s+code|OTP\b|Verification\s+Code|'
+    r'Declined\s+Transaction|Transaction\s+Declined|'
+    r'Failed\s+Transaction|Transaction\s+Failed|'
+    r'Unsuccessful\s+Transaction)\b|'
+    r'^\s*(?:Transaction\s+)?Status\s*[:：]\s*'
+    r'(?:Pending|Declined|Failed|Rejected|Cancelled|Canceled)\b',
+    caseSensitive:false,multiLine:true,
+  ).hasMatch(raw);
+
+  /// Separate source-currency totals. Never add AED, SAR, JOD etc. together
+  /// or imply that an unresolved amount is zero.
+  static ({Map<String,double> totals,int unresolved}) sourceTotals(
+      List<String> messages) {
+    // Source totals are display-only but must still be summed in exact
+    // 0/2/3-minor-unit integers. Binary double accumulation can misstate
+    // a multi-message finance review (0.10 + 0.20 != exactly 0.30).
+    final minorTotals=<String,int>{};
+    var unresolved=0;
+    for(final message in messages){
+      // Exclude non-posted notices entirely, rather than reporting their
+      // quoted amount as spend or as an unresolved financial transaction.
+      if(isUnpostedNotice(message))continue;
+      final original=originalAmount(message);
+      if(original==null){
+        unresolved++;
+        continue;
+      }
+      final digits=minorDigits(original.currency);
+      final factor=digits==0?1:digits==3?1000:100;
+      final scaled=original.amount*factor;
+      final minor=scaled.isFinite&&scaled>0&&scaled<9007199254740991
+        ?scaled.round():null;
+      if(minor==null||(scaled-minor).abs()>1e-6){
+        unresolved++;
+        continue;
+      }
+      final previous=minorTotals[original.currency]??0;
+      if(previous>9007199254740991-minor){
+        unresolved++;
+        continue;
+      }
+      minorTotals[original.currency]=previous+minor;
+    }
+    final totals=<String,double>{
+      for(final entry in minorTotals.entries)
+        entry.key:entry.value/(minorDigits(entry.key)==0
+          ?1:minorDigits(entry.key)==3?1000:100),
+    };
+    return (totals:Map<String,double>.unmodifiable(totals),
+      unresolved:unresolved);
+  }
+
+
+  static bool requiresReviewForSarLedger(String raw) {
+    final currencies = currenciesForMessage(raw);
+    return currencies.length > 1 || currencies.any((code) => code != 'SAR');
+  }
+
+  static WaffraSmsCurrencyBatch summarize(List<String> messages) {
+    final counts = <String, int>{};
+    for (final message in messages) {
+      if(isUnpostedNotice(message))continue;
+      for (final currency in currenciesForMessage(message)) {
+        counts[currency] = (counts[currency] ?? 0) + 1;
+      }
+    }
+    return WaffraSmsCurrencyBatch(Map<String, int>.unmodifiable(counts));
+  }
+}
+
+class WaffraSmsCurrencyBatch {
+  const WaffraSmsCurrencyBatch(this.counts);
+  final Map<String, int> counts;
+  bool get hasMixedCurrencies => counts.keys.length > 1;
+  bool get needsCurrencyReview => counts.keys.any((code) => code != 'SAR');
+  String get summary => (counts.entries.toList()
+    ..sort((a,b) => a.key.compareTo(b.key)))
+    .map((item) => item.key + ': ' + item.value.toString()).join(' • ');
+}
+).hasMatch(matches.single)&&
+      RegExp(r'^\s*(?:Amount|Amt)\s*[:：]\s*'
+        r'[0-9]{1,3}(?:,[0-9]{3})+\s*(?:SAR|SR)\s*
+    final amount=double.tryParse(canonical);
+    if(amount==null||!amount.isFinite||amount<=0||amount>1e9)return null;
+    final factor=scale==3?1000:scale==0?1:100;
+    final minor=amount*factor;
+    if((minor-minor.round()).abs()>0.000001)return null;
+    return (amount:amount,currency:currency,formatted:canonical+' '+currency);
+  }
+
+  static String? originalAmountPreview(String raw)=>originalAmount(raw)?.formatted;
+
+  /// Pending authorizations, one-time codes and failed notices do not
+  /// represent settled transactions, even when they repeat a card amount.
+  static bool isUnpostedNotice(String raw) => RegExp(
+    r'^\s*(?:Online\s+Pre[-\s]?Auth(?:ori[sz]ation)?|'
+    r'Pre[-\s]?Authori[sz]ation|Authorization\s+Hold|'
+    r'Please\s+use\s+the\s+code|OTP\b|Verification\s+Code|'
+    r'Declined\s+Transaction|Transaction\s+Declined|'
+    r'Failed\s+Transaction|Transaction\s+Failed|'
+    r'Unsuccessful\s+Transaction)\b|'
+    r'^\s*(?:Transaction\s+)?Status\s*[:：]\s*'
+    r'(?:Pending|Declined|Failed|Rejected|Cancelled|Canceled)\b',
+    caseSensitive:false,multiLine:true,
+  ).hasMatch(raw);
+
+  /// Separate source-currency totals. Never add AED, SAR, JOD etc. together
+  /// or imply that an unresolved amount is zero.
+  static ({Map<String,double> totals,int unresolved}) sourceTotals(
+      List<String> messages) {
+    // Source totals are display-only but must still be summed in exact
+    // 0/2/3-minor-unit integers. Binary double accumulation can misstate
+    // a multi-message finance review (0.10 + 0.20 != exactly 0.30).
+    final minorTotals=<String,int>{};
+    var unresolved=0;
+    for(final message in messages){
+      // Exclude non-posted notices entirely, rather than reporting their
+      // quoted amount as spend or as an unresolved financial transaction.
+      if(isUnpostedNotice(message))continue;
+      final original=originalAmount(message);
+      if(original==null){
+        unresolved++;
+        continue;
+      }
+      final digits=minorDigits(original.currency);
+      final factor=digits==0?1:digits==3?1000:100;
+      final scaled=original.amount*factor;
+      final minor=scaled.isFinite&&scaled>0&&scaled<9007199254740991
+        ?scaled.round():null;
+      if(minor==null||(scaled-minor).abs()>1e-6){
+        unresolved++;
+        continue;
+      }
+      final previous=minorTotals[original.currency]??0;
+      if(previous>9007199254740991-minor){
+        unresolved++;
+        continue;
+      }
+      minorTotals[original.currency]=previous+minor;
+    }
+    final totals=<String,double>{
+      for(final entry in minorTotals.entries)
+        entry.key:entry.value/(minorDigits(entry.key)==0
+          ?1:minorDigits(entry.key)==3?1000:100),
+    };
+    return (totals:Map<String,double>.unmodifiable(totals),
+      unresolved:unresolved);
+  }
+
+
+  static bool requiresReviewForSarLedger(String raw) {
+    final currencies = currenciesForMessage(raw);
+    return currencies.length > 1 || currencies.any((code) => code != 'SAR');
+  }
+
+  static WaffraSmsCurrencyBatch summarize(List<String> messages) {
+    final counts = <String, int>{};
+    for (final message in messages) {
+      if(isUnpostedNotice(message))continue;
+      for (final currency in currenciesForMessage(message)) {
+        counts[currency] = (counts[currency] ?? 0) + 1;
+      }
+    }
+    return WaffraSmsCurrencyBatch(Map<String, int>.unmodifiable(counts));
+  }
+}
+
+class WaffraSmsCurrencyBatch {
+  const WaffraSmsCurrencyBatch(this.counts);
+  final Map<String, int> counts;
+  bool get hasMixedCurrencies => counts.keys.length > 1;
+  bool get needsCurrencyReview => counts.keys.any((code) => code != 'SAR');
+  String get summary => (counts.entries.toList()
+    ..sort((a,b) => a.key.compareTo(b.key)))
+    .map((item) => item.key + ': ' + item.value.toString()).join(' • ');
+}
+,
+        caseSensitive:false,multiLine:true).hasMatch(action);
+    final canonical=_canonicalMoney(matches.single,scale)??
+      (labelledSarThousands?matches.single.replaceAll(',',''):null);
     if(canonical==null)return null;
     final amount=double.tryParse(canonical);
     if(amount==null||!amount.isFinite||amount<=0||amount>1e9)return null;
