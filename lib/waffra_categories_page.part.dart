@@ -281,7 +281,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
      shape:const RoundedRectangleBorder(side:BorderSide.none),
      collapsedShape:const RoundedRectangleBorder(side:BorderSide.none),
      tilePadding:const EdgeInsets.symmetric(horizontal:12),
-     childrenPadding:const EdgeInsets.fromLTRB(12,0,12,12),
+     childrenPadding:const EdgeInsets.fromLTRB(16,8,16,18),
      title:WaffraText(waffraIsEnglish?'Filter & sort':'الفلترة والترتيب',
       style:const TextStyle(fontWeight:FontWeight.bold)),
      subtitle:WaffraText(filterLabels.isEmpty?
@@ -300,7 +300,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
         floatingLabelBehavior:FloatingLabelBehavior.auto,
         contentPadding:const EdgeInsets.symmetric(horizontal:14,vertical:15),
         border:OutlineInputBorder(borderRadius:BorderRadius.circular(13)));
-       return Wrap(spacing:10,runSpacing:10,children:[
+       return Wrap(spacing:12,runSpacing:16,children:[
         SizedBox(width:cell,child:DropdownButtonFormField<String>(
          key:ValueKey('waffra-category-type-'+categoryTypeFilter),
          initialValue:categoryTypeFilter,isExpanded:true,
