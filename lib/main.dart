@@ -5339,8 +5339,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      // Only child-category budgets may receive NEW allocations. An existing
      // legacy parent budget is visible for history, never silently migrated.
      if(pickedId==null){selectedBudgetId=null;return;}
-     final matches=categories.where((c)=>c.id==pickedId&&
-      !c.income&&c.budget>0&&c.isSubcategory).toList();
+     final matches=namedBudgets.where((b)=>b.id==pickedId&&
+      b.budget>0&&b.budgetActive&&!b.deleted).toList();
      if(matches.length!=1)return;
      // Budget allocation is independent of the user's chosen category.
      selectedBudgetId=pickedId;
@@ -5532,9 +5532,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         Expanded(child:DropdownButtonFormField<String>(
          key:ValueKey('waffra-entry-budget-'+(selectedBudgetId??'unlinked')+'-$budgetMenuRevision'),
          menuMaxHeight:min(340.0,MediaQuery.sizeOf(sheetContext).height*.48),
-         initialValue:categories.any((c)=>!c.income&&c.budget>0&&
-          (c.budgetActive||(initial!=null&&initial.budgetId==c.id))&&
-          c.id==selectedBudgetId)?selectedBudgetId:'unlinked',
+         initialValue:namedBudgets.any((b)=>b.budget>0&&
+          !b.deleted&&(b.budgetActive||
+           (initial!=null&&initial.budgetId==b.id))&&
+          b.id==selectedBudgetId)?selectedBudgetId:'unlinked',
          isExpanded:true,
          decoration:InputDecoration(
           labelText:waffraIsEnglish?'Transaction budget':'ميزانية العملية',
@@ -5542,14 +5543,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          items:[
           DropdownMenuItem(value:'unlinked',child:WaffraText(
            waffraIsEnglish?'No budget':'غير مرتبطة',maxLines:1)),
-          ...categories.where((c)=>!c.income&&c.isSubcategory&&
-           c.budget>0&&c.budgetActive)
+          ...namedBudgets.where((b)=>b.budget>0&&b.budgetActive&&!b.deleted)
            .map((c)=>DropdownMenuItem(value:c.id,child:WaffraText(
             c.budgetLabel??'ميزانية '+c.displayName,maxLines:1))),
           if(initial?.budgetId!=null)
-           ...categories.where((c)=>c.id==initial!.budgetId&&
-            !c.income&&c.budget>0&&
-            (!c.budgetActive||!c.isSubcategory)).map(
+           ...namedBudgets.where((b)=>b.id==initial!.budgetId&&
+            (b.deleted||!b.budgetActive)).map(
              (c)=>DropdownMenuItem(value:c.id,enabled:false,
               child:WaffraText(
                (c.budgetLabel??'ميزانية '+c.displayName)+
@@ -5573,8 +5572,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           if(v=='__create_budget__'){
            final id=await chooseBudgetCategory();
            if(!sheetContext.mounted)return;
-           final b=categories.where((c)=>c.id==id&&!c.income&&
-            c.isSubcategory&&c.budget>0&&c.budgetActive).toList();
+           final b=namedBudgets.where((x)=>x.id==id&&
+            x.budgetActive&&!x.deleted).toList();
            update((){
             budgetMenuRevision++;
             if(b.length==1)assignBudgetInsideEditor(b.single.id);
@@ -5713,9 +5712,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        if(!waffraCanAssignManualCategory(categories,
         income,selectedParentId,category))return;
        if(!income&&selectedBudgetId!=null&&
-          !categories.any((c)=>c.id==selectedBudgetId&&
-            !c.income&&c.budget>0&&
-            (c.budgetActive||(initial!=null&&initial.budgetId==c.id)))){
+          !namedBudgets.any((b)=>b.id==selectedBudgetId&&
+            b.budget>0&&!b.deleted&&
+            (b.budgetActive||(initial!=null&&initial.budgetId==b.id)))){
         if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
          'This budget is currently paused. Pick another budget or choose Unassigned.':
          'الميزانية دي متوقفة حاليًا. اختار ميزانية مفعّلة أو خلّي العملية بدون ربط.');
@@ -5752,9 +5751,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         sourceType:initial?.sourceType??(sms?'sms':scannedReceipt!=null?'receipt':'manual'),
         merchantKey:initial?.merchantKey??(sms?(waffraMerchantKey(message.text)??''):''),
         goalWalletPaidMinor:initial?.goalWalletPaidMinor??0,
-        budgetId:income?null:(categories.any((c)=>c.id==selectedBudgetId&&
-         !c.income&&c.budget>0&&
-         (c.budgetActive||(initial!=null&&initial.budgetId==c.id)))
+        budgetId:income?null:(namedBudgets.any((b)=>b.id==selectedBudgetId&&
+         !b.deleted&&b.budget>0&&
+         (b.budgetActive||(initial!=null&&initial.budgetId==b.id)))
           ?selectedBudgetId:null)));
       }),child:const WaffraText('تأكيد وحفظ العملية')),
      );
@@ -5798,7 +5797,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // Confirmation here only permits the user's explicitly reviewed overlap.
    if(pendingHash!=null)explicitlyApprovedSmsDuplicate=true;
   }
-  final linkedBudget=categories.where((c)=>c.id==result.budgetId&&c.budget>0&&!c.income).toList();
+  final linkedBudget=namedBudgets.where((b)=>b.id==result.budgetId&&!b.deleted).toList();
   final previousSpent=linkedBudget.isEmpty?0.0:waffraNamedBudgetSpent(
     entries.where((e)=>e.id!=result.id),categories,linkedBudget.single,result.date);
   if(pendingHash!=null&&initial==null){
@@ -6133,8 +6132,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  Future<void> budgetAlert(MoneyEntry entry,double previousSpent)async {
   if(entry.income)return;
-  final budgets=categories.where((c)=>!c.income&&c.budget>0&&
-    c.budgetActive&&c.id==entry.budgetId).toList();
+  final budgets=namedBudgets.where((b)=>b.budget>0&&
+    b.budgetActive&&!b.deleted&&b.id==entry.budgetId).toList();
   if(budgets.length!=1)return;
   final category=budgets.single;
   final spent=waffraNamedBudgetSpent(entries,categories,category,entry.date);
@@ -6982,10 +6981,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    builder:(ctx)=>WaffraTransactionDetailsDialog(
     entry:entry,
     protectedOriginalSms:originalBankSms,
-    linkedBudgetName:categories.where((c)=>c.id==entry.budgetId)
-      .map((c)=>c.budgetLabel??c.name).firstOrNull,
-    linkedBudgetPaused:categories.any((c)=>c.id==entry.budgetId&&
-      c.budget>0&&!c.budgetActive),
+    linkedBudgetName:namedBudgets.where((b)=>b.id==entry.budgetId)
+      .map((b)=>b.name).firstOrNull,
+    linkedBudgetPaused:namedBudgets.any((b)=>b.id==entry.budgetId&&
+      (!b.budgetActive||b.deleted)),
     onLinkBudget:entry.income||entry.budgetId!=null?null:(){
       Navigator.pop(ctx);
       unawaited(assignExistingExpenseToBudget(entry));
@@ -7293,7 +7292,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     'العملية اتغيرت أو معرفها مكرر. حدّث الصفحة قبل المراجعة.');
    return;
   }
-  final budgets=categories.where((c)=>!c.income&&c.budget>0&&c.budgetActive)
+  final budgets=namedBudgets.where((b)=>b.budget>0&&b.budgetActive&&!b.deleted)
    .toList(growable:false);
   if(budgets.isEmpty){
    snack(context,waffraIsEnglish?'Create a budget first.':
@@ -7367,7 +7366,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      latest.single.notes!=old.notes||
      latest.single.receiptPath!=old.receiptPath||
      latest.single.sourceType!=old.sourceType||
-     !categories.any((b)=>b.id==selected.id&&!b.income&&b.budget>0&&b.budgetActive)){
+     !namedBudgets.any((b)=>b.id==selected.id&&b.budget>0&&
+      b.budgetActive&&!b.deleted)){
    snack(context,waffraIsEnglish?'Record changed; nothing saved.':
     'العملية أو الميزانية اتغيرت. لم يتم حفظ أي ربط.');
    return;
@@ -7585,7 +7585,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final monthEntries=entries.where((e)=>e.date.year==today.year&&e.date.month==today.month);
   // Include legacy budgets previously saved on main categories in totals;
   // only *new* budget creation requires a child category.
-  final allBudgets=categories.where((c)=>!c.income&&c.budget>0).toList();
+  final allBudgets=namedBudgets.where((b)=>b.budget>0&&!b.deleted).toList();
   // Overall monthly budget is a projection, not an additional saved cap.
   // Paused budgets remain part of the total the user has created.
   final overallLimit=allBudgets.fold<double>(0,(total,c)=>total+c.budget);
@@ -7850,8 +7850,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    pendingRecurringIncome:pendingIncome,pendingRecurringExpense:pendingExpense);
   // The old separately-entered monthly cap is legacy-only. Daily allowance
   // follows the active user-created budgets and their explicitly linked spend.
-  final activeBudgets=categories.where((c)=>
-   !c.income&&c.budget>0&&c.budgetActive).toList();
+  final activeBudgets=namedBudgets.where((b)=>
+   b.budget>0&&b.budgetActive&&!b.deleted).toList();
   final activeCap=activeBudgets.fold<double>(0,(v,c)=>v+c.budget);
   final activeIds=activeBudgets.map((c)=>c.id).toSet();
   final activeBudgetSpent=monthExpenses.where((e)=>
@@ -7862,7 +7862,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final prev=DateTime(now.year,now.month-1);
   final prevTotal=sum(entries.where((e)=>!e.income&&e.date.year==prev.year&&e.date.month==prev.month),false);
   final delta=WaffraFinancialInsights.comparisonPercent(spent,prevTotal);
-  final warnings=categories.where((c)=>!c.income&&c.budget>0&&c.budgetActive&&
+  final warnings=namedBudgets.where((c)=>!c.deleted&&c.budget>0&&c.budgetActive&&
    WaffraFinancialInsights.budgetAlertStage(
     sum(monthExpenses.where((e)=>e.category==c.name),false),c.budget)>=80).toList();
   return Card(
