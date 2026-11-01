@@ -113,6 +113,40 @@ class WaffraVerifiedFinanceAuthority {
   /// Complete the already-existing encrypted SMS-hash route; the current
   /// guarded legacy branch merges under the SAME widget/dashboard lock.
   /// Never accepts raw SMS, never selects a second empty finance source.
+  /// Dedicated encrypted linked-goal settlement route for future live Home
+  /// integration. A legacy source is NOT allowed to simulate the new
+  /// relational wallet movement and a stale screen can never force payment.
+  Future<WaffraFinanceAuthorityRead> settleLinkedGoalDue({
+    required WaffraFinanceAuthorityRead baseline,
+    required String goalId,
+    required String recurringId,
+    required String dueKey,
+    required int amountMinor,
+    required String confirmedAtIso,
+    required bool userConfirmed,
+  }) async {
+    if (!userConfirmed ||
+        await _requireRoute(WaffraFinanceRoute.recurringPostingAndPostponement) !=
+            WaffraRuntimeFinanceBackend.verifiedEncrypted) {
+      throw StateError('Linked goal settlement requires verified SQLCipher.');
+    }
+    final witness = baseline.encryptedWitness;
+    if (baseline.source != WaffraRuntimeFinanceBackend.verifiedEncrypted ||
+        witness == null || encryptedSession == null) {
+      throw StateError('No verified encrypted goal wallet witness.');
+    }
+    await encryptedSession!.settleLinkedGoalDue(
+      baseline: witness,
+      goalId: goalId,
+      recurringId: recurringId,
+      dueKey: dueKey,
+      amountMinor: amountMinor,
+      confirmedAtIso: confirmedAtIso,
+      userConfirmed: true,
+    );
+    return load(route: WaffraFinanceRoute.dashboardRead);
+  }
+
   Future<WaffraFinanceAuthorityRead> mergeSmsHashes(
       Iterable<String> newHashes) async {
     final frozen = List<String>.unmodifiable(newHashes);
