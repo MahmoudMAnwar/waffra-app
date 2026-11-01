@@ -2916,6 +2916,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  String budgetStatusFilter='active'; // UI-only: active budgets by default.
  String budgetSearch='';
  String budgetSort='default'; // name, limit or spending, UI-only.
+ String budgetMainCategoryFilter='all'; // Budget directory category filter.
  DateTimeRange? transactionsDateRange;
  double? minTransactionAmount,maxTransactionAmount;
  int tab=0,year=DateTime.now().year,month=DateTime.now().month;
@@ -7388,7 +7389,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    e.budgetId!=null&&linkedIds.contains(e.budgetId))
    .fold<double>(0,(total,e)=>total+e.amount);
   final named=allBudgets.where((c)=>
-   budgetStatusFilter=='active'?c.budgetActive:!c.budgetActive).toList();
+   budgetStatusFilter=='all'||(budgetStatusFilter=='active'?
+    c.budgetActive:!c.budgetActive)).toList();
   final selectedRows=named.where((c)=>c.id==selectedNamedBudgetCategoryId).toList();
   final selected=selectedRows.isEmpty?null:selectedRows.single;
   final limit=selected?.budget??overallLimit;
@@ -7491,6 +7493,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       border:const OutlineInputBorder(),
       contentPadding:const EdgeInsets.symmetric(horizontal:12,vertical:12)),
      items:[
+      DropdownMenuItem(value:'all',
+       child:WaffraText(waffraIsEnglish?'All budgets':'كل الميزانيات')),
       DropdownMenuItem(value:'active',
        child:WaffraText(waffraIsEnglish?'Active budgets':'الميزانيات الفعّالة')),
       DropdownMenuItem(value:'inactive',
