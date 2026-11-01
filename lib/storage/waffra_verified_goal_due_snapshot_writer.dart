@@ -73,6 +73,11 @@ class WaffraVerifiedGoalDueSnapshotWriter {
     if (!experimentalEnabled || !userConfirmed) {
       throw StateError('Verified encrypted goal due needs explicit approval.');
     }
+    // Both the typed writer and the Home/Widget snapshot MUST share the
+    // identical SQL connection; two different vaults cannot commit atomically.
+    if (!identical(snapshot.store, store)) {
+      throw StateError('Goal settlement and finance snapshot use different vaults.');
+    }
     return store.transaction(() async {
       final before=await snapshot.read();
       final finance=Map<String,Object?>.from(before.values);
