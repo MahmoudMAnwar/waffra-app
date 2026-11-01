@@ -3844,8 +3844,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ]))]));
 /// Every bank expense needs an explicit budget choice. Cancel means no post.
  Future<List<String?>?> reviewSmsBudgetLinks(List<MoneyEntry> candidates)async{
-  final choices=categories.where((c)=>
-   !c.income&&c.isSubcategory&&c.budget>0&&c.budgetActive).toList();
+  final choices=namedBudgets.where((b)=>
+   !b.deleted&&b.budget>0&&b.budgetActive).toList();
   final assigned=List<String?>.filled(candidates.length,null);
   if(!candidates.any((e)=>!e.income))return assigned;
   return showWaffraDialog<List<String?>>(context:context,
@@ -3889,14 +3889,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            onPressed:WaffraHaptics.tap(()async{
             final id=await chooseBudgetCategory();
             if(id==null||!ctx.mounted)return;
-            final found=categories.where((c)=>c.id==id&&!c.income&&
-             c.budget>0&&c.budgetActive).toList();
+            final found=namedBudgets.where((b)=>b.id==id&&
+             b.budget>0&&b.budgetActive&&!b.deleted).toList();
             if(found.length!=1)return;
             update((){
              choices
               ..clear()
-              ..addAll(categories.where((c)=>
-               !c.income&&c.isSubcategory&&c.budget>0&&c.budgetActive));
+              ..addAll(namedBudgets.where((b)=>
+               b.budget>0&&b.budgetActive&&!b.deleted));
              assigned[n]=id;
             });
            }),
@@ -4161,7 +4161,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // A paused budget may not receive a newly imported SMS charge.
   // Refuse the batch if its previously confirmed selection became stale.
   if(reviewedBudgets.any((id)=>id!=null&&
-     !categories.any((c)=>c.id==id&&!c.income&&c.budget>0&&c.budgetActive))){
+     !namedBudgets.any((b)=>b.id==id&&b.budget>0&&b.budgetActive&&!b.deleted))){
    if(ctx.mounted){
     update(()=>busy=false);
     snack(ctx,waffraIsEnglish?
@@ -4798,7 +4798,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        final budgetSelection=await reviewSmsBudgetLinks([entry]);
        if(budgetSelection==null){if(ctx.mounted)update(()=>busy=false);return;}
        entry=entry.withBudget(budgetSelection.single);
-       final selected=categories.where((c)=>c.id==entry.budgetId&&c.budget>0).toList();
+       final selected=namedBudgets.where((b)=>b.id==entry.budgetId&&
+        b.budget>0&&!b.deleted).toList();
        if(selected.length==1)previous=waffraNamedBudgetSpent(
         entries,categories,selected.single,entry.date);
        // A parsed SMS is not saved until both the transaction and its
@@ -7193,37 +7194,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  /// Edit only budget fields; the category name and transaction history must
  /// never be mutated by the budget editor.
  /// Ask before assigning historical unbudgeted purchases.
+ /// Never infer a historic budget link from the transaction category.
  Future<void> offerHistoricBudgetLink(BudgetCategory budget)async{
   if(!mounted||budget.budget<=0||!budget.budgetActive)return;
-  final names=<String>{budget.name,
-   if(!budget.isSubcategory)...categories.where((c)=>c.parentId==budget.id).map((c)=>c.name)};
-  final matching=entries.where((e)=>!e.income&&e.budgetId==null&&names.contains(e.category)).toList();
-  if(matching.isEmpty)return;
-  final total=matching.fold<double>(0,(v,e)=>v+e.amount);
-  final ok=await showWaffraDialog<bool>(context:context,
-   builder:(ctx)=>AlertDialog(
-    title:WaffraText(waffraIsEnglish?'Link existing expenses?':'ربط العمليات السابقة بالميزانية؟'),
-    content:WaffraText(waffraIsEnglish?
-     '${matching.length} previously unassigned expense(s), totalling ${cash(total)}, match this category. Link them to ${budget.budgetLabel??budget.name}? This does not create or change payments.':
-     'فيه ${matching.length} عملية قديمة غير مرتبطة، بإجمالي ${cash(total)}، في نفس القسم. تربطها بميزانية «${budget.budgetLabel??budget.name}»؟ مش هنضيف أو نغيّر أي مبلغ.'),
-    actions:[
-     TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),
-      child:WaffraText(waffraIsEnglish?'Not now':'مش دلوقتي')),
-     FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),
-      child:WaffraText(waffraIsEnglish?'Link expenses':'ربط العمليات')),
-    ],
-   ));
-  if(ok!=true||!mounted)return;
-  final ids=matching.map((e)=>e.id).toSet();
-  setState((){
-   for(var i=0;i<entries.length;i++){
-    if(ids.contains(entries[i].id)&&entries[i].budgetId==null){
-     entries[i]=entries[i].withBudget(budget.id);
-    }
-   }
-  });
-  await _persistModuleOrReload(WaffraFinanceRoute.transactionEdit,
-   operation:'link-old-expenses-to-budget');
+  if(entries.any((e)=>!e.income&&e.budgetId==null)){
+   snack(context,waffraIsEnglish?
+    'Older unassigned expenses may be linked individually under My Budgets.':
+    'في عمليات قديمة غير مرتبطة؛ تقدر تراجعها وتربطها يدويًا من ميزانياتي.',
+    isError:false);
+  }
  }
 
  /// User-approved historic linking. This does NOT invent a ledger entry.
@@ -7322,14 +7301,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ListView.builder(
      itemCount:visible.length,itemBuilder:(_,i){
       final b=visible[i];
-      final scope=<String>{b.name,
-       if(!b.isSubcategory)
-        ...categories.where((c)=>c.parentId==b.id).map((c)=>c.name)};
       return ListTile(
        key:Key('waffra-retro-budget-option-'+b.id),
        title:WaffraText(b.budgetLabel??b.name,maxLines:2),
-       subtitle:scope.contains(original.single.category)?
-        WaffraText(waffraIsEnglish?'Suggested':'مقترحة حسب القسم الأصلي'):null,
+       subtitle:WaffraText(waffraIsEnglish?
+        'Optional, no category change':'اختياري، من غير تغيير القسم'),
        onTap:WaffraHaptics.tap(()=>Navigator.pop(ctx,b)),
       );
      })),])),
@@ -7862,9 +7838,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final prev=DateTime(now.year,now.month-1);
   final prevTotal=sum(entries.where((e)=>!e.income&&e.date.year==prev.year&&e.date.month==prev.month),false);
   final delta=WaffraFinancialInsights.comparisonPercent(spent,prevTotal);
-  final warnings=namedBudgets.where((c)=>!c.deleted&&c.budget>0&&c.budgetActive&&
+  final warnings=namedBudgets.where((b)=>!b.deleted&&b.budget>0&&b.budgetActive&&
    WaffraFinancialInsights.budgetAlertStage(
-    sum(monthExpenses.where((e)=>e.category==c.name),false),c.budget)>=80).toList();
+    sum(monthExpenses.where((e)=>e.budgetId==b.id),false),b.budget)>=80).toList();
   return Card(
    elevation:1.0,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(21)),
    child:Padding(padding:const EdgeInsets.all(15),child:Column(
@@ -11351,18 +11327,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    return Center(child:WaffraText(waffraIsEnglish?
     'Financial source not ready':'مصدر البيانات المالية غير جاهز'));
   }
-  // Build named-budget lookup once: avoid a categories scan for each row.
-  final childNames=<String,Set<String>>{};
-  for(final c in categories){
-   if(c.isSubcategory)(childNames[c.parentId]??=<String>{}).add(c.name);
-  }
-  final eligibleNames=<String>{},liveBudgetIds=<String>{};
-  for(final c in categories){
-   if(c.income||c.budget<=0)continue;
-   liveBudgetIds.add(c.id);
-   eligibleNames.add(c.name);
-   eligibleNames.addAll(childNames[c.id]??const <String>{});
-  }
+  // Budget linking is explicit, never inferred from category labels.
+  final liveBudgetIds=namedBudgets.where((b)=>!b.deleted).map((b)=>b.id).toSet();
   return WaffraSmartFeaturesPage(
    key:const Key('waffra-m268-footer-page'),
    tourHeadingKey:_tourKeys[3],
@@ -11374,8 +11340,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     id:e.id,title:e.title,category:e.category,amount:e.amount,
     income:e.income,date:e.date,notes:e.notes,
     hasAttachment:e.receiptPath?.isNotEmpty??false,
-    unassignedNamedBudget:!e.income&&e.budgetId==null&&
-      eligibleNames.contains(e.category),
+    unassignedNamedBudget:!e.income&&e.budgetId==null,
     orphanBudgetLink:e.budgetId!=null&&!liveBudgetIds.contains(e.budgetId)))),
    goals:List<WaffraSmartGoal>.unmodifiable(goals.map((g)=>
     WaffraSmartGoal(g.name,g.target,g.saved))),
