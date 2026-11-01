@@ -52,18 +52,23 @@ void main() {
 
  test('M298 all three finance entry points display category error and reject invalid selection',(){
   final source=File('lib/main.dart').readAsStringSync();
-  expect(source,contains("labelText:waffraIsEnglish?'Message category *':'قسم هذه الرسالة *'"));
-  expect(source,contains("labelText:waffraIsEnglish?'Category *':'القسم *'"));
-  expect(source,contains("errorText:reviewAttempted&&WaffraValidators.requiredCategory("));
-  expect(source,contains("errorText:attempted&&WaffraValidators.requiredCategory("));
-  expect(source,contains("category:sms?chosen!:category"));
+  // M335 replaces the old flat category menu with required main/subcategory
+  // pickers. Both the bulk SMS review and the shared manual/scan/SMS entry
+  // sheet must reject an invalid (or stale) leaf before persisting money.
+  expect(source,contains("labelText:waffraIsEnglish?'Main category *':'القسم الرئيسي *'"));
+  expect(source,contains("labelText:waffraIsEnglish?'Subcategory *':'القسم الفرعي *'"));
+  expect(source,contains("errorText:reviewAttempted&&activeSmsMains.isEmpty"));
+  expect(source,contains("errorText:reviewAttempted&&"));
+  expect(source,contains("!waffraCanAssignManualCategory(available,income,activeSmsParent,category)"));
+  expect(source,contains("errorText:attempted&&selectedMain.isEmpty"));
+  expect(source,contains("errorText:attempted&&selectedSub.isEmpty"));
+  expect(source,contains("if(!waffraCanAssignManualCategory(categories,"));
+  expect(source,contains("category:category,amount:n,"));
   expect(source,contains("category:selected,"));
-  expect(source,contains("category=forType(v).isNotEmpty?forType(v).first.name:'';"));
   expect(source,contains("waffraIsEnglish?'Gender *':'الجنس *'"));
   expect(source,contains("waffraIsEnglish?'Attachment name *':'اسم المرفق *'"));
   expect(source,contains("waffraIsEnglish?'Phone number *':'رقم الجوال *'"));
   expect(source,contains("waffraIsEnglish?'Password *':'كلمة المرور *'"));
   expect(source,contains("WaffraValidators.requiredCategory(selected,options.map((c)=>c.name))==null"));
-  expect(source,contains("WaffraValidators.requiredCategory(category,available.map((c)=>c.name))!=null"));
  });
 }
