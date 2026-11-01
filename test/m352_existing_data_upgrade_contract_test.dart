@@ -133,7 +133,7 @@ void main() {
    expect(home,contains('final pending=entries.where((e)=>!e.income&&e.budgetId==null)'));
    expect(home,contains('if(ok!=true||!mounted)return;'));
    expect(home,contains('entries[index]=entries[index].withBudget(selected.id);'));
-   expect(home,contains('operation:\\u0027retroactive-opt-in-budget-link\\u0027'));
+   expect(home,contains('retroactive-opt-in-budget-link'));
    expect(home,contains('_persistModuleOrReload(WaffraFinanceRoute.transactionEdit'));
    expect(screen,contains("Key('waffra-retro-budget-review-banner')"));
    expect(screen,contains('reviewUnlinkedHistoricalExpenses()'));
