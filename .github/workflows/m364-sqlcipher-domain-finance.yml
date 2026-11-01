@@ -7,9 +7,11 @@ on:
       - '.github/workflows/m364-sqlcipher-domain-finance.yml'
       - 'lib/storage/waffra_fresh_finance_domain_schema.dart'
       - 'lib/storage/waffra_fresh_finance_domain_repository.dart'
+      - 'lib/storage/waffra_fresh_saved_features_repository.dart'
       - 'lib/storage/waffra_fresh_encrypted_vault_bootstrap.dart'
       - 'lib/storage/waffra_encrypted_full_finance_reset.dart'
       - 'test/storage/m364_sqlcipher_finance_domain_test.dart'
+      - 'test/storage/m364_saved_features_storage_test.dart'
   workflow_dispatch:
 
 permissions:
@@ -43,9 +45,12 @@ jobs:
         run: |
           dart analyze lib/storage/waffra_fresh_finance_domain_schema.dart \
             lib/storage/waffra_fresh_finance_domain_repository.dart \
+            lib/storage/waffra_fresh_saved_features_repository.dart \
             lib/storage/waffra_fresh_encrypted_vault_bootstrap.dart \
             lib/storage/waffra_encrypted_full_finance_reset.dart \
-            test/storage/m364_sqlcipher_finance_domain_test.dart
+            test/storage/m364_sqlcipher_finance_domain_test.dart \
+            test/storage/m364_saved_features_storage_test.dart \
+            test/storage/m364_saved_features_storage_test.dart
       - name: Exercise new SQLCipher finance domain and existing baseline
         run: |
           flutter test --reporter expanded \
