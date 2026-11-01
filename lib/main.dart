@@ -246,13 +246,18 @@ class MoneyEntry {
  final String? budgetId;
  /// Internal merchant identifier is a merchant *name*, never a bank/card ID.
  final String notes,sourceType,merchantKey;
+ /// Saved separately from cash: the confirmed goal-due amount funded by
+ /// the goals wallet, in integer halalas. Other entries must leave it zero.
+ final int goalWalletPaidMinor;
  MoneyEntry({required this.id,required this.title,required this.category,required this.amount,
   required this.income,required this.date,this.receiptPath,this.notes='',
-  this.sourceType='manual',this.merchantKey='',this.budgetId});
+  this.sourceType='manual',this.merchantKey='',this.budgetId,
+  this.goalWalletPaidMinor=0});
  Map<String,dynamic> toJson()=>{'id':id,'title':title,'category':category,
   'amount':amount,'income':income,'date':date.toIso8601String(),
   'receiptPath':receiptPath,'notes':notes,'sourceType':sourceType,
-  'merchantKey':merchantKey,if(budgetId!=null)'budgetId':budgetId};
+  'merchantKey':merchantKey,if(budgetId!=null)'budgetId':budgetId,
+  if(goalWalletPaidMinor>0)'goalWalletPaidMinor':goalWalletPaidMinor};
  factory MoneyEntry.fromJson(Map<String,dynamic> j)=>MoneyEntry(
   id:'${j['id']??newId()}',title:'${j['title']??''}',
   category:'${j['category']??'أخرى'}',amount:(j['amount'] as num).toDouble(),
@@ -261,18 +266,21 @@ class MoneyEntry {
   notes:'${j['notes']??''}',sourceType:'${j['sourceType']??'legacy'}',
   merchantKey:'${j['merchantKey']??''}',
   budgetId:j['budgetId'] is String&&((j['budgetId'] as String).trim().isNotEmpty)?
-   j['budgetId'] as String:null);
+   j['budgetId'] as String:null,
+  goalWalletPaidMinor:j['sourceType']=='goal_due'&&j['goalWalletPaidMinor'] is int
+   ?j['goalWalletPaidMinor'] as int:0);
  /// Category rename is metadata-only; protect SMS notes, source identity,
  /// merchant key, original timestamp and receipt references.
  MoneyEntry withCategory(String next)=>MoneyEntry(
   id:id,title:title,category:next,amount:amount,income:income,date:date,
   receiptPath:receiptPath,notes:notes,sourceType:sourceType,
-  merchantKey:merchantKey,budgetId:budgetId);
+  merchantKey:merchantKey,budgetId:budgetId,goalWalletPaidMinor:goalWalletPaidMinor);
  /// Reassigning a budget must not mutate the amount, date, SMS, merchant or receipt.
  MoneyEntry withBudget(String? budget)=>MoneyEntry(
   id:id,title:title,category:category,amount:amount,income:income,
   date:date,receiptPath:receiptPath,notes:notes,
-  sourceType:sourceType,merchantKey:merchantKey,budgetId:income?null:budget);
+  sourceType:sourceType,merchantKey:merchantKey,budgetId:income?null:budget,
+  goalWalletPaidMinor:goalWalletPaidMinor);
 }
 
 
@@ -493,12 +501,19 @@ double waffraNamedBudgetSpent(Iterable<MoneyEntry> records,
   e.date.year==month.year&&e.date.month==month.month)
   .fold<double>(0,(sum,e)=>sum+e.amount);
 }
-/// Earmarked goal savings reduce available cash, not total net worth.
+/// Goals savings are an independent wallet; saving or creating a goal must
+/// NOT debit the current cash ledger. A goal_due explicitly attributes its
+/// paid amount to the wallet, with any uncovered remainder paid from cash.
 double waffraGoalWalletBalance(Iterable<SavingGoal> goals)=>
  goals.fold<double>(0,(sum,g)=>sum+g.saved);
 double waffraAvailableCash(Iterable<MoneyEntry> ledger,Iterable<SavingGoal> goals)=>
- ledger.fold<double>(0,(total,e)=>total+(e.income?e.amount:-e.amount))-
- waffraGoalWalletBalance(goals);
+ ledger.fold<double>(0,(total,e){
+  if(e.income)return total+e.amount;
+  final minor=(e.amount*100).round();
+  final wallet=e.sourceType=='goal_due'&&e.goalWalletPaidMinor>=0&&
+   e.goalWalletPaidMinor<=minor?e.goalWalletPaidMinor/100:0.0;
+  return total-e.amount+wallet;
+ });
 
 /// Fresh per-paste summary, independent of previous parsing results.
 class WaffraSmsPasteSummary {
@@ -3660,7 +3675,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        entries.insert(0,MoneyEntry(
         id:id,title:r.title,category:r.category,
         amount:allocation.amount,income:false,date:DateTime.now(),
-        sourceType:'goal_due',
+        sourceType:'goal_due',goalWalletPaidMinor:allocation.fromGoalMinor,
         notes:waffraIsEnglish?
          'From goal wallet: ${cash(allocation.fromGoalWallet)}; '
          'from current balance: ${cash(allocation.fromCurrentBalance)}':
@@ -8171,7 +8186,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       SliverPersistentHeader(
        pinned:false,
        delegate:WaffraBalanceHeader(
-         balance:inc-exp-waffraGoalWalletBalance(goals),english:waffraIsEnglish,focusKey:_tourKeys[0],
+         balance:waffraAvailableCash(entries,goals),english:waffraIsEnglish,focusKey:_tourKeys[0],
          monthlyChangePercent:monthChange,
          refreshVerifiedWidgetBalance:_refreshWidget)),
       SliverPadding(padding:const EdgeInsets.fromLTRB(14,10,14,96),
@@ -9583,8 +9598,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      title:WaffraText(waffraIsEnglish?'Release goal savings':'سحب من محفظة الهدف'),
      content:Column(mainAxisSize:MainAxisSize.min,children:[
       WaffraText(waffraIsEnglish?
-       'Move savings back to spendable balance. This is not an income or expense. Record any payment separately.':
-       'تحويل الادخار إلى الرصيد المتاح بدون تسجيل دخل أو مصروف. سجّل الدفع كعملية مصروف منفصلة بعد السحب.'),
+       'Reduce the separate goals wallet without changing current balance. Record any real bank movement separately.':
+       'خفض المدخرات من محفظة الهدف لا يغيّر الرصيد الحالي. سجّل أي حركة بنكية فعلية كعملية مستقلة.'),
       const SizedBox(height:12),
       TextField(controller:ctl,
        keyboardType:const TextInputType.numberWithOptions(decimal:true),
@@ -9755,11 +9770,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        'Savings exceed available balance':'تنبيه: مبلغ الادخار أكبر من الرصيد المتاح'),
       content:WaffraText(waffraIsEnglish?
        'Available: ${cash(available)}. Requested: ${cash(n)}. '
-       'If you continue, your spendable balance will be ${cash(available-n)}. '
-       'You can still fund your goal; this is a warning, not a restriction.':
-       'الرصيد المتاح: ${cash(available)}، والمبلغ المراد ادخاره: ${cash(n)}. '
-       'لو كملت، الرصيد المتاح للصرف هيصبح ${cash(available-n)}. '
-       'تقدر تكمل عادي؛ ده تنبيه فقط ومش منع.'),
+       'The goals wallet is separate. This saving will not deduct money '
+       'from your current balance. This is an informational warning only.':
+       'الرصيد الحالي: ${cash(available)}، والادخار المطلوب: ${cash(n)}. '
+       'محفظة الأهداف منفصلة؛ إضافة الادخار لن تخصم أي مبلغ من الرصيد الحالي. '
+       'هذا تنبيه توضيحي فقط.'),
       actions:[SizedBox(width:double.maxFinite,child:Row(children:[
        Expanded(child:OutlinedButton(
         onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialog,false)),
@@ -10025,8 +10040,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      refreshVerifiedWidgetBalance:_refreshWidget).build(context,0,false)),
    Padding(padding:const EdgeInsets.symmetric(horizontal:14,vertical:7),
     child:WaffraText(waffraIsEnglish?
-     'Goals wallet + spendable balance = total recorded net cash. Allocations are not expenses until paid.':
-     'محفظة الأهداف + الرصيد المتاح = إجمالي رصيدك. الادخار حجز للفلوس وليس مصروفًا نهائيًا.',
+     'Your goals wallet is independent from current balance. Saving progress does not spend cash automatically.':
+     'محفظة الأهداف مستقلة عن الرصيد الحالي؛ إضافة الادخار لا تخصم منه تلقائيًا.',
      textAlign:TextAlign.center,style:const TextStyle(fontSize:12,color:emerald))),
    const SizedBox(height:13),
    if(goals.isNotEmpty)...[
