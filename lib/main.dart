@@ -3647,8 +3647,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         'توزيع الدفع اتغير؛ افتح الاستحقاق وراجع المبالغ قبل التأكيد.');
        return;
       }
-      // Confirmation is financial authority, not simply a reminder.
-      // One transactional snapshot mutates the ledger, goal and schedule.
+      // A confirmed goal settlement changes ledger, goal and schedule in
+      // the guarded legacy batch. Encrypted mode is refused above until a
+      // separately audited atomic SQLCipher writer supports this exact delta.
       setState((){
        final goalIndex=goals.indexWhere((g)=>g.id==r.linkedGoalId);
        final scheduleIndex=recurring.indexWhere((x)=>x.id==r.id);
@@ -3666,9 +3667,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          'من الرصيد الحالي: ${cash(allocation.fromCurrentBalance)}'));
       });
       try{
-       // Unlike a recurring-only append, a linked goal settlement updates
-       // three projections together. The transaction editor route carries
-       // their atomic SQLCipher snapshot with an unchanged finance baseline.
+       // The guarded source checks the loaded finance witness; a failed
+       // multi-module save is reloaded rather than assuming success.
        await persist(route:WaffraFinanceRoute.transactionEdit,
         userConfirmed:true);
        if(mounted)await syncRecurringReminders();
@@ -5224,6 +5224,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         selectedParentId=parent.isEmpty?null:parent.first.id;
         category='';
        }
+       selectedBudgetId=null;
        hasParsed=true;analyzing=false;
       });
      });
@@ -5236,14 +5237,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final budgetSuggestions=categories.where((c)=>!c.income&&c.budget>0&&c.budgetActive&&
       (c.name==category||c.id==selectedParentId)).toList();
     void assignBudgetInsideEditor(String? pickedId){
-     selectedBudgetId=pickedId;
-     if(pickedId==null)return;
+     // Only child-category budgets may receive NEW allocations. An existing
+     // legacy parent budget is visible for history, never silently migrated.
+     if(pickedId==null){selectedBudgetId=null;return;}
      final matches=categories.where((c)=>c.id==pickedId&&
       !c.income&&c.budget>0&&c.isSubcategory).toList();
-     if(matches.length==1){
-      selectedParentId=matches.single.parentId;
-      category=matches.single.name;
-     }
+     if(matches.length!=1)return;
+     selectedBudgetId=pickedId;
+     selectedParentId=matches.single.parentId;
+     category=matches.single.name;
     }
     Widget dateAction()=>OutlinedButton.icon(
       key:const Key('waffra-entry-date-action'),
@@ -5453,15 +5455,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         items:[
          DropdownMenuItem(value:'unlinked',child:WaffraText(
           waffraIsEnglish?'Unassigned — choose later':'غير مرتبطة بميزانية')),
-         ...categories.where((c)=>!c.income&&c.budget>0&&c.budgetActive)
+         ...categories.where((c)=>
+          !c.income&&c.isSubcategory&&c.budget>0&&c.budgetActive)
           .map((c)=>DropdownMenuItem(value:c.id,child:WaffraText(
            c.budgetLabel??'ميزانية '+c.displayName,maxLines:1))),
          if(initial?.budgetId!=null)
           ...categories.where((c)=>c.id==initial!.budgetId&&
-           !c.income&&c.budget>0&&!c.budgetActive).map(
+           !c.income&&c.budget>0&&
+           (!c.budgetActive||!c.isSubcategory)).map(
             (c)=>DropdownMenuItem(value:c.id,enabled:false,child:WaffraText(
              (c.budgetLabel??'ميزانية '+c.displayName)+
-              (waffraIsEnglish?' (paused)':' (متوقفة)'),maxLines:1))),
+              (waffraIsEnglish?' (historical)':' (ارتباط قديم)'),maxLines:1))),
         ],
         onChanged:WaffraHaptics.selection((v)=>update(
          ()=>assignBudgetInsideEditor(v=='unlinked'?null:v))),
@@ -5474,7 +5478,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            'Select budget':'تحديد الميزانية'),
          onPressed:WaffraHaptics.tap(()async{
           final activeBudgets=categories.where((c)=>
-           !c.income&&c.budget>0&&c.budgetActive).toList();
+           !c.income&&c.isSubcategory&&c.budget>0&&c.budgetActive).toList();
           String budgetQuery='';
           final picked=await showWaffraDialog<String>(context:sheetContext,
            builder:(dialogContext)=>StatefulBuilder(
