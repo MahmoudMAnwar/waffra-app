@@ -60,6 +60,7 @@ import 'waffra_account_deletion.dart';
 import 'diagnostics/waffra_crashlytics_opt_in.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'waffra_category_catalog.dart';
+import 'waffra_budget_template_catalog.dart';
 import 'waffra_category_month_totals.dart';
 import 'waffra_category_rankings.dart';
 import 'waffra_entry_sheet_safe_layout.dart';
@@ -7246,11 +7247,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
   }finally{disposeLater([name,amount]);}
  }
- Future<String?> chooseBudgetCategory({String? suggestedName})async{
+ Future<String?> chooseBudgetCategory({String? suggestedName,
+  String? suggestedParentId,String? suggestedSubcategory})async{
   // A budget is attached to one existing expense subcategory. Never create
   // a budget on a parent heading, or silently change any ledger entry.
   final parents=categories.where((c)=>!c.income&&!c.isSubcategory).toList();
-  String? chosenParentId;
+  String? chosenParentId=suggestedParentId!=null&&parents.any(
+   (c)=>c.id==suggestedParentId)?suggestedParentId:null;
   String query='';
   final chosenId=await showWaffraDialog<String>(context:context,
    builder:(ctx)=>StatefulBuilder(builder:(ctx,update){
@@ -7260,6 +7263,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       !c.income&&c.isSubcategory&&c.parentId==parent.id).toList());
     final shown=choices.where((c)=>waffraSearchAny(
       [c.name,c.displayName,waffraTr(c.name),waffraTr(c.displayName)],query)).toList();
+    if(parent!=null&&suggestedSubcategory!=null){
+     shown.sort((a,b)=>(a.displayName==suggestedSubcategory?0:1)
+       .compareTo(b.displayName==suggestedSubcategory?0:1));
+    }
     return AlertDialog(
      title:WaffraText(parent==null?
       (waffraIsEnglish?'Choose main expense category':'اختر القسم الرئيسي'):
