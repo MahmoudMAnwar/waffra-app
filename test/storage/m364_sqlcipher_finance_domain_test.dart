@@ -107,6 +107,23 @@ void main() {
     expect(await count('fresh_finance_named_budgets'),0);
   });
 
+  test('M365 missing SQLCipher domain table never silently resets stored data',
+      () async {
+    await bootstrap();
+    await db.customStatement(
+      'DROP TABLE fresh_finance_saved_scenarios',
+    );
+    await expectLater(WaffraFreshFinanceDomainSchema.requireReady(db),
+      throwsA(isA<StateError>()));
+    await expectLater(bootstrap(),throwsA(isA<StateError>()));
+    final stillMissing=await db.customSelect(
+      "SELECT name FROM sqlite_master WHERE type='table' "
+      "AND name='fresh_finance_saved_scenarios'",
+    ).get();
+    expect(stillMissing,isEmpty,
+      reason:'Versioned schema must not recreate an empty replacement table');
+  });
+
   test('M364 refuses unapproved writers and refuses absent schema',() async {
     await expectLater(repo().createNamedBudget(
       budgetId:'x',name:'Car',categoryId:'fuel',limitMinor:100,
