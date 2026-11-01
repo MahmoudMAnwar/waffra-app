@@ -6727,6 +6727,117 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    operation:'link-old-expenses-to-budget');
  }
 
+ /// User-approved historic linking. This does NOT invent a ledger entry.
+ Future<void> reviewUnlinkedHistoricalExpenses()async{
+  if(!mounted)return;
+  final pending=entries.where((e)=>!e.income&&e.budgetId==null)
+   .toList(growable:false);
+  if(pending.isEmpty){
+   snack(context,waffraIsEnglish?'No unassigned expenses.':
+    'ما فيه مصروفات غير مرتبطة تحتاج مراجعة.');
+   return;
+  }
+  final old=await showWaffraDialog<MoneyEntry>(context:context,
+   builder:(ctx)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Review saved expenses':
+     'مراجعة المصروفات القديمة غير المرتبطة'),
+    content:SizedBox(width:430,height:370,child:Column(children:[
+     WaffraText(waffraIsEnglish?
+      pending.length.toString()+' saved expense(s) need optional budget review.':
+      'عندك '+pending.length.toString()+' عملية مصروف محفوظة بدون ميزانية. '
+      'الربط اختياري ومش هنغيّر المبالغ ولا التواريخ.',
+      style:const TextStyle(fontSize:13)),
+     const SizedBox(height:9),
+     Expanded(child:ListView.builder(itemCount:pending.length,
+      itemBuilder:(_,i){
+       final item=pending[i];
+       return ListTile(
+        key:Key('waffra-retro-unlinked-'+item.id),
+        dense:true,title:WaffraText(item.title,maxLines:1),
+        subtitle:WaffraText(item.category,maxLines:1),
+        trailing:WaffraText(cash(item.amount)),
+        onTap:WaffraHaptics.tap(()=>Navigator.pop(ctx,item)),
+       );
+      })),
+    ])),
+    actions:[TextButton(
+     onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
+     child:WaffraText(waffraIsEnglish?'Not now':'مش دلوقتي'))]));
+  if(old==null||!mounted)return;
+  await assignExistingExpenseToBudget(old);
+ }
+
+ Future<void> assignExistingExpenseToBudget(MoneyEntry old)async{
+  if(!mounted)return;
+  final original=entries.where((e)=>e.id==old.id).toList(growable:false);
+  if(original.length!=1||original.single.income||
+     original.single.budgetId!=null){
+   snack(context,waffraIsEnglish?'Refresh before reviewing this record.':
+    'العملية اتغيرت أو معرفها مكرر. حدّث الصفحة قبل المراجعة.');
+   return;
+  }
+  final budgets=categories.where((c)=>!c.income&&c.budget>0)
+   .toList(growable:false);
+  if(budgets.isEmpty){
+   snack(context,waffraIsEnglish?'Create a budget first.':
+    'ضيف ميزانية الأول، وبعدها اربط العملية لو حابب.');
+   return;
+  }
+  final selected=await showWaffraDialog<BudgetCategory>(context:context,
+   builder:(ctx)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Choose a budget':'اختار الميزانية'),
+    content:SizedBox(width:430,height:360,child:ListView.builder(
+     itemCount:budgets.length,itemBuilder:(_,i){
+      final b=budgets[i];
+      final scope=<String>{b.name,
+       if(!b.isSubcategory)
+        ...categories.where((c)=>c.parentId==b.id).map((c)=>c.name)};
+      return ListTile(
+       key:Key('waffra-retro-budget-option-'+b.id),
+       title:WaffraText(b.budgetLabel??b.name,maxLines:2),
+       subtitle:scope.contains(original.single.category)?
+        WaffraText(waffraIsEnglish?'Suggested':'مقترحة حسب القسم الأصلي'):null,
+       onTap:WaffraHaptics.tap(()=>Navigator.pop(ctx,b)),
+      );
+     })),
+    actions:[TextButton(
+     onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
+     child:WaffraText(waffraIsEnglish?'Leave unassigned':'بدون ربط'))]));
+  if(selected==null||!mounted)return;
+  final ok=await showWaffraDialog<bool>(context:context,
+   builder:(ctx)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Confirm link':'تأكيد الربط'),
+    content:WaffraText(waffraIsEnglish?
+     'Link the saved '+cash(original.single.amount)+' expense to '+
+       (selected.budgetLabel??selected.name)+
+       '? No new expense will be created or amount changed.':
+     'ربط مصروف '+cash(original.single.amount)+' بميزانية «'+
+       (selected.budgetLabel??selected.name)+
+       '» فقط؟ المبلغ والتاريخ والقسم والملاحظات هيفضلوا زي ما هم.'),
+    actions:[
+     TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),
+      child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+     FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),
+      child:WaffraText(waffraIsEnglish?'Link only':'ربط فقط')),
+    ]));
+  if(ok!=true||!mounted)return;
+  // Dialogs are asynchronous: never rely on stale selection after await.
+  final latest=entries.where((e)=>e.id==old.id).toList(growable:false);
+  if(latest.length!=1||latest.single.income||
+     latest.single.budgetId!=null||
+     !categories.any((b)=>b.id==selected.id&&!b.income&&b.budget>0)){
+   snack(context,waffraIsEnglish?'Record changed; nothing saved.':
+    'العملية أو الميزانية اتغيرت. لم يتم حفظ أي ربط.');
+   return;
+  }
+  setState((){
+   final index=entries.indexWhere((e)=>e.id==old.id);
+   if(index>=0)entries[index]=entries[index].withBudget(selected.id);
+  });
+  await _persistModuleOrReload(WaffraFinanceRoute.transactionEdit,
+   operation:'retroactive-opt-in-budget-link');
+ }
+
  Future<void> deleteNamedBudget(BudgetCategory selected)async{
   final affected=entries.where((e)=>e.budgetId==selected.id).length;
   final ok=await confirmDeletion(
