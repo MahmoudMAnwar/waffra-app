@@ -3,11 +3,11 @@ part of 'main.dart';
 /// Goal progress is the sole source of truth. A linked schedule holds a goal ID,
 /// NOT its own saved amount. A due reminder never posts a ledger entry.
 extension WaffraGoalRecurringActions on _HomeScreenState {
- Future<void> _ensureLinkedRecurringForGoal(SavingGoal goal)async{
+ Future<bool> _ensureLinkedRecurringForGoal(SavingGoal goal)async{
   final deadline=goal.dueDate;
   final linkedIndex=recurring.indexWhere((r)=>r.linkedGoalId==goal.id);
   if(deadline==null){
-   if(linkedIndex<0)return;
+   if(linkedIndex<0)return true;
    setState(()=>recurring[linkedIndex]=recurring[linkedIndex].copy(active:false));
   }else{
    final available=categories.where((c)=>!c.income&&c.isSubcategory).toList();
@@ -15,7 +15,7 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
     if(mounted)snack(context,waffraIsEnglish?
      'An expense subcategory is required for the linked recurring reminder.':
      'يلزم وجود قسم مصروف فرعي لإنشاء الاستحقاق المتكرر.');
-    return;
+    return false;
    }
    final rent=available.where((c)=>goal.name.contains('إيجار')&&
     c.name=='سكن / إيجار شهري').toList();
@@ -32,8 +32,9 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
    });
   }
   if(!await _persistModuleOrReload(WaffraFinanceRoute.recurringCreateEditDeleteRestore,
-    operation:'goal-recurring-link'))return;
+    operation:'goal-recurring-link'))return false;
   await syncRecurringReminders();
+  return true;
  }
 
  Future<void> editGoal(SavingGoal existing)async{
