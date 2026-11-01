@@ -47,6 +47,13 @@ abstract final class WaffraBankScreenshotParser {
   static final _action = RegExp(
     r'(?:شراء\s*(?:pos|نقاط|عبر|بقيمة)?|\bpos\b|card\s+purchase|'
     r'payment\s+at|purchase\s+at|'
+    r'\bonline\s+purchase(?:\s+card)?\b|\bpurchase\s+card\b|'
+    // Keep the amount and currency with a global debit/credit OCR action;
+    // otherwise the generic "credited" anchor starts AFTER the number.
+    r'\b(?:JOD|AED|SAR|KWD|BHD|OMR)\s*[0-9][0-9,.]*\s+'
+    r'has\s+been\s+(?:credited|debited)\b|'
+    r'\b[0-9][0-9,.]*\s+(?:AED|JOD|SAR)\s+'
+    r'debited\s+from\s+account\b|'
     r'حوالة\s+واردة|تحويل\s+وارد|حوالة\s+صادرة|تحويل\s+صادر|'
     r'إيداع|ايداع|سحب\s+نقدي|تم\s+خصم|'
     r'\bcredit\s+transfer\b|\bdebit\s+transfer\b|'
