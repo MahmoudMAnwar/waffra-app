@@ -9132,6 +9132,8 @@ Future<void> bulkSmsSheet({String? initialText})async {
     const SizedBox(height:11),
    ],
    ...shown.map((r){
+    final linked=goals.where((g)=>g.id==r.linkedGoalId).toList();
+    final goal=linked.isEmpty?null:linked.single;
     final color=Color(categoryFor(r.category,r.income).color);
     final when=nextRecurringDue(r);
     return Card(elevation:0,margin:const EdgeInsets.only(bottom:11),
@@ -9146,6 +9148,20 @@ Future<void> bulkSmsSheet({String? initialText})async {
       Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
        WaffraText(r.title,style:const TextStyle(fontSize:15,fontWeight:FontWeight.bold)),
        WaffraText(cash(r.amount),style:const TextStyle(fontSize:14)),
+       if(goal!=null)...[
+        const SizedBox(height:7),
+        LinearProgressIndicator(
+         value:goal.target<=0?0:(goal.saved/goal.target).clamp(0.0,1.0),
+         minHeight:6,borderRadius:BorderRadius.circular(8),
+         color:emerald,backgroundColor:emerald.withValues(alpha:.12)),
+        const SizedBox(height:4),
+        WaffraText(waffraIsEnglish?
+         'Saved '+cash(goal.saved)+' of '+cash(goal.target)+
+         ' • Remaining '+cash(max(0,goal.target-goal.saved)):
+         'ادخرت '+cash(goal.saved)+' من '+cash(goal.target)+
+         ' • المتبقي '+cash(max(0,goal.target-goal.saved)),
+         style:const TextStyle(fontSize:11,color:emerald)),
+       ],
        const SizedBox(height:3),
        WaffraText(r.active?
         (waffraIsEnglish?'Next due: ${dayText(when)}':'الاستحقاق القادم: ${dayText(when)}'):
@@ -9170,6 +9186,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
        await syncRecurringReminders();
       })),
       PopupMenuButton<String>(onSelected:WaffraHaptics.selection((v)async {
+       if(v=='edit'){await recurringDialog(initial:r);return;}
        if(v!='delete')return;
        final hasHistory=entries.any((e)=>e.id.startsWith('rec_${r.id}_'));
        final ok=await confirmDeletion(waffraIsEnglish?'Delete recurring transaction?':'حذف العملية المتكررة',
@@ -9192,6 +9209,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
         await syncRecurringReminders();
        }
       }),itemBuilder:(_)=>[
+       PopupMenuItem(value:'edit',child:WaffraText(waffraIsEnglish?'Edit recurring':'تعديل المتكررة')),
        PopupMenuItem(value:'delete',child:WaffraText(waffraIsEnglish?'Delete':'حذف'))]),
      ])));
    }),
