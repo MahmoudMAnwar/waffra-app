@@ -7310,10 +7310,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            contentPadding:const EdgeInsets.symmetric(horizontal:8),
            minVerticalPadding:0,
            title:WaffraText(item.displayName,maxLines:1),
+           subtitle:parent!=null&&item.budget>0?
+            WaffraText(waffraIsEnglish?
+             'Already has a budget — edit under My Budgets':
+             'له ميزانية موجودة — عدّلها من ميزانياتي',
+             maxLines:2,style:const TextStyle(fontSize:11)):null,
            trailing:Icon(parent==null?
              Icons.chevron_right_rounded:
-             (item.budget>0?Icons.edit_outlined:Icons.check_circle_outline_rounded)),
-           onTap:WaffraHaptics.tap((){
+             (item.budget>0?Icons.lock_outline_rounded:
+              Icons.check_circle_outline_rounded)),
+           onTap:parent!=null&&item.budget>0?null:WaffraHaptics.tap((){
             if(parent==null){
              update((){chosenParentId=item.id;query='';});
             }else{
@@ -7351,6 +7357,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     p.id==c.parentId&&!p.income&&!p.isSubcategory)).toList();
   if(matches.length!=1)return null;
   final selected=matches.single;
+  // Current persisted budgets are stored on a category ID. Never silently
+  // rename/replace a different budget when the user requested creation.
+  // Independent multiple budgets on one leaf need a separate finance schema.
+  if(selected.budget>0){
+   snack(context,waffraIsEnglish?
+    'This subcategory already has a budget. Edit it in My Budgets.':
+    'القسم الفرعي ده له ميزانية بالفعل. عدّلها من ميزانياتي.');
+   return null;
+  }
   await editBudgetForCategory(selected,suggestedName:suggestedName);
   if(mounted&&categories.any((c)=>c.id==selected.id&&c.budget>0)){
    setState(()=>selectedNamedBudgetCategoryId=selected.id);
