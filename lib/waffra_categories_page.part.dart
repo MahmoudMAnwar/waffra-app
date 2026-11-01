@@ -44,6 +44,17 @@ extension WaffraCategoryScreen on _HomeScreenState {
     subs.any((c)=>(!categoryMineOnly||c.isUserAdded)&&
      waffraSearchAny([c.displayName,waffraTr(c.displayName)],query));
   }).toList();
+  if(categorySort=='alpha'){
+   shown.sort((a,b)=>waffraTr(a.name).compareTo(waffraTr(b.name)));
+  }else if(categorySort=='spent'){
+   // Cache each group total once during this sort; never invoke the ledger
+   // scanner from the comparator itself.
+   final spentById={for(final root in shown)root.id:monthlyFor(root)};
+   shown.sort((a,b){
+    final order=(spentById[b.id]??0).compareTo(spentById[a.id]??0);
+    return order!=0?order:waffraTr(a.name).compareTo(waffraTr(b.name));
+   });
+  }
 
   Widget rootCard(BudgetCategory root){
    final color=Color(root.color);
@@ -219,6 +230,15 @@ extension WaffraCategoryScreen on _HomeScreenState {
     _filterChip(waffraIsEnglish?'All budgets':'كل الميزانيات',categoryDisplay=='all',()=>setState(()=>categoryDisplay='all')),
     _filterChip(waffraIsEnglish?'Budgeted':'بميزانية',categoryDisplay=='budget',()=>setState(()=>categoryDisplay='budget')),
     _filterChip(waffraIsEnglish?'No budget':'بدون ميزانية',categoryDisplay=='none',()=>setState(()=>categoryDisplay='none')),
+   ]),
+   const SizedBox(height:8),
+   Wrap(spacing:7,runSpacing:6,children:[
+    _filterChip(waffraIsEnglish?'Default order':'الترتيب الافتراضي',
+     categorySort=='default',()=>setState(()=>categorySort='default')),
+    _filterChip(waffraIsEnglish?'Most spent':'الأكثر صرفًا',
+     categorySort=='spent',()=>setState(()=>categorySort='spent')),
+    _filterChip(waffraIsEnglish?'A–Z':'أبجديًا',
+     categorySort=='alpha',()=>setState(()=>categorySort='alpha')),
    ]),
    const SizedBox(height:8),
    Align(alignment:AlignmentDirectional.centerStart,
