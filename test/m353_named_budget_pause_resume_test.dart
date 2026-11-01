@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:waffra/waffra_i18n.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
 
@@ -125,4 +127,46 @@ void main(){
   expect(scope,isNot(contains('withBudget(')));
   expect(scope,contains('_persistModuleOrReload('));
  });
+
+ testWidgets('M353 unlinked expense details show warning and link action',
+  (tester)async{
+  waffraLanguage.value='ar';
+  var clicked=false;
+  final old=MoneyEntry(id:'old',title:'مصروف قديم',
+   category:'سيارة / بنزين',amount:75,income:false,
+   date:DateTime(2026,11,1));
+  await tester.pumpWidget(MaterialApp(home:Scaffold(
+   body:WaffraTransactionDetailsDialog(
+    entry:old,onClose:(){},onLinkBudget:()=>clicked=true))));
+  expect(find.byKey(const Key('waffra-transaction-budget-unlinked-warning')),
+    findsOneWidget);
+  final action=find.byKey(const Key('waffra-transaction-link-budget-action'));
+  expect(action,findsOneWidget);
+  await tester.ensureVisible(action);
+  await tester.tap(action);
+  await tester.pump();
+  expect(clicked,isTrue);
+  expect(old.budgetId,isNull,
+   reason:'The detail UI must only trigger confirmation, not save a link');
+  expect(tester.takeException(),isNull);
+ });
+
+ testWidgets('M353 existing paused linked expense retains badge without warning',
+  (tester)async{
+  waffraLanguage.value='ar';
+  final older=MoneyEntry(id:'existing',title:'مصروف قبل الإيقاف',
+   category:'سيارة / بنزين',amount:75,income:false,
+   date:DateTime(2026,10,15),budgetId:'fuel');
+  await tester.pumpWidget(MaterialApp(home:Scaffold(
+   body:WaffraTransactionDetailsDialog(entry:older,onClose:(){},
+    linkedBudgetName:'ميزانية الوقود',linkedBudgetPaused:true))));
+  expect(find.byKey(const Key('waffra-transaction-budget-unlinked-warning')),
+    findsNothing);
+  expect(find.byKey(const Key('waffra-transaction-link-budget-action')),
+    findsNothing);
+  expect(find.textContaining('متوقفة مؤقتًا'),findsWidgets);
+  expect(older.budgetId,'fuel');
+  expect(tester.takeException(),isNull);
+ });
+
 }
