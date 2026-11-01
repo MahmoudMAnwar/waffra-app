@@ -2912,6 +2912,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  bool monthlyBudgetEnabled=false;
  String? selectedNamedBudgetCategoryId;
  String budgetStatusFilter='active'; // UI-only: active budgets by default.
+ String budgetSearch='';
+ String budgetSort='default'; // name, limit or spending, UI-only.
  DateTimeRange? transactionsDateRange;
  double? minTransactionAmount,maxTransactionAmount;
  int tab=0,year=DateTime.now().year,month=DateTime.now().month;
@@ -7169,8 +7171,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
  }
  
- Future<void> editBudgetForCategory(BudgetCategory selected)async{
-  final name=TextEditingController(text:selected.budgetLabel??'ميزانية '+selected.displayName);
+ Future<void> editBudgetForCategory(BudgetCategory selected,{String? suggestedName})async{
+  final name=TextEditingController(text:selected.budgetLabel??
+   (selected.budget>0?'ميزانية '+selected.displayName:
+    suggestedName??'ميزانية '+selected.displayName));
   final amount=TextEditingController(text:selected.budget>0?
    formatWaffraEditAmount(selected.budget):'');
   var alert=selected.alertPercent;
@@ -7242,7 +7246,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
   }finally{disposeLater([name,amount]);}
  }
- Future<String?> chooseBudgetCategory()async{
+ Future<String?> chooseBudgetCategory({String? suggestedName})async{
   // A budget is attached to one existing expense subcategory. Never create
   // a budget on a parent heading, or silently change any ledger entry.
   final parents=categories.where((c)=>!c.income&&!c.isSubcategory).toList();
@@ -7329,7 +7333,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final added=categories.where((c)=>c.parentId==parentId&&
     c.isSubcategory&&!c.income&&!before.contains(c.id)).toList();
    if(added.length!=1)return null;
-   await editBudgetForCategory(added.single);
+   await editBudgetForCategory(added.single,suggestedName:suggestedName);
    final saved=categories.where((c)=>c.id==added.single.id&&
     c.budget>0&&c.budgetActive).toList();
    return saved.length==1?saved.single.id:null;
@@ -7339,7 +7343,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     p.id==c.parentId&&!p.income&&!p.isSubcategory)).toList();
   if(matches.length!=1)return null;
   final selected=matches.single;
-  await editBudgetForCategory(selected);
+  await editBudgetForCategory(selected,suggestedName:suggestedName);
   if(mounted&&categories.any((c)=>c.id==selected.id&&c.budget>0)){
    setState(()=>selectedNamedBudgetCategoryId=selected.id);
    final updated=categories.where((c)=>c.id==selected.id&&c.budgetActive).toList();
