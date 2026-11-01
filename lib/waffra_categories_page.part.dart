@@ -20,15 +20,35 @@ extension WaffraCategoryScreen on _HomeScreenState {
   );
  Widget categoriesPageV2(){
   final now=DateTime.now();
-  final recent=entries.where((e)=>e.date.year==now.year&&e.date.month==now.month).toList();
-  final expenseTotal=recent.where((e)=>!e.income).fold<double>(0,(total,e)=>total+e.amount);
-  final roots=categories.where((c)=>!c.isSubcategory).toList();
+  // Build month totals and the category hierarchy ONCE per build.
+  // Before M343, each root/child card rescanned all finance entries.
+  // This preserves the existing name-based legacy source semantics; moving
+  // finance history to immutable category IDs needs a separate migration.
+  final totals=<(bool,String),double>{};
+  var expenseTotal=0.0;
+  for(final e in entries){
+   if(e.date.year!=now.year||e.date.month!=now.month)continue;
+   final key=(e.income,e.category);
+   totals[key]=(totals[key]??0)+e.amount;
+   if(!e.income)expenseTotal+=e.amount;
+  }
+  final childrenByParent=<String,List<BudgetCategory>>{};
+  final roots=<BudgetCategory>[];
+  var subcategoryCount=0;
+  for(final category in categories){
+   if(category.isSubcategory){
+    subcategoryCount++;
+    (childrenByParent[category.parentId]??=<BudgetCategory>[]).add(category);
+   }else{roots.add(category);}
+  }
   List<BudgetCategory> children(BudgetCategory root)=>
-   categories.where((c)=>c.parentId==root.id).toList();
+   childrenByParent[root.id]??const <BudgetCategory>[];
   double monthlyFor(BudgetCategory root){
-   final names={root.name,...children(root).map((c)=>c.name)};
-   return recent.where((e)=>e.income==root.income&&names.contains(e.category))
-    .fold<double>(0,(total,e)=>total+e.amount);
+   var amount=totals[(root.income,root.name)]??0;
+   for(final sub in children(root)){
+    amount+=totals[(sub.income,sub.name)]??0;
+   }
+   return amount;
   }
   final shown=roots.where((root){
    if(categoryMineOnly&&!root.isUserAdded&&
@@ -102,8 +122,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
 
   Widget childCard(BudgetCategory sub){
    final color=Color(sub.color);
-   final total=recent.where((e)=>e.category==sub.name&&e.income==sub.income)
-    .fold<double>(0,(value,e)=>value+e.amount);
+   final total=totals[(sub.income,sub.name)]??0;
    return Card(margin:EdgeInsets.zero,elevation:0,
     color:color.withValues(alpha:.08),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15),
@@ -173,8 +192,11 @@ extension WaffraCategoryScreen on _HomeScreenState {
         painter.dispose();
         return needsWrap;
        }
+       final wraps=<String,bool>{};
+       bool cachedWrap(BudgetCategory item)=>
+        wraps.putIfAbsent(item.id,()=>needsTwoLines(item));
        final ordered=[...items]..sort((a,b)=>
-        (needsTwoLines(a)?1:0).compareTo(needsTwoLines(b)?1:0));
+        (cachedWrap(a)?1:0).compareTo(cachedWrap(b)?1:0));
        return Wrap(spacing:9,runSpacing:9,children:[
         for(final sub in ordered)SizedBox(width:width,child:childCard(sub)),
        ]);
@@ -182,9 +204,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
      ])));
    }
   }
-  return ListView(controller:_categoryScrollController,
-   physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
-   padding:const EdgeInsets.fromLTRB(16,14,16,116),children:[
+  final pageRows=<Widget>[
    WaffraPageHero(
     title:waffraIsEnglish?'Categories & budgets':'أقسامك وميزانياتك',
     subtitle:waffraIsEnglish?'All income and expense types with subcategories':
@@ -195,7 +215,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
      roots.length.toString(),Icons.layers,emerald)),
     const SizedBox(width:10),
     Expanded(child:_compactCategoryStat(waffraIsEnglish?'Subcategories':'الأقسام الفرعية',
-     categories.where((c)=>c.isSubcategory).length.toString(),Icons.account_tree,Colors.deepPurple)),
+     subcategoryCount.toString(),Icons.account_tree,Colors.deepPurple)),
    ]),
    const SizedBox(height:10),
    Align(alignment:AlignmentDirectional.centerStart,
@@ -237,6 +257,13 @@ extension WaffraCategoryScreen on _HomeScreenState {
      WaffraText(waffraIsEnglish?'No matching categories':'لا توجد أقسام مطابقة'),
     ])),
    const SizedBox(height:75),
-  ]);
+  ];
+  return ListView.builder(
+   controller:_categoryScrollController,
+   physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
+   padding:const EdgeInsets.fromLTRB(16,14,16,116),
+   itemCount:pageRows.length,
+   itemBuilder:(context,index)=>pageRows[index],
+  );
  }
 }
