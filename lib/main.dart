@@ -3190,10 +3190,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final nextCategories=readList<BudgetCategory>(catalog,BudgetCategory.fromJson);
    final nextNamedBudgets=readList<WaffraNamedBudget>(
     view.getString('waffra_named_budgets_v1'),WaffraNamedBudget.fromJson);
-   for(final c in nextCategories.where((c)=>!c.income&&c.budget>0)){
+   for(var i=0;i<nextCategories.length;i++){
+    final c=nextCategories[i];
+    if(c.income||c.budget<=0)continue;
     if(!nextNamedBudgets.any((b)=>b.id==c.id)){
      nextNamedBudgets.add(WaffraNamedBudget.fromLegacy(c));
     }
+    // Presentation-only until next verified same-batch finance write.
+    nextCategories[i]=c.copy(budget:0,clearBudget:true);
    }
    final nextGoals=readList<SavingGoal>(
     view.getString('waffra_goals_v24'),SavingGoal.fromJson);
@@ -3447,6 +3451,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(!verifiedEncryptedStartup)for(final e in entries){
    if(!categories.any((c)=>c.name==e.category&&c.income==e.income)){
     categories.add(BudgetCategory(id:newId(),name:e.category,icon:'category',color:colors[7],income:e.income));
+   }
+  }
+  // Keep old per-category caps out of the new Categories UI. The original
+  // values remain on disk until a verified batch preserves their budget IDs.
+  for(var i=0;i<categories.length;i++){
+   final c=categories[i];
+   if(!c.income&&c.budget>0&&namedBudgets.any((b)=>b.id==c.id)){
+    categories[i]=c.copy(budget:0,clearBudget:true);
    }
   }
   if(!mounted)return;setState(()=>ready=true);_receiveSharedSms();_receiveWidgetAction();unawaited(_refreshWidget());
