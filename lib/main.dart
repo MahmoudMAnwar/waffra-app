@@ -341,6 +341,47 @@ class BudgetCategory {
     (j['budgetLabel'] as String).trim().isNotEmpty
     ?(j['budgetLabel'] as String).trim():null);
 }
+/// Budgets live in their own finance collection, not in category hierarchy.
+class WaffraNamedBudget extends BudgetCategory {
+ final bool deleted;
+ WaffraNamedBudget({required String id,required String name,
+  required double budget,int alertPercent=80,bool budgetActive=true,
+  this.deleted=false}):super(
+   id:id,name:name,icon:'wallet',color:0xFF087A54,income:false,
+   budget:budget,alertPercent:alertPercent,budgetActive:budgetActive,
+   budgetLabel:name,origin:'user');
+ factory WaffraNamedBudget.fromLegacy(BudgetCategory category)=>
+  WaffraNamedBudget(id:category.id,
+   name:category.budgetLabel??'ميزانية ${category.displayName}',
+   budget:category.budget,alertPercent:category.alertPercent,
+   budgetActive:category.budgetActive);
+ factory WaffraNamedBudget.fromJson(Map<String,dynamic> raw) {
+  final id=raw['id'],name=raw['name'],amount=raw['budget'];
+  final alert=raw['alertPercent'],active=raw['budgetActive'];
+  if(id is! String||id.trim().isEmpty||id.length>256||
+   name is! String||name.trim().isEmpty||name.runes.length>80||
+   amount is! num||!amount.isFinite||amount<=0||
+   alert is! int||alert<1||alert>100||active is! bool){
+   throw const FormatException('Invalid standalone named budget.');
+  }
+  return WaffraNamedBudget(id:id,name:name,budget:amount.toDouble(),
+   alertPercent:alert,budgetActive:active,deleted:raw['deleted']==true);
+ }
+ @override Map<String,dynamic> toJson()=>{
+  'id':id,'name':name,'parentId':'','income':false,
+  'budget':budget,'budgetActive':budgetActive,
+  'alertPercent':alertPercent,'deleted':deleted,
+ };
+ @override WaffraNamedBudget copy({String? name,String? icon,int? color,
+  double? budget,int? alertPercent,String? parentId,
+  String? budgetLabel,bool clearBudget=false,bool? budgetActive,
+  bool? deleted})=>WaffraNamedBudget(
+    id:id,name:budgetLabel??name??this.name,budget:budget??this.budget,
+    alertPercent:alertPercent??this.alertPercent,
+    budgetActive:budgetActive??this.budgetActive,
+    deleted:deleted??this.deleted);
+}
+
 /// Manual transactions must target an active child category, never a heading.
 List<BudgetCategory> waffraManualCategoryParents(
  Iterable<BudgetCategory> values,bool income)=>
@@ -2931,6 +2972,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  final expandedCategoryIds=<String>{};
  final learnedMerchantCategories=<String,String>{};
  final entries=<MoneyEntry>[],categories=<BudgetCategory>[],goals=<SavingGoal>[],recurring=<RecurringBill>[];
+ final namedBudgets=<WaffraNamedBudget>[];
  // One repaint-isolated saving indicator for every confirmed Home finance edit.
  final WaffraSmoothOperationController _saveProgress=WaffraSmoothOperationController();
  final challenges=<SavingChallenge>[];
@@ -3051,7 +3093,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Future<void> _loadFinanceSafely()async{
   if(!mounted)return;
   setState((){ready=false;_financeLoadFailure=null;});
-  entries.clear();categories.clear();goals.clear();recurring.clear();challenges.clear();
+  entries.clear();categories.clear();namedBudgets.clear();goals.clear();recurring.clear();challenges.clear();
   deletedCategories.clear();deletedGoals.clear();deletedRecurring.clear();
   recurringPostponed.clear();smsHashes.clear();learnedMerchantCategories.clear();
   try{
@@ -3146,6 +3188,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
    final nextEntries=readList<MoneyEntry>(ledger,MoneyEntry.fromJson);
    final nextCategories=readList<BudgetCategory>(catalog,BudgetCategory.fromJson);
+   final nextNamedBudgets=readList<WaffraNamedBudget>(
+    view.getString('waffra_named_budgets_v1'),WaffraNamedBudget.fromJson);
+   for(final c in nextCategories.where((c)=>!c.income&&c.budget>0)){
+    if(!nextNamedBudgets.any((b)=>b.id==c.id)){
+     nextNamedBudgets.add(WaffraNamedBudget.fromLegacy(c));
+    }
+   }
    final nextGoals=readList<SavingGoal>(
     view.getString('waffra_goals_v24'),SavingGoal.fromJson);
    final nextRecurring=readList<RecurringBill>(
@@ -3174,6 +3223,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    setState((){
     entries..clear()..addAll(nextEntries);
     categories..clear()..addAll(nextCategories);
+    namedBudgets..clear()..addAll(nextNamedBudgets);
     goals..clear()..addAll(nextGoals);
     recurring..clear()..addAll(nextRecurring);
     challenges..clear()..addAll(nextChallenges);
@@ -3218,6 +3268,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   _lastLedgerSavedRaw=loadedFinance.ledgerRaw;
   try{final raw=financeView.getString('entries');if(raw!=null)entries.addAll((jsonDecode(raw) as List).map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved transactions cannot be decoded safely: $e');}
   try{final raw=financeView.getString('waffra_categories_v24');categories.addAll(raw==null?defaultCategories():(jsonDecode(raw) as List).map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved categories cannot be decoded safely: $e');}
+  try{
+   final raw=financeView.getString('waffra_named_budgets_v1');
+   if(raw!=null)namedBudgets.addAll((jsonDecode(raw) as List).map(
+    (x)=>WaffraNamedBudget.fromJson(Map<String,dynamic>.from(x))));
+   for(final c in categories.where((c)=>!c.income&&c.budget>0)){
+    if(!namedBudgets.any((b)=>b.id==c.id)){
+     namedBudgets.add(WaffraNamedBudget.fromLegacy(c));
+    }
+   }
+  }catch(e){throw StateError('Saved independent budgets are invalid: $e');}
   try{final raw=financeView.getString('waffra_goals_v24');if(raw!=null)goals.addAll((jsonDecode(raw) as List).map((x)=>SavingGoal.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved goals cannot be decoded safely: $e');}
   try{final raw=financeView.getString('waffra_recurring_v24');if(raw!=null)recurring.addAll((jsonDecode(raw) as List).map((x)=>RecurringBill.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved recurring finance cannot be decoded safely: $e');}
   try{final raw=financeView.getString('waffra_challenges_v1');if(raw!=null)challenges.addAll((jsonDecode(raw) as List).map((e)=>SavingChallenge.fromJson(Map<String,dynamic>.from(e))));}catch(e){throw StateError('Saved challenges cannot be decoded safely: $e');}
@@ -3445,7 +3505,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // in the middle of SharedPreferences' non-atomic multi-key update.
   final snapshot=<String,Object>{
    'entries':jsonEncode(entries.map((e)=>e.toJson()).toList()),
-   'waffra_categories_v24':jsonEncode(categories.map((e)=>e.toJson()).toList()),
+   // Migrate old category caps together with the independent budget list.
+   // Historic ledger budget IDs are kept unchanged.
+   'waffra_categories_v24':jsonEncode(categories.map((c)=>
+    c.budget>0&&namedBudgets.any((b)=>b.id==c.id)?
+     c.copy(budget:0,clearBudget:true).toJson():c.toJson()).toList()),
+   'waffra_named_budgets_v1':jsonEncode(
+    namedBudgets.map((b)=>b.toJson()).toList()),
    'waffra_goals_v24':jsonEncode(goals.map((e)=>e.toJson()).toList()),
    'waffra_recurring_v24':jsonEncode(recurring.map((e)=>e.toJson()).toList()),
    'waffra_challenges_v1':jsonEncode(challenges.map((e)=>e.toJson()).toList()),
