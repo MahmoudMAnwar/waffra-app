@@ -296,7 +296,18 @@ abstract final class WaffraSmsCurrencies {
       if(separated!=null)matches.add(separated.group(1)!);
     }
     if(matches.length!=1)return null;
-    final canonical=_canonicalMoney(matches.single,scale);
+    // A comma-grouped integer in a specifically labelled English SAR
+    // Amount field is unambiguous in this bank template: "Amount: 1,900 SAR".
+    // Do not loosen generic "USD 1,234" or 3-decimal JOD ambiguity.
+    final labelledSarThousands=currency=='SAR'&&
+      RegExp(r'^[0-9]{1,3}(?:,[0-9]{3})+$').hasMatch(matches.single)&&
+      RegExp(r'(?:^|\n)\s*(?:Amount|Amt)\s*[:：]\s*'
+        r'[0-9]{1,3}(?:,[0-9]{3})+\s*(?:SAR|SR)(?![A-Za-z])',
+        caseSensitive:false).hasMatch(action);
+    final canonical=_canonicalMoney(matches.single,scale)??
+      (labelledSarThousands?matches.single.replaceAll(',',''):null);
+    // Fail closed if the amount format is ambiguous. Do not coerce a
+    // missing canonical amount into a finance preview or source total.
     if(canonical==null)return null;
     final amount=double.tryParse(canonical);
     if(amount==null||!amount.isFinite||amount<=0||amount>1e9)return null;
@@ -308,6 +319,20 @@ abstract final class WaffraSmsCurrencies {
 
   static String? originalAmountPreview(String raw)=>originalAmount(raw)?.formatted;
 
+  /// Pending authorizations, one-time codes and failed notices do not
+  /// represent settled transactions, even when they repeat a card amount.
+  static bool isUnpostedNotice(String raw) => RegExp(
+    r'^\s*(?:Online\s+Pre[-\s]?Auth(?:ori[sz]ation)?|'
+    r'Pre[-\s]?Authori[sz]ation|Authorization\s+Hold|'
+    r'Please\s+use\s+the\s+code|OTP\b|Verification\s+Code|'
+    r'Declined\s+Transaction|Transaction\s+Declined|'
+    r'Failed\s+Transaction|Transaction\s+Failed|'
+    r'Unsuccessful\s+Transaction)\b|'
+    r'^\s*(?:Transaction\s+)?Status\s*[:：]\s*'
+    r'(?:Pending|Declined|Failed|Rejected|Cancelled|Canceled)\b',
+    caseSensitive:false,multiLine:true,
+  ).hasMatch(raw);
+
   /// Separate source-currency totals. Never add AED, SAR, JOD etc. together
   /// or imply that an unresolved amount is zero.
   static ({Map<String,double> totals,int unresolved}) sourceTotals(
@@ -318,6 +343,9 @@ abstract final class WaffraSmsCurrencies {
     final minorTotals=<String,int>{};
     var unresolved=0;
     for(final message in messages){
+      // Exclude non-posted notices entirely, rather than reporting their
+      // quoted amount as spend or as an unresolved financial transaction.
+      if(isUnpostedNotice(message))continue;
       final original=originalAmount(message);
       if(original==null){
         unresolved++;
@@ -357,6 +385,7 @@ abstract final class WaffraSmsCurrencies {
   static WaffraSmsCurrencyBatch summarize(List<String> messages) {
     final counts = <String, int>{};
     for (final message in messages) {
+      if(isUnpostedNotice(message))continue;
       for (final currency in currenciesForMessage(message)) {
         counts[currency] = (counts[currency] ?? 0) + 1;
       }
