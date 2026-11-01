@@ -238,6 +238,11 @@ class WaffraFinanceDomainSupplement {
     }
 
     await store.transaction(() async {
+      // Recheck identity under the same SQL write lock; a concurrent Home or
+      // widget finance change between preview and commit must never be lost.
+      if (await _parentFingerprint() != payload['parentFingerprint']) {
+        throw StateError('Finance source changed during domain restoration.');
+      }
       // Preserve all existing finance. A repeated restore is never an UPSERT.
       for (final table in WaffraFreshFinanceDomainSchema.domainTables) {
         final count = await store.customSelect(
