@@ -20,18 +20,15 @@ extension WaffraCategoryScreen on _HomeScreenState {
   );
  Widget categoriesPageV2(){
   final now=DateTime.now();
-  // Monthly income/expense totals are computed in a single pass so both
-  // ranking choices remain fast even with a large transaction history.
-  final monthlyTotals=<(bool,String),double>{};
-  var expenseTotal=0.0;
+  // One finance-history scan for month totals and legacy unassigned review.
+  // Never infer named-budget links or change stored finance records here.
   var unassignedExpenseCount=0;
-  for(final e in entries){
-   if(!e.income&&e.budgetId==null)unassignedExpenseCount++;
-   if(e.date.year!=now.year||e.date.month!=now.month)continue;
-   final key=(e.income,e.category);
-   monthlyTotals[key]=(monthlyTotals[key]??0)+e.amount;
-   if(!e.income)expenseTotal+=e.amount;
-  }
+  final monthly=WaffraCategoryMonthTotals.build<MoneyEntry>(
+   entries,now,date:(e)=>e.date,income:(e)=>e.income,
+   category:(e)=>e.category,amount:(e)=>e.amount,
+   onRow:(e){if(!e.income&&e.budgetId==null)unassignedExpenseCount++;});
+  final monthlyTotals=monthly.byCategory;
+  final expenseTotal=monthly.expenses;
   final roots=<BudgetCategory>[];
   final childrenByParent=<String,List<BudgetCategory>>{};
   for(final c in categories){
@@ -168,11 +165,11 @@ extension WaffraCategoryScreen on _HomeScreenState {
        ],child:const Icon(Icons.more_vert,size:17)),
      ]))));
   }
-  final groupRows=<Widget>[];
+  final groupRows=<Widget Function()>[];
   for(var i=0;i<sorted.length;i+=2){
    final left=sorted[i];
    final right=i+1<sorted.length?sorted[i+1]:null;
-   groupRows.add(Padding(padding:const EdgeInsets.only(bottom:10),
+   groupRows.add(()=>Padding(padding:const EdgeInsets.only(bottom:10),
     child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
      Expanded(child:rootCard(left)),const SizedBox(width:10),
      Expanded(child:right==null?const SizedBox.shrink():rootCard(right)),
@@ -180,7 +177,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
    for(final root in [left,if(right!=null)right]){
     if(!expandedCategoryIds.contains(root.id))continue;
     final items=children(root).where((c)=>!categoryMineOnly||c.isUserAdded).toList();
-    groupRows.add(Container(
+    groupRows.add(()=>Container(
      margin:const EdgeInsets.only(bottom:14),
      padding:const EdgeInsets.all(12),
      decoration:BoxDecoration(color:Theme.of(context).cardColor,
@@ -212,8 +209,11 @@ extension WaffraCategoryScreen on _HomeScreenState {
         painter.dispose();
         return needsWrap;
        }
+       final wraps=<String,bool>{};
+       bool cachedWrap(BudgetCategory item)=>
+        wraps.putIfAbsent(item.id,()=>needsTwoLines(item));
        final ordered=[...items]..sort((a,b)=>
-        (needsTwoLines(a)?1:0).compareTo(needsTwoLines(b)?1:0));
+        (cachedWrap(a)?1:0).compareTo(cachedWrap(b)?1:0));
        return Wrap(spacing:9,runSpacing:9,children:[
         for(final sub in ordered)SizedBox(width:width,child:childCard(sub)),
        ]);
@@ -221,34 +221,32 @@ extension WaffraCategoryScreen on _HomeScreenState {
      ])));
    }
   }
-  return ListView(controller:_categoryScrollController,
-   physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
-   padding:const EdgeInsets.fromLTRB(16,14,16,116),children:[
-   WaffraPageHero(
+  final pageRows=<Widget Function()>[
+   ()=>WaffraPageHero(
     title:waffraIsEnglish?'Categories & budgets':'أقسامك وميزانياتك',
     subtitle:waffraIsEnglish?'All income and expense types with subcategories':
      'كل أنواع الدخل والمصروفات في أقسام رئيسية وفرعية منظمة.',
     icon:Icons.category_outlined,titleKey:_tourKeys[2]),
-   Row(children:[
+   ()=>Row(children:[
     Expanded(child:_compactCategoryStat(waffraIsEnglish?'Main categories':'الأقسام الرئيسية',
      roots.length.toString(),Icons.layers,emerald)),
     const SizedBox(width:10),
     Expanded(child:_compactCategoryStat(waffraIsEnglish?'Subcategories':'الأقسام الفرعية',
      categories.where((c)=>c.isSubcategory).length.toString(),Icons.account_tree,Colors.deepPurple)),
    ]),
-   const SizedBox(height:10),
-   Align(alignment:AlignmentDirectional.centerStart,
+   ()=>const SizedBox(height:10),
+   ()=>Align(alignment:AlignmentDirectional.centerStart,
     child:ConstrainedBox(constraints:const BoxConstraints(maxWidth:250),
      child:WaffraDeletedItemsButton(
       onPressed:WaffraHaptics.tapRequired(showCategoryTrash),
       label:waffraIsEnglish?'Deleted categories (${deletedCategories.length})':
        'الأقسام المحذوفة (${deletedCategories.length})'))),
-   const SizedBox(height:10),
-   _summaryBox(waffraIsEnglish?'Monthly expenses':'المصروف الشهري',
+   ()=>const SizedBox(height:10),
+   ()=>_summaryBox(waffraIsEnglish?'Monthly expenses':'المصروف الشهري',
     cash(expenseTotal),Icons.trending_down,Colors.deepOrange),
    if(unassignedExpenseCount>0)...[
-    const SizedBox(height:9),
-    Card(
+    ()=>const SizedBox(height:9),
+    ()=>Card(
      key:const Key('waffra-retro-budget-review-banner'),
      margin:EdgeInsets.zero,
      child:ListTile(
@@ -266,10 +264,10 @@ extension WaffraCategoryScreen on _HomeScreenState {
       onTap:WaffraHaptics.tap(()=>reviewUnlinkedHistoricalExpenses()),
      )),
    ],
-   const SizedBox(height:13),
+   ()=>const SizedBox(height:13),
    // Compact by default: the three large rows of chips previously pushed
    // the actual category cards below the fold on smaller phones.
-   Container(
+   ()=>Container(
     key:const Key('waffra-category-filter-accordion'),
     decoration:BoxDecoration(
      color:Theme.of(context).cardColor,
@@ -357,20 +355,28 @@ extension WaffraCategoryScreen on _HomeScreenState {
         label:WaffraText(waffraIsEnglish?'Reset filters':'إعادة ضبط الفلاتر'))),
      ],
     )),
-   const SizedBox(height:12),
-   TextField(onChanged:(text)=>setState(()=>categorySearch=text),
+   ()=>const SizedBox(height:12),
+   ()=>TextFormField(initialValue:categorySearch,
+    onChanged:(text)=>setState(()=>categorySearch=text),
     decoration:InputDecoration(prefixIcon:const Icon(Icons.search),
      hintText:waffraIsEnglish?'Search categories and subcategories':'البحث عن قسم أو قسم فرعي...',
      border:OutlineInputBorder(borderRadius:BorderRadius.circular(20)),isDense:true)),
-   const SizedBox(height:15),
+   ()=>const SizedBox(height:15),
    ...groupRows,
-   if(shown.isEmpty)Padding(padding:const EdgeInsets.symmetric(vertical:46),
+   if(shown.isEmpty)()=>Padding(padding:const EdgeInsets.symmetric(vertical:46),
     child:Column(children:[
      const Icon(Icons.search_off_rounded,size:48,color:emerald),
      const SizedBox(height:11),
      WaffraText(waffraIsEnglish?'No matching categories':'لا توجد أقسام مطابقة'),
     ])),
-   const SizedBox(height:75),
-  ]);
+   ()=>const SizedBox(height:75),
+  ];
+  return ListView.builder(
+   controller:_categoryScrollController,
+   physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
+   padding:const EdgeInsets.fromLTRB(16,14,16,116),
+   itemCount:pageRows.length,
+   itemBuilder:(context,index)=>pageRows[index](),
+  );
  }
 }
