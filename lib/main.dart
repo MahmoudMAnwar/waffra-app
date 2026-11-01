@@ -7684,6 +7684,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
    return parent.isEmpty?text:'${parent.first.name} / $text';
   }
   final budget=TextEditingController(text:initial==null||initial.budget==0?'':formatWaffraEditAmount(initial.budget));
+   final budgetName=TextEditingController(text:initial?.budgetLabel??'');
   String icon=initial?.icon??'category';int color=initial?.color??colors[0];int alertPercent=initial?.alertPercent??80;
   bool attempted=false;
   final result=await showWaffraDialog<BudgetCategory>(context:context,
@@ -7705,6 +7706,10 @@ Future<void> bulkSmsSheet({String? initialText})async {
       child:CircleAvatar(radius:15,backgroundColor:Color(x),
        child:color==x?const Icon(Icons.check,color:Colors.white,size:17):null))).toList()),
      if(!(initial?.income??income))...[
+      TextField(controller:budgetName,maxLength:80,
+       decoration:InputDecoration(labelText:waffraIsEnglish?'Budget name (optional)':'اسم الميزانية (اختياري)',
+        hintText:waffraIsEnglish?'Food budget':'ميزانية الأكل',border:const OutlineInputBorder())),
+      const SizedBox(height:8),
       TextField(controller:budget,onChanged:(_)=>update((){}),
        keyboardType:const TextInputType.numberWithOptions(decimal:true),inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],decoration:InputDecoration(labelText:waffraTr('ميزانية شهرية (اختياري)'),
        errorText:attempted?waffraAmountFieldError(budget.text,required:false):null)),
@@ -7725,10 +7730,11 @@ Future<void> bulkSmsSheet({String? initialText})async {
        categories.where((c)=>c.id!=initial?.id&&c.income==(initial?.income??income)).map((c)=>c.name))!=null ||
        WaffraValidators.positiveAmount(budget.text,required:false)!=null)return;
       Navigator.pop(ctx,BudgetCategory(id:initial?.id??newId(),name:fullName(),icon:icon,color:color,
-       income:initial?.income??income,parentId:effectiveParentId,budget:budget.text.trim().isEmpty?0:(amountOfDisplay(budget.text)??0),alertPercent:alertPercent,origin:initial?.origin??'user'));
+       income:initial?.income??income,parentId:effectiveParentId,budget:budget.text.trim().isEmpty?0:(amountOfDisplay(budget.text)??0),alertPercent:alertPercent,origin:initial?.origin??'user',
+        budgetLabel:budgetName.text.trim().isEmpty?null:budgetName.text.trim()));
      }),child:const WaffraText('حفظ')),
     ])));
-  disposeLater([name,budget]);return result;
+  disposeLater([name,budget,budgetName]);return result;
  }
  Future<void> chooseCategoryLevel({required bool income})async{
   final parents=categories.where((c)=>!c.isSubcategory&&c.income==income).toList();
