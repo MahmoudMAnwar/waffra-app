@@ -138,15 +138,12 @@ class _WaffraOverflowScrollCueState extends State<WaffraOverflowScrollCue> {
                         child: Stack(children: <Widget>[
                           Positioned(
                             top: offset, left: 0, right: 0,
-                            child: Semantics(
-                              label: 'Scroll position indicator',
-                              child: Container(
-                                key: const Key('waffra-overflow-scroll-thumb'),
-                                width: 4, height: thumb,
-                                decoration: BoxDecoration(
-                                  color: color.withValues(alpha: .70),
-                                  borderRadius: BorderRadius.circular(9),
-                                ),
+                            child: Container(
+                              key: const Key('waffra-overflow-scroll-thumb'),
+                              width: 4, height: thumb,
+                              decoration: BoxDecoration(
+                                color: color.withValues(alpha: .70),
+                                borderRadius: BorderRadius.circular(9),
                               ),
                             ),
                           ),
