@@ -3684,6 +3684,27 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           onChanged:WaffraHaptics.selection((value)=>update(
            ()=>assigned[n]=value=='none'?null:value)),
          ),
+         Align(alignment:AlignmentDirectional.centerStart,
+          child:TextButton.icon(
+           key:Key('waffra-sms-batch-create-budget-'+n.toString()),
+           icon:const Icon(Icons.add_circle_outline_rounded,size:17),
+           label:WaffraText(waffraIsEnglish?
+            'Create new budget':'إنشاء ميزانية جديدة'),
+           onPressed:WaffraHaptics.tap(()async{
+            final id=await chooseBudgetCategory();
+            if(id==null||!ctx.mounted)return;
+            final found=categories.where((c)=>c.id==id&&!c.income&&
+             c.budget>0&&c.budgetActive).toList();
+            if(found.length!=1)return;
+            update((){
+             choices
+              ..clear()
+              ..addAll(categories.where((c)=>
+               !c.income&&c.budget>0&&c.budgetActive));
+             assigned[n]=id;
+            });
+           }),
+          )),
         ])),
      ])),
     actions:[
