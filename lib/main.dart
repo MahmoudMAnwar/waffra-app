@@ -8221,6 +8221,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
  Future<void> goalDialog()async {
   await _ensureFinanceBound();
   final name=TextEditingController(),target=TextEditingController();
+  DateTime? selectedDeadline;
   final customGoals=await _financeAuthority.loadCustomGoalSuggestions();
   if(!mounted){name.dispose();target.dispose();return;}
   final defaults=waffraDefaultGoalNames(waffraIsEnglish);
@@ -8326,6 +8327,16 @@ Future<void> bulkSmsSheet({String? initialText})async {
         border:const OutlineInputBorder())),
      ],
      const SizedBox(height:12),
+     OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async{
+      final date=await waffraPickDateWithToday(english:waffraIsEnglish,context:ctx,
+       initialDate:selectedDeadline??DateTime.now().add(const Duration(days:1)),
+       firstDate:DateTime.now(),lastDate:DateTime(DateTime.now().year+10));
+      if(date!=null&&ctx.mounted)updateGoal(()=>selectedDeadline=date);
+     }),icon:const Icon(Icons.calendar_month_outlined),
+     label:WaffraText(selectedDeadline==null?
+      (waffraIsEnglish?'Due date (optional, link to recurring)':'تاريخ الاستحقاق (اختياري) · ربط بالمتكررة'):
+      dayText(selectedDeadline!))),
+     const SizedBox(height:12),
      TextField(controller:target,
       keyboardType:const TextInputType.numberWithOptions(decimal:true),
       inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],
@@ -8344,7 +8355,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
       final n=amountOfDisplay(target.text);
       if(selectedGoal.isEmpty||validateGoalName()!=null||
        WaffraValidators.positiveAmount(target.text)!=null||n==null)return;
-      Navigator.pop(ctx,SavingGoal(id:newId(),name:name.text.trim(),target:n,saved:0));
+      Navigator.pop(ctx,SavingGoal(id:newId(),name:name.text.trim(),target:n,saved:0,dueDate:selectedDeadline));
      }),child:WaffraText(waffraIsEnglish?'Add goal':'إضافة الهدف')),
     ],
    )));
@@ -8360,8 +8371,12 @@ Future<void> bulkSmsSheet({String? initialText})async {
    setState(()=>goals.add(g));
    if(!await _persistModuleOrReload(WaffraFinanceRoute.goalCreateEditDeleteRestore,
      operation:'goal-create'))return;
-   if(mounted)snackSuccess(context,
-    waffraIsEnglish?'Savings goal added successfully':'تمت إضافة الهدف بنجاح');
+   if(g.dueDate!=null){
+    await _ensureLinkedRecurringForGoal(g);
+   }
+   if(mounted)snackSuccess(context,g.dueDate!=null?
+     (waffraIsEnglish?'Goal and linked recurring due date created.':'تم إنشاء الهدف وربط استحقاقه بالمتكررة.'):
+     (waffraIsEnglish?'Savings goal added successfully':'تمت إضافة الهدف بنجاح'));
   }
  }
  Future<void> fundGoal(SavingGoal g)async {
