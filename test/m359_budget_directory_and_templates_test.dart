@@ -32,7 +32,7 @@ void main() {
   test('M359: My Budgets is separate from income/expense category filters', () {
     final source = File('lib/waffra_budget_directory.part.dart').readAsStringSync();
     final categories = File('lib/waffra_categories_page.part.dart').readAsStringSync();
-    expect(categories, contains('()=>budgetsDirectory()'));
+    expect(categories, contains('()=>this.budgetsDirectory()'));
     expect(source, contains("'waffra-my-budgets-panel'"));
     expect(source, contains("'waffra-budget-directory-search'"));
     expect(source, contains("budgetStatusFilter=='active'"));
