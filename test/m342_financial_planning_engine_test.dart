@@ -266,4 +266,16 @@ void main() {
   });
  });
 
+
+ test('M342 bank matcher rejects an invented due date', () {
+  final plan=RecurringPlan('rent',DateTime(2026,11,1),
+    RecurringFrequency.monthly,200000,'housing',
+    merchantKey:'landlord');
+  expect(()=>RecurringBatchMatcher.review(plans:[plan],
+   dues:[RecurringDueObligation('rent',DateTime(2026,11,7))],
+   payments:[BankPaymentEvidence('bank-payment',DateTime(2026,11,7),
+    200000,'housing',merchantKey:'landlord',confirmed:true)]),
+   throwsStateError);
+ });
+
 }
