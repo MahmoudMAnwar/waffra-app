@@ -7893,7 +7893,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    !entries.any((e)=>e.id=='rec_${r.id}_${now.year}_${now.month}'));
   final pendingIncome=pending.where((r)=>r.income).fold<double>(0,(v,r)=>v+r.amount);
   final pendingExpense=pending.where((r)=>!r.income).fold<double>(0,(v,r)=>v+r.amount);
-  final balance=sum(entries,true)-sum(entries,false);
+  final balance=waffraAvailableCash(entries,goals);
   final projection=WaffraFinancialInsights.projectedEndBalance(
    currentBalance:balance,variableExpensesSoFar:variableSpent,daysElapsed:now.day,
    daysInMonth:DateTime(now.year,now.month+1,0).day,
@@ -8143,10 +8143,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final priorMonthStart=DateTime(nowBalanceDate.year,nowBalanceDate.month-1);
   final hasPreviousMonthEntries=entries.any((e)=>
    !e.date.isBefore(priorMonthStart)&&e.date.isBefore(monthStart));
-  final previousClosingBalance=entries.where((e)=>e.date.isBefore(monthStart))
-   .fold<double>(0,(total,e)=>total+(e.income?e.amount:-e.amount));
+  final previousClosingBalance=waffraAvailableCash(
+   entries.where((e)=>e.date.isBefore(monthStart)),goals);
   final monthChange=hasPreviousMonthEntries&&previousClosingBalance>0
-   ?((inc-exp-previousClosingBalance)/previousClosingBalance)*100:null;
+   ?((waffraAvailableCash(entries,goals)-previousClosingBalance)/previousClosingBalance)*100:null;
   final visible=entries.where((e){
    final q=search.trim();
    return(waffraSearchAny([e.title,e.category,waffraTr(e.category)],q))&&
@@ -8484,7 +8484,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     const SizedBox(height:10),
     Row(children:[const Icon(Icons.account_balance_wallet_outlined,color:emerald),
      const SizedBox(width:8),Expanded(child:WaffraText(waffraIsEnglish?'Expected balance':'الرصيد المتوقع')),
-     WaffraText(cash(sum(entries,true)-sum(entries,false)+nextIncome-nextExpenses),
+     WaffraText(cash(waffraAvailableCash(entries,goals)+nextIncome-nextExpenses),
       style:const TextStyle(fontWeight:FontWeight.bold))]),
     const SizedBox(height:12),
     WaffraText(waffraIsEnglish?'Current month vs forecast':'مقارنة الشهر الحالي بالشهر القادم',
