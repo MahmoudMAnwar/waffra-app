@@ -30,10 +30,11 @@ class WaffraSmartEntry {
   final DateTime date;
   /// The Home-verified projection only; never send bank details to the cloud.
   final String notes;
-  final bool hasAttachment;
+  final bool hasAttachment,unassignedNamedBudget,orphanBudgetLink;
   const WaffraSmartEntry({required this.id,required this.title,
     required this.category,required this.amount,required this.income,
-    required this.date,this.notes='',this.hasAttachment=false});
+    required this.date,this.notes='',this.hasAttachment=false,
+    this.unassignedNamedBudget=false,this.orphanBudgetLink=false});
 }
 
 class WaffraSmartGoal {
@@ -886,11 +887,14 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
       onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(
        builder:(_)=>WaffraPracticalToolsPage(
         english:widget.english,onNotice:widget.onNotice,
+        goalOverallocated:widget.goals.fold<double>(0,(sum,g)=>sum+g.saved) > balance,
         entries:List<WaffraPracticalEntry>.unmodifiable(
          widget.entries.map((entry)=>WaffraPracticalEntry(
           id:entry.id,title:entry.title,category:entry.category,
           amount:entry.amount,income:entry.income,date:entry.date,
-          notes:entry.notes,hasAttachment:entry.hasAttachment)))))),
+          notes:entry.notes,hasAttachment:entry.hasAttachment,
+          unassignedNamedBudget:entry.unassignedNamedBudget,
+          orphanBudgetLink:entry.orphanBudgetLink)))))),
      )),
    ]);
  }
