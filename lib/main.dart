@@ -5262,8 +5262,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final selectedMain=mainCategories.where((c)=>c.id==selectedParentId).toList();
     final subcategories=waffraManualCategoryChildren(available,income,selectedParentId);
     final selectedSub=subcategories.where((c)=>c.name==category).toList();
-    final budgetSuggestions=categories.where((c)=>!c.income&&c.budget>0&&c.budgetActive&&
-      (c.name==category||c.id==selectedParentId)).toList();
     void assignBudgetInsideEditor(String? pickedId){
      // Only child-category budgets may receive NEW allocations. An existing
      // legacy parent budget is visible for history, never silently migrated.
@@ -7581,6 +7579,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   return null;
  }
+ // Cross-screen refresh stays inside State, not the budgets extension.
+ void refreshFromBudgetDirectory(){if(mounted)setState((){});}
  Widget monthlyBudgetCard(){
   final today=DateTime.now();
   final monthEntries=entries.where((e)=>e.date.year==today.year&&e.date.month==today.month);
