@@ -2871,6 +2871,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  String categorySearch='',categoryDisplay='all',categoryTypeFilter='all',goalDisplay='all',recurringDisplay='all';
  String categorySort='default'; // Presentation-only; never rewrites finance categories.
  bool categoryMineOnly=false;
+ bool categoryFiltersOpen=false; // Compact category-filter accordion; UI-only state.
   String? forecastCategory;
   int forecastReduction=20;
  bool recurringRemindersEnabled=false;
