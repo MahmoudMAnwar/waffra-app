@@ -456,6 +456,19 @@ class BankParser {
   // Current finance records lack original currency and a verified FX
   // witness. Never auto-import a foreign-currency SMS as Saudi riyals.
   final discoveredCurrencies=WaffraSmsCurrencies.currenciesForMessage(s);
+  // A transfer between the user's own accounts, or a credit-card settlement,
+  // must not be silently counted as everyday income/expense. Account ownership
+  // and card liability need explicit user review before ledger classification.
+  if(RegExp(r'^\s*(?:Internal\s+Transfer|Credit\s+Card\s+Payment)\b',
+      caseSensitive:false).hasMatch(header)||
+     RegExp(r'\bas\s+Credit\s+Card\s+Payment\b',
+      caseSensitive:false).hasMatch(s)){
+   return BankResult(null,false,'تحويل أو سداد يحتاج مراجعة','تحويلات',null,
+    currencyCode:discoveredCurrencies.length==1
+      ?discoveredCurrencies.single:null,
+    requiresCurrencyReview:
+      WaffraSmsCurrencies.requiresReviewForSarLedger(s));
+  }
   if(WaffraSmsCurrencies.requiresReviewForSarLedger(s)){
     // Preserve direction while blocking foreign amount from SAR-only ledger.
     final credited=RegExp(
@@ -617,13 +630,26 @@ bool bankSmsHasUnverifiedTimestamp(String raw,{DateTime? referenceDate}){
 
 String bankSmsHash(String raw)=>sha256.convert(utf8.encode(digits(raw).replaceAll(RegExp(r'\s+'),' ').trim().toLowerCase())).toString();
 List<String> splitBankMessages(String raw){
- final clean=raw.replaceAll('\r\n','\n').replaceAll('\u200f','').replaceAll('\u200e','').trim();
+ var clean=raw.replaceAll('\r\n','\n').replaceAll('\u200f','').replaceAll('\u200e','').trim();
  if(clean.isEmpty)return [];
+ // SMS exports/OCR can join the end of a bank notification to the next
+ // message without a space (e.g. "SARCredit Transfer" or "JODJOD10").
+ // Insert boundaries only before strongly recognizable new actions.
+ clean=clean.replaceAll(RegExp(
+  r'(?<=[A-Za-z0-9.])(?=(?:Credit\s+Transfer\s+via\b|'
+  r'Credit\s+via\s+(?:local|domestic|international)\s+transfer\b|'
+  r'Purchase\s+Card\b|Online\s+Purchase(?:\s+Card)?\b|'
+  r'Online\s+Pre[-\s]?Auth\b|Please\s+use\s+the\s+code\b|'
+  r'Declined\s+Transaction\b))',caseSensitive:false),'\n');
+ clean=clean.replaceAll(RegExp(
+  r'(?<=[A-Za-z0-9.])(?=(?:JOD|AED|SAR|KWD|BHD|OMR)\s*'
+  r'[0-9][0-9,]*(?:\.[0-9]{1,3})?\s+has\s+been\s+'
+  r'(?:credited|debited)\b)',caseSensitive:false),'\n');
  // Bank SMS messages often start with a transaction heading, even without dates.
  // Separate all posted and unposted notices by header, without relying
  // on blank lines (which also occur *inside* one bank SMS).
  final heading=RegExp(
-  r'^\s*(?:Online\s+Purchase(?:\s+Card)?|Online\s+Pre[-\s]?Auth|Pre[-\s]?Authori[sz]ation|Please\s+use\s+the\s+code|Verification\s+Code|OTP\b|Declined\s+Transaction|Transaction\s+Declined|Failed\s+Transaction|Transaction\s+Failed|Unsuccessful\s+Transaction|Incoming\s+Transfer|Outgoing\s+Transfer|Transfer\s+(?:Received|Sent|In|Out|To)|Funds\s+Received|Money\s+(?:Received|Sent)|Account\s+Credited|Salary\s+(?:Credit|Deposit)|Cash\s+Deposit|Refund|Reversal\s+Credit|ATM\s+Withdrawal|Cash\s+Withdrawal|Bill\s+Payment|Direct\s+Debit|Payment\s+(?:Completed|Successful)|Card\s+(?:Purchase|Payment)|Credit\s+Card\s+Purchase|POS|شراء(?:\s+PoS)?|حوال[ةه]|تحويل|إيداع|ايداع|راتب|سحب|دفع|نقاط بيع|Purchase|Debit|Credit)(?=\s|$|[:：])',
+  r'^\s*(?:(?:JOD|AED|SAR|KWD|BHD|OMR)\s*[0-9][0-9,]*(?:\.[0-9]{1,3})?\s+has\s+been\s+(?:credited|debited)|[0-9][0-9,.]*\s+(?:AED|JOD|SAR)\s+debited\s+from\s+account|Online\s+Purchase(?:\s+Card)?|Online\s+Pre[-\s]?Auth|Pre[-\s]?Authori[sz]ation|Please\s+use\s+the\s+code|Verification\s+Code|OTP\b|Declined\s+Transaction|Transaction\s+Declined|Failed\s+Transaction|Transaction\s+Failed|Unsuccessful\s+Transaction|Incoming\s+Transfer|Outgoing\s+Transfer|Transfer\s+(?:Received|Sent|In|Out|To)|Funds\s+Received|Money\s+(?:Received|Sent)|Account\s+Credited|Salary\s+(?:Credit|Deposit)|Cash\s+Deposit|Refund|Reversal\s+Credit|ATM\s+Withdrawal|Cash\s+Withdrawal|Bill\s+Payment|Direct\s+Debit|Payment\s+(?:Completed|Successful)|Card\s+(?:Purchase|Payment)|Credit\s+Card\s+Purchase|POS|شراء(?:\s+PoS)?|حوال[ةه]|تحويل|إيداع|ايداع|راتب|سحب|دفع|نقاط بيع|Purchase|Debit|Credit)(?=\s|$|[:：])',
   caseSensitive:false,multiLine:true);
  final starts=heading.allMatches(clean).map((m)=>m.start).toList();
  if(starts.length>1){
