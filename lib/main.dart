@@ -10326,6 +10326,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
  }
  DateTime nextRecurringDue(RecurringBill r) {
+  if(r.linkedGoalId!=null){
+   final once=DateTime(r.startAt.year,r.startAt.month,r.startAt.day);
+   final stableId=WaffraRecurringPolicy.entryId(r.id,once);
+   final postponed=DateTime.tryParse(recurringPostponed[stableId]??'');
+   return postponed!=null&&postponed.isAfter(once)?postponed:once;
+  }
   final today=DateTime.now();
   final monthlyDue=WaffraRecurringPolicy.dueDate(today.year,today.month,r.day);
   final monthId=WaffraRecurringPolicy.entryId(r.id,monthlyDue);
@@ -10340,7 +10346,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    nextRecurringDue(a).compareTo(nextRecurringDue(b)));
   final nextBill=orderedActive.isEmpty?null:orderedActive.first;
   final lastOfCurrentMonth=DateTime(DateTime.now().year,DateTime.now().month+1,0);
-  final monthly=active.where((r)=>!r.income&&!r.startAt.isAfter(lastOfCurrentMonth))
+  // Linked goals are one-time obligations, not repeating monthly bills.
+  final monthly=active.where((r)=>!r.income&&
+   !r.startAt.isAfter(lastOfCurrentMonth)&&
+   (r.linkedGoalId==null||
+    (r.startAt.year==lastOfCurrentMonth.year&&
+     r.startAt.month==lastOfCurrentMonth.month)))
    .fold<double>(0,(v,r)=>v+r.amount);
   final shown=recurring.where((r)=>recurringDisplay=='all'||
    (recurringDisplay=='active'?r.active:!r.active)).toList();
