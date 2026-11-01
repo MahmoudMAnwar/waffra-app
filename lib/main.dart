@@ -7381,80 +7381,61 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
 
  Future<void> deleteNamedBudget(BudgetCategory selected)async{
+  final active=namedBudgets.where((b)=>b.id==selected.id&&!b.deleted).toList();
+  if(active.length!=1)return;
   final affected=entries.where((e)=>e.budgetId==selected.id).length;
   final ok=await confirmDeletion(
-   waffraIsEnglish?'Delete named budget?':'حذف الميزانية',
+   waffraIsEnglish?'Delete budget?':'حذف الميزانية',
    waffraIsEnglish?
-    'Delete only the budget and unlink ${affected} expense(s)? All transactions, amounts, and the expense category will remain.':
-    'هنحذف الميزانية فقط ونفصل ارتباط ${affected} عملية بها، لكن كل المعاملات ومبالغها والقسم نفسه هيفضلوا محفوظين.');
+    'Archive this budget? $affected historical allocation(s) stay intact and no financial transactions will be deleted.':
+    'أرشفة الميزانية؟ هنحتفظ بارتباط $affected عملية تاريخية بدون حذف أي معاملة مالية.');
   if(ok!=true||!mounted)return;
+  final current=namedBudgets.where((b)=>b.id==selected.id&&!b.deleted).toList();
+  if(current.length!=1)return;
   setState((){
-   final i=categories.indexWhere((c)=>c.id==selected.id);
-   if(i>=0)categories[i]=categories[i].copy(budget:0,clearBudget:true);
-   for(var j=0;j<entries.length;j++){
-    if(entries[j].budgetId==selected.id)entries[j]=entries[j].withBudget(null);
-   }
+   final i=namedBudgets.indexWhere((b)=>b.id==selected.id);
+   namedBudgets[i]=namedBudgets[i].copy(budgetActive:false,deleted:true);
    if(selectedNamedBudgetCategoryId==selected.id)selectedNamedBudgetCategoryId=null;
   });
-  await _persistModuleOrReload(WaffraFinanceRoute.categoryCreateEditDeleteRestore,
-    operation:'named-budget-delete-and-unlink');
+  await _persistModuleOrReload(
+   WaffraFinanceRoute.challengeAndBudgetUpdate,
+   operation:'standalone-budget-soft-delete');
  }
 
- /// Pause or resume a named budget without dropping its amount, label, links
- /// or legacy finance records. Only future explicit budget selections change.
  Future<void> setNamedBudgetActive(BudgetCategory selected,bool enabled)async{
-  if(!mounted||selected.income||selected.budget<=0)return;
-  final previous=categories.where((c)=>c.id==selected.id).toList();
-  if(previous.length!=1||previous.single.budget<=0||
-     previous.single.budgetActive==enabled)return;
+  final current=namedBudgets.where((b)=>b.id==selected.id&&!b.deleted).toList();
+  if(current.length!=1||current.single.budgetActive==enabled)return;
   final ok=await showWaffraDialog<bool>(context:context,
    builder:(ctx)=>AlertDialog(
     title:WaffraText(enabled?
-     (waffraIsEnglish?'Resume named budget?':'إعادة تفعيل الميزانية؟'):
-     (waffraIsEnglish?'Pause named budget?':'إيقاف الميزانية مؤقتًا؟')),
-    content:WaffraText(enabled?
-     (waffraIsEnglish?
-      'Your budget and past links will remain unchanged. Expenses saved while it was paused will NOT be linked automatically. Review those records individually if needed.':
-      'الميزانية وروابط العمليات القديمة هتفضل محفوظة. المصروفات اللي اتسجلت وهي متوقفة مش هترتبط تلقائيًا بعد التفعيل. تقدر تراجعها وتربطها باختيارك.'):
-     (waffraIsEnglish?
-      'The budget will stay saved, but new expenses cannot be assigned to it until you resume. Existing transactions and links will not be changed.':
-      'هنحتفظ بالميزانية وبياناتها، لكن مش هينفع تربط بيها مصروفات جديدة لحد ما تفعلها تاني. العمليات القديمة وروابطها مش هتتغير.')),
+     (waffraIsEnglish?'Resume budget?':'إعادة تفعيل الميزانية؟'):
+     (waffraIsEnglish?'Pause budget?':'إيقاف الميزانية؟')),
+    content:WaffraText(waffraIsEnglish?
+     'Existing allocations stay unchanged. Expenses saved while paused will not be linked automatically.':
+     'كل الروابط القديمة محفوظة. العمليات وقت الإيقاف مش هترتبط تلقائيًا.'),
     actions:[
      TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),
       child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
      FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),
       child:WaffraText(enabled?
        (waffraIsEnglish?'Resume':'تفعيل'):
-       (waffraIsEnglish?'Pause':'إيقاف التفعيل'))),
+       (waffraIsEnglish?'Pause':'إيقاف'))),
     ]));
   if(ok!=true||!mounted)return;
-  final latest=categories.where((c)=>c.id==selected.id).toList();
-  if(latest.length!=1||latest.single.income||latest.single.budget<=0||
-     latest.single.budgetActive==enabled)return;
+  final live=namedBudgets.where((b)=>b.id==selected.id&&!b.deleted).toList();
+  if(live.length!=1||live.single.budgetActive==enabled)return;
   setState((){
-   final i=categories.indexWhere((c)=>c.id==selected.id);
-   if(i>=0)categories[i]=categories[i].copy(budgetActive:enabled);
-   // A paused budget must immediately disappear from the active picker.
-   if(selectedNamedBudgetCategoryId==selected.id){
-    selectedNamedBudgetCategoryId=null;
-   }
+   final index=namedBudgets.indexWhere((b)=>b.id==selected.id);
+   namedBudgets[index]=namedBudgets[index].copy(budgetActive:enabled);
+   if(selectedNamedBudgetCategoryId==selected.id)selectedNamedBudgetCategoryId=null;
   });
-  final saved=await _persistModuleOrReload(
-    WaffraFinanceRoute.categoryCreateEditDeleteRestore,
-    operation:'named-budget-active-toggle');
-  if(saved&&mounted){
-   snack(context,enabled?
-    (waffraIsEnglish?'Budget resumed. Old unlinked expenses need review.':
-     'تم تفعيل الميزانية. العمليات القديمة غير المرتبطة تحتاج مراجعتك.'):
-    (waffraIsEnglish?'Budget paused without deleting anything.':
-     'تم إيقاف الميزانية مؤقتًا من غير حذف أي بيانات.'));
-  }
+  await _persistModuleOrReload(
+   WaffraFinanceRoute.challengeAndBudgetUpdate,
+   operation:'standalone-budget-toggle');
  }
- 
+
  Future<void> editBudgetForCategory(BudgetCategory selected,{String? suggestedName})async{
-  final name=TextEditingController(text:selected.budgetLabel??
-   (selected.budget>0?'ميزانية '+selected.displayName:
-    suggestedName??'ميزانية '+selected.displayName));
+  final name=TextEditingController(text:selected.budgetLabel??selected.name);
   final amount=TextEditingController(text:selected.budget>0?
    formatWaffraEditAmount(selected.budget):'');
   var alert=selected.alertPercent;
@@ -7465,7 +7446,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      title:WaffraText(waffraIsEnglish?'Set named budget':'تحديد ميزانية باسم'),
      scrollable:true,
      content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-      WaffraText(selected.name,style:const TextStyle(fontWeight:FontWeight.w700)),
+      WaffraText(waffraIsEnglish?'Independent of categories':'مستقلة عن الأقسام',style:const TextStyle(fontWeight:FontWeight.w700)),
       const SizedBox(height:12),
       TextField(controller:name,maxLength:80,
        onChanged:(_)=>update(()=>nameError=null),
@@ -7495,9 +7476,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        final label=name.text.trim(),value=amountOfDisplay(amount.text);
        update((){
         nameError=label.isEmpty?waffraRequiredFieldMessage:
-         categories.any((c)=>c.id!=selected.id&&c.budget>0&&
-           (c.budgetLabel??'ميزانية '+c.displayName).trim().toLowerCase()==
-              label.toLowerCase())?
+         namedBudgets.any((c)=>c.id!=selected.id&&!c.deleted&&
+           c.name.trim().toLowerCase()==label.toLowerCase())?
           (waffraIsEnglish?'A budget with this name already exists':
            'اسم الميزانية مستخدم بالفعل'):null;
         amountError=waffraAmountFieldError(amount.text);
@@ -7509,148 +7489,94 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      ]))],
     )));
    if(edited==null||!mounted)return;
-   if(edited.amount<0){await deleteNamedBudget(selected);return;}
-   final wasNew=selected.budget<=0;
+   final live=namedBudgets.where((b)=>b.id==selected.id&&!b.deleted).toList();
+   if(live.length!=1)return;
    setState((){
-    final index=categories.indexWhere((c)=>c.id==selected.id);
-    if(index>=0)categories[index]=selected.copy(
-     budget:edited.amount,budgetLabel:edited.label,alertPercent:edited.alert);
+    final index=namedBudgets.indexWhere((b)=>b.id==selected.id);
+    namedBudgets[index]=namedBudgets[index].copy(
+     name:edited.label,budget:edited.amount,alertPercent:edited.alert);
     selectedNamedBudgetCategoryId=selected.id;
    });
-   final saved=await _persistModuleOrReload(WaffraFinanceRoute.categoryCreateEditDeleteRestore,
-    operation:'named-category-budget-update');
-   if(saved&&wasNew&&mounted){
-    final updated=categories.where((c)=>c.id==selected.id).toList();
-    if(updated.length==1&&updated.single.budgetActive)
-     await offerHistoricBudgetLink(updated.single);
-   }
+   await _persistModuleOrReload(WaffraFinanceRoute.challengeAndBudgetUpdate,
+    operation:'standalone-budget-edit');
   }finally{disposeLater([name,amount]);}
  }
+ /// No category selection: a budget is a standalone financial envelope.
  Future<String?> chooseBudgetCategory({String? suggestedName,
   String? suggestedParentId,String? suggestedSubcategory})async{
-  // A budget is attached to one existing expense subcategory. Never create
-  // a budget on a parent heading, or silently change any ledger entry.
-  final parents=categories.where((c)=>!c.income&&!c.isSubcategory).toList();
-  String? chosenParentId=suggestedParentId!=null&&parents.any(
-   (c)=>c.id==suggestedParentId)?suggestedParentId:null;
-  String query='';
-  final chosenId=await showWaffraDialog<String>(context:context,
-   builder:(ctx)=>StatefulBuilder(builder:(ctx,update){
-    final matchingParents=parents.where((c)=>c.id==chosenParentId).toList();
-    final parent=matchingParents.isEmpty?null:matchingParents.single;
-    final choices=(parent==null?parents:categories.where((c)=>
-      !c.income&&c.isSubcategory&&c.parentId==parent.id).toList());
-    final shown=choices.where((c)=>waffraSearchAny(
-      [c.name,c.displayName,waffraTr(c.name),waffraTr(c.displayName)],query)).toList();
-    if(parent!=null&&suggestedSubcategory!=null){
-     shown.sort((a,b)=>(a.displayName==suggestedSubcategory?0:1)
-       .compareTo(b.displayName==suggestedSubcategory?0:1));
-    }
-    return AlertDialog(
-     title:WaffraText(parent==null?
-      (waffraIsEnglish?'Choose main expense category':'اختر القسم الرئيسي'):
-      (waffraIsEnglish?'Choose subcategory':'اختر القسم الفرعي')),
-     content:SizedBox(width:double.maxFinite,
-      height:waffraKeyboardDialogListHeight(ctx,desired:470),
-      child:Column(children:[
-       if(parent!=null)Row(children:[
-        IconButton(
-         key:const Key('waffra-budget-back-to-parents'),
-         tooltip:waffraIsEnglish?'Back to main categories':'رجوع للأقسام الرئيسية',
-         onPressed:WaffraHaptics.tap(()=>update((){
-          chosenParentId=null;query='';
-         })),
-         icon:const Icon(Icons.arrow_back_rounded)),
-        Expanded(child:WaffraText(parent.displayName,maxLines:2,
-         style:const TextStyle(fontWeight:FontWeight.w700))),
-       ]),
-       TextField(
-        key:const Key('waffra-hierarchical-budget-search'),
-        onChanged:(v)=>update(()=>query=v),
+  final name=TextEditingController(text:suggestedName??'');
+  final amount=TextEditingController();
+  var alert=80;
+  String? nameError,amountError;
+  try{
+   final selected=await showWaffraDialog<({String name,double cap,int alert})>(
+    context:context,builder:(ctx)=>StatefulBuilder(
+     builder:(ctx,update)=>AlertDialog(
+      key:const Key('waffra-independent-budget-create'),
+      scrollable:true,
+      title:WaffraText(waffraIsEnglish?'New budget':'إنشاء ميزانية جديدة'),
+      content:Column(mainAxisSize:MainAxisSize.min,children:[
+       WaffraText(waffraIsEnglish?
+        'Create a budget without selecting any category.':
+        'ميزانيتك مستقلة، مش محتاج تختار أي قسم.',
+        style:const TextStyle(fontSize:12,color:emerald)),
+       const SizedBox(height:12),
+       TextField(controller:name,maxLength:80,
+        onChanged:(_)=>update(()=>nameError=null),
         decoration:InputDecoration(
-         prefixIcon:const Icon(Icons.search_rounded),
-         hintText:parent==null?
-          (waffraIsEnglish?'Search main expense categories':'ابحث في الأقسام الرئيسية'):
-          (waffraIsEnglish?'Search subcategories':'ابحث في الأقسام الفرعية'),
-         border:const OutlineInputBorder())),
-       const SizedBox(height:8),
-       Expanded(child:shown.isEmpty?Center(child:WaffraText(
-        waffraIsEnglish?'No matching categories':'لا توجد أقسام مطابقة')):
-        ListView.builder(
-         key:Key(parent==null?'waffra-budget-main-list':'waffra-budget-sub-list'),
-         itemCount:shown.length,
-         itemBuilder:(ctx,i){
-          final item=shown[i];
-          return ListTile(
-           key:Key('waffra-budget-category-'+item.id),
-           dense:true,
-           visualDensity:VisualDensity.compact,
-           contentPadding:const EdgeInsets.symmetric(horizontal:8),
-           minVerticalPadding:0,
-           title:WaffraText(item.displayName,maxLines:1),
-           subtitle:parent!=null&&item.budget>0?
-            WaffraText(waffraIsEnglish?
-             'Already has a budget — edit under My Budgets':
-             'له ميزانية موجودة — عدّلها من ميزانياتي',
-             maxLines:2,style:const TextStyle(fontSize:11)):null,
-           trailing:Icon(parent==null?
-             Icons.chevron_right_rounded:
-             (item.budget>0?Icons.lock_outline_rounded:
-              Icons.check_circle_outline_rounded)),
-           onTap:parent!=null&&item.budget>0?null:WaffraHaptics.tap((){
-            if(parent==null){
-             update((){chosenParentId=item.id;query='';});
-            }else{
-             Navigator.pop(ctx,item.id);
-            }
-           }),
-          );
-         })),
-       if(parent!=null)TextButton.icon(
-        key:const Key('waffra-budget-create-subcategory'),
-        onPressed:WaffraHaptics.tap(()=>
-         Navigator.pop(ctx,'create-subcategory:'+parent.id)),
-        icon:const Icon(Icons.add_rounded,size:19),
-        label:WaffraText(waffraIsEnglish?
-         'Create a new subcategory':'إضافة قسم فرعي جديد')),
-      ])),
-    );
-   }));
-  if(chosenId==null||!mounted)return null;
-  if(chosenId.startsWith('create-subcategory:')){
-   final parentId=chosenId.substring('create-subcategory:'.length);
-   final before=categories.map((c)=>c.id).toSet();
-   await addCategory(income:false,parentId:parentId);
-   if(!mounted)return null;
-   final added=categories.where((c)=>c.parentId==parentId&&
-    c.isSubcategory&&!c.income&&!before.contains(c.id)).toList();
-   if(added.length!=1)return null;
-   await editBudgetForCategory(added.single,suggestedName:suggestedName);
-   final saved=categories.where((c)=>c.id==added.single.id&&
-    c.budget>0&&c.budgetActive).toList();
-   return saved.length==1?saved.single.id:null;
-  }
-  final matches=categories.where((c)=>c.id==chosenId&&!c.income&&
-   c.isSubcategory&&categories.any((p)=>
-    p.id==c.parentId&&!p.income&&!p.isSubcategory)).toList();
-  if(matches.length!=1)return null;
-  final selected=matches.single;
-  // Current persisted budgets are stored on a category ID. Never silently
-  // rename/replace a different budget when the user requested creation.
-  // Independent multiple budgets on one leaf need a separate finance schema.
-  if(selected.budget>0){
-   snack(context,waffraIsEnglish?
-    'This subcategory already has a budget. Edit it in My Budgets.':
-    'القسم الفرعي ده له ميزانية بالفعل. عدّلها من ميزانياتي.');
-   return null;
-  }
-  await editBudgetForCategory(selected,suggestedName:suggestedName);
-  if(mounted&&categories.any((c)=>c.id==selected.id&&c.budget>0)){
-   setState(()=>selectedNamedBudgetCategoryId=selected.id);
-   final updated=categories.where((c)=>c.id==selected.id&&c.budgetActive).toList();
-   return updated.length==1?updated.single.id:null;
-  }
-  return null;
+         labelText:waffraIsEnglish?'Budget name *':'اسم الميزانية *',
+         errorText:nameError,border:const OutlineInputBorder())),
+       const SizedBox(height:12),
+       TextField(controller:amount,
+        keyboardType:const TextInputType.numberWithOptions(decimal:true),
+        inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],
+        onChanged:(_)=>update(()=>amountError=null),
+        decoration:InputDecoration(
+         labelText:waffraIsEnglish?'Monthly amount *':'الحد الشهري *',
+         errorText:amountError,border:const OutlineInputBorder())),
+       const SizedBox(height:12),
+       DropdownButtonFormField<int>(initialValue:alert,
+        isExpanded:true,
+        decoration:InputDecoration(labelText:waffraIsEnglish?
+         'Notify at':'التنبيه عند نسبة'),
+        items:[50,60,70,75,80,85,90,95,100].map((v)=>
+         DropdownMenuItem(value:v,child:WaffraText('$v٪'))).toList(),
+        onChanged:WaffraHaptics.selection((v){
+         if(v!=null)update(()=>alert=v);
+        })),
+      ]),
+      actions:[
+       TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
+        child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+       FilledButton(onPressed:WaffraHaptics.tap((){
+        final text=name.text.trim(),cap=amountOfDisplay(amount.text);
+        update((){
+         nameError=text.isEmpty?waffraRequiredFieldMessage:
+          namedBudgets.any((b)=>!b.deleted&&
+           b.name.trim().toLowerCase()==text.toLowerCase())?
+           (waffraIsEnglish?'Budget name already exists':
+            'اسم الميزانية مستخدم بالفعل'):null;
+         amountError=waffraAmountFieldError(amount.text);
+        });
+        if(nameError!=null||amountError!=null||cap==null||cap<=0)return;
+        Navigator.pop(ctx,(name:text,cap:cap,alert:alert));
+       }),child:WaffraText(waffraIsEnglish?'Save budget':'حفظ الميزانية')),
+      ],
+     )));
+   if(selected==null||!mounted)return null;
+   // Dialogs may be open while another budget operation finishes.
+   if(namedBudgets.any((b)=>!b.deleted&&b.name.toLowerCase()==
+      selected.name.toLowerCase()))return null;
+   final id='budget:'+newId();
+   setState(()=>namedBudgets.add(WaffraNamedBudget(
+    id:id,name:selected.name,budget:selected.cap,alertPercent:selected.alert)));
+   final saved=await _persistModuleOrReload(
+    WaffraFinanceRoute.challengeAndBudgetUpdate,
+    operation:'standalone-budget-create');
+   if(!saved||!mounted)return null;
+   setState(()=>selectedNamedBudgetCategoryId=id);
+   return id;
+  }finally{disposeLater([name,amount]);}
  }
  // Cross-screen refresh stays inside State, not the budgets extension.
  void refreshFromBudgetDirectory(){if(mounted)setState((){});}
