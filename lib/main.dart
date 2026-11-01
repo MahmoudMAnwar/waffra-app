@@ -2869,6 +2869,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  String search='',typeFilter='الكل',categoryFilter='الكل',period='شهري';
  String categorySearch='',categoryDisplay='all',categoryTypeFilter='all',goalDisplay='all',recurringDisplay='all';
+ String categorySort='default'; // Presentation-only; never rewrites finance categories.
  bool categoryMineOnly=false;
   String? forecastCategory;
   int forecastReduction=20;
