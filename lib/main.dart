@@ -62,6 +62,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'waffra_category_catalog.dart';
 import 'waffra_category_rankings.dart';
 import 'waffra_entry_sheet_safe_layout.dart';
+import 'waffra_visible_scroll_behavior.dart';
 import 'waffra_goal_catalog.dart';
 import 'waffra_pdf_reader.dart';
 import 'waffra_footer.dart';
@@ -1014,6 +1015,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   await p.setBool('waffra_dark_mode',dark);
  }
  @override Widget build(BuildContext context)=>MaterialApp(
+  scrollBehavior:const WaffraVisibleScrollBehavior(),
   debugShowCheckedModeBanner:false,title:'وفرة | Waffra',
   locale:language=='en'?const Locale('en','US'):
    WaffraRegionalCopy.arabicCountrySubtag.isEmpty?const Locale('ar'):
