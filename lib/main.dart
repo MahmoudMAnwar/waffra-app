@@ -327,7 +327,7 @@ class BudgetCategory {
   budget:(j['budget'] as num?)?.toDouble()??0,
   alertPercent:(j['alertPercent'] as num?)?.toInt()??80,
   origin:j['origin']=='user'?'user':j['origin']=='detected'?'detected':'system',
-  budgetActive:j['budgetActive']==null?true:j['budgetActive']==true,
+  budgetActive:!j.containsKey('budgetActive')||j['budgetActive']==true,
   budgetLabel:j['budgetLabel'] is String&&
     (j['budgetLabel'] as String).trim().isNotEmpty
     ?(j['budgetLabel'] as String).trim():null);
