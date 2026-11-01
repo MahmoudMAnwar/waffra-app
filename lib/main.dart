@@ -9536,16 +9536,45 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   );
   disposeLater([amount]);
   if(n!=null&&mounted){
-   if(n>waffraAvailableCash(entries,goals)){
+   final available=waffraAvailableCash(entries,goals);
+   if(n>available){
+    final acknowledged=await showWaffraDialog<bool>(
+     context:context,builder:(dialog)=>AlertDialog(
+      title:WaffraText(waffraIsEnglish?
+       'Savings exceed available balance':'تنبيه: مبلغ الادخار أكبر من الرصيد المتاح'),
+      content:WaffraText(waffraIsEnglish?
+       'Available: ${cash(available)}. Requested: ${cash(n)}. '
+       'If you continue, your spendable balance will be ${cash(available-n)}. '
+       'You can still fund your goal; this is a warning, not a restriction.':
+       'الرصيد المتاح: ${cash(available)}، والمبلغ المراد ادخاره: ${cash(n)}. '
+       'لو كملت، الرصيد المتاح للصرف هيصبح ${cash(available-n)}. '
+       'تقدر تكمل عادي؛ ده تنبيه فقط ومش منع.'),
+      actions:[SizedBox(width:double.maxFinite,child:Row(children:[
+       Expanded(child:OutlinedButton(
+        onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialog,false)),
+        child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء',maxLines:2))),
+       const SizedBox(width:8),
+       Expanded(child:FilledButton(
+        onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialog,true)),
+        child:WaffraText(waffraIsEnglish?'Continue':'متابعة',maxLines:2))),
+      ]))],
+     ));
+    if(acknowledged!=true||!mounted)return;
+   }
+   // Never overwrite concurrent edits to this goal after a warning dialog.
+   final matching=goals.where((x)=>x.id==g.id).toList();
+   if(matching.length!=1){
     snack(context,waffraIsEnglish?
-     'Insufficient available balance to allocate this savings amount.':
-     'الرصيد المتاح للصرف لا يكفي لتحويل المبلغ لمحفظة الأهداف.');
+     'Goal changed; refresh and try again.':
+     'بيانات الهدف اتغيرت؛ حدّث الصفحة وحاول تاني.');
     return;
    }
-   final achieved=g.saved<g.target&&g.saved+n>=g.target;
+   final current=matching.single;
+   final achieved=current.saved<current.target&&
+    current.saved+n>=current.target;
    setState((){
     final i=goals.indexWhere((x)=>x.id==g.id);
-    if(i>=0)goals[i]=g.copy(saved:g.saved+n);
+    if(i>=0)goals[i]=current.copy(saved:current.saved+n);
    });
    if(!await _persistModuleOrReload(WaffraFinanceRoute.goalCreateEditDeleteRestore,
      operation:'goal-funding'))return;
