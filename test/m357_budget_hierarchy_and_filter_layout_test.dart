@@ -25,6 +25,12 @@ void main() {
     expect(app, contains("'waffra-month-budget-compact-edit'"));
     expect(app, contains("'waffra-delete-selected-named-budget'"));
     expect(app, contains('deleteNamedBudget(selected)'));
+    expect(app, contains("budgetStatusFilter='active'"));
+    expect(app, contains("'waffra-budget-status-filter-'"));
+    expect(app, contains("'الميزانيات غير الفعّالة'"));
+    expect(app, contains("'الميزانيات الفعّالة'"));
+    expect(app, contains('if(monthlyBudgetDetailsOpen)...['));
+    expect(app, contains('actions:[SizedBox(width:double.maxFinite,child:Row(children:['));
     expect(app, contains('await confirmDeletion('));
     expect(app, contains('entries[j].withBudget(null)'));
   });
