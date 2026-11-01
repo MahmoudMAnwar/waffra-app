@@ -8859,6 +8859,14 @@ Future<void> bulkSmsSheet({String? initialText})async {
          PopupMenuItem(value:'edit',child:WaffraText(waffraIsEnglish?'Edit goal':'تعديل الهدف')),
          PopupMenuItem(value:'delete',child:WaffraText(waffraIsEnglish?'Delete goal':'حذف الهدف'))]),
       ]),
+      if(g.dueDate!=null)Padding(padding:const EdgeInsets.only(top:8),
+       child:Row(children:[
+        const Icon(Icons.event_outlined,size:16,color:emerald),
+        const SizedBox(width:5),
+        Expanded(child:WaffraText(
+         (waffraIsEnglish?'Due date: ':'تاريخ الاستحقاق: ')+dayText(g.dueDate!),
+         style:const TextStyle(fontSize:12,color:emerald))),
+       ])),
       const SizedBox(height:11),
       Row(children:[
        WaffraText('${(percent*100).round()}%',style:TextStyle(fontWeight:FontWeight.bold,color:shade)),
