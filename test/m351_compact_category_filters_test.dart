@@ -61,7 +61,7 @@ void main(){
   expect(ui,contains("initiallyExpanded:categoryFiltersOpen"));
   expect(ui,contains("DropdownButtonFormField<String>("));
   expect(ui,contains("key:ValueKey('waffra-category-type-'"));
-  expect(ui,contains("key:ValueKey('waffra-category-budget-'"));
+  expect(ui,isNot(contains("key:ValueKey('waffra-category-budget-'")));
   expect(ui,contains("key:ValueKey('waffra-category-sort-'"));
   expect(ui,contains("categoryMineOnly=v"));
   expect(ui,contains('monthlyTotals[(root.income,root.name)]'));
