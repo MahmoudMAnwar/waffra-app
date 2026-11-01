@@ -6,7 +6,9 @@ class WaffraCivilWindow {
  const WaffraCivilWindow(this.start,this.endExclusive);
  final DateTime start,endExclusive;
  bool contains(DateTime date)=>!date.isBefore(start)&&date.isBefore(endExclusive);
- int get days=>endExclusive.difference(start).inDays;
+ int get days=>DateTime.utc(endExclusive.year,endExclusive.month,
+    endExclusive.day).difference(DateTime.utc(start.year,start.month,
+    start.day)).inDays;
 }
 
 /// An explicit, non-overlapping period. Weekly starts on Monday; monthly and
@@ -18,7 +20,7 @@ abstract final class WaffraBudgetPeriods {
   switch(interval) {
    case WaffraBudgetInterval.weekly:
     final start=day.subtract(Duration(days:day.weekday-DateTime.monday));
-    return WaffraCivilWindow(start,start.add(const Duration(days:7)));
+    return WaffraCivilWindow(start,DateTime(start.year,start.month,start.day+7));
    case WaffraBudgetInterval.monthly:
     return WaffraCivilWindow(DateTime(day.year,day.month),
        DateTime(day.year,day.month+1));
