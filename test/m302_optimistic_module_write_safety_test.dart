@@ -30,24 +30,29 @@ void main() {
   expect(source,contains("if(!await _persistModuleOrReload("));
  });
 
- test('M302 category picker never selects a name when create is rejected',(){
+ test('M302 inline category picker returns a new name only after durable save',(){
   final code=File('lib/main.dart').readAsStringSync();
-  final start=code.indexOf('if(sms&&suggestion!=null)TextButton.icon(');
-  final end=code.indexOf('const SizedBox(height:12),',start);
+  final start=code.indexOf('Future<String?> chooseTransactionCategory(');
+  final end=code.indexOf('Future<String?> _promptReceiptLabel(',start);
   expect(start,greaterThan(0));
   expect(end,greaterThan(start));
   final picker=code.substring(start,end);
-  for(final mutation in <String>[
-    "operation:'bank-category-suggestion'",
-    "operation:'bank-new-category'",
-    "operation:'manual-new-subcategory'",
-  ]){
-   expect(picker,contains(mutation),reason:mutation);
-  }
-  final allGuards='if(!await _persistModuleOrReload('
-      .allMatches(picker).length;
-  expect(allGuards,3);
-  expect(picker,contains("if(sheetContext.mounted)update(()=>category=c.name)"));
+  expect(picker,contains('if(picked==null||!mounted||!ctx.mounted)return null;'));
+  expect(picker,contains('if(picked!=createMain&&picked!=createSub)return picked;'));
+  expect(picker,contains('income:typeIncome,parentId:categoryParentId,'));
+  expect(picker,contains('WaffraValidators.uniqueCategory(created.name,'));
+  expect(picker,contains('if(created==null||!mounted||!ctx.mounted)return null;'));
+  final add=picker.indexOf('setState(()=>categories.add(created));');
+  final persist=picker.indexOf('if(!await _persistModuleOrReload(',add);
+  final operation=picker.indexOf("operation:'transaction-category-picker-create'",persist);
+  final refuse=picker.indexOf('))return null;',operation);
+  final selected=picker.indexOf('return created.name;',refuse);
+  expect(add,greaterThan(0));
+  expect(persist,greaterThan(add));
+  expect(operation,greaterThan(persist));
+  expect(refuse,greaterThan(operation));
+  expect(selected,greaterThan(refuse),
+    reason:'Never select an unsaved main/subcategory after a failed durable write');
  });
 
  test('M302 recurring reminders are not scheduled for rejected mutations',(){
