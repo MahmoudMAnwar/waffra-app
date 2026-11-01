@@ -36,16 +36,19 @@ abstract final class GoalWalletProjector {
           if(m.from!=null||m.to==null||!goals.containsKey(m.to)||
              spendable<n)throw StateError('invalid goal funding');
           spendable-=n; goals[m.to!]=goals[m.to!]!+n;
+          break;
         case GoalMoveKind.withdraw:
           if(m.from==null||m.to!=null||!goals.containsKey(m.from)||
              goals[m.from]!<n)throw StateError('invalid withdrawal');
           goals[m.from!]=goals[m.from!]!-n;spendable+=n;
+          break;
         case GoalMoveKind.transfer:
           if(m.from==null||m.to==null||m.from==m.to||
              !goals.containsKey(m.from)||!goals.containsKey(m.to)||
              goals[m.from]!<n)throw StateError('invalid goal transfer');
           goals[m.from!]=goals[m.from!]!-n;
           goals[m.to!]=goals[m.to!]!+n;
+          break;
       }
     }
     final view=GoalBalances(spendable,Map.unmodifiable(goals));
