@@ -22,7 +22,8 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
    final category=linkedIndex>=0?recurring[linkedIndex].category:
     (rent.isNotEmpty?rent.first.name:available.first.name);
    final next=linkedIndex>=0?recurring[linkedIndex].copy(
-    amount:goal.target,day:deadline.day,startAt:deadline,active:true):
+    amount:goal.target,day:deadline.day,startAt:deadline,
+    active:recurring[linkedIndex].active):
     RecurringBill(id:newId(),title:'استحقاق '+goal.name,category:category,
      amount:goal.target,income:false,day:deadline.day,startAt:deadline,
      linkedGoalId:goal.id);
