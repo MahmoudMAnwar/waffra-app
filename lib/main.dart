@@ -350,10 +350,18 @@ class WaffraNamedBudget extends BudgetCategory {
    id:id,name:name,icon:'wallet',color:0xFF087A54,income:false,
    budget:budget,alertPercent:alertPercent,budgetActive:budgetActive,
    budgetLabel:name,origin:'user');
+ static String _legacyLabel(BudgetCategory c) {
+  final raw=(c.budgetLabel??'ميزانية ${c.displayName}').trim();
+  // A historic category title may exceed the independent budget 80-char
+  // limit. Preserve its stable ID and amount while bounding display text.
+  final runes=raw.runes.toList();
+  return String.fromCharCodes(runes.length>80?runes.take(80):runes);
+ }
  factory WaffraNamedBudget.fromLegacy(BudgetCategory category)=>
   WaffraNamedBudget(id:category.id,
-   name:category.budgetLabel??'ميزانية ${category.displayName}',
-   budget:category.budget,alertPercent:category.alertPercent,
+   name:_legacyLabel(category),budget:category.budget,
+   alertPercent:category.alertPercent<1||category.alertPercent>100
+    ?80:category.alertPercent,
    budgetActive:category.budgetActive);
  factory WaffraNamedBudget.fromJson(Map<String,dynamic> raw) {
   final id=raw['id'],name=raw['name'],amount=raw['budget'];
@@ -361,7 +369,8 @@ class WaffraNamedBudget extends BudgetCategory {
   if(id is! String||id.trim().isEmpty||id.length>256||
    name is! String||name.trim().isEmpty||name.runes.length>80||
    amount is! num||!amount.isFinite||amount<=0||
-   alert is! int||alert<1||alert>100||active is! bool){
+   alert is! int||alert<1||alert>100||active is! bool||
+   (raw.containsKey('deleted')&&raw['deleted'] is! bool)){
    throw const FormatException('Invalid standalone named budget.');
   }
   return WaffraNamedBudget(id:id,name:name,budget:amount.toDouble(),
