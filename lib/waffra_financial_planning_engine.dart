@@ -338,3 +338,46 @@ abstract final class RecurringBatchMatcher {
       accepted.values.toSet())));
  }
 }
+
+
+class GoalAmountEvidence {
+ const GoalAmountEvidence(this.id,this.targetMinor,this.savedMinor);
+ final String id;
+ final int targetMinor,savedMinor;
+}
+class GoalWalletHealthReport {
+ const GoalWalletHealthReport(this.netLedgerMinor,this.reservedMinor,
+    this.availableMinor,this.issues);
+ final int netLedgerMinor,reservedMinor,availableMinor;
+ /// Machine-readable warnings. No repairs or writes are performed.
+ final List<String> issues;
+ bool get reconciled => issues.isEmpty;
+}
+/// Reconcile old aggregate SavingGoal.saved snapshots conservatively.
+/// Legacy saves have no contribution event history: never fabricate an
+/// automatic movement from these scalar values or rewrite the cash ledger.
+/// Negative cash after earmarking is flagged, never silently clamped to zero.
+abstract final class GoalWalletHealthAudit {
+ static GoalWalletHealthReport inspect(int verifiedNetLedgerMinor,
+     Iterable<GoalAmountEvidence> goals) {
+  final issues=<String>[];
+  final ids=<String>{};
+  var reserved=0;
+  for(final goal in goals) {
+   if(goal.id.trim().isEmpty||!ids.add(goal.id)) {
+    issues.add('duplicate_or_missing_goal_id');
+   }
+   if(goal.targetMinor<=0||goal.savedMinor<0) {
+    issues.add('invalid_goal_amount');
+    continue;
+   }
+   // Saving beyond the original target may be intentional; it must not
+   // silently result in disappearing or truncated savings.
+   reserved+=goal.savedMinor;
+  }
+  final available=verifiedNetLedgerMinor-reserved;
+  if(available<0)issues.add('goals_exceed_spendable_ledger');
+  return GoalWalletHealthReport(verifiedNetLedgerMinor,reserved,available,
+      List<String>.unmodifiable(issues));
+ }
+}
