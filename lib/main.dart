@@ -7177,7 +7177,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       DropdownMenuItem(value:'all',child:WaffraText(waffraIsEnglish?
        'General monthly budget':'الميزانية الشهرية العامة')),
       ...named.map((c)=>DropdownMenuItem(value:c.id,
-       child:WaffraText(c.budgetLabel??'ميزانية '+c.displayName,maxLines:1))),
+       child:WaffraText((c.budgetLabel??'ميزانية '+c.displayName)+
+        (c.budgetActive?'':(waffraIsEnglish?' (paused)':' (متوقفة)')),
+        maxLines:1))),
      ],
      onChanged:WaffraHaptics.selection((v)=>setState(
        ()=>selectedNamedBudgetCategoryId=v=='all'?null:v)),
