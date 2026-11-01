@@ -7272,11 +7272,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           final item=shown[i];
           return ListTile(
            key:Key('waffra-budget-category-'+item.id),
-           title:WaffraText(item.displayName,maxLines:2),
-           subtitle:parent!=null&&item.budget>0?WaffraText(
-             waffraIsEnglish?'Edit existing budget':'تعديل الميزانية الموجودة'):null,
+           dense:true,
+           visualDensity:VisualDensity.compact,
+           contentPadding:const EdgeInsets.symmetric(horizontal:8),
+           minVerticalPadding:0,
+           title:WaffraText(item.displayName,maxLines:1),
            trailing:Icon(parent==null?
-             Icons.chevron_right_rounded:Icons.check_circle_outline_rounded),
+             Icons.chevron_right_rounded:
+             (item.budget>0?Icons.edit_outlined:Icons.check_circle_outline_rounded)),
            onTap:WaffraHaptics.tap((){
             if(parent==null){
              update((){chosenParentId=item.id;query='';});
