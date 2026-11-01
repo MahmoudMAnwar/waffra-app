@@ -57,5 +57,7 @@ void main() {
     expect(app, contains('final id=await chooseBudgetCategory();'));
     expect(app, contains('selectedBudgetId=match.single.id;'));
     expect(app, contains('if(match.length!=1)return;'));
+    expect(app, contains('if(selected.budget>0){'));
+    expect(app, contains('final allBudgets=categories.where((c)=>!c.income&&c.budget>0)'));
   });
 }
