@@ -8,6 +8,7 @@ import 'waffra_atomic_finance_snapshot.dart';
 import 'waffra_encrypted_receipt_vault.dart';
 import 'waffra_experimental_writer_gate.dart';
 import 'waffra_finance_read_view.dart';
+import 'waffra_fresh_finance_domain_schema.dart';
 import 'waffra_portable_backup_v2.dart';
 import 'waffra_portable_encrypted_vault_restorer.dart';
 
@@ -43,6 +44,29 @@ class WaffraPortableEncryptedBackupExporter {
       disposableDirectory: writerDirectory, experimentalEnabled: true,
     ).withExclusiveAccess(() async {
       await verifySourceUnderLock();
+      // Portable V2 only archives the canonical legacy-shaped snapshot and
+      // receipt bytes. New relational domain rows (budget allocations,
+      // verified goal movements, projects and user-confirmed subscriptions)
+      // have no V2 fields. Refuse a misleading 'successful' partial backup.
+      // An empty domain remains compatible with existing V2 exports.
+      final domainMarker = await snapshot.store.customSelect(
+        "SELECT name FROM sqlite_master WHERE type='table' "
+        "AND name='fresh_finance_domain_revision'",
+      ).get();
+      if (domainMarker.isNotEmpty) {
+        await WaffraFreshFinanceDomainSchema.requireReady(snapshot.store);
+        for (final table in WaffraFreshFinanceDomainSchema.domainTables) {
+          final row = await snapshot.store.customSelect(
+            'SELECT count(*) AS n FROM ' + table,
+          ).getSingle();
+          if (row.read<int>('n') != 0) {
+            throw StateError(
+              'Portable backup V2 cannot preserve saved SQLCipher finance '
+              'domain records. Export stopped to avoid silent data loss.',
+            );
+          }
+        }
+      }
       final state = await snapshot.read();
       WaffraFinanceReadView.fromEncrypted(state).requireIntegrity();
       final finance = Map<String, Object?>.from(state.values);
