@@ -111,6 +111,12 @@ extension WaffraCategoryScreen on _HomeScreenState {
       ]),
       const SizedBox(height:5),
       WaffraText(root.name,maxLines:2,style:const TextStyle(fontSize:15,fontWeight:FontWeight.w700)),
+      if(!root.income&&root.budget>0&&!root.budgetActive)
+       Padding(padding:const EdgeInsets.only(top:4),
+        child:WaffraText(waffraIsEnglish?
+         'Budget paused':'الميزانية متوقفة مؤقتًا',
+         style:const TextStyle(fontSize:11,color:Colors.deepOrange,
+          fontWeight:FontWeight.w600))),
       const SizedBox(height:5),
       WaffraText(waffraIsEnglish?'${visibleChildren.length} subcategories':'${visibleChildren.length} قسم فرعي',
        style:TextStyle(fontSize:11,color:Theme.of(context).hintColor)),
@@ -119,7 +125,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
        (waffraIsEnglish?'Income: ${cash(amount)}':'الدخل: ${cash(amount)}'):
        (waffraIsEnglish?'Spent: ${cash(amount)}':'المصروف: ${cash(amount)}'),
        maxLines:1,style:TextStyle(fontSize:11,color:color,fontWeight:FontWeight.bold)),
-      if(!root.income&&root.budget>0)...[
+      if(!root.income&&root.budget>0&&root.budgetActive)...[
        const SizedBox(height:6),
        LinearProgressIndicator(value:(assigned/root.budget).clamp(0.0,1.0),
         minHeight:5,color:assigned>root.budget?Colors.red:color,
