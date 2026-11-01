@@ -304,11 +304,11 @@ class BudgetCategory {
  bool get isSubcategory=>parentId.isNotEmpty;
  String get displayName=>isSubcategory?name.split(' / ').last:name;
  BudgetCategory copy({String? name,String? icon,int? color,double? budget,
-  int? alertPercent,String? parentId,String? budgetLabel})=>BudgetCategory(
+  int? alertPercent,String? parentId,String? budgetLabel,bool clearBudget=false})=>BudgetCategory(
    id:id,name:name??this.name,icon:icon??this.icon,color:color??this.color,
    income:income,parentId:parentId??this.parentId,budget:budget??this.budget,
    alertPercent:alertPercent??this.alertPercent,origin:origin,
-   budgetLabel:budgetLabel??this.budgetLabel);
+   budgetLabel:clearBudget?null:budgetLabel??this.budgetLabel);
  Map<String,dynamic> toJson()=>{'id':id,'name':name,'icon':icon,'color':color,
   'income':income,'parentId':parentId,'budget':budget,'alertPercent':alertPercent,
   'origin':origin,if(budgetLabel!=null)'budgetLabel':budgetLabel};
