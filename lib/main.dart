@@ -5304,7 +5304,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       SegmentedButton<bool>(
        segments:const [ButtonSegment(value:true,label:WaffraText('دخل')),
         ButtonSegment(value:false,label:WaffraText('مصروف'))],
-       selected:{income},onSelectionChanged:WaffraHaptics.selection((v)=>update((){
+       selected:{income},
+       onSelectionChanged:initial?.sourceType=='goal_due'?null:
+        WaffraHaptics.selection((v)=>update((){
         income=v.first;
         selectedParentId=null;
         selectedBudgetId=null;
@@ -5336,8 +5338,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         style:const TextStyle(fontSize:12,color:emerald)),
        const SizedBox(height:12),
       ],
-      TextField(controller:value,keyboardType:const TextInputType.numberWithOptions(decimal:true),
-       inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],onChanged:(_)=>update((){}),
+      TextField(controller:value,readOnly:initial?.sourceType=='goal_due',
+       keyboardType:const TextInputType.numberWithOptions(decimal:true),
+       inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],
+       onChanged:(_)=>update((){}),
        decoration:InputDecoration(labelText:waffraIsEnglish?'Amount *':'المبلغ *',
         errorText:attempted?waffraAmountFieldError(value.text):null,
         border:OutlineInputBorder())),
@@ -5651,6 +5655,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        if(!waffraTransactionTitleAllowed(title.text,oldTitle:initial?.title)||
         (!sms&&!waffraTransactionNotesAllowed(notes.text,oldNotes:initial?.notes))||
         waffraAmountFieldError(value.text)!=null||n==null)return;
+       // A settled goal payment is coupled to a debited earmark. Edits
+       // may change its category/budget/notes, but not the money or type.
+       if(initial?.sourceType=='goal_due'&&
+        (WaffraRecurringPolicy.toHalalas(n)!=
+         WaffraRecurringPolicy.toHalalas(initial!.amount)||
+         income!=initial.income)){
+        snack(sheetContext,waffraIsEnglish?
+         'Goal payment amount/type cannot be changed without reversing the wallet.':
+         'مبلغ ونوع استحقاق الهدف ثابتان لحماية رصيد محفظة الهدف.');
+        return;
+       }
        if(!waffraCanAssignManualCategory(categories,
         income,selectedParentId,category))return;
        if(!income&&selectedBudgetId!=null&&
@@ -6803,6 +6818,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
 
  Future<void> deleteEntry(MoneyEntry e)async {
+  // Deleting a confirmed goal debit without also reversing its goal-wallet
+  // earmark would silently increase spendable cash. No unverified rollback.
+  if(e.sourceType=='goal_due'){
+   snack(context,waffraIsEnglish?
+    'Goal payments need a verified wallet reversal before deletion. '
+    'No money was changed.':
+    'حذف استحقاق الهدف يحتاج عكس الخصم من محفظة الهدف بأمان؛ '
+    'لم يتم تغيير أي مبلغ.');
+   return;
+  }
   if(_lastFinanceAuthorityRead?.source==
      WaffraRuntimeFinanceBackend.verifiedEncrypted){
    await _deleteVerifiedEntry(e);
