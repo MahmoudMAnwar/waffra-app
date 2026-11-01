@@ -5728,6 +5728,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         income:income,date:date,receiptPath:receiptPath,
         sourceType:initial?.sourceType??(sms?'sms':scannedReceipt!=null?'receipt':'manual'),
         merchantKey:initial?.merchantKey??(sms?(waffraMerchantKey(message.text)??''):''),
+        goalWalletPaidMinor:initial?.goalWalletPaidMinor??0,
         budgetId:income?null:(categories.any((c)=>c.id==selectedBudgetId&&
          !c.income&&c.budget>0&&
          (c.budgetActive||(initial!=null&&initial.budgetId==c.id)))
