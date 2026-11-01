@@ -7213,35 +7213,96 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }finally{disposeLater([name,amount]);}
  }
  Future<void> chooseBudgetCategory()async{
-  final choices=categories.where((c)=>!c.income).toList();
+  // A budget is attached to one existing expense subcategory. Never create
+  // a budget on a parent heading, or silently change any ledger entry.
+  final parents=categories.where((c)=>!c.income&&!c.isSubcategory).toList();
+  String? chosenParentId;
   String query='';
-  final selected=await showWaffraDialog<BudgetCategory>(context:context,
+  final chosenId=await showWaffraDialog<String>(context:context,
    builder:(ctx)=>StatefulBuilder(builder:(ctx,update){
+    final matchingParents=parents.where((c)=>c.id==chosenParentId).toList();
+    final parent=matchingParents.isEmpty?null:matchingParents.single;
+    final choices=(parent==null?parents:categories.where((c)=>
+      !c.income&&c.isSubcategory&&c.parentId==parent.id).toList());
     final shown=choices.where((c)=>waffraSearchAny(
-      [c.name,waffraTr(c.name)],query)).toList();
+      [c.name,c.displayName,waffraTr(c.name),waffraTr(c.displayName)],query)).toList();
     return AlertDialog(
-     title:WaffraText(waffraIsEnglish?'Choose category for budget':'اختر قسم الميزانية'),
+     title:WaffraText(parent==null?
+      (waffraIsEnglish?'Choose main expense category':'اختر القسم الرئيسي'):
+      (waffraIsEnglish?'Choose subcategory':'اختر القسم الفرعي')),
      content:SizedBox(width:double.maxFinite,
       height:min(470.0,MediaQuery.sizeOf(ctx).height*.60),
       child:Column(children:[
-       TextField(autofocus:true,onChanged:(v)=>update(()=>query=v),
+       if(parent!=null)Row(children:[
+        IconButton(
+         key:const Key('waffra-budget-back-to-parents'),
+         tooltip:waffraIsEnglish?'Back to main categories':'رجوع للأقسام الرئيسية',
+         onPressed:WaffraHaptics.tap(()=>update((){
+          chosenParentId=null;query='';
+         })),
+         icon:const Icon(Icons.arrow_back_rounded)),
+        Expanded(child:WaffraText(parent.displayName,maxLines:2,
+         style:const TextStyle(fontWeight:FontWeight.w700))),
+       ]),
+       TextField(
+        key:const Key('waffra-hierarchical-budget-search'),
+        onChanged:(v)=>update(()=>query=v),
         decoration:InputDecoration(
          prefixIcon:const Icon(Icons.search_rounded),
-         hintText:waffraIsEnglish?'Search expense categories':'ابحث في أقسام المصروفات',
+         hintText:parent==null?
+          (waffraIsEnglish?'Search main expense categories':'ابحث في الأقسام الرئيسية'):
+          (waffraIsEnglish?'Search subcategories':'ابحث في الأقسام الفرعية'),
          border:const OutlineInputBorder())),
        const SizedBox(height:8),
        Expanded(child:shown.isEmpty?Center(child:WaffraText(
         waffraIsEnglish?'No matching categories':'لا توجد أقسام مطابقة')):
-        ListView.builder(itemCount:shown.length,
-         itemBuilder:(ctx,i)=>ListTile(
-          title:WaffraText(shown[i].name,maxLines:2),
-          subtitle:shown[i].budget>0?WaffraText(waffraIsEnglish?
-           'Edit existing budget':'تعديل الميزانية الموجودة'):null,
-          onTap:WaffraHaptics.tap(()=>Navigator.pop(ctx,shown[i]))))),
+        ListView.builder(
+         key:Key(parent==null?'waffra-budget-main-list':'waffra-budget-sub-list'),
+         itemCount:shown.length,
+         itemBuilder:(ctx,i){
+          final item=shown[i];
+          return ListTile(
+           key:Key('waffra-budget-category-'+item.id),
+           title:WaffraText(item.displayName,maxLines:2),
+           subtitle:parent!=null&&item.budget>0?WaffraText(
+             waffraIsEnglish?'Edit existing budget':'تعديل الميزانية الموجودة'):null,
+           trailing:Icon(parent==null?
+             Icons.chevron_right_rounded:Icons.check_circle_outline_rounded),
+           onTap:WaffraHaptics.tap((){
+            if(parent==null){
+             update((){chosenParentId=item.id;query='';});
+            }else{
+             Navigator.pop(ctx,item.id);
+            }
+           }),
+          );
+         })),
+       if(parent!=null)TextButton.icon(
+        key:const Key('waffra-budget-create-subcategory'),
+        onPressed:WaffraHaptics.tap(()=>
+         Navigator.pop(ctx,'create-subcategory:'+parent.id)),
+        icon:const Icon(Icons.add_rounded,size:19),
+        label:WaffraText(waffraIsEnglish?
+         'Create a new subcategory':'إضافة قسم فرعي جديد')),
       ])),
     );
    }));
-  if(selected==null||!mounted)return;
+  if(chosenId==null||!mounted)return;
+  if(chosenId.startsWith('create-subcategory:')){
+   final parentId=chosenId.substring('create-subcategory:'.length);
+   final before=categories.map((c)=>c.id).toSet();
+   await addCategory(income:false,parentId:parentId);
+   if(!mounted)return;
+   final added=categories.where((c)=>c.parentId==parentId&&
+    c.isSubcategory&&!c.income&&!before.contains(c.id)).toList();
+   if(added.length==1)await editBudgetForCategory(added.single);
+   return;
+  }
+  final matches=categories.where((c)=>c.id==chosenId&&!c.income&&
+   c.isSubcategory&&categories.any((p)=>
+    p.id==c.parentId&&!p.income&&!p.isSubcategory)).toList();
+  if(matches.length!=1)return;
+  final selected=matches.single;
   await editBudgetForCategory(selected);
   if(mounted&&categories.any((c)=>c.id==selected.id&&c.budget>0)){
    setState(()=>selectedNamedBudgetCategoryId=selected.id);
@@ -7283,25 +7344,44 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      blurRadius:8,offset:const Offset(0,3))]),
    child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
     LayoutBuilder(builder:(context,box){
-     final compact=box.maxWidth<365||MediaQuery.textScalerOf(context).scale(16)>23;
+     final compact=box.maxWidth<300||
+      MediaQuery.textScalerOf(context).scale(16)>22;
      final budgetLabel=Row(mainAxisSize:MainAxisSize.min,children:[
       const Icon(Icons.donut_large,color:emerald,size:23),
       const SizedBox(width:7),
-      Flexible(child:WaffraText(selected==null?(waffraIsEnglish?'Monthly budget':'الميزانية الشهرية'):(selected.budgetLabel??'ميزانية '+selected.displayName),
+      Flexible(child:WaffraText(selected==null?
+       (waffraIsEnglish?'Monthly budget':'الميزانية الشهرية'):
+       (selected.budgetLabel??'ميزانية '+selected.displayName),
        maxLines:2,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:18))),
      ]);
      final edit=TextButton.icon(
       key:const Key('waffra-month-budget-compact-edit'),
       style:TextButton.styleFrom(minimumSize:const Size(0,48),
-       padding:const EdgeInsets.symmetric(horizontal:9,vertical:8),
+       padding:const EdgeInsets.symmetric(horizontal:6,vertical:8),
        tapTargetSize:MaterialTapTargetSize.padded),
-      onPressed:WaffraHaptics.tap(()=>selected==null?editMonthlyBudget():editBudgetForCategory(selected)),
+      onPressed:WaffraHaptics.tap(()=>
+       selected==null?editMonthlyBudget():editBudgetForCategory(selected)),
       icon:const Icon(Icons.edit_outlined,size:17),
-      label:WaffraText(waffraIsEnglish?'Edit':'تحديد الميزانية'));
-     return compact?Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-      budgetLabel,const SizedBox(height:6),
-      Align(alignment:AlignmentDirectional.centerStart,child:edit),
-     ]):Row(children:[Expanded(child:budgetLabel),edit]);
+      label:WaffraText(waffraIsEnglish?'Edit':'تحديد الميزانية',
+       maxLines:2,style:const TextStyle(fontSize:13)));
+     final create=TextButton.icon(
+      key:const Key('waffra-budget-create-action'),
+      style:TextButton.styleFrom(minimumSize:const Size(0,48),
+       padding:const EdgeInsets.symmetric(horizontal:6,vertical:8),
+       tapTargetSize:MaterialTapTargetSize.padded),
+      onPressed:WaffraHaptics.tap(chooseBudgetCategory),
+      icon:const Icon(Icons.add_rounded,size:18),
+      label:WaffraText(waffraIsEnglish?'Add budget':'إضافة ميزانية',
+       maxLines:2,style:const TextStyle(fontSize:13)));
+     return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      budgetLabel,
+      const SizedBox(height:6),
+      compact?Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+       edit,create,
+      ]):Row(children:[
+       Expanded(child:edit),const SizedBox(width:8),Expanded(child:create),
+      ]),
+     ]);
     }),
     const SizedBox(height:8),
     DropdownButtonFormField<String>(
@@ -7349,10 +7429,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         'الميزانية متوقفة مؤقتًا، وكل العمليات القديمة محفوظة. بعد التفعيل راجع العمليات اللي اتسجلت أثناء الإيقاف واربطها باختيارك.',
         style:const TextStyle(fontSize:12,color:Colors.deepOrange))),
     ],
-    Align(alignment:AlignmentDirectional.centerStart,child:TextButton.icon(
-      onPressed:WaffraHaptics.tap(chooseBudgetCategory),
-      icon:const Icon(Icons.add,size:17),
-      label:WaffraText(waffraIsEnglish?'Add named budget':'إضافة ميزانية باسم'))),
     const SizedBox(height:7),
     if(active&&limit>0)...[
      WaffraText(waffraIsEnglish?
