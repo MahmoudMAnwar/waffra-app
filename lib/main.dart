@@ -5271,9 +5271,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      final matches=categories.where((c)=>c.id==pickedId&&
       !c.income&&c.budget>0&&c.isSubcategory).toList();
      if(matches.length!=1)return;
+     // Budget allocation is independent of the user's chosen category.
      selectedBudgetId=pickedId;
-     selectedParentId=matches.single.parentId;
-     category=matches.single.name;
     }
     Widget dateAction()=>OutlinedButton.icon(
       key:const Key('waffra-entry-date-action'),
@@ -5456,141 +5455,80 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          style:const TextStyle(color:Colors.deepOrange,fontSize:12))),
       ],
       if(!income)...[
-       if(budgetSuggestions.isNotEmpty)Padding(
-        padding:const EdgeInsets.only(top:8,bottom:5),
-        child:WaffraText(waffraIsEnglish?
-         'Suggested budget: '+(budgetSuggestions.first.budgetLabel??
-           'Budget '+budgetSuggestions.first.displayName):
-         'الميزانية المقترحة: '+(budgetSuggestions.first.budgetLabel??
-           'ميزانية '+budgetSuggestions.first.displayName),
-         style:const TextStyle(fontSize:12,color:emerald))),
-       const SizedBox(height:11),
-       DropdownButtonFormField<String>(
-        key:ValueKey('waffra-entry-budget-'+(selectedBudgetId??'unlinked')),
-        menuMaxHeight:min(340.0,MediaQuery.sizeOf(sheetContext).height*.48),
-        // An existing record may retain its historical paused budget.
-        // New records can only select active budgets.
-        initialValue:categories.any((c)=>!c.income&&c.budget>0&&
-         (c.budgetActive||(initial!=null&&initial.budgetId==c.id))&&
-         c.id==selectedBudgetId)?selectedBudgetId:'unlinked',
-        isExpanded:true,
-        decoration:InputDecoration(
-         labelText:waffraIsEnglish?'Assign to budget':'تسجيل العملية في أي ميزانية؟',
-         helperText:waffraIsEnglish?
-          'Choose a saved budget or leave this expense unassigned.':
-          'اختر من ميزانياتك أو اترك العملية غير مرتبطة.',
-         border:const OutlineInputBorder()),
-        items:[
-         DropdownMenuItem(value:'unlinked',child:WaffraText(
-          waffraIsEnglish?'Unassigned — choose later':'غير مرتبطة بميزانية')),
-         ...categories.where((c)=>
-          !c.income&&c.isSubcategory&&c.budget>0&&c.budgetActive)
-          .map((c)=>DropdownMenuItem(value:c.id,child:WaffraText(
-           c.budgetLabel??'ميزانية '+c.displayName,maxLines:1))),
-         if(initial?.budgetId!=null)
-          ...categories.where((c)=>c.id==initial!.budgetId&&
-           !c.income&&c.budget>0&&
-           (!c.budgetActive||!c.isSubcategory)).map(
-            (c)=>DropdownMenuItem(value:c.id,enabled:false,child:WaffraText(
-             (c.budgetLabel??'ميزانية '+c.displayName)+
-              (waffraIsEnglish?' (historical)':' (ارتباط قديم)'),maxLines:1))),
-        ],
-        onChanged:WaffraHaptics.selection((v)=>update(
-         ()=>assignBudgetInsideEditor(v=='unlinked'?null:v))),
-       ),
-       Align(alignment:AlignmentDirectional.centerStart,
-        child:TextButton.icon(
-         key:const Key('waffra-entry-search-budgets'),
-         icon:const Icon(Icons.search_rounded,size:17),
-         label:WaffraText(waffraIsEnglish?
-           'Select budget':'تحديد الميزانية'),
-         onPressed:WaffraHaptics.tap(()async{
-          final activeBudgets=categories.where((c)=>
-           !c.income&&c.isSubcategory&&c.budget>0&&c.budgetActive).toList();
-          String budgetQuery='';
-          final picked=await showWaffraDialog<String>(context:sheetContext,
-           builder:(dialogContext)=>StatefulBuilder(
-            builder:(dialogContext,refresh){
-             final shown=activeBudgets.where((c)=>waffraSearchAny(
-               [c.name,c.displayName,c.budgetLabel??''],budgetQuery))
-              .toList();
-             return AlertDialog(
-              title:WaffraText(waffraIsEnglish?
-               'Find a budget':'ابحث عن ميزانية'),
-              content:SizedBox(width:400,
-               height:min(420.0,MediaQuery.sizeOf(dialogContext).height*.55),
-               child:Column(children:[
-                TextField(
-                 key:const Key('waffra-entry-budget-search-field'),
-                 onChanged:(v)=>refresh(()=>budgetQuery=v),
-                 decoration:InputDecoration(
-                  prefixIcon:const Icon(Icons.search),
-                  hintText:waffraIsEnglish?
-                   'Search active budgets':'ابحث بالاسم أو القسم',
-                  border:const OutlineInputBorder())),
-                const SizedBox(height:8),
-                Expanded(child:shown.isEmpty?
-                 Center(child:WaffraText(waffraIsEnglish?
-                  'No matching budgets':'ما فيه ميزانيات مطابقة')):
-                 ListView.builder(
-                  itemCount:shown.length,itemBuilder:(_,i){
-                   final budget=shown[i];
-                   return ListTile(
-                    dense:true,
-                    title:WaffraText(budget.budgetLabel??budget.name,
-                     maxLines:2),
-                    onTap:WaffraHaptics.tap(()=>
-                     Navigator.pop(dialogContext,budget.id)));
-                  })),
-               ])),
-              actions:[
-               TextButton(
-                onPressed:WaffraHaptics.tap(()=>
-                 Navigator.pop(dialogContext,'unlinked')),
-                child:WaffraText(waffraIsEnglish?
-                 'Leave unassigned':'بدون ربط')),
-               TextButton(
-                onPressed:WaffraHaptics.tap(()=>
-                 Navigator.pop(dialogContext)),
-                child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
-              ]);
-            }));
-          if(picked!=null&&sheetContext.mounted){
-           update(()=>assignBudgetInsideEditor(picked=='unlinked'?null:picked));
+       const SizedBox(height:10),
+       // Budget and transaction date share one compact, keyboard-safe row.
+       Row(children:[
+        Expanded(child:DropdownButtonFormField<String>(
+         key:ValueKey('waffra-entry-budget-'+(selectedBudgetId??'unlinked')),
+         menuMaxHeight:min(340.0,MediaQuery.sizeOf(sheetContext).height*.48),
+         initialValue:categories.any((c)=>!c.income&&c.budget>0&&
+          (c.budgetActive||(initial!=null&&initial.budgetId==c.id))&&
+          c.id==selectedBudgetId)?selectedBudgetId:'unlinked',
+         isExpanded:true,
+         decoration:InputDecoration(
+          labelText:waffraIsEnglish?'Transaction budget':'ميزانية العملية',
+          border:const OutlineInputBorder()),
+         items:[
+          DropdownMenuItem(value:'unlinked',child:WaffraText(
+           waffraIsEnglish?'No budget':'غير مرتبطة',maxLines:1)),
+          ...categories.where((c)=>!c.income&&c.isSubcategory&&
+           c.budget>0&&c.budgetActive)
+           .map((c)=>DropdownMenuItem(value:c.id,child:WaffraText(
+            c.budgetLabel??'ميزانية '+c.displayName,maxLines:1))),
+          if(initial?.budgetId!=null)
+           ...categories.where((c)=>c.id==initial!.budgetId&&
+            !c.income&&c.budget>0&&
+            (!c.budgetActive||!c.isSubcategory)).map(
+             (c)=>DropdownMenuItem(value:c.id,enabled:false,
+              child:WaffraText(
+               (c.budgetLabel??'ميزانية '+c.displayName)+
+               (waffraIsEnglish?' (previous)':' (ارتباط قديم)'),maxLines:1))),
+          DropdownMenuItem(value:'__create_budget__',
+           child:Row(children:[
+            const Icon(Icons.add_circle_outline_rounded,color:emerald,size:19),
+            const SizedBox(width:8),
+            Expanded(child:WaffraText(waffraIsEnglish?
+             'Create a new budget':'إنشاء ميزانية جديدة',maxLines:1)),
+           ])),
+          DropdownMenuItem(value:'__manage_budgets__',
+           child:Row(children:[
+            const Icon(Icons.settings_outlined,color:emerald,size:19),
+            const SizedBox(width:8),
+            Expanded(child:WaffraText(waffraIsEnglish?
+             'Manage / delete budgets':'إدارة / حذف الميزانيات',maxLines:1)),
+           ])),
+         ],
+         onChanged:WaffraHaptics.selection((v)async{
+          if(v=='__create_budget__'){
+           final id=await chooseBudgetCategory();
+           if(!sheetContext.mounted)return;
+           final b=categories.where((c)=>c.id==id&&!c.income&&
+            c.isSubcategory&&c.budget>0&&c.budgetActive).toList();
+           if(b.length==1)update(()=>assignBudgetInsideEditor(b.single.id));
+           return;
           }
+          if(v=='__manage_budgets__'){
+           await showBudgetsDirectorySheet();
+           if(sheetContext.mounted)update((){});
+           return;
+          }
+          if(sheetContext.mounted)update(
+           ()=>assignBudgetInsideEditor(v=='unlinked'?null:v));
          }),
         )),
-       Align(alignment:AlignmentDirectional.centerStart,
-        child:TextButton.icon(
-         key:const Key('waffra-entry-create-named-budget'),
-         icon:const Icon(Icons.add_circle_outline_rounded,size:19),
-         label:WaffraText(waffraIsEnglish?
-          'Create new budget':'إنشاء ميزانية جديدة'),
-         onPressed:WaffraHaptics.tap(()async{
-          // Only a saved, active child-category budget may be assigned.
-          // Cancelled dialogs never select a stale budget.
-          final id=await chooseBudgetCategory();
-          if(id==null||!sheetContext.mounted)return;
-          final match=categories.where((c)=>c.id==id&&
-           !c.income&&c.isSubcategory&&c.budget>0&&c.budgetActive).toList();
-          if(match.length!=1)return;
-          update((){
-           selectedParentId=match.single.parentId;
-           category=match.single.name;
-           selectedBudgetId=match.single.id;
-          });
-         }),
-        )),
+        const SizedBox(width:8),
+        SizedBox(width:137,child:dateAction()),
+       ]),
        if(selectedBudgetId==null)Padding(
-        padding:const EdgeInsets.only(top:5),
+        padding:const EdgeInsets.only(top:7),
         child:WaffraText(waffraIsEnglish?
-         'This expense is not linked to a budget. You can link it later.':
-         'هذه العملية غير مرتبطة بميزانية؛ تقدر تربطها لاحقًا.',
+         'Unassigned; you can link this expense to a budget later.':
+         'غير مرتبطة بميزانية، تقدر تربطها لاحقًا.',
          style:const TextStyle(color:Colors.deepOrange,fontSize:11))),
-      ],
-      Padding(padding:const EdgeInsets.symmetric(vertical:12),
-       child:Align(alignment:AlignmentDirectional.centerStart,
-        child:dateAction())),
+      ]else
+       Padding(padding:const EdgeInsets.symmetric(vertical:12),
+        child:Align(alignment:AlignmentDirectional.centerStart,
+         child:dateAction())),
       const SizedBox(height:12),
       Row(children:[
        Expanded(child:OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async{
