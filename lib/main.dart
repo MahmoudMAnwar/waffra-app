@@ -4854,6 +4854,7 @@ Future<void> bulkSmsSheet({String? initialText})async {
   bool submitTapped=false;
   String category=initial?.category??'أخرى';
   String? selectedParentId;
+  String? selectedBudgetId=initial?.budgetId;
   {
    // All reviewed transactions, including SMS, must use a real child category.
    final matchingLeaf=categories.where((c)=>c.income==income&&
@@ -5051,6 +5052,36 @@ Future<void> bulkSmsSheet({String? initialText})async {
          waffraIsEnglish?'No subcategories yet. Add one below first.':
          'لا توجد أقسام فرعية هنا، أضف قسمًا فرعيًا أولًا.',
          style:const TextStyle(color:Colors.redAccent,fontSize:12))),
+      ],
+      if(!income)...[
+       const SizedBox(height:11),
+       DropdownButtonFormField<String>(
+        key:ValueKey('waffra-entry-budget-'+(selectedBudgetId??'unlinked')),
+        initialValue:categories.any((c)=>!c.income&&c.budget>0&&
+         c.id==selectedBudgetId)?selectedBudgetId:'unlinked',
+        isExpanded:true,
+        decoration:InputDecoration(
+         labelText:waffraIsEnglish?'Assign to budget':'تسجيل العملية في أي ميزانية؟',
+         helperText:waffraIsEnglish?
+          'Choose a saved budget or leave this expense unassigned.':
+          'اختر من ميزانياتك أو اترك العملية غير مرتبطة.',
+         border:const OutlineInputBorder()),
+        items:[
+         DropdownMenuItem(value:'unlinked',child:WaffraText(
+          waffraIsEnglish?'Unassigned — choose later':'غير مرتبطة بميزانية')),
+         ...categories.where((c)=>!c.income&&c.budget>0)
+          .map((c)=>DropdownMenuItem(value:c.id,child:WaffraText(
+           c.budgetLabel??'ميزانية '+c.displayName,maxLines:1))),
+        ],
+        onChanged:WaffraHaptics.selection((v)=>update(
+         ()=>selectedBudgetId=v=='unlinked'?null:v)),
+       ),
+       if(selectedBudgetId==null)Padding(
+        padding:const EdgeInsets.only(top:5),
+        child:WaffraText(waffraIsEnglish?
+         'This expense is not linked to a budget. You can link it later.':
+         'هذه العملية غير مرتبطة بميزانية؛ تقدر تربطها لاحقًا.',
+         style:const TextStyle(color:Colors.deepOrange,fontSize:11))),
       ],
       if(sms&&suggestion!=null)TextButton.icon(onPressed:WaffraHaptics.tap(()async {
        final mainId=selectedMain.isEmpty?null:selectedMain.first.id;
@@ -5255,7 +5286,9 @@ Future<void> bulkSmsSheet({String? initialText})async {
         category:category,amount:n,
         income:income,date:date,receiptPath:receiptPath,
         sourceType:initial?.sourceType??(sms?'sms':scannedReceipt!=null?'receipt':'manual'),
-        merchantKey:initial?.merchantKey??(sms?(waffraMerchantKey(message.text)??''):'')));
+        merchantKey:initial?.merchantKey??(sms?(waffraMerchantKey(message.text)??''):''),
+        budgetId:income?null:(categories.any((c)=>c.id==selectedBudgetId&&
+         !c.income&&c.budget>0)?selectedBudgetId:null)));
       }),child:const WaffraText('تأكيد وحفظ العملية')),
      ])));
    }));
