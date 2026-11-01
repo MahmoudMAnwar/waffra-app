@@ -5,7 +5,7 @@ import 'package:waffra/waffra_validators.dart';
 
 TextEditingValue typeNumber(String value) {
  const formatter = WaffraAmountFormatter(truncateExcess:false);
- var current=const TextEditingValue();
+ var current=const TextEditingValue(text:'',selection:TextSelection.collapsed(offset:0));
  for (final character in value.split('')) {
   final next=TextEditingValue(
    text:current.text.replaceRange(
