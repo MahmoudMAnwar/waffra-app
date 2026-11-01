@@ -75,12 +75,12 @@ void main() {
   expect(waffraAvailableCash(ledger,initial),5000);
   final allocated=[initial.single.copy(saved:1000)];
   expect(waffraGoalWalletBalance(allocated),1000);
-  expect(waffraAvailableCash(ledger,allocated),4000);
+  expect(waffraAvailableCash(ledger,allocated),5000);
   final released=[allocated.single.copy(saved:0)];
   expect(waffraAvailableCash(ledger,released),5000);
   final paid=[...ledger,tx('paid-rent',1000,false)];
   expect(waffraAvailableCash(paid,released),4000);
-  // Earmarking does NOT generate a second ledger transaction.
+  // An independent goals-wallet allocation never changes ledger cash.
   expect(ledger.length,1);
  });
 
