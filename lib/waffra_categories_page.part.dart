@@ -290,14 +290,15 @@ extension WaffraCategoryScreen on _HomeScreenState {
       maxLines:2,style:TextStyle(fontSize:11,color:Theme.of(context).hintColor)),
      children:[
       LayoutBuilder(builder:(ctx,layout){
-       // Two columns on normal screens; one on very narrow screens/text
-       // scaling. Every selector remains readable in Arabic and English.
-       final singleColumn=layout.maxWidth<325||
-        MediaQuery.textScalerOf(ctx).scale(16)>23;
-       final cell=singleColumn?layout.maxWidth:(layout.maxWidth-10)/2;
+       // Prevent Arabic/English dropdown labels from clipping on phones.
+       // Only use two columns on tablets with sufficient room for both.
+       final singleColumn=layout.maxWidth<560||
+        MediaQuery.textScalerOf(ctx).scale(16)>21;
+       final cell=singleColumn?layout.maxWidth:(layout.maxWidth-12)/2;
        InputDecoration decor(String label)=>InputDecoration(
         labelText:label,isDense:true,
-        contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:10),
+        floatingLabelBehavior:FloatingLabelBehavior.auto,
+        contentPadding:const EdgeInsets.symmetric(horizontal:14,vertical:15),
         border:OutlineInputBorder(borderRadius:BorderRadius.circular(13)));
        return Wrap(spacing:10,runSpacing:10,children:[
         SizedBox(width:cell,child:DropdownButtonFormField<String>(
