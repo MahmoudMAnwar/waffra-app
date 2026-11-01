@@ -7513,41 +7513,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      onChanged:WaffraHaptics.selection((v)=>setState(
        ()=>selectedNamedBudgetCategoryId=v=='all'?null:v)),
     ),
-    if(selected!=null)...[
-     Align(alignment:AlignmentDirectional.centerEnd,child:TextButton.icon(
-      key:const Key('waffra-delete-selected-named-budget'),
-      onPressed:WaffraHaptics.tap(()=>deleteNamedBudget(selected)),
-      icon:const Icon(Icons.delete_outline_rounded,size:18,color:Colors.deepOrange),
-      label:WaffraText(waffraIsEnglish?'Delete budget':'حذف الميزانية',
-       style:const TextStyle(color:Colors.deepOrange)),
-     )),
-     const SizedBox(height:8),
-     SwitchListTile.adaptive(
-      key:const Key('waffra-named-budget-enabled-switch'),
-      contentPadding:EdgeInsets.zero,
-      dense:true,
-      title:WaffraText(waffraIsEnglish?
-        'Enable this budget':'تفعيل الميزانية',
-        style:const TextStyle(fontWeight:FontWeight.w700,fontSize:13)),
-      subtitle:WaffraText(waffraIsEnglish?
-        (selected.budgetActive?
-          'Active • new expenses may be linked':'Paused • new expenses stay unassigned'):
-        (selected.budgetActive?
-          'مفعّلة • يمكن ربط المصروفات الجديدة':
-          'متوقفة • المصروفات الجديدة مش هتترابط بيها'),
-        style:const TextStyle(fontSize:11)),
-      value:selected.budgetActive,
-      activeTrackColor:emerald,
-      onChanged:WaffraHaptics.selection(
-       (value)=>setNamedBudgetActive(selected,value)),
-     ),
-     if(!selected.budgetActive)
-      Padding(padding:const EdgeInsets.only(bottom:9),
-       child:WaffraText(waffraIsEnglish?
-        'Budget paused. Existing transactions remain unchanged. To link expenses saved during the pause, resume and review them manually.':
-        'الميزانية متوقفة مؤقتًا، وكل العمليات القديمة محفوظة. بعد التفعيل راجع العمليات اللي اتسجلت أثناء الإيقاف واربطها باختيارك.',
-        style:const TextStyle(fontSize:12,color:Colors.deepOrange))),
-    ],
+    if(selected!=null&&!selected.budgetActive)
+     Padding(padding:const EdgeInsets.symmetric(vertical:9),
+      child:WaffraText(waffraIsEnglish?
+       'Paused budget — manage it under Categories > My Budgets.':
+       'الميزانية متوقفة — تقدر تديرها من الأقسام ← ميزانياتي.',
+       style:const TextStyle(fontSize:12,color:Colors.deepOrange))),
     const SizedBox(height:7),
     if(limit>0)...[
      WaffraText(waffraIsEnglish?
