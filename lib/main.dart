@@ -5725,7 +5725,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  Future<void> budgetAlert(MoneyEntry entry,double previousSpent)async {
   if(entry.income)return;
-  final budgets=categories.where((c)=>!c.income&&c.budget>0&&c.id==entry.budgetId).toList();
+  final budgets=categories.where((c)=>!c.income&&c.budget>0&&
+    c.budgetActive&&c.id==entry.budgetId).toList();
   if(budgets.length!=1)return;
   final category=budgets.single;
   final spent=waffraNamedBudgetSpent(entries,categories,category,entry.date);
@@ -7332,7 +7333,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final prev=DateTime(now.year,now.month-1);
   final prevTotal=sum(entries.where((e)=>!e.income&&e.date.year==prev.year&&e.date.month==prev.month),false);
   final delta=WaffraFinancialInsights.comparisonPercent(spent,prevTotal);
-  final warnings=categories.where((c)=>!c.income&&c.budget>0&&
+  final warnings=categories.where((c)=>!c.income&&c.budget>0&&c.budgetActive&&
    WaffraFinancialInsights.budgetAlertStage(
     sum(monthExpenses.where((e)=>e.category==c.name),false),c.budget)>=80).toList();
   return Card(
