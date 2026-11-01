@@ -294,9 +294,18 @@ abstract final class RecurringBatchMatcher {
   }
   final occurrences=<String,RecurringDueObligation>{};
   for(final due in dues) {
-   if(!planById.containsKey(due.scheduleId)||
-       occurrences.containsKey(due.occurrenceKey)) {
+   final plan=planById[due.scheduleId];
+   if(plan==null||occurrences.containsKey(due.occurrenceKey)) {
     throw StateError('Unknown or duplicated recurring occurrence');
+   }
+   final expected=RecurringPaymentReview.nextDue(plan,due.dueDate);
+   final requested=DateTime(due.dueDate.year,due.dueDate.month,
+     due.dueDate.day);
+   // A fake due date must not make an unrelated bank payment look like a
+   // settled scheduled charge. Explicit postponements need their own
+   // reviewed occurrence provenance before this matching API is used.
+   if(expected!=requested) {
+    throw StateError('Unverified recurring due occurrence');
    }
    occurrences[due.occurrenceKey]=due;
   }
