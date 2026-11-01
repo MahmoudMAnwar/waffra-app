@@ -299,21 +299,27 @@ class BudgetCategory {
  final int color;final bool income;final double budget;final int alertPercent;
  // Optional label for a category-scoped named monthly budget.
  final String? budgetLabel;
+ /// Paused budgets stay in storage with their former ID, cap and links.
+ /// Pre-activation records have no flag, so default to active.
+ final bool budgetActive;
  BudgetCategory({required this.id,required this.name,required this.icon,required this.color,
   required this.income,this.parentId='',this.budget=0,this.alertPercent=80,
-  this.origin='system',this.budgetLabel});
+  this.origin='system',this.budgetLabel,this.budgetActive=true});
  bool get isUserAdded=>origin=='user';
  bool get isSubcategory=>parentId.isNotEmpty;
  String get displayName=>isSubcategory?name.split(' / ').last:name;
  BudgetCategory copy({String? name,String? icon,int? color,double? budget,
-  int? alertPercent,String? parentId,String? budgetLabel,bool clearBudget=false})=>BudgetCategory(
+  int? alertPercent,String? parentId,String? budgetLabel,bool clearBudget=false,
+  bool? budgetActive})=>BudgetCategory(
    id:id,name:name??this.name,icon:icon??this.icon,color:color??this.color,
    income:income,parentId:parentId??this.parentId,budget:budget??this.budget,
    alertPercent:alertPercent??this.alertPercent,origin:origin,
-   budgetLabel:clearBudget?null:budgetLabel??this.budgetLabel);
+   budgetLabel:clearBudget?null:budgetLabel??this.budgetLabel,
+   budgetActive:budgetActive??this.budgetActive);
  Map<String,dynamic> toJson()=>{'id':id,'name':name,'icon':icon,'color':color,
   'income':income,'parentId':parentId,'budget':budget,'alertPercent':alertPercent,
-  'origin':origin,if(budgetLabel!=null)'budgetLabel':budgetLabel};
+  'origin':origin,'budgetActive':budgetActive,
+  if(budgetLabel!=null)'budgetLabel':budgetLabel};
  factory BudgetCategory.fromJson(Map<String,dynamic> j)=>BudgetCategory(
   id:'${j['id']??newId()}',name:'${j['name']??'أخرى'}',
   icon:'${j['icon']??'category'}',color:(j['color'] as num?)?.toInt()??0xFF087A54,
@@ -321,6 +327,7 @@ class BudgetCategory {
   budget:(j['budget'] as num?)?.toDouble()??0,
   alertPercent:(j['alertPercent'] as num?)?.toInt()??80,
   origin:j['origin']=='user'?'user':j['origin']=='detected'?'detected':'system',
+  budgetActive:j['budgetActive']!=false,
   budgetLabel:j['budgetLabel'] is String&&
     (j['budgetLabel'] as String).trim().isNotEmpty
     ?(j['budgetLabel'] as String).trim():null);
