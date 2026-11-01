@@ -197,3 +197,57 @@ abstract final class RecurringPaymentReview {
   return due.difference(paid).inDays.abs()<=toleranceDays;
  }
 }
+
+
+class BudgetRemovalPreview {
+ const BudgetRemovalPreview(this.remainingBudgets,this.remainingLinks,
+     this.recalculated);
+ final List<NamedBudget> remainingBudgets;
+ final List<BudgetAllocation> remainingLinks;
+ final BudgetProjection recalculated;
+}
+
+/// Explicitly previews unlinked historical expenses when a budget is created,
+/// and detaches links safely if a budget is removed. Neither method writes.
+abstract final class BudgetChangeReview {
+ static Map<String,List<String>> suggestUnlinked(
+    Iterable<NamedBudget> budgets,Iterable<PostedExpense> expenses,
+    Iterable<BudgetAllocation> existingLinks) {
+  final allBudgets=budgets.toList(growable:false);
+  final allExpenses=expenses.toList(growable:false);
+  final allLinks=existingLinks.toList(growable:false);
+  final projection=NamedBudgetProjector.review(
+    allBudgets,allExpenses,allLinks);
+  return Map.unmodifiable({
+    for(final row in allExpenses)
+      if(projection.unassigned.containsKey(row.id))
+        row.id:List<String>.unmodifiable([
+          for(final budget in allBudgets)
+            if(budget.categoryId==row.categoryId &&
+               !row.date.isBefore(budget.start) &&
+               row.date.isBefore(budget.endExclusive) &&
+               !allLinks.any((link)=>link.expenseId==row.id &&
+                                      link.budgetId==budget.id))
+              budget.id,
+        ]),
+  });
+ }
+ static BudgetRemovalPreview deleteBudget(
+   String budgetId,Iterable<NamedBudget> budgets,
+   Iterable<PostedExpense> expenses,Iterable<BudgetAllocation> links) {
+  final oldBudgets=budgets.toList(growable:false);
+  final source=expenses.toList(growable:false);
+  final oldLinks=links.toList(growable:false);
+  NamedBudgetProjector.review(oldBudgets,source,oldLinks);
+  if(!oldBudgets.any((budget)=>budget.id==budgetId)) {
+    throw StateError('Budget to remove does not exist');
+  }
+  final remainingBudgets=List<NamedBudget>.unmodifiable(
+      oldBudgets.where((row)=>row.id!=budgetId));
+  final remainingLinks=List<BudgetAllocation>.unmodifiable(
+      oldLinks.where((row)=>row.budgetId!=budgetId));
+  final refreshed=NamedBudgetProjector.review(
+      remainingBudgets,source,remainingLinks);
+  return BudgetRemovalPreview(remainingBudgets,remainingLinks,refreshed);
+ }
+}
