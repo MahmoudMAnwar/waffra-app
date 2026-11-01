@@ -8427,12 +8427,20 @@ Future<void> bulkSmsSheet({String? initialText})async {
    setState(()=>goals.add(g));
    if(!await _persistModuleOrReload(WaffraFinanceRoute.goalCreateEditDeleteRestore,
      operation:'goal-create'))return;
-   if(g.dueDate!=null){
-    await this._ensureLinkedRecurringForGoal(g);
+   final linked=g.dueDate==null?false:
+     await this._ensureLinkedRecurringForGoal(g);
+   if(mounted){
+    if(g.dueDate!=null&&!linked){
+     snack(context,waffraIsEnglish?
+      'Goal saved, but recurring link was not confirmed. Retry from Edit Goal.':
+      'تم حفظ الهدف، لكن ربط المتكررة لم يتأكد. أعد المحاولة من تعديل الهدف.');
+    }else{
+     snackSuccess(context,linked?
+      (waffraIsEnglish?'Goal and recurring due date created.':
+       'تم إنشاء الهدف وربط استحقاقه بالمتكررة.'):
+      (waffraIsEnglish?'Savings goal added successfully':'تمت إضافة الهدف بنجاح'));
+    }
    }
-   if(mounted)snackSuccess(context,g.dueDate!=null?
-     (waffraIsEnglish?'Goal and linked recurring due date created.':'تم إنشاء الهدف وربط استحقاقه بالمتكررة.'):
-     (waffraIsEnglish?'Savings goal added successfully':'تمت إضافة الهدف بنجاح'));
   }
  }
  Future<void> fundGoal(SavingGoal g)async {
