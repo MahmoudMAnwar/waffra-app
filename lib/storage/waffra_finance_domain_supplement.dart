@@ -102,7 +102,7 @@ class WaffraFinanceDomainSupplement {
 
     // Read all domain rows from one SQL snapshot, never per-table at separate
     // write generations. The runtime caller still must take the native lock.
-    final tables = await store.transaction(() async {
+    final captured = await store.transaction(() async {
       final result = <String, Object?>{};
       var total = 0;
       for (final name in WaffraFreshFinanceDomainSchema.domainTables) {
@@ -133,15 +133,18 @@ class WaffraFinanceDomainSupplement {
       if (foreignKeys.isNotEmpty) {
         throw StateError('Finance-domain foreign key integrity failed.');
       }
-      return result;
+      return <String, Object?>{
+        'tables':result,
+        'parentFingerprint':await _parentFingerprint(),
+      };
     });
 
     final body = <String, Object?>{
       'format': _format,
       'version': _archiveVersion,
       'domainVersion': WaffraFreshFinanceDomainSchema.version,
-      'parentFingerprint': await _parentFingerprint(),
-      'tables': tables,
+      'parentFingerprint': captured['parentFingerprint'],
+      'tables': captured['tables'],
     };
     final envelope = jsonEncode({...body, 'sha256': _digest(body)});
     if (envelope.length > maxClearCharacters) {
