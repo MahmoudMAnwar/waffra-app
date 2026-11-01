@@ -6837,8 +6837,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     'ما فيه مصروفات غير مرتبطة تحتاج مراجعة.');
    return;
   }
+  String entryQuery='';
   final old=await showWaffraDialog<MoneyEntry>(context:context,
-   builder:(ctx)=>AlertDialog(
+   builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh){
+    final visible=pending.where((e)=>waffraSearchAny(
+     [e.title,e.category,e.notes,cash(e.amount),dayText(e.date)],
+      entryQuery)).toList(growable:false);
+    return AlertDialog(
     title:WaffraText(waffraIsEnglish?'Review saved expenses':
      'مراجعة المصروفات القديمة غير المرتبطة'),
     content:SizedBox(width:430,height:370,child:Column(children:[
@@ -6848,9 +6853,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       'الربط اختياري ومش هنغيّر المبالغ ولا التواريخ.',
       style:const TextStyle(fontSize:13)),
      const SizedBox(height:9),
-     Expanded(child:ListView.builder(itemCount:pending.length,
+     TextField(
+      key:const Key('waffra-historical-expense-search'),
+      onChanged:(text)=>refresh(()=>entryQuery=text),
+      decoration:InputDecoration(
+       prefixIcon:const Icon(Icons.search_rounded),
+       hintText:waffraIsEnglish?'Search saved expenses':'ابحث في العمليات المحفوظة',
+       border:const OutlineInputBorder())),
+     const SizedBox(height:8),
+     Expanded(child:visible.isEmpty?
+      Center(child:WaffraText(waffraIsEnglish?
+       'No matching expenses':'ما فيه عمليات مطابقة')):
+      ListView.builder(itemCount:visible.length,
       itemBuilder:(_,i){
-       final item=pending[i];
+       final item=visible[i];
        return ListTile(
         key:Key('waffra-retro-unlinked-'+item.id),
         dense:true,title:WaffraText(item.title,maxLines:1),
@@ -6862,7 +6878,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     ])),
     actions:[TextButton(
      onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
-     child:WaffraText(waffraIsEnglish?'Not now':'مش دلوقتي'))]));
+     child:WaffraText(waffraIsEnglish?'Not now':'مش دلوقتي'))]);
+   }));
   if(old==null||!mounted)return;
   await assignExistingExpenseToBudget(old);
  }
@@ -6883,12 +6900,29 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     'ضيف ميزانية الأول، وبعدها اربط العملية لو حابب.');
    return;
   }
+  String budgetQuery='';
   final selected=await showWaffraDialog<BudgetCategory>(context:context,
-   builder:(ctx)=>AlertDialog(
+   builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh){
+    final visible=budgets.where((b)=>waffraSearchAny(
+     [b.name,b.budgetLabel??'',b.displayName],budgetQuery))
+     .toList(growable:false);
+    return AlertDialog(
     title:WaffraText(waffraIsEnglish?'Choose a budget':'اختار الميزانية'),
-    content:SizedBox(width:430,height:360,child:ListView.builder(
-     itemCount:budgets.length,itemBuilder:(_,i){
-      final b=budgets[i];
+    content:SizedBox(width:430,height:360,child:Column(children:[
+     TextField(
+      key:const Key('waffra-budget-link-search'),
+      onChanged:(text)=>refresh(()=>budgetQuery=text),
+      decoration:InputDecoration(
+       prefixIcon:const Icon(Icons.search_rounded),
+       hintText:waffraIsEnglish?'Search active budgets':'ابحث في الميزانيات المفعّلة',
+       border:const OutlineInputBorder())),
+     const SizedBox(height:8),
+     Expanded(child:visible.isEmpty?
+      Center(child:WaffraText(waffraIsEnglish?
+       'No matching budgets':'ما فيه ميزانيات مطابقة')):
+      ListView.builder(
+     itemCount:visible.length,itemBuilder:(_,i){
+      final b=visible[i];
       final scope=<String>{b.name,
        if(!b.isSubcategory)
         ...categories.where((c)=>c.parentId==b.id).map((c)=>c.name)};
@@ -6899,10 +6933,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         WaffraText(waffraIsEnglish?'Suggested':'مقترحة حسب القسم الأصلي'):null,
        onTap:WaffraHaptics.tap(()=>Navigator.pop(ctx,b)),
       );
-     })),
+     })),])),
     actions:[TextButton(
      onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
-     child:WaffraText(waffraIsEnglish?'Leave unassigned':'بدون ربط'))]));
+     child:WaffraText(waffraIsEnglish?'Leave unassigned':'بدون ربط'))]);
+   }));
   if(selected==null||!mounted)return;
   final ok=await showWaffraDialog<bool>(context:context,
    builder:(ctx)=>AlertDialog(
