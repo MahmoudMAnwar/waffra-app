@@ -528,6 +528,8 @@ class WaffraFreshFinanceDomainRepository {
         'category':category,'amount':amountMinor / 100,
         'income':false,'date':confirmedAtIso,
         'sourceType':'goal_due','budgetId':null,
+        // Integer halalas are the authoritative split; never parse notes.
+        'goalWalletPaidMinor':fromGoal,
         'notes':'goal_wallet_minor=$fromGoal;current_cash_minor=$fromCurrent',
       };
       await store.customStatement(
