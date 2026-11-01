@@ -1,7 +1,8 @@
 part of 'main.dart';
 
 /// Goal progress is the sole source of truth. A linked schedule holds a goal ID,
-/// NOT its own saved amount. A due reminder never posts a ledger entry.
+/// NOT its own saved amount. Reaching the date alone never posts money;
+/// payment requires explicit confirmation and a verified finance writer.
 extension WaffraGoalRecurringActions on _HomeScreenState {
  Future<bool> _ensureLinkedRecurringForGoal(SavingGoal goal)async{
   final deadline=goal.dueDate;

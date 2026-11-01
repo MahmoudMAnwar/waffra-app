@@ -95,9 +95,11 @@ void main(){
   expect(home,contains("budgetActive:budgetActive??this.budgetActive"));
   expect(home,contains('Future<void> setNamedBudgetActive('));
   expect(home,contains('operation:\'named-budget-active-toggle\''));
-  expect(home,contains("Key('waffra-named-budget-enabled-switch')"));
-  expect(home,contains('value:selected.budgetActive'));
-  expect(home,contains('onChanged:WaffraHaptics.selection('));
+  final directory=File('lib/waffra_budget_directory.part.dart').readAsStringSync();
+  expect(home,isNot(contains("Key('waffra-named-budget-enabled-switch')")));
+  expect(directory,contains("'waffra-budget-quick-actions-'"));
+  expect(directory,contains('setNamedBudgetActive(b,!b.budgetActive)'));
+  expect(directory,contains('budgetStatusFilter==\'active\''));
   expect(home,contains('c.budget>0&&c.budgetActive'));
   expect(home,contains('initial!=null&&initial.budgetId==c.id'));
   expect(home,contains('if(updated.length==1&&updated.single.budgetActive)'));

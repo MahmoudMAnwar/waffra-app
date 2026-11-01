@@ -86,7 +86,8 @@ jobs:
           buttons=Path('lib/waffra_action_layout.dart').read_text()
           gates=Path('lib/storage/waffra_production_cutover_release_gate.dart').read_text()
           must=[
-            ("compact budget", "waffra-month-budget-compact-edit" in app),
+            ("compact budget add", "waffra-budget-create-action" in app),
+            ("no redundant budget edit action", "waffra-month-budget-compact-edit" not in app),
             ("two-back", "WaffraDoubleBackExit" in app),
             ("account home", "_consumeHomeBack" in app),
             ("Saudi rotation", "WaffraSaudiGreetings.compose" in app),

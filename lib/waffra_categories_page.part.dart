@@ -92,19 +92,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
       Row(children:[
        WaffraIllustration(topic:root.icon,size:40),
        const Spacer(),
-       PopupMenuButton<String>(
-        tooltip:waffraIsEnglish?'Category actions':'خيارات القسم',
-        onSelected:WaffraHaptics.selection((action){
-         if(action=='add')addCategory(income:root.income,parentId:root.id);
-         if(action=='edit')updateCategory(root);
-         if(action=='delete')deleteCategory(root);
-        }),
-        itemBuilder:(_)=>[
-         PopupMenuItem(value:'add',child:WaffraText(waffraIsEnglish?'Add subcategory':'إضافة قسم فرعي')),
-         PopupMenuItem(value:'edit',child:WaffraText(waffraIsEnglish?'Edit':'تعديل')),
-         PopupMenuItem(value:'delete',child:WaffraText(waffraIsEnglish?'Delete':'حذف')),
-        ],
-        child:const Icon(Icons.more_vert,size:20)),
+
       ]),
       const SizedBox(height:5),
       WaffraText(root.name,maxLines:2,style:const TextStyle(fontSize:15,fontWeight:FontWeight.w700)),
@@ -134,6 +122,35 @@ extension WaffraCategoryScreen on _HomeScreenState {
        WaffraText(waffraIsEnglish?'Subcategories':'الأقسام الفرعية',style:const TextStyle(fontSize:10)),
        Icon(opened?Icons.keyboard_arrow_up:Icons.keyboard_arrow_down,size:20,color:color),
       ]),
+      ExpansionTile(
+       key:PageStorageKey<String>('waffra-root-category-actions-'+root.id),
+       initiallyExpanded:false,
+       tilePadding:EdgeInsets.zero,
+       childrenPadding:const EdgeInsets.symmetric(vertical:6),
+       leading:const Icon(Icons.settings_rounded,size:18,color:emerald),
+       title:WaffraText(waffraIsEnglish?'Quick actions':'إجراءات سريعة',
+        style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700)),
+       children:[
+        Wrap(spacing:6,runSpacing:8,children:[
+         TextButton.icon(
+          onPressed:WaffraHaptics.tap(()=>
+           addCategory(income:root.income,parentId:root.id)),
+          icon:const Icon(Icons.add_rounded,size:16),
+          label:WaffraText(waffraIsEnglish?'Add subcategory':'إضافة فرعي',
+           style:const TextStyle(fontSize:11))),
+         TextButton.icon(
+          onPressed:WaffraHaptics.tap(()=>updateCategory(root)),
+          icon:const Icon(Icons.edit_outlined,size:16),
+          label:WaffraText(waffraIsEnglish?'Edit':'تعديل',
+           style:const TextStyle(fontSize:11))),
+         TextButton.icon(
+          onPressed:WaffraHaptics.tap(()=>deleteCategory(root)),
+          icon:const Icon(Icons.delete_outline_rounded,size:16,
+           color:Colors.deepOrange),
+          label:WaffraText(waffraIsEnglish?'Delete':'حذف',
+           style:const TextStyle(color:Colors.deepOrange,fontSize:11))),
+        ]),
+       ]),
      ]))));
   }
 
@@ -144,27 +161,45 @@ extension WaffraCategoryScreen on _HomeScreenState {
     color:color.withValues(alpha:.08),
     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15),
      side:BorderSide(color:color.withValues(alpha:.20))),
-    child:InkWell(borderRadius:BorderRadius.circular(15),
-     onTap:WaffraHaptics.tap(()=>updateCategory(sub)),
-     child:Padding(padding:const EdgeInsets.all(10),child:Row(children:[
-      WaffraIllustration(topic:sub.icon,size:30),
-      const SizedBox(width:7),
-      Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-       WaffraText(sub.displayName,maxLines:2,
-        style:const TextStyle(fontSize:12,fontWeight:FontWeight.bold)),
-       if(total>0)WaffraText(cash(total),maxLines:1,
-        style:TextStyle(fontSize:10,color:Theme.of(context).hintColor)),
-      ])),
-      PopupMenuButton<String>(tooltip:waffraIsEnglish?'Subcategory actions':'خيارات القسم الفرعي',
-       onSelected:WaffraHaptics.selection((action){
-        if(action=='edit')updateCategory(sub);
-        if(action=='delete')deleteCategory(sub);
-       }),itemBuilder:(_)=>[
-        PopupMenuItem(value:'edit',child:WaffraText(waffraIsEnglish?'Edit':'تعديل')),
-        PopupMenuItem(value:'delete',child:WaffraText(waffraIsEnglish?'Delete':'حذف')),
-       ],child:const Icon(Icons.more_vert,size:17)),
-     ]))));
+    child:Padding(padding:const EdgeInsets.all(10),
+     child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+      Row(children:[
+       WaffraIllustration(topic:sub.icon,size:30),
+       const SizedBox(width:7),
+       Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        WaffraText(sub.displayName,maxLines:2,
+         style:const TextStyle(fontSize:12,fontWeight:FontWeight.bold)),
+        if(total>0)WaffraText(cash(total),maxLines:1,
+         style:TextStyle(fontSize:10,color:Theme.of(context).hintColor)),
+       ])),
+      ]),
+      const SizedBox(height:5),
+      ExpansionTile(
+       key:PageStorageKey<String>('waffra-subcategory-actions-'+sub.id),
+       initiallyExpanded:false,
+       tilePadding:EdgeInsets.zero,
+       childrenPadding:const EdgeInsets.symmetric(vertical:4),
+       title:WaffraText(waffraIsEnglish?'Quick actions':'إجراءات سريعة',
+        maxLines:2,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700)),
+       trailing:const Icon(Icons.expand_more_rounded,size:16),
+       children:[
+        Wrap(spacing:5,runSpacing:6,children:[
+         TextButton.icon(
+          onPressed:WaffraHaptics.tap(()=>updateCategory(sub)),
+          icon:const Icon(Icons.edit_outlined,size:15),
+          label:WaffraText(waffraIsEnglish?'Edit':'تعديل',
+           style:const TextStyle(fontSize:11))),
+         TextButton.icon(
+          onPressed:WaffraHaptics.tap(()=>deleteCategory(sub)),
+          icon:const Icon(Icons.delete_outline_rounded,
+           size:15,color:Colors.deepOrange),
+          label:WaffraText(waffraIsEnglish?'Delete':'حذف',
+           style:const TextStyle(fontSize:11,color:Colors.deepOrange))),
+        ]),
+       ]),
+     ])));
   }
+
   final groupRows=<Widget Function()>[];
   for(var i=0;i<sorted.length;i+=2){
    final left=sorted[i];
@@ -265,6 +300,8 @@ extension WaffraCategoryScreen on _HomeScreenState {
      )),
    ],
    ()=>const SizedBox(height:13),
+   ()=>this.budgetsDirectory(),
+   ()=>const SizedBox(height:13),
    // Compact by default: the three large rows of chips previously pushed
    // the actual category cards below the fold on smaller phones.
    ()=>Container(
@@ -281,7 +318,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
      shape:const RoundedRectangleBorder(side:BorderSide.none),
      collapsedShape:const RoundedRectangleBorder(side:BorderSide.none),
      tilePadding:const EdgeInsets.symmetric(horizontal:12),
-     childrenPadding:const EdgeInsets.fromLTRB(12,0,12,12),
+     childrenPadding:const EdgeInsets.fromLTRB(16,8,16,18),
      title:WaffraText(waffraIsEnglish?'Filter & sort':'الفلترة والترتيب',
       style:const TextStyle(fontWeight:FontWeight.bold)),
      subtitle:WaffraText(filterLabels.isEmpty?
@@ -290,16 +327,17 @@ extension WaffraCategoryScreen on _HomeScreenState {
       maxLines:2,style:TextStyle(fontSize:11,color:Theme.of(context).hintColor)),
      children:[
       LayoutBuilder(builder:(ctx,layout){
-       // Two columns on normal screens; one on very narrow screens/text
-       // scaling. Every selector remains readable in Arabic and English.
-       final singleColumn=layout.maxWidth<325||
-        MediaQuery.textScalerOf(ctx).scale(16)>23;
-       final cell=singleColumn?layout.maxWidth:(layout.maxWidth-10)/2;
+       // Prevent Arabic/English dropdown labels from clipping on phones.
+       // Only use two columns on tablets with sufficient room for both.
+       final singleColumn=layout.maxWidth<560||
+        MediaQuery.textScalerOf(ctx).scale(16)>21;
+       final cell=singleColumn?layout.maxWidth:(layout.maxWidth-12)/2;
        InputDecoration decor(String label)=>InputDecoration(
         labelText:label,isDense:true,
-        contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:10),
+        floatingLabelBehavior:FloatingLabelBehavior.auto,
+        contentPadding:const EdgeInsets.symmetric(horizontal:14,vertical:15),
         border:OutlineInputBorder(borderRadius:BorderRadius.circular(13)));
-       return Wrap(spacing:10,runSpacing:10,children:[
+       return Wrap(spacing:12,runSpacing:16,children:[
         SizedBox(width:cell,child:DropdownButtonFormField<String>(
          key:ValueKey('waffra-category-type-'+categoryTypeFilter),
          initialValue:categoryTypeFilter,isExpanded:true,

@@ -25,7 +25,19 @@ class WaffraAmountFormatter extends TextInputFormatter {
       ?RegExp(r'^[0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]*)?$')
           .hasMatch(normalized)
       :true;
-  if(!permitted||decimalPoints>1||!grouping) {
+  // Group separators inserted by the formatter can become displaced when
+  // the next digit is typed (e.g. 1,350 + 0 becomes 1,3500 before reformat).
+  // Allow trusted single-key edits while retaining malformed pasted values.
+  final oldParts=oldValue.text.split('.');
+  final validOld=oldValue.text.contains(',')&&
+    oldParts.length<=2&&
+    RegExp(r'^[0-9]{1,3}(,[0-9]{3})+').hasMatch(oldParts.first)&&
+    (!oldValue.text.contains('.')||
+     RegExp(r'^[0-9]*').hasMatch(oldParts.last));
+  final singleKeyEdit=(normalized.length-oldValue.text.length).abs()<=1;
+  final allowRegroup=!grouping&&validOld&&singleKeyEdit&&
+    RegExp(r'^[0-9,.]+').hasMatch(normalized);
+  if(!permitted||decimalPoints>1||(!grouping&&!allowRegroup)) {
     return TextEditingValue(text:normalized,
       selection:TextSelection.collapsed(offset:caret));
   }

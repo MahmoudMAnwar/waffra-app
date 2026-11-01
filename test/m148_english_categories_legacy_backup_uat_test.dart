@@ -79,8 +79,8 @@ void main() {
   expect(main,contains('Future<String?> chooseTransactionCategory('));
   expect(main,contains('final label=leafLabels?item.displayName:item.name;'));
   expect(main,contains('waffraSearchAny([label,waffraTr(label),waffraTr(item.name)],query)'));
-  expect(main,contains('title:WaffraText(waffraTr(leafLabels?item.displayName:item.name),maxLines:3)'));
-  expect(main,contains('title:WaffraText(waffraTr(leafLabels?item.displayName:item.name),maxLines:3)'));
+  expect(main,contains('title:WaffraText(waffraTr(leafLabels?'));
+  expect(main,contains('item.displayName:item.name),maxLines:3)'));
   expect(categories,contains('WaffraText(root.name,maxLines:2'));
   expect(categories,contains('WaffraText(sub.displayName,maxLines:2'));
   expect(categories,contains('waffraSearchAny([root.name,waffraTr(root.name)],query)'));
