@@ -6825,6 +6825,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final latest=entries.where((e)=>e.id==old.id).toList(growable:false);
   if(latest.length!=1||latest.single.income||
      latest.single.budgetId!=null||
+     latest.single.amount!=old.amount||
+     latest.single.date!=old.date||
+     latest.single.category!=old.category||
+     latest.single.title!=old.title||
+     latest.single.notes!=old.notes||
+     latest.single.receiptPath!=old.receiptPath||
+     latest.single.sourceType!=old.sourceType||
      !categories.any((b)=>b.id==selected.id&&!b.income&&b.budget>0)){
    snack(context,waffraIsEnglish?'Record changed; nothing saved.':
     'العملية أو الميزانية اتغيرت. لم يتم حفظ أي ربط.');
