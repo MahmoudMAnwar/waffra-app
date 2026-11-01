@@ -31,11 +31,11 @@ void main() {
  });
 
  test('M343 separate budgets count only assigned expense categories',(){
-  const food=BudgetCategory(id:'food',name:'مطاعم وكافيهات',icon:'restaurant',
+  final food=BudgetCategory(id:'food',name:'مطاعم وكافيهات',icon:'restaurant',
    color:0xff087a54,income:false,budget:2500,budgetLabel:'ميزانية الأكل');
-  const meal=BudgetCategory(id:'meal',name:'مطاعم وكافيهات / وجبات سريعة',
+  final meal=BudgetCategory(id:'meal',name:'مطاعم وكافيهات / وجبات سريعة',
    icon:'restaurant',color:0xff087a54,income:false,parentId:'food');
-  const fuel=BudgetCategory(id:'fuel',name:'مواصلات / بنزين',
+  final fuel=BudgetCategory(id:'fuel',name:'مواصلات / بنزين',
    icon:'car',color:0xff087a54,income:false,budget:1000,budgetLabel:'ميزانية البنزين');
   final date=DateTime(2026,11,1);
   MoneyEntry entry(String id,String cat,double n,bool income,{DateTime? when})=>
