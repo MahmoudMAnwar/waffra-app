@@ -223,40 +223,7 @@ class WaffraLegacyPreflight {
     // require the exact ISO calendar date to survive parsing unchanged.
     bool valid() {
       if (value is! String) return false;
-      final iso = RegExp(r'^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?
-  }
-
-  /// Avoid silent precision loss or overflow when converting SAR to halalas.
-  static bool canRepresentHalalas(num amount) {
-    if (!amount.isFinite || amount < 0 || amount > 90071992547409) {
-      return false;
-    }
-    final scaled = amount * 100;
-    return (scaled - scaled.roundToDouble()).abs() < 1e-7;
-  }
-}
-
-class WaffraPreflightIssue {
-  const WaffraPreflightIssue(this.sourceKey, this.index, this.code);
-  final String sourceKey;
-  final int index;
-  final String code;
-}
-
-class WaffraPreflightResult {
-  const WaffraPreflightResult({
-    required this.sourceSha256,
-    required this.itemCounts,
-    required this.issues,
-  });
-
-  final String sourceSha256;
-  final Map<String, int> itemCounts;
-  final List<WaffraPreflightIssue> issues;
-
-  bool get canStage => issues.isEmpty;
-}
-)
+      final iso = RegExp(r'^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$')
           .firstMatch(value);
       if (iso == null) return false;
       final parsed = DateTime.tryParse(value);
