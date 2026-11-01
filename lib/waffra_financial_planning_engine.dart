@@ -254,3 +254,87 @@ abstract final class BudgetChangeReview {
   return BudgetRemovalPreview(remainingBudgets,remainingLinks,refreshed);
  }
 }
+
+
+class RecurringDueObligation {
+ const RecurringDueObligation(this.scheduleId,this.dueDate,{
+  this.alreadyPaid=false});
+ final String scheduleId;
+ final DateTime dueDate;
+ final bool alreadyPaid;
+ String get occurrenceKey => scheduleId+'@'+
+   dueDate.year.toString().padLeft(4,'0')+'-'+
+   dueDate.month.toString().padLeft(2,'0')+'-'+
+   dueDate.day.toString().padLeft(2,'0');
+}
+class RecurringBatchReview {
+ const RecurringBatchReview(this.uniqueSuggestions,this.ambiguousOccurrences,
+     this.unmatchedPaymentIds);
+ /// A suggestion is not payment confirmation and never writes a transaction.
+ final Map<String,String> uniqueSuggestions;
+ final Set<String> ambiguousOccurrences;
+ final Set<String> unmatchedPaymentIds;
+}
+
+/// An incoming bank row can match several standing orders of the same
+/// amount, or several bank rows may match one standing order. In either
+/// case we abstain rather than automatically marking one obligation paid.
+abstract final class RecurringBatchMatcher {
+ static RecurringBatchReview review({
+  required Iterable<RecurringPlan> plans,
+  required Iterable<RecurringDueObligation> dues,
+  required Iterable<BankPaymentEvidence> payments,
+ }) {
+  final planById=<String,RecurringPlan>{};
+  for(final plan in plans) {
+   if(plan.id.isEmpty||planById.containsKey(plan.id)) {
+    throw StateError('Invalid or duplicate recurring schedule');
+   }
+   planById[plan.id]=plan;
+  }
+  final occurrences=<String,RecurringDueObligation>{};
+  for(final due in dues) {
+   if(!planById.containsKey(due.scheduleId)||
+       occurrences.containsKey(due.occurrenceKey)) {
+    throw StateError('Unknown or duplicated recurring occurrence');
+   }
+   occurrences[due.occurrenceKey]=due;
+  }
+  final paymentById=<String,BankPaymentEvidence>{};
+  for(final payment in payments) {
+   if(payment.id.isEmpty||paymentById.containsKey(payment.id)) {
+    throw StateError('Unknown or duplicate bank payment ID');
+   }
+   paymentById[payment.id]=payment;
+  }
+  final candidates=<String,List<String>>{};
+  final reverse=<String,int>{};
+  for(final due in occurrences.values) {
+   if(due.alreadyPaid)continue;
+   final plan=planById[due.scheduleId]!;
+   final matches=<String>[];
+   for(final payment in paymentById.values) {
+    if(RecurringPaymentReview.matches(plan,payment,
+       expectedDue:due.dueDate)) {
+     matches.add(payment.id);
+     reverse[payment.id]=(reverse[payment.id]??0)+1;
+    }
+   }
+   candidates[due.occurrenceKey]=matches;
+  }
+  final accepted=<String,String>{},ambiguous=<String>{};
+  for(final candidate in candidates.entries) {
+   if(candidate.value.isEmpty)continue;
+   if(candidate.value.length==1&&
+      reverse[candidate.value.single]==1) {
+    accepted[candidate.key]=candidate.value.single;
+   }else{
+    ambiguous.add(candidate.key);
+   }
+  }
+  return RecurringBatchReview(Map.unmodifiable(accepted),
+    Set.unmodifiable(ambiguous),
+    Set.unmodifiable(paymentById.keys.toSet().difference(
+      accepted.values.toSet())));
+ }
+}
