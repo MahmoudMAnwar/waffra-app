@@ -14,9 +14,12 @@ class WaffraPracticalToolsPage extends StatefulWidget {
   const WaffraPracticalToolsPage({
     super.key, required this.entries, required this.english,
     this.onNotice, this.pickImage, this.scanReceipt,
+    this.goalOverallocated = false,
   });
   final List<WaffraPracticalEntry> entries;
   final bool english;
+  /// True only from a verified Home finance snapshot; never repaired here.
+  final bool goalOverallocated;
   final ValueChanged<String>? onNotice;
   /// Optional seams for pure widget tests; production uses native OCR.
   final Future<XFile?> Function(ImageSource)? pickImage;
@@ -133,14 +136,23 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
       WaffraHealthIssueKind.invalidAmount => t('مبلغ غير صالح', 'Invalid amount'),
       WaffraHealthIssueKind.missingCategory =>
         t('تصنيف يحتاج مراجعة', 'Category needs review'),
+      WaffraHealthIssueKind.unassignedNamedBudget =>
+        t('مصروف غير مربوط بميزانية', 'Expense without named budget'),
+      WaffraHealthIssueKind.orphanBudgetLink =>
+        t('رابط ميزانية غير موجودة', 'Missing or deleted budget link'),
     };
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       notice('نتائج للمراجعة فقط، ولن نحذف أو نغير أي معاملة.',
         'Review-only findings; no transaction will be changed or deleted.'),
-      Text(t('ملاحظات: ', 'Findings: ') + found.length.toString(),
+      if (widget.goalOverallocated)
+        notice('المدخر في الأهداف أكبر من الرصيد المالي المسجل. راجع العمليات ومحفظة الأهداف.',
+          'Goal savings exceed recorded net cash. Review your ledger and goals wallet.'),
+      Text(t('ملاحظات: ', 'Findings: ') +
+        (found.length + (widget.goalOverallocated ? 1 : 0)).toString(),
         key: const Key('m281-health-count'),
         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-      if (found.isEmpty) Text(t('لا توجد ملاحظات واضحة.', 'No obvious issues found.')),
+      if (found.isEmpty && !widget.goalOverallocated)
+        Text(t('لا توجد ملاحظات واضحة.', 'No obvious issues found.')),
       ...found.take(25).map((i) => ListTile(
         dense: true, title: Text(issue(i.kind)),
         subtitle: Text(t('رقم العملية: ', 'Record ID: ') + i.entryId),
