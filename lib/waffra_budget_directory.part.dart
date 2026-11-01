@@ -248,7 +248,7 @@ extension WaffraBudgetDirectory on _HomeScreenState {
        Wrap(spacing:8,runSpacing:10,children:[
         for(final t in templates)
          ActionChip(
-          key:Key('waffra-budget-template-'+t.mainCategoryId+'-'+t.subcategoryAr),
+          key:Key('waffra-budget-template-'+t.nameAr),
           avatar:const Icon(Icons.add_rounded,size:16,color:emerald),
           label:WaffraText(t.name(waffraIsEnglish),
            style:const TextStyle(fontSize:12)),
