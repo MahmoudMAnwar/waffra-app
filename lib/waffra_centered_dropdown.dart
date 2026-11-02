@@ -8,6 +8,7 @@ class WaffraCenteredDropdownFormField<T> extends FormField<T> {
   WaffraCenteredDropdownFormField({
     super.key,
     T? initialValue,
+    T? value,
     required List<DropdownMenuItem<T>> items,
     required ValueChanged<T?>? onChanged,
     InputDecoration decoration=const InputDecoration(),
@@ -17,7 +18,7 @@ class WaffraCenteredDropdownFormField<T> extends FormField<T> {
     FormFieldSetter<T>? onSaved,
     bool autovalidateModeAlways=false,
   }) : super(
-    initialValue:initialValue,
+    initialValue:value??initialValue,
     validator:validator,
     onSaved:onSaved,
     autovalidateMode:autovalidateModeAlways
@@ -64,7 +65,7 @@ class WaffraCenteredDropdownFormField<T> extends FormField<T> {
                     constraints:BoxConstraints(
                       maxWidth:420,
                       maxHeight:menuMaxHeight==null?480:
-                        menuMaxHeight.clamp(120,560)),
+                        menuMaxHeight.clamp(120.0,560.0).toDouble()),
                     child:Column(mainAxisSize:MainAxisSize.min,children:[
                       Padding(
                         padding:const EdgeInsets.fromLTRB(16,16,16,8),
