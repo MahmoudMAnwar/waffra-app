@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M388-M390",
+  "change_id": "M388-M395",
   "human_scope_review": "REQUIRED: owner approval of requested behavior + live Android screenshot and legacy data checks",
   "user_requested_changes": [
     "M388: allow an open-ended savings goal with no fixed target amount and no mandatory budget, preserve old target goals and wallet accounting; avoid false 0-percent completion and allow editing the goal.",
@@ -8,7 +8,11 @@
     "M390: tapping existing counted corner badge on both Home and Transactions opens the exact preserved receipt gallery without modifying saved attachment paths or removing details access.",
     "M388-M390: update only regression tests whose old expected results contradict the newly user-approved functionality; track all 42 acceptance cases independently.",
     "M388: legacy goal regression must verify goal creation with open-ended zero-target still never debits spendable cash or skips source-bound persistence.",
-    "M391: after M274 Android emulator precompile failed on truncated Android NDK 28.2.13676358 zip, perform bounded retries of same pinned NDK with explicit fail-closed version validation, without skipping emulator UI checks."
+    "M391: after M274 Android emulator precompile failed on truncated Android NDK 28.2.13676358 zip, perform bounded retries of same pinned NDK with explicit fail-closed version validation, without skipping emulator UI checks.",
+    "M392: every saved budget has collapsed-by-default expandable details, a clearly visible switch, bigger suggested templates, an arrow for template disclosure, and non-overlapping create spacing.",
+    "M393: each goal and recurring transaction has collapsed Quick actions (edit/delete/activate); goal pause leaves saved balance untouched and linked recurrence inactive. Existing goals default active.",
+    "M394: preserve zero-target savings through non-negative legacy and experimental encrypted finance validation and cloud allowlist; never accept negative targets or silently activate SQLCipher.",
+    "M395: search and visible scrollbars in Goals and Recurring; presentation-only filters must never alter financial entries."
   ],
   "allowed_changed_files": [
     ".github/workflows/m274-production-ui-golden.yml",
@@ -16,13 +20,26 @@
     "docs/qa/approved_change_scope.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
+    "lib/storage/legacy_financial_snapshot.dart",
+    "lib/storage/legacy_snapshot_preflight.dart",
+    "lib/storage/waffra_cloud_cipher.dart",
+    "lib/storage/waffra_encrypted_goal_recycle.dart",
+    "lib/storage/waffra_encrypted_module_projection_guard.dart",
+    "lib/storage/waffra_fresh_encrypted_vault_bootstrap.dart",
+    "lib/storage/waffra_fresh_finance_modules_repository.dart",
+    "lib/storage/waffra_ledger_projection.dart",
+    "lib/storage/waffra_normalized_import.dart",
+    "lib/waffra_budget_directory.part.dart",
     "lib/waffra_financial_planning_engine.dart",
     "lib/waffra_goal_recurring_actions.part.dart",
     "test/m127_ui_tour_backup_acceptance_test.dart",
     "test/m371_goal_wallet_and_budgets_regression_test.dart",
     "test/m384_receipt_corner_upgrade_regression_test.dart",
     "test/m388_m390_approved_goal_recurring_receipt_test.dart",
+    "test/m392_m395_budget_quick_actions_goal_ui_test.dart",
     "test/qa/m391_m274_ndk_archive_retry_test.py",
+    "test/storage/fresh_finance_modules_repository_test.dart",
+    "test/storage/ledger_projection_test.dart",
     "test/storage/m266_home_bound_source_regression_test.dart",
     "test/waffra_directional_fab_receipt_corner_test.dart",
     "test/waffra_oct21_regression_test.dart"
@@ -68,6 +85,22 @@
       {
         "start": "       if(goal!=null)...[\n        const SizedBox(height:7),",
         "end": "       const SizedBox(height:3),\n       WaffraText(r.active?"
+      },
+      {
+        "start": "class SavingGoal {",
+        "end": "class SavingChallenge {"
+      },
+      {
+        "start": " String categorySort='default';",
+        "end": " bool categoryMineOnly=false;"
+      },
+      {
+        "start": " Future<void> deletedGoalsDialog(",
+        "end": " Widget goalsPage(){"
+      },
+      {
+        "start": " DateTime nextRecurringDue(",
+        "end": " Widget recurringPage(){"
       }
     ],
     "lib/waffra_goal_recurring_actions.part.dart": [
@@ -126,6 +159,86 @@
       {
         "start": "      - name: Recover disposable Linux runner disk before Android emulator QA\n",
         "end": "      - name: Enable KVM for Android emulator\n"
+      }
+    ],
+    "lib/waffra_budget_directory.part.dart": [
+      {
+        "start": " Widget _budgetDirectoryPanel(StateSetter refresh)",
+        "end": null
+      }
+    ],
+    "lib/storage/waffra_fresh_finance_modules_repository.dart": [
+      {
+        "start": "  static Map<String, Object?> _validate(",
+        "end": "  Future<List<Map<String, Object?>>> list("
+      },
+      {
+        "start": "  Future<void> save(",
+        "end": "  /// Prevent permanent deletion"
+      }
+    ],
+    "lib/storage/waffra_encrypted_module_projection_guard.dart": [
+      {
+        "start": "        case WaffraFinanceModule.goals:",
+        "end": "        case WaffraFinanceModule.recurring:"
+      }
+    ],
+    "lib/storage/legacy_snapshot_preflight.dart": [
+      {
+        "start": "        } else if (key == 'waffra_goals_v24') {",
+        "end": "        } else if (key == 'waffra_recurring_v24') {"
+      }
+    ],
+    "lib/storage/waffra_fresh_encrypted_vault_bootstrap.dart": [
+      {
+        "start": "CREATE TABLE IF NOT EXISTS fresh_finance_goals(",
+        "end": "CREATE TABLE IF NOT EXISTS fresh_finance_recurring("
+      }
+    ],
+    "lib/storage/waffra_ledger_projection.dart": [
+      {
+        "start": "CREATE TABLE IF NOT EXISTS saving_goals(",
+        "end": "CREATE TABLE IF NOT EXISTS recurring_bills("
+      }
+    ],
+    "lib/storage/waffra_normalized_import.dart": [
+      {
+        "start": "CREATE TABLE IF NOT EXISTS normalized_goals (",
+        "end": "CREATE TABLE IF NOT EXISTS normalized_recurring ("
+      }
+    ],
+    "lib/storage/waffra_encrypted_goal_recycle.dart": [
+      {
+        "start": "CREATE TABLE IF NOT EXISTS $_table (",
+        "end": "  /// Best-effort matching for known explicit goal references."
+      }
+    ],
+    "lib/storage/legacy_financial_snapshot.dart": [
+      {
+        "start": "        final amountFields = <String>[",
+        "end": "        if (isMoney) {"
+      }
+    ],
+    "lib/storage/waffra_cloud_cipher.dart": [
+      {
+        "start": "    'goal': {",
+        "end": "    'recurring': {"
+      }
+    ],
+    "test/storage/fresh_finance_modules_repository_test.dart": [
+      {
+        "start": "  test('three UI modules can save and read exact typed attributes', () async {",
+        "end": "  test('unknown ID cannot be treated as a successful update', () async {"
+      },
+      {
+        "start": "  test('mandatory fields block invalid negative scenarios', () async {",
+        "end": "  test('missing schema and disabled flag prevent finance access', () async {"
+      }
+    ],
+    "test/storage/ledger_projection_test.dart": [
+      {
+        "start": "  test('projection failure rolls back inserts and journal', () async {",
+        "end": null
       }
     ]
   }
