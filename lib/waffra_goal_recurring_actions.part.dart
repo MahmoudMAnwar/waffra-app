@@ -7,7 +7,7 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
  Future<bool> _ensureLinkedRecurringForGoal(SavingGoal goal)async{
   final deadline=goal.dueDate;
   final linkedIndex=recurring.indexWhere((r)=>r.linkedGoalId==goal.id);
-  if(deadline==null){
+  if(deadline==null||goal.target<=0){
    if(linkedIndex<0)return true;
    setState(()=>recurring[linkedIndex]=recurring[linkedIndex].copy(active:false));
   }else{
@@ -41,7 +41,8 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
 
  Future<void> editGoal(SavingGoal existing)async{
   final name=TextEditingController(text:existing.name);
-  final target=TextEditingController(text:formatWaffraEditAmount(existing.target));
+  final target=TextEditingController(text:existing.target<=0?'':formatWaffraEditAmount(existing.target));
+  bool noTarget=existing.target<=0;
   DateTime? deadline=existing.dueDate;
   bool removeDeadline=false;
   String? nameError,amountError;
@@ -57,7 +58,12 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
         decoration:InputDecoration(labelText:waffraIsEnglish?'Goal name *':'اسم الهدف *',
          border:const OutlineInputBorder(),errorText:nameError)),
        const SizedBox(height:10),
-       TextField(controller:target,
+       SwitchListTile.adaptive(
+        contentPadding:EdgeInsets.zero,
+        value:noTarget,activeTrackColor:emerald,
+        title:WaffraText(waffraIsEnglish?'Open-ended savings':'ادخار مفتوح بدون مبلغ مستهدف'),
+        onChanged:WaffraHaptics.selection((value)=>update(()=>noTarget=value))),
+       if(!noTarget)TextField(controller:target,
         keyboardType:const TextInputType.numberWithOptions(decimal:true),
         inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],
         onChanged:(_)=>update(()=>amountError=null),
@@ -93,10 +99,10 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
          nameError=waffraGoalNameIssue(n,goals.where((g)=>g.id!=existing.id)
           .map((g)=>g.name))==null?null:
           (waffraIsEnglish?'Enter a unique goal name':'أدخل اسم هدف صحيحًا وغير مكرر');
-         amountError=waffraAmountFieldError(target.text);
+         amountError=noTarget?null:waffraAmountFieldError(target.text);
         });
-        if(nameError!=null||amountError!=null||v==null||v<=0)return;
-        Navigator.pop(dialog,SavingGoal(id:existing.id,name:n,target:v,
+        if(nameError!=null||amountError!=null||(!noTarget&&(v==null||v<=0)))return;
+        Navigator.pop(dialog,SavingGoal(id:existing.id,name:n,target:noTarget?0:v!,
          saved:existing.saved,dueDate:removeDeadline?null:deadline));
        }),child:WaffraText(waffraIsEnglish?'Save changes':'حفظ التعديل')),
       ],
