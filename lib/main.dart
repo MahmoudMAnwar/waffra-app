@@ -7123,7 +7123,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      onPressed:WaffraHaptics.tap(()=>transactionActions(e)),icon:const Icon(Icons.more_vert,color:forest)),
    ]))),
     if(attachmentCount>0)PositionedDirectional(top:0,start:0,
-     child:WaffraReceiptCornerBadge(count:attachmentCount,english:waffraIsEnglish)),
+     child:WaffraReceiptCornerAction(
+      key:Key('waffra-receipt-corner-list-'+e.id),
+      count:attachmentCount,english:waffraIsEnglish,
+      onTap:()=>showReceipt(e.receiptPath!))),
    ]));
  }
  String get greeting=>WaffraSaudiGreetings.compose(
@@ -8154,7 +8157,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       onPressed:WaffraHaptics.tap(()=>transactionActions(entry)),icon:const Icon(Icons.more_vert,size:18)),
     ])),
     if(attachmentCount>0)PositionedDirectional(top:0,start:0,
-     child:WaffraReceiptCornerBadge(count:attachmentCount,english:waffraIsEnglish)),
+     child:WaffraReceiptCornerAction(
+      key:Key('waffra-receipt-corner-home-'+entry.id),
+      count:attachmentCount,english:waffraIsEnglish,
+      onTap:()=>showReceipt(entry.receiptPath!))),
    ])));
  }
  Widget dashboard(){
@@ -12231,6 +12237,28 @@ class WaffraDirectionalFabLocation extends FloatingActionButtonLocation {
    max(16.0,bottom-geometry.floatingActionButtonSize.height-16),
   );
  }
+}
+/// Accessible 48×48 tap target that keeps the approved 36×30 badge artwork.
+/// Uses the existing receipt viewer and never reads or rewrites saved files.
+class WaffraReceiptCornerAction extends StatelessWidget {
+ const WaffraReceiptCornerAction({
+  super.key,required this.count,required this.english,required this.onTap,
+ });
+ final int count;
+ final bool english;
+ final VoidCallback onTap;
+ @override Widget build(BuildContext context)=>Semantics(
+  button:true,
+  label:english?'View $count attachments':'عرض $count مرفقات',
+  child:Tooltip(
+   message:english?'View attachments':'عرض المرفقات',
+   child:Material(type:MaterialType.transparency,
+    child:InkWell(
+     onTap:WaffraHaptics.tap(onTap),
+     child:SizedBox(width:48,height:48,
+      child:Align(alignment:AlignmentDirectional.topStart,
+       child:WaffraReceiptCornerBadge(count:count,english:english))),
+    ))));
 }
 /// Approved Design 9: a compact folded triangular attachment corner.
 /// RTL uses the top-right corner; LTR mirrors it to top-left.
