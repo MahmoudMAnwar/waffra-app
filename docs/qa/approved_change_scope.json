@@ -1,30 +1,24 @@
 {
   "contract_version": 1,
-  "change_id": "M383-M384-M385-M386-M387",
-  "human_scope_review": "REQUIRED; only user/project owner can approve whether claims match requested change; manifest author cannot grant approval",
+  "change_id": "M388-M390",
+  "human_scope_review": "REQUIRED: owner approval of requested behavior + live Android screenshot and legacy data checks",
   "user_requested_changes": [
-    "M383: reduce total main Android APK and Play AAB build time by independent parallel builds while preserving source and signing safety.",
-    "M384: restore existing counted top-corner attachment badge on Arabic and English transaction cards without altering existing user photos.",
-    "M385: forbid any change to pre-existing app code and accepted features that was not explicitly requested, with a fail-closed PR scope audit.",
-    "M386: resolve observed M274 Android emulator CI startup failure caused by Pixel AVD needing 7372 MB while runner had only 5911 MB; preserve real UI tap coverage.",
-    "M387: fix the second M274 Android emulator UI smoke failure after Android boot and first tap test pass, by compiling the temporary APK before launching the AVD and lowering runner resource contention, without skipping tap tests."
+    "M388: allow an open-ended savings goal with no fixed target amount and no mandatory budget, preserve old target goals and wallet accounting; avoid false 0-percent completion and allow editing the goal.",
+    "M389: Goals plus opens new goal, duplicate existing goal, and unlimited savings; Recurring plus opens new recurring or duplicate existing recurring. Duplication uses a new ID, preserves original and does not copy goal savings or old linked-goal ID.",
+    "M390: tapping existing counted corner badge on both Home and Transactions opens the exact preserved receipt gallery without modifying saved attachment paths or removing details access.",
+    "M388-M390: update only regression tests whose old expected results contradict the newly user-approved functionality; track all 42 acceptance cases independently."
   ],
   "allowed_changed_files": [
-    ".github/CODEOWNERS",
-    ".github/scripts/run-m274-android-tap-smoke.sh",
-    ".github/workflows/android.yml",
-    ".github/workflows/m174-main-sha-postmerge.yml",
-    ".github/workflows/m274-production-ui-golden.yml",
-    "docs/SMART_INCREMENTAL_CI.md",
+    "docs/qa/WAFFRA_42_REQUEST_ACCEPTANCE_TRACKER.md",
     "docs/qa/approved_change_scope.json",
-    "docs/qa/m385-no-unrequested-changes.md",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "scripts/qa/m385_approved_change_guard.py",
+    "lib/waffra_financial_planning_engine.dart",
+    "lib/waffra_goal_recurring_actions.part.dart",
+    "test/m127_ui_tour_backup_acceptance_test.dart",
     "test/m384_receipt_corner_upgrade_regression_test.dart",
-    "test/qa/m383_parallel_signed_android_build_test.py",
-    "test/qa/m385_approved_scope_guard_test.py",
-    "test/qa/m386_m274_emulator_disk_safety_test.py",
+    "test/m388_m390_approved_goal_recurring_receipt_test.dart",
+    "test/storage/m266_home_bound_source_regression_test.dart",
     "test/waffra_directional_fab_receipt_corner_test.dart",
     "test/waffra_oct21_regression_test.dart"
   ],
@@ -37,46 +31,80 @@
       {
         "start": " Widget compactTransaction(MoneyEntry entry){",
         "end": " Widget dashboard(){"
+      },
+      {
+        "start": " Future<void> goalDialog(",
+        "end": " /// Release an earmark"
+      },
+      {
+        "start": " Future<void> fundGoal(",
+        "end": " IconData goalIcon("
+      },
+      {
+        "start": " Widget goalsPage(){",
+        "end": " Future<void> recurringDialog("
+      },
+      {
+        "start": " Future<void> recurringDialog(",
+        "end": " DateTime nextRecurringDue("
+      },
+      {
+        "start": " Widget _addMenuOption(",
+        "end": " Widget currentTab(){"
+      },
+      {
+        "start": "    if(!accountOpened",
+        "end": "  // The notice reserves real layout"
+      },
+      {
+        "start": "   max(16.0,bottom-geometry.floatingActionButtonSize.height-16),",
+        "end": "class WaffraReceiptCornerClipper extends"
       }
     ],
-    ".github/workflows/android.yml": [
+    "lib/waffra_goal_recurring_actions.part.dart": [
       {
-        "start": "  build:\n",
+        "start": " Future<bool> _ensureLinkedRecurringForGoal(",
+        "end": " Future<void> editGoal("
+      },
+      {
+        "start": " Future<void> editGoal(",
         "end": null
       }
     ],
-    ".github/workflows/m174-main-sha-postmerge.yml": [
+    "lib/waffra_financial_planning_engine.dart": [
       {
-        "start": "      - name: Checkout exact reviewed SHA\n",
-        "end": "      - name: Generate non-sensitive NO-GO evidence for exact SHA\n"
+        "start": "abstract final class GoalWalletHealthAudit {",
+        "end": null
       }
     ],
-    "test/waffra_oct21_regression_test.dart": [
+    "test/m127_ui_tour_backup_acceptance_test.dart": [
       {
-        "start": "  expect(app, contains(\"'No.'\"));\n });\n\n",
-        "end": " test('Sensitive financial actions always require OS biometric authentication', () {"
+        "start": "  test('four finance action destinations share one language-aware circular action', () {",
+        "end": "  test('tour intro no longer cuts through the top header', () {"
+      }
+    ],
+    "test/m384_receipt_corner_upgrade_regression_test.dart": [
+      {
+        "start": "  test('M384: both cards show folded count from the stored finance record', () {",
+        "end": "  testWidgets('M384: top start corner is right in Arabic and left in English',"
+      }
+    ],
+    "test/storage/m266_home_bound_source_regression_test.dart": [
+      {
+        "start": "  test('goals and backup request verified finance binding before reads', () {",
+        "end": "  test('Home source selection still starts through guarded production binding',"
       }
     ],
     "test/waffra_directional_fab_receipt_corner_test.dart": [
       {
-        "start": "    expect(direction==TextDirection.rtl?statusX>closeX:statusX<closeX,isTrue,\n        reason:'Status icon and close action must follow the current direction.');",
-        "end": "  test('Home, Categories, Goals and Recurring plus actions preserve locale switch, with no fixed-left anchor',"
-      },
-      {
-        "start": "    expect(source, isNot(contains('WaffraPhysicalLeftFab')));\n  });\n\n",
-        "end": "  testWidgets('expanded menu is above the physical plus on the same side in both languages', (tester) async {"
+        "start": "  test('M384 restores corner count and keeps details attachments action', () {",
+        "end": "  testWidgets('expanded menu is above the physical plus on the same side in both languages',"
       }
     ],
-    ".github/workflows/m274-production-ui-golden.yml": [
+    "test/waffra_oct21_regression_test.dart": [
       {
-        "start": "      - name: Syntax-check Android emulator test runner\n",
-        "end": null
-      }
-    ],
-    ".github/scripts/run-m274-android-tap-smoke.sh": [
-      {
-        "start": "  set -e\n",
-        "end": "  if (( result == 0 )); then\n"
+        "start": " test('M384 restored receipt corner on cards and retained details access', () {",
+        "end": " test('Sensitive financial actions always require OS biometric authentication',"
       }
     ]
   }
