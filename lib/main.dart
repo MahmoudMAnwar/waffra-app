@@ -9574,7 +9574,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       final n=amountOfDisplay(target.text);
       if(selectedGoal.isEmpty||validateGoalName()!=null||
        (!noTarget&&(WaffraValidators.positiveAmount(target.text)!=null||n==null)))return;
-      Navigator.pop(ctx,SavingGoal(id:newId(),name:name.text.trim(),target:noTarget?0:n!,saved:0,dueDate:selectedDeadline));
+      Navigator.pop(ctx,SavingGoal(id:newId(),name:name.text.trim(),target:noTarget?0.0:n!,saved:0,dueDate:selectedDeadline));
      }),child:WaffraText(waffraIsEnglish?'Add goal':'إضافة الهدف')),
     ],
    )));
