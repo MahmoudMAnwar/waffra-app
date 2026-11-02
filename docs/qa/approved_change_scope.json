@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M388-M409",
+  "change_id": "M388-M410",
   "human_scope_review": "REQUIRED: owner approval of requested behavior + live Android screenshot and legacy data checks",
   "user_requested_changes": [
     "M388: allow an open-ended savings goal with no fixed target amount and no mandatory budget, preserve old target goals and wallet accounting; avoid false 0-percent completion and allow editing the goal.",
@@ -19,7 +19,8 @@
     "M403: support independent activation and quick actions on main/subcategories without deleting historical entries or changing finance ledger.",
     "M406: repair Drift test API errors without weakening assertions, and expand M385 scope only to exact PR changed hunks while preserving protected code outside them.",
     "M408: repair six actual failing assertions without removing any financial or security test: month navigation, recurring durable writes, active category validation, concise bank SMS title, StateError rollback, and paused goal due behavior.",
-    "M409: fix the failed M274 Android UI startup caused by VM-service disconnect and an offline emulator during a redundant post-boot Gradle build. Reuse the exact precompiled integration debug APK with a real Flutter drive integration driver, stop idle Gradle daemons before boot, preserve real tap assertions and fail-closed diagnostics."
+    "M409: fix the failed M274 Android UI startup caused by VM-service disconnect and an offline emulator during a redundant post-boot Gradle build. Reuse the exact precompiled integration debug APK with a real Flutter drive integration driver, stop idle Gradle daemons before boot, preserve real tap assertions and fail-closed diagnostics.",
+    "M410: implement safe incremental CI recovery: retry exactly one failed Android emulator CI job on the same SHA only when logs prove transient infrastructure failure; cap to one retry, disallow failing application assertions or stale PR heads, never skip protected financial/security checks or final full-main certification."
   ],
   "allowed_changed_files": [
     ".github/workflows/m274-production-ui-golden.yml",
@@ -67,7 +68,11 @@
     "test/storage/m266_home_bound_source_regression_test.dart",
     "test/waffra_directional_fab_receipt_corner_test.dart",
     "test/waffra_oct21_regression_test.dart",
-    ".github/scripts/run-m274-android-tap-smoke.sh"
+    ".github/scripts/run-m274-android-tap-smoke.sh",
+    ".github/workflows/m410-failed-android-retry.yml",
+    "scripts/qa/m410_failed_job_retry.py",
+    "test/qa/m410_smart_ci_retry_test.py",
+    "docs/SMART_INCREMENTAL_CI.md"
   ],
   "bounded_sections": {
     "lib/main.dart": [

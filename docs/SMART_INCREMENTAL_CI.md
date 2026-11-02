@@ -99,3 +99,24 @@ SQLite/SQLCipher storage behavior, or authorize public Google Play release.
 main run.** Parallel cold Android runners can still have significant setup and
 compilation cost, and GitHub's overall duration is the slower of both jobs.
 A green AAB is a candidate for internal testing, not Google Play approval.
+
+## M410 — Targeted rerun for a transient CI failure
+
+**No code change / same SHA:** GitHub Actions can rerun one failed job
+("Re-run jobs" -> failed jobs) while keeping previously successful jobs and
+workflows untouched. Do **not** commit a no-op change just to restart CI.
+
+**Automation (active only after this workflow is merged to default branch):**
+M410 watches the M274 Android UI workflow. Only when exactly one failed job is
+the known Android-emulator job, logs contain a known VM service / ADB-offline
+failure and no application assertion, and the PR head SHA is still current,
+it requests **one rerun of that failed job only**. A second failure stays red.
+Other failures require diagnosis, not automatic forgiveness.
+
+**Code fix / new SHA:** all mandatory exact-SHA release/security gates still
+need fresh evidence. Relevant development tests should run first, but full
+Flutter/Python and independent financial gates remain required before main APK.
+The M410 workflow does **not** replace, skip, or cache release acceptance.
+The historical Smart CI reuse policy still excludes critical financial tests.
+If GitHub Rulesets require other checks, those checks must keep functioning;
+never path-skip required checks into a permanently pending state.
