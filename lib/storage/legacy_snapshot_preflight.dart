@@ -143,6 +143,9 @@ class WaffraLegacyPreflight {
         } else if (key == 'waffra_goals_v24') {
           _checkMoney(issues, key, i, item, 'target');
           _checkMoney(issues, key, i, item, 'saved');
+          if(item.containsKey('active')&&item['active'] is! bool){
+            issues.add(WaffraPreflightIssue(key,i,'invalid_goal_active_flag'));
+          }
           if (item['dueDate'] != null &&
               (item['dueDate'] is! String ||
                DateTime.tryParse(item['dueDate'] as String) == null)) {
