@@ -4556,7 +4556,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
  void disposeLater(){
   pasteTimer?.cancel();
-  WaffraOnDeviceQwen.shared.cancelCurrentGeneration();
+  if(WaffraSaudiRelease.qwenForBankSms)
+   WaffraOnDeviceQwen.shared.cancelCurrentGeneration();
   Future<void>.delayed(const Duration(milliseconds:500),(){
    pasted.dispose();description.dispose();amount.dispose();
   });
@@ -4638,7 +4639,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       },decoration:InputDecoration(labelText:waffraIsEnglish?'Bank SMS *':'الرسالة البنكية *',
        errorText:pasteAttempted&&pasted.text.trim().isEmpty?waffraRequiredFieldMessage:null,errorMaxLines:3,
        hintText:waffraIsEnglish?'Paste your bank message here. We’ll analyze it automatically.':'الصق رسالتك البنكية هنا، وبنحلّلها لك تلقائيًا.',hintStyle:const TextStyle(fontSize:13,color:Color(0xFF888F8A)),
-       suffixIcon:pasted.text.isNotEmpty?IconButton(tooltip:waffraIsEnglish?'Clear text':'مسح النص',icon:const Icon(Icons.clear_rounded,color:Colors.redAccent),onPressed:WaffraHaptics.tap((){pasteTimer?.cancel();WaffraOnDeviceQwen.shared.cancelCurrentGeneration();++pasteRevision;pasted.clear();update((){parsed=false;analyzingPaste=false;messages=[];statusMessage='';});})):null,
+       suffixIcon:pasted.text.isNotEmpty?IconButton(tooltip:waffraIsEnglish?'Clear text':'مسح النص',icon:const Icon(Icons.clear_rounded,color:Colors.redAccent),onPressed:WaffraHaptics.tap((){pasteTimer?.cancel();if(WaffraSaudiRelease.qwenForBankSms)WaffraOnDeviceQwen.shared.cancelCurrentGeneration();++pasteRevision;pasted.clear();update((){parsed=false;analyzingPaste=false;messages=[];statusMessage='';});})):null,
        border:OutlineInputBorder(borderRadius:BorderRadius.circular(18)))),
       const SizedBox(height:12),
      if(statusMessage.isNotEmpty&&pasted.text.trim().isNotEmpty)...[
@@ -4802,7 +4803,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         waffraIsEnglish?'Discard the unsaved pasted text and start again?':'هل تريد حذف الرسائل غير المحفوظة والبدء من جديد؟');
        if(yes!=true||!ctx.mounted)return;
        pasteTimer?.cancel();
-       WaffraOnDeviceQwen.shared.cancelCurrentGeneration();
+       if(WaffraSaudiRelease.qwenForBankSms)
+        WaffraOnDeviceQwen.shared.cancelCurrentGeneration();
        ++pasteRevision;
        update((){reviewing=false;parsed=false;analyzingPaste=false;messages=[];index=0;pasted.clear();description.clear();amount.clear();});
       }),icon:const Icon(Icons.delete_outline),label:const WaffraText('حذف النص بالكامل ولصق رسائل جديدة')),
@@ -5387,6 +5389,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,
   WaffraReceiptOcrFields? scannedReceipt,XFile? scannedImage,bool? scannedIncome,
   int? scannedImagePosition,int? scannedImageTotal})async {
+  if(!WaffraSaudiRelease.receiptImageTransactionImport&&
+     (scannedReceipt!=null||scannedImage!=null)){
+   if(mounted)snack(context,waffraIsEnglish?
+    'Receipt/image transaction import is unavailable in this release.':
+    'إضافة عمليات من فاتورة أو صورة غير متاحة في النسخة الحالية.');
+   return;
+  }
   // Bank SMS and OCR edit forms work offline without starting Qwen.
   // Model-dependent finance advice remains gated separately.
   // Last defense: every OCR entry must verify the currency *inside* the
