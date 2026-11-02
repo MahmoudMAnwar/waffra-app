@@ -6730,9 +6730,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         minimumSize:const Size(0,48),
         padding:const EdgeInsets.symmetric(horizontal:10),
         shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12))),
-       label:Flexible(child:WaffraText(
+       label:WaffraText(
         waffraIsEnglish?'Open report':'فتح التقرير',
-        maxLines:2,textAlign:TextAlign.center)));
+        maxLines:2,textAlign:TextAlign.center));
       Widget shareButton()=>OutlinedButton.icon(
        key:const Key('waffra-report-share'),
        onPressed:WaffraHaptics.tap(()async{
@@ -6750,9 +6750,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         minimumSize:const Size(0,48),
         padding:const EdgeInsets.symmetric(horizontal:10),
         shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12))),
-       label:Flexible(child:WaffraText(
+       label:WaffraText(
         waffraIsEnglish?'Share report':'مشاركة التقرير',
-        maxLines:2,textAlign:TextAlign.center)));
+        maxLines:2,textAlign:TextAlign.center));
       // Buttons stay on one row when the dialog has room. Below 300dp
       // they stack without clipping a translated label or Android insets.
       if(limits.maxWidth<300)return Column(
