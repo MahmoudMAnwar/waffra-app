@@ -10521,11 +10521,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          minHeight:6,borderRadius:BorderRadius.circular(8),
          color:emerald,backgroundColor:emerald.withValues(alpha:.12)),
         const SizedBox(height:4),
-        WaffraText(waffraIsEnglish?
+        WaffraText(goal.target<=0?(waffraIsEnglish?'Saved '+cash(goal.saved)+' · Open-ended':'ادخرت '+cash(goal.saved)+' · ادخار مفتوح'):(waffraIsEnglish?
          'Saved '+cash(goal.saved)+' of '+cash(goal.target)+
          ' • Remaining '+cash(max(0,goal.target-goal.saved)):
          'ادخرت '+cash(goal.saved)+' من '+cash(goal.target)+
-         ' • المتبقي '+cash(max(0,goal.target-goal.saved)),
+         ' • المتبقي '+cash(max(0,goal.target-goal.saved))),
          style:const TextStyle(fontSize:11,color:emerald)),
        ],
        const SizedBox(height:3),
