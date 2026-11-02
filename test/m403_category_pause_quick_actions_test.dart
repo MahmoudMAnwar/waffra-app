@@ -19,6 +19,17 @@ void main(){
   final enabled=parent.copy(categoryActive:true);
   expect(app.waffraCanAssignManualCategory([enabled,child],false,'p','Child'),isTrue);
  });
+ test('M405 standalone named budget copy remains covariant and independent',(){
+  final budget=app.WaffraNamedBudget(
+   id:'budget-1',name:'Fuel',budget:200,budgetActive:true);
+  final app.BudgetCategory polymorphic=budget;
+  final modified=polymorphic.copy(categoryActive:false,budgetActive:false);
+  expect(modified,isA<app.WaffraNamedBudget>());
+  expect(modified.budgetActive,isFalse);
+  expect(modified.categoryActive,isTrue);
+  expect((modified as app.WaffraNamedBudget).deleted,isFalse);
+  expect(modified.budget,200);
+ });
  test('M403 quick action toggles are available on both category levels',(){
   final source=File('lib/waffra_categories_page.part.dart').readAsStringSync();
   expect(source,contains('waffra-root-category-active-'));
