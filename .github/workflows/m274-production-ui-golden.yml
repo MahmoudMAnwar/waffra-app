@@ -138,6 +138,9 @@ jobs:
           arch: x86_64
           profile: pixel_6
           cores: 2
+          # M386: cap AVD userdata instead of accepting Pixel default > available
+          # GitHub runner disk. Keep the real Android UI tap test mandatory.
+          disk-size: 3072M
           ram-size: 3072M
           heap-size: 512M
           disable-animations: true
