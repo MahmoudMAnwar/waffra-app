@@ -200,9 +200,10 @@ void main() {
     expect(dashboardCard,contains('final attachmentCount=waffraReceiptPaths(entry.receiptPath).length;'));
     for(final card in [listCard,dashboardCard]){
       expect(card,contains('if(attachmentCount>0)PositionedDirectional(top:0,start:0'));
-      expect(card,contains('WaffraReceiptCornerBadge(count:attachmentCount,english:waffraIsEnglish)'));
-      expect(card,isNot(contains('showReceipt(')),
-        reason:'The corner remains a compact count, not a second destructive action.');
+      expect(card,contains('WaffraReceiptCornerAction('));
+      expect(card,contains('count:attachmentCount,english:waffraIsEnglish'));
+      expect(card,contains('onTap:()=>showReceipt('),
+        reason:'Tapping the visual corner must open the same existing gallery as details.');
     }
     expect(source,contains("onViewReceipt:waffraReceiptPaths(entry.receiptPath).isNotEmpty"));
     expect(source,contains("waffraIsEnglish?'View attachments':'عرض المرفقات'"));
@@ -240,7 +241,7 @@ void main() {
       .split('Widget dashboard()').first;
     for(final card in [listCard,dashboardCard]){
       expect(card,contains('PositionedDirectional(top:0,start:0'));
-      expect(card,contains('child:WaffraReceiptCornerBadge('));
+      expect(card,contains('child:WaffraReceiptCornerAction('));
       expect(card,isNot(contains('File(')));
       expect(card,isNot(contains('delete(')));
     }
