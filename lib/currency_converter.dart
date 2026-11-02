@@ -118,7 +118,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
  int _quoteRevision=0;
  int _goldRefreshRevision=0;
  int _oilRefreshRevision=0;
- String? _openMarket='currency';
+ String? _openMarket=WaffraSaudiRelease.globalCurrencyConverter?'currency':'gold';
  final ScrollController _marketsScroll=ScrollController();
  void toggleMarket(String id)=>setState(()=>_openMarket=_openMarket==id?null:id);
  double? result,rate;
