@@ -224,12 +224,13 @@ void main() {
     ));
     expect(source, contains('width:58,height:58'));
     expect(source, contains('WaffraFabMenuAnchor('));
-    expect(source, contains('expanded:addFabExpanded&&!goalsOpened'));
+    expect(source, contains('expanded:addFabExpanded'));
     expect(source, isNot(contains(
       'floatingActionButton:!ready||tab==4?null:Directionality(',
     )));
-    expect(source, contains('if(goalsOpened||tab==3){unawaited(_launchAddAction(()=>goalDialog()));return;}'));
-    expect(source, contains('if(tab==4){unawaited(_launchAddAction(()=>recurringDialog()));return;}'));
+    expect(source, contains("label:waffraIsEnglish?'New savings goal':'إضافة هدف جديد'"));
+    expect(source, contains("label:waffraIsEnglish?'Open-ended savings':'ادخار مفتوح بدون مستهدف'"));
+    expect(source, contains("label:waffraIsEnglish?'Duplicate recurring transaction':'تكرار عملية متكررة موجودة'"));
     expect(source, isNot(contains('WaffraPhysicalLeftFab')));
   });
 
