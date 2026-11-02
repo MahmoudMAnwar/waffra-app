@@ -1,16 +1,18 @@
 {
   "contract_version": 1,
-  "change_id": "M383-M384-M385",
+  "change_id": "M383-M384-M385-M386",
   "human_scope_review": "REQUIRED; only user/project owner can approve whether claims match requested change; manifest author cannot grant approval",
   "user_requested_changes": [
     "M383: reduce total main Android APK and Play AAB build time by independent parallel builds while preserving source and signing safety.",
     "M384: restore existing counted top-corner attachment badge on Arabic and English transaction cards without altering existing user photos.",
-    "M385: forbid any change to pre-existing app code and accepted features that was not explicitly requested, with a fail-closed PR scope audit."
+    "M385: forbid any change to pre-existing app code and accepted features that was not explicitly requested, with a fail-closed PR scope audit.",
+    "M386: resolve observed M274 Android emulator CI startup failure caused by Pixel AVD needing 7372 MB while runner had only 5911 MB; preserve real UI tap coverage."
   ],
   "allowed_changed_files": [
     ".github/CODEOWNERS",
     ".github/workflows/android.yml",
     ".github/workflows/m174-main-sha-postmerge.yml",
+    ".github/workflows/m274-production-ui-golden.yml",
     "docs/SMART_INCREMENTAL_CI.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/m385-no-unrequested-changes.md",
@@ -20,6 +22,7 @@
     "test/m384_receipt_corner_upgrade_regression_test.dart",
     "test/qa/m383_parallel_signed_android_build_test.py",
     "test/qa/m385_approved_scope_guard_test.py",
+    "test/qa/m386_m274_emulator_disk_safety_test.py",
     "test/waffra_directional_fab_receipt_corner_test.dart",
     "test/waffra_oct21_regression_test.dart"
   ],
@@ -60,6 +63,12 @@
       {
         "start": "    expect(source, isNot(contains('WaffraPhysicalLeftFab')));\n  });\n\n",
         "end": "  testWidgets('expanded menu is above the physical plus on the same side in both languages', (tester) async {"
+      }
+    ],
+    ".github/workflows/m274-production-ui-golden.yml": [
+      {
+        "start": "      - name: Run real Android-engine tap sequence on emulator\n",
+        "end": null
       }
     ]
   }
