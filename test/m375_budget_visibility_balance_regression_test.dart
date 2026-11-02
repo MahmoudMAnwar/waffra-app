@@ -45,7 +45,7 @@ void main() {
       reason:'Only the non-wallet share of a goal settlement debits cash.');
   });
 
-  test('M375 all entry paths suppress linking until an active budget exists', () {
+  test('M375 budget picker is conditional, assignment is always optional', () {
     final app=File('lib/main.dart').readAsStringSync();
     final categories=File('lib/waffra_categories_page.part.dart')
       .readAsStringSync();
@@ -53,13 +53,42 @@ void main() {
       reason:'Manual, bank and OCR share the transaction editor.');
     expect(app,contains('if(!candidates.any((e)=>!e.income)||choices.isEmpty)return assigned;'),
       reason:'Bank batch/individual import must bypass absent budget UI.');
-    expect(app,contains('if(initial==null&&!income&&'),
-      reason:'New expenses choose an existing budget when one exists.');
-    expect(app,contains('assigned[pair.key]==null'),
-      reason:'Bank SMS review must require selection only when a budget exists.');
+    expect(app,isNot(contains('if(initial==null&&!income&&')),
+      reason:'New manual and OCR expenses must never require a budget.');
+    expect(app,isNot(contains('missingBudgetSelection')),
+      reason:'Bank imports cannot refuse to save just for missing budget.');
+    expect(app,contains("initialValue:assigned[n]??'none'"),
+      reason:'SMS expenses start unassigned even when budgets are available.');
+    expect(app,contains("value:'none',child:WaffraText("),
+      reason:'Bank budget menu must provide a no-budget choice.');
+    expect(app,contains("b.id==selectedBudgetId)?selectedBudgetId:'unlinked'"),
+      reason:'Manual and OCR editors default to unassigned.');
+    expect(app,contains("value:'unlinked',child:WaffraText("),
+      reason:'All transaction editors permit saving without a budget.');
+    expect(app,isNot(contains("'Transaction budget *'")),
+      reason:'Budget must not appear mandatory.');
     expect(categories,contains('unassignedExpenseCount>0&&waffraHasSelectableBudget(namedBudgets)'),
       reason:'Older unassigned expenses should surface after budget creation.');
     expect(app,contains('showBudgetInfo:entry.budgetId!=null||waffraHasSelectableBudget(namedBudgets)'),
       reason:'Details must not nag users about budgets that do not exist.');
+  });
+
+  test('M376 budget association never changes a historical ledger value', () {
+    final transaction=MoneyEntry(
+      id:'existing-expense',title:'Fuel',category:'Car / Fuel',
+      amount:75,income:false,date:DateTime(2026,11,2),
+      notes:'Existing receipt',sourceType:'manual');
+    final unassigned=MoneyEntry.fromJson(transaction.toJson());
+    expect(unassigned.budgetId,isNull);
+    expect(unassigned.amount,75);
+    final linked=unassigned.withBudget('budget:fuel');
+    expect(linked.budgetId,'budget:fuel');
+    expect(linked.amount,unassigned.amount);
+    expect(linked.notes,unassigned.notes);
+    expect(linked.date,unassigned.date);
+    final detached=linked.withBudget(null);
+    expect(detached.budgetId,isNull);
+    expect(detached.amount,75);
+    expect(detached.title,transaction.title);
   });
 }
