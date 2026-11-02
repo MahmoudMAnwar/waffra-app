@@ -114,7 +114,7 @@ extension WaffraBudgetDirectory on _HomeScreenState {
       // All displays owned budgets plus optional unsaved suggestions.
       // Every saved standalone budget belongs to this user, even when
       // created using a suggested template or migrated from legacy data.
-      DropdownButtonFormField<String>(
+      WaffraCenteredDropdownFormField<String>(
        key:ValueKey('waffra-budget-directory-scope-'+scope),
        initialValue:scope,isExpanded:true,
        decoration:InputDecoration(
@@ -131,7 +131,7 @@ extension WaffraBudgetDirectory on _HomeScreenState {
        }),
       ),
       const SizedBox(height:12),
-      DropdownButtonFormField<String>(
+      WaffraCenteredDropdownFormField<String>(
        key:ValueKey('waffra-budget-directory-status-'+budgetStatusFilter),
        initialValue:const {'all','active','inactive'}.contains(budgetStatusFilter)?
         budgetStatusFilter:'all',isExpanded:true,
@@ -154,7 +154,7 @@ extension WaffraBudgetDirectory on _HomeScreenState {
        }),
       ),
       const SizedBox(height:12),
-      DropdownButtonFormField<String>(
+      WaffraCenteredDropdownFormField<String>(
        key:ValueKey('waffra-budget-directory-sort-'+budgetSort),
        initialValue:const {'default','name','limit','spent'}.contains(budgetSort)?
         budgetSort:'default',isExpanded:true,
