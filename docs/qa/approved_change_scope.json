@@ -1,0 +1,50 @@
+{
+  "contract_version": 1,
+  "change_id": "M383-M384-M385",
+  "human_scope_review": "REQUIRED; only user/project owner can approve whether claims match requested change; manifest author cannot grant approval",
+  "user_requested_changes": [
+    "M383: reduce total main Android APK and Play AAB build time by independent parallel builds while preserving source and signing safety.",
+    "M384: restore existing counted top-corner attachment badge on Arabic and English transaction cards without altering existing user photos.",
+    "M385: forbid any change to pre-existing app code and accepted features that was not explicitly requested, with a fail-closed PR scope audit."
+  ],
+  "allowed_changed_files": [
+    ".github/CODEOWNERS",
+    ".github/workflows/android.yml",
+    ".github/workflows/m174-main-sha-postmerge.yml",
+    "docs/SMART_INCREMENTAL_CI.md",
+    "docs/qa/approved_change_scope.json",
+    "docs/qa/m385-no-unrequested-changes.md",
+    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "lib/main.dart",
+    "scripts/qa/m385_approved_change_guard.py",
+    "test/m384_receipt_corner_upgrade_regression_test.dart",
+    "test/qa/m383_parallel_signed_android_build_test.py",
+    "test/qa/m385_approved_scope_guard_test.py",
+    "test/waffra_directional_fab_receipt_corner_test.dart",
+    "test/waffra_oct21_regression_test.dart"
+  ],
+  "bounded_sections": {
+    "lib/main.dart": [
+      {
+        "start": " Widget tile(MoneyEntry e){",
+        "end": " String get greeting=>"
+      },
+      {
+        "start": " Widget compactTransaction(MoneyEntry entry){",
+        "end": " Widget dashboard(){"
+      }
+    ],
+    ".github/workflows/android.yml": [
+      {
+        "start": "  build:\n",
+        "end": null
+      }
+    ],
+    ".github/workflows/m174-main-sha-postmerge.yml": [
+      {
+        "start": "      - name: Checkout exact reviewed SHA\n",
+        "end": "      - name: Generate non-sensitive NO-GO evidence for exact SHA\n"
+      }
+    ]
+  }
+}
