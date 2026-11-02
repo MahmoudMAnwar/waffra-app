@@ -3158,7 +3158,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  static const tourTabs=WaffraTourPlan.tabs;
  static const tourTargetKeys=WaffraTourPlan.targetKeys;
  bool addFabExpanded=false;
- final GlobalKey _fabFooterKey=GlobalKey(debugLabel:'waffra-fab-footer');
+ final LayerLink _fabOverlayAnchor=LayerLink();
  bool quickActionsExpanded=false;
  bool _addActionOpening=false;
  bool _fabPressed=false;
@@ -12277,7 +12277,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // Never allow a menu width to change Scaffold's floating geometry.
   floatingActionButtonLocation:WaffraDirectionalFabLocation(english:waffraIsEnglish),
   floatingActionButtonAnimator:const WaffraStationaryFabAnimator(),
-  floatingActionButton:!ready||accountOpened||tab==2?null:SizedBox(
+  floatingActionButton:!ready||accountOpened||tab==2?null:CompositedTransformTarget(
+   link:_fabOverlayAnchor,child:SizedBox(
    width:58,height:58,
    child:
     Material(
@@ -12313,11 +12314,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        turns:addFabExpanded?0.125:0,
        child:const Icon(Icons.add,color:Colors.white,size:28)))),
      )),
-   ),
+   )),
   // The notice reserves real layout height above the bottom footer.
   // The transaction list and the floating + reposition instead of being
   // covered by an overlay. The expanded + menu closes on feedback.
-  bottomNavigationBar:accountOpened?null:Column(key:_fabFooterKey,mainAxisSize:MainAxisSize.min,children:[
+  bottomNavigationBar:accountOpened?null:Column(mainAxisSize:MainAxisSize.min,children:[
    WaffraFooterNoticeHost(onNoticePresented:(){
     if(mounted&&addFabExpanded)setState(()=>addFabExpanded=false);
    }),
@@ -12344,7 +12345,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      WaffraFabMenuAnchor(
       english:waffraIsEnglish,
       expanded:addFabExpanded,
-      bottom:(_fabFooterKey.currentContext?.size?.height??(90+MediaQuery.paddingOf(context).bottom))+86,
+      link:_fabOverlayAnchor,
       menu:Column(mainAxisSize:MainAxisSize.min,
        crossAxisAlignment:waffraIsEnglish?CrossAxisAlignment.end:CrossAxisAlignment.start,
        children:[
@@ -12408,16 +12409,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ]
        ]),
      ),
-   Positioned(
-    left:waffraIsEnglish?null:16,
-    right:waffraIsEnglish?16:null,
-    bottom:(_fabFooterKey.currentContext?.size?.height??(90+MediaQuery.paddingOf(context).bottom))+16,
-    child:Material(color:forest,elevation:7,shape:const CircleBorder(),
-     child:InkWell(key:const Key('waffra-fab-menu-close'),
-      onTap:WaffraHaptics.tap(()=>setState(()=>addFabExpanded=false)),
-      customBorder:const CircleBorder(),
-      child:const SizedBox(width:58,height:58,
-       child:Icon(Icons.close_rounded,color:Colors.white,size:28)))),
+   Positioned.fill(
+    child:Align(alignment:Alignment.topLeft,
+     child:CompositedTransformFollower(
+      link:_fabOverlayAnchor,showWhenUnlinked:false,
+      targetAnchor:Alignment.topLeft,followerAnchor:Alignment.topLeft,
+      child:Material(color:forest,elevation:7,shape:const CircleBorder(),
+       child:InkWell(key:const Key('waffra-fab-menu-close'),
+        onTap:WaffraHaptics.tap(()=>setState(()=>addFabExpanded=false)),
+        customBorder:const CircleBorder(),
+        child:const SizedBox(width:58,height:58,
+         child:Icon(Icons.close_rounded,color:Colors.white,size:28)))))),
    ),
   ],
   if(tourActive&&tourTargetReady)Positioned.fill(child:tourOverlay()),
@@ -12471,37 +12473,31 @@ class WaffraDeletedItemsButton extends StatelessWidget {
 class WaffraFabMenuAnchor extends StatelessWidget {
  const WaffraFabMenuAnchor({
   super.key,required this.english,required this.expanded,required this.menu,
-  this.bottom,
+  required this.link,
  });
- final bool english;
- final bool expanded;
+ final bool english,expanded;
  final Widget menu;
- final double? bottom;
-
- @override Widget build(BuildContext context)=>Positioned(
-  left:english?null:16,
-  right:english?16:null,
-  bottom:bottom??86, // Full-screen overlay anchored above actual footer.
-  child:IgnorePointer(
-   ignoring:!expanded,
-   child:AnimatedSwitcher(
-    duration:waffraMotion(280),
-    reverseDuration:waffraMotion(220),
-    switchInCurve:Curves.easeOutCubic,
-    switchOutCurve:Curves.easeInCubic,
-    layoutBuilder:(current,previous)=>Stack(
-     alignment:english?Alignment.bottomRight:Alignment.bottomLeft,
-     children:[...previous,if(current!=null)current],
-    ),
-    transitionBuilder:(child,animation)=>SizeTransition(
-     sizeFactor:animation,alignment:Alignment.bottomCenter,
-     child:FadeTransition(opacity:animation,child:child),
-    ),
-    child:expanded
-      ? KeyedSubtree(key:const ValueKey('waffra-fab-menu-open'),child:menu)
-      : const SizedBox(key:ValueKey('waffra-fab-menu-closed')),
-   ),
-  ),
+ final LayerLink link;
+ /// Follow the actual FAB's position, including the footer and system inset.
+ @override Widget build(BuildContext context)=>Positioned.fill(
+  child:Align(alignment:Alignment.topLeft,
+   child:CompositedTransformFollower(
+    link:link,showWhenUnlinked:false,
+    targetAnchor:english?Alignment.topRight:Alignment.topLeft,
+    followerAnchor:english?Alignment.bottomRight:Alignment.bottomLeft,
+    offset:const Offset(0,-12),
+    child:IgnorePointer(
+     ignoring:!expanded,
+     child:AnimatedSwitcher(
+      duration:waffraMotion(280),
+      reverseDuration:waffraMotion(220),
+      switchInCurve:Curves.easeOutCubic,
+      switchOutCurve:Curves.easeInCubic,
+      child:expanded?
+       KeyedSubtree(key:const ValueKey('waffra-fab-menu-open'),child:menu):
+       const SizedBox(key:ValueKey('waffra-fab-menu-closed')),
+     )),
+   )),
  );
 }
 
