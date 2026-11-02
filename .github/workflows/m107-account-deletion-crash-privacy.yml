@@ -16,6 +16,7 @@ on:
       - 'test/m107_release_backend_gating_test.dart'
       - 'test/firebase/**'
   workflow_dispatch:
+
 permissions:
   contents: read
 

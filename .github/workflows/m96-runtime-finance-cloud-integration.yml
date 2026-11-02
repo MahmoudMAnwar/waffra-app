@@ -9,6 +9,7 @@ on:
       - 'test/storage/m96_*.dart'
       - '.github/workflows/m96-runtime-finance-cloud-integration.yml'
   workflow_dispatch:
+
 permissions:
   contents: read
 

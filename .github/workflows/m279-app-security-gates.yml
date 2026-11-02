@@ -19,6 +19,7 @@ on:
       - 'test/firebase/**'
       - 'test/storage/**'
   workflow_dispatch:
+
 permissions:
   contents: read
 

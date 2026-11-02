@@ -12,6 +12,7 @@ on:
       - 'test/firebase/firestore.rules.test.mjs'
       - '.github/workflows/m98-encrypted-recovery-inventory.yml'
   workflow_dispatch:
+
 permissions:
   contents: read
 

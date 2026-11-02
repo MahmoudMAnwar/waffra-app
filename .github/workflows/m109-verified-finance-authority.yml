@@ -8,6 +8,7 @@ on:
       - 'test/storage/m109_verified_finance_authority_test.dart'
       - '.github/workflows/m109-verified-finance-authority.yml'
   workflow_dispatch:
+
 permissions:
   contents: read
 

@@ -13,6 +13,7 @@ on:
       - 'integration_test/finance_cloud_final_release_android_test.dart'
       - '.github/workflows/firestore-security-rules.yml'
   workflow_dispatch:
+
 permissions:
   contents: read
 

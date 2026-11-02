@@ -11,6 +11,7 @@ on:
       - 'test/m110_live_finance_authority_writer_test.dart'
       - '.github/workflows/m110-home-writer-source-authority.yml'
   workflow_dispatch:
+
 permissions:
   contents: read
 

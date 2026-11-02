@@ -11,6 +11,7 @@ on:
       - '.github/workflows/android.yml'
       - '.github/workflows/m106-play-privacy-preflight.yml'
   workflow_dispatch:
+
 permissions:
   contents: read
 

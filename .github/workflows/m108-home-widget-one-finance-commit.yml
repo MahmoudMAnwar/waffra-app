@@ -9,6 +9,7 @@ on:
       - 'test/m108_home_widget_one_finance_writer_test.dart'
       - '.github/workflows/m108-home-widget-one-finance-commit.yml'
   workflow_dispatch:
+
 permissions:
   contents: read
 

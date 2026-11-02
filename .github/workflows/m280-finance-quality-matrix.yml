@@ -11,6 +11,7 @@ on:
       - 'lib/waffra_secure_backup.dart'
       - 'docs/qa/m280_*'
   workflow_dispatch:
+
 permissions:
   contents: read
 
