@@ -62,7 +62,7 @@ void main() {
           textDirection:english?TextDirection.ltr:TextDirection.rtl,
           child:Scaffold(body:Center(child:SizedBox(
             width:200,height:80,
-            child:Stack(children:[
+            child:Stack(key:const Key('m384-test-card'),children:[
               const Positioned.fill(child:ColoredBox(color:Colors.white)),
               PositionedDirectional(top:0,start:0,
                 child:WaffraReceiptCornerBadge(count:3,english:english)),
@@ -71,7 +71,7 @@ void main() {
         ),
       ));
       final badge=tester.getRect(find.byType(WaffraReceiptCornerBadge));
-      final stack=tester.getRect(find.byType(Stack).last);
+      final stack=tester.getRect(find.byKey(const Key('m384-test-card')));
       expect(badge.width,36);
       expect(badge.height,30);
       expect(badge.top,stack.top);
@@ -81,7 +81,7 @@ void main() {
       expect(find.byIcon(Icons.attach_file_rounded),findsOneWidget);
       final clip=tester.widget<ClipPath>(
         find.descendant(of:find.byType(WaffraReceiptCornerBadge),
-          matching:find.byType(ClipPath)).single);
+          matching:find.byType(ClipPath)).first);
       expect((clip.clipper as WaffraReceiptCornerClipper).english,english);
       expect(tester.takeException(),isNull);
     }
