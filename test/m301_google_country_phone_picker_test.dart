@@ -139,24 +139,26 @@ void main(){
   expect(saved,'EGP');
  });
 
- testWidgets('M416 Saudi Google phone prefix is visible but the country picker is disabled',
+ testWidgets('M416 Google Saudi phone is plain 05 ten-digit input without flag or code',
  (tester)async{
-  final controller=TextEditingController(text:'512345678');
-  WaffraPhoneCountry country=WaffraInternationalPhone.byIso('SA');
-  await tester.pumpWidget(StatefulBuilder(builder:(context,rebuild)=>
-   MaterialApp(home:Scaffold(body:Center(child:
-    WaffraGooglePhoneField(
-     controller:controller,country:country,english:false,
-     onChanged:(_){},
-     onCountryChanged:(selected)=>rebuild(()=>country=selected)))))));
+  final controller=TextEditingController(text:'0512345678');
+  final sa=WaffraInternationalPhone.byIso('SA');
+  await tester.pumpWidget(MaterialApp(home:Scaffold(body:Center(
+   child:WaffraGooglePhoneField(
+    controller:controller,country:sa,english:false,
+    onChanged:(_){},onCountryChanged:(_){fail('Country picker must be disabled');})))));
   await tester.pumpAndSettle();
-  expect(find.text('🇸🇦'),findsOneWidget);
-  expect(find.text('+966'),findsOneWidget);
-  await tester.tap(find.byKey(const Key('waffra-google-phone-country-picker')));
-  await tester.pumpAndSettle();
+  expect(find.text('🇸🇦'),findsNothing);
+  expect(find.text('+966'),findsNothing);
+  expect(find.byKey(const Key('waffra-google-phone-country-picker')),findsNothing);
   expect(find.byKey(const Key('waffra-google-country-search')),findsNothing);
-  expect(country.iso,'SA');
-  expect(controller.text,'512345678');
+  final input=find.byKey(const Key('waffra-profile-mobile-number'));
+  expect(input,findsOneWidget);
+  expect(tester.widget<TextField>(input).decoration!.hintText,'05XXXXXXXX');
+  await tester.enterText(input,'05123456789');
+  await tester.pump();
+  expect(controller.text,'0512345678',
+   reason:'A Saudi mobile field must accept at most ten digits.');
   expect(tester.takeException(),isNull);
   controller.dispose();
  });
