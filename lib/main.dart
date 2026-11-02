@@ -10043,6 +10043,26 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))],
    )));
  }
+ Future<void> _handleGoalCardAction(SavingGoal g,String v)async{
+        if(v=='edit'){await this.editGoal(g);return;}
+        if(v=='release'){await releaseGoalFunds(g);return;}
+         if(v=='delete'){
+         final linked=g.saved>0||entries.any((e)=>e.category==g.name);
+         final yes=await confirmDeletion(waffraIsEnglish?'Delete savings goal?':'حذف هدف الادخار',
+          waffraGoalDeleteWarning(g.name,linked,waffraIsEnglish));
+         if(yes==true&&mounted){
+          if(_lastFinanceAuthorityRead?.source==
+             WaffraRuntimeFinanceBackend.verifiedEncrypted){
+           await _deleteVerifiedModule(
+            module:WaffraFinanceModule.goals,displayed:g.toJson());
+          }else{
+           setState((){deletedGoals.add({'goal':g.toJson(),'deletedAt':DateTime.now().toIso8601String()});goals.removeWhere((x)=>x.id==g.id);});
+           await persist(route:WaffraFinanceRoute.goalCreateEditDeleteRestore);
+          }
+         }
+        }
+
+ }
  Widget goalsPage(){
   final target=goals.fold<double>(0,(v,g)=>v+g.target);
   final saved=goals.fold<double>(0,(v,g)=>v+g.saved);
@@ -10140,29 +10160,44 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         WaffraText(g.target<=0?(waffraIsEnglish?'Open-ended savings':'ادخار مفتوح'):(waffraIsEnglish?'Target: ${cash(g.target)}':'المستهدف: ${cash(g.target)}'),
          style:const TextStyle(fontSize:12)),
        ])),
-       PopupMenuButton<String>(onSelected:WaffraHaptics.selection((v)async {
-        if(v=='edit'){await this.editGoal(g);return;}
-        if(v=='release'){await releaseGoalFunds(g);return;}
-         if(v=='delete'){
-         final linked=g.saved>0||entries.any((e)=>e.category==g.name);
-         final yes=await confirmDeletion(waffraIsEnglish?'Delete savings goal?':'حذف هدف الادخار',
-          waffraGoalDeleteWarning(g.name,linked,waffraIsEnglish));
-         if(yes==true&&mounted){
-          if(_lastFinanceAuthorityRead?.source==
-             WaffraRuntimeFinanceBackend.verifiedEncrypted){
-           await _deleteVerifiedModule(
-            module:WaffraFinanceModule.goals,displayed:g.toJson());
-          }else{
-           setState((){deletedGoals.add({'goal':g.toJson(),'deletedAt':DateTime.now().toIso8601String()});goals.removeWhere((x)=>x.id==g.id);});
-           await persist(route:WaffraFinanceRoute.goalCreateEditDeleteRestore);
-          }
-         }
-        }
-       }),itemBuilder:(_)=>[
-         PopupMenuItem(value:'edit',child:WaffraText(waffraIsEnglish?'Edit goal':'تعديل الهدف')),
-         if(g.saved>0)PopupMenuItem(value:'release',child:WaffraText(waffraIsEnglish?'Release savings':'سحب من الهدف')),
-         PopupMenuItem(value:'delete',child:WaffraText(waffraIsEnglish?'Delete goal':'حذف الهدف'))]),
+       const SizedBox(width:1),
       ]),
+      ExpansionTile(
+       key:PageStorageKey<String>('waffra-goal-quick-actions-'+g.id),
+       initiallyExpanded:false,
+       tilePadding:EdgeInsets.zero,
+       childrenPadding:const EdgeInsets.only(bottom:8),
+       leading:const Icon(Icons.bolt_outlined,color:emerald,size:20),
+       title:WaffraText(waffraIsEnglish?'Quick actions':'إجراءات سريعة',
+        style:const TextStyle(fontSize:13,fontWeight:FontWeight.w700)),
+       children:[
+        Wrap(spacing:8,runSpacing:8,alignment:WrapAlignment.start,children:[
+         OutlinedButton.icon(
+          onPressed:WaffraHaptics.tap(()=>unawaited(_handleGoalCardAction(g,'edit'))),
+          icon:const Icon(Icons.edit_outlined,size:17),
+          label:WaffraText(waffraIsEnglish?'Edit':'تعديل')),
+         if(g.saved>0)OutlinedButton.icon(
+          onPressed:WaffraHaptics.tap(()=>unawaited(_handleGoalCardAction(g,'release'))),
+          icon:const Icon(Icons.savings_outlined,size:17),
+          label:WaffraText(waffraIsEnglish?'Release savings':'سحب المدخرات')),
+         OutlinedButton.icon(
+          onPressed:WaffraHaptics.tap(()=>unawaited(_handleGoalCardAction(g,'delete'))),
+          icon:const Icon(Icons.delete_outline_rounded,color:Colors.deepOrange,size:17),
+          label:WaffraText(waffraIsEnglish?'Delete':'حذف')),
+        ]),
+        SwitchListTile.adaptive(
+         key:Key('waffra-goal-active-switch-'+g.id),
+         contentPadding:EdgeInsets.zero,
+         title:WaffraText(waffraIsEnglish?'Goal enabled':'تفعيل الهدف'),
+         subtitle:WaffraText(g.active?
+          (waffraIsEnglish?'Active':'مفعّل'):
+          (waffraIsEnglish?'Paused — savings preserved':'متوقف مؤقتًا والمدخرات محفوظة')),
+         activeTrackColor:emerald,
+         value:g.active,
+         onChanged:WaffraHaptics.selection((enabled)=>
+          unawaited(setGoalActive(g,enabled)))),
+       ],
+      ),
       if(g.dueDate!=null)Padding(padding:const EdgeInsets.only(top:8),
        child:Row(children:[
         const Icon(Icons.event_outlined,size:16,color:emerald),
