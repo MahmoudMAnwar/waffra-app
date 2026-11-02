@@ -111,7 +111,7 @@ class WaffraCenteredDropdownFormField<T> extends FormField<T> {
             );
             if(choice==null||!field.mounted)return;
             field.didChange(choice.value);
-            onChanged(choice.value);
+            onChanged?.call(choice.value);
           },
           child:InputDecorator(
             isEmpty:field.value==null,
