@@ -381,7 +381,8 @@ abstract final class GoalWalletHealthAudit {
    if(goal.id.trim().isEmpty||!ids.add(goal.id)) {
     issues.add('duplicate_or_missing_goal_id');
    }
-   if(goal.targetMinor<=0||goal.savedMinor<0) {
+   // Zero target is a valid open-ended savings wallet, not corrupt finance data.
+   if(goal.targetMinor<0||goal.savedMinor<0) {
     issues.add('invalid_goal_amount');
     continue;
    }
