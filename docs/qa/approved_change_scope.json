@@ -1,12 +1,13 @@
 {
   "contract_version": 1,
-  "change_id": "M383-M384-M385-M386",
+  "change_id": "M383-M384-M385-M386-M387",
   "human_scope_review": "REQUIRED; only user/project owner can approve whether claims match requested change; manifest author cannot grant approval",
   "user_requested_changes": [
     "M383: reduce total main Android APK and Play AAB build time by independent parallel builds while preserving source and signing safety.",
     "M384: restore existing counted top-corner attachment badge on Arabic and English transaction cards without altering existing user photos.",
     "M385: forbid any change to pre-existing app code and accepted features that was not explicitly requested, with a fail-closed PR scope audit.",
-    "M386: resolve observed M274 Android emulator CI startup failure caused by Pixel AVD needing 7372 MB while runner had only 5911 MB; preserve real UI tap coverage."
+    "M386: resolve observed M274 Android emulator CI startup failure caused by Pixel AVD needing 7372 MB while runner had only 5911 MB; preserve real UI tap coverage.",
+    "M387: fix the second M274 Android emulator UI smoke failure after Android boot and first tap test pass, by compiling the temporary APK before launching the AVD and lowering runner resource contention, without skipping tap tests."
   ],
   "allowed_changed_files": [
     ".github/CODEOWNERS",
@@ -67,7 +68,7 @@
     ],
     ".github/workflows/m274-production-ui-golden.yml": [
       {
-        "start": "      - name: Run real Android-engine tap sequence on emulator\n",
+        "start": "      - name: Syntax-check Android emulator test runner\n",
         "end": null
       }
     ]
