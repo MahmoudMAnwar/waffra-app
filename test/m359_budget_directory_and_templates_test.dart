@@ -4,11 +4,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_budget_template_catalog.dart';
 
 void main() {
-  test('M359: 24 independent budget templates have unique names without category links', () {
-    expect(waffraBudgetStarterTemplates.length, 24);
+  test('M359/M383: 62 independent budget templates have unique names without category links', () {
+    expect(waffraBudgetStarterTemplates.length, 62);
+    expect(waffraBudgetTemplateGroups.length, 9);
+    final groupIds=waffraBudgetTemplateGroups.map((g)=>g.id).toSet();
+    expect(groupIds.length, 9);
     final namesAr = <String>{};
     final namesEn = <String>{};
     for (final template in waffraBudgetStarterTemplates) {
+      expect(groupIds.contains(template.group), isTrue);
       expect(template.nameAr.trim(), isNotEmpty);
       expect(template.nameEn.trim(), isNotEmpty);
       expect(namesAr.add(template.nameAr), isTrue);
@@ -41,7 +45,11 @@ void main() {
     expect(source, contains('waffraSearchAny('));
     expect(source, contains('waffraNamedBudgetSpent('));
     expect(source, contains('editBudgetForCategory(b)'));
-    expect(source, contains('setNamedBudgetActive(b,!b.budgetActive)'));
+    expect(source, contains('setNamedBudgetActive(b,enabled)'));
+    expect(source, contains("'waffra-budget-active-'"));
+    expect(source, contains("'waffra-budget-details-'"));
+    expect(source, contains("if(view!='mine')"));
+    expect(source, contains("if(view!='suggested')"));
     expect(source, contains('deleteNamedBudget(b)'));
     expect(source, contains('waffraBudgetStarterTemplates'));
     expect(source, contains('suggestedName:t.name(waffraIsEnglish)'));
