@@ -75,7 +75,11 @@ void main(){
  });
 
  test('M397 linking budgets is metadata-only and offers create/manage',(){
-  expect(main,contains('latest.single.withBudget(selected.id)'));
+  expect(main,contains('entries[index]=entries[index].withBudget(selected.id)'));
+  expect(main,contains('latest.single.amount!=old.amount'));
+  expect(main,contains('latest.single.date!=old.date'));
+  expect(main,contains('latest.single.category!=old.category'));
+  expect(main,contains('latest.single.receiptPath!=old.receiptPath'));
   expect(main,contains("operation:'retroactive-opt-in-budget-link'"));
   expect(main,contains('showBudgetsDirectorySheet()'));
   expect(main,contains('final id=await chooseBudgetCategory();'));
