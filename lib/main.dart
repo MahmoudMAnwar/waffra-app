@@ -42,6 +42,7 @@ import 'waffra_phone_country_codes.dart';
 import 'waffra_google_phone_field.dart';
 import 'waffra_country_first_run_page.dart';
 import 'waffra_regional_copy.dart';
+import 'waffra_saudi_release.dart';
 import 'waffra_search.dart';
 import 'waffra_balance_art.dart';
 import 'waffra_validators.dart';
@@ -1077,7 +1078,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     if(!{'light','dark','system'}.contains(appearance))appearance='light';
     dark=appearance=='dark'||(appearance=='system'&&WidgetsBinding.instance.platformDispatcher.platformBrightness==Brightness.dark);
     profile=u;
-    googleFirstRunSetup=waffraGoogleProfileReadyForCountrySetup(u)&&
+    googleFirstRunSetup=!WaffraSaudiRelease.enabled&&
+     waffraGoogleProfileReadyForCountrySetup(u)&&
       !(p.getBool(waffraCountrySetupKey(u!))??false);
     pinHash=p.getString('waffra_pin_sha256');
     locked=pinHash!=null;startupError=null;loading=false;
@@ -1113,7 +1115,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    phone:u.phone.trim().isNotEmpty?u.phone.trim():null,
   );
   final prefs=await SharedPreferences.getInstance();
-  final needsGoogleSetup=waffraGoogleProfileReadyForCountrySetup(u)&&
+  final needsGoogleSetup=!WaffraSaudiRelease.enabled&&
+   waffraGoogleProfileReadyForCountrySetup(u)&&
     !(prefs.getBool(waffraCountrySetupKey(u))??false);
   if(mounted)setState((){
    profile=u;showLogin=false;googleFirstRunSetup=needsGoogleSetup;
@@ -1393,7 +1396,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    ])))):
    locked?PinLockScreen(pinHash:pinHash!,onUnlock:()=>setState(()=>locked=false)):
    profile==null||showLogin?LoginScreen(onSave:saveUser):
-   googleFirstRunSetup?WaffraCountryFirstRunPage(
+   googleFirstRunSetup&&!WaffraSaudiRelease.enabled?WaffraCountryFirstRunPage(
      english:language=='en',onComplete:completeGoogleCountrySetup,
      onCountryConfirmed:setUiCountry):
    HomeScreen(key:ValueKey(language),profile:profile!,
@@ -4481,7 +4484,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      !parsed.requiresCurrencyReview&&money!=null&&money.currency=='SAR'&&
      (money.amount-parsed.amount!).abs()<0.00001;
   });
-  if(reliable||!WaffraOnDeviceQwen.shared.isReady){
+  if(!WaffraSaudiRelease.qwenForBankSms||reliable||
+     !WaffraOnDeviceQwen.shared.isReady){
    update((){
     messages=found;parsed=true;analyzingPaste=false;
     statusMessage=noTransactionWarning(input)??(waffraIsEnglish?
@@ -4535,7 +4539,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  void scheduleBankSmsAnalysis(
      BuildContext ctx,StateSetter update,String input){
   pasteTimer?.cancel();
-  WaffraOnDeviceQwen.shared.cancelCurrentGeneration();
+  if(WaffraSaudiRelease.qwenForBankSms)
+   WaffraOnDeviceQwen.shared.cancelCurrentGeneration();
   final revision=++pasteRevision;
   update((){
    parsed=false;analyzingPaste=input.trim().isNotEmpty;
@@ -5110,7 +5115,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
  Future<WaffraAiResult?> _reviewAiPastedBankMessages(
      BuildContext ctx,String source)async {
-  if(!WaffraOnDeviceQwen.shared.isReady||source.trim().isEmpty)return null;
+  if(!WaffraSaudiRelease.qwenForBankSms||
+     !WaffraOnDeviceQwen.shared.isReady||source.trim().isEmpty)return null;
   try{
    return await _withAiWorkProgress(
     'جاري الآن تحليل الرسائل بالذكاء الاصطناعي…',
@@ -5246,6 +5252,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
 
  Future<void> scanAndAddReceipt()async {
+  if(!WaffraSaudiRelease.receiptImageTransactionImport){
+   if(mounted)snack(context,waffraIsEnglish?
+    'Receipt scanning is temporarily unavailable in this release.':
+    'استخراج العمليات من الصور والفواتير غير متاح حاليًا.');
+   return;
+  }
   // Offline OCR itself needs its tiny Tesseract assets, not Qwen.
   // A slow/removed GGUF must not block the camera and image review.
   if(_receiptOcrAiOpening||!mounted)return;
@@ -11737,6 +11749,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    onAddRecurring:(candidate)=>recurringDialog(
     suggestedTitle:candidate.title,suggestedAmount:candidate.estimatedMonthly))));
  Future<void> chooseAppCurrency()async{
+  if(!WaffraSaudiRelease.userCurrencyChoice)return;
   final searchController=TextEditingController();
   String query='';
   try{
@@ -11844,7 +11857,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     hintText:waffraIsEnglish?'Find a setting':'ابحث داخل إعدادات حسابي')),
    const SizedBox(height:12),
    _accountSection(waffraIsEnglish?'App settings':'إعدادات التطبيق',Icons.settings_outlined,[
-    ListTile(
+    if(WaffraSaudiRelease.userCurrencyChoice)ListTile(
      key:const Key('waffra-app-base-currency-setting'),
      leading:const CircleAvatar(child:Icon(Icons.public_rounded,color:emerald)),
      title:WaffraText(waffraIsEnglish?'App currency by country':'عملة التطبيق حسب الدولة'),
@@ -11869,7 +11882,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ButtonSegment(value:'ar',label:Text('AR')),ButtonSegment(value:'en',label:Text('EN')),
      ],selected:{waffraLanguage.value},showSelectedIcon:false,
      onSelectionChanged:WaffraHaptics.selection((v)async{setState(()=>tab=0);await widget.onLanguage(v.first);}))),
-    ListTile(
+    if(WaffraSaudiRelease.userCountryChoice)ListTile(
      key:const Key('waffra-regional-arabic-setting'),
      leading:const Icon(Icons.public_outlined,color:emerald),
      title:WaffraText(waffraIsEnglish?'Country / Arabic wording':'البلد واللهجة العربية'),
@@ -12245,7 +12258,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           unawaited(_launchAddAction(()=>bulkSmsSheet(),fromMenu:true));
          })),
         const SizedBox(height:7),
-        _addMenuOption(
+        if(WaffraSaudiRelease.receiptImageTransactionImport)_addMenuOption(
          icon:Icons.document_scanner_outlined,
          label:waffraIsEnglish?'Scan receipt / image':'تصوير / استخراج فاتورة',
          onTap:WaffraHaptics.tapRequired((){
