@@ -240,7 +240,7 @@ PRIMARY KEY(vault_id,source_bucket,category_id))
 CREATE TABLE IF NOT EXISTS saving_goals(
 vault_id TEXT NOT NULL REFERENCES shadow_vaults(vault_id),
 goal_id TEXT NOT NULL,source_bucket TEXT NOT NULL,
-name TEXT NOT NULL,target_minor INTEGER NOT NULL CHECK(target_minor>0),
+name TEXT NOT NULL,target_minor INTEGER NOT NULL CHECK(target_minor>=0),
 saved_minor INTEGER NOT NULL CHECK(saved_minor>=0),
 deleted_at TEXT,source_json TEXT NOT NULL,
 PRIMARY KEY(vault_id,source_bucket,goal_id))
