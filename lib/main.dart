@@ -12076,7 +12076,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     ]))));
  Widget _borderedMenuChoice({
   Key? key,required Widget title,Widget? subtitle,Widget? leading,
-  required VoidCallback onTap,
+  required VoidCallback? onTap,
  })=>Padding(
   key:key,padding:const EdgeInsets.symmetric(vertical:5),
   child:Material(
