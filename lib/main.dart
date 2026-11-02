@@ -3158,6 +3158,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  static const tourTabs=WaffraTourPlan.tabs;
  static const tourTargetKeys=WaffraTourPlan.targetKeys;
  bool addFabExpanded=false;
+ final GlobalKey _fabFooterKey=GlobalKey(debugLabel:'waffra-fab-footer');
  bool quickActionsExpanded=false;
  bool _addActionOpening=false;
  bool _fabPressed=false;
@@ -12240,10 +12241,79 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        child:Transform.translate(offset:Offset((1-progress)*(waffraIsEnglish?26:-26),0),
         child:Transform.scale(scale:accountOpened?0.985+0.015*progress:1,child:child))),
       child:currentTab()))),
-    if(!accountOpened&&(tab==0||tab==1||tab==3||tab==4||goalsOpened))
+   ]),
+  // A fixed 58x58 FAB: pop-up menu is an independent body overlay.
+  // Never allow a menu width to change Scaffold's floating geometry.
+  floatingActionButtonLocation:WaffraDirectionalFabLocation(english:waffraIsEnglish),
+  floatingActionButtonAnimator:const WaffraStationaryFabAnimator(),
+  floatingActionButton:!ready||accountOpened||tab==2?null:SizedBox(
+   width:58,height:58,
+   child:
+    Material(
+      key:_tourKeys[1],
+      color:forest,elevation:7,
+     shadowColor:Colors.black26,
+     shape:const CircleBorder(),
+     child:InkWell(
+      customBorder:const CircleBorder(),
+      onTap:()async{
+     if(!_acceptFabTap())return;
+     HapticFeedback.lightImpact(); // Only accepted circular + tap triggers haptic feedback.
+     final tappedTab=tab;
+     setState(()=>_fabPressed=true);
+     // Give the press a short, visible response before presenting any menu.
+     await Future<void>.delayed(waffraMotion(165));
+     if(!mounted)return;
+     setState(()=>_fabPressed=false);
+     await Future<void>.delayed(waffraMotion(110));
+     if(!mounted||tab!=tappedTab)return;
+     setState(()=>addFabExpanded=!addFabExpanded);
+    },
+    splashFactory:NoSplash.splashFactory,
+    highlightColor:Colors.transparent,
+    child:AnimatedScale(
+     scale:_fabPressed?0.96:1.0,
+     duration:waffraMotion(220),
+     curve:Curves.easeOutCubic,
+     child:SizedBox(width:58,height:58,
+      child:AnimatedRotation(
+       duration:waffraMotion(320),
+       curve:Curves.easeInOutCubic,
+       turns:addFabExpanded?0.125:0,
+       child:const Icon(Icons.add,color:Colors.white,size:28)))),
+     )),
+   ),
+  // The notice reserves real layout height above the bottom footer.
+  // The transaction list and the floating + reposition instead of being
+  // covered by an overlay. The expanded + menu closes on feedback.
+  bottomNavigationBar:accountOpened?null:Column(key:_fabFooterKey,mainAxisSize:MainAxisSize.min,children:[
+   WaffraFooterNoticeHost(onNoticePresented:(){
+    if(mounted&&addFabExpanded)setState(()=>addFabExpanded=false);
+   }),
+   WaffraFooterNavigation(
+    selectedIndex:tab,
+    english:waffraIsEnglish,
+    onSelected:WaffraHaptics.selectionRequired((selected){
+     waffraDismissFooterNotice();
+     unawaited(selectFooter(selected));
+    }),
+   ),
+  ])),
+  if(addFabExpanded&&!accountOpened&&!tourActive)...[
+   Positioned.fill(
+    key:const Key('waffra-fullscreen-fab-blur'),
+    child:ClipRect(child:BackdropFilter(
+     filter:ui.ImageFilter.blur(sigmaX:9,sigmaY:9),
+     child:GestureDetector(
+      behavior:HitTestBehavior.opaque,
+      onTap:WaffraHaptics.tap(()=>setState(()=>addFabExpanded=false)),
+      child:ColoredBox(color:Colors.black.withValues(alpha:.24))))),
+   ),
+    if(addFabExpanded&&!accountOpened&&(tab==0||tab==1||tab==3||tab==4||goalsOpened))
      WaffraFabMenuAnchor(
       english:waffraIsEnglish,
       expanded:addFabExpanded,
+      bottom:(_fabFooterKey.currentContext?.size?.height??(90+MediaQuery.paddingOf(context).bottom))+86,
       menu:Column(mainAxisSize:MainAxisSize.min,
        crossAxisAlignment:waffraIsEnglish?CrossAxisAlignment.end:CrossAxisAlignment.start,
        children:[
@@ -12307,64 +12377,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ]
        ]),
      ),
-   ]),
-  // A fixed 58x58 FAB: pop-up menu is an independent body overlay.
-  // Never allow a menu width to change Scaffold's floating geometry.
-  floatingActionButtonLocation:WaffraDirectionalFabLocation(english:waffraIsEnglish),
-  floatingActionButtonAnimator:const WaffraStationaryFabAnimator(),
-  floatingActionButton:!ready||accountOpened||tab==2?null:SizedBox(
-   width:58,height:58,
-   child:
-    Material(
-      key:_tourKeys[1],
-      color:forest,elevation:7,
-     shadowColor:Colors.black26,
-     shape:const CircleBorder(),
-     child:InkWell(
+   Positioned(
+    left:waffraIsEnglish?null:16,
+    right:waffraIsEnglish?16:null,
+    bottom:(_fabFooterKey.currentContext?.size?.height??(90+MediaQuery.paddingOf(context).bottom))+16,
+    child:Material(color:forest,elevation:7,shape:const CircleBorder(),
+     child:InkWell(key:const Key('waffra-fab-menu-close'),
+      onTap:WaffraHaptics.tap(()=>setState(()=>addFabExpanded=false)),
       customBorder:const CircleBorder(),
-      onTap:()async{
-     if(!_acceptFabTap())return;
-     HapticFeedback.lightImpact(); // Only accepted circular + tap triggers haptic feedback.
-     final tappedTab=tab;
-     setState(()=>_fabPressed=true);
-     // Give the press a short, visible response before presenting any menu.
-     await Future<void>.delayed(waffraMotion(165));
-     if(!mounted)return;
-     setState(()=>_fabPressed=false);
-     await Future<void>.delayed(waffraMotion(110));
-     if(!mounted||tab!=tappedTab)return;
-     setState(()=>addFabExpanded=!addFabExpanded);
-    },
-    splashFactory:NoSplash.splashFactory,
-    highlightColor:Colors.transparent,
-    child:AnimatedScale(
-     scale:_fabPressed?0.96:1.0,
-     duration:waffraMotion(220),
-     curve:Curves.easeOutCubic,
-     child:SizedBox(width:58,height:58,
-      child:AnimatedRotation(
-       duration:waffraMotion(320),
-       curve:Curves.easeInOutCubic,
-       turns:addFabExpanded?0.125:0,
-       child:const Icon(Icons.add,color:Colors.white,size:28)))),
-     )),
+      child:const SizedBox(width:58,height:58,
+       child:Icon(Icons.close_rounded,color:Colors.white,size:28)))),
    ),
-  // The notice reserves real layout height above the bottom footer.
-  // The transaction list and the floating + reposition instead of being
-  // covered by an overlay. The expanded + menu closes on feedback.
-  bottomNavigationBar:accountOpened?null:Column(mainAxisSize:MainAxisSize.min,children:[
-   WaffraFooterNoticeHost(onNoticePresented:(){
-    if(mounted&&addFabExpanded)setState(()=>addFabExpanded=false);
-   }),
-   WaffraFooterNavigation(
-    selectedIndex:tab,
-    english:waffraIsEnglish,
-    onSelected:WaffraHaptics.selectionRequired((selected){
-     waffraDismissFooterNotice();
-     unawaited(selectFooter(selected));
-    }),
-   ),
-  ])),
+  ],
   if(tourActive&&tourTargetReady)Positioned.fill(child:tourOverlay()),
   // Outside Scaffold so the loading status never rebuilds the finance list.
   Positioned.fill(child:WaffraSmoothConfirmationOverlay(
@@ -12416,15 +12440,17 @@ class WaffraDeletedItemsButton extends StatelessWidget {
 class WaffraFabMenuAnchor extends StatelessWidget {
  const WaffraFabMenuAnchor({
   super.key,required this.english,required this.expanded,required this.menu,
+  this.bottom,
  });
  final bool english;
  final bool expanded;
  final Widget menu;
+ final double? bottom;
 
  @override Widget build(BuildContext context)=>Positioned(
   left:english?null:16,
   right:english?16:null,
-  bottom:86, // FAB: 58 high + 16 bottom margin + 12 clear gap
+  bottom:bottom??86, // Full-screen overlay anchored above actual footer.
   child:IgnorePointer(
    ignoring:!expanded,
    child:AnimatedSwitcher(
