@@ -225,6 +225,12 @@ extension WaffraBudgetDirectory on _HomeScreenState {
            })),
          ]),
          children:[
+         if(!b.alertsEnabled)Padding(
+          padding:const EdgeInsets.only(bottom:8),
+          child:WaffraText(waffraIsEnglish?
+           'Percentage alerts off — edit budget to enable':
+           'تنبيهات النسبة متوقفة — فعّلها من تعديل الميزانية',
+           style:const TextStyle(fontSize:12,color:Colors.grey))),
          const SizedBox(height:8),
          LinearProgressIndicator(value:ratio,minHeight:7,
           color:spent>b.budget?Colors.deepOrange:emerald,

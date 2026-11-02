@@ -32,6 +32,30 @@ class WaffraFinancialInsights {
   return (current-previous)/previous*100;
  }
 
+ /// Use each saved budget's own user-selected threshold everywhere.
+ static bool budgetThresholdVisible({
+  required double spent,required double limit,
+  required int alertPercent,required bool enabled,
+ })=>enabled&&spent.isFinite&&limit.isFinite&&limit>0&&
+  alertPercent>=1&&alertPercent<=100&&
+  spent>=limit*alertPercent/100;
+
+ /// Crossing detection prevents repeated alerts on successive expenses.
+ /// The 100% limit is always a second milestone while alerts are enabled.
+ static int crossedBudgetThreshold({
+  required double previousSpent,required double spent,
+  required double limit,required int alertPercent,required bool enabled,
+ }) {
+  if(!budgetThresholdVisible(spent:spent,limit:limit,
+      alertPercent:alertPercent,enabled:enabled)||
+      !previousSpent.isFinite)return 0;
+  var crossed=0;
+  for(final stage in <int>{alertPercent,100}.toList()..sort()){
+   if(previousSpent<limit*stage/100&&spent>=limit*stage/100)crossed=stage;
+  }
+  return crossed;
+ }
+
  static int budgetAlertStage(double spent,double limit){
   if(limit<=0)return 0;
   final percent=spent/limit*100;

@@ -111,6 +111,13 @@ class WaffraFreshModulesRepository {
         if(data['active'] != null && data['active'] is! bool){
           throw ArgumentError('Invalid goal active flag.');
         }
+        if(data['progressAlertsEnabled']!=null&&
+           data['progressAlertsEnabled'] is! bool ||
+           data['progressAlertPercent']!=null&&
+           (data['progressAlertPercent'] is! int||
+            !const [50,60,70,75,80,85,90,95,100].contains(data['progressAlertPercent']))){
+          throw ArgumentError('Invalid goal progress alert.');
+        }
         break;
       case WaffraFinanceModule.recurring:
         if (data['income'] is! bool) throw ArgumentError('Recurring type is mandatory.');

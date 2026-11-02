@@ -352,9 +352,11 @@ class BudgetCategory {
 /// Budgets live in their own finance collection, not in category hierarchy.
 class WaffraNamedBudget extends BudgetCategory {
  final bool deleted;
+ /// Separate from budget activation: user-controlled percentage alerts.
+ final bool alertsEnabled;
  WaffraNamedBudget({required String id,required String name,
   required double budget,int alertPercent=80,bool budgetActive=true,
-  this.deleted=false}):super(
+  this.alertsEnabled=true,this.deleted=false}):super(
    id:id,name:name,icon:'wallet',color:0xFF087A54,income:false,
    budget:budget,alertPercent:alertPercent,budgetActive:budgetActive,
    budgetLabel:name,origin:'user');
@@ -374,32 +376,73 @@ class WaffraNamedBudget extends BudgetCategory {
  factory WaffraNamedBudget.fromJson(Map<String,dynamic> raw) {
   final id=raw['id'],name=raw['name'],amount=raw['budget'];
   final alert=raw['alertPercent'],active=raw['budgetActive'];
+  final alerts=raw['alertsEnabled'];
   if(id is! String||id.trim().isEmpty||id.length>256||
    name is! String||name.trim().isEmpty||name.runes.length>80||
    amount is! num||!amount.isFinite||amount<=0||
    alert is! int||alert<1||alert>100||active is! bool||
-   (raw.containsKey('deleted')&&raw['deleted'] is! bool)){
+   (raw.containsKey('deleted')&&raw['deleted'] is! bool)||
+   (raw.containsKey('alertsEnabled')&&alerts is! bool)){
    throw const FormatException('Invalid standalone named budget.');
   }
   return WaffraNamedBudget(id:id,name:name,budget:amount.toDouble(),
-   alertPercent:alert,budgetActive:active,deleted:raw['deleted']==true);
+   alertPercent:alert,budgetActive:active,
+   alertsEnabled:alerts!=false,deleted:raw['deleted']==true);
  }
  @override Map<String,dynamic> toJson()=>{
   'id':id,'name':name,'parentId':'','income':false,
   'budget':budget,'budgetActive':budgetActive,
-  'alertPercent':alertPercent,'deleted':deleted,
+  'alertPercent':alertPercent,'alertsEnabled':alertsEnabled,
+  'deleted':deleted,
  };
  @override WaffraNamedBudget copy({String? name,String? icon,int? color,
   double? budget,int? alertPercent,String? parentId,
   String? budgetLabel,bool clearBudget=false,bool? budgetActive,
   // Standalone budgets are not categories; keep inherited API compatible
   // without persisting the independent category-activation flag on budgets.
-  bool? categoryActive,bool? deleted})=>WaffraNamedBudget(
+  bool? categoryActive,bool? alertsEnabled,bool? deleted})=>WaffraNamedBudget(
     id:id,name:budgetLabel??name??this.name,budget:budget??this.budget,
     alertPercent:alertPercent??this.alertPercent,
     budgetActive:budgetActive??this.budgetActive,
+    alertsEnabled:alertsEnabled??this.alertsEnabled,
     deleted:deleted??this.deleted);
 }
+
+
+/// Independent percentage alerts: the budget remains active even when muted.
+Widget waffraBudgetAlertControls({
+ required bool enabled,required int percent,required bool english,
+ required ValueChanged<bool> onEnabled,required ValueChanged<int> onPercent,
+ bool goal=false,
+})=>Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+ SwitchListTile.adaptive(
+  key:Key(goal?'waffra-goal-alert-toggle':'waffra-budget-alert-toggle'),
+  contentPadding:EdgeInsets.zero,
+  title:WaffraText(goal?
+   (english?'Goal progress alerts':'تنبيهات نسبة ادخار الهدف'):
+   (english?'Budget percentage alerts':'تنبيهات نسبة الميزانية')),
+  subtitle:WaffraText(goal?
+   (english?'Notify when savings reach the selected percentage':
+    'نبهني عند وصول الادخار للنسبة المحددة'):
+   (english?'Alert me after spending reaches the selected percentage':
+    'نبهني عند الوصول للنسبة اللي أحددها')),
+  value:enabled,activeTrackColor:emerald,
+  onChanged:WaffraHaptics.selection(onEnabled)),
+ if(enabled)...[
+  const SizedBox(height:8),
+  WaffraCenteredDropdownFormField<int>(
+   key:ValueKey('waffra-${goal?'goal':'budget'}-alert-percent-$percent'),
+   initialValue:percent,isExpanded:true,
+   decoration:InputDecoration(
+    labelText:english?'Notify at':'التنبيه عند نسبة',
+    border:const OutlineInputBorder()),
+   items:(<int>{50,60,70,75,80,85,90,95,100,percent}.toList()..sort()).map((value)=>
+    DropdownMenuItem<int>(value:value,child:WaffraText('$value٪'))).toList(),
+   onChanged:WaffraHaptics.selection((value){
+    if(value!=null)onPercent(value);
+   })),
+ ],
+]);
 
 /// A budget picker is not part of transaction entry until the user has at
 /// least one active named budget. Paused and archived budgets are retained
@@ -455,26 +498,42 @@ bool waffraCanAssignManualCategory(Iterable<BudgetCategory> values,
 class SavingGoal {
  final String id,name;
  final double target,saved;
+ /// Optional savings progress alerts, independent of goal active state.
+ final bool progressAlertsEnabled;
+ final int progressAlertPercent;
  /// Pausing a goal does not spend, delete or change its saved money.
  final bool active;
  /// Deadline alone never posts money; payment needs user confirmation.
  final DateTime? dueDate;
  SavingGoal({required this.id,required this.name,required this.target,
-  required this.saved,this.dueDate,this.active=true});
+  required this.saved,this.dueDate,this.active=true,
+  this.progressAlertsEnabled=false,this.progressAlertPercent=80});
  SavingGoal copy({String? name,double? target,double? saved,DateTime? dueDate,
-  bool? active})=>
+  bool? active,bool? progressAlertsEnabled,int? progressAlertPercent})=>
   SavingGoal(id:id,name:name??this.name,target:target??this.target,
    saved:saved??this.saved,dueDate:dueDate??this.dueDate,
-   active:active??this.active);
+   active:active??this.active,
+   progressAlertsEnabled:progressAlertsEnabled??this.progressAlertsEnabled,
+   progressAlertPercent:progressAlertPercent??this.progressAlertPercent);
  Map<String,dynamic> toJson()=>{'id':id,'name':name,'target':target,'saved':saved,
-  'active':active,
+  'active':active,'progressAlertsEnabled':progressAlertsEnabled,
+  'progressAlertPercent':progressAlertPercent,
   if(dueDate!=null)'dueDate':dueDate!.toIso8601String()};
- factory SavingGoal.fromJson(Map<String,dynamic> j)=>SavingGoal(
+ factory SavingGoal.fromJson(Map<String,dynamic> j){
+  if(j['progressAlertsEnabled']!=null&&j['progressAlertsEnabled'] is! bool ||
+     j['progressAlertPercent']!=null&&
+      (j['progressAlertPercent'] is! int||
+       !(const [50,60,70,75,80,85,90,95,100]).contains(j['progressAlertPercent']))){
+   throw const FormatException('Invalid goal progress alert setting.');
+  }
+  return SavingGoal(
   id:'${j['id']??newId()}',name:'${j['name']??''}',
   target:(j['target'] as num).toDouble(),
   saved:(j['saved'] as num?)?.toDouble()??0,
   dueDate:DateTime.tryParse('${j['dueDate']??''}'),
-  active:!j.containsKey('active')||j['active']==true);
+  active:!j.containsKey('active')||j['active']==true,
+  progressAlertsEnabled:j['progressAlertsEnabled']==true,
+  progressAlertPercent:j['progressAlertPercent'] as int? ??80);
 }
 class SavingChallenge {
  final String id,title;final double dailyAmount;
@@ -6255,21 +6314,33 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }));
   }finally{controller.dispose();}
  }
+ Future<void> _requestPercentageAlertPermission()async{
+  try{
+   final granted=await WaffraReminders.requestPermission();
+   if(!granted&&mounted)snack(context,waffraIsEnglish?
+    'In-app alerts are on; allow notifications in Android Settings for lock-screen alerts.':
+    'تنبيهات التطبيق مفعلة. فعّل إشعارات وفرة من إعدادات أندرويد عشان توصلك خارج التطبيق.');
+  }catch(error){
+   debugPrint('Optional percentage notification permission unavailable: $error');
+  }
+ }
  Future<void> budgetAlert(MoneyEntry entry,double previousSpent)async {
   if(entry.income)return;
   final budgets=namedBudgets.where((b)=>b.budget>0&&
-    b.budgetActive&&!b.deleted&&b.id==entry.budgetId).toList();
+    b.budgetActive&&b.alertsEnabled&&!b.deleted&&b.id==entry.budgetId).toList();
   if(budgets.length!=1)return;
   final category=budgets.single;
   final spent=waffraNamedBudgetSpent(entries,categories,category,entry.date);
-  final stages=<int>{category.alertPercent,100}.toList()..sort();
-  int? crossed;
-  for(final stage in stages){
-   if(previousSpent<category.budget*stage/100&&spent>=category.budget*stage/100)crossed=stage;
-  }
-  if(crossed==null||!mounted)return;
+  final crossed=WaffraFinancialInsights.crossedBudgetThreshold(
+   previousSpent:previousSpent,spent:spent,limit:category.budget,
+   alertPercent:category.alertPercent,enabled:category.alertsEnabled);
+  if(crossed==0||!mounted)return;
+  try{await WaffraReminders.showBudgetThreshold(
+   budgetId:category.id,stage:crossed,english:waffraIsEnglish);}
+  catch(error){debugPrint('Budget notification unavailable: $error');}
+  if(!mounted)return;
   await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
-   title:WaffraText(waffraIsEnglish?'Budget alert':'⚠️ تنبيه ميزانية القسم'),
+   title:WaffraText(waffraIsEnglish?'Budget alert':'⚠️ تنبيه الميزانية'),
    content:WaffraText(waffraIsEnglish?
     '${category.name} has reached ${(spent/category.budget*100).round()}% of the budget (crossed $crossed%). Spent ${cash(spent)} out of ${cash(category.budget)}.':
     'صرف «${category.name}» ${(spent/category.budget*100).round()}٪ (حد التنبيه $crossed٪). ${cash(spent)} من ${cash(category.budget)}.'),
@@ -7570,9 +7641,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final amount=TextEditingController(text:selected.budget>0?
    formatWaffraEditAmount(selected.budget):'');
   var alert=selected.alertPercent;
+  var alertsEnabled=selected is WaffraNamedBudget?selected.alertsEnabled:true;
   String? nameError,amountError;
   try{
-   final edited=await showWaffraDialog<({String label,double amount,int alert})>(
+   final edited=await showWaffraDialog<({String label,double amount,int alert,bool alertsEnabled})>(
     context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
      title:WaffraText(waffraIsEnglish?'Set named budget':'تحديد ميزانية باسم'),
      scrollable:true,
@@ -7591,11 +7663,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        decoration:InputDecoration(labelText:waffraIsEnglish?'Monthly limit *':'الحد الشهري *',
         errorText:amountError,border:const OutlineInputBorder())),
       const SizedBox(height:12),
-      WaffraCenteredDropdownFormField<int>(initialValue:alert,
-       decoration:InputDecoration(labelText:waffraIsEnglish?'Budget alert at':'التنبيه عند نسبة'),
-       items:[50,60,70,75,80,85,90,95,100]
-        .map((n)=>DropdownMenuItem(value:n,child:WaffraText(n.toString()+'٪'))).toList(),
-       onChanged:WaffraHaptics.selection((n){if(n!=null)update(()=>alert=n);})),
+      waffraBudgetAlertControls(
+       enabled:alertsEnabled,percent:alert,english:waffraIsEnglish,
+       onEnabled:(value)=>update(()=>alertsEnabled=value),
+       onPercent:(value)=>update(()=>alert=value)),
      ]),
      actionsPadding:const EdgeInsets.fromLTRB(16,4,16,14),
      actions:[SizedBox(width:double.maxFinite,child:Row(children:[
@@ -7614,18 +7685,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         amountError=waffraAmountFieldError(amount.text);
        });
        if(nameError!=null||amountError!=null||value==null||value<=0)return;
-       Navigator.pop(ctx,(label:label,amount:value,alert:alert));
+       Navigator.pop(ctx,(label:label,amount:value,alert:alert,
+        alertsEnabled:alertsEnabled));
       }),child:WaffraText(waffraIsEnglish?'Save budget':'حفظ الميزانية',
        maxLines:1))),
      ]))],
     )));
    if(edited==null||!mounted)return;
+   if(edited.alertsEnabled&&!(selected is WaffraNamedBudget&&selected.alertsEnabled)){
+    await _requestPercentageAlertPermission();
+   }
+   if(!mounted)return;
    final live=namedBudgets.where((b)=>b.id==selected.id&&!b.deleted).toList();
    if(live.length!=1)return;
    setState((){
     final index=namedBudgets.indexWhere((b)=>b.id==selected.id);
     namedBudgets[index]=namedBudgets[index].copy(
-     name:edited.label,budget:edited.amount,alertPercent:edited.alert);
+     name:edited.label,budget:edited.amount,alertPercent:edited.alert,
+     alertsEnabled:edited.alertsEnabled);
     selectedNamedBudgetCategoryId=selected.id;
    });
    await _persistModuleOrReload(WaffraFinanceRoute.challengeAndBudgetUpdate,
@@ -7638,9 +7715,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final name=TextEditingController(text:suggestedName??'');
   final amount=TextEditingController();
   var alert=80;
+  var alertsEnabled=true;
   String? nameError,amountError;
   try{
-   final selected=await showWaffraDialog<({String name,double cap,int alert})>(
+   final selected=await showWaffraDialog<({String name,double cap,int alert,bool alertsEnabled})>(
     context:context,builder:(ctx)=>StatefulBuilder(
      builder:(ctx,update)=>AlertDialog(
       key:const Key('waffra-independent-budget-create'),
@@ -7661,15 +7739,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          labelText:waffraIsEnglish?'Monthly amount *':'الحد الشهري *',
          errorText:amountError,border:const OutlineInputBorder())),
        const SizedBox(height:12),
-       WaffraCenteredDropdownFormField<int>(initialValue:alert,
-        isExpanded:true,
-        decoration:InputDecoration(labelText:waffraIsEnglish?
-         'Notify at':'التنبيه عند نسبة'),
-        items:[50,60,70,75,80,85,90,95,100].map((v)=>
-         DropdownMenuItem(value:v,child:WaffraText('$v٪'))).toList(),
-        onChanged:WaffraHaptics.selection((v){
-         if(v!=null)update(()=>alert=v);
-        })),
+       waffraBudgetAlertControls(
+        enabled:alertsEnabled,percent:alert,english:waffraIsEnglish,
+        onEnabled:(value)=>update(()=>alertsEnabled=value),
+        onPercent:(value)=>update(()=>alert=value)),
       ]),
       actions:[
        TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
@@ -7685,17 +7758,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          amountError=waffraAmountFieldError(amount.text);
         });
         if(nameError!=null||amountError!=null||cap==null||cap<=0)return;
-        Navigator.pop(ctx,(name:text,cap:cap,alert:alert));
+        Navigator.pop(ctx,(name:text,cap:cap,alert:alert,
+         alertsEnabled:alertsEnabled));
        }),child:WaffraText(waffraIsEnglish?'Save budget':'حفظ الميزانية')),
       ],
      )));
    if(selected==null||!mounted)return null;
+   if(selected.alertsEnabled){
+    await _requestPercentageAlertPermission();
+   }
+   if(!mounted)return null;
    // Dialogs may be open while another budget operation finishes.
    if(namedBudgets.any((b)=>!b.deleted&&b.name.toLowerCase()==
       selected.name.toLowerCase()))return null;
    final id='budget:'+newId();
    setState(()=>namedBudgets.add(WaffraNamedBudget(
-    id:id,name:selected.name,budget:selected.cap,alertPercent:selected.alert)));
+    id:id,name:selected.name,budget:selected.cap,alertPercent:selected.alert,
+    alertsEnabled:selected.alertsEnabled)));
    final saved=await _persistModuleOrReload(
     WaffraFinanceRoute.challengeAndBudgetUpdate,
     operation:'standalone-budget-create');
@@ -7901,13 +7980,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       Expanded(child:_budgetFigure(spent>limit?(waffraIsEnglish?'Over budget':'التجاوز'):(waffraIsEnglish?'Remaining':'المتبقي'),
        (limit-spent).abs())), 
      ]),
-     if(spent>=limit*alertAt/100)Padding(
+     if(selected!=null&&selected.budgetActive&&selected.alertsEnabled&&
+       spent>=limit*alertAt/100)Padding(
       padding:const EdgeInsets.only(top:10),
       child:WaffraText(waffraIsEnglish?
        (spent>limit?'Monthly budget exceeded by ${cash(spent-limit)}.':spent==limit?'Monthly budget fully used.':'Budget warning: ${alertAt}% threshold reached.'):
        (spent>limit?'تجاوزت الميزانية الشهرية بمبلغ ${cash(spent-limit)}.':spent==limit?'استهلكت الميزانية الشهرية بالكامل.':'تنبيه الميزانية: وصلت إلى حد ${alertAt}٪.'),
        style:const TextStyle(color:Colors.deepOrange,fontSize:13))),
-     if(pace?.projectedOverBudget==true && spent<limit)
+     if(pace?.projectedOverBudget==true && spent<limit&&
+        (selected==null||(selected.budgetActive&&selected.alertsEnabled)))
       Padding(padding:const EdgeInsets.only(top:6),
        child:WaffraText(waffraIsEnglish?
          'At the current spending pace, this month may exceed the limit.':
@@ -8021,9 +8102,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final prev=DateTime(now.year,now.month-1);
   final prevTotal=sum(entries.where((e)=>!e.income&&e.date.year==prev.year&&e.date.month==prev.month),false);
   final delta=WaffraFinancialInsights.comparisonPercent(spent,prevTotal);
-  final warnings=namedBudgets.where((b)=>!b.deleted&&b.budget>0&&b.budgetActive&&
-   WaffraFinancialInsights.budgetAlertStage(
-    sum(monthExpenses.where((e)=>e.budgetId==b.id),false),b.budget)>=80).toList();
+  final warnings=namedBudgets.where((b)=>!b.deleted&&b.budget>0&&
+   WaffraFinancialInsights.budgetThresholdVisible(
+    spent:sum(monthExpenses.where((e)=>e.budgetId==b.id),false),
+    limit:b.budget,alertPercent:b.alertPercent,
+    enabled:b.budgetActive&&b.alertsEnabled)).toList();
   return Card(
    elevation:1.0,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(21)),
    child:Padding(padding:const EdgeInsets.all(15),child:Column(
@@ -9577,6 +9660,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   String selectedGoal=duplicate==null?'':'__other_goal__';
   bool attempted=false;
   bool noTarget=openEnded||(duplicate!=null&&duplicate.target<=0);
+  bool goalAlertsEnabled=duplicate?.progressAlertsEnabled??false;
+  int goalAlertPercent=duplicate?.progressAlertPercent??80;
   String? validateGoalName(){
    final issue=waffraGoalNameIssue(name.text,goals.map((g)=>g.name));
    if(issue=='required'||issue=='too_long')return waffraTextFieldError(name.text);
@@ -9691,6 +9776,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        hintText:waffraIsEnglish?'e.g. 25000':'مثال: 25000',
        errorText:attempted?waffraAmountFieldError(target.text):null,
        border:const OutlineInputBorder())),
+     if(!noTarget)...[
+      const SizedBox(height:12),
+      waffraBudgetAlertControls(
+       enabled:goalAlertsEnabled,percent:goalAlertPercent,
+       english:waffraIsEnglish,goal:true,
+       onEnabled:(value)=>updateGoal(()=>goalAlertsEnabled=value),
+       onPercent:(value)=>updateGoal(()=>goalAlertPercent=value)),
+     ],
     ]),
     actions:[
      TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
@@ -9700,12 +9793,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       final n=amountOfDisplay(target.text);
       if(selectedGoal.isEmpty||validateGoalName()!=null||
        (!noTarget&&(WaffraValidators.positiveAmount(target.text)!=null||n==null)))return;
-      Navigator.pop(ctx,SavingGoal(id:newId(),name:name.text.trim(),target:noTarget?0.0:n!,saved:0,dueDate:selectedDeadline));
+      Navigator.pop(ctx,SavingGoal(id:newId(),name:name.text.trim(),
+       target:noTarget?0.0:n!,saved:0,dueDate:selectedDeadline,
+       progressAlertsEnabled:!noTarget&&goalAlertsEnabled,
+       progressAlertPercent:goalAlertPercent));
      }),child:WaffraText(waffraIsEnglish?'Add goal':'إضافة الهدف')),
     ],
    )));
   disposeLater([name,target]);
   if(g!=null&&mounted){
+   if(g.progressAlertsEnabled){
+    await _requestPercentageAlertPermission();
+   }
+   if(!mounted)return;
    if(selectedGoal==otherGoal){
     final key=waffraNormalizeGoal(g.name);
     if(!allDefaultNames.contains(key)&&!customGoals.any((entry)=>waffraNormalizeGoal(entry)==key)){
@@ -9955,6 +10055,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    });
    if(!await _persistModuleOrReload(WaffraFinanceRoute.goalCreateEditDeleteRestore,
      operation:'goal-funding'))return;
+   final progressCrossed=WaffraFinancialInsights.crossedBudgetThreshold(
+    previousSpent:current.saved,spent:current.saved+n,
+    limit:current.target,alertPercent:current.progressAlertPercent,
+    enabled:current.active&&current.progressAlertsEnabled);
+   if(progressCrossed!=0){
+    try{await WaffraReminders.showGoalProgress(
+     goalId:current.id,stage:progressCrossed,english:waffraIsEnglish);}
+    catch(error){debugPrint('Goal progress notification unavailable: $error');}
+   }
    if(achieved&&mounted){
     await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
      title:WaffraText(waffraIsEnglish?'🎉 Goal achieved!':'🎉 مبروك!'),
@@ -9963,6 +10072,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       :'تم تحقيق هدف الادخار «${g.name}» بنجاح!'),
      actions:[FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
       child:WaffraText(waffraIsEnglish?'Great':'رائع'))]));
+   }else if(progressCrossed!=0&&mounted){
+    await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+     title:WaffraText(waffraIsEnglish?'Savings progress':'تنبيه تقدّم الادخار'),
+     content:WaffraText(waffraIsEnglish?
+      'Your savings reached $progressCrossed% of the target.':
+      'مدخراتك وصلت إلى $progressCrossed٪ من المبلغ المستهدف.'),
+     actions:[FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
+      child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))]));
    }
   }
  }

@@ -1,0 +1,13 @@
+WAFFRA M414 — OPTIONAL PERCENTAGE ALERT CONTROLS
+2026-11-02 | QA preview, independent feature PR
+
+* Independent budget-alert On/Off switch (distinct from budget activation) in both new/edit budget dialogs, shared across all entry points.
+* Existing percentages: 50,60,70,75,80,85,90,95,100. Historical valid nonpreset percentages are retained and available to change.
+* No in-app alerts, forecast warnings, snapshot warnings or local OS notifications when a budget percentage alert is disabled.
+* When enabled, alert only when an approved spending transaction crosses the selected percentage; 100% budget usage is an additional warning milestone, not a duplicate of the selected 100%.
+* Budget names and amounts never appear in the OS notification preview. Android permission explicitly requested when turning percentage alerts on; if permission denied the app dialog still works.
+* Savings goal progress percentage alert also has independent opt-in threshold, but only for goals with a numeric target. Old goals remain opt-out by default. Targetless/open savings never generate percentage alerts.
+* Recurring due reminders remain separate from expenditure percentages: no invented ratio without a target.
+* Legacy named budgets maintain original IDs, budget active state, alert percentage and historical ledger links. Missing alertsEnabled defaults true, missing goal progressAlertsEnabled defaults false.
+* No income/expense balance modifications, SQLCipher production cutover, server notifications or background banking listener.
+* QA: Flutter test suite (new test/m414_percentage_alert_controls_test.dart), migration strictness, snapshot, activation/toggle, threshold boundary, no-repeat, Android notification permission UX. Do not merge prior to green CI.
