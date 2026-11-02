@@ -119,7 +119,10 @@ void main(){
   expect(home,contains("Key('waffra-transaction-budget-unlinked-warning')"));
   expect(home,contains('if(entry.budgetId==null)'));
   expect(home,contains("Key('waffra-transaction-link-budget-action')"));
-  expect(home,contains('onLinkBudget:entry.income||entry.budgetId!=null?null:()'));
+  expect(home,contains('onLinkBudget:entry.income||entry.budgetId!=null||'));
+  expect(home,contains('!waffraHasSelectableBudget(namedBudgets)?null:(){'));
+  expect(home,contains('showBudgetInfo:entry.budgetId!=null||waffraHasSelectableBudget(namedBudgets)'));
+  // No budget exists: do not nag users about linking, but preserve history.
   expect(home,contains('unawaited(assignExistingExpenseToBudget(entry))'));
   expect(home,contains('b.budget>0&&b.budgetActive'));
   expect(home,contains('operation:\'retroactive-opt-in-budget-link\''));
