@@ -98,7 +98,8 @@ class NoUnrequestedChangesTest(unittest.TestCase):
         )
         with self.assertRaisesRegex(guard.ScopeViolation, "cannot change wholesale"):
             guard.audit_scope(manifest, {path, MANIFEST},
-                              {path: "jobs:\n  build: old"}, {path: "jobs:\n  build: new"},
+                              {path: "jobs:\n  build: old"},
+                              {path: "jobs:\n  build: new", MANIFEST: "scope"},
                               {path})
 
     def test_whole_workflow_bypass_in_other_job_is_blocked(self):
