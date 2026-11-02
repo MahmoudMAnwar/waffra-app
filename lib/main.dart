@@ -1269,6 +1269,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    floatingActionButtonTheme:const FloatingActionButtonThemeData(
     backgroundColor:forest,foregroundColor:Colors.white),
    dividerTheme:const DividerThemeData(color:Color(0xFFE1EDE6),thickness:.8),
+   expansionTileTheme:const ExpansionTileThemeData(
+    shape:RoundedRectangleBorder(side:BorderSide.none),
+    collapsedShape:RoundedRectangleBorder(side:BorderSide.none)),
   ),
   darkTheme:ThemeData(
    useMaterial3:true,
@@ -1355,6 +1358,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    floatingActionButtonTheme:const FloatingActionButtonThemeData(
     backgroundColor:forest,foregroundColor:Colors.white),
    dividerTheme:const DividerThemeData(color:Color(0xFF394039),thickness:.8),
+   expansionTileTheme:const ExpansionTileThemeData(
+    shape:RoundedRectangleBorder(side:BorderSide.none),
+    collapsedShape:RoundedRectangleBorder(side:BorderSide.none)),
   ),
   themeMode:appearance=='system'?ThemeMode.system:(appearance=='dark'?ThemeMode.dark:ThemeMode.light),
   themeAnimationDuration:waffraMotion(250),
@@ -10304,7 +10310,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        ])),
        const SizedBox(width:1),
       ]),
-      ExpansionTile(
+      Container(
+       decoration:BoxDecoration(
+        border:Border.all(color:emerald.withValues(alpha:.4)),
+        borderRadius:BorderRadius.circular(15)),
+       clipBehavior:Clip.antiAlias,
+       child:ExpansionTile(
        key:PageStorageKey<String>('waffra-goal-quick-actions-'+g.id),
        initiallyExpanded:false,
        tilePadding:EdgeInsets.zero,
@@ -10340,7 +10351,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          onChanged:WaffraHaptics.selection((enabled)=>
           unawaited(setGoalActive(g,enabled)))),
        ],
-      ),
+      )),
       if(g.dueDate!=null)Padding(padding:const EdgeInsets.only(top:8),
        child:Row(children:[
         const Icon(Icons.event_outlined,size:16,color:emerald),
@@ -10786,7 +10797,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         style:TextStyle(fontSize:11,color:r.active?Theme.of(context).hintColor:Colors.deepOrange)),
       ])),
      ]),
-     ExpansionTile(
+     Container(
+      decoration:BoxDecoration(
+       border:Border.all(color:emerald.withValues(alpha:.4)),
+       borderRadius:BorderRadius.circular(15)),
+      clipBehavior:Clip.antiAlias,
+      child:ExpansionTile(
       key:PageStorageKey<String>('waffra-recurring-quick-actions-'+r.id),
       initiallyExpanded:false,
       tilePadding:EdgeInsets.zero,
@@ -10817,7 +10833,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             unawaited(_setRecurringActiveFromCard(r,value)))))),
        ]),
       ],
-     ),
+     )),
      ])));
    }),
    if(recurring.isEmpty)Padding(padding:const EdgeInsets.only(top:18),
