@@ -2773,7 +2773,7 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
           color:dark?const Color(0xFF74D8A9):emerald),
          const SizedBox(width:6),
          Expanded(child:WaffraText(waffraIsEnglish?
-           'Original bank message (encrypted)':'تفاصيل الرسالة البنكية الأصلية (مشفّرة)',
+           'Original bank message':'الرسالة البنكية الأصلية',
            textAlign:TextAlign.start,
            style:TextStyle(fontSize:12,color:muted,fontWeight:FontWeight.w700))),
         ]),
@@ -7329,18 +7329,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     'العملية اتغيرت أو معرفها مكرر. حدّث الصفحة قبل المراجعة.');
    return;
   }
-  final budgets=namedBudgets.where((b)=>b.budget>0&&b.budgetActive&&!b.deleted)
-   .toList(growable:false);
-  if(budgets.isEmpty){
-   snack(context,waffraIsEnglish?'Create a budget first.':
-    'ضيف ميزانية الأول، وبعدها اربط العملية لو حابب.');
-   return;
-  }
+  // The picker must remain usable when there are no active budgets:
+  // create/manage are available without losing the source transaction.
   String budgetQuery='';
   final selected=await showWaffraDialog<BudgetCategory>(context:context,
    builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh){
-    final visible=budgets.where((b)=>waffraSearchAny(
-     [b.name,b.budgetLabel??'',b.displayName],budgetQuery))
+    final visible=namedBudgets.where((b)=>
+     b.budget>0&&b.budgetActive&&!b.deleted&&
+     waffraSearchAny([b.name,b.budgetLabel??'',b.displayName],budgetQuery))
      .toList(growable:false);
     return AlertDialog(
     title:WaffraText(waffraIsEnglish?'Choose a budget':'اختار الميزانية'),
@@ -7359,17 +7355,39 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ListView.builder(
      itemCount:visible.length,itemBuilder:(_,i){
       final b=visible[i];
-      return ListTile(
+      return Card(
        key:Key('waffra-retro-budget-option-'+b.id),
-       title:WaffraText(b.budgetLabel??b.name,maxLines:2),
-       subtitle:WaffraText(waffraIsEnglish?
-        'Optional, no category change':'اختياري، من غير تغيير القسم'),
-       onTap:WaffraHaptics.tap(()=>Navigator.pop(ctx,b)),
-      );
+       elevation:0,margin:const EdgeInsets.symmetric(vertical:4),
+       shape:RoundedRectangleBorder(
+        borderRadius:BorderRadius.circular(13),
+        side:BorderSide(color:emerald.withValues(alpha:.30))),
+       child:ListTile(
+        title:WaffraText(b.budgetLabel??b.name,maxLines:2),
+        trailing:const Icon(Icons.chevron_left_rounded,color:emerald),
+        onTap:WaffraHaptics.tap(()=>Navigator.pop(ctx,b)),
+       ));
      })),])),
-    actions:[TextButton(
-     onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
-     child:WaffraText(waffraIsEnglish?'Leave unassigned':'بدون ربط'))]);
+    actions:[
+     OutlinedButton.icon(
+      onPressed:WaffraHaptics.tap(()async{
+       final id=await chooseBudgetCategory();
+       if(!ctx.mounted||id==null)return;
+       final found=namedBudgets.where((b)=>b.id==id&&b.budgetActive&&!b.deleted).toList();
+       if(found.length==1)Navigator.pop(ctx,found.single);
+      }),
+      icon:const Icon(Icons.add_circle_outline_rounded,size:18),
+      label:WaffraText(waffraIsEnglish?'Create':'إنشاء ميزانية')),
+     OutlinedButton.icon(
+      onPressed:WaffraHaptics.tap(()async{
+       await showBudgetsDirectorySheet();
+       if(ctx.mounted)refresh((){});
+      }),
+      icon:const Icon(Icons.settings_outlined,size:18),
+      label:WaffraText(waffraIsEnglish?'Manage':'إدارة الميزانيات')),
+     TextButton(
+      onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
+      child:WaffraText(waffraIsEnglish?'Leave unassigned':'بدون ربط')),
+    ]);
    }));
   if(selected==null||!mounted)return;
   final ok=await showWaffraDialog<bool>(context:context,
@@ -7670,9 +7688,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        WaffraText(waffraIsEnglish?'Monthly budgets':'الميزانيات الشهرية',
         style:const TextStyle(fontWeight:FontWeight.bold,fontSize:17)),
        const SizedBox(height:3),
-       WaffraText(selected==null?
-        (waffraIsEnglish?'Sum of all created budgets':'إجمالي الميزانيات المضافة'):
-        (selected.budgetLabel??'ميزانية '+selected.displayName),
+       WaffraText(waffraIsEnglish?
+        '${allBudgets.length} saved budgets':'${allBudgets.length} ميزانية محفوظة',
         maxLines:2,style:const TextStyle(fontSize:12,color:Colors.grey)),
       ])),
       Icon(monthlyBudgetDetailsOpen?
@@ -7681,32 +7698,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      ]))),
     if(monthlyBudgetDetailsOpen)...[
     const SizedBox(height:12),
-    LayoutBuilder(builder:(context,box){
-     final compact=box.maxWidth<290||
-      MediaQuery.textScalerOf(context).scale(16)>22;
-     final label=WaffraText(selected==null?
-      (waffraIsEnglish?'Overall monthly budget':'الميزانية الشهرية العامة'):
-      (selected.budgetLabel??'ميزانية '+selected.displayName),
-      maxLines:2,style:const TextStyle(
-       fontWeight:FontWeight.bold,fontSize:16));
-     final add=TextButton.icon(
-      key:const Key('waffra-budget-create-action'),
-      style:TextButton.styleFrom(minimumSize:const Size(0,48),
-       padding:const EdgeInsets.symmetric(horizontal:8,vertical:8),
-       tapTargetSize:MaterialTapTargetSize.padded),
-      onPressed:WaffraHaptics.tap(()=>chooseBudgetCategory()),
-      icon:const Icon(Icons.add_rounded,size:18),
-      label:WaffraText(waffraIsEnglish?'Add budget':'إضافة ميزانية',
-       maxLines:2,style:const TextStyle(fontSize:13)));
-     return compact?
-      Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-       label,const SizedBox(height:6),
-       Align(alignment:AlignmentDirectional.centerStart,child:add),
-      ]):
-      Row(children:[
-       Expanded(child:label),const SizedBox(width:8),add,
-      ]);
-    }),
+    // No duplicate standalone selected-budget title beside the create button.
+    Align(alignment:AlignmentDirectional.centerStart,
+     child:Tooltip(
+      message:waffraIsEnglish?'Overall monthly budget':'الميزانية الشهرية العامة',
+      child:OutlinedButton.icon(
+       key:const Key('waffra-budget-create-action'),
+       style:OutlinedButton.styleFrom(minimumSize:const Size(0,48),
+        padding:const EdgeInsets.symmetric(horizontal:12,vertical:10)),
+       onPressed:WaffraHaptics.tap(()=>chooseBudgetCategory()),
+       icon:const Icon(Icons.add_rounded,size:18),
+       label:WaffraText(waffraIsEnglish?'Add budget':'إضافة ميزانية',
+        maxLines:2,style:const TextStyle(fontSize:13))))),
     const SizedBox(height:8),
     DropdownButtonFormField<String>(
      key:ValueKey('waffra-budget-status-filter-'+budgetStatusFilter),
@@ -9693,7 +9696,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           const SizedBox(width:8),
           Expanded(child:WaffraText(waffraIsEnglish
            ?'Savings are added to this goal only. Past transactions stay unchanged.'
-           :'يُحجز المبلغ في محفظة الأهداف ويُخصم من رصيدك المتاح دون احتسابه مصروفًا مرتين.',
+           :'يُضاف المبلغ لمحفظة الأهداف دون خصمه تلقائيًا من الرصيد الحالي. تظل العمليات السابقة كما هي.',
            style:const TextStyle(fontSize:12))),
          ])),
        ],
