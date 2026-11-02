@@ -10,7 +10,9 @@ abstract final class WaffraSaudiRelease {
  static const bool freeTextAskWaffra=false;
  static const bool userCountryChoice=false;
  static const bool userCurrencyChoice=false;
- static const bool globalCurrencyConverter=false;
+ static const bool globalCurrencyConverter=true;
+ /// Only bank-SMS foreign-FX previews remain deferred; Tools FX works normally.
+ static const bool bankSmsForeignCurrencyPreview=false;
  static const String countryIso='SA';
  static const String ledgerCurrency='SAR';
 }
