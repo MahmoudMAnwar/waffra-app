@@ -64,7 +64,7 @@
         "end": " /// Release an earmark"
       },
       {
-        "start": " Future<void> goalProgressAlert(",
+        "start": " /// Release an earmark",
         "end": " IconData goalIcon("
       },
       {
@@ -72,12 +72,12 @@
         "end": " DateTime nextRecurringDue("
       },
       {
-        "start": " Future<void> _setRecurringReminderFromCard(",
+        "start": " DateTime nextRecurringDue(",
         "end": " Widget recurringPage(){"
       },
       {
         "start": " Widget recurringPage(){",
-        "end": " Widget _"
+        "end": " Future<void> showWaffraFinancialCalendar()async{"
       }
     ],
     "lib/waffra_financial_insights.dart": [
