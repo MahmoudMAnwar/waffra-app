@@ -7463,7 +7463,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ListView.builder(
      itemCount:visible.length,itemBuilder:(_,i){
       final b=visible[i];
-      return ListTile(
+      return _borderedMenuChoice(
        key:Key('waffra-retro-budget-option-'+b.id),
        title:WaffraText(b.budgetLabel??b.name,maxLines:2),
        subtitle:WaffraText(waffraIsEnglish?
@@ -12075,10 +12075,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       fontSize:15,fontWeight:FontWeight.bold,color:Theme.of(context).brightness==Brightness.dark?Colors.white:forest)),
     ]))));
  Widget _borderedMenuChoice({
-  required Widget title,Widget? subtitle,Widget? leading,
+  Key? key,required Widget title,Widget? subtitle,Widget? leading,
   required VoidCallback onTap,
  })=>Padding(
-  padding:const EdgeInsets.symmetric(vertical:5),
+  key:key,padding:const EdgeInsets.symmetric(vertical:5),
   child:Material(
    color:Theme.of(context).cardColor,
    shape:RoundedRectangleBorder(
