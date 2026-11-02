@@ -5792,6 +5792,108 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         }
         pendingHash=h;
        }
+       // A budget is ALWAYS optional. Ask only on an otherwise-valid
+       // unassigned expense, once per save attempt and never for income.
+       // This UI changes the optional budgetId, NEVER the money record.
+       if(!income&&selectedBudgetId==null&&
+        waffraHasSelectableBudget(namedBudgets)){
+        final decision=await showWaffraDialog<String>(
+         context:sheetContext,builder:(dialog)=>AlertDialog(
+          title:WaffraText(waffraIsEnglish?
+           'Expense has no budget':'العملية غير مرتبطة بميزانية'),
+          content:WaffraText(waffraIsEnglish?
+           'Link this expense to a budget before saving?':
+           'تحب تربط المصروف بميزانية قبل الحفظ؟'),
+          actions:[
+           TextButton(onPressed:WaffraHaptics.tap(()=>
+            Navigator.pop(dialog,'cancel')),
+            child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+           OutlinedButton(onPressed:WaffraHaptics.tap(()=>
+            Navigator.pop(dialog,'save')),
+            child:WaffraText(waffraIsEnglish?
+             'Save without budget':'حفظ بدون ميزانية')),
+           FilledButton(onPressed:WaffraHaptics.tap(()=>
+            Navigator.pop(dialog,'link')),
+            child:WaffraText(waffraIsEnglish?
+             'Choose budget':'اختيار ميزانية')),
+          ]));
+        if(!sheetContext.mounted||decision==null||decision=='cancel'){
+         return;
+        }
+        if(decision=='link'){
+         String query='';
+         final chosen=await showWaffraDialog<String>(
+          context:sheetContext,
+          builder:(dialog)=>StatefulBuilder(builder:(dialog,refresh){
+           final available=namedBudgets.where((b)=>
+            b.budget>0&&b.budgetActive&&!b.deleted&&
+            waffraSearchAny([b.name,b.budgetLabel??''],query)).toList();
+           return AlertDialog(
+            title:WaffraText(waffraIsEnglish?
+             'Choose a budget':'اختر الميزانية'),
+            content:SizedBox(width:390,
+             height:min(380.0,MediaQuery.sizeOf(dialog).height*.5),
+             child:Column(children:[
+              TextField(
+               autofocus:true,textInputAction:TextInputAction.search,
+               onChanged:(value)=>refresh(()=>query=value),
+               decoration:InputDecoration(
+                prefixIcon:const Icon(Icons.search_rounded),
+                hintText:waffraIsEnglish?'Search budgets':'ابحث في الميزانيات',
+                border:OutlineInputBorder(
+                 borderRadius:BorderRadius.circular(13)))),
+              const SizedBox(height:8),
+              Expanded(child:ListView.builder(
+               itemCount:available.length,
+               itemBuilder:(_,index){
+                final budget=available[index];
+                return Card(elevation:0,
+                 shape:RoundedRectangleBorder(
+                  side:BorderSide(color:emerald.withValues(alpha:.32)),
+                  borderRadius:BorderRadius.circular(13)),
+                 child:ListTile(
+                  title:WaffraText(budget.name,maxLines:2),
+                  trailing:const Icon(Icons.chevron_left_rounded,color:emerald),
+                  onTap:WaffraHaptics.tap(()=>
+                   Navigator.pop(dialog,budget.id))));
+               })),
+             ])),
+            actions:[
+             TextButton(onPressed:WaffraHaptics.tap(()=>
+              Navigator.pop(dialog)),child:WaffraText(
+               waffraIsEnglish?'Back':'رجوع')),
+             OutlinedButton.icon(
+              onPressed:WaffraHaptics.tap(()async{
+               final added=await chooseBudgetCategory();
+               if(added!=null&&dialog.mounted){
+                Navigator.pop(dialog,added);
+               }
+              }),
+              icon:const Icon(Icons.add_rounded),
+              label:WaffraText(waffraIsEnglish?
+               'Create budget':'إنشاء ميزانية')),
+             OutlinedButton.icon(
+              onPressed:WaffraHaptics.tap(()async{
+               await showBudgetsDirectorySheet();
+               if(dialog.mounted)refresh((){});
+              }),
+              icon:const Icon(Icons.settings_outlined),
+              label:WaffraText(waffraIsEnglish?
+               'Manage':'إدارة')),
+            ]);
+          }));
+         if(!sheetContext.mounted||chosen==null)return;
+         final stillSelectable=namedBudgets.any((b)=>
+          b.id==chosen&&b.budgetActive&&!b.deleted&&b.budget>0);
+         if(!stillSelectable)return;
+         update((){
+          selectedBudgetId=chosen;
+          budgetMenuRevision++;
+         });
+         // Let the user see and confirm their selection in the original form.
+         return;
+        }
+       }
        submitTapped=true; // Synchronous gate: rapid taps cannot post twice.
        Navigator.pop(sheetContext,MoneyEntry(id:initial?.id??newId(),
         title:title.text.trim(),notes:sms?message.text:notes.text,
