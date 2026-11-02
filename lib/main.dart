@@ -9797,6 +9797,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    setState(()=>goals.add(g));
    if(!await _persistModuleOrReload(WaffraFinanceRoute.goalCreateEditDeleteRestore,
      operation:'goal-create'))return;
+   if(g.alertEnabled){
+    try{await WaffraReminders.requestPermission();}
+    catch(e){debugPrint('Goal notification permission not granted: $e');}
+   }
    // Creating an obligation is never automatic just because a date exists.
    bool linked=false,requestedRecurring=false;
    if(g.dueDate!=null&&g.target>0&&g.active&&mounted){
