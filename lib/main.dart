@@ -392,7 +392,9 @@ class WaffraNamedBudget extends BudgetCategory {
  @override WaffraNamedBudget copy({String? name,String? icon,int? color,
   double? budget,int? alertPercent,String? parentId,
   String? budgetLabel,bool clearBudget=false,bool? budgetActive,
-  bool? deleted})=>WaffraNamedBudget(
+  // Standalone budgets are not categories; keep inherited API compatible
+  // without persisting the independent category-activation flag on budgets.
+  bool? categoryActive,bool? deleted})=>WaffraNamedBudget(
     id:id,name:budgetLabel??name??this.name,budget:budget??this.budget,
     alertPercent:alertPercent??this.alertPercent,
     budgetActive:budgetActive??this.budgetActive,
