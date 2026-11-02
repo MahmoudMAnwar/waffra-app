@@ -7,6 +7,8 @@ import 'waffra_haptic_feedback.dart';
 import 'waffra_ai_finance_coach.dart';
 import 'waffra_ai_recorded_answers.dart';
 import 'waffra_ask_scope.dart';
+import 'waffra_saudi_release.dart';
+import 'waffra_saudi_ask.dart';
 import 'waffra_ondevice_qwen.dart';
 import 'waffra_ai_model_gate.dart';
 import 'waffra_display_currency.dart';
@@ -41,6 +43,13 @@ class WaffraSmartGoal {
   final String name;
   final double target,saved;
   const WaffraSmartGoal(this.name,this.target,this.saved);
+}
+
+class WaffraSmartBudget {
+ final String id,name;
+ final double limit,spent;
+ final bool active;
+ const WaffraSmartBudget(this.id,this.name,this.limit,this.spent,this.active);
 }
 
 class WaffraSmartRecurring {
@@ -235,6 +244,7 @@ class WaffraIllustration extends StatelessWidget {
 class WaffraSmartFeaturesPage extends StatefulWidget{
  final List<WaffraSmartEntry> entries;
  final List<WaffraSmartGoal> goals;
+ final List<WaffraSmartBudget> budgets;
  final List<WaffraSmartRecurring> recurring;
  final bool english;
  final bool embedded;
@@ -246,7 +256,8 @@ class WaffraSmartFeaturesPage extends StatefulWidget{
  final ValueChanged<String>? onNotice;
  const WaffraSmartFeaturesPage({super.key,required this.entries,
   required this.goals,required this.recurring,required this.english,
-  this.embedded=false,this.analysisBuilder,this.onNotice,this.tourHeadingKey});
+  this.embedded=false,this.analysisBuilder,this.onNotice,this.tourHeadingKey,
+  this.budgets=const <WaffraSmartBudget>[]});
  @override State<WaffraSmartFeaturesPage> createState()=>_WaffraSmartFeaturesPageState();
 }
 
@@ -277,7 +288,8 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
   final next=active==section?null:section;
   setState(()=>active=next);
   // A deleted model leaves its AI features visible but disabled.
-  if(section==4&&!WaffraOnDeviceQwen.shared.isReady)return;
+  if(section==4&&!WaffraSaudiRelease.enabled&&
+     !WaffraOnDeviceQwen.shared.isReady)return;
   final token=++_focusSerial;
   if(next==null)return;
   final reduced=MediaQuery.disableAnimationsOf(context);
@@ -299,6 +311,7 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
  double goalAmount=3000,challengePercent=20,existingEmergency=0;
  int emergencyMonths=3,projectIndex=0;
  String question='',answer='';
+ String? saudiQuestionId;
  bool aiBusy=false;
  String aiStatus='',aiAnalysis='',aiSavings='';
  final input=TextEditingController();
@@ -323,7 +336,7 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
    if(!WaffraOnDeviceQwen.shared.isReady){
     // Clear private model output; collapse an open AI-only panel on delete.
     aiStatus='';aiAnalysis='';aiSavings='';answer='';
-    if(active==4)active=null;
+    if(active==4&&!WaffraSaudiRelease.enabled)active=null;
    }
   });
  }
@@ -501,6 +514,7 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
  }
 
  Future<void> _generateAiSkill(String skill,{String questionText=''})async{
+  if(skill=='ask'&&!WaffraSaudiRelease.qwenForAskWaffra)return;
   if(skill=='ask'&&!WaffraAskScope.isRelated(questionText)){
    if(mounted)setState(()=>answer=WaffraAskScope.outsideResponse(english:widget.english));
    return;
@@ -611,6 +625,7 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
  }
 
  void _ask(){
+  if(!WaffraSaudiRelease.freeTextAskWaffra)return;
   final q=question.trim();
   if(q.isEmpty){
    setState(()=>answer=t('اكتب سؤال عن معاملاتك.','Ask about your transactions.'));
@@ -646,7 +661,64 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
   }
   unawaited(_generateAiSkill('ask',questionText:q));
  }
+ Widget _saudiAssistant(){
+  final facts=<WaffraSaudiAskEntry>[];
+  for(final e in widget.entries){
+   final minor=e.amount*100;
+   if(!minor.isFinite||minor<=0||minor>100000000000||
+      (minor-minor.round()).abs()>0.000001)continue;
+   facts.add(WaffraSaudiAskEntry(e.date,e.category,minor.round(),e.income));
+  }
+  final budgets=<WaffraSaudiAskBudget>[];
+  for(final b in widget.budgets){
+   final limit=b.limit*100,spent=b.spent*100;
+   if(!limit.isFinite||!spent.isFinite||limit<=0||limit>100000000000||
+      spent<0||spent>100000000000||
+      (limit-limit.round()).abs()>0.000001||
+      (spent-spent.round()).abs()>0.000001)continue;
+   budgets.add(WaffraSaudiAskBudget(
+    b.id,b.name,limit.round(),spent.round(),b.active));
+  }
+  final options=WaffraSaudiAsk.questions(facts,budgets,now:today);
+  return _column([
+   _head(titlesAr[4],'assistant',t(
+    'اسأل عن بياناتك المسجلة باختيار سؤال','Choose a question about your records')),
+   const SizedBox(height:12),
+   if(saudiQuestionId==null)...[
+    _paragraph(t('اختر سؤالًا من القائمة، والإجابة تُحسب محليًا من معاملاتك وميزانياتك.',
+      'Choose a question; answers are calculated locally from your transactions and budgets.')),
+    const SizedBox(height:10),
+    ...options.map((choice)=>Padding(
+     padding:const EdgeInsets.only(bottom:8),
+     child:OutlinedButton(
+      key:Key('waffra-saudi-question-'+choice.id),
+      onPressed:WaffraHaptics.tap(()=>setState((){
+       saudiQuestionId=choice.id;
+       answer=WaffraSaudiAsk.answer(choice.id,facts,budgets,
+        now:today,english:widget.english,
+        money:(minor)=>cash(minor/100));
+      })),
+      child:Align(alignment:AlignmentDirectional.centerStart,
+       child:Text(choice.label(widget.english),maxLines:3)))),
+    ),
+   ]else...[
+    _tile(t('الإجابة من بياناتك','Answer from your records'),answer),
+    const SizedBox(height:12),
+    OutlinedButton.icon(
+     key:const Key('waffra-saudi-ask-clear'),
+     onPressed:WaffraHaptics.tap(()=>setState((){
+      saudiQuestionId=null;answer='';question='';input.clear();
+     })),
+     icon:const Icon(Icons.refresh_rounded),
+     label:Text(t('مسح الإجابة وعرض الأسئلة','Clear answer and show questions'))),
+   ],
+   const SizedBox(height:8),
+   _paragraph(t('لا يوجد شات أو تنزيل نموذج أو اتصال بنكي. الأرقام من سجلك فقط.',
+    'No chat, model download or bank connection. Only saved records are used.')),
+  ]);
+ }
  Widget _assistant(){
+  if(WaffraSaudiRelease.enabled)return _saudiAssistant();
   return _column([
    _head(titlesAr[4],'assistant',t('إجابات من سجلك المحلي فقط','Answers from verified local records')),
    const SizedBox(height:15),
@@ -802,8 +874,9 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
   // Negative indices avoid changing the ten tools' stable names and keys.
   final tiles=List<Widget?>.generate(types.length+2,(slot){
    final i=slot-2;
-   if(i==4&&!_aiToolVisible)return null;
-   final aiLocked=i==4&&_aiToolState==WaffraAiToolsState.disabled;
+   if(i==4&&!WaffraSaudiRelease.enabled&&!_aiToolVisible)return null;
+   final aiLocked=i==4&&!WaffraSaudiRelease.enabled&&
+    _aiToolState==WaffraAiToolsState.disabled;
    final id=i==-2?'analysis':i==-1?'markets':types[i];
    final name=i==-2?t('التحليل المالي','Financial analysis'):
     i==-1?t('العملات والذهب والبترول','Currency, gold and oil markets'):names[i];
