@@ -18,7 +18,7 @@ M384 restores the badge without altering the user's saved receipt files.
    or user-visible behavior change, **do not make it**.
 2. Enumerate every changed file under `allowed_changed_files` and ensure
    the list matches `git diff --name-only <base> <head>` exactly.
-3. For each existing production/runtime/source/workflow file, identify exact
+3. For each existing production/runtime/source/workflow/**regression test** file, identify exact
    permitted anchored functions or job bodies in `bounded_sections`.
    Compare original and candidate content outside those boundaries byte-for-byte.
 4. For changes to a previously accepted function, extend **positive**
