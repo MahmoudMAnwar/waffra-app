@@ -54,10 +54,13 @@ void main() {
      onDismiss:()=>closed++),
    ))))));
   final close=find.byIcon(Icons.close_rounded);
-  final undo=find.byType(OutlinedButton);
+  final undo=find.byKey(const Key('waffra-snackbar-action'));
   expect(close,findsOneWidget);
   expect(undo,findsOneWidget);
   expect(tester.getRect(close).overlaps(tester.getRect(undo)),isFalse);
+  expect(tester.getSize(find.byKey(const Key('waffra-snackbar-close'))).height,
+   greaterThanOrEqualTo(48));
+  expect(tester.getSize(undo).height,greaterThanOrEqualTo(48));
   await tester.tap(close);
   expect(closed,1);
   expect(undone,0);
