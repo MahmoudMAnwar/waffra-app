@@ -39,7 +39,7 @@ void main() {
     .split('/// Release an earmark').first;
   expect(dialog,contains('goalDialog({SavingGoal? duplicate,bool openEnded=false})'));
   expect(dialog,contains('SavingGoal(id:newId()'));
-  expect(dialog,contains('target:noTarget?0:n!,saved:0'));
+  expect(dialog,contains('target:noTarget?0.0:n!,saved:0'));
   expect(dialog,contains('duplicate.target<=0'));
   expect(dialog,contains('noTarget=openEnded'));
   expect(dialog,contains('g.target<=0?false'));
