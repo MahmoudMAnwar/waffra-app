@@ -2883,7 +2883,8 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
   return Container(
    key:focusKey,
    color:waveColor,
-   padding:const EdgeInsets.fromLTRB(14,0,14,4),
+   // Both cards share the approved emerald design without extra Goals inset.
+   padding:EdgeInsets.fromLTRB(goalWallet?0:14,0,goalWallet?0:14,4),
    child:Container(
     key:Key(goalWallet?'waffra-goal-wallet-balance-card':'waffra-approved-emerald-balance-card'),
     decoration:BoxDecoration(
@@ -10003,7 +10004,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    (goalDisplay=='done'?g.saved>=g.target:g.saved<g.target)).toList();
   return ListView(controller:_goalsScrollController,
    physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
-   padding:const EdgeInsets.fromLTRB(16,14,16,28),children:[
+   padding:const EdgeInsets.fromLTRB(14,14,14,28),children:[
    WaffraPageHero(
     title:waffraIsEnglish?'Savings goals':'أهداف الادخار',
     subtitle:waffraIsEnglish?'Plan your future and follow every milestone':
