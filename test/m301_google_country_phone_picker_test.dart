@@ -67,24 +67,27 @@ void main(){
   expect(WaffraInternationalPhone.fromStored('0512345678').country.iso,'SA');
  });
 
- test('M301 saved display currency is not derived from phone prefix',()async{
-  SharedPreferences.setMockInitialValues({});
+ test('M416 Saudi display ignores phone prefix and retains dormant global selection',()async{
+  SharedPreferences.setMockInitialValues({
+   'waffra_display_country_currency_v1':'JOD',
+  });
   await WaffraDisplayCurrency.initialize();
-  await WaffraDisplayCurrency.setCurrency('JOD');
-  expect(WaffraDisplayCurrency.country.code,'JOD');
+  expect(WaffraDisplayCurrency.country.code,'SAR');
   expect(WaffraInternationalPhone.e164(
    WaffraInternationalPhone.byIso('SA'),'512345678'),'+966512345678');
-  expect(WaffraDisplayCurrency.country.code,'JOD');
-  await WaffraDisplayCurrency.initialize();
-  expect(WaffraDisplayCurrency.country.code,'JOD');
-  WaffraDisplayCurrency.active.value=
-   WaffraDisplayCurrency.displaySelection('SAR');
+  expect(WaffraDisplayCurrency.country.code,'SAR');
+  await expectLater(WaffraDisplayCurrency.setCurrency('JOD'),throwsStateError);
+  final prefs=await SharedPreferences.getInstance();
+  expect(prefs.getString('waffra_display_country_currency_v1'),'JOD');
+  expect(WaffraDisplayCurrency.displaySelection('JOD').code,'JOD');
  });
 
  testWidgets('M301 previously persisted currency survives different GPS country',(tester)async{
-  SharedPreferences.setMockInitialValues({});
+  SharedPreferences.setMockInitialValues({
+   'waffra_display_country_currency_v1':'JOD',
+  });
   await WaffraDisplayCurrency.initialize();
-  await WaffraDisplayCurrency.setCurrency('JOD');
+  expect(WaffraDisplayCurrency.country.code,'SAR');
   expect(WaffraDisplayCurrency.hasSavedPreference,isTrue);
   String? saved;
   await tester.pumpWidget(MaterialApp(home:WaffraCountryFirstRunPage(
@@ -103,7 +106,9 @@ void main(){
   await tester.pumpAndSettle();
   await tester.tap(find.byKey(const Key('m290-setup-confirm')));
   await tester.pumpAndSettle();
-  expect(saved,'JOD');
+  expect(saved,'SAR');
+  final prefs=await SharedPreferences.getInstance();
+  expect(prefs.getString('waffra_display_country_currency_v1'),'JOD');
   WaffraDisplayCurrency.hasSavedPreference=false;
  });
 
@@ -134,7 +139,7 @@ void main(){
   expect(saved,'EGP');
  });
 
- testWidgets('M301 Google mobile shows flag inside same field and searchable countries',
+ testWidgets('M416 Saudi Google phone prefix is visible but the country picker is disabled',
  (tester)async{
   final controller=TextEditingController(text:'512345678');
   WaffraPhoneCountry country=WaffraInternationalPhone.byIso('SA');
@@ -149,26 +154,9 @@ void main(){
   expect(find.text('+966'),findsOneWidget);
   await tester.tap(find.byKey(const Key('waffra-google-phone-country-picker')));
   await tester.pumpAndSettle();
-  await tester.enterText(find.byKey(const Key('waffra-google-country-search')),'الاردن');
-  await tester.pumpAndSettle();
-  expect(find.text('🇯🇴'),findsOneWidget);
-  await tester.tap(find.byKey(const Key('waffra-phone-country-JO')));
-  await tester.pumpAndSettle();
-  expect(country.iso,'JO');
-  expect(find.text('+962'),findsOneWidget);
-  expect(controller.text,isEmpty,
-    reason:'A Saudi national number cannot carry over to Jordan');
-  // Re-selecting the same country must not erase the re-entered number.
-  await tester.enterText(find.byKey(const Key('waffra-profile-mobile-number')),
-    '791234567');
-  await tester.tap(find.byKey(const Key('waffra-google-phone-country-picker')));
-  await tester.pumpAndSettle();
-  await tester.enterText(find.byKey(const Key('waffra-google-country-search')),
-    'Jordan');
-  await tester.pumpAndSettle();
-  await tester.tap(find.byKey(const Key('waffra-phone-country-JO')));
-  await tester.pumpAndSettle();
-  expect(controller.text,'791234567');
+  expect(find.byKey(const Key('waffra-google-country-search')),findsNothing);
+  expect(country.iso,'SA');
+  expect(controller.text,'512345678');
   expect(tester.takeException(),isNull);
   controller.dispose();
  });
