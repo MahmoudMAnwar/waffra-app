@@ -335,7 +335,8 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
   setState((){
    if(!WaffraOnDeviceQwen.shared.isReady){
     // Clear private model output; collapse an open AI-only panel on delete.
-    aiStatus='';aiAnalysis='';aiSavings='';answer='';
+    aiStatus='';aiAnalysis='';aiSavings='';
+    if(WaffraSaudiRelease.qwenForAskWaffra)answer='';
     if(active==4&&WaffraSaudiRelease.freeTextAskWaffra)active=null;
    }
   });
@@ -576,8 +577,8 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
      _paragraph(_aiToolVisible?
       t('نموذج الذكاء غير مفعّل. أعد تشغيله لاستخدام AI.',
         'AI is off. Reactivate the model to use it.'):
-      t('حمّل النموذج لتفعيل أدوات الذكاء.',
-        'Download the model to enable AI tools.')),
+      t('النموذج اختياري للتحليل الإضافي، واسأل وفرة يعمل بدونه.',
+        'The model is optional for extra analysis. Ask Waffra works without it.')),
      const SizedBox(height:8),
      OutlinedButton.icon(
       key:const Key('waffra-local-ai-opt-in'),
