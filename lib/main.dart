@@ -9694,9 +9694,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             style:const TextStyle(fontWeight:FontWeight.bold,fontSize:14))),
           ]),
           const SizedBox(height:9),
-          WaffraText(waffraIsEnglish
+          WaffraText(g.target<=0?(waffraIsEnglish?'Saved '+cash(g.saved)+' · Open-ended':'المدخر '+cash(g.saved)+' · ادخار مفتوح'):(waffraIsEnglish
            ?'${WaffraDisplayCurrency.money(g.saved,english:true)} of ${WaffraDisplayCurrency.money(g.target,english:true)}'
-           :'${WaffraDisplayCurrency.money(g.saved,english:false)} من ${WaffraDisplayCurrency.money(g.target,english:false)}',
+           :'${WaffraDisplayCurrency.money(g.saved,english:false)} من ${WaffraDisplayCurrency.money(g.target,english:false)}'),
            textAlign:TextAlign.center,style:const TextStyle(fontSize:13)),
           const SizedBox(height:9),
           if(g.target>0)LinearProgressIndicator(value:currentProgress,minHeight:8,
