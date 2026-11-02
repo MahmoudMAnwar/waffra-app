@@ -5,6 +5,7 @@ import '../lib/waffra_saudi_ask.dart';
 import '../lib/waffra_display_currency.dart';
 import '../lib/waffra_regional_copy.dart';
 import '../lib/waffra_sms_intelligence.dart';
+import '../lib/main.dart' show BankParser;
 
 void main(){
  setUp((){
@@ -93,12 +94,20 @@ void main(){
    expect(value,contains('0.00 SAR'));
   });
  });
- test('M416 Arabic and English bank intent uses existing offline model',(){
-  final income=WaffraSmsIntelligence.classify(
-   'Credit Transfer via Alinma Bank Amount: 1,900 SAR From: Sender');
-  final expense=WaffraSmsIntelligence.classify(
-   'Card purchase 75.00 SAR at restaurant');
-  expect(income.requiresCurrencyReview,isFalse);
-  expect(expense.requiresCurrencyReview,isFalse);
+ test('M416 local Saudi and English SMS classify without Qwen',(){
+  const arabic='شراء PoS\n\nمن2912;مدى-mada Pay\n\nبـ84.72SR\n00:43 16/10/26';
+  final spent=BankParser.parse(arabic);
+  expect(spent.amount,84.72);
+  expect(spent.income,isFalse);
+  const incoming='Credit Transfer via Alinma Bank\n'
+   'Amount: 1,900 SAR\nFrom: Sender\nDate: 2026-11-01 08:46';
+  final received=BankParser.parse(incoming);
+  expect(received.income,isTrue);
+  expect(received.amount,1900.0);
+  expect(received.requiresCurrencyReview,isFalse);
+  final intent=WaffraSmsIntelligence.classify(incoming);
+  expect(intent.requiresCurrencyReview,isFalse);
+  expect(BankParser.parse('JOD198.000 credited via CliQ transfer').amount,isNull,
+   reason:'Foreign amounts must never silently be written as SAR.');
  });
 }
