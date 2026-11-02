@@ -25,10 +25,14 @@ void main() {
   expect(app, contains("'No.'"));
  });
 
- test('Receipt corner reports number of attachments and hides on empty', () {
-  expect(app, contains("if(attachmentCount>0)PositionedDirectional"));
-  expect(app, contains("'عدد المرفقات \u0024attachmentCount'"));
-  expect(app, contains("onTap:WaffraHaptics.tap(()=>showReceipt(e.receiptPath!)"));
+ test('M374 receipts only open inside transaction details, not cards', () {
+  expect(app, isNot(contains('if(attachmentCount>0)PositionedDirectional')),
+   reason:'Old quick-card attachment button was intentionally removed.');
+  expect(app, contains('if(onViewReceipt!=null)'),
+   reason:'Details alone expose a saved-attachment action.');
+  expect(app, contains('waffraReceiptPaths(entry.receiptPath).isNotEmpty'),
+   reason:'Absent attachments must not create an empty action.');
+  expect(app, contains('showReceipt(entry.receiptPath!)'));
   expect(app, isNot(contains("const Icon(Icons.attach_file,size:17,color:emerald)")));
  });
 
