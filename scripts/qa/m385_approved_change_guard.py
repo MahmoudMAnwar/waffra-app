@@ -17,7 +17,7 @@ from typing import Mapping
 MANIFEST_PATH = "docs/qa/approved_change_scope.json"
 PROTECTED_PREFIXES = (
     "lib/", "native/", "android/", "ios/", "firebase/", "assets/",
-    ".github/workflows/", "scripts/qa/",
+    ".github/workflows/", "scripts/qa/", "test/",
 )
 
 
