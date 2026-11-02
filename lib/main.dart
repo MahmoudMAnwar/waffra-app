@@ -10422,6 +10422,49 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    currentMonthPaid:entries.any((entry)=>entry.id==monthId),
    postponedUntil:DateTime.tryParse(recurringPostponed[monthId]??''));
  }
+ Future<void> _setRecurringActiveFromCard(RecurringBill r,bool enabled)async{
+       final index=recurring.indexWhere((item)=>item.id==r.id);
+       if(index<0)return;
+       if(enabled){
+        final chosen=await waffraPickDateWithToday(english:waffraIsEnglish,context:context,initialDate:DateTime.now().add(const Duration(days:1)),
+         firstDate:DateTime.now(),lastDate:DateTime(DateTime.now().year+5));
+        if(chosen==null||!mounted)return;
+        setState(()=>recurring[index]=r.copy(active:true,startAt:chosen,day:chosen.day));
+       }else{
+        setState(()=>recurring[index]=r.copy(active:false));
+       }
+       if(!await _persistModuleOrReload(
+        WaffraFinanceRoute.recurringCreateEditDeleteRestore,
+        operation:'recurring-active-toggle'))return;
+       if(enabled)await applyRecurring();
+       await syncRecurringReminders();
+
+ }
+ Future<void> _handleRecurringCardAction(RecurringBill r,String v)async{
+       if(v=='edit'){await recurringDialog(initial:r);return;}
+       if(v!='delete')return;
+       final hasHistory=entries.any((e)=>e.id.startsWith('rec_${r.id}_'));
+       final ok=await confirmDeletion(waffraIsEnglish?'Delete recurring transaction?':'حذف العملية المتكررة',
+        waffraRecurringDeleteWarning(r.title,hasHistory,waffraIsEnglish));
+       if(ok==true&&mounted){
+        if(_lastFinanceAuthorityRead?.source==
+           WaffraRuntimeFinanceBackend.verifiedEncrypted){
+         await _deleteVerifiedModule(
+          module:WaffraFinanceModule.recurring,displayed:r.toJson());
+         return;
+        }
+        setState((){
+         deletedRecurring.add({'recurring':r.toJson(),'deletedAt':DateTime.now().toIso8601String()});
+         recurring.removeWhere((e)=>e.id==r.id);
+         recurringPostponed.removeWhere((key,value)=>key.startsWith('rec_${r.id}_'));
+        });
+        if(!await _persistModuleOrReload(
+         WaffraFinanceRoute.recurringCreateEditDeleteRestore,
+         operation:'recurring-delete'))return;
+        await syncRecurringReminders();
+       }
+
+ }
  Widget recurringPage(){
   final active=recurring.where((r)=>r.active).toList();
   final orderedActive=active.toList()..sort((a,b)=>
@@ -10548,7 +10591,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       (r.income?const Color(0xFFEAF6EF):const Color(0xFFFFF0ED)),
      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(21),
       side:BorderSide(color:r.income?const Color(0xFFBBDCC9):const Color(0xFFF3DCD7))),
-     child:Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:13),child:Row(children:[
+     child:Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:13),child:Column(children:[
+     Row(children:[
       CircleAvatar(backgroundColor:color.withValues(alpha:.13),
        child:Icon(categoryIcon(categoryFor(r.category,r.income).icon),color:color)),
       const SizedBox(width:10),
@@ -10575,49 +10619,39 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         (waffraIsEnglish?'Paused':'متوقفة'),
         style:TextStyle(fontSize:11,color:r.active?Theme.of(context).hintColor:Colors.deepOrange)),
       ])),
-      Switch(value:r.active,onChanged:WaffraHaptics.selection((enabled)async {
-       final index=recurring.indexWhere((item)=>item.id==r.id);
-       if(index<0)return;
-       if(enabled){
-        final chosen=await waffraPickDateWithToday(english:waffraIsEnglish,context:context,initialDate:DateTime.now().add(const Duration(days:1)),
-         firstDate:DateTime.now(),lastDate:DateTime(DateTime.now().year+5));
-        if(chosen==null||!mounted)return;
-        setState(()=>recurring[index]=r.copy(active:true,startAt:chosen,day:chosen.day));
-       }else{
-        setState(()=>recurring[index]=r.copy(active:false));
-       }
-       if(!await _persistModuleOrReload(
-        WaffraFinanceRoute.recurringCreateEditDeleteRestore,
-        operation:'recurring-active-toggle'))return;
-       if(enabled)await applyRecurring();
-       await syncRecurringReminders();
-      })),
-      PopupMenuButton<String>(onSelected:WaffraHaptics.selection((v)async {
-       if(v=='edit'){await recurringDialog(initial:r);return;}
-       if(v!='delete')return;
-       final hasHistory=entries.any((e)=>e.id.startsWith('rec_${r.id}_'));
-       final ok=await confirmDeletion(waffraIsEnglish?'Delete recurring transaction?':'حذف العملية المتكررة',
-        waffraRecurringDeleteWarning(r.title,hasHistory,waffraIsEnglish));
-       if(ok==true&&mounted){
-        if(_lastFinanceAuthorityRead?.source==
-           WaffraRuntimeFinanceBackend.verifiedEncrypted){
-         await _deleteVerifiedModule(
-          module:WaffraFinanceModule.recurring,displayed:r.toJson());
-         return;
-        }
-        setState((){
-         deletedRecurring.add({'recurring':r.toJson(),'deletedAt':DateTime.now().toIso8601String()});
-         recurring.removeWhere((e)=>e.id==r.id);
-         recurringPostponed.removeWhere((key,value)=>key.startsWith('rec_${r.id}_'));
-        });
-        if(!await _persistModuleOrReload(
-         WaffraFinanceRoute.recurringCreateEditDeleteRestore,
-         operation:'recurring-delete'))return;
-        await syncRecurringReminders();
-       }
-      }),itemBuilder:(_)=>[
-       PopupMenuItem(value:'edit',child:WaffraText(waffraIsEnglish?'Edit recurring':'تعديل المتكررة')),
-       PopupMenuItem(value:'delete',child:WaffraText(waffraIsEnglish?'Delete':'حذف'))]),
+     ]),
+     ExpansionTile(
+      key:PageStorageKey<String>('waffra-recurring-quick-actions-'+r.id),
+      initiallyExpanded:false,
+      tilePadding:EdgeInsets.zero,
+      childrenPadding:const EdgeInsets.only(bottom:8),
+      leading:const Icon(Icons.bolt_outlined,color:emerald,size:20),
+      title:WaffraText(waffraIsEnglish?'Quick actions':'إجراءات سريعة',
+       style:const TextStyle(fontSize:13,fontWeight:FontWeight.w700)),
+      children:[
+       Wrap(spacing:8,runSpacing:8,children:[
+        OutlinedButton.icon(
+         onPressed:WaffraHaptics.tap(()=>unawaited(_handleRecurringCardAction(r,'edit'))),
+         icon:const Icon(Icons.edit_outlined,size:17),
+         label:WaffraText(waffraIsEnglish?'Edit':'تعديل')),
+        OutlinedButton.icon(
+         onPressed:WaffraHaptics.tap(()=>unawaited(_handleRecurringCardAction(r,'delete'))),
+         icon:const Icon(Icons.delete_outline_rounded,color:Colors.deepOrange,size:17),
+         label:WaffraText(waffraIsEnglish?'Delete':'حذف')),
+       ]),
+       SwitchListTile.adaptive(
+        key:Key('waffra-recurring-active-switch-'+r.id),
+        contentPadding:EdgeInsets.zero,
+        title:WaffraText(waffraIsEnglish?'Recurring enabled':'تفعيل العملية المتكررة'),
+        subtitle:WaffraText(r.active?
+         (waffraIsEnglish?'Active':'مفعلة'):
+         (waffraIsEnglish?'Paused':'متوقفة مؤقتًا')),
+        activeTrackColor:emerald,
+        value:r.active,
+        onChanged:WaffraHaptics.selection((value)=>
+         unawaited(_setRecurringActiveFromCard(r,value)))),
+      ],
+     ),
      ])));
    }),
    if(recurring.isEmpty)Padding(padding:const EdgeInsets.only(top:18),
