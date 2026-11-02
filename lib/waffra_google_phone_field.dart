@@ -63,7 +63,26 @@ class _WaffraGooglePhoneFieldState extends State<WaffraGooglePhoneField> {
   await Future<void>.delayed(const Duration(milliseconds:450));
   query.dispose();
  }
- @override Widget build(BuildContext context)=>TextField(
+ @override Widget build(BuildContext context){
+  if(WaffraSaudiRelease.enabled){
+   return TextField(
+    key:const Key('waffra-profile-mobile-number'),
+    controller:widget.controller,
+    textDirection:TextDirection.ltr,
+    keyboardType:TextInputType.phone,
+    inputFormatters:[
+     FilteringTextInputFormatter.digitsOnly,
+     LengthLimitingTextInputFormatter(10),
+    ],
+    onChanged:widget.onChanged,
+    decoration:InputDecoration(
+     labelText:widget.english?'Saudi mobile number *':'رقم الجوال السعودي *',
+     hintText:'05XXXXXXXX',
+     errorText:widget.errorText,errorMaxLines:2,
+     border:const OutlineInputBorder()));
+  }
+  // Global-edition widget is retained but inaccessible in Saudi mode.
+  return TextField(
   key:const Key('waffra-profile-mobile-number'),
   controller:widget.controller,textDirection:TextDirection.ltr,
   keyboardType:TextInputType.phone,
@@ -92,4 +111,5 @@ class _WaffraGooglePhoneFieldState extends State<WaffraGooglePhoneField> {
    errorMaxLines:2,
    border:const OutlineInputBorder(),
   ));
+ }
 }
