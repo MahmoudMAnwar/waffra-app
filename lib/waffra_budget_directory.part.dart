@@ -7,6 +7,9 @@ extension WaffraBudgetDirectory on _HomeScreenState {
  /// Categories ListView. The old nested ExpansionTile/LayoutBuilder could
  /// render as a large grey ErrorWidget on narrow Android devices.
  Future<void> showBudgetsDirectorySheet() async {
+  // Only state for this modal instance: reopening must not restore stale
+  // PageStorage expansion state or reuse an already-disposed sheet context.
+  var directoryScope='all';
   await showModalBottomSheet<void>(
    context:context,isScrollControlled:true,useSafeArea:true,showDragHandle:true,
    backgroundColor:Theme.of(context).scaffoldBackgroundColor,
@@ -15,8 +18,11 @@ extension WaffraBudgetDirectory on _HomeScreenState {
     builder:(ctx,scroll)=>StatefulBuilder(
      builder:(ctx,refresh)=>ListView(
       controller:scroll,
-      padding:const EdgeInsets.fromLTRB(14,0,14,28),
-      children:[_budgetDirectoryPanel(refresh)],
+      padding:EdgeInsets.fromLTRB(
+       14,0,14,28+MediaQuery.viewInsetsOf(ctx).bottom),
+      children:[_budgetDirectoryPanel(
+       refresh,scope:directoryScope,
+       onScopeChanged:(value)=>refresh(()=>directoryScope=value))],
      ),
     ),
    ),
@@ -44,7 +50,9 @@ extension WaffraBudgetDirectory on _HomeScreenState {
    ),
   );
  }
- Widget _budgetDirectoryPanel(StateSetter refresh){
+ Widget _budgetDirectoryPanel(StateSetter refresh,{
+  required String scope,required ValueChanged<String> onScopeChanged,
+ }){
 
   final now=DateTime.now();
   // Standalone budgets are not filtered by main/subcategory.
@@ -68,23 +76,28 @@ extension WaffraBudgetDirectory on _HomeScreenState {
   ],budgetSearch)).toList();
   return Container(
    key:const Key('waffra-my-budgets-panel'),
+   padding:const EdgeInsets.fromLTRB(14,8,14,16),
    decoration:BoxDecoration(
     color:Theme.of(context).cardColor,
     border:Border.all(color:emerald.withValues(alpha:.24)),
     borderRadius:BorderRadius.circular(18)),
-   child:ExpansionTile(
-    key:const PageStorageKey<String>('waffra-my-budgets-directory-sheet'),
-    initiallyExpanded:true,
-    tilePadding:const EdgeInsets.symmetric(horizontal:14),
-    childrenPadding:const EdgeInsets.fromLTRB(14,6,14,16),
-    leading:const Icon(Icons.account_balance_wallet_outlined,color:emerald),
-    title:WaffraText(waffraIsEnglish?'My budgets':'ميزانياتي',
-     style:const TextStyle(fontWeight:FontWeight.bold)),
-    subtitle:WaffraText(waffraIsEnglish?
-     saved.length.toString()+' saved budgets':
-     saved.length.toString()+' ميزانية محفوظة',
-     style:const TextStyle(fontSize:12)),
-    children:[
+   // No nested root ExpansionTile: the draggable sheet is itself the sole
+   // scrolling surface. This also avoids stale PageStorage on reopen.
+   child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    Padding(padding:const EdgeInsets.only(bottom:12),
+     child:Row(children:[
+      const Icon(Icons.account_balance_wallet_outlined,color:emerald),
+      const SizedBox(width:10),
+      Expanded(child:Column(
+       crossAxisAlignment:CrossAxisAlignment.start,children:[
+        WaffraText(waffraIsEnglish?'My budgets':'ميزانياتي',
+         style:const TextStyle(fontWeight:FontWeight.bold)),
+        WaffraText(waffraIsEnglish?
+         '${saved.length} saved budgets':'${saved.length} ميزانية محفوظة',
+         style:const TextStyle(fontSize:12)),
+       ])),
+     ])),
+
      TextFormField(
       key:const Key('waffra-budget-directory-search'),
       initialValue:budgetSearch,
@@ -98,6 +111,26 @@ extension WaffraBudgetDirectory on _HomeScreenState {
      // Stable single-column filters avoid unbounded Wrap/Dropdown sizing
      // failures under Android text scaling and the draggable sheet.
      Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      // All displays owned budgets plus optional unsaved suggestions.
+      // Every saved standalone budget belongs to this user, even when
+      // created using a suggested template or migrated from legacy data.
+      DropdownButtonFormField<String>(
+       key:ValueKey('waffra-budget-directory-scope-'+scope),
+       initialValue:scope,isExpanded:true,
+       decoration:InputDecoration(
+        labelText:waffraIsEnglish?'Show':'عرض',
+        border:OutlineInputBorder(borderRadius:BorderRadius.circular(13))),
+       items:[
+        DropdownMenuItem(value:'all',child:WaffraText(
+         waffraIsEnglish?'Budgets and suggestions':'الميزانيات والمقترحات')),
+        DropdownMenuItem(value:'mine',child:WaffraText(
+         waffraIsEnglish?'Budgets I added':'ميزانياتي المضافة بواسطتي')),
+       ],
+       onChanged:WaffraHaptics.selection((v){
+        if(v!=null)onScopeChanged(v);
+       }),
+      ),
+      const SizedBox(height:12),
       DropdownButtonFormField<String>(
        key:ValueKey('waffra-budget-directory-status-'+budgetStatusFilter),
        initialValue:const {'all','active','inactive'}.contains(budgetStatusFilter)?
@@ -237,7 +270,7 @@ extension WaffraBudgetDirectory on _HomeScreenState {
       );
      }),
      const SizedBox(height:20),
-     ExpansionTile(
+     if(scope!='mine')ExpansionTile(
       key:const PageStorageKey<String>('waffra-budget-starter-templates'),
       initiallyExpanded:false,
       tilePadding:EdgeInsets.zero,
