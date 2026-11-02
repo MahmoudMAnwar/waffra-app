@@ -3097,6 +3097,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  bool categoryMineOnly=false;
  bool categoryFiltersOpen=false; // Compact category-filter accordion; UI-only state.
  bool monthlyBudgetDetailsOpen=false; // Monthly budget accordion, presentation only.
+ DateTime budgetViewedMonth=DateTime(DateTime.now().year,DateTime.now().month,1);
   String? forecastCategory;
   int forecastReduction=20;
  bool recurringRemindersEnabled=false;
@@ -7664,7 +7665,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  void refreshFromBudgetDirectory(){if(mounted)setState((){});}
  Widget monthlyBudgetCard(){
   final today=DateTime.now();
-  final monthEntries=entries.where((e)=>e.date.year==today.year&&e.date.month==today.month);
+  final viewedMonth=DateTime(budgetViewedMonth.year,budgetViewedMonth.month,1);
+  final viewingToday=viewedMonth.year==today.year&&viewedMonth.month==today.month;
+  final monthEntries=entries.where((e)=>e.date.year==viewedMonth.year&&e.date.month==viewedMonth.month);
   // Include legacy budgets previously saved on main categories in totals;
   // only *new* budget creation requires a child category.
   final allBudgets=namedBudgets.where((b)=>b.budget>0&&!b.deleted).toList();
@@ -7684,12 +7687,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // Selecting a paused budget must never show it as active or start
   // charging it again; its former limit and historical links remain.
   final spent=selected==null?overallSpent:
-   waffraNamedBudgetSpent(entries,categories,selected,today);
+   waffraNamedBudgetSpent(entries,categories,selected,viewedMonth);
   final used=limit>0?(spent/limit).clamp(0.0,1.0):0.0;
   // Read-only projection. Missing/invalid source amounts must never be
   // converted or rewritten just to display a forecast.
   WaffraBudgetPace? pace;
-  if(limit>0){
+  if(limit>0&&viewingToday){
    try{
     pace=WaffraBudgetPace(
      spentMinor:waffraSarMinorChecked(spent),
@@ -7718,9 +7721,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        WaffraText(waffraIsEnglish?'Monthly budgets':'الميزانيات الشهرية',
         style:const TextStyle(fontWeight:FontWeight.bold,fontSize:17)),
        const SizedBox(height:3),
-       WaffraText(selected==null?
-        (waffraIsEnglish?'Sum of all created budgets':'إجمالي الميزانيات المضافة'):
-        (selected.budgetLabel??'ميزانية '+selected.displayName),
+       WaffraText(waffraIsEnglish?
+        '${allBudgets.length} saved budgets':'${allBudgets.length} ميزانية مضافة',
         maxLines:2,style:const TextStyle(fontSize:12,color:Colors.grey)),
       ])),
       Icon(monthlyBudgetDetailsOpen?
@@ -7729,12 +7731,44 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      ]))),
     if(monthlyBudgetDetailsOpen)...[
     const SizedBox(height:12),
+    Container(
+     key:const Key('waffra-budget-month-control'),
+     decoration:BoxDecoration(
+      border:Border.all(color:emerald.withValues(alpha:.45)),
+      borderRadius:BorderRadius.circular(14)),
+     child:Row(children:[
+      IconButton(key:const Key('waffra-budget-month-prev'),
+       tooltip:waffraIsEnglish?'Previous month':'الشهر السابق',
+       icon:const Icon(Icons.chevron_left_rounded,color:emerald),
+       constraints:const BoxConstraints(minWidth:40,minHeight:48),
+       onPressed:WaffraHaptics.tap(()=>setState(()=>
+        budgetViewedMonth=DateTime(viewedMonth.year,viewedMonth.month-1,1)))),
+      Expanded(child:SizedBox(key:const Key('waffra-budget-month-label'),
+       child:WaffraText(
+        MaterialLocalizations.of(context).formatMonthYear(viewedMonth),
+        maxLines:1,textAlign:TextAlign.center,
+        style:const TextStyle(fontWeight:FontWeight.w700,fontSize:14)))),
+      IconButton(key:const Key('waffra-budget-month-next'),
+       tooltip:waffraIsEnglish?'Next month':'الشهر التالي',
+       icon:const Icon(Icons.chevron_right_rounded,color:emerald),
+       constraints:const BoxConstraints(minWidth:40,minHeight:48),
+       onPressed:WaffraHaptics.tap(()=>setState(()=>
+        budgetViewedMonth=DateTime(viewedMonth.year,viewedMonth.month+1,1)))),
+      TextButton(key:const Key('waffra-budget-month-today'),
+       onPressed:viewingToday?null:WaffraHaptics.tap(()=>setState(()=>
+        budgetViewedMonth=DateTime(today.year,today.month,1))),
+       style:TextButton.styleFrom(minimumSize:const Size(52,48),
+        padding:const EdgeInsets.symmetric(horizontal:6)),
+       child:WaffraText(waffraIsEnglish?'Today':'اليوم',
+        maxLines:1,style:const TextStyle(fontSize:12))),
+     ]),
+    ),
+    const SizedBox(height:12),
     LayoutBuilder(builder:(context,box){
      final compact=box.maxWidth<290||
       MediaQuery.textScalerOf(context).scale(16)>22;
-     final label=WaffraText(selected==null?
-      (waffraIsEnglish?'Overall monthly budget':'الميزانية الشهرية العامة'):
-      (selected.budgetLabel??'ميزانية '+selected.displayName),
+     final label=WaffraText(
+      waffraIsEnglish?'Budget overview':'متابعة الميزانيات',
       maxLines:2,style:const TextStyle(
        fontWeight:FontWeight.bold,fontSize:16));
      final add=TextButton.icon(
