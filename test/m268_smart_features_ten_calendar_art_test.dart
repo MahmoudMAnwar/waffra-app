@@ -97,6 +97,12 @@ void main(){
    expect(find.byKey(const Key('waffra-datepicker-today')),findsOneWidget);
    await tester.tap(find.byKey(const Key('waffra-datepicker-today')));
    await tester.pumpAndSettle();
+   // Today navigates the calendar like the financial calendar; changing
+   // a transaction remains an explicit confirmation.
+   expect(chosen,isNull);
+   expect(find.byKey(const Key('waffra-datepicker-today')),findsNothing);
+   await tester.tap(find.byKey(const Key('waffra-datepicker-confirm')));
+   await tester.pumpAndSettle();
    expect(chosen,today);
   });
   testWidgets('future-only date picker refuses selecting invalid today',(tester)async{
