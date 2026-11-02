@@ -5,7 +5,7 @@ The Android workflow has two modes:
 - **Main release candidate (default main pushes):** run the entire Flutter/Dart and
   Python QA suite exactly once in the mandatory verification job, **in parallel**
   with the independent same-commit workflow auditor. The signed ARM64 APK and
-  Google Play internal-testing AAB build job starts **only after both gates pass**.
+  Google Play internal-testing AAB build runners start in parallel **only after both gates pass**.
   The build job does not re-run static analysis, Smart CI or Flutter tests already
   covered on the exact main SHA; release signing and artifact identity remain mandatory.
 - **Full (`android-full-smoke.yml`, nightly or manual):** run *all* Flutter tests,
@@ -74,8 +74,28 @@ A documentation-only change is a convenient follow-up to verify that reuse works
 
 ## M381 optimization limits
 
-This change removes redundant **sequential** verification from main; it does not
-shorten Android compilation, skip Play AAB signature or install tests, change
+M381 removed redundant **sequential** verification from main; it did not
+shorten native compilation, skip Play AAB signature or install tests, change
 SQLite/SQLCipher storage behavior, or authorize public Google Play release.
-The APK and candidate AAB still build sequentially in the same release job.
-Measure step runtimes before claiming a specific percentage reduction.
+
+## M383: parallel Android artifacts on main
+
+- The mandatory exhaustive Flutter/Python verification and independent
+  exact-SHA finance + SQLCipher gate must **both succeed first**.
+- The `build` job is a two-entry matrix: `apk` and `aab`, each on its own
+  clean Android runner. Both use the same approved source SHA, Firebase
+  configuration and release signing. The APK no longer waits for the Play
+  bundle build before its signed QA artifact is published.
+- APK: verify signature, embedded commit/branch/run ID, branch freshness,
+  signed source SHA256 receipt and matching Arabic release notes before upload.
+- AAB: verify Android API 36, archive integrity, certificate SHA1/SHA256,
+  embedded exact source SHA and branch freshness before artifact upload.
+- Each runner has a unique Gradle, Flutter compilation and historical QA
+  cache-write key to prevent matrix write collisions.
+- M174's separate post-merge compiler and the production real-device/SQLCipher
+  safety requirements are unaffected.
+
+**No measured speedup percentage is promised before observing the next
+main run.** Parallel cold Android runners can still have significant setup and
+compilation cost, and GitHub's overall duration is the slower of both jobs.
+A green AAB is a candidate for internal testing, not Google Play approval.
