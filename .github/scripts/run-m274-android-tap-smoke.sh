@@ -15,8 +15,12 @@ log="build/m274/android-tap-smoke.log"
 for attempt in 1 2; do
   echo "M274_ANDROID_UI_ATTEMPT:$attempt"
   set +e
-  flutter test "$test_file" -d "$device" --reporter expanded --no-pub \
-    > "$log" 2>&1
+  # Drive the exact integration APK built before emulator boot. Flutter test
+  # would re-run Gradle with the emulator active, exhausting runner memory.
+  timeout --signal=TERM --kill-after=20s 900s \
+    flutter drive --driver=test_driver/integration_test.dart \
+      --target="$test_file" --use-application-binary=build/app/outputs/flutter-apk/app-debug.apk \
+      -d "$device" --no-pub > "$log" 2>&1
   result=$?
   set -e
   cat "$log"
@@ -39,7 +43,8 @@ for attempt in 1 2; do
   # A transient DDS startup failure can happen before any app assertion runs.
   # Do not retry test assertion failures, crashes or timeouts.
   if (( attempt == 1 )) \
-    && grep -Fq 'Failed to start Dart Development Service' "$log" \
+    && grep -Eq 'Failed to start Dart Development Service|registerService:.*Service connection disposed' "$log" \
+    && test "$(adb -s "$device" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" \
     && ! grep -Eq '([+][1-9]|Test failed\.|Expected:|Actual:)' "$log"; then
     echo "::warning::M274 DDS startup failed before test execution; retrying once after ADB port reset"
     adb -s "$device" forward --remove-all || true
