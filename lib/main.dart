@@ -4721,7 +4721,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          WaffraText(waffraIsEnglish?
           'Foreign currency is not stored as SAR without encrypted source/rate evidence. Balance is not a transaction.':
           'المبلغ الأجنبي لا يُحفظ كريال بدون إثبات العملة والسعر مشفرًا. الرصيد ليس معاملة.'),
-         if(WaffraSaudiRelease.globalCurrencyConverter&&
+         if(WaffraSaudiRelease.bankSmsForeignCurrencyPreview&&
             messages.length==1&&WaffraSmsCurrencies.originalAmount(messages.first)!=null)
           OutlinedButton.icon(
            key:const Key('waffra-fx-quote-preview-action'),
@@ -4733,7 +4733,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ],
       // Bank currency vs selected APP display currency are separate concepts.
       // Never mistake nominal label switching for an actual FX rate.
-      if(WaffraSaudiRelease.globalCurrencyConverter&&
+      if(WaffraSaudiRelease.bankSmsForeignCurrencyPreview&&
          messages.length==1&&!currencyPreview.needsCurrencyReview&&
          WaffraSmsCurrencies.originalAmount(messages.first)!=null&&
          WaffraSmsCurrencies.originalAmount(messages.first)!.currency!=
@@ -4833,7 +4833,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
        inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],onChanged:(_)=>update((){}),
        decoration:InputDecoration(labelText:waffraIsEnglish?'Amount *':'مبلغ هذه الرسالة بالريال *',errorText:reviewAttempted?waffraAmountFieldError(amount.text):null,border:OutlineInputBorder())),
-      if(WaffraSaudiRelease.globalCurrencyConverter&&
+      if(WaffraSaudiRelease.bankSmsForeignCurrencyPreview&&
          WaffraSmsCurrencies.originalAmount(messages[index])!=null&&
          WaffraSmsCurrencies.originalAmount(messages[index])!.currency!=
            WaffraDisplayCurrency.country.code)
@@ -5002,7 +5002,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 }
 
  Future<void> _previewForeignBankCurrency(String raw)async {
-  if(!WaffraSaudiRelease.globalCurrencyConverter){
+  if(!WaffraSaudiRelease.bankSmsForeignCurrencyPreview){
    if(mounted)snack(context,waffraIsEnglish?
     'Non-SAR transactions cannot be saved in this Saudi release.':
     'العمليات بغير الريال غير مدعومة في النسخة السعودية الحالية.');
