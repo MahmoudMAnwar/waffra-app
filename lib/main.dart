@@ -2971,6 +2971,34 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
  // Preserve the old delegate's rebuild semantics on theme/locale changes.
  @override bool shouldRebuild(covariant WaffraBalanceHeader oldDelegate)=>true;
 }
+/// A cancelled budget warning keeps the caller's editor/review stack intact.
+Future<bool> waffraConfirmUnlinkedBudgetSave({
+ required BuildContext context,int expenseCount=1,
+})async{
+ if(expenseCount<=0)return true;
+ final approved=await showWaffraDialog<bool>(
+  context:context,builder:(ctx)=>AlertDialog(
+   key:const Key('waffra-unlinked-budget-confirmation'),
+   title:WaffraText(waffraIsEnglish?'Save without a budget?':'حفظ بدون ميزانية؟'),
+   content:WaffraText(waffraIsEnglish?
+    (expenseCount==1?
+     'This expense will not count toward a budget. You can link it later.':
+     '$expenseCount expenses will not count toward a budget. You can link them later.'):
+    (expenseCount==1?
+     'المصروف ده مش هيتحسب على أي ميزانية. تقدر تربطه بعدين.':
+     '$expenseCount مصروفات مش هتتحسب على ميزانية. تقدر تربطها بعدين.')),
+   actions:[
+    TextButton(key:const Key('waffra-unlinked-budget-cancel'),
+     onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),
+     child:WaffraText(waffraIsEnglish?'Go back':'رجوع')),
+    FilledButton(key:const Key('waffra-unlinked-budget-accept'),
+     onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),
+     child:WaffraText(waffraIsEnglish?'Save without budget':'حفظ بدون ميزانية')),
+   ],
+  ));
+ return approved==true;
+}
+
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
  // Stable callback identity ensures an old locale-specific Home disposal
  // cannot clear the replacement Home's back handler.
@@ -3020,6 +3048,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  DateTimeRange? transactionsDateRange;
  double? minTransactionAmount,maxTransactionAmount;
  int tab=0,year=DateTime.now().year,month=DateTime.now().month;
+ // UI-only history: no finance record or persisted state is modified.
+ final List<int> _tabBackStack=<int>[];
  bool goalsOpened=false;
  bool _smsSheetOpen=false;
  bool _receiptOcrAiOpening=false;
@@ -3102,7 +3132,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  bool accountOpened=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
  @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:()=>unawaited(_syncWidgetTransactions()));unawaited(_loadFinanceSafely());}
- void _returnToHome(){if(mounted)setState((){tab=0;accountOpened=false;goalsOpened=false;addFabExpanded=false;});}
+ void _returnToHome(){if(mounted)setState((){_tabBackStack.clear();tab=0;accountOpened=false;goalsOpened=false;addFabExpanded=false;});}
  void _receiveWidgetAction(){
   if(!mounted||!ready||waffraWidgetAction.value!='add')return;
   waffraWidgetAction.value=null;
@@ -3889,8 +3919,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      height:waffraKeyboardDialogListHeight(ctx,desired:500),
      child:ListView(children:[
       WaffraText(waffraIsEnglish?
-       'Nothing is linked automatically. Review each expense before saving.':
-       'ربط المصروف بميزانية اختياري، وتقدر تربطه لاحقًا من الأقسام.'),
+       'Choose a budget for each expense, or leave it unlinked.':
+       'اختار ميزانية لكل مصروف، أو سيبه بدون ربط.'),
       const SizedBox(height:12),
       for(var n=0;n<candidates.length;n++)
        if(!candidates[n].income)Padding(
@@ -3903,7 +3933,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           key:ValueKey('waffra-sms-budget-'+n.toString()+'-'+(assigned[n]??'none')),
           menuMaxHeight:min(340.0,MediaQuery.sizeOf(ctx).height*.48),
           initialValue:assigned[n]??'none',isExpanded:true,
-          decoration:InputDecoration(labelText:waffraIsEnglish?'Budget (optional)':'الميزانية (اختياري)',
+          decoration:InputDecoration(labelText:waffraIsEnglish?'Budget':'الميزانية',
            border:const OutlineInputBorder()),
           items:[
            DropdownMenuItem(value:'none',child:WaffraText(
@@ -3940,8 +3970,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     actions:[
      TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
       child:WaffraText(waffraIsEnglish?'Cancel batch':'إلغاء')),
-     FilledButton(onPressed:WaffraHaptics.tap(()=>
-      Navigator.pop(ctx,List<String?>.from(assigned))),
+     FilledButton(onPressed:WaffraHaptics.tap(()async{
+      final unlinked=List<int>.generate(candidates.length,(i)=>i)
+       .where((i)=>!candidates[i].income&&assigned[i]==null).length;
+      if(unlinked>0){
+       final confirmed=await waffraConfirmUnlinkedBudgetSave(
+        context:ctx,expenseCount:unlinked);
+       if(!confirmed||!ctx.mounted)return;
+      }
+      if(ctx.mounted)Navigator.pop(ctx,List<String?>.from(assigned));
+     }),
       child:WaffraText(waffraIsEnglish?
        'Continue saving':'متابعة الحفظ')),
     ],
@@ -5461,7 +5499,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       const SizedBox(height:10),
       if(!sms)...[
        TextField(controller:notes,onChanged:(_)=>update((){}),minLines:1,maxLines:4,
-        decoration:InputDecoration(labelText:waffraIsEnglish?'Notes (optional)':'ملاحظات (اختياري)',
+        decoration:InputDecoration(labelText:waffraIsEnglish?'Notes':'ملاحظات',
          errorText:attempted&&!waffraTransactionNotesAllowed(notes.text,oldNotes:initial?.notes)
           ?(waffraIsEnglish?'Notes cannot exceed 2,000 characters.':
             'الملاحظات لا تتجاوز 2000 حرف.'):null,
@@ -5574,7 +5612,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           b.id==selectedBudgetId)?selectedBudgetId:'unlinked',
          isExpanded:true,
          decoration:InputDecoration(
-          labelText:waffraIsEnglish?'Transaction budget (optional)':'ميزانية العملية (اختياري)',
+          labelText:waffraIsEnglish?'Transaction budget':'ميزانية العملية',
           border:const OutlineInputBorder()),
          items:[
           DropdownMenuItem(value:'unlinked',child:WaffraText(
@@ -5628,12 +5666,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         const SizedBox(width:8),
         SizedBox(width:137,child:dateAction()),
        ]),
-       if(selectedBudgetId==null)Padding(
-        padding:const EdgeInsets.only(top:7),
-        child:WaffraText(waffraIsEnglish?
-         'Budget linking is optional; you can link this expense later.':
-         'ربط الميزانية اختياري؛ تقدر تربط العملية لاحقًا.',
-         style:const TextStyle(color:Colors.grey,fontSize:11))),
       ]else
        Padding(padding:const EdgeInsets.symmetric(vertical:12),
         child:Align(alignment:AlignmentDirectional.centerStart,
@@ -5755,6 +5787,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          'This budget is currently paused. Pick another budget or choose Unassigned.':
          'الميزانية دي متوقفة حاليًا. اختار ميزانية مفعّلة أو خلّي العملية بدون ربط.');
         return;
+       }
+       if(!income&&selectedBudgetId==null&&
+          waffraHasSelectableBudget(namedBudgets)){
+        final confirmed=await waffraConfirmUnlinkedBudgetSave(
+         context:sheetContext);
+        if(!confirmed||!sheetContext.mounted)return;
        }
        if(sms){
         if(message.text.trim().isEmpty)return;
@@ -6842,7 +6880,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(!mounted)return;
    snack(context,waffraIsEnglish?
     'Transaction saved in encrypted Recently Deleted for 30 days.':
-    'تم نقل المعاملة إلى المحذوفات المشفرة لمدة 30 يومًا.',
+    'تم نقل المعاملة إلى المحذوفات لمدة 30 يومًا.',
     isError:false,duration:const Duration(seconds:6),
     actionLabel:waffraIsEnglish?'Undo':'تراجع',
     onAction:(){if(mounted)unawaited(_undoVerifiedDeletedEntry(entry.id));});
@@ -6896,7 +6934,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       'المعاملات المحذوفة'),
      content:WaffraText(waffraIsEnglish?
       'There are no encrypted transactions to restore.':
-      'لا توجد معاملات مشفرة قابلة للاسترجاع.'),
+      'لا توجد معاملات لاسترجاعها.'),
      actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
       child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))]));
     return;
@@ -7363,7 +7401,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        key:Key('waffra-retro-budget-option-'+b.id),
        title:WaffraText(b.budgetLabel??b.name,maxLines:2),
        subtitle:WaffraText(waffraIsEnglish?
-        'Optional, no category change':'اختياري، من غير تغيير القسم'),
+        'Monthly limit: '+cash(b.budget):'حد الميزانية: '+cash(b.budget)),
        onTap:WaffraHaptics.tap(()=>Navigator.pop(ctx,b)),
       );
      })),])),
@@ -9076,7 +9114,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(module==WaffraFinanceModule.recurring)await syncRecurringReminders();
    if(mounted&&ready)snackSuccess(context,waffraIsEnglish?
     'Moved to encrypted Recently Deleted for 30 days':
-    'تم النقل إلى المحذوفات المشفرة لمدة 30 يومًا');
+    'تم النقل إلى المحذوفات لمدة 30 يومًا');
   }catch(error){
    debugPrint('Encrypted module delete refused: $error');
    if(mounted){
@@ -9108,7 +9146,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    await _loadFinanceSafely();
    if(module==WaffraFinanceModule.recurring)await syncRecurringReminders();
    if(mounted&&ready)snackSuccess(context,waffraIsEnglish?
-    'Encrypted item restored safely':'تم استرجاع العنصر المشفر بأمان');
+    'Item restored':'تم استرجاع العنصر');
   }catch(error){
    debugPrint('Encrypted finance module restoration blocked safely: $error');
    if(mounted){
@@ -9144,7 +9182,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     context:context,builder:(ctx)=>AlertDialog(
      title:WaffraText(waffraIsEnglish?
       'Encrypted Recently Deleted — ${labels[0]}':
-      'المحذوفات المشفرة — ${labels[1]}'),
+      'المحذوفات — ${labels[1]}'),
      content:SizedBox(
       width:double.maxFinite,
       height:min(365.0,items.length*78.0+35.0),
@@ -11114,12 +11152,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  Future<void> completeTour()async {
   _tourGlow.stop();
-  if(mounted)setState((){tourActive=false;tourTargetReady=false;addFabExpanded=false;tab=0;goalsOpened=false;});
+  if(mounted)setState((){_tabBackStack.clear();tourActive=false;tourTargetReady=false;addFabExpanded=false;tab=0;goalsOpened=false;});
   final p=await SharedPreferences.getInstance();
   await p.setBool('waffra_in_app_tour_seen_v2',true);
  }
  void beginTour(){
-  setState((){tourStep=0;tourActive=true;tourTargetReady=false;tab=0;accountOpened=false;_headerCompact=false;goalsOpened=false;addFabExpanded=false;});
+  setState((){_tabBackStack.clear();tourStep=0;tourActive=true;tourTargetReady=false;tab=0;accountOpened=false;_headerCompact=false;goalsOpened=false;addFabExpanded=false;});
   if(waffraAnimationLevel.value!='off')_tourGlow.repeat(reverse:true);
   scheduleTourFocus();
  }
@@ -11774,14 +11812,34 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(target!=tab)unawaited(selectFooter(target));
  }
  Future<void> selectFooter(int target)async {
-  if(target<0||target>=WaffraFooterNavigation.itemCount)return;
-  if(mounted)setState((){tab=target;accountOpened=false;goalsOpened=false;addFabExpanded=false;_headerCompact=false;});
+  if(target<0||target>=WaffraFooterNavigation.itemCount||!mounted)return;
+  setState((){
+   if(target!=tab){
+    _tabBackStack.add(tab);
+    if(_tabBackStack.length>20)_tabBackStack.removeAt(0);
+   }
+   tab=target;accountOpened=false;goalsOpened=false;
+   addFabExpanded=false;_headerCompact=false;
+  });
  }
  bool _consumeHomeBack(){
   if(!mounted)return false;
-  if(accountOpened||goalsOpened||tab!=0||addFabExpanded){
-   setState((){tab=0;accountOpened=false;goalsOpened=false;
-    addFabExpanded=false;_headerCompact=false;});
+  // Go back one UI layer at a time, without rebuilding earlier forms.
+  if(addFabExpanded){setState(()=>addFabExpanded=false);return true;}
+  if(accountOpened){
+   // Existing product rule: Account back always returns to Home.
+   setState((){
+    accountOpened=false;goalsOpened=false;tab=0;
+    _tabBackStack.clear();_headerCompact=false;
+   });
+   return true;
+  }
+  if(goalsOpened){setState(()=>goalsOpened=false);return true;}
+  if(tab!=0){
+   setState((){
+    tab=_tabBackStack.isNotEmpty?_tabBackStack.removeLast():0;
+    _headerCompact=false;
+   });
    return true;
   }
   return false;
