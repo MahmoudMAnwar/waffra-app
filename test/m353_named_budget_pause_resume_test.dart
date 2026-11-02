@@ -101,8 +101,10 @@ void main(){
   expect(home,contains("operation:'standalone-budget-create'"));
   expect(home,contains("operation:'standalone-budget-soft-delete'"));
   expect(home,isNot(contains("Key('waffra-named-budget-enabled-switch')")));
-  expect(directory,contains("'waffra-budget-quick-actions-'"));
-  expect(directory,contains('setNamedBudgetActive(b,!b.budgetActive)'));
+  expect(directory,contains("'waffra-budget-details-'"));
+  expect(directory,contains("'waffra-budget-active-'"));
+  expect(directory,contains('setNamedBudgetActive(b,enabled)'));
+  expect(directory,contains('Switch.adaptive('));
   expect(directory,contains("budgetStatusFilter=='active'"));
   // Manual editor and SMS import revalidate active standalone budget IDs.
   expect(home,contains('final linkedBudget=namedBudgets.where((b)=>b.id==result.budgetId&&!b.deleted)'));
