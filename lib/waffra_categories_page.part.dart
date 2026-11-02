@@ -106,25 +106,39 @@ extension WaffraCategoryScreen on _HomeScreenState {
       ExpansionTile(
        key:PageStorageKey<String>('waffra-root-category-actions-'+root.id),
        initiallyExpanded:false,
-       tilePadding:EdgeInsets.zero,
-       childrenPadding:const EdgeInsets.symmetric(vertical:6),
+       // A stable outlined control replaces Material's dark expansion rules.
+       shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12),
+        side:BorderSide(color:emerald.withValues(alpha:.30))),
+       collapsedShape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12),
+        side:BorderSide(color:emerald.withValues(alpha:.30))),
+       tilePadding:const EdgeInsets.symmetric(horizontal:8),
+       childrenPadding:const EdgeInsets.fromLTRB(7,4,7,9),
        leading:const Icon(Icons.settings_rounded,size:18,color:emerald),
        title:WaffraText(waffraIsEnglish?'Quick actions':'إجراءات سريعة',
         style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700)),
        children:[
         Wrap(spacing:6,runSpacing:8,children:[
-         TextButton.icon(
+         OutlinedButton.icon(
+          style:OutlinedButton.styleFrom(
+           minimumSize:const Size(0,48),
+           padding:const EdgeInsets.symmetric(horizontal:6,vertical:7)),
           onPressed:WaffraHaptics.tap(()=>
            addCategory(income:root.income,parentId:root.id)),
           icon:const Icon(Icons.add_rounded,size:16),
           label:WaffraText(waffraIsEnglish?'Add subcategory':'إضافة فرعي',
            style:const TextStyle(fontSize:11))),
-         TextButton.icon(
+         OutlinedButton.icon(
+          style:OutlinedButton.styleFrom(
+           minimumSize:const Size(0,48),
+           padding:const EdgeInsets.symmetric(horizontal:6,vertical:7)),
           onPressed:WaffraHaptics.tap(()=>updateCategory(root)),
           icon:const Icon(Icons.edit_outlined,size:16),
           label:WaffraText(waffraIsEnglish?'Edit':'تعديل',
            style:const TextStyle(fontSize:11))),
-         TextButton.icon(
+         OutlinedButton.icon(
+          style:OutlinedButton.styleFrom(
+           minimumSize:const Size(0,48),
+           padding:const EdgeInsets.symmetric(horizontal:6,vertical:7)),
           onPressed:WaffraHaptics.tap(()=>deleteCategory(root)),
           icon:const Icon(Icons.delete_outline_rounded,size:16,
            color:Colors.deepOrange),
@@ -158,19 +172,29 @@ extension WaffraCategoryScreen on _HomeScreenState {
       ExpansionTile(
        key:PageStorageKey<String>('waffra-subcategory-actions-'+sub.id),
        initiallyExpanded:false,
-       tilePadding:EdgeInsets.zero,
-       childrenPadding:const EdgeInsets.symmetric(vertical:4),
+       shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12),
+        side:BorderSide(color:emerald.withValues(alpha:.30))),
+       collapsedShape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12),
+        side:BorderSide(color:emerald.withValues(alpha:.30))),
+       tilePadding:const EdgeInsets.symmetric(horizontal:7),
+       childrenPadding:const EdgeInsets.fromLTRB(6,4,6,8),
        title:WaffraText(waffraIsEnglish?'Quick actions':'إجراءات سريعة',
         maxLines:2,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700)),
        trailing:const Icon(Icons.expand_more_rounded,size:16),
        children:[
         Wrap(spacing:5,runSpacing:6,children:[
-         TextButton.icon(
+         OutlinedButton.icon(
+          style:OutlinedButton.styleFrom(
+           minimumSize:const Size(0,48),
+           padding:const EdgeInsets.symmetric(horizontal:6,vertical:7)),
           onPressed:WaffraHaptics.tap(()=>updateCategory(sub)),
           icon:const Icon(Icons.edit_outlined,size:15),
           label:WaffraText(waffraIsEnglish?'Edit':'تعديل',
            style:const TextStyle(fontSize:11))),
-         TextButton.icon(
+         OutlinedButton.icon(
+          style:OutlinedButton.styleFrom(
+           minimumSize:const Size(0,48),
+           padding:const EdgeInsets.symmetric(horizontal:6,vertical:7)),
           onPressed:WaffraHaptics.tap(()=>deleteCategory(sub)),
           icon:const Icon(Icons.delete_outline_rounded,
            size:15,color:Colors.deepOrange),
@@ -343,12 +367,16 @@ extension WaffraCategoryScreen on _HomeScreenState {
          onChanged:WaffraHaptics.selection((v){
           if(v!=null)setState(()=>categorySort=v);
          }))),
-        SizedBox(width:cell,child:SwitchListTile.adaptive(
-         contentPadding:EdgeInsets.zero,dense:true,
+        SizedBox(width:cell,child:Container(
+         decoration:BoxDecoration(
+          border:Border.all(color:emerald.withValues(alpha:.30)),
+          borderRadius:BorderRadius.circular(13)),
+         child:SwitchListTile.adaptive(
+         contentPadding:const EdgeInsets.symmetric(horizontal:10),dense:true,
          title:WaffraText(waffraIsEnglish?'Added by me':'مضاف بواسطتي',
           style:const TextStyle(fontSize:12)),
          value:categoryMineOnly,
-         onChanged:WaffraHaptics.selection((v)=>setState(()=>categoryMineOnly=v)))),
+         onChanged:WaffraHaptics.selection((v)=>setState(()=>categoryMineOnly=v))))),
        ]);
       }),
       Align(alignment:AlignmentDirectional.centerEnd,
