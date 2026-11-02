@@ -11,6 +11,7 @@
   ],
   "allowed_changed_files": [
     ".github/CODEOWNERS",
+    ".github/scripts/run-m274-android-tap-smoke.sh",
     ".github/workflows/android.yml",
     ".github/workflows/m174-main-sha-postmerge.yml",
     ".github/workflows/m274-production-ui-golden.yml",
@@ -70,6 +71,12 @@
       {
         "start": "      - name: Syntax-check Android emulator test runner\n",
         "end": null
+      }
+    ],
+    ".github/scripts/run-m274-android-tap-smoke.sh": [
+      {
+        "start": "  cat \"$log\"\n",
+        "end": "  if (( result == 0 )); then\n"
       }
     ]
   }
