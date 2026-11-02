@@ -83,6 +83,23 @@ void main() {
   expect(source,contains("String goalSearch='',recurringSearch=''"));
  });
 
+ test('M396 new due entries require explicit consent, never silently debit',(){
+  final home=File('lib/main.dart').readAsStringSync();
+  final linked=File('lib/waffra_goal_recurring_actions.part.dart').readAsStringSync();
+  expect(home,contains('requestedRecurring=await _confirmGoalDueRecurringLink(g)'));
+  expect(home,contains('if(requestedRecurring&&mounted)'));
+  expect(linked,contains('Future<bool> _confirmGoalDueRecurringLink('));
+  expect(linked,contains("Navigator.pop(ctx,false)"));
+  expect(linked,contains("Navigator.pop(ctx,true)"));
+  expect(linked,contains('No money is deducted now.'));
+  expect(linked,contains('if(oldLinked)'));
+  expect(linked,contains('await _confirmGoalDueRecurringLink(updated)'));
+  final confirm=linked.split('Future<bool> _confirmGoalDueRecurringLink(').last
+    .split('Future<bool> _ensureLinkedRecurringForGoal(').first;
+  expect(confirm,isNot(contains('entries.add(')));
+  expect(confirm,isNot(contains('recurring.add(')));
+ });
+
  test('M394 privacy cloud explicitly allowlists only owner-approved goal active flag',(){
   final goal=SavingGoal(id:'safe',name:'مفتوح',target:0,saved:250,active:false);
   final copy=WaffraCloudSanitizer.sanitize('goal',goal.toJson());
