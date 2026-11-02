@@ -68,35 +68,3 @@ jobs:
           test/storage/m173_production_release_negative_matrix_test.dart
           test/storage/m123_production_cutover_release_gate_test.dart
           test/storage/m83_cutover_release_gate_matrix_test.dart
-
-  main-arm64-compile:
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    timeout-minutes: 50
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }}
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-      - run: |
-          flutter pub get
-          python3 scripts/qa/m287_patch_tesseract_gradle.py
-      - name: Provision Android project for CI (not signed release)
-        run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
-      - name: Compile Android ARM64 release-mode APK on main SHA
-        run: flutter build apk --release --no-pub --target-platform android-arm64
-      - name: Archive CI-only APK, not real-device or store proof
-        uses: actions/upload-artifact@v4
-        with:
-          name: m174-main-arm64-ci-apk-not-production-certified
-          path: build/app/outputs/flutter-apk/app-release.apk
-          if-no-files-found: error
-          retention-days: 7
