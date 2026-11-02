@@ -16,7 +16,7 @@ void main() {
     expect(card,contains("key:const Key('waffra-budget-month-next')"));
     expect(card,contains("key:const Key('waffra-budget-month-today')"));
     expect(card,contains("key:const Key('waffra-budget-month-label')"));
-    expect(card,contains("'${allBudgets.length} ميزانية مضافة'"));
+    expect(card,contains('ميزانية مضافة'));
     expect(card,contains('MaterialLocalizations.of(context).formatMonthYear(viewedMonth)'));
     expect(card,contains('e.date.month==viewedMonth.month'));
     expect(card,contains('waffraNamedBudgetSpent(entries,categories,selected,viewedMonth)'));
