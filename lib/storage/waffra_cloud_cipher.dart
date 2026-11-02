@@ -135,9 +135,9 @@ class WaffraCloudSanitizer {
 
   static const allowedFields = <String, Set<String>>{
     'entry': {'id','title','category','amount','income','date','budgetId'},
-    'category': {'id','name','icon','color','income','parentId','budget','alertPercent','budgetLabel'},
-    'goal': {'id','name','target','saved','dueDate','active'},
-    'recurring': {'id','title','category','amount','income','day','active','startAt','linkedGoalId'},
+    'category': {'id','name','icon','color','income','parentId','budget','alertPercent','budgetLabel','alertEnabled'},
+    'goal': {'id','name','target','saved','dueDate','active','alertEnabled','alertPercent'},
+    'recurring': {'id','title','category','amount','income','day','active','startAt','linkedGoalId','reminderEnabled'},
     'challenge': {'id','title','dailyAmount','days','completedDays','lastDone'},
     'postponement': {'entryId','postponedTo'},
     'merchant_rule': {'merchantKey','category'},
