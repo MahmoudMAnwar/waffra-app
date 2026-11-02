@@ -53,7 +53,7 @@ void main() {
 
   test('goals and backup request verified finance binding before reads', () {
     ensureBefore(
-      between('Future<void> goalDialog()async', 'Future<void>'),
+      between('Future<void> goalDialog({SavingGoal? copyFrom})async', 'Future<void>'),
       '_financeAuthority.loadCustomGoalSuggestions(',
     );
     ensureBefore(
