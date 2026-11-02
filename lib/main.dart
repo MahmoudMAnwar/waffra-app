@@ -1078,7 +1078,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     if(!{'light','dark','system'}.contains(appearance))appearance='light';
     dark=appearance=='dark'||(appearance=='system'&&WidgetsBinding.instance.platformDispatcher.platformBrightness==Brightness.dark);
     profile=u;
-    googleFirstRunSetup=!WaffraSaudiRelease.enabled&&
+    googleFirstRunSetup=WaffraSaudiRelease.locationCountryOnboarding&&
      waffraGoogleProfileReadyForCountrySetup(u)&&
       !(p.getBool(waffraCountrySetupKey(u!))??false);
     pinHash=p.getString('waffra_pin_sha256');
@@ -1115,7 +1115,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    phone:u.phone.trim().isNotEmpty?u.phone.trim():null,
   );
   final prefs=await SharedPreferences.getInstance();
-  final needsGoogleSetup=!WaffraSaudiRelease.enabled&&
+  final needsGoogleSetup=WaffraSaudiRelease.locationCountryOnboarding&&
    waffraGoogleProfileReadyForCountrySetup(u)&&
     !(prefs.getBool(waffraCountrySetupKey(u))??false);
   if(mounted)setState((){
@@ -1396,7 +1396,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    ])))):
    locked?PinLockScreen(pinHash:pinHash!,onUnlock:()=>setState(()=>locked=false)):
    profile==null||showLogin?LoginScreen(onSave:saveUser):
-   googleFirstRunSetup&&!WaffraSaudiRelease.enabled?WaffraCountryFirstRunPage(
+   googleFirstRunSetup&&WaffraSaudiRelease.locationCountryOnboarding?WaffraCountryFirstRunPage(
      english:language=='en',onComplete:completeGoogleCountrySetup,
      onCountryConfirmed:setUiCountry):
    HomeScreen(key:ValueKey(language),profile:profile!,
