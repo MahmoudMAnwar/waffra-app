@@ -32,7 +32,7 @@ void main() {
   expect(app, contains('Widget compactTransaction(MoneyEntry entry)'));
   expect(app, contains('final attachmentCount=waffraReceiptPaths(e.receiptPath).length;'));
   expect(app, contains('final attachmentCount=waffraReceiptPaths(entry.receiptPath).length;'));
-  expect(RegExp(r'if\\(attachmentCount>0\\)PositionedDirectional\\(top:0,start:0')
+  expect(RegExp(r'if\(attachmentCount>0\)PositionedDirectional\(top:0,start:0')
       .allMatches(app).length, 2,
    reason:'Both transaction list and dashboard require the RTL/LTR corner.');
   expect(app, contains('WaffraReceiptCornerBadge(count:attachmentCount,english:waffraIsEnglish)'));
