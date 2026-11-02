@@ -29,7 +29,8 @@
     "M416: pasted/shared bank SMS is parsed using the conservative local Saudi parser, never Qwen, with no foreign-currency-as-SAR auto-post; the user still confirms saved transactions.",
     "M416: do not alter existing financial history, SQLCipher activation, Google login, or saved Global preferences during Saudi-only rollout; preserve AR/EN app language for Saudi users.",
     "M416 QA: maintain the dormant Global unit tests but update Saudi-production expectations of country, locale and currency; remove generated Android coarse-location permission in Saudi builds, with explicit Global opt-in script mode.",
-    "M416 owner correction (Nov 2): restore original Tools currency converter in full; it was never approved for disabling. Keep only the app base currency/country and bank-SMS foreign FX-preview restrictions separate."
+    "M416 owner correction (Nov 2): restore original Tools currency converter in full; it was never approved for disabling. Keep only the app base currency/country and bank-SMS foreign FX-preview restrictions separate.",
+    "M416 owner correction: both Google and non-Google signup, sign-in and profile must use a 10-digit Saudi 05XXXXXXXX national mobile input with no flags, +966 label or selectable country. Preserve existing stored Saudi +966 Google records and never silently migrate old non-Saudi numbers."
   ],
   "allowed_changed_files": [
     ".github/workflows/m274-production-ui-golden.yml",
@@ -129,7 +130,9 @@
     "test/m301_google_country_phone_picker_test.dart",
     "test/m290_google_country_reminders_test.dart",
     "test/m268_smart_features_ten_calendar_art_test.dart",
-    "test/m326_region_dialect_splash_localization_test.dart"
+    "test/m326_region_dialect_splash_localization_test.dart",
+    "lib/waffra_saudi_mobile.dart",
+    "test/m416_saudi_mobile_only_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -999,6 +1002,18 @@
       }
     ],
     "test/m326_region_dialect_splash_localization_test.dart": [
+      {
+        "start": null,
+        "end": null
+      }
+    ],
+    "lib/waffra_saudi_mobile.dart": [
+      {
+        "start": null,
+        "end": null
+      }
+    ],
+    "test/m416_saudi_mobile_only_test.dart": [
       {
         "start": null,
         "end": null
