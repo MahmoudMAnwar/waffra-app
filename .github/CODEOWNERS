@@ -1,0 +1,12 @@
+# M385: require a human owner to review approved feature scope and safety gates.
+# For enforcement in GitHub configure the "main" branch ruleset to REQUIRE
+# code-owner approval and the M174 exact-SHA CI check. Merely having this file
+# does not activate branch-protection review requirements.
+/docs/qa/approved_change_scope.json @MahmoudMAnwar
+/scripts/qa/m385_approved_change_guard.py @MahmoudMAnwar
+/test/qa/m385_approved_scope_guard_test.py @MahmoudMAnwar
+/.github/workflows/ @MahmoudMAnwar
+/lib/ @MahmoudMAnwar
+/native/ @MahmoudMAnwar
+/android/ @MahmoudMAnwar
+/ios/ @MahmoudMAnwar
