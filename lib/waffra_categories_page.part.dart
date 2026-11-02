@@ -260,7 +260,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
    ()=>const SizedBox(height:10),
    ()=>_summaryBox(waffraIsEnglish?'Monthly expenses':'المصروف الشهري',
     cash(expenseTotal),Icons.trending_down,Colors.deepOrange),
-   if(unassignedExpenseCount>0)...[
+   if(unassignedExpenseCount>0&&waffraHasSelectableBudget(namedBudgets))...[
     ()=>const SizedBox(height:9),
     ()=>Card(
      key:const Key('waffra-retro-budget-review-banner'),
