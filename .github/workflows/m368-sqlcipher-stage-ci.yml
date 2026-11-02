@@ -1,0 +1,39 @@
+name: M368 SQLCipher Goal Due Authority Integration
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/m368-sqlcipher-stage-ci.yml'
+      - 'lib/storage/waffra_verified_encrypted_finance_bridge.dart'
+      - 'lib/storage/waffra_encrypted_finance_session.dart'
+      - 'lib/storage/waffra_verified_finance_authority.dart'
+      - 'test/storage/m182_encrypted_recurring_paid_atomic_test.dart'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verified-sqlcipher-stage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Analyze changed finance files
+        run: dart analyze lib/storage/waffra_verified_encrypted_finance_bridge.dart lib/storage/waffra_encrypted_finance_session.dart lib/storage/waffra_verified_finance_authority.dart test/storage/m182_encrypted_recurring_paid_atomic_test.dart
+      - name: Check stage-specific regression
+        run: flutter test --reporter expanded test/storage/m182_encrypted_recurring_paid_atomic_test.dart test/storage/m364_sqlcipher_finance_domain_test.dart
+      - name: Confirm production cutover still requires independent evidence
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          code = Path('lib/storage/waffra_production_cutover_release_gate.dart').read_text()
+          assert 'bool get automaticallyActivateSqlCipher => false;' in code
+          print('No automatic SQLCipher production activation.')
+          PY
