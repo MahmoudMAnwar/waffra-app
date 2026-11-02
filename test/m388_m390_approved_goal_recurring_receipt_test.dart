@@ -37,7 +37,7 @@ void main() {
   final source=File('lib/main.dart').readAsStringSync();
   final dialog=source.split('Future<void> goalDialog(').last
     .split('/// Release an earmark').first;
-  expect(dialog,contains('goalDialog({SavingGoal? duplicate,bool openEnded=false})'));
+  expect(dialog,contains('{SavingGoal? duplicate,bool openEnded=false})'));
   expect(dialog,contains('SavingGoal(id:newId()'));
   expect(dialog,contains('target:noTarget?0.0:n!,saved:0'));
   expect(dialog,contains('duplicate.target<=0'));
