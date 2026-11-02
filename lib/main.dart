@@ -2356,10 +2356,10 @@ class WaffraNoticeContent extends StatelessWidget {
  final VoidCallback onDismiss;
  @override Widget build(BuildContext context){
   final palette=waffraNoticePalette(context,notice.kind);
-  // Both actions share the same 40dp touch height. Keep the message
-  // flexible so RTL, large text and compact Android widths never push
-  // Undo or Close out of the notice.
-  return ConstrainedBox(constraints:const BoxConstraints(minHeight:40),
+  // Keep both actions at least 48dp tall for accessible touch targets.
+  // Their small icons and compact text preserve visual balance in RTL/LTR.
+  // The message stays flexible on narrow Android screens and at 200% text.
+  return ConstrainedBox(constraints:const BoxConstraints(minHeight:48),
    child:Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
     Icon(palette.$4,color:palette.$2,size:19),
     const SizedBox(width:8),
@@ -2374,10 +2374,9 @@ class WaffraNoticeContent extends StatelessWidget {
       key:const Key('waffra-snackbar-action'),
       style:TextButton.styleFrom(
        foregroundColor:palette.$2,
-       minimumSize:const Size(64,40),
-       maximumSize:const Size(96,40),
+       minimumSize:const Size(64,48),
+       maximumSize:const Size(96,48),
        padding:const EdgeInsets.symmetric(horizontal:10),
-       visualDensity:VisualDensity.compact,
        backgroundColor:palette.$2.withValues(alpha:.07),
        side:BorderSide(color:palette.$3.withValues(alpha:.45)),
        shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(10))),
@@ -2390,12 +2389,12 @@ class WaffraNoticeContent extends StatelessWidget {
         color:palette.$2,fontSize:12,fontWeight:FontWeight.bold))),
     ],
     const SizedBox(width:6),
-    SizedBox(width:40,height:40,child:IconButton(
+    SizedBox(width:48,height:48,child:IconButton(
      key:const Key('waffra-snackbar-close'),
      tooltip:waffraIsEnglish?'Close':'إغلاق',
      icon:Icon(Icons.close_rounded,color:palette.$2,size:18),
-     visualDensity:VisualDensity.compact,padding:EdgeInsets.zero,
-     constraints:const BoxConstraints(minWidth:40,minHeight:40),
+     padding:EdgeInsets.zero,
+     constraints:const BoxConstraints(minWidth:48,minHeight:48),
      onPressed:WaffraHaptics.tap(onDismiss))),
    ]));
  }
