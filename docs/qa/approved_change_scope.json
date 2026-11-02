@@ -233,6 +233,10 @@
       {
         "start": "  test('mandatory fields block invalid negative scenarios', () async {",
         "end": "  test('missing schema and disabled flag prevent finance access', () async {"
+      },
+      {
+        "start": "import 'dart:io';",
+        "end": "void main() {"
       }
     ],
     "test/storage/ledger_projection_test.dart": [
