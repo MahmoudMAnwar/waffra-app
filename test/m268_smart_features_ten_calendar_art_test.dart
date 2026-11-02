@@ -148,7 +148,7 @@ void main(){
    expect(waffraSmartBalance(sample),1150);
    expect(find.textContaining('Simulation only'),findsOneWidget);
   });
-  testWidgets('smart tools honor selected nominal currency without FX',(tester)async{
+  testWidgets('Saudi smart tools show SAR even when old Global display unit differs',(tester)async{
    final original=waffraSmartBalance(sample);
    WaffraDisplayCurrency.active.value=
     WaffraDisplayCurrency.displaySelection('EGP');
@@ -162,8 +162,8 @@ void main(){
    await tester.pumpAndSettle();
    await tester.tap(find.byKey(const Key('waffra-m268-feature-simulation')));
    await tester.pumpAndSettle();
-   expect(find.text('Hypothetical purchase (EGP) — 3500'),findsOneWidget);
-   expect(find.text('-2,350.00 EGP'),findsOneWidget);
+   expect(find.text('Hypothetical purchase (SAR) — 3500'),findsOneWidget);
+   expect(find.text('-2,350.00 SAR'),findsOneWidget);
    expect(waffraSmartBalance(sample),original);
    expect(WaffraDisplayCurrency.toLedgerSar(1000),1000);
   });
@@ -199,7 +199,7 @@ void main(){
    expect(sample.length,2);
    expect(waffraSmartBalance(sample),1150);
   });
-  testWidgets('analysis and live currency gold oil open inside Tools, not Home',(tester)async{
+  testWidgets('analysis and Saudi gold/oil markets open without global currency panel',(tester)async{
    await tester.pumpWidget(MaterialApp(home:Scaffold(
     body:WaffraSmartFeaturesPage(embedded:true,entries:sample,
      goals:const [],recurring:const [],english:false,
@@ -219,7 +219,7 @@ void main(){
    await tester.pumpAndSettle();
    expect(find.byKey(const Key('waffra-m268-expanded-analysis')),findsNothing);
    expect(find.byKey(const Key('waffra-inline-world-markets')),findsOneWidget);
-   expect(find.byKey(const Key('waffra-market-currency')),findsOneWidget);
+   expect(find.byKey(const Key('waffra-market-currency')),findsNothing);
    expect(find.byKey(const Key('waffra-market-gold')),findsOneWidget);
    expect(find.byKey(const Key('waffra-market-oil')),findsOneWidget);
    expect(find.byType(Scaffold),findsOneWidget);
