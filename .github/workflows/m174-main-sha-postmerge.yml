@@ -27,6 +27,8 @@ jobs:
         run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
       - name: Test source guard tamper detection
         run: python3 -m unittest scripts/qa/test_m173_source_cutover_preflight.py -v
+      - name: Verify M382 skip-free routing and preserved release safety
+        run: python3 -m unittest discover -s test/qa -p 'm382_skip_free_workflow_routing_test.py' -v
       - name: Generate non-sensitive NO-GO evidence for exact SHA
         env:
           GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
