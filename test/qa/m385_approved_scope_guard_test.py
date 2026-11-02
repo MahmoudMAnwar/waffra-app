@@ -114,6 +114,18 @@ class NoUnrequestedChangesTest(unittest.TestCase):
             guard.audit_scope(manifest, {path, MANIFEST},
                               {path: original}, {path: modified, MANIFEST: "scope"}, {path})
 
+    def test_existing_regression_test_cannot_be_rewritten_wholesale(self):
+        path = "test/legacy_accepted_feature_test.dart"
+        manifest = contract(allowed=[path, MANIFEST], sections={})
+        with self.assertRaisesRegex(guard.ScopeViolation, "cannot change wholesale"):
+            guard.audit_scope(
+                manifest, {path, MANIFEST},
+                {path: "test('original badge', () => expect(true, true));"},
+                {path: "test('badge absent', () => expect(true, true));",
+                 MANIFEST: "scope"},
+                {path},
+            )
+
     def test_exact_content_outside_scope_must_be_byte_identical(self):
         with self.assertRaisesRegex(guard.ScopeViolation, "outside"):
             run(head=HEAD.replace("BEFORE", "BEFORE-CHANGED"))
