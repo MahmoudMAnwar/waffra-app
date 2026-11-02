@@ -10330,10 +10330,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         SwitchListTile.adaptive(
          key:Key('waffra-goal-active-switch-'+g.id),
          contentPadding:EdgeInsets.zero,
-         title:WaffraText(waffraIsEnglish?'Goal enabled':'تفعيل الهدف'),
-         subtitle:WaffraText(g.active?
-          (waffraIsEnglish?'Active':'مفعّل'):
-          (waffraIsEnglish?'Paused — savings preserved':'متوقف مؤقتًا والمدخرات محفوظة')),
+         title:WaffraText(
+          (waffraIsEnglish?'Goal enabled':'تفعيل الهدف')+'  •  '+
+          (g.active?(waffraIsEnglish?'Active':'مفعّل'):
+           (waffraIsEnglish?'Paused':'متوقف')),
+          maxLines:1,style:const TextStyle(fontSize:13,fontWeight:FontWeight.w600)),
          activeTrackColor:emerald,
          value:g.active,
          onChanged:WaffraHaptics.selection((enabled)=>
@@ -10794,27 +10795,27 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       title:WaffraText(waffraIsEnglish?'Quick actions':'إجراءات سريعة',
        style:const TextStyle(fontSize:13,fontWeight:FontWeight.w700)),
       children:[
-       Wrap(spacing:8,runSpacing:8,children:[
-        OutlinedButton.icon(
+       Row(children:[
+        Expanded(child:OutlinedButton.icon(
          onPressed:WaffraHaptics.tap(()=>unawaited(_handleRecurringCardAction(r,'edit'))),
          icon:const Icon(Icons.edit_outlined,size:17),
-         label:WaffraText(waffraIsEnglish?'Edit':'تعديل')),
-        OutlinedButton.icon(
+         label:WaffraText(waffraIsEnglish?'Edit':'تعديل',maxLines:1))),
+        const SizedBox(width:7),
+        Expanded(child:OutlinedButton.icon(
          onPressed:WaffraHaptics.tap(()=>unawaited(_handleRecurringCardAction(r,'delete'))),
          icon:const Icon(Icons.delete_outline_rounded,color:Colors.deepOrange,size:17),
-         label:WaffraText(waffraIsEnglish?'Delete':'حذف')),
+         label:WaffraText(waffraIsEnglish?'Delete':'حذف',maxLines:1))),
+        const SizedBox(width:6),
+        Tooltip(message:r.active?
+         (waffraIsEnglish?'Pause recurring':'إيقاف العملية المتكررة'):
+         (waffraIsEnglish?'Enable recurring':'تفعيل العملية المتكررة'),
+         child:Semantics(label:waffraIsEnglish?'Recurring enabled':'تفعيل المتكررة',
+          child:Switch.adaptive(
+           key:Key('waffra-recurring-active-switch-'+r.id),
+           activeTrackColor:emerald,value:r.active,
+           onChanged:WaffraHaptics.selection((value)=>
+            unawaited(_setRecurringActiveFromCard(r,value)))))),
        ]),
-       SwitchListTile.adaptive(
-        key:Key('waffra-recurring-active-switch-'+r.id),
-        contentPadding:EdgeInsets.zero,
-        title:WaffraText(waffraIsEnglish?'Recurring enabled':'تفعيل العملية المتكررة'),
-        subtitle:WaffraText(r.active?
-         (waffraIsEnglish?'Active':'مفعلة'):
-         (waffraIsEnglish?'Paused':'متوقفة مؤقتًا')),
-        activeTrackColor:emerald,
-        value:r.active,
-        onChanged:WaffraHaptics.selection((value)=>
-         unawaited(_setRecurringActiveFromCard(r,value)))),
       ],
      ),
      ])));
@@ -12256,12 +12257,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           label:waffraIsEnglish?'New savings goal':'إضافة هدف جديد',
           onTap:WaffraHaptics.tapRequired((){
            unawaited(_launchAddAction(()=>goalDialog(),fromMenu:true));
-          })),
-         const SizedBox(height:7),
-         _addMenuOption(icon:Icons.all_inclusive_rounded,
-          label:waffraIsEnglish?'Open-ended savings':'ادخار مفتوح بدون مستهدف',
-          onTap:WaffraHaptics.tapRequired((){
-           unawaited(_launchAddAction(()=>goalDialog(openEnded:true),fromMenu:true));
           })),
          if(goals.isNotEmpty)...[
           const SizedBox(height:7),
