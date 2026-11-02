@@ -47,6 +47,15 @@ class WaffraFinancialInsights {
   }
   return crossed;
  }
+ /// A percentage is meaningful only for a positive fixed savings target.
+ /// A category is not a budget and has no implicit spending threshold.
+ static int newlyCrossedGoalStage(
+  double previousSaved,double saved,double target,int threshold,{
+  bool enabled=true,
+ }){
+  if(!enabled||target<=0)return 0; // Open-ended saving must never alert by percent.
+  return newlyCrossedBudgetStage(previousSaved,saved,target,threshold);
+ }
  static int budgetAlertStage(double spent,double limit){
   if(limit<=0)return 0;
   final percent=spent/limit*100;
