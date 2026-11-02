@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'waffra_amount_formatter.dart';
+import 'waffra_saudi_release.dart';
 
 /// Country chooses a PRESENTATION UNIT ONLY. Numbers are unchanged (e.g.,
 /// 1,000 SAR is shown as 1,000 EGP when EGP is selected). This is NOT FX.
@@ -99,10 +100,11 @@ class WaffraDisplayCurrency {
   ValueNotifier<WaffraVerifiedDisplayQuote>(
    const WaffraVerifiedDisplayQuote(code:'SAR',sarToSelected:1,
      updatedAtUtc:null,provider:'display-only'));
- static WaffraCountryCurrency get country=>waffraCountry(active.value.code);
+ static WaffraCountryCurrency get country=>waffraCountry(
+  WaffraSaudiRelease.enabled?'SAR':active.value.code);
  static String label(bool english)=>english?country.code:country.symbolAr;
- static double? convert(num sar)=>active.value.fromSar(sar);
- static double? toLedgerSar(num selected)=>active.value.toSar(selected);
+ static double? convert(num sar)=>WaffraSaudiRelease.enabled?sar.toDouble():active.value.fromSar(sar);
+ static double? toLedgerSar(num selected)=>WaffraSaudiRelease.enabled?selected.toDouble():active.value.toSar(selected);
  static String amount(num sar) {
   final converted=convert(sar);
   if(converted==null)return '—';
@@ -224,6 +226,7 @@ class WaffraDisplayCurrency {
    provider: 'display-only');
  }
  static Future<void> setCurrency(String code,{http.Client? client})async{
+  if(WaffraSaudiRelease.enabled&&code!='SAR')throw StateError('saudi_release_currency_locked');
   final quote=displaySelection(code);
   final p=await SharedPreferences.getInstance();
   if(!await p.setString(_preferenceKey,code)){
@@ -237,7 +240,7 @@ class WaffraDisplayCurrency {
   final saved=p.getString(_preferenceKey)??'SAR';
   hasSavedPreference=p.containsKey(_preferenceKey)&&
     waffraCountryCurrencies.any((item)=>item.code==saved);
-  active.value=displaySelection(
+  active.value=displaySelection(WaffraSaudiRelease.enabled?'SAR':
    waffraCountryCurrencies.any((item)=>item.code==saved)?saved:'SAR');
  }
  static Future<void> refresh({http.Client? client})async{
