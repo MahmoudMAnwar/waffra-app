@@ -9597,10 +9597,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    setState(()=>goals.add(g));
    if(!await _persistModuleOrReload(WaffraFinanceRoute.goalCreateEditDeleteRestore,
      operation:'goal-create'))return;
-   final linked=g.dueDate==null||g.target<=0?false:
-     await this._ensureLinkedRecurringForGoal(g);
+   // Creating an obligation is never automatic just because a date exists.
+   bool linked=false,requestedRecurring=false;
+   if(g.dueDate!=null&&g.target>0&&g.active&&mounted){
+    requestedRecurring=await _confirmGoalDueRecurringLink(g);
+    if(requestedRecurring&&mounted){
+     linked=await this._ensureLinkedRecurringForGoal(g);
+    }
+   }
    if(mounted){
-    if(g.dueDate!=null&&g.target>0&&!linked){
+    if(requestedRecurring&&!linked){
      snack(context,waffraIsEnglish?
       'Goal saved, but recurring link was not confirmed. Retry from Edit Goal.':
       'تم حفظ الهدف، لكن ربط المتكررة لم يتأكد. أعد المحاولة من تعديل الهدف.');
