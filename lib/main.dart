@@ -12074,6 +12074,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      WaffraText(label,style:TextStyle(
       fontSize:15,fontWeight:FontWeight.bold,color:Theme.of(context).brightness==Brightness.dark?Colors.white:forest)),
     ]))));
+ Widget _borderedMenuChoice({
+  required Widget title,Widget? subtitle,Widget? leading,
+  required VoidCallback onTap,
+ })=>Padding(
+  padding:const EdgeInsets.symmetric(vertical:5),
+  child:Material(
+   color:Theme.of(context).cardColor,
+   shape:RoundedRectangleBorder(
+    borderRadius:BorderRadius.circular(14),
+    side:BorderSide(color:emerald.withValues(alpha:.35))),
+   clipBehavior:Clip.antiAlias,
+   child:ListTile(
+    title:title,subtitle:subtitle,leading:leading,
+    onTap:onTap,contentPadding:const EdgeInsets.symmetric(
+     horizontal:12,vertical:7))));
  Future<void> _duplicateGoalFromMenu()async {
   if(goals.isEmpty)return;
   final chosen=await showWaffraDialog<SavingGoal>(
@@ -12082,7 +12097,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     content:SizedBox(width:350,height:min(420,MediaQuery.sizeOf(dialogCtx).height*.55),
      child:ListView.builder(itemCount:goals.length,itemBuilder:(ctx,index){
       final item=goals[index];
-      return ListTile(
+      return _borderedMenuChoice(
        leading:const Icon(Icons.copy_all_outlined,color:emerald),
        title:WaffraText(item.name),
        subtitle:WaffraText(item.target<=0
@@ -12105,7 +12120,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     content:SizedBox(width:350,height:min(420,MediaQuery.sizeOf(dialogCtx).height*.55),
      child:ListView.builder(itemCount:recurring.length,itemBuilder:(ctx,index){
       final item=recurring[index];
-      return ListTile(
+      return _borderedMenuChoice(
        leading:const Icon(Icons.copy_all_outlined,color:emerald),
        title:WaffraText(item.title),
        subtitle:WaffraText(cash(item.amount)),
