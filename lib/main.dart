@@ -17,6 +17,7 @@ import 'waffra_smart_features.dart';
 import 'waffra_tour_plan.dart';
 import 'waffra_today_picker.dart';
 import 'waffra_action_layout.dart';
+import 'waffra_centered_dropdown.dart';
 import 'waffra_subtle_selection.dart';
 import 'waffra_receipt_filename.dart';
 import 'waffra_receipt_ocr.dart';
@@ -2294,7 +2295,7 @@ class _ProfileFormState extends State<ProfileForm> {
      ])),
    ],
    const SizedBox(height:12),
-   DropdownButtonFormField<String>(initialValue:['ذكر','أنثى'].contains(gender)?gender:null,
+   WaffraCenteredDropdownFormField<String>(initialValue:['ذكر','أنثى'].contains(gender)?gender:null,
     decoration:InputDecoration(labelText:waffraIsEnglish?'Gender *':'الجنس *',
       errorText:profileAttempted&&gender.isEmpty?waffraRequiredFieldMessage:null,
       border:const OutlineInputBorder()),
@@ -3937,7 +3938,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          WaffraText(candidates[n].title+' · '+cash(candidates[n].amount),
           style:const TextStyle(fontWeight:FontWeight.bold),maxLines:2),
          const SizedBox(height:5),
-         DropdownButtonFormField<String>(
+         WaffraCenteredDropdownFormField<String>(
           key:ValueKey('waffra-sms-budget-'+n.toString()+'-'+(assigned[n]??'none')),
           menuMaxHeight:min(340.0,MediaQuery.sizeOf(ctx).height*.48),
           initialValue:assigned[n]??'none',isExpanded:true,
@@ -5611,7 +5612,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        const SizedBox(height:10),
        // Budget and transaction date share one compact, keyboard-safe row.
        Row(children:[
-        Expanded(child:DropdownButtonFormField<String>(
+        Expanded(child:WaffraCenteredDropdownFormField<String>(
          key:ValueKey('waffra-entry-budget-'+(selectedBudgetId??'unlinked')+'-$budgetMenuRevision'),
          menuMaxHeight:min(340.0,MediaQuery.sizeOf(sheetContext).height*.48),
          initialValue:namedBudgets.any((b)=>b.budget>0&&
@@ -7548,7 +7549,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        decoration:InputDecoration(labelText:waffraIsEnglish?'Monthly limit *':'الحد الشهري *',
         errorText:amountError,border:const OutlineInputBorder())),
       const SizedBox(height:12),
-      DropdownButtonFormField<int>(initialValue:alert,
+      WaffraCenteredDropdownFormField<int>(initialValue:alert,
        decoration:InputDecoration(labelText:waffraIsEnglish?'Budget alert at':'التنبيه عند نسبة'),
        items:[50,60,70,75,80,85,90,95,100]
         .map((n)=>DropdownMenuItem(value:n,child:WaffraText(n.toString()+'٪'))).toList(),
@@ -7618,7 +7619,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          labelText:waffraIsEnglish?'Monthly amount *':'الحد الشهري *',
          errorText:amountError,border:const OutlineInputBorder())),
        const SizedBox(height:12),
-       DropdownButtonFormField<int>(initialValue:alert,
+       WaffraCenteredDropdownFormField<int>(initialValue:alert,
         isExpanded:true,
         decoration:InputDecoration(labelText:waffraIsEnglish?
          'Notify at':'التنبيه عند نسبة'),
@@ -7790,7 +7791,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ]);
     }),
     const SizedBox(height:8),
-    DropdownButtonFormField<String>(
+    WaffraCenteredDropdownFormField<String>(
      key:ValueKey('waffra-budget-status-filter-'+budgetStatusFilter),
      initialValue:budgetStatusFilter,
      isExpanded:true,
@@ -7815,7 +7816,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      }),
     ),
     const SizedBox(height:14),
-    DropdownButtonFormField<String>(
+    WaffraCenteredDropdownFormField<String>(
      key:ValueKey('waffra-budget-picker-'+(selected?.id??'all')),
      menuMaxHeight:min(340.0,MediaQuery.sizeOf(context).height*.48),
      initialValue:selected?.id??'all',isExpanded:true,
@@ -8460,7 +8461,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               onSelected:WaffraHaptics.selection((_)=>setState((){
                typeFilter=choice;categoryFilter='الكل';
               })))).toList()),
-            DropdownButtonFormField<String>(
+            WaffraCenteredDropdownFormField<String>(
              key:ValueKey(typeFilter+'-'+selected),initialValue:selected,
              decoration:InputDecoration(labelText:waffraIsEnglish?
               'Category':'تصفية حسب القسم'),
@@ -8576,7 +8577,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      Row(children:[const Icon(Icons.tune,color:emerald),const SizedBox(width:8),
       WaffraText(waffraIsEnglish?'What if?':'ماذا لو؟',
        style:const TextStyle(fontWeight:FontWeight.bold,fontSize:16))]),
-     DropdownButtonFormField<String>(initialValue:chosen,
+     WaffraCenteredDropdownFormField<String>(initialValue:chosen,
       decoration:InputDecoration(labelText:waffraIsEnglish?'Reduce category expenses':'تقليل مصروفات قسم'),
       items:top.map((e)=>DropdownMenuItem(value:e.key,child:WaffraText(e.key))).toList(),
       onChanged:WaffraHaptics.selection((v)=>setState((){forecastCategory=v;forecastReduction=20;}))),
@@ -8909,11 +8910,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     selected:{period},onSelectionChanged:WaffraHaptics.selection((v)=>setState(()=>period=v.first))),
    const SizedBox(height:12),
    Row(children:[
-    Expanded(child:DropdownButtonFormField<int>(initialValue:year,
+    Expanded(child:WaffraCenteredDropdownFormField<int>(initialValue:year,
      decoration:InputDecoration(labelText:waffraTr('السنة')),
      items:years.map((x)=>DropdownMenuItem(value:x,child:WaffraText('$x'))).toList(),
      onChanged:WaffraHaptics.selection((v){if(v!=null)setState(()=>year=v);}))),
-    if(period=='شهري')Expanded(child:DropdownButtonFormField<int>(initialValue:month,
+    if(period=='شهري')Expanded(child:WaffraCenteredDropdownFormField<int>(initialValue:month,
      decoration:InputDecoration(labelText:waffraTr('الشهر')),
      items:List.generate(12,(i)=>DropdownMenuItem(value:i+1,child:WaffraText('شهر ${i+1}'))),
      onChanged:WaffraHaptics.selection((v){if(v!=null)setState(()=>month=v);}))),
@@ -9905,7 +9906,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        labelText:waffraIsEnglish?'Daily amount *':'الادخار اليومي *',
        errorText:attempted?waffraAmountFieldError(amount.text):null)),
      const SizedBox(height:12),
-     DropdownButtonFormField<int>(initialValue:days,
+     WaffraCenteredDropdownFormField<int>(initialValue:days,
       decoration:InputDecoration(labelText:waffraIsEnglish?'Duration *':'مدة التحدي *'),
       items:[7,14,30].map((n)=>DropdownMenuItem<int>(value:n,
        child:WaffraText(waffraIsEnglish?'$n days':'$n يوم'))).toList(),
@@ -10348,7 +10349,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        decoration:InputDecoration(labelText:waffraIsEnglish?'Amount *':'المبلغ *',
         errorText:attempted?waffraAmountFieldError(amount.text):null)),
       const SizedBox(height:12),
-      DropdownButtonFormField<bool>(initialValue:income,
+      WaffraCenteredDropdownFormField<bool>(initialValue:income,
        items:const [DropdownMenuItem(value:true,child:WaffraText('دخل')),
         DropdownMenuItem(value:false,child:WaffraText('مصروف'))],
        onChanged:initial?.linkedGoalId!=null?null:WaffraHaptics.selection((v){if(v!=null)update((){
