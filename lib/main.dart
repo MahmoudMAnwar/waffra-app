@@ -6875,7 +6875,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      'نقل المعاملة إلى المحذوفات',
     waffraIsEnglish?
      'Move «${entry.title}» and its attached invoices to encrypted Recently Deleted for 30 days?':
-     'هل تريد نقل المعاملة «${entry.title}» وفواتيرها المشفرة إلى المحذوفات لمدة 30 يومًا؟');
+     'هل تريد نقل المعاملة «${entry.title}» وفواتيرها إلى المحذوفات لمدة 30 يومًا؟');
    if(approved!=true||!mounted)return;
    await _financialWriteQueue.submit(<String,Object>{'id':entry.id},(_)async{
     final committed=await _financeAuthority.deleteVerifiedTransactionToRecycle(
@@ -7603,11 +7603,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       scrollable:true,
       title:WaffraText(waffraIsEnglish?'New budget':'إنشاء ميزانية جديدة'),
       content:Column(mainAxisSize:MainAxisSize.min,children:[
-       WaffraText(waffraIsEnglish?
-        'Create a budget without selecting any category.':
-        'ميزانيتك مستقلة، مش محتاج تختار أي قسم.',
-        style:const TextStyle(fontSize:12,color:emerald)),
-       const SizedBox(height:12),
        TextField(controller:name,maxLength:80,
         onChanged:(_)=>update(()=>nameError=null),
         decoration:InputDecoration(
