@@ -140,7 +140,7 @@ void main() {
       password:password,explicitlyApproved:true);
     await expectLater(backup(destination).restore(
       encryptedArchive:encrypted,password:password,explicitlyApproved:true),
-      throwsA(isA<Exception>()));
+      throwsA(isA<StateError>()));
     for(final table in WaffraFreshFinanceDomainSchema.domainTables) {
       expect(await count(destination,table),0,reason:table);
     }
