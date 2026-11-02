@@ -59,7 +59,7 @@
       },
       {
         "start": "    expect(source, isNot(contains('WaffraPhysicalLeftFab')));\n  });\n\n",
-        "end": "  testWidgets('expanded menu is above the physical plus on the same side in both languages', tester) async {"
+        "end": "  testWidgets('expanded menu is above the physical plus on the same side in both languages', (tester) async {"
       }
     ]
   }
