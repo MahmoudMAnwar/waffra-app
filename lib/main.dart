@@ -3093,6 +3093,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  String search='',typeFilter='الكل',categoryFilter='الكل',period='شهري';
  String categorySearch='',categoryDisplay='all',categoryTypeFilter='all',goalDisplay='all',recurringDisplay='all';
  String categorySort='default'; // Presentation-only; never rewrites finance categories.
+ String goalSearch='',recurringSearch=''; // Presentation-only queries.
  bool categoryMineOnly=false;
  bool categoryFiltersOpen=false; // Compact category-filter accordion; UI-only state.
  bool monthlyBudgetDetailsOpen=false; // Monthly budget accordion, presentation only.
@@ -10068,9 +10069,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final saved=goals.fold<double>(0,(v,g)=>v+g.saved);
   final savedTowardsTargets=goals.where((g)=>g.target>0).fold<double>(0,(v,g)=>v+g.saved);
   final pct=target==0?0.0:(savedTowardsTargets/target).clamp(0.0,1.0);
-  final filtered=goals.where((g)=>goalDisplay=='all'||
-   (goalDisplay=='done'?(g.target>0&&g.saved>=g.target):(g.target<=0||g.saved<g.target))).toList();
-  return ListView(controller:_goalsScrollController,
+  final filtered=goals.where((g)=>
+   (goalDisplay=='all'||
+    (goalDisplay=='done'?(g.target>0&&g.saved>=g.target):
+      (g.target<=0||g.saved<g.target)))&&
+   waffraSearchAny([g.name,waffraTr(g.name)],goalSearch)).toList();
+  return Scrollbar(
+   controller:_goalsScrollController,thumbVisibility:true,
+   thickness:3,radius:const Radius.circular(8),
+   child:ListView(controller:_goalsScrollController,
    physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
    padding:const EdgeInsets.fromLTRB(16,14,16,28),children:[
    WaffraPageHero(
@@ -10078,6 +10085,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     subtitle:waffraIsEnglish?'Plan your future and follow every milestone':
      'حوّل أحلامك إلى أهداف وتابع تقدّمك خطوة بخطوة.',
     icon:Icons.flag_outlined,titleKey:_tourKeys[6]),
+   const SizedBox(height:10),
+   TextField(
+    key:const Key('waffra-goals-search'),
+    onChanged:(query)=>setState(()=>goalSearch=query),
+    decoration:InputDecoration(
+     hintText:waffraIsEnglish?'Search savings goals':'ابحث في أهداف الادخار',
+     prefixIcon:const Icon(Icons.search_rounded),
+     border:OutlineInputBorder(borderRadius:BorderRadius.circular(14))),
+   ),
+   const SizedBox(height:12),
    SizedBox(height:148,
     child:WaffraBalanceHeader(
      balance:waffraGoalWalletBalance(goals),
@@ -10267,7 +10284,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     child:WaffraText(waffraIsEnglish?'No goals in this filter':'لا توجد أهداف في هذا التصنيف',textAlign:TextAlign.center)),
    savingsChallengesSection(),
    const SizedBox(height:30),
-  ]);
+  ]));
  }
  Future<void> recurringDialog({String? suggestedTitle,double? suggestedAmount,RecurringBill? initial,RecurringBill? duplicate})async {
   final title=TextEditingController(text:initial?.title??duplicate?.title??suggestedTitle??''),
@@ -10478,13 +10495,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     (r.startAt.year==lastOfCurrentMonth.year&&
      r.startAt.month==lastOfCurrentMonth.month)))
    .fold<double>(0,(v,r)=>v+r.amount);
-  final shown=recurring.where((r)=>recurringDisplay=='all'||
-   (recurringDisplay=='active'?r.active:!r.active)).toList();
+  final shown=recurring.where((r)=>
+   (recurringDisplay=='all'||
+    (recurringDisplay=='active'?r.active:!r.active))&&
+   waffraSearchAny([r.title,r.category,waffraTr(r.category)],recurringSearch)).toList();
   final upcoming=active.where((r){
    final days=nextRecurringDue(r).difference(DateTime(DateTime.now().year,DateTime.now().month,DateTime.now().day)).inDays;
    return days>=0&&days<=3;
   }).length;
-  return ListView(controller:_recurringScrollController,
+  return Scrollbar(
+   controller:_recurringScrollController,thumbVisibility:true,
+   thickness:3,radius:const Radius.circular(8),
+   child:ListView(controller:_recurringScrollController,
    physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
    padding:const EdgeInsets.fromLTRB(16,14,16,28),children:[
    WaffraPageHero(
@@ -10492,6 +10514,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     subtitle:waffraIsEnglish?'Track recurring payments and due dates':
      'نظّم عملياتك الشهرية ومواعيد استحقاقها بسهولة.',
     icon:Icons.event_repeat_rounded,titleKey:_tourKeys[4]),
+   const SizedBox(height:10),
+   TextField(
+    key:const Key('waffra-recurring-search'),
+    onChanged:(query)=>setState(()=>recurringSearch=query),
+    decoration:InputDecoration(
+     hintText:waffraIsEnglish?'Search recurring transactions':'ابحث في العمليات المتكررة',
+     prefixIcon:const Icon(Icons.search_rounded),
+     border:OutlineInputBorder(borderRadius:BorderRadius.circular(14))),
+   ),
    const SizedBox(height:9),
    Row(children:[
     Expanded(child:OutlinedButton.icon(
@@ -10682,7 +10713,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     child:WaffraText(waffraIsEnglish?'No items match this filter':'لا توجد عمليات في هذا التصنيف',
      textAlign:TextAlign.center)),
    const SizedBox(height:20),
-  ]);
+  ]));
  }
  Future<void> showWaffraFinancialCalendar()async{
   DateTime selected=DateTime.now();
