@@ -275,7 +275,8 @@ void main() {
            'dueDate':'2026-10-24T00:00:00'},
         ]),
         'waffra_recurring_v24': jsonEncode([
-          {...recurring,'linkedGoalId':'goal'},
+          {...recurring,'linkedGoalId':'goal',
+           'startAt':'2026-10-24T00:00:00'},
         ]),
       },
     );
