@@ -7,6 +7,8 @@ extension WaffraBudgetDirectory on _HomeScreenState {
  /// Categories ListView. The old nested ExpansionTile/LayoutBuilder could
  /// render as a large grey ErrorWidget on narrow Android devices.
  Future<void> showBudgetsDirectorySheet() async {
+  // Modal-local filters: reopening the sheet never inherits a stale chooser.
+  var view='all',templateGroup='all';
   await showModalBottomSheet<void>(
    context:context,isScrollControlled:true,useSafeArea:true,showDragHandle:true,
    backgroundColor:Theme.of(context).scaffoldBackgroundColor,
@@ -16,7 +18,10 @@ extension WaffraBudgetDirectory on _HomeScreenState {
      builder:(ctx,refresh)=>ListView(
       controller:scroll,
       padding:const EdgeInsets.fromLTRB(14,0,14,28),
-      children:[_budgetDirectoryPanel(refresh)],
+      children:[_budgetDirectoryPanel(refresh,
+       view:view,onViewChange:(v)=>refresh(()=>view=v),
+       templateGroup:templateGroup,
+       onTemplateGroupChange:(g)=>refresh(()=>templateGroup=g))],
      ),
     ),
    ),
@@ -44,7 +49,11 @@ extension WaffraBudgetDirectory on _HomeScreenState {
    ),
   );
  }
- Widget _budgetDirectoryPanel(StateSetter refresh){
+ Widget _budgetDirectoryPanel(StateSetter refresh,{
+  required String view,required ValueChanged<String> onViewChange,
+  required String templateGroup,
+  required ValueChanged<String> onTemplateGroupChange,
+ }){
 
   final now=DateTime.now();
   // Standalone budgets are not filtered by main/subcategory.
@@ -63,6 +72,7 @@ extension WaffraBudgetDirectory on _HomeScreenState {
    waffraNamedBudgetSpent(entries,categories,b,now).compareTo(
     waffraNamedBudgetSpent(entries,categories,a,now)));
   final templates=waffraBudgetStarterTemplates.where((t)=>
+   (templateGroup=='all'||t.group==templateGroup)&&
    waffraSearchAny([
    t.nameAr,t.nameEn,
   ],budgetSearch)).toList();
@@ -95,6 +105,19 @@ extension WaffraBudgetDirectory on _HomeScreenState {
        border:OutlineInputBorder(borderRadius:BorderRadius.circular(13))),
      ),
      const SizedBox(height:14),
+     // Saved records and optional starter templates are separate concepts.
+     // These view chips are read-only and never relink an expense.
+     Wrap(spacing:7,runSpacing:7,children:[
+      ChoiceChip(label:WaffraText(waffraIsEnglish?'All':'الكل'),
+       selected:view=='all',onSelected:(_)=>onViewChange('all')),
+      ChoiceChip(label:WaffraText(waffraIsEnglish?
+       'My saved budgets':'ميزانياتي المضافة'),
+       selected:view=='mine',onSelected:(_)=>onViewChange('mine')),
+      ChoiceChip(label:WaffraText(waffraIsEnglish?
+       'Suggested':'المقترحة'),
+       selected:view=='suggested',onSelected:(_)=>onViewChange('suggested')),
+     ]),
+     const SizedBox(height:13),
      // Stable single-column filters avoid unbounded Wrap/Dropdown sizing
      // failures under Android text scaling and the draggable sheet.
      Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
@@ -155,6 +178,7 @@ extension WaffraBudgetDirectory on _HomeScreenState {
        }),
        icon:const Icon(Icons.add_circle_outline_rounded),
        label:WaffraText(waffraIsEnglish?'Create budget':'إضافة ميزانية جديدة'))),
+     if(view!='suggested')...[
      if(filtered.isEmpty)Padding(
       padding:const EdgeInsets.symmetric(vertical:14),
       child:WaffraText(waffraIsEnglish?'No matching saved budgets':
@@ -262,6 +286,8 @@ extension WaffraBudgetDirectory on _HomeScreenState {
        ),
       );
      }),
+     ],
+     if(view!='mine')...[
      const SizedBox(height:10),
      ExpansionTile(
       key:const PageStorageKey<String>('waffra-budget-starter-templates'),
@@ -281,6 +307,20 @@ extension WaffraBudgetDirectory on _HomeScreenState {
        'قوالب اختيارية — انت اللي بتحدد الحد الشهري',
        style:const TextStyle(fontSize:12)),
       children:[
+       Padding(padding:const EdgeInsets.symmetric(vertical:8),
+        child:SingleChildScrollView(scrollDirection:Axis.horizontal,
+         child:Row(children:[
+          ChoiceChip(
+           label:WaffraText(waffraIsEnglish?'All types':'كل الأنواع'),
+           selected:templateGroup=='all',
+           onSelected:(_)=>onTemplateGroupChange('all')),
+          for(final type in waffraBudgetTemplateGroups)...[
+           const SizedBox(width:6),
+           ChoiceChip(label:WaffraText(type.name(waffraIsEnglish)),
+            selected:templateGroup==type.id,
+            onSelected:(_)=>onTemplateGroupChange(type.id)),
+          ],
+         ]))),
        if(templates.isEmpty)
         WaffraText(waffraIsEnglish?'No matching templates':
          'لا توجد قوالب مطابقة'),
@@ -297,6 +337,7 @@ extension WaffraBudgetDirectory on _HomeScreenState {
          ),
        ]),
       ]),
+     ],
     ],
    ),
   );
