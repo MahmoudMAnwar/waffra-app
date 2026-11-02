@@ -11730,6 +11730,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     orphanBudgetLink:e.budgetId!=null&&!liveBudgetIds.contains(e.budgetId)))),
    goals:List<WaffraSmartGoal>.unmodifiable(goals.map((g)=>
     WaffraSmartGoal(g.name,g.target,g.saved))),
+   budgets:List<WaffraSmartBudget>.unmodifiable(
+    namedBudgets.where((b)=>!b.deleted&&b.budget>0).map((b)=>
+     WaffraSmartBudget(b.id,b.budgetLabel??b.name,b.budget,
+      waffraNamedBudgetSpent(entries,categories,b,DateTime.now()),b.budgetActive))),
    recurring:List<WaffraSmartRecurring>.unmodifiable(recurring.where((r)=>r.active).map((r)=>
     WaffraSmartRecurring(r.title,r.amount,r.day,r.income))),
   );
