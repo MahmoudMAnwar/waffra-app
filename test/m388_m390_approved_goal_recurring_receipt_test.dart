@@ -112,7 +112,7 @@ void main() {
     home:Directionality(
      textDirection:english?TextDirection.ltr:TextDirection.rtl,
      child:Scaffold(body:Center(child:WaffraReceiptCornerAction(
-      count:2,english:english,onTap:()=>opened++)))));
+      count:2,english:english,onTap:()=>opened++))))));
    expect(find.text('2'),findsOneWidget);
    expect(find.byIcon(Icons.attach_file_rounded),findsOneWidget);
    expect(tester.getSize(find.byType(WaffraReceiptCornerAction)),const Size(48,48));
