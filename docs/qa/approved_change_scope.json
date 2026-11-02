@@ -1,19 +1,27 @@
 {
   "contract_version": 1,
   "change_id": "M413",
-  "human_scope_review": "Owner approved optional budget alert switch and reusable thresholds; physical Android QA required.",
+  "human_scope_review": "M413 budget alert controls plus M414 goal milestone and recurring reminder independence; Android device delivery evidence remains required before merging.",
   "user_requested_changes": [
     "Add enable and disable for budget threshold warnings independently from budget activation, show the percent dropdown only while enabled and persist state.",
     "Unify percentage warning logic in Home monthly budget, smart financial insights and confirmed manual/SMS expenses with each budget's selected threshold.",
     "Suppress repeated delivery of the same budget-month-milestone threshold alert and avoid notifying while alert disabled, paused, deleted or data is historical.",
-    "Use local Android notifications only after a confirmed transaction in a running app with permission; do not change time-based recurring due reminders or claim bank push access."
+    "Use local Android notifications only after a confirmed transaction in a running app with permission; do not change time-based recurring due reminders or claim bank push access.",
+    "Allow optional saved-progress milestone alerts only for goals with a fixed positive target; open savings have no percentage.",
+    "Provide per-recurring-entry reminder enable/disable independently of financial schedule active state; preserve that preference after restart.",
+    "Keep main/subcategories as classification only. No category budget percentage or inferred budget linkage.",
+    "Regression-test JSON reload and state separation for goal, recurring and budget alert controls; separately certify UI cold restart and real Android notifications before merge."
   ],
   "allowed_changed_files": [
     "lib/main.dart",
     "lib/waffra_financial_insights.dart",
     "lib/waffra_reminders.dart",
     "docs/qa/approved_change_scope.json",
-    "test/m413_opt_in_budget_alerts_test.dart"
+    "test/m413_opt_in_budget_alerts_test.dart",
+    "lib/waffra_goal_recurring_actions.part.dart",
+    "lib/waffra_categories_page.part.dart",
+    "test/m414_goal_recurring_alerts_test.dart",
+    "docs/qa/m414_android_notification_acceptance.md"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -36,6 +44,38 @@
       {
         "start": " Widget smartMoneyInsightsCard(){",
         "end": " Future<void> showSummaryTransactions("
+      },
+      {
+        "start": "class SavingGoal {",
+        "end": "class SavingChallenge {"
+      },
+      {
+        "start": "class RecurringBill {",
+        "end": "const iconNames="
+      },
+      {
+        "start": " Future<void> syncRecurringReminders()async {",
+        "end": " // No recurring schedule may post money"
+      },
+      {
+        "start": " Future<void> goalDialog(",
+        "end": " /// Release an earmark"
+      },
+      {
+        "start": " Future<void> goalProgressAlert(",
+        "end": " IconData goalIcon("
+      },
+      {
+        "start": " Future<void> recurringDialog(",
+        "end": " DateTime nextRecurringDue("
+      },
+      {
+        "start": " Future<void> _setRecurringReminderFromCard(",
+        "end": " Widget recurringPage(){"
+      },
+      {
+        "start": " Widget recurringPage(){",
+        "end": " Widget _"
       }
     ],
     "lib/waffra_financial_insights.dart": [
@@ -48,6 +88,18 @@
       {
         "start": " static bool _initialized=false;",
         "end": " static Future<void> _useDeviceTimeZone()async {"
+      }
+    ],
+    "lib/waffra_goal_recurring_actions.part.dart": [
+      {
+        "start": " Future<void> editGoal(",
+        "end": null
+      }
+    ],
+    "lib/waffra_categories_page.part.dart": [
+      {
+        "start": " Widget categoriesPageV2(){",
+        "end": null
       }
     ]
   }
