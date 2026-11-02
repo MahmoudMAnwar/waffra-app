@@ -35,5 +35,22 @@ class AndroidNdkArchiveRetryTest(unittest.TestCase):
         self.assertIn("::error::Pinned Android NDK archive unavailable or corrupt", job)
 
 
+    def test_prebuilt_android_drive_keeps_real_taps_and_failure_reporting(self):
+        job = self.yaml.split("  android-emulator-ui-taps:", 1)[1]
+        script = (WORKFLOW.parent / "scripts/run-m274-android-tap-smoke.sh").read_text(
+            encoding="utf-8")
+        self.assertIn("Prepare integration driver for prebuilt debug APK", job)
+        self.assertIn("integrationDriver()", job)
+        self.assertIn("flutter build apk --debug --no-pub --target integration_test/", job)
+        self.assertIn("./android/gradlew --stop", job)
+        self.assertIn("flutter drive --driver=test_driver/integration_test.dart", script)
+        self.assertIn("--use-application-binary=build/app/outputs/flutter-apk/app-debug.apk", script)
+        self.assertIn("integration_test/m274_ui_tap_smoke_android_test.dart", script)
+        self.assertIn("M274_FAILURE_DIAGNOSTICS_BEGIN", script)
+        self.assertIn("exit \"$result\"", script)
+        self.assertNotIn("continue-on-error: true", job)
+        self.assertNotIn('flutter test "$test_file"', script)
+
+
 if __name__ == "__main__":
     unittest.main()
