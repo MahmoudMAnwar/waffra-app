@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
-  "change_id": "M388-M412",
-  "human_scope_review": "REQUIRED: owner approval of requested behavior + live Android screenshot and legacy data checks",
+  "change_id": "M388-M416",
+  "human_scope_review": "M416 owner requested reversible Saudi-only offline gating; signed Android and exact-head CI remain mandatory. Preserve approved M388-M412 work and financial data.",
   "user_requested_changes": [
     "M388: allow an open-ended savings goal with no fixed target amount and no mandatory budget, preserve old target goals and wallet accounting; avoid false 0-percent completion and allow editing the goal.",
     "M389: Goals plus opens new goal, duplicate existing goal, and unlimited savings; Recurring plus opens new recurring or duplicate existing recurring. Duplication uses a new ID, preserves original and does not copy goal savings or old linked-goal ID.",
@@ -22,7 +22,12 @@
     "M409: fix the failed M274 Android UI startup caused by VM-service disconnect and an offline emulator during a redundant post-boot Gradle build. Reuse the exact precompiled integration debug APK with a real Flutter drive integration driver, stop idle Gradle daemons before boot, preserve real tap assertions and fail-closed diagnostics.",
     "M410: implement safe incremental CI recovery: retry exactly one failed Android emulator CI job on the same SHA only when logs prove transient infrastructure failure; cap to one retry, disallow failing application assertions or stale PR heads, never skip protected financial/security checks or final full-main certification.",
     "M411: repair real red Firestore security CI dependency install: pin stable Firebase JS SDK and security emulator versions, override the unavailable @firebase/firestore 4.19.1 tarball to published 4.19.0, use Node 24.12.0 for engine compatibility, preserve all security assertion tests and do not fake green.",
-    "M412: final incremental PR CI implementation: compare the exact before-to-after SHA pair of each PR synchronize event to only run impacted scope-specific test jobs; keep always-on mandatory production finance/security and complete main verification; on unknown diff, base ancestry, event, or path list run all (fail-open); do not silently skip on code changes; no modifications to app logic or user data."
+    "M412: final incremental PR CI implementation: compare the exact before-to-after SHA pair of each PR synchronize event to only run impacted scope-specific test jobs; keep always-on mandatory production finance/security and complete main verification; on unknown diff, base ancestry, event, or path list run all (fail-open); do not silently skip on code changes; no modifications to app logic or user data.",
+    "M416: Saudi-only release disables first-run location country detection, country/dialect selection, application currency setting and global currency converter without deleting Global implementation or old preferences.",
+    "M416: disable creating a transaction by OCR/image/receipt while keeping existing receipt attachments and manual transactions intact.",
+    "M416: Ask Waffra is a no-chat predefined question list based only on verified recorded income, expenses, categories and explicitly linked standalone budgets, with Clear returning to the question list. No Qwen requirement or network.",
+    "M416: pasted/shared bank SMS is parsed using the conservative local Saudi parser, never Qwen, with no foreign-currency-as-SAR auto-post; the user still confirms saved transactions.",
+    "M416: do not alter existing financial history, SQLCipher activation, Google login, or saved Global preferences during Saudi-only rollout; preserve AR/EN app language for Saudi users."
   ],
   "allowed_changed_files": [
     ".github/workflows/m274-production-ui-golden.yml",
@@ -106,7 +111,16 @@
     ".github/workflows/m280-finance-quality-matrix.yml",
     "scripts/qa/m412_pr_changed_impact.py",
     "test/qa/m412_incremental_pr_impact_test.py",
-    "test/qa/m412_workflow_wiring_test.py"
+    "test/qa/m412_workflow_wiring_test.py",
+    "lib/waffra_saudi_release.dart",
+    "lib/waffra_saudi_ask.dart",
+    "lib/waffra_smart_features.dart",
+    "lib/waffra_display_currency.dart",
+    "lib/waffra_regional_copy.dart",
+    "lib/waffra_google_phone_field.dart",
+    "lib/currency_converter.dart",
+    "test/m416_saudi_release_offline_test.dart",
+    "docs/qa/m416_saudi_release_acceptance.md"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -345,6 +359,50 @@
       {
         "start": "   max(16.0,bottom-geometry.floatingActionButtonSize.height-16),\n  );\n }\n",
         "end": "/// RTL uses the top-right corner; LTR mirrors it to top-left.\n"
+      },
+      {
+        "start": "import 'waffra_regional_copy.dart';",
+        "end": "import 'waffra_riyal_symbol.dart';"
+      },
+      {
+        "start": " Future<void> load()async {",
+        "end": " Future<void> quickStart()async {"
+      },
+      {
+        "start": " Future<void> saveUser(Person u)async {",
+        "end": " Future<void> logout()async {"
+      },
+      {
+        "start": " @override Widget build(BuildContext context)=>MaterialApp(",
+        "end": "class PinLockScreen extends StatefulWidget"
+      },
+      {
+        "start": " Future<void> bulkSmsSheet({String? initialText})async {",
+        "end": " Future<void> scanAndAddReceipt()async {"
+      },
+      {
+        "start": " Future<void> scanAndAddReceipt()async {",
+        "end": " Future<void> entrySheet("
+      },
+      {
+        "start": " Future<void> entrySheet(",
+        "end": " Future<String?> _promptReceiptLabel("
+      },
+      {
+        "start": " Future<void> chooseAppCurrency()async{",
+        "end": " Widget profilePage(){"
+      },
+      {
+        "start": " Widget profilePage(){",
+        "end": " Widget _currentTabContents()"
+      },
+      {
+        "start": " Widget _smartToolsTab(){",
+        "end": " void openSmartFeatures(){"
+      },
+      {
+        "start": " Widget _currentTabContents(){",
+        "end": " @override Widget build(BuildContext context)=>PopScope("
       }
     ],
     "lib/waffra_goal_recurring_actions.part.dart": [
@@ -850,6 +908,48 @@
     ".github/workflows/m280-finance-quality-matrix.yml": [
       {
         "start": "jobs:\n",
+        "end": null
+      }
+    ],
+    "lib/waffra_saudi_release.dart": [
+      {
+        "start": null,
+        "end": null
+      }
+    ],
+    "lib/waffra_saudi_ask.dart": [
+      {
+        "start": null,
+        "end": null
+      }
+    ],
+    "lib/waffra_smart_features.dart": [
+      {
+        "start": null,
+        "end": null
+      }
+    ],
+    "lib/waffra_display_currency.dart": [
+      {
+        "start": null,
+        "end": null
+      }
+    ],
+    "lib/waffra_regional_copy.dart": [
+      {
+        "start": null,
+        "end": null
+      }
+    ],
+    "lib/waffra_google_phone_field.dart": [
+      {
+        "start": null,
+        "end": null
+      }
+    ],
+    "lib/currency_converter.dart": [
+      {
+        "start": null,
         "end": null
       }
     ]
