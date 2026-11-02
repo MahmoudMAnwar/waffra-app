@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'waffra_saudi_release.dart';
 
 /// UI-only country preference. NEVER use a selected display currency, SIM
 /// phone prefix, device IP or bank-message currency to determine dialect.
@@ -39,10 +40,12 @@ abstract final class WaffraRegionalCopy {
   }
 
   static Future<void> initialize(SharedPreferences preferences)async{
-    countryIso.value=normalized(preferences.getString(preferenceKey));
+    countryIso.value=WaffraSaudiRelease.enabled?'SA':
+     normalized(preferences.getString(preferenceKey));
   }
 
   static Future<void> setCountry(String? country)async{
+    if(WaffraSaudiRelease.enabled)throw StateError('saudi_release_country_locked');
     final value=normalized(country);
     final prefs=await SharedPreferences.getInstance();
     if(!await prefs.setString(preferenceKey,value)){
@@ -88,7 +91,7 @@ abstract final class WaffraRegionalCopy {
   static String text({required bool english,required String standard,
     String? saudi,String? egyptian,required String en,String? country}){
     if(english)return en;
-    switch(normalized(country??countryIso.value)){
+    switch(WaffraSaudiRelease.enabled?'SA':normalized(country??countryIso.value)){
       case 'SA':return saudi??standard;
       case 'EG':return egyptian??standard;
       default:return standard;
