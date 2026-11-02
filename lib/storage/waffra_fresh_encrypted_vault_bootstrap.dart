@@ -166,7 +166,7 @@ CREATE TABLE IF NOT EXISTS fresh_finance_categories(
 CREATE TABLE IF NOT EXISTS fresh_finance_goals(
   goal_id TEXT PRIMARY KEY NOT NULL,
   name TEXT NOT NULL,
-  target_minor INTEGER NOT NULL CHECK(target_minor > 0),
+  target_minor INTEGER NOT NULL CHECK(target_minor >= 0),
   saved_minor INTEGER NOT NULL CHECK(saved_minor >= 0),
   source_json TEXT NOT NULL
 )''');
