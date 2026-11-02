@@ -137,19 +137,19 @@ def main() -> int:
     changed = set(filter(None, git("diff", "--name-only", "-z", args.base,
                                    args.head).decode().split("\x00")))
     manifest = json.loads(Path(MANIFEST_PATH).read_text(encoding="utf-8"))
+    # Inspect the Git trees first. A failed "git show" for an existing file
+    # must never be mistaken for a newly added file and skip its diff audit.
+    base_exists = set(filter(None, git(
+        "ls-tree", "-r", "--name-only", "-z", args.base).decode().split("\x00")))
+    head_exists = set(filter(None, git(
+        "ls-tree", "-r", "--name-only", "-z", args.head).decode().split("\x00")))
     base_text: dict[str, str] = {}
     head_text: dict[str, str] = {}
-    base_exists: set[str] = set()
     for path in changed:
-        try:
+        if path in base_exists:
             base_text[path] = git("show", f"{args.base}:{path}").decode("utf-8")
-            base_exists.add(path)
-        except ScopeViolation:
-            pass
-        try:
+        if path in head_exists:
             head_text[path] = git("show", f"{args.head}:{path}").decode("utf-8")
-        except ScopeViolation:
-            pass
     audit_scope(manifest, changed, base_text, head_text, base_exists)
     print(f"PASS M385: {len(changed)} declared files, protected code outside "
           "bounded sections unchanged. Human scope approval still required.")
