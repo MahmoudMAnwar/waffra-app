@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M388-M397",
+  "change_id": "M388-M406",
   "human_scope_review": "REQUIRED: owner approval of requested behavior + live Android screenshot and legacy data checks",
   "user_requested_changes": [
     "M388: allow an open-ended savings goal with no fixed target amount and no mandatory budget, preserve old target goals and wallet accounting; avoid false 0-percent completion and allow editing the goal.",
@@ -14,7 +14,10 @@
     "M394: preserve zero-target savings through non-negative legacy and experimental encrypted finance validation and cloud allowlist; never accept negative targets or silently activate SQLCipher.",
     "M395: search and visible scrollbars in Goals and Recurring; presentation-only filters must never alter financial entries.",
     "M396: new or newly dated goal due never silently creates a recurring obligation; ask the user with explicit Not now / Link due date options while keeping ledger and savings unchanged.",
-    "M397: remove unnecessary optional/encryption jargon from the savings date picker and original SMS title while retaining genuine encrypted-vault safety notices."
+    "M397: remove unnecessary optional/encryption jargon from the savings date picker and original SMS title while retaining genuine encrypted-vault safety notices.",
+    "M398-M402: fix previously approved budget directory reopen and own-budget filters, ensure bounded calendars and concise UI copy, show monthly budget count and month navigation, and use centered blurred dropdowns in the user-approved locations.",
+    "M403: support independent activation and quick actions on main/subcategories without deleting historical entries or changing finance ledger.",
+    "M406: repair Drift test API errors without weakening assertions, and expand M385 scope only to exact PR changed hunks while preserving protected code outside them."
   ],
   "allowed_changed_files": [
     ".github/workflows/m274-production-ui-golden.yml",
@@ -32,13 +35,26 @@
     "lib/storage/waffra_ledger_projection.dart",
     "lib/storage/waffra_normalized_import.dart",
     "lib/waffra_budget_directory.part.dart",
+    "lib/waffra_categories_page.part.dart",
+    "lib/waffra_centered_dropdown.dart",
+    "lib/waffra_country_first_run_page.dart",
     "lib/waffra_financial_planning_engine.dart",
     "lib/waffra_goal_recurring_actions.part.dart",
+    "lib/waffra_gold_market_section.dart",
+    "lib/waffra_oil_market_section.dart",
+    "lib/waffra_practical_tools_page.dart",
+    "lib/waffra_today_picker.dart",
     "test/m127_ui_tour_backup_acceptance_test.dart",
+    "test/m351_compact_category_filters_test.dart",
     "test/m371_goal_wallet_and_budgets_regression_test.dart",
     "test/m384_receipt_corner_upgrade_regression_test.dart",
     "test/m388_m390_approved_goal_recurring_receipt_test.dart",
     "test/m392_m395_budget_quick_actions_goal_ui_test.dart",
+    "test/m398_budget_directory_reopen_scope_test.dart",
+    "test/m399_calendar_bounded_initial_date_test.dart",
+    "test/m400_compact_visible_copy_test.dart",
+    "test/m401_m402_budget_month_centered_dropdown_test.dart",
+    "test/m403_category_pause_quick_actions_test.dart",
     "test/qa/m391_m274_ndk_archive_retry_test.py",
     "test/storage/fresh_finance_modules_repository_test.dart",
     "test/storage/ledger_projection_test.dart",
@@ -49,74 +65,266 @@
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": " Widget tile(MoneyEntry e){",
-        "end": " String get greeting=>"
+        "start": "import 'waffra_today_picker.dart';\n",
+        "end": "import 'waffra_receipt_filename.dart';\n"
       },
       {
-        "start": " Widget compactTransaction(MoneyEntry entry){",
-        "end": " Widget dashboard(){"
+        "start": " /// Pre-activation records have no flag, so default to active.\n",
+        "end": " factory BudgetCategory.fromJson(Map<String,dynamic> j)=>BudgetCategory(\n"
       },
       {
-        "start": " Future<void> goalDialog(",
-        "end": " /// Release an earmark"
+        "start": "  origin:j['origin']=='user'?'user':j['origin']=='detected'?'detected':'system',\n",
+        "end": "    (j['budgetLabel'] as String).trim().isNotEmpty\n"
       },
       {
-        "start": " Future<void> fundGoal(",
-        "end": " IconData goalIcon("
+        "start": "  double? budget,int? alertPercent,String? parentId,\n",
+        "end": "    alertPercent:alertPercent??this.alertPercent,\n"
       },
       {
-        "start": " Widget goalsPage(){",
-        "end": " Future<void> recurringDialog("
+        "start": " budgets.any((b)=>b.budget>0&&b.budgetActive&&!b.deleted);\n\n",
+        "end": "class SavingChallenge {\n"
       },
       {
-        "start": " Future<void> recurringDialog(",
-        "end": " DateTime nextRecurringDue("
+        "start": "     ])),\n   ],\n",
+        "end": "      errorText:profileAttempted&&gender.isEmpty?waffraRequiredFieldMessage:null,\n"
       },
       {
-        "start": " Widget _addMenuOption(",
-        "end": " Widget currentTab(){"
+        "start": "         const SizedBox(width:6),\n",
+        "end": "           style:TextStyle(fontSize:12,color:muted,fontWeight:FontWeight.w700))),\n"
       },
       {
-        "start": "    if(!accountOpened",
-        "end": "  // The notice reserves real layout"
+        "start": " String categorySearch='',categoryDisplay='all',categoryTypeFilter='all',goalDisplay='all',recurringDisplay='all';\n",
+        "end": "  int forecastReduction=20;\n"
       },
       {
-        "start": "   max(16.0,bottom-geometry.floatingActionButtonSize.height-16),",
-        "end": "class WaffraReceiptCornerClipper extends"
+        "start": "  if(!recurringRemindersEnabled)return;\n  try {\n",
+        "end": "     .map((r)=>WaffraReminder(id:r.id,title:r.title,day:r.day,\n"
       },
       {
-        "start": "class SavingGoal {",
-        "end": "class SavingChallenge {"
+        "start": "  if(!mounted||!ready||_dueDialogShowing)return;\n  final today=DateTime.now();\n",
+        "end": "   // remains the same even when the user returns to the app much later.\n"
       },
       {
-        "start": " String categorySort='default';",
-        "end": " bool categoryMineOnly=false;"
+        "start": " // in older transactions remain unchanged until a user deliberately edits.\n",
+        "end": "  context:context,builder:(ctx)=>AlertDialog(title:WaffraText(title),content:WaffraText(body),\n"
       },
       {
-        "start": " Future<void> deletedGoalsDialog(",
-        "end": " Widget goalsPage(){"
+        "start": "          style:const TextStyle(fontWeight:FontWeight.bold),maxLines:2),\n",
+        "end": "          menuMaxHeight:min(340.0,MediaQuery.sizeOf(ctx).height*.48),\n"
       },
       {
-        "start": " DateTime nextRecurringDue(",
-        "end": " Widget recurringPage(){"
+        "start": "       // Budget and transaction date share one compact, keyboard-safe row.\n",
+        "end": "         menuMaxHeight:min(340.0,MediaQuery.sizeOf(sheetContext).height*.48),\n"
       },
       {
-        "start": " Widget recurringPage(){",
-        "end": " Future<void> showWaffraFinancialCalendar()"
+        "start": "     'نقل المعاملة إلى المحذوفات',\n    waffraIsEnglish?\n",
+        "end": "   await _financialWriteQueue.submit(<String,Object>{'id':entry.id},(_)async{\n"
       },
       {
-        "start": "       if(entry.sourceType=='sms')...[",
-        "end": "       if(onViewReceipt!=null)...["
+        "start": "     onPressed:WaffraHaptics.tap(()=>transactionActions(e)),icon:const Icon(Icons.more_vert,color:forest)),\n   ]))),\n",
+        "end": " }\n String get greeting=>WaffraSaudiGreetings.compose(\n"
+      },
+      {
+        "start": "       decoration:InputDecoration(labelText:waffraIsEnglish?'Monthly limit *':'الحد الشهري *',\n        errorText:amountError,border:const OutlineInputBorder())),\n",
+        "end": "       items:[50,60,70,75,80,85,90,95,100]\n"
+      },
+      {
+        "start": "      title:WaffraText(waffraIsEnglish?'New budget':'إنشاء ميزانية جديدة'),\n",
+        "end": "        onChanged:(_)=>update(()=>nameError=null),\n"
+      },
+      {
+        "start": "         errorText:amountError,border:const OutlineInputBorder())),\n",
+        "end": "        decoration:InputDecoration(labelText:waffraIsEnglish?\n         'Notify at':'التنبيه عند نسبة'),\n"
+      },
+      {
+        "start": " Widget monthlyBudgetCard(){\n",
+        "end": "  // only *new* budget creation requires a child category.\n"
+      },
+      {
+        "start": "  // charging it again; its former limit and historical links remain.\n",
+        "end": "    pace=WaffraBudgetPace(\n"
+      },
+      {
+        "start": "        style:const TextStyle(fontWeight:FontWeight.bold,fontSize:17)),\n",
+        "end": "      ])),\n      Icon(monthlyBudgetDetailsOpen?\n"
+      },
+      {
+        "start": "    if(monthlyBudgetDetailsOpen)...[\n",
+        "end": "       fontWeight:FontWeight.bold,fontSize:16));\n"
+      },
+      {
+        "start": "      ]);\n    }),\n",
+        "end": "     initialValue:budgetStatusFilter,\n"
+      },
+      {
+        "start": "     }),\n    ),\n",
+        "end": "     menuMaxHeight:min(340.0,MediaQuery.sizeOf(context).height*.48),\n"
+      },
+      {
+        "start": "      onPressed:WaffraHaptics.tap(()=>transactionActions(entry)),icon:const Icon(Icons.more_vert,size:18)),\n    ])),\n",
+        "end": " }\n Widget dashboard(){\n"
+      },
+      {
+        "start": "               (choice=='الكل'?'All':choice=='الدخل'?'Income':'Expenses'):choice),\n              onSelected:WaffraHaptics.selection((_)=>setState((){\n               typeFilter=choice;categoryFilter='الكل';\n",
+        "end": "             decoration:InputDecoration(labelText:waffraIsEnglish?\n"
+      },
+      {
+        "start": "      WaffraText(waffraIsEnglish?'What if?':'ماذا لو؟',\n",
+        "end": "      items:top.map((e)=>DropdownMenuItem(value:e.key,child:WaffraText(e.key))).toList(),\n"
+      },
+      {
+        "start": "    selected:{period},onSelectionChanged:WaffraHaptics.selection((v)=>setState(()=>period=v.first))),\n   const SizedBox(height:12),\n",
+        "end": "     items:List.generate(12,(i)=>DropdownMenuItem(value:i+1,child:WaffraText('شهر ${i+1}'))),\n"
+      },
+      {
+        "start": "       budget:initial?.budget??0,alertPercent:initial?.alertPercent??80,\n",
+        "end": "     }),child:const WaffraText('حفظ')),\n    ])));\n"
+      },
+      {
+        "start": "  await addCategory(income:income,parentId:parentId);\n",
+        "end": "  if(c==null||!mounted)return;\n"
+      },
+      {
+        "start": "     ?const Color(0xFFD9FFE9):forest):null,\n",
+        "end": "  if(!mounted){name.dispose();target.dispose();return;}\n"
+      },
+      {
+        "start": "   if(key.isNotEmpty&&seen.add(key))suggested.add(entry.trim());\n  }\n",
+        "end": "   final issue=waffraGoalNameIssue(name.text,goals.map((g)=>g.name));\n"
+      },
+      {
+        "start": "     }),icon:const Icon(Icons.calendar_month_outlined),\n",
+        "end": "      inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],\n      onChanged:(_)=>updateGoal((){}),\n"
+      },
+      {
+        "start": "      final n=amountOfDisplay(target.text);\n",
+        "end": "    ],\n   )));\n  disposeLater([name,target]);\n"
+      },
+      {
+        "start": "   setState(()=>goals.add(g));\n   if(!await _persistModuleOrReload(WaffraFinanceRoute.goalCreateEditDeleteRestore,\n",
+        "end": "      'Goal saved, but recurring link was not confirmed. Retry from Edit Goal.':\n"
+      },
+      {
+        "start": "            style:const TextStyle(fontWeight:FontWeight.bold,fontSize:14))),\n          ]),\n",
+        "end": "           style:TextStyle(fontWeight:FontWeight.bold,fontSize:12,color:accent)),\n"
+      },
+      {
+        "start": "       labelText:waffraIsEnglish?'Daily amount *':'الادخار اليومي *',\n       errorText:attempted?waffraAmountFieldError(amount.text):null)),\n",
+        "end": "      items:[7,14,30].map((n)=>DropdownMenuItem<int>(value:n,\n"
+      },
+      {
+        "start": "    actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),\n     child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))],\n   )));\n",
+        "end": "    child:WaffraBalanceHeader(\n"
+      },
+      {
+        "start": "       SizedBox(width:48,height:48,child:Stack(alignment:Alignment.center,children:[\n",
+        "end": "    ]),\n    const SizedBox(height:14),\n   ],\n"
+      },
+      {
+        "start": "    int? monthlyRequired;\n",
+        "end": "       final forecast=WaffraGoalPlan(\n"
+      },
+      {
+        "start": "      }catch(_){/* Show no invented target guidance. */}\n",
+        "end": "     goalIcon(g.name)==Icons.directions_car?const Color(0xFF3867D6):emerald;\n"
+      },
+      {
+        "start": "       WaffraIllustration(topic:g.name,size:44),\n       const SizedBox(width:10),\n       Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[\n",
+        "end": "       child:Row(children:[\n        const Icon(Icons.event_outlined,size:16,color:emerald),\n"
+      },
+      {
+        "start": "         'موعد الهدف فات. عدّل التاريخ علشان تحصل على خطة ادخار جديدة.',\n         style:const TextStyle(fontSize:12,color:Colors.deepOrange))),\n",
+        "end": "       const SizedBox(width:10),\n       Expanded(child:LinearProgressIndicator(value:percent,minHeight:9,\n"
+      },
+      {
+        "start": "        WaffraText(waffraIsEnglish?'Saved':'المدّخر',style:const TextStyle(fontSize:11)),\n",
+        "end": "     ])),\n    );\n"
+      },
+      {
+        "start": "   savingsChallengesSection(),\n",
+        "end": "     content:SizedBox(width:340,child:SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,mainAxisSize:MainAxisSize.min,children:[\n"
+      },
+      {
+        "start": "        errorText:attempted?waffraAmountFieldError(amount.text):null)),\n",
+        "end": "      const SizedBox(height:12),\n      InkWell(\n"
+      },
+      {
+        "start": "         labelText:waffraIsEnglish?'Category *':'القسم *',\n",
+        "end": "         border:OutlineInputBorder(borderRadius:BorderRadius.circular(14)),\n"
+      },
+      {
+        "start": "        WaffraValidators.positiveAmount(amount.text)==null&&\n",
+        "end": "      }),child:const WaffraText('حفظ')),\n"
+      },
+      {
+        "start": "   postponedUntil:DateTime.tryParse(recurringPostponed[monthId]??''));\n",
+        "end": "  final active=recurring.where((r)=>r.active).toList();\n"
+      },
+      {
+        "start": "     r.startAt.month==lastOfCurrentMonth.month)))\n",
+        "end": "   Row(children:[\n    Expanded(child:OutlinedButton.icon(\n"
+      },
+      {
+        "start": "     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(21),\n",
+        "end": "       child:Icon(categoryIcon(categoryFor(r.category,r.income).icon),color:color)),\n"
+      },
+      {
+        "start": "       if(goal!=null)...[\n",
+        "end": "       ],\n       const SizedBox(height:3),\n"
+      },
+      {
+        "start": "        style:TextStyle(fontSize:11,color:r.active?Theme.of(context).hintColor:Colors.deepOrange)),\n",
+        "end": "   }),\n   if(recurring.isEmpty)Padding(padding:const EdgeInsets.only(top:18),\n"
+      },
+      {
+        "start": "     textAlign:TextAlign.center)),\n",
+        "end": " Future<void> showWaffraFinancialCalendar()async{\n"
+      },
+      {
+        "start": "      fontSize:15,fontWeight:FontWeight.bold,color:Theme.of(context).brightness==Brightness.dark?Colors.white:forest)),\n",
+        "end": "  if(accountOpened)return profilePage();\n"
+      },
+      {
+        "start": "        child:Transform.scale(scale:accountOpened?0.985+0.015*progress:1,child:child))),\n",
+        "end": "       crossAxisAlignment:waffraIsEnglish?CrossAxisAlignment.end:CrossAxisAlignment.start,\n"
+      },
+      {
+        "start": "          unawaited(_launchAddAction(scanAndAddReceipt,fromMenu:true));\n",
+        "end": "         _addMenuOption(icon:Icons.trending_up,\n"
+      },
+      {
+        "start": "     await Future<void>.delayed(waffraMotion(110));\n",
+        "end": "    },\n    splashFactory:NoSplash.splashFactory,\n"
+      },
+      {
+        "start": "   max(16.0,bottom-geometry.floatingActionButtonSize.height-16),\n  );\n }\n",
+        "end": "/// RTL uses the top-right corner; LTR mirrors it to top-left.\n"
       }
     ],
     "lib/waffra_goal_recurring_actions.part.dart": [
       {
-        "start": " Future<bool> _ensureLinkedRecurringForGoal(",
-        "end": " Future<void> editGoal("
+        "start": "/// payment requires explicit confirmation and a verified finance writer.\n",
+        "end": "   setState(()=>recurring[linkedIndex]=recurring[linkedIndex].copy(active:false));\n"
       },
       {
-        "start": " Future<void> editGoal(",
-        "end": null
+        "start": "   final next=linkedIndex>=0?recurring[linkedIndex].copy(\n",
+        "end": "     amount:goal.target,income:false,day:deadline.day,startAt:deadline,\n"
+      },
+      {
+        "start": "  return true;\n }\n",
+        "end": "  bool removeDeadline=false;\n"
+      },
+      {
+        "start": "         border:const OutlineInputBorder(),errorText:nameError)),\n",
+        "end": "        inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],\n"
+      },
+      {
+        "start": "          .map((g)=>g.name))==null?null:\n",
+        "end": "      ],\n"
+      },
+      {
+        "start": "   if(!await _persistModuleOrReload(WaffraFinanceRoute.goalCreateEditDeleteRestore,\n",
+        "end": "   }\n  }finally{disposeLater([name,target]);}\n"
       }
     ],
     "lib/waffra_financial_planning_engine.dart": [
@@ -169,8 +377,44 @@
     ],
     "lib/waffra_budget_directory.part.dart": [
       {
-        "start": " Widget _budgetDirectoryPanel(StateSetter refresh)",
-        "end": null
+        "start": " /// render as a large grey ErrorWidget on narrow Android devices.\n",
+        "end": "   context:context,isScrollControlled:true,useSafeArea:true,showDragHandle:true,\n"
+      },
+      {
+        "start": "     builder:(ctx,refresh)=>ListView(\n",
+        "end": "    ),\n   ),\n"
+      },
+      {
+        "start": "    trailing:const Icon(Icons.chevron_right_rounded,color:emerald),\n   ),\n  );\n",
+        "end": "  final now=DateTime.now();\n"
+      },
+      {
+        "start": "  ],budgetSearch)).toList();\n  return Container(\n",
+        "end": "      key:const Key('waffra-budget-directory-search'),\n"
+      },
+      {
+        "start": "     // failures under Android text scaling and the draggable sheet.\n",
+        "end": "       initialValue:const {'all','active','inactive'}.contains(budgetStatusFilter)?\n"
+      },
+      {
+        "start": "        });\n       }),\n      ),\n",
+        "end": "       initialValue:const {'default','name','limit','spent'}.contains(budgetSort)?\n"
+      },
+      {
+        "start": "       icon:const Icon(Icons.add_circle_outline_rounded),\n",
+        "end": "      padding:const EdgeInsets.symmetric(vertical:14),\n"
+      },
+      {
+        "start": "         border:Border.all(color:emerald.withValues(alpha:.23)),\n",
+        "end": "         LinearProgressIndicator(value:ratio,minHeight:7,\n"
+      },
+      {
+        "start": "           icon:const Icon(Icons.edit_outlined,size:17),\n",
+        "end": "           onPressed:WaffraHaptics.tap(()async{\n            await deleteNamedBudget(b);\n"
+      },
+      {
+        "start": "      );\n",
+        "end": "           chooseBudgetCategory(\n"
       }
     ],
     "lib/storage/waffra_fresh_finance_modules_repository.dart": [
@@ -249,6 +493,112 @@
       {
         "start": "  test('projection failure rolls back inserts and journal', () async {",
         "end": null
+      }
+    ],
+    "lib/waffra_categories_page.part.dart": [
+      {
+        "start": "       const Spacer(),\n\n      ]),\n      const SizedBox(height:5),\n",
+        "end": "      WaffraText(waffraIsEnglish?'${visibleChildren.length} subcategories':'${visibleChildren.length} قسم فرعي',\n"
+      },
+      {
+        "start": "       key:PageStorageKey<String>('waffra-root-category-actions-'+root.id),\n",
+        "end": "       childrenPadding:const EdgeInsets.symmetric(vertical:6),\n"
+      },
+      {
+        "start": "        Wrap(spacing:6,runSpacing:8,children:[\n",
+        "end": "          label:WaffraText(waffraIsEnglish?'Add subcategory':'إضافة فرعي',\n"
+      },
+      {
+        "start": "           style:const TextStyle(color:Colors.deepOrange,fontSize:11))),\n",
+        "end": "     ]))));\n"
+      },
+      {
+        "start": "        WaffraText(sub.displayName,maxLines:2,\n",
+        "end": "         style:TextStyle(fontSize:10,color:Theme.of(context).hintColor)),\n"
+      },
+      {
+        "start": "       key:PageStorageKey<String>('waffra-subcategory-actions-'+sub.id),\n",
+        "end": "       childrenPadding:const EdgeInsets.symmetric(vertical:4),\n"
+      },
+      {
+        "start": "           style:const TextStyle(fontSize:11,color:Colors.deepOrange))),\n",
+        "end": "     ])));\n  }\n"
+      },
+      {
+        "start": "       Expanded(child:WaffraText(root.name,\n",
+        "end": "        label:WaffraText(waffraIsEnglish?'Add subcategory':'إضافة فرعي')),\n"
+      },
+      {
+        "start": "        border:OutlineInputBorder(borderRadius:BorderRadius.circular(13)));\n",
+        "end": "         initialValue:categoryTypeFilter,isExpanded:true,\n"
+      },
+      {
+        "start": "          if(v!=null)setState(()=>categoryTypeFilter=v);\n",
+        "end": "         initialValue:categorySort,isExpanded:true,\n"
+      }
+    ],
+    "lib/waffra_country_first_run_page.dart": [
+      {
+        "start": "import 'package:flutter/material.dart';\n",
+        "end": "import 'waffra_country_suggestion.dart';\n"
+      },
+      {
+        "start": "                ? Theme.of(context).colorScheme.error : emerald))),\n",
+        "end": "            value:selectedRegionIso,isExpanded:true,\n"
+      },
+      {
+        "start": "            style:Theme.of(context).textTheme.bodySmall),\n",
+        "end": "            value: currencyCode, isExpanded: true,\n"
+      }
+    ],
+    "lib/waffra_gold_market_section.dart": [
+      {
+        "start": "import 'dart:convert';\n",
+        "end": "import 'waffra_gold_market_data.dart';\n"
+      },
+      {
+        "start": "        const SizedBox(height: 12),\n        Row(children: [\n",
+        "end": "              initialValue: _karat,\n"
+      }
+    ],
+    "lib/waffra_oil_market_section.dart": [
+      {
+        "start": "import 'dart:convert';\n",
+        "end": "import 'waffra_amount_formatter.dart';\n"
+      },
+      {
+        "start": "      'اختَر نوع الخام والكمية وعملة التحويل بسعر صرف موثّق.'),\n     style:TextStyle(fontSize:11,color:Theme.of(context).hintColor)),\n",
+        "end": "     initialValue:benchmark,isExpanded:true,\n"
+      },
+      {
+        "start": "      onChanged:(_)=>setState((){}))),\n",
+        "end": "      decoration:InputDecoration(labelText:t('Currency','العملة'),\n"
+      }
+    ],
+    "lib/waffra_practical_tools_page.dart": [
+      {
+        "start": "import 'package:flutter/material.dart';\n",
+        "end": "import 'package:image_picker/image_picker.dart';\n"
+      },
+      {
+        "start": "      notice('اختر نوع المشكلة التي واجهتها. لا نجمع بيانات شخصية أو رسائل بنكية أو ملفات.',\n",
+        "end": "          DropdownMenuItem<WaffraSafeDiagnosticCode>(\n"
+      }
+    ],
+    "lib/waffra_today_picker.dart": [
+      {
+        "start": "  final from=DateUtils.dateOnly(firstDate);\n",
+        "end": "   context:context,\n"
+      },
+      {
+        "start": "bool waffraCalendarIsToday(DateTime selected,{DateTime? now}) =>\n",
+        "end": null
+      }
+    ],
+    "test/m351_compact_category_filters_test.dart": [
+      {
+        "start": "  expect(ui,contains('ExpansionTile('));\n",
+        "end": "  expect(ui,isNot(contains(\"key:ValueKey('waffra-category-budget-'\")));\n"
       }
     ]
   }
