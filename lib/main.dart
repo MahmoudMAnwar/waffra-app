@@ -4072,8 +4072,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(!hasTransaction&&parts.any((message)=>
     BankParser.parse(message).requiresCurrencyReview)){
    return waffraIsEnglish
-    ?'Foreign currency detected. View its exchange-rate source. FX saving awaits encrypted provenance.'
-    :'تم اكتشاف عملة أجنبية. اعرض سعر الصرف ومصدره؛ الحفظ ينتظر اعتماد بيانات التحويل المشفرة.';
+    ?'Foreign currency detected. Non-SAR transactions are unsupported in this release.'
+    :'تم اكتشاف عملة أجنبية. العمليات بغير الريال السعودي غير مدعومة حاليًا.';
   }
   return hasTransaction?null:(waffraIsEnglish
    ?'No confirmed supported-SAR transaction found. Review and retry.'
@@ -4720,7 +4720,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          WaffraText(waffraIsEnglish?
           'Foreign currency is not stored as SAR without encrypted source/rate evidence. Balance is not a transaction.':
           'المبلغ الأجنبي لا يُحفظ كريال بدون إثبات العملة والسعر مشفرًا. الرصيد ليس معاملة.'),
-         if(messages.length==1&&WaffraSmsCurrencies.originalAmount(messages.first)!=null)
+         if(WaffraSaudiRelease.globalCurrencyConverter&&
+            messages.length==1&&WaffraSmsCurrencies.originalAmount(messages.first)!=null)
           OutlinedButton.icon(
            key:const Key('waffra-fx-quote-preview-action'),
            onPressed:busy?null:()=>_previewForeignBankCurrency(messages.first),
@@ -4731,7 +4732,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ],
       // Bank currency vs selected APP display currency are separate concepts.
       // Never mistake nominal label switching for an actual FX rate.
-      if(messages.length==1&&!currencyPreview.needsCurrencyReview&&
+      if(WaffraSaudiRelease.globalCurrencyConverter&&
+         messages.length==1&&!currencyPreview.needsCurrencyReview&&
          WaffraSmsCurrencies.originalAmount(messages.first)!=null&&
          WaffraSmsCurrencies.originalAmount(messages.first)!.currency!=
           WaffraDisplayCurrency.country.code)...[
@@ -4744,7 +4746,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          'Convert to app currency — rate & source':
          'تحويل لعملة التطبيق — السعر والمصدر')),
       ],
-       if(analyzingPaste)...[const SizedBox(height:12),const LinearProgressIndicator(),const SizedBox(height:6),WaffraText(waffraIsEnglish?'Analyzing bank messages with AI…':'جاري الآن تحليل الرسائل بالذكاء الاصطناعي…')],
+       if(analyzingPaste)...[const SizedBox(height:12),const LinearProgressIndicator(),const SizedBox(height:6),WaffraText(waffraIsEnglish?'Analyzing bank messages locally…':'جاري تحليل الرسائل البنكية محليًا…')],
       // Shared lightweight in-dialog progress while the batch is committed.
       if(busy)Padding(
        key:const Key('waffra-bank-sms-save-progress'),
@@ -4829,7 +4831,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
        inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],onChanged:(_)=>update((){}),
        decoration:InputDecoration(labelText:waffraIsEnglish?'Amount *':'مبلغ هذه الرسالة بالريال *',errorText:reviewAttempted?waffraAmountFieldError(amount.text):null,border:OutlineInputBorder())),
-      if(WaffraSmsCurrencies.originalAmount(messages[index])!=null&&
+      if(WaffraSaudiRelease.globalCurrencyConverter&&
+         WaffraSmsCurrencies.originalAmount(messages[index])!=null&&
          WaffraSmsCurrencies.originalAmount(messages[index])!.currency!=
            WaffraDisplayCurrency.country.code)
        OutlinedButton.icon(key:const Key('waffra-fx-transaction-preview'),
@@ -4997,6 +5000,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 }
 
  Future<void> _previewForeignBankCurrency(String raw)async {
+  if(!WaffraSaudiRelease.globalCurrencyConverter){
+   if(mounted)snack(context,waffraIsEnglish?
+    'Non-SAR transactions cannot be saved in this Saudi release.':
+    'العمليات بغير الريال غير مدعومة في النسخة السعودية الحالية.');
+   return;
+  }
   // No bank message contents, personal identifiers, photos or notes are
   // included in the FX network request: only original and target codes.
   final source=WaffraSmsCurrencies.originalAmount(raw);
