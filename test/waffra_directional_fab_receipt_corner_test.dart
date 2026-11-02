@@ -190,10 +190,20 @@ void main() {
     notice.dispose();
   });
 
-  test('attachment access is inside transaction details only', () {
+  test('M384 restores corner count and keeps details attachments action', () {
     final source=File('lib/main.dart').readAsStringSync();
-    expect(source,isNot(contains('if(count>0)PositionedDirectional(top:0,start:0')));
-    expect(source,isNot(contains('if(attachmentCount>0)PositionedDirectional(top:0,start:0')));
+    final listCard=source.split('Widget tile(MoneyEntry e)').last
+        .split('String get greeting').first;
+    final dashboardCard=source.split('Widget compactTransaction(MoneyEntry entry)').last
+        .split('Widget dashboard()').first;
+    expect(listCard,contains('final attachmentCount=waffraReceiptPaths(e.receiptPath).length;'));
+    expect(dashboardCard,contains('final attachmentCount=waffraReceiptPaths(entry.receiptPath).length;'));
+    for(final card in [listCard,dashboardCard]){
+      expect(card,contains('if(attachmentCount>0)PositionedDirectional(top:0,start:0'));
+      expect(card,contains('WaffraReceiptCornerBadge(count:attachmentCount,english:waffraIsEnglish)'));
+      expect(card,isNot(contains('showReceipt(')),
+        reason:'The corner remains a compact count, not a second destructive action.');
+    }
     expect(source,contains("onViewReceipt:waffraReceiptPaths(entry.receiptPath).isNotEmpty"));
     expect(source,contains("waffraIsEnglish?'View attachments':'عرض المرفقات'"));
     expect(source,contains('Icons.attach_file_rounded,size:10'));
@@ -222,16 +232,20 @@ void main() {
     expect(source, isNot(contains('WaffraPhysicalLeftFab')));
   });
 
-  test('transaction cards do not expose an external attachment button', () {
-    final source = File('lib/main.dart').readAsStringSync();
-    final listCard = source.split('Widget tile(MoneyEntry e)').last
+  test('M384 transaction cards use persisted references, never alter old photos', () {
+    final source=File('lib/main.dart').readAsStringSync();
+    final listCard=source.split('Widget tile(MoneyEntry e)').last
       .split('String get greeting').first;
-    final dashboardCard = source.split('Widget _transaction').length > 1
-      ? source.split('Widget dashboard()').first : source;
-    expect(listCard, isNot(contains('showReceipt(')));
-    expect(listCard, isNot(contains('WaffraReceiptCornerBadge(')));
-    expect(dashboardCard, isNot(contains('WaffraReceiptCornerBadge(count:count')));
-    expect(source, contains("onViewReceipt:waffraReceiptPaths(entry.receiptPath).isNotEmpty"));
+    final dashboardCard=source.split('Widget compactTransaction(MoneyEntry entry)').last
+      .split('Widget dashboard()').first;
+    for(final card in [listCard,dashboardCard]){
+      expect(card,contains('PositionedDirectional(top:0,start:0'));
+      expect(card,contains('child:WaffraReceiptCornerBadge('));
+      expect(card,isNot(contains('File(')));
+      expect(card,isNot(contains('delete(')));
+    }
+    expect(source,contains('Future<void> showReceipt(String encoded'));
+    expect(source,contains("onViewReceipt:waffraReceiptPaths(entry.receiptPath).isNotEmpty"));
   });
   testWidgets('expanded menu is above the physical plus on the same side in both languages', (tester) async {
     Widget harness(bool english) => MaterialApp(

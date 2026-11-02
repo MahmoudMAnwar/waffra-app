@@ -20,6 +20,17 @@ for attempt in 1 2; do
   result=$?
   set -e
   cat "$log"
+  if (( result != 0 )); then
+    # M387: record emulator/host state on failure, without changing the result
+    # or logging application financial data (these tests use synthetic records).
+    echo "M274_FAILURE_DIAGNOSTICS_BEGIN"
+    adb devices -l || true
+    adb -s "$device" shell getprop sys.boot_completed || true
+    df -h . || true
+    free -h || true
+    ps -eo pid,comm,rss --sort=-rss | head -n 16 || true
+    echo "M274_FAILURE_DIAGNOSTICS_END"
+  fi
   if (( result == 0 )); then
     echo "M274_ANDROID_UI_PASS:real_footer_and_privacy_taps"
     exit 0

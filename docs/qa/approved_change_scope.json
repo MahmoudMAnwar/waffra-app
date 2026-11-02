@@ -1,0 +1,83 @@
+{
+  "contract_version": 1,
+  "change_id": "M383-M384-M385-M386-M387",
+  "human_scope_review": "REQUIRED; only user/project owner can approve whether claims match requested change; manifest author cannot grant approval",
+  "user_requested_changes": [
+    "M383: reduce total main Android APK and Play AAB build time by independent parallel builds while preserving source and signing safety.",
+    "M384: restore existing counted top-corner attachment badge on Arabic and English transaction cards without altering existing user photos.",
+    "M385: forbid any change to pre-existing app code and accepted features that was not explicitly requested, with a fail-closed PR scope audit.",
+    "M386: resolve observed M274 Android emulator CI startup failure caused by Pixel AVD needing 7372 MB while runner had only 5911 MB; preserve real UI tap coverage.",
+    "M387: fix the second M274 Android emulator UI smoke failure after Android boot and first tap test pass, by compiling the temporary APK before launching the AVD and lowering runner resource contention, without skipping tap tests."
+  ],
+  "allowed_changed_files": [
+    ".github/CODEOWNERS",
+    ".github/scripts/run-m274-android-tap-smoke.sh",
+    ".github/workflows/android.yml",
+    ".github/workflows/m174-main-sha-postmerge.yml",
+    ".github/workflows/m274-production-ui-golden.yml",
+    "docs/SMART_INCREMENTAL_CI.md",
+    "docs/qa/approved_change_scope.json",
+    "docs/qa/m385-no-unrequested-changes.md",
+    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "lib/main.dart",
+    "scripts/qa/m385_approved_change_guard.py",
+    "test/m384_receipt_corner_upgrade_regression_test.dart",
+    "test/qa/m383_parallel_signed_android_build_test.py",
+    "test/qa/m385_approved_scope_guard_test.py",
+    "test/qa/m386_m274_emulator_disk_safety_test.py",
+    "test/waffra_directional_fab_receipt_corner_test.dart",
+    "test/waffra_oct21_regression_test.dart"
+  ],
+  "bounded_sections": {
+    "lib/main.dart": [
+      {
+        "start": " Widget tile(MoneyEntry e){",
+        "end": " String get greeting=>"
+      },
+      {
+        "start": " Widget compactTransaction(MoneyEntry entry){",
+        "end": " Widget dashboard(){"
+      }
+    ],
+    ".github/workflows/android.yml": [
+      {
+        "start": "  build:\n",
+        "end": null
+      }
+    ],
+    ".github/workflows/m174-main-sha-postmerge.yml": [
+      {
+        "start": "      - name: Checkout exact reviewed SHA\n",
+        "end": "      - name: Generate non-sensitive NO-GO evidence for exact SHA\n"
+      }
+    ],
+    "test/waffra_oct21_regression_test.dart": [
+      {
+        "start": "  expect(app, contains(\"'No.'\"));\n });\n\n",
+        "end": " test('Sensitive financial actions always require OS biometric authentication', () {"
+      }
+    ],
+    "test/waffra_directional_fab_receipt_corner_test.dart": [
+      {
+        "start": "    expect(direction==TextDirection.rtl?statusX>closeX:statusX<closeX,isTrue,\n        reason:'Status icon and close action must follow the current direction.');",
+        "end": "  test('Home, Categories, Goals and Recurring plus actions preserve locale switch, with no fixed-left anchor',"
+      },
+      {
+        "start": "    expect(source, isNot(contains('WaffraPhysicalLeftFab')));\n  });\n\n",
+        "end": "  testWidgets('expanded menu is above the physical plus on the same side in both languages', (tester) async {"
+      }
+    ],
+    ".github/workflows/m274-production-ui-golden.yml": [
+      {
+        "start": "      - name: Syntax-check Android emulator test runner\n",
+        "end": null
+      }
+    ],
+    ".github/scripts/run-m274-android-tap-smoke.sh": [
+      {
+        "start": "  set -e\n",
+        "end": "  if (( result == 0 )); then\n"
+      }
+    ]
+  }
+}

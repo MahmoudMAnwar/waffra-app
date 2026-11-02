@@ -25,15 +25,21 @@ void main() {
   expect(app, contains("'No.'"));
  });
 
- test('M374 receipts only open inside transaction details, not cards', () {
-  expect(app, isNot(contains('if(attachmentCount>0)PositionedDirectional')),
-   reason:'Old quick-card attachment button was intentionally removed.');
+ test('M384 restored receipt corner on cards and retained details access', () {
+  // M374 removed the approved corner badge. A regression test must never
+  // treat its absence as a success again.
+  expect(app, contains('Widget tile(MoneyEntry e)'));
+  expect(app, contains('Widget compactTransaction(MoneyEntry entry)'));
+  expect(app, contains('final attachmentCount=waffraReceiptPaths(e.receiptPath).length;'));
+  expect(app, contains('final attachmentCount=waffraReceiptPaths(entry.receiptPath).length;'));
+  expect(RegExp(r'if\(attachmentCount>0\)PositionedDirectional\(top:0,start:0')
+      .allMatches(app).length, 2,
+   reason:'Both transaction list and dashboard require the RTL/LTR corner.');
+  expect(app, contains('WaffraReceiptCornerBadge(count:attachmentCount,english:waffraIsEnglish)'));
   expect(app, contains('if(onViewReceipt!=null)'),
-   reason:'Details alone expose a saved-attachment action.');
-  expect(app, contains('waffraReceiptPaths(entry.receiptPath).isNotEmpty'),
-   reason:'Absent attachments must not create an empty action.');
+   reason:'Details must continue exposing the saved-attachment action.');
+  expect(app, contains('waffraReceiptPaths(entry.receiptPath).isNotEmpty'));
   expect(app, contains('showReceipt(entry.receiptPath!)'));
-  expect(app, isNot(contains("const Icon(Icons.attach_file,size:17,color:emerald)")));
  });
 
  test('Sensitive financial actions always require OS biometric authentication', () {

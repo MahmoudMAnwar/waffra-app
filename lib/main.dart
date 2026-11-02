@@ -7101,9 +7101,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
  Widget tile(MoneyEntry e){
   final c=categoryFor(e.category,e.income);
+  // Restored M384 corner count uses persisted receipt references only.
+  // Never migrate, move or modify existing receipt files during rendering.
+  final attachmentCount=waffraReceiptPaths(e.receiptPath).length;
   return Card(color:e.income?waffraIncomeBackground:waffraExpenseBackground,
    clipBehavior:Clip.antiAlias,child:Stack(children:[
-    Padding(padding:const EdgeInsets.only(top:0),child:ListTile(
+    Padding(padding:EdgeInsets.only(top:attachmentCount>0?16:0),child:ListTile(
    textColor:waffraInk,iconColor:forest,
    leading:CircleAvatar(backgroundColor:Color(c.color).withValues(alpha:.15),
     child:Icon(categoryIcon(c.icon),color:Color(c.color))),
@@ -7119,6 +7122,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     IconButton(tooltip:waffraIsEnglish?'Transaction options':'خيارات المعاملة',
      onPressed:WaffraHaptics.tap(()=>transactionActions(e)),icon:const Icon(Icons.more_vert,color:forest)),
    ]))),
+    if(attachmentCount>0)PositionedDirectional(top:0,start:0,
+     child:WaffraReceiptCornerBadge(count:attachmentCount,english:waffraIsEnglish)),
    ]));
  }
  String get greeting=>WaffraSaudiGreetings.compose(
@@ -8112,6 +8117,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     ]))));
  Widget compactTransaction(MoneyEntry entry){
   final cat=categoryFor(entry.category,entry.income);
+  final attachmentCount=waffraReceiptPaths(entry.receiptPath).length;
   final valueColor=entry.income?waffraIncomeTone(context):Colors.deepOrange;
   final darkMode=Theme.of(context).brightness==Brightness.dark;
   final rowColor=entry.income?(darkMode?const Color(0xFF244C3A):const Color(0xFFB2D5C2)):
@@ -8120,7 +8126,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    decoration:BoxDecoration(color:rowColor,borderRadius:BorderRadius.circular(17),
     border:Border.all(color:forest.withValues(alpha:darkMode ? 0.18 : 0.08))),
    clipBehavior:Clip.antiAlias,child:Stack(children:[
-    Padding(padding:const EdgeInsets.fromLTRB(11,12,11,12),child:Row(children:[
+    Padding(padding:EdgeInsets.fromLTRB(11,attachmentCount>0?23:12,11,12),child:Row(children:[
      CircleAvatar(radius:18,
       backgroundColor:Color(cat.color).withValues(alpha:0.13),
       child:WaffraIllustration(topic:cat.icon,size:36)),
@@ -8147,6 +8153,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      IconButton(tooltip:waffraIsEnglish?'Transaction options':'خيارات المعاملة',
       onPressed:WaffraHaptics.tap(()=>transactionActions(entry)),icon:const Icon(Icons.more_vert,size:18)),
     ])),
+    if(attachmentCount>0)PositionedDirectional(top:0,start:0,
+     child:WaffraReceiptCornerBadge(count:attachmentCount,english:waffraIsEnglish)),
    ])));
  }
  Widget dashboard(){
