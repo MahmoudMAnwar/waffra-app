@@ -73,9 +73,9 @@ void main() {
     expect(saved['active'],false);
     final typed=await vault.customSelect(
      'SELECT target_minor,saved_minor FROM fresh_finance_goals WHERE goal_id=?',
-     variables:[const Variable.withString('unlimited')]);
-    expect(typed.single.read<int>('target_minor'),0);
-    expect(typed.single.read<int>('saved_minor'),25075);
+     variables:[Variable.withString('unlimited')]).getSingle();
+    expect(typed.read<int>('target_minor'),0);
+    expect(typed.read<int>('saved_minor'),25075);
     await repo.save(WaffraFinanceModule.goals,{
      ...saved,'saved':300.25,
     },replaceExisting:true);
