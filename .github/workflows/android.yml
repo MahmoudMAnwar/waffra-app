@@ -994,8 +994,12 @@ jobs:
           if [[ -n "${WAFFRA_PUBLIC_EIA_KEY:-}" ]]; then
             eia_define+=(--dart-define="WAFFRA_PUBLIC_EIA_KEY=${WAFFRA_PUBLIC_EIA_KEY}")
           fi
+          started=$(date +%s)
           flutter build appbundle --no-pub --release --target-platform android-arm64 --tree-shake-icons "${eia_define[@]}"
           test -s build/app/outputs/bundle/release/app-release.aab
+          elapsed=$(( $(date +%s) - started ))
+          printf 'AAB compile command: **%s seconds**.\\n' "$elapsed" >> "$GITHUB_STEP_SUMMARY"
+          echo "WAFFRA_AAB_BUILD_SECONDS=$elapsed"
 
       - name: Validate signed AAB archive (not a Play approval)
         if: matrix.artifact == 'aab'
@@ -1044,7 +1048,7 @@ jobs:
           for key, wanted in [
               ('SHA1', '7b65b90ca51c0dec5d36cbab1af789119d9b4335'),
               ('SHA256', '894c436dc4270d46815707a29147709e89cd42d40fbf5d3ae24104293b03ae8c')]:
-              found = re.search(r'(?m)^\\s*' + key + r':\\s*([0-9a-fA-F:]+)', cert)
+              found = re.search(r'(?m)^\s*' + key + r':\s*([0-9a-fA-F:]+)', cert)
               if not found or found.group(1).replace(':', '').lower() != wanted:
                   raise SystemExit('BLOCKED: AAB signature certificate mismatch for ' + key)
           print('PASS: signed AAB matches release certificate and exact SHA')
