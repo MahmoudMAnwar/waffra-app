@@ -1,5 +1,5 @@
-import 'package:drift/drift.dart';
 import 'dart:io';
+import 'package:drift/drift.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/storage/waffra_encrypted_store.dart';
