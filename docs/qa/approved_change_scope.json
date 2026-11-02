@@ -26,7 +26,7 @@
         "end": " /// Draw the same category-colored donut"
       },
       {
-        "start": " Future<void> editBudgetForCategory(BudgetCategory selected,{String? suggestedName})async{",
+        "start": " Future<void> editBudgetForCategory(",
         "end": " // Cross-screen refresh stays inside State"
       },
       {

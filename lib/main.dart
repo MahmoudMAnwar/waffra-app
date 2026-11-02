@@ -7586,7 +7586,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    operation:'standalone-budget-toggle');
  }
 
- Future<void> editBudgetForCategory(BudgetCategory selected,{String? suggestedName})async{
+ Future<void> editBudgetForCategory(WaffraNamedBudget selected,{String? suggestedName})async{
   final name=TextEditingController(text:selected.budgetLabel??selected.name);
   final amount=TextEditingController(text:selected.budget>0?
    formatWaffraEditAmount(selected.budget):'');
