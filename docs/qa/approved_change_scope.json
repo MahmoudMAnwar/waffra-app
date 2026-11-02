@@ -75,7 +75,7 @@
     ],
     ".github/scripts/run-m274-android-tap-smoke.sh": [
       {
-        "start": "  cat \"$log\"\n",
+        "start": "  set -e\n",
         "end": "  if (( result == 0 )); then\n"
       }
     ]
