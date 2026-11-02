@@ -17,8 +17,13 @@ Future<DateTime?> waffraPickDateWithToday({
   final today=DateUtils.dateOnly(DateTime.now());
   final from=DateUtils.dateOnly(firstDate);
   final until=DateUtils.dateOnly(lastDate);
+  // Imported/edited historical records can fall outside the date window.
+  // Never pass such a value to CalendarDatePicker (it asserts at build time).
+  // Only explicit Confirm changes the calling form's selected date.
+  final safeInitial=waffraBoundedCalendarInitialDate(initialDate,from,until);
+  if(safeInitial==null)return Future<DateTime?>.value(null);
   final allowed=!today.isBefore(from)&&!today.isAfter(until);
-  var selected=DateUtils.dateOnly(initialDate);
+  var selected=safeInitial;
   return showDialog<DateTime>(
    context:context,
    builder:(dialogContext)=>StatefulBuilder(
@@ -87,3 +92,16 @@ Future<DateTime?> waffraPickDateWithToday({
 /// Shared condition for compact financial-calendar Today controls.
 bool waffraCalendarIsToday(DateTime selected,{DateTime? now}) =>
  DateUtils.isSameDay(selected,now??DateTime.now());
+
+/// Fail closed for invalid ranges; clamp historical initial selections solely
+/// for picker display. Cancelling still returns null and never edits finance.
+DateTime? waffraBoundedCalendarInitialDate(
+ DateTime initialDate,DateTime firstDate,DateTime lastDate) {
+ final from=DateUtils.dateOnly(firstDate);
+ final until=DateUtils.dateOnly(lastDate);
+ if(from.isAfter(until))return null;
+ final initial=DateUtils.dateOnly(initialDate);
+ if(initial.isBefore(from))return from;
+ if(initial.isAfter(until))return until;
+ return initial;
+}
