@@ -70,7 +70,8 @@ jobs:
 
   verify-same-sha-checks:
     name: Check every independent test workflow on this exact SHA
-    needs: verify-all-tests
+    # M381: this audit only reads independent same-SHA results. Run in
+    # parallel with the mandatory Flutter/Python job; release still needs BOTH.
     runs-on: ubuntu-latest
     timeout-minutes: 55
     steps:
@@ -89,12 +90,18 @@ jobs:
           own_run = int(os.environ['RUN_ID'])
           branch = os.environ['BRANCH_NAME']
           expected = {
+              # These trigger on push to main, not just on PRs. Require BOTH
+              # before the parallel audit can finish: never approve an empty
+              # result when the other workflows have not registered yet.
+              'M340 Continuous Financial Quality Gate (Exact SHA, No Cutover)',
+              'M174 Main SHA Post-Merge SQLCipher Regression',
+          } if branch == 'main' else ({
               'M147 Final Main-Safe Merge Readiness Review',
               'M160 Main Reconciliation and Backup Regression',
               'Waffra Full Offline Finance and UI Regression',
               'Waffra M103 Same-SHA Whole-App Release Certification',
               'M202 Android SQLCipher Source Binding Dry Run (CI ONLY)',
-          } if branch == 'fix/m206-daylight-tour-sms-notes-motion-20261024' else set()
+          } if branch == 'fix/m206-daylight-tour-sms-notes-motion-20261024' else set())
           headers = {
               'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
               'Accept': 'application/vnd.github+json',
@@ -136,6 +143,8 @@ jobs:
           PY
 
   build:
+    # Never publish a signed APK/AAB until exhaustive tests AND the parallel
+    # independent exact-SHA gate have finished successfully.
     needs: [verify-all-tests, verify-same-sha-checks]
     runs-on: ubuntu-latest
 
@@ -771,16 +780,22 @@ jobs:
           PY
 
       - name: Flutter static analysis
+        # Mandatory main verification has already analyzed the same SHA.
+        # Keep this local verification on other historical QA branches.
+        if: github.ref != 'refs/heads/main'
         run: flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings
 
       # Validate the cache invalidation logic itself on every build.
       - name: Verify Smart CI safety policies
+        if: github.ref != 'refs/heads/main'
         run: python3 -m unittest discover -s scripts -p 'test_smart_ci.py' -v
 
       # A test cache contains ONLY fingerprints and previous green results,
       # never compiled APKs or security secrets. An older successful full
       # release is used as the reference if the exact run has no cache.
       - name: Restore verified passing Flutter test fingerprints
+        # Main has an exhaustive same-SHA suite: no result reuse needed.
+        if: github.ref != 'refs/heads/main'
         id: smart_cache
         uses: actions/cache/restore@v4
         with:
@@ -793,6 +808,9 @@ jobs:
       # always run. Other tests run if their transitive source or environment
       # changed. Scheduled/full-smoke releases re-run ALL Flutter tests.
       - name: Run Smart Incremental Flutter tests
+        # Do not rerun Flutter tests inside the main APK job after the
+        # mandatory full suite completed successfully in verify-all-tests.
+        if: github.ref != 'refs/heads/main'
         id: smart_tests
         env:
           WAFFRA_FULL_VALIDATION: 'false'
@@ -1016,6 +1034,7 @@ jobs:
       # Results become reusable ONLY after tests, Android build, signature
       # verification and APK upload have ALL succeeded in this same job.
       - name: Save verified green test fingerprints
+        if: github.ref != 'refs/heads/main'
         uses: actions/cache/save@v4
         with:
           path: .ci_cache/waffra_green_tests.json
