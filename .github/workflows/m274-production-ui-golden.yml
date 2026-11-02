@@ -164,12 +164,25 @@ jobs:
             exit 1
           fi
           grep -q 'Pkg.Revision = 28.2.13676358' "$sdk/ndk/$version/source.properties"
+      # M409: flutter drive can reuse the prebuilt APK; flutter test cannot.
+      # Create the standard integration driver on this disposable CI checkout.
+      - name: Prepare integration driver for prebuilt debug APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p test_driver
+          cat > test_driver/integration_test.dart <<'DART'
+          import 'package:integration_test/integration_test_driver.dart';
+          Future<void> main() => integrationDriver();
+          DART
       - name: Precompile Android UI integration APK before emulator launch
         shell: bash
         run: |
           set -euo pipefail
           flutter build apk --debug --no-pub --target integration_test/m274_ui_tap_smoke_android_test.dart
           test -s build/app/outputs/flutter-apk/app-debug.apk
+          # Avoid carrying a multi-GB idle Gradle daemon into the emulator.
+          ./android/gradlew --stop
           df -h .
           free -h
       - name: Enable KVM for Android emulator
