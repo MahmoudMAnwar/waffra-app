@@ -32,6 +32,21 @@ class WaffraFinancialInsights {
   return (current-previous)/previous*100;
  }
 
+ /// All budget surfaces must use the user-selected percent.
+ static bool budgetThresholdReached(double spent,double limit,{
+  required int threshold,bool enabled=true,
+ })=>enabled&&limit>0&&threshold>=1&&threshold<=100&&
+  spent>=limit*threshold/100;
+ static int newlyCrossedBudgetStage(
+  double previous,double current,double limit,int threshold){
+  if(limit<=0||threshold<1||threshold>100||current<=previous)return 0;
+  final stages=<int>{threshold,100}.toList()..sort();
+  var crossed=0;
+  for(final stage in stages){
+   if(previous<limit*stage/100&&current>=limit*stage/100)crossed=stage;
+  }
+  return crossed;
+ }
  static int budgetAlertStage(double spent,double limit){
   if(limit<=0)return 0;
   final percent=spent/limit*100;
