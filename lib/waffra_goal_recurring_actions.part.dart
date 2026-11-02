@@ -7,7 +7,7 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
  Future<bool> _ensureLinkedRecurringForGoal(SavingGoal goal)async{
   final deadline=goal.dueDate;
   final linkedIndex=recurring.indexWhere((r)=>r.linkedGoalId==goal.id);
-  if(deadline==null||goal.target<=0){
+  if(deadline==null||goal.target<=0||!goal.active){
    if(linkedIndex<0)return true;
    setState(()=>recurring[linkedIndex]=recurring[linkedIndex].copy(active:false));
   }else{
@@ -24,7 +24,7 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
     (rent.isNotEmpty?rent.first.name:available.first.name);
    final next=linkedIndex>=0?recurring[linkedIndex].copy(
     amount:goal.target,day:deadline.day,startAt:deadline,
-    active:recurring[linkedIndex].active):
+    active:goal.active):
     RecurringBill(id:newId(),title:'استحقاق '+goal.name,category:category,
      amount:goal.target,income:false,day:deadline.day,startAt:deadline,
      linkedGoalId:goal.id);
@@ -39,6 +39,29 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
   return true;
  }
 
+ /// Pause/resume keeps the saved wallet intact and suspends linked due entries.
+ Future<void> setGoalActive(SavingGoal original,bool enabled)async{
+  if(!mounted)return;
+  await _ensureFinanceBound();
+  if(!mounted)return;
+  final matches=goals.where((g)=>g.id==original.id).toList();
+  if(matches.length!=1||matches.single.active==enabled)return;
+  final current=matches.single;
+  final updated=current.copy(active:enabled);
+  setState((){
+   final index=goals.indexWhere((g)=>g.id==current.id);
+   if(index>=0)goals[index]=updated;
+  });
+  if(!await _persistModuleOrReload(
+   WaffraFinanceRoute.goalCreateEditDeleteRestore,
+   operation:'goal-active-toggle'))return;
+  if(updated.dueDate!=null&&updated.target>0){
+   final linked=await _ensureLinkedRecurringForGoal(updated);
+   if(!linked&&mounted)snack(context,waffraIsEnglish?
+    'Goal saved, but linked due date needs review.':
+    'تم حفظ الهدف، لكن الاستحقاق المرتبط يحتاج مراجعة.');
+  }
+ }
  Future<void> editGoal(SavingGoal existing)async{
   final name=TextEditingController(text:existing.name);
   final target=TextEditingController(text:existing.target<=0?'':formatWaffraEditAmount(existing.target));
@@ -103,7 +126,8 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
         });
         if(nameError!=null||amountError!=null||(!noTarget&&(v==null||v<=0)))return;
         Navigator.pop(dialog,SavingGoal(id:existing.id,name:n,target:noTarget?0.0:v!,
-         saved:existing.saved,dueDate:removeDeadline?null:deadline));
+         saved:existing.saved,dueDate:removeDeadline?null:deadline,
+         active:existing.active));
        }),child:WaffraText(waffraIsEnglish?'Save changes':'حفظ التعديل')),
       ],
      )));
