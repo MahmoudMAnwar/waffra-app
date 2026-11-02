@@ -681,7 +681,7 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
   }
   final options=WaffraSaudiAsk.questions(facts,budgets,now:today);
   return _column([
-   _head(titlesAr[4],'assistant',t(
+   _head(t(titlesAr[4],titlesEn[4]),'assistant',t(
     'اسأل عن بياناتك المسجلة باختيار سؤال','Choose a question about your records')),
    const SizedBox(height:12),
    if(saudiQuestionId==null)...[
