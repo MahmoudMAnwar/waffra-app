@@ -4,13 +4,13 @@ Enabled in Saudi release:
 - Default ledger/display: SAR only. Arabic wording: Saudi. Arabic/English application languages remain supported.
 - Ask Waffra: predefined, deterministic local questions about recorded monthly income, spending, category breakdowns, and user-created named budgets; clear to reset list.
 - Bank SMS: existing local deterministic Saudi parser and tiny offline intent classifier; user review is required before any posting.
-- Saudi market gold and oil sections retained.
+- Tools currency converter, gold and oil sections and gold FX action remain enabled exactly as before.
 
 Temporarily disabled (Global code retained):
 - Location/country-detection first-run page and related Android permission prompt.
 - Receipt/photo OCR to transaction creation (existing attachments untouched).
 - Qwen text inference in bank SMS and Ask Waffra; other optional AI features are unchanged.
-- Country, dialect, app currency controls and global currency converter (including gold FX button).
+- Country, dialect and app-wide display currency controls; Tools currency converter and gold FX button are *not* disabled.
 - Country dialing-code picker during Saudi registration; existing account profile storage unchanged.
 
 Safety/release:
