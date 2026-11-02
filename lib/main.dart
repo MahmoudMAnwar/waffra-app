@@ -2626,10 +2626,11 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
  final VoidCallback? onLinkBudget;
  final String? linkedBudgetName;
  final bool linkedBudgetPaused;
+ final bool showBudgetInfo;
  const WaffraTransactionDetailsDialog({
   super.key,required this.entry,required this.onClose,this.onViewReceipt,
   this.protectedOriginalSms,this.onLinkBudget,this.linkedBudgetName,
-  this.linkedBudgetPaused=false,
+  this.linkedBudgetPaused=false,this.showBudgetInfo=true,
  });
  @override Widget build(BuildContext context){
   final rtl=!waffraIsEnglish;
@@ -2689,7 +2690,7 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
          textDirection:rtl?TextDirection.rtl:TextDirection.ltr,
          style:TextStyle(color:muted,fontSize:13))),
        ]),
-       if(!entry.income)...[
+       if(!entry.income&&showBudgetInfo)...[
         const SizedBox(height:12),
         if(entry.budgetId==null)
          Container(
@@ -7067,7 +7068,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       .map((b)=>b.name).firstOrNull,
     linkedBudgetPaused:namedBudgets.any((b)=>b.id==entry.budgetId&&
       (!b.budgetActive||b.deleted)),
-    onLinkBudget:entry.income||entry.budgetId!=null?null:(){
+    showBudgetInfo:entry.budgetId!=null||waffraHasSelectableBudget(namedBudgets),
+    onLinkBudget:entry.income||entry.budgetId!=null||
+      !waffraHasSelectableBudget(namedBudgets)?null:(){
       Navigator.pop(ctx);
       unawaited(assignExistingExpenseToBudget(entry));
     },
