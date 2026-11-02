@@ -29,7 +29,8 @@ jobs:
           java-version: '21'
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          # M411: Firebase SDK 13.x / rules-unit-testing 6 require Node >=24.12.
+          node-version: '24.12.0'
           cache: npm
           cache-dependency-path: test/firebase/package.json
       - name: Install isolated Firestore test dependencies
