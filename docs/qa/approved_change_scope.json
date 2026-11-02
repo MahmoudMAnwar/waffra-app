@@ -304,38 +304,66 @@
     ],
     "test/qa/m290_country_permissions_test.py": [
       {
-        "start": null,
-        "end": null
+        "start": "class CountryPermissionManifestTest(unittest.TestCase):\n",
+        "end": "        with tempfile.TemporaryDirectory() as directory:\n            manifest = Path(directory) / \"AndroidManifest.xml\"\n            manifest.write_text(\n                '<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\">'\n                '<application android:label=\"Waffra\" /></manifest>',\n"
+      },
+      {
+        "start": "            result = manifest.read_text(encoding=\"utf-8\")\n",
+        "end": "if __name__ == \"__main__\":\n"
       }
     ],
     "test/m224_pdf_verified_display_currency_test.dart": [
       {
-        "start": null,
-        "end": null
+        "start": " tearDown(() {\n  WaffraDisplayCurrency.active.value=WaffraDisplayCurrency.displaySelection('SAR');\n });\n",
+        "end": "  }finally{noNetwork.close();}\n"
       }
     ],
     "test/m301_google_country_phone_picker_test.dart": [
       {
-        "start": null,
-        "end": null
+        "start": "  expect(WaffraInternationalPhone.fromStored('0512345678').country.iso,'SA');\n });\n\n",
+        "end": "  expect(WaffraDisplayCurrency.hasSavedPreference,isTrue);\n"
+      },
+      {
+        "start": "  expect(find.textContaining('manual selection is preserved'),findsWidgets);\n  await tester.scrollUntilVisible(\n   find.byKey(const Key('m290-setup-confirm')),160,\n   scrollable:find.byType(Scrollable).first);\n  await tester.ensureVisible(find.byKey(const Key('m290-setup-confirm')));\n  await tester.pumpAndSettle();\n  await tester.tap(find.byKey(const Key('m290-setup-confirm')));\n  await tester.pumpAndSettle();\n",
+        "end": "  WaffraDisplayCurrency.hasSavedPreference=false;\n"
+      },
+      {
+        "start": "  expect(saved,'EGP');\n });\n\n",
+        "end": "  expect(tester.takeException(),isNull);\n"
       }
     ],
     "test/m290_google_country_reminders_test.dart": [
       {
-        "start": null,
-        "end": null
+        "start": "      isNot(waffraCountrySetupKey(profile(email: 'other@example.com'))));\n  });\n\n",
+        "end": "  });\n\n  testWidgets('M290 reason shown first; only tapping location starts detection',\n"
+      },
+      {
+        "start": "    final reminders = File('lib/waffra_reminders.dart')\n      .readAsStringSync();\n",
+        "end": "    expect(main, contains('waffraGoogleProfileReadyForCountrySetup(u)'));\n"
       }
     ],
     "test/m268_smart_features_ten_calendar_art_test.dart": [
       {
-        "start": null,
-        "end": null
+        "start": "   expect(find.textContaining('Simulation only'),findsOneWidget);\n  });\n",
+        "end": "   final original=waffraSmartBalance(sample);\n"
+      },
+      {
+        "start": "    WaffraDisplayCurrency.displaySelection('SAR'));\n   await tester.pumpWidget(MaterialApp(home:WaffraSmartFeaturesPage(\n    entries:sample,goals:const [],recurring:const [],english:true)));\n   await tester.scrollUntilVisible(\n    find.byKey(const Key('waffra-m268-feature-simulation')),250,\n    scrollable:find.byType(Scrollable).first);\n   await tester.pumpAndSettle();\n   await tester.tap(find.byKey(const Key('waffra-m268-feature-simulation')));\n   await tester.pumpAndSettle();\n",
+        "end": "   expect(waffraSmartBalance(sample),original);\n"
+      },
+      {
+        "start": "   expect(sample.length,2);\n   expect(waffraSmartBalance(sample),1150);\n  });\n",
+        "end": "   await tester.pumpWidget(MaterialApp(home:Scaffold(\n"
       }
     ],
     "test/m326_region_dialect_splash_localization_test.dart": [
       {
-        "start": null,
-        "end": null
+        "start": "    expect(source,isNot(contains('Waffra.. shows you where your money goes')));\n  });\n\n",
+        "end": "    final copy=File('lib/waffra_country_first_run_page.dart').readAsStringSync();\n"
+      },
+      {
+        "start": "    expect(WaffraRegionalCopy.regionLabel('SA',english:true),'Saudi Arabia');\n  });\n\n",
+        "end": "  });\n\n  test('M326 locale, greeting, exit and profile settings use same UI country',(){\n"
       }
     ],
     "lib/waffra_saudi_mobile.dart": [
