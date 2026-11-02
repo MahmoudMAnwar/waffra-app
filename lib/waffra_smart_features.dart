@@ -288,7 +288,7 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
   final next=active==section?null:section;
   setState(()=>active=next);
   // A deleted model leaves its AI features visible but disabled.
-  if(section==4&&!WaffraSaudiRelease.enabled&&
+  if(section==4&&WaffraSaudiRelease.freeTextAskWaffra&&
      !WaffraOnDeviceQwen.shared.isReady)return;
   final token=++_focusSerial;
   if(next==null)return;
@@ -336,7 +336,7 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
    if(!WaffraOnDeviceQwen.shared.isReady){
     // Clear private model output; collapse an open AI-only panel on delete.
     aiStatus='';aiAnalysis='';aiSavings='';answer='';
-    if(active==4&&!WaffraSaudiRelease.enabled)active=null;
+    if(active==4&&WaffraSaudiRelease.freeTextAskWaffra)active=null;
    }
   });
  }
@@ -718,7 +718,7 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
   ]);
  }
  Widget _assistant(){
-  if(WaffraSaudiRelease.enabled)return _saudiAssistant();
+  if(!WaffraSaudiRelease.freeTextAskWaffra)return _saudiAssistant();
   return _column([
    _head(titlesAr[4],'assistant',t('إجابات من سجلك المحلي فقط','Answers from verified local records')),
    const SizedBox(height:15),
@@ -874,8 +874,8 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
   // Negative indices avoid changing the ten tools' stable names and keys.
   final tiles=List<Widget?>.generate(types.length+2,(slot){
    final i=slot-2;
-   if(i==4&&!WaffraSaudiRelease.enabled&&!_aiToolVisible)return null;
-   final aiLocked=i==4&&!WaffraSaudiRelease.enabled&&
+   if(i==4&&WaffraSaudiRelease.freeTextAskWaffra&&!_aiToolVisible)return null;
+   final aiLocked=i==4&&WaffraSaudiRelease.freeTextAskWaffra&&
     _aiToolState==WaffraAiToolsState.disabled;
    final id=i==-2?'analysis':i==-1?'markets':types[i];
    final name=i==-2?t('التحليل المالي','Financial analysis'):
