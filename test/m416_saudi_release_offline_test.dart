@@ -20,7 +20,8 @@ void main(){
   expect(WaffraSaudiRelease.freeTextAskWaffra,isFalse);
   expect(WaffraSaudiRelease.userCountryChoice,isFalse);
   expect(WaffraSaudiRelease.userCurrencyChoice,isFalse);
-  expect(WaffraSaudiRelease.globalCurrencyConverter,isFalse);
+  expect(WaffraSaudiRelease.globalCurrencyConverter,isTrue);
+  expect(WaffraSaudiRelease.bankSmsForeignCurrencyPreview,isFalse);
   expect(WaffraSaudiRelease.ledgerCurrency,'SAR');
  });
  test('M416 old foreign display preference is preserved but not applied',()async{
