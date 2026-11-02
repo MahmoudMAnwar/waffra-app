@@ -18,7 +18,10 @@ extension WaffraBudgetDirectory on _HomeScreenState {
      builder:(ctx,refresh)=>ListView(
       controller:scroll,
       padding:const EdgeInsets.fromLTRB(14,0,14,28),
-      children:[_budgetDirectoryPanel(refresh,
+      // A dismissed modal must never receive an async StateSetter callback.
+      children:[_budgetDirectoryPanel((operation){
+       if(ctx.mounted)refresh(operation);
+      },
        view:view,onViewChange:(v)=>refresh(()=>view=v),
        templateGroup:templateGroup,
        onTemplateGroupChange:(g)=>refresh(()=>templateGroup=g))],
@@ -83,8 +86,10 @@ extension WaffraBudgetDirectory on _HomeScreenState {
     border:Border.all(color:emerald.withValues(alpha:.24)),
     borderRadius:BorderRadius.circular(18)),
    child:ExpansionTile(
-    key:const PageStorageKey<String>('waffra-my-budgets-directory-sheet'),
+    key:const ValueKey<String>('waffra-my-budgets-directory-sheet'),
     initiallyExpanded:true,
+    shape:const RoundedRectangleBorder(side:BorderSide.none),
+    collapsedShape:const RoundedRectangleBorder(side:BorderSide.none),
     tilePadding:const EdgeInsets.symmetric(horizontal:14),
     childrenPadding:const EdgeInsets.fromLTRB(14,6,14,16),
     leading:const Icon(Icons.account_balance_wallet_outlined,color:emerald),
