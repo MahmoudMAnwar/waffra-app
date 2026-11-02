@@ -10221,13 +10221,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    const SizedBox(height:30),
   ]);
  }
- Future<void> recurringDialog({String? suggestedTitle,double? suggestedAmount,RecurringBill? initial})async {
-  final title=TextEditingController(text:initial?.title??suggestedTitle??''),
-   amount=TextEditingController(text:initial!=null?formatWaffraEditAmount(initial.amount):suggestedAmount==null?'':formatWaffraEditAmount(suggestedAmount)),
-   day=TextEditingController(text:(initial?.day??1).toString());
-  bool income=initial?.income??false;String category=initial?.category??(forType(false).isNotEmpty?
+ Future<void> recurringDialog({String? suggestedTitle,double? suggestedAmount,RecurringBill? initial,RecurringBill? duplicate})async {
+  final title=TextEditingController(text:initial?.title??duplicate?.title??suggestedTitle??''),
+   amount=TextEditingController(text:initial!=null?formatWaffraEditAmount(initial.amount):duplicate!=null?formatWaffraEditAmount(duplicate.amount):suggestedAmount==null?'':formatWaffraEditAmount(suggestedAmount)),
+   day=TextEditingController(text:(initial?.day??duplicate?.day??1).toString());
+  bool income=initial?.income??duplicate?.income??false;String category=initial?.category??duplicate?.category??(forType(false).isNotEmpty?
     forType(false).first.name:'');bool attempted=false;
-  DateTime startAt=initial?.startAt??DateTime.now();
+  DateTime startAt=initial?.startAt??(duplicate!=null&&duplicate.startAt.isAfter(DateTime.now())?duplicate.startAt:DateTime.now());
   final r=await showWaffraDialog<RecurringBill>(context:context,
    builder:(ctx)=>StatefulBuilder(builder:(ctx,update){
     final options=forType(income);
@@ -10340,7 +10340,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          amount:initial?.linkedGoalId!=null?initial!.amount:n,income:income,
          day:initial?.linkedGoalId!=null?initial!.day:d,
          startAt:initial?.linkedGoalId!=null?initial!.startAt:startAt,
-         active:initial?.active??true,linkedGoalId:initial?.linkedGoalId));
+         active:initial?.active??duplicate?.active??true,linkedGoalId:initial?.linkedGoalId));
        }
       }),child:const WaffraText('حفظ')),
      ]);
@@ -11793,6 +11793,48 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      WaffraText(label,style:TextStyle(
       fontSize:15,fontWeight:FontWeight.bold,color:Theme.of(context).brightness==Brightness.dark?Colors.white:forest)),
     ]))));
+ Future<void> _duplicateGoalFromMenu()async {
+  if(goals.isEmpty)return;
+  final chosen=await showWaffraDialog<SavingGoal>(
+   context:context,builder:(dialogCtx)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Choose a goal to duplicate':'اختر هدفًا لتكراره'),
+    content:SizedBox(width:350,height:min(420,MediaQuery.sizeOf(dialogCtx).height*.55),
+     child:ListView.builder(itemCount:goals.length,itemBuilder:(ctx,index){
+      final item=goals[index];
+      return ListTile(
+       leading:const Icon(Icons.copy_all_outlined,color:emerald),
+       title:WaffraText(item.name),
+       subtitle:WaffraText(item.target<=0
+        ?(waffraIsEnglish?'Open-ended savings':'ادخار مفتوح')
+        :cash(item.target)),
+       onTap:WaffraHaptics.tap(()=>Navigator.pop(dialogCtx,item)));
+     })),
+    actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogCtx)),
+     child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء'))],
+   ));
+  if(chosen!=null&&mounted)await goalDialog(duplicate:chosen);
+ }
+ Future<void> _duplicateRecurringFromMenu()async {
+  if(recurring.isEmpty)return;
+  // Existing linked goal bills are *not* re-linked to the original goal.
+  // A duplicate always gets its own new ID and editable finance fields.
+  final chosen=await showWaffraDialog<RecurringBill>(
+   context:context,builder:(dialogCtx)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Choose a recurring transaction':'اختر عملية متكررة لتكرارها'),
+    content:SizedBox(width:350,height:min(420,MediaQuery.sizeOf(dialogCtx).height*.55),
+     child:ListView.builder(itemCount:recurring.length,itemBuilder:(ctx,index){
+      final item=recurring[index];
+      return ListTile(
+       leading:const Icon(Icons.copy_all_outlined,color:emerald),
+       title:WaffraText(item.title),
+       subtitle:WaffraText(cash(item.amount)),
+       onTap:WaffraHaptics.tap(()=>Navigator.pop(dialogCtx,item)));
+     })),
+    actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogCtx)),
+     child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء'))],
+   ));
+  if(chosen!=null&&mounted)await recurringDialog(duplicate:chosen);
+ }
  Widget currentTab(){
   if(accountOpened)return profilePage();
   if(tab==1||tab==3||tab==4){
@@ -11934,10 +11976,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        child:Transform.translate(offset:Offset((1-progress)*(waffraIsEnglish?26:-26),0),
         child:Transform.scale(scale:accountOpened?0.985+0.015*progress:1,child:child))),
       child:currentTab()))),
-    if(!accountOpened&&(tab==0||tab==1))
+    if(!accountOpened&&(tab==0||tab==1||tab==3||tab==4||goalsOpened))
      WaffraFabMenuAnchor(
       english:waffraIsEnglish,
-      expanded:addFabExpanded&&!goalsOpened,
+      expanded:addFabExpanded,
       menu:Column(mainAxisSize:MainAxisSize.min,
        crossAxisAlignment:waffraIsEnglish?CrossAxisAlignment.end:CrossAxisAlignment.start,
        children:[
@@ -11962,6 +12004,40 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          onTap:WaffraHaptics.tapRequired((){
           unawaited(_launchAddAction(scanAndAddReceipt,fromMenu:true));
          })),
+        ]else if(goalsOpened||tab==3)...[
+         _addMenuOption(icon:Icons.add_circle_outline_rounded,
+          label:waffraIsEnglish?'New savings goal':'إضافة هدف جديد',
+          onTap:WaffraHaptics.tapRequired((){
+           unawaited(_launchAddAction(()=>goalDialog(),fromMenu:true));
+          })),
+         const SizedBox(height:7),
+         _addMenuOption(icon:Icons.all_inclusive_rounded,
+          label:waffraIsEnglish?'Open-ended savings':'ادخار مفتوح بدون مستهدف',
+          onTap:WaffraHaptics.tapRequired((){
+           unawaited(_launchAddAction(()=>goalDialog(openEnded:true),fromMenu:true));
+          })),
+         if(goals.isNotEmpty)...[
+          const SizedBox(height:7),
+          _addMenuOption(icon:Icons.copy_all_outlined,
+           label:waffraIsEnglish?'Duplicate an existing goal':'تكرار هدف موجود',
+           onTap:WaffraHaptics.tapRequired((){
+            unawaited(_launchAddAction(_duplicateGoalFromMenu,fromMenu:true));
+           })),
+         ],
+        ]else if(tab==4)...[
+         _addMenuOption(icon:Icons.event_repeat_rounded,
+          label:waffraIsEnglish?'New recurring transaction':'إضافة عملية متكررة',
+          onTap:WaffraHaptics.tapRequired((){
+           unawaited(_launchAddAction(()=>recurringDialog(),fromMenu:true));
+          })),
+         if(recurring.isNotEmpty)...[
+          const SizedBox(height:7),
+          _addMenuOption(icon:Icons.copy_all_outlined,
+           label:waffraIsEnglish?'Duplicate recurring transaction':'تكرار عملية متكررة موجودة',
+           onTap:WaffraHaptics.tapRequired((){
+            unawaited(_launchAddAction(_duplicateRecurringFromMenu,fromMenu:true));
+           })),
+         ],
         ]else...[
          _addMenuOption(icon:Icons.trending_up,
           label:waffraIsEnglish?'Income category':'إضافة قسم دخل',
@@ -11999,8 +12075,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      setState(()=>_fabPressed=false);
      await Future<void>.delayed(waffraMotion(110));
      if(!mounted||tab!=tappedTab)return;
-     if(goalsOpened||tab==3){unawaited(_launchAddAction(()=>goalDialog()));return;}
-     if(tab==4){unawaited(_launchAddAction(()=>recurringDialog()));return;}
      setState(()=>addFabExpanded=!addFabExpanded);
     },
     splashFactory:NoSplash.splashFactory,
