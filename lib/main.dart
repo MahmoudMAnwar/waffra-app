@@ -2350,33 +2350,43 @@ class WaffraNoticeContent extends StatelessWidget {
  final VoidCallback onDismiss;
  @override Widget build(BuildContext context){
   final palette=waffraNoticePalette(context,notice.kind);
-  return ConstrainedBox(constraints:const BoxConstraints(minHeight:38),
-   child:Row(children:[
-    Icon(palette.$4,color:palette.$2,size:19),
-    const SizedBox(width:7),
+  return ConstrainedBox(constraints:const BoxConstraints(minHeight:48),
+   child:Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
+    Icon(palette.$4,color:palette.$2,size:18),
+    const SizedBox(width:8),
     Expanded(child:Tooltip(message:notice.text,
      child:WaffraText(notice.text,maxLines:2,
       overflow:TextOverflow.ellipsis,style:TextStyle(
-       color:palette.$2,fontSize:12,height:1.15,
+       color:palette.$2,fontSize:12,height:1.3,
        fontWeight:FontWeight.w700)))),
-    if(notice.onAction!=null)TextButton(
-     style:TextButton.styleFrom(
-      padding:const EdgeInsets.symmetric(horizontal:4),
-      minimumSize:const Size(36,30),
-      tapTargetSize:MaterialTapTargetSize.shrinkWrap),
-     onPressed:WaffraHaptics.tap((){
-      onDismiss();
-      notice.onAction?.call();
-     }),
-     child:WaffraText(notice.actionLabel??(waffraIsEnglish?'Undo':'تراجع'),
-      maxLines:1,style:TextStyle(
-       color:palette.$2,fontSize:12,fontWeight:FontWeight.bold))),
-    IconButton(
-     tooltip:waffraIsEnglish?'Close':'إغلاق',
-     icon:Icon(Icons.close_rounded,color:palette.$2,size:19),
-     visualDensity:VisualDensity.standard,padding:EdgeInsets.zero,
-     constraints:const BoxConstraints(minWidth:48,minHeight:48),
-     onPressed:WaffraHaptics.tap(onDismiss)),
+    if(notice.onAction!=null)...[
+     const SizedBox(width:5),
+     TextButton(
+      key:const Key('waffra-notice-undo'),
+      style:TextButton.styleFrom(
+       padding:const EdgeInsets.symmetric(horizontal:10),
+       minimumSize:const Size(62,44),
+       tapTargetSize:MaterialTapTargetSize.padded,
+       shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12),
+        side:BorderSide(color:palette.$3.withValues(alpha:.60)))),
+      onPressed:WaffraHaptics.tap((){
+       onDismiss();
+       notice.onAction?.call();
+      }),
+      child:WaffraText(notice.actionLabel??(waffraIsEnglish?'Undo':'تراجع'),
+       maxLines:1,style:TextStyle(
+        color:palette.$2,fontSize:12,fontWeight:FontWeight.bold))),
+    ],
+    const SizedBox(width:4),
+    Tooltip(message:waffraIsEnglish?'Close':'إغلاق',
+     child:Semantics(button:true,label:waffraIsEnglish?'Close':'إغلاق',
+      child:SizedBox(width:48,height:48,
+       child:InkWell(
+        key:const Key('waffra-notice-dismiss'),
+        borderRadius:BorderRadius.circular(24),
+        onTap:WaffraHaptics.tap(onDismiss),
+        child:Center(child:Icon(Icons.close_rounded,
+         color:palette.$2,size:18)))))),
    ]));
  }
 }
@@ -6701,23 +6711,32 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      WaffraText('${(bytes.length/1024).toStringAsFixed(1)} KB',
       textAlign:TextAlign.center,style:const TextStyle(fontSize:12)),
     ]),
+    // Stable, matched button widths and spacing in Arabic and English.
     actionsAlignment:MainAxisAlignment.center,
+    actionsPadding:const EdgeInsets.fromLTRB(12,0,12,16),
     actions:[
-     SizedBox(width:double.infinity,child:FilledButton.icon(
-      onPressed:WaffraHaptics.tap((){
-       Navigator.of(dialogContext).pop();
-       Navigator.of(context).push(MaterialPageRoute(builder:(_)=>
-        WaffraPdfReader(bytes:bytes,fileName:fileName,english:waffraIsEnglish)));
-      }),
-      icon:const Icon(Icons.visibility_outlined),
-      label:WaffraText(waffraIsEnglish?'Open report':'فتح التقرير'))),
-     Align(alignment:AlignmentDirectional.centerStart,child:OutlinedButton.icon(
-      onPressed:WaffraHaptics.tap(()async{
-       Navigator.of(dialogContext).pop();
-       await Printing.sharePdf(bytes:bytes,filename:fileName);
-      }),
-      icon:const Icon(Icons.share_outlined),
-      label:WaffraText(waffraIsEnglish?'Share report':'مشاركة التقرير'))),
+     SizedBox(width:min(250.0,MediaQuery.sizeOf(dialogContext).width-100),
+      child:Column(mainAxisSize:MainAxisSize.min,
+       crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+       FilledButton.icon(
+        key:const Key('waffra-pdf-open-action'),
+        onPressed:WaffraHaptics.tap((){
+         Navigator.of(dialogContext).pop();
+         Navigator.of(context).push(MaterialPageRoute(builder:(_)=>
+          WaffraPdfReader(bytes:bytes,fileName:fileName,english:waffraIsEnglish)));
+        }),
+        icon:const Icon(Icons.visibility_outlined,size:19),
+        label:WaffraText(waffraIsEnglish?'Open report':'فتح التقرير')),
+       const SizedBox(height:10),
+       OutlinedButton.icon(
+        key:const Key('waffra-pdf-share-action'),
+        onPressed:WaffraHaptics.tap(()async{
+         Navigator.of(dialogContext).pop();
+         await Printing.sharePdf(bytes:bytes,filename:fileName);
+        }),
+        icon:const Icon(Icons.share_outlined,size:19),
+        label:WaffraText(waffraIsEnglish?'Share report':'مشاركة التقرير')),
+      ])),
     ],
    ));
   }catch(e,st){
@@ -6921,7 +6940,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     FittedBox(child:RiyalAmount(value,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:16))),
    ]))));
  Future<void> transactionActions(MoneyEntry entry)async {
-  final hasReceipt=waffraReceiptPaths(entry.receiptPath).isNotEmpty;
   final action=await showWaffraDialog<String>(context:context,builder:(ctx)=>AlertDialog(
    insetPadding:const EdgeInsets.symmetric(horizontal:26,vertical:24),
    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(24)),
@@ -6940,18 +6958,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       _transactionActionTile(ctx,'cancel',Icons.close_rounded,
        waffraIsEnglish?'Cancel':'إلغاء',Theme.of(ctx).colorScheme.onSurface),
      ]),
-    if(hasReceipt)...[
-     const SizedBox(height:10),
-     Align(alignment:AlignmentDirectional.centerStart,child:OutlinedButton.icon(
-      onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,'receipt')),
-      icon:const Icon(Icons.photo_library_outlined),
-      label:WaffraText(waffraIsEnglish?'View attached images':'عرض الصور المرفقة'))),
-    ],
    ])),
   ));
   if(!mounted)return;
   switch(action){
-   case 'receipt':if(hasReceipt)await showReceipt(entry.receiptPath!);break;
    case 'open':await transactionDetails(entry);break;
    case 'edit':await entrySheet(initial:entry);break;
    case 'delete':await deleteEntry(entry);break;
