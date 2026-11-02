@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
+import 'package:waffra/waffra_financial_planning_engine.dart';
 
 void main() {
  TestWidgetsFlutterBinding.ensureInitialized();
@@ -21,6 +22,15 @@ void main() {
   expect(waffraGoalWalletBalance([restored]),1250.50);
   expect(waffraAvailableCash(<MoneyEntry>[],[restored]),0);
   expect(restored.copy(saved:1500).target,0);
+ });
+
+ test('M388: finance health audit counts saved funds for a zero-target goal',(){
+  final result=GoalWalletHealthAudit.inspect(250000,[
+   const GoalAmountEvidence('unlimited',0,65000),
+  ]);
+  expect(result.reservedMinor,65000);
+  expect(result.availableMinor,185000);
+  expect(result.issues, isEmpty);
  });
 
  test('M389: duplicate goal uses independent identity and starts with zero savings',(){
