@@ -42,7 +42,9 @@ void main() {
   expect(dialog,contains('target:noTarget?0.0:n!,saved:0'));
   expect(dialog,contains('duplicate.target<=0'));
   expect(dialog,contains('noTarget=openEnded'));
-  expect(dialog,contains('g.target<=0?false'));
+  expect(dialog,contains('requestedRecurring=await _confirmGoalDueRecurringLink(g)'));
+  expect(dialog,contains('if(requestedRecurring&&mounted)'));
+  expect(dialog,contains('this._ensureLinkedRecurringForGoal(g)'));
   expect(dialog,isNot(contains('target:duplicate.target,saved:duplicate.saved')));
  });
 
