@@ -391,6 +391,12 @@ class WaffraNamedBudget extends BudgetCategory {
     deleted:deleted??this.deleted);
 }
 
+/// A budget picker is not part of transaction entry until the user has at
+/// least one active named budget. Paused and archived budgets are retained
+/// safely but are not selectable for new spending.
+bool waffraHasSelectableBudget(Iterable<WaffraNamedBudget> budgets)=>
+ budgets.any((b)=>b.budget>0&&b.budgetActive&&!b.deleted);
+
 /// Manual transactions must target an active child category, never a heading.
 List<BudgetCategory> waffraManualCategoryParents(
  Iterable<BudgetCategory> values,bool income)=>
@@ -3875,7 +3881,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final choices=namedBudgets.where((b)=>
    !b.deleted&&b.budget>0&&b.budgetActive).toList();
   final assigned=List<String?>.filled(candidates.length,null);
-  if(!candidates.any((e)=>!e.income))return assigned;
+  if(!candidates.any((e)=>!e.income)||choices.isEmpty)return assigned;
   return showWaffraDialog<List<String?>>(context:context,
    builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
     title:WaffraText(waffraIsEnglish?'Choose budgets for expenses':'تسجيل كل مصروف في أي ميزانية؟'),
@@ -5554,7 +5560,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           'لا توجد أقسام فرعية؛ افتح القائمة لإضافة قسم.',
          style:const TextStyle(color:Colors.deepOrange,fontSize:12))),
       ],
-      if(!income)...[
+      if(!income&&waffraHasSelectableBudget(namedBudgets))...[
        const SizedBox(height:10),
        // Budget and transaction date share one compact, keyboard-safe row.
        Row(children:[
