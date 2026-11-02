@@ -9699,11 +9699,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            :'${WaffraDisplayCurrency.money(g.saved,english:false)} من ${WaffraDisplayCurrency.money(g.target,english:false)}',
            textAlign:TextAlign.center,style:const TextStyle(fontSize:13)),
           const SizedBox(height:9),
-          LinearProgressIndicator(value:currentProgress,minHeight:8,
+          if(g.target>0)LinearProgressIndicator(value:currentProgress,minHeight:8,
            color:accent,backgroundColor:accent.withValues(alpha:.14),
            borderRadius:BorderRadius.circular(12)),
           const SizedBox(height:7),
-          WaffraText('${(currentProgress*100).round()}%',
+          if(g.target>0)WaffraText('${(currentProgress*100).round()}%',
            textAlign:TextAlign.start,
            style:TextStyle(fontWeight:FontWeight.bold,fontSize:12,color:accent)),
          ])),
@@ -10040,7 +10040,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Widget goalsPage(){
   final target=goals.fold<double>(0,(v,g)=>v+g.target);
   final saved=goals.fold<double>(0,(v,g)=>v+g.saved);
-  final pct=target==0?0.0:(saved/target).clamp(0.0,1.0);
+  final savedTowardsTargets=goals.where((g)=>g.target>0).fold<double>(0,(v,g)=>v+g.saved);
+  final pct=target==0?0.0:(savedTowardsTargets/target).clamp(0.0,1.0);
   final filtered=goals.where((g)=>goalDisplay=='all'||
    (goalDisplay=='done'?(g.target>0&&g.saved>=g.target):(g.target<=0||g.saved<g.target))).toList();
   return ListView(controller:_goalsScrollController,
@@ -10074,9 +10075,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       child:Column(children:[
        SizedBox(width:48,height:48,child:Stack(alignment:Alignment.center,children:[
         CircularProgressIndicator(value:pct,strokeWidth:6,backgroundColor:emerald.withValues(alpha:.13)),
-        WaffraText('${(pct*100).round()}%',style:const TextStyle(fontWeight:FontWeight.bold,fontSize:12))])),
+        WaffraText(target<=0?'—':'${(pct*100).round()}%',style:const TextStyle(fontWeight:FontWeight.bold,fontSize:12))])),
        const SizedBox(height:7),
-       WaffraText(waffraIsEnglish?'Progress':'الإنجاز',style:const TextStyle(fontSize:11)),
+       WaffraText(target<=0?(waffraIsEnglish?'Open savings':'ادخار مفتوح'):(waffraIsEnglish?'Progress':'الإنجاز'),style:const TextStyle(fontSize:11)),
       ]))),
     ]),
     const SizedBox(height:14),
@@ -10515,7 +10516,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        WaffraText(cash(r.amount),style:const TextStyle(fontSize:14)),
        if(goal!=null)...[
         const SizedBox(height:7),
-        LinearProgressIndicator(
+        if(goal.target>0)LinearProgressIndicator(
          value:goal.target<=0?0:(goal.saved/goal.target).clamp(0.0,1.0),
          minHeight:6,borderRadius:BorderRadius.circular(8),
          color:emerald,backgroundColor:emerald.withValues(alpha:.12)),
