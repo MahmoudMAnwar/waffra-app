@@ -10,7 +10,8 @@
     "Allow optional saved-progress milestone alerts only for goals with a fixed positive target; open savings have no percentage.",
     "Provide per-recurring-entry reminder enable/disable independently of financial schedule active state; preserve that preference after restart.",
     "Keep main/subcategories as classification only. No category budget percentage or inferred budget linkage.",
-    "Regression-test JSON reload and state separation for goal, recurring and budget alert controls; separately certify UI cold restart and real Android notifications before merge."
+    "Regression-test JSON reload and state separation for goal, recurring and budget alert controls; separately certify UI cold restart and real Android notifications before merge.",
+    "Preserve user-approved budget, goal and recurring alert state through the encrypted cloud sanitizer, explicitly allowlisting only alertEnabled, alertPercent and reminderEnabled while rejecting unknown financial fields."
   ],
   "allowed_changed_files": [
     "lib/main.dart",
@@ -21,7 +22,8 @@
     "lib/waffra_goal_recurring_actions.part.dart",
     "lib/waffra_categories_page.part.dart",
     "test/m414_goal_recurring_alerts_test.dart",
-    "docs/qa/m414_android_notification_acceptance.md"
+    "docs/qa/m414_android_notification_acceptance.md",
+    "lib/storage/waffra_cloud_cipher.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -100,6 +102,12 @@
       {
         "start": " Widget categoriesPageV2(){",
         "end": null
+      }
+    ],
+    "lib/storage/waffra_cloud_cipher.dart": [
+      {
+        "start": "  static const allowedFields = <String, Set<String>>{",
+        "end": "  static const excludedLocalOnly = <String>{"
       }
     ]
   }
