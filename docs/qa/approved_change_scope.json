@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M388-M411",
+  "change_id": "M388-M412",
   "human_scope_review": "REQUIRED: owner approval of requested behavior + live Android screenshot and legacy data checks",
   "user_requested_changes": [
     "M388: allow an open-ended savings goal with no fixed target amount and no mandatory budget, preserve old target goals and wallet accounting; avoid false 0-percent completion and allow editing the goal.",
@@ -21,7 +21,8 @@
     "M408: repair six actual failing assertions without removing any financial or security test: month navigation, recurring durable writes, active category validation, concise bank SMS title, StateError rollback, and paused goal due behavior.",
     "M409: fix the failed M274 Android UI startup caused by VM-service disconnect and an offline emulator during a redundant post-boot Gradle build. Reuse the exact precompiled integration debug APK with a real Flutter drive integration driver, stop idle Gradle daemons before boot, preserve real tap assertions and fail-closed diagnostics.",
     "M410: implement safe incremental CI recovery: retry exactly one failed Android emulator CI job on the same SHA only when logs prove transient infrastructure failure; cap to one retry, disallow failing application assertions or stale PR heads, never skip protected financial/security checks or final full-main certification.",
-    "M411: repair real red Firestore security CI dependency install: pin stable Firebase JS SDK and security emulator versions, override the unavailable @firebase/firestore 4.19.1 tarball to published 4.19.0, use Node 24.12.0 for engine compatibility, preserve all security assertion tests and do not fake green."
+    "M411: repair real red Firestore security CI dependency install: pin stable Firebase JS SDK and security emulator versions, override the unavailable @firebase/firestore 4.19.1 tarball to published 4.19.0, use Node 24.12.0 for engine compatibility, preserve all security assertion tests and do not fake green.",
+    "M412: final incremental PR CI implementation: compare the exact before-to-after SHA pair of each PR synchronize event to only run impacted scope-specific test jobs; keep always-on mandatory production finance/security and complete main verification; on unknown diff, base ancestry, event, or path list run all (fail-open); do not silently skip on code changes; no modifications to app logic or user data."
   ],
   "allowed_changed_files": [
     ".github/workflows/m274-production-ui-golden.yml",
@@ -76,7 +77,36 @@
     "docs/SMART_INCREMENTAL_CI.md",
     ".github/workflows/firestore-security-rules.yml",
     "test/firebase/package.json",
-    "test/qa/m411_firestore_rules_ci_dependencies_test.py"
+    "test/qa/m411_firestore_rules_ci_dependencies_test.py",
+    ".github/workflows/m295-compact-selection-ui.yml",
+    ".github/workflows/m283-compact-layout-tools-back-greetings.yml",
+    ".github/workflows/m277-ux-accessibility.yml",
+    ".github/workflows/m278-mobile-system-insets.yml",
+    ".github/workflows/m281-practical-tools.yml",
+    ".github/workflows/m287-receipt-ocr.yml",
+    ".github/workflows/m297-receipt-to-entry.yml",
+    ".github/workflows/m298-finance-validation.yml",
+    ".github/workflows/m302-cross-feature-input-qa.yml",
+    ".github/workflows/m303-m306-production-hardening.yml",
+    ".github/workflows/m371-goal-wallet-budget-android-regression.yml",
+    ".github/workflows/m290-country-reminders-multicurrency.yml",
+    ".github/workflows/m317-ondevice-ai-brain.yml",
+    ".github/workflows/m106-play-privacy-preflight.yml",
+    ".github/workflows/m107-account-deletion-crash-privacy.yml",
+    ".github/workflows/m108-home-widget-one-finance-commit.yml",
+    ".github/workflows/m109-verified-finance-authority.yml",
+    ".github/workflows/m110-home-writer-source-authority.yml",
+    ".github/workflows/m113-recovery-rollback-regression.yml",
+    ".github/workflows/m114-sqlcipher-projected-editor.yml",
+    ".github/workflows/m96-runtime-finance-cloud-integration.yml",
+    ".github/workflows/m98-encrypted-recovery-inventory.yml",
+    ".github/workflows/m99-manifest-last-cloud-sync.yml",
+    ".github/workflows/m266-sqlcipher-precutover-qa.yml",
+    ".github/workflows/m279-app-security-gates.yml",
+    ".github/workflows/m280-finance-quality-matrix.yml",
+    "scripts/qa/m412_pr_changed_impact.py",
+    "test/qa/m412_incremental_pr_impact_test.py",
+    "test/qa/m412_workflow_wiring_test.py"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -387,8 +417,8 @@
     ],
     ".github/workflows/m274-production-ui-golden.yml": [
       {
-        "start": "      - name: Recover disposable Linux runner disk before Android emulator QA\n",
-        "end": "      - name: Enable KVM for Android emulator\n"
+        "start": "jobs:\n",
+        "end": null
       }
     ],
     "lib/waffra_budget_directory.part.dart": [
@@ -653,8 +683,8 @@
     ],
     ".github/workflows/firestore-security-rules.yml": [
       {
-        "start": "      - uses: actions/setup-node@v4\n",
-        "end": "      - name: Install isolated Firestore test dependencies\n"
+        "start": "jobs:\n",
+        "end": null
       }
     ],
     "test/firebase/package.json": [
@@ -665,6 +695,162 @@
       {
         "start": "  \"overrides\": {\n",
         "end": "  }\n}\n"
+      }
+    ],
+    ".github/workflows/m295-compact-selection-ui.yml": [
+      {
+        "start": "jobs:\n",
+        "end": null
+      }
+    ],
+    ".github/workflows/m283-compact-layout-tools-back-greetings.yml": [
+      {
+        "start": "jobs:\n",
+        "end": null
+      }
+    ],
+    ".github/workflows/m277-ux-accessibility.yml": [
+      {
+        "start": "jobs:\n",
+        "end": null
+      }
+    ],
+    ".github/workflows/m278-mobile-system-insets.yml": [
+      {
+        "start": "jobs:\n",
+        "end": null
+      }
+    ],
+    ".github/workflows/m281-practical-tools.yml": [
+      {
+        "start": "jobs:\n",
+        "end": null
+      }
+    ],
+    ".github/workflows/m287-receipt-ocr.yml": [
+      {
+        "start": "jobs:\n",
+        "end": null
+      }
+    ],
+    ".github/workflows/m297-receipt-to-entry.yml": [
+      {
+        "start": "jobs:\n",
+        "end": null
+      }
+    ],
+    ".github/workflows/m298-finance-validation.yml": [
+      {
+        "start": "jobs:\n",
+        "end": null
+      }
+    ],
+    ".github/workflows/m302-cross-feature-input-qa.yml": [
+      {
+        "start": "jobs:\n",
+        "end": null
+      }
+    ],
+    ".github/workflows/m303-m306-production-hardening.yml": [
+      {
+        "start": "jobs:\n",
+        "end": null
+      }
+    ],
+    ".github/workflows/m371-goal-wallet-budget-android-regression.yml": [
+      {
+        "start": "jobs:\n",
+        "end": null
+      }
+    ],
+    ".github/workflows/m290-country-reminders-multicurrency.yml": [
+      {
+        "start": "jobs:\n",
+        "end": null
+      }
+    ],
+    ".github/workflows/m317-ondevice-ai-brain.yml": [
+      {
+        "start": "jobs:\n",
+        "end": null
+      }
+    ],
+    ".github/workflows/m106-play-privacy-preflight.yml": [
+      {
+        "start": "jobs:\n",
+        "end": null
+      }
+    ],
+    ".github/workflows/m107-account-deletion-crash-privacy.yml": [
+      {
+        "start": "jobs:\n",
+        "end": null
+      }
+    ],
+    ".github/workflows/m108-home-widget-one-finance-commit.yml": [
+      {
+        "start": "jobs:\n",
+        "end": null
+      }
+    ],
+    ".github/workflows/m109-verified-finance-authority.yml": [
+      {
+        "start": "jobs:\n",
+        "end": null
+      }
+    ],
+    ".github/workflows/m110-home-writer-source-authority.yml": [
+      {
+        "start": "jobs:\n",
+        "end": null
+      }
+    ],
+    ".github/workflows/m113-recovery-rollback-regression.yml": [
+      {
+        "start": "jobs:\n",
+        "end": null
+      }
+    ],
+    ".github/workflows/m114-sqlcipher-projected-editor.yml": [
+      {
+        "start": "jobs:\n",
+        "end": null
+      }
+    ],
+    ".github/workflows/m96-runtime-finance-cloud-integration.yml": [
+      {
+        "start": "jobs:\n",
+        "end": null
+      }
+    ],
+    ".github/workflows/m98-encrypted-recovery-inventory.yml": [
+      {
+        "start": "jobs:\n",
+        "end": null
+      }
+    ],
+    ".github/workflows/m99-manifest-last-cloud-sync.yml": [
+      {
+        "start": "jobs:\n",
+        "end": null
+      }
+    ],
+    ".github/workflows/m266-sqlcipher-precutover-qa.yml": [
+      {
+        "start": "jobs:\n",
+        "end": null
+      }
+    ],
+    ".github/workflows/m279-app-security-gates.yml": [
+      {
+        "start": "jobs:\n",
+        "end": null
+      }
+    ],
+    ".github/workflows/m280-finance-quality-matrix.yml": [
+      {
+        "start": "jobs:\n",
+        "end": null
       }
     ]
   }

@@ -19,7 +19,6 @@ on:
       - 'test/firebase/**'
       - 'test/storage/**'
   workflow_dispatch:
-
 permissions:
   contents: read
 
@@ -28,7 +27,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  m412-impact:
+    name: M412 Only Run Tests Impacted By Latest PR Update
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.impact.outputs.run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Compare exact before/after change set (missing evidence means RUN)
+        id: impact
+        run: python3 scripts/qa/m412_pr_changed_impact.py --workflow .github/workflows/m279-app-security-gates.yml
+
   static-security-and-mutation:
+    needs: m412-impact
+    if: ${{ needs.m412-impact.outputs.run == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -47,6 +63,8 @@ jobs:
         run: python3 -m unittest -v scripts/qa/test_m279_app_security_gate.py
 
   finance-secrets-encryption:
+    needs: m412-impact
+    if: ${{ needs.m412-impact.outputs.run == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -76,6 +94,8 @@ jobs:
             test/storage/finance_read_view_test.dart
 
   firestore-owner-permissions:
+    needs: m412-impact
+    if: ${{ needs.m412-impact.outputs.run == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:

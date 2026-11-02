@@ -120,3 +120,42 @@ The M410 workflow does **not** replace, skip, or cache release acceptance.
 The historical Smart CI reuse policy still excludes critical financial tests.
 If GitHub Rulesets require other checks, those checks must keep functioning;
 never path-skip required checks into a permanently pending state.
+
+## M412 — actual incremental PR tests (not cumulative pull-request paths)
+
+GitHub evaluates native `pull_request.paths` against **the whole PR diff**.
+That is why changing a Firebase CI configuration used to re-run an unrelated
+Android UI workflow after an earlier `lib/main.dart` edit in the same PR.
+
+M412 retains existing workflow event routing and original scope filters, but
+adds a lightweight `m412-impact` preflight in 28 scoped workflows. On a
+`pull_request.synchronize` event the preflight checks the exact `before` and
+`after` commit hashes, validates that the old SHA is an ancestor, and reads
+the actual two-dot diff covering **all commits in that push**. It then compares
+the changed files against that workflow's existing `pull_request.paths`.
+Unchanged nonaffected test jobs are skipped (they are not reported as newly
+passed tests), while affected jobs run normally.
+
+**Fail-open safety:** missing before/after, changed branch ancestry, checkout
+problems, invalid YAML paths, or missing diff metadata always cause the real
+test to RUN, never silently bypass it. An update to the impact-checker source
+or its tests also forces scoped jobs to run. PR opened/reopened events do not
+use partial checks. The full main release verification, exact-SHA SQLCipher
+source preflight, and other always-on final gates are not skipped by M412.
+All prior successful test results belong to their original SHA; they are
+never misrepresented as fresh successes on the new SHA.
+
+GitHub may still *start* the 28 scoped workflow runs and show an inexpensive
+preflight on each new PR commit. The optimization eliminates redundant costly
+test jobs, **not** their required status surfaces. For a failed infrastructure
+job on the unchanged SHA, prefer GitHub "Re-run failed jobs" or the bounded
+M410 helper instead of creating another commit. If an actual code fix alters
+a module that a workflow covers, the relevant tests rerun.
+
+Final gate remains: full Flutter/Python tests, financial and encryption
+checks, exact-SHA release validation, human review and physical Android
+migration checks before merging/publishing main APK.
+
+An optimization that produces skipped or pending required status checks under
+repository branch protection must be reviewed by a maintainer; never weaken
+the protection rule merely to make a skipped check green.

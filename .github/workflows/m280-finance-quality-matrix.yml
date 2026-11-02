@@ -11,7 +11,6 @@ on:
       - 'lib/waffra_secure_backup.dart'
       - 'docs/qa/m280_*'
   workflow_dispatch:
-
 permissions:
   contents: read
 
@@ -20,7 +19,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  m412-impact:
+    name: M412 Only Run Tests Impacted By Latest PR Update
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.impact.outputs.run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Compare exact before/after change set (missing evidence means RUN)
+        id: impact
+        run: python3 scripts/qa/m412_pr_changed_impact.py --workflow .github/workflows/m280-finance-quality-matrix.yml
+
   encrypted-ledger-integrity:
+    needs: m412-impact
+    if: ${{ needs.m412-impact.outputs.run == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -47,6 +63,8 @@ jobs:
             test/storage/m187_active_restore_preflight_test.dart
 
   sms-adversarial:
+    needs: m412-impact
+    if: ${{ needs.m412-impact.outputs.run == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -68,6 +86,8 @@ jobs:
             test/storage/m224_encrypted_legacy_sms_reattachment_test.dart
 
   security-backup-and-restore:
+    needs: m412-impact
+    if: ${{ needs.m412-impact.outputs.run == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -88,6 +108,8 @@ jobs:
             test/storage/m218_encrypted_account_owner_mutations_test.dart
 
   source-scope-and-manual-physical-requirements:
+    needs: m412-impact
+    if: ${{ needs.m412-impact.outputs.run == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

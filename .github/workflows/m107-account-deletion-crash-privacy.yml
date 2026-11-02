@@ -16,12 +16,28 @@ on:
       - 'test/m107_release_backend_gating_test.dart'
       - 'test/firebase/**'
   workflow_dispatch:
-
 permissions:
   contents: read
 
 jobs:
+  m412-impact:
+    name: M412 Only Run Tests Impacted By Latest PR Update
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.impact.outputs.run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Compare exact before/after change set (missing evidence means RUN)
+        id: impact
+        run: python3 scripts/qa/m412_pr_changed_impact.py --workflow .github/workflows/m107-account-deletion-crash-privacy.yml
+
   server-deletion:
+    needs: m412-impact
+    if: ${{ needs.m412-impact.outputs.run == 'true' }}
     name: Backend owner reauth, recursive delete and outage replay
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -46,6 +62,8 @@ jobs:
           PY
 
   firestore-tombstone:
+    needs: m412-impact
+    if: ${{ needs.m412-impact.outputs.run == 'true' }}
     name: Firebase emulator rejects two-device account resurrection
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -68,6 +86,8 @@ jobs:
             'npm --prefix test/firebase test'
 
   flutter-consent:
+    needs: m412-impact
+    if: ${{ needs.m412-impact.outputs.run == 'true' }}
     name: Strict Flutter account deletion/privacy source and smoke
     runs-on: ubuntu-latest
     timeout-minutes: 40
@@ -99,6 +119,8 @@ jobs:
         run: flutter test test --reporter expanded
 
   release-proof:
+    needs: m412-impact
+    if: ${{ needs.m412-impact.outputs.run == 'true' }}
     name: No false production approval while live SQLCipher and two-phone QA missing
     runs-on: ubuntu-latest
     timeout-minutes: 10
