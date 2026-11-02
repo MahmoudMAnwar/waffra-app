@@ -27,9 +27,9 @@ void main() {
     expect(directory, contains('editBudgetForCategory(b)'));
     expect(app, isNot(contains("'waffra-delete-selected-named-budget'")));
     expect(app, isNot(contains("'waffra-named-budget-enabled-switch'")));
-    expect(directory, contains("'waffra-budget-quick-actions-'"));
+    expect(directory, contains("'waffra-budget-details-'"));
     expect(directory, contains('deleteNamedBudget(b)'));
-    expect(directory, contains('setNamedBudgetActive(b,!b.budgetActive)'));
+    expect(directory, contains('setNamedBudgetActive(b,enabled)'));
     expect(app, contains("budgetStatusFilter='active'"));
     expect(app, contains("'waffra-budget-status-filter-'"));
     expect(app, contains("'الميزانيات غير الفعّالة'"));
