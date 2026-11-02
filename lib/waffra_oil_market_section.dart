@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'waffra_centered_dropdown.dart';
 import 'package:http/http.dart' as http;
 import 'waffra_amount_formatter.dart';
 import 'waffra_display_currency.dart';
@@ -153,7 +154,7 @@ class _WaffraOilMarketSectionState extends State<WaffraOilMarketSection>{
       'اختَر نوع الخام والكمية وعملة التحويل بسعر صرف موثّق.'),
      style:TextStyle(fontSize:11,color:Theme.of(context).hintColor)),
     const SizedBox(height:12),
-    DropdownButtonFormField<String>(
+    WaffraCenteredDropdownFormField<String>(
      key:ValueKey('waffra-oil-benchmark-picker-'+benchmark),
      initialValue:benchmark,isExpanded:true,
      decoration:InputDecoration(labelText:t('Benchmark','نوع الخام'),
@@ -172,7 +173,7 @@ class _WaffraOilMarketSectionState extends State<WaffraOilMarketSection>{
        border:const OutlineInputBorder()),
       onChanged:(_)=>setState((){}))),
      const SizedBox(width:9),
-     Expanded(child:DropdownButtonFormField<String>(
+     Expanded(child:WaffraCenteredDropdownFormField<String>(
       key:ValueKey('waffra-oil-currency-'+currency),initialValue:currency,
       decoration:InputDecoration(labelText:t('Currency','العملة'),
        border:const OutlineInputBorder()),
