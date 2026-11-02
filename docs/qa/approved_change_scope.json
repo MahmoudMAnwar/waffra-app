@@ -59,6 +59,10 @@
       {
         "start": "   max(16.0,bottom-geometry.floatingActionButtonSize.height-16),",
         "end": "class WaffraReceiptCornerClipper extends"
+      },
+      {
+        "start": "       if(goal!=null)...[\n        const SizedBox(height:7),",
+        "end": "       const SizedBox(height:3),\n       WaffraText(r.active?"
       }
     ],
     "lib/waffra_goal_recurring_actions.part.dart": [
