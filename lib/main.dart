@@ -417,6 +417,15 @@ bool waffraCategoryAvailableForNewEntry(
   parent.categoryActive);
 }
 
+/// Historical recurring items may reference a legacy main category; respect
+/// its pause flag too while retaining the original recurring item unchanged.
+bool waffraCategoryNameAvailableForPosting(
+ Iterable<BudgetCategory> values,bool income,String name){
+ final all=values.toList();
+ return all.any((c)=>c.income==income&&c.name==name&&
+  waffraCategoryAvailableForNewEntry(all,c));
+}
+
 List<BudgetCategory> waffraManualCategoryParents(
  Iterable<BudgetCategory> values,bool income)=>
  values.where((c)=>c.income==income&&!c.isSubcategory&&
@@ -3679,7 +3688,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(!recurringRemindersEnabled)return;
   try {
    await WaffraReminders.schedule(
-    recurring.where((r)=>r.active&&(r.linkedGoalId==null||
+    recurring.where((r)=>r.active&&waffraCategoryNameAvailableForPosting(
+     categories,r.income,r.category)&&(r.linkedGoalId==null||
       goals.any((g)=>g.id==r.linkedGoalId&&g.dueDate!=null)))
      .map((r)=>WaffraReminder(id:r.id,title:r.title,day:r.day,
       startAt:r.linkedGoalId==null?null:r.startAt)).toList(),
@@ -3722,7 +3732,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(!mounted||!ready||_dueDialogShowing)return;
   final today=DateTime.now();
   for(final r in recurring){
-   if(!r.active)continue;
+   if(!r.active||!waffraCategoryNameAvailableForPosting(
+    categories,r.income,r.category))continue;
    // A goal is a one-time obligation. Its immutable original due month
    // remains the same even when the user returns to the app much later.
    final isGoalDue=r.linkedGoalId!=null;
@@ -9133,9 +9144,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final saved=await _persistModuleOrReload(
    WaffraFinanceRoute.categoryCreateEditDeleteRestore,
    operation:'category-availability-toggle');
-  if(saved&&mounted)snackSuccess(context,waffraIsEnglish?
-   (enabled?'Category enabled':'Category paused'):
-   (enabled?'تم تفعيل القسم':'تم إيقاف القسم مؤقتًا'));
+  if(saved&&mounted){
+   await syncRecurringReminders();
+   if(mounted)snackSuccess(context,waffraIsEnglish?
+    (enabled?'Category enabled':'Category paused'):
+    (enabled?'تم تفعيل القسم':'تم إيقاف القسم مؤقتًا'));
+  }
  }
  Future<void> addCategory({bool income=false,String parentId=''})async {
   if(parentId.isNotEmpty&&!categories.any((c)=>
