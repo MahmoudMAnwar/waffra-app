@@ -9,8 +9,11 @@ void main() {
     final source=File('lib/main.dart').readAsStringSync();
     expect(source,contains('floatingActionButtonLocation:WaffraDirectionalFabLocation(english:waffraIsEnglish)'));
     expect(source,contains('floatingActionButton:!ready||accountOpened||tab==2?null:SizedBox('));
-    expect(source,contains('if(goalsOpened||tab==3){unawaited(_launchAddAction(()=>goalDialog()));return;}'));
-    expect(source,contains('if(tab==4){unawaited(_launchAddAction(()=>recurringDialog()));return;}'));
+    expect(source,contains("label:waffraIsEnglish?'New savings goal':'إضافة هدف جديد'"));
+    expect(source,contains('unawaited(_launchAddAction(copyGoalDialog,fromMenu:true))'));
+    expect(source,contains("label:waffraIsEnglish?'New recurring item':'إضافة عملية متكررة'"));
+    expect(source,contains('unawaited(_launchAddAction(copyRecurringDialog,fromMenu:true))'));
+    expect(source,contains('filter:ui.ImageFilter.blur(sigmaX:7,sigmaY:7)'));
     expect(source,contains('key:_tourKeys[1],'));
     expect(source.contains('onTap:()=>setState(()=>addFabExpanded=!addFabExpanded)'),
         isFalse);
