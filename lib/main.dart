@@ -2779,7 +2779,7 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
           color:dark?const Color(0xFF74D8A9):emerald),
          const SizedBox(width:6),
          Expanded(child:WaffraText(waffraIsEnglish?
-           'Original bank message (encrypted)':'تفاصيل الرسالة البنكية الأصلية (مشفّرة)',
+           'Original bank message':'تفاصيل الرسالة البنكية الأصلية',
            textAlign:TextAlign.start,
            style:TextStyle(fontSize:12,color:muted,fontWeight:FontWeight.w700))),
         ]),
@@ -9554,7 +9554,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       if(date!=null&&ctx.mounted)updateGoal(()=>selectedDeadline=date);
      }),icon:const Icon(Icons.calendar_month_outlined),
      label:WaffraText(selectedDeadline==null?
-      (waffraIsEnglish?'Due date (optional, link to recurring)':'تاريخ الاستحقاق (اختياري) · ربط بالمتكررة'):
+      (waffraIsEnglish?'Due date':'تاريخ الاستحقاق'):
       dayText(selectedDeadline!))),
      const SizedBox(height:12),
      SwitchListTile.adaptive(
