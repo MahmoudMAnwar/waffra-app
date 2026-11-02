@@ -64,7 +64,7 @@ class WaffraCenteredDropdownFormField<T> extends FormField<T> {
                   child:ConstrainedBox(
                     constraints:BoxConstraints(
                       maxWidth:420,
-                      maxHeight:menuMaxHeight==null?480:
+                      maxHeight:menuMaxHeight==null?480.0:
                         menuMaxHeight.clamp(120.0,560.0).toDouble()),
                     child:Column(mainAxisSize:MainAxisSize.min,children:[
                       Padding(
