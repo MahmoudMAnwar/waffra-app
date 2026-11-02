@@ -11,7 +11,7 @@ Temporarily disabled (Global code retained):
 - Receipt/photo OCR to transaction creation (existing attachments untouched).
 - Qwen text inference in bank SMS and Ask Waffra; other optional AI features are unchanged.
 - Country, dialect and app-wide display currency controls; Tools currency converter and gold FX button are *not* disabled.
-- Country dialing-code picker during Saudi registration; existing account profile storage unchanged.
+- International country flags/codes and country picker removed from Saudi registration and account profile. Google and local numbers are entered as 05XXXXXXXX only (10 digits); existing Saudi Google +966 records remain readable without migration.
 
 Safety/release:
 - No migration or rewriting of current transactions, account credentials, monthly budgets, goals, recurring data, attachments, or Global preferences.
