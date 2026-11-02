@@ -181,6 +181,10 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
    });
    if(!await _persistModuleOrReload(WaffraFinanceRoute.goalCreateEditDeleteRestore,
      operation:'goal-edit'))return;
+   if(updated.alertEnabled&&!existing.alertEnabled){
+    try{await WaffraReminders.requestPermission();}
+    catch(e){debugPrint('Goal notification permission not granted: $e');}
+   }
    if(oldLinked){
     await _ensureLinkedRecurringForGoal(updated);
    }else if(updated.dueDate!=null&&updated.target>0&&updated.active&&
