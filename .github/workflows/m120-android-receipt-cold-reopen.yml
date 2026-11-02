@@ -6,6 +6,7 @@ on:
       - 'lib/storage/waffra_encrypted_receipt_recycle.dart'
       - 'lib/storage/waffra_verified_encrypted_finance_bridge.dart'
       - '.github/workflows/m120-android-receipt-cold-reopen.yml'
+      - '.github/scripts/run-m120-android-receipt-reopen.sh'
   workflow_dispatch:
 permissions:
   contents: read
@@ -14,7 +15,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout the exact PR head for native-asset test
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify the expected tested commit
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -59,4 +67,6 @@ jobs:
           target: google_apis
           disable-animations: true
           emulator-boot-timeout: 600
-          script: bash -c 'timeout --signal=TERM --kill-after=20s 900s flutter test integration_test/m120_verified_receipt_reopen_android_test.dart -d emulator-5554 --reporter expanded'
+          # Only failed sqlite3mc GitHub native-asset downloads are retried.
+          # A failing assertion, encryption error or Android test remains fatal.
+          script: bash .github/scripts/run-m120-android-receipt-reopen.sh
