@@ -1,0 +1,32 @@
+WAFFRA M374 — 2026-11-02 — Transaction details / Snackbar / Date picker / PDF report actions
+Status: PENDING EXACT-HEAD CI AND PHYSICAL ANDROID SCREENSHOT QA. Not approved for release.
+
+1. Transaction attachments
+- Remove the corner attachment quick action from both list and dashboard transaction cards.
+- The transaction details dialog alone offers View attachments, only when receiptPath contains saved attachments.
+- Keep receipt vault and underlying attachment data unchanged. No data migration.
+
+2. Global notices
+- Keep a single footer-aware Snackbar presenter; share matched 40dp minimum touch targets for Undo and Close.
+- Align the action and X centrally in RTL/LTR; flexible two-line text clips rather than pushing controls outside the banner.
+- Preserve 6-second financial Undo callback semantics, mandatory dismissal and existing warning/error palettes.
+
+3. Manual / bank date picker
+- Replace bottom overlay Today (which obscured the Material calendar) with a compact Today action at the top of the shared date dialog, following the financial calendar.
+- Today navigates the selected date without automatically saving a transaction. Explicit Confirm is required.
+- Reject an out-of-range Today. Cancel leaves the calling form unchanged.
+
+4. PDF report-ready confirmation
+- Open Report and Share Report use equal-height 48dp buttons, responsive horizontal layout when >=300dp and stacked controls for smaller dialogs.
+- Share errors do not masquerade as successful exports; original PDF bytes are unchanged.
+
+Regression coverage:
+- test/waffra_directional_fab_receipt_corner_test.dart
+- test/m268_smart_features_ten_calendar_art_test.dart
+- existing M277/M278/financial report suites via GitHub Actions.
+
+Gates:
+- Review exact PR head and all mandatory CI jobs before merge to main.
+- Test UI on Android with Arabic, English, narrow screens, large font, keyboard/insets, theme modes.
+- No claim of device QA, main merge or signed APK yet.
+- SQLCipher automatic production activation remains OFF. No production financial data reset.

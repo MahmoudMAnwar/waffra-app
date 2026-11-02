@@ -190,12 +190,12 @@ void main() {
     notice.dispose();
   });
 
-  test('attachment corner mirrors with language without increasing row height', () {
+  test('attachment access is inside transaction details only', () {
     final source=File('lib/main.dart').readAsStringSync();
-    expect(source,contains('if(count>0)PositionedDirectional(top:0,start:0'));
-    expect(source,contains('if(attachmentCount>0)PositionedDirectional(top:0,start:0'));
-    expect(source,isNot(contains('count>0?29:12')));
-    expect(source,isNot(contains('attachmentCount>0?29:0')));
+    expect(source,isNot(contains('if(count>0)PositionedDirectional(top:0,start:0')));
+    expect(source,isNot(contains('if(attachmentCount>0)PositionedDirectional(top:0,start:0')));
+    expect(source,contains("onViewReceipt:waffraReceiptPaths(entry.receiptPath).isNotEmpty"));
+    expect(source,contains("waffraIsEnglish?'View attachments':'عرض المرفقات'"));
     expect(source,contains('Icons.attach_file_rounded,size:10'));
   });
 
@@ -222,15 +222,16 @@ void main() {
     expect(source, isNot(contains('WaffraPhysicalLeftFab')));
   });
 
-  test('attachment marker is anchored in a card corner and contains its count',
-      () {
+  test('transaction cards do not expose an external attachment button', () {
     final source = File('lib/main.dart').readAsStringSync();
-    expect(source, contains('if(attachmentCount>0)PositionedDirectional(top:0,start:0'));
-    expect(source, contains(
-      'WaffraReceiptCornerBadge(count:attachmentCount,english:waffraIsEnglish)',
-    ));
-    expect(source, contains("onTap:WaffraHaptics.tap(()=>showReceipt(e.receiptPath!)"));
-    expect(source, contains('child:WaffraReceiptCornerBadge'));
+    final listCard = source.split('Widget tile(MoneyEntry e)').last
+      .split('String get greeting').first;
+    final dashboardCard = source.split('Widget _transaction').length > 1
+      ? source.split('Widget dashboard()').first : source;
+    expect(listCard, isNot(contains('showReceipt(')));
+    expect(listCard, isNot(contains('WaffraReceiptCornerBadge(')));
+    expect(dashboardCard, isNot(contains('WaffraReceiptCornerBadge(count:count')));
+    expect(source, contains("onViewReceipt:waffraReceiptPaths(entry.receiptPath).isNotEmpty"));
   });
   testWidgets('expanded menu is above the physical plus on the same side in both languages', (tester) async {
     Widget harness(bool english) => MaterialApp(
@@ -276,6 +277,53 @@ void main() {
     const incoming=AlwaysStoppedAnimation<double>(0.3);
     expect(animator.getScaleAnimation(parent:incoming).value,1);
     expect(animator.getRotationAnimation(parent:incoming).value,1);
+  });
+
+  testWidgets('RTL and LTR undo and close share a centered 40dp touch row',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320,640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final notice=ValueNotifier<WaffraNoticeData?>(
+      const WaffraNoticeData(
+        text:'رسالة طويلة لاختبار عرض السناك بار مع التراجع والإغلاق على الهاتف',
+        kind:WaffraSnackKind.success,requireDismissal:true,
+        duration:Duration(seconds:5),actionLabel:'تراجع',
+        onAction:null));
+    for(final dir in [TextDirection.rtl,TextDirection.ltr]){
+      notice.value=WaffraNoticeData(
+        text:'A long success notice / رسالة نجاح طويلة',
+        kind:WaffraSnackKind.success,requireDismissal:true,
+        duration:const Duration(seconds:5),actionLabel:'تراجع',
+        onAction:(){});
+      await tester.pumpWidget(MaterialApp(
+        home:Directionality(textDirection:dir,child:Scaffold(
+          body:const SizedBox.expand(),
+          bottomNavigationBar:Column(mainAxisSize:MainAxisSize.min,children:[
+            WaffraFooterNoticeHost(
+              listenable:notice,onDismiss:()=>notice.value=null),
+            const SizedBox(height:70),
+          ]),
+        )),
+      ));
+      await tester.pumpAndSettle();
+      final undo=tester.getRect(find.byKey(const Key('waffra-snackbar-action')));
+      final close=tester.getRect(find.byKey(const Key('waffra-snackbar-close')));
+      expect((undo.center.dy-close.center.dy).abs(),lessThanOrEqualTo(2));
+      expect(undo.height,greaterThanOrEqualTo(40));
+      expect(close.height,greaterThanOrEqualTo(40));
+      expect(tester.takeException(),isNull);
+    }
+    await tester.pumpWidget(const SizedBox.shrink());
+    notice.dispose();
+  });
+
+  test('report confirmation actions have adaptive non-overlapping layout', () {
+    final source=File('lib/main.dart').readAsStringSync();
+    expect(source,contains("Key('waffra-report-open')"));
+    expect(source,contains("Key('waffra-report-share')"));
+    expect(source,contains('if(limits.maxWidth<300)return Column('));
+    expect(source,contains('Expanded(child:openButton())'));
+    expect(source,contains('Expanded(child:shareButton())'));
   });
 
 }

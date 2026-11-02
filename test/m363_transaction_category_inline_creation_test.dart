@@ -5,7 +5,9 @@ void main(){
  test('M363 both category dropdowns create styled main/child categories',(){
   final source=File('lib/main.dart').readAsStringSync();
   expect(source,contains("'waffra-inline-create-main-category'"));
+  expect(source,contains('if(allowCreate&&!leafLabels)'));
   expect(source,contains("'waffra-inline-create-subcategory'"));
+  expect(source,contains('if(allowCreate&&leafLabels)'));
   expect(source,contains('final created=await categoryDialog('));
   expect(source,contains('income:typeIncome,parentId:categoryParentId'));
   expect(source,contains('operation:\'transaction-category-picker-create\''));
@@ -27,12 +29,15 @@ void main(){
   final source=File('lib/main.dart').readAsStringSync();
   expect(source,contains('String? selectedBudgetId=initial?.budgetId'));
   expect(source,contains("'waffra-entry-budget-'"));
-  expect(source,contains("'waffra-entry-search-budgets'"));
-  expect(source,contains("'Select budget':'تحديد الميزانية'"));
-  expect(source,contains("'waffra-entry-create-named-budget'"));
+  expect(source,contains("'__create_budget__'"));
+  expect(source,contains("'__manage_budgets__'"));
+  expect(source,isNot(contains("'waffra-entry-search-budgets'")));
+  expect(source,isNot(contains("'waffra-entry-create-named-budget'")));
   expect(source,contains('void assignBudgetInsideEditor(String? pickedId)'));
-  expect(source,contains('selectedParentId=matches.single.parentId'));
-  expect(source,contains('category=matches.single.name'));
+  final assign=source.substring(source.indexOf('void assignBudgetInsideEditor('),
+   source.indexOf('Widget dateAction()',source.indexOf('void assignBudgetInsideEditor(')));
+  expect(assign,isNot(contains('selectedParentId=matches.single.parentId')));
+  expect(assign,isNot(contains('category=matches.single.name')));
  });
 
  test('M363 bulk bank review also receives inline parent/child creation',(){

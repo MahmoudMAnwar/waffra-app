@@ -1,0 +1,18 @@
+WAFFRA M372 - Android Category/Transaction/Budget/Keyboard UX - 2026-11-02
+
+Branch: fix/m371-goal-wallet-independent-balance-budget-directory
+Scope: changes augment existing open PR #340; no main merge before CI.
+
+- Main category selector contains New main category only; subcategory selector contains New subcategory only.
+- Retain same name/icon/color workflow. The category edit UI no longer exposes budget fields and keeps all previously saved budget properties (amount, label, alert, activation) intact.
+- Transaction entry/review puts the budget dropdown beside the date, with Create budget and Manage/Delete budgets actions in the dropdown. Removed duplicate select/create buttons.
+- Selecting a budget no longer silently replaces the user's main/subcategory selection.
+- Budget panel hides category filters and category-label rows; 24 suggested budget name templates are visible.
+- Dialog lists use remaining viewport height after the Android IME opens, and category editor scrolls with keyboard; icon and color options have row spacing.
+- M372 source-level regression checks added; existing M355, M359, M360 and M363 checks aligned with revised UX.
+- Existing expenses and historical budget/category links are never auto-reclassified or erased by this presentation update.
+
+Outstanding, NOT shipped or certified:
+- True standalone budget domain creation is not yet implemented. The current persisted category-ID budget model still underpins chooseBudgetCategory(). A complete standalone-budgets migration must preserve historical ledger links, be transaction-safe, and be tested across legacy and SQLCipher startup before claiming category independence.
+- Run exact-head CI and real Android keyboard tests across narrow screens, text scaling, 3-button navigation and both AR/EN.
+- This PR does not activate SQLCipher or certify 2-device encrypted restore.

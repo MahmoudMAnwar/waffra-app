@@ -1,0 +1,46 @@
+WAFFRA M373 — STANDALONE BUDGETS — 2026-11-02
+PR #340: https://github.com/MahmoudMAnwar/waffra-app/pull/340
+
+Finance schema (guarded live legacy)
+- New optional authoritative finance JSON key: waffra_named_budgets_v1.
+- Each independent budget is a financial entity with its own immutable budget ID,
+  user-supplied name, monthly limit, alert threshold, active/paused and archive state.
+- Budget creation is independent of category hierarchy and has no required category.
+- Manual, SMS, OCR review and historical expense assignment link by budget ID, not
+  by rewriting the transaction's main/subcategory.
+- Pausing does not backfill expense allocations. Archiving retains historical links
+  and ledger balances.
+- Existing category-scoped budgets are read as independent budget projections,
+  reusing their old category IDs to keep all historical MoneyEntry.budgetId links.
+- Crucially, legacy category caps are not cleared by startup/catalog installation.
+  Only a source-verified same-batch financial write can save the new rows and clear
+  the old cap fields, avoiding crashes between two separate writes.
+- No transaction/goal/SMS/receipt amount gets changed in the migration.
+
+UX
+- Category creation/editing no longer shows a budget editor.
+- A transaction's budget selector also offers Create and Manage/Delete; date is
+  beside the dropdown. Main and child category pickers each show only their own
+  create action.
+- My Budgets lists standalone budgets; 24 optional named templates do NOT pick a
+  default category or automatically allocate any money.
+- Category screens no longer imply category budgets, and Android keyboard-safe
+  controls use the available viewport.
+
+Backup and restore
+- Authenticated Waffra export contains the independent budgets collection.
+- V24 backups without this field remain importable via preservation of historic caps.
+- Restore and full financial reset include the new budget key.
+
+SQLCipher / production gate
+- Added an additive candidate V2 finance-domain schema with category-independent
+  budget/expense allocation tables and fail-closed upgrade from V1; old V1 tables
+  remain unchanged for audit.
+- Added experimental standalone CRUD and explicit allocation SQL transactions.
+- Not activated as the mandatory production SQLCipher source. Certified encrypted
+  backup-domain export/import and real two-phone restore remain outstanding.
+- Never publish a Google-authenticated APK or merge this PR without exact-head CI
+  success, checked migration, and Android AR/EN keyboard + finance QA.
+
+Tests: M373 stand-alone model/old-ID preservation/preflight/backup/SQL candidate,
+plus updated M343, M351, M357, M359, M372 tests.

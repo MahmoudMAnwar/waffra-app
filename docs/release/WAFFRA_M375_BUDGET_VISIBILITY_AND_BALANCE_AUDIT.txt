@@ -1,0 +1,33 @@
+M375 | Conditional budget linking and current-cash audit | QA-only
+Date: 2026-11-02
+PR: #340
+
+1. For a NEW manual, bank or OCR expense with no active usable named
+   budgets, omit the entire budget field and save without an assignment.
+   Existing user data and category/receipt fields are unchanged.
+2. M376 clarification (user-approved 2026-11-02): budget assignment is ALWAYS
+   OPTIONAL even when one or many active usable budgets exist. Every expense
+   editor (manual/SMS/OCR) offers an explicit 'Without a budget' choice and
+   saves unassigned records without blocking. SMS batch/individual selection
+   also defaults to unassigned and never requires a budget. Income never
+   requires a budget. An empty budget directory hides budget review entirely.
+3. Existing unlinked expenses remain unlinked without automatic category-based
+   linking. Their review banner appears under Categories after an active budget
+   exists, with verified individual relink and no amount/date mutation.
+4. Transaction details do not display an unlinked-budget warning while there
+   are no usable budgets. Existing linked historical budget rows remain visible.
+5. Cash audit: Dashboard passes the complete verified transaction ledger
+   to waffraAvailableCash. The routine sums every income, subtracts each cash
+   expense, and deducts only the cash-funded share of a goal due. It does not
+   calculate from the last income. Added a regression with two incomes,
+   two expenses, order changes, JSON reload and a split goal-wallet payment.
+   An individual user's missing credit entries or wrong stored income flags
+   cannot be diagnosed from code alone; do not rewrite ledger or invent money.
+
+Safety: No SQLCipher cutover, production APK approval, data reset, automatic
+migration or force-merge. New tests require exact-HEAD GitHub CI and RTL/LTR
+Android confirmation before merging or release.
+
+M376 override: Any M375 source/test wording that previously made budget
+selection mandatory is superseded. Unlinked expenses must be preserved and
+eligible for later manual review; no inferred assignment or money changes.

@@ -88,24 +88,30 @@ void main(){
   });
  });
 
- test('M353 all screens gate NEW budget assignment and retain old links',(){
+ test('M353 all screens gate NEW standalone budget assignment and retain old links',(){
   final home=File('lib/main.dart').readAsStringSync();
-  final cats=File('lib/waffra_categories_page.part.dart').readAsStringSync();
-  expect(home,contains('budgetActive:!j.containsKey(\'budgetActive\')||j[\'budgetActive\']==true'));
-  expect(home,contains("budgetActive:budgetActive??this.budgetActive"));
-  expect(home,contains('Future<void> setNamedBudgetActive('));
-  expect(home,contains('operation:\'named-budget-active-toggle\''));
   final directory=File('lib/waffra_budget_directory.part.dart').readAsStringSync();
+  // Old category-backed budgets still deserialize for non-destructive upgrades,
+  // but new budgets and assignments must use independent names and IDs.
+  expect(home,contains("budgetActive:!j.containsKey('budgetActive')||j['budgetActive']==true"));
+  expect(home,contains('budgetActive:budgetActive??this.budgetActive'));
+  expect(home,contains('Future<void> setNamedBudgetActive('));
+  expect(home,contains('namedBudgets.add(WaffraNamedBudget('));
+  expect(home,contains("operation:'standalone-budget-toggle'"));
+  expect(home,contains("operation:'standalone-budget-create'"));
+  expect(home,contains("operation:'standalone-budget-soft-delete'"));
   expect(home,isNot(contains("Key('waffra-named-budget-enabled-switch')")));
   expect(directory,contains("'waffra-budget-quick-actions-'"));
   expect(directory,contains('setNamedBudgetActive(b,!b.budgetActive)'));
-  expect(directory,contains('budgetStatusFilter==\'active\''));
-  expect(home,contains('c.budget>0&&c.budgetActive'));
-  expect(home,contains('initial!=null&&initial.budgetId==c.id'));
-  expect(home,contains('if(updated.length==1&&updated.single.budgetActive)'));
-  expect(home,contains('budgetId:income?null:(categories.any'));
+  expect(directory,contains("budgetStatusFilter=='active'"));
+  // Manual editor and SMS import revalidate active standalone budget IDs.
+  expect(home,contains('final linkedBudget=namedBudgets.where((b)=>b.id==result.budgetId&&!b.deleted)'));
+  expect(home,contains('final reviewedBudgets=await reviewSmsBudgetLinks(additions)'));
+  expect(home,contains('!namedBudgets.any((b)=>b.id==id&&b.budget>0&&b.budgetActive&&!b.deleted)'));
   expect(home,contains('A selected budget was paused. Review the batch again.'));
-  expect(cats,contains('Budget paused'));
+  // Separating budgets from categories must never mutate linked transactions.
+  expect(home,contains("operation:'retroactive-opt-in-budget-link'"));
+  expect(home,contains('Existing allocations stay unchanged.'));
  });
 
  test('M353 transaction details warn with optional link after resume',(){
@@ -113,23 +119,33 @@ void main(){
   expect(home,contains("Key('waffra-transaction-budget-unlinked-warning')"));
   expect(home,contains('if(entry.budgetId==null)'));
   expect(home,contains("Key('waffra-transaction-link-budget-action')"));
-  expect(home,contains('onLinkBudget:entry.income||entry.budgetId!=null?null:()'));
+  expect(home,contains('onLinkBudget:entry.income||entry.budgetId!=null||'));
+  expect(home,contains('!waffraHasSelectableBudget(namedBudgets)?null:(){'));
+  expect(home,contains('showBudgetInfo:entry.budgetId!=null||waffraHasSelectableBudget(namedBudgets)'));
+  // No budget exists: do not nag users about linking, but preserve history.
   expect(home,contains('unawaited(assignExistingExpenseToBudget(entry))'));
   expect(home,contains('b.budget>0&&b.budgetActive'));
   expect(home,contains('operation:\'retroactive-opt-in-budget-link\''));
   expect(home,contains('if(ok!=true||!mounted)return;'));
  });
 
- test('M353 paused budget toggles never touch original finance transaction',(){
+ test('M353 paused standalone budget toggles never touch original finance transaction',(){
   final home=File('lib/main.dart').readAsStringSync();
   final scope=home.split('Future<void> setNamedBudgetActive(').last
     .split('Future<void> editBudgetForCategory(').first;
-  expect(scope,contains('categories[i]=categories[i].copy(budgetActive:enabled)'));
+  // Changing only one budget record is safe; no transaction rewrites,
+  // category-budget mutation, or silent retroactive relink is allowed.
+  expect(scope,contains('namedBudgets[index]=namedBudgets[index].copy(budgetActive:enabled)'));
+  expect(scope,contains('current.single.budgetActive==enabled'));
+  expect(scope,contains('live.single.budgetActive==enabled'));
+  expect(scope,isNot(contains('categories[i]=')));
   expect(scope,isNot(contains('entries.add(')));
   expect(scope,isNot(contains('entries.clear(')));
   expect(scope,isNot(contains('entries.remove(')));
   expect(scope,isNot(contains('withBudget(')));
   expect(scope,contains('_persistModuleOrReload('));
+  expect(scope,contains('WaffraFinanceRoute.challengeAndBudgetUpdate'));
+  expect(scope,contains("operation:'standalone-budget-toggle'"));
  });
 
  testWidgets('M353 unlinked expense details show warning and link action',

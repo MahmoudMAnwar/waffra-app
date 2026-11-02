@@ -6,10 +6,12 @@ void main(){
   final main=File('lib/main.dart').readAsStringSync();
   final entry=main.indexOf('Future<void> entrySheet(');
   final duplicate=main.indexOf('if(initial==null&&entries.any((e)=>',entry);
-  // M344 changed the expense projection from an unlinked sum to an
-  // explicitly linked named-budget total. The duplicate rejection must
-  // still finish (including staged receipt cleanup) before that projection.
-  final budgetProjection=main.indexOf('final linkedBudget=categories.where(',duplicate);
+  // M373 uses standalone named-budget IDs, never category IDs.
+  // A duplicate cancellation must remove only staged receipt copies before
+  // the independent budget spend projection or any financial commit.
+  final budgetProjection=main.indexOf(
+    'final linkedBudget=namedBudgets.where((b)=>b.id==result.budgetId&&!b.deleted)',
+    duplicate);
   final commit=main.indexOf(
     'final previousSpent=linkedBudget.isEmpty?0.0:waffraNamedBudgetSpent(',
     budgetProjection);

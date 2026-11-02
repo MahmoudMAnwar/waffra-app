@@ -3,17 +3,15 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('M357 named-budget selection follows parent then child hierarchy', () {
-    final app = File('lib/main.dart').readAsStringSync();
-    expect(app, contains("categories.where((c)=>!c.income&&!c.isSubcategory)"));
-    expect(app, contains('c.isSubcategory&&c.parentId==parent.id'));
-    expect(app, contains("'waffra-budget-main-list'"));
-    expect(app, contains("'waffra-budget-sub-list'"));
-    expect(app, contains("Navigator.pop(ctx,item.id)"));
-    expect(app, contains('if(matches.length!=1)return null;'));
-    expect(app, contains('await editBudgetForCategory(selected,suggestedName:suggestedName);'));
-    expect(app, contains("'waffra-budget-create-subcategory'"));
-    expect(app, contains('await addCategory(income:false,parentId:parentId);'));
+  test('M373 named-budget selection is independent of category hierarchy', () {
+    final app=File('lib/main.dart').readAsStringSync();
+    final create=app.split('Future<String?> chooseBudgetCategory(').last
+     .split('void refreshFromBudgetDirectory()').first;
+    expect(create,contains("'waffra-independent-budget-create'"));
+    expect(create,contains('namedBudgets.add(WaffraNamedBudget('));
+    expect(create,isNot(contains("'waffra-budget-create-subcategory'")));
+    expect(create,isNot(contains('categoryId')));
+    expect(create,isNot(contains('chooseTransactionCategory(')));
   });
 
   test('M357 budget card is collapsible and edit/delete are explicit', () {
@@ -39,7 +37,7 @@ void main() {
     expect(app, contains('if(monthlyBudgetDetailsOpen)...['));
     expect(app, contains('actions:[SizedBox(width:double.maxFinite,child:Row(children:['));
     expect(app, contains('await confirmDeletion('));
-    expect(app, contains('entries[j].withBudget(null)'));
+    expect(app, contains("operation:'standalone-budget-soft-delete'"));
   });
 
   test('M357 category filter controls do not clip on phone width', () {

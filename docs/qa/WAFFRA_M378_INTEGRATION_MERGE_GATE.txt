@@ -1,0 +1,17 @@
+M378 | Integration QA before main merge | 2026-11-02
+Source PRs: #337 (M368), #338 (M369), #339 (M370), #340 (M371-M377).
+Parent order: #340, #337, #338, #339 (preserve all commit histories).
+All source branches originated at main 987f9be4589bab757b90a1a59f852e624c0d74f7.
+Only common changed path was docs/release/WAFFRA_APPROVED_CHANGES.txt.
+Merged release notes keep M371 and append all three M368–M370 entries.
+
+COMBINED QA REQUIRED BEFORE MAIN:
+- Full Flutter unit/widget tests and analyzer, source and legacy migration checks.
+- Home/Widget shared journal, goal wallet ledger, named budget ID persistence.
+- Portable backup supplement plus guarded domain schema and original record retention.
+- Android UI safe areas, SMS/OCR, RTL/LTR and verified finance no double debit.
+- Android emulator tests and external device upgrade tests before production.
+- Preserve sign-in and all preexisting transactions on update.
+- Build QA APK from main only AFTER combined PR verified/merged.
+- SQLCipher production automaticallyActivateSqlCipher MUST stay false.
+- Never claim final Android two-phone certification from GitHub CI alone.

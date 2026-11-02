@@ -75,6 +75,155 @@ class WaffraFreshFinanceDomainRepository {
     await WaffraFreshFinanceDomainSchema.requireReady(store);
   }
 
+  /// SQLCipher V2 counterpart of the standalone budget screen. This does
+  /// not change, rename, or delete any expense category or transaction.
+  Future<void> createStandaloneBudget({
+    required String budgetId,required String name,required int limitMinor,
+    required String createdAtIso,int alertPercent=80,
+  }) async {
+    await _requireReady();
+    _id(budgetId,'budgetId');
+    _iso(createdAtIso);
+    if(name.trim().isEmpty||name.runes.length>80||limitMinor<=0||
+       alertPercent<1||alertPercent>100){
+      throw ArgumentError('Invalid standalone budget.');
+    }
+    await store.transaction(() async {
+      final existing=await store.customSelect(
+       'SELECT budget_id FROM fresh_finance_standalone_budgets '
+       'WHERE lower(name)=lower(?) AND archived_at_iso IS NULL',
+       variables:[Variable.withString(name.trim())]).get();
+      if(existing.isNotEmpty)throw StateError('Budget name already exists.');
+      await store.customStatement(
+       'INSERT INTO fresh_finance_standalone_budgets '
+       '(budget_id,name,monthly_limit_minor,is_active,alert_percent,'
+       'created_at_iso,source_json) VALUES (?,?,?,?,?,?,?)',
+       [budgetId,name.trim(),limitMinor,1,alertPercent,createdAtIso,
+        jsonEncode({'id':budgetId,'name':name.trim(),
+         'budgetMinor':limitMinor,'budgetActive':true,
+         'alertPercent':alertPercent})]);
+    });
+  }
+
+  Future<void> editStandaloneBudget({
+    required String budgetId,required String name,required int limitMinor,
+    required int alertPercent,required bool userConfirmed,
+  }) async {
+    await _requireReady();
+    _id(budgetId,'budgetId');
+    if(!userConfirmed||name.trim().isEmpty||name.runes.length>80||
+       limitMinor<=0||alertPercent<1||alertPercent>100){
+      throw StateError('Invalid independent budget edit.');
+    }
+    await store.transaction(() async {
+      final rows=await store.customSelect(
+       'SELECT source_json FROM fresh_finance_standalone_budgets '
+       'WHERE budget_id=? AND archived_at_iso IS NULL',
+       variables:[Variable.withString(budgetId)]).get();
+      if(rows.length!=1)throw StateError('Active budget not found.');
+      final duplicates=await store.customSelect(
+       'SELECT budget_id FROM fresh_finance_standalone_budgets '
+       'WHERE budget_id<>? AND archived_at_iso IS NULL AND lower(name)=lower(?)',
+       variables:[Variable.withString(budgetId),Variable.withString(name.trim())]).get();
+      if(duplicates.isNotEmpty)throw StateError('Budget name already exists.');
+      final source=_decoded(rows.single.read<String>('source_json'))
+       ..['name']=name.trim()
+       ..['budgetMinor']=limitMinor
+       ..['alertPercent']=alertPercent;
+      await store.customStatement(
+       'UPDATE fresh_finance_standalone_budgets '
+       'SET name=?,monthly_limit_minor=?,alert_percent=?,source_json=? '
+       'WHERE budget_id=?',
+       [name.trim(),limitMinor,alertPercent,jsonEncode(source),budgetId]);
+    });
+  }
+
+  Future<void> setStandaloneBudgetActive({
+    required String budgetId,required bool enabled,
+  }) async {
+    await _requireReady();
+    _id(budgetId,'budgetId');
+    await store.transaction(() async {
+      final rows=await store.customSelect(
+       'SELECT source_json FROM fresh_finance_standalone_budgets '
+       'WHERE budget_id=? AND archived_at_iso IS NULL',
+       variables:[Variable.withString(budgetId)]).get();
+      if(rows.length!=1)throw StateError('Budget not found or archived.');
+      final source=_decoded(rows.single.read<String>('source_json'))
+       ..['budgetActive']=enabled;
+      await store.customStatement(
+       'UPDATE fresh_finance_standalone_budgets '
+       'SET is_active=?,source_json=? WHERE budget_id=?',
+       [enabled?1:0,jsonEncode(source),budgetId]);
+    });
+  }
+
+  /// Archive, never destroy historical allocation rows or ledger entries.
+  Future<void> archiveStandaloneBudget({
+    required String budgetId,required String archivedAtIso,
+    required bool userConfirmed,
+  }) async {
+    await _requireReady();
+    _id(budgetId,'budgetId');
+    _iso(archivedAtIso);
+    if(!userConfirmed)throw StateError('Archive requires approval.');
+    await store.transaction(() async {
+      final rows=await store.customSelect(
+       'SELECT source_json FROM fresh_finance_standalone_budgets '
+       'WHERE budget_id=? AND archived_at_iso IS NULL',
+       variables:[Variable.withString(budgetId)]).get();
+      if(rows.length!=1)throw StateError('Budget already archived or missing.');
+      final source=_decoded(rows.single.read<String>('source_json'))
+       ..['deleted']=true
+       ..['budgetActive']=false
+       ..['archivedAt']=archivedAtIso;
+      await store.customStatement(
+       'UPDATE fresh_finance_standalone_budgets SET is_active=0,'
+       'archived_at_iso=?,source_json=? WHERE budget_id=?',
+       [archivedAtIso,jsonEncode(source),budgetId]);
+    });
+  }
+
+  Future<void> assignStandaloneExpense({
+    required String allocationId,required String budgetId,
+    required String entryId,required int amountMinor,
+    required String assignedAtIso,required bool userConfirmed,
+  }) async {
+    await _requireReady();
+    _id(allocationId,'allocationId');
+    _id(budgetId,'budgetId');
+    _id(entryId,'entryId');
+    _iso(assignedAtIso);
+    if(!userConfirmed||amountMinor<=0){
+      throw StateError('Explicit positive allocation required.');
+    }
+    await store.transaction(() async {
+      final budget=await store.customSelect(
+       'SELECT budget_id FROM fresh_finance_standalone_budgets '
+       'WHERE budget_id=? AND is_active=1 AND archived_at_iso IS NULL',
+       variables:[Variable.withString(budgetId)]).get();
+      final expense=await store.customSelect(
+       'SELECT amount_minor FROM fresh_finance_entries '
+       'WHERE entry_id=? AND is_income=0',
+       variables:[Variable.withString(entryId)]).get();
+      if(budget.length!=1||expense.length!=1||
+         amountMinor!=expense.single.read<int>('amount_minor')){
+        throw StateError('Unverified budget or expense amount.');
+      }
+      final legacy=await store.customSelect(
+       'SELECT 1 FROM fresh_finance_budget_allocations WHERE entry_id=?',
+       variables:[Variable.withString(entryId)]).get();
+      if(legacy.isNotEmpty){
+        throw StateError('An old budget already owns this expense.');
+      }
+      await store.customStatement(
+       'INSERT INTO fresh_finance_standalone_allocations '
+       '(allocation_id,budget_id,entry_id,amount_minor,assigned_at_iso,'
+       'explicitly_confirmed) VALUES (?,?,?,?,?,1)',
+       [allocationId,budgetId,entryId,amountMinor,assignedAtIso]);
+    });
+  }
+
   /// New named budgets are independent rows. No uniqueness on category ID:
   /// a single subcategory may have multiple separately named budgets.
   Future<void> createNamedBudget({
@@ -528,6 +677,8 @@ class WaffraFreshFinanceDomainRepository {
         'category':category,'amount':amountMinor / 100,
         'income':false,'date':confirmedAtIso,
         'sourceType':'goal_due','budgetId':null,
+        // Integer halalas are the authoritative split; never parse notes.
+        'goalWalletPaidMinor':fromGoal,
         'notes':'goal_wallet_minor=$fromGoal;current_cash_minor=$fromCurrent',
       };
       await store.customStatement(
