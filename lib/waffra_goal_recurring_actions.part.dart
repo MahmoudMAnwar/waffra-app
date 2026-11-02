@@ -4,6 +4,27 @@ part of 'main.dart';
 /// NOT its own saved amount. Reaching the date alone never posts money;
 /// payment requires explicit confirmation and a verified finance writer.
 extension WaffraGoalRecurringActions on _HomeScreenState {
+ /// Creating a financial due entry is optional and requires explicit consent.
+ /// Declining preserves the goal, its due-date hint, and all saved money.
+ Future<bool> _confirmGoalDueRecurringLink(SavingGoal goal)async{
+  if(!mounted||goal.dueDate==null||goal.target<=0||!goal.active)return false;
+  final choice=await showWaffraDialog<bool>(
+   context:context,builder:(ctx)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?
+     'Create a linked recurring due date?':'ربط استحقاق الهدف بالعمليات المتكررة؟'),
+    content:WaffraText(waffraIsEnglish?
+     'This adds a reminder for ${goal.name} on ${dayText(goal.dueDate!)}. No money is deducted now.':
+     'هيتم إضافة تذكير لاستحقاق «${goal.name}» بتاريخ ${dayText(goal.dueDate!)}، من غير خصم أي فلوس دلوقتي.'),
+    actions:[
+     TextButton(
+      onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),
+      child:WaffraText(waffraIsEnglish?'Not now':'ليس الآن')),
+     FilledButton(
+      onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),
+      child:WaffraText(waffraIsEnglish?'Link due date':'ربط الاستحقاق')),
+    ]));
+  return choice==true;
+ }
  Future<bool> _ensureLinkedRecurringForGoal(SavingGoal goal)async{
   final deadline=goal.dueDate;
   final linkedIndex=recurring.indexWhere((r)=>r.linkedGoalId==goal.id);
@@ -139,7 +160,10 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
    });
    if(!await _persistModuleOrReload(WaffraFinanceRoute.goalCreateEditDeleteRestore,
      operation:'goal-edit'))return;
-   if(updated.dueDate!=null||oldLinked){
+   if(oldLinked){
+    await _ensureLinkedRecurringForGoal(updated);
+   }else if(updated.dueDate!=null&&updated.target>0&&updated.active&&
+     await _confirmGoalDueRecurringLink(updated)){
     await _ensureLinkedRecurringForGoal(updated);
    }
   }finally{disposeLater([name,target]);}
