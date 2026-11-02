@@ -45,6 +45,22 @@
         "start": "      - name: Checkout exact reviewed SHA\n",
         "end": "      - name: Generate non-sensitive NO-GO evidence for exact SHA\n"
       }
+    ],
+    "test/waffra_oct21_regression_test.dart": [
+      {
+        "start": "  expect(app, contains(\"'No.'\"));\n });\n\n",
+        "end": " test('Sensitive financial actions always require OS biometric authentication', () {"
+      }
+    ],
+    "test/waffra_directional_fab_receipt_corner_test.dart": [
+      {
+        "start": "    expect(direction==TextDirection.rtl?statusX>closeX:statusX<closeX,isTrue,\n        reason:'Status icon and close action must follow the current direction.');",
+        "end": "  test('Home, Categories, Goals and Recurring plus actions preserve locale switch, with no fixed-left anchor',"
+      },
+      {
+        "start": "    expect(source, isNot(contains('WaffraPhysicalLeftFab')));\n  });\n\n",
+        "end": "  testWidgets('expanded menu is above the physical plus on the same side in both languages', tester) async {"
+      }
     ]
   }
 }
