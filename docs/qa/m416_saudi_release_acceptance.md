@@ -8,7 +8,7 @@
 - Bank SMS paste/share is deterministic/offline only; no Qwen inference, download, readiness check or cancel. Review and explicit save still required. Maximum 100 SMS per paste; preserve duplicate detection and source date checks. Foreign currencies must never save as SAR.
 - Ask Waffra has predefined financial questions only: current-month income, spending, net recorded cashflow (not bank balance), most-expensive category, per-category totals and budgets. No freeform chat, keyboard, model or network. Clear shows questions again.
 - Retain the independent currency converter in Tools *exactly as before*, including live FX and the gold value conversion button; it is NOT the app currency setting. Hide only the app-wide currency and country selectors.
-- Hide international dialing-code picker for Saudi new profiles without rewriting previously stored phone numbers.
+- Use one Saudi-only mobile number field for Google and non-Google signup, login and profile editing: **05XXXXXXXX**, exactly 10 digits, no flag, country dial code, or picker. Existing Saudi Google +966 E.164 records show as 05 in the UI without rewriting when unchanged. Historical foreign records remain unmodified until explicit correction.
 
 ## Exact HEAD test matrix
 1. Run Flutter analyzer, all finance/UI/SMS tests and test/m416_saudi_release_offline_test.dart; record passed/failed/skipped counts and distinct defect count.
@@ -21,6 +21,7 @@
 8. Tools: currency converter remains visible and converts with verified FX rates, plus gold and oil remain available. Gold value conversion action remains accessible. No forced model download.
 9. In-place upgrade: all transactions, goals, recurring schedules, categories, budgets, attachments, Google sign-in and encrypted backups remain intact.
 10. Signed physical Android tests: phone sizes, 3-button/gesture system bars, app restart, dark/light, Arabic/English, Play Data Safety/permission review.
+11. Test Google + local signup/sign-in/profile: only Saudi 05 input, ten-digit cap, no flag/+966 visible, foreign/short/long invalid, existing Saudi +966 storage remains valid on re-edit, and no silent rewrite of legacy non-Saudi profile.
 
 ## Release gates
 Keep PR Draft until exact-head CI and physical-device evidence. No automatic merge to main or production-store release. Reconcile with #348 and #350; do not overwrite their UI/alert changes.
