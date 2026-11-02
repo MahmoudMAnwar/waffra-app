@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'waffra_centered_dropdown.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'waffra_gold_market_data.dart';
 import 'waffra_amount_formatter.dart';
@@ -420,7 +421,7 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
         const SizedBox(height: 12),
         Row(children: [
           Expanded(
-            child: DropdownButtonFormField<int>(
+            child: WaffraCenteredDropdownFormField<int>(
               key: const Key('waffra-gold-calc-karat'),
               initialValue: _karat,
               isExpanded: true,
