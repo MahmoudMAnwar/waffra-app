@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M388-M395",
+  "change_id": "M388-M397",
   "human_scope_review": "REQUIRED: owner approval of requested behavior + live Android screenshot and legacy data checks",
   "user_requested_changes": [
     "M388: allow an open-ended savings goal with no fixed target amount and no mandatory budget, preserve old target goals and wallet accounting; avoid false 0-percent completion and allow editing the goal.",
@@ -12,7 +12,9 @@
     "M392: every saved budget has collapsed-by-default expandable details, a clearly visible switch, bigger suggested templates, an arrow for template disclosure, and non-overlapping create spacing.",
     "M393: each goal and recurring transaction has collapsed Quick actions (edit/delete/activate); goal pause leaves saved balance untouched and linked recurrence inactive. Existing goals default active.",
     "M394: preserve zero-target savings through non-negative legacy and experimental encrypted finance validation and cloud allowlist; never accept negative targets or silently activate SQLCipher.",
-    "M395: search and visible scrollbars in Goals and Recurring; presentation-only filters must never alter financial entries."
+    "M395: search and visible scrollbars in Goals and Recurring; presentation-only filters must never alter financial entries.",
+    "M396: new or newly dated goal due never silently creates a recurring obligation; ask the user with explicit Not now / Link due date options while keeping ledger and savings unchanged.",
+    "M397: remove unnecessary optional/encryption jargon from the savings date picker and original SMS title while retaining genuine encrypted-vault safety notices."
   ],
   "allowed_changed_files": [
     ".github/workflows/m274-production-ui-golden.yml",
@@ -101,6 +103,10 @@
       {
         "start": " Widget recurringPage(){",
         "end": " Future<void> showWaffraFinancialCalendar()"
+      },
+      {
+        "start": "       if(entry.sourceType=='sms')...[",
+        "end": "       if(onViewReceipt!=null)...["
       }
     ],
     "lib/waffra_goal_recurring_actions.part.dart": [
