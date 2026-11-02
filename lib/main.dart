@@ -9423,10 +9423,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     color:selected?(Theme.of(context).brightness==Brightness.dark
      ?const Color(0xFFD9FFE9):forest):null,
     fontWeight:selected?FontWeight.bold:FontWeight.normal));
- Future<void> goalDialog()async {
+ Future<void> goalDialog({SavingGoal? duplicate,bool openEnded=false})async {
   await _ensureFinanceBound();
-  final name=TextEditingController(),target=TextEditingController();
-  DateTime? selectedDeadline;
+  final name=TextEditingController(text:duplicate==null?'':(waffraIsEnglish?'Copy of ':'نسخة من ')+duplicate.name),
+   target=TextEditingController(text:duplicate==null||duplicate.target<=0?'':formatWaffraEditAmount(duplicate.target));
+  DateTime? selectedDeadline=duplicate?.dueDate!=null&&duplicate!.dueDate!.isAfter(DateTime.now())?duplicate.dueDate:null;
   final customGoals=await _financeAuthority.loadCustomGoalSuggestions();
   if(!mounted){name.dispose();target.dispose();return;}
   final defaults=waffraDefaultGoalNames(waffraIsEnglish);
@@ -9441,8 +9442,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(key.isNotEmpty&&seen.add(key))suggested.add(entry.trim());
   }
   const otherGoal='__other_goal__';
-  String selectedGoal='';
+  String selectedGoal=duplicate==null?'':'__other_goal__';
   bool attempted=false;
+  bool noTarget=openEnded||(duplicate!=null&&duplicate.target<=0);
   String? validateGoalName(){
    final issue=waffraGoalNameIssue(name.text,goals.map((g)=>g.name));
    if(issue=='required'||issue=='too_long')return waffraTextFieldError(name.text);
@@ -9542,7 +9544,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       (waffraIsEnglish?'Due date (optional, link to recurring)':'تاريخ الاستحقاق (اختياري) · ربط بالمتكررة'):
       dayText(selectedDeadline!))),
      const SizedBox(height:12),
-     TextField(controller:target,
+     SwitchListTile.adaptive(
+      contentPadding:EdgeInsets.zero,
+      title:WaffraText(waffraIsEnglish?'Open-ended savings':'ادخار مفتوح بدون مبلغ مستهدف'),
+      subtitle:WaffraText(waffraIsEnglish?'Save any amount, without a target or completion percentage':'ادّخر براحتك من غير حدّ أو رقم مستهدف'),
+      value:noTarget,activeTrackColor:emerald,
+      onChanged:WaffraHaptics.selection((value)=>updateGoal(()=>noTarget=value))),
+     if(!noTarget)TextField(controller:target,
       keyboardType:const TextInputType.numberWithOptions(decimal:true),
       inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],
       onChanged:(_)=>updateGoal((){}),
@@ -9559,8 +9567,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       updateGoal(()=>attempted=true);
       final n=amountOfDisplay(target.text);
       if(selectedGoal.isEmpty||validateGoalName()!=null||
-       WaffraValidators.positiveAmount(target.text)!=null||n==null)return;
-      Navigator.pop(ctx,SavingGoal(id:newId(),name:name.text.trim(),target:n,saved:0,dueDate:selectedDeadline));
+       (!noTarget&&(WaffraValidators.positiveAmount(target.text)!=null||n==null)))return;
+      Navigator.pop(ctx,SavingGoal(id:newId(),name:name.text.trim(),target:noTarget?0:n!,saved:0,dueDate:selectedDeadline));
      }),child:WaffraText(waffraIsEnglish?'Add goal':'إضافة الهدف')),
     ],
    )));
@@ -9576,10 +9584,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    setState(()=>goals.add(g));
    if(!await _persistModuleOrReload(WaffraFinanceRoute.goalCreateEditDeleteRestore,
      operation:'goal-create'))return;
-   final linked=g.dueDate==null?false:
+   final linked=g.dueDate==null||g.target<=0?false:
      await this._ensureLinkedRecurringForGoal(g);
    if(mounted){
-    if(g.dueDate!=null&&!linked){
+    if(g.dueDate!=null&&g.target>0&&!linked){
      snack(context,waffraIsEnglish?
       'Goal saved, but recurring link was not confirmed. Retry from Edit Goal.':
       'تم حفظ الهدف، لكن ربط المتكررة لم يتأكد. أعد المحاولة من تعديل الهدف.');
@@ -10028,7 +10036,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final saved=goals.fold<double>(0,(v,g)=>v+g.saved);
   final pct=target==0?0.0:(saved/target).clamp(0.0,1.0);
   final filtered=goals.where((g)=>goalDisplay=='all'||
-   (goalDisplay=='done'?g.saved>=g.target:g.saved<g.target)).toList();
+   (goalDisplay=='done'?(g.target>0&&g.saved>=g.target):(g.target<=0||g.saved<g.target))).toList();
   return ListView(controller:_goalsScrollController,
    physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
    padding:const EdgeInsets.fromLTRB(16,14,16,28),children:[
@@ -10091,7 +10099,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ...filtered.map((g){
     int? monthlyRequired;
     bool overdue=false;
-    if(g.dueDate!=null){
+    if(g.dueDate!=null&&g.target>0){
       try{
        final forecast=WaffraGoalPlan(
         targetMinor:waffraSarMinorChecked(g.target),
@@ -10101,7 +10109,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        overdue=forecast.overdue;
       }catch(_){/* Show no invented target guidance. */}
     }
-    final percent=(g.saved/g.target).clamp(0.0,1.0);
+    final percent=g.target<=0?0.0:(g.saved/g.target).clamp(0.0,1.0);
     final shade=goalIcon(g.name)==Icons.flight_takeoff?const Color(0xFF9C56B8):
      goalIcon(g.name)==Icons.directions_car?const Color(0xFF3867D6):emerald;
     return Card(
@@ -10116,7 +10124,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        const SizedBox(width:10),
        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         WaffraText(g.name,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:16)),
-        WaffraText(waffraIsEnglish?'Target: ${cash(g.target)}':'المستهدف: ${cash(g.target)}',
+        WaffraText(g.target<=0?(waffraIsEnglish?'Open-ended savings':'ادخار مفتوح'):(waffraIsEnglish?'Target: ${cash(g.target)}':'المستهدف: ${cash(g.target)}'),
          style:const TextStyle(fontSize:12)),
        ])),
        PopupMenuButton<String>(onSelected:WaffraHaptics.selection((v)async {
@@ -10163,7 +10171,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          'موعد الهدف فات. عدّل التاريخ علشان تحصل على خطة ادخار جديدة.',
          style:const TextStyle(fontSize:12,color:Colors.deepOrange))),
       const SizedBox(height:11),
-      Row(children:[
+      if(g.target>0)Row(children:[
        WaffraText('${(percent*100).round()}%',style:TextStyle(fontWeight:FontWeight.bold,color:shade)),
        const SizedBox(width:10),
        Expanded(child:LinearProgressIndicator(value:percent,minHeight:9,
@@ -10175,13 +10183,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         WaffraText(waffraIsEnglish?'Saved':'المدّخر',style:const TextStyle(fontSize:11)),
         WaffraText(cash(g.saved),style:const TextStyle(fontWeight:FontWeight.bold))])),
-       Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+       if(g.target>0)Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         WaffraText(waffraIsEnglish?'Remaining':'المتبقي',style:const TextStyle(fontSize:11)),
         WaffraText(cash(max(0,g.target-g.saved)),style:const TextStyle(fontWeight:FontWeight.bold))])),
-       if(g.saved<g.target)TextButton.icon(onPressed:WaffraHaptics.tap(()=>fundGoal(g)),
+       if(g.target<=0||g.saved<g.target)TextButton.icon(onPressed:WaffraHaptics.tap(()=>fundGoal(g)),
         icon:const Icon(Icons.add,size:18),label:WaffraText(waffraIsEnglish?'Add amount':'إضافة مبلغ')),
       ]),
-      if(g.saved>=g.target)WaffraText(waffraIsEnglish?'Goal achieved!':'🎉 تم تحقيق الهدف!',
+      if(g.target>0&&g.saved>=g.target)WaffraText(waffraIsEnglish?'Goal achieved!':'🎉 تم تحقيق الهدف!',
        style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
      ])),
     );
