@@ -36,7 +36,9 @@ def run(manifest=None, head=HEAD, changed=None, base=BASE):
     manifest = manifest if manifest is not None else contract()
     changed = changed if changed is not None else set(manifest["allowed_changed_files"])
     old = {"lib/main.dart": base}
-    new = {"lib/main.dart": head}
+    new = {"lib/main.dart": head,
+           MANIFEST: '{"contract_version":1}',
+           "test/new_approval_test.dart": "test: approved new coverage"}
     return guard.audit_scope(manifest, changed, old, new, {"lib/main.dart"})
 
 
@@ -62,7 +64,9 @@ class NoUnrequestedChangesTest(unittest.TestCase):
         manifest = contract()
         with self.assertRaisesRegex(guard.ScopeViolation, "deleted"):
             guard.audit_scope(manifest, set(manifest["allowed_changed_files"]),
-                              {"lib/main.dart": BASE}, {}, {"lib/main.dart"})
+                              {"lib/main.dart": BASE},
+                              {MANIFEST: "scope", "test/new_approval_test.dart": "test"},
+                              {"lib/main.dart"})
 
     def test_old_function_anchor_removed_fails_closed(self):
         with self.assertRaisesRegex(guard.ScopeViolation, "anchor"):
@@ -107,7 +111,7 @@ class NoUnrequestedChangesTest(unittest.TestCase):
         modified = original.replace("run: flutter test", "run: true")
         with self.assertRaisesRegex(guard.ScopeViolation, "outside"):
             guard.audit_scope(manifest, {path, MANIFEST},
-                              {path: original}, {path: modified}, {path})
+                              {path: original}, {path: modified, MANIFEST: "scope"}, {path})
 
     def test_exact_content_outside_scope_must_be_byte_identical(self):
         with self.assertRaisesRegex(guard.ScopeViolation, "outside"):
