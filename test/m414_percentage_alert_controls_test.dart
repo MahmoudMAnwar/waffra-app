@@ -64,6 +64,13 @@ void main() {
    spent:1000,limit:1000,alertPercent:80,enabled:true),isTrue);
  });
 
+ test('M414 SavingGoal factory and class close before SavingChallenge',(){
+  final source=File('lib/main.dart').readAsStringSync();
+  final model=source.split('class SavingGoal {').last
+   .split('class SavingChallenge {').first;
+  expect(model,contains("progressAlertPercent:j['progressAlertPercent'] as int? ??80);\n }\n}\n"));
+ });
+
  test('M414 goal progress threshold does not affect money or recurrence',(){
   final old=SavingGoal(id:'g1',name:'Car',target:1000,saved:400);
   expect(old.progressAlertsEnabled,isFalse);

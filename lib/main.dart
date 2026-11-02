@@ -534,6 +534,7 @@ class SavingGoal {
   active:!j.containsKey('active')||j['active']==true,
   progressAlertsEnabled:j['progressAlertsEnabled']==true,
   progressAlertPercent:j['progressAlertPercent'] as int? ??80);
+ }
 }
 class SavingChallenge {
  final String id,title;final double dailyAmount;
