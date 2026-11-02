@@ -124,6 +124,23 @@ jobs:
           PY
       - name: Syntax-check Android emulator test runner
         run: bash -n .github/scripts/run-m274-android-tap-smoke.sh
+      # M387: precompile heavy Gradle/NDK workload BEFORE booting the emulator.
+      # Keeping emulator and build tools active together exhausted CI resources.
+      - name: Recover disposable Linux runner disk before Android emulator QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          df -h .
+          sudo rm -rf /usr/share/dotnet /usr/local/share/powershell /opt/hostedtoolcache/CodeQL
+          df -h .
+      - name: Precompile Android UI integration APK before emulator launch
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter build apk --debug --no-pub --target integration_test/m274_ui_tap_smoke_android_test.dart
+          test -s build/app/outputs/flutter-apk/app-debug.apk
+          df -h .
+          free -h
       - name: Enable KVM for Android emulator
         shell: bash
         run: |
@@ -141,8 +158,8 @@ jobs:
           # M386: cap AVD userdata instead of accepting Pixel default > available
           # GitHub runner disk. Keep the real Android UI tap test mandatory.
           disk-size: 3072M
-          ram-size: 3072M
-          heap-size: 512M
+          ram-size: 2048M
+          heap-size: 256M
           disable-animations: true
           emulator-boot-timeout: 600
           emulator-options: -no-window -no-audio -no-snapshot -gpu swiftshader_indirect -no-boot-anim
