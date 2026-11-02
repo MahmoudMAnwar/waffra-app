@@ -418,20 +418,26 @@ bool waffraCanAssignManualCategory(Iterable<BudgetCategory> values,
 class SavingGoal {
  final String id,name;
  final double target,saved;
+ /// Pausing a goal does not spend, delete or change its saved money.
+ final bool active;
  /// Deadline alone never posts money; payment needs user confirmation.
  final DateTime? dueDate;
  SavingGoal({required this.id,required this.name,required this.target,
-  required this.saved,this.dueDate});
- SavingGoal copy({String? name,double? target,double? saved,DateTime? dueDate})=>
+  required this.saved,this.dueDate,this.active=true});
+ SavingGoal copy({String? name,double? target,double? saved,DateTime? dueDate,
+  bool? active})=>
   SavingGoal(id:id,name:name??this.name,target:target??this.target,
-   saved:saved??this.saved,dueDate:dueDate??this.dueDate);
+   saved:saved??this.saved,dueDate:dueDate??this.dueDate,
+   active:active??this.active);
  Map<String,dynamic> toJson()=>{'id':id,'name':name,'target':target,'saved':saved,
+  'active':active,
   if(dueDate!=null)'dueDate':dueDate!.toIso8601String()};
  factory SavingGoal.fromJson(Map<String,dynamic> j)=>SavingGoal(
   id:'${j['id']??newId()}',name:'${j['name']??''}',
   target:(j['target'] as num).toDouble(),
   saved:(j['saved'] as num?)?.toDouble()??0,
-  dueDate:DateTime.tryParse('${j['dueDate']??''}'));
+  dueDate:DateTime.tryParse('${j['dueDate']??''}'),
+  active:!j.containsKey('active')||j['active']==true);
 }
 class SavingChallenge {
  final String id,title;final double dailyAmount;
