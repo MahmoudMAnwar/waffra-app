@@ -136,7 +136,7 @@ class WaffraCloudSanitizer {
   static const allowedFields = <String, Set<String>>{
     'entry': {'id','title','category','amount','income','date','budgetId'},
     'category': {'id','name','icon','color','income','parentId','budget','alertPercent','budgetLabel'},
-    'goal': {'id','name','target','saved','dueDate'},
+    'goal': {'id','name','target','saved','dueDate','active'},
     'recurring': {'id','title','category','amount','income','day','active','startAt','linkedGoalId'},
     'challenge': {'id','title','dailyAmount','days','completedDays','lastDone'},
     'postponement': {'entryId','postponedTo'},
