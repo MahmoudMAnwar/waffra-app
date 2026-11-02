@@ -143,10 +143,12 @@ extension WaffraBudgetDirectory on _HomeScreenState {
        }),
       ),
      ]),
-     const SizedBox(height:10),
+     const SizedBox(height:16),
      Align(alignment:AlignmentDirectional.centerStart,
-      child:TextButton.icon(
+      child:OutlinedButton.icon(
        key:const Key('waffra-budgets-directory-create'),
+       style:OutlinedButton.styleFrom(minimumSize:const Size(0,48),
+        padding:const EdgeInsets.symmetric(horizontal:12,vertical:10)),
        onPressed:WaffraHaptics.tap(()async{
         await chooseBudgetCategory();
         if(mounted)refresh((){});
@@ -165,73 +167,110 @@ extension WaffraBudgetDirectory on _HomeScreenState {
        padding:const EdgeInsets.only(bottom:12),
        child:Container(
         key:Key('waffra-saved-budget-'+b.id),
-        padding:const EdgeInsets.all(12),
         decoration:BoxDecoration(
+         color:Theme.of(context).cardColor,
          border:Border.all(color:emerald.withValues(alpha:.23)),
          borderRadius:BorderRadius.circular(14)),
-        child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-         WaffraText(b.budgetLabel??('ميزانية '+b.displayName),
+        // Collapsed by default: no nested expansion tiles or tall action
+        // regions inside the draggable modal. Historic budget IDs stay put.
+        child:ExpansionTile(
+         key:PageStorageKey<String>('waffra-budget-details-'+b.id),
+         initiallyExpanded:false,
+         shape:const RoundedRectangleBorder(side:BorderSide.none),
+         collapsedShape:const RoundedRectangleBorder(side:BorderSide.none),
+         tilePadding:const EdgeInsets.symmetric(horizontal:12,vertical:2),
+         childrenPadding:const EdgeInsets.fromLTRB(12,2,12,12),
+         title:WaffraText(b.budgetLabel??('ميزانية '+b.displayName),
           maxLines:2,style:const TextStyle(fontWeight:FontWeight.bold)),
-
-         const SizedBox(height:8),
-         LinearProgressIndicator(value:ratio,minHeight:7,
-          color:spent>b.budget?Colors.deepOrange:emerald,
-          backgroundColor:emerald.withValues(alpha:.1)),
-         const SizedBox(height:6),
-         WaffraText(waffraIsEnglish?
-          'Limit: '+cash(b.budget)+'  •  Spent: '+cash(spent)+'  •  Left: '+cash(b.budget-spent):
-          'الحد: '+cash(b.budget)+'  •  المصروف: '+cash(spent)+'  •  المتبقي: '+cash(b.budget-spent),
-          maxLines:3,style:const TextStyle(fontSize:12)),
-         const SizedBox(height:8),
-         ExpansionTile(
-          key:PageStorageKey<String>('waffra-budget-quick-actions-'+b.id),
-          initiallyExpanded:false,
-          tilePadding:EdgeInsets.zero,
-          childrenPadding:const EdgeInsets.only(bottom:8),
-          leading:const Icon(Icons.settings_rounded,color:emerald,size:20),
-          title:WaffraText(waffraIsEnglish?'Quick actions':'إجراءات سريعة',
-           style:const TextStyle(fontWeight:FontWeight.w700,fontSize:13)),
-          children:[
-           Wrap(spacing:8,runSpacing:8,children:[
-          TextButton.icon(
-           onPressed:WaffraHaptics.tap(()async{
-            await editBudgetForCategory(b);
-            if(mounted)refresh((){});
-           }),
-           icon:const Icon(Icons.edit_outlined,size:17),
-           label:WaffraText(waffraIsEnglish?'Edit':'تعديل')),
-          TextButton.icon(
-           onPressed:WaffraHaptics.tap(()async{
-            await setNamedBudgetActive(b,!b.budgetActive);
-            if(mounted)refresh((){});
-           }),
-           icon:Icon(b.budgetActive?
-            Icons.pause_circle_outline:Icons.play_circle_outline,size:17),
-           label:WaffraText(b.budgetActive?
-            (waffraIsEnglish?'Pause':'إيقاف'):
-            (waffraIsEnglish?'Resume':'تفعيل'))),
-          TextButton.icon(
-           onPressed:WaffraHaptics.tap(()async{
-            await deleteNamedBudget(b);
-            if(mounted)refresh((){});
-           }),
-           icon:const Icon(Icons.delete_outline_rounded,size:17,
-            color:Colors.deepOrange),
-           label:WaffraText(waffraIsEnglish?'Delete':'حذف',
-            style:const TextStyle(color:Colors.deepOrange))),
-
+         subtitle:WaffraText(waffraIsEnglish?
+          'Limit: '+cash(b.budget)+' • Spent: '+cash(spent):
+          'الحد: '+cash(b.budget)+' • المصروف: '+cash(spent),
+          maxLines:2,style:const TextStyle(fontSize:11)),
+         children:[
+          ClipRRect(
+           borderRadius:BorderRadius.circular(6),
+           child:LinearProgressIndicator(value:ratio,minHeight:7,
+            color:spent>b.budget?Colors.deepOrange:emerald,
+            backgroundColor:emerald.withValues(alpha:.10))),
+          const SizedBox(height:8),
+          WaffraText(waffraIsEnglish?
+           'Remaining: '+cash(b.budget-spent):
+           'المتبقي: '+cash(b.budget-spent),
+           style:const TextStyle(fontSize:12)),
+          const SizedBox(height:12),
+          Container(
+           width:double.infinity,
+           padding:const EdgeInsets.symmetric(horizontal:10,vertical:11),
+           decoration:BoxDecoration(
+            border:Border.all(color:emerald.withValues(alpha:.30)),
+            borderRadius:BorderRadius.circular(12)),
+           child:Row(children:[
+            const Icon(Icons.settings_rounded,color:emerald,size:18),
+            const SizedBox(width:8),
+            Expanded(child:WaffraText(
+             waffraIsEnglish?'Quick actions':'إجراءات سريعة',
+             style:const TextStyle(fontWeight:FontWeight.w700,fontSize:12))),
+           ])),
+          const SizedBox(height:8),
+          Wrap(spacing:7,runSpacing:8,crossAxisAlignment:WrapCrossAlignment.center,
+           children:[
+            OutlinedButton.icon(
+             style:OutlinedButton.styleFrom(
+              minimumSize:const Size(0,48),
+              padding:const EdgeInsets.symmetric(horizontal:9,vertical:7)),
+             onPressed:WaffraHaptics.tap(()async{
+              await editBudgetForCategory(b);
+              if(mounted)refresh((){});
+             }),
+             icon:const Icon(Icons.edit_outlined,size:16),
+             label:WaffraText(waffraIsEnglish?'Edit':'تعديل',
+              style:const TextStyle(fontSize:12))),
+            OutlinedButton.icon(
+             style:OutlinedButton.styleFrom(
+              minimumSize:const Size(0,48),
+              padding:const EdgeInsets.symmetric(horizontal:9,vertical:7)),
+             onPressed:WaffraHaptics.tap(()async{
+              await deleteNamedBudget(b);
+              if(mounted)refresh((){});
+             }),
+             icon:const Icon(Icons.delete_outline_rounded,
+              size:16,color:Colors.deepOrange),
+             label:WaffraText(waffraIsEnglish?'Delete':'حذف',
+              style:const TextStyle(color:Colors.deepOrange,fontSize:12))),
+            Container(
+             padding:const EdgeInsetsDirectional.only(start:8,end:2),
+             decoration:BoxDecoration(
+              border:Border.all(color:emerald.withValues(alpha:.30)),
+              borderRadius:BorderRadius.circular(12)),
+             child:Row(mainAxisSize:MainAxisSize.min,children:[
+              WaffraText(b.budgetActive?
+               (waffraIsEnglish?'Enabled':'مفعّل'):
+               (waffraIsEnglish?'Paused':'متوقف'),
+               style:const TextStyle(fontSize:12,fontWeight:FontWeight.w700)),
+              Switch.adaptive(
+               key:Key('waffra-budget-active-'+b.id),
+               value:b.budgetActive,
+               activeTrackColor:emerald,
+               onChanged:WaffraHaptics.selection((enabled)async{
+                await setNamedBudgetActive(b,enabled);
+                if(mounted)refresh((){});
+               })),
+             ])),
            ]),
-          ],
-         ),
-        ]),
+         ],
+        ),
        ),
       );
      }),
      const SizedBox(height:10),
      ExpansionTile(
       key:const PageStorageKey<String>('waffra-budget-starter-templates'),
-      initiallyExpanded:true,
-      tilePadding:EdgeInsets.zero,
+      initiallyExpanded:false,
+      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12),
+       side:BorderSide(color:emerald.withValues(alpha:.30))),
+      collapsedShape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12),
+       side:BorderSide(color:emerald.withValues(alpha:.30))),
+      tilePadding:const EdgeInsets.symmetric(horizontal:10),
       childrenPadding:const EdgeInsets.only(bottom:8),
       leading:const Icon(Icons.auto_awesome_outlined,color:emerald),
       title:WaffraText(waffraIsEnglish?
