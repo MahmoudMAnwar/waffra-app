@@ -3882,6 +3882,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    !b.deleted&&b.budget>0&&b.budgetActive).toList();
   final assigned=List<String?>.filled(candidates.length,null);
   if(!candidates.any((e)=>!e.income)||choices.isEmpty)return assigned;
+  var missingBudgetSelection=false;
   return showWaffraDialog<List<String?>>(context:context,
    builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
     title:WaffraText(waffraIsEnglish?'Choose budgets for expenses':'تسجيل كل مصروف في أي ميزانية؟'),
@@ -3890,7 +3891,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      child:ListView(children:[
       WaffraText(waffraIsEnglish?
        'Nothing is linked automatically. Review each expense before saving.':
-       'الربط مش تلقائي؛ راجع ميزانية كل مصروف قبل الحفظ.'),
+       'الربط مش تلقائي؛ اختر ميزانية لكل مصروف قبل الحفظ.'),
+      if(missingBudgetSelection)Padding(
+       padding:const EdgeInsets.only(top:8),
+       child:WaffraText(waffraIsEnglish?
+        'Select a budget for every expense before saving.':
+        'اختار ميزانية لكل مصروف قبل الحفظ.',
+        style:const TextStyle(color:Colors.deepOrange,fontWeight:FontWeight.w700))),
       const SizedBox(height:12),
       for(var n=0;n<candidates.length;n++)
        if(!candidates[n].income)Padding(
@@ -3902,17 +3909,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          DropdownButtonFormField<String>(
           key:ValueKey('waffra-sms-budget-'+n.toString()+'-'+(assigned[n]??'none')),
           menuMaxHeight:min(340.0,MediaQuery.sizeOf(ctx).height*.48),
-          initialValue:assigned[n]??'none',isExpanded:true,
-          decoration:InputDecoration(labelText:waffraIsEnglish?'Budget':'الميزانية',
+          initialValue:assigned[n],isExpanded:true,
+          decoration:InputDecoration(labelText:waffraIsEnglish?'Budget *':'الميزانية *',
            border:const OutlineInputBorder()),
           items:[
-           DropdownMenuItem(value:'none',child:WaffraText(
-            waffraIsEnglish?'Unassigned':'غير مرتبطة بميزانية')),
            ...choices.map((c)=>DropdownMenuItem(value:c.id,child:WaffraText(
             c.budgetLabel??'ميزانية '+c.displayName,maxLines:1))),
           ],
-          onChanged:WaffraHaptics.selection((value)=>update(
-           ()=>assigned[n]=value=='none'?null:value)),
+          onChanged:WaffraHaptics.selection((value)=>update((){
+           assigned[n]=value;
+           missingBudgetSelection=false;
+          })),
          ),
          Align(alignment:AlignmentDirectional.centerStart,
           child:TextButton.icon(
@@ -3940,9 +3947,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     actions:[
      TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
       child:WaffraText(waffraIsEnglish?'Cancel batch':'إلغاء')),
-     FilledButton(onPressed:WaffraHaptics.tap(()=>
-      Navigator.pop(ctx,List<String?>.from(assigned))),
-      child:WaffraText(waffraIsEnglish?'Confirm budget choices':'تأكيد الميزانيات')),
+     FilledButton(onPressed:WaffraHaptics.tap((){
+      if(candidates.asMap().entries.any((pair)=>
+       !pair.value.income&&assigned[pair.key]==null)){
+       update(()=>missingBudgetSelection=true);
+       return;
+      }
+      Navigator.pop(ctx,List<String?>.from(assigned));
+     }),child:WaffraText(waffraIsEnglish?
+      'Confirm budget choices':'تأكيد الميزانيات')),
     ],
    )));
  }
@@ -5570,13 +5583,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          initialValue:namedBudgets.any((b)=>b.budget>0&&
           !b.deleted&&(b.budgetActive||
            (initial!=null&&initial.budgetId==b.id))&&
-          b.id==selectedBudgetId)?selectedBudgetId:'unlinked',
+          b.id==selectedBudgetId)?selectedBudgetId:
+           (initial!=null?'unlinked':null),
          isExpanded:true,
          decoration:InputDecoration(
-          labelText:waffraIsEnglish?'Transaction budget':'ميزانية العملية',
+          labelText:waffraIsEnglish?'Transaction budget *':'ميزانية العملية *',
+          errorText:attempted&&initial==null&&selectedBudgetId==null?
+           waffraRequiredFieldMessage:null,
           border:const OutlineInputBorder()),
          items:[
-          DropdownMenuItem(value:'unlinked',child:WaffraText(
+          if(initial!=null)DropdownMenuItem(value:'unlinked',child:WaffraText(
            waffraIsEnglish?'No budget':'غير مرتبطة',maxLines:1)),
           ...namedBudgets.where((b)=>b.budget>0&&b.budgetActive&&!b.deleted)
            .map((c)=>DropdownMenuItem(value:c.id,child:WaffraText(
@@ -5629,9 +5645,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        ]),
        if(selectedBudgetId==null)Padding(
         padding:const EdgeInsets.only(top:7),
-        child:WaffraText(waffraIsEnglish?
-         'Unassigned; you can link this expense to a budget later.':
-         'غير مرتبطة بميزانية، تقدر تربطها لاحقًا.',
+        child:WaffraText(initial==null?
+         (waffraIsEnglish?'Choose a budget before saving.':
+          'اختار ميزانية قبل الحفظ.'):
+         (waffraIsEnglish?
+          'Unassigned; you can link this expense to a budget later.':
+          'غير مرتبطة بميزانية، تقدر تربطها لاحقًا.'),
          style:const TextStyle(color:Colors.deepOrange,fontSize:11))),
       ]else
        Padding(padding:const EdgeInsets.symmetric(vertical:12),
@@ -5746,6 +5765,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        }
        if(!waffraCanAssignManualCategory(categories,
         income,selectedParentId,category))return;
+       if(initial==null&&!income&&
+        waffraHasSelectableBudget(namedBudgets)&&selectedBudgetId==null)return;
        if(!income&&selectedBudgetId!=null&&
           !namedBudgets.any((b)=>b.id==selectedBudgetId&&
             b.budget>0&&!b.deleted&&
