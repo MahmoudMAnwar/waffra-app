@@ -17,21 +17,24 @@ Future<DateTime?> waffraPickDateWithToday({
   return showDatePicker(
    context:context,initialDate:initialDate,
    firstDate:firstDate,lastDate:lastDate,
-   builder:(dialogContext,child)=>Column(children:[
-    Expanded(child:child??const SizedBox.shrink()),
-    SafeArea(top:false,child:Material(
-      color:Theme.of(dialogContext).colorScheme.surface,
-      child:Padding(padding:const EdgeInsets.fromLTRB(20,5,20,12),
-       child:Align(alignment:AlignmentDirectional.centerEnd,
-        child:Semantics(button:true,
-         label:english?'Go to today':'العودة إلى اليوم',
-         child:FilledButton.tonalIcon(
-          key:const Key('waffra-datepicker-today'),
-          onPressed:allowed?WaffraHaptics.tap(
-           ()=>Navigator.of(dialogContext).pop(today)):null,
-          icon:const Icon(Icons.today_rounded,size:18),
-          label:Text(english?'Today':'اليوم',style:
-           const TextStyle(fontFamily:'Tajawal',fontWeight:FontWeight.w700)))))))),
+   // Keep the Today shortcut inside the Material date dialog rather than
+   // adding a second full-width row outside its rounded card.
+   builder:(dialogContext,child)=>Stack(children:[
+    child??const SizedBox.shrink(),
+    PositionedDirectional(start:18,bottom:9,child:SafeArea(
+     top:false,bottom:false,child:Semantics(button:true,
+      label:english?'Go to today':'العودة إلى اليوم',
+      child:FilledButton.tonalIcon(
+       key:const Key('waffra-datepicker-today'),
+       onPressed:allowed?WaffraHaptics.tap(
+        ()=>Navigator.of(dialogContext).pop(today)):null,
+       style:FilledButton.styleFrom(
+        minimumSize:const Size(88,40),
+        padding:const EdgeInsets.symmetric(horizontal:12),
+        visualDensity:VisualDensity.compact),
+       icon:const Icon(Icons.today_rounded,size:18),
+       label:Text(english?'Today':'اليوم',style:
+        const TextStyle(fontFamily:'Tajawal',fontWeight:FontWeight.w700)))))),
    ]),
   );
 }
