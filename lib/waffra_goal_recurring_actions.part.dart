@@ -102,7 +102,7 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
          amountError=noTarget?null:waffraAmountFieldError(target.text);
         });
         if(nameError!=null||amountError!=null||(!noTarget&&(v==null||v<=0)))return;
-        Navigator.pop(dialog,SavingGoal(id:existing.id,name:n,target:noTarget?0:v!,
+        Navigator.pop(dialog,SavingGoal(id:existing.id,name:n,target:noTarget?0.0:v!,
          saved:existing.saved,dueDate:removeDeadline?null:deadline));
        }),child:WaffraText(waffraIsEnglish?'Save changes':'حفظ التعديل')),
       ],
