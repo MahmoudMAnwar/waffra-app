@@ -90,6 +90,9 @@ extension WaffraCategoryScreen on _HomeScreenState {
       ]),
       const SizedBox(height:5),
       WaffraText(root.name,maxLines:2,style:const TextStyle(fontSize:15,fontWeight:FontWeight.w700)),
+      if(!root.categoryActive)WaffraText(
+       waffraIsEnglish?'Paused':'متوقف مؤقتًا',
+       style:const TextStyle(fontSize:11,color:Colors.grey)),
       const SizedBox(height:5),
       WaffraText(waffraIsEnglish?'${visibleChildren.length} subcategories':'${visibleChildren.length} قسم فرعي',
        style:TextStyle(fontSize:11,color:Theme.of(context).hintColor)),
@@ -106,6 +109,8 @@ extension WaffraCategoryScreen on _HomeScreenState {
       ExpansionTile(
        key:PageStorageKey<String>('waffra-root-category-actions-'+root.id),
        initiallyExpanded:false,
+       shape:const RoundedRectangleBorder(side:BorderSide.none),
+       collapsedShape:const RoundedRectangleBorder(side:BorderSide.none),
        tilePadding:EdgeInsets.zero,
        childrenPadding:const EdgeInsets.symmetric(vertical:6),
        leading:const Icon(Icons.settings_rounded,size:18,color:emerald),
@@ -114,8 +119,8 @@ extension WaffraCategoryScreen on _HomeScreenState {
        children:[
         Wrap(spacing:6,runSpacing:8,children:[
          TextButton.icon(
-          onPressed:WaffraHaptics.tap(()=>
-           addCategory(income:root.income,parentId:root.id)),
+          onPressed:root.categoryActive?WaffraHaptics.tap(()=>
+           addCategory(income:root.income,parentId:root.id)):null,
           icon:const Icon(Icons.add_rounded,size:16),
           label:WaffraText(waffraIsEnglish?'Add subcategory':'إضافة فرعي',
            style:const TextStyle(fontSize:11))),
@@ -131,6 +136,21 @@ extension WaffraCategoryScreen on _HomeScreenState {
           label:WaffraText(waffraIsEnglish?'Delete':'حذف',
            style:const TextStyle(color:Colors.deepOrange,fontSize:11))),
         ]),
+        SwitchListTile.adaptive(
+         key:Key('waffra-root-category-active-'+root.id),
+         contentPadding:EdgeInsets.zero,
+         dense:true,
+         title:WaffraText(waffraIsEnglish?'Enable category':'تفعيل القسم',
+          style:const TextStyle(fontSize:12,fontWeight:FontWeight.w700)),
+         subtitle:WaffraText(root.categoryActive?
+          (waffraIsEnglish?'Available for new entries':'متاح للعمليات الجديدة'):
+          (waffraIsEnglish?'Paused — old entries are kept':'متوقف مؤقتًا — معاملاتك محفوظة'),
+          style:const TextStyle(fontSize:11)),
+         activeTrackColor:emerald,
+         value:root.categoryActive,
+         onChanged:WaffraHaptics.selection((v)=>
+          unawaited(setCategoryActive(root,v))),
+        ),
        ]),
      ]))));
   }
@@ -150,6 +170,9 @@ extension WaffraCategoryScreen on _HomeScreenState {
        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         WaffraText(sub.displayName,maxLines:2,
          style:const TextStyle(fontSize:12,fontWeight:FontWeight.bold)),
+        if(!waffraCategoryAvailableForNewEntry(categories,sub))
+         WaffraText(waffraIsEnglish?'Paused':'متوقف مؤقتًا',
+          style:const TextStyle(fontSize:10,color:Colors.grey)),
         if(total>0)WaffraText(cash(total),maxLines:1,
          style:TextStyle(fontSize:10,color:Theme.of(context).hintColor)),
        ])),
@@ -158,6 +181,8 @@ extension WaffraCategoryScreen on _HomeScreenState {
       ExpansionTile(
        key:PageStorageKey<String>('waffra-subcategory-actions-'+sub.id),
        initiallyExpanded:false,
+       shape:const RoundedRectangleBorder(side:BorderSide.none),
+       collapsedShape:const RoundedRectangleBorder(side:BorderSide.none),
        tilePadding:EdgeInsets.zero,
        childrenPadding:const EdgeInsets.symmetric(vertical:4),
        title:WaffraText(waffraIsEnglish?'Quick actions':'إجراءات سريعة',
@@ -177,6 +202,23 @@ extension WaffraCategoryScreen on _HomeScreenState {
           label:WaffraText(waffraIsEnglish?'Delete':'حذف',
            style:const TextStyle(fontSize:11,color:Colors.deepOrange))),
         ]),
+        SwitchListTile.adaptive(
+         key:Key('waffra-subcategory-active-'+sub.id),
+         dense:true,
+         contentPadding:EdgeInsets.zero,
+         title:WaffraText(waffraIsEnglish?'Enable subcategory':'تفعيل القسم الفرعي',
+          style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700)),
+         subtitle:WaffraText(!sub.categoryActive?
+          (waffraIsEnglish?'Paused — history kept':'متوقف — السجل محفوظ'):
+          !waffraCategoryAvailableForNewEntry(categories,sub)?
+          (waffraIsEnglish?'Main category is paused':'القسم الرئيسي متوقف'):
+          (waffraIsEnglish?'Available for new entries':'متاح للعمليات الجديدة'),
+          style:const TextStyle(fontSize:10)),
+         activeTrackColor:emerald,
+         value:sub.categoryActive,
+         onChanged:WaffraHaptics.selection((v)=>
+          unawaited(setCategoryActive(sub,v))),
+        ),
        ]),
      ])));
   }
@@ -203,7 +245,8 @@ extension WaffraCategoryScreen on _HomeScreenState {
       Row(children:[
        Expanded(child:WaffraText(root.name,
         style:const TextStyle(fontSize:15,fontWeight:FontWeight.bold))),
-       TextButton.icon(onPressed:WaffraHaptics.tap(()=>addCategory(income:root.income,parentId:root.id)),
+       TextButton.icon(onPressed:root.categoryActive?
+        WaffraHaptics.tap(()=>addCategory(income:root.income,parentId:root.id)):null,
         icon:const Icon(Icons.add,size:16),
         label:WaffraText(waffraIsEnglish?'Add subcategory':'إضافة فرعي')),
       ]),
