@@ -96,6 +96,7 @@ part 'waffra_budget_directory.part.dart';
 part 'waffra_smart_analysis.part.dart';
 part 'waffra_recurring_trash.part.dart';
 part 'waffra_goal_recurring_actions.part.dart';
+part 'waffra_clone_goal_recurring.part.dart';
 part 'waffra_deleted_item_card.part.dart';
 part 'waffra_widget_capture.part.dart';
 
@@ -9380,10 +9381,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     color:selected?(Theme.of(context).brightness==Brightness.dark
      ?const Color(0xFFD9FFE9):forest):null,
     fontWeight:selected?FontWeight.bold:FontWeight.normal));
- Future<void> goalDialog()async {
+ Future<void> goalDialog({SavingGoal? copyFrom})async {
   await _ensureFinanceBound();
-  final name=TextEditingController(),target=TextEditingController();
-  DateTime? selectedDeadline;
+  final copyBase=copyFrom==null?'':
+   (waffraIsEnglish?'Copy of ':'نسخة من ')+copyFrom.name;
+  var copyName=copyBase;
+  if(copyFrom!=null){
+   var suffix=2;
+   while(goals.any((g)=>waffraNormalizeGoal(g.name)==waffraNormalizeGoal(copyName))){
+    copyName=copyBase+' ('+suffix.toString()+')';suffix++;
+   }
+  }
+  final name=TextEditingController(text:copyName),
+   target=TextEditingController(text:copyFrom==null?'':
+    formatWaffraEditAmount(copyFrom.target));
+  DateTime? selectedDeadline=copyFrom?.dueDate;
+  if(selectedDeadline!=null&&!selectedDeadline.isAfter(DateTime.now())){
+   selectedDeadline=null; // No overdue obligation on copy.
+  }
   final customGoals=await _financeAuthority.loadCustomGoalSuggestions();
   if(!mounted){name.dispose();target.dispose();return;}
   final defaults=waffraDefaultGoalNames(waffraIsEnglish);
@@ -9398,7 +9413,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(key.isNotEmpty&&seen.add(key))suggested.add(entry.trim());
   }
   const otherGoal='__other_goal__';
-  String selectedGoal='';
+  String selectedGoal=copyFrom==null?'':otherGoal;
   bool attempted=false;
   String? validateGoalName(){
    final issue=waffraGoalNameIssue(name.text,goals.map((g)=>g.name));
@@ -10170,13 +10185,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    const SizedBox(height:30),
   ]);
  }
- Future<void> recurringDialog({String? suggestedTitle,double? suggestedAmount,RecurringBill? initial})async {
-  final title=TextEditingController(text:initial?.title??suggestedTitle??''),
-   amount=TextEditingController(text:initial!=null?formatWaffraEditAmount(initial.amount):suggestedAmount==null?'':formatWaffraEditAmount(suggestedAmount)),
-   day=TextEditingController(text:(initial?.day??1).toString());
-  bool income=initial?.income??false;String category=initial?.category??(forType(false).isNotEmpty?
-    forType(false).first.name:'');bool attempted=false;
-  DateTime startAt=initial?.startAt??DateTime.now();
+ Future<void> recurringDialog({String? suggestedTitle,double? suggestedAmount,RecurringBill? initial,RecurringBill? copyFrom})async {
+  // Only seed fields. Never inherit old schedule ID or paid occurrences.
+  final seed=initial??copyFrom;
+  final title=TextEditingController(text:seed?.title??suggestedTitle??''),
+   amount=TextEditingController(text:seed!=null?
+    formatWaffraEditAmount(seed.amount):suggestedAmount==null?'':
+    formatWaffraEditAmount(suggestedAmount)),
+   day=TextEditingController(text:(seed?.day??1).toString());
+  bool income=seed?.income??false;
+  String category=seed?.category??(forType(false).isNotEmpty?
+   forType(false).first.name:'');bool attempted=false;
+  DateTime startAt=initial?.startAt??DateTime.now().add(const Duration(days:1));
   final r=await showWaffraDialog<RecurringBill>(context:context,
    builder:(ctx)=>StatefulBuilder(builder:(ctx,update){
     final options=forType(income);
@@ -11782,7 +11802,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  bool _consumeHomeBack(){
   if(!mounted)return false;
-  if(accountOpened||goalsOpened||tab!=0||addFabExpanded){
+  if(addFabExpanded){setState(()=>addFabExpanded=false);return true;}
+  if(accountOpened||goalsOpened||tab!=0){
    setState((){tab=0;accountOpened=false;goalsOpened=false;
     addFabExpanded=false;_headerCompact=false;});
    return true;
@@ -11863,10 +11884,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        child:Transform.translate(offset:Offset((1-progress)*(waffraIsEnglish?26:-26),0),
         child:Transform.scale(scale:accountOpened?0.985+0.015*progress:1,child:child))),
       child:currentTab()))),
-    if(!accountOpened&&(tab==0||tab==1))
+    if(addFabExpanded&&!accountOpened&&tab!=2)
+     Positioned.fill(child:GestureDetector(
+      behavior:HitTestBehavior.opaque,
+      onTap:WaffraHaptics.tap(()=>setState(()=>addFabExpanded=false)),
+      child:BackdropFilter(filter:ui.ImageFilter.blur(sigmaX:7,sigmaY:7),
+       child:ColoredBox(color:Colors.black.withValues(alpha:.27))))),
+    if(!accountOpened&&(tab==0||tab==1||tab==3||tab==4||goalsOpened))
      WaffraFabMenuAnchor(
       english:waffraIsEnglish,
-      expanded:addFabExpanded&&!goalsOpened,
+      expanded:addFabExpanded,
       menu:Column(mainAxisSize:MainAxisSize.min,
        crossAxisAlignment:waffraIsEnglish?CrossAxisAlignment.end:CrossAxisAlignment.start,
        children:[
@@ -11891,7 +11918,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          onTap:WaffraHaptics.tapRequired((){
           unawaited(_launchAddAction(scanAndAddReceipt,fromMenu:true));
          })),
-        ]else...[
+        ]else if(tab==1&&!goalsOpened)...[
          _addMenuOption(icon:Icons.trending_up,
           label:waffraIsEnglish?'Income category':'إضافة قسم دخل',
           onTap:WaffraHaptics.tapRequired((){unawaited(_launchAddAction(()=>chooseCategoryLevel(income:true),fromMenu:true));})),
@@ -11899,6 +11926,30 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          _addMenuOption(icon:Icons.trending_down,
           label:waffraIsEnglish?'Expense category':'إضافة قسم مصروفات',
           onTap:WaffraHaptics.tapRequired((){unawaited(_launchAddAction(()=>chooseCategoryLevel(income:false),fromMenu:true));})),
+        ]else if(goalsOpened||tab==3)...[
+         _addMenuOption(icon:Icons.add_circle_outline_rounded,
+          label:waffraIsEnglish?'New savings goal':'إضافة هدف جديد',
+          onTap:WaffraHaptics.tapRequired((){
+           unawaited(_launchAddAction(()=>goalDialog(),fromMenu:true));
+          })),
+         const SizedBox(height:7),
+         _addMenuOption(icon:Icons.copy_rounded,
+          label:waffraIsEnglish?'Copy current or past goal':'نسخ هدف موجود أو سابق',
+          onTap:WaffraHaptics.tapRequired((){
+           unawaited(_launchAddAction(copyGoalDialog,fromMenu:true));
+          })),
+        ]else if(tab==4)...[
+         _addMenuOption(icon:Icons.add_circle_outline_rounded,
+          label:waffraIsEnglish?'New recurring item':'إضافة عملية متكررة',
+          onTap:WaffraHaptics.tapRequired((){
+           unawaited(_launchAddAction(()=>recurringDialog(),fromMenu:true));
+          })),
+         const SizedBox(height:7),
+         _addMenuOption(icon:Icons.copy_rounded,
+          label:waffraIsEnglish?'Copy recurring item':'نسخ عملية متكررة موجودة أو سابقة',
+          onTap:WaffraHaptics.tapRequired((){
+           unawaited(_launchAddAction(copyRecurringDialog,fromMenu:true));
+          })),
         ]
        ]),
      ),
@@ -11928,8 +11979,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      setState(()=>_fabPressed=false);
      await Future<void>.delayed(waffraMotion(110));
      if(!mounted||tab!=tappedTab)return;
-     if(goalsOpened||tab==3){unawaited(_launchAddAction(()=>goalDialog()));return;}
-     if(tab==4){unawaited(_launchAddAction(()=>recurringDialog()));return;}
      setState(()=>addFabExpanded=!addFabExpanded);
     },
     splashFactory:NoSplash.splashFactory,
