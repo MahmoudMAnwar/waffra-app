@@ -187,7 +187,7 @@ void main() {
           'goal': {
             'id': 'goal-x',
             'name': 'bad target',
-            'target': 0,
+            'target': -1,
             'saved': 100,
           },
           'deletedAt': '2026-10-21T13:00:00',
