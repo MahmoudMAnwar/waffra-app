@@ -108,6 +108,9 @@ class WaffraFreshModulesRepository {
         }
         _halalas(data['target']);
         _halalas(data['saved'] ?? 0);
+        if(data['active'] != null && data['active'] is! bool){
+          throw ArgumentError('Invalid goal active flag.');
+        }
         break;
       case WaffraFinanceModule.recurring:
         if (data['income'] is! bool) throw ArgumentError('Recurring type is mandatory.');
