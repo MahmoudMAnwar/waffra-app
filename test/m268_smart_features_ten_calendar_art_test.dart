@@ -199,7 +199,7 @@ void main(){
    expect(sample.length,2);
    expect(waffraSmartBalance(sample),1150);
   });
-  testWidgets('analysis and Saudi gold/oil markets open without global currency panel',(tester)async{
+  testWidgets('analysis and live currency converter, gold and oil open in Tools',(tester)async{
    await tester.pumpWidget(MaterialApp(home:Scaffold(
     body:WaffraSmartFeaturesPage(embedded:true,entries:sample,
      goals:const [],recurring:const [],english:false,
@@ -219,7 +219,7 @@ void main(){
    await tester.pumpAndSettle();
    expect(find.byKey(const Key('waffra-m268-expanded-analysis')),findsNothing);
    expect(find.byKey(const Key('waffra-inline-world-markets')),findsOneWidget);
-   expect(find.byKey(const Key('waffra-market-currency')),findsNothing);
+   expect(find.byKey(const Key('waffra-market-currency')),findsOneWidget);
    expect(find.byKey(const Key('waffra-market-gold')),findsOneWidget);
    expect(find.byKey(const Key('waffra-market-oil')),findsOneWidget);
    expect(find.byType(Scaffold),findsOneWidget);
