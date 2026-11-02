@@ -1,35 +1,88 @@
-/// Suggested budget names only, never financial records or assigned limits.
-/// Budgets are independent of categories; templates choose NO category and
-/// require a user-confirmed name, monthly cap and alert level.
-class WaffraBudgetTemplate {
- final String nameAr,nameEn;
- const WaffraBudgetTemplate(this.nameAr,this.nameEn);
+/// Optional independent starter budget names only; no budget assignment,
+/// money movement, category hierarchy, account ID or automatic spending.
+/// Every template requires explicit user entry of a limit and confirmation.
+class WaffraBudgetTemplateGroup {
+ final String id,nameAr,nameEn;
+ const WaffraBudgetTemplateGroup(this.id,this.nameAr,this.nameEn);
  String name(bool english)=>english?nameEn:nameAr;
 }
-
+class WaffraBudgetTemplate {
+ final String nameAr,nameEn,group;
+ const WaffraBudgetTemplate(this.nameAr,this.nameEn,{required this.group});
+ String name(bool english)=>english?nameEn:nameAr;
+}
+const waffraBudgetTemplateGroups=<WaffraBudgetTemplateGroup>[
+ WaffraBudgetTemplateGroup('home','البيت','Home'),
+ WaffraBudgetTemplateGroup('food','الأكل والمطاعم','Food & dining'),
+ WaffraBudgetTemplateGroup('transport','السيارة والمواصلات','Transport'),
+ WaffraBudgetTemplateGroup('utilities','الفواتير والاشتراكات','Bills'),
+ WaffraBudgetTemplateGroup('health','الصحة والعافية','Health'),
+ WaffraBudgetTemplateGroup('family','الأسرة والتعليم','Family'),
+ WaffraBudgetTemplateGroup('lifestyle','التسوق والترفيه','Lifestyle'),
+ WaffraBudgetTemplateGroup('giving','العطاء والالتزامات','Giving'),
+ WaffraBudgetTemplateGroup('other','أخرى','Other'),
+];
 const waffraBudgetStarterTemplates=<WaffraBudgetTemplate>[
- WaffraBudgetTemplate('إيجار البيت','Home rent'),
- WaffraBudgetTemplate('مشتريات السوبرماركت','Groceries'),
- WaffraBudgetTemplate('مطاعم الشهر','Restaurants'),
- WaffraBudgetTemplate('القهوة والمقاهي','Coffee & cafés'),
- WaffraBudgetTemplate('توصيل الطعام','Food delivery'),
- WaffraBudgetTemplate('بنزين السيارة','Car fuel'),
- WaffraBudgetTemplate('صيانة السيارة','Car maintenance'),
- WaffraBudgetTemplate('فاتورة الكهرباء','Electricity bill'),
- WaffraBudgetTemplate('فاتورة المياه','Water bill'),
- WaffraBudgetTemplate('الإنترنت المنزلي','Home internet'),
- WaffraBudgetTemplate('فاتورة الجوال','Mobile phone bill'),
- WaffraBudgetTemplate('الصيدلية والأدوية','Pharmacy & medicines'),
- WaffraBudgetTemplate('رسوم التعليم','School fees'),
- WaffraBudgetTemplate('مصروف البيت','Household spending'),
- WaffraBudgetTemplate('احتياجات الأطفال','Children’s essentials'),
- WaffraBudgetTemplate('السفر والعطلات','Travel & holidays'),
- WaffraBudgetTemplate('الاشتراكات الرقمية','Digital subscriptions'),
- WaffraBudgetTemplate('الصدقات','Charitable giving'),
- WaffraBudgetTemplate('الهدايا والمناسبات','Gifts & occasions'),
- WaffraBudgetTemplate('الملابس والتسوق','Clothes & shopping'),
- WaffraBudgetTemplate('الترفيه','Entertainment'),
- WaffraBudgetTemplate('المصاريف الطارئة','Unexpected expenses'),
- WaffraBudgetTemplate('الاشتراك الرياضي','Gym membership'),
- WaffraBudgetTemplate('تأمين السيارة','Car insurance'),
+ WaffraBudgetTemplate('إيجار البيت','Home rent',group:'home'),
+ WaffraBudgetTemplate('قسط التمويل السكني','Mortgage installment',group:'home'),
+ WaffraBudgetTemplate('مصروف البيت','Household spending',group:'home'),
+ WaffraBudgetTemplate('صيانة المنزل','Home maintenance',group:'home'),
+ WaffraBudgetTemplate('أثاث المنزل','Furniture',group:'home'),
+ WaffraBudgetTemplate('الأجهزة المنزلية','Home appliances',group:'home'),
+ WaffraBudgetTemplate('مستلزمات التنظيف','Cleaning supplies',group:'home'),
+ WaffraBudgetTemplate('مساعدة منزلية','Domestic help',group:'home'),
+ WaffraBudgetTemplate('مشتريات السوبرماركت','Groceries',group:'food'),
+ WaffraBudgetTemplate('مطاعم الشهر','Restaurants',group:'food'),
+ WaffraBudgetTemplate('القهوة والمقاهي','Coffee & cafés',group:'food'),
+ WaffraBudgetTemplate('توصيل الطعام','Food delivery',group:'food'),
+ WaffraBudgetTemplate('وجبات العمل','Work lunches',group:'food'),
+ WaffraBudgetTemplate('المخابز والحلويات','Bakeries & sweets',group:'food'),
+ WaffraBudgetTemplate('احتياجات المطبخ','Kitchen supplies',group:'food'),
+ WaffraBudgetTemplate('الأكل الصحي','Healthy food',group:'food'),
+ WaffraBudgetTemplate('بنزين السيارة','Car fuel',group:'transport'),
+ WaffraBudgetTemplate('صيانة السيارة','Car maintenance',group:'transport'),
+ WaffraBudgetTemplate('تأمين السيارة','Car insurance',group:'transport'),
+ WaffraBudgetTemplate('غسيل السيارة','Car wash',group:'transport'),
+ WaffraBudgetTemplate('مواقف السيارة','Parking',group:'transport'),
+ WaffraBudgetTemplate('المواصلات العامة','Public transport',group:'transport'),
+ WaffraBudgetTemplate('تطبيقات التوصيل','Ride hailing',group:'transport'),
+ WaffraBudgetTemplate('تجديد الرخصة','License renewal',group:'transport'),
+ WaffraBudgetTemplate('فاتورة الكهرباء','Electricity bill',group:'utilities'),
+ WaffraBudgetTemplate('فاتورة المياه','Water bill',group:'utilities'),
+ WaffraBudgetTemplate('الإنترنت المنزلي','Home internet',group:'utilities'),
+ WaffraBudgetTemplate('فاتورة الجوال','Mobile phone bill',group:'utilities'),
+ WaffraBudgetTemplate('اشتراكات البث','Streaming subscriptions',group:'utilities'),
+ WaffraBudgetTemplate('الاشتراكات الرقمية','Digital subscriptions',group:'utilities'),
+ WaffraBudgetTemplate('الاشتراكات السنوية','Annual subscriptions',group:'utilities'),
+ WaffraBudgetTemplate('خدمات التخزين السحابي','Cloud storage',group:'utilities'),
+ WaffraBudgetTemplate('الصيدلية والأدوية','Pharmacy & medicines',group:'health'),
+ WaffraBudgetTemplate('زيارات الطبيب','Doctor visits',group:'health'),
+ WaffraBudgetTemplate('التأمين الصحي','Health insurance',group:'health'),
+ WaffraBudgetTemplate('تحاليل وفحوصات','Lab tests',group:'health'),
+ WaffraBudgetTemplate('النظارات والعدسات','Eyewear',group:'health'),
+ WaffraBudgetTemplate('الاشتراك الرياضي','Gym membership',group:'health'),
+ WaffraBudgetTemplate('رسوم التعليم','School fees',group:'family'),
+ WaffraBudgetTemplate('احتياجات الأطفال','Children’s essentials',group:'family'),
+ WaffraBudgetTemplate('الحضانة','Childcare',group:'family'),
+ WaffraBudgetTemplate('الدروس والدورات','Tutoring & courses',group:'family'),
+ WaffraBudgetTemplate('مصروف الأسرة','Family allowance',group:'family'),
+ WaffraBudgetTemplate('احتياجات الوالدين','Parents’ support',group:'family'),
+ WaffraBudgetTemplate('مستلزمات المدرسة','School supplies',group:'family'),
+ WaffraBudgetTemplate('الملابس والتسوق','Clothes & shopping',group:'lifestyle'),
+ WaffraBudgetTemplate('الترفيه','Entertainment',group:'lifestyle'),
+ WaffraBudgetTemplate('السفر والعطلات','Travel & holidays',group:'lifestyle'),
+ WaffraBudgetTemplate('الهدايا والمناسبات','Gifts & occasions',group:'lifestyle'),
+ WaffraBudgetTemplate('العناية الشخصية','Personal care',group:'lifestyle'),
+ WaffraBudgetTemplate('الأنشطة والهوايات','Activities & hobbies',group:'lifestyle'),
+ WaffraBudgetTemplate('العطور والتجميل','Perfumes & beauty',group:'lifestyle'),
+ WaffraBudgetTemplate('المطاعم في السفر','Travel dining',group:'lifestyle'),
+ WaffraBudgetTemplate('الصدقات','Charitable giving',group:'giving'),
+ WaffraBudgetTemplate('الزكاة','Zakat',group:'giving'),
+ WaffraBudgetTemplate('المناسبات العائلية','Family events',group:'giving'),
+ WaffraBudgetTemplate('الدعم الاجتماعي','Community support',group:'giving'),
+ WaffraBudgetTemplate('المصاريف الطارئة','Unexpected expenses',group:'other'),
+ WaffraBudgetTemplate('رسوم حكومية','Government fees',group:'other'),
+ WaffraBudgetTemplate('رسوم بنكية','Bank fees',group:'other'),
+ WaffraBudgetTemplate('تجديد الوثائق','Document renewal',group:'other'),
+ WaffraBudgetTemplate('احتياطي غير متوقع','Unexpected reserve',group:'other'),
 ];
