@@ -7,9 +7,11 @@
     "M389: Goals plus opens new goal, duplicate existing goal, and unlimited savings; Recurring plus opens new recurring or duplicate existing recurring. Duplication uses a new ID, preserves original and does not copy goal savings or old linked-goal ID.",
     "M390: tapping existing counted corner badge on both Home and Transactions opens the exact preserved receipt gallery without modifying saved attachment paths or removing details access.",
     "M388-M390: update only regression tests whose old expected results contradict the newly user-approved functionality; track all 42 acceptance cases independently.",
-    "M388: legacy goal regression must verify goal creation with open-ended zero-target still never debits spendable cash or skips source-bound persistence."
+    "M388: legacy goal regression must verify goal creation with open-ended zero-target still never debits spendable cash or skips source-bound persistence.",
+    "M391: after M274 Android emulator precompile failed on truncated Android NDK 28.2.13676358 zip, perform bounded retries of same pinned NDK with explicit fail-closed version validation, without skipping emulator UI checks."
   ],
   "allowed_changed_files": [
+    ".github/workflows/m274-production-ui-golden.yml",
     "docs/qa/WAFFRA_42_REQUEST_ACCEPTANCE_TRACKER.md",
     "docs/qa/approved_change_scope.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
@@ -20,6 +22,7 @@
     "test/m371_goal_wallet_and_budgets_regression_test.dart",
     "test/m384_receipt_corner_upgrade_regression_test.dart",
     "test/m388_m390_approved_goal_recurring_receipt_test.dart",
+    "test/qa/m391_m274_ndk_archive_retry_test.py",
     "test/storage/m266_home_bound_source_regression_test.dart",
     "test/waffra_directional_fab_receipt_corner_test.dart",
     "test/waffra_oct21_regression_test.dart"
@@ -117,6 +120,12 @@
       {
         "start": "  test('M371 goal creation cannot post an expense or negative cash debit',",
         "end": null
+      }
+    ],
+    ".github/workflows/m274-production-ui-golden.yml": [
+      {
+        "start": "      - name: Recover disposable Linux runner disk before Android emulator QA\n",
+        "end": "      - name: Enable KVM for Android emulator\n"
       }
     ]
   }
