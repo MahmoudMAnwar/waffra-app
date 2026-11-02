@@ -4,10 +4,31 @@ part of 'main.dart';
 /// NOT its own saved amount. Reaching the date alone never posts money;
 /// payment requires explicit confirmation and a verified finance writer.
 extension WaffraGoalRecurringActions on _HomeScreenState {
+ /// Creating a financial due entry is optional and requires explicit consent.
+ /// Declining preserves the goal, its due-date hint, and all saved money.
+ Future<bool> _confirmGoalDueRecurringLink(SavingGoal goal)async{
+  if(!mounted||goal.dueDate==null||goal.target<=0||!goal.active)return false;
+  final choice=await showWaffraDialog<bool>(
+   context:context,builder:(ctx)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?
+     'Create a linked recurring due date?':'ربط استحقاق الهدف بالعمليات المتكررة؟'),
+    content:WaffraText(waffraIsEnglish?
+     'This adds a reminder for ${goal.name} on ${dayText(goal.dueDate!)}. No money is deducted now.':
+     'هيتم إضافة تذكير لاستحقاق «${goal.name}» بتاريخ ${dayText(goal.dueDate!)}، من غير خصم أي فلوس دلوقتي.'),
+    actions:[
+     TextButton(
+      onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),
+      child:WaffraText(waffraIsEnglish?'Not now':'ليس الآن')),
+     FilledButton(
+      onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),
+      child:WaffraText(waffraIsEnglish?'Link due date':'ربط الاستحقاق')),
+    ]));
+  return choice==true;
+ }
  Future<bool> _ensureLinkedRecurringForGoal(SavingGoal goal)async{
   final deadline=goal.dueDate;
   final linkedIndex=recurring.indexWhere((r)=>r.linkedGoalId==goal.id);
-  if(deadline==null){
+  if(deadline==null||goal.target<=0||!goal.active){
    if(linkedIndex<0)return true;
    setState(()=>recurring[linkedIndex]=recurring[linkedIndex].copy(active:false));
   }else{
@@ -24,7 +45,7 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
     (rent.isNotEmpty?rent.first.name:available.first.name);
    final next=linkedIndex>=0?recurring[linkedIndex].copy(
     amount:goal.target,day:deadline.day,startAt:deadline,
-    active:recurring[linkedIndex].active):
+    active:goal.active):
     RecurringBill(id:newId(),title:'استحقاق '+goal.name,category:category,
      amount:goal.target,income:false,day:deadline.day,startAt:deadline,
      linkedGoalId:goal.id);
@@ -39,9 +60,33 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
   return true;
  }
 
+ /// Pause/resume keeps the saved wallet intact and suspends linked due entries.
+ Future<void> setGoalActive(SavingGoal original,bool enabled)async{
+  if(!mounted)return;
+  await _ensureFinanceBound();
+  if(!mounted)return;
+  final matches=goals.where((g)=>g.id==original.id).toList();
+  if(matches.length!=1||matches.single.active==enabled)return;
+  final current=matches.single;
+  final updated=current.copy(active:enabled);
+  setState((){
+   final index=goals.indexWhere((g)=>g.id==current.id);
+   if(index>=0)goals[index]=updated;
+  });
+  if(!await _persistModuleOrReload(
+   WaffraFinanceRoute.goalCreateEditDeleteRestore,
+   operation:'goal-active-toggle'))return;
+  if(updated.dueDate!=null&&updated.target>0){
+   final linked=await _ensureLinkedRecurringForGoal(updated);
+   if(!linked&&mounted)snack(context,waffraIsEnglish?
+    'Goal saved, but linked due date needs review.':
+    'تم حفظ الهدف، لكن الاستحقاق المرتبط يحتاج مراجعة.');
+  }
+ }
  Future<void> editGoal(SavingGoal existing)async{
   final name=TextEditingController(text:existing.name);
-  final target=TextEditingController(text:formatWaffraEditAmount(existing.target));
+  final target=TextEditingController(text:existing.target<=0?'':formatWaffraEditAmount(existing.target));
+  bool noTarget=existing.target<=0;
   DateTime? deadline=existing.dueDate;
   bool removeDeadline=false;
   String? nameError,amountError;
@@ -57,7 +102,12 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
         decoration:InputDecoration(labelText:waffraIsEnglish?'Goal name *':'اسم الهدف *',
          border:const OutlineInputBorder(),errorText:nameError)),
        const SizedBox(height:10),
-       TextField(controller:target,
+       SwitchListTile.adaptive(
+        contentPadding:EdgeInsets.zero,
+        value:noTarget,activeTrackColor:emerald,
+        title:WaffraText(waffraIsEnglish?'Open-ended savings':'ادخار مفتوح بدون مبلغ مستهدف'),
+        onChanged:WaffraHaptics.selection((value)=>update(()=>noTarget=value))),
+       if(!noTarget)TextField(controller:target,
         keyboardType:const TextInputType.numberWithOptions(decimal:true),
         inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],
         onChanged:(_)=>update(()=>amountError=null),
@@ -93,11 +143,12 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
          nameError=waffraGoalNameIssue(n,goals.where((g)=>g.id!=existing.id)
           .map((g)=>g.name))==null?null:
           (waffraIsEnglish?'Enter a unique goal name':'أدخل اسم هدف صحيحًا وغير مكرر');
-         amountError=waffraAmountFieldError(target.text);
+         amountError=noTarget?null:waffraAmountFieldError(target.text);
         });
-        if(nameError!=null||amountError!=null||v==null||v<=0)return;
-        Navigator.pop(dialog,SavingGoal(id:existing.id,name:n,target:v,
-         saved:existing.saved,dueDate:removeDeadline?null:deadline));
+        if(nameError!=null||amountError!=null||(!noTarget&&(v==null||v<=0)))return;
+        Navigator.pop(dialog,SavingGoal(id:existing.id,name:n,target:noTarget?0.0:v!,
+         saved:existing.saved,dueDate:removeDeadline?null:deadline,
+         active:existing.active));
        }),child:WaffraText(waffraIsEnglish?'Save changes':'حفظ التعديل')),
       ],
      )));
@@ -109,7 +160,10 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
    });
    if(!await _persistModuleOrReload(WaffraFinanceRoute.goalCreateEditDeleteRestore,
      operation:'goal-edit'))return;
-   if(updated.dueDate!=null||oldLinked){
+   if(oldLinked){
+    await _ensureLinkedRecurringForGoal(updated);
+   }else if(updated.dueDate!=null&&updated.target>0&&updated.active&&
+     await _confirmGoalDueRecurringLink(updated)){
     await _ensureLinkedRecurringForGoal(updated);
    }
   }finally{disposeLater([name,target]);}

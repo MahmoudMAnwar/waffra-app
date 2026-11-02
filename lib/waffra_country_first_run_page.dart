@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'waffra_centered_dropdown.dart';
 
 import 'waffra_country_suggestion.dart';
 import 'waffra_display_currency.dart';
@@ -124,7 +125,7 @@ class _WaffraCountryFirstRunPageState extends State<WaffraCountryFirstRunPage> {
               style: TextStyle(color: isError
                 ? Theme.of(context).colorScheme.error : emerald))),
           const SizedBox(height: 15),
-          DropdownButtonFormField<String>(
+          WaffraCenteredDropdownFormField<String>(
             key:const Key('waffra-region-dialect-country'),
             value:selectedRegionIso,isExpanded:true,
             decoration:InputDecoration(
@@ -145,7 +146,7 @@ class _WaffraCountryFirstRunPageState extends State<WaffraCountryFirstRunPage> {
             'Country changes Arabic wording only, not your app language or currency.'),
             style:Theme.of(context).textTheme.bodySmall),
           const SizedBox(height: 15),
-          DropdownButtonFormField<String>(
+          WaffraCenteredDropdownFormField<String>(
             key: const Key('m290-currency-select'),
             value: currencyCode, isExpanded: true,
             decoration: InputDecoration(

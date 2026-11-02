@@ -23,7 +23,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  m412-impact:
+    name: M412 Only Run Tests Impacted By Latest PR Update
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.impact.outputs.run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Compare exact before/after change set (missing evidence means RUN)
+        id: impact
+        run: python3 scripts/qa/m412_pr_changed_impact.py --workflow .github/workflows/m274-production-ui-golden.yml
+
   widget-ui-and-golden-candidates:
+    needs: m412-impact
+    if: ${{ needs.m412-impact.outputs.run == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -68,6 +85,8 @@ jobs:
           if-no-files-found: warn
 
   android-emulator-ui-taps:
+    needs: m412-impact
+    if: ${{ needs.m412-impact.outputs.run == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -133,12 +152,56 @@ jobs:
           df -h .
           sudo rm -rf /usr/share/dotnet /usr/local/share/powershell /opt/hostedtoolcache/CodeQL
           df -h .
+      # M391: SDK repository occasionally sends a truncated NDK ZIP to
+      # ephemeral hosted runners. Retry the *same* pinned SDK package, never
+      # bypass or mark the real Android UI test green.
+      - name: Install pinned Android NDK with bounded archive retries
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          version="28.2.13676358"
+          manager="$sdk/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$manager"
+          installed=false
+          for attempt in 1 2 3; do
+            if test -f "$sdk/ndk/$version/source.properties"; then
+              installed=true
+              break
+            fi
+            echo "M391_NDK_DOWNLOAD_ATTEMPT:$attempt"
+            rm -rf "$sdk/ndk/$version"
+            if "$manager" --sdk_root="$sdk" "ndk;$version" && \
+                test -f "$sdk/ndk/$version/source.properties"; then
+              installed=true
+              break
+            fi
+            sleep 5
+          done
+          if test "$installed" != true; then
+            echo "::error::Pinned Android NDK archive unavailable or corrupt after 3 attempts"
+            exit 1
+          fi
+          grep -q 'Pkg.Revision = 28.2.13676358' "$sdk/ndk/$version/source.properties"
+      # M409: flutter drive can reuse the prebuilt APK; flutter test cannot.
+      # Create the standard integration driver on this disposable CI checkout.
+      - name: Prepare integration driver for prebuilt debug APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p test_driver
+          cat > test_driver/integration_test.dart <<'DART'
+          import 'package:integration_test/integration_test_driver.dart';
+          Future<void> main() => integrationDriver();
+          DART
       - name: Precompile Android UI integration APK before emulator launch
         shell: bash
         run: |
           set -euo pipefail
           flutter build apk --debug --no-pub --target integration_test/m274_ui_tap_smoke_android_test.dart
           test -s build/app/outputs/flutter-apk/app-debug.apk
+          # Avoid carrying a multi-GB idle Gradle daemon into the emulator.
+          ./android/gradlew --stop
           df -h .
           free -h
       - name: Enable KVM for Android emulator

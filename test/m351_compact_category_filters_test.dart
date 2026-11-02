@@ -59,7 +59,7 @@ void main(){
   expect(ui,contains("PageStorageKey<String>('waffra-category-filter-dropdown')"));
   expect(ui,contains('ExpansionTile('));
   expect(ui,contains("initiallyExpanded:categoryFiltersOpen"));
-  expect(ui,contains("DropdownButtonFormField<String>("));
+  expect(ui,contains("WaffraCenteredDropdownFormField<String>("));
   expect(ui,contains("key:ValueKey('waffra-category-type-'"));
   expect(ui,isNot(contains("key:ValueKey('waffra-category-budget-'")));
   expect(ui,contains("key:ValueKey('waffra-category-sort-'"));

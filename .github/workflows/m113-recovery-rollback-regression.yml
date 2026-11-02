@@ -9,7 +9,24 @@ on:
 permissions:
   contents: read
 jobs:
+  m412-impact:
+    name: M412 Only Run Tests Impacted By Latest PR Update
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.impact.outputs.run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Compare exact before/after change set (missing evidence means RUN)
+        id: impact
+        run: python3 scripts/qa/m412_pr_changed_impact.py --workflow .github/workflows/m113-recovery-rollback-regression.yml
+
   disposable-recovery:
+    needs: m412-impact
+    if: ${{ needs.m412-impact.outputs.run == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:

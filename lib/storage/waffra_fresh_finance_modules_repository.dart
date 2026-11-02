@@ -106,8 +106,11 @@ class WaffraFreshModulesRepository {
             DateTime.tryParse(data['dueDate'] as String)==null)){
           throw ArgumentError('Invalid goal deadline.');
         }
-        _halalas(data['target'], positive: true);
+        _halalas(data['target']);
         _halalas(data['saved'] ?? 0);
+        if(data['active'] != null && data['active'] is! bool){
+          throw ArgumentError('Invalid goal active flag.');
+        }
         break;
       case WaffraFinanceModule.recurring:
         if (data['income'] is! bool) throw ArgumentError('Recurring type is mandatory.');
@@ -204,7 +207,7 @@ class WaffraFreshModulesRepository {
           break;
         case WaffraFinanceModule.goals:
           final values = <Object?>[
-            data['name'], _halalas(data['target'], positive: true),
+            data['name'], _halalas(data['target']),
             _halalas(data['saved'] ?? 0), raw,
           ];
           if (replaceExisting) {

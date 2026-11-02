@@ -45,7 +45,9 @@ void main() {
     for(final card in <String>[listCard,compactCard]){
       expect(card,contains('final attachmentCount=waffraReceiptPaths('));
       expect(card,contains('if(attachmentCount>0)PositionedDirectional(top:0,start:0'));
-      expect(card,contains('WaffraReceiptCornerBadge(count:attachmentCount,english:waffraIsEnglish)'));
+      expect(card,contains('WaffraReceiptCornerAction('));
+      expect(card,contains('count:attachmentCount,english:waffraIsEnglish'));
+      expect(card,contains('onTap:()=>showReceipt('));
       expect(card,isNot(contains('saveReceipt(')),
         reason:'Badge rendering must not copy user attachments or alter storage.');
       expect(card,isNot(contains('delete(')));

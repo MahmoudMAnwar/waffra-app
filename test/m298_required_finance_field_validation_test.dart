@@ -69,6 +69,6 @@ void main() {
   expect(source,contains("waffraIsEnglish?'Attachment name *':'اسم المرفق *'"));
   expect(source,contains("waffraIsEnglish?'Phone number *':'رقم الجوال *'"));
   expect(source,contains("waffraIsEnglish?'Password *':'كلمة المرور *'"));
-  expect(source,contains("WaffraValidators.requiredCategory(selected,options.map((c)=>c.name))==null"));
+  expect(source,contains("WaffraValidators.requiredCategory(selected,validNames)==null"));
  });
 }

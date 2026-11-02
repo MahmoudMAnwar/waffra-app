@@ -21,7 +21,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  m412-impact:
+    name: M412 Only Run Tests Impacted By Latest PR Update
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.impact.outputs.run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Compare exact before/after change set (missing evidence means RUN)
+        id: impact
+        run: python3 scripts/qa/m412_pr_changed_impact.py --workflow .github/workflows/m283-compact-layout-tools-back-greetings.yml
+
   compact-tools-navigation:
+    needs: m412-impact
+    if: ${{ needs.m412-impact.outputs.run == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -56,6 +73,8 @@ jobs:
             test/m278_system_bars_responsive_matrix_test.dart
 
   full-app-no-regression:
+    needs: m412-impact
+    if: ${{ needs.m412-impact.outputs.run == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 55
     steps:
@@ -71,6 +90,8 @@ jobs:
         run: flutter test test --reporter expanded
 
   source-coverage-safety:
+    needs: m412-impact
+    if: ${{ needs.m412-impact.outputs.run == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'waffra_centered_dropdown.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -467,11 +468,12 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       notice('اختر نوع المشكلة التي واجهتها. لا نجمع بيانات شخصية أو رسائل بنكية أو ملفات.',
         'Select the issue you experienced. No personal details, bank SMS or files are collected.'),
-      DropdownButton<WaffraSafeDiagnosticCode>(
+      WaffraCenteredDropdownFormField<WaffraSafeDiagnosticCode>(
         key: const Key('m281-diagnostic-select'),
         isExpanded: true,
-        hint: Text(t('نوع المشكلة', 'Problem category')),
-        value: userSelectedIssue,
+        decoration:InputDecoration(labelText:t('نوع المشكلة', 'Problem category'),
+          border:const OutlineInputBorder()),
+        initialValue: userSelectedIssue,
         items: WaffraSafeDiagnosticCode.values.map((code) =>
           DropdownMenuItem<WaffraSafeDiagnosticCode>(
             value: code, child: Text(diagnosticLabel(code)))).toList(),

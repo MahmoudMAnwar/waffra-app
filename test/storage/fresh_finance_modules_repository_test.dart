@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:drift/drift.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/storage/waffra_encrypted_store.dart';
@@ -59,6 +60,28 @@ void main() {
         'فاتورة إنترنت');
   });
 
+  test('M394 zero-target open savings and paused flag roundtrip in encrypted SQL', () async {
+    await initialize();
+    final repo=getRepo(true);
+    await repo.save(WaffraFinanceModule.goals,{
+     'id':'unlimited','name':'ادخار مفتوح','target':0,'saved':250.75,
+     'active':false,
+    });
+    final saved=(await repo.list(WaffraFinanceModule.goals)).single;
+    expect(saved['target'],0);
+    expect(saved['saved'],250.75);
+    expect(saved['active'],false);
+    final typed=await vault.customSelect(
+     'SELECT target_minor,saved_minor FROM fresh_finance_goals WHERE goal_id=?',
+     variables:[Variable.withString('unlimited')]).getSingle();
+    expect(typed.read<int>('target_minor'),0);
+    expect(typed.read<int>('saved_minor'),25075);
+    await repo.save(WaffraFinanceModule.goals,{
+     ...saved,'saved':300.25,
+    },replaceExisting:true);
+    expect((await repo.list(WaffraFinanceModule.goals)).single['saved'],300.25);
+  });
+
   test('update preserves same identifier and prevents duplicates', () async {
     await initialize();
     final repo = getRepo(true);
@@ -93,7 +116,7 @@ void main() {
       {...category(), 'name': ''},
       {...category(), 'income': null},
       category(budget: -1),
-      {...goal(), 'target': 0},
+      {...goal(), 'target': -1},
       {...goal(), 'saved': -2},
       recurring(day: 0),
       recurring(day: 32),

@@ -22,7 +22,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  m412-impact:
+    name: M412 Only Run Tests Impacted By Latest PR Update
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.impact.outputs.run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Compare exact before/after change set (missing evidence means RUN)
+        id: impact
+        run: python3 scripts/qa/m412_pr_changed_impact.py --workflow .github/workflows/m266-sqlcipher-precutover-qa.yml
+
   widget-and-source-regressions:
+    needs: m412-impact
+    if: ${{ needs.m412-impact.outputs.run == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -59,6 +76,8 @@ jobs:
           test -f docs/qa/sqlcipher-cutover-readiness-20261027.md
 
   android-sqlcipher-disposable-evidence:
+    needs: m412-impact
+    if: ${{ needs.m412-impact.outputs.run == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 75
     steps:

@@ -200,9 +200,10 @@ void main() {
     expect(dashboardCard,contains('final attachmentCount=waffraReceiptPaths(entry.receiptPath).length;'));
     for(final card in [listCard,dashboardCard]){
       expect(card,contains('if(attachmentCount>0)PositionedDirectional(top:0,start:0'));
-      expect(card,contains('WaffraReceiptCornerBadge(count:attachmentCount,english:waffraIsEnglish)'));
-      expect(card,isNot(contains('showReceipt(')),
-        reason:'The corner remains a compact count, not a second destructive action.');
+      expect(card,contains('WaffraReceiptCornerAction('));
+      expect(card,contains('count:attachmentCount,english:waffraIsEnglish'));
+      expect(card,contains('onTap:()=>showReceipt('),
+        reason:'Tapping the visual corner must open the same existing gallery as details.');
     }
     expect(source,contains("onViewReceipt:waffraReceiptPaths(entry.receiptPath).isNotEmpty"));
     expect(source,contains("waffraIsEnglish?'View attachments':'عرض المرفقات'"));
@@ -223,12 +224,13 @@ void main() {
     ));
     expect(source, contains('width:58,height:58'));
     expect(source, contains('WaffraFabMenuAnchor('));
-    expect(source, contains('expanded:addFabExpanded&&!goalsOpened'));
+    expect(source, contains('expanded:addFabExpanded'));
     expect(source, isNot(contains(
       'floatingActionButton:!ready||tab==4?null:Directionality(',
     )));
-    expect(source, contains('if(goalsOpened||tab==3){unawaited(_launchAddAction(()=>goalDialog()));return;}'));
-    expect(source, contains('if(tab==4){unawaited(_launchAddAction(()=>recurringDialog()));return;}'));
+    expect(source, contains("label:waffraIsEnglish?'New savings goal':'إضافة هدف جديد'"));
+    expect(source, contains("label:waffraIsEnglish?'Open-ended savings':'ادخار مفتوح بدون مستهدف'"));
+    expect(source, contains("label:waffraIsEnglish?'Duplicate recurring transaction':'تكرار عملية متكررة موجودة'"));
     expect(source, isNot(contains('WaffraPhysicalLeftFab')));
   });
 
@@ -240,7 +242,7 @@ void main() {
       .split('Widget dashboard()').first;
     for(final card in [listCard,dashboardCard]){
       expect(card,contains('PositionedDirectional(top:0,start:0'));
-      expect(card,contains('child:WaffraReceiptCornerBadge('));
+      expect(card,contains('child:WaffraReceiptCornerAction('));
       expect(card,isNot(contains('File(')));
       expect(card,isNot(contains('delete(')));
     }

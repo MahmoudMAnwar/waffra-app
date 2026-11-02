@@ -35,7 +35,10 @@ void main() {
   expect(RegExp(r'if\(attachmentCount>0\)PositionedDirectional\(top:0,start:0')
       .allMatches(app).length, 2,
    reason:'Both transaction list and dashboard require the RTL/LTR corner.');
-  expect(app, contains('WaffraReceiptCornerBadge(count:attachmentCount,english:waffraIsEnglish)'));
+  expect(app, contains('WaffraReceiptCornerAction('));
+  expect(app, contains('count:attachmentCount,english:waffraIsEnglish'));
+  expect(app, contains('onTap:()=>showReceipt(e.receiptPath!)'));
+  expect(app, contains('onTap:()=>showReceipt(entry.receiptPath!)'));
   expect(app, contains('if(onViewReceipt!=null)'),
    reason:'Details must continue exposing the saved-attachment action.');
   expect(app, contains('waffraReceiptPaths(entry.receiptPath).isNotEmpty'));
