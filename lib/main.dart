@@ -461,24 +461,35 @@ class SavingGoal {
  final double target,saved;
  /// Pausing a goal does not spend, delete or change its saved money.
  final bool active;
+ /// Goal alerts are optional and separate from the financial goal state.
+ /// Open-ended goals have no percentage, regardless of this preference.
+ final bool alertEnabled;
+ final int alertPercent;
  /// Deadline alone never posts money; payment needs user confirmation.
  final DateTime? dueDate;
  SavingGoal({required this.id,required this.name,required this.target,
-  required this.saved,this.dueDate,this.active=true});
+  required this.saved,this.dueDate,this.active=true,
+  this.alertEnabled=false,this.alertPercent=75});
  SavingGoal copy({String? name,double? target,double? saved,DateTime? dueDate,
-  bool? active})=>
+  bool? active,bool? alertEnabled,int? alertPercent})=>
   SavingGoal(id:id,name:name??this.name,target:target??this.target,
    saved:saved??this.saved,dueDate:dueDate??this.dueDate,
-   active:active??this.active);
+   active:active??this.active,
+   alertEnabled:alertEnabled??this.alertEnabled,
+   alertPercent:alertPercent??this.alertPercent);
  Map<String,dynamic> toJson()=>{'id':id,'name':name,'target':target,'saved':saved,
-  'active':active,
+  'active':active,'alertEnabled':alertEnabled,'alertPercent':alertPercent,
   if(dueDate!=null)'dueDate':dueDate!.toIso8601String()};
  factory SavingGoal.fromJson(Map<String,dynamic> j)=>SavingGoal(
   id:'${j['id']??newId()}',name:'${j['name']??''}',
   target:(j['target'] as num).toDouble(),
   saved:(j['saved'] as num?)?.toDouble()??0,
   dueDate:DateTime.tryParse('${j['dueDate']??''}'),
-  active:!j.containsKey('active')||j['active']==true);
+  active:!j.containsKey('active')||j['active']==true,
+  alertEnabled:j['alertEnabled']==true,
+  alertPercent:j['alertPercent'] is int&&
+   (j['alertPercent'] as int)>=1&&(j['alertPercent'] as int)<=100
+   ?j['alertPercent'] as int:75);
 }
 class SavingChallenge {
  final String id,title;final double dailyAmount;
@@ -506,27 +517,32 @@ class RecurringBill {
  final String id,title,category;
  final double amount;final bool income;
  final int day;final bool active;
+ /// Independent from the recurring transaction's financial enabled state.
+ final bool reminderEnabled;
  final DateTime startAt;
  /// Link to an existing savings goal, without mirroring its saved amount.
  final String? linkedGoalId;
  RecurringBill({required this.id,required this.title,required this.category,
   required this.amount,required this.income,required this.day,this.active=true,
-  DateTime? startAt,this.linkedGoalId}):startAt=startAt??DateTime.now();
+  this.reminderEnabled=true,DateTime? startAt,this.linkedGoalId}):startAt=startAt??DateTime.now();
  RecurringBill copy({String? title,String? category,double? amount,bool? active,
-  int? day,DateTime? startAt})=>RecurringBill(id:id,title:title??this.title,
+  bool? reminderEnabled,int? day,DateTime? startAt})=>
+  RecurringBill(id:id,title:title??this.title,
    category:category??this.category,amount:amount??this.amount,income:income,
    day:day??this.day,active:active??this.active,
+   reminderEnabled:reminderEnabled??this.reminderEnabled,
    startAt:startAt??this.startAt,linkedGoalId:linkedGoalId);
  RecurringBill withCategory(String next)=>copy(category:next);
  Map<String,dynamic> toJson()=>{'id':id,'title':title,'category':category,
   'amount':amount,'income':income,'day':day,'active':active,
-  'startAt':startAt.toIso8601String(),
+  'reminderEnabled':reminderEnabled,'startAt':startAt.toIso8601String(),
   if(linkedGoalId!=null)'linkedGoalId':linkedGoalId};
  factory RecurringBill.fromJson(Map<String,dynamic> j)=>RecurringBill(
   id:'${j['id']??newId()}',title:'${j['title']??''}',
   category:'${j['category']??'أخرى'}',
   amount:(j['amount'] as num).toDouble(),income:j['income']==true,
   day:(j['day'] as num?)?.toInt()??1,active:j['active']!=false,
+  reminderEnabled:j['reminderEnabled']!=false,
   startAt:DateTime.tryParse('${j['startAt']??''}')??DateTime.now(),
   linkedGoalId:j['linkedGoalId'] is String&&
     (j['linkedGoalId'] as String).trim().isNotEmpty
@@ -3694,7 +3710,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(!recurringRemindersEnabled)return;
   try {
    await WaffraReminders.schedule(
-    recurring.where((r)=>r.active&&waffraCategoryNameAvailableForPosting(
+    recurring.where((r)=>r.active&&r.reminderEnabled&&
+     waffraCategoryNameAvailableForPosting(
      categories,r.income,r.category)&&(r.linkedGoalId==null||
       goals.any((g)=>g.id==r.linkedGoalId&&g.dueDate!=null)))
      .map((r)=>WaffraReminder(id:r.id,title:r.title,day:r.day,
@@ -9619,6 +9636,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   String selectedGoal=duplicate==null?'':'__other_goal__';
   bool attempted=false;
   bool noTarget=openEnded||(duplicate!=null&&duplicate.target<=0);
+  bool goalAlertsEnabled=false;
+  int goalAlertPercent=75;
   String? validateGoalName(){
    final issue=waffraGoalNameIssue(name.text,goals.map((g)=>g.name));
    if(issue=='required'||issue=='too_long')return waffraTextFieldError(name.text);
@@ -9724,6 +9743,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       subtitle:WaffraText(waffraIsEnglish?'Save any amount, without a target or completion percentage':'ادّخر براحتك من غير حدّ أو رقم مستهدف'),
       value:noTarget,activeTrackColor:emerald,
       onChanged:WaffraHaptics.selection((value)=>updateGoal(()=>noTarget=value))),
+     if(!noTarget)...[
+      SwitchListTile.adaptive(
+       key:const Key('waffra-goal-alert-toggle-create'),
+       contentPadding:EdgeInsets.zero,
+       title:WaffraText(waffraIsEnglish?'Goal progress alerts':'تنبيهات تقدم الهدف'),
+       subtitle:WaffraText(waffraIsEnglish?
+        'Only for goals with a target amount':'فقط للأهداف ذات المبلغ المستهدف'),
+       value:goalAlertsEnabled,activeTrackColor:emerald,
+       onChanged:WaffraHaptics.selection((v)=>updateGoal(()=>goalAlertsEnabled=v))),
+      if(goalAlertsEnabled)WaffraCenteredDropdownFormField<int>(
+       initialValue:goalAlertPercent,
+       decoration:InputDecoration(labelText:waffraIsEnglish?'Alert at':'نسبة التنبيه'),
+       items:[50,60,70,75,80,85,90,95,100].map((n)=>
+        DropdownMenuItem(value:n,child:WaffraText('$n%'))).toList(),
+       onChanged:WaffraHaptics.selection((v){
+        if(v!=null)updateGoal(()=>goalAlertPercent=v);
+       })),
+     ],
      if(!noTarget)TextField(controller:target,
       keyboardType:const TextInputType.numberWithOptions(decimal:true),
       inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],
@@ -9742,7 +9779,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       final n=amountOfDisplay(target.text);
       if(selectedGoal.isEmpty||validateGoalName()!=null||
        (!noTarget&&(WaffraValidators.positiveAmount(target.text)!=null||n==null)))return;
-      Navigator.pop(ctx,SavingGoal(id:newId(),name:name.text.trim(),target:noTarget?0.0:n!,saved:0,dueDate:selectedDeadline));
+      Navigator.pop(ctx,SavingGoal(id:newId(),name:name.text.trim(),
+       target:noTarget?0.0:n!,saved:0,dueDate:selectedDeadline,
+       alertEnabled:!noTarget&&goalAlertsEnabled,alertPercent:goalAlertPercent));
      }),child:WaffraText(waffraIsEnglish?'Add goal':'إضافة الهدف')),
     ],
    )));
@@ -9824,6 +9863,37 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    await _persistModuleOrReload(WaffraFinanceRoute.goalCreateEditDeleteRestore,
     operation:'release-goal-earmark');
   }finally{disposeLater([ctl]);}
+ }
+ /// Notify only after an explicitly confirmed and persisted goal contribution.
+ /// No percentage exists for open savings; do not treat this as a bank feed.
+ Future<void> goalProgressAlert(SavingGoal goal,double previousSaved)async{
+  if(!mounted||!goal.active||!goal.alertEnabled||goal.target<=0)return;
+  final crossed=WaffraFinancialInsights.newlyCrossedGoalStage(
+   previousSaved,goal.saved,goal.target,goal.alertPercent,
+   enabled:goal.active&&goal.alertEnabled);
+  if(crossed==0)return;
+  final prefs=await SharedPreferences.getInstance();
+  const key='waffra_goal_progress_alert_seen_v1';
+  final marker='${goal.id}|${goal.target}|$crossed';
+  final seen=prefs.getStringList(key)??<String>[];
+  if(seen.contains(marker)||!mounted)return;
+  final percent=(goal.saved/goal.target*100).round();
+  final detail=waffraIsEnglish?
+   '${goal.name}: $percent% saved (threshold $crossed%).':
+   'بلغ ادخار «${goal.name}» $percent٪ (حد التنبيه $crossed٪).';
+  if(WidgetsBinding.instance.lifecycleState==AppLifecycleState.resumed){
+   await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Goal progress':'تقدم الهدف'),
+    content:WaffraText(detail),
+    actions:[FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
+     child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))]));
+  }else if(await WaffraReminders.alreadyPermitted()){
+   await WaffraReminders.showGoalProgressAlert(
+    id:goal.id,target:goal.target,stage:crossed,detail:detail,
+    english:waffraIsEnglish);
+  }else{return;}
+  final latest=prefs.getStringList(key)??<String>[];
+  if(!latest.contains(marker))await prefs.setStringList(key,[...latest,marker]);
  }
  Future<void> fundGoal(SavingGoal g)async {
   final amount=TextEditingController();
@@ -9997,6 +10067,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    });
    if(!await _persistModuleOrReload(WaffraFinanceRoute.goalCreateEditDeleteRestore,
      operation:'goal-funding'))return;
+   // Achievement has its own celebration. Avoid showing two dialogs at 100%.
+   if(!achieved&&mounted)await goalProgressAlert(
+    current.copy(saved:current.saved+n),current.saved);
    if(achieved&&mounted){
     await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
      title:WaffraText(waffraIsEnglish?'🎉 Goal achieved!':'🎉 مبروك!'),
@@ -10581,7 +10654,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          amount:initial?.linkedGoalId!=null?initial!.amount:n,income:income,
          day:initial?.linkedGoalId!=null?initial!.day:d,
          startAt:initial?.linkedGoalId!=null?initial!.startAt:startAt,
-         active:initial?.active??duplicate?.active??true,linkedGoalId:initial?.linkedGoalId));
+         active:initial?.active??duplicate?.active??true,
+         reminderEnabled:initial?.reminderEnabled??duplicate?.reminderEnabled??true,
+         linkedGoalId:initial?.linkedGoalId));
        }
       }),child:const WaffraText('حفظ')),
      ]);
@@ -10614,6 +10689,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    today:today,startAt:r.startAt,day:r.day,
    currentMonthPaid:entries.any((entry)=>entry.id==monthId),
    postponedUntil:DateTime.tryParse(recurringPostponed[monthId]??''));
+ }
+ Future<void> _setRecurringReminderFromCard(RecurringBill original,bool enabled)async{
+  final index=recurring.indexWhere((r)=>r.id==original.id);
+  if(index<0||recurring[index].reminderEnabled==enabled)return;
+  setState(()=>recurring[index]=recurring[index].copy(reminderEnabled:enabled));
+  if(!await _persistModuleOrReload(
+   WaffraFinanceRoute.recurringCreateEditDeleteRestore,
+   operation:'recurring-reminder-toggle'))return;
+  await syncRecurringReminders();
  }
  Future<void> _setRecurringActiveFromCard(RecurringBill r,bool enabled)async{
        final index=recurring.indexWhere((item)=>item.id==r.id);
@@ -10857,6 +10941,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         value:r.active,
         onChanged:WaffraHaptics.selection((value)=>
          unawaited(_setRecurringActiveFromCard(r,value)))),
+       SwitchListTile.adaptive(
+        key:Key('waffra-recurring-reminder-switch-'+r.id),
+        contentPadding:EdgeInsets.zero,
+        title:WaffraText(waffraIsEnglish?'Due reminder':'تذكير موعد العملية'),
+        subtitle:WaffraText(!recurringRemindersEnabled?
+         (waffraIsEnglish?'Global reminders are off':'التذكيرات العامة متوقفة'):
+         r.reminderEnabled?
+         (waffraIsEnglish?'Reminder on':'التذكير مفعّل'):
+         (waffraIsEnglish?'Reminder off — transaction stays active':
+          'التذكير متوقف والعملية المالية كما هي')),
+        activeTrackColor:emerald,
+        value:r.reminderEnabled,
+        onChanged:WaffraHaptics.selection((value)=>
+         unawaited(_setRecurringReminderFromCard(r,value)))),
       ],
      ),
      ])));
