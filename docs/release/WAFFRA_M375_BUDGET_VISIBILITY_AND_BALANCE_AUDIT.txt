@@ -5,10 +5,12 @@ PR: #340
 1. For a NEW manual, bank or OCR expense with no active usable named
    budgets, omit the entire budget field and save without an assignment.
    Existing user data and category/receipt fields are unchanged.
-2. If one or more active usable budgets exist, new expense submissions require
-   explicit selection of an existing budget (or user-created one). Bank SMS
-   batch/individual review requires a budget for each expense; income never
-   requires a budget. An empty budget directory skips budget review entirely.
+2. M376 clarification (user-approved 2026-11-02): budget assignment is ALWAYS
+   OPTIONAL even when one or many active usable budgets exist. Every expense
+   editor (manual/SMS/OCR) offers an explicit 'Without a budget' choice and
+   saves unassigned records without blocking. SMS batch/individual selection
+   also defaults to unassigned and never requires a budget. Income never
+   requires a budget. An empty budget directory hides budget review entirely.
 3. Existing unlinked expenses remain unlinked without automatic category-based
    linking. Their review banner appears under Categories after an active budget
    exists, with verified individual relink and no amount/date mutation.
@@ -25,3 +27,7 @@ PR: #340
 Safety: No SQLCipher cutover, production APK approval, data reset, automatic
 migration or force-merge. New tests require exact-HEAD GitHub CI and RTL/LTR
 Android confirmation before merging or release.
+
+M376 override: Any M375 source/test wording that previously made budget
+selection mandatory is superseded. Unlinked expenses must be preserved and
+eligible for later manual review; no inferred assignment or money changes.
