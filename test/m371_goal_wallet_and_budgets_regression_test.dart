@@ -109,7 +109,9 @@ void main() {
   test('M371 goal creation cannot post an expense or negative cash debit',
       () {
     final source=File('lib/main.dart').readAsStringSync();
-    expect(source,contains('target:n,saved:0,dueDate:selectedDeadline'));
+    expect(source,contains('target:noTarget?0.0:n!,saved:0,dueDate:selectedDeadline'));
+    expect(source,contains('setState(()=>goals.add(g))'));
+    expect(source,contains('operation:\'goal-create\''));
     expect(source,contains('balance:waffraAvailableCash(entries,goals)'));
     expect(source,contains('goalWalletPaidMinor:allocation.fromGoalMinor'));
     expect(source,isNot(contains('inc-exp-waffraGoalWalletBalance(goals)')));
