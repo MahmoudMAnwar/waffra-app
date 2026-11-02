@@ -19,7 +19,7 @@ Future<DateTime?> waffraPickDateWithToday({
    firstDate:firstDate,lastDate:lastDate,
    // Keep the Today shortcut inside the Material date dialog rather than
    // adding a second full-width row outside its rounded card.
-   builder:(dialogContext,child)=>Stack(children:[
+   builder:(dialogContext,child)=>Center(child:Stack(children:[
     child??const SizedBox.shrink(),
     PositionedDirectional(start:18,bottom:9,child:SafeArea(
      top:false,bottom:false,child:Semantics(button:true,
@@ -35,7 +35,7 @@ Future<DateTime?> waffraPickDateWithToday({
        icon:const Icon(Icons.today_rounded,size:18),
        label:Text(english?'Today':'اليوم',style:
         const TextStyle(fontFamily:'Tajawal',fontWeight:FontWeight.w700)))))),
-   ]),
+   ])),
   );
 }
 
