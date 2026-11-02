@@ -2359,24 +2359,31 @@ class WaffraNoticeContent extends StatelessWidget {
       overflow:TextOverflow.ellipsis,style:TextStyle(
        color:palette.$2,fontSize:12,height:1.15,
        fontWeight:FontWeight.w700)))),
-    if(notice.onAction!=null)TextButton(
-     style:TextButton.styleFrom(
-      padding:const EdgeInsets.symmetric(horizontal:4),
-      minimumSize:const Size(36,30),
-      tapTargetSize:MaterialTapTargetSize.shrinkWrap),
-     onPressed:WaffraHaptics.tap((){
-      onDismiss();
-      notice.onAction?.call();
-     }),
-     child:WaffraText(notice.actionLabel??(waffraIsEnglish?'Undo':'تراجع'),
-      maxLines:1,style:TextStyle(
-       color:palette.$2,fontSize:12,fontWeight:FontWeight.bold))),
-    IconButton(
+    if(notice.onAction!=null)...[
+     const SizedBox(width:5),
+     OutlinedButton(
+      style:OutlinedButton.styleFrom(
+       foregroundColor:palette.$2,
+       minimumSize:const Size(64,40),
+       padding:const EdgeInsets.symmetric(horizontal:10),
+       visualDensity:VisualDensity.compact,
+       side:BorderSide(color:palette.$3.withValues(alpha:.45)),
+       shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12))),
+      onPressed:WaffraHaptics.tap((){
+       onDismiss();
+       notice.onAction?.call();
+      }),
+      child:WaffraText(notice.actionLabel??(waffraIsEnglish?'Undo':'تراجع'),
+       maxLines:1,style:TextStyle(
+        color:palette.$2,fontSize:12,fontWeight:FontWeight.bold))),
+    ],
+    const SizedBox(width:3),
+    SizedBox(width:40,height:40,child:IconButton(
      tooltip:waffraIsEnglish?'Close':'إغلاق',
-     icon:Icon(Icons.close_rounded,color:palette.$2,size:19),
-     visualDensity:VisualDensity.standard,padding:EdgeInsets.zero,
-     constraints:const BoxConstraints(minWidth:48,minHeight:48),
-     onPressed:WaffraHaptics.tap(onDismiss)),
+     icon:Icon(Icons.close_rounded,color:palette.$2,size:18),
+     visualDensity:VisualDensity.compact,padding:EdgeInsets.zero,
+     constraints:const BoxConstraints(minWidth:40,minHeight:40),
+     onPressed:WaffraHaptics.tap(onDismiss))),
    ]));
  }
 }
@@ -6701,23 +6708,29 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      WaffraText('${(bytes.length/1024).toStringAsFixed(1)} KB',
       textAlign:TextAlign.center,style:const TextStyle(fontSize:12)),
     ]),
-    actionsAlignment:MainAxisAlignment.center,
+    actionsPadding:const EdgeInsets.fromLTRB(20,0,20,20),
     actions:[
-     SizedBox(width:double.infinity,child:FilledButton.icon(
+     SizedBox(width:double.infinity,child:Column(
+      mainAxisSize:MainAxisSize.min,
+      children:[FilledButton.icon(
       onPressed:WaffraHaptics.tap((){
        Navigator.of(dialogContext).pop();
        Navigator.of(context).push(MaterialPageRoute(builder:(_)=>
         WaffraPdfReader(bytes:bytes,fileName:fileName,english:waffraIsEnglish)));
       }),
       icon:const Icon(Icons.visibility_outlined),
-      label:WaffraText(waffraIsEnglish?'Open report':'فتح التقرير'))),
-     Align(alignment:AlignmentDirectional.centerStart,child:OutlinedButton.icon(
+      style:FilledButton.styleFrom(minimumSize:const Size(double.infinity,48)),
+      label:WaffraText(waffraIsEnglish?'Open report':'فتح التقرير')),
+     const SizedBox(height:10),
+     OutlinedButton.icon(
       onPressed:WaffraHaptics.tap(()async{
        Navigator.of(dialogContext).pop();
        await Printing.sharePdf(bytes:bytes,filename:fileName);
       }),
       icon:const Icon(Icons.share_outlined),
-      label:WaffraText(waffraIsEnglish?'Share report':'مشاركة التقرير'))),
+      style:OutlinedButton.styleFrom(minimumSize:const Size(double.infinity,48)),
+      label:WaffraText(waffraIsEnglish?'Share report':'مشاركة التقرير')),
+     ])),
     ],
    ));
   }catch(e,st){
@@ -6940,13 +6953,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       _transactionActionTile(ctx,'cancel',Icons.close_rounded,
        waffraIsEnglish?'Cancel':'إلغاء',Theme.of(ctx).colorScheme.onSurface),
      ]),
-    if(hasReceipt)...[
-     const SizedBox(height:10),
-     Align(alignment:AlignmentDirectional.centerStart,child:OutlinedButton.icon(
-      onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,'receipt')),
-      icon:const Icon(Icons.photo_library_outlined),
-      label:WaffraText(waffraIsEnglish?'View attached images':'عرض الصور المرفقة'))),
-    ],
+
    ])),
   ));
   if(!mounted)return;
