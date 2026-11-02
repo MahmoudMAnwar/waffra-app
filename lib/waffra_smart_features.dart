@@ -879,9 +879,13 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
     _aiToolState==WaffraAiToolsState.disabled;
    final id=i==-2?'analysis':i==-1?'markets':types[i];
    final name=i==-2?t('التحليل المالي','Financial analysis'):
-    i==-1?t('العملات والذهب والبترول','Currency, gold and oil markets'):names[i];
+    i==-1?(WaffraSaudiRelease.globalCurrencyConverter?
+     t('العملات والذهب والبترول','Currency, gold and oil markets'):
+     t('الذهب والبترول','Gold and oil markets')):names[i];
    final detail=i==-2?t('تحليلك وتوقعاتك المالية الفعلية','Insights and financial forecasts'):
-    i==-1?t('أسعار الذهب والنفط وتحويل العملات','Gold, oil and exchange rates'):details[i];
+    i==-1?(WaffraSaudiRelease.globalCurrencyConverter?
+     t('أسعار الذهب والنفط وتحويل العملات','Gold, oil and exchange rates'):
+     t('أسعار الذهب العالمية والنفط','Global gold and oil prices')):details[i];
    final illustration=i==-2?'investment':i==-1?'bank':types[i];
    final expanded=active==i;
    final sectionBody=expanded?Padding(
