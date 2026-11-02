@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS $_table (
   goal_id TEXT PRIMARY KEY NOT NULL,
   original_goal_json TEXT NOT NULL,
   name TEXT NOT NULL,
-  target_minor INTEGER NOT NULL CHECK(target_minor > 0),
+  target_minor INTEGER NOT NULL CHECK(target_minor >= 0),
   deleted_at_ms INTEGER NOT NULL,
   expires_at_ms INTEGER NOT NULL,
   linked_count_at_deletion INTEGER NOT NULL CHECK(linked_count_at_deletion >= 0)
