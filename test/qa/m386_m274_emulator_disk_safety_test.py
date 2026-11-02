@@ -43,6 +43,17 @@ class M274EmulatorDiskBudgetTest(unittest.TestCase):
         self.assertIn("df -h .", job)
         self.assertIn("free -h", job)
 
+    def test_crash_diagnostics_cannot_mark_a_failed_test_as_passing(self):
+        script = (ROOT / ".github/scripts/run-m274-android-tap-smoke.sh").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("M274_FAILURE_DIAGNOSTICS_BEGIN", script)
+        self.assertIn("adb devices -l", script)
+        self.assertIn("df -h .", script)
+        self.assertIn("free -h", script)
+        self.assertIn('echo "::error::M274 Android UI smoke failed', script)
+        self.assertIn('exit "$result"', script)
+
     def test_failure_not_hidden_by_skipping_or_continue_on_error(self):
         job = self.workflow.split("  android-emulator-ui-taps:", 1)[-1]
         self.assertNotIn("continue-on-error: true", job)
