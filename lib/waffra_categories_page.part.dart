@@ -286,6 +286,13 @@ extension WaffraCategoryScreen on _HomeScreenState {
     subtitle:waffraIsEnglish?'All income and expense types with subcategories':
      'كل أنواع الدخل والمصروفات في أقسام رئيسية وفرعية منظمة.',
     icon:Icons.category_outlined,titleKey:_tourKeys[2]),
+   ()=>Padding(
+    key:const Key('waffra-category-alert-policy-note'),
+    padding:const EdgeInsets.symmetric(vertical:8,horizontal:4),
+    child:WaffraText(waffraIsEnglish?
+     'Categories organize transactions; budget percentage alerts apply only to named budgets, not main or subcategories.':
+     'الأقسام الرئيسية والفرعية للتصنيف فقط؛ تنبيهات نسب الصرف تخص الميزانيات المستقلة.',
+     textAlign:TextAlign.center,style:const TextStyle(fontSize:12,color:emerald))),
    ()=>Row(children:[
     Expanded(child:_compactCategoryStat(waffraIsEnglish?'Main categories':'الأقسام الرئيسية',
      roots.length.toString(),Icons.layers,emerald)),
