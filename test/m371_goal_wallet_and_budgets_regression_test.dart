@@ -102,7 +102,7 @@ void main() {
     expect(source,isNot(contains('LayoutBuilder(builder:(ctx,box){')));
     // Reassignments and history are never altered by a screen refactor.
     expect(source,contains('editBudgetForCategory(b)'));
-    expect(source,contains('setNamedBudgetActive(b,!b.budgetActive)'));
+    expect(source,contains('setNamedBudgetActive(b,enabled)'));
     expect(source,contains('deleteNamedBudget(b)'));
   });
 
