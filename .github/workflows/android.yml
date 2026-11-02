@@ -998,7 +998,7 @@ jobs:
           flutter build appbundle --no-pub --release --target-platform android-arm64 --tree-shake-icons "${eia_define[@]}"
           test -s build/app/outputs/bundle/release/app-release.aab
           elapsed=$(( $(date +%s) - started ))
-          printf 'AAB compile command: **%s seconds**.\\n' "$elapsed" >> "$GITHUB_STEP_SUMMARY"
+          printf 'AAB compile command: **%s seconds**.\n' "$elapsed" >> "$GITHUB_STEP_SUMMARY"
           echo "WAFFRA_AAB_BUILD_SECONDS=$elapsed"
 
       - name: Validate signed AAB archive (not a Play approval)
