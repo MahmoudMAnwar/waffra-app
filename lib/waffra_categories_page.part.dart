@@ -318,7 +318,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
         contentPadding:const EdgeInsets.symmetric(horizontal:14,vertical:15),
         border:OutlineInputBorder(borderRadius:BorderRadius.circular(13)));
        return Wrap(spacing:12,runSpacing:16,children:[
-        SizedBox(width:cell,child:DropdownButtonFormField<String>(
+        SizedBox(width:cell,child:WaffraCenteredDropdownFormField<String>(
          key:ValueKey('waffra-category-type-'+categoryTypeFilter),
          initialValue:categoryTypeFilter,isExpanded:true,
          decoration:decor(waffraIsEnglish?'Transaction type':'نوع العملية'),
@@ -330,7 +330,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
          onChanged:WaffraHaptics.selection((v){
           if(v!=null)setState(()=>categoryTypeFilter=v);
          }))),
-        SizedBox(width:cell,child:DropdownButtonFormField<String>(
+        SizedBox(width:cell,child:WaffraCenteredDropdownFormField<String>(
          key:ValueKey('waffra-category-sort-'+categorySort),
          initialValue:categorySort,isExpanded:true,
          decoration:decor(waffraIsEnglish?'Sort by':'الترتيب حسب'),
