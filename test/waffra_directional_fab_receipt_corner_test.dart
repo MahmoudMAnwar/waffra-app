@@ -250,23 +250,33 @@ void main() {
     expect(source,contains("onViewReceipt:waffraReceiptPaths(entry.receiptPath).isNotEmpty"));
   });
   testWidgets('expanded menu is above the physical plus on the same side in both languages', (tester) async {
-    Widget harness(bool english) => MaterialApp(
-      home: Scaffold(
-        body: Align(
-          alignment: Alignment.topLeft,
-          child: SizedBox(
-            width: 390,height: 500,
-            child: Stack(children:[
-              WaffraFabMenuAnchor(
-                english:english,expanded:true,
-                menu:Container(key:const Key('menu-anchor-probe'),
-                  width:220,height:96,color:Colors.green),
-              ),
-            ]),
+    Widget harness(bool english) {
+      final link = LayerLink();
+      return MaterialApp(
+        home: Scaffold(
+          body: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: 390,height: 500,
+              child: Stack(children:[
+                Positioned(
+                  left:english?316:16,top:426,
+                  child:CompositedTransformTarget(
+                    link:link,
+                    child:const SizedBox(width:58,height:58),
+                  ),
+                ),
+                WaffraFabMenuAnchor(
+                  english:english,expanded:true,link:link,
+                  menu:Container(key:const Key('menu-anchor-probe'),
+                    width:220,height:96,color:Colors.green),
+                ),
+              ]),
+            ),
           ),
         ),
-      ),
-    );
+      );
+    }
     for (final english in <bool>[true,false]) {
       await tester.pumpWidget(harness(english));
       await tester.pumpAndSettle();
