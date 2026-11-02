@@ -17,7 +17,8 @@
     "M397: remove unnecessary optional/encryption jargon from the savings date picker and original SMS title while retaining genuine encrypted-vault safety notices.",
     "M398-M402: fix previously approved budget directory reopen and own-budget filters, ensure bounded calendars and concise UI copy, show monthly budget count and month navigation, and use centered blurred dropdowns in the user-approved locations.",
     "M403: support independent activation and quick actions on main/subcategories without deleting historical entries or changing finance ledger.",
-    "M406: repair Drift test API errors without weakening assertions, and expand M385 scope only to exact PR changed hunks while preserving protected code outside them."
+    "M406: repair Drift test API errors without weakening assertions, and expand M385 scope only to exact PR changed hunks while preserving protected code outside them.",
+    "M408: repair six actual failing assertions without removing any financial or security test: month navigation, recurring durable writes, active category validation, concise bank SMS title, StateError rollback, and paused goal due behavior."
   ],
   "allowed_changed_files": [
     ".github/workflows/m274-production-ui-golden.yml",
@@ -45,6 +46,10 @@
     "lib/waffra_practical_tools_page.dart",
     "lib/waffra_today_picker.dart",
     "test/m127_ui_tour_backup_acceptance_test.dart",
+    "test/m262_bank_sms_notes_separation_test.dart",
+    "test/m298_required_finance_field_validation_test.dart",
+    "test/m302_optimistic_module_write_safety_test.dart",
+    "test/m343_goal_recurring_named_budgets_test.dart",
     "test/m351_compact_category_filters_test.dart",
     "test/m371_goal_wallet_and_budgets_regression_test.dart",
     "test/m384_receipt_corner_upgrade_regression_test.dart",
@@ -599,6 +604,30 @@
       {
         "start": "  expect(ui,contains('ExpansionTile('));\n",
         "end": "  expect(ui,isNot(contains(\"key:ValueKey('waffra-category-budget-'\")));\n"
+      }
+    ],
+    "test/m343_goal_recurring_named_budgets_test.dart": [
+      {
+        "start": " test('M343 goal/recurring UI uses one saved total and budget remains independent',(){",
+        "end": null
+      }
+    ],
+    "test/m302_optimistic_module_write_safety_test.dart": [
+      {
+        "start": " test('M302 recurring reminders are not scheduled for rejected mutations',(){",
+        "end": null
+      }
+    ],
+    "test/m298_required_finance_field_validation_test.dart": [
+      {
+        "start": " test('M298 all three finance entry points display category error and reject invalid selection',(){",
+        "end": null
+      }
+    ],
+    "test/m262_bank_sms_notes_separation_test.dart": [
+      {
+        "start": "  testWidgets('edited personal notes never hide the original encrypted SMS',",
+        "end": "  testWidgets('vault failure is explicit and does not display fake SMS',"
       }
     ]
   }

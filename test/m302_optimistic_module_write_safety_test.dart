@@ -57,11 +57,13 @@ void main() {
 
  test('M302 recurring reminders are not scheduled for rejected mutations',(){
   final code=File('lib/main.dart').readAsStringSync();
-  final mainStart=code.indexOf('Widget recurringPage()');
-  final end=code.indexOf('Future<void>',mainStart);
-  expect(mainStart,greaterThan(0));
-  // The recurring view is a long widget tree; check the exact tap handlers.
-  final view=code.substring(mainStart,end<0?code.length:end);
+  final actionStart=code.indexOf('Future<void> _setRecurringActiveFromCard(');
+  final actionEnd=code.indexOf('Widget recurringPage(){',actionStart);
+  expect(actionStart,greaterThan(0));
+  expect(actionEnd,greaterThan(actionStart));
+  // Verify the durable-save and notification-order guards on the actual
+  // quick-action handlers immediately preceding the recurring card view.
+  final view=code.substring(actionStart,actionEnd);
   expect(view,contains("operation:'recurring-active-toggle'"));
   expect(view,contains("operation:'recurring-delete'"));
   expect(view,contains('if(enabled)await applyRecurring();'));

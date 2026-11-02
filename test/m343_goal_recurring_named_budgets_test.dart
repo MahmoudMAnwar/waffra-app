@@ -109,7 +109,7 @@ void main() {
   final directory=File('lib/waffra_budget_directory.part.dart').readAsStringSync();
   expect(directory,contains('editBudgetForCategory(b)'));
   expect(app,contains('goal.saved/goal.target'));
-  expect(app,contains('waffraNamedBudgetSpent(entries,categories,selected,today)'));
+  expect(app,contains('waffraNamedBudgetSpent(entries,categories,selected,viewedMonth)'));
   expect(link,contains('linkedGoalId:goal.id'));
   expect(link,contains('operation:\'goal-edit\''));
   expect(link,contains('operation:\'goal-recurring-link\''));

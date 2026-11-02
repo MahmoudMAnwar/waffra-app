@@ -53,7 +53,7 @@ void main() {
     expect(tester.widget<SelectableText>(personal).data,
         'قسّطت مبلغ الشراء');
     expect(tester.widget<SelectableText>(bank).data, original);
-    expect(find.text('تفاصيل الرسالة البنكية الأصلية (مشفّرة)'),
+    expect(find.text('تفاصيل الرسالة البنكية الأصلية'),
         findsWidgets);
     expect(tester.takeException(), isNull);
   });

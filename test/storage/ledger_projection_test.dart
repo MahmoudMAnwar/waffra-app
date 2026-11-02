@@ -196,7 +196,7 @@ void main() {
     await db.stageSnapshot('vault', invalid);
     await expectLater(
       db.buildRelationalProjection('vault'),
-      throwsA(isA<Exception>()),
+      throwsA(isA<StateError>()),
     );
     // Creation and inserts happen inside the same transaction. A failed
     // CHECK constraint must roll back even the projection schema DDL.

@@ -87,9 +87,9 @@ void main() {
   expect(card,contains('g.target>0&&g.saved>=g.target'));
   expect(card,contains("waffraIsEnglish?'Open-ended savings':'ادخار مفتوح'"));
   final edit=File('lib/waffra_goal_recurring_actions.part.dart').readAsStringSync();
-  expect(edit,contains('if(deadline==null||goal.target<=0)'));
+  expect(edit,contains('if(deadline==null||goal.target<=0||!goal.active)'));
   expect(edit,contains('target:noTarget?0.0:v!'));
-  expect(edit,contains('if(deadline==null||goal.target<=0)'));
+  expect(edit,contains('if(deadline==null||goal.target<=0||!goal.active)'));
  });
 
  test('M390: restored receipt references open the same existing gallery',(){
