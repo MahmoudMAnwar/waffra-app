@@ -10419,8 +10419,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final r=await showWaffraDialog<RecurringBill>(context:context,
    builder:(ctx)=>StatefulBuilder(builder:(ctx,update){
     final options=forSelectableType(income);
-    final selected=options.any((x)=>x.name==category)?category:
-      (options.isNotEmpty?options.first.name:'');
+    // An old recurring schedule may refer to a now-paused category.
+    // Editing its title/date must not silently reassign it to another leaf.
+    // New or duplicated schedules must explicitly select an active leaf.
+    final historicalSelected=initial!=null&&initial.income==income&&
+     initial.category==category;
+    final selected=options.any((x)=>x.name==category)||historicalSelected
+     ?category:'';
+    final validNames=[
+     ...options.map((c)=>c.name),
+     if(historicalSelected)initial.category,
+    ];
     return AlertDialog(title:WaffraText(initial==null?(waffraIsEnglish?'New recurring item':'عملية شهرية متكررة'):(waffraIsEnglish?'Edit recurring item':'تعديل العملية المتكررة')),
      content:SizedBox(width:340,child:SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,mainAxisSize:MainAxisSize.min,children:[
       const SizedBox(height:12),
@@ -10491,7 +10500,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         decoration:InputDecoration(
          labelText:waffraIsEnglish?'Category *':'القسم *',
          errorText:attempted&&WaffraValidators.requiredCategory(
-          selected,options.map((c)=>c.name))!=null?waffraRequiredFieldMessage:null,
+          selected,validNames)!=null?waffraRequiredFieldMessage:null,
          suffixIcon:const Icon(Icons.search_rounded),
          border:OutlineInputBorder(borderRadius:BorderRadius.circular(14)),
          contentPadding:const EdgeInsets.symmetric(horizontal:13,vertical:15)),
@@ -10522,7 +10531,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        if(WaffraValidators.requiredText(title.text)==null&&
         WaffraValidators.positiveAmount(amount.text)==null&&
         WaffraValidators.dayOfMonth(day.text)==null&&
-        WaffraValidators.requiredCategory(selected,options.map((c)=>c.name))==null&&
+        WaffraValidators.requiredCategory(selected,validNames)==null&&
         n!=null&&d!=null){
         Navigator.pop(ctx,RecurringBill(id:initial?.id??newId(),title:title.text.trim(),category:selected,
          amount:initial?.linkedGoalId!=null?initial!.amount:n,income:income,
