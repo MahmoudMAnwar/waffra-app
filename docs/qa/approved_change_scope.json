@@ -23,12 +23,13 @@
     "M410: implement safe incremental CI recovery: retry exactly one failed Android emulator CI job on the same SHA only when logs prove transient infrastructure failure; cap to one retry, disallow failing application assertions or stale PR heads, never skip protected financial/security checks or final full-main certification.",
     "M411: repair real red Firestore security CI dependency install: pin stable Firebase JS SDK and security emulator versions, override the unavailable @firebase/firestore 4.19.1 tarball to published 4.19.0, use Node 24.12.0 for engine compatibility, preserve all security assertion tests and do not fake green.",
     "M412: final incremental PR CI implementation: compare the exact before-to-after SHA pair of each PR synchronize event to only run impacted scope-specific test jobs; keep always-on mandatory production finance/security and complete main verification; on unknown diff, base ancestry, event, or path list run all (fail-open); do not silently skip on code changes; no modifications to app logic or user data.",
-    "M416: Saudi-only release disables first-run location country detection, country/dialect selection, application currency setting and global currency converter without deleting Global implementation or old preferences.",
+    "M416: Saudi-only release disables first-run location country detection, country/dialect selection and the app-wide display currency setting while preserving the independent Tools currency converter, live FX conversions, gold FX action, Global implementation and old preferences.",
     "M416: disable creating a transaction by OCR/image/receipt while keeping existing receipt attachments and manual transactions intact.",
     "M416: Ask Waffra is a no-chat predefined question list based only on verified recorded income, expenses, categories and explicitly linked standalone budgets, with Clear returning to the question list. No Qwen requirement or network.",
     "M416: pasted/shared bank SMS is parsed using the conservative local Saudi parser, never Qwen, with no foreign-currency-as-SAR auto-post; the user still confirms saved transactions.",
     "M416: do not alter existing financial history, SQLCipher activation, Google login, or saved Global preferences during Saudi-only rollout; preserve AR/EN app language for Saudi users.",
-    "M416 QA: maintain the dormant Global unit tests but update Saudi-production expectations of country, locale and currency; remove generated Android coarse-location permission in Saudi builds, with explicit Global opt-in script mode."
+    "M416 QA: maintain the dormant Global unit tests but update Saudi-production expectations of country, locale and currency; remove generated Android coarse-location permission in Saudi builds, with explicit Global opt-in script mode.",
+    "M416 owner correction (Nov 2): restore original Tools currency converter in full; it was never approved for disabling. Keep only the app base currency/country and bank-SMS foreign FX-preview restrictions separate."
   ],
   "allowed_changed_files": [
     ".github/workflows/m274-production-ui-golden.yml",
