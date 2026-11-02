@@ -7783,34 +7783,50 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     const SizedBox(height:12),
     Container(
      key:const Key('waffra-budget-month-control'),
+     padding:const EdgeInsets.symmetric(horizontal:5,vertical:4),
      decoration:BoxDecoration(
-      border:Border.all(color:emerald.withValues(alpha:.45)),
-      borderRadius:BorderRadius.circular(14)),
+      color:emerald.withValues(alpha:.065),
+      borderRadius:BorderRadius.circular(16),
+      border:Border.all(color:emerald.withValues(alpha:.19))),
      child:Row(children:[
-      IconButton(key:const Key('waffra-budget-month-prev'),
+      IconButton(
+       key:const Key('waffra-budget-month-prev'),
        tooltip:waffraIsEnglish?'Previous month':'الشهر السابق',
-       icon:const Icon(Icons.chevron_left_rounded,color:emerald),
-       constraints:const BoxConstraints(minWidth:40,minHeight:48),
+       style:IconButton.styleFrom(
+        minimumSize:const Size(40,42),
+        padding:const EdgeInsets.all(6)),
+       icon:const Icon(Icons.chevron_left_rounded,color:emerald,size:23),
        onPressed:WaffraHaptics.tap(()=>setState(()=>
         budgetViewedMonth=DateTime(viewedMonth.year,viewedMonth.month-1,1)))),
-      Expanded(child:SizedBox(key:const Key('waffra-budget-month-label'),
-       child:WaffraText(
+      Expanded(child:Semantics(
+       label:waffraIsEnglish?'Viewing budget month':'شهر الميزانية المعروض',
+       value:MaterialLocalizations.of(context).formatMonthYear(viewedMonth),
+       child:Center(child:WaffraText(
         MaterialLocalizations.of(context).formatMonthYear(viewedMonth),
+        key:const Key('waffra-budget-month-label'),
         maxLines:1,textAlign:TextAlign.center,
-        style:const TextStyle(fontWeight:FontWeight.w700,fontSize:14)))),
-      IconButton(key:const Key('waffra-budget-month-next'),
+        style:const TextStyle(fontWeight:FontWeight.w800,fontSize:16))))),
+      IconButton(
+       key:const Key('waffra-budget-month-next'),
        tooltip:waffraIsEnglish?'Next month':'الشهر التالي',
-       icon:const Icon(Icons.chevron_right_rounded,color:emerald),
-       constraints:const BoxConstraints(minWidth:40,minHeight:48),
+       style:IconButton.styleFrom(
+        minimumSize:const Size(40,42),
+        padding:const EdgeInsets.all(6)),
+       icon:const Icon(Icons.chevron_right_rounded,color:emerald,size:23),
        onPressed:WaffraHaptics.tap(()=>setState(()=>
         budgetViewedMonth=DateTime(viewedMonth.year,viewedMonth.month+1,1)))),
-      TextButton(key:const Key('waffra-budget-month-today'),
+      const SizedBox(width:5),
+      OutlinedButton(
+       key:const Key('waffra-budget-month-today'),
        onPressed:viewingToday?null:WaffraHaptics.tap(()=>setState(()=>
         budgetViewedMonth=DateTime(today.year,today.month,1))),
-       style:TextButton.styleFrom(minimumSize:const Size(52,48),
-        padding:const EdgeInsets.symmetric(horizontal:6)),
+       style:OutlinedButton.styleFrom(
+        minimumSize:const Size(53,40),
+        padding:const EdgeInsets.symmetric(horizontal:8,vertical:4),
+        backgroundColor:Theme.of(context).cardColor,
+        shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12))),
        child:WaffraText(waffraIsEnglish?'Today':'اليوم',
-        maxLines:1,style:const TextStyle(fontSize:12))),
+        maxLines:1,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w700))),
      ]),
     ),
     const SizedBox(height:12),
