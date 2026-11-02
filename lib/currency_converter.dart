@@ -7,7 +7,6 @@ import 'package:http/http.dart' as http;
 import 'waffra_i18n.dart';
 import 'waffra_search.dart';
 import 'waffra_gold_market_section.dart';
-import 'waffra_saudi_release.dart';
 import 'waffra_gold_calculator.dart';
 import 'waffra_market_accordion.dart';
 import 'waffra_oil_market_section.dart';
@@ -118,7 +117,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
  int _quoteRevision=0;
  int _goldRefreshRevision=0;
  int _oilRefreshRevision=0;
- String? _openMarket=WaffraSaudiRelease.globalCurrencyConverter?'currency':'gold';
+ String? _openMarket='currency';
  final ScrollController _marketsScroll=ScrollController();
  void toggleMarket(String id)=>setState(()=>_openMarket=_openMarket==id?null:id);
  double? result,rate;
@@ -258,7 +257,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
   if(amount.text.trim().isNotEmpty)await convert();
  }
  List<Widget> _marketCards()=>[
-   if(WaffraSaudiRelease.globalCurrencyConverter)WaffraMarketAccordionCard(
+   WaffraMarketAccordionCard(
     id:'currency',key:const Key('waffra-market-currency'),
     title:waffraIsEnglish?'Currency converter':'تحويل العملات',
     subtitle:waffraIsEnglish?'Quick conversion between global currencies':
@@ -343,7 +342,7 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
       key:ValueKey('gold-refresh-'+_goldRefreshRevision.toString()),
       english:waffraIsEnglish),
      const SizedBox(height:12),
-     if(WaffraSaudiRelease.globalCurrencyConverter)Align(alignment:AlignmentDirectional.centerStart,child:OutlinedButton.icon(
+     Align(alignment:AlignmentDirectional.centerStart,child:OutlinedButton.icon(
       style:OutlinedButton.styleFrom(
        padding:const EdgeInsets.symmetric(horizontal:10,vertical:8),
        minimumSize:const Size(0,48),
@@ -391,10 +390,8 @@ class _CurrencyConverterPageState extends State<CurrencyConverterPage> {
   }
   return Scaffold(
    appBar:AppBar(title:WaffraText(waffraIsEnglish?
-    WaffraSaudiRelease.globalCurrencyConverter?
-     'Currency, gold & global oil prices':'Gold & global oil prices':
-    WaffraSaudiRelease.globalCurrencyConverter?
-     'محوّل العملات وأسعار الذهب العالمية والبترول':'أسعار الذهب العالمية والبترول',
+    'Currency, gold & global oil prices':
+    'محوّل العملات وأسعار الذهب العالمية والبترول',
     style:const TextStyle(fontSize:18,fontWeight:FontWeight.w800),maxLines:2)),
    body:RefreshIndicator(onRefresh:_pullRefresh,
     child:ListView(controller:_marketsScroll,
