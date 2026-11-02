@@ -312,23 +312,29 @@ class BudgetCategory {
  /// Paused budgets stay in storage with their former ID, cap and links.
  /// Pre-activation records have no flag, so default to active.
  final bool budgetActive;
+ /// Category visibility for NEW postings; unrelated to named budget pause.
+ /// Old records and scheduled references retain category IDs and amounts.
+ final bool categoryActive;
  BudgetCategory({required this.id,required this.name,required this.icon,required this.color,
   required this.income,this.parentId='',this.budget=0,this.alertPercent=80,
-  this.origin='system',this.budgetLabel,this.budgetActive=true});
+  this.origin='system',this.budgetLabel,this.budgetActive=true,
+  this.categoryActive=true});
  bool get isUserAdded=>origin=='user';
  bool get isSubcategory=>parentId.isNotEmpty;
  String get displayName=>isSubcategory?name.split(' / ').last:name;
  BudgetCategory copy({String? name,String? icon,int? color,double? budget,
   int? alertPercent,String? parentId,String? budgetLabel,bool clearBudget=false,
-  bool? budgetActive})=>BudgetCategory(
+  bool? budgetActive,bool? categoryActive})=>BudgetCategory(
    id:id,name:name??this.name,icon:icon??this.icon,color:color??this.color,
    income:income,parentId:parentId??this.parentId,budget:budget??this.budget,
    alertPercent:alertPercent??this.alertPercent,origin:origin,
    budgetLabel:clearBudget?null:budgetLabel??this.budgetLabel,
-   budgetActive:budgetActive??this.budgetActive);
+   budgetActive:budgetActive??this.budgetActive,
+   categoryActive:categoryActive??this.categoryActive);
  Map<String,dynamic> toJson()=>{'id':id,'name':name,'icon':icon,'color':color,
   'income':income,'parentId':parentId,'budget':budget,'alertPercent':alertPercent,
   'origin':origin,'budgetActive':budgetActive,
+  'categoryActive':categoryActive,
   if(budgetLabel!=null)'budgetLabel':budgetLabel};
  factory BudgetCategory.fromJson(Map<String,dynamic> j)=>BudgetCategory(
   id:'${j['id']??newId()}',name:'${j['name']??'أخرى'}',
@@ -338,6 +344,7 @@ class BudgetCategory {
   alertPercent:(j['alertPercent'] as num?)?.toInt()??80,
   origin:j['origin']=='user'?'user':j['origin']=='detected'?'detected':'system',
   budgetActive:!j.containsKey('budgetActive')||j['budgetActive']==true,
+  categoryActive:!j.containsKey('categoryActive')||j['categoryActive']==true,
   budgetLabel:j['budgetLabel'] is String&&
     (j['budgetLabel'] as String).trim().isNotEmpty
     ?(j['budgetLabel'] as String).trim():null);
@@ -399,21 +406,39 @@ bool waffraHasSelectableBudget(Iterable<WaffraNamedBudget> budgets)=>
  budgets.any((b)=>b.budget>0&&b.budgetActive&&!b.deleted);
 
 /// Manual transactions must target an active child category, never a heading.
+/// A paused parent disables selection of all its children without mutating
+/// any child or historical ledger record. Legacy JSON defaults to enabled.
+bool waffraCategoryAvailableForNewEntry(
+ Iterable<BudgetCategory> values,BudgetCategory category){
+ if(!category.categoryActive)return false;
+ if(!category.isSubcategory)return true;
+ return values.any((parent)=>parent.id==category.parentId&&
+  !parent.isSubcategory&&parent.income==category.income&&
+  parent.categoryActive);
+}
+
 List<BudgetCategory> waffraManualCategoryParents(
  Iterable<BudgetCategory> values,bool income)=>
- values.where((c)=>c.income==income&&!c.isSubcategory).toList();
+ values.where((c)=>c.income==income&&!c.isSubcategory&&
+  c.categoryActive).toList();
 
 List<BudgetCategory> waffraManualCategoryChildren(
- Iterable<BudgetCategory> values,bool income,String? parentId)=>
- parentId==null?<BudgetCategory>[]:
- values.where((c)=>c.income==income&&c.isSubcategory&&c.parentId==parentId).toList();
+ Iterable<BudgetCategory> values,bool income,String? parentId){
+ if(parentId==null)return <BudgetCategory>[];
+ final all=values.toList();
+ return all.where((c)=>c.income==income&&c.isSubcategory&&
+  c.parentId==parentId&&waffraCategoryAvailableForNewEntry(all,c)).toList();
+}
 
 bool waffraCanAssignManualCategory(Iterable<BudgetCategory> values,
  bool income,String? parentId,String category){
  if(parentId==null)return false;
- return values.any((c)=>c.income==income&&!c.isSubcategory&&c.id==parentId)&&
-  values.any((c)=>c.income==income&&c.isSubcategory&&
-   c.parentId==parentId&&c.name==category);
+ final all=values.toList();
+ return all.any((c)=>c.income==income&&!c.isSubcategory&&
+  c.id==parentId&&c.categoryActive)&&
+  all.any((c)=>c.income==income&&c.isSubcategory&&
+   c.parentId==parentId&&c.name==category&&
+   waffraCategoryAvailableForNewEntry(all,c));
 }
 
 class SavingGoal {
@@ -3894,7 +3919,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // Manual entries may only select leaf categories; stored parent references
  // in older transactions remain unchanged until a user deliberately edits.
  List<BudgetCategory> forManualTransactionType(bool income)=>
-  categories.where((c)=>c.income==income&&c.isSubcategory).toList();
+  categories.where((c)=>c.income==income&&c.isSubcategory&&
+   waffraCategoryAvailableForNewEntry(categories,c)).toList();
+ // Used in NEW recurring selections. forType stays historical/complete.
+ List<BudgetCategory> forSelectableType(bool income)=>
+  forManualTransactionType(income);
  Future<bool?> confirm(String title,String body)=>showWaffraDialog<bool>(
   context:context,builder:(ctx)=>AlertDialog(title:WaffraText(title),content:WaffraText(body),
   actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),child:const WaffraText('إلغاء')),
@@ -9029,6 +9058,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        income:initial?.income??income,parentId:effectiveParentId,
        budget:initial?.budget??0,alertPercent:initial?.alertPercent??80,
        budgetActive:initial?.budgetActive??true,
+       categoryActive:initial?.categoryActive??true,
        origin:initial?.origin??'user',budgetLabel:initial?.budgetLabel));
      }),child:const WaffraText('حفظ')),
     ])));
@@ -9071,7 +9101,50 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(!mounted||parentId==null)return;
   await addCategory(income:income,parentId:parentId);
  }
+ /// Category actions are reversible and never rewrite ledger, budgets, goal
+ /// funds or historical references. Only new-category eligibility changes.
+ Future<void> setCategoryActive(BudgetCategory selected,bool enabled)async{
+  final current=categories.where((c)=>c.id==selected.id).toList();
+  if(current.length!=1||current.single.categoryActive==enabled)return;
+  if(!enabled){
+   final affected=selected.isSubcategory?0:
+    categories.where((c)=>c.parentId==selected.id).length;
+   final approved=await showWaffraDialog<bool>(
+    context:context,builder:(ctx)=>AlertDialog(
+     title:WaffraText(waffraIsEnglish?'Pause category?':'إيقاف القسم مؤقتًا؟'),
+     content:WaffraText(waffraIsEnglish?
+      'The category and ${affected>0?'its $affected subcategories ':''}will no longer be selectable for new transactions. Existing transactions, recurring references and budgets are kept unchanged.':
+      'القسم ${affected>0?'وعدد $affected قسم فرعي تابع له ':''}لن يكون متاحًا للعمليات الجديدة. معاملاتك القديمة والعمليات المتكررة والميزانيات محفوظة بدون تغيير.'),
+     actions:[
+      TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),
+       child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+      FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),
+       child:WaffraText(waffraIsEnglish?'Pause':'إيقاف')),
+     ],
+    ));
+   if(approved!=true||!mounted)return;
+  }
+  final live=categories.where((c)=>c.id==selected.id).toList();
+  if(live.length!=1||live.single.categoryActive==enabled)return;
+  setState((){
+   final index=categories.indexWhere((c)=>c.id==selected.id);
+   categories[index]=categories[index].copy(categoryActive:enabled);
+  });
+  final saved=await _persistModuleOrReload(
+   WaffraFinanceRoute.categoryCreateEditDeleteRestore,
+   operation:'category-availability-toggle');
+  if(saved&&mounted)snackSuccess(context,waffraIsEnglish?
+   (enabled?'Category enabled':'Category paused'):
+   (enabled?'تم تفعيل القسم':'تم إيقاف القسم مؤقتًا'));
+ }
  Future<void> addCategory({bool income=false,String parentId=''})async {
+  if(parentId.isNotEmpty&&!categories.any((c)=>
+   c.id==parentId&&!c.isSubcategory&&c.categoryActive)){
+   snack(context,waffraIsEnglish?
+    'Enable the main category before adding a subcategory.':
+    'فعّل القسم الرئيسي قبل إضافة قسم فرعي.');
+   return;
+  }
   final c=await categoryDialog(income:income,parentId:parentId);
   if(c==null||!mounted)return;
   if(WaffraValidators.uniqueCategory(c.name,
@@ -10326,12 +10399,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final title=TextEditingController(text:initial?.title??duplicate?.title??suggestedTitle??''),
    amount=TextEditingController(text:initial!=null?formatWaffraEditAmount(initial.amount):duplicate!=null?formatWaffraEditAmount(duplicate.amount):suggestedAmount==null?'':formatWaffraEditAmount(suggestedAmount)),
    day=TextEditingController(text:(initial?.day??duplicate?.day??1).toString());
-  bool income=initial?.income??duplicate?.income??false;String category=initial?.category??duplicate?.category??(forType(false).isNotEmpty?
-    forType(false).first.name:'');bool attempted=false;
+  bool income=initial?.income??duplicate?.income??false;String category=initial?.category??duplicate?.category??(forSelectableType(false).isNotEmpty?
+    forSelectableType(false).first.name:'');bool attempted=false;
   DateTime startAt=initial?.startAt??(duplicate!=null&&duplicate.startAt.isAfter(DateTime.now())?duplicate.startAt:DateTime.now());
   final r=await showWaffraDialog<RecurringBill>(context:context,
    builder:(ctx)=>StatefulBuilder(builder:(ctx,update){
-    final options=forType(income);
+    final options=forSelectableType(income);
     final selected=options.any((x)=>x.name==category)?category:
       (options.isNotEmpty?options.first.name:'');
     return AlertDialog(title:WaffraText(initial==null?(waffraIsEnglish?'New recurring item':'عملية شهرية متكررة'):(waffraIsEnglish?'Edit recurring item':'تعديل العملية المتكررة')),
@@ -10353,7 +10426,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        items:const [DropdownMenuItem(value:true,child:WaffraText('دخل')),
         DropdownMenuItem(value:false,child:WaffraText('مصروف'))],
        onChanged:initial?.linkedGoalId!=null?null:WaffraHaptics.selection((v){if(v!=null)update((){
-         income=v;category=forType(v).isNotEmpty?forType(v).first.name:'';
+         income=v;category=forSelectableType(v).isNotEmpty?forSelectableType(v).first.name:'';
         });})),
       const SizedBox(height:12),
       InkWell(
