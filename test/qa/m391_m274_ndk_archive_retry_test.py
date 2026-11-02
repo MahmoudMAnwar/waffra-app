@@ -37,7 +37,7 @@ class AndroidNdkArchiveRetryTest(unittest.TestCase):
 
     def test_prebuilt_android_drive_keeps_real_taps_and_failure_reporting(self):
         job = self.yaml.split("  android-emulator-ui-taps:", 1)[1]
-        script = (WORKFLOW.parent / "scripts/run-m274-android-tap-smoke.sh").read_text(
+        script = (WORKFLOW.parent.parent / "scripts/run-m274-android-tap-smoke.sh").read_text(
             encoding="utf-8")
         self.assertIn("Prepare integration driver for prebuilt debug APK", job)
         self.assertIn("integrationDriver()", job)
