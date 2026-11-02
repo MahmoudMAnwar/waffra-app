@@ -153,6 +153,7 @@ extension WaffraBudgetDirectory on _HomeScreenState {
        }),
        icon:const Icon(Icons.add_circle_outline_rounded),
        label:WaffraText(waffraIsEnglish?'Create budget':'إضافة ميزانية جديدة'))),
+     const SizedBox(height:14),
      if(filtered.isEmpty)Padding(
       padding:const EdgeInsets.symmetric(vertical:14),
       child:WaffraText(waffraIsEnglish?'No matching saved budgets':
@@ -169,10 +170,28 @@ extension WaffraBudgetDirectory on _HomeScreenState {
         decoration:BoxDecoration(
          border:Border.all(color:emerald.withValues(alpha:.23)),
          borderRadius:BorderRadius.circular(14)),
-        child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-         WaffraText(b.budgetLabel??('ميزانية '+b.displayName),
+        child:ExpansionTile(
+         key:PageStorageKey<String>('waffra-saved-budget-details-'+b.id),
+         initiallyExpanded:false,
+         tilePadding:EdgeInsets.zero,
+         childrenPadding:const EdgeInsets.only(bottom:8),
+         title:WaffraText(b.budgetLabel??('ميزانية '+b.displayName),
           maxLines:2,style:const TextStyle(fontWeight:FontWeight.bold)),
-
+         subtitle:Row(mainAxisSize:MainAxisSize.min,children:[
+          Expanded(child:WaffraText(b.budgetActive?
+           (waffraIsEnglish?'Active':'مفعلة'):
+           (waffraIsEnglish?'Paused':'متوقفة'),
+           style:const TextStyle(fontSize:12))),
+          Switch.adaptive(
+           key:Key('waffra-budget-activation-'+b.id),
+           value:b.budgetActive,
+           onChanged:WaffraHaptics.selection((enabled)async{
+            if(enabled==b.budgetActive)return;
+            await setNamedBudgetActive(b,!b.budgetActive);
+            if(mounted)refresh((){});
+           })),
+         ]),
+         children:[
          const SizedBox(height:8),
          LinearProgressIndicator(value:ratio,minHeight:7,
           color:spent>b.budget?Colors.deepOrange:emerald,
@@ -202,16 +221,6 @@ extension WaffraBudgetDirectory on _HomeScreenState {
            label:WaffraText(waffraIsEnglish?'Edit':'تعديل')),
           TextButton.icon(
            onPressed:WaffraHaptics.tap(()async{
-            await setNamedBudgetActive(b,!b.budgetActive);
-            if(mounted)refresh((){});
-           }),
-           icon:Icon(b.budgetActive?
-            Icons.pause_circle_outline:Icons.play_circle_outline,size:17),
-           label:WaffraText(b.budgetActive?
-            (waffraIsEnglish?'Pause':'إيقاف'):
-            (waffraIsEnglish?'Resume':'تفعيل'))),
-          TextButton.icon(
-           onPressed:WaffraHaptics.tap(()async{
             await deleteNamedBudget(b);
             if(mounted)refresh((){});
            }),
@@ -227,31 +236,30 @@ extension WaffraBudgetDirectory on _HomeScreenState {
        ),
       );
      }),
-     const SizedBox(height:10),
+     const SizedBox(height:20),
      ExpansionTile(
       key:const PageStorageKey<String>('waffra-budget-starter-templates'),
-      initiallyExpanded:true,
+      initiallyExpanded:false,
       tilePadding:EdgeInsets.zero,
-      childrenPadding:const EdgeInsets.only(bottom:8),
+      childrenPadding:const EdgeInsets.only(bottom:12),
       leading:const Icon(Icons.auto_awesome_outlined,color:emerald),
       title:WaffraText(waffraIsEnglish?
        'Suggested budgets':'ميزانيات مقترحة',
        style:const TextStyle(fontWeight:FontWeight.bold)),
-      subtitle:WaffraText(waffraIsEnglish?
-       'Optional templates — enter your own monthly limit':
-       'قوالب اختيارية — انت اللي بتحدد الحد الشهري',
-       style:const TextStyle(fontSize:12)),
+
       children:[
        if(templates.isEmpty)
         WaffraText(waffraIsEnglish?'No matching templates':
          'لا توجد قوالب مطابقة'),
-       Wrap(spacing:8,runSpacing:10,children:[
+       Wrap(spacing:10,runSpacing:12,children:[
         for(final t in templates)
          ActionChip(
           key:Key('waffra-budget-template-'+t.nameAr),
-          avatar:const Icon(Icons.add_rounded,size:16,color:emerald),
+          materialTapTargetSize:MaterialTapTargetSize.padded,
+          padding:const EdgeInsets.symmetric(horizontal:11,vertical:10),
+          avatar:const Icon(Icons.add_rounded,size:19,color:emerald),
           label:WaffraText(t.name(waffraIsEnglish),
-           style:const TextStyle(fontSize:12)),
+           style:const TextStyle(fontSize:14,fontWeight:FontWeight.w600)),
           onPressed:WaffraHaptics.tap(()=>
            chooseBudgetCategory(
             suggestedName:t.name(waffraIsEnglish))),
