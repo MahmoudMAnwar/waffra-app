@@ -87,6 +87,8 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
   final name=TextEditingController(text:existing.name);
   final target=TextEditingController(text:existing.target<=0?'':formatWaffraEditAmount(existing.target));
   bool noTarget=existing.target<=0;
+  bool goalAlertsEnabled=existing.alertEnabled;
+  int goalAlertPercent=existing.alertPercent;
   DateTime? deadline=existing.dueDate;
   bool removeDeadline=false;
   String? nameError,amountError;
@@ -107,6 +109,24 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
         value:noTarget,activeTrackColor:emerald,
         title:WaffraText(waffraIsEnglish?'Open-ended savings':'ادخار مفتوح بدون مبلغ مستهدف'),
         onChanged:WaffraHaptics.selection((value)=>update(()=>noTarget=value))),
+       if(!noTarget)...[
+        SwitchListTile.adaptive(
+         key:const Key('waffra-goal-alert-toggle-edit'),
+         contentPadding:EdgeInsets.zero,
+         title:WaffraText(waffraIsEnglish?'Goal progress alerts':'تنبيهات تقدم الهدف'),
+         subtitle:WaffraText(waffraIsEnglish?
+          'Only for goals with a target amount':'فقط للأهداف ذات المبلغ المستهدف'),
+         value:goalAlertsEnabled,activeTrackColor:emerald,
+         onChanged:WaffraHaptics.selection((v)=>update(()=>goalAlertsEnabled=v))),
+        if(goalAlertsEnabled)WaffraCenteredDropdownFormField<int>(
+         initialValue:goalAlertPercent,
+         decoration:InputDecoration(labelText:waffraIsEnglish?'Alert at':'نسبة التنبيه'),
+         items:[50,60,70,75,80,85,90,95,100].map((n)=>
+          DropdownMenuItem(value:n,child:WaffraText('$n%'))).toList(),
+         onChanged:WaffraHaptics.selection((v){
+          if(v!=null)update(()=>goalAlertPercent=v);
+         })),
+       ],
        if(!noTarget)TextField(controller:target,
         keyboardType:const TextInputType.numberWithOptions(decimal:true),
         inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],
@@ -148,7 +168,8 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
         if(nameError!=null||amountError!=null||(!noTarget&&(v==null||v<=0)))return;
         Navigator.pop(dialog,SavingGoal(id:existing.id,name:n,target:noTarget?0.0:v!,
          saved:existing.saved,dueDate:removeDeadline?null:deadline,
-         active:existing.active));
+         active:existing.active,alertEnabled:!noTarget&&goalAlertsEnabled,
+         alertPercent:goalAlertPercent));
        }),child:WaffraText(waffraIsEnglish?'Save changes':'حفظ التعديل')),
       ],
      )));
@@ -160,6 +181,10 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
    });
    if(!await _persistModuleOrReload(WaffraFinanceRoute.goalCreateEditDeleteRestore,
      operation:'goal-edit'))return;
+   if(updated.alertEnabled&&!existing.alertEnabled){
+    try{await WaffraReminders.requestPermission();}
+    catch(e){debugPrint('Goal notification permission not granted: $e');}
+   }
    if(oldLinked){
     await _ensureLinkedRecurringForGoal(updated);
    }else if(updated.dueDate!=null&&updated.target>0&&updated.active&&

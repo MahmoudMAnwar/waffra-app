@@ -18,6 +18,36 @@ class WaffraReminders {
  static final FlutterLocalNotificationsPlugin _plugin=FlutterLocalNotificationsPlugin();
  static bool _initialized=false;
  static String? _lastTimeZone;
+ static const _budgetDetails=NotificationDetails(android:AndroidNotificationDetails(
+  'waffra_budget_threshold_v1','Waffra budget alerts',
+  channelDescription:'Optional alerts for confirmed budget thresholds',
+  importance:Importance.defaultImportance,priority:Priority.defaultPriority));
+ static Future<void> showBudgetAlert({
+  required String id,required String month,required int stage,
+  required String detail,bool english=false,
+ })async{
+  if(!Platform.isAndroid)return;
+  await initialize();
+  if(!await alreadyPermitted())return;
+  await _plugin.show(stableId('budget:$id:$month:$stage',0),
+   english?'Waffra • Budget alert':'وفرة • تنبيه ميزانية',
+   detail,_budgetDetails);
+ }
+ static const _goalDetails=NotificationDetails(android:AndroidNotificationDetails(
+  'waffra_goal_progress_v1','Waffra savings progress',
+  channelDescription:'Optional progress alerts after confirmed goal contributions',
+  importance:Importance.defaultImportance,priority:Priority.defaultPriority));
+ static Future<void> showGoalProgressAlert({
+  required String id,required double target,required int stage,
+  required String detail,bool english=false,
+ })async{
+  if(!Platform.isAndroid||target<=0)return;
+  await initialize();
+  if(!await alreadyPermitted())return;
+  await _plugin.show(stableId('goal:$id:$target:$stage',0),
+   english?'Waffra • Goal progress':'وفرة • تقدم الهدف',
+   detail,_goalDetails);
+ }
  static const _details=NotificationDetails(android:AndroidNotificationDetails(
   'waffra_recurring_due_v1','Waffra recurring reminders',
   channelDescription:'Optional reminders before upcoming recurring obligations',

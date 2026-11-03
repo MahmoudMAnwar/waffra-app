@@ -80,6 +80,7 @@ class WaffraFreshFinanceDomainRepository {
   Future<void> createStandaloneBudget({
     required String budgetId,required String name,required int limitMinor,
     required String createdAtIso,int alertPercent=80,
+    bool alertEnabled=true,
   }) async {
     await _requireReady();
     _id(budgetId,'budgetId');
@@ -101,13 +102,14 @@ class WaffraFreshFinanceDomainRepository {
        [budgetId,name.trim(),limitMinor,1,alertPercent,createdAtIso,
         jsonEncode({'id':budgetId,'name':name.trim(),
          'budgetMinor':limitMinor,'budgetActive':true,
-         'alertPercent':alertPercent})]);
+         'alertPercent':alertPercent,'alertEnabled':alertEnabled})]);
     });
   }
 
   Future<void> editStandaloneBudget({
     required String budgetId,required String name,required int limitMinor,
     required int alertPercent,required bool userConfirmed,
+    bool? alertEnabled,
   }) async {
     await _requireReady();
     _id(budgetId,'budgetId');
@@ -130,6 +132,7 @@ class WaffraFreshFinanceDomainRepository {
        ..['name']=name.trim()
        ..['budgetMinor']=limitMinor
        ..['alertPercent']=alertPercent;
+      if(alertEnabled!=null)source['alertEnabled']=alertEnabled;
       await store.customStatement(
        'UPDATE fresh_finance_standalone_budgets '
        'SET name=?,monthly_limit_minor=?,alert_percent=?,source_json=? '
