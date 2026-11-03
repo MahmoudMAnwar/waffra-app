@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M413",
-  "human_scope_review": "M413 budget alert controls plus M414 goal milestone and recurring reminder independence; Android device delivery evidence remains required before merging.",
+  "human_scope_review": "M413 budget alert controls plus M414 goal milestone and recurring reminder independence; Android device delivery evidence remains required before merging. M414 finance snapshot validation follow-up: optional alert fields are validated and retained in guarded storage, with legacy compatibility tests.",
   "user_requested_changes": [
     "Add enable and disable for budget threshold warnings independently from budget activation, show the percent dropdown only while enabled and persist state.",
     "Unify percentage warning logic in Home monthly budget, smart financial insights and confirmed manual/SMS expenses with each budget's selected threshold.",
@@ -11,7 +11,8 @@
     "Provide per-recurring-entry reminder enable/disable independently of financial schedule active state; preserve that preference after restart.",
     "Keep main/subcategories as classification only. No category budget percentage or inferred budget linkage.",
     "Regression-test JSON reload and state separation for goal, recurring and budget alert controls; separately certify UI cold restart and real Android notifications before merge.",
-    "Preserve user-approved budget, goal and recurring alert state through the encrypted cloud sanitizer, explicitly allowlisting only alertEnabled, alertPercent and reminderEnabled while rejecting unknown financial fields."
+    "Preserve user-approved budget, goal and recurring alert state through the encrypted cloud sanitizer, explicitly allowlisting only alertEnabled, alertPercent and reminderEnabled while rejecting unknown financial fields.",
+    "Preserve newly opted-in goal, budget and recurring alert/reminder settings during legacy data preflight and guarded SQLCipher source JSON writes, without enabling production database cutover."
   ],
   "allowed_changed_files": [
     "lib/main.dart",
@@ -23,7 +24,11 @@
     "lib/waffra_categories_page.part.dart",
     "test/m414_goal_recurring_alerts_test.dart",
     "docs/qa/m414_android_notification_acceptance.md",
-    "lib/storage/waffra_cloud_cipher.dart"
+    "lib/storage/waffra_cloud_cipher.dart",
+    "lib/storage/legacy_snapshot_preflight.dart",
+    "lib/storage/waffra_fresh_finance_domain_repository.dart",
+    "lib/storage/waffra_fresh_finance_modules_repository.dart",
+    "test/m414_alert_snapshot_compat_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
