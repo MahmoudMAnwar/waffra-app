@@ -39,6 +39,7 @@ object WaffraAutoSmsStore {
     private const val historyCursorAt = "sms_history_cursor_at"
     private const val historyCursorId = "sms_history_cursor_id"
     private const val historyComplete = "sms_history_complete"
+    private const val historySourceMonth = "sms_history_source_install_month_v2"
     private fun monthStart() = Calendar.getInstance().apply {
         set(Calendar.DAY_OF_MONTH, 1)
         set(Calendar.HOUR_OF_DAY, 0)
@@ -46,6 +47,24 @@ object WaffraAutoSmsStore {
         set(Calendar.SECOND, 0)
         set(Calendar.MILLISECOND, 0)
     }.timeInMillis
+
+    // The requested historical boundary is the FIRST day of the calendar
+    // month in which this installation was installed (not SMS consent day).
+    // PackageInfo.firstInstallTime survives an in-place app update.
+    private fun installationMonthStart(context: Context): Long {
+        val installedAt = try {
+            context.packageManager.getPackageInfo(context.packageName, 0).firstInstallTime
+        } catch (_: Exception) { return 0L }
+        if (installedAt <= 0L || installedAt > System.currentTimeMillis()) return 0L
+        return Calendar.getInstance().apply {
+            timeInMillis = installedAt
+            set(Calendar.DAY_OF_MONTH, 1)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+    }
     private val mutex = Any()
     @Volatile var onChanged: (() -> Unit)? = null
 
@@ -158,8 +177,8 @@ object WaffraAutoSmsStore {
         return hasFinancialSender
     }
 
-    // M437: Unknown-finance lookup is strictly ON-DEMAND, and only scans
-    // SMS already covered by the one-time, activation-month permission.
+    // M437: Unknown-finance lookup is strictly ON-DEMAND, and scans from
+    // the first day of the installation month with standing SMS consent.
     // Never treat invoice/debt IDs as a paid transaction or send unknown SMS
     // to OpenRouter. No raw unknown message is saved in Waffra storage.
     private val debtNotice = Regex(
@@ -200,13 +219,9 @@ object WaffraAutoSmsStore {
     ): List<Map<String, Any>> {
         if (!enabled(context) || maxRead <= 0 || maxResults <= 0)
             return emptyList()
-        val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
-        val start = prefs.getLong(activationMonth, 0L)
+        val start = installationMonthStart(context)
         if (start <= 0L) return emptyList()
-        val end = minOf(Calendar.getInstance().apply {
-            timeInMillis = start
-            add(Calendar.MONTH, 1)
-        }.timeInMillis, System.currentTimeMillis() + 1)
+        val end = System.currentTimeMillis() + 1
         val cursor = try {
             context.contentResolver.query(Uri.parse("content://sms/inbox"),
                 arrayOf("address", "body", "date"),
@@ -383,7 +398,7 @@ object WaffraAutoSmsStore {
             } catch (_: Exception) { false }
         }
 
-    /** Resumable history import: only the consent calendar month, for review.
+    /** Resumable history import: from day 1 of installation month through now.
      * This native importer never posts money or contacts a cloud provider.
      * An separately opted-in Flutter worker may stage sanitized cloud hints.
      * The encrypted queue holds up to 100 and resumes after user review.
@@ -391,12 +406,11 @@ object WaffraAutoSmsStore {
     fun importConsentMonth(context: Context, maxRead: Int = 500): Int {
         if (!enabled(context)) return 0
         val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
-        val start = prefs.getLong(activationMonth, 0)
-        if (start <= 0 || prefs.getBoolean(historyComplete, false)) return 0
-        val end = minOf(Calendar.getInstance().apply {
-            timeInMillis = start
-            add(Calendar.MONTH, 1)
-        }.timeInMillis, System.currentTimeMillis() + 1)
+        val start = installationMonthStart(context)
+        if (start <= 0L) return 0
+        // Do not mark the window permanently complete: next month's SMS
+        // must also be found by a later on-demand scan.
+        val end = System.currentTimeMillis() + 1
         var queued = try { synchronized(mutex) { read(context).length() } }
             catch (_: Exception) { return 0 }
         if (queued >= maxCandidates) return 0
@@ -406,8 +420,12 @@ object WaffraAutoSmsStore {
                 projection, "date >= ? AND date < ?",
                 arrayOf(start.toString(), end.toString()), "date ASC, _id ASC")
         } catch (_: Exception) { null } ?: return 0
-        var lastAt = prefs.getLong(historyCursorAt, start - 1)
-        var lastId = prefs.getLong(historyCursorId, -1)
+        // The v1 cursor started on the permission-activation month. On first
+        // v2 scan replay from install-month start; queue and finance hashes
+        // still protect existing reviewed entries from double posting.
+        val sameSource = prefs.getLong(historySourceMonth, 0L) == start
+        var lastAt = if (sameSource) prefs.getLong(historyCursorAt, start - 1) else start - 1
+        var lastId = if (sameSource) prefs.getLong(historyCursorId, -1) else -1
         var checked = 0
         var accepted = 0
         var complete = true
@@ -440,6 +458,7 @@ object WaffraAutoSmsStore {
         }
         prefs.edit().putLong(historyCursorAt, lastAt)
             .putLong(historyCursorId, lastId)
+            .putLong(historySourceMonth, start)
             .putBoolean(historyComplete, complete).commit()
         return accepted
     }
