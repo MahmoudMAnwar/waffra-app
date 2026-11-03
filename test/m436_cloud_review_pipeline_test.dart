@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:waffra/waffra_sms_cloud_redactor.dart';
 
 void main() {
  test('M436 cloud suggestions are consented and budgeted, never posted',(){
@@ -84,4 +85,18 @@ void main() {
   expect(cloud,contains('WaffraCloudflareSmsGateway.analyze('));
   expect(cloud,contains('WaffraSmsCloudRedactor.redact(source)'));
  });
+ test('M436 redactor accepts compact English multi-currency SMS',(){
+  final samples=[
+   'JOD198.000 credited to account from CliQ transfer.',
+   'JOD10.000 debited from account via CliQ transfer.',
+   '136.00 AED debited for restaurant purchase.',
+  ];
+  for(final message in samples){
+   expect(WaffraSmsCloudRedactor.redact(message),isNotNull,
+    reason:'Missing safe money/action parsing for compact currency');
+  }
+  expect(WaffraSmsCloudRedactor.redact(
+   'Your OTP verification code is 123456 for login'),isNull);
+ });
+
 }
