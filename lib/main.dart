@@ -68,6 +68,8 @@ import 'waffra_goal_catalog.dart';
 import 'waffra_pdf_reader.dart';
 import 'waffra_footer.dart';
 import 'waffra_messages.dart';
+import 'waffra_auto_sms.dart';
+import 'waffra_auto_sms_consent.dart';
 import 'waffra_recurring_policy.dart';
 import 'waffra_cross_source_duplicate_review.dart';
 import 'waffra_secure_backup.dart';
@@ -1004,6 +1006,7 @@ String waffraCountrySetupKey(Person user){
 class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  bool loading=true,onboarded=false,dark=false,locked=false,showLogin=false;
  bool googleFirstRunSetup=false;
+ bool autoSmsConsentPending=false;
  String appearance='light';
  bool introDone=false;
  int _greetingCycle=0;
@@ -1079,6 +1082,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     profile=u;
     googleFirstRunSetup=waffraGoogleProfileReadyForCountrySetup(u)&&
       !(p.getBool(waffraCountrySetupKey(u!))??false);
+    autoSmsConsentPending=Platform.isAndroid&&
+     !(p.getBool(WaffraAutoSms.firstRunKey)??false);
     pinHash=p.getString('waffra_pin_sha256');
     locked=pinHash!=null;startupError=null;loading=false;
    });
@@ -1086,6 +1091,13 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    debugPrint('Waffra startup failed: $e');
    if(mounted)setState((){startupError=e.toString();loading=false;});
   }
+ }
+ Future<void> finishSmsPermissionChoice()async{
+  final p=await SharedPreferences.getInstance();
+  if(!await p.setBool(WaffraAutoSms.firstRunKey,true)){
+   throw StateError('Could not persist SMS onboarding decision');
+  }
+  if(mounted)setState(()=>autoSmsConsentPending=false);
  }
  Future<void> quickStart()async {
   final p=await SharedPreferences.getInstance();
@@ -1134,6 +1146,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   if(mounted)setState(()=>googleFirstRunSetup=false);
  }
  Future<void> logout()async {
+  // Never capture bank messages for a profile after sign-out.
+  await WaffraAutoSms.disable();
   // Drop any in-memory AI prompt context and cancel model download before
   // a new account can open its verified finance scope.
   try{await WaffraOnDeviceQwen.shared.dispose();}catch(_){}
@@ -1391,6 +1405,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     const SizedBox(height:8),
     FilledButton(onPressed:WaffraHaptics.tap((){setState((){loading=true;startupError=null;});load();}),child:const WaffraText('إعادة المحاولة')),
    ])))):
+   autoSmsConsentPending?WaffraAutoSmsConsentPage(
+    english:language=='en',onComplete:finishSmsPermissionChoice):
    locked?PinLockScreen(pinHash:pinHash!,onUnlock:()=>setState(()=>locked=false)):
    profile==null||showLogin?LoginScreen(onSave:saveUser):
    googleFirstRunSetup?WaffraCountryFirstRunPage(
@@ -3176,13 +3192,67 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // Account settings open from the app bar instead of a footer destination.
  bool accountOpened=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
- @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:()=>unawaited(_syncWidgetTransactions()));unawaited(_loadFinanceSafely());}
+ @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraAutoSmsUpdates.addListener(_receiveAutoSmsNotice);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:(){unawaited(_syncWidgetTransactions());unawaited(_reviewAutoSmsCandidates());});unawaited(_loadFinanceSafely());}
  void _returnToHome(){if(mounted)setState((){_tabBackStack.clear();tab=0;accountOpened=false;goalsOpened=false;addFabExpanded=false;});}
  void _receiveWidgetAction(){
   if(!mounted||!ready||waffraWidgetAction.value!='add')return;
   waffraWidgetAction.value=null;
   setState((){tab=0;goalsOpened=false;addFabExpanded=false;});
   WidgetsBinding.instance.addPostFrameCallback((_){if(mounted)unawaited(entrySheet());});
+ }
+ bool _autoSmsReviewOpen=false;
+ void _receiveAutoSmsNotice(){
+  if(!mounted||!ready||_smsSheetOpen||_autoSmsReviewOpen)return;
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+   if(mounted)unawaited(_reviewAutoSmsCandidates());
+  });
+ }
+ Future<void> _reviewAutoSmsCandidates()async {
+  if(!mounted||!ready||_smsSheetOpen||_autoSmsReviewOpen||
+     _financeLoadFailure!=null)return;
+  _autoSmsReviewOpen=true;
+  try{
+   final items=await WaffraAutoSms.pending();
+   if(!mounted||items.isEmpty)return;
+   Map<String,Object?>? selected;
+   for(final item in items){
+    final id=item['id'],body=item['body'];
+    if(id is! String||body is! String||body.trim().isEmpty)continue;
+    if(smsHashes.contains(bankSmsHash(body))){
+     await WaffraAutoSms.acknowledge([id]);
+     continue;
+    }
+    selected=item;
+    break;
+   }
+   if(!mounted||selected==null)return;
+   final id=selected['id'],body=selected['body'];
+   final sender=selected['sender'] is String?selected['sender'] as String:'';
+   if(id is! String||body is! String)return;
+   final decision=await showWaffraDialog<String>(context:context,
+    builder:(dialog)=>AlertDialog(
+     title:WaffraText(waffraIsEnglish?'New bank SMS found':'رسالة بنكية جديدة'),
+     content:WaffraText(waffraIsEnglish?
+      'A financial SMS from $sender is ready. Review amount, type and budget before saving.':
+      'وصلت رسالة مالية من $sender. راجع المبلغ ونوع العملية والميزانية قبل الحفظ.'),
+     actions:[
+      TextButton(onPressed:()=>Navigator.pop(dialog),
+       child:WaffraText(waffraIsEnglish?'Later':'لاحقًا')),
+      TextButton(onPressed:()=>Navigator.pop(dialog,'ignore'),
+       child:WaffraText(waffraIsEnglish?'Ignore':'تجاهل')),
+      FilledButton(onPressed:()=>Navigator.pop(dialog,'review'),
+       child:WaffraText(waffraIsEnglish?'Review transaction':'مراجعة العملية')),
+     ]));
+   if(decision=='ignore'){
+    await WaffraAutoSms.acknowledge([id]);
+   }else if(decision=='review'&&mounted){
+    await bulkSmsSheet(initialText:body);
+    // The inbox message is acknowledged ONLY after the guarded finance
+    // writer proves the original SMS hash was durably committed.
+    if(smsHashes.contains(bankSmsHash(body)))
+     await WaffraAutoSms.acknowledge([id]);
+   }
+  }finally{_autoSmsReviewOpen=false;}
  }
  void _receiveSharedSms(){
   if(!mounted||!ready||_smsSheetOpen)return;
@@ -3202,6 +3272,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   recurringPostponed.clear();smsHashes.clear();learnedMerchantCategories.clear();
   try{
    await load();
+   WidgetsBinding.instance.addPostFrameCallback((_) {
+    if(mounted)unawaited(_reviewAutoSmsCandidates());
+   });
   }catch(e){
    debugPrint('Financial startup integrity/recovery gate blocked access: $e');
    if(mounted)setState((){
@@ -3227,7 +3300,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     icon:const Icon(Icons.refresh),
     label:WaffraText(waffraIsEnglish?'Retry safely':'إعادة المحاولة بأمان')),
   ])));
- @override void dispose(){if(identical(WaffraBackNavigation.onHomeBack,_registeredBackHandler))WaffraBackNavigation.onHomeBack=null;_dashboardScrollController.dispose();_categoryScrollController.dispose();_goalsScrollController.dispose();_recurringScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();_saveProgress.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
+ @override void dispose(){if(identical(WaffraBackNavigation.onHomeBack,_registeredBackHandler))WaffraBackNavigation.onHomeBack=null;_dashboardScrollController.dispose();_categoryScrollController.dispose();_goalsScrollController.dispose();_recurringScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraAutoSmsUpdates.removeListener(_receiveAutoSmsNotice);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();_saveProgress.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
  Future<void> _syncWidgetTransactions()async{
   if(!mounted||!ready)return;
   try{
