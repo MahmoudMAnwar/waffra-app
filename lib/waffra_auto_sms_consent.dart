@@ -45,17 +45,23 @@ class _WaffraAutoSmsConsentPageState extends State<WaffraAutoSmsConsentPage> {
      style:Theme.of(context).textTheme.headlineSmall?.copyWith(
       fontWeight:FontWeight.bold)),
     const SizedBox(height:18),
-    Text(en?'Waffra can detect bank transactions as SMS arrive. '
-     'Review the suggested income, expense, account and budget before saving.':
-     'وفرة يكتشف الرسائل البنكية عند وصولها ويقترح الدخل والمصروف '
-     'والحساب والميزانية. تراجع العملية قبل الحفظ.',
+    Text(en?'When bank SMS arrive, Waffra automatically records verified '
+     'income and expenses, matches your previous budget rules, and sends a '
+     'phone notification after saving. Uncertain transactions require review.':
+     'لما توصلك رسالة بنكية، وفرة هيسجل الدخل والمصروف المؤكد تلقائيًا '
+     'ويربط الميزانية حسب اختياراتك السابقة، ويبعت إشعار بعد الحفظ. '
+     'أي عملية مش مؤكدة هتحتاج مراجعتك.',
      textAlign:TextAlign.center),
     const SizedBox(height:14),
-    Text(en?'Only qualifying financial SMS are kept in an encrypted '
-     'on-device queue. Verification codes and personal messages are excluded. '
-     'No SMS is uploaded or sent to a third-party AI service.':
-     'يتم حفظ الرسائل المالية المطابقة فقط في قائمة مشفّرة على الهاتف. '
-     'نستبعد رموز التحقق والرسائل الشخصية، ولا نرسل الرسائل إلى الإنترنت.',
+    Text(en?'Allowing bank SMS also authorizes automatic recording of '
+     'high-confidence financial transactions and local notifications. '
+     'Bank messages stay encrypted on this device, are not uploaded to an '
+     'AI service, and can be disabled later. OTPs and personal messages '
+     'are excluded. You can skip and enter transactions manually.':
+     'بالموافقة تسمح لوفرة بتسجيل المعاملات المؤكدة تلقائيًا وإرسال إشعار '
+     'بعد حفظها. الرسائل المالية محفوظة مشفّرة على جهازك ولا يتم رفعها '
+     'لخدمة ذكاء اصطناعي. نستبعد رموز التحقق والرسائل الشخصية، وتقدر '
+     'توقف الميزة أو تستخدم الإدخال اليدوي في أي وقت.',
      textAlign:TextAlign.center,
      style:Theme.of(context).textTheme.bodySmall),
     const Spacer(),
