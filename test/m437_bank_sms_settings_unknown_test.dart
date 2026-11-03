@@ -19,6 +19,9 @@ void main(){
   expect(newSettings,isNot(contains('requestAutoSmsPermission')));
   expect(newSettings,isNot(contains('commitConfirmedSms(')));
   expect(sms,contains("'scanUnknownFinancialSms'"));
+  expect(newSettings,contains('await _openAutoSmsInbox()'));
+  expect(newSettings,contains('لا توجد رسائل بنكية حديثة'));
+  expect(ui,contains("((item['body'] as String?)??'')"));
  });
 
  test('M437 Etimad debt notices are not monetary transactions',(){
@@ -35,6 +38,7 @@ void main(){
   expect(code,contains('maxRead: Int = 500'));
   expect(code,contains('maxResults: Int = 100'));
   expect(code,contains('"date >= ? AND date < ?"'));
+  expect(code,contains('installationMonthStart(context)'));
   expect(code,contains('"date DESC"'));
   expect(code,isNot(contains('cloud')));
   expect(code,isNot(contains('offer(context')));
@@ -67,10 +71,26 @@ void main(){
   final scan=store.substring(store.indexOf('fun scanUnknownFinancialSms('),
    store.indexOf('private fun id(sender: String, body: String, at: Long)'));
   expect(scan,contains('if (!enabled(context)'));
-  expect(scan,contains('getLong(activationMonth'));
+  expect(scan,contains('installationMonthStart(context)'));
+  expect(scan,contains('System.currentTimeMillis() + 1'));
+  expect(scan,isNot(contains('getLong(activationMonth')));
   expect(scan,contains('content://sms/inbox'));
   expect(scan,isNot(contains('save(context')));
   expect(scan,isNot(contains('seal(')));
   expect(scan,isNot(contains('OPENROUTER')));
+ });
+ test('M437 history cutoff is original install month, scan remains resumable',(){
+  final code=File('native/WaffraAutoSmsStore.kt').readAsStringSync();
+  final begin=code.indexOf('fun importConsentMonth(');
+  final end=code.indexOf('fun claimReviewNotification(',begin);
+  final history=code.substring(begin,end);
+  expect(code,contains('getPackageInfo(context.packageName, 0).firstInstallTime'));
+  expect(code,contains('set(Calendar.DAY_OF_MONTH, 1)'));
+  expect(history,contains('installationMonthStart(context)'));
+  expect(history,contains('historySourceMonth'));
+  expect(history,contains('date ASC, _id ASC'));
+  expect(history,isNot(contains('prefs.getBoolean(historyComplete, false)')));
+  expect(history,isNot(contains('getLong(activationMonth')));
+  expect(history,isNot(contains('commitConfirmedSms(')));
  });
 }
