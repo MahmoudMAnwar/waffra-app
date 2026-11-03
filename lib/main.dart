@@ -37,6 +37,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:crypto/crypto.dart';
 import 'waffra_biometrics.dart';
 import 'waffra_mandatory_biometric_gate.dart';
+import 'waffra_phone_secure_auth.dart';
 import 'waffra_amount_formatter.dart';
 import 'waffra_display_currency.dart';
 import 'waffra_phone_country_codes.dart';
@@ -1051,6 +1052,13 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
 
    Person? u;
    try{final raw=p.getString('waffra_profile');if(raw!=null)u=Person.fromJson(Map<String,dynamic>.from(jsonDecode(raw)));}catch(e){debugPrint('Profile loading: $e');}
+   if(WaffraPhoneSecureAuth.enabled&&u!=null){
+    final linked=p.getString('waffra_verified_phone_owner_uid_v1');
+    try{
+     await WaffraPhoneSecureAuth.initialize();
+     if(linked==null||WaffraPhoneSecureAuth.currentUid!=linked)u=null;
+    }catch(_){u=null;}
+   }
    // Screenshot settings are best-effort and must never block application startup.
    if(p.getBool('waffra_screenshot_default_v2')!=true){
     try {
@@ -1099,6 +1107,13 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  final WaffraLiveAccountWriteAuthority _accountWriteAuthority=
      const WaffraLiveAccountWriteAuthority();
  Future<void> saveUser(Person u)async {
+  if(WaffraPhoneSecureAuth.enabled&&u.provider.toLowerCase()=='phone'){
+   final prefs=await SharedPreferences.getInstance();
+   final bound=prefs.getString('waffra_verified_phone_owner_uid_v1');
+   if(bound==null||bound!=WaffraPhoneSecureAuth.currentUid){
+    throw StateError('verified_phone_session_required');
+   }
+  }
   await _accountWriteAuthority.saveProfile(
    profileJson:jsonEncode(u.toJson()),
    registeredProfileJson:u.phone.trim().isNotEmpty?jsonEncode(u.toJson()):null,
@@ -1134,6 +1149,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   if(mounted)setState(()=>googleFirstRunSetup=false);
  }
  Future<void> logout()async {
+  if(WaffraPhoneSecureAuth.enabled)await WaffraPhoneSecureAuth.signOut();
   // Drop any in-memory AI prompt context and cancel model download before
   // a new account can open its verified finance scope.
   try{await WaffraOnDeviceQwen.shared.dispose();}catch(_){}
@@ -1903,9 +1919,30 @@ class _LoginScreenState extends State<LoginScreen> {
   setState(()=>signingIn=true);
   try{
    final p=await SharedPreferences.getInstance();
+   final account=registered;
+   if(WaffraPhoneSecureAuth.enabled){
+    try{
+     final uid=await WaffraPhoneSecureAuth.signIn(
+      phone:signInPhone.text.trim(),password:signInPassword.text);
+     final bound=p.getString('waffra_verified_phone_owner_uid_v1');
+     if(bound==null||bound!=uid||account==null||
+        account.phone!=signInPhone.text.trim()){
+      await WaffraPhoneSecureAuth.signOut();
+      if(mounted)setState(()=>signInAuthError=waffraIsEnglish?
+       'Restore or migrate your existing finance profile before signing in.':
+       'انقل الحساب المالي القديم أو استعد النسخة الآمنة قبل الدخول.');
+      return;
+     }
+     await widget.onSave(account);
+    }catch(_){
+     if(mounted)setState(()=>signInAuthError=waffraIsEnglish?
+      'Secure phone sign-in is unavailable. Please retry.':
+      'تعذر تسجيل الدخول الآمن بالجوال. حاول مرة ثانية.');
+    }
+    return;
+   }
    final salt=p.getString('waffra_local_password_salt');
    final expected=p.getString('waffra_local_password_hash');
-   final account=registered;
    if(account==null||salt==null||expected==null||signInPhone.text.trim()!=account.phone||
      sha256.convert(utf8.encode('$salt:${signInPassword.text}')).toString()!=expected){
     if(mounted)setState(()=>signInAuthError=waffraIsEnglish?'Incorrect phone number or password':'رقم الجوال أو كلمة المرور غير صحيحة');return;
@@ -2188,6 +2225,33 @@ class _ProfileFormState extends State<ProfileForm> {
    if(mounted)setState(()=>avatar='file:${file.path}');
   }catch(e){if(mounted)snack(context,waffraIsEnglish?'Could not save photo':'تعذر حفظ الصورة');}
  }
+ Future<String?> _requestVerifiedPhoneCode()async {
+  final code=TextEditingController();
+  try{
+   return await showWaffraDialog<String>(context:context,builder:(ctx)=>
+    AlertDialog(
+     title:WaffraText(waffraIsEnglish?'Verify your mobile number':'تأكيد ملكية رقم الجوال'),
+     content:Column(mainAxisSize:MainAxisSize.min,children:[
+      WaffraText(waffraIsEnglish?
+       'Enter the 6-digit verification code sent to your phone.':
+       'أدخل رمز التحقق المكوّن من ٦ أرقام المرسل لجوالك.'),
+      const SizedBox(height:14),
+      TextField(controller:code,keyboardType:TextInputType.number,
+       textDirection:TextDirection.ltr,
+       inputFormatters:[FilteringTextInputFormatter.digitsOnly,
+        LengthLimitingTextInputFormatter(6)],
+       decoration:const InputDecoration(hintText:'000000',
+        border:OutlineInputBorder())),
+     ]),
+     actions:[
+      TextButton(onPressed:()=>Navigator.pop(ctx),
+       child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+      FilledButton(onPressed:()=>Navigator.pop(ctx,code.text.trim()),
+       child:WaffraText(waffraIsEnglish?'Verify':'تحقق')),
+     ],
+    ));
+  }finally{disposeLater([code]);}
+ }
  Future<void> save()async {
   setState(()=>profileAttempted=true);
   if(gender.isEmpty)return;
@@ -2200,11 +2264,21 @@ class _ProfileFormState extends State<ProfileForm> {
   setState(()=>busy=true);
   try {
    if(widget.initial==null){
+    if(WaffraPhoneSecureAuth.enabled&&widget.provider=='Phone'){
+     final uid=await WaffraPhoneSecureAuth.enrollWithOtp(
+      phone:phone.text.trim(),password:password.text,
+      requestCode:_requestVerifiedPhoneCode);
+     final p=await SharedPreferences.getInstance();
+     final previous=p.getString('waffra_verified_phone_owner_uid_v1');
+     if(previous!=null&&previous!=uid)throw StateError('owner_uid_conflict');
+     await p.setString('waffra_verified_phone_owner_uid_v1',uid);
+    }else{
     final p=await SharedPreferences.getInstance();
     final salt=List<int>.generate(16,(_)=>Random.secure().nextInt(256));
     final saltHex=base64Encode(salt);
     await p.setString('waffra_local_password_salt',saltHex);
     await p.setString('waffra_local_password_hash',sha256.convert(utf8.encode('$saltHex:${password.text}')).toString());
+    }
    }
    await widget.onSave(Person(name:name.text.trim(),email:widget.initial?.email??'',
     phone:widget.provider=='Google'?WaffraInternationalPhone.e164(phoneCountry,phone.text)!:phone.text.trim(),
