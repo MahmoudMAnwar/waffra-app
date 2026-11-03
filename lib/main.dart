@@ -36,6 +36,9 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:crypto/crypto.dart';
 import 'waffra_biometrics.dart';
+import 'waffra_mandatory_biometric_gate.dart';
+import 'waffra_local_phone_credentials.dart';
+import 'waffra_local_account_migration.dart';
 import 'waffra_amount_formatter.dart';
 import 'waffra_display_currency.dart';
 import 'waffra_phone_country_codes.dart';
@@ -1049,12 +1052,13 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  }
  DateTime? _backgroundAt;
  @override void didChangeAppLifecycleState(AppLifecycleState state){
-  if(state==AppLifecycleState.paused||state==AppLifecycleState.hidden){_backgroundAt=DateTime.now();}
-  // Returning from Android notification permission must not change the active tab.
-  if(state==AppLifecycleState.resumed&&pinHash!=null&&!locked&&_backgroundAt!=null){
-   final away=DateTime.now().difference(_backgroundAt!);
-   _backgroundAt=null;
-   if(away>=const Duration(seconds:30)&&mounted)setState(()=>locked=true);
+  if(state==AppLifecycleState.resumed){_backgroundAt=null;return;}
+  // Immediately lock whenever Waffra loses foreground focus.
+  if(WaffraBiometricSessionGuard.mustLockOn(state)){
+   _backgroundAt??=DateTime.now();
+   if(mounted&&profile!=null&&!showLogin&&!locked){
+    setState(()=>locked=true);
+   }
   }
  }
  @override void dispose(){WaffraRegionalCopy.countryIso.removeListener(_onRegionChanged);
@@ -1110,7 +1114,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     autoSmsConsentPending=Platform.isAndroid&&
      !(p.getBool(WaffraAutoSms.firstRunKey)??false);
     pinHash=p.getString('waffra_pin_sha256');
-    locked=pinHash!=null;startupError=null;loading=false;
+    locked=u!=null;startupError=null;loading=false;
    });
   }catch(e){
    debugPrint('Waffra startup failed: $e');
@@ -1153,7 +1157,11 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   final needsGoogleSetup=waffraGoogleProfileReadyForCountrySetup(u)&&
     !(prefs.getBool(waffraCountrySetupKey(u))??false);
   if(mounted)setState((){
+   // First phone/password login and new registration require biometrics.
+   // Editing a profile in an already-unlocked session does not re-lock.
+   final freshSession=profile==null||showLogin;
    profile=u;showLogin=false;googleFirstRunSetup=needsGoogleSetup;
+   if(freshSession)locked=true;
   });
  }
  Future<void> setUiCountry(String? iso)async{
@@ -1432,8 +1440,22 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    ])))):
    autoSmsConsentPending?WaffraAutoSmsConsentPage(
     english:language=='en',onComplete:finishSmsPermissionChoice):
-   locked?PinLockScreen(pinHash:pinHash!,onUnlock:()=>setState(()=>locked=false)):
-   profile==null||showLogin?LoginScreen(onSave:saveUser):
+   profile==null||showLogin||((profile!.phone.trim().isEmpty)&&
+    (profile!.provider.toLowerCase().contains('local')||
+     profile!.provider.contains('محلي')||
+     profile!.provider.toLowerCase().contains('guest')||
+     profile!.provider.toLowerCase().contains('demo')))?LoginScreen(onSave:saveUser):
+   locked?WaffraMandatoryBiometricGate(
+    english:language=='en',
+    onVerified:(){
+     final lifecycle=WidgetsBinding.instance.lifecycleState;
+     if(mounted&&WaffraBiometricSessionGuard.canReveal(
+       authenticated:true,inForeground:lifecycle==AppLifecycleState.resumed)){
+      setState(()=>locked=false);
+     }
+    },
+    onSignOut:logout,
+   ):
    googleFirstRunSetup?WaffraCountryFirstRunPage(
      english:language=='en',onComplete:completeGoogleCountrySetup,
      onCountryConfirmed:setUiCountry):
@@ -1926,19 +1948,34 @@ class _LoginScreenState extends State<LoginScreen> {
  Future<void> _signIn()async{
   if(signingIn)return;
   setState(()=>signInAttempted=true);
-  if(waffraMobileFieldError(signInPhone.text)!=null||signInPassword.text.isEmpty)return;
+  if(waffraMobileFieldError(signInPhone.text)!=null||
+     signInPassword.text.isEmpty)return;
   setState(()=>signingIn=true);
   try{
-   final p=await SharedPreferences.getInstance();
-   final salt=p.getString('waffra_local_password_salt');
-   final expected=p.getString('waffra_local_password_hash');
    final account=registered;
-   if(account==null||salt==null||expected==null||signInPhone.text.trim()!=account.phone||
-     sha256.convert(utf8.encode('$salt:${signInPassword.text}')).toString()!=expected){
-    if(mounted)setState(()=>signInAuthError=waffraIsEnglish?'Incorrect phone number or password':'رقم الجوال أو كلمة المرور غير صحيحة');return;
+   if(account==null||signInPhone.text.trim()!=account.phone){
+    if(mounted)setState(()=>signInAuthError=waffraIsEnglish?
+     'Incorrect mobile number or password':'رقم الجوال أو كلمة المرور غير صحيحة');
+    return;
+   }
+   final prefs=await SharedPreferences.getInstance();
+   final match=await WaffraLocalPhoneCredentials.verify(
+    phone:signInPhone.text.trim(),password:signInPassword.text,
+    oldSalt:prefs.getString('waffra_local_password_salt'),
+    oldHash:prefs.getString('waffra_local_password_hash'));
+   if(!match){
+    if(mounted)setState(()=>signInAuthError=waffraIsEnglish?
+     'Incorrect mobile number or password':'رقم الجوال أو كلمة المرور غير صحيحة');
+    return;
    }
    await widget.onSave(account);
-  }finally{if(mounted)setState(()=>signingIn=false);}
+  }catch(_){
+   if(mounted)setState(()=>signInAuthError=waffraIsEnglish?
+    'Local secure storage is unavailable. Unlock your device and retry.':
+    'تعذر فتح التخزين الآمن على الجهاز. افتح قفل هاتفك وحاول مجددًا.');
+  }finally{
+   if(mounted)setState(()=>signingIn=false);
+  }
  }
 
  String get maskedLastPhone{
@@ -2021,82 +2058,23 @@ class _LoginScreenState extends State<LoginScreen> {
    ]));
  }
  bool socialBusy=false;
- Widget _socialBorder(BuildContext sheet,String id,Widget icon,{required String label})=>Material(
-  color:const Color(0xFFFEFDF8),borderRadius:BorderRadius.circular(18),child:InkWell(
-  borderRadius:BorderRadius.circular(18),onTap:WaffraHaptics.tap(()=>Navigator.pop(sheet,id)),
-  child:Container(width:double.infinity,padding:const EdgeInsets.symmetric(horizontal:19,vertical:19),
-   decoration:BoxDecoration(borderRadius:BorderRadius.circular(18),
-    border:Border.all(color:forest,width:1.5)),
-   child:Row(children:[icon,const SizedBox(width:16),Expanded(child:WaffraText(label,
-    style:const TextStyle(color:Color(0xFF10191A),fontSize:17,fontWeight:FontWeight.bold))),
-    const SizedBox(width:8),const Icon(Icons.chevron_left_rounded,color:forest,size:29)]))));
- Future<void> chooseRegistration()async {
-  final choice=await showModalBottomSheet<String>(context:context,showDragHandle:true,
-   backgroundColor:const Color(0xFFFEFDF8),
-   shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(30))),
-   builder:(ctx)=>SafeArea(child:Padding(padding:const EdgeInsets.fromLTRB(20,14,20,28),child:Column(mainAxisSize:MainAxisSize.min,children:[
-    WaffraText(waffraIsEnglish?'Create account':'إنشاء حساب',style:const TextStyle(fontSize:29,fontWeight:FontWeight.bold,color:Color(0xFF10191A))),
-    const SizedBox(height:15),
-    _socialBorder(ctx,'Google',SvgPicture.string(_waffraGoogleLogo,width:32,height:32),label:waffraIsEnglish?'Continue with Google':'المتابعة باستخدام Google'),
-    const SizedBox(height:12),
-    _socialBorder(ctx,'Apple',const Icon(Icons.apple,size:34,color:Color(0xFF111111)),label:waffraIsEnglish?'Continue with Apple':'المتابعة باستخدام Apple'),
-    const SizedBox(height:12),
-    _socialBorder(ctx,'Phone',const Icon(Icons.phone_android,color:forest),label:waffraIsEnglish?'Register with phone number':'التسجيل برقم الجوال'),
-    const SizedBox(height:8),
-   ]))));
-  if(!mounted||choice==null)return;
-  if(choice=='Phone'){setState(()=>provider='Phone');return;}
-  if(choice=='Google'){
-   if(waffraCompileOnlyQaPreview){
-    if(mounted)snack(context,waffraGooglePreviewNotice(waffraIsEnglish));
-    return;
-   }
-   if(socialBusy)return;
-   setState(()=>socialBusy=true);
-   try{
-    final result=await WaffraGoogleAuth.signIn();
-    final user=result.user;
-    if(user==null)throw StateError('Google did not return an account');
-    // Do not save an incomplete Google profile and tear down LoginScreen
-    // before the required phone/gender form is presented.
-    if(!mounted)return;
-    final firstGoogleProfile=Person(name:user.displayName??'',email:user.email??'',
-     phone:user.phoneNumber??'',provider:'Google',gender:'',
-     avatar:user.photoURL??'person',birthday:DateTime(2000));
-    await Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>
-     ProfileForm(provider:'Google',initial:firstGoogleProfile,onSave:widget.onSave)));
-   }catch(e){
-    if(mounted){
-      final message=e.toString().toLowerCase();
-      final offline=e is SocketException||message.contains('network-request-failed')||message.contains('network_error')||message.contains('network error')||message.contains('unable to resolve host')||message.contains('failed host lookup')||message.contains('no internet')||message.contains('connection refused')||message.contains('socketexception');
-      final cancelled=message.contains('canceled')||message.contains('cancelled');
-      snack(context,offline?(waffraIsEnglish?'No internet connection. Check your connection and try again.':'تعذر الاتصال بالإنترنت. تحقق من اتصالك وحاول مرة أخرى.'):
-       cancelled?(waffraIsEnglish?'Google sign-in was cancelled.':'تم إلغاء تسجيل الدخول بجوجل.'):
-       (waffraIsEnglish?'Could not sign in with Google. Please try again.':'تعذر تسجيل الدخول بجوجل. حاول مرة أخرى.'));
-     }
-    debugPrint('Waffra Google sign-in: $e');
-   }finally{if(mounted)setState(()=>socialBusy=false);}
+ // New accounts have a Saudi phone/password entry, never a social provider.
+ // Old Google identities still require a controlled, one-time migration.
+ void chooseRegistration(){
+  if(registered!=null){
+   snack(context,waffraIsEnglish?
+    'An account already exists on this device. Sign in or migrate it first.':
+    'يوجد حساب محفوظ على الجهاز. سجّل الدخول أو انقل الحساب القديم أولًا.');
    return;
   }
-  await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
-   title:WaffraText(waffraIsEnglish?'Sign-in not configured':'تسجيل الدخول غير مفعّل'),
-   content:WaffraText(waffraIsEnglish?'Secure $choice sign-in needs authentication setup. No account was created.':'تسجيل الدخول الآمن باستخدام $choice يحتاج إعداد خدمة المصادقة. لم يتم إنشاء حساب.'),
-   actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))]));
+  setState(()=>provider='Phone');
  }
- Future<void> demoSocial(String selected)async {
-  if(socialBusy)return;
-  setState(()=>socialBusy=true);
-  try {
-   await widget.onSave(Person(name:'',email:'',phone:'',provider:'Local $selected demo',gender:'',avatar:'person',birthday:DateTime(2000)));
-   if(!mounted)return;
-   snackSuccess(context,waffraIsEnglish?'Local demo profile opened — not authenticated with $selected':'تم الدخول للملف المحلي التجريبي بنجاح — لم تتم المصادقة مع $selected');
-  }finally{if(mounted)setState(()=>socialBusy=false);}
- }
-
+ 
  @override Widget build(BuildContext context){
-  if(provider!=null)return ProfileForm(provider:provider!,onSave:widget.onSave,
+  if(provider!=null)return ProfileForm(provider:'Phone',onSave:widget.onSave,
    onBack:()=>setState(()=>provider=null));
   final hasExisting=registered!=null;
+  final legacyAccount=hasExisting&&registered!.provider.toLowerCase()!='phone';
   return Scaffold(backgroundColor:forest,resizeToAvoidBottomInset:false,
    body:Stack(fit:StackFit.expand,children:[
     Image.asset('assets/waffra_login_approved_exact.png',fit:BoxFit.cover,
@@ -2111,7 +2089,7 @@ class _LoginScreenState extends State<LoginScreen> {
         borderRadius:BorderRadius.circular(24)),
        child:Column(mainAxisSize:MainAxisSize.min,
         crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-        if(returnAfterLogout&&!signInMode)...[
+        if(returnAfterLogout&&!signInMode&&hasExisting)...[
          WaffraText(waffraIsEnglish?'Welcome back':'مرحبًا بك مجددًا',
           textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:25,fontWeight:FontWeight.bold)),
          const SizedBox(height:5),
@@ -2120,9 +2098,21 @@ class _LoginScreenState extends State<LoginScreen> {
          const SizedBox(height:15),
          recentLoginCard(),
          const SizedBox(height:12),
-         TextButton(onPressed:WaffraHaptics.tap(()=>setState(()=>returnAfterLogout=false)),
-          child:WaffraText(waffraIsEnglish?'Other sign-in options':'خيارات تسجيل دخول أخرى',
+         if(!legacyAccount)TextButton(
+          onPressed:WaffraHaptics.tap(()=>setState(()=>signInMode=true)),
+          child:WaffraText(waffraIsEnglish?'Sign in with mobile':'الدخول برقم الجوال',
            style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold))),
+        ]else if(legacyAccount)...[
+         WaffraText(waffraIsEnglish?'Legacy account migration':'نقل الحساب القديم',
+          textAlign:TextAlign.center,style:const TextStyle(fontSize:20,color:Colors.white,fontWeight:FontWeight.bold)),
+         const SizedBox(height:10),
+         WaffraText(waffraIsEnglish?
+          'Your data remains on this phone. You must verify your previous account once before switching to mobile/password.':
+          'بياناتك موجودة على الجهاز. لازم نتحقق من حسابك القديم مرة واحدة قبل نقله إلى الجوال وكلمة المرور.',
+          textAlign:TextAlign.center,style:const TextStyle(color:Colors.white70)),
+         const SizedBox(height:12),
+         FilledButton(onPressed:WaffraHaptics.tap(socialBusy?null:continueLastLogin),
+          child:WaffraText(waffraIsEnglish?'Temporary access to old account':'دخول مؤقت للحساب القديم')),
         ]else if(signInMode&&hasExisting)...[
          WaffraText(waffraIsEnglish?'Sign in to Waffra':'تسجيل الدخول إلى وفرة',
           textAlign:TextAlign.center,
@@ -2156,30 +2146,18 @@ class _LoginScreenState extends State<LoginScreen> {
            (waffraIsEnglish?'Signing in...':'جارٍ تسجيل الدخول'):
            (waffraIsEnglish?'Sign in':'تسجيل الدخول'))),
          TextButton(onPressed:WaffraHaptics.tap(()=>setState(()=>signInMode=false)),
-          child:WaffraText(waffraIsEnglish?'Other options':'خيارات أخرى',
+          child:WaffraText(waffraIsEnglish?'Create an account':'إنشاء حساب',
            style:const TextStyle(color:Colors.white))),
         ]else...[
          WaffraText(waffraIsEnglish?'Welcome to Waffra':'مرحباً بك في وفرة',
           style:const TextStyle(color:Colors.white,fontSize:19,fontWeight:FontWeight.bold),
           textAlign:TextAlign.center),
          const SizedBox(height:12),
-         FilledButton.icon(onPressed:WaffraHaptics.tap(signingIn?null:()async{
-          if(signingIn)return;
-          setState(()=>signingIn=true);
-          try{
-           await widget.onSave(Person(name:'',email:'',phone:'',provider:'محلي',
-            gender:'',avatar:'person',birthday:DateTime(2000)));
-          }finally{if(mounted)setState(()=>signingIn=false);}
-         }),style:FilledButton.styleFrom(backgroundColor:Colors.white,foregroundColor:forest),
-          icon:const Icon(Icons.arrow_forward),
-          label:WaffraText(waffraIsEnglish?'Start now — no sign in':'ابدأ الآن بدون تسجيل دخول')),
-         const SizedBox(height:8),
-         OutlinedButton.icon(onPressed:WaffraHaptics.tap(chooseRegistration),
-          style:OutlinedButton.styleFrom(foregroundColor:Colors.white,
-           side:const BorderSide(color:Colors.white70)),
-          icon:const Icon(Icons.person_add_alt_1_outlined),
-          label:WaffraText(waffraIsEnglish?'Create account':'إنشاء حساب')),
-         if(hasExisting)TextButton(onPressed:WaffraHaptics.tap(()=>setState(()=>signInMode=true)),
+         FilledButton.icon(onPressed:WaffraHaptics.tap(chooseRegistration),
+          style:FilledButton.styleFrom(backgroundColor:Colors.white,foregroundColor:forest),
+          icon:const Icon(Icons.phone_android_outlined),
+          label:WaffraText(waffraIsEnglish?'Register with Saudi mobile':'إنشاء حساب برقم الجوال')),
+         if(hasExisting&&!legacyAccount)TextButton(onPressed:WaffraHaptics.tap(()=>setState(()=>signInMode=true)),
           child:WaffraText(waffraIsEnglish?'Already have an account? Sign in':
            'عندك حساب بالفعل؟ تسجيل الدخول',
            style:const TextStyle(color:Colors.white))),
@@ -2200,7 +2178,8 @@ class ProfileForm extends StatefulWidget {
 class _ProfileFormState extends State<ProfileForm> {
  late final TextEditingController name,email,confirmEmail,phone,password,confirmPassword;
  bool showPassword=false,showConfirmPassword=false;
-  bool profileAttempted=false;
+ bool _registrationDetailsStep=false;
+ bool profileAttempted=false;
  bool get comparingPasswords=>password.text.isNotEmpty&&confirmPassword.text.isNotEmpty;
  bool get matchingPasswords=>comparingPasswords&&password.text==confirmPassword.text;
  OutlineInputBorder passwordBorder({bool focused=false}){
@@ -2284,12 +2263,11 @@ class _ProfileFormState extends State<ProfileForm> {
    waffraConfirmPasswordFieldError(confirmPassword.text,password.text)!=null))return;
   setState(()=>busy=true);
   try {
-   if(widget.initial==null){
-    final p=await SharedPreferences.getInstance();
-    final salt=List<int>.generate(16,(_)=>Random.secure().nextInt(256));
-    final saltHex=base64Encode(salt);
-    await p.setString('waffra_local_password_salt',saltHex);
-    await p.setString('waffra_local_password_hash',sha256.convert(utf8.encode('$saltHex:${password.text}')).toString());
+   if(widget.initial==null&&widget.provider=='Phone'){
+    // Password verifier lives in OS-protected secure storage only.
+    // No OTP, Firebase phone authentication or paid SMS providers.
+    await WaffraLocalPhoneCredentials.register(
+     phone:phone.text.trim(),password:password.text);
    }
    await widget.onSave(Person(name:name.text.trim(),email:widget.initial?.email??'',
     phone:widget.provider=='Google'?WaffraInternationalPhone.e164(phoneCountry,phone.text)!:phone.text.trim(),
@@ -2299,7 +2277,102 @@ class _ProfileFormState extends State<ProfileForm> {
   }catch(e){if(mounted)snack(context,'تعذر حفظ البيانات: $e');}
   finally{if(mounted)setState(()=>busy=false);}
  }
- @override Widget build(BuildContext context)=>Scaffold(
+ void _nextPhoneRegistrationStep(){
+  setState(()=>profileAttempted=true);
+  if(waffraMobileFieldError(phone.text)!=null||
+     waffraPasswordFieldError(password.text)!=null||
+     waffraConfirmPasswordFieldError(confirmPassword.text,password.text)!=null){
+   return;
+  }
+  setState((){_registrationDetailsStep=true;profileAttempted=false;});
+ }
+ Widget _phoneRegistrationForm(){
+  return Scaffold(
+   appBar:AppBar(title:WaffraText(waffraIsEnglish?
+    'Create a Waffra account':'إنشاء حساب وفرة'),
+    leading:IconButton(onPressed:WaffraHaptics.tap((){
+     if(_registrationDetailsStep)setState((){_registrationDetailsStep=false;profileAttempted=false;});
+     else widget.onBack?.call();
+    }),icon:const Icon(Icons.arrow_back))),
+   body:SafeArea(child:ListView(padding:const EdgeInsets.all(22),children:[
+    LinearProgressIndicator(value:_registrationDetailsStep?1:0.5,color:emerald),
+    const SizedBox(height:20),
+    if(!_registrationDetailsStep)...[
+     WaffraText(waffraIsEnglish?'1. Mobile number and password':'١. رقم الجوال وكلمة المرور',
+      style:const TextStyle(fontWeight:FontWeight.bold,fontSize:19)),
+     const SizedBox(height:14),
+     TextField(controller:phone,keyboardType:TextInputType.phone,
+      textDirection:TextDirection.ltr,onChanged:(_)=>setState((){}),
+      inputFormatters:[FilteringTextInputFormatter.digitsOnly,
+       LengthLimitingTextInputFormatter(10)],
+      decoration:InputDecoration(
+       labelText:waffraIsEnglish?'Saudi mobile number':'رقم الجوال السعودي',
+       hintText:'05XXXXXXXX',
+       errorText:profileAttempted?waffraMobileFieldError(phone.text):null,
+       border:const OutlineInputBorder())),
+     const SizedBox(height:14),
+     TextField(controller:password,obscureText:!showPassword,
+      onChanged:(_)=>setState((){}),
+      decoration:InputDecoration(labelText:waffraIsEnglish?'Password':'كلمة المرور',
+       helperText:waffraIsEnglish?'8+ characters, letters and numbers':'٨ خانات على الأقل، تشمل أحرفًا وأرقامًا',
+       errorText:profileAttempted?waffraPasswordFieldError(password.text):null,
+       errorMaxLines:3,border:const OutlineInputBorder(),
+       suffixIcon:IconButton(
+        onPressed:WaffraHaptics.tap(()=>setState(()=>showPassword=!showPassword)),
+        icon:Icon(showPassword?Icons.visibility_off:Icons.visibility)))),
+     const SizedBox(height:14),
+     TextField(controller:confirmPassword,obscureText:!showConfirmPassword,
+      onChanged:(_)=>setState((){}),
+      decoration:InputDecoration(labelText:waffraIsEnglish?'Confirm password':'تأكيد كلمة المرور',
+       errorText:profileAttempted?
+        waffraConfirmPasswordFieldError(confirmPassword.text,password.text):null,
+       errorMaxLines:3,border:const OutlineInputBorder(),
+       suffixIcon:IconButton(
+        onPressed:WaffraHaptics.tap(()=>setState(()=>showConfirmPassword=!showConfirmPassword)),
+        icon:Icon(showConfirmPassword?Icons.visibility_off:Icons.visibility)))),
+     const SizedBox(height:20),
+     FilledButton(onPressed:WaffraHaptics.tap(_nextPhoneRegistrationStep),
+      child:WaffraText(waffraIsEnglish?'Continue':'متابعة')),
+    ]else...[
+     WaffraText(waffraIsEnglish?'2. Complete your profile':'٢. كمّل بياناتك',
+      style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold)),
+     const SizedBox(height:10),
+     WaffraText(waffraIsEnglish?'No email or date of birth required.':
+      'مش محتاج تكتب إيميل أو تاريخ ميلاد.',
+      style:const TextStyle(color:Colors.grey)),
+     const SizedBox(height:14),
+     TextField(controller:name,onChanged:(_)=>setState((){}),
+      decoration:InputDecoration(labelText:waffraIsEnglish?'Name':'الاسم',
+       errorText:profileAttempted?waffraTextFieldError(name.text):null,
+       border:const OutlineInputBorder())),
+     const SizedBox(height:15),
+     WaffraText(waffraIsEnglish?'Gender':'الجنس',
+      style:const TextStyle(fontWeight:FontWeight.bold)),
+     const SizedBox(height:10),
+     Wrap(alignment:WrapAlignment.center,spacing:12,children:['ذكر','أنثى']
+      .map((g)=>ChoiceChip(label:WaffraText(waffraIsEnglish?
+       (g=='ذكر'?'Male':'Female'):g),selected:gender==g,
+       onSelected:WaffraHaptics.selection((_)=>setState((){
+        gender=g;avatar=g=='ذكر'?'male':'female';
+       })))).toList()),
+     if(profileAttempted&&gender.isEmpty)Padding(padding:const EdgeInsets.only(top:6),
+      child:WaffraText(waffraRequiredFieldMessage,
+       style:const TextStyle(color:Colors.red))),
+     const SizedBox(height:18),
+     FilledButton(onPressed:WaffraHaptics.tap(busy?null:save),
+      child:WaffraText(busy?
+       (waffraIsEnglish?'Saving...':'جارٍ الحفظ'):
+       (waffraIsEnglish?'Complete registration':'إكمال التسجيل'))),
+     TextButton(onPressed:WaffraHaptics.tap(()=>setState((){
+      _registrationDetailsStep=false;profileAttempted=false;
+     })),child:WaffraText(waffraIsEnglish?'Back':'رجوع')),
+    ],
+   ])),
+  );
+ }
+ @override Widget build(BuildContext context){
+  if(widget.initial==null&&widget.provider=='Phone')return _phoneRegistrationForm();
+  return Scaffold(
   appBar:AppBar(title:WaffraText(widget.initial==null?'كمّل بياناتك':'تعديل الحساب'),
    leading:widget.onBack==null?null:IconButton(onPressed:WaffraHaptics.tap(widget.onBack),icon:const Icon(Icons.arrow_back))),
   body:ListView(padding:const EdgeInsets.all(22),children:[
@@ -2386,6 +2459,7 @@ class _ProfileFormState extends State<ProfileForm> {
    const SizedBox(height:20),
    FilledButton(onPressed:WaffraHaptics.tap(busy?null:save),child:WaffraText(waffraIsEnglish?'Save profile':'حفظ البيانات')),
   ]));
+ }
 }
 void disposeLater(List<TextEditingController> controllers){
  Future<void>.delayed(const Duration(milliseconds:700),(){for(final c in controllers){c.dispose();}});
@@ -11954,6 +12028,39 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     label:WaffraText(waffraIsEnglish?'Edit profile':'تعديل حسابي')),
     ])),
    const SizedBox(height:13),
+   if(provider=='google'||provider=='apple')...[
+    Card(child:Padding(padding:const EdgeInsets.all(13),
+     child:Column(children:[
+      WaffraText(waffraIsEnglish?
+       'Keep your data and switch to mobile + password':
+       'احتفظ ببياناتك وانقل الدخول إلى الجوال وكلمة المرور'),
+      const SizedBox(height:10),
+      FilledButton.icon(
+       onPressed:WaffraHaptics.tap(()async{
+        await Navigator.push<void>(context,MaterialPageRoute(
+         builder:(_)=>WaffraLocalAccountMigration(
+          english:waffraIsEnglish,
+          onConfirm:(number,password)async{
+           // Complete local migration without changing Firebase UID,
+           // historical finance, backups or any encrypted receipt.
+           final already=await WaffraLocalPhoneCredentials.verify(
+            phone:number,password:password);
+           if(!already){
+            await WaffraLocalPhoneCredentials.register(
+             phone:number,password:password);
+           }
+           await widget.onProfile(Person(
+            name:p.name,email:p.email,phone:number,provider:'Phone',
+            gender:p.gender,avatar:p.avatar,birthday:p.birthday));
+          },
+         )));
+       }),
+       icon:const Icon(Icons.phonelink_lock),
+       label:WaffraText(waffraIsEnglish?
+        'Migrate local login':'نقل تسجيل الدخول للجوال')),
+     ]))),
+    const SizedBox(height:13),
+   ],
    TextField(key:const Key('waffra-account-settings-search'),onChanged:(value){
     final q=value.trim();
     final groups=<String,String>{
@@ -12097,12 +12204,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        if(mounted)setState((){});
       }),
      )),
-    _accountTile(waffraIsEnglish?'PIN app lock':'قفل التطبيق برمز PIN',
-     widget.pinEnabled?(waffraIsEnglish?'Enabled':'مفعّل'):(waffraIsEnglish?'Disabled':'غير مفعّل'),
-     widget.pinEnabled?Icons.lock:Icons.lock_open,onTap:WaffraHaptics.tap(configurePin)),
-    if(widget.pinEnabled)_accountTile(waffraIsEnglish?'Change PIN':'تغيير رمز PIN',
-     waffraIsEnglish?'Update your lock code':'تحديث رمز القفل',
-     Icons.password_outlined,onTap:WaffraHaptics.tap(changePin)),
+    // Mandatory biometrics: optional PIN settings removed.
     SwitchListTile(secondary:const Icon(Icons.preview_outlined,color:emerald),
      title:WaffraText(waffraIsEnglish?'Protect Recent Apps preview':'حماية معاينة التطبيقات الأخيرة'),
      value:protectRecentApps,onChanged:WaffraHaptics.selection(_setRecentAppProtection)),
