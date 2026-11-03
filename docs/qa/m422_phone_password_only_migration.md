@@ -38,3 +38,8 @@ This changes authentication for financial data and is deliberately **separate fr
 ## M426 owner revision (2026-11-03)
 
 The owner explicitly rejected SMS OTP, Firebase custom token login and paid phone verification. This PR now uses only a local phone login name plus password, in OS-backed secure storage with salted PBKDF2-HMAC-SHA256 (600k iterations). Old salted SHA-256 verifier is consulted only once to upgrade a successful legacy login; the old wallet is not wiped. Local phone is NOT authenticated remote identity; cannot safely authorize Cloudflare, cannot sync across handsets, and losing device storage requires encrypted backup restoration. M425 server-side phone/OTP prototypes are deleted, not deployed. First sign-in requires mandatory OS biometric and each return prompts again. Existing Google users retain a one-time legacy sign-in route; actual verified migration and financial content preservation must be tested on real phones before release. Do not merge based solely on this description.
+
+
+## M428 legacy local finance preservation
+
+A legacy Google/Apple account already opened on its original phone (behind the mandatory biometric gate) now has an explicit migration option in My Account. This sets a new local Saudi phone name and device-protected password but does **not** change the existing Firebase UID, delete Google account records, reset finance source, move SQLCipher keys or touch any backups. Existing Google login remains available as the recovery bridge for accounts not yet migrated. Never describe this as cloud identity migration or multi-phone synchronization. Test real balances, budgets, attachments and encrypted backup/restore on both physical devices before main merge.

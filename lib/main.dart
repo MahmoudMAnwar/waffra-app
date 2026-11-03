@@ -38,6 +38,7 @@ import 'package:crypto/crypto.dart';
 import 'waffra_biometrics.dart';
 import 'waffra_mandatory_biometric_gate.dart';
 import 'waffra_local_phone_credentials.dart';
+import 'waffra_local_account_migration.dart';
 import 'waffra_amount_formatter.dart';
 import 'waffra_display_currency.dart';
 import 'waffra_phone_country_codes.dart';
@@ -11894,6 +11895,39 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     label:WaffraText(waffraIsEnglish?'Edit profile':'تعديل حسابي')),
     ])),
    const SizedBox(height:13),
+   if(provider=='google'||provider=='apple')...[
+    Card(child:Padding(padding:const EdgeInsets.all(13),
+     child:Column(children:[
+      WaffraText(waffraIsEnglish?
+       'Keep your data and switch to mobile + password':
+       'احتفظ ببياناتك وانقل الدخول إلى الجوال وكلمة المرور'),
+      const SizedBox(height:10),
+      FilledButton.icon(
+       onPressed:WaffraHaptics.tap(()async{
+        await Navigator.push<void>(context,MaterialPageRoute(
+         builder:(_)=>WaffraLocalAccountMigration(
+          english:waffraIsEnglish,
+          onConfirm:(number,password)async{
+           // Complete local migration without changing Firebase UID,
+           // historical finance, backups or any encrypted receipt.
+           final already=await WaffraLocalPhoneCredentials.verify(
+            phone:number,password:password);
+           if(!already){
+            await WaffraLocalPhoneCredentials.register(
+             phone:number,password:password);
+           }
+           await widget.onProfile(Person(
+            name:p.name,email:p.email,phone:number,provider:'Phone',
+            gender:p.gender,avatar:p.avatar,birthday:p.birthday));
+          },
+         )));
+       }),
+       icon:const Icon(Icons.phonelink_lock),
+       label:WaffraText(waffraIsEnglish?
+        'Migrate local login':'نقل تسجيل الدخول للجوال')),
+     ]))),
+    const SizedBox(height:13),
+   ],
    TextField(key:const Key('waffra-account-settings-search'),onChanged:(value){
     final q=value.trim();
     final groups=<String,String>{

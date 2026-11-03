@@ -1,14 +1,15 @@
 {
   "contract_version": 1,
-  "change_id": "M422-M424-M426",
-  "human_scope_review": "M426 user explicitly rejected SMS OTP, paid phone services and Firebase PhoneAuth. This PR removes all M425 OTP server and client experiments and keeps Saudi phone/password registration purely local with OS-encrypted PBKDF2 verifier, mandatory biometric lock and non-destructive legacy login migration. No new finance data writes or hidden reset of existing user data. Physical device Google-account migration and recovery still require validation before production merge.",
+  "change_id": "M422-M428",
+  "human_scope_review": "M426 user explicitly rejected SMS OTP, paid phone services and Firebase PhoneAuth. This PR removes all M425 OTP server and client experiments and keeps Saudi phone/password registration purely local with OS-encrypted PBKDF2 verifier, mandatory biometric lock and non-destructive legacy login migration. No new finance data writes or hidden reset of existing user data. Physical device Google-account migration and recovery still require validation before production merge. M428 adds local-account migration UI for old Google/Apple profiles already accessible after the mandatory OS biometric gate; preserves finance files and profile fields while setting the new local phone/password. Does not link/replace any Firebase Auth UID. Physical device backup and account data parity remain release blockers.",
   "user_requested_changes": [
     "M422: Replace new Google and Apple registration options with Saudi mobile number (05XXXXXXXX) and password only, and remove unauthenticated guest entry and bypass.",
     "M422: Stage phone-only registration in two screens: mobile/password/confirm, then name and gender without email or birth date.",
     "M422: Preserve legacy Google/Apple profiles and on-device finance data for verified one-time migration; do not allow registration to overwrite an existing account.",
     "M422: Keep cloud identity/password security, SMS verification and account migration as hard release blockers until provider-backed authentication and regression tests are complete.",
     "M424: Require OS biometric verification immediately after successful Saudi phone/password login and on every app return; remove optional app PIN lock/change setting from My Account, no PIN bypass, preserve previous user data.",
-    "M426: remove OTP, Firebase PhoneAuth and backend password callables, keep local Saudi phone+password and mandatory biometric first/return sessions without billing, preserve old accounts and safely upgrade existing local password hashes without resetting data."
+    "M426: remove OTP, Firebase PhoneAuth and backend password callables, keep local Saudi phone+password and mandatory biometric first/return sessions without billing, preserve old accounts and safely upgrade existing local password hashes without resetting data.",
+    "M428: safely migrate already accessible legacy Google/Apple local profiles to a local Saudi phone+password without deleting historical ledger, while preserving old provider recovery until a real-device backup and migration test passes."
   ],
   "allowed_changed_files": [
     ".github/workflows/m422-phone-only-auth-ui.yml",
@@ -17,11 +18,13 @@
     "docs/qa/m424_mandatory_biometric_session.md",
     "lib/main.dart",
     "lib/waffra_biometrics.dart",
+    "lib/waffra_local_account_migration.dart",
     "lib/waffra_local_phone_credentials.dart",
     "lib/waffra_mandatory_biometric_gate.dart",
     "test/m422_phone_only_auth_entry_test.dart",
     "test/m424_mandatory_biometrics_test.dart",
-    "test/m426_local_phone_credentials_test.dart"
+    "test/m426_local_phone_credentials_test.dart",
+    "test/m428_local_account_migration_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [

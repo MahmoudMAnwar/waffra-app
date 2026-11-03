@@ -4,6 +4,8 @@ on:
     paths:
       - 'lib/main.dart'
       - 'lib/waffra_local_phone_credentials.dart'
+      - 'lib/waffra_local_account_migration.dart'
+      - 'test/m428_local_account_migration_test.dart'
       - 'test/m426_local_phone_credentials_test.dart'
       - 'lib/waffra_biometrics.dart'
       - 'lib/waffra_mandatory_biometric_gate.dart'
@@ -27,7 +29,7 @@ jobs:
           cache: true
       - run: flutter pub get
       - name: Verify new phone/password and no guest/social registration
-        run: flutter test --reporter expanded test/m422_phone_only_auth_entry_test.dart test/m424_mandatory_biometrics_test.dart test/m426_local_phone_credentials_test.dart
+        run: flutter test --reporter expanded test/m422_phone_only_auth_entry_test.dart test/m424_mandatory_biometrics_test.dart test/m426_local_phone_credentials_test.dart test/m428_local_account_migration_test.dart
       - name: Compile-check registration and onboarding code
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings lib/main.dart lib/waffra_biometrics.dart lib/waffra_mandatory_biometric_gate.dart lib/waffra_local_phone_credentials.dart
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings lib/main.dart lib/waffra_biometrics.dart lib/waffra_mandatory_biometric_gate.dart lib/waffra_local_phone_credentials.dart lib/waffra_local_account_migration.dart
 

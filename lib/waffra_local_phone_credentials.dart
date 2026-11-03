@@ -64,14 +64,10 @@ abstract final class WaffraLocalPhoneCredentials {
  static Future<void> register({required String phone,
   required String password})async{
   final saved=await _store.read(key:_key);
-  if(saved!=null) {
-   // Do not overwrite existing credentials and accidentally lock out
-   // a different owner. Explicit password changes need a separate workflow.
-   final current=jsonDecode(saved);
-   if(current is! Map||current['phoneHash']!=
-     legacy_crypto.sha256.convert(utf8.encode(phone)).toString()){
-    throw StateError('local_owner_conflict');
-   }
+  if(saved!=null){
+   // Never overwrite a user's password without verifying existing credentials.
+   // Reset/login recovery requires a dedicated owner-approved workflow.
+   throw StateError('local_credentials_already_exist');
   }
   final payload=await deriveRecord(phone:phone,password:password);
   await _store.write(key:_key,value:jsonEncode(payload));
