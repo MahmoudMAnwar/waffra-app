@@ -1035,6 +1035,10 @@ String waffraCountrySetupKey(Person user){
 
 class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  bool loading=true,onboarded=false,dark=false,locked=false,showLogin=false;
+ // OS biometric UI may report success while Flutter is briefly inactive.
+ // Keep that success pending only until the app resumes; never reveal while
+ // backgrounded, and discard it if the app actually pauses or detaches.
+ bool _biometricVerifiedAwaitingResume=false;
  bool googleFirstRunSetup=false;
  bool autoSmsConsentPending=false;
  String appearance='light';
@@ -1054,7 +1058,24 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  }
  DateTime? _backgroundAt;
  @override void didChangeAppLifecycleState(AppLifecycleState state){
-  if(state==AppLifecycleState.resumed){_backgroundAt=null;return;}
+  if(state==AppLifecycleState.resumed){
+   _backgroundAt=null;
+   // A successful OS challenge can finish before Android reports resumed.
+   // Only reveal the existing signed-in session after foreground resumes.
+   if(_biometricVerifiedAwaitingResume){
+    _biometricVerifiedAwaitingResume=false;
+    if(mounted&&locked&&profile!=null&&!showLogin){
+     setState(()=>locked=false);
+    }
+   }
+   return;
+  }
+  // A genuine background transition invalidates a pending verification.
+  if(state==AppLifecycleState.paused||
+     state==AppLifecycleState.hidden||
+     state==AppLifecycleState.detached){
+   _biometricVerifiedAwaitingResume=false;
+  }
   // Immediately lock whenever Waffra loses foreground focus.
   if(WaffraBiometricSessionGuard.mustLockOn(state)){
    _backgroundAt??=DateTime.now();
@@ -1451,10 +1472,16 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    locked?WaffraMandatoryBiometricGate(
     english:language=='en',
     onVerified:(){
+     if(!mounted||!locked||profile==null||showLogin)return;
      final lifecycle=WidgetsBinding.instance.lifecycleState;
-     if(mounted&&WaffraBiometricSessionGuard.canReveal(
+     if(WaffraBiometricSessionGuard.canReveal(
        authenticated:true,inForeground:lifecycle==AppLifecycleState.resumed)){
+      _biometricVerifiedAwaitingResume=false;
       setState(()=>locked=false);
+     }else if(lifecycle==AppLifecycleState.inactive){
+      // Android's native fingerprint dialog can complete before resumed.
+      // Defer only this verified result; do not unlock a backgrounded app.
+      _biometricVerifiedAwaitingResume=true;
      }
     },
     onSignOut:logout,
