@@ -62,15 +62,16 @@ void main() {
 
  test('M389: Goals/Recurring + menus show approved choices instead of direct sheet',(){
   final source=File('lib/main.dart').readAsStringSync();
-  final menu=source.split('if(!accountOpened&&(tab==0||tab==1||tab==3||tab==4||goalsOpened))').last
-    .split('// The notice reserves real layout').first;
+  final menu=source.split('if(addFabExpanded&&!accountOpened&&(tab==0||tab==1||tab==3||tab==4||goalsOpened))').last
+    .split('if(tourActive&&tourTargetReady)').first;
   for(final label in <String>[
-   'إضافة هدف جديد','ادخار مفتوح بدون مستهدف','تكرار هدف موجود',
+   'إضافة هدف جديد','تكرار هدف موجود',
    'إضافة عملية متكررة','تكرار عملية متكررة موجودة']){
    expect(menu,contains(label));
   }
   expect(menu,contains('expanded:addFabExpanded'));
-  expect(menu,contains('setState(()=>addFabExpanded=!addFabExpanded)'));
+  expect(source,contains('setState(()=>addFabExpanded=!addFabExpanded)'));
+  expect(source,contains('bool noTarget=openEnded;'));
   expect(menu,isNot(contains(
    'if(goalsOpened||tab==3){unawaited(_launchAddAction(()=>goalDialog()))')));
   expect(menu,isNot(contains(
