@@ -181,7 +181,13 @@ object WaffraAutoSmsStore {
     fun unknownFinancialKind(sender: String, body: String): String? {
         val name = sender.trim()
         val safe = body.trim()
-        if (!senderName.matches(name) || safe.length !in 18..1600 ||
+        // Institution senders may be Arabic (اعتماد) or English (Etimad).
+        // Never accept a numeric/personal phone sender as an institution.
+        val namedSender = name.length in 3..25 &&
+            name.firstOrNull()?.isLetter() == true &&
+            name.all { it.isLetterOrDigit() || it == ' ' ||
+                it == '_' || it == '-' }
+        if (!namedSender || safe.length !in 18..1600 ||
             otp.containsMatchIn(safe) || qualifies(name, safe)) return null
         if (debtNotice.containsMatchIn(safe)) return "debt_notice"
         if (institutionalSender.containsMatchIn(name) &&
