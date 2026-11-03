@@ -34,67 +34,21 @@
     "M436 release acceptance: reflect opt-in automatic cloud suggestions and no auto financial posting in QA release TXT, keep existing backup and source of truth."
   ],
   "allowed_changed_files": [
-    ".github/workflows/android-full-smoke.yml",
     ".github/workflows/android.yml",
-    ".github/workflows/m417-auto-bank-sms.yml",
-    ".github/workflows/m422-phone-only-auth-ui.yml",
-    ".github/workflows/m429-integration-smoke.yml",
-    "cloudflare/waffra_sms_appcheck.mjs",
-    "cloudflare/waffra_sms_worker.mjs",
-    "cloudflare/waffra_sms_worker.test.mjs",
     "docs/qa/approved_change_scope.json",
-    "docs/qa/m417_google_play_sms_submission_packet.md",
-    "docs/qa/m417_sms_play_declaration.md",
-    "docs/qa/m419_sms_account_merchant_parity_acceptance.md",
-    "docs/qa/m420_openrouter_cloud_sms_plan.md",
-    "docs/qa/m421_firebase_openrouter_owner_setup.md",
-    "docs/qa/m422_phone_password_only_migration.md",
-    "docs/qa/m423_cloudflare_worker_link.md",
-    "docs/qa/m424_mandatory_biometric_session.md",
-    "docs/qa/m429_combined_premerge_review.md",
-    "functions/.gitignore",
-    "functions/index.js",
-    "functions/openrouter_sms_extractor.cjs",
-    "functions/test/openrouter_sms_extractor.test.cjs",
+    "docs/qa/m436_cloud_review_acceptance.md",
+    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
     "lib/waffra_auto_sms.dart",
     "lib/waffra_auto_sms_autopost.part.dart",
     "lib/waffra_auto_sms_consent.dart",
-    "lib/waffra_auto_sms_policy.dart",
-    "lib/waffra_bank_sms_facts.dart",
-    "lib/waffra_biometrics.dart",
-    "lib/waffra_cloudflare_sms_gateway.dart",
-    "lib/waffra_local_account_migration.dart",
-    "lib/waffra_local_phone_credentials.dart",
-    "lib/waffra_mandatory_biometric_gate.dart",
-    "lib/waffra_messages.dart",
     "lib/waffra_sms_cloud_redactor.dart",
-    "lib/waffra_sms_cloud_service.dart",
-    "native/WaffraAutoSmsNotifications.kt",
-    "native/WaffraAutoSmsReceiver.kt",
+    "lib/waffra_sms_cloud_review_analyzer.dart",
     "native/WaffraAutoSmsStore.kt",
     "native/WaffraAutoSmsWorker.kt",
     "native/WaffraMainActivity.kt",
-    "pubspec.yaml",
-    "scripts/qa/m279_app_security_gate.py",
-    "scripts/qa/test_m279_app_security_gate.py",
-    "test/m417_sms_first_run_test.dart",
-    "test/m422_phone_only_auth_entry_test.dart",
-    "test/m423_cloudflare_sms_gateway_test.dart",
-    "test/m424_mandatory_biometrics_test.dart",
-    "test/m426_local_phone_credentials_test.dart",
-    "test/m428_local_account_migration_test.dart",
     "test/m429_sms_phone_integration_test.dart",
-    "test/qa/m417_sms_permission_acceptance_test.py",
-    "test/waffra_auto_sms_policy_test.dart",
-    "test/waffra_bank_sms_facts_test.dart",
-    "test/waffra_sms_cloud_redactor_test.dart",
-    "lib/waffra_merchant_brands.dart",
-    "test/m435_merchant_brand_directory_test.dart",
-    "lib/waffra_sms_cloud_review_analyzer.dart",
-    "test/m436_cloud_review_pipeline_test.dart",
-    "docs/qa/m436_cloud_review_acceptance.md",
-    "docs/release/WAFFRA_APPROVED_CHANGES.txt"
+    "test/m436_cloud_review_pipeline_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -183,34 +137,6 @@
         "end": "        goalWalletPaidMinor:initial?.goalWalletPaidMinor"
       }
     ],
-    "lib/waffra_messages.dart": [
-      {
-        "start": "/// Only holds text the user chose to share. Never reads the inbox.",
-        "end": "/// Launch the handset's default SMS app"
-      }
-    ],
-    "native/WaffraMainActivity.kt": [
-      {
-        "start": "import android.content.Intent",
-        "end": "import android.net.Uri"
-      },
-      {
-        "start": "    private val messagesChannel = \"waffra/messages\"",
-        "end": "    private val widgetChannelName ="
-      },
-      {
-        "start": "    override fun onResume() {",
-        "end": "    private fun receiveSharedText("
-      },
-      {
-        "start": "        messageChannel = MethodChannel(",
-        "end": "    // Android Storage Access Framework:"
-      },
-      {
-        "start": "    override fun onDestroy() {",
-        "end": null
-      }
-    ],
     ".github/workflows/android.yml": [
       {
         "start": "      - name: Install native messaging share support",
@@ -225,32 +151,56 @@
         "end": "      - name: Measure release APK size"
       }
     ],
-    ".github/workflows/android-full-smoke.yml": [
+    "lib/waffra_auto_sms.dart": [
       {
-        "start": "      - name: Install native messaging share support",
-        "end": "      # Match the production ARM64 workflow:"
+        "start": " static Future<bool> optIn()async{",
+        "end": " static Future<bool> stageCloudAnalysis("
       }
     ],
-    "scripts/qa/m279_app_security_gate.py": [
+    "lib/waffra_auto_sms_autopost.part.dart": [
       {
-        "start": "def manifest_permission_errors(",
-        "end": "def required_markers("
+        "start": "abstract final class WaffraAutoSmsAutoPoster {",
+        "end": "  final prefs=await SharedPreferences.getInstance();"
+      }
+    ],
+    "lib/waffra_auto_sms_consent.dart": [
+      {
+        "start": " @override Widget build(BuildContext context){",
+        "end": "    if(error!=null)Padding("
+      }
+    ],
+    "lib/waffra_sms_cloud_redactor.dart": [
+      {
+        "start": "  static final _money = RegExp(",
+        "end": "  static String? redact(String sms) {"
+      }
+    ],
+    "native/WaffraAutoSmsStore.kt": [
+      {
+        "start": "    fun pending(context: Context): List<Map<String, Any>> =",
+        "end": "    /** Persist sanitized LLM suggestions inside the same encrypted queue."
       },
       {
-        "start": "def audit_repo(root: Path)",
-        "end": "def main() -> int:"
+        "start": "    /** Resumable history import:",
+        "end": "    fun claimReviewNotification("
       }
     ],
-    "scripts/qa/test_m279_app_security_gate.py": [
+    "native/WaffraAutoSmsWorker.kt": [
       {
-        "start": "    def test_reject_high_risk_sms_and_device_permissions(self):",
-        "end": "    def test_allow_ordinary_network_permission(self):"
+        "start": "                        \"pendingAutoBankSms\" -> result.success(",
+        "end": "                        \"ackAutoBankSms\" -> {"
       }
     ],
-    "lib/waffra_biometrics.dart": [
+    "native/WaffraMainActivity.kt": [
       {
-        "start": "  static Future<bool> confirmAiModelRemoval({required bool english}) async {",
-        "end": "  static Future<bool> unlock() async {"
+        "start": "                \"pendingAutoBankSms\" -> result.success(",
+        "end": "                \"ackAutoBankSms\" -> {"
+      }
+    ],
+    "test/m429_sms_phone_integration_test.dart": [
+      {
+        "start": " test('M429 Cloudflare is app-attested",
+        "end": " test('M434 encrypted SMS inbox groups real sender"
       }
     ]
   }
