@@ -36,8 +36,8 @@ void main(){
   expect(workflow,contains('refs/heads/main'));
   expect(workflow,contains('Cloud SMS staging APK is allowed only from main'));
   expect(workflow,contains('WAFFRA_SMS_WORKER_URL=https://waffra-sms-appcheck-staging.mahmoudmanwar159.workers.dev/analyze'));
-  expect(workflow,contains('"${sms_define[@]}"'));
-  expect(workflow,contains('flutter build appbundle --no-pub --release --target-platform android-arm64 --tree-shake-icons "${eia_define[@]}"'));
+  expect(workflow,contains('"\${sms_define[@]}"'));
+  expect(workflow,contains('flutter build appbundle --no-pub --release --target-platform android-arm64 --tree-shake-icons "\${eia_define[@]}"'));
   expect(workflow,isNot(contains('OPENROUTER_API_KEY')));
  });
 
