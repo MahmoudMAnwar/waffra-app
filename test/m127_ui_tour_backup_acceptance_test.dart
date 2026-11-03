@@ -10,7 +10,7 @@ void main() {
     expect(source,contains('floatingActionButtonLocation:WaffraDirectionalFabLocation(english:waffraIsEnglish)'));
     expect(source,contains('floatingActionButton:!ready||accountOpened||tab==2?null:CompositedTransformTarget('));
     expect(source,contains("label:waffraIsEnglish?'New savings goal':'إضافة هدف جديد'"));
-    expect(source,contains('bool noTarget=openEnded;'));
+    expect(source,contains('bool noTarget=openEnded||(duplicate!=null&&duplicate.target<=0);'));
     expect(source,contains("label:waffraIsEnglish?'Duplicate recurring transaction':'تكرار عملية متكررة موجودة'"));
     expect(source,contains('key:_tourKeys[1],'));
     expect(source.contains('onTap:()=>setState(()=>addFabExpanded=!addFabExpanded)'),
