@@ -2768,6 +2768,15 @@ class WaffraPageHero extends StatelessWidget {
 /// Preserves full bank-SMS text while presenting Arabic transaction
 /// details in an explicitly right-to-left, consistently aligned dialog.
 class WaffraTransactionDetailsDialog extends StatelessWidget {
+ /// Only previously persisted provenance is authoritative.
+ static String sourceLabel(String source,bool english)=>switch(source){
+  'sms'=>english?'Bank SMS':'رسالة بنكية (SMS)',
+  'manual'=>english?'Manual entry':'إدخال يدوي',
+  'receipt'=>english?'Receipt capture':'إضافة من فاتورة',
+  'goal_due'=>english?'Goal due payment':'استحقاق هدف',
+  _=>english?'Previous entry (source unverified)':
+   'معاملة سابقة (المصدر غير محدد)',
+ };
  final MoneyEntry entry;
  /// A verified read-only SMS original from SQLCipher; never write to notes.
  final String? protectedOriginalSms;
@@ -2822,6 +2831,29 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
          softWrap:true,
          style:const TextStyle(fontSize:14,fontWeight:FontWeight.w600,height:1.5)),
        ),
+       const SizedBox(height:12),
+       Container(
+        key:const Key('waffra-transaction-source-provenance'),
+        padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),
+        decoration:BoxDecoration(
+         color:dark?const Color(0xFF18372E):const Color(0xFFEAF5EF),
+         borderRadius:BorderRadius.circular(12)),
+        child:Row(children:[
+         Icon(entry.sourceType=='sms'?Icons.sms_outlined:
+          Icons.edit_note_outlined,color:emerald,size:19),
+         const SizedBox(width:8),
+         Expanded(child:WaffraText(
+          WaffraTransactionDetailsDialog.sourceLabel(
+           entry.sourceType,waffraIsEnglish),
+          style:const TextStyle(fontWeight:FontWeight.w700,fontSize:13))),
+        ])),
+       if(entry.sourceType=='manual')...[
+        const SizedBox(height:7),
+        WaffraText(waffraIsEnglish?
+         'Added manually. No original SMS exists for this transaction.':
+         'تمت إضافة المعاملة يدويًا — لا توجد رسالة SMS أصلية.',
+         style:TextStyle(fontSize:12,color:muted)),
+       ],
        const SizedBox(height:15),
        Row(children:[
         Icon(Icons.category_outlined,color:dark?const Color(0xFF74D8A9):emerald,size:20),
@@ -7518,6 +7550,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     child:Icon(categoryIcon(c.icon),color:Color(c.color))),
    title:WaffraText(e.title,style:const TextStyle(color:waffraInk,fontWeight:FontWeight.w600)),subtitle:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
     WaffraText('${e.category} • ${dayText(e.date)}',style:const TextStyle(color:waffraInk)),
+    WaffraText(WaffraTransactionDetailsDialog.sourceLabel(
+     e.sourceType,waffraIsEnglish),
+     style:const TextStyle(fontSize:11,color:waffraInk)),
 
    ]),
    trailing:Row(mainAxisSize:MainAxisSize.min,children:[
@@ -8580,6 +8615,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            fontSize:10,color:Colors.deepOrange,fontWeight:FontWeight.w600))),
        const SizedBox(height:2),
        WaffraText(waffraTr(entry.category)+' • '+dayText(entry.date),
+        const SizedBox(height:2),
+        Row(children:[
+         Icon(entry.sourceType=='sms'?Icons.sms_outlined:
+          Icons.edit_note_outlined,size:13,color:Colors.grey),
+         const SizedBox(width:4),
+         Expanded(child:WaffraText(
+          WaffraTransactionDetailsDialog.sourceLabel(
+           entry.sourceType,waffraIsEnglish),
+          maxLines:1,style:const TextStyle(fontSize:11,color:Colors.grey))),
+        ]),
         maxLines:1,style:const TextStyle(fontSize:11,color:Colors.grey)),
       ]))),
      const SizedBox(width:5),
