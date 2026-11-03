@@ -8615,6 +8615,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            fontSize:10,color:Colors.deepOrange,fontWeight:FontWeight.w600))),
        const SizedBox(height:2),
        WaffraText(waffraTr(entry.category)+' • '+dayText(entry.date),
+        maxLines:1,style:const TextStyle(fontSize:11,color:Colors.grey)),
         const SizedBox(height:2),
         Row(children:[
          Icon(entry.sourceType=='sms'?Icons.sms_outlined:
@@ -8625,7 +8626,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            entry.sourceType,waffraIsEnglish),
           maxLines:1,style:const TextStyle(fontSize:11,color:Colors.grey))),
         ]),
-        maxLines:1,style:const TextStyle(fontSize:11,color:Colors.grey)),
       ]))),
      const SizedBox(width:5),
      ConstrainedBox(constraints:const BoxConstraints(maxWidth:119),
