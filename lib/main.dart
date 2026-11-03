@@ -2404,10 +2404,6 @@ class _ProfileFormState extends State<ProfileForm> {
     ]else...[
      WaffraText(waffraIsEnglish?'2. Complete your profile':'٢. كمّل بياناتك',
       style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold)),
-     const SizedBox(height:10),
-     WaffraText(waffraIsEnglish?'No email or date of birth required.':
-      'مش محتاج تكتب إيميل أو تاريخ ميلاد.',
-      style:const TextStyle(color:Colors.grey)),
      const SizedBox(height:14),
      TextField(controller:name,onChanged:(_)=>setState((){}),
       decoration:InputDecoration(labelText:waffraIsEnglish?'Name':'الاسم',
