@@ -38,6 +38,7 @@ import 'package:crypto/crypto.dart';
 import 'waffra_biometrics.dart';
 import 'waffra_mandatory_biometric_gate.dart';
 import 'waffra_phone_secure_auth.dart';
+import 'waffra_phone_migration_form.dart';
 import 'waffra_amount_formatter.dart';
 import 'waffra_display_currency.dart';
 import 'waffra_phone_country_codes.dart';
@@ -11953,6 +11954,38 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     label:WaffraText(waffraIsEnglish?'Edit profile':'تعديل حسابي')),
     ])),
    const SizedBox(height:13),
+   if(WaffraPhoneSecureAuth.enabled&&
+      (provider=='google'||provider=='apple'))...[
+    Card(child:Padding(padding:const EdgeInsets.all(14),
+     child:Column(children:[
+      WaffraText(waffraIsEnglish?
+       'Switch to phone login without losing your finance history':
+       'انقل حسابك للدخول بالجوال مع الاحتفاظ ببياناتك المالية'),
+      const SizedBox(height:10),
+      FilledButton.icon(
+       onPressed:WaffraHaptics.tap(()async{
+        await Navigator.push<void>(context,MaterialPageRoute(
+         builder:(_)=>WaffraPhoneMigrationForm(
+          english:waffraIsEnglish,initialPhone:p.phone,
+          onMigrated:(number,uid)async {
+           final pref=await SharedPreferences.getInstance();
+           final existing=pref.getString('waffra_verified_phone_owner_uid_v1');
+           if(existing!=null&&existing!=uid){
+            throw StateError('finance_owner_binding_conflict');
+           }
+           await pref.setString('waffra_verified_phone_owner_uid_v1',uid);
+           await widget.onProfile(Person(
+            name:p.name,email:p.email,phone:number,provider:'Phone',
+            gender:p.gender,avatar:p.avatar,birthday:p.birthday));
+          },
+         )));
+       }),
+       icon:const Icon(Icons.verified_user_outlined),
+       label:WaffraText(waffraIsEnglish?
+        'Verify and migrate account':'التحقق ونقل الحساب')),
+     ]))),
+    const SizedBox(height:13),
+   ],
    TextField(key:const Key('waffra-account-settings-search'),onChanged:(value){
     final q=value.trim();
     final groups=<String,String>{
