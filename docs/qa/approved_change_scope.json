@@ -30,7 +30,8 @@
     "M416: do not alter existing financial history, SQLCipher activation, Google login, or saved Global preferences during Saudi-only rollout; preserve AR/EN app language for Saudi users.",
     "M416 QA: maintain the dormant Global unit tests but update Saudi-production expectations of country, locale and currency; remove generated Android coarse-location permission in Saudi builds, with explicit Global opt-in script mode.",
     "M416 owner correction (Nov 2): restore original Tools currency converter in full; it was never approved for disabling. Keep only the app base currency/country and bank-SMS foreign FX-preview restrictions separate.",
-    "M416 owner correction: both Google and non-Google signup, sign-in and profile must use a 10-digit Saudi 05XXXXXXXX national mobile input with no flags, +966 label or selectable country. Preserve existing stored Saudi +966 Google records and never silently migrate old non-Saudi numbers."
+    "M416 owner correction: both Google and non-Google signup, sign-in and profile must use a 10-digit Saudi 05XXXXXXXX national mobile input with no flags, +966 label or selectable country. Preserve existing stored Saudi +966 Google records and never silently migrate old non-Saudi numbers.",
+    "M416 regression update: enforce Saudi SAR-only app display, original finance values, offline deterministic bank-SMS draft review, disabled receipt-image transaction import, and independent optional Qwen consent; all unrelated tests remain active."
   ],
   "allowed_changed_files": [
     ".github/workflows/m290-country-reminders-multicurrency.yml",
@@ -48,9 +49,16 @@
     "scripts/qa/m290_configure_country_permissions.py",
     "test/m224_pdf_verified_display_currency_test.dart",
     "test/m268_smart_features_ten_calendar_art_test.dart",
+    "test/m273_production_user_journey_regression_test.dart",
     "test/m290_google_country_reminders_test.dart",
     "test/m301_google_country_phone_picker_test.dart",
+    "test/m302_display_currency_precision_test.dart",
+    "test/m320_ai_live_entrypoints_test.dart",
+    "test/m321_ai_model_download_delete_test.dart",
+    "test/m325_ai_tools_visibility_test.dart",
     "test/m326_region_dialect_splash_localization_test.dart",
+    "test/m330_compact_ui_copy_test.dart",
+    "test/m335_real_sms_ocr_accuracy_test.dart",
     "test/m416_saudi_mobile_only_test.dart",
     "test/m416_saudi_release_offline_test.dart",
     "test/qa/m290_country_permissions_test.py"
@@ -375,6 +383,48 @@
     "test/m416_saudi_mobile_only_test.dart": [
       {
         "start": null,
+        "end": null
+      }
+    ],
+    "test/m302_display_currency_precision_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/m273_production_user_journey_regression_test.dart": [
+      {
+        "start": "test('P0: Arabic, English and country changes do not rewrite ledger numbers'",
+        "end": "test('P0: small income and expense entries yield exact halala totals'"
+      }
+    ],
+    "test/m330_compact_ui_copy_test.dart": [
+      {
+        "start": "test('M330 core screens have concise Arabic and English messages'",
+        "end": "test('M330 shared translations preserve keys while shortening visible output'"
+      }
+    ],
+    "test/m325_ai_tools_visibility_test.dart": [
+      {
+        "start": "test('M325 deleted model keeps historical AI tile locked and offers reinstall'",
+        "end": null
+      }
+    ],
+    "test/m321_ai_model_download_delete_test.dart": [
+      {
+        "start": "test('M321 first-use UI states deletion warning and actual byte progress'",
+        "end": "test('M321 My Account deletion is blocked on biometric-only OS confirmation'"
+      }
+    ],
+    "test/m335_real_sms_ocr_accuracy_test.dart": [
+      {
+        "start": "test('M335 fast SMS path never starts Qwen for verified SAR'",
+        "end": null
+      }
+    ],
+    "test/m320_ai_live_entrypoints_test.dart": [
+      {
+        "start": "expect(runner,contains('_activeDownload?.close()'));",
         "end": null
       }
     ]
