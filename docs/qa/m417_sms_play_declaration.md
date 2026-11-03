@@ -24,9 +24,7 @@ before the first app launch. A denial never blocks manual transactions.
 ## Not yet equivalent to Genie
 - **Fully automatic account/card creation and reconciliation are not built.**
   Sender identity by itself cannot establish bank account ownership.
-- **Hands-free finance saving is not built.** Requiring a confirmed transaction
-  is deliberate until atomic financial writer and budget-link authority are
-  tested with automatic consent semantics.
+- **Automatic posting is implemented as a draft candidate** using the pre-existing verified Home/Widget finance writer. Physical background execution and production security certification remain release blockers.
 - Cloud-model inference is not enabled: it needs separate privacy opt-in,
   secure authenticated backend, DP policies and review.
 - A first-launch prompt does not mean Google Play approval. Permission
