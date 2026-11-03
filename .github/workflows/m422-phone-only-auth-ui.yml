@@ -5,6 +5,14 @@ on:
       - 'lib/main.dart'
       - 'lib/waffra_biometrics.dart'
       - 'lib/waffra_mandatory_biometric_gate.dart'
+      - 'lib/waffra_phone_secure_auth.dart'
+      - 'lib/waffra_phone_migration_form.dart'
+      - 'functions/phone_auth_core.cjs'
+      - 'functions/phone_auth_store.cjs'
+      - 'functions/index.js'
+      - 'functions/test/phone_auth_core.test.cjs'
+      - 'test/m425_phone_verified_identity_test.dart'
+      - 'docs/qa/m425_verified_phone_auth_and_legacy_migration.md'
       - 'test/m424_mandatory_biometrics_test.dart'
       - 'docs/qa/m424_mandatory_biometric_session.md'
       - 'test/m422_phone_only_auth_entry_test.dart'
@@ -25,6 +33,40 @@ jobs:
           cache: true
       - run: flutter pub get
       - name: Verify new phone/password and no guest/social registration
-        run: flutter test --reporter expanded test/m422_phone_only_auth_entry_test.dart test/m424_mandatory_biometrics_test.dart
+        run: flutter test --reporter expanded test/m422_phone_only_auth_entry_test.dart test/m424_mandatory_biometrics_test.dart test/m425_phone_verified_identity_test.dart
       - name: Compile-check registration and onboarding code
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings lib/main.dart lib/waffra_biometrics.dart lib/waffra_mandatory_biometric_gate.dart
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings lib/main.dart lib/waffra_biometrics.dart lib/waffra_mandatory_biometric_gate.dart lib/waffra_phone_secure_auth.dart lib/waffra_phone_migration_form.dart
+
+  verified-phone-server-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate backend syntax
+        run: |
+          node --check functions/index.js
+          node --check functions/phone_auth_core.cjs
+          node --check functions/phone_auth_store.cjs
+      - name: OTP proof, UID preservation, hashing and throttling tests
+        run: node --test functions/test/phone_auth_core.test.cjs
+      - name: Verify default-off staging and no direct finance writes
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          index=Path('functions/index.js').read_text()
+          core=Path('functions/phone_auth_core.cjs').read_text()
+          client=Path('lib/waffra_phone_secure_auth.dart').read_text()
+          assert "process.env.WAFFRA_PHONE_AUTH_ENABLED !== 'true'" in index
+          assert 'enforceAppCheck:true' in index
+          assert "defineSecret('WAFFRA_PHONE_PASSWORD_PEPPER')" in index
+          assert 'createCustomToken' in core
+          assert "WAFFRA_SECURE_PHONE_AUTH_ENABLED', defaultValue: false" in client
+          assert 'linkWithCredential' in client
+          assert 'financeLedger' not in core
+          print('PASS: staged signed phone identity and separate ledger')
+          PY
