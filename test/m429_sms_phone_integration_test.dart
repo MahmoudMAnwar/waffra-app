@@ -28,7 +28,38 @@ void main(){
   expect(consent,contains('final activated=await WaffraSmsCloudService.setConsent(cloud);'));
   expect(consent,contains('if(cloud&&!activated)'));
  });
- test('M432 signed QA APK Cloudflare staging is manual and main only',(){
+
+ test('M433 month-bounded encrypted SMS import is manual-review only',(){
+  final store=File('native/WaffraAutoSmsStore.kt').readAsStringSync();
+  final activity=File('native/WaffraMainActivity.kt').readAsStringSync();
+  final bridge=File('lib/waffra_auto_sms.dart').readAsStringSync();
+  final poster=File('lib/waffra_auto_sms_autopost.part.dart').readAsStringSync();
+  expect(store,contains('fun importConsentMonth('));
+  expect(store,contains('Calendar.DAY_OF_MONTH, 1'));
+  expect(store,contains('"date >= ? AND date < ?"'));
+  expect(store,contains('history_cursor_at'));
+  expect(store,contains('historical = true'));
+  expect(store,contains('maxCandidates = 100'));
+  expect(activity,contains('"importConsentMonthBankSms"'));
+  expect(bridge,contains("channel.invokeMethod<int>('importConsentMonthBankSms')"));
+  expect(poster,contains('static bool get reviewOnly => true;'));
+  final guard=poster.substring(poster.indexOf('if(reviewOnly)'),
+   poster.indexOf('final prefs=await SharedPreferences.getInstance();'));
+  expect(guard,contains('return summary;'));
+  expect(guard,isNot(contains('commitConfirmedSms(')));
+ });
+ test('M433 Home has stable review inbox count and per-SMS manual review',(){
+  final main=File('lib/main.dart').readAsStringSync();
+  expect(main,contains("Key('waffra-auto-sms-review-card')"));
+  expect(main,contains("Key('waffra-auto-sms-review-count')"));
+  expect(main,contains("Key('waffra-auto-sms-review-open')"));
+  expect(main,contains('await WaffraAutoSms.importConsentMonth()'));
+  expect(main,contains('Future<void> _openAutoSmsInbox()'));
+  expect(main,contains('bulkSmsSheet(initialText:body)'));
+  expect(main,contains('reviewSmsBudgetLinks(additions)'));
+  expect(main,contains('if(targetId!=null&&id!=targetId)continue;'));
+ });
+  test('M432 signed QA APK Cloudflare staging is manual and main only',(){
   final workflow=File('.github/workflows/android.yml').readAsStringSync();
   expect(workflow,contains('sms_staging_worker:'));
   expect(workflow,contains('default: false'));
