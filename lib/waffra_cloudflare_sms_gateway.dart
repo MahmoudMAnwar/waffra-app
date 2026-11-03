@@ -29,6 +29,27 @@ abstract final class WaffraCloudflareSmsGateway {
     return uri;
   }
 
+  static bool sourceCurrencyMatches(String quote, String currency) {
+    if (WaffraAiFinanceBrain.exactCurrency(quote, currency)) return true;
+    // Bank SMS may write the Saudi currency in Arabic but the AI emits ISO.
+    // Accept that spelling only when there is no competing ISO or other unit.
+    if (currency != 'SAR') return false;
+    final normalized = WaffraAiFinanceBrain.normalize(quote);
+    if (!RegExp(r'ريال|ر\.?\s*س\.?').hasMatch(normalized)) return false;
+    for (final code in WaffraAiFinanceBrain.supported) {
+      if (code != 'SAR' &&
+          RegExp(r'(?<![A-Za-z])' + code + r'(?![A-Za-z])',
+            caseSensitive: false).hasMatch(quote)) return false;
+    }
+    for (final pair in WaffraAiFinanceBrain.currencyNames.entries) {
+      if (pair.value != 'SAR' &&
+          normalized.contains(WaffraAiFinanceBrain.normalize(pair.key))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   /// Validates every important model claim against the *redacted* source.
   /// Wrong counts, invented amounts, conflicting status, unexpected schemas,
   /// currencies or direction never grant finance-writer authority.
@@ -56,7 +77,7 @@ abstract final class WaffraCloudflareSmsGateway {
         description is! String || description.length > 90 ||
         WaffraAiFinanceBrain.unconfirmed(redactedSource) ||
         WaffraAiFinanceBrain.competingAmounts(quote) ||
-        !WaffraAiFinanceBrain.exactCurrency(quote, rawCurrency)) {
+        !sourceCurrencyMatches(quote, rawCurrency)) {
       return null;
     }
 
