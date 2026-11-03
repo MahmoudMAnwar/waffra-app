@@ -936,16 +936,17 @@ jobs:
           else
             echo "::warning::WAFFRA_PUBLIC_EIA_KEY is not configured; oil quotes will depend on unkeyed FRED CSV availability"
           fi
-          # M432: Only a manual exact-main QA APK can use the public staging URL.
-          # Normal main push APKs and all AABs remain cloud SMS disabled.
+          # M436: Owner-approved exact-main QA APKs can analyze opted-in,
+          # redacted bank SMS into encrypted review suggestions. NO auto-post.
+          # All Play AAB builds and non-main branches stay cloud-disabled.
           sms_define=()
           if [[ "${{ inputs.sms_staging_worker }}" == "true" && "${{ github.ref }}" != "refs/heads/main" ]]; then
             echo "::error::Cloud SMS staging APK is allowed only from main"
             exit 1
           fi
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.ref }}" == "refs/heads/main" && "${{ inputs.sms_staging_worker }}" == "true" ]]; then
+          if [[ "${{ github.ref }}" == "refs/heads/main" && ( "${{ github.event_name }}" == "push" || "${{ github.event_name }}" == "workflow_dispatch" ) ]]; then
             sms_define+=(--dart-define="WAFFRA_SMS_WORKER_URL=https://waffra-sms-appcheck-staging.mahmoudmanwar159.workers.dev/analyze")
-            echo "Owner-only QA: signed App Check staging transport configured using a PUBLIC endpoint"
+            echo "Signed main QA APK: opt-in App Check cloud SMS suggestions to staging (NO auto-post)"
           fi
           for attempt in 1 2 3 4; do
             echo "Android ARM64 build attempt ${attempt}/4"
