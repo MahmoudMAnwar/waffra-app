@@ -1400,7 +1400,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     english:language=='en',
     onVerified:(){
      final lifecycle=WidgetsBinding.instance.lifecycleState;
-     if(mounted&&(lifecycle==null||lifecycle==AppLifecycleState.resumed)){
+     if(mounted&&WaffraBiometricSessionGuard.canReveal(
+       authenticated:true,inForeground:lifecycle==AppLifecycleState.resumed)){
       setState(()=>locked=false);
      }
     },
