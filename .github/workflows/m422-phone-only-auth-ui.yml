@@ -11,6 +11,7 @@ on:
       - 'functions/phone_auth_store.cjs'
       - 'functions/index.js'
       - 'functions/test/phone_auth_core.test.cjs'
+      - 'functions/test/phone_auth_store.test.cjs'
       - 'test/m425_phone_verified_identity_test.dart'
       - 'docs/qa/m425_verified_phone_auth_and_legacy_migration.md'
       - 'test/m424_mandatory_biometrics_test.dart'
@@ -53,7 +54,7 @@ jobs:
           node --check functions/phone_auth_core.cjs
           node --check functions/phone_auth_store.cjs
       - name: OTP proof, UID preservation, hashing and throttling tests
-        run: node --test functions/test/phone_auth_core.test.cjs
+        run: node --test functions/test/phone_auth_core.test.cjs functions/test/phone_auth_store.test.cjs
       - name: Verify default-off staging and no direct finance writes
         run: |
           python3 - <<'PY'
