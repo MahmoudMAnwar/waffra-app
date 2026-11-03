@@ -51,7 +51,11 @@ abstract final class WaffraAutoSmsAutoPoster {
      cloud=Map<String,Object?>.from(candidate['cloud'] as Map);
     }else{
      cloud=await WaffraSmsCloudService.analyzeIfConsented(body);
-     if(cloud!=null)await WaffraAutoSms.stageCloudAnalysis(id,cloud);
+     if(cloud!=null){
+      final staged=Map<String,Object?>.from(cloud)
+       ..remove('verifiedForPosting');
+      await WaffraAutoSms.stageCloudAnalysis(id,staged);
+     }
     }
     final parsed=BankParser.parse(body);
     final arrived=DateTime.fromMillisecondsSinceEpoch(at);
