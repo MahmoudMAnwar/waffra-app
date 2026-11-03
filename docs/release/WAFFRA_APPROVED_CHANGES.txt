@@ -1419,3 +1419,6 @@ M370: إعداد فحص إلزامية SQLCipher للتثبيتات الجديد
 
 - يدعم فحص الإشعارات المالية أسماء المرسلين المؤسسيين بالعربية والإنجليزية
   مثل «اعتماد» وEtimad، ويرفض أرقام الهواتف كاسم جهة موثوقة.
+
+
+M438 2026-11-03 owner-approved main integration: after PR #356, add full-screen blurred + Quick Actions overlay, consistent budget/goal/recurring menu layout, disable Saudi location requests, disable receipt-image OCR transaction import, replace Ask Waffra Qwen free-text chat with offline financial question choices, hide country flags/pickers and lock app display SAR while preserving independent Tools FX converter and phone-only/SMS/data migration. Exact-head CI and signed device QA remain required.
