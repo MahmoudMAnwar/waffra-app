@@ -27,7 +27,8 @@
     "M431: one-time permission only captures future bank SMS automatically; never backfill old SMS without a separate explicit user-approved review. Show a clear error when cloud activation is unavailable and offer on-device processing.",
     "M432: After exact-head QA passes, provide an explicitly requested manually triggered signed QA APK from main only using the public Firebase App Check Cloudflare SMS staging URL; keep standard builds and Play AAB cloud-disabled and retain finance data.",
     "M433: Import eligible bank SMS from the first day of the month the user activates SMS tracking, and queue subsequent incoming bank SMS, encrypted and without automatic analysis or posting. Add a permanent, counted and scrollable home review section; only user-confirmed SMS may change balance, with explicit budget choice, and send private nonrepeated review notifications for new incoming messages.",
-    "M434: Group pending encrypted bank SMS by the true sender with per-sender message count and list, and show SMS versus manual origin in every saved transaction detail/list while preserving legacy unknown provenance without changing or deleting previous financial data."
+    "M434: Group pending encrypted bank SMS by the true sender with per-sender message count and list, and show SMS versus manual origin in every saved transaction detail/list while preserving legacy unknown provenance without changing or deleting previous financial data.",
+    "M434 edit-form provenance: clearly label the original SMS or manual entry type on transaction editing, without modifying sourceType or financial balances."
   ],
   "allowed_changed_files": [
     ".github/workflows/android-full-smoke.yml",
@@ -155,6 +156,10 @@
       {
         "start": " Widget compactTransaction(MoneyEntry entry){",
         "end": " Widget dashboard(){"
+      },
+      {
+        "start": "      WaffraText(initial!=null?'تعديل العملية'",
+        "end": "      if(scannedImagePosition!=null&&scannedImageTotal!=null)"
       }
     ],
     "lib/waffra_messages.dart": [
