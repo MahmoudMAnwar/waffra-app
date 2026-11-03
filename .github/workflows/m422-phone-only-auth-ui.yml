@@ -1,0 +1,26 @@
+name: M422 Saudi Mobile and Password Only Entry
+on:
+  pull_request:
+    paths:
+      - 'lib/main.dart'
+      - 'test/m422_phone_only_auth_entry_test.dart'
+      - 'docs/qa/m422_phone_password_only_migration.md'
+      - '.github/workflows/m422-phone-only-auth-ui.yml'
+  workflow_dispatch:
+jobs:
+  phone-only-ui-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Verify new phone/password and no guest/social registration
+        run: flutter test --reporter expanded test/m422_phone_only_auth_entry_test.dart
+      - name: Compile-check registration and onboarding code
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings lib/main.dart
