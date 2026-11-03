@@ -10,7 +10,8 @@
     "Shorten bank SMS tracking permission copy and use the user-requested automatic analysis and SMS-only button labels.",
     "Remove redundant email and birth date explanatory copy from the name and gender signup screen without changing required inputs.",
     "Keep bank SMS permission UI to a single short line with explicit external cloud analysis disclosure and exactly two primary options.",
-    "Update existing SMS consent, phone sign-in, and secure credentials tests to match the user-approved text and ensure password matching precedes successful login without weakening the checks."
+    "Update existing SMS consent, phone sign-in, and secure credentials tests to match the user-approved text and ensure password matching precedes successful login without weakening the checks.",
+    "Update previously approved M436 and M417 test assertions for compact SMS consent, retaining independent cloud opt-in, redaction, review-only behavior and activation-month import."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
@@ -21,8 +22,10 @@
     "test/m417_sms_first_run_test.dart",
     "test/m422_phone_only_auth_entry_test.dart",
     "test/m426_local_phone_credentials_test.dart",
+    "test/m436_cloud_review_pipeline_test.dart",
     "test/m440_biometric_resume_regression_test.dart",
-    "test/m441_auth_sms_copy_regression_test.dart"
+    "test/m441_auth_sms_copy_regression_test.dart",
+    "test/qa/m417_sms_permission_acceptance_test.py"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -101,6 +104,18 @@
       {
         "start": " test('M426 main sign in requires password and biometric, no OTP',(){",
         "end": "\n}\n"
+      }
+    ],
+    "test/m436_cloud_review_pipeline_test.dart": [
+      {
+        "start": " test('M436 separate cloud opt-in remains disclosed before upload',(){",
+        "end": " test('M436 redactor accepts compact English multi-currency SMS',(){"
+      }
+    ],
+    "test/qa/m417_sms_permission_acceptance_test.py": [
+      {
+        "start": "    def test_sms_permission_disclosure_is_review_only(self):",
+        "end": "    def test_android_build_uses_explicit_scoped_receiver(self):"
       }
     ]
   }
