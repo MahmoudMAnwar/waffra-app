@@ -71,7 +71,7 @@ void main() {
   }
   expect(menu,contains('expanded:addFabExpanded'));
   expect(source,contains('setState(()=>addFabExpanded=!addFabExpanded)'));
-  expect(source,contains('bool noTarget=openEnded;'));
+  expect(source,contains('bool noTarget=openEnded||(duplicate!=null&&duplicate.target<=0);'));
   expect(menu,isNot(contains(
    'if(goalsOpened||tab==3){unawaited(_launchAddAction(()=>goalDialog()))')));
   expect(menu,isNot(contains(
