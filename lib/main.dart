@@ -3343,7 +3343,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          'Review amount, category and budget':
          'راجع المبلغ والقسم والميزانية قبل التسجيل'),
         trailing:const Icon(Icons.chevron_left_rounded),
-        onTap:id is String?()=>Navigator.pop(ctx,id):null,
+        onTap:(id is String)?()=>Navigator.pop(ctx,id):null,
        );
       })),
      Padding(padding:const EdgeInsets.all(12),
