@@ -30,8 +30,10 @@ class WaffraAutoSmsReceiver : BroadcastReceiver() {
                 )
             }
             for ((sender, parts) in bySender) {
-                WaffraAutoSmsStore.offer(context, sender, parts.toString(),
-                    receivedDates[sender] ?: System.currentTimeMillis())
+                if (WaffraAutoSmsStore.offer(context, sender, parts.toString(),
+                        receivedDates[sender] ?: System.currentTimeMillis())) {
+                    WaffraAutoSmsWorker.enqueue(context)
+                }
             }
         } catch (_: Exception) {
             // Fail closed: neither text, sender, nor exception is logged.
