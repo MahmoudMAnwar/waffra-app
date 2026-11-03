@@ -12189,10 +12189,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        }
        final completed=await WaffraSmsCloudService.setConsent(enabled);
        if(!completed&&mounted){
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-         content:WaffraText(waffraIsEnglish?
-          'Cloud service is not active or authentication is unavailable. No SMS was uploaded.':
-          'الخدمة السحابية غير مفعلة أو تسجيل الدخول غير متاح. لم يتم رفع أي رسالة.')));
+        snack(context,waffraIsEnglish?
+         'Cloud analysis or App Check is unavailable. No SMS was uploaded.':
+         'التحليل السحابي أو حماية التطبيق غير متاحة. لم يتم رفع أي رسالة.',
+         isError:true);
        }
        if(mounted)setState((){});
       }),
