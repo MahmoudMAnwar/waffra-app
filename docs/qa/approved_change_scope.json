@@ -303,7 +303,7 @@
       },
       {
         "start": "   errorMaxLines:2,\n   border:const OutlineInputBorder(),\n  ));",
-        "end": "}"
+        "end": null
       }
     ],
     "lib/waffra_regional_copy.dart": [
@@ -398,7 +398,7 @@
         "end": "   final original=waffraSmartBalance(sample);\n   WaffraDisplayCurrency.active.value=\n    WaffraDisplayCurrency.displaySelection('EGP');"
       },
       {
-        "start": "   await tester.pumpAndSettle();\n   await tester.tap(find.byKey(const Key('waffra-m268-feature-simulation')));\n   await tester.pumpAndSettle();",
+        "start": ";\n   await tester.pumpWidget(MaterialApp(home:WaffraSmartFeaturesPage(\n    entries:sample,goals:const [],recurring:const [],english:true)));\n   await tester.scrollUntilVisible(\n    find.byKey(const Key('waffra-m268-feature-simulation')),250,\n    scrollable:find.byType(Scrollable).first);\n   await tester.pumpAndSettle();\n   await tester.tap(find.byKey(const Key('waffra-m268-feature-simulation')));\n   await tester.pumpAndSettle();",
         "end": "   expect(waffraSmartBalance(sample),original);\n   expect(WaffraDisplayCurrency.toLedgerSar(1000),1000);\n  });"
       },
       {
@@ -428,7 +428,7 @@
         "end": "  expect(WaffraDisplayCurrency.hasSavedPreference,isTrue);\n  String? saved;\n  await tester.pumpWidget(MaterialApp(home:WaffraCountryFirstRunPage("
       },
       {
-        "start": "  await tester.pumpAndSettle();\n  await tester.tap(find.byKey(const Key('m290-setup-confirm')));\n  await tester.pumpAndSettle();",
+        "start": "d'),findsWidgets);\n  await tester.scrollUntilVisible(\n   find.byKey(const Key('m290-setup-confirm')),160,\n   scrollable:find.byType(Scrollable).first);\n  await tester.ensureVisible(find.byKey(const Key('m290-setup-confirm')));\n  await tester.pumpAndSettle();\n  await tester.tap(find.byKey(const Key('m290-setup-confirm')));\n  await tester.pumpAndSettle();",
         "end": "  WaffraDisplayCurrency.hasSavedPreference=false;\n });\n"
       },
       {
@@ -535,7 +535,7 @@
     "test/qa/m290_country_permissions_test.py": [
       {
         "start": "\n\nclass CountryPermissionManifestTest(unittest.TestCase):",
-        "end": "        with tempfile.TemporaryDirectory() as directory:\n            manifest = Path(directory) / \"AndroidManifest.xml\"\n            manifest.write_text("
+        "end": "        with tempfile.TemporaryDirectory() as directory:\n            manifest = Path(directory) / \"AndroidManifest.xml\"\n            manifest.write_text(\n                '<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\">'\n                '"
       },
       {
         "start": "            apply_manifest(manifest)\n            apply_manifest(manifest)\n            result = manifest.read_text(encoding=\"utf-8\")",
