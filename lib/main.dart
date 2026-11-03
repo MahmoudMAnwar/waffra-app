@@ -5878,6 +5878,36 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       WaffraText(initial!=null?'تعديل العملية':sms?'إضافة رسالة بنكية':
         scannedReceipt!=null?(waffraIsEnglish?'Review image transaction':'مراجعة عملية من صورة'):'إضافة عملية',
        style:Theme.of(sheetContext).textTheme.titleLarge),
+      if(initial!=null)...[
+       const SizedBox(height:9),
+       Container(
+        key:const Key('waffra-entry-edit-source'),
+        padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),
+        decoration:BoxDecoration(
+         color:Theme.of(sheetContext).colorScheme.surfaceContainerHighest,
+         borderRadius:BorderRadius.circular(12)),
+        child:Row(children:[
+         Icon(initial.sourceType=='sms'?Icons.sms_outlined:
+          Icons.edit_note_outlined,color:emerald,size:19),
+         const SizedBox(width:9),
+         Expanded(child:WaffraText(
+          WaffraTransactionDetailsDialog.sourceLabel(
+           initial.sourceType,waffraIsEnglish),
+          style:const TextStyle(fontWeight:FontWeight.bold))),
+        ])),
+       if(initial.sourceType=='manual')Padding(
+        padding:const EdgeInsets.only(top:7),
+        child:WaffraText(waffraIsEnglish?
+         'Added manually. No original SMS exists.':
+         'أُضيفت العملية يدويًا ولا توجد لها رسالة SMS أصلية.',
+         style:const TextStyle(fontSize:12))),
+       if(initial.sourceType=='sms')Padding(
+        padding:const EdgeInsets.only(top:7),
+        child:WaffraText(waffraIsEnglish?
+         'The protected original SMS is in transaction details.':
+         'الرسالة البنكية الأصلية المحمية موجودة في تفاصيل المعاملة.',
+         style:const TextStyle(fontSize:12))),
+      ],
       if(scannedImagePosition!=null&&scannedImageTotal!=null)
        Padding(padding:const EdgeInsets.only(top:6),child:WaffraText(
         waffraIsEnglish?
