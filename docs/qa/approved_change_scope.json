@@ -1,24 +1,33 @@
 {
   "contract_version": 1,
-  "change_id": "M422",
-  "human_scope_review": "Owner explicitly requests removing Google, Apple, guest, email and using Saudi phone/password. This PR changes entry UI only, not a secure remote identity system. Existing Google identity verified path remains **only** for legacy account migration to prevent user finance data loss. Remote SMS/OTP + password recovery, Firebase Custom Token, cross-device auth and database migration require separate signed testing before merge. Never treat local SharedPreferences salted SHA256 as cloud auth. Exact allowed code sections and changed files documented; human review required. M424 owner approved compulsory biometric-only unlock after phone/password login and on each foreground return, and removal of optional PIN lock settings. Preserve legacy Google migration and old finance/backup data, keep release gated by real verified phone identity and physical device QA.",
+  "change_id": "M422-M425",
+  "human_scope_review": "Owner explicitly requests removing Google, Apple, guest, email and using Saudi phone/password. This PR changes entry UI only, not a secure remote identity system. Existing Google identity verified path remains **only** for legacy account migration to prevent user finance data loss. Remote SMS/OTP + password recovery, Firebase Custom Token, cross-device auth and database migration require separate signed testing before merge. Never treat local SharedPreferences salted SHA256 as cloud auth. Exact allowed code sections and changed files documented; human review required. M424 owner approved compulsory biometric-only unlock after phone/password login and on each foreground return, and removal of optional PIN lock settings. Preserve legacy Google migration and old finance/backup data, keep release gated by real verified phone identity and physical device QA. M425 follows the owner's explicit request to complete server-verified phone/password OTP identity and old-account migration, while keeping real rollout default OFF. New Firebase Callable functions use OTP-proven unchanged UID, peppered scrypt, atomic phone owner binding, throttling, App Check, and no finance mutation; UI links legacy Google UID by verified OTP. No real secret, provider deployment, billing or physical-device migration is claimed. Human scope approval and real-device validation remain release blockers.",
   "user_requested_changes": [
     "M422: Replace new Google and Apple registration options with Saudi mobile number (05XXXXXXXX) and password only, and remove unauthenticated guest entry and bypass.",
     "M422: Stage phone-only registration in two screens: mobile/password/confirm, then name and gender without email or birth date.",
     "M422: Preserve legacy Google/Apple profiles and on-device finance data for verified one-time migration; do not allow registration to overwrite an existing account.",
     "M422: Keep cloud identity/password security, SMS verification and account migration as hard release blockers until provider-backed authentication and regression tests are complete.",
-    "M424: Require OS biometric verification immediately after successful Saudi phone/password login and on every app return; remove optional app PIN lock/change setting from My Account, no PIN bypass, preserve previous user data."
+    "M424: Require OS biometric verification immediately after successful Saudi phone/password login and on every app return; remove optional app PIN lock/change setting from My Account, no PIN bypass, preserve previous user data.",
+    "M425: Implement real server-side Saudi phone/password registration and reset after OTP ownership proof, authenticated Firebase custom token phone login, no local-hash fallback in secure mode, no email alias, and in-place migration retaining the original Firebase UID and all historical finance data; add bounded migration tests."
   ],
   "allowed_changed_files": [
     ".github/workflows/m422-phone-only-auth-ui.yml",
     "docs/qa/approved_change_scope.json",
     "docs/qa/m422_phone_password_only_migration.md",
     "docs/qa/m424_mandatory_biometric_session.md",
+    "docs/qa/m425_verified_phone_auth_and_legacy_migration.md",
+    "functions/index.js",
+    "functions/phone_auth_core.cjs",
+    "functions/phone_auth_store.cjs",
+    "functions/test/phone_auth_core.test.cjs",
     "lib/main.dart",
     "lib/waffra_biometrics.dart",
     "lib/waffra_mandatory_biometric_gate.dart",
+    "lib/waffra_phone_migration_form.dart",
+    "lib/waffra_phone_secure_auth.dart",
     "test/m422_phone_only_auth_entry_test.dart",
-    "test/m424_mandatory_biometrics_test.dart"
+    "test/m424_mandatory_biometrics_test.dart",
+    "test/m425_phone_verified_identity_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -45,6 +54,14 @@
       {
         "start": "   _accountSection(waffraIsEnglish?'Security & privacy'",
         "end": "    SwitchListTile(secondary:const Icon(Icons.preview_outlined"
+      },
+      {
+        "start": " Future<void> logout()async {",
+        "end": " Future<void> setPin(String? value)async{"
+      },
+      {
+        "start": " Widget profilePage(){",
+        "end": "   _accountSection(waffraIsEnglish?'App settings'"
       }
     ],
     "lib/waffra_biometrics.dart": [
