@@ -8,6 +8,9 @@ on:
       - 'native/WaffraMainActivity.kt'
       - 'lib/waffra_auto_sms*.dart'
       - 'lib/waffra_bank_sms_facts.dart'
+      - 'functions/openrouter_sms_extractor.cjs'
+      - 'functions/test/openrouter_sms_extractor.test.cjs'
+      - 'docs/qa/m420_openrouter_cloud_sms_plan.md'
       - 'lib/waffra_messages.dart'
       - 'lib/main.dart'
       - 'test/m417_*.dart'
@@ -106,3 +109,28 @@ jobs:
         run: |
           cd android
           ./gradlew :app:compileDebugKotlin --stacktrace --no-daemon
+
+  m420-openrouter-server-contract:
+    name: Verify OpenRouter cloud SMS adapter remains opt-in and non-deployable
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Confirm server-side extraction tests without remote API usage
+        run: node --test functions/test/openrouter_sms_extractor.test.cjs
+      - name: Ensure no client OpenRouter keys or public cloud endpoint are exposed
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          client='\n'.join(p.read_text(errors='replace') for p in Path('lib').rglob('*.dart'))
+          assert 'openrouter.ai/api/v1/chat/completions' not in client
+          assert 'OPENROUTER_API_KEY' not in client
+          functions=Path('functions/index.js').read_text()
+          assert 'suggestFromBankSms' not in functions, 'Cloud provider route must stay off'
+          print('PASS: no public OpenRouter endpoint, APK secret, or consent bypass')
+          PY
