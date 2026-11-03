@@ -28,13 +28,15 @@ void main(){
     expect(runner,contains('_activeDownload?.close()'));
   });
 
-  test('M324 bank SMS and OCR require local model while manual finance stays available',(){
+  test('M416 bank SMS stays offline, OCR import is disabled, and Global AI remains gated',(){
     final home=File('lib/main.dart').readAsStringSync();
     final tools=File('lib/waffra_smart_features.dart').readAsStringSync();
     expect(home,contains('if(!WaffraOnDeviceQwen.shared.isReady)return false;'));
-    expect(home,anyOf(
-      contains('if(!WaffraOnDeviceQwen.shared.isReady||source.trim().isEmpty)return;'),
-      contains('if(!WaffraOnDeviceQwen.shared.isReady||source.trim().isEmpty)return null;')));
+    expect(home,contains('if(!WaffraSaudiRelease.qwenForBankSms||reliable||'));
+    expect(home,contains('if(!WaffraSaudiRelease.receiptImageTransactionImport){'));
+    expect(home,contains('final found=splitBankMessages(input);'));
+    expect(home,contains('Maximum 100 messages per paste.'));
+    expect(home,contains('Amounts extracted. Confirm each transaction before saving.'));
     // M299 replaced flattened candidates with ordered OCR review items.
         // Keep multi-transaction review and the local-AI prerequisite together.
         expect(home,contains('await _reviewAiScannedTransactions(extracted.rawText,picked))return;'));
