@@ -36,6 +36,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:crypto/crypto.dart';
 import 'waffra_biometrics.dart';
+import 'waffra_mandatory_biometric_gate.dart';
 import 'waffra_amount_formatter.dart';
 import 'waffra_display_currency.dart';
 import 'waffra_phone_country_codes.dart';
@@ -1021,12 +1022,13 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  }
  DateTime? _backgroundAt;
  @override void didChangeAppLifecycleState(AppLifecycleState state){
-  if(state==AppLifecycleState.paused||state==AppLifecycleState.hidden){_backgroundAt=DateTime.now();}
-  // Returning from Android notification permission must not change the active tab.
-  if(state==AppLifecycleState.resumed&&pinHash!=null&&!locked&&_backgroundAt!=null){
-   final away=DateTime.now().difference(_backgroundAt!);
-   _backgroundAt=null;
-   if(away>=const Duration(seconds:30)&&mounted)setState(()=>locked=true);
+  if(state==AppLifecycleState.resumed){_backgroundAt=null;return;}
+  // Immediately lock whenever Waffra loses foreground focus.
+  if(WaffraBiometricSessionGuard.mustLockOn(state)){
+   _backgroundAt??=DateTime.now();
+   if(mounted&&profile!=null&&!showLogin&&!locked){
+    setState(()=>locked=true);
+   }
   }
  }
  @override void dispose(){WaffraRegionalCopy.countryIso.removeListener(_onRegionChanged);
@@ -1080,7 +1082,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     googleFirstRunSetup=waffraGoogleProfileReadyForCountrySetup(u)&&
       !(p.getBool(waffraCountrySetupKey(u!))??false);
     pinHash=p.getString('waffra_pin_sha256');
-    locked=pinHash!=null;startupError=null;loading=false;
+    // Keep old PIN preference only for non-destructive migration.
+    locked=u!=null;startupError=null;loading=false;
    });
   }catch(e){
    debugPrint('Waffra startup failed: $e');
@@ -1109,7 +1112,11 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   final needsGoogleSetup=waffraGoogleProfileReadyForCountrySetup(u)&&
     !(prefs.getBool(waffraCountrySetupKey(u))??false);
   if(mounted)setState((){
+   // First phone/password login and new registration require biometrics.
+   // Editing a profile in an already-unlocked session does not re-lock.
+   final freshSession=profile==null||showLogin;
    profile=u;showLogin=false;googleFirstRunSetup=needsGoogleSetup;
+   if(freshSession)locked=true;
   });
  }
  Future<void> setUiCountry(String? iso)async{
@@ -1384,12 +1391,21 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     const SizedBox(height:8),
     FilledButton(onPressed:WaffraHaptics.tap((){setState((){loading=true;startupError=null;});load();}),child:const WaffraText('إعادة المحاولة')),
    ])))):
-   locked?PinLockScreen(pinHash:pinHash!,onUnlock:()=>setState(()=>locked=false)):
    profile==null||showLogin||((profile!.phone.trim().isEmpty)&&
     (profile!.provider.toLowerCase().contains('local')||
      profile!.provider.contains('محلي')||
      profile!.provider.toLowerCase().contains('guest')||
      profile!.provider.toLowerCase().contains('demo')))?LoginScreen(onSave:saveUser):
+   locked?WaffraMandatoryBiometricGate(
+    english:language=='en',
+    onVerified:(){
+     final lifecycle=WidgetsBinding.instance.lifecycleState;
+     if(mounted&&(lifecycle==null||lifecycle==AppLifecycleState.resumed)){
+      setState(()=>locked=false);
+     }
+    },
+    onSignOut:logout,
+   ):
    googleFirstRunSetup?WaffraCountryFirstRunPage(
      english:language=='en',onComplete:completeGoogleCountrySetup,
      onCountryConfirmed:setUiCountry):
@@ -11946,12 +11962,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ])),
    ]),
    _accountSection(waffraIsEnglish?'Security & privacy':'الأمان والخصوصية',Icons.shield_outlined,[
-    _accountTile(waffraIsEnglish?'PIN app lock':'قفل التطبيق برمز PIN',
-     widget.pinEnabled?(waffraIsEnglish?'Enabled':'مفعّل'):(waffraIsEnglish?'Disabled':'غير مفعّل'),
-     widget.pinEnabled?Icons.lock:Icons.lock_open,onTap:WaffraHaptics.tap(configurePin)),
-    if(widget.pinEnabled)_accountTile(waffraIsEnglish?'Change PIN':'تغيير رمز PIN',
-     waffraIsEnglish?'Update your lock code':'تحديث رمز القفل',
-     Icons.password_outlined,onTap:WaffraHaptics.tap(changePin)),
+    // M424: no optional app lock or PIN entry in My Account.
     SwitchListTile(secondary:const Icon(Icons.preview_outlined,color:emerald),
      title:WaffraText(waffraIsEnglish?'Protect Recent Apps preview':'حماية معاينة التطبيقات الأخيرة'),
      value:protectRecentApps,onChanged:WaffraHaptics.selection(_setRecentAppProtection)),
