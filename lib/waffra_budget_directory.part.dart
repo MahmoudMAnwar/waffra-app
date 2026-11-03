@@ -210,20 +210,10 @@ extension WaffraBudgetDirectory on _HomeScreenState {
          childrenPadding:const EdgeInsets.only(bottom:8),
          title:WaffraText(b.budgetLabel??('ميزانية '+b.displayName),
           maxLines:2,style:const TextStyle(fontWeight:FontWeight.bold)),
-         subtitle:Row(mainAxisSize:MainAxisSize.min,children:[
-          Expanded(child:WaffraText(b.budgetActive?
-           (waffraIsEnglish?'Active':'مفعلة'):
-           (waffraIsEnglish?'Paused':'متوقفة'),
-           style:const TextStyle(fontSize:12))),
-          Switch.adaptive(
-           key:Key('waffra-budget-activation-'+b.id),
-           value:b.budgetActive,
-           onChanged:WaffraHaptics.selection((enabled)async{
-            if(enabled==b.budgetActive)return;
-            await setNamedBudgetActive(b,!b.budgetActive);
-            if(mounted)refresh((){});
-           })),
-         ]),
+         subtitle:WaffraText(b.budgetActive?
+          (waffraIsEnglish?'Active':'مفعلة'):
+          (waffraIsEnglish?'Paused':'متوقفة'),
+          style:const TextStyle(fontSize:12)),
          children:[
          const SizedBox(height:8),
          LinearProgressIndicator(value:ratio,minHeight:7,
@@ -235,7 +225,12 @@ extension WaffraBudgetDirectory on _HomeScreenState {
           'الحد: '+cash(b.budget)+'  •  المصروف: '+cash(spent)+'  •  المتبقي: '+cash(b.budget-spent),
           maxLines:3,style:const TextStyle(fontSize:12)),
          const SizedBox(height:8),
-         ExpansionTile(
+         Container(
+          decoration:BoxDecoration(
+           border:Border.all(color:emerald.withValues(alpha:.42)),
+           borderRadius:BorderRadius.circular(14)),
+          clipBehavior:Clip.antiAlias,
+          child:ExpansionTile(
           key:PageStorageKey<String>('waffra-budget-quick-actions-'+b.id),
           initiallyExpanded:false,
           tilePadding:EdgeInsets.zero,
@@ -244,27 +239,39 @@ extension WaffraBudgetDirectory on _HomeScreenState {
           title:WaffraText(waffraIsEnglish?'Quick actions':'إجراءات سريعة',
            style:const TextStyle(fontWeight:FontWeight.w700,fontSize:13)),
           children:[
-           Wrap(spacing:8,runSpacing:8,children:[
-          TextButton.icon(
-           onPressed:WaffraHaptics.tap(()async{
-            await editBudgetForCategory(b);
-            if(mounted)refresh((){});
-           }),
-           icon:const Icon(Icons.edit_outlined,size:17),
-           label:WaffraText(waffraIsEnglish?'Edit':'تعديل')),
-          TextButton.icon(
-           onPressed:WaffraHaptics.tap(()async{
-            await deleteNamedBudget(b);
-            if(mounted)refresh((){});
-           }),
-           icon:const Icon(Icons.delete_outline_rounded,size:17,
-            color:Colors.deepOrange),
-           label:WaffraText(waffraIsEnglish?'Delete':'حذف',
-            style:const TextStyle(color:Colors.deepOrange))),
-
+           Row(children:[
+            Expanded(child:TextButton.icon(
+             onPressed:WaffraHaptics.tap(()async{
+              await editBudgetForCategory(b);
+              if(mounted)refresh((){});
+             }),
+             icon:const Icon(Icons.edit_outlined,size:17),
+             label:WaffraText(waffraIsEnglish?'Edit':'تعديل',maxLines:1))),
+            const SizedBox(width:7),
+            Expanded(child:TextButton.icon(
+             onPressed:WaffraHaptics.tap(()async{
+              await deleteNamedBudget(b);
+              if(mounted)refresh((){});
+             }),
+             icon:const Icon(Icons.delete_outline_rounded,size:17,
+              color:Colors.deepOrange),
+             label:WaffraText(waffraIsEnglish?'Delete':'حذف',
+              maxLines:1,style:const TextStyle(color:Colors.deepOrange)))),
+            const SizedBox(width:6),
+            Tooltip(message:b.budgetActive?
+             (waffraIsEnglish?'Pause budget':'إيقاف الميزانية'):
+             (waffraIsEnglish?'Enable budget':'تفعيل الميزانية'),
+             child:Switch.adaptive(
+              key:Key('waffra-budget-activation-'+b.id),
+              value:b.budgetActive,
+              onChanged:WaffraHaptics.selection((enabled)async{
+               if(enabled==b.budgetActive)return;
+               await setNamedBudgetActive(b,enabled);
+               if(mounted)refresh((){});
+              }))),
            ]),
           ],
-         ),
+         )),
         ]),
        ),
       );

@@ -105,7 +105,9 @@ jobs:
           app=Path('lib/main.dart').read_text()
           setup=Path('lib/waffra_country_first_run_page.dart').read_text()
           verify=Path('lib/waffra_sms_multicurrency_review.dart').read_text()
-          assert "googleFirstRunSetup?WaffraCountryFirstRunPage(" in app
+          assert "googleFirstRunSetup&&WaffraSaudiRelease.locationCountryOnboarding?WaffraCountryFirstRunPage(" in app
+          assert "googleFirstRunSetup=WaffraSaudiRelease.locationCountryOnboarding&&" in app
+          assert "static const bool locationCountryOnboarding=false;" in Path('lib/waffra_saudi_release.dart').read_text()
           assert "waffraGoogleProfileReadyForCountrySetup(u)" in app
           assert "waffraCountrySetupKey(" in app
           assert "WaffraReminders.requestPermission()" in app
@@ -142,9 +144,10 @@ jobs:
       - run: |
           flutter pub get
           python3 scripts/qa/m287_patch_tesseract_gradle.py
-      - name: Generate Android project and configure coarse location only
+      - name: Generate Android project with Saudi location permission disabled
         run: |
           flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
           python3 scripts/qa/m290_configure_country_permissions.py .
+          ! grep -q 'android.permission.ACCESS_COARSE_LOCATION' android/app/src/main/AndroidManifest.xml
       - name: Compile Flutter Android debug candidate only
         run: flutter build apk --debug --no-pub --dart-define=WAFFRA_COMPILE_ONLY_PREVIEW=true

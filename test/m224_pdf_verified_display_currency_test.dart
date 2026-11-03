@@ -17,26 +17,29 @@ void main() {
  tearDown(() {
   WaffraDisplayCurrency.active.value=WaffraDisplayCurrency.displaySelection('SAR');
  });
- test('M225: app currency relabels 1,000 SAR as 1,000 EGP without FX',()async{
+ test('M416 Saudi edition keeps SAR and preserves legacy Global selection',()async{
   final noNetwork=MockClient((_)async {
-   fail('Global country selection must never contact FX service');
+   fail('Saudi app currency must never request FX network rates');
    return http.Response('',503);
   });
   try {
-   await WaffraDisplayCurrency.setCurrency('EGP',client:noNetwork);
-   expect(WaffraDisplayCurrency.country.code,'EGP');
+   SharedPreferences.setMockInitialValues({
+    'waffra_display_country_currency_v1':'EGP',
+   });
+   await WaffraDisplayCurrency.initialize(client:noNetwork);
+   expect(WaffraDisplayCurrency.country.code,'SAR');
    expect(WaffraDisplayCurrency.convert(1000),1000);
    expect(WaffraDisplayCurrency.toLedgerSar(1000),1000);
    expect(WaffraDisplayCurrency.amount(1000),'1,000.00');
-   expect(WaffraDisplayCurrency.money(1000,english:false),'1,000.00 ج.م');
-   expect(WaffraDisplayCurrency.active.value.fromSar(1000),1000);
-   expect(WaffraDisplayCurrency.active.value.verified,isTrue);
-   await WaffraDisplayCurrency.initialize(client:noNetwork);
-   expect(WaffraDisplayCurrency.amount(1000),'1,000.00');
+   expect(WaffraDisplayCurrency.money(1000,english:true),'1,000.00 SAR');
+   await expectLater(
+    WaffraDisplayCurrency.setCurrency('EGP',client:noNetwork),
+    throwsStateError);
+   final p=await SharedPreferences.getInstance();
+   expect(p.getString('waffra_display_country_currency_v1'),'EGP');
+   expect(WaffraDisplayCurrency.displaySelection('EGP').fromSar(1000),1000);
    await WaffraDisplayCurrency.refresh(client:noNetwork);
-   expect(WaffraDisplayCurrency.amount(1000),'1,000.00');
-   await WaffraDisplayCurrency.setCurrency('USD',client:noNetwork);
-   expect(WaffraDisplayCurrency.money(1000,english:true),'1,000.00 USD');
+   expect(WaffraDisplayCurrency.country.code,'SAR');
   }finally{noNetwork.close();}
  });
  test('M225: verified FX parser exists for tools, not app display selection',(){

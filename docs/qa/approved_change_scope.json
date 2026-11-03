@@ -1,72 +1,567 @@
 {
   "contract_version": 1,
-  "change_id": "M437-bank-SMS-history-and-unknown-financial-notices",
-  "human_scope_review": "M437 user clarification: scan bank SMS from the FIRST calendar day of the Android app installation month (PackageInfo.firstInstallTime), continuing through scan time, not from the date of SMS permission activation. First run after separate one-time SMS consent and account finance load stages qualifying messages to encrypted review; the settings scan also displays original SMS within the grouped review list and clear empty state. No finance write without review, no OTP/personal SMS, no cloud without separate consent. Unknown finance notices remain read-only/local and Etimad debt IDs are not payment amounts. Continue with signed Android + finance migration QA before deployment.",
+  "change_id": "M438-M415-M416-M437-main-SMS-safe-integration",
+  "human_scope_review": "User requested merging all remaining M415 and M416 functionality on latest main while retaining M429/M436/M437 login, SMS and optional cloud analysis, without accounting migration. The additional main-build failure is caused by release notes ancestry check in step 46; refresh approved notes AFTER latest app changes, retaining release gate. CI exact HEAD and physical signed-device finance migration tests must pass before production release. This manifest describes reviewed code scopes but does not claim device certification.",
   "user_requested_changes": [
-    "Add a separate Bank SMS section in Waffra My Account settings containing Scan previous SMS and Unrecognized SMS, based on user-provided screenshots.",
-    "Scan old bank SMS from the FIRST day of the calendar month in which Waffra was installed on the device, continuing through now, regardless of the later one-time SMS permission date. Repeat scans must resume safely; show original SMS grouped for review or a localized no-recent-messages state.",
-    "Show Etimad and other financial-looking non-transaction notices as unrecognized, without interpreting indebtedness reference numbers as paid amounts; present original SMS locally and allow only a blank manually confirmed transaction form.",
-    "Exclude OTP and personal messages, cap on-device scan to 500 input rows and 100 displayed notices, and never upload unknown SMS to the model or create new storage with sensitive content.",
-    "Preserve existing cloud consent and analysis: bank SMS suggestions stage only with standing cloud consent, while posting always requires user confirmation."
+    "Integrate full-screen frosted glass backdrop on all plus FAB menus including header and footer in both themes and Android navigation modes.",
+    "Restore outlined selectable dropdowns and clarify budget quick actions, monthly budget navigation and goal/recurring edit and duplicate controls.",
+    "Disable country/location permission and country onboarding without removing dormant Global source or prior saved preferences.",
+    "Disable receipt OCR/image-to-finance transaction entry while preserving existing receipt attachments and manually viewed files.",
+    "Replace freeform Qwen Ask Waffra with deterministic, selectable questions about recorded income expenses categories and independent named budgets, including clear questions flow.",
+    "Keep deterministic bank SMS parsing and optional consented cloud SMS analysis as encrypted REVIEW-ONLY suggestions; never auto-post finances or remove existing SMS inbox and unknown notices.",
+    "Force Saudi-facing SAR and Saudi mobile input beginning 05 without country flags or selectors; preserve existing stored finance and legacy Google identifiers.",
+    "Keep Tools independent currency converter and gold/oil information available; foreign FX bank SMS always requires validation rather than relabeling it as SAR.",
+    "Bring M415 and M416 regression tests forward to last integrated main, preserving recently merged phone-password and biometric authentication safeguards.",
+    "Fix failed main Android Release Notes check by bringing approved notes after latest app-code revisions, retaining SHA/ancestry certification and preserving signed APK source integrity."
   ],
   "allowed_changed_files": [
+    ".github/workflows/m290-country-reminders-multicurrency.yml",
     "docs/qa/approved_change_scope.json",
-    "docs/qa/m437_bank_sms_settings_unknown_acceptance.md",
+    "docs/qa/m416_saudi_release_acceptance.md",
+    "docs/release/M416_SAUDI_ONLY_RELEASE_NOTES.txt",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "lib/waffra_auto_sms.dart",
-    "lib/waffra_unknown_financial_sms_page.dart",
-    "native/WaffraAutoSmsStore.kt",
-    "native/WaffraMainActivity.kt",
-    "test/m437_bank_sms_settings_unknown_test.dart"
+    "lib/waffra_budget_directory.part.dart",
+    "lib/waffra_centered_dropdown.dart",
+    "lib/waffra_display_currency.dart",
+    "lib/waffra_google_phone_field.dart",
+    "lib/waffra_regional_copy.dart",
+    "lib/waffra_saudi_ask.dart",
+    "lib/waffra_saudi_mobile.dart",
+    "lib/waffra_saudi_release.dart",
+    "lib/waffra_smart_features.dart",
+    "scripts/qa/m290_configure_country_permissions.py",
+    "test/m127_ui_tour_backup_acceptance_test.dart",
+    "test/m224_pdf_verified_display_currency_test.dart",
+    "test/m268_smart_features_ten_calendar_art_test.dart",
+    "test/m273_production_user_journey_regression_test.dart",
+    "test/m290_google_country_reminders_test.dart",
+    "test/m301_google_country_phone_picker_test.dart",
+    "test/m302_display_currency_precision_test.dart",
+    "test/m320_ai_live_entrypoints_test.dart",
+    "test/m321_ai_model_download_delete_test.dart",
+    "test/m325_ai_tools_visibility_test.dart",
+    "test/m326_region_dialect_splash_localization_test.dart",
+    "test/m330_compact_ui_copy_test.dart",
+    "test/m335_real_sms_ocr_accuracy_test.dart",
+    "test/m353_named_budget_pause_resume_test.dart",
+    "test/m357_budget_hierarchy_and_filter_layout_test.dart",
+    "test/m359_budget_directory_and_templates_test.dart",
+    "test/m360_budget_category_quick_actions_test.dart",
+    "test/m371_goal_wallet_and_budgets_regression_test.dart",
+    "test/m388_m390_approved_goal_recurring_receipt_test.dart",
+    "test/m392_m395_budget_quick_actions_goal_ui_test.dart",
+    "test/m415_ui_choice_borders_test.dart",
+    "test/m416_saudi_mobile_only_test.dart",
+    "test/m416_saudi_release_offline_test.dart",
+    "test/qa/m290_country_permissions_test.py",
+    "test/waffra_directional_fab_receipt_corner_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": "import 'waffra_sms_cloud_review_analyzer.dart';",
-        "end": "import 'waffra_auto_sms_consent.dart';"
+        "start": "   dividerTheme:const DividerThemeData(color:Color(0xFFE1EDE6),thickness:.8),",
+        "end": "  ),\n  darkTheme:ThemeData(\n"
       },
       {
-        "start": " @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;",
-        "end": " Future<void> _openAutoSmsInbox()async{"
+        "start": "   dividerTheme:const DividerThemeData(color:Color(0xFF394039),thickness:.8),",
+        "end": "  ),\n  themeMode:appearance=='system'?ThemeMode.system:(appearance=='dark'?ThemeMode.dark:ThemeMode.light),\n"
       },
       {
-        "start": " TextField(key:const Key('waffra-account-settings-search')",
-        "end": "   _accountSection(waffraIsEnglish?'Security & privacy':'الأمان والخصوصية',Icons.shield_outlined,["
+        "start": " bool addFabExpanded=false;",
+        "end": " bool quickActionsExpanded=false;\n"
       },
       {
-        "start": " Future<void> _openAutoSmsInbox()async{",
-        "end": " Widget _autoSmsReviewCard(){"
+        "start": "      final b=visible[i];\n",
+        "end": "       key:Key('waffra-retro-budget-option-'+b.id),\n"
       },
       {
-        "start": " Widget _autoSmsReviewCard(){",
-        "end": " Future<void> _reviewAutoSmsCandidates("
+        "start": "     key:const Key('waffra-budget-month-control'),\n",
+        "end": "     ]),\n    ),\n"
+      },
+      {
+        "start": "       const SizedBox(width:1),\n      ]),\n",
+        "end": "       key:PageStorageKey<String>('waffra-goal-quick-actions-'+g.id),\n"
+      },
+      {
+        "start": "         contentPadding:EdgeInsets.zero,\n",
+        "end": "      if(g.dueDate!=null)Padding(padding:const EdgeInsets.only(top:8),\n"
+      },
+      {
+        "start": "      ])),\n     ]),\n",
+        "end": "      key:PageStorageKey<String>('waffra-recurring-quick-actions-'+r.id),\n"
+      },
+      {
+        "start": "       style:const TextStyle(fontSize:13,fontWeight:FontWeight.w700)),\n      children:[\n",
+        "end": "     ])));\n   }),\n"
+      },
+      {
+        "start": "      fontSize:15,fontWeight:FontWeight.bold,color:Theme.of(context).brightness==Brightness.dark?Colors.white:forest)),\n    ]))));",
+        "end": " Future<void> _duplicateGoalFromMenu()async {\n"
+      },
+      {
+        "start": "      final item=goals[index];\n",
+        "end": "       leading:const Icon(Icons.copy_all_outlined,color:emerald),\n       title:WaffraText(item.name),\n"
+      },
+      {
+        "start": "      final item=recurring[index];\n",
+        "end": "       leading:const Icon(Icons.copy_all_outlined,color:emerald),\n       title:WaffraText(item.title),\n"
+      },
+      {
+        "start": "      child:currentTab()))),\n",
+        "end": "      menu:Column(mainAxisSize:MainAxisSize.min,\n"
+      },
+      {
+        "start": "           unawaited(_launchAddAction(()=>goalDialog(),fromMenu:true));\n          })),",
+        "end": "         if(goals.isNotEmpty)...[\n"
+      },
+      {
+        "start": "       ]),\n     ),\n",
+        "end": "  if(tourActive&&tourTargetReady)Positioned.fill(child:tourOverlay()),\n"
+      },
+      {
+        "start": "  super.key,required this.english,required this.expanded,required this.menu,\n",
+        "end": " );\n}\n\n/// Avoid Scaffold's default size/translation animation when tabs or locale\n"
+      },
+      {
+        "start": "import 'waffra_google_phone_field.dart';\n",
+        "end": "import 'waffra_search.dart';\n"
+      },
+      {
+        "start": " return WaffraValidators.mobileNumber(raw)==null?null:(waffraIsEnglish?'Mobile number must start with 05 and contain 10 digits':'رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام');\n}\n",
+        "end": "}\nString? waffraPasswordFieldError(String? raw) {\n"
+      },
+      {
+        "start": "    profile=u;\n",
+        "end": "      !(p.getBool(waffraCountrySetupKey(u!))??false);\n"
+      },
+      {
+        "start": "  );\n  final prefs=await SharedPreferences.getInstance();\n",
+        "end": "    !(prefs.getBool(waffraCountrySetupKey(u))??false);\n"
+      },
+      {
+        "start": "    onSignOut:logout,\n   ):\n",
+        "end": "     english:language=='en',onComplete:completeGoogleCountrySetup,\n"
+      },
+      {
+        "start": "         TextField(controller:signInPhone,keyboardType:TextInputType.phone,\n",
+        "end": "           filled:true,fillColor:Colors.white,\n           errorText:signInAttempted?waffraMobileFieldError(signInPhone.text):null,errorMaxLines:2,\n"
+      },
+      {
+        "start": "  final phoneSeed=WaffraInternationalPhone.fromStored(widget.initial?.phone);\n",
+        "end": "  password=TextEditingController();confirmPassword=TextEditingController();\n"
+      },
+      {
+        "start": "  if(waffraTextFieldError(name.text)!=null||\n",
+        "end": "      english:waffraIsEnglish):waffraMobileFieldError(phone.text))!=null)return;\n"
+      },
+      {
+        "start": "   await widget.onSave(Person(name:name.text.trim(),email:widget.initial?.email??'',\n",
+        "end": "     provider:widget.provider,gender:gender,avatar:avatar,birthday:birthday));\n"
+      },
+      {
+        "start": "    WaffraGooglePhoneField(\n     controller:phone,country:phoneCountry,english:waffraIsEnglish,\n",
+        "end": "   if(widget.initial==null) ...[\n"
+      },
+      {
+        "start": "   return waffraIsEnglish\n",
+        "end": "  }\n  return hasTransaction?null:(waffraIsEnglish\n"
+      },
+      {
+        "start": "     (money.amount-parsed.amount!).abs()<0.00001;\n  });\n",
+        "end": "   update((){\n    messages=found;parsed=true;analyzingPaste=false;\n"
+      },
+      {
+        "start": "     BuildContext ctx,StateSetter update,String input){\n  pasteTimer?.cancel();\n",
+        "end": "  final revision=++pasteRevision;\n"
+      },
+      {
+        "start": " void disposeLater(){\n  pasteTimer?.cancel();\n",
+        "end": "  Future<void>.delayed(const Duration(milliseconds:500),(){\n"
+      },
+      {
+        "start": "       hintText:waffraIsEnglish?'Paste your bank message here. We’ll analyze it automatically.':'الصق رسالتك البنكية هنا، وبنحلّلها لك تلقائيًا.',hintStyle:const TextStyle(fontSize:13,color:Color(0xFF888F8A)),\n",
+        "end": "       border:OutlineInputBorder(borderRadius:BorderRadius.circular(18)))),\n"
+      },
+      {
+        "start": "          'المبلغ الأجنبي لا يُحفظ كريال بدون إثبات العملة والسعر مشفرًا. الرصيد ليس معاملة.'),\n",
+        "end": "          OutlinedButton.icon(\n"
+      },
+      {
+        "start": "      // Never mistake nominal label switching for an actual FX rate.\n",
+        "end": "         WaffraSmsCurrencies.originalAmount(messages.first)!=null&&\n"
+      },
+      {
+        "start": "         'تحويل لعملة التطبيق — السعر والمصدر')),\n      ],\n",
+        "end": "      // Shared lightweight in-dialog progress while the batch is committed.\n"
+      },
+      {
+        "start": "       pasteTimer?.cancel();\n",
+        "end": "       ++pasteRevision;\n"
+      },
+      {
+        "start": "       decoration:InputDecoration(labelText:waffraIsEnglish?'Amount *':'مبلغ هذه الرسالة بالريال *',errorText:reviewAttempted?waffraAmountFieldError(amount.text):null,border:OutlineInputBorder())),\n",
+        "end": "         WaffraSmsCurrencies.originalAmount(messages[index])!.currency!=\n"
+      },
+      {
+        "start": " _receiveSharedSms();\n}\n\n",
+        "end": "  // No bank message contents, personal identifiers, photos or notes are\n"
+      },
+      {
+        "start": "     BuildContext ctx,String source)async {\n",
+        "end": "  try{\n   return await _withAiWorkProgress(\n"
+      },
+      {
+        "start": "  return true;\n }\n\n",
+        "end": "  // Offline OCR itself needs its tiny Tesseract assets, not Qwen.\n"
+      },
+      {
+        "start": "  WaffraReceiptOcrFields? scannedReceipt,XFile? scannedImage,bool? scannedIncome,\n",
+        "end": "  // Bank SMS and OCR edit forms work offline without starting Qwen.\n"
+      },
+      {
+        "start": "   goals:List<WaffraSmartGoal>.unmodifiable(goals.map((g)=>\n",
+        "end": "   recurring:List<WaffraSmartRecurring>.unmodifiable(recurring.where((r)=>r.active).map((r)=>\n"
+      },
+      {
+        "start": "    suggestedTitle:candidate.title,suggestedAmount:candidate.estimatedMonthly))));\n",
+        "end": "  final searchController=TextEditingController();\n"
+      },
+      {
+        "start": "   _accountSection(waffraIsEnglish?'App settings':'إعدادات التطبيق',Icons.settings_outlined,[\n",
+        "end": "     key:const Key('waffra-app-base-currency-setting'),\n"
+      },
+      {
+        "start": "     onSelectionChanged:WaffraHaptics.selection((v)async{setState(()=>tab=0);await widget.onLanguage(v.first);}))),\n",
+        "end": "     key:const Key('waffra-regional-arabic-setting'),\n"
+      },
+      {
+        "start": "          unawaited(_launchAddAction(()=>bulkSmsSheet(),fromMenu:true));\n         })),\n        const SizedBox(height:7),\n",
+        "end": "         icon:Icons.document_scanner_outlined,\n"
       }
     ],
-    "lib/waffra_auto_sms.dart": [
+    "lib/waffra_budget_directory.part.dart": [
       {
-        "start": " static Future<List<Map<String,Object?>>> pending()async{",
-        "end": " static Future<bool> claimCloudAttempt(String id)async{"
-      }
-    ],
-    "native/WaffraAutoSmsStore.kt": [
-      {
-        "start": "    private val brand = Regex(",
-        "end": "    private fun id(sender: String, body: String, at: Long): String {"
+        "start": "          maxLines:2,style:const TextStyle(fontWeight:FontWeight.bold)),\n",
+        "end": "         children:[\n         const SizedBox(height:8),\n"
       },
       {
-        "start": "    private const val activationMonth =",
-        "end": "    private val mutex = Any()"
+        "start": "          maxLines:3,style:const TextStyle(fontSize:12)),\n         const SizedBox(height:8),\n",
+        "end": "          key:PageStorageKey<String>('waffra-budget-quick-actions-'+b.id),\n"
       },
       {
-        "start": "    /** Resumable history import:",
-        "end": "    /** Claim each review notification once;"
+        "start": "          children:[\n",
+        "end": "        ]),\n       ),\n"
       }
     ],
-    "native/WaffraMainActivity.kt": [
+    "lib/waffra_centered_dropdown.dart": [
       {
-        "start": "                \"importConsentMonthBankSms\" -> {",
-        "end": "                \"claimAutoBankSmsCloudAttempt\" -> result.success("
+        "start": "                          final item=items[index];\n",
+        "end": "                          );\n                        },\n"
+      }
+    ],
+    "test/waffra_directional_fab_receipt_corner_test.dart": [
+      {
+        "start": "  testWidgets('expanded menu is above the physical plus on the same side in both languages', (tester) async {\n",
+        "end": "    for (final english in <bool>[true,false]) {\n"
+      },
+      {
+        "start": "test('Home, Categories, Goals and Recurring plus actions preserve locale switch, with no fixed-left anchor'",
+        "end": "test('M384 transaction cards use persisted references, never alter old photos'"
+      }
+    ],
+    "test/m127_ui_tour_backup_acceptance_test.dart": [
+      {
+        "start": "test('four finance action destinations share one language-aware circular action'",
+        "end": "test('tour intro no longer cuts through the top header'"
+      }
+    ],
+    "test/m353_named_budget_pause_resume_test.dart": [
+      {
+        "start": "test('M353 all screens gate NEW standalone budget assignment and retain old links'",
+        "end": "test('M353 transaction details warn with optional link after resume'"
+      }
+    ],
+    "test/m357_budget_hierarchy_and_filter_layout_test.dart": [
+      {
+        "start": "test('M357 budget card is collapsible and edit/delete are explicit'",
+        "end": "test('M357 category filter controls do not clip on phone width'"
+      }
+    ],
+    "test/m359_budget_directory_and_templates_test.dart": [
+      {
+        "start": "test('M359: My Budgets is separate from income/expense category filters'",
+        "end": "test('M359: overall budget is computed, transaction review can create budget'"
+      }
+    ],
+    "test/m360_budget_category_quick_actions_test.dart": [
+      {
+        "start": "test('M360 saved budget actions are in My Budgets only'",
+        "end": "test('M360 bank SMS batch review also permits creating a new budget'"
+      }
+    ],
+    "test/m371_goal_wallet_and_budgets_regression_test.dart": [
+      {
+        "start": "test('M371 budgets open in bounded Android sheet, not nested lazy expansion'",
+        "end": "test('M371 goal creation cannot post an expense or negative cash debit'"
+      }
+    ],
+    "test/m388_m390_approved_goal_recurring_receipt_test.dart": [
+      {
+        "start": "test('M389: Goals/Recurring + menus show approved choices instead of direct sheet'",
+        "end": "test('M388: open-ended goal never divided by zero or marked achieved'"
+      }
+    ],
+    "test/m392_m395_budget_quick_actions_goal_ui_test.dart": [
+      {
+        "start": "test('M392 saved budget expands details and has clear, independent switch'",
+        "end": "test('M395 search and visible scrollbars do not mutate finance models'"
+      }
+    ],
+    ".github/workflows/m290-country-reminders-multicurrency.yml": [
+      {
+        "start": "          verify=Path('lib/waffra_sms_multicurrency_review.dart').read_text()\n",
+        "end": "          assert \"waffraGoogleProfileReadyForCountrySetup(u)\" in app\n"
+      },
+      {
+        "start": "      - run: |\n          flutter pub get\n          python3 scripts/qa/m287_patch_tesseract_gradle.py\n",
+        "end": "      - name: Compile Flutter Android debug candidate only\n"
+      }
+    ],
+    "lib/waffra_saudi_release.dart": [
+      {
+        "start": null,
+        "end": null
+      }
+    ],
+    "lib/waffra_saudi_ask.dart": [
+      {
+        "start": null,
+        "end": null
+      }
+    ],
+    "lib/waffra_smart_features.dart": [
+      {
+        "start": "import 'waffra_ai_recorded_answers.dart';\n",
+        "end": "import 'waffra_ondevice_qwen.dart';\n"
+      },
+      {
+        "start": "  const WaffraSmartGoal(this.name,this.target,this.saved);\n}\n",
+        "end": "class WaffraSmartRecurring {\n"
+      },
+      {
+        "start": " final List<WaffraSmartEntry> entries;\n",
+        "end": " final List<WaffraSmartRecurring> recurring;\n"
+      },
+      {
+        "start": "  required this.goals,required this.recurring,required this.english,\n",
+        "end": " @override State<WaffraSmartFeaturesPage> createState()=>_WaffraSmartFeaturesPageState();\n"
+      },
+      {
+        "start": "  // A deleted model leaves its AI features visible but disabled.\n",
+        "end": "  final token=++_focusSerial;\n"
+      },
+      {
+        "start": " int emergencyMonths=3,projectIndex=0;\n",
+        "end": " bool aiBusy=false;\n"
+      },
+      {
+        "start": "    // Clear private model output; collapse an open AI-only panel on delete.\n",
+        "end": "   }\n  });\n }\n"
+      },
+      {
+        "start": "       'AI is not enabled; the usual tools remain available.'));\n  }finally{\n   if(mounted)setState(()=>aiBusy=false);\n  }\n }\n\n",
+        "end": "  if(skill=='ask'&&!WaffraAskScope.isRelated(questionText)){\n"
+      },
+      {
+        "start": "        'AI is off. Reactivate the model to use it.'):\n",
+        "end": "     const SizedBox(height:8),\n"
+      },
+      {
+        "start": "     'Suggestions for review'),aiSavings),\n  ]);\n }\n\n",
+        "end": "  final q=question.trim();\n"
+      },
+      {
+        "start": "  unawaited(_generateAiSkill('ask',questionText:q));\n }\n",
+        "end": "  return _column([\n   _head(titlesAr[4],'assistant',t('إجابات من سجلك المحلي فقط','Answers from verified local records')),\n"
+      },
+      {
+        "start": "   final i=slot-2;\n",
+        "end": "   final id=i==-2?'analysis':i==-1?'markets':types[i];\n"
+      }
+    ],
+    "lib/waffra_display_currency.dart": [
+      {
+        "start": "import 'package:shared_preferences/shared_preferences.dart';\n",
+        "end": "\n/// Country chooses a PRESENTATION UNIT ONLY. Numbers are unchanged (e.g.,\n"
+      },
+      {
+        "start": "     updatedAtUtc:null,provider:'display-only'));\n",
+        "end": " static String amount(num sar) {\n"
+      },
+      {
+        "start": "   provider: 'display-only');\n }\n",
+        "end": "  final quote=displaySelection(code);\n"
+      },
+      {
+        "start": "    waffraCountryCurrencies.any((item)=>item.code==saved);\n",
+        "end": "   waffraCountryCurrencies.any((item)=>item.code==saved)?saved:'SAR');\n"
+      }
+    ],
+    "lib/waffra_regional_copy.dart": [
+      {
+        "start": "import 'package:flutter/foundation.dart';\n",
+        "end": "\n/// UI-only country preference. NEVER use a selected display currency, SIM\n"
+      },
+      {
+        "start": "  static Future<void> initialize(SharedPreferences preferences)async{\n",
+        "end": "    final value=normalized(country);\n"
+      },
+      {
+        "start": "    if(english)return en;\n",
+        "end": "      case 'SA':return saudi??standard;\n"
+      }
+    ],
+    "lib/waffra_google_phone_field.dart": [
+      {
+        "start": "import 'package:flutter/services.dart';\n",
+        "end": "\n/// One accessible input border, with a compact flag+dial selector. This\n"
+      },
+      {
+        "start": "class _WaffraGooglePhoneFieldState extends State<WaffraGooglePhoneField> {\n",
+        "end": "  final query=TextEditingController();\n"
+      },
+      {
+        "start": "  query.dispose();\n }\n",
+        "end": "  key:const Key('waffra-profile-mobile-number'),\n  controller:widget.controller,textDirection:TextDirection.ltr,\n"
+      },
+      {
+        "start": "    key:const Key('waffra-google-phone-country-picker'),\n",
+        "end": null
+      }
+    ],
+    "scripts/qa/m290_configure_country_permissions.py": [
+      {
+        "start": "    '<uses-permission android:name=\"android.permission.ACCESS_COARSE_LOCATION\" />'\n)\n\n",
+        "end": null
+      }
+    ],
+    "test/qa/m290_country_permissions_test.py": [
+      {
+        "start": "class CountryPermissionManifestTest(unittest.TestCase):\n",
+        "end": "        with tempfile.TemporaryDirectory() as directory:\n            manifest = Path(directory) / \"AndroidManifest.xml\"\n            manifest.write_text(\n                '<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\">'\n                '<application android:label=\"Waffra\" /></manifest>',\n"
+      },
+      {
+        "start": "            result = manifest.read_text(encoding=\"utf-8\")\n",
+        "end": "if __name__ == \"__main__\":\n"
+      }
+    ],
+    "test/m224_pdf_verified_display_currency_test.dart": [
+      {
+        "start": " tearDown(() {\n  WaffraDisplayCurrency.active.value=WaffraDisplayCurrency.displaySelection('SAR');\n });\n",
+        "end": "  }finally{noNetwork.close();}\n"
+      }
+    ],
+    "test/m301_google_country_phone_picker_test.dart": [
+      {
+        "start": "  expect(WaffraInternationalPhone.fromStored('0512345678').country.iso,'SA');\n });\n\n",
+        "end": "  expect(WaffraDisplayCurrency.hasSavedPreference,isTrue);\n"
+      },
+      {
+        "start": "  expect(find.textContaining('manual selection is preserved'),findsWidgets);\n  await tester.scrollUntilVisible(\n   find.byKey(const Key('m290-setup-confirm')),160,\n   scrollable:find.byType(Scrollable).first);\n  await tester.ensureVisible(find.byKey(const Key('m290-setup-confirm')));\n  await tester.pumpAndSettle();\n  await tester.tap(find.byKey(const Key('m290-setup-confirm')));\n  await tester.pumpAndSettle();\n",
+        "end": "  WaffraDisplayCurrency.hasSavedPreference=false;\n"
+      },
+      {
+        "start": "  expect(saved,'EGP');\n });\n\n",
+        "end": "  expect(tester.takeException(),isNull);\n"
+      }
+    ],
+    "test/m290_google_country_reminders_test.dart": [
+      {
+        "start": "      isNot(waffraCountrySetupKey(profile(email: 'other@example.com'))));\n  });\n\n",
+        "end": "  });\n\n  testWidgets('M290 reason shown first; only tapping location starts detection',\n"
+      },
+      {
+        "start": "    final reminders = File('lib/waffra_reminders.dart')\n      .readAsStringSync();\n",
+        "end": "    expect(main, contains('waffraGoogleProfileReadyForCountrySetup(u)'));\n"
+      }
+    ],
+    "test/m268_smart_features_ten_calendar_art_test.dart": [
+      {
+        "start": "   expect(find.textContaining('Simulation only'),findsOneWidget);\n  });\n",
+        "end": "   final original=waffraSmartBalance(sample);\n"
+      },
+      {
+        "start": "    WaffraDisplayCurrency.displaySelection('SAR'));\n   await tester.pumpWidget(MaterialApp(home:WaffraSmartFeaturesPage(\n    entries:sample,goals:const [],recurring:const [],english:true)));\n   await tester.scrollUntilVisible(\n    find.byKey(const Key('waffra-m268-feature-simulation')),250,\n    scrollable:find.byType(Scrollable).first);\n   await tester.pumpAndSettle();\n   await tester.tap(find.byKey(const Key('waffra-m268-feature-simulation')));\n   await tester.pumpAndSettle();\n",
+        "end": "   expect(waffraSmartBalance(sample),original);\n"
+      },
+      {
+        "start": "   expect(sample.length,2);\n   expect(waffraSmartBalance(sample),1150);\n  });\n",
+        "end": "   await tester.pumpWidget(MaterialApp(home:Scaffold(\n"
+      }
+    ],
+    "test/m326_region_dialect_splash_localization_test.dart": [
+      {
+        "start": "    expect(source,isNot(contains('Waffra.. shows you where your money goes')));\n  });\n\n",
+        "end": "    final copy=File('lib/waffra_country_first_run_page.dart').readAsStringSync();\n"
+      },
+      {
+        "start": "    expect(WaffraRegionalCopy.regionLabel('SA',english:true),'Saudi Arabia');\n  });\n\n",
+        "end": "  });\n\n  test('M326 locale, greeting, exit and profile settings use same UI country',(){\n"
+      }
+    ],
+    "lib/waffra_saudi_mobile.dart": [
+      {
+        "start": null,
+        "end": null
+      }
+    ],
+    "test/m416_saudi_mobile_only_test.dart": [
+      {
+        "start": null,
+        "end": null
+      }
+    ],
+    "test/m302_display_currency_precision_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/m273_production_user_journey_regression_test.dart": [
+      {
+        "start": "test('P0: Arabic, English and country changes do not rewrite ledger numbers'",
+        "end": "test('P0: small income and expense entries yield exact halala totals'"
+      }
+    ],
+    "test/m330_compact_ui_copy_test.dart": [
+      {
+        "start": "test('M330 core screens have concise Arabic and English messages'",
+        "end": "test('M330 shared translations preserve keys while shortening visible output'"
+      }
+    ],
+    "test/m325_ai_tools_visibility_test.dart": [
+      {
+        "start": "test('M325 deleted model keeps historical AI tile locked and offers reinstall'",
+        "end": null
+      }
+    ],
+    "test/m321_ai_model_download_delete_test.dart": [
+      {
+        "start": "test('M321 first-use UI states deletion warning and actual byte progress'",
+        "end": "test('M321 My Account deletion is blocked on biometric-only OS confirmation'"
+      }
+    ],
+    "test/m335_real_sms_ocr_accuracy_test.dart": [
+      {
+        "start": "test('M335 fast SMS path never starts Qwen for verified SAR'",
+        "end": null
+      }
+    ],
+    "test/m320_ai_live_entrypoints_test.dart": [
+      {
+        "start": "expect(runner,contains('_activeDownload?.close()'));",
+        "end": null
       }
     ]
   }
