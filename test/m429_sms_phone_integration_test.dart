@@ -104,4 +104,21 @@ void main(){
   expect(main,contains("Key('waffra-entry-edit-source')"));
  });
 
+
+ test('M435 merchant-brand selection retains old finance and protects privacy',(){
+  final brand=File('lib/waffra_merchant_brands.dart').readAsStringSync();
+  final main=File('lib/main.dart').readAsStringSync();
+  expect(brand,contains('WAFFRA_BRANDFETCH_CLIENT_ID'));
+  expect(brand,contains("'cdn.brandfetch.io'"));
+  expect(brand,contains("static WaffraMerchantBrand? match(String? raw)"));
+  expect(brand,contains("WaffraMerchantLogo"));
+  expect(brand,isNot(contains('bankSmsHash(')));
+  expect(brand,isNot(contains('OPENROUTER_API_KEY')));
+  expect(main,contains("Key('waffra-transaction-select-merchant')"));
+  expect(main,contains('selectedMerchantOverride??initial?.merchantKey??'));
+  expect(main,contains('WaffraMerchantBrands.match(entry.merchantKey)'));
+  expect(main,contains('WaffraMerchantBrands.match(e.merchantKey)'));
+  expect(main,contains('protectedOriginalSms:originalBankSms'));
+ });
+
 }
