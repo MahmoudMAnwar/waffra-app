@@ -12,7 +12,7 @@ abstract final class WaffraMerchantBrands {
  // Brandfetch free Logo API client ID is public. Leave empty until Android
  // client origin/Referer usage and provider terms are confirmed on hardware.
  static const clientId=String.fromEnvironment(
-  'WAFFRA_BRANDFETCH_CLIENT_ID',defaultValue:'');
+  'WAFFRA_BRANDFETCH_CLIENT_ID',defaultValue:'1id765UE_np6HSZtwVK');
  static const androidLogoProviderApproved=bool.fromEnvironment(
   'WAFFRA_BRANDFETCH_ANDROID_APPROVED',defaultValue:false);
  static const known=<WaffraMerchantBrand>[
