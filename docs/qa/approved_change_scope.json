@@ -39,7 +39,7 @@
         "end": " String appearance='light';"
       },
       {
-        "start": " Future<void> load()async {",
+        "start": " Future<void> load()async {\n  try {\n   final p=await SharedPreferences.getInstance().timeout(",
         "end": " Future<void> quickStart()async {"
       },
       {
