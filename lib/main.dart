@@ -3319,42 +3319,101 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Future<void> _openAutoSmsInbox()async{
   await _refreshAutoSmsInbox(importMonth:true);
   if(!mounted||_autoSmsPending.isEmpty)return;
-  final items=List<Map<String,Object?>>.from(_autoSmsPending);
-  final chosen=await showModalBottomSheet<String>(
+  // Every bank sender gets one group. No guessed merchants or bank identities.
+  final bySender=<String,List<Map<String,Object?>>>{};
+  for(final candidate in _autoSmsPending){
+   final raw=candidate['sender'] is String?
+    (candidate['sender'] as String).trim():'';
+   final name=raw.isEmpty?
+    (waffraIsEnglish?'Unknown sender':'مرسل غير محدد'):raw;
+   final group=bySender.keys.firstWhere(
+    (key)=>key.toLowerCase()==name.toLowerCase(),orElse:()=>name);
+   bySender.putIfAbsent(group,()=> <Map<String,Object?>>[]).add(candidate);
+  }
+  final senders=bySender.keys.toList()
+   ..sort((a,b)=>a.toLowerCase().compareTo(b.toLowerCase()));
+  for(final messages in bySender.values){
+   messages.sort((a,b){
+    final x=a['receivedAt'] is int?a['receivedAt'] as int:0;
+    final y=b['receivedAt'] is int?b['receivedAt'] as int:0;
+    return y.compareTo(x);
+   });
+  }
+  String? selectedSender;
+  final selected=await showModalBottomSheet<String>(
    context:context,isScrollControlled:true,showDragHandle:true,
-   builder:(sheet)=>SafeArea(child:SizedBox(
-    height:MediaQuery.sizeOf(sheet).height*.7,
-    child:Column(children:[
-     Padding(padding:const EdgeInsets.all(15),
-      child:WaffraText(waffraIsEnglish?
-       'Transactions requiring review':'عمليات تحتاج مراجعة',
-       style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold))),
-     Expanded(child:ListView.builder(
-      itemCount:items.length,
-      itemBuilder:(ctx,i){
-       final row=items[i],id=row['id'];
-       final sender=row['sender'] is String?row['sender'] as String:'';
-       return ListTile(
-        key:Key('waffra-auto-sms-review-item-'+i.toString()),
-        leading:const Icon(Icons.markunread_mailbox_outlined,color:emerald),
-        title:WaffraText(sender.isEmpty?
-         (waffraIsEnglish?'Bank SMS':'رسالة بنكية'):sender),
-        subtitle:WaffraText(waffraIsEnglish?
-         'Review amount, category and budget':
-         'راجع المبلغ والقسم والميزانية قبل التسجيل'),
-        trailing:const Icon(Icons.chevron_left_rounded),
-        onTap:(id is String)?()=>Navigator.pop(ctx,id):null,
-       );
-      })),
-     Padding(padding:const EdgeInsets.all(12),
-      child:WaffraText(waffraIsEnglish?
-       'No financial entry is saved until your confirmation.':
-       'لن تتسجل أي عملية مالية إلا بعد مراجعتك وتأكيدك.',
-       textAlign:TextAlign.center)),
-    ]),
-   )),
+   builder:(sheet)=>StatefulBuilder(
+    builder:(ctx,refresh)=>SafeArea(
+     child:SizedBox(height:MediaQuery.sizeOf(ctx).height*.74,
+      child:Column(children:[
+       Row(children:[
+        IconButton(
+         key:const Key('waffra-sms-senders-back'),
+         onPressed:(){
+          if(selectedSender==null){Navigator.pop(ctx);}
+          else{refresh(()=>selectedSender=null);}
+         },
+         icon:const Icon(Icons.arrow_back_rounded)),
+        Expanded(child:WaffraText(
+         selectedSender??(waffraIsEnglish?'Bank SMS by sender':'رسائل للفرز'),
+         style:const TextStyle(fontWeight:FontWeight.bold,fontSize:19),
+         maxLines:2)),
+        Padding(padding:const EdgeInsets.all(12),
+         child:WaffraText(selectedSender==null?senders.length.toString():
+          (bySender[selectedSender]?.length??0).toString())),
+       ]),
+       Expanded(child:ListView.builder(
+        key:Key(selectedSender==null?'waffra-sms-sender-list':
+         'waffra-sms-sender-transactions'),
+        itemCount:selectedSender==null?senders.length:
+         (bySender[selectedSender]?.length??0),
+        itemBuilder:(rowContext,index){
+         if(selectedSender==null){
+          final sender=senders[index],count=bySender[sender]!.length;
+          return Card(margin:const EdgeInsets.symmetric(
+           horizontal:14,vertical:6),
+           child:ListTile(
+            key:Key('waffra-sms-sender-group-'+index.toString()),
+            title:WaffraText(sender,maxLines:2,
+             style:const TextStyle(fontWeight:FontWeight.bold)),
+            leading:Container(
+             padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),
+             decoration:BoxDecoration(color:const Color(0xFFE4F4EB),
+              borderRadius:BorderRadius.circular(20)),
+             child:WaffraText(waffraIsEnglish?'$count SMS':'$count رسالة',
+              style:const TextStyle(color:forest,fontWeight:FontWeight.bold))),
+            trailing:const Icon(Icons.chevron_left_rounded),
+            onTap:()=>refresh(()=>selectedSender=sender),
+           ));
+         }
+         final item=bySender[selectedSender]![index];
+         final id=item['id'],at=item['receivedAt'];
+         final date=at is int?DateTime.fromMillisecondsSinceEpoch(at)
+          .toLocal().toString().substring(0,16):'';
+         return ListTile(
+          key:Key('waffra-sms-sender-message-'+index.toString()),
+          leading:const Icon(Icons.sms_outlined,color:emerald),
+          title:WaffraText(waffraIsEnglish?
+           'Bank SMS • needs review':'رسالة بنكية • تحتاج مراجعة'),
+          subtitle:WaffraText((waffraIsEnglish?
+           'Review amount, category and budget':
+           'راجع المبلغ والقسم والميزانية')+
+           (date.isEmpty?'':' • '+date),maxLines:2),
+          trailing:const Icon(Icons.chevron_left_rounded),
+          onTap:(id is String)?()=>Navigator.pop(ctx,id):null,
+         );
+        })),
+       Padding(padding:const EdgeInsets.all(12),
+        child:WaffraText(waffraIsEnglish?
+         'Nothing is recorded until you approve the transaction.':
+         'ما تتسجلش أي عملية مالية إلا بعد مراجعتك وتأكيدك.',
+         textAlign:TextAlign.center)),
+      ]),
+     ),
+    ),
+   ),
   );
-  if(chosen!=null&&mounted)await _reviewAutoSmsCandidates(targetId:chosen);
+  if(selected!=null&&mounted)await _reviewAutoSmsCandidates(targetId:selected);
  }
  Widget _autoSmsReviewCard(){
   final count=_autoSmsPending.length;
