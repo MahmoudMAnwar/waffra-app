@@ -30,7 +30,7 @@ void main(){
   expect(selected,'active');
   await tester.tap(find.text('Active budgets').first);
   await tester.pumpAndSettle();
-  await tester.pageBack();
+  await tester.binding.handlePopRoute();
   await tester.pumpAndSettle();
   expect(selected,'active');
  });
