@@ -50,7 +50,7 @@ void main() {
     expect(find.text('السماح بالرسائل والتحليل تلقائيًا'),findsOneWidget);
     expect(find.text('السماح بالرسائل فقط'),findsOneWidget);
     expect(find.text('تخطي الآن'),findsOneWidget);
-    expect(find.textContaining('خدمة سحابية خارجية'),findsOneWidget);
+    expect(find.textContaining('لخدمة سحابية'),findsOneWidget);
     expect(find.textContaining('خارج السعودية'),findsNothing);
   });
 }
