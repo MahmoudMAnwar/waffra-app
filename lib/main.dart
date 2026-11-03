@@ -71,6 +71,7 @@ import 'waffra_messages.dart';
 import 'waffra_auto_sms.dart';
 import 'waffra_auto_sms_policy.dart';
 import 'waffra_bank_sms_facts.dart';
+import 'waffra_sms_cloud_service.dart';
 import 'waffra_auto_sms_consent.dart';
 import 'waffra_recurring_policy.dart';
 import 'waffra_cross_source_duplicate_review.dart';
@@ -3276,13 +3277,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if(facts.fee!=null&&facts.fee!>0)
      (waffraIsEnglish?'Separate fee: ':'رسوم مستقلة: ')+facts.fee!.toStringAsFixed(2)+' SAR',
    ].join('\n');
+   final cloud=selected['cloud'];
+   final cloudFacts=cloud is Map ? cloud : null;
+   final cloudAmount=cloudFacts?['amount'];
+   final cloudKind=cloudFacts?['kind'];
+   final cloudSummary=cloudKind is String?
+    '\n'+(waffraIsEnglish?'Cloud AI suggests: ':'اقتراح الذكاء الاصطناعي: ')+
+    cloudKind+(cloudAmount is num?' • '+cloudAmount.toStringAsFixed(2):''):'';
    final decision=await showWaffraDialog<String>(context:context,
     builder:(dialog)=>AlertDialog(
      title:WaffraText(waffraIsEnglish?'Bank SMS needs review':'رسالة بنكية تحتاج مراجعة'),
      content:WaffraText((waffraIsEnglish?
       'A financial SMS from $sender requires review before saving.':
       'وصلت رسالة مالية من $sender وتحتاج مراجعة قبل الحفظ.')
-      +'\n\n'+summary),
+      +'\n\n'+summary+cloudSummary),
      actions:[
       TextButton(onPressed:()=>Navigator.pop(dialog),
        child:WaffraText(waffraIsEnglish?'Later':'لاحقًا')),
@@ -12048,6 +12056,43 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          )));
        }else{
         await WaffraAutoSms.disable();
+       }
+       if(mounted)setState((){});
+      }),
+     )),
+    if(Platform.isAndroid)FutureBuilder<bool>(
+     future:WaffraSmsCloudService.hasConsent(),
+     builder:(context,snapshot)=>SwitchListTile(
+      secondary:const Icon(Icons.cloud_outlined,color:emerald),
+      title:WaffraText(waffraIsEnglish?
+       'AI analysis of bank SMS (cloud)':'تحليل الرسائل البنكية بالذكاء الاصطناعي السحابي'),
+      subtitle:WaffraText(waffraIsEnglish?
+       'Optional. Sends redacted financial SMS to a third-party AI provider.':
+       'اختياري. يرسل النص المالي بعد حجب المعرفات لخدمة ذكاء اصطناعي خارجية.'),
+      value:snapshot.data==true,
+      onChanged:WaffraHaptics.selection((enabled)async{
+       if(enabled){
+        final accepted=await showWaffraDialog<bool>(context:context,
+         builder:(dialog)=>AlertDialog(
+          title:WaffraText(waffraIsEnglish?
+           'Enable cloud bank SMS analysis?':'تفعيل تحليل الرسائل البنكية السحابي؟'),
+          content:WaffraText(waffraIsEnglish?
+           'Bank SMS that match financial activity will be redacted locally, then processed by a third-party model through OpenRouter. Some processing may take place outside Saudi Arabia. This is separate from permission to read SMS. You can decline and keep local analysis.':
+           'سيتم حجب المعرفات الشخصية من الرسائل البنكية المطابقة محليًا، ثم إرسال البيانات المالية لخدمة ذكاء اصطناعي خارجية عبر OpenRouter. قد تتم المعالجة خارج السعودية. هذه موافقة منفصلة عن صلاحية قراءة الرسائل، ويمكنك رفضها والاستمرار بالتحليل المحلي.'),
+          actions:[
+           TextButton(onPressed:()=>Navigator.pop(dialog,false),
+            child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+           FilledButton(onPressed:()=>Navigator.pop(dialog,true),
+            child:WaffraText(waffraIsEnglish?'I agree':'أوافق')),
+          ]));
+        if(accepted!=true)return;
+       }
+       final completed=await WaffraSmsCloudService.setConsent(enabled);
+       if(!completed&&mounted){
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+         content:WaffraText(waffraIsEnglish?
+          'Cloud service is not active or authentication is unavailable. No SMS was uploaded.':
+          'الخدمة السحابية غير مفعلة أو تسجيل الدخول غير متاح. لم يتم رفع أي رسالة.')));
        }
        if(mounted)setState((){});
       }),
