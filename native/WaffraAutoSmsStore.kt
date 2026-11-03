@@ -43,9 +43,17 @@ object WaffraAutoSmsStore {
         context.checkSelfPermission(Manifest.permission.RECEIVE_SMS) ==
             PackageManager.PERMISSION_GRANTED
 
-    fun enabled(context: Context): Boolean = permissionGranted(context) &&
-        context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
-            .getBoolean(activeName, false)
+    fun enabled(context: Context): Boolean {
+        if (!permissionGranted(context) ||
+            !context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+                .getBoolean(activeName, false)) return false
+        // The first-run disclosure precedes login. Permission alone must NOT
+        // stage inbox text for an unowned installation or former user.
+        val user = context.getSharedPreferences("FlutterSharedPreferences",
+            Context.MODE_PRIVATE)
+        return user.getBoolean("flutter.waffra_onboarding_completed", false) &&
+            !user.getString("flutter.waffra_profile", "").isNullOrBlank()
+    }
 
     fun enable(context: Context, allow: Boolean): Boolean = synchronized(mutex) {
         if (allow && !permissionGranted(context)) return@synchronized false
