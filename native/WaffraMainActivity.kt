@@ -287,7 +287,11 @@ class MainActivity : FlutterFragmentActivity() {
                     if (saved && allow) WaffraAutoSmsWorker.enqueue(this)
                     result.success(saved)
                 }
-                "importRecentBankSms" -> result.success(WaffraAutoSmsStore.importRecent(this))
+                "importRecentBankSms" -> {
+                    val count = WaffraAutoSmsStore.importRecent(this)
+                    if (count > 0) WaffraAutoSmsWorker.enqueue(this)
+                    result.success(count)
+                }
                 "pendingAutoBankSms" -> result.success(WaffraAutoSmsStore.pending(this))
                 "ackAutoBankSms" -> {
                     val values = call.arguments as? List<*>
