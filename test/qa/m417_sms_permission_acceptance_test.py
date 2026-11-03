@@ -59,10 +59,21 @@ class M417AutoSmsContractTest(unittest.TestCase):
 
     def test_sms_permission_disclosure_is_review_only(self):
         ui=self.read("lib/waffra_auto_sms_consent.dart")
-        self.assertIn("first day of the month",ui)
-        self.assertIn("before it changes your balance",ui)
-        self.assertIn("مش هيتسجل أي دخل",ui)
+        # The user-approved concise first-run copy must retain independent
+        # local/cloud consent, explicit redaction and a skip path.
+        self.assertIn("السماح بالرسائل والتحليل تلقائيًا",ui)
+        self.assertIn("السماح بالرسائل فقط",ui)
+        self.assertIn("بعد إخفاء المعلومات الحساسة لخدمة سحابية",ui)
+        self.assertIn("allow(cloud:true)",ui)
+        self.assertIn("allow(cloud:false)",ui)
+        self.assertIn("if(cloud&&!activated)",ui)
         self.assertIn("m417-permission-skip",ui)
+        # History starts at the activation month's first day, independent
+        # of UI text length. Verify the native boundary is unchanged.
+        store=self.read("native/WaffraAutoSmsStore.kt")
+        api=self.read("lib/waffra_auto_sms.dart")
+        self.assertIn("set(Calendar.DAY_OF_MONTH, 1)",store)
+        self.assertIn("importConsentMonthBankSms",api)
         poster=self.read("lib/waffra_auto_sms_autopost.part.dart")
         self.assertIn("static bool get reviewOnly => true;",poster)
         self.assertLess(poster.index("if(reviewOnly)"),
