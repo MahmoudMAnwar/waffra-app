@@ -1,14 +1,15 @@
 {
   "contract_version": 1,
   "change_id": "M417",
-  "human_scope_review": "Owner explicitly requested separate PR for automatic bank SMS access after first installation. User consent is required at first foreground launch. Play SMS-based money-management exception and physical-device review still pending. This is a DRAFT only; no main merge or release. Human approver must review each function boundary and verify that no existing financial writer is bypassed. Dedicated M417 GitHub Actions job verifies source guards and Flutter first-run widget without granting Play production permission. The M417 Google Play SMS submission packet is supporting documentation only; permission approval and production-release steps require the actual Play Console owner.",
+  "human_scope_review": "Owner explicitly requested separate PR for automatic bank SMS access after first installation. User consent is required at first foreground launch. Play SMS-based money-management exception and physical-device review still pending. This is a DRAFT only; no main merge or release. Human approver must review each function boundary and verify that no existing financial writer is bypassed. Dedicated M417 GitHub Actions job verifies source guards and Flutter first-run widget without granting Play production permission. The M417 Google Play SMS submission packet is supporting documentation only; permission approval and production-release steps require the actual Play Console owner. M418: owner-requested standing consent allows high-confidence automatic SMS posting using existing widget verified finance authority; notification only after durable finance+hash witness. WorkManager may defer execution; production validation and real-device testing remain blockers. Sign-out clears encrypted SMS queue.",
   "user_requested_changes": [
     "Offer first-launch optional SMS permission disclosure and accept/skip choice, with Android READ_SMS and RECEIVE_SMS requested only on explicit tap.",
     "Receive new financial SMS and import bounded recent inbox entries locally after permission, filtering OTP and personal messages without server upload.",
     "Encrypt candidate bank messages at rest with Android Keystore AES-GCM and never submit money through the receiver.",
     "Present queued SMS to the existing financial review path; remove queued candidates only after a confirmed committed SMS hash or explicit ignore.",
     "Disable automatic SMS collection on logout, preserve all legacy manual and pasted transaction paths, and do not enable unapproved cloud inference.",
-    "Provide release declaration checklist and tests, leave PR draft until Google Play approval, Android compilation and signed-device verification."
+    "Provide release declaration checklist and tests, leave PR draft until Google Play approval, Android compilation and signed-device verification.",
+    "M418: Automatically post strictly verified Saudi bank SMS (income and expenses) after first-launch standing consent, reuse prior merchant budget links, and send a system notification only after an atomic durable finance+hash commit. New bank/card account mapping and cloud LLM require further evidence; skip ambiguous/foreign/OTP and send review notification."
   ],
   "allowed_changed_files": [
     ".github/workflows/android-full-smoke.yml",
@@ -19,15 +20,20 @@
     "docs/qa/m417_sms_play_declaration.md",
     "lib/main.dart",
     "lib/waffra_auto_sms.dart",
+    "lib/waffra_auto_sms_autopost.part.dart",
     "lib/waffra_auto_sms_consent.dart",
+    "lib/waffra_auto_sms_policy.dart",
     "lib/waffra_messages.dart",
+    "native/WaffraAutoSmsNotifications.kt",
     "native/WaffraAutoSmsReceiver.kt",
     "native/WaffraAutoSmsStore.kt",
+    "native/WaffraAutoSmsWorker.kt",
     "native/WaffraMainActivity.kt",
     "scripts/qa/m279_app_security_gate.py",
     "scripts/qa/test_m279_app_security_gate.py",
     "test/m417_sms_first_run_test.dart",
-    "test/qa/m417_sms_permission_acceptance_test.py"
+    "test/qa/m417_sms_permission_acceptance_test.py",
+    "test/waffra_auto_sms_policy_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -54,6 +60,18 @@
       {
         "start": " @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;",
         "end": " Future<void> _syncWidgetTransactions()async{"
+      },
+      {
+        "start": "part 'waffra_widget_capture.part.dart';",
+        "end": "Future<Map<String,dynamic>> waffraDecodeBackupInIsolate("
+      },
+      {
+        "start": "const bool waffraCompileOnlyQaPreview =",
+        "end": "Future<void> main()async {"
+      },
+      {
+        "start": "   _accountSection(waffraIsEnglish?'Security & privacy':'الأمان والخصوصية',Icons.shield_outlined,[",
+        "end": "    _accountTile(waffraIsEnglish?'PIN app lock'"
       }
     ],
     "lib/waffra_messages.dart": [
