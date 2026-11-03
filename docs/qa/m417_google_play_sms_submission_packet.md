@@ -14,16 +14,16 @@ Updated 2026-11-03. Owner-approved scope is PR #352 only. The base M416 and othe
 ## Proposed Play Console declaration answer — accurate only for current M417 candidate
 
 **Core purpose:**
-Waffra is a personal money-management and budgeting app for Saudi users. Its user-facing bank-message feature detects incoming banking transaction SMS, extracts draft expense/income details locally, and presents them for classification and confirmation into the user's private spending records and budgets. Manual and user-shared transaction entry remain available.
+Waffra is a personal money-management and budgeting app for Saudi users. Its user-facing bank-message feature detects incoming banking transaction SMS, extracts draft expense/income details locally, and automatically records high-confidence transactions into a private ledger under explicit standing consent. Uncertain messages require review. Manual and user-shared transaction entry remain available.
 
 **Why READ_SMS is needed:**
 After the user expressly opts in, Waffra checks a bounded sample of recent inbox messages to discover qualifying bank-transaction notifications, deduplicate previously imported banking entries, and suggest categorized income/expense records. A copy/paste alternative cannot provide optional automatic historical bank transaction discovery.
 
 **Why RECEIVE_SMS is needed:**
-With explicit consent, Waffra detects qualifying financial SMS as they arrive without requiring the user to copy each bank SMS. The receiver does not create ledger entries; a user must review the proposed transaction before the verified finance save.
+With explicit consent, Waffra detects qualifying financial SMS as they arrive without requiring the user to copy each bank SMS. The receiver does not create ledger entries; the scheduled finance worker saves only strongly verified transactions under explicit opt-in and sends a saved notification after confirmation. Uncertain entries are held for review.
 
 **Minimum access, data safeguards:**
-Bank/financial matching and exclusion of OTP, personal and non-financial messages happen on the device. Matched candidates are staged in a bounded AES-GCM encrypted local queue backed by Android Keystore. In the M417 code path, no raw SMS is sent to a cloud model or server. The user may deny SMS access and still use manual/paste flows. Consent and receipt of SMS do not automatically authorize financial postings.
+Bank/financial matching and exclusion of OTP, personal and non-financial messages happen on the device. Matched candidates are staged in a bounded AES-GCM encrypted local queue backed by Android Keystore. In the M417 code path, no raw SMS is sent to a cloud model or server. The user may deny SMS access and still use manual/paste flows. A separate prominent standing auto-save consent is required for automatic financial postings. Receiving any individual SMS alone is insufficient.
 
 **Why an alternative is insufficient for this specific feature:**
 Share Sheet and manual paste remain supported as fallbacks, but neither can trigger continuous detection of *new* transaction SMS or scan prior SMS for an opt-in banking history. An OTP-specific SMS Retriever API is not designed to retrieve arbitrary bank transaction notifications.
@@ -37,7 +37,7 @@ These statements describe the **candidate implementation** and must be independe
 3. Choose Allow; inspect the Android READ_SMS / RECEIVE_SMS permission dialog and grant it.
 4. Complete sign-in using the separate reviewer account supplied in Play Console's App access section, or the supported guest flow, if suitable.
 5. Send a **synthetic**, non-real bank-SMS sample to the test phone from a test sender. Example action: "Purchase Card — Amount: SAR 12.50 — Merchant: TEST CAFE — 2026-11-03 09:30". Never share real bank messages or OTP.
-6. Reopen Waffra, review the locally staged candidate, select a category and budget, confirm saving. Show that the transaction appears exactly once in the ledger.
+6. With a real signed test build, demonstrate high-confidence automatic posting and an external saved notification, followed by an exactly-once ledger entry. Separately show uncertain SMS review.
 7. Restart and re-send identical test SMS; inspect duplicate handling. Show manual transaction entry still operates after declining/revoking access.
 8. Provide reviewer instructions for a pre-seeded demo account and test phone if inbound SMS is not feasible in Google's test environment. **Do not invent test credentials**.
 
