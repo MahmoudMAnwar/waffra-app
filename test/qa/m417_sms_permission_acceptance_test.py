@@ -57,12 +57,16 @@ class M417AutoSmsContractTest(unittest.TestCase):
         self.assertIn("setExpedited",worker)
         self.assertNotIn("FirebaseFirestore",worker)
 
-    def test_sms_permission_disclosure_is_accurate_about_auto_saving(self):
+    def test_sms_permission_disclosure_is_review_only(self):
         ui=self.read("lib/waffra_auto_sms_consent.dart")
-        self.assertIn("high-confidence",ui)
-        self.assertIn("automatically",ui)
-        self.assertIn("تلقائي",ui)
+        self.assertIn("first day of the month",ui)
+        self.assertIn("without",ui)
+        self.assertIn("مش هيتسجل أي دخل",ui)
         self.assertIn("m417-permission-skip",ui)
+        poster=self.read("lib/waffra_auto_sms_autopost.part.dart")
+        self.assertIn("static bool get reviewOnly => true;",poster)
+        self.assertLess(poster.index("if(reviewOnly)"),
+                        poster.index("commitConfirmedSms("))
 
     def test_android_build_uses_explicit_scoped_receiver(self):
         for path in (".github/workflows/android.yml",
