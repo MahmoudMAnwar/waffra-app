@@ -55,13 +55,14 @@ class _WaffraAutoSmsConsentPageState extends State<WaffraAutoSmsConsentPage> {
     const SizedBox(height:14),
     Text(en?'Allowing bank SMS also authorizes automatic recording of '
      'high-confidence financial transactions and local notifications. '
-     'Bank messages stay encrypted on this device, are not uploaded to an '
-     'AI service, and can be disabled later. OTPs and personal messages '
-     'are excluded. You can skip and enter transactions manually.':
+     'Bank messages stay encrypted on this device. This SMS permission '
+     'does not send them to cloud AI; only a separate optional cloud consent '
+     'allows redacted financial data to be processed externally. '
+     'OTPs and personal messages are excluded.':
      'بالموافقة تسمح لوفرة بتسجيل المعاملات المؤكدة تلقائيًا وإرسال إشعار '
-     'بعد حفظها. الرسائل المالية محفوظة مشفّرة على جهازك ولا يتم رفعها '
-     'لخدمة ذكاء اصطناعي. نستبعد رموز التحقق والرسائل الشخصية، وتقدر '
-     'توقف الميزة أو تستخدم الإدخال اليدوي في أي وقت.',
+     'بعد حفظها. الرسائل المالية محفوظة مشفّرة على جهازك. صلاحية الرسائل '
+     'لوحدها لا تسمح برفعها لخدمة سحابية؛ مشاركة النص المالي بعد حجب '
+     'المعرفات تحتاج موافقة منفصلة اختيارية. نستبعد رموز التحقق والرسائل الشخصية.',
      textAlign:TextAlign.center,
      style:Theme.of(context).textTheme.bodySmall),
     const Spacer(),
