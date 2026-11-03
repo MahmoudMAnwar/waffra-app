@@ -34,34 +34,38 @@ void main(){
     expect(source,isNot(contains('Waffra.. shows you where your money goes')));
   });
 
-  test('M326 shared Arabic texts use selected regional voice',()async{
-    await WaffraRegionalCopy.setCountry('SA');
+  test('M416 Saudi Arabic tone stays fixed without rewriting older dialect',()async{
+    SharedPreferences.setMockInitialValues({
+      WaffraRegionalCopy.preferenceKey:'EG',
+    });
+    final prefs=await SharedPreferences.getInstance();
+    await WaffraRegionalCopy.initialize(prefs);
     expect(WaffraRegionalCopy.adaptArabicUi('فشلت العملية'),
       'العملية ما تمت. جرّب مرة ثانية.');
-    expect(WaffraRegionalCopy.adaptArabicUi('دوّر على عملية'),
-      'دوّر على عملية');
-    await WaffraRegionalCopy.setCountry('AE');
-    expect(WaffraRegionalCopy.adaptArabicUi('دوّر على عملية'),
-      'ابحث عن معاملة');
-    expect(WaffraRegionalCopy.adaptArabicUi('فشلت العملية'),
-      'فشلت العملية');
+    expect(WaffraRegionalCopy.adaptArabicUi('دوّر على عملية'),'دوّر على عملية');
+    await expectLater(WaffraRegionalCopy.setCountry('AE'),throwsStateError);
+    expect(WaffraRegionalCopy.countryIso.value,'SA');
+    expect(prefs.getString(WaffraRegionalCopy.preferenceKey),'EG');
     final ui=File('lib/waffra_i18n.dart').readAsStringSync();
     expect(ui,contains('WaffraRegionalCopy.adaptArabicUi(compact?.ar??source)'));
     expect(ui,contains("'إلغاء': 'Cancel'"));
     expect(ui,contains("'تأكيد': 'Confirm'"));
   });
 
-  test('M326 country and currency preferences never share a storage key',()async{
+  test('M416 country choice remains stored but Saudi mode ignores it',()async{
+    SharedPreferences.setMockInitialValues({
+     WaffraRegionalCopy.preferenceKey:'EG',
+     'waffra_currency_v1':'EGP',
+    });
     final prefs=await SharedPreferences.getInstance();
     await WaffraRegionalCopy.initialize(prefs);
-    expect(WaffraRegionalCopy.countryIso.value,isEmpty);
+    expect(WaffraRegionalCopy.countryIso.value,'SA');
     expect(WaffraRegionalCopy.text(english:false,
       standard:'لغة عربية عامة',saudi:'لهجة سعودية',egyptian:'لهجة مصرية',
-      en:'English'),equals('لغة عربية عامة'));
-    await WaffraRegionalCopy.setCountry('sa');
-    expect(WaffraRegionalCopy.countryIso.value,'SA');
-    expect(prefs.getString(WaffraRegionalCopy.preferenceKey),'SA');
-    expect(prefs.getString('waffra_currency_v1'),isNull);
+      en:'English'),equals('لهجة سعودية'));
+    await expectLater(WaffraRegionalCopy.setCountry('sa'),throwsStateError);
+    expect(prefs.getString(WaffraRegionalCopy.preferenceKey),'EG');
+    expect(prefs.getString('waffra_currency_v1'),'EGP');
     final copy=File('lib/waffra_country_first_run_page.dart').readAsStringSync();
     expect(copy,contains('onCountryConfirmed'));
     expect(copy,contains('onComplete(currencyCode)'));
@@ -82,14 +86,16 @@ void main(){
     expect(WaffraRegionalCopy.regionLabel('SA',english:true),'Saudi Arabia');
   });
 
-  test('M326 Egypt uses Egyptian wording, other country uses neutral Arabic',(){
+  test('M416 disabled foreign dialect selection falls back to Saudi, not Egypt',(){
     expect(WaffraRegionalCopy.exitHint(english:false,country:'EG'),
-      'اضغط رجوع مرة كمان عشان تخرج من وفرة');
+      'اضغط رجوع مرة ثانية عشان تطلع من وفرة');
     expect(WaffraRegionalCopy.exitHint(english:false,country:'AE'),
-      'اضغط رجوع مرة ثانية للخروج من وفرة');
+      'اضغط رجوع مرة ثانية عشان تطلع من وفرة');
     expect(WaffraRegionalCopy.signOutTitle(english:false,country:'EG'),
-      'عايز تسجّل خروج من وفرة؟');
+      'ودّك تسجّل خروج من وفرة؟');
     expect(WaffraRegionalCopy.normalized('xyz'),isEmpty);
+    expect(WaffraRegionalCopy.normalized('EG'),'EG',
+      reason:'Dormant Global country normalization is preserved');
   });
 
   test('M326 locale, greeting, exit and profile settings use same UI country',(){

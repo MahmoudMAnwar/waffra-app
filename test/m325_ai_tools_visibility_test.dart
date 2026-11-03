@@ -58,8 +58,8 @@ void main(){
  test('M325 deleted model keeps historical AI tile locked and offers reinstall',(){
   final src=File('lib/waffra_smart_features.dart').readAsStringSync();
   final model=File('lib/waffra_ondevice_qwen.dart').readAsStringSync();
-  expect(src,contains('if(i==4&&!_aiToolVisible)return null;'));
-  expect(src,contains('final aiLocked=i==4&&_aiToolState==WaffraAiToolsState.disabled;'));
+  expect(src,contains('if(i==4&&WaffraSaudiRelease.freeTextAskWaffra&&!_aiToolVisible)return null;'));
+  expect(src,contains('final aiLocked=i==4&&WaffraSaudiRelease.freeTextAskWaffra&&'));
   expect(src,contains('onTap:aiLocked?null:'));
   expect(src,contains('enabled:!aiLocked'));
   expect(src,contains('onPressed:ready&&!aiBusy?'));

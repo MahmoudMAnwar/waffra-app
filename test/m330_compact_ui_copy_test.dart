@@ -34,7 +34,8 @@ void main() {
     expect(country,contains('لا نحفظ موقعك ولا نتتبعك.'));
     expect(country,contains("We do not save or track your location."));
     expect(receipt,contains('اختر فاتورة أو صوّرها.'));
-    expect(smart,contains('حمّل النموذج لتفعيل أدوات الذكاء.'));
+    expect(smart,contains('النموذج اختياري للتحليل الإضافي، واسأل وفرة يعمل بدونه.'));
+    expect(smart,contains('تفعيل النموذج'));
   });
 
   test('M330 shared translations preserve keys while shortening visible output',(){
