@@ -218,6 +218,31 @@ object WaffraAutoSmsStore {
         } catch (_: Exception) { emptyList() }
     }
 
+    /** Atomic per-SMS request claim shared by foreground and WorkManager.
+     * A failed cloud request cannot be retried repeatedly on every resume.
+     * No financial writer is reachable through this review-only record.
+     */
+    fun claimCloudAttempt(context: Context, id: String): Boolean =
+        synchronized(mutex) {
+            if (!enabled(context) || !Regex("^[a-f0-9]{64}$").matches(id))
+                return@synchronized false
+            try {
+                val queue = read(context)
+                val now = System.currentTimeMillis()
+                for (i in 0 until queue.length()) {
+                    val row = queue.getJSONObject(i)
+                    if (row.optString("id") != id) continue
+                    if (row.has("cloud")) return@synchronized false
+                    val previous = row.optLong("cloudAttemptAtMs", 0L)
+                    if (previous > now - 86400000L && previous <= now)
+                        return@synchronized false
+                    row.put("cloudAttemptAtMs", now)
+                    return@synchronized save(context, queue)
+                }
+                false
+            } catch (_: Exception) { false }
+        }
+
     /** Persist sanitized LLM suggestions inside the same encrypted queue.
      * No original SMS is transmitted back to Android outside the app.
      * The model may never mark a candidate verified-for-posting.
