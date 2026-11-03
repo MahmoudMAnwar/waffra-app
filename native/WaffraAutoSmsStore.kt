@@ -177,13 +177,70 @@ object WaffraAutoSmsStore {
             val data = read(context)
             (0 until data.length()).map { index ->
                 val row = data.getJSONObject(index)
-                mapOf<String, Any>(
+                val fields = mutableMapOf<String, Any>(
                     "id" to row.getString("id"),
                     "sender" to row.getString("sender"),
                     "body" to row.getString("body"),
                     "receivedAt" to row.getLong("receivedAt"))
+                if (row.has("cloud")) {
+                    val proof = row.optJSONObject("cloud")
+                    if (proof != null) {
+                        val analysis = mutableMapOf<String, Any>()
+                        for (key in arrayOf("kind", "currency", "merchant")) {
+                            if (!proof.isNull(key)) analysis[key] = proof.optString(key)
+                        }
+                        for (key in arrayOf("amount", "fee")) {
+                            if (!proof.isNull(key)) analysis[key] = proof.optDouble(key)
+                        }
+                        analysis["requiresReview"] = proof.optBoolean("requiresReview", true)
+                        fields["cloud"] = analysis
+                    }
+                }
+                fields
             }
         } catch (_: Exception) { emptyList() }
+    }
+
+    /** Persist sanitized LLM suggestions inside the same encrypted queue.
+     * No original SMS is transmitted back to Android outside the app.
+     * The model may never mark a candidate verified-for-posting.
+     */
+    fun stageCloudAnalysis(context: Context, id: String,
+                           values: Map<*, *>): Boolean = synchronized(mutex) {
+        if (!enabled(context) || !Regex("^[a-f0-9]{64}$").matches(id))
+            return@synchronized false
+        try {
+            val allowed = setOf("kind", "currency", "merchant", "amount",
+                "fee", "requiresReview")
+            if (values.keys.any { it !is String || !allowed.contains(it) })
+                return@synchronized false
+            val kind = values["kind"] as? String ?: return@synchronized false
+            if (!setOf("income", "expense", "transfer", "card_settlement",
+                    "uncertain").contains(kind)) return@synchronized false
+            val payload = JSONObject().put("kind", kind)
+            for (field in arrayOf("currency", "merchant")) {
+                val value = values[field] as? String
+                if (value != null && value.length <= 90) payload.put(field, value)
+            }
+            for (field in arrayOf("amount", "fee")) {
+                val value = values[field] as? Number
+                if (value != null && value.toDouble().isFinite() &&
+                    value.toDouble() >= 0 && value.toDouble() <= 100000000)
+                    payload.put(field, value.toDouble())
+            }
+            payload.put("requiresReview", true) // model cannot bypass review
+            val queue = read(context)
+            var found = false
+            for (i in 0 until queue.length()) {
+                val row = queue.getJSONObject(i)
+                if (row.optString("id") == id) {
+                    row.put("cloud", payload)
+                    found = true
+                    break
+                }
+            }
+            found && save(context, queue)
+        } catch (_: Exception) { false }
     }
 
     fun acknowledge(context: Context, ids: Set<String>): Boolean =
