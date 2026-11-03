@@ -61,6 +61,11 @@ abstract final class WaffraLocalPhoneCredentials {
    return _equal(await _derive(password,salt),expected);
   }catch(_){return false;}
  }
+ /// A secure verifier may remain valid after an older profile was edited.
+ /// The existence check never returns the phone, password or verifier bytes.
+ static Future<bool> hasRegisteredCredentials() async =>
+   (await _store.read(key:_key))!=null;
+
  static Future<void> register({required String phone,
   required String password})async{
   final saved=await _store.read(key:_key);

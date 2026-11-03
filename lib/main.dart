@@ -1035,6 +1035,10 @@ String waffraCountrySetupKey(Person user){
 
 class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  bool loading=true,onboarded=false,dark=false,locked=false,showLogin=false;
+ // OS biometric UI may report success while Flutter is briefly inactive.
+ // Keep that success pending only until the app resumes; never reveal while
+ // backgrounded, and discard it if the app actually pauses or detaches.
+ bool _biometricVerifiedAwaitingResume=false;
  bool googleFirstRunSetup=false;
  bool autoSmsConsentPending=false;
  String appearance='light';
@@ -1054,7 +1058,24 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  }
  DateTime? _backgroundAt;
  @override void didChangeAppLifecycleState(AppLifecycleState state){
-  if(state==AppLifecycleState.resumed){_backgroundAt=null;return;}
+  if(state==AppLifecycleState.resumed){
+   _backgroundAt=null;
+   // A successful OS challenge can finish before Android reports resumed.
+   // Only reveal the existing signed-in session after foreground resumes.
+   if(_biometricVerifiedAwaitingResume){
+    _biometricVerifiedAwaitingResume=false;
+    if(mounted&&locked&&profile!=null&&!showLogin){
+     setState(()=>locked=false);
+    }
+   }
+   return;
+  }
+  // A genuine background transition invalidates a pending verification.
+  if(state==AppLifecycleState.paused||
+     state==AppLifecycleState.hidden||
+     state==AppLifecycleState.detached){
+   _biometricVerifiedAwaitingResume=false;
+  }
   // Immediately lock whenever Waffra loses foreground focus.
   if(WaffraBiometricSessionGuard.mustLockOn(state)){
    _backgroundAt??=DateTime.now();
@@ -1140,6 +1161,11 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  final WaffraLiveAccountWriteAuthority _accountWriteAuthority=
      const WaffraLiveAccountWriteAuthority();
  Future<void> saveUser(Person u)async {
+  // Profile edits cannot silently detach the stored phone/password verifier.
+  if(profile!=null&&profile!.provider.toLowerCase()=='phone'&&
+     u.provider.toLowerCase()=='phone'&&profile!.phone!=u.phone){
+   throw StateError('Changing a sign-in phone requires verified account migration');
+  }
   await _accountWriteAuthority.saveProfile(
    profileJson:jsonEncode(u.toJson()),
    registeredProfileJson:u.phone.trim().isNotEmpty?jsonEncode(u.toJson()):null,
@@ -1451,10 +1477,16 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    locked?WaffraMandatoryBiometricGate(
     english:language=='en',
     onVerified:(){
+     if(!mounted||!locked||profile==null||showLogin)return;
      final lifecycle=WidgetsBinding.instance.lifecycleState;
-     if(mounted&&WaffraBiometricSessionGuard.canReveal(
+     if(WaffraBiometricSessionGuard.canReveal(
        authenticated:true,inForeground:lifecycle==AppLifecycleState.resumed)){
+      _biometricVerifiedAwaitingResume=false;
       setState(()=>locked=false);
+     }else if(lifecycle==AppLifecycleState.inactive){
+      // Android's native fingerprint dialog can complete before resumed.
+      // Defer only this verified result; do not unlock a backgrounded app.
+      _biometricVerifiedAwaitingResume=true;
      }
     },
     onSignOut:logout,
@@ -1945,7 +1977,7 @@ class _LoginScreenState extends State<LoginScreen> {
   });
   final raw=prefs.getString('waffra_registered_profile');
   if(raw==null)return;
-  try{final u=Person.fromJson(Map<String,dynamic>.from(jsonDecode(raw)));if(mounted)setState((){registered=u;signInMode=!signedOut;signInPhone.text=u.phone;});}catch(_){ }
+  try{final u=Person.fromJson(Map<String,dynamic>.from(jsonDecode(raw)));if(mounted)setState((){registered=u;signInMode=!signedOut;signInPhone.text=WaffraSaudiMobile.inputFromStored(u.phone);});}catch(_){ }
  }
  @override void dispose(){signInPhone.dispose();signInPassword.dispose();super.dispose();}
  Future<void> _signIn()async{
@@ -1956,14 +1988,27 @@ class _LoginScreenState extends State<LoginScreen> {
   setState(()=>signingIn=true);
   try{
    final account=registered;
-   if(account==null||signInPhone.text.trim()!=account.phone){
+   final enteredPhone=signInPhone.text.trim();
+   if(account==null){
+    if(mounted)setState(()=>signInAuthError=waffraIsEnglish?
+     'Account details are unavailable on this device.':
+     'بيانات الحساب غير متاحة على هذا الجهاز.');
+    return;
+   }
+   final prefs=await SharedPreferences.getInstance();
+   final storedPhone=WaffraSaudiMobile.inputFromStored(account.phone);
+   final hasSecureVerifier=
+    await WaffraLocalPhoneCredentials.hasRegisteredCredentials();
+   // An older editable profile may contain a different display phone.
+   // Only the OS-protected verifier may authenticate the entered number.
+   // Without a secure verifier, legacy migration must keep its original phone.
+   if(!hasSecureVerifier&&storedPhone!=enteredPhone){
     if(mounted)setState(()=>signInAuthError=waffraIsEnglish?
      'Incorrect mobile number or password':'رقم الجوال أو كلمة المرور غير صحيحة');
     return;
    }
-   final prefs=await SharedPreferences.getInstance();
    final match=await WaffraLocalPhoneCredentials.verify(
-    phone:signInPhone.text.trim(),password:signInPassword.text,
+    phone:enteredPhone,password:signInPassword.text,
     oldSalt:prefs.getString('waffra_local_password_salt'),
     oldHash:prefs.getString('waffra_local_password_hash'));
    if(!match){
@@ -1971,7 +2016,13 @@ class _LoginScreenState extends State<LoginScreen> {
      'Incorrect mobile number or password':'رقم الجوال أو كلمة المرور غير صحيحة');
     return;
    }
-   await widget.onSave(account);
+   // Repair a stale display profile only AFTER a real password match.
+   // This preserves the original account identity and all finance data.
+   final verifiedAccount=storedPhone==enteredPhone?account:Person(
+    name:account.name,email:account.email,provider:'Phone',
+    gender:account.gender,avatar:account.avatar,
+    birthday:account.birthday,phone:enteredPhone);
+   await widget.onSave(verifiedAccount);
   }catch(_){
    if(mounted)setState(()=>signInAuthError=waffraIsEnglish?
     'Local secure storage is unavailable. Unlock your device and retry.':
@@ -2279,7 +2330,8 @@ class _ProfileFormState extends State<ProfileForm> {
      phone:phone.text.trim(),password:password.text);
    }
    await widget.onSave(Person(name:name.text.trim(),email:widget.initial?.email??'',
-    phone:widget.provider=='Google'?
+    phone:widget.initial!=null&&widget.provider=='Phone'?
+      widget.initial!.phone:widget.provider=='Google'?
       (WaffraSaudiRelease.enabled?
        (widget.initial!=null&&
         WaffraSaudiMobile.isSupportedStored(widget.initial!.phone)&&
@@ -2352,10 +2404,6 @@ class _ProfileFormState extends State<ProfileForm> {
     ]else...[
      WaffraText(waffraIsEnglish?'2. Complete your profile':'٢. كمّل بياناتك',
       style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold)),
-     const SizedBox(height:10),
-     WaffraText(waffraIsEnglish?'No email or date of birth required.':
-      'مش محتاج تكتب إيميل أو تاريخ ميلاد.',
-      style:const TextStyle(color:Colors.grey)),
      const SizedBox(height:14),
      TextField(controller:name,onChanged:(_)=>setState((){}),
       decoration:InputDecoration(labelText:waffraIsEnglish?'Name':'الاسم',
@@ -2425,6 +2473,7 @@ class _ProfileFormState extends State<ProfileForm> {
        WaffraInternationalPhone.error(phoneCountry,phone.text,
         english:waffraIsEnglish)):null)
    else TextField(controller:phone,keyboardType:TextInputType.phone,
+    readOnly:widget.initial!=null&&widget.provider=='Phone',
     onChanged:(_)=>setState((){}),
     inputFormatters:[FilteringTextInputFormatter.digitsOnly,
      LengthLimitingTextInputFormatter(10)],

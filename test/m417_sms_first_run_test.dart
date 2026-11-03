@@ -18,7 +18,12 @@ void main() {
      (tester) async {
   await tester.pumpWidget(MaterialApp(home:WaffraAutoSmsConsentPage(
    english:true,onComplete:()async{})));
-  expect(find.textContaining('encrypted'),findsOneWidget);
+  // Short consent copy must disclose the optional external processing
+  // without promising encryption or displaying unnecessary paragraphs.
+  expect(find.textContaining('cloud service'),findsOneWidget);
+  expect(find.textContaining('redacted'),findsOneWidget);
+  expect(find.text('Allow SMS and automatic analysis'),findsOneWidget);
+  expect(find.text('Allow SMS only'),findsOneWidget);
   expect(find.text('Not now'),findsOneWidget);
  });
 }
