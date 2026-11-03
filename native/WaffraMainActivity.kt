@@ -293,6 +293,12 @@ class MainActivity : FlutterFragmentActivity() {
                     result.success(count)
                 }
                 "pendingAutoBankSms" -> result.success(WaffraAutoSmsStore.pending(this))
+                "stageAutoBankSmsCloudAnalysis" -> {
+                    val args = call.arguments as? Map<*, *>
+                    val id = args?.get("id") as? String ?: ""
+                    val values = args?.get("analysis") as? Map<*, *> ?: emptyMap<Any, Any>()
+                    result.success(WaffraAutoSmsStore.stageCloudAnalysis(this, id, values))
+                }
                 "ackAutoBankSms" -> {
                     val values = call.arguments as? List<*>
                     val ids = values?.filterIsInstance<String>()?.toSet() ?: emptySet()
