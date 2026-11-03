@@ -49,8 +49,14 @@ object WaffraAutoSmsStore {
 
     fun enable(context: Context, allow: Boolean): Boolean = synchronized(mutex) {
         if (allow && !permissionGranted(context)) return@synchronized false
-        context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
-            .edit().putBoolean(activeName, allow).commit()
+        val editor = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+            .edit().putBoolean(activeName, allow)
+        if (!allow) {
+            // On logout discard unread ciphertext too: the next profile
+            // must never inherit a previous user's banking SMS candidates.
+            editor.remove(queueName)
+        }
+        editor.commit()
     }
 
     private fun key(): SecretKey {
