@@ -8,9 +8,20 @@ part of 'main.dart';
 /// identical code when Waffra is closed. On failure, the encrypted message
 /// stays queued; never report that a transaction was recorded.
 abstract final class WaffraAutoSmsAutoPoster {
+ // QA safety: no automatic bank SMS analysis or money writes until accepted.
+ static bool get reviewOnly => true;
  static Future<Map<String,int>> run()async{
   final summary=<String,int>{'saved':0,'duplicates':0,'review':0};
   if(!await WaffraAutoSms.enabled())return summary;
+  if(reviewOnly){
+   final pending=await WaffraAutoSms.pending();
+   for(final candidate in pending){
+    final id=candidate['id'];
+    if(id is String)await WaffraAutoSms.notifyReview(id);
+   }
+   summary['review']=pending.length;
+   return summary;
+  }
   final prefs=await SharedPreferences.getInstance();
   await prefs.reload();
   // No guest data writes before first-run profile setup. Old installed
