@@ -7,7 +7,9 @@
     "Remove the extra mandatory biometric explanation in Arabic and English while preserving OS biometric security.",
     "Fix correct password being rejected on the phone login screen after explicit sign out, preserving account data.",
     "Safeguard the registered phone login identity from accidental changes during profile edits and use secure verification.",
-    "Shorten bank SMS tracking permission copy and use the user-requested automatic analysis and SMS-only button labels."
+    "Shorten bank SMS tracking permission copy and use the user-requested automatic analysis and SMS-only button labels.",
+    "Remove redundant email and birth date explanatory copy from the name and gender signup screen without changing required inputs.",
+    "Keep bank SMS permission UI to a single short line with explicit external cloud analysis disclosure and exactly two primary options."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
@@ -51,6 +53,10 @@
       {
         "start": "    WaffraGooglePhoneField(\n     controller:phone,country:phoneCountry,english:waffraIsEnglish,",
         "end": "   if(widget.initial==null) ...["
+      },
+      {
+        "start": "     WaffraText(waffraIsEnglish?'2. Complete your profile':'٢. كمّل بياناتك',",
+        "end": "     TextField(controller:name,onChanged:(_)=>setState((){}),"
       }
     ],
     "lib/waffra_mandatory_biometric_gate.dart": [
