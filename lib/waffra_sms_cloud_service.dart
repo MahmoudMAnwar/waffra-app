@@ -15,7 +15,7 @@ abstract final class WaffraSmsCloudService {
   if(Firebase.apps.isEmpty)await Firebase.initializeApp();
   if(!_activated){
    await FirebaseAppCheck.instance.activate(
-    providerAndroid:kReleaseMode?AndroidProvider.playIntegrity:AndroidProvider.debug);
+    providerAndroid:kReleaseMode?const AndroidPlayIntegrityProvider():const AndroidDebugProvider());
    _activated=true;
   }
  }

@@ -1128,13 +1128,6 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   }
   if(mounted)setState(()=>autoSmsConsentPending=false);
  }
- Future<void> quickStart()async {
-  final p=await SharedPreferences.getInstance();
-  await p.setBool('waffra_onboarding_completed',true);
-  final u=profile??Person(name:'',email:'',provider:'محلي',gender:'',avatar:'person',birthday:DateTime(2000));
-  await saveUser(u);
-  if(mounted)setState((){onboarded=true;showLogin=false;});
- }
  Future<void> intro()async {
   final p=await SharedPreferences.getInstance();await p.setBool('waffra_onboarding_completed',true);
   if(mounted)setState((){onboarded=true;showLogin=true;});
