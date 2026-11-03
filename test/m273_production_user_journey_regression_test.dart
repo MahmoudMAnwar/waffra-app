@@ -169,7 +169,7 @@ void main() {
       expect(WaffraDisplayCurrency.toLedgerSar(entry.amount), storedAmount);
       expect(entry.amount, storedAmount);
       expect(WaffraDisplayCurrency.money(entry.amount, english: true),
-          '1,234.50 ' + currency);
+          '1,234.50 SAR');
     }
   });
 
