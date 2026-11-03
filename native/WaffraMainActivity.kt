@@ -2,6 +2,8 @@ package com.waffra.app
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.Manifest
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.app.Activity
@@ -21,6 +23,8 @@ import org.json.JSONArray
 class MainActivity : FlutterFragmentActivity() {
     private val privacyChannel = "waffra/privacy"
     private val messagesChannel = "waffra/messages"
+    private val autoSmsRequestCode = 7712
+    private var pendingSmsPermissionResult: MethodChannel.Result? = null
     private val widgetChannelName = "waffra/widget"
     private val backupChannelName = "waffra/backup_files"
     // M219: read-only access to an independently provisioned Android Keystore
@@ -91,7 +95,21 @@ class MainActivity : FlutterFragmentActivity() {
     override fun onResume() {
         super.onResume()
         applyScreenshotSetting(screenshotsAllowed)
+        // A receiver can enqueue a bank candidate while Waffra is backgrounded.
+        if (WaffraAutoSmsStore.enabled(this) && WaffraAutoSmsStore.pending(this).isNotEmpty()) {
+            messageChannel?.invokeMethod("autoSmsAvailable", null)
+        }
     }
+
+    override fun onRequestPermissionsResult(requestCode: Int,
+        permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != autoSmsRequestCode) return
+        val callback = pendingSmsPermissionResult
+        pendingSmsPermissionResult = null
+        callback?.success(WaffraAutoSmsStore.permissionGranted(this))
+    }
+
 
     private fun receiveSharedText(received: Intent?) {
         if (received?.action != Intent.ACTION_SEND ||
@@ -206,12 +224,38 @@ class MainActivity : FlutterFragmentActivity() {
                 }
             }
         messageChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, messagesChannel)
+        WaffraAutoSmsStore.onChanged = {
+            messageChannel?.invokeMethod("autoSmsAvailable", null)
+        }
         messageChannel?.setMethodCallHandler { call, result ->
             when (call.method) {
                 "takeSharedText" -> {
                     val text = pendingShare
                     pendingShare = null
                     result.success(text)
+                }
+                "autoSmsPermissionState" -> result.success(WaffraAutoSmsStore.permissionGranted(this))
+                "autoSmsEnabled" -> result.success(WaffraAutoSmsStore.enabled(this))
+                "requestAutoSmsPermission" -> {
+                    if (WaffraAutoSmsStore.permissionGranted(this)) result.success(true)
+                    else if (pendingSmsPermissionResult != null) result.error(
+                        "SMS_PERMISSION_BUSY", "Another permission dialog is active", null)
+                    else {
+                        pendingSmsPermissionResult = result
+                        requestPermissions(arrayOf(Manifest.permission.READ_SMS,
+                            Manifest.permission.RECEIVE_SMS), autoSmsRequestCode)
+                    }
+                }
+                "setAutoSmsEnabled" -> {
+                    val allow = call.arguments as? Boolean ?: false
+                    result.success(WaffraAutoSmsStore.enable(this, allow))
+                }
+                "importRecentBankSms" -> result.success(WaffraAutoSmsStore.importRecent(this))
+                "pendingAutoBankSms" -> result.success(WaffraAutoSmsStore.pending(this))
+                "ackAutoBankSms" -> {
+                    val values = call.arguments as? List<*>
+                    val ids = values?.filterIsInstance<String>()?.toSet() ?: emptySet()
+                    result.success(WaffraAutoSmsStore.acknowledge(this, ids))
                 }
                 "openMessages" -> {
                     try {
@@ -351,6 +395,9 @@ class MainActivity : FlutterFragmentActivity() {
     }
 
     override fun onDestroy() {
+        WaffraAutoSmsStore.onChanged = null
+        pendingSmsPermissionResult?.error("SMS_PERMISSION_CANCELLED", "Activity closed", null)
+        pendingSmsPermissionResult = null
         messageChannel = null
         widgetChannel = null
         super.onDestroy()
