@@ -6,6 +6,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'waffra_sms_cloud_redactor.dart';
+import 'waffra_cloudflare_sms_gateway.dart';
 
 /// M421: separately opt-in server-assisted bank-SMS interpretation.
 /// Never call the provider directly from Android. No client API secret.
@@ -42,6 +43,24 @@ abstract final class WaffraSmsCloudService {
   /// cannot authorize the callable endpoint to process any bank message.
   static Future<bool> setConsent(bool enable) async {
     if (!Platform.isAndroid) return false;
+    // M423: Worker mode requires a real signed Firebase session. Local
+    // passwords or a bundled staging token do not authorize cloud access.
+    // The Worker verifies identity independently on the server.
+    if (WaffraCloudflareSmsGateway.configured) {
+      try {
+        await _ready();
+        final owner = _owner();
+        final user = FirebaseAuth.instance.currentUser;
+        if (owner == null || user == null || user.isAnonymous ||
+            WaffraCloudflareSmsGateway.validEndpoint(
+              WaffraCloudflareSmsGateway.configuredUrl) == null) return false;
+        final prefs = await SharedPreferences.getInstance();
+        return prefs.setBool('$_preference$owner', enable);
+      } catch (_) {
+        return false;
+      }
+    }
+
     if (!enable) {
       final owner = _owner();
       if (owner == null) return false;
@@ -82,6 +101,24 @@ abstract final class WaffraSmsCloudService {
     if (!await hasConsent()) return null;
     final redacted = WaffraSmsCloudRedactor.redact(source);
     if (redacted == null) return null;
+    // Explicitly configured Worker takes precedence over Firebase Callable.
+    // Without a signed Firebase ID token, fail closed to offline analysis.
+    if (WaffraCloudflareSmsGateway.configured) {
+      try {
+        await _ready();
+        final user = FirebaseAuth.instance.currentUser;
+        final endpoint = WaffraCloudflareSmsGateway.validEndpoint(
+          WaffraCloudflareSmsGateway.configuredUrl);
+        if (user == null || user.isAnonymous || endpoint == null) return null;
+        final signedToken = await user.getIdToken();
+        if (signedToken == null || signedToken.isEmpty) return null;
+        return WaffraCloudflareSmsGateway.analyze(
+          source: source, firebaseIdToken: signedToken, endpoint: endpoint);
+      } catch (_) {
+        return null;
+      }
+    }
+
     try {
       await _ready();
       if (_owner() == null) return null;
