@@ -246,6 +246,8 @@ jobs:
           template=Path('native/WaffraMainActivity.kt').read_text()
           assert 'waffra/privacy' in template and 'waffra/messages' in template
           activity.write_text(template)
+          for filename in ('WaffraAutoSmsStore.kt', 'WaffraAutoSmsReceiver.kt'):
+              (activity.parent/filename).write_text((Path('native')/filename).read_text())
 
           manifest=Path('android/app/src/main/AndroidManifest.xml')
           xml=manifest.read_text()
@@ -263,9 +265,26 @@ jobs:
                   raise SystemExit('Could not locate generated MainActivity')
               xml=xml[:close]+filter_xml+chr(10)+'    '+xml[close:]
               manifest.write_text(xml)
-          if re.search(r'<uses-permission[^>]*\\b(?:READ_SMS|RECEIVE_SMS|READ_CALL_LOG)\\b',xml):
-              raise SystemExit('SMS inbox permissions must never be requested')
-          print('Enabled user-triggered text sharing and messaging launch without inbox access')
+          # M417 draft-only: sensitive SMS access requires Play review before release.
+          for permission in ('READ_SMS', 'RECEIVE_SMS'):
+              entry=f'<uses-permission android:name="android.permission.{permission}" />'
+              if entry not in xml:
+                  xml=xml.replace('<application','    '+entry+'\n    <application',1)
+          receiver='''
+              <receiver android:name="com.waffra.app.WaffraAutoSmsReceiver"
+                  android:exported="true"
+                  android:permission="android.permission.BROADCAST_SMS">
+                  <intent-filter>
+                      <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+                  </intent-filter>
+              </receiver>
+          '''
+          if 'com.waffra.app.WaffraAutoSmsReceiver' not in xml:
+              xml=xml.replace('</application>',receiver+'\n    </application>',1)
+          manifest.write_text(xml)
+          assert all('android.permission.'+p in xml for p in ('READ_SMS','RECEIVE_SMS'))
+          assert 'WaffraAutoSmsReceiver' in xml and 'READ_CALL_LOG' not in xml
+          print('M417 draft: opt-in, scoped SMS bank intake; Play approval pending')
           PY
 
       # Match the production ARM64 workflow: native WaffraMainActivity.kt
