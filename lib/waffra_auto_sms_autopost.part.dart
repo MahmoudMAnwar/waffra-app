@@ -42,6 +42,17 @@ abstract final class WaffraAutoSmsAutoPoster {
      summary['duplicates']=summary['duplicates']!+1;
      continue;
     }
+    // When a user separately enabled cloud analysis, process matching SMS
+    // through the authenticated Firebase -> OpenRouter path even with the UI
+    // closed. Only redacted payloads leave the device; suggestions are cached
+    // inside the already-encrypted Android SMS queue.
+    Map<String,Object?>? cloud;
+    if(candidate['cloud'] is Map){
+     cloud=Map<String,Object?>.from(candidate['cloud'] as Map);
+    }else{
+     cloud=await WaffraSmsCloudService.analyzeIfConsented(body);
+     if(cloud!=null)await WaffraAutoSms.stageCloudAnalysis(id,cloud);
+    }
     final parsed=BankParser.parse(body);
     final arrived=DateTime.fromMillisecondsSinceEpoch(at);
     final date=bankSmsDate(body,referenceDate:arrived);
@@ -51,7 +62,19 @@ abstract final class WaffraAutoSmsAutoPoster {
       parsed.requiresCurrencyReview||WaffraSmsCurrencies.requiresReviewForSarLedger(body),
      arrived:arrived,verifiedDate:date,
     );
-    if(!preliminary.canPost||bankSmsHasUnverifiedTimestamp(body,referenceDate:arrived)){
+    // The LLM may veto an unsafe candidate, never fabricate a verified
+    // bank amount. Conflicts go to review instead of changing balances.
+    final cloudAmount=cloud?['amount'];
+    final cloudCurrency=cloud?['currency'];
+    final cloudKind=cloud?['kind'];
+    final disagree=cloud!=null&&(
+      cloud['requiresReview']==true||
+      cloudAmount is! num||parsed.amount==null||
+      (cloudAmount.toDouble()-parsed.amount!).abs()>0.001||
+      cloudCurrency!='SAR'||
+      cloudKind!=(parsed.income?'income':'expense'));
+    if(disagree||!preliminary.canPost||
+       bankSmsHasUnverifiedTimestamp(body,referenceDate:arrived)){
      summary['review']=summary['review']!+1;
      await WaffraAutoSms.notifyReview(id);
      continue;
