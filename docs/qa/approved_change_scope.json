@@ -169,7 +169,7 @@
         "end": "  int budgetMenuRevision=0"
       },
       {
-        "start": "      TextField(controller:title",
+        "start": "      TextField(controller:title,onChanged:(_)=>update((){}),minLines:1,maxLines:5,",
         "end": "      if(!sms)...["
       },
       {
