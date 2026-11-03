@@ -90,7 +90,7 @@ abstract final class WaffraLocalPhoneCredentials {
   // Upgrade legacy salted SHA-256 only after a successful old-password
   // login. Never interpret a bad password as permission to reset a profile.
   if(oldSalt==null||oldHash==null)return false;
-  final supplied=sha256.convert(utf8.encode('$'+'oldSalt:$'+'password')).toString();
+  final supplied=sha256.convert(utf8.encode('$oldSalt:$password')).toString();
   if(!_equal(utf8.encode(supplied),utf8.encode(oldHash)))return false;
   await register(phone:phone,password:password);
   return true;
