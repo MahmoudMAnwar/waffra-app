@@ -41,7 +41,7 @@ void main() {
     expect(source, contains('waffraSearchAny('));
     expect(source, contains('waffraNamedBudgetSpent('));
     expect(source, contains('editBudgetForCategory(b)'));
-    expect(source, contains('setNamedBudgetActive(b,!b.budgetActive)'));
+    expect(source, contains('setNamedBudgetActive(b,enabled)'));
     expect(source, contains('deleteNamedBudget(b)'));
     expect(source, contains('waffraBudgetStarterTemplates'));
     expect(source, contains('suggestedName:t.name(waffraIsEnglish)'));
