@@ -57,5 +57,6 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter analyze lib/waffra_auto_sms.dart lib/waffra_auto_sms_consent.dart lib/waffra_messages.dart
-      - run: flutter test --reporter expanded test/m417_sms_first_run_test.dart
+      - run: flutter analyze lib/main.dart lib/waffra_auto_sms.dart lib/waffra_auto_sms_policy.dart lib/waffra_auto_sms_consent.dart lib/waffra_messages.dart
+      - name: Test foreground opt-in and strict income/expense decision matrix
+        run: flutter test --reporter expanded test/m417_sms_first_run_test.dart test/waffra_auto_sms_policy_test.dart
