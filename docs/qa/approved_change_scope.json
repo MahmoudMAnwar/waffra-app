@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M413",
-  "human_scope_review": "M413 budget alert controls plus M414 goal milestone and recurring reminder independence; Android device delivery evidence remains required before merging. M414 finance snapshot validation follow-up: optional alert fields are validated and retained in guarded storage, with legacy compatibility tests.",
+  "human_scope_review": "M413 budget alert controls plus M414 goal milestone and recurring reminder independence; Android device delivery evidence remains required before merging. M414 finance snapshot validation follow-up: optional alert fields are validated and retained in guarded storage, with legacy compatibility tests. Scope boundaries now enumerate the exact legacy goal/recurring/budget preflight branches, the two isolated standalone-budget SQL candidate methods, and the module payload validator. All other legacy/migration code must remain byte-for-byte unchanged; M385 enforces this.",
   "user_requested_changes": [
     "Add enable and disable for budget threshold warnings independently from budget activation, show the percent dropdown only while enabled and persist state.",
     "Unify percentage warning logic in Home monthly budget, smart financial insights and confirmed manual/SMS expenses with each budget's selected threshold.",
@@ -113,6 +113,36 @@
       {
         "start": "  static const allowedFields = <String, Set<String>>{",
         "end": "  static const excludedLocalOnly = <String>{"
+      }
+    ],
+    "lib/storage/legacy_snapshot_preflight.dart": [
+      {
+        "start": "        } else if (key == 'waffra_goals_v24') {",
+        "end": "        } else if (key == 'waffra_recurring_v24') {"
+      },
+      {
+        "start": "        } else if (key == 'waffra_recurring_v24') {",
+        "end": "        } else if (key == 'waffra_categories_v24') {"
+      },
+      {
+        "start": "        } else if (key == 'waffra_named_budgets_v1') {",
+        "end": "        } else if (key == 'waffra_challenges_v1') {"
+      }
+    ],
+    "lib/storage/waffra_fresh_finance_domain_repository.dart": [
+      {
+        "start": "  Future<void> createStandaloneBudget({",
+        "end": "  Future<void> editStandaloneBudget({"
+      },
+      {
+        "start": "  Future<void> editStandaloneBudget({",
+        "end": "  Future<void> setStandaloneBudgetActive({"
+      }
+    ],
+    "lib/storage/waffra_fresh_finance_modules_repository.dart": [
+      {
+        "start": "  static Map<String, Object?> _validate(",
+        "end": "  Future<List<Map<String, Object?>>> list("
       }
     ]
   }
