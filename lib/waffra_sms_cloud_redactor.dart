@@ -32,9 +32,10 @@ abstract final class WaffraSmsCloudRedactor {
       r'(?:\b(?:to|from|beneficiary|payee|recipient)\s*[:：]\s*|'
       r'(?:إلى|الى|لصالح|المستفيد)\s*[:：]\s*)'
       r'[^\r\n]{2,100}', caseSensitive: false), '[party-redacted]');
+    // Mask contiguous and spaced IBAN variants conservatively.
     data = data.replaceAll(RegExp(
-      r'\b[A-Z]{2}[0-9]{2}[A-Z0-9]{10,}\b', caseSensitive: false),
-      '[iban-redacted]');
+      r'\b[A-Z]{2}[0-9]{2}(?:[ -]?[A-Z0-9]){10,}\b',
+      caseSensitive: false), '[iban-redacted]');
     data = data.replaceAll(RegExp(
       r'(?:reference|ref(?:erence)?\s*(?:no\.?|number)?|'
       r'الرقم\s*المرجعي|رقم\s*العملية)\s*[:：#]?\s*'
@@ -43,6 +44,11 @@ abstract final class WaffraSmsCloudRedactor {
     data = data.replaceAll(RegExp(
       r'\+?\d{2,4}[- ]\d{3}[- ]\d{3,6}\b'), '[identifier-redacted]');
     data = data.trim();
+    // After redaction, anything that still looks like an IBAN/full payment
+    // identifier fails closed instead of reaching an external model.
+    if (RegExp(r'\b[A-Z]{2}[0-9]{2}(?:[ -]?[A-Z0-9]){10,}\b',
+       caseSensitive: false).hasMatch(data)) return null;
+    if (RegExp(r'\b[0-9]{8,}\b').hasMatch(data)) return null;
     if (data.length < 18 || data.length > 1600 ||
         !_action.hasMatch(data) || !_money.hasMatch(data)) return null;
     return data;
