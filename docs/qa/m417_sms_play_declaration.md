@@ -15,13 +15,11 @@ before the first app launch. A denial never blocks manual transactions.
    Crashlytics/analytics events.
 3. After permission is granted the user may import up to 500 newest inbox
    items (only matches are staged).
-4. Waffra offers incoming candidates to its **existing** bank-SMS review sheet,
-   which verifies amount, currency, direction, date, category, budget and
-   duplicate fingerprint. **No background ledger writes** are allowed.
-5. The queue only acknowledges candidates after the verified finance path
-   confirms their stored SMS hash, or the user explicitly ignores the item.
-6. On sign-out capture is disabled so another profile cannot silently inherit
-   live SMS intake. The user may revoke the OS permission at any time.
+4. After standing first-run opt-in, Android WorkManager can start a short-lived Flutter finance worker while Waffra is closed. Only messages with independently checked sender, SAR amount, direction, date and category are eligible for automatic posting.
+5. The existing Home/Widget locked finance authority atomically records the SMS transaction and duplicate hash; no native receiver ever writes money.
+6. A budget is inherited only from a previous confirmed assignment for that merchant. Unknown assignments remain unlinked and are clearly indicated.
+7. A device notification saying "saved" is triggered only after a verified ledger and SMS hash witness, not merely after detecting a message.
+8. Ambiguous messages remain encrypted for review, and sign-out disables capture and clears pending ciphertext.
 
 ## Not yet equivalent to Genie
 - **Fully automatic account/card creation and reconciliation are not built.**
