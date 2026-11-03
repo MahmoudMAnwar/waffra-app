@@ -101,6 +101,7 @@ void main(){
   expect(details,contains("entry.sourceType=='sms'"));
   expect(main,contains('WaffraTransactionDetailsDialog.sourceLabel('));
   expect(main,contains('protectedOriginalSms:originalBankSms'));
+  expect(main,contains("Key('waffra-entry-edit-source')"));
  });
 
 }
