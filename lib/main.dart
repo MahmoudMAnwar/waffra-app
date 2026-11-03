@@ -3281,7 +3281,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final cloudFacts=cloud is Map ? cloud : null;
    final cloudAmount=cloudFacts?['amount'];
    final cloudKind=cloudFacts?['kind'];
-   final cloudSummary=cloudKind is String?
+   final cloudSummary=cloudKind is String ?
     '\n'+(waffraIsEnglish?'Cloud AI suggests: ':'اقتراح الذكاء الاصطناعي: ')+
     cloudKind+(cloudAmount is num?' • '+cloudAmount.toStringAsFixed(2):''):'';
    final decision=await showWaffraDialog<String>(context:context,
