@@ -57,7 +57,7 @@ abstract final class WaffraBankSmsFactsParser {
   r'[^\r\n]{0,22}?(?:\*{2,}|x{2,}|X{2,})\s*([0-9٠-٩]{4})',
   caseSensitive:false);
  static final _destination=RegExp(
-  r'(?:إلى|الى|iban|to\s+(?:account|wallet|card)|destination)'
+  r'(?:إلى|الى|أيبان|ايبان|iban|to\s+(?:account|wallet|card)|destination)'
   r'[^\r\n]{0,45}?(?:\*{2,}|x{2,}|X{2,})\s*([0-9٠-٩]{4})',
   caseSensitive:false);
  static final _fee=RegExp(
