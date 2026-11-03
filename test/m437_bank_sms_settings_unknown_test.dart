@@ -28,6 +28,8 @@ void main(){
   expect(code,contains('مديونية'));
   expect(code,contains('مستحقة'));
   expect(code,contains('etimad'));
+  expect(code,contains('name.firstOrNull()?.isLetter() == true'));
+  expect(code,contains("return \"debt_notice\""));
   expect(code,contains('return "debt_notice"'));
   expect(code,contains('otp.containsMatchIn(safe)'));
   expect(code,contains('qualifies(name, safe)'));
