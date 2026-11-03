@@ -13,6 +13,8 @@ abstract final class WaffraMerchantBrands {
  // client origin/Referer usage and provider terms are confirmed on hardware.
  static const clientId=String.fromEnvironment(
   'WAFFRA_BRANDFETCH_CLIENT_ID',defaultValue:'');
+ static const androidLogoProviderApproved=bool.fromEnvironment(
+  'WAFFRA_BRANDFETCH_ANDROID_APPROVED',defaultValue:false);
  static const known=<WaffraMerchantBrand>[
   WaffraMerchantBrand('Spotify','spotify.com',['سبوتيفاي','spotify']),
   WaffraMerchantBrand('Steam','steampowered.com',['ستيم','steam']),
@@ -64,7 +66,8 @@ abstract final class WaffraMerchantBrands {
  }
  /// Direct CDN URL, never an image scraper. No network request if unconfigured.
  static Uri? logoUri(WaffraMerchantBrand? brand){
-  if(brand==null||!RegExp(r'^[A-Za-z0-9_-]{8,128}$')
+  if(!androidLogoProviderApproved||brand==null||
+     !RegExp(r'^[A-Za-z0-9_-]{8,128}$')
      .hasMatch(clientId))return null;
   if(!RegExp(r'^[a-z0-9.-]+$').hasMatch(brand.domain))return null;
   return Uri.https('cdn.brandfetch.io','/'+brand.domain,{'c':clientId});
@@ -94,6 +97,7 @@ class WaffraMerchantLogo extends StatelessWidget {
   return SizedBox(width:size,height:size,child:ClipRRect(
    borderRadius:BorderRadius.circular(12),
    child:Image.network(uri.toString(),fit:BoxFit.contain,
+    headers:const {'Referer':'android-app://com.waffra.app/'},
     errorBuilder:(_,__,___)=>fallback,
     loadingBuilder:(_,child,progress)=>progress==null?child:fallback)));
  }
