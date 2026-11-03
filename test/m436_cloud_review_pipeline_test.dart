@@ -79,8 +79,13 @@ void main() {
   expect(ui,contains("allow(cloud:true)"));
   expect(ui,contains("allow(cloud:false)"));
   expect(ui,contains("if(cloud&&!activated)"));
-  expect(ui,contains('تُحلّل الرسائل المؤهلة تلقائيًا'));
-  expect(ui,contains('بعد حجب البيانات'));
+  // Consent is separately visible and cloud is clearly described.
+  expect(ui,contains("allow(cloud:true)"));
+  expect(ui,contains("allow(cloud:false)"));
+  expect(ui,contains('السماح بالرسائل والتحليل تلقائيًا'));
+  expect(ui,contains('السماح بالرسائل فقط'));
+  expect(ui,contains('التحليل التلقائي يرسل بيانات مالية'));
+  expect(ui,contains('بعد إخفاء المعلومات الحساسة لخدمة سحابية'));
   expect(cloud,contains('FirebaseAppCheck.instance.getToken()'));
   expect(cloud,contains('WaffraCloudflareSmsGateway.analyze('));
   expect(cloud,contains('WaffraSmsCloudRedactor.redact(source)'));
