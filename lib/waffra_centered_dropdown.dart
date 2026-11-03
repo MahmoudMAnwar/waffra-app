@@ -87,19 +87,35 @@ class WaffraCenteredDropdownFormField<T> extends FormField<T> {
                         itemCount:items.length,
                         itemBuilder:(ctx,index) {
                           final item=items[index];
-                          return ListTile(
-                            enabled:item.enabled,
-                            key:Key('waffra-modal-choice-$index'),
-                            contentPadding:const EdgeInsets.symmetric(
-                              horizontal:18,vertical:3),
-                            title:item.child,
-                            trailing:item.value==field.value?
+                          final chosen=item.value==field.value;
+                          return Padding(
+                           padding:const EdgeInsets.symmetric(
+                            horizontal:12,vertical:5),
+                           child:Material(
+                            color:chosen?tone.withValues(alpha:.08):
+                             Theme.of(dialogContext).cardColor,
+                            shape:RoundedRectangleBorder(
+                             borderRadius:BorderRadius.circular(13),
+                             side:BorderSide(color:chosen?tone:
+                              tone.withValues(alpha:.26),
+                              width:chosen?1.5:1)),
+                            clipBehavior:Clip.antiAlias,
+                            child:ListTile(
+                             enabled:item.enabled,
+                             key:Key('waffra-modal-choice-$index'),
+                             minVerticalPadding:12,
+                             contentPadding:const EdgeInsets.symmetric(
+                              horizontal:15,vertical:2),
+                             title:item.child,
+                             trailing:chosen?
                               Icon(Icons.check_circle,color:tone):null,
-                            onTap:item.enabled?(){
+                             onTap:item.enabled?(){
                               item.onTap?.call();
                               Navigator.pop(dialogContext,
                                 _WaffraChoice<T>(item.value));
-                            }:null,
+                             }:null,
+                            ),
+                           ),
                           );
                         },
                       )),

@@ -1312,6 +1312,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    floatingActionButtonTheme:const FloatingActionButtonThemeData(
     backgroundColor:forest,foregroundColor:Colors.white),
    dividerTheme:const DividerThemeData(color:Color(0xFFE1EDE6),thickness:.8),
+   expansionTileTheme:const ExpansionTileThemeData(
+    shape:RoundedRectangleBorder(side:BorderSide.none),
+    collapsedShape:RoundedRectangleBorder(side:BorderSide.none)),
   ),
   darkTheme:ThemeData(
    useMaterial3:true,
@@ -1398,6 +1401,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    floatingActionButtonTheme:const FloatingActionButtonThemeData(
     backgroundColor:forest,foregroundColor:Colors.white),
    dividerTheme:const DividerThemeData(color:Color(0xFF394039),thickness:.8),
+   expansionTileTheme:const ExpansionTileThemeData(
+    shape:RoundedRectangleBorder(side:BorderSide.none),
+    collapsedShape:RoundedRectangleBorder(side:BorderSide.none)),
   ),
   themeMode:appearance=='system'?ThemeMode.system:(appearance=='dark'?ThemeMode.dark:ThemeMode.light),
   themeAnimationDuration:waffraMotion(250),
@@ -3306,6 +3312,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  static const tourTabs=WaffraTourPlan.tabs;
  static const tourTargetKeys=WaffraTourPlan.targetKeys;
  bool addFabExpanded=false;
+ final LayerLink _fabOverlayAnchor=LayerLink();
  bool quickActionsExpanded=false;
  bool _addActionOpening=false;
  bool _fabPressed=false;
@@ -8019,7 +8026,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ListView.builder(
      itemCount:visible.length,itemBuilder:(_,i){
       final b=visible[i];
-      return ListTile(
+      return _borderedMenuChoice(
        key:Key('waffra-retro-budget-option-'+b.id),
        title:WaffraText(b.budgetLabel??b.name,maxLines:2),
        subtitle:WaffraText(waffraIsEnglish?
@@ -8339,34 +8346,50 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     const SizedBox(height:12),
     Container(
      key:const Key('waffra-budget-month-control'),
+     padding:const EdgeInsets.symmetric(horizontal:5,vertical:4),
      decoration:BoxDecoration(
-      border:Border.all(color:emerald.withValues(alpha:.45)),
-      borderRadius:BorderRadius.circular(14)),
+      color:emerald.withValues(alpha:.065),
+      borderRadius:BorderRadius.circular(16),
+      border:Border.all(color:emerald.withValues(alpha:.19))),
      child:Row(children:[
-      IconButton(key:const Key('waffra-budget-month-prev'),
+      IconButton(
+       key:const Key('waffra-budget-month-prev'),
        tooltip:waffraIsEnglish?'Previous month':'الشهر السابق',
-       icon:const Icon(Icons.chevron_left_rounded,color:emerald),
-       constraints:const BoxConstraints(minWidth:40,minHeight:48),
+       style:IconButton.styleFrom(
+        minimumSize:const Size(40,42),
+        padding:const EdgeInsets.all(6)),
+       icon:const Icon(Icons.chevron_left_rounded,color:emerald,size:23),
        onPressed:WaffraHaptics.tap(()=>setState(()=>
         budgetViewedMonth=DateTime(viewedMonth.year,viewedMonth.month-1,1)))),
-      Expanded(child:SizedBox(key:const Key('waffra-budget-month-label'),
-       child:WaffraText(
+      Expanded(child:Semantics(
+       label:waffraIsEnglish?'Viewing budget month':'شهر الميزانية المعروض',
+       value:MaterialLocalizations.of(context).formatMonthYear(viewedMonth),
+       child:Center(child:WaffraText(
         MaterialLocalizations.of(context).formatMonthYear(viewedMonth),
+        key:const Key('waffra-budget-month-label'),
         maxLines:1,textAlign:TextAlign.center,
-        style:const TextStyle(fontWeight:FontWeight.w700,fontSize:14)))),
-      IconButton(key:const Key('waffra-budget-month-next'),
+        style:const TextStyle(fontWeight:FontWeight.w800,fontSize:16))))),
+      IconButton(
+       key:const Key('waffra-budget-month-next'),
        tooltip:waffraIsEnglish?'Next month':'الشهر التالي',
-       icon:const Icon(Icons.chevron_right_rounded,color:emerald),
-       constraints:const BoxConstraints(minWidth:40,minHeight:48),
+       style:IconButton.styleFrom(
+        minimumSize:const Size(40,42),
+        padding:const EdgeInsets.all(6)),
+       icon:const Icon(Icons.chevron_right_rounded,color:emerald,size:23),
        onPressed:WaffraHaptics.tap(()=>setState(()=>
         budgetViewedMonth=DateTime(viewedMonth.year,viewedMonth.month+1,1)))),
-      TextButton(key:const Key('waffra-budget-month-today'),
+      const SizedBox(width:5),
+      OutlinedButton(
+       key:const Key('waffra-budget-month-today'),
        onPressed:viewingToday?null:WaffraHaptics.tap(()=>setState(()=>
         budgetViewedMonth=DateTime(today.year,today.month,1))),
-       style:TextButton.styleFrom(minimumSize:const Size(52,48),
-        padding:const EdgeInsets.symmetric(horizontal:6)),
+       style:OutlinedButton.styleFrom(
+        minimumSize:const Size(53,40),
+        padding:const EdgeInsets.symmetric(horizontal:8,vertical:4),
+        backgroundColor:Theme.of(context).cardColor,
+        shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12))),
        child:WaffraText(waffraIsEnglish?'Today':'اليوم',
-        maxLines:1,style:const TextStyle(fontSize:12))),
+        maxLines:1,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w700))),
      ]),
     ),
     const SizedBox(height:12),
@@ -10885,7 +10908,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        ])),
        const SizedBox(width:1),
       ]),
-      ExpansionTile(
+      Container(
+       decoration:BoxDecoration(
+        border:Border.all(color:emerald.withValues(alpha:.4)),
+        borderRadius:BorderRadius.circular(15)),
+       clipBehavior:Clip.antiAlias,
+       child:ExpansionTile(
        key:PageStorageKey<String>('waffra-goal-quick-actions-'+g.id),
        initiallyExpanded:false,
        tilePadding:EdgeInsets.zero,
@@ -10911,16 +10939,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         SwitchListTile.adaptive(
          key:Key('waffra-goal-active-switch-'+g.id),
          contentPadding:EdgeInsets.zero,
-         title:WaffraText(waffraIsEnglish?'Goal enabled':'تفعيل الهدف'),
-         subtitle:WaffraText(g.active?
-          (waffraIsEnglish?'Active':'مفعّل'):
-          (waffraIsEnglish?'Paused — savings preserved':'متوقف مؤقتًا والمدخرات محفوظة')),
+         title:WaffraText(
+          (waffraIsEnglish?'Goal enabled':'تفعيل الهدف')+'  •  '+
+          (g.active?(waffraIsEnglish?'Active':'مفعّل'):
+           (waffraIsEnglish?'Paused':'متوقف')),
+          maxLines:1,style:const TextStyle(fontSize:13,fontWeight:FontWeight.w600)),
          activeTrackColor:emerald,
          value:g.active,
          onChanged:WaffraHaptics.selection((enabled)=>
           unawaited(setGoalActive(g,enabled)))),
        ],
-      ),
+      )),
       if(g.dueDate!=null)Padding(padding:const EdgeInsets.only(top:8),
        child:Row(children:[
         const Icon(Icons.event_outlined,size:16,color:emerald),
@@ -11366,7 +11395,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         style:TextStyle(fontSize:11,color:r.active?Theme.of(context).hintColor:Colors.deepOrange)),
       ])),
      ]),
-     ExpansionTile(
+     Container(
+      decoration:BoxDecoration(
+       border:Border.all(color:emerald.withValues(alpha:.4)),
+       borderRadius:BorderRadius.circular(15)),
+      clipBehavior:Clip.antiAlias,
+      child:ExpansionTile(
       key:PageStorageKey<String>('waffra-recurring-quick-actions-'+r.id),
       initiallyExpanded:false,
       tilePadding:EdgeInsets.zero,
@@ -11375,29 +11409,29 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       title:WaffraText(waffraIsEnglish?'Quick actions':'إجراءات سريعة',
        style:const TextStyle(fontSize:13,fontWeight:FontWeight.w700)),
       children:[
-       Wrap(spacing:8,runSpacing:8,children:[
-        OutlinedButton.icon(
+       Row(children:[
+        Expanded(child:OutlinedButton.icon(
          onPressed:WaffraHaptics.tap(()=>unawaited(_handleRecurringCardAction(r,'edit'))),
          icon:const Icon(Icons.edit_outlined,size:17),
-         label:WaffraText(waffraIsEnglish?'Edit':'تعديل')),
-        OutlinedButton.icon(
+         label:WaffraText(waffraIsEnglish?'Edit':'تعديل',maxLines:1))),
+        const SizedBox(width:7),
+        Expanded(child:OutlinedButton.icon(
          onPressed:WaffraHaptics.tap(()=>unawaited(_handleRecurringCardAction(r,'delete'))),
          icon:const Icon(Icons.delete_outline_rounded,color:Colors.deepOrange,size:17),
-         label:WaffraText(waffraIsEnglish?'Delete':'حذف')),
+         label:WaffraText(waffraIsEnglish?'Delete':'حذف',maxLines:1))),
+        const SizedBox(width:6),
+        Tooltip(message:r.active?
+         (waffraIsEnglish?'Pause recurring':'إيقاف العملية المتكررة'):
+         (waffraIsEnglish?'Enable recurring':'تفعيل العملية المتكررة'),
+         child:Semantics(label:waffraIsEnglish?'Recurring enabled':'تفعيل المتكررة',
+          child:Switch.adaptive(
+           key:Key('waffra-recurring-active-switch-'+r.id),
+           activeTrackColor:emerald,value:r.active,
+           onChanged:WaffraHaptics.selection((value)=>
+            unawaited(_setRecurringActiveFromCard(r,value)))))),
        ]),
-       SwitchListTile.adaptive(
-        key:Key('waffra-recurring-active-switch-'+r.id),
-        contentPadding:EdgeInsets.zero,
-        title:WaffraText(waffraIsEnglish?'Recurring enabled':'تفعيل العملية المتكررة'),
-        subtitle:WaffraText(r.active?
-         (waffraIsEnglish?'Active':'مفعلة'):
-         (waffraIsEnglish?'Paused':'متوقفة مؤقتًا')),
-        activeTrackColor:emerald,
-        value:r.active,
-        onChanged:WaffraHaptics.selection((value)=>
-         unawaited(_setRecurringActiveFromCard(r,value)))),
       ],
-     ),
+     )),
      ])));
    }),
    if(recurring.isEmpty)Padding(padding:const EdgeInsets.only(top:18),
@@ -12727,6 +12761,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      WaffraText(label,style:TextStyle(
       fontSize:15,fontWeight:FontWeight.bold,color:Theme.of(context).brightness==Brightness.dark?Colors.white:forest)),
     ]))));
+ Widget _borderedMenuChoice({
+  Key? key,required Widget title,Widget? subtitle,Widget? leading,
+  required VoidCallback? onTap,
+ })=>Padding(
+  key:key,padding:const EdgeInsets.symmetric(vertical:5),
+  child:Material(
+   color:Theme.of(context).cardColor,
+   shape:RoundedRectangleBorder(
+    borderRadius:BorderRadius.circular(14),
+    side:BorderSide(color:emerald.withValues(alpha:.35))),
+   clipBehavior:Clip.antiAlias,
+   child:ListTile(
+    title:title,subtitle:subtitle,leading:leading,
+    onTap:onTap,contentPadding:const EdgeInsets.symmetric(
+     horizontal:12,vertical:7))));
  Future<void> _duplicateGoalFromMenu()async {
   if(goals.isEmpty)return;
   final chosen=await showWaffraDialog<SavingGoal>(
@@ -12735,7 +12784,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     content:SizedBox(width:350,height:min(420,MediaQuery.sizeOf(dialogCtx).height*.55),
      child:ListView.builder(itemCount:goals.length,itemBuilder:(ctx,index){
       final item=goals[index];
-      return ListTile(
+      return _borderedMenuChoice(
        leading:const Icon(Icons.copy_all_outlined,color:emerald),
        title:WaffraText(item.name),
        subtitle:WaffraText(item.target<=0
@@ -12758,7 +12807,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     content:SizedBox(width:350,height:min(420,MediaQuery.sizeOf(dialogCtx).height*.55),
      child:ListView.builder(itemCount:recurring.length,itemBuilder:(ctx,index){
       final item=recurring[index];
-      return ListTile(
+      return _borderedMenuChoice(
        leading:const Icon(Icons.copy_all_outlined,color:emerald),
        title:WaffraText(item.title),
        subtitle:WaffraText(cash(item.amount)),
@@ -12910,85 +12959,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        child:Transform.translate(offset:Offset((1-progress)*(waffraIsEnglish?26:-26),0),
         child:Transform.scale(scale:accountOpened?0.985+0.015*progress:1,child:child))),
       child:currentTab()))),
-    if(!accountOpened&&(tab==0||tab==1||tab==3||tab==4||goalsOpened))
-     WaffraFabMenuAnchor(
-      english:waffraIsEnglish,
-      expanded:addFabExpanded,
-      menu:Column(mainAxisSize:MainAxisSize.min,
-       crossAxisAlignment:waffraIsEnglish?CrossAxisAlignment.end:CrossAxisAlignment.start,
-       children:[
-        if(tab==0&&!goalsOpened)...[
-        _addMenuOption(
-         icon:Icons.edit_note_rounded,
-         label:waffraIsEnglish?'Manual transaction':'عملية يدوية',
-         onTap:WaffraHaptics.tapRequired((){
-          unawaited(_launchAddAction(()=>entrySheet(),fromMenu:true));
-         })),
-        const SizedBox(height:7),
-        _addMenuOption(
-         icon:Icons.sms_outlined,
-         label:waffraIsEnglish?'Bank message':'رسالة بنكية',
-         onTap:WaffraHaptics.tapRequired((){
-          unawaited(_launchAddAction(()=>bulkSmsSheet(),fromMenu:true));
-         })),
-        const SizedBox(height:7),
-        _addMenuOption(
-         icon:Icons.document_scanner_outlined,
-         label:waffraIsEnglish?'Scan receipt / image':'تصوير / استخراج فاتورة',
-         onTap:WaffraHaptics.tapRequired((){
-          unawaited(_launchAddAction(scanAndAddReceipt,fromMenu:true));
-         })),
-        ]else if(goalsOpened||tab==3)...[
-         _addMenuOption(icon:Icons.add_circle_outline_rounded,
-          label:waffraIsEnglish?'New savings goal':'إضافة هدف جديد',
-          onTap:WaffraHaptics.tapRequired((){
-           unawaited(_launchAddAction(()=>goalDialog(),fromMenu:true));
-          })),
-         const SizedBox(height:7),
-         _addMenuOption(icon:Icons.all_inclusive_rounded,
-          label:waffraIsEnglish?'Open-ended savings':'ادخار مفتوح بدون مستهدف',
-          onTap:WaffraHaptics.tapRequired((){
-           unawaited(_launchAddAction(()=>goalDialog(openEnded:true),fromMenu:true));
-          })),
-         if(goals.isNotEmpty)...[
-          const SizedBox(height:7),
-          _addMenuOption(icon:Icons.copy_all_outlined,
-           label:waffraIsEnglish?'Duplicate an existing goal':'تكرار هدف موجود',
-           onTap:WaffraHaptics.tapRequired((){
-            unawaited(_launchAddAction(_duplicateGoalFromMenu,fromMenu:true));
-           })),
-         ],
-        ]else if(tab==4)...[
-         _addMenuOption(icon:Icons.event_repeat_rounded,
-          label:waffraIsEnglish?'New recurring transaction':'إضافة عملية متكررة',
-          onTap:WaffraHaptics.tapRequired((){
-           unawaited(_launchAddAction(()=>recurringDialog(),fromMenu:true));
-          })),
-         if(recurring.isNotEmpty)...[
-          const SizedBox(height:7),
-          _addMenuOption(icon:Icons.copy_all_outlined,
-           label:waffraIsEnglish?'Duplicate recurring transaction':'تكرار عملية متكررة موجودة',
-           onTap:WaffraHaptics.tapRequired((){
-            unawaited(_launchAddAction(_duplicateRecurringFromMenu,fromMenu:true));
-           })),
-         ],
-        ]else...[
-         _addMenuOption(icon:Icons.trending_up,
-          label:waffraIsEnglish?'Income category':'إضافة قسم دخل',
-          onTap:WaffraHaptics.tapRequired((){unawaited(_launchAddAction(()=>chooseCategoryLevel(income:true),fromMenu:true));})),
-         const SizedBox(height:7),
-         _addMenuOption(icon:Icons.trending_down,
-          label:waffraIsEnglish?'Expense category':'إضافة قسم مصروفات',
-          onTap:WaffraHaptics.tapRequired((){unawaited(_launchAddAction(()=>chooseCategoryLevel(income:false),fromMenu:true));})),
-        ]
-       ]),
-     ),
    ]),
   // A fixed 58x58 FAB: pop-up menu is an independent body overlay.
   // Never allow a menu width to change Scaffold's floating geometry.
   floatingActionButtonLocation:WaffraDirectionalFabLocation(english:waffraIsEnglish),
   floatingActionButtonAnimator:const WaffraStationaryFabAnimator(),
-  floatingActionButton:!ready||accountOpened||tab==2?null:SizedBox(
+  floatingActionButton:!ready||accountOpened||tab==2?null:CompositedTransformTarget(
+   link:_fabOverlayAnchor,child:SizedBox(
    width:58,height:58,
    child:
     Material(
@@ -13024,7 +13001,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        turns:addFabExpanded?0.125:0,
        child:const Icon(Icons.add,color:Colors.white,size:28)))),
      )),
-   ),
+   )),
   // The notice reserves real layout height above the bottom footer.
   // The transaction list and the floating + reposition instead of being
   // covered by an overlay. The expanded + menu closes on feedback.
@@ -13041,6 +13018,97 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }),
    ),
   ])),
+  if(addFabExpanded&&!accountOpened&&!tourActive)...[
+   Positioned.fill(
+    key:const Key('waffra-fullscreen-fab-blur'),
+    child:ClipRect(child:BackdropFilter(
+     filter:ui.ImageFilter.blur(sigmaX:9,sigmaY:9),
+     child:GestureDetector(
+      behavior:HitTestBehavior.opaque,
+      onTap:WaffraHaptics.tap(()=>setState(()=>addFabExpanded=false)),
+      child:ColoredBox(color:Colors.black.withValues(alpha:.24))))),
+   ),
+    if(addFabExpanded&&!accountOpened&&(tab==0||tab==1||tab==3||tab==4||goalsOpened))
+     WaffraFabMenuAnchor(
+      english:waffraIsEnglish,
+      expanded:addFabExpanded,
+      link:_fabOverlayAnchor,
+      menu:Column(mainAxisSize:MainAxisSize.min,
+       crossAxisAlignment:waffraIsEnglish?CrossAxisAlignment.end:CrossAxisAlignment.start,
+       children:[
+        if(tab==0&&!goalsOpened)...[
+        _addMenuOption(
+         icon:Icons.edit_note_rounded,
+         label:waffraIsEnglish?'Manual transaction':'عملية يدوية',
+         onTap:WaffraHaptics.tapRequired((){
+          unawaited(_launchAddAction(()=>entrySheet(),fromMenu:true));
+         })),
+        const SizedBox(height:7),
+        _addMenuOption(
+         icon:Icons.sms_outlined,
+         label:waffraIsEnglish?'Bank message':'رسالة بنكية',
+         onTap:WaffraHaptics.tapRequired((){
+          unawaited(_launchAddAction(()=>bulkSmsSheet(),fromMenu:true));
+         })),
+        const SizedBox(height:7),
+        _addMenuOption(
+         icon:Icons.document_scanner_outlined,
+         label:waffraIsEnglish?'Scan receipt / image':'تصوير / استخراج فاتورة',
+         onTap:WaffraHaptics.tapRequired((){
+          unawaited(_launchAddAction(scanAndAddReceipt,fromMenu:true));
+         })),
+        ]else if(goalsOpened||tab==3)...[
+         _addMenuOption(icon:Icons.add_circle_outline_rounded,
+          label:waffraIsEnglish?'New savings goal':'إضافة هدف جديد',
+          onTap:WaffraHaptics.tapRequired((){
+           unawaited(_launchAddAction(()=>goalDialog(),fromMenu:true));
+          })),
+         if(goals.isNotEmpty)...[
+          const SizedBox(height:7),
+          _addMenuOption(icon:Icons.copy_all_outlined,
+           label:waffraIsEnglish?'Duplicate an existing goal':'تكرار هدف موجود',
+           onTap:WaffraHaptics.tapRequired((){
+            unawaited(_launchAddAction(_duplicateGoalFromMenu,fromMenu:true));
+           })),
+         ],
+        ]else if(tab==4)...[
+         _addMenuOption(icon:Icons.event_repeat_rounded,
+          label:waffraIsEnglish?'New recurring transaction':'إضافة عملية متكررة',
+          onTap:WaffraHaptics.tapRequired((){
+           unawaited(_launchAddAction(()=>recurringDialog(),fromMenu:true));
+          })),
+         if(recurring.isNotEmpty)...[
+          const SizedBox(height:7),
+          _addMenuOption(icon:Icons.copy_all_outlined,
+           label:waffraIsEnglish?'Duplicate recurring transaction':'تكرار عملية متكررة موجودة',
+           onTap:WaffraHaptics.tapRequired((){
+            unawaited(_launchAddAction(_duplicateRecurringFromMenu,fromMenu:true));
+           })),
+         ],
+        ]else...[
+         _addMenuOption(icon:Icons.trending_up,
+          label:waffraIsEnglish?'Income category':'إضافة قسم دخل',
+          onTap:WaffraHaptics.tapRequired((){unawaited(_launchAddAction(()=>chooseCategoryLevel(income:true),fromMenu:true));})),
+         const SizedBox(height:7),
+         _addMenuOption(icon:Icons.trending_down,
+          label:waffraIsEnglish?'Expense category':'إضافة قسم مصروفات',
+          onTap:WaffraHaptics.tapRequired((){unawaited(_launchAddAction(()=>chooseCategoryLevel(income:false),fromMenu:true));})),
+        ]
+       ]),
+     ),
+   Positioned.fill(
+    child:Align(alignment:Alignment.topLeft,
+     child:CompositedTransformFollower(
+      link:_fabOverlayAnchor,showWhenUnlinked:false,
+      targetAnchor:Alignment.topLeft,followerAnchor:Alignment.topLeft,
+      child:Material(color:forest,elevation:7,shape:const CircleBorder(),
+       child:InkWell(key:const Key('waffra-fab-menu-close'),
+        onTap:WaffraHaptics.tap(()=>setState(()=>addFabExpanded=false)),
+        customBorder:const CircleBorder(),
+        child:const SizedBox(width:58,height:58,
+         child:Icon(Icons.close_rounded,color:Colors.white,size:28)))))),
+   ),
+  ],
   if(tourActive&&tourTargetReady)Positioned.fill(child:tourOverlay()),
   // Outside Scaffold so the loading status never rebuilds the finance list.
   Positioned.fill(child:WaffraSmoothConfirmationOverlay(
@@ -13092,35 +13160,31 @@ class WaffraDeletedItemsButton extends StatelessWidget {
 class WaffraFabMenuAnchor extends StatelessWidget {
  const WaffraFabMenuAnchor({
   super.key,required this.english,required this.expanded,required this.menu,
+  required this.link,
  });
- final bool english;
- final bool expanded;
+ final bool english,expanded;
  final Widget menu;
-
- @override Widget build(BuildContext context)=>Positioned(
-  left:english?null:16,
-  right:english?16:null,
-  bottom:86, // FAB: 58 high + 16 bottom margin + 12 clear gap
-  child:IgnorePointer(
-   ignoring:!expanded,
-   child:AnimatedSwitcher(
-    duration:waffraMotion(280),
-    reverseDuration:waffraMotion(220),
-    switchInCurve:Curves.easeOutCubic,
-    switchOutCurve:Curves.easeInCubic,
-    layoutBuilder:(current,previous)=>Stack(
-     alignment:english?Alignment.bottomRight:Alignment.bottomLeft,
-     children:[...previous,if(current!=null)current],
-    ),
-    transitionBuilder:(child,animation)=>SizeTransition(
-     sizeFactor:animation,alignment:Alignment.bottomCenter,
-     child:FadeTransition(opacity:animation,child:child),
-    ),
-    child:expanded
-      ? KeyedSubtree(key:const ValueKey('waffra-fab-menu-open'),child:menu)
-      : const SizedBox(key:ValueKey('waffra-fab-menu-closed')),
-   ),
-  ),
+ final LayerLink link;
+ /// Follow the actual FAB's position, including the footer and system inset.
+ @override Widget build(BuildContext context)=>Positioned.fill(
+  child:Align(alignment:Alignment.topLeft,
+   child:CompositedTransformFollower(
+    link:link,showWhenUnlinked:false,
+    targetAnchor:english?Alignment.topRight:Alignment.topLeft,
+    followerAnchor:english?Alignment.bottomRight:Alignment.bottomLeft,
+    offset:const Offset(0,-12),
+    child:IgnorePointer(
+     ignoring:!expanded,
+     child:AnimatedSwitcher(
+      duration:waffraMotion(280),
+      reverseDuration:waffraMotion(220),
+      switchInCurve:Curves.easeOutCubic,
+      switchOutCurve:Curves.easeInCubic,
+      child:expanded?
+       KeyedSubtree(key:const ValueKey('waffra-fab-menu-open'),child:menu):
+       const SizedBox(key:ValueKey('waffra-fab-menu-closed')),
+     )),
+   )),
  );
 }
 
