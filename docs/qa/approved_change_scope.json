@@ -147,7 +147,7 @@
       },
       {
         "start": "class WaffraTransactionDetailsDialog extends StatelessWidget {",
-        "end": " class HomeScreen extends StatefulWidget {"
+        "end": "class HomeScreen extends StatefulWidget {"
       },
       {
         "start": " Widget tile(MoneyEntry e){",
