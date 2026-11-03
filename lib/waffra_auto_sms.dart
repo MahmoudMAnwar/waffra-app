@@ -1,112 +1,61 @@
 import 'dart:io';
 import 'package:flutter/services.dart';
 
-/// Explicit opt-in Android bank-SMS bridge. No network calls.
+/// Bridge between the native permission+encrypted queue and the existing
+/// atomic Waffra bank-SMS journal. Never sends messages to the network.
 abstract final class WaffraAutoSms {
  static const MethodChannel channel=MethodChannel('waffra/messages');
- static const firstRunKey='waffra_auto_sms_first_run_consent_v1';
- static Future<bool> enabled()async{
+ static const String firstRunKey='waffra_auto_sms_first_run_consent_v1';
+
+ static Future<bool> _boolCall(String action,[Object? input])async{
   if(!Platform.isAndroid)return false;
-  try{return await channel.invokeMethod<bool>('autoSmsEnabled')??false;}
-  on PlatformException{return false;}on MissingPluginException{return false;}
+  try{return await channel.invokeMethod<bool>(action,input)??false;}
+  on MissingPluginException{return false;}
+  on PlatformException{return false;}
  }
- static Future<bool> permissionGranted()async {
-  if(!Platform.isAndroid)return false;
-  try{return await channel.invokeMethod<bool>('autoSmsPermissionState')??false;}
-  on PlatformException{return false;}on MissingPluginException{return false;}
+ static Future<bool> enabled()=>_boolCall('autoSmsEnabled');
+ static Future<bool> permissionGranted()=>_boolCall('autoSmsPermissionState');
+ static Future<bool> notificationPermission()=>_boolCall('autoSmsNotificationsEnabled');
+ static Future<bool> requestNotificationPermission()=>_boolCall('requestAutoSmsNotifications');
+
+ static Future<bool> optIn()async{
+  if(!await _boolCall('requestAutoSmsPermission'))return false;
+  if(!await _boolCall('setAutoSmsEnabled',true))return false;
+  // An Android 13+ user may decline notifications; financial capture remains
+  // enabled but no system notification can be shown until consent is granted.
+  await requestNotificationPermission();
+  try{await channel.invokeMethod<int>('importRecentBankSms');}
+  on MissingPluginException{}on PlatformException{}
+  return true;
  }
- static Future<bool> optIn()async {
-  if(!Platform.isAndroid)return false;
+
+ static Future<bool> disable()=>_boolCall('setAutoSmsEnabled',false);
+
+ static Future<List<Map<String,Object?>>> pending()async{
+  if(!Platform.isAndroid)return const [];
   try{
-   final granted=await channel.invokeMethod<bool>('requestAutoSmsPermission')??false;
-   if(!granted)return false;
-   final enabled=await channel.invokeMethod<bool>('setAutoSmsEnabled',true)??false;
-   if(enabled){
-    await requestNotificationPermission();
-    await channel.invokeMethod<int>('importRecentBankSms');
-   }
-   return enabled;
-  }on PlatformException{return false;}on MissingPluginException{return false;}
+   final data=await channel.invokeMethod<List<dynamic>>('pendingAutoBankSms')??[];
+   return data.whereType<Map>().map((m)=>Map<String,Object?>.from(m)).toList();
+  }on MissingPluginException{return const [];}
+   on PlatformException{return const [];}
  }
- static Future<bool> notificationPermission()async{
-  if(!Platform.isAndroid)return false;
-  try{return await channel.invokeMethod<bool>('autoSmsNotificationsEnabled')??false;}
-  on PlatformException{return false;}on MissingPluginException{return false;}
- }
- static Future<bool> requestNotificationPermission()async{
-  if(!Platform.isAndroid)return false;
-  try{return await channel.invokeMethod<bool>('requestAutoSmsNotifications')??false;}
-  on PlatformException{return false;}on MissingPluginException{return false;}
+ static Future<bool> acknowledge(List<String> ids)async{
+  if(ids.isEmpty||ids.length>100)return false;
+  return _boolCall('ackAutoBankSms',ids);
  }
  static Future<bool> notifyCommitted({
   required String hash,required double amount,required bool income,
   required bool linkedBudget,
  })async{
-  if(!Platform.isAndroid||!RegExp(r'^[a-f0-9]{64}
-  if(!Platform.isAndroid)return false;
-  try{return await channel.invokeMethod<bool>('setAutoSmsEnabled',false)??false;}
-  on PlatformException{return false;}on MissingPluginException{return false;}
- }
- static Future<List<Map<String,Object?>>> pending()async{
-  if(!Platform.isAndroid)return [];
-  try{
-   final rows=await channel.invokeMethod<List<dynamic>>('pendingAutoBankSms')??[];
-   return rows.whereType<Map>().map((m)=>Map<String,Object?>.from(m)).toList();
-  }on PlatformException{return [];}on MissingPluginException{return [];}
- }
- static Future<bool> acknowledge(List<String> ids)async{
-  if(!Platform.isAndroid||ids.isEmpty)return false;
-  try{return await channel.invokeMethod<bool>('ackAutoBankSms',ids)??false;}
-  on PlatformException{return false;}on MissingPluginException{return false;}
- }
-}
-).hasMatch(hash)||
-     !amount.isFinite||amount<=0)return false;
-  try{
-   return await channel.invokeMethod<bool>('notifyAutoSmsSaved',{
-    'hash':hash,'amount':amount.toStringAsFixed(2),
-    'income':income,'linkedBudget':linkedBudget,
-   })??false;
-  }on PlatformException{return false;}on MissingPluginException{return false;}
+  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(hash)||!amount.isFinite||amount<=0)
+   return false;
+  return _boolCall('notifyAutoSmsSaved',{
+   'hash':hash,'amount':amount.toStringAsFixed(2),
+   'income':income,'linkedBudget':linkedBudget,
+  });
  }
  static Future<bool> notifyReview(String hash)async{
-  if(!Platform.isAndroid||!RegExp(r'^[a-f0-9]{64}
-  if(!Platform.isAndroid)return false;
-  try{return await channel.invokeMethod<bool>('setAutoSmsEnabled',false)??false;}
-  on PlatformException{return false;}on MissingPluginException{return false;}
- }
- static Future<List<Map<String,Object?>>> pending()async{
-  if(!Platform.isAndroid)return [];
-  try{
-   final rows=await channel.invokeMethod<List<dynamic>>('pendingAutoBankSms')??[];
-   return rows.whereType<Map>().map((m)=>Map<String,Object?>.from(m)).toList();
-  }on PlatformException{return [];}on MissingPluginException{return [];}
- }
- static Future<bool> acknowledge(List<String> ids)async{
-  if(!Platform.isAndroid||ids.isEmpty)return false;
-  try{return await channel.invokeMethod<bool>('ackAutoBankSms',ids)??false;}
-  on PlatformException{return false;}on MissingPluginException{return false;}
- }
-}
-).hasMatch(hash))return false;
-  try{return await channel.invokeMethod<bool>('notifyAutoSmsNeedsReview',hash)??false;}
-  on PlatformException{return false;}on MissingPluginException{return false;}
- }
- static Future<bool> disable()async{
-  if(!Platform.isAndroid)return false;
-  try{return await channel.invokeMethod<bool>('setAutoSmsEnabled',false)??false;}
-  on PlatformException{return false;}on MissingPluginException{return false;}
- }
- static Future<List<Map<String,Object?>>> pending()async{
-  if(!Platform.isAndroid)return [];
-  try{
-   final rows=await channel.invokeMethod<List<dynamic>>('pendingAutoBankSms')??[];
-   return rows.whereType<Map>().map((m)=>Map<String,Object?>.from(m)).toList();
-  }on PlatformException{return [];}on MissingPluginException{return [];}
- }
- static Future<bool> acknowledge(List<String> ids)async{
-  if(!Platform.isAndroid||ids.isEmpty)return false;
-  try{return await channel.invokeMethod<bool>('ackAutoBankSms',ids)??false;}
-  on PlatformException{return false;}on MissingPluginException{return false;}
+  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(hash))return false;
+  return _boolCall('notifyAutoSmsNeedsReview',hash);
  }
 }
