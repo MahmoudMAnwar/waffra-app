@@ -127,7 +127,7 @@ exports.analyzeWaffraBankSms = onCall({...smsOptions, secrets: [smsKey]},
     try {
       return await suggestFromBankSms({
         data: request.data, enabled: true,
-        apiKey: smsKey.value(), model: process.env.WAFFRA_SMS_LLM_MODEL,
+        apiKey: smsKey.value(), model: process.env.WAFFRA_SMS_LLM_MODEL || 'openai/gpt-4.1-mini',
       });
     } catch (_) {
       // Do not log the message, model response, merchant, account, or prompt.
