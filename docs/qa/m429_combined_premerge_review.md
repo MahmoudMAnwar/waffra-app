@@ -38,3 +38,11 @@ Persisted entries retain their `MoneyEntry.sourceType`. Both compact transaction
 Release remains blocked on exact-head CI, month-bounded import and sender count tests, signed hardware back-navigation/RTL checks, and data migration parity. Grouping only covers the **pending review SMS inbox**, not historical saved-transaction grouping by sender, because the older finance schema does not contain a verified sender on each saved transaction.
 
 M434 follow-up: transaction edit form now also presents the immutable saved sourceType with a manual/SMS distinction. Encrypted originals remain readable only through the separately gated details viewer; there is no guessing or automatic provenance relabeling.
+
+## M435 — branded merchants, zero-cost opt-in provider
+
+The curated merchant directory shows a local Arabic/English searchable list and a safe initial avatar. Explicitly selecting a known brand in the existing transaction editor updates only the existing merchantKey on the user's next confirmed save. No account amount, SMS body, merchant ledger or historic record is silently rewritten. Home/list and details show the logo or monogram, without changing their sourceType or protected original SMS.
+
+Optional Brandfetch Free Logo API: use the `WAFFRA_BRANDFETCH_CLIENT_ID` public compile-time setting only after creating a free developer client ID and verifying direct hotlinking, Referer/origin requirement and license terms on a signed Android APK. Do not scrape, proxy or persist copied logo images. No request contains bank SMS, payment identifiers or monetary details. Without the client ID, every logo gracefully displays a local monogram. Catalog is a small curated starting set; do not promise coverage of every merchant or infer a trademark from an ambiguous descriptor.
+
+QA: run `test/m435_merchant_brand_directory_test.dart`, M429 exact-head contract, local/offline/error fallback, Arabic aliases, wrong-brand avoidance, edit/save rollback, read-only old finance migration, Android original-SMS access protection, and Google Play brand-rights review. The free logo integration is NOT live until provider setup and signed-device verification pass.
