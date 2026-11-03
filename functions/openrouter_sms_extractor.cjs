@@ -124,7 +124,6 @@ async function suggestFromBankSms({
       headers: {
         Authorization: 'Bearer ' + apiKey,
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://waffra.app',
         'X-Title': 'Waffra Secure SMS Extraction',
       },
       body: JSON.stringify(payload),
