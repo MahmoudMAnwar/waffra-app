@@ -246,7 +246,8 @@ jobs:
           template=Path('native/WaffraMainActivity.kt').read_text()
           assert 'waffra/privacy' in template and 'waffra/messages' in template
           activity.write_text(template)
-          for filename in ('WaffraAutoSmsStore.kt', 'WaffraAutoSmsReceiver.kt'):
+          for filename in ('WaffraAutoSmsStore.kt', 'WaffraAutoSmsReceiver.kt',
+                           'WaffraAutoSmsWorker.kt', 'WaffraAutoSmsNotifications.kt'):
               (activity.parent/filename).write_text((Path('native')/filename).read_text())
 
           manifest=Path('android/app/src/main/AndroidManifest.xml')
@@ -281,6 +282,14 @@ jobs:
           '''
           if 'com.waffra.app.WaffraAutoSmsReceiver' not in xml:
               xml=xml.replace('</application>',receiver+'\n    </application>',1)
+          # WorkManager executes the same verified Dart finance source after
+          # receiving SMS while the UI is closed. No new native ledger writes.
+          gradle=Path('android/app/build.gradle.kts')
+          script=gradle.read_text()
+          dep='implementation("androidx.work:work-runtime-ktx:2.11.2")'
+          if dep not in script:
+              script+='\n// M418 opt-in bank SMS background finance verification\ndependencies { '+dep+' }\n'
+              gradle.write_text(script)
           manifest.write_text(xml)
           assert all('android.permission.'+p in xml for p in ('READ_SMS','RECEIVE_SMS'))
           assert 'WaffraAutoSmsReceiver' in xml and 'READ_CALL_LOG' not in xml
