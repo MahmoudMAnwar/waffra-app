@@ -3563,7 +3563,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      _financeLoadFailure!=null)return;
   _autoSmsReviewOpen=true;
   try{
-   // Explicit review only: never auto-analyze or auto-post.
+   // Cloud AI may suggest after separate opt-in. Financial posting is always manual.
    final items=await WaffraAutoSms.pending();
    if(!mounted||items.isEmpty)return;
    Map<String,Object?>? selected;
