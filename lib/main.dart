@@ -70,6 +70,7 @@ import 'waffra_footer.dart';
 import 'waffra_messages.dart';
 import 'waffra_auto_sms.dart';
 import 'waffra_auto_sms_policy.dart';
+import 'waffra_bank_sms_facts.dart';
 import 'waffra_auto_sms_consent.dart';
 import 'waffra_recurring_policy.dart';
 import 'waffra_cross_source_duplicate_review.dart';
@@ -3258,12 +3259,30 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final id=selected['id'],body=selected['body'];
    final sender=selected['sender'] is String?selected['sender'] as String:'';
    if(id is! String||body is! String)return;
+   final facts=WaffraBankSmsFactsParser.parse(body);
+   final operationName=switch(facts.kind){
+    WaffraBankOperationKind.transfer=>waffraIsEnglish?'Bank transfer':'تحويل بنكي',
+    WaffraBankOperationKind.cardSettlement=>waffraIsEnglish?'Card settlement':'سداد بطاقة',
+    WaffraBankOperationKind.income=>waffraIsEnglish?'Income':'دخل',
+    WaffraBankOperationKind.expense=>waffraIsEnglish?'Expense':'مصروف',
+    WaffraBankOperationKind.uncertain=>waffraIsEnglish?'Unknown':'غير محدد',
+   };
+   final source=facts.sourceSuffix;
+   final destination=facts.destinationSuffix;
+   final summary=<String>[
+    (waffraIsEnglish?'Detected type: ':'نوع العملية: ')+operationName,
+    if(source!=null)(waffraIsEnglish?'From account: ':'من الحساب: ')+'••••'+source,
+    if(destination!=null)(waffraIsEnglish?'To account: ':'إلى الحساب: ')+'••••'+destination,
+    if(facts.fee!=null&&facts.fee!>0)
+     (waffraIsEnglish?'Separate fee: ':'رسوم مستقلة: ')+facts.fee!.toStringAsFixed(2)+' SAR',
+   ].join('\n');
    final decision=await showWaffraDialog<String>(context:context,
     builder:(dialog)=>AlertDialog(
      title:WaffraText(waffraIsEnglish?'Bank SMS needs review':'رسالة بنكية تحتاج مراجعة'),
-     content:WaffraText(waffraIsEnglish?
-      'Waffra could not verify the transaction automatically for $sender. Review the amount, direction and budget before saving.':
-      'وفرة لم يقدر يؤكد العملية تلقائيًا من $sender. راجع المبلغ ونوع العملية والميزانية قبل الحفظ.'),
+     content:WaffraText((waffraIsEnglish?
+      'A financial SMS from $sender requires review before saving.':
+      'وصلت رسالة مالية من $sender وتحتاج مراجعة قبل الحفظ.')
+      +'\n\n'+summary),
      actions:[
       TextButton(onPressed:()=>Navigator.pop(dialog),
        child:WaffraText(waffraIsEnglish?'Later':'لاحقًا')),
