@@ -33,6 +33,16 @@ void main() {
     expect(main,contains('Changing a sign-in phone requires verified account migration'));
   });
 
+  test('M442: concise sign-up profile screen excludes redundant helper text', () {
+    final main=File('lib/main.dart').readAsStringSync();
+    final section=main.substring(
+      main.indexOf("WaffraText(waffraIsEnglish?'2. Complete your profile'"),
+      main.indexOf('TextField(controller:name,onChanged:',main.indexOf("WaffraText(waffraIsEnglish?'2. Complete your profile'")));
+    expect(section,isNot(contains('مش محتاج تكتب إيميل أو تاريخ ميلاد')));
+    expect(section,isNot(contains('No email or date of birth required')));
+    expect(section,contains('const SizedBox(height:14)'));
+  });
+
   testWidgets('M441: concise SMS permission keeps meaningful cloud choice',
     (tester) async {
     await tester.pumpWidget(MaterialApp(home:WaffraAutoSmsConsentPage(
