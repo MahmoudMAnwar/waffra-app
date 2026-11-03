@@ -126,6 +126,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Syntax-check Firebase Callable and OpenRouter code
+        run: |
+          node --check functions/index.js
+          node --check functions/openrouter_sms_extractor.cjs
       - name: Confirm server-side extraction tests without remote API usage
         run: node --test functions/test/openrouter_sms_extractor.test.cjs
       - name: Ensure no client OpenRouter keys or public cloud endpoint are exposed
