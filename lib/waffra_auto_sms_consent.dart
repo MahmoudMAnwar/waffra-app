@@ -61,22 +61,22 @@ class _WaffraAutoSmsConsentPageState extends State<WaffraAutoSmsConsentPage> {
      style:Theme.of(context).textTheme.headlineSmall?.copyWith(
       fontWeight:FontWeight.bold)),
     const SizedBox(height:18),
-    Text(en?'When bank SMS arrive, Waffra automatically records verified '
-     'income and expenses, matches your previous budget rules, and sends a '
-     'phone notification after saving. Uncertain transactions require review.':
-     'لما توصلك رسالة بنكية، وفرة هيسجل الدخل والمصروف المؤكد تلقائيًا '
-     'ويربط الميزانية حسب اختياراتك السابقة، ويبعت إشعار بعد الحفظ. '
-     'أي عملية مش مؤكدة هتحتاج مراجعتك.',
+    Text(en?'Waffra queues bank SMS from the first day of the month you '
+     'activate tracking and every new SMS. You must review and approve each '
+     'transaction before it changes your balance.':
+     'وفرة هيجمع الرسائل البنكية من أول يوم في شهر التفعيل وكمان الرسائل '
+     'الجديدة ويحطها تحت عمليات تحتاج مراجعة. مش هيتسجل أي دخل أو '
+     'مصروف تلقائيًا إلا بعد مراجعتك وتأكيدك.',
      textAlign:TextAlign.center),
     const SizedBox(height:14),
-    Text(en?'Allowing bank SMS also authorizes automatic recording of '
-     'high-confidence financial transactions and local notifications. '
-     'Bank messages stay encrypted on this device. This SMS permission '
+    Text(en?'Allowing bank SMS enables encrypted local review and private '
+     'notification of new candidate messages, not automatic posting. '
+     'Bank messages stay encrypted on this device. This SMS permission 
      'does not send them to cloud AI unless you select cloud analysis. '
      'OpenRouter may process redacted financial data outside Saudi Arabia. '
      'OTPs and personal messages are excluded.':
-     'بالموافقة تسمح لوفرة بتسجيل المعاملات المؤكدة تلقائيًا وإرسال إشعار '
-     'بعد حفظها. الرسائل المالية محفوظة مشفّرة على جهازك. صلاحية الرسائل '
+     'بالموافقة تسمح لوفرة بتجميع الرسائل للمراجعة وإشعارك بالجديد '
+     'بدون تسجيل تلقائي. الرسائل محفوظة مشفّرة على جهازك. صلاحية الرسائل 
      'لوحدها لا تسمح برفعها لخدمة سحابية؛ اختر الخيار السحابي للموافقة '
      'على إرسال البيانات المالية المحجوبة إلى OpenRouter وقد تتم معالجتها خارج السعودية. '
      'نستبعد رموز التحقق والرسائل الشخصية.',
