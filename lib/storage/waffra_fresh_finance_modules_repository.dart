@@ -111,6 +111,13 @@ class WaffraFreshModulesRepository {
         if(data['active'] != null && data['active'] is! bool){
           throw ArgumentError('Invalid goal active flag.');
         }
+        if((data['alertEnabled']!=null&&data['alertEnabled'] is! bool)||
+           (data['alertPercent']!=null&&
+            (data['alertPercent'] is! int||
+             (data['alertPercent'] as int)<1||
+             (data['alertPercent'] as int)>100))){
+          throw ArgumentError('Invalid goal progress alert controls.');
+        }
         break;
       case WaffraFinanceModule.recurring:
         if (data['income'] is! bool) throw ArgumentError('Recurring type is mandatory.');
@@ -131,6 +138,9 @@ class WaffraFreshModulesRepository {
         }
         if (data['active'] != null && data['active'] is! bool) {
           throw ArgumentError('Recurring active flag is invalid.');
+        }
+        if(data['reminderEnabled']!=null&&data['reminderEnabled'] is! bool){
+          throw ArgumentError('Invalid recurring reminder control.');
         }
         break;
     }
