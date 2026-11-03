@@ -5,10 +5,28 @@ void main(){
  const debit='Card Purchase: SAR 75.00 at TEST FUEL station';
  const credit='Credit Transfer via Alinma Bank Amount: SAR 1900.00';
  final arrived=DateTime(2026,11,3,8,50);
- test('confirmed Alinma credit qualifies as income',(){
+ test('incoming credit transfer requires account-aware review',(){
   final result=WaffraAutoSmsPolicy.decide(sender:'ALINMA',sms:credit,
    parsedAmount:1900,parsedIncome:true,foreignCurrency:false,arrived:arrived);
+  expect(result.canPost,isFalse);
+  expect(result.reason,'requires_transfer_or_fee_ledger');
+ });
+ test('completed SAR refund can be posted as income',(){
+  final result=WaffraAutoSmsPolicy.decide(sender:'ALINMA',
+   sms:'Refund Received Amount: SAR 90.00',
+   parsedAmount:90.0,parsedIncome:true,foreignCurrency:false,
+   arrived:arrived);
   expect(result.canPost,isTrue);
+ });
+ test('wallet transfer with a separately quoted fee cannot debit cash',(){
+  final result=WaffraAutoSmsPolicy.decide(sender:'ALINMA',
+   sms:'عملية حوالة مالية صادرة مقبولة\\n'
+       'خصمت من محفظة: **8308\\n'
+       'القيمة: SAR 882.00\\n'
+       'الرسوم: SAR 0.58',
+   parsedAmount:882.0,parsedIncome:false,foreignCurrency:false,
+   arrived:arrived);
+  expect(result.canPost,isFalse);
  });
  test('confirmed bank purchase qualifies as expense',(){
   final result=WaffraAutoSmsPolicy.decide(sender:'ALRAJHI',sms:debit,
