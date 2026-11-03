@@ -3375,7 +3375,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final selected=await showModalBottomSheet<String>(
    context:context,isScrollControlled:true,showDragHandle:true,
    builder:(sheet)=>StatefulBuilder(
-    builder:(ctx,refresh)=>SafeArea(
+    builder:(ctx,refresh)=>PopScope(
+     canPop:selectedSender==null,
+     onPopInvokedWithResult:(didPop,result){
+      if(!didPop&&selectedSender!=null){
+       refresh(()=>selectedSender=null);
+      }
+     },
+     child:SafeArea(
      child:SizedBox(height:MediaQuery.sizeOf(ctx).height*.74,
       child:Column(children:[
        Row(children:[
@@ -3442,6 +3449,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          textAlign:TextAlign.center)),
       ]),
      ),
+    ),
     ),
    ),
   );
