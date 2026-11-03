@@ -29,6 +29,12 @@ on:
       # M127: isolated signed QA artifact only; never auto-release or deploy.
       - 'feature/m127-approved-ui-and-safe-backup-build'
   workflow_dispatch:
+    inputs:
+      sms_staging_worker:
+        description: 'Owner QA APK on main only: enable Firebase App Check Cloudflare SMS staging'
+        required: false
+        type: boolean
+        default: false
 
 # Fast-build concurrency: only the latest pushed revision needs an APK.
 # Separate full-smoke workflow runs independently without skipped steps.
@@ -413,6 +419,9 @@ jobs:
           template=Path('native/WaffraMainActivity.kt').read_text()
           assert 'waffra/privacy' in template and 'waffra/messages' in template
           activity.write_text(template)
+          for filename in ('WaffraAutoSmsStore.kt', 'WaffraAutoSmsReceiver.kt',
+                           'WaffraAutoSmsWorker.kt', 'WaffraAutoSmsNotifications.kt'):
+              (activity.parent/filename).write_text((Path('native')/filename).read_text())
 
           manifest=Path('android/app/src/main/AndroidManifest.xml')
           xml=manifest.read_text()
@@ -430,9 +439,34 @@ jobs:
                   raise SystemExit('Could not locate generated MainActivity')
               xml=xml[:close]+filter_xml+chr(10)+'    '+xml[close:]
               manifest.write_text(xml)
-          if re.search(r'<uses-permission[^>]*\\b(?:READ_SMS|RECEIVE_SMS|READ_CALL_LOG)\\b',xml):
-              raise SystemExit('SMS inbox permissions must never be requested')
-          print('Enabled user-triggered text sharing and messaging launch without inbox access')
+          # M417 draft-only: sensitive SMS access requires Play review before release.
+          for permission in ('READ_SMS', 'RECEIVE_SMS'):
+              entry=f'<uses-permission android:name="android.permission.{permission}" />'
+              if entry not in xml:
+                  xml=xml.replace('<application','    '+entry+'\n    <application',1)
+          receiver='''
+              <receiver android:name="com.waffra.app.WaffraAutoSmsReceiver"
+                  android:exported="true"
+                  android:permission="android.permission.BROADCAST_SMS">
+                  <intent-filter>
+                      <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+                  </intent-filter>
+              </receiver>
+          '''
+          if 'com.waffra.app.WaffraAutoSmsReceiver' not in xml:
+              xml=xml.replace('</application>',receiver+'\n    </application>',1)
+          # WorkManager executes the same verified Dart finance source after
+          # receiving SMS while the UI is closed. No new native ledger writes.
+          gradle=Path('android/app/build.gradle.kts')
+          script=gradle.read_text()
+          dep='implementation("androidx.work:work-runtime-ktx:2.11.2")'
+          if dep not in script:
+              script+='\n// M418 opt-in bank SMS background finance verification\ndependencies { '+dep+' }\n'
+              gradle.write_text(script)
+          manifest.write_text(xml)
+          assert all('android.permission.'+p in xml for p in ('READ_SMS','RECEIVE_SMS'))
+          assert 'WaffraAutoSmsReceiver' in xml and 'READ_CALL_LOG' not in xml
+          print('M417 draft: opt-in, scoped SMS bank intake; Play approval pending')
           PY
 
       - name: Install native Firebase Auth SDK dependency (M219)
@@ -902,9 +936,20 @@ jobs:
           else
             echo "::warning::WAFFRA_PUBLIC_EIA_KEY is not configured; oil quotes will depend on unkeyed FRED CSV availability"
           fi
+          # M432: Only a manual exact-main QA APK can use the public staging URL.
+          # Normal main push APKs and all AABs remain cloud SMS disabled.
+          sms_define=()
+          if [[ "${{ inputs.sms_staging_worker }}" == "true" && "${{ github.ref }}" != "refs/heads/main" ]]; then
+            echo "::error::Cloud SMS staging APK is allowed only from main"
+            exit 1
+          fi
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.ref }}" == "refs/heads/main" && "${{ inputs.sms_staging_worker }}" == "true" ]]; then
+            sms_define+=(--dart-define="WAFFRA_SMS_WORKER_URL=https://waffra-sms-appcheck-staging.mahmoudmanwar159.workers.dev/analyze")
+            echo "Owner-only QA: signed App Check staging transport configured using a PUBLIC endpoint"
+          fi
           for attempt in 1 2 3 4; do
             echo "Android ARM64 build attempt ${attempt}/4"
-            if flutter build apk --no-pub --release --target-platform android-arm64 --tree-shake-icons "${eia_define[@]}"; then
+            if flutter build apk --no-pub --release --target-platform android-arm64 --tree-shake-icons "${eia_define[@]}" "${sms_define[@]}"; then
               elapsed=$(( $(date +%s) - started ))
               printf 'ARM64 build command: **%s seconds** (including retries, if any).\n' "$elapsed" >> "$GITHUB_STEP_SUMMARY"
               echo "WAFFRA_ARM64_BUILD_SECONDS=$elapsed"

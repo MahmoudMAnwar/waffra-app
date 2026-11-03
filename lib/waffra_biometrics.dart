@@ -36,6 +36,24 @@ class WaffraBiometrics {
     }
   }
 
+  /// Required per-session biometric OS challenge. Does not allow a device
+  /// credential/PIN fallback and does not continue silently in background.
+  static Future<bool> unlockMandatory() async {
+    try {
+      if (!await isAvailable()) return false;
+      return await _auth.authenticate(
+        localizedReason: 'أكد ببصمة جهازك فتح وفرة',
+        options: const AuthenticationOptions(
+          biometricOnly: true,
+          stickyAuth: false,
+          useErrorDialogs: true,
+        ),
+      );
+    } on PlatformException {
+      return false;
+    }
+  }
+
   static Future<bool> unlock() async {
     try {
       if (!await isAvailable()) return false;

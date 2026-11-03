@@ -36,6 +36,9 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:crypto/crypto.dart';
 import 'waffra_biometrics.dart';
+import 'waffra_mandatory_biometric_gate.dart';
+import 'waffra_local_phone_credentials.dart';
+import 'waffra_local_account_migration.dart';
 import 'waffra_amount_formatter.dart';
 import 'waffra_display_currency.dart';
 import 'waffra_phone_country_codes.dart';
@@ -68,6 +71,12 @@ import 'waffra_goal_catalog.dart';
 import 'waffra_pdf_reader.dart';
 import 'waffra_footer.dart';
 import 'waffra_messages.dart';
+import 'waffra_merchant_brands.dart';
+import 'waffra_auto_sms.dart';
+import 'waffra_auto_sms_policy.dart';
+import 'waffra_bank_sms_facts.dart';
+import 'waffra_sms_cloud_service.dart';
+import 'waffra_auto_sms_consent.dart';
 import 'waffra_recurring_policy.dart';
 import 'waffra_cross_source_duplicate_review.dart';
 import 'waffra_secure_backup.dart';
@@ -99,6 +108,7 @@ part 'waffra_recurring_trash.part.dart';
 part 'waffra_goal_recurring_actions.part.dart';
 part 'waffra_deleted_item_card.part.dart';
 part 'waffra_widget_capture.part.dart';
+part 'waffra_auto_sms_autopost.part.dart';
 
 Future<Map<String,dynamic>> waffraDecodeBackupInIsolate(Map<String,String> request) async {
  final decoded=jsonDecode(await WaffraSecureBackup.decrypt(
@@ -117,6 +127,27 @@ const bool waffraCompileOnlyQaPreview =
 String waffraGooglePreviewNotice(bool english)=>english
  ?'Google sign-in needs the signed Waffra build. Try guest mode in this preview.'
  :'دخول جوجل يتطلب نسخة وفرة الموقّعة. استخدم وضع الضيف للمعاينة.';
+
+/// A short-lived background FlutterEngine executes the very same verified
+/// Home/Widget finance writer after Android schedules receipt of bank SMS.
+/// No UI tree, no new database and no cloud inference in the background.
+@pragma('vm:entry-point')
+void waffraAutoSmsBackgroundEntrypoint() {
+ WidgetsFlutterBinding.ensureInitialized();
+ const bridge=MethodChannel('waffra/auto_sms_worker');
+ bridge.setMethodCallHandler((call)async{
+  if(call.method!='process')return false;
+  try{
+   await WaffraAutoSmsAutoPoster.run();
+   return true;
+  }catch(_){
+   // Do not log banking text or claim it was recorded. WorkManager may retry
+   // with the same encrypted candidate and atomic duplicate hash.
+   return false;
+  }
+ });
+ unawaited(bridge.invokeMethod<void>('ready'));
+}
 
 Future<void> main()async {
  WidgetsFlutterBinding.ensureInitialized();
@@ -1004,6 +1035,7 @@ String waffraCountrySetupKey(Person user){
 class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  bool loading=true,onboarded=false,dark=false,locked=false,showLogin=false;
  bool googleFirstRunSetup=false;
+ bool autoSmsConsentPending=false;
  String appearance='light';
  bool introDone=false;
  int _greetingCycle=0;
@@ -1021,12 +1053,13 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  }
  DateTime? _backgroundAt;
  @override void didChangeAppLifecycleState(AppLifecycleState state){
-  if(state==AppLifecycleState.paused||state==AppLifecycleState.hidden){_backgroundAt=DateTime.now();}
-  // Returning from Android notification permission must not change the active tab.
-  if(state==AppLifecycleState.resumed&&pinHash!=null&&!locked&&_backgroundAt!=null){
-   final away=DateTime.now().difference(_backgroundAt!);
-   _backgroundAt=null;
-   if(away>=const Duration(seconds:30)&&mounted)setState(()=>locked=true);
+  if(state==AppLifecycleState.resumed){_backgroundAt=null;return;}
+  // Immediately lock whenever Waffra loses foreground focus.
+  if(WaffraBiometricSessionGuard.mustLockOn(state)){
+   _backgroundAt??=DateTime.now();
+   if(mounted&&profile!=null&&!showLogin&&!locked){
+    setState(()=>locked=true);
+   }
   }
  }
  @override void dispose(){WaffraRegionalCopy.countryIso.removeListener(_onRegionChanged);
@@ -1079,20 +1112,22 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     profile=u;
     googleFirstRunSetup=waffraGoogleProfileReadyForCountrySetup(u)&&
       !(p.getBool(waffraCountrySetupKey(u!))??false);
+    autoSmsConsentPending=Platform.isAndroid&&
+     !(p.getBool(WaffraAutoSms.firstRunKey)??false);
     pinHash=p.getString('waffra_pin_sha256');
-    locked=pinHash!=null;startupError=null;loading=false;
+    locked=u!=null;startupError=null;loading=false;
    });
   }catch(e){
    debugPrint('Waffra startup failed: $e');
    if(mounted)setState((){startupError=e.toString();loading=false;});
   }
  }
- Future<void> quickStart()async {
+ Future<void> finishSmsPermissionChoice()async{
   final p=await SharedPreferences.getInstance();
-  await p.setBool('waffra_onboarding_completed',true);
-  final u=profile??Person(name:'',email:'',provider:'محلي',gender:'',avatar:'person',birthday:DateTime(2000));
-  await saveUser(u);
-  if(mounted)setState((){onboarded=true;showLogin=false;});
+  if(!await p.setBool(WaffraAutoSms.firstRunKey,true)){
+   throw StateError('Could not persist SMS onboarding decision');
+  }
+  if(mounted)setState(()=>autoSmsConsentPending=false);
  }
  Future<void> intro()async {
   final p=await SharedPreferences.getInstance();await p.setBool('waffra_onboarding_completed',true);
@@ -1116,7 +1151,11 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   final needsGoogleSetup=waffraGoogleProfileReadyForCountrySetup(u)&&
     !(prefs.getBool(waffraCountrySetupKey(u))??false);
   if(mounted)setState((){
+   // First phone/password login and new registration require biometrics.
+   // Editing a profile in an already-unlocked session does not re-lock.
+   final freshSession=profile==null||showLogin;
    profile=u;showLogin=false;googleFirstRunSetup=needsGoogleSetup;
+   if(freshSession)locked=true;
   });
  }
  Future<void> setUiCountry(String? iso)async{
@@ -1134,6 +1173,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   if(mounted)setState(()=>googleFirstRunSetup=false);
  }
  Future<void> logout()async {
+  // Never capture bank messages for a profile after sign-out.
+  await WaffraAutoSms.disable();
   // Drop any in-memory AI prompt context and cancel model download before
   // a new account can open its verified finance scope.
   try{await WaffraOnDeviceQwen.shared.dispose();}catch(_){}
@@ -1391,8 +1432,24 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     const SizedBox(height:8),
     FilledButton(onPressed:WaffraHaptics.tap((){setState((){loading=true;startupError=null;});load();}),child:const WaffraText('إعادة المحاولة')),
    ])))):
-   locked?PinLockScreen(pinHash:pinHash!,onUnlock:()=>setState(()=>locked=false)):
-   profile==null||showLogin?LoginScreen(onSave:saveUser):
+   autoSmsConsentPending?WaffraAutoSmsConsentPage(
+    english:language=='en',onComplete:finishSmsPermissionChoice):
+   profile==null||showLogin||((profile!.phone.trim().isEmpty)&&
+    (profile!.provider.toLowerCase().contains('local')||
+     profile!.provider.contains('محلي')||
+     profile!.provider.toLowerCase().contains('guest')||
+     profile!.provider.toLowerCase().contains('demo')))?LoginScreen(onSave:saveUser):
+   locked?WaffraMandatoryBiometricGate(
+    english:language=='en',
+    onVerified:(){
+     final lifecycle=WidgetsBinding.instance.lifecycleState;
+     if(mounted&&WaffraBiometricSessionGuard.canReveal(
+       authenticated:true,inForeground:lifecycle==AppLifecycleState.resumed)){
+      setState(()=>locked=false);
+     }
+    },
+    onSignOut:logout,
+   ):
    googleFirstRunSetup?WaffraCountryFirstRunPage(
      english:language=='en',onComplete:completeGoogleCountrySetup,
      onCountryConfirmed:setUiCountry):
@@ -1885,19 +1942,34 @@ class _LoginScreenState extends State<LoginScreen> {
  Future<void> _signIn()async{
   if(signingIn)return;
   setState(()=>signInAttempted=true);
-  if(waffraMobileFieldError(signInPhone.text)!=null||signInPassword.text.isEmpty)return;
+  if(waffraMobileFieldError(signInPhone.text)!=null||
+     signInPassword.text.isEmpty)return;
   setState(()=>signingIn=true);
   try{
-   final p=await SharedPreferences.getInstance();
-   final salt=p.getString('waffra_local_password_salt');
-   final expected=p.getString('waffra_local_password_hash');
    final account=registered;
-   if(account==null||salt==null||expected==null||signInPhone.text.trim()!=account.phone||
-     sha256.convert(utf8.encode('$salt:${signInPassword.text}')).toString()!=expected){
-    if(mounted)setState(()=>signInAuthError=waffraIsEnglish?'Incorrect phone number or password':'رقم الجوال أو كلمة المرور غير صحيحة');return;
+   if(account==null||signInPhone.text.trim()!=account.phone){
+    if(mounted)setState(()=>signInAuthError=waffraIsEnglish?
+     'Incorrect mobile number or password':'رقم الجوال أو كلمة المرور غير صحيحة');
+    return;
+   }
+   final prefs=await SharedPreferences.getInstance();
+   final match=await WaffraLocalPhoneCredentials.verify(
+    phone:signInPhone.text.trim(),password:signInPassword.text,
+    oldSalt:prefs.getString('waffra_local_password_salt'),
+    oldHash:prefs.getString('waffra_local_password_hash'));
+   if(!match){
+    if(mounted)setState(()=>signInAuthError=waffraIsEnglish?
+     'Incorrect mobile number or password':'رقم الجوال أو كلمة المرور غير صحيحة');
+    return;
    }
    await widget.onSave(account);
-  }finally{if(mounted)setState(()=>signingIn=false);}
+  }catch(_){
+   if(mounted)setState(()=>signInAuthError=waffraIsEnglish?
+    'Local secure storage is unavailable. Unlock your device and retry.':
+    'تعذر فتح التخزين الآمن على الجهاز. افتح قفل هاتفك وحاول مجددًا.');
+  }finally{
+   if(mounted)setState(()=>signingIn=false);
+  }
  }
 
  String get maskedLastPhone{
@@ -1980,82 +2052,23 @@ class _LoginScreenState extends State<LoginScreen> {
    ]));
  }
  bool socialBusy=false;
- Widget _socialBorder(BuildContext sheet,String id,Widget icon,{required String label})=>Material(
-  color:const Color(0xFFFEFDF8),borderRadius:BorderRadius.circular(18),child:InkWell(
-  borderRadius:BorderRadius.circular(18),onTap:WaffraHaptics.tap(()=>Navigator.pop(sheet,id)),
-  child:Container(width:double.infinity,padding:const EdgeInsets.symmetric(horizontal:19,vertical:19),
-   decoration:BoxDecoration(borderRadius:BorderRadius.circular(18),
-    border:Border.all(color:forest,width:1.5)),
-   child:Row(children:[icon,const SizedBox(width:16),Expanded(child:WaffraText(label,
-    style:const TextStyle(color:Color(0xFF10191A),fontSize:17,fontWeight:FontWeight.bold))),
-    const SizedBox(width:8),const Icon(Icons.chevron_left_rounded,color:forest,size:29)]))));
- Future<void> chooseRegistration()async {
-  final choice=await showModalBottomSheet<String>(context:context,showDragHandle:true,
-   backgroundColor:const Color(0xFFFEFDF8),
-   shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(30))),
-   builder:(ctx)=>SafeArea(child:Padding(padding:const EdgeInsets.fromLTRB(20,14,20,28),child:Column(mainAxisSize:MainAxisSize.min,children:[
-    WaffraText(waffraIsEnglish?'Create account':'إنشاء حساب',style:const TextStyle(fontSize:29,fontWeight:FontWeight.bold,color:Color(0xFF10191A))),
-    const SizedBox(height:15),
-    _socialBorder(ctx,'Google',SvgPicture.string(_waffraGoogleLogo,width:32,height:32),label:waffraIsEnglish?'Continue with Google':'المتابعة باستخدام Google'),
-    const SizedBox(height:12),
-    _socialBorder(ctx,'Apple',const Icon(Icons.apple,size:34,color:Color(0xFF111111)),label:waffraIsEnglish?'Continue with Apple':'المتابعة باستخدام Apple'),
-    const SizedBox(height:12),
-    _socialBorder(ctx,'Phone',const Icon(Icons.phone_android,color:forest),label:waffraIsEnglish?'Register with phone number':'التسجيل برقم الجوال'),
-    const SizedBox(height:8),
-   ]))));
-  if(!mounted||choice==null)return;
-  if(choice=='Phone'){setState(()=>provider='Phone');return;}
-  if(choice=='Google'){
-   if(waffraCompileOnlyQaPreview){
-    if(mounted)snack(context,waffraGooglePreviewNotice(waffraIsEnglish));
-    return;
-   }
-   if(socialBusy)return;
-   setState(()=>socialBusy=true);
-   try{
-    final result=await WaffraGoogleAuth.signIn();
-    final user=result.user;
-    if(user==null)throw StateError('Google did not return an account');
-    // Do not save an incomplete Google profile and tear down LoginScreen
-    // before the required phone/gender form is presented.
-    if(!mounted)return;
-    final firstGoogleProfile=Person(name:user.displayName??'',email:user.email??'',
-     phone:user.phoneNumber??'',provider:'Google',gender:'',
-     avatar:user.photoURL??'person',birthday:DateTime(2000));
-    await Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>
-     ProfileForm(provider:'Google',initial:firstGoogleProfile,onSave:widget.onSave)));
-   }catch(e){
-    if(mounted){
-      final message=e.toString().toLowerCase();
-      final offline=e is SocketException||message.contains('network-request-failed')||message.contains('network_error')||message.contains('network error')||message.contains('unable to resolve host')||message.contains('failed host lookup')||message.contains('no internet')||message.contains('connection refused')||message.contains('socketexception');
-      final cancelled=message.contains('canceled')||message.contains('cancelled');
-      snack(context,offline?(waffraIsEnglish?'No internet connection. Check your connection and try again.':'تعذر الاتصال بالإنترنت. تحقق من اتصالك وحاول مرة أخرى.'):
-       cancelled?(waffraIsEnglish?'Google sign-in was cancelled.':'تم إلغاء تسجيل الدخول بجوجل.'):
-       (waffraIsEnglish?'Could not sign in with Google. Please try again.':'تعذر تسجيل الدخول بجوجل. حاول مرة أخرى.'));
-     }
-    debugPrint('Waffra Google sign-in: $e');
-   }finally{if(mounted)setState(()=>socialBusy=false);}
+ // New accounts have a Saudi phone/password entry, never a social provider.
+ // Old Google identities still require a controlled, one-time migration.
+ void chooseRegistration(){
+  if(registered!=null){
+   snack(context,waffraIsEnglish?
+    'An account already exists on this device. Sign in or migrate it first.':
+    'يوجد حساب محفوظ على الجهاز. سجّل الدخول أو انقل الحساب القديم أولًا.');
    return;
   }
-  await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
-   title:WaffraText(waffraIsEnglish?'Sign-in not configured':'تسجيل الدخول غير مفعّل'),
-   content:WaffraText(waffraIsEnglish?'Secure $choice sign-in needs authentication setup. No account was created.':'تسجيل الدخول الآمن باستخدام $choice يحتاج إعداد خدمة المصادقة. لم يتم إنشاء حساب.'),
-   actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))]));
+  setState(()=>provider='Phone');
  }
- Future<void> demoSocial(String selected)async {
-  if(socialBusy)return;
-  setState(()=>socialBusy=true);
-  try {
-   await widget.onSave(Person(name:'',email:'',phone:'',provider:'Local $selected demo',gender:'',avatar:'person',birthday:DateTime(2000)));
-   if(!mounted)return;
-   snackSuccess(context,waffraIsEnglish?'Local demo profile opened — not authenticated with $selected':'تم الدخول للملف المحلي التجريبي بنجاح — لم تتم المصادقة مع $selected');
-  }finally{if(mounted)setState(()=>socialBusy=false);}
- }
-
+ 
  @override Widget build(BuildContext context){
-  if(provider!=null)return ProfileForm(provider:provider!,onSave:widget.onSave,
+  if(provider!=null)return ProfileForm(provider:'Phone',onSave:widget.onSave,
    onBack:()=>setState(()=>provider=null));
   final hasExisting=registered!=null;
+  final legacyAccount=hasExisting&&registered!.provider.toLowerCase()!='phone';
   return Scaffold(backgroundColor:forest,resizeToAvoidBottomInset:false,
    body:Stack(fit:StackFit.expand,children:[
     Image.asset('assets/waffra_login_approved_exact.png',fit:BoxFit.cover,
@@ -2070,7 +2083,7 @@ class _LoginScreenState extends State<LoginScreen> {
         borderRadius:BorderRadius.circular(24)),
        child:Column(mainAxisSize:MainAxisSize.min,
         crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-        if(returnAfterLogout&&!signInMode)...[
+        if(returnAfterLogout&&!signInMode&&hasExisting)...[
          WaffraText(waffraIsEnglish?'Welcome back':'مرحبًا بك مجددًا',
           textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:25,fontWeight:FontWeight.bold)),
          const SizedBox(height:5),
@@ -2079,9 +2092,21 @@ class _LoginScreenState extends State<LoginScreen> {
          const SizedBox(height:15),
          recentLoginCard(),
          const SizedBox(height:12),
-         TextButton(onPressed:WaffraHaptics.tap(()=>setState(()=>returnAfterLogout=false)),
-          child:WaffraText(waffraIsEnglish?'Other sign-in options':'خيارات تسجيل دخول أخرى',
+         if(!legacyAccount)TextButton(
+          onPressed:WaffraHaptics.tap(()=>setState(()=>signInMode=true)),
+          child:WaffraText(waffraIsEnglish?'Sign in with mobile':'الدخول برقم الجوال',
            style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold))),
+        ]else if(legacyAccount)...[
+         WaffraText(waffraIsEnglish?'Legacy account migration':'نقل الحساب القديم',
+          textAlign:TextAlign.center,style:const TextStyle(fontSize:20,color:Colors.white,fontWeight:FontWeight.bold)),
+         const SizedBox(height:10),
+         WaffraText(waffraIsEnglish?
+          'Your data remains on this phone. You must verify your previous account once before switching to mobile/password.':
+          'بياناتك موجودة على الجهاز. لازم نتحقق من حسابك القديم مرة واحدة قبل نقله إلى الجوال وكلمة المرور.',
+          textAlign:TextAlign.center,style:const TextStyle(color:Colors.white70)),
+         const SizedBox(height:12),
+         FilledButton(onPressed:WaffraHaptics.tap(socialBusy?null:continueLastLogin),
+          child:WaffraText(waffraIsEnglish?'Temporary access to old account':'دخول مؤقت للحساب القديم')),
         ]else if(signInMode&&hasExisting)...[
          WaffraText(waffraIsEnglish?'Sign in to Waffra':'تسجيل الدخول إلى وفرة',
           textAlign:TextAlign.center,
@@ -2115,30 +2140,18 @@ class _LoginScreenState extends State<LoginScreen> {
            (waffraIsEnglish?'Signing in...':'جارٍ تسجيل الدخول'):
            (waffraIsEnglish?'Sign in':'تسجيل الدخول'))),
          TextButton(onPressed:WaffraHaptics.tap(()=>setState(()=>signInMode=false)),
-          child:WaffraText(waffraIsEnglish?'Other options':'خيارات أخرى',
+          child:WaffraText(waffraIsEnglish?'Create an account':'إنشاء حساب',
            style:const TextStyle(color:Colors.white))),
         ]else...[
          WaffraText(waffraIsEnglish?'Welcome to Waffra':'مرحباً بك في وفرة',
           style:const TextStyle(color:Colors.white,fontSize:19,fontWeight:FontWeight.bold),
           textAlign:TextAlign.center),
          const SizedBox(height:12),
-         FilledButton.icon(onPressed:WaffraHaptics.tap(signingIn?null:()async{
-          if(signingIn)return;
-          setState(()=>signingIn=true);
-          try{
-           await widget.onSave(Person(name:'',email:'',phone:'',provider:'محلي',
-            gender:'',avatar:'person',birthday:DateTime(2000)));
-          }finally{if(mounted)setState(()=>signingIn=false);}
-         }),style:FilledButton.styleFrom(backgroundColor:Colors.white,foregroundColor:forest),
-          icon:const Icon(Icons.arrow_forward),
-          label:WaffraText(waffraIsEnglish?'Start now — no sign in':'ابدأ الآن بدون تسجيل دخول')),
-         const SizedBox(height:8),
-         OutlinedButton.icon(onPressed:WaffraHaptics.tap(chooseRegistration),
-          style:OutlinedButton.styleFrom(foregroundColor:Colors.white,
-           side:const BorderSide(color:Colors.white70)),
-          icon:const Icon(Icons.person_add_alt_1_outlined),
-          label:WaffraText(waffraIsEnglish?'Create account':'إنشاء حساب')),
-         if(hasExisting)TextButton(onPressed:WaffraHaptics.tap(()=>setState(()=>signInMode=true)),
+         FilledButton.icon(onPressed:WaffraHaptics.tap(chooseRegistration),
+          style:FilledButton.styleFrom(backgroundColor:Colors.white,foregroundColor:forest),
+          icon:const Icon(Icons.phone_android_outlined),
+          label:WaffraText(waffraIsEnglish?'Register with Saudi mobile':'إنشاء حساب برقم الجوال')),
+         if(hasExisting&&!legacyAccount)TextButton(onPressed:WaffraHaptics.tap(()=>setState(()=>signInMode=true)),
           child:WaffraText(waffraIsEnglish?'Already have an account? Sign in':
            'عندك حساب بالفعل؟ تسجيل الدخول',
            style:const TextStyle(color:Colors.white))),
@@ -2159,7 +2172,8 @@ class ProfileForm extends StatefulWidget {
 class _ProfileFormState extends State<ProfileForm> {
  late final TextEditingController name,email,confirmEmail,phone,password,confirmPassword;
  bool showPassword=false,showConfirmPassword=false;
-  bool profileAttempted=false;
+ bool _registrationDetailsStep=false;
+ bool profileAttempted=false;
  bool get comparingPasswords=>password.text.isNotEmpty&&confirmPassword.text.isNotEmpty;
  bool get matchingPasswords=>comparingPasswords&&password.text==confirmPassword.text;
  OutlineInputBorder passwordBorder({bool focused=false}){
@@ -2243,12 +2257,11 @@ class _ProfileFormState extends State<ProfileForm> {
    waffraConfirmPasswordFieldError(confirmPassword.text,password.text)!=null))return;
   setState(()=>busy=true);
   try {
-   if(widget.initial==null){
-    final p=await SharedPreferences.getInstance();
-    final salt=List<int>.generate(16,(_)=>Random.secure().nextInt(256));
-    final saltHex=base64Encode(salt);
-    await p.setString('waffra_local_password_salt',saltHex);
-    await p.setString('waffra_local_password_hash',sha256.convert(utf8.encode('$saltHex:${password.text}')).toString());
+   if(widget.initial==null&&widget.provider=='Phone'){
+    // Password verifier lives in OS-protected secure storage only.
+    // No OTP, Firebase phone authentication or paid SMS providers.
+    await WaffraLocalPhoneCredentials.register(
+     phone:phone.text.trim(),password:password.text);
    }
    await widget.onSave(Person(name:name.text.trim(),email:widget.initial?.email??'',
     phone:widget.provider=='Google'?WaffraInternationalPhone.e164(phoneCountry,phone.text)!:phone.text.trim(),
@@ -2258,7 +2271,102 @@ class _ProfileFormState extends State<ProfileForm> {
   }catch(e){if(mounted)snack(context,'تعذر حفظ البيانات: $e');}
   finally{if(mounted)setState(()=>busy=false);}
  }
- @override Widget build(BuildContext context)=>Scaffold(
+ void _nextPhoneRegistrationStep(){
+  setState(()=>profileAttempted=true);
+  if(waffraMobileFieldError(phone.text)!=null||
+     waffraPasswordFieldError(password.text)!=null||
+     waffraConfirmPasswordFieldError(confirmPassword.text,password.text)!=null){
+   return;
+  }
+  setState((){_registrationDetailsStep=true;profileAttempted=false;});
+ }
+ Widget _phoneRegistrationForm(){
+  return Scaffold(
+   appBar:AppBar(title:WaffraText(waffraIsEnglish?
+    'Create a Waffra account':'إنشاء حساب وفرة'),
+    leading:IconButton(onPressed:WaffraHaptics.tap((){
+     if(_registrationDetailsStep)setState((){_registrationDetailsStep=false;profileAttempted=false;});
+     else widget.onBack?.call();
+    }),icon:const Icon(Icons.arrow_back))),
+   body:SafeArea(child:ListView(padding:const EdgeInsets.all(22),children:[
+    LinearProgressIndicator(value:_registrationDetailsStep?1:0.5,color:emerald),
+    const SizedBox(height:20),
+    if(!_registrationDetailsStep)...[
+     WaffraText(waffraIsEnglish?'1. Mobile number and password':'١. رقم الجوال وكلمة المرور',
+      style:const TextStyle(fontWeight:FontWeight.bold,fontSize:19)),
+     const SizedBox(height:14),
+     TextField(controller:phone,keyboardType:TextInputType.phone,
+      textDirection:TextDirection.ltr,onChanged:(_)=>setState((){}),
+      inputFormatters:[FilteringTextInputFormatter.digitsOnly,
+       LengthLimitingTextInputFormatter(10)],
+      decoration:InputDecoration(
+       labelText:waffraIsEnglish?'Saudi mobile number':'رقم الجوال السعودي',
+       hintText:'05XXXXXXXX',
+       errorText:profileAttempted?waffraMobileFieldError(phone.text):null,
+       border:const OutlineInputBorder())),
+     const SizedBox(height:14),
+     TextField(controller:password,obscureText:!showPassword,
+      onChanged:(_)=>setState((){}),
+      decoration:InputDecoration(labelText:waffraIsEnglish?'Password':'كلمة المرور',
+       helperText:waffraIsEnglish?'8+ characters, letters and numbers':'٨ خانات على الأقل، تشمل أحرفًا وأرقامًا',
+       errorText:profileAttempted?waffraPasswordFieldError(password.text):null,
+       errorMaxLines:3,border:const OutlineInputBorder(),
+       suffixIcon:IconButton(
+        onPressed:WaffraHaptics.tap(()=>setState(()=>showPassword=!showPassword)),
+        icon:Icon(showPassword?Icons.visibility_off:Icons.visibility)))),
+     const SizedBox(height:14),
+     TextField(controller:confirmPassword,obscureText:!showConfirmPassword,
+      onChanged:(_)=>setState((){}),
+      decoration:InputDecoration(labelText:waffraIsEnglish?'Confirm password':'تأكيد كلمة المرور',
+       errorText:profileAttempted?
+        waffraConfirmPasswordFieldError(confirmPassword.text,password.text):null,
+       errorMaxLines:3,border:const OutlineInputBorder(),
+       suffixIcon:IconButton(
+        onPressed:WaffraHaptics.tap(()=>setState(()=>showConfirmPassword=!showConfirmPassword)),
+        icon:Icon(showConfirmPassword?Icons.visibility_off:Icons.visibility)))),
+     const SizedBox(height:20),
+     FilledButton(onPressed:WaffraHaptics.tap(_nextPhoneRegistrationStep),
+      child:WaffraText(waffraIsEnglish?'Continue':'متابعة')),
+    ]else...[
+     WaffraText(waffraIsEnglish?'2. Complete your profile':'٢. كمّل بياناتك',
+      style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold)),
+     const SizedBox(height:10),
+     WaffraText(waffraIsEnglish?'No email or date of birth required.':
+      'مش محتاج تكتب إيميل أو تاريخ ميلاد.',
+      style:const TextStyle(color:Colors.grey)),
+     const SizedBox(height:14),
+     TextField(controller:name,onChanged:(_)=>setState((){}),
+      decoration:InputDecoration(labelText:waffraIsEnglish?'Name':'الاسم',
+       errorText:profileAttempted?waffraTextFieldError(name.text):null,
+       border:const OutlineInputBorder())),
+     const SizedBox(height:15),
+     WaffraText(waffraIsEnglish?'Gender':'الجنس',
+      style:const TextStyle(fontWeight:FontWeight.bold)),
+     const SizedBox(height:10),
+     Wrap(alignment:WrapAlignment.center,spacing:12,children:['ذكر','أنثى']
+      .map((g)=>ChoiceChip(label:WaffraText(waffraIsEnglish?
+       (g=='ذكر'?'Male':'Female'):g),selected:gender==g,
+       onSelected:WaffraHaptics.selection((_)=>setState((){
+        gender=g;avatar=g=='ذكر'?'male':'female';
+       })))).toList()),
+     if(profileAttempted&&gender.isEmpty)Padding(padding:const EdgeInsets.only(top:6),
+      child:WaffraText(waffraRequiredFieldMessage,
+       style:const TextStyle(color:Colors.red))),
+     const SizedBox(height:18),
+     FilledButton(onPressed:WaffraHaptics.tap(busy?null:save),
+      child:WaffraText(busy?
+       (waffraIsEnglish?'Saving...':'جارٍ الحفظ'):
+       (waffraIsEnglish?'Complete registration':'إكمال التسجيل'))),
+     TextButton(onPressed:WaffraHaptics.tap(()=>setState((){
+      _registrationDetailsStep=false;profileAttempted=false;
+     })),child:WaffraText(waffraIsEnglish?'Back':'رجوع')),
+    ],
+   ])),
+  );
+ }
+ @override Widget build(BuildContext context){
+  if(widget.initial==null&&widget.provider=='Phone')return _phoneRegistrationForm();
+  return Scaffold(
   appBar:AppBar(title:WaffraText(widget.initial==null?'كمّل بياناتك':'تعديل الحساب'),
    leading:widget.onBack==null?null:IconButton(onPressed:WaffraHaptics.tap(widget.onBack),icon:const Icon(Icons.arrow_back))),
   body:ListView(padding:const EdgeInsets.all(22),children:[
@@ -2345,6 +2453,7 @@ class _ProfileFormState extends State<ProfileForm> {
    const SizedBox(height:20),
    FilledButton(onPressed:WaffraHaptics.tap(busy?null:save),child:WaffraText(waffraIsEnglish?'Save profile':'حفظ البيانات')),
   ]));
+ }
 }
 void disposeLater(List<TextEditingController> controllers){
  Future<void>.delayed(const Duration(milliseconds:700),(){for(final c in controllers){c.dispose();}});
@@ -2660,6 +2769,15 @@ class WaffraPageHero extends StatelessWidget {
 /// Preserves full bank-SMS text while presenting Arabic transaction
 /// details in an explicitly right-to-left, consistently aligned dialog.
 class WaffraTransactionDetailsDialog extends StatelessWidget {
+ /// Only previously persisted provenance is authoritative.
+ static String sourceLabel(String source,bool english)=>switch(source){
+  'sms'=>english?'Bank SMS':'رسالة بنكية (SMS)',
+  'manual'=>english?'Manual entry':'إدخال يدوي',
+  'receipt'=>english?'Receipt capture':'إضافة من فاتورة',
+  'goal_due'=>english?'Goal due payment':'استحقاق هدف',
+  _=>english?'Previous entry (source unverified)':
+   'معاملة سابقة (المصدر غير محدد)',
+ };
  final MoneyEntry entry;
  /// A verified read-only SMS original from SQLCipher; never write to notes.
  final String? protectedOriginalSms;
@@ -2698,6 +2816,17 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
       mainAxisSize:MainAxisSize.min,
       crossAxisAlignment:CrossAxisAlignment.stretch,
       children:[
+       if(entry.merchantKey.trim().isNotEmpty)...[
+        Row(children:[
+         WaffraMerchantLogo(
+          brand:WaffraMerchantBrands.match(entry.merchantKey),
+          fallbackName:entry.merchantKey,size:45),
+         const SizedBox(width:10),
+         Expanded(child:WaffraText(entry.merchantKey,
+          style:const TextStyle(fontWeight:FontWeight.bold,fontSize:15))),
+        ]),
+        const SizedBox(height:12),
+       ],
        WaffraText(waffraIsEnglish?'Transaction description':'وصف المعاملة',
         textAlign:TextAlign.start,style:TextStyle(fontSize:12,color:muted)),
        const SizedBox(height:7),
@@ -2714,6 +2843,29 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
          softWrap:true,
          style:const TextStyle(fontSize:14,fontWeight:FontWeight.w600,height:1.5)),
        ),
+       const SizedBox(height:12),
+       Container(
+        key:const Key('waffra-transaction-source-provenance'),
+        padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),
+        decoration:BoxDecoration(
+         color:dark?const Color(0xFF18372E):const Color(0xFFEAF5EF),
+         borderRadius:BorderRadius.circular(12)),
+        child:Row(children:[
+         Icon(entry.sourceType=='sms'?Icons.sms_outlined:
+          Icons.edit_note_outlined,color:emerald,size:19),
+         const SizedBox(width:8),
+         Expanded(child:WaffraText(
+          WaffraTransactionDetailsDialog.sourceLabel(
+           entry.sourceType,waffraIsEnglish),
+          style:const TextStyle(fontWeight:FontWeight.w700,fontSize:13))),
+        ])),
+       if(entry.sourceType=='manual')...[
+        const SizedBox(height:7),
+        WaffraText(waffraIsEnglish?
+         'Added manually. No original SMS exists for this transaction.':
+         'تمت إضافة المعاملة يدويًا — لا توجد رسالة SMS أصلية.',
+         style:TextStyle(fontSize:12,color:muted)),
+       ],
        const SizedBox(height:15),
        Row(children:[
         Icon(Icons.category_outlined,color:dark?const Color(0xFF74D8A9):emerald,size:20),
@@ -3176,13 +3328,265 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // Account settings open from the app bar instead of a footer destination.
  bool accountOpened=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
- @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:()=>unawaited(_syncWidgetTransactions()));unawaited(_loadFinanceSafely());}
+ @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraAutoSmsUpdates.addListener(_receiveAutoSmsNotice);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:(){unawaited(_syncWidgetTransactions());unawaited(_refreshAutoSmsInbox(importMonth:true));});unawaited(_loadFinanceSafely());}
  void _returnToHome(){if(mounted)setState((){_tabBackStack.clear();tab=0;accountOpened=false;goalsOpened=false;addFabExpanded=false;});}
  void _receiveWidgetAction(){
   if(!mounted||!ready||waffraWidgetAction.value!='add')return;
   waffraWidgetAction.value=null;
   setState((){tab=0;goalsOpened=false;addFabExpanded=false;});
   WidgetsBinding.instance.addPostFrameCallback((_){if(mounted)unawaited(entrySheet());});
+ }
+ bool _autoSmsReviewOpen=false;
+ final List<Map<String,Object?>> _autoSmsPending=<Map<String,Object?>>[];
+ void _receiveAutoSmsNotice(){
+  if(mounted&&ready)unawaited(_refreshAutoSmsInbox());
+ }
+ Future<void> _refreshAutoSmsInbox({bool importMonth=false})async{
+  if(!mounted||!ready||_financeLoadFailure!=null)return;
+  if(importMonth)await WaffraAutoSms.importConsentMonth();
+  final results=await WaffraAutoSms.pending();
+  if(!mounted)return;
+  final waiting=<Map<String,Object?>>[];
+  for(final candidate in results){
+   final id=candidate['id'],body=candidate['body'];
+   if(id is! String||body is! String)continue;
+   if(smsHashes.contains(bankSmsHash(body))){
+    await WaffraAutoSms.acknowledge([id]);
+   }else{
+    waiting.add(candidate);
+   }
+  }
+  if(mounted)setState((){
+   _autoSmsPending..clear()..addAll(waiting);
+  });
+ }
+ Future<void> _openAutoSmsInbox()async{
+  await _refreshAutoSmsInbox(importMonth:true);
+  if(!mounted||_autoSmsPending.isEmpty)return;
+  // Every bank sender gets one group. No guessed merchants or bank identities.
+  final bySender=<String,List<Map<String,Object?>>>{};
+  for(final candidate in _autoSmsPending){
+   final raw=candidate['sender'] is String?
+    (candidate['sender'] as String).trim():'';
+   final name=raw.isEmpty?
+    (waffraIsEnglish?'Unknown sender':'مرسل غير محدد'):raw;
+   final group=bySender.keys.firstWhere(
+    (key)=>key.toLowerCase()==name.toLowerCase(),orElse:()=>name);
+   bySender.putIfAbsent(group,()=> <Map<String,Object?>>[]).add(candidate);
+  }
+  final senders=bySender.keys.toList()
+   ..sort((a,b)=>a.toLowerCase().compareTo(b.toLowerCase()));
+  for(final messages in bySender.values){
+   messages.sort((a,b){
+    final x=a['receivedAt'] is int?a['receivedAt'] as int:0;
+    final y=b['receivedAt'] is int?b['receivedAt'] as int:0;
+    return y.compareTo(x);
+   });
+  }
+  String? selectedSender;
+  final selected=await showModalBottomSheet<String>(
+   context:context,isScrollControlled:true,showDragHandle:true,
+   builder:(sheet)=>StatefulBuilder(
+    builder:(ctx,refresh)=>PopScope(
+     canPop:selectedSender==null,
+     onPopInvokedWithResult:(didPop,result){
+      if(!didPop&&selectedSender!=null){
+       refresh(()=>selectedSender=null);
+      }
+     },
+     child:SafeArea(
+     child:SizedBox(height:MediaQuery.sizeOf(ctx).height*.74,
+      child:Column(children:[
+       Row(children:[
+        IconButton(
+         key:const Key('waffra-sms-senders-back'),
+         onPressed:(){
+          if(selectedSender==null){Navigator.pop(ctx);}
+          else{refresh(()=>selectedSender=null);}
+         },
+         icon:const Icon(Icons.arrow_back_rounded)),
+        Expanded(child:WaffraText(
+         selectedSender??(waffraIsEnglish?'Bank SMS by sender':'رسائل للفرز'),
+         style:const TextStyle(fontWeight:FontWeight.bold,fontSize:19),
+         maxLines:2)),
+        Padding(padding:const EdgeInsets.all(12),
+         child:WaffraText(selectedSender==null?senders.length.toString():
+          (bySender[selectedSender]?.length??0).toString())),
+       ]),
+       Expanded(child:ListView.builder(
+        key:Key(selectedSender==null?'waffra-sms-sender-list':
+         'waffra-sms-sender-transactions'),
+        itemCount:selectedSender==null?senders.length:
+         (bySender[selectedSender]?.length??0),
+        itemBuilder:(rowContext,index){
+         if(selectedSender==null){
+          final sender=senders[index],count=bySender[sender]!.length;
+          return Card(margin:const EdgeInsets.symmetric(
+           horizontal:14,vertical:6),
+           child:ListTile(
+            key:Key('waffra-sms-sender-group-'+index.toString()),
+            title:WaffraText(sender,maxLines:2,
+             style:const TextStyle(fontWeight:FontWeight.bold)),
+            leading:Container(
+             padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),
+             decoration:BoxDecoration(color:const Color(0xFFE4F4EB),
+              borderRadius:BorderRadius.circular(20)),
+             child:WaffraText(waffraIsEnglish?'$count SMS':'$count رسالة',
+              style:const TextStyle(color:forest,fontWeight:FontWeight.bold))),
+            trailing:const Icon(Icons.chevron_left_rounded),
+            onTap:()=>refresh(()=>selectedSender=sender),
+           ));
+         }
+         final item=bySender[selectedSender]![index];
+         final id=item['id'],at=item['receivedAt'];
+         final date=at is int?DateTime.fromMillisecondsSinceEpoch(at)
+          .toLocal().toString().substring(0,16):'';
+         return ListTile(
+          key:Key('waffra-sms-sender-message-'+index.toString()),
+          leading:const Icon(Icons.sms_outlined,color:emerald),
+          title:WaffraText(waffraIsEnglish?
+           'Bank SMS • needs review':'رسالة بنكية • تحتاج مراجعة'),
+          subtitle:WaffraText((waffraIsEnglish?
+           'Review amount, category and budget':
+           'راجع المبلغ والقسم والميزانية')+
+           (date.isEmpty?'':' • '+date),maxLines:2),
+          trailing:const Icon(Icons.chevron_left_rounded),
+          onTap:(id is String)?()=>Navigator.pop(ctx,id):null,
+         );
+        })),
+       Padding(padding:const EdgeInsets.all(12),
+        child:WaffraText(waffraIsEnglish?
+         'Nothing is recorded until you approve the transaction.':
+         'ما تتسجلش أي عملية مالية إلا بعد مراجعتك وتأكيدك.',
+         textAlign:TextAlign.center)),
+      ]),
+     ),
+    ),
+    ),
+   ),
+  );
+  if(selected!=null&&mounted)await _reviewAutoSmsCandidates(targetId:selected);
+ }
+ Widget _autoSmsReviewCard(){
+  final count=_autoSmsPending.length;
+  return Container(
+   key:const Key('waffra-auto-sms-review-card'),
+   padding:const EdgeInsets.all(14),
+   decoration:BoxDecoration(color:Theme.of(context).cardColor,
+    borderRadius:BorderRadius.circular(16),
+    border:Border.all(color:forest.withValues(alpha:.16))),
+   child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    Row(children:[
+     const Icon(Icons.fact_check_outlined,color:emerald),
+     const SizedBox(width:8),
+     Expanded(child:WaffraText(waffraIsEnglish?
+      'Transactions requiring review':'عمليات تحتاج مراجعة',
+      style:const TextStyle(fontSize:16,fontWeight:FontWeight.bold))),
+     Container(
+      key:const Key('waffra-auto-sms-review-count'),
+      padding:const EdgeInsets.symmetric(horizontal:10,vertical:5),
+      decoration:BoxDecoration(color:const Color(0xFFE4F4EB),
+       borderRadius:BorderRadius.circular(24)),
+      child:Text(count.toString(),
+       style:const TextStyle(color:forest,fontWeight:FontWeight.bold))),
+    ]),
+    const SizedBox(height:9),
+    WaffraText(count==0?
+     (waffraIsEnglish?'No bank SMS awaiting review.':
+      'ما فيه رسائل بنكية بانتظار المراجعة.'):
+     (waffraIsEnglish?
+      'Bank SMS from your activation month and new messages await approval.':
+      'رسائل شهر التفعيل والجديدة بانتظار مراجعتك وتأكيدك.')),
+    const SizedBox(height:9),
+    Row(children:[
+     Expanded(child:FilledButton.icon(
+      key:const Key('waffra-auto-sms-review-open'),
+      onPressed:count==0?null:WaffraHaptics.tap(_openAutoSmsInbox),
+      icon:const Icon(Icons.rate_review_outlined,size:18),
+      label:WaffraText(waffraIsEnglish?'Review messages':'مراجعة العمليات'))),
+     IconButton(
+      key:const Key('waffra-auto-sms-review-refresh'),
+      tooltip:waffraIsEnglish?'Load more month messages':'تحديث رسائل الشهر',
+      onPressed:WaffraHaptics.tap(
+       ()=>unawaited(_refreshAutoSmsInbox(importMonth:true))),
+      icon:const Icon(Icons.refresh_rounded,color:emerald)),
+    ]),
+   ]),
+  );
+ }
+ Future<void> _reviewAutoSmsCandidates({String? targetId})async {
+  if(!mounted||!ready||_smsSheetOpen||_autoSmsReviewOpen||
+     _financeLoadFailure!=null)return;
+  _autoSmsReviewOpen=true;
+  try{
+   // Explicit review only: never auto-analyze or auto-post.
+   final items=await WaffraAutoSms.pending();
+   if(!mounted||items.isEmpty)return;
+   Map<String,Object?>? selected;
+   for(final item in items){
+    final id=item['id'],body=item['body'];
+    if(id is! String||body is! String||body.trim().isEmpty)continue;
+    if(targetId!=null&&id!=targetId)continue;
+    if(smsHashes.contains(bankSmsHash(body))){
+     await WaffraAutoSms.acknowledge([id]);
+     continue;
+    }
+    selected=item;break;
+   }
+   if(!mounted||selected==null)return;
+   final id=selected['id'],body=selected['body'];
+   final sender=selected['sender'] is String?selected['sender'] as String:'';
+   if(id is! String||body is! String)return;
+   final facts=WaffraBankSmsFactsParser.parse(body);
+   final operationName=switch(facts.kind){
+    WaffraBankOperationKind.transfer=>waffraIsEnglish?'Bank transfer':'تحويل بنكي',
+    WaffraBankOperationKind.cardSettlement=>waffraIsEnglish?'Card settlement':'سداد بطاقة',
+    WaffraBankOperationKind.income=>waffraIsEnglish?'Income':'دخل',
+    WaffraBankOperationKind.expense=>waffraIsEnglish?'Expense':'مصروف',
+    WaffraBankOperationKind.uncertain=>waffraIsEnglish?'Unknown':'غير محدد',
+   };
+   final source=facts.sourceSuffix;
+   final destination=facts.destinationSuffix;
+   final summary=<String>[
+    (waffraIsEnglish?'Detected type: ':'نوع العملية: ')+operationName,
+    if(source!=null)(waffraIsEnglish?'From account: ':'من الحساب: ')+'••••'+source,
+    if(destination!=null)(waffraIsEnglish?'To account: ':'إلى الحساب: ')+'••••'+destination,
+    if(facts.fee!=null&&facts.fee!>0)
+     (waffraIsEnglish?'Separate fee: ':'رسوم مستقلة: ')+facts.fee!.toStringAsFixed(2)+' SAR',
+   ].join('\n');
+   final cloud=selected['cloud'];
+   final cloudFacts=cloud is Map ? cloud : null;
+   final cloudAmount=cloudFacts?['amount'];
+   final cloudKind=cloudFacts?['kind'];
+   final cloudSummary=cloudKind is String ?
+    '\n'+(waffraIsEnglish?'Cloud AI suggests: ':'اقتراح الذكاء الاصطناعي: ')+
+    cloudKind+(cloudAmount is num?' • '+cloudAmount.toStringAsFixed(2):''):'';
+   final decision=await showWaffraDialog<String>(context:context,
+    builder:(dialog)=>AlertDialog(
+     title:WaffraText(waffraIsEnglish?'Bank SMS needs review':'رسالة بنكية تحتاج مراجعة'),
+     content:WaffraText((waffraIsEnglish?
+      'A financial SMS from $sender requires review before saving.':
+      'وصلت رسالة مالية من $sender وتحتاج مراجعة قبل الحفظ.')
+      +'\n\n'+summary+cloudSummary),
+     actions:[
+      TextButton(onPressed:()=>Navigator.pop(dialog),
+       child:WaffraText(waffraIsEnglish?'Later':'لاحقًا')),
+      TextButton(onPressed:()=>Navigator.pop(dialog,'ignore'),
+       child:WaffraText(waffraIsEnglish?'Ignore':'تجاهل')),
+      FilledButton(onPressed:()=>Navigator.pop(dialog,'review'),
+       child:WaffraText(waffraIsEnglish?'Review transaction':'مراجعة العملية')),
+     ]));
+   if(decision=='ignore'){
+    await WaffraAutoSms.acknowledge([id]);
+   }else if(decision=='review'&&mounted){
+    await bulkSmsSheet(initialText:body);
+    if(smsHashes.contains(bankSmsHash(body)))
+     await WaffraAutoSms.acknowledge([id]);
+   }
+  }finally{
+   _autoSmsReviewOpen=false;
+   if(mounted)unawaited(_refreshAutoSmsInbox());
+  }
  }
  void _receiveSharedSms(){
   if(!mounted||!ready||_smsSheetOpen)return;
@@ -3202,6 +3606,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   recurringPostponed.clear();smsHashes.clear();learnedMerchantCategories.clear();
   try{
    await load();
+   WidgetsBinding.instance.addPostFrameCallback((_) {
+    if(mounted)unawaited(_refreshAutoSmsInbox(importMonth:true));
+   });
   }catch(e){
    debugPrint('Financial startup integrity/recovery gate blocked access: $e');
    if(mounted)setState((){
@@ -3227,7 +3634,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     icon:const Icon(Icons.refresh),
     label:WaffraText(waffraIsEnglish?'Retry safely':'إعادة المحاولة بأمان')),
   ])));
- @override void dispose(){if(identical(WaffraBackNavigation.onHomeBack,_registeredBackHandler))WaffraBackNavigation.onHomeBack=null;_dashboardScrollController.dispose();_categoryScrollController.dispose();_goalsScrollController.dispose();_recurringScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();_saveProgress.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
+ @override void dispose(){if(identical(WaffraBackNavigation.onHomeBack,_registeredBackHandler))WaffraBackNavigation.onHomeBack=null;_dashboardScrollController.dispose();_categoryScrollController.dispose();_goalsScrollController.dispose();_recurringScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraAutoSmsUpdates.removeListener(_receiveAutoSmsNotice);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();_saveProgress.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
  Future<void> _syncWidgetTransactions()async{
   if(!mounted||!ready)return;
   try{
@@ -5386,6 +5793,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   String category=initial?.category??'أخرى';
   String? selectedParentId;
   String? selectedBudgetId=initial?.budgetId;
+  String? selectedMerchantOverride; // explicit selection only
   int budgetMenuRevision=0; // reset action-only dropdown selections
   {
    // All reviewed transactions, including SMS, must use a real child category.
@@ -5491,6 +5899,36 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       WaffraText(initial!=null?'تعديل العملية':sms?'إضافة رسالة بنكية':
         scannedReceipt!=null?(waffraIsEnglish?'Review image transaction':'مراجعة عملية من صورة'):'إضافة عملية',
        style:Theme.of(sheetContext).textTheme.titleLarge),
+      if(initial!=null)...[
+       const SizedBox(height:9),
+       Container(
+        key:const Key('waffra-entry-edit-source'),
+        padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),
+        decoration:BoxDecoration(
+         color:Theme.of(sheetContext).colorScheme.surfaceContainerHighest,
+         borderRadius:BorderRadius.circular(12)),
+        child:Row(children:[
+         Icon(initial.sourceType=='sms'?Icons.sms_outlined:
+          Icons.edit_note_outlined,color:emerald,size:19),
+         const SizedBox(width:9),
+         Expanded(child:WaffraText(
+          WaffraTransactionDetailsDialog.sourceLabel(
+           initial.sourceType,waffraIsEnglish),
+          style:const TextStyle(fontWeight:FontWeight.bold))),
+        ])),
+       if(initial.sourceType=='manual')Padding(
+        padding:const EdgeInsets.only(top:7),
+        child:WaffraText(waffraIsEnglish?
+         'Added manually. No original SMS exists.':
+         'أُضيفت العملية يدويًا ولا توجد لها رسالة SMS أصلية.',
+         style:const TextStyle(fontSize:12))),
+       if(initial.sourceType=='sms')Padding(
+        padding:const EdgeInsets.only(top:7),
+        child:WaffraText(waffraIsEnglish?
+         'The protected original SMS is in transaction details.':
+         'الرسالة البنكية الأصلية المحمية موجودة في تفاصيل المعاملة.',
+         style:const TextStyle(fontSize:12))),
+      ],
       if(scannedImagePosition!=null&&scannedImageTotal!=null)
        Padding(padding:const EdgeInsets.only(top:6),child:WaffraText(
         waffraIsEnglish?
@@ -5547,6 +5985,39 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            (waffraIsEnglish?'Maximum 250 characters for a new name.':
             'اسم العملية الجديد لا يزيد عن 250 حرفًا.')):null,
         border:OutlineInputBorder())),
+      const SizedBox(height:10),
+      OutlinedButton.icon(
+       key:const Key('waffra-transaction-select-merchant'),
+       icon:const Icon(Icons.storefront_outlined,color:emerald),
+       label:WaffraText(waffraIsEnglish?
+        'Choose merchant and logo':'اختيار التاجر وشعاره'),
+       onPressed:WaffraHaptics.tap(()async{
+        final picked=await waffraChooseMerchantBrand(sheetContext,
+         english:waffraIsEnglish);
+        if(picked==null||!sheetContext.mounted)return;
+        update((){
+         selectedMerchantOverride=picked.name;
+         if(title.text.trim().isEmpty&&initial==null)title.text=picked.name;
+        });
+       })),
+      if((selectedMerchantOverride??initial?.merchantKey??'').trim().isNotEmpty)...[
+       const SizedBox(height:7),
+       Row(children:[
+        WaffraMerchantLogo(
+         brand:WaffraMerchantBrands.match(
+          selectedMerchantOverride??initial?.merchantKey),
+         fallbackName:selectedMerchantOverride??initial?.merchantKey??'',
+         size:34),
+        const SizedBox(width:8),
+        Expanded(child:WaffraText(
+         selectedMerchantOverride??initial?.merchantKey??'')),
+        TextButton(
+         key:const Key('waffra-transaction-clear-merchant'),
+         onPressed:WaffraHaptics.tap(
+          ()=>update(()=>selectedMerchantOverride='')),
+         child:WaffraText(waffraIsEnglish?'Remove':'إزالة')),
+       ]),
+      ],
       const SizedBox(height:10),
       if(!sms)...[
        TextField(controller:notes,onChanged:(_)=>update((){}),minLines:1,maxLines:4,
@@ -5874,7 +6345,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         category:category,amount:n,
         income:income,date:date,receiptPath:receiptPath,
         sourceType:initial?.sourceType??(sms?'sms':scannedReceipt!=null?'receipt':'manual'),
-        merchantKey:initial?.merchantKey??(sms?(waffraMerchantKey(message.text)??''):''),
+        merchantKey:selectedMerchantOverride??initial?.merchantKey??
+         (sms?(waffraMerchantKey(message.text)??''):''),
         goalWalletPaidMinor:initial?.goalWalletPaidMinor??0,
         budgetId:income?null:(namedBudgets.any((b)=>b.id==selectedBudgetId&&
          !b.deleted&&b.budget>0&&
@@ -7159,10 +7631,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    clipBehavior:Clip.antiAlias,child:Stack(children:[
     Padding(padding:EdgeInsets.only(top:attachmentCount>0?16:0),child:ListTile(
    textColor:waffraInk,iconColor:forest,
-   leading:CircleAvatar(backgroundColor:Color(c.color).withValues(alpha:.15),
-    child:Icon(categoryIcon(c.icon),color:Color(c.color))),
+   leading:e.merchantKey.trim().isNotEmpty
+    ?WaffraMerchantLogo(
+      brand:WaffraMerchantBrands.match(e.merchantKey),
+      fallbackName:e.merchantKey,size:42)
+    :CircleAvatar(backgroundColor:Color(c.color).withValues(alpha:.15),
+      child:Icon(categoryIcon(c.icon),color:Color(c.color))),
    title:WaffraText(e.title,style:const TextStyle(color:waffraInk,fontWeight:FontWeight.w600)),subtitle:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
     WaffraText('${e.category} • ${dayText(e.date)}',style:const TextStyle(color:waffraInk)),
+    WaffraText(WaffraTransactionDetailsDialog.sourceLabel(
+     e.sourceType,waffraIsEnglish),
+     style:const TextStyle(fontSize:11,color:waffraInk)),
 
    ]),
    trailing:Row(mainAxisSize:MainAxisSize.min,children:[
@@ -8209,7 +8688,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     border:Border.all(color:forest.withValues(alpha:darkMode ? 0.18 : 0.08))),
    clipBehavior:Clip.antiAlias,child:Stack(children:[
     Padding(padding:EdgeInsets.fromLTRB(11,attachmentCount>0?23:12,11,12),child:Row(children:[
-     CircleAvatar(radius:18,
+     if(entry.merchantKey.trim().isNotEmpty)
+      WaffraMerchantLogo(
+       brand:WaffraMerchantBrands.match(entry.merchantKey),
+       fallbackName:entry.merchantKey,size:38)
+     else CircleAvatar(radius:18,
       backgroundColor:Color(cat.color).withValues(alpha:0.13),
       child:WaffraIllustration(topic:cat.icon,size:36)),
      const SizedBox(width:8),
@@ -8226,6 +8709,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        const SizedBox(height:2),
        WaffraText(waffraTr(entry.category)+' • '+dayText(entry.date),
         maxLines:1,style:const TextStyle(fontSize:11,color:Colors.grey)),
+        const SizedBox(height:2),
+        Row(children:[
+         Icon(entry.sourceType=='sms'?Icons.sms_outlined:
+          Icons.edit_note_outlined,size:13,color:Colors.grey),
+         const SizedBox(width:4),
+         Expanded(child:WaffraText(
+          WaffraTransactionDetailsDialog.sourceLabel(
+           entry.sourceType,waffraIsEnglish),
+          maxLines:1,style:const TextStyle(fontSize:11,color:Colors.grey))),
+        ]),
       ]))),
      const SizedBox(width:5),
      ConstrainedBox(constraints:const BoxConstraints(maxWidth:119),
@@ -8350,6 +8843,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                ]))
              :const SizedBox.shrink()),
           ])),
+         if(Platform.isAndroid)...[
+          const SizedBox(height:12),
+          _autoSmsReviewCard(),
+         ],
          if(unverifiedFxEntries.isNotEmpty)...[
           const SizedBox(height:10),
           Container(
@@ -11827,6 +12324,39 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     label:WaffraText(waffraIsEnglish?'Edit profile':'تعديل حسابي')),
     ])),
    const SizedBox(height:13),
+   if(provider=='google'||provider=='apple')...[
+    Card(child:Padding(padding:const EdgeInsets.all(13),
+     child:Column(children:[
+      WaffraText(waffraIsEnglish?
+       'Keep your data and switch to mobile + password':
+       'احتفظ ببياناتك وانقل الدخول إلى الجوال وكلمة المرور'),
+      const SizedBox(height:10),
+      FilledButton.icon(
+       onPressed:WaffraHaptics.tap(()async{
+        await Navigator.push<void>(context,MaterialPageRoute(
+         builder:(_)=>WaffraLocalAccountMigration(
+          english:waffraIsEnglish,
+          onConfirm:(number,password)async{
+           // Complete local migration without changing Firebase UID,
+           // historical finance, backups or any encrypted receipt.
+           final already=await WaffraLocalPhoneCredentials.verify(
+            phone:number,password:password);
+           if(!already){
+            await WaffraLocalPhoneCredentials.register(
+             phone:number,password:password);
+           }
+           await widget.onProfile(Person(
+            name:p.name,email:p.email,phone:number,provider:'Phone',
+            gender:p.gender,avatar:p.avatar,birthday:p.birthday));
+          },
+         )));
+       }),
+       icon:const Icon(Icons.phonelink_lock),
+       label:WaffraText(waffraIsEnglish?
+        'Migrate local login':'نقل تسجيل الدخول للجوال')),
+     ]))),
+    const SizedBox(height:13),
+   ],
    TextField(key:const Key('waffra-account-settings-search'),onChanged:(value){
     final q=value.trim();
     final groups=<String,String>{
@@ -11911,12 +12441,66 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ])),
    ]),
    _accountSection(waffraIsEnglish?'Security & privacy':'الأمان والخصوصية',Icons.shield_outlined,[
-    _accountTile(waffraIsEnglish?'PIN app lock':'قفل التطبيق برمز PIN',
-     widget.pinEnabled?(waffraIsEnglish?'Enabled':'مفعّل'):(waffraIsEnglish?'Disabled':'غير مفعّل'),
-     widget.pinEnabled?Icons.lock:Icons.lock_open,onTap:WaffraHaptics.tap(configurePin)),
-    if(widget.pinEnabled)_accountTile(waffraIsEnglish?'Change PIN':'تغيير رمز PIN',
-     waffraIsEnglish?'Update your lock code':'تحديث رمز القفل',
-     Icons.password_outlined,onTap:WaffraHaptics.tap(changePin)),
+    if(Platform.isAndroid)FutureBuilder<bool>(
+     future:WaffraAutoSms.enabled(),builder:(context,snapshot)=>SwitchListTile(
+      secondary:const Icon(Icons.sms_outlined,color:emerald),
+      title:WaffraText(waffraIsEnglish?
+       'Automatic bank SMS tracking':'تسجيل الرسائل البنكية تلقائيًا'),
+      subtitle:WaffraText(waffraIsEnglish?
+       'Save verified SMS transactions and notify you; uncertain messages need review.':
+       'تسجيل العمليات المؤكدة وإشعارك بعد الحفظ؛ الرسائل الغامضة تحتاج مراجعة.'),
+      value:snapshot.data==true,
+      onChanged:WaffraHaptics.selection((enabled)async{
+       if(enabled){
+        await Navigator.push<void>(context,MaterialPageRoute(
+         builder:(_)=>WaffraAutoSmsConsentPage(
+          english:waffraIsEnglish,
+          onComplete:()async{if(context.mounted)Navigator.pop(context);},
+         )));
+       }else{
+        await WaffraAutoSms.disable();
+       }
+       if(mounted)setState((){});
+      }),
+     )),
+    if(Platform.isAndroid)FutureBuilder<bool>(
+     future:WaffraSmsCloudService.hasConsent(),
+     builder:(context,snapshot)=>SwitchListTile(
+      secondary:const Icon(Icons.cloud_outlined,color:emerald),
+      title:WaffraText(waffraIsEnglish?
+       'AI analysis of bank SMS (cloud)':'تحليل الرسائل البنكية بالذكاء الاصطناعي السحابي'),
+      subtitle:WaffraText(waffraIsEnglish?
+       'Optional. Sends redacted financial SMS to a third-party AI provider.':
+       'اختياري. يرسل النص المالي بعد حجب المعرفات لخدمة ذكاء اصطناعي خارجية.'),
+      value:snapshot.data==true,
+      onChanged:WaffraHaptics.selection((enabled)async{
+       if(enabled){
+        final accepted=await showWaffraDialog<bool>(context:context,
+         builder:(dialog)=>AlertDialog(
+          title:WaffraText(waffraIsEnglish?
+           'Enable cloud bank SMS analysis?':'تفعيل تحليل الرسائل البنكية السحابي؟'),
+          content:WaffraText(waffraIsEnglish?
+           'Bank SMS that match financial activity will be redacted locally, then processed by a third-party model through OpenRouter. Some processing may take place outside Saudi Arabia. This is separate from permission to read SMS. You can decline and keep local analysis.':
+           'سيتم حجب المعرفات الشخصية من الرسائل البنكية المطابقة محليًا، ثم إرسال البيانات المالية لخدمة ذكاء اصطناعي خارجية عبر OpenRouter. قد تتم المعالجة خارج السعودية. هذه موافقة منفصلة عن صلاحية قراءة الرسائل، ويمكنك رفضها والاستمرار بالتحليل المحلي.'),
+          actions:[
+           TextButton(onPressed:()=>Navigator.pop(dialog,false),
+            child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+           FilledButton(onPressed:()=>Navigator.pop(dialog,true),
+            child:WaffraText(waffraIsEnglish?'I agree':'أوافق')),
+          ]));
+        if(accepted!=true)return;
+       }
+       final completed=await WaffraSmsCloudService.setConsent(enabled);
+       if(!completed&&mounted){
+        snack(context,waffraIsEnglish?
+         'Cloud analysis or App Check is unavailable. No SMS was uploaded.':
+         'التحليل السحابي أو حماية التطبيق غير متاحة. لم يتم رفع أي رسالة.',
+         isError:true);
+       }
+       if(mounted)setState((){});
+      }),
+     )),
+    // Mandatory biometrics: optional PIN settings removed.
     SwitchListTile(secondary:const Icon(Icons.preview_outlined,color:emerald),
      title:WaffraText(waffraIsEnglish?'Protect Recent Apps preview':'حماية معاينة التطبيقات الأخيرة'),
      value:protectRecentApps,onChanged:WaffraHaptics.selection(_setRecentAppProtection)),

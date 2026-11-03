@@ -1,856 +1,250 @@
 {
   "contract_version": 1,
-  "change_id": "M388-M412",
-  "human_scope_review": "REQUIRED: owner approval of requested behavior + live Android screenshot and legacy data checks",
+  "change_id": "M417-M429",
+  "human_scope_review": "Owner explicitly requested separate PR for automatic bank SMS access after first installation. User consent is required at first foreground launch. Play SMS-based money-management exception and physical-device review still pending. This is a DRAFT only; no main merge or release. Human approver must review each function boundary and verify that no existing financial writer is bypassed. Dedicated M417 GitHub Actions job verifies source guards and Flutter first-run widget without granting Play production permission. The M417 Google Play SMS submission packet is supporting documentation only; permission approval and production-release steps require the actual Play Console owner. M418: owner-requested standing consent allows high-confidence automatic SMS posting using existing widget verified finance authority; notification only after durable finance+hash witness. WorkManager may defer execution; production validation and real-device testing remain blockers. Sign-out clears encrypted SMS queue. M419 follows screenshot review and adds strictly fail-closed account and transfer metadata. Existing Home/Widget financial journal remains the only writer. No automatic transfer posting or FX conversion is claimed. M419 screenshot-inspired functional acceptance matrix documents precisely which items are implemented versus pending to avoid claiming Genie parity prematurely. M420 source and tests are deliberately NOT deployed or invoked by the mobile app. Cloud permission requires a distinct opt-in from SMS permission. Do not merge as live OpenRouter integration or mark the cloud feature complete. M421 adds separate Firebase-secured user opt-in in account security settings, authenticated callable endpoint with Secret Manager key and default-off env switch, App Check, and cloud suggestions in encrypted queue. No externally sent SMS until real deployment and separate cloud consent. M421 does not change underlying ledger authority. M421 owner setup guide defines exact staging-only Firebase/OpenRouter consent and secret-manager setup, app-check and deployment prerequisites; no deployment has occurred. functions/.gitignore excludes untracked cloud provider secrets and environment settings in the manual staging setup. M423 owner requested Cloudflare/OpenRouter linkage and accuracy QA after successful one-message manual test. Add only opt-in Cloudflare gateway, signed-Firebase staging Worker source, source-grounding tests and exact-head CI. The old Worker is not deployed by this PR; no static staging token in the APK; existing Google users and local ledger remain untouched. Worker requires verified Firebase identity and Cloudflare rate limiting. PR #353 phone-only onboarding is not yet a signed server-side identity, so production integration stays blocked. M427: owner eliminated SMS OTP and requires standing consent only once at install. Cloudflare uses App Check attestation instead of user ID, independent IP+token rate limits, free-only models; sideloaded signed APK requires Play Integrity configuration. Not deployed or certified. M429 is one combined QA candidate integrating M422/424/426/428 local phone/password and biometrics into M417/427 SMS and AppCheck. Exact lib/main.dart unchanged outside declared anchored sections compared to main. No deployed Worker, signed APK/real owner migration or production merge is claimed. M430 removes the unused unauthenticated quickStart function in the approved login boundary; fixes App Check provider class to the current FlutterFire signature. No finance data mutation. M431 prohibits automatic historical bank SMS backfill upon first permission to avoid double-posting old expenses on update; if cloud attestation/endpoint is not ready the onboarding choice fails visibly, never feigns successful cloud enablement. M432: Owner requested next APK stage after 40 exact-head PR checks passed. Only manual main-branch owner-QA APK may embed public staging endpoint; default main-push APK and AAB remain cloud-disabled, and no provider secret enters Flutter. A signed APK must prove App Check on physical Android before release or legacy-user migration. M433: Owner requested that SMS intake read only messages from the first calendar day of the feature activation month (plus future incoming SMS), with ALL messages queued for explicit review; automatic parsing, Cloudflare analysis and ledger posting are disabled until accuracy is proven. Finance receipts, goals and budget data are unchanged; the existing manual confirmation flow still explicitly chooses or declines a budget. Signed physical-device and backup/migration acceptance remain release blockers. M434: user supplied sender-grouped bank message reference screens. Implement functionally equivalent sender grouping in review inbox, not visual asset cloning. Display existing sourceType metadata for SMS and manual entries, with legacy/unknown unchanged. No finance schema rewrite or retroactive data conversion. M435: the user requested real merchant logos without paid subscriptions. Curated local brand list and existing merchantKey metadata, no raw SMS/bank data upload, optional public Brandfetch Client ID and a monogram fallback. Provider's Referer/hotlinking acceptance on physical Android and logo rights must be confirmed before enabling external logo fetching. New vendor/brand URLs are display-only; exact brand names and aliases not guessed from arbitrary SMS text.",
   "user_requested_changes": [
-    "M388: allow an open-ended savings goal with no fixed target amount and no mandatory budget, preserve old target goals and wallet accounting; avoid false 0-percent completion and allow editing the goal.",
-    "M389: Goals plus opens new goal, duplicate existing goal, and unlimited savings; Recurring plus opens new recurring or duplicate existing recurring. Duplication uses a new ID, preserves original and does not copy goal savings or old linked-goal ID.",
-    "M390: tapping existing counted corner badge on both Home and Transactions opens the exact preserved receipt gallery without modifying saved attachment paths or removing details access.",
-    "M388-M390: update only regression tests whose old expected results contradict the newly user-approved functionality; track all 42 acceptance cases independently.",
-    "M388: legacy goal regression must verify goal creation with open-ended zero-target still never debits spendable cash or skips source-bound persistence.",
-    "M391: after M274 Android emulator precompile failed on truncated Android NDK 28.2.13676358 zip, perform bounded retries of same pinned NDK with explicit fail-closed version validation, without skipping emulator UI checks.",
-    "M392: every saved budget has collapsed-by-default expandable details, a clearly visible switch, bigger suggested templates, an arrow for template disclosure, and non-overlapping create spacing.",
-    "M393: each goal and recurring transaction has collapsed Quick actions (edit/delete/activate); goal pause leaves saved balance untouched and linked recurrence inactive. Existing goals default active.",
-    "M394: preserve zero-target savings through non-negative legacy and experimental encrypted finance validation and cloud allowlist; never accept negative targets or silently activate SQLCipher.",
-    "M395: search and visible scrollbars in Goals and Recurring; presentation-only filters must never alter financial entries.",
-    "M396: new or newly dated goal due never silently creates a recurring obligation; ask the user with explicit Not now / Link due date options while keeping ledger and savings unchanged.",
-    "M397: remove unnecessary optional/encryption jargon from the savings date picker and original SMS title while retaining genuine encrypted-vault safety notices.",
-    "M398-M402: fix previously approved budget directory reopen and own-budget filters, ensure bounded calendars and concise UI copy, show monthly budget count and month navigation, and use centered blurred dropdowns in the user-approved locations.",
-    "M403: support independent activation and quick actions on main/subcategories without deleting historical entries or changing finance ledger.",
-    "M406: repair Drift test API errors without weakening assertions, and expand M385 scope only to exact PR changed hunks while preserving protected code outside them.",
-    "M408: repair six actual failing assertions without removing any financial or security test: month navigation, recurring durable writes, active category validation, concise bank SMS title, StateError rollback, and paused goal due behavior.",
-    "M409: fix the failed M274 Android UI startup caused by VM-service disconnect and an offline emulator during a redundant post-boot Gradle build. Reuse the exact precompiled integration debug APK with a real Flutter drive integration driver, stop idle Gradle daemons before boot, preserve real tap assertions and fail-closed diagnostics.",
-    "M410: implement safe incremental CI recovery: retry exactly one failed Android emulator CI job on the same SHA only when logs prove transient infrastructure failure; cap to one retry, disallow failing application assertions or stale PR heads, never skip protected financial/security checks or final full-main certification.",
-    "M411: repair real red Firestore security CI dependency install: pin stable Firebase JS SDK and security emulator versions, override the unavailable @firebase/firestore 4.19.1 tarball to published 4.19.0, use Node 24.12.0 for engine compatibility, preserve all security assertion tests and do not fake green.",
-    "M412: final incremental PR CI implementation: compare the exact before-to-after SHA pair of each PR synchronize event to only run impacted scope-specific test jobs; keep always-on mandatory production finance/security and complete main verification; on unknown diff, base ancestry, event, or path list run all (fail-open); do not silently skip on code changes; no modifications to app logic or user data."
+    "Offer first-launch optional SMS permission disclosure and accept/skip choice, with Android READ_SMS and RECEIVE_SMS requested only on explicit tap.",
+    "Receive new financial SMS and import bounded recent inbox entries locally after permission, filtering OTP and personal messages without server upload.",
+    "Encrypt candidate bank messages at rest with Android Keystore AES-GCM and never submit money through the receiver.",
+    "Present queued SMS to the existing financial review path; remove queued candidates only after a confirmed committed SMS hash or explicit ignore.",
+    "Disable automatic SMS collection on logout, preserve all legacy manual and pasted transaction paths, and do not enable unapproved cloud inference.",
+    "Provide release declaration checklist and tests, leave PR draft until Google Play approval, Android compilation and signed-device verification.",
+    "M418: Automatically post strictly verified Saudi bank SMS (income and expenses) after first-launch standing consent, reuse prior merchant budget links, and send a system notification only after an atomic durable finance+hash commit. New bank/card account mapping and cloud LLM require further evidence; skip ambiguous/foreign/OTP and send review notification.",
+    "M419: classify bank SMS into true income, expenses, transfers and card settlements; recognize distinct account suffixes and fees; show masked account/fee detail at review; prohibit automatic cash ledger writes for any unlinked source account or transfer until typed account accounting exists.",
+    "M420: prepare server-only optional OpenRouter LLM extraction adapter using JSON schema with separate consent, zero-retention routing and no raw identifiers/OTP; no client API key, no public callable endpoint, and no cloud SMS data processing until security, credentials and Saudi privacy review.",
+    "M421: wire optional redacted automatic bank SMS into Firebase Cloud Functions and server-only OpenRouter API using separate owner-consent, Firebase Auth, App Check, strict user quotas, cloud suggestions encrypted in native candidate queue; no model-written finance entries; disabled pending credentials, staging, privacy and Google Play approvals.",
+    "M423: integrate owner-tested Cloudflare Worker with the existing separately consented bank SMS cloud review path, using signed Firebase user identity rather than embedding static API tokens; run synthetic English/Arabic/foreign currency/OTP/duplicate/invented amount tests and preserve offline fallback without modifying finance writer authority.",
+    "M427: persist installation-wide one-time consent for SMS+external cloud analysis (with separate local-only choice), replace Firebase identity with signed App Check verification and enforce free-only OpenRouter model and dual rate limits; no OTP, no billing or per-message permission prompts.",
+    "M422: Replace new Google and Apple registration options with Saudi mobile number (05XXXXXXXX) and password only, and remove unauthenticated guest entry and bypass.",
+    "M422: Stage phone-only registration in two screens: mobile/password/confirm, then name and gender without email or birth date.",
+    "M422: Preserve legacy Google/Apple profiles and on-device finance data for verified one-time migration; do not allow registration to overwrite an existing account.",
+    "M422: Keep cloud identity/password security, SMS verification and account migration as hard release blockers until provider-backed authentication and regression tests are complete.",
+    "M424: Require OS biometric verification immediately after successful Saudi phone/password login and on every app return; remove optional app PIN lock/change setting from My Account, no PIN bypass, preserve previous user data.",
+    "M426: remove OTP, Firebase PhoneAuth and backend password callables, keep local Saudi phone+password and mandatory biometric first/return sessions without billing, preserve old accounts and safely upgrade existing local password hashes without resetting data.",
+    "M428: safely migrate already accessible legacy Google/Apple local profiles to a local Saudi phone+password without deleting historical ledger, while preserving old provider recovery until a real-device backup and migration test passes.",
+    "M429: consolidate one-time SMS and cloud consent, Cloudflare App Check, local Saudi phone/password, mandatory biometric unlocking and local legacy Google data migration into one exact-head premerge candidate.",
+    "M430: remove dead quickStart guest bypass and use typed FlutterFire Android App Check providers for no-OTP sideload App Check.",
+    "M431: one-time permission only captures future bank SMS automatically; never backfill old SMS without a separate explicit user-approved review. Show a clear error when cloud activation is unavailable and offer on-device processing.",
+    "M432: After exact-head QA passes, provide an explicitly requested manually triggered signed QA APK from main only using the public Firebase App Check Cloudflare SMS staging URL; keep standard builds and Play AAB cloud-disabled and retain finance data.",
+    "M433: Import eligible bank SMS from the first day of the month the user activates SMS tracking, and queue subsequent incoming bank SMS, encrypted and without automatic analysis or posting. Add a permanent, counted and scrollable home review section; only user-confirmed SMS may change balance, with explicit budget choice, and send private nonrepeated review notifications for new incoming messages.",
+    "M434: Group pending encrypted bank SMS by the true sender with per-sender message count and list, and show SMS versus manual origin in every saved transaction detail/list while preserving legacy unknown provenance without changing or deleting previous financial data.",
+    "M434 edit-form provenance: clearly label the original SMS or manual entry type on transaction editing, without modifying sourceType or financial balances.",
+    "M435: Add a searchable merchant picker with logos like the user's sample application, show a real brand icon in transaction lists/details when validated, and display a safe initial for unknown or offline brands. No financial-data migration or automatic SMS posting. Use an optional free logo CDN only after signed Android provider-terms QA."
   ],
   "allowed_changed_files": [
-    ".github/workflows/m274-production-ui-golden.yml",
-    "docs/qa/WAFFRA_42_REQUEST_ACCEPTANCE_TRACKER.md",
+    ".github/workflows/android-full-smoke.yml",
+    ".github/workflows/android.yml",
+    ".github/workflows/m417-auto-bank-sms.yml",
+    ".github/workflows/m422-phone-only-auth-ui.yml",
+    ".github/workflows/m429-integration-smoke.yml",
+    "cloudflare/waffra_sms_appcheck.mjs",
+    "cloudflare/waffra_sms_worker.mjs",
+    "cloudflare/waffra_sms_worker.test.mjs",
     "docs/qa/approved_change_scope.json",
-    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "docs/qa/m417_google_play_sms_submission_packet.md",
+    "docs/qa/m417_sms_play_declaration.md",
+    "docs/qa/m419_sms_account_merchant_parity_acceptance.md",
+    "docs/qa/m420_openrouter_cloud_sms_plan.md",
+    "docs/qa/m421_firebase_openrouter_owner_setup.md",
+    "docs/qa/m422_phone_password_only_migration.md",
+    "docs/qa/m423_cloudflare_worker_link.md",
+    "docs/qa/m424_mandatory_biometric_session.md",
+    "docs/qa/m429_combined_premerge_review.md",
+    "functions/.gitignore",
+    "functions/index.js",
+    "functions/openrouter_sms_extractor.cjs",
+    "functions/test/openrouter_sms_extractor.test.cjs",
     "lib/main.dart",
-    "lib/storage/legacy_financial_snapshot.dart",
-    "lib/storage/legacy_snapshot_preflight.dart",
-    "lib/storage/waffra_cloud_cipher.dart",
-    "lib/storage/waffra_encrypted_goal_recycle.dart",
-    "lib/storage/waffra_encrypted_module_projection_guard.dart",
-    "lib/storage/waffra_fresh_encrypted_vault_bootstrap.dart",
-    "lib/storage/waffra_fresh_finance_modules_repository.dart",
-    "lib/storage/waffra_ledger_projection.dart",
-    "lib/storage/waffra_normalized_import.dart",
-    "lib/waffra_budget_directory.part.dart",
-    "lib/waffra_categories_page.part.dart",
-    "lib/waffra_centered_dropdown.dart",
-    "lib/waffra_country_first_run_page.dart",
-    "lib/waffra_financial_planning_engine.dart",
-    "lib/waffra_goal_recurring_actions.part.dart",
-    "lib/waffra_gold_market_section.dart",
-    "lib/waffra_oil_market_section.dart",
-    "lib/waffra_practical_tools_page.dart",
-    "lib/waffra_today_picker.dart",
-    "test/m127_ui_tour_backup_acceptance_test.dart",
-    "test/m262_bank_sms_notes_separation_test.dart",
-    "test/m298_required_finance_field_validation_test.dart",
-    "test/m302_optimistic_module_write_safety_test.dart",
-    "test/m343_goal_recurring_named_budgets_test.dart",
-    "test/m351_compact_category_filters_test.dart",
-    "test/m371_goal_wallet_and_budgets_regression_test.dart",
-    "test/m384_receipt_corner_upgrade_regression_test.dart",
-    "test/m388_m390_approved_goal_recurring_receipt_test.dart",
-    "test/m392_m395_budget_quick_actions_goal_ui_test.dart",
-    "test/m398_budget_directory_reopen_scope_test.dart",
-    "test/m399_calendar_bounded_initial_date_test.dart",
-    "test/m400_compact_visible_copy_test.dart",
-    "test/m401_m402_budget_month_centered_dropdown_test.dart",
-    "test/m403_category_pause_quick_actions_test.dart",
-    "test/qa/m391_m274_ndk_archive_retry_test.py",
-    "test/storage/fresh_finance_modules_repository_test.dart",
-    "test/storage/ledger_projection_test.dart",
-    "test/storage/m266_home_bound_source_regression_test.dart",
-    "test/waffra_directional_fab_receipt_corner_test.dart",
-    "test/waffra_oct21_regression_test.dart",
-    ".github/scripts/run-m274-android-tap-smoke.sh",
-    ".github/workflows/m410-failed-android-retry.yml",
-    "scripts/qa/m410_failed_job_retry.py",
-    "test/qa/m410_smart_ci_retry_test.py",
-    "docs/SMART_INCREMENTAL_CI.md",
-    ".github/workflows/firestore-security-rules.yml",
-    "test/firebase/package.json",
-    "test/qa/m411_firestore_rules_ci_dependencies_test.py",
-    ".github/workflows/m295-compact-selection-ui.yml",
-    ".github/workflows/m283-compact-layout-tools-back-greetings.yml",
-    ".github/workflows/m277-ux-accessibility.yml",
-    ".github/workflows/m278-mobile-system-insets.yml",
-    ".github/workflows/m281-practical-tools.yml",
-    ".github/workflows/m287-receipt-ocr.yml",
-    ".github/workflows/m297-receipt-to-entry.yml",
-    ".github/workflows/m298-finance-validation.yml",
-    ".github/workflows/m302-cross-feature-input-qa.yml",
-    ".github/workflows/m303-m306-production-hardening.yml",
-    ".github/workflows/m371-goal-wallet-budget-android-regression.yml",
-    ".github/workflows/m290-country-reminders-multicurrency.yml",
-    ".github/workflows/m317-ondevice-ai-brain.yml",
-    ".github/workflows/m106-play-privacy-preflight.yml",
-    ".github/workflows/m107-account-deletion-crash-privacy.yml",
-    ".github/workflows/m108-home-widget-one-finance-commit.yml",
-    ".github/workflows/m109-verified-finance-authority.yml",
-    ".github/workflows/m110-home-writer-source-authority.yml",
-    ".github/workflows/m113-recovery-rollback-regression.yml",
-    ".github/workflows/m114-sqlcipher-projected-editor.yml",
-    ".github/workflows/m96-runtime-finance-cloud-integration.yml",
-    ".github/workflows/m98-encrypted-recovery-inventory.yml",
-    ".github/workflows/m99-manifest-last-cloud-sync.yml",
-    ".github/workflows/m266-sqlcipher-precutover-qa.yml",
-    ".github/workflows/m279-app-security-gates.yml",
-    ".github/workflows/m280-finance-quality-matrix.yml",
-    "scripts/qa/m412_pr_changed_impact.py",
-    "test/qa/m412_incremental_pr_impact_test.py",
-    "test/qa/m412_workflow_wiring_test.py"
+    "lib/waffra_auto_sms.dart",
+    "lib/waffra_auto_sms_autopost.part.dart",
+    "lib/waffra_auto_sms_consent.dart",
+    "lib/waffra_auto_sms_policy.dart",
+    "lib/waffra_bank_sms_facts.dart",
+    "lib/waffra_biometrics.dart",
+    "lib/waffra_cloudflare_sms_gateway.dart",
+    "lib/waffra_local_account_migration.dart",
+    "lib/waffra_local_phone_credentials.dart",
+    "lib/waffra_mandatory_biometric_gate.dart",
+    "lib/waffra_messages.dart",
+    "lib/waffra_sms_cloud_redactor.dart",
+    "lib/waffra_sms_cloud_service.dart",
+    "native/WaffraAutoSmsNotifications.kt",
+    "native/WaffraAutoSmsReceiver.kt",
+    "native/WaffraAutoSmsStore.kt",
+    "native/WaffraAutoSmsWorker.kt",
+    "native/WaffraMainActivity.kt",
+    "pubspec.yaml",
+    "scripts/qa/m279_app_security_gate.py",
+    "scripts/qa/test_m279_app_security_gate.py",
+    "test/m417_sms_first_run_test.dart",
+    "test/m422_phone_only_auth_entry_test.dart",
+    "test/m423_cloudflare_sms_gateway_test.dart",
+    "test/m424_mandatory_biometrics_test.dart",
+    "test/m426_local_phone_credentials_test.dart",
+    "test/m428_local_account_migration_test.dart",
+    "test/m429_sms_phone_integration_test.dart",
+    "test/qa/m417_sms_permission_acceptance_test.py",
+    "test/waffra_auto_sms_policy_test.dart",
+    "test/waffra_bank_sms_facts_test.dart",
+    "test/waffra_sms_cloud_redactor_test.dart",
+    "lib/waffra_merchant_brands.dart",
+    "test/m435_merchant_brand_directory_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": "import 'waffra_today_picker.dart';\n",
-        "end": "import 'waffra_receipt_filename.dart';\n"
+        "start": "import 'waffra_messages.dart';",
+        "end": "import 'waffra_recurring_policy.dart';"
       },
       {
-        "start": " /// Pre-activation records have no flag, so default to active.\n",
-        "end": " factory BudgetCategory.fromJson(Map<String,dynamic> j)=>BudgetCategory(\n"
+        "start": " bool googleFirstRunSetup=false;",
+        "end": " String appearance='light';"
       },
       {
-        "start": "  origin:j['origin']=='user'?'user':j['origin']=='detected'?'detected':'system',\n",
-        "end": "    (j['budgetLabel'] as String).trim().isNotEmpty\n"
+        "start": " Future<void> logout()async {",
+        "end": " Future<void> setPin(String? value)async {"
       },
       {
-        "start": "  double? budget,int? alertPercent,String? parentId,\n",
-        "end": "    alertPercent:alertPercent??this.alertPercent,\n"
+        "start": " @override Widget build(BuildContext context)=>MaterialApp(",
+        "end": "class PinLockScreen extends StatefulWidget {"
       },
       {
-        "start": " budgets.any((b)=>b.budget>0&&b.budgetActive&&!b.deleted);\n\n",
-        "end": "class SavingChallenge {\n"
+        "start": " @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;",
+        "end": " Future<void> _syncWidgetTransactions()async{"
       },
       {
-        "start": "     ])),\n   ],\n",
-        "end": "      errorText:profileAttempted&&gender.isEmpty?waffraRequiredFieldMessage:null,\n"
+        "start": "part 'waffra_widget_capture.part.dart';",
+        "end": "Future<Map<String,dynamic>> waffraDecodeBackupInIsolate("
       },
       {
-        "start": "         const SizedBox(width:6),\n",
-        "end": "           style:TextStyle(fontSize:12,color:muted,fontWeight:FontWeight.w700))),\n"
+        "start": "const bool waffraCompileOnlyQaPreview =",
+        "end": "Future<void> main()async {"
       },
       {
-        "start": " String categorySearch='',categoryDisplay='all',categoryTypeFilter='all',goalDisplay='all',recurringDisplay='all';\n",
-        "end": "  int forecastReduction=20;\n"
+        "start": " @override void didChangeAppLifecycleState(AppLifecycleState state)",
+        "end": " Future<void> intro()async {"
       },
       {
-        "start": "  if(!recurringRemindersEnabled)return;\n  try {\n",
-        "end": "     .map((r)=>WaffraReminder(id:r.id,title:r.title,day:r.day,\n"
+        "start": " Future<void> saveUser(Person u)async {",
+        "end": " Future<void> setUiCountry(String? iso)async{"
       },
       {
-        "start": "  if(!mounted||!ready||_dueDialogShowing)return;\n  final today=DateTime.now();\n",
-        "end": "   // remains the same even when the user returns to the app much later.\n"
+        "start": "class _LoginScreenState extends State<LoginScreen> {",
+        "end": "// All transient notices use the same footer-anchored surface throughout the app."
       },
       {
-        "start": " // in older transactions remain unchanged until a user deliberately edits.\n",
-        "end": "  context:context,builder:(ctx)=>AlertDialog(title:WaffraText(title),content:WaffraText(body),\n"
+        "start": "import 'waffra_biometrics.dart';",
+        "end": "import 'waffra_amount_formatter.dart';"
       },
       {
-        "start": "          style:const TextStyle(fontWeight:FontWeight.bold),maxLines:2),\n",
-        "end": "          menuMaxHeight:min(340.0,MediaQuery.sizeOf(ctx).height*.48),\n"
+        "start": " Widget profilePage(){",
+        "end": "   _accountSection(waffraIsEnglish?'App settings'"
       },
       {
-        "start": "       // Budget and transaction date share one compact, keyboard-safe row.\n",
-        "end": "         menuMaxHeight:min(340.0,MediaQuery.sizeOf(sheetContext).height*.48),\n"
+        "start": "   _accountSection(waffraIsEnglish?'Security & privacy'",
+        "end": "    SwitchListTile(secondary:const Icon(Icons.preview_outlined"
       },
       {
-        "start": "     'نقل المعاملة إلى المحذوفات',\n    waffraIsEnglish?\n",
-        "end": "   await _financialWriteQueue.submit(<String,Object>{'id':entry.id},(_)async{\n"
+        "start": " Widget dashboard(){",
+        "end": " List<MoneyEntry> get analysisEntries"
       },
       {
-        "start": "     onPressed:WaffraHaptics.tap(()=>transactionActions(e)),icon:const Icon(Icons.more_vert,color:forest)),\n   ]))),\n",
-        "end": " }\n String get greeting=>WaffraSaudiGreetings.compose(\n"
+        "start": "class WaffraTransactionDetailsDialog extends StatelessWidget {",
+        "end": "class HomeScreen extends StatefulWidget {"
       },
       {
-        "start": "       decoration:InputDecoration(labelText:waffraIsEnglish?'Monthly limit *':'الحد الشهري *',\n        errorText:amountError,border:const OutlineInputBorder())),\n",
-        "end": "       items:[50,60,70,75,80,85,90,95,100]\n"
+        "start": " Widget tile(MoneyEntry e){",
+        "end": " String get greeting=>"
       },
       {
-        "start": "      title:WaffraText(waffraIsEnglish?'New budget':'إنشاء ميزانية جديدة'),\n",
-        "end": "        onChanged:(_)=>update(()=>nameError=null),\n"
+        "start": " Widget compactTransaction(MoneyEntry entry){",
+        "end": " Widget dashboard(){"
       },
       {
-        "start": "         errorText:amountError,border:const OutlineInputBorder())),\n",
-        "end": "        decoration:InputDecoration(labelText:waffraIsEnglish?\n         'Notify at':'التنبيه عند نسبة'),\n"
+        "start": "      WaffraText(initial!=null?'تعديل العملية'",
+        "end": "      if(scannedImagePosition!=null&&scannedImageTotal!=null)"
       },
       {
-        "start": " Widget monthlyBudgetCard(){\n",
-        "end": "  // only *new* budget creation requires a child category.\n"
+        "start": "  String? selectedBudgetId=initial?.budgetId;",
+        "end": "  int budgetMenuRevision=0"
       },
       {
-        "start": "  // charging it again; its former limit and historical links remain.\n",
-        "end": "    pace=WaffraBudgetPace(\n"
+        "start": "      TextField(controller:title,onChanged:(_)=>update((){}),minLines:1,maxLines:5,",
+        "end": "      if(!sms)...["
       },
       {
-        "start": "        style:const TextStyle(fontWeight:FontWeight.bold,fontSize:17)),\n",
-        "end": "      ])),\n      Icon(monthlyBudgetDetailsOpen?\n"
-      },
-      {
-        "start": "    if(monthlyBudgetDetailsOpen)...[\n",
-        "end": "       fontWeight:FontWeight.bold,fontSize:16));\n"
-      },
-      {
-        "start": "      ]);\n    }),\n",
-        "end": "     initialValue:budgetStatusFilter,\n"
-      },
-      {
-        "start": "     }),\n    ),\n",
-        "end": "     menuMaxHeight:min(340.0,MediaQuery.sizeOf(context).height*.48),\n"
-      },
-      {
-        "start": "      onPressed:WaffraHaptics.tap(()=>transactionActions(entry)),icon:const Icon(Icons.more_vert,size:18)),\n    ])),\n",
-        "end": " }\n Widget dashboard(){\n"
-      },
-      {
-        "start": "               (choice=='الكل'?'All':choice=='الدخل'?'Income':'Expenses'):choice),\n              onSelected:WaffraHaptics.selection((_)=>setState((){\n               typeFilter=choice;categoryFilter='الكل';\n",
-        "end": "             decoration:InputDecoration(labelText:waffraIsEnglish?\n"
-      },
-      {
-        "start": "      WaffraText(waffraIsEnglish?'What if?':'ماذا لو؟',\n",
-        "end": "      items:top.map((e)=>DropdownMenuItem(value:e.key,child:WaffraText(e.key))).toList(),\n"
-      },
-      {
-        "start": "    selected:{period},onSelectionChanged:WaffraHaptics.selection((v)=>setState(()=>period=v.first))),\n   const SizedBox(height:12),\n",
-        "end": "     items:List.generate(12,(i)=>DropdownMenuItem(value:i+1,child:WaffraText('شهر ${i+1}'))),\n"
-      },
-      {
-        "start": "       budget:initial?.budget??0,alertPercent:initial?.alertPercent??80,\n",
-        "end": "     }),child:const WaffraText('حفظ')),\n    ])));\n"
-      },
-      {
-        "start": "  await addCategory(income:income,parentId:parentId);\n",
-        "end": "  if(c==null||!mounted)return;\n"
-      },
-      {
-        "start": "     ?const Color(0xFFD9FFE9):forest):null,\n",
-        "end": "  if(!mounted){name.dispose();target.dispose();return;}\n"
-      },
-      {
-        "start": "   if(key.isNotEmpty&&seen.add(key))suggested.add(entry.trim());\n  }\n",
-        "end": "   final issue=waffraGoalNameIssue(name.text,goals.map((g)=>g.name));\n"
-      },
-      {
-        "start": "     }),icon:const Icon(Icons.calendar_month_outlined),\n",
-        "end": "      inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],\n      onChanged:(_)=>updateGoal((){}),\n"
-      },
-      {
-        "start": "      final n=amountOfDisplay(target.text);\n",
-        "end": "    ],\n   )));\n  disposeLater([name,target]);\n"
-      },
-      {
-        "start": "   setState(()=>goals.add(g));\n   if(!await _persistModuleOrReload(WaffraFinanceRoute.goalCreateEditDeleteRestore,\n",
-        "end": "      'Goal saved, but recurring link was not confirmed. Retry from Edit Goal.':\n"
-      },
-      {
-        "start": "            style:const TextStyle(fontWeight:FontWeight.bold,fontSize:14))),\n          ]),\n",
-        "end": "           style:TextStyle(fontWeight:FontWeight.bold,fontSize:12,color:accent)),\n"
-      },
-      {
-        "start": "       labelText:waffraIsEnglish?'Daily amount *':'الادخار اليومي *',\n       errorText:attempted?waffraAmountFieldError(amount.text):null)),\n",
-        "end": "      items:[7,14,30].map((n)=>DropdownMenuItem<int>(value:n,\n"
-      },
-      {
-        "start": "    actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),\n     child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))],\n   )));\n",
-        "end": "    child:WaffraBalanceHeader(\n"
-      },
-      {
-        "start": "       SizedBox(width:48,height:48,child:Stack(alignment:Alignment.center,children:[\n",
-        "end": "    ]),\n    const SizedBox(height:14),\n   ],\n"
-      },
-      {
-        "start": "    int? monthlyRequired;\n",
-        "end": "       final forecast=WaffraGoalPlan(\n"
-      },
-      {
-        "start": "      }catch(_){/* Show no invented target guidance. */}\n",
-        "end": "     goalIcon(g.name)==Icons.directions_car?const Color(0xFF3867D6):emerald;\n"
-      },
-      {
-        "start": "       WaffraIllustration(topic:g.name,size:44),\n       const SizedBox(width:10),\n       Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[\n",
-        "end": "       child:Row(children:[\n        const Icon(Icons.event_outlined,size:16,color:emerald),\n"
-      },
-      {
-        "start": "         'موعد الهدف فات. عدّل التاريخ علشان تحصل على خطة ادخار جديدة.',\n         style:const TextStyle(fontSize:12,color:Colors.deepOrange))),\n",
-        "end": "       const SizedBox(width:10),\n       Expanded(child:LinearProgressIndicator(value:percent,minHeight:9,\n"
-      },
-      {
-        "start": "        WaffraText(waffraIsEnglish?'Saved':'المدّخر',style:const TextStyle(fontSize:11)),\n",
-        "end": "     ])),\n    );\n"
-      },
-      {
-        "start": "   savingsChallengesSection(),\n",
-        "end": "     content:SizedBox(width:340,child:SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,mainAxisSize:MainAxisSize.min,children:[\n"
-      },
-      {
-        "start": "        errorText:attempted?waffraAmountFieldError(amount.text):null)),\n",
-        "end": "      const SizedBox(height:12),\n      InkWell(\n"
-      },
-      {
-        "start": "         labelText:waffraIsEnglish?'Category *':'القسم *',\n",
-        "end": "         border:OutlineInputBorder(borderRadius:BorderRadius.circular(14)),\n"
-      },
-      {
-        "start": "        WaffraValidators.positiveAmount(amount.text)==null&&\n",
-        "end": "      }),child:const WaffraText('حفظ')),\n"
-      },
-      {
-        "start": "   postponedUntil:DateTime.tryParse(recurringPostponed[monthId]??''));\n",
-        "end": "  final active=recurring.where((r)=>r.active).toList();\n"
-      },
-      {
-        "start": "     r.startAt.month==lastOfCurrentMonth.month)))\n",
-        "end": "   Row(children:[\n    Expanded(child:OutlinedButton.icon(\n"
-      },
-      {
-        "start": "     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(21),\n",
-        "end": "       child:Icon(categoryIcon(categoryFor(r.category,r.income).icon),color:color)),\n"
-      },
-      {
-        "start": "       if(goal!=null)...[\n",
-        "end": "       ],\n       const SizedBox(height:3),\n"
-      },
-      {
-        "start": "        style:TextStyle(fontSize:11,color:r.active?Theme.of(context).hintColor:Colors.deepOrange)),\n",
-        "end": "   }),\n   if(recurring.isEmpty)Padding(padding:const EdgeInsets.only(top:18),\n"
-      },
-      {
-        "start": "     textAlign:TextAlign.center)),\n",
-        "end": " Future<void> showWaffraFinancialCalendar()async{\n"
-      },
-      {
-        "start": "      fontSize:15,fontWeight:FontWeight.bold,color:Theme.of(context).brightness==Brightness.dark?Colors.white:forest)),\n",
-        "end": "  if(accountOpened)return profilePage();\n"
-      },
-      {
-        "start": "        child:Transform.scale(scale:accountOpened?0.985+0.015*progress:1,child:child))),\n",
-        "end": "       crossAxisAlignment:waffraIsEnglish?CrossAxisAlignment.end:CrossAxisAlignment.start,\n"
-      },
-      {
-        "start": "          unawaited(_launchAddAction(scanAndAddReceipt,fromMenu:true));\n",
-        "end": "         _addMenuOption(icon:Icons.trending_up,\n"
-      },
-      {
-        "start": "     await Future<void>.delayed(waffraMotion(110));\n",
-        "end": "    },\n    splashFactory:NoSplash.splashFactory,\n"
-      },
-      {
-        "start": "   max(16.0,bottom-geometry.floatingActionButtonSize.height-16),\n  );\n }\n",
-        "end": "/// RTL uses the top-right corner; LTR mirrors it to top-left.\n"
+        "start": "        sourceType:initial?.sourceType??(sms?",
+        "end": "        goalWalletPaidMinor:initial?.goalWalletPaidMinor"
       }
     ],
-    "lib/waffra_goal_recurring_actions.part.dart": [
+    "lib/waffra_messages.dart": [
       {
-        "start": "/// payment requires explicit confirmation and a verified finance writer.\n",
-        "end": "   setState(()=>recurring[linkedIndex]=recurring[linkedIndex].copy(active:false));\n"
-      },
-      {
-        "start": "   final next=linkedIndex>=0?recurring[linkedIndex].copy(\n",
-        "end": "     amount:goal.target,income:false,day:deadline.day,startAt:deadline,\n"
-      },
-      {
-        "start": "  return true;\n }\n",
-        "end": "  bool removeDeadline=false;\n"
-      },
-      {
-        "start": "         border:const OutlineInputBorder(),errorText:nameError)),\n",
-        "end": "        inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],\n"
-      },
-      {
-        "start": "          .map((g)=>g.name))==null?null:\n",
-        "end": "      ],\n"
-      },
-      {
-        "start": "   if(!await _persistModuleOrReload(WaffraFinanceRoute.goalCreateEditDeleteRestore,\n",
-        "end": "   }\n  }finally{disposeLater([name,target]);}\n"
+        "start": "/// Only holds text the user chose to share. Never reads the inbox.",
+        "end": "/// Launch the handset's default SMS app"
       }
     ],
-    "lib/waffra_financial_planning_engine.dart": [
+    "native/WaffraMainActivity.kt": [
       {
-        "start": "abstract final class GoalWalletHealthAudit {",
+        "start": "import android.content.Intent",
+        "end": "import android.net.Uri"
+      },
+      {
+        "start": "    private val messagesChannel = \"waffra/messages\"",
+        "end": "    private val widgetChannelName ="
+      },
+      {
+        "start": "    override fun onResume() {",
+        "end": "    private fun receiveSharedText("
+      },
+      {
+        "start": "        messageChannel = MethodChannel(",
+        "end": "    // Android Storage Access Framework:"
+      },
+      {
+        "start": "    override fun onDestroy() {",
         "end": null
       }
     ],
-    "test/m127_ui_tour_backup_acceptance_test.dart": [
+    ".github/workflows/android.yml": [
       {
-        "start": "  test('four finance action destinations share one language-aware circular action', () {",
-        "end": "  test('tour intro no longer cuts through the top header', () {"
-      }
-    ],
-    "test/m384_receipt_corner_upgrade_regression_test.dart": [
-      {
-        "start": "  test('M384: both cards show folded count from the stored finance record', () {",
-        "end": "  testWidgets('M384: top start corner is right in Arabic and left in English',"
-      }
-    ],
-    "test/storage/m266_home_bound_source_regression_test.dart": [
-      {
-        "start": "  test('goals and backup request verified finance binding before reads', () {",
-        "end": "  test('Home source selection still starts through guarded production binding',"
-      }
-    ],
-    "test/waffra_directional_fab_receipt_corner_test.dart": [
-      {
-        "start": "  test('M384 restores corner count and keeps details attachments action', () {",
-        "end": "  testWidgets('expanded menu is above the physical plus on the same side in both languages',"
-      }
-    ],
-    "test/waffra_oct21_regression_test.dart": [
-      {
-        "start": " test('M384 restored receipt corner on cards and retained details access', () {",
-        "end": " test('Sensitive financial actions always require OS biometric authentication',"
-      }
-    ],
-    "test/m371_goal_wallet_and_budgets_regression_test.dart": [
-      {
-        "start": "  test('M371 goal creation cannot post an expense or negative cash debit',",
-        "end": null
-      }
-    ],
-    ".github/workflows/m274-production-ui-golden.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    "lib/waffra_budget_directory.part.dart": [
-      {
-        "start": " /// render as a large grey ErrorWidget on narrow Android devices.\n",
-        "end": "   context:context,isScrollControlled:true,useSafeArea:true,showDragHandle:true,\n"
+        "start": "      - name: Install native messaging share support",
+        "end": "      - name: Install native Firebase Auth SDK dependency"
       },
       {
-        "start": "     builder:(ctx,refresh)=>ListView(\n",
-        "end": "    ),\n   ),\n"
+        "start": "  workflow_dispatch:",
+        "end": "# Fast-build concurrency:"
       },
       {
-        "start": "    trailing:const Icon(Icons.chevron_right_rounded,color:emerald),\n   ),\n  );\n",
-        "end": "  final now=DateTime.now();\n"
+        "start": "      - name: Build optimized ARM64 Release APK",
+        "end": "      - name: Measure release APK size"
+      }
+    ],
+    ".github/workflows/android-full-smoke.yml": [
+      {
+        "start": "      - name: Install native messaging share support",
+        "end": "      # Match the production ARM64 workflow:"
+      }
+    ],
+    "scripts/qa/m279_app_security_gate.py": [
+      {
+        "start": "def manifest_permission_errors(",
+        "end": "def required_markers("
       },
       {
-        "start": "  ],budgetSearch)).toList();\n  return Container(\n",
-        "end": "      key:const Key('waffra-budget-directory-search'),\n"
-      },
-      {
-        "start": "     // failures under Android text scaling and the draggable sheet.\n",
-        "end": "       initialValue:const {'all','active','inactive'}.contains(budgetStatusFilter)?\n"
-      },
-      {
-        "start": "        });\n       }),\n      ),\n",
-        "end": "       initialValue:const {'default','name','limit','spent'}.contains(budgetSort)?\n"
-      },
-      {
-        "start": "       icon:const Icon(Icons.add_circle_outline_rounded),\n",
-        "end": "      padding:const EdgeInsets.symmetric(vertical:14),\n"
-      },
-      {
-        "start": "         border:Border.all(color:emerald.withValues(alpha:.23)),\n",
-        "end": "         LinearProgressIndicator(value:ratio,minHeight:7,\n"
-      },
-      {
-        "start": "           icon:const Icon(Icons.edit_outlined,size:17),\n",
-        "end": "           onPressed:WaffraHaptics.tap(()async{\n            await deleteNamedBudget(b);\n"
-      },
-      {
-        "start": "      );\n",
-        "end": "           chooseBudgetCategory(\n"
+        "start": "def audit_repo(root: Path)",
+        "end": "def main() -> int:"
       }
     ],
-    "lib/storage/waffra_fresh_finance_modules_repository.dart": [
+    "scripts/qa/test_m279_app_security_gate.py": [
       {
-        "start": "  static Map<String, Object?> _validate(",
-        "end": "  Future<List<Map<String, Object?>>> list("
-      },
-      {
-        "start": "  Future<void> save(",
-        "end": "  /// Prevent permanent deletion"
+        "start": "    def test_reject_high_risk_sms_and_device_permissions(self):",
+        "end": "    def test_allow_ordinary_network_permission(self):"
       }
     ],
-    "lib/storage/waffra_encrypted_module_projection_guard.dart": [
+    "lib/waffra_biometrics.dart": [
       {
-        "start": "        case WaffraFinanceModule.goals:",
-        "end": "        case WaffraFinanceModule.recurring:"
-      }
-    ],
-    "lib/storage/legacy_snapshot_preflight.dart": [
-      {
-        "start": "        } else if (key == 'waffra_goals_v24') {",
-        "end": "        } else if (key == 'waffra_recurring_v24') {"
-      }
-    ],
-    "lib/storage/waffra_fresh_encrypted_vault_bootstrap.dart": [
-      {
-        "start": "CREATE TABLE IF NOT EXISTS fresh_finance_goals(",
-        "end": "CREATE TABLE IF NOT EXISTS fresh_finance_recurring("
-      }
-    ],
-    "lib/storage/waffra_ledger_projection.dart": [
-      {
-        "start": "CREATE TABLE IF NOT EXISTS saving_goals(",
-        "end": "CREATE TABLE IF NOT EXISTS recurring_bills("
-      }
-    ],
-    "lib/storage/waffra_normalized_import.dart": [
-      {
-        "start": "CREATE TABLE IF NOT EXISTS normalized_goals (",
-        "end": "CREATE TABLE IF NOT EXISTS normalized_recurring ("
-      }
-    ],
-    "lib/storage/waffra_encrypted_goal_recycle.dart": [
-      {
-        "start": "CREATE TABLE IF NOT EXISTS $_table (",
-        "end": "  /// Best-effort matching for known explicit goal references."
-      }
-    ],
-    "lib/storage/legacy_financial_snapshot.dart": [
-      {
-        "start": "        final amountFields = <String>[",
-        "end": "        if (isMoney) {"
-      }
-    ],
-    "lib/storage/waffra_cloud_cipher.dart": [
-      {
-        "start": "    'goal': {",
-        "end": "    'recurring': {"
-      }
-    ],
-    "test/storage/fresh_finance_modules_repository_test.dart": [
-      {
-        "start": "  test('three UI modules can save and read exact typed attributes', () async {",
-        "end": "  test('unknown ID cannot be treated as a successful update', () async {"
-      },
-      {
-        "start": "  test('mandatory fields block invalid negative scenarios', () async {",
-        "end": "  test('missing schema and disabled flag prevent finance access', () async {"
-      },
-      {
-        "start": "import 'dart:io';",
-        "end": "void main() {"
-      }
-    ],
-    "test/storage/ledger_projection_test.dart": [
-      {
-        "start": "  test('projection failure rolls back inserts and journal', () async {",
-        "end": null
-      }
-    ],
-    "lib/waffra_categories_page.part.dart": [
-      {
-        "start": "       const Spacer(),\n\n      ]),\n      const SizedBox(height:5),\n",
-        "end": "      WaffraText(waffraIsEnglish?'${visibleChildren.length} subcategories':'${visibleChildren.length} قسم فرعي',\n"
-      },
-      {
-        "start": "       key:PageStorageKey<String>('waffra-root-category-actions-'+root.id),\n",
-        "end": "       childrenPadding:const EdgeInsets.symmetric(vertical:6),\n"
-      },
-      {
-        "start": "        Wrap(spacing:6,runSpacing:8,children:[\n",
-        "end": "          label:WaffraText(waffraIsEnglish?'Add subcategory':'إضافة فرعي',\n"
-      },
-      {
-        "start": "           style:const TextStyle(color:Colors.deepOrange,fontSize:11))),\n",
-        "end": "     ]))));\n"
-      },
-      {
-        "start": "        WaffraText(sub.displayName,maxLines:2,\n",
-        "end": "         style:TextStyle(fontSize:10,color:Theme.of(context).hintColor)),\n"
-      },
-      {
-        "start": "       key:PageStorageKey<String>('waffra-subcategory-actions-'+sub.id),\n",
-        "end": "       childrenPadding:const EdgeInsets.symmetric(vertical:4),\n"
-      },
-      {
-        "start": "           style:const TextStyle(fontSize:11,color:Colors.deepOrange))),\n",
-        "end": "     ])));\n  }\n"
-      },
-      {
-        "start": "       Expanded(child:WaffraText(root.name,\n",
-        "end": "        label:WaffraText(waffraIsEnglish?'Add subcategory':'إضافة فرعي')),\n"
-      },
-      {
-        "start": "        border:OutlineInputBorder(borderRadius:BorderRadius.circular(13)));\n",
-        "end": "         initialValue:categoryTypeFilter,isExpanded:true,\n"
-      },
-      {
-        "start": "          if(v!=null)setState(()=>categoryTypeFilter=v);\n",
-        "end": "         initialValue:categorySort,isExpanded:true,\n"
-      }
-    ],
-    "lib/waffra_country_first_run_page.dart": [
-      {
-        "start": "import 'package:flutter/material.dart';\n",
-        "end": "import 'waffra_country_suggestion.dart';\n"
-      },
-      {
-        "start": "                ? Theme.of(context).colorScheme.error : emerald))),\n",
-        "end": "            value:selectedRegionIso,isExpanded:true,\n"
-      },
-      {
-        "start": "            style:Theme.of(context).textTheme.bodySmall),\n",
-        "end": "            value: currencyCode, isExpanded: true,\n"
-      }
-    ],
-    "lib/waffra_gold_market_section.dart": [
-      {
-        "start": "import 'dart:convert';\n",
-        "end": "import 'waffra_gold_market_data.dart';\n"
-      },
-      {
-        "start": "        const SizedBox(height: 12),\n        Row(children: [\n",
-        "end": "              initialValue: _karat,\n"
-      }
-    ],
-    "lib/waffra_oil_market_section.dart": [
-      {
-        "start": "import 'dart:convert';\n",
-        "end": "import 'waffra_amount_formatter.dart';\n"
-      },
-      {
-        "start": "      'اختَر نوع الخام والكمية وعملة التحويل بسعر صرف موثّق.'),\n     style:TextStyle(fontSize:11,color:Theme.of(context).hintColor)),\n",
-        "end": "     initialValue:benchmark,isExpanded:true,\n"
-      },
-      {
-        "start": "      onChanged:(_)=>setState((){}))),\n",
-        "end": "      decoration:InputDecoration(labelText:t('Currency','العملة'),\n"
-      }
-    ],
-    "lib/waffra_practical_tools_page.dart": [
-      {
-        "start": "import 'package:flutter/material.dart';\n",
-        "end": "import 'package:image_picker/image_picker.dart';\n"
-      },
-      {
-        "start": "      notice('اختر نوع المشكلة التي واجهتها. لا نجمع بيانات شخصية أو رسائل بنكية أو ملفات.',\n",
-        "end": "          DropdownMenuItem<WaffraSafeDiagnosticCode>(\n"
-      }
-    ],
-    "lib/waffra_today_picker.dart": [
-      {
-        "start": "  final from=DateUtils.dateOnly(firstDate);\n",
-        "end": "   context:context,\n"
-      },
-      {
-        "start": "bool waffraCalendarIsToday(DateTime selected,{DateTime? now}) =>\n",
-        "end": null
-      }
-    ],
-    "test/m351_compact_category_filters_test.dart": [
-      {
-        "start": "  expect(ui,contains('ExpansionTile('));\n",
-        "end": "  expect(ui,isNot(contains(\"key:ValueKey('waffra-category-budget-'\")));\n"
-      }
-    ],
-    "test/m343_goal_recurring_named_budgets_test.dart": [
-      {
-        "start": " test('M343 goal/recurring UI uses one saved total and budget remains independent',(){",
-        "end": null
-      }
-    ],
-    "test/m302_optimistic_module_write_safety_test.dart": [
-      {
-        "start": " test('M302 recurring reminders are not scheduled for rejected mutations',(){",
-        "end": null
-      }
-    ],
-    "test/m298_required_finance_field_validation_test.dart": [
-      {
-        "start": " test('M298 all three finance entry points display category error and reject invalid selection',(){",
-        "end": null
-      }
-    ],
-    "test/m262_bank_sms_notes_separation_test.dart": [
-      {
-        "start": "  testWidgets('edited personal notes never hide the original encrypted SMS',",
-        "end": "  testWidgets('vault failure is explicit and does not display fake SMS',"
-      }
-    ],
-    ".github/scripts/run-m274-android-tap-smoke.sh": [
-      {
-        "start": "  set +e\n",
-        "end": "  result=$?\n"
-      },
-      {
-        "start": "  if (( attempt == 1 )) \\\n",
-        "end": "    echo \"::warning::M274 DDS startup failed before test execution; retrying once after ADB port reset\"\n"
-      }
-    ],
-    ".github/workflows/firestore-security-rules.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    "test/firebase/package.json": [
-      {
-        "start": "  \"devDependencies\": {\n",
-        "end": "  \"overrides\": {\n"
-      },
-      {
-        "start": "  \"overrides\": {\n",
-        "end": "  }\n}\n"
-      }
-    ],
-    ".github/workflows/m295-compact-selection-ui.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m283-compact-layout-tools-back-greetings.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m277-ux-accessibility.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m278-mobile-system-insets.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m281-practical-tools.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m287-receipt-ocr.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m297-receipt-to-entry.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m298-finance-validation.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m302-cross-feature-input-qa.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m303-m306-production-hardening.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m371-goal-wallet-budget-android-regression.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m290-country-reminders-multicurrency.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m317-ondevice-ai-brain.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m106-play-privacy-preflight.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m107-account-deletion-crash-privacy.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m108-home-widget-one-finance-commit.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m109-verified-finance-authority.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m110-home-writer-source-authority.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m113-recovery-rollback-regression.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m114-sqlcipher-projected-editor.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m96-runtime-finance-cloud-integration.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m98-encrypted-recovery-inventory.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m99-manifest-last-cloud-sync.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m266-sqlcipher-precutover-qa.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m279-app-security-gates.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m280-finance-quality-matrix.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
+        "start": "  static Future<bool> confirmAiModelRemoval({required bool english}) async {",
+        "end": "  static Future<bool> unlock() async {"
       }
     ]
   }

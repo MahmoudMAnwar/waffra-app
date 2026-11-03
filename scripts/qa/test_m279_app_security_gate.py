@@ -82,6 +82,19 @@ class SecurityGateMutationTests(unittest.TestCase):
              "prohibited_android_permission_READ_SMS"],
         )
 
+    def test_m417_exception_only_allows_financial_read_receive(self):
+        xml = """<uses-permission android:name="android.permission.READ_SMS"/>
+        <uses-permission android:name="android.permission.RECEIVE_SMS"/>
+        <uses-permission android:name="android.permission.SEND_SMS"/>
+        <uses-permission android:name="android.permission.READ_CALL_LOG"/>"""
+        self.assertEqual(gate.manifest_permission_errors(xml,
+            m417_candidate=True), [
+            "prohibited_android_permission_READ_CALL_LOG",
+            "prohibited_android_permission_SEND_SMS",
+        ])
+        self.assertIn("prohibited_android_permission_READ_SMS",
+                      gate.manifest_permission_errors(xml))
+
     def test_allow_ordinary_network_permission(self):
         self.assertEqual(gate.manifest_permission_errors(
             '<uses-permission android:name="android.permission.INTERNET"/>'

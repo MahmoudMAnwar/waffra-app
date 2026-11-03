@@ -72,11 +72,14 @@ def firestore_errors(rules: str) -> list[str]:
     return problems
 
 
-def manifest_permission_errors(source: str) -> list[str]:
-    return sorted(
-        "prohibited_android_permission_" + name
-        for name in (set(PERMISSION.findall(source)) & PROHIBITED_ANDROID_PERMISSIONS)
-    )
+def manifest_permission_errors(source: str, *, m417_candidate: bool = False) -> list[str]:
+    forbidden = set(PERMISSION.findall(source)) & PROHIBITED_ANDROID_PERMISSIONS
+    # M417 explicit owner request: review-candidate ONLY. Actual Google Play
+    # approval and signed production Data Safety are separate release blockers.
+    # Never exempt SEND_SMS, Call Log, Contacts or other sensitive permissions.
+    if m417_candidate:
+        forbidden -= {"READ_SMS", "RECEIVE_SMS"}
+    return sorted("prohibited_android_permission_" + name for name in forbidden)
 
 
 def required_markers(name: str, content: str, markers: tuple[str, ...]) -> list[str]:
@@ -136,6 +139,28 @@ def audit_repo(root: Path) -> dict[str, list[str]]:
         ("No raw SMS/receipts/balances in Crashlytics",
          "No bank-account permission", "two physical phones"),
     ))
+    m417_manifest = root / "docs/qa/approved_change_scope.json"
+    m417_candidate = False
+    if m417_manifest.is_file():
+        try:
+            scope = json.loads(m417_manifest.read_text(encoding="utf-8"))
+            m417_candidate = (scope.get("change_id") == "M417" and
+                (root / "docs/qa/m417_sms_play_declaration.md").is_file())
+        except (ValueError, OSError):
+            m417_candidate = False
+    if m417_candidate:
+        for required_file, required in (
+            ("native/WaffraAutoSmsStore.kt",
+             ("AndroidKeyStore", "permissionGranted", "qualifies", "enabled")),
+            ("native/WaffraAutoSmsReceiver.kt",
+             ("SMS_RECEIVED_ACTION", "WaffraAutoSmsStore.offer")),
+            ("native/WaffraMainActivity.kt",
+             ("requestAutoSmsPermission", "autoSmsPermissionState")),
+            ("lib/waffra_auto_sms_consent.dart",
+             ("m417-permission-allow", "m417-permission-skip")),
+        ):
+            errors.extend(required_markers("m417_sms_guard",
+                read(required_file), required))
     manifest_paths = sorted(
         set((root / "native").rglob("*.xml"))
         | set((root / "android").rglob("AndroidManifest.xml"))
@@ -145,7 +170,8 @@ def audit_repo(root: Path) -> dict[str, list[str]]:
         errors.append("native_android_sources_unavailable")
     for p in manifest_paths:
         checked.append(str(p.relative_to(root)))
-        errors.extend(manifest_permission_errors(p.read_text(encoding="utf-8")))
+        errors.extend(manifest_permission_errors(p.read_text(encoding="utf-8"),
+            m417_candidate=m417_candidate))
 
     # The iOS Runner isn't checked into this repository yet. It is an
     # explicit release blocker, NOT a static-scanner PASS.
