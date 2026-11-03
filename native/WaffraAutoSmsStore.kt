@@ -15,6 +15,7 @@ import org.json.JSONObject
 import java.nio.charset.StandardCharsets
 import java.security.KeyStore
 import java.security.MessageDigest
+import java.util.Calendar
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -34,6 +35,17 @@ object WaffraAutoSmsStore {
     private const val queueName = "encrypted_candidates"
     private const val activeName = "enabled"
     private const val maxCandidates = 100
+    private const val activationMonth = "sms_activation_month_start"
+    private const val historyCursorAt = "sms_history_cursor_at"
+    private const val historyCursorId = "sms_history_cursor_id"
+    private const val historyComplete = "sms_history_complete"
+    private fun monthStart() = Calendar.getInstance().apply {
+        set(Calendar.DAY_OF_MONTH, 1)
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
     private val mutex = Any()
     @Volatile var onChanged: (() -> Unit)? = null
 
@@ -57,8 +69,10 @@ object WaffraAutoSmsStore {
 
     fun enable(context: Context, allow: Boolean): Boolean = synchronized(mutex) {
         if (allow && !permissionGranted(context)) return@synchronized false
-        val editor = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
-            .edit().putBoolean(activeName, allow)
+        val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        val editor = prefs.edit().putBoolean(activeName, allow)
+        if (allow && !prefs.contains(activationMonth))
+            editor.putLong(activationMonth, monthStart())
         if (!allow) {
             // On logout discard unread ciphertext too: the next profile
             // must never inherit a previous user's banking SMS candidates.
@@ -121,7 +135,8 @@ object WaffraAutoSmsStore {
         "\\bwithdrawal\\b|\\bpayment\\b|\\bsalary\\b|\\brefund\\b|" +
         "\\bdeposit\\b)", RegexOption.IGNORE_CASE)
     private val money = Regex(
-        "(?:\\bSAR\\b|\\bSR\\b|ر\\.?\\s*س|ريال)", RegexOption.IGNORE_CASE)
+        "(?:\\b(?:SAR|SR|AED|JOD|EGP|KWD|BHD|OMR|QAR|USD|EUR|GBP)\\b|" +
+        "ر\\.?\\s*س|ريال|درهم|دينار|جنيه|دولار|يورو)", RegexOption.IGNORE_CASE)
     private val digits = Regex("[0-9٠-٩۰-۹][0-9٠-٩۰-۹,.]{0,14}")
     private val senderName = Regex("^[A-Za-z][A-Za-z0-9 _-]{2,24}$")
     private val brand = Regex(
@@ -150,7 +165,8 @@ object WaffraAutoSmsStore {
             .joinToString("") { "%02x".format(it.toInt() and 255) }
     }
 
-    fun offer(context: Context, sender: String, body: String, at: Long): Boolean {
+    fun offer(context: Context, sender: String, body: String, at: Long,
+              historical: Boolean = false): Boolean {
         if (!enabled(context) || !qualifies(sender, body)) return false
         val result = synchronized(mutex) {
             try {
@@ -163,11 +179,12 @@ object WaffraAutoSmsStore {
                 if (queue.length() >= maxCandidates) return@synchronized false
                 queue.put(JSONObject().put("id", fingerprint)
                     .put("sender", sender.trim()).put("body", body.trim())
-                    .put("receivedAt", at))
+                    .put("receivedAt", at)
+                    .put("reviewNotified", historical))
                 save(context, queue)
             } catch (_: Exception) { false }
         }
-        if (result) Handler(Looper.getMainLooper()).post { onChanged?.invoke() }
+        if (result && !historical) Handler(Looper.getMainLooper()).post { onChanged?.invoke() }
         return result
     }
 
@@ -259,30 +276,80 @@ object WaffraAutoSmsStore {
             } catch (_: Exception) { false }
         }
 
-    fun importRecent(context: Context, maxRead: Int = 500): Int {
+    /** Resumable history import: only the consent calendar month, for review.
+     * Never post or cloud-analyze any SMS on receipt. The encrypted review
+     * queue holds up to 100 and the cursor resumes after entries are reviewed.
+     */
+    fun importConsentMonth(context: Context, maxRead: Int = 500): Int {
         if (!enabled(context)) return 0
-        var accepted = 0
-        // One-off history import is opt-in. Never send a non-matching SMS to
-        // Flutter and do not retain it. Android may deny inbox access.
-        val uri = Uri.parse("content://sms/inbox")
+        val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        val start = prefs.getLong(activationMonth, 0)
+        if (start <= 0 || prefs.getBoolean(historyComplete, false)) return 0
+        val end = minOf(Calendar.getInstance().apply {
+            timeInMillis = start
+            add(Calendar.MONTH, 1)
+        }.timeInMillis, System.currentTimeMillis() + 1)
+        var queued = try { synchronized(mutex) { read(context).length() } }
+            catch (_: Exception) { return 0 }
+        if (queued >= maxCandidates) return 0
         val projection = arrayOf("_id", "address", "body", "date")
         val cursor = try {
-            context.contentResolver.query(uri, projection, null, null, "date DESC")
+            context.contentResolver.query(Uri.parse("content://sms/inbox"),
+                projection, "date >= ? AND date < ?",
+                arrayOf(start.toString(), end.toString()), "date ASC, _id ASC")
         } catch (_: Exception) { null } ?: return 0
+        var lastAt = prefs.getLong(historyCursorAt, start - 1)
+        var lastId = prefs.getLong(historyCursorId, -1)
+        var checked = 0
+        var accepted = 0
+        var complete = true
         cursor.use {
+            val rowCol = it.getColumnIndex("_id")
             val senderCol = it.getColumnIndex("address")
             val bodyCol = it.getColumnIndex("body")
             val dateCol = it.getColumnIndex("date")
-            if (senderCol < 0 || bodyCol < 0 || dateCol < 0) return 0
-            var scanned = 0
-            while (it.moveToNext() && scanned < maxRead && accepted < maxCandidates) {
-                scanned++
-                val sender = it.getString(senderCol) ?: continue
-                val body = it.getString(bodyCol) ?: continue
-                val date = it.getLong(dateCol)
-                if (offer(context, sender, body, date)) accepted++
+            if (rowCol < 0 || senderCol < 0 || bodyCol < 0 || dateCol < 0)
+                return 0
+            while (it.moveToNext()) {
+                val at = it.getLong(dateCol)
+                val rowId = it.getLong(rowCol)
+                if (at < lastAt || (at == lastAt && rowId <= lastId)) continue
+                if (queued >= maxCandidates || checked >= maxRead) {
+                    complete = false
+                    break
+                }
+                val sender = it.getString(senderCol) ?: ""
+                val body = it.getString(bodyCol) ?: ""
+                if (qualifies(sender, body) &&
+                    offer(context, sender, body, at, historical = true)) {
+                    queued++
+                    accepted++
+                }
+                checked++
+                lastAt = at
+                lastId = rowId
             }
         }
+        prefs.edit().putLong(historyCursorAt, lastAt)
+            .putLong(historyCursorId, lastId)
+            .putBoolean(historyComplete, complete).commit()
         return accepted
     }
+
+    /** Claim each review notification once; history never floods the shade. */
+    fun claimReviewNotification(context: Context, fingerprint: String): Boolean =
+        synchronized(mutex) {
+            try {
+                val data = read(context)
+                for (i in 0 until data.length()) {
+                    val row = data.getJSONObject(i)
+                    if (row.optString("id") != fingerprint) continue
+                    if (row.optBoolean("reviewNotified", false)) return@synchronized false
+                    row.put("reviewNotified", true)
+                    return@synchronized save(context, data)
+                }
+                false
+            } catch (_: Exception) { false }
+        }
+
 }
