@@ -3364,14 +3364,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // Auto-prepare redacted cloud suggestions only for installations with
   // separate standing cloud consent. Review and budget approval stay manual.
   if(waiting.isNotEmpty&&!_cloudReviewStageRunning){
-   _cloudReviewStageRunning=true;
-   unawaited(WaffraSmsCloudReviewAnalyzer.stagePending(
-    waiting,maxPerRun:2).then((staged){
-     _cloudReviewStageRunning=false;
-     if(staged>0&&mounted)unawaited(_refreshAutoSmsInbox());
-    }).catchError((Object _){
-     _cloudReviewStageRunning=false;
-    }));
+   unawaited(_stageCloudReviewSuggestions(waiting));
+  }
+ }
+ Future<void> _stageCloudReviewSuggestions(
+  List<Map<String,Object?>> candidates)async{
+  if(_cloudReviewStageRunning)return;
+  _cloudReviewStageRunning=true;
+  try{
+   final staged=await WaffraSmsCloudReviewAnalyzer.stagePending(
+    candidates,maxPerRun:2);
+   if(staged>0&&mounted)unawaited(_refreshAutoSmsInbox());
+  }catch(_){
+   // Retain encrypted candidates. Cloud is never a finance authority.
+  }finally{
+   _cloudReviewStageRunning=false;
   }
  }
  Future<void> _openAutoSmsInbox()async{
