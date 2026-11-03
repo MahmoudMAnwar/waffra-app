@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'waffra_phone_country_codes.dart';
+import 'waffra_saudi_release.dart';
 
 /// One accessible input border, with a compact flag+dial selector. This
 /// never requests GPS or changes currency/payment preferences.
@@ -23,6 +24,7 @@ class WaffraGooglePhoneField extends StatefulWidget {
 
 class _WaffraGooglePhoneFieldState extends State<WaffraGooglePhoneField> {
  Future<void> _pick() async {
+  if(WaffraSaudiRelease.enabled)return;
   final query=TextEditingController();
   final selected=await showModalBottomSheet<WaffraPhoneCountry>(
    context:context,isScrollControlled:true,showDragHandle:true,
@@ -61,7 +63,26 @@ class _WaffraGooglePhoneFieldState extends State<WaffraGooglePhoneField> {
   await Future<void>.delayed(const Duration(milliseconds:450));
   query.dispose();
  }
- @override Widget build(BuildContext context)=>TextField(
+ @override Widget build(BuildContext context){
+  if(WaffraSaudiRelease.enabled){
+   return TextField(
+    key:const Key('waffra-profile-mobile-number'),
+    controller:widget.controller,
+    textDirection:TextDirection.ltr,
+    keyboardType:TextInputType.phone,
+    inputFormatters:[
+     FilteringTextInputFormatter.digitsOnly,
+     LengthLimitingTextInputFormatter(10),
+    ],
+    onChanged:widget.onChanged,
+    decoration:InputDecoration(
+     labelText:widget.english?'Saudi mobile number *':'رقم الجوال السعودي *',
+     hintText:'05XXXXXXXX',
+     errorText:widget.errorText,errorMaxLines:2,
+     border:const OutlineInputBorder()));
+  }
+  // Global-edition widget is retained but inaccessible in Saudi mode.
+  return TextField(
   key:const Key('waffra-profile-mobile-number'),
   controller:widget.controller,textDirection:TextDirection.ltr,
   keyboardType:TextInputType.phone,
@@ -74,14 +95,14 @@ class _WaffraGooglePhoneFieldState extends State<WaffraGooglePhoneField> {
    prefixIconConstraints:const BoxConstraints(minWidth:0,minHeight:44),
    prefixIcon:InkWell(
     key:const Key('waffra-google-phone-country-picker'),
-    onTap:_pick,
+    onTap:WaffraSaudiRelease.enabled?null:_pick,
     child:Padding(padding:const EdgeInsets.symmetric(horizontal:8),
      child:Row(mainAxisSize:MainAxisSize.min,children:[
       Text(widget.country.flag,style:const TextStyle(fontSize:21)),
       const SizedBox(width:4),
       Text(widget.country.dial,textDirection:TextDirection.ltr,
        style:const TextStyle(fontWeight:FontWeight.w700)),
-      const Icon(Icons.arrow_drop_down,size:20),
+      if(!WaffraSaudiRelease.enabled)const Icon(Icons.arrow_drop_down,size:20),
      ]))),
    labelText:widget.english?'Mobile number *':'رقم الجوال *',
    hintText:widget.country.iso=='SA'?'5XXXXXXXX':
@@ -90,4 +111,5 @@ class _WaffraGooglePhoneFieldState extends State<WaffraGooglePhoneField> {
    errorMaxLines:2,
    border:const OutlineInputBorder(),
   ));
+ }
 }
