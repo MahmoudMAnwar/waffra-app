@@ -46,15 +46,21 @@ void main() {
       isNot(waffraCountrySetupKey(profile(email: 'other@example.com'))));
   });
 
-  test('M290 Google phone supports Egypt and Saudi international numbers', () {
-    expect(waffraGoogleProfilePhoneError('+201234567890'), isNull);
-    expect(waffraGoogleProfilePhoneError('+966512345678'), isNull);
+  test('M416 Saudi-only login and stored Google numbers reject foreign prefixes', () {
+    expect(waffraGoogleProfilePhoneError('+201234567890'), isNotNull);
+    expect(waffraGoogleProfilePhoneError('+966512345678'), isNull,
+      reason:'Previously saved Saudi Google E.164 values remain readable.');
     expect(waffraGoogleProfilePhoneError('0512345678'), isNull);
+    expect(waffraGoogleProfilePhoneError('512345678'), isNotNull);
+    expect(waffraGoogleProfilePhoneError('05123456789'), isNotNull);
+    expect(waffraGoogleProfilePhoneError('0412345678'), isNotNull);
     expect(waffraGoogleProfilePhoneError(''), isNotNull);
     expect(waffraGoogleProfilePhoneError('12345'), isNotNull);
     expect(waffraGoogleProfilePhoneError('++201234567890'), isNotNull);
-    expect(waffraMobileFieldError('+201234567890'), isNotNull,
-      reason: 'Non-Google local phone login still uses approved 05 format.');
+    expect(waffraMobileFieldError('0512345678'), isNull);
+    expect(waffraMobileFieldError('+201234567890'), isNotNull);
+    expect(waffraMobileFieldError('+966512345678'), isNotNull,
+      reason:'New user input always uses 05 instead of international code.');
   });
 
   testWidgets('M290 reason shown first; only tapping location starts detection',
@@ -144,7 +150,8 @@ void main() {
       .readAsStringSync();
     final reminders = File('lib/waffra_reminders.dart')
       .readAsStringSync();
-    expect(main, contains('googleFirstRunSetup?WaffraCountryFirstRunPage('));
+    expect(main, contains('googleFirstRunSetup&&WaffraSaudiRelease.locationCountryOnboarding?WaffraCountryFirstRunPage('));
+    expect(main, contains('googleFirstRunSetup=WaffraSaudiRelease.locationCountryOnboarding&&'));
     expect(main, contains('waffraGoogleProfileReadyForCountrySetup(u)'));
     expect(main, contains('waffraCountrySetupKey('));
     expect(main, contains('WaffraDisplayCurrency.setCurrency(selectedCurrency)'));
