@@ -302,8 +302,9 @@ object WaffraAutoSmsStore {
         }
 
     /** Resumable history import: only the consent calendar month, for review.
-     * Never post or cloud-analyze any SMS on receipt. The encrypted review
-     * queue holds up to 100 and the cursor resumes after entries are reviewed.
+     * This native importer never posts money or contacts a cloud provider.
+     * An separately opted-in Flutter worker may stage sanitized cloud hints.
+     * The encrypted queue holds up to 100 and resumes after user review.
      */
     fun importConsentMonth(context: Context, maxRead: Int = 500): Int {
         if (!enabled(context)) return 0
