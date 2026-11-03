@@ -2031,7 +2031,7 @@ class _LoginScreenState extends State<LoginScreen> {
           textAlign:TextAlign.center,style:const TextStyle(color:Colors.white70)),
          const SizedBox(height:12),
          FilledButton(onPressed:WaffraHaptics.tap(socialBusy?null:continueLastLogin),
-          child:WaffraText(waffraIsEnglish?'Access account for migration':'الدخول للحساب القديم لنقله')),
+          child:WaffraText(waffraIsEnglish?'Temporary access to old account':'دخول مؤقت للحساب القديم')),
         ]else if(signInMode&&hasExisting)...[
          WaffraText(waffraIsEnglish?'Sign in to Waffra':'تسجيل الدخول إلى وفرة',
           textAlign:TextAlign.center,
