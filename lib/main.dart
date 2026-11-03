@@ -69,6 +69,7 @@ import 'waffra_pdf_reader.dart';
 import 'waffra_footer.dart';
 import 'waffra_messages.dart';
 import 'waffra_auto_sms.dart';
+import 'waffra_auto_sms_policy.dart';
 import 'waffra_auto_sms_consent.dart';
 import 'waffra_recurring_policy.dart';
 import 'waffra_cross_source_duplicate_review.dart';
@@ -101,6 +102,7 @@ part 'waffra_recurring_trash.part.dart';
 part 'waffra_goal_recurring_actions.part.dart';
 part 'waffra_deleted_item_card.part.dart';
 part 'waffra_widget_capture.part.dart';
+part 'waffra_auto_sms_autopost.part.dart';
 
 Future<Map<String,dynamic>> waffraDecodeBackupInIsolate(Map<String,String> request) async {
  final decoded=jsonDecode(await WaffraSecureBackup.decrypt(
@@ -119,6 +121,27 @@ const bool waffraCompileOnlyQaPreview =
 String waffraGooglePreviewNotice(bool english)=>english
  ?'Google sign-in needs the signed Waffra build. Try guest mode in this preview.'
  :'دخول جوجل يتطلب نسخة وفرة الموقّعة. استخدم وضع الضيف للمعاينة.';
+
+/// A short-lived background FlutterEngine executes the very same verified
+/// Home/Widget finance writer after Android schedules receipt of bank SMS.
+/// No UI tree, no new database and no cloud inference in the background.
+@pragma('vm:entry-point')
+void waffraAutoSmsBackgroundEntrypoint() {
+ WidgetsFlutterBinding.ensureInitialized();
+ const bridge=MethodChannel('waffra/auto_sms_worker');
+ bridge.setMethodCallHandler((call)async{
+  if(call.method!='process')return false;
+  try{
+   await WaffraAutoSmsAutoPoster.run();
+   return true;
+  }catch(_){
+   // Do not log banking text or claim it was recorded. WorkManager may retry
+   // with the same encrypted candidate and atomic duplicate hash.
+   return false;
+  }
+ });
+ unawaited(bridge.invokeMethod<void>('ready'));
+}
 
 Future<void> main()async {
  WidgetsFlutterBinding.ensureInitialized();
@@ -3212,6 +3235,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      _financeLoadFailure!=null)return;
   _autoSmsReviewOpen=true;
   try{
+   // Standing first-run consent permits background import of VERIFIED SMS.
+   // The shared writer, never this widget tree, owns every money mutation.
+   if(await WaffraAutoSms.enabled()){
+    await WaffraAutoSmsAutoPoster.run();
+    if(mounted)await _syncWidgetTransactions();
+   }
+   if(!mounted)return;
    final items=await WaffraAutoSms.pending();
    if(!mounted||items.isEmpty)return;
    Map<String,Object?>? selected;
@@ -3222,8 +3252,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      await WaffraAutoSms.acknowledge([id]);
      continue;
     }
-    selected=item;
-    break;
+    selected=item;break;
    }
    if(!mounted||selected==null)return;
    final id=selected['id'],body=selected['body'];
@@ -3231,10 +3260,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(id is! String||body is! String)return;
    final decision=await showWaffraDialog<String>(context:context,
     builder:(dialog)=>AlertDialog(
-     title:WaffraText(waffraIsEnglish?'New bank SMS found':'رسالة بنكية جديدة'),
+     title:WaffraText(waffraIsEnglish?'Bank SMS needs review':'رسالة بنكية تحتاج مراجعة'),
      content:WaffraText(waffraIsEnglish?
-      'A financial SMS from $sender is ready. Review amount, type and budget before saving.':
-      'وصلت رسالة مالية من $sender. راجع المبلغ ونوع العملية والميزانية قبل الحفظ.'),
+      'Waffra could not verify the transaction automatically for $sender. Review the amount, direction and budget before saving.':
+      'وفرة لم يقدر يؤكد العملية تلقائيًا من $sender. راجع المبلغ ونوع العملية والميزانية قبل الحفظ.'),
      actions:[
       TextButton(onPressed:()=>Navigator.pop(dialog),
        child:WaffraText(waffraIsEnglish?'Later':'لاحقًا')),
@@ -3247,8 +3276,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     await WaffraAutoSms.acknowledge([id]);
    }else if(decision=='review'&&mounted){
     await bulkSmsSheet(initialText:body);
-    // The inbox message is acknowledged ONLY after the guarded finance
-    // writer proves the original SMS hash was durably committed.
     if(smsHashes.contains(bankSmsHash(body)))
      await WaffraAutoSms.acknowledge([id]);
    }
