@@ -41,7 +41,7 @@ void main(){
    arrived:arrived,accountLinked:false).canPost,isFalse);
  });
  test('OTP or invalid amounts cannot post',(){
-  for(final amount in [double.nan,double.infinity,-1,0,0.001]){
+  for(final amount in <double>[double.nan,double.infinity,-1.0,0.0,0.001]){
    expect(WaffraAutoSmsPolicy.decide(sender:'ALRAJHI',sms:debit,
     parsedAmount:amount,parsedIncome:false,foreignCurrency:false,
     arrived:arrived).canPost,isFalse);
