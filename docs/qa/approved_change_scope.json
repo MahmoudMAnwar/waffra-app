@@ -7,28 +7,37 @@
     "M415: move named budget enable/pause control into Quick Actions; clarify goal and recurring edit, delete and activation rows.",
     "M415: simplify monthly budget month navigation and preserve date-only view-state without changing any saved finance records.",
     "M415: keep Goals + new/duplicate choices clear and recurring duplicates independent; blur Home, Categories, Goals and Recurring menus including header and footer.",
-    "M415 corrective CI: preserve nullable haptic callbacks in outlined choices and update the menu-position regression test to attach a real composited FAB target; no financial behavior change."
+    "M415 corrective CI: preserve nullable haptic callbacks in outlined choices and update the menu-position regression test to attach a real composited FAB target; no financial behavior change.",
+    "M415 regression alignment: verify owner-approved modal budget activation (within Quick actions), overlaid composited FAB and open-ended goal toggle inside creation dialog; protect unchanged finance tests and app code."
   ],
   "allowed_changed_files": [
+    "docs/qa/approved_change_scope.json",
     "lib/main.dart",
     "lib/waffra_budget_directory.part.dart",
     "lib/waffra_centered_dropdown.dart",
+    "test/m127_ui_tour_backup_acceptance_test.dart",
+    "test/m353_named_budget_pause_resume_test.dart",
+    "test/m357_budget_hierarchy_and_filter_layout_test.dart",
+    "test/m359_budget_directory_and_templates_test.dart",
+    "test/m360_budget_category_quick_actions_test.dart",
+    "test/m371_goal_wallet_and_budgets_regression_test.dart",
+    "test/m388_m390_approved_goal_recurring_receipt_test.dart",
+    "test/m392_m395_budget_quick_actions_goal_ui_test.dart",
     "test/m415_ui_choice_borders_test.dart",
-    "test/waffra_directional_fab_receipt_corner_test.dart",
-    "docs/qa/approved_change_scope.json"
+    "test/waffra_directional_fab_receipt_corner_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": "   dividerTheme:const DividerThemeData(color:Color(0xFFE1EDE6),thickness:.8),\n",
+        "start": "   dividerTheme:const DividerThemeData(color:Color(0xFFE1EDE6),thickness:.8),",
         "end": "  ),\n  darkTheme:ThemeData(\n"
       },
       {
-        "start": "   dividerTheme:const DividerThemeData(color:Color(0xFF394039),thickness:.8),\n",
+        "start": "   dividerTheme:const DividerThemeData(color:Color(0xFF394039),thickness:.8),",
         "end": "  ),\n  themeMode:appearance=='system'?ThemeMode.system:(appearance=='dark'?ThemeMode.dark:ThemeMode.light),\n"
       },
       {
-        "start": " bool addFabExpanded=false;\n",
+        "start": " bool addFabExpanded=false;",
         "end": " bool quickActionsExpanded=false;\n"
       },
       {
@@ -56,7 +65,7 @@
         "end": "     ])));\n   }),\n"
       },
       {
-        "start": "      fontSize:15,fontWeight:FontWeight.bold,color:Theme.of(context).brightness==Brightness.dark?Colors.white:forest)),\n    ]))));\n",
+        "start": "      fontSize:15,fontWeight:FontWeight.bold,color:Theme.of(context).brightness==Brightness.dark?Colors.white:forest)),\n    ]))));",
         "end": " Future<void> _duplicateGoalFromMenu()async {\n"
       },
       {
@@ -72,7 +81,7 @@
         "end": "      menu:Column(mainAxisSize:MainAxisSize.min,\n"
       },
       {
-        "start": "           unawaited(_launchAddAction(()=>goalDialog(),fromMenu:true));\n          })),\n",
+        "start": "           unawaited(_launchAddAction(()=>goalDialog(),fromMenu:true));\n          })),",
         "end": "         if(goals.isNotEmpty)...[\n"
       },
       {
@@ -108,6 +117,58 @@
       {
         "start": "  testWidgets('expanded menu is above the physical plus on the same side in both languages', (tester) async {\n",
         "end": "    for (final english in <bool>[true,false]) {\n"
+      },
+      {
+        "start": "test('Home, Categories, Goals and Recurring plus actions preserve locale switch, with no fixed-left anchor'",
+        "end": "test('M384 transaction cards use persisted references, never alter old photos'"
+      }
+    ],
+    "test/m127_ui_tour_backup_acceptance_test.dart": [
+      {
+        "start": "test('four finance action destinations share one language-aware circular action'",
+        "end": "test('tour intro no longer cuts through the top header'"
+      }
+    ],
+    "test/m353_named_budget_pause_resume_test.dart": [
+      {
+        "start": "test('M353 all screens gate NEW standalone budget assignment and retain old links'",
+        "end": "test('M353 transaction details warn with optional link after resume'"
+      }
+    ],
+    "test/m357_budget_hierarchy_and_filter_layout_test.dart": [
+      {
+        "start": "test('M357 budget card is collapsible and edit/delete are explicit'",
+        "end": "test('M357 category filter controls do not clip on phone width'"
+      }
+    ],
+    "test/m359_budget_directory_and_templates_test.dart": [
+      {
+        "start": "test('M359: My Budgets is separate from income/expense category filters'",
+        "end": "test('M359: overall budget is computed, transaction review can create budget'"
+      }
+    ],
+    "test/m360_budget_category_quick_actions_test.dart": [
+      {
+        "start": "test('M360 saved budget actions are in My Budgets only'",
+        "end": "test('M360 bank SMS batch review also permits creating a new budget'"
+      }
+    ],
+    "test/m371_goal_wallet_and_budgets_regression_test.dart": [
+      {
+        "start": "test('M371 budgets open in bounded Android sheet, not nested lazy expansion'",
+        "end": "test('M371 goal creation cannot post an expense or negative cash debit'"
+      }
+    ],
+    "test/m388_m390_approved_goal_recurring_receipt_test.dart": [
+      {
+        "start": "test('M389: Goals/Recurring + menus show approved choices instead of direct sheet'",
+        "end": "test('M388: open-ended goal never divided by zero or marked achieved'"
+      }
+    ],
+    "test/m392_m395_budget_quick_actions_goal_ui_test.dart": [
+      {
+        "start": "test('M392 saved budget expands details and has clear, independent switch'",
+        "end": "test('M395 search and visible scrollbars do not mutate finance models'"
       }
     ]
   }
