@@ -158,6 +158,82 @@ object WaffraAutoSmsStore {
         return hasFinancialSender
     }
 
+    // M437: Unknown-finance lookup is strictly ON-DEMAND, and only scans
+    // SMS already covered by the one-time, activation-month permission.
+    // Never treat invoice/debt IDs as a paid transaction or send unknown SMS
+    // to OpenRouter. No raw unknown message is saved in Waffra storage.
+    private val debtNotice = Regex(
+        "(?:مديونية|مستحقة\\s+السداد|صدور\\s+مديونية|مطالبة\\s+مالية|" +
+        "استحقاق\\s+سداد|debt\\s+(?:due|issued)|outstanding\\s+debt|" +
+        "payment\\s+due|amount\\s+due)",
+        RegexOption.IGNORE_CASE)
+    private val otherFinanceNotice = Regex(
+        "(?:فاتورة|مستحقات|حساب|رصيد|تحويل|خصم|سداد|" +
+        "billing|invoice|statement|balance|transfer|debited|credited|" +
+        "payment|transaction|refund|purchase)",
+        RegexOption.IGNORE_CASE)
+    private val institutionalSender = Regex(
+        "(?:etimad|اعتماد|bank|alinma|inma|rajhi|snb|sabb|riyad|" +
+        "bilad|anb|saib|aljazira|jazeera|alahli|stcpay|" +
+        "stc.?bank|urpay|mobily.?pay)",
+        RegexOption.IGNORE_CASE)
+
+    fun unknownFinancialKind(sender: String, body: String): String? {
+        val name = sender.trim()
+        val safe = body.trim()
+        if (!senderName.matches(name) || safe.length !in 18..1600 ||
+            otp.containsMatchIn(safe) || qualifies(name, safe)) return null
+        if (debtNotice.containsMatchIn(safe)) return "debt_notice"
+        if (institutionalSender.containsMatchIn(name) &&
+            otherFinanceNotice.containsMatchIn(safe)) return "unrecognized_financial"
+        return null
+    }
+
+    fun scanUnknownFinancialSms(
+        context: Context, maxRead: Int = 500, maxResults: Int = 100
+    ): List<Map<String, Any>> {
+        if (!enabled(context) || maxRead <= 0 || maxResults <= 0)
+            return emptyList()
+        val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        val start = prefs.getLong(activationMonth, 0L)
+        if (start <= 0L) return emptyList()
+        val end = minOf(Calendar.getInstance().apply {
+            timeInMillis = start
+            add(Calendar.MONTH, 1)
+        }.timeInMillis, System.currentTimeMillis() + 1)
+        val cursor = try {
+            context.contentResolver.query(Uri.parse("content://sms/inbox"),
+                arrayOf("address", "body", "date"),
+                "date >= ? AND date < ?",
+                arrayOf(start.toString(), end.toString()), "date DESC")
+        } catch (_: Exception) { null } ?: return emptyList()
+        val found = mutableListOf<Map<String, Any>>()
+        cursor.use {
+            val senderCol = it.getColumnIndex("address")
+            val bodyCol = it.getColumnIndex("body")
+            val dateCol = it.getColumnIndex("date")
+            if (senderCol < 0 || bodyCol < 0 || dateCol < 0)
+                return emptyList()
+            var checked = 0
+            while (it.moveToNext() && checked < maxRead &&
+                found.size < maxResults) {
+                checked++
+                val sender = it.getString(senderCol) ?: continue
+                val body = it.getString(bodyCol) ?: continue
+                val date = it.getLong(dateCol)
+                val kind = unknownFinancialKind(sender, body) ?: continue
+                found.add(mapOf(
+                    "id" to id(sender, body, date),
+                    "sender" to sender,
+                    "body" to body,
+                    "receivedAt" to date,
+                    "kind" to kind
+                ))
+            }
+        }
+        return found
+    }
+
     private fun id(sender: String, body: String, at: Long): String {
         val input = "$sender\u0000$body\u0000$at"
         return MessageDigest.getInstance("SHA-256")
