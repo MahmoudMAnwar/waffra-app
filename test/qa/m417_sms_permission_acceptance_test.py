@@ -60,7 +60,7 @@ class M417AutoSmsContractTest(unittest.TestCase):
     def test_sms_permission_disclosure_is_review_only(self):
         ui=self.read("lib/waffra_auto_sms_consent.dart")
         self.assertIn("first day of the month",ui)
-        self.assertIn("without",ui)
+        self.assertIn("before it changes your balance",ui)
         self.assertIn("مش هيتسجل أي دخل",ui)
         self.assertIn("m417-permission-skip",ui)
         poster=self.read("lib/waffra_auto_sms_autopost.part.dart")
