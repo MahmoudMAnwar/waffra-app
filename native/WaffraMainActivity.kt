@@ -287,10 +287,9 @@ class MainActivity : FlutterFragmentActivity() {
                     if (saved && allow) WaffraAutoSmsWorker.enqueue(this)
                     result.success(saved)
                 }
-                "importRecentBankSms" -> {
-                    val count = WaffraAutoSmsStore.importRecent(this)
-                    if (count > 0) WaffraAutoSmsWorker.enqueue(this)
-                    result.success(count)
+                "importConsentMonthBankSms" -> {
+                    // Historical candidates are review-only; no worker auto-save.
+                    result.success(WaffraAutoSmsStore.importConsentMonth(this))
                 }
                 "pendingAutoBankSms" -> result.success(WaffraAutoSmsStore.pending(this))
                 "stageAutoBankSmsCloudAnalysis" -> {
