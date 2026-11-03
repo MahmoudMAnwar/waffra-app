@@ -1,19 +1,24 @@
 {
   "contract_version": 1,
   "change_id": "M422",
-  "human_scope_review": "Owner explicitly requests removing Google, Apple, guest, email and using Saudi phone/password. This PR changes entry UI only, not a secure remote identity system. Existing Google identity verified path remains **only** for legacy account migration to prevent user finance data loss. Remote SMS/OTP + password recovery, Firebase Custom Token, cross-device auth and database migration require separate signed testing before merge. Never treat local SharedPreferences salted SHA256 as cloud auth. Exact allowed code sections and changed files documented; human review required.",
+  "human_scope_review": "Owner explicitly requests removing Google, Apple, guest, email and using Saudi phone/password. This PR changes entry UI only, not a secure remote identity system. Existing Google identity verified path remains **only** for legacy account migration to prevent user finance data loss. Remote SMS/OTP + password recovery, Firebase Custom Token, cross-device auth and database migration require separate signed testing before merge. Never treat local SharedPreferences salted SHA256 as cloud auth. Exact allowed code sections and changed files documented; human review required. M424 owner approved compulsory biometric-only unlock after phone/password login and on each foreground return, and removal of optional PIN lock settings. Preserve legacy Google migration and old finance/backup data, keep release gated by real verified phone identity and physical device QA.",
   "user_requested_changes": [
     "M422: Replace new Google and Apple registration options with Saudi mobile number (05XXXXXXXX) and password only, and remove unauthenticated guest entry and bypass.",
     "M422: Stage phone-only registration in two screens: mobile/password/confirm, then name and gender without email or birth date.",
     "M422: Preserve legacy Google/Apple profiles and on-device finance data for verified one-time migration; do not allow registration to overwrite an existing account.",
-    "M422: Keep cloud identity/password security, SMS verification and account migration as hard release blockers until provider-backed authentication and regression tests are complete."
+    "M422: Keep cloud identity/password security, SMS verification and account migration as hard release blockers until provider-backed authentication and regression tests are complete.",
+    "M424: Require OS biometric verification immediately after successful Saudi phone/password login and on every app return; remove optional app PIN lock/change setting from My Account, no PIN bypass, preserve previous user data."
   ],
   "allowed_changed_files": [
     ".github/workflows/m422-phone-only-auth-ui.yml",
     "docs/qa/approved_change_scope.json",
     "docs/qa/m422_phone_password_only_migration.md",
+    "docs/qa/m424_mandatory_biometric_session.md",
     "lib/main.dart",
-    "test/m422_phone_only_auth_entry_test.dart"
+    "lib/waffra_biometrics.dart",
+    "lib/waffra_mandatory_biometric_gate.dart",
+    "test/m422_phone_only_auth_entry_test.dart",
+    "test/m424_mandatory_biometrics_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -22,12 +27,30 @@
         "end": " Future<void> intro()async {"
       },
       {
-        "start": "locked?PinLockScreen(",
+        "start": "   startupError!=null?Scaffold(body:Center(",
         "end": "googleFirstRunSetup?WaffraCountryFirstRunPage("
       },
       {
         "start": "class _LoginScreenState extends State<LoginScreen> {",
         "end": "// All transient notices use the same footer-anchored surface throughout the app."
+      },
+      {
+        "start": "import 'waffra_biometrics.dart';",
+        "end": "import 'waffra_amount_formatter.dart';"
+      },
+      {
+        "start": " Future<void> saveUser(Person u)async {",
+        "end": " Future<void> setUiCountry(String? iso)async{"
+      },
+      {
+        "start": "   _accountSection(waffraIsEnglish?'Security & privacy'",
+        "end": "    SwitchListTile(secondary:const Icon(Icons.preview_outlined"
+      }
+    ],
+    "lib/waffra_biometrics.dart": [
+      {
+        "start": "  static Future<bool> confirmAiModelRemoval({required bool english}) async {",
+        "end": "  static Future<bool> unlock() async {"
       }
     ]
   }
