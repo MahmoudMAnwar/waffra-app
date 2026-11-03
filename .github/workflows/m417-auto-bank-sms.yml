@@ -9,6 +9,11 @@ on:
       - 'lib/waffra_auto_sms*.dart'
       - 'lib/waffra_bank_sms_facts.dart'
       - 'functions/openrouter_sms_extractor.cjs'
+      - 'functions/index.js'
+      - 'lib/waffra_sms_cloud_redactor.dart'
+      - 'lib/waffra_sms_cloud_service.dart'
+      - 'test/waffra_sms_cloud_redactor_test.dart'
+      - 'pubspec.yaml'
       - 'functions/test/openrouter_sms_extractor.test.cjs'
       - 'docs/qa/m420_openrouter_cloud_sms_plan.md'
       - 'lib/waffra_messages.dart'
@@ -61,9 +66,9 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter analyze lib/main.dart lib/waffra_auto_sms.dart lib/waffra_auto_sms_policy.dart lib/waffra_auto_sms_consent.dart lib/waffra_messages.dart lib/waffra_bank_sms_facts.dart
+      - run: flutter analyze lib/main.dart lib/waffra_auto_sms.dart lib/waffra_auto_sms_policy.dart lib/waffra_auto_sms_consent.dart lib/waffra_messages.dart lib/waffra_bank_sms_facts.dart lib/waffra_sms_cloud_service.dart lib/waffra_sms_cloud_redactor.dart
       - name: Test foreground opt-in and strict income/expense decision matrix
-        run: flutter test --reporter expanded test/m417_sms_first_run_test.dart test/waffra_auto_sms_policy_test.dart test/waffra_bank_sms_facts_test.dart
+        run: flutter test --reporter expanded test/m417_sms_first_run_test.dart test/waffra_auto_sms_policy_test.dart test/waffra_bank_sms_facts_test.dart test/waffra_sms_cloud_redactor_test.dart
 
   android-sms-native-compile:
     name: Compile M417 Android receiver, worker and notifications (no APK release)
@@ -131,6 +136,10 @@ jobs:
           assert 'openrouter.ai/api/v1/chat/completions' not in client
           assert 'OPENROUTER_API_KEY' not in client
           functions=Path('functions/index.js').read_text()
-          assert 'suggestFromBankSms' not in functions, 'Cloud provider route must stay off'
-          print('PASS: no public OpenRouter endpoint, APK secret, or consent bypass')
+          assert 'secrets: [smsKey]' in functions, 'Provider secret must stay server-bound'
+          assert 'enforceAppCheck: true' in functions
+          assert "process.env.WAFFRA_SMS_CLOUD_ENABLED !== 'true'" in functions
+          assert 'waffraSmsCloudConsents' in functions
+          assert 'checkedSmsOwner(request)' in functions
+          print('PASS: server-only OpenRouter, App Check, authenticated owner, feature flag and consent gate')
           PY
