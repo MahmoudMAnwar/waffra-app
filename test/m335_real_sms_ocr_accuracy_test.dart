@@ -70,7 +70,8 @@ Joanna Sa
     final method=app.substring(start,end);
     expect(method.indexOf('final reliable=found.every('),
       lessThan(method.indexOf('final ai=await _reviewAiPastedBankMessages(')));
-    expect(method,contains("if(reliable||!WaffraOnDeviceQwen.shared.isReady)"));
+    expect(method,contains("if(!WaffraSaudiRelease.qwenForBankSms||reliable||"));
+    expect(method,contains("!WaffraOnDeviceQwen.shared.isReady)"));
     expect(method,contains('Never commit on paste'));
     expect(method,isNot(contains('await saveParsedMessages(ctx,update)')));
   });
