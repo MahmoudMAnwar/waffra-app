@@ -283,7 +283,9 @@ class MainActivity : FlutterFragmentActivity() {
                 }
                 "setAutoSmsEnabled" -> {
                     val allow = call.arguments as? Boolean ?: false
-                    result.success(WaffraAutoSmsStore.enable(this, allow))
+                    val saved = WaffraAutoSmsStore.enable(this, allow)
+                    if (saved && allow) WaffraAutoSmsWorker.enqueue(this)
+                    result.success(saved)
                 }
                 "importRecentBankSms" -> result.success(WaffraAutoSmsStore.importRecent(this))
                 "pendingAutoBankSms" -> result.success(WaffraAutoSmsStore.pending(this))
