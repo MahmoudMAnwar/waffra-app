@@ -8,7 +8,8 @@
     "M422: Preserve legacy Google/Apple profiles and on-device finance data for verified one-time migration; do not allow registration to overwrite an existing account.",
     "M422: Keep cloud identity/password security, SMS verification and account migration as hard release blockers until provider-backed authentication and regression tests are complete.",
     "M424: Require OS biometric verification immediately after successful Saudi phone/password login and on every app return; remove optional app PIN lock/change setting from My Account, no PIN bypass, preserve previous user data.",
-    "M425: Implement real server-side Saudi phone/password registration and reset after OTP ownership proof, authenticated Firebase custom token phone login, no local-hash fallback in secure mode, no email alias, and in-place migration retaining the original Firebase UID and all historical finance data; add bounded migration tests."
+    "M425: Implement real server-side Saudi phone/password registration and reset after OTP ownership proof, authenticated Firebase custom token phone login, no local-hash fallback in secure mode, no email alias, and in-place migration retaining the original Firebase UID and all historical finance data; add bounded migration tests.",
+    "M425: Add Firestore transaction adapter unit tests proving phone-to-UID uniqueness, password reset ownership, brute-force throttle persistence and no financial journal changes."
   ],
   "allowed_changed_files": [
     ".github/workflows/m422-phone-only-auth-ui.yml",
@@ -20,6 +21,7 @@
     "functions/phone_auth_core.cjs",
     "functions/phone_auth_store.cjs",
     "functions/test/phone_auth_core.test.cjs",
+    "functions/test/phone_auth_store.test.cjs",
     "lib/main.dart",
     "lib/waffra_biometrics.dart",
     "lib/waffra_mandatory_biometric_gate.dart",
