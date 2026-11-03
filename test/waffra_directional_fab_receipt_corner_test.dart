@@ -220,7 +220,7 @@ void main() {
       'floatingActionButtonAnimator:const WaffraStationaryFabAnimator()',
     ));
     expect(source, contains(
-      'floatingActionButton:!ready||accountOpened||tab==2?null:SizedBox(',
+      'floatingActionButton:!ready||accountOpened||tab==2?null:CompositedTransformTarget(',
     ));
     expect(source, contains('width:58,height:58'));
     expect(source, contains('WaffraFabMenuAnchor('));
@@ -229,7 +229,8 @@ void main() {
       'floatingActionButton:!ready||tab==4?null:Directionality(',
     )));
     expect(source, contains("label:waffraIsEnglish?'New savings goal':'إضافة هدف جديد'"));
-    expect(source, contains("label:waffraIsEnglish?'Open-ended savings':'ادخار مفتوح بدون مستهدف'"));
+    expect(source, contains('bool noTarget=openEnded||(duplicate!=null&&duplicate.target<=0);'));
+    expect(source, contains('target:noTarget?0.0:n!,saved:0'));
     expect(source, contains("label:waffraIsEnglish?'Duplicate recurring transaction':'تكرار عملية متكررة موجودة'"));
     expect(source, isNot(contains('WaffraPhysicalLeftFab')));
   });
@@ -250,23 +251,33 @@ void main() {
     expect(source,contains("onViewReceipt:waffraReceiptPaths(entry.receiptPath).isNotEmpty"));
   });
   testWidgets('expanded menu is above the physical plus on the same side in both languages', (tester) async {
-    Widget harness(bool english) => MaterialApp(
-      home: Scaffold(
-        body: Align(
-          alignment: Alignment.topLeft,
-          child: SizedBox(
-            width: 390,height: 500,
-            child: Stack(children:[
-              WaffraFabMenuAnchor(
-                english:english,expanded:true,
-                menu:Container(key:const Key('menu-anchor-probe'),
-                  width:220,height:96,color:Colors.green),
-              ),
-            ]),
+    Widget harness(bool english) {
+      final link = LayerLink();
+      return MaterialApp(
+        home: Scaffold(
+          body: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: 390,height: 500,
+              child: Stack(children:[
+                Positioned(
+                  left:english?316:16,top:426,
+                  child:CompositedTransformTarget(
+                    link:link,
+                    child:const SizedBox(width:58,height:58),
+                  ),
+                ),
+                WaffraFabMenuAnchor(
+                  english:english,expanded:true,link:link,
+                  menu:Container(key:const Key('menu-anchor-probe'),
+                    width:220,height:96,color:Colors.green),
+                ),
+              ]),
+            ),
           ),
         ),
-      ),
-    );
+      );
+    }
     for (final english in <bool>[true,false]) {
       await tester.pumpWidget(harness(english));
       await tester.pumpAndSettle();
