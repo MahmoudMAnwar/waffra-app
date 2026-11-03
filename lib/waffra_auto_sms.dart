@@ -48,7 +48,8 @@ abstract final class WaffraAutoSms {
    on PlatformException{return const [];}
  }
  static Future<bool> claimCloudAttempt(String id)async{
-  if(!RegExp(r'^[a-f0-9]{64}  String id,Map<String,Object?> suggestion)async{
+  if(!RegExp(r'^[a-f0-9]{64}
+  String id,Map<String,Object?> suggestion)async{
   if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(id))return false;
   return _boolCall('stageAutoBankSmsCloudAnalysis',
    <String,Object?>{'id':id,'analysis':suggestion});
