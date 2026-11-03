@@ -72,4 +72,35 @@ void main(){
   expect(workflow,isNot(contains('OPENROUTER_API_KEY')));
  });
 
+
+ test('M434 encrypted SMS inbox groups real sender and displays count',(){
+  final main=File('lib/main.dart').readAsStringSync();
+  final inbox=main.substring(
+   main.indexOf('Future<void> _openAutoSmsInbox()async{'),
+   main.indexOf('Widget _autoSmsReviewCard(){'));
+  expect(inbox,contains("final bySender=<String,List<Map<String,Object?>>>{};"));
+  expect(inbox,contains("candidate['sender']"));
+  expect(inbox,contains('bySender.putIfAbsent('));
+  expect(inbox,contains("'waffra-sms-sender-list'"));
+  expect(inbox,contains("'waffra-sms-sender-transactions'"));
+  expect(inbox,contains("Key('waffra-sms-sender-group-'"));
+  expect(inbox,contains("Key('waffra-sms-sender-message-'"));
+  expect(inbox,contains('await _reviewAutoSmsCandidates(targetId:selected)'));
+  expect(inbox,isNot(contains('commitConfirmedSms(')));
+ });
+ test('M434 saved transactions preserve genuine SMS versus manual origin',(){
+  final main=File('lib/main.dart').readAsStringSync();
+  final details=main.substring(
+   main.indexOf('class WaffraTransactionDetailsDialog'),
+   main.indexOf('class HomeScreen extends StatefulWidget'));
+  expect(details,contains("'sms'=>english?'Bank SMS':'رسالة بنكية (SMS)'"));
+  expect(details,contains("'manual'=>english?'Manual entry':'إدخال يدوي'"));
+  expect(details,contains('معاملة سابقة (المصدر غير محدد)'));
+  expect(details,contains("Key('waffra-transaction-source-provenance')"));
+  expect(details,contains("entry.sourceType=='manual'"));
+  expect(details,contains("entry.sourceType=='sms'"));
+  expect(main,contains('WaffraTransactionDetailsDialog.sourceLabel('));
+  expect(main,contains('protectedOriginalSms:originalBankSms'));
+ });
+
 }
