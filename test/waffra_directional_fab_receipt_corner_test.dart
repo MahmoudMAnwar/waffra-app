@@ -229,7 +229,8 @@ void main() {
       'floatingActionButton:!ready||tab==4?null:Directionality(',
     )));
     expect(source, contains("label:waffraIsEnglish?'New savings goal':'إضافة هدف جديد'"));
-    expect(source, contains("label:waffraIsEnglish?'Open-ended savings':'ادخار مفتوح بدون مستهدف'"));
+    expect(source, contains('bool noTarget=openEnded;'));
+    expect(source, contains('target:noTarget?0.0:n!,saved:0'));
     expect(source, contains("label:waffraIsEnglish?'Duplicate recurring transaction':'تكرار عملية متكررة موجودة'"));
     expect(source, isNot(contains('WaffraPhysicalLeftFab')));
   });
