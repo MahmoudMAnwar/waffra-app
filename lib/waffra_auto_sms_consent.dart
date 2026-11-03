@@ -62,19 +62,11 @@ class _WaffraAutoSmsConsentPageState extends State<WaffraAutoSmsConsentPage> {
       fontWeight:FontWeight.bold)),
     const SizedBox(height:18),
     Text(en?
-     'Waffra reads bank messages with your permission and prepares transactions for review. '
-     'Messages are encrypted on your device; no balance changes without your approval.':
-     'وفرة يقرأ رسائلك البنكية بموافقتك ويجهّز المعاملات للمراجعة. '
-     'الرسائل محفوظة مشفّرة، ومش هيتغير رصيدك إلا بموافقتك.',
+     'Waffra tracks bank SMS. Automatic analysis sends financial data '
+     'to a cloud service after sensitive details are redacted.':
+     'وفرة يتابع رسائلك البنكية. التحليل التلقائي يرسل بيانات مالية '
+     'بعد إخفاء المعلومات الحساسة لخدمة سحابية.',
      textAlign:TextAlign.center),
-    const SizedBox(height:12),
-    Text(en?
-     'Automatic cloud analysis sends redacted financial data to an external service. '
-     'SMS-only keeps analysis on your device.':
-     'التحليل التلقائي يستخدم خدمة سحابية خارجية بعد إخفاء البيانات الحساسة. '
-     'تقدر تختار قراءة الرسائل فقط بدون تحليل سحابي.',
-     textAlign:TextAlign.center,
-     style:Theme.of(context).textTheme.bodySmall),
     const Spacer(),
     if(error!=null)Padding(padding:const EdgeInsets.all(12),
      child:Text(error!,textAlign:TextAlign.center,
