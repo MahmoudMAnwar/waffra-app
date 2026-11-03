@@ -79,7 +79,7 @@ class WaffraMerchantLogo extends StatelessWidget {
  const WaffraMerchantLogo({super.key,this.brand,this.fallbackName='',this.size=40});
  @override Widget build(BuildContext context){
   final name=brand?.name??fallbackName.trim();
-  final initial=name.isEmpty?'•':name.characters.first.toUpperCase();
+  final initial=name.isEmpty?'•':String.fromCharCode(name.runes.first).toUpperCase();
   final colors=Theme.of(context).colorScheme;
   final fallback=Container(
    width:size,height:size,
