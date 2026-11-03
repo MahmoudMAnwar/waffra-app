@@ -24,8 +24,8 @@ abstract final class WaffraAutoSms {
   // An Android 13+ user may decline notifications; financial capture remains
   // enabled but no system notification can be shown until consent is granted.
   await requestNotificationPermission();
-  try{await channel.invokeMethod<int>('importRecentBankSms');}
-  on MissingPluginException{}on PlatformException{}
+  // Do not import historical inbox messages automatically: old expenses may
+  // already exist in this device ledger and must never double-post on upgrade.
   return true;
  }
 

@@ -20,8 +20,21 @@ class _WaffraAutoSmsConsentPageState extends State<WaffraAutoSmsConsentPage> {
   setState((){busy=true;error=null;});
   final allowed=await WaffraAutoSms.optIn();
   if(!mounted)return;
-  if(allowed){await WaffraSmsCloudService.setConsent(cloud);
-   await widget.onComplete();return;}
+  if(allowed){
+   final activated=await WaffraSmsCloudService.setConsent(cloud);
+   if(cloud&&!activated){
+    // Do not falsely claim third-party cloud processing is enabled.
+    // SMS permission is already granted; user may choose local-only below.
+    if(mounted)setState((){
+     busy=false;
+     error=widget.english?
+      'Cloud analysis is unavailable. Choose SMS-only to continue.':
+      'التحليل السحابي غير متاح حاليًا. اختر الرسائل فقط للمتابعة.';
+    });
+    return;
+   }
+   await widget.onComplete();return;
+  }
   setState((){
    busy=false;
    error=widget.english?

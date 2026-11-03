@@ -21,4 +21,11 @@ void main(){
   expect(worker,contains("'openrouter/free'"));
   expect(worker,isNot(contains('WAFFRA_STAGING_TOKEN')));
  });
+ test('M430: first-run consent does not reimport historical bank inbox',(){
+  final bridge=File('lib/waffra_auto_sms.dart').readAsStringSync();
+  final consent=File('lib/waffra_auto_sms_consent.dart').readAsStringSync();
+  expect(bridge,isNot(contains("channel.invokeMethod<int>('importRecentBankSms')")));
+  expect(consent,contains('final activated=await WaffraSmsCloudService.setConsent(cloud);'));
+  expect(consent,contains('if(cloud&&!activated)'));
+ });
 }
