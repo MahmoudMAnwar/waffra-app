@@ -17,6 +17,12 @@ abstract final class WaffraMerchantBrands {
   'WAFFRA_BRANDFETCH_ANDROID_APPROVED',defaultValue:false);
  static const known=<WaffraMerchantBrand>[
   WaffraMerchantBrand('Spotify','spotify.com',['سبوتيفاي','spotify']),
+  WaffraMerchantBrand('Rumble','rumble.com',['رامبل','rumble']),
+  WaffraMerchantBrand('STARZPLAY','starzplay.com',['ستارزبلاي','starzplay']),
+  WaffraMerchantBrand('Tazkarti','tazkarti.com',['تذكرتي','tazkarti']),
+  WaffraMerchantBrand('WATCH IT','watchit.com',['واتش ات','watch it','watchit']),
+  WaffraMerchantBrand('Tinder','tinder.com',['تيندر','tinder']),
+  WaffraMerchantBrand('Truecaller','truecaller.com',['ترو كولر','truecaller']),
   WaffraMerchantBrand('Steam','steampowered.com',['ستيم','steam']),
   WaffraMerchantBrand('Netflix','netflix.com',['نتفلكس','netflix']),
   WaffraMerchantBrand('YouTube','youtube.com',['يوتيوب','youtube']),
