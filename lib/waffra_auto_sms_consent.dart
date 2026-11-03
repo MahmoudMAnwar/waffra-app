@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'waffra_auto_sms.dart';
+import 'waffra_sms_cloud_service.dart';
 
 /// Presented once on the first foreground launch, before account screens.
 /// The permission dialog is requested ONLY after the user chooses Allow.
@@ -14,12 +15,13 @@ class WaffraAutoSmsConsentPage extends StatefulWidget {
 class _WaffraAutoSmsConsentPageState extends State<WaffraAutoSmsConsentPage> {
  bool busy=false;
  String? error;
- Future<void> allow()async{
+ Future<void> allow({required bool cloud})async{
   if(busy)return;
   setState((){busy=true;error=null;});
   final allowed=await WaffraAutoSms.optIn();
   if(!mounted)return;
-  if(allowed){await widget.onComplete();return;}
+  if(allowed){await WaffraSmsCloudService.setConsent(cloud);
+   await widget.onComplete();return;}
   setState((){
    busy=false;
    error=widget.english?
@@ -30,6 +32,7 @@ class _WaffraAutoSmsConsentPageState extends State<WaffraAutoSmsConsentPage> {
  Future<void> skip()async{
   if(busy)return;
   setState(()=>busy=true);
+  await WaffraSmsCloudService.setConsent(false);
   await widget.onComplete();
  }
  @override Widget build(BuildContext context){
@@ -56,13 +59,14 @@ class _WaffraAutoSmsConsentPageState extends State<WaffraAutoSmsConsentPage> {
     Text(en?'Allowing bank SMS also authorizes automatic recording of '
      'high-confidence financial transactions and local notifications. '
      'Bank messages stay encrypted on this device. This SMS permission '
-     'does not send them to cloud AI; only a separate optional cloud consent '
-     'allows redacted financial data to be processed externally. '
+     'does not send them to cloud AI unless you select cloud analysis. '
+     'OpenRouter may process redacted financial data outside Saudi Arabia. '
      'OTPs and personal messages are excluded.':
      'بالموافقة تسمح لوفرة بتسجيل المعاملات المؤكدة تلقائيًا وإرسال إشعار '
      'بعد حفظها. الرسائل المالية محفوظة مشفّرة على جهازك. صلاحية الرسائل '
-     'لوحدها لا تسمح برفعها لخدمة سحابية؛ مشاركة النص المالي بعد حجب '
-     'المعرفات تحتاج موافقة منفصلة اختيارية. نستبعد رموز التحقق والرسائل الشخصية.',
+     'لوحدها لا تسمح برفعها لخدمة سحابية؛ اختر الخيار السحابي للموافقة '
+     'على إرسال البيانات المالية المحجوبة إلى OpenRouter وقد تتم معالجتها خارج السعودية. '
+     'نستبعد رموز التحقق والرسائل الشخصية.',
      textAlign:TextAlign.center,
      style:Theme.of(context).textTheme.bodySmall),
     const Spacer(),
@@ -71,10 +75,17 @@ class _WaffraAutoSmsConsentPageState extends State<WaffraAutoSmsConsentPage> {
       style:TextStyle(color:Theme.of(context).colorScheme.error))),
     FilledButton.icon(
      key:const Key('m417-permission-allow'),
-     onPressed:busy?null:allow,
+     onPressed:busy?null:()=>allow(cloud:true),
      icon:const Icon(Icons.mark_email_read_outlined),
-     label:Text(en?'Allow access to bank SMS':'السماح بالوصول لرسائل البنوك'),
+     label:Text(en?'Allow SMS and redacted cloud analysis':'السماح بالرسائل وتحليلها سحابيًا بعد حجب البيانات'),
      style:FilledButton.styleFrom(minimumSize:const Size(double.infinity,56))),
+    const SizedBox(height:8),
+    OutlinedButton.icon(
+     key:const Key('m427-sms-local-only'),
+     onPressed:busy?null:()=>allow(cloud:false),
+     icon:const Icon(Icons.phone_android_outlined),
+     label:Text(en?'Allow SMS only — keep data on this device':
+      'السماح بالرسائل فقط — بدون تحليل سحابي')),
     const SizedBox(height:8),
     TextButton(key:const Key('m417-permission-skip'),
      onPressed:busy?null:skip,child:Text(en?'Not now':'تخطي الآن')),

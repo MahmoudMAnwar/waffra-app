@@ -137,7 +137,7 @@ void main() {
       called++;
       expect(request.method, 'POST');
       expect(request.url, endpoint);
-      expect(request.headers['authorization'], 'Bearer test.signed.token');
+      expect(request.headers['X-Firebase-AppCheck'], 'test.signed.token');
       final body = jsonDecode(request.body) as Map;
       expect(body['cloudConsent'], true);
       expect(body['text'], english);
@@ -145,7 +145,7 @@ void main() {
       return http.Response(jsonEncode(result(english)), 200);
     });
     final item = await WaffraCloudflareSmsGateway.analyze(
-      source: english, firebaseIdToken: 'test.signed.token',
+      source: english, appCheckToken: 'test.signed.token',
       endpoint: endpoint, client: client);
     expect(called, 1);
     expect(item?['requiresReview'], true);
@@ -160,15 +160,15 @@ void main() {
       return http.Response('{"error":"provider_error"}', 502);
     });
     expect(await WaffraCloudflareSmsGateway.analyze(
-      source: english, firebaseIdToken: '',
+      source: english, appCheckToken: '',
       endpoint: endpoint, client: client), isNull);
     expect(await WaffraCloudflareSmsGateway.analyze(
       source: 'OTP 1234 for SAR 75.00 payment',
-      firebaseIdToken: 'test.signed.token',
+      appCheckToken: 'test.signed.token',
       endpoint: endpoint, client: client), isNull);
     expect(called, 0);
     expect(await WaffraCloudflareSmsGateway.analyze(
-      source: english, firebaseIdToken: 'test.signed.token',
+      source: english, appCheckToken: 'test.signed.token',
       endpoint: endpoint, client: client), isNull);
     expect(called, 1);
     client.close();

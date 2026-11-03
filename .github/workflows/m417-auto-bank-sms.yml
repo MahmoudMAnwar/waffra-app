@@ -139,6 +139,7 @@ jobs:
       - name: Verify Cloudflare Worker syntax and signed-identity tests
         run: |
           node --check cloudflare/waffra_sms_worker.mjs
+          node --check cloudflare/waffra_sms_appcheck.mjs
           node --test cloudflare/waffra_sms_worker.test.mjs
       - name: Ensure no client OpenRouter keys or public cloud endpoint are exposed
         run: |

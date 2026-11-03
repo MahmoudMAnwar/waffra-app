@@ -7,10 +7,9 @@ import 'waffra_sms_cloud_redactor.dart';
 
 /// M423: Cloudflare Worker transport for consented, redacted bank-SMS review.
 ///
-/// URL is a public build setting; ONLY a short-lived, signed Firebase ID token
+/// URL is a public build setting; ONLY a short-lived, signed App Check token
 /// is sent as Authorization. Never embed a Worker staging token or OpenRouter
-/// API key in Flutter. A staging Worker accepting only WAFFRA_STAGING_TOKEN
-/// will return 401 until it is upgraded to verify signed identity tokens.
+/// API key in Flutter. Never put a staging secret or provider key in an APK.
 ///
 /// Nothing here can persist a transaction. Every result requires user review.
 abstract final class WaffraCloudflareSmsGateway {
@@ -117,12 +116,12 @@ abstract final class WaffraCloudflareSmsGateway {
 
   static Future<Map<String, Object?>?> analyze({
     required String source,
-    required String firebaseIdToken,
+    required String appCheckToken,
     required Uri endpoint,
     http.Client? client,
   }) async {
     if (validEndpoint(endpoint.toString()) == null ||
-        firebaseIdToken.isEmpty) return null;
+        appCheckToken.isEmpty) return null;
     final redacted = WaffraSmsCloudRedactor.redact(source);
     if (redacted == null) return null;
     final owned = client == null;
@@ -132,7 +131,7 @@ abstract final class WaffraCloudflareSmsGateway {
         endpoint,
         headers: <String, String>{
           'content-type': 'application/json',
-          'authorization': 'Bearer $firebaseIdToken',
+          'X-Firebase-AppCheck': appCheckToken,
         },
         body: jsonEncode(<String, Object>{
           'cloudConsent': true,
