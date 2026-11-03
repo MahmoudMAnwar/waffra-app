@@ -1386,8 +1386,10 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    ])))):
    locked?PinLockScreen(pinHash:pinHash!,onUnlock:()=>setState(()=>locked=false)):
    profile==null||showLogin||((profile!.phone.trim().isEmpty)&&
-    (profile!.provider.toLowerCase()=='local'||profile!.provider=='محلي'||
-     profile!.provider.toLowerCase().contains('guest')))?LoginScreen(onSave:saveUser):
+    (profile!.provider.toLowerCase().contains('local')||
+     profile!.provider.contains('محلي')||
+     profile!.provider.toLowerCase().contains('guest')||
+     profile!.provider.toLowerCase().contains('demo')))?LoginScreen(onSave:saveUser):
    googleFirstRunSetup?WaffraCountryFirstRunPage(
      english:language=='en',onComplete:completeGoogleCountrySetup,
      onCountryConfirmed:setUiCountry):
