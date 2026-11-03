@@ -7,6 +7,7 @@ on:
       - 'native/WaffraAutoSms*.kt'
       - 'native/WaffraMainActivity.kt'
       - 'lib/waffra_auto_sms*.dart'
+      - 'lib/waffra_bank_sms_facts.dart'
       - 'lib/waffra_messages.dart'
       - 'lib/main.dart'
       - 'test/m417_*.dart'
@@ -57,9 +58,9 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter analyze lib/main.dart lib/waffra_auto_sms.dart lib/waffra_auto_sms_policy.dart lib/waffra_auto_sms_consent.dart lib/waffra_messages.dart
+      - run: flutter analyze lib/main.dart lib/waffra_auto_sms.dart lib/waffra_auto_sms_policy.dart lib/waffra_auto_sms_consent.dart lib/waffra_messages.dart lib/waffra_bank_sms_facts.dart
       - name: Test foreground opt-in and strict income/expense decision matrix
-        run: flutter test --reporter expanded test/m417_sms_first_run_test.dart test/waffra_auto_sms_policy_test.dart
+        run: flutter test --reporter expanded test/m417_sms_first_run_test.dart test/waffra_auto_sms_policy_test.dart test/waffra_bank_sms_facts_test.dart
 
   android-sms-native-compile:
     name: Compile M417 Android receiver, worker and notifications (no APK release)
