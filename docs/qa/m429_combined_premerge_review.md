@@ -28,3 +28,11 @@ Do not merge this draft or update a data-bearing family device before signed-APK
 - ALL automatic analysis and financial posting are disabled by `WaffraAutoSmsAutoPoster.reviewOnly`. A notification is sent for each new qualifying financial SMS at most once; historical messages do not flood notifications. The locked phone only sees private review wording.
 - Home has a persistent "Transactions requiring review" card with pending count, scrollable per-SMS selection and a manual confirmation flow. The existing SMS editor offers active budgets or an explicit unlinked choice with warning before the user confirms a save.
 - Release blockers: Google Play SMS access policy; signed Android test of permissions, month boundaries and duplicate prevention; restoring previous owner data; App Check/OpenRouter accuracy for explicitly reviewed messages; two physical-device acceptance. No production cutover or main merge is claimed.
+
+## M434 — per-sender SMS review list and saved transaction provenance
+
+The Home review inbox now groups pending encrypted messages by the actual Android SMS sender. Group cards show sender name and count; selecting one opens its messages newest first with an explicit per-message review action. Sender grouping is case-insensitive but does not silently claim a sender is a verified bank or associate a manual transaction with a bank. On Back, the selection returns to the sender groups.
+
+Persisted entries retain their `MoneyEntry.sourceType`. Both compact transaction lists and the transaction details screen visibly distinguish `sms` = "رسالة بنكية (SMS)" and `manual` = "إدخال يدوي". Receipt/goal-due entries are separate, and legacy or unknown entries are expressly marked as source unverified. An original SMS is opened only from its independently protected finance vault. A manual entry clearly states no original SMS exists. No ledger schema/finance data conversion was introduced.
+
+Release remains blocked on exact-head CI, month-bounded import and sender count tests, signed hardware back-navigation/RTL checks, and data migration parity. Grouping only covers the **pending review SMS inbox**, not historical saved-transaction grouping by sender, because the older finance schema does not contain a verified sender on each saved transaction.
