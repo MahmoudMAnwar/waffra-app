@@ -25,7 +25,7 @@ abstract final class WaffraAutoSms {
   // enabled but no system notification can be shown until consent is granted.
   await requestNotificationPermission();
   // Activation-month history is staged only after profile startup.
-  // Financial posting and cloud analysis require explicit review.
+  // Cloud suggestions require separate opt-in. Posting always needs review.
   return true;
  }
 
