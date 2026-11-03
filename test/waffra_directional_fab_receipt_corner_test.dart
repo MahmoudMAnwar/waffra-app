@@ -220,7 +220,7 @@ void main() {
       'floatingActionButtonAnimator:const WaffraStationaryFabAnimator()',
     ));
     expect(source, contains(
-      'floatingActionButton:!ready||accountOpened||tab==2?null:SizedBox(',
+      'floatingActionButton:!ready||accountOpened||tab==2?null:CompositedTransformTarget(',
     ));
     expect(source, contains('width:58,height:58'));
     expect(source, contains('WaffraFabMenuAnchor('));
