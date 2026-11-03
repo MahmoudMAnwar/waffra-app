@@ -136,7 +136,8 @@ test('M427 genuine RS256 App Check and forged project/app/expiry rejected',
    await assert.rejects(verifyAppCheckToken(await jwt(broken),
     project,app,fakeFetch,webcrypto.subtle));
   }
-  const forged=valid.slice(0,-1)+(valid.endsWith('A')?'B':'A');
+  const tampered=valid.length-8;
+  const forged=valid.slice(0,tampered)+(valid[tampered]==='A'?'B':'A')+valid.slice(tampered+1);
   await assert.rejects(verifyAppCheckToken(forged,project,app,
    fakeFetch,webcrypto.subtle));
  });
