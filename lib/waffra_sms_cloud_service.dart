@@ -44,7 +44,7 @@ abstract final class WaffraSmsCloudService {
    await _ready();
    final token=await FirebaseAppCheck.instance.getToken();
    if(token==null||token.isEmpty)return null;
-   return WaffraCloudflareSmsGateway.analyze(
+   return await WaffraCloudflareSmsGateway.analyze(
     source:source,appCheckToken:token,endpoint:endpoint);
   }catch(_){
    // Keep local parse and ledger untouched. No bank SMS in logs.
