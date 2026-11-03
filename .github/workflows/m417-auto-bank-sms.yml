@@ -33,7 +33,7 @@ jobs:
           EXPECTED: ${{ github.event.pull_request.head.sha || github.sha }}
         run: test "$(git rev-parse HEAD)" = "$EXPECTED"
       - name: Run opt-in, encrypted queue and duplicate handling contracts
-        run: python3 -m unittest -v test/qa/m417_sms_permission_acceptance_test.py
+        run: python3 -m unittest discover -s test/qa -p 'm417_sms_permission_acceptance_test.py' -v
       - name: Ensure protected Android permissions retain a narrow exception
         run: |
           python3 scripts/qa/m279_app_security_gate.py
