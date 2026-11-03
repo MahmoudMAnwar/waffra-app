@@ -1,12 +1,13 @@
 {
   "contract_version": 1,
   "change_id": "M437-bank-SMS-history-and-unknown-financial-notices",
-  "human_scope_review": "M437 approval candidate: owner asked to add two Bank SMS settings analogous to screenshots, with concrete Etimad debt-issuance samples. Finance safety: debt alerts are NOT a completed transaction and debt reference/date/URL must never be parsed as a monetary amount. Native scan is on demand, local-only, from first day of user's activation month, permission reused without recurring prompts. Unrecognized SMS view performs no cloud call, ledger write, SMS deletion, or account/data migration; manual button opens existing blank form. The separate M436 cloud-opt-in pipeline and all preexisting encrypted finance and Google migration safeguards remain unchanged. Signed Android, account-migration and privacy acceptance still required before broad deployment.",
+  "human_scope_review": "M437 user clarification: scan bank SMS from the FIRST calendar day of the Android app installation month (PackageInfo.firstInstallTime), continuing through scan time, not from the date of SMS permission activation. First run after separate one-time SMS consent and account finance load stages qualifying messages to encrypted review; the settings scan also displays original SMS within the grouped review list and clear empty state. No finance write without review, no OTP/personal SMS, no cloud without separate consent. Unknown finance notices remain read-only/local and Etimad debt IDs are not payment amounts. Continue with signed Android + finance migration QA before deployment.",
   "user_requested_changes": [
     "Add a separate Bank SMS section in Waffra My Account settings containing Scan previous SMS and Unrecognized SMS, based on user-provided screenshots.",
-    "Scan old bank SMS within the first calendar month of SMS activation using the already-granted one-time permission; preserve review-only finance and do not duplicate any ledger item.",
+    "Scan old bank SMS from the FIRST day of the calendar month in which Waffra was installed on the device, continuing through now, regardless of the later one-time SMS permission date. Repeat scans must resume safely; show original SMS grouped for review or a localized no-recent-messages state.",
     "Show Etimad and other financial-looking non-transaction notices as unrecognized, without interpreting indebtedness reference numbers as paid amounts; present original SMS locally and allow only a blank manually confirmed transaction form.",
-    "Exclude OTP and personal messages, cap on-device scan to 500 input rows and 100 displayed notices, and never upload unknown SMS to the model or create new storage with sensitive content."
+    "Exclude OTP and personal messages, cap on-device scan to 500 input rows and 100 displayed notices, and never upload unknown SMS to the model or create new storage with sensitive content.",
+    "Preserve existing cloud consent and analysis: bank SMS suggestions stage only with standing cloud consent, while posting always requires user confirmation."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
@@ -32,6 +33,14 @@
       {
         "start": " TextField(key:const Key('waffra-account-settings-search')",
         "end": "   _accountSection(waffraIsEnglish?'Security & privacy':'الأمان والخصوصية',Icons.shield_outlined,["
+      },
+      {
+        "start": " Future<void> _openAutoSmsInbox()async{",
+        "end": " Widget _autoSmsReviewCard(){"
+      },
+      {
+        "start": " Widget _autoSmsReviewCard(){",
+        "end": " Future<void> _reviewAutoSmsCandidates("
       }
     ],
     "lib/waffra_auto_sms.dart": [
@@ -44,6 +53,14 @@
       {
         "start": "    private val brand = Regex(",
         "end": "    private fun id(sender: String, body: String, at: Long): String {"
+      },
+      {
+        "start": "    private const val activationMonth =",
+        "end": "    private val mutex = Any()"
+      },
+      {
+        "start": "    /** Resumable history import:",
+        "end": "    /** Claim each review notification once;"
       }
     ],
     "native/WaffraMainActivity.kt": [
