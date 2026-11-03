@@ -57,7 +57,7 @@
       },
       {
         "start": " Future<void> logout()async {",
-        "end": " Future<void> setPin(String? value)async{"
+        "end": " Future<void> setPin(String? value)async {"
       },
       {
         "start": " Widget profilePage(){",
