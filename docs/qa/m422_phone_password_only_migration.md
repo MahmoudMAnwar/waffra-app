@@ -33,3 +33,8 @@ Before merging:
 - Birth date removed from the signup UI; no mandatory email.
 
 This changes authentication for financial data and is deliberately **separate from PR #352**, so SMS finance work cannot accidentally override login changes.
+
+
+## M426 owner revision (2026-11-03)
+
+The owner explicitly rejected SMS OTP, Firebase custom token login and paid phone verification. This PR now uses only a local phone login name plus password, in OS-backed secure storage with salted PBKDF2-HMAC-SHA256 (600k iterations). Old salted SHA-256 verifier is consulted only once to upgrade a successful legacy login; the old wallet is not wiped. Local phone is NOT authenticated remote identity; cannot safely authorize Cloudflare, cannot sync across handsets, and losing device storage requires encrypted backup restoration. M425 server-side phone/OTP prototypes are deleted, not deployed. First sign-in requires mandatory OS biometric and each return prompts again. Existing Google users retain a one-time legacy sign-in route; actual verified migration and financial content preservation must be tested on real phones before release. Do not merge based solely on this description.

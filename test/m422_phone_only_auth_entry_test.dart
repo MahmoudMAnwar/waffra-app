@@ -56,8 +56,8 @@ void main(){
  test('M422 login retains explicit password challenge before profile save',(){
   final s=main.substring(main.indexOf('class _LoginScreenState'),
     main.indexOf('class ProfileForm extends StatefulWidget'));
-  expect(s,contains('waffra_local_password_salt'));
-  expect(s,contains('waffra_local_password_hash'));
+  expect(s,contains('WaffraLocalPhoneCredentials.verify('));
+  expect(s,contains('oldSalt:'));
   expect(s,contains('widget.onSave(account)'));
   expect(s,contains('signInPassword.text'));
  });
