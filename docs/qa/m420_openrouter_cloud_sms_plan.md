@@ -1,48 +1,36 @@
-# M420 — Cloud LLM bank SMS enhancement: OpenRouter, not yet live
+# M421 — Connected Firebase → OpenRouter SMS cloud pipeline (staging candidate)
 
-Status: **Server adapter + mock tests only, disabled; NO deployed endpoint, NO user SMS upload.** Changes stay inside draft PR #352.
+Status: **CODE WIRED, NOT DEPLOYED; feature flag defaults OFF**. PR #352 only. This is the full application→callable→OpenRouter pathway, with no API key inside Android, APK or GitHub.
 
-## What the current offline analyzer actually is
-- `lib/main.dart`: deterministic bank SMS amount and direction parser.
-- `lib/waffra_sms_intelligence.dart`: small trained multinomial Naive Bayes intent model, completely on-device; requires high confidence (0.84).
-- `lib/waffra_auto_sms_policy.dart`: conservative finance posting validator.
-- Qwen is not needed for banking SMS and is not part of this architecture.
-- The user had asked for features independent of a downloaded on-device Qwen model.
+### Implemented
+- Waffra settings: Account → Security & privacy → optional cloud bank SMS analysis, with separate bilingual disclosure, cross-border notice and explicit agreement.
+- Flutter client `lib/waffra_sms_cloud_service.dart`: authenticated Firebase Callable Function in `me-central2`, Firebase App Check (Play Integrity for release; allowlisted debug tokens for development), per-user opt-in and reliable local fallback.
+- `lib/waffra_sms_cloud_redactor.dart`: local redaction of long account/card numbers, IBANs, payment references and personally named parties; refusal of OTP and personal/nonfinancial messages.
+- Backend `functions/index.js`: `setWaffraSmsCloudConsent` persists per-Firebase-uid consent and `analyzeWaffraBankSms` rechecks it with Firebase Auth and enforced App Check before invoking OpenRouter. A Firestore atomic daily quota (30 per user and ≥3s between calls) limits cost. No raw SMS is persisted on the server or logged.
+- `functions/openrouter_sms_extractor.cjs`: server-only secret, structured financial facts JSON, restricted provider routing (`zdr: true`, `data_collection: 'deny'`, `require_parameters: true`). Invalid responses fail closed.
+- Background SMS worker can request a cloud interpretation of an opt-in financial SMS, stage validated suggestion back into the device's Android Keystore encrypted candidate queue and show the suggestion at review. **The LLM cannot directly record money**. Local bank amount/direction/currency evidence and the atomic finance journal remain authoritative; discrepancies require manual review.
+- Refusal, unavailable model, guest without Firebase Auth, unavailable internet or disabled feature fall back to offline recognition. No cloud request without separate consent.
 
-## Cloud flow intended to match Genie's approach
-`Android SMS → local financial filter + OTP exclusion → locally redacted candidate → separately consented authenticated Firebase Cloud Function (region me-central2) → server-only OpenRouter structured JSON extraction → local source validation → existing locked finance writer → saved notification after durable commit`
+### Still needed for an actually working external service
 
-**OpenRouter is an API broker**, not a bank SMS parser itself. The selected underlying LLM supplies the extraction. No evidence identifies Genie's exact model. Model choice and provider policy should be benchmarked against Saudi Arabic/English test messages.
+1. The owner must access the real Firebase project (same project as Waffra's Google Sign-In) and ensure Cloud Functions Gen2, Firestore and Cloud Secret Manager are available, with billing and Firestore security rules restricted appropriately.
+2. Enable Firebase App Check → Android Play Integrity with the correct signing certificate and project app registration; for CI/dev device, allowlist a specific debug token (never commit it).
+3. Obtain an OpenRouter account and API key and store it as `WAFFRA_OPENROUTER_API_KEY` in Firebase Secret Manager **outside the repository**:
+   `firebase functions:secrets:set WAFFRA_OPENROUTER_API_KEY`
+4. Choose a model with tested strict JSON-schema output, compliant provider routing and documented data processing/retention. Set a private deployment environment value `WAFFRA_SMS_LLM_MODEL=<approved-provider/model>`, and explicit `WAFFRA_SMS_CLOUD_ENABLED=true` only after review.
+5. Deploy **only** the two new functions, not the unrelated account-deletion function:
+   `firebase deploy --only functions:setWaffraSmsCloudConsent,functions:analyzeWaffraBankSms`
+   (after correct project selection and staged review).
+6. Run signed Android tests across a real bank SMS, offline fallback, model timeout, consent revocation, account switching, and background worker restart. Complete Saudi PDPL cross-border assessment, privacy notice and Google Play Data Safety/SMS permission review.
+7. Enable cost/budget alerts in Firebase and OpenRouter, configure Firestore TTL for `waffraSmsCloudRateLimits.expiresAt`, and monitor only anonymous operational counters. Reconcile PR #352 with other active PRs before main merge.
 
-## Added in this PR
-- Server-only `functions/openrouter_sms_extractor.cjs` with mock tests.
-- Structured JSON schema for operation type (income, expense, transfer, card settlement, uncertain), amount, original currency, merchant, fee, account last four, date, review flag.
-- Explicit cloud opt-in required in request.
-- Reject OTP/verification messages and unredacted long identifiers before any remote call.
-- OpenRouter provider flags `zdr: true`, `data_collection: 'deny'`, `require_parameters: true`.
-- Fails closed if disabled, model/key missing, provider fails, or output is invalid. Returned suggestions are **never directly verified for posting**.
+### Deployment stop
 
-## Still required before any actual traffic
-1. Choose a structured-output-supported OpenRouter model/endpoint and validate current price, retention, jurisdiction, output quality, and provider policy.
-2. Add authenticated callable Cloud Function with Firebase Auth, App Check enforcement, quotas/rate-limits, per-owner signed *separate* consent, abuse protection, bounded cost and environment feature flag. Never deploy an unauthenticated LLM proxy.
-3. Configure the OpenRouter API key **in Firebase Secret Manager**, never in GitHub, Flutter or APK. No key has been created or configured in this PR.
-4. Build user-facing Arabic and English cloud data disclosure, toggle, withdrawal, Data Safety and retention rules. The SMS-read permission **does not imply consent to export any SMS**.
-5. Keep a **local fallback** for users who decline cloud processing or are offline.
-6. Validate every suggested amount and direction against original bank SMS and currency evidence; no LLM certainty score overrides deterministic accounting policy. Transfers, card settlements, account mapping and FX remain review-only until proper accounting.
-7. Deploy staging only after written privacy/data-transfer evaluation for Saudi Arabia; OpenRouter ZDR does not by itself guarantee processing remains within Saudi Arabia.
-8. Real-device background execution, signed AAB, Play approval for READ_SMS/RECEIVE_SMS and Play Data Safety review are independently required.
-9. Operational monitoring must log only counters/latency/error codes, no raw financial SMS, recipient, IBAN or LLM prompts.
+**No credentials or Firebase project administration are exposed by the GitHub connector.** We have not set a secret, selected a paid model, configured App Check in the real project, deployed a function or sent real bank data to OpenRouter. A green CI run does not prove the provider connectivity. Production and Google Play release remain blocked pending those steps.
 
-## Why no direct OpenRouter call inside the Android app?
-A mobile API key can be extracted from a distributed APK. It would expose paid quota and private message contents to misuse. Therefore **all paid provider traffic must originate from an authenticated backend**.
-
-## Test commands
-`node --test functions/test/openrouter_sms_extractor.test.cjs`
-`npm --prefix functions test`
-
-Official docs:
+Official technical references:
+- https://firebase.google.com/docs/functions/callable
+- https://firebase.google.com/docs/app-check/cloud-functions
+- https://firebase.google.com/docs/functions/config-env
 - https://openrouter.ai/docs/api/api-reference/chat/send-chat-completion-request
-- https://openrouter.ai/blog/insights/zero-data-retention/
-- https://openrouter.ai/privacy
-
-**Release flag remains disabled.** Enabling this requires the developer to connect secure credentials, select a compliant endpoint, and complete the consent, backend security and Android tests. Nothing here represents a live integration or approved cloud data transfer.
+- https://openrouter.ai/blog/insights/ai-data-residency/
