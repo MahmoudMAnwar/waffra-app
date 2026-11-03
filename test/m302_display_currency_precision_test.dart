@@ -9,7 +9,7 @@ void main() {
       WaffraDisplayCurrency.displaySelection('SAR');
   });
 
-  test('M302 all 36 app currency labels use ISO precision with no FX',(){
+  test('M416 Saudi app fixes SAR while preserving all 36 Global currency descriptors and ledger precision',(){
     expect(waffraCountryCurrencies.length,36);
     for(final item in waffraCountryCurrencies){
       WaffraDisplayCurrency.active.value=
@@ -17,21 +17,21 @@ void main() {
       expect(WaffraDisplayCurrency.convert(1234),1234,reason:item.code);
       expect(WaffraDisplayCurrency.toLedgerSar(1234),1234,reason:item.code);
       final precision=waffraCurrencyMinorDigits(item.code);
-      final expected=precision==0?'1,234':
-          precision==3?'1,234.000':'1,234.00';
-      expect(WaffraDisplayCurrency.amount(1234),expected,reason:item.code);
+      expect(precision,inInclusiveRange(0,3),reason:item.code);
+      expect(WaffraDisplayCurrency.amount(1234),'1,234.00',reason:item.code);
       expect(WaffraDisplayCurrency.money(1234,english:true),
-        expected+' '+item.code,reason:item.code);
+        '1,234.00 SAR',reason:'Saudi app display for '+item.code);
+      expect(WaffraDisplayCurrency.country.code,'SAR');
     }
   });
 
-  test('M308 changing only the displayed unit never hides existing cents',(){
+  test('M416 dormant Global selection cannot change SAR app units or stored cents',(){
     for(final code in ['JPY','KRW']){
       WaffraDisplayCurrency.active.value=
         WaffraDisplayCurrency.displaySelection(code);
       expect(WaffraDisplayCurrency.amount(1000.25),'1,000.25',reason:code);
       expect(WaffraDisplayCurrency.amount(-20.50),'-20.50',reason:code);
-      expect(WaffraDisplayCurrency.amount(1000),'1,000',reason:code);
+      expect(WaffraDisplayCurrency.amount(1000),'1,000.00',reason:code);
       expect(WaffraDisplayCurrency.toLedgerSar(1000.25),1000.25,
         reason:'Label-only selection must not recalculate the ledger');
     }
@@ -40,16 +40,16 @@ void main() {
     expect(WaffraDisplayCurrency.amount(1000.25),'1,000.25');
     WaffraDisplayCurrency.active.value=
       WaffraDisplayCurrency.displaySelection('JOD');
-    expect(WaffraDisplayCurrency.amount(1000.25),'1,000.250');
+    expect(WaffraDisplayCurrency.amount(1000.25),'1,000.25');
   });
 
-  test('M302 zero and three decimal currencies display independently',(){
+  test('M416 Saudi display retains precise fractions without silent FX',(){
     WaffraDisplayCurrency.active.value=
       WaffraDisplayCurrency.displaySelection('JPY');
-    expect(WaffraDisplayCurrency.amount(1000),'1,000');
+    expect(WaffraDisplayCurrency.amount(1000),'1,000.00');
     WaffraDisplayCurrency.active.value=
       WaffraDisplayCurrency.displaySelection('KRW');
-    expect(WaffraDisplayCurrency.amount(1000),'1,000');
+    expect(WaffraDisplayCurrency.amount(1000),'1,000.00');
     for(final code in ['JOD','KWD','BHD','OMR','IQD','TND']){
       WaffraDisplayCurrency.active.value=
         WaffraDisplayCurrency.displaySelection(code);
