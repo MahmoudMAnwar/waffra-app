@@ -1,4 +1,5 @@
 import 'waffra_sms_intelligence.dart';
+import 'waffra_bank_sms_facts.dart';
 
 /// M418: Fully local strict eligibility before an SMS can affect money.
 /// An LLM suggestion can NEVER override these deterministically checked gates.
@@ -53,6 +54,27 @@ abstract final class WaffraAutoSmsPolicy {
   if(sms.trim().isEmpty || sms.length>1600 || _unsafe.hasMatch(sms)||
       WaffraSmsIntelligence.isPendingOrUnconfirmed(sms)){
    return const WaffraAutoSmsDecision(WaffraAutoSmsDisposition.ignore,'not_confirmed');
+  }
+  // A transfer, card settlement or message with a separate fee cannot
+  // be represented faithfully by an income/expense-only transaction record.
+  // Preserve it for a dedicated account-to-account review; do not debit Cash.
+  final facts=WaffraBankSmsFactsParser.parse(sms);
+  if(facts.kind==WaffraBankOperationKind.transfer||
+     facts.kind==WaffraBankOperationKind.cardSettlement||
+     (facts.fee!=null&&facts.fee!>0)){
+   return const WaffraAutoSmsDecision(
+    WaffraAutoSmsDisposition.review,'requires_transfer_or_fee_ledger');
+  }
+  if(!facts.canAutoPostAsIncomeExpense){
+   return const WaffraAutoSmsDecision(
+    WaffraAutoSmsDisposition.review,'transaction_kind_uncertain');
+  }
+  // Source account suffix alone is NOT an identity-mapping authorization.
+  // No typed bank account in the current MoneyEntry schema; do not silently
+  // apply a real bank SMS to the app's generic Cash account.
+  if(facts.sourceSuffix!=null){
+   return const WaffraAutoSmsDecision(
+    WaffraAutoSmsDisposition.review,'source_account_mapping_required');
   }
   if(!_trustedSender.hasMatch(sender)||RegExp(r'\d{6,}').hasMatch(sender)){
    return const WaffraAutoSmsDecision(WaffraAutoSmsDisposition.review,'untrusted_sender');
