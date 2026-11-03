@@ -6000,14 +6000,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          if(title.text.trim().isEmpty&&initial==null)title.text=picked.name;
         });
        })),
-      if(selectedMerchantOverride!=null)...[
+      if((selectedMerchantOverride??initial?.merchantKey??'').trim().isNotEmpty)...[
        const SizedBox(height:7),
        Row(children:[
         WaffraMerchantLogo(
-         brand:WaffraMerchantBrands.match(selectedMerchantOverride),
-         fallbackName:selectedMerchantOverride!,size:34),
+         brand:WaffraMerchantBrands.match(
+          selectedMerchantOverride??initial?.merchantKey),
+         fallbackName:selectedMerchantOverride??initial?.merchantKey??'',
+         size:34),
         const SizedBox(width:8),
-        Expanded(child:WaffraText(selectedMerchantOverride!)),
+        Expanded(child:WaffraText(
+         selectedMerchantOverride??initial?.merchantKey??'')),
+        TextButton(
+         key:const Key('waffra-transaction-clear-merchant'),
+         onPressed:WaffraHaptics.tap(
+          ()=>update(()=>selectedMerchantOverride='')),
+         child:WaffraText(waffraIsEnglish?'Remove':'إزالة')),
        ]),
       ],
       const SizedBox(height:10),
