@@ -1,0 +1,61 @@
+name: M417 Automatic Bank SMS Opt-in and Finance Review QA
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'native/WaffraAutoSms*.kt'
+      - 'native/WaffraMainActivity.kt'
+      - 'lib/waffra_auto_sms*.dart'
+      - 'lib/waffra_messages.dart'
+      - 'lib/main.dart'
+      - 'test/m417_*.dart'
+      - 'test/qa/m417_*.py'
+      - 'docs/qa/m417_sms_play_declaration.md'
+      - 'scripts/qa/m279_app_security_gate.py'
+      - '.github/workflows/m417-auto-bank-sms.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sms-privacy-and-finance-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Verify exact branch SHA
+        env:
+          EXPECTED: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED"
+      - name: Run opt-in, encrypted queue and duplicate handling contracts
+        run: python3 -m unittest -v test/qa/m417_sms_permission_acceptance_test.py
+      - name: Ensure protected Android permissions retain a narrow exception
+        run: |
+          python3 scripts/qa/m279_app_security_gate.py
+          python3 -m unittest -v scripts/qa/test_m279_app_security_gate.py
+      - name: Run unchanged-code scope guard against PR main base
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python3 scripts/qa/m385_approved_change_guard.py --base "$BASE_SHA" --head "$HEAD_SHA"
+
+  flutter-auto-sms-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze lib/waffra_auto_sms.dart lib/waffra_auto_sms_consent.dart lib/waffra_messages.dart
+      - run: flutter test --reporter expanded test/m417_sms_first_run_test.dart
