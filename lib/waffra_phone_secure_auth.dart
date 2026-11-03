@@ -21,6 +21,13 @@ abstract final class WaffraPhoneSecureAuth {
     return '+966' + raw.substring(1);
   }
 
+  static String? get currentUid =>
+    Firebase.apps.isEmpty ? null : FirebaseAuth.instance.currentUser?.uid;
+
+  static Future<void> signOut() async {
+    if (Firebase.apps.isNotEmpty) await FirebaseAuth.instance.signOut();
+  }
+
   static Future<void> initialize() async {
     if (Firebase.apps.isEmpty) await Firebase.initializeApp();
     await FirebaseAppCheck.instance.activate(
