@@ -5,6 +5,11 @@ import 'package:flutter/services.dart';
 abstract final class WaffraAutoSms {
  static const MethodChannel channel=MethodChannel('waffra/messages');
  static const firstRunKey='waffra_auto_sms_first_run_consent_v1';
+ static Future<bool> enabled()async{
+  if(!Platform.isAndroid)return false;
+  try{return await channel.invokeMethod<bool>('autoSmsEnabled')??false;}
+  on PlatformException{return false;}on MissingPluginException{return false;}
+ }
  static Future<bool> permissionGranted()async {
   if(!Platform.isAndroid)return false;
   try{return await channel.invokeMethod<bool>('autoSmsPermissionState')??false;}
