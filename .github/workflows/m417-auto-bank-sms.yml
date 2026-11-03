@@ -12,6 +12,10 @@ on:
       - 'functions/index.js'
       - 'lib/waffra_sms_cloud_redactor.dart'
       - 'lib/waffra_sms_cloud_service.dart'
+      - 'lib/waffra_cloudflare_sms_gateway.dart'
+      - 'cloudflare/**'
+      - 'test/m423_cloudflare_sms_gateway_test.dart'
+      - 'docs/qa/m423_cloudflare_worker_link.md'
       - 'test/waffra_sms_cloud_redactor_test.dart'
       - 'pubspec.yaml'
       - 'functions/test/openrouter_sms_extractor.test.cjs'
@@ -66,9 +70,9 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter analyze lib/main.dart lib/waffra_auto_sms.dart lib/waffra_auto_sms_policy.dart lib/waffra_auto_sms_consent.dart lib/waffra_messages.dart lib/waffra_bank_sms_facts.dart lib/waffra_sms_cloud_service.dart lib/waffra_sms_cloud_redactor.dart
+      - run: flutter analyze lib/main.dart lib/waffra_auto_sms.dart lib/waffra_auto_sms_policy.dart lib/waffra_auto_sms_consent.dart lib/waffra_messages.dart lib/waffra_bank_sms_facts.dart lib/waffra_sms_cloud_service.dart lib/waffra_sms_cloud_redactor.dart lib/waffra_cloudflare_sms_gateway.dart
       - name: Test foreground opt-in and strict income/expense decision matrix
-        run: flutter test --reporter expanded test/m417_sms_first_run_test.dart test/waffra_auto_sms_policy_test.dart test/waffra_bank_sms_facts_test.dart test/waffra_sms_cloud_redactor_test.dart
+        run: flutter test --reporter expanded test/m417_sms_first_run_test.dart test/waffra_auto_sms_policy_test.dart test/waffra_bank_sms_facts_test.dart test/waffra_sms_cloud_redactor_test.dart test/m423_cloudflare_sms_gateway_test.dart
 
   android-sms-native-compile:
     name: Compile M417 Android receiver, worker and notifications (no APK release)
@@ -132,6 +136,10 @@ jobs:
           node --check functions/openrouter_sms_extractor.cjs
       - name: Confirm server-side extraction tests without remote API usage
         run: node --test functions/test/openrouter_sms_extractor.test.cjs
+      - name: Verify Cloudflare Worker syntax and signed-identity tests
+        run: |
+          node --check cloudflare/waffra_sms_worker.mjs
+          node --test cloudflare/waffra_sms_worker.test.mjs
       - name: Ensure no client OpenRouter keys or public cloud endpoint are exposed
         run: |
           python3 - <<'PY'
