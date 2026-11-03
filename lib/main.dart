@@ -3389,15 +3389,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     'فعّل متابعة الرسائل البنكية من الأمان والخصوصية أولًا.');
    return;
   }
-  final added=await WaffraAutoSms.importConsentMonth();
+  await WaffraAutoSms.importConsentMonth();
   await _refreshAutoSmsInbox();
-  final unknown=await WaffraAutoSms.scanUnknownFinancialSms();
   if(!mounted)return;
-  snackSuccess(context,waffraIsEnglish?
-   'Added $added bank SMS for review. Found up to ${unknown.length} '
-    'unrecognized financial notices in the activation month.':
-   'أضفنا $added رسائل بنكية للمراجعة. ولقينا حتى '
-    '${unknown.length} إشعارات مالية غير معروفة من شهر التفعيل.');
+  // A successful scan opens the existing sender/message review list, not
+  // merely a total in a snackbar. No financial commit happens in this path.
+  if(_autoSmsPending.isEmpty){
+   snack(context,waffraIsEnglish?
+    'No recent bank SMS found since the first day of the installation month.':
+    'لا توجد رسائل بنكية حديثة منذ بداية شهر تثبيت التطبيق.');
+   return;
+  }
+  await _openAutoSmsInbox();
  }
  Future<void> _openUnknownSmsFromSettings()async{
   if(!await WaffraAutoSms.enabled()){
@@ -3515,10 +3518,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             suggestionLabel+
             (amount is num?' • '+amount.toStringAsFixed(2):'')+
             (currency is String?' '+currency:'')),
-          subtitle:WaffraText((waffraIsEnglish?
-           'Review amount, category and budget':
-           'راجع المبلغ والقسم والميزانية')+
-           (date.isEmpty?'':' • '+date),maxLines:2),
+          // Preserve the real original SMS text in the history review, with
+          // sender and date, while the cloud analysis remains a suggestion.
+          subtitle:WaffraText(
+           ((item['body'] as String?)??'')+'\n'+
+           (waffraIsEnglish?'Review amount, category and budget':
+            'راجع المبلغ والقسم والميزانية')+
+           (date.isEmpty?'':' • '+date),maxLines:5),
           trailing:const Icon(Icons.chevron_left_rounded),
           onTap:(id is String)?()=>Navigator.pop(ctx,id):null,
          );
@@ -3565,8 +3571,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      (waffraIsEnglish?'No bank SMS awaiting review.':
       'ما فيه رسائل بنكية بانتظار المراجعة.'):
      (waffraIsEnglish?
-      'Bank SMS from your activation month and new messages await approval.':
-      'رسائل شهر التفعيل والجديدة بانتظار مراجعتك وتأكيدك.')),
+      'Bank SMS since the installation month await approval.':
+      'رسائل من بداية شهر تثبيت التطبيق بانتظار مراجعتك وتأكيدك.')),
     if(analyzed>0)...[
      const SizedBox(height:5),
      WaffraText(waffraIsEnglish?
@@ -12525,8 +12531,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _accountTile(
      waffraIsEnglish?'Scan previous SMS':'فحص رسائل SMS السابقة',
      waffraIsEnglish?
-      'Review bank SMS from the month you first enabled tracking.':
-      'استيراد رسائل الشهر الذي فعّلت فيه المتابعة للمراجعة.',
+      'Review bank SMS from the first day of the month Waffra was installed.':
+      'فحص الرسائل من أول يوم في شهر تثبيت وفرة وحتى الآن.',
      Icons.history_rounded,
      onTap:()=>unawaited(_scanPreviousBankSmsFromSettings())),
     _accountTile(
