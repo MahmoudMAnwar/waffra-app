@@ -291,6 +291,8 @@ class MainActivity : FlutterFragmentActivity() {
                     // Historical candidates are review-only; no worker auto-save.
                     result.success(WaffraAutoSmsStore.importConsentMonth(this))
                 }
+                "scanUnknownFinancialSms" -> result.success(
+                    WaffraAutoSmsStore.scanUnknownFinancialSms(this))
                 "pendingAutoBankSms" -> result.success(WaffraAutoSmsStore.pending(this))
                 "claimAutoBankSmsCloudAttempt" -> result.success(
                     WaffraAutoSmsStore.claimCloudAttempt(this, call.arguments as? String ?: ""))
