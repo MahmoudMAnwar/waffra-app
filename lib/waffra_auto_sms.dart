@@ -25,7 +25,7 @@ abstract final class WaffraAutoSms {
   // enabled but no system notification can be shown until consent is granted.
   await requestNotificationPermission();
   // Activation-month history is staged only after profile startup.
-  // Financial posting and cloud analysis require explicit review.
+  // Cloud suggestions require separate opt-in. Posting always needs review.
   return true;
  }
 
@@ -47,6 +47,11 @@ abstract final class WaffraAutoSms {
   }on MissingPluginException{return const [];}
    on PlatformException{return const [];}
  }
+ static Future<bool> claimCloudAttempt(String id)async{
+  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(id))return false;
+  return _boolCall('claimAutoBankSmsCloudAttempt',id);
+ }
+
  static Future<bool> stageCloudAnalysis(
   String id,Map<String,Object?> suggestion)async{
   if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(id))return false;

@@ -59,11 +59,12 @@ void main(){
   expect(main,contains('reviewSmsBudgetLinks(additions)'));
   expect(main,contains('if(targetId!=null&&id!=targetId)continue;'));
  });
-  test('M432 signed QA APK Cloudflare staging is manual and main only',(){
+  test('M436 signed QA APK Cloudflare staging is main only, cloud opt-in',(){
   final workflow=File('.github/workflows/android.yml').readAsStringSync();
   expect(workflow,contains('sms_staging_worker:'));
   expect(workflow,contains('default: false'));
   expect(workflow,contains('github.event_name'));
+  expect(workflow,contains('"push"'));
   expect(workflow,contains('refs/heads/main'));
   expect(workflow,contains('Cloud SMS staging APK is allowed only from main'));
   expect(workflow,contains('WAFFRA_SMS_WORKER_URL=https://waffra-sms-appcheck-staging.mahmoudmanwar159.workers.dev/analyze'));

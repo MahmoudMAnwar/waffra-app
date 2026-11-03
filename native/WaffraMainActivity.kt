@@ -292,6 +292,8 @@ class MainActivity : FlutterFragmentActivity() {
                     result.success(WaffraAutoSmsStore.importConsentMonth(this))
                 }
                 "pendingAutoBankSms" -> result.success(WaffraAutoSmsStore.pending(this))
+                "claimAutoBankSmsCloudAttempt" -> result.success(
+                    WaffraAutoSmsStore.claimCloudAttempt(this, call.arguments as? String ?: ""))
                 "stageAutoBankSmsCloudAnalysis" -> {
                     val args = call.arguments as? Map<*, *>
                     val id = args?.get("id") as? String ?: ""

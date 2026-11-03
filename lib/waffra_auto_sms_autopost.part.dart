@@ -15,6 +15,11 @@ abstract final class WaffraAutoSmsAutoPoster {
   if(!await WaffraAutoSms.enabled())return summary;
   if(reviewOnly){
    final pending=await WaffraAutoSms.pending();
+   // Analysis may run after explicit cloud opt-in, even with UI closed.
+   // Suggestions stay in the encrypted review queue. NO finance writer is
+   // ever opened in this branch, regardless of model confidence.
+   await WaffraSmsCloudReviewAnalyzer.stagePending(
+    pending,maxPerRun:1);
    for(final candidate in pending){
     final id=candidate['id'];
     if(id is String)await WaffraAutoSms.notifyReview(id);

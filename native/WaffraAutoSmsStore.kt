@@ -218,6 +218,31 @@ object WaffraAutoSmsStore {
         } catch (_: Exception) { emptyList() }
     }
 
+    /** Atomic per-SMS request claim shared by foreground and WorkManager.
+     * A failed cloud request cannot be retried repeatedly on every resume.
+     * No financial writer is reachable through this review-only record.
+     */
+    fun claimCloudAttempt(context: Context, id: String): Boolean =
+        synchronized(mutex) {
+            if (!enabled(context) || !Regex("^[a-f0-9]{64}$").matches(id))
+                return@synchronized false
+            try {
+                val queue = read(context)
+                val now = System.currentTimeMillis()
+                for (i in 0 until queue.length()) {
+                    val row = queue.getJSONObject(i)
+                    if (row.optString("id") != id) continue
+                    if (row.has("cloud")) return@synchronized false
+                    val previous = row.optLong("cloudAttemptAtMs", 0L)
+                    if (previous > now - 86400000L && previous <= now)
+                        return@synchronized false
+                    row.put("cloudAttemptAtMs", now)
+                    return@synchronized save(context, queue)
+                }
+                false
+            } catch (_: Exception) { false }
+        }
+
     /** Persist sanitized LLM suggestions inside the same encrypted queue.
      * No original SMS is transmitted back to Android outside the app.
      * The model may never mark a candidate verified-for-posting.
@@ -277,8 +302,9 @@ object WaffraAutoSmsStore {
         }
 
     /** Resumable history import: only the consent calendar month, for review.
-     * Never post or cloud-analyze any SMS on receipt. The encrypted review
-     * queue holds up to 100 and the cursor resumes after entries are reviewed.
+     * This native importer never posts money or contacts a cloud provider.
+     * An separately opted-in Flutter worker may stage sanitized cloud hints.
+     * The encrypted queue holds up to 100 and resumes after user review.
      */
     fun importConsentMonth(context: Context, maxRead: Int = 500): Int {
         if (!enabled(context)) return 0

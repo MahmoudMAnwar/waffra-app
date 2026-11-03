@@ -13,7 +13,7 @@ abstract final class WaffraSmsCloudRedactor {
     r'شراء|خصم|حوالة|تحويل|راتب|سحب|إيداع|ايداع|دفع',
     caseSensitive: false);
   static final _money = RegExp(
-    r'\b(?:SAR|SR|AED|JOD|EGP|KWD|BHD|OMR)\b|'
+    r'\b(?:SAR|SR|AED|JOD|EGP|KWD|BHD|OMR)(?=\b|[0-9٠-٩۰-۹])|'
     r'ريال|درهم|دينار|جنيه|ر\.?\s*س',
     caseSensitive: false);
   static String? redact(String sms) {

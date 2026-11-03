@@ -70,13 +70,17 @@ class _WaffraAutoSmsConsentPageState extends State<WaffraAutoSmsConsentPage> {
      textAlign:TextAlign.center),
     const SizedBox(height:14),
     Text(en?'Allowing bank SMS enables encrypted local review and private '
-     'notification of new candidate messages, not automatic posting. '
+     'notification of new messages, not automatic financial posting. '
+     'If you choose cloud analysis, eligible redacted SMS are analyzed '
+     'automatically and the results await your confirmation. '
      'Bank messages stay encrypted on this device. This SMS permission '
      'does not send them to cloud AI unless you select cloud analysis. '
      'OpenRouter may process redacted financial data outside Saudi Arabia. '
      'OTPs and personal messages are excluded.':
      'بالموافقة تسمح لوفرة بتجميع الرسائل للمراجعة وإشعارك بالجديد '
-     'بدون تسجيل تلقائي. الرسائل محفوظة مشفّرة على جهازك. صلاحية الرسائل '
+     'بدون تسجيل تلقائي في رصيدك. عند اختيار التحليل السحابي، '
+     'تُحلّل الرسائل المؤهلة تلقائيًا بعد حجب البيانات وتنتظر تأكيدك. '
+     'الرسائل محفوظة مشفّرة على جهازك. صلاحية الرسائل '
      'لوحدها لا تسمح برفعها لخدمة سحابية؛ اختر الخيار السحابي للموافقة '
      'على إرسال البيانات المالية المحجوبة إلى OpenRouter وقد تتم معالجتها خارج السعودية. '
      'نستبعد رموز التحقق والرسائل الشخصية.',

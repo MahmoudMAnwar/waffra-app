@@ -52,6 +52,9 @@ class WaffraAutoSmsWorker(context: Context, parameters: WorkerParameters) :
                     when (call.method) {
                         "autoSmsEnabled" -> result.success(WaffraAutoSmsStore.enabled(context))
                         "pendingAutoBankSms" -> result.success(WaffraAutoSmsStore.pending(context))
+                        "claimAutoBankSmsCloudAttempt" ->
+                            result.success(WaffraAutoSmsStore.claimCloudAttempt(
+                                context, call.arguments as? String ?: ""))
                         "stageAutoBankSmsCloudAnalysis" -> {
                             val args = call.arguments as? Map<*, *>
                             val id = args?.get("id") as? String ?: ""

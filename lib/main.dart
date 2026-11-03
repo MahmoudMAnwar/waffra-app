@@ -76,6 +76,7 @@ import 'waffra_auto_sms.dart';
 import 'waffra_auto_sms_policy.dart';
 import 'waffra_bank_sms_facts.dart';
 import 'waffra_sms_cloud_service.dart';
+import 'waffra_sms_cloud_review_analyzer.dart';
 import 'waffra_auto_sms_consent.dart';
 import 'waffra_recurring_policy.dart';
 import 'waffra_cross_source_duplicate_review.dart';
@@ -3337,6 +3338,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   WidgetsBinding.instance.addPostFrameCallback((_){if(mounted)unawaited(entrySheet());});
  }
  bool _autoSmsReviewOpen=false;
+ bool _cloudReviewStageRunning=false;
  final List<Map<String,Object?>> _autoSmsPending=<Map<String,Object?>>[];
  void _receiveAutoSmsNotice(){
   if(mounted&&ready)unawaited(_refreshAutoSmsInbox());
@@ -3359,6 +3361,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(mounted)setState((){
    _autoSmsPending..clear()..addAll(waiting);
   });
+  // Auto-prepare redacted cloud suggestions only for installations with
+  // separate standing cloud consent. Review and budget approval stay manual.
+  if(waiting.isNotEmpty&&!_cloudReviewStageRunning){
+   unawaited(_stageCloudReviewSuggestions(waiting));
+  }
+ }
+ Future<void> _stageCloudReviewSuggestions(
+  List<Map<String,Object?>> candidates)async{
+  if(_cloudReviewStageRunning)return;
+  _cloudReviewStageRunning=true;
+  try{
+   final staged=await WaffraSmsCloudReviewAnalyzer.stagePending(
+    candidates,maxPerRun:2);
+   if(staged>0&&mounted)unawaited(_refreshAutoSmsInbox());
+  }catch(_){
+   // Retain encrypted candidates. Cloud is never a finance authority.
+  }finally{
+   _cloudReviewStageRunning=false;
+  }
  }
  Future<void> _openAutoSmsInbox()async{
   await _refreshAutoSmsInbox(importMonth:true);
@@ -3441,11 +3462,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          final id=item['id'],at=item['receivedAt'];
          final date=at is int?DateTime.fromMillisecondsSinceEpoch(at)
           .toLocal().toString().substring(0,16):'';
+         final proposal=item['cloud'];
+         final suggestion=proposal is Map?proposal:null;
+         final amount=suggestion?['amount'];
+         final currency=suggestion?['currency'];
+         final kind=suggestion?['kind'];
+         final suggestionLabel=kind=='income'?
+          (waffraIsEnglish?'Income':'دخل'):
+          kind=='expense'?(waffraIsEnglish?'Expense':'مصروف'):
+          (waffraIsEnglish?'Needs checking':'تحتاج تحقق');
          return ListTile(
           key:Key('waffra-sms-sender-message-'+index.toString()),
           leading:const Icon(Icons.sms_outlined,color:emerald),
-          title:WaffraText(waffraIsEnglish?
-           'Bank SMS • needs review':'رسالة بنكية • تحتاج مراجعة'),
+          title:WaffraText(suggestion==null?
+           (waffraIsEnglish?'Bank SMS • needs review':
+            'رسالة بنكية • تحتاج مراجعة'):
+           (waffraIsEnglish?'AI suggestion • ':'اقتراح AI • ')+
+            suggestionLabel+
+            (amount is num?' • '+amount.toStringAsFixed(2):'')+
+            (currency is String?' '+currency:'')),
           subtitle:WaffraText((waffraIsEnglish?
            'Review amount, category and budget':
            'راجع المبلغ والقسم والميزانية')+
@@ -3469,6 +3504,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  Widget _autoSmsReviewCard(){
   final count=_autoSmsPending.length;
+  final analyzed=_autoSmsPending.where((row)=>row['cloud'] is Map).length;
   return Container(
    key:const Key('waffra-auto-sms-review-card'),
    padding:const EdgeInsets.all(14),
@@ -3497,6 +3533,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      (waffraIsEnglish?
       'Bank SMS from your activation month and new messages await approval.':
       'رسائل شهر التفعيل والجديدة بانتظار مراجعتك وتأكيدك.')),
+    if(analyzed>0)...[
+     const SizedBox(height:5),
+     WaffraText(waffraIsEnglish?
+      '$analyzed cloud AI suggestions ready for your review.':
+      '$analyzed اقتراحات من الذكاء الاصطناعي جاهزة لمراجعتك.',
+      style:const TextStyle(color:emerald,fontSize:12,
+       fontWeight:FontWeight.w600)),
+    ],
     const SizedBox(height:9),
     Row(children:[
      Expanded(child:FilledButton.icon(
@@ -3519,7 +3563,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      _financeLoadFailure!=null)return;
   _autoSmsReviewOpen=true;
   try{
-   // Explicit review only: never auto-analyze or auto-post.
+   // Cloud AI may suggest after separate opt-in. Financial posting is always manual.
    final items=await WaffraAutoSms.pending();
    if(!mounted||items.isEmpty)return;
    Map<String,Object?>? selected;
