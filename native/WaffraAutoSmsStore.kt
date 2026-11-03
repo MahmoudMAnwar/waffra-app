@@ -135,7 +135,7 @@ object WaffraAutoSmsStore {
         "\\bwithdrawal\\b|\\bpayment\\b|\\bsalary\\b|\\brefund\\b|" +
         "\\bdeposit\\b)", RegexOption.IGNORE_CASE)
     private val money = Regex(
-        "(?:\\b(?:SAR|SR|AED|JOD|EGP|KWD|BHD|OMR|QAR|USD|EUR|GBP)\\b|" +
+        "(?:\\b(?:SAR|SR|AED|JOD|EGP|KWD|BHD|OMR|QAR|USD|EUR|GBP)(?=\\b|[0-9٠-٩۰-۹])|" +
         "ر\\.?\\s*س|ريال|درهم|دينار|جنيه|دولار|يورو)", RegexOption.IGNORE_CASE)
     private val digits = Regex("[0-9٠-٩۰-۹][0-9٠-٩۰-۹,.]{0,14}")
     private val senderName = Regex("^[A-Za-z][A-Za-z0-9 _-]{2,24}$")
