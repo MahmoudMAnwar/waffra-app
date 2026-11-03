@@ -3284,7 +3284,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // Account settings open from the app bar instead of a footer destination.
  bool accountOpened=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
- @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraAutoSmsUpdates.addListener(_receiveAutoSmsNotice);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:(){unawaited(_syncWidgetTransactions());unawaited(_reviewAutoSmsCandidates());});unawaited(_loadFinanceSafely());}
+ @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraAutoSmsUpdates.addListener(_receiveAutoSmsNotice);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:(){unawaited(_syncWidgetTransactions());unawaited(_refreshAutoSmsInbox(importMonth:true));});unawaited(_loadFinanceSafely());}
  void _returnToHome(){if(mounted)setState((){_tabBackStack.clear();tab=0;accountOpened=false;goalsOpened=false;addFabExpanded=false;});}
  void _receiveWidgetAction(){
   if(!mounted||!ready||waffraWidgetAction.value!='add')return;
@@ -3293,30 +3293,129 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   WidgetsBinding.instance.addPostFrameCallback((_){if(mounted)unawaited(entrySheet());});
  }
  bool _autoSmsReviewOpen=false;
+ final List<Map<String,Object?>> _autoSmsPending=<Map<String,Object?>>[];
  void _receiveAutoSmsNotice(){
-  if(!mounted||!ready||_smsSheetOpen||_autoSmsReviewOpen)return;
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-   if(mounted)unawaited(_reviewAutoSmsCandidates());
+  if(mounted&&ready)unawaited(_refreshAutoSmsInbox());
+ }
+ Future<void> _refreshAutoSmsInbox({bool importMonth=false})async{
+  if(!mounted||!ready||_financeLoadFailure!=null)return;
+  if(importMonth)await WaffraAutoSms.importConsentMonth();
+  final results=await WaffraAutoSms.pending();
+  if(!mounted)return;
+  final waiting=<Map<String,Object?>>[];
+  for(final candidate in results){
+   final id=candidate['id'],body=candidate['body'];
+   if(id is! String||body is! String)continue;
+   if(smsHashes.contains(bankSmsHash(body))){
+    await WaffraAutoSms.acknowledge([id]);
+   }else{
+    waiting.add(candidate);
+   }
+  }
+  if(mounted)setState((){
+   _autoSmsPending..clear()..addAll(waiting);
   });
  }
- Future<void> _reviewAutoSmsCandidates()async {
+ Future<void> _openAutoSmsInbox()async{
+  await _refreshAutoSmsInbox(importMonth:true);
+  if(!mounted||_autoSmsPending.isEmpty)return;
+  final items=List<Map<String,Object?>>.from(_autoSmsPending);
+  final chosen=await showModalBottomSheet<String>(
+   context:context,isScrollControlled:true,showDragHandle:true,
+   builder:(sheet)=>SafeArea(child:SizedBox(
+    height:MediaQuery.sizeOf(sheet).height*.7,
+    child:Column(children:[
+     Padding(padding:const EdgeInsets.all(15),
+      child:WaffraText(waffraIsEnglish?
+       'Transactions requiring review':'عمليات تحتاج مراجعة',
+       style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold))),
+     Expanded(child:ListView.builder(
+      itemCount:items.length,
+      itemBuilder:(ctx,i){
+       final row=items[i],id=row['id'];
+       final sender=row['sender'] is String?row['sender'] as String:'';
+       return ListTile(
+        key:Key('waffra-auto-sms-review-item-'+i.toString()),
+        leading:const Icon(Icons.markunread_mailbox_outlined,color:emerald),
+        title:WaffraText(sender.isEmpty?
+         (waffraIsEnglish?'Bank SMS':'رسالة بنكية'):sender),
+        subtitle:WaffraText(waffraIsEnglish?
+         'Review amount, category and budget':
+         'راجع المبلغ والقسم والميزانية قبل التسجيل'),
+        trailing:const Icon(Icons.chevron_left_rounded),
+        onTap:id is String?()=>Navigator.pop(ctx,id):null,
+       );
+      })),
+     Padding(padding:const EdgeInsets.all(12),
+      child:WaffraText(waffraIsEnglish?
+       'No financial entry is saved until your confirmation.':
+       'لن تتسجل أي عملية مالية إلا بعد مراجعتك وتأكيدك.',
+       textAlign:TextAlign.center)),
+    ]),
+   )),
+  );
+  if(chosen!=null&&mounted)await _reviewAutoSmsCandidates(targetId:chosen);
+ }
+ Widget _autoSmsReviewCard(){
+  final count=_autoSmsPending.length;
+  return Container(
+   key:const Key('waffra-auto-sms-review-card'),
+   padding:const EdgeInsets.all(14),
+   decoration:BoxDecoration(color:Theme.of(context).cardColor,
+    borderRadius:BorderRadius.circular(16),
+    border:Border.all(color:forest.withValues(alpha:.16))),
+   child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    Row(children:[
+     const Icon(Icons.fact_check_outlined,color:emerald),
+     const SizedBox(width:8),
+     Expanded(child:WaffraText(waffraIsEnglish?
+      'Transactions requiring review':'عمليات تحتاج مراجعة',
+      style:const TextStyle(fontSize:16,fontWeight:FontWeight.bold))),
+     Container(
+      key:const Key('waffra-auto-sms-review-count'),
+      padding:const EdgeInsets.symmetric(horizontal:10,vertical:5),
+      decoration:BoxDecoration(color:const Color(0xFFE4F4EB),
+       borderRadius:BorderRadius.circular(24)),
+      child:Text(count.toString(),
+       style:const TextStyle(color:forest,fontWeight:FontWeight.bold))),
+    ]),
+    const SizedBox(height:9),
+    WaffraText(count==0?
+     (waffraIsEnglish?'No bank SMS awaiting review.':
+      'ما فيه رسائل بنكية بانتظار المراجعة.'):
+     (waffraIsEnglish?
+      'Bank SMS from your activation month and new messages await approval.':
+      'رسائل شهر التفعيل والجديدة بانتظار مراجعتك وتأكيدك.')),
+    const SizedBox(height:9),
+    Row(children:[
+     Expanded(child:FilledButton.icon(
+      key:const Key('waffra-auto-sms-review-open'),
+      onPressed:count==0?null:WaffraHaptics.tap(_openAutoSmsInbox),
+      icon:const Icon(Icons.rate_review_outlined,size:18),
+      label:WaffraText(waffraIsEnglish?'Review messages':'مراجعة العمليات'))),
+     IconButton(
+      key:const Key('waffra-auto-sms-review-refresh'),
+      tooltip:waffraIsEnglish?'Load more month messages':'تحديث رسائل الشهر',
+      onPressed:WaffraHaptics.tap(
+       ()=>unawaited(_refreshAutoSmsInbox(importMonth:true))),
+      icon:const Icon(Icons.refresh_rounded,color:emerald)),
+    ]),
+   ]),
+  );
+ }
+ Future<void> _reviewAutoSmsCandidates({String? targetId})async {
   if(!mounted||!ready||_smsSheetOpen||_autoSmsReviewOpen||
      _financeLoadFailure!=null)return;
   _autoSmsReviewOpen=true;
   try{
-   // Standing first-run consent permits background import of VERIFIED SMS.
-   // The shared writer, never this widget tree, owns every money mutation.
-   if(await WaffraAutoSms.enabled()){
-    await WaffraAutoSmsAutoPoster.run();
-    if(mounted)await _syncWidgetTransactions();
-   }
-   if(!mounted)return;
+   // Explicit review only: never auto-analyze or auto-post.
    final items=await WaffraAutoSms.pending();
    if(!mounted||items.isEmpty)return;
    Map<String,Object?>? selected;
    for(final item in items){
     final id=item['id'],body=item['body'];
     if(id is! String||body is! String||body.trim().isEmpty)continue;
+    if(targetId!=null&&id!=targetId)continue;
     if(smsHashes.contains(bankSmsHash(body))){
      await WaffraAutoSms.acknowledge([id]);
      continue;
@@ -3373,7 +3472,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if(smsHashes.contains(bankSmsHash(body)))
      await WaffraAutoSms.acknowledge([id]);
    }
-  }finally{_autoSmsReviewOpen=false;}
+  }finally{
+   _autoSmsReviewOpen=false;
+   if(mounted)unawaited(_refreshAutoSmsInbox());
+  }
  }
  void _receiveSharedSms(){
   if(!mounted||!ready||_smsSheetOpen)return;
@@ -3394,7 +3496,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   try{
    await load();
    WidgetsBinding.instance.addPostFrameCallback((_) {
-    if(mounted)unawaited(_reviewAutoSmsCandidates());
+    if(mounted)unawaited(_refreshAutoSmsInbox(importMonth:true));
    });
   }catch(e){
    debugPrint('Financial startup integrity/recovery gate blocked access: $e');
@@ -8544,6 +8646,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                ]))
              :const SizedBox.shrink()),
           ])),
+         if(Platform.isAndroid)...[
+          const SizedBox(height:12),
+          _autoSmsReviewCard(),
+         ],
          if(unverifiedFxEntries.isNotEmpty)...[
           const SizedBox(height:10),
           Container(
