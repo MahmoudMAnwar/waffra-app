@@ -66,6 +66,8 @@ object WaffraAutoSmsNotifications {
     fun notifyReview(context: Context, fingerprint: String): Boolean {
         if (!canNotify(context) || !Regex("^[a-f0-9]{64}$").matches(fingerprint))
             return false
+        if (!WaffraAutoSmsStore.claimReviewNotification(context, fingerprint))
+            return false
         ensureChannel(context)
         val pending = PendingIntent.getActivity(context, 711,
             Intent(context, MainActivity::class.java),
