@@ -44,9 +44,9 @@ void main() {
     // Financial SMS/OCR must remain available even if the optional ~484 MB
     // model was not downloaded. Only explicit AI activation asks for consent.
     expect(home,isNot(contains('WaffraAiModelGate.requireForFeature(context,')));
-    expect(home,contains('if(reliable||!WaffraOnDeviceQwen.shared.isReady){'));
+    expect(home,contains('if(!WaffraSaudiRelease.qwenForBankSms||reliable||'));
     expect(home,contains('if(!WaffraOnDeviceQwen.shared.isReady)return false;'));
-    expect(home,contains('if(!WaffraOnDeviceQwen.shared.isReady||source.trim().isEmpty)return null;'));
+    expect(home,contains('if(!WaffraSaudiRelease.receiptImageTransactionImport){'));
     expect(dialog,isNot(contains('waffra-ai-required-feature-notice')));
     expect(dialog,contains('manual entry still works'));
     expect(dialog,contains('الإضافة اليدوية متاحة'));
@@ -57,8 +57,8 @@ void main() {
     // The Tools installer is explicit. No model-driven tool automatically
     // prompts on expansion: before first download it is completely hidden.
     expect(smart,contains('waffra-ai-tools-install-section'));
-    expect(smart,contains('if(i==4&&!_aiToolVisible)return null;'));
-    expect(smart,contains('if(section==4&&!WaffraOnDeviceQwen.shared.isReady)return;'));
+    expect(smart,contains('if(i==4&&WaffraSaudiRelease.freeTextAskWaffra&&!_aiToolVisible)return null;'));
+    expect(smart,contains('if(section==4&&WaffraSaudiRelease.freeTextAskWaffra&&'));
     expect(smart,isNot(contains('if(next==4||next==7)')));
     expect(smart,isNot(contains('if(next==-2||next==4||next==7)')));
     expect(smart,contains("key:const Key('waffra-local-ai-opt-in')"));
