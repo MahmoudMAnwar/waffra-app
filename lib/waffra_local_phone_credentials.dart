@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
-import 'package:crypto/crypto.dart';
+import 'package:crypto/crypto.dart' as legacy_crypto;
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -38,7 +38,7 @@ abstract final class WaffraLocalPhoneCredentials {
   if(salt.length!=32)throw StateError('invalid_salt');
   final hash=await _derive(password,salt);
   return <String,Object?>{
-   'version':2,'phoneHash':sha256.convert(utf8.encode(phone)).toString(),
+   'version':2,'phoneHash':legacy_crypto.sha256.convert(utf8.encode(phone)).toString(),
    'salt':base64Encode(salt),'hash':base64Encode(hash),
    'iterations':_iterations,
   };
@@ -51,7 +51,7 @@ abstract final class WaffraLocalPhoneCredentials {
      item['phoneHash'] is! String||item['salt'] is! String||
      item['hash'] is! String)return false;
   try{
-   final phoneHash=sha256.convert(utf8.encode(phone)).toString();
+   final phoneHash=legacy_crypto.sha256.convert(utf8.encode(phone)).toString();
    if(!_equal(utf8.encode(phoneHash),utf8.encode(item['phoneHash'] as String))){
     return false;
    }
@@ -69,7 +69,7 @@ abstract final class WaffraLocalPhoneCredentials {
    // a different owner. Explicit password changes need a separate workflow.
    final current=jsonDecode(saved);
    if(current is! Map||current['phoneHash']!=
-     sha256.convert(utf8.encode(phone)).toString()){
+     legacy_crypto.sha256.convert(utf8.encode(phone)).toString()){
     throw StateError('local_owner_conflict');
    }
   }
@@ -90,7 +90,7 @@ abstract final class WaffraLocalPhoneCredentials {
   // Upgrade legacy salted SHA-256 only after a successful old-password
   // login. Never interpret a bad password as permission to reset a profile.
   if(oldSalt==null||oldHash==null)return false;
-  final supplied=sha256.convert(utf8.encode('$oldSalt:$password')).toString();
+  final supplied=legacy_crypto.sha256.convert(utf8.encode('$oldSalt:$password')).toString();
   if(!_equal(utf8.encode(supplied),utf8.encode(oldHash)))return false;
   await register(phone:phone,password:password);
   return true;
