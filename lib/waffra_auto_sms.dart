@@ -47,6 +47,19 @@ abstract final class WaffraAutoSms {
   }on MissingPluginException{return const [];}
    on PlatformException{return const [];}
  }
+ /// Read-only, on-demand scan for institutional financial notices that
+ /// were not recognized as completed transactions. Never posts or uploads SMS.
+ static Future<List<Map<String,Object?>>> scanUnknownFinancialSms()async{
+  if(!Platform.isAndroid||!await enabled())return const [];
+  try{
+   final data=await channel.invokeMethod<List<dynamic>>(
+    'scanUnknownFinancialSms')??[];
+   return data.whereType<Map>().map(
+    (item)=>Map<String,Object?>.from(item)).toList(growable:false);
+  }on MissingPluginException{return const [];}
+   on PlatformException{return const [];}
+ }
+
  static Future<bool> claimCloudAttempt(String id)async{
   if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(id))return false;
   return _boolCall('claimAutoBankSmsCloudAttempt',id);
