@@ -139,13 +139,6 @@ class _WaffraMandatoryBiometricGateState
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white, fontFamily: 'Tajawal',
                 fontSize: 25, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            Text(widget.english
-                ? 'Biometric verification is required every time you return to Waffra.'
-                : 'التحقق بالبصمة إجباري كل مرة ترجع فيها إلى وفرة.',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white, fontFamily: 'Tajawal',
-                fontSize: 15)),
             if (_message != null) ...[
               const SizedBox(height: 16),
               Text(_message!, textAlign: TextAlign.center,
