@@ -97,7 +97,7 @@
     ],
     "scripts/qa/m279_app_security_gate.py": [
       {
-        "start": "def manifest_permission_errors(source: str)",
+        "start": "def manifest_permission_errors(",
         "end": "def required_markers("
       },
       {
