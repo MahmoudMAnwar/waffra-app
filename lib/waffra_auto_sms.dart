@@ -24,12 +24,20 @@ abstract final class WaffraAutoSms {
   // An Android 13+ user may decline notifications; financial capture remains
   // enabled but no system notification can be shown until consent is granted.
   await requestNotificationPermission();
-  // Do not import historical inbox messages automatically: old expenses may
-  // already exist in this device ledger and must never double-post on upgrade.
+  // Activation-month history is staged only after profile startup.
+  // Financial posting and cloud analysis require explicit review.
   return true;
  }
 
  static Future<bool> disable()=>_boolCall('setAutoSmsEnabled',false);
+
+ /// Resumable batch from first day of month when permission was first granted.
+ static Future<int> importConsentMonth()async{
+  if(!Platform.isAndroid)return 0;
+  try{return await channel.invokeMethod<int>('importConsentMonthBankSms')??0;}
+  on MissingPluginException{return 0;}
+  on PlatformException{return 0;}
+ }
 
  static Future<List<Map<String,Object?>>> pending()async{
   if(!Platform.isAndroid)return const [];
