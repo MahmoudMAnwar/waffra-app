@@ -24,7 +24,7 @@ void main() {
   final app=File('lib/main.dart').readAsStringSync();
   expect(budgets,contains("'waffra-budget-quick-actions-'"));
   expect(budgets,contains('editBudgetForCategory(b)'));
-  expect(budgets,contains('setNamedBudgetActive(b,!b.budgetActive)'));
+  expect(budgets,contains('setNamedBudgetActive(b,enabled)'));
   expect(budgets,contains('deleteNamedBudget(b)'));
   expect(app,isNot(contains("'waffra-named-budget-enabled-switch'")));
   expect(app,isNot(contains("'waffra-delete-selected-named-budget'")));

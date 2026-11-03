@@ -61,7 +61,7 @@ void main() {
   expect(source,contains("'waffra-budget-activation-'"));
   expect(source,contains('Switch.adaptive('));
   expect(source,contains('value:b.budgetActive'));
-  expect(source,contains('await setNamedBudgetActive(b,!b.budgetActive)'));
+  expect(source,contains('await setNamedBudgetActive(b,enabled)'));
   expect(source,contains("'waffra-budget-quick-actions-'"));
   expect(source,contains('editBudgetForCategory(b)'));
   expect(source,contains('deleteNamedBudget(b)'));
