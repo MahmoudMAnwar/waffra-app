@@ -146,6 +146,14 @@ class WaffraLegacyPreflight {
           if(item.containsKey('active')&&item['active'] is! bool){
             issues.add(WaffraPreflightIssue(key,i,'invalid_goal_active_flag'));
           }
+          // Optional M414 settings must not break older goal snapshots.
+          if((item.containsKey('alertEnabled')&&item['alertEnabled'] is! bool)||
+             (item.containsKey('alertPercent')&&
+              (item['alertPercent'] is! int||
+               (item['alertPercent'] as int)<1||
+               (item['alertPercent'] as int)>100))){
+            issues.add(WaffraPreflightIssue(key,i,'invalid_goal_alert_controls'));
+          }
           if (item['dueDate'] != null &&
               (item['dueDate'] is! String ||
                DateTime.tryParse(item['dueDate'] as String) == null)) {
@@ -159,6 +167,10 @@ class WaffraLegacyPreflight {
               (item['linkedGoalId'] as String).trim().isEmpty ||
               (item['linkedGoalId'] as String).length > 256)){
             issues.add(WaffraPreflightIssue(key,i,'invalid_linked_goal_id'));
+          }
+          if(item.containsKey('reminderEnabled')&&
+             item['reminderEnabled'] is! bool){
+            issues.add(WaffraPreflightIssue(key,i,'invalid_recurring_reminder_flag'));
           }
           final day = item['day'];
           if (day is! int || day < 1 || day > 31) {
@@ -180,6 +192,7 @@ class WaffraLegacyPreflight {
             issues.add(WaffraPreflightIssue(key, i, 'invalid_standalone_budget'));
           }
           if (item['budgetActive'] is! bool ||
+              (item.containsKey('alertEnabled')&&item['alertEnabled'] is! bool) ||
               item['alertPercent'] is! int ||
               (item['alertPercent'] as int) < 1 ||
               (item['alertPercent'] as int) > 100) {
