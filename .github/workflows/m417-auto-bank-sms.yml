@@ -60,3 +60,48 @@ jobs:
       - run: flutter analyze lib/main.dart lib/waffra_auto_sms.dart lib/waffra_auto_sms_policy.dart lib/waffra_auto_sms_consent.dart lib/waffra_messages.dart
       - name: Test foreground opt-in and strict income/expense decision matrix
         run: flutter test --reporter expanded test/m417_sms_first_run_test.dart test/waffra_auto_sms_policy_test.dart
+
+  android-sms-native-compile:
+    name: Compile M417 Android receiver, worker and notifications (no APK release)
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Restore Flutter dependencies and create transient Android project
+        run: |
+          flutter pub get
+          flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
+      - name: Install native SMS-only candidate sources (compile without production credentials)
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          root=Path('android/app/src/main/kotlin/com/waffra/app')
+          root.mkdir(parents=True,exist_ok=True)
+          for name in ('WaffraAutoSmsStore.kt', 'WaffraAutoSmsReceiver.kt',
+                       'WaffraAutoSmsWorker.kt', 'WaffraAutoSmsNotifications.kt'):
+              (root/name).write_text((Path('native')/name).read_text())
+          (root/'MainActivity.kt').write_text(
+              'package com.waffra.app\n'
+              'import io.flutter.embedding.android.FlutterActivity\n'
+              'class MainActivity : FlutterActivity() {}\n')
+          gradle=Path('android/app/build.gradle.kts')
+          content=gradle.read_text()
+          content+='\n// Compile-only M417 Android dependencies\ndependencies {\n'
+          content+='    implementation("androidx.work:work-runtime-ktx:2.11.2")\n'
+          content+='    implementation("androidx.core:core-ktx:1.16.0")\n}\n'
+          gradle.write_text(content)
+          PY
+      - name: Compile Kotlin SMS receiver, WorkManager and notification service
+        run: |
+          cd android
+          ./gradlew :app:compileDebugKotlin --stacktrace --no-daemon
