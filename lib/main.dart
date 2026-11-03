@@ -12011,6 +12011,28 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ])),
    ]),
    _accountSection(waffraIsEnglish?'Security & privacy':'الأمان والخصوصية',Icons.shield_outlined,[
+    if(Platform.isAndroid)FutureBuilder<bool>(
+     future:WaffraAutoSms.enabled(),builder:(context,snapshot)=>SwitchListTile(
+      secondary:const Icon(Icons.sms_outlined,color:emerald),
+      title:WaffraText(waffraIsEnglish?
+       'Automatic bank SMS tracking':'تسجيل الرسائل البنكية تلقائيًا'),
+      subtitle:WaffraText(waffraIsEnglish?
+       'Save verified SMS transactions and notify you; uncertain messages need review.':
+       'تسجيل العمليات المؤكدة وإشعارك بعد الحفظ؛ الرسائل الغامضة تحتاج مراجعة.'),
+      value:snapshot.data==true,
+      onChanged:WaffraHaptics.selection((enabled)async{
+       if(enabled){
+        await Navigator.push<void>(context,MaterialPageRoute(
+         builder:(_)=>WaffraAutoSmsConsentPage(
+          english:waffraIsEnglish,
+          onComplete:()async{if(context.mounted)Navigator.pop(context);},
+         )));
+       }else{
+        await WaffraAutoSms.disable();
+       }
+       if(mounted)setState((){});
+      }),
+     )),
     _accountTile(waffraIsEnglish?'PIN app lock':'قفل التطبيق برمز PIN',
      widget.pinEnabled?(waffraIsEnglish?'Enabled':'مفعّل'):(waffraIsEnglish?'Disabled':'غير مفعّل'),
      widget.pinEnabled?Icons.lock:Icons.lock_open,onTap:WaffraHaptics.tap(configurePin)),
