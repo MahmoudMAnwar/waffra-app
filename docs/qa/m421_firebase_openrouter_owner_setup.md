@@ -30,7 +30,7 @@ npm install -g firebase-tools
 firebase login
 firebase projects:list
 git checkout feature/m417-auto-sms-financial-import
-npm --prefix functions ci
+npm --prefix functions install # no package-lock.json is committed yet; generate it locally
 node --test functions/test/openrouter_sms_extractor.test.cjs
 node --check functions/index.js
 
