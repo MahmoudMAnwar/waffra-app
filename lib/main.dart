@@ -43,8 +43,10 @@ import 'waffra_amount_formatter.dart';
 import 'waffra_display_currency.dart';
 import 'waffra_phone_country_codes.dart';
 import 'waffra_google_phone_field.dart';
+import 'waffra_saudi_mobile.dart';
 import 'waffra_country_first_run_page.dart';
 import 'waffra_regional_copy.dart';
+import 'waffra_saudi_release.dart';
 import 'waffra_search.dart';
 import 'waffra_balance_art.dart';
 import 'waffra_validators.dart';
@@ -986,16 +988,13 @@ String? waffraMobileFieldError(String? raw) {
  if((raw??'').trim().isEmpty)return waffraRequiredFieldMessage;
  return WaffraValidators.mobileNumber(raw)==null?null:(waffraIsEnglish?'Mobile number must start with 05 and contain 10 digits':'رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام');
 }
-/// Google profiles accept E.164 so Egyptian users can complete signup
-/// before granting location; local Saudi phone login remains unchanged.
+/// Saudi edition accepts national 05 numbers, plus the existing Saudi E.164
+/// storage representation for backward-compatible Google profiles.
 String? waffraGoogleProfilePhoneError(String? value){
- final raw=(value??'').trim();
- if(raw.isEmpty)return waffraRequiredFieldMessage;
- if(RegExp(r'^05[0-9]{8}$').hasMatch(raw)||
-  RegExp(r'^\+[1-9][0-9]{7,14}$').hasMatch(raw))return null;
- return waffraIsEnglish?
-  'Enter 05xxxxxxxx or international number like +201234567890.':
-  'أدخل 05xxxxxxxx أو رقمًا دوليًا مثل +201234567890.';
+ if((value??'').trim().isEmpty)return waffraRequiredFieldMessage;
+ return WaffraSaudiMobile.isSupportedStored(value)?null:
+  (waffraIsEnglish?'Use a 10-digit Saudi number starting with 05':
+    'رقم الجوال السعودي يجب أن يبدأ بـ 05 ويتكون من 10 أرقام');
 }
 String? waffraPasswordFieldError(String? raw) {
  if((raw??'').isEmpty)return waffraRequiredFieldMessage;
@@ -1112,7 +1111,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     if(!{'light','dark','system'}.contains(appearance))appearance='light';
     dark=appearance=='dark'||(appearance=='system'&&WidgetsBinding.instance.platformDispatcher.platformBrightness==Brightness.dark);
     profile=u;
-    googleFirstRunSetup=waffraGoogleProfileReadyForCountrySetup(u)&&
+    googleFirstRunSetup=WaffraSaudiRelease.locationCountryOnboarding&&
+     waffraGoogleProfileReadyForCountrySetup(u)&&
       !(p.getBool(waffraCountrySetupKey(u!))??false);
     autoSmsConsentPending=Platform.isAndroid&&
      !(p.getBool(WaffraAutoSms.firstRunKey)??false);
@@ -1150,7 +1150,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    phone:u.phone.trim().isNotEmpty?u.phone.trim():null,
   );
   final prefs=await SharedPreferences.getInstance();
-  final needsGoogleSetup=waffraGoogleProfileReadyForCountrySetup(u)&&
+  final needsGoogleSetup=WaffraSaudiRelease.locationCountryOnboarding&&
+   waffraGoogleProfileReadyForCountrySetup(u)&&
     !(prefs.getBool(waffraCountrySetupKey(u))??false);
   if(mounted)setState((){
    // First phone/password login and new registration require biometrics.
@@ -1458,7 +1459,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     },
     onSignOut:logout,
    ):
-   googleFirstRunSetup?WaffraCountryFirstRunPage(
+   googleFirstRunSetup&&WaffraSaudiRelease.locationCountryOnboarding?WaffraCountryFirstRunPage(
      english:language=='en',onComplete:completeGoogleCountrySetup,
      onCountryConfirmed:setUiCountry):
    HomeScreen(key:ValueKey(language),profile:profile!,
@@ -2123,9 +2124,11 @@ class _LoginScreenState extends State<LoginScreen> {
          WaffraText(waffraIsEnglish?'Phone number *':'رقم الجوال *',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold)),
          const SizedBox(height:6),
          TextField(controller:signInPhone,keyboardType:TextInputType.phone,
+          inputFormatters:[FilteringTextInputFormatter.digitsOnly,
+           LengthLimitingTextInputFormatter(10)],
           onChanged:(_)=>setState(()=>signInAuthError=null),
           style:const TextStyle(color:forest),textDirection:TextDirection.ltr,
-          decoration:InputDecoration(hintText:waffraIsEnglish?'Phone number':'05xxxxxxxx',hintStyle:const TextStyle(color:Colors.black38),
+          decoration:InputDecoration(hintText:'05XXXXXXXX',hintStyle:const TextStyle(color:Colors.black38),
            filled:true,fillColor:Colors.white,
            errorText:signInAttempted?waffraMobileFieldError(signInPhone.text):null,errorMaxLines:2,
            border:OutlineInputBorder(borderRadius:BorderRadius.circular(13)))),
@@ -2195,8 +2198,11 @@ class _ProfileFormState extends State<ProfileForm> {
   email=TextEditingController(text:widget.initial?.email??'');
   confirmEmail=TextEditingController();
   final phoneSeed=WaffraInternationalPhone.fromStored(widget.initial?.phone);
-   phoneCountry=phoneSeed.country;
-   phone=TextEditingController(text:widget.provider=='Google'?phoneSeed.local:widget.initial?.phone??'');
+  phoneCountry=WaffraSaudiRelease.enabled?
+   WaffraInternationalPhone.byIso('SA'):phoneSeed.country;
+  phone=TextEditingController(text:WaffraSaudiRelease.enabled?
+   WaffraSaudiMobile.inputFromStored(widget.initial?.phone):
+   widget.provider=='Google'?phoneSeed.local:widget.initial?.phone??'');
   password=TextEditingController();confirmPassword=TextEditingController();
   gender=widget.initial==null?'':(['ذكر','أنثى'].contains(widget.initial?.gender)?widget.initial!.gender:'');avatar=widget.initial?.avatar??'person';
   birthday=widget.initial?.birthday??DateTime(2000);
@@ -2258,7 +2264,8 @@ class _ProfileFormState extends State<ProfileForm> {
   setState(()=>profileAttempted=true);
   if(gender.isEmpty)return;
   if(waffraTextFieldError(name.text)!=null||
-   (widget.provider=='Google'?WaffraInternationalPhone.error(phoneCountry,phone.text,
+   (WaffraSaudiRelease.enabled?waffraMobileFieldError(phone.text):
+    widget.provider=='Google'?WaffraInternationalPhone.error(phoneCountry,phone.text,
       english:waffraIsEnglish):waffraMobileFieldError(phone.text))!=null)return;
   if(widget.initial==null&&(
    waffraPasswordFieldError(password.text)!=null||
@@ -2272,7 +2279,14 @@ class _ProfileFormState extends State<ProfileForm> {
      phone:phone.text.trim(),password:password.text);
    }
    await widget.onSave(Person(name:name.text.trim(),email:widget.initial?.email??'',
-    phone:widget.provider=='Google'?WaffraInternationalPhone.e164(phoneCountry,phone.text)!:phone.text.trim(),
+    phone:widget.provider=='Google'?
+      (WaffraSaudiRelease.enabled?
+       (widget.initial!=null&&
+        WaffraSaudiMobile.isSupportedStored(widget.initial!.phone)&&
+        WaffraSaudiMobile.inputFromStored(widget.initial!.phone)==phone.text.trim()?
+        widget.initial!.phone:WaffraSaudiMobile.toE164(phone.text)!):
+       WaffraInternationalPhone.e164(phoneCountry,phone.text)!):
+      phone.text.trim(),
      provider:widget.provider,gender:gender,avatar:avatar,birthday:birthday));
    if(!mounted)return;
    if(widget.initial!=null&&Navigator.of(context).canPop())Navigator.pop(context);
@@ -2406,14 +2420,16 @@ class _ProfileFormState extends State<ProfileForm> {
      controller:phone,country:phoneCountry,english:waffraIsEnglish,
      onCountryChanged:(chosen)=>setState(()=>phoneCountry=chosen),
      onChanged:(_)=>setState((){}),
-     errorText:profileAttempted?WaffraInternationalPhone.error(
-      phoneCountry,phone.text,english:waffraIsEnglish):null)
+     errorText:profileAttempted?
+      (WaffraSaudiRelease.enabled?waffraMobileFieldError(phone.text):
+       WaffraInternationalPhone.error(phoneCountry,phone.text,
+        english:waffraIsEnglish)):null)
    else TextField(controller:phone,keyboardType:TextInputType.phone,
     onChanged:(_)=>setState((){}),
     inputFormatters:[FilteringTextInputFormatter.digitsOnly,
      LengthLimitingTextInputFormatter(10)],
     decoration:InputDecoration(
-     labelText:waffraIsEnglish?'Mobile number starting with 05 *':'رقم الجوال يبدأ بـ 05 *',
+     labelText:waffraIsEnglish?'Saudi mobile number *':'رقم الجوال السعودي *',
      hintText:'05XXXXXXXX',
      errorText:profileAttempted?waffraMobileFieldError(phone.text):null,
      border:const OutlineInputBorder())),
@@ -4567,8 +4583,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(!hasTransaction&&parts.any((message)=>
     BankParser.parse(message).requiresCurrencyReview)){
    return waffraIsEnglish
-    ?'Foreign currency detected. View its exchange-rate source. FX saving awaits encrypted provenance.'
-    :'تم اكتشاف عملة أجنبية. اعرض سعر الصرف ومصدره؛ الحفظ ينتظر اعتماد بيانات التحويل المشفرة.';
+    ?'Foreign currency detected. Non-SAR transactions are unsupported in this release.'
+    :'تم اكتشاف عملة أجنبية. العمليات بغير الريال السعودي غير مدعومة حاليًا.';
   }
   return hasTransaction?null:(waffraIsEnglish
    ?'No confirmed supported-SAR transaction found. Review and retry.'
@@ -4979,7 +4995,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      !parsed.requiresCurrencyReview&&money!=null&&money.currency=='SAR'&&
      (money.amount-parsed.amount!).abs()<0.00001;
   });
-  if(reliable||!WaffraOnDeviceQwen.shared.isReady){
+  if(!WaffraSaudiRelease.qwenForBankSms||reliable||
+     !WaffraOnDeviceQwen.shared.isReady){
    update((){
     messages=found;parsed=true;analyzingPaste=false;
     statusMessage=noTransactionWarning(input)??(waffraIsEnglish?
@@ -5033,7 +5050,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  void scheduleBankSmsAnalysis(
      BuildContext ctx,StateSetter update,String input){
   pasteTimer?.cancel();
-  WaffraOnDeviceQwen.shared.cancelCurrentGeneration();
+  if(WaffraSaudiRelease.qwenForBankSms)
+   WaffraOnDeviceQwen.shared.cancelCurrentGeneration();
   final revision=++pasteRevision;
   update((){
    parsed=false;analyzingPaste=input.trim().isNotEmpty;
@@ -5049,7 +5067,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
  void disposeLater(){
   pasteTimer?.cancel();
-  WaffraOnDeviceQwen.shared.cancelCurrentGeneration();
+  if(WaffraSaudiRelease.qwenForBankSms)
+   WaffraOnDeviceQwen.shared.cancelCurrentGeneration();
   Future<void>.delayed(const Duration(milliseconds:500),(){
    pasted.dispose();description.dispose();amount.dispose();
   });
@@ -5131,7 +5150,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       },decoration:InputDecoration(labelText:waffraIsEnglish?'Bank SMS *':'الرسالة البنكية *',
        errorText:pasteAttempted&&pasted.text.trim().isEmpty?waffraRequiredFieldMessage:null,errorMaxLines:3,
        hintText:waffraIsEnglish?'Paste your bank message here. We’ll analyze it automatically.':'الصق رسالتك البنكية هنا، وبنحلّلها لك تلقائيًا.',hintStyle:const TextStyle(fontSize:13,color:Color(0xFF888F8A)),
-       suffixIcon:pasted.text.isNotEmpty?IconButton(tooltip:waffraIsEnglish?'Clear text':'مسح النص',icon:const Icon(Icons.clear_rounded,color:Colors.redAccent),onPressed:WaffraHaptics.tap((){pasteTimer?.cancel();WaffraOnDeviceQwen.shared.cancelCurrentGeneration();++pasteRevision;pasted.clear();update((){parsed=false;analyzingPaste=false;messages=[];statusMessage='';});})):null,
+       suffixIcon:pasted.text.isNotEmpty?IconButton(tooltip:waffraIsEnglish?'Clear text':'مسح النص',icon:const Icon(Icons.clear_rounded,color:Colors.redAccent),onPressed:WaffraHaptics.tap((){pasteTimer?.cancel();if(WaffraSaudiRelease.qwenForBankSms)WaffraOnDeviceQwen.shared.cancelCurrentGeneration();++pasteRevision;pasted.clear();update((){parsed=false;analyzingPaste=false;messages=[];statusMessage='';});})):null,
        border:OutlineInputBorder(borderRadius:BorderRadius.circular(18)))),
       const SizedBox(height:12),
      if(statusMessage.isNotEmpty&&pasted.text.trim().isNotEmpty)...[
@@ -5213,7 +5232,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          WaffraText(waffraIsEnglish?
           'Foreign currency is not stored as SAR without encrypted source/rate evidence. Balance is not a transaction.':
           'المبلغ الأجنبي لا يُحفظ كريال بدون إثبات العملة والسعر مشفرًا. الرصيد ليس معاملة.'),
-         if(messages.length==1&&WaffraSmsCurrencies.originalAmount(messages.first)!=null)
+         if(WaffraSaudiRelease.bankSmsForeignCurrencyPreview&&
+            messages.length==1&&WaffraSmsCurrencies.originalAmount(messages.first)!=null)
           OutlinedButton.icon(
            key:const Key('waffra-fx-quote-preview-action'),
            onPressed:busy?null:()=>_previewForeignBankCurrency(messages.first),
@@ -5224,7 +5244,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ],
       // Bank currency vs selected APP display currency are separate concepts.
       // Never mistake nominal label switching for an actual FX rate.
-      if(messages.length==1&&!currencyPreview.needsCurrencyReview&&
+      if(WaffraSaudiRelease.bankSmsForeignCurrencyPreview&&
+         messages.length==1&&!currencyPreview.needsCurrencyReview&&
          WaffraSmsCurrencies.originalAmount(messages.first)!=null&&
          WaffraSmsCurrencies.originalAmount(messages.first)!.currency!=
           WaffraDisplayCurrency.country.code)...[
@@ -5237,7 +5258,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          'Convert to app currency — rate & source':
          'تحويل لعملة التطبيق — السعر والمصدر')),
       ],
-       if(analyzingPaste)...[const SizedBox(height:12),const LinearProgressIndicator(),const SizedBox(height:6),WaffraText(waffraIsEnglish?'Analyzing bank messages with AI…':'جاري الآن تحليل الرسائل بالذكاء الاصطناعي…')],
+       if(analyzingPaste)...[const SizedBox(height:12),const LinearProgressIndicator(),const SizedBox(height:6),WaffraText(waffraIsEnglish?'Analyzing bank messages locally…':'جاري تحليل الرسائل البنكية محليًا…')],
       // Shared lightweight in-dialog progress while the batch is committed.
       if(busy)Padding(
        key:const Key('waffra-bank-sms-save-progress'),
@@ -5293,7 +5314,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         waffraIsEnglish?'Discard the unsaved pasted text and start again?':'هل تريد حذف الرسائل غير المحفوظة والبدء من جديد؟');
        if(yes!=true||!ctx.mounted)return;
        pasteTimer?.cancel();
-       WaffraOnDeviceQwen.shared.cancelCurrentGeneration();
+       if(WaffraSaudiRelease.qwenForBankSms)
+        WaffraOnDeviceQwen.shared.cancelCurrentGeneration();
        ++pasteRevision;
        update((){reviewing=false;parsed=false;analyzingPaste=false;messages=[];index=0;pasted.clear();description.clear();amount.clear();});
       }),icon:const Icon(Icons.delete_outline),label:const WaffraText('حذف النص بالكامل ولصق رسائل جديدة')),
@@ -5322,7 +5344,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
        inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],onChanged:(_)=>update((){}),
        decoration:InputDecoration(labelText:waffraIsEnglish?'Amount *':'مبلغ هذه الرسالة بالريال *',errorText:reviewAttempted?waffraAmountFieldError(amount.text):null,border:OutlineInputBorder())),
-      if(WaffraSmsCurrencies.originalAmount(messages[index])!=null&&
+      if(WaffraSaudiRelease.bankSmsForeignCurrencyPreview&&
+         WaffraSmsCurrencies.originalAmount(messages[index])!=null&&
          WaffraSmsCurrencies.originalAmount(messages[index])!.currency!=
            WaffraDisplayCurrency.country.code)
        OutlinedButton.icon(key:const Key('waffra-fx-transaction-preview'),
@@ -5490,6 +5513,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 }
 
  Future<void> _previewForeignBankCurrency(String raw)async {
+  if(!WaffraSaudiRelease.bankSmsForeignCurrencyPreview){
+   if(mounted)snack(context,waffraIsEnglish?
+    'Non-SAR transactions cannot be saved in this Saudi release.':
+    'العمليات بغير الريال غير مدعومة في النسخة السعودية الحالية.');
+   return;
+  }
   // No bank message contents, personal identifiers, photos or notes are
   // included in the FX network request: only original and target codes.
   final source=WaffraSmsCurrencies.originalAmount(raw);
@@ -5608,7 +5637,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
  Future<WaffraAiResult?> _reviewAiPastedBankMessages(
      BuildContext ctx,String source)async {
-  if(!WaffraOnDeviceQwen.shared.isReady||source.trim().isEmpty)return null;
+  if(!WaffraSaudiRelease.qwenForBankSms||
+     !WaffraOnDeviceQwen.shared.isReady||source.trim().isEmpty)return null;
   try{
    return await _withAiWorkProgress(
     'جاري الآن تحليل الرسائل بالذكاء الاصطناعي…',
@@ -5744,6 +5774,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
 
  Future<void> scanAndAddReceipt()async {
+  if(!WaffraSaudiRelease.receiptImageTransactionImport){
+   if(mounted)snack(context,waffraIsEnglish?
+    'Receipt scanning is temporarily unavailable in this release.':
+    'استخراج العمليات من الصور والفواتير غير متاح حاليًا.');
+   return;
+  }
   // Offline OCR itself needs its tiny Tesseract assets, not Qwen.
   // A slow/removed GGUF must not block the camera and image review.
   if(_receiptOcrAiOpening||!mounted)return;
@@ -5864,6 +5900,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,
   WaffraReceiptOcrFields? scannedReceipt,XFile? scannedImage,bool? scannedIncome,
   int? scannedImagePosition,int? scannedImageTotal})async {
+  if(!WaffraSaudiRelease.receiptImageTransactionImport&&
+     (scannedReceipt!=null||scannedImage!=null)){
+   if(mounted)snack(context,waffraIsEnglish?
+    'Receipt/image transaction import is unavailable in this release.':
+    'إضافة عمليات من فاتورة أو صورة غير متاحة في النسخة الحالية.');
+   return;
+  }
   // Bank SMS and OCR edit forms work offline without starting Qwen.
   // Model-dependent finance advice remains gated separately.
   // Last defense: every OCR entry must verify the currency *inside* the
@@ -12333,6 +12376,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     orphanBudgetLink:e.budgetId!=null&&!liveBudgetIds.contains(e.budgetId)))),
    goals:List<WaffraSmartGoal>.unmodifiable(goals.map((g)=>
     WaffraSmartGoal(g.name,g.target,g.saved))),
+   budgets:List<WaffraSmartBudget>.unmodifiable(
+    namedBudgets.where((b)=>!b.deleted&&b.budget>0).map((b)=>
+     WaffraSmartBudget(b.id,b.budgetLabel??b.name,b.budget,
+      waffraNamedBudgetSpent(entries,categories,b,DateTime.now()),b.budgetActive))),
    recurring:List<WaffraSmartRecurring>.unmodifiable(recurring.where((r)=>r.active).map((r)=>
     WaffraSmartRecurring(r.title,r.amount,r.day,r.income))),
   );
@@ -12352,6 +12399,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    onAddRecurring:(candidate)=>recurringDialog(
     suggestedTitle:candidate.title,suggestedAmount:candidate.estimatedMonthly))));
  Future<void> chooseAppCurrency()async{
+  if(!WaffraSaudiRelease.userCurrencyChoice)return;
   final searchController=TextEditingController();
   String query='';
   try{
@@ -12493,7 +12541,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     hintText:waffraIsEnglish?'Find a setting':'ابحث داخل إعدادات حسابي')),
    const SizedBox(height:12),
    _accountSection(waffraIsEnglish?'App settings':'إعدادات التطبيق',Icons.settings_outlined,[
-    ListTile(
+    if(WaffraSaudiRelease.userCurrencyChoice)ListTile(
      key:const Key('waffra-app-base-currency-setting'),
      leading:const CircleAvatar(child:Icon(Icons.public_rounded,color:emerald)),
      title:WaffraText(waffraIsEnglish?'App currency by country':'عملة التطبيق حسب الدولة'),
@@ -12518,7 +12566,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ButtonSegment(value:'ar',label:Text('AR')),ButtonSegment(value:'en',label:Text('EN')),
      ],selected:{waffraLanguage.value},showSelectedIcon:false,
      onSelectionChanged:WaffraHaptics.selection((v)async{setState(()=>tab=0);await widget.onLanguage(v.first);}))),
-    ListTile(
+    if(WaffraSaudiRelease.userCountryChoice)ListTile(
      key:const Key('waffra-regional-arabic-setting'),
      leading:const Icon(Icons.public_outlined,color:emerald),
      title:WaffraText(waffraIsEnglish?'Country / Arabic wording':'البلد واللهجة العربية'),
@@ -13051,7 +13099,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           unawaited(_launchAddAction(()=>bulkSmsSheet(),fromMenu:true));
          })),
         const SizedBox(height:7),
-        _addMenuOption(
+        if(WaffraSaudiRelease.receiptImageTransactionImport)_addMenuOption(
          icon:Icons.document_scanner_outlined,
          label:waffraIsEnglish?'Scan receipt / image':'تصوير / استخراج فاتورة',
          onTap:WaffraHaptics.tapRequired((){
