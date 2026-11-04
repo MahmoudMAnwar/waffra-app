@@ -37,7 +37,7 @@
       },
       {
         "start": " Widget smartMoneyInsightsCard(){",
-        "end": "  return Card(\n   elevation:1.0,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(21)),"
+        "end": " Future<void> showSummaryTransactions(bool income)async {"
       }
     ],
     "lib/waffra_reminders.dart": [
