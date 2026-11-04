@@ -54,5 +54,16 @@ class M452ReviewAndRegistration(unittest.TestCase):
         self.assertIn("!permissionGranted(context)", store)
 
 
+    def test_local_rule_store_owner_guard_is_unique(self):
+        rules = source("lib/waffra_sms_local_rules.dart")
+        self.assertEqual(rules.count("Future<List<WaffraSmsLocalRule>> read("), 1)
+        self.assertEqual(rules.count("Future<void> write("), 1)
+        self.assertEqual(rules.count("String _key(String owner)"), 1)
+        self.assertIn("RegExp(r'^[a-f0-9]{64}
+    unittest.main()
+).hasMatch(owner)", rules)
+        self.assertNotIn(").hasMatch(owner)){\n   throw", rules.split("Future<void> write(", 1)[1])
+
+
 if __name__ == "__main__":
     unittest.main()
