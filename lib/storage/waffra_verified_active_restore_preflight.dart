@@ -151,11 +151,24 @@ class WaffraVerifiedActiveRestorePreflight {
       if (accounts != null) {
         const equality = DeepCollectionEquality();
         final actual = await WaffraAccountsPortableBackupV3.capture(candidate);
-        if (!equality.equals(actual, {
-          'accounts': accounts.accounts, 'links': accounts.links, 'transfers': accounts.transfers,
-        }) || (accounts.history != null && !equality.equals(
-          await WaffraAccountsFinanceHistory.capture(candidate), accounts.history,
-        ))) {
+        // M448 V3 adds authenticated account-context rows to the archive.
+        // Comparing the entire capture with only the old three V3 keys
+        // would reject every otherwise-correct restored account archive.
+        // Always verify every restored key, including the empty legacy
+        // context when the archive predates M448.
+        final expectedContext = accounts.context ?? <String, Object?>{
+          'goalSources': <Object>[],
+          'recurringDefaults': <Object>[],
+          'smsSuffixes': <Object>[],
+        };
+        if (!equality.equals(actual['accounts'], accounts.accounts) ||
+            !equality.equals(actual['links'], accounts.links) ||
+            !equality.equals(actual['transfers'], accounts.transfers) ||
+            !equality.equals(actual['contextV1'], expectedContext) ||
+            (accounts.history != null && !equality.equals(
+              await WaffraAccountsFinanceHistory.capture(candidate),
+              accounts.history,
+            ))) {
           throw StateError('Reopened finance history differs from the authenticated archive.');
         }
       }
