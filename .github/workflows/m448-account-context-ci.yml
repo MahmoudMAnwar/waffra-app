@@ -1,0 +1,60 @@
+name: M448 Account Context and Source Attribution
+on:
+  pull_request:
+    paths:
+      - 'lib/storage/waffra_account_context_*.dart'
+      - 'lib/storage/waffra_accounts_repository.dart'
+      - 'lib/storage/waffra_accounts_portable_backup_v3.dart'
+      - 'lib/storage/waffra_verified_accounts_api.dart'
+      - 'lib/storage/waffra_verified_encrypted_finance_bridge.dart'
+      - 'lib/storage/waffra_verified_goal_funding_writer.dart'
+      - 'lib/storage/waffra_verified_active_accounts_restore.dart'
+      - 'lib/main.dart'
+      - 'lib/waffra_account_context_page.dart'
+      - 'lib/waffra_account_context_settings.dart'
+      - 'lib/waffra_accounts_manager_page.dart'
+      - 'test/storage/m448_*.dart'
+      - '.github/workflows/m448-account-context-ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  account-context:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install Flutter dependencies
+        run: flutter pub get
+      - name: Static analysis of changed accounting paths
+        run: |
+          dart analyze \
+            lib/storage/waffra_account_context_policy.dart \
+            lib/storage/waffra_account_context_schema.dart \
+            lib/storage/waffra_account_context_repository.dart \
+            lib/storage/waffra_account_context_read.dart \
+            lib/storage/waffra_account_context_backup.dart \
+            lib/storage/waffra_accounts_repository.dart \
+            lib/storage/waffra_accounts_portable_backup_v3.dart \
+            lib/storage/waffra_verified_accounts_api.dart \
+            lib/storage/waffra_verified_encrypted_finance_bridge.dart \
+            lib/storage/waffra_verified_goal_funding_writer.dart \
+            lib/storage/waffra_verified_active_accounts_restore.dart \
+            lib/waffra_account_context_page.dart \
+            lib/waffra_account_context_settings.dart \
+            lib/waffra_accounts_manager_page.dart
+      - name: Run focused SQLCipher and behavior tests only
+        run: |
+          flutter test \
+            test/storage/m448_account_context_policy_test.dart \
+            test/storage/m448_account_context_read_test.dart \
+            test/storage/m448_account_context_repository_test.dart \
+            test/storage/m448_account_context_v3_roundtrip_test.dart \
+            test/storage/m448_verified_goal_funding_writer_test.dart \
+            test/storage/m448_verified_active_accounts_restore_test.dart \
+            test/storage/m440_accounts_repository_test.dart \
+            test/storage/m440_accounts_portable_v3_test.dart
