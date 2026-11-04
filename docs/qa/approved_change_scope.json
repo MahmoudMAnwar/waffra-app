@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
-  "change_id": "M228-pull-refresh-and-24-route-safety-combined-20261104",
-  "human_scope_review": "Owner approved resolving all stale PR conflicts. This single reviewable change combines rebased PR #229 (guarded legacy fresh install pull refresh parity) and PR #228 (24 route read-only SQLCipher preflight). All current main SMS, biometric, merchant, goals and budget code is retained; no production SQLCipher activation, money movement or migration is permitted.",
+  "change_id": "M228-combined-refresh-sqlcipher-routes-hosted-android-disk",
+  "human_scope_review": "Owner approved resolving all stale PR conflicts. This single reviewable change combines rebased PR #229 (guarded legacy fresh install pull refresh parity) and PR #228 (24 route read-only SQLCipher preflight). All current main SMS, biometric, merchant, goals and budget code is retained; no production SQLCipher activation, money movement or migration is permitted. This release candidate also fixes independent exact-head Android emulator disk exhaustion: the same encrypted DB job fails on a hosted runner before finance tests when userdata exceeds available disk. Retain the mandatory physical emulator test while reducing AVD disk size to 3072MB and removing nonessential hosted runner toolchains.",
   "user_requested_changes": [
     "Reconcile conflicted PR #229 onto current main without replacing newer unrelated finance, SMS, budget, biometric or merchant UI fixes.",
     "Allow first-install guarded-legacy pull-to-refresh when genuinely absent empty ledger or categories are valid and preserve the same default categories as ordinary startup.",
@@ -12,7 +12,8 @@
     "Check each canonical finance route before ever binding an already active encrypted SQLCipher source and reject any route without audited witness.",
     "Keep the preflight strictly read-only and incapable of automatically activating SQLCipher or switching the authoritative ledger.",
     "Preserve current guarded-legacy startup and require existing OS-backed key, verified source digest and native bridge before any encrypted read.",
-    "Add deterministic 24-route, missing-key, missing-witness, incomplete-audit, immutable report and main-wiring regression tests."
+    "Add deterministic 24-route, missing-key, missing-witness, incomplete-audit, immutable report and main-wiring regression tests.",
+    "Remove the shared GitHub hosted-runner Android encrypted DB emulator disk-exhaustion CI blocker without changing finance logic, test assertions or marking emulator verification skipped."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
@@ -25,7 +26,9 @@
     "test/qa/m228_24_route_binder_wiring_test.py",
     "test/qa/m228_pull_refresh_live_wiring_test.py",
     "test/storage/m228_24_route_preflight_test.dart",
-    "test/storage/m228_verified_pull_refresh_source_test.dart"
+    "test/storage/m228_verified_pull_refresh_source_test.dart",
+    ".github/workflows/storage-android-integration.yml",
+    "test/qa/m228_android_emulator_disk_preflight_test.py"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -46,6 +49,20 @@
       {
         "start": "      if (checkpoint == null ||\n",
         "end": "      final bridge = WaffraVerifiedEncryptedFinanceBridge(\n"
+      }
+    ],
+    ".github/workflows/storage-android-integration.yml": [
+      {
+        "start": "      - name: Enable Linux KVM permissions\n",
+        "end": "      - name: Test encrypted vault on Android emulator (primary)\n"
+      },
+      {
+        "start": "      - name: Test encrypted vault on Android emulator (primary)\n",
+        "end": "      - name: Reset adb before a clean emulator retry\n"
+      },
+      {
+        "start": "      - name: Retry complete finance tests on fresh API 35 after emulator failure\n",
+        "end": null
       }
     ]
   }

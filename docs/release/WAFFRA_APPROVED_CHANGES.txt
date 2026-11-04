@@ -1538,3 +1538,7 @@ M370: إعداد فحص إلزامية SQLCipher للتثبيتات الجديد
 - Add read-only exhaustive canonical finance route check inside existing already-activated encrypted binder, only AFTER verified OS key and trusted source digest.
 - Missing audited route, missing witness or incomplete restore/recovery audit fail closed. No activation key, source switch, new finance writer or currency/ledger mutation.
 - Retain main M442/M443 bank SMS and biometric fixes; exact-head CI and device evidence still required before shipping.
+
+[M228 CI 2026-11-04] Fix shared encrypted-DB emulator space before mandatory Android finance checks
+- GitHub runner had ~5.68GB available while default Android AVD requested ~7.37GB; reclaim disposable toolchains and explicitly use 3072MB AVD storage for API34/API35 attempts.
+- Keep real emulator assertions, native SQLCipher, SMS/receipt tests and fail-closed gate mandatory; do not treat this CI fix as proof of Android device success.
