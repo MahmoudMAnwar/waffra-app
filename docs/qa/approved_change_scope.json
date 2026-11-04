@@ -23,7 +23,8 @@
     "M447: Ask for an optional verified financial account per bank-SMS transaction in all three Home bank SMS review/save routes and attach it in the same SQLCipher commit as the SMS hash.",
     "M447: Add a GitHub Actions regression that verifies all three bank SMS confirmation routes review and forward witnessed account allocations.",
     "M447: Link manual and recurring Home transaction save to approved cash/bank account using verified SQLCipher, preserving duplicate detection and independent budgets.",
-    "M447: Verify recurring payments debit the user selected SAR money account atomically and do not double-charge when retried."
+    "M447: Verify recurring payments debit the user selected SAR money account atomically and do not double-charge when retried.",
+    "M447: Verified recurring account posting is atomic, idempotent and rejects stale account balance witnesses."
   ],
   "allowed_changed_files": [
     ".github/scripts/run-m120-android-receipt-reopen.sh",
@@ -31,31 +32,32 @@
     ".github/workflows/m440-account-ledger-and-backup-ci.yml",
     "docs/qa/approved_change_scope.json",
     "docs/qa/m440_accounts_design.md",
+    "lib/main.dart",
     "lib/storage/waffra_accounts_backup_guard.dart",
     "lib/storage/waffra_accounts_migration_preview.dart",
     "lib/storage/waffra_accounts_portable_backup_v3.dart",
     "lib/storage/waffra_accounts_repository.dart",
     "lib/storage/waffra_accounts_schema.dart",
+    "lib/storage/waffra_encrypted_finance_session.dart",
     "lib/storage/waffra_portable_encrypted_backup_exporter.dart",
+    "lib/storage/waffra_production_finance_authority_binding.dart",
     "lib/storage/waffra_unified_finance_writer.dart",
     "lib/storage/waffra_verified_accounts_api.dart",
     "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+    "lib/storage/waffra_verified_finance_authority.dart",
     "lib/waffra_account_transaction_form.dart",
     "lib/waffra_accounts_manager_page.dart",
     "test/m440_account_transaction_form_test.dart",
     "test/qa/m440_android_emulator_disk_preflight_test.py",
     "test/qa/m440_transfer_replay_ux_test.py",
+    "test/qa/m447_verified_sms_account_linking_test.py",
     "test/storage/m440_account_linked_entry_writer_test.dart",
     "test/storage/m440_accounts_backup_guard_test.dart",
     "test/storage/m440_accounts_migration_preview_test.dart",
     "test/storage/m440_accounts_portable_v3_test.dart",
     "test/storage/m440_accounts_repository_test.dart",
-    "lib/main.dart",
-    "lib/storage/waffra_production_finance_authority_binding.dart",
-    "lib/storage/waffra_encrypted_finance_session.dart",
-    "lib/storage/waffra_verified_finance_authority.dart",
-    "test/qa/m447_verified_sms_account_linking_test.py",
-    "test/storage/m447_account_recurring_atomic_test.dart"
+    "test/storage/m447_account_recurring_atomic_test.dart",
+    "test/storage/m447_live_recurring_account_binding_test.dart"
   ],
   "bounded_sections": {
     "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
