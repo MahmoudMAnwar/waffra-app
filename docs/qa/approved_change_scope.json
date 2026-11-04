@@ -63,7 +63,9 @@
     "test/storage/m440_accounts_backup_guard_test.dart",
     "test/storage/m440_accounts_migration_preview_test.dart",
     "test/storage/m440_accounts_portable_v3_test.dart",
-    "test/storage/m440_accounts_repository_test.dart"
+    "test/storage/m440_accounts_repository_test.dart",
+    ".github/scripts/run-m120-android-receipt-reopen.sh",
+    ".github/workflows/m120-android-receipt-cold-reopen.yml"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -196,6 +198,22 @@
       {
         "start": "          await snapshot.store.customStatement(\n            'INSERT INTO fresh_finance_entries '\n",
         "end": "          list.add(record);\n"
+      }
+    ],
+    ".github/scripts/run-m120-android-receipt-reopen.sh": [
+      {
+        "start": "#!/usr/bin/env bash\n",
+        "end": "echo \"::error::M120 did not complete\"\n"
+      }
+    ],
+    ".github/workflows/m120-android-receipt-cold-reopen.yml": [
+      {
+        "start": "      - name: Enable KVM for Android emulator\n",
+        "end": "      - name: Run disposable Android receipt restart and recovery proof\n"
+      },
+      {
+        "start": "      - name: Run disposable Android receipt restart and recovery proof\n",
+        "end": "          # Only failed sqlite3mc GitHub native-asset downloads are retried.\n"
       }
     ]
   }
