@@ -47,9 +47,12 @@ void main(){
   expect(source,contains('smsParentId=leaf.single.parentId'));
  });
 
- test('M362 verified encrypted goal spend fails closed until atomic writer',(){
+ test('M362 verified encrypted goal spend uses one atomic wallet-and-ledger writer',(){
   final source=File('lib/main.dart').readAsStringSync();
-  expect(source,contains('Goal payment needs a verified atomic wallet-and-ledger writer.'));
+  // The atomic goal due writer has now been implemented. Keep a positive
+  // source-level witness instead of requiring its obsolete fail-closed stub.
+  expect(source,contains('_financeAuthority.settleLinkedGoalDue('));
+  expect(source,contains('userConfirmed:true,selectedAccountId:chosenId'));
   expect(source,contains('WaffraRuntimeFinanceBackend.verifiedEncrypted'));
   expect(source,contains("if(e.sourceType=='goal_due')"));
   expect(source,contains("readOnly:initial?.sourceType=='goal_due'"));

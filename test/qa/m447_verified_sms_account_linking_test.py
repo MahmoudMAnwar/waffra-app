@@ -9,7 +9,10 @@ class VerifiedSmsAccountLinkingTest(unittest.TestCase):
     def test_every_home_sms_commit_reviews_accounts(self):
         home = (ROOT / "lib/main.dart").read_text(encoding="utf-8")
         self.assertEqual(home.count("commitConfirmedSms("), 3)
-        self.assertEqual(home.count("await reviewSmsAccountLinks("), 5)
+        # The sixth verified review is the goal-due cash remainder; it must
+        # be accounted for, not removed to satisfy an obsolete call count.
+        self.assertEqual(home.count("await reviewSmsAccountLinks("), 6)
+        self.assertIn("sourceType:'goal_due'", home)
         self.assertEqual(home.count("selectedAccountIds:reviewedAccounts.ids"), 1)
         self.assertEqual(home.count("selectedAccountIds:reviewedAccount.ids"), 2)
         self.assertEqual(home.count("expectedAccountGeneration:reviewedAccounts.generation"), 1)
