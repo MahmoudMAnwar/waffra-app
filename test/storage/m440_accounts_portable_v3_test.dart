@@ -77,7 +77,7 @@ void main(){
   expect(preview.links.length,1);
   expect(preview.transfers.length,1);
   final restored=WaffraEncryptedStore.openAt(
-   File('${dir.path}/destination.sqlite'),key:'different-v3-test-key');
+   File('${dir.path}/destination.sqlite'),key:'different-v3-test-key-longer-than-32-chars');
   try{
    await WaffraAccountsPortableBackupV3.restoreToEmptyEncryptedVault(
     encryptedArchive:encrypted,password:password,
