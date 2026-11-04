@@ -1,61 +1,29 @@
 {
   "contract_version": 1,
-  "change_id": "M450-first-run-local-phone-registration-resume-and-verified-encrypted-profile",
-  "human_scope_review": "User reported the actual Android Create Waffra Account step-2 screenshot showing local_credentials_already_exist and being unable to enter the app. The fix must authenticate original credentials on retry, prevent overwriting an already registered profile, and allow only non-financial profile/lock writes for a fully verified fresh active SQLCipher install. This cannot authorize legacy financial writes, automatic migrations, key replacement or data deletion. Human review of this precise seven-file scope remains mandatory.",
+  "change_id": "M451-fresh-sqlcipher-home-empty-ledger-and-catalog-startup-repair",
+  "human_scope_review": "Owner reproduced a second, critical Android issue after PR #370 registration: Home displays 'بياناتك المالية محمية' and refuses to show the dashboard. This exact-scope change uses the EXISTING verified SQLCipher source and atomic cross-engine finance patch to add only missing empty ledger/default category fields in authenticated fresh installations. It cannot select, reset, migrate, initialize or backfill an existing user's unverified finance vault and does not bypass Home or widget source checks. Human review is required before merging.",
   "user_requested_changes": [
-    "Make the second Create Account submission recover an interrupted same-phone/same-password local registration without replacing an existing credential verifier, and clearly explain a different existing identity to the user.",
-    "Refuse creating a new profile over an already registered account and direct that user to verified sign in rather than overwriting data.",
-    "Fix fresh-install SQLCipher onboarding: route nonfinancial account, logout and PIN preferences through a read-only validated fresh-install identity and digest under the shared native Home/widget lock; keep all legacy financial writes fail closed.",
-    "Add regression tests for credential mismatch, missing source, tampered receipt, wrong key, pending activation, verified first-run account write, and ensure approved release notes reflect the change."
+    "Fix newly registered Waffra Android homes that refuse startup because M440 initialized a genuinely fresh SQLCipher finance snapshot with absent ledger/categories, while Home requires a durable encrypted category catalog.",
+    "Persist only missing ledger and default category fields together in the existing SQLCipher finance snapshot and typed relational category tables, holding the Home/Widget file lock with verified active source witnesses; never fall back to legacy finance preferences.",
+    "Ensure an already-repaired Home reload is idempotent, existing account/transaction/goal data survive, invalid defaults or missing cutover witnesses are rejected, and existing/migrated finance sources are not fabricated.",
+    "Exercise the exact shipped default category list, new-install Home recovery, repeat reopen, database integrity, pending pointer failure, account source preservation, and update reviewed QA release notes."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "lib/storage/waffra_fresh_install_source.dart",
-    "lib/storage/waffra_live_account_write_authority.dart",
-    "lib/waffra_local_phone_credentials.dart",
-    "test/storage/m450_first_run_registration_recovery_test.dart"
+    "lib/storage/waffra_fresh_home_catalog_recovery.dart",
+    "test/storage/m451_fresh_home_catalog_recovery_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": " Future<void> save()async {\n  setState(()=>profileAttempted=true);\n",
-        "end": " void _nextPhoneRegistrationStep(){\n"
-      }
-    ],
-    "lib/storage/waffra_fresh_install_source.dart": [
-      {
-        "start": "  final String id;\n",
-        "end": "  static const _prefix = 'fresh-sqlcipher-v1:';\n"
+        "start": "import 'storage/waffra_fresh_install_source.dart';\n",
+        "end": "import 'storage/waffra_legacy_finance_writer_coordinator.dart';\n"
       },
       {
-        "start": "      return source;\n",
-        "end": "  Future<void> verify(WaffraEncryptedStore store) async {\n"
-      }
-    ],
-    "lib/storage/waffra_live_account_write_authority.dart": [
-      {
-        "start": "import 'waffra_legacy_finance_writer_coordinator.dart';\n",
-        "end": "/// M217: The shipped login/profile/PIN writer participates"
-      },
-      {
-        "start": "  static void _requirePersonJson(String raw) {\n",
-        "end": "  Future<void> saveProfile({\n"
-      },
-      {
-        "start": "  Future<void> saveProfile({\n",
-        "end": "  Future<void> replacePinVerifier(String? nextVerifier) async {\n"
-      },
-      {
-        "start": "  Future<void> replacePinVerifier(String? nextVerifier) async {\n",
-        "end": null
-      }
-    ],
-    "lib/waffra_local_phone_credentials.dart": [
-      {
-        "start": " static Future<void> register({required String phone,\n",
-        "end": " static Future<bool> verify({\n"
+        "start": " Future<void> load()async {\n  await _ensureFinanceBound();\n",
+        "end": "  _lastWidgetRevision=loadedFinance.widgetRevision;\n"
       }
     ]
   }
