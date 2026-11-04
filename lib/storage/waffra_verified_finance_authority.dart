@@ -456,6 +456,7 @@ class WaffraVerifiedFinanceAuthority {
     required WaffraFinanceAuthorityRead baseline,
     required Map<String, Object> captured,
     bool userConfirmed = false,
+    String? selectedAccountId,
   }) async {
     // Capture caller-owned values synchronously, before ANY awaited source
     // probe. A queued Home edit can otherwise mutate the map while the OS
@@ -470,6 +471,14 @@ class WaffraVerifiedFinanceAuthority {
     final backend = await _requireRoute(route);
     if (backend != baseline.source) {
       throw StateError('Finance authority changed while screen was open.');
+    }
+    if (selectedAccountId != null &&
+        (selectedAccountId.trim().isEmpty || selectedAccountId.length > 128 ||
+         backend != WaffraRuntimeFinanceBackend.verifiedEncrypted ||
+         !userConfirmed ||
+         (route != WaffraFinanceRoute.manualTransactionSave &&
+          route != WaffraFinanceRoute.recurringPostingAndPostponement))) {
+      throw StateError('Account posting needs confirmed verified SQLCipher finance.');
     }
     // A second Paid tap with an already-posted deterministic ID must not be
     // reported as a successful scalar/no-op save. Postpone-only actions use
@@ -548,6 +557,7 @@ class WaffraVerifiedFinanceAuthority {
         proposedPostponedJson:
             immutableCapture['waffra_recurring_postponed_v1'] as String,
         userConfirmed: true,
+        selectedAccountId: selectedAccountId,
       );
       return await load(route: route);
     }
@@ -663,6 +673,8 @@ class WaffraVerifiedFinanceAuthority {
         records: added,
         hashes: const <String?>[null],
         userConfirmed: true,
+        selectedAccountIds: selectedAccountId == null ? null : [selectedAccountId],
+        expectedAccountGeneration: selectedAccountId == null ? null : witness.generation,
       );
       return await load(route: route);
     }
