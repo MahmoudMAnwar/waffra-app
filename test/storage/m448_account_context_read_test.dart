@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/storage/waffra_account_context_read.dart';
+import 'package:waffra/storage/waffra_account_context_repository.dart';
 import 'package:waffra/storage/waffra_accounts_repository.dart';
 import 'package:waffra/storage/waffra_accounts_schema.dart';
 import 'package:waffra/storage/waffra_encrypted_store.dart';
@@ -37,6 +38,35 @@ void main(){
    'occurred_iso,receipt_count,source_json) VALUES (?,?,?,?,?,?,0,?)',
    [id,id,'Food',minor,income?1:0,stamp,'{}']);
  }
+
+
+ test('goal wallet total remains independent of account-sourced contribution',()async{
+  await createAccount('rajhi');
+  await createAccount('cash');
+  await db.customStatement('INSERT INTO fresh_finance_goals '
+   '(goal_id,name,target_minor,saved_minor,source_json) '
+   'VALUES (?,?,?,?,?)',['travel','Travel',100000,50000,'{}']);
+  await db.customStatement('INSERT INTO fresh_finance_goal_wallet_movements '
+   '(movement_id,goal_id,kind,amount_minor,idempotency_key,occurred_at_iso) '
+   'VALUES (?,?,?,?,?,?)',
+   ['source-1','travel','fund',30000,'source-once',stamp]);
+  final attribution=WaffraAccountContextRepository(
+   store:db,experimentalEnabled:true);
+  expect(await attribution.attributeGoalMovement(
+   movementId:'source-1',accountId:'rajhi',
+   linkedIso:stamp,userConfirmed:true),true);
+  final rajhi=await WaffraAccountContextRead.load(
+   store:db,monthIso:'2026-11',selectedAccountId:'rajhi');
+  final cash=await WaffraAccountContextRead.load(
+   store:db,monthIso:'2026-11',selectedAccountId:'cash');
+  expect(rajhi.goals.single.totalSavedMinor,50000);
+  expect(rajhi.goals.single.selectedAccountNetMinor,30000);
+  expect(cash.goals.single.totalSavedMinor,50000);
+  expect(cash.goals.single.selectedAccountNetMinor,0);
+  expect({for(final a in await WaffraAccountsRepository(
+    db:db,experimentalEnabled:true).balances()) a.id:a.balanceMinor},
+    {'rajhi':70000,'cash':100000});
+ });
 
  test('all/unassigned budget and balance are independent of account header',()async{
   await createAccount('rajhi');await createAccount('cash');
