@@ -1175,6 +1175,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    email:u.email.trim().isNotEmpty?u.email.trim():null,
    phone:u.phone.trim().isNotEmpty?u.phone.trim():null,
   );
+  // Restore standing SMS consent only for the verified same account. Never
+  // re-request Android SMS permissions after ordinary re-login.
+  if(Platform.isAndroid)await WaffraAutoSms.resumeAfterSignIn();
   final prefs=await SharedPreferences.getInstance();
   final needsGoogleSetup=WaffraSaudiRelease.locationCountryOnboarding&&
    waffraGoogleProfileReadyForCountrySetup(u)&&
@@ -1202,8 +1205,15 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   if(mounted)setState(()=>googleFirstRunSetup=false);
  }
  Future<void> logout()async {
-  // Never capture bank messages for a profile after sign-out.
-  await WaffraAutoSms.disable();
+  // Stop capture BEFORE removing profile. Keep this account's encrypted
+  // pending review. If the new native bridge is unavailable, fail closed by
+  // using explicit disable; never silently sign out with collection enabled.
+  if(Platform.isAndroid){
+   final paused=await WaffraAutoSms.suspendForSignOut();
+   if(!paused&&!await WaffraAutoSms.disable()){
+    throw StateError('Could not safely suspend bank SMS before sign-out');
+   }
+  }
   // Drop any in-memory AI prompt context and cancel model download before
   // a new account can open its verified finance scope.
   try{await WaffraOnDeviceQwen.shared.dispose();}catch(_){}
@@ -3412,15 +3422,62 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  bool _autoSmsReviewOpen=false;
  bool _cloudReviewStageRunning=false;
+ bool _autoSmsStatusChecked=false;
+ bool _autoSmsHistoryComplete=false;
+ String? _autoSmsStatusProblem;
  final List<Map<String,Object?>> _autoSmsPending=<Map<String,Object?>>[];
  void _receiveAutoSmsNotice(){
   if(mounted&&ready)unawaited(_refreshAutoSmsInbox());
  }
  Future<void> _refreshAutoSmsInbox({bool importMonth=false})async{
   if(!mounted||!ready||_financeLoadFailure!=null)return;
-  if(importMonth)await WaffraAutoSms.importConsentMonth();
-  final results=await WaffraAutoSms.pending();
+  final status=await WaffraAutoSms.trackingStatus();
   if(!mounted)return;
+  if(status==null||status['enabled']!=true){
+   final message=status==null?
+    (waffraIsEnglish?'Could not verify bank SMS state. Retry.':
+     'تعذر التحقق من حالة الرسائل البنكية. حاول التحديث.'):
+    status['permissionGranted']!=true?
+     (waffraIsEnglish?'Android SMS permission is not granted.':
+      'صلاحية رسائل أندرويد غير مفعّلة بالكامل.'):
+    status['profileReady']!=true?
+     (waffraIsEnglish?'Sign in to access your bank SMS.':
+      'سجّل دخولك لمراجعة رسائل حسابك البنكية.'):
+    (waffraIsEnglish?
+     'Android permission is granted, but Waffra tracking is paused. Enable it in Security & privacy.':
+     'صلاحية أندرويد مفعّلة، لكن متابعة الرسائل موقوفة داخل وفرة. فعّلها من الأمان والخصوصية.');
+   setState((){
+    _autoSmsStatusChecked=true;
+    _autoSmsStatusProblem=message;
+    _autoSmsHistoryComplete=false;
+    _autoSmsPending.clear();
+   });
+   return;
+  }
+  if(importMonth){
+   // Native importer is cursor-based and processes up to 500 SMS per call.
+   // Catch up in bounded pages; never equate a partial scan with zero SMS.
+   for(var page=0;page<4;page++){
+    await WaffraAutoSms.importConsentMonth();
+    final progress=await WaffraAutoSms.trackingStatus();
+    if(progress==null||progress['enabled']!=true||
+       progress['historyComplete']==true)break;
+   }
+  }
+  final results=await WaffraAutoSms.pendingChecked();
+  if(!mounted)return;
+  if(results==null){
+   setState((){
+    _autoSmsStatusChecked=true;
+    // Clear only stale in-memory candidates. Native encrypted data remains
+    // untouched and the user sees an explicit recoverable read error.
+    _autoSmsPending.clear();
+    _autoSmsStatusProblem=waffraIsEnglish?
+     'Could not read encrypted SMS queue. Nothing was deleted. Retry.':
+     'تعذر قراءة الرسائل المشفرة. لم يُحذف شيء. حاول التحديث.';
+   });
+   return;
+  }
   final waiting=<Map<String,Object?>>[];
   for(final candidate in results){
    final id=candidate['id'],body=candidate['body'];
@@ -3431,11 +3488,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     waiting.add(candidate);
    }
   }
-  if(mounted)setState((){
+  final progress=await WaffraAutoSms.trackingStatus();
+  if(!mounted)return;
+  if(progress?['enabled']!=true){
+   setState((){
+    _autoSmsStatusChecked=true;
+    _autoSmsPending.clear();
+    _autoSmsStatusProblem=waffraIsEnglish?
+     'SMS tracking was paused while reading. Refresh after sign-in.':
+     'متابعة الرسائل توقفت أثناء القراءة. حدّث بعد تسجيل الدخول.';
+   });
+   return;
+  }
+  setState((){
+   _autoSmsStatusChecked=true;
+   _autoSmsStatusProblem=null;
+   _autoSmsHistoryComplete=progress?['historyComplete']==true;
    _autoSmsPending..clear()..addAll(waiting);
   });
-  // Auto-prepare redacted cloud suggestions only for installations with
-  // separate standing cloud consent. Review and budget approval stay manual.
+  // Cloud suggestions remain separately opt-in and never post transactions.
   if(waiting.isNotEmpty&&!_cloudReviewStageRunning){
    unawaited(_stageCloudReviewSuggestions(waiting));
   }
@@ -3456,29 +3527,40 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  Future<void> _scanPreviousBankSmsFromSettings()async{
   if(!await WaffraAutoSms.enabled()){
-   if(mounted)snack(context,waffraIsEnglish?
-    'Enable bank SMS tracking in Security & privacy first.':
-    'فعّل متابعة الرسائل البنكية من الأمان والخصوصية أولًا.');
+   final status=await WaffraAutoSms.trackingStatus();
+   if(mounted)snack(context,status?['permissionGranted']!=true?
+    (waffraIsEnglish?'Allow bank SMS in Android permissions first.':
+     'اسمح لوفرة بقراءة الرسائل من صلاحيات أندرويد أولًا.'):
+    (waffraIsEnglish?
+     'Android SMS permission is already allowed. Enable Waffra tracking in Security & privacy.':
+     'صلاحية أندرويد مفعّلة بالفعل؛ فعّل متابعة وفرة من الأمان والخصوصية.'));
    return;
   }
   await WaffraAutoSms.importConsentMonth();
-  await _refreshAutoSmsInbox();
+  await _refreshAutoSmsInbox(importMonth:true);
   if(!mounted)return;
-  // A successful scan opens the existing sender/message review list, not
-  // merely a total in a snackbar. No financial commit happens in this path.
+  // Successful scan opens sender/message review; never auto-posts money.
   if(_autoSmsPending.isEmpty){
-   snack(context,waffraIsEnglish?
-    'No recent bank SMS found since the first day of the installation month.':
-    'لا توجد رسائل بنكية حديثة منذ بداية شهر تثبيت التطبيق.');
+   snack(context,_autoSmsStatusProblem!=null?_autoSmsStatusProblem!:
+    !_autoSmsHistoryComplete?
+     (waffraIsEnglish?'History scan incomplete. Scan again to continue.':
+      'فحص الرسائل السابقة لسه ما اكتملش. اضغط فحص مرة تانية للاستكمال.'):
+    (waffraIsEnglish?
+     'No recent bank SMS found since the first day of the installation month.':
+     'لا توجد رسائل بنكية حديثة منذ بداية شهر تثبيت التطبيق.'));
    return;
   }
   await _openAutoSmsInbox();
  }
  Future<void> _openUnknownSmsFromSettings()async{
   if(!await WaffraAutoSms.enabled()){
-   if(mounted)snack(context,waffraIsEnglish?
-    'Enable bank SMS tracking in Security & privacy first.':
-    'فعّل متابعة الرسائل البنكية من الأمان والخصوصية أولًا.');
+   final status=await WaffraAutoSms.trackingStatus();
+   if(mounted)snack(context,status?['permissionGranted']!=true?
+    (waffraIsEnglish?'Allow bank SMS in Android permissions first.':
+     'اسمح لوفرة بقراءة الرسائل من صلاحيات أندرويد أولًا.'):
+    (waffraIsEnglish?
+     'Android SMS permission is already allowed. Enable Waffra tracking in Security & privacy.':
+     'صلاحية أندرويد مفعّلة بالفعل؛ فعّل متابعة وفرة من الأمان والخصوصية.'));
    return;
   }
   final notices=await WaffraAutoSms.scanUnknownFinancialSms();
@@ -3635,16 +3717,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       padding:const EdgeInsets.symmetric(horizontal:10,vertical:5),
       decoration:BoxDecoration(color:const Color(0xFFE4F4EB),
        borderRadius:BorderRadius.circular(24)),
-      child:Text(count.toString(),
+      child:Text(!_autoSmsStatusChecked||_autoSmsStatusProblem!=null?
+       '—':count.toString(),
        style:const TextStyle(color:forest,fontWeight:FontWeight.bold))),
     ]),
     const SizedBox(height:9),
-    WaffraText(count==0?
-     (waffraIsEnglish?'No bank SMS awaiting review.':
-      'ما فيه رسائل بنكية بانتظار المراجعة.'):
-     (waffraIsEnglish?
-      'Bank SMS since the installation month await approval.':
-      'رسائل من بداية شهر تثبيت التطبيق بانتظار مراجعتك وتأكيدك.')),
+    WaffraText(_autoSmsStatusProblem!=null?_autoSmsStatusProblem!:
+     !_autoSmsStatusChecked?
+      (waffraIsEnglish?'Checking SMS tracking status...':
+       'جارٍ التحقق من حالة الرسائل البنكية...'):
+     count==0?
+      (!_autoSmsHistoryComplete?
+       (waffraIsEnglish?'History scan incomplete. Tap refresh to continue.':
+        'فحص الرسائل السابقة غير مكتمل؛ اضغط تحديث للاستكمال.'):
+       (waffraIsEnglish?'No bank SMS awaiting review.':
+        'ما فيه رسائل بنكية بانتظار المراجعة.')):
+      (waffraIsEnglish?
+       'Bank SMS since the installation month await approval.':
+       'رسائل من بداية شهر تثبيت التطبيق بانتظار مراجعتك وتأكيدك.')),
     if(analyzed>0)...[
      const SizedBox(height:5),
      WaffraText(waffraIsEnglish?

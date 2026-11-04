@@ -99,9 +99,15 @@ class MainActivity : FlutterFragmentActivity() {
         super.onResume()
         applyScreenshotSetting(screenshotsAllowed)
         // A receiver can enqueue a bank candidate while Waffra is backgrounded.
-        if (WaffraAutoSmsStore.enabled(this) && WaffraAutoSmsStore.pending(this).isNotEmpty()) {
-            messageChannel?.invokeMethod("autoSmsAvailable", null)
+        // A damaged encrypted queue must be reported by the Flutter review
+        // screen, not crash Activity.onResume or be treated as zero pending.
+        val hasReview = try {
+            WaffraAutoSmsStore.enabled(this) &&
+                WaffraAutoSmsStore.pending(this).isNotEmpty()
+        } catch (_: Exception) {
+            true // Foreground refresh will surface the read failure.
         }
+        if (hasReview) messageChannel?.invokeMethod("autoSmsAvailable", null)
     }
 
     override fun onRequestPermissionsResult(requestCode: Int,
@@ -245,6 +251,14 @@ class MainActivity : FlutterFragmentActivity() {
                 }
                 "autoSmsPermissionState" -> result.success(WaffraAutoSmsStore.permissionGranted(this))
                 "autoSmsEnabled" -> result.success(WaffraAutoSmsStore.enabled(this))
+                "autoSmsTrackingStatus" -> result.success(WaffraAutoSmsStore.trackingStatus(this))
+                "pauseAutoSmsForSignOut" ->
+                    result.success(WaffraAutoSmsStore.suspendForSignOut(this))
+                "resumeAutoSmsAfterSignIn" -> {
+                    val resumed = WaffraAutoSmsStore.resumeForSameSignedInOwner(this)
+                    if (resumed) WaffraAutoSmsWorker.enqueue(this)
+                    result.success(resumed)
+                }
                 "autoSmsNotificationsEnabled" ->
                     result.success(WaffraAutoSmsNotifications.canNotify(this))
                 "requestAutoSmsNotifications" -> {

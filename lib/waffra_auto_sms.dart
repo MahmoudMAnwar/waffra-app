@@ -15,6 +15,22 @@ abstract final class WaffraAutoSms {
  }
  static Future<bool> enabled()=>_boolCall('autoSmsEnabled');
  static Future<bool> permissionGranted()=>_boolCall('autoSmsPermissionState');
+ // Never confuse OS SMS permission with Waffra's active, account-bound
+ // consent. A missing native channel is unknown, NOT an empty inbox.
+ static Future<Map<String,bool>?> trackingStatus()async{
+  if(!Platform.isAndroid)return null;
+  try{
+   final value=await channel.invokeMapMethod<String,dynamic>(
+    'autoSmsTrackingStatus');
+   if(value==null)return null;
+   return value.map((key,item)=>MapEntry(key,item==true));
+  }on MissingPluginException{return null;}
+   on PlatformException{return null;}
+ }
+ // Logout preserves standing consent for the SAME verified account, but
+ // suspends collection and clears encrypted pending SMS until sign-in.
+ static Future<bool> suspendForSignOut()=>_boolCall('pauseAutoSmsForSignOut');
+ static Future<bool> resumeAfterSignIn()=>_boolCall('resumeAutoSmsAfterSignIn');
  static Future<bool> notificationPermission()=>_boolCall('autoSmsNotificationsEnabled');
  static Future<bool> requestNotificationPermission()=>_boolCall('requestAutoSmsNotifications');
 
@@ -39,6 +55,18 @@ abstract final class WaffraAutoSms {
   on PlatformException{return 0;}
  }
 
+ // Unlike pending(), this method distinguishes an empty inbox from a
+ // native/permission failure; the dashboard must not show false zero.
+ static Future<List<Map<String,Object?>>?> pendingChecked()async{
+  if(!Platform.isAndroid)return null;
+  try{
+   final data=await channel.invokeMethod<List<dynamic>>('pendingAutoBankSms');
+   if(data==null)return null;
+   return data.whereType<Map>().map(
+    (m)=>Map<String,Object?>.from(m)).toList(growable:false);
+  }on MissingPluginException{return null;}
+   on PlatformException{return null;}
+ }
  static Future<List<Map<String,Object?>>> pending()async{
   if(!Platform.isAndroid)return const [];
   try{

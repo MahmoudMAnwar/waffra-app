@@ -1,121 +1,96 @@
 {
   "contract_version": 1,
-  "change_id": "M440-M441-PR360-biometric-login-sms-ui",
-  "human_scope_review": "User explicitly requested fixes after real Android screenshots: successful fingerprint must enter app, login with correct existing password must work after logout without deleting financial history, remove redundant biometric copy, and shorten SMS consent to requested buttons. This declares exact bounded code changes for M385. Does not imply passing CI or real-device certification.",
+  "change_id": "M442-SMS-one-time-consent-account-safe-history-review",
+  "human_scope_review": "User reported on real Android screenshots that bank SMS pending count incorrectly shows zero despite messages after 2026-11-01, while prior SMS permission is already granted but app asks to re-enable. Authorize bounded repairs only; CI and physical phone verification remain required.",
   "user_requested_changes": [
-    "Fix accepted Android fingerprint returning users to the biometric gate instead of opening the app safely.",
-    "Remove the extra mandatory biometric explanation in Arabic and English while preserving OS biometric security.",
-    "Fix correct password being rejected on the phone login screen after explicit sign out, preserving account data.",
-    "Safeguard the registered phone login identity from accidental changes during profile edits and use secure verification.",
-    "Shorten bank SMS tracking permission copy and use the user-requested automatic analysis and SMS-only button labels.",
-    "Remove redundant email and birth date explanatory copy from the name and gender signup screen without changing required inputs.",
-    "Keep bank SMS permission UI to a single short line with explicit external cloud analysis disclosure and exactly two primary options.",
-    "Update existing SMS consent, phone sign-in, and secure credentials tests to match the user-approved text and ensure password matching precedes successful login without weakening the checks.",
-    "Update previously approved M436 and M417 test assertions for compact SMS consent, retaining independent cloud opt-in, redaction, review-only behavior and activation-month import."
+    "Prevent bank SMS permissions and consent state from being mistaken for an empty pending-review list on the Home screen.",
+    "Preserve one-time bank SMS consent across sign-out/sign-in for the same verified account without silently authorizing a different user.",
+    "Protect account identity and encrypted pending SMS: keep one owner's queue inaccessible while logged out, purge on explicit opt-out or different-account opt-in.",
+    "Resume earlier bank SMS review from original installation month in bounded cursor-based batches, with progress status instead of misleading zero.",
+    "Expose Android READ_SMS/RECEIVE_SMS permission, app tracking, signed-in profile and protected queue read failures as separate accurate statuses.",
+    "Prevent unreadable AndroidKeyStore SMS review data from being silently reported as zero or crashing Activity during resume.",
+    "Update exact-SHA release notes and add regression test coverage for the two Android screenshot failures."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
+    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "lib/waffra_auto_sms_consent.dart",
-    "lib/waffra_local_phone_credentials.dart",
-    "lib/waffra_mandatory_biometric_gate.dart",
-    "test/m417_sms_first_run_test.dart",
-    "test/m422_phone_only_auth_entry_test.dart",
-    "test/m426_local_phone_credentials_test.dart",
-    "test/m436_cloud_review_pipeline_test.dart",
-    "test/m440_biometric_resume_regression_test.dart",
-    "test/m441_auth_sms_copy_regression_test.dart",
-    "test/qa/m417_sms_permission_acceptance_test.py"
+    "lib/waffra_auto_sms.dart",
+    "native/WaffraAutoSmsStore.kt",
+    "native/WaffraMainActivity.kt",
+    "test/qa/m442_sms_consent_session_recovery_test.py"
   ],
   "bounded_sections": {
     "lib/main.dart": [
-      {
-        "start": " bool loading=true,onboarded=false,dark=false,locked=false,showLogin=false;",
-        "end": " bool googleFirstRunSetup=false;"
-      },
-      {
-        "start": " @override void didChangeAppLifecycleState(AppLifecycleState state){",
-        "end": " @override void dispose(){WaffraRegionalCopy.countryIso.removeListener(_onRegionChanged);"
-      },
       {
         "start": " Future<void> saveUser(Person u)async {",
         "end": " Future<void> setUiCountry(String? iso)async{"
       },
       {
-        "start": "   locked?WaffraMandatoryBiometricGate(",
-        "end": "    onSignOut:logout,\n   ):"
+        "start": " Future<void> logout()async {",
+        "end": " Future<void> setPin(String? value)async {"
       },
       {
-        "start": "  final raw=prefs.getString('waffra_registered_profile');",
-        "end": " @override void dispose(){signInPhone.dispose();signInPassword.dispose();super.dispose();}"
+        "start": " bool _autoSmsReviewOpen=false;",
+        "end": " Future<void> _stageCloudReviewSuggestions("
       },
       {
-        "start": " Future<void> _signIn()async{",
-        "end": " String get maskedLastPhone{"
+        "start": " Future<void> _scanPreviousBankSmsFromSettings()async{",
+        "end": " Future<void> _openAutoSmsInbox()async{"
       },
       {
-        "start": "   await widget.onSave(Person(name:name.text.trim(),email:widget.initial?.email??'',",
-        "end": "   if(!mounted)return;\n   if(widget.initial!=null&&Navigator.of(context).canPop())Navigator.pop(context);"
+        "start": " Widget _autoSmsReviewCard(){",
+        "end": " Future<void> _reviewAutoSmsCandidates("
+      }
+    ],
+    "lib/waffra_auto_sms.dart": [
+      {
+        "start": " static Future<bool> enabled()=>_boolCall('autoSmsEnabled');",
+        "end": " static Future<bool> notificationPermission()=>_boolCall('autoSmsNotificationsEnabled');"
       },
       {
-        "start": "    WaffraGooglePhoneField(\n     controller:phone,country:phoneCountry,english:waffraIsEnglish,",
-        "end": "   if(widget.initial==null) ...["
+        "start": " static Future<bool> disable()=>_boolCall('setAutoSmsEnabled',false);",
+        "end": " /// Read-only, on-demand scan for institutional financial notices that"
+      }
+    ],
+    "native/WaffraAutoSmsStore.kt": [
+      {
+        "start": "    private const val activeName = \"enabled\"",
+        "end": "    private const val activationMonth = \"sms_activation_month_start\""
       },
       {
-        "start": "     WaffraText(waffraIsEnglish?'2. Complete your profile':'٢. كمّل بياناتك',",
-        "end": "     TextField(controller:name,onChanged:(_)=>setState((){}),"
-      }
-    ],
-    "lib/waffra_mandatory_biometric_gate.dart": [
-      {
-        "start": "            Text(widget.english ? 'Unlock Waffra' : 'فتح وفرة بالبصمة',",
-        "end": "            if (_message != null) ...["
-      }
-    ],
-    "lib/waffra_local_phone_credentials.dart": [
-      {
-        "start": " static Future<bool> verifyRecord(Map<String,dynamic> item,{",
-        "end": " static Future<void> register({required String phone,"
-      }
-    ],
-    "lib/waffra_auto_sms_consent.dart": [
-      {
-        "start": "    Text(en?'Automatic bank SMS tracking':'تتبّع الرسائل البنكية تلقائيًا',",
-        "end": "    const Spacer(),\n    if(error!=null)"
+        "start": "    fun permissionGranted(context: Context): Boolean =",
+        "end": "    private fun key(): SecretKey {"
       },
       {
-        "start": "    FilledButton.icon(",
-        "end": "    const SizedBox(height:8),\n    TextButton(key:const Key('m417-permission-skip'),"
+        "start": "    fun offer(context: Context, sender: String, body: String, at: Long,",
+        "end": "    fun pending(context: Context): List<Map<String, Any>> = synchronized(mutex) {"
+      },
+      {
+        "start": "    fun pending(context: Context): List<Map<String, Any>> = synchronized(mutex) {",
+        "end": "    /** Atomic per-SMS request claim shared by foreground and WorkManager."
+      },
+      {
+        "start": "    fun acknowledge(context: Context, ids: Set<String>): Boolean =",
+        "end": "    /** Resumable history import:"
+      },
+      {
+        "start": "    fun importConsentMonth(context: Context, maxRead: Int = 500): Int {",
+        "end": "    /** Claim each review notification once; history never floods the shade. */"
+      },
+      {
+        "start": "    fun claimReviewNotification(context: Context, fingerprint: String): Boolean =",
+        "end": null
       }
     ],
-    "test/m417_sms_first_run_test.dart": [
+    "native/WaffraMainActivity.kt": [
       {
-        "start": " testWidgets('M417 English copy explains on-device privacy',",
-        "end": "\n}\n"
-      }
-    ],
-    "test/m422_phone_only_auth_entry_test.dart": [
+        "start": "    override fun onResume() {",
+        "end": "    override fun onRequestPermissionsResult("
+      },
       {
-        "start": " test('M422 login retains explicit password challenge before profile save',(){",
-        "end": "\n}\n"
-      }
-    ],
-    "test/m426_local_phone_credentials_test.dart": [
-      {
-        "start": " test('M426 main sign in requires password and biometric, no OTP',(){",
-        "end": "\n}\n"
-      }
-    ],
-    "test/m436_cloud_review_pipeline_test.dart": [
-      {
-        "start": " test('M436 separate cloud opt-in remains disclosed before upload',(){",
-        "end": " test('M436 redactor accepts compact English multi-currency SMS',(){"
-      }
-    ],
-    "test/qa/m417_sms_permission_acceptance_test.py": [
-      {
-        "start": "    def test_sms_permission_disclosure_is_review_only(self):",
-        "end": "    def test_android_build_uses_explicit_scoped_receiver(self):"
+        "start": "                \"autoSmsPermissionState\" ->",
+        "end": "                \"autoSmsNotificationsEnabled\" ->"
       }
     ]
   }

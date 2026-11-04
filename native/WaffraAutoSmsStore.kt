@@ -34,6 +34,9 @@ object WaffraAutoSmsStore {
     private const val keyAlias = "waffra_sms_intake_aes_v1"
     private const val queueName = "encrypted_candidates"
     private const val activeName = "enabled"
+    // Hash of the verified signed-in account. No phone/email is saved here.
+    private const val consentedOwnerName = "consented_account_sha256_v1"
+    private const val suspendedAfterLogoutName = "suspended_after_logout_v1"
     private const val maxCandidates = 100
     private const val activationMonth = "sms_activation_month_start"
     private const val historyCursorAt = "sms_history_cursor_at"
@@ -74,30 +77,123 @@ object WaffraAutoSmsStore {
         context.checkSelfPermission(Manifest.permission.RECEIVE_SMS) ==
             PackageManager.PERMISSION_GRANTED
 
-    fun enabled(context: Context): Boolean {
-        if (!permissionGranted(context) ||
-            !context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
-                .getBoolean(activeName, false)) return false
-        // The first-run disclosure precedes login. Permission alone must NOT
-        // stage inbox text for an unowned installation or former user.
+    // Resolve the account from Flutter's existing verified profile without
+    // placing phone numbers or email addresses in Android SMS preferences.
+    private fun signedInOwnerHash(context: Context): String? {
+        val user = context.getSharedPreferences("FlutterSharedPreferences",
+            Context.MODE_PRIVATE)
+        if (!user.getBoolean("flutter.waffra_onboarding_completed", false))
+            return null
+        val raw = user.getString("flutter.waffra_profile", "") ?: ""
+        val profile = try { JSONObject(raw) } catch (_: Exception) { return null }
+        val phone = profile.optString("phone", "").filter { it.isDigit() }
+        val email = profile.optString("email", "").trim().lowercase()
+        val identity = when {
+            phone.length >= 9 -> "phone:$phone"
+            email.contains('@') -> "email:$email"
+            else -> return null
+        }
+        return MessageDigest.getInstance("SHA-256")
+            .digest(identity.toByteArray(StandardCharsets.UTF_8))
+            .joinToString("") { "%02x".format(it.toInt() and 255) }
+    }
+
+    private fun activeProfileReady(context: Context): Boolean {
         val user = context.getSharedPreferences("FlutterSharedPreferences",
             Context.MODE_PRIVATE)
         return user.getBoolean("flutter.waffra_onboarding_completed", false) &&
             !user.getString("flutter.waffra_profile", "").isNullOrBlank()
     }
 
+    fun enabled(context: Context): Boolean = synchronized(mutex) {
+        val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        if (!permissionGranted(context) || !prefs.getBoolean(activeName, false) ||
+            !activeProfileReady(context)) return@synchronized false
+        val nowOwner = signedInOwnerHash(context)
+        val boundOwner = prefs.getString(consentedOwnerName, null)
+        if (boundOwner != null && boundOwner != nowOwner)
+            return@synchronized false
+        // Bind the first-install consent on first authenticated profile load.
+        // Existing profiles without a stable identity can still use their
+        // explicit session consent, but never silently resume after logout.
+        if (boundOwner == null && nowOwner != null &&
+            !prefs.edit().putString(consentedOwnerName, nowOwner).commit())
+            return@synchronized false
+        true
+    }
+
+    fun trackingStatus(context: Context): Map<String, Boolean> {
+        val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        return mapOf(
+            "permissionGranted" to permissionGranted(context),
+            "trackingRequested" to prefs.getBoolean(activeName, false),
+            "profileReady" to activeProfileReady(context),
+            "suspendedAfterLogout" to prefs.getBoolean(suspendedAfterLogoutName, false),
+            "historyComplete" to prefs.getBoolean(historyComplete, false),
+            "enabled" to enabled(context)
+        )
+    }
+
+    // Explicit opt-out must never auto-resume after a future login.
     fun enable(context: Context, allow: Boolean): Boolean = synchronized(mutex) {
         if (allow && !permissionGranted(context)) return@synchronized false
         val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        val previouslyActive = prefs.getBoolean(activeName, false)
         val editor = prefs.edit().putBoolean(activeName, allow)
+            .putBoolean(suspendedAfterLogoutName, false)
+        if (allow && !previouslyActive) {
+            // Repair upgrades from the old sign-out flow, which discarded
+            // review ciphertext but left the history cursor at the end.
+            // Explicit renewed opt-in must safely replay the install month.
+            // Existing confirmed finance hashes are still deduplicated by UI.
+            editor.remove(historyCursorAt).remove(historyCursorId)
+                .remove(historySourceMonth).remove(historyComplete)
+        }
+        if (allow) {
+            val owner = signedInOwnerHash(context)
+            val previous = prefs.getString(consentedOwnerName, null)
+            if (previous != null && previous != owner) {
+                // A different account's encrypted queue and read cursor must
+                // never become visible under this explicit new opt-in.
+                editor.remove(queueName).remove(historyCursorAt)
+                    .remove(historyCursorId).remove(historySourceMonth)
+                    .remove(historyComplete)
+            }
+            if (owner != null) editor.putString(consentedOwnerName, owner)
+            else editor.remove(consentedOwnerName)
+        }
         if (allow && !prefs.contains(activationMonth))
             editor.putLong(activationMonth, monthStart())
-        if (!allow) {
-            // On logout discard unread ciphertext too: the next profile
-            // must never inherit a previous user's banking SMS candidates.
-            editor.remove(queueName)
-        }
+        if (!allow) editor.remove(queueName)
         editor.commit()
+    }
+
+    // Stop collection immediately on logout. Retain pending ciphertext only
+    // when bound to a stable owner, to avoid losing unreviewed bank messages.
+    // A new/different account cannot read it; explicit new opt-in purges it.
+    fun suspendForSignOut(context: Context): Boolean = synchronized(mutex) {
+        val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        val owner = signedInOwnerHash(context)
+        val bound = prefs.getString(consentedOwnerName, null)
+        val canResume = prefs.getBoolean(activeName, false) &&
+            owner != null && (bound == null || bound == owner)
+        val editor = prefs.edit().putBoolean(activeName, false)
+            .putBoolean(suspendedAfterLogoutName, canResume)
+        if (canResume) editor.putString(consentedOwnerName, owner)
+        else editor.remove(queueName)
+        editor.commit()
+    }
+
+    fun resumeForSameSignedInOwner(context: Context): Boolean = synchronized(mutex) {
+        val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        if (prefs.getBoolean(activeName, false)) return@synchronized enabled(context)
+        val owner = signedInOwnerHash(context)
+        if (!permissionGranted(context) || !activeProfileReady(context) ||
+            !prefs.getBoolean(suspendedAfterLogoutName, false) ||
+            owner == null || owner != prefs.getString(consentedOwnerName, null))
+            return@synchronized false
+        prefs.edit().putBoolean(activeName, true)
+            .putBoolean(suspendedAfterLogoutName, false).commit()
     }
 
     private fun key(): SecretKey {
@@ -267,6 +363,9 @@ object WaffraAutoSmsStore {
         if (!enabled(context) || !qualifies(sender, body)) return false
         val result = synchronized(mutex) {
             try {
+                // Recheck after entering the lock: logout may race the
+                // receiver between its first permission check and this read.
+                if (!enabled(context)) return@synchronized false
                 val queue = read(context)
                 val fingerprint = id(sender, body, at)
                 for (i in 0 until queue.length()) {
@@ -312,7 +411,12 @@ object WaffraAutoSmsStore {
                 }
                 fields
             }
-        } catch (_: Exception) { emptyList() }
+        } catch (failure: Exception) {
+            // A broken AndroidKeyStore key or invalid ciphertext is NOT an
+            // empty review queue. Report it to Flutter, never wipe or fabricate
+            // a zero financial count.
+            throw IllegalStateException("Encrypted SMS review queue unreadable", failure)
+        }
     }
 
     /** Atomic per-SMS request claim shared by foreground and WorkManager.
@@ -386,7 +490,8 @@ object WaffraAutoSmsStore {
 
     fun acknowledge(context: Context, ids: Set<String>): Boolean =
         synchronized(mutex) {
-            if (ids.isEmpty() || ids.size > maxCandidates) return@synchronized false
+            if (!enabled(context) || ids.isEmpty() || ids.size > maxCandidates)
+                return@synchronized false
             try {
                 val data = read(context)
                 val remaining = JSONArray()
@@ -411,8 +516,10 @@ object WaffraAutoSmsStore {
         // Do not mark the window permanently complete: next month's SMS
         // must also be found by a later on-demand scan.
         val end = System.currentTimeMillis() + 1
-        var queued = try { synchronized(mutex) { read(context).length() } }
-            catch (_: Exception) { return 0 }
+        var queued = try { synchronized(mutex) {
+            if (!enabled(context)) return 0
+            read(context).length()
+        } } catch (_: Exception) { return 0 }
         if (queued >= maxCandidates) return 0
         val projection = arrayOf("_id", "address", "body", "date")
         val cursor = try {
@@ -456,16 +563,22 @@ object WaffraAutoSmsStore {
                 lastId = rowId
             }
         }
-        prefs.edit().putLong(historyCursorAt, lastAt)
-            .putLong(historyCursorId, lastId)
-            .putLong(historySourceMonth, start)
-            .putBoolean(historyComplete, complete).commit()
+        // Serialize cursor persistence with sign-out/owner change so a
+        // stale scanner cannot skip SMS for the next authenticated session.
+        synchronized(mutex) {
+            if (!enabled(context)) return accepted
+            prefs.edit().putLong(historyCursorAt, lastAt)
+                .putLong(historyCursorId, lastId)
+                .putLong(historySourceMonth, start)
+                .putBoolean(historyComplete, complete).commit()
+        }
         return accepted
     }
 
     /** Claim each review notification once; history never floods the shade. */
     fun claimReviewNotification(context: Context, fingerprint: String): Boolean =
         synchronized(mutex) {
+            if (!enabled(context)) return@synchronized false
             try {
                 val data = read(context)
                 for (i in 0 until data.length()) {
