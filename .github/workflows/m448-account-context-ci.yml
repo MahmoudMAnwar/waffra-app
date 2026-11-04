@@ -45,5 +45,6 @@ jobs:
           flutter test \
             test/storage/m448_account_context_policy_test.dart \
             test/storage/m448_account_context_read_test.dart \
+            test/storage/m448_account_context_repository_test.dart \
             test/storage/m440_accounts_repository_test.dart \
             test/storage/m440_accounts_portable_v3_test.dart
