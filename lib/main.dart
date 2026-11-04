@@ -1175,6 +1175,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    email:u.email.trim().isNotEmpty?u.email.trim():null,
    phone:u.phone.trim().isNotEmpty?u.phone.trim():null,
   );
+  // Restore standing SMS consent only for the verified same account. Never
+  // re-request Android SMS permissions after ordinary re-login.
+  if(Platform.isAndroid)await WaffraAutoSms.resumeAfterSignIn();
   final prefs=await SharedPreferences.getInstance();
   final needsGoogleSetup=WaffraSaudiRelease.locationCountryOnboarding&&
    waffraGoogleProfileReadyForCountrySetup(u)&&
@@ -1202,8 +1205,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   if(mounted)setState(()=>googleFirstRunSetup=false);
  }
  Future<void> logout()async {
-  // Never capture bank messages for a profile after sign-out.
-  await WaffraAutoSms.disable();
+  // Suspend inbox collection and discard old ciphertext BEFORE removing
+  // profile. Verified same-owner login may later resume standing consent.
+  await WaffraAutoSms.suspendForSignOut();
   // Drop any in-memory AI prompt context and cancel model download before
   // a new account can open its verified finance scope.
   try{await WaffraOnDeviceQwen.shared.dispose();}catch(_){}
@@ -3412,15 +3416,59 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  bool _autoSmsReviewOpen=false;
  bool _cloudReviewStageRunning=false;
+ bool _autoSmsStatusChecked=false;
+ bool _autoSmsHistoryComplete=false;
+ String? _autoSmsStatusProblem;
  final List<Map<String,Object?>> _autoSmsPending=<Map<String,Object?>>[];
  void _receiveAutoSmsNotice(){
   if(mounted&&ready)unawaited(_refreshAutoSmsInbox());
  }
  Future<void> _refreshAutoSmsInbox({bool importMonth=false})async{
   if(!mounted||!ready||_financeLoadFailure!=null)return;
-  if(importMonth)await WaffraAutoSms.importConsentMonth();
-  final results=await WaffraAutoSms.pending();
+  final status=await WaffraAutoSms.trackingStatus();
   if(!mounted)return;
+  if(status==null||status['enabled']!=true){
+   final message=status==null?
+    (waffraIsEnglish?'Could not verify bank SMS state. Retry.':
+     'تعذر التحقق من حالة الرسائل البنكية. حاول التحديث.'):
+    status['permissionGranted']!=true?
+     (waffraIsEnglish?'Android SMS permission is not granted.':
+      'صلاحية رسائل أندرويد غير مفعّلة بالكامل.'):
+    status['profileReady']!=true?
+     (waffraIsEnglish?'Sign in to access your bank SMS.':
+      'سجّل دخولك لمراجعة رسائل حسابك البنكية.'):
+    (waffraIsEnglish?
+     'Android permission is granted, but Waffra tracking is paused. Enable it in Security & privacy.':
+     'صلاحية أندرويد مفعّلة، لكن متابعة الرسائل موقوفة داخل وفرة. فعّلها من الأمان والخصوصية.');
+   setState((){
+    _autoSmsStatusChecked=true;
+    _autoSmsStatusProblem=message;
+    _autoSmsHistoryComplete=false;
+    _autoSmsPending.clear();
+   });
+   return;
+  }
+  if(importMonth){
+   // Native importer is cursor-based and processes up to 500 SMS per call.
+   // Catch up in bounded pages; never equate a partial scan with zero SMS.
+   for(var page=0;page<4;page++){
+    await WaffraAutoSms.importConsentMonth();
+    final progress=await WaffraAutoSms.trackingStatus();
+    if(progress==null||progress['enabled']!=true||
+       progress['historyComplete']==true)break;
+   }
+  }
+  final results=await WaffraAutoSms.pendingChecked();
+  if(!mounted)return;
+  if(results==null){
+   setState((){
+    _autoSmsStatusChecked=true;
+    _autoSmsStatusProblem=waffraIsEnglish?
+     'Could not read encrypted SMS queue. Nothing was deleted. Retry.':
+     'تعذر قراءة الرسائل المشفرة. لم يُحذف شيء. حاول التحديث.';
+   });
+   return;
+  }
   final waiting=<Map<String,Object?>>[];
   for(final candidate in results){
    final id=candidate['id'],body=candidate['body'];
@@ -3431,11 +3479,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     waiting.add(candidate);
    }
   }
+  final progress=await WaffraAutoSms.trackingStatus();
   if(mounted)setState((){
+   _autoSmsStatusChecked=true;
+   _autoSmsStatusProblem=null;
+   _autoSmsHistoryComplete=progress?['historyComplete']==true;
    _autoSmsPending..clear()..addAll(waiting);
   });
-  // Auto-prepare redacted cloud suggestions only for installations with
-  // separate standing cloud consent. Review and budget approval stay manual.
+  // Cloud suggestions remain separately opt-in and never post transactions.
   if(waiting.isNotEmpty&&!_cloudReviewStageRunning){
    unawaited(_stageCloudReviewSuggestions(waiting));
   }
