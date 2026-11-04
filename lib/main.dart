@@ -4768,6 +4768,27 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     ids:List<String?>.filled(candidates.length,null),
     generation:verified.witness.generation);
    final assigned=List<String?>.filled(candidates.length,null);
+   // Only verified masked bank evidence can suggest a specific SMS account.
+   // Manual, recurring, goal-due and uncertain bank messages stay unassigned
+   // until the user makes an explicit choice; never inherit Home's header.
+   final accountEvidence=WaffraVerifiedAccountsApi(bridge:bridge);
+   for(var i=0;i<candidates.length;i++){
+    final item=candidates[i];
+    if(item.sourceType!='sms'||item.notes.trim().isEmpty)continue;
+    final facts=WaffraBankSmsFactsParser.parse(item.notes);
+    if(!facts.canAutoPostAsIncomeExpense||
+       (facts.kind==WaffraBankOperationKind.income)!=item.income)continue;
+    try{
+     final match=await accountEvidence.suggestSmsAccount(facts);
+     if(match.confident&&match.accountId!=null&&
+        active.any((a)=>a.id==match.accountId)){
+      assigned[i]=match.accountId;
+     }
+    }catch(_){
+     // Suggestion failure must never guess or silently link an account.
+    }
+   }
+   if(!mounted)return null;
    final approved=await showWaffraDialog<bool>(context:context,
     builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
      title:WaffraText(waffraIsEnglish?
