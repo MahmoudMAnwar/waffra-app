@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'waffra_encrypted_sms_notes_vault.dart';
+import 'waffra_fresh_install_source.dart';
 import 'waffra_encrypted_full_finance_reset.dart';
 import 'waffra_encrypted_finance_session.dart';
 import 'waffra_receipt_screen_contract.dart';
@@ -58,6 +59,7 @@ class WaffraVerifiedFinanceAuthority {
     this.legacy = const WaffraHomeFinancePersistence(),
     this.sourceGuard = const WaffraProductionFinanceSourceGuard(),
     this.encryptedSession,
+    this.freshInstall,
     this.audit = const WaffraFinanceRouteAudit(),
     this.encryptedSqlWitnessActive = false,
     this.externalSourceWitnessActive = false,
@@ -68,6 +70,7 @@ class WaffraVerifiedFinanceAuthority {
   final WaffraHomeFinancePersistence legacy;
   final WaffraProductionFinanceSourceGuard sourceGuard;
   final WaffraEncryptedFinanceSession? encryptedSession;
+  final WaffraFreshInstallSource? freshInstall;
   final WaffraFinanceRouteAudit audit;
   final bool encryptedSqlWitnessActive;
   final bool externalSourceWitnessActive;
@@ -96,6 +99,14 @@ class WaffraVerifiedFinanceAuthority {
   Future<WaffraRuntimeFinanceBackend> _requireRoute(
       WaffraFinanceRoute route) async {
     final report = await sourceGuard.inspect();
+    if (freshInstall != null) {
+      final session = encryptedSession;
+      if (report.source != WaffraProductionFinanceSource.encryptedRoutingRequired || session == null) {
+        throw StateError('Encrypted installation cannot switch finance source.');
+      }
+      await freshInstall!.verify(session.bridge.snapshot.store);
+      return WaffraRuntimeFinanceBackend.verifiedEncrypted;
+    }
     final backend = WaffraRuntimeFinanceRouteContract(
       source: report,
       audit: audit,

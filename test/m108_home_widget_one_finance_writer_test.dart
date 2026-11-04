@@ -52,6 +52,6 @@ void main() {
     expect(binding, contains('if (evidence == null)'));
     expect(binding, isNot(contains('WaffraEncryptedStore.openShadow(')));
     expect(widget, isNot(contains('FirebaseFirestore.instance')));
-    expect(main, contains('requireSafeLegacyStartup'));
+    expect(main, contains('if(!startup.encrypted)await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p)'));
   });
 }

@@ -37,6 +37,7 @@ abstract final class WaffraAutoSmsAutoPoster {
   final batch=await WaffraAutoSms.pending();
   if(batch.isEmpty)return summary;
   final binding=await WaffraProductionFinanceAuthorityBinding.bind(
+    installedApp:true,
    legacy:const WaffraHomeFinancePersistence(),
    startupRoute:WaffraFinanceRoute.widgetStartup);
   try{

@@ -17,6 +17,7 @@ class WaffraEncryptedStore extends GeneratedDatabase {
   WaffraEncryptedStore._(QueryExecutor executor) : super(executor);
 
   static const _keyStorageName = 'waffra_vault_encryption_key_v1';
+  static const freshSqlCipherKeyPrefix = 'waffra-sqlcipher-v4:';
   static const _filename = 'waffra_shadow_v1.sqlite';
 
   /// Stable native locations. Startup guards may inspect these without
@@ -86,6 +87,16 @@ class WaffraEncryptedStore extends GeneratedDatabase {
       setup: (db) {
         // Fail closed in EVERY build, not only debug/assert.
         // Ordinary SQLite ignores this pragma and returns no result.
+        if (key.startsWith(freshSqlCipherKeyPrefix)) {
+          db.execute("PRAGMA cipher='sqlcipher'");
+          db.execute('PRAGMA legacy=4');
+          final cipher = db.select('PRAGMA cipher');
+          final version = db.select('PRAGMA legacy');
+          if (cipher.isEmpty || cipher.first.values.first != 'sqlcipher' ||
+              version.isEmpty || version.first.values.first != 4) {
+            throw StateError('SQLCipher 4 is unavailable.');
+          }
+        }
         final supportedCipher = db.select('PRAGMA cipher');
         if (supportedCipher.isEmpty) {
           throw StateError('Encrypted SQLite engine is unavailable.');

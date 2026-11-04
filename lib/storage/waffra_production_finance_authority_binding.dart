@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'waffra_atomic_finance_snapshot.dart';
+import 'waffra_fresh_install_source.dart';
 import 'waffra_encrypted_cutover_journal.dart';
 import 'waffra_encrypted_finance_session.dart';
 import 'waffra_encrypted_store.dart';
@@ -34,19 +35,17 @@ class WaffraProductionFinanceAuthorityBinding {
   WaffraVerifiedEncryptedFinanceBridge? get accountsBridge =>
       encrypted ? _accountsBridge : null;
 
-  /// The default shipped call sites intentionally pass no release evidence.
-  /// An already-active encrypted source therefore blocks access instead of
-  /// being misread as an empty legacy ledger. A future release coordinator
-  /// must supply independently authenticated evidence, not UI preferences.
   static Future<WaffraProductionFinanceAuthorityBinding> bind({
     required WaffraHomeFinancePersistence legacy,
-    WaffraProductionFinanceSourceGuard sourceGuard =
-        const WaffraProductionFinanceSourceGuard(),
+    WaffraProductionFinanceSourceGuard sourceGuard = const WaffraProductionFinanceSourceGuard(),
     WaffraProductionCutoverEvidence? certifiedEvidence,
     WaffraFinanceRoute startupRoute = WaffraFinanceRoute.appStartup,
     Future<Directory> Function()? directoryProvider,
     Future<String?> Function()? secureKeyReader,
+    bool installedApp = false,
   }) async {
+    final freshInstall = installedApp && Platform.isAndroid
+        ? await WaffraFreshInstallSource.prepare() : null;
     if (startupRoute != WaffraFinanceRoute.appStartup &&
         startupRoute != WaffraFinanceRoute.widgetStartup) {
       throw ArgumentError('Only Home or widget startup can bind finance.');
@@ -57,7 +56,7 @@ class WaffraProductionFinanceAuthorityBinding {
       throw StateError('Financial source requires independent recovery.');
     }
     if (report.source == WaffraProductionFinanceSource.guardedLegacy) {
-      if (certifiedEvidence != null) {
+      if (certifiedEvidence != null || freshInstall != null) {
         throw StateError('Encrypted release evidence cannot select legacy.');
       }
       return WaffraProductionFinanceAuthorityBinding._(
@@ -71,22 +70,23 @@ class WaffraProductionFinanceAuthorityBinding {
     }
 
     final evidence = certifiedEvidence;
-    if (evidence == null) {
-      throw StateError(
-        'Existing SQLCipher source cannot start without verified release evidence.',
-      );
+    if (freshInstall == null) {
+      if (evidence == null) {
+        throw StateError(
+          'Existing SQLCipher source cannot start without verified release evidence.',
+        );
+      }
+      final decision =
+          const WaffraProductionCutoverReleaseGate().inspect(evidence);
+      if (!decision.eligibleForHumanReleaseReview ||
+          !evidence.routes.verifiedRoutes.contains(startupRoute)) {
+        throw StateError('Encrypted source release certification is incomplete.');
+      }
+      // Even a fully green review NEVER switches a source automatically.
+      if (decision.automaticallyActivateSqlCipher) {
+        throw StateError('Automatic encrypted cutover must remain disabled.');
+      }
     }
-    final decision =
-        const WaffraProductionCutoverReleaseGate().inspect(evidence);
-    if (!decision.eligibleForHumanReleaseReview ||
-        !evidence.routes.verifiedRoutes.contains(startupRoute)) {
-      throw StateError('Encrypted source release certification is incomplete.');
-    }
-    // Even a fully green review NEVER switches a source automatically.
-    if (decision.automaticallyActivateSqlCipher) {
-      throw StateError('Automatic encrypted cutover must remain disabled.');
-    }
-
     final directory = directoryProvider != null
         ? await directoryProvider()
         : await getApplicationSupportDirectory();
@@ -122,25 +122,28 @@ class WaffraProductionFinanceAuthorityBinding {
       // Compare the approved LEGACY source checksum with the independently
       // persisted, immutable cutover checkpoint before binding either engine.
       // Neither a synthetic report nor a stale migration can grant access.
+      if (freshInstall != null) await freshInstall.verify(store);
       final checkpoint = await journal.read();
       if (checkpoint == null ||
           checkpoint.phase != WaffraCutoverPhase.active ||
-          checkpoint.sourceDigest != evidence.storage.sourceDigest) {
+          checkpoint.sourceDigest != (freshInstall?.digest ?? evidence!.storage.sourceDigest)) {
         throw StateError('Encrypted source certification digest mismatches.');
       }
       // Read-only exhaustive route contract check after the authenticated OS
       // key and independently confirmed source digest. Never performs cutover.
-      final routePreflight = const WaffraFinance24RoutePreflight().inspect(
-        source: report,
-        audit: evidence.routes,
-        encryptedSqlWitnessActive: true,
-        externalSourceWitnessActive: true,
-        verifiedKeyRecoveryInDevice: true,
-      );
-      if (!routePreflight.allContractsAcceptEncrypted) {
-        throw StateError(
-          'Cannot bind encrypted finance until all 24 source contracts pass.',
+      if (evidence != null) {
+        final routePreflight = const WaffraFinance24RoutePreflight().inspect(
+          source: report,
+          audit: evidence.routes,
+          encryptedSqlWitnessActive: true,
+          externalSourceWitnessActive: true,
+          verifiedKeyRecoveryInDevice: true,
         );
+        if (!routePreflight.allContractsAcceptEncrypted) {
+          throw StateError(
+            'Cannot bind encrypted finance until all 24 source contracts pass.',
+          );
+        }
       }
       final bridge = WaffraVerifiedEncryptedFinanceBridge(
         snapshot: snapshot,
@@ -156,7 +159,8 @@ class WaffraProductionFinanceAuthorityBinding {
         encryptedSession: WaffraEncryptedFinanceSession(
           bridge: bridge, experimentalEnabled: true,
         ),
-        audit: evidence.routes,
+        audit: evidence?.routes ?? const WaffraFinanceRouteAudit(),
+        freshInstall: freshInstall,
         encryptedSqlWitnessActive: true,
         externalSourceWitnessActive: true,
         verifiedKeyRecoveryInDevice: true,

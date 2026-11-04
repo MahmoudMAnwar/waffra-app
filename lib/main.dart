@@ -89,6 +89,7 @@ import 'storage/waffra_legacy_write_queue.dart';
 import 'storage/waffra_authoritative_widget_balance.dart';
 import 'storage/waffra_live_legacy_finance_guard.dart';
 import 'storage/waffra_production_finance_source_guard.dart';
+import 'storage/waffra_fresh_install_source.dart';
 import 'storage/waffra_legacy_finance_writer_coordinator.dart';
 import 'storage/waffra_live_account_write_authority.dart';
 import 'storage/waffra_home_finance_persistence.dart';
@@ -164,6 +165,15 @@ Future<void> main()async {
  if(WidgetsBinding.instance.platformDispatcher.defaultRouteName=='/waffra-widget'){
   runApp(const WaffraWidgetCaptureApp());
   return;
+ }
+ // Classify the installation before onboarding writes its first preferences.
+ if(Platform.isAndroid){
+  try{await WaffraFreshInstallSource.prepare();}catch(_){
+   runApp(MaterialApp(home:Scaffold(body:Center(child:FilledButton(
+    onPressed:main,child:const Text('تعذّر فتح التخزين المشفّر. إعادة المحاولة / Retry'),
+   )))));
+   return;
+  }
  }
  // Native Android manifest disables automatic crash collection on startup.
  try {
@@ -1155,9 +1165,12 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  Future<void> load()async {
   try {
    final p=await SharedPreferences.getInstance().timeout(const Duration(seconds:15));
-   await const WaffraProductionFinanceSourceGuard()
-    .requireSafeLegacyStartup(preferences:p);
-   await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p);
+   final startup=await WaffraProductionFinanceAuthorityBinding.bind(
+    installedApp:true,
+    legacy:const WaffraHomeFinancePersistence());
+   try {
+    if(!startup.encrypted)await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p);
+   } finally {await startup.close();}
    // Nonfinancial preference only. Rotate once per cold start; retries do not
    // advance the greeting again or bypass the finance source guard.
    if(!_greetingCycleInitialized){
@@ -3348,6 +3361,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  Future<void> _bindFinanceSource()async{
   final binding=await WaffraProductionFinanceAuthorityBinding.bind(
+    installedApp:true,
    legacy:_homeFinancePersistence,
    startupRoute:WaffraFinanceRoute.appStartup,
   );
