@@ -363,6 +363,9 @@ object WaffraAutoSmsStore {
         if (!enabled(context) || !qualifies(sender, body)) return false
         val result = synchronized(mutex) {
             try {
+                // Recheck after entering the lock: logout may race the
+                // receiver between its first permission check and this read.
+                if (!enabled(context)) return@synchronized false
                 val queue = read(context)
                 val fingerprint = id(sender, body, at)
                 for (i in 0 until queue.length()) {
@@ -487,7 +490,8 @@ object WaffraAutoSmsStore {
 
     fun acknowledge(context: Context, ids: Set<String>): Boolean =
         synchronized(mutex) {
-            if (ids.isEmpty() || ids.size > maxCandidates) return@synchronized false
+            if (!enabled(context) || ids.isEmpty() || ids.size > maxCandidates)
+                return@synchronized false
             try {
                 val data = read(context)
                 val remaining = JSONArray()
@@ -512,8 +516,10 @@ object WaffraAutoSmsStore {
         // Do not mark the window permanently complete: next month's SMS
         // must also be found by a later on-demand scan.
         val end = System.currentTimeMillis() + 1
-        var queued = try { synchronized(mutex) { read(context).length() } }
-            catch (_: Exception) { return 0 }
+        var queued = try { synchronized(mutex) {
+            if (!enabled(context)) return 0
+            read(context).length()
+        } } catch (_: Exception) { return 0 }
         if (queued >= maxCandidates) return 0
         val projection = arrayOf("_id", "address", "body", "date")
         val cursor = try {
@@ -557,6 +563,8 @@ object WaffraAutoSmsStore {
                 lastId = rowId
             }
         }
+        // Never advance the review cursor after a concurrent sign-out.
+        if (!enabled(context)) return accepted
         prefs.edit().putLong(historyCursorAt, lastAt)
             .putLong(historyCursorId, lastId)
             .putLong(historySourceMonth, start)
@@ -567,6 +575,7 @@ object WaffraAutoSmsStore {
     /** Claim each review notification once; history never floods the shade. */
     fun claimReviewNotification(context: Context, fingerprint: String): Boolean =
         synchronized(mutex) {
+            if (!enabled(context)) return@synchronized false
             try {
                 val data = read(context)
                 for (i in 0 until data.length()) {
