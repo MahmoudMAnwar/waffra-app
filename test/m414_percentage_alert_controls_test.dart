@@ -102,14 +102,14 @@ void main() {
   final budgetAlert=source.split('Future<void> budgetAlert(').last
    .split('/// Draw the same category-colored donut').first;
   expect(budgetAlert,contains('b.budgetActive&&b.alertsEnabled'));
-  expect(budgetAlert,contains('crossedBudgetThreshold('));
-  expect(budgetAlert,contains('if(crossed==0||!mounted)return;'));
+  expect(budgetAlert,contains('WaffraBudgetAlertOnce.claim('));
+  expect(budgetAlert,contains('if(!newlyCrossed||!mounted)return;'));
   expect(budgetAlert,contains('showBudgetThreshold('));
   expect(budgetAlert,contains('تنبيه الميزانية'));
   expect(budgetAlert,isNot(contains('تنبيه ميزانية القسم')));
   final smart=source.split('final warnings=namedBudgets.where(').last
    .split('return Card(').first;
-  expect(smart,contains('budgetThresholdVisible('));
+  expect(smart,contains('reachedBudgetThreshold('));
   expect(smart,contains('alertPercent:b.alertPercent'));
   expect(smart,contains('b.budgetActive&&b.alertsEnabled'));
   expect(smart,isNot(contains('>=80')));
