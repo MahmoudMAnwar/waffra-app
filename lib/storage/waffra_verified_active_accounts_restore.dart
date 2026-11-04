@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
-import 'package:drift/drift.dart';
 
 import 'waffra_account_context_schema.dart';
 import 'waffra_accounts_finance_history.dart';
@@ -9,7 +8,6 @@ import 'waffra_accounts_portable_backup_v3.dart';
 import 'waffra_accounts_schema.dart';
 import 'waffra_atomic_finance_snapshot.dart';
 import 'waffra_encrypted_store.dart';
-import 'waffra_fresh_finance_domain_schema.dart';
 import 'waffra_portable_backup_v2.dart';
 import 'waffra_restored_finance_receipt_attestor.dart';
 
