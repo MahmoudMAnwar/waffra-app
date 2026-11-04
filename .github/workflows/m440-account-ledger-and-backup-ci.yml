@@ -33,9 +33,9 @@ jobs:
         run: flutter pub get
       - name: Static analysis for all changed accounting surfaces
         run: |
-          dart analyze lib/storage/waffra_accounts_portable_backup_v3.dart lib/storage/waffra_accounts_repository.dart lib/storage/waffra_accounts_schema.dart lib/storage/waffra_portable_encrypted_backup_exporter.dart lib/storage/waffra_unified_finance_writer.dart lib/storage/waffra_verified_accounts_api.dart lib/waffra_account_transaction_form.dart lib/waffra_accounts_manager_page.dart test/storage/m440_accounts_portable_v3_test.dart test/storage/m440_account_linked_entry_writer_test.dart test/storage/m447_account_recurring_atomic_test.dart
+          dart analyze lib/storage/waffra_accounts_portable_backup_v3.dart lib/storage/waffra_accounts_repository.dart lib/storage/waffra_accounts_schema.dart lib/storage/waffra_portable_encrypted_backup_exporter.dart lib/storage/waffra_unified_finance_writer.dart lib/storage/waffra_verified_accounts_api.dart lib/waffra_account_transaction_form.dart lib/waffra_accounts_manager_page.dart test/storage/m440_accounts_portable_v3_test.dart test/storage/m440_account_linked_entry_writer_test.dart test/storage/m447_live_recurring_account_binding_test.dart test/storage/m447_account_recurring_atomic_test.dart
       - name: Verify bank-SMS account selection and source isolation
         run: python3 -m unittest discover -s test/qa -p 'm447_verified_sms_account_linking_test.py' -v
       - name: Run atomic SQLCipher accounts, SMS and V3 backup regression
         run: |
-          flutter test test/storage/m440_accounts_repository_test.dart test/storage/m440_account_linked_entry_writer_test.dart test/storage/m440_accounts_backup_guard_test.dart test/storage/m440_accounts_migration_preview_test.dart test/storage/m440_accounts_portable_v3_test.dart test/m440_account_transaction_form_test.dart test/storage/m447_account_recurring_atomic_test.dart
+          flutter test test/storage/m440_accounts_repository_test.dart test/storage/m440_account_linked_entry_writer_test.dart test/storage/m440_accounts_backup_guard_test.dart test/storage/m440_accounts_migration_preview_test.dart test/storage/m440_accounts_portable_v3_test.dart test/storage/m447_live_recurring_account_binding_test.dart test/m440_account_transaction_form_test.dart test/storage/m447_account_recurring_atomic_test.dart
