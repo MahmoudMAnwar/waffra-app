@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -11,6 +12,7 @@ import 'package:waffra/storage/waffra_fresh_encrypted_vault_bootstrap.dart';
 import 'package:waffra/storage/waffra_portable_backup_v2.dart';
 import 'package:waffra/storage/waffra_portable_encrypted_backup_exporter.dart';
 import 'package:waffra/storage/waffra_verified_active_accounts_restore.dart';
+import 'package:waffra/waffra_secure_backup.dart';
 
 void main(){
  late Directory dir;
@@ -122,4 +124,29 @@ void main(){
    "SELECT count(*) AS n FROM fresh_finance_settings").getSingle())
    .read<int>('n'),1);
  });
+ test('previous V3 archive lacking optional account context restores empty links',()async{
+  final original=await archives();
+  final decoded=jsonDecode(await WaffraSecureBackup.decrypt(
+   original.incoming,pass)) as Map<String,dynamic>;
+  decoded.remove('accountContextV1');
+  final olderArchive=await WaffraSecureBackup.encryptUserBackup(
+   jsonEncode(decoded),pass);
+  final backward=(incoming:olderArchive,rescue:original.rescue,
+   checksum:original.checksum);
+  expect((await apply(backward)).transactionCount,0);
+  expect(await balances(),{'new-account':300000});
+ });
+
+ test('unarchived typed SMS fingerprint prevents data loss on restore',()async{
+  final proof=await archives();
+  await live.customStatement(
+   'INSERT INTO fresh_finance_sms_hashes(message_hash) VALUES (?)',
+   ['c'*64]);
+  await expectLater(apply(proof),throwsA(isA<StateError>()));
+  expect(await balances(),{'old-account':100000});
+  expect((await live.customSelect(
+   'SELECT count(*) AS n FROM fresh_finance_sms_hashes').getSingle())
+    .read<int>('n'),1);
+ });
+
 }
