@@ -4099,21 +4099,51 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if(smsHashes.contains(bankSmsHash(body))){
      await WaffraAutoSms.acknowledge([id]);
      if(mounted&&_smsRuleOwnerKey.isNotEmpty){
-      final wantRule=await showWaffraDialog<bool>(context:context,
-       builder:(dialog)=>AlertDialog(
-        title:WaffraText(waffraIsEnglish?
-         'Create a rule for similar messages?':
-         'تحب ننشئ قاعدة للرسائل المشابهة؟'),
-        content:WaffraText(waffraIsEnglish?
-         'Select suggested keywords, type and category.':
-         'اختار الكلمات المقترحة ونوع العملية والقسم.'),
-        actions:[
-         TextButton(onPressed:()=>Navigator.pop(dialog,false),
-          child:WaffraText(waffraIsEnglish?'Not now':'مش دلوقتي')),
-         FilledButton(onPressed:()=>Navigator.pop(dialog,true),
-          child:WaffraText(waffraIsEnglish?'Create rule':'إنشاء قاعدة')),
-        ]));
-      if(wantRule==true&&mounted)await _openSmsRules(seedMessage:body);
+      // Once a trusted matching rule already exists, never ask to create
+      // that rule again. This does not authorize a balance write by itself.
+      var existingRule=false;
+      try{
+       final savedRules=await const WaffraSmsLocalRuleStore()
+        .read(_smsRuleOwnerKey);
+       final known=WaffraSmsLocalRules.resolve(
+        body:body,sender:sender,
+        bankKind:WaffraBankSmsFactsParser.parse(body).kind,
+        custom:savedRules);
+       existingRule=known!=null &&
+        // Generic "purchase" and "payment" don't establish a useful
+        // learned merchant rule. Still offer specific classification.
+        known.id!='builtin_purchase'&&known.id!='builtin_payment';
+      }catch(_){
+       // A corrupt encrypted rule store is not an empty rules list.
+       // Preserve the financial transaction and alert the owner instead.
+       if(mounted)snack(context,waffraIsEnglish?
+        'Could not verify your saved rules. No rule was changed.':
+        'تعذر التحقق من القواعد المحفوظة. لم يتم تغيير أي قاعدة.',
+        isError:true);
+       return;
+      }
+      if(!existingRule&&mounted){
+       await showWaffraDialog<void>(context:context,
+        barrierDismissible:false,
+        builder:(dialog)=>PopScope(
+         canPop:false,
+         child:AlertDialog(
+          title:WaffraText(waffraIsEnglish?
+           'Create a rule for this new SMS format':
+           'إنشاء قاعدة لصيغة الرسالة الجديدة'),
+          content:WaffraText(waffraIsEnglish?
+           'Choose matching keywords, transaction type and category. '
+           'Existing matching rules are reused automatically.':
+           'اختار الكلمات المفتاحية ونوع العملية والقسم. '
+           'القواعد المطابقة الموجودة بنستخدمها تلقائيًا بدون سؤالك مرة تانية.'),
+          actions:[
+           FilledButton(
+            key:const Key('waffra-new-sms-create-rule-required'),
+            onPressed:()=>Navigator.pop(dialog),
+            child:WaffraText(waffraIsEnglish?'Create rule':'إنشاء قاعدة')),
+          ])));
+       if(mounted)await _openSmsRules(seedMessage:body);
+      }
      }
     }
    }
