@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:waffra/main.dart' show defaultCategories;
+import 'package:waffra/storage/waffra_fresh_home_catalog_recovery.dart';
 import 'package:waffra/storage/waffra_home_finance_persistence.dart';
 import 'package:waffra/storage/waffra_production_finance_authority_binding.dart';
 import 'package:waffra/storage/waffra_production_finance_routing_gate.dart';
@@ -16,8 +18,19 @@ void main() {
     final home = await bind(WaffraFinanceRoute.appStartup);
     try {
       expect(home.encrypted,isTrue);
-      final source = await home.authority.load(route:WaffraFinanceRoute.dashboardRead);
-      expect(jsonDecode(source.ledgerRaw ?? '[]'),isEmpty);
+      // Reproduce the *actual* first-Home startup that was missing in M440.
+      // Only a verified, real Android fresh SQLCipher origin may add the two
+      // absent defaults; neither the source key nor user finance is replaced.
+      final catalog = jsonEncode(
+        defaultCategories().map((category) => category.toJson()).toList(),
+      );
+      final source = await WaffraFreshHomeCatalogRecovery.load(
+        authority: home.authority,
+        defaultCategoriesJson: catalog,
+      );
+      expect(source.ledgerRaw, '[]');
+      expect(source.finance.getString('waffra_categories_v24'), catalog);
+      expect(jsonDecode(source.ledgerRaw!), isEmpty);
     } finally { await home.close(); }
     final widget = await bind(WaffraFinanceRoute.widgetStartup);
     try {
@@ -35,7 +48,13 @@ void main() {
       final row = (jsonDecode(read.ledgerRaw!) as List).single as Map;
       expect(row['id'],'fresh-widget');
       expect(row['amount'],12.34);
+      final catalogAfter = read.finance.getString('waffra_categories_v24');
+      expect(catalogAfter, isNotNull);
+      expect((jsonDecode(catalogAfter!) as List).length,
+        defaultCategories().length);
       expect((await SharedPreferences.getInstance()).containsKey('entries'),isFalse);
+      expect((await SharedPreferences.getInstance())
+        .containsKey('waffra_categories_v24'),isFalse);
     } finally { await reopened.close(); }
   });
 }
