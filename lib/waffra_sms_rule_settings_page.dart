@@ -8,12 +8,15 @@ class WaffraSmsRuleSettingsPage extends StatefulWidget {
  const WaffraSmsRuleSettingsPage({
   super.key,required this.english,required this.ownerKey,
   required this.scannedMessages,required this.incomeCategories,
-  required this.expenseCategories,this.seedMessage,
+  required this.expenseCategories,this.seedMessage,this.seedKind,
+  this.seedSender='',this.seedAccountSuffix='',this.bankAccounts=const {},
  });
  final bool english;
  final String ownerKey;
  final List<String> scannedMessages,incomeCategories,expenseCategories;
- final String? seedMessage;
+ final String? seedMessage,seedKind;
+ final String seedSender,seedAccountSuffix;
+ final Map<String,String> bankAccounts;
  @override State<WaffraSmsRuleSettingsPage> createState()=>_WaffraSmsRuleSettingsPageState();
 }
 
@@ -33,7 +36,7 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
    setState((){saved=rules;loading=false;error=null;});
    if(widget.seedMessage!=null){
     WidgetsBinding.instance.addPostFrameCallback((_){
-     if(mounted)_edit(seed:widget.seedMessage);
+     if(mounted)_edit(seed:widget.seedMessage,kindHint:widget.seedKind);
     });
    }
   }catch(_){
@@ -44,16 +47,18 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
    });
   }
  }
- Future<void> _persist(List<WaffraSmsLocalRule> next)async{
-  if(busy||error!=null)return;
+ Future<bool> _persist(List<WaffraSmsLocalRule> next)async{
+  if(busy||error!=null)return false;
   setState(()=>busy=true);
   try{
    await store.write(widget.ownerKey,next);
    if(mounted)setState(()=>saved=next);
+   return true;
   }catch(_){
    if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(
     content:Text(widget.english?'Could not save rules securely. Nothing changed.':
      'تعذر حفظ القواعد بأمان. لم يتغير شيء.')));
+   return false;
   }finally{if(mounted)setState(()=>busy=false);}
  }
  Future<void> _remove(WaffraSmsLocalRule rule)async{
@@ -68,13 +73,18 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
    ]));
   if(ok==true)await _persist(saved.where((r)=>r.id!=rule.id).toList());
  }
- Future<void> _edit({WaffraSmsLocalRule? existing,String? seed})async{
+ Future<void> _edit({WaffraSmsLocalRule? existing,String? seed,String? kindHint})async{
   if(busy||error!=null)return;
   final name=TextEditingController(text:existing?.name??'');
   final customKeyword=TextEditingController();
   final search=TextEditingController();
-  final sender=TextEditingController(text:existing?.sender??'');
-  var income=existing?.income??false;
+  final sender=TextEditingController(text:existing?.sender??widget.seedSender);
+  final suffix=TextEditingController(text:existing?.accountSuffix??
+   widget.seedAccountSuffix);
+  var kind=existing?.resolvedKind??kindHint??'expense';
+  var income=kind=='income';
+  var autoPost=existing?.autoPost??false;
+  var accountId=existing?.accountId??'';
   var all=existing?.matchAll??true;
   var category=existing?.category;
   var searchQuery='';
@@ -88,7 +98,7 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
   if(existing==null&&seedChoices.isNotEmpty)selected.add(seedChoices.first);
   Future<void> addKeyword(StateSetter update)async{
    final keyword=customKeyword.text.trim();
-   if(!WaffraSmsLocalRules.safeKeyword(keyword)){
+   if(!WaffraSmsLocalRules.safeRuleKeyword(keyword,kind)){
     update(()=>validation=widget.english?
      'Choose a safe word without numbers or account details.':
      'اكتب كلمة واضحة بدون أرقام أو تفاصيل الحساب.');
@@ -104,14 +114,17 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
    final result=await showModalBottomSheet<WaffraSmsLocalRule>(
     context:context,isScrollControlled:true,showDragHandle:true,
     builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh){
-     final categories=income?widget.incomeCategories:widget.expenseCategories;
+     final financial=kind=='income'||kind=='expense';
+     final categories=financial?
+      (income?widget.incomeCategories:widget.expenseCategories):
+      const <String>[];
      if(category!=null&&!categories.contains(category))category=null;
      final visible=candidates.where((item)=>WaffraSmsLocalRules.normalized(item)
       .contains(WaffraSmsLocalRules.normalized(searchQuery))).take(60).toList();
      final previewRule=WaffraSmsLocalRule(
       id:'preview',name:name.text.trim().isEmpty?'Preview':name.text,
-      keywords:selected.toList(),income:income,category:category??'Preview',
-      matchAll:all,sender:sender.text.trim());
+      keywords:selected.toList(),income:income,category:category??'',
+      kind:kind,matchAll:all,sender:sender.text.trim());
      final matches=widget.scannedMessages.where((sms)=>
       WaffraSmsLocalRules.matches(previewRule,sms)).length;
      return SafeArea(top:false,child:Padding(
@@ -127,30 +140,76 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
           labelText:widget.english?'Rule name':'اسم القاعدة',
           border:const OutlineInputBorder())),
         const SizedBox(height:12),
-        Text(widget.english?'Operation type':'نوع العملية'),
+        Text(widget.english?'Rule type':'نوع القاعدة'),
         const SizedBox(height:6),
-        SegmentedButton<bool>(
-         segments:[
-          ButtonSegment(value:true,label:Text(widget.english?'Income':'دخل')),
-          ButtonSegment(value:false,label:Text(widget.english?'Expense':'مصروف')),
-         ],
-         selected:{income},onSelectionChanged:(set)=>refresh((){income=set.first;category=null;})),
+        Wrap(spacing:7,runSpacing:7,children:[
+         for(final option in const <String>['income','expense','transfer','excluded'])
+          ChoiceChip(
+           label:Text(option=='income'?(widget.english?'Income':'دخل'):
+            option=='expense'?(widget.english?'Expense':'مصروف'):
+            option=='transfer'?(widget.english?'Transfer':'تحويل'):
+            (widget.english?'Excluded':'مستثناة')),
+           selected:kind==option,
+           onSelected:(_)=>refresh((){
+            kind=option;income=option=='income';
+            category=null;autoPost=false;accountId='';
+           })),
+        ]),
         const SizedBox(height:12),
-        DropdownButtonFormField<String>(
-         key:ValueKey('sms-rule-category-$income'),
-         initialValue:category,
-         isExpanded:true,
-         decoration:InputDecoration(labelText:widget.english?
-          'Main / subcategory':'القسم الرئيسي والفرعي',
-          border:const OutlineInputBorder()),
-         items:categories.map((c)=>DropdownMenuItem(
-          value:c,child:Text(c,overflow:TextOverflow.ellipsis))).toList(),
-         onChanged:(value)=>refresh(()=>category=value)),
-        const SizedBox(height:12),
+        if(financial)...[
+         DropdownButtonFormField<String>(
+          key:ValueKey('sms-rule-category-$kind'),
+          initialValue:category,
+          isExpanded:true,
+          decoration:InputDecoration(labelText:widget.english?
+           'Main / subcategory':'القسم الرئيسي والفرعي',
+           border:const OutlineInputBorder()),
+          items:categories.map((c)=>DropdownMenuItem(
+           value:c,child:Text(c,overflow:TextOverflow.ellipsis))).toList(),
+          onChanged:(value)=>refresh(()=>category=value)),
+         const SizedBox(height:12),
+        ],
         TextField(controller:sender,
          decoration:InputDecoration(labelText:widget.english?
           'Bank sender (optional)':'المرسل (اختياري)',
           border:const OutlineInputBorder())),
+        if(financial)...[
+         SwitchListTile.adaptive(
+          key:const Key('waffra-sms-rule-auto-post'),
+          contentPadding:EdgeInsets.zero,
+          value:autoPost,
+          title:Text(widget.english?
+           'Automatically record future verified matches':
+           'سجّل العمليات المطابقة والموثّقة القادمة تلقائيًا'),
+          subtitle:Text(widget.english?
+           'Only with a confirmed bank account, exact SMS sender and '
+           'matching 4-digit account suffix. Otherwise review manually.':
+           'فقط عند تطابق البنك وآخر ٤ أرقام مع حساب مالي مؤكد. '
+           'أي اختلاف يرجع للمراجعة.'),
+          onChanged:widget.bankAccounts.isEmpty?null:
+           (v)=>refresh(()=>autoPost=v)),
+         if(autoPost)...[
+          DropdownButtonFormField<String>(
+           key:ValueKey('waffra-sms-rule-account-$accountId'),
+           initialValue:widget.bankAccounts.containsKey(accountId)?
+            accountId:null,
+           isExpanded:true,
+           decoration:InputDecoration(
+            labelText:widget.english?'Verified account':'الحساب المالي الموثّق',
+            border:const OutlineInputBorder()),
+           items:widget.bankAccounts.entries.map((pair)=>DropdownMenuItem(
+            value:pair.key,child:Text(pair.value,overflow:TextOverflow.ellipsis))).toList(),
+           onChanged:(value)=>refresh(()=>accountId=value??'')),
+          const SizedBox(height:10),
+          TextField(
+           controller:suffix,keyboardType:TextInputType.number,
+           maxLength:4,
+           decoration:InputDecoration(
+            labelText:widget.english?
+             'Last four bank account digits':'آخر ٤ أرقام من حساب البنك',
+            border:const OutlineInputBorder())),
+         ],
+        ],
         const SizedBox(height:12),
         Text(widget.english?'Choose keywords from scanned messages':
          'اختار الكلمات المفتاحية من الرسائل الممسوحة'),
@@ -207,10 +266,12 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
           final rule=WaffraSmsLocalRule(
            id:existing?.id??'custom_${DateTime.now().microsecondsSinceEpoch}',
            name:name.text.trim(),keywords:selected.toList(),
-           income:income,category:category??'',
+           kind:kind,income:income,category:financial?(category??''):'',
            matchAll:all,sender:sender.text.trim(),
+           autoPost:autoPost&&financial,accountId:autoPost?accountId:'',
+           accountSuffix:autoPost?suffix.text.trim():'',
           );
-          if(categories.isEmpty||category==null){
+          if(financial&&(categories.isEmpty||category==null)){
            refresh(()=>validation=widget.english?
             'Select a valid category.':'اختار قسم رئيسي وفرعي صحيح.');
            return;
@@ -234,9 +295,13 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
     for(final rule in saved)if(rule.id!=result.id)rule,
     result,
    ];
-   await _persist(next);
+   final savedSuccessfully=await _persist(next);
+   if(savedSuccessfully&&seed!=null&&mounted){
+    Navigator.pop(context,true); // Explicit review-flow rule created.
+   }
   }finally{
    name.dispose();customKeyword.dispose();search.dispose();sender.dispose();
+   suffix.dispose();
   }
  }
  @override Widget build(BuildContext context)=>Scaffold(
@@ -264,7 +329,7 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
       'لسه ما أضفتش قواعد. اضغط إضافة قاعدة واختار كلمات من الرسائل الممسوحة.')),
     for(final rule in saved)Card(child:ListTile(
      title:Text(rule.name),
-     subtitle:Text('${rule.income?(widget.english?'Income':'دخل'):(widget.english?'Expense':'مصروف')} • ${rule.category}\n${rule.keywords.join('، ')}'),
+     subtitle:Text('${rule.resolvedKind} • ${rule.category}\n${rule.keywords.join('، ')}'),
      isThreeLine:true,
      onTap:()=>_edit(existing:rule),
      trailing:IconButton(
