@@ -465,6 +465,7 @@ class WaffraVerifiedEncryptedFinanceBridge {
     required Map<String, Object?> record,
     required String proposedPostponedJson,
     required bool userConfirmed,
+    String? selectedAccountId,
   }) async {
     if (!experimentalEnabled || !userConfirmed) {
       throw StateError('An explicitly confirmed encrypted payment is required.');
@@ -611,6 +612,20 @@ class WaffraVerifiedEncryptedFinanceBridge {
                 jsonEncode(jsonDecode(row.read<String>('source_json'))))) {
           throw StateError('Recurring payment SQL ledger is out of sync.');
         }
+        if(selectedAccountId!=null){
+          if(selectedAccountId.trim().isEmpty||selectedAccountId.length>128){
+            throw StateError('Invalid selected recurring finance account.');
+          }
+          await WaffraAccountsSchema.requireReady(snapshot.store);
+          final chosen=await snapshot.store.customSelect(
+            'SELECT archived,currency FROM fresh_finance_money_accounts WHERE account_id=?',
+            variables:[Variable.withString(selectedAccountId)],
+          ).get();
+          if(chosen.length!=1||chosen.single.read<int>('archived')!=0||
+             chosen.single.read<String>('currency')!='SAR'){
+            throw StateError('Recurring account is missing, archived or not SAR.');
+          }
+        }
         await snapshot.store.customStatement(
           'INSERT INTO fresh_finance_entries '
           '(entry_id,title,category_snapshot,amount_minor,is_income,'
@@ -621,6 +636,13 @@ class WaffraVerifiedEncryptedFinanceBridge {
             frozen['date'], jsonEncode(frozen),
           ],
         );
+        if(selectedAccountId!=null){
+          await snapshot.store.customStatement(
+            'INSERT INTO fresh_finance_account_entry_links '
+            '(entry_id,account_id,confirmed_iso) VALUES (?,?,?)',
+            [id,selectedAccountId,DateTime.now().toIso8601String()],
+          );
+        }
         final next = Map<String, Object?>.from(current.values)
           ..['entries'] = jsonEncode([frozen, ...entries])
           ..['waffra_recurring_postponed_v1'] = proposedPostponedJson;
