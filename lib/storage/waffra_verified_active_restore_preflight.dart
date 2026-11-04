@@ -96,6 +96,14 @@ class WaffraVerifiedActiveRestorePreflight {
             encryptedArchive: encryptedArchive, password: password,
           )
         : null;
+    if (accounts != null && accounts.history == null) {
+      // Old V3 envelopes without relational finance history cannot prove
+      // that goal wallets, budgets and recurring records survived cutover.
+      // Reject before biometric approval or replacing a live source.
+      throw StateError('This V3 archive has no verified finance history. '
+          'Use the original protected archive on a compatible version, '
+          'then re-export with the complete finance history.');
+    }
     final preview = await WaffraPortableBackupV2.verifyAndPreview(
       encryptedArchive: accounts?.encryptedV2 ?? encryptedArchive,
       password: password,
