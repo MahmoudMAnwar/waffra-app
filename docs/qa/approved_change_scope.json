@@ -21,7 +21,7 @@
     "lib/main.dart": [
       {
         "start": "import 'storage/waffra_verified_finance_authority.dart';\n",
-        "end": "import 'storage/waffra_production_finance_authority_binding.dart';\n"
+        "end": "import 'storage/waffra_fresh_finance_modules_repository.dart';\n"
       },
       {
         "start": " Future<void> _refreshFromVerifiedFinance()async {",
