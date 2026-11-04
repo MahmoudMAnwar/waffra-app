@@ -8,6 +8,7 @@ import 'waffra_accounts_repository.dart';
 import 'waffra_fresh_finance_domain_repository.dart';
 import 'waffra_verified_goal_due_snapshot_writer.dart';
 import 'waffra_verified_goal_funding_writer.dart';
+import 'waffra_verified_active_accounts_restore.dart';
 import 'waffra_encrypted_transaction_recycle.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -96,6 +97,38 @@ class WaffraVerifiedEncryptedFinanceBridge {
     if (recovery != WaffraCutoverRecoveryStatus.encryptedReady) {
       throw StateError('SQLCipher activation witness needs reconciliation.');
     }
+  }
+
+  /// Restore is permitted ONLY on an already active verified encrypted vault.
+  /// Caller must first cold-attest the new archive, obtain explicit biometric
+  /// consent and save the old vault's encrypted rescue outside the app.
+  Future<WaffraVerifiedAccountsRestoreReceipt> applyVerifiedV3Restore({
+    required WaffraEncryptedHomeWitness baseline,
+    required String encryptedArchive,required String password,
+    required String savedRescueArchive,required String rescuePassword,
+    required String preflightChecksum,required bool userConfirmed,
+    required bool externallySavedRescueConfirmed,
+  }) async {
+    if(!experimentalEnabled||!userConfirmed||
+       !externallySavedRescueConfirmed) {
+      throw StateError('Verified restore needs an external rescue and approval.');
+    }
+    return WaffraExperimentalWriterGate(
+      disposableDirectory:writerDirectory,experimentalEnabled:true,
+    ).withExclusiveAccess(()async{
+      await _requireActivatedUnderLock();
+      return WaffraVerifiedActiveAccountsRestore(
+        store:snapshot.store,snapshot:snapshot,experimentalEnabled:true,
+      ).restore(
+        encryptedArchive:encryptedArchive,password:password,
+        savedRescueArchive:savedRescueArchive,
+        rescuePassword:rescuePassword,
+        expectedGeneration:baseline.generation,
+        expectedDigest:baseline.digest,
+        preflightChecksum:preflightChecksum,userConfirmed:true,
+        externallySavedRescueConfirmed:true,
+      );
+    });
   }
 
   Future<String> exportPortableBackup(String password) =>
