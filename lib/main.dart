@@ -3602,7 +3602,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final facts=WaffraBankSmsFactsParser.parse(body);
   final special=WaffraSmsLocalRules.resolveSpecial(
    body:body,sender:sender is String?sender:'',
-   bankKind:facts.kind,custom:custom);
+   bankKind:item['sensitiveOtp']==true?
+    WaffraBankOperationKind.uncertain:facts.kind,
+   custom:custom);
   if(special!=null)return <String,Object?>{
    'rule':special.name,'kind':special.resolvedKind,
    'category':special.category,'income':false,
@@ -4144,7 +4146,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      final existing=await const WaffraSmsLocalRuleStore()
       .read(_smsRuleOwnerKey);
      final match=WaffraSmsLocalRules.resolveSpecial(
-      body:body,sender:sender,bankKind:facts.kind,custom:existing);
+      body:body,sender:sender,
+      bankKind:sensitive?WaffraBankOperationKind.uncertain:facts.kind,
+      custom:existing);
      if(match==null&&mounted){
       await _openSmsRules(seedMessage:body,seedKind:kind,seedSender:sender);
      }
@@ -4152,7 +4156,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      final saved=await const WaffraSmsLocalRuleStore()
       .read(_smsRuleOwnerKey);
      final after=WaffraSmsLocalRules.resolveSpecial(
-      body:body,sender:sender,bankKind:facts.kind,custom:saved);
+      body:body,sender:sender,
+      bankKind:sensitive?WaffraBankOperationKind.uncertain:facts.kind,
+      custom:saved);
      if(after!=null&&after.resolvedKind==kind){
       if(kind=='excluded'){
        await WaffraAutoSms.acknowledge([id]);
