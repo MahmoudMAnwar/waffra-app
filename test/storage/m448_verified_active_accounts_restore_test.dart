@@ -141,7 +141,7 @@ void main(){
   final proof=await archives();
   await live.customStatement(
    'INSERT INTO fresh_finance_sms_hashes(message_hash) VALUES (?)',
-   ['c'*64]);
+   [List.filled(64,'c').join()]);
   await expectLater(apply(proof),throwsA(isA<StateError>()));
   expect(await balances(),{'old-account':100000});
   expect((await live.customSelect(
