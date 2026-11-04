@@ -109,7 +109,7 @@ void main() {
     test('pending activation refuses account profile write', () async {
       await install();
       final prefs=await SharedPreferences.getInstance();
-      await prefs.setString('waffra_sqlcipher_cutover_pending','malformed');
+      await prefs.setString('waffra_finance_cutover_pending_v1','malformed');
       await expectLater(saveName('must not save'),throwsStateError);
     });
 
