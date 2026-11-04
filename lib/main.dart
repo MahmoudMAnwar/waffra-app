@@ -3692,19 +3692,56 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // never authorizes processing a specific message off-device.
   // The explicit ambiguous-message action owns cloud requests.
  }
- Future<void> _stageCloudReviewSuggestions(
-  List<Map<String,Object?>> candidates)async{
-  if(_cloudReviewStageRunning)return;
+ Future<void> _analyzeAmbiguousSmsOnDemand(
+  Map<String,Object?> selected)async{
+  if(_cloudReviewStageRunning||!mounted||selected['id'] is! String||
+     selected['body'] is! String)return;
+  final accepted=await showWaffraDialog<bool>(context:context,
+   builder:(dialog)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?
+     'Analyze this unclear message with AI?':
+     'تحليل الرسالة الغامضة بالذكاء الاصطناعي؟'),
+    content:WaffraText(waffraIsEnglish?
+     'The financial text will be redacted locally before sending it to '
+     'OpenRouter through an external service. Processing may occur outside '
+     'Saudi Arabia. Only this message is sent, and nothing is saved as money.':
+     'هنحجب المعرفات الحساسة من الرسالة محليًا قبل إرسال بياناتها المالية '
+     'إلى OpenRouter عبر خدمة خارجية. ممكن تتم المعالجة خارج السعودية. '
+     'هنرسل الرسالة دي فقط، ومش هنسجل أي مبلغ تلقائيًا.'),
+    actions:[
+     TextButton(onPressed:()=>Navigator.pop(dialog,false),
+      child:WaffraText(waffraIsEnglish?'Review myself':'أراجع بنفسي')),
+     FilledButton(onPressed:()=>Navigator.pop(dialog,true),
+      child:WaffraText(waffraIsEnglish?'Send this message':'أرسل هذه الرسالة')),
+    ]));
+  if(accepted!=true||!mounted)return;
   _cloudReviewStageRunning=true;
   try{
+   if(!await WaffraSmsCloudService.setConsent(true)){
+    if(mounted)snack(context,waffraIsEnglish?
+     'Cloud analysis is unavailable. Review the message manually.':
+     'التحليل السحابي غير متاح. راجع الرسالة بنفسك.',isError:true);
+    return;
+   }
    final staged=await WaffraSmsCloudReviewAnalyzer.stagePending(
-    candidates,maxPerRun:1,explicitlyRequested:true);
-   if(staged>0&&mounted)unawaited(_refreshAutoSmsInbox());
+    [selected],maxPerRun:1,explicitlyRequested:true);
+   if(!mounted)return;
+   if(staged==0){
+    snack(context,waffraIsEnglish?
+     'No AI suggestion returned. The message remains awaiting review.':
+     'ما رجعش اقتراح من الذكاء الاصطناعي. الرسالة لسه للمراجعة.',
+     isError:true);
+   }else{
+    snackSuccess(context,waffraIsEnglish?
+     'AI suggestion is ready. Verify it before saving.':
+     'اقتراح الذكاء الاصطناعي جاهز. راجعه قبل الحفظ.');
+   }
+   await _refreshAutoSmsInbox();
   }catch(_){
-   // Retain encrypted candidates. Cloud is never a finance authority.
-  }finally{
-   _cloudReviewStageRunning=false;
-  }
+   if(mounted)snack(context,waffraIsEnglish?
+    'Could not analyze the message. Manual review is still available.':
+    'تعذر تحليل الرسالة. المراجعة اليدوية متاحة.',isError:true);
+  }finally{_cloudReviewStageRunning=false;}
  }
  Future<void> _scanPreviousBankSmsFromSettings()async{
   if(!await WaffraAutoSms.enabled()){
