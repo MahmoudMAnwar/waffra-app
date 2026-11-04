@@ -63,8 +63,24 @@
         "end": "    private fun key(): SecretKey {"
       },
       {
+        "start": "    fun offer(context: Context, sender: String, body: String, at: Long,",
+        "end": "    fun pending(context: Context): List<Map<String, Any>> = synchronized(mutex) {"
+      },
+      {
         "start": "    fun pending(context: Context): List<Map<String, Any>> = synchronized(mutex) {",
         "end": "    /** Atomic per-SMS request claim shared by foreground and WorkManager."
+      },
+      {
+        "start": "    fun acknowledge(context: Context, ids: Set<String>): Boolean =",
+        "end": "    /** Resumable history import:"
+      },
+      {
+        "start": "    fun importConsentMonth(context: Context, maxRead: Int = 500): Int {",
+        "end": "    /** Claim each review notification once; history never floods the shade. */"
+      },
+      {
+        "start": "    fun claimReviewNotification(context: Context, fingerprint: String): Boolean =",
+        "end": null
       }
     ],
     "native/WaffraMainActivity.kt": [
