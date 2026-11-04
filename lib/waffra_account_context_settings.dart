@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'main.dart' show snack, snackSuccess;
 
 import 'storage/waffra_account_context_repository.dart';
 import 'storage/waffra_accounts_repository.dart';
@@ -26,9 +27,10 @@ class _WaffraAccountContextSettingsState
  @override
  void initState(){super.initState();_reload();}
  void _reload(){templates=widget.api.recurringAccountTemplates();}
- void _notify(String ar,String en){
-  if(mounted)ScaffoldMessenger.of(context).showSnackBar(
-   SnackBar(content:Text(t(ar,en))));
+ void _notify(String ar,String en,{bool success=false}){
+  if(!mounted)return;
+  final text=t(ar,en);
+  if(success){snackSuccess(context,text);}else{snack(context,text);}
  }
 
  Future<void> _editRecurring(WaffraRecurringAccountTemplate item)async{
@@ -71,7 +73,7 @@ class _WaffraAccountContextSettingsState
     accountId:selection=='none'?null:selection,
     userConfirmed:true);
    if(mounted)setState(_reload);
-   _notify('تم تحديث الحساب للدفعات القادمة.','Future payment default saved.');
+   _notify('تم تحديث الحساب للدفعات القادمة.','Future payment default saved.',success:true);
   }catch(_){
    _notify('تعذر حفظ حساب المتكررة. راجع الحسابات.',
     'Could not save recurring account. Refresh and retry.');
@@ -133,7 +135,7 @@ class _WaffraAccountContextSettingsState
    await widget.api.registerVerifiedBankSuffix(
     accountId:result[0],lastFour:result[1],userConfirmed:true);
    _notify('تم حفظ ربط الرسائل البنكية داخل قاعدة البيانات المشفرة.',
-    'Verified bank mapping securely saved.');
+    'Verified bank mapping securely saved.',success:true);
   }catch(_){
    _notify('تعذر تأكيد الحساب البنكي. راجع البيانات وحاول مرة أخرى.',
     'Bank mapping could not be verified. Refresh and retry.');
