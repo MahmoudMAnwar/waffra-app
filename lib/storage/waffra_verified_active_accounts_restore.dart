@@ -106,7 +106,11 @@ class WaffraVerifiedActiveAccountsRestore {
     "SELECT name FROM sqlite_master WHERE type='table' "
     "AND name LIKE 'fresh_finance_%'").get();
    final present=<String>{for(final row in all)row.read<String>('name')};
-   if(!present.containsAll(_permanent.intersection(present))||
+   if(!present.containsAll(const <String>{
+       'fresh_finance_meta','fresh_finance_domain_revision',
+       'fresh_finance_account_revision',
+       'fresh_finance_account_context_revision',
+      })||
       !present.contains('fresh_finance_snapshot_state')) {
     throw StateError('Required finance tables are missing.');
    }
@@ -152,8 +156,10 @@ class WaffraVerifiedActiveAccountsRestore {
     .restoreToEmptyEncryptedVault(
      encryptedArchive:encryptedArchive,password:password,
      disposableStore:store,userConfirmed:true,experimentalEnabled:true);
+   final restoredRaw=preview.financialSnapshot['entries'];
+   final verifiedEntries=restoredRaw==null?<Object>[]:jsonDecode(restoredRaw as String) as List;
    if(restored.sourceChecksum!=preview.sourceChecksum||
-      restored.transactionCount!=preview.transactionCount||
+      restored.transactionCount!=verifiedEntries.length||
       restored.receiptCount!=preview.receiptCount) {
     throw StateError('Restored finance and receipt proof differs.');
    }
