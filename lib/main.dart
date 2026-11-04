@@ -90,6 +90,7 @@ import 'storage/waffra_authoritative_widget_balance.dart';
 import 'storage/waffra_live_legacy_finance_guard.dart';
 import 'storage/waffra_production_finance_source_guard.dart';
 import 'storage/waffra_fresh_install_source.dart';
+import 'storage/waffra_fresh_home_catalog_recovery.dart';
 import 'storage/waffra_legacy_finance_writer_coordinator.dart';
 import 'storage/waffra_live_account_write_authority.dart';
 import 'storage/waffra_home_finance_persistence.dart';
@@ -4139,7 +4140,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Future<void> load()async {
   await _ensureFinanceBound();
   final p=await SharedPreferences.getInstance();
-  final loadedFinance=await _financeAuthority.load(route:WaffraFinanceRoute.dashboardRead);
+  // An authenticated fresh SQLCipher vault is born with an empty snapshot.
+  // Add only absent first-run ledger and category fields via the existing
+  // atomic SQLCipher writer before displaying Home; never use legacy fallback.
+  final loadedFinance=await WaffraFreshHomeCatalogRecovery.load(
+   authority:_financeAuthority,
+   defaultCategoriesJson:jsonEncode(
+    defaultCategories().map((category)=>category.toJson()).toList()),
+  );
   _lastFinanceAuthorityRead=loadedFinance;
   final financeView=loadedFinance.finance;
   financeView.requireIntegrity();
