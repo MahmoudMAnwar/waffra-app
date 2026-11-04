@@ -126,4 +126,59 @@ void main(){
    encryptedArchive:encrypted,password:'incorrect-password'),
    throwsA(isA<Exception>()));
  });
+
+ test('V3 preserves every finance history table and rejects orphan links atomically',() async {
+  await seed();
+  final fixture = <String, List<Object?>>{
+    'fresh_finance_categories': ['cat','Food',null,0,0,'{}'],
+    'fresh_finance_goals': ['goal','Rent',200000,3000,'{}'],
+    'fresh_finance_recurring': ['monthly',5000,0,1,'{}'],
+    'fresh_finance_standalone_budgets': ['budget','Home',30000,0,60,null,'2026-11-04','{}'],
+    'fresh_finance_standalone_allocations': ['a','budget','salary',5000,'2026-11-04',1],
+    'fresh_finance_named_budgets': ['named','Old budget','cat',20000,1,75,'2026-11-04','cat','{}'],
+    'fresh_finance_budget_allocations': ['b','named','salary',3000,1,'2026-11-04'],
+    'fresh_finance_goal_opening_balances': ['goal',3000,'0123456789abcdef','2026-11-04'],
+    'fresh_finance_goal_wallet_movements': ['move','goal','due_debit',3000,'due-once','salary','2026-11-04'],
+    'fresh_finance_goal_due_settlements': ['due','goal','monthly','salary',5000,3000,2000,'2026-11-04'],
+    'fresh_finance_project_wallets': ['project','Kitchen',12000,0,'2026-11-04'],
+    'fresh_finance_project_wallet_links': ['project','salary',1000],
+    'fresh_finance_confirmed_subscriptions': ['sub','Service',1000,'SAR',1,'confirmed','2026-11-04','cat'],
+    'fresh_finance_saved_scenarios': ['scenario','challenge','Savings','{}','2026-11-04'],
+    'fresh_finance_ai_threads': ['thread','Plan',1,'2026-11-04'],
+    'fresh_finance_ai_messages': ['message','thread','user','Plan','2026-11-04'],
+    'fresh_finance_price_observations': ['quote','gold','SAR',12345,'test','2026-11-04'],
+    'fresh_finance_notification_events': ['event','monthly','goal','2026-11-04','scheduled'],
+  };
+  for (final item in fixture.entries) {
+    final marks = List.filled(item.value.length, '?').join(',');
+    await db.customStatement('INSERT INTO ${item.key} VALUES ($marks)', item.value);
+  }
+  await db.customStatement("UPDATE fresh_finance_entries SET category_id='cat' WHERE entry_id='salary'");
+  final archive = await exportV3();
+  final target = WaffraEncryptedStore.openAt(
+    File('${dir.path}/history.sqlite'), key: 'distinct-history-vault-key-at-least-32-bytes');
+  try {
+    final envelope = jsonDecode(await WaffraSecureBackup.decrypt(archive,password)) as Map;
+    final history = envelope['financeHistoryV1'] as Map;
+    (history['fresh_finance_goal_wallet_movements'] as List).single['goal_id'] = 'missing';
+    final corrupt = await WaffraSecureBackup.encrypt(jsonEncode(envelope),password);
+    Future<void> restore(String data) =>
+      WaffraAccountsPortableBackupV3.restoreToEmptyEncryptedVault(
+        encryptedArchive:data,password:password,disposableStore:target,
+        userConfirmed:true,experimentalEnabled:true);
+    await expectLater(restore(corrupt),throwsA(anything));
+    await restore(archive); // The failed restore left the target reusable.
+    final linked = await target.customSelect("SELECT category_id FROM fresh_finance_entries WHERE entry_id='salary'").getSingle();
+    expect(linked.read<String>('category_id'),'cat');
+    for (final table in fixture.keys) {
+      final source = await db.customSelect('SELECT * FROM $table').getSingle();
+      final restored = await target.customSelect('SELECT * FROM $table').getSingle();
+      expect(restored.data,source.data,reason:table);
+    }
+    await expectLater(restore(archive),throwsA(anything));
+    expect((await target.customSelect('SELECT * FROM fresh_finance_goal_wallet_movements').get()).length,1);
+  } finally {
+    await target.close();
+  }
+ });
 }

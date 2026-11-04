@@ -8,6 +8,7 @@ import '../waffra_sms_fx_review.dart';
 import 'legacy_financial_snapshot.dart';
 import 'waffra_atomic_finance_snapshot.dart';
 import 'waffra_accounts_backup_guard.dart';
+import 'waffra_accounts_finance_history.dart';
 import 'waffra_accounts_portable_backup_v3.dart';
 import 'waffra_encrypted_receipt_vault.dart';
 import 'waffra_experimental_writer_gate.dart';
@@ -79,6 +80,8 @@ class WaffraPortableEncryptedBackupExporter {
       }
       if (domainMarker.isNotEmpty) {
         await WaffraFreshFinanceDomainSchema.requireReady(snapshot.store);
+      }
+      if (!includeAccounts && domainMarker.isNotEmpty) {
         for (final table in WaffraFreshFinanceDomainSchema.domainTables) {
           final row = await snapshot.store.customSelect(
             'SELECT count(*) AS n FROM ' + table,
@@ -95,6 +98,11 @@ class WaffraPortableEncryptedBackupExporter {
       // seemingly complete backup that would drop accounts and transfers.
       final capturedAccounts=includeAccounts?
         await WaffraAccountsPortableBackupV3.capture(snapshot.store):null;
+      if (includeAccounts && domainMarker.isEmpty) {
+        throw StateError('V3 requires a verified finance domain schema.');
+      }
+      final history = includeAccounts
+          ? await WaffraAccountsFinanceHistory.capture(snapshot.store) : null;
       if(!includeAccounts){
         await WaffraAccountsPortableV2Guard.refuseUnrestorableAccounts(snapshot.store);
       }
@@ -231,7 +239,7 @@ class WaffraPortableEncryptedBackupExporter {
       );
       if(capturedAccounts==null)return encryptedV2;
       return WaffraAccountsPortableBackupV3.bundle(
-       encryptedV2:encryptedV2,capturedAccounts:capturedAccounts,
+       encryptedV2:encryptedV2,capturedAccounts:capturedAccounts,history:history,
        password:password,
       );
     });

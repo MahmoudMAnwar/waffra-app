@@ -4,6 +4,7 @@ import 'package:crypto/crypto.dart';
 
 import '../waffra_secure_backup.dart';
 import 'waffra_accounts_schema.dart';
+import 'waffra_accounts_finance_history.dart';
 import 'waffra_encrypted_store.dart';
 import 'waffra_portable_backup_v2.dart';
 import 'waffra_portable_encrypted_vault_restorer.dart';
@@ -14,8 +15,9 @@ import 'waffra_portable_encrypted_vault_restorer.dart';
 class WaffraAccountsBackupV3Preview {
  const WaffraAccountsBackupV3Preview({
   required this.encryptedV2,required this.accounts,
-  required this.links,required this.transfers,
+  required this.links,required this.transfers,this.history,
  });
+ final Map<String,dynamic>? history;
  final String encryptedV2;
  final List<Map<String,Object?>> accounts,links,transfers;
 }
@@ -164,18 +166,24 @@ abstract final class WaffraAccountsPortableBackupV3 {
  static Future<String> bundle({
   required String encryptedV2,
   required Map<String,Object?> capturedAccounts,
+  Map<String,Object?>? history,
   required String password,
  })async{
   final accounts=_rows(capturedAccounts['accounts'],_accountFields,maxAccounts);
   final links=_rows(capturedAccounts['links'],_linkFields,maxLinks);
   final transfers=_rows(capturedAccounts['transfers'],_transferFields,maxTransfers);
   _validate(accounts,links,transfers,await _ledgerIds(encryptedV2,password));
-  return WaffraSecureBackup.encrypt(jsonEncode(<String,Object?>{
+  final archive = await WaffraSecureBackup.encrypt(jsonEncode(<String,Object?>{
    'format':format,'version':version,
    'innerV2Sha256':sha256.convert(utf8.encode(encryptedV2)).toString(),
    'innerV2':encryptedV2,
    'accounts':accounts,'links':links,'transfers':transfers,
+   if(history!=null)'financeHistoryV1':history,
   }),password);
+  if(archive.length>maxEncryptedCharacters){
+   throw StateError('Encrypted account backup exceeds restore capacity.');
+  }
+  return archive;
  }
 
  static Future<WaffraAccountsBackupV3Preview> verifyAndPreview({
@@ -189,9 +197,9 @@ abstract final class WaffraAccountsPortableBackupV3 {
   final raw=jsonDecode(text);
   if(raw is! Map || raw.keys.any((k)=>k is! String)||
      raw.keys.toSet().difference(const {
-      'format','version','innerV2Sha256','innerV2','accounts','links','transfers'
+      'format','version','innerV2Sha256','innerV2','accounts','links','transfers','financeHistoryV1'
      }).isNotEmpty||
-     raw.length!=7||raw['format']!=format||raw['version']!=version||
+     raw.length!=(raw.containsKey('financeHistoryV1')?8:7)||raw['format']!=format||raw['version']!=version||
      raw['innerV2'] is! String||raw['innerV2Sha256'] is! String){
    throw const FormatException('Unsupported account backup format.');
   }
@@ -204,7 +212,9 @@ abstract final class WaffraAccountsPortableBackupV3 {
   final transfers=_rows(raw['transfers'],_transferFields,maxTransfers);
   _validate(accounts,links,transfers,await _ledgerIds(inner,password));
   return WaffraAccountsBackupV3Preview(
-   encryptedV2:inner,accounts:accounts,links:links,transfers:transfers);
+   encryptedV2:inner,accounts:accounts,links:links,transfers:transfers,
+   history:raw.containsKey('financeHistoryV1')
+     ?WaffraAccountsFinanceHistory.validate(raw['financeHistoryV1']):null);
  }
 
  /// Restores ONLY into a caller-owned empty, disposable SQLCipher vault.
@@ -227,6 +237,9 @@ abstract final class WaffraAccountsPortableBackupV3 {
    await WaffraPortableEncryptedVaultRestorer(
     disposableStore:disposableStore,experimentalEnabled:true,
    ).restore(encryptedArchive:verified.encryptedV2,password:password);
+   if(verified.history!=null){
+    await WaffraAccountsFinanceHistory.restore(disposableStore,verified.history!);
+   }
    await WaffraAccountsSchema.install(disposableStore);
    for(final a in verified.accounts){
     await disposableStore.customStatement(
