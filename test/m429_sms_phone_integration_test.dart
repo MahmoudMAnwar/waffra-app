@@ -119,6 +119,6 @@ void main(){
   expect(main,contains('merchantKey:initial?.merchantKey??'));
   expect(main,contains('candidateMerchantKey:result.merchantKey'));
   expect(main,contains('existingMerchantKey:e.merchantKey'));
- });;
+ });
 
 }
