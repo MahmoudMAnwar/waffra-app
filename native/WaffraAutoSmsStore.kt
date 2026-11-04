@@ -399,7 +399,12 @@ object WaffraAutoSmsStore {
                 }
                 fields
             }
-        } catch (_: Exception) { emptyList() }
+        } catch (failure: Exception) {
+            // A broken AndroidKeyStore key or invalid ciphertext is NOT an
+            // empty review queue. Report it to Flutter, never wipe or fabricate
+            // a zero financial count.
+            throw IllegalStateException("Encrypted SMS review queue unreadable", failure)
+        }
     }
 
     /** Atomic per-SMS request claim shared by foreground and WorkManager.
