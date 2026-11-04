@@ -16,7 +16,8 @@
     "Release savings from the separate goal wallet through a verified, one-time SQLCipher movement, crediting an explicitly chosen SAR destination account once or leaving it unassigned; retain legacy wallet-only semantics.",
     "Guarantee two-level category parent integrity in fresh SQLCipher at database level and reject orphan/wrong-type/nested parents through source-verified projection writes in existing vaults, with corruption rollback tests.",
     "Commit creation, editing and pause of a savings goal and linked recurring payment in one authoritative SQLCipher transaction, with both relational projections and snapshot verified, and adjust UI regression tests to this behavior.",
-    "Keep production migration of historical SharedPreferences and legacy receipts blocked until lossless signed-device evidence; do not confuse authenticated cold preview or CI with actual old-user migration certification."
+    "Keep production migration of historical SharedPreferences and legacy receipts blocked until lossless signed-device evidence; do not confuse authenticated cold preview or CI with actual old-user migration certification.",
+    "Preserve SQLCipher parent-before-child insertion and child-before-parent deletion while replacing an authenticated V3 account/archive history, ensuring the new category database constraints cannot break atomic encrypted restore."
   ],
   "allowed_changed_files": [
     ".github/workflows/m448-account-context-ci.yml",
@@ -30,6 +31,7 @@
     "lib/storage/waffra_account_context_read_repository.dart",
     "lib/storage/waffra_account_context_repository.dart",
     "lib/storage/waffra_account_context_schema.dart",
+    "lib/storage/waffra_accounts_finance_history.dart",
     "lib/storage/waffra_accounts_portable_backup_v3.dart",
     "lib/storage/waffra_accounts_repository.dart",
     "lib/storage/waffra_encrypted_module_projection_guard.dart",
@@ -240,6 +242,12 @@
       {
         "start": " test('M396 new due entries require explicit consent, never silently debit',(){",
         "end": " test('M394 privacy cloud explicitly allowlists only owner-approved goal active flag',(){"
+      }
+    ],
+    "lib/storage/waffra_accounts_finance_history.dart": [
+      {
+        "start": "      final placeholders = List.filled(columns.length, '?').join(',');",
+        "end": "        if (row.length != columns.length || !columns.every(row.containsKey)) {"
       }
     ]
   }
