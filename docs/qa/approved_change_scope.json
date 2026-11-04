@@ -1,67 +1,64 @@
 {
   "contract_version": 1,
-  "change_id": "M228-combined-refresh-sqlcipher-routes-hosted-android-disk",
-  "human_scope_review": "Owner approved resolving all stale PR conflicts. This single reviewable change combines rebased PR #229 (guarded legacy fresh install pull refresh parity) and PR #228 (24 route read-only SQLCipher preflight). All current main SMS, biometric, merchant, goals and budget code is retained; no production SQLCipher activation, money movement or migration is permitted. This release candidate also fixes independent exact-head Android emulator disk exhaustion: the same encrypted DB job fails on a hosted runner before finance tests when userdata exceeds available disk. Retain the mandatory physical emulator test while reducing AVD disk size to 3072MB and removing nonessential hosted runner toolchains.",
+  "change_id": "M444-notification-forecast-budget-fixes",
+  "human_scope_review": "Owner instructed to complete remaining functional code issues. Bounded changes isolate recurring reminders from bank SMS notifications, make linked savings goal reminders one-time, correct current-month forecast and honor chosen budget warning thresholds. No account source cutover or change to financial amounts, saved transactions or backup.",
   "user_requested_changes": [
-    "Reconcile conflicted PR #229 onto current main without replacing newer unrelated finance, SMS, budget, biometric or merchant UI fixes.",
-    "Allow first-install guarded-legacy pull-to-refresh when genuinely absent empty ledger or categories are valid and preserve the same default categories as ordinary startup.",
-    "Fail closed on absent or corrupt authoritative SQLCipher financial fields, keeping existing money records unchanged and detecting malformed source data.",
-    "Preserve the existing independent named-budget refresh projection and all unrelated Home and Widget finance state.",
-    "Add regression tests proving legacy default parity and encrypted/malformed source refusal on the exact updated PR head.",
-    "Resolve the outdated conflicting PR #228 against current main while preserving all later finance, SMS, widget, backup, biometric and locale code.",
-    "Check each canonical finance route before ever binding an already active encrypted SQLCipher source and reject any route without audited witness.",
-    "Keep the preflight strictly read-only and incapable of automatically activating SQLCipher or switching the authoritative ledger.",
-    "Preserve current guarded-legacy startup and require existing OS-backed key, verified source digest and native bridge before any encrypted read.",
-    "Add deterministic 24-route, missing-key, missing-witness, incomplete-audit, immutable report and main-wiring regression tests.",
-    "Remove the shared GitHub hosted-runner Android encrypted DB emulator disk-exhaustion CI blocker without changing finance logic, test assertions or marking emulator verification skipped."
+    "Prevent rescheduling optional recurring notifications from erasing unrelated bank SMS alerts by cancelling only owned notification requests.",
+    "Stop monthly repetitions for a savings goal's one-time due-date reminder.",
+    "Exclude next-month goals and recurring payments whose start date lies after the current-month due date from financial forecasts.",
+    "Ensure smart finance warning uses the exact selected percentage for each independent named budget rather than a hard-coded 80 percent.",
+    "Include deterministic Dart and Python regression tests for date boundaries, notification channel ownership and budget warnings.",
+    "Suppress replay of a previously shown budget alert threshold after expenses are reduced and rise again, using a hashed non-financial monthly per-account alert register."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
-    "docs/qa/m228-24-route-source-preflight.md",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "lib/storage/waffra_finance_24_route_preflight.dart",
-    "lib/storage/waffra_production_finance_authority_binding.dart",
-    "lib/storage/waffra_verified_pull_refresh_source.dart",
-    "test/qa/m228_24_route_binder_wiring_test.py",
-    "test/qa/m228_pull_refresh_live_wiring_test.py",
-    "test/storage/m228_24_route_preflight_test.dart",
-    "test/storage/m228_verified_pull_refresh_source_test.dart",
-    ".github/workflows/storage-android-integration.yml",
-    "test/qa/m228_android_emulator_disk_preflight_test.py"
+    "lib/waffra_reminders.dart",
+    "lib/waffra_financial_insights.dart",
+    "test/m444_notification_forecast_budget_test.dart",
+    "test/qa/m444_notification_safety_test.py",
+    "lib/waffra_budget_alert_once.dart",
+    "test/m444_budget_alert_once_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": "import 'storage/waffra_verified_finance_authority.dart';\n",
-        "end": "import 'storage/waffra_fresh_finance_modules_repository.dart';\n"
+        "start": "import 'waffra_validators.dart';\n",
+        "end": "import 'waffra_goal_budget_forecast.dart';\n"
       },
       {
-        "start": " Future<void> _refreshFromVerifiedFinance()async {",
-        "end": "   final nextNamedBudgets=readList<WaffraNamedBudget>("
+        "start": " Future<void> syncRecurringReminders()async {",
+        "end": " Future<void> toggleRecurringReminders(bool enabled,"
+      },
+      {
+        "start": " Future<void> budgetAlert(MoneyEntry entry,double previousSpent)async {",
+        "end": " /// Draw the same category-colored donut shown on Smart Analysis."
+      },
+      {
+        "start": " Widget smartMoneyInsightsCard(){",
+        "end": " Future<void> showSummaryTransactions(bool income)async {"
       }
     ],
-    "lib/storage/waffra_production_finance_authority_binding.dart": [
+    "lib/waffra_reminders.dart": [
       {
-        "start": "import 'waffra_encrypted_store.dart';\n",
-        "end": "import 'waffra_home_finance_persistence.dart';\n"
+        "start": "class WaffraReminder {",
+        "end": "class WaffraReminders {"
       },
       {
-        "start": "      if (checkpoint == null ||\n",
-        "end": "      final bridge = WaffraVerifiedEncryptedFinanceBridge(\n"
+        "start": " static int stableId(String id,int monthOffset){",
+        "end": null
       }
     ],
-    ".github/workflows/storage-android-integration.yml": [
+    "lib/waffra_financial_insights.dart": [
       {
-        "start": "      - name: Enable Linux KVM permissions\n",
-        "end": "      - name: Test encrypted vault on Android emulator (primary)\n"
-      },
+        "start": " static double? comparisonPercent(double current,double previous){",
+        "end": null
+      }
+    ],
+    "lib/waffra_budget_alert_once.dart": [
       {
-        "start": "      - name: Test encrypted vault on Android emulator (primary)\n",
-        "end": "      - name: Reset adb before a clean emulator retry\n"
-      },
-      {
-        "start": "      - name: Retry complete finance tests on fresh API 35 after emulator failure\n",
+        "start": "import 'dart:async';",
         "end": null
       }
     ]
