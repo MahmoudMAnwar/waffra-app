@@ -52,7 +52,7 @@
     "lib/storage/waffra_accounts_portable_backup_v3.dart": [
       {
         "start": "import 'waffra_accounts_schema.dart';\n",
-        "end": "import 'waffra_accounts_finance_history.dart';\n"
+        "end": "import 'waffra_encrypted_store.dart';\n"
       },
       {
         "start": "  required this.encryptedV2,required this.accounts,\n",
@@ -60,7 +60,7 @@
       },
       {
         "start": "  await WaffraAccountsSchema.requireReady(store);\n",
-        "end": "  final accounts=await store.customSelect(\n"
+        "end": "   'SELECT account_id,label,kind,currency,opening_minor,archived,created_iso '\n"
       },
       {
         "start": "   throw StateError('Account backup exceeds supported bounded capacity.');\n",
@@ -86,7 +86,7 @@
     "lib/storage/waffra_accounts_repository.dart": [
       {
         "start": "import 'waffra_accounts_schema.dart';\n",
-        "end": "import 'waffra_encrypted_store.dart';\n"
+        "end": "class WaffraAccountBalance {\n"
       },
       {
         "start": "  await WaffraAccountsSchema.install(db);\n",
@@ -100,7 +100,7 @@
     "lib/storage/waffra_verified_accounts_api.dart": [
       {
         "start": "import 'waffra_accounts_repository.dart';\n",
-        "end": "import 'waffra_unified_finance_writer.dart';\n"
+        "end": "import 'waffra_verified_encrypted_finance_bridge.dart';\n"
       },
       {
         "start": "   accountId:accountId,\n   expectedAccountGeneration:displayed.generation,\n  );\n }\n",
@@ -120,7 +120,7 @@
     "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
       {
         "start": "import 'waffra_accounts_schema.dart';\n",
-        "end": "import 'waffra_portable_encrypted_backup_exporter.dart';\n"
+        "end": "import 'waffra_accounts_repository.dart';\n"
       },
       {
         "start": "        if(initializeSchema){\n",
@@ -130,7 +130,7 @@
     "lib/waffra_accounts_manager_page.dart": [
       {
         "start": "import 'waffra_account_transaction_form.dart';\n",
-        "end": "\n/// M440 optional SQLCipher account page. A production Home route must only\n"
+        "end": "/// open this after the same certified finance source is active for SMS/widget.\n"
       },
       {
         "start": " @override Widget build(BuildContext context)=>Scaffold(\n",
