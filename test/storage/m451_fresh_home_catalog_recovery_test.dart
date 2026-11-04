@@ -12,6 +12,7 @@ import 'package:waffra/storage/waffra_fresh_home_catalog_recovery.dart';
 import 'package:waffra/storage/waffra_fresh_install_source.dart';
 import 'package:waffra/storage/waffra_live_legacy_finance_guard.dart';
 import 'package:waffra/storage/waffra_production_finance_source_guard.dart';
+import 'package:waffra/storage/waffra_production_finance_routing_gate.dart';
 import 'package:waffra/storage/waffra_verified_encrypted_finance_bridge.dart';
 import 'package:waffra/storage/waffra_verified_finance_authority.dart';
 
@@ -170,9 +171,9 @@ void main() {
     expect(prefs.containsKey('waffra_categories_v24'), false);
   });
 
-  test('M451 wrong installation identity blocks and retains vault', () async {
+  test('M451 missing active source pointer blocks and retains vault', () async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(WaffraFreshInstallSource.receiptKey, 'invalid');
+    await prefs.remove(WaffraLiveLegacyFinanceGuard.activeKey);
     final before = await snapshot.read();
     // This path must never ask the user to clear storage on a failed witness.
     await expectLater(WaffraFreshHomeCatalogRecovery.load(
