@@ -3535,6 +3535,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   WidgetsBinding.instance.addPostFrameCallback((_){if(mounted)unawaited(entrySheet());});
  }
  bool _autoSmsReviewOpen=false;
+ bool _autoSmsReviewExpanded=false; // Presentation-only: collapsed by default.
  bool _cloudReviewStageRunning=false;
  bool _autoSmsStatusChecked=false;
  bool _autoSmsHistoryComplete=false;
@@ -3815,62 +3816,83 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final analyzed=_autoSmsPending.where((row)=>row['cloud'] is Map).length;
   return Container(
    key:const Key('waffra-auto-sms-review-card'),
-   padding:const EdgeInsets.all(14),
    decoration:BoxDecoration(color:Theme.of(context).cardColor,
     borderRadius:BorderRadius.circular(16),
     border:Border.all(color:forest.withValues(alpha:.16))),
    child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-    Row(children:[
-     const Icon(Icons.fact_check_outlined,color:emerald),
-     const SizedBox(width:8),
-     Expanded(child:WaffraText(waffraIsEnglish?
-      'Transactions requiring review':'عمليات تحتاج مراجعة',
-      style:const TextStyle(fontSize:16,fontWeight:FontWeight.bold))),
-     Container(
-      key:const Key('waffra-auto-sms-review-count'),
-      padding:const EdgeInsets.symmetric(horizontal:10,vertical:5),
-      decoration:BoxDecoration(color:const Color(0xFFE4F4EB),
-       borderRadius:BorderRadius.circular(24)),
-      child:Text(!_autoSmsStatusChecked||_autoSmsStatusProblem!=null?
-       '—':count.toString(),
-       style:const TextStyle(color:forest,fontWeight:FontWeight.bold))),
-    ]),
-    const SizedBox(height:9),
-    WaffraText(_autoSmsStatusProblem!=null?_autoSmsStatusProblem!:
-     !_autoSmsStatusChecked?
-      (waffraIsEnglish?'Checking SMS tracking status...':
-       'جارٍ التحقق من حالة الرسائل البنكية...'):
-     count==0?
-      (!_autoSmsHistoryComplete?
-       (waffraIsEnglish?'History scan incomplete. Tap refresh to continue.':
-        'فحص الرسائل السابقة غير مكتمل؛ اضغط تحديث للاستكمال.'):
-       (waffraIsEnglish?'No bank SMS awaiting review.':
-        'ما فيه رسائل بنكية بانتظار المراجعة.')):
-      (waffraIsEnglish?
-       'Bank SMS since the installation month await approval.':
-       'رسائل من بداية شهر تثبيت التطبيق بانتظار مراجعتك وتأكيدك.')),
-    if(analyzed>0)...[
-     const SizedBox(height:5),
-     WaffraText(waffraIsEnglish?
-      '$analyzed cloud AI suggestions ready for your review.':
-      '$analyzed اقتراحات من الذكاء الاصطناعي جاهزة لمراجعتك.',
-      style:const TextStyle(color:emerald,fontSize:12,
-       fontWeight:FontWeight.w600)),
-    ],
-    const SizedBox(height:9),
-    Row(children:[
-     Expanded(child:FilledButton.icon(
-      key:const Key('waffra-auto-sms-review-open'),
-      onPressed:count==0?null:WaffraHaptics.tap(_openAutoSmsInbox),
-      icon:const Icon(Icons.rate_review_outlined,size:18),
-      label:WaffraText(waffraIsEnglish?'Review messages':'مراجعة العمليات'))),
-     IconButton(
-      key:const Key('waffra-auto-sms-review-refresh'),
-      tooltip:waffraIsEnglish?'Load more month messages':'تحديث رسائل الشهر',
-      onPressed:WaffraHaptics.tap(
-       ()=>unawaited(_refreshAutoSmsInbox(importMonth:true))),
-      icon:const Icon(Icons.refresh_rounded,color:emerald)),
-    ]),
+    // Match Quick Actions: tap anywhere on the framed title to expand.
+    Semantics(
+     button:true,expanded:_autoSmsReviewExpanded,
+     label:waffraIsEnglish?'Transactions requiring review':
+      'عمليات تحتاج مراجعة',
+     child:InkWell(
+      key:const Key('waffra-auto-sms-review-expand'),
+      borderRadius:BorderRadius.circular(16),
+      onTap:WaffraHaptics.tap(
+       ()=>setState(()=>_autoSmsReviewExpanded=!_autoSmsReviewExpanded)),
+      child:Padding(padding:const EdgeInsets.all(14),child:Row(children:[
+       Icon(_autoSmsReviewExpanded?
+        Icons.keyboard_arrow_up_rounded:Icons.keyboard_arrow_down_rounded,
+        color:forest),
+       const SizedBox(width:8),
+       const Icon(Icons.fact_check_outlined,color:emerald),
+       const SizedBox(width:8),
+       Expanded(child:WaffraText(waffraIsEnglish?
+        'Transactions requiring review':'عمليات تحتاج مراجعة',
+        style:const TextStyle(fontSize:16,fontWeight:FontWeight.bold))),
+       Container(
+        key:const Key('waffra-auto-sms-review-count'),
+        padding:const EdgeInsets.symmetric(horizontal:10,vertical:5),
+        decoration:BoxDecoration(color:const Color(0xFFE4F4EB),
+         borderRadius:BorderRadius.circular(24)),
+        child:Text(!_autoSmsStatusChecked||_autoSmsStatusProblem!=null?
+         '—':count.toString(),
+         style:const TextStyle(color:forest,fontWeight:FontWeight.bold))),
+      ]))),
+    ),
+    if(_autoSmsReviewExpanded)Padding(
+     key:const Key('waffra-auto-sms-review-expanded-content'),
+     padding:const EdgeInsets.fromLTRB(14,0,14,14),
+     child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      WaffraText(_autoSmsStatusProblem!=null?_autoSmsStatusProblem!:
+       !_autoSmsStatusChecked?
+        (waffraIsEnglish?'Checking SMS tracking status...':
+         'جارٍ التحقق من حالة الرسائل البنكية...'):
+       count==0?
+        (!_autoSmsHistoryComplete?
+         (waffraIsEnglish?'History scan incomplete. Tap refresh to continue.':
+          'فحص الرسائل السابقة غير مكتمل؛ اضغط تحديث للاستكمال.'):
+         (waffraIsEnglish?'No bank SMS awaiting review.':
+          'ما فيه رسائل بنكية بانتظار المراجعة.')):
+        (waffraIsEnglish?
+         'Bank SMS since the installation month await approval.':
+         'رسائل من بداية شهر تثبيت التطبيق بانتظار مراجعتك وتأكيدك.')),
+      if(analyzed>0)...[
+       const SizedBox(height:5),
+       WaffraText(waffraIsEnglish?
+        '$analyzed cloud AI suggestions ready for your review.':
+        '$analyzed اقتراحات من الذكاء الاصطناعي جاهزة لمراجعتك.',
+        style:const TextStyle(color:emerald,fontSize:12,
+         fontWeight:FontWeight.w600)),
+      ],
+      const SizedBox(height:12),
+      Row(children:[
+       Expanded(child:FilledButton.icon(
+        key:const Key('waffra-auto-sms-review-open'),
+        onPressed:count==0||_autoSmsStatusProblem!=null?
+         null:WaffraHaptics.tap(_openAutoSmsInbox),
+        icon:const Icon(Icons.rate_review_outlined,size:18),
+        label:WaffraText(waffraIsEnglish?'Review messages':'مراجعة العمليات'))),
+       const SizedBox(width:8),
+       OutlinedButton.icon(
+        key:const Key('waffra-auto-sms-review-refresh'),
+        onPressed:WaffraHaptics.tap(
+         ()=>unawaited(_refreshAutoSmsInbox(importMonth:true))),
+        icon:const Icon(Icons.refresh_rounded,size:19),
+        label:WaffraText(waffraIsEnglish?'Rescan':'إعادة الفحص')),
+       ),
+      ]),
+     ])),
    ]),
   );
  }
