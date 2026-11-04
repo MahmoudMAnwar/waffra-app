@@ -1,5 +1,6 @@
 import 'waffra_encrypted_full_finance_reset.dart';
 import 'waffra_accounts_schema.dart';
+import 'waffra_portable_encrypted_backup_exporter.dart';
 import 'waffra_accounts_repository.dart';
 import 'waffra_fresh_finance_domain_repository.dart';
 import 'waffra_verified_goal_due_snapshot_writer.dart';
@@ -92,6 +93,20 @@ class WaffraVerifiedEncryptedFinanceBridge {
       throw StateError('SQLCipher activation witness needs reconciliation.');
     }
   }
+
+  Future<String> exportPortableBackup(String password) =>
+      WaffraPortableEncryptedBackupExporter(
+        snapshot: snapshot,
+        receiptVault: WaffraEncryptedReceiptVault(
+          store: snapshot.store, experimentalEnabled: experimentalEnabled,
+        ),
+        writerDirectory: writerDirectory,
+        verifySourceUnderLock: () async {
+          await _requireActivatedUnderLock();
+          await WaffraAccountsSchema.install(snapshot.store);
+        },
+        experimentalEnabled: experimentalEnabled,
+      ).exportV3(password: password);
 
   /// Encrypted-only, explicitly authenticated reset route. The independent
   /// source selector and the reset engine recheck the active SQLCipher

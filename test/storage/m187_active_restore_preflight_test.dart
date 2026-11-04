@@ -195,6 +195,30 @@ void main() {
     }
   });
 
+  test('verified V3 file with linked budget survives a staged cold reopen', () async {
+    await store.customStatement(
+      'INSERT INTO fresh_finance_standalone_budgets '
+      '(budget_id,name,monthly_limit_minor,created_at_iso,source_json) VALUES (?,?,?,?,?)',
+      ['budget','Household',30000,'2026-11-04','{}'],
+    );
+    await store.customStatement(
+      'INSERT INTO fresh_finance_standalone_allocations '
+      '(allocation_id,budget_id,entry_id,amount_minor,assigned_at_iso,explicitly_confirmed) '
+      'VALUES (?,?,?,?,?,?)',['allocation','budget',currentId,1425,'2026-11-04',1],
+    );
+    final before = await load();
+    final document = await authority.encryptedSession!.bridge.exportPortableBackup(pass);
+    final file = File('${activeDirectory.path}/home.waffra');
+    await file.writeAsString(document,flush:true);
+    final verified = await WaffraVerifiedActiveRestorePreflight(
+      authority:authority,experimentalEnabled:true,
+    ).inspect(selectedSource:before,encryptedArchive:await file.readAsString(),
+      password:pass,userConfirmed:true,accountArchive:true);
+    expect(verified.transactionCount,1);
+    expect(verified.activeSourceReplaced,isFalse);
+    expect((await load()).widgetRevision,before.widgetRevision);
+  });
+
   test('M187 accepted portable receipt cold-stages without replacing active ledger',
       () async {
     final before = await load();

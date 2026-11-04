@@ -173,7 +173,7 @@ abstract final class WaffraAccountsPortableBackupV3 {
   final links=_rows(capturedAccounts['links'],_linkFields,maxLinks);
   final transfers=_rows(capturedAccounts['transfers'],_transferFields,maxTransfers);
   _validate(accounts,links,transfers,await _ledgerIds(encryptedV2,password));
-  final archive = await WaffraSecureBackup.encrypt(jsonEncode(<String,Object?>{
+  final archive = await WaffraSecureBackup.encryptUserBackup(jsonEncode(<String,Object?>{
    'format':format,'version':version,
    'innerV2Sha256':sha256.convert(utf8.encode(encryptedV2)).toString(),
    'innerV2':encryptedV2,
@@ -221,7 +221,7 @@ abstract final class WaffraAccountsPortableBackupV3 {
  /// The V2 finance+receipts and all V3 account rows share a single outer
  /// SQLite transaction. Any bad association rolls every inserted row back.
  /// Production source selection/cutover is deliberately not done here.
- static Future<void> restoreToEmptyEncryptedVault({
+ static Future<WaffraPortableEncryptedRestoreResult> restoreToEmptyEncryptedVault({
   required String encryptedArchive,
   required String password,
   required WaffraEncryptedStore disposableStore,
@@ -233,8 +233,8 @@ abstract final class WaffraAccountsPortableBackupV3 {
   }
   final verified=await verifyAndPreview(
    encryptedArchive:encryptedArchive,password:password);
-  await disposableStore.transaction(()async{
-   await WaffraPortableEncryptedVaultRestorer(
+  return disposableStore.transaction(()async{
+   final result = await WaffraPortableEncryptedVaultRestorer(
     disposableStore:disposableStore,experimentalEnabled:true,
    ).restore(encryptedArchive:verified.encryptedV2,password:password);
    if(verified.history!=null){
@@ -267,6 +267,7 @@ abstract final class WaffraAccountsPortableBackupV3 {
      ]);
    }
    await WaffraAccountsSchema.requireReady(disposableStore);
+   return result;
   });
  }
 }

@@ -93,6 +93,8 @@ import 'storage/waffra_legacy_finance_writer_coordinator.dart';
 import 'storage/waffra_live_account_write_authority.dart';
 import 'storage/waffra_home_finance_persistence.dart';
 import 'storage/waffra_verified_finance_authority.dart';
+import 'storage/waffra_accounts_portable_backup_v3.dart';
+import 'storage/waffra_verified_active_restore_preflight.dart';
 import 'storage/waffra_verified_pull_refresh_source.dart';
 import 'storage/waffra_production_finance_authority_binding.dart';
 import 'storage/waffra_verified_accounts_api.dart';
@@ -12040,10 +12042,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       await _financialWriteQueue.drain();
       final current=await _financeAuthority.load(
        route:WaffraFinanceRoute.backupExport);
-      final authoritativePayload=exportBackup(fromSource:current);
-      final encrypted=await compute(waffraEncryptBackupInIsolate,<String,String>{
-       'payload':authoritativePayload,'password':secret.text,
-      });
+      final String encrypted;
+      if(current.encryptedWitness!=null){
+       final bridge=_financeBinding?.accountsBridge;
+       if(bridge==null)throw StateError('Encrypted backup source unavailable.');
+       encrypted=await bridge.exportPortableBackup(secret.text);
+      }else{
+       final authoritativePayload=exportBackup(fromSource:current);
+       encrypted=await compute(waffraEncryptBackupInIsolate,<String,String>{
+        'payload':authoritativePayload,'password':secret.text,
+       });
+      }
       // Persist the encrypted archive only after system document picker confirms.
       // Never copy it to the system clipboard on export.
       final saved=await WaffraBackupFiles.saveEncryptedArchive(encrypted);
@@ -12160,6 +12169,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       final raw=await compute(waffraDecodeBackupInIsolate,<String,String>{
        'payload':stagedBackup!,'password':restoreSecret.text,
       });
+      if(raw['format']==WaffraAccountsPortableBackupV3.format){
+       final source=await _financeAuthority.load(route:WaffraFinanceRoute.backupRestore);
+       if(source.encryptedWitness==null){
+        if(ctx.mounted)update(()=>restoreError=waffraIsEnglish?
+         'This file requires an active SQLCipher vault.':
+         'استعادة هذا الملف تتطلب تفعيل قاعدة SQLCipher.');
+        return;
+       }
+       final result=await WaffraVerifiedActiveRestorePreflight(
+        authority:_financeAuthority,experimentalEnabled:true,
+       ).inspect(selectedSource:source,encryptedArchive:stagedBackup!,
+        password:restoreSecret.text,userConfirmed:true,accountArchive:true);
+       if(ctx.mounted)update(()=>restoreError=waffraIsEnglish?
+        'Verified ${result.transactionCount} transactions in a temporary vault. Applying this backup to your current data is unavailable.':
+        'تم التحقق من ${result.transactionCount} معاملة في قاعدة مؤقتة. استبدال البيانات الحالية بهذه النسخة غير متاح بعد.');
+       return;
+      }
       if(raw['format']!='waffra-backup'||raw['entries'] is! List||
         raw['categories'] is! List||raw['goals'] is! List||raw['recurring'] is! List){
        throw const FormatException('Invalid backup');
