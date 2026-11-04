@@ -92,6 +92,9 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
   );
  }
 
+ /// Bank-SMS and recurring confirmations supply one explicit account decision
+ /// per posting. A null decision is UNASSIGNED, never the visible header.
+ /// No fake cash account is added while identifying a bank message.
  /// The bank-SMS review screen or recurring scheduler must submit its own
  /// confirmed transaction payloads, SMS hashes and explicit account choices.
  /// The same witnessed SQLCipher writer handles deduplication, money posting
@@ -106,7 +109,7 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
   if(displayed==null||!userConfirmed||records.isEmpty||
      records.length!=messageHashes.length||
      records.length!=selectedAccountIds.length||
-     selectedAccountIds.any((id)=>id==null||id.trim().isEmpty)){
+     selectedAccountIds.any((id)=>id!=null&&id.trim().isEmpty)){
    throw StateError('Reload balances and confirm every account assignment.');
   }
   _lastDisplayed=null;
