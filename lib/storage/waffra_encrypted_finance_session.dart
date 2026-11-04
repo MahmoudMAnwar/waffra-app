@@ -302,6 +302,8 @@ class WaffraEncryptedFinanceSession {
     required bool userConfirmed,
     bool allowDuplicateHashes = false,
     List<Map<String,Object?>> proposedCategories = const [],
+    List<String?>? selectedAccountIds,
+    int? expectedAccountGeneration,
   }) async {
     _requireEnabled();
     return bridge.appendConfirmedTransactions(
@@ -310,6 +312,8 @@ class WaffraEncryptedFinanceSession {
       userConfirmed: userConfirmed,
       allowDuplicateHashes: allowDuplicateHashes,
       proposedCategories: proposedCategories,
+      selectedAccountIds: selectedAccountIds,
+      expectedAccountGeneration: expectedAccountGeneration,
     );
   }
 
