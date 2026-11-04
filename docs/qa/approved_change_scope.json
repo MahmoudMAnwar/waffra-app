@@ -19,7 +19,8 @@
     "M440: Account-aware authenticated V3 backup and atomic disposable-vault restore, with V2 loss prevention.",
     "M440: Persist one explicit selected account per confirmed SMS/recurring batch entry inside the unified SQLCipher writer.",
     "M440: Make My Accounts navigation available only for independently verified activated SQLCipher sources; never create a second live finance database.",
-    "M447: Carry explicitly reviewed bank-SMS account selections through the existing verified finance authority/session and shared SQLCipher writer without permitting bank data in guarded legacy."
+    "M447: Carry explicitly reviewed bank-SMS account selections through the existing verified finance authority/session and shared SQLCipher writer without permitting bank data in guarded legacy.",
+    "M447: Ask for an optional verified financial account per bank-SMS transaction in all three Home bank SMS review/save routes and attach it in the same SQLCipher commit as the SMS hash."
   ],
   "allowed_changed_files": [
     ".github/scripts/run-m120-android-receipt-reopen.sh",
@@ -134,6 +135,22 @@
       {
         "start": "   _accountSection(waffraIsEnglish?'Financial tools':'الأدوات المالية',Icons.account_balance_wallet_outlined,[\n",
         "end": "    _accountTile(waffraIsEnglish?'Subscription insights':'كشف الاشتراكات',\n"
+      },
+      {
+        "start": "     child:WaffraText(waffraIsEnglish?'Confirm delete':'تأكيد الحذف',\n",
+        "end": " Future<List<String?>?> reviewSmsBudgetLinks(List<MoneyEntry> candidates)async{\n"
+      },
+      {
+        "start": "  final reviewedBudgets=await reviewSmsBudgetLinks(additions);\n",
+        "end": "   final persisted=(jsonDecode(applied.current.ledgerRaw??'[]') as List)\n"
+      },
+      {
+        "start": "       final budgetSelection=await reviewSmsBudgetLinks([entry]);\n",
+        "end": "       if(committed.saved!=1){\n"
+      },
+      {
+        "start": "  if(pendingHash!=null&&initial==null){\n",
+        "end": "   if(applied.saved!=1){\n"
       }
     ],
     "lib/storage/waffra_production_finance_authority_binding.dart": [
