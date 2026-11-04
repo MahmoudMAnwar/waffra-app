@@ -146,6 +146,13 @@ class WaffraLegacyPreflight {
           if(item.containsKey('active')&&item['active'] is! bool){
             issues.add(WaffraPreflightIssue(key,i,'invalid_goal_active_flag'));
           }
+          if(item.containsKey('progressAlertsEnabled')&&
+             item['progressAlertsEnabled'] is! bool ||
+             item.containsKey('progressAlertPercent')&&
+             (item['progressAlertPercent'] is! int||
+              !const [50,60,70,75,80,85,90,95,100].contains(item['progressAlertPercent']))){
+            issues.add(WaffraPreflightIssue(key,i,'invalid_goal_alert_controls'));
+          }
           if (item['dueDate'] != null &&
               (item['dueDate'] is! String ||
                DateTime.tryParse(item['dueDate'] as String) == null)) {
@@ -180,6 +187,7 @@ class WaffraLegacyPreflight {
             issues.add(WaffraPreflightIssue(key, i, 'invalid_standalone_budget'));
           }
           if (item['budgetActive'] is! bool ||
+              (item.containsKey('alertsEnabled')&&item['alertsEnabled'] is! bool) ||
               item['alertPercent'] is! int ||
               (item['alertPercent'] as int) < 1 ||
               (item['alertPercent'] as int) > 100) {
