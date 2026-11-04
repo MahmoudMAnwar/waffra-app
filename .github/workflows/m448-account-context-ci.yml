@@ -8,6 +8,7 @@ on:
       - 'lib/storage/waffra_verified_accounts_api.dart'
       - 'lib/storage/waffra_verified_encrypted_finance_bridge.dart'
       - 'lib/waffra_account_context_page.dart'
+      - 'lib/waffra_account_context_settings.dart'
       - 'lib/waffra_accounts_manager_page.dart'
       - 'test/storage/m448_*.dart'
       - '.github/workflows/m448-account-context-ci.yml'
@@ -39,6 +40,7 @@ jobs:
             lib/storage/waffra_verified_accounts_api.dart \
             lib/storage/waffra_verified_encrypted_finance_bridge.dart \
             lib/waffra_account_context_page.dart \
+            lib/waffra_account_context_settings.dart \
             lib/waffra_accounts_manager_page.dart
       - name: Run focused SQLCipher and behavior tests only
         run: |
