@@ -34,6 +34,26 @@ class M442SmsConsentSessionRecovery(unittest.TestCase):
         self.assertIn('!prefs.getBoolean(activeName, false)', store)
         self.assertIn('!activeProfileReady(context)', store)
 
+    def test_logout_races_cannot_capture_or_hide_old_encrypted_data(self):
+        store = read("native/WaffraAutoSmsStore.kt")
+        activity = read("native/WaffraMainActivity.kt")
+        offer = store[store.index("fun offer(context:"):
+                      store.index("fun pending(context:")]
+        self.assertIn("if (!enabled(context)) return@synchronized false", offer)
+        self.assertIn("val result = synchronized(mutex)", offer)
+        acknowledge = store[store.index("fun acknowledge(context:"):
+                            store.index("fun importConsentMonth(")]
+        self.assertIn("if (!enabled(context) || ids.isEmpty()", acknowledge)
+        importer = store[store.index("fun importConsentMonth("):
+                         store.index("fun claimReviewNotification(")]
+        self.assertIn("synchronized(mutex) {", importer)
+        self.assertIn("if (!enabled(context)) return accepted", importer)
+        self.assertIn("if (allow && !previouslyActive)", store)
+        self.assertIn("editor.remove(historyCursorAt).remove(historyCursorId)", store)
+        self.assertIn("if (canResume) editor.putString(consentedOwnerName, owner)", store)
+        self.assertIn("else editor.remove(queueName)", store)
+        self.assertIn("if (hasReview) messageChannel?.invokeMethod", activity)
+
     def test_bridge_is_wired_to_native_with_no_os_reprompt_on_relogin(self):
         bridge = read("lib/waffra_auto_sms.dart")
         activity = read("native/WaffraMainActivity.kt")
