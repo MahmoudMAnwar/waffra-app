@@ -3507,29 +3507,40 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  Future<void> _scanPreviousBankSmsFromSettings()async{
   if(!await WaffraAutoSms.enabled()){
-   if(mounted)snack(context,waffraIsEnglish?
-    'Enable bank SMS tracking in Security & privacy first.':
-    'فعّل متابعة الرسائل البنكية من الأمان والخصوصية أولًا.');
+   final status=await WaffraAutoSms.trackingStatus();
+   if(mounted)snack(context,status?['permissionGranted']!=true?
+    (waffraIsEnglish?'Allow bank SMS in Android permissions first.':
+     'اسمح لوفرة بقراءة الرسائل من صلاحيات أندرويد أولًا.'):
+    (waffraIsEnglish?
+     'Android SMS permission is already allowed. Enable Waffra tracking in Security & privacy.':
+     'صلاحية أندرويد مفعّلة بالفعل؛ فعّل متابعة وفرة من الأمان والخصوصية.'));
    return;
   }
   await WaffraAutoSms.importConsentMonth();
-  await _refreshAutoSmsInbox();
+  await _refreshAutoSmsInbox(importMonth:true);
   if(!mounted)return;
-  // A successful scan opens the existing sender/message review list, not
-  // merely a total in a snackbar. No financial commit happens in this path.
+  // Successful scan opens sender/message review; never auto-posts money.
   if(_autoSmsPending.isEmpty){
-   snack(context,waffraIsEnglish?
-    'No recent bank SMS found since the first day of the installation month.':
-    'لا توجد رسائل بنكية حديثة منذ بداية شهر تثبيت التطبيق.');
+   snack(context,_autoSmsStatusProblem!=null?_autoSmsStatusProblem!:
+    !_autoSmsHistoryComplete?
+     (waffraIsEnglish?'History scan incomplete. Scan again to continue.':
+      'فحص الرسائل السابقة لسه ما اكتملش. اضغط فحص مرة تانية للاستكمال.'):
+    (waffraIsEnglish?
+     'No recent bank SMS found since the first day of the installation month.':
+     'لا توجد رسائل بنكية حديثة منذ بداية شهر تثبيت التطبيق.'));
    return;
   }
   await _openAutoSmsInbox();
  }
  Future<void> _openUnknownSmsFromSettings()async{
   if(!await WaffraAutoSms.enabled()){
-   if(mounted)snack(context,waffraIsEnglish?
-    'Enable bank SMS tracking in Security & privacy first.':
-    'فعّل متابعة الرسائل البنكية من الأمان والخصوصية أولًا.');
+   final status=await WaffraAutoSms.trackingStatus();
+   if(mounted)snack(context,status?['permissionGranted']!=true?
+    (waffraIsEnglish?'Allow bank SMS in Android permissions first.':
+     'اسمح لوفرة بقراءة الرسائل من صلاحيات أندرويد أولًا.'):
+    (waffraIsEnglish?
+     'Android SMS permission is already allowed. Enable Waffra tracking in Security & privacy.':
+     'صلاحية أندرويد مفعّلة بالفعل؛ فعّل متابعة وفرة من الأمان والخصوصية.'));
    return;
   }
   final notices=await WaffraAutoSms.scanUnknownFinancialSms();
@@ -3686,16 +3697,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       padding:const EdgeInsets.symmetric(horizontal:10,vertical:5),
       decoration:BoxDecoration(color:const Color(0xFFE4F4EB),
        borderRadius:BorderRadius.circular(24)),
-      child:Text(count.toString(),
+      child:Text(!_autoSmsStatusChecked||_autoSmsStatusProblem!=null?
+       '—':count.toString(),
        style:const TextStyle(color:forest,fontWeight:FontWeight.bold))),
     ]),
     const SizedBox(height:9),
-    WaffraText(count==0?
-     (waffraIsEnglish?'No bank SMS awaiting review.':
-      'ما فيه رسائل بنكية بانتظار المراجعة.'):
-     (waffraIsEnglish?
-      'Bank SMS since the installation month await approval.':
-      'رسائل من بداية شهر تثبيت التطبيق بانتظار مراجعتك وتأكيدك.')),
+    WaffraText(_autoSmsStatusProblem!=null?_autoSmsStatusProblem!:
+     !_autoSmsStatusChecked?
+      (waffraIsEnglish?'Checking SMS tracking status...':
+       'جارٍ التحقق من حالة الرسائل البنكية...'):
+     count==0?
+      (!_autoSmsHistoryComplete?
+       (waffraIsEnglish?'History scan incomplete. Tap refresh to continue.':
+        'فحص الرسائل السابقة غير مكتمل؛ اضغط تحديث للاستكمال.'):
+       (waffraIsEnglish?'No bank SMS awaiting review.':
+        'ما فيه رسائل بنكية بانتظار المراجعة.')):
+      (waffraIsEnglish?
+       'Bank SMS since the installation month await approval.':
+       'رسائل من بداية شهر تثبيت التطبيق بانتظار مراجعتك وتأكيدك.')),
     if(analyzed>0)...[
      const SizedBox(height:5),
      WaffraText(waffraIsEnglish?
