@@ -4,6 +4,7 @@ import 'package:crypto/crypto.dart';
 
 import '../waffra_secure_backup.dart';
 import 'waffra_accounts_schema.dart';
+import 'waffra_account_context_schema.dart';
 import 'waffra_accounts_finance_history.dart';
 import 'waffra_encrypted_store.dart';
 import 'waffra_portable_backup_v2.dart';
@@ -15,9 +16,10 @@ import 'waffra_portable_encrypted_vault_restorer.dart';
 class WaffraAccountsBackupV3Preview {
  const WaffraAccountsBackupV3Preview({
   required this.encryptedV2,required this.accounts,
-  required this.links,required this.transfers,this.history,
+  required this.links,required this.transfers,this.history,this.context,
  });
  final Map<String,dynamic>? history;
+ final Map<String,List<Map<String,Object?>>>? context;
  final String encryptedV2;
  final List<Map<String,Object?>> accounts,links,transfers;
 }
@@ -38,6 +40,7 @@ abstract final class WaffraAccountsPortableBackupV3 {
 
  static Future<Map<String,Object?>> capture(WaffraEncryptedStore store)async{
   await WaffraAccountsSchema.requireReady(store);
+  await WaffraAccountContextSchema.install(store);
   final accounts=await store.customSelect(
    'SELECT account_id,label,kind,currency,opening_minor,archived,created_iso '
    'FROM fresh_finance_money_accounts ORDER BY account_id').get();
@@ -51,7 +54,36 @@ abstract final class WaffraAccountsPortableBackupV3 {
      transfers.length>maxTransfers){
    throw StateError('Account backup exceeds supported bounded capacity.');
   }
+  final goalSources=await store.customSelect(
+   'SELECT movement_id,account_id,linked_iso '
+   'FROM fresh_finance_goal_account_sources ORDER BY movement_id').get();
+  final recurringDefaults=await store.customSelect(
+   'SELECT recurring_id,account_id,changed_iso '
+   'FROM fresh_finance_recurring_account_defaults ORDER BY recurring_id').get();
+  final smsSuffixes=await store.customSelect(
+   'SELECT account_id,last_four,confirmed_iso '
+   'FROM fresh_finance_account_sms_suffixes ORDER BY account_id').get();
+  if(goalSources.length>maxLinks || recurringDefaults.length>maxAccounts ||
+     smsSuffixes.length>maxAccounts)throw StateError(
+    'Account-context backup exceeds bounded capacity.');
   return <String,Object?>{
+   'contextV1': <String,Object?>{
+    'goalSources':goalSources.map((r)=><String,Object?>{
+     'movement_id':r.read<String>('movement_id'),
+     'account_id':r.read<String>('account_id'),
+     'linked_iso':r.read<String>('linked_iso'),
+    }).toList(growable:false),
+    'recurringDefaults':recurringDefaults.map((r)=><String,Object?>{
+     'recurring_id':r.read<String>('recurring_id'),
+     'account_id':r.read<String>('account_id'),
+     'changed_iso':r.read<String>('changed_iso'),
+    }).toList(growable:false),
+    'smsSuffixes':smsSuffixes.map((r)=><String,Object?>{
+     'account_id':r.read<String>('account_id'),
+     'last_four':r.read<String>('last_four'),
+     'confirmed_iso':r.read<String>('confirmed_iso'),
+    }).toList(growable:false),
+   },
    'accounts':accounts.map((r)=><String,Object?>{
     'account_id':r.read<String>('account_id'),
     'label':r.read<String>('label'),
