@@ -3624,10 +3624,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    _autoSmsHistoryComplete=progress?['historyComplete']==true;
    _autoSmsPending..clear()..addAll(waiting);
   });
-  // Cloud suggestions remain separately opt-in and never post transactions.
-  if(waiting.isNotEmpty&&!_cloudReviewStageRunning){
-   unawaited(_stageCloudReviewSuggestions(waiting));
-  }
+  // Foreground intake is always local-only. Even a standing cloud consent
+  // never authorizes processing a specific message off-device.
+  // The explicit ambiguous-message action owns cloud requests.
  }
  Future<void> _stageCloudReviewSuggestions(
   List<Map<String,Object?>> candidates)async{
