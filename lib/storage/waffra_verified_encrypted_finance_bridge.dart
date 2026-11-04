@@ -7,6 +7,7 @@ import 'waffra_portable_encrypted_backup_exporter.dart';
 import 'waffra_accounts_repository.dart';
 import 'waffra_fresh_finance_domain_repository.dart';
 import 'waffra_verified_goal_due_snapshot_writer.dart';
+import 'waffra_verified_goal_funding_writer.dart';
 import 'waffra_encrypted_transaction_recycle.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -121,6 +122,35 @@ class WaffraVerifiedEncryptedFinanceBridge {
   ///
   /// The caller's generation must still match: even an unrelated widget edit
   /// means the Home screen must reload before confirming any cash movement.
+  /// Atomic goal funding on the preexisting verified encrypted source.
+  /// A funding movement is not an expense and never inherits Home's header.
+  Future<void> fundVerifiedGoal({
+    required WaffraEncryptedHomeWitness baseline,
+    required String goalId,required int amountMinor,
+    required String movementId,required String occurredIso,
+    required String? sourceAccountId,required bool userConfirmed,
+  }) async {
+    if(!experimentalEnabled||!userConfirmed){
+      throw StateError('Goal account source requires verified approval.');
+    }
+    await WaffraExperimentalWriterGate(
+      disposableDirectory:writerDirectory,experimentalEnabled:true,
+    ).withExclusiveAccess(() async {
+      await _requireActivatedUnderLock();
+      await WaffraAccountsSchema.install(snapshot.store);
+      await WaffraAccountContextSchema.install(snapshot.store);
+      await WaffraVerifiedGoalFundingWriter(
+        store:snapshot.store,snapshot:snapshot,experimentalEnabled:true,
+      ).fund(
+        expectedGeneration:baseline.generation,
+        expectedDigest:baseline.digest,
+        goalId:goalId,amountMinor:amountMinor,movementId:movementId,
+        occurredIso:occurredIso,sourceAccountId:sourceAccountId,
+        userConfirmed:true,
+      );
+    });
+  }
+
   Future<WaffraGoalDueSqlReceipt> settleLinkedGoalDue({
     required WaffraEncryptedHomeWitness baseline,
     required String goalId,
