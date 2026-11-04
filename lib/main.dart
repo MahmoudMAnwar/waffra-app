@@ -3890,7 +3890,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          ()=>unawaited(_refreshAutoSmsInbox(importMonth:true))),
         icon:const Icon(Icons.refresh_rounded,size:19),
         label:WaffraText(waffraIsEnglish?'Rescan':'إعادة الفحص')),
-       ),
       ]),
      ])),
    ]),
