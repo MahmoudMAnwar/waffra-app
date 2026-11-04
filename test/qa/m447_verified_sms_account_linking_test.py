@@ -9,11 +9,17 @@ class VerifiedSmsAccountLinkingTest(unittest.TestCase):
     def test_every_home_sms_commit_reviews_accounts(self):
         home = (ROOT / "lib/main.dart").read_text(encoding="utf-8")
         self.assertEqual(home.count("commitConfirmedSms("), 3)
-        self.assertEqual(home.count("await reviewSmsAccountLinks("), 3)
+        self.assertEqual(home.count("await reviewSmsAccountLinks("), 5)
         self.assertEqual(home.count("selectedAccountIds:reviewedAccounts.ids"), 1)
         self.assertEqual(home.count("selectedAccountIds:reviewedAccount.ids"), 2)
         self.assertEqual(home.count("expectedAccountGeneration:reviewedAccounts.generation"), 1)
         self.assertEqual(home.count("expectedAccountGeneration:reviewedAccount.generation"), 2)
+
+    def test_manual_and_recurring_finance_account_selection(self):
+        home = (ROOT / "lib/main.dart").read_text(encoding="utf-8")
+        self.assertIn("selectedAccountId:chosen.ids?.single", home)
+        self.assertIn("selectedAccountId:initial==null?chosenManual?.ids?.single:null", home)
+        self.assertIn("route:WaffraFinanceRoute.recurringPostingAndPostponement", home)
 
     def test_verified_source_only_with_no_shadow_db(self):
         home = (ROOT / "lib/main.dart").read_text(encoding="utf-8")
