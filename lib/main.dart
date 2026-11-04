@@ -4335,7 +4335,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      categories,r.income,r.category)&&(r.linkedGoalId==null||
       goals.any((g)=>g.id==r.linkedGoalId&&g.dueDate!=null)))
      .map((r)=>WaffraReminder(id:r.id,title:r.title,day:r.day,
-      startAt:r.linkedGoalId==null?null:r.startAt)).toList(),
+      startAt:r.startAt,
+      oneTimeDueAt:r.linkedGoalId==null?null:r.startAt)).toList(),
     english:waffraIsEnglish);
   }catch(e){debugPrint('Reminder scheduling failed: $e');}
  }
@@ -8716,8 +8717,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final spent=sum(monthExpenses,false);
   final variableSpent=sum(monthExpenses.where((e)=>!e.id.startsWith('rec_')),false);
   final remaining=DateTime(now.year,now.month+1,0).day-now.day;
-  final pending=recurring.where((r)=>r.active&&r.day>now.day&&
-   !entries.any((e)=>e.id=='rec_${r.id}_${now.year}_${now.month}'));
+  final pending=recurring.where((r){
+   if(!r.active)return false;
+   final due=r.linkedGoalId==null
+    ?WaffraRecurringPolicy.dueDate(now.year,now.month,r.day)
+    :DateTime(r.startAt.year,r.startAt.month,r.startAt.day);
+   return WaffraFinancialInsights.pendingCurrentMonth(
+    now:now,startAt:r.startAt,day:r.day,
+    goalLinked:r.linkedGoalId!=null,
+    alreadyPaid:entries.any((e)=>
+     e.id==WaffraRecurringPolicy.entryId(r.id,due)));
+  });
   final pendingIncome=pending.where((r)=>r.income).fold<double>(0,(v,r)=>v+r.amount);
   final pendingExpense=pending.where((r)=>!r.income).fold<double>(0,(v,r)=>v+r.amount);
   final balance=waffraAvailableCash(entries,goals);
@@ -8740,8 +8750,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final prevTotal=sum(entries.where((e)=>!e.income&&e.date.year==prev.year&&e.date.month==prev.month),false);
   final delta=WaffraFinancialInsights.comparisonPercent(spent,prevTotal);
   final warnings=namedBudgets.where((b)=>!b.deleted&&b.budget>0&&b.budgetActive&&
-   WaffraFinancialInsights.budgetAlertStage(
-    sum(monthExpenses.where((e)=>e.budgetId==b.id),false),b.budget)>=80).toList();
+   WaffraFinancialInsights.reachedBudgetThreshold(
+    spent:waffraNamedBudgetSpent(entries,categories,b,now),
+    budget:b.budget,alertPercent:b.alertPercent)).toList();
   return Card(
    elevation:1.0,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(21)),
    child:Padding(padding:const EdgeInsets.all(15),child:Column(

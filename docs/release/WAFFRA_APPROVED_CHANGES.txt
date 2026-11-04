@@ -1528,3 +1528,9 @@ M370: إعداد فحص إلزامية SQLCipher للتثبيتات الجديد
 - Reconciled the separate Android SMS consent/review and merchant UI/biometric patches on one main-descendant branch; preserved both features and all old financial records.
 - Declared all 12 changed files and original-base protected function boundaries; verified byte-identical code outside approved sections.
 - Re-run exact-HEAD CI and signed APK main release checks; native device testing remains a separate gate.
+
+[M444 2026-11-04] Functional correctness: notification isolation, one-time goal dues, forecast and budget warnings
+- Cancel only app-owned pending recurring reminder requests, never unrelated bank SMS notifications. Preserve legacy reminder title cleanup.
+- Linked savings goal dues produce one reminder, not endless monthly notices. Exclude not-yet-started obligations from current-month forecast.
+- Smart finance budget warnings use each budget's chosen threshold and independent budget spend projection.
+- Ledger, encrypted authority, backup, login and historical transactions unchanged; run exact-SHA CI and on-device notification acceptance before release.
