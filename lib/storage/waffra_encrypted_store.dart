@@ -92,9 +92,17 @@ class WaffraEncryptedStore extends GeneratedDatabase {
           db.execute('PRAGMA legacy=4');
           final cipher = db.select('PRAGMA cipher');
           final version = db.select('PRAGMA legacy');
-          if (cipher.isEmpty || cipher.first.values.first != 'sqlcipher' ||
-              version.isEmpty || version.first.values.first != 4) {
-            throw StateError('SQLCipher 4 is unavailable.');
+          final selectedCipher = cipher.isEmpty
+              ? null : cipher.first.values.first.toString().toLowerCase();
+          final selectedVersion = version.isEmpty
+              ? null : int.tryParse(version.first.values.first.toString());
+          if (selectedCipher != 'sqlcipher' || selectedVersion != 4) {
+            // These are non-secret engine settings, not key material. Include
+            // them so CI can distinguish a missing native cipher from a
+            // mismatched compatibility setting without weakening fail-closed.
+            throw StateError('SQLCipher 4 is unavailable '
+                '(cipher=${selectedCipher ?? 'missing'}, '
+                'legacy=${selectedVersion?.toString() ?? 'missing'}).');
           }
         }
         final supportedCipher = db.select('PRAGMA cipher');
