@@ -137,6 +137,19 @@ void main(){
   expect(await balances(),{'new-account':300000});
  });
 
+ test('history-less V3 refuses live restore and keeps original balance',()async{
+  final original=await archives();
+  final decoded=jsonDecode(await WaffraSecureBackup.decrypt(
+   original.incoming,pass)) as Map<String,dynamic>;
+  decoded.remove('financeHistoryV1');
+  final legacy=await WaffraSecureBackup.encryptUserBackup(
+   jsonEncode(decoded),pass);
+  final candidate=(incoming:legacy,rescue:original.rescue,
+   checksum:original.checksum);
+  await expectLater(apply(candidate),throwsA(isA<StateError>()));
+  expect(await balances(),{'old-account':100000});
+ });
+
  test('unarchived typed SMS fingerprint prevents data loss on restore',()async{
   final proof=await archives();
   await live.customStatement(
