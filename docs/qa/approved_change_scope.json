@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M446-M440-SAR-accounts-V3-on-M445-main",
-  "human_scope_review": "User approved completing Saudi SAR money accounts, account-linked manual/SMS/recurring confirmed posting, idempotent transfers, and password-authenticated V3 account backup/restoration. The M440 implementation is rebased on merged M445 preserving budget/goal alert source code and Home+widget SMS routing. Production source activation and signed-device evidence remain gated until proven; do not bypass SQLCipher release review. Subsequent user instruction authorizes production activation for fresh Android installations. Existing users retain guarded routing. Signed Android validation is pending.",
+  "human_scope_review": "User approved completing Saudi SAR money accounts, account-linked manual/SMS/recurring confirmed posting, idempotent transfers, and password-authenticated V3 account backup/restoration. The M440 implementation is rebased on merged M445 preserving budget/goal alert source code and Home+widget SMS routing. Production source activation and signed-device evidence remain gated until proven; do not bypass SQLCipher release review. Subsequent user instruction authorizes production activation for fresh Android installations. Existing users retain guarded routing. Signed Android validation is pending. M96 regression repair checks that the same source guard is instantiated in the verified binder; it does not remove or relax a source safety assertion.",
   "user_requested_changes": [
     "Preserve M444 hashed single-alert-per-budget-month deduplication and account-specific SMS notification isolation while adding user-selectable alert enable/disable.",
     "Create Saudi riyal cash, bank, wallet and other money accounts with independent balances and account metadata.",
@@ -28,7 +28,8 @@
     "M447: Settle linked savings goals atomically with their due recurrence; subtract the goals wallet only once and link only the cash-funded portion to an explicitly chosen bank account.",
     "Activate SQLCipher-compatible v4 on empty Android installations with an OS-protected key, durable install receipt and shared Home, widget and SMS runtime. Preserve existing legacy finance.",
     "Export and cold-verify linked relational records and authenticated account archives from the active finance backup UI; test interruption, restart and real Android source binding.",
-    "Update only the M175 verified recurring route assertion to require user confirmation and selected account; update only the obsolete M362 goal due test to assert the new atomic due writer."
+    "Update only the M175 verified recurring route assertion to require user confirmation and selected account; update only the obsolete M362 goal due test to assert the new atomic due writer.",
+    "Repair the M96 source-safety contract so it verifies the actual centralized production binder instead of an obsolete Home source-guard location while preserving strict source activation and legacy fallback protections."
   ],
   "allowed_changed_files": [
     ".github/scripts/run-m120-android-receipt-reopen.sh",
@@ -36,6 +37,7 @@
     ".github/workflows/m120-android-receipt-cold-reopen.yml",
     ".github/workflows/m202-android-sqlcipher-source-binder-dryrun.yml",
     ".github/workflows/m440-account-ledger-and-backup-ci.yml",
+    ".github/workflows/m96-runtime-finance-cloud-integration.yml",
     "docs/qa/approved_change_scope.json",
     "docs/qa/m440_accounts_design.md",
     "integration_test/fresh_install_production_binding_android_test.dart",
@@ -500,6 +502,12 @@
       {
         "start": "      await activeDirectory.delete(recursive: true);\n",
         "end": "  test('M187 accepted portable receipt cold-stages without replacing active ledger',\n"
+      }
+    ],
+    ".github/workflows/m96-runtime-finance-cloud-integration.yml": [
+      {
+        "start": "          assert 'bool get automaticallyActivateSqlCipher => false;' in release\n",
+        "end": "          assert 'SharedPreferences remains authoritative' in persistence\n"
       }
     ]
   }
