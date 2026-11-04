@@ -12,7 +12,6 @@ import 'waffra_verified_active_accounts_restore.dart';
 import 'waffra_encrypted_transaction_recycle.dart';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:drift/drift.dart';
