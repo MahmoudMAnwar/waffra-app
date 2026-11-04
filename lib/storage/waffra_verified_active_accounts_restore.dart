@@ -11,6 +11,7 @@ import 'waffra_atomic_finance_snapshot.dart';
 import 'waffra_encrypted_store.dart';
 import 'waffra_fresh_finance_domain_schema.dart';
 import 'waffra_portable_backup_v2.dart';
+import 'waffra_restored_finance_receipt_attestor.dart';
 
 class WaffraVerifiedAccountsRestoreReceipt {
  const WaffraVerifiedAccountsRestoreReceipt(
@@ -163,6 +164,11 @@ class WaffraVerifiedActiveAccountsRestore {
       restored.receiptCount!=preview.receiptCount) {
     throw StateError('Restored finance and receipt proof differs.');
    }
+   // The final live vault must contain the exact authenticated receipt
+   // owner/position/bytes, not merely the expected number of attachments.
+   await WaffraRestoredFinanceReceiptAttestor(
+    store:store,experimentalEnabled:true,
+   ).attest(authenticatedArchive:preview,reported:restored);
    // The portable restorer creates generation 1 for a new vault. Revisions
    // of an EXISTING live source must never move backward or reuse a stale
    // Home/Widget generation.
