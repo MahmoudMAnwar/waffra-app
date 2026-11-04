@@ -122,6 +122,19 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
       )),
      WaffraAccountContextSettings(
       api:widget.api,accounts:widget.accounts,english:widget.english),
+     if(data.goals.isNotEmpty)...[
+      Padding(padding:const EdgeInsets.all(12),
+       child:Text(t('الأهداف ومحفظة الادخار','Savings goals and wallet'),
+        style:Theme.of(context).textTheme.titleMedium)),
+      ...data.goals.map((goal)=>Card(child:ListTile(
+       title:Text(goal.name),
+       subtitle:Text(accountId==null
+        ?t('إجمالي الادخار: ','Total saved: ')+money(goal.totalSavedMinor)
+        :t('مساهمة الحساب: ','Account contribution: ')+
+          money(goal.selectedAccountNetMinor)+'\n'+
+          t('إجمالي الادخار: ','Total saved: ')+money(goal.totalSavedMinor)),
+      ))),
+     ],
      if(data.budgets.isNotEmpty)...[
       Padding(padding:const EdgeInsets.all(12),
        child:Text(t('الميزانيات هذا الشهر','This month’s budgets'),
