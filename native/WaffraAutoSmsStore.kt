@@ -255,7 +255,9 @@ object WaffraAutoSmsStore {
         "(?:\\b(?:SAR|SR|AED|JOD|EGP|KWD|BHD|OMR|QAR|USD|EUR|GBP)(?=\\b|[0-9٠-٩۰-۹])|" +
         "ر\\.?\\s*س|ريال|درهم|دينار|جنيه|دولار|يورو)", RegexOption.IGNORE_CASE)
     private val digits = Regex("[0-9٠-٩۰-۹][0-9٠-٩۰-۹,.]{0,14}")
-    private val senderName = Regex("^[A-Za-z][A-Za-z0-9 _-]{2,24}$")
+    // Named bank/application senders can be Arabic or English. Personal
+    // numeric phone numbers never enter the automatic review queue.
+    private val senderName = Regex("^[\\p{L}][\\p{L}0-9 _-]{2,24}$")
     private val brand = Regex(
         "(?:bank|alinma|inma|rajhi|snb|sabb|riyad|bilad|anb|saib|" +
         "aljazira|jazeera|alahli|stcpay|stc.?bank|urpay|mobily.?pay|" +
@@ -263,9 +265,12 @@ object WaffraAutoSmsStore {
 
     fun qualifies(sender: String, body: String): Boolean {
         val safe = body.trim()
-        if (safe.length < 18 || safe.length > 1600 || otp.containsMatchIn(safe))
-            return false
+        if (safe.length < 10 || safe.length > 1600) return false
         if (!senderName.matches(sender.trim())) return false
+        // Non-financial verification notices are reviewable as EXCLUDED,
+        // never processed as money. No original verification digits are kept.
+        if (otp.containsMatchIn(safe)) return true
+        if (safe.length < 18) return false
         if (!action.containsMatchIn(safe) || !money.containsMatchIn(safe) ||
             !digits.containsMatchIn(safe)) return false
         // Unknown financial senders can be reviewed, but a phone number or
@@ -375,8 +380,16 @@ object WaffraAutoSmsStore {
                         return@synchronized false
                 }
                 if (queue.length() >= maxCandidates) return@synchronized false
+                val sensitive = otp.containsMatchIn(body)
+                // Mask every contiguous run of digits in OTP notices,
+                // including localized digit variants, before encryption.
+                // The original is used only to derive the dedupe hash;
+                // it is never put in the review queue or cloud payload.
+                val masked = if (sensitive) body.trim().replace(
+                    Regex("[0-9٠-٩۰-۹]+"), "••••") else body.trim()
                 queue.put(JSONObject().put("id", fingerprint)
-                    .put("sender", sender.trim()).put("body", body.trim())
+                    .put("sender", sender.trim()).put("body", masked)
+                    .put("sensitiveOtp", sensitive)
                     .put("receivedAt", at)
                     .put("reviewNotified", historical))
                 save(context, queue)
@@ -396,7 +409,8 @@ object WaffraAutoSmsStore {
                     "id" to row.getString("id"),
                     "sender" to row.getString("sender"),
                     "body" to row.getString("body"),
-                    "receivedAt" to row.getLong("receivedAt"))
+                    "receivedAt" to row.getLong("receivedAt"),
+                    "sensitiveOtp" to row.optBoolean("sensitiveOtp", false))
                 if (row.has("cloud")) {
                     val proof = row.optJSONObject("cloud")
                     if (proof != null) {
