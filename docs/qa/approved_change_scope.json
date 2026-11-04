@@ -214,8 +214,8 @@
     ],
     "lib/storage/waffra_verified_goal_due_snapshot_writer.dart": [
       {
-        "start": "import 'waffra_atomic_finance_snapshot.dart';\n",
-        "end": "import 'waffra_encrypted_store.dart';\n"
+        "start": "import 'dart:convert';\n",
+        "end": "import 'waffra_fresh_finance_domain_repository.dart';\n"
       },
       {
         "start": "  Future<WaffraGoalDueSqlReceipt> settle({\n",
