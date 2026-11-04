@@ -1,159 +1,68 @@
 {
   "contract_version": 1,
-  "change_id": "M442-M443-combined-sms-review-and-biometric-merchant-reconciliation",
-  "human_scope_review": "Owner explicitly approved merging M442 bank SMS capture/review/session repair and M443 screenshot biometric/merchant UI removal together after reviewing cross-PR conflicts. Both previously reviewed source scopes remain bounded; neither feature may modify balances, historical records, or certified storage authority. This manifest declares both actual patches versus original PR base because exact-head workflows use the old base SHA.",
+  "change_id": "M228-combined-refresh-sqlcipher-routes-hosted-android-disk",
+  "human_scope_review": "Owner approved resolving all stale PR conflicts. This single reviewable change combines rebased PR #229 (guarded legacy fresh install pull refresh parity) and PR #228 (24 route read-only SQLCipher preflight). All current main SMS, biometric, merchant, goals and budget code is retained; no production SQLCipher activation, money movement or migration is permitted. This release candidate also fixes independent exact-head Android emulator disk exhaustion: the same encrypted DB job fails on a hosted runner before finance tests when userdata exceeds available disk. Retain the mandatory physical emulator test while reducing AVD disk size to 3072MB and removing nonessential hosted runner toolchains.",
   "user_requested_changes": [
-    "Prevent bank SMS permissions and consent state from being mistaken for an empty pending-review list on the Home screen.",
-    "Preserve one-time bank SMS consent across sign-out/sign-in for the same verified account without silently authorizing a different user.",
-    "Protect account identity and encrypted pending SMS: keep one owner's queue inaccessible while logged out, purge on explicit opt-out or different-account opt-in.",
-    "Resume earlier bank SMS review from original installation month in bounded cursor-based batches, with progress status instead of misleading zero.",
-    "Expose Android READ_SMS/RECEIVE_SMS permission, app tracking, signed-in profile and protected queue read failures as separate accurate statuses.",
-    "Prevent unreadable AndroidKeyStore SMS review data from being silently reported as zero or crashing Activity during resume.",
-    "Update exact-SHA release notes and add regression test coverage for the two Android screenshot failures.",
-    "Remove the Choose merchant and logo selector and associated merchant brand search and preview from editing or adding any transaction.",
-    "Stop rendering merchant logos or merchant name branding in transaction detail, list and compact Home views, replacing them with category icons.",
-    "Retain existing transaction IDs, amounts, historical merchantKey metadata, SMS dedupe, categories, receipts, and finance writes without migrating or deleting data.",
-    "Prevent spurious biometric relock on a transient Android inactive lifecycle event such as a screenshot while maintaining mandatory OS biometric checks after genuine paused, hidden or detached background transitions.",
-    "Update existing biometric and SMS finance UI source assertions and add screenshot/branding regression tests without weakening security or bypassing test guards.",
-    "Document exact changes and physical device testing requirement in main APK release notes."
+    "Reconcile conflicted PR #229 onto current main without replacing newer unrelated finance, SMS, budget, biometric or merchant UI fixes.",
+    "Allow first-install guarded-legacy pull-to-refresh when genuinely absent empty ledger or categories are valid and preserve the same default categories as ordinary startup.",
+    "Fail closed on absent or corrupt authoritative SQLCipher financial fields, keeping existing money records unchanged and detecting malformed source data.",
+    "Preserve the existing independent named-budget refresh projection and all unrelated Home and Widget finance state.",
+    "Add regression tests proving legacy default parity and encrypted/malformed source refusal on the exact updated PR head.",
+    "Resolve the outdated conflicting PR #228 against current main while preserving all later finance, SMS, widget, backup, biometric and locale code.",
+    "Check each canonical finance route before ever binding an already active encrypted SQLCipher source and reject any route without audited witness.",
+    "Keep the preflight strictly read-only and incapable of automatically activating SQLCipher or switching the authoritative ledger.",
+    "Preserve current guarded-legacy startup and require existing OS-backed key, verified source digest and native bridge before any encrypted read.",
+    "Add deterministic 24-route, missing-key, missing-witness, incomplete-audit, immutable report and main-wiring regression tests.",
+    "Remove the shared GitHub hosted-runner Android encrypted DB emulator disk-exhaustion CI blocker without changing finance logic, test assertions or marking emulator verification skipped."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
+    "docs/qa/m228-24-route-source-preflight.md",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "lib/waffra_auto_sms.dart",
-    "lib/waffra_mandatory_biometric_gate.dart",
-    "native/WaffraAutoSmsStore.kt",
-    "native/WaffraMainActivity.kt",
-    "test/m424_mandatory_biometrics_test.dart",
-    "test/m429_sms_phone_integration_test.dart",
-    "test/m440_biometric_resume_regression_test.dart",
-    "test/m443_merchant_screenshot_regression_test.dart",
-    "test/qa/m442_sms_consent_session_recovery_test.py"
+    "lib/storage/waffra_finance_24_route_preflight.dart",
+    "lib/storage/waffra_production_finance_authority_binding.dart",
+    "lib/storage/waffra_verified_pull_refresh_source.dart",
+    "test/qa/m228_24_route_binder_wiring_test.py",
+    "test/qa/m228_pull_refresh_live_wiring_test.py",
+    "test/storage/m228_24_route_preflight_test.dart",
+    "test/storage/m228_verified_pull_refresh_source_test.dart",
+    ".github/workflows/storage-android-integration.yml",
+    "test/qa/m228_android_emulator_disk_preflight_test.py"
   ],
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": "import 'waffra_footer.dart';\n",
-        "end": "import 'waffra_auto_sms_policy.dart';\n"
+        "start": "import 'storage/waffra_verified_finance_authority.dart';\n",
+        "end": "import 'storage/waffra_fresh_finance_modules_repository.dart';\n"
       },
       {
-        "start": "    content:ConstrainedBox(\n     constraints:const BoxConstraints(maxWidth:440),\n",
-        "end": "       WaffraText(waffraIsEnglish?'Transaction description'"
-      },
-      {
-        "start": "  String? selectedParentId;\n",
-        "end": "  int budgetMenuRevision=0;"
-      },
-      {
-        "start": "      const SizedBox(height:12),\n      TextField(controller:title,onChanged:(_)=>update((){}),minLines:1,maxLines:5,",
-        "end": "      if(!sms)...["
-      },
-      {
-        "start": "        sourceType:initial?.sourceType??(sms?'sms':scannedReceipt!=null?'receipt':'manual'),",
-        "end": "        goalWalletPaidMinor:"
-      },
-      {
-        "start": "   textColor:waffraInk,iconColor:forest,",
-        "end": "   title:WaffraText(e.title,style:const TextStyle(color:waffraInk,fontWeight:FontWeight.w600)),subtitle:"
-      },
-      {
-        "start": "    Padding(padding:EdgeInsets.fromLTRB(11,attachmentCount>0?23:12,11,12),child:Row(children:[",
-        "end": "     const SizedBox(width:8),\n     Expanded(child:InkWell(onTap:WaffraHaptics.tap(()=>transactionDetails(entry)),"
-      },
-      {
-        "start": " Future<void> saveUser(Person u)async {",
-        "end": " Future<void> setUiCountry(String? iso)async{"
-      },
-      {
-        "start": " Future<void> logout()async {",
-        "end": " Future<void> setPin(String? value)async {"
-      },
-      {
-        "start": " bool _autoSmsReviewOpen=false;",
-        "end": " Future<void> _stageCloudReviewSuggestions("
-      },
-      {
-        "start": " Future<void> _scanPreviousBankSmsFromSettings()async{",
-        "end": " Future<void> _openAutoSmsInbox()async{"
-      },
-      {
-        "start": " Widget _autoSmsReviewCard(){",
-        "end": " Future<void> _reviewAutoSmsCandidates("
+        "start": " Future<void> _refreshFromVerifiedFinance()async {",
+        "end": "   final nextNamedBudgets=readList<WaffraNamedBudget>("
       }
     ],
-    "lib/waffra_mandatory_biometric_gate.dart": [
+    "lib/storage/waffra_production_finance_authority_binding.dart": [
       {
-        "start": "/// requests. Every new gate instance must be verified through the OS.\n",
-        "end": "  static bool canReveal({"
+        "start": "import 'waffra_encrypted_store.dart';\n",
+        "end": "import 'waffra_home_finance_persistence.dart';\n"
+      },
+      {
+        "start": "      if (checkpoint == null ||\n",
+        "end": "      final bridge = WaffraVerifiedEncryptedFinanceBridge(\n"
       }
     ],
-    "test/m424_mandatory_biometrics_test.dart": [
+    ".github/workflows/storage-android-integration.yml": [
       {
-        "start": "void main() {\n",
-        "end": "  test('M424: old OS success cannot reveal finance while backgrounded'"
-      }
-    ],
-    "test/m429_sms_phone_integration_test.dart": [
+        "start": "      - name: Enable Linux KVM permissions\n",
+        "end": "      - name: Test encrypted vault on Android emulator (primary)\n"
+      },
       {
-        "start": " test('M434 saved transactions preserve genuine SMS versus manual origin',(){",
+        "start": "      - name: Test encrypted vault on Android emulator (primary)\n",
+        "end": "      - name: Reset adb before a clean emulator retry\n"
+      },
+      {
+        "start": "      - name: Retry complete finance tests on fresh API 35 after emulator failure\n",
         "end": null
-      }
-    ],
-    "test/m440_biometric_resume_regression_test.dart": [
-      {
-        "start": "void main() {\n",
-        "end": null
-      }
-    ],
-    "lib/waffra_auto_sms.dart": [
-      {
-        "start": " static Future<bool> enabled()=>_boolCall('autoSmsEnabled');",
-        "end": " static Future<bool> notificationPermission()=>_boolCall('autoSmsNotificationsEnabled');"
-      },
-      {
-        "start": " static Future<bool> disable()=>_boolCall('setAutoSmsEnabled',false);",
-        "end": " /// Read-only, on-demand scan for institutional financial notices that"
-      }
-    ],
-    "native/WaffraAutoSmsStore.kt": [
-      {
-        "start": "    private const val activeName = \"enabled\"",
-        "end": "    private const val activationMonth = \"sms_activation_month_start\""
-      },
-      {
-        "start": "    fun permissionGranted(context: Context): Boolean =",
-        "end": "    private fun key(): SecretKey {"
-      },
-      {
-        "start": "    fun offer(context: Context, sender: String, body: String, at: Long,",
-        "end": "    fun pending(context: Context): List<Map<String, Any>> = synchronized(mutex) {"
-      },
-      {
-        "start": "    fun pending(context: Context): List<Map<String, Any>> = synchronized(mutex) {",
-        "end": "    /** Atomic per-SMS request claim shared by foreground and WorkManager."
-      },
-      {
-        "start": "    fun acknowledge(context: Context, ids: Set<String>): Boolean =",
-        "end": "    /** Resumable history import:"
-      },
-      {
-        "start": "    fun importConsentMonth(context: Context, maxRead: Int = 500): Int {",
-        "end": "    /** Claim each review notification once; history never floods the shade. */"
-      },
-      {
-        "start": "    fun claimReviewNotification(context: Context, fingerprint: String): Boolean =",
-        "end": null
-      }
-    ],
-    "native/WaffraMainActivity.kt": [
-      {
-        "start": "    override fun onResume() {",
-        "end": "    override fun onRequestPermissionsResult("
-      },
-      {
-        "start": "                \"autoSmsPermissionState\" ->",
-        "end": "                \"autoSmsNotificationsEnabled\" ->"
       }
     ]
   }

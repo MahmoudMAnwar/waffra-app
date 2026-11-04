@@ -92,6 +92,7 @@ import 'storage/waffra_legacy_finance_writer_coordinator.dart';
 import 'storage/waffra_live_account_write_authority.dart';
 import 'storage/waffra_home_finance_persistence.dart';
 import 'storage/waffra_verified_finance_authority.dart';
+import 'storage/waffra_verified_pull_refresh_source.dart';
 import 'storage/waffra_production_finance_authority_binding.dart';
 import 'storage/waffra_fresh_finance_modules_repository.dart';
 import 'storage/waffra_verified_module_ui_guard.dart';
@@ -3920,11 +3921,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     route:WaffraFinanceRoute.dashboardRead);
    final view=current.finance;
    view.requireIntegrity();
-   final ledger=current.ledgerRaw;
-   final catalog=view.getString('waffra_categories_v24');
-   if(ledger==null||catalog==null) {
-    throw StateError('Authoritative finance view is incomplete.');
-   }
+   // Legacy first installs may omit their empty ledger or category catalog.
+   // Activated SQLCipher still fails closed if either required source is absent.
+   final refreshSource=WaffraVerifiedPullRefreshSource.fromAuthority(current);
+   final ledger=refreshSource.ledgerRaw;
+   final catalog=refreshSource.categoriesRaw;
    List<T> readList<T>(String? raw,T Function(Map<String,dynamic>) make) {
     if(raw==null)return <T>[];
     final parsed=jsonDecode(raw);
@@ -3932,7 +3933,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     return parsed.map((e)=>make(Map<String,dynamic>.from(e as Map))).toList();
    }
    final nextEntries=readList<MoneyEntry>(ledger,MoneyEntry.fromJson);
-   final nextCategories=readList<BudgetCategory>(catalog,BudgetCategory.fromJson);
+   final nextCategories=catalog==null
+    ?defaultCategories()
+    :readList<BudgetCategory>(catalog,BudgetCategory.fromJson);
+   if(current.source==WaffraRuntimeFinanceBackend.guardedLegacy){
+    if(nextCategories.isEmpty)nextCategories.addAll(defaultCategories());
+    for(final entry in nextEntries){
+     if(!nextCategories.any((c)=>c.name==entry.category&&c.income==entry.income)){
+      nextCategories.add(BudgetCategory(id:newId(),name:entry.category,
+       icon:'category',color:colors[7],income:entry.income));
+     }
+    }
+   }
    final nextNamedBudgets=readList<WaffraNamedBudget>(
     view.getString('waffra_named_budgets_v1'),WaffraNamedBudget.fromJson);
    for(final c in nextCategories.where((c)=>!c.income&&c.budget>0)){
