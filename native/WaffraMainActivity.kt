@@ -245,6 +245,14 @@ class MainActivity : FlutterFragmentActivity() {
                 }
                 "autoSmsPermissionState" -> result.success(WaffraAutoSmsStore.permissionGranted(this))
                 "autoSmsEnabled" -> result.success(WaffraAutoSmsStore.enabled(this))
+                "autoSmsTrackingStatus" -> result.success(WaffraAutoSmsStore.trackingStatus(this))
+                "pauseAutoSmsForSignOut" ->
+                    result.success(WaffraAutoSmsStore.suspendForSignOut(this))
+                "resumeAutoSmsAfterSignIn" -> {
+                    val resumed = WaffraAutoSmsStore.resumeForSameSignedInOwner(this)
+                    if (resumed) WaffraAutoSmsWorker.enqueue(this)
+                    result.success(resumed)
+                }
                 "autoSmsNotificationsEnabled" ->
                     result.success(WaffraAutoSmsNotifications.canNotify(this))
                 "requestAutoSmsNotifications" -> {
