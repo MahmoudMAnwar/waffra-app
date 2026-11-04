@@ -164,6 +164,13 @@ class WaffraVerifiedActiveAccountsRestore {
     order.add(table);remaining.remove(table);
    }
    for(final table in order){
+    if(table=='fresh_finance_categories'){
+     // The M452 SQL parent guard requires children removed first. The
+     // surrounding source-witnessed SQL transaction rolls back everything
+     // if any later restore validation fails.
+     await store.customStatement(
+      "DELETE FROM fresh_finance_categories WHERE COALESCE(parent_id,'')<>''");
+    }
     await store.customStatement('DELETE FROM $table');
    }
    // All source activation/cutover checkpoints survive unchanged.
