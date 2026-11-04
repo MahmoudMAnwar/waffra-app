@@ -14,14 +14,14 @@ void main(){
  late Directory dir;
  late WaffraEncryptedStore db;
  const at='2026-11-04T13:00:00';
- WaffraAccountContextRepository get context=>
-  WaffraAccountContextRepository(store:db,experimentalEnabled:true);
- WaffraAccountsRepository get accounts=>
-  WaffraAccountsRepository(db:db,experimentalEnabled:true);
+ late WaffraAccountContextRepository context;
+ late WaffraAccountsRepository accounts;
  setUp(()async{
   dir=await Directory.systemTemp.createTemp('m448-source');
   db=WaffraEncryptedStore.openAt(File(dir.path+'/store.sqlite'),
     key:'m448-only-disposable-verified-test-key');
+  context=WaffraAccountContextRepository(store:db,experimentalEnabled:true);
+  accounts=WaffraAccountsRepository(db:db,experimentalEnabled:true);
   await WaffraFreshEncryptedVaultBootstrap(store:db,experimentalEnabled:true)
    .initialize(decision:WaffraFirstRunDecision.freshCandidate);
   await WaffraAccountsSchema.install(db);
