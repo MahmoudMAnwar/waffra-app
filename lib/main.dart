@@ -1205,9 +1205,15 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   if(mounted)setState(()=>googleFirstRunSetup=false);
  }
  Future<void> logout()async {
-  // Suspend inbox collection and discard old ciphertext BEFORE removing
-  // profile. Verified same-owner login may later resume standing consent.
-  await WaffraAutoSms.suspendForSignOut();
+  // Stop capture BEFORE removing profile. Keep this account's encrypted
+  // pending review. If the new native bridge is unavailable, fail closed by
+  // using explicit disable; never silently sign out with collection enabled.
+  if(Platform.isAndroid){
+   final paused=await WaffraAutoSms.suspendForSignOut();
+   if(!paused&&!await WaffraAutoSms.disable()){
+    throw StateError('Could not safely suspend bank SMS before sign-out');
+   }
+  }
   // Drop any in-memory AI prompt context and cancel model download before
   // a new account can open its verified finance scope.
   try{await WaffraOnDeviceQwen.shared.dispose();}catch(_){}
