@@ -138,8 +138,17 @@ object WaffraAutoSmsStore {
     fun enable(context: Context, allow: Boolean): Boolean = synchronized(mutex) {
         if (allow && !permissionGranted(context)) return@synchronized false
         val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        val previouslyActive = prefs.getBoolean(activeName, false)
         val editor = prefs.edit().putBoolean(activeName, allow)
             .putBoolean(suspendedAfterLogoutName, false)
+        if (allow && !previouslyActive) {
+            // Repair upgrades from the old sign-out flow, which discarded
+            // review ciphertext but left the history cursor at the end.
+            // Explicit renewed opt-in must safely replay the install month.
+            // Existing confirmed finance hashes are still deduplicated by UI.
+            editor.remove(historyCursorAt).remove(historyCursorId)
+                .remove(historySourceMonth).remove(historyComplete)
+        }
         if (allow) {
             val owner = signedInOwnerHash(context)
             val previous = prefs.getString(consentedOwnerName, null)
