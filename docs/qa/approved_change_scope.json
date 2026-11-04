@@ -18,7 +18,8 @@
     "Treat verified exactly-once transfer replays as already saved rather than showing a failure after an identical committed transfer.",
     "M440: Account-aware authenticated V3 backup and atomic disposable-vault restore, with V2 loss prevention.",
     "M440: Persist one explicit selected account per confirmed SMS/recurring batch entry inside the unified SQLCipher writer.",
-    "M440: Make My Accounts navigation available only for independently verified activated SQLCipher sources; never create a second live finance database."
+    "M440: Make My Accounts navigation available only for independently verified activated SQLCipher sources; never create a second live finance database.",
+    "M447: Carry explicitly reviewed bank-SMS account selections through the existing verified finance authority/session and shared SQLCipher writer without permitting bank data in guarded legacy."
   ],
   "allowed_changed_files": [
     ".github/scripts/run-m120-android-receipt-reopen.sh",
@@ -46,7 +47,9 @@
     "test/storage/m440_accounts_portable_v3_test.dart",
     "test/storage/m440_accounts_repository_test.dart",
     "lib/main.dart",
-    "lib/storage/waffra_production_finance_authority_binding.dart"
+    "lib/storage/waffra_production_finance_authority_binding.dart",
+    "lib/storage/waffra_encrypted_finance_session.dart",
+    "lib/storage/waffra_verified_finance_authority.dart"
   ],
   "bounded_sections": {
     "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
@@ -141,6 +144,18 @@
       {
         "start": "      startup.finance.requireIntegrity();\n",
         "end": "    } catch (_) {\n"
+      }
+    ],
+    "lib/storage/waffra_encrypted_finance_session.dart": [
+      {
+        "start": "  Future<WaffraUnifiedWriteResult> appendConfirmed({\n",
+        "end": "  /// Save normalized transaction + raw picker picture bytes atomically after\n"
+      }
+    ],
+    "lib/storage/waffra_verified_finance_authority.dart": [
+      {
+        "start": "  Future<WaffraFinanceAuthoritySmsCommit> commitConfirmedSms({\n",
+        "end": "    return WaffraFinanceAuthoritySmsCommit(\n"
       }
     ]
   }
