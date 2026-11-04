@@ -1,121 +1,78 @@
 {
   "contract_version": 1,
-  "change_id": "M440-M441-PR360-biometric-login-sms-ui",
-  "human_scope_review": "User explicitly requested fixes after real Android screenshots: successful fingerprint must enter app, login with correct existing password must work after logout without deleting financial history, remove redundant biometric copy, and shorten SMS consent to requested buttons. This declares exact bounded code changes for M385. Does not imply passing CI or real-device certification.",
+  "change_id": "M443-merchant-branding-removal-and-screenshot-biometric-focus",
+  "human_scope_review": "The owner explicitly requested from real Android screenshots that merchant/logo selection and visible merchant branding be removed, and that taking screenshots no longer forces biometric reauthentication. The bounded scopes preserve transaction amounts and metadata, the Android biometric requirement for genuine background/launch, and all unrelated finance workflows. CI and physical Android confirmation are still required.",
   "user_requested_changes": [
-    "Fix accepted Android fingerprint returning users to the biometric gate instead of opening the app safely.",
-    "Remove the extra mandatory biometric explanation in Arabic and English while preserving OS biometric security.",
-    "Fix correct password being rejected on the phone login screen after explicit sign out, preserving account data.",
-    "Safeguard the registered phone login identity from accidental changes during profile edits and use secure verification.",
-    "Shorten bank SMS tracking permission copy and use the user-requested automatic analysis and SMS-only button labels.",
-    "Remove redundant email and birth date explanatory copy from the name and gender signup screen without changing required inputs.",
-    "Keep bank SMS permission UI to a single short line with explicit external cloud analysis disclosure and exactly two primary options.",
-    "Update existing SMS consent, phone sign-in, and secure credentials tests to match the user-approved text and ensure password matching precedes successful login without weakening the checks.",
-    "Update previously approved M436 and M417 test assertions for compact SMS consent, retaining independent cloud opt-in, redaction, review-only behavior and activation-month import."
+    "Remove the Choose merchant and logo selector and associated merchant brand search and preview from editing or adding any transaction.",
+    "Stop rendering merchant logos or merchant name branding in transaction detail, list and compact Home views, replacing them with category icons.",
+    "Retain existing transaction IDs, amounts, historical merchantKey metadata, SMS dedupe, categories, receipts, and finance writes without migrating or deleting data.",
+    "Prevent spurious biometric relock on a transient Android inactive lifecycle event such as a screenshot while maintaining mandatory OS biometric checks after genuine paused, hidden or detached background transitions.",
+    "Update existing biometric and SMS finance UI source assertions and add screenshot/branding regression tests without weakening security or bypassing test guards.",
+    "Document exact changes and physical device testing requirement in main APK release notes."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
+    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "lib/waffra_auto_sms_consent.dart",
-    "lib/waffra_local_phone_credentials.dart",
     "lib/waffra_mandatory_biometric_gate.dart",
-    "test/m417_sms_first_run_test.dart",
-    "test/m422_phone_only_auth_entry_test.dart",
-    "test/m426_local_phone_credentials_test.dart",
-    "test/m436_cloud_review_pipeline_test.dart",
+    "test/m424_mandatory_biometrics_test.dart",
+    "test/m429_sms_phone_integration_test.dart",
     "test/m440_biometric_resume_regression_test.dart",
-    "test/m441_auth_sms_copy_regression_test.dart",
-    "test/qa/m417_sms_permission_acceptance_test.py"
+    "test/m443_merchant_screenshot_regression_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": " bool loading=true,onboarded=false,dark=false,locked=false,showLogin=false;",
-        "end": " bool googleFirstRunSetup=false;"
+        "start": "import 'waffra_footer.dart';\n",
+        "end": "import 'waffra_auto_sms_policy.dart';\n"
       },
       {
-        "start": " @override void didChangeAppLifecycleState(AppLifecycleState state){",
-        "end": " @override void dispose(){WaffraRegionalCopy.countryIso.removeListener(_onRegionChanged);"
+        "start": "    content:ConstrainedBox(\n     constraints:const BoxConstraints(maxWidth:440),\n",
+        "end": "       WaffraText(waffraIsEnglish?'Transaction description'"
       },
       {
-        "start": " Future<void> saveUser(Person u)async {",
-        "end": " Future<void> setUiCountry(String? iso)async{"
+        "start": "  String? selectedParentId;\n",
+        "end": "  int budgetMenuRevision=0;"
       },
       {
-        "start": "   locked?WaffraMandatoryBiometricGate(",
-        "end": "    onSignOut:logout,\n   ):"
+        "start": "      const SizedBox(height:12),\n      TextField(controller:title,onChanged:(_)=>update((){}),minLines:1,maxLines:5,",
+        "end": "      if(!sms)...["
       },
       {
-        "start": "  final raw=prefs.getString('waffra_registered_profile');",
-        "end": " @override void dispose(){signInPhone.dispose();signInPassword.dispose();super.dispose();}"
+        "start": "        sourceType:initial?.sourceType??(sms?'sms':scannedReceipt!=null?'receipt':'manual'),",
+        "end": "        goalWalletPaidMinor:"
       },
       {
-        "start": " Future<void> _signIn()async{",
-        "end": " String get maskedLastPhone{"
+        "start": "   textColor:waffraInk,iconColor:forest,",
+        "end": "   title:WaffraText(e.title,style:const TextStyle(color:waffraInk,fontWeight:FontWeight.w600)),subtitle:"
       },
       {
-        "start": "   await widget.onSave(Person(name:name.text.trim(),email:widget.initial?.email??'',",
-        "end": "   if(!mounted)return;\n   if(widget.initial!=null&&Navigator.of(context).canPop())Navigator.pop(context);"
-      },
-      {
-        "start": "    WaffraGooglePhoneField(\n     controller:phone,country:phoneCountry,english:waffraIsEnglish,",
-        "end": "   if(widget.initial==null) ...["
-      },
-      {
-        "start": "     WaffraText(waffraIsEnglish?'2. Complete your profile':'٢. كمّل بياناتك',",
-        "end": "     TextField(controller:name,onChanged:(_)=>setState((){}),"
+        "start": "    Padding(padding:EdgeInsets.fromLTRB(11,attachmentCount>0?23:12,11,12),child:Row(children:[",
+        "end": "     const SizedBox(width:8),\n     Expanded(child:InkWell(onTap:WaffraHaptics.tap(()=>transactionDetails(entry)),"
       }
     ],
     "lib/waffra_mandatory_biometric_gate.dart": [
       {
-        "start": "            Text(widget.english ? 'Unlock Waffra' : 'فتح وفرة بالبصمة',",
-        "end": "            if (_message != null) ...["
+        "start": "/// requests. Every new gate instance must be verified through the OS.\n",
+        "end": "  static bool canReveal({"
       }
     ],
-    "lib/waffra_local_phone_credentials.dart": [
+    "test/m424_mandatory_biometrics_test.dart": [
       {
-        "start": " static Future<bool> verifyRecord(Map<String,dynamic> item,{",
-        "end": " static Future<void> register({required String phone,"
+        "start": "void main() {\n",
+        "end": "  test('M424: old OS success cannot reveal finance while backgrounded'"
       }
     ],
-    "lib/waffra_auto_sms_consent.dart": [
+    "test/m429_sms_phone_integration_test.dart": [
       {
-        "start": "    Text(en?'Automatic bank SMS tracking':'تتبّع الرسائل البنكية تلقائيًا',",
-        "end": "    const Spacer(),\n    if(error!=null)"
-      },
-      {
-        "start": "    FilledButton.icon(",
-        "end": "    const SizedBox(height:8),\n    TextButton(key:const Key('m417-permission-skip'),"
+        "start": " test('M434 saved transactions preserve genuine SMS versus manual origin',(){",
+        "end": null
       }
     ],
-    "test/m417_sms_first_run_test.dart": [
+    "test/m440_biometric_resume_regression_test.dart": [
       {
-        "start": " testWidgets('M417 English copy explains on-device privacy',",
-        "end": "\n}\n"
-      }
-    ],
-    "test/m422_phone_only_auth_entry_test.dart": [
-      {
-        "start": " test('M422 login retains explicit password challenge before profile save',(){",
-        "end": "\n}\n"
-      }
-    ],
-    "test/m426_local_phone_credentials_test.dart": [
-      {
-        "start": " test('M426 main sign in requires password and biometric, no OTP',(){",
-        "end": "\n}\n"
-      }
-    ],
-    "test/m436_cloud_review_pipeline_test.dart": [
-      {
-        "start": " test('M436 separate cloud opt-in remains disclosed before upload',(){",
-        "end": " test('M436 redactor accepts compact English multi-currency SMS',(){"
-      }
-    ],
-    "test/qa/m417_sms_permission_acceptance_test.py": [
-      {
-        "start": "    def test_sms_permission_disclosure_is_review_only(self):",
-        "end": "    def test_android_build_uses_explicit_scoped_receiver(self):"
+        "start": "void main() {\n",
+        "end": null
       }
     ]
   }
