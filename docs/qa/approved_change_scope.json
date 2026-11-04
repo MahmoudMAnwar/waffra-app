@@ -82,14 +82,14 @@
   "bounded_sections": {
     "test/m363_transaction_category_inline_creation_test.dart": [
       {
-        "start": " test('M363 bulk bank review also receives inline parent/child creation',(){\\n",
-        "end": " test('M362 a short available balance warns and permits funding',(){\\n"
+        "start": " test('M363 bulk bank review also receives inline parent/child creation',(){\n",
+        "end": " test('M362 a short available balance warns and permits funding',(){\n"
       }
     ],
     "test/storage/m175_live_finance_mutation_intent_test.dart": [
       {
-        "start": "  test('M175 exact Home live writes carry their distinct finance intent', () {\\n",
-        "end": "  test('M175 guarded legacy routes remain eligible, without any cutover', () {\\n"
+        "start": "  test('M175 exact Home live writes carry their distinct finance intent', () {\n",
+        "end": "  test('M175 guarded legacy routes remain eligible, without any cutover', () {\n"
       }
     ],
     "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
