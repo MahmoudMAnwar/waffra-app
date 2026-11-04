@@ -79,6 +79,8 @@ import 'waffra_auto_sms_policy.dart';
 import 'waffra_bank_sms_facts.dart';
 import 'waffra_sms_cloud_service.dart';
 import 'waffra_sms_cloud_review_analyzer.dart';
+import 'waffra_sms_local_rules.dart';
+import 'waffra_sms_rule_settings_page.dart';
 import 'waffra_unknown_financial_sms_page.dart';
 import 'waffra_auto_sms_consent.dart';
 import 'waffra_recurring_policy.dart';
@@ -3544,6 +3546,57 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  bool _autoSmsHistoryComplete=false;
  String? _autoSmsStatusProblem;
  final List<Map<String,Object?>> _autoSmsPending=<Map<String,Object?>>[];
+
+ String get _smsRuleOwnerKey=>WaffraSmsLocalRuleStore.ownerKey(
+  provider:widget.profile.provider,phone:widget.profile.phone,
+  email:widget.profile.email);
+
+ Future<void> _openSmsRules({String? seedMessage})async{
+  if(_smsRuleOwnerKey.isEmpty){
+   if(mounted)snack(context,waffraIsEnglish?
+    'Sign in with a verified phone or email before editing SMS rules.':
+    'سجل دخولك برقم جوال أو بريد مؤكد قبل تعديل القواعد.',isError:true);
+   return;
+  }
+  await Navigator.push<void>(context,MaterialPageRoute(
+   builder:(_)=>WaffraSmsRuleSettingsPage(
+    english:waffraIsEnglish,ownerKey:_smsRuleOwnerKey,
+    scannedMessages:_autoSmsPending.map((row)=>
+     row['body'] is String?row['body'] as String:'').toList(),
+    incomeCategories:categories.where((c)=>c.income&&c.isSubcategory&&
+     waffraCategoryAvailableForNewEntry(categories,c))
+     .map((c)=>c.name).toList(),
+    expenseCategories:categories.where((c)=>!c.income&&c.isSubcategory&&
+     waffraCategoryAvailableForNewEntry(categories,c))
+     .map((c)=>c.name).toList(),
+    seedMessage:seedMessage,
+   )));
+  if(mounted)unawaited(_refreshAutoSmsInbox());
+ }
+
+ Map<String,Object?>? _localSmsClassification(
+  Map<String,Object?> item,List<WaffraSmsLocalRule> custom){
+  final body=item['body'],sender=item['sender'];
+  if(body is! String||body.trim().isEmpty)return null;
+  final parsed=BankParser.parse(body);
+  final facts=WaffraBankSmsFactsParser.parse(body);
+  if(facts.pending||parsed.amount==null||parsed.amount!<=0||
+     parsed.requiresCurrencyReview||
+     WaffraSmsCurrencies.requiresReviewForSarLedger(body))return null;
+  if((facts.kind==WaffraBankOperationKind.income)!=parsed.income &&
+     (facts.kind==WaffraBankOperationKind.income||
+      facts.kind==WaffraBankOperationKind.expense))return null;
+  final rule=WaffraSmsLocalRules.resolve(
+   body:body,sender:sender is String?sender:'',
+   bankKind:facts.kind,custom:custom);
+  if(rule==null||!categories.any((c)=>c.name==rule.category&&
+     c.income==rule.income&&c.isSubcategory&&
+     waffraCategoryAvailableForNewEntry(categories,c)))return null;
+  return <String,Object?>{
+   'rule':rule.name,'category':rule.category,'income':rule.income,
+  };
+ }
+
  void _receiveAutoSmsNotice(){
   if(mounted&&ready)unawaited(_refreshAutoSmsInbox());
  }
@@ -3596,6 +3649,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    });
    return;
   }
+  // On a vault error keep SMS review available with built-in rules.
+  var customRules=<WaffraSmsLocalRule>[];
+  if(_smsRuleOwnerKey.isNotEmpty){
+   try{customRules=await const WaffraSmsLocalRuleStore().read(
+    _smsRuleOwnerKey);}
+   catch(_){ /* No bank SMS in logs. Built-ins remain usable. */ }
+  }
+  if(!mounted)return;
   final waiting=<Map<String,Object?>>[];
   for(final candidate in results){
    final id=candidate['id'],body=candidate['body'];
@@ -3603,7 +3664,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(smsHashes.contains(bankSmsHash(body))){
     await WaffraAutoSms.acknowledge([id]);
    }else{
-    waiting.add(candidate);
+    final annotated=Map<String,Object?>.from(candidate);
+    final local=_localSmsClassification(annotated,customRules);
+    if(local!=null)annotated['local']=local;
+    waiting.add(annotated);
    }
   }
   final progress=await WaffraAutoSms.trackingStatus();
@@ -13095,6 +13159,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(Platform.isAndroid)_accountSection(
     waffraIsEnglish?'Bank SMS':'رسائل SMS البنكية',
     Icons.sms_outlined,[
+    _accountTile(
+     waffraIsEnglish?'Classification rules':'قواعد تحليل الرسائل',
+     waffraIsEnglish?
+      'Built-in income/expense rules and custom keyword rules.':
+      'قواعد جاهزة للدخل والمصروف وإضافة قواعد بكلمات مفتاحية.',
+     Icons.rule_rounded,
+     onTap:()=>unawaited(_openSmsRules())),
     _accountTile(
      waffraIsEnglish?'Scan previous SMS':'فحص رسائل SMS السابقة',
      waffraIsEnglish?
