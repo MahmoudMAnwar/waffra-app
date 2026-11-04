@@ -508,6 +508,11 @@ class WaffraVerifiedEncryptedFinanceBridge {
       await _requireActivatedUnderLock();
       return snapshot.store.transaction(() async {
         final current = await snapshot.read();
+        // A selected account is valid only for the exact displayed revision.
+        if(selectedAccountId!=null&&
+           current.generation!=baseline.snapshot.generation){
+          throw StateError('Account revision changed before recurring payment.');
+        }
         if (current.values['waffra_recurring_v24'] !=
                 baseline.snapshot.values['waffra_recurring_v24'] ||
             current.values['waffra_recurring_postponed_v1'] !=
