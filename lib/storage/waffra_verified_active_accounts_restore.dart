@@ -201,7 +201,7 @@ class WaffraVerifiedActiveAccountsRestore {
    if(!same.equals(finalAccounts['accounts'],archive.accounts)||
       !same.equals(finalAccounts['links'],archive.links)||
       !same.equals(finalAccounts['transfers'],archive.transfers)||
-      !same.equals(finalAccounts['contextV1'],archive.context)||
+      !same.equals(finalAccounts['contextV1'], archive.context ?? <String,Object?>{'goalSources':<Object>[], 'recurringDefaults':<Object>[], 'smsSuffixes':<Object>[]})||
       !same.equals(
        await WaffraAccountsFinanceHistory.capture(store),archive.history)||
       (await store.customSelect('PRAGMA foreign_key_check').get()).isNotEmpty){
