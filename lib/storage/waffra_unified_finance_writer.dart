@@ -111,9 +111,8 @@ class WaffraUnifiedFinanceWriter {
       throw ArgumentError('Account choices must match confirmed entries.');
     }
     final hasAccountLinks=confirmedAccounts.any((id)=>id!=null);
-    if(hasAccountLinks && (expectedAccountGeneration==null ||
-       allowDuplicateHashes || proposedCategories.isNotEmpty)){
-      throw StateError('Account-linked save needs witnessed finance and no bypass.');
+    if(hasAccountLinks && expectedAccountGeneration==null){
+      throw StateError('Account-linked save needs witnessed finance generation.');
     }
 
     if(proposedCategories.length>100) {
