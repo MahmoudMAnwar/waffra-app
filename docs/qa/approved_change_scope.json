@@ -1,8 +1,15 @@
 {
   "contract_version": 1,
-  "change_id": "M443-merchant-branding-removal-and-screenshot-biometric-focus",
-  "human_scope_review": "The owner explicitly requested from real Android screenshots that merchant/logo selection and visible merchant branding be removed, and that taking screenshots no longer forces biometric reauthentication. The bounded scopes preserve transaction amounts and metadata, the Android biometric requirement for genuine background/launch, and all unrelated finance workflows. CI and physical Android confirmation are still required.",
+  "change_id": "M442-M443-combined-sms-review-and-biometric-merchant-reconciliation",
+  "human_scope_review": "Owner explicitly approved merging M442 bank SMS capture/review/session repair and M443 screenshot biometric/merchant UI removal together after reviewing cross-PR conflicts. Both previously reviewed source scopes remain bounded; neither feature may modify balances, historical records, or certified storage authority. This manifest declares both actual patches versus original PR base because exact-head workflows use the old base SHA.",
   "user_requested_changes": [
+    "Prevent bank SMS permissions and consent state from being mistaken for an empty pending-review list on the Home screen.",
+    "Preserve one-time bank SMS consent across sign-out/sign-in for the same verified account without silently authorizing a different user.",
+    "Protect account identity and encrypted pending SMS: keep one owner's queue inaccessible while logged out, purge on explicit opt-out or different-account opt-in.",
+    "Resume earlier bank SMS review from original installation month in bounded cursor-based batches, with progress status instead of misleading zero.",
+    "Expose Android READ_SMS/RECEIVE_SMS permission, app tracking, signed-in profile and protected queue read failures as separate accurate statuses.",
+    "Prevent unreadable AndroidKeyStore SMS review data from being silently reported as zero or crashing Activity during resume.",
+    "Update exact-SHA release notes and add regression test coverage for the two Android screenshot failures.",
     "Remove the Choose merchant and logo selector and associated merchant brand search and preview from editing or adding any transaction.",
     "Stop rendering merchant logos or merchant name branding in transaction detail, list and compact Home views, replacing them with category icons.",
     "Retain existing transaction IDs, amounts, historical merchantKey metadata, SMS dedupe, categories, receipts, and finance writes without migrating or deleting data.",
@@ -14,11 +21,15 @@
     "docs/qa/approved_change_scope.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
+    "lib/waffra_auto_sms.dart",
     "lib/waffra_mandatory_biometric_gate.dart",
+    "native/WaffraAutoSmsStore.kt",
+    "native/WaffraMainActivity.kt",
     "test/m424_mandatory_biometrics_test.dart",
     "test/m429_sms_phone_integration_test.dart",
     "test/m440_biometric_resume_regression_test.dart",
-    "test/m443_merchant_screenshot_regression_test.dart"
+    "test/m443_merchant_screenshot_regression_test.dart",
+    "test/qa/m442_sms_consent_session_recovery_test.py"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -49,6 +60,26 @@
       {
         "start": "    Padding(padding:EdgeInsets.fromLTRB(11,attachmentCount>0?23:12,11,12),child:Row(children:[",
         "end": "     const SizedBox(width:8),\n     Expanded(child:InkWell(onTap:WaffraHaptics.tap(()=>transactionDetails(entry)),"
+      },
+      {
+        "start": " Future<void> saveUser(Person u)async {",
+        "end": " Future<void> setUiCountry(String? iso)async{"
+      },
+      {
+        "start": " Future<void> logout()async {",
+        "end": " Future<void> setPin(String? value)async {"
+      },
+      {
+        "start": " bool _autoSmsReviewOpen=false;",
+        "end": " Future<void> _stageCloudReviewSuggestions("
+      },
+      {
+        "start": " Future<void> _scanPreviousBankSmsFromSettings()async{",
+        "end": " Future<void> _openAutoSmsInbox()async{"
+      },
+      {
+        "start": " Widget _autoSmsReviewCard(){",
+        "end": " Future<void> _reviewAutoSmsCandidates("
       }
     ],
     "lib/waffra_mandatory_biometric_gate.dart": [
@@ -73,6 +104,56 @@
       {
         "start": "void main() {\n",
         "end": null
+      }
+    ],
+    "lib/waffra_auto_sms.dart": [
+      {
+        "start": " static Future<bool> enabled()=>_boolCall('autoSmsEnabled');",
+        "end": " static Future<bool> notificationPermission()=>_boolCall('autoSmsNotificationsEnabled');"
+      },
+      {
+        "start": " static Future<bool> disable()=>_boolCall('setAutoSmsEnabled',false);",
+        "end": " /// Read-only, on-demand scan for institutional financial notices that"
+      }
+    ],
+    "native/WaffraAutoSmsStore.kt": [
+      {
+        "start": "    private const val activeName = \"enabled\"",
+        "end": "    private const val activationMonth = \"sms_activation_month_start\""
+      },
+      {
+        "start": "    fun permissionGranted(context: Context): Boolean =",
+        "end": "    private fun key(): SecretKey {"
+      },
+      {
+        "start": "    fun offer(context: Context, sender: String, body: String, at: Long,",
+        "end": "    fun pending(context: Context): List<Map<String, Any>> = synchronized(mutex) {"
+      },
+      {
+        "start": "    fun pending(context: Context): List<Map<String, Any>> = synchronized(mutex) {",
+        "end": "    /** Atomic per-SMS request claim shared by foreground and WorkManager."
+      },
+      {
+        "start": "    fun acknowledge(context: Context, ids: Set<String>): Boolean =",
+        "end": "    /** Resumable history import:"
+      },
+      {
+        "start": "    fun importConsentMonth(context: Context, maxRead: Int = 500): Int {",
+        "end": "    /** Claim each review notification once; history never floods the shade. */"
+      },
+      {
+        "start": "    fun claimReviewNotification(context: Context, fingerprint: String): Boolean =",
+        "end": null
+      }
+    ],
+    "native/WaffraMainActivity.kt": [
+      {
+        "start": "    override fun onResume() {",
+        "end": "    override fun onRequestPermissionsResult("
+      },
+      {
+        "start": "                \"autoSmsPermissionState\" ->",
+        "end": "                \"autoSmsNotificationsEnabled\" ->"
       }
     ]
   }
