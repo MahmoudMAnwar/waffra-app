@@ -12,6 +12,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: waffra-pr-m97-parallel-crash-and-ui-freeze-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   synthetic-acceptance:
     name: M97 independently verify ${{ matrix.name }}

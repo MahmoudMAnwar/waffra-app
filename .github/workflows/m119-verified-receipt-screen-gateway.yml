@@ -15,6 +15,10 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: waffra-pr-m119-verified-receipt-screen-gateway-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   verified-receipt-screen:
     runs-on: ubuntu-latest

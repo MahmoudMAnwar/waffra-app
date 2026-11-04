@@ -8,6 +8,10 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: waffra-pr-m111-finance-negative-acceptance-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   fail-closed-acceptance:
     runs-on: ubuntu-latest

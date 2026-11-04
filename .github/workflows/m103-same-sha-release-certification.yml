@@ -13,6 +13,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: waffra-pr-m103-same-sha-release-certification-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   full-flutter-regression:
     name: Full Dart/Flutter source and complete unit/widget suite

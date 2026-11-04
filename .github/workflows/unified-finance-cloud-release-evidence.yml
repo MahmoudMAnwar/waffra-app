@@ -13,6 +13,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: waffra-pr-unified-finance-cloud-release-evidence-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   finance-cloud-source-integration:
     name: Unified Home/Widget finance + Firebase/recovery proof

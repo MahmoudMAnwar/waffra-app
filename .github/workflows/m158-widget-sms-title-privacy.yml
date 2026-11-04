@@ -12,6 +12,10 @@ on:
       - '.github/workflows/m158-widget-sms-title-privacy.yml'
   workflow_dispatch:
 
+concurrency:
+  group: waffra-pr-m158-widget-sms-title-privacy-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   widget-sms-private-title:
     runs-on: ubuntu-latest

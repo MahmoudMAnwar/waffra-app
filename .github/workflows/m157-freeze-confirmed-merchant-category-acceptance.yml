@@ -12,6 +12,10 @@ on:
       - '.github/workflows/m157-freeze-confirmed-merchant-category-acceptance.yml'
   workflow_dispatch:
 
+concurrency:
+  group: waffra-pr-m157-freeze-confirmed-merchant-category-acceptance-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   immutable-confirmed-sms:
     runs-on: ubuntu-latest

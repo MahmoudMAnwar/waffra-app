@@ -1,0 +1,130 @@
+name: M453 Safe Superseded PR Run Cleanup
+
+# Trusted default-branch workflow; never checks out or executes PR source.
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'Optional open PR number; blank = recently updated open PRs'
+        required: false
+        type: string
+      dry_run:
+        description: 'Preview without cancellation (manual default)'
+        type: boolean
+        required: true
+        default: true
+
+permissions:
+  actions: write
+  pull-requests: read
+  contents: read
+
+concurrency:
+  group: m453-sweep-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request_target' }}
+
+jobs:
+  cancel-superseded-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Cancel only superseded runs of active PRs in this repository
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+            const repository = owner + '/' + repo;
+            const event = context.eventName;
+            const inputs = context.payload.inputs || {};
+            const dryRun = event === 'workflow_dispatch' && inputs.dry_run !== 'false';
+            const targetNumber = event === 'pull_request_target'
+              ? context.payload.pull_request?.number
+              : (event === 'workflow_dispatch' && inputs.pr_number
+                ? Number(inputs.pr_number) : null);
+            let prs = [];
+            if (targetNumber != null) {
+              if (!Number.isSafeInteger(targetNumber) || targetNumber < 1) {
+                throw new Error('Invalid PR number');
+              }
+              const response = await github.rest.pulls.get({
+                owner, repo, pull_number: targetNumber,
+              });
+              prs = [response.data];
+            } else {
+              const response = await github.rest.pulls.list({
+                owner, repo, state: 'open', sort: 'updated',
+                direction: 'desc', per_page: 12,
+              });
+              prs = response.data;
+            }
+            let attempted = 0, previewed = 0, scanned = 0, errors = 0;
+            const active = new Set([
+              'queued', 'in_progress', 'pending', 'waiting', 'requested'
+            ]);
+            for (const pr of prs) {
+              if (pr.state !== 'open' || pr.base?.ref !== 'main' ||
+                  pr.head?.repo?.full_name !== repository) {
+                core.info('Skip fork/closed/non-main PR #' + pr.number);
+                continue;
+              }
+              const latest = pr.head.sha;
+              const branch = pr.head.ref;
+              for (let page = 1; page <= 10; page++) {
+                const response = await github.rest.actions.listWorkflowRunsForRepo({
+                  owner, repo, branch, event: 'pull_request',
+                  per_page: 100, page,
+                });
+                const runs = response.data.workflow_runs || [];
+                for (const run of runs) {
+                  scanned++;
+                  if (!active.has(run.status) ||
+                      run.head_sha === latest ||
+                      run.head_branch !== branch ||
+                      run.event !== 'pull_request' ||
+                      run.id === context.runId ||
+                      !(run.pull_requests || []).some(
+                        linked => linked.number === pr.number)) {
+                    continue;
+                  }
+                  if (dryRun) {
+                    previewed++;
+                    core.info('DRY RUN PR #' + pr.number +
+                      ': stale run ' + run.id + ' SHA ' + run.head_sha);
+                    continue;
+                  }
+                  try {
+                    await github.rest.actions.cancelWorkflowRun({
+                      owner, repo, run_id: run.id,
+                    });
+                    attempted++;
+                    core.info('Cancelled old PR #' + pr.number +
+                      ' run ' + run.id);
+                  } catch (err) {
+                    // This run may finish before the cancellation reaches GitHub.
+                    if (err.status !== 409) {
+                      errors++;
+                      core.warning('Cannot cancel run ' + run.id +
+                        ': ' + String(err.message).slice(0, 150));
+                    }
+                  }
+                  if (attempted >= 300) break;
+                }
+                if (runs.length < 100 || attempted >= 300) break;
+              }
+              if (attempted >= 300) break;
+            }
+            await core.summary
+              .addHeading('M453 superseded-run cleanup')
+              .addRaw('PRs checked: ' + prs.length +
+                '; runs scanned: ' + scanned +
+                '; cancelled: ' + attempted +
+                '; dry-run matches: ' + previewed +
+                '; errors: ' + errors +
+                '; mode: ' + (dryRun ? 'DRY RUN' : 'ACTIVE'))
+              .write();
+            if (errors) core.setFailed(errors + ' cancel requests failed.');
