@@ -1,4 +1,5 @@
 import 'waffra_accounts_repository.dart';
+import 'waffra_account_context_read.dart';
 import 'waffra_unified_finance_writer.dart';
 import 'waffra_verified_encrypted_finance_bridge.dart';
 
@@ -119,6 +120,28 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
    expectedAccountGeneration:displayed.generation,
   );
  }
+
+
+ /// Return the complete ledger (including unassigned entries) and the
+ /// independent monthly budget totals for the selected account context.
+ Future<WaffraAccountContextReadResult> readAccountContext({
+  required String monthIso,String? selectedAccountId,
+ })=>bridge.readVerifiedAccountContext(
+  monthIso:monthIso,selectedAccountId:selectedAccountId);
+
+ /// Attach a past unassigned entry only AFTER the account screen has a
+ /// witnessed generation and the user explicitly confirms. This does not
+ /// create a second income/expense or rewrite the original transaction.
+ Future<void> linkUnassignedEntry({
+  required String entryId,required String accountId,
+  required bool userConfirmed,
+ })=>_commit<void>((repository)async{
+   await WaffraAccountContextRead.attachPreviouslyUnassigned(
+    store:repository.db,entryId:entryId,accountId:accountId,
+    confirmedIso:DateTime.now().toIso8601String(),
+    userConfirmed:true,
+   );
+  },userConfirmed:userConfirmed);
 
  @override
  Future<void> renameAccount({required String id,required String name,
