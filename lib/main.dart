@@ -4339,6 +4339,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Future<void> persist({
   WaffraFinanceRoute route = WaffraFinanceRoute.transactionEdit,
   bool userConfirmed = false,
+  String? selectedAccountId,
  }) {
   // Freeze a snapshot BEFORE any await. Previously Future.wait launched
   // overlapping multi-key saves, so a slower old save could finish last.
@@ -4380,6 +4381,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     baseline:baseline,
     captured:captured,
     userConfirmed:userConfirmed,
+    selectedAccountId:selectedAccountId,
    );
    _lastFinanceAuthorityRead=committed;
    _lastLedgerSavedRaw=committed.ledgerRaw;
@@ -4622,16 +4624,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        return;
       }
      }else{
+      // Select the destination/source money account BEFORE changing the
+      // in-memory ledger. A cancellation does not post or clear postponement.
+      final chosen=await reviewSmsAccountLinks([MoneyEntry(
+       id:id,title:r.title,category:r.category,amount:r.amount,
+       income:r.income,date:DateTime.now(),sourceType:'recurring')]);
+      if(chosen==null)return;
       if(!entries.any((e)=>e.id==id)){
        setState(()=>entries.insert(0,MoneyEntry(
         id:id,title:r.title,category:r.category,amount:r.amount,
         income:r.income,date:DateTime.now())));
       }
       recurringPostponed.remove(id);
-      // Normal income adds to cash; normal expenses reduce it.
+      // SQLCipher commits the posted due, cleared postponement, and account
+      // link atomically; guarded legacy preserves its existing safe writer.
       try{
        await persist(route:WaffraFinanceRoute.recurringPostingAndPostponement,
-        userConfirmed:true);
+        userConfirmed:true,selectedAccountId:chosen.ids?.single);
       }catch(error){
        debugPrint('Recurring payment commit could not be confirmed: $error');
        if(mounted)await _loadFinanceSafely();
@@ -6844,6 +6853,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     return;
    }
   }else{
+   // An account is selected from the same verified source only for a NEW
+   // manually posted entry. Editing an existing entry never silently moves
+   // that entry to a different financial account.
+   final chosenManual=initial==null
+    ?await reviewSmsAccountLinks([result]):null;
+   if(initial==null&&chosenManual==null){
+    for(final copy in stagedReceiptCopies){
+     try{final staged=File(copy);if(await staged.exists())await staged.delete();}
+     catch(_){}
+    }
+    return;
+   }
    // Optimistic in-memory edits must roll back if durable save is rejected.
    // A spinner is NOT proof of a completed financial write.
    final previousEntries=List<MoneyEntry>.of(entries);
@@ -6866,7 +6887,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     // source-aware writer has acknowledged the commit.
     await persist(route:initial==null
      ?WaffraFinanceRoute.manualTransactionSave
-     :WaffraFinanceRoute.transactionEdit);
+     :WaffraFinanceRoute.transactionEdit,
+     userConfirmed:initial==null,
+     selectedAccountId:initial==null?chosenManual?.ids?.single:null);
    }catch(e){
     if(mounted){
      setState((){
