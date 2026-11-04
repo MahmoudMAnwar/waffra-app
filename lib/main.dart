@@ -12308,9 +12308,44 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         authority:_financeAuthority,experimentalEnabled:true,
        ).inspect(selectedSource:source,encryptedArchive:stagedBackup!,
         password:restoreSecret.text,userConfirmed:true,accountArchive:true);
-       if(ctx.mounted)update(()=>restoreError=waffraIsEnglish?
-        'Verified ${result.transactionCount} transactions in a temporary vault. Applying this backup to your current data is unavailable.':
-        'تم التحقق من ${result.transactionCount} معاملة في قاعدة مؤقتة. استبدال البيانات الحالية بهذه النسخة غير متاح بعد.');
+       if(!ctx.mounted||!mounted)return;
+       final approved=await confirm(
+        waffraIsEnglish?'Replace encrypted finance?':'استبدال البيانات المالية؟',
+        waffraIsEnglish
+         ?'Verified ${result.transactionCount} transactions and ${result.receiptCount} receipt images. This will replace your current accounts, transfers, goals, budgets and transaction history. First you MUST save an encrypted rescue copy of your current data outside Waffra. Continue?'
+         :'تم التحقق من ${result.transactionCount} معاملة و${result.receiptCount} مرفق. سيتم استبدال الحسابات والتحويلات والأهداف والميزانيات والعمليات الحالية بالكامل. يجب أولًا حفظ نسخة أمان مشفرة لبياناتك الحالية خارج وفرة. هل تريد المتابعة؟');
+       if(approved!=true||!mounted||!ctx.mounted)return;
+       if(!await _authorizeSensitiveAction('replacing encrypted finance')||
+          !mounted||!ctx.mounted)return;
+       // Neither the file chooser nor the biometric prompt holds the native
+       // writer lock; the final commit compares the preflight source witness.
+       await _financialWriteQueue.drain();
+       final bridge=_financeBinding?.accountsBridge;
+       if(bridge==null)throw StateError('Active finance source is unavailable.');
+       final rescue=await bridge.exportPortableBackup(restoreSecret.text);
+       final rescueSaved=await WaffraBackupFiles.saveEncryptedArchive(rescue);
+       if(!rescueSaved){
+        if(ctx.mounted)update(()=>restoreError=waffraIsEnglish?
+         'Restore cancelled: save the current encrypted rescue file first.':
+         'تم إلغاء الاستعادة: احفظ نسخة أمان مشفرة لبياناتك الحالية أولًا.');
+        return;
+       }
+       final applied=await bridge.applyVerifiedV3Restore(
+        baseline:source.encryptedWitness!,
+        encryptedArchive:stagedBackup!,password:restoreSecret.text,
+        savedRescueArchive:rescue,rescuePassword:restoreSecret.text,
+        preflightChecksum:result.archiveChecksum,
+        userConfirmed:true,externallySavedRescueConfirmed:true);
+       if(!mounted)return;
+       // The authoritative encrypted snapshot, not a decoded backup in
+       // memory, becomes the source for Home and widget after one commit.
+       await _loadFinanceSafely();
+       if(mounted)await _refreshWidget();
+       if(mounted)await syncRecurringReminders();
+       if(ctx.mounted)Navigator.pop(ctx);
+       if(mounted)snackSuccess(context,waffraIsEnglish
+        ?'Encrypted restore verified: ${applied.transactionCount} transactions and ${applied.receiptCount} receipts. Your previous encrypted backup was saved separately.'
+        :'اكتملت الاستعادة المشفرة لـ${applied.transactionCount} معاملة و${applied.receiptCount} مرفق. احتفظ بنسخة الأمان السابقة خارج التطبيق.');
        return;
       }
       if(raw['format']!='waffra-backup'||raw['entries'] is! List||
