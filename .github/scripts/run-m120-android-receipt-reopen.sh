@@ -54,8 +54,20 @@ for (( attempt=1; attempt<=max_attempts; attempt++ )); do
     native_timeout=true
   fi
 
+  # Crash evidence beats a transport retry. Collect only fatal traces from
+  # the disposable emulator; do not hide an Android app startup failure.
+  adb -s "$device" logcat -d -t 1000 -s AndroidRuntime:E flutter:E \
+    > "build/m120/android-runtime-attempt-${attempt}.log" 2>/dev/null || true
+  if grep -Eq '(FATAL EXCEPTION|Unhandled Exception|Fatal signal)' \
+       "build/m120/android-runtime-attempt-${attempt}.log"; then
+    echo "::error::M120 Android app/runtime crashed before driver connection; preserving failure"
+    grep -E -A 24 '(FATAL EXCEPTION|Unhandled Exception|Fatal signal)' \
+      "build/m120/android-runtime-attempt-${attempt}.log" | head -n 100 || true
+    exit "$code"
+  fi
+
   vm_transport=false
-  if grep -Eq '(Failed to start Dart Development Service|It is taking an unusually long time to connect to the VM|Failed to connect to the VM Service|Service connection disposed)' "$log"; then
+  if grep -Eq '(Failed to start Dart Development Service|It is taking an unusually long time to connect to the VM|Failed to connect to the VM Service|Service connection disposed|Connecting to the VM Service is taking longer than expected|Exception attempting to connect to the VM Service: SocketException: Connection refused)' "$log"; then
     vm_transport=true
   fi
 
