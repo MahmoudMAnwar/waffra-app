@@ -93,6 +93,19 @@ class WaffraVerifiedActiveAccountsRestore {
      throw StateError('Saved rescue archive does not match live finance.');
     }
    }
+   // The source's typed SMS deduplication index must be represented in its
+   // authenticated rescue. Never silently discard existing message hashes.
+   final hashesBefore=before.values['waffra_sms_hashes_v1'];
+   if(hashesBefore!=null&&hashesBefore is! List<String>){
+    throw StateError('Invalid canonical SMS hash snapshot.');
+   }
+   final expectedHashes=(hashesBefore as List<String>? ?? const <String>[]).toSet();
+   final hashRows=await store.customSelect(
+    'SELECT message_hash FROM fresh_finance_sms_hashes').get();
+   final typedHashes=hashRows.map((r)=>r.read<String>('message_hash')).toSet();
+   if(!const SetEquality<String>().equals(expectedHashes,typedHashes)){
+    throw StateError('SMS duplicate ledger is not fully backed up.');
+   }
    const same=DeepCollectionEquality();
    final active=await WaffraAccountsPortableBackupV3.capture(store);
    if(!same.equals(active['accounts'],rescue.accounts)||
