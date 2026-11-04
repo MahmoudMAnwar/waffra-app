@@ -82,19 +82,18 @@ abstract final class WaffraSmsLocalRules {
   return rule.matchAll?rule.keywords.every(has):rule.keywords.any(has);
  }
 
- /// A transfer is NEVER a ledger income/expense. Excluded rules may only
- /// match non-financial or pending notices, never a verified bank payment.
+ /// Transfers cannot create ledger income/expense entries; exclude rules
+ /// only operate on unconfirmed, non-financial messages.
  static WaffraSmsLocalRule? resolveSpecial({
   required String body,required String sender,
   required WaffraBankOperationKind bankKind,
   Iterable<WaffraSmsLocalRule> custom=const <WaffraSmsLocalRule>[],
  }) {
   final eligible=custom.where((rule)=>
-   (rule.resolvedKind=='transfer'&&bankKind==WaffraBankOperationKind.transfer||
-    rule.resolvedKind=='excluded'&&bankKind==WaffraBankOperationKind.uncertain)&&
+   ((rule.resolvedKind=='transfer'&&bankKind==WaffraBankOperationKind.transfer)||
+    (rule.resolvedKind=='excluded'&&bankKind==WaffraBankOperationKind.uncertain))&&
    matches(rule,body,sender:sender)).toList(growable:false);
   if(eligible.isEmpty)return null;
-  // A collision is ambiguous. Never silently drop a potential transaction.
   if(eligible.map((r)=>r.resolvedKind).toSet().length>1)return null;
   return eligible.first;
  }
@@ -180,91 +179,7 @@ abstract final class WaffraSmsLocalRules {
      rule.category.length>130||rule.sender.length>64||
      rule.accountId.length>128||
      (rule.accountSuffix.isNotEmpty&&
-      !RegExp(r'^[0-9]{4}
-   throw const FormatException('Invalid local SMS rule');
-  }
- }
-}
-
-/// Per-user encrypted app configuration, not a new unverified finance writer.
-/// No source SMS or transaction amount is ever persisted here.
-class WaffraSmsLocalRuleStore {
- const WaffraSmsLocalRuleStore();
- static const _storage=FlutterSecureStorage(
-  aOptions:AndroidOptions(encryptedSharedPreferences:true));
-
- static String ownerKey({required String provider,
-  required String phone,required String email}){
-  final identity=email.trim().isNotEmpty?
-   'email:${email.trim().toLowerCase()}':
-   phone.trim().isNotEmpty?'phone:${phone.trim()}':'';
-  if(identity.isEmpty)return '';
-  return sha256.convert(utf8.encode(identity)).toString();
- }
- String _key(String owner) {
-  if(!RegExp(r'^[a-f0-9]{64}
-   throw const FormatException('Verified SMS rules owner missing');
-  }
-  return 'waffra_sms_local_rules_v1_$owner';
- }
- Future<List<WaffraSmsLocalRule>> read(String owner) async {
-  final raw=await _storage.read(key:_key(owner));
-  if(raw==null||raw.isEmpty)return const [];
-  final values=jsonDecode(raw);
-  if(values is! List)throw const FormatException('Invalid local rules store');
-  final rules=<WaffraSmsLocalRule>[];
-  for(final value in values){
-   if(value is! Map)throw const FormatException('Invalid rule record');
-   final rule=WaffraSmsLocalRule.fromJson(Map<String,dynamic>.from(value));
-   WaffraSmsLocalRules.validate(rule);
-   rules.add(rule);
-  }
-  if(rules.length>100||rules.map((e)=>e.id).toSet().length!=rules.length){
-   throw const FormatException('Local rule store failed validation');
-  }
-  return rules;
- }
- Future<void> write(String owner,List<WaffraSmsLocalRule> rules)async{
-  if(rules.length>100||rules.map((e)=>e.id).toSet().length!=rules.length){
-   throw const FormatException('Too many or duplicate rules');
-  }
-  for(final rule in rules)WaffraSmsLocalRules.validate(rule);
-  await _storage.write(key:_key(owner),
-   value:jsonEncode(rules.map((rule)=>rule.toJson()).toList(growable:false)));
- }
-}
-).hasMatch(owner)){
-   throw const FormatException('Verified SMS rules owner missing');
-  }
-  return 'waffra_sms_local_rules_v1_$owner';
- }
- Future<List<WaffraSmsLocalRule>> read(String owner) async {
-  final raw=await _storage.read(key:_key(owner));
-  if(raw==null||raw.isEmpty)return const [];
-  final values=jsonDecode(raw);
-  if(values is! List)throw const FormatException('Invalid local rules store');
-  final rules=<WaffraSmsLocalRule>[];
-  for(final value in values){
-   if(value is! Map)throw const FormatException('Invalid rule record');
-   final rule=WaffraSmsLocalRule.fromJson(Map<String,dynamic>.from(value));
-   WaffraSmsLocalRules.validate(rule);
-   rules.add(rule);
-  }
-  if(rules.length>100||rules.map((e)=>e.id).toSet().length!=rules.length){
-   throw const FormatException('Local rule store failed validation');
-  }
-  return rules;
- }
- Future<void> write(String owner,List<WaffraSmsLocalRule> rules)async{
-  if(rules.length>100||rules.map((e)=>e.id).toSet().length!=rules.length){
-   throw const FormatException('Too many or duplicate rules');
-  }
-  for(final rule in rules)WaffraSmsLocalRules.validate(rule);
-  await _storage.write(key:_key(owner),
-   value:jsonEncode(rules.map((rule)=>rule.toJson()).toList(growable:false)));
- }
-}
-).hasMatch(rule.accountSuffix))||
+      !RegExp(r'^[0-9]{4}$').hasMatch(rule.accountSuffix))||
      (rule.autoPost&&(!rule.financial||rule.accountId.trim().isEmpty||
       rule.sender.trim().isEmpty||rule.accountSuffix.length!=4))) {
    throw const FormatException('Invalid local SMS rule');
