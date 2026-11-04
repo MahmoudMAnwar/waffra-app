@@ -17,6 +17,7 @@ class WaffraEncryptedStore extends GeneratedDatabase {
   WaffraEncryptedStore._(QueryExecutor executor) : super(executor);
 
   static const _keyStorageName = 'waffra_vault_encryption_key_v1';
+  static const freshSqlCipherKeyPrefix = 'waffra-sqlcipher-v4:';
   static const _filename = 'waffra_shadow_v1.sqlite';
 
   /// Stable native locations. Startup guards may inspect these without
@@ -86,6 +87,37 @@ class WaffraEncryptedStore extends GeneratedDatabase {
       setup: (db) {
         // Fail closed in EVERY build, not only debug/assert.
         // Ordinary SQLite ignores this pragma and returns no result.
+        if (key.startsWith(freshSqlCipherKeyPrefix)) {
+          db.execute("PRAGMA cipher='sqlcipher'");
+          db.execute('PRAGMA legacy=4');
+          final cipher = db.select('PRAGMA cipher');
+          final version = db.select('PRAGMA legacy');
+          final selectedCipher = cipher.isEmpty
+              ? null : cipher.first.values.first.toString().toLowerCase();
+          final selectedVersion = version.isEmpty
+              ? null : int.tryParse(version.first.values.first.toString());
+          // SQLite3MC may expose SQLCipher 4 as legacy=4, or as
+          // default legacy=0 with SQLCipher 4's 256k/SHA-512/HMAC settings.
+          // Ordinary SQLite must never pass this fail-closed check.
+          int? nativeCipherParameter(String name) {
+            final rows = db.select('PRAGMA $name');
+            return rows.isEmpty
+                ? null : int.tryParse(rows.first.values.first.toString());
+          }
+          final v4Parameters = nativeCipherParameter('kdf_iter') == 256000 &&
+              nativeCipherParameter('kdf_algorithm') == 2 &&
+              nativeCipherParameter('hmac_algorithm') == 2 &&
+              nativeCipherParameter('hmac_use') == 1 &&
+              nativeCipherParameter('plaintext_header_size') == 0;
+          final v4Engine = selectedVersion == 4 ||
+              ((selectedVersion == 0 || selectedVersion == null) && v4Parameters);
+          if (selectedCipher != 'sqlcipher' || !v4Engine) {
+            // These are non-secret configuration values, never the key.
+            throw StateError('SQLCipher 4 is unavailable '
+                '(cipher=${selectedCipher ?? 'missing'}, '
+                'legacy=${selectedVersion?.toString() ?? 'missing'}).');
+          }
+        }
         final supportedCipher = db.select('PRAGMA cipher');
         if (supportedCipher.isEmpty) {
           throw StateError('Encrypted SQLite engine is unavailable.');

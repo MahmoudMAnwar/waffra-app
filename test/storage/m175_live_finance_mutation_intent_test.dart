@@ -25,7 +25,9 @@ void main() {
     expect(RegExp(
       r'await persist\(route:initial==null\s+'
       r'\?WaffraFinanceRoute\.manualTransactionSave\s+'
-      r':WaffraFinanceRoute\.transactionEdit\);',
+      r':WaffraFinanceRoute\.transactionEdit,\s*'
+      r'userConfirmed:initial==null,\s*'
+      r'selectedAccountId:initial==null\?chosenManual\?\.ids\?\.single:null\);',
     ).hasMatch(home),isTrue);
     // Delete, undo and postponement now use the same fail-closed wrapper
     // rather than unguarded direct persistence. Preserve the precise route
@@ -55,7 +57,8 @@ void main() {
     expect(RegExp(
       r'await\s+persist\s*\(\s*'
       r'route\s*:\s*WaffraFinanceRoute\.recurringPostingAndPostponement\s*,\s*'
-      r'userConfirmed\s*:\s*true\s*,?\s*\)\s*;'
+      r'userConfirmed\s*:\s*true\s*,\s*'
+      r'selectedAccountId\s*:\s*chosen\.ids\?\.single\s*,?\s*\)\s*;'
     ).hasMatch(home), isTrue,
       reason: 'Paid requires the recurring route and explicit confirmation.');
   });

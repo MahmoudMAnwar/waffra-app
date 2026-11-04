@@ -83,6 +83,7 @@ class WaffraEncryptedFinanceSession {
     required Map<String, Object?> record,
     required String proposedPostponedJson,
     required bool userConfirmed,
+    String? selectedAccountId,
   }) async {
     _requireEnabled();
     return bridge.commitRecurringPayment(
@@ -90,6 +91,7 @@ class WaffraEncryptedFinanceSession {
       record: record,
       proposedPostponedJson: proposedPostponedJson,
       userConfirmed: userConfirmed,
+      selectedAccountId: selectedAccountId,
     );
   }
 
@@ -103,6 +105,7 @@ class WaffraEncryptedFinanceSession {
     required int amountMinor,
     required String confirmedAtIso,
     required bool userConfirmed,
+    String? selectedAccountId,
   }) {
     _requireEnabled();
     return bridge.settleLinkedGoalDue(
@@ -113,6 +116,7 @@ class WaffraEncryptedFinanceSession {
       amountMinor: amountMinor,
       confirmedAtIso: confirmedAtIso,
       userConfirmed: userConfirmed,
+      selectedAccountId: selectedAccountId,
     );
   }
 
@@ -302,6 +306,8 @@ class WaffraEncryptedFinanceSession {
     required bool userConfirmed,
     bool allowDuplicateHashes = false,
     List<Map<String,Object?>> proposedCategories = const [],
+    List<String?>? selectedAccountIds,
+    int? expectedAccountGeneration,
   }) async {
     _requireEnabled();
     return bridge.appendConfirmedTransactions(
@@ -310,6 +316,8 @@ class WaffraEncryptedFinanceSession {
       userConfirmed: userConfirmed,
       allowDuplicateHashes: allowDuplicateHashes,
       proposedCategories: proposedCategories,
+      selectedAccountIds: selectedAccountIds,
+      expectedAccountGeneration: expectedAccountGeneration,
     );
   }
 

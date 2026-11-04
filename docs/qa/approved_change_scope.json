@@ -1,115 +1,513 @@
 {
   "contract_version": 1,
-  "change_id": "M445-M414-reconciled-optional-budget-and-goal-alerts-on-M444",
-  "human_scope_review": "Owner already approved independent percentage alerts for budgets and target-based goals. Reconciled M414 onto M444 main descendant without replacing once-per-month hashed threshold suppression, unrelated bank SMS notification isolation, goal one-time due dates, or financial calculations. All source changes are scoped, no balance migration or SQLCipher production cutover.",
+  "change_id": "M446-M440-SAR-accounts-V3-on-M445-main",
+  "human_scope_review": "User approved completing Saudi SAR money accounts, account-linked manual/SMS/recurring confirmed posting, idempotent transfers, and password-authenticated V3 account backup/restoration. The M440 implementation is rebased on merged M445 preserving budget/goal alert source code and Home+widget SMS routing. Production source activation and signed-device evidence remain gated until proven; do not bypass SQLCipher release review. Subsequent user instruction authorizes production activation for fresh Android installations. Existing users retain guarded routing. Signed Android validation is pending. M96 regression repair checks that the same source guard is instantiated in the verified binder; it does not remove or relax a source safety assertion.",
   "user_requested_changes": [
-    "M414: Budget percentage alerts have their own independent on/off switch, separate from budget/category activation, in all budget create and edit routes. Show list of existing alert thresholds when enabled, hide them when disabled, retaining saved budget and existing history.",
-    "M414: Use per-budget custom selected threshold instead of hardcoded 80% in all main dashboard, finance snapshot and new confirmed expense warnings. Prevent repeated threshold alerts for normal subsequent saves, retain a 100% budget cap milestone, and remove obsolete 'category budget' wording.",
-    "M414: Optional in-app and Android local notification on user-confirmed crossing when OS permission granted; private amounts, names and ledger information never appear in lock-screen notifications. No remote push or background bank access is claimed.",
-    "M414: Separate opt-in percentage-progress alerts for savings goals with a numeric target; open-ended savings have no denominator and do not emit percentage alerts. Keep recurring due-date reminders independent and opt-in, never fabricate a recurring percentage target or change money.",
-    "M414: Preserve migration, backup and encrypted finance records with optional new alert flags defaulting to compatible values on historic data, and reject invalid new alert settings in both import and finance validators. Add seven automated tests covering policy, UI and persistence.",
-    "Preserve M444 hashed single-alert-per-budget-month deduplication and account-specific SMS notification isolation while adding user-selectable alert enable/disable."
+    "Preserve M444 hashed single-alert-per-budget-month deduplication and account-specific SMS notification isolation while adding user-selectable alert enable/disable.",
+    "Create Saudi riyal cash, bank, wallet and other money accounts with independent balances and account metadata.",
+    "Create a transfer between two different accounts whose opposite legs preserve total balance and are neither income nor expense.",
+    "Require user consent, immutable transfer IDs, idempotent retry and SQLCipher database integrity for financial changes.",
+    "Implement subsequent third Transfer selection next to manual income and expense without changing main until all integration gates pass.",
+    "Prepare independent accessible Arabic/English Income, Expense and Transfer form with From Account and To Account selectors, fully blocked until an injected authoritative finance writer is connected.",
+    "Prepare a user-facing My Accounts page for creating, renaming, archiving and viewing balances with confirmed transfers; leave current production navigation unchanged until financial storage integration passes.",
+    "Bind account mutations and transfer posting to the verified SQLCipher source under the same native Home/Widget lock and increment the finance generation atomically to reject stale editors.",
+    "Guard encrypted backup V2 so new account and transfer tables cannot be silently omitted; ensure incomplete schema or any account rows block unsupported backup until verified account-aware restore exists.",
+    "Store each manually confirmed classified finance entry and its chosen account link inside one SQLCipher transaction with exact revision compare, while preserving separate SMS and widget behavior and blocking stale or invalid accounts.",
+    "Prepare source-digested, read-only historical-account reconciliation that preserves original entries and adjusts goal-wallet-funded expenses before any approved account assignment.",
+    "Repair M385 exact-scope boundary anchors around M440 account ledger and portable-backup safety changes without bypassing scope protection.",
+    "Treat verified exactly-once transfer replays as already saved rather than showing a failure after an identical committed transfer.",
+    "M440: Account-aware authenticated V3 backup and atomic disposable-vault restore, with V2 loss prevention.",
+    "M440: Persist one explicit selected account per confirmed SMS/recurring batch entry inside the unified SQLCipher writer.",
+    "M440: Make My Accounts navigation available only for independently verified activated SQLCipher sources; never create a second live finance database.",
+    "M447: Carry explicitly reviewed bank-SMS account selections through the existing verified finance authority/session and shared SQLCipher writer without permitting bank data in guarded legacy.",
+    "M447: Ask for an optional verified financial account per bank-SMS transaction in all three Home bank SMS review/save routes and attach it in the same SQLCipher commit as the SMS hash.",
+    "M447: Add a GitHub Actions regression that verifies all three bank SMS confirmation routes review and forward witnessed account allocations.",
+    "M447: Link manual and recurring Home transaction save to approved cash/bank account using verified SQLCipher, preserving duplicate detection and independent budgets.",
+    "M447: Verify recurring payments debit the user selected SAR money account atomically and do not double-charge when retried.",
+    "M447: Verified recurring account posting is atomic, idempotent and rejects stale account balance witnesses.",
+    "M447: Settle linked savings goals atomically with their due recurrence; subtract the goals wallet only once and link only the cash-funded portion to an explicitly chosen bank account.",
+    "Activate SQLCipher-compatible v4 on empty Android installations with an OS-protected key, durable install receipt and shared Home, widget and SMS runtime. Preserve existing legacy finance.",
+    "Export and cold-verify linked relational records and authenticated account archives from the active finance backup UI; test interruption, restart and real Android source binding.",
+    "Update only the M175 verified recurring route assertion to require user confirmation and selected account; update only the obsolete M362 goal due test to assert the new atomic due writer.",
+    "Repair the M96 source-safety contract so it verifies the actual centralized production binder instead of an obsolete Home source-guard location while preserving strict source activation and legacy fallback protections."
   ],
   "allowed_changed_files": [
-    "lib/main.dart",
-    "lib/storage/legacy_snapshot_preflight.dart",
-    "lib/storage/waffra_cloud_cipher.dart",
-    "lib/storage/waffra_fresh_finance_domain_repository.dart",
-    "lib/storage/waffra_fresh_finance_modules_repository.dart",
-    "lib/waffra_budget_directory.part.dart",
-    "lib/waffra_financial_insights.dart",
-    "lib/waffra_goal_recurring_actions.part.dart",
-    "lib/waffra_reminders.dart",
-    "test/m414_percentage_alert_controls_test.dart",
+    ".github/scripts/run-m120-android-receipt-reopen.sh",
+    ".github/scripts/run-m202-sqlcipher-binder-android.sh",
+    ".github/workflows/m120-android-receipt-cold-reopen.yml",
+    ".github/workflows/m202-android-sqlcipher-source-binder-dryrun.yml",
+    ".github/workflows/m440-account-ledger-and-backup-ci.yml",
+    ".github/workflows/m96-runtime-finance-cloud-integration.yml",
     "docs/qa/approved_change_scope.json",
-    "docs/release/WAFFRA_M414_PERCENTAGE_ALERTS_QA.txt",
-    "docs/release/WAFFRA_APPROVED_CHANGES.txt"
+    "docs/qa/m440_accounts_design.md",
+    "integration_test/fresh_install_production_binding_android_test.dart",
+    "lib/main.dart",
+    "lib/storage/waffra_accounts_backup_guard.dart",
+    "lib/storage/waffra_accounts_finance_history.dart",
+    "lib/storage/waffra_accounts_migration_preview.dart",
+    "lib/storage/waffra_accounts_portable_backup_v3.dart",
+    "lib/storage/waffra_accounts_repository.dart",
+    "lib/storage/waffra_accounts_schema.dart",
+    "lib/storage/waffra_encrypted_finance_session.dart",
+    "lib/storage/waffra_encrypted_store.dart",
+    "lib/storage/waffra_fresh_install_source.dart",
+    "lib/storage/waffra_portable_encrypted_backup_exporter.dart",
+    "lib/storage/waffra_production_finance_authority_binding.dart",
+    "lib/storage/waffra_unified_finance_writer.dart",
+    "lib/storage/waffra_verified_accounts_api.dart",
+    "lib/storage/waffra_verified_active_restore_preflight.dart",
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+    "lib/storage/waffra_verified_finance_authority.dart",
+    "lib/storage/waffra_verified_goal_due_snapshot_writer.dart",
+    "lib/waffra_account_transaction_form.dart",
+    "lib/waffra_accounts_manager_page.dart",
+    "lib/waffra_auto_sms_autopost.part.dart",
+    "lib/waffra_widget_capture.part.dart",
+    "pubspec.yaml",
+    "test/m108_home_widget_one_finance_writer_test.dart",
+    "test/m363_transaction_category_inline_creation_test.dart",
+    "test/m440_account_transaction_form_test.dart",
+    "test/qa/m440_android_emulator_disk_preflight_test.py",
+    "test/qa/m440_transfer_replay_ux_test.py",
+    "test/qa/m447_verified_sms_account_linking_test.py",
+    "test/storage/m175_live_finance_mutation_intent_test.dart",
+    "test/storage/m187_active_restore_preflight_test.dart",
+    "test/storage/m440_account_linked_entry_writer_test.dart",
+    "test/storage/m440_accounts_backup_guard_test.dart",
+    "test/storage/m440_accounts_migration_preview_test.dart",
+    "test/storage/m440_accounts_portable_v3_test.dart",
+    "test/storage/m440_accounts_repository_test.dart",
+    "test/storage/m440_fresh_install_source_test.dart",
+    "test/storage/m447_account_recurring_atomic_test.dart",
+    "test/storage/m447_live_recurring_account_binding_test.dart"
   ],
   "bounded_sections": {
+    "test/m363_transaction_category_inline_creation_test.dart": [
+      {
+        "start": " test('M363 bulk bank review also receives inline parent/child creation',(){\n",
+        "end": " test('M362 a short available balance warns and permits funding',(){\n"
+      }
+    ],
+    "test/storage/m175_live_finance_mutation_intent_test.dart": [
+      {
+        "start": "  test('M175 exact Home live writes carry their distinct finance intent', () {\n",
+        "end": "  test('M175 guarded legacy routes remain eligible, without any cutover', () {\n"
+      }
+    ],
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
+      {
+        "start": "import 'waffra_encrypted_full_finance_reset.dart';\n",
+        "end": "import 'waffra_verified_goal_due_snapshot_writer.dart';\n"
+      },
+      {
+        "start": "      throw StateError('SQLCipher activation witness needs reconciliation.');\n",
+        "end": "  /// Encrypted-only, explicitly authenticated reset route. The independent\n"
+      },
+      {
+        "start": "    required String confirmedAtIso,\n",
+        "end": "  }) async {\n    if (!experimentalEnabled || !userConfirmed) {\n      throw StateError('Encrypted goal due needs explicit user approval.');\n"
+      },
+      {
+        "start": "        userConfirmed: true,\n",
+        "end": "    });\n  }\n\n  Future<WaffraEncryptedFullResetResult> resetVerifiedFinance({\n"
+      },
+      {
+        "start": "    required String proposedPostponedJson,\n",
+        "end": "  }) async {\n    if (!experimentalEnabled || !userConfirmed) {\n      throw StateError('An explicitly confirmed encrypted payment is required.');\n"
+      },
+      {
+        "start": "    final proposed = decodePostponed(proposedPostponedJson);\n",
+        "end": "        if (current.values['waffra_recurring_v24'] !=\n"
+      },
+      {
+        "start": "          throw StateError('Recurring payment SQL ledger is out of sync.');\n",
+        "end": "        await snapshot.store.customStatement(\n          'INSERT INTO fresh_finance_entries '\n"
+      },
+      {
+        "start": "          ],\n        );\n",
+        "end": "          ..['entries'] = jsonEncode([frozen, ...entries])\n"
+      },
+      {
+        "start": "    List<Map<String,Object?>> proposedCategories = const [],\n",
+        "end": "    if (!experimentalEnabled) {\n      throw StateError('Encrypted source bridge is disabled by default.');\n    }\n    return WaffraUnifiedFinanceWriter(\n"
+      },
+      {
+        "start": "      proposedCategories: proposedCategories,\n",
+        "end": "  }\n  /// Save a confirmed transaction and its attached images as ONE encrypted\n"
+      },
+      {
+        "start": "          ..['waffra_sms_hashes_v1'] = (nextHashes.toList()..sort());\n",
+        "end": "  /// Read only existing and owner-verified encrypted attachment BLOBs.\n"
+      }
+    ],
+    "lib/storage/waffra_portable_encrypted_backup_exporter.dart": [
+      {
+        "start": "import 'legacy_financial_snapshot.dart';\n",
+        "end": "import 'waffra_encrypted_receipt_vault.dart';\n"
+      },
+      {
+        "start": "  final bool experimentalEnabled;\n",
+        "end": "    if (!experimentalEnabled) {\n"
+      },
+      {
+        "start": "      if (domainMarker.isNotEmpty) {\n",
+        "end": "      final state = await snapshot.read();\n"
+      },
+      {
+        "start": "        finance['waffra_custom_goals_v1'] = values;\n",
+        "end": "    });\n  }\n}"
+      }
+    ],
+    "lib/storage/waffra_unified_finance_writer.dart": [
+      {
+        "start": "import 'dart:io';\n",
+        "end": "import 'waffra_atomic_finance_snapshot.dart';\n"
+      },
+      {
+        "start": "  Future<WaffraUnifiedWriteResult> appendTransactions({\n",
+        "end": "    if (!experimentalEnabled) {\n"
+      },
+      {
+        "start": "    for (final record in records) {",
+        "end": "    if(proposedCategories.length>100) {\n"
+      },
+      {
+        "start": "      return snapshot.store.transaction(() async {",
+        "end": "        final next = Map<String, Object?>.from(current.values);\n"
+      },
+      {
+        "start": "          await snapshot.store.customStatement(\n            'INSERT INTO fresh_finance_entries '\n",
+        "end": "          list.add(record);\n"
+      }
+    ],
+    ".github/scripts/run-m120-android-receipt-reopen.sh": [
+      {
+        "start": "#!/usr/bin/env bash\n",
+        "end": "echo \"::error::M120 did not complete\"\n"
+      }
+    ],
+    ".github/workflows/m120-android-receipt-cold-reopen.yml": [
+      {
+        "start": "      - name: Enable KVM for Android emulator\n",
+        "end": "      - name: Run disposable Android receipt restart and recovery proof\n"
+      },
+      {
+        "start": "      - name: Run disposable Android receipt restart and recovery proof\n",
+        "end": "          # Only failed sqlite3mc GitHub native-asset downloads are retried.\n"
+      }
+    ],
     "lib/main.dart": [
       {
-        "start": "class WaffraNamedBudget extends BudgetCategory {",
-        "end": "/// A budget picker is not part of transaction entry"
+        "start": "import 'storage/waffra_production_finance_source_guard.dart';\n",
+        "end": "import 'storage/waffra_live_account_write_authority.dart';\n"
       },
       {
-        "start": "class SavingGoal {",
-        "end": "class SavingChallenge {"
+        "start": "import 'storage/waffra_verified_finance_authority.dart';\n",
+        "end": "import 'storage/waffra_verified_module_ui_guard.dart';\n"
       },
       {
-        "start": "  }finally{controller.dispose();}\n }\n",
-        "end": "Future<void> editBudgetForCategory("
+        "start": "  runApp(const WaffraWidgetCaptureApp());\n",
+        "end": " }\n // Native Android manifest disables automatic crash collection on startup.\n"
       },
       {
-        "start": "Future<void> editBudgetForCategory(",
-        "end": "Widget monthlyBudgetCard(){"
+        "start": "   final p=await SharedPreferences.getInstance().timeout(const Duration(seconds:15));\n",
+        "end": "   // Nonfinancial preference only. Rotate once per cold start; retries do not\n"
       },
       {
-        "start": "Widget monthlyBudgetCard(){",
-        "end": "Widget _budgetFigure("
+        "start": "  final binding=await WaffraProductionFinanceAuthorityBinding.bind(\n",
+        "end": "   startupRoute:WaffraFinanceRoute.appStartup,\n"
       },
       {
-        "start": "final warnings=namedBudgets.where(",
-        "end": "  return Card(\n   elevation:1.0,shape:"
+        "start": "  _financeAuthority=binding.authority;\n",
+        "end": " WaffraFinanceAuthorityRead? _lastFinanceAuthorityRead;\n"
       },
       {
-        "start": "Future<void> goalDialog(",
-        "end": "/// Release an earmark"
+        "start": "  bool userConfirmed = false,\n",
+        "end": "  // Freeze a snapshot BEFORE any await. Previously Future.wait launched\n"
       },
       {
-        "start": "final achieved=current.saved<current.target&&",
-        "end": "IconData goalIcon("
+        "start": "    userConfirmed:userConfirmed,\n",
+        "end": "   _lastFinanceAuthorityRead=committed;\n   _lastLedgerSavedRaw=committed.ledgerRaw;\n   _lastWidgetRevision=committed.widgetRevision;\n  }).then((_){unawaited(_refreshWidget());});\n"
+      },
+      {
+        "start": "     if(isGoalDue){\n",
+        "end": "       return;\n      }\n      // The same deterministic recurring ID cannot settle a goal twice.\n"
+      },
+      {
+        "start": "      }\n     }else{\n",
+        "end": "       setState(()=>entries.insert(0,MoneyEntry(\n"
+      },
+      {
+        "start": "      }\n      recurringPostponed.remove(id);\n",
+        "end": "      try{\n       await persist(route:WaffraFinanceRoute.recurringPostingAndPostponement,\n"
+      },
+      {
+        "start": "       await persist(route:WaffraFinanceRoute.recurringPostingAndPostponement,\n",
+        "end": "      }catch(error){\n       debugPrint('Recurring payment commit could not be confirmed: $error');\n"
+      },
+      {
+        "start": "      maxLines:2,textAlign:TextAlign.center))),\n",
+        "end": "/// Budget assignment is OPTIONAL in every bank import: no assignment never blocks saving.\n"
+      },
+      {
+        "start": "   additions[n]=additions[n].withBudget(reviewedBudgets[n]);\n",
+        "end": "  try{\n   // The dashboard and standalone Android widget now use the SAME locked,\n"
+      },
+      {
+        "start": "    allowDuplicateHashes:allowRepeatedSms,\n",
+        "end": "   if(!mounted)return;\n   final persisted=(jsonDecode(applied.current.ledgerRaw??'[]') as List)\n"
+      },
+      {
+        "start": "       entry=entry.withBudget(budgetSelection.single);\n",
+        "end": "        b.budget>0&&!b.deleted).toList();\n"
+      },
+      {
+        "start": "        allowDuplicateHashes:explicitlyApprovedDuplicate,\n",
+        "end": "       if(committed.saved!=1){\n"
+      },
+      {
+        "start": "  if(pendingHash!=null&&initial==null){\n",
+        "end": "   // A single reviewed bank SMS must commit both its transaction and\n"
+      },
+      {
+        "start": "    allowDuplicateHashes:explicitlyApprovedSmsDuplicate,\n",
+        "end": "   if(applied.saved!=1){\n"
+      },
+      {
+        "start": "   }\n  }else{\n",
+        "end": "   // A spinner is NOT proof of a completed financial write.\n"
+      },
+      {
+        "start": "     ?WaffraFinanceRoute.manualTransactionSave\n",
+        "end": "   }catch(e){\n    if(mounted){\n"
+      },
+      {
+        "start": "       route:WaffraFinanceRoute.backupExport);\n",
+        "end": "      // Persist the encrypted archive only after system document picker confirms.\n"
+      },
+      {
+        "start": "       'payload':stagedBackup!,'password':restoreSecret.text,\n",
+        "end": "      if(raw['format']!='waffra-backup'||raw['entries'] is! List||\n"
+      },
+      {
+        "start": "   _accountSection(waffraIsEnglish?'Financial tools':'الأدوات المالية',Icons.account_balance_wallet_outlined,[\n",
+        "end": "     waffraIsEnglish?'Transactions and recurring dates':'المعاملات ومواعيد العمليات المتكررة',\n"
       }
     ],
-    "lib/waffra_budget_directory.part.dart": [
+    "lib/storage/waffra_production_finance_authority_binding.dart": [
       {
-        "start": "key:PageStorageKey<String>('waffra-saved-budget-details-'",
-        "end": "LinearProgressIndicator(value:ratio"
+        "start": "import 'waffra_atomic_finance_snapshot.dart';\n",
+        "end": "import 'waffra_encrypted_finance_session.dart';\n"
+      },
+      {
+        "start": "    WaffraEncryptedStore? store,\n",
+        "end": "\n  final WaffraVerifiedFinanceAuthority authority;\n"
+      },
+      {
+        "start": "  final WaffraEncryptedStore? _store;\n",
+        "end": "  static Future<WaffraProductionFinanceAuthorityBinding> bind({\n"
+      },
+      {
+        "start": "    required WaffraHomeFinancePersistence legacy,\n",
+        "end": "    WaffraProductionCutoverEvidence? certifiedEvidence,\n"
+      },
+      {
+        "start": "    Future<String?> Function()? secureKeyReader,\n",
+        "end": "        startupRoute != WaffraFinanceRoute.widgetStartup) {\n"
+      },
+      {
+        "start": "    if (report.source == WaffraProductionFinanceSource.guardedLegacy) {\n",
+        "end": "        throw StateError('Encrypted release evidence cannot select legacy.');\n"
+      },
+      {
+        "start": "    final evidence = certifiedEvidence;\n",
+        "end": "    final directory = directoryProvider != null\n"
+      },
+      {
+        "start": "      // Neither a synthetic report nor a stale migration can grant access.\n",
+        "end": "      if (checkpoint == null ||\n"
+      },
+      {
+        "start": "          checkpoint.phase != WaffraCutoverPhase.active ||\n",
+        "end": "        throw StateError('Encrypted source certification digest mismatches.');\n"
+      },
+      {
+        "start": "      // key and independently confirmed source digest. Never performs cutover.\n",
+        "end": "      }\n      final bridge = WaffraVerifiedEncryptedFinanceBridge(\n"
+      },
+      {
+        "start": "          bridge: bridge, experimentalEnabled: true,\n",
+        "end": "        encryptedSqlWitnessActive: true,\n        externalSourceWitnessActive: true,\n        verifiedKeyRecoveryInDevice: true,\n      );\n      // A real source read rechecks both activation witnesses under the\n"
+      },
+      {
+        "start": "        authority: authority, encrypted: true, store: store,\n",
+        "end": "    } catch (_) {\n"
       }
     ],
-    "lib/waffra_financial_insights.dart": [
+    "lib/storage/waffra_encrypted_finance_session.dart": [
       {
-        "start": "static double? comparisonPercent(",
-        "end": "static int budgetAlertStage("
+        "start": "    required String proposedPostponedJson,\n",
+        "end": "  }) async {\n    _requireEnabled();\n    return bridge.commitRecurringPayment(\n"
+      },
+      {
+        "start": "      proposedPostponedJson: proposedPostponedJson,\n",
+        "end": "    );\n  }\n\n  /// The verified bridge owns both the native Home/Widget lock and the\n"
+      },
+      {
+        "start": "    required String confirmedAtIso,\n",
+        "end": "  }) {\n    _requireEnabled();\n    return bridge.settleLinkedGoalDue(\n"
+      },
+      {
+        "start": "      confirmedAtIso: confirmedAtIso,\n",
+        "end": "    );\n  }\n\n  Future<WaffraTransactionRecycleResult> recycleVerifiedTransaction({\n"
+      },
+      {
+        "start": "    List<Map<String,Object?>> proposedCategories = const [],\n",
+        "end": "    _requireEnabled();\n    return bridge.appendConfirmedTransactions(\n"
+      },
+      {
+        "start": "      proposedCategories: proposedCategories,\n",
+        "end": "  }\n\n  /// Save normalized transaction + raw picker picture bytes atomically after\n"
       }
     ],
-    "lib/waffra_goal_recurring_actions.part.dart": [
+    "lib/storage/waffra_verified_finance_authority.dart": [
       {
-        "start": "Future<void> editGoal(SavingGoal existing)",
+        "start": "import 'waffra_encrypted_sms_notes_vault.dart';\n",
+        "end": "import 'waffra_encrypted_finance_session.dart';\n"
+      },
+      {
+        "start": "    this.encryptedSession,\n",
+        "end": "    this.encryptedSqlWitnessActive = false,\n"
+      },
+      {
+        "start": "  final WaffraEncryptedFinanceSession? encryptedSession;\n",
+        "end": "  final bool encryptedSqlWitnessActive;\n"
+      },
+      {
+        "start": "    final report = await sourceGuard.inspect();\n",
+        "end": "      source: report,\n"
+      },
+      {
+        "start": "    required String confirmedAtIso,\n",
+        "end": "  }) async {\n    if (!userConfirmed ||\n"
+      },
+      {
+        "start": "      confirmedAtIso: confirmedAtIso,\n",
+        "end": "    );\n    return load(route: WaffraFinanceRoute.dashboardRead);\n"
+      },
+      {
+        "start": "    bool userConfirmed = false,\n",
+        "end": "    // Capture caller-owned values synchronously, before ANY awaited source\n"
+      },
+      {
+        "start": "      throw StateError('Finance authority changed while screen was open.');\n",
+        "end": "    // A second Paid tap with an already-posted deterministic ID must not be\n"
+      },
+      {
+        "start": "            immutableCapture['waffra_recurring_postponed_v1'] as String,\n",
+        "end": "      );\n      return await load(route: route);\n    }\n    if (backend == WaffraRuntimeFinanceBackend.verifiedEncrypted &&\n        (route == WaffraFinanceRoute.challengeAndBudgetUpdate ||\n"
+      },
+      {
+        "start": "        hashes: const <String?>[null],\n",
+        "end": "      );\n      return await load(route: route);\n    }\n    if (backend == WaffraRuntimeFinanceBackend.guardedLegacy) {\n"
+      },
+      {
+        "start": "    List<Map<String, Object?>> proposedCategories = const [],\n",
+        "end": "    if (route != WaffraFinanceRoute.bulkSmsConfirmedSave &&\n"
+      },
+      {
+        "start": "    final fingerprints = List<String>.unmodifiable(hashes);\n",
+        "end": "    // source check. Home/Widget may still rebuild or edit their category lists\n"
+      },
+      {
+        "start": "    late final int saved, income, expenses, skipped, incomeMinor, expenseMinor;\n",
+        "end": "      // Save transaction metadata without original SMS text on unencrypted\n"
+      },
+      {
+        "start": "        records: frozen, hashes: fingerprints.cast<String?>(),\n",
+        "end": "      );\n      saved = result.saved;\n"
+      }
+    ],
+    "lib/storage/waffra_verified_goal_due_snapshot_writer.dart": [
+      {
+        "start": "import 'dart:convert';\n",
+        "end": "import 'waffra_fresh_finance_domain_repository.dart';\n"
+      },
+      {
+        "start": "  Future<WaffraGoalDueSqlReceipt> settle({\n",
         "end": null
       }
     ],
-    "lib/waffra_reminders.dart": [
+    ".github/workflows/m202-android-sqlcipher-source-binder-dryrun.yml": [
       {
-        "start": "static Future<void> schedule(",
-        "end": "static Future<void> clear()"
-      }
-    ],
-    "lib/storage/legacy_snapshot_preflight.dart": [
-      {
-        "start": "} else if (key == 'waffra_goals_v24') {",
-        "end": "} else if (key == 'waffra_recurring_v24') {"
+        "start": "    branches: [main]\n",
+        "end": "      - 'integration_test/m202_home_widget_source_binder_android_test.dart'\n"
       },
       {
-        "start": "} else if (key == 'waffra_named_budgets_v1') {",
-        "end": "} else if (key == 'waffra_challenges_v1') {"
+        "start": "          dart analyze \\\n",
+        "end": "            integration_test/live_finance_migration_receipts_android_test.dart \\\n"
       }
     ],
-    "lib/storage/waffra_cloud_cipher.dart": [
+    "lib/storage/waffra_encrypted_store.dart": [
       {
-        "start": "'goal': {'id'",
-        "end": "'recurring': {'id'"
+        "start": "  static const _keyStorageName = 'waffra_vault_encryption_key_v1';\n",
+        "end": "\n  /// Stable native locations. Startup guards may inspect these without\n"
+      },
+      {
+        "start": "        // Ordinary SQLite ignores this pragma and returns no result.\n",
+        "end": "        if (supportedCipher.isEmpty) {\n"
       }
     ],
-    "lib/storage/waffra_fresh_finance_domain_repository.dart": [
+    "lib/storage/waffra_verified_active_restore_preflight.dart": [
       {
-        "start": "Future<void> createStandaloneBudget(",
-        "end": "/// Archive, never destroy historical allocation"
+        "start": "import 'dart:math';\n",
+        "end": "import 'waffra_encrypted_store.dart';\n"
+      },
+      {
+        "start": "    required bool userConfirmed,\n",
+        "end": "    if (!experimentalEnabled || !userConfirmed ||\n"
+      },
+      {
+        "start": "    // The encrypted archive is authenticated before opening ANY candidate.\n",
+        "end": "      password: password,\n    );\n"
+      },
+      {
+        "start": "    try {\n      candidate = WaffraEncryptedStore.openAt(\n",
+        "end": "        disposableStore: candidate,\n"
+      },
+      {
+        "start": "      );\n      await WaffraRestoredFinanceReceiptAttestor(\n",
+        "end": "      // Another Home/Widget write during the expensive archive validation\n"
       }
     ],
-    "lib/storage/waffra_fresh_finance_modules_repository.dart": [
+    "lib/waffra_auto_sms_autopost.part.dart": [
       {
-        "start": "case WaffraFinanceModule.goals:\n        if(data['dueDate'] != null",
-        "end": "case WaffraFinanceModule.recurring:\n        if (data['income']"
+        "start": "  final binding=await WaffraProductionFinanceAuthorityBinding.bind(\n",
+        "end": "   startupRoute:WaffraFinanceRoute.widgetStartup);\n"
+      }
+    ],
+    "lib/waffra_widget_capture.part.dart": [
+      {
+        "start": "    final binding=await WaffraProductionFinanceAuthorityBinding.bind(\n",
+        "end": "     startupRoute:WaffraFinanceRoute.widgetStartup,\n"
+      }
+    ],
+    "test/m108_home_widget_one_finance_writer_test.dart": [
+      {
+        "start": "    expect(widget, isNot(contains('FirebaseFirestore.instance')));\n",
+        "end": null
+      }
+    ],
+    "test/storage/m187_active_restore_preflight_test.dart": [
+      {
+        "start": "      await activeDirectory.delete(recursive: true);\n",
+        "end": "  test('M187 accepted portable receipt cold-stages without replacing active ledger',\n"
+      }
+    ],
+    ".github/workflows/m96-runtime-finance-cloud-integration.yml": [
+      {
+        "start": "          assert 'bool get automaticallyActivateSqlCipher => false;' in release\n",
+        "end": "          assert 'SharedPreferences remains authoritative' in persistence\n"
       }
     ]
   }

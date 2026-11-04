@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 
 import 'waffra_atomic_finance_snapshot.dart';
+import 'waffra_accounts_schema.dart';
 import 'waffra_encrypted_store.dart';
 import 'waffra_fresh_finance_domain_repository.dart';
 
@@ -69,6 +70,7 @@ class WaffraVerifiedGoalDueSnapshotWriter {
     required int amountMinor,
     required String confirmedAtIso,
     required bool userConfirmed,
+    String? selectedAccountId,
   }) async {
     if (!experimentalEnabled || !userConfirmed) {
       throw StateError('Verified encrypted goal due needs explicit approval.');
@@ -156,6 +158,28 @@ class WaffraVerifiedGoalDueSnapshotWriter {
           entry['id']!=dueKey || entry['sourceType']!='goal_due' ||
           entry['income']!=false || _minor(entry['amount'])!=amountMinor) {
         throw StateError('Goal due entry mismatches its SQL settlement.');
+      }
+      // One SQLCipher commit links the settled goal to the chosen account.
+      // Account balance calculation deducts ONLY fromCurrentMinor, not the
+      // amount already paid from the separate goals wallet.
+      if(selectedAccountId!=null){
+        if(selectedAccountId.trim().isEmpty||selectedAccountId.length>128){
+          throw StateError('Invalid confirmed goal cash account.');
+        }
+        await WaffraAccountsSchema.requireReady(store);
+        final account=await store.customSelect(
+          'SELECT archived,currency FROM fresh_finance_money_accounts WHERE account_id=?',
+          variables:[Variable.withString(selectedAccountId)],
+        ).get();
+        if(account.length!=1||account.single.read<int>('archived')!=0||
+           account.single.read<String>('currency')!='SAR'){
+          throw StateError('Goal cash account is not available.');
+        }
+        await store.customStatement(
+          'INSERT INTO fresh_finance_account_entry_links '
+          '(entry_id,account_id,confirmed_iso) VALUES (?,?,?)',
+          [dueKey,selectedAccountId,confirmedAtIso],
+        );
       }
       goal['saved']=(savedBefore-receipt.fromGoalMinor)/100;
       recurring['active']=false;

@@ -1,7 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:drift/drift.dart' show Variable;
+
 import 'legacy_snapshot_preflight.dart';
+import 'waffra_accounts_schema.dart';
 import 'waffra_atomic_finance_snapshot.dart';
 import 'waffra_experimental_writer_gate.dart';
 
@@ -58,6 +61,11 @@ class WaffraUnifiedFinanceWriter {
     required bool userConfirmed,
     bool allowDuplicateHashes = false,
     List<Map<String, Object?>> proposedCategories = const [],
+    // Account linkage is permitted ONLY for a single confirmed manual entry.
+    // It shares this method's app/widget lock and SQL transaction.
+    String? accountId,
+    List<String?>? selectedAccountIds,
+    int? expectedAccountGeneration,
   }) async {
     if (!experimentalEnabled) {
       throw StateError('Unified finance writer is disabled by default.');
@@ -82,6 +90,31 @@ class WaffraUnifiedFinanceWriter {
       confirmedRecords.add(Map<String, Object?>.unmodifiable(decoded));
     }
     final confirmedHashes = List<String?>.unmodifiable(messageHashes);
+    // One explicit account decision per confirmed transaction. The old
+    // single-manual-account argument remains supported for existing callers.
+    // Freeze selections before the first await, as the UI may change them.
+    if(accountId!=null && selectedAccountIds!=null){
+      throw StateError('Ambiguous account selection.');
+    }
+    if(accountId!=null && (
+       accountId.trim().isEmpty || accountId.length>128 ||
+       confirmedRecords.length!=1 || confirmedHashes.single!=null ||
+       confirmedRecords.single['sourceType']!='manual')) {
+      throw StateError('Single account shortcut requires one manual entry.');
+    }
+    final confirmedAccounts=List<String?>.unmodifiable(
+      selectedAccountIds??List<String?>.filled(
+       confirmedRecords.length,accountId));
+    if(confirmedAccounts.length!=confirmedRecords.length ||
+       confirmedAccounts.any((id)=>id!=null &&
+        (id.trim().isEmpty || id.length>128))){
+      throw ArgumentError('Account choices must match confirmed entries.');
+    }
+    final hasAccountLinks=confirmedAccounts.any((id)=>id!=null);
+    if(hasAccountLinks && expectedAccountGeneration==null){
+      throw StateError('Account-linked save needs witnessed finance generation.');
+    }
+
     if(proposedCategories.length>100) {
       throw ArgumentError('Merchant categories exceed batch limit.');
     }
@@ -136,6 +169,24 @@ class WaffraUnifiedFinanceWriter {
       await verifySourceUnderLock?.call();
       return snapshot.store.transaction(() async {
         final current = await snapshot.read();
+        if(hasAccountLinks){
+          if(current.generation!=expectedAccountGeneration){
+            throw StateError('Accounts or transactions changed. Reload before posting.');
+          }
+          await WaffraAccountsSchema.requireReady(snapshot.store);
+          for(final id in confirmedAccounts.whereType<String>().toSet()){
+            final account=await snapshot.store.customSelect(
+              'SELECT archived,currency FROM fresh_finance_money_accounts '
+              'WHERE account_id=?',variables:[Variable.withString(id)],
+            ).get();
+            if(account.length!=1 ||
+               account.single.read<int>('archived')!=0 ||
+               account.single.read<String>('currency')!='SAR'){
+              throw StateError('Chosen finance account is not active or valid.');
+            }
+          }
+        }
+
         final next = Map<String, Object?>.from(current.values);
         final decoded = jsonDecode((next['entries'] as String?) ?? '[]');
         if (decoded is! List) {
@@ -221,6 +272,16 @@ class WaffraUnifiedFinanceWriter {
               record['date'], 0, jsonEncode(record),
             ],
           );
+          // Atomic double-entry association: the original classified ledger
+          // row and its selected account link either BOTH commit, or neither.
+          final selectedAccount=confirmedAccounts[i];
+          if(selectedAccount!=null){
+            await snapshot.store.customStatement(
+              'INSERT INTO fresh_finance_account_entry_links '
+              '(entry_id,account_id,confirmed_iso) VALUES (?,?,?)',
+              [record['id'],selectedAccount,DateTime.now().toIso8601String()],
+            );
+          }
           list.add(record);
           if (hash != null && record['notes'] is String &&
               (record['notes'] as String).isNotEmpty) {

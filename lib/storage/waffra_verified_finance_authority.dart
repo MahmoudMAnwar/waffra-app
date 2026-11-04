@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'waffra_encrypted_sms_notes_vault.dart';
+import 'waffra_fresh_install_source.dart';
 import 'waffra_encrypted_full_finance_reset.dart';
 import 'waffra_encrypted_finance_session.dart';
 import 'waffra_receipt_screen_contract.dart';
@@ -58,6 +59,7 @@ class WaffraVerifiedFinanceAuthority {
     this.legacy = const WaffraHomeFinancePersistence(),
     this.sourceGuard = const WaffraProductionFinanceSourceGuard(),
     this.encryptedSession,
+    this.freshInstall,
     this.audit = const WaffraFinanceRouteAudit(),
     this.encryptedSqlWitnessActive = false,
     this.externalSourceWitnessActive = false,
@@ -68,6 +70,7 @@ class WaffraVerifiedFinanceAuthority {
   final WaffraHomeFinancePersistence legacy;
   final WaffraProductionFinanceSourceGuard sourceGuard;
   final WaffraEncryptedFinanceSession? encryptedSession;
+  final WaffraFreshInstallSource? freshInstall;
   final WaffraFinanceRouteAudit audit;
   final bool encryptedSqlWitnessActive;
   final bool externalSourceWitnessActive;
@@ -96,6 +99,14 @@ class WaffraVerifiedFinanceAuthority {
   Future<WaffraRuntimeFinanceBackend> _requireRoute(
       WaffraFinanceRoute route) async {
     final report = await sourceGuard.inspect();
+    if (freshInstall != null) {
+      final session = encryptedSession;
+      if (report.source != WaffraProductionFinanceSource.encryptedRoutingRequired || session == null) {
+        throw StateError('Encrypted installation cannot switch finance source.');
+      }
+      await freshInstall!.verify(session.bridge.snapshot.store);
+      return WaffraRuntimeFinanceBackend.verifiedEncrypted;
+    }
     final backend = WaffraRuntimeFinanceRouteContract(
       source: report,
       audit: audit,
@@ -124,6 +135,7 @@ class WaffraVerifiedFinanceAuthority {
     required int amountMinor,
     required String confirmedAtIso,
     required bool userConfirmed,
+    String? selectedAccountId,
   }) async {
     if (!userConfirmed ||
         await _requireRoute(WaffraFinanceRoute.recurringPostingAndPostponement) !=
@@ -143,6 +155,7 @@ class WaffraVerifiedFinanceAuthority {
       amountMinor: amountMinor,
       confirmedAtIso: confirmedAtIso,
       userConfirmed: true,
+      selectedAccountId: selectedAccountId,
     );
     return load(route: WaffraFinanceRoute.dashboardRead);
   }
@@ -456,6 +469,7 @@ class WaffraVerifiedFinanceAuthority {
     required WaffraFinanceAuthorityRead baseline,
     required Map<String, Object> captured,
     bool userConfirmed = false,
+    String? selectedAccountId,
   }) async {
     // Capture caller-owned values synchronously, before ANY awaited source
     // probe. A queued Home edit can otherwise mutate the map while the OS
@@ -470,6 +484,14 @@ class WaffraVerifiedFinanceAuthority {
     final backend = await _requireRoute(route);
     if (backend != baseline.source) {
       throw StateError('Finance authority changed while screen was open.');
+    }
+    if (selectedAccountId != null &&
+        (selectedAccountId.trim().isEmpty || selectedAccountId.length > 128 ||
+         backend != WaffraRuntimeFinanceBackend.verifiedEncrypted ||
+         !userConfirmed ||
+         (route != WaffraFinanceRoute.manualTransactionSave &&
+          route != WaffraFinanceRoute.recurringPostingAndPostponement))) {
+      throw StateError('Account posting needs confirmed verified SQLCipher finance.');
     }
     // A second Paid tap with an already-posted deterministic ID must not be
     // reported as a successful scalar/no-op save. Postpone-only actions use
@@ -548,6 +570,7 @@ class WaffraVerifiedFinanceAuthority {
         proposedPostponedJson:
             immutableCapture['waffra_recurring_postponed_v1'] as String,
         userConfirmed: true,
+        selectedAccountId: selectedAccountId,
       );
       return await load(route: route);
     }
@@ -663,6 +686,8 @@ class WaffraVerifiedFinanceAuthority {
         records: added,
         hashes: const <String?>[null],
         userConfirmed: true,
+        selectedAccountIds: selectedAccountId == null ? null : [selectedAccountId],
+        expectedAccountGeneration: selectedAccountId == null ? null : witness.generation,
       );
       return await load(route: route);
     }
@@ -868,6 +893,8 @@ class WaffraVerifiedFinanceAuthority {
     required bool userConfirmed,
     bool allowDuplicateHashes = false,
     List<Map<String, Object?>> proposedCategories = const [],
+    List<String?>? selectedAccountIds,
+    int? expectedAccountGeneration,
   }) async {
     if (route != WaffraFinanceRoute.bulkSmsConfirmedSave &&
         route != WaffraFinanceRoute.widgetSmsConfirmedSave) {
@@ -884,6 +911,16 @@ class WaffraVerifiedFinanceAuthority {
       ),
     )).toList(growable: false);
     final fingerprints = List<String>.unmodifiable(hashes);
+    final accounts = selectedAccountIds == null ? null :
+        List<String?>.unmodifiable(selectedAccountIds);
+    if(accounts != null && (accounts.length != frozen.length ||
+      accounts.any((id)=>id!=null && (id.trim().isEmpty || id.length>128)))){
+      throw ArgumentError('Account assignments do not match confirmed SMS batch.');
+    }
+    if(accounts != null && accounts.any((id)=>id!=null) &&
+       expectedAccountGeneration==null){
+      throw StateError('Linked SMS requires the witnessed finance generation.');
+    }
     // Freeze every user-confirmed category before the first asynchronous
     // source check. Home/Widget may still rebuild or edit their category lists
     // while waiting for the native writer lock; the committed batch must not
@@ -903,6 +940,9 @@ class WaffraVerifiedFinanceAuthority {
     final backend = await _requireRoute(route);
     late final int saved, income, expenses, skipped, incomeMinor, expenseMinor;
     if (backend == WaffraRuntimeFinanceBackend.guardedLegacy) {
+      if(accounts != null && accounts.any((id)=>id!=null)){
+        throw StateError('Account-linked SMS requires verified SQLCipher.');
+      }
       // Save transaction metadata without original SMS text on unencrypted
       // SharedPreferences. Preserve the strict M207 fail-closed gate on the
       // locked writer itself. Never send raw notes to that journal.
@@ -961,6 +1001,8 @@ class WaffraVerifiedFinanceAuthority {
         records: frozen, hashes: fingerprints.cast<String?>(),
         userConfirmed: true, allowDuplicateHashes: allowDuplicateHashes,
         proposedCategories: frozenCategories,
+        selectedAccountIds: accounts,
+        expectedAccountGeneration: expectedAccountGeneration,
       );
       saved = result.saved;
       income = result.savedIncome;

@@ -2,6 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'waffra_accounts_portable_backup_v3.dart';
+import 'waffra_accounts_finance_history.dart';
+import 'package:collection/collection.dart';
 import 'waffra_encrypted_store.dart';
 import 'waffra_portable_backup_v2.dart';
 import 'waffra_portable_encrypted_vault_restorer.dart';
@@ -61,6 +64,7 @@ class WaffraVerifiedActiveRestorePreflight {
     required String encryptedArchive,
     required String password,
     required bool userConfirmed,
+    bool accountArchive = false,
   }) async {
     if (!experimentalEnabled || !userConfirmed ||
         authority.encryptedSession?.experimentalEnabled != true ||
@@ -87,8 +91,13 @@ class WaffraVerifiedActiveRestorePreflight {
     }
 
     // The encrypted archive is authenticated before opening ANY candidate.
+    final accounts = accountArchive
+        ? await WaffraAccountsPortableBackupV3.verifyAndPreview(
+            encryptedArchive: encryptedArchive, password: password,
+          )
+        : null;
     final preview = await WaffraPortableBackupV2.verifyAndPreview(
-      encryptedArchive: encryptedArchive,
+      encryptedArchive: accounts?.encryptedV2 ?? encryptedArchive,
       password: password,
     );
 
@@ -108,7 +117,13 @@ class WaffraVerifiedActiveRestorePreflight {
       candidate = WaffraEncryptedStore.openAt(
         candidateFile, key: disposableKey,
       );
-      final result = await WaffraPortableEncryptedVaultRestorer(
+      final result = accounts != null
+          ? await WaffraAccountsPortableBackupV3.restoreToEmptyEncryptedVault(
+              encryptedArchive: encryptedArchive, password: password,
+              disposableStore: candidate, userConfirmed: userConfirmed,
+              experimentalEnabled: true,
+            )
+          : await WaffraPortableEncryptedVaultRestorer(
         disposableStore: candidate,
         experimentalEnabled: true,
       ).restore(
@@ -133,6 +148,17 @@ class WaffraVerifiedActiveRestorePreflight {
         store: candidate, experimentalEnabled: true,
       ).attest(authenticatedArchive: preview, reported: result);
 
+      if (accounts != null) {
+        const equality = DeepCollectionEquality();
+        final actual = await WaffraAccountsPortableBackupV3.capture(candidate);
+        if (!equality.equals(actual, {
+          'accounts': accounts.accounts, 'links': accounts.links, 'transfers': accounts.transfers,
+        }) || (accounts.history != null && !equality.equals(
+          await WaffraAccountsFinanceHistory.capture(candidate), accounts.history,
+        ))) {
+          throw StateError('Reopened finance history differs from the authenticated archive.');
+        }
+      }
       // Another Home/Widget write during the expensive archive validation
       // invalidates this preflight. Never overwrite or update that live source.
       final after = await fresh();

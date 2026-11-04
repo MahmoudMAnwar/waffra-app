@@ -87,6 +87,7 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
     await widget.testSourceProbe!();
    } else {
     final binding=await WaffraProductionFinanceAuthorityBinding.bind(
+    installedApp:true,
      legacy:_financePersistence,
      startupRoute:WaffraFinanceRoute.widgetStartup,
     );

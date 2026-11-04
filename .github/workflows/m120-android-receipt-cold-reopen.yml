@@ -58,6 +58,14 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+      - name: Reclaim disposable runner disk space before emulator
+        run: |
+          # No application code, Gradle cache, Android SDK or user files are removed.
+          # GitHub-hosted runners include large unrelated preinstalled toolchains.
+          df -h .
+          sudo rm -rf /usr/share/dotnet /usr/local/share/powershell /opt/hostedtoolcache/CodeQL
+          sudo apt-get clean
+          df -h .
       - name: Run disposable Android receipt restart and recovery proof
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -66,6 +74,9 @@ jobs:
           profile: pixel_6
           target: google_apis
           disable-animations: true
+          # Avoid the action default userdata size exceeding hosted-runner disk.
+          # All receipt/SQLCipher assertions still execute on the actual emulator.
+          disk-size: 3072M
           emulator-boot-timeout: 600
           # Only failed sqlite3mc GitHub native-asset downloads are retried.
           # A failing assertion, encryption error or Android test remains fatal.

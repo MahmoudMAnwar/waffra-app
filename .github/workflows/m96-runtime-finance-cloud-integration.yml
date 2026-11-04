@@ -92,7 +92,7 @@ jobs:
           assert 'if (evidence == null)' in binder
           assert 'WaffraEncryptedStore.openShadow(' not in binder
           assert 'bool get automaticallyActivateSqlCipher => false;' in release
-          assert 'WaffraProductionFinanceSourceGuard' in app
+          assert 'WaffraProductionFinanceSourceGuard' in binder
           assert 'SharedPreferences remains authoritative' in persistence
           print('Home and widget use guarded source binding; production cutover stays NO-GO.')
           PY

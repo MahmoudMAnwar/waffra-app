@@ -89,12 +89,17 @@ import 'storage/waffra_legacy_write_queue.dart';
 import 'storage/waffra_authoritative_widget_balance.dart';
 import 'storage/waffra_live_legacy_finance_guard.dart';
 import 'storage/waffra_production_finance_source_guard.dart';
+import 'storage/waffra_fresh_install_source.dart';
 import 'storage/waffra_legacy_finance_writer_coordinator.dart';
 import 'storage/waffra_live_account_write_authority.dart';
 import 'storage/waffra_home_finance_persistence.dart';
 import 'storage/waffra_verified_finance_authority.dart';
+import 'storage/waffra_accounts_portable_backup_v3.dart';
+import 'storage/waffra_verified_active_restore_preflight.dart';
 import 'storage/waffra_verified_pull_refresh_source.dart';
 import 'storage/waffra_production_finance_authority_binding.dart';
+import 'storage/waffra_verified_accounts_api.dart';
+import 'waffra_accounts_manager_page.dart';
 import 'storage/waffra_fresh_finance_modules_repository.dart';
 import 'storage/waffra_verified_module_ui_guard.dart';
 import 'storage/waffra_runtime_finance_route_contract.dart';
@@ -160,6 +165,15 @@ Future<void> main()async {
  if(WidgetsBinding.instance.platformDispatcher.defaultRouteName=='/waffra-widget'){
   runApp(const WaffraWidgetCaptureApp());
   return;
+ }
+ // Classify the installation before onboarding writes its first preferences.
+ if(Platform.isAndroid){
+  try{await WaffraFreshInstallSource.prepare();}catch(_){
+   runApp(MaterialApp(home:Scaffold(body:Center(child:FilledButton(
+    onPressed:main,child:const Text('تعذّر فتح التخزين المشفّر. إعادة المحاولة / Retry'),
+   )))));
+   return;
+  }
  }
  // Native Android manifest disables automatic crash collection on startup.
  try {
@@ -1151,9 +1165,12 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  Future<void> load()async {
   try {
    final p=await SharedPreferences.getInstance().timeout(const Duration(seconds:15));
-   await const WaffraProductionFinanceSourceGuard()
-    .requireSafeLegacyStartup(preferences:p);
-   await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p);
+   final startup=await WaffraProductionFinanceAuthorityBinding.bind(
+    installedApp:true,
+    legacy:const WaffraHomeFinancePersistence());
+   try {
+    if(!startup.encrypted)await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p);
+   } finally {await startup.close();}
    // Nonfinancial preference only. Rotate once per cold start; retries do not
    // advance the greeting again or bypass the finance source guard.
    if(!_greetingCycleInitialized){
@@ -3344,6 +3361,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  Future<void> _bindFinanceSource()async{
   final binding=await WaffraProductionFinanceAuthorityBinding.bind(
+    installedApp:true,
    legacy:_homeFinancePersistence,
    startupRoute:WaffraFinanceRoute.appStartup,
   );
@@ -3352,6 +3370,30 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   _financeAuthority=binding.authority;
  }
 
+ Future<void> openVerifiedAccounts()async{
+  await _ensureFinanceBound();
+  if(!mounted)return;
+  final verifiedBridge=_financeBinding?.accountsBridge;
+  if(verifiedBridge==null){
+   snack(context,waffraIsEnglish?
+    'Accounts require an activated, verified encrypted finance source.':
+    'الحسابات تحتاج تفعيل مصدر مالي مشفّر وموثّق أولًا.');
+   return;
+  }
+  await Navigator.of(context).push<void>(MaterialPageRoute(
+   builder:(_)=>WaffraAccountsManagerPage(
+    repository:WaffraVerifiedAccountsApi(bridge:verifiedBridge),
+    english:waffraIsEnglish,
+    incomeCategories:categories.where((item)=>item.income&&item.isSubcategory&&
+      waffraCategoryAvailableForNewEntry(categories,item))
+      .map((item)=>item.name).toList(growable:false),
+    expenseCategories:categories.where((item)=>!item.income&&item.isSubcategory&&
+      waffraCategoryAvailableForNewEntry(categories,item))
+      .map((item)=>item.name).toList(growable:false),
+    availableBudgets:{for(final item in namedBudgets.where((b)=>
+      !b.deleted&&b.budgetActive&&b.budget>0))item.id:item.budgetLabel??item.name},
+   )));
+ }
  WaffraFinanceAuthorityRead? _lastFinanceAuthorityRead;
  final smsHashes=<String>{};
  final expandedCategoryIds=<String>{};
@@ -4321,6 +4363,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Future<void> persist({
   WaffraFinanceRoute route = WaffraFinanceRoute.transactionEdit,
   bool userConfirmed = false,
+  String? selectedAccountId,
  }) {
   // Freeze a snapshot BEFORE any await. Previously Future.wait launched
   // overlapping multi-key saves, so a slower old save could finish last.
@@ -4362,6 +4405,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     baseline:baseline,
     captured:captured,
     userConfirmed:userConfirmed,
+    selectedAccountId:selectedAccountId,
    );
    _lastFinanceAuthorityRead=committed;
    _lastLedgerSavedRaw=committed.ledgerRaw;
@@ -4538,16 +4582,45 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if(!mounted)return;
     if(action=='paid'){
      if(isGoalDue){
-      // SQLCipher's current recurring writer cannot atomically append a
-      // payment and debit a goal earmark. Fail closed until that verified
-      // multi-module operation exists; never run two separate writes.
       if(_lastFinanceAuthorityRead?.source==
         WaffraRuntimeFinanceBackend.verifiedEncrypted){
-       snack(context,waffraIsEnglish?
-        'Goal payment needs a verified atomic wallet-and-ledger writer. '
-        'Your data was not changed.':
-        'خصم استحقاق الهدف يتطلب حفظًا مشفرًا ذريًا للمحفظة والعملية. '
-        'لم يتم تغيير أي بيانات مالية.');
+       final cashMinor=WaffraRecurringPolicy.toHalalas(r.amount)-
+        goalPreview!.fromGoalMinor;
+       final chosen=cashMinor>0?await reviewSmsAccountLinks([
+        MoneyEntry(id:id,title:r.title,category:r.category,
+         amount:r.amount,income:false,date:DateTime.now(),
+         sourceType:'goal_due',goalWalletPaidMinor:goalPreview.fromGoalMinor)]):null;
+       if(cashMinor>0&&chosen==null)return;
+       final chosenId=chosen?.ids?.single;
+       if(chosenId!=null&&chosen!.generation!=
+          _lastFinanceAuthorityRead?.encryptedWitness?.generation){
+        if(mounted)await _loadFinanceSafely();
+        if(mounted)snack(context,waffraIsEnglish?
+         'Account changed; review the goal due again.':
+         'الحساب اتغير؛ راجع استحقاق الهدف مرة تانية.');
+        return;
+       }
+       try{
+        await _financialWriteQueue.drain();
+        final baseline=_lastFinanceAuthorityRead;
+        if(baseline==null||baseline.encryptedWitness==null){
+         throw StateError('Verified goal due witness unavailable.');
+        }
+        await _saveProgress.track('settle-verified-goal-due',()=>
+         _financeAuthority.settleLinkedGoalDue(
+          baseline:baseline,goalId:r.linkedGoalId!,recurringId:r.id,
+          dueKey:id,amountMinor:WaffraRecurringPolicy.toHalalas(r.amount),
+          confirmedAtIso:DateTime.now().toIso8601String(),
+          userConfirmed:true,selectedAccountId:chosenId));
+        if(mounted)await _loadFinanceSafely();
+        if(mounted)await syncRecurringReminders();
+       }catch(error){
+        debugPrint('Goal due SQLCipher commit rejected: $error');
+        if(mounted)await _loadFinanceSafely();
+        if(mounted)snack(context,waffraIsEnglish?
+         'Goal payment was not verified. Reload before retrying.':
+         'لم يتم تأكيد استحقاق الهدف؛ أعد تحميل البيانات قبل المحاولة.');
+       }
        return;
       }
       // The same deterministic recurring ID cannot settle a goal twice.
@@ -4604,16 +4677,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        return;
       }
      }else{
+      // Select the destination/source money account BEFORE changing the
+      // in-memory ledger. A cancellation does not post or clear postponement.
+      final chosen=await reviewSmsAccountLinks([MoneyEntry(
+       id:id,title:r.title,category:r.category,amount:r.amount,
+       income:r.income,date:DateTime.now(),sourceType:'recurring')]);
+      if(chosen==null)return;
       if(!entries.any((e)=>e.id==id)){
        setState(()=>entries.insert(0,MoneyEntry(
         id:id,title:r.title,category:r.category,amount:r.amount,
         income:r.income,date:DateTime.now())));
       }
       recurringPostponed.remove(id);
-      // Normal income adds to cash; normal expenses reduce it.
+      // SQLCipher commits the posted due, cleared postponement, and account
+      // link atomically; guarded legacy preserves its existing safe writer.
       try{
        await persist(route:WaffraFinanceRoute.recurringPostingAndPostponement,
-        userConfirmed:true);
+        userConfirmed:true,selectedAccountId:chosen.ids?.single);
       }catch(error){
        debugPrint('Recurring payment commit could not be confirmed: $error');
        if(mounted)await _loadFinanceSafely();
@@ -4672,6 +4752,76 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      child:WaffraText(waffraIsEnglish?'Confirm delete':'تأكيد الحذف',
       maxLines:2,textAlign:TextAlign.center))),
    ]))]));
+ /// Read a single authoritative SQLCipher account witness immediately
+ /// before posting an explicitly reviewed bank SMS. Guarded legacy keeps the
+ /// existing SMS save behavior, without a shadow account database.
+ Future<({List<String?>? ids,int? generation})?> reviewSmsAccountLinks(
+  List<MoneyEntry> candidates)async{
+  final bridge=_financeBinding?.accountsBridge;
+  if(bridge==null)return (ids:null,generation:null);
+  if(candidates.isEmpty)return (ids:null,generation:null);
+  try{
+   final verified=await bridge.readVerifiedAccounts();
+   if(!mounted)return null;
+   final active=verified.balances.where((a)=>!a.archived).toList();
+   if(active.isEmpty)return (
+    ids:List<String?>.filled(candidates.length,null),
+    generation:verified.witness.generation);
+   final assigned=List<String?>.filled(candidates.length,null);
+   final approved=await showWaffraDialog<bool>(context:context,
+    builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
+     title:WaffraText(waffraIsEnglish?
+      'Which account for each bank transaction?':
+      'تسجيل كل معاملة بنكية في أي حساب؟'),
+     content:SizedBox(width:double.maxFinite,
+      height:waffraKeyboardDialogListHeight(ctx,desired:500),
+      child:ListView(children:[
+       WaffraText(waffraIsEnglish?
+        'Choose the actual bank or cash account. No account is optional.':
+        'اختار الحساب الفعلي لكل عملية، أو سيبها بدون ربط.'),
+       const SizedBox(height:12),
+       for(var n=0;n<candidates.length;n++)
+        Padding(padding:const EdgeInsets.only(bottom:12),
+         child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          WaffraText(candidates[n].title+' · '+cash(candidates[n].amount),
+           maxLines:2,style:const TextStyle(fontWeight:FontWeight.bold)),
+          const SizedBox(height:5),
+          WaffraCenteredDropdownFormField<String>(
+           key:ValueKey('waffra-sms-account-'+n.toString()+'-'+
+            (assigned[n]??'none')),
+           initialValue:assigned[n]??'none',isExpanded:true,
+           menuMaxHeight:min(340.0,MediaQuery.sizeOf(ctx).height*.48),
+           decoration:InputDecoration(
+            labelText:waffraIsEnglish?'Money account':'الحساب المالي',
+            border:const OutlineInputBorder()),
+           items:[
+            DropdownMenuItem(value:'none',child:WaffraText(
+             waffraIsEnglish?'Unlinked':'بدون حساب')),
+            ...active.map((a)=>DropdownMenuItem(value:a.id,
+             child:WaffraText(a.name,maxLines:1))),
+           ],
+           onChanged:WaffraHaptics.selection((value)=>update(
+            ()=>assigned[n]=value=='none'?null:value)),
+          ),
+         ])),
+      ])),
+     actions:[
+      TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),
+       child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+      FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),
+       child:WaffraText(waffraIsEnglish?'Confirm':'تأكيد')),
+     ],
+    )));
+   if(approved!=true)return null;
+   return (ids:List<String?>.unmodifiable(assigned),
+    generation:verified.witness.generation);
+  }catch(_){
+   if(mounted)snack(context,waffraIsEnglish?
+    'Accounts could not be verified. Open My accounts before saving.':
+    'تعذر التحقق من الحسابات. افتح حساباتي قبل حفظ العملية.');
+   return null;
+  }
+ }
 /// Budget assignment is OPTIONAL in every bank import: no assignment never blocks saving.
  Future<List<String?>?> reviewSmsBudgetLinks(List<MoneyEntry> candidates)async{
   final choices=namedBudgets.where((b)=>
@@ -5012,6 +5162,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   for(var n=0;n<additions.length;n++){
    additions[n]=additions[n].withBudget(reviewedBudgets[n]);
   }
+  final reviewedAccounts=await reviewSmsAccountLinks(additions);
+  if(reviewedAccounts==null){if(ctx.mounted)update(()=>busy=false);return;}
   try{
    // The dashboard and standalone Android widget now use the SAME locked,
    // crash-recoverable finance+SMS-hash journal on guarded legacy installs.
@@ -5024,6 +5176,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     proposedCategories:proposed.map((c)=>c.toJson()).toList(),
     userConfirmed:true,
     allowDuplicateHashes:allowRepeatedSms,
+    selectedAccountIds:reviewedAccounts.ids,
+    expectedAccountGeneration:reviewedAccounts.generation,
    ));
    if(!mounted)return;
    final persisted=(jsonDecode(applied.current.ledgerRaw??'[]') as List)
@@ -5644,6 +5798,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        final budgetSelection=await reviewSmsBudgetLinks([entry]);
        if(budgetSelection==null){if(ctx.mounted)update(()=>busy=false);return;}
        entry=entry.withBudget(budgetSelection.single);
+       final reviewedAccount=await reviewSmsAccountLinks([entry]);
+       if(reviewedAccount==null){if(ctx.mounted)update(()=>busy=false);return;}
        final selected=namedBudgets.where((b)=>b.id==entry.budgetId&&
         b.budget>0&&!b.deleted).toList();
        if(selected.length==1)previous=waffraNamedBudgetSpent(
@@ -5657,6 +5813,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         hashes:[hash],
         userConfirmed:true,
         allowDuplicateHashes:explicitlyApprovedDuplicate,
+        selectedAccountIds:reviewedAccount.ids,
+        expectedAccountGeneration:reviewedAccount.generation,
        );
        if(committed.saved!=1){
         if(ctx.mounted)update((){
@@ -6699,6 +6857,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final previousSpent=linkedBudget.isEmpty?0.0:waffraNamedBudgetSpent(
     entries.where((e)=>e.id!=result.id),categories,linkedBudget.single,result.date);
   if(pendingHash!=null&&initial==null){
+   final reviewedAccount=await reviewSmsAccountLinks([result]);
+   if(reviewedAccount==null)return;
    try{
    // A single reviewed bank SMS must commit both its transaction and
    // fingerprint atomically under the same Home/Widget source and journal.
@@ -6710,6 +6870,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     hashes:[pendingHash!],
     userConfirmed:true,
     allowDuplicateHashes:explicitlyApprovedSmsDuplicate,
+    selectedAccountIds:reviewedAccount.ids,
+    expectedAccountGeneration:reviewedAccount.generation,
    ));
    if(applied.saved!=1){
     if(mounted)snack(context,waffraIsEnglish?
@@ -6744,6 +6906,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     return;
    }
   }else{
+   // An account is selected from the same verified source only for a NEW
+   // manually posted entry. Editing an existing entry never silently moves
+   // that entry to a different financial account.
+   final chosenManual=initial==null
+    ?await reviewSmsAccountLinks([result]):null;
+   if(initial==null&&chosenManual==null){
+    for(final copy in stagedReceiptCopies){
+     try{final staged=File(copy);if(await staged.exists())await staged.delete();}
+     catch(_){}
+    }
+    return;
+   }
    // Optimistic in-memory edits must roll back if durable save is rejected.
    // A spinner is NOT proof of a completed financial write.
    final previousEntries=List<MoneyEntry>.of(entries);
@@ -6766,7 +6940,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     // source-aware writer has acknowledged the commit.
     await persist(route:initial==null
      ?WaffraFinanceRoute.manualTransactionSave
-     :WaffraFinanceRoute.transactionEdit);
+     :WaffraFinanceRoute.transactionEdit,
+     userConfirmed:initial==null,
+     selectedAccountId:initial==null?chosenManual?.ids?.single:null);
    }catch(e){
     if(mounted){
      setState((){
@@ -11880,10 +12056,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       await _financialWriteQueue.drain();
       final current=await _financeAuthority.load(
        route:WaffraFinanceRoute.backupExport);
-      final authoritativePayload=exportBackup(fromSource:current);
-      final encrypted=await compute(waffraEncryptBackupInIsolate,<String,String>{
-       'payload':authoritativePayload,'password':secret.text,
-      });
+      final String encrypted;
+      if(current.encryptedWitness!=null){
+       final bridge=_financeBinding?.accountsBridge;
+       if(bridge==null)throw StateError('Encrypted backup source unavailable.');
+       encrypted=await bridge.exportPortableBackup(secret.text);
+      }else{
+       final authoritativePayload=exportBackup(fromSource:current);
+       encrypted=await compute(waffraEncryptBackupInIsolate,<String,String>{
+        'payload':authoritativePayload,'password':secret.text,
+       });
+      }
       // Persist the encrypted archive only after system document picker confirms.
       // Never copy it to the system clipboard on export.
       final saved=await WaffraBackupFiles.saveEncryptedArchive(encrypted);
@@ -12000,6 +12183,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       final raw=await compute(waffraDecodeBackupInIsolate,<String,String>{
        'payload':stagedBackup!,'password':restoreSecret.text,
       });
+      if(raw['format']==WaffraAccountsPortableBackupV3.format){
+       final source=await _financeAuthority.load(route:WaffraFinanceRoute.backupRestore);
+       if(source.encryptedWitness==null){
+        if(ctx.mounted)update(()=>restoreError=waffraIsEnglish?
+         'This file requires an active SQLCipher vault.':
+         'استعادة هذا الملف تتطلب تفعيل قاعدة SQLCipher.');
+        return;
+       }
+       final result=await WaffraVerifiedActiveRestorePreflight(
+        authority:_financeAuthority,experimentalEnabled:true,
+       ).inspect(selectedSource:source,encryptedArchive:stagedBackup!,
+        password:restoreSecret.text,userConfirmed:true,accountArchive:true);
+       if(ctx.mounted)update(()=>restoreError=waffraIsEnglish?
+        'Verified ${result.transactionCount} transactions in a temporary vault. Applying this backup to your current data is unavailable.':
+        'تم التحقق من ${result.transactionCount} معاملة في قاعدة مؤقتة. استبدال البيانات الحالية بهذه النسخة غير متاح بعد.');
+       return;
+      }
       if(raw['format']!='waffra-backup'||raw['entries'] is! List||
         raw['categories'] is! List||raw['goals'] is! List||raw['recurring'] is! List){
        throw const FormatException('Invalid backup');
@@ -12942,6 +13142,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        }:null))),
    ]),
    _accountSection(waffraIsEnglish?'Financial tools':'الأدوات المالية',Icons.account_balance_wallet_outlined,[
+    if(_financeBinding?.accountsBridge!=null)
+     _accountTile(waffraIsEnglish?'My money accounts':'حساباتي',
+      waffraIsEnglish?'Cash, bank accounts and internal transfers':'النقد والحسابات البنكية والتحويلات الداخلية',
+      Icons.account_balance_outlined,onTap:WaffraHaptics.tap(openVerifiedAccounts)),
     _accountTile(waffraIsEnglish?'Financial calendar':'التقويم المالي',
      waffraIsEnglish?'Transactions and recurring dates':'المعاملات ومواعيد العمليات المتكررة',
      Icons.calendar_month_outlined,onTap:WaffraHaptics.tap(openFinancialCalendar)),

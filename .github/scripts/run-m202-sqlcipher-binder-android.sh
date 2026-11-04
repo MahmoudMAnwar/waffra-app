@@ -90,6 +90,7 @@ run_check() {
 }
 
 # Bound hung device connections; each case must still pass independently.
+run_check fresh_install_production_binding_android_test.dart 720
 run_check m202_home_widget_source_binder_android_test.dart 720
 run_check live_finance_migration_receipts_android_test.dart 600
 run_check m120_verified_receipt_reopen_android_test.dart 600
