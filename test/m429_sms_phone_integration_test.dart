@@ -106,20 +106,19 @@ void main(){
  });
 
 
- test('M435 merchant-brand selection retains old finance and protects privacy',(){
-  final brand=File('lib/waffra_merchant_brands.dart').readAsStringSync();
+ test('M443 merchant and logo UI removed without deleting finance history',(){
   final main=File('lib/main.dart').readAsStringSync();
-  expect(brand,contains('WAFFRA_BRANDFETCH_CLIENT_ID'));
-  expect(brand,contains("'cdn.brandfetch.io'"));
-  expect(brand,contains("static WaffraMerchantBrand? match(String? raw)"));
-  expect(brand,contains("WaffraMerchantLogo"));
-  expect(brand,isNot(contains('bankSmsHash(')));
-  expect(brand,isNot(contains('OPENROUTER_API_KEY')));
-  expect(main,contains("Key('waffra-transaction-select-merchant')"));
-  expect(main,contains('selectedMerchantOverride??initial?.merchantKey??'));
-  expect(main,contains('WaffraMerchantBrands.match(entry.merchantKey)'));
-  expect(main,contains('WaffraMerchantBrands.match(e.merchantKey)'));
-  expect(main,contains('protectedOriginalSms:originalBankSms'));
+  expect(main,isNot(contains("import 'waffra_merchant_brands.dart';")));
+  expect(main,isNot(contains('WaffraMerchantLogo(')));
+  expect(main,isNot(contains('WaffraMerchantBrands.match(')));
+  expect(main,isNot(contains('waffraChooseMerchantBrand(')));
+  expect(main,isNot(contains("Key('waffra-transaction-select-merchant')")));
+  expect(main,isNot(contains('selectedMerchantOverride')));
+  // Original merchantKey metadata remains unchanged for historical finance
+  // transactions and cross-source duplicate detection.
+  expect(main,contains('merchantKey:initial?.merchantKey??'));
+  expect(main,contains('candidateMerchantKey:result.merchantKey'));
+  expect(main,contains('existingMerchantKey:e.merchantKey'));
  });
 
 }
