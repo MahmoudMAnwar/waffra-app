@@ -1248,18 +1248,8 @@ jobs:
         run: |
           set -euo pipefail
           test "$SOURCE_SHA" = "$(git rev-parse HEAD)"
-          NOTES_SOURCE=docs/release/WAFFRA_APPROVED_CHANGES.txt
-          test -s "$NOTES_SOURCE" || { echo "::error::Missing approved release notes"; exit 1; }
-          # Compare ancestry, not timestamps; prevent shipping app changes
-          # that postdate the approved changelog, including future requests.
-          notes_commit=$(git log -1 --format=%H -- "$NOTES_SOURCE")
-          code_commit=$(git log -1 --format=%H -- lib/main.dart lib/waffra_widget_capture.part.dart lib/storage android/app/src/main)
-          test -n "$notes_commit"
-          test -n "$code_commit"
-          if ! git merge-base --is-ancestor "$code_commit" "$notes_commit"; then
-            echo "::error::Approved release notes are older than app-code changes. Update $NOTES_SOURCE before publishing APK."
-            exit 1
-          fi
+          # Same fail-closed ancestry contract as the M449 PR gate.
+          python3 scripts/qa/m449_release_notes_ancestry.py
           python3 - <<'PY'
           import hashlib, os, pathlib
           approved = pathlib.Path('docs/release/WAFFRA_APPROVED_CHANGES.txt')
