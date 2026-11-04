@@ -8,15 +8,16 @@ class WaffraAccountLedgerRow {
   const WaffraAccountLedgerRow({
     required this.id, required this.title, required this.occurredIso,
     required this.amountMinor, required this.income,
-    this.accountId, this.budgetId,
+    this.accountId, this.budgetId, this.budgetAllocatedMinor,
   });
   final String id, title, occurredIso;
   final int amountMinor;
   final bool income;
   final String? accountId, budgetId;
+  final int? budgetAllocatedMinor;
 
   WaffraScopedEntry get scoped => WaffraScopedEntry(
-    id: id, amountMinor: amountMinor, income: income,
+    id: id, amountMinor: budgetAllocatedMinor ?? amountMinor, income: income,
     accountId: accountId, budgetId: budgetId,
   );
 }
@@ -51,7 +52,7 @@ abstract final class WaffraAccountContextRead {
     }
     final rows = await store.customSelect('''
 SELECT e.entry_id, e.title, e.amount_minor, e.is_income, e.occurred_iso,
-       l.account_id, a.budget_id
+       l.account_id, a.budget_id, a.amount_minor AS budget_allocated_minor
 FROM fresh_finance_entries e
 LEFT JOIN fresh_finance_account_entry_links l ON l.entry_id=e.entry_id
 LEFT JOIN fresh_finance_standalone_allocations a ON a.entry_id=e.entry_id
@@ -66,6 +67,7 @@ ORDER BY e.occurred_iso DESC, e.entry_id DESC
         income: r.read<int>('is_income') == 1,
         accountId: r.readNullable<String>('account_id'),
         budgetId: r.readNullable<String>('budget_id'),
+        budgetAllocatedMinor: r.readNullable<int>('budget_allocated_minor'),
       ),
     ));
     final budgets = await store.customSelect('''
