@@ -27,7 +27,8 @@
     "M447: Verified recurring account posting is atomic, idempotent and rejects stale account balance witnesses.",
     "M447: Settle linked savings goals atomically with their due recurrence; subtract the goals wallet only once and link only the cash-funded portion to an explicitly chosen bank account.",
     "Activate SQLCipher-compatible v4 on empty Android installations with an OS-protected key, durable install receipt and shared Home, widget and SMS runtime. Preserve existing legacy finance.",
-    "Export and cold-verify linked relational records and authenticated account archives from the active finance backup UI; test interruption, restart and real Android source binding."
+    "Export and cold-verify linked relational records and authenticated account archives from the active finance backup UI; test interruption, restart and real Android source binding.",
+    "Update only the M175 verified recurring route assertion to require user confirmation and selected account; update only the obsolete M362 goal due test to assert the new atomic due writer."
   ],
   "allowed_changed_files": [
     ".github/scripts/run-m120-android-receipt-reopen.sh",
@@ -62,10 +63,12 @@
     "lib/waffra_widget_capture.part.dart",
     "pubspec.yaml",
     "test/m108_home_widget_one_finance_writer_test.dart",
+    "test/m363_transaction_category_inline_creation_test.dart",
     "test/m440_account_transaction_form_test.dart",
     "test/qa/m440_android_emulator_disk_preflight_test.py",
     "test/qa/m440_transfer_replay_ux_test.py",
     "test/qa/m447_verified_sms_account_linking_test.py",
+    "test/storage/m175_live_finance_mutation_intent_test.dart",
     "test/storage/m187_active_restore_preflight_test.dart",
     "test/storage/m440_account_linked_entry_writer_test.dart",
     "test/storage/m440_accounts_backup_guard_test.dart",
@@ -77,6 +80,18 @@
     "test/storage/m447_live_recurring_account_binding_test.dart"
   ],
   "bounded_sections": {
+    "test/m363_transaction_category_inline_creation_test.dart": [
+      {
+        "start": " test('M363 bulk bank review also receives inline parent/child creation',(){\n",
+        "end": " test('M362 a short available balance warns and permits funding',(){\n"
+      }
+    ],
+    "test/storage/m175_live_finance_mutation_intent_test.dart": [
+      {
+        "start": "  test('M175 exact Home live writes carry their distinct finance intent', () {\n",
+        "end": "  test('M175 guarded legacy routes remain eligible, without any cutover', () {\n"
+      }
+    ],
     "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
       {
         "start": "import 'waffra_encrypted_full_finance_reset.dart';\n",

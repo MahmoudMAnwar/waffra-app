@@ -57,7 +57,8 @@ void main() {
     expect(RegExp(
       r'await\s+persist\s*\(\s*'
       r'route\s*:\s*WaffraFinanceRoute\.recurringPostingAndPostponement\s*,\s*'
-      r'userConfirmed\s*:\s*true\s*,?\s*\)\s*;'
+      r'userConfirmed\s*:\s*true\s*,\s*'
+      r'selectedAccountId\s*:\s*chosen\.ids\?\.single\s*,?\s*\)\s*;'
     ).hasMatch(home), isTrue,
       reason: 'Paid requires the recurring route and explicit confirmation.');
   });
