@@ -270,6 +270,11 @@ object WaffraAutoSmsStore {
         // Non-financial verification notices are reviewable as EXCLUDED,
         // never processed as money. No original verification digits are kept.
         if (otp.containsMatchIn(safe)) return true
+        // Read-only bank notifications (balance, debt, billing) may be
+        // classified as Excluded on first review; they are never money.
+        if (institutionalSender.containsMatchIn(sender) &&
+            (otherFinanceNotice.containsMatchIn(safe) ||
+             debtNotice.containsMatchIn(safe))) return true
         if (safe.length < 18) return false
         if (!action.containsMatchIn(safe) || !money.containsMatchIn(safe) ||
             !digits.containsMatchIn(safe)) return false
