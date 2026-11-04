@@ -92,6 +92,31 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
   );
  }
 
+ /// The bank-SMS review screen or recurring scheduler must submit its own
+ /// confirmed transaction payloads, SMS hashes and explicit account choices.
+ /// The same witnessed SQLCipher writer handles deduplication, money posting
+ /// and account associations; there is no independent account balance update.
+ Future<WaffraUnifiedWriteResult> postAccountLinkedConfirmedBatch({
+  required List<Map<String,Object?>> records,
+  required List<String?> messageHashes,
+  required List<String?> selectedAccountIds,
+  required bool userConfirmed,
+ })async{
+  final displayed=_lastDisplayed;
+  if(displayed==null||!userConfirmed||records.isEmpty||
+     records.length!=messageHashes.length||
+     records.length!=selectedAccountIds.length||
+     selectedAccountIds.any((id)=>id==null||id.trim().isEmpty)){
+   throw StateError('Reload balances and confirm every account assignment.');
+  }
+  _lastDisplayed=null;
+  return bridge.appendConfirmedTransactions(
+   records:records,messageHashes:messageHashes,userConfirmed:true,
+   selectedAccountIds:selectedAccountIds,
+   expectedAccountGeneration:displayed.generation,
+  );
+ }
+
  @override
  Future<void> renameAccount({required String id,required String name,
   required bool userConfirmed})=>_commit<void>((repository)=>
