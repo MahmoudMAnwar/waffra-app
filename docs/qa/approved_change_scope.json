@@ -1,26 +1,61 @@
 {
   "contract_version": 1,
-  "change_id": "M449-release-notes-premerge-and-main-ancestry-root-fix",
-  "human_scope_review": "Owner requested a permanent repair after repeated signed APK failures at release-notes validation. M449 updates the stale approved QA changelog for merged PR #359/#368 and introduces an exact-head PR/pre-merge gate that uses the same fail-closed source ancestry logic as signed main APK publishing. This is no relaxation of release-note approval, financial-source protection, signed artifact validation or phone/device testing.",
+  "change_id": "M450-first-run-local-phone-registration-resume-and-verified-encrypted-profile",
+  "human_scope_review": "User reported the actual Android Create Waffra Account step-2 screenshot showing local_credentials_already_exist and being unable to enter the app. The fix must authenticate original credentials on retry, prevent overwriting an already registered profile, and allow only non-financial profile/lock writes for a fully verified fresh active SQLCipher install. This cannot authorize legacy financial writes, automatic migrations, key replacement or data deletion. Human review of this precise seven-file scope remains mandatory.",
   "user_requested_changes": [
-    "Update approved Waffra QA release notes to reflect the already merged fresh-install SQLCipher accounts/transfers PR #359 and the QA-only M228 regression repair PR #368.",
-    "Prevent recurring main APK failures from stale changelogs by running the exact same ancestry source-release-notes validation on every PR targeting main before merge.",
-    "Keep signed Android APK release-note, SHA, signature, receipt and artifact fail-closed checks unchanged, sharing only the verification implementation with the early gate.",
-    "Include regression tests proving that changed Android or financial app code without a newer approved changelog is rejected, while approved updates and test-only changes are permitted."
+    "Make the second Create Account submission recover an interrupted same-phone/same-password local registration without replacing an existing credential verifier, and clearly explain a different existing identity to the user.",
+    "Refuse creating a new profile over an already registered account and direct that user to verified sign in rather than overwriting data.",
+    "Fix fresh-install SQLCipher onboarding: route nonfinancial account, logout and PIN preferences through a read-only validated fresh-install identity and digest under the shared native Home/widget lock; keep all legacy financial writes fail closed.",
+    "Add regression tests for credential mismatch, missing source, tampered receipt, wrong key, pending activation, verified first-run account write, and ensure approved release notes reflect the change."
   ],
   "allowed_changed_files": [
-    ".github/workflows/android.yml",
-    ".github/workflows/m449-release-notes-ancestry.yml",
     "docs/qa/approved_change_scope.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "scripts/qa/m449_release_notes_ancestry.py",
-    "test/qa/m449_release_notes_ancestry_test.py"
+    "lib/main.dart",
+    "lib/storage/waffra_fresh_install_source.dart",
+    "lib/storage/waffra_live_account_write_authority.dart",
+    "lib/waffra_local_phone_credentials.dart",
+    "test/storage/m450_first_run_registration_recovery_test.dart"
   ],
   "bounded_sections": {
-    ".github/workflows/android.yml": [
+    "lib/main.dart": [
       {
-        "start": "          SOURCE_REPO: ${{ github.repository }}\n        run: |\n          set -euo pipefail\n          test \"$SOURCE_SHA\" = \"$(git rev-parse HEAD)\"\n",
-        "end": "          python3 - <<'PY'\n          import hashlib, os, pathlib\n          approved = pathlib.Path('docs/release/WAFFRA_APPROVED_CHANGES.txt')\n"
+        "start": " Future<void> save()async {\n  setState(()=>profileAttempted=true);\n",
+        "end": " void _nextPhoneRegistrationStep(){\n"
+      }
+    ],
+    "lib/storage/waffra_fresh_install_source.dart": [
+      {
+        "start": "  final String id;\n",
+        "end": "  static const _prefix = 'fresh-sqlcipher-v1:';\n"
+      },
+      {
+        "start": "      return source;\n",
+        "end": "  Future<void> verify(WaffraEncryptedStore store) async {\n"
+      }
+    ],
+    "lib/storage/waffra_live_account_write_authority.dart": [
+      {
+        "start": "import 'waffra_legacy_finance_writer_coordinator.dart';\n",
+        "end": "/// M217: The shipped login/profile/PIN writer participates"
+      },
+      {
+        "start": "  static void _requirePersonJson(String raw) {\n",
+        "end": "  Future<void> saveProfile({\n"
+      },
+      {
+        "start": "  Future<void> saveProfile({\n",
+        "end": "  Future<void> replacePinVerifier(String? nextVerifier) async {\n"
+      },
+      {
+        "start": "  Future<void> replacePinVerifier(String? nextVerifier) async {\n",
+        "end": null
+      }
+    ],
+    "lib/waffra_local_phone_credentials.dart": [
+      {
+        "start": " static Future<void> register({required String phone,\n",
+        "end": " static Future<bool> verify({\n"
       }
     ]
   }
