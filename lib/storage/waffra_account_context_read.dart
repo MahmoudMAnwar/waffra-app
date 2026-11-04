@@ -30,10 +30,21 @@ class WaffraAccountBudgetRow {
   final WaffraBudgetUse usage;
 }
 
+class WaffraAccountGoalSummary {
+ const WaffraAccountGoalSummary({
+  required this.id,required this.name,required this.totalSavedMinor,
+  required this.selectedAccountNetMinor,
+ });
+ final String id,name;
+ final int totalSavedMinor,selectedAccountNetMinor;
+}
+
 class WaffraAccountContextReadResult {
-  const WaffraAccountContextReadResult(this.entries, this.budgets);
-  final List<WaffraAccountLedgerRow> entries;
-  final List<WaffraAccountBudgetRow> budgets;
+ const WaffraAccountContextReadResult(this.entries,this.budgets,
+  {this.goals=const <WaffraAccountGoalSummary>[]});
+ final List<WaffraAccountLedgerRow> entries;
+ final List<WaffraAccountBudgetRow> budgets;
+ final List<WaffraAccountGoalSummary> goals;
 }
 
 /// Read-only SQLCipher projection. An entry with no association is visible in
@@ -92,7 +103,28 @@ ORDER BY name, budget_id
         );
       }),
     );
-    return WaffraAccountContextReadResult(entries, summed);
+    // A goal is its own savings wallet. Display the overall saved total
+    // independently of the selected account contribution. These are read
+    // projections only; viewing a goal never debits a bank.
+    final goalRows=await store.customSelect('''
+SELECT g.goal_id,g.name,g.saved_minor,
+ COALESCE((SELECT SUM(CASE
+  WHEN m.kind='fund' THEN m.amount_minor
+  WHEN m.kind='release' THEN -m.amount_minor ELSE 0 END)
+ FROM fresh_finance_goal_account_sources s
+ JOIN fresh_finance_goal_wallet_movements m ON m.movement_id=s.movement_id
+ WHERE m.goal_id=g.goal_id AND s.account_id=?),0) AS own_minor
+FROM fresh_finance_goals g
+ORDER BY g.name,g.goal_id
+''',variables:[Variable.withString(selectedAccountId??'')]).get();
+    final goals=List<WaffraAccountGoalSummary>.unmodifiable(
+      goalRows.map((row)=>WaffraAccountGoalSummary(
+       id:row.read<String>('goal_id'),
+       name:row.read<String>('name'),
+       totalSavedMinor:row.read<int>('saved_minor'),
+       selectedAccountNetMinor:row.read<int>('own_minor'),
+      )));
+    return WaffraAccountContextReadResult(entries,summed,goals:goals);
   }
 
   static Future<int> attachPreviouslyUnassigned({
