@@ -51,6 +51,7 @@ import 'waffra_search.dart';
 import 'waffra_balance_art.dart';
 import 'waffra_validators.dart';
 import 'waffra_financial_insights.dart';
+import 'waffra_budget_alert_once.dart';
 import 'waffra_goal_budget_forecast.dart';
 import 'waffra_goal_due_policy.dart';
 import 'waffra_reminders.dart';
@@ -6963,13 +6964,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final category=budgets.single;
   final spent=waffraNamedBudgetSpent(entries,categories,category,entry.date);
   final stages=<int>{category.alertPercent,100}.toList()..sort();
-  int? crossed;
-  for(final stage in stages){
-   if(previousSpent<category.budget*stage/100&&spent>=category.budget*stage/100)crossed=stage;
-  }
-  if(crossed==null||!mounted)return;
+  final crossedStages=stages.where((stage)=>
+   previousSpent<category.budget*stage/100&&
+   spent>=category.budget*stage/100).toList();
+  if(crossedStages.isEmpty||!mounted)return;
+  // Only non-financial hashed alert markers are stored locally. A later edit
+  // that reduces spend must not re-alert for a threshold already shown.
+  final newlyCrossed=await WaffraBudgetAlertOnce.claim(
+   owner:'${widget.profile.provider}|${widget.profile.phone}|${widget.profile.email}',
+   budgetId:category.id,month:entry.date,crossedStages:crossedStages);
+  if(!newlyCrossed||!mounted)return;
+  final crossed=crossedStages.last;
   await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
-   title:WaffraText(waffraIsEnglish?'Budget alert':'⚠️ تنبيه ميزانية القسم'),
+   title:WaffraText(waffraIsEnglish?'Budget alert':'⚠️ تنبيه الميزانية'),
    content:WaffraText(waffraIsEnglish?
     '${category.name} has reached ${(spent/category.budget*100).round()}% of the budget (crossed $crossed%). Spent ${cash(spent)} out of ${cash(category.budget)}.':
     'صرف «${category.name}» ${(spent/category.budget*100).round()}٪ (حد التنبيه $crossed٪). ${cash(spent)} من ${cash(category.budget)}.'),

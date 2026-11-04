@@ -7,7 +7,8 @@
     "Stop monthly repetitions for a savings goal's one-time due-date reminder.",
     "Exclude next-month goals and recurring payments whose start date lies after the current-month due date from financial forecasts.",
     "Ensure smart finance warning uses the exact selected percentage for each independent named budget rather than a hard-coded 80 percent.",
-    "Include deterministic Dart and Python regression tests for date boundaries, notification channel ownership and budget warnings."
+    "Include deterministic Dart and Python regression tests for date boundaries, notification channel ownership and budget warnings.",
+    "Suppress replay of a previously shown budget alert threshold after expenses are reduced and rise again, using a hashed non-financial monthly per-account alert register."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
@@ -16,7 +17,9 @@
     "lib/waffra_reminders.dart",
     "lib/waffra_financial_insights.dart",
     "test/m444_notification_forecast_budget_test.dart",
-    "test/qa/m444_notification_safety_test.py"
+    "test/qa/m444_notification_safety_test.py",
+    "lib/waffra_budget_alert_once.dart",
+    "test/m444_budget_alert_once_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -27,6 +30,14 @@
       {
         "start": " Widget smartMoneyInsightsCard(){",
         "end": "  return Card(\n   elevation:1.0,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(21)),"
+      },
+      {
+        "start": "import 'waffra_financial_insights.dart';\n",
+        "end": "import 'waffra_goal_budget_forecast.dart';\n"
+      },
+      {
+        "start": " Future<void> budgetAlert(MoneyEntry entry,double previousSpent)async {",
+        "end": " /// Draw the same category-colored donut shown on Smart Analysis."
       }
     ],
     "lib/waffra_reminders.dart": [
@@ -42,6 +53,12 @@
     "lib/waffra_financial_insights.dart": [
       {
         "start": " static double? comparisonPercent(double current,double previous){",
+        "end": null
+      }
+    ],
+    "lib/waffra_budget_alert_once.dart": [
+      {
+        "start": "import 'dart:async';",
         "end": null
       }
     ]

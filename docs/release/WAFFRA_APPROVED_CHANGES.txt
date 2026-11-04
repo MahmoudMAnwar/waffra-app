@@ -1534,3 +1534,8 @@ M370: إعداد فحص إلزامية SQLCipher للتثبيتات الجديد
 - Linked savings goal dues produce one reminder, not endless monthly notices. Exclude not-yet-started obligations from current-month forecast.
 - Smart finance budget warnings use each budget's chosen threshold and independent budget spend projection.
 - Ledger, encrypted authority, backup, login and historical transactions unchanged; run exact-SHA CI and on-device notification acceptance before release.
+
+[M444 follow-up] Prevent repeated budget threshold dialogs after edits
+- Persist hashed non-financial per-profile/per-budget/month/stage alert markers and serialize concurrent claims; never modify balances or ledger.
+- Jumping across multiple stages marks all of them once; fixed Arabic dialog title to تنبيه الميزانية.
+- Added deterministic cross-month/account/concurrency regression tests; exact-head and signed-device checks still required.
