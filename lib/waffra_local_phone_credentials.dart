@@ -77,6 +77,27 @@ abstract final class WaffraLocalPhoneCredentials {
   final payload=await deriveRecord(phone:phone,password:password);
   await _store.write(key:_key,value:jsonEncode(payload));
  }
+ /// Resume an interrupted registration only after proving that the EXACT
+ /// same phone and password own the existing OS-protected verifier.
+ /// Never rotate a verifier, create a second identity, or erase secure data.
+ static Future<void> registerOrResume({
+  required String phone,required String password,
+ })async{
+  if(!validPhone(phone)||!validPassword(password)){
+   throw StateError('invalid_local_credentials');
+  }
+  final saved=await _store.read(key:_key);
+  if(saved==null){
+   await register(phone:phone,password:password);
+   return;
+  }
+  try {
+   final record=jsonDecode(saved);
+   if(record is Map<String,dynamic> &&
+      await verifyRecord(record,phone:phone,password:password))return;
+  }catch(_){ /* Corrupt/verifier unavailable: fail closed, never overwrite. */ }
+  throw StateError('local_credentials_already_exist');
+ }
  static Future<bool> verify({
   required String phone,required String password,
   String? oldSalt,String? oldHash,
