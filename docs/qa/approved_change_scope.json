@@ -46,6 +46,7 @@
     "lib/waffra_account_context_settings.dart",
     "lib/waffra_accounts_manager_page.dart",
     "lib/waffra_goal_recurring_actions.part.dart",
+    "test/m343_goal_recurring_named_budgets_test.dart",
     "test/m388_m390_approved_goal_recurring_receipt_test.dart",
     "test/m392_m395_budget_quick_actions_goal_ui_test.dart",
     "test/m448_account_context_policies_test.dart",
@@ -248,6 +249,12 @@
       {
         "start": "      final placeholders = List.filled(columns.length, '?').join(',');",
         "end": "        if (row.length != columns.length || !columns.every(row.containsKey)) {"
+      }
+    ],
+    "test/m343_goal_recurring_named_budgets_test.dart": [
+      {
+        "start": " test('M343 goal/recurring UI uses one saved total and budget remains independent',(){",
+        "end": null
       }
     ]
   }
