@@ -91,12 +91,19 @@ abstract final class WaffraLocalPhoneCredentials {
    await register(phone:phone,password:password);
    return;
   }
-  try {
-   final record=jsonDecode(saved);
-   if(record is Map<String,dynamic> &&
-      await verifyRecord(record,phone:phone,password:password))return;
-  }catch(_){ /* Corrupt/verifier unavailable: fail closed, never overwrite. */ }
+  if(await canResumeRecord(saved,phone:phone,password:password))return;
   throw StateError('local_credentials_already_exist');
+ }
+ /// Decode and challenge a pre-existing verifier without ever storing the
+ /// phone or password or accepting malformed records as registration consent.
+ static Future<bool> canResumeRecord(String saved,{
+  required String phone,required String password,
+ })async{
+  try{
+   final record=jsonDecode(saved);
+   return record is Map<String,dynamic> &&
+     await verifyRecord(record,phone:phone,password:password);
+  }catch(_){return false;}
  }
  static Future<bool> verify({
   required String phone,required String password,
