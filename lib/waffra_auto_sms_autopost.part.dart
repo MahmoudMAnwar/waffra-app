@@ -15,11 +15,8 @@ abstract final class WaffraAutoSmsAutoPoster {
   if(!await WaffraAutoSms.enabled())return summary;
   if(reviewOnly){
    final pending=await WaffraAutoSms.pending();
-   // Analysis may run after explicit cloud opt-in, even with UI closed.
-   // Suggestions stay in the encrypted review queue. NO finance writer is
-   // ever opened in this branch, regardless of model confidence.
-   await WaffraSmsCloudReviewAnalyzer.stagePending(
-    pending,maxPerRun:1);
+   // Background delivery only queues a review notification.
+   // It cannot trigger OpenRouter without the user's per-message request.
    for(final candidate in pending){
     final id=candidate['id'];
     if(id is String)await WaffraAutoSms.notifyReview(id);
@@ -66,14 +63,8 @@ abstract final class WaffraAutoSmsAutoPoster {
     Map<String,Object?>? cloud;
     if(candidate['cloud'] is Map){
      cloud=Map<String,Object?>.from(candidate['cloud'] as Map);
-    }else{
-     cloud=await WaffraSmsCloudService.analyzeIfConsented(body);
-     if(cloud!=null){
-      final staged=Map<String,Object?>.from(cloud)
-       ..remove('verifiedForPosting');
-      await WaffraAutoSms.stageCloudAnalysis(id,staged);
-     }
     }
+    // No implicit network fallback, even if future builds enable posting.
     final parsed=BankParser.parse(body);
     final arrived=DateTime.fromMillisecondsSinceEpoch(at);
     final date=bankSmsDate(body,referenceDate:arrived);
