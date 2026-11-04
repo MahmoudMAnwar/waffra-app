@@ -139,62 +139,61 @@ class WaffraFreshInstallSource {
     } finally { await store.close(); }
   }
 
-  /// Guarded NON-FINANCIAL profile/PIN preference writes on a fresh vault.
-  /// The original legacy account writer correctly refuses the activated
-  /// SQLCipher source. This route never permits legacy finance writes and
-  /// never generates an encryption key, empty vault, or new receipt.
-  /// Both active source witnesses are rechecked INSIDE the Home/Widget lease.
+  /// Guarded NON-FINANCIAL account/PIN preferences for an already-activated
+  /// fresh SQLCipher installation. The legacy writer must never touch it.
+  /// No vault/key/receipt creation; verify BOTH source witnesses under the
+  /// common Home/Widget native lock before touching only account metadata.
   static Future<T> withVerifiedProfilePreferences<T>(
     Future<T> Function(SharedPreferences prefs) write, {
     Directory? testDirectory,
     Future<String?> Function()? secureKeyReader,
   }) async {
     assert(secureKeyReader == null || testDirectory != null);
-    final directory=testDirectory ?? await getApplicationSupportDirectory();
+    final directory = testDirectory ?? await getApplicationSupportDirectory();
     return WaffraExperimentalWriterGate(
-      disposableDirectory:directory,experimentalEnabled:true,
+      disposableDirectory: directory, experimentalEnabled: true,
     ).withExclusiveAccess(() async {
-      final prefs=await SharedPreferences.getInstance();
+      final prefs = await SharedPreferences.getInstance();
       await prefs.reload();
-      final id=prefs.getString(_receipt);
-      if(id==null||!RegExp(r'^[A-Za-z0-9_-]{43}=    final rows = await store.customSelect('SELECT id FROM fresh_install_origin').get();
-    if (rows.length != 1 || rows.single.read<String>('id') != id) {
-      throw StateError('Encrypted install identity mismatch.');
-    }
-  }
-}
-).hasMatch(id)||
-         prefs.getBool(_active)!=true||prefs.containsKey(_pending)){
+      final id = prefs.getString(_receipt);
+      if (id == null || !RegExp(r'^[A-Za-z0-9_-]{43}=$').hasMatch(id) ||
+          prefs.getBool(_active) != true || prefs.containsKey(_pending)) {
         throw StateError('Fresh encrypted account source is not active.');
       }
-      final path=File('${directory.path}/${WaffraEncryptedStore.encryptedDatabaseFilename}');
-      if(await FileSystemEntity.type(path.path,followLinks:false)!=
-          FileSystemEntityType.file){
+      final path = File(
+        '${directory.path}/${WaffraEncryptedStore.encryptedDatabaseFilename}',
+      );
+      if (await FileSystemEntity.type(path.path, followLinks: false) !=
+          FileSystemEntityType.file) {
         throw StateError('Fresh encrypted finance vault is unavailable.');
       }
-      final key=await (secureKeyReader!=null?secureKeyReader():
-          _storage.read(key:WaffraEncryptedStore.secureKeyStorageName));
-      if(key==null||!key.startsWith(WaffraEncryptedStore.freshSqlCipherKeyPrefix)){
+      final key = await (secureKeyReader != null
+          ? secureKeyReader()
+          : _storage.read(key: WaffraEncryptedStore.secureKeyStorageName));
+      if (key == null ||
+          !key.startsWith(WaffraEncryptedStore.freshSqlCipherKeyPrefix)) {
         throw StateError('Fresh encrypted OS key is unavailable.');
       }
-      final store=WaffraEncryptedStore.openAt(path,key:key);
+      final store = WaffraEncryptedStore.openAt(path, key: key);
       try {
-        final source=WaffraFreshInstallSource._(id);
+        final source = WaffraFreshInstallSource._(id);
         await source.verify(store);
-        final snapshot=WaffraAtomicFinanceSnapshot(
-          store:store,experimentalEnabled:true,
+        final snapshot = WaffraAtomicFinanceSnapshot(
+          store: store, experimentalEnabled: true,
         );
-        final journal=WaffraEncryptedCutoverJournal(
-          store:store,snapshot:snapshot,experimentalEnabled:true,
+        final journal = WaffraEncryptedCutoverJournal(
+          store: store, snapshot: snapshot, experimentalEnabled: true,
         );
-        final checkpoint=await journal.read();
-        if(checkpoint==null||
-           checkpoint.phase!=WaffraCutoverPhase.active||
-           checkpoint.sourceDigest!=source.digest){
+        final checkpoint = await journal.read();
+        if (checkpoint == null ||
+            checkpoint.phase != WaffraCutoverPhase.active ||
+            checkpoint.sourceDigest != source.digest) {
           throw StateError('Fresh encrypted source digest is unverified.');
         }
         return await write(prefs);
-      }finally{await store.close();}
+      } finally {
+        await store.close();
+      }
     });
   }
 
