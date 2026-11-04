@@ -102,7 +102,7 @@ void main() {
   final app=File('lib/main.dart').readAsStringSync();
   final link=File('lib/waffra_goal_recurring_actions.part.dart').readAsStringSync();
   expect(app,contains('waffra_goal_recurring_actions.part.dart'));
-  expect(app,contains('await this._ensureLinkedRecurringForGoal(g);'));
+  expect(app,contains('await this._saveGoalAndLinkedDueAtomically(g,'));
   expect(app,contains('this.editGoal(g)'));
   expect(app,contains('recurringDialog(initial:r)'));
   expect(app,contains('onChanged:initial?.linkedGoalId!=null?null'));
@@ -110,9 +110,9 @@ void main() {
   expect(directory,contains('editBudgetForCategory(b)'));
   expect(app,contains('goal.saved/goal.target'));
   expect(app,contains('waffraNamedBudgetSpent(entries,categories,selected,viewedMonth)'));
-  expect(link,contains('linkedGoalId:goal.id'));
-  expect(link,contains('operation:\'goal-edit\''));
-  expect(link,contains('operation:\'goal-recurring-link\''));
+  expect(link,contains('linkedGoalId:updated.id'));
+  expect(link,contains('operation:\'goal-edit-and-due\''));
+  expect(app,contains('operation:\'goal-create-and-due\''));
   expect(link,isNot(contains('entries.add(')));
   expect(app,contains("sourceType:'goal_due'"));
   expect(app,contains('WaffraGoalDueAllocation.allocate('));
