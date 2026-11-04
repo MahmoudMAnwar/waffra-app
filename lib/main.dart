@@ -12323,7 +12323,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        final bridge=_financeBinding?.accountsBridge;
        if(bridge==null)throw StateError('Active finance source is unavailable.');
        final rescue=await bridge.exportPortableBackup(restoreSecret.text);
-       final rescueSaved=await WaffraBackupFiles.saveEncryptedArchive(rescue);
+       final rescueSaved=await WaffraBackupFiles.saveEncryptedArchive(rescue,
+        name:'Waffra_Rescue_Before_Restore_${DateTime.now().millisecondsSinceEpoch}.waffra');
        if(!rescueSaved){
         if(ctx.mounted)update(()=>restoreError=waffraIsEnglish?
          'Restore cancelled: save the current encrypted rescue file first.':
