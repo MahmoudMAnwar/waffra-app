@@ -4690,6 +4690,76 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      child:WaffraText(waffraIsEnglish?'Confirm delete':'تأكيد الحذف',
       maxLines:2,textAlign:TextAlign.center))),
    ]))]));
+ /// Read a single authoritative SQLCipher account witness immediately
+ /// before posting an explicitly reviewed bank SMS. Guarded legacy keeps the
+ /// existing SMS save behavior, without a shadow account database.
+ Future<({List<String?>? ids,int? generation})?> reviewSmsAccountLinks(
+  List<MoneyEntry> candidates)async{
+  final bridge=_financeBinding?.accountsBridge;
+  if(bridge==null)return (ids:null,generation:null);
+  if(candidates.isEmpty)return (ids:null,generation:null);
+  try{
+   final verified=await bridge.readVerifiedAccounts();
+   if(!mounted)return null;
+   final active=verified.balances.where((a)=>!a.archived).toList();
+   if(active.isEmpty)return (
+    ids:List<String?>.filled(candidates.length,null),
+    generation:verified.witness.generation);
+   final assigned=List<String?>.filled(candidates.length,null);
+   final approved=await showWaffraDialog<bool>(context:context,
+    builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
+     title:WaffraText(waffraIsEnglish?
+      'Which account for each bank transaction?':
+      'تسجيل كل معاملة بنكية في أي حساب؟'),
+     content:SizedBox(width:double.maxFinite,
+      height:waffraKeyboardDialogListHeight(ctx,desired:500),
+      child:ListView(children:[
+       WaffraText(waffraIsEnglish?
+        'Choose the actual bank or cash account. No account is optional.':
+        'اختار الحساب الفعلي لكل عملية، أو سيبها بدون ربط.'),
+       const SizedBox(height:12),
+       for(var n=0;n<candidates.length;n++)
+        Padding(padding:const EdgeInsets.only(bottom:12),
+         child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          WaffraText(candidates[n].title+' · '+cash(candidates[n].amount),
+           maxLines:2,style:const TextStyle(fontWeight:FontWeight.bold)),
+          const SizedBox(height:5),
+          WaffraCenteredDropdownFormField<String>(
+           key:ValueKey('waffra-sms-account-'+n.toString()+'-'+
+            (assigned[n]??'none')),
+           initialValue:assigned[n]??'none',isExpanded:true,
+           menuMaxHeight:min(340.0,MediaQuery.sizeOf(ctx).height*.48),
+           decoration:InputDecoration(
+            labelText:waffraIsEnglish?'Money account':'الحساب المالي',
+            border:const OutlineInputBorder()),
+           items:[
+            DropdownMenuItem(value:'none',child:WaffraText(
+             waffraIsEnglish?'Unlinked':'بدون حساب')),
+            ...active.map((a)=>DropdownMenuItem(value:a.id,
+             child:WaffraText(a.name,maxLines:1))),
+           ],
+           onChanged:WaffraHaptics.selection((value)=>update(
+            ()=>assigned[n]=value=='none'?null:value)),
+          ),
+         ])),
+      ])),
+     actions:[
+      TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),
+       child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+      FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),
+       child:WaffraText(waffraIsEnglish?'Confirm':'تأكيد')),
+     ],
+    )));
+   if(approved!=true)return null;
+   return (ids:List<String?>.unmodifiable(assigned),
+    generation:verified.witness.generation);
+  }catch(_){
+   if(mounted)snack(context,waffraIsEnglish?
+    'Accounts could not be verified. Open My accounts before saving.':
+    'تعذر التحقق من الحسابات. افتح حساباتي قبل حفظ العملية.');
+   return null;
+  }
+ }
 /// Budget assignment is OPTIONAL in every bank import: no assignment never blocks saving.
  Future<List<String?>?> reviewSmsBudgetLinks(List<MoneyEntry> candidates)async{
   final choices=namedBudgets.where((b)=>
@@ -5030,6 +5100,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   for(var n=0;n<additions.length;n++){
    additions[n]=additions[n].withBudget(reviewedBudgets[n]);
   }
+  final reviewedAccounts=await reviewSmsAccountLinks(additions);
+  if(reviewedAccounts==null){if(ctx.mounted)update(()=>busy=false);return;}
   try{
    // The dashboard and standalone Android widget now use the SAME locked,
    // crash-recoverable finance+SMS-hash journal on guarded legacy installs.
@@ -5042,6 +5114,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     proposedCategories:proposed.map((c)=>c.toJson()).toList(),
     userConfirmed:true,
     allowDuplicateHashes:allowRepeatedSms,
+    selectedAccountIds:reviewedAccounts.ids,
+    expectedAccountGeneration:reviewedAccounts.generation,
    ));
    if(!mounted)return;
    final persisted=(jsonDecode(applied.current.ledgerRaw??'[]') as List)
@@ -5662,6 +5736,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        final budgetSelection=await reviewSmsBudgetLinks([entry]);
        if(budgetSelection==null){if(ctx.mounted)update(()=>busy=false);return;}
        entry=entry.withBudget(budgetSelection.single);
+       final reviewedAccount=await reviewSmsAccountLinks([entry]);
+       if(reviewedAccount==null){if(ctx.mounted)update(()=>busy=false);return;}
        final selected=namedBudgets.where((b)=>b.id==entry.budgetId&&
         b.budget>0&&!b.deleted).toList();
        if(selected.length==1)previous=waffraNamedBudgetSpent(
@@ -5675,6 +5751,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         hashes:[hash],
         userConfirmed:true,
         allowDuplicateHashes:explicitlyApprovedDuplicate,
+        selectedAccountIds:reviewedAccount.ids,
+        expectedAccountGeneration:reviewedAccount.generation,
        );
        if(committed.saved!=1){
         if(ctx.mounted)update((){
@@ -6717,6 +6795,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final previousSpent=linkedBudget.isEmpty?0.0:waffraNamedBudgetSpent(
     entries.where((e)=>e.id!=result.id),categories,linkedBudget.single,result.date);
   if(pendingHash!=null&&initial==null){
+   final reviewedAccount=await reviewSmsAccountLinks([result]);
+   if(reviewedAccount==null)return;
    try{
    // A single reviewed bank SMS must commit both its transaction and
    // fingerprint atomically under the same Home/Widget source and journal.
@@ -6728,6 +6808,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     hashes:[pendingHash!],
     userConfirmed:true,
     allowDuplicateHashes:explicitlyApprovedSmsDuplicate,
+    selectedAccountIds:reviewedAccount.ids,
+    expectedAccountGeneration:reviewedAccount.generation,
    ));
    if(applied.saved!=1){
     if(mounted)snack(context,waffraIsEnglish?
