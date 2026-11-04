@@ -21,7 +21,7 @@
   "bounded_sections": {
     "lib/storage/waffra_production_finance_authority_binding.dart": [
       {
-        "start": "import 'waffra_encrypted_sms_notes_vault.dart';\n",
+        "start": "import 'waffra_encrypted_store.dart';\n",
         "end": "import 'waffra_home_finance_persistence.dart';\n"
       },
       {
