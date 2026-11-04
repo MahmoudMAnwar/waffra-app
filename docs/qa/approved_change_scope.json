@@ -56,7 +56,7 @@
       },
       {
         "start": "import 'storage/waffra_verified_accounts_api.dart';\n",
-        "end": "import 'waffra_accounts_manager_page.dart';\n"
+        "end": "import 'storage/waffra_fresh_finance_modules_repository.dart';\n"
       },
       {
         "start": " Future<void> fundGoal(SavingGoal g)async {\n",
@@ -146,7 +146,7 @@
       },
       {
         "start": "import 'waffra_verified_goal_due_snapshot_writer.dart';\n",
-        "end": "import 'waffra_encrypted_transaction_recycle.dart';\n"
+        "end": "import 'dart:convert';\n"
       },
       {
         "start": "    if (recovery != WaffraCutoverRecoveryStatus.encryptedReady) {\n",
