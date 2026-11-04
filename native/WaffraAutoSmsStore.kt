@@ -142,6 +142,14 @@ object WaffraAutoSmsStore {
             .putBoolean(suspendedAfterLogoutName, false)
         if (allow) {
             val owner = signedInOwnerHash(context)
+            val previous = prefs.getString(consentedOwnerName, null)
+            if (previous != null && previous != owner) {
+                // A different account's encrypted queue and read cursor must
+                // never become visible under this explicit new opt-in.
+                editor.remove(queueName).remove(historyCursorAt)
+                    .remove(historyCursorId).remove(historySourceMonth)
+                    .remove(historyComplete)
+            }
             if (owner != null) editor.putString(consentedOwnerName, owner)
             else editor.remove(consentedOwnerName)
         }
@@ -151,9 +159,9 @@ object WaffraAutoSmsStore {
         editor.commit()
     }
 
-    // A signed-out phone must stop scanning and discard encrypted pending SMS.
-    // Save only the prior account's hash so this SAME user can resume without
-    // requesting Android's permanent permission again.
+    // Stop collection immediately on logout. Retain pending ciphertext only
+    // when bound to a stable owner, to avoid losing unreviewed bank messages.
+    // A new/different account cannot read it; explicit new opt-in purges it.
     fun suspendForSignOut(context: Context): Boolean = synchronized(mutex) {
         val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
         val owner = signedInOwnerHash(context)
@@ -162,8 +170,8 @@ object WaffraAutoSmsStore {
             owner != null && (bound == null || bound == owner)
         val editor = prefs.edit().putBoolean(activeName, false)
             .putBoolean(suspendedAfterLogoutName, canResume)
-            .remove(queueName)
         if (canResume) editor.putString(consentedOwnerName, owner)
+        else editor.remove(queueName)
         editor.commit()
     }
 
