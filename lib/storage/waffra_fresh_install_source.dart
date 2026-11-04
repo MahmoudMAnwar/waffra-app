@@ -22,6 +22,7 @@ class WaffraFreshInstallSource {
   const WaffraFreshInstallSource._(this.id);
   final String id;
   static const _receipt = 'waffra_fresh_sqlcipher_install_v1';
+  static const receiptKey = _receipt;
   static const _prefix = 'fresh-sqlcipher-v1:';
   static const _active = WaffraLiveLegacyFinanceGuard.activeKey;
   static const _pending = WaffraLiveLegacyFinanceGuard.pendingKey;
@@ -136,6 +137,64 @@ class WaffraFreshInstallSource {
       if (!await prefs.remove(_pending)) throw StateError('Installation completion failed.');
       return source;
     } finally { await store.close(); }
+  }
+
+  /// Guarded NON-FINANCIAL account/PIN preferences for an already-activated
+  /// fresh SQLCipher installation. The legacy writer must never touch it.
+  /// No vault/key/receipt creation; verify BOTH source witnesses under the
+  /// common Home/Widget native lock before touching only account metadata.
+  static Future<T> withVerifiedProfilePreferences<T>(
+    Future<T> Function(SharedPreferences prefs) write, {
+    Directory? testDirectory,
+    Future<String?> Function()? secureKeyReader,
+  }) async {
+    assert(secureKeyReader == null || testDirectory != null);
+    final directory = testDirectory ?? await getApplicationSupportDirectory();
+    return WaffraExperimentalWriterGate(
+      disposableDirectory: directory, experimentalEnabled: true,
+    ).withExclusiveAccess(() async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.reload();
+      final id = prefs.getString(_receipt);
+      if (id == null || !RegExp(r'^[A-Za-z0-9_-]{43}=$').hasMatch(id) ||
+          prefs.getBool(_active) != true || prefs.containsKey(_pending)) {
+        throw StateError('Fresh encrypted account source is not active.');
+      }
+      final path = File(
+        '${directory.path}/${WaffraEncryptedStore.encryptedDatabaseFilename}',
+      );
+      if (await FileSystemEntity.type(path.path, followLinks: false) !=
+          FileSystemEntityType.file) {
+        throw StateError('Fresh encrypted finance vault is unavailable.');
+      }
+      final key = await (secureKeyReader != null
+          ? secureKeyReader()
+          : _storage.read(key: WaffraEncryptedStore.secureKeyStorageName));
+      if (key == null ||
+          !key.startsWith(WaffraEncryptedStore.freshSqlCipherKeyPrefix)) {
+        throw StateError('Fresh encrypted OS key is unavailable.');
+      }
+      final store = WaffraEncryptedStore.openAt(path, key: key);
+      try {
+        final source = WaffraFreshInstallSource._(id);
+        await source.verify(store);
+        final snapshot = WaffraAtomicFinanceSnapshot(
+          store: store, experimentalEnabled: true,
+        );
+        final journal = WaffraEncryptedCutoverJournal(
+          store: store, snapshot: snapshot, experimentalEnabled: true,
+        );
+        final checkpoint = await journal.read();
+        if (checkpoint == null ||
+            checkpoint.phase != WaffraCutoverPhase.active ||
+            checkpoint.sourceDigest != source.digest) {
+          throw StateError('Fresh encrypted source digest is unverified.');
+        }
+        return await write(prefs);
+      } finally {
+        await store.close();
+      }
+    });
   }
 
   Future<void> verify(WaffraEncryptedStore store) async {

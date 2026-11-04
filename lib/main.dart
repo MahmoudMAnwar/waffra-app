@@ -2412,9 +2412,17 @@ class _ProfileFormState extends State<ProfileForm> {
   setState(()=>busy=true);
   try {
    if(widget.initial==null&&widget.provider=='Phone'){
-    // Password verifier lives in OS-protected secure storage only.
-    // No OTP, Firebase phone authentication or paid SMS providers.
-    await WaffraLocalPhoneCredentials.register(
+    // A completed existing profile must use verified sign-in, never a
+    // second registration that can overwrite the account's name or data.
+    final prefs=await SharedPreferences.getInstance();
+    await prefs.reload();
+    if(prefs.getString('waffra_registered_profile')!=null){
+     throw StateError('local_profile_already_completed');
+    }
+    // If the previous attempt stored a verifier but failed to persist the
+    // profile, resume ONLY after proving the same phone AND password.
+    // No credential deletion, password reset, or new OS key is permitted.
+    await WaffraLocalPhoneCredentials.registerOrResume(
      phone:phone.text.trim(),password:password.text);
    }
    await widget.onSave(Person(name:name.text.trim(),email:widget.initial?.email??'',
@@ -2430,7 +2438,21 @@ class _ProfileFormState extends State<ProfileForm> {
      provider:widget.provider,gender:gender,avatar:avatar,birthday:birthday));
    if(!mounted)return;
    if(widget.initial!=null&&Navigator.of(context).canPop())Navigator.pop(context);
-  }catch(e){if(mounted)snack(context,'تعذر حفظ البيانات: $e');}
+  }catch(e){
+   if(!mounted)return;
+   final message=e is StateError&&e.message=='local_credentials_already_exist'?
+     (waffraIsEnglish?
+       'A different local login already exists. Use its original phone and password to finish, or sign in.':
+       'يوجد تسجيل دخول سابق على الجهاز. استخدم نفس رقم الجوال وكلمة المرور الأصلية، أو ارجع لتسجيل الدخول.'):
+     e is StateError&&e.message=='local_profile_already_completed'?
+     (waffraIsEnglish?
+       'This account is already registered. Go back and sign in.':
+       'الحساب مسجل بالفعل. ارجع وسجّل الدخول برقم الجوال وكلمة المرور.'):
+     (waffraIsEnglish?
+       'Unable to complete registration. Your login details were kept; retry with the same phone and password.':
+       'تعذر إكمال التسجيل. بيانات الدخول محفوظة؛ حاول مجددًا بنفس رقم الجوال وكلمة المرور.');
+   snack(context,message);
+  }
   finally{if(mounted)setState(()=>busy=false);}
  }
  void _nextPhoneRegistrationStep(){
