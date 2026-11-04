@@ -43,7 +43,7 @@ void main(){
  });
 
  test('goal funding source debits bank once; goal creation never does',()async{
-  expect((await accounts.balances()).first.balanceMinor,200000);
+  expect({for(final a in await accounts.balances())a.id:a.balanceMinor}, {'rajhi':200000,'cash':50000});
   await db.customStatement('INSERT INTO fresh_finance_goal_wallet_movements '
    '(movement_id,goal_id,kind,amount_minor,idempotency_key,occurred_at_iso) '
    'VALUES (?,?,?,?,?,?)',['fund-1','travel','fund',30000,'fund-key',at]);
@@ -98,7 +98,6 @@ void main(){
   await expectLater(context.setVerifiedBankSuffix(
    accountId:'cash',lastFour:'9999',confirmedIso:at,userConfirmed:true),
     throwsA(isA<StateError>()));
-  expect((await accounts.balances()).map((a)=>a.balanceMinor).toList(),
-   [200000,50000]);
+  expect({for(final a in await accounts.balances())a.id:a.balanceMinor}, {'rajhi':200000,'cash':50000});
  });
 }
