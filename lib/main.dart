@@ -73,7 +73,6 @@ import 'waffra_goal_catalog.dart';
 import 'waffra_pdf_reader.dart';
 import 'waffra_footer.dart';
 import 'waffra_messages.dart';
-import 'waffra_merchant_brands.dart';
 import 'waffra_auto_sms.dart';
 import 'waffra_auto_sms_policy.dart';
 import 'waffra_bank_sms_facts.dart';
@@ -2889,17 +2888,6 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
       mainAxisSize:MainAxisSize.min,
       crossAxisAlignment:CrossAxisAlignment.stretch,
       children:[
-       if(entry.merchantKey.trim().isNotEmpty)...[
-        Row(children:[
-         WaffraMerchantLogo(
-          brand:WaffraMerchantBrands.match(entry.merchantKey),
-          fallbackName:entry.merchantKey,size:45),
-         const SizedBox(width:10),
-         Expanded(child:WaffraText(entry.merchantKey,
-          style:const TextStyle(fontWeight:FontWeight.bold,fontSize:15))),
-        ]),
-        const SizedBox(height:12),
-       ],
        WaffraText(waffraIsEnglish?'Transaction description':'وصف المعاملة',
         textAlign:TextAlign.start,style:TextStyle(fontSize:12,color:muted)),
        const SizedBox(height:7),
@@ -5976,7 +5964,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   String category=initial?.category??'أخرى';
   String? selectedParentId;
   String? selectedBudgetId=initial?.budgetId;
-  String? selectedMerchantOverride; // explicit selection only
   int budgetMenuRevision=0; // reset action-only dropdown selections
   {
    // All reviewed transactions, including SMS, must use a real child category.
@@ -6168,39 +6155,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            (waffraIsEnglish?'Maximum 250 characters for a new name.':
             'اسم العملية الجديد لا يزيد عن 250 حرفًا.')):null,
         border:OutlineInputBorder())),
-      const SizedBox(height:10),
-      OutlinedButton.icon(
-       key:const Key('waffra-transaction-select-merchant'),
-       icon:const Icon(Icons.storefront_outlined,color:emerald),
-       label:WaffraText(waffraIsEnglish?
-        'Choose merchant and logo':'اختيار التاجر وشعاره'),
-       onPressed:WaffraHaptics.tap(()async{
-        final picked=await waffraChooseMerchantBrand(sheetContext,
-         english:waffraIsEnglish);
-        if(picked==null||!sheetContext.mounted)return;
-        update((){
-         selectedMerchantOverride=picked.name;
-         if(title.text.trim().isEmpty&&initial==null)title.text=picked.name;
-        });
-       })),
-      if((selectedMerchantOverride??initial?.merchantKey??'').trim().isNotEmpty)...[
-       const SizedBox(height:7),
-       Row(children:[
-        WaffraMerchantLogo(
-         brand:WaffraMerchantBrands.match(
-          selectedMerchantOverride??initial?.merchantKey),
-         fallbackName:selectedMerchantOverride??initial?.merchantKey??'',
-         size:34),
-        const SizedBox(width:8),
-        Expanded(child:WaffraText(
-         selectedMerchantOverride??initial?.merchantKey??'')),
-        TextButton(
-         key:const Key('waffra-transaction-clear-merchant'),
-         onPressed:WaffraHaptics.tap(
-          ()=>update(()=>selectedMerchantOverride='')),
-         child:WaffraText(waffraIsEnglish?'Remove':'إزالة')),
-       ]),
-      ],
       const SizedBox(height:10),
       if(!sms)...[
        TextField(controller:notes,onChanged:(_)=>update((){}),minLines:1,maxLines:4,
@@ -6528,7 +6482,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         category:category,amount:n,
         income:income,date:date,receiptPath:receiptPath,
         sourceType:initial?.sourceType??(sms?'sms':scannedReceipt!=null?'receipt':'manual'),
-        merchantKey:selectedMerchantOverride??initial?.merchantKey??
+        merchantKey:initial?.merchantKey??
          (sms?(waffraMerchantKey(message.text)??''):''),
         goalWalletPaidMinor:initial?.goalWalletPaidMinor??0,
         budgetId:income?null:(namedBudgets.any((b)=>b.id==selectedBudgetId&&
@@ -7814,11 +7768,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    clipBehavior:Clip.antiAlias,child:Stack(children:[
     Padding(padding:EdgeInsets.only(top:attachmentCount>0?16:0),child:ListTile(
    textColor:waffraInk,iconColor:forest,
-   leading:e.merchantKey.trim().isNotEmpty
-    ?WaffraMerchantLogo(
-      brand:WaffraMerchantBrands.match(e.merchantKey),
-      fallbackName:e.merchantKey,size:42)
-    :CircleAvatar(backgroundColor:Color(c.color).withValues(alpha:.15),
+   leading:CircleAvatar(backgroundColor:Color(c.color).withValues(alpha:.15),
       child:Icon(categoryIcon(c.icon),color:Color(c.color))),
    title:WaffraText(e.title,style:const TextStyle(color:waffraInk,fontWeight:FontWeight.w600)),subtitle:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
     WaffraText('${e.category} • ${dayText(e.date)}',style:const TextStyle(color:waffraInk)),
@@ -8887,11 +8837,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     border:Border.all(color:forest.withValues(alpha:darkMode ? 0.18 : 0.08))),
    clipBehavior:Clip.antiAlias,child:Stack(children:[
     Padding(padding:EdgeInsets.fromLTRB(11,attachmentCount>0?23:12,11,12),child:Row(children:[
-     if(entry.merchantKey.trim().isNotEmpty)
-      WaffraMerchantLogo(
-       brand:WaffraMerchantBrands.match(entry.merchantKey),
-       fallbackName:entry.merchantKey,size:38)
-     else CircleAvatar(radius:18,
+     CircleAvatar(radius:18,
       backgroundColor:Color(cat.color).withValues(alpha:0.13),
       child:WaffraIllustration(topic:cat.icon,size:36)),
      const SizedBox(width:8),
