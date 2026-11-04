@@ -4566,16 +4566,45 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if(!mounted)return;
     if(action=='paid'){
      if(isGoalDue){
-      // SQLCipher's current recurring writer cannot atomically append a
-      // payment and debit a goal earmark. Fail closed until that verified
-      // multi-module operation exists; never run two separate writes.
       if(_lastFinanceAuthorityRead?.source==
         WaffraRuntimeFinanceBackend.verifiedEncrypted){
-       snack(context,waffraIsEnglish?
-        'Goal payment needs a verified atomic wallet-and-ledger writer. '
-        'Your data was not changed.':
-        'خصم استحقاق الهدف يتطلب حفظًا مشفرًا ذريًا للمحفظة والعملية. '
-        'لم يتم تغيير أي بيانات مالية.');
+       final cashMinor=WaffraRecurringPolicy.toHalalas(r.amount)-
+        goalPreview!.fromGoalMinor;
+       final chosen=cashMinor>0?await reviewSmsAccountLinks([
+        MoneyEntry(id:id,title:r.title,category:r.category,
+         amount:r.amount,income:false,date:DateTime.now(),
+         sourceType:'goal_due',goalWalletPaidMinor:goalPreview.fromGoalMinor)]):null;
+       if(cashMinor>0&&chosen==null)return;
+       final chosenId=chosen?.ids?.single;
+       if(chosenId!=null&&chosen!.generation!=
+          _lastFinanceAuthorityRead?.encryptedWitness?.generation){
+        if(mounted)await _loadFinanceSafely();
+        if(mounted)snack(context,waffraIsEnglish?
+         'Account changed; review the goal due again.':
+         'الحساب اتغير؛ راجع استحقاق الهدف مرة تانية.');
+        return;
+       }
+       try{
+        await _financialWriteQueue.drain();
+        final baseline=_lastFinanceAuthorityRead;
+        if(baseline==null||baseline.encryptedWitness==null){
+         throw StateError('Verified goal due witness unavailable.');
+        }
+        await _saveProgress.track('settle-verified-goal-due',()=>
+         _financeAuthority.settleLinkedGoalDue(
+          baseline:baseline,goalId:r.linkedGoalId!,recurringId:r.id,
+          dueKey:id,amountMinor:WaffraRecurringPolicy.toHalalas(r.amount),
+          confirmedAtIso:DateTime.now().toIso8601String(),
+          userConfirmed:true,selectedAccountId:chosenId));
+        if(mounted)await _loadFinanceSafely();
+        if(mounted)await syncRecurringReminders();
+       }catch(error){
+        debugPrint('Goal due SQLCipher commit rejected: $error');
+        if(mounted)await _loadFinanceSafely();
+        if(mounted)snack(context,waffraIsEnglish?
+         'Goal payment was not verified. Reload before retrying.':
+         'لم يتم تأكيد استحقاق الهدف؛ أعد تحميل البيانات قبل المحاولة.');
+       }
        return;
       }
       // The same deterministic recurring ID cannot settle a goal twice.
