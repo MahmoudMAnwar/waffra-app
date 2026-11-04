@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'waffra_amount_formatter.dart';
 import 'waffra_gold_market_data.dart';
 import 'waffra_i18n.dart';
+import 'waffra_search.dart';
 
 /// Spot quotes are USD per troy ounce (31.1034768g), NOT retail shop prices.
 class WaffraGoldMath {
@@ -124,7 +125,8 @@ class _WaffraGoldCalculatorPageState extends State<WaffraGoldCalculatorPage> {
   WaffraGoldQuote? quote;
 
   String t(String en, String ar) => waffraIsEnglish ? en : ar;
-  String money(double value, String code) => value.toStringAsFixed(2) + ' ' + code;
+  String money(double value, String code) =>
+   formatWaffraMoney(value,decimalPlaces:waffraCurrencyMinorDigits(code)) + ' ' + code;
   String stamp(DateTime d) {
     final local = d.toLocal();
     return local.day.toString() + '/' + local.month.toString() + '/' +
@@ -147,9 +149,8 @@ class _WaffraGoldCalculatorPageState extends State<WaffraGoldCalculatorPage> {
         context: context,
         builder: (dialog) => StatefulBuilder(builder: (dialog, refresh) {
           final keys = widget.arabicCurrencies.keys.where((code) =>
-              (code + ' ' + (widget.arabicCurrencies[code] ?? '') + ' ' +
-               (widget.englishCurrencies[code] ?? ''))
-                  .toLowerCase().contains(query.toLowerCase())).toList();
+              waffraSearchAny([code,widget.arabicCurrencies[code]??'',
+                widget.englishCurrencies[code]??''],query)).toList();
           return AlertDialog(
             title: Text(t('Gold quotation currency', 'عملة تسعير الذهب')),
             content: SizedBox(width: 400, height: 400, child: Column(children: [
@@ -180,7 +181,7 @@ class _WaffraGoldCalculatorPageState extends State<WaffraGoldCalculatorPage> {
   }
 
   Future<void> fetchQuote() async {
-    final grams = double.tryParse(weight.text.trim().replaceAll(',', ''));
+    final grams = waffraStrictNumericInput(weight.text,decimalPlaces:4,maxValue:1000000);
     if (grams == null || !grams.isFinite || grams <= 0 || grams > 1000000) {
       setState(() { quote = null;
         error = t('Enter a valid positive weight in grams.',
@@ -207,7 +208,7 @@ class _WaffraGoldCalculatorPageState extends State<WaffraGoldCalculatorPage> {
 
   @override
   Widget build(BuildContext context) {
-    final grams = double.tryParse(weight.text.trim().replaceAll(',', ''));
+    final grams = waffraStrictNumericInput(weight.text,decimalPlaces:4,maxValue:1000000);
     final valid = quote != null && grams != null &&
         grams.isFinite && grams > 0 && grams <= 1000000;
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -233,21 +234,21 @@ class _WaffraGoldCalculatorPageState extends State<WaffraGoldCalculatorPage> {
             const SizedBox(height: 15),
             TextField(controller: weight,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [const WaffraAmountFormatter()],
+              inputFormatters: [const WaffraAmountFormatter(decimalPlaces:4,truncateExcess:false)],
               decoration: InputDecoration(labelText: t('Weight in grams', 'الوزن بالجرام'),
                 prefixIcon: const Icon(Icons.scale_outlined),
                 border: const OutlineInputBorder()),
               onChanged: (_) => setState(() => error = '')),
             const SizedBox(height: 12),
-            OutlinedButton.icon(key: const Key('waffra-gold-currency-picker'),
+            Align(alignment:AlignmentDirectional.centerStart,child:OutlinedButton.icon(key: const Key('waffra-gold-currency-picker'),
               onPressed: busy ? null : selectCurrency,
               icon: const Icon(Icons.currency_exchange),
-              label: Text(t('Show in ', 'اعرض السعر بـ ') + currencyName + ' (' + currency + ')')),
+              label: Text(t('Show in ', 'اعرض السعر بـ ') + currencyName + ' (' + currency + ')'))),
             const SizedBox(height: 10),
-            FilledButton.icon(key: const Key('waffra-gold-quote-button'),
+            Align(alignment:AlignmentDirectional.centerStart,child:FilledButton.icon(key: const Key('waffra-gold-quote-button'),
               onPressed: busy ? null : fetchQuote, icon: const Icon(Icons.refresh),
               label: Text(busy ? t('Fetching...', 'جاري جلب السعر...')
-                : t('Get latest available quote', 'عرض أحدث سعر متاح'))),
+                : t('Get latest available quote', 'عرض أحدث سعر متاح')))),
           ]))),
         if (busy) const Padding(padding: EdgeInsets.all(12),
           child: LinearProgressIndicator()),
@@ -261,14 +262,14 @@ class _WaffraGoldCalculatorPageState extends State<WaffraGoldCalculatorPage> {
                 Text(t('Estimated total', 'الإجمالي التقريبي'),
                   style: TextStyle(color: ink, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                Text(money(WaffraGoldMath.total(quote!.gram(karat), grams), currency),
+                WaffraText(money(WaffraGoldMath.total(quote!.gram(karat), grams), currency),
                   textDirection: TextDirection.ltr,
                   style: Theme.of(context).textTheme.headlineMedium),
                 const SizedBox(height: 9),
-                Text(t('Saudi riyal equivalent: ', 'ما يعادله بالريال: ') +
+                WaffraText(t('Saudi riyal equivalent: ', 'ما يعادله بالريال: ') +
                   money(WaffraGoldMath.total(quote!.gram(karat, sar: true), grams), 'SAR')),
-                if (currency != 'SAR') Text(t('Indicative FX: 1 SAR ≈ ', 'سعر الصرف: 1 ريال ≈ ') +
-                  money(quote!.currencyFx / quote!.sarFx, currency)),
+                if (currency != 'SAR') WaffraText(t('Indicative FX: 1 SAR ≈ ', 'سعر الصرف: 1 ريال ≈ ') +
+                  (quote!.currencyFx / quote!.sarFx).toStringAsFixed(6)+' '+currency),
               ]))),
           const SizedBox(height: 12),
           Text(t('Spot price per gram', 'سعر الجرام العالمي'),
@@ -276,8 +277,8 @@ class _WaffraGoldCalculatorPageState extends State<WaffraGoldCalculatorPage> {
           for (final value in WaffraGoldMath.supportedKarats)
             Card(child: ListTile(
               title: Text(t(value.toString() + 'K', 'عيار ' + value.toString())),
-              subtitle: Text(money(quote!.gram(value, sar: true), 'SAR')),
-              trailing: Text(money(quote!.gram(value), currency),
+              subtitle: WaffraText(money(quote!.gram(value, sar: true), 'SAR')),
+              trailing: WaffraText(money(quote!.gram(value), currency),
                 textDirection: TextDirection.ltr,
                 style: TextStyle(fontWeight: FontWeight.bold, color: ink)))),
           const SizedBox(height: 10),

@@ -79,9 +79,11 @@ def main() -> None:
     checks = {
       "full original in verified detail": ("readProtectedOriginalSms(entry.id)" in source
          and "child:SelectableText(entry.notes" in source),
-      "gold on home": ("waffra-home-gold-currency-entry" in source
-         and "محوّل العملات وأسعار الذهب العالمية" in converter
-         and "WaffraGoldMarketSection(" in converter),
+      "gold in tools": ("waffra-home-gold-currency-entry" not in source
+         and "case 2:return _smartToolsTab();" in source
+         and "CurrencyConverterPage(embedded:true)" in Path("lib/waffra_smart_features.dart").read_text(encoding="utf-8")
+         and "WaffraGoldMarketSection(" in converter
+         and "WaffraOilMarketSection(" in converter),
       "global nominal display only": ("provider: 'display-only'" in currency
          and "if(code=='SAR'||displayOnly)return amount.toDouble();" in currency
          and "double? toLedgerSar" in currency),

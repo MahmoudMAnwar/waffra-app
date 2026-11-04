@@ -1,0 +1,53 @@
+name: M429 Combined SMS Phone and Biometric Exact Head QA
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'lib/main.dart'
+      - 'lib/waffra_local_*.dart'
+      - 'lib/waffra_mandatory_biometric_gate.dart'
+      - 'lib/waffra_sms_cloud_service.dart'
+      - 'cloudflare/**'
+      - 'test/m429_sms_phone_integration_test.dart'
+      - '.github/workflows/m429-integration-smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  combined-flutter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Test phone, biometrics, SMS consent, cloud and account migration
+        run: flutter test --reporter expanded test/m422_phone_only_auth_entry_test.dart test/m424_mandatory_biometrics_test.dart test/m426_local_phone_credentials_test.dart test/m428_local_account_migration_test.dart test/m417_sms_first_run_test.dart test/m423_cloudflare_sms_gateway_test.dart test/m429_sms_phone_integration_test.dart
+      - name: Analyzer combined app
+        run: flutter analyze lib/main.dart lib/waffra_local_phone_credentials.dart lib/waffra_local_account_migration.dart lib/waffra_mandatory_biometric_gate.dart lib/waffra_biometrics.dart lib/waffra_auto_sms.dart lib/waffra_sms_cloud_service.dart lib/waffra_cloudflare_sms_gateway.dart lib/waffra_auto_sms_consent.dart
+      - name: Enforce exactly approved main source boundaries
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python3 scripts/qa/m385_approved_change_guard.py --base "$BASE_SHA" --head "$HEAD_SHA"
+  appcheck-jwt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify App Check JWT and free-only Cloudflare transport
+        run: |
+          node --check cloudflare/waffra_sms_worker.mjs
+          node --check cloudflare/waffra_sms_appcheck.mjs
+          node --test cloudflare/waffra_sms_worker.test.mjs

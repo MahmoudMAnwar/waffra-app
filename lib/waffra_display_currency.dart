@@ -5,6 +5,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'waffra_amount_formatter.dart';
+import 'waffra_saudi_release.dart';
 
 /// Country chooses a PRESENTATION UNIT ONLY. Numbers are unchanged (e.g.,
 /// 1,000 SAR is shown as 1,000 EGP when EGP is selected). This is NOT FX.
@@ -90,20 +92,35 @@ class WaffraVerifiedDisplayQuote {
 
 class WaffraDisplayCurrency {
  static const _preferenceKey='waffra_display_country_currency_v1';
+ // True only when a currency preference has actually been persisted.
+ // GPS suggestions cannot displace a previously approved preference.
+ static bool hasSavedPreference=false;
  static const _freshness=Duration(days:7);
  static final ValueNotifier<WaffraVerifiedDisplayQuote> active=
   ValueNotifier<WaffraVerifiedDisplayQuote>(
    const WaffraVerifiedDisplayQuote(code:'SAR',sarToSelected:1,
      updatedAtUtc:null,provider:'display-only'));
- static WaffraCountryCurrency get country=>waffraCountry(active.value.code);
+ static WaffraCountryCurrency get country=>waffraCountry(
+  WaffraSaudiRelease.enabled?'SAR':active.value.code);
  static String label(bool english)=>english?country.code:country.symbolAr;
- static double? convert(num sar)=>active.value.fromSar(sar);
- static double? toLedgerSar(num selected)=>active.value.toSar(selected);
+ static double? convert(num sar)=>WaffraSaudiRelease.enabled?sar.toDouble():active.value.fromSar(sar);
+ static double? toLedgerSar(num selected)=>WaffraSaudiRelease.enabled?selected.toDouble():active.value.toSar(selected);
  static String amount(num sar) {
   final converted=convert(sar);
   if(converted==null)return '—';
-  final fixed=converted.toStringAsFixed(2).split('.');
-  return '${fixed.first.replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'),(_)=>',')}.${fixed.last}';
+  // ISO-appropriate presentation precision, not currency conversion.
+  // The original numeric balance and stored ledger are unchanged.
+  // A display-only unit switch must never hide part of the saved number:
+  // e.g. 100.25 SAR becomes 100.25 JPY, not a rounded 100 JPY.
+  // Keep the normal ISO digits for whole amounts; use additional decimal
+  // places only when reducing them would change the numeric amount.
+  var digits=waffraCurrencyMinorDigits(country.code);
+  if(digits==0&&converted!=converted.roundToDouble())digits=2;
+  while(digits<6&&
+      (double.parse(converted.toStringAsFixed(digits))-converted).abs()>1e-9){
+   digits++;
+  }
+  return formatWaffraMoney(converted,decimalPlaces:digits);
  }
  static String money(num sar,{required bool english}) =>
   '${amount(sar)} ${label(english)}';
@@ -209,17 +226,21 @@ class WaffraDisplayCurrency {
    provider: 'display-only');
  }
  static Future<void> setCurrency(String code,{http.Client? client})async{
+  if(WaffraSaudiRelease.enabled&&code!='SAR')throw StateError('saudi_release_currency_locked');
   final quote=displaySelection(code);
   final p=await SharedPreferences.getInstance();
   if(!await p.setString(_preferenceKey,code)){
    throw StateError('Currency preference was not stored.');
   }
   active.value=quote;
+  hasSavedPreference=true;
  }
  static Future<void> initialize({http.Client? client})async{
   final p=await SharedPreferences.getInstance();
   final saved=p.getString(_preferenceKey)??'SAR';
-  active.value=displaySelection(
+  hasSavedPreference=p.containsKey(_preferenceKey)&&
+    waffraCountryCurrencies.any((item)=>item.code==saved);
+  active.value=displaySelection(WaffraSaudiRelease.enabled?'SAR':
    waffraCountryCurrencies.any((item)=>item.code==saved)?saved:'SAR');
  }
  static Future<void> refresh({http.Client? client})async{

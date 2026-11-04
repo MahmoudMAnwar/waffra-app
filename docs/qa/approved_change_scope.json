@@ -1,0 +1,32 @@
+{
+  "contract_version": 1,
+  "change_id": "M228-pull-refresh-rebased-20261104",
+  "human_scope_review": "Owner requested resolving all unmerged PR conflicts. Original M228 PR #229 contained an actual fresh-install pull-refresh functional defect still present in main; this reconciliation keeps current main intact except the verified refresh read, adds the original fail-closed helper and tests, and does not activate SQLCipher, change amounts, or alter finance writers.",
+  "user_requested_changes": [
+    "Reconcile conflicted PR #229 onto current main without replacing newer unrelated finance, SMS, budget, biometric or merchant UI fixes.",
+    "Allow first-install guarded-legacy pull-to-refresh when genuinely absent empty ledger or categories are valid and preserve the same default categories as ordinary startup.",
+    "Fail closed on absent or corrupt authoritative SQLCipher financial fields, keeping existing money records unchanged and detecting malformed source data.",
+    "Preserve the existing independent named-budget refresh projection and all unrelated Home and Widget finance state.",
+    "Add regression tests proving legacy default parity and encrypted/malformed source refusal on the exact updated PR head."
+  ],
+  "allowed_changed_files": [
+    "docs/qa/approved_change_scope.json",
+    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "lib/main.dart",
+    "lib/storage/waffra_verified_pull_refresh_source.dart",
+    "test/storage/m228_verified_pull_refresh_source_test.dart",
+    "test/qa/m228_pull_refresh_live_wiring_test.py"
+  ],
+  "bounded_sections": {
+    "lib/main.dart": [
+      {
+        "start": "import 'storage/waffra_verified_finance_authority.dart';\n",
+        "end": "import 'storage/waffra_production_finance_authority_binding.dart';\n"
+      },
+      {
+        "start": " Future<void> _refreshFromVerifiedFinance()async {",
+        "end": "   final nextNamedBudgets=readList<WaffraNamedBudget>("
+      }
+    ]
+  }
+}

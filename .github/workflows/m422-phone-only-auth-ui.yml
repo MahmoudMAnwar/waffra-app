@@ -1,0 +1,35 @@
+name: M422 Saudi Mobile and Password Only Entry
+on:
+  pull_request:
+    paths:
+      - 'lib/main.dart'
+      - 'lib/waffra_local_phone_credentials.dart'
+      - 'lib/waffra_local_account_migration.dart'
+      - 'test/m428_local_account_migration_test.dart'
+      - 'test/m426_local_phone_credentials_test.dart'
+      - 'lib/waffra_biometrics.dart'
+      - 'lib/waffra_mandatory_biometric_gate.dart'
+      - 'test/m424_mandatory_biometrics_test.dart'
+      - 'docs/qa/m424_mandatory_biometric_session.md'
+      - 'test/m422_phone_only_auth_entry_test.dart'
+      - 'docs/qa/m422_phone_password_only_migration.md'
+      - '.github/workflows/m422-phone-only-auth-ui.yml'
+  workflow_dispatch:
+jobs:
+  phone-only-ui-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Verify new phone/password and no guest/social registration
+        run: flutter test --reporter expanded test/m422_phone_only_auth_entry_test.dart test/m424_mandatory_biometrics_test.dart test/m426_local_phone_credentials_test.dart test/m428_local_account_migration_test.dart
+      - name: Compile-check registration and onboarding code
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings lib/main.dart lib/waffra_biometrics.dart lib/waffra_mandatory_biometric_gate.dart lib/waffra_local_phone_credentials.dart lib/waffra_local_account_migration.dart
+

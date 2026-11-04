@@ -3,6 +3,8 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 
+import '../waffra_sms_fx_review.dart';
+
 import 'legacy_snapshot_preflight.dart';
 import 'waffra_atomic_finance_snapshot.dart';
 import 'waffra_encrypted_receipt_vault.dart';
@@ -169,6 +171,18 @@ CREATE TABLE IF NOT EXISTS fresh_finance_custom_goals(
       for (final row in transformed) {
         final id = row['id'] as String;
         final minor = ((row['amount'] as num) * 100).round();
+        final rawFx = row['waffra_fx_provenance_v1'];
+        if (rawFx != null) {
+          if (rawFx is! Map<String, dynamic>) {
+            throw StateError('Invalid encrypted FX archive provenance.');
+          }
+          final witness = WaffraSmsFxReview.fromProvenanceJson(rawFx);
+          if (witness.originalCurrency == 'SAR' ||
+              witness.convertedCurrency != 'SAR' ||
+              witness.convertedMinor != minor) {
+            throw StateError('FX archive amount/currency mismatch.');
+          }
+        }
         final isIncome = row['income'] as bool;
         final parts = imagesByEntry[id] ?? const <WaffraReceiptBackupPart>[];
         await disposableStore.customStatement(

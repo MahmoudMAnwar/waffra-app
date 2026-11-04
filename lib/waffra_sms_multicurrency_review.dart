@@ -1,0 +1,405 @@
+/// Read-only, conservative currency discovery for pasted bank SMS.
+/// Never performs FX or changes the ledger or display currency.
+abstract final class WaffraSmsCurrencies {
+  static const supported = <String>{
+    'SAR','EGP','USD','EUR','GBP','AED','KWD','QAR','BHD','OMR',
+    'JOD','IQD','LBP','MAD','DZD','TND','TRY','INR','PKR','BDT',
+    'JPY','CNY','CAD','AUD','CHF','SEK','NOK','DKK','ZAR',
+    'SGD','HKD','MYR','IDR','KRW','THB','PHP',
+  };
+
+  // Full Arabic currency names independent of the app's display setting.
+  // Normalize the names before matching, but never silently convert money.
+  static const _arabicNames=<String,String>{
+    'ريال سعودي':'SAR','جنيه مصري':'EGP',
+    'درهم اماراتي':'AED','دينار كويتي':'KWD',
+    'دينار بحريني':'BHD','ريال قطري':'QAR',
+    'ريال عماني':'OMR','دينار اردني':'JOD',
+    'دينار عراقي':'IQD','ليره لبنانيه':'LBP',
+    'درهم مغربي':'MAD','دينار جزائري':'DZD',
+    'دينار تونسي':'TND','دولار امريكي':'USD',
+    'يورو':'EUR','جنيه استرليني':'GBP',
+    'ليره تركيه':'TRY','روبيه هنديه':'INR',
+    'روبيه باكستانيه':'PKR','تاكا بنغلاديشي':'BDT',
+    'ين ياباني':'JPY','يوان صيني':'CNY',
+    'دولار كندي':'CAD','دولار استرالي':'AUD',
+    'فرنك سويسري':'CHF','كرونه سويديه':'SEK',
+    'كرونه نرويجيه':'NOK','كرونه دنماركيه':'DKK',
+    'راند جنوب افريقي':'ZAR','دولار سنغافوري':'SGD',
+    'دولار هونغ كونغ':'HKD','رينغيت ماليزي':'MYR',
+    'روبيه اندونيسيه':'IDR','وون كوري':'KRW',
+    'بات تايلندي':'THB','بيزو فلبيني':'PHP',
+  };
+  static String _normalizeArabic(String raw)=>raw
+    .replaceAll(RegExp(r'[أإآٱ]'),'ا')
+    .replaceAll('ى','ي').replaceAll('ة','ه')
+    .replaceAll(RegExp(r'[\u064B-\u065F\u0670]'),'');
+  static final _namedAlternatives=_arabicNames.keys
+      .map(RegExp.escape).join('|');
+  static final _namedAdjacentAmount=RegExp(
+    r'(?:(?:[0-9][0-9,.]*\s*(' + _namedAlternatives +
+      r'))|(?:(' + _namedAlternatives + r')\s*[0-9][0-9,.]*))'
+  );
+
+  static String codeFor(String value) {
+    final original = value.trim();
+    final token = original.toUpperCase();
+    if (const <String>{'SR','ريال','ريال سعودي','ر.س','﷼','⃁'}
+        .contains(token)) return 'SAR';
+    if (const <String>{'ج.م','جنيه','جنيه مصري'}.contains(token)) return 'EGP';
+    if (const <String>{'د.إ','درهم','درهم إماراتي'}.contains(token)) return 'AED';
+    if (token == '€') return 'EUR';
+    if (token == '£') return 'GBP';
+    if (token == '₹') return 'INR';
+    if (token == r'$') return 'UNKNOWN'; // Ambiguous in many countries
+    // Unknown lowercase words such as "has" are not financial currencies.
+    // But genuine unsupported ISO codes in real bank messages must remain
+    // UNKNOWN, not slip into the SAR-only ledger as a valid amount.
+    const externalIsoCodes=<String>{
+      'MXN','BRL','CLP','COP','PEN','ARS','UYU','VES','BOB','PYG',
+      'CRC','GTQ','DOP','HNL','NIO','PAB','JMD','TTD','BSD',
+      'PLN','CZK','HUF','RON','BGN','RSD','UAH','RUB','GEL','MDL',
+      'ILS','NGN','KES','GHS','ETB','UGX','TZS','RWF','XOF','XAF',
+      'MUR','SCR','NPR','LKR','MMK','KHR','LAK','MNT','KZT','UZS',
+      'AZN','AMD','BAM','MKD','ALL','ISK','HRK','CUP','TWD','VND',
+      'BWP','NAD','MZN','AOA','ZMW','MWK','SDG','LYD','SYP','IRR',
+    };
+    if (RegExp(r'^[A-Za-z]{3}$').hasMatch(original) &&
+        !supported.contains(token) && original != token &&
+        !externalIsoCodes.contains(token)) return '';
+    // Bank templates often put AMT/TXN labels next to numbers or use
+    // uppercase English prose. They must never be mistaken for a
+    // second unsupported ISO currency alongside a valid SAR amount.
+    // Keep genuine ISO codes (including TRY, MAD, IDR) untouched.
+    if (const <String>{
+      'HAS','FOR','AND','THE','YOU','NEW','NOW','NOT','WAS','ARE',
+      'DID','GET','GOT','ONE','TWO','OUT','PER','VIA','OUR',
+      'AMT','TXN','TRX','NET','DUE',
+    }.contains(token)) return '';
+    // Common SMS action codes are NOT currencies even beside an amount.
+    if (const <String>{'POS','ATM','OTP','PIN','SMS','REF','TAX','VAT',
+      'FEE','BAL','PAY','P2P','ACH','AMT','TXN'}.contains(token)) return '';
+    return token;
+  }
+
+  static final RegExp adjacentAmount = RegExp(
+    r'(?:(?!(?:POS|ATM|OTP|PIN|SMS|REF|TAX|VAT|FEE|BAL|PAY|P2P|ACH|AMT|TXN)\b)(?:\b[A-Z]{3}(?=\s*[:：]?\s*[0-9٠-٩۰-۹])|SR\b|ريال(?:\s+سعودي)?|ر\.س|﷼|⃁|'
+    r'ج\.م|جنيه(?:\s+مصري)?|د\.إ|درهم(?:\s+إماراتي)?|[$€£₹])'
+    r'\s*[:：]?\s*[0-9٠-٩۰-۹][0-9٠-٩۰-۹,.\u066B\u066C]*)'
+    r'|(?:[0-9٠-٩۰-۹][0-9٠-٩۰-۹,.\u066B\u066C]*\s*'
+    r'(?:[A-Z]{3}\b|SR\b|ريال(?:\s+سعودي)?|ر\.س|﷼|⃁|'
+    r'ج\.م|جنيه(?:\s+مصري)?|د\.إ|درهم(?:\s+إماراتي)?|[$€£₹]))',
+    caseSensitive: false);
+
+  static final RegExp currencyToken = RegExp(
+    r'[A-Z]{3}(?![A-Za-z])|SR\b|ريال(?:\s+سعودي)?|ر\.س|﷼|⃁|'
+    r'ج\.م|جنيه(?:\s+مصري)?|د\.إ|درهم(?:\s+إماراتي)?|[$€£₹]',
+    caseSensitive: false);
+
+  static Set<String> currenciesForMessage(String raw) {
+    final found = <String>{};
+    for (final line in raw.split(RegExp(r'[\r\n]+'))) {
+      // Split combined SMS lines: "Purchase USD 10; Balance SAR 400".
+      // Ignore only the balance/fee clause, never the transaction clause.
+      for (final clause in line.split(RegExp(r'[;|]'))) {
+        final footer = RegExp(
+          r'available balance|remaining balance|current balance|'
+          r'\bbalance\b|الرصيد|المتاح|saldo disponible|solde disponible|'
+          r'commission|رسوم|service fee|fee amount|\bvat\b|ضريبة',
+          caseSensitive:false).firstMatch(clause);
+        final action = footer==null?clause:clause.substring(0,footer.start);
+        // Some English banks put the ISO code before the debit verb and
+        // the amount after it: "AED debited from account 136.00 ending with
+        // 1001". This still means a FOREIGN transaction: never fall back
+        // to SAR merely because code and amount are not adjacent.
+        final actionVerb=RegExp(
+          r'\b([A-Z]{3})\s+(?:debited|credited|withdrawn|received|paid|spent)\b',
+          caseSensitive:false).firstMatch(action);
+        if(actionVerb!=null){
+          final code=codeFor(actionVerb.group(1)!);
+          if(supported.contains(code))found.add(code);
+          else if(code.isNotEmpty)found.add('UNKNOWN');
+        }
+        // Named Arabic currencies can contain spaces. Scan their full names
+        // beside an amount before the generic ريال/جنيه/درهم token scanner.
+        final namedAction=_normalizeArabic(_westernDigits(action));
+        for (final match in _namedAdjacentAmount.allMatches(namedAction)) {
+          final name=match.group(1)??match.group(2);
+          if(name!=null)found.add(_arabicNames[name]??'UNKNOWN');
+        }
+        // A bare "دينار", "ليرة", etc. remains ambiguous and must not
+        // be posted as SAR even if no specific country was readable.
+        // A full "ريال قطري" or "جنيه إسترليني" is one currency,
+        // not a generic SAR/EGP token followed by an unrelated country.
+        // Remove only *matched amount + full-name* spans from the generic
+        // lexer, retaining all other explicit transaction currencies.
+        final genericAction=namedAction.replaceAll(_namedAdjacentAmount,' ');
+        // More than one clause may share a line. Even if a fully named
+        // currency was found, a *different*, unnamed "5 دينار" must still
+        // force an unknown-currency review.
+        if (RegExp(r'(?<![\u0600-\u06FF])(?:دينار|ليره|دولار|روبيه|'
+           r'كرونه|فرنك|راند|رينغيت|يوان|وون|بات|بيزو|تاكا|ين)'
+           r'(?![\u0600-\u06FF])').hasMatch(genericAction) &&
+            RegExp(r'[0-9]').hasMatch(genericAction)) {
+          found.add('UNKNOWN');
+        }
+        // Do not collapse an unsupported "ريال يمني", "جنيه سوداني",
+        // or "درهم ..." into the generic SAR, EGP, or AED token. The app
+        // only recognizes complete country-qualified names explicitly.
+        if (RegExp(
+          r'(?:[0-9][0-9,.]*\s*(?:ريال|جنيه|درهم)\s+'
+          r'[\u0600-\u06FF]{2,}(?:\s+[\u0600-\u06FF]{2,}){0,2}|'
+          r'(?:ريال|جنيه|درهم)\s+[\u0600-\u06FF]{2,}'
+           r'(?:\s+[\u0600-\u06FF]{2,}){0,2}'
+          r'\s*[0-9][0-9,.]*)'
+        ).hasMatch(genericAction)) {
+          found.add('UNKNOWN');
+        }
+        for (final expression in adjacentAmount.allMatches(genericAction)) {
+          for (final token in currencyToken.allMatches(expression.group(0)!)) {
+          final code = codeFor(token.group(0)!);
+          if (supported.contains(code) || code == 'UNKNOWN') {
+            found.add(code);
+          } else if (RegExp(r'^[A-Z]{3}$').hasMatch(code)) {
+            found.add('UNKNOWN');
+          }
+          }
+        }
+      }
+    }
+    return found;
+  }
+
+  /// A pure currency precision table shared by display, FX and SMS parsing.
+  /// This does not authorize money to be posted to a financial ledger.
+  static int minorDigits(String currency) {
+    if (const <String>{'JPY','KRW'}.contains(currency)) return 0;
+    if (const <String>{'BHD','KWD','OMR','TND','JOD','IQD'}
+        .contains(currency)) return 3;
+    return 2;
+  }
+
+  static String _westernDigits(String source) {
+    const ar='٠١٢٣٤٥٦٧٨٩', fa='۰۱۲۳۴۵۶۷۸۹';
+    return source.replaceAllMapped(RegExp(r'[٠-٩۰-۹]'),(match){
+      final ch=match.group(0)!;
+      final i=ar.indexOf(ch);
+      return (i>=0?i:fa.indexOf(ch)).toString();
+    }).replaceAll('٫','.').replaceAll('٬',',');
+  }
+
+  /// Never turn an ambiguous 1,234 into 1.234 (or vice versa).
+  /// Decimal punctuation is normalized only when grouping is unambiguous.
+  static String? _canonicalMoney(String raw,int digits) {
+    var value=_westernDigits(raw);
+    if (!RegExp(r'^[0-9][0-9,.]*$').hasMatch(value)) return null;
+    final comma=value.lastIndexOf(','),dot=value.lastIndexOf('.');
+    if (comma>=0 && dot>=0) {
+      final separator=comma>dot?',':'.';
+      final groups=separator==','?'.':',';
+      final pieces=value.split(separator);
+      if (pieces.length!=2 ||
+          !RegExp(r'^[0-9]{1,3}(?:[,.][0-9]{3})+$').hasMatch(pieces.first) ||
+          !RegExp(r'^[0-9]{1,3}$').hasMatch(pieces.last) ||
+          !pieces.first.contains(groups)) return null;
+      final integer=pieces.first.replaceAll(groups,'');
+      value=integer+'.'+pieces.last;
+    } else if (comma>=0 || dot>=0) {
+      final separator=comma>=0?',':'.';
+      final parts=value.split(separator);
+      if(parts.length>2) {
+        if (!RegExp('^[0-9]{1,3}('+RegExp.escape(separator)+r'[0-9]{3})+$')
+            .hasMatch(value)) return null;
+        value=parts.join('');
+      } else {
+        final fraction=parts.last;
+        if (separator==',' && fraction.length==3 && digits==0 &&
+            RegExp(r'^[0-9]{1,3}$').hasMatch(parts.first)) {
+          // JPY/KRW cannot represent fractional units. A lone 1,234
+          // therefore has one unambiguous interpretation: 1234 units.
+          value=parts.first+fraction;
+        } else {
+          if (fraction.length==3 && (digits<3 || separator==',')) {
+            // 1,234 in a fractional currency is locale-ambiguous.
+            return null;
+          }
+          if (fraction.length>digits || digits==0) {
+            return null;
+          }
+          value=parts.first+'.'+fraction;
+        }
+      }
+    }
+    if(!RegExp(r'^[0-9]{1,12}(?:\.[0-9]{1,3})?$').hasMatch(value)) {
+      return null;
+    }
+    return value;
+  }
+
+  /// Returns the sole action amount in source units, or null when there is
+  /// insufficient evidence. Never includes a balance, fee or second amount.
+  /// This parser is a *suggestion* and must not write into the SAR ledger.
+  static ({double amount,String currency,String formatted})? originalAmount(
+      String raw) {
+    final found=currenciesForMessage(raw);
+    if(found.length!=1 || found.contains('UNKNOWN'))return null;
+    final currency=found.single;
+    final scale=minorDigits(currency);
+    final normalized=_normalizeArabic(_westernDigits(raw));
+    final footer=RegExp(
+      r'available balance|remaining balance|current balance|'
+      r'\bbalance\b|الرصيد|المتاح|commission|service fee|'
+      r'fee amount|رسوم|ضريبة|vat\b',
+      caseSensitive:false).firstMatch(normalized);
+    final beforeBalance=footer==null?normalized:normalized.substring(0,footer.start);
+    // Service fees are not the original posted transaction amount. Avoid
+    // ever selecting a fee when the action contains no verified debit/credit.
+    final action=beforeBalance.split(RegExp(r'[\r\n]+')).where((line)=>
+      !RegExp(r'^\s*(?:fees?|service\s+fee|commission|رسوم|الرسوم|ضريبة|vat)\s*[:：-]?',
+        caseSensitive:false).hasMatch(line)).join('\n');
+    final escaped=currency=='SAR'?
+      r'(?:SAR|SR|ريال(?:\s+سعودي)?|ر\.?\s*س\.?|﷼|⃁)':
+      currency=='EGP'?
+      r'(?:EGP|ج\.م|جنيه(?:\s+مصري)?)':
+      currency=='AED'?
+      r'(?:AED|د\.إ|درهم(?:\s+إماراتي)?)':
+      currency=='EUR'?r'(?:EUR|€)':
+      currency=='GBP'?r'(?:GBP|£)':
+      currency=='INR'?r'(?:INR|₹)':RegExp.escape(currency);
+    final localizedAliases=_arabicNames.entries
+        .where((entry)=>entry.value==currency)
+        .map((entry)=>RegExp.escape(entry.key)).join('|');
+    final acceptedCurrency=localizedAliases.isEmpty?escaped:
+        '(?:'+escaped+'|'+localizedAliases+')';
+    // Explicit codes only: do not treat a random numeral, card or reference
+    // as a financial amount. Currency may touch the number on either side.
+    final pattern=r'([0-9][0-9,.]{0,20})(?![0-9,.])';
+    // Horizontal whitespace only: SR on one line must NOT bind to
+    // the next line's date, card suffix or merchant number.
+    final before=RegExp('(?<![A-Za-z])'+acceptedCurrency+r'[ \t]*[:：]?[ \t]*'+pattern,
+      caseSensitive:false);
+    final after=RegExp(pattern+r'[ \t]*'+acceptedCurrency+r'(?![A-Za-z])',
+      caseSensitive:false);
+    final matches=<String>[
+      ...before.allMatches(action).map((m)=>m.group(1)!),
+      ...after.allMatches(action).map((m)=>m.group(1)!),
+    ];
+    // Only this constrained "debited from account [amount] ending with ID"
+    // bank layout may suggest its separated amount. Never take account ID
+    // or balance, and the review gate still blocks foreign-as-SAR writes.
+    if(matches.isEmpty){
+      final separated=RegExp(
+        '(?<![A-Za-z])'+acceptedCurrency+
+        r'\s+(?:debited|credited)\s+(?:from|to)\s+account\s+'+
+        pattern+r'\s+ending\s+with\s+[0-9]{3,6}\b',
+        caseSensitive:false).firstMatch(action);
+      if(separated!=null)matches.add(separated.group(1)!);
+    }
+    if(matches.length!=1)return null;
+    // A comma-grouped integer in a specifically labelled English SAR
+    // Amount field is unambiguous in this bank template: "Amount: 1,900 SAR".
+    // Do not loosen generic "USD 1,234" or 3-decimal JOD ambiguity.
+    final labelledSarThousands=currency=='SAR'&&
+      RegExp(r'^[0-9]{1,3}(?:,[0-9]{3})+$').hasMatch(matches.single)&&
+      RegExp(r'(?:^|\n)\s*(?:Amount|Amt)\s*[:：]\s*'
+        r'[0-9]{1,3}(?:,[0-9]{3})+\s*(?:SAR|SR)(?![A-Za-z])',
+        caseSensitive:false).hasMatch(action);
+    final canonical=_canonicalMoney(matches.single,scale)??
+      (labelledSarThousands?matches.single.replaceAll(',',''):null);
+    // Fail closed if the amount format is ambiguous. Do not coerce a
+    // missing canonical amount into a finance preview or source total.
+    if(canonical==null)return null;
+    final amount=double.tryParse(canonical);
+    if(amount==null||!amount.isFinite||amount<=0||amount>1e9)return null;
+    final factor=scale==3?1000:scale==0?1:100;
+    final minor=amount*factor;
+    if((minor-minor.round()).abs()>0.000001)return null;
+    return (amount:amount,currency:currency,formatted:canonical+' '+currency);
+  }
+
+  static String? originalAmountPreview(String raw)=>originalAmount(raw)?.formatted;
+
+  /// Pending authorizations, one-time codes and failed notices do not
+  /// represent settled transactions, even when they repeat a card amount.
+  static bool isUnpostedNotice(String raw) => RegExp(
+    r'^\s*(?:Online\s+Pre[-\s]?Auth(?:ori[sz]ation)?|'
+    r'Pre[-\s]?Authori[sz]ation|Authorization\s+Hold|'
+    r'Please\s+use\s+the\s+code|OTP\b|Verification\s+Code|'
+    r'Declined\s+Transaction|Transaction\s+Declined|'
+    r'Failed\s+Transaction|Transaction\s+Failed|'
+    r'Unsuccessful\s+Transaction)\b|'
+    r'^\s*(?:Transaction\s+)?Status\s*[:：]\s*'
+    r'(?:Pending|Declined|Failed|Rejected|Cancelled|Canceled)\b',
+    caseSensitive:false,multiLine:true,
+  ).hasMatch(raw);
+
+  /// Separate source-currency totals. Never add AED, SAR, JOD etc. together
+  /// or imply that an unresolved amount is zero.
+  static ({Map<String,double> totals,int unresolved}) sourceTotals(
+      List<String> messages) {
+    // Source totals are display-only but must still be summed in exact
+    // 0/2/3-minor-unit integers. Binary double accumulation can misstate
+    // a multi-message finance review (0.10 + 0.20 != exactly 0.30).
+    final minorTotals=<String,int>{};
+    var unresolved=0;
+    for(final message in messages){
+      // Exclude non-posted notices entirely, rather than reporting their
+      // quoted amount as spend or as an unresolved financial transaction.
+      if(isUnpostedNotice(message))continue;
+      final original=originalAmount(message);
+      if(original==null){
+        unresolved++;
+        continue;
+      }
+      final digits=minorDigits(original.currency);
+      final factor=digits==0?1:digits==3?1000:100;
+      final scaled=original.amount*factor;
+      final minor=scaled.isFinite&&scaled>0&&scaled<9007199254740991
+        ?scaled.round():null;
+      if(minor==null||(scaled-minor).abs()>1e-6){
+        unresolved++;
+        continue;
+      }
+      final previous=minorTotals[original.currency]??0;
+      if(previous>9007199254740991-minor){
+        unresolved++;
+        continue;
+      }
+      minorTotals[original.currency]=previous+minor;
+    }
+    final totals=<String,double>{
+      for(final entry in minorTotals.entries)
+        entry.key:entry.value/(minorDigits(entry.key)==0
+          ?1:minorDigits(entry.key)==3?1000:100),
+    };
+    return (totals:Map<String,double>.unmodifiable(totals),
+      unresolved:unresolved);
+  }
+
+
+  static bool requiresReviewForSarLedger(String raw) {
+    final currencies = currenciesForMessage(raw);
+    return currencies.length > 1 || currencies.any((code) => code != 'SAR');
+  }
+
+  static WaffraSmsCurrencyBatch summarize(List<String> messages) {
+    final counts = <String, int>{};
+    for (final message in messages) {
+      if(isUnpostedNotice(message))continue;
+      for (final currency in currenciesForMessage(message)) {
+        counts[currency] = (counts[currency] ?? 0) + 1;
+      }
+    }
+    return WaffraSmsCurrencyBatch(Map<String, int>.unmodifiable(counts));
+  }
+}
+
+class WaffraSmsCurrencyBatch {
+  const WaffraSmsCurrencyBatch(this.counts);
+  final Map<String, int> counts;
+  bool get hasMixedCurrencies => counts.keys.length > 1;
+  bool get needsCurrencyReview => counts.keys.any((code) => code != 'SAR');
+  String get summary => (counts.entries.toList()
+    ..sort((a,b) => a.key.compareTo(b.key)))
+    .map((item) => item.key + ': ' + item.value.toString()).join(' • ');
+}

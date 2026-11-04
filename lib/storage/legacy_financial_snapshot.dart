@@ -166,9 +166,6 @@ class WaffraLegacySnapshotInspector {
             issues.add(WaffraLegacyIssue(key, i, 'invalid_$field'));
           }
         }
-        if (key == 'waffra_goals_v24' && amountToHalalas(data['target']) == 0) {
-          issues.add(WaffraLegacyIssue(key, i, 'zero_goal_target'));
-        }
         if (isMoney) {
           final amount = amountToHalalas(data['amount']);
           if (data['income'] is! bool) {

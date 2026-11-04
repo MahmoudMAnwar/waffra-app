@@ -1,0 +1,75 @@
+name: M371 Goals Wallet / Budget Directory Android UI Regression
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/m371-goal-wallet-budget-android-regression.yml'
+      - 'lib/main.dart'
+      - 'lib/waffra_budget_directory.part.dart'
+      - 'lib/storage/waffra_authoritative_widget_balance.dart'
+      - 'lib/storage/waffra_fresh_finance_domain_repository.dart'
+      - 'lib/storage/legacy_snapshot_preflight.dart'
+      - 'test/m371_goal_wallet_and_budgets_regression_test.dart'
+      - 'test/m362_goal_wallet_due_settlement_test.dart'
+      - 'test/m343_goal_recurring_named_budgets_test.dart'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  m412-impact:
+    name: M412 Only Run Tests Impacted By Latest PR Update
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.impact.outputs.run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Compare exact before/after change set (missing evidence means RUN)
+        id: impact
+        run: python3 scripts/qa/m412_pr_changed_impact.py --workflow .github/workflows/m371-goal-wallet-budget-android-regression.yml
+
+  m371-screenshot-accounting-and-ui:
+    needs: m412-impact
+    if: ${{ needs.m412-impact.outputs.run == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Analyze changed finance and UI code
+        run: |
+          dart analyze lib/main.dart lib/waffra_budget_directory.part.dart \
+            lib/storage/waffra_authoritative_widget_balance.dart \
+            lib/storage/waffra_fresh_finance_domain_repository.dart \
+            lib/storage/legacy_snapshot_preflight.dart \
+            test/m371_goal_wallet_and_budgets_regression_test.dart \
+            test/m362_goal_wallet_due_settlement_test.dart \
+            test/m343_goal_recurring_named_budgets_test.dart
+      - name: Run screenshot wallet and category layout regressions
+        run: |
+          flutter test --reporter expanded \
+            test/m371_goal_wallet_and_budgets_regression_test.dart \
+            test/m362_goal_wallet_due_settlement_test.dart \
+            test/m343_goal_recurring_named_budgets_test.dart \
+            test/m359_budget_directory_and_templates_test.dart \
+            test/m357_budget_hierarchy_and_filter_layout_test.dart \
+            test/waffra_widget_balance_source_authority_test.dart \
+            test/storage/m364_sqlcipher_finance_domain_test.dart
+      - name: Confirm production source still requires certified activation
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('lib/storage/waffra_production_cutover_release_gate.dart').read_text()
+          assert 'bool get automaticallyActivateSqlCipher => false;' in s
+          print('M371: no premature encrypted production cutover.')
+          PY

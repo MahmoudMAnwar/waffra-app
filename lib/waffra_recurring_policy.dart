@@ -8,6 +8,48 @@ class WaffraRecurringPolicy {
   return DateTime(year,month,day.clamp(1,lastDay));
  }
 
+ /// First due date not earlier than either today or the schedule start.
+ /// A newly scheduled future recurring item must never be presented as
+ /// payable this month before its actual first eligible occurrence.
+ static DateTime nextDueDate({
+  required DateTime today, required DateTime startAt, required int day,
+ }) {
+  if(day<1||day>31)throw ArgumentError.value(day,'day','Day must be 1..31');
+  final current=DateTime(today.year,today.month,today.day);
+  final earliest=DateTime(startAt.year,startAt.month,startAt.day);
+  final threshold=current.isAfter(earliest)?current:earliest;
+  var due=dueDate(threshold.year,threshold.month,day);
+  if(due.isBefore(threshold)) {
+   due=dueDate(threshold.year,threshold.month+1,day);
+  }
+  return due;
+ }
+
+ /// Date to show in the recurring overview. Unlike the next calendar
+ /// occurrence, the current month's unpaid charge remains due/overdue.
+ /// A postponement changes the actionable date, never the ledger identity.
+ /// This never creates money or marks a schedule paid.
+ static DateTime nextActionableDue({
+  required DateTime today,required DateTime startAt,required int day,
+  required bool currentMonthPaid,DateTime? postponedUntil,
+ }) {
+  if(day<1||day>31)throw ArgumentError.value(day,'day','Day must be 1..31');
+  final current=DateTime(today.year,today.month,today.day);
+  final first=DateTime(startAt.year,startAt.month,startAt.day);
+  final due=dueDate(current.year,current.month,day);
+  if(currentMonthPaid||due.isBefore(first)) {
+   return nextDueDate(
+    today:DateTime(current.year,current.month+1,1),
+    startAt:first,day:day);
+  }
+  if(postponedUntil!=null) {
+   final moved=DateTime(
+    postponedUntil.year,postponedUntil.month,postponedUntil.day);
+   if(moved.isAfter(due))return moved;
+  }
+  return due;
+ }
+
  static String entryId(String scheduleId,DateTime due)=>
   'rec_${scheduleId}_${due.year}_${due.month}';
 

@@ -18,16 +18,44 @@ void main() {
   test('M176 every existing category, goal, recurring and budget save is tagged', () {
     final home = File('lib/main.dart').readAsStringSync();
     final trash = File('lib/waffra_recurring_trash.part.dart').readAsStringSync();
-    const routeCountsInHome = <String, int>{
-      'categoryCreateEditDeleteRestore': 10,
+    // The newer fail-closed _persistModuleOrReload path replaces some
+    // legacy direct persist calls. M373 also split named budget creation/toggle
+    // away from category edits. Count actual guarded category mutation routes
+    // without miscounting a removed category-backed budget writer.
+    const minimumTaggedIntents = <String, int>{
+      'categoryCreateEditDeleteRestore': 9,
       'goalCreateEditDeleteRestore': 6,
       'recurringCreateEditDeleteRestore': 3,
       'challengeAndBudgetUpdate': 4,
     };
-    for (final entry in routeCountsInHome.entries) {
-      final tag = 'persist(route:WaffraFinanceRoute.${entry.key})';
-      expect(tag.allMatches(home).length, entry.value,
-        reason: 'Every reviewed Home finance write needs its own source intent');
+    for (final entry in minimumTaggedIntents.entries) {
+      final token = 'WaffraFinanceRoute.${entry.key}';
+      expect(token.allMatches(home).length,
+        greaterThanOrEqualTo(entry.value),
+        reason: 'Existing module writes must retain explicit source intent');
+    }
+    // The removed tenth category write became a standalone named-budget
+    // mutation, still under the guarded finance source and durable reload.
+    expect(home, contains('namedBudgets.add(WaffraNamedBudget('));
+    for (final operation in <String>[
+      'standalone-budget-create',
+      'standalone-budget-edit',
+      'standalone-budget-toggle',
+      'standalone-budget-soft-delete',
+    ]) {
+      expect(home, contains("operation:'$operation'"),
+        reason: 'Every standalone budget mutation needs a guarded commit');
+    }
+    expect(home, contains('Future<bool> _persistModuleOrReload('));
+    expect(home, contains('await persist(route:route);'));
+    expect(home, contains('await _loadFinanceSafely()'));
+    for(final name in <String>[
+      'categoryCreateEditDeleteRestore',
+      'goalCreateEditDeleteRestore',
+      'recurringCreateEditDeleteRestore',
+    ]) {
+      expect(home, contains('_persistModuleOrReload(WaffraFinanceRoute.$name'),
+        reason: 'Edited finance modules must reconcile after rejected commits');
     }
     expect('persist(route:WaffraFinanceRoute.recurringCreateEditDeleteRestore)'
       .allMatches(trash).length, 3,

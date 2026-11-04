@@ -20,8 +20,12 @@ void main(){
   expect(source,contains('c.income==income&&c.isSubcategory'));
   expect(source,contains('final mainCategories=waffraManualCategoryParents(available,income);'));
   expect(source,contains('final subcategories=waffraManualCategoryChildren(available,income,selectedParentId);'));
-  expect(source,contains('parentId:mainId'));
-  expect(source,contains("onTap:()=>Navigator.pop(dialogCtx,item.name)"));
+  expect(source,contains('typeIncome:income,parentId:selectedParentId'));
+  expect(source,contains('income:typeIncome,parentId:categoryParentId,'));
+  expect(source,contains('Navigator.pop(dialogCtx,item.name)'));
+  expect(source,contains("operation:'transaction-category-picker-create'"));
+  expect(source,contains('))return null;'));
+  expect(source,contains('return created.name;'));
   expect(waffraCategoryCatalog.isNotEmpty,isTrue);
   expect(source,contains('waffraCanAssignManualCategory(categories,'));
  });

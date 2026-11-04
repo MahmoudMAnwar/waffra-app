@@ -1,0 +1,23 @@
+WAFFRA M380 | User-facing budget confirmation, copy cleanup and back navigation
+Date: 2026-11-02
+Base: main 5f6b35cd82f475f45dc06004d3c77197a4cedd08
+PR: pending
+
+- Existing active budget(s): saving a new unlinked expense now opens a clear,
+  reversible Yes/Back confirmation. Cancel stays in the same transaction editor
+  with unchanged fields. Applies to the shared manual/receipt-OCR/SMS editor.
+- SMS batch and individual review: any unlinked expense in an existing budget
+  directory must be explicitly acknowledged before commit; cancel retains
+  the review list and selections. No additional financial write or relink.
+- No existing usable budgets: do not nag or block the user. Income and old
+  unlinked items remain unchanged.
+- Replaced redundant optional labels, unclear historic budget-choice subtitles,
+  and misleading nonessential encrypted-trash UI copy with short task-oriented
+  wording; retained material security warnings and failure gates.
+- Android back: closes expanded add menu first, then account/goals layer, then
+  previous footer tab when available. An explicit Return Home and tutorial
+  start/end clear navigation history. UI history is memory-only.
+- Added focused M380 widget and source regression tests.
+- No changes to SQLCipher activation, ledger amounts, migration, or backup.
+- Do not certify until exact-head CI, Android RTL/LTR device navigation,
+  older-version data upgrade and main build verification pass.

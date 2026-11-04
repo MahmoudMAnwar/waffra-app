@@ -7,9 +7,15 @@ const MethodChannel _messageChannel=MethodChannel('waffra/messages');
 /// Only holds text the user chose to share. Never reads the inbox.
 final ValueNotifier<String?> waffraIncomingSms=ValueNotifier<String?>(null);
 
+/// Native receiver reports *availability*, never raw data, over this event.
+final ValueNotifier<int> waffraAutoSmsUpdates=ValueNotifier<int>(0);
+
 Future<void> initializeWaffraMessages()async{
  if(!Platform.isAndroid)return;
  _messageChannel.setMethodCallHandler((call)async{
+  if(call.method=='autoSmsAvailable'){
+   waffraAutoSmsUpdates.value++;
+  }
   if(call.method=='sharedText'){
    final value=call.arguments;
    if(value is String&&value.trim().isNotEmpty){

@@ -1,0 +1,20 @@
+M416 — SAUDI-ONLY OFFLINE RELEASE CANDIDATE (DRAFT, NOT MERGED)
+
+Enabled in Saudi release:
+- Default ledger/display: SAR only. Arabic wording: Saudi. Arabic/English application languages remain supported.
+- Ask Waffra: predefined, deterministic local questions about recorded monthly income, spending, category breakdowns, and user-created named budgets; clear to reset list.
+- Bank SMS: existing local deterministic Saudi parser and tiny offline intent classifier; user review is required before any posting.
+- Tools currency converter, gold and oil sections and gold FX action remain enabled exactly as before.
+
+Temporarily disabled (Global code retained):
+- Location/country-detection first-run page and related Android permission prompt.
+- Receipt/photo OCR to transaction creation (existing attachments untouched).
+- Qwen text inference in bank SMS and Ask Waffra; other optional AI features are unchanged.
+- Country, dialect and app-wide display currency controls; Tools currency converter and gold FX button are *not* disabled.
+- International country flags/codes and country picker removed from Saudi registration and account profile. Google and local numbers are entered as 05XXXXXXXX only (10 digits); existing Saudi Google +966 records remain readable without migration.
+
+Safety/release:
+- No migration or rewriting of current transactions, account credentials, monthly budgets, goals, recurring data, attachments, or Global preferences.
+- Foreign-currency bank SMS remain non-postable as SAR.
+- Must pass exact HEAD analyzer, SMS/finance/backup regression, phone-permission and Android sign-in/UI checks.
+- PR to remain Draft, independent from #348 and #350 pending reconciliation. No release APK is certified by this file.

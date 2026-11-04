@@ -92,12 +92,25 @@ class WaffraFreshModulesRepository {
       case WaffraFinanceModule.categories:
         if (data['income'] is! bool) throw ArgumentError('Category type is mandatory.');
         _halalas(data['budget'] ?? 0);
+        if(data['budgetLabel'] != null &&
+           (data['budgetLabel'] is! String ||
+            (data['budgetLabel'] as String).length > 80)){
+          throw ArgumentError('Invalid budget label.');
+        }
         final p = data['parentId'];
         if (p != null && p is! String) throw ArgumentError('Invalid parent category.');
         break;
       case WaffraFinanceModule.goals:
-        _halalas(data['target'], positive: true);
+        if(data['dueDate'] != null &&
+           (data['dueDate'] is! String ||
+            DateTime.tryParse(data['dueDate'] as String)==null)){
+          throw ArgumentError('Invalid goal deadline.');
+        }
+        _halalas(data['target']);
         _halalas(data['saved'] ?? 0);
+        if(data['active'] != null && data['active'] is! bool){
+          throw ArgumentError('Invalid goal active flag.');
+        }
         break;
       case WaffraFinanceModule.recurring:
         if (data['income'] is! bool) throw ArgumentError('Recurring type is mandatory.');
@@ -105,6 +118,12 @@ class WaffraFreshModulesRepository {
         final day = data['day'];
         if (day is! int || day < 1 || day > 31) {
           throw ArgumentError('Recurring due day must be 1 through 31.');
+        }
+        if(data['linkedGoalId'] != null &&
+           (data['linkedGoalId'] is! String ||
+            (data['linkedGoalId'] as String).trim().isEmpty ||
+            (data['linkedGoalId'] as String).length > 256)){
+          throw ArgumentError('Invalid recurring linked goal.');
         }
         final date = data['startAt'];
         if (date is! String || DateTime.tryParse(date) == null) {
@@ -188,7 +207,7 @@ class WaffraFreshModulesRepository {
           break;
         case WaffraFinanceModule.goals:
           final values = <Object?>[
-            data['name'], _halalas(data['target'], positive: true),
+            data['name'], _halalas(data['target']),
             _halalas(data['saved'] ?? 0), raw,
           ];
           if (replaceExisting) {

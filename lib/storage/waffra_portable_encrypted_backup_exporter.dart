@@ -1,11 +1,16 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:drift/drift.dart';
+
+import '../waffra_sms_fx_review.dart';
+
 import 'legacy_financial_snapshot.dart';
 import 'waffra_atomic_finance_snapshot.dart';
 import 'waffra_encrypted_receipt_vault.dart';
 import 'waffra_experimental_writer_gate.dart';
 import 'waffra_finance_read_view.dart';
+import 'waffra_fresh_finance_domain_schema.dart';
 import 'waffra_portable_backup_v2.dart';
 import 'waffra_portable_encrypted_vault_restorer.dart';
 
@@ -41,11 +46,94 @@ class WaffraPortableEncryptedBackupExporter {
       disposableDirectory: writerDirectory, experimentalEnabled: true,
     ).withExclusiveAccess(() async {
       await verifySourceUnderLock();
+      // Portable V2 only archives the canonical legacy-shaped snapshot and
+      // receipt bytes. New relational domain rows (budget allocations,
+      // verified goal movements, projects and user-confirmed subscriptions)
+      // have no V2 fields. Refuse a misleading 'successful' partial backup.
+      // An empty domain remains compatible with existing V2 exports.
+      final domainMarker = await snapshot.store.customSelect(
+        "SELECT name FROM sqlite_master WHERE type='table' "
+        "AND name='fresh_finance_domain_revision'",
+      ).get();
+      if (domainMarker.isEmpty) {
+        for (final table in WaffraFreshFinanceDomainSchema.domainTables) {
+          final stray = await snapshot.store.customSelect(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+            variables: [Variable.withString(table)],
+          ).get();
+          if (stray.isNotEmpty) {
+            throw StateError('Unversioned SQLCipher domain data blocks backup.');
+          }
+        }
+      }
+      if (domainMarker.isNotEmpty) {
+        await WaffraFreshFinanceDomainSchema.requireReady(snapshot.store);
+        for (final table in WaffraFreshFinanceDomainSchema.domainTables) {
+          final row = await snapshot.store.customSelect(
+            'SELECT count(*) AS n FROM ' + table,
+          ).getSingle();
+          if (row.read<int>('n') != 0) {
+            throw StateError(
+              'Portable backup V2 cannot preserve saved SQLCipher finance '
+              'domain records. Export stopped to avoid silent data loss.',
+            );
+          }
+        }
+      }
       final state = await snapshot.read();
       WaffraFinanceReadView.fromEncrypted(state).requireIntegrity();
       final finance = Map<String, Object?>.from(state.values);
       final raw = finance['entries'];
       final rows = raw == null ? <dynamic>[] : jsonDecode(raw as String) as List;
+      // M293: SQLCipher ledger and encrypted snapshot are currently two
+      // independently gated representations. Never export a backup that
+      // silently drops FX provenance present in the authoritative SQL row.
+      final snapshotFx = <String, Map<String, dynamic>>{};
+      for (final rawRow in rows) {
+        final row = Map<String, dynamic>.from(rawRow as Map);
+        if (row.containsKey('waffra_fx_provenance_v1')) {
+          final id = row['id'];
+          if (id is! String || id.isEmpty || snapshotFx.containsKey(id)) {
+            throw StateError('Duplicate or missing FX archive entry ID.');
+          }
+          snapshotFx[id] = row;
+        }
+      }
+      final storedFxIds = <String>{};
+      final table = await snapshot.store.customSelect(
+        "SELECT name FROM sqlite_master WHERE type='table' "
+        "AND name='fresh_finance_entries'",
+      ).get();
+      if (table.isNotEmpty) {
+        final ledgerRows = await snapshot.store.customSelect(
+          'SELECT entry_id,amount_minor,source_json FROM fresh_finance_entries',
+        ).get();
+        for (final ledgerRow in ledgerRows) {
+          final source = jsonDecode(ledgerRow.read<String>('source_json'));
+          if (source is! Map<String, dynamic> ||
+              !source.containsKey('waffra_fx_provenance_v1')) continue;
+          final id = ledgerRow.read<String>('entry_id');
+          final rawWitness = source['waffra_fx_provenance_v1'];
+          final backupWitness = snapshotFx[id]?['waffra_fx_provenance_v1'];
+          if (rawWitness is! Map<String, dynamic> ||
+              backupWitness is! Map<String, dynamic>) {
+            throw StateError('FX provenance missing from encrypted snapshot.');
+          }
+          final verified = WaffraSmsFxReview.fromProvenanceJson(rawWitness);
+          if (verified.convertedCurrency != 'SAR' ||
+              verified.convertedMinor != ledgerRow.read<int>('amount_minor') ||
+              jsonEncode(rawWitness) != jsonEncode(backupWitness) ||
+              snapshotFx[id]?['amount'] !=
+                  ledgerRow.read<int>('amount_minor') / 100) {
+            throw StateError('FX ledger and backup snapshot disagree.');
+          }
+          storedFxIds.add(id);
+        }
+      }
+      if (storedFxIds.length != snapshotFx.length ||
+          snapshotFx.keys.any((id) => !storedFxIds.contains(id))) {
+        throw StateError('Unverified FX data cannot be included in a backup.');
+      }
       final receipts = <WaffraReceiptBackupPart>[];
       for (final rawRow in rows) {
         final row = Map<String, dynamic>.from(rawRow as Map);

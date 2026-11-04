@@ -4,6 +4,11 @@ name: Waffra Android Full Startup Smoke (Nightly or Manual)
 
 on:
   workflow_dispatch:
+  # Re-test the exact new main SHA immediately when this smoke gate is fixed.
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/android-full-smoke.yml'
   schedule:
     - cron: '0 2 * * *'
 
@@ -62,6 +67,9 @@ jobs:
 
       - name: Generate Android project (without duplicate pub get)
         run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
+
+      - name: Configure optional approximate location only (no background or SMS)
+        run: python3 scripts/qa/m290_configure_country_permissions.py .
 
       - name: Match native Android launch background to Waffra emerald
         shell: bash
@@ -238,6 +246,9 @@ jobs:
           template=Path('native/WaffraMainActivity.kt').read_text()
           assert 'waffra/privacy' in template and 'waffra/messages' in template
           activity.write_text(template)
+          for filename in ('WaffraAutoSmsStore.kt', 'WaffraAutoSmsReceiver.kt',
+                           'WaffraAutoSmsWorker.kt', 'WaffraAutoSmsNotifications.kt'):
+              (activity.parent/filename).write_text((Path('native')/filename).read_text())
 
           manifest=Path('android/app/src/main/AndroidManifest.xml')
           xml=manifest.read_text()
@@ -255,9 +266,54 @@ jobs:
                   raise SystemExit('Could not locate generated MainActivity')
               xml=xml[:close]+filter_xml+chr(10)+'    '+xml[close:]
               manifest.write_text(xml)
-          if re.search(r'<uses-permission[^>]*\\b(?:READ_SMS|RECEIVE_SMS|READ_CALL_LOG)\\b',xml):
-              raise SystemExit('SMS inbox permissions must never be requested')
-          print('Enabled user-triggered text sharing and messaging launch without inbox access')
+          # M417 draft-only: sensitive SMS access requires Play review before release.
+          for permission in ('READ_SMS', 'RECEIVE_SMS'):
+              entry=f'<uses-permission android:name="android.permission.{permission}" />'
+              if entry not in xml:
+                  xml=xml.replace('<application','    '+entry+'\n    <application',1)
+          receiver='''
+              <receiver android:name="com.waffra.app.WaffraAutoSmsReceiver"
+                  android:exported="true"
+                  android:permission="android.permission.BROADCAST_SMS">
+                  <intent-filter>
+                      <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+                  </intent-filter>
+              </receiver>
+          '''
+          if 'com.waffra.app.WaffraAutoSmsReceiver' not in xml:
+              xml=xml.replace('</application>',receiver+'\n    </application>',1)
+          # WorkManager executes the same verified Dart finance source after
+          # receiving SMS while the UI is closed. No new native ledger writes.
+          gradle=Path('android/app/build.gradle.kts')
+          script=gradle.read_text()
+          dep='implementation("androidx.work:work-runtime-ktx:2.11.2")'
+          if dep not in script:
+              script+='\n// M418 opt-in bank SMS background finance verification\ndependencies { '+dep+' }\n'
+              gradle.write_text(script)
+          manifest.write_text(xml)
+          assert all('android.permission.'+p in xml for p in ('READ_SMS','RECEIVE_SMS'))
+          assert 'WaffraAutoSmsReceiver' in xml and 'READ_CALL_LOG' not in xml
+          print('M417 draft: opt-in, scoped SMS bank intake; Play approval pending')
+          PY
+
+      # Match the production ARM64 workflow: native WaffraMainActivity.kt
+      # imports com.google.firebase.auth.FirebaseAuth on both ARM64 and x64.
+      - name: Install native Firebase Auth SDK dependency (M219)
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('android/app/build.gradle.kts')
+          kotlin=p.read_text()
+          if 'com.google.firebase:firebase-auth' not in kotlin:
+              kotlin += '''
+          dependencies {
+              implementation(platform("com.google.firebase:firebase-bom:34.0.0"))
+              implementation("com.google.firebase:firebase-auth")
+          }
+          '''
+              p.write_text(kotlin)
+          assert 'com.google.firebase:firebase-auth' in p.read_text()
           PY
 
       - name: Install compact circular widget and transparent quick-capture screen
@@ -298,6 +354,11 @@ jobs:
                       android:autoSizeMinTextSize="6sp" android:autoSizeMaxTextSize="14sp"
                       android:autoSizeStepGranularity="1sp"
                       android:textColor="#B8F5D6"/>
+                  <ImageView android:id="@+id/widget_riyal_icon"
+                      android:layout_width="14dp" android:layout_height="14dp"
+                      android:src="@drawable/waffra_sar_symbol"
+                      android:tint="#FFFFFF" android:visibility="gone"
+                      android:contentDescription="Saudi Riyal" />
                   <TextView android:id="@+id/widget_currency"
                       android:layout_width="wrap_content" android:layout_height="wrap_content"
                       android:text="ريال" android:textColor="#FFFFFF"
@@ -306,6 +367,12 @@ jobs:
               </LinearLayout>
               </FrameLayout>
           </FrameLayout>""")
+          # The Android widget uses the exact same PNG as Flutter/PDF.
+          riyal=Path('assets/Saudi_Riyal_Symbol-1.png')
+          assert riyal.is_file() and riyal.stat().st_size>0
+          symbol=root/'res/drawable-nodpi/waffra_sar_symbol.png'
+          symbol.parent.mkdir(parents=True,exist_ok=True)
+          symbol.write_bytes(riyal.read_bytes())
           drawable=root/'res/drawable'
           drawable.mkdir(parents=True,exist_ok=True)
           (drawable/'waffra_widget_bg.xml').write_text("""<?xml version="1.0" encoding="utf-8"?>
@@ -525,7 +592,9 @@ jobs:
           echo 'Gradle task output caching enabled.'
 
       - name: Install dependencies
-        run: flutter pub get
+        run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
 
       - name: Identify Flutter compilation-cache compatibility
         id: flutter_cache_identity
@@ -616,11 +685,63 @@ jobs:
       # The hosted Android emulator uses x86_64, hence an extra x64 APK is
       # only compiled in full-smoke mode; it must not slow every push.
       # Upload only the final ARM64 APK for users.
+      # Flutter's integration_test is a dev-only tool. Flutter create/pub
+      # sometimes leave its Java registrar in the release source tree even
+      # though the release classpath correctly excludes the test plugin.
+      # Remove ONLY this debug test registration; keep production plugins.
+      - name: Drop debug-only integration test registration for release
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java')
+          if not path.exists():
+              print('No stale generated Java registrant on this SDK')
+          else:
+              text=path.read_text()
+              statement='flutterEngine.getPlugins().add(new dev.flutter.plugins.integration_test.IntegrationTestPlugin());'
+              if statement in text:
+                  text=text.replace(statement,
+                      '// integration_test is debug/test-only and not on the release classpath.')
+                  path.write_text(text)
+                  print('Excluded test-only registrar from release compilation')
+              elif 'dev.flutter.plugins.integration_test.IntegrationTestPlugin()' in text:
+                  raise SystemExit('Unexpected integration_test registrar form; fail safely')
+              else:
+                  print('No test-only integration plugin in Java registrar')
+          PY
+
+
       - name: Build x64 Release APK for emulator smoke test
         env:
           WAFFRA_RELEASE_STORE_PASSWORD: ${{ secrets.WAFFRA_RELEASE_STORE_PASSWORD }}
           WAFFRA_RELEASE_KEY_PASSWORD: ${{ secrets.WAFFRA_RELEASE_KEY_PASSWORD }}
         run: flutter build apk --no-pub --release --target-platform android-x64 --tree-shake-icons
+
+      # The hosted Linux runner exposes /dev/kvm but the unprivileged runner
+      # lacks permission. Require actual hardware acceleration rather than
+      # silently running x86_64 with -accel off until boot timeout.
+      - name: Require KVM access for Android x64 release startup (M308)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -c /dev/kvm ]; then
+            echo "::error::KVM device missing; cannot certify x86_64 emulator startup"
+            exit 1
+          fi
+          # This is an isolated, ephemeral hosted runner. Grant only its
+          # current user access; do not make the device world-writable.
+          sudo chown "$(id -u):$(id -g)" /dev/kvm
+          sudo chmod 0600 /dev/kvm
+          if [ ! -r /dev/kvm ] || [ ! -w /dev/kvm ]; then
+            echo "::error::KVM remains inaccessible; refusing unaccelerated smoke test"
+            exit 1
+          fi
+          echo "KVM device accessible; x86_64 emulator acceleration is mandatory"
+
+      - name: Verify Android release startup script syntax
+        shell: bash
+        run: bash -n scripts/qa/verify_android_release_startup.sh
 
       - name: Verify Release startup on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
@@ -630,29 +751,10 @@ jobs:
           target: google_apis
           profile: pixel_6
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
-          script: |
-            set -euo pipefail
-            adb install -r build/app/outputs/flutter-apk/app-release.apk
-            PACKAGE=$(adb shell pm list packages -3 | tr -d '\r' | sed -n 's/^package://p' | grep -m1 -E 'waffra' || true)
-            test -n "$PACKAGE" || { echo "Could not find installed Waffra package"; exit 1; }
-            adb logcat -c
-            adb shell monkey -p "$PACKAGE" -c android.intent.category.LAUNCHER 1
-            sleep 18
-            adb shell pidof "$PACKAGE" || { adb logcat -d -t 350; exit 1; }
-            adb shell uiautomator dump /sdcard/waffra-ui.xml || true
-            adb pull /sdcard/waffra-ui.xml /tmp/waffra-ui.xml || true
-            if [ -f /tmp/waffra-ui.xml ]; then
-              if grep -qE 'تعذر تشغيل وفرة|نسخ تفاصيل الخطأ|Retry' /tmp/waffra-ui.xml; then
-                echo "Startup error UI detected"
-                adb logcat -d -t 350
-                exit 1
-              fi
-            fi
-            if adb logcat -d -t 2000 | grep -E 'NoSuchMethodError.*SharedPreferences|FATAL EXCEPTION|Waffra startup failed:'; then
-              echo "Release startup error detected in Android logs"
-              exit 1
-            fi
-            echo "Release app launched without detected startup exception"
+          disable-linux-hw-accel: false
+          # Runner executes each script line independently with /bin/sh -c.
+          # Invoke our entire strict-mode Bash program as a single command.
+          script: bash -euo pipefail scripts/qa/verify_android_release_startup.sh
 
       - name: Build optimized ARM64 Release APK
         shell: bash
@@ -718,11 +820,18 @@ jobs:
               print('NOTICE: checked-in google-services.json predates release SHA-1; refresh it from Firebase to ensure Google Sign-In client data is current')
           PY
 
+      - name: Stage verified Waffra.apk for download
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -m 0644 build/app/outputs/flutter-apk/app-release.apk build/Waffra.apk
+          cmp -s build/app/outputs/flutter-apk/app-release.apk build/Waffra.apk
+
       - name: Upload Waffra Release APK
         uses: actions/upload-artifact@v4
         with:
           name: Waffra-Android-ARM64-Release
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: build/Waffra.apk
           retention-days: 30
 
       # Only save compilation state after the signed APK was built, verified

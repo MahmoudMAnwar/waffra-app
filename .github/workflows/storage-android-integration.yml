@@ -15,10 +15,17 @@ permissions:
 jobs:
   android-encrypted-db:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 75
     steps:
-      - name: Checkout
+      - name: Checkout exact PR head
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact tested SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
       - name: Install JDK 17
         uses: actions/setup-java@v4
         with:
@@ -49,7 +56,9 @@ jobs:
           path.write_text(gradle)
           PY
       - name: Resolve packages and native assets
-        run: flutter pub get
+        run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
       - name: Analyze integration test
         run: dart analyze integration_test/storage_encryption_android_test.dart integration_test/offline_restore_android_test.dart integration_test/copied_receipt_ledger_android_test.dart integration_test/fresh_vault_first_run_android_test.dart integration_test/offline_finance_e2e_android_test.dart integration_test/finance_release_regressions_android_test.dart integration_test/live_finance_migration_receipts_android_test.dart integration_test/verified_encrypted_finance_bridge_android_test.dart integration_test/portable_encrypted_receipts_android_test.dart integration_test/finance_cloud_final_release_android_test.dart integration_test/m78_parallel_combined_android_test.dart
       - name: Enable Linux KVM permissions
@@ -59,18 +68,22 @@ jobs:
           sudo udevadm trigger --name-match=kvm
       # Emulator start-up can intermittently refuse adb TCP 5554 on hosted
       # runners; a successful static analyzer is not a substitute for the
-      # Android runtime test. Retry once with a fresh, stable API 34 emulator.
+      # Android runtime test. Retry once with a fresh, independent API 35 emulator.
       - name: Test encrypted vault on Android emulator (primary)
         id: emulator_primary
         continue-on-error: true
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 35
+          api-level: 34
           arch: x86_64
           profile: pixel_6
           target: google_apis
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
           disable-animations: true
           emulator-boot-timeout: 600
+          emulator-options: -no-window -no-audio -no-snapshot -gpu swiftshader_indirect -no-boot-anim
           script: bash .github/scripts/run-android-finance-integration.sh
       - name: Reset adb before a clean emulator retry
         if: steps.emulator_primary.outcome == 'failure'
@@ -78,16 +91,16 @@ jobs:
         run: |
           adb kill-server || true
           adb start-server
-      - name: Retry entire Android integration test on API 34 after emulator failure
+      - name: Retry complete finance tests on fresh API 35 after emulator failure
         if: steps.emulator_primary.outcome == 'failure'
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 34
+          api-level: 35
           arch: x86_64
           profile: pixel_6
           target: google_apis
-          cores: 2
-          ram-size: 2048M
+          cores: 4
+          ram-size: 4096M
           heap-size: 512M
           disable-animations: true
           emulator-boot-timeout: 600

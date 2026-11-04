@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
+import 'package:waffra/waffra_action_layout.dart';
 import 'package:waffra/waffra_i18n.dart';
 import 'package:waffra/waffra_secure_backup.dart';
 
@@ -52,16 +53,19 @@ void main() {
   expect(main,contains('class WaffraDeletedItemsButton extends StatelessWidget'));
   expect(main,contains('const Color(0xFFFF9090)'));
   expect(main,contains('const Color(0xFFB42332)'));
-  expect(main,contains('onPressed:deletedGoalsDialog'));
-  expect(main,contains('onPressed:deletedRecurringDialog'));
+  expect(main,contains('onPressed:WaffraHaptics.tapRequired(deletedGoalsDialog)'));
+  expect(main,contains('onPressed:WaffraHaptics.tapRequired(deletedRecurringDialog)'));
   // The new compact recurring cards remain adjacent; legacy recycle-bin
   // buttons in other sections stay red and independently accessible.
   expect(main,contains("Key('waffra-recurring-count-badge')"));
   expect(main,contains('Expanded(child:OutlinedButton.icon('));
-  expect(main,contains('onPressed:deletedRecurringDialog'));
-  expect(main,contains('minimumSize:const Size(0,48)'));
-  expect(main,contains('onPressed:showWaffraFinancialCalendar'));
-  expect(cats,contains('onPressed:showCategoryTrash'));
+  expect(main,contains('onPressed:WaffraHaptics.tapRequired(deletedRecurringDialog)'));
+  // Compact buttons retain the 48dp minimum touch target
+  // without reintroducing oversized outlines.
+  expect(main,contains('minimumSize:WaffraActionLayout.minimumSize'));
+  expect(WaffraActionLayout.minimumSize.height,greaterThanOrEqualTo(48));
+  expect(main,contains('onPressed:WaffraHaptics.tap(showWaffraFinancialCalendar)'));
+  expect(cats,contains('onPressed:WaffraHaptics.tapRequired(showCategoryTrash)'));
   expect(cats,contains('WaffraDeletedItemsButton('));
  });
 

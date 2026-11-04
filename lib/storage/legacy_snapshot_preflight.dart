@@ -10,6 +10,7 @@ class WaffraLegacyPreflight {
   static const financeListKeys = <String>[
     'entries',
     'waffra_categories_v24',
+    'waffra_named_budgets_v1',
     'waffra_goals_v24',
     'waffra_recurring_v24',
     'waffra_challenges_v1',
@@ -106,6 +107,25 @@ class WaffraLegacyPreflight {
           if (item['income'] is! bool) {
             issues.add(WaffraPreflightIssue(key, i, 'invalid_income_flag'));
           }
+          final budgetId=item['budgetId'];
+          if(budgetId != null &&
+             (budgetId is! String || budgetId.trim().isEmpty ||
+              budgetId.length > 256 || item['income']==true)) {
+            issues.add(WaffraPreflightIssue(key,i,'invalid_budget_assignment'));
+          }
+          // The wallet-funded portion is a verified property of a confirmed
+          // goal-due ledger event, never inferred from mutable notes.
+          final walletMinor=item['goalWalletPaidMinor'];
+          if(walletMinor!=null) {
+            final gross=item['amount'];
+            if(item['sourceType']!='goal_due'||item['income']!=false||
+               walletMinor is! int||walletMinor<0||gross is! num||
+               !gross.isFinite||gross<0||
+               walletMinor>(gross*100).round()) {
+              issues.add(WaffraPreflightIssue(
+                key,i,'invalid_goal_wallet_allocation'));
+            }
+          }
           final receipt = item['receiptPath'];
           if (receipt != null && receipt is! String) {
             issues.add(WaffraPreflightIssue(key, i, 'invalid_receipt_path'));
@@ -121,17 +141,50 @@ class WaffraLegacyPreflight {
             }
           }
         } else if (key == 'waffra_goals_v24') {
-          _checkMoney(issues, key, i, item, 'target', positive: true);
+          _checkMoney(issues, key, i, item, 'target');
           _checkMoney(issues, key, i, item, 'saved');
+          if(item.containsKey('active')&&item['active'] is! bool){
+            issues.add(WaffraPreflightIssue(key,i,'invalid_goal_active_flag'));
+          }
+          if (item['dueDate'] != null &&
+              (item['dueDate'] is! String ||
+               DateTime.tryParse(item['dueDate'] as String) == null)) {
+            issues.add(WaffraPreflightIssue(key,i,'invalid_goal_due_date'));
+          }
         } else if (key == 'waffra_recurring_v24') {
           _checkMoney(issues, key, i, item, 'amount');
           _checkDate(issues, key, i, item, 'startAt');
+          if(item['linkedGoalId'] != null &&
+             (item['linkedGoalId'] is! String ||
+              (item['linkedGoalId'] as String).trim().isEmpty ||
+              (item['linkedGoalId'] as String).length > 256)){
+            issues.add(WaffraPreflightIssue(key,i,'invalid_linked_goal_id'));
+          }
           final day = item['day'];
           if (day is! int || day < 1 || day > 31) {
             issues.add(WaffraPreflightIssue(key, i, 'invalid_due_day'));
           }
         } else if (key == 'waffra_categories_v24') {
           _checkMoney(issues, key, i, item, 'budget');
+          if(item['budgetLabel'] != null &&
+             (item['budgetLabel'] is! String ||
+              (item['budgetLabel'] as String).length > 80)){
+            issues.add(WaffraPreflightIssue(key,i,'invalid_budget_label'));
+          }
+        } else if (key == 'waffra_named_budgets_v1') {
+          _checkMoney(issues, key, i, item, 'budget', positive: true);
+          final name = item['name'];
+          if (name is! String || name.trim().isEmpty ||
+              name.runes.length > 80 || item['income'] != false ||
+              item['parentId'] != '') {
+            issues.add(WaffraPreflightIssue(key, i, 'invalid_standalone_budget'));
+          }
+          if (item['budgetActive'] is! bool ||
+              item['alertPercent'] is! int ||
+              (item['alertPercent'] as int) < 1 ||
+              (item['alertPercent'] as int) > 100) {
+            issues.add(WaffraPreflightIssue(key, i, 'invalid_budget_controls'));
+          }
         } else if (key == 'waffra_challenges_v1') {
           _checkMoney(issues, key, i, item, 'dailyAmount');
         }
@@ -218,7 +271,30 @@ class WaffraLegacyPreflight {
   static void _checkDate(List<WaffraPreflightIssue> issues, String key,
       int index, Map<String, dynamic> item, String field) {
     final value = item[field];
-    if (value is! String || DateTime.tryParse(value) == null) {
+    // DateTime.tryParse normalizes some impossible dates (e.g. 2026-02-30)
+    // to the following month. For a money ledger, that is data corruption:
+    // require the exact ISO calendar date to survive parsing unchanged.
+    bool valid() {
+      if (value is! String) return false;
+      final iso = RegExp(r'^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$')
+          .firstMatch(value);
+      if (iso == null) return false;
+      final parsed = DateTime.tryParse(value);
+      if (parsed == null) return false;
+      // DateTime.tryParse converts offset-bearing timestamps to UTC.
+      // Compare the recorded *calendar date* instead: a valid local
+      // 2026-11-01T00:15:00+03:00 becomes 2026-10-31 in UTC.
+      // A UTC calendar constructor still rejects normalized impossible
+      // dates such as 2026-02-30 by checking the exact components.
+      final year = int.parse(iso.group(1)!);
+      final month = int.parse(iso.group(2)!);
+      final day = int.parse(iso.group(3)!);
+      final calendar = DateTime.utc(year, month, day);
+      return calendar.year == year &&
+          calendar.month == month &&
+          calendar.day == day;
+    }
+    if (!valid()) {
       issues.add(WaffraPreflightIssue(key, index, 'invalid_$field'));
     }
   }

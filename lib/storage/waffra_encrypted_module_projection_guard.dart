@@ -111,7 +111,7 @@ class WaffraEncryptedModuleProjectionGuard {
           break;
         case WaffraFinanceModule.goals:
           if (entry['name'] != row.read<String>('name') ||
-              _minor(entry['target'], positive: true) != row.read<int>('target_minor') ||
+              _minor(entry['target']) != row.read<int>('target_minor') ||
               _minor(entry['saved'] ?? 0) != row.read<int>('saved_minor')) {
             throw StateError('SQLCipher goal typed projection differs.');
           }
