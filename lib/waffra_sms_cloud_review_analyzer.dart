@@ -38,7 +38,7 @@ abstract final class WaffraSmsCloudReviewAnalyzer {
   var attempted=0,staged=0;
   for(final item in prioritized){
    if(attempted>=maxPerRun||used>=perInstallationDailyLimit)break;
-   if(item['cloud'] is Map)continue;
+   if(item['cloud'] is Map||item['sensitiveOtp']==true)continue;
    final id=item['id'],body=item['body'];
    if(id is! String||body is! String||body.trim().isEmpty)continue;
    // No message that cannot be locally redacted reaches an external model.
