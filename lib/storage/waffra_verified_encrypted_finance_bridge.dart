@@ -1,6 +1,8 @@
 import 'waffra_encrypted_full_finance_reset.dart';
 import 'waffra_accounts_schema.dart';
 import 'waffra_account_context_read.dart';
+import 'waffra_account_context_schema.dart';
+import 'waffra_account_context_repository.dart';
 import 'waffra_portable_encrypted_backup_exporter.dart';
 import 'waffra_accounts_repository.dart';
 import 'waffra_fresh_finance_domain_repository.dart';
@@ -1189,6 +1191,7 @@ class WaffraVerifiedEncryptedFinanceBridge {
         }else{
           await WaffraAccountsSchema.requireReady(snapshot.store);
         }
+        await WaffraAccountContextSchema.install(snapshot.store);
         final accounts=WaffraAccountsRepository(
           db:snapshot.store,experimentalEnabled:true);
         final result=await change(accounts);
@@ -1203,6 +1206,27 @@ class WaffraVerifiedEncryptedFinanceBridge {
     });
   }
 
+
+
+  Future<T> readVerifiedAccountMetadata<T>(
+    Future<T> Function(WaffraAccountContextRepository context) reader,
+  )async{
+    if(!experimentalEnabled)throw StateError('Account context is not active.');
+    return WaffraExperimentalWriterGate(
+      disposableDirectory:writerDirectory,experimentalEnabled:true,
+    ).withExclusiveAccess(()async{
+      await _requireActivatedUnderLock();
+      await WaffraAccountContextSchema.install(snapshot.store);
+      final before=await snapshot.read();
+      final result=await reader(WaffraAccountContextRepository(
+        store:snapshot.store,experimentalEnabled:true));
+      final after=await snapshot.read();
+      if(before.generation!=after.generation||before.digest!=after.digest){
+        throw StateError('Account metadata changed during review.');
+      }
+      return result;
+    });
+  }
 
   /// M448 read-only account context. Every row, account association and budget
   /// sum is read under the same verified Home/Widget native source lock.
@@ -1241,6 +1265,7 @@ class WaffraVerifiedEncryptedFinanceBridge {
     ).withExclusiveAccess(() async {
       await _requireActivatedUnderLock();
       await WaffraAccountsSchema.requireReady(snapshot.store);
+      await WaffraAccountContextSchema.install(snapshot.store);
       final current=await snapshot.read();
       final accounts=await WaffraAccountsRepository(
         db:snapshot.store,experimentalEnabled:true).balances();
