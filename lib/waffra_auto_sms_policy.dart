@@ -50,6 +50,7 @@ abstract final class WaffraAutoSmsPolicy {
   DateTime? verifiedDate,
   bool accountLinked=true,
   bool categoryActive=true,
+  bool sourceAccountVerified=false,
  }) {
   if(sms.trim().isEmpty || sms.length>1600 || _unsafe.hasMatch(sms)||
       WaffraSmsIntelligence.isPendingOrUnconfirmed(sms)){
@@ -72,7 +73,7 @@ abstract final class WaffraAutoSmsPolicy {
   // Source account suffix alone is NOT an identity-mapping authorization.
   // No typed bank account in the current MoneyEntry schema; do not silently
   // apply a real bank SMS to the app's generic Cash account.
-  if(facts.sourceSuffix!=null){
+  if(facts.sourceSuffix!=null&&!sourceAccountVerified){
    return const WaffraAutoSmsDecision(
     WaffraAutoSmsDisposition.review,'source_account_mapping_required');
   }
