@@ -2323,7 +2323,6 @@ class ProfileForm extends StatefulWidget {
 class _ProfileFormState extends State<ProfileForm> {
  late final TextEditingController name,email,confirmEmail,phone,password,confirmPassword;
  bool showPassword=false,showConfirmPassword=false;
- bool _registrationDetailsStep=false;
  bool profileAttempted=false;
  bool get comparingPasswords=>password.text.isNotEmpty&&confirmPassword.text.isNotEmpty;
  bool get matchingPasswords=>comparingPasswords&&password.text==confirmPassword.text;
@@ -2456,31 +2455,48 @@ class _ProfileFormState extends State<ProfileForm> {
   }
   finally{if(mounted)setState(()=>busy=false);}
  }
- void _nextPhoneRegistrationStep(){
-  setState(()=>profileAttempted=true);
-  if(waffraMobileFieldError(phone.text)!=null||
-     waffraPasswordFieldError(password.text)!=null||
-     waffraConfirmPasswordFieldError(confirmPassword.text,password.text)!=null){
-   return;
-  }
-  setState((){_registrationDetailsStep=true;profileAttempted=false;});
- }
+
  Widget _phoneRegistrationForm(){
   return Scaffold(
    appBar:AppBar(title:WaffraText(waffraIsEnglish?
     'Create a Waffra account':'إنشاء حساب وفرة'),
-    leading:IconButton(onPressed:WaffraHaptics.tap((){
-     if(_registrationDetailsStep)setState((){_registrationDetailsStep=false;profileAttempted=false;});
-     else widget.onBack?.call();
-    }),icon:const Icon(Icons.arrow_back))),
-   body:SafeArea(child:ListView(padding:const EdgeInsets.all(22),children:[
-    LinearProgressIndicator(value:_registrationDetailsStep?1:0.5,color:emerald),
-    const SizedBox(height:20),
-    if(!_registrationDetailsStep)...[
-     WaffraText(waffraIsEnglish?'1. Mobile number and password':'١. رقم الجوال وكلمة المرور',
-      style:const TextStyle(fontWeight:FontWeight.bold,fontSize:19)),
+    leading:IconButton(onPressed:WaffraHaptics.tap(widget.onBack),
+     icon:const Icon(Icons.arrow_back))),
+   body:SafeArea(child:ListView(
+    key:const Key('waffra-register-single-page'),
+    padding:const EdgeInsets.fromLTRB(22,14,22,32),
+    keyboardDismissBehavior:ScrollViewKeyboardDismissBehavior.onDrag,
+    children:[
+     WaffraText(waffraIsEnglish?'Your account details':'بيانات حسابك',
+      style:const TextStyle(fontWeight:FontWeight.bold,fontSize:20)),
      const SizedBox(height:14),
-     TextField(controller:phone,keyboardType:TextInputType.phone,
+     TextField(key:const Key('waffra-register-name'),controller:name,
+      textInputAction:TextInputAction.next,onChanged:(_)=>setState((){}),
+      decoration:InputDecoration(labelText:waffraIsEnglish?'Name':'الاسم',
+       errorText:profileAttempted?waffraTextFieldError(name.text):null,
+       border:const OutlineInputBorder())),
+     const SizedBox(height:15),
+     WaffraText(waffraIsEnglish?'Gender and avatar':'النوع والصورة الشخصية',
+      style:const TextStyle(fontWeight:FontWeight.bold)),
+     const SizedBox(height:10),
+     Wrap(alignment:WrapAlignment.center,spacing:12,runSpacing:8,
+      children:['ذكر','أنثى'].map((g)=>ChoiceChip(
+       key:Key(g=='ذكر'?'waffra-register-gender-male':'waffra-register-gender-female'),
+       label:Row(mainAxisSize:MainAxisSize.min,children:[
+        saudiAvatar(g,radius:21),const SizedBox(width:8),
+        WaffraText(waffraIsEnglish?(g=='ذكر'?'Male':'Female'):g),
+       ]),
+       selected:gender==g,
+       onSelected:WaffraHaptics.selection((_)=>setState((){
+        gender=g;avatar=g=='ذكر'?'male':'female';
+       })))).toList()),
+     if(profileAttempted&&gender.isEmpty)Padding(
+      padding:const EdgeInsets.only(top:8),
+      child:WaffraText(waffraRequiredFieldMessage,
+       style:const TextStyle(color:Colors.red))),
+     const SizedBox(height:16),
+     TextField(key:const Key('waffra-register-phone'),controller:phone,
+      keyboardType:TextInputType.phone,textInputAction:TextInputAction.next,
       textDirection:TextDirection.ltr,onChanged:(_)=>setState((){}),
       inputFormatters:[FilteringTextInputFormatter.digitsOnly,
        LengthLimitingTextInputFormatter(10)],
@@ -2490,7 +2506,9 @@ class _ProfileFormState extends State<ProfileForm> {
        errorText:profileAttempted?waffraMobileFieldError(phone.text):null,
        border:const OutlineInputBorder())),
      const SizedBox(height:14),
-     TextField(controller:password,obscureText:!showPassword,
+     TextField(key:const Key('waffra-register-password'),
+      controller:password,obscureText:!showPassword,
+      textInputAction:TextInputAction.next,
       onChanged:(_)=>setState((){}),
       decoration:InputDecoration(labelText:waffraIsEnglish?'Password':'كلمة المرور',
        helperText:waffraIsEnglish?'8+ characters, letters and numbers':'٨ خانات على الأقل، تشمل أحرفًا وأرقامًا',
@@ -2500,8 +2518,11 @@ class _ProfileFormState extends State<ProfileForm> {
         onPressed:WaffraHaptics.tap(()=>setState(()=>showPassword=!showPassword)),
         icon:Icon(showPassword?Icons.visibility_off:Icons.visibility)))),
      const SizedBox(height:14),
-     TextField(controller:confirmPassword,obscureText:!showConfirmPassword,
+     TextField(key:const Key('waffra-register-confirm-password'),
+      controller:confirmPassword,obscureText:!showConfirmPassword,
+      textInputAction:TextInputAction.done,
       onChanged:(_)=>setState((){}),
+      onSubmitted:(_){if(!busy)save();},
       decoration:InputDecoration(labelText:waffraIsEnglish?'Confirm password':'تأكيد كلمة المرور',
        errorText:profileAttempted?
         waffraConfirmPasswordFieldError(confirmPassword.text,password.text):null,
@@ -2509,40 +2530,18 @@ class _ProfileFormState extends State<ProfileForm> {
        suffixIcon:IconButton(
         onPressed:WaffraHaptics.tap(()=>setState(()=>showConfirmPassword=!showConfirmPassword)),
         icon:Icon(showConfirmPassword?Icons.visibility_off:Icons.visibility)))),
-     const SizedBox(height:20),
-     FilledButton(onPressed:WaffraHaptics.tap(_nextPhoneRegistrationStep),
-      child:WaffraText(waffraIsEnglish?'Continue':'متابعة')),
-    ]else...[
-     WaffraText(waffraIsEnglish?'2. Complete your profile':'٢. كمّل بياناتك',
-      style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold)),
-     const SizedBox(height:14),
-     TextField(controller:name,onChanged:(_)=>setState((){}),
-      decoration:InputDecoration(labelText:waffraIsEnglish?'Name':'الاسم',
-       errorText:profileAttempted?waffraTextFieldError(name.text):null,
-       border:const OutlineInputBorder())),
-     const SizedBox(height:15),
-     WaffraText(waffraIsEnglish?'Gender':'الجنس',
-      style:const TextStyle(fontWeight:FontWeight.bold)),
-     const SizedBox(height:10),
-     Wrap(alignment:WrapAlignment.center,spacing:12,children:['ذكر','أنثى']
-      .map((g)=>ChoiceChip(label:WaffraText(waffraIsEnglish?
-       (g=='ذكر'?'Male':'Female'):g),selected:gender==g,
-       onSelected:WaffraHaptics.selection((_)=>setState((){
-        gender=g;avatar=g=='ذكر'?'male':'female';
-       })))).toList()),
-     if(profileAttempted&&gender.isEmpty)Padding(padding:const EdgeInsets.only(top:6),
-      child:WaffraText(waffraRequiredFieldMessage,
-       style:const TextStyle(color:Colors.red))),
-     const SizedBox(height:18),
-     FilledButton(onPressed:WaffraHaptics.tap(busy?null:save),
+     if(comparingPasswords&&matchingPasswords)Padding(
+      padding:const EdgeInsets.only(top:8),
+      child:Row(children:[const Icon(Icons.check_circle_outline,color:emerald,size:18),
+       const SizedBox(width:6),
+       WaffraText(waffraIsEnglish?'Passwords match':'كلمتا المرور متطابقتان')])),
+     const SizedBox(height:22),
+     FilledButton(key:const Key('waffra-register-submit'),
+      onPressed:WaffraHaptics.tap(busy?null:save),
       child:WaffraText(busy?
        (waffraIsEnglish?'Saving...':'جارٍ الحفظ'):
        (waffraIsEnglish?'Complete registration':'إكمال التسجيل'))),
-     TextButton(onPressed:WaffraHaptics.tap(()=>setState((){
-      _registrationDetailsStep=false;profileAttempted=false;
-     })),child:WaffraText(waffraIsEnglish?'Back':'رجوع')),
-    ],
-   ])),
+    ])),
   );
  }
  @override Widget build(BuildContext context){
