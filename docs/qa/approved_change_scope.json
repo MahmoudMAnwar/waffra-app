@@ -24,7 +24,8 @@
     "M447: Add a GitHub Actions regression that verifies all three bank SMS confirmation routes review and forward witnessed account allocations.",
     "M447: Link manual and recurring Home transaction save to approved cash/bank account using verified SQLCipher, preserving duplicate detection and independent budgets.",
     "M447: Verify recurring payments debit the user selected SAR money account atomically and do not double-charge when retried.",
-    "M447: Verified recurring account posting is atomic, idempotent and rejects stale account balance witnesses."
+    "M447: Verified recurring account posting is atomic, idempotent and rejects stale account balance witnesses.",
+    "M447: Settle linked savings goals atomically with their due recurrence; subtract the goals wallet only once and link only the cash-funded portion to an explicitly chosen bank account."
   ],
   "allowed_changed_files": [
     ".github/scripts/run-m120-android-receipt-reopen.sh",
@@ -45,6 +46,7 @@
     "lib/storage/waffra_verified_accounts_api.dart",
     "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
     "lib/storage/waffra_verified_finance_authority.dart",
+    "lib/storage/waffra_verified_goal_due_snapshot_writer.dart",
     "lib/waffra_account_transaction_form.dart",
     "lib/waffra_accounts_manager_page.dart",
     "test/m440_account_transaction_form_test.dart",
@@ -76,6 +78,10 @@
       {
         "start": "  Future<WaffraFinanceSnapshotState> commitRecurringPayment({\n",
         "end": "  /// Never expose the module recycle against an unverified encrypted source.\n"
+      },
+      {
+        "start": "  Future<WaffraGoalDueSqlReceipt> settleLinkedGoalDue({\n",
+        "end": "  Future<WaffraEncryptedFullResetResult> resetVerifiedFinance({\n"
       }
     ],
     "lib/storage/waffra_portable_encrypted_backup_exporter.dart": [
@@ -200,6 +206,20 @@
       {
         "start": "  Future<WaffraFinanceAuthoritySmsCommit> commitConfirmedSms({\n",
         "end": "    return WaffraFinanceAuthoritySmsCommit(\n"
+      },
+      {
+        "start": "  Future<WaffraFinanceAuthorityRead> settleLinkedGoalDue({\n",
+        "end": "  Future<WaffraFinanceAuthorityRead> mergeSmsHashes(\n"
+      }
+    ],
+    "lib/storage/waffra_verified_goal_due_snapshot_writer.dart": [
+      {
+        "start": "import 'waffra_atomic_finance_snapshot.dart';\n",
+        "end": "import 'waffra_encrypted_store.dart';\n"
+      },
+      {
+        "start": "  Future<WaffraGoalDueSqlReceipt> settle({\n",
+        "end": null
       }
     ]
   }
