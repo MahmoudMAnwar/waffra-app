@@ -21,7 +21,8 @@
     "M440: Make My Accounts navigation available only for independently verified activated SQLCipher sources; never create a second live finance database.",
     "M447: Carry explicitly reviewed bank-SMS account selections through the existing verified finance authority/session and shared SQLCipher writer without permitting bank data in guarded legacy.",
     "M447: Ask for an optional verified financial account per bank-SMS transaction in all three Home bank SMS review/save routes and attach it in the same SQLCipher commit as the SMS hash.",
-    "M447: Add a GitHub Actions regression that verifies all three bank SMS confirmation routes review and forward witnessed account allocations."
+    "M447: Add a GitHub Actions regression that verifies all three bank SMS confirmation routes review and forward witnessed account allocations.",
+    "M447: Link manual and recurring Home transaction save to approved cash/bank account using verified SQLCipher, preserving duplicate detection and independent budgets."
   ],
   "allowed_changed_files": [
     ".github/scripts/run-m120-android-receipt-reopen.sh",
@@ -67,6 +68,10 @@
       {
         "start": "  Future<WaffraFinanceSnapshotState> mergeConfirmedSmsHashes(\n",
         "end": "  /// Read only existing and owner-verified encrypted attachment BLOBs.\n"
+      },
+      {
+        "start": "  Future<WaffraFinanceSnapshotState> commitRecurringPayment({\n",
+        "end": "  /// Never expose the module recycle against an unverified encrypted source.\n"
       }
     ],
     "lib/storage/waffra_portable_encrypted_backup_exporter.dart": [
@@ -152,7 +157,15 @@
       },
       {
         "start": "  if(pendingHash!=null&&initial==null){\n",
-        "end": "   if(applied.saved!=1){\n"
+        "end": "    // Cleanup must also run if the route disposed while persistence awaited.\n"
+      },
+      {
+        "start": " Future<void> persist({\n",
+        "end": " /// Optimistic UI updates must never masquerade as committed finance.\n"
+      },
+      {
+        "start": " Future<void> applyRecurring()async {\n",
+        "end": " double sum(Iterable<MoneyEntry> list,bool income)=>\n"
       }
     ],
     "lib/storage/waffra_production_finance_authority_binding.dart": [
@@ -167,11 +180,19 @@
     ],
     "lib/storage/waffra_encrypted_finance_session.dart": [
       {
+        "start": "  Future<WaffraFinanceSnapshotState> commitRecurringPayment({\n",
+        "end": "  /// The verified bridge owns both the native Home/Widget lock and the\n"
+      },
+      {
         "start": "  Future<WaffraUnifiedWriteResult> appendConfirmed({\n",
         "end": "  /// Save normalized transaction + raw picker picture bytes atomically after\n"
       }
     ],
     "lib/storage/waffra_verified_finance_authority.dart": [
+      {
+        "start": "  Future<WaffraFinanceAuthorityRead> saveCaptured({\n",
+        "end": "  /// A future encrypted-only receipt attachment route. The caller supplies\n"
+      },
       {
         "start": "  Future<WaffraFinanceAuthoritySmsCommit> commitConfirmedSms({\n",
         "end": "    return WaffraFinanceAuthoritySmsCommit(\n"
