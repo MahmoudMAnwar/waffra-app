@@ -99,6 +99,7 @@ import 'storage/waffra_verified_active_restore_preflight.dart';
 import 'storage/waffra_verified_pull_refresh_source.dart';
 import 'storage/waffra_production_finance_authority_binding.dart';
 import 'storage/waffra_verified_accounts_api.dart';
+import 'storage/waffra_accounts_repository.dart';
 import 'waffra_accounts_manager_page.dart';
 import 'storage/waffra_fresh_finance_modules_repository.dart';
 import 'storage/waffra_verified_module_ui_guard.dart';
@@ -10860,9 +10861,28 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }finally{disposeLater([ctl]);}
  }
  Future<void> fundGoal(SavingGoal g)async {
+  // Source accounts are offered ONLY for a previously verified SQLCipher
+  // vault. Legacy/unknown sources cannot invent a bank debit.
+  await _ensureFinanceBound();
+  final fundingBridge=_financeBinding?.accountsBridge;
+  var fundingAccounts=<WaffraAccountBalance>[];
+  if(fundingBridge!=null){
+   try{
+    fundingAccounts=(await WaffraVerifiedAccountsApi(
+     bridge:fundingBridge).balances()).where((a)=>!a.archived).toList();
+   }catch(error){
+    debugPrint('Verified savings accounts unavailable: $error');
+    if(mounted)snack(context,waffraIsEnglish?
+     'Accounts could not be verified. Refresh and try again.':
+     'تعذر التحقق من الحسابات. حدّث الصفحة وحاول مرة أخرى.');
+    return;
+   }
+  }
+  if(!mounted)return;
+  String chosenSource='none';
   final amount=TextEditingController();
   bool attempted=false;
-  final n=await showWaffraDialog<double>(
+  final funding=await showWaffraDialog<({double amount,String? sourceAccountId})>(
    context:context,builder:(dialogCtx)=>StatefulBuilder(
     builder:(dialogCtx,update){
      final theme=Theme.of(dialogCtx);
@@ -10937,6 +10957,28 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            borderSide:BorderSide(color:accent,width:2)),
           border:OutlineInputBorder(borderRadius:BorderRadius.circular(15)),
          )),
+        if(fundingBridge!=null)...[
+         const SizedBox(height:12),
+         DropdownButtonFormField<String>(
+          key:const Key('waffra-goal-funding-source-account'),
+          isExpanded:true,initialValue:chosenSource,
+          decoration:InputDecoration(
+           labelText:waffraIsEnglish?'Transfer savings from':'مصدر مبلغ الادخار',
+           border:const OutlineInputBorder()),
+          items:[
+           DropdownMenuItem(value:'none',
+            child:WaffraText(waffraIsEnglish?'Unassigned':'بدون حساب')),
+           ...fundingAccounts.map((a)=>DropdownMenuItem(
+            value:a.id,child:WaffraText(a.name,maxLines:1))),
+          ],
+          onChanged:(v){if(v!=null)update(()=>chosenSource=v);},
+         ),
+         const SizedBox(height:7),
+         WaffraText(waffraIsEnglish
+          ?'Choose a bank or cash account for this deposit only. An unassigned deposit does not change any account balance.'
+          :'اختار حساب مصدر الدفعة فقط. تركها بدون حساب لا يغيّر رصيد أي حساب.',
+          style:const TextStyle(fontSize:12)),
+        ],
         const SizedBox(height:10),
         Row(children:[
          for(final quick in [500.0,1000.0,2000.0])...[
@@ -10960,8 +11002,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           Icon(Icons.info_outline_rounded,size:19,color:accent),
           const SizedBox(width:8),
           Expanded(child:WaffraText(waffraIsEnglish
-           ?'Savings are added to this goal only. Past transactions stay unchanged.'
-           :'يُحجز المبلغ في محفظة الأهداف ويُخصم من رصيدك المتاح دون احتسابه مصروفًا مرتين.',
+           ?'This is a separate savings-wallet movement, not an expense. A verified funding account is debited once, if selected.'
+           :'هذه حركة في محفظة الادخار المستقلة وليست مصروفًا. الحساب المحدد كمصدر يُخصم منه مرة واحدة فقط.',
            style:const TextStyle(fontSize:12))),
          ])),
        ],
@@ -10975,7 +11017,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           if(waffraAmountFieldError(amount.text)!=null)return;
           final value=amountOfDisplay(amount.text);
           if(value==null||value<=0)return;
-          Navigator.pop(dialogCtx,value);
+          Navigator.pop(dialogCtx,(amount:value,
+           sourceAccountId:chosenSource=='none'?null:chosenSource));
          }),
          child:WaffraText(waffraIsEnglish?'Add amount':'إضافة'))),
         const SizedBox(height:7),
@@ -10988,7 +11031,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ),
   );
   disposeLater([amount]);
-  if(n!=null&&mounted){
+  if(funding!=null&&mounted){
+   final n=funding.amount;
    final available=waffraAvailableCash(entries,goals);
    if(n>available){
     final acknowledged=await showWaffraDialog<bool>(
@@ -11025,12 +11069,44 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final current=matching.single;
    final achieved=current.saved<current.target&&
     current.saved+n>=current.target;
-   setState((){
-    final i=goals.indexWhere((x)=>x.id==g.id);
-    if(i>=0)goals[i]=current.copy(saved:current.saved+n);
-   });
-   if(!await _persistModuleOrReload(WaffraFinanceRoute.goalCreateEditDeleteRestore,
-     operation:'goal-funding'))return;
+   if(fundingBridge!=null){
+    // One trusted writer handles the goal-wallet movement, funding account
+    // attribution and canonical snapshot in one SQLCipher transaction.
+    try{
+     await _financialWriteQueue.drain();
+     final baseline=await _financeAuthority.load(
+      route:WaffraFinanceRoute.goalCreateEditDeleteRestore);
+     if(baseline.source!=WaffraRuntimeFinanceBackend.verifiedEncrypted||
+        baseline.encryptedWitness==null){
+      throw StateError('Verified goal source changed.');
+     }
+     await fundingBridge.fundVerifiedGoal(
+      baseline:baseline.encryptedWitness!,
+      goalId:g.id,amountMinor:(n*100).round(),
+      movementId:'goal-fund:${newId()}',
+      occurredIso:DateTime.now().toUtc().toIso8601String(),
+      sourceAccountId:funding.sourceAccountId,userConfirmed:true,
+     );
+     if(mounted)await _loadFinanceSafely();
+    }catch(error){
+     debugPrint('Atomic goal funding was not confirmed: $error');
+     if(mounted)await _loadFinanceSafely();
+     if(mounted)snack(context,waffraIsEnglish?
+      'Savings transfer was not confirmed. Financial balances were reloaded.':
+      'لم تتأكد حركة الادخار. أعدنا تحميل الأرصدة بدون خصم غير مؤكد.');
+     return;
+    }
+   }else{
+    // The legacy wallet has no verified bank-account ledger. Preserve its
+    // original independent wallet-only behavior; do not invent a debit.
+    setState((){
+     final i=goals.indexWhere((x)=>x.id==g.id);
+     if(i>=0)goals[i]=current.copy(saved:current.saved+n);
+    });
+    if(!await _persistModuleOrReload(
+       WaffraFinanceRoute.goalCreateEditDeleteRestore,
+       operation:'goal-funding'))return;
+   }
    final progressCrossed=WaffraFinancialInsights.crossedBudgetThreshold(
     previousSpent:current.saved,spent:current.saved+n,
     limit:current.target,alertPercent:current.progressAlertPercent,
