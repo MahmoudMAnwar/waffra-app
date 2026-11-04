@@ -1,19 +1,26 @@
 {
   "contract_version": 1,
-  "change_id": "M449-M228-fresh-install-source-digest-regression-test",
-  "human_scope_review": "The user requested repair of the failing main APK build. Limit this PR to making the M228 Python QA assertion recognize the existing production SQLCipher binder's authenticated fresh-install digest fallback and certified existing-user digest; no source code, database, migration, or gate changes. Human review of this scoped change remains required.",
+  "change_id": "M449-release-notes-premerge-and-main-ancestry-root-fix",
+  "human_scope_review": "Owner requested a permanent repair after repeated signed APK failures at release-notes validation. M449 updates the stale approved QA changelog for merged PR #359/#368 and introduces an exact-head PR/pre-merge gate that uses the same fail-closed source ancestry logic as signed main APK publishing. This is no relaxation of release-note approval, financial-source protection, signed artifact validation or phone/device testing.",
   "user_requested_changes": [
-    "Repair the M228 Python regression test that falsely rejects the existing fresh-install-or-certified SQLCipher source digest comparison while preserving source-witness and route-preflight assertions."
+    "Update approved Waffra QA release notes to reflect the already merged fresh-install SQLCipher accounts/transfers PR #359 and the QA-only M228 regression repair PR #368.",
+    "Prevent recurring main APK failures from stale changelogs by running the exact same ancestry source-release-notes validation on every PR targeting main before merge.",
+    "Keep signed Android APK release-note, SHA, signature, receipt and artifact fail-closed checks unchanged, sharing only the verification implementation with the early gate.",
+    "Include regression tests proving that changed Android or financial app code without a newer approved changelog is rejected, while approved updates and test-only changes are permitted."
   ],
   "allowed_changed_files": [
+    ".github/workflows/android.yml",
+    ".github/workflows/m449-release-notes-ancestry.yml",
     "docs/qa/approved_change_scope.json",
-    "test/qa/m228_24_route_binder_wiring_test.py"
+    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "scripts/qa/m449_release_notes_ancestry.py",
+    "test/qa/m449_release_notes_ancestry_test.py"
   ],
   "bounded_sections": {
-    "test/qa/m228_24_route_binder_wiring_test.py": [
+    ".github/workflows/android.yml": [
       {
-        "start": "    def test_preflight_is_after_key_and_digest_before_bridge(self):\n",
-        "end": "    def test_preflight_never_grants_cutover(self):\n"
+        "start": "          SOURCE_REPO: ${{ github.repository }}\n        run: |\n          set -euo pipefail\n          test \"$SOURCE_SHA\" = \"$(git rev-parse HEAD)\"\n",
+        "end": "          python3 - <<'PY'\n          import hashlib, os, pathlib\n          approved = pathlib.Path('docs/release/WAFFRA_APPROVED_CHANGES.txt')\n"
       }
     ]
   }

@@ -1,0 +1,39 @@
+name: M449 Release Notes Freshness Before Main Merge
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m449-notes-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release-notes-ancestry:
+    name: Block stale release notes before APK publishing
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Checkout exact source with full history
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify exact candidate
+        run: test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+      - name: Regression-test stale notes rejection
+        run: python3 -m unittest discover -s test/qa -p 'm449_release_notes_ancestry_test.py' -v
+      - name: Require approved notes to cover current app code
+        run: python3 scripts/qa/m449_release_notes_ancestry.py
+      - name: Report protected release requirement
+        run: echo 'PASS only proves notes provenance; signed APK and real Android acceptance remain separate gates.'

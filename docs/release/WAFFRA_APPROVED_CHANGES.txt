@@ -1560,3 +1560,31 @@ M370: إعداد فحص إلزامية SQLCipher للتثبيتات الجديد
 - Confirmed events may issue privacy-safe Android local notification only with OS permission. No background bank monitoring is claimed.
 - Preserve M444 hashed once-per-budget/month threshold suppression, nonfinancial alert history, bank SMS notification isolation, and goal one-time due reminders.
 - No accounts/SQLCipher production cutover, automatic transaction write, legacy balance migration, or data deletion; release requires exact-head CI and Android phone acceptance.
+
+=======================================================================
+[M449 — 2026-11-04] توثيق آخر دمج وإصلاح منع تكرار فشل ملاحظات APK
+=======================================================================
+- تم دمج PR #359 في main (Commit f4ecdcda): إضافة الحسابات المالية
+  السعودية والتحويلات الداخلية وربط حفظ المعاملات بالحسابات المالية
+  المعتمدة، مع مصدر SQLCipher موثّق للتثبيت الجديد فقط. تُرفض إعادة
+  استخدام رصيد أو ترحيل بيانات مستخدم حالي بلا أدلة وموافقة لازمة.
+- يظل لكل حساب رصيده؛ التحويل بين الحسابات ليس دخلًا أو مصروفًا،
+  ويجب ألا يُخصم المبلغ مرتين. اختبارات المصدر لا تعني تحقق الهاتفين
+  أو نجاح ترحيل بيانات مستخدم قديم، ولا تعني نشر Google Play.
+- تم دمج PR #368 في main (Commit 5a8ae065): تحديث اختبار M228
+  ليتحقق من بصمة مصدر SQLCipher في التثبيت الجديد أو المصدر الحالي
+  المعتمد، دون تخفيف التحقق أو تغيير كود قاعدة البيانات.
+- في تشغيل main رقم 41874679215 نجح بناء وتوقيع Android APK
+  ونجح Android AAB، ثم فشلت مرحلة Generate and validate Waffra
+  Release Notes TXT لأن سجل التعديلات لم يتضمن آخر تغييرات الكود
+  المعتمد بعد PR #359. لم يُنشر APK ناجح من هذا التشغيل.
+- إصلاح M449: ربط فحص أسبقية سجل التعديلات بين PR ومرحلة إخراج
+  APK الموقّع بنفس أداة القراءة فقط، ليُكتشف أي نقص في ملاحظات
+  الإصدار قبل الدمج. تشمل المقارنة ملفات lib وAndroid والموارد
+  وpubspec.yaml، وليس main.dart وحده.
+- الاختبارات ترفض تغييرًا وظيفيًا أحدث من ملاحظات الإصدار وتقبل
+  تصحيح الاختبارات فقط دون إجبار على إدخال بيانات إصدار وهمية.
+- لا يتم تجاوز توقيع APK أو بصمة SHA-256 أو سجل إثبات البناء
+  أو حماية SQLCipher أو متطلبات الاختبارات والأجهزة الحقيقية.
+- اعتماد هذه الملاحظات يخص مرشح QA فقط؛ حالة نجاح بناء main
+  الجديد يُحسمها تشغيل GitHub Actions الفعلي بعد الدمج.
