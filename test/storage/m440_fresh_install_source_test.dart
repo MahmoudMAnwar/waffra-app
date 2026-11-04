@@ -27,7 +27,11 @@ void main() {
     try {
       await sources.first!.verify(store);
       expect((await store.customSelect('PRAGMA cipher').getSingle()).data.values.single,'sqlcipher');
-      expect((await store.customSelect('PRAGMA legacy').getSingle()).data.values.single,4);
+      // Cipher mode is validated by openAt. Verify the actual vault bytes
+      // are encrypted, not merely a successful ignored PRAGMA key.
+      final file=File('${directory.path}/${WaffraEncryptedStore.encryptedDatabaseFilename}');
+      final header=(await file.readAsBytes()).take(15).toList();
+      expect(header,isNot(equals('SQLite format 3'.codeUnits)));
     } finally { await store.close(); }
   });
   test('existing legacy financial records never provision an empty successor', () async {
