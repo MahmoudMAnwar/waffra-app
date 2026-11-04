@@ -3469,6 +3469,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(results==null){
    setState((){
     _autoSmsStatusChecked=true;
+    // Clear only stale in-memory candidates. Native encrypted data remains
+    // untouched and the user sees an explicit recoverable read error.
+    _autoSmsPending.clear();
     _autoSmsStatusProblem=waffraIsEnglish?
      'Could not read encrypted SMS queue. Nothing was deleted. Retry.':
      'تعذر قراءة الرسائل المشفرة. لم يُحذف شيء. حاول التحديث.';
@@ -3486,7 +3489,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
   }
   final progress=await WaffraAutoSms.trackingStatus();
-  if(mounted)setState((){
+  if(!mounted)return;
+  if(progress?['enabled']!=true){
+   setState((){
+    _autoSmsStatusChecked=true;
+    _autoSmsPending.clear();
+    _autoSmsStatusProblem=waffraIsEnglish?
+     'SMS tracking was paused while reading. Refresh after sign-in.':
+     'متابعة الرسائل توقفت أثناء القراءة. حدّث بعد تسجيل الدخول.';
+   });
+   return;
+  }
+  setState((){
    _autoSmsStatusChecked=true;
    _autoSmsStatusProblem=null;
    _autoSmsHistoryComplete=progress?['historyComplete']==true;
