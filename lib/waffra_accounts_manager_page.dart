@@ -10,9 +10,13 @@ import 'waffra_account_transaction_form.dart';
 class WaffraAccountsManagerPage extends StatefulWidget {
  const WaffraAccountsManagerPage({
   super.key,required this.repository,this.english=false,this.onConfirmEntry,
+  this.incomeCategories=const [],this.expenseCategories=const [],
+  this.availableBudgets=const {},
  });
  final WaffraAccountOperations repository;
  final bool english;
+ final List<String> incomeCategories,expenseCategories;
+ final Map<String,String> availableBudgets;
  final Future<void> Function(WaffraAccountTransactionDraft)? onConfirmEntry;
  @override State<WaffraAccountsManagerPage> createState()=>
   _WaffraAccountsManagerPageState();
@@ -127,6 +131,7 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
     'receiptPath':null,
     'notes':draft.memo,
     'sourceType':'manual',
+    if(draft.budgetId!=null)'budgetId':draft.budgetId,
    },
    accountId:draft.accountId,userConfirmed:true,
   );
@@ -140,6 +145,10 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
    Scaffold(appBar:AppBar(title:Text(t('معاملة جديدة','New transaction'))),
     body:WaffraAccountTransactionForm(
      accounts:accounts,english:widget.english,
+     incomeCategories:widget.incomeCategories,
+     expenseCategories:widget.expenseCategories,
+     availableBudgets:widget.availableBudgets,
+     requireKnownCategory:true,
      onConfirmEntry:_saveClassifiedEntry,
      onConfirmTransfer:(draft)async{
       // The verified repository returns false for an exact same-ID replay:
