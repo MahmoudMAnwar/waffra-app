@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 
 import '../waffra_bank_sms_facts.dart';
@@ -11,6 +13,12 @@ class WaffraGoalAccountProgress {
   this.selectedAccountNetMinor);
  final String goalId;
  final int totalSavedMinor,selectedAccountNetMinor;
+}
+
+class WaffraRecurringAccountTemplate {
+ const WaffraRecurringAccountTemplate(this.id,this.title,this.accountId);
+ final String id,title;
+ final String? accountId;
 }
 
 /// M448 account attribution metadata: never adds a second income, expense,
@@ -98,6 +106,34 @@ FROM fresh_finance_goals g WHERE g.goal_id=?
   return WaffraGoalAccountProgress(goalId,
    rows.single.read<int>('saved_minor'),
    rows.single.read<int>('contribution_minor'));
+ }
+
+ /// Enumerate the real encrypted recurring templates and their persisted
+ /// account defaults. The open Home header never supplies a default.
+ Future<List<WaffraRecurringAccountTemplate>> recurringTemplates()async{
+  await _ready();
+  final rows=await store.customSelect('''
+SELECT r.recurring_id,r.source_json,d.account_id
+FROM fresh_finance_recurring r
+LEFT JOIN fresh_finance_recurring_account_defaults d
+ ON d.recurring_id=r.recurring_id
+ORDER BY r.recurring_id
+''').get();
+  return List<WaffraRecurringAccountTemplate>.unmodifiable(rows.map((row){
+   final id=row.read<String>('recurring_id');
+   var title=id;
+   try{
+    final data=jsonDecode(row.read<String>('source_json'));
+    if(data is Map&&data['title'] is String&&
+       (data['title'] as String).trim().isNotEmpty){
+     title=(data['title'] as String).trim();
+    }
+   }catch(_){
+    // A malformed label must never guess the money source.
+   }
+   return WaffraRecurringAccountTemplate(
+    id,title,row.readNullable<String>('account_id'));
+  }));
  }
 
  /// A recurring template owns its default, never the currently opened header.
