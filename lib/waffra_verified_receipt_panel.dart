@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'storage/waffra_receipt_screen_contract.dart';
 
+import 'waffra_haptic_feedback.dart';
 /// Verified SQLCipher-only receipt preview and 30-day recovery surface.
 /// The caller must inject an independently verified finance authority port.
 /// This widget does NOT switch finance sources or touch legacy receipt files.
@@ -91,12 +92,12 @@ class _WaffraVerifiedReceiptPanelState
             : 'تقدر تسترجع الصور خلال 30 يومًا. المعاملة ومبلغها مش هيتغيروا.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
+            onPressed: WaffraHaptics.tap(() => Navigator.pop(dialogContext, false)),
             child: Text(widget.english ? 'Cancel' : 'إلغاء'),
           ),
           FilledButton(
             key: const Key('confirm-encrypted-receipt-recycle'),
-            onPressed: () => Navigator.pop(dialogContext, true),
+            onPressed: WaffraHaptics.tap(() => Navigator.pop(dialogContext, true)),
             child: Text(widget.english ? 'Confirm' : 'تأكيد'),
           ),
         ],
@@ -200,28 +201,28 @@ class _WaffraVerifiedReceiptPanelState
           Text('${_page + 1} / ${receipt.images.length}',
               textAlign: TextAlign.center),
           const SizedBox(height: 8),
-          OutlinedButton.icon(
+          Align(alignment:AlignmentDirectional.centerStart,child:OutlinedButton.icon(
             key: const Key('move-encrypted-receipts-to-trash'),
-            onPressed: _busy ? null : _remove,
+            onPressed: WaffraHaptics.tap(_busy ? null : _remove),
             icon: const Icon(Icons.delete_outline),
             label: Text(widget.english
                 ? 'Move attachments to recycle bin'
                 : 'نقل المرفقات إلى المحذوفة'),
-          ),
+          )),
         ] else if (archived) ...[
           const SizedBox(height: 12),
           Text(widget.english
               ? 'Attachments are in the encrypted recycle bin.'
               : 'المرفقات محفوظة في سلة المحذوفات المشفرة.'),
           const SizedBox(height: 8),
-          OutlinedButton.icon(
+          Align(alignment:AlignmentDirectional.centerStart,child:OutlinedButton.icon(
             key: const Key('restore-encrypted-receipts'),
-            onPressed: _busy || !recoverable ? null : _restore,
+            onPressed: WaffraHaptics.tap(_busy || !recoverable ? null : _restore),
             icon: const Icon(Icons.restore),
             label: Text(widget.english
                 ? (recoverable ? 'Restore attachments' : 'Recovery period expired')
                 : (recoverable ? 'استرجاع المرفقات' : 'انتهت مهلة الاسترجاع')),
-          ),
+          )),
         ] else if (!_busy && _error == null)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
@@ -229,12 +230,12 @@ class _WaffraVerifiedReceiptPanelState
                 ? 'No encrypted attachments for this transaction.'
                 : 'ما فيه مرفقات مشفرة للمعاملة دي.'),
           ),
-        TextButton.icon(
+        Align(alignment:AlignmentDirectional.centerStart,child:TextButton.icon(
           key: const Key('refresh-encrypted-receipts'),
-          onPressed: _busy ? null : _refresh,
+          onPressed: WaffraHaptics.tap(_busy ? null : _refresh),
           icon: const Icon(Icons.refresh_outlined),
           label: Text(_loadLabel),
-        ),
+        )),
       ],
     );
   }

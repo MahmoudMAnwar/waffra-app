@@ -1,29 +1,42 @@
 import 'dart:io';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 /// Notifications are opt-in. No bank accounts or financial credentials are used.
 class WaffraReminder {
  final String id,title;
  final int day;
- const WaffraReminder({required this.id,required this.title,required this.day});
+ /// A linked goal may not start its monthly reminders before this date.
+ final DateTime? startAt;
+ const WaffraReminder({required this.id,required this.title,required this.day,this.startAt});
 }
 
 class WaffraReminders {
  WaffraReminders._();
  static final FlutterLocalNotificationsPlugin _plugin=FlutterLocalNotificationsPlugin();
  static bool _initialized=false;
+ static String? _lastTimeZone;
  static const _details=NotificationDetails(android:AndroidNotificationDetails(
   'waffra_recurring_due_v1','Waffra recurring reminders',
   channelDescription:'Optional reminders before upcoming recurring obligations',
   importance:Importance.defaultImportance,priority:Priority.defaultPriority));
 
- static Future<void> initialize()async {
-  if(_initialized||!Platform.isAndroid)return;
+ static Future<void> _useDeviceTimeZone()async {
   tz_data.initializeTimeZones();
-  // Waffra's initial Saudi release schedules recurring obligations in Riyadh time.
-  tz.setLocalLocation(tz.getLocation('Asia/Riyadh'));
+  final detected=await FlutterTimezone.getLocalTimezone();
+  final identifier=detected.identifier;
+  if(identifier.isEmpty)throw StateError('Device timezone not available.');
+  // Africa/Cairo observes Egyptian DST; never force Asia/Riyadh globally.
+  final location=tz.getLocation(identifier);
+  tz.setLocalLocation(location);
+  _lastTimeZone=identifier;
+ }
+ static Future<void> initialize()async {
+  if(!Platform.isAndroid)return;
+  await _useDeviceTimeZone();
+  if(_initialized)return;
   await _plugin.initialize(const InitializationSettings(
    android:AndroidInitializationSettings('@mipmap/ic_launcher')));
   _initialized=true;
@@ -34,6 +47,12 @@ class WaffraReminders {
   await initialize();
   return await _plugin.resolvePlatformSpecificImplementation<
    AndroidFlutterLocalNotificationsPlugin>()?.requestNotificationsPermission()??false;
+ }
+ static Future<bool> alreadyPermitted()async{
+  if(!Platform.isAndroid)return false;
+  await initialize();
+  return await _plugin.resolvePlatformSpecificImplementation<
+   AndroidFlutterLocalNotificationsPlugin>()?.areNotificationsEnabled()??false;
  }
 
  static int stableId(String id,int monthOffset){
@@ -53,9 +72,12 @@ class WaffraReminders {
   await _plugin.cancelAll();
   final now=DateTime.now();
   for(final item in items){
-   for(var offset=0;offset<3;offset++){
+   var scheduled=0;
+   for(var offset=0;offset<18&&scheduled<3;offset++){
     final month=DateTime(now.year,now.month+offset,1);
     final due=dueDate(month,item.day);
+    if(item.startAt!=null&&due.isBefore(DateTime(
+      item.startAt!.year,item.startAt!.month,item.startAt!.day)))continue;
     final remindAt=DateTime(due.year,due.month,due.day-1,9);
     if(!remindAt.isAfter(now.add(const Duration(minutes:2))))continue;
     await _plugin.zonedSchedule(
@@ -65,6 +87,7 @@ class WaffraReminders {
       'اقترب موعد «${item.title}» بتاريخ ${due.day}/${due.month}',
      tz.TZDateTime.from(remindAt,tz.local),_details,
      androidScheduleMode:AndroidScheduleMode.inexactAllowWhileIdle);
+    scheduled++;
    }
   }
  }

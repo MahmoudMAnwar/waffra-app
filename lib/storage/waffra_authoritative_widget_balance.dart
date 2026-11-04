@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../waffra_recurring_policy.dart';
+import 'legacy_snapshot_preflight.dart';
 
 /// Computes the widget balance from an *independently source-verified*
 /// finance ledger. This class never reads SharedPreferences or a UI cache.
@@ -26,11 +27,27 @@ class WaffraAuthoritativeWidgetBalance {
         throw StateError('Widget balance transaction is malformed.');
       }
       final value = (record['amount'] as num).toDouble();
-      if (!value.isFinite || value < 0 || value > 1000000000000) {
-        throw StateError('Widget balance amount is outside the safe range.');
+      if (!value.isFinite || value < 0 || value > 1000000000000 ||
+          !WaffraLegacyPreflight.canRepresentHalalas(value)) {
+        // Never round invalid sub-halalah values into a seemingly valid
+        // displayed balance. Hide the widget until the source is reconciled.
+        throw StateError('Widget balance amount violates ledger precision.');
       }
       final halalas = WaffraRecurringPolicy.toHalalas(value);
-      net += record['income'] == true ? halalas : -halalas;
+      final attributed = record['goalWalletPaidMinor'];
+      var walletMinor = 0;
+      if (attributed != null) {
+        if (record['sourceType'] != 'goal_due' ||
+            record['income'] != false ||
+            attributed is! int ||
+            attributed < 0 || attributed > halalas) {
+          // No guess from free-text notes. Missing or forged transfer metadata
+          // must never make the Android Widget show a fabricated cash balance.
+          throw StateError('Goal due wallet allocation is invalid.');
+        }
+        walletMinor = attributed;
+      }
+      net += record['income'] == true ? halalas : -halalas + walletMinor;
       if (net.abs() > 9000000000000000) {
         throw StateError('Widget balance total exceeds safe precision.');
       }

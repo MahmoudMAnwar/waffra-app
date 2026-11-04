@@ -1,0 +1,33 @@
+{
+  "contract_version": 1,
+  "change_id": "M228-exhaustive-finance-route-preflight-rebased-20261104",
+  "human_scope_review": "Owner asked to resolve all outstanding PR conflicts. Old #228 contains a read-only 24-route SQLCipher preflight absent from main. Reconciled solely in the encrypted startup binder after verified OS key and immutable source digest; without automatic cutover, writes, or changes to guarded-legacy behavior. Follow existing independent human release review policy.",
+  "user_requested_changes": [
+    "Resolve the outdated conflicting PR #228 against current main while preserving all later finance, SMS, widget, backup, biometric and locale code.",
+    "Check each canonical finance route before ever binding an already active encrypted SQLCipher source and reject any route without audited witness.",
+    "Keep the preflight strictly read-only and incapable of automatically activating SQLCipher or switching the authoritative ledger.",
+    "Preserve current guarded-legacy startup and require existing OS-backed key, verified source digest and native bridge before any encrypted read.",
+    "Add deterministic 24-route, missing-key, missing-witness, incomplete-audit, immutable report and main-wiring regression tests."
+  ],
+  "allowed_changed_files": [
+    "docs/qa/approved_change_scope.json",
+    "docs/qa/m228-24-route-source-preflight.md",
+    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "lib/storage/waffra_finance_24_route_preflight.dart",
+    "lib/storage/waffra_production_finance_authority_binding.dart",
+    "test/storage/m228_24_route_preflight_test.dart",
+    "test/qa/m228_24_route_binder_wiring_test.py"
+  ],
+  "bounded_sections": {
+    "lib/storage/waffra_production_finance_authority_binding.dart": [
+      {
+        "start": "import 'waffra_encrypted_sms_notes_vault.dart';\n",
+        "end": "import 'waffra_home_finance_persistence.dart';\n"
+      },
+      {
+        "start": "      if (checkpoint == null ||\n",
+        "end": "      final bridge = WaffraVerifiedEncryptedFinanceBridge(\n"
+      }
+    ]
+  }
+}

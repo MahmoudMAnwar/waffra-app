@@ -1,0 +1,158 @@
+name: M417 Automatic Bank SMS Opt-in and Finance Review QA
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'native/WaffraAutoSms*.kt'
+      - 'native/WaffraMainActivity.kt'
+      - 'lib/waffra_auto_sms*.dart'
+      - 'lib/waffra_bank_sms_facts.dart'
+      - 'functions/openrouter_sms_extractor.cjs'
+      - 'functions/index.js'
+      - 'lib/waffra_sms_cloud_redactor.dart'
+      - 'lib/waffra_sms_cloud_service.dart'
+      - 'lib/waffra_cloudflare_sms_gateway.dart'
+      - 'cloudflare/**'
+      - 'test/m423_cloudflare_sms_gateway_test.dart'
+      - 'docs/qa/m423_cloudflare_worker_link.md'
+      - 'test/waffra_sms_cloud_redactor_test.dart'
+      - 'pubspec.yaml'
+      - 'functions/test/openrouter_sms_extractor.test.cjs'
+      - 'docs/qa/m420_openrouter_cloud_sms_plan.md'
+      - 'lib/waffra_messages.dart'
+      - 'lib/main.dart'
+      - 'test/m417_*.dart'
+      - 'test/qa/m417_*.py'
+      - 'docs/qa/m417_sms_play_declaration.md'
+      - 'scripts/qa/m279_app_security_gate.py'
+      - '.github/workflows/m417-auto-bank-sms.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sms-privacy-and-finance-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Verify exact branch SHA
+        env:
+          EXPECTED: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED"
+      - name: Run opt-in, encrypted queue and duplicate handling contracts
+        run: python3 -m unittest discover -s test/qa -p 'm417_sms_permission_acceptance_test.py' -v
+      - name: Ensure protected Android permissions retain a narrow exception
+        run: |
+          python3 scripts/qa/m279_app_security_gate.py
+          python3 -m unittest -v scripts/qa/test_m279_app_security_gate.py
+      - name: Run unchanged-code scope guard against PR main base
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python3 scripts/qa/m385_approved_change_guard.py --base "$BASE_SHA" --head "$HEAD_SHA"
+
+  flutter-auto-sms-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze lib/main.dart lib/waffra_auto_sms.dart lib/waffra_auto_sms_policy.dart lib/waffra_auto_sms_consent.dart lib/waffra_messages.dart lib/waffra_bank_sms_facts.dart lib/waffra_sms_cloud_service.dart lib/waffra_sms_cloud_redactor.dart lib/waffra_cloudflare_sms_gateway.dart
+      - name: Test foreground opt-in and strict income/expense decision matrix
+        run: flutter test --reporter expanded test/m417_sms_first_run_test.dart test/waffra_auto_sms_policy_test.dart test/waffra_bank_sms_facts_test.dart test/waffra_sms_cloud_redactor_test.dart test/m423_cloudflare_sms_gateway_test.dart
+
+  android-sms-native-compile:
+    name: Compile M417 Android receiver, worker and notifications (no APK release)
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Restore Flutter dependencies and create transient Android project
+        run: |
+          flutter pub get
+          flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
+      - name: Install native SMS-only candidate sources (compile without production credentials)
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          root=Path('android/app/src/main/kotlin/com/waffra/app')
+          root.mkdir(parents=True,exist_ok=True)
+          for name in ('WaffraAutoSmsStore.kt', 'WaffraAutoSmsReceiver.kt',
+                       'WaffraAutoSmsWorker.kt', 'WaffraAutoSmsNotifications.kt'):
+              (root/name).write_text((Path('native')/name).read_text())
+          (root/'MainActivity.kt').write_text(
+              'package com.waffra.app\n'
+              'import io.flutter.embedding.android.FlutterActivity\n'
+              'class MainActivity : FlutterActivity() {}\n')
+          gradle=Path('android/app/build.gradle.kts')
+          content=gradle.read_text()
+          content+='\n// Compile-only M417 Android dependencies\ndependencies {\n'
+          content+='    implementation("androidx.work:work-runtime-ktx:2.11.2")\n'
+          content+='    implementation("androidx.core:core-ktx:1.16.0")\n}\n'
+          gradle.write_text(content)
+          PY
+      - name: Compile Kotlin SMS receiver, WorkManager and notification service
+        run: |
+          cd android
+          ./gradlew :app:compileDebugKotlin --stacktrace --no-daemon
+
+  m420-openrouter-server-contract:
+    name: Verify OpenRouter cloud SMS adapter remains opt-in and non-deployable
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax-check Firebase Callable and OpenRouter code
+        run: |
+          node --check functions/index.js
+          node --check functions/openrouter_sms_extractor.cjs
+      - name: Confirm server-side extraction tests without remote API usage
+        run: node --test functions/test/openrouter_sms_extractor.test.cjs
+      - name: Verify Cloudflare Worker syntax and signed-identity tests
+        run: |
+          node --check cloudflare/waffra_sms_worker.mjs
+          node --check cloudflare/waffra_sms_appcheck.mjs
+          node --test cloudflare/waffra_sms_worker.test.mjs
+      - name: Ensure no client OpenRouter keys or public cloud endpoint are exposed
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          client='\n'.join(p.read_text(errors='replace') for p in Path('lib').rglob('*.dart'))
+          assert 'openrouter.ai/api/v1/chat/completions' not in client
+          assert 'OPENROUTER_API_KEY' not in client
+          functions=Path('functions/index.js').read_text()
+          assert 'secrets: [smsKey]' in functions, 'Provider secret must stay server-bound'
+          assert 'enforceAppCheck: true' in functions
+          assert "process.env.WAFFRA_SMS_CLOUD_ENABLED !== 'true'" in functions
+          assert 'waffraSmsCloudConsents' in functions
+          assert 'checkedSmsOwner(request)' in functions
+          print('PASS: server-only OpenRouter, App Check, authenticated owner, feature flag and consent gate')
+          PY

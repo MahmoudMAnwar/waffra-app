@@ -1,4 +1,6 @@
 import 'waffra_encrypted_full_finance_reset.dart';
+import 'waffra_fresh_finance_domain_repository.dart';
+import 'waffra_verified_goal_due_snapshot_writer.dart';
 import 'waffra_encrypted_transaction_recycle.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -93,6 +95,49 @@ class WaffraVerifiedEncryptedFinanceBridge {
   /// source selector and the reset engine recheck the active SQLCipher
   /// checkpoint beneath the same native Home/Widget writer lock. A locally
   /// generated backup, UI button or in-memory certificate is never enough.
+  /// Verify the active finance source *inside* the Home/Widget native writer
+  /// lock, then settle a linked goal due and its canonical snapshot in ONE
+  /// SQLCipher transaction. No independent SharedPreferences fallback exists.
+  ///
+  /// The caller's generation must still match: even an unrelated widget edit
+  /// means the Home screen must reload before confirming any cash movement.
+  Future<WaffraGoalDueSqlReceipt> settleLinkedGoalDue({
+    required WaffraEncryptedHomeWitness baseline,
+    required String goalId,
+    required String recurringId,
+    required String dueKey,
+    required int amountMinor,
+    required String confirmedAtIso,
+    required bool userConfirmed,
+  }) async {
+    if (!experimentalEnabled || !userConfirmed) {
+      throw StateError('Encrypted goal due needs explicit user approval.');
+    }
+    return WaffraExperimentalWriterGate(
+      disposableDirectory: writerDirectory,
+      experimentalEnabled: true,
+    ).withExclusiveAccess(() async {
+      await _requireActivatedUnderLock();
+      final current = await snapshot.read();
+      if (current.generation != baseline.generation ||
+          current.digest != baseline.digest) {
+        throw StateError('Finance changed before goal due. Reload and retry.');
+      }
+      return WaffraVerifiedGoalDueSnapshotWriter(
+        store: snapshot.store,
+        snapshot: snapshot,
+        experimentalEnabled: true,
+      ).settle(
+        goalId: goalId,
+        recurringId: recurringId,
+        dueKey: dueKey,
+        amountMinor: amountMinor,
+        confirmedAtIso: confirmedAtIso,
+        userConfirmed: true,
+      );
+    });
+  }
+
   Future<WaffraEncryptedFullResetResult> resetVerifiedFinance({
     required WaffraEncryptedHomeWitness baseline,
     required String encryptedBackup,

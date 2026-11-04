@@ -20,6 +20,10 @@ dependencies:
   local_auth: ^2.3.0
   http: ^1.2.2
   image_picker: ^1.1.2
+  geolocator: ^13.0.4
+  geocoding: ^4.0.0
+  flutter_timezone: ^5.1.1
+  flutter_tesseract_ocr: ^0.4.31
   path_provider: ^2.1.5
   fl_chart: ^0.69.2
   image: 4.5.4
@@ -29,12 +33,15 @@ dependencies:
   pdf: ^3.11.1
   printing: ^5.13.4
   firebase_core: ^4.0.0
+  firebase_app_check: ^0.4.8
   firebase_auth: ^6.0.0
   cloud_firestore: ^6.0.0
   cloud_functions: ^6.5.0
   firebase_crashlytics: ^5.4.0
   google_sign_in: ^7.0.0
   flutter_svg: ^2.0.10
+  # Opt-in local GGUF model; not loaded or downloaded at startup.
+  llamadart: 0.8.24
 
 dev_dependencies:
   integration_test:
@@ -47,6 +54,8 @@ hooks:
   user_defines:
     sqlite3:
       source: sqlite3mc
+    llamadart:
+      llamadart_native_runtimes: [llama_cpp]
 
 flutter:
   uses-material-design: true

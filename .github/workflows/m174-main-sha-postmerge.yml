@@ -21,12 +21,22 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
       - name: Assert checked-out SHA is the CI subject
         env:
           EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
       - name: Test source guard tamper detection
         run: python3 -m unittest scripts/qa/test_m173_source_cutover_preflight.py -v
+      - name: Verify M382 skip-free routing and preserved release safety
+        run: python3 -m unittest discover -s test/qa -p 'm382_skip_free_workflow_routing_test.py' -v
+      - name: Verify M385 unrequested-change guard cannot be bypassed
+        run: python3 -m unittest discover -s test/qa -p 'm385_approved_scope_guard_test.py' -v
+      - name: Enforce declared file and function edit scope versus original main
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: python3 scripts/qa/m385_approved_change_guard.py --base "$BASE_SHA" --head "$HEAD_SHA"
       - name: Generate non-sensitive NO-GO evidence for exact SHA
         env:
           GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -59,40 +69,12 @@ jobs:
           channel: stable
           cache: true
       - name: Resolve packages
-        run: flutter pub get
+        run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
       - name: Enforce cutover negative matrix on exact SHA
         run: >
           flutter test
           test/storage/m173_production_release_negative_matrix_test.dart
           test/storage/m123_production_cutover_release_gate_test.dart
           test/storage/m83_cutover_release_gate_matrix_test.dart
-
-  main-arm64-compile:
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    timeout-minutes: 50
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }}
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-      - run: flutter pub get
-      - name: Provision Android project for CI (not signed release)
-        run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
-      - name: Compile Android ARM64 release-mode APK on main SHA
-        run: flutter build apk --release --no-pub --target-platform android-arm64
-      - name: Archive CI-only APK, not real-device or store proof
-        uses: actions/upload-artifact@v4
-        with:
-          name: m174-main-arm64-ci-apk-not-production-certified
-          path: build/app/outputs/flutter-apk/app-release.apk
-          if-no-files-found: error
-          retention-days: 7

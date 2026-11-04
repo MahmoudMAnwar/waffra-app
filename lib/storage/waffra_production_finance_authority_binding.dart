@@ -124,10 +124,8 @@ class WaffraProductionFinanceAuthorityBinding {
           checkpoint.sourceDigest != evidence.storage.sourceDigest) {
         throw StateError('Encrypted source certification digest mismatches.');
       }
-      // This structural 24-route gate is applied ONLY after the durable OS
-      // key and signed-off source digest have been checked. It never grants
-      // production permission, creates activation markers or changes a ledger.
-      // The existing release gate and the native bridge must also agree.
+      // Read-only exhaustive route contract check after the authenticated OS
+      // key and independently confirmed source digest. Never performs cutover.
       final routePreflight = const WaffraFinance24RoutePreflight().inspect(
         source: report,
         audit: evidence.routes,

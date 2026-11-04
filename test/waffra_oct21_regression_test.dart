@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
+import 'package:waffra/waffra_tour_plan.dart';
 
 void main() {
  late String app;
@@ -24,11 +25,24 @@ void main() {
   expect(app, contains("'No.'"));
  });
 
- test('Receipt corner reports number of attachments and hides on empty', () {
-  expect(app, contains("if(attachmentCount>0)PositionedDirectional"));
-  expect(app, contains("'عدد المرفقات \u0024attachmentCount'"));
-  expect(app, contains("onTap:()=>showReceipt(e.receiptPath!)"));
-  expect(app, isNot(contains("const Icon(Icons.attach_file,size:17,color:emerald)")));
+ test('M384 restored receipt corner on cards and retained details access', () {
+  // M374 removed the approved corner badge. A regression test must never
+  // treat its absence as a success again.
+  expect(app, contains('Widget tile(MoneyEntry e)'));
+  expect(app, contains('Widget compactTransaction(MoneyEntry entry)'));
+  expect(app, contains('final attachmentCount=waffraReceiptPaths(e.receiptPath).length;'));
+  expect(app, contains('final attachmentCount=waffraReceiptPaths(entry.receiptPath).length;'));
+  expect(RegExp(r'if\(attachmentCount>0\)PositionedDirectional\(top:0,start:0')
+      .allMatches(app).length, 2,
+   reason:'Both transaction list and dashboard require the RTL/LTR corner.');
+  expect(app, contains('WaffraReceiptCornerAction('));
+  expect(app, contains('count:attachmentCount,english:waffraIsEnglish'));
+  expect(app, contains('onTap:()=>showReceipt(e.receiptPath!)'));
+  expect(app, contains('onTap:()=>showReceipt(entry.receiptPath!)'));
+  expect(app, contains('if(onViewReceipt!=null)'),
+   reason:'Details must continue exposing the saved-attachment action.');
+  expect(app, contains('waffraReceiptPaths(entry.receiptPath).isNotEmpty'));
+  expect(app, contains('showReceipt(entry.receiptPath!)'));
  });
 
  test('Sensitive financial actions always require OS biometric authentication', () {
@@ -58,8 +72,10 @@ void main() {
   expect(app, contains("'waffra_appearance_mode_v1'"));
  });
 
- test('Tour explains six core sections and supports replay', () {
-  expect(app, contains('static const tourTabs=<int>[0,0,0,1,2,3]'));
+ test('Tour explains seven approved sections and supports replay', () {
+  expect(app, contains('static const tourTabs=WaffraTourPlan.tabs;'));
+  expect(WaffraTourPlan.tabs, <int>[0,0,0,1,2,3,4]);
+  expect(WaffraTourPlan.titlesEn, contains('Smart financial tools'));
   expect(app, contains('List<GlobalKey>.generate(7'));
   expect(app, contains('tourStep==tourTabs.length-1'));
   expect(app, contains('void beginTour()'));

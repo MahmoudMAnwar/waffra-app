@@ -8,6 +8,8 @@ on:
       - main
       # M206 on-branch QA build; no merge, store deploy or SQLCipher activation.
       - 'fix/m206-daylight-tour-sms-notes-motion-20261024'
+      # M259 signed owner-only QA; never Google Play or SQLCipher cutover.
+      - 'feature/m259-approved-markets-oil-accordion-refresh-20261026'
       # M160 signed APK for owner physical-device QA only; no store release.
       - 'integration/m160-reconcile-main-m158-release-gate-20261023'
       - 'feature/storage-finance-startup-recovery-m62'
@@ -27,6 +29,12 @@ on:
       # M127: isolated signed QA artifact only; never auto-release or deploy.
       - 'feature/m127-approved-ui-and-safe-backup-build'
   workflow_dispatch:
+    inputs:
+      sms_staging_worker:
+        description: 'Owner QA APK on main only: enable Firebase App Check Cloudflare SMS staging'
+        required: false
+        type: boolean
+        default: false
 
 # Fast-build concurrency: only the latest pushed revision needs an APK.
 # Separate full-smoke workflow runs independently without skipped steps.
@@ -54,7 +62,9 @@ jobs:
           channel: stable
           cache: true
       - name: Resolve Dart packages
-        run: flutter pub get
+        run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
       - name: Run Flutter analyzer
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
       - name: Run every Flutter regression including future test files
@@ -66,7 +76,8 @@ jobs:
 
   verify-same-sha-checks:
     name: Check every independent test workflow on this exact SHA
-    needs: verify-all-tests
+    # M381: this audit only reads independent same-SHA results. Run in
+    # parallel with the mandatory Flutter/Python job; release still needs BOTH.
     runs-on: ubuntu-latest
     timeout-minutes: 55
     steps:
@@ -85,12 +96,18 @@ jobs:
           own_run = int(os.environ['RUN_ID'])
           branch = os.environ['BRANCH_NAME']
           expected = {
+              # These trigger on push to main, not just on PRs. Require BOTH
+              # before the parallel audit can finish: never approve an empty
+              # result when the other workflows have not registered yet.
+              'M340 Continuous Financial Quality Gate (Exact SHA, No Cutover)',
+              'M174 Main SHA Post-Merge SQLCipher Regression',
+          } if branch == 'main' else ({
               'M147 Final Main-Safe Merge Readiness Review',
               'M160 Main Reconciliation and Backup Regression',
               'Waffra Full Offline Finance and UI Regression',
               'Waffra M103 Same-SHA Whole-App Release Certification',
               'M202 Android SQLCipher Source Binding Dry Run (CI ONLY)',
-          } if branch == 'fix/m206-daylight-tour-sms-notes-motion-20261024' else set()
+          } if branch == 'fix/m206-daylight-tour-sms-notes-motion-20261024' else set())
           headers = {
               'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
               'Accept': 'application/vnd.github+json',
@@ -132,7 +149,15 @@ jobs:
           PY
 
   build:
+    # M383: compile signed APK and Play AAB in independent clean runners.
+    # Never publish EITHER artifact until mandatory full tests and independent
+    # exact-SHA finance/SQLCipher gates have both succeeded.
     needs: [verify-all-tests, verify-same-sha-checks]
+    strategy:
+      fail-fast: false
+      matrix:
+        artifact: [apk, aab]
+    name: Signed Android ${{ matrix.artifact }} on exact main SHA
     runs-on: ubuntu-latest
 
     steps:
@@ -169,7 +194,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.gradle/caches/build-cache-1
-          key: waffra-gradle-tasks-v1-${{ runner.os }}-${{ hashFiles('pubspec.lock', 'pubspec.yaml', 'gradle/wrapper/gradle-wrapper.properties', 'android/gradle/wrapper/gradle-wrapper.properties') }}-${{ github.run_id }}
+          key: waffra-gradle-tasks-v1-${{ runner.os }}-${{ hashFiles('pubspec.lock', 'pubspec.yaml', 'gradle/wrapper/gradle-wrapper.properties', 'android/gradle/wrapper/gradle-wrapper.properties') }}-${{ github.run_id }}-${{ matrix.artifact }}
           restore-keys: |
             waffra-gradle-tasks-v1-${{ runner.os }}-${{ hashFiles('pubspec.lock', 'pubspec.yaml', 'gradle/wrapper/gradle-wrapper.properties', 'android/gradle/wrapper/gradle-wrapper.properties') }}-
 
@@ -183,6 +208,9 @@ jobs:
 
       - name: Generate Android project (without duplicate pub get)
         run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
+
+      - name: Configure optional approximate location only (no background or SMS)
+        run: python3 scripts/qa/m290_configure_country_permissions.py .
 
       - name: Match native Android launch background to Waffra emerald
         shell: bash
@@ -391,6 +419,9 @@ jobs:
           template=Path('native/WaffraMainActivity.kt').read_text()
           assert 'waffra/privacy' in template and 'waffra/messages' in template
           activity.write_text(template)
+          for filename in ('WaffraAutoSmsStore.kt', 'WaffraAutoSmsReceiver.kt',
+                           'WaffraAutoSmsWorker.kt', 'WaffraAutoSmsNotifications.kt'):
+              (activity.parent/filename).write_text((Path('native')/filename).read_text())
 
           manifest=Path('android/app/src/main/AndroidManifest.xml')
           xml=manifest.read_text()
@@ -408,9 +439,34 @@ jobs:
                   raise SystemExit('Could not locate generated MainActivity')
               xml=xml[:close]+filter_xml+chr(10)+'    '+xml[close:]
               manifest.write_text(xml)
-          if re.search(r'<uses-permission[^>]*\\b(?:READ_SMS|RECEIVE_SMS|READ_CALL_LOG)\\b',xml):
-              raise SystemExit('SMS inbox permissions must never be requested')
-          print('Enabled user-triggered text sharing and messaging launch without inbox access')
+          # M417 draft-only: sensitive SMS access requires Play review before release.
+          for permission in ('READ_SMS', 'RECEIVE_SMS'):
+              entry=f'<uses-permission android:name="android.permission.{permission}" />'
+              if entry not in xml:
+                  xml=xml.replace('<application','    '+entry+'\n    <application',1)
+          receiver='''
+              <receiver android:name="com.waffra.app.WaffraAutoSmsReceiver"
+                  android:exported="true"
+                  android:permission="android.permission.BROADCAST_SMS">
+                  <intent-filter>
+                      <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+                  </intent-filter>
+              </receiver>
+          '''
+          if 'com.waffra.app.WaffraAutoSmsReceiver' not in xml:
+              xml=xml.replace('</application>',receiver+'\n    </application>',1)
+          # WorkManager executes the same verified Dart finance source after
+          # receiving SMS while the UI is closed. No new native ledger writes.
+          gradle=Path('android/app/build.gradle.kts')
+          script=gradle.read_text()
+          dep='implementation("androidx.work:work-runtime-ktx:2.11.2")'
+          if dep not in script:
+              script+='\n// M418 opt-in bank SMS background finance verification\ndependencies { '+dep+' }\n'
+              gradle.write_text(script)
+          manifest.write_text(xml)
+          assert all('android.permission.'+p in xml for p in ('READ_SMS','RECEIVE_SMS'))
+          assert 'WaffraAutoSmsReceiver' in xml and 'READ_CALL_LOG' not in xml
+          print('M417 draft: opt-in, scoped SMS bank intake; Play approval pending')
           PY
 
       - name: Install native Firebase Auth SDK dependency (M219)
@@ -468,6 +524,11 @@ jobs:
                       android:autoSizeMinTextSize="6sp" android:autoSizeMaxTextSize="14sp"
                       android:autoSizeStepGranularity="1sp"
                       android:textColor="#B8F5D6"/>
+                  <ImageView android:id="@+id/widget_riyal_icon"
+                      android:layout_width="14dp" android:layout_height="14dp"
+                      android:src="@drawable/waffra_sar_symbol"
+                      android:tint="#FFFFFF" android:visibility="gone"
+                      android:contentDescription="Saudi Riyal" />
                   <TextView android:id="@+id/widget_currency"
                       android:layout_width="wrap_content" android:layout_height="wrap_content"
                       android:text="ريال" android:textColor="#FFFFFF"
@@ -476,6 +537,12 @@ jobs:
               </LinearLayout>
               </FrameLayout>
           </FrameLayout>""")
+          # The Android widget uses the exact same PNG as Flutter/PDF.
+          riyal=Path('assets/Saudi_Riyal_Symbol-1.png')
+          assert riyal.is_file() and riyal.stat().st_size>0
+          symbol=root/'res/drawable-nodpi/waffra_sar_symbol.png'
+          symbol.parent.mkdir(parents=True,exist_ok=True)
+          symbol.write_bytes(riyal.read_bytes())
           drawable=root/'res/drawable'
           drawable.mkdir(parents=True,exist_ok=True)
           (drawable/'waffra_widget_bg.xml').write_text("""<?xml version="1.0" encoding="utf-8"?>
@@ -695,7 +762,9 @@ jobs:
           echo 'Gradle task output caching enabled.'
 
       - name: Install dependencies
-        run: flutter pub get
+        run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
 
       - name: Identify Flutter compilation-cache compatibility
         id: flutter_cache_identity
@@ -718,7 +787,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: .dart_tool/flutter_build
-          key: waffra-flutter-compile-v1-${{ runner.os }}-${{ steps.flutter_cache_identity.outputs.revision }}-${{ hashFiles('pubspec.lock', 'pubspec.yaml', 'native/**', 'firebase/google-services.json', '.github/workflows/android.yml') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: waffra-flutter-compile-v1-${{ runner.os }}-${{ steps.flutter_cache_identity.outputs.revision }}-${{ hashFiles('pubspec.lock', 'pubspec.yaml', 'native/**', 'firebase/google-services.json', '.github/workflows/android.yml') }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.artifact }}
           restore-keys: |
             waffra-flutter-compile-v1-${{ runner.os }}-${{ steps.flutter_cache_identity.outputs.revision }}-${{ hashFiles('pubspec.lock', 'pubspec.yaml', 'native/**', 'firebase/google-services.json', '.github/workflows/android.yml') }}-
 
@@ -751,21 +820,27 @@ jobs:
           PY
 
       - name: Flutter static analysis
+        # Mandatory main verification has already analyzed the same SHA.
+        # Keep this local verification on other historical QA branches.
+        if: github.ref != 'refs/heads/main'
         run: flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings
 
       # Validate the cache invalidation logic itself on every build.
       - name: Verify Smart CI safety policies
+        if: github.ref != 'refs/heads/main'
         run: python3 -m unittest discover -s scripts -p 'test_smart_ci.py' -v
 
       # A test cache contains ONLY fingerprints and previous green results,
       # never compiled APKs or security secrets. An older successful full
       # release is used as the reference if the exact run has no cache.
       - name: Restore verified passing Flutter test fingerprints
+        # Main has an exhaustive same-SHA suite: no result reuse needed.
+        if: github.ref != 'refs/heads/main'
         id: smart_cache
         uses: actions/cache/restore@v4
         with:
           path: .ci_cache/waffra_green_tests.json
-          key: waffra-smart-tests-v2-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: waffra-smart-tests-v2-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.artifact }}
           restore-keys: |
             waffra-smart-tests-v2-${{ runner.os }}-
 
@@ -773,6 +848,9 @@ jobs:
       # always run. Other tests run if their transitive source or environment
       # changed. Scheduled/full-smoke releases re-run ALL Flutter tests.
       - name: Run Smart Incremental Flutter tests
+        # Do not rerun Flutter tests inside the main APK job after the
+        # mandatory full suite completed successfully in verify-all-tests.
+        if: github.ref != 'refs/heads/main'
         id: smart_tests
         env:
           WAFFRA_FULL_VALIDATION: 'false'
@@ -836,19 +914,43 @@ jobs:
           PY
 
       - name: Build optimized ARM64 Release APK
+        if: matrix.artifact == 'apk'
         shell: bash
         env:
           WAFFRA_RELEASE_STORE_PASSWORD: ${{ secrets.WAFFRA_RELEASE_STORE_PASSWORD }}
           WAFFRA_RELEASE_KEY_PASSWORD: ${{ secrets.WAFFRA_RELEASE_KEY_PASSWORD }}
+          # Public read-only commodity API key; never a bank credential.
+          WAFFRA_PUBLIC_EIA_KEY: ${{ secrets.WAFFRA_PUBLIC_EIA_KEY }}
         run: |
           set -o pipefail
           started=$(date +%s)
           # Gradle/Maven occasionally answer 429 Too Many Requests on hosted
           # runners. Retry transient download failures rather than report
           # them as application or Dart compilation failures.
+          eia_define=()
+          if [[ -n "${WAFFRA_PUBLIC_EIA_KEY:-}" ]]; then
+            # Official EIA route uses its own registered public read-only key.
+            # Never print this key or include it in release notes.
+            eia_define+=(--dart-define="WAFFRA_PUBLIC_EIA_KEY=${WAFFRA_PUBLIC_EIA_KEY}")
+            echo "Official EIA live commodity source configured for release APK"
+          else
+            echo "::warning::WAFFRA_PUBLIC_EIA_KEY is not configured; oil quotes will depend on unkeyed FRED CSV availability"
+          fi
+          # M436: Owner-approved exact-main QA APKs can analyze opted-in,
+          # redacted bank SMS into encrypted review suggestions. NO auto-post.
+          # All Play AAB builds and non-main branches stay cloud-disabled.
+          sms_define=()
+          if [[ "${{ inputs.sms_staging_worker }}" == "true" && "${{ github.ref }}" != "refs/heads/main" ]]; then
+            echo "::error::Cloud SMS staging APK is allowed only from main"
+            exit 1
+          fi
+          if [[ "${{ github.ref }}" == "refs/heads/main" && ( "${{ github.event_name }}" == "push" || "${{ github.event_name }}" == "workflow_dispatch" ) ]]; then
+            sms_define+=(--dart-define="WAFFRA_SMS_WORKER_URL=https://waffra-sms-appcheck-staging.mahmoudmanwar159.workers.dev/analyze")
+            echo "Signed main QA APK: opt-in App Check cloud SMS suggestions to staging (NO auto-post)"
+          fi
           for attempt in 1 2 3 4; do
             echo "Android ARM64 build attempt ${attempt}/4"
-            if flutter build apk --no-pub --release --target-platform android-arm64 --tree-shake-icons; then
+            if flutter build apk --no-pub --release --target-platform android-arm64 --tree-shake-icons "${eia_define[@]}" "${sms_define[@]}"; then
               elapsed=$(( $(date +%s) - started ))
               printf 'ARM64 build command: **%s seconds** (including retries, if any).\n' "$elapsed" >> "$GITHUB_STEP_SUMMARY"
               echo "WAFFRA_ARM64_BUILD_SECONDS=$elapsed"
@@ -862,6 +964,7 @@ jobs:
           done
 
       - name: Measure release APK size
+        if: matrix.artifact == 'apk'
         shell: bash
         run: |
           python3 - <<'PY'
@@ -871,6 +974,7 @@ jobs:
           PY
 
       - name: Verify final APK uses Firebase-registered Waffra release signing
+        if: matrix.artifact == 'apk'
         shell: bash
         run: |
           python3 - <<'PY'
@@ -902,6 +1006,7 @@ jobs:
       # AAB is a TEST candidate. Do NOT upload to a Production Play track
       # until the independent finance/security/physical-device gates pass.
       - name: Enforce Google Play Android 16 target SDK 36 for candidate AAB
+        if: matrix.artifact == 'aab'
         shell: bash
         run: |
           python3 - <<'PY'
@@ -924,15 +1029,26 @@ jobs:
           PY
 
       - name: Build Android App Bundle candidate for Google Play internal testing
+        if: matrix.artifact == 'aab'
         shell: bash
         env:
           WAFFRA_RELEASE_STORE_PASSWORD: ${{ secrets.WAFFRA_RELEASE_STORE_PASSWORD }}
           WAFFRA_RELEASE_KEY_PASSWORD: ${{ secrets.WAFFRA_RELEASE_KEY_PASSWORD }}
+          WAFFRA_PUBLIC_EIA_KEY: ${{ secrets.WAFFRA_PUBLIC_EIA_KEY }}
         run: |
-          flutter build appbundle --no-pub --release --target-platform android-arm64 --tree-shake-icons
+          eia_define=()
+          if [[ -n "${WAFFRA_PUBLIC_EIA_KEY:-}" ]]; then
+            eia_define+=(--dart-define="WAFFRA_PUBLIC_EIA_KEY=${WAFFRA_PUBLIC_EIA_KEY}")
+          fi
+          started=$(date +%s)
+          flutter build appbundle --no-pub --release --target-platform android-arm64 --tree-shake-icons "${eia_define[@]}"
           test -s build/app/outputs/bundle/release/app-release.aab
+          elapsed=$(( $(date +%s) - started ))
+          printf 'AAB compile command: **%s seconds**.\n' "$elapsed" >> "$GITHUB_STEP_SUMMARY"
+          echo "WAFFRA_AAB_BUILD_SECONDS=$elapsed"
 
       - name: Validate signed AAB archive (not a Play approval)
+        if: matrix.artifact == 'aab'
         shell: bash
         run: |
           set -euo pipefail
@@ -942,7 +1058,50 @@ jobs:
           sha256sum "$bundle" | tee aab_candidate_sha256.txt
           echo 'Signed candidate AAB built. Store policy and physical-install proof still required.'
 
+      - name: Verify signed AAB release certificate and compiled source identity
+        if: matrix.artifact == 'aab'
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          SOURCE_BRANCH: ${{ github.ref_name }}
+          SOURCE_RUN: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          test "$SOURCE_SHA" = "$(git rev-parse HEAD)"
+          latest=$(git ls-remote origin "refs/heads/$SOURCE_BRANCH" | awk '{print $1}')
+          test -n "$latest"
+          if [ "$latest" != "$SOURCE_SHA" ]; then
+            echo "::error::BLOCKED stale AAB: branch moved to $latest from $SOURCE_SHA"
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json, os, pathlib, re, subprocess, zipfile
+          path = pathlib.Path('build/app/outputs/bundle/release/app-release.aab')
+          expected = {'commit_sha': os.environ['SOURCE_SHA'],
+                      'branch': os.environ['SOURCE_BRANCH'],
+                      'workflow_run': os.environ['SOURCE_RUN'],
+                      'build_type': 'qa-android-arm64'}
+          with zipfile.ZipFile(path) as archive:
+              identities = [name for name in archive.namelist()
+                            if name.endswith('/assets/waffra-build-identity.json')]
+              if len(identities) != 1:
+                  raise SystemExit('BLOCKED: AAB missing unique embedded source identity')
+              identity = json.loads(archive.read(identities[0]))
+              if identity != expected:
+                  raise SystemExit('BLOCKED: AAB embedded identity differs from exact tested SHA')
+          cert = subprocess.run(['keytool', '-printcert', '-jarfile', str(path)],
+                                text=True, capture_output=True, check=True).stdout
+          for key, wanted in [
+              ('SHA1', '7b65b90ca51c0dec5d36cbab1af789119d9b4335'),
+              ('SHA256', '894c436dc4270d46815707a29147709e89cd42d40fbf5d3ae24104293b03ae8c')]:
+              found = re.search(r'(?m)^\s*' + key + r':\s*([0-9a-fA-F:]+)', cert)
+              if not found or found.group(1).replace(':', '').lower() != wanted:
+                  raise SystemExit('BLOCKED: AAB signature certificate mismatch for ' + key)
+          print('PASS: signed AAB matches release certificate and exact SHA')
+          PY
+
       - name: Upload signed Google Play internal-testing AAB candidate
+        if: matrix.artifact == 'aab'
         uses: actions/upload-artifact@v4
         with:
           name: Waffra-Android-API36-AAB-Internal-Test-Candidate
@@ -951,8 +1110,9 @@ jobs:
             aab_candidate_sha256.txt
           retention-days: 30
 
-      # Only save compilation state after the signed APK was built, verified
-      # and uploaded. Skip excessive cache sizes that hurt performance.
+      # Save per-artifact compilation state only after that artifact has
+      # been built and verified on its own exact-SHA matrix runner.
+      # Do not cache secrets, keystores or signed release binaries.
       - name: Measure Flutter compilation cache size
         id: flutter_cache_size
         shell: bash
@@ -975,20 +1135,22 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: .dart_tool/flutter_build
-          key: waffra-flutter-compile-v1-${{ runner.os }}-${{ steps.flutter_cache_identity.outputs.revision }}-${{ hashFiles('pubspec.lock', 'pubspec.yaml', 'native/**', 'firebase/google-services.json', '.github/workflows/android.yml') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: waffra-flutter-compile-v1-${{ runner.os }}-${{ steps.flutter_cache_identity.outputs.revision }}-${{ hashFiles('pubspec.lock', 'pubspec.yaml', 'native/**', 'firebase/google-services.json', '.github/workflows/android.yml') }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.artifact }}
 
       # Results become reusable ONLY after tests, Android build, signature
       # verification and APK upload have ALL succeeded in this same job.
       - name: Save verified green test fingerprints
+        if: github.ref != 'refs/heads/main'
         uses: actions/cache/save@v4
         with:
           path: .ci_cache/waffra_green_tests.json
-          key: waffra-smart-tests-v2-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: waffra-smart-tests-v2-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.artifact }}
 
       # Fail closed if compiled APK differs from checkout, if another
       # commit was pushed while the build was running, or if APK is invalid.
       # Previous QA artifacts may still exist but are not current releases.
       - name: Gate QA APK on embedded SHA and current branch head
+        if: matrix.artifact == 'apk'
         shell: bash
         env:
           SOURCE_SHA: ${{ github.sha }}
@@ -1031,6 +1193,7 @@ jobs:
       # APK revision before installation. This is a QA artifact, not a
       # certification of SQLCipher production cutover or device tests.
       - name: Generate exact-commit APK checklist and SHA-256 receipt
+        if: matrix.artifact == 'apk'
         shell: bash
         env:
           SOURCE_SHA: ${{ github.sha }}
@@ -1075,6 +1238,7 @@ jobs:
       # from the approved changes tracked in Git. Future app-code changes
       # require updating the approval manifest before an APK is published.
       - name: Generate and validate Waffra Release Notes TXT
+        if: matrix.artifact == 'apk'
         shell: bash
         env:
           SOURCE_SHA: ${{ github.sha }}
@@ -1153,13 +1317,23 @@ jobs:
           test -s build/Waffra-Release-Notes.txt
           echo "✅ Waffra-Release-Notes.txt (same verified commit and APK hash)" >> "$GITHUB_STEP_SUMMARY"
 
-      # Only the LAST step publishes the APK and its exact source receipt.
+      - name: Stage verified Waffra.apk for download
+        if: matrix.artifact == 'apk'
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -m 0644 build/app/outputs/flutter-apk/app-release.apk build/Waffra.apk
+          cmp -s build/app/outputs/flutter-apk/app-release.apk build/Waffra.apk
+
+      # Only the LAST step of the APK matrix runner publishes its signed
+      # artifact, compiled identity receipt and approved release notes.
       - name: Publish signed QA APK (FINAL step)
+        if: matrix.artifact == 'apk'
         uses: actions/upload-artifact@v4
         with:
           name: Waffra-Android-ARM64-Release-${{ github.sha }}
           path: |
-            build/app/outputs/flutter-apk/app-release.apk
+            build/Waffra.apk
             build/waffra-qa-build-receipt.txt
             build/Waffra-Release-Notes.txt
           if-no-files-found: error

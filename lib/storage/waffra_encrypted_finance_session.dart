@@ -1,4 +1,5 @@
 import 'waffra_encrypted_full_finance_reset.dart';
+import 'waffra_fresh_finance_domain_repository.dart';
 import 'waffra_encrypted_transaction_recycle.dart';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -88,6 +89,29 @@ class WaffraEncryptedFinanceSession {
       baseline: baseline,
       record: record,
       proposedPostponedJson: proposedPostponedJson,
+      userConfirmed: userConfirmed,
+    );
+  }
+
+  /// The verified bridge owns both the native Home/Widget lock and the
+  /// typed+canonical SQLCipher transaction. A missing source is a hard error.
+  Future<WaffraGoalDueSqlReceipt> settleLinkedGoalDue({
+    required WaffraEncryptedHomeWitness baseline,
+    required String goalId,
+    required String recurringId,
+    required String dueKey,
+    required int amountMinor,
+    required String confirmedAtIso,
+    required bool userConfirmed,
+  }) {
+    _requireEnabled();
+    return bridge.settleLinkedGoalDue(
+      baseline: baseline,
+      goalId: goalId,
+      recurringId: recurringId,
+      dueKey: dueKey,
+      amountMinor: amountMinor,
+      confirmedAtIso: confirmedAtIso,
       userConfirmed: userConfirmed,
     );
   }

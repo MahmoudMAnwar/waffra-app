@@ -44,7 +44,7 @@ class _WidgetParsedSms {
 class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
  final _controller=TextEditingController();
  Timer? _debounce;
- bool _ready=false,_saving=false,_analyzing=false,_allowDuplicates=false,_success=false;
+ bool _ready=false,_sourceReady=false,_saving=false,_analyzing=false,_allowDuplicates=false,_success=false;
  bool _legacySource=true,_smsNotesOmitted=false;
  bool _english=false,_dark=false;
  String? _error;
@@ -62,13 +62,19 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
      );
 
 
- WaffraVerifiedFinanceAuthority get _financeAuthority=>
-  _financeBinding?.authority??WaffraVerifiedFinanceAuthority(
-   legacy:_financePersistence,
-   sourceGuard:widget.testSourceProbe==null
-    ?const WaffraProductionFinanceSourceGuard()
-    :const _WaffraWidgetTestingOnlySourceGuard(),
-  );
+ // Production never constructs an unbound legacy authority as a fallback.
+ // Only an explicit disposable widget-test probe may use the test authority.
+ WaffraVerifiedFinanceAuthority get _financeAuthority {
+  final binding=_financeBinding;
+  if(binding!=null)return binding.authority;
+  if(widget.testSourceProbe!=null){
+   return WaffraVerifiedFinanceAuthority(
+    legacy:_financePersistence,
+    sourceGuard:const _WaffraWidgetTestingOnlySourceGuard(),
+   );
+  }
+  throw StateError('Widget finance source has not been verified.');
+ }
 
  @override void initState(){
   super.initState();
@@ -94,10 +100,12 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
     _dark=prefs.getBool('waffra_dark_mode')??false;
     _knownHashes=(loaded.finance.getStringList('waffra_sms_hashes_v1')??[]).toSet();
     _legacySource=loaded.source==WaffraRuntimeFinanceBackend.guardedLegacy;
-    _ready=true;
+    _sourceReady=true;_error=null;_ready=true;
    });
   }catch(e){
-   if(mounted)setState((){_error='Cannot load local data / تعذر فتح البيانات المحلية';_ready=true;});
+   if(mounted)setState((){
+    _sourceReady=false;_error='Cannot load local data / تعذر فتح البيانات المحلية';_ready=true;
+   });
   }
  }
 
@@ -173,7 +181,7 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
  }
 
  Future<void> _commitWidgetSms()async{
-  if(_saving||_analyzing||_selected.isEmpty)return;
+  if(!_sourceReady||_saving||_analyzing||_selected.isEmpty)return;
   final selected=List<_WidgetParsedSms>.of(_selected);
   final totalDetected=_results.length;
   final allowDuplicates=_allowDuplicates;
@@ -337,7 +345,7 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
            const SizedBox(width:7),
            Expanded(child:Text(_english?'Waffra • Bank SMS':'وفرة • إضافة رسالة بنكية',
             style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold))),
-           IconButton(icon:const Icon(Icons.close),onPressed:_saving?null:_close),
+           IconButton(icon:const Icon(Icons.close),onPressed:WaffraHaptics.tap(_saving?null:_close)),
           ]),
           const SizedBox(height:8),
           Text(_english?'Paste a message for automatic analysis.':
@@ -345,6 +353,11 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
            style:const TextStyle(fontSize:13)),
           const SizedBox(height:11),
           if(!_ready)const LinearProgressIndicator()
+          else if(!_sourceReady)Text(
+           _english?'Financial source unavailable. Close and reopen to retry.':
+            'تعذر التحقق من مصدر البيانات المالية. أغلق النافذة وافتحها للمحاولة مجددًا.',
+           textAlign:TextAlign.center,
+          )
           else ...[
            TextField(
             key:const Key('waffra-widget-bank-message'),
@@ -354,14 +367,14 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
              hintText:_english?'Paste your bank SMS here…':'الصق رسالتك البنكية هنا…',
              border:OutlineInputBorder(borderRadius:BorderRadius.circular(16)),
              suffixIcon:_controller.text.isEmpty?null:IconButton(
-              icon:const Icon(Icons.clear),onPressed:(){
+              icon:const Icon(Icons.clear),onPressed:WaffraHaptics.tap((){
                _controller.clear();_onTextChanged('');
-              })),
+              }))),
            ),
            const SizedBox(height:9),
-           OutlinedButton.icon(onPressed:_saving?null:_pasteClipboard,
+           Align(alignment:AlignmentDirectional.centerStart,child:OutlinedButton.icon(onPressed:WaffraHaptics.tap(_saving?null:_pasteClipboard),
             icon:const Icon(Icons.content_paste),
-            label:Text(_english?'Paste from clipboard':'لصق الرسالة المنسوخة')),
+            label:Text(_english?'Paste from clipboard':'لصق الرسالة المنسوخة'))),
            if(_analyzing)...[
             const SizedBox(height:11),
             const LinearProgressIndicator(),
@@ -374,13 +387,13 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
              'المكتشفة: ${_results.length} • الدخل: ${_selected.where((r)=>r.result.income).length} • المصروفات: ${_selected.where((r)=>!r.result.income).length}',
              style:const TextStyle(fontWeight:FontWeight.bold)),
             const SizedBox(height:6),
-            Text(_english?
+            WaffraText(_english?
              'Income: ${formatWaffraMoney(_sum(true)/100)} SAR • Expenses: ${formatWaffraMoney(_sum(false)/100)} SAR':
              'الدخل: ${formatWaffraMoney(_sum(true)/100)} ريال • المصروف: ${formatWaffraMoney(_sum(false)/100)} ريال',
              style:const TextStyle(fontSize:12)),
             if(_results.any((r)=>r.duplicate))CheckboxListTile(
              contentPadding:EdgeInsets.zero,
-             value:_allowDuplicates,onChanged:_saving?null:(v)=>setState(()=>_allowDuplicates=v??false),
+             value:_allowDuplicates,onChanged:WaffraHaptics.selection(_saving?null:(v)=>setState(()=>_allowDuplicates=v??false)),
              title:Text(_english?'Allow duplicate SMS transactions':'السماح بإضافة الرسائل المكررة',
               style:const TextStyle(fontSize:12)),
             ),
@@ -409,7 +422,7 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
               textAlign:TextAlign.center,
               style:const TextStyle(color:Colors.deepOrange,fontSize:12))),
             FilledButton.icon(
-             onPressed:_selected.isEmpty||_saving?null:_confirmAndSave,
+             onPressed:WaffraHaptics.tap(_selected.isEmpty||_saving?null:_confirmAndSave),
              icon:const Icon(Icons.check_circle_outline),
              label:Text(_english?'Confirm and save':'تأكيد إضافة العمليات')),
            ],
@@ -435,6 +448,12 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
            if(_error!=null)Padding(padding:const EdgeInsets.only(top:9),
             child:Text(_error!,style:const TextStyle(color:Colors.red))),
           ],
+          // Source errors must remain visible even though unsafe input and
+          // confirmation controls are deliberately hidden.
+          if(!_sourceReady&&_error!=null)Padding(
+           padding:const EdgeInsets.only(top:9),
+           child:Text(_error!,style:const TextStyle(color:Colors.red)),
+          ),
          ]),
         ),
        ),

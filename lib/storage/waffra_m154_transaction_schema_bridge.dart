@@ -20,7 +20,7 @@ class WaffraM154TransactionSchemaBridge {
   if(date is! String||DateTime.tryParse(date)==null){
    throw const FormatException('Invalid finance entry date');
   }
-  for(final field in ['receiptPath','notes','sourceType','merchantKey']){
+  for(final field in ['receiptPath','notes','sourceType','merchantKey','budgetId']){
    if(input.containsKey(field)&&input[field]!=null&&input[field] is! String){
     throw const FormatException('Invalid optional transaction metadata');
    }

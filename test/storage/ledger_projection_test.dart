@@ -187,7 +187,7 @@ void main() {
           'goal': {
             'id': 'goal-x',
             'name': 'bad target',
-            'target': 0,
+            'target': -1,
             'saved': 100,
           },
           'deletedAt': '2026-10-21T13:00:00',
@@ -196,7 +196,7 @@ void main() {
     await db.stageSnapshot('vault', invalid);
     await expectLater(
       db.buildRelationalProjection('vault'),
-      throwsA(isA<Exception>()),
+      throwsA(isA<StateError>()),
     );
     // Creation and inserts happen inside the same transaction. A failed
     // CHECK constraint must roll back even the projection schema DDL.

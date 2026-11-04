@@ -4,6 +4,51 @@
 Approved changes for the next QA APK
 =============================================
 
+
+[M442] إصلاح متابعة الرسائل البنكية والمراجعة بعد تسجيل الدخول — 2026-11-04
+================================================================
+- فصل إذن قراءة الرسائل الممنوح من أندرويد عن حالة تفعيل المتابعة داخل
+  وفرة وربطها بالحساب الجاري. الإذن وحده لا يفعّل التقاط الرسائل.
+- بعد تسجيل الخروج: إيقاف التقاط الرسائل وعدم عرض رسائل الحساب السابق.
+  عند عودة نفس الحساب المثبت: استعادة موافقته السابقة بدون طلب إذن
+  أندرويد مرة ثانية، مع حماية الرسائل المشفرة المعلّقة من الفقد.
+- عند تبديل الحساب أو إيقاف المتابعة صراحةً: منع تسريب محتوى المراجعة
+  إلى الحساب الآخر ومسح القائمة المشفرة حسب شروط الحماية.
+- في الرئيسية: لا يظهر صفر كأنه نجاح فحص حين تكون صلاحية الرسائل
+  معطلة، أو التتبع متوقفًا، أو قراءة قائمة الرسائل المشفرة فشلت.
+- فحص الرسائل من بداية شهر التثبيت يصبح تدريجيًا بدفعات متتابعة،
+  ويُعلن صراحةً عن الفحص غير المكتمل بدل افتراض عدم وجود رسائل.
+- فتح إعدادات رسائل SMS يوضح الفرق بين صلاحيات أندرويد وقرار
+  تفعيل وفرة، من غير مطالبة المستخدم بنفس إذن النظام باستمرار.
+- لا حفظ تلقائي للمعاملات ولا إعادة اعتماد لعمليات مالية: يظل
+  التأكيد الشخصي والتأكد من عدم تكرار العمليات إلزاميين.
+- أثناء تسجيل الخروج: منع سباق المستقبِل أو حفظ مؤشر فحص الرسائل
+  بعد إيقاف الجلسة، وعدم حذف رسائل مراجعة نفس الحساب المشفرة.
+- للمستخدمين القادمين من نسخة أقدم: إعادة تفعيل المتابعة الصريحة
+  تبدأ فحص شهر التثبيت من البداية إذا كانت النسخة القديمة مسحت
+  المعلّقات وتركت مؤشر الفحص متقدمًا، مع منع التكرار المحاسبي.
+- هذه إصلاحات مرشحة لا تُعد مُجتازة للتجربة على هاتف فعلي حتى
+  تنجح اختبارات نفس الـCommit ويؤكد المستخدم ظهور الرسائل.
+
+
+[تحديث النسخة — PR #360 — 2026-11-03]
+- إصلاح رجوع الشاشة إلى بوابة البصمة بعد نجاح التحقق البيومتري؛
+  يُستكمل فتح التطبيق بعد نجاح البصمة بدل تكرار شاشة القفل.
+- إصلاح تسجيل الدخول برقم الجوال وكلمة المرور بعد تسجيل الخروج،
+  مع إبقاء التحقق من بيانات الدخول الآمنة وحماية الحسابات القديمة.
+- إزالة الشرح الزائد من شاشة البصمة، وحذف عبارة عدم الحاجة إلى
+  البريد الإلكتروني وتاريخ الميلاد من خطوة الاسم والجنس.
+- اختصار شاشة الموافقة على تتبع الرسائل البنكية، مع اختيارين منفصلين:
+  «السماح بالرسائل والتحليل تلقائيًا» (بموافقة مستقلة على الخدمة السحابية)
+  و«السماح بالرسائل فقط» (بدون التحليل السحابي)، بالإضافة إلى «تخطي الآن».
+- النص المختصر يوضح إرسال البيانات المالية إلى الخدمة السحابية بعد
+  إخفاء المعلومات الحساسة عند اختيار التحليل التلقائي.
+- تظل مراجعة المعاملات مطلوبة، ولا يُعتبر نجاح CI اعتمادًا لتخزين
+  SQLCipher الإنتاجي أو بديلًا عن الاختبار على هاتف أندرويد فعلي.
+- هذا القسم يخص PR #360 المدموج فقط؛ حسابات وتحويلات PR #359
+  ما زالت في PR منفصل ولم تُدمج في main.
+
+
 هذه القائمة تخص تعديلات الكود المعتمدة في هذا الفرع.
 وجود التعديل في الكود لا يساوي نجاح تجربته بصريًا على هاتف فعلي.
 سيضيف نظام البناء تلقائيًا رقم الـCommit ورقم تشغيل GitHub Actions
@@ -429,3 +474,1062 @@ M208 encrypted-legacy privacy constraint: When verified SQLCipher is not active,
 - An Android M202 test failed with "Encrypted source certification digest mismatches": the synthetic evidence fixture claimed an arbitrary hard-coded digest while the initialized SQLCipher checkpoint held the actual computed disposable legacy source SHA-256.
 - Fix the TEST fixture to pass the actual WaffraLegacyPreflight source fingerprint into certifiedEvidence, matching the same digest recorded in the throwaway vault cutover journal. Do not remove or weaken the production binding's independent checkpoint equality assertion.
 - This only authenticates a synthetic test vault; no production finance source activated. Requires rerunning Android M202 and all exact-SHA checks; no APK acceptance until they pass.
+
+[M258–M259] Approved market accordion, verified global oil and finance pull-refresh settle — 2026-10-26
+- Approved entire visual concept for the existing currency / global gold page: three bilingual sections in a single, one-open-at-a-time accordion. Opening Currency, Gold or Oil closes the previous section; tapping the open header may collapse it. All sections respect RTL/LTR, Tajawal and the Waffra emerald/gold identity.
+- Keep the existing true FX converter, source time, swap, source fallback, global gold karat/bullion drawings, certified Gold-API quote and independent gold currency calculator intact. Currency display preferences do not convert the actual stored balance.
+- Introduce the oil market section with hand-drawn barrel illustrations (Brent, WTI, Oman, Dubai) and a distinct natural-gas cylinder, source-dated quote cards, daily change and historical mini-chart ONLY when genuine benchmark observations are available, refresh, oil quantity and verified FX calculator.
+- Official U.S. EIA daily *spot* series RBRTE and RWTC are eligible only when a public commodity API quota key is configured at build time (WAFFRA_PUBLIC_EIA_KEY). A user-visible not-configured/unavailable state must never be replaced by fake prices, a demo endpoint, estimated market returns, guessed trends or a natural-gas barrel unit. Oman, Dubai and gas must show unavailable until independent provider coverage and units are validated. No bank API, finance database or stored transaction mutation.
+- Fix the build #706 Pull-to-Refresh bounce/blank top gap in Home, Categories, Savings Goals and Recurring by per-tab stable scroll controllers, bounded clamping and next-frame restoration only after the authoritative read succeeds and only if the original tab is still visible. Keep financial fail-closed error recovery.
+- M258–M259 are visual/market-data changes only; source must derive from the stable main branch, NOT silently pull the open M253–M257 encrypted-storage candidate into main. Same-SHA Flutter, Python and Android tests must succeed before merge and owner QA APK. No SQLCipher production cutover or genuine banking-SMS storage acceptance without two physical Android device evidence.
+- Additional CI reliability: M75 custom-goal concurrent writers are validated as an exact unique set (and existing first entry preserved), rather than assuming a nondeterministic native-lock acquisition sequence. This does NOT alter persisted goals or weaken assertions for duplicate/lost values.
+- M259 is added to the existing signed Android QA workflow branch allowlist. The workflow still requires full Flutter/Python and independent same-SHA tests before any APK is signed and uploaded; this grants NO permission to activate production finance or release to stores.
+- M259 verified public-data feed upgrade: without a registered EIA API key, Brent and WTI USD/barrel daily spot and Henry Hub natural gas USD/MMBtu load from the publicly downloadable FRED CSV for the official EIA series DCOILBRENTEU, DCOILWTICO and DHHNGSP, with strictly validated dates and values. Users get real source-dated readings/mini-trends or explicit unavailable states, never mock values. Optional direct EIA API key supports registered EIA Brent/WTI reads. Oman/Dubai remain unavailable until qualified providers are added.\n
+
+[M260] Unified bordered text-icon action alignment / oil-source failure UX — 2026-10-26
+- Apply a shared 52 logical-pixel MINIMUM button height and 18 horizontal / 12 vertical inner padding through light/dark FilledButton, OutlinedButton and TextButton themes, without imposing a fixed height that clips longer Arabic/English labels.
+- Text and icon stay vertically centered on the same action row; the widget can grow for two-line text. Keep Tajawal typography, RTL/LTR behavior, and existing functional onPressed callbacks intact.
+- Fix special overrides: recurring Financial Calendar and red Deleted Items buttons, which had overly cramped 5–7 px horizontal insets. Keep their compact two-column layout and flex text wrapping.
+- The global gold conversion call-to-action gains 20 horizontal / 14 vertical spacing, 54 minimum height, rounded 18px corners, centered two-line label and centered icon.
+- Oil prices: show explicit source-unavailable message and retry action, with diagnostic failure categories and optional registered EIA HTTP fallback to validated FRED; only verified actual source data may be shown.
+- The signed APK and internal AAB workflows accept optional registered WAFFRA_PUBLIC_EIA_KEY through a GitHub Actions secret and show a build warning when absent; no credentials or commodity prices are invented. The EIA API is used for independently sourced daily Brent/WTI and Henry Hub gas (RNGWHHD, USD/MMBtu) with parser/unit and route tests.
+- This market patch does NOT certify FRED public CSV availability on the owner's phone or supply an EIA API key. Oman and Dubai still have no qualified live data provider; their prices remain unavailable rather than invented.
+- Added RTL/LTR and dark-mode widget layout regression plus SHA-pinned file-scope review. A code diff or CI simulation is NOT a signed owner-tested APK; finish exact-main CI and signed APK before UI acceptance.
+- No SQLCipher financial production cutover, no new real-bank-SMS authorization, no Play publication and no two-device physical attestation. Production NO-GO remains.
+
+[M261] Official keyless oil and gas quote recovery — 2026-10-26
+- Fix the all-dashes petroleum card failure when FRED CSV returns HTTP 403 and no EIA API key was provided: prefer the official public EIA DAILY price pages for RBRTE Brent, RWTC WTI and RNGWHHD Henry Hub. Each page is independently fetched, source-title/unit checked and parsed for genuine dated daily observations. Reject stale, future, malformed and fictitious readings.
+- Retain registered EIA API and public FRED as alternate verified routes without overwriting valid official observations. USD/barrel for crude, USD/MMBtu for Henry Hub; unavailable stays unavailable for Oman/Dubai.
+- Add keyless 403, bad units, invalid week, partial-source regression tests and M261 SHA-pinned no-finance scope review. No SQLCipher live cutover or finance write changes.
+- This is a code-side fix, NOT proof of a verified real Android response, completed signed APK, or production security certification. Verify full same-SHA CI and actual phone before marking the symptom resolved.
+
+[M262] Notes and original encrypted bank SMS separation — 2026-10-26
+- In transaction details, show two separate fields for SMS transactions: "Notes/الملاحظات" from the ordinary transaction record, and "Original bank message (encrypted)/تفاصيل الرسالة البنكية الأصلية (مشفّرة)" read-only from the verified SQLCipher vault. Keep full selectable text without truncation and distinct light/dark accessible borders.
+- Fix the disappearing original when notes are edited: readProtectedOriginalSms(entry.id) must execute for every confirmed SMS transaction ID, regardless of entry.notes contents. Never copy decrypted vault text into the editable notes field or change encrypted SMS bytes because notes were edited.
+- New single-SMS paste screen no longer displays original SMS as readonly personal notes; original SMS is still provided to the protected confirmation writer, with the pre-existing legacy plaintext-redaction/duplicate guards preserved. User notes can be added or changed later from Edit Transaction.
+- Display explicit no-notes and verified-original-unavailable states without fabricating an original. Preserve the older records without destructive migration or source cutover. Test empty notes, edited notes, unavailable encrypted vault and full original fidelity.
+- UI/source-boundary QA only. No SQLCipher production activation, database migration, new real-user-data claim or signed APK acceptance before full same-SHA test and owner device verification.
+
+[M263] Same-main consolidated QA candidate for M261 + M262. Do not merge until complete exact head Flutter, Android and independent CI success; no finance migration or SQLCipher production enablement.
+
+[M264] Unified app-wide button light-impact haptics — 2026-10-26
+- Apply the existing circular + button HapticFeedback.lightImpact strength to accepted, enabled actions on Home, categories, goals, recurring, profile/settings, deleted-item actions, bank SMS capture, reports/PDF viewer, currency/FX, global gold, petroleum and receipt controls, in Arabic/English light/dark screens.
+- Shared WaffraHaptics.tap/selection wrappers preserve NULL disabled callbacks, coalesce nested same-gesture impacts and do not fire on passive screen draws, scrolling, refreshing, animation or TextField typing. Slider drag values remain non-haptic; dropdown, switch, segmented choice and popup selections receive one accepted impact. The existing + is explicitly NOT wrapped to avoid double vibration.
+- No native VIBRATE permission, third-party haptic plugin, financial/SQLCipher storage modification, new phone/SMS permissions or cutover; the device OS ultimately controls haptics and real-phone QA remains required.
+- Full CI and signed main APK validation must precede approval. This isolated PR must be integrated with M263 before the final main merge.
+
+[M265] Integrate M261 official oil feed, M262 independent bank SMS and editable notes, and M264 all accepted action haptics. Changes require complete Flutter suite, Android build, independent CI, and signed main APK from post-merge main; no SQLCipher activation or real-phone QA claim.
+
+[M266] حماية ربط مصدر SQLCipher للرئيسية والـWidget — 2026-10-26
+- بعد دمج PR #266 على main، يجب أن تتحقق شاشات الرئيسية وويدجت إدخال الرسائل البنكية من مصدر البيانات المالية قبل القراءة أو الحفظ أو مزامنة رصيد الويدجت.
+- حذف مسار fallback غير الموثق في واجهة الـWidget؛ عند تعذر التحقق من المصدر لا يظهر حقل لصق الرسائل أو زر تأكيد الحفظ، مع ظهور رسالة خطأ واضحة دون تعديل السجل المالي الموجود.
+- ربط مسارات المالية الموجودة (قائمة الأهداف، البصمات SHA-256، الكتابة المتسلسلة والنسخ الاحتياطي) بطبقة المصدر المعتمدة؛ منع استخدام writer قديم من شاشة لم تنهِ التحقق.
+- اختبارات QA محلية معزولة لحالات فشل المفتاح/المصدر، منع إعادة استخدام تخزين قديم عند تفعيل أو انتظار SQLCipher، وعدم فقد بيانات السجل أو رسائل البنك.
+- نجاح 57 اختبارًا في مجموعة M266 الخاصة بسلامة الواجهة ومصدر البيانات، ونجاح اختبار تكامل Android بمحاكي مع بيانات مؤقتة على Commit cf52ade44؛ كذلك تم اجتياز اختبارات حماية نفس الـCommit ودمج PR #266.
+- ملاحظة جوهرية: هذه تحسينات أمان وتجهيز فقط؛ SQLCipher لا يزال غير مفعل إنتاجيًا، ولا يوجد اعتماد فعلي مستقل للمسارات الـ24 على هاتفين Android حقيقيين ولا إذن باستخدام بيانات بنكية حقيقية.
+- تُستخدم نسخة main القادمة لاختبار QA فقط بعد إثبات نتائج GitHub Actions وتوقيع APK ومطابقة رقم الـCommit والبصمة، وإعادة فحص الواجهة على هاتف المالك.
+
+
+[M268] عشر أدوات تخطيط مالي وتقويم اليوم ورسومات بديلة للأيقونات — 2026-10-27
+- إضافة مركز أدوات مالية ذكية في تبويب الفوتر الثالث بعد الأقسام وقبل الأهداف (وليس على الرئيسية)، مع عشر واجهات تفاعلية: فلوسك تكفيك، صائد الاشتراكات، محاكاة قرار شراء، الحارس المالي، اسأل وفرة، مواسم السعودية، محافظ المشاريع، تحديات التوفير، خريطة التدفق، وصندوق الطوارئ.
+- المدخل الجديد يتعامل مع نسخة قراءة فقط من المعاملات والأهداف والمتكررة الموجودة فعلاً؛ لا كتابة إلى SharedPreferences أو SQLCipher، ولا وصول للرسالة البنكية الأصلية أو الاتصال بالبنوك، ولا تفعيل الإنتاج.
+- أدوات التخطيط/المحاكاة مؤقتة في الجلسة الحالية وليست محافظ أو تحديات محفوظة. «اسأل وفرة» استعلامات حسابية محلية وليست خدمة ذكاء اصطناعي سحابية، ونتائج الإنذار مجرد مقترحات للمراجعة.
+- زر «اليوم / Today» للتقويم المالي الأساسي والمتكررة وكل منتقي تاريخ Material الموجود، مع احترام حدود الحقول وعدم السماح بانتقاء تاريخ غير صالح، دون تبديل البيانات المالية آلياً.
+- استبدال رسوم الأقسام الرئيسية والفرعية وأهداف الادخار وبعض بطاقات المعاملات برسوم توضيحية صغيرة ذات درجات خضراء وبمراعاة RTL/LTR والنهاري/الليلي. أزرار النظام الأمنية والتنقل (رجوع/حذف/بصمة) تحتفظ بأيقوناتها المألوفة لضمان الوضوح وإمكانية الوصول.
+- تدعم التجربة العربية والإنجليزية وخط Tajawal، مع رسومات وفرة اللطيفة وخاصية الاهتزاز عند النقر لا عند السحب أو تغيير شريط المبلغ.
+- قبول هذه المرحلة لا يعتمد SQLCipher للاستخدام الحقيقي؛ يلزم CI وAPK موقع مطابق لأحدث main وتجربة ببيانات وهمية على هاتف المستخدم، ثم اعتماد مستقل لتشفير جميع المسارات على هاتفين.
+
+- اكتشاف فرق جوهري في APK المعاينة: بيلد M147 يُنشئ حزمة com.waffra.waffra بدون Firebase OAuth المسجل وتوقيع إصدار com.waffra.app؛ لا يُستخدم لاختبار تسجيل الدخول بجوجل. تم تمييز المعاينة بوضوح وإظهار تنبيه بدل فشل غير مفهوم.
+- معاينة M147 تختبر رسومات وتقويم وتخطيط أوفلاين، لكنها لا تُعتمد لتجربة الـWidget ومشاركة الرسائل للنظام ومستقبلات تذكيرات إعادة التشغيل والبصمة وقنوات أندرويد الأصلية. التحقق النهائي لهذه المسارات في APK main موقّع ومطابق للـCommit على أجهزة حقيقية، دون مساس بالبيانات.
+- تبويب الأدوات الذكية يعرض الأدوات العشر في صفحة واحدة؛ فتح قسم يتم أسفل بطاقته بحركة AnimatedSize ناعمة ويدعم فتح قسم واحد فقط وإغلاقه دون تغيير الصفحة أو إخفاء باقي الأدوات. الفوتر أصبح 5 أقسام (الرئيسية، الأقسام، الأدوات، الأهداف، المتكررة) مع الحفاظ على وظائف + وباقي التنقل.
+- كل حقول البحث في الواجهة (المعاملات، الأقسام الرئيسية والفرعية، أهداف الادخار، العملات الأساسية والتحويل والذهب، وإعدادات الحساب) تستخدم تطبيعًا موحدًا للبحث عن أ/إ/آ/ا، ي/ى، ة/ه والتشكيل والمسافات بدون تغيير نصوص البيانات المحفوظة؛ مثال «دينار اردني» يعرض «دينار أردني».
+- تبقى قيود معاينة PR على Google OAuth والتوقيع والقنوات الأصلية كما هي؛ نجاح Flutter/CI لا يثبت تسجيل جوجل أو وظائف الهاتف الحقيقية قبل APK كامل من main موقع ومسجل.
+- اعتمد المستخدم نقل «حسابي» بالكامل خارج الفوتر إلى صورة الملف الشخصي في هيدر التطبيق؛ الضغط عليها يفتح نفس صفحة حسابي بجميع إعدادات الحساب والخصوصية والنسخ الاحتياطية مع أنيميشن انتقال Fade/Slide/Scale خفيف. زر رجوع في الهيدر وزر رجوع Android يعيدان المستخدم إلى تبويبه السابق، ويختفي الفوتر أثناء صفحة الحساب لتجنب وجود تبويب نشط خاطئ. لا حذف أو تغيير لأي بيانات مستخدم.
+- اعتماد تبسيط الرئيسية: إزالة بطاقة «التحليل الذكي»، وملخص «نظرتك المالية الذكية»، واختصار «الذهب العالمي وتحويل العملات» من الرئيسية؛ تبويب «الأدوات» يحتوي قسم «التحليل المالي الذكي» يعرض نفس البطاقة والتحليل التفصيلي والملخص التقديري المرتبط بالبيانات المالية الموثقة فقط.
+- تبويب «الأدوات» يحتوي قسم «العملات والذهب والبترول» يُفتح تحت عنوانه بنفس أنيميشن Accordion، ويعرض محول العملات + الذهب والسبائك + البترول والغاز مع القائمة الداخلية المتبادلة وميزة تحديث الأسعار داخل نفس صفحة الأدوات. لا يتم تغيير مصادر الأسعار أو قيم الأرصدة أو التخزين المشفر. الإبقاء على باقي الأدوات مرئية وتحديث اختبارات M208 وM227 لحماية مسارات الذهب والرسائل البنكية بعد نقل الاختصار.
+
+- اعتماد تصميم «إجمالي رصيدك» المرجعي في الرئيسية: بطاقة زمردية متدرجة أخضر فاتح إلى غامق بزوايا دائرية، رسم نباتي ثلاثي التدرج مع أعمدة عملات ذهبية وخضراء على اليمين، تموج بيج/أبيض من خلفية الصفحة أسفل البطاقة، أيقونة العين يسار أعلى البطاقة، العنوان في المنتصف والرصيد باللون الأبيض بخط Tajawal كبير. الرسمة متجهية محلية داخل lib/waffra_balance_art.dart وليست سعر سوق أو قيمة مالية وهمية.
+- اختصار ومجال البطاقة متجاوب مع شاشة Android الضيقة والوضعين الفاتح والداكن؛ الخصوصية الحالية تبقى كما هي: إخفاء الرقم فورًا + حفظ preference + تحديث Widget من مصدر مالي موثوق. نسبة المقارنة تظهر فقط لو وجدت بيانات فعلية عن الشهر السابق ورصيد مقارن موجب، ولا يوجد +12% ثابت. لا مساس بمنطق SQLCipher أو الرسائل الأصلية أو البيانات المحفوظة.
+- اختبارات واجهة مخصصة للكارت الجديد تشمل 320px وإخفاء الرصيد والتحديث الحقيقي وغياب النسبة المصطنعة، إضافة لفحص SVG والألوان في GitHub Actions. مرجع الصورة وافق عليه المستخدم، وباقي الواجهة كما هي.
+
+- توثيق اعتماد ملاحظات إصدار QA بعد دمج PR #268 في main (الدمج 5fa3f402c958981ec112db88c33d801843ce8575): جميع تغييرات الواجهة المعتمدة أعلاه محفوظة في هذا السجل، ولا يضيف هذا التحديث أي تعديل للكود أو إعدادات Firebase أو مفاتيح التوقيع أو تفعيل SQLCipher الإنتاجي. نسخة Android الرسمية مشروطة باجتياز CI والتحقق من توقيع APK على Commit الإصدار الفعلي، واختبار الهاتفين يظل منفصلًا.
+
+=======================================================================
+[20] اعتماد تغييرات M274–M283 بعد الدمج في main — 2026-10-27
+=======================================================================
+مرجع الدمج: PR #282، Commit b8406201c1cb86cc003c2b8db830eb37a6314678.
+هذا البيان يصف التعديلات الموجودة فعليًا في المصدر. إصدار APK موقّع
+وتجربة هاتف فعلي واعتماد الإنتاج خطوات منفصلة لا تثبتها هذه الوثيقة.
+
+- M274: اختبارات تجاوب صفحات التطبيق الأساسية واتجاه RTL/LTR
+  ومراجعات العرض على الأجهزة المختلفة؛ لا يُعتبر اختبار المحاكي هاتفًا فعليًا.
+- M275: سلاسة تأكيد الحفظ، منع الضغط المزدوج، اختبارات الاسترجاع
+  والتعامل مع مجموعات رسائل SMS الكبيرة دون تعطيل واجهة المستخدم.
+- M276: قياسات أداء وتدفقات متوقعة عند تحميل وتأكيد المعاملات؛
+  قياسات أجهزة المستخدم النهائية تحتاج الاختبار اليدوي.
+- M277: تباعد عناصر الواجهة، إمكانية الوصول، وإشعارات الفوتر
+  وأزرار إغلاق مناسبة للمس؛ دعم مظهر فاتح/داكن وعربي/إنجليزي.
+- M278: مصفوفة توافق Safe Area وأشرطة نظام Android واختبارات
+  iOS Simulator. نتيجة المحاكي اختبار CI وليست اعتماد جهاز فعلي.
+- M279: مصفوفة اختبارات الأمان لقواعد Firebase والتخزين والنسخ
+  الاحتياطي وكلمات المرور؛ لا يترتب عليها تشغيل SQLCipher إنتاجيًا.
+- M280: سلامة الحسابات المالية والدقة في الأجزاء النقدية، حالات
+  الانقطاع والاسترجاع، وتحليل الرسائل مع استبعاد عمليات التفويض
+  البنكي المؤقتة وعدم حفظ معاملات غير مؤكدة.
+- M281: خمس أدوات مالية إضافية في قسم الأدوات: صحة البيانات،
+  البحث المتقدم في العمليات والملاحظات وحالة المرفقات، مراجعة
+  بيانات الإيصالات يدويًا، معاينة الإقفال الشهري، والتشخيص الآمن.
+  تعرّف صور الإيصالات OCR لم يتم تنفيذه بعد، ولا توجد سجلات
+  إقفال شهرية مشفرة دائمة؛ المعاينة لا تغيّر الدفتر المالي.
+- M283: تصغير هوامش أزرار وفرة بشكل متجاوب، وتنسيق زر
+  «تحديد الميزانية» مع العناوين والشاشات الضيقة ودعم النص المكبر.
+  تقصير الوصف في واجهة الأدوات، وتحريك التمرير إلى بداية القسم
+  الذي يفتحه المستخدم، مع احترام خيار تقليل الحركة.
+  الرجوع من «حسابي» إلى الرئيسية، والخروج بضغطة رجوع مرتين.
+  تحيات سعودية متغيرة عند التشغيل البارد؛ صياغة مذكرة أو مؤنثة
+  عندما يُحدد جنس المستخدم، وتحية محايدة عند غياب التحديد.
+  بقي الحد الأدنى لحجم زر اللمس 52dp، وهو يتوافق مع اختبارات
+  M149/M260 القديمة ويمنع التداخل مع حدود الأزرار الأخرى.
+
+إثبات النسخة المجمعة: PR #283 اندمج داخل الفرع التجميعي،
+ثم اندمج PR #282 في main. اجتازت بوابات قبول M282
+29 Workflow مطلوبًا، وكان Workflow تاريخي محدد لـM268
+متخطى حسب شرط الفرع الأصلي. هذه النتائج تخص Commit الدمج
+b8406201c1cb86cc003c2b8db830eb37a6314678 ولا تثبت
+أن APK الإصدار اللاحق قد اجتاز فحوص التوقيع والبصمة.
+
+تحذيرات QA/الإنتاج:
+- SQLCipher إنتاجيًا عبر كل مسارات التخزين المالية الـ24 غير معتمد
+  للتفعيل تلقائيًا حتى تقديم أدلة الانتقال والاسترجاع على أجهزة فعلية.
+- الاختبار على هاتفين فعليين، والتوقيع النهائي، والنسخ المشفر
+  والاستعادة والتحقق من مرفقات المعاملات لم يثبت نجاحهم هنا.
+- لا تستخدم رسائل بنكية أصلية أو بيانات مالية حقيقية لهذا الإصدار
+  التجريبي إلى أن تُعتمد سلامة مسارات التخزين المشفر.
+- أي APK مقبول يجب أن يعرض Commit وSHA-256 خاصين ببيلد
+  الإصدار الفعلي، وتُرفق ملاحظات الإصدار والإيصال المطابقان له.
+
+=======================================================================
+[21] دمج M285–M292 في main — 2026-10-29 (PR #285)
+=======================================================================
+هذه البنود توثق كودًا مدمجًا بالفعل، ولا تدعي اجتياز بيلد APK أو
+الاختبارات على Commit إصدار لاحق. ظهور الميزة في المصدر لا يساوي
+اعتماد تشغيلها إنتاجيًا أو على جهاز فعلي.
+
+- M285: تقليص المسافات الأفقية حول أزرار الإجراءات وتهذيب بطاقات
+  الأدوات، فتح قسم مالي واحد في كل مرة، وتحسين خيارات التشخيص المترجمة.
+- M286: جولة تعريفية ثنائية اللغة بسبع خطوات تشمل الأدوات المالية،
+  وإعادة تشغيل الجولة من صفحة الحساب.
+- M287: مسار OCR محلي قائم على Tesseract على Android وiOS لفواتير
+  المستخدم؛ يعرض النتائج للمراجعة ولا يكتب مبالغ الفواتير تلقائيًا.
+  قبول العمل على أجهزة فعلية وصلاحياتها ما زال مطلوبًا؛ لا تزعم هذه
+  الوثيقة إثبات OCR فعلي ناجح في كل جهاز.
+- M288: إعادة تسمية مرفقات الإيصالات بأمان داخل التطبيق، وإخفاء حقل
+  الملاحظات الفارغ أو المكوّن من فراغات فقط في التفاصيل.
+- M289: اقتراحات تصنيف الرسائل البنكية متعددة اللغات دون اتصال،
+  وتمييز التحويلات الواردة والصادرة والامتناع عن الجزم عند الغموض.
+  لا يسمح هذا المكون بالحفظ الآلي غير المؤكد.
+- M290: شرح صلاحية الموقع اختياريًا بعد اكتمال ملف مستخدم Google؛
+  اقتراح EGP داخل مصر وSAR داخل السعودية بموافقة المستخدم، دون تغيير
+  العملة تلقائيًا أو طلب موقع في الخلفية. إشعارات المتكرر تطلب إذنها
+  وقت تشغيل التنبيه، والكاميرا والمعرض وقت الاستخدام؛ مع احترام
+  المنطقة الزمنية للهاتف عند التذكير.
+- M291: لا تُحفظ الرسائل ذات عملة أجنبية تلقائيًا ضمن سجل العملة
+  الواحدة القديم؛ تُراجع الدفعات المختلطة بشكل منفصل ولا يُغيَّر
+  تعريف عملة التطبيق دون موافقة المستخدم.
+- M292: تصميم ونموذج نقي فقط لمراجعة سعر الصرف ومصدره وتوقيته:
+  الاحتفاظ بمبلغ/عملة الرسالة الأصليين وتقدير تحويل اختياري موثق،
+  وموافقة صريحة لكل عملية، وعدم جمع مبالغ عملات مختلفة. **ليس**
+  هناك حتى الآن تعديل إنتاجي معتمد لجدول MoneyEntry أو SQLCipher
+  لحفظ كل عملة ومعامل الصرف والتاريخ ومصدر السعر وموافقة المستخدم؛
+  ولا توجد ترقية تلقائية للدفتر القديم أو استيراد أجنبي آلي.
+- اختيار عملة العرض في الإعدادات يبدل اسم/رمز الوحدة دون تحويل
+  الأرقام التاريخية، ولا يعني دعم دفتر متعدد العملات فعليًا.
+
+شروط الإصدار بعد هذا الدمج:
+- بيلد موقع من main على SHA جديد بعد تحديث هذه الوثيقة، وفحص
+  Flutter/Python ومصفوفة نفس الـSHA وحزمة Release Notes والبصمة.
+- موافقة جهاز حقيقي على Google Sign-In وOCR والمرفقات وسلامة
+  عملة الرسائل والتنبيهات، مع عدم ادعاء نجاح مسارات غير مختبرة.
+- مسارات SQLCipher المالية الـ24 واستعادة هاتفين فعليين واعتماد
+  نقل الرسائل الخام وبيانات المستخدم ما زالت غير معتمدة للإنتاج.
+- يمنع نشر APK تجريبي باعتباره إصدار Play أو السماح باستخدام
+  بيانات مالية/بنكية حقيقية قبل اكتمال إثبات الحماية.
+
+=======================================================================
+[22] اعتماد M269 وM271 وM273 في main — تحديث توثيق الإصدار
+=======================================================================
+- M271 / PR #271: رفض مبالغ غير صالحة دون تغيير معناها بصمت.
+  تبقى الإشارات السالبة والأحرف ومجموعات الفواصل الملتبسة ظاهرة
+  لتُظهر الواجهة خطأ الحقل، كما تُرفض الدقة الأكبر من هللتين.
+  لا تغيير لقيم معاملات محفوظة ولا اعتماد لترحيل SQLCipher.
+- M273 / PR #273: اختبارات مستخدم آلية للخصم/الإيداع، حدود
+  100 رسالة، الازدواج، OTP، سلامة التواريخ، بقاء الملاحظات
+  والمرفقات، ودقة الميزانيات والأرصدة؛ اختبارات بيانات تجريبية
+  وليست إثبات قبول على جهاز فعلي.
+- M269 / PR #269: تسمية نسخة الملف المنشور Waffra.apk بعد
+  التحقق من التوقيع وبصمة SHA-256 وباقي بوابات الإصدار. هذا
+  تغيير اسم نسخة مطابقة البايتات فقط؛ لا تغيير في الحزمة أو
+  المفاتيح أو Google Sign-In، ولا إعادة توقيع أو تفعيل للبيانات.
+- اعتماد أي APK جديد مشروط بنتائج CI على SHA الدمج النهائي،
+  ومراجعة ملف Waffra-Release-Notes.txt وبصمة الملف الناتج.
+
+=======================================================================
+[23] M270 — اعتماد استعادة الرسم الأصلي للريال في العرض العربي
+=======================================================================
+- استخدام assets/Saudi_Riyal_Symbol-1.png الأصلي عند عرض
+  قيم SAR بالعربية في الرئيسية والأدوات والذهب والتقارير PDF،
+  وبعض نصوص الـWidget. تعرض الإنجليزية SAR نصًا واضحًا.
+- لا استبدال لشعار أي عملة أجنبية بالريال؛ المبالغ غير SAR تظل
+  بوحدتها، ولا يُنفذ تحويل أو تعديل لأرصدة أو معاملات مخزنة.
+- تسليم التعديل مشروط بنجاح الاختبارات على SHA الدمج النهائي
+  وبناء APK موقع من main ومراجعة العرض على هاتف فعلي وPDF.
+- لا يُفعّل SQLCipher إنتاجيًا أو حفظ نص SMS الخام بغير تشفير.
+
+
+=======================================================================
+[24] اعتماد تغييرات واجهة M295/M296 وOCR M297 بعد دمج PR #286 و#287
+=======================================================================
+مرجع main قبل تحديث هذه الوثيقة:
+- PR #286: Merge commit 329a812c205cde4720bcb82f8ed6a2a0733c809f
+- PR #287: Merge commit 5b4a431d69945dea24bbfad948abe5a4a3e985df
+هذه البنود تصف تغييرات موجودة في المصدر فقط. لا تُثبت انتهاء
+بيلد APK جديد أو تجربة هاتف حقيقي إلا بعد ظهور دليل نجاح مستقل.
+
+M295 — تقليل ازدحام واجهة المستخدم:
+- تصغير هوامش الأزرار والحدود الخضراء لحالة التحديد وإجراءات الصفحة.
+- الإجراءات السريعة قابلة للطي بدل الازدحام في الصفحة الرئيسية.
+- ترتيب النصوص والأيقونات والتنقل بما يتناسب مع RTL/LTR وLight/Dark.
+
+M296 — فاليديشن الميزانية وقائمة المعاملات:
+- حقل قيمة الميزانية الشهرية إجباري وموجب حتى عند إيقاف التتبع.
+- لا يسمح زر الحفظ بتثبيت قيمة فارغة أو غير صالحة وتظهر رسالة أسفل الحقل.
+- عرض أول 10 معاملات مرشحة، وإظهار عرض أكثر/أقل فقط عند وجود أكثر من 10.
+
+M297 — إضافة معاملة من صورة وتصحيح الرسائل البنكية:
+- قائمة زر (+) في الرئيسية تعرض ثلاثة اختيارات:
+  «عملية يدوية»، «رسالة بنكية»، «تصوير / استخراج فاتورة».
+- التصوير أو اختيار صورة من المعرض يحدث عند الطلب فقط.
+- قراءة OCR العربية/الإنجليزية محليًا؛ نقل المقترحات القابلة للتحقق
+  إلى شاشة إضافة المعاملة الحالية: الدخل/المصروف، المبلغ، الاسم، التاريخ.
+- يختار المستخدم القسم ويصحح البيانات ثم يؤكد الحفظ بنفسه.
+  لا يُنشئ OCR أي عملية مالية أو يعدّل الرصيد بدون تأكيد.
+- يمكن مراجعة عدة معاملات مستقلة من لقطة رسائل بنكية، بينما
+  ترفض القواعد الأرقام غير المرتبطة بسياق مالي مثل البطاقة والمرجع.
+  يجب مراجعة كل مبلغ من الصورة الأصلية؛ لا ضمان فهم كل البنوك.
+- الصورة الأصلية تُرفق بالمعاملة بعد تأكيد التسجيل، وتُحذف
+  النسخ المؤقتة في حالة إلغاء نافذة إضافة المعاملة.
+- زرا «لصق رسالة» و«فتح الرسائل» أفقيان في العرض المناسب،
+  وينتقلان إلى ترتيب رأسي عند ضيق الشاشة أو كِبر الخط.
+- واجهة المراجعة والاختبارات لم تثبتا بعد دقة OCR الفعلية في
+  تصوير ورقي متعدد الظروف أو على أجهزة Android/iOS حقيقية.
+- ميزات QR للفواتير السعودية والمحركات البديلة وPDF متعدد
+  الصفحات والتعلم من التصحيحات ليست ضمن هذه المرحلة.
+
+سبب تحديث اعتماد ملاحظات الإصدار:
+- أوقف نظام إصدار APK من main في تشغيل 40970326729 عند
+  «Generate and validate Waffra Release Notes TXT»؛ كانت هذه
+  الوثيقة أقدم من تغييرات lib/main.dart بعد دمج PR #286 و#287.
+- تصحيح الوثيقة دون تعطيل قيد أن يكون آخر تحديث موثق
+  لاحقًا لكل تغيير في كود التطبيق، ودون تعطيل تحقق SHA-256
+  أو توقيع APK أو بوابة اختبارات نفس Commit.
+- بناء APK من آخر main واختبار حقيقي على جهاز منفصلان،
+  ولا يعني توثيق التعديلات اكتمال الاختبار أو النشر.
+
+اشتراطات حاسمة:
+- نسخة QA تجريبية فقط؛ لا تسمح باستخدام بيانات مالية حقيقية
+  دون اعتماد مسارات SQLCipher الـ24 ونتائج التعافي والتشفير.
+- لا تخزن نص رسائل SMS البنكية الحقيقية دون تأكيد حماية المصدر.
+- ملف Waffra-Release-Notes.txt النهائي يجب أن يتضمن commit
+  البناء الحقيقي ورقم GitHub Actions وبصمة SHA-256 المطابقة.
+
+
+=======================================================================
+[25] M298 — ضبط الحقول الإجبارية وسلامة الحفظ المالي (PR #288)
+=======================================================================
+هذه تعديلات اختبارية في كود الواجهة والتحقق، ولا تعني انتهاء
+إصدار APK أو اعتماد جهاز فعلي. تاريخ الفرع يتضمن PR #289
+الذي عالج مشكلة توثيق إصدارات main بعد دمج M297.
+
+- مراجعة الرسائل البنكية المجمّعة: قسم كل رسالة حقل إجباري،
+  مع رسالة تحت الحقل وحظر الحفظ إذا كان القسم فارغًا أو محذوفًا
+  أو غير متوافق مع نوع العملية (دخل/مصروف).
+- إضافة رسالة بنكية فردية: التحقق من تطابق القسم المحفوظ مع
+  الاختيار الظاهر للمستخدم وعدم حفظ اختيار قديم أو افتراضي غير صالح.
+- العمليات المتكررة: تحقق إجباري من القسم، وإظهار خطأ أسفل
+  الحقل عند غيابه؛ التعامل الآمن مع حذف جميع الأقسام دون تعطل
+  بسبب الوصول إلى أول عنصر في قائمة فارغة.
+- يوم الشهر للمعاملة المتكررة: قبول الأرقام الإنجليزية والعربية
+  والفارسية، مع رفض الفراغ والصفر والقيم خارج 1–31 والرموز.
+- توضيح النجمة (*) للحقول الموجودة بالفعل في التحقق:
+  هاتف وكلمة مرور تسجيل الدخول، الجنس في الملف الشخصي،
+  واسم المرفق عند إعادة تسميته.
+- المبلغ والوصف والأقسام الرئيسية والفرعية في نموذج الإضافة
+  اليدوية، وميزانية الشهر والأهداف، تخضع للحمايات السابقة؛
+  لا يتحول أي حقل اختياري مثل الملاحظات إلى إجباري.
+- اختبارات M298 للمدخلات الفارغة، الأقسام المحذوفة، القسم
+  من نوع معاملة مختلف، حدود يوم الشهر، وأسماء الحقول الإلزامية.
+- لا توجد أي تعديلات على التوقيع، مصدر التمويل، قواعد النسخ
+  الاحتياطي، صلاحيات الهاتف أو تفعيل SQLCipher الإنتاجي.
+
+شرط إصدار QA: اختبار آخر SHA على main، التحقق من توقيع APK
+ورقم التشغيل والبصمة، ورفع Waffra-Release-Notes.txt المطابق.
+لا تعتبر نتائج اختبارات PR إثباتًا نهائيًا لعمل APK على هاتف فعلي.
+
+
+============ M328 / 2026-10-30: M327 main integration QA approval ============
+الدفعة M327 — الدمج البرمجي المكتمل في main عبر PR #312
+Commit الدمج المرجعي: 4f00fa409b9c50a0864fe0ee6a87406b58d10320
+نسخة PR التجميع التي اجتازت CI: 0a27e1ac7a4d087fb45e7380eb663927ae81559c
+نتائج مراجعة الدمج: 38 تشغيل GitHub Actions ناجح على SHA التجميع،
+وتشغيل M268 متجاوز عن قصد لأنه مشروط بفرع M268 مستقل.
+
+[أ] تحليل الصور وإدخال العمليات
+- استخدام OCR للفاتورة أو لقطة رسالة بنكية؛ مراجعة العمليات المكتشفة
+  في ترتيب الصورة مع ترقيم كل عملية وتصحيح المبلغ والنوع قبل أي حفظ.
+- الاحتفاظ بصورة ومحتوى الرسالة الأصلي؛ معالجة الدخل والمصروف
+  مع حاجز مراجعة العملات الأجنبية/المجهولة وعدم تسجيلها كريال بلا مصدر موثوق.
+
+[ب] نموذج الذكاء الاصطناعي المحلي والخصوصية
+- نموذج محلي اختياري لخدمات تحليل الرسائل البنكية واستخراج الفواتير
+  و«اسأل وفرة» والتحليل المالي واقتراحات التوفير.
+- طلب موافقة المستخدم قبل تنزيل النموذج أول مرة مع تقدم التنزيل
+  وإمكانية الإلغاء؛ إزالة ملفات النموذج من الإعدادات بتأكيد القياسات الحيوية.
+- بعد حذف النموذج تتوقف الميزات التي تحتاجه حتى إعادة تنزيله؛
+  الإدخال اليدوي يبقى متاحًا. عدم نشر صور المستخدم خارجيًا.
+
+[ج] البيانات المالية والرسائل البنكية
+- سلامة التحقق من الحقول الإجبارية والأقسام ومنع التكرار،
+  وتحسين التعامل مع الأرقام العربية والفارسية.
+- التحقق من رسائل بنكية بعملات التطبيق الـ36؛ JOD/CliQ والحوالات
+  الواردة/الصادرة والمراجعة الإلزامية للعملات غير الواضحة.
+- تحسين 12 مسارًا ماليًا وحماية دقة البيانات عند التعديل والترحيل.
+- لا يوجد تغيير لقيمة الرصيد عند اختيار عملة العرض؛ تبديل الملصق
+  لا يعني تحويل القيمة بسعر الصرف.
+
+[د] تجربة المستخدم واللغة
+- فصل منطقة المستخدم ولغة الواجهة والعملة المختارة وكود اتصال الهاتف.
+- تهيئة أول تشغيل، ومحدد دولة الهاتف مع العلم، والتحيات حسب المنطقة
+  للهجة السعودية عند اختيار السعودية، مع أولوية لغة الواجهة.
+- الشعار الافتتاحي العربي المحلي والتوافق مع النسخة الإنجليزية.
+- تحسين بدء تشغيل Android وتهيئة اختبارات المحاكي في Bash.
+
+[هـ] أدلة الاعتماد وحدود هذا الإصدار
+- نجاح اختبارات Flutter الشاملة وOCR وSMS وAI وSQLCipher على
+  محاكي Android، وAndroid UI الحقيقي داخل المحاكي، وiOS simulator.
+- لا يعني نجاح المحاكي اعتماد التشغيل على هاتفين حقيقيين أو
+  السماح بتفعيل SQLCipher الإنتاجي أو نشر البيانات الحقيقية.
+- قبل تسليم Waffra.apk يجب نجاح فحوص نفس SHA الحالي على main،
+  والتحقق من التوقيع المعتمد، وبصمة APK، ورقم الـCommit المضمن.
+- نسخة APK المقصودة QA ببيانات تجريبية؛ Google Sign-In
+  وPull-to-refresh وتجربة النموذج وOCR تحتاج فحصًا يدويًا على الهاتف.
+- تُكتب حالة الاختبار الحقيقية في Release Notes النهائية للـAPK،
+  ولا يجوز وصف إصدار APK بأنه ناجح قبل ظهور Artifact مطابق له.
+
+
+============ M331 / 2026-10-30: M329-M330 QA copy/model fix ============
+الدمج: PR #314 في main، Commit 39cb7c4d6763bb3bf4e9de842dd55e3bef7f4e31.
+مرجع CI على آخر HEAD لـPR: f8687a271e692adb5907e2d63279857ce5be6464.
+نتائج CI: نجاح 30 تشغيلًا من أصل 31، مع تشغيل واحد Skipped
+مقصود. نجاح الاختبارات البرمجية لا يثبت عمل النموذج على هاتف فعلي.
+
+[M329] إصلاحات تجربة الذكاء الاصطناعي المحلي:
+- التحقق من وجود ملف GGUF المحفوظ وإعادة تشغيل المحرك من الملف
+  الموجود بعد إعادة فتح التطبيق، دون تنزيل الملف مرة أخرى عند سلامته.
+- إظهار حالة تقدم واضحة أثناء OCR وتحليل الصور والرسائل البنكية
+  محليًا، مع إزالة المؤشر بعد اكتمال أو فشل العملية.
+- بقاء المراجعة اليدوية إلزامية قبل تسجيل أي عملية مالية.
+- التحميل الأول من الإنترنت يحتاج الموافقة؛ إعادة تنزيل الملف بعد حذف
+  بيانات التطبيق قد تكون مطلوبة. هذه الدفعة لا تتضمن استيراد/تصدير
+  ملفات النموذج، وفقًا لتأجيل المستخدم لهذه الميزة.
+
+[M330] تبسيط رسائل واجهة المستخدم:
+- تقليل النصوص العربية والإنجليزية في نافذتي موافقة النموذج وتنزيله،
+  إزالة نافذة التنبيه المكررة عند الإلغاء، وضبط اتجاه أرقام تقدم التنزيل.
+- اختصار الرسائل الطويلة في OCR وSMS وتأكيدات الحذف ومراجعة العملات
+  وإعداد البلد والنسخ الاحتياطي والأدوات وشروح الذهب والنفط.
+- الحفاظ على التحذيرات الحرجة وعدم تغيير قيم المعاملات أو سجلاتها.
+- تم تحديث اختبارات الواجهة والترجمة والتقدم والمتطلبات بعد التبسيط.
+
+[حالة التسليم]
+- هذه موافقة توثيق للتعديل المدمج وليست إعلان إصدار APK.
+- يظل إنتاج Waffra.apk مشروطًا بنجاح آخر SHA على main واجتياز
+  اختبارات التوقيع وFirebase SHA والتحقق من البصمة ورفع Artifact.
+- يجب تجربة النموذج بعد تحديث APK فوق النسخة الحالية بنفس معرّف
+  التطبيق والتوقيع، والتحقق من OCR وSMS فعليًا على Android.
+- تفعيل SQLCipher الإنتاجي على بيانات حقيقية ليس جزءًا من هذه الدفعة.
+
+=======================================================================
+[26] M334 — اعتماد دمج M332 OCR/SMS وM333 اسأل وفرة — 2026-10-31
+=======================================================================
+مرجع الدمج في main: PR #322، Merge Commit
+918c9dc918a204301b1139a4ffef369ed15c7277
+HEAD التجميع الذي خضع للاختبارات: 1deb9d0dc422b07a1bbd8d92a8682e9e6da94172
+اجتازت 30 Workflow من أصل 31 على SHA التجميع، وكان M268
+متخطى عمدًا (Skipped). نتائج CI البرمجية ليست اختبارًا على هاتف فعلي.
+
+[M332] OCR وتحليل الرسائل البنكية:
+- ضبط تشغيل نموذج Qwen المحلي بمهلة وتحديد طول الاستجابة
+  وإتاحة إلغاء التحليل والتعافي من الخطأ دون تعليق شاشة OCR.
+- تقليل تكرار العمليات المستخرجة من صور الرسائل البنكية؛
+  لا تقبل اقتراحات النموذج التي تخالف عدد العمليات المتحقق منه.
+- تحليل الرسالة تلقائيًا عند اللصق أو المشاركة أو إعادة اللصق
+  دون زر منفصل، مع إلغاء التحليل القديم عند لصق نص أحدث.
+- مطابقة المقترحات مع النص الأصلي والمحلل المحدد؛
+  الحالات غير المؤكدة تُعرض للمراجعة ولا تُحفظ تلقائيًا.
+- حفظ العمليات يظل بموافقة المستخدم عبر مسار الكتابة المحمي؛
+  لا تعتبر دقة OCR على صورة حقيقية أو سرعة Qwen على هاتف
+  فعلي مثبتة بنتائج CI فقط.
+
+[M333] «اسأل وفرة»:
+- إجابات رقمية مباشرة لأسئلة الدخل والمصروفات وصافي
+  المعاملات المسجلة والفئات والفترات الزمنية المحددة.
+- حساب الإجابات من سجلات المستخدم المتحقق منها، بدقة
+  الوحدات النقدية الصغرى، دون تخمين حساب بنكي أو تحويل عملة.
+- الأسئلة المفتوحة عن الميزانية والتوفير يمكن تمريرها إلى
+  النموذج المحلي؛ تنظيف Markdown والنصوص المطولة وتحسين RTL/LTR.
+- ضبط «أمس» والأسبوع والسنة السابقين ومدى الأشهر؛
+  السؤال دون فترة يعني جميع المعاملات المسجلة.
+- هذه إجابات تحليلية للعرض، ولا تنشئ عمليات مالية أو تغيّر الرصيد.
+
+[M334] حالة دمج النسخة:
+- اجتازت اختبارات Full Offline Finance/UI وM282 وM124 وM103
+  وM147 وM317 وM287/M297 وM280 على SHA التجميع المذكور.
+- اجتاز فحص M174 SQLCipher بعد الدمج على main، لكنه
+  NO-GO للتحويل الإنتاجي ولا يثبت اختبار هاتفين فعليين.
+- بيلد main الأول رقم 41162101574 أنجز تجميع APK ARM64
+  وفحص التوقيع والبصمة وAAB التجريبي، لكنه أوقف نشر APK
+  عند بوابة ملاحظات الإصدار لأن هذه الوثيقة كانت أقدم من
+  تغييرات كود M332/M333. لذلك لم يُنشر APK في ذلك التشغيل.
+- تحديث هذه الوثيقة يعالج سبب المنع دون تغيير التطبيق أو
+  تعطيل بوابة التوقيع أو البصمة أو مراجعة نفس SHA.
+- إصدار Waffra.apk التالي لا يعتبر ناجحًا إلا بعد نجاح
+  تشغيل main الجديد ونشر APK وRelease Notes وإيصال SHA-256
+  المتطابقين مع Commit البناء الفعلي.
+
+قيود الإصدار:
+- هذه نسخة QA ببيانات اصطناعية فقط، وليست اعتماد Google Play.
+- لا تفعيل SQLCipher production، ولا ادعاء اختبار Android
+  مادي أو اختبار هاتفين أو سلامة تخزين رسائل بنكية حقيقية.
+- المحافظة على معرّف التطبيق وتوقيع الإصدار لتمكين التحديث
+  فوق النسخة المثبتة، والتحقق يدويًا من Google Sign-In وOCR
+  وSMS و«اسأل وفرة» على جهاز المستخدم قبل اعتماد الإنتاج.
+
+=======================================================================
+[27] M335 / M341 / M342 — دقة المعاملات المالية واختبارات Android — 2026-11-01
+=======================================================================
+[M335] PR #324، مدموج في main، Merge Commit:
+557430e254ecf47d4a5b759b2712b2718892e764
+
+- مراجعة دقة استخراج المعاملات من الرسائل البنكية والصور والفواتير
+  بالاعتماد على الأدلة النصية المؤكدة أولًا؛ الاقتراحات غير الواضحة
+  تخضع لمراجعة المستخدم، ولا يجري الحفظ المالي تلقائيًا عند اللصق.
+- منع الخلط بين مبلغ عملية بعملة AED وبين رقم الحساب أو الرصيد
+  أو اعتبار المبلغ SAR دون موافقة على اختلاف العملة.
+- عند OCR يتم استخدام الاستخراج المحلي والمراجعة المحددة أولًا،
+  دون فرض بدء نموذج Qwen أو تنزيله لفتح مسار الصور.
+- تحسين حدود «اسأل وفرة»؛ الإجابات الرقمية من السجلات الموثقة
+  ومراجعة الأسئلة خارج المجال دون إنشاء عمليات أو تخمين مبالغ.
+- تحسين اختيار القسم الرئيسي والفرعي والتحقق من صحة التصنيف
+  عند الحفظ، ومعالجة أسماء التجار الخاطئة المشتقة من الطوابع الزمنية.
+- تحديث حالات الانحدار الاصطناعية للصور والرسائل البنكية والأسئلة.
+- التعديلات المالية تستهدف رفع موثوقية QA، ولا تُعد شهادة دقة
+  لجميع البنوك أو الفواتير الحقيقية دون اختبار المستخدم على الجهاز.
+
+[M341] PR #325، إصلاح خطأ Shell في Android Startup Smoke:
+- نقل أوامر تثبيت APK وتشغيل التطبيق والتحقق من معرّفه وسجلاته
+  إلى سكربت Bash مستقل لأن Emulator Runner ينفذ أوامر YAML
+  كسطور مستقلة في /bin/sh؛ الإبقاء على فحوص التشغيل الفعلية.
+- نجح تشغيل اختبار Android Startup Smoke على main بعد الإصلاح؛
+  فشل إصدار APK اللاحق بسبب اختبار QA قديم يتوقع السكربت داخل YAML.
+
+[M342] إصلاح بوابة الاختبار وتوثيق النسخة المرشحة:
+- تحديث اختبار QA للتحقق من سكربت Android المنفذ فعلًا وفحص
+  Bash syntax ومعرّف com.waffra.app والتثبيت والإقلاع والأخطاء.
+- لا تغيير لسلوك التطبيق ولا تخفيف لبوابات توقيع APK أو SHA
+  أو نجاح M340 أو SQLCipher أو التحقق من التشغيل الفعلي.
+- هذه الوثيقة تعتمد وصف التغييرات المرشحة للبيلد فقط؛ لا تثبت
+  نجاح بيلد main الجديد ولا وجود Artifact قبل نجاح GitHub Actions.
+- تسليم نسخة QA ببيانات تجريبية؛ اختبار الهاتف الحقيقي عند المستخدم.
+- SQLCipher production cutover لم يُعتمد، والتخزين الآمن لرسائل
+  بنكية حقيقية واختبار جهازين يظلان خارج اعتماد هذه الدفعة.
+
+=======================================================================
+[28] M343 — أهداف الاستحقاق والمتكررة والميزانيات المسماة — 2026-11-01
+=======================================================================
+هذه تغييرات مرشحة للاختبارات في PR #327، وليست إعلان نجاح APK.
+- الهدف: موعد استحقاق اختياري بالتقويم + تعديل الاسم والمستهدف والموعد.
+- اختيار موعد إنشاء هدف يربط استحقاقه بعملية شهرية متكررة تبدأ
+  من التاريخ المختار، وتطلب موافقة المستخدم قبل إثبات الدفع.
+- المتكررة المرتبطة تعرض مدخرات الهدف نفسها (المدخر/المستهدف/
+  المتبقي)، دون نسخ المدخر في جدول المتكررة ودون إنشاء معاملة مالية.
+- العملية المتكررة المرتبطة هدفًا لا يمكن قلبها إلى دخل، ولا
+  تغيير قيمتها من محرر المتكررة؛ هذا يحمي دقة الحسابات.
+- أي تعديل لمبلغ أو موعد المتكررة المرتبطة يتم من الهدف؛ التعديل
+  العادي للمتكررة مستقل ويمكنه تعديل العنوان والقسم والموعد والمبلغ.
+- الميزانيات المسماة تعتمد على ميزانية كل قسم مصروفات موجودة
+  بالفعل؛ محرر الميزانية يغير الاسم والحد والتنبيه فقط دون تغيير
+  اسم القسم أو تصنيف العمليات. القائمة البحثية لا تغير السجلات.
+  حقل الاسم مستقل، ودروب داون في الرئيسية لعرض كل ميزانية
+  ومبلغ ما صُرف من قسمها وحده. الميزانية الشهرية العامة تبقى مستقلة.
+- إضافة «الأسرة / مصروف البيت» كمصروف،
+  و«حوالات واردة / مخصص مصروف البيت» كدخل للمحفظة المستقبلة.
+  لا يُحسب تحويل واحد دخلًا ومصروفًا في الحساب المالي نفسه.
+- ترقية التصنيفات إلى v5 تحفظ ميزانيات الأقسام القديمة والمعاملات
+  والأقسام المحذوفة، وتضيف الأوراق الجديدة دون تكرار أو إعادة حذف.
+- حقول dueDate وlinkedGoalId وbudgetLabel اختيارية، وقراءة السجلات
+  القديمة تظل متوافقة. التحقق النهائي من الترميز والاستعادة
+  والتطبيق الحقيقي على أجهزة Android مطلوب قبل اعتماد الإصدار.
+- لا تحويل SQLCipher إنتاجي، ولا رفع APK إلا بعد نجاح آخر SHA على
+  main والتحقق من توقيعه وبصمته وملف ملاحظات الإصدار النهائي.
+
+=======================================================================
+[29] M344 — ربط المصروفات بالميزانيات ومحفظة الأهداف — 2026-11-01
+=======================================================================
+تغييرات مرشحة للاختبارات ضمن PR #327 وليست تصريحًا بنشر APK.
+- ميزانيات الأقسام يمكن تسميتها وتعديل حدها وتنبيهها وحذفها؛
+  حذف الميزانية لا يحذف القسم أو أي عملية مالية.
+- لكل عملية مصروف budgetId اختياري في السجل الأصلي. اختيار
+  الميزانية ظاهر عند الإدخال اليدوي ومراجعة الرسائل الفردية وOCR؛
+  الدفعات البنكية تتطلب مراجعة ميزانية لكل مصروف قبل الحفظ.
+- «غير مرتبطة» خيار واضح، والميزانية لا تُحسب بمجرد تطابق اسم
+  القسم؛ لا يتغير تاريخ عملية قديمة ولا رصيدها بمجرد إنشاء ميزانية.
+- عند إضافة ميزانية جديدة يختار المستخدم إذا أراد ربط المعاملات
+  التاريخية غير المرتبطة في القسم المناسب. الربط اختياري ولا يغيّر
+  أصل مبلغ المعاملة أو نص الرسالة البنكية أو صورتها.
+- حذف ميزانية يزيل ارتباطها عن المصروفات دون حذف العمليات.
+- الرصيد المتاح للصرف = صافي المعاملات المسجلة - ادخارات الأهداف.
+  محفظة الأهداف = إجمالي الادخار داخل الأهداف. الادخار حجز مال
+  وليس دخلًا/مصروفًا إضافيًا؛ إجمالي الرصيد لا يتغيّر عند نقل المال
+  بين المحفظتين.
+- تم إضافة زر سحب من الهدف: يرجع المال من محفظة الأهداف إلى
+  الرصيد المتاح. عند دفع التزام من هذا المال يلزم إثبات مصروف
+  منفصل بعد فك الحجز؛ لا يجري قيد مصروفين لنفس المبلغ.
+- عملية متكررة مرتبطة بهدف تعمل كتذكير، وليست قيد مصروف
+  تلقائي؛ لا تنشئ دفعة جديدة دون تحقق مالي معتمد.
+- حدود الحقول الجديدة تُراجع عند استيراد السجلات القديمة وعبر
+  وحدة الحفظ الجديدة. مسارات SQLCipher والتزامن والنسخة الاحتياطية
+  تحتاج اختبارات انحدار على نفس SHA قبل الدمج النهائي.
+- Widget الحالي قد يعرض إجمالي صافي الدفتر؛ يجب توحيد دلالته
+  مع «الرصيد المتاح» قبل اعتبار جميع الشاشات معتمدة إنتاجيًا.
+
+
+=======================================================================
+[30] M356 — توثيق دمج وفرة الموحد وإعادة إصدار APK من main — 2026-11-01
+=======================================================================
+مرجع الدمج: PR #331، Merge Commit:
+3eda8abb643e2cebcc1ffcaf866ab08e81b88339
+آخر HEAD للتكامل الذي جرت عليه فحوص PR #331:
+50d60fb64764f6d186bb23e546e8ff64ba48792a
+اجتازت 43 تشغيل Workflow في PR #331؛ تشغيل واحد Skipped،
+ولا توجد حالات فشل أو انتظار عند اعتماد الدمج. هذه الأرقام لعمليات
+CI وليست عدد حالات الاختبار الفردية داخل Flutter.
+
+[M341] فهم الرسائل البنكية الإنجليزية ومتعددة العملات وOCR:
+- فصل رسائل SMS المتلاصقة والتعرف على الحوالات الواردة والمشتريات
+  وعمليات الخصم بعملاتها الأصلية SAR/AED/JOD وغيرها بدقة أعلى.
+- معالجة صيغة Amount: 1,900 SAR، والحذر من الفواصل النقدية
+  الغامضة وعمليات العملات الأجنبية؛ لا تحويل FX تلقائي ولا حفظ
+  مبلغ أجنبي على أنه SAR من دون تحقق وموافقة.
+- منع احتساب OTP والتفويض المعلق والعمليات المرفوضة في مجاميع
+  العمليات المنفذة، وإحالة التحويل الداخلي وسداد البطاقة للمراجعة
+  حتى لا تتكرر الإيرادات أو المصروفات.
+- تحليل صور الرسائل إلى مسودات مراجعة مستقلة، مع اختبارات تمنع
+  تكرار نفس العملية أو استخدام الرصيد المتبقي كمبلغ عملية.
+
+[M342/M347] قواعد تخطيط مالي آمنة للعرض والاختبار:
+- فصل الرصيد المتاح عن محفظة أهداف الادخار مع قواعد حفظ إجمالي المال.
+- فترات الميزانيات والتوزيع الصريح وربط المصروفات بالميزانيات،
+  والتحقق من المدفوعات المتكررة دون قيد مزدوج أو افتراض دفع تلقائي.
+- هذه القواعد تظل read-only عند عدم ربطها بالكاتب المالي الإنتاجي؛
+  لا ادعاء بتفعيل مخطط تخزين جديد أو ترحيل تلقائي للسجلات.
+
+[M343–M355] الميزانيات والأهداف والواجهة والبيانات التاريخية:
+- تسمية الميزانيات وتعديلها وتفعيلها/إيقافها؛ فصل حدود المصروف
+  عن العمليات الحقيقية، وإبقاء العمليات القديمة محفوظة كما هي.
+- ربط اختياري ومراجَع للمصروفات القديمة غير المرتبطة بميزانية،
+  دون المساس بالمبلغ أو التاريخ أو نص الرسالة البنكية الأصلية.
+- محفظة الأهداف تميز المبلغ المحجوز عن المصروف الحقيقي لتجنب
+  خصم الادخار مرتين. الترحيل المالي الإنتاجي ما زال مشروطًا بالقبول.
+- حماية زر تأكيد المعاملة اليدوية وSMS وOCR من التداخل مع أزرار
+  التنقل النظامية الثلاثة أو لوحة المفاتيح في Android.
+- إضافة مؤشر Scrollbar للتنقل في القوائم الطويلة مع المحافظة على
+  البحث العربي/الإنجليزي وRTL/LTR واللمس الأصلي.
+- تحسين أداء صفحة الأقسام عبر تجميع شهري واحد وListView.builder
+  مع الاحتفاظ بتصميم الفلاتر المطوية وتنبيه العمليات غير المرتبطة.
+
+[سبب فشل أول بيلد من main وإجراء المعالجة]:
+- تشغيل Build Waffra Android APK رقم #748، Run ID 41308492178،
+  على Merge Commit أعلاه: نجحت فحوص Flutter وPython والاستقلالية،
+  وتم تجميع وفحص توقيع APK، لكن نشر Waffra.apk أُوقف بعد ذلك
+  لأن هذا الملف لم يكن أحدث من تغييرات الكود حسب شرط ancestry.
+- إضافة توثيق M356 هنا هي معالجة لسبب المنع؛ لا تعطل أي فحص
+  أمان، ولا تعني أن تشغيل إعادة البناء التالي نجح قبل ظهور نتيجته.
+
+[قيود التسليم والتحقق]:
+- ملف APK الناتج مخصص لاختبار QA على بيانات تجريبية فقط.
+- لا إعلان عن اعتماد Google Play أو SQLCipher production cutover،
+  ولا استخدام رسائل أو بيانات مالية حقيقية في التحقق غير المعتمد.
+- يجب اختبار ترقية النسخة القديمة على جهاز فعلي دون حذف البيانات،
+  ومراجعة المرفقات والنسخ الاحتياطية والمحفظة والرصيد والـWidget.
+- تحقق يدويًا من Google Sign-In وOCR وSMS ومنع الحفظ المكرر
+  والتعامل مع التنقل الثلاثي ومؤشر التحميل قبل اعتماد الإنتاج.
+- لا يعتبر إصدار Waffra.apk ناجحًا حتى ظهور Artifact خاص بآخر
+  Commit من main، مع تطابق رقم الـSHA وبصمة APK وتوقيعه،
+  وملف Waffra-Release-Notes.txt المولد من نفس التشغيل.
+
+=======================================================================
+[31] M357–M363 / M366 — اعتماد ملاحظات دمج الميزانيات والأهداف لبيلد main التجريبي — 2026-11-01
+=======================================================================
+مرجع الدمج: PR #332، Merge Commit:
+8740df85fc94703b3bcb429d97bb4aa34c2d2ac7
+
+[M357–M363] التعديلات المدموجة بالفعل في main:
+- إظهار تحذير عند انخفاض الرصيد المتاح أثناء إضافة هدف بدل منع
+  المستخدم من تسجيل هدفه. حجز مدخرات الهدف لا يُحسب كمصروفين.
+- أهداف الادخار ومحفظتها وموعد استحقاق الهدف مرتبطة بالمتكررات
+  وتعرض التقدم والمدخر والمتبقي وفق سياسة عدم التكرار المالي.
+- تحسين اختيار الميزانيات المسماة وربط المعاملات بها بشكل صريح
+  أثناء الإدخال اليدوي أو المراجعة البنكية أو الفواتير.
+- إظهار التحذير للمعاملات غير المرتبطة بميزانية، مع عدم ربط
+  العمليات القديمة تلقائيًا عند إضافة أو إعادة تفعيل الميزانيات.
+- تبسيط اختيار القسم الرئيسي والفرعي وإنشاء قسم جديد من داخل
+  واجهة الإضافة والتعديل، وإصلاح اختبارات عرض وترجمة الأقسام.
+- هذه الميزات مدموجة في الكود ولا تعني أن SQLCipher أصبح
+  المصدر الإنتاجي الإجباري لكل المعاملات.
+
+[M366] سبب فشل آخر Build على main وطريقة إصلاحه:
+- Build Waffra Android APK: Run ID 41334614573 على الـCommit أعلاه.
+- نجحت بوابة Flutter/Python والاختبارات المرتبطة بنفس SHA، وتم
+  تجميع وتوقيع APK، لكن أُوقف نشر Waffra.apk النهائي في خطوة
+  Release Notes لأن ملف الملاحظات أقدم من التغييرات المدموجة.
+- هذا التحديث يوثّق التعديلات الحقيقية المدموجة ولا يتجاوز شرط
+  توقيع Android أو مطابقة SHA أو فحوص الاختبارات.
+- سيتم نشر APK وملف Waffra-Release-Notes.txt ورقم SHA-256 من
+  نفس تشغيل main فقط إذا اجتاز البناء جميع البوابات فعليًا.
+
+حدود الاعتماد:
+- هذا إصدار QA تجريبي فقط، ببيانات مالية اصطناعية، وليس Production.
+- ميزة SQLCipher M364–M365 في PR #334 ما زالت Draft ولم تُدمج
+  ولا تم تشغيلها إجباريًا؛ لا يجب تقديمها على أنها ضمن APK.
+- لم يُثبت اختبار حفظ وترحيل واسترجاع البيانات على جهازين فعليين،
+  أو الاعتماد الإنتاجي الكامل لمحفظة الهدف والـWidget وOCR وSMS.
+- مستخدمو النسخ القديمة يجب الحفاظ على بياناتهم دون أي مسح تلقائي.
+- اختبار Google Sign-In والمرفقات والفاتورة والرصيد والـWidget
+  وتحديث APK فوق نسخة سابقة مطلوب قبل الاعتماد الإنتاجي.
+
+=======================================================================
+[32] M367 — SQLCipher: المرحلة الأولى، الجداول والمستودعات الآمنة — 2026-11-01
+=======================================================================
+هذه المرحلة مستقلة من PR #334، عبر PR جديد مبني على أحدث main.
+
+- تم تجهيز مخطط الجداول المالية الإضافية داخل قاعدة SQLCipher:
+  الميزانيات المسماة، تخصيصات الميزانية للمعاملات، رصيد بداية
+  محفظة الهدف، حركات الهدف، تسويات الاستحقاق، محافظ المشاريع
+  وروابط معاملاتها، الاشتراكات المحفوظة، سيناريوهات المستخدم،
+  محادثات «اسأل وفرة» بموافقة صريحة، أرصدة الأسعار والإشعارات.
+- إضافة مراجعة إصدار المخطط وإلزام قيود العلاقات والقيم النقدية
+  بوحدات العملات الصغرى، مع رفض الجداول المحذوفة أو المخطط
+  غير المكتمل؛ لا يُعاد إنشاء جدول مالي مفقود بصورة صامتة.
+- إضافة مستودعات SQLCipher تجريبية للإنشاء والتعديل وتفعيل
+  وإيقاف الميزانيات والربط الصريح للمعاملات، وسجل حركة الأهداف
+  وتسوية الاستحقاق بمعاملات ذرية مقيّدة بمفتاح عدم التكرار.
+- دعم الاستيراد التجريبي غير المدمر للميزانيات القديمة وروابط
+  المعاملات ورصيد افتتاح الهدف بدون اختراع عمليات ادخار تاريخية.
+- تحديث متطلبات المسح المالي الاختباري ليشمل الجداول الجديدة
+  ولا يترك سجلات قديمة غير مرئية.
+- اختبار إنشاء الجداول، منع الكتابة عند فشل الشرط، استئناف
+  العملية بعد الفشل، عدم خصم الهدف مرتين، والحفظ دون مسح.
+
+حدود الاعتماد:
+- دمج هذه المرحلة لا يفعّل SQLCipher إجباريًا عند فتح التطبيق.
+- لا توصيل لعمليات الشاشة أو Widget أو SMS أو OCR أو النسخ
+  الاحتياطية النهائية في هذه الدفعة؛ كل ذلك ضمن مراحل منفصلة.
+- لا نشر Production ولا Google Play بناء على وجود الجداول وحدها.
+- لا مسح تلقائي لبيانات التثبيتات السابقة؛ اختبارات الترقية
+  على أجهزة Android حقيقية ما زالت مطلوبة.
+- يشترط نجاح الاختبارات على SHA الدمج قبل تسليم APK تجريبي.
+
+=======================================================================
+[36] M371 — إصلاح رصيد محفظة الأهداف ومساحة ميزانياتي الرمادية — 2026-11-01
+=======================================================================
+مراجعة من صور مستخدم على أندرويد (لا تحتوي بيانات اعتماد).
+
+- إصلاح حساب رصيد الرئيسية: تسجيل/زيادة ادخار بمحفظة الأهداف
+  المستقلة لا يخصم مبلغًا ثانيًا من الرصيد الحالي.
+- مثال الحالة المبلغ عنها: عمليات مصروفات بقيمة 1135 ريال،
+  ومدخرات أهداف 9000 ريال، بدون دخل مسجل؛ الرصيد الناتج
+  عن العمليات -1135 وليس -10135 (إذا لم توجد معاملات أخرى).
+- سجل استحقاق الهدف يحدد مبلغ الخصم من محفظة الأهداف بالهللات
+  بصورة صريحة؛ الجزء المدفوع من محفظة الهدف لا يخصم من
+  الحساب الحالي مجددًا، بينما الباقي فقط يُحسب كدفعة نقدية.
+- المعاملات المدخلة سابقًا لا تُحذف أو يُعاد كتابتها تلقائيًا.
+  مبالغ الاستحقاقات القديمة التي ليس لها حقل تسوية موثق
+  لا تُستنتج من ملاحظات نصية قابلة للتعديل.
+- رصيد الـWidget يتبع نفس تقسيم الاستحقاق المالي في الرئيسية
+  مع رفض قيم التخصيص المفقودة/غير الصحيحة.
+- نقل قائمة «ميزانياتي» إلى نافذة تمرير مستقلة بدلاً من
+  تمدد محتوياتها داخل القائمة الافتراضية للأقسام، وتوحيد
+  عناصر الفلترة للعرض الضيق وعدم عرض مساحة خطأ رمادية.
+- إصلاح تعديل معاملة استحقاق الهدف حتى لا تمسح بيانات
+  مبلغ الدفع المرتبط بمحفظة الأهداف.
+- الاختبارات تشمل سيناريو مصروفات 1135 ومدخرات 9000،
+  تقسيم الدفع، إعادة فتح المعاملة، وملاءمة ميزانياتي.
+
+حدود الاعتماد:
+- الدفعة على فرع إصلاح منفصل، ولا تعد نسخة Android
+  صحيحة حتى تجتاز اختبارات Flutter/أندرويد على نفس الـSHA.
+- تفعيل SQLCipher الإجباري والنسخ الاحتياطي الموحد
+  ما زالا ضمن مراحل منفصلة؛ لا تعتمد هذه التعديلة
+  موافقة على إطلاق Production أو اختبار الهاتفين.
+
+
+=======================================================================
+M368: ربط استحقاق الأهداف بسلطة SQLCipher المشتركة تحت قفل Home والـWidget، ورفض الخصم عند اختلاف بصمة الجيل أو فقدان مصدر البيانات. لا تفعيل إنتاجي بعد.
+- هذه مرحلة QA فقط. التفعيل الإجباري والتجربة على هاتفين Android لم يتم اعتمادهما بعد.
+
+
+=======================================================================
+M369: منع النسخة الاحتياطية V2 من إسقاط بيانات الجداول المشفرة الجديدة بصمت، وتجهيز أرشيف مكمّل مشفر للميزانيات وحركات الأهداف وغيرها. النسخة الموحدة الكاملة لم تعتمد بعد.
+- هذه مرحلة QA فقط. التفعيل الإجباري والتجربة على هاتفين Android لم يتم اعتمادهما بعد.
+
+
+=======================================================================
+M370: إعداد فحص إلزامية SQLCipher للتثبيتات الجديدة ومنع إنشاء خزنة فوق بيانات قديمة أو عند فقدان المفتاح. لا تشغيل إنتاجي تلقائي قبل استكمال المسارات.
+- هذه مرحلة QA فقط. التفعيل الإجباري والتجربة على هاتفين Android لم يتم اعتمادهما بعد.
+
+=======================================================================
+[37] M380 — تأكيد الحفظ بدون ميزانية وتنظيف النصوص والرجوع التدريجي — 2026-11-02
+=======================================================================
+- إذا كانت هناك ميزانيات مفعّلة واختار المستخدم عدم ربط مصروف بميزانية، تظهر
+  رسالة تأكيد قبل الحفظ؛ الإلغاء يعود لنفس شاشة الإدخال دون فقد البيانات.
+- تدعم رسالة التأكيد الإدخال اليدوي، المعاملة البنكية، OCR، وتسجيل عدة
+  رسائل بنكية معًا. اختيار الميزانية ما زال غير إلزامي.
+- إزالة كلمات اختيارية غير مفيدة في حقول الإدخال والقوائم، وعرض حد
+  الميزانية بدل وصف لا يفيد المستخدم في شاشة الربط التاريخي.
+- زر الرجوع يغلق القائمة المفتوحة أولًا، ثم يعود للتبويب السابق بدل
+  القفز للبداية؛ تظل صفحة حسابي تعود للرئيسية حسب الموافقة السابقة.
+- اختبارات انحدار جديدة M380 على الاحتفاظ بالمدخلات بعد الإلغاء.
+حدود الاعتماد: لا تفعيل إنتاجي لـSQLCipher؛ يلزم نجاح CI لنفس SHA
+واختبار أندرويد على هاتف فعلي قبل اعتماد APK أو أي نشر.
+
+=======================================================================
+[38] M381 — تقليل زمن بيلد main دون تجاوز الاختبارات — 2026-11-02
+=======================================================================
+- تشغيل تدقيق نتائج GitHub المستقلة على نفس SHA بالتوازي مع كامل اختبارات
+  Flutter وPython، بدلاً من انتظار انتهاء الاختبارات أولاً.
+- لا تبدأ عملية بناء أو توقيع APK/AAB قبل نجاح المهمتين، مع اشتراط
+  نتائج M340 للتحقق المالي وM174 لمراجعة ما بعد الدمج في main.
+- إلغاء تكرار تحليل Flutter واختباراته داخل مهمة بناء main فقط بعد
+  أن اجتازت نفس الاختبارات سابقًا على SHA المطابق في وظيفة إلزامية.
+- إبقاء تشغيل Smart CI والفحوصات الخاصة بالفروع التجريبية القديمة
+  بدون تغيير. استمرار فحوصات التوقيع، هوية SHA، AAB، APK والملاحظات.
+- إضافة اختبار M381 لمنع حذف ضمانات التحقق أو النشر عرضًا.
+- لا تغيير في البيانات المالية، SQLCipher، النسخ الاحتياطية أو نموذج AI.
+- هذا تحسين سرعة بنية CI؛ لا يجوز الإدعاء بنسبة تسريع قبل القياس الفعلي.
+- لا يسمح بنشر Google Play قبل استكمال بوابات الأمان والأجهزة والتوقيع.
+
+=======================================================================
+[M382] تنظيف شروط تشغيل GitHub Actions — 2026-11-02
+=======================================================================
+- فصل خطوة M174 الخاصة ببناء ARM64 على main فقط في Workflow مستقل،
+  مع استمرار فحص SQLCipher الأساسي على PR وmain دون ظهور Skipped.
+- قصر Workflow التاريخي M268 على فرع المراجعة الأصلي والتشغيل اليدوي
+  بدلاً من فتح Check متخطى عمدًا عند كل طلب دمج عادي.
+- فصل محاكاة Android لترحيل البيانات من فحص Full Offline Finance:
+  يستمر فحص Flutter الكامل في PR، وتبقى المحاكاة متاحة على فروع
+  M60/M160 الأصلية وعند تشغيلها يدويًا، بعد فحص Flutter كامل بنفس SHA.
+- الاحتفاظ باختبارات الأمان المالي وSHA والتوقيع ومرشح AAB دون تخفيف.
+- إضافة اختبارات M382 للتأكد من عدم إزالة أي بوابة إلزامية بالخطأ.
+- نجاح CI لا يعادل اعتماد SQLCipher الإنتاجي أو اختبار هاتفين فعليين.
+
+=======================================================================
+[M383] بناء APK وAAB بالتوازي من نفس SHA — 2026-11-02
+=======================================================================
+- فصل بناء APK الموقع للاختبارات عن AAB المرشح لـ Google Play إلى
+  مهمتين متوازيتين داخل نفس تشغيل GitHub Actions، لكل منهما runner مستقل.
+- كلا الملفين ينتظر اكتمال جميع اختبارات Flutter/Python وبوابات
+  الجودة المالية والتشفير على commit واحد، قبل بدء البناء.
+- نسخة APK لا تنتظر بناء AAB، وتظل مشروطة بفحص توقيع Firebase
+  وبصمة SHA وهوية الـcommit داخل النسخة وملاحظات إصدار TXT.
+- ملف AAB يخضع الآن لفحص مستقل للتوقيع SHA1/SHA256، وإثبات
+  الـcommit المضمن داخل الملف، وعدم تغير رأس main قبل رفعه.
+- فصل مفاتيح كاش Gradle وFlutter بين مساري APK/AAB لمنع التعارض.
+- تسجيل مدة تجميع ملف AAB بشكل واضح في ملخص تشغيل Actions.
+- إضافة اختبارات M383 لمنع إلغاء التوقيع أو فحص SHA مستقبلًا.
+- لا تغيير في بيانات المستخدم أو ترحيل SQLCipher أو صلاحية
+  النشر الإنتاجي؛ اختبار هاتفين فعليين ومراجعة Google Play لازمان.
+- نسبة التسريع الحقيقية لا تعتمد إلا بعد قياس تشغيل main الجديد.
+
+=======================================================================
+[M384] إعادة شارة المرفقات في زاوية بطاقات المعاملات — 2026-11-02
+=======================================================================
+- إصلاح انحدار M374 الذي أخفى شارة المرفقات وعدد الصور من بطاقات
+  المعاملات في القائمة والصفحة الرئيسية على الرغم من استمرار وجود الصور.
+- استعادة المثلث الأصلي 36×30 باللون الأخضر الغامق، مع مشبك أبيض
+  ورقم المرفقات بداخله. موضعه أعلى اليمين في العربية (RTL)،
+  وأعلى اليسار في الإنجليزية (LTR).
+- إظهار الشارة فقط عند وجود مرفقات محفوظة في سجل المعاملة،
+  وحساب العدد من receiptPath القديم أو المصفوفة المرتبة للصور.
+- الاحتفاظ بزر «عرض المرفقات» داخل تفاصيل المعاملة كما هو.
+- إصلاح اختبارات M374 التي كانت تعتبر اختفاء الشارة نتيجة صحيحة،
+  وإضافة اختبارات M384 لتوافق مرفقات ما قبل التحديث واتجاه الواجهة.
+- ممنوع تغيير receiptPath أو نقل أو حذف أو ترحيل أي ملف صورة
+  عند رسم الشارة؛ لا SQLCipher cutover ولا تعديل على بيانات مالية.
+- التحقق العملي بعد تحديث APK: فتح معاملة قديمة بها صور،
+  رؤية الرقم على البطاقة وفتح جميع الصور من تفاصيل المعاملة.
+
+=======================================================================
+[M385] منع التعديل على الميزات القديمة بدون طلب المستخدم — 2026-11-02
+=======================================================================
+- اعتماد قاعدة: لا تغير ولا تحذف أي ميزة قديمة معتمدة ما لم يطلب
+  المستخدم تعديلها صراحة، حتى لو تغيرت واجهة أو زر مجاور.
+- كل PR يعلن نطاق طلب المستخدم وأسماء الملفات وأجزاء الكود المحددة
+  في docs/qa/approved_change_scope.json، ويمنع أي فروق خارجه.
+- فحص Python جديد يقارن الكود الأصلي بكود PR HEAD byte-for-byte
+  خارج الوظائف المسموح تعديلها، ويغلق الدمج عند مخالفة النطاق.
+- اختبارات سلبية لحماية أجزاء قديمة وفحوصات البناء والملفات غير
+  المصرح بها، وربطها ببوابة M174 المستقلة على GitHub.
+- إضافة CODEOWNERS واشتراط مراجعة بشرية للنطاق قبل الدمج.
+  تفعيل فرض الموافقة يتطلب Ruleset من إعدادات مستودع GitHub.
+- تعديل اختبارات قديمة لتبرير حذف وظيفة غير مطلوب ممنوع.
+- أي إصلاح يجب أن يحافظ على بيانات ومرفقات مستخدمي النسخ السابقة.
+- CI لا يستطيع إثبات موافقة المستخدم وحده، ولا يحل محل اختبار هاتف.
+
+=======================================================================
+[M386] إصلاح فشل محاكي أندرويد في M274 — 2026-11-02
+=======================================================================
+- فحص سجل التشغيل الفاشل أثبت أن محاكي Pixel 6 لم يبدأ بسبب
+  نقص مساحة قرص GitHub runner؛ المطلوب 7372.80MB والمتاح 5911.09MB.
+- تخفيض مساحة بيانات AVD المصطنعة إلى disk-size: 3072M في
+  .github/workflows/m274-production-ui-golden.yml فقط، بدون تعديل
+  أي كود مالي أو مصدر صور أو واجهات التطبيق.
+- الحفاظ على اختبار Android engine الحقيقي والضغطات والـGolden
+  بدون continue-on-error أو إلغاء أي خطوة من الفحص.
+- 3 اختبارات Regression جديدة تؤكد مساحة القرص، ووجود اختبار
+  أندرويد الفعلي، وعدم إخفاء الفشل.
+- لا يُعتبر العطل محلولًا حتى ينجح تشغيل M274 الجديد من نفس SHA.
+
+=======================================================================
+[M387] علاج فشل M274 بعد تشغيل المحاكي — 2026-11-02
+=======================================================================
+- إصلاح M386 نجح في إقلاع محاكي Android وبناء APK تجريبي،
+  ونجح أول اختبار ضغطات للفوتر.
+- فشل اختبار إخفاء/إظهار الرصيد بإشارة did not complete بعد 48
+  ثانية، ثم لم يعد adb يتصل بالمحاكي. لم يظهر أي Assertion يدل
+  على خلل في حساب الرصيد أو زر العين؛ سبب الانقطاع لم يثبت بعد.
+- تخفيف التنافس على موارد Runner بإتمام NDK/Gradle وتجميع APK
+  قبل إطلاق المحاكي، وتحرير ملفات أدوات Linux غير المستخدمة
+  داخل Job مؤقت فقط، وخفض ذاكرة المحاكي إلى 2048M/heap 256M.
+- الاحتفاظ بفحوص واجهة Android الحقيقية دون تعطيل أو تجاهل فشل،
+  وإضافة تشخيص موارد وADB عند الإخفاق مع نتيجة CI حمراء.
+- لا تعديل على كود الرصيد، أو صور المستخدم، أو التخزين، أو
+  أي واجهة تطبيق؛ لا تعتبر المشكلة مغلقة حتى نجاح إعادة M274.
+
+=======================================================================
+[M388–M390] قوائم إضافة الأهداف والمتكررة والادخار المفتوح وفتح شارة المرفقات
+=======================================================================
+- زر + في الأهداف يفتح قائمة: إضافة هدف جديد / ادخار مفتوح بدون
+  رقم مستهدف / تكرار هدف موجود. زر + في العمليات المتكررة يفتح
+  إضافة عملية متكررة / تكرار عملية متكررة موجودة.
+- اختيار تكرار هدف يفتح نموذج إضافة قابل للتعديل به اسم جديد
+  ورقم تعريف جديد، ويبدأ الادخار الجديد بـ 0 دون نقل رصيد الأصل.
+- تكرار العملية المتكررة ينسخ بيانات النموذج لعملية جديدة ذات
+  معرف جديد؛ لا يحتفظ بربط goal ID القديم ولا يعدل الأصل.
+- هدف الادخار المفتوح يستعمل target=0 داخل السجل الحالي بدون
+  أي ترحيل مدمر أو فرض ميزانية أو استقطاع من الرصيد الجاري.
+- المدخرات المفتوحة لا تُحسب اكتمالًا 100% ولا ترفع نسبة الإنجاز
+  للأهداف ذات المبلغ المستهدف؛ دعم تعديل الهدف المفتوح.
+- فحص سلامة محفظة الأهداف يقبل المستهدف صفر كادخار مفتوح
+  مع بقاء المدخرات ضمن الرصيد المحجوز، ويرفض السالب.
+- شارة الزاوية في بطاقة الرئيسية وقائمة المعاملات قابلة للضغط
+  وتفتح showReceipt بنفس مراجع الصور الموجودة من غير نسخ/حذف.
+  يظل شكل المثلث 36×30، مع مساحة ضغط 48×48 ودعم العربية/الإنجليزية.
+- إصلاح توقعات Regression القديمة التي افترضت أن الشارة للعرض
+  فقط؛ إضافة اختبار تفاعل فعلي واختبارات هوية النسخ وسلامة صفر المستهدف.
+- ملف docs/qa/WAFFRA_42_REQUEST_ACCEPTANCE_TRACKER.md يفصل
+  تنفيذ الكود عن نجاح CI وعن فحص هاتفين؛ لا اعتبار 42 طلبًا مكتملًا بعد.
+- لا تدمج للـmain حتى ينجح CI على نفس HEAD وتراجع باقي متطلبات التسليم.
+
+=======================================================================
+[M409] تصحيح فشل اختبار Android UI M274 — 2026-11-02
+=======================================================================
+- آخر تشغيل M274: فشل واحد في android-emulator-ui-taps؛ بعد نجاح
+  إقلاع المحاكي وتركيب APK انقطع اتصال Dart VM Service وأصبح ADB offline.
+- السبب المباشر المثبت انقطاع خدمة الاختبار؛ أحد عوامل ضغط الموارد
+  أن flutter test يعيد بناء APK وGradle أثناء تشغيل المحاكي حتى بعد precompile.
+- أصبح الاختبار يستعمل flutter drive على نفس debug APK المبني قبل الإقلاع،
+  مع integrationDriver فعلي، وإيقاف Gradle daemon غير المستخدم بعد البناء.
+- الحفاظ على ضغطات الفوتر وزر إخفاء/إظهار الرصيد والنتائج الفعلية؛
+  لا تجاهل لفشل Assertion ولا إلغاء للفحص. التشخيص يفشل مغلقًا.
+- اختبار تعاقدي جديد يؤكد استخدام التطبيق الحقيقي وعدم تجاوز الفشل.
+- لا تغييرات على كود التطبيق أو بيانات الحسابات أو المرفقات.
+- النتيجة ليست نجاحًا معتمدًا حتى ينجح M274 على HEAD الجديد.
+
+
+=======================================================================
+[M410] إعادة تشغيل اختبار CI الفاشل فقط — سياسة Smart CI
+=======================================================================
+- عند فشل بنية المحاكي في M274 بدون أي تغيير للكود، لا حاجة
+  لتشغيل الـ42 Workflow من أول وجديد. يمكن إعادة الـJob الأحمر وحده
+  على نفس SHA، والاحتفاظ بنتائج الـJobs الناجحة.
+- أضيف Workflow آمن من default branch يعيد تشغيل Android UI job
+  مرة واحدة فقط إذا أثبتت الـLogs انقطاع Dart VM Service أو ADB،
+  وليس فشل أي Assertion بالتطبيق، وبعد التحقق من تطابق HEAD.
+- أي فشل ثانٍ يظل أحمر؛ لا يوجد تعطيل اختبارات أو continue-on-error.
+- ما زال التعديل البرمجي الذي يغيّر SHA يتطلب نتائج حديثة لبوابات
+  الاعتماد، والدورة الكاملة قبل APK على main إلزامية.
+- هذه الأتمتة لا تبدأ تلقائياً قبل وجود Workflow على main.
+
+=======================================================================
+[M411] إصلاح فشل Firestore Security Rules dependencies — 2026-11-02
+=======================================================================
+- Job firestore-emulator فشل وقت npm install قبل تشغيل أي اختبارات Firestore
+  بسبب طلب @firebase/firestore@4.19.1 غير المنشور (npm E404)،
+  وتحذيرات EBADENGINE لأن Node 22 أقدم من متطلبات Firebase 13.x.
+- تحديث Node CI إلى 24.12.0، مع تثبيت Firebase SDK 13.1.0
+  و@firebase/rules-unit-testing 6.0.0 وfirebase-tools 15.34.1.
+- تثبيت النسخة المتاحة @firebase/firestore 4.19.0 باستخدام npm overrides
+  بدل الاعتماد على حل عابر قد يجلب tarball غير موجود.
+- الحفاظ على تشغيل محاكي Firestore الحقيقي وقواعد firestore.rules وجميع
+  اختبارات السماح والمنع وعدم تغيير أي كود إنتاجي أو بيانات مستخدم.
+- اختبار تعاقدي جديد يرفض العودة إلى Node 22 أو الإصدارات العائمة
+  أو تعطيل اختبارات الأمان. يجب نجاح CI على SHA الجديد قبل الاعتماد.
+
+=======================================================================
+[M412] حل تكرار اختبارات PR عند كل إصلاح — 2026-11-02
+=======================================================================
+- مصدر التكرار: native pull_request.paths يحسب فرق PR بالكامل، وليس
+  الفرق بين آخر SHA وآخر تعديل؛ لذلك كانت اختبارات Android وOCR
+  تعاد بعد إصلاح Firebase رغم عدم تغيير الواجهة في التعديل الأخير.
+- إضافة مرحلة مبدئية رخيصة إلى 28 Workflow ذات نطاق ملفات معروف،
+  تقارن SHA القديم والجديد من حدث synchronize، وتتأكد من ancestry
+  وتفحص الملفات الجديدة بينهما بدل كامل الـPR.
+- لو الاختبار غير متأثر، لا يعاد تنفيذ Jobs الثقيلة؛ لا توصف نتيجة
+  الاختبار القديمة بأنها نجاح جديد، ويظل الـWorkflow يعرض حالة skip.
+- عند عدم التأكد من فرق الملفات أو غياب SHA أو وجود تغيير على
+  فاحص M412 نفسه، يجري الاختبار الفعلي بدل تعطيله.
+- الحفاظ على جميع الاختبارات المالية والأمنية المعنية بالتغييرات،
+  وبوابات التحقق الشامل على main وبناء APK من main فقط.
+- اختبارين Python للتحقق من مسارات التشغيل والـWorkflow wiring
+  ومنع تجاوز الاختبارات أو حذفها؛ لا تغيير لبيانات مستخدم أو للـUI.
+- تخفيض وقت الاختبارات يحتاج قياس CI حقيقي بعد اعتماد نفس الإصلاح،
+  وليس وعدًا برقم أو اعتباره نجاحًا قبل التشغيل.
+
+=======================================================================
+[M436] تصحيح ربط تحليل الرسائل البنكية السحابي بالمراجعة — 2026-11-03
+=======================================================================
+- يفصل وفرة الآن بين تحليل الرسائل وبين تسجيل الدخل والمصروف فعليًا:
+  بعد موافقة مستقلة على تحليل الرسائل عبر Cloudflare وOpenRouter،
+  تُحلَّل الرسائل البنكية المؤهلة تلقائيًا وتُحفظ نتائج التحليل كاقتراحات
+  مشفرة تحت «عمليات تحتاج مراجعة»، بدون تغيير أي رصيد أو ميزانية.
+- استمرار استيراد الرسائل البنكية من أول شهر التفعيل، وتصنيفها حسب
+  اسم المرسل وعرض عددها؛ وأي عملية تستلزم مراجعة المستخدم وتأكيد الحفظ
+  وربط الميزانية قبل إضافة دخل أو مصروف إلى السجل المالي.
+- التحليل السحابي يستبعد رسائل OTP والبيانات التي لا يمكن حجب
+  معرفاتها بصورة آمنة؛ لا تُرسل الرسائل للخارج قبل موافقة المستخدم
+  المنفصلة. عند الفشل تبقى الرسالة محفوظة للمراجعة المحلية.
+- حماية الحصة المجانية مبدئيًا بحد 8 محاولات لكل تثبيت يوميًا،
+  مع منع إعادة إرسال نفس الرسالة مرارًا عند تشغيل التطبيق أو العامل
+  الخلفي، وظهور عدد المقترحات التي تم تحليلها في الرئيسية.
+- بناء APK التجريبي الموقّع من main يربط عنوان Cloudflare العام
+  المحمي بواسطة Firebase App Check؛ لا يحتوي التطبيق على مفاتيح
+  OpenRouter السرية. يبقى AAB الخاص بالمتجر دون هذا الربط التجريبي.
+- ضمان عدم تفعيل التسجيل المالي التلقائي في هذه الدورة، وعدم
+  حذف أو تحويل أو ترحيل المعاملات السابقة أو محافظ الأهداف.
+- لا تعتبر الاختبارات البرمجية إثباتًا لنجاح App Check على الهاتف:
+  يلزم اختبار النسخة الموقّعة والتحليل الحقيقي وحفظ البيانات القديمة
+  قبل تحديث أجهزة الأسرة أو إطلاق Production.
+
+=======================================================================
+[M437] إعدادات الرسائل البنكية: فحص السابقة والرسائل غير المعروفة — 2026-11-03
+=======================================================================
+- قسم مستقل داخل «حسابي» بعنوان «رسائل SMS البنكية» مع خيارين:
+  «فحص رسائل SMS السابقة» و«رسائل SMS غير معروفة».
+- فحص الرسائل السابقة يستخدم صلاحية القراءة التي وافق عليها المستخدم
+  سابقًا، من بداية شهر التفعيل، ويُدرج الرسائل البنكية المؤهلة في
+  قائمة المراجعة المشفرة من دون أي تسجيل تلقائي أو موافقة متكررة.
+- الرسائل غير المعروفة تُعرض من صندوق Android محليًا، ضمن شهر
+  التفعيل فقط، بحد أقصى 500 رسالة مفحوصة و100 نتيجة معروضة.
+  يستبعد الفحص رسائل رموز التحقق والمراسلات الشخصية ولا يرسل
+  النصوص غير المعروفة إلى التحليل السحابي.
+- رسائل «اعتماد Etimad» بصدور مديونية مستحقة السداد ليست إثباتًا
+  لدفع مبلغ أو دخوله؛ لا يُستخدم رقم المديونية أو المرجع أو التاريخ
+  كمبلغ مالي إطلاقًا.
+- كل إشعار غير معروف قابل للعرض في تفاصيل مقروءة، مع زر
+  «إنشاء معاملة يدويًا» يفتح نموذجًا فارغًا مع تأكيد المستخدم
+  للمبلغ والقسم والميزانية؛ لا يُحفظ أي مصروف تلقائيًا.
+- لا تعديل على محافظ الأهداف أو قاعدة البيانات المالية أو النسخ
+  الاحتياطية أو حسابات المستخدمين؛ التشغيل يتطلب اختبار Android
+  حقيقي وحماية البيانات قبل إتاحة تحديث أجهزة الأسرة.
+
+- يدعم فحص الإشعارات المالية أسماء المرسلين المؤسسيين بالعربية والإنجليزية
+  مثل «اعتماد» وEtimad، ويرفض أرقام الهواتف كاسم جهة موثوقة.
+=======================================================================
+[M438] الدمج السعودي الآمن لتعديلات الواجهة والإعدادات — 2026-11-03
+=======================================================================
+- استكمال دمج نطاقي PR #350 (M415) وPR #351 (M416) على نسخة main
+  المشتملة على PR #354 و#355 و#356: تسجيل الجوال وكلمة المرور،
+  البصمة الإلزامية، موافقة قراءة SMS مرة واحدة، مراجعة الرسائل البنكية
+  السابقة وغير المعروفة، والتحليل السحابي الاختياري كمجرد اقتراح.
+- تحسين قوائم الإضافة + بطبقة ضبابية كاملة خلف شريط التطبيق والمحتوى
+  والفوتر، وتوحيد حدود الخيارات والقوائم، وأزرار الإجراءات السريعة،
+  والتنقل بين شهور الميزانية، والنسخ الآمن للأهداف والمتكررة.
+- إيقاف شاشة الموقع/تحديد الدولة في الإصدار السعودي وعدم طلب إذن الموقع،
+  مع إبقاء بيانات المستخدم والتفضيلات العالمية القديمة دون ترحيل مدمر.
+- تعطيل إدخال معاملة من تصوير/استخراج فاتورة OCR، دون حذف المرفقات
+  القديمة أو منع فتح صور المعاملات المسجلة.
+- تحويل «اسأل وفرة» إلى أسئلة مالية ثابتة مبنية على الدخل والمصروفات
+  والأقسام والميزانيات المستقلة؛ دون شات حر أو اعتمادية Qwen لهذا القسم.
+- العملة المعروضة للتطبيق SAR والمدخل السعودي للجوال 05XXXXXXXX دون
+  أعلام الدول، مع الحفاظ على محول العملات في الأدوات وأسعار الذهب والنفط.
+- موافقة التحليل السحابي للرسائل البنكية تظل مستقلة واختيارية؛ يتم
+  وضع النتيجة في قائمة المراجعة المشفرة فقط، ولا تتغير الأرصدة بدون
+  إدخال أو مراجعة واعتماد المستخدم للمبلغ والقسم والميزانية.
+- نقل الاختبارات ذات الصلة وتحديث عقد M385 لمراجعة حدود التغيير؛
+  لا يصح اعتماد النسخة دون نجاح CI لكل HEAD واختبار هاتف حقيقي.
+- الهدف إصدار APK تجريبي من main فقط بعد الدمج والتحقق؛ لم يتم في
+  هذه الخطوة اعتماد نشر عام أو تشغيل قاعدة بيانات مالية إنتاجية.
+
+=======================================================================
+[M439] معالجة فشل خطوة Release Notes في main — 2026-11-03
+=======================================================================
+- في GitHub Actions Run 41668810368 / Job 126034977932 نجح بناء
+  Android ARM64 Release APK وفحص التوقيع وبصمة Commit، لكن فشلت
+  الخطوة 46 قبل نشر Waffra.apk لأن آخر تعديل للكود أحدث من
+  docs/release/WAFFRA_APPROVED_CHANGES.txt وفق فحص git ancestry.
+- تحديث سجل التعديلات المعتمد في COMMIT مستقل بعد آخر تغييرات الكود
+  في PR التكامل حتى يصبح code_commit سلفًا لـ notes_commit، دون
+  تعطيل فحص المصدر أو تجاوز تطابق SHA أو نشر ملف غير معتمد.
+- النتيجة الفعلية تحتاج إعادة بناء main ونجاح Step 46 ونشر الملفات
+  Waffra.apk وWaffra-Release-Notes.txt على نفس SHA بعد الدمج.
+- لا تعني هذه المعالجة وحدها نجاح App Check الموقّع أو اختبار
+  حفظ بيانات المستخدم القديمة أو جاهزية النسخة لأجهزة الأسرة.
+
+
+[M443] إزالة التاجر والشعار وإصلاح قفل البصمة عند لقطة الشاشة — 2026-11-04
+====================================================
+- أُلغي زر «اختيار التاجر وشعاره» والبحث عن العلامات التجارية
+  من محرر العمليات اليدوية والرسائل البنكية.
+- أُزيلت صور/شعارات التجار من تفاصيل العمليات وقائمة المعاملات
+  وبطاقات الرئيسية؛ تظهر أيقونة القسم المالي بدلًا منها.
+- لا يحذف هذا التغيير أي عملية أو مبلغ أو قسم أو مرفق أو حقل تاريخي:
+  merchantKey محفوظ داخليًا للتوافق مع المعاملات القديمة واكتشاف
+  التكرار بين المصادر، لكنه لم يعد عنصرًا قابلًا للاختيار أو العرض.
+- تغيّر قفل البصمة بحيث لا يُعاد عرض التحقق بسبب حالة inactive
+  المؤقتة أثناء لقطة الشاشة أو ظهور واجهة نظام، وتبقى البصمة
+  إلزامية بعد انتقال حقيقي إلى paused/hidden/detached وعند بداية الجلسة.
+- السماح بلقطات الشاشة يظل إعدادًا مستقلًا يحترم اختيار المستخدم.
+- أُضيف/حُدّث اختبار M424/M429/M440/M443. نجاح CI لا يثبت
+  سلوك واجهة أندرويد الحقيقية حتى تجربة الهاتف.
+- يخص هذا التغيير PR مستقلًا؛ لا يشمل أو يدمج حسابات وتحويلات
+  PR #359 ولا إصلاح الرسائل البنكية في PR #361.
+
+[M442+M443 merged reconciliation — 2026-11-04]
+- Reconciled the separate Android SMS consent/review and merchant UI/biometric patches on one main-descendant branch; preserved both features and all old financial records.
+- Declared all 12 changed files and original-base protected function boundaries; verified byte-identical code outside approved sections.
+- Re-run exact-HEAD CI and signed APK main release checks; native device testing remains a separate gate.
+
+[M228-24-route-reconcile 2026-11-04] Reconcile old SQLCipher route preflight #228 against current main
+- Add read-only exhaustive canonical finance route check inside existing already-activated encrypted binder, only AFTER verified OS key and trusted source digest.
+- Missing audited route, missing witness or incomplete restore/recovery audit fail closed. No activation key, source switch, new finance writer or currency/ledger mutation.
+- Retain main M442/M443 bank SMS and biometric fixes; exact-head CI and device evidence still required before shipping.

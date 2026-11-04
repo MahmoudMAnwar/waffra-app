@@ -1,11 +1,25 @@
 import 'package:flutter/material.dart';
 import 'waffra_category_english.dart';
+import 'waffra_riyal_symbol.dart';
+import 'waffra_regional_copy.dart';
 
 /// Language preference shared by UI and PDF exports. Internal saved values remain unchanged.
 final ValueNotifier<String> waffraLanguage = ValueNotifier<String>('ar');
 bool get waffraIsEnglish => waffraLanguage.value == 'en';
 
 const Map<String,String> _english = {
+ 'إلغاء': 'Cancel',
+ 'تأكيد': 'Confirm',
+ 'حسنًا': 'OK',
+ 'تأكيد الحذف': 'Confirm delete',
+ 'حذف': 'Delete',
+ 'إعادة المحاولة': 'Retry',
+ 'نسخ تفاصيل الخطأ': 'Copy error details',
+ 'تنبيه': 'Notice',
+ 'تحذير': 'Warning',
+ 'هل أنت متأكد؟': 'Are you sure?',
+ 'الرجوع': 'Back',
+ 'الخروج': 'Exit',
  'بدون ميزانية محددة': 'No budget set',
  'الميزانية': 'Budget',
  'تمت الإضافة بنجاح': 'Added successfully',
@@ -143,9 +157,6 @@ const Map<String,String> _english = {
  'صرف': 'Expenses',
  'عرض الفاتورة': 'View receipt',
  'تعديل': 'Edit',
- 'حذف': 'Delete',
- 'إلغاء': 'Cancel',
- 'تأكيد': 'Confirm',
  'حفظ': 'Save',
  'إغلاق': 'Close',
  'إضافة': 'Add',
@@ -222,7 +233,6 @@ const Map<String,String> _english = {
  'المتابعة باستخدام Google': 'Continue with Google',
  'المتابعة باستخدام Apple': 'Continue with Apple',
  'البصمة غير متاحة': 'Fingerprint unavailable',
- 'حسنًا': 'OK',
  'الدخول برمز PIN': 'Unlock with PIN',
  'إدخال رمز PIN': 'Enter PIN',
  'فتح التطبيق': 'Unlock app',
@@ -235,8 +245,29 @@ const Map<String,String> _english = {
  'Waffra': 'Waffra',
 };
 
+// Shorten UI-only copy; preserve original lookup keys and stored records.
+const _compactUiCopy=<String,({String ar,String en})>{
+ 'تأكد من تسجيل بصمتك في إعدادات الهاتف، وبعدها افتح التطبيق مرة أخرى. يمكنك الدخول برمز PIN الآن.':(
+  ar:'فعّل البصمة من إعدادات الهاتف. يمكنك الدخول بالرمز الآن.',
+  en:'Enable fingerprint in phone settings. Use PIN for now.'),
+ 'بياناتك محفوظة على جهازك. المتابعة هنا لإنشاء ملف شخصي محلي، وليست مصادقة فعلية مع Google أو Apple.':(
+  ar:'إنشاء ملف محلي فقط؛ لا يسجّل دخول Google أو Apple.',
+  en:'Local profile only; not Google or Apple sign-in.'),
+ 'انسخ بياناتك واحفظها في مكان آمن. للاستعادة، الصق نسخة JSON. الاستعادة تستبدل بيانات العمليات والأقسام والأهداف والتكرار الحالية.':(
+  ar:'احفظ نسخة JSON بأمان. الاستعادة تستبدل المعاملات والأقسام والأهداف والمتكررة.',
+  en:'Keep your JSON backup safe. Restore replaces transactions, categories, goals and recurring items.'),
+ 'بياناتك محفوظة على جهازك. احفظ نسخة احتياطية قبل تغيير الجوال أو حذف التطبيق. ما فيه ربط بالحسابات البنكية.':(
+  ar:'بياناتك على جهازك. خذ نسخة قبل تغييره أو حذف التطبيق. لا ربط بنكي.',
+  en:'Data stays on-device. Back up before changing phones or uninstalling. No bank link.'),
+ 'المصدر: ExchangeRate-API أو مزود احتياطي عند تعذّر الاتصال. الأسعار استرشادية وقد تختلف عن أسعار البنوك أو التحويل الفعلي.':(
+  ar:'المصدر: ExchangeRate-API أو بديله. أسعار تقريبية تختلف عن البنك.',
+  en:'Source: ExchangeRate-API or backup. Rates may differ from banks.'),
+};
+
 String waffraTr(String source) {
- if(!waffraIsEnglish)return source;
+ final compact=_compactUiCopy[source];
+ if(!waffraIsEnglish)return WaffraRegionalCopy.adaptArabicUi(compact?.ar??source);
+ if(compact!=null)return compact.en;
  // Built-in categories are localized for display only; storage remains stable.
  final catalogLabel=waffraEnglishCategoryLabel(source);
  if(catalogLabel!=source)return catalogLabel;
@@ -255,17 +286,32 @@ String waffraTr(String source) {
 
 /// Translates existing Text widgets without changing model/category identifiers.
 class WaffraText extends Text {
- const WaffraText(super.data,{
+ final bool? currencyEnglish;
+ const WaffraText(super.data,{this.currencyEnglish,
   super.key,super.style,super.strutStyle,super.textAlign,super.textDirection,
   super.locale,super.softWrap,super.overflow,super.textScaler,super.maxLines,
   super.semanticsLabel,super.textWidthBasis,super.textHeightBehavior,super.selectionColor,
  });
  @override
- Widget build(BuildContext context)=>Text(
-  waffraTr(data??''),
-  key:key,style:DefaultTextStyle.of(context).style.merge(style).copyWith(fontFamily:'Tajawal'),strutStyle:strutStyle,textAlign:textAlign,textDirection:textDirection,
-  locale:locale,softWrap:softWrap,overflow:overflow,textScaler:textScaler,maxLines:maxLines,
-  semanticsLabel:semanticsLabel,textWidthBasis:textWidthBasis,
-  textHeightBehavior:textHeightBehavior,selectionColor:selectionColor,
- );
+ Widget build(BuildContext context){
+  final translated=waffraTr(data??'');
+  final effective=DefaultTextStyle.of(context).style.merge(style)
+      .copyWith(fontFamily:'Tajawal');
+  final spans=waffraMoneyCurrencySpans(translated,
+      english:currencyEnglish??waffraIsEnglish,style:effective);
+  if(spans==null)return Text(translated,
+    key:key,style:effective,strutStyle:strutStyle,
+    textAlign:textAlign,textDirection:textDirection,locale:locale,
+    softWrap:softWrap,overflow:overflow,textScaler:textScaler,
+    maxLines:maxLines,semanticsLabel:semanticsLabel,
+    textWidthBasis:textWidthBasis,textHeightBehavior:textHeightBehavior,
+    selectionColor:selectionColor);
+  return Text.rich(TextSpan(children:spans),
+    key:key,style:effective,strutStyle:strutStyle,
+    textAlign:textAlign,textDirection:textDirection,locale:locale,
+    softWrap:softWrap,overflow:overflow,textScaler:textScaler,
+    maxLines:maxLines,semanticsLabel:semanticsLabel,
+    textWidthBasis:textWidthBasis,textHeightBehavior:textHeightBehavior,
+    selectionColor:selectionColor);
+ }
 }

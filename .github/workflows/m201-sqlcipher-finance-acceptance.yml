@@ -47,7 +47,9 @@ jobs:
           channel: stable
           cache: true
       - name: Get dependencies
-        run: flutter pub get
+        run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
       - name: Analyze new route acceptance tests
         run: dart analyze test/storage/m201_24_route_no_false_production_proof_test.dart
       - name: Verify source selection, migration, receipts, backup restore and reset

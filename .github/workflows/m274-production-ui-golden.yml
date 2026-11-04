@@ -1,0 +1,229 @@
+name: M274 Production UI Journeys and Golden Screenshot Review
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'test/m274_responsive_ui_journeys_test.dart'
+      - 'integration_test/m274_ui_tap_smoke_android_test.dart'
+      - '.github/scripts/run-m274-android-tap-smoke.sh'
+      - 'tool/goldens/**'
+      - 'scripts/qa/m274_verify_golden_candidates.py'
+      - '.github/workflows/m274-production-ui-golden.yml'
+      - 'lib/main.dart'
+      - 'lib/waffra_footer.dart'
+      - 'lib/waffra_balance_art.dart'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m274-ui-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  m412-impact:
+    name: M412 Only Run Tests Impacted By Latest PR Update
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.impact.outputs.run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Compare exact before/after change set (missing evidence means RUN)
+        id: impact
+        run: python3 scripts/qa/m412_pr_changed_impact.py --workflow .github/workflows/m274-production-ui-golden.yml
+
+  widget-ui-and-golden-candidates:
+    needs: m412-impact
+    if: ${{ needs.m412-impact.outputs.run == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Restore dependencies
+        run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
+      - name: Analyze responsive and pixel snapshot suites
+        run: dart analyze test/m274_responsive_ui_journeys_test.dart tool/goldens/m274_capture_test.dart integration_test/m274_ui_tap_smoke_android_test.dart
+      - name: Tap through five tabs, account-safe balance hide and inline errors
+        run: flutter test --reporter expanded test/m274_responsive_ui_journeys_test.dart
+      - name: Generate review candidates or strictly compare approved golden baselines
+        shell: bash
+        run: |
+          set -euo pipefail
+          if test -f tool/goldens/baselines/m274-footer-ar-light.png; then
+            echo "APPROVED BASELINES PRESENT: pixel differences now fail CI."
+            flutter test --reporter expanded tool/goldens/m274_capture_test.dart
+          else
+            echo "FIRST RUN: generate candidates only; not design-approved."
+            flutter test --reporter expanded --update-goldens tool/goldens/m274_capture_test.dart
+          fi
+      - name: Verify PNG signatures, dimensions and record exact SHA-256s
+        run: python3 scripts/qa/m274_verify_golden_candidates.py
+      - name: Upload six visual candidates plus fingerprint receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m274-ui-golden-review-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            tool/goldens/baselines/*.png
+            build/m274-golden-candidate-receipt.json
+          if-no-files-found: warn
+
+  android-emulator-ui-taps:
+    needs: m412-impact
+    if: ${{ needs.m412-impact.outputs.run == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install dependencies
+        run: |
+          flutter pub get
+          python3 scripts/qa/m287_patch_tesseract_gradle.py
+      - name: Generate temporary Android host for disposable UI test
+        run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
+      - name: Configure Java library desugaring for Android UI emulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          app = Path('android/app/build.gradle.kts')
+          if app.is_file():
+              source = app.read_text()
+              assert 'compileOptions {' in source
+              if 'isCoreLibraryDesugaringEnabled = true' not in source:
+                  source = source.replace('compileOptions {',
+                      'compileOptions {\n        isCoreLibraryDesugaringEnabled = true', 1)
+              if 'coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")' not in source:
+                  if 'dependencies {' in source:
+                      source = source.replace('dependencies {',
+                          'dependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")', 1)
+                  else:
+                      source += '\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n'
+              app.write_text(source)
+          else:
+              app = Path('android/app/build.gradle')
+              assert app.is_file()
+              source = app.read_text()
+              assert 'compileOptions {' in source
+              if 'coreLibraryDesugaringEnabled true' not in source:
+                  source = source.replace('compileOptions {',
+                      'compileOptions {\n        coreLibraryDesugaringEnabled true', 1)
+              if 'coreLibraryDesugaring ' not in source:
+                  source += "\ndependencies { coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4' }\n"
+              app.write_text(source)
+          print('Desugaring enabled for disposable Android UI test host')
+          PY
+      - name: Syntax-check Android emulator test runner
+        run: bash -n .github/scripts/run-m274-android-tap-smoke.sh
+      # M387: precompile heavy Gradle/NDK workload BEFORE booting the emulator.
+      # Keeping emulator and build tools active together exhausted CI resources.
+      - name: Recover disposable Linux runner disk before Android emulator QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          df -h .
+          sudo rm -rf /usr/share/dotnet /usr/local/share/powershell /opt/hostedtoolcache/CodeQL
+          df -h .
+      # M391: SDK repository occasionally sends a truncated NDK ZIP to
+      # ephemeral hosted runners. Retry the *same* pinned SDK package, never
+      # bypass or mark the real Android UI test green.
+      - name: Install pinned Android NDK with bounded archive retries
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          version="28.2.13676358"
+          manager="$sdk/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$manager"
+          installed=false
+          for attempt in 1 2 3; do
+            if test -f "$sdk/ndk/$version/source.properties"; then
+              installed=true
+              break
+            fi
+            echo "M391_NDK_DOWNLOAD_ATTEMPT:$attempt"
+            rm -rf "$sdk/ndk/$version"
+            if "$manager" --sdk_root="$sdk" "ndk;$version" && \
+                test -f "$sdk/ndk/$version/source.properties"; then
+              installed=true
+              break
+            fi
+            sleep 5
+          done
+          if test "$installed" != true; then
+            echo "::error::Pinned Android NDK archive unavailable or corrupt after 3 attempts"
+            exit 1
+          fi
+          grep -q 'Pkg.Revision = 28.2.13676358' "$sdk/ndk/$version/source.properties"
+      # M409: flutter drive can reuse the prebuilt APK; flutter test cannot.
+      # Create the standard integration driver on this disposable CI checkout.
+      - name: Prepare integration driver for prebuilt debug APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p test_driver
+          cat > test_driver/integration_test.dart <<'DART'
+          import 'package:integration_test/integration_test_driver.dart';
+          Future<void> main() => integrationDriver();
+          DART
+      - name: Precompile Android UI integration APK before emulator launch
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter build apk --debug --no-pub --target integration_test/m274_ui_tap_smoke_android_test.dart
+          test -s build/app/outputs/flutter-apk/app-debug.apk
+          # Avoid carrying a multi-GB idle Gradle daemon into the emulator.
+          ./android/gradlew --stop
+          df -h .
+          free -h
+      - name: Enable KVM for Android emulator
+        shell: bash
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run real Android-engine tap sequence on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          cores: 2
+          # M386: cap AVD userdata instead of accepting Pixel default > available
+          # GitHub runner disk. Keep the real Android UI tap test mandatory.
+          disk-size: 3072M
+          ram-size: 2048M
+          heap-size: 256M
+          disable-animations: true
+          emulator-boot-timeout: 600
+          emulator-options: -no-window -no-audio -no-snapshot -gpu swiftshader_indirect -no-boot-anim
+          script: bash .github/scripts/run-m274-android-tap-smoke.sh

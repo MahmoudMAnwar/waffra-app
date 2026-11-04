@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/storage/waffra_atomic_finance_snapshot.dart';
 import 'package:waffra/storage/waffra_encrypted_receipt_vault.dart';
 import 'package:waffra/storage/waffra_encrypted_store.dart';
+import 'package:waffra/storage/waffra_fresh_ledger_repository.dart';
+import 'package:waffra/waffra_sms_fx_review.dart';
 import 'package:waffra/storage/waffra_portable_backup_v2.dart';
 import 'package:waffra/storage/waffra_portable_encrypted_backup_exporter.dart';
 import 'package:waffra/storage/waffra_portable_encrypted_vault_restorer.dart';
@@ -121,6 +123,68 @@ void main() {
     } finally {
       await imported.close();
     }
+  });
+
+  test('M293 encrypted backup refuses a foreign-currency SQL row omitted by snapshot',
+      () async {
+    await install();
+    final at = DateTime.utc(2026, 10, 27, 9);
+    final now = DateTime.utc(2026, 10, 28);
+    final quote = WaffraSmsFxQuote.fromUsdRates({
+      'result': 'success',
+      'rates': {'USD': 1.0, 'SAR': 3.75},
+      'time_last_update_unix': at.millisecondsSinceEpoch ~/ 1000,
+    }, originalCurrency: 'USD', targetCurrency: 'SAR', now: now);
+    final fx = WaffraSmsFxReview.approve(
+      originalAmount: 100, quote: quote, userConfirmed: true, now: now);
+    await WaffraFreshLedgerRepository(
+      store: encrypted, experimentalEnabled: true,
+    ).add(WaffraFreshLedgerEntry(
+      id: 'usd-after-snapshot',
+      title: 'International purchase',
+      categorySnapshot: 'Shopping',
+      amountMinor: 37500,
+      isIncome: false,
+      occurredIso: '2026-10-27T18:30:00',
+      fxReview: fx,
+    ));
+    await expectLater(exporter().export(password: password),
+        throwsA(isA<StateError>()),
+        reason: 'Never silently omit foreign-currency approval from backup');
+  });
+
+  test('M364 V2 backup refuses to omit independent SQLCipher domain records',
+      () async {
+    await install();
+    // All domain tables exist after a clean restore, but V2 cannot carry
+    // newly saved scenario/budget/goal-movement rows.
+    await encrypted.customStatement(
+      'INSERT INTO fresh_finance_saved_scenarios '
+      '(scenario_id,kind,name,payload_json,saved_at_iso) '
+      'VALUES (?,?,?,?,?)',
+      ['saved-plan','before_spend','My saved plan','{}',
+       '2026-11-01T12:00:00'],
+    );
+    await expectLater(
+      exporter().export(password: password), throwsA(isA<StateError>()),
+      reason: 'An apparently successful backup must never omit saved features',
+    );
+    final stillThere = await encrypted.customSelect(
+      "SELECT scenario_id FROM fresh_finance_saved_scenarios "
+      "WHERE scenario_id='saved-plan'",
+    ).getSingle();
+    expect(stillThere.read<String>('scenario_id'), 'saved-plan');
+  });
+
+  test('M365 unversioned domain tables block misleading V2 export',
+      () async {
+    await install();
+    await encrypted.customStatement(
+      'DROP TABLE fresh_finance_domain_revision',
+    );
+    await expectLater(exporter().export(password:password),
+      throwsA(isA<StateError>()),
+      reason:'An incomplete SQLCipher domain must not be ignored');
   });
 
   test('M68 refuses export if source is unverified or feature disabled',

@@ -1,10 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'waffra_centered_dropdown.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'waffra_gold_market_data.dart';
+import 'waffra_amount_formatter.dart';
 import 'waffra_display_currency.dart';
+import 'waffra_i18n.dart';
 
+import 'waffra_haptic_feedback.dart';
 /// Read-only global spot price utility under currency conversion.
 /// Never touches the user's financial records or SQLCipher source.
 class WaffraGoldMarketSection extends StatefulWidget {
@@ -166,8 +170,8 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
   }
 
   double? get _grams {
-    final raw = _weight.text.trim().replaceAll(',', '.');
-    final parsed = double.tryParse(raw);
+    final parsed=waffraStrictNumericInput(
+      _weight.text,decimalPlaces:4,maxValue:1000000);
     if (parsed == null || !parsed.isFinite || parsed <= 0 || parsed > 1000000) {
       return null;
     }
@@ -241,7 +245,7 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 10, color: Theme.of(context).hintColor)),
         if (_quote != null && _sarPerUsd != null)
-          FittedBox(fit: BoxFit.scaleDown, child: Text(
+          FittedBox(fit: BoxFit.scaleDown, child: WaffraText(
             '≈ ${sar(_quote!.gramUsd(karat) * _sarPerUsd!)}',
             textDirection: TextDirection.ltr,
             style: TextStyle(fontSize: 10,
@@ -327,7 +331,8 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
               ),
               if (quote != null && _sarPerUsd != null)
                 FittedBox(fit: BoxFit.scaleDown,
-                  child: Text('≈ ${sar(quote.usdPerTroyOunce * _sarPerUsd!)}',
+                  child: WaffraText(
+            '≈ ${sar(quote.usdPerTroyOunce * _sarPerUsd!)}',
                     textDirection: TextDirection.ltr,
                     style: TextStyle(fontSize: 10.5,
                       color: Theme.of(context).hintColor))),
@@ -354,7 +359,8 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
               ),
               if (quote != null && _sarPerUsd != null)
                 FittedBox(fit: BoxFit.scaleDown,
-                  child: Text('≈ ${sar(quote.pureGramUsd * _sarPerUsd!)}',
+                  child: WaffraText(
+            '≈ ${sar(quote.pureGramUsd * _sarPerUsd!)}',
                     textDirection: TextDirection.ltr,
                     style: TextStyle(fontSize: 10.5,
                       color: Theme.of(context).hintColor))),
@@ -382,7 +388,7 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
           ),
           IconButton(
             tooltip: t('Refresh gold spot quote', 'تحديث سعر الذهب'),
-            onPressed: _loading ? null : _fetch,
+            onPressed: WaffraHaptics.tap(_loading ? null : _fetch),
             icon: const Icon(Icons.refresh_rounded, color: _goldDark),
           ),
         ]),
@@ -415,7 +421,7 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
         const SizedBox(height: 12),
         Row(children: [
           Expanded(
-            child: DropdownButtonFormField<int>(
+            child: WaffraCenteredDropdownFormField<int>(
               key: const Key('waffra-gold-calc-karat'),
               initialValue: _karat,
               isExpanded: true,
@@ -426,9 +432,9 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
               items: waffraGoldFineness.keys.map((k) => DropdownMenuItem(
                 value: k, child: Text(t('K$k', 'عيار $k')),
               )).toList(),
-              onChanged: (value) {
+              onChanged: WaffraHaptics.selection((value) {
                 if (value != null) setState(() => _karat = value);
-              },
+              }),
             ),
           ),
           const SizedBox(width: 9),
@@ -438,6 +444,8 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
               controller: _weight,
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters:[const WaffraAmountFormatter(
+               decimalPlaces:4,truncateExcess:false)],
               decoration: InputDecoration(
                   labelText: t('Weight (g)', 'الوزن (جرام)'),
                   hintText: t('Enter weight', 'أدخل الوزن'), isDense: true,
@@ -540,7 +548,7 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
         _title(t('Gold bars', 'أسعار السبائك الذهبية'),
             Icons.inventory_2_outlined,
             action: TextButton(
-              onPressed: () => setState(() => _allBars = !_allBars),
+              onPressed: WaffraHaptics.tap(() => setState(() => _allBars = !_allBars)),
               child: Text(_allBars ? t('Show less', 'عرض أقل') :
                   t('See all', 'عرض الكل'),
                   style: const TextStyle(color: _goldDark)),
@@ -561,8 +569,8 @@ class _WaffraGoldMarketSectionState extends State<WaffraGoldMarketSection> {
           const SizedBox(width: 6),
           Expanded(child: Text(
             t(
-              'Source: Gold-API · USD spot per troy ounce. Values are indicative raw gold content; retail premiums, workmanship, bid/ask spread and taxes are excluded.',
-              'المصدر: Gold-API · سعر الأونصة التروي بالدولار. الأرقام قيمة الذهب الخام استرشاديًا فقط، ولا تشمل المصنعية أو فرق البيع والشراء أو الضرائب.',
+              'Source: Gold-API · USD/oz. Estimates exclude making charges, spreads and taxes.',
+              'المصدر: Gold-API · دولار/أونصة. السعر استرشادي دون مصنعية أو ضرائب أو فروق بيع.',
             ),
             style: TextStyle(fontSize: 10.5,
                 color: Theme.of(context).hintColor),

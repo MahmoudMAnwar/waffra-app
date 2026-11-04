@@ -28,6 +28,12 @@ String? waffraMerchantName(String raw,{bool income=false}) {
  if(!transfer){
   matches.add(RegExp(r'^\s*(?:At|Merchant)\s*[:：]\s*([^\n\r;]{2,100})',
    multiLine:true,caseSensitive:false));
+  // Some English banks embed merchant after "account ending with ... at"
+  // on the SAME line. Only capture the bounded merchant, never the
+  // preceding amount or account suffix, or trailing balance.
+  matches.add(RegExp(
+   r'\bdebited\s+from\s+account\s+ending\s+with\s+[0-9*]{3,8}'
+   r'\s+at\s+([^\n\r.]{2,100})',caseSensitive:false));
  }
  matches.addAll([
   RegExp(r'(?:^|\n)\s*لدى\s*[:：]?\s*([^\n\r;]{2,100})',multiLine:true),
@@ -173,7 +179,7 @@ String? waffraRecognizedMerchantLeaf(String merchant,{required bool income}){
   'kfc','كنتاكي','mcdonalds','ماكدونالدز','البيك','albaik',
   'herfy','هرفي','hardees','هارديز','subway food','بيت الشاورما']))
   return 'مطاعم وكافيهات / وجبات سريعة';
- if(any(['restaurant','مطعم','مطاعم','مطابخ','food court']))
+ if(any(['restaurant','restauran','مطعم','مطاعم','مطابخ','food court']))
   return 'مطاعم وكافيهات / مطاعم شعبية';
  if(any(['coffee','cafe','café','كوفي','قهوة','كافيه','starbucks',
   'ستاربكس','dunkin','دانكن','barns','بارنز']))

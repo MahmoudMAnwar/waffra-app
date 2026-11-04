@@ -10,9 +10,9 @@ void main() {
  setUp(()=>waffraLanguage.value='ar');
  tearDown(()=>waffraLanguage.value='ar');
 
- test('M148: all 79 built-in roots and 973 subcategories have English names',(){
+ test('M148: all 79 built-in roots and 975 subcategories have English names',(){
   expect(waffraCategoryCatalog.length,79);
-  expect(waffraCategoryCatalog.fold<int>(0,(n,g)=>n+g.subcategories.length),973);
+  expect(waffraCategoryCatalog.fold<int>(0,(n,g)=>n+g.subcategories.length),975);
   expect(waffraEnglishCategoryCatalogComplete,isTrue);
   // Existing catalog intentionally has some same-named leaves under
   // different parents. New proposals were checked against all originals.
@@ -39,9 +39,10 @@ void main() {
 
  test('M148: guarded catalog installer explicitly supports v4 upgrade',(){
   final legacy=File('lib/storage/waffra_home_finance_persistence.dart').readAsStringSync();
-  expect(legacy,contains('version != 2 && version != 3 && version != 4'));
+  expect(legacy,contains('version != 2 && version != 3 && version != 4 && version != 5'));
   final ui=File('lib/main.dart').readAsStringSync();
   expect(ui,contains('waffra_category_catalog_v4_installed'));
+  expect(ui,contains('waffra_category_catalog_v5_installed'));
   expect(ui,contains('version:4'));
   expect(ui,contains('removedNames.contains'));
  });
@@ -72,14 +73,18 @@ void main() {
  test('M148: transaction pickers and category search use translated display labels',(){
   final main=File('lib/main.dart').readAsStringSync();
   final categories=File('lib/waffra_categories_page.part.dart').readAsStringSync();
-  expect(main,contains('waffraTr(item.name).toLowerCase()'));
-  expect(main,contains('waffraTr(c.name).toLowerCase()'));
-  expect(main,contains('DropdownMenuItem(value:c.name,child:WaffraText(c.name))'));
-  expect(main,contains('title:WaffraText(waffraTr(leafLabels?item.displayName:item.name),maxLines:3)'));
+  expect(main,contains('waffraSearchAny([label,waffraTr(label),waffraTr(item.name)],query)'));
+  expect(main,contains('waffraSearchAny([c.name,waffraTr(c.name)],query)'));
+  // M335 uses a searchable hierarchical picker rather than a flat dropdown.
+  expect(main,contains('Future<String?> chooseTransactionCategory('));
+  expect(main,contains('final label=leafLabels?item.displayName:item.name;'));
+  expect(main,contains('waffraSearchAny([label,waffraTr(label),waffraTr(item.name)],query)'));
+  expect(main,contains('title:WaffraText(waffraTr(leafLabels?'));
+  expect(main,contains('item.displayName:item.name),maxLines:3)'));
   expect(categories,contains('WaffraText(root.name,maxLines:2'));
   expect(categories,contains('WaffraText(sub.displayName,maxLines:2'));
-  expect(categories,contains('waffraTr(root.name).toLowerCase()'));
-  expect(categories,contains('waffraTr(c.displayName).toLowerCase()'));
+  expect(categories,contains('waffraSearchAny([root.name,waffraTr(root.name)],query)'));
+  expect(categories,contains('waffraSearchAny([c.displayName,waffraTr(c.displayName)],query)'));
   expect(categories,contains('TextSpan(text:waffraTr(sub.displayName)'));
  });
 

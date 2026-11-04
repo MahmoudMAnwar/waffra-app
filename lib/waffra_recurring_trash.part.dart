@@ -54,9 +54,9 @@ extension WaffraRecurringRecycleBin on _HomeScreenState {
            ?'Past linked transactions remain unchanged. The schedule is restored paused, with no new payments posted. Choose a new due date before reactivating.'
            :'ستبقى جميع المعاملات القديمة المرتبطة بها محفوظة. تعود الجدولة متوقفة دون تسجيل أي دفعة، ويجب تحديد تاريخ استحقاق جديد عند تفعيلها.'),
           actions:[
-           TextButton(onPressed:()=>Navigator.pop(confirmCtx,false),
+           TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(confirmCtx,false)),
             child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
-           FilledButton(onPressed:()=>Navigator.pop(confirmCtx,true),
+           FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(confirmCtx,true)),
             child:WaffraText(waffraIsEnglish?'Restore':'استرجاع')),
           ]));
          if(ok!=true||!mounted)return;
@@ -89,7 +89,7 @@ extension WaffraRecurringRecycleBin on _HomeScreenState {
         },
        );
       }).toList())),
-    actions:[TextButton(onPressed:()=>Navigator.pop(ctx),
+    actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
      child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))],
    )));
  }

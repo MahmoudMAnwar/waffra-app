@@ -16,9 +16,24 @@ void main(){
     expect(WaffraValidators.positiveAmount(v), isNotNull, reason:'amount $v');
    }
    expect(WaffraValidators.positiveAmount('1,200.50'), isNull);
+   for(final invalid in ['1,2','12,34','1,,000','1,234,56',
+       '12.345','1,200.501','1.2.3','-1,000','1e4']) {
+     expect(WaffraValidators.positiveAmount(invalid), 'invalid_amount',
+       reason:'reject ambiguous or sub-halalah input: $invalid');
+   }
+   expect(WaffraValidators.positiveAmount('0.01'), isNull);
+   expect(WaffraValidators.positiveAmount('1,234,567.89'), isNull);
    expect(WaffraValidators.positiveAmount('',required:false), isNull);
   });
-  test('rejects duplicate category regardless of casing or whitespace',(){
+  test('M337 financial amount digits match Arabic/Persian parser without rounding',(){
+   for(final valid in ['١٬٢٣٤٫٥٦','۱۲۳۴٫۵۶','٣٫٥٠','٠٫٠١']){
+    expect(WaffraValidators.positiveAmount(valid),isNull,reason:valid);
+   }
+   for(final invalid in ['١٫٢٣٤','٠','۰٫۰۰','١٬٢٣','۱۲,۳۴,۵۶']){
+    expect(WaffraValidators.positiveAmount(invalid),'invalid_amount',reason:invalid);
+   }
+  });
+   test('rejects duplicate category regardless of casing or whitespace',(){
    expect(WaffraValidators.uniqueCategory(' تسوّق ',['تسوّق']), 'duplicate');
    expect(WaffraValidators.uniqueCategory('Food',['food']), 'duplicate');
    expect(WaffraValidators.uniqueCategory('نقل',['تسوّق']), isNull);

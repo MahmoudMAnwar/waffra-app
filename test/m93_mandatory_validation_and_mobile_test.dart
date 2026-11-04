@@ -39,8 +39,10 @@ void main() {
     }
     expect(WaffraValidators.positiveAmount('84.72'), isNull);
     expect(WaffraValidators.positiveAmount('1,200.50'), isNull);
-    expect(WaffraValidators.positiveAmount('١٬٢٠٠٫٥٠'), isNotNull,
-        reason: 'a raw Arabic digit string is normalized by the UI formatter');
+    // Localized Arabic digits and separators are accepted and normalized
+    // by the shared validator, including paths that bypass the UI formatter.
+    expect(WaffraValidators.positiveAmount('١٬٢٠٠٫٥٠'), isNull);
+    expect(WaffraValidators.positiveAmount('١٬٢٠٠٫٥٠٠'), 'invalid_amount');
     expect(WaffraValidators.positiveAmount('', required: false), isNull);
   });
 

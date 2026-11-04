@@ -42,7 +42,7 @@ void main() {
       }
       final footer = File('lib/waffra_footer.dart').readAsStringSync();
       expect(footer, contains('static const itemCount=5'),
-        reason: 'The redesigned footer must keep all five destinations');
+        reason: 'The redesigned footer must keep all five finance destinations');
     });
 
     testWidgets('Calendar does not show zero totals in an empty month', (tester) async {
