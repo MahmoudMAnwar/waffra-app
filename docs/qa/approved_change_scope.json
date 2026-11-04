@@ -66,8 +66,16 @@
         "end": "import 'waffra_encrypted_receipt_vault.dart';\n"
       },
       {
+        "start": "  final bool experimentalEnabled;\n",
+        "end": "    if (!experimentalEnabled) {\n"
+      },
+      {
         "start": "      if (domainMarker.isNotEmpty) {\n",
         "end": "      final state = await snapshot.read();\n"
+      },
+      {
+        "start": "        finance['waffra_custom_goals_v1'] = values;\n",
+        "end": "    });\n  }\n}"
       }
     ],
     "lib/storage/waffra_unified_finance_writer.dart": [
