@@ -1,4 +1,6 @@
 import 'waffra_encrypted_full_finance_reset.dart';
+import 'waffra_accounts_schema.dart';
+import 'waffra_accounts_repository.dart';
 import 'waffra_fresh_finance_domain_repository.dart';
 import 'waffra_verified_goal_due_snapshot_writer.dart';
 import 'waffra_encrypted_transaction_recycle.dart';
@@ -716,6 +718,9 @@ class WaffraVerifiedEncryptedFinanceBridge {
     required bool userConfirmed,
     bool allowDuplicateHashes = false,
     List<Map<String,Object?>> proposedCategories = const [],
+    String? accountId,
+    List<String?>? selectedAccountIds,
+    int? expectedAccountGeneration,
   }) async {
     if (!experimentalEnabled) {
       throw StateError('Encrypted source bridge is disabled by default.');
@@ -731,6 +736,9 @@ class WaffraVerifiedEncryptedFinanceBridge {
       userConfirmed: userConfirmed,
       allowDuplicateHashes: allowDuplicateHashes,
       proposedCategories: proposedCategories,
+      accountId: accountId,
+      selectedAccountIds: selectedAccountIds,
+      expectedAccountGeneration: expectedAccountGeneration,
     );
   }
   /// Save a confirmed transaction and its attached images as ONE encrypted
@@ -1104,6 +1112,72 @@ class WaffraVerifiedEncryptedFinanceBridge {
           fullFinanceSnapshot: next,
         );
       });
+    });
+  }
+
+
+  /// Account sub-ledger changes use the SAME native Home/Widget source lock.
+  /// The snapshot generation is advanced in the SAME SQLCipher transaction as
+  /// the account mutation, so an old Home snapshot cannot overwrite transfers.
+  /// A secondary database or an inactive SQLCipher vault is never accepted.
+  Future<T> commitVerifiedAccountChange<T>({
+    required WaffraEncryptedHomeWitness baseline,
+    required Future<T> Function(WaffraAccountsRepository accounts) change,
+    required bool userConfirmed,
+    bool initializeSchema=false,
+  }) async {
+    if (!experimentalEnabled || !userConfirmed) {
+      throw StateError('Verified account change needs approval and a live encrypted source.');
+    }
+    return WaffraExperimentalWriterGate(
+      disposableDirectory:writerDirectory,experimentalEnabled:true,
+    ).withExclusiveAccess(() async {
+      await _requireActivatedUnderLock();
+      return snapshot.store.transaction(() async {
+        final latest=await snapshot.read();
+        if(latest.generation!=baseline.generation ||
+           latest.digest!=baseline.digest){
+          throw StateError('Finance changed since account review. Reload first.');
+        }
+        if(initializeSchema){
+          await WaffraAccountsSchema.install(snapshot.store);
+        }else{
+          await WaffraAccountsSchema.requireReady(snapshot.store);
+        }
+        final accounts=WaffraAccountsRepository(
+          db:snapshot.store,experimentalEnabled:true);
+        final result=await change(accounts);
+        // Accounts are typed SQL and never fake MoneyEntry rows. Increment
+        // the canonical generation without rewriting any ledger content.
+        await snapshot.commit(
+          expectedGeneration:latest.generation,
+          fullFinanceSnapshot:latest.values,
+        );
+        return result;
+      });
+    });
+  }
+
+  /// Read account balances with a source witness, not from UI preferences.
+  /// The result must be presented together with its snapshot generation.
+  Future<({WaffraEncryptedHomeWitness witness,
+           List<WaffraAccountBalance> balances})> readVerifiedAccounts() async {
+    if(!experimentalEnabled)throw StateError('Encrypted accounts are not active.');
+    return WaffraExperimentalWriterGate(
+      disposableDirectory:writerDirectory,experimentalEnabled:true,
+    ).withExclusiveAccess(() async {
+      await _requireActivatedUnderLock();
+      await WaffraAccountsSchema.requireReady(snapshot.store);
+      final current=await snapshot.read();
+      final accounts=await WaffraAccountsRepository(
+        db:snapshot.store,experimentalEnabled:true).balances();
+      return (
+        witness:WaffraEncryptedHomeWitness(
+          snapshot:current,
+          finance:WaffraFinanceReadView.fromEncrypted(current),
+        ),
+        balances:accounts,
+      );
     });
   }
 
