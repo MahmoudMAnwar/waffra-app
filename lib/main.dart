@@ -95,6 +95,8 @@ import 'storage/waffra_home_finance_persistence.dart';
 import 'storage/waffra_verified_finance_authority.dart';
 import 'storage/waffra_verified_pull_refresh_source.dart';
 import 'storage/waffra_production_finance_authority_binding.dart';
+import 'storage/waffra_verified_accounts_api.dart';
+import 'waffra_accounts_manager_page.dart';
 import 'storage/waffra_fresh_finance_modules_repository.dart';
 import 'storage/waffra_verified_module_ui_guard.dart';
 import 'storage/waffra_runtime_finance_route_contract.dart';
@@ -3352,6 +3354,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   _financeAuthority=binding.authority;
  }
 
+ Future<void> openVerifiedAccounts()async{
+  await _ensureFinanceBound();
+  if(!mounted)return;
+  final verifiedBridge=_financeBinding?.accountsBridge;
+  if(verifiedBridge==null){
+   snack(context,waffraIsEnglish?
+    'Accounts require an activated, verified encrypted finance source.':
+    'الحسابات تحتاج تفعيل مصدر مالي مشفّر وموثّق أولًا.');
+   return;
+  }
+  await Navigator.of(context).push<void>(MaterialPageRoute(
+   builder:(_)=>WaffraAccountsManagerPage(
+    repository:WaffraVerifiedAccountsApi(bridge:verifiedBridge),
+    english:waffraIsEnglish,
+   )));
+ }
  WaffraFinanceAuthorityRead? _lastFinanceAuthorityRead;
  final smsHashes=<String>{};
  final expandedCategoryIds=<String>{};
@@ -12942,6 +12960,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        }:null))),
    ]),
    _accountSection(waffraIsEnglish?'Financial tools':'الأدوات المالية',Icons.account_balance_wallet_outlined,[
+    if(_financeBinding?.accountsBridge!=null)
+     _accountTile(waffraIsEnglish?'My money accounts':'حساباتي',
+      waffraIsEnglish?'Cash, bank accounts and internal transfers':'النقد والحسابات البنكية والتحويلات الداخلية',
+      Icons.account_balance_outlined,onTap:WaffraHaptics.tap(openVerifiedAccounts)),
     _accountTile(waffraIsEnglish?'Financial calendar':'التقويم المالي',
      waffraIsEnglish?'Transactions and recurring dates':'المعاملات ومواعيد العمليات المتكررة',
      Icons.calendar_month_outlined,onTap:WaffraHaptics.tap(openFinancialCalendar)),

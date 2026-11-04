@@ -17,7 +17,8 @@
     "Repair M385 exact-scope boundary anchors around M440 account ledger and portable-backup safety changes without bypassing scope protection.",
     "Treat verified exactly-once transfer replays as already saved rather than showing a failure after an identical committed transfer.",
     "M440: Account-aware authenticated V3 backup and atomic disposable-vault restore, with V2 loss prevention.",
-    "M440: Persist one explicit selected account per confirmed SMS/recurring batch entry inside the unified SQLCipher writer."
+    "M440: Persist one explicit selected account per confirmed SMS/recurring batch entry inside the unified SQLCipher writer.",
+    "M440: Make My Accounts navigation available only for independently verified activated SQLCipher sources; never create a second live finance database."
   ],
   "allowed_changed_files": [
     ".github/scripts/run-m120-android-receipt-reopen.sh",
@@ -43,7 +44,9 @@
     "test/storage/m440_accounts_backup_guard_test.dart",
     "test/storage/m440_accounts_migration_preview_test.dart",
     "test/storage/m440_accounts_portable_v3_test.dart",
-    "test/storage/m440_accounts_repository_test.dart"
+    "test/storage/m440_accounts_repository_test.dart",
+    "lib/main.dart",
+    "lib/storage/waffra_production_finance_authority_binding.dart"
   ],
   "bounded_sections": {
     "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
@@ -114,6 +117,30 @@
       {
         "start": "      - name: Run disposable Android receipt restart and recovery proof\n",
         "end": "          # Only failed sqlite3mc GitHub native-asset downloads are retried.\n"
+      }
+    ],
+    "lib/main.dart": [
+      {
+        "start": "import 'storage/waffra_production_finance_authority_binding.dart';\n",
+        "end": "import 'storage/waffra_fresh_finance_modules_repository.dart';\n"
+      },
+      {
+        "start": " Future<void> _bindFinanceSource()async{\n",
+        "end": " WaffraFinanceAuthorityRead? _lastFinanceAuthorityRead;\n"
+      },
+      {
+        "start": "   _accountSection(waffraIsEnglish?'Financial tools':'الأدوات المالية',Icons.account_balance_wallet_outlined,[\n",
+        "end": "    _accountTile(waffraIsEnglish?'Financial calendar':'التقويم المالي',\n"
+      }
+    ],
+    "lib/storage/waffra_production_finance_authority_binding.dart": [
+      {
+        "start": "  WaffraProductionFinanceAuthorityBinding._({\n",
+        "end": "  /// The default shipped call sites intentionally pass no release evidence.\n"
+      },
+      {
+        "start": "      startup.finance.requireIntegrity();\n",
+        "end": "    } catch (_) {\n"
       }
     ]
   }

@@ -24,11 +24,15 @@ class WaffraProductionFinanceAuthorityBinding {
     required this.authority,
     required this.encrypted,
     WaffraEncryptedStore? store,
-  }) : _store = store;
+    WaffraVerifiedEncryptedFinanceBridge? accountsBridge,
+  }) : _store = store, _accountsBridge=accountsBridge;
 
   final WaffraVerifiedFinanceAuthority authority;
   final bool encrypted;
   final WaffraEncryptedStore? _store;
+  final WaffraVerifiedEncryptedFinanceBridge? _accountsBridge;
+  WaffraVerifiedEncryptedFinanceBridge? get accountsBridge =>
+      encrypted ? _accountsBridge : null;
 
   /// The default shipped call sites intentionally pass no release evidence.
   /// An already-active encrypted source therefore blocks access instead of
@@ -166,6 +170,7 @@ class WaffraProductionFinanceAuthorityBinding {
       startup.finance.requireIntegrity();
       return WaffraProductionFinanceAuthorityBinding._(
         authority: authority, encrypted: true, store: store,
+        accountsBridge: bridge,
       );
     } catch (_) {
       await store.close();
