@@ -69,6 +69,9 @@ class WaffraVerifiedActiveAccountsRestore {
    encryptedArchive:encryptedArchive,password:password);
   final rescue=await WaffraAccountsPortableBackupV3.verifyAndPreview(
    encryptedArchive:savedRescueArchive,password:rescuePassword);
+  if(archive.history==null) {
+   throw StateError('Legacy V3 lacks authenticated finance history; restore refused.');
+  }
   final preview=await WaffraPortableBackupV2.verifyAndPreview(
    encryptedArchive:archive.encryptedV2,password:password);
   final rescuePreview=await WaffraPortableBackupV2.verifyAndPreview(
