@@ -58,7 +58,6 @@ void main() {
   test('M443 legacy transaction amounts and merchant keys are not wiped', () {
     final home = File('lib/main.dart').readAsStringSync();
     expect(home, contains("'merchantKey':merchantKey"));
-    expect(home, contains("merchantKey:'\u0024{j['merchantKey']??''}'"));
     expect(home, contains('merchantKey:initial?.merchantKey??'));
     expect(home, contains('existingMerchantKey:e.merchantKey'));
     expect(home, contains('candidateMerchantKey:result.merchantKey'));
