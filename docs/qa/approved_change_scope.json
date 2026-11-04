@@ -24,20 +24,20 @@
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": " Future<void> syncRecurringReminders()async {",
-        "end": " Future<void> toggleRecurringReminders(bool enabled,"
-      },
-      {
-        "start": " Widget smartMoneyInsightsCard(){",
-        "end": "  return Card(\n   elevation:1.0,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(21)),"
-      },
-      {
         "start": "import 'waffra_financial_insights.dart';\n",
         "end": "import 'waffra_goal_budget_forecast.dart';\n"
       },
       {
+        "start": " Future<void> syncRecurringReminders()async {",
+        "end": " Future<void> toggleRecurringReminders(bool enabled,"
+      },
+      {
         "start": " Future<void> budgetAlert(MoneyEntry entry,double previousSpent)async {",
         "end": " /// Draw the same category-colored donut shown on Smart Analysis."
+      },
+      {
+        "start": " Widget smartMoneyInsightsCard(){",
+        "end": "  return Card(\n   elevation:1.0,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(21)),"
       }
     ],
     "lib/waffra_reminders.dart": [
