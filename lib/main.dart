@@ -10859,7 +10859,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           border:const OutlineInputBorder())),
         if(bridge!=null)...[
          const SizedBox(height:12),
-         DropdownButtonFormField<String>(
+         WaffraCenteredDropdownFormField<String>(
           key:const Key('waffra-goal-release-destination-account'),
           isExpanded:true,initialValue:chosen,
           decoration:InputDecoration(
@@ -11039,7 +11039,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          )),
         if(fundingBridge!=null)...[
          const SizedBox(height:12),
-         DropdownButtonFormField<String>(
+         WaffraCenteredDropdownFormField<String>(
           key:const Key('waffra-goal-funding-source-account'),
           isExpanded:true,initialValue:chosenSource,
           decoration:InputDecoration(
