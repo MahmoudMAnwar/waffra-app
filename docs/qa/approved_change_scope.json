@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
-  "change_id": "M442-SMS-one-time-consent-account-safe-history-review",
-  "human_scope_review": "User reported on real Android screenshots that bank SMS pending count incorrectly shows zero despite messages after 2026-11-01, while prior SMS permission is already granted but app asks to re-enable. Authorize bounded repairs only; CI and physical phone verification remain required.",
+  "change_id": "M442-M443-combined-sms-review-and-biometric-merchant-reconciliation",
+  "human_scope_review": "Owner explicitly approved merging M442 bank SMS capture/review/session repair and M443 screenshot biometric/merchant UI removal together after reviewing cross-PR conflicts. Both previously reviewed source scopes remain bounded; neither feature may modify balances, historical records, or certified storage authority. This manifest declares both actual patches versus original PR base because exact-head workflows use the old base SHA.",
   "user_requested_changes": [
     "Prevent bank SMS permissions and consent state from being mistaken for an empty pending-review list on the Home screen.",
     "Preserve one-time bank SMS consent across sign-out/sign-in for the same verified account without silently authorizing a different user.",
@@ -9,19 +9,58 @@
     "Resume earlier bank SMS review from original installation month in bounded cursor-based batches, with progress status instead of misleading zero.",
     "Expose Android READ_SMS/RECEIVE_SMS permission, app tracking, signed-in profile and protected queue read failures as separate accurate statuses.",
     "Prevent unreadable AndroidKeyStore SMS review data from being silently reported as zero or crashing Activity during resume.",
-    "Update exact-SHA release notes and add regression test coverage for the two Android screenshot failures."
+    "Update exact-SHA release notes and add regression test coverage for the two Android screenshot failures.",
+    "Remove the Choose merchant and logo selector and associated merchant brand search and preview from editing or adding any transaction.",
+    "Stop rendering merchant logos or merchant name branding in transaction detail, list and compact Home views, replacing them with category icons.",
+    "Retain existing transaction IDs, amounts, historical merchantKey metadata, SMS dedupe, categories, receipts, and finance writes without migrating or deleting data.",
+    "Prevent spurious biometric relock on a transient Android inactive lifecycle event such as a screenshot while maintaining mandatory OS biometric checks after genuine paused, hidden or detached background transitions.",
+    "Update existing biometric and SMS finance UI source assertions and add screenshot/branding regression tests without weakening security or bypassing test guards.",
+    "Document exact changes and physical device testing requirement in main APK release notes."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
     "lib/waffra_auto_sms.dart",
+    "lib/waffra_mandatory_biometric_gate.dart",
     "native/WaffraAutoSmsStore.kt",
     "native/WaffraMainActivity.kt",
+    "test/m424_mandatory_biometrics_test.dart",
+    "test/m429_sms_phone_integration_test.dart",
+    "test/m440_biometric_resume_regression_test.dart",
+    "test/m443_merchant_screenshot_regression_test.dart",
     "test/qa/m442_sms_consent_session_recovery_test.py"
   ],
   "bounded_sections": {
     "lib/main.dart": [
+      {
+        "start": "import 'waffra_footer.dart';\n",
+        "end": "import 'waffra_auto_sms_policy.dart';\n"
+      },
+      {
+        "start": "    content:ConstrainedBox(\n     constraints:const BoxConstraints(maxWidth:440),\n",
+        "end": "       WaffraText(waffraIsEnglish?'Transaction description'"
+      },
+      {
+        "start": "  String? selectedParentId;\n",
+        "end": "  int budgetMenuRevision=0;"
+      },
+      {
+        "start": "      const SizedBox(height:12),\n      TextField(controller:title,onChanged:(_)=>update((){}),minLines:1,maxLines:5,",
+        "end": "      if(!sms)...["
+      },
+      {
+        "start": "        sourceType:initial?.sourceType??(sms?'sms':scannedReceipt!=null?'receipt':'manual'),",
+        "end": "        goalWalletPaidMinor:"
+      },
+      {
+        "start": "   textColor:waffraInk,iconColor:forest,",
+        "end": "   title:WaffraText(e.title,style:const TextStyle(color:waffraInk,fontWeight:FontWeight.w600)),subtitle:"
+      },
+      {
+        "start": "    Padding(padding:EdgeInsets.fromLTRB(11,attachmentCount>0?23:12,11,12),child:Row(children:[",
+        "end": "     const SizedBox(width:8),\n     Expanded(child:InkWell(onTap:WaffraHaptics.tap(()=>transactionDetails(entry)),"
+      },
       {
         "start": " Future<void> saveUser(Person u)async {",
         "end": " Future<void> setUiCountry(String? iso)async{"
@@ -41,6 +80,30 @@
       {
         "start": " Widget _autoSmsReviewCard(){",
         "end": " Future<void> _reviewAutoSmsCandidates("
+      }
+    ],
+    "lib/waffra_mandatory_biometric_gate.dart": [
+      {
+        "start": "/// requests. Every new gate instance must be verified through the OS.\n",
+        "end": "  static bool canReveal({"
+      }
+    ],
+    "test/m424_mandatory_biometrics_test.dart": [
+      {
+        "start": "void main() {\n",
+        "end": "  test('M424: old OS success cannot reveal finance while backgrounded'"
+      }
+    ],
+    "test/m429_sms_phone_integration_test.dart": [
+      {
+        "start": " test('M434 saved transactions preserve genuine SMS versus manual origin',(){",
+        "end": null
+      }
+    ],
+    "test/m440_biometric_resume_regression_test.dart": [
+      {
+        "start": "void main() {\n",
+        "end": null
       }
     ],
     "lib/waffra_auto_sms.dart": [

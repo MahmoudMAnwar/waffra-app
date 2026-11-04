@@ -6,8 +6,11 @@ import 'waffra_biometrics.dart';
 /// No local PIN/password shortcut, no remembered unlock and no network
 /// requests. Every new gate instance must be verified through the OS.
 abstract final class WaffraBiometricSessionGuard {
+  // Android may briefly emit inactive for a screenshot, notification shade,
+  // overlay or its own biometric prompt without actually backgrounding Waffra.
+  // Lock only when the activity leaves the foreground for real. Keep the
+  // existing OS biometric gate mandatory after every true background event.
   static bool mustLockOn(AppLifecycleState state) =>
-      state == AppLifecycleState.inactive ||
       state == AppLifecycleState.paused ||
       state == AppLifecycleState.hidden ||
       state == AppLifecycleState.detached;

@@ -5,9 +5,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_mandatory_biometric_gate.dart';
 
 void main() {
-  test('M424: every background/inactive state locks immediately', () {
+  test('M424: actual background locks, transient screenshot inactive does not', () {
+    expect(WaffraBiometricSessionGuard.mustLockOn(AppLifecycleState.inactive),
+        isFalse, reason: 'Screenshot or OS overlay may transiently lose focus');
     for (final state in [
-      AppLifecycleState.inactive,
       AppLifecycleState.hidden,
       AppLifecycleState.paused,
       AppLifecycleState.detached,
