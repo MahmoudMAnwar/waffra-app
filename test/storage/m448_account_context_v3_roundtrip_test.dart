@@ -144,7 +144,9 @@ void main() {
     final context = envelope['accountContextV1'] as Map<String, dynamic>;
     final goalSources = context['goalSources'] as List;
     (goalSources.single as Map<String, dynamic>)['movement_id'] = 'missing-movement';
-    final tampered = await WaffraSecureBackup.encrypt(
+    // Keep a valid current Argon2id/AES-GCM envelope so restore reaches
+    // the SQLCipher foreign-key attestation rather than failing at the header.
+    final tampered = await WaffraSecureBackup.encryptUserBackup(
       jsonEncode(envelope), password,
     );
     final target = WaffraEncryptedStore.openAt(
