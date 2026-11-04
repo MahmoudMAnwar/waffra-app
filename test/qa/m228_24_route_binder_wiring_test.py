@@ -5,7 +5,20 @@ class Encrypted24RouteGateWiring(unittest.TestCase):
     def test_preflight_is_after_key_and_digest_before_bridge(self):
         binder=Path("lib/storage/waffra_production_finance_authority_binding.dart").read_text(encoding="utf-8")
         pos_key=binder.index("if (key == null || key.isEmpty)")
-        pos_digest=binder.index("checkpoint.sourceDigest != evidence.storage.sourceDigest")
+        # A fresh install uses its independently verified source digest;
+        # an existing encrypted user uses certified release evidence.
+        # Both must match the active journal before Home/Widget bridge binding.
+        import re
+        self.assertIn("if (freshInstall != null) await freshInstall.verify(store);", binder)
+        self.assertIn("checkpoint.phase != WaffraCutoverPhase.active", binder)
+        digest_check = re.search(
+            r"checkpoint\.sourceDigest\s*!=\s*\(\s*"
+            r"freshInstall\?\.digest\s*\?\?\s*"
+            r"evidence!\.storage\.sourceDigest\s*\)",
+            binder,
+        )
+        self.assertIsNotNone(digest_check, "Active-source digest gate must check both authenticated sources")
+        pos_digest=digest_check.start()
         pos_preflight=binder.index("WaffraFinance24RoutePreflight().inspect(")
         pos_bridge=binder.index("final bridge = WaffraVerifiedEncryptedFinanceBridge(")
         self.assertLess(pos_key,pos_digest)
