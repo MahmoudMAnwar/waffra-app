@@ -563,12 +563,15 @@ object WaffraAutoSmsStore {
                 lastId = rowId
             }
         }
-        // Never advance the review cursor after a concurrent sign-out.
-        if (!enabled(context)) return accepted
-        prefs.edit().putLong(historyCursorAt, lastAt)
-            .putLong(historyCursorId, lastId)
-            .putLong(historySourceMonth, start)
-            .putBoolean(historyComplete, complete).commit()
+        // Serialize cursor persistence with sign-out/owner change so a
+        // stale scanner cannot skip SMS for the next authenticated session.
+        synchronized(mutex) {
+            if (!enabled(context)) return accepted
+            prefs.edit().putLong(historyCursorAt, lastAt)
+                .putLong(historyCursorId, lastId)
+                .putLong(historySourceMonth, start)
+                .putBoolean(historyComplete, complete).commit()
+        }
         return accepted
     }
 
