@@ -4,6 +4,7 @@ import 'main.dart' show snack;
 import 'storage/waffra_accounts_repository.dart';
 import 'storage/waffra_verified_accounts_api.dart';
 import 'waffra_account_transaction_form.dart';
+import 'waffra_account_context_page.dart';
 
 /// M440 optional SQLCipher account page. A production Home route must only
 /// open this after the same certified finance source is active for SMS/widget.
@@ -165,7 +166,27 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
  }
 
  @override Widget build(BuildContext context)=>Scaffold(
-  appBar:AppBar(title:Text(t('حساباتي','My accounts'))),
+  appBar:AppBar(
+   title:Text(t('حساباتي','My accounts')),
+   actions:[
+    if(widget.repository is WaffraVerifiedAccountsApi)
+     IconButton(
+      tooltip:t('كل الحسابات والعمليات بدون حساب','All and unassigned transactions'),
+      icon:const Icon(Icons.receipt_long_outlined),
+      onPressed:()async{
+       final api=widget.repository as WaffraVerifiedAccountsApi;
+       try{
+        final accounts=await api.balances();
+        if(!mounted)return;
+        await Navigator.of(context).push<void>(MaterialPageRoute(
+         builder:(ctx)=>WaffraAccountContextPage(
+          api:api,accounts:accounts,english:widget.english)));
+        reload();
+       }catch(_){failed();}
+      },
+     ),
+   ],
+  ),
   body:FutureBuilder<List<WaffraAccountBalance>>(future:current,
    builder:(ctx,snapshot){
     if(snapshot.connectionState!=ConnectionState.done){
