@@ -868,6 +868,8 @@ class WaffraVerifiedFinanceAuthority {
     required bool userConfirmed,
     bool allowDuplicateHashes = false,
     List<Map<String, Object?>> proposedCategories = const [],
+    List<String?>? selectedAccountIds,
+    int? expectedAccountGeneration,
   }) async {
     if (route != WaffraFinanceRoute.bulkSmsConfirmedSave &&
         route != WaffraFinanceRoute.widgetSmsConfirmedSave) {
@@ -884,6 +886,16 @@ class WaffraVerifiedFinanceAuthority {
       ),
     )).toList(growable: false);
     final fingerprints = List<String>.unmodifiable(hashes);
+    final accounts = selectedAccountIds == null ? null :
+        List<String?>.unmodifiable(selectedAccountIds);
+    if(accounts != null && (accounts.length != frozen.length ||
+      accounts.any((id)=>id!=null && (id.trim().isEmpty || id.length>128)))){
+      throw ArgumentError('Account assignments do not match confirmed SMS batch.');
+    }
+    if(accounts != null && accounts.any((id)=>id!=null) &&
+       expectedAccountGeneration==null){
+      throw StateError('Linked SMS requires the witnessed finance generation.');
+    }
     // Freeze every user-confirmed category before the first asynchronous
     // source check. Home/Widget may still rebuild or edit their category lists
     // while waiting for the native writer lock; the committed batch must not
@@ -903,6 +915,9 @@ class WaffraVerifiedFinanceAuthority {
     final backend = await _requireRoute(route);
     late final int saved, income, expenses, skipped, incomeMinor, expenseMinor;
     if (backend == WaffraRuntimeFinanceBackend.guardedLegacy) {
+      if(accounts != null && accounts.any((id)=>id!=null)){
+        throw StateError('Account-linked SMS requires verified SQLCipher.');
+      }
       // Save transaction metadata without original SMS text on unencrypted
       // SharedPreferences. Preserve the strict M207 fail-closed gate on the
       // locked writer itself. Never send raw notes to that journal.
@@ -961,6 +976,8 @@ class WaffraVerifiedFinanceAuthority {
         records: frozen, hashes: fingerprints.cast<String?>(),
         userConfirmed: true, allowDuplicateHashes: allowDuplicateHashes,
         proposedCategories: frozenCategories,
+        selectedAccountIds: accounts,
+        expectedAccountGeneration: expectedAccountGeneration,
       );
       saved = result.saved;
       income = result.savedIncome;
