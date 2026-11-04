@@ -10819,45 +10819,125 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  /// recorded once using the normal finance entry editor, not in this transfer.
  Future<void> releaseGoalFunds(SavingGoal goal)async{
   if(goal.saved<=0)return;
-  final ctl=TextEditingController(text:formatWaffraEditAmount(goal.saved));
-  try{
-   final requested=await showWaffraDialog<double>(context:context,
-    builder:(ctx)=>AlertDialog(
-     title:WaffraText(waffraIsEnglish?'Release goal savings':'سحب من محفظة الهدف'),
-     content:Column(mainAxisSize:MainAxisSize.min,children:[
-      WaffraText(waffraIsEnglish?
-       'Reduce the separate goals wallet without changing current balance. Record any real bank movement separately.':
-       'خفض المدخرات من محفظة الهدف لا يغيّر الرصيد الحالي. سجّل أي حركة بنكية فعلية كعملية مستقلة.'),
-      const SizedBox(height:12),
-      TextField(controller:ctl,
-       keyboardType:const TextInputType.numberWithOptions(decimal:true),
-       inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],
-       decoration:InputDecoration(labelText:waffraIsEnglish?'Amount to release':'مبلغ السحب',
-        border:const OutlineInputBorder())),
-     ]),
-     actions:[
-      TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
-       child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
-      FilledButton(onPressed:WaffraHaptics.tap((){
-       final sum=amountOfDisplay(ctl.text);
-       if(sum==null||sum<=0||sum>goal.saved)return;
-       Navigator.pop(ctx,sum);
-      }),child:WaffraText(waffraIsEnglish?'Confirm transfer':'تأكيد التحويل')),
-     ],
-    ));
-   if(requested==null||!mounted)return;
-   final current=goals.where((g)=>g.id==goal.id).toList();
-   if(current.length!=1||current.single.saved<requested){
-    snack(context,waffraIsEnglish?'Goal balance changed; reload first.':
-     'رصيد الهدف اتغير. حدّث الصفحة وأعد المحاولة.');
+  await _ensureFinanceBound();
+  final bridge=_financeBinding?.accountsBridge;
+  var possible=<WaffraAccountBalance>[];
+  if(bridge!=null){
+   try{
+    possible=(await WaffraVerifiedAccountsApi(
+     bridge:bridge).balances()).where((a)=>!a.archived).toList();
+   }catch(error){
+    debugPrint('Verified goal release accounts unavailable: $error');
+    if(mounted)snack(context,waffraIsEnglish?
+     'Cannot verify the receiving account; reload first.':
+     'تعذر التحقق من الحساب المستلم؛ حدّث الصفحة أولًا.');
     return;
    }
-   setState((){
-    final idx=goals.indexWhere((g)=>g.id==goal.id);
-    goals[idx]=current.single.copy(saved:current.single.saved-requested);
-   });
-   await _persistModuleOrReload(WaffraFinanceRoute.goalCreateEditDeleteRestore,
-    operation:'release-goal-earmark');
+  }
+  if(!mounted)return;
+  var chosen='none';
+  final ctl=TextEditingController(text:formatWaffraEditAmount(goal.saved));
+  try{
+   final choice=await showWaffraDialog<({double amount,String? accountId})>(
+    context:context,builder:(ctx)=>StatefulBuilder(
+     builder:(ctx,refresh)=>AlertDialog(
+      title:WaffraText(waffraIsEnglish?
+       'Release goal savings':'سحب من محفظة الهدف'),
+      content:SingleChildScrollView(child:Column(
+       mainAxisSize:MainAxisSize.min,
+       crossAxisAlignment:CrossAxisAlignment.stretch,
+       children:[
+        WaffraText(waffraIsEnglish?
+         'Move savings out of the separate goal wallet. This is not income and never creates a second expense.':
+         'السحب من محفظة الهدف المستقلة ليس دخلًا جديدًا ولا يسجّل مصروفًا ثانيًا.'),
+        const SizedBox(height:12),
+        TextField(controller:ctl,
+         keyboardType:const TextInputType.numberWithOptions(decimal:true),
+         inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],
+         decoration:InputDecoration(
+          labelText:waffraIsEnglish?'Amount to release':'مبلغ السحب',
+          border:const OutlineInputBorder())),
+        if(bridge!=null)...[
+         const SizedBox(height:12),
+         DropdownButtonFormField<String>(
+          key:const Key('waffra-goal-release-destination-account'),
+          isExpanded:true,initialValue:chosen,
+          decoration:InputDecoration(
+           labelText:waffraIsEnglish?
+            'Receive savings in account':'الحساب المستلم للادخار',
+           border:const OutlineInputBorder()),
+          items:[
+           DropdownMenuItem<String>(value:'none',
+            child:WaffraText(waffraIsEnglish?
+             'No linked account':'بدون حساب')),
+           ...possible.map((a)=>DropdownMenuItem<String>(
+            value:a.id,child:WaffraText(a.name,maxLines:1))),
+          ],
+          onChanged:(value)=>refresh(()=>chosen=value??'none'),
+         ),
+         const SizedBox(height:6),
+         WaffraText(waffraIsEnglish?
+          'A selected SAR account is credited exactly once; no account means no bank balance change.':
+          'الحساب المختار يُضاف له المبلغ مرة واحدة؛ بدون حساب لا يتغير أي رصيد بنكي.',
+          style:const TextStyle(fontSize:12)),
+        ],
+       ])),
+      actions:[
+       TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
+        child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+       FilledButton(onPressed:WaffraHaptics.tap((){
+        final value=amountOfDisplay(ctl.text);
+        if(value==null||value<=0||value>goal.saved)return;
+        Navigator.pop(ctx,(amount:value,
+         accountId:chosen=='none'?null:chosen));
+       }),child:WaffraText(waffraIsEnglish?'Confirm release':'تأكيد السحب')),
+      ],
+     ),
+    ),
+   );
+   if(choice==null||!mounted)return;
+   final matching=goals.where((g)=>g.id==goal.id).toList();
+   if(matching.length!=1||matching.single.saved<choice.amount){
+    snack(context,waffraIsEnglish?
+     'Goal balance changed; reload before release.':
+     'رصيد الهدف اتغير؛ حدّث الصفحة قبل السحب.');
+    return;
+   }
+   if(bridge!=null){
+    try{
+     await _financialWriteQueue.drain();
+     final baseline=await _financeAuthority.load(
+      route:WaffraFinanceRoute.goalCreateEditDeleteRestore);
+     if(baseline.source!=WaffraRuntimeFinanceBackend.verifiedEncrypted||
+        baseline.encryptedWitness==null){
+      throw StateError('Verified goal release source changed.');
+     }
+     await bridge.fundVerifiedGoal(
+      baseline:baseline.encryptedWitness!,goalId:goal.id,
+      amountMinor:(choice.amount*100).round(),
+      movementId:'goal-release:${newId()}',
+      occurredIso:DateTime.now().toUtc().toIso8601String(),
+      sourceAccountId:choice.accountId,userConfirmed:true,release:true,
+     );
+     if(mounted)await _loadFinanceSafely();
+     if(mounted)unawaited(_refreshWidget());
+    }catch(error){
+     debugPrint('Verified savings release rejected: $error');
+     if(mounted)await _loadFinanceSafely();
+     if(mounted)snack(context,waffraIsEnglish?
+      'Release was not confirmed. Balances were safely refreshed.':
+      'لم يتأكد السحب. تم تحديث الأرصدة بأمان.');
+    }
+   }else{
+    // Existing guarded legacy data has no verified bank-account ledger.
+    setState((){
+     final idx=goals.indexWhere((g)=>g.id==goal.id);
+     if(idx>=0)goals[idx]=matching.single.copy(
+      saved:matching.single.saved-choice.amount);
+    });
+    await _persistModuleOrReload(WaffraFinanceRoute.goalCreateEditDeleteRestore,
+     operation:'release-goal-earmark');
+   }
   }finally{disposeLater([ctl]);}
  }
  Future<void> fundGoal(SavingGoal g)async {

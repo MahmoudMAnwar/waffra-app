@@ -162,6 +162,7 @@ class WaffraVerifiedEncryptedFinanceBridge {
     required String goalId,required int amountMinor,
     required String movementId,required String occurredIso,
     required String? sourceAccountId,required bool userConfirmed,
+    bool release=false,
   }) async {
     if(!experimentalEnabled||!userConfirmed){
       throw StateError('Goal account source requires verified approval.');
@@ -179,7 +180,7 @@ class WaffraVerifiedEncryptedFinanceBridge {
         expectedDigest:baseline.digest,
         goalId:goalId,amountMinor:amountMinor,movementId:movementId,
         occurredIso:occurredIso,sourceAccountId:sourceAccountId,
-        userConfirmed:true,
+        userConfirmed:true,release:release,
       );
     });
   }

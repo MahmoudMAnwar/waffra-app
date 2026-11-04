@@ -12,7 +12,8 @@
     "Fix focused M448 compilation and parent M440 M175/M385 CI regressions without deleting prior tests, bypassing protection, activating SQLCipher without certified evidence or creating a second finance source.",
     "Expose user-confirmed recurring account defaults and bank SMS suffix verification in account settings, with no silent auto-post and no change to existing records or reminders.",
     "Fund goal savings using the selected explicit bank/cash account or no account, as a single SQLCipher movement and canonical goal update with exactly-once money effects.",
-    "Allow user-confirmed, biometric-verified V3 restore to replace an already activated encrypted finance source only after cold preview, externally saved encrypted rescue archive, full source-witness revalidation, and all-or-nothing database transaction with FK/receipt/history parity; refuse unsupported records."
+    "Allow user-confirmed, biometric-verified V3 restore to replace an already activated encrypted finance source only after cold preview, externally saved encrypted rescue archive, full source-witness revalidation, and all-or-nothing database transaction with FK/receipt/history parity; refuse unsupported records.",
+    "Release savings from the separate goal wallet through a verified, one-time SQLCipher movement, crediting an explicitly chosen SAR destination account once or leaving it unassigned; retain legacy wallet-only semantics."
   ],
   "allowed_changed_files": [
     ".github/workflows/m448-account-context-ci.yml",
@@ -65,6 +66,10 @@
       {
         "start": "      if(raw['format']==WaffraAccountsPortableBackupV3.format){\n",
         "end": "      if(raw['format']!='waffra-backup'||raw['entries'] is! List||\n"
+      },
+      {
+        "start": " Future<void> releaseGoalFunds(SavingGoal goal)async{\n",
+        "end": " Future<void> fundGoal(SavingGoal g)async {\n"
       }
     ],
     "lib/storage/waffra_accounts_portable_backup_v3.dart": [

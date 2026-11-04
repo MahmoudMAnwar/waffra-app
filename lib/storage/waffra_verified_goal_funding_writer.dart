@@ -32,6 +32,7 @@ class WaffraVerifiedGoalFundingWriter {
   required String goalId,required int amountMinor,
   required String movementId,required String occurredIso,
   required String? sourceAccountId,required bool userConfirmed,
+  bool release=false,
  }) async {
   if (!experimentalEnabled || !userConfirmed ||
       goalId.trim().isEmpty || movementId.trim().isEmpty ||
@@ -64,8 +65,8 @@ class WaffraVerifiedGoalFundingWriter {
      final old=goal['saved'];
      if(old is! num)throw StateError('Goal saved balance is invalid.');
      final priorMinor=_minor(old);
-     final nextMinor=priorMinor+amountMinor;
-     if(nextMinor>9007199254740991) {
+     final nextMinor=release?priorMinor-amountMinor:priorMinor+amountMinor;
+     if(nextMinor<0||nextMinor>9007199254740991) {
       throw StateError('Goal savings exceed safe precision.');
      }
      goal['saved']=nextMinor/100;
@@ -79,7 +80,7 @@ class WaffraVerifiedGoalFundingWriter {
     store:store,experimentalEnabled:true,
    ).updateGoalSavings(
     movementId:movementId,goalId:goalId,amountMinor:amountMinor,
-    release:false,idempotencyKey:movementId,occurredAtIso:occurredIso,
+    release:release,idempotencyKey:movementId,occurredAtIso:occurredIso,
     userConfirmed:true,
    );
    if(!movement) {

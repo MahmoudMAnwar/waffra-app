@@ -110,6 +110,45 @@ void main(){
   expect(progress.selectedAccountNetMinor,0);
  });
 
+ test('verified goal release credits the explicitly selected account once',()async{
+  await save('fund-in',accountId:'rajhi');
+  final before=await snapshot.read();
+  await writer.fund(
+   expectedGeneration:before.generation,expectedDigest:before.digest,
+   goalId:'travel',amountMinor:10000,movementId:'release-one',
+   occurredIso:now,sourceAccountId:'rajhi',userConfirmed:true,
+   release:true);
+  expect(await balances(),{'rajhi':80000});
+  final progress=await WaffraAccountContextRepository(
+   store:db,experimentalEnabled:true).goalProgress(
+    goalId:'travel',selectedAccountId:'rajhi');
+  expect(progress.totalSavedMinor,30000);
+  expect(progress.selectedAccountNetMinor,20000);
+  final row=await db.customSelect(
+   "SELECT saved_minor FROM fresh_finance_goals WHERE goal_id='travel'",
+  ).getSingle();
+  expect(row.read<int>('saved_minor'),30000);
+  final transactions=await db.customSelect(
+   'SELECT count(*) AS n FROM fresh_finance_entries').getSingle();
+  expect(transactions.read<int>('n'),0);
+ });
+
+ test('unassigned release does not invent a bank credit',()async{
+  await save('fund-unassigned');
+  final before=await snapshot.read();
+  await writer.fund(
+   expectedGeneration:before.generation,expectedDigest:before.digest,
+   goalId:'travel',amountMinor:10000,movementId:'release-unassigned',
+   occurredIso:now,sourceAccountId:null,userConfirmed:true,
+   release:true);
+  expect(await balances(),{'rajhi':100000});
+  final progress=await WaffraAccountContextRepository(
+   store:db,experimentalEnabled:true).goalProgress(
+    goalId:'travel',selectedAccountId:'rajhi');
+  expect(progress.totalSavedMinor,30000);
+  expect(progress.selectedAccountNetMinor,0);
+ });
+
  test('missing account rolls back wallet, movement and snapshot',()async{
   final prior=await snapshot.read();
   await expectLater(save('fund-invalid',accountId:'unknown'),
