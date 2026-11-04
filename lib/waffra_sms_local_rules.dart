@@ -4,6 +4,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'waffra_bank_sms_facts.dart';
+import 'waffra_merchant_rules.dart';
 
 /// Local-only, user-reviewable SMS classification. Rules are suggestions:
 /// neither this file nor the settings screen can post money or link an account.
@@ -123,6 +124,10 @@ abstract final class WaffraSmsLocalRules {
   };
   for(final raw in messages.take(100)){
    final norm=normalized(raw);
+   if(WaffraBankSmsFactsParser.parse(raw).kind==WaffraBankOperationKind.expense){
+    final merchant=waffraMerchantName(raw,income:false);
+    if(merchant!=null&&safeKeyword(merchant))choices.add(merchant);
+   }
    for(final term in known){
     if(safeKeyword(term)&&norm.contains(normalized(term)))choices.add(term);
    }
@@ -158,7 +163,38 @@ class WaffraSmsLocalRuleStore {
   return sha256.convert(utf8.encode(identity)).toString();
  }
  String _key(String owner) {
-  if(!RegExp(r'^[a-f0-9]{64}\u0024').hasMatch(owner)){
+  if(!RegExp(r'^[a-f0-9]{64}.hasMatch(owner)){
+   throw const FormatException('Verified SMS rules owner missing');
+  }
+  return 'waffra_sms_local_rules_v1_$owner';
+ }
+ Future<List<WaffraSmsLocalRule>> read(String owner) async {
+  final raw=await _storage.read(key:_key(owner));
+  if(raw==null||raw.isEmpty)return const [];
+  final values=jsonDecode(raw);
+  if(values is! List)throw const FormatException('Invalid local rules store');
+  final rules=<WaffraSmsLocalRule>[];
+  for(final value in values){
+   if(value is! Map)throw const FormatException('Invalid rule record');
+   final rule=WaffraSmsLocalRule.fromJson(Map<String,dynamic>.from(value));
+   WaffraSmsLocalRules.validate(rule);
+   rules.add(rule);
+  }
+  if(rules.length>100||rules.map((e)=>e.id).toSet().length!=rules.length){
+   throw const FormatException('Local rule store failed validation');
+  }
+  return rules;
+ }
+ Future<void> write(String owner,List<WaffraSmsLocalRule> rules)async{
+  if(rules.length>100||rules.map((e)=>e.id).toSet().length!=rules.length){
+   throw const FormatException('Too many or duplicate rules');
+  }
+  for(final rule in rules)WaffraSmsLocalRules.validate(rule);
+  await _storage.write(key:_key(owner),
+   value:jsonEncode(rules.map((rule)=>rule.toJson()).toList(growable:false)));
+ }
+}
+).hasMatch(owner)){
    throw const FormatException('Verified SMS rules owner missing');
   }
   return 'waffra_sms_local_rules_v1_$owner';
