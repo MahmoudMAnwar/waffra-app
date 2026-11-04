@@ -20,7 +20,8 @@
     "M440: Persist one explicit selected account per confirmed SMS/recurring batch entry inside the unified SQLCipher writer.",
     "M440: Make My Accounts navigation available only for independently verified activated SQLCipher sources; never create a second live finance database.",
     "M447: Carry explicitly reviewed bank-SMS account selections through the existing verified finance authority/session and shared SQLCipher writer without permitting bank data in guarded legacy.",
-    "M447: Ask for an optional verified financial account per bank-SMS transaction in all three Home bank SMS review/save routes and attach it in the same SQLCipher commit as the SMS hash."
+    "M447: Ask for an optional verified financial account per bank-SMS transaction in all three Home bank SMS review/save routes and attach it in the same SQLCipher commit as the SMS hash.",
+    "M447: Add a GitHub Actions regression that verifies all three bank SMS confirmation routes review and forward witnessed account allocations."
   ],
   "allowed_changed_files": [
     ".github/scripts/run-m120-android-receipt-reopen.sh",
@@ -50,7 +51,8 @@
     "lib/main.dart",
     "lib/storage/waffra_production_finance_authority_binding.dart",
     "lib/storage/waffra_encrypted_finance_session.dart",
-    "lib/storage/waffra_verified_finance_authority.dart"
+    "lib/storage/waffra_verified_finance_authority.dart",
+    "test/qa/m447_verified_sms_account_linking_test.py"
   ],
   "bounded_sections": {
     "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
