@@ -1553,3 +1553,10 @@ M370: إعداد فحص إلزامية SQLCipher للتثبيتات الجديد
 - Persist hashed non-financial per-profile/per-budget/month/stage alert markers and serialize concurrent claims; never modify balances or ledger.
 - Jumping across multiple stages marks all of them once; fixed Arabic dialog title to تنبيه الميزانية.
 - Added deterministic cross-month/account/concurrency regression tests; exact-head and signed-device checks still required.
+
+[M445 2026-11-04] Reconcile optional budget and goal percentage alerts with M444
+- Add independent per-budget percentage alert enable/disable (separate from budget activation), preserving saved percentages and old budget records across edit/create/backup/restore.
+- Target-based savings goals gain optional percentage progress alerts; open-ended goals never use percentage-denominator notifications.
+- Confirmed events may issue privacy-safe Android local notification only with OS permission. No background bank monitoring is claimed.
+- Preserve M444 hashed once-per-budget/month threshold suppression, nonfinancial alert history, bank SMS notification isolation, and goal one-time due reminders.
+- No accounts/SQLCipher production cutover, automatic transaction write, legacy balance migration, or data deletion; release requires exact-head CI and Android phone acceptance.

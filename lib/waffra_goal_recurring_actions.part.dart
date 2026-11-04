@@ -87,6 +87,8 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
   final name=TextEditingController(text:existing.name);
   final target=TextEditingController(text:existing.target<=0?'':formatWaffraEditAmount(existing.target));
   bool noTarget=existing.target<=0;
+  bool goalAlertsEnabled=existing.progressAlertsEnabled;
+  int goalAlertPercent=existing.progressAlertPercent;
   DateTime? deadline=existing.dueDate;
   bool removeDeadline=false;
   String? nameError,amountError;
@@ -113,6 +115,11 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
         onChanged:(_)=>update(()=>amountError=null),
         decoration:InputDecoration(labelText:waffraIsEnglish?'Target amount *':'المبلغ المستهدف *',
          errorText:amountError,border:const OutlineInputBorder())),
+       if(!noTarget)waffraBudgetAlertControls(
+        enabled:goalAlertsEnabled,percent:goalAlertPercent,
+        english:waffraIsEnglish,goal:true,
+        onEnabled:(value)=>update(()=>goalAlertsEnabled=value),
+        onPercent:(value)=>update(()=>goalAlertPercent=value)),
        const SizedBox(height:12),
        OutlinedButton.icon(
         onPressed:WaffraHaptics.tap(()async{
@@ -148,11 +155,17 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
         if(nameError!=null||amountError!=null||(!noTarget&&(v==null||v<=0)))return;
         Navigator.pop(dialog,SavingGoal(id:existing.id,name:n,target:noTarget?0.0:v!,
          saved:existing.saved,dueDate:removeDeadline?null:deadline,
-         active:existing.active));
+         active:existing.active,
+         progressAlertsEnabled:!noTarget&&goalAlertsEnabled,
+         progressAlertPercent:goalAlertPercent));
        }),child:WaffraText(waffraIsEnglish?'Save changes':'حفظ التعديل')),
       ],
      )));
    if(updated==null||!mounted)return;
+   if(updated.progressAlertsEnabled&&!existing.progressAlertsEnabled){
+    try{await WaffraReminders.requestPermission();}catch(_){/* In-app remains available. */}
+   }
+   if(!mounted)return;
    final oldLinked=recurring.any((r)=>r.linkedGoalId==existing.id);
    setState((){
     final i=goals.indexWhere((g)=>g.id==existing.id);

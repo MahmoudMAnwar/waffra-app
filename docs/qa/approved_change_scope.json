@@ -1,65 +1,115 @@
 {
   "contract_version": 1,
-  "change_id": "M444-notification-forecast-budget-fixes",
-  "human_scope_review": "Owner instructed to complete remaining functional code issues. Bounded changes isolate recurring reminders from bank SMS notifications, make linked savings goal reminders one-time, correct current-month forecast and honor chosen budget warning thresholds. No account source cutover or change to financial amounts, saved transactions or backup.",
+  "change_id": "M445-M414-reconciled-optional-budget-and-goal-alerts-on-M444",
+  "human_scope_review": "Owner already approved independent percentage alerts for budgets and target-based goals. Reconciled M414 onto M444 main descendant without replacing once-per-month hashed threshold suppression, unrelated bank SMS notification isolation, goal one-time due dates, or financial calculations. All source changes are scoped, no balance migration or SQLCipher production cutover.",
   "user_requested_changes": [
-    "Prevent rescheduling optional recurring notifications from erasing unrelated bank SMS alerts by cancelling only owned notification requests.",
-    "Stop monthly repetitions for a savings goal's one-time due-date reminder.",
-    "Exclude next-month goals and recurring payments whose start date lies after the current-month due date from financial forecasts.",
-    "Ensure smart finance warning uses the exact selected percentage for each independent named budget rather than a hard-coded 80 percent.",
-    "Include deterministic Dart and Python regression tests for date boundaries, notification channel ownership and budget warnings.",
-    "Suppress replay of a previously shown budget alert threshold after expenses are reduced and rise again, using a hashed non-financial monthly per-account alert register."
+    "M414: Budget percentage alerts have their own independent on/off switch, separate from budget/category activation, in all budget create and edit routes. Show list of existing alert thresholds when enabled, hide them when disabled, retaining saved budget and existing history.",
+    "M414: Use per-budget custom selected threshold instead of hardcoded 80% in all main dashboard, finance snapshot and new confirmed expense warnings. Prevent repeated threshold alerts for normal subsequent saves, retain a 100% budget cap milestone, and remove obsolete 'category budget' wording.",
+    "M414: Optional in-app and Android local notification on user-confirmed crossing when OS permission granted; private amounts, names and ledger information never appear in lock-screen notifications. No remote push or background bank access is claimed.",
+    "M414: Separate opt-in percentage-progress alerts for savings goals with a numeric target; open-ended savings have no denominator and do not emit percentage alerts. Keep recurring due-date reminders independent and opt-in, never fabricate a recurring percentage target or change money.",
+    "M414: Preserve migration, backup and encrypted finance records with optional new alert flags defaulting to compatible values on historic data, and reject invalid new alert settings in both import and finance validators. Add seven automated tests covering policy, UI and persistence.",
+    "Preserve M444 hashed single-alert-per-budget-month deduplication and account-specific SMS notification isolation while adding user-selectable alert enable/disable."
   ],
   "allowed_changed_files": [
-    "docs/qa/approved_change_scope.json",
-    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "lib/waffra_reminders.dart",
+    "lib/storage/legacy_snapshot_preflight.dart",
+    "lib/storage/waffra_cloud_cipher.dart",
+    "lib/storage/waffra_fresh_finance_domain_repository.dart",
+    "lib/storage/waffra_fresh_finance_modules_repository.dart",
+    "lib/waffra_budget_directory.part.dart",
     "lib/waffra_financial_insights.dart",
-    "test/m444_notification_forecast_budget_test.dart",
-    "test/qa/m444_notification_safety_test.py",
-    "lib/waffra_budget_alert_once.dart",
-    "test/m444_budget_alert_once_test.dart"
+    "lib/waffra_goal_recurring_actions.part.dart",
+    "lib/waffra_reminders.dart",
+    "test/m414_percentage_alert_controls_test.dart",
+    "docs/qa/approved_change_scope.json",
+    "docs/release/WAFFRA_M414_PERCENTAGE_ALERTS_QA.txt",
+    "docs/release/WAFFRA_APPROVED_CHANGES.txt"
   ],
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": "import 'waffra_validators.dart';\n",
-        "end": "import 'waffra_goal_budget_forecast.dart';\n"
+        "start": "class WaffraNamedBudget extends BudgetCategory {",
+        "end": "/// A budget picker is not part of transaction entry"
       },
       {
-        "start": " Future<void> syncRecurringReminders()async {",
-        "end": " Future<void> toggleRecurringReminders(bool enabled,"
+        "start": "class SavingGoal {",
+        "end": "class SavingChallenge {"
       },
       {
-        "start": " Future<void> budgetAlert(MoneyEntry entry,double previousSpent)async {",
-        "end": " /// Draw the same category-colored donut shown on Smart Analysis."
+        "start": "  }finally{controller.dispose();}\n }\n",
+        "end": "Future<void> editBudgetForCategory("
       },
       {
-        "start": " Widget smartMoneyInsightsCard(){",
-        "end": " Future<void> showSummaryTransactions(bool income)async {"
+        "start": "Future<void> editBudgetForCategory(",
+        "end": "Widget monthlyBudgetCard(){"
+      },
+      {
+        "start": "Widget monthlyBudgetCard(){",
+        "end": "Widget _budgetFigure("
+      },
+      {
+        "start": "final warnings=namedBudgets.where(",
+        "end": "  return Card(\n   elevation:1.0,shape:"
+      },
+      {
+        "start": "Future<void> goalDialog(",
+        "end": "/// Release an earmark"
+      },
+      {
+        "start": "final achieved=current.saved<current.target&&",
+        "end": "IconData goalIcon("
       }
     ],
-    "lib/waffra_reminders.dart": [
+    "lib/waffra_budget_directory.part.dart": [
       {
-        "start": "class WaffraReminder {",
-        "end": "class WaffraReminders {"
-      },
-      {
-        "start": " static int stableId(String id,int monthOffset){",
-        "end": null
+        "start": "key:PageStorageKey<String>('waffra-saved-budget-details-'",
+        "end": "LinearProgressIndicator(value:ratio"
       }
     ],
     "lib/waffra_financial_insights.dart": [
       {
-        "start": " static double? comparisonPercent(double current,double previous){",
+        "start": "static double? comparisonPercent(",
+        "end": "static int budgetAlertStage("
+      }
+    ],
+    "lib/waffra_goal_recurring_actions.part.dart": [
+      {
+        "start": "Future<void> editGoal(SavingGoal existing)",
         "end": null
       }
     ],
-    "lib/waffra_budget_alert_once.dart": [
+    "lib/waffra_reminders.dart": [
       {
-        "start": "import 'dart:async';",
-        "end": null
+        "start": "static Future<void> schedule(",
+        "end": "static Future<void> clear()"
+      }
+    ],
+    "lib/storage/legacy_snapshot_preflight.dart": [
+      {
+        "start": "} else if (key == 'waffra_goals_v24') {",
+        "end": "} else if (key == 'waffra_recurring_v24') {"
+      },
+      {
+        "start": "} else if (key == 'waffra_named_budgets_v1') {",
+        "end": "} else if (key == 'waffra_challenges_v1') {"
+      }
+    ],
+    "lib/storage/waffra_cloud_cipher.dart": [
+      {
+        "start": "'goal': {'id'",
+        "end": "'recurring': {'id'"
+      }
+    ],
+    "lib/storage/waffra_fresh_finance_domain_repository.dart": [
+      {
+        "start": "Future<void> createStandaloneBudget(",
+        "end": "/// Archive, never destroy historical allocation"
+      }
+    ],
+    "lib/storage/waffra_fresh_finance_modules_repository.dart": [
+      {
+        "start": "case WaffraFinanceModule.goals:\n        if(data['dueDate'] != null",
+        "end": "case WaffraFinanceModule.recurring:\n        if (data['income']"
       }
     ]
   }

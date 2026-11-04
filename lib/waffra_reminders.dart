@@ -125,6 +125,47 @@ class WaffraReminders {
   }
  }
 
+ /// Dispatched only after a verified user-confirmed expense. This is a
+ /// local Android notification, not background bank monitoring/remote push.
+ /// Lock-screen preview contains no financial values or budget names.
+ static Future<void> showBudgetThreshold({
+  required String budgetId,required int stage,bool english=false,
+ })async{
+  if(!Platform.isAndroid||stage<1||stage>100)return;
+  if(!await alreadyPermitted())return;
+  final now=DateTime.now();
+  final token='budget-alert:$budgetId:${now.year}-${now.month}:$stage';
+  const details=NotificationDetails(android:AndroidNotificationDetails(
+   'waffra_budget_usage_v1','Waffra budget alerts',
+   channelDescription:'Optional budget percentage notifications',
+   importance:Importance.defaultImportance,
+   priority:Priority.defaultPriority));
+  await _plugin.show(stableId(token,0),
+   english?'Waffra • Budget alert':'وفرة • تنبيه الميزانية',
+   english?'Your spending reached your alert threshold. Open Waffra to review.':
+    'وصلت لنسبة التنبيه المحددة. افتح وفرة لمراجعة الميزانية.',
+   details);
+ }
+
+ static Future<void> showGoalProgress({
+  required String goalId,required int stage,bool english=false,
+ })async{
+  if(!Platform.isAndroid||stage<1||stage>100)return;
+  if(!await alreadyPermitted())return;
+  final now=DateTime.now();
+  final token='goal-progress:$goalId:$stage';
+  const details=NotificationDetails(android:AndroidNotificationDetails(
+   'waffra_savings_progress_v1','Waffra savings progress',
+   channelDescription:'Optional goal progress percentage alerts',
+   importance:Importance.defaultImportance,
+   priority:Priority.defaultPriority));
+  await _plugin.show(stableId(token,0),
+   english?'Waffra • Savings progress':'وفرة • تقدّم الادخار',
+   english?'Your savings reached your chosen percentage. Open Waffra to review.':
+    'وصلت مدخراتك لنسبة التنبيه المحددة. افتح وفرة للمراجعة.',
+   details);
+ }
+
  static Future<void> clear()async{
   if(!Platform.isAndroid)return;
   await initialize();
