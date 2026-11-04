@@ -138,6 +138,10 @@
       {
         "start": "        final actual = await WaffraAccountsPortableBackupV3.capture(candidate);\n",
         "end": "          throw StateError('Reopened finance history differs from the authenticated archive.');\n"
+      },
+      {
+        "start": "    final accounts = accountArchive\n",
+        "end": "    final preview = await WaffraPortableBackupV2.verifyAndPreview("
       }
     ],
     "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
