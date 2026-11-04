@@ -1,5 +1,6 @@
 import 'waffra_encrypted_full_finance_reset.dart';
 import 'waffra_accounts_schema.dart';
+import 'waffra_account_context_read.dart';
 import 'waffra_portable_encrypted_backup_exporter.dart';
 import 'waffra_accounts_repository.dart';
 import 'waffra_fresh_finance_domain_repository.dart';
@@ -1199,6 +1200,34 @@ class WaffraVerifiedEncryptedFinanceBridge {
         );
         return result;
       });
+    });
+  }
+
+
+  /// M448 read-only account context. Every row, account association and budget
+  /// sum is read under the same verified Home/Widget native source lock.
+  Future<WaffraAccountContextReadResult> readVerifiedAccountContext({
+    required String monthIso,
+    String? selectedAccountId,
+  }) async {
+    if (!experimentalEnabled) {
+      throw StateError('Encrypted account context is not active.');
+    }
+    return WaffraExperimentalWriterGate(
+      disposableDirectory: writerDirectory, experimentalEnabled: true,
+    ).withExclusiveAccess(() async {
+      await _requireActivatedUnderLock();
+      final before = await snapshot.read();
+      final result = await WaffraAccountContextRead.load(
+        store: snapshot.store, monthIso: monthIso,
+        selectedAccountId: selectedAccountId,
+      );
+      final after = await snapshot.read();
+      if (before.generation != after.generation ||
+          before.digest != after.digest) {
+        throw StateError('Finance changed while reading account context.');
+      }
+      return result;
     });
   }
 
