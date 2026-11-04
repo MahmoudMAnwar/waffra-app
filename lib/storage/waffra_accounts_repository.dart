@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import 'waffra_accounts_schema.dart';
+import 'waffra_account_context_schema.dart';
 import 'waffra_encrypted_store.dart';
 
 class WaffraAccountBalance {
@@ -39,11 +40,13 @@ class WaffraAccountsRepository implements WaffraAccountOperations {
    throw StateError('Encrypted account initialization requires release approval.');
   }
   await WaffraAccountsSchema.install(db);
+  await WaffraAccountContextSchema.install(db);
  }
 
  Future<void> _ready()async{
   if(!experimentalEnabled)throw StateError('Account release not certified for production.');
   await WaffraAccountsSchema.requireReady(db);
+  await WaffraAccountContextSchema.install(db);
  }
  static void _id(String value){
   if(value.trim().isEmpty||value.length>128)throw ArgumentError('Invalid identifier.');
@@ -182,7 +185,12 @@ SELECT a.account_id,a.label,a.kind,a.archived,
  COALESCE((SELECT SUM(t.amount_minor) FROM fresh_finance_internal_transfers t
   WHERE t.to_account_id=a.account_id),0) -
  COALESCE((SELECT SUM(t.amount_minor) FROM fresh_finance_internal_transfers t
-  WHERE t.from_account_id=a.account_id),0) AS balance_minor
+  WHERE t.from_account_id=a.account_id),0) +
+ COALESCE((SELECT SUM(CASE WHEN m.kind='fund' THEN -m.amount_minor
+   WHEN m.kind='release' THEN m.amount_minor ELSE 0 END)
+  FROM fresh_finance_goal_account_sources s
+  JOIN fresh_finance_goal_wallet_movements m ON m.movement_id=s.movement_id
+  WHERE s.account_id=a.account_id),0) AS balance_minor
 FROM fresh_finance_money_accounts a
 ORDER BY a.created_iso,a.account_id
 ''').get();
