@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'waffra_account_context_settings.dart';
 
 import 'storage/waffra_account_context_read.dart';
 import 'storage/waffra_accounts_repository.dart';
@@ -119,6 +120,8 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
         filter=value;reload();
        });},
       )),
+     WaffraAccountContextSettings(
+      api:widget.api,accounts:widget.accounts,english:widget.english),
      if(data.budgets.isNotEmpty)...[
       Padding(padding:const EdgeInsets.all(12),
        child:Text(t('الميزانيات هذا الشهر','This month’s budgets'),
