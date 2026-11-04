@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'waffra_legacy_finance_writer_coordinator.dart';
+import 'waffra_fresh_install_source.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// M217: The shipped login/profile/PIN writer participates in the exact same
 /// cross-engine native source lease as Home and the Android quick-add widget.
@@ -37,6 +39,20 @@ class WaffraLiveAccountWriteAuthority {
     }
   }
 
+  /// Existing customers keep the guarded legacy coordinator. Fresh
+  /// SQLCipher installs use verified metadata-only writes under the shared
+  /// Home/Widget lease: no legacy ledger mutations or key regeneration.
+  Future<T> _withVerifiedAccountPreferences<T>(
+    Future<T> Function(SharedPreferences) change,
+  ) async {
+    final prefs=await SharedPreferences.getInstance();
+    await prefs.reload();
+    if(prefs.getString(WaffraFreshInstallSource.receiptKey)!=null){
+      return WaffraFreshInstallSource.withVerifiedProfilePreferences(change);
+    }
+    return coordinator.withCurrentPreferences(change);
+  }
+
   Future<void> saveProfile({
     required String profileJson,
     String? registeredProfileJson,
@@ -56,7 +72,7 @@ class WaffraLiveAccountWriteAuthority {
         (phone != null && phone.length > 1024)) {
       throw StateError('Account login hint exceeds approved limits.');
     }
-    return coordinator.withCurrentPreferences((prefs) async {
+    return _withVerifiedAccountPreferences((prefs) async {
       await prefs.setString('waffra_profile', profileJson);
       if (registeredProfileJson != null) {
         await prefs.setString(
@@ -73,7 +89,7 @@ class WaffraLiveAccountWriteAuthority {
     });
   }
 
-  Future<void> signOut() => coordinator.withCurrentPreferences((prefs) async {
+  Future<void> signOut() => _withVerifiedAccountPreferences((prefs) async {
     // Keep the user-approved "welcome back" registration hints, but never
     // clear or overwrite any finance source or source activation pointer.
     await prefs.remove('waffra_profile');
@@ -85,7 +101,7 @@ class WaffraLiveAccountWriteAuthority {
         !RegExp(r'^[0-9a-f]{64}$').hasMatch(nextVerifier)) {
       throw StateError('PIN verifier has an invalid SHA-256 representation.');
     }
-    return coordinator.withCurrentPreferences((prefs) async {
+    return _withVerifiedAccountPreferences((prefs) async {
       if (nextVerifier == null) {
         await prefs.remove('waffra_pin_sha256');
       } else {
