@@ -32,6 +32,30 @@ class WaffraFinancialInsights {
   return (current-previous)/previous*100;
  }
 
+ /// A selected percentage must apply to every budget warning surface.
+ static bool reachedBudgetThreshold({
+  required double spent,required double budget,required int alertPercent,
+ }){
+  if(budget<=0||alertPercent<1||alertPercent>100)return false;
+  return spent>=budget*alertPercent/100;
+ }
+
+ /// A future-start or already-paid obligation must not lower this month's
+ /// read-only forecast. Linked goals occur once in their original due month.
+ static bool pendingCurrentMonth({
+  required DateTime now,required DateTime startAt,required int day,
+  required bool goalLinked,required bool alreadyPaid,
+ }){
+  if(alreadyPaid)return false;
+  final due=goalLinked?DateTime(startAt.year,startAt.month,startAt.day):
+   DateTime(now.year,now.month,
+    day.clamp(1,DateTime(now.year,now.month+1,0).day));
+  final first=DateTime(startAt.year,startAt.month,startAt.day);
+  return due.year==now.year&&due.month==now.month&&
+   due.isAfter(DateTime(now.year,now.month,now.day))&&
+   !first.isAfter(due);
+ }
+
  static int budgetAlertStage(double spent,double limit){
   if(limit<=0)return 0;
   final percent=spent/limit*100;
