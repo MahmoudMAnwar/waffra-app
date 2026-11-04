@@ -3368,6 +3368,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    builder:(_)=>WaffraAccountsManagerPage(
     repository:WaffraVerifiedAccountsApi(bridge:verifiedBridge),
     english:waffraIsEnglish,
+    incomeCategories:categories.where((item)=>item.income&&item.isSubcategory&&
+      waffraCategoryAvailableForNewEntry(categories,item))
+      .map((item)=>item.name).toList(growable:false),
+    expenseCategories:categories.where((item)=>!item.income&&item.isSubcategory&&
+      waffraCategoryAvailableForNewEntry(categories,item))
+      .map((item)=>item.name).toList(growable:false),
+    availableBudgets:{for(final item in namedBudgets.where((b)=>
+      !b.deleted&&b.budgetActive&&b.budget>0))item.id:item.budgetLabel??item.name},
    )));
  }
  WaffraFinanceAuthorityRead? _lastFinanceAuthorityRead;
