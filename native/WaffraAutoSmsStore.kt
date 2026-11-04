@@ -449,6 +449,8 @@ object WaffraAutoSmsStore {
                 for (i in 0 until queue.length()) {
                     val row = queue.getJSONObject(i)
                     if (row.optString("id") != id) continue
+                    if (row.optBoolean("sensitiveOtp", false))
+                        return@synchronized false
                     if (row.has("cloud")) return@synchronized false
                     val previous = row.optLong("cloudAttemptAtMs", 0L)
                     if (previous > now - 86400000L && previous <= now)
