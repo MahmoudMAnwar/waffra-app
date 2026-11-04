@@ -83,6 +83,7 @@ class WaffraEncryptedFinanceSession {
     required Map<String, Object?> record,
     required String proposedPostponedJson,
     required bool userConfirmed,
+    String? selectedAccountId,
   }) async {
     _requireEnabled();
     return bridge.commitRecurringPayment(
@@ -90,6 +91,7 @@ class WaffraEncryptedFinanceSession {
       record: record,
       proposedPostponedJson: proposedPostponedJson,
       userConfirmed: userConfirmed,
+      selectedAccountId: selectedAccountId,
     );
   }
 
