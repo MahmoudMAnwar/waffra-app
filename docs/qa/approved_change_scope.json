@@ -24,7 +24,7 @@
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": "import 'waffra_financial_insights.dart';\n",
+        "start": "import 'waffra_validators.dart';\n",
         "end": "import 'waffra_goal_budget_forecast.dart';\n"
       },
       {
