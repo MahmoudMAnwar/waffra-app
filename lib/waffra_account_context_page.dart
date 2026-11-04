@@ -20,6 +20,7 @@ class WaffraAccountContextPage extends StatefulWidget {
 
 class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
  String filter='all';
+ int visibleCount=100;
  late Future<WaffraAccountContextReadResult> future;
  String t(String ar,String en)=>widget.english?en:ar;
  String get month {
@@ -117,7 +118,7 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
          value:'account:'+account.id,child:Text(account.name))),
        ],
        onChanged:(value){if(value==null)return;setState((){
-        filter=value;reload();
+        filter=value;visibleCount=100;reload();
        });},
       )),
      WaffraAccountContextSettings(
@@ -156,7 +157,7 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
      if(entries.isEmpty)Padding(padding:const EdgeInsets.all(16),
       child:Text(t('لا توجد عمليات في هذا الفلتر.',
        'No entries for this filter.'))),
-     ...entries.take(100).map((entry)=>Card(child:ListTile(
+     ...entries.take(visibleCount).map((entry)=>Card(child:ListTile(
       title:Text(entry.title),
       subtitle:Text(entry.occurredIso.split('T').first+' • '+
        (entry.accountId==null?t('بدون حساب','Unassigned'):
@@ -170,6 +171,14 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
       ]),
       onTap:entry.accountId==null?()=>link(entry):null,
      ))),
+     if(entries.length>visibleCount)Padding(
+      padding:const EdgeInsets.all(12),
+      child:OutlinedButton.icon(
+       onPressed:()=>setState(()=>visibleCount+=100),
+       icon:const Icon(Icons.expand_more),
+       label:Text(t('عرض المزيد من العمليات','Show more transactions')+
+        ' (${entries.length-visibleCount})'),
+      )),
     ]);
    },
   ),
