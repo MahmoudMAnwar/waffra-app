@@ -130,7 +130,7 @@
       },
       {
         "start": "   _accountSection(waffraIsEnglish?'Financial tools':'الأدوات المالية',Icons.account_balance_wallet_outlined,[\n",
-        "end": "    _accountTile(waffraIsEnglish?'Financial calendar':'التقويم المالي',\n"
+        "end": "    _accountTile(waffraIsEnglish?'Subscription insights':'كشف الاشتراكات',\n"
       }
     ],
     "lib/storage/waffra_production_finance_authority_binding.dart": [
