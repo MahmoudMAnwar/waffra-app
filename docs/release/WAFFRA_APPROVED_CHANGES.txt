@@ -1523,3 +1523,8 @@ M370: إعداد فحص إلزامية SQLCipher للتثبيتات الجديد
   سلوك واجهة أندرويد الحقيقية حتى تجربة الهاتف.
 - يخص هذا التغيير PR مستقلًا؛ لا يشمل أو يدمج حسابات وتحويلات
   PR #359 ولا إصلاح الرسائل البنكية في PR #361.
+
+[M442+M443 merged reconciliation — 2026-11-04]
+- Reconciled the separate Android SMS consent/review and merchant UI/biometric patches on one main-descendant branch; preserved both features and all old financial records.
+- Declared all 12 changed files and original-base protected function boundaries; verified byte-identical code outside approved sections.
+- Re-run exact-HEAD CI and signed APK main release checks; native device testing remains a separate gate.
