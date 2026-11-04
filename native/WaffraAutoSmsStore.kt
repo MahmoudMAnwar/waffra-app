@@ -34,6 +34,9 @@ object WaffraAutoSmsStore {
     private const val keyAlias = "waffra_sms_intake_aes_v1"
     private const val queueName = "encrypted_candidates"
     private const val activeName = "enabled"
+    // Hash of the verified signed-in account. No phone/email is saved here.
+    private const val consentedOwnerName = "consented_account_sha256_v1"
+    private const val suspendedAfterLogoutName = "suspended_after_logout_v1"
     private const val maxCandidates = 100
     private const val activationMonth = "sms_activation_month_start"
     private const val historyCursorAt = "sms_history_cursor_at"
@@ -74,30 +77,106 @@ object WaffraAutoSmsStore {
         context.checkSelfPermission(Manifest.permission.RECEIVE_SMS) ==
             PackageManager.PERMISSION_GRANTED
 
-    fun enabled(context: Context): Boolean {
-        if (!permissionGranted(context) ||
-            !context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
-                .getBoolean(activeName, false)) return false
-        // The first-run disclosure precedes login. Permission alone must NOT
-        // stage inbox text for an unowned installation or former user.
+    // Resolve the account from Flutter's existing verified profile without
+    // placing phone numbers or email addresses in Android SMS preferences.
+    private fun signedInOwnerHash(context: Context): String? {
+        val user = context.getSharedPreferences("FlutterSharedPreferences",
+            Context.MODE_PRIVATE)
+        if (!user.getBoolean("flutter.waffra_onboarding_completed", false))
+            return null
+        val raw = user.getString("flutter.waffra_profile", "") ?: ""
+        val profile = try { JSONObject(raw) } catch (_: Exception) { return null }
+        val phone = profile.optString("phone", "").filter { it.isDigit() }
+        val email = profile.optString("email", "").trim().lowercase()
+        val identity = when {
+            phone.length >= 9 -> "phone:$phone"
+            email.contains('@') -> "email:$email"
+            else -> return null
+        }
+        return MessageDigest.getInstance("SHA-256")
+            .digest(identity.toByteArray(StandardCharsets.UTF_8))
+            .joinToString("") { "%02x".format(it.toInt() and 255) }
+    }
+
+    private fun activeProfileReady(context: Context): Boolean {
         val user = context.getSharedPreferences("FlutterSharedPreferences",
             Context.MODE_PRIVATE)
         return user.getBoolean("flutter.waffra_onboarding_completed", false) &&
             !user.getString("flutter.waffra_profile", "").isNullOrBlank()
     }
 
+    fun enabled(context: Context): Boolean = synchronized(mutex) {
+        val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        if (!permissionGranted(context) || !prefs.getBoolean(activeName, false) ||
+            !activeProfileReady(context)) return@synchronized false
+        val nowOwner = signedInOwnerHash(context)
+        val boundOwner = prefs.getString(consentedOwnerName, null)
+        if (boundOwner != null && boundOwner != nowOwner)
+            return@synchronized false
+        // Bind the first-install consent on first authenticated profile load.
+        // Existing profiles without a stable identity can still use their
+        // explicit session consent, but never silently resume after logout.
+        if (boundOwner == null && nowOwner != null &&
+            !prefs.edit().putString(consentedOwnerName, nowOwner).commit())
+            return@synchronized false
+        true
+    }
+
+    fun trackingStatus(context: Context): Map<String, Boolean> {
+        val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        return mapOf(
+            "permissionGranted" to permissionGranted(context),
+            "trackingRequested" to prefs.getBoolean(activeName, false),
+            "profileReady" to activeProfileReady(context),
+            "suspendedAfterLogout" to prefs.getBoolean(suspendedAfterLogoutName, false),
+            "historyComplete" to prefs.getBoolean(historyComplete, false),
+            "enabled" to enabled(context)
+        )
+    }
+
+    // Explicit opt-out must never auto-resume after a future login.
     fun enable(context: Context, allow: Boolean): Boolean = synchronized(mutex) {
         if (allow && !permissionGranted(context)) return@synchronized false
         val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
         val editor = prefs.edit().putBoolean(activeName, allow)
+            .putBoolean(suspendedAfterLogoutName, false)
+        if (allow) {
+            val owner = signedInOwnerHash(context)
+            if (owner != null) editor.putString(consentedOwnerName, owner)
+            else editor.remove(consentedOwnerName)
+        }
         if (allow && !prefs.contains(activationMonth))
             editor.putLong(activationMonth, monthStart())
-        if (!allow) {
-            // On logout discard unread ciphertext too: the next profile
-            // must never inherit a previous user's banking SMS candidates.
-            editor.remove(queueName)
-        }
+        if (!allow) editor.remove(queueName)
         editor.commit()
+    }
+
+    // A signed-out phone must stop scanning and discard encrypted pending SMS.
+    // Save only the prior account's hash so this SAME user can resume without
+    // requesting Android's permanent permission again.
+    fun suspendForSignOut(context: Context): Boolean = synchronized(mutex) {
+        val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        val owner = signedInOwnerHash(context)
+        val bound = prefs.getString(consentedOwnerName, null)
+        val canResume = prefs.getBoolean(activeName, false) &&
+            owner != null && (bound == null || bound == owner)
+        val editor = prefs.edit().putBoolean(activeName, false)
+            .putBoolean(suspendedAfterLogoutName, canResume)
+            .remove(queueName)
+        if (canResume) editor.putString(consentedOwnerName, owner)
+        editor.commit()
+    }
+
+    fun resumeForSameSignedInOwner(context: Context): Boolean = synchronized(mutex) {
+        val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        if (prefs.getBoolean(activeName, false)) return@synchronized enabled(context)
+        val owner = signedInOwnerHash(context)
+        if (!permissionGranted(context) || !activeProfileReady(context) ||
+            !prefs.getBoolean(suspendedAfterLogoutName, false) ||
+            owner == null || owner != prefs.getString(consentedOwnerName, null))
+            return@synchronized false
+        prefs.edit().putBoolean(activeName, true)
+            .putBoolean(suspendedAfterLogoutName, false).commit()
     }
 
     private fun key(): SecretKey {
