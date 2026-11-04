@@ -23,13 +23,14 @@ void main() {
     expect(source, contains('setState(()=>locked=false);'));
   });
 
-  test('Background transition invalidates pending OS verification', () {
+  test('Real background transition invalidates verification; inactive alone does not relock', () {
     final source = File('lib/main.dart').readAsStringSync();
     expect(source, contains('state==AppLifecycleState.paused||'));
     expect(source, contains('state==AppLifecycleState.hidden||'));
     expect(source, contains('state==AppLifecycleState.detached){'));
+    expect(source, contains('WaffraBiometricSessionGuard.mustLockOn(state)'));
     expect(source, contains('_biometricVerifiedAwaitingResume=false;'));
     expect(WaffraBiometricSessionGuard.mustLockOn(AppLifecycleState.paused), isTrue);
-    expect(WaffraBiometricSessionGuard.mustLockOn(AppLifecycleState.inactive), isTrue);
+    expect(WaffraBiometricSessionGuard.mustLockOn(AppLifecycleState.inactive), isFalse);
   });
 }
