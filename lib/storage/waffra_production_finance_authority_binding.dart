@@ -8,6 +8,7 @@ import 'waffra_encrypted_cutover_journal.dart';
 import 'waffra_encrypted_finance_session.dart';
 import 'waffra_encrypted_store.dart';
 import 'waffra_encrypted_sms_notes_vault.dart';
+import 'waffra_finance_24_route_preflight.dart';
 import 'waffra_home_finance_persistence.dart';
 import 'waffra_production_cutover_release_gate.dart';
 import 'waffra_production_finance_routing_gate.dart';
@@ -122,6 +123,20 @@ class WaffraProductionFinanceAuthorityBinding {
           checkpoint.phase != WaffraCutoverPhase.active ||
           checkpoint.sourceDigest != evidence.storage.sourceDigest) {
         throw StateError('Encrypted source certification digest mismatches.');
+      }
+      // Read-only exhaustive route contract check after the authenticated OS
+      // key and independently confirmed source digest. Never performs cutover.
+      final routePreflight = const WaffraFinance24RoutePreflight().inspect(
+        source: report,
+        audit: evidence.routes,
+        encryptedSqlWitnessActive: true,
+        externalSourceWitnessActive: true,
+        verifiedKeyRecoveryInDevice: true,
+      );
+      if (!routePreflight.allContractsAcceptEncrypted) {
+        throw StateError(
+          'Cannot bind encrypted finance until all 24 source contracts pass.',
+        );
       }
       final bridge = WaffraVerifiedEncryptedFinanceBridge(
         snapshot: snapshot,

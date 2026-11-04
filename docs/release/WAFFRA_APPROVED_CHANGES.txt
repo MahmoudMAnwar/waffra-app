@@ -1533,3 +1533,8 @@ M370: إعداد فحص إلزامية SQLCipher للتثبيتات الجديد
 - Restore absent guarded-legacy entries/catalog acceptance and standard local category defaults on verified refresh, preserving saved entries and independent named budgets.
 - Missing SQLCipher fields and malformed saved JSON remain fail-closed; no financial database source migration, balance write, or production SQLCipher cutover.
 - Retain all M442/M443 bank SMS, biometric and merchant-free UI fixes from current main; exact-head CI and signed APK remain mandatory before merge.
+
+[M228-24-route-reconcile 2026-11-04] Reconcile old SQLCipher route preflight #228 against current main
+- Add read-only exhaustive canonical finance route check inside existing already-activated encrypted binder, only AFTER verified OS key and trusted source digest.
+- Missing audited route, missing witness or incomplete restore/recovery audit fail closed. No activation key, source switch, new finance writer or currency/ledger mutation.
+- Retain main M442/M443 bank SMS and biometric fixes; exact-head CI and device evidence still required before shipping.
