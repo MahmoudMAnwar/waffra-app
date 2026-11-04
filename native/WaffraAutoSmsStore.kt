@@ -82,8 +82,8 @@ object WaffraAutoSmsStore {
     private fun signedInOwnerHash(context: Context): String? {
         val user = context.getSharedPreferences("FlutterSharedPreferences",
             Context.MODE_PRIVATE)
-        if (!user.getBoolean("flutter.waffra_onboarding_completed", false))
-            return null
+        // The account-backed profile is written only after verified login.
+        // Fresh encrypted installs may not carry the legacy onboarding flag.
         val raw = user.getString("flutter.waffra_profile", "") ?: ""
         val profile = try { JSONObject(raw) } catch (_: Exception) { return null }
         val phone = profile.optString("phone", "").filter { it.isDigit() }
@@ -101,8 +101,10 @@ object WaffraAutoSmsStore {
     private fun activeProfileReady(context: Context): Boolean {
         val user = context.getSharedPreferences("FlutterSharedPreferences",
             Context.MODE_PRIVATE)
-        return user.getBoolean("flutter.waffra_onboarding_completed", false) &&
-            !user.getString("flutter.waffra_profile", "").isNullOrBlank()
+        // Require a stable authenticated owner, not an unrelated onboarding
+        // preference. A sign-out removes the profile and fails closed.
+        return !user.getString("flutter.waffra_profile", "").isNullOrBlank() &&
+            signedInOwnerHash(context) != null
     }
 
     fun enabled(context: Context): Boolean = synchronized(mutex) {
