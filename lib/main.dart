@@ -3698,7 +3698,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   _cloudReviewStageRunning=true;
   try{
    final staged=await WaffraSmsCloudReviewAnalyzer.stagePending(
-    candidates,maxPerRun:2);
+    candidates,maxPerRun:1,explicitlyRequested:true);
    if(staged>0&&mounted)unawaited(_refreshAutoSmsInbox());
   }catch(_){
    // Retain encrypted candidates. Cloud is never a finance authority.
@@ -3836,6 +3836,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           .toLocal().toString().substring(0,16):'';
          final proposal=item['cloud'];
          final suggestion=proposal is Map?proposal:null;
+         final local=item['local'] is Map?item['local'] as Map:null;
          final amount=suggestion?['amount'];
          final currency=suggestion?['currency'];
          final kind=suggestion?['kind'];
@@ -3847,8 +3848,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           key:Key('waffra-sms-sender-message-'+index.toString()),
           leading:const Icon(Icons.sms_outlined,color:emerald),
           title:WaffraText(suggestion==null?
-           (waffraIsEnglish?'Bank SMS • needs review':
-            'رسالة بنكية • تحتاج مراجعة'):
+           (local==null?
+            (waffraIsEnglish?'Ambiguous • needs review':
+             'عملية غامضة • تحتاج مراجعة'):
+            (waffraIsEnglish?'Local rule • ':'قاعدة محلية • ')+
+             (local['income']==true?
+              (waffraIsEnglish?'Income':'دخل'):
+              (waffraIsEnglish?'Expense':'مصروف'))):
            (waffraIsEnglish?'AI suggestion • ':'اقتراح AI • ')+
             suggestionLabel+
             (amount is num?' • '+amount.toStringAsFixed(2):'')+
@@ -3857,6 +3863,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           // sender and date, while the cloud analysis remains a suggestion.
           subtitle:WaffraText(
            ((item['body'] as String?)??'')+'\n'+
+           (local!=null?"${local['category']} • ":'')+
            (waffraIsEnglish?'Review amount, category and budget':
             'راجع المبلغ والقسم والميزانية')+
            (date.isEmpty?'':' • '+date),maxLines:5),
@@ -3880,6 +3887,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Widget _autoSmsReviewCard(){
   final count=_autoSmsPending.length;
   final analyzed=_autoSmsPending.where((row)=>row['cloud'] is Map).length;
+  final localCount=_autoSmsPending.where((row)=>row['local'] is Map).length;
+  final ambiguous=count-localCount-analyzed;
   return Container(
    key:const Key('waffra-auto-sms-review-card'),
    decoration:BoxDecoration(color:Theme.of(context).cardColor,
@@ -3933,6 +3942,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         (waffraIsEnglish?
          'Bank SMS since the installation month await approval.':
          'رسائل من بداية شهر تثبيت التطبيق بانتظار مراجعتك وتأكيدك.')),
+      if(count>0)...[
+       const SizedBox(height:5),
+       WaffraText(waffraIsEnglish?
+        '$localCount classified locally • ${ambiguous<0?0:ambiguous} ambiguous':
+        '$localCount مصنفة محليًا • ${ambiguous<0?0:ambiguous} غامضة',
+        style:const TextStyle(color:emerald,fontSize:12,
+         fontWeight:FontWeight.w600)),
+      ],
       if(analyzed>0)...[
        const SizedBox(height:5),
        WaffraText(waffraIsEnglish?
