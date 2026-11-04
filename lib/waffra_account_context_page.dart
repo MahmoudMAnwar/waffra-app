@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'main.dart' show snack;
 import 'waffra_account_context_settings.dart';
 
 import 'storage/waffra_account_context_read.dart';
@@ -78,9 +79,9 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
     entryId:entry.id,accountId:chosen,userConfirmed:true);
    if(mounted)setState(reload);
   }catch(_){
-   if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-    content:Text(t('تعذر تأكيد الربط؛ حدّث الصفحة وحاول مرة أخرى.',
-     'Could not confirm account link. Refresh and retry.'))));
+   if(mounted)snack(context,t(
+    'تعذر تأكيد الربط؛ حدّث الصفحة وحاول مرة أخرى.',
+    'Could not confirm account link. Refresh and retry.'));
   }
  }
 
