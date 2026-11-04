@@ -4057,6 +4057,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ].join('\n');
    final cloud=selected['cloud'];
    final cloudFacts=cloud is Map ? cloud : null;
+   final localMatches=_autoSmsPending.where((row)=>row['id']==id);
+   final local=localMatches.isEmpty?null:localMatches.first['local'];
+   final localFacts=local is Map?local:null;
    final cloudAmount=cloudFacts?['amount'];
    final cloudKind=cloudFacts?['kind'];
    final cloudSummary=cloudKind is String ?
@@ -4068,21 +4071,51 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      content:WaffraText((waffraIsEnglish?
       'A financial SMS from $sender requires review before saving.':
       'وصلت رسالة مالية من $sender وتحتاج مراجعة قبل الحفظ.')
-      +'\n\n'+summary+cloudSummary),
+      +'\n\n'+summary+
+       (localFacts!=null?
+        '\n'+(waffraIsEnglish?'Local category: ':'القسم المقترح محليًا: ')+
+        (localFacts['category']?.toString()??''):'')+
+       cloudSummary),
      actions:[
       TextButton(onPressed:()=>Navigator.pop(dialog),
        child:WaffraText(waffraIsEnglish?'Later':'لاحقًا')),
       TextButton(onPressed:()=>Navigator.pop(dialog,'ignore'),
        child:WaffraText(waffraIsEnglish?'Ignore':'تجاهل')),
+      if(localFacts==null&&cloudFacts==null)OutlinedButton(
+       key:const Key('waffra-ambiguous-ai-request'),
+       onPressed:()=>Navigator.pop(dialog,'ai'),
+       child:WaffraText(waffraIsEnglish?'Analyze with AI':'تحليل بالذكاء الاصطناعي')),
       FilledButton(onPressed:()=>Navigator.pop(dialog,'review'),
        child:WaffraText(waffraIsEnglish?'Review transaction':'مراجعة العملية')),
      ]));
    if(decision=='ignore'){
     await WaffraAutoSms.acknowledge([id]);
+   }else if(decision=='ai'&&mounted){
+    await _analyzeAmbiguousSmsOnDemand(selected);
    }else if(decision=='review'&&mounted){
-    await bulkSmsSheet(initialText:body);
-    if(smsHashes.contains(bankSmsHash(body)))
+    await bulkSmsSheet(initialText:body,
+     suggestedLocalCategory:localFacts?['category'] as String?,
+     suggestedLocalIncome:localFacts?['income'] as bool?);
+    if(smsHashes.contains(bankSmsHash(body))){
      await WaffraAutoSms.acknowledge([id]);
+     if(mounted&&_smsRuleOwnerKey.isNotEmpty){
+      final wantRule=await showWaffraDialog<bool>(context:context,
+       builder:(dialog)=>AlertDialog(
+        title:WaffraText(waffraIsEnglish?
+         'Create a rule for similar messages?':
+         'تحب ننشئ قاعدة للرسائل المشابهة؟'),
+        content:WaffraText(waffraIsEnglish?
+         'Select suggested keywords, type and category.':
+         'اختار الكلمات المقترحة ونوع العملية والقسم.'),
+        actions:[
+         TextButton(onPressed:()=>Navigator.pop(dialog,false),
+          child:WaffraText(waffraIsEnglish?'Not now':'مش دلوقتي')),
+         FilledButton(onPressed:()=>Navigator.pop(dialog,true),
+          child:WaffraText(waffraIsEnglish?'Create rule':'إنشاء قاعدة')),
+        ]));
+      if(wantRule==true&&mounted)await _openSmsRules(seedMessage:body);
+     }
+    }
    }
   }finally{
    _autoSmsReviewOpen=false;
@@ -5071,7 +5104,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     ],
    )));
  }
- Future<void> bulkSmsSheet({String? initialText})async {
+ Future<void> bulkSmsSheet({String? initialText,
+  String? suggestedLocalCategory,bool? suggestedLocalIncome})async {
   // Deterministic SMS review is available immediately and offline.
   // Qwen remains optional for ambiguous messages; never block paste on a
   // 484 MB model initialization just to read a supported bank template.
@@ -5117,8 +5151,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final result=BankParser.parse(messages[i]);
   update((){
    reviewAttempted=false;index=i;income=result.income;
-   category=categories.any((c)=>c.income==income&&c.name==result.category)?result.category:
-    (forType(income).isNotEmpty?forType(income).first.name:'أخرى');
+   final suggested=messages.length==1&&i==0&&
+    suggestedLocalIncome==income&&suggestedLocalCategory!=null&&
+    categories.any((c)=>c.income==income&&c.isSubcategory&&
+     c.name==suggestedLocalCategory)?suggestedLocalCategory:null;
+   category=suggested??(categories.any((c)=>
+    c.income==income&&c.name==result.category)?result.category:
+    (forType(income).isNotEmpty?forType(income).first.name:'أخرى'));
    final leaves=categories.where((c)=>c.income==income&&c.isSubcategory&&c.name==category).toList();
    if(leaves.isNotEmpty){
     smsParentId=leaves.first.parentId;
