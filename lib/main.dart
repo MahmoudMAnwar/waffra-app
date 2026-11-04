@@ -1214,7 +1214,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     googleFirstRunSetup=WaffraSaudiRelease.locationCountryOnboarding&&
      waffraGoogleProfileReadyForCountrySetup(u)&&
       !(p.getBool(waffraCountrySetupKey(u!))??false);
-    autoSmsConsentPending=Platform.isAndroid&&
+    autoSmsConsentPending=Platform.isAndroid&&u!=null&&
      !(p.getBool(WaffraAutoSms.firstRunKey)??false);
     pinHash=p.getString('waffra_pin_sha256');
     locked=u!=null;startupError=null;loading=false;
@@ -1261,7 +1261,10 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   final needsGoogleSetup=WaffraSaudiRelease.locationCountryOnboarding&&
    waffraGoogleProfileReadyForCountrySetup(u)&&
     !(prefs.getBool(waffraCountrySetupKey(u))??false);
+  final needsSmsAccessAfterRegistration=Platform.isAndroid&&profile==null&&
+   !(prefs.getBool(WaffraAutoSms.firstRunKey)??false);
   if(mounted)setState((){
+   if(needsSmsAccessAfterRegistration)autoSmsConsentPending=true;
    // First phone/password login and new registration require biometrics.
    // Editing a profile in an already-unlocked session does not re-lock.
    final freshSession=profile==null||showLogin;
