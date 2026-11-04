@@ -82,12 +82,10 @@ class _WaffraAccountContextSettingsState
   final banks=widget.accounts.where((a)=>
    !a.archived&&a.kind=='bank').toList();
   if(banks.isEmpty)return;
-  final ctl=TextEditingController();
   String? selected;
   String digits='';
   List<String>? result;
-  try{
-   result=await showDialog<List<String>>(
+  result=await showDialog<List<String>>(
     context:context,builder:(dialog)=>
      StatefulBuilder(builder:(dialog,update)=>AlertDialog(
       title:Text(t('تأكيد حساب الرسائل البنكية','Verify SMS bank account')),
@@ -108,7 +106,7 @@ class _WaffraAccountContextSettingsState
         ),
         const SizedBox(height:10),
         TextField(
-         controller:ctl,keyboardType:TextInputType.number,
+         keyboardType:TextInputType.number,
          inputFormatters:[
           FilteringTextInputFormatter.digitsOnly,
           LengthLimitingTextInputFormatter(4),
@@ -129,9 +127,6 @@ class _WaffraAccountContextSettingsState
         child:Text(t('تأكيد','Verify'))),
       ],
      )));
-  }finally{
-   ctl.dispose();
-  }
   if(result==null||!mounted)return;
   try{
    await widget.api.balances();
