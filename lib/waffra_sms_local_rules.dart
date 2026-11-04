@@ -163,7 +163,7 @@ class WaffraSmsLocalRuleStore {
   return sha256.convert(utf8.encode(identity)).toString();
  }
  String _key(String owner) {
-  if(!RegExp(r'^[a-f0-9]{64}.hasMatch(owner)){
+  if(!RegExp(r'^[a-f0-9]{64}
    throw const FormatException('Verified SMS rules owner missing');
   }
   return 'waffra_sms_local_rules_v1_$owner';
