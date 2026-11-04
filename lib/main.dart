@@ -10809,40 +10809,29 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    )));
   disposeLater([name,target]);
   if(g!=null&&mounted){
-   if(g.progressAlertsEnabled){
-    await _requestPercentageAlertPermission();
-   }
+   if(g.progressAlertsEnabled)await _requestPercentageAlertPermission();
    if(!mounted)return;
    if(selectedGoal==otherGoal){
     final key=waffraNormalizeGoal(g.name);
-    if(!allDefaultNames.contains(key)&&!customGoals.any((entry)=>waffraNormalizeGoal(entry)==key)){
+    if(!allDefaultNames.contains(key)&&
+       !customGoals.any((x)=>waffraNormalizeGoal(x)==key)){
      await _financeAuthority.addCustomGoalSuggestion(g.name);
     }
    }
    if(!mounted)return;
-   setState(()=>goals.add(g));
-   if(!await _persistModuleOrReload(WaffraFinanceRoute.goalCreateEditDeleteRestore,
-     operation:'goal-create'))return;
-   // Creating an obligation is never automatic just because a date exists.
-   bool linked=false,requestedRecurring=false;
-   if(g.dueDate!=null&&g.target>0&&g.active&&mounted){
-    requestedRecurring=await _confirmGoalDueRecurringLink(g);
-    if(requestedRecurring&&mounted){
-     linked=await this._ensureLinkedRecurringForGoal(g);
-    }
-   }
-   if(mounted){
-    if(requestedRecurring&&!linked){
-     snack(context,waffraIsEnglish?
-      'Goal saved, but recurring link was not confirmed. Retry from Edit Goal.':
-      'تم حفظ الهدف، لكن ربط المتكررة لم يتأكد. أعد المحاولة من تعديل الهدف.');
-    }else{
-     snackSuccess(context,linked?
-      (waffraIsEnglish?'Goal and recurring due date created.':
-       'تم إنشاء الهدف وربط استحقاقه بالمتكررة.'):
-      (waffraIsEnglish?'Savings goal added successfully':'تمت إضافة الهدف بنجاح'));
-    }
-   }
+   // Approval BEFORE write: goal and linked recurring due use one atomic
+   // SQLCipher snapshot+relational projection commit, or both roll back.
+   final linkNew=g.dueDate!=null&&g.target>0&&g.active&&
+    await _confirmGoalDueRecurringLink(g);
+   if(!mounted)return;
+   final saved=await this._saveGoalAndLinkedDueAtomically(g,
+    creating:true,linkNew:linkNew,operation:'goal-create-and-due');
+   if(!saved||!mounted)return;
+   snackSuccess(context,linkNew?
+    (waffraIsEnglish?'Goal and due saved together.':
+     'تم حفظ الهدف والاستحقاق المرتبط معًا.'):
+    (waffraIsEnglish?'Savings goal added successfully':
+     'تمت إضافة الهدف بنجاح'));
   }
  }
  /// Release an earmark back to spendable cash. The eventual expense is
