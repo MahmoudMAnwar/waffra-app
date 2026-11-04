@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'legacy_snapshot_preflight.dart';
 import 'waffra_production_finance_routing_gate.dart';
+import 'waffra_runtime_finance_route_contract.dart';
 import 'waffra_verified_finance_authority.dart';
 
 /// M451: One-time startup repair for an *authenticated fresh* SQLCipher vault.
