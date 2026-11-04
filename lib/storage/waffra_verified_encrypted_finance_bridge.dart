@@ -111,6 +111,7 @@ class WaffraVerifiedEncryptedFinanceBridge {
     required int amountMinor,
     required String confirmedAtIso,
     required bool userConfirmed,
+    String? selectedAccountId,
   }) async {
     if (!experimentalEnabled || !userConfirmed) {
       throw StateError('Encrypted goal due needs explicit user approval.');
@@ -136,6 +137,7 @@ class WaffraVerifiedEncryptedFinanceBridge {
         amountMinor: amountMinor,
         confirmedAtIso: confirmedAtIso,
         userConfirmed: true,
+        selectedAccountId: selectedAccountId,
       );
     });
   }

@@ -105,6 +105,7 @@ class WaffraEncryptedFinanceSession {
     required int amountMinor,
     required String confirmedAtIso,
     required bool userConfirmed,
+    String? selectedAccountId,
   }) {
     _requireEnabled();
     return bridge.settleLinkedGoalDue(
@@ -115,6 +116,7 @@ class WaffraEncryptedFinanceSession {
       amountMinor: amountMinor,
       confirmedAtIso: confirmedAtIso,
       userConfirmed: userConfirmed,
+      selectedAccountId: selectedAccountId,
     );
   }
 

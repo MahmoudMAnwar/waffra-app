@@ -124,6 +124,7 @@ class WaffraVerifiedFinanceAuthority {
     required int amountMinor,
     required String confirmedAtIso,
     required bool userConfirmed,
+    String? selectedAccountId,
   }) async {
     if (!userConfirmed ||
         await _requireRoute(WaffraFinanceRoute.recurringPostingAndPostponement) !=
@@ -143,6 +144,7 @@ class WaffraVerifiedFinanceAuthority {
       amountMinor: amountMinor,
       confirmedAtIso: confirmedAtIso,
       userConfirmed: true,
+      selectedAccountId: selectedAccountId,
     );
     return load(route: WaffraFinanceRoute.dashboardRead);
   }
