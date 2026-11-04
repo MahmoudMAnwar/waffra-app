@@ -164,6 +164,11 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
     linkedIso:DateTime.now().toIso8601String(),
     userConfirmed:true),userConfirmed:userConfirmed);
 
+ /// Read available recurring templates with their own default account.
+ /// Reminder enable/disable is independent of these financial references.
+ Future<List<WaffraRecurringAccountTemplate>> recurringAccountTemplates()=>
+  bridge.readVerifiedAccountMetadata((context)=>context.recurringTemplates());
+
  Future<String?> recurringDefaultAccount(String recurringId)=>
   bridge.readVerifiedAccountMetadata((context)=>
    context.recurringDefault(recurringId));
