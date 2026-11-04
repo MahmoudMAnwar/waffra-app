@@ -27,9 +27,10 @@ class WaffraAccountTransactionDraft {
  const WaffraAccountTransactionDraft({
   required this.requestId,required this.operation,
   required this.accountId,required this.amountMinor,required this.memo,
-  required this.title,required this.category,
+  required this.title,required this.category,this.budgetId,
  });
  final String requestId,accountId,memo,title,category;
+ final String? budgetId;
  final WaffraAccountOperation operation;
  final int amountMinor;
 }
@@ -50,8 +51,13 @@ class WaffraAccountTransactionForm extends StatefulWidget {
  const WaffraAccountTransactionForm({
   super.key,required this.accounts,this.english=false,
   this.onConfirmEntry,this.onConfirmTransfer,
+  this.incomeCategories=const [],this.expenseCategories=const [],
+  this.availableBudgets=const {},this.requireKnownCategory=false,
  });
  final List<WaffraAccountBalance> accounts;
+ final List<String> incomeCategories,expenseCategories;
+ final Map<String,String> availableBudgets;
+ final bool requireKnownCategory;
  final bool english;
  final Future<void> Function(WaffraAccountTransactionDraft)? onConfirmEntry;
  final Future<void> Function(WaffraInternalTransferDraft)? onConfirmTransfer;
@@ -65,7 +71,9 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
  late final DateTime requestTime=DateTime.now();
  late final String requestId='m440-'+requestTime.microsecondsSinceEpoch.toString();
  WaffraAccountOperation mode=WaffraAccountOperation.income;
- String? source,destination,error;
+ String? source,destination,error,selectedBudgetId;
+ List<String> get choices=>mode==WaffraAccountOperation.income?
+  widget.incomeCategories:widget.expenseCategories;
  bool saving=false,saved=false;
  List<WaffraAccountBalance> get active=>
   widget.accounts.where((a)=>!a.archived).toList(growable:false);
@@ -93,11 +101,25 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
    return;
   }
   if(mode!=WaffraAccountOperation.transfer &&
-    (title.text.trim().isEmpty || category.text.trim().isEmpty)){
+    (title.text.trim().isEmpty || category.text.trim().isEmpty ||
+     (widget.requireKnownCategory && !choices.contains(category.text.trim())))) {
    setState(()=>error=tr('أدخل عنوان العملية والقسم',
     'Enter a transaction title and category'));
    return;
   }
+  if(mode==WaffraAccountOperation.expense && selectedBudgetId==null &&
+     widget.availableBudgets.isNotEmpty){
+   final approved=await showDialog<bool>(context:context,builder:(ctx)=>
+    AlertDialog(title:Text(tr('حفظ بدون ميزانية؟','Save without budget?')),
+     content:Text(tr('المصروف مش هيتربط بميزانية. تقدر تربطه لاحقًا.',
+      'This expense will remain unlinked to a budget. You may link it later.')),
+     actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),
+       child:Text(tr('إلغاء','Cancel'))),
+      FilledButton(onPressed:()=>Navigator.pop(ctx,true),
+       child:Text(tr('حفظ بدون ميزانية','Save without budget')))]));
+   if(approved!=true || !mounted)return;
+  }
+  if(!mounted)return;
   setState((){saving=true;error=null;});
   try{
    if(mode==WaffraAccountOperation.transfer){
@@ -111,7 +133,8 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
     if(commit==null)throw StateError('Verified income/expense source unavailable.');
     await commit(WaffraAccountTransactionDraft(requestId:requestId,
      operation:mode,accountId:source!,amountMinor:value,memo:memo.text.trim(),
-     title:title.text.trim(),category:category.text.trim()));
+     title:title.text.trim(),category:category.text.trim(),
+     budgetId:mode==WaffraAccountOperation.expense?selectedBudgetId:null));
    }
    if(mounted)setState(()=>saved=true);
   }catch(_){
@@ -152,7 +175,8 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
        label:Text(tr('تحويل','Transfer'))),
      ],
      selected:{mode},onSelectionChanged:saving||saved?null:(choice){
-      setState((){mode=choice.first;error=null;});
+      setState((){mode=choice.first;error=null;selectedBudgetId=null;
+       category.clear();});
      }),
     const SizedBox(height:16),
     TextField(key:const Key('m440-amount'),controller:amount,
@@ -179,9 +203,37 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
       decoration:InputDecoration(labelText:tr('عنوان العملية','Transaction title'),
        border:const OutlineInputBorder())),
      const SizedBox(height:12),
-     TextField(key:const Key('m440-category'),controller:category,maxLength:100,
-      decoration:InputDecoration(labelText:tr('القسم','Category'),
-       border:const OutlineInputBorder())),
+     if(widget.requireKnownCategory)
+      DropdownButtonFormField<String>(
+       key:const Key('m440-category-picker'),isExpanded:true,
+       initialValue:choices.contains(category.text)?category.text:null,
+       decoration:InputDecoration(labelText:tr('القسم','Category'),
+        border:const OutlineInputBorder()),
+       items:choices.toSet().map((name)=>DropdownMenuItem(
+        value:name,child:Text(name,overflow:TextOverflow.ellipsis))).toList(),
+       onChanged:saving||saved?null:(value)=>setState(
+        ()=>category.text=value??'')),
+     if(!widget.requireKnownCategory)
+      TextField(key:const Key('m440-category'),controller:category,maxLength:100,
+       decoration:InputDecoration(labelText:tr('القسم','Category'),
+        border:const OutlineInputBorder())),
+     if(widget.requireKnownCategory && choices.isEmpty)
+      Padding(padding:const EdgeInsets.only(top:8),
+       child:Text(tr('أضف قسمًا فرعيًا أولًا من صفحة الأقسام.',
+        'Add a subcategory in Categories before posting.'),
+        style:TextStyle(color:Theme.of(context).colorScheme.error))),
+     if(mode==WaffraAccountOperation.expense && widget.availableBudgets.isNotEmpty)...[
+      const SizedBox(height:12),
+      DropdownButtonFormField<String>(key:const Key('m440-budget-picker'),
+       isExpanded:true,initialValue:selectedBudgetId??'none',
+       decoration:InputDecoration(labelText:tr('تسجيل في أي ميزانية؟','Budget'),
+        border:const OutlineInputBorder()),
+       items:[DropdownMenuItem(value:'none',child:Text(tr('بدون ميزانية','Unlinked'))),
+        ...widget.availableBudgets.entries.map((e)=>DropdownMenuItem(
+         value:e.key,child:Text(e.value,overflow:TextOverflow.ellipsis)))],
+       onChanged:saving||saved?null:(value)=>setState(
+        ()=>selectedBudgetId=value=='none'?null:value)),
+     ],
     ],
     const SizedBox(height:12),
     TextField(key:const Key('m440-note'),controller:memo,
