@@ -3551,16 +3551,36 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   provider:widget.profile.provider,phone:widget.profile.phone,
   email:widget.profile.email);
 
- Future<void> _openSmsRules({String? seedMessage})async{
+ Future<void> _openSmsRules({String? seedMessage,String? seedKind,
+  String seedSender=''})async{
   if(_smsRuleOwnerKey.isEmpty){
    if(mounted)snack(context,waffraIsEnglish?
     'Sign in with a verified phone or email before editing SMS rules.':
     'سجل دخولك برقم جوال أو بريد مؤكد قبل تعديل القواعد.',isError:true);
    return;
   }
-  await Navigator.push<void>(context,MaterialPageRoute(
+  final bankAccounts=<String,String>{};
+  try{
+   final verified=await _financeBinding?.accountsBridge?.readVerifiedAccounts();
+   if(verified!=null){
+    for(final account in verified.balances.where((a)=>!a.archived)){
+     if(account.kind=='bank'||account.kind=='wallet'){
+      bankAccounts[account.id]=account.name;
+     }
+    }
+   }
+  }catch(_){ /* Local rules still work without SQLCipher accounts. */ }
+  if(!mounted)return;
+  final facts=seedMessage==null?null:
+   WaffraBankSmsFactsParser.parse(seedMessage);
+  final suffix=seedKind=='income'?
+   (facts?.destinationSuffix??''):
+   (facts?.sourceSuffix??'');
+  await Navigator.push<bool>(context,MaterialPageRoute(
    builder:(_)=>WaffraSmsRuleSettingsPage(
     english:waffraIsEnglish,ownerKey:_smsRuleOwnerKey,
+    seedKind:seedKind,seedSender:seedSender,
+    seedAccountSuffix:suffix,bankAccounts:bankAccounts,
     scannedMessages:_autoSmsPending.map((row)=>
      row['body'] is String?row['body'] as String:'').toList(),
     incomeCategories:categories.where((c)=>c.income&&c.isSubcategory&&
@@ -3580,6 +3600,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(body is! String||body.trim().isEmpty)return null;
   final parsed=BankParser.parse(body);
   final facts=WaffraBankSmsFactsParser.parse(body);
+  final special=WaffraSmsLocalRules.resolveSpecial(
+   body:body,sender:sender is String?sender:'',
+   bankKind:facts.kind,custom:custom);
+  if(special!=null)return <String,Object?>{
+   'rule':special.name,'kind':special.resolvedKind,
+   'category':special.category,'income':false,
+  };
   if(facts.pending||parsed.amount==null||parsed.amount!<=0||
      parsed.requiresCurrencyReview||
      WaffraSmsCurrencies.requiresReviewForSarLedger(body))return null;
@@ -3593,7 +3620,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      c.income==rule.income&&c.isSubcategory&&
      waffraCategoryAvailableForNewEntry(categories,c)))return null;
   return <String,Object?>{
-   'rule':rule.name,'category':rule.category,'income':rule.income,
+   'rule':rule.name,'kind':rule.resolvedKind,
+   'category':rule.category,'income':rule.income,
   };
  }
 
@@ -3666,7 +3694,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }else{
     final annotated=Map<String,Object?>.from(candidate);
     final local=_localSmsClassification(annotated,customRules);
-    if(local!=null)annotated['local']=local;
+    if(local!=null){
+     if(local['kind']=='excluded'){
+      final removed=await WaffraAutoSms.acknowledge([id]);
+      if(removed)continue;
+     }
+     annotated['local']=local;
+    }
     waiting.add(annotated);
    }
   }
@@ -3695,7 +3729,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Future<void> _analyzeAmbiguousSmsOnDemand(
   Map<String,Object?> selected)async{
   if(_cloudReviewStageRunning||!mounted||selected['id'] is! String||
-     selected['body'] is! String)return;
+     selected['body'] is! String||selected['sensitiveOtp']==true)return;
   final accepted=await showWaffraDialog<bool>(context:context,
    builder:(dialog)=>AlertDialog(
     title:WaffraText(waffraIsEnglish?
@@ -3889,9 +3923,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             (waffraIsEnglish?'Ambiguous • needs review':
              'عملية غامضة • تحتاج مراجعة'):
             (waffraIsEnglish?'Local rule • ':'قاعدة محلية • ')+
-             (local['income']==true?
-              (waffraIsEnglish?'Income':'دخل'):
-              (waffraIsEnglish?'Expense':'مصروف'))):
+             (local['kind']=='transfer'?
+              (waffraIsEnglish?'Transfer':'تحويل'):
+              local['kind']=='excluded'?
+              (waffraIsEnglish?'Excluded':'مستثناة'):
+              local['income']==true?
+               (waffraIsEnglish?'Income':'دخل'):
+               (waffraIsEnglish?'Expense':'مصروف'))):
            (waffraIsEnglish?'AI suggestion • ':'اقتراح AI • ')+
             suggestionLabel+
             (amount is num?' • '+amount.toStringAsFixed(2):'')+
@@ -4039,6 +4077,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final sender=selected['sender'] is String?selected['sender'] as String:'';
    if(id is! String||body is! String)return;
    final facts=WaffraBankSmsFactsParser.parse(body);
+   final sensitive=selected['sensitiveOtp']==true;
    final operationName=switch(facts.kind){
     WaffraBankOperationKind.transfer=>waffraIsEnglish?'Bank transfer':'تحويل بنكي',
     WaffraBankOperationKind.cardSettlement=>waffraIsEnglish?'Card settlement':'سداد بطاقة',
@@ -4079,17 +4118,57 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      actions:[
       TextButton(onPressed:()=>Navigator.pop(dialog),
        child:WaffraText(waffraIsEnglish?'Later':'لاحقًا')),
-      TextButton(onPressed:()=>Navigator.pop(dialog,'ignore'),
-       child:WaffraText(waffraIsEnglish?'Ignore':'تجاهل')),
-      if(localFacts==null&&cloudFacts==null)OutlinedButton(
+      TextButton(
+       key:const Key('waffra-sms-exclude-with-rule'),
+       onPressed:()=>Navigator.pop(dialog,'exclude'),
+       child:WaffraText(waffraIsEnglish?
+        'Not a transaction • create exclusion rule':
+        'ليست معاملة • إنشاء قاعدة مستثناة')),
+      if(facts.kind==WaffraBankOperationKind.transfer)TextButton(
+       onPressed:()=>Navigator.pop(dialog,'transfer'),
+       child:WaffraText(waffraIsEnglish?
+        'Classify transfer':'تصنيف كتحويل')),
+      if(!sensitive&&localFacts==null&&cloudFacts==null)OutlinedButton(
        key:const Key('waffra-ambiguous-ai-request'),
        onPressed:()=>Navigator.pop(dialog,'ai'),
        child:WaffraText(waffraIsEnglish?'Analyze with AI':'تحليل بالذكاء الاصطناعي')),
-      FilledButton(onPressed:()=>Navigator.pop(dialog,'review'),
-       child:WaffraText(waffraIsEnglish?'Review transaction':'مراجعة العملية')),
+      FilledButton(onPressed:()=>Navigator.pop(dialog,sensitive?'manual':'review'),
+       child:WaffraText(sensitive?
+        (waffraIsEnglish?'Add separate manual transaction':'إضافة عملية يدوية مستقلة'):
+        (waffraIsEnglish?'Review transaction':'مراجعة العملية'))),
      ]));
-   if(decision=='ignore'){
-    await WaffraAutoSms.acknowledge([id]);
+   if(decision=='exclude'||decision=='transfer'){
+    if(_smsRuleOwnerKey.isEmpty)return;
+    final kind=decision=='exclude'?'excluded':'transfer';
+    try{
+     final existing=await const WaffraSmsLocalRuleStore()
+      .read(_smsRuleOwnerKey);
+     final match=WaffraSmsLocalRules.resolveSpecial(
+      body:body,sender:sender,bankKind:facts.kind,custom:existing);
+     if(match==null&&mounted){
+      await _openSmsRules(seedMessage:body,seedKind:kind,seedSender:sender);
+     }
+     if(!mounted)return;
+     final saved=await const WaffraSmsLocalRuleStore()
+      .read(_smsRuleOwnerKey);
+     final after=WaffraSmsLocalRules.resolveSpecial(
+      body:body,sender:sender,bankKind:facts.kind,custom:saved);
+     if(after!=null&&after.resolvedKind==kind){
+      if(kind=='excluded'){
+       await WaffraAutoSms.acknowledge([id]);
+      }else{
+       snackSuccess(context,waffraIsEnglish?
+        'Transfer rule saved. Register the transfer from Accounts; no money was changed.':
+        'اتحفظت قاعدة التحويل. سجّل التحويل من شاشة الحسابات؛ مفيش رصيد اتغيّر.');
+      }
+     }
+    }catch(_){
+     if(mounted)snack(context,waffraIsEnglish?
+      'Could not verify the rule store. Message remains for review.':
+      'تعذر التحقق من القواعد. الرسالة لسه للمراجعة.',isError:true);
+    }
+   }else if(decision=='manual'&&mounted){
+    await entrySheet();
    }else if(decision=='ai'&&mounted){
     await _analyzeAmbiguousSmsOnDemand(selected);
    }else if(decision=='review'&&mounted){
@@ -4142,7 +4221,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             onPressed:()=>Navigator.pop(dialog),
             child:WaffraText(waffraIsEnglish?'Create rule':'إنشاء قاعدة')),
           ])));
-       if(mounted)await _openSmsRules(seedMessage:body);
+       if(mounted)await _openSmsRules(
+        seedMessage:body,seedSender:sender,
+        seedKind:WaffraBankSmsFactsParser.parse(body).kind==
+         WaffraBankOperationKind.income?'income':'expense');
       }
      }
     }
