@@ -10,7 +10,10 @@ class WaffraReminder {
  final int day;
  /// A linked goal may not start its monthly reminders before this date.
  final DateTime? startAt;
- const WaffraReminder({required this.id,required this.title,required this.day,this.startAt});
+ /// A goal-linked due must remind only once, not every month.
+ final DateTime? oneTimeDueAt;
+ const WaffraReminder({required this.id,required this.title,required this.day,
+  this.startAt,this.oneTimeDueAt});
 }
 
 class WaffraReminders {
@@ -66,28 +69,58 @@ class WaffraReminders {
   return DateTime(monthStart.year,monthStart.month,day.clamp(1,last));
  }
 
+ static const _payload='waffra_recurring_due_v1:';
+ static bool isManagedRecurringRequest({String? payload,String? title})=>
+  (payload?.startsWith(_payload)??false)||
+  title=='وفرة • تذكير بالتزام قادم'||
+  title=='Waffra • Upcoming payment';
+
+ /// Delete only our recurring schedules, never bank SMS review notices.
+ static Future<void> _cancelRecurringOnly()async {
+  final pending=await _plugin.pendingNotificationRequests();
+  for(final request in pending){
+   if(isManagedRecurringRequest(payload:request.payload,title:request.title)){
+    await _plugin.cancel(request.id);
+   }
+  }
+ }
+
+ /// Pure calendar function: a goal due gets exactly one notification.
+ static List<DateTime> upcomingDueDates(WaffraReminder item,DateTime now){
+  bool future(DateTime due)=>DateTime(due.year,due.month,due.day-1,9)
+   .isAfter(now.add(const Duration(minutes:2)));
+  if(item.oneTimeDueAt!=null){
+   final once=item.oneTimeDueAt!;
+   final due=DateTime(once.year,once.month,once.day);
+   return future(due)?<DateTime>[due]:<DateTime>[];
+  }
+  final dueDates=<DateTime>[];
+  for(var offset=0;offset<18&&dueDates.length<3;offset++){
+   final month=DateTime(now.year,now.month+offset,1);
+   final due=dueDate(month,item.day);
+   if(item.startAt!=null&&due.isBefore(DateTime(
+    item.startAt!.year,item.startAt!.month,item.startAt!.day)))continue;
+   if(future(due))dueDates.add(due);
+  }
+  return dueDates;
+ }
+
  static Future<void> schedule(List<WaffraReminder> items,{bool english=false})async {
   if(!Platform.isAndroid)return;
   await initialize();
-  await _plugin.cancelAll();
+  await _cancelRecurringOnly();
   final now=DateTime.now();
   for(final item in items){
-   var scheduled=0;
-   for(var offset=0;offset<18&&scheduled<3;offset++){
-    final month=DateTime(now.year,now.month+offset,1);
-    final due=dueDate(month,item.day);
-    if(item.startAt!=null&&due.isBefore(DateTime(
-      item.startAt!.year,item.startAt!.month,item.startAt!.day)))continue;
+   for(final due in upcomingDueDates(item,now)){
     final remindAt=DateTime(due.year,due.month,due.day-1,9);
-    if(!remindAt.isAfter(now.add(const Duration(minutes:2))))continue;
     await _plugin.zonedSchedule(
-     stableId(item.id,offset),
+     stableId(item.id,due.year*12+due.month),
      english?'Waffra • Upcoming payment':'وفرة • تذكير بالتزام قادم',
      english?'Upcoming: ${item.title} on ${due.day}/${due.month}':
       'اقترب موعد «${item.title}» بتاريخ ${due.day}/${due.month}',
      tz.TZDateTime.from(remindAt,tz.local),_details,
+     payload:'${_payload}${item.id}',
      androidScheduleMode:AndroidScheduleMode.inexactAllowWhileIdle);
-    scheduled++;
    }
   }
  }
@@ -95,6 +128,6 @@ class WaffraReminders {
  static Future<void> clear()async{
   if(!Platform.isAndroid)return;
   await initialize();
-  await _plugin.cancelAll();
+  await _cancelRecurringOnly();
  }
 }
