@@ -6,11 +6,13 @@
     "Fix newly registered Waffra Android homes that refuse startup because M440 initialized a genuinely fresh SQLCipher finance snapshot with absent ledger/categories, while Home requires a durable encrypted category catalog.",
     "Persist only missing ledger and default category fields together in the existing SQLCipher finance snapshot and typed relational category tables, holding the Home/Widget file lock with verified active source witnesses; never fall back to legacy finance preferences.",
     "Ensure an already-repaired Home reload is idempotent, existing account/transaction/goal data survive, invalid defaults or missing cutover witnesses are rejected, and existing/migrated finance sources are not fabricated.",
-    "Exercise the exact shipped default category list, new-install Home recovery, repeat reopen, database integrity, pending pointer failure, account source preservation, and update reviewed QA release notes."
+    "Exercise the exact shipped default category list, new-install Home recovery, repeat reopen, database integrity, pending pointer failure, account source preservation, and update reviewed QA release notes.",
+    "Add an actual Android emulator full first-install to Home to widget-confirmed-SMS to cold Home reopen test with persistent SQLCipher categories, preventing isolated unit-test false positives."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "integration_test/fresh_install_production_binding_android_test.dart",
     "lib/main.dart",
     "lib/storage/waffra_fresh_home_catalog_recovery.dart",
     "test/storage/m451_fresh_home_catalog_recovery_test.dart"
@@ -24,6 +26,20 @@
       {
         "start": " Future<void> load()async {\n  await _ensureFinanceBound();\n",
         "end": "  _lastWidgetRevision=loadedFinance.widgetRevision;\n"
+      }
+    ],
+    "integration_test/fresh_install_production_binding_android_test.dart": [
+      {
+        "start": "import 'package:integration_test/integration_test.dart';\n",
+        "end": "import 'package:waffra/storage/waffra_home_finance_persistence.dart';\n"
+      },
+      {
+        "start": "    final home = await bind(WaffraFinanceRoute.appStartup);\n",
+        "end": "    final widget = await bind(WaffraFinanceRoute.widgetStartup);\n"
+      },
+      {
+        "start": "    final reopened = await bind(WaffraFinanceRoute.appStartup);\n",
+        "end": "  });\n}\n"
       }
     ]
   }
