@@ -4,6 +4,8 @@ import 'package:crypto/crypto.dart';
 
 import '../waffra_secure_backup.dart';
 import 'waffra_accounts_schema.dart';
+import 'waffra_account_context_schema.dart';
+import 'waffra_account_context_backup.dart';
 import 'waffra_accounts_finance_history.dart';
 import 'waffra_encrypted_store.dart';
 import 'waffra_portable_backup_v2.dart';
@@ -15,9 +17,10 @@ import 'waffra_portable_encrypted_vault_restorer.dart';
 class WaffraAccountsBackupV3Preview {
  const WaffraAccountsBackupV3Preview({
   required this.encryptedV2,required this.accounts,
-  required this.links,required this.transfers,this.history,
+  required this.links,required this.transfers,this.history,this.context,
  });
  final Map<String,dynamic>? history;
+ final Map<String,List<Map<String,Object?>>>? context;
  final String encryptedV2;
  final List<Map<String,Object?>> accounts,links,transfers;
 }
@@ -38,6 +41,7 @@ abstract final class WaffraAccountsPortableBackupV3 {
 
  static Future<Map<String,Object?>> capture(WaffraEncryptedStore store)async{
   await WaffraAccountsSchema.requireReady(store);
+  await WaffraAccountContextSchema.install(store);
   final accounts=await store.customSelect(
    'SELECT account_id,label,kind,currency,opening_minor,archived,created_iso '
    'FROM fresh_finance_money_accounts ORDER BY account_id').get();
@@ -51,7 +55,36 @@ abstract final class WaffraAccountsPortableBackupV3 {
      transfers.length>maxTransfers){
    throw StateError('Account backup exceeds supported bounded capacity.');
   }
+  final goalSources=await store.customSelect(
+   'SELECT movement_id,account_id,linked_iso '
+   'FROM fresh_finance_goal_account_sources ORDER BY movement_id').get();
+  final recurringDefaults=await store.customSelect(
+   'SELECT recurring_id,account_id,changed_iso '
+   'FROM fresh_finance_recurring_account_defaults ORDER BY recurring_id').get();
+  final smsSuffixes=await store.customSelect(
+   'SELECT account_id,last_four,confirmed_iso '
+   'FROM fresh_finance_account_sms_suffixes ORDER BY account_id').get();
+  if(goalSources.length>maxLinks || recurringDefaults.length>maxAccounts ||
+     smsSuffixes.length>maxAccounts)throw StateError(
+    'Account-context backup exceeds bounded capacity.');
   return <String,Object?>{
+   'contextV1': <String,Object?>{
+    'goalSources':goalSources.map((r)=><String,Object?>{
+     'movement_id':r.read<String>('movement_id'),
+     'account_id':r.read<String>('account_id'),
+     'linked_iso':r.read<String>('linked_iso'),
+    }).toList(growable:false),
+    'recurringDefaults':recurringDefaults.map((r)=><String,Object?>{
+     'recurring_id':r.read<String>('recurring_id'),
+     'account_id':r.read<String>('account_id'),
+     'changed_iso':r.read<String>('changed_iso'),
+    }).toList(growable:false),
+    'smsSuffixes':smsSuffixes.map((r)=><String,Object?>{
+     'account_id':r.read<String>('account_id'),
+     'last_four':r.read<String>('last_four'),
+     'confirmed_iso':r.read<String>('confirmed_iso'),
+    }).toList(growable:false),
+   },
    'accounts':accounts.map((r)=><String,Object?>{
     'account_id':r.read<String>('account_id'),
     'label':r.read<String>('label'),
@@ -173,12 +206,14 @@ abstract final class WaffraAccountsPortableBackupV3 {
   final links=_rows(capturedAccounts['links'],_linkFields,maxLinks);
   final transfers=_rows(capturedAccounts['transfers'],_transferFields,maxTransfers);
   _validate(accounts,links,transfers,await _ledgerIds(encryptedV2,password));
+  final context=WaffraAccountContextBackup.validate(capturedAccounts['contextV1'],accounts);
   final archive = await WaffraSecureBackup.encryptUserBackup(jsonEncode(<String,Object?>{
    'format':format,'version':version,
    'innerV2Sha256':sha256.convert(utf8.encode(encryptedV2)).toString(),
    'innerV2':encryptedV2,
    'accounts':accounts,'links':links,'transfers':transfers,
    if(history!=null)'financeHistoryV1':history,
+   if(context!=null)'accountContextV1':context,
   }),password);
   if(archive.length>maxEncryptedCharacters){
    throw StateError('Encrypted account backup exceeds restore capacity.');
@@ -197,9 +232,10 @@ abstract final class WaffraAccountsPortableBackupV3 {
   final raw=jsonDecode(text);
   if(raw is! Map || raw.keys.any((k)=>k is! String)||
      raw.keys.toSet().difference(const {
-      'format','version','innerV2Sha256','innerV2','accounts','links','transfers','financeHistoryV1'
+      'format','version','innerV2Sha256','innerV2','accounts','links','transfers','financeHistoryV1','accountContextV1'
      }).isNotEmpty||
-     raw.length!=(raw.containsKey('financeHistoryV1')?8:7)||raw['format']!=format||raw['version']!=version||
+     raw.length!=7+(raw.containsKey('financeHistoryV1')?1:0)+
+       (raw.containsKey('accountContextV1')?1:0)||raw['format']!=format||raw['version']!=version||
      raw['innerV2'] is! String||raw['innerV2Sha256'] is! String){
    throw const FormatException('Unsupported account backup format.');
   }
@@ -211,8 +247,10 @@ abstract final class WaffraAccountsPortableBackupV3 {
   final links=_rows(raw['links'],_linkFields,maxLinks);
   final transfers=_rows(raw['transfers'],_transferFields,maxTransfers);
   _validate(accounts,links,transfers,await _ledgerIds(inner,password));
+  final context=WaffraAccountContextBackup.validate(raw['accountContextV1'],accounts);
   return WaffraAccountsBackupV3Preview(
    encryptedV2:inner,accounts:accounts,links:links,transfers:transfers,
+   context:context,
    history:raw.containsKey('financeHistoryV1')
      ?WaffraAccountsFinanceHistory.validate(raw['financeHistoryV1']):null);
  }
@@ -266,6 +304,7 @@ abstract final class WaffraAccountsPortableBackupV3 {
       t['amount_minor'],t['occurred_iso'],t['note'],
      ]);
    }
+   await WaffraAccountContextBackup.restore(disposableStore,verified.context);
    await WaffraAccountsSchema.requireReady(disposableStore);
    return result;
   });
