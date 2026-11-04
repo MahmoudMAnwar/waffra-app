@@ -172,4 +172,75 @@ void main() {
   expect((await WaffraAccountsRepository(db:db,experimentalEnabled:true)
    .balances()).single.balanceMinor,30000);
  });
+ test('M447 goal due spends wallet first and charges only remaining SAR cash once',()async{
+  final previous=await session.loadForDashboardOrWidget();
+  await session.saveChangedFields(baseline:previous,
+   changedValues:<String,Object?>{
+    'waffra_goals_v24':jsonEncode([
+     {'id':'goal','name':'Rent goal','target':2500.0,'saved':100.0,
+      'dueDate':'2026-10-24T00:00:00'},
+    ]),
+    'waffra_recurring_v24':jsonEncode([
+     {...schedule,'linkedGoalId':'goal',
+      'startAt':'2026-10-24T00:00:00'},
+    ]),
+   });
+  final baseline=await load();
+  final paid=await authority.settleLinkedGoalDue(
+   baseline:baseline,goalId:'goal',recurringId:'rent',
+   dueKey:'rec_rent_2026_10',amountMinor:12550,
+   confirmedAtIso:'2026-10-24T12:00:00',
+   userConfirmed:true,selectedAccountId:'bank');
+  final recorded=jsonDecode(paid.ledgerRaw!) as List;
+  expect(recorded.single['sourceType'],'goal_due');
+  expect(recorded.single['goalWalletPaidMinor'],10000);
+  expect((await WaffraAccountsRepository(
+   db:db,experimentalEnabled:true).balances()).single.balanceMinor,27450);
+  expect((await db.customSelect(
+   'SELECT count(*) AS n FROM fresh_finance_account_entry_links')
+    .getSingle()).read<int>('n'),1);
+  final goals=jsonDecode(paid.finance.getString('waffra_goals_v24')!) as List;
+  expect(goals.single['saved'],0.0);
+  final again=await authority.settleLinkedGoalDue(
+   baseline:paid,goalId:'goal',recurringId:'rent',
+   dueKey:'rec_rent_2026_10',amountMinor:12550,
+   confirmedAtIso:'2026-10-24T12:00:01',
+   userConfirmed:true,selectedAccountId:'bank');
+  expect(again.ledgerRaw,paid.ledgerRaw);
+  expect((await WaffraAccountsRepository(
+   db:db,experimentalEnabled:true).balances()).single.balanceMinor,27450);
+  expect((await db.customSelect(
+   'SELECT count(*) AS n FROM fresh_finance_account_entry_links')
+   .getSingle()).read<int>('n'),1);
+ });
+
+ test('M447 invalid goal cash account rejects settlement and preserves saved goal money',()async{
+  final previous=await session.loadForDashboardOrWidget();
+  await session.saveChangedFields(baseline:previous,
+   changedValues:<String,Object?>{
+    'waffra_goals_v24':jsonEncode([
+     {'id':'goal','name':'Rent goal','target':2500.0,'saved':100.0,
+      'dueDate':'2026-10-24T00:00:00'},
+    ]),
+    'waffra_recurring_v24':jsonEncode([
+     {...schedule,'linkedGoalId':'goal',
+      'startAt':'2026-10-24T00:00:00'},
+    ]),
+   });
+  final baseline=await load();
+  final before=await snapshot.read();
+  await expectLater(authority.settleLinkedGoalDue(
+   baseline:baseline,goalId:'goal',recurringId:'rent',
+   dueKey:'rec_rent_2026_10',amountMinor:12550,
+   confirmedAtIso:'2026-10-24T12:00:00',
+   userConfirmed:true,selectedAccountId:'absent'),throwsStateError);
+  expect((await snapshot.read()).digest,before.digest);
+  expect((await db.customSelect(
+   'SELECT count(*) AS n FROM fresh_finance_entries')
+   .getSingle()).read<int>('n'),0);
+  expect((await db.customSelect(
+   'SELECT count(*) AS n FROM fresh_finance_account_entry_links')
+   .getSingle()).read<int>('n'),0);
+ });
+
 }
