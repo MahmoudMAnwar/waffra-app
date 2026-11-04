@@ -47,6 +47,8 @@ class M453QueueSafetyTests(unittest.TestCase):
         self.assertNotIn("actions/checkout", raw)
         self.assertIn("pr.head?.repo?.full_name !== repository", raw)
         self.assertIn("run.head_sha === latest", raw)
+        self.assertIn("refreshed.data.head.sha !== latest", raw)
+        self.assertIn("Date.parse(run.created_at) >= cutoff", raw)
         self.assertIn("run.event !== 'pull_request'", raw)
         self.assertIn("run.id === context.runId", raw)
         self.assertIn("linked.number === pr.number", raw)

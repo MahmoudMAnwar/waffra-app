@@ -74,7 +74,18 @@ jobs:
               }
               const latest = pr.head.sha;
               const branch = pr.head.ref;
+              const cutoff = Date.parse(pr.updated_at);
+              if (!Number.isFinite(cutoff)) continue;
               for (let page = 1; page <= 10; page++) {
+                // A newer push during cleanup must never be mistaken for an old run.
+                const refreshed = await github.rest.pulls.get({
+                  owner, repo, pull_number: pr.number,
+                });
+                if (refreshed.data.state !== 'open' ||
+                    refreshed.data.head.sha !== latest) {
+                  core.info('PR head moved; stop scanning PR #' + pr.number);
+                  break;
+                }
                 const response = await github.rest.actions.listWorkflowRunsForRepo({
                   owner, repo, branch, event: 'pull_request',
                   per_page: 100, page,
@@ -83,6 +94,8 @@ jobs:
                 for (const run of runs) {
                   scanned++;
                   if (!active.has(run.status) ||
+                      !run.created_at ||
+                      Date.parse(run.created_at) >= cutoff ||
                       run.head_sha === latest ||
                       run.head_branch !== branch ||
                       run.event !== 'pull_request' ||
