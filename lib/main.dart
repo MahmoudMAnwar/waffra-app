@@ -4681,7 +4681,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       // in-memory ledger. A cancellation does not post or clear postponement.
       final chosen=await reviewSmsAccountLinks([MoneyEntry(
        id:id,title:r.title,category:r.category,amount:r.amount,
-       income:r.income,date:DateTime.now(),sourceType:'recurring')]);
+       income:r.income,date:DateTime.now(),sourceType:'recurring')],
+       recurringId:r.id);
       if(chosen==null)return;
       if(!entries.any((e)=>e.id==id)){
        setState(()=>entries.insert(0,MoneyEntry(
@@ -4756,7 +4757,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  /// before posting an explicitly reviewed bank SMS. Guarded legacy keeps the
  /// existing SMS save behavior, without a shadow account database.
  Future<({List<String?>? ids,int? generation})?> reviewSmsAccountLinks(
-  List<MoneyEntry> candidates)async{
+  List<MoneyEntry> candidates,{String? recurringId})async{
   final bridge=_financeBinding?.accountsBridge;
   if(bridge==null)return (ids:null,generation:null);
   if(candidates.isEmpty)return (ids:null,generation:null);
@@ -4772,6 +4773,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // Manual, recurring, goal-due and uncertain bank messages stay unassigned
    // until the user makes an explicit choice; never inherit Home's header.
    final accountEvidence=WaffraVerifiedAccountsApi(bridge:bridge);
+   // A recurring template owns its default, not the active Home header.
+   // A change in this review applies to this payment only; users manage
+   // future defaults separately in Accounts -> Recurring defaults.
+   if(recurringId!=null&&candidates.length==1){
+    try{
+     final saved=await accountEvidence.recurringDefaultAccount(recurringId);
+     if(saved!=null&&active.any((a)=>a.id==saved))assigned[0]=saved;
+    }catch(_){
+     // Missing/unverified template means explicit choice or unassigned.
+    }
+   }
    for(var i=0;i<candidates.length;i++){
     final item=candidates[i];
     if(item.sourceType!='sms'||item.notes.trim().isEmpty)continue;
@@ -4797,9 +4809,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      content:SizedBox(width:double.maxFinite,
       height:waffraKeyboardDialogListHeight(ctx,desired:500),
       child:ListView(children:[
-       WaffraText(waffraIsEnglish?
-        'Choose the actual bank or cash account. No account is optional.':
-        'اختار الحساب الفعلي لكل عملية، أو سيبها بدون ربط.'),
+       WaffraText(recurringId!=null
+        ?(waffraIsEnglish
+          ?'This selection is for this payment only. Change future defaults from Accounts.'
+          :'الاختيار لهذه الدفعة فقط. غيّر الحساب للدفعات القادمة من الحسابات.')
+        :(waffraIsEnglish
+          ?'Choose the actual bank or cash account. No account is optional.'
+          :'اختار الحساب الفعلي لكل عملية، أو سيبها بدون ربط.')),
        const SizedBox(height:12),
        for(var n=0;n<candidates.length;n++)
         Padding(padding:const EdgeInsets.only(bottom:12),
