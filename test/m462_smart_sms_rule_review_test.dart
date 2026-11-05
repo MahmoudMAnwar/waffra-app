@@ -282,7 +282,12 @@ void main(){
   expect(home,contains('initialSmsTransfer:prefill'));
   expect(home,contains('await api.transfer(id:draft.requestId'));
   expect(home,contains('ack=await WaffraAutoSms.acknowledge([id])'));
-  expect(form,contains('widget.initialSmsTransfer!=null?null:'));
+  // The transfer mode must remain locked for both SMS-prefilled transfers
+  // and the user's explicit Transfer action from Home +.
+  expect(form,contains('widget.initialSmsTransfer!=null||'));
+  expect(form,contains(
+   'widget.initialOperation==WaffraAccountOperation.transfer?null:(choice){'));
+  expect(form,contains('mode=WaffraAccountOperation.transfer;'));
   expect(manager,contains('widget.onTransferConfirmed?.call(draft)'));
  });
 
