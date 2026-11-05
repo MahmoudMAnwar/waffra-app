@@ -1,3 +1,9 @@
+[M466-M457-M464-QA] 2026-11-05 — Keep the original verified manual and Home+ contracts current
+============================================================================================================
+- Updated the older M457 UI source contract to assert no attached manual save falls back to legacy full-ledger replacement and that staged receipt paths are stripped before atomic encrypted bytes are written.
+- Updated M464 Home+ test to require the new owner's exact single manual popup (income/expense/transfer), with transfer still posting through the verified account-to-account writer and not as a separate Home+ button.
+- Both changes remain explicit bounded regression checks; they do not remove any existing finance authorization tests. Post-merge signed APK and real-device confirmation remain pending.
+
 [M466] 2026-11-05 — Manual income/expense with attachment and account + unified Home popup
 =========================================================================================================
 - User-device reproduction (Android): after amount, child category, photo and explicit account selection, tapping Confirm displayed 'تعذر حفظ المعاملة. بياناتك السابقة لم تتغير'; both income and expense affected. The M457 path only handled UNATTACHED manual entries. Any receipt fell through to optimistic legacy whole-ledger persist, which a verified SQLCipher source refuses.
