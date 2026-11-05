@@ -1,9 +1,14 @@
 import 'waffra_encrypted_full_finance_reset.dart';
 import 'waffra_accounts_schema.dart';
+import 'waffra_account_context_read.dart';
+import 'waffra_account_context_schema.dart';
+import 'waffra_account_context_repository.dart';
 import 'waffra_portable_encrypted_backup_exporter.dart';
 import 'waffra_accounts_repository.dart';
 import 'waffra_fresh_finance_domain_repository.dart';
 import 'waffra_verified_goal_due_snapshot_writer.dart';
+import 'waffra_verified_goal_funding_writer.dart';
+import 'waffra_verified_active_accounts_restore.dart';
 import 'waffra_encrypted_transaction_recycle.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -94,6 +99,38 @@ class WaffraVerifiedEncryptedFinanceBridge {
     }
   }
 
+  /// Restore is permitted ONLY on an already active verified encrypted vault.
+  /// Caller must first cold-attest the new archive, obtain explicit biometric
+  /// consent and save the old vault's encrypted rescue outside the app.
+  Future<WaffraVerifiedAccountsRestoreReceipt> applyVerifiedV3Restore({
+    required WaffraEncryptedHomeWitness baseline,
+    required String encryptedArchive,required String password,
+    required String savedRescueArchive,required String rescuePassword,
+    required String preflightChecksum,required bool userConfirmed,
+    required bool externallySavedRescueConfirmed,
+  }) async {
+    if(!experimentalEnabled||!userConfirmed||
+       !externallySavedRescueConfirmed) {
+      throw StateError('Verified restore needs an external rescue and approval.');
+    }
+    return WaffraExperimentalWriterGate(
+      disposableDirectory:writerDirectory,experimentalEnabled:true,
+    ).withExclusiveAccess(()async{
+      await _requireActivatedUnderLock();
+      return WaffraVerifiedActiveAccountsRestore(
+        store:snapshot.store,snapshot:snapshot,experimentalEnabled:true,
+      ).restore(
+        encryptedArchive:encryptedArchive,password:password,
+        savedRescueArchive:savedRescueArchive,
+        rescuePassword:rescuePassword,
+        expectedGeneration:baseline.generation,
+        expectedDigest:baseline.digest,
+        preflightChecksum:preflightChecksum,userConfirmed:true,
+        externallySavedRescueConfirmed:true,
+      );
+    });
+  }
+
   Future<String> exportPortableBackup(String password) =>
       WaffraPortableEncryptedBackupExporter(
         snapshot: snapshot,
@@ -118,6 +155,36 @@ class WaffraVerifiedEncryptedFinanceBridge {
   ///
   /// The caller's generation must still match: even an unrelated widget edit
   /// means the Home screen must reload before confirming any cash movement.
+  /// Atomic goal funding on the preexisting verified encrypted source.
+  /// A funding movement is not an expense and never inherits Home's header.
+  Future<void> fundVerifiedGoal({
+    required WaffraEncryptedHomeWitness baseline,
+    required String goalId,required int amountMinor,
+    required String movementId,required String occurredIso,
+    required String? sourceAccountId,required bool userConfirmed,
+    bool release=false,
+  }) async {
+    if(!experimentalEnabled||!userConfirmed){
+      throw StateError('Goal account source requires verified approval.');
+    }
+    await WaffraExperimentalWriterGate(
+      disposableDirectory:writerDirectory,experimentalEnabled:true,
+    ).withExclusiveAccess(() async {
+      await _requireActivatedUnderLock();
+      await WaffraAccountsSchema.install(snapshot.store);
+      await WaffraAccountContextSchema.install(snapshot.store);
+      await WaffraVerifiedGoalFundingWriter(
+        store:snapshot.store,snapshot:snapshot,experimentalEnabled:true,
+      ).fund(
+        expectedGeneration:baseline.generation,
+        expectedDigest:baseline.digest,
+        goalId:goalId,amountMinor:amountMinor,movementId:movementId,
+        occurredIso:occurredIso,sourceAccountId:sourceAccountId,
+        userConfirmed:true,release:release,
+      );
+    });
+  }
+
   Future<WaffraGoalDueSqlReceipt> settleLinkedGoalDue({
     required WaffraEncryptedHomeWitness baseline,
     required String goalId,
@@ -1188,6 +1255,7 @@ class WaffraVerifiedEncryptedFinanceBridge {
         }else{
           await WaffraAccountsSchema.requireReady(snapshot.store);
         }
+        await WaffraAccountContextSchema.install(snapshot.store);
         final accounts=WaffraAccountsRepository(
           db:snapshot.store,experimentalEnabled:true);
         final result=await change(accounts);
@@ -1202,6 +1270,55 @@ class WaffraVerifiedEncryptedFinanceBridge {
     });
   }
 
+
+
+  Future<T> readVerifiedAccountMetadata<T>(
+    Future<T> Function(WaffraAccountContextRepository context) reader,
+  )async{
+    if(!experimentalEnabled)throw StateError('Account context is not active.');
+    return WaffraExperimentalWriterGate(
+      disposableDirectory:writerDirectory,experimentalEnabled:true,
+    ).withExclusiveAccess(()async{
+      await _requireActivatedUnderLock();
+      await WaffraAccountContextSchema.install(snapshot.store);
+      final before=await snapshot.read();
+      final result=await reader(WaffraAccountContextRepository(
+        store:snapshot.store,experimentalEnabled:true));
+      final after=await snapshot.read();
+      if(before.generation!=after.generation||before.digest!=after.digest){
+        throw StateError('Account metadata changed during review.');
+      }
+      return result;
+    });
+  }
+
+  /// M448 read-only account context. Every row, account association and budget
+  /// sum is read under the same verified Home/Widget native source lock.
+  Future<WaffraAccountContextReadResult> readVerifiedAccountContext({
+    required String monthIso,
+    String? selectedAccountId,
+  }) async {
+    if (!experimentalEnabled) {
+      throw StateError('Encrypted account context is not active.');
+    }
+    return WaffraExperimentalWriterGate(
+      disposableDirectory: writerDirectory, experimentalEnabled: true,
+    ).withExclusiveAccess(() async {
+      await _requireActivatedUnderLock();
+      final before = await snapshot.read();
+      final result = await WaffraAccountContextRead.load(
+        store: snapshot.store, monthIso: monthIso,
+        selectedAccountId: selectedAccountId,
+      );
+      final after = await snapshot.read();
+      if (before.generation != after.generation ||
+          before.digest != after.digest) {
+        throw StateError('Finance changed while reading account context.');
+      }
+      return result;
+    });
+  }
+
   /// Read account balances with a source witness, not from UI preferences.
   /// The result must be presented together with its snapshot generation.
   Future<({WaffraEncryptedHomeWitness witness,
@@ -1212,6 +1329,7 @@ class WaffraVerifiedEncryptedFinanceBridge {
     ).withExclusiveAccess(() async {
       await _requireActivatedUnderLock();
       await WaffraAccountsSchema.requireReady(snapshot.store);
+      await WaffraAccountContextSchema.install(snapshot.store);
       final current=await snapshot.read();
       final accounts=await WaffraAccountsRepository(
         db:snapshot.store,experimentalEnabled:true).balances();
