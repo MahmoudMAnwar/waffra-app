@@ -105,10 +105,21 @@ void main() {
       "UPDATE fresh_finance_categories SET name='Forged' WHERE category_id='food'",
     );
   });
-  test('forged category parent rejects all concurrent edits',() async {
-    await rejectAfterCorruption(
-      "UPDATE fresh_finance_categories SET parent_id='unknown' WHERE category_id='food'",
+  test('forged category parent is blocked directly by SQLCipher trigger',() async {
+    final before=await snapshot().read();
+    await expectLater(
+      vault.customStatement(
+        "UPDATE fresh_finance_categories SET parent_id='unknown' WHERE category_id='food'",
+      ),
+      throwsA(isA<Exception>()),
     );
+    final after=await snapshot().read();
+    expect(after.digest,before.digest);
+    expect(after.generation,before.generation);
+    final parent=await vault.customSelect(
+      "SELECT parent_id FROM fresh_finance_categories WHERE category_id='food'",
+    ).getSingle();
+    expect(parent.read<String>('parent_id'),'');
   });
   test('forged category income flag rejects all concurrent edits',() async {
     await rejectAfterCorruption(

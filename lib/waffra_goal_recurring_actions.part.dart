@@ -25,63 +25,70 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
     ]));
   return choice==true;
  }
- Future<bool> _ensureLinkedRecurringForGoal(SavingGoal goal)async{
-  final deadline=goal.dueDate;
-  final linkedIndex=recurring.indexWhere((r)=>r.linkedGoalId==goal.id);
-  if(deadline==null||goal.target<=0||!goal.active){
-   if(linkedIndex<0)return true;
-   setState(()=>recurring[linkedIndex]=recurring[linkedIndex].copy(active:false));
-  }else{
-   final available=categories.where((c)=>!c.income&&c.isSubcategory).toList();
+ Future<bool> _saveGoalAndLinkedDueAtomically(
+  SavingGoal updated,{required bool creating,required bool linkNew,
+  required String operation})async{
+  final i=goals.indexWhere((g)=>g.id==updated.id);
+  if((creating&&i>=0)||(!creating&&i<0)){
+   if(mounted)snack(context,waffraIsEnglish?
+    'Goal changed; reload first.':'الهدف اتغير؛ حدّث البيانات.');
+   return false;
+  }
+  final linked=recurring.where((r)=>r.linkedGoalId==updated.id).toList();
+  if(linked.length>1){
+   if(mounted)snack(context,waffraIsEnglish?
+    'Duplicate linked due dates need review.':'الاستحقاقات المرتبطة تحتاج مراجعة.');
+   return false;
+  }
+  final date=updated.dueDate;
+  RecurringBill? next;
+  if(linked.isNotEmpty){
+   final old=linked.single;
+   next=date==null||updated.target<=0||!updated.active?
+    old.copy(active:false,title:'استحقاق '+updated.name):
+    old.copy(title:'استحقاق '+updated.name,amount:updated.target,
+     day:date.day,startAt:date,active:true);
+  }else if(linkNew){
+   if(date==null||updated.target<=0||!updated.active)return false;
+   final available=categories.where((c)=>!c.income&&c.isSubcategory&&
+    waffraCategoryAvailableForNewEntry(categories,c)).toList();
    if(available.isEmpty){
     if(mounted)snack(context,waffraIsEnglish?
-     'An expense subcategory is required for the linked recurring reminder.':
-     'يلزم وجود قسم مصروف فرعي لإنشاء الاستحقاق المتكرر.');
+     'Add an active expense subcategory before linking the due date.':
+     'أضف قسم مصروف فرعي مفعّل قبل ربط الاستحقاق.');
     return false;
    }
-   final rent=available.where((c)=>goal.name.contains('إيجار')&&
-    c.name=='سكن / إيجار شهري').toList();
-   final category=linkedIndex>=0?recurring[linkedIndex].category:
-    (rent.isNotEmpty?rent.first.name:available.first.name);
-   final next=linkedIndex>=0?recurring[linkedIndex].copy(
-    amount:goal.target,day:deadline.day,startAt:deadline,
-    active:goal.active):
-    RecurringBill(id:newId(),title:'استحقاق '+goal.name,category:category,
-     amount:goal.target,income:false,day:deadline.day,startAt:deadline,
-     linkedGoalId:goal.id);
-   setState((){
-    if(linkedIndex>=0){recurring[linkedIndex]=next;}
-    else{recurring.add(next);}
-   });
+   final chosen=available.firstWhere(
+    (c)=>updated.name.contains('إيجار')&&c.name=='سكن / إيجار شهري',
+    orElse:()=>available.first);
+   next=RecurringBill(id:newId(),title:'استحقاق '+updated.name,
+    category:chosen.name,amount:updated.target,income:false,
+    day:date.day,startAt:date,linkedGoalId:updated.id);
   }
-  if(!await _persistModuleOrReload(WaffraFinanceRoute.recurringCreateEditDeleteRestore,
-    operation:'goal-recurring-link'))return false;
-  await syncRecurringReminders();
-  return true;
+  // Mutate both in-memory collections before the ONE source-aware save.
+  // The SQLCipher projection and snapshot commit succeed or roll back together.
+  setState((){
+   if(creating){goals.add(updated);}else{goals[i]=updated;}
+   if(next!=null){
+    final j=recurring.indexWhere((r)=>r.linkedGoalId==updated.id);
+    if(j<0){recurring.add(next!);}else{recurring[j]=next!;}
+   }
+  });
+  final saved=await _persistModuleOrReload(
+   WaffraFinanceRoute.goalCreateEditDeleteRestore,operation:operation);
+  if(saved&&next!=null)await syncRecurringReminders();
+  return saved;
  }
 
- /// Pause/resume keeps the saved wallet intact and suspends linked due entries.
+ /// Pause/resume edits its linked schedule in the same transaction.
  Future<void> setGoalActive(SavingGoal original,bool enabled)async{
   if(!mounted)return;
   await _ensureFinanceBound();
   if(!mounted)return;
-  final matches=goals.where((g)=>g.id==original.id).toList();
-  if(matches.length!=1||matches.single.active==enabled)return;
-  final current=matches.single;
-  final updated=current.copy(active:enabled);
-  setState((){
-   final index=goals.indexWhere((g)=>g.id==current.id);
-   if(index>=0)goals[index]=updated;
-  });
-  if(!await _persistModuleOrReload(
-   WaffraFinanceRoute.goalCreateEditDeleteRestore,
-   operation:'goal-active-toggle'))return;
-  if(updated.dueDate!=null&&updated.target>0){
-   final linked=await _ensureLinkedRecurringForGoal(updated);
-   if(!linked&&mounted)snack(context,waffraIsEnglish?
-    'Goal saved, but linked due date needs review.':
-    'تم حفظ الهدف، لكن الاستحقاق المرتبط يحتاج مراجعة.');
-  }
+  final found=goals.where((g)=>g.id==original.id).toList();
+  if(found.length!=1||found.single.active==enabled)return;
+  await _saveGoalAndLinkedDueAtomically(found.single.copy(active:enabled),
+   creating:false,linkNew:false,operation:'goal-active-and-due');
  }
  Future<void> editGoal(SavingGoal existing)async{
   final name=TextEditingController(text:existing.name);
@@ -166,19 +173,11 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
     try{await WaffraReminders.requestPermission();}catch(_){/* In-app remains available. */}
    }
    if(!mounted)return;
-   final oldLinked=recurring.any((r)=>r.linkedGoalId==existing.id);
-   setState((){
-    final i=goals.indexWhere((g)=>g.id==existing.id);
-    if(i>=0)goals[i]=updated;
-   });
-   if(!await _persistModuleOrReload(WaffraFinanceRoute.goalCreateEditDeleteRestore,
-     operation:'goal-edit'))return;
-   if(oldLinked){
-    await _ensureLinkedRecurringForGoal(updated);
-   }else if(updated.dueDate!=null&&updated.target>0&&updated.active&&
-     await _confirmGoalDueRecurringLink(updated)){
-    await _ensureLinkedRecurringForGoal(updated);
-   }
+   final wasLinked=recurring.any((r)=>r.linkedGoalId==existing.id);
+   final linkNew=!wasLinked&&updated.dueDate!=null&&updated.target>0&&
+    updated.active&&await _confirmGoalDueRecurringLink(updated);
+   await _saveGoalAndLinkedDueAtomically(updated,
+    creating:false,linkNew:linkNew,operation:'goal-edit-and-due');
   }finally{disposeLater([name,target]);}
  }
 }

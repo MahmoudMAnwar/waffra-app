@@ -1,4 +1,8 @@
 import 'waffra_accounts_repository.dart';
+import 'waffra_account_context_read.dart';
+import 'waffra_account_context_repository.dart';
+import 'waffra_account_context_policy.dart';
+import '../waffra_bank_sms_facts.dart';
 import 'waffra_unified_finance_writer.dart';
 import 'waffra_verified_encrypted_finance_bridge.dart';
 
@@ -92,6 +96,9 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
   );
  }
 
+ /// Bank-SMS and recurring confirmations supply one explicit account decision
+ /// per posting. A null decision is UNASSIGNED, never the visible header.
+ /// No fake cash account is added while identifying a bank message.
  /// The bank-SMS review screen or recurring scheduler must submit its own
  /// confirmed transaction payloads, SMS hashes and explicit account choices.
  /// The same witnessed SQLCipher writer handles deduplication, money posting
@@ -106,7 +113,7 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
   if(displayed==null||!userConfirmed||records.isEmpty||
      records.length!=messageHashes.length||
      records.length!=selectedAccountIds.length||
-     selectedAccountIds.any((id)=>id==null||id.trim().isEmpty)){
+     selectedAccountIds.any((id)=>id!=null&&id.trim().isEmpty)){
    throw StateError('Reload balances and confirm every account assignment.');
   }
   _lastDisplayed=null;
@@ -116,6 +123,80 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
    expectedAccountGeneration:displayed.generation,
   );
  }
+
+
+ /// Return the complete ledger (including unassigned entries) and the
+ /// independent monthly budget totals for the selected account context.
+ Future<WaffraAccountContextReadResult> readAccountContext({
+  required String monthIso,String? selectedAccountId,
+ })=>bridge.readVerifiedAccountContext(
+  monthIso:monthIso,selectedAccountId:selectedAccountId);
+
+ /// Attach a past unassigned entry only AFTER the account screen has a
+ /// witnessed generation and the user explicitly confirms. This does not
+ /// create a second income/expense or rewrite the original transaction.
+ Future<void> linkUnassignedEntry({
+  required String entryId,required String accountId,
+  required bool userConfirmed,
+ })=>_commit<void>((repository)async{
+   await WaffraAccountContextRead.attachPreviouslyUnassigned(
+    store:repository.db,entryId:entryId,accountId:accountId,
+    confirmedIso:DateTime.now().toIso8601String(),
+    userConfirmed:true,
+   );
+  },userConfirmed:userConfirmed);
+
+
+ /// A goal's overall progress stays independent of the selected account.
+ Future<WaffraGoalAccountProgress> goalAccountProgress({
+  required String goalId,required String selectedAccountId,
+ })=>bridge.readVerifiedAccountMetadata((context)=>context.goalProgress(
+  goalId:goalId,selectedAccountId:selectedAccountId));
+
+ /// The source is an existing goal funding/release movement, never a second
+ /// savings deposit or expense. Requires witnessed confirmation.
+ Future<bool> attributeGoalMovement({
+  required String movementId,required String accountId,
+  required bool userConfirmed,
+ })=>_commit<bool>((accounts)=>WaffraAccountContextRepository(
+   store:accounts.db,experimentalEnabled:true).attributeGoalMovement(
+    movementId:movementId,accountId:accountId,
+    linkedIso:DateTime.now().toIso8601String(),
+    userConfirmed:true),userConfirmed:userConfirmed);
+
+ /// Read available recurring templates with their own default account.
+ /// Reminder enable/disable is independent of these financial references.
+ Future<List<WaffraRecurringAccountTemplate>> recurringAccountTemplates()=>
+  bridge.readVerifiedAccountMetadata((context)=>context.recurringTemplates());
+
+ Future<String?> recurringDefaultAccount(String recurringId)=>
+  bridge.readVerifiedAccountMetadata((context)=>
+   context.recurringDefault(recurringId));
+
+ /// Changing an alert/reminder does not trigger this accounting operation.
+ Future<void> setRecurringDefaultAccount({
+  required String recurringId,required String? accountId,
+  required bool userConfirmed,
+ })=>_commit<void>((accounts)=>WaffraAccountContextRepository(
+   store:accounts.db,experimentalEnabled:true).setRecurringDefault(
+    recurringId:recurringId,accountId:accountId,
+    changedIso:DateTime.now().toIso8601String(),
+    userConfirmed:true),userConfirmed:userConfirmed);
+
+ Future<void> registerVerifiedBankSuffix({
+  required String accountId,required String lastFour,
+  required bool userConfirmed,
+ })=>_commit<void>((accounts)=>WaffraAccountContextRepository(
+  store:accounts.db,experimentalEnabled:true).setVerifiedBankSuffix(
+   accountId:accountId,lastFour:lastFour,
+   confirmedIso:DateTime.now().toIso8601String(),
+   userConfirmed:true),userConfirmed:userConfirmed);
+
+ /// Null account means unassigned and MUST NOT be replaced by header cash.
+ Future<WaffraSmsAccountDecision> suggestSmsAccount(
+  WaffraBankSmsFacts facts,
+ )=>bridge.readVerifiedAccountMetadata(
+  (context)=>context.inferSmsAccount(facts));
 
  @override
  Future<void> renameAccount({required String id,required String name,

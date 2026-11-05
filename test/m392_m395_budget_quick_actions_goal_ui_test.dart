@@ -36,9 +36,9 @@ void main() {
   expect(source,contains("_handleGoalCardAction(g,'delete')"));
   expect(source,contains("setGoalActive(g,enabled)"));
   expect(linked,contains('Future<void> setGoalActive('));
-  expect(linked,contains("operation:'goal-active-toggle'"));
-  expect(linked,contains('if(deadline==null||goal.target<=0||!goal.active)'));
-  expect(linked,contains('active:goal.active'));
+  expect(linked,contains("operation:'goal-active-and-due'"));
+  expect(linked,contains('date==null||updated.target<=0||!updated.active'));
+  expect(linked,contains('active:true'));
   expect(linked,contains('active:existing.active'));
   expect(source,contains('saved:saved??this.saved'));
  });
@@ -86,16 +86,17 @@ void main() {
  test('M396 new due entries require explicit consent, never silently debit',(){
   final home=File('lib/main.dart').readAsStringSync();
   final linked=File('lib/waffra_goal_recurring_actions.part.dart').readAsStringSync();
-  expect(home,contains('requestedRecurring=await _confirmGoalDueRecurringLink(g)'));
-  expect(home,contains('if(requestedRecurring&&mounted)'));
+  expect(home,contains('final linkNew=g.dueDate!=null&&g.target>0&&g.active&&'));
+  expect(home,contains('await _confirmGoalDueRecurringLink(g)'));
+  expect(home,contains('await this._saveGoalAndLinkedDueAtomically(g,'));
   expect(linked,contains('Future<bool> _confirmGoalDueRecurringLink('));
   expect(linked,contains("Navigator.pop(ctx,false)"));
   expect(linked,contains("Navigator.pop(ctx,true)"));
   expect(linked,contains('No money is deducted now.'));
-  expect(linked,contains('if(oldLinked)'));
+  expect(linked,contains('final wasLinked=recurring.any('));
   expect(linked,contains('await _confirmGoalDueRecurringLink(updated)'));
   final confirm=linked.split('Future<bool> _confirmGoalDueRecurringLink(').last
-    .split('Future<bool> _ensureLinkedRecurringForGoal(').first;
+    .split('Future<bool> _saveGoalAndLinkedDueAtomically(').first;
   expect(confirm,isNot(contains('entries.add(')));
   expect(confirm,isNot(contains('recurring.add(')));
  });

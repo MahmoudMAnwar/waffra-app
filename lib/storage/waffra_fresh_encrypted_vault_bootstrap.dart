@@ -162,6 +162,41 @@ CREATE TABLE IF NOT EXISTS fresh_finance_categories(
   budget_minor INTEGER NOT NULL DEFAULT 0 CHECK(budget_minor >= 0),
   source_json TEXT NOT NULL
 )''');
+      // M452: new vaults enforce root/subcategory integrity at SQL level.
+      // Existing encrypted vaults also reject invalid edits in the snapshot
+      // projection guard without destructive schema replacement.
+      await store.customStatement('''
+CREATE TRIGGER IF NOT EXISTS m452_category_parent_insert
+BEFORE INSERT ON fresh_finance_categories
+WHEN COALESCE(NEW.parent_id, '') <> ''
+BEGIN
+ SELECT CASE WHEN NOT EXISTS (
+  SELECT 1 FROM fresh_finance_categories p
+  WHERE p.category_id=NEW.parent_id AND COALESCE(p.parent_id, '')=''
+   AND p.is_income=NEW.is_income
+ ) THEN RAISE(ABORT, 'Invalid category parent') END;
+END''');
+      await store.customStatement('''
+CREATE TRIGGER IF NOT EXISTS m452_category_parent_update
+BEFORE UPDATE OF parent_id,is_income ON fresh_finance_categories
+BEGIN
+ SELECT CASE WHEN COALESCE(NEW.parent_id, '')<>'' AND NOT EXISTS (
+  SELECT 1 FROM fresh_finance_categories p
+  WHERE p.category_id=NEW.parent_id AND COALESCE(p.parent_id, '')=''
+   AND p.is_income=NEW.is_income
+ ) THEN RAISE(ABORT, 'Invalid category parent') END;
+ SELECT CASE WHEN EXISTS (
+  SELECT 1 FROM fresh_finance_categories c WHERE c.parent_id=OLD.category_id
+ ) AND (COALESCE(NEW.parent_id, '')<>'' OR NEW.is_income<>OLD.is_income)
+ THEN RAISE(ABORT, 'Cannot reparent a category with children') END;
+END''');
+      await store.customStatement('''
+CREATE TRIGGER IF NOT EXISTS m452_category_parent_delete
+BEFORE DELETE ON fresh_finance_categories
+WHEN EXISTS (
+ SELECT 1 FROM fresh_finance_categories c WHERE c.parent_id=OLD.category_id
+)
+BEGIN SELECT RAISE(ABORT, 'Cannot delete parent category with children'); END''');
       await store.customStatement('''
 CREATE TABLE IF NOT EXISTS fresh_finance_goals(
   goal_id TEXT PRIMARY KEY NOT NULL,
