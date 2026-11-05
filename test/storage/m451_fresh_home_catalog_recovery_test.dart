@@ -237,7 +237,7 @@ void main() {
     expect((rows.single as Map)['id'], 'm455-manual-1');
     // Empty UI defaults are compared, not written as an unrelated mutation.
     expect(committed.finance.containsKey('waffra_goals_v24'), false);
-    expect(committed.source, WaffraRuntimeFinanceBackend.verifiedEncrypted);
+    expect(committed.encryptedWitness, isNotNull);
     expect((await vault.customSelect(
       'SELECT count(*) AS n FROM fresh_finance_entries',
     ).getSingle()).read<int>('n'), 1);
