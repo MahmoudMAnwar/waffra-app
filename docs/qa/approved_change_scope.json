@@ -10,7 +10,8 @@
     "Add targeted source and behavior regression tests; preserve signed APK, M385 change-scope review, encrypted finance safety and all legacy records.",
     "When a confirmed manual income or expense supplies a safe new description, append the keyword to the reusable learned rule bucket for the same financial direction, retaining per-keyword category mapping across different merchant categories; do not create another learned rule for every manual transaction.",
     "When a confirmed bank SMS, bank transfer or exclusion supplies a safe phrase from the same authenticated sender and kind, update the existing system-learned rule instead of duplicating it; never cross sender security boundaries or copy an amount, bank identifier or OTP.",
-    "If the same phrase maps to contradictory categories, leave the existing encrypted rule unchanged and require human review. Existing explicit user-defined and auto-post authorizations remain immutable under automatic learning."
+    "If the same phrase maps to contradictory categories, leave the existing encrypted rule unchanged and require human review. Existing explicit user-defined and auto-post authorizations remain immutable under automatic learning.",
+    "Group the automatically learned classification list under clear income, expense, transfer and exclusion sections, keeping manual user-created rules separate and their settings unchanged."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
@@ -61,6 +62,10 @@
       {
         "start": " Future<void> _edit({WaffraSmsLocalRule? existing,String? seed,String? kindHint})async{\n",
         "end": " @override Widget build(BuildContext context)=>Scaffold(\n"
+      },
+      {
+        "start": " @override Widget build(BuildContext context)=>Scaffold(\n",
+        "end": null
       }
     ]
   }
