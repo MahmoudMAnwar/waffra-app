@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M462-reuse-safe-income-expense-transfer-exclusion-buckets-20261105",
-  "human_scope_review": "Owner explicitly approved the simple three-screen Arabic concept on 2026-11-05: understood messages create classification rules automatically; uncertain messages open an editable rule with sender, type, safe keywords and category prefilled as far as available. This PR is stacked on M461 to preserve its proven Android SQLCipher and SMS fixes, is draft, and requires exact-head CI, independent human code scope approval and signed real phone testing before release. Neither rule learning nor UI changes may authorize any ledger writes or expose raw OTPs. Follow-up owner explicitly requested parallel PR work and reuse of existing automatic income/expense/transfer/excluded rule buckets when new manual or scanned classifications are confirmed; never silently add a fresh rule for every event. Preserve distinct financial category per safe phrase rather than overwriting a global category, and never alter custom auto-post permission.",
+  "human_scope_review": "Owner explicitly approved the simple three-screen Arabic concept on 2026-11-05: understood messages create classification rules automatically; uncertain messages open an editable rule with sender, type, safe keywords and category prefilled as far as available. This PR is stacked on M461 to preserve its proven Android SQLCipher and SMS fixes, is draft, and requires exact-head CI, independent human code scope approval and signed real phone testing before release. Neither rule learning nor UI changes may authorize any ledger writes or expose raw OTPs. Follow-up owner explicitly requested parallel PR work and reuse of existing automatic income/expense/transfer/excluded rule buckets when new manual or scanned classifications are confirmed; never silently add a fresh rule for every event. Preserve distinct financial category per safe phrase rather than overwriting a global category, and never alter custom auto-post permission. Same-day follow-up: owner wants bank SMS to request budget selection if active budgets exist and to allow background posting without one otherwise; finance posting remains subject to the existing explicit per-rule authorization and verified account. Change to background worker is a restriction on posting scope, not a new auto-post permission.",
   "user_requested_changes": [
     "Recognize a verified bank SMS using its independent directional facts and specific built-in category, then securely save a deduplicated sender-scoped local classification rule without another multi-step setup dialog after the user confirms the transaction.",
     "When classification is uncertain, immediately open a pre-populated beginner-friendly rule form containing a suggested name, actual sender, safe phrase chips, known kind and previously verified category where available, with advanced keyword and optional account controls collapsed.",
@@ -11,7 +11,8 @@
     "When a confirmed manual income or expense supplies a safe new description, append the keyword to the reusable learned rule bucket for the same financial direction, retaining per-keyword category mapping across different merchant categories; do not create another learned rule for every manual transaction.",
     "When a confirmed bank SMS, bank transfer or exclusion supplies a safe phrase from the same authenticated sender and kind, update the existing system-learned rule instead of duplicating it; never cross sender security boundaries or copy an amount, bank identifier or OTP.",
     "If the same phrase maps to contradictory categories, leave the existing encrypted rule unchanged and require human review. Existing explicit user-defined and auto-post authorizations remain immutable under automatic learning.",
-    "Group the automatically learned classification list under clear income, expense, transfer and exclusion sections, keeping manual user-created rules separate and their settings unchanged."
+    "Group the automatically learned classification list under clear income, expense, transfer and exclusion sections, keeping manual user-created rules separate and their settings unchanged.",
+    "When a trusted, separately authorized SMS rule permits automatic posting, save without an invented budget only if no active named or historical budget needs user selection; otherwise keep the bank SMS encrypted for review and Android notification. Never infer, auto-create or silently assign a budget; keep account, transfer and duplicate-post guards intact."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
@@ -19,7 +20,8 @@
     "lib/main.dart",
     "lib/waffra_sms_local_rules.dart",
     "lib/waffra_sms_rule_settings_page.dart",
-    "test/m462_smart_sms_rule_review_test.dart"
+    "test/m462_smart_sms_rule_review_test.dart",
+    "lib/waffra_auto_sms_autopost.part.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -65,6 +67,12 @@
       },
       {
         "start": " @override Widget build(BuildContext context)=>Scaffold(\n",
+        "end": null
+      }
+    ],
+    "lib/waffra_auto_sms_autopost.part.dart": [
+      {
+        "start": "abstract final class WaffraAutoSmsAutoPoster {\n",
         "end": null
       }
     ]

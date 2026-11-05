@@ -131,6 +131,23 @@ abstract final class WaffraAutoSmsAutoPoster {
      final categories=(jsonDecode(catalogRaw) as List).map((row)=>
       BudgetCategory.fromJson(Map<String,dynamic>.from(row as Map)))
       .toList(growable:false);
+     // A named budget must be explicitly selected by the owner; never guess
+     // a budget for background SMS, and never auto-create one from a message.
+     // This guard runs AFTER the trusted account and finance-source read but
+     // BEFORE the atomic SMS ledger commit. Income has no budget allocation.
+     final budgetRaw=before.finance.getString('waffra_named_budgets_v1');
+     final budgets=budgetRaw==null?const <WaffraNamedBudget>[]:
+      (jsonDecode(budgetRaw) as List).map((row)=>
+       WaffraNamedBudget.fromJson(Map<String,dynamic>.from(row as Map)))
+       .toList(growable:false);
+     final needsBudgetChoice=!parsed.income&&(
+      budgets.any((b)=>!b.deleted&&b.budgetActive&&b.budget>0)||
+      // Historic category budgets can exist before stand-alone migration.
+      categories.any((c)=>!c.income&&c.budgetActive&&c.budget>0));
+     if(needsBudgetChoice){
+      await keepForReview(candidate);
+      continue;
+     }
      if(!categories.any((c)=>c.isSubcategory&&
        c.name==matched.category&&c.income==matched.income&&
        waffraCategoryAvailableForNewEntry(categories,c))){

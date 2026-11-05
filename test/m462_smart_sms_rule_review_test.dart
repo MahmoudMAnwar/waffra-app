@@ -231,4 +231,22 @@ void main(){
   expect(ui,contains(r"Key('waffra-sms-rule-bucket-$kind')"));
   expect(home,contains('await bulkSmsSheet(initialText:body,'));
  });
+ test('M462 background SMS respects explicit budget choice before auto-save',(){
+  // Gate must read the SAME verified finance snapshot as the posting writer.
+  // A selected budget is never inferred from a learned category or sender.
+  final source=File('lib/waffra_auto_sms_autopost.part.dart').readAsStringSync();
+  expect(source,contains("before.finance.getString('waffra_named_budgets_v1')"));
+  expect(source,contains('WaffraNamedBudget.fromJson'));
+  expect(source,contains('!b.deleted&&b.budgetActive&&b.budget>0'));
+  expect(source,contains('categories.any((c)=>!c.income&&c.budgetActive&&c.budget>0)'));
+  expect(source,contains('final needsBudgetChoice=!parsed.income&&('));
+  expect(source,contains('if(needsBudgetChoice){'));
+  expect(source,contains('await keepForReview(candidate);'));
+  expect(source,contains('await binding.authority.commitConfirmedSms('));
+  expect(source.indexOf('if(needsBudgetChoice){'),lessThan(
+   source.indexOf('await binding.authority.commitConfirmedSms(')));
+  expect(source,contains('await WaffraAutoSms.notifyCommitted('));
+  expect(source,contains('linkedBudget:false'));
+ });
+
 }
