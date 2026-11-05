@@ -72,8 +72,12 @@ void main() {
     )));
     // The one real SAR amount uses the image, but the counter words never do.
     expect(find.byType(WaffraCurrencyMark), findsOneWidget);
-    expect(find.text('497 رسائل بانتظار المراجعة'), findsOneWidget);
-    expect(find.text('500 رسالة من مرسلين'), findsOneWidget);
+    expect(find.byWidgetPredicate((widget) =>
+        widget is Text && widget is! WaffraText &&
+        widget.data == '497 رسائل بانتظار المراجعة'), findsOneWidget);
+    expect(find.byWidgetPredicate((widget) =>
+        widget is Text && widget is! WaffraText &&
+        widget.data == '500 رسالة من مرسلين'), findsOneWidget);
     addTearDown(() => waffraLanguage.value = 'ar');
   });
 
