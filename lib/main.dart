@@ -2,7 +2,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
