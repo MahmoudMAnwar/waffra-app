@@ -8,7 +8,6 @@ import 'package:waffra/storage/waffra_home_finance_persistence.dart';
 import 'package:waffra/storage/waffra_legacy_finance_writer_coordinator.dart';
 import 'package:waffra/storage/waffra_production_finance_routing_gate.dart';
 import 'package:waffra/storage/waffra_production_finance_source_guard.dart';
-import 'package:waffra/storage/waffra_runtime_finance_route_contract.dart';
 import 'package:waffra/storage/waffra_verified_finance_authority.dart';
 
 class _GuardedLegacySource extends WaffraProductionFinanceSourceGuard {
