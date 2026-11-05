@@ -118,7 +118,7 @@
     ],
     "test/m388_m390_approved_goal_recurring_receipt_test.dart": [
       {
-        "start": " test('M390/M466: old paths and owner-bound encrypted receipts open same gallery',",
+        "start": " test('M390: restored receipt references open the same existing gallery',",
         "end": " testWidgets('M390: clipped badge is tappable with 48dp target in Arabic and English',"
       }
     ]

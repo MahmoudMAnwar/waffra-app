@@ -1,3 +1,8 @@
+[M466-M385-SCOPE] 2026-11-05 — Keep unchanged source anchor for approved test scope
+===================================================================================
+- Retained the M390 test's original section heading as the unchanged M385 base/head anchor. Its stronger M466 owner-bound and encrypted-image assertions remain. This prevents an incorrect missing-anchor scope failure without weakening test coverage.
+- Latest head requires full CI and Android proof; no production money logic changed.
+
 [M466-RECEIPT-REGRESSION] 2026-11-05 — Preserve corner tests with owner-verified image viewer
 ====================================================================================
 - Older M384/M390/October-21 Flutter source contracts and the directional corner reviewer checked the legacy showReceipt(path) call. The new verified viewer intentionally passes entryId to validate encrypted token ownership before opening. Updated only these source assertions to require the owner-bound call and retained the existing legacy-gallery tests.

@@ -95,7 +95,7 @@ void main() {
   expect(edit,contains('await _saveGoalAndLinkedDueAtomically(updated'));
  });
 
- test('M390/M466: old paths and owner-bound encrypted receipts open same gallery',(){
+ test('M390: restored receipt references open the same existing gallery',(){
   final source=File('lib/main.dart').readAsStringSync();
   final list=source.split('Widget tile(MoneyEntry e){').last
     .split('String get greeting').first;
