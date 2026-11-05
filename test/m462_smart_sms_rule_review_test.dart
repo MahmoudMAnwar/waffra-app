@@ -120,7 +120,7 @@ void main(){
    existing:original,candidate:repeated);
   expect(identical(result,original),isTrue);
   expect(result,same(original));
-  expect(result,singleElement);
+  expect(result,hasLength(1));
   expect(result.single.keywords,['petromin']);
  });
 
