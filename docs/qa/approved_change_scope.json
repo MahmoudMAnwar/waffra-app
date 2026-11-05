@@ -68,7 +68,7 @@
         "end": " Widget nextMonthForecast(){"
       },
       {
-        "start": " @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;",
+        "start": " // Account settings open from the app bar instead of a footer destination.",
         "end": " void _returnToHome(){"
       }
     ],
