@@ -1,3 +1,42 @@
+[M466-M282-REGRESSION] 2026-11-05 — Fix exact M282 UI failures without moving the save footer
+================================================================================================
+- M282 combined Flutter suite reported two failures (2292 passed, 2 failed): M354 source assertion still searched for the old four-controller dispose line, and M402 correctly rejected the new transfer's anchored DropdownButtonFormField.
+- Fixed transfer source and destination selectors by using existing WaffraCenteredDropdownFormField, preserving blurred/centered/bordered modal behavior in RTL and English. This is a real user-facing UX fix, not a test bypass.
+- Updated M354 source contract for cleanup of transfer amount/note controllers and asserted both income/expense and transfer confirmation remain pinned using WaffraEntrySheetSafeLayout, while retaining widget tests for keyboard, 3-button navigation and large fonts. Extended M402 exact UI contract to require centered selector for the M466 transfer form; legacy zero-anchored-dropdown guarantee stays intact.
+- Kept M385 allowed-file/section scope and no change to SQLCipher keys, persisted finance data, authorization or migrations. Exact-current-head CI and signed Android tests are required to verify this change.
+
+[M466-M385-SCOPE] 2026-11-05 — Keep unchanged source anchor for approved test scope
+===================================================================================
+- Retained the M390 test's original section heading as the unchanged M385 base/head anchor. Its stronger M466 owner-bound and encrypted-image assertions remain. This prevents an incorrect missing-anchor scope failure without weakening test coverage.
+- Latest head requires full CI and Android proof; no production money logic changed.
+
+[M466-RECEIPT-REGRESSION] 2026-11-05 — Preserve corner tests with owner-verified image viewer
+====================================================================================
+- Older M384/M390/October-21 Flutter source contracts and the directional corner reviewer checked the legacy showReceipt(path) call. The new verified viewer intentionally passes entryId to validate encrypted token ownership before opening. Updated only these source assertions to require the owner-bound call and retained the existing legacy-gallery tests.
+- Tests still require working corner badges on both home and list, no disk writes from badge painting, attachment counts, both Arabic/English layouts, and the new memory-backed encrypted reader. No production behavior changed in this update.
+- Re-run all mandatory checks on this exact commit; signed main APK and real Android receipt viewing remain unverified.
+
+[M466-FLUTTER-ANALYZER] 2026-11-05 — Remove redundant import in manual receipt repair
+================================================================================
+- The older parallel candidate PR #390 failed analyzer because Flutter foundation already exports Uint8List and an added dart:typed_data import in lib/main.dart is unnecessary. PR #391 inherited the same import; removed that import alone without changing any saving, receipt or transfer behavior.
+- Recheck exact new head in CI; successful static analysis does not certify signed APK or real handset behavior.
+
+[M466-CI] 2026-11-05 — Keep M457 verified manual-path guard current
+================================================================================
+- PR #391 workflow Waffra encrypted storage smoke run 42066524014 had 1 failed source regression assertion: M457 still expected a Home cached runtime backend branch, which M466 deliberately removed to avoid picture-triggered legacy fallback.
+- Changed the test to require actual _ensureFinanceBound(), a path-stripped confirmed record, and manualReceiptImages forwarded to the verified authority. Production behavior stays the same; no tests were skipped or downgraded.
+- Latest M466 exact-head CI must pass on the new commit. Signed Android/physical device still unverified.
+
+[M466] 2026-11-05 — Fix verified manual money with attachments; one income/expense/transfer popup
+===================================================================================================
+- Reproduced source cause of owner's failed manual save: an image path kept new manual income/expense outside commitConfirmedManual, routing it through whole-ledger optimistic persist (which rejects verified source/receipt path).
+- The fresh SQLCipher unified writer now accepts frozen picker BYTES for exactly one manually confirmed, verified-account-linked entry; under one native Home/Widget lock and SQLCipher transaction it inserts the ledger entry, account association, encrypted receipt BLOBs and canonical snapshot. It refuses mixed/unlinked/invalid attachments, validates expected account generation and byte parity, and rolls back on any failure.
+- The Home manual editor strips temporary receipt disk paths from the confirmed financial record; encrypted owner-bound references replace them in the persisted row. The in-app viewer retrieves those images through independently verified SQLCipher authorization, and historical local-file images are not rewritten or deleted.
+- Home "+" offers one "عملية يدوية" action. Its existing popup has دخل/مصروف/تحويل, with an internal transfer source/destination selector and the same verified accounts API. There is no separate transfer button in the Home + menu. Internal transfers do not enter income/expense totals.
+- Added exercised finance tests for money+one image+account+existing data preservation and invalid account rollback, plus static UI contracts and updated the outdated M464 standalone-transfer expectation.
+- Neither the existing two accounts, goal, two recurring items, original SMS hashes nor historical ledger records are intentionally altered. No silent SQLCipher source cutover, permission change or weakened integrity check.
+- Exact-head CI, signed Android APK built from main, device receipt re-open and update-over-old-version checks remain mandatory. Source review does NOT certify real-phone success.
+
 [M465-CI] 2026-11-05 — Bound GitHub Releases 504 retries; do not weaken native safety
 ===============================================================================================
 - M147 ARM64 preview job 127343122683 failed because the downloaded sqlite3mc.arm64.android.so hashed as bef140a1... instead of its immutable package SHA. The isolated retry job 127347857126 failed to fetch a JetBrains Kotlin compiler asset from github.com (HTTP 504 Gateway Time-out).

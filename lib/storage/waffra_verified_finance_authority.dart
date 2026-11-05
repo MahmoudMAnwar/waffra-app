@@ -756,6 +756,7 @@ class WaffraVerifiedFinanceAuthority {
     required bool userConfirmed,
     String? selectedAccountId,
     int? expectedAccountGeneration,
+    List<Uint8List>? manualReceiptImages,
   }) async {
     if (route != WaffraFinanceRoute.manualTransactionSave ||
         !userConfirmed || record['sourceType'] != 'manual' ||
@@ -791,6 +792,7 @@ class WaffraVerifiedFinanceAuthority {
       userConfirmed: true,
       selectedAccountIds: <String?>[selectedAccountId],
       expectedAccountGeneration: expectedAccountGeneration,
+      manualReceiptImages: manualReceiptImages,
     );
     if (result.saved != 1 || result.savedIncome + result.savedExpenses != 1) {
       throw StateError('M457 manual entry did not commit exactly once.');

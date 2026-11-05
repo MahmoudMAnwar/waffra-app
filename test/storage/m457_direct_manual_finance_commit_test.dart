@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,6 +16,7 @@ import 'package:waffra/storage/waffra_production_finance_source_guard.dart';
 import 'package:waffra/storage/waffra_production_finance_routing_gate.dart';
 import 'package:waffra/storage/waffra_verified_encrypted_finance_bridge.dart';
 import 'package:waffra/storage/waffra_verified_finance_authority.dart';
+import 'package:waffra/storage/waffra_portable_encrypted_vault_restorer.dart';
 
 class _M457ActivatedSource extends WaffraProductionFinanceSourceGuard {
   @override
@@ -209,6 +211,77 @@ void main() {
       route:WaffraFinanceRoute.dashboardRead)).ledgerRaw!) as List),hasLength(1));
   });
 
+  test('M466 attached manual expense preserves existing income and links exactly once',
+      () async {
+    final earlier=manual('m466-before-image',true);
+    await authority.commitConfirmedManual(
+      route:WaffraFinanceRoute.manualTransactionSave,record:earlier,
+      userConfirmed:true,selectedAccountId:'cash',
+      expectedAccountGeneration:(await snapshot.read()).generation);
+    final prior=(jsonDecode((await snapshot.read()).values['entries'] as String)
+      as List).single;
+    final image=Uint8List.fromList([137,80,78,71,13,10,26,10,0,1,2,3]);
+    final record=manual('m466-with-image',false);
+    final confirmed=await authority.commitConfirmedManual(
+      route:WaffraFinanceRoute.manualTransactionSave,record:record,
+      manualReceiptImages:[image],userConfirmed:true,
+      selectedAccountId:'cash',
+      expectedAccountGeneration:(await snapshot.read()).generation);
+    final entries=jsonDecode(confirmed.ledgerRaw!) as List;
+    expect(entries,hasLength(2));
+    expect(entries.first,prior);
+    final attached=entries.last as Map;
+    expect(attached['id'],'m466-with-image');
+    expect(WaffraEncryptedReceiptReference.matches(
+      attached['receiptPath'] as String,'m466-with-image',0),isTrue);
+    expect((attached['receiptPath'] as String).contains('/'),isTrue);
+    final opened=await authority.loadEncryptedReceiptImages(
+      route:WaffraFinanceRoute.receiptView,entryId:'m466-with-image');
+    expect(opened,hasLength(1));
+    expect(opened.single,image);
+    final sql=await store.customSelect(
+      "SELECT receipt_count,source_json FROM fresh_finance_entries "
+      "WHERE entry_id='m466-with-image'").getSingle();
+    expect(sql.read<int>('receipt_count'),1);
+    expect((jsonDecode(sql.read<String>('source_json')) as Map)['receiptPath'],
+      attached['receiptPath']);
+    final links=await store.customSelect(
+      "SELECT account_id FROM fresh_finance_account_entry_links "
+      "WHERE entry_id='m466-with-image'").get();
+    expect(links,hasLength(1));
+    expect(links.single.read<String>('account_id'),'cash');
+    final stable=(await snapshot.read()).digest;
+    await expectLater(authority.commitConfirmedManual(
+      route:WaffraFinanceRoute.manualTransactionSave,
+      record:manual('m466-invalid-owner',false),
+      manualReceiptImages:[image],userConfirmed:true,
+      selectedAccountId:'not-an-account',
+      expectedAccountGeneration:(await snapshot.read()).generation),
+      throwsStateError);
+    expect((await snapshot.read()).digest,stable);
+    expect((await authority.loadEncryptedReceiptImages(
+      route:WaffraFinanceRoute.receiptView,
+      entryId:'m466-with-image')).single,image);
+  });
+
+  test('M466 Home manual popup shares three choices and encrypted attachment view',(){
+    final app=File('lib/main.dart').readAsStringSync();
+    expect(app,contains("Key('waffra-manual-three-modes')"));
+    expect(app,contains('WaffraAccountOperation.transfer'));
+    expect(app,contains("Key('m466-confirm-transfer')"));
+    expect(app,contains("manualReceiptImages:images.isEmpty?null:images"));
+    expect(app,contains("if(initial==null&&result.sourceType=='manual'){"));
+    expect(app,contains("Image.memory(encryptedBytes[index]"));
+    final start=app.indexOf("if(tab==0&&!goalsOpened)...[");
+    final end=app.indexOf("]else if(goalsOpened||tab==3)...[",start);
+    expect(start,greaterThan(0));
+    expect(end,greaterThan(start));
+    final menu=app.substring(start,end);
+    expect(menu,contains("'Manual transaction':'عملية يدوية'"));
+    expect(menu, isNot(contains(
+      "'Transfer between my accounts':'تحويل بين حساباتي'")));
+  });
+
   test('M457 manual UI posts a single frozen entry without optimistic ledger',
       () {
     final app=File('lib/main.dart').readAsStringSync();
@@ -226,6 +299,13 @@ void main() {
     expect(flow,contains('await _refreshFromVerifiedFinance();'));
     expect(flow,isNot(contains('await _loadFinanceSafely();')));
     expect(flow,contains('if(initial==null&&result.sourceType=='));
-    expect(flow,contains('WaffraRuntimeFinanceBackend.verifiedEncrypted'));
+    // M466: direct append ALWAYS checks the active authority under the lock,
+    // rather than guessing source type from a stale Home cache. Pictures
+    // follow the same source and never fall back to legacy whole-ledger save.
+    expect(flow,contains('await _ensureFinanceBound();'));
+    expect(flow,contains("safeRecord['receiptPath']=null;"));
+    expect(flow,contains('manualReceiptImages:images.isEmpty?null:images'));
+    expect(flow,isNot(contains(
+     "(result.receiptPath==null||result.receiptPath!.isEmpty)")));
   });
 }

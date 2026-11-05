@@ -832,6 +832,7 @@ class WaffraVerifiedEncryptedFinanceBridge {
     String? accountId,
     List<String?>? selectedAccountIds,
     int? expectedAccountGeneration,
+    List<Uint8List>? manualReceiptImages,
   }) async {
     if (!experimentalEnabled) {
       throw StateError('Encrypted source bridge is disabled by default.');
@@ -850,6 +851,7 @@ class WaffraVerifiedEncryptedFinanceBridge {
       accountId: accountId,
       selectedAccountIds: selectedAccountIds,
       expectedAccountGeneration: expectedAccountGeneration,
+      manualReceiptImages: manualReceiptImages,
     );
   }
   /// Save a confirmed transaction and its attached images as ONE encrypted

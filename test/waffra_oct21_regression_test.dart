@@ -37,12 +37,12 @@ void main() {
    reason:'Both transaction list and dashboard require the RTL/LTR corner.');
   expect(app, contains('WaffraReceiptCornerAction('));
   expect(app, contains('count:attachmentCount,english:waffraIsEnglish'));
-  expect(app, contains('onTap:()=>showReceipt(e.receiptPath!)'));
-  expect(app, contains('onTap:()=>showReceipt(entry.receiptPath!)'));
+  expect(app, contains('onTap:()=>showReceipt(e.receiptPath!,entryId:e.id)'));
+  expect(app, contains('onTap:()=>showReceipt(entry.receiptPath!,entryId:entry.id)'));
   expect(app, contains('if(onViewReceipt!=null)'),
    reason:'Details must continue exposing the saved-attachment action.');
   expect(app, contains('waffraReceiptPaths(entry.receiptPath).isNotEmpty'));
-  expect(app, contains('showReceipt(entry.receiptPath!)'));
+  expect(app, contains('showReceipt(entry.receiptPath!,entryId:entry.id)'));
  });
 
  test('Sensitive financial actions always require OS biometric authentication', () {

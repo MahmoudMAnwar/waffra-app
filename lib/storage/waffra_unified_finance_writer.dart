@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:drift/drift.dart' show Variable;
 
@@ -7,6 +8,14 @@ import 'legacy_snapshot_preflight.dart';
 import 'waffra_accounts_schema.dart';
 import 'waffra_atomic_finance_snapshot.dart';
 import 'waffra_experimental_writer_gate.dart';
+import 'waffra_encrypted_receipt_vault.dart';
+import 'waffra_portable_encrypted_vault_restorer.dart';
+
+bool waffraSameReceiptBytes(Uint8List a, Uint8List b) {
+  if(a.length!=b.length)return false;
+  for(var i=0;i<a.length;i++){if(a[i]!=b[i])return false;}
+  return true;
+}
 
 class WaffraUnifiedWriteResult {
   const WaffraUnifiedWriteResult({
@@ -66,6 +75,7 @@ class WaffraUnifiedFinanceWriter {
     String? accountId,
     List<String?>? selectedAccountIds,
     int? expectedAccountGeneration,
+    List<Uint8List>? manualReceiptImages,
   }) async {
     if (!experimentalEnabled) {
       throw StateError('Unified finance writer is disabled by default.');
@@ -90,6 +100,37 @@ class WaffraUnifiedFinanceWriter {
       confirmedRecords.add(Map<String, Object?>.unmodifiable(decoded));
     }
     final confirmedHashes = List<String?>.unmodifiable(messageHashes);
+    // Freeze picker bytes before any awaited account witness or source lock.
+    // No file path may enter the encrypted canonical finance ledger.
+    final frozenReceiptImages = manualReceiptImages == null ? null :
+        List<Uint8List>.unmodifiable(
+          manualReceiptImages.map(Uint8List.fromList));
+    if (frozenReceiptImages != null) {
+      if (confirmedRecords.length != 1 ||
+          confirmedHashes.single != null ||
+          confirmedRecords.single['sourceType'] != 'manual' ||
+          (confirmedRecords.single['receiptPath'] != null &&
+           confirmedRecords.single['receiptPath'] != '') ||
+          confirmedRecords.single['id'] is! String ||
+          (confirmedRecords.single['id'] as String).trim().isEmpty ||
+          frozenReceiptImages.isEmpty ||
+          frozenReceiptImages.length >
+              WaffraEncryptedReceiptVault.maxReceiptsPerEntry ||
+          frozenReceiptImages.any((image) => image.isEmpty ||
+              image.length > WaffraEncryptedReceiptVault.maxReceiptBytes) ||
+          frozenReceiptImages.fold<int>(
+                  0, (total, image) => total + image.length) >
+              60 * 1024 * 1024) {
+        throw StateError('Invalid confirmed manual receipt batch.');
+      }
+      final entryId = confirmedRecords.single['id'] as String;
+      final refs = List<String>.generate(frozenReceiptImages.length,
+        (i) => WaffraEncryptedReceiptReference.of(entryId, i));
+      final normalized = Map<String, Object?>.from(confirmedRecords.single);
+      normalized['receiptPath'] =
+          refs.length == 1 ? refs.single : jsonEncode(refs);
+      confirmedRecords[0] = Map<String, Object?>.unmodifiable(normalized);
+    }
     // One explicit account decision per confirmed transaction. The old
     // single-manual-account argument remains supported for existing callers.
     // Freeze selections before the first await, as the UI may change them.
@@ -111,6 +152,9 @@ class WaffraUnifiedFinanceWriter {
       throw ArgumentError('Account choices must match confirmed entries.');
     }
     final hasAccountLinks=confirmedAccounts.any((id)=>id!=null);
+    if(frozenReceiptImages!=null && !hasAccountLinks){
+      throw StateError('Manual receipts require one verified money account.');
+    }
     if(hasAccountLinks && expectedAccountGeneration==null){
       throw StateError('Account-linked save needs witnessed finance generation.');
     }
@@ -141,7 +185,8 @@ class WaffraUnifiedFinanceWriter {
       if (hash != null && !RegExp(r'^[a-f0-9]{64}$').hasMatch(hash)) {
         throw ArgumentError('Invalid SMS digest.');
       }
-      if (data['receiptPath'] != null && data['receiptPath'] != '') {
+      if (data['receiptPath'] != null && data['receiptPath'] != '' &&
+          frozenReceiptImages == null) {
         throw StateError('Receipts require their own verified file installer.');
       }
       // Delegate financial value, ID, date and amount validation to the same
@@ -272,6 +317,22 @@ class WaffraUnifiedFinanceWriter {
               record['date'], 0, jsonEncode(record),
             ],
           );
+          if (frozenReceiptImages != null) {
+            // This is inside the SAME native-lock SQLCipher transaction as
+            // the ledger and account link. No early partial financial save.
+            final vault = WaffraEncryptedReceiptVault(
+              store: snapshot.store, experimentalEnabled: true);
+            await vault.attachNewBatch(
+              entryId: record['id'] as String,
+              images: frozenReceiptImages);
+            final persisted = await vault.readAll(record['id'] as String);
+            if (persisted.length != frozenReceiptImages.length ||
+                persisted.asMap().entries.any((row) =>
+                  !waffraSameReceiptBytes(row.value.bytes,
+                      frozenReceiptImages[row.key]))) {
+              throw StateError('Encrypted receipt verification failed.');
+            }
+          }
           // Atomic double-entry association: the original classified ledger
           // row and its selected account link either BOTH commit, or neither.
           final selectedAccount=confirmedAccounts[i];
