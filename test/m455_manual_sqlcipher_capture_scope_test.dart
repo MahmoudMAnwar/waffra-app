@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/storage/waffra_home_transaction_capture.dart';
+import 'package:waffra/storage/waffra_production_finance_routing_gate.dart';
 import 'package:waffra/storage/waffra_runtime_finance_route_contract.dart';
 
 void main() {
