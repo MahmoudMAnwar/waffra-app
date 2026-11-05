@@ -71,7 +71,9 @@ void main(){
   expect(activity,contains('"scanUnknownFinancialSms" -> {'));
   expect(activity,contains('smsHistoryExecutor.execute {'));
   expect(activity,contains('runOnUiThread { result.success(found) }'));
-  expect(activity,contains('WaffraAutoSmsStore.scanUnknownFinancialSms(this)'));
+  // The worker must use applicationContext rather than a captured Activity.
+  expect(activity,contains('val app = applicationContext'));
+  expect(activity,contains('WaffraAutoSmsStore.scanUnknownFinancialSms(app)'));
   expect(bridge,contains('static Future<List<Map<String,Object?>>> scanUnknownFinancialSms()'));
   expect(bridge,contains('if(!Platform.isAndroid||!await enabled())return const [];'));
   final scan=store.substring(store.indexOf('fun scanUnknownFinancialSms('),
