@@ -2027,3 +2027,8 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 - Recurring Paid crash: restrict fresh encrypted capture to new ledger entry and related postponement, preserving fail-closed checks for any unrelated finance changes.
 - Added source/widget, protective capture, and disposable SQLCipher integration tests. CI and physical device acceptance on the exact PR SHA are pending; no production merge, main APK or full 32-item Done assertion.
 - Tracker: docs/qa/WAFFRA_32_NEW_CHANGES_M470_TRACKER.md.
+
+[M470 staged follow-up] 2026-11-06 — Verified recurring DEFAULT account setting (partial #25/#30)
+- Existing recurring schedules' default-account editor now has a provider/bank dropdown followed by an explicit active linked account dropdown. It does not present an unassigned option, silently pick the first account, or relink past payments.
+- Known bank names only are grouped; unknown labels remain separate to prevent guessing. This is NOT the still-pending mandatory choice during a NEW recurring schedule's creation.
+- New test: test/m470_recurring_provider_accounts_test.dart. Still requires exact SHA CI, signed Android and a safe initial-creation flow.
