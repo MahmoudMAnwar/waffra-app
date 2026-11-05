@@ -49,8 +49,32 @@ abstract final class WaffraAutoSmsAutoPoster {
    for(final row in pending)await keepForReview(row);
    return summary;
   }
+  // User-confirmed exclusions are safe local queue operations, even when
+  // app is closed and no rule has permission to post financial records.
+  // Never suppress bank-classified income, expenses, transfers or settlements.
+  final actionable=<Map<String,Object?>>[];
+  summary['excluded']=0;
+  for(final row in pending){
+   final id=row['id'],body=row['body'],sender=row['sender'];
+   if(id is String&&body is String&&sender is String){
+    final facts=WaffraBankSmsFactsParser.parse(body);
+    if(facts.kind==WaffraBankOperationKind.uncertain){
+     final rule=WaffraSmsLocalRules.resolveSpecial(
+      body:body,sender:sender,bankKind:facts.kind,custom:rules);
+     if(rule?.resolvedKind=='excluded'&&
+        (facts.pending||BankParser.parse(body).amount==null)){
+      if(await WaffraAutoSms.acknowledge([id])){
+       summary['excluded']=summary['excluded']!+1;
+       continue;
+      }
+     }
+    }
+   }
+   actionable.add(row);
+  }
+  if(actionable.isEmpty)return summary;
   if(!rules.any((r)=>r.autoPost)){
-   for(final row in pending)await keepForReview(row);
+   for(final row in actionable)await keepForReview(row);
    return summary;
   }
 
@@ -62,10 +86,10 @@ abstract final class WaffraAutoSmsAutoPoster {
     installedApp:true,legacy:const WaffraHomeFinancePersistence(),
     startupRoute:WaffraFinanceRoute.widgetStartup);
    if(binding.accountsBridge==null){
-    for(final row in pending)await keepForReview(row);
+    for(final row in actionable)await keepForReview(row);
     return summary;
    }
-   for(final candidate in pending.take(25)){
+   for(final candidate in actionable.take(25)){
     final id=candidate['id'];
     final body=candidate['body'];
     final sender=candidate['sender'];
@@ -131,6 +155,23 @@ abstract final class WaffraAutoSmsAutoPoster {
      final categories=(jsonDecode(catalogRaw) as List).map((row)=>
       BudgetCategory.fromJson(Map<String,dynamic>.from(row as Map)))
       .toList(growable:false);
+     // A named budget must be explicitly selected by the owner; never guess
+     // a budget for background SMS, and never auto-create one from a message.
+     // This guard runs AFTER the trusted account and finance-source read but
+     // BEFORE the atomic SMS ledger commit. Income has no budget allocation.
+     final budgetRaw=before.finance.getString('waffra_named_budgets_v1');
+     final budgets=budgetRaw==null?const <WaffraNamedBudget>[]:
+      (jsonDecode(budgetRaw) as List).map((row)=>
+       WaffraNamedBudget.fromJson(Map<String,dynamic>.from(row as Map)))
+       .toList(growable:false);
+     final needsBudgetChoice=!parsed.income&&(
+      budgets.any((b)=>!b.deleted&&b.budgetActive&&b.budget>0)||
+      // Historic category budgets can exist before stand-alone migration.
+      categories.any((c)=>!c.income&&c.budgetActive&&c.budget>0));
+     if(needsBudgetChoice){
+      await keepForReview(candidate);
+      continue;
+     }
      if(!categories.any((c)=>c.isSubcategory&&
        c.name==matched.category&&c.income==matched.income&&
        waffraCategoryAvailableForNewEntry(categories,c))){
@@ -190,7 +231,7 @@ abstract final class WaffraAutoSmsAutoPoster {
    }
   }catch(_){
    // Vault unavailable: keep all SMS for human review, no legacy writes.
-   for(final row in pending)await keepForReview(row);
+   for(final row in actionable)await keepForReview(row);
   }finally{
    await binding?.close();
   }

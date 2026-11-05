@@ -1,8 +1,24 @@
 {
   "contract_version": 1,
-  "change_id": "M463-auth-first-single-page-saudi-registration-20261105",
-  "human_scope_review": "Owner's physical Android build from merged main 7efe26185e3c showed the app requesting SMS access before a verified login and returned a two-stage phone signup despite explicit 2026-11-04 and 2026-11-05 owner requirements. Scope narrowly repairs login/registration/consent routing, existing-account detection and first-use tests only. Initial users get one form for name, gender/avatar, Saudi mobile, password and confirmation. On existing phones password sign-in is first, consent after verified session/unlock. After completed new registration Android asks SMS then notifications then biometric. Fail-closed existing profile and OS credential checks prevent data loss. No financial authority, security gate, SMS ledger, legacy migration or cloud code modified. Human QA on signed main APK still required; tests are not real device certification.",
+  "change_id": "M462-M463-sms-rules-auth-integration-20261105",
+  "human_scope_review": "Owner explicitly approved the simple three-screen Arabic concept on 2026-11-05: understood messages create classification rules automatically; uncertain messages open an editable rule with sender, type, safe keywords and category prefilled as far as available. This PR is stacked on M461 to preserve its proven Android SQLCipher and SMS fixes, is draft, and requires exact-head CI, independent human code scope approval and signed real phone testing before release. Neither rule learning nor UI changes may authorize any ledger writes or expose raw OTPs. Follow-up owner explicitly requested parallel PR work and reuse of existing automatic income/expense/transfer/excluded rule buckets when new manual or scanned classifications are confirmed; never silently add a fresh rule for every event. Preserve distinct financial category per safe phrase rather than overwriting a global category, and never alter custom auto-post permission. Same-day follow-up: owner wants bank SMS to request budget selection if active budgets exist and to allow background posting without one otherwise; finance posting remains subject to the existing explicit per-rule authorization and verified account. Change to background worker is a restriction on posting scope, not a new auto-post permission. Owner 2026-11-05 expanded automatic learning to internal transfers and verified excluded SMS. Background exclusions are classified before permission to post money and never mutate ledger. Reviewed transfer transaction form and manager callbacks were added for explicitly selected source and target accounts. No automatic transfer posting. Confirmed follow-up includes transfer form, accounts manager, Home entry, and native background exclusion. Verified SMS transfer remains an explicit two-account confirmation with dedupe; nonfinancial excluded queue items do not post to ledger. CI M385 verified that new-method-only start anchors do not exist in the main base. Corrected the review-region anchor to an existing unchanged method and bounded the new transfer form import; no CI guard was relaxed or bypassed. User requested actual learned-rule classification when saving confirmed bank SMS, including from native queue. Added narrow bank-import category resolution and explicit transfer/card guard to prevent false expense posting. M385 scope uses pre-existing reviewSmsBudgetLinks anchor (bulkSmsSheet signature was extended), ensuring both base and head validate. Failed encrypted-rule reads block the confirmed batch without guessing a different category or posting money. Import boundary starts at the preceding unchanged accounts-repository import to provide positive nonempty range in both main base and PR head; all existing guard checks retained. M463 auth-first was merged into main at 9de406adb1e47de76014234093e1748ec26a009d. The independent M463 edits were then preserved in M462's main.dart while keeping local SMS rule and transfer changes. Owner's physical Android build from merged main 7efe26185e3c showed the app requesting SMS access before a verified login and returned a two-stage phone signup despite explicit 2026-11-04 and 2026-11-05 owner requirements. Scope narrowly repairs login/registration/consent routing, existing-account detection and first-use tests only. Initial users get one form for name, gender/avatar, Saudi mobile, password and confirmation. On existing phones password sign-in is first, consent after verified session/unlock. After completed new registration Android asks SMS then notifications then biometric. Fail-closed existing profile and OS credential checks prevent data loss. No financial authority, security gate, SMS ledger, legacy migration or cloud code modified. Human QA on signed main APK still required; tests are not real device certification.",
   "user_requested_changes": [
+    "Recognize a verified bank SMS using its independent directional facts and specific built-in category, then securely save a deduplicated sender-scoped local classification rule without another multi-step setup dialog after the user confirms the transaction.",
+    "When classification is uncertain, immediately open a pre-populated beginner-friendly rule form containing a suggested name, actual sender, safe phrase chips, known kind and previously verified category where available, with advanced keyword and optional account controls collapsed.",
+    "Simplify match semantics into explicit Any keyword/All keywords choices, rename misleading scanned message copy, and keep one concise save action with encrypted owner-bound storage.",
+    "Never use OTP numbers, account numbers, balance figures, cloud inference or generic POS/payment words as learned rule keys; transfer/exclusion rules never post money, and a custom rule cannot override trusted bank direction.",
+    "Add targeted source and behavior regression tests; preserve signed APK, M385 change-scope review, encrypted finance safety and all legacy records.",
+    "When a confirmed manual income or expense supplies a safe new description, append the keyword to the reusable learned rule bucket for the same financial direction, retaining per-keyword category mapping across different merchant categories; do not create another learned rule for every manual transaction.",
+    "When a confirmed bank SMS, bank transfer or exclusion supplies a safe phrase from the same authenticated sender and kind, update the existing system-learned rule instead of duplicating it; never cross sender security boundaries or copy an amount, bank identifier or OTP.",
+    "If the same phrase maps to contradictory categories, leave the existing encrypted rule unchanged and require human review. Existing explicit user-defined and auto-post authorizations remain immutable under automatic learning.",
+    "Group the automatically learned classification list under clear income, expense, transfer and exclusion sections, keeping manual user-created rules separate and their settings unchanged.",
+    "When a trusted, separately authorized SMS rule permits automatic posting, save without an invented budget only if no active named or historical budget needs user selection; otherwise keep the bank SMS encrypted for review and Android notification. Never infer, auto-create or silently assign a budget; keep account, transfer and duplicate-post guards intact.",
+    "Classify manual transfers with a senderless non-posting transfer bucket; in Android background, acknowledge only sender-scoped, confirmed nonfinancial exclusion matches, never financial, transfer or settlement messages; do not require finance writer or auto-post authority to exclude safely.",
+    "Prefill already-reviewed bank SMS into transfer mode with stable request id, amount and date; lock the form to transfer, require two explicit account choices and verified SQLCipher transfer callback. After separately confirmed manual transfer, invoke optional safe learning callback.",
+    "After first verified manual account transfer learn safe reusable senderless transfer classification, but never post transfers without explicit two-account approval.",
+    "After reviewed bank SMS transfer, open verified account-to-account form with parsed amount and stable fingerprint-based transfer ID. Require explicit source/destination; the account writer is idempotent and SMS acknowledgement follows the verified operation.",
+    "When the background worker finds a previously user-approved nonfinancial exclusion rule, safely acknowledge its native encrypted queue item without touching balances; classify transfers as needing account review and notify outside the app where permitted.",
+    "Bank SMS bulk save rejects transfer/card settlement/pending notifications instead of casting to income or expense. It uses sender-scoped encrypted learned classification for verified income/expense and preserves the learned main/subcategory when that category is still active. Native sender identity never leaks across banks.",
     "Show exactly one new-user phone registration form on a genuinely clean installation, not a welcome screen then a separate registration page; collect name, male/female avatar, 05 Saudi phone, password and confirmation together.",
     "For previously registered phone accounts, open the phone/password login fields directly instead of showing a second intermediate recent-account page after logout.",
     "Never allow a stored registered profile, previous finance profile, OS-keystore phone credential, or legacy password verifier to be silently overwritten by a new registration prompt.",
@@ -13,10 +29,39 @@
     "docs/qa/approved_change_scope.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "test/m463_auth_first_one_page_test.dart"
+    "lib/waffra_sms_local_rules.dart",
+    "lib/waffra_sms_rule_settings_page.dart",
+    "test/m462_smart_sms_rule_review_test.dart",
+    "lib/waffra_auto_sms_autopost.part.dart",
+    "lib/waffra_account_transaction_form.dart",
+    "lib/waffra_accounts_manager_page.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
+      {
+        "start": " Future<void> _openSmsRules({String? seedMessage,String? seedKind,\n",
+        "end": " Map<String,Object?>? _localSmsClassification(\n"
+      },
+      {
+        "start": " Widget _autoSmsReviewCard(){\n",
+        "end": " void _receiveSharedSms(){\n"
+      },
+      {
+        "start": " Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,\n",
+        "end": " Future<String?> chooseTransactionCategory(\n"
+      },
+      {
+        "start": " Future<void> openVerifiedAccounts()async{\n",
+        "end": " WaffraFinanceAuthorityRead? _lastFinanceAuthorityRead;"
+      },
+      {
+        "start": "import 'storage/waffra_accounts_repository.dart';\n",
+        "end": "import 'storage/waffra_fresh_finance_modules_repository.dart';\n"
+      },
+      {
+        "start": " Future<List<String?>?> reviewSmsBudgetLinks(List<MoneyEntry> candidates)async{\n",
+        "end": " Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,\n"
+      },
       {
         "start": " bool googleFirstRunSetup=false;\n",
         "end": " String appearance='light';\n"
@@ -40,6 +85,56 @@
       {
         "start": " Widget _phoneRegistrationForm(){\n",
         "end": " @override Widget build(BuildContext context){\n  if(widget.initial==null&&widget.provider=='Phone')return _phoneRegistrationForm();"
+      }
+    ],
+    "lib/waffra_sms_local_rules.dart": [
+      {
+        "start": "class WaffraSmsLocalRule {\n",
+        "end": "/// Approved keywords only. Never suggest bank identifiers, long numbers,\n"
+      },
+      {
+        "start": " static bool matches(WaffraSmsLocalRule rule,String body,{String sender=''}) {\n",
+        "end": " static const builtIn=<WaffraSmsLocalRule>[\n"
+      },
+      {
+        "start": " static List<String> suggestions(Iterable<String> messages){\n",
+        "end": " static void validate(WaffraSmsLocalRule rule){\n"
+      },
+      {
+        "start": " static void validate(WaffraSmsLocalRule rule){\n",
+        "end": "/// Per-user encrypted app configuration, not a new unverified finance writer.\n"
+      }
+    ],
+    "lib/waffra_sms_rule_settings_page.dart": [
+      {
+        "start": "class WaffraSmsRuleSettingsPage extends StatefulWidget {\n",
+        "end": "class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{\n"
+      },
+      {
+        "start": " Future<void> _edit({WaffraSmsLocalRule? existing,String? seed,String? kindHint})async{\n",
+        "end": " @override Widget build(BuildContext context)=>Scaffold(\n"
+      },
+      {
+        "start": " @override Widget build(BuildContext context)=>Scaffold(\n",
+        "end": null
+      }
+    ],
+    "lib/waffra_auto_sms_autopost.part.dart": [
+      {
+        "start": "abstract final class WaffraAutoSmsAutoPoster {\n",
+        "end": null
+      }
+    ],
+    "lib/waffra_account_transaction_form.dart": [
+      {
+        "start": "class WaffraAccountTransactionForm extends StatefulWidget {\n",
+        "end": null
+      }
+    ],
+    "lib/waffra_accounts_manager_page.dart": [
+      {
+        "start": "class WaffraAccountsManagerPage extends StatefulWidget {\n",
+        "end": null
       }
     ]
   }

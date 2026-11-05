@@ -104,6 +104,7 @@ import 'storage/waffra_production_finance_authority_binding.dart';
 import 'storage/waffra_verified_accounts_api.dart';
 import 'storage/waffra_accounts_repository.dart';
 import 'waffra_accounts_manager_page.dart';
+import 'waffra_account_transaction_form.dart';
 import 'storage/waffra_fresh_finance_modules_repository.dart';
 import 'storage/waffra_verified_module_ui_guard.dart';
 import 'storage/waffra_runtime_finance_route_contract.dart';
@@ -3473,6 +3474,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       .map((item)=>item.name).toList(growable:false),
     availableBudgets:{for(final item in namedBudgets.where((b)=>
       !b.deleted&&b.budgetActive&&b.budget>0))item.id:item.budgetLabel??item.name},
+    onTransferConfirmed:(_)=>_learnManualTransferPreference(),
    )));
  }
  WaffraFinanceAuthorityRead? _lastFinanceAuthorityRead;
@@ -3606,7 +3608,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   email:widget.profile.email);
 
  Future<void> _openSmsRules({String? seedMessage,String? seedKind,
-  String seedSender=''})async{
+  String seedSender='',String seedCategory=''})async{
   if(_smsRuleOwnerKey.isEmpty){
    if(mounted)snack(context,waffraIsEnglish?
     'Sign in with a verified phone or email before editing SMS rules.':
@@ -3634,6 +3636,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    builder:(_)=>WaffraSmsRuleSettingsPage(
     english:waffraIsEnglish,ownerKey:_smsRuleOwnerKey,
     seedKind:seedKind,seedSender:seedSender,
+    seedCategory:seedCategory,
     seedAccountSuffix:suffix,bankAccounts:bankAccounts,
     scannedMessages:_autoSmsPending.map((row)=>
      row['body'] is String?row['body'] as String:'').toList(),
@@ -3649,6 +3652,52 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // A newly saved rule may free encrypted queue slots. Continue the history
   // cursor immediately instead of requiring another manual search tap.
   if(mounted)await _refreshAutoSmsInbox(importMonth:true);
+ }
+
+ // Local classification learning never authorizes financial posting.
+ // Only a specific, independently classified message may produce a rule.
+ Future<bool> _learnSafeSmsRule({
+  required String body,required String sender,
+  required String kind,String category='',
+ })async{
+  if(_smsRuleOwnerKey.isEmpty)return false;
+  final candidate=WaffraSmsLocalRules.suggestedRule(
+   body:body,sender:sender,kind:kind,category:category,confidentOnly:true);
+  if(candidate==null)return false;
+  final store=const WaffraSmsLocalRuleStore();
+  final prior=await store.read(_smsRuleOwnerKey);
+  // Same sender, category and direction are reused. Never change an
+  // already-authorized autoPost rule's matching criteria behind the user.
+  final updated=WaffraSmsLocalRules.upsertLearned(
+   existing:prior,candidate:candidate);
+  if(identical(updated,prior))return prior.any((r)=>
+   r.resolvedKind==kind&&r.category==category&&
+   WaffraSmsLocalRules.matches(r,body,sender:sender));
+  await store.write(_smsRuleOwnerKey,updated);
+  return true;
+ }
+
+ /// Manual entries have no bank SMS sender. Learn only a non-posting
+ /// description/category hint after an independently verified save.
+ Future<void> _learnManualTransferPreference()async{
+  if(_smsRuleOwnerKey.isEmpty)return;
+  final store=const WaffraSmsLocalRuleStore();
+  final original=await store.read(_smsRuleOwnerKey);
+  final updated=WaffraSmsLocalRules.upsertLearned(
+   existing:original,candidate:WaffraSmsLocalRules.manualTransferPattern());
+  if(!identical(original,updated))await store.write(_smsRuleOwnerKey,updated);
+ }
+ Future<void> _learnManualCategoryPreference(MoneyEntry record)async{
+  if(_smsRuleOwnerKey.isEmpty||record.sourceType!='manual')return;
+  final merchant=waffraMerchantKey(record.title,income:record.income)??record.title;
+  final candidate=WaffraSmsLocalRules.manualCategoryPattern(
+   description:merchant,category:record.category,income:record.income);
+  if(candidate==null)return;
+  final store=const WaffraSmsLocalRuleStore();
+  final previous=await store.read(_smsRuleOwnerKey);
+  final next=WaffraSmsLocalRules.upsertLearned(
+   existing:previous,candidate:candidate);
+  if(!identical(next,previous))await store.write(_smsRuleOwnerKey,next);
  }
 
  Map<String,Object?>? _localSmsClassification(
@@ -4145,6 +4194,87 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ]),
   );
  }
+ /// Explicit, idempotent account-to-account transfer from reviewed bank SMS.
+ /// No SMS becomes income/expense or selects bank accounts by guessing.
+ Future<void> _reviewSmsAccountTransfer({
+  required Map<String,Object?> item,
+  required WaffraBankSmsFacts facts,
+ })async{
+  final id=item['id'],body=item['body'];
+  if(id is! String||body is! String||
+     facts.kind!=WaffraBankOperationKind.transfer||facts.pending)return;
+  if(WaffraSmsCurrencies.requiresReviewForSarLedger(body)){
+   if(mounted)snack(context,'تحقق من عملة الرسالة قبل تسجيل التحويل.',
+    isError:true);
+   return;
+  }
+  final bridge=_financeBinding?.accountsBridge;
+  if(bridge==null){
+   if(mounted)snack(context,'الحسابات الموثقة غير متاحة.',
+    isError:true);
+   return;
+  }
+  try{
+   final api=WaffraVerifiedAccountsApi(bridge:bridge);
+   final accounts=await api.balances();
+   if(!mounted)return;
+   if(accounts.where((a)=>!a.archived).length<2){
+    snack(context,'أضف حسابين على الأقل قبل تسجيل التحويل.',isError:true);
+    return;
+   }
+   final parsed=BankParser.parse(body);
+   final arrived=DateTime.fromMillisecondsSinceEpoch(
+    item['receivedAt'] is int?item['receivedAt'] as int:
+     DateTime.now().millisecondsSinceEpoch);
+   final date=bankSmsDate(body,referenceDate:arrived)??arrived;
+   final minor=parsed.amount!=null&&!parsed.requiresCurrencyReview?
+    waffraSarAmountMinor(parsed.amount!.toStringAsFixed(2)):null;
+   final prefill=WaffraInternalTransferDraft(
+    requestId:'sms-transfer-'+bankSmsHash(body),
+    fromId:'',toId:'',amountMinor:minor??0,
+    occurredIso:date.toIso8601String(),memo:'تحويل من رسالة بنكية');
+   var saved=false,ack=false;
+   await Navigator.of(context).push<void>(MaterialPageRoute(
+    builder:(route)=>Scaffold(
+     appBar:AppBar(title:const WaffraText('مراجعة تحويل بين حساباتي')),
+     body:Column(children:[
+      Padding(padding:const EdgeInsets.all(12),
+       child:WaffraText('من الحساب: '+
+        (facts.sourceSuffix==null?'غير معروف':'••••'+facts.sourceSuffix!)+
+        '  إلى الحساب: '+
+        (facts.destinationSuffix==null?'غير معروف':
+         '••••'+facts.destinationSuffix!))),
+      Expanded(child:WaffraAccountTransactionForm(
+       accounts:accounts,english:waffraIsEnglish,
+       initialSmsTransfer:prefill,
+       onConfirmTransfer:(draft)async{
+        await api.transfer(id:draft.requestId,
+         fromAccountId:draft.fromId,toAccountId:draft.toId,
+         amountMinor:draft.amountMinor,occurredIso:draft.occurredIso,
+         note:draft.memo,userConfirmed:true);
+        saved=true;
+        ack=await WaffraAutoSms.acknowledge([id]);
+        if(route.mounted)Navigator.of(route).pop();
+       })),
+     ]),
+    )));
+   if(!mounted||!saved)return;
+   try{await _learnSafeSmsRule(body:body,
+    sender:item['sender'] is String?item['sender'] as String:'',
+    kind:'transfer');}catch(_){}
+   if(ack){
+    setState(()=>_autoSmsPending.removeWhere((r)=>r['id']==id));
+    snackSuccess(context,'تم تسجيل التحويل بين الحسابات.');
+   }else{
+    snack(context,'التحويل اتسجل لكن تأكيد إزالة الرسالة فشل. '
+     'معرّف العملية يمنع الخصم مرتين.',isError:true);
+   }
+   unawaited(_refreshAutoSmsInbox());
+  }catch(_){
+   if(mounted)snack(context,'تعذر تسجيل التحويل؛ الرسالة ما زالت للمراجعة.',
+    isError:true);
+  }
+ }
  Future<void> _reviewAutoSmsCandidates({String? targetId})async {
   if(!mounted||!ready||_smsSheetOpen||_autoSmsReviewOpen||
      _financeLoadFailure!=null)return;
@@ -4196,38 +4326,88 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final cloudSummary=cloudKind is String ?
     '\n'+(waffraIsEnglish?'Cloud AI suggests: ':'اقتراح الذكاء الاصطناعي: ')+
     cloudKind+(cloudAmount is num?' • '+cloudAmount.toStringAsFixed(2):''):'';
+   final understood=facts.kind==WaffraBankOperationKind.income||
+    facts.kind==WaffraBankOperationKind.expense;
+   final firstChoice=sensitive?'exclude':
+    facts.kind==WaffraBankOperationKind.transfer?'transfer':
+    understood?'review':'manual';
    final decision=await showWaffraDialog<String>(context:context,
     builder:(dialog)=>AlertDialog(
-     title:WaffraText(waffraIsEnglish?'Bank SMS needs review':'رسالة بنكية تحتاج مراجعة'),
-     content:WaffraText((waffraIsEnglish?
-      'A financial SMS from $sender requires review before saving.':
-      'وصلت رسالة مالية من $sender وتحتاج مراجعة قبل الحفظ.')
-      +'\n\n'+summary+
-       (localFacts!=null?
-        '\n'+(waffraIsEnglish?'Local category: ':'القسم المقترح محليًا: ')+
-        (localFacts['category']?.toString()??''):'')+
-       cloudSummary),
+     title:WaffraText(waffraIsEnglish?
+      'Review bank message':'مراجعة رسالة بنكية'),
+     content:SingleChildScrollView(child:Column(
+      mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,
+      children:[
+       Container(
+        padding:const EdgeInsets.all(12),
+        decoration:BoxDecoration(borderRadius:BorderRadius.circular(14),
+         color:Theme.of(dialog).colorScheme.surfaceContainerLow),
+        child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+         Row(children:[
+          const Icon(Icons.account_balance_outlined,size:21),
+          const SizedBox(width:8),
+          Expanded(child:WaffraText(sender.isEmpty?
+           (waffraIsEnglish?'Bank sender not confirmed':'مرسل غير محدد'):sender)),
+         ]),
+         const SizedBox(height:8),
+         WaffraText(sensitive?
+          (waffraIsEnglish?
+           'Verification message. The private code is hidden for safety.':
+           'رسالة تحقق. رمز التحقق مخفي لحمايتك.'):
+          summary),
+         if(localFacts!=null)WaffraText(
+          (waffraIsEnglish?'Suggested category: ':'القسم المقترح: ')+
+          (localFacts['category']?.toString()??'')),
+         if(cloudSummary.isNotEmpty)WaffraText(cloudSummary),
+        ])),
+       const SizedBox(height:12),
+       WaffraText(waffraIsEnglish?
+        'Waffra read the sender and safe keywords. Choose the next step.':
+        'وفرة قرأ المرسل والكلمات المهمة. اختار الخطوة المناسبة.'),
+       const SizedBox(height:11),
+       Card(child:ListTile(
+        key:const Key('waffra-sms-understood-action'),
+        leading:Icon(sensitive?Icons.shield_outlined:
+         facts.kind==WaffraBankOperationKind.transfer?Icons.sync_alt_rounded:
+         understood?Icons.account_balance_wallet_outlined:Icons.edit_note_outlined),
+        title:WaffraText(sensitive?
+         (waffraIsEnglish?'Exclude verification SMS':'استبعاد رسالة التحقق'):
+         facts.kind==WaffraBankOperationKind.transfer?
+          (waffraIsEnglish?'Review account transfer':'مراجعة تحويل بين حساباتي'):
+         understood?(waffraIsEnglish?'I understand this transaction':'مراجعة العملية'):
+         (waffraIsEnglish?'Add a separate manual transaction':'إضافة عملية يدوية')),
+        subtitle:WaffraText(sensitive?
+         (waffraIsEnglish?'Learn a safe exclusion rule':'إنشاء قاعدة استثناء آمنة'):
+         (waffraIsEnglish?'Continue with verified transaction review':
+          'استكمال المراجعة قبل تسجيل أي مبلغ')),
+        onTap:()=>Navigator.pop(dialog,firstChoice),
+       )),
+       Card(child:ListTile(
+        key:const Key('waffra-sms-teach-action'),
+        leading:const Icon(Icons.auto_awesome_outlined),
+        title:WaffraText(waffraIsEnglish?'Teach Waffra this message':
+         'علّم وفرة هذه الرسالة'),
+        subtitle:WaffraText(waffraIsEnglish?
+         'Open a prefilled rule. Edit only what is missing.':
+         'افتح قاعدة جاهزة بكل البيانات المقترحة.'),
+        onTap:()=>Navigator.pop(dialog,'teach'),
+       )),
+      ])),
      actions:[
       TextButton(onPressed:()=>Navigator.pop(dialog),
        child:WaffraText(waffraIsEnglish?'Later':'لاحقًا')),
-      TextButton(
-       key:const Key('waffra-sms-exclude-with-rule'),
-       onPressed:()=>Navigator.pop(dialog,'exclude'),
-       child:WaffraText(waffraIsEnglish?
-        'Not a transaction • create exclusion rule':
-        'ليست معاملة • إنشاء قاعدة مستثناة')),
-      if(facts.kind==WaffraBankOperationKind.transfer)TextButton(
-       onPressed:()=>Navigator.pop(dialog,'transfer'),
-       child:WaffraText(waffraIsEnglish?
-        'Classify transfer':'تصنيف كتحويل')),
-      if(!sensitive&&localFacts==null&&cloudFacts==null)OutlinedButton(
-       key:const Key('waffra-ambiguous-ai-request'),
-       onPressed:()=>Navigator.pop(dialog,'ai'),
-       child:WaffraText(waffraIsEnglish?'Analyze with AI':'تحليل بالذكاء الاصطناعي')),
-      FilledButton(onPressed:()=>Navigator.pop(dialog,sensitive?'manual':'review'),
-       child:WaffraText(sensitive?
-        (waffraIsEnglish?'Add separate manual transaction':'إضافة عملية يدوية مستقلة'):
-        (waffraIsEnglish?'Review transaction':'مراجعة العملية'))),
+      if(!sensitive&&localFacts==null&&cloudFacts==null)
+       PopupMenuButton<String>(
+        tooltip:waffraIsEnglish?'More options':'خيارات أخرى',
+        icon:const Icon(Icons.more_horiz),
+        onSelected:(value)=>Navigator.pop(dialog,value),
+        itemBuilder:(_)=>[
+         PopupMenuItem(value:'ai',child:WaffraText(waffraIsEnglish?
+          'Optional AI review':'تحليل اختياري بالذكاء الاصطناعي')),
+         PopupMenuItem(value:'exclude',child:WaffraText(waffraIsEnglish?
+          'Not a transaction':'ليست عملية مالية')),
+        ],
+       ),
      ]));
    if(decision=='exclude'||decision=='transfer'){
     if(_smsRuleOwnerKey.isEmpty)return;
@@ -4239,7 +4419,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       rule.resolvedKind==kind&&WaffraSmsLocalRules.matches(
        rule,body,sender:sender));
      if(!existingMatch&&mounted){
-      await _openSmsRules(seedMessage:body,seedKind:kind,seedSender:sender);
+      // Explicit exclusion/transfer action allows conservative local learning.
+      // No balance is ever changed by learning a rule.
+      final learned=await _learnSafeSmsRule(
+       body:body,sender:sender,kind:kind);
+      if(!learned&&mounted)await _openSmsRules(
+       seedMessage:body,seedKind:kind,seedSender:sender);
      }
      if(!mounted)return;
      final saved=await const WaffraSmsLocalRuleStore()
@@ -4264,10 +4449,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          'اتحفظت القاعدة لكن تعذر استبعاد الرسالة بأمان. حاول مجددًا.',isError:true);
        }
       }else{
-       snackSuccess(context,waffraIsEnglish?
-        'Transfer rule saved. Register the transfer from Accounts; no money was changed.':
-        'اتحفظت قاعدة التحويل. سجّل التحويل من شاشة الحسابات؛ مفيش رصيد اتغيّر.');
+       await _reviewSmsAccountTransfer(item:selected,facts:facts);
       }
+     }else if(kind=='transfer'){
+      await _reviewSmsAccountTransfer(item:selected,facts:facts);
      }else if(mounted){
       snack(context,waffraIsEnglish?
        'Saved rule does not match this message. Adjust its keywords.':
@@ -4278,64 +4463,95 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       'Could not verify the rule store. Message remains for review.':
       'تعذر التحقق من القواعد. الرسالة لسه للمراجعة.',isError:true);
     }
+   }else if(decision=='teach'&&mounted){
+    if(_smsRuleOwnerKey.isEmpty)return;
+    final suggestionKind=sensitive?'excluded':
+     facts.kind==WaffraBankOperationKind.transfer?'transfer':
+     facts.kind==WaffraBankOperationKind.income?'income':
+     facts.kind==WaffraBankOperationKind.expense?'expense':'expense';
+    await _openSmsRules(
+     seedMessage:body,seedSender:sender,seedKind:suggestionKind,
+     seedCategory:(localFacts?['category'] is String)?
+      (localFacts!['category'] as String):'');
+    // Saving a rule is not a financial transaction. A verified explicit
+    // exclusion can remove the current review item after native acknowledgement.
+    try{
+     final rules=await const WaffraSmsLocalRuleStore()
+      .read(_smsRuleOwnerKey);
+     if(facts.kind==WaffraBankOperationKind.uncertain&&rules.any((r)=>
+      r.resolvedKind=='excluded'&&
+      WaffraSmsLocalRules.matches(r,body,sender:sender))){
+      final acknowledged=await WaffraAutoSms.acknowledge([id]);
+      if(acknowledged&&mounted){
+       setState(()=>_autoSmsPending.removeWhere((item)=>item['id']==id));
+       unawaited(_refreshAutoSmsInbox(importMonth:true));
+      }else if(mounted)snack(context,waffraIsEnglish?
+       'Rule saved, but SMS acknowledgement failed. Retry.':
+       'القاعدة اتحفظت لكن استبعاد الرسالة لم يتأكد. حاول تاني.',
+       isError:true);
+     }
+    }catch(_){
+     if(mounted)snack(context,waffraIsEnglish?
+      'Could not verify the new rule. Message remains for review.':
+      'تعذر التحقق من القاعدة. الرسالة ما زالت للمراجعة.',
+      isError:true);
+    }
    }else if(decision=='manual'&&mounted){
     await entrySheet();
    }else if(decision=='ai'&&mounted){
     await _analyzeAmbiguousSmsOnDemand(selected);
    }else if(decision=='review'&&mounted){
-    await bulkSmsSheet(initialText:body,
+    await bulkSmsSheet(initialText:body,initialSender:sender,
      suggestedLocalCategory:localFacts?['category'] as String?,
      suggestedLocalIncome:localFacts?['income'] as bool?);
     if(smsHashes.contains(bankSmsHash(body))){
      await WaffraAutoSms.acknowledge([id]);
      if(mounted&&_smsRuleOwnerKey.isNotEmpty){
-      // Once a trusted matching rule already exists, never ask to create
-      // that rule again. This does not authorize a balance write by itself.
-      var existingRule=false;
+      // Once a confirmed entry is committed, learn only a specific and
+      // verified bank direction; generic/uncertain categories need review.
       try{
-       final savedRules=await const WaffraSmsLocalRuleStore()
-        .read(_smsRuleOwnerKey);
+       final store=const WaffraSmsLocalRuleStore();
+       final savedRules=await store.read(_smsRuleOwnerKey);
        final known=WaffraSmsLocalRules.resolve(
-        body:body,sender:sender,
-        bankKind:WaffraBankSmsFactsParser.parse(body).kind,
-        custom:savedRules);
-       existingRule=known!=null &&
-        // Generic "purchase" and "payment" don't establish a useful
-        // learned merchant rule. Still offer specific classification.
-        known.id!='builtin_purchase'&&known.id!='builtin_payment';
+        body:body,sender:sender,bankKind:facts.kind,custom:savedRules);
+       // The user's FINAL saved category wins over pre-review guesses.
+       // Only use a record verified back from the encrypted ledger.
+       final confirmed=entries.where((entry)=>entry.sourceType=='sms'&&
+        entry.notes.isNotEmpty&&
+        bankSmsHash(entry.notes)==bankSmsHash(body)).toList();
+       final match=confirmed.length==1?confirmed.single:null;
+       final expectedIncome=facts.kind==WaffraBankOperationKind.income;
+       final specific=match!=null&&
+        (facts.kind==WaffraBankOperationKind.income||
+         facts.kind==WaffraBankOperationKind.expense)&&
+        match.income==expectedIncome&&
+        categories.any((c)=>c.name==match.category&&
+         c.income==match.income&&c.isSubcategory&&
+         waffraCategoryAvailableForNewEntry(categories,c));
+       final learned=specific?
+        await _learnSafeSmsRule(
+         body:body,sender:sender,
+         kind:expectedIncome?'income':'expense',
+         category:match.category):false;
+       if(!learned&&mounted){
+        // Uncertain classification opens a fully prefilled, editable rule.
+        await _openSmsRules(
+         seedMessage:body,seedSender:sender,
+         seedKind:facts.kind==WaffraBankOperationKind.income?
+          'income':'expense',
+         seedCategory:(localFacts?['category'] is String)?
+          (localFacts!['category'] as String):
+          (known?.category??''));
+       }else if(learned&&mounted){
+        snackSuccess(context,waffraIsEnglish?
+         'Matching SMS rule saved automatically.':
+         'اتحفظت قاعدة الرسائل المطابقة تلقائيًا.');
+       }
       }catch(_){
-       // A corrupt encrypted rule store is not an empty rules list.
-       // Preserve the financial transaction and alert the owner instead.
        if(mounted)snack(context,waffraIsEnglish?
-        'Could not verify your saved rules. No rule was changed.':
-        'تعذر التحقق من القواعد المحفوظة. لم يتم تغيير أي قاعدة.',
+        'Could not securely save a rule; your confirmed transaction is unchanged.':
+        'تعذر حفظ قاعدة التصنيف بأمان. العملية المالية المؤكدة لم تتغير.',
         isError:true);
-       return;
-      }
-      if(!existingRule&&mounted){
-       await showWaffraDialog<void>(context:context,
-        barrierDismissible:false,
-        builder:(dialog)=>PopScope(
-         canPop:false,
-         child:AlertDialog(
-          title:WaffraText(waffraIsEnglish?
-           'Create a rule for this new SMS format':
-           'إنشاء قاعدة لصيغة الرسالة الجديدة'),
-          content:WaffraText(waffraIsEnglish?
-           'Choose matching keywords, transaction type and category. '
-           'Existing matching rules are reused automatically.':
-           'اختار الكلمات المفتاحية ونوع العملية والقسم. '
-           'القواعد المطابقة الموجودة بنستخدمها تلقائيًا بدون سؤالك مرة تانية.'),
-          actions:[
-           FilledButton(
-            key:const Key('waffra-new-sms-create-rule-required'),
-            onPressed:()=>Navigator.pop(dialog),
-            child:WaffraText(waffraIsEnglish?'Create rule':'إنشاء قاعدة')),
-          ])));
-       if(mounted)await _openSmsRules(
-        seedMessage:body,seedSender:sender,
-        seedKind:WaffraBankSmsFactsParser.parse(body).kind==
-         WaffraBankOperationKind.income?'income':'expense');
       }
      }
     }
@@ -5383,7 +5599,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     ],
    )));
  }
- Future<void> bulkSmsSheet({String? initialText,
+ Future<void> bulkSmsSheet({String? initialText,String initialSender='',
   String? suggestedLocalCategory,bool? suggestedLocalIncome})async {
   // Deterministic SMS review is available immediately and offline.
   // Qwen remains optional for ambiguous messages; never block paste on a
@@ -5488,9 +5704,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(!ctx.mounted)return;
   final valid=<int>[],invalid=<int>[],duplicates=<int>[];
   final preRejected=<int,WaffraSmsNotSavedReason>{};
+  // Income/expense ledger does not represent account-to-account transfers,
+  // card settlements or unconfirmed messages. Leave these for proper review.
+  var transferReviewCount=0;
   var allowRepeatedSms=false;
   final seen=<String>{};
   for(var i=0;i<found.length;i++){
+   final facts=WaffraBankSmsFactsParser.parse(found[i]);
+   if(facts.kind==WaffraBankOperationKind.transfer||
+      facts.kind==WaffraBankOperationKind.cardSettlement||facts.pending){
+    transferReviewCount++;
+    invalid.add(i);
+    preRejected[i]=WaffraSmsNotSavedReason.categoryUnresolved;
+    continue;
+   }
    if(results[i].amount==null||results[i].amount!<=0){
     invalid.add(i);
     preRejected[i]=WaffraSmsNotSavedReason.amountUnrecognized;
@@ -5523,7 +5750,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     valid.sort();
    }
   }
-  if(valid.isEmpty){update(() {statusMessage=waffraIsEnglish?'No new transactions can be saved. Review the messages below.':'لا توجد معاملات جديدة قابلة للحفظ. راجع الرسائل أدناه.';rejectedMessages=[for(final i in preRejected.keys)found[i]];});return;}
+  if(valid.isEmpty){update(() {statusMessage=transferReviewCount>0?
+    (waffraIsEnglish?'Transfers and card settlements require separate account review. No income/expense was posted.':
+     'التحويلات وسداد البطاقات تحتاج مراجعة منفصلة في الحسابات؛ لم نسجلها كدخل أو مصروف.'):
+    (waffraIsEnglish?'No new transactions can be saved. Review the messages below.':
+     'لا توجد معاملات جديدة قابلة للحفظ. راجع الرسائل أدناه.');
+    rejectedMessages=[for(final i in preRejected.keys)found[i]];});return;}
   final incomes=valid.where((i)=>results[i].income).toList();
   final expenses=valid.where((i)=>!results[i].income).toList();
   final incomeTotal=incomes.fold<double>(0,(v,i)=>v+results[i].amount!);
@@ -5584,6 +5816,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // Paint the confirmation feedback before preparing a large SMS batch.
   await WidgetsBinding.instance.endOfFrame;
   if(!ctx.mounted)return;
+  List<WaffraSmsLocalRule> learnedSmsRules=const [];
+  if(_smsRuleOwnerKey.isNotEmpty){
+   try{
+    learnedSmsRules=await const WaffraSmsLocalRuleStore()
+     .read(_smsRuleOwnerKey);
+   }catch(_){
+    if(ctx.mounted)update((){
+     busy=false;
+     statusMessage=waffraIsEnglish?
+      'Encrypted classification rules are unavailable. No SMS was saved. Retry after unlocking.':
+      'تعذر قراءة قواعد التصنيف المشفرة. لم تُحفظ أي رسالة؛ حاول مجددًا بعد فتح التطبيق.';
+    });
+    return;
+   }
+  }
+  if(!ctx.mounted)return;
   final additions=<MoneyEntry>[];
   final proposedSourceIndexes=<int>[];
   final proposed=<BudgetCategory>[];
@@ -5595,14 +5843,29 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     for(final c in [...categories,...proposed])
      WaffraM155Category(id:c.id,name:c.name,income:c.income,parentId:c.parentId),
    ];
-   final plan=WaffraM155CategoryPlan.propose(rawSms:raw,income:result.income,
-    existing:existing,learned:learnedMerchantCategories);
-   if(plan==null){
+   final bankFacts=WaffraBankSmsFactsParser.parse(raw);
+   final learned=WaffraSmsLocalRules.resolve(
+    body:raw,sender:found.length==1?initialSender:'',
+    bankKind:bankFacts.kind,custom:learnedSmsRules);
+   // Generic built-in patterns should not supersede the existing planner.
+   final confirmedRule=learned!=null&&!learned.builtIn?learned:null;
+   final learnedCategory=confirmedRule!=null&&categories.any((c)=>
+     c.isSubcategory&&c.name==confirmedRule.category&&
+     c.income==result.income&&waffraCategoryAvailableForNewEntry(categories,c))
+      ?confirmedRule.category:null;
+   // Inactive learned categories must be reviewed instead of substituted.
+   if(confirmedRule!=null&&learnedCategory==null){
     preRejected[i]=WaffraSmsNotSavedReason.categoryUnresolved;
     continue;
    }
-   if(plan.newCategoryRequired){
-    final parentName=plan.categoryName.split(' / ').first;
+   final plan=WaffraM155CategoryPlan.propose(rawSms:raw,income:result.income,
+    existing:existing,learned:learnedMerchantCategories);
+   if(plan==null&&learnedCategory==null){
+    preRejected[i]=WaffraSmsNotSavedReason.categoryUnresolved;
+    continue;
+   }
+   if(learnedCategory==null&&plan?.newCategoryRequired==true){
+    final parentName=plan!.categoryName.split(' / ').first;
     final roots=categories.where((c)=>c.income==result.income&&
       !c.isSubcategory&&c.name==parentName).toList();
     if(roots.length!=1){
@@ -5614,12 +5877,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      parentId:parent.id,income:result.income,icon:parent.icon,
      color:parent.color));
    }
+   final categoryName=learnedCategory??plan!.categoryName;
    final merchant=waffraMerchantName(raw,income:result.income);
    final title=merchant==null?result.title:result.title+' — '+merchant;
    additions.add(MoneyEntry(id:newId(),title:title,
-    category:plan.categoryName,amount:result.amount!,income:result.income,
+    category:categoryName,amount:result.amount!,income:result.income,
     date:bankSmsDate(raw)??DateTime.now(),notes:raw,sourceType:'sms',
-    merchantKey:plan.merchantKey));
+    merchantKey:plan?.merchantKey??waffraMerchantKey(raw,income:result.income)??''));
    proposedHashes.add(bankSmsHash(raw));
    proposedSourceIndexes.add(i);
   }
@@ -7447,6 +7711,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        },
       ),
      );
+     // A preference failure cannot retry an already-committed debit.
+     try{await _learnManualCategoryPreference(result);}catch(_){}
     }catch(error){
      // A write may have committed before a later source read failed. Never
      // claim 'previous data unchanged' or let a retry create a ghost debit.
@@ -7489,6 +7755,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      :WaffraFinanceRoute.transactionEdit,
      userConfirmed:initial==null,
      selectedAccountId:initial==null?chosenManual?.ids?.single:null);
+    if(initial==null&&result.sourceType=='manual'){
+     try{await _learnManualCategoryPreference(result);}catch(_){}
+    }
    }catch(e){
     if(mounted){
      setState((){

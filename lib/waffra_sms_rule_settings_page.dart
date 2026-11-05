@@ -9,14 +9,15 @@ class WaffraSmsRuleSettingsPage extends StatefulWidget {
   super.key,required this.english,required this.ownerKey,
   required this.scannedMessages,required this.incomeCategories,
   required this.expenseCategories,this.seedMessage,this.seedKind,
-  this.seedSender='',this.seedAccountSuffix='',this.bankAccounts=const {},
+  this.seedSender='',this.seedAccountSuffix='',this.seedCategory='',
+  this.bankAccounts=const {},
   required this.onNotice,
  });
  final bool english;
  final String ownerKey;
  final List<String> scannedMessages,incomeCategories,expenseCategories;
  final String? seedMessage,seedKind;
- final String seedSender,seedAccountSuffix;
+ final String seedSender,seedAccountSuffix,seedCategory;
  final Map<String,String> bankAccounts;
  final void Function(String) onNotice;
  @override State<WaffraSmsRuleSettingsPage> createState()=>_WaffraSmsRuleSettingsPageState();
@@ -77,7 +78,15 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
  }
  Future<void> _edit({WaffraSmsLocalRule? existing,String? seed,String? kindHint})async{
   if(busy||error!=null)return;
-  final name=TextEditingController(text:existing?.name??'');
+  final proposed=seed==null?null:WaffraSmsLocalRules.suggestedRule(
+   body:seed,sender:widget.seedSender,kind:kindHint??'expense',
+   category:widget.seedCategory);
+  final name=TextEditingController(text:existing?.name??
+   proposed?.name??(seed==null?'':switch(kindHint){
+    'income'=>'دخل من البنك','expense'=>'مصروف بنكي',
+    'transfer'=>'تحويل بنكي','excluded'=>'رسائل تحقق',
+    _=>'رسالة بنكية',
+   }));
   final customKeyword=TextEditingController();
   final search=TextEditingController();
   final sender=TextEditingController(text:existing?.sender??widget.seedSender);
@@ -89,8 +98,9 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
   var accountId=existing?.accountId??'';
   // Exclusion rules normally match ANY verified keyword, not every word
   // suggested from one SMS. Matching all is an explicit advanced option.
-  var all=existing?.matchAll??(kind!='excluded');
-  var category=existing?.category;
+  var all=existing?.matchAll??(seed==null&&kind!='excluded');
+  var category=existing?.category??
+   (widget.seedCategory.isNotEmpty?widget.seedCategory:proposed?.category);
   var searchQuery='';
   String? validation;
   final selected=<String>{...?existing?.keywords};
@@ -99,7 +109,10 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
   ]);
   final seedChoices=seed==null?const <String>[]:
    WaffraSmsLocalRules.suggestions([seed]);
-  if(existing==null&&seedChoices.isNotEmpty)selected.add(seedChoices.first);
+  if(existing==null){
+   if(proposed!=null)selected.addAll(proposed.keywords);
+   else if(seedChoices.isNotEmpty)selected.add(seedChoices.first);
+  }
   Future<void> addKeyword(StateSetter update)async{
    final keyword=customKeyword.text.trim();
    if(!WaffraSmsLocalRules.safeRuleKeyword(keyword,kind)){
@@ -141,8 +154,23 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
       child:ConstrainedBox(constraints:BoxConstraints(
        maxHeight:MediaQuery.sizeOf(ctx).height*.81),
        child:ListView(shrinkWrap:true,children:[
-        Text(widget.english?'Add classification rule':'إضافة قاعدة تحليل',
+        Text(existing!=null?(widget.english?'Edit classification':'تعديل القاعدة'):
+         (widget.english?'Review suggested rule':'راجع القاعدة المقترحة'),
          style:Theme.of(ctx).textTheme.titleLarge),
+        if(seed!=null)...[
+         const SizedBox(height:9),
+         Container(padding:const EdgeInsets.all(12),
+          decoration:BoxDecoration(
+           color:Theme.of(ctx).colorScheme.primaryContainer.withValues(alpha:.38),
+           borderRadius:BorderRadius.circular(14)),
+          child:Row(children:[
+           const Icon(Icons.auto_awesome_outlined,size:22),
+           const SizedBox(width:9),
+           Expanded(child:Text(widget.english?
+            'Waffra filled this rule from the message. Review and confirm.':
+            'وفرة جهّز القاعدة من الرسالة. راجع البيانات واحفظ.')),
+          ])),
+        ],
         const SizedBox(height:10),
         TextField(controller:name,textInputAction:TextInputAction.next,
          decoration:InputDecoration(
@@ -180,9 +208,87 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
          const SizedBox(height:12),
         ],
         TextField(controller:sender,
-         decoration:InputDecoration(labelText:widget.english?
-          'Bank sender (optional)':'المرسل (اختياري)',
+         decoration:InputDecoration(
+          prefixIcon:const Icon(Icons.account_balance_outlined),
+          labelText:widget.english?'SMS sender':'مرسل الرسالة',
           border:const OutlineInputBorder())),
+        const SizedBox(height:14),
+        Row(children:[
+         const Icon(Icons.tag_outlined,size:21),
+         const SizedBox(width:7),
+         Expanded(child:Text(widget.english?'Suggested keywords':'الكلمات المقترحة',
+          style:Theme.of(ctx).textTheme.titleMedium)),
+        ]),
+        const SizedBox(height:7),
+        if(selected.isEmpty)Text(widget.english?
+         'No safe keywords found. Add one under Advanced edit.':
+         'لم نجد كلمات كافية. أضف كلمة من تعديل متقدم.'),
+        if(selected.isNotEmpty)Wrap(spacing:6,runSpacing:4,children:[
+         for(final word in selected)InputChip(
+          label:Text(word),onDeleted:()=>refresh(()=>selected.remove(word))),
+        ]),
+        const SizedBox(height:12),
+        Text(widget.english?'When should this rule match?':'متى تنطبق القاعدة؟',
+         style:Theme.of(ctx).textTheme.titleSmall),
+        const SizedBox(height:5),
+        Wrap(spacing:8,runSpacing:5,children:[
+         ChoiceChip(
+          key:const Key('waffra-sms-any-keyword'),
+          label:Text(widget.english?'Any keyword':'أي كلمة تكفي'),
+          selected:!all,onSelected:(_)=>refresh(()=>all=false)),
+         ChoiceChip(
+          key:const Key('waffra-sms-all-keywords'),
+          label:Text(widget.english?'All keywords':'كل الكلمات'),
+          selected:all,onSelected:(_)=>refresh(()=>all=true)),
+        ]),
+        const SizedBox(height:7),
+        Text(widget.english?
+         'Matches $matches checked messages (preview, not deletion).':
+         'تنطبق على $matches رسالة تم فحصها (معاينة فقط).',
+         style:Theme.of(ctx).textTheme.bodySmall),
+        const SizedBox(height:8),
+        ExpansionTile(
+         key:const Key('waffra-sms-advanced-rule-edit'),
+         tilePadding:EdgeInsets.zero,
+         title:Text(widget.english?'Advanced edit':'تعديل متقدم'),
+         children:[
+          Text(widget.english?
+           'Choose keywords or add a safe phrase. Never enter OTP numbers.':
+           'اختار كلمات إضافية أو اكتب عبارة آمنة. لا تكتب رمز التحقق نفسه.'),
+          const SizedBox(height:8),
+          TextField(controller:search,
+           onChanged:(value)=>refresh(()=>searchQuery=value),
+           decoration:InputDecoration(
+            prefixIcon:const Icon(Icons.search),
+            hintText:widget.english?'Search suggestions':'ابحث في الاقتراحات',
+            border:const OutlineInputBorder())),
+          const SizedBox(height:8),
+          if(visible.isEmpty)Text(widget.english?
+           'No suggestions; enter a safe word below.':
+           'مفيش اقتراحات؛ أضف كلمة آمنة بنفسك.'),
+          Wrap(spacing:7,runSpacing:6,children:[
+           for(final word in visible)FilterChip(
+            label:Text(word),selected:selected.contains(word),
+            onSelected:(value)=>refresh((){
+             if(value&&selected.length<12)selected.add(word);
+             if(!value)selected.remove(word);
+             validation=null;
+            })),
+          ]),
+          const SizedBox(height:10),
+          Row(children:[
+           Expanded(child:TextField(controller:customKeyword,
+            decoration:InputDecoration(
+             labelText:widget.english?'Add keyword':'أضف كلمة جديدة',
+             border:const OutlineInputBorder()))),
+           IconButton(onPressed:()=>addKeyword(refresh),
+            icon:const Icon(Icons.add_circle_outline),
+            tooltip:widget.english?'Add':'إضافة'),
+          ]),
+          const SizedBox(height:10),
+          if(financial)Text(widget.english?
+           'Automatic financial posting requires separate verified consent.':
+           'التسجيل المالي التلقائي يحتاج تحقق وموافقة مستقلة.'),
         if(financial)...[
          SwitchListTile.adaptive(
           key:const Key('waffra-sms-rule-auto-post'),
@@ -220,57 +326,9 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
             border:const OutlineInputBorder())),
          ],
         ],
-        const SizedBox(height:12),
-        Text(widget.english?'Tap one or more chips to SELECT keywords (not just view them).':
-         'اضغط على كلمة من الاقتراحات لتحديدها، وبعد الاختيار هتظهر ضمن الكلمات المختارة.'),
-        const SizedBox(height:5),
-        Text(widget.english?'Selected: ${selected.length} / 12':
-         'الكلمات المختارة: ${selected.length} من ١٢'),
+
+         ]),
         const SizedBox(height:6),
-        TextField(controller:search,
-         onChanged:(value)=>refresh(()=>searchQuery=value),
-         decoration:InputDecoration(
-          prefixIcon:const Icon(Icons.search),
-          hintText:widget.english?'Search suggestions':'ابحث في الاقتراحات',
-          border:const OutlineInputBorder())),
-        const SizedBox(height:7),
-        if(visible.isEmpty)Text(widget.english?
-         'No suggestions yet. Add a word below.':
-         'لسه مفيش اقتراحات؛ تقدر تضيف كلمة بنفسك.'),
-        Wrap(spacing:6,runSpacing:4,children:[
-         for(final word in visible)FilterChip(
-          label:Text(word),selected:selected.contains(word),
-          onSelected:(value)=>refresh((){
-           if(value&&selected.length<12)selected.add(word);
-           if(!value)selected.remove(word);
-           validation=null;
-          })),
-        ]),
-        const SizedBox(height:9),
-        Row(children:[
-         Expanded(child:TextField(controller:customKeyword,
-          decoration:InputDecoration(
-           labelText:widget.english?'Or add a keyword':'أو أضف كلمة جديدة',
-           border:const OutlineInputBorder()))),
-         IconButton(onPressed:()=>addKeyword(refresh),
-          icon:const Icon(Icons.add_circle_outline),tooltip:widget.english?'Add':'إضافة'),
-        ]),
-        if(selected.isNotEmpty)Wrap(spacing:5,runSpacing:3,children:[
-         for(final word in selected)InputChip(label:Text(word),onDeleted:()=>
-          refresh(()=>selected.remove(word))),
-        ]),
-        const SizedBox(height:10),
-        SwitchListTile.adaptive(
-         contentPadding:EdgeInsets.zero,value:all,
-         title:Text(widget.english?'All selected keywords must match':
-          'لازم كل الكلمات المختارة تظهر'),
-         subtitle:Text(widget.english?
-          'Turn off to match any one keyword.':
-          'اقفل الاختيار لو يكفي ظهور أي كلمة.'),
-         onChanged:(value)=>refresh(()=>all=value)),
-        Text(widget.english?
-         'Matches $matches scanned messages (preview only).':
-         'القاعدة تطابق $matches رسالة ممسوحة (معاينة فقط).'),
         if(validation!=null)Padding(padding:const EdgeInsets.only(top:6),
          child:Text(validation!,style:TextStyle(color:Theme.of(ctx).colorScheme.error))),
         const SizedBox(height:14),
@@ -347,21 +405,49 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
      'القواعد بتحلل محليًا قبل الذكاء الاصطناعي، وبتقترح نوع العملية والقسم فقط. الحفظ بعد موافقتك.',
      style:Theme.of(context).textTheme.bodyMedium),
     const SizedBox(height:16),
-    Text(widget.english?'My rules':'قواعدي',
+    Text(widget.english?'Learned classifications':'التصنيفات التي تعلّمها وفرة',
      style:Theme.of(context).textTheme.titleMedium),
-    if(saved.isEmpty)Padding(padding:const EdgeInsets.symmetric(vertical:12),
-     child:Text(widget.english?
-      'No custom rules yet. Use Add rule to choose keywords from scanned messages.':
-      'لسه ما أضفتش قواعد. اضغط إضافة قاعدة واختار كلمات من الرسائل الممسوحة.')),
-    for(final rule in saved)Card(child:ListTile(
-     title:Text(rule.name),
-     subtitle:Text('${rule.resolvedKind} • ${rule.category}\n${rule.keywords.join('، ')}'),
-     isThreeLine:true,
-     onTap:()=>_edit(existing:rule),
-     trailing:IconButton(
-      tooltip:widget.english?'Delete rule':'حذف القاعدة',
-      icon:const Icon(Icons.delete_outline),
-      onPressed:busy?null:()=>_remove(rule)))),
+    const SizedBox(height:8),
+    for(final kind in const <String>['income','expense','transfer','excluded'])
+     Card(child:ExpansionTile(
+      key:Key('waffra-sms-rule-bucket-$kind'),
+      leading:Icon(switch(kind){
+       'income'=>Icons.call_received_rounded,
+       'expense'=>Icons.call_made_rounded,
+       'transfer'=>Icons.sync_alt_rounded,
+       _=>Icons.shield_outlined,
+      }),
+      title:Text(switch(kind){
+       'income'=>widget.english?'Income':'دخل',
+       'expense'=>widget.english?'Expenses':'مصروف',
+       'transfer'=>widget.english?'Transfers':'تحويل',
+       _=>widget.english?'Excluded messages':'رسائل مستثناة',
+      }),
+      subtitle:Text(widget.english?
+       '${saved.where((r)=>r.resolvedKind==kind).length} saved patterns':
+       '${saved.where((r)=>r.resolvedKind==kind).length} أنماط محفوظة'),
+      children:[
+       if(!saved.any((r)=>r.resolvedKind==kind))
+        Padding(padding:const EdgeInsets.all(14),
+         child:Text(widget.english?
+          'Waffra will learn from your confirmed SMS.':
+          'وفرة هيتعلّم من الرسائل اللي بتراجعها وتأكدها.')),
+       for(final rule in saved.where((r)=>r.resolvedKind==kind))
+        ListTile(
+         title:Text(rule.name),
+         subtitle:Text(
+          '${rule.category.isNotEmpty?rule.category+' • ':''}'
+          '${rule.sender.isNotEmpty?rule.sender+' • ':''}'
+          '${rule.keywords.join('، ')}',
+          maxLines:3,overflow:TextOverflow.ellipsis),
+         onTap:()=>_edit(existing:rule),
+         trailing:IconButton(
+          tooltip:widget.english?'Delete this pattern':'حذف هذا النمط',
+          icon:const Icon(Icons.delete_outline),
+          onPressed:busy?null:()=>_remove(rule)),
+        ),
+      ],
+     )),
     const SizedBox(height:18),
     Text(widget.english?'Built-in rules':'قواعد جاهزة',
      style:Theme.of(context).textTheme.titleMedium),
