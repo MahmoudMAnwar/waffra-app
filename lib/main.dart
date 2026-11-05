@@ -3546,7 +3546,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final p=await SharedPreferences.getInstance();
     chosen=p.getString(_m467ChoiceKey)??'all';
    }
-   if(chosen!='all'&&chosen!='none'&&
+   if(chosen!='all'&&
       !accounts.any((a)=>!a.archived&&a.id==chosen))chosen='all';
    final now=DateTime.now();
    final month=now.year.toString().padLeft(4,'0')+'-'+
@@ -3555,7 +3555,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // Don't scan the full SQLCipher account context after every save or pull.
    final contextView=chosen=='all'?null:await api.readAccountContext(
     monthIso:month,
-    selectedAccountId:chosen=='none'?null:chosen);
+    selectedAccountId:chosen);
    if(!mounted)return;
    // A user may switch accounts while this async SQL projection is running.
    // Never repaint that newly chosen view with a stale older selection.
@@ -3586,7 +3586,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
  String get _m467AccountLabel{
   if(_m467SelectedAccount=='all')return (waffraIsEnglish?'All accounts':'كل الحسابات');
-  if(_m467SelectedAccount=='none')return (waffraIsEnglish?'Unassigned transactions':'عمليات بدون حساب');
   for(final account in _m467Accounts){
    if(account.id==_m467SelectedAccount)return account.name;
   }
@@ -3598,8 +3597,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(selected=='all')return entries;
   final contextView=_m467AccountContext;
   if(contextView==null)return const <MoneyEntry>[];
-  final ids=contextView.entries.where((item)=>selected=='none'?
-   item.accountId==null:item.accountId==selected).map((item)=>item.id).toSet();
+  final ids=contextView.entries.where((item)=>
+   item.accountId==selected).map((item)=>item.id).toSet();
   return entries.where((entry)=>ids.contains(entry.id));
  }
 
@@ -3610,7 +3609,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // wallet movements. Unassigned ledger entries do not alter accounts.
    return _m467Accounts.fold<int>(0,(total,a)=>total+a.balanceMinor)/100;
   }
-  if(_m467SelectedAccount=='none')return 0;
   for(final a in _m467Accounts){
    if(a.id==_m467SelectedAccount)return a.balanceMinor/100;
   }
@@ -3633,8 +3631,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    await openVerifiedAccounts();
    return;
   }
-  if(next!='all'&&next!='none'&&
-     !_m467Accounts.any((a)=>a.id==next))return;
+  if(next!='all'&&
+     !_m467Accounts.any((a)=>a.id==next&&!a.archived))return;
   setState(()=>_m467SelectedAccount=next);
   try{
    final p=await SharedPreferences.getInstance();
