@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_riyal_symbol.dart';
+import 'package:waffra/waffra_i18n.dart';
 
 void main() {
   const style = TextStyle(fontSize: 14);
@@ -57,6 +58,23 @@ void main() {
     expect(valid.whereType<TextSpan>()
         .map((span) => span.text ?? '').join(),
         contains('رسالة واردة: '));
+  });
+
+  testWidgets('M470 bank SMS counter and fee labels are never mutilated',
+      (tester) async {
+    waffraLanguage.value = 'ar';
+    await tester.pumpWidget(const MaterialApp(home: Scaffold(
+      body: Column(children: [
+        WaffraText('497 رسائل بانتظار المراجعة'),
+        WaffraText('500 رسالة من مرسلين'),
+        WaffraText('رسوم مستقلة: 0.58 SAR'),
+      ]),
+    )));
+    // The one real SAR amount uses the image, but the counter words never do.
+    expect(find.byType(WaffraCurrencyMark), findsOneWidget);
+    expect(find.text('497 رسائل بانتظار المراجعة'), findsOneWidget);
+    expect(find.text('500 رسالة من مرسلين'), findsOneWidget);
+    addTearDown(() => waffraLanguage.value = 'ar');
   });
 
   test('M470 English currency text is preserved as SAR', () {
