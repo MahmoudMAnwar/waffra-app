@@ -59,14 +59,11 @@ class M452ReviewAndRegistration(unittest.TestCase):
         self.assertEqual(rules.count("Future<List<WaffraSmsLocalRule>> read("), 1)
         self.assertEqual(rules.count("Future<void> write("), 1)
         self.assertEqual(rules.count("String _key(String owner)"), 1)
-        self.assertIn("RegExp(r'^[a-f0-9]{64}
-        self.assertNotIn(").hasMatch(owner)){\n   throw", rules.split("Future<void> write(", 1)[1])
-
-
-if __name__ == "__main__":
-    unittest.main()
-).hasMatch(owner)", rules)
-        self.assertNotIn(").hasMatch(owner)){\n   throw", rules.split("Future<void> write(", 1)[1])
+        self.assertIn("RegExp(r'^[a-f0-9]{64}$').hasMatch(owner)", rules)
+        self.assertNotIn(
+            "RegExp(r'^[a-f0-9]{64}$').hasMatch(owner)",
+            rules.split("Future<void> write(", 1)[1],
+        )
 
 
 if __name__ == "__main__":
