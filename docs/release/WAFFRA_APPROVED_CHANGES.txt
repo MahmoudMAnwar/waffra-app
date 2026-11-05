@@ -1,3 +1,11 @@
+[M470-27] 2026-11-06 — New account creation UI with distinct type and opening balance
+====================================================================================
+- Replaced the original crowded account form with a compact account-creation dialog. Account type, verified bank/provider choice (only for a bank), account nickname, and opening balance are distinct labeled controls. Existing cash, bank, wallet, and other storage kinds remain unchanged.
+- Account opening uses the existing SAR-to-halalas parser and rejects negative/invalid amounts, missing names and unknown bank selection. Opening balance is a starting asset, not a new income entry.
+- An explicitly chosen bank name is shown as part of the account display label only. There is no API bank connection, no inferred SMS ownership, and no unapproved schema migration.
+- The original witnessed SQLCipher account creation writer remains the sole financial mutation. Added Flutter tests and exact M385 scoped file/section declarations.
+- Item #27 is code + tests, NOT signed Android success. More detailed account type definitions in item #23 remain to be implemented with compatible V3 backup and migration.
+
 [M470-29] 2026-11-06 — Read-only monthly budgets by explicit account allocation (PR #395)
 ============================================================================================
 - Added pure, integer-halalas monthly per-account cap and expense projections for a single account or All accounts. Multiple budgets for one account sum; all explicitly assigned account caps sum once, without duplicating a budget by selecting All.
