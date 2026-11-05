@@ -21,7 +21,7 @@ abstract final class WaffraAutoSmsPolicy {
   r'jazira|jazeera|aljazira|bank|urpay|stcpay|stcbank|mobily.?pay',
   caseSensitive:false);
  static final _currency=RegExp(
-  r'\b(?:SAR|SR)\b|ريال(?:\s+سعودي)?|ر\.?\s*س',
+  r'(?<![A-Za-zء-ي])(?:SAR|SR|ريال(?:\s+سعودي)?|ر\.\s*س|ر\s+س)(?![A-Za-zء-ي])',
   caseSensitive:false);
  static final _incoming=RegExp(
   r'\b(?:credit transfer|incoming transfer|account credited|credited|'
