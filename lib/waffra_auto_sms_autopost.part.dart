@@ -1,201 +1,199 @@
 part of 'main.dart';
 
-/// M418: a one-time explicit opt-in authorizes confirmed, high-confidence
-/// automatic bank transaction imports. A sender or LLM is never a finance
-/// authority; the existing cross-engine writer owns ALL money and SMS hashes.
+/// M452: no cloud network calls from WorkManager. The owner can authorize
+/// recurring FINANCIAL posting only by explicitly saving a custom rule bound
+/// to a named, verified account and its four-digit bank SMS suffix.
 ///
-/// Separate from the user's main UI: the Android SMS worker can execute the
-/// identical code when Waffra is closed. On failure, the encrypted message
-/// stays queued; never report that a transaction was recorded.
+/// All failed, uncertain, unbound, transfer and sensitive verification
+/// messages remain review-only. Nothing touches Cash by default.
 abstract final class WaffraAutoSmsAutoPoster {
- // QA safety: no automatic bank SMS analysis or money writes until accepted.
- static bool get reviewOnly => true;
+ static bool get reviewOnly => false; // Only an approved per-rule match can post.
+
  static Future<Map<String,int>> run()async{
   final summary=<String,int>{'saved':0,'duplicates':0,'review':0};
   if(!await WaffraAutoSms.enabled())return summary;
-  if(reviewOnly){
-   final pending=await WaffraAutoSms.pending();
-   // Analysis may run after explicit cloud opt-in, even with UI closed.
-   // Suggestions stay in the encrypted review queue. NO finance writer is
-   // ever opened in this branch, regardless of model confidence.
-   await WaffraSmsCloudReviewAnalyzer.stagePending(
-    pending,maxPerRun:1);
-   for(final candidate in pending){
-    final id=candidate['id'];
-    if(id is String)await WaffraAutoSms.notifyReview(id);
-   }
-   summary['review']=pending.length;
-   return summary;
+  final pending=await WaffraAutoSms.pendingChecked();
+  if(pending==null)return summary;
+  if(pending.isEmpty)return summary;
+
+  Future<void> keepForReview(Map<String,Object?> candidate)async{
+   summary['review']=summary['review']!+1;
+   final id=candidate['id'];
+   if(id is String)await WaffraAutoSms.notifyReview(id);
   }
+
   final prefs=await SharedPreferences.getInstance();
   await prefs.reload();
-  // No guest data writes before first-run profile setup. Old installed
-  // profiles remain unchanged and their finance source is never reset.
-  final profile=prefs.getString('waffra_profile');
-  if(profile==null||profile.isEmpty||
-     prefs.getBool('waffra_onboarding_completed')!=true)return summary;
-  final batch=await WaffraAutoSms.pending();
-  if(batch.isEmpty)return summary;
-  final binding=await WaffraProductionFinanceAuthorityBinding.bind(
-    installedApp:true,
-   legacy:const WaffraHomeFinancePersistence(),
-   startupRoute:WaffraFinanceRoute.widgetStartup);
+  final rawProfile=prefs.getString('waffra_profile');
+  if(rawProfile==null||rawProfile.isEmpty){
+   for(final row in pending)await keepForReview(row);
+   return summary;
+  }
+  String owner='';
   try{
-   for(final candidate in batch.take(25)){
-    if(!await WaffraAutoSms.enabled())break;
-    final id=candidate['id'],body=candidate['body'];
+   final profile=Person.fromJson(
+    Map<String,dynamic>.from(jsonDecode(rawProfile) as Map));
+   owner=WaffraSmsLocalRuleStore.ownerKey(
+    provider:profile.provider,phone:profile.phone,email:profile.email);
+  }catch(_){}
+  if(owner.isEmpty){
+   for(final row in pending)await keepForReview(row);
+   return summary;
+  }
+  List<WaffraSmsLocalRule> rules;
+  try{
+   rules=await const WaffraSmsLocalRuleStore().read(owner);
+  }catch(_){
+   // A broken user-specific key may not silently fall back to generic
+   // rules or erase the encrypted review queue.
+   for(final row in pending)await keepForReview(row);
+   return summary;
+  }
+  if(!rules.any((r)=>r.autoPost)){
+   for(final row in pending)await keepForReview(row);
+   return summary;
+  }
+
+  WaffraProductionFinanceAuthorityBinding? binding;
+  try{
+   // The account-aware writer exists only for a verified, activated source.
+   // Guarded legacy must not gain a second/shadow money authority.
+   binding=await WaffraProductionFinanceAuthorityBinding.bind(
+    installedApp:true,legacy:const WaffraHomeFinancePersistence(),
+    startupRoute:WaffraFinanceRoute.widgetStartup);
+   if(binding.accountsBridge==null){
+    for(final row in pending)await keepForReview(row);
+    return summary;
+   }
+   for(final candidate in pending.take(25)){
+    final id=candidate['id'];
+    final body=candidate['body'];
     final sender=candidate['sender'];
     final at=candidate['receivedAt'];
     if(id is! String||body is! String||sender is! String||
-       at is! int||body.trim().isEmpty)continue;
-    final hash=bankSmsHash(body);
-    // Never trust a stale in-memory Home cache: verify each message under the
-    // shared Home/Widget finance journal and retry safely after partial saves.
-    final loaded=await binding.authority.load(route:WaffraFinanceRoute.widgetRead);
-    loaded.finance.requireIntegrity();
-    final known=loaded.finance.getStringList('waffra_sms_hashes_v1')??const <String>[];
-    if(known.contains(hash)){
-     await WaffraAutoSms.acknowledge([id]);
-     summary['duplicates']=summary['duplicates']!+1;
+       at is! int||body.trim().isEmpty||candidate['sensitiveOtp']==true){
+     await keepForReview(candidate);
      continue;
     }
-    // When a user separately enabled cloud analysis, process matching SMS
-    // through the authenticated Firebase -> OpenRouter path even with the UI
-    // closed. Only redacted payloads leave the device; suggestions are cached
-    // inside the already-encrypted Android SMS queue.
-    Map<String,Object?>? cloud;
-    if(candidate['cloud'] is Map){
-     cloud=Map<String,Object?>.from(candidate['cloud'] as Map);
-    }else{
-     cloud=await WaffraSmsCloudService.analyzeIfConsented(body);
-     if(cloud!=null){
-      final staged=Map<String,Object?>.from(cloud)
-       ..remove('verifiedForPosting');
-      await WaffraAutoSms.stageCloudAnalysis(id,staged);
+    try{
+     final facts=WaffraBankSmsFactsParser.parse(body);
+     final parsed=BankParser.parse(body);
+     // Transfers and card settlements must NOT be saved as income/expense.
+     if(facts.pending||!facts.canAutoPostAsIncomeExpense||
+        parsed.amount==null||parsed.amount!<=0||
+        parsed.requiresCurrencyReview||
+        WaffraSmsCurrencies.requiresReviewForSarLedger(body)||
+        (facts.kind==WaffraBankOperationKind.income)!=parsed.income){
+      await keepForReview(candidate);continue;
      }
-    }
-    final parsed=BankParser.parse(body);
-    final arrived=DateTime.fromMillisecondsSinceEpoch(at);
-    final date=bankSmsDate(body,referenceDate:arrived);
-    final preliminary=WaffraAutoSmsPolicy.decide(
-     sender:sender,sms:body,parsedAmount:parsed.amount,
-     parsedIncome:parsed.income,foreignCurrency:
-      parsed.requiresCurrencyReview||WaffraSmsCurrencies.requiresReviewForSarLedger(body),
-     arrived:arrived,verifiedDate:date,
-    );
-    // The LLM may veto an unsafe candidate, never fabricate a verified
-    // bank amount. Conflicts go to review instead of changing balances.
-    final cloudAmount=cloud?['amount'];
-    final cloudCurrency=cloud?['currency'];
-    final cloudKind=cloud?['kind'];
-    final disagree=cloud!=null&&(
-      cloud['requiresReview']==true||
-      cloudAmount is! num||parsed.amount==null||
-      (cloudAmount.toDouble()-parsed.amount!).abs()>0.001||
-      cloudCurrency!='SAR'||
-      cloudKind!=(parsed.income?'income':'expense'));
-    if(disagree||!preliminary.canPost||
-       bankSmsHasUnverifiedTimestamp(body,referenceDate:arrived)){
-     summary['review']=summary['review']!+1;
-     await WaffraAutoSms.notifyReview(id);
-     continue;
-    }
-    final categoriesRaw=loaded.finance.getString('waffra_categories_v24');
-    final categories=categoriesRaw==null?defaultCategories():
-     (jsonDecode(categoriesRaw) as List).map((row)=>
-      BudgetCategory.fromJson(Map<String,dynamic>.from(row as Map))).toList();
-    final merchant=waffraMerchantKey(body,income:parsed.income)??'';
-    final rulesRaw=loaded.finance.getString('waffra_learned_merchants_v1');
-    final rules=rulesRaw==null?<String,String>{}:
-     Map<String,String>.from(jsonDecode(rulesRaw) as Map);
-    final safeLeaf=waffraRecognizedSmsLeaf(body,
-     income:parsed.income,
-     merchant:waffraMerchantName(body,income:parsed.income));
-    final suggestions=<String>[
-     if(merchant.isNotEmpty&&rules[merchant]!=null)rules[merchant]!,
-     if(safeLeaf!=null)safeLeaf,
-     if(parsed.suggestedCategory!=null)parsed.suggestedCategory!,
-     parsed.category,
-     if(parsed.income)'دخل آخر / دخل غير مصنف'
-     else 'أخرى / مصروف غير مصنف',
-    ];
-    BudgetCategory? category;
-    for(final label in suggestions){
-     for(final c in categories){
-      if(c.name==label&&c.income==parsed.income&&c.isSubcategory&&
-         waffraCategoryAvailableForNewEntry(categories,c)){
-       category=c;
-       break;
-      }
+     final matched=WaffraSmsLocalRules.resolve(
+      body:body,sender:sender,bankKind:facts.kind,custom:rules);
+     if(matched==null||matched.builtIn||!matched.autoPost||
+        matched.sender.isEmpty||matched.accountId.isEmpty||
+        matched.accountSuffix.isEmpty||matched.income!=parsed.income){
+      await keepForReview(candidate);continue;
      }
-     if(category!=null)break;
-    }
-    if(category==null){
-     summary['review']=summary['review']!+1;
-     await WaffraAutoSms.notifyReview(id);
-     continue;
-    }
-    // Only a user's earlier budget selection for the SAME merchant may be
-    // inherited. Budget names do not imply an accounting link.
-    String? budgetId;
-    if(!parsed.income&&merchant.isNotEmpty){
-     final ledgerRaw=loaded.ledgerRaw;
-     final budgetsRaw=loaded.finance.getString('waffra_named_budgets_v1');
-     if(ledgerRaw!=null&&budgetsRaw!=null){
-      final budgets=(jsonDecode(budgetsRaw) as List)
-       .map((row)=>WaffraNamedBudget.fromJson(
-        Map<String,dynamic>.from(row as Map)))
-       .where((b)=>!b.deleted&&b.budgetActive&&b.budget>0)
-       .toList();
-      final activeIds={for(final b in budgets)b.id};
-      final previous=(jsonDecode(ledgerRaw) as List)
-       .map((row)=>MoneyEntry.fromJson(Map<String,dynamic>.from(row as Map)))
-       .where((e)=>!e.income&&e.merchantKey==merchant&&
-         e.budgetId!=null&&activeIds.contains(e.budgetId))
-       .map((e)=>e.budgetId!).toSet();
-      if(previous.length==1)budgetId=previous.single;
+     // The rule is bound to the exact account suffix and sender that the
+     // user reviewed. Other accounts at the same bank remain review-only.
+     final suffix=parsed.income?
+      facts.destinationSuffix:facts.sourceSuffix;
+     if(suffix==null||suffix!=matched.accountSuffix){
+      await keepForReview(candidate);continue;
      }
-    }
-    final transaction=MoneyEntry(
-     id:newId(),
-     title:waffraSafeSmsTransactionTitle(parsed.title,body,income:parsed.income),
-     category:category.name,
-     amount:parsed.amount!,
-     income:parsed.income,
-     date:date??arrived,
-     sourceType:'sms',notes:body,merchantKey:merchant,
-     budgetId:budgetId,
-    );
-    // The user enabled automatic posting with the initial prominent consent.
-    // The legacy writer's confirmation flag represents THIS standing consent
-    // plus the strict local eligibility gate, not a tap on every bank message.
-    final committed=await binding.authority.commitConfirmedSms(
-     route:WaffraFinanceRoute.widgetSmsConfirmedSave,
-     records:[Map<String,Object?>.from(transaction.toJson())],
-     hashes:[hash],userConfirmed:true,allowDuplicateHashes:false);
-    final resulting=committed.current;
-    resulting.finance.requireIntegrity();
-    final actualHashes=resulting.finance.getStringList('waffra_sms_hashes_v1')??const <String>[];
-    final ledger=resulting.ledgerRaw;
-    if(ledger==null||!actualHashes.contains(hash)){
-     // Do not claim success without verified atomic hash + finance witness.
-     throw StateError('Automatic bank SMS commit witness is missing');
-    }
-    final persisted=(jsonDecode(ledger) as List).any((row)=>
-      row is Map&&row['id']==transaction.id);
-    if(committed.saved==1&&persisted){
-     await WaffraAutoSms.acknowledge([id]);
-     await WaffraAutoSms.notifyCommitted(hash:id,amount:parsed.amount!,
-      income:parsed.income,linkedBudget:budgetId!=null);
-     summary['saved']=summary['saved']!+1;
-    }else if(committed.saved==0){
-     await WaffraAutoSms.acknowledge([id]);
-     summary['duplicates']=summary['duplicates']!+1;
-    }else{
-     throw StateError('Automatic SMS finance ID mismatch');
+     final arrived=DateTime.fromMillisecondsSinceEpoch(at);
+     final date=bankSmsDate(body,referenceDate:arrived);
+     if(bankSmsHasUnverifiedTimestamp(body,referenceDate:arrived)){
+      await keepForReview(candidate);continue;
+     }
+     final decision=WaffraAutoSmsPolicy.decide(
+      sender:sender,sms:body,parsedAmount:parsed.amount,
+      parsedIncome:parsed.income,foreignCurrency:false,
+      arrived:arrived,verifiedDate:date,
+      accountLinked:true,sourceAccountVerified:true);
+     if(!decision.canPost){
+      await keepForReview(candidate);continue;
+     }
+     final bridge=binding.accountsBridge!;
+     final accounts=await bridge.readVerifiedAccounts();
+     final accountValid=accounts.balances.any((a)=>
+      a.id==matched.accountId&&!a.archived&&
+      (a.kind=='bank'||a.kind=='wallet'));
+     if(!accountValid){
+      await keepForReview(candidate);continue;
+     }
+     final before=await binding.authority.load(
+      route:WaffraFinanceRoute.widgetRead);
+     before.finance.requireIntegrity();
+     final catalogRaw=before.finance.getString('waffra_categories_v24');
+     if(catalogRaw==null){
+      await keepForReview(candidate);continue;
+     }
+     final categories=(jsonDecode(catalogRaw) as List).map((row)=>
+      BudgetCategory.fromJson(Map<String,dynamic>.from(row as Map)))
+      .toList(growable:false);
+     if(!categories.any((c)=>c.isSubcategory&&
+       c.name==matched.category&&c.income==matched.income&&
+       waffraCategoryAvailableForNewEntry(categories,c))){
+      await keepForReview(candidate);continue;
+     }
+     final fingerprint=bankSmsHash(body);
+     if((before.finance.getStringList('waffra_sms_hashes_v1')??
+         const <String>[]).contains(fingerprint)){
+      await WaffraAutoSms.acknowledge([id]);
+      summary['duplicates']=summary['duplicates']!+1;
+      continue;
+     }
+     final entry=MoneyEntry(
+      id:newId(),
+      title:waffraSafeSmsTransactionTitle(
+       parsed.title,body,income:parsed.income),
+      category:matched.category,
+      amount:parsed.amount!,income:parsed.income,
+      date:date??arrived,notes:body,sourceType:'sms',
+      merchantKey:waffraMerchantKey(body,income:parsed.income)??'',
+     );
+     // Saving the account-bound AutoPost checkbox and rule was the user's
+     // standing confirmation for future EXACT matches; no separate UI tap
+     // is fabricated by the worker.
+     final committed=await binding.authority.commitConfirmedSms(
+      route:WaffraFinanceRoute.widgetSmsConfirmedSave,
+      records:[Map<String,Object?>.from(entry.toJson())],
+      hashes:[fingerprint],
+      userConfirmed:true,allowDuplicateHashes:false,
+      selectedAccountIds:[matched.accountId],
+      expectedAccountGeneration:accounts.witness.generation,
+     );
+     final finalHashes=committed.current.finance
+      .getStringList('waffra_sms_hashes_v1')??const <String>[];
+     final ledgerRaw=committed.current.ledgerRaw;
+     final persisted=ledgerRaw!=null&&
+      (jsonDecode(ledgerRaw) as List).any((item)=>
+       item is Map&&item['id']==entry.id);
+     if(committed.saved==1&&persisted&&
+        finalHashes.contains(fingerprint)){
+      await WaffraAutoSms.acknowledge([id]);
+      await WaffraAutoSms.notifyCommitted(
+       hash:id,amount:parsed.amount!,income:parsed.income,
+       linkedBudget:false);
+      summary['saved']=summary['saved']!+1;
+     }else if(committed.saved==0&&
+         finalHashes.contains(fingerprint)){
+      await WaffraAutoSms.acknowledge([id]);
+      summary['duplicates']=summary['duplicates']!+1;
+     }else{
+      await keepForReview(candidate);
+     }
+    }catch(_){
+     // Never log bank SMS, account ID, or secure-store exceptions.
+     await keepForReview(candidate);
     }
    }
-  }finally{await binding.close();}
+  }catch(_){
+   // Vault unavailable: keep all SMS for human review, no legacy writes.
+   for(final row in pending)await keepForReview(row);
+  }finally{
+   await binding?.close();
+  }
   return summary;
  }
 }

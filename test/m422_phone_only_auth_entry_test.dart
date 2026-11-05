@@ -21,19 +21,20 @@ void main(){
   expect(s,contains("إنشاء حساب برقم الجوال"));
  });
 
- test('M422 first onboarding step validates Saudi phone and both passwords',(){
+ test('M422 single-page onboarding validates Saudi phone and both passwords',(){
   final section=main.substring(main.indexOf('Widget _phoneRegistrationForm()'),
     main.indexOf(' @override Widget build(BuildContext context){',
       main.indexOf('Widget _phoneRegistrationForm()')));
   expect(section,contains('waffraMobileFieldError(phone.text)'));
   expect(section,contains('FilteringTextInputFormatter.digitsOnly'));
   expect(section,contains('LengthLimitingTextInputFormatter(10)'));
-  expect(section,contains('_nextPhoneRegistrationStep'));
+  expect(section,contains("Key('waffra-register-submit')"));
+  expect(section,contains('onPressed:WaffraHaptics.tap(busy?null:save)'));
   expect(section,contains('waffraPasswordFieldError(password.text)'));
   expect(section,contains('waffraConfirmPasswordFieldError'));
  });
 
- test('M422 second step requires name and gender without email or birthday',(){
+ test('M422 single page requires name and gender without email or birthday',(){
   final s=main.substring(main.indexOf('Widget _phoneRegistrationForm()'),
    main.indexOf(' @override Widget build(BuildContext context){',
     main.indexOf('Widget _phoneRegistrationForm()')));
