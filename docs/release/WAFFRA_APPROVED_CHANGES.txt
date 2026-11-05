@@ -1,3 +1,15 @@
+[M470 - PR #395 DRAFT] 2026-11-06 — Account selection for recurring default, scope and payment safeguards
+====================================================================================================
+- The owner requested 32 new Waffra follow-up changes. This draft implements only the specifically verified M470 subitems and does not claim all 32 are finished.
+- Home account picker no longer offers a new "unassigned transactions" display filter. An older saved unassigned display value safely falls back to All accounts; historical entries are not deleted or silently mapped to cash.
+- Verified internal transfers now offer an explicit transaction date while preserving a stable intent ID and mutually distinct source/destination accounts.
+- The paid recurring / cash-financed goal due confirmation requires an explicitly verified money account and does not inherit the Home header. The recurring paid SQLCipher snapshot captures only the one posted ledger entry and due-postponement metadata, with existing rollback protection and duplicate checks.
+- NEW THIS UPDATE: recurring default account settings have two separate selectors: a provider/bank group and an explicitly selected active account in that group. Known Saudi institutions are grouped from display names only; unknown bank accounts are left in separate groups rather than guessed together. Changing a provider clears the chosen account, and Save is disabled until an active account is selected. Historical payments and reminder switches are unaffected.
+- Added tests for multiple Al Rajhi accounts, unknown bank isolation, archived-account exclusion and mandatory explicit account selection. Changes live in lib/waffra_recurring_account_groups.dart, lib/waffra_account_context_settings.dart and test/m470_recurring_provider_accounts_test.dart.
+- Remaining for the recurring workflow: attach an account atomically when a recurring template is CREATED/EDITED, not only when managing its default later; confirm one-time vs future-account selection at due, and certify Android actual paid retry and balance. The per-account monthly budget allocation and other remaining 32 items are NOT done.
+- M385 approved-change scope and the M470 per-item tracker explicitly declare these changes; no writer/schema/security bypass, financial migration, automatic SMS debit or guessable bank source is authorized.
+- Exact-head CI and signed-device tests are pending. This note is documentation of changes on the PR, NOT a successful signed APK or production release certification.
+
 [CI-M228] 2026-11-05 — Repair verified pull-refresh QA expectation after M468
 ==============================================================================
 - Main Android APK run 42096659741 failed in mandatory Python job 127488700667: 136/137 tests passed, with M228 searching for the pre-M468 synchronous named-budget readList.
