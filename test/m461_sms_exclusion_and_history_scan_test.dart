@@ -56,7 +56,7 @@ void main() {
     final app=File('lib/main.dart').readAsStringSync();
     expect(app,contains('Future<void>? _autoSmsRefreshInFlight;'));
     expect(app,contains('final toAcknowledge=<String>[];'));
-    expect(app,contains('WaffraAutoSms.acknowledge(toAcknowledge)'));
+    expect(app,contains('WaffraAutoSms.acknowledge(batch)'));
     expect(app,contains('toRestoreOnAckFailure'));
     expect(app,contains('setState(()=>_autoSmsPending.removeWhere'));
     expect(app,contains('unawaited(_refreshAutoSmsInbox(importMonth:true))'));
