@@ -118,7 +118,11 @@ void main() {
         reason:'Creating a goal and its due cannot append an expense');
     expect(creation,isNot(contains('await _persistModuleOrReload(')),
         reason:'Both linked records use one atomic write, not two saves');
-    expect(source,contains('balance:waffraAvailableCash(entries,goals)'));
+    // The approved Home account selector displays VERIFIED money balances,
+    // while the goal wallet stays separate and cannot debit cash on creation.
+    expect(source,contains('balance:_m467ShownBalance()'));
+    expect(source,contains('if(!_m468VerifiedAccountsLoaded)return waffraAvailableCash(entries,goals);'));
+    expect(source,contains('_m467Accounts.fold<int>(0,(total,a)=>total+a.balanceMinor)/100'));
     expect(source,contains('goalWalletPaidMinor:allocation.fromGoalMinor'));
     expect(source,isNot(contains('inc-exp-waffraGoalWalletBalance(goals)')));
     expect(source,contains('إضافة الادخار لن تخصم أي مبلغ من الرصيد الحالي'));

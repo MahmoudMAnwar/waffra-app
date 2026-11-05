@@ -3466,6 +3466,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  WaffraAccountContextReadResult? _m467AccountContext;
  String _m467SelectedAccount='all';
  bool _m467AccountChoiceRestored=false;
+ bool _m468VerifiedAccountsLoaded=false;
+ Future<void>? _m468AccountReadInFlight;
+ bool _m468AccountReadAgain=false;
 
  String get _m467ChoiceKey{
   final owner=widget.profile.provider+'|'+widget.profile.phone.trim()+
@@ -3474,7 +3477,27 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   return 'waffra_home_account_display_'+hash.substring(0,20);
  }
 
+ // Concurrent save, transfer, resume and refresh events share one account read.
+ // A later request gets ONE trailing replay so a new commit is not missed.
  Future<void> _m467RefreshHomeAccounts()async{
+  final active=_m468AccountReadInFlight;
+  if(active!=null){
+   _m468AccountReadAgain=true;
+   await active;
+   return;
+  }
+  final running=_m468ReadVerifiedAccountsOnce();
+  _m468AccountReadInFlight=running;
+  try{await running;}
+  finally{
+   _m468AccountReadInFlight=null;
+   final again=_m468AccountReadAgain;
+   _m468AccountReadAgain=false;
+   if(again&&mounted)unawaited(_m467RefreshHomeAccounts());
+  }
+ }
+
+ Future<void> _m468ReadVerifiedAccountsOnce()async{
   try{
    await _ensureFinanceBound();
    final bridge=_financeBinding?.accountsBridge;
@@ -3491,15 +3514,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final now=DateTime.now();
    final month=now.year.toString().padLeft(4,'0')+'-'+
     now.month.toString().padLeft(2,'0');
-   final contextView=await api.readAccountContext(
+   // "All accounts" already uses verified account balances + Home ledger.
+   // Don't scan the full SQLCipher account context after every save or pull.
+   final contextView=chosen=='all'?null:await api.readAccountContext(
     monthIso:month,
-    selectedAccountId:chosen=='all'||chosen=='none'?null:chosen);
+    selectedAccountId:chosen=='none'?null:chosen);
    if(!mounted)return;
    setState((){
     _m467Accounts=accounts.where((a)=>!a.archived).toList();
     _m467AccountContext=contextView;
     _m467SelectedAccount=chosen;
     _m467AccountChoiceRestored=true;
+    _m468VerifiedAccountsLoaded=true;
    });
   }catch(error){
    debugPrint('Home accounts view unavailable: '+error.runtimeType.toString());
@@ -3510,6 +3536,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _m467AccountContext=null;
     _m467SelectedAccount='all';
     _m467AccountChoiceRestored=false;
+    _m468VerifiedAccountsLoaded=false;
    });
   }
  }
@@ -3535,7 +3562,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
  double _m467ShownBalance(){
   if(_m467SelectedAccount=='all'){
-   if(_m467AccountContext==null)return waffraAvailableCash(entries,goals);
+   if(!_m468VerifiedAccountsLoaded)return waffraAvailableCash(entries,goals);
    // The sum of verified balances includes openings, account transfers and
    // wallet movements. Unassigned ledger entries do not alter accounts.
    return _m467Accounts.fold<int>(0,(total,a)=>total+a.balanceMinor)/100;
@@ -3548,7 +3575,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
 
  Future<void> _m467PickHomeAccount()async{
-  await _m467RefreshHomeAccounts();
+  // Open instantly from a verified snapshot; refresh after selection.
+  if(!_m468VerifiedAccountsLoaded)await _m467RefreshHomeAccounts();
   if(!mounted)return;
   final next=await showModalBottomSheet<String>(
    context:context,isScrollControlled:true,useSafeArea:true,
@@ -3758,7 +3786,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // Account settings open from the app bar instead of a footer destination.
  bool accountOpened=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
- @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraAutoSmsUpdates.addListener(_receiveAutoSmsNotice);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:(){unawaited(_syncWidgetTransactions());unawaited(_refreshAutoSmsInbox(importMonth:true));});unawaited(_loadFinanceSafely());}
+ DateTime? _m468LastResumeSmsScan;
+ void _m468OnResume(){
+  if(!mounted||!ready||
+     WaffraExternalMediaSession.shouldSkipResumeBackgroundWork)return;
+  // Widget revision MUST remain source-verified after a genuine resume.
+  unawaited(_syncWidgetTransactions());
+  // The already-completed history cursor must not be rescanned on every
+  // native Activity return. New SMS still arrive through the native listener.
+  final now=DateTime.now();
+  final last=_m468LastResumeSmsScan;
+  if(_autoSmsRefreshInFlight!=null||
+     (last!=null&&now.difference(last)<const Duration(seconds:20)))return;
+  _m468LastResumeSmsScan=now;
+  unawaited(_refreshAutoSmsInbox(importMonth:!_autoSmsHistoryComplete));
+ }
+ @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraAutoSmsUpdates.addListener(_receiveAutoSmsNotice);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:_m468OnResume);unawaited(_loadFinanceSafely());}
  void _returnToHome(){if(mounted)setState((){_tabBackStack.clear();tab=0;accountOpened=false;goalsOpened=false;addFabExpanded=false;});}
  void _receiveWidgetAction(){
   if(!mounted||!ready||waffraWidgetAction.value!='add')return;
@@ -5012,7 +5055,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    await load();
    unawaited(_m467RefreshHomeAccounts());
    WidgetsBinding.instance.addPostFrameCallback((_) {
-    if(mounted)unawaited(_refreshAutoSmsInbox(importMonth:true));
+    if(mounted)unawaited(_refreshAutoSmsInbox(
+     importMonth:!_autoSmsHistoryComplete));
    });
   }catch(e){
    debugPrint('Financial startup integrity/recovery gate blocked access: $e');

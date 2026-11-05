@@ -1,3 +1,10 @@
+[M468] Shared performance work for owner-approved Home/finance interactions (2026-11-05)
+- Coalesce overlapping encrypted account reads, and perform at most one trailing read for an intervening new save. The all-accounts header now reads witnessed balances but skips full account-to-entry/budget/goal projection unless a narrower filter needs it.
+- Reuse the verified account snapshot to show the account selector without forcing another storage read on every tap; the next read refreshes after selection or a committed write.
+- Native camera/gallery resume does not launch widget sync plus four-page history scan over the still-open manual form. Normal app resume keeps verified widget reconciliation, and the SMS history cursor runs only while genuinely incomplete, with a bounded 20-second UI scheduling throttle. Native SMS update listener remains active for incoming texts.
+- M371 still verifies absence of goal-creation cash debits, but updates the old exact Home balance source assertion to cover the approved SQLCipher account-aware Home.
+- Does not remove source verification, persistence, SMS consent or safety checks. Exact-HEAD CI and performance testing on Android required.
+
 [M467] Main account-balance projection and camera/SMS UI refinements
 - All-accounts balance now sums SQLCipher-witnessed active account balances including openings and transfers. Unassigned transactions appear in overall reports but cannot mutate an account balance. Month-change badge is hidden when there is no matching verified account-period series.
 - Refresh the verified account context after a confirmed transfer or manually saved income/expense. Sender review sheet adapts its height to avoid the large blank area on 2-bank review screens.

@@ -5,7 +5,18 @@ import 'package:flutter/widgets.dart';
 abstract final class WaffraExternalMediaSession {
  static DateTime? _started;
  static int _count=0;
+ static DateTime? _lastFinishedAt;
  static const maxLifetime=Duration(minutes:5);
+ static const resumeGrace=Duration(seconds:3);
+
+ /// Avoid a second full Home/widget/SMS reload after returning from a picker.
+ /// This does not affect biometric locking on a genuine background event.
+ static bool get shouldSkipResumeBackgroundWork{
+  if(_count>0&&_started!=null&&
+     DateTime.now().difference(_started!)<=maxLifetime)return true;
+  final finished=_lastFinishedAt;
+  return finished!=null&&DateTime.now().difference(finished)<resumeGrace;
+ }
  static bool trustedBackgroundTransition(AppLifecycleState state,{DateTime? at}){
   if(state!=AppLifecycleState.paused&&state!=AppLifecycleState.hidden)return false;
   final began=_started;
@@ -18,7 +29,9 @@ abstract final class WaffraExternalMediaSession {
   try{return await action();}
   finally{
    _count--;
-   if(_count<=0){_count=0;_started=null;}
+   if(_count<=0){
+    _count=0;_started=null;_lastFinishedAt=DateTime.now();
+   }
   }
  }
 }
