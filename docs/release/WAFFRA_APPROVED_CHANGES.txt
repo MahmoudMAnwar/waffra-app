@@ -1,3 +1,10 @@
+[M470-29] 2026-11-06 — Read-only monthly budgets by explicit account allocation (PR #395)
+============================================================================================
+- Added pure, integer-halalas monthly per-account cap and expense projections for a single account or All accounts. Multiple budgets for one account sum; all explicitly assigned account caps sum once, without duplicating a budget by selecting All.
+- Missing account-budget links cannot be guessed from the Home header or prior unassigned transactions. Invalid month, negative expenses and repeated (budget, account) cap association fail closed.
+- Added tests for separate Rajhi and SNB allocations, all-account sums, cross-month isolation, unlinked expenses and duplicate-cap prevention. NO persistent account-budget allocation writer, Home UI connection, SQLCipher schema/backup migration or finance entry change was made.
+- Remaining item #29: verified account-to-budget allocation storage, V3 backup/restore and account-scoped Home budget display. CI and physical Android acceptance remain outstanding.
+
 [M470 - PR #395 DRAFT] 2026-11-06 — Preserve paid recurring source identity
 =========================================================================
 - While reviewing owner-reported Paid confirmation errors, found a definite mismatch: the recurring review candidate used sourceType recurring but the inserted ledger row omitted sourceType and defaulted to manual.
