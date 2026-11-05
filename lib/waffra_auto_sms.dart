@@ -29,6 +29,21 @@ abstract final class WaffraAutoSms {
  }
  // Logout preserves standing consent for the SAME verified account, but
  // suspends collection and clears encrypted pending SMS until sign-in.
+ static Future<Map<String,Object?>?> scanProgress()async{
+  if(!Platform.isAndroid)return null;
+  try{
+   final data=await channel.invokeMapMethod<String,dynamic>(
+    'autoSmsScanProgress');
+   return data==null?null:Map<String,Object?>.from(data);
+  }on MissingPluginException{return null;}
+   on PlatformException{return null;}
+ }
+ // Unlike the legacy importer, this one exposes native failures to the
+ // explicit Rescan UI; it never reports an I/O error as an empty inbox.
+ static Future<int> importConsentMonthChecked()async{
+  if(!Platform.isAndroid)throw StateError('Android SMS scan is unavailable.');
+  return await channel.invokeMethod<int>('importConsentMonthBankSms')??0;
+ }
  static Future<bool> suspendForSignOut()=>_boolCall('pauseAutoSmsForSignOut');
  static Future<bool> resumeAfterSignIn()=>_boolCall('resumeAutoSmsAfterSignIn');
  static Future<bool> notificationPermission()=>_boolCall('autoSmsNotificationsEnabled');
