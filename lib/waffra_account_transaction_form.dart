@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'storage/waffra_accounts_repository.dart';
+import 'waffra_recurring_account_groups.dart';
 
 /// User-facing transaction modes, independent from old income/expense bool.
 /// The transfer variant must never be encoded as a MoneyEntry expense.
@@ -79,6 +80,7 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
   'm440-'+requestTime.microsecondsSinceEpoch.toString();
  WaffraAccountOperation mode=WaffraAccountOperation.income;
  String? source,destination,error,selectedBudgetId;
+ String? sourceProvider,destinationProvider;
  List<String> get choices=>mode==WaffraAccountOperation.income?
   widget.incomeCategories:widget.expenseCategories;
  bool saving=false,saved=false;
@@ -168,16 +170,48 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
  }
  @override Widget build(BuildContext context){
   final accounts=active;
+  // Money source is never inherited from the Home account display filter.
+  // Explicitly choose a bank/provider, then a live verified account under it.
+  final providers=WaffraRecurringAccountGroups.fromAccounts(accounts);
   Widget accountField(String? value,String label,ValueChanged<String?> onChanged,
-   {String? exclude}){
-   return DropdownButtonFormField<String>(
-    isExpanded:true,
-    initialValue:accounts.any((a)=>a.id==value)?value:null,
-    decoration:InputDecoration(labelText:label,border:const OutlineInputBorder()),
-    items:accounts.where((a)=>a.id!=exclude).map((a)=>DropdownMenuItem(
-     value:a.id,child:Text(a.name,overflow:TextOverflow.ellipsis))).toList(),
-    onChanged:saving||saved?null:onChanged,
-   );
+   {String? exclude,bool isDestination=false}){
+   final storedProvider=isDestination?destinationProvider:sourceProvider;
+   String? group=storedProvider;
+   if(group==null&&value!=null){
+    for(final item in providers){
+     if(item.accounts.any((a)=>a.id==value)){group=item.id;break;}
+    }
+   }
+   final matches=providers.where((p)=>p.id==group).toList();
+   final available=matches.isEmpty?const <WaffraAccountBalance>[]:
+    matches.single.accounts.where((a)=>a.id!=exclude).toList();
+   return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    DropdownButtonFormField<String>(
+     key:Key('m470-'+(isDestination?'target':'source')+'-provider-'+(group??'none')),
+     initialValue:group,isExpanded:true,
+     decoration:InputDecoration(
+      labelText:tr('الجهة أو البنك','Bank or provider'),
+      border:const OutlineInputBorder()),
+     items:providers.map((p)=>DropdownMenuItem<String>(
+      value:p.id,child:Text(tr(p.labelAr,p.labelEn),
+       maxLines:1,overflow:TextOverflow.ellipsis))).toList(),
+     onChanged:saving||saved?null:(v)=>setState((){
+      if(isDestination){destinationProvider=v;destination=null;}
+      else{sourceProvider=v;source=null;}
+      error=null;
+     }),
+    ),
+    const SizedBox(height:10),
+    DropdownButtonFormField<String>(
+     key:Key('m470-'+(isDestination?'target':'source')+'-account-'+(group??'none')),
+     isExpanded:true,
+     initialValue:available.any((a)=>a.id==value)?value:null,
+     decoration:InputDecoration(labelText:label,border:const OutlineInputBorder()),
+     items:available.map((a)=>DropdownMenuItem<String>(
+      value:a.id,child:Text(a.name,overflow:TextOverflow.ellipsis))).toList(),
+     onChanged:saving||saved||group==null?null:onChanged,
+    ),
+   ]);
   }
   return SafeArea(child:SingleChildScrollView(
    padding:const EdgeInsets.all(16),
@@ -239,7 +273,7 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
      const SizedBox(height:12),
      accountField(destination,tr('إلى حساب','To account'),(v){
       setState((){destination=v;error=null;});
-     },exclude:source),
+     },exclude:source,isDestination:true),
      const SizedBox(height:10),
      Text(tr('التحويل بين حساباتك لا يُحسب دخلًا أو مصروفًا.',
       'Moving money between your own accounts is not income or spending.')),
