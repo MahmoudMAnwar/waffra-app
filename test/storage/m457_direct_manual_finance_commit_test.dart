@@ -226,6 +226,10 @@ void main() {
     expect(flow,contains('await _refreshFromVerifiedFinance();'));
     expect(flow,isNot(contains('await _loadFinanceSafely();')));
     expect(flow,contains('if(initial==null&&result.sourceType=='));
-    expect(flow,contains('WaffraRuntimeFinanceBackend.verifiedEncrypted'));
+    // All NEW manual transactions now use this verified route, including
+    // attached images; there is no legacy whole-ledger fallback.
+    expect(flow,contains("record['receiptPath']=null"));
+    expect(flow,contains('receiptImages:images'));
+    expect(flow,contains('imagePaths.any((path)=>!stagedReceiptCopies.contains(path))'));
   });
 }
