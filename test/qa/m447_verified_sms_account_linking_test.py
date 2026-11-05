@@ -30,7 +30,10 @@ class VerifiedSmsAccountLinkingTest(unittest.TestCase):
         reader = reader.split("/// Budget assignment is OPTIONAL", 1)[0]
         self.assertIn("final bridge=_financeBinding?.accountsBridge;", reader)
         self.assertIn("if(bridge==null){", reader)
-        self.assertIn("return manualRequiresAccount?null:(ids:null,generation:null);", reader)
+        self.assertIn("return mustSelectAccount?null:(ids:null,generation:null);", reader)
+        self.assertIn("final dueRequiresAccount=recurringId!=null", reader)
+        self.assertIn("if(mustSelectAccount&&assigned.any((account)=>account==null))return null;", reader)
+        self.assertIn("if(!mustSelectAccount)", reader)
         self.assertIn("final manualRequiresAccount=candidates.any", reader)
         self.assertIn("if(active.isEmpty){", reader)
         self.assertIn("if(manualRequiresAccount){", reader)
