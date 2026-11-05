@@ -2019,3 +2019,11 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 - أضيف زر «تحويل بين حساباتي» إلى قائمة + في الرئيسية، يفتح مباشرة نموذج التحويل ويتطلب مصدرًا ووجهة مختلفين؛ عندما تقل الحسابات عن اثنين، يوجَّه المستخدم لإدارتها. التحويل لا يُسجل دخلًا أو مصروفًا ولا يُحفظ بمجرد اختيار نوعه.
 - أصبح «حساباتي» ظاهرًا ضمن الأدوات المالية حتى عند غياب المصدر الموثق، مع رسالة توضح أنه غير متاح بدل إخفاء الرابط تمامًا.
 - تشمل الاختبارات رفض المعاملة المكررة والصلاحية غير الموثقة والمحافظة على السجل السابق. نجاح CI شرط للدمج ولا يعتبر تجربة هاتف ناجحة أو تأكيدًا بأمان النسخ الاحتياطية.
+
+[M470] 2026-11-06 — 32 requested follow-ups / staged PR (NOT RELEASE-CERTIFIED)
+- Home account selector: remove unassigned choice, preserve historic data, and normalize a former unassigned display preference to All accounts. This is NOT a migration or retroactive account link.
+- Transfer: add explicit transaction date with unchanged stable request ID and verified source/destination accounts.
+- Due payment: require an active verified money account for recurring/goal-due cash confirmations; no implicit account from Home header.
+- Recurring Paid crash: restrict fresh encrypted capture to new ledger entry and related postponement, preserving fail-closed checks for any unrelated finance changes.
+- Added source/widget, protective capture, and disposable SQLCipher integration tests. CI and physical device acceptance on the exact PR SHA are pending; no production merge, main APK or full 32-item Done assertion.
+- Tracker: docs/qa/WAFFRA_32_NEW_CHANGES_M470_TRACKER.md.
