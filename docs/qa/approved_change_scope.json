@@ -24,6 +24,7 @@
     "native/WaffraMainActivity.kt",
     "test/m429_sms_phone_integration_test.dart",
     "test/m461_sms_exclusion_and_history_scan_test.dart",
+    "test/m462_smart_sms_rule_review_test.dart",
     "test/m464_sms_account_learning_test.dart",
     "test/m464_sms_bulk_rescan_regression_test.dart",
     "test/qa/m417_sms_permission_acceptance_test.py",
@@ -179,6 +180,12 @@
       {
         "start": " test('fresh encrypted account accepts goal, linked due and recurring, then manual money',",
         "end": null
+      }
+    ],
+    "test/m462_smart_sms_rule_review_test.dart": [
+      {
+        "start": " test('M462 SMS transfer uses verified account-to-account route',(){",
+        "end": " test('M462 background safely acknowledges verified exclusions',(){"
       }
     ]
   }
