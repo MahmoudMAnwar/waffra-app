@@ -3592,6 +3592,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      waffraCategoryAvailableForNewEntry(categories,c))
      .map((c)=>c.name).toList(),
     seedMessage:seedMessage,
+    onNotice:(message)=>snack(context,message),
    )));
   if(mounted)unawaited(_refreshAutoSmsInbox());
  }
