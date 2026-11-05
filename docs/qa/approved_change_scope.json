@@ -1,30 +1,89 @@
 {
   "contract_version": 1,
-  "change_id": "M460-apk-main-same-sha-audit-repository-checkout-20261105",
-  "human_scope_review": "Owner requested that all ready fixes merge in order and that recurring main APK build failures be fixed permanently. M460 fixes the verified exact-main APK dependency-audit failure (job 127112822065): the job imports a repository Python module without checking out the repository. The one-job fix checks out the triggering SHA and keeps all same-SHA mandatory gates active, with a regression test. No finance source or application behavior changes. Exact-head CI and signed main build must pass before release. The same main APK run 41988663385 independently exposed a malformed Python source string at test/qa/m452_sms_review_signup_regression_test.py line 62. M460 repairs that existing source-only QA assertion and keeps its unique verified SMS owner-key check; no runtime behavior change. The broken Python file was corrupted from its last verified-owner guard test through the end; declare only that final test section as the bounded repair. All earlier tests and other file content must remain byte-identical under M385 guard.",
+  "change_id": "M461-fresh-finance-all-manual-recurring-goal-sms-history-performance-20261105",
+  "human_scope_review": "Owner supplied actual Android screenshots 2026-11-05 showing manual income/expense, recurring and goal writes rejected, exclusion rules leaving messages in review, installation-month SMS scan gaps and serious UI freezes on transaction save and pull refresh. Repair only verified financial editor delta capture, failed-save refresh, SMS rule acknowledgement, chronological bounded native cursor scanning and Android background work. Keep immutable SQLCipher source, linked account witnesses, OTP masking, no auto-post, backup and UI records intact. User will validate signed real-phone builds. Changes are candidate until exact-head CI and phone signoff.",
   "user_requested_changes": [
-    "Fix recurring signed Android APK failure on main without bypassing mandatory same-commit independent test checks.",
-    "Ensure the CI audit job checks out its exact trigger SHA before importing the local Python QA helper.",
-    "Add regression coverage to prevent the missing checkout from reappearing in the APK release pipeline.",
-    "Fix broken SMS regression test Python syntax that blocks mandatory main APK CI, while preserving real SMS account ownership assertions."
+    "Repair recurring and goal SQLCipher writes by submitting only explicitly touched projections while comparing every unrelated field with the verified account/source witness, without activating or bypassing a second finance database.",
+    "Preserve manual verified income and expense and improve failed-write refresh without clearing the entire UI or rescanning all bank SMS whenever a save fails.",
+    "Ensure explicitly excluded bank messages disappear from review only after securely storing a matching local rule and successfully acknowledging the selected native encrypted message ID, and automatically refresh without a manual search tap.",
+    "Scan bank SMS from installation-month first day using durable chronological date and row cursor and preserve resumable 100-message encrypted review queue; broaden read-only institutional financial review with no automatic posting.",
+    "Move heavy Android SMS history scans off the UI thread and reduce redundant SQLCipher widget reads and repeated platform calls; test fresh SQLCipher manual, goals, recurring and OTP exclusions.",
+    "Keep user data safe under failed transactions and preserve all M385 and M449 audit gates and signed APK readiness requirements."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
-    ".github/workflows/android.yml",
-    "test/qa/m460_main_apk_ci_checkout_test.py",
-    "test/qa/m452_sms_review_signup_regression_test.py"
+    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "lib/main.dart",
+    "lib/storage/waffra_home_transaction_capture.dart",
+    "native/WaffraMainActivity.kt",
+    "native/WaffraAutoSmsStore.kt",
+    "test/storage/m461_verified_module_capture_test.dart",
+    "test/storage/m461_fresh_finance_android_source_regression_test.dart",
+    "test/m461_sms_exclusion_and_history_scan_test.dart"
   ],
   "bounded_sections": {
-    ".github/workflows/android.yml": [
+    "lib/main.dart": [
       {
-        "start": "  verify-same-sha-checks:\n",
-        "end": "      - name: Fail closed on missing, running or failed independent tests\n"
+        "start": " Future<void> _openSmsRules({String? seedMessage,String? seedKind,\n",
+        "end": " Future<void> _analyzeAmbiguousSmsOnDemand(\n"
+      },
+      {
+        "start": " Future<void> _reviewAutoSmsCandidates({String? targetId})async {\n",
+        "end": " void _receiveSharedSms(){\n"
+      },
+      {
+        "start": " Future<void> _refreshFromVerifiedFinance()async {\n",
+        "end": " Future<void> load()async {\n  await _ensureFinanceBound();\n"
+      },
+      {
+        "start": " Future<void> _refreshWidget()async{\n",
+        "end": " Future<void> persist({\n"
+      },
+      {
+        "start": " Future<void> persist({\n",
+        "end": " Future<void> _persistSmsHashes("
+      },
+      {
+        "start": "   if(initial==null&&result.sourceType=='manual'&&\n",
+        "end": "   }else{\n   // Optimistic in-memory edits must roll back if durable save is rejected.\n"
       }
     ],
-    "test/qa/m452_sms_review_signup_regression_test.py": [
+    "lib/storage/waffra_home_transaction_capture.dart": [
       {
-        "start": "    def test_local_rule_store_owner_guard_is_unique(self):\n",
+        "start": "import 'waffra_production_finance_routing_gate.dart';\n",
         "end": null
+      }
+    ],
+    "native/WaffraMainActivity.kt": [
+      {
+        "start": "import java.security.KeyStore\n",
+        "end": "import javax.crypto.Mac\n"
+      },
+      {
+        "start": "    private val messagesChannel = \"waffra/messages\"\n",
+        "end": "    private var pendingSmsPermissionResult: MethodChannel.Result? = null\n"
+      },
+      {
+        "start": "                \"importConsentMonthBankSms\" -> {\n",
+        "end": "                \"pendingAutoBankSms\" -> result.success("
+      },
+      {
+        "start": "    override fun onDestroy() {\n",
+        "end": null
+      }
+    ],
+    "native/WaffraAutoSmsStore.kt": [
+      {
+        "start": "    fun qualifies(sender: String, body: String): Boolean {\n",
+        "end": "    // M437: Unknown-finance lookup is strictly ON-DEMAND"
+      },
+      {
+        "start": "    fun scanUnknownFinancialSms(\n",
+        "end": "    private fun id(sender: String, body: String, at: Long): String {\n"
+      },
+      {
+        "start": "    fun importConsentMonth(context: Context, maxRead: Int = 500): Int {\n",
+        "end": "    /** Claim each review notification once"
       }
     ]
   }
