@@ -10,7 +10,8 @@
     "Move heavy Android SMS history scans off the UI thread and reduce redundant SQLCipher widget reads and repeated platform calls; test fresh SQLCipher manual, goals, recurring and OTP exclusions.",
     "Keep user data safe under failed transactions and preserve all M385 and M449 audit gates and signed APK readiness requirements.",
     "Update only the obsolete M457 test expectation for reload-on-failed-save; keep all direct manual append, duplicate and encrypted source guards intact.",
-    "Pin official immutable sqlite3 3.7.0 native cipher binary release to stop floating 3.9.0 artifact hash-mismatch failures without changing package SHA validation or SQLCipher source selection."
+    "Pin official immutable sqlite3 3.7.0 native cipher binary release to stop floating 3.9.0 artifact hash-mismatch failures without changing package SHA validation or SQLCipher source selection.",
+    "Keep the SMS exclusion rule editor's default matching and sender-aware message preview scoped to its existing _edit handler, so explicitly excluded SMS are reliably matched and previewed without broadening ledger authorization."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
@@ -24,7 +25,8 @@
     "test/m461_sms_exclusion_and_history_scan_test.dart",
     "test/storage/m457_direct_manual_finance_commit_test.dart",
     "pubspec.yaml",
-    "test/qa/m461_sqlite_native_artifact_pin_test.py"
+    "test/qa/m461_sqlite_native_artifact_pin_test.py",
+    "lib/waffra_sms_rule_settings_page.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -95,6 +97,12 @@
       {
         "start": "  test('M457 manual UI posts a single frozen entry without optimistic ledger',\n",
         "end": null
+      }
+    ],
+    "lib/waffra_sms_rule_settings_page.dart": [
+      {
+        "start": " Future<void> _edit({WaffraSmsLocalRule? existing,String? seed,String? kindHint})async{\n",
+        "end": "  @override Widget build(BuildContext context)=>Scaffold(\n"
       }
     ]
   }
