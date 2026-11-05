@@ -4449,7 +4449,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }else if(decision=='ai'&&mounted){
     await _analyzeAmbiguousSmsOnDemand(selected);
    }else if(decision=='review'&&mounted){
-    await bulkSmsSheet(initialText:body,
+    await bulkSmsSheet(initialText:body,initialSender:sender,
      suggestedLocalCategory:localFacts?['category'] as String?,
      suggestedLocalIncome:localFacts?['income'] as bool?);
     if(smsHashes.contains(bankSmsHash(body))){
@@ -5547,7 +5547,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     ],
    )));
  }
- Future<void> bulkSmsSheet({String? initialText,
+ Future<void> bulkSmsSheet({String? initialText,String initialSender='',
   String? suggestedLocalCategory,bool? suggestedLocalIncome})async {
   // Deterministic SMS review is available immediately and offline.
   // Qwen remains optional for ambiguous messages; never block paste on a
@@ -5652,9 +5652,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(!ctx.mounted)return;
   final valid=<int>[],invalid=<int>[],duplicates=<int>[];
   final preRejected=<int,WaffraSmsNotSavedReason>{};
+  // Income/expense ledger does not represent account-to-account transfers,
+  // card settlements or unconfirmed messages. Leave these for proper review.
+  var transferReviewCount=0;
   var allowRepeatedSms=false;
   final seen=<String>{};
   for(var i=0;i<found.length;i++){
+   final facts=WaffraBankSmsFactsParser.parse(found[i]);
+   if(facts.kind==WaffraBankOperationKind.transfer||
+      facts.kind==WaffraBankOperationKind.cardSettlement||facts.pending){
+    transferReviewCount++;
+    invalid.add(i);
+    preRejected[i]=WaffraSmsNotSavedReason.categoryUnresolved;
+    continue;
+   }
    if(results[i].amount==null||results[i].amount!<=0){
     invalid.add(i);
     preRejected[i]=WaffraSmsNotSavedReason.amountUnrecognized;
@@ -5687,7 +5698,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     valid.sort();
    }
   }
-  if(valid.isEmpty){update(() {statusMessage=waffraIsEnglish?'No new transactions can be saved. Review the messages below.':'لا توجد معاملات جديدة قابلة للحفظ. راجع الرسائل أدناه.';rejectedMessages=[for(final i in preRejected.keys)found[i]];});return;}
+  if(valid.isEmpty){update(() {statusMessage=transferReviewCount>0?
+    (waffraIsEnglish?'Transfers and card settlements require separate account review. No income/expense was posted.':
+     'التحويلات وسداد البطاقات تحتاج مراجعة منفصلة في الحسابات؛ لم نسجلها كدخل أو مصروف.'):
+    (waffraIsEnglish?'No new transactions can be saved. Review the messages below.':
+     'لا توجد معاملات جديدة قابلة للحفظ. راجع الرسائل أدناه.');
+    rejectedMessages=[for(final i in preRejected.keys)found[i]];});return;}
   final incomes=valid.where((i)=>results[i].income).toList();
   final expenses=valid.where((i)=>!results[i].income).toList();
   final incomeTotal=incomes.fold<double>(0,(v,i)=>v+results[i].amount!);
@@ -5748,6 +5764,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // Paint the confirmation feedback before preparing a large SMS batch.
   await WidgetsBinding.instance.endOfFrame;
   if(!ctx.mounted)return;
+  final learnedSmsRules=_smsRuleOwnerKey.isEmpty?
+   <WaffraSmsLocalRule>[]:
+   await const WaffraSmsLocalRuleStore().read(_smsRuleOwnerKey);
+  if(!ctx.mounted)return;
   final additions=<MoneyEntry>[];
   final proposedSourceIndexes=<int>[];
   final proposed=<BudgetCategory>[];
@@ -5759,14 +5779,27 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     for(final c in [...categories,...proposed])
      WaffraM155Category(id:c.id,name:c.name,income:c.income,parentId:c.parentId),
    ];
-   final plan=WaffraM155CategoryPlan.propose(rawSms:raw,income:result.income,
-    existing:existing,learned:learnedMerchantCategories);
-   if(plan==null){
+   final bankFacts=WaffraBankSmsFactsParser.parse(raw);
+   final learned=WaffraSmsLocalRules.resolve(
+    body:raw,sender:found.length==1?initialSender:'',
+    bankKind:bankFacts.kind,custom:learnedSmsRules);
+   final learnedCategory=learned!=null&&categories.any((c)=>
+     c.isSubcategory&&c.name==learned.category&&
+     c.income==result.income&&waffraCategoryAvailableForNewEntry(categories,c))
+      ?learned.category:null;
+   // A matched rule for a deleted/inactive category is unsafe to substitute.
+   if(learned!=null&&learnedCategory==null){
     preRejected[i]=WaffraSmsNotSavedReason.categoryUnresolved;
     continue;
    }
-   if(plan.newCategoryRequired){
-    final parentName=plan.categoryName.split(' / ').first;
+   final plan=WaffraM155CategoryPlan.propose(rawSms:raw,income:result.income,
+    existing:existing,learned:learnedMerchantCategories);
+   if(plan==null&&learnedCategory==null){
+    preRejected[i]=WaffraSmsNotSavedReason.categoryUnresolved;
+    continue;
+   }
+   if(learnedCategory==null&&plan?.newCategoryRequired==true){
+    final parentName=plan!.categoryName.split(' / ').first;
     final roots=categories.where((c)=>c.income==result.income&&
       !c.isSubcategory&&c.name==parentName).toList();
     if(roots.length!=1){
@@ -5778,12 +5811,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      parentId:parent.id,income:result.income,icon:parent.icon,
      color:parent.color));
    }
+   final categoryName=learnedCategory??plan!.categoryName;
    final merchant=waffraMerchantName(raw,income:result.income);
    final title=merchant==null?result.title:result.title+' — '+merchant;
    additions.add(MoneyEntry(id:newId(),title:title,
-    category:plan.categoryName,amount:result.amount!,income:result.income,
+    category:categoryName,amount:result.amount!,income:result.income,
     date:bankSmsDate(raw)??DateTime.now(),notes:raw,sourceType:'sms',
-    merchantKey:plan.merchantKey));
+    merchantKey:plan?.merchantKey??waffraMerchantKey(raw,income:result.income)??''));
    proposedHashes.add(bankSmsHash(raw));
    proposedSourceIndexes.add(i);
   }
