@@ -1845,3 +1845,5 @@ M462 budget-aware automatic bank SMS safeguard (5 Nov 2026): When approved accou
 M462 follow-up (2026-11-05): verified nonfinancial excluded bank SMS can be removed from the native encrypted queue while Android UI is closed; confirmed manual transfer category learns non-posting bilingual transfer hints. Transfer remains a distinct account-to-account operation. Exact-head CI pending.
 
 M462 transfer form: optional bank SMS transfer prefill for amount/date/stable id, transfer-mode locked, both accounts must be explicitly selected; manual verified account transfer invokes best-effort non-posting learning hook.
+
+M462 SMS transfer/exclusion completion (2026-11-05): confirmed manual account transfers add a reusable review-only transfer rule; reviewed bank transfer SMS opens verified account-to-account form with prefilled amount and stable idempotent fingerprint, explicit account selection, native acknowledgement after commit, never an expense. Previously approved excluded nonfinancial SMS is acknowledged from Android WorkManager even with UI closed. Exact-head CI and physical phone validation required.

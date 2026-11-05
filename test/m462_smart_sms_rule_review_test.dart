@@ -249,4 +249,52 @@ void main(){
   expect(source,contains('linkedBudget:false'));
  });
 
+ test('M462 transfers learned from manual entries are review-only',(){
+  final rule=WaffraSmsLocalRules.manualTransferPattern();
+  expect(rule.resolvedKind,'transfer');
+  expect(rule.autoPost,isFalse);
+  expect(rule.financial,isFalse);
+  expect(rule.keywords,containsAll(['تحويل','transfer']));
+  final original=WaffraSmsLocalRules.upsertLearned(
+   existing:const [],candidate:rule);
+  final repeat=WaffraSmsLocalRules.upsertLearned(
+   existing:original,candidate:rule);
+  expect(original,hasLength(1));
+  expect(repeat,hasLength(1));
+  expect(WaffraSmsLocalRules.resolveSpecial(
+    body:'Credit Transfer via Alinma Bank',sender:'Bank',
+    bankKind:WaffraBankOperationKind.transfer,custom:original)
+   ?.resolvedKind,'transfer');
+  expect(WaffraSmsLocalRules.resolve(
+    body:'Credit Transfer via Alinma Bank',sender:'Bank',
+    bankKind:WaffraBankOperationKind.transfer,custom:original),isNull);
+ });
+
+ test('M462 SMS transfer uses verified account-to-account route',(){
+  final home=File('lib/main.dart').readAsStringSync();
+  final form=File('lib/waffra_account_transaction_form.dart')
+   .readAsStringSync();
+  final manager=File('lib/waffra_accounts_manager_page.dart')
+   .readAsStringSync();
+  expect(home,contains('Future<void> _reviewSmsAccountTransfer({'));
+  expect(home,contains("requestId:'sms-transfer-'+bankSmsHash(body)"));
+  expect(home,contains("fromId:'',toId:''"));
+  expect(home,contains('initialSmsTransfer:prefill'));
+  expect(home,contains('await api.transfer(id:draft.requestId'));
+  expect(home,contains('ack=await WaffraAutoSms.acknowledge([id])'));
+  expect(form,contains('widget.initialSmsTransfer!=null?null:'));
+  expect(manager,contains('widget.onTransferConfirmed?.call(draft)'));
+ });
+
+ test('M462 background safely acknowledges verified exclusions',(){
+  final worker=File('lib/waffra_auto_sms_autopost.part.dart')
+   .readAsStringSync();
+  expect(worker,contains("summary['excluded']=0"));
+  expect(worker,contains('WaffraSmsLocalRules.resolveSpecial('));
+  expect(worker,contains("rule?.resolvedKind=='excluded'"));
+  expect(worker,contains('if(actionable.isEmpty)return summary'));
+  expect(worker,contains('for(final candidate in actionable.take(25))'));
+  expect(worker,contains('WaffraAutoSms.acknowledge([id])'));
+ });
+
 }
