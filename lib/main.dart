@@ -4088,6 +4088,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    });
   }
   String? selectedSender;
+  final selectedIds=<String>{};
+  var bulkBusy=false;
+  List<String> idsOf(Iterable<Map<String,Object?>> rows)=>
+   rows.map((row)=>row['id']).whereType<String>().toList(growable:false);
+  List<String> visibleIds()=>selectedSender==null?
+   idsOf(bySender.values.expand((rows)=>rows)):
+   idsOf(bySender[selectedSender]??const <Map<String,Object?>>[]);
   final selected=await showModalBottomSheet<String>(
    context:context,isScrollControlled:true,showDragHandle:true,
    builder:(sheet)=>StatefulBuilder(
@@ -4117,6 +4124,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          child:WaffraText(selectedSender==null?senders.length.toString():
           (bySender[selectedSender]?.length??0).toString())),
        ]),
+       Row(children:[
+        Checkbox(
+         key:const Key('waffra-sms-select-all-visible'),
+         value:visibleIds().isNotEmpty&&
+          visibleIds().every(selectedIds.contains),
+         onChanged:bulkBusy?null:(value)=>refresh((){
+          if(value==true){selectedIds.addAll(visibleIds());}
+          else{selectedIds.removeAll(visibleIds());}
+         })),
+        Expanded(child:WaffraText(waffraIsEnglish?
+         'Select all shown messages':'تحديد كل الرسائل المعروضة')),
+        Padding(padding:const EdgeInsets.only(left:12,right:12),
+         child:WaffraText(waffraIsEnglish?
+          '${selectedIds.length} selected':
+          '${selectedIds.length} محددة')),
+       ]),
        Expanded(child:ListView.builder(
         key:Key(selectedSender==null?'waffra-sms-sender-list':
          'waffra-sms-sender-transactions'),
@@ -4137,7 +4160,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               borderRadius:BorderRadius.circular(20)),
              child:WaffraText(waffraIsEnglish?'$count SMS':'$count رسالة',
               style:const TextStyle(color:forest,fontWeight:FontWeight.bold))),
-            trailing:const Icon(Icons.chevron_left_rounded),
+            trailing:Row(mainAxisSize:MainAxisSize.min,children:[
+             Checkbox(
+              key:Key('waffra-sms-select-sender-'+index.toString()),
+              value:idsOf(bySender[sender]!).isNotEmpty&&
+               idsOf(bySender[sender]!).every(selectedIds.contains),
+              onChanged:bulkBusy?null:(value)=>refresh((){
+               final ids=idsOf(bySender[sender]!);
+               if(value==true){selectedIds.addAll(ids);}
+               else{selectedIds.removeAll(ids);}
+              })),
+             const Icon(Icons.chevron_left_rounded),
+            ]),
             onTap:()=>refresh(()=>selectedSender=sender),
            ));
          }
@@ -4182,10 +4216,101 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            (waffraIsEnglish?'Review amount, category and budget':
             'راجع المبلغ والقسم والميزانية')+
            (date.isEmpty?'':' • '+date),maxLines:5),
-          trailing:const Icon(Icons.chevron_left_rounded),
-          onTap:(id is String)?()=>Navigator.pop(ctx,id):null,
+          trailing:Row(mainAxisSize:MainAxisSize.min,children:[
+           Checkbox(
+            key:Key('waffra-sms-select-message-'+index.toString()),
+            value:id is String&&selectedIds.contains(id),
+            onChanged:bulkBusy||id is! String?null:(value)=>refresh((){
+             if(value==true){selectedIds.add(id);}
+             else{selectedIds.remove(id);}
+            })),
+           const Icon(Icons.chevron_left_rounded),
+          ]),
+          onTap:bulkBusy?null:(id is String)?()=>Navigator.pop(ctx,id):null,
          );
         })),
+       if(selectedIds.isNotEmpty)Padding(
+        padding:const EdgeInsets.fromLTRB(12,8,12,4),
+        child:SizedBox(width:double.infinity,child:FilledButton.icon(
+         key:const Key('waffra-sms-bulk-exclude-selected'),
+         icon:bulkBusy?
+          const SizedBox(width:18,height:18,
+           child:CircularProgressIndicator(strokeWidth:2)):
+          const Icon(Icons.delete_outline_rounded),
+         label:WaffraText(waffraIsEnglish?
+          'Exclude ${selectedIds.length} selected':
+          'استبعاد ${selectedIds.length} رسالة محددة'),
+         onPressed:bulkBusy?null:()async{
+          // Explicit review-queue removal only: NEVER delete Android SMS or
+          // touch the finance ledger. Avoid implicit sender-wide rules.
+          final ids=selectedIds.toList(growable:false);
+          final likelyFinancial=_autoSmsPending.where((item){
+           if(!ids.contains(item['id'])||item['body'] is! String)return false;
+           final facts=WaffraBankSmsFactsParser.parse(item['body'] as String);
+           return facts.kind!=WaffraBankOperationKind.uncertain;
+          }).length;
+          final confirmed=await showWaffraDialog<bool>(
+           context:ctx,builder:(dialog)=>AlertDialog(
+            title:WaffraText(waffraIsEnglish?
+             'Exclude selected messages?':'استبعاد الرسائل المحددة؟'),
+            content:WaffraText(waffraIsEnglish?
+             'Remove ${ids.length} items from Waffra review only. '
+             'Your phone SMS and saved financial transactions are untouched.'+
+             (likelyFinancial>0?
+              ' WARNING: $likelyFinancial look financial; verify your selection.':''):
+             'سيتم استبعاد ${ids.length} رسالة من مراجعة وفرة فقط، '
+             'دون حذف رسائل الهاتف أو أي عمليات مالية محفوظة.'+
+             (likelyFinancial>0?
+              ' تنبيه: $likelyFinancial منها قد تكون معاملات مالية؛ راجع اختيارك.':'')),
+            actions:[
+             TextButton(onPressed:()=>Navigator.pop(dialog,false),
+              child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+             FilledButton(onPressed:()=>Navigator.pop(dialog,true),
+              child:WaffraText(waffraIsEnglish?'Exclude':'تأكيد الاستبعاد')),
+            ]));
+          if(confirmed!=true||!ctx.mounted)return;
+          refresh(()=>bulkBusy=true);
+          final done=<String>{};
+          var failed=false;
+          try{
+           // The native acknowledge bridge accepts up to 100 per atomic call.
+           // Stop at the first failed batch; never claim partial success.
+           for(var at=0;at<ids.length;at+=100){
+            final batch=ids.skip(at).take(100).toList(growable:false);
+            if(!await WaffraAutoSms.acknowledge(batch)){
+             failed=true;break;
+            }
+            done.addAll(batch);
+           }
+           if(done.isNotEmpty){
+            if(mounted)setState(()=>
+             _autoSmsPending.removeWhere((row)=>done.contains(row['id'])));
+            for(final rows in bySender.values){
+             rows.removeWhere((row)=>done.contains(row['id']));
+            }
+            senders.removeWhere((sender)=>bySender[sender]!.isEmpty);
+            selectedIds.removeAll(done);
+           }
+           if(ctx.mounted)Navigator.pop(ctx);
+           if(mounted){
+            if(failed)snack(context,waffraIsEnglish?
+             'Only ${done.length} messages were excluded. Retry remaining items.':
+             'تم استبعاد ${done.length} فقط. أعد محاولة الباقي.',isError:true);
+            else snackSuccess(context,waffraIsEnglish?
+             'Excluded ${done.length} messages from review.':
+             'تم استبعاد ${done.length} رسالة من المراجعة.');
+            unawaited(_refreshAutoSmsInbox(importMonth:true));
+           }
+          }catch(_){
+           if(mounted)snack(context,waffraIsEnglish?
+            'Bulk exclusion failed. Unconfirmed messages remain in review.':
+            'تعذر الاستبعاد الجماعي. الرسائل غير المؤكدة باقية للمراجعة.',
+            isError:true);
+          }finally{
+           if(ctx.mounted)refresh(()=>bulkBusy=false);
+          }
+         },
+        ))),
        Padding(padding:const EdgeInsets.all(12),
         child:WaffraText(waffraIsEnglish?
          'Nothing is recorded until you approve the transaction.':
