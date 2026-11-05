@@ -2,6 +2,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -20,6 +21,7 @@ import 'waffra_action_layout.dart';
 import 'waffra_centered_dropdown.dart';
 import 'waffra_subtle_selection.dart';
 import 'waffra_receipt_filename.dart';
+import 'storage/waffra_portable_encrypted_vault_restorer.dart' show WaffraEncryptedReceiptReference;
 import 'waffra_receipt_ocr.dart';
 import 'waffra_receipt_ocr_parser.dart';
 import 'waffra_bank_screenshot_parser.dart';
@@ -7414,6 +7416,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   DateTime date=initial?.date??scannedReceipt?.date??DateTime.now();
    String? suggestion,pendingHash,receiptPath=initial?.receiptPath;
    final stagedReceiptCopies=<String>[];
+   // All three modes share the SAME manual bottom sheet. Transfers never
+   // enter a categorized income/expense ledger or an attachment writer.
+   bool transferSelected=false,transferSaving=false,transferCommitted=false;
+   WaffraVerifiedAccountsApi? transferApi;
+   List<WaffraAccountBalance> transferAccounts=<WaffraAccountBalance>[];
+   String? transferSource,transferDestination,transferError;
+   final transferAmount=TextEditingController();
+   final transferNote=TextEditingController();
+   final transferRequestId='m466-'+DateTime.now().microsecondsSinceEpoch.toString();
    if(scannedImage!=null){
     try{
      final copy=await saveReceipt(scannedImage);
@@ -7490,6 +7501,159 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       }),
       icon:const Icon(Icons.calendar_month,size:19),
       label:WaffraText(dayText(date),maxLines:1));
+    Widget operationPicker(){
+     if(initial!=null||sms||scannedReceipt!=null){
+      return SegmentedButton<bool>(
+       segments:const [
+        ButtonSegment(value:true,label:WaffraText('دخل')),
+        ButtonSegment(value:false,label:WaffraText('مصروف'))],
+       selected:{income},
+       onSelectionChanged:initial?.sourceType=='goal_due'?null:
+        WaffraHaptics.selection((v)=>update((){
+         income=v.first;selectedParentId=null;selectedBudgetId=null;
+         category='';suggestion=null;
+        })));
+     }
+     return SegmentedButton<WaffraAccountOperation>(
+      key:const Key('waffra-manual-three-modes'),
+      showSelectedIcon:false,
+      segments:[
+       ButtonSegment(value:WaffraAccountOperation.income,
+        label:WaffraText(waffraIsEnglish?'Income':'دخل')),
+       ButtonSegment(value:WaffraAccountOperation.expense,
+        label:WaffraText(waffraIsEnglish?'Expense':'مصروف')),
+       ButtonSegment(value:WaffraAccountOperation.transfer,
+        label:WaffraText(waffraIsEnglish?'Transfer':'تحويل'))],
+      selected:{transferSelected?WaffraAccountOperation.transfer:
+       income?WaffraAccountOperation.income:WaffraAccountOperation.expense},
+      onSelectionChanged:transferSaving?null:
+       WaffraHaptics.selection((choice)async{
+       final selected=choice.first;
+       if(selected!=WaffraAccountOperation.transfer){
+        update((){
+         transferSelected=false;
+         income=selected==WaffraAccountOperation.income;
+         selectedParentId=null;selectedBudgetId=null;category='';suggestion=null;
+        });
+        return;
+       }
+       update(()=>transferSelected=true);
+       if(transferApi!=null)return;
+       try{
+        await _ensureFinanceBound();
+        final bridge=_financeBinding?.accountsBridge;
+        if(bridge==null)throw StateError('Verified money accounts unavailable');
+        final api=WaffraVerifiedAccountsApi(bridge:bridge);
+        final accounts=await api.balances();
+        if(!sheetContext.mounted)return;
+        update((){
+         transferApi=api;
+         transferAccounts=accounts.where((a)=>!a.archived).toList();
+         transferError=transferAccounts.length<2?
+          (waffraIsEnglish?'Create two accounts before transferring.':
+           'لازم تضيف حسابين على الأقل قبل التحويل.'):null;
+        });
+       }catch(error){
+        if(sheetContext.mounted)update(()=>transferError=waffraIsEnglish?
+         'Verified accounts unavailable. Reopen My Accounts.':
+         'الحسابات الموثقة غير متاحة. راجع حساباتي.');
+       }
+      }));
+    }
+    if(transferSelected){
+     Widget accountChoice({required String label,required String? value,
+      required ValueChanged<String?> onChange,String? exclude}){
+      final options=transferAccounts.where((a)=>a.id!=exclude).toList();
+      return DropdownButtonFormField<String>(
+       key:ValueKey('m466-transfer-'+label+'-'+(value??'none')),
+       isExpanded:true,
+       initialValue:options.any((a)=>a.id==value)?value:null,
+       decoration:InputDecoration(labelText:label,
+        border:const OutlineInputBorder()),
+       items:options.map((a)=>DropdownMenuItem(value:a.id,
+        child:WaffraText(a.name,maxLines:1))).toList(),
+       onChanged:transferSaving||options.isEmpty?null:onChange);
+     }
+     return WaffraEntrySheetSafeLayout(
+      form:SingleChildScrollView(
+       padding:const EdgeInsets.fromLTRB(18,10,18,8),
+       child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,
+        children:[
+         WaffraText(waffraIsEnglish?'Manual transaction':'عملية يدوية',
+          style:Theme.of(sheetContext).textTheme.titleLarge),
+         const SizedBox(height:12),
+         operationPicker(),
+         const SizedBox(height:18),
+         WaffraText(waffraIsEnglish?
+          'Moving money between your own accounts is not income or spending.':
+          'التحويل بين حساباتك لا يُحسب دخلًا ولا مصروفًا.',
+          style:const TextStyle(color:emerald)),
+         const SizedBox(height:14),
+         TextField(key:const Key('m466-transfer-amount'),controller:transferAmount,
+          keyboardType:const TextInputType.numberWithOptions(decimal:true),
+          inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],
+          decoration:InputDecoration(
+           labelText:waffraIsEnglish?'Amount (SAR)':'المبلغ (ر.س)',
+           border:const OutlineInputBorder())),
+         const SizedBox(height:12),
+         accountChoice(label:waffraIsEnglish?'From account':'من حساب',
+          value:transferSource,onChange:(v)=>update((){
+           transferSource=v;
+           if(transferDestination==v)transferDestination=null;
+           transferError=null;
+          })),
+         const SizedBox(height:12),
+         accountChoice(label:waffraIsEnglish?'To account':'إلى حساب',
+          value:transferDestination,exclude:transferSource,
+          onChange:(v)=>update((){
+           transferDestination=v;transferError=null;
+          })),
+         const SizedBox(height:12),
+         TextField(key:const Key('m466-transfer-note'),controller:transferNote,
+          maxLength:2000,maxLines:3,minLines:1,
+          decoration:InputDecoration(
+           labelText:waffraIsEnglish?'Transfer note':'ملاحظة التحويل',
+           border:const OutlineInputBorder())),
+         if(transferError!=null)
+          WaffraText(transferError!,style:TextStyle(
+           color:Theme.of(sheetContext).colorScheme.error)),
+        ])),
+      footer:FilledButton(
+       key:const Key('m466-confirm-transfer'),
+       onPressed:transferSaving||transferApi==null||
+        transferAccounts.length<2?null:WaffraHaptics.tap(()async{
+        final amount=waffraSarAmountMinor(transferAmount.text);
+        if(amount==null||transferSource==null||
+           transferDestination==null||
+           transferSource==transferDestination){
+         update(()=>transferError=waffraIsEnglish?
+          'Enter a valid amount and two different accounts.':
+          'أدخل مبلغًا صحيحًا وحسابَي مصدر ووجهة مختلفين.');
+         return;
+        }
+        update((){transferSaving=true;transferError=null;});
+        try{
+         await transferApi!.transfer(
+          id:transferRequestId,fromAccountId:transferSource!,
+          toAccountId:transferDestination!,amountMinor:amount,
+          occurredIso:DateTime.now().toIso8601String(),
+          note:transferNote.text.trim(),userConfirmed:true);
+         transferCommitted=true;
+         try{await _learnManualTransferPreference();}catch(_){}
+         if(sheetContext.mounted)Navigator.pop(sheetContext);
+        }catch(error){
+         if(sheetContext.mounted)update(()=>transferError=waffraIsEnglish?
+          'Transfer was not confirmed. Refresh accounts before retrying.':
+          'لم يتأكد التحويل. حدّث حساباتك قبل إعادة المحاولة.');
+        }finally{
+         if(sheetContext.mounted)update(()=>transferSaving=false);
+        }
+       }),
+       child:WaffraText(transferSaving?
+        (waffraIsEnglish?'Saving…':'جارٍ الحفظ…'):
+        (waffraIsEnglish?'Confirm transfer':'تأكيد التحويل'))),
+     );
+    }
      // Keep save above Android navigation controls and the keyboard.
      // Fields scroll independently while the confirmation remains visible.
      return WaffraEntrySheetSafeLayout(
@@ -7566,18 +7730,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         style:const TextStyle(color:emerald)),
        const SizedBox(height:12),
       ],
-      SegmentedButton<bool>(
-       segments:const [ButtonSegment(value:true,label:WaffraText('دخل')),
-        ButtonSegment(value:false,label:WaffraText('مصروف'))],
-       selected:{income},
-       onSelectionChanged:initial?.sourceType=='goal_due'?null:
-        WaffraHaptics.selection((v)=>update((){
-        income=v.first;
-        selectedParentId=null;
-        selectedBudgetId=null;
-        category='';
-        suggestion=null;
-       }))),
+      operationPicker(),
       const SizedBox(height:12),
       TextField(controller:title,onChanged:(_)=>update((){}),minLines:1,maxLines:5,
        decoration:InputDecoration(labelText:waffraIsEnglish?'Transaction name *':'اسم العملية *',
@@ -7924,8 +8077,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       }),child:const WaffraText('تأكيد وحفظ العملية')),
      );
    }));
-  debounce?.cancel();disposeLater([title,value,notes,message]);
+  debounce?.cancel();disposeLater([title,value,notes,message,transferAmount,transferNote]);
   if(result==null||!mounted){
+   if(transferCommitted&&mounted){
+    snackSuccess(context,waffraIsEnglish?
+     'Transfer recorded in verified accounts.':
+     'تم تسجيل التحويل بين الحسابات.');
+   }
    for(final copy in stagedReceiptCopies){
     try{final file=File(copy);if(await file.exists())await file.delete();}catch(_){}
    }
@@ -8031,24 +8189,32 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // M457: confirmed manual additions use the same atomic Home/Widget
    // SQLCipher append writer as reviewed bank SMS. Do NOT reserialize or
    // replace pre-existing ledger rows from a cached Home screen.
-   if(initial==null&&result.sourceType=='manual'&&
-      (result.receiptPath==null||result.receiptPath!.isEmpty)&&
-      (_financeBinding?.encrypted==true||
-       _lastFinanceAuthorityRead?.source==
-        WaffraRuntimeFinanceBackend.verifiedEncrypted||
-       _lastFinanceAuthorityRead?.source==
-        WaffraRuntimeFinanceBackend.guardedLegacy)){
+   // The same source writer handles manual money WITH or WITHOUT photos.
+   // The source is reverified under lock; guarded legacy cannot fabricate
+   // an account or silently fall back to a whole-ledger optimistic rewrite.
+   if(initial==null&&result.sourceType=='manual'){
     try{
      await _saveProgress.track<void>(
       'commit-confirmed-manual',()=>_financialWriteQueue.submit(
-       <String,Object>{'record':jsonEncode(result.toJson())},
+       <String,Object>{'record':jsonEncode(result.toJson()),
+        'receiptPaths':List<String>.of(waffraReceiptPaths(result.receiptPath))},
        (captured)async{
+        // Read staged picker paths before committing; only bytes enter SQLCipher.
+        // Invalid/missing files must abort BEFORE any money is posted.
+        final paths=List<String>.from(captured['receiptPaths'] as List);
+        final images=<Uint8List>[];
+        for(final path in paths){
+         images.add(await File(path).readAsBytes());
+        }
         await _ensureFinanceBound();
+        final safeRecord=Map<String,Object?>.from(
+         jsonDecode(captured['record'] as String) as Map);
+        safeRecord['receiptPath']=null;
         final committed=await _financeAuthority.commitConfirmedManual(
          route:WaffraFinanceRoute.manualTransactionSave,
-         record:Map<String,Object?>.from(
-          jsonDecode(captured['record'] as String) as Map),
+         record:safeRecord,
          userConfirmed:true,
+         manualReceiptImages:images.isEmpty?null:images,
          selectedAccountId:chosenManual?.ids?.single,
          expectedAccountGeneration:chosenManual?.ids?.single==null?
           null:chosenManual?.generation,
@@ -8072,6 +8238,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        },
       ),
      );
+     // Once encrypted storage has the bytes, remove only images staged by
+     // this editor. Never delete originals or existing transaction receipts.
+     for(final copy in stagedReceiptCopies){
+      try{final staged=File(copy);if(await staged.exists())await staged.delete();}
+      catch(_){}
+     }
      // A preference failure cannot retry an already-committed debit.
      try{await _learnManualCategoryPreference(result);}catch(_){}
     }catch(error){
@@ -14890,13 +15062,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          label:waffraIsEnglish?'Manual transaction':'عملية يدوية',
          onTap:WaffraHaptics.tapRequired((){
           unawaited(_launchAddAction(()=>entrySheet(),fromMenu:true));
-         })),
-        const SizedBox(height:7),
-        _addMenuOption(
-         icon:Icons.swap_horiz_rounded,
-         label:waffraIsEnglish?'Transfer between my accounts':'تحويل بين حساباتي',
-         onTap:WaffraHaptics.tapRequired((){
-          unawaited(_launchAddAction(openVerifiedTransfer,fromMenu:true));
          })),
         const SizedBox(height:7),
         _addMenuOption(
