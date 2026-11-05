@@ -4468,7 +4468,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _lastLedgerSavedRaw=ledger;
     _lastWidgetRevision=current.widgetRevision;
    });
-   unawaited(_refreshWidget());
+   // The verified pull read already includes the full authoritative ledger.
+   // Reusing it prevents a second SQLCipher decrypt for the Home widget.
+   unawaited(_publishVerifiedWidgetBalance(current));
   }catch(error) {
    debugPrint('Verified pull refresh failed closed: $error');
    if(mounted)setState((){
@@ -4706,17 +4708,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    });
   }
  }
- Future<void> _refreshWidget()async{
+ Future<void> _publishVerifiedWidgetBalance(
+  WaffraFinanceAuthorityRead verified)async{
   if(!Platform.isAndroid)return;
   try{
-   await _ensureFinanceBound();
-   final verified=await _financeAuthority.load(
-    route:WaffraFinanceRoute.widgetBalanceRefresh);
    verified.finance.requireIntegrity();
    final raw=verified.ledgerRaw;
-   if(raw==null){
-    throw StateError('Financial source returned no verified widget ledger.');
-   }
+   if(raw==null)throw StateError('Verified widget ledger is missing.');
    final net=WaffraAuthoritativeWidgetBalance.netHalalas(raw);
    await refreshWaffraHomeWidget(
     balance:hideWaffraAmounts.value?'***':WaffraDisplayCurrency.amount(net/100),
@@ -4724,9 +4722,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     hidden:hideWaffraAmounts.value,
     currency:WaffraDisplayCurrency.label(waffraIsEnglish));
   }catch(e){
-   // An absent OS key, conflicting source witness, corrupt ledger or
-   // interrupted cutover must NEVER display a stale in-memory balance.
-   debugPrint('Verified widget balance refresh unavailable: $e');
+   debugPrint('Verified widget balance refresh unavailable: ${e.runtimeType}');
+   await refreshWaffraHomeWidget(
+    balance:'***',negative:false,hidden:true,
+    currency:WaffraDisplayCurrency.label(waffraIsEnglish));
+  }
+ }
+ Future<void> _refreshWidget()async{
+  if(!Platform.isAndroid)return;
+  try{
+   await _ensureFinanceBound();
+   final verified=await _financeAuthority.load(
+    route:WaffraFinanceRoute.widgetBalanceRefresh);
+   await _publishVerifiedWidgetBalance(verified);
+  }catch(e){
+   debugPrint('Widget source unavailable: ${e.runtimeType}');
    await refreshWaffraHomeWidget(
     balance:'***',negative:false,hidden:true,
     currency:WaffraDisplayCurrency.label(waffraIsEnglish));
