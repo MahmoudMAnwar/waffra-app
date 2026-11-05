@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M463-login-first-single-page-saudi-phone-permissions-20261105",
-  "human_scope_review": "User reported signed Android main build 2026-11-05 regressed to showing permission access before authentication and presenting an extra welcome/select-signup page before the approved one-page Saudi phone registration. Change only WaffraApp cold-start routing and one-time consent timing, LoginScreen initial route, ProfileForm registration AppBar, focused tests, exact scope and release notes. Phone number and password verifier, biometric checks, Google legacy migration, SQLCipher/wallet, SMS content and notifications API stay unchanged. Never clear legacy account/profile or ask permissions before authentication. A signed main APK on a physical device is still required after CI and merge.",
+  "human_scope_review": "User reported signed Android main build 2026-11-05 regressed to showing permission access before authentication and presenting an extra welcome/select-signup page before the approved one-page Saudi phone registration. Change only WaffraApp cold-start routing and one-time consent timing, LoginScreen initial route, ProfileForm registration AppBar, focused tests, exact scope and release notes. Phone number and password verifier, biometric checks, Google legacy migration, SQLCipher/wallet, SMS content and notifications API stay unchanged. Never clear legacy account/profile or ask permissions before authentication. A signed main APK on a physical device is still required after CI and merge. M385 originally rejected an ambiguous generic @override build end anchor (nine occurrences); replaced with the unique ProfileForm first-registration branch as a strict boundary, with no source or test bypass.",
   "user_requested_changes": [
     "Fresh Saudi users must see the entire account creation form on the very first interactive page: name, gender/avatar, Saudi number, password, confirm password and Create Account; no intermediate registration choice or multi-page signup.",
     "Returning Saudi phone account users go directly to the phone/password login form, not an extra welcome/continue screen; prefill the safe stored phone only and keep the secure verifier.",
@@ -28,7 +28,7 @@
       },
       {
         "start": " Widget _phoneRegistrationForm(){\n",
-        "end": " @override Widget build(BuildContext context){\n"
+        "end": "  if(widget.initial==null&&widget.provider=='Phone')return _phoneRegistrationForm();\n"
       }
     ]
   }
