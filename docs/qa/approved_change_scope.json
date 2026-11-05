@@ -48,6 +48,10 @@
       {
         "start": " bool _autoSmsReviewOpen=false;",
         "end": " /// Explicit, idempotent account-to-account transfer from reviewed bank SMS."
+      },
+      {
+        "start": " Future<({List<String?>? ids,int? generation})?> reviewSmsAccountLinks(",
+        "end": "/// Budget assignment is OPTIONAL in every bank import:"
       }
     ],
     "lib/waffra_account_transaction_form.dart": [
