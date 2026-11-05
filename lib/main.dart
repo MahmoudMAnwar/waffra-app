@@ -3594,7 +3594,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     seedMessage:seedMessage,
     onNotice:(message)=>snack(context,message),
    )));
-  if(mounted)await _refreshAutoSmsInbox();
+  // A newly saved rule may free encrypted queue slots. Continue the history
+  // cursor immediately instead of requiring another manual search tap.
+  if(mounted)await _refreshAutoSmsInbox(importMonth:true);
  }
 
  Map<String,Object?>? _localSmsClassification(
