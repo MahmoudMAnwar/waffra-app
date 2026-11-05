@@ -17,7 +17,9 @@
     "Guarantee two-level category parent integrity in fresh SQLCipher at database level and reject orphan/wrong-type/nested parents through source-verified projection writes in existing vaults, with corruption rollback tests.",
     "Commit creation, editing and pause of a savings goal and linked recurring payment in one authoritative SQLCipher transaction, with both relational projections and snapshot verified, and adjust UI regression tests to this behavior.",
     "Keep production migration of historical SharedPreferences and legacy receipts blocked until lossless signed-device evidence; do not confuse authenticated cold preview or CI with actual old-user migration certification.",
-    "Preserve SQLCipher parent-before-child insertion and child-before-parent deletion while replacing an authenticated V3 account/archive history, ensuring the new category database constraints cannot break atomic encrypted restore."
+    "Preserve SQLCipher parent-before-child insertion and child-before-parent deletion while replacing an authenticated V3 account/archive history, ensuring the new category database constraints cannot break atomic encrypted restore.",
+    "Update legacy tests to verify that invalid category parents are rejected by SQLCipher before any corruption can be introduced, and build real category parent rows in source-only M365 domain restore coverage.",
+    "Update M371 goal creation regression to require a single atomic goal+due finance write with no cash expense or double debit, instead of requiring a now-obsolete standalone save implementation."
   ],
   "allowed_changed_files": [
     ".github/workflows/m448-account-context-ci.yml",
@@ -47,9 +49,12 @@
     "lib/waffra_accounts_manager_page.dart",
     "lib/waffra_goal_recurring_actions.part.dart",
     "test/m343_goal_recurring_named_budgets_test.dart",
+    "test/m371_goal_wallet_and_budgets_regression_test.dart",
     "test/m388_m390_approved_goal_recurring_receipt_test.dart",
     "test/m392_m395_budget_quick_actions_goal_ui_test.dart",
     "test/m448_account_context_policies_test.dart",
+    "test/storage/m134_sqlcipher_typed_projection_corruption_rollback_test.dart",
+    "test/storage/m365_domain_supplement_roundtrip_test.dart",
     "test/storage/m448_account_context_encrypted_test.dart",
     "test/storage/m448_account_context_policy_test.dart",
     "test/storage/m448_account_context_read_test.dart",
@@ -254,6 +259,24 @@
     "test/m343_goal_recurring_named_budgets_test.dart": [
       {
         "start": " test('M343 goal/recurring UI uses one saved total and budget remains independent',(){",
+        "end": null
+      }
+    ],
+    "test/storage/m134_sqlcipher_typed_projection_corruption_rollback_test.dart": [
+      {
+        "start": "  test('forged category parent rejects all concurrent edits',() async {",
+        "end": "  test('forged category income flag rejects all concurrent edits',() async {"
+      }
+    ],
+    "test/storage/m365_domain_supplement_roundtrip_test.dart": [
+      {
+        "start": "  Future<void> category(WaffraEncryptedStore db) async {",
+        "end": "  Future<void> savedBudget(WaffraEncryptedStore db) async {"
+      }
+    ],
+    "test/m371_goal_wallet_and_budgets_regression_test.dart": [
+      {
+        "start": "  test('M371 goal creation cannot post an expense or negative cash debit',",
         "end": null
       }
     ]
