@@ -21,7 +21,9 @@ void main(){
  });
  test('M467 Home header scope is verified and never passed into finance commits',(){
   final src=File('lib/main.dart').readAsStringSync();
-  expect(src,contains('WaffraHomeAccountChip('));
+  expect(src,contains("Key('m470-balance-account-picker')"));
+  expect(src,contains('onAccountTap:()=>unawaited(_m467PickHomeAccount())'));
+  expect(src,isNot(contains('child:WaffraHomeAccountChip(')));
   expect(src,contains('_m467ScopedEntries().toList()'));
   expect(src,contains('api.readAccountContext('));
   expect(src,contains('if(_m467AccountChoiceRestored&&_m467SelectedAccount!=chosen)'));
