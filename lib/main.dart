@@ -7998,7 +7998,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             receiptPath=waffraEncodeReceipts([...waffraReceiptPaths(receiptPath)]..remove(path));
            }))),
          ]),
-         onTap:WaffraHaptics.tap(()=>showReceipt(receiptPath!,initialIndex:waffraReceiptPaths(receiptPath).indexOf(path)))),
+         onTap:WaffraHaptics.tap(()=>showReceipt(receiptPath!,initialIndex:waffraReceiptPaths(receiptPath).indexOf(path),entryId:initial?.id))),
       ],
        ])),
       footer:FilledButton(
@@ -8495,11 +8495,46 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   await File(picked.path).copy(target);
   return target;
  }
- Future<void> showReceipt(String encoded,{int initialIndex=0})async {
+ Future<void> showReceipt(String encoded,{int initialIndex=0,String? entryId})async {
   final paths=waffraReceiptPaths(encoded);
+  final encrypted=paths.isNotEmpty&&
+   paths.every((p)=>p.startsWith('waffra-receipt://'));
   final available=<String>[];
-  for(final path in paths){if(await File(path).exists())available.add(path);}
-  if(available.isEmpty){if(mounted)snack(context,waffraIsEnglish?'Images not found on this device':'ما لقينا الصور على الجهاز');return;}
+  final encryptedBytes=<Uint8List>[];
+  if(encrypted){
+   // The tokens are opaque and owner-bound; never treat them as file paths.
+   if(entryId==null||!List.generate(paths.length,
+      (i)=>WaffraEncryptedReceiptReference.matches(
+       paths[i],entryId,i)).every((matched)=>matched)){
+    if(mounted)snack(context,waffraIsEnglish?
+     'Encrypted receipt owner could not be verified.':
+     'تعذر التحقق من ارتباط الصورة بالعملية.',isError:true);
+    return;
+   }
+   try{
+    encryptedBytes.addAll(await _financeAuthority.loadEncryptedReceiptImages(
+     route:WaffraFinanceRoute.receiptView,entryId:entryId));
+    if(encryptedBytes.length!=paths.length){
+     throw StateError('Encrypted receipt count mismatch');
+    }
+    available.addAll(paths);
+   }catch(error){
+    if(mounted)snack(context,waffraIsEnglish?
+     'Could not verify encrypted attachments.':
+     'تعذر التحقق من المرفقات المشفرة.',isError:true);
+    return;
+   }
+  }else{
+   if(paths.any((p)=>p.startsWith('waffra-receipt://'))){
+    if(mounted)snack(context,waffraIsEnglish?
+     'Mixed receipt references were rejected.':
+     'تم رفض مراجع مرفقات غير متطابقة.',isError:true);
+    return;
+   }
+   for(final path in paths){if(await File(path).exists())available.add(path);}
+  }
+  if(available.isEmpty){if(mounted)snack(context,waffraIsEnglish?
+   'Images not found on this device':'ما لقينا الصور على الجهاز');return;}
   if(!mounted)return;
   final controller=PageController(initialPage:initialIndex.clamp(0,available.length-1));
   int current=initialIndex.clamp(0,available.length-1);
@@ -8529,9 +8564,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          onPageChanged:(index)=>update(()=>current=index),
          itemBuilder:(ctx,index)=>InteractiveViewer(
           minScale:.8,maxScale:5,
-          child:Center(child:Image.file(File(available[index]),fit:BoxFit.contain)))))),
+          child:Center(child:encrypted?
+           Image.memory(encryptedBytes[index],fit:BoxFit.contain):
+           Image.file(File(available[index]),fit:BoxFit.contain)))))),
        Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:4),
-        child:WaffraText(WaffraReceiptFilename.displayName(available[current]),
+        child:WaffraText(encrypted?
+         (waffraIsEnglish?'Attachment ${current+1}':'مرفق ${current+1}'):
+         WaffraReceiptFilename.displayName(available[current]),
          maxLines:2,textAlign:TextAlign.center,
          style:const TextStyle(color:Colors.white,fontSize:13,fontWeight:FontWeight.w700))),
        SizedBox(height:58,child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
@@ -9462,7 +9501,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     },
     onClose:()=>Navigator.pop(ctx),
     onViewReceipt:waffraReceiptPaths(entry.receiptPath).isNotEmpty
-      ?(){Navigator.pop(ctx);showReceipt(entry.receiptPath!);}
+      ?(){Navigator.pop(ctx);showReceipt(entry.receiptPath!,entryId:entry.id);}
       :null,
    ),
   );
@@ -9498,7 +9537,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      child:WaffraReceiptCornerAction(
       key:Key('waffra-receipt-corner-list-'+e.id),
       count:attachmentCount,english:waffraIsEnglish,
-      onTap:()=>showReceipt(e.receiptPath!))),
+      onTap:()=>showReceipt(e.receiptPath!,entryId:e.id))),
    ]));
  }
  String get greeting=>WaffraSaudiGreetings.compose(
@@ -10606,7 +10645,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      child:WaffraReceiptCornerAction(
       key:Key('waffra-receipt-corner-home-'+entry.id),
       count:attachmentCount,english:waffraIsEnglish,
-      onTap:()=>showReceipt(entry.receiptPath!))),
+      onTap:()=>showReceipt(entry.receiptPath!,entryId:entry.id))),
    ])));
  }
  Widget dashboard(){
