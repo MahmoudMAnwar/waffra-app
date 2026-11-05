@@ -1121,6 +1121,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  bool _biometricVerifiedAwaitingResume=false;
  bool googleFirstRunSetup=false;
  bool autoSmsConsentPending=false;
+ // A restored profile is not fresh login: verify the current session first.
+ bool _smsConsentAfterExistingSessionUnlock=false;
  String appearance='light';
  bool introDone=false;
  int _greetingCycle=0;
@@ -1145,7 +1147,13 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    if(_biometricVerifiedAwaitingResume){
     _biometricVerifiedAwaitingResume=false;
     if(mounted&&locked&&profile!=null&&!showLogin){
-     setState(()=>locked=false);
+     setState((){
+      locked=false;
+      if(_smsConsentAfterExistingSessionUnlock){
+       autoSmsConsentPending=true;
+       _smsConsentAfterExistingSessionUnlock=false;
+      }
+     });
     }
    }
    return;
@@ -1218,7 +1226,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     googleFirstRunSetup=WaffraSaudiRelease.locationCountryOnboarding&&
      waffraGoogleProfileReadyForCountrySetup(u)&&
       !(p.getBool(waffraCountrySetupKey(u!))??false);
-    autoSmsConsentPending=Platform.isAndroid&&u!=null&&
+    // A cold-start profile is not proof of a fresh authenticated session.
+    autoSmsConsentPending=false;
+    _smsConsentAfterExistingSessionUnlock=Platform.isAndroid&&u!=null&&
      !(p.getBool(WaffraAutoSms.firstRunKey)??false);
     pinHash=p.getString('waffra_pin_sha256');
     locked=u!=null;startupError=null;loading=false;
@@ -1268,7 +1278,11 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   final needsSmsAccessAfterRegistration=Platform.isAndroid&&profile==null&&
    !(prefs.getBool(WaffraAutoSms.firstRunKey)??false);
   if(mounted)setState((){
-   if(needsSmsAccessAfterRegistration)autoSmsConsentPending=true;
+   if(needsSmsAccessAfterRegistration){
+    // Permission requests follow the completed phone sign-in/registration.
+    autoSmsConsentPending=true;
+    _smsConsentAfterExistingSessionUnlock=false;
+   }
    // First phone/password login and new registration require biometrics.
    // Editing a profile in an already-unlocked session does not re-lock.
    final freshSession=profile==null||showLogin;
@@ -1563,13 +1577,13 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     const SizedBox(height:8),
     FilledButton(onPressed:WaffraHaptics.tap((){setState((){loading=true;startupError=null;});load();}),child:const WaffraText('إعادة المحاولة')),
    ])))):
-   autoSmsConsentPending?WaffraAutoSmsConsentPage(
-    english:language=='en',onComplete:finishSmsPermissionChoice):
    profile==null||showLogin||((profile!.phone.trim().isEmpty)&&
     (profile!.provider.toLowerCase().contains('local')||
      profile!.provider.contains('محلي')||
      profile!.provider.toLowerCase().contains('guest')||
      profile!.provider.toLowerCase().contains('demo')))?LoginScreen(onSave:saveUser):
+   autoSmsConsentPending?WaffraAutoSmsConsentPage(
+    english:language=='en',onComplete:finishSmsPermissionChoice):
    locked?WaffraMandatoryBiometricGate(
     english:language=='en',
     onVerified:(){
@@ -1578,7 +1592,13 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
      if(WaffraBiometricSessionGuard.canReveal(
        authenticated:true,inForeground:lifecycle==AppLifecycleState.resumed)){
       _biometricVerifiedAwaitingResume=false;
-      setState(()=>locked=false);
+      setState((){
+       locked=false;
+       if(_smsConsentAfterExistingSessionUnlock){
+        autoSmsConsentPending=true;
+        _smsConsentAfterExistingSessionUnlock=false;
+       }
+      });
      }else if(lifecycle==AppLifecycleState.inactive){
       // Android's native fingerprint dialog can complete before resumed.
       // Defer only this verified result; do not unlock a backgrounded app.
