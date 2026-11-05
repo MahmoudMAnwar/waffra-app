@@ -1,3 +1,13 @@
+[M466] 2026-11-05 — Fix verified manual money with attachments; one income/expense/transfer popup
+===================================================================================================
+- Reproduced source cause of owner's failed manual save: an image path kept new manual income/expense outside commitConfirmedManual, routing it through whole-ledger optimistic persist (which rejects verified source/receipt path).
+- The fresh SQLCipher unified writer now accepts frozen picker BYTES for exactly one manually confirmed, verified-account-linked entry; under one native Home/Widget lock and SQLCipher transaction it inserts the ledger entry, account association, encrypted receipt BLOBs and canonical snapshot. It refuses mixed/unlinked/invalid attachments, validates expected account generation and byte parity, and rolls back on any failure.
+- The Home manual editor strips temporary receipt disk paths from the confirmed financial record; encrypted owner-bound references replace them in the persisted row. The in-app viewer retrieves those images through independently verified SQLCipher authorization, and historical local-file images are not rewritten or deleted.
+- Home "+" offers one "عملية يدوية" action. Its existing popup has دخل/مصروف/تحويل, with an internal transfer source/destination selector and the same verified accounts API. There is no separate transfer button in the Home + menu. Internal transfers do not enter income/expense totals.
+- Added exercised finance tests for money+one image+account+existing data preservation and invalid account rollback, plus static UI contracts and updated the outdated M464 standalone-transfer expectation.
+- Neither the existing two accounts, goal, two recurring items, original SMS hashes nor historical ledger records are intentionally altered. No silent SQLCipher source cutover, permission change or weakened integrity check.
+- Exact-head CI, signed Android APK built from main, device receipt re-open and update-over-old-version checks remain mandatory. Source review does NOT certify real-phone success.
+
 [M465-CI] 2026-11-05 — Bound GitHub Releases 504 retries; do not weaken native safety
 ===============================================================================================
 - M147 ARM64 preview job 127343122683 failed because the downloaded sqlite3mc.arm64.android.so hashed as bef140a1... instead of its immutable package SHA. The isolated retry job 127347857126 failed to fetch a JetBrains Kotlin compiler asset from github.com (HTTP 504 Gateway Time-out).
