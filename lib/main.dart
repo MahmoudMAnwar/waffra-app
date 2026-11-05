@@ -104,6 +104,7 @@ import 'storage/waffra_production_finance_authority_binding.dart';
 import 'storage/waffra_verified_accounts_api.dart';
 import 'storage/waffra_accounts_repository.dart';
 import 'waffra_accounts_manager_page.dart';
+import 'waffra_account_transaction_form.dart';
 import 'storage/waffra_fresh_finance_modules_repository.dart';
 import 'storage/waffra_verified_module_ui_guard.dart';
 import 'storage/waffra_runtime_finance_route_contract.dart';
@@ -3421,6 +3422,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       .map((item)=>item.name).toList(growable:false),
     availableBudgets:{for(final item in namedBudgets.where((b)=>
       !b.deleted&&b.budgetActive&&b.budget>0))item.id:item.budgetLabel??item.name},
+    onTransferConfirmed:(_)=>_learnManualTransferPreference(),
    )));
  }
  WaffraFinanceAuthorityRead? _lastFinanceAuthorityRead;
@@ -3625,6 +3627,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
  /// Manual entries have no bank SMS sender. Learn only a non-posting
  /// description/category hint after an independently verified save.
+ Future<void> _learnManualTransferPreference()async{
+  if(_smsRuleOwnerKey.isEmpty)return;
+  final store=const WaffraSmsLocalRuleStore();
+  final original=await store.read(_smsRuleOwnerKey);
+  final updated=WaffraSmsLocalRules.upsertLearned(
+   existing:original,candidate:WaffraSmsLocalRules.manualTransferPattern());
+  if(!identical(original,updated))await store.write(_smsRuleOwnerKey,updated);
+ }
  Future<void> _learnManualCategoryPreference(MoneyEntry record)async{
   if(_smsRuleOwnerKey.isEmpty||record.sourceType!='manual')return;
   final merchant=waffraMerchantKey(record.title,income:record.income)??record.title;
