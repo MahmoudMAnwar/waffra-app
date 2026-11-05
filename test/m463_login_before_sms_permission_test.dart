@@ -35,7 +35,6 @@ void main() {
   expect(login,contains("return ProfileForm(provider:'Phone',onSave:widget.onSave,"));
   expect(login,contains("signInMode=u.provider.toLowerCase()=='phone'"));
   // Keep one registration form with all approved required fields on screen.
-  final form=code.substring(end,code.indexOf('class ',end+7));
   expect(code,contains("Key('waffra-register-single-page')"));
   expect(code,contains("Key('waffra-register-name')"));
   expect(code,contains("Key('waffra-register-phone')"));
