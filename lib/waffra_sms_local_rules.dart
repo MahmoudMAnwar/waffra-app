@@ -286,7 +286,19 @@ abstract final class WaffraSmsLocalRules {
     rule.keywords.any((word)=>candidate.keywords.any(
      (other)=>normalized(word)==normalized(other))))){
    // Conflicting category evidence must remain human-review only.
-   return List<WaffraSmsLocalRule>.unmodifiable(existing);
+   // Preserve object identity so the caller does not report a learned rule
+   // or rewrite the encrypted store when no rule changed.
+   return existing;
+  }
+  // Never create a duplicate learned rule for a pattern the user already
+  // authorized to post. Nor may learning expand that authorized pattern.
+  if(existing.any((rule)=>rule.autoPost&&
+   rule.resolvedKind==candidate.resolvedKind&&
+   normalized(rule.sender)==normalized(candidate.sender)&&
+   rule.category==candidate.category&&
+   rule.keywords.any((word)=>candidate.keywords.any(
+    (other)=>normalized(word)==normalized(other))))){
+   return existing;
   }
   final index=existing.indexWhere((rule)=>
    !rule.autoPost&&(rule.id.startsWith('smart_')||
