@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M470-staged-32-approved-Waffra-corrections-20261106",
-  "human_scope_review": "Owner directed a new PR tracking 32 approved Waffra follow-up changes, with real implementation status for every numbered item and strict priority for broken money posts, recurrent due accounts, verified account selection, then UI. This candidate implements only the specifically confirmed M470 items described below. Items 1-23 and the other incompletely reconstructed requests are NOT silently marked done, and no production migration, account reattribution, default budget split, bank-sender guessing, or SQLCipher safety bypass is authorized. Exact-head CI and signed-device approval remain mandatory. This revision additionally includes the approved two-step bank/provider and linked-account selection in EXISTING recurring default settings only; mandatory account on initial recurring creation remains pending. M470 adds only a provider-then-linked-account picker to recurring default settings, with active-account filtering and explicit confirmed default; this does not claim atomic creation-time linkage. Known bank display grouping is derived only from account labels; unrecognized providers remain isolated, never auto-selected. The user requested this two-level recurring selector. New M470 account-budget math is isolated pure code and disposable unit tests, with no claim of live SQLCipher allocation persistence. Standalone budgets remain shared and must not be split or multiplied until explicitly allocated and backed up. M470 Add Account redesign changes no SQLCipher schema, account types, or native financial writer. Bank/provider input is a display label on one of the four already-supported storage kinds. Advanced account subtype persistence remains pending. M470 linked selectors modify only the existing verified manual/transfer money UI. They preserve its callbacks and source validation. Group by display name is a suggestion, never SMS confidence or a financial posting decision.",
+  "human_scope_review": "Owner directed a new PR tracking 32 approved Waffra follow-up changes, with real implementation status for every numbered item and strict priority for broken money posts, recurrent due accounts, verified account selection, then UI. This candidate implements only the specifically confirmed M470 items described below. Items 1-23 and the other incompletely reconstructed requests are NOT silently marked done, and no production migration, account reattribution, default budget split, bank-sender guessing, or SQLCipher safety bypass is authorized. Exact-head CI and signed-device approval remain mandatory. This revision additionally includes the approved two-step bank/provider and linked-account selection in EXISTING recurring default settings only; mandatory account on initial recurring creation remains pending. M470 adds only a provider-then-linked-account picker to recurring default settings, with active-account filtering and explicit confirmed default; this does not claim atomic creation-time linkage. Known bank display grouping is derived only from account labels; unrecognized providers remain isolated, never auto-selected. The user requested this two-level recurring selector. New M470 account-budget math is isolated pure code and disposable unit tests, with no claim of live SQLCipher allocation persistence. Standalone budgets remain shared and must not be split or multiplied until explicitly allocated and backed up. M470 Add Account redesign changes no SQLCipher schema, account types, or native financial writer. Bank/provider input is a display label on one of the four already-supported storage kinds. Advanced account subtype persistence remains pending. M470 linked selectors modify only the existing verified manual/transfer money UI. They preserve its callbacks and source validation. Group by display name is a suggestion, never SMS confidence or a financial posting decision. M470 item 26 moves only the existing Account selector trigger inside the Home balance-card delegate; it preserves active verified balances, privacy eye and finance-account source neutrality.",
   "user_requested_changes": [
     "Remove the unassigned-transactions option from the Home account selector, while safely resetting an old saved unassigned display preference to All accounts without discarding historical records.",
     "Allow the user to choose a date in the verified internal transfer form, while preserving verified source/destination selection and stable duplicate-protected transfer intent.",
@@ -13,7 +13,8 @@
     "Preserve recurring transaction provenance when a monthly due is confirmed Paid: the saved ledger row must have sourceType recurring and must not be mislabeled a manually entered transaction; ensure one-time receipt and source validation remain unchanged.",
     "Calculate monthly budget limits and spending for the selected verified money account and for All accounts by summing only explicitly associated account-specific budget allocations; refuse duplicate caps or synthetic linking of shared or unassigned budgets.",
     "Redesign Add Account with separate, required account kind, bank/provider when the selected type is bank, a user-defined name and integer-halalas opening balance; route confirmed creation to the existing verified SQLCipher account writer.",
-    "Show the financial institution/bank before its linked account when choosing a verified manual income/expense source and when selecting transfer source/destination accounts; changing the institution must clear the account and never silently use the Home header."
+    "Show the financial institution/bank before its linked account when choosing a verified manual income/expense source and when selecting transfer source/destination accounts; changing the institution must clear the account and never silently use the Home header.",
+    "Move the Home All accounts and selected-account picker inside the emerald balance card while preserving the existing verified read-only filter and preventing an implicit money source."
   ],
   "allowed_changed_files": [
     "docs/qa/WAFFRA_32_NEW_CHANGES_M470_TRACKER.md",
@@ -31,6 +32,7 @@
     "test/m467_account_header_test.dart",
     "test/m470_account_monthly_budget_policy_test.dart",
     "test/m470_account_scope_and_transfer_date_test.dart",
+    "test/m470_balance_header_account_picker_test.dart",
     "test/m470_new_account_dialog_test.dart",
     "test/m470_recurring_provider_accounts_test.dart",
     "test/qa/m447_verified_sms_account_linking_test.py",
@@ -50,6 +52,14 @@
       {
         "start": "      if(!entries.any((e)=>e.id==id)){",
         "end": "\n      recurringPostponed.remove(id);"
+      },
+      {
+        "start": "class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {",
+        "end": "/// A cancelled budget warning"
+      },
+      {
+        "start": "      SliverToBoxAdapter(child:Padding(\n       padding:const EdgeInsets.fromLTRB(14,14,14,4),",
+        "end": "      SliverPadding(padding:const EdgeInsets.fromLTRB(14,10,14,96),"
       }
     ],
     "lib/waffra_home_accounts_sheet.dart": [
@@ -94,6 +104,10 @@
       {
         "start": " testWidgets(",
         "end": "\n test('M467 Home header scope"
+      },
+      {
+        "start": " test('M467 Home header scope is verified and never passed into finance commits',(){",
+        "end": "\n  expect(src,contains('_m467ScopedEntries().toList()'));"
       }
     ],
     "test/qa/m447_verified_sms_account_linking_test.py": [
