@@ -5879,7 +5879,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       if(!entries.any((e)=>e.id==id)){
        setState(()=>entries.insert(0,MoneyEntry(
         id:id,title:r.title,category:r.category,amount:r.amount,
-        income:r.income,date:DateTime.now())));
+        income:r.income,date:DateTime.now(),sourceType:'recurring')));
       }
       recurringPostponed.remove(id);
       // SQLCipher commits the posted due, cleared postponement, and account
