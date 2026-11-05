@@ -4308,7 +4308,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      facts.kind==WaffraBankOperationKind.expense?'expense':'expense';
     await _openSmsRules(
      seedMessage:body,seedSender:sender,seedKind:suggestionKind,
-     seedCategory:localFacts?['category'] is String?
+     seedCategory:(localFacts?['category'] is String)?
       (localFacts!['category'] as String):'');
     // Saving a rule is not a financial transaction. A verified explicit
     // exclusion can remove the current review item after native acknowledgement.
