@@ -39,11 +39,13 @@ void main() {
   expect(login,contains('_freshSignup=raw==null&&!hasOldProfile&&!hasLegacyVerifier&&'));
   expect(registration,contains("Key('waffra-register-single-page')"));
   for(final key in const [
-   'waffra-register-name','waffra-register-gender-male',
-   'waffra-register-gender-female','waffra-register-phone',
+   'waffra-register-name','waffra-register-phone',
    'waffra-register-password','waffra-register-confirm-password',
    'waffra-register-submit',
   ]){expect(registration,contains("Key('$key')"));}
+  // Gender keys are conditional expressions in the existing choice chips.
+  expect(registration,contains("'waffra-register-gender-male'"));
+  expect(registration,contains("'waffra-register-gender-female'"));
   expect(registration,isNot(contains('controller:email')));
   expect(registration,isNot(contains('birthday')));
   expect(registration,contains('leading:widget.onBack==null?null:IconButton('));
