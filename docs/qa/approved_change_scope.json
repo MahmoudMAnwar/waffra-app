@@ -1,29 +1,97 @@
 {
   "contract_version": 1,
-  "change_id": "M465-main-build-rescan-Python-contract-20261105",
-  "human_scope_review": "5 Nov 2026: Owner reported failed main GitHub Actions run 42053505246, job 127335569839, step 8, after approved PR #388 and explicitly requested immediate repair. Root cause is outdated M452 Python source-assertion on old direct SMS rescan handler; correct behavior is progress-aware wrapper. Repair only this regression and its QA scope/release documentation; production code, financial ledger, encryption, and Android SMS data are unchanged. New PR to main subject to exact SHA checks. Subsequent PR job 127343122683 failed hash checking downloaded sqlite3mc.arm64.android.so against the immutable expected SHA; isolated job retry 127347857126 hit GitHub Releases HTTP 504 downloading JetBrains Kotlin compiler. Only the M147 preview compile step gains a three-attempt retry on explicit upstream transport errors; all source/asset hash and ELF checks remain required.",
+  "change_id": "M466-account-linked-manual-receipts-unified-popup-20261105",
+  "human_scope_review": "Owner 5 Nov 2026 reported that manual income and expense fail after entering amount, category, selected money account and selecting a picture. The existing Home sheet routes image-bearing manual entries through legacy optimistic save instead of account-verified SQLCipher append. Owner explicitly requests one Home plus Manual transaction popup with income/expense/transfer, removing standalone transfer option. Scope: atomic money/account/encrypted picture commit, verified viewer and tests. Preserve existing users' finance, SMS, accounts, goals, recurring, encrypted keys and migrations. No signing or production source cutover changes. CI and real-phone verification required.",
   "user_requested_changes": [
-    "Fix the specific post-merge main APK pipeline failing in mandatory Python QA step 8 of run 42053505246 while retaining correct progress-aware rescan and preventing accidental regressions to direct importer calls.",
-    "Keep existing encrypted financial records, goals, recurring items, bank SMS, and source authority untouched; do not bypass any mandatory CI gate.",
-    "Fix repeated intermittent GitHub Releases HTTP 504 downloads in M147 ARM64 preview compilation using a bounded retry only for positively identified transport failures, never a skipped check or weakened SHA verification."
+    "Fix manual income and expense with a selected verified account and image so ledger, account link and encrypted picture bytes commit atomically without a stale whole-ledger rewrite.",
+    "Expose the income, expense and internal transfer choices in ONE manual entry bottom sheet; remove redundant separate Home plus transfer action; transfer must not alter income or expense totals.",
+    "View saved encrypted image attachments with verified owner-linked tokens; preserve existing local legacy receipts without destructive migration.",
+    "Add exact-SHA tests for one-write receipt/account parity, failed-account rollback, UI menu choice and no accidental double posting; retain all other user data."
   ],
   "allowed_changed_files": [
-    ".github/workflows/m147-final-main-review-gate.yml",
     "docs/qa/approved_change_scope.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "test/qa/m452_sms_review_signup_regression_test.py"
+    "lib/main.dart",
+    "lib/storage/waffra_encrypted_finance_session.dart",
+    "lib/storage/waffra_unified_finance_writer.dart",
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+    "lib/storage/waffra_verified_finance_authority.dart",
+    "test/storage/m457_direct_manual_finance_commit_test.dart",
+    "test/storage/m464_manual_unassigned_transfer_access_regression_test.dart"
   ],
   "bounded_sections": {
-    "test/qa/m452_sms_review_signup_regression_test.py": [
+    "lib/main.dart": [
       {
-        "start": "    def test_sms_review_is_collapsible_and_count_remains_visible(self):",
-        "end": "    def test_registration_has_single_submit_and_avatar_choices(self):"
+        "start": "import 'package:flutter_svg/flutter_svg.dart';",
+        "end": "import 'waffra_receipt_ocr.dart';"
+      },
+      {
+        "start": " Future<void> entrySheet({",
+        "end": " Future<String?> chooseTransactionCategory("
+      },
+      {
+        "start": " Future<void> showReceipt(",
+        "end": " Future<void> _requestPercentageAlertPermission()async{"
+      },
+      {
+        "start": " Future<void> transactionDetails(MoneyEntry entry)async {",
+        "end": " Widget tile(MoneyEntry e){"
+      },
+      {
+        "start": " Widget tile(MoneyEntry e){",
+        "end": " String get greeting=>"
+      },
+      {
+        "start": "      key:Key('waffra-receipt-corner-home-'+entry.id),",
+        "end": " Widget dashboard(){"
+      },
+      {
+        "start": "        _addMenuOption(\n         icon:Icons.edit_note_rounded,",
+        "end": "        _addMenuOption(\n         icon:Icons.sms_outlined,"
       }
     ],
-    ".github/workflows/m147-final-main-review-gate.yml": [
+    "lib/storage/waffra_unified_finance_writer.dart": [
       {
-        "start": "      - name: Compile ARM64 release-mode APK (limited unsigned-app-identity preview)\n",
-        "end": "      # Do not publish a compile-only preview with missing native bindings:"
+        "start": "import 'dart:convert';",
+        "end": "class WaffraUnifiedWriteResult {"
+      },
+      {
+        "start": "  Future<WaffraUnifiedWriteResult> appendTransactions({",
+        "end": null
+      }
+    ],
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
+      {
+        "start": "  Future<WaffraUnifiedWriteResult> appendConfirmedTransactions({",
+        "end": "  /// Save a confirmed transaction and its attached images as ONE encrypted"
+      }
+    ],
+    "lib/storage/waffra_encrypted_finance_session.dart": [
+      {
+        "start": "  Future<WaffraUnifiedWriteResult> appendConfirmed({",
+        "end": "  /// Save normalized transaction + raw picker picture bytes atomically after"
+      }
+    ],
+    "lib/storage/waffra_verified_finance_authority.dart": [
+      {
+        "start": "  Future<WaffraFinanceAuthorityRead> commitConfirmedManual({",
+        "end": "  /// A future encrypted-only receipt attachment route."
+      }
+    ],
+    "test/storage/m457_direct_manual_finance_commit_test.dart": [
+      {
+        "start": "import 'dart:convert';",
+        "end": "class _M457ActivatedSource extends WaffraProductionFinanceSourceGuard {"
+      },
+      {
+        "start": "  test('M457 consent, duplicate and invalid account fail closed',",
+        "end": "  test('M457 manual UI posts a single frozen entry without optimistic ledger',"
+      }
+    ],
+    "test/storage/m464_manual_unassigned_transfer_access_regression_test.dart": [
+      {
+        "start": " test('Legacy cannot attach unverifiable account or post as SMS',",
+        "end": null
       }
     ]
   }
