@@ -5764,9 +5764,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // Paint the confirmation feedback before preparing a large SMS batch.
   await WidgetsBinding.instance.endOfFrame;
   if(!ctx.mounted)return;
-  final learnedSmsRules=_smsRuleOwnerKey.isEmpty?
-   <WaffraSmsLocalRule>[]:
-   await const WaffraSmsLocalRuleStore().read(_smsRuleOwnerKey);
+  List<WaffraSmsLocalRule> learnedSmsRules=const [];
+  if(_smsRuleOwnerKey.isNotEmpty){
+   try{
+    learnedSmsRules=await const WaffraSmsLocalRuleStore()
+     .read(_smsRuleOwnerKey);
+   }catch(_){
+    if(ctx.mounted)update((){
+     busy=false;
+     statusMessage=waffraIsEnglish?
+      'Encrypted classification rules are unavailable. No SMS was saved. Retry after unlocking.':
+      'تعذر قراءة قواعد التصنيف المشفرة. لم تُحفظ أي رسالة؛ حاول مجددًا بعد فتح التطبيق.';
+    });
+    return;
+   }
+  }
   if(!ctx.mounted)return;
   final additions=<MoneyEntry>[];
   final proposedSourceIndexes=<int>[];
