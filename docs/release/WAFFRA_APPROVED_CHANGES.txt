@@ -1841,3 +1841,5 @@ M370: إعداد فحص إلزامية SQLCipher للتثبيتات الجديد
 - أُصلحت أخطاء بناء اختبار M462 وأُضيفت اختبارات إعادة الاستخدام والتصنيفات المختلفة والتكرار والتحويل والاستثناء. لم تُعلن جاهزية الدمج أو APK؛ يلزم نجاح بوابات exact-SHA وتجربة هاتف.
 
 M462 budget-aware automatic bank SMS safeguard (5 Nov 2026): When approved account-bound auto-post is possible, active named or legacy budgets now require review and explicit budget selection; with no active budgets, an already-approved rule may post without an invented budget. SMS save notifications remain subject to Android notification permission and successful verified ledger commit. Automatic learning alone is not auto-post permission. Tests and exact-head CI pending.
+
+M462 follow-up (2026-11-05): verified nonfinancial excluded bank SMS can be removed from the native encrypted queue while Android UI is closed; confirmed manual transfer category learns non-posting bilingual transfer hints. Transfer remains a distinct account-to-account operation. Exact-head CI pending.

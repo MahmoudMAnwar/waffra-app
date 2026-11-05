@@ -303,6 +303,18 @@ abstract final class WaffraSmsLocalRules {
   try{validate(rule);return rule;}on FormatException{return null;}
  }
 
+ /// A manual account transfer teaches safe bilingual classification hints;
+ /// it cannot post bank SMS or silently choose either account.
+ static WaffraSmsLocalRule manualTransferPattern(){
+  const rule=WaffraSmsLocalRule(
+   id:'manual_transfer_account_to_account',
+   name:'تحويل بين حساباتي',kind:'transfer',income:false,
+   category:'',keywords:['تحويل','transfer'],sender:'',
+   matchAll:false,autoPost:false);
+  validate(rule);
+  return rule;
+ }
+
  /// Automatic learning is a classification preference, never a ledger
  /// permission. Keep one reusable sender/category pattern rather than
  /// creating a new user-visible rule after every reviewed SMS.
