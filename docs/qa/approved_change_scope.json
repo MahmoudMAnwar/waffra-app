@@ -10,7 +10,9 @@
     "M468: reduce application lag after manual income/expense/transfers, goal and recurring saves, first-run and pull-to-refresh by coalescing overlapping verified account reads, skipping full all-account ledger scans, and suppressing redundant native picker/resume SMS history scans without altering financial source authority.",
     "M468: decode large verified first-run and pull-refresh ledger/category snapshots in a background Flutter isolate to prevent expensive main-isolate JSON parsing from blocking loading indicators, without editing or bypassing any SQLCipher validation.",
     "M468: eliminate main-isolate JSON serialization stalls on financial edits by freezing complete manual/goal/recurring ledger entry maps before any await, encoding large captures off-isolate under the existing save overlay, and still applying the unchanged witnessed route guards and queue before SQLCipher writes.",
-    "M468: optimize witnessed module-save comparison by checking identical serialized ledger strings directly rather than re-JSON-encoding each large unchanged snapshot on the UI thread, without weakening comparisons for structured values or the account/writer authority."
+    "M468: optimize witnessed module-save comparison by checking identical serialized ledger strings directly rather than re-JSON-encoding each large unchanged snapshot on the UI thread, without weakening comparisons for structured values or the account/writer authority.",
+    "Fix account-selector ListTile ink and tint by placing interactive tiles on a clipped Material surface, so Flutter widget tests and actual user touch highlights render correctly.",
+    "Refresh three source regression expectations after M468 sequenced saving and M467 account-scoped monthly comparison/scoped gallery picker while requiring equivalent or stronger safety checks."
   ],
   "allowed_changed_files": [
     "lib/waffra_external_media_session.dart",
@@ -26,7 +28,10 @@
     "lib/waffra_large_json_decode.dart",
     "test/m468_large_ledger_decode_test.dart",
     "lib/storage/waffra_home_transaction_capture.dart",
-    "test/m468_snapshot_compare_performance_test.dart"
+    "test/m468_snapshot_compare_performance_test.dart",
+    "test/m275_smooth_confirmation_performance_test.dart",
+    "test/m268_approved_emerald_balance_card_test.dart",
+    "test/m290_google_country_reminders_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -97,6 +102,30 @@
       {
         "start": "  static void narrowVerifiedModuleEdit({",
         "end": "  static bool _emptyOptionalModule("
+      }
+    ],
+    "lib/waffra_home_accounts_sheet.dart": [
+      {
+        "start": " Widget choice(BuildContext context,{required String id,",
+        "end": " @override Widget build(BuildContext context){"
+      }
+    ],
+    "test/m275_smooth_confirmation_performance_test.dart": [
+      {
+        "start": "  test('P0: all app finance entry points use the safe feedback boundary',(){",
+        "end": null
+      }
+    ],
+    "test/m268_approved_emerald_balance_card_test.dart": [
+      {
+        "start": " test('approved balance artwork stays embedded and never uses external images',(){",
+        "end": " for(final brightness in [Brightness.light,Brightness.dark]){"
+      }
+    ],
+    "test/m290_google_country_reminders_test.dart": [
+      {
+        "start": "  test('M290 permissions are triggered only by the relevant user action', () {",
+        "end": null
       }
     ]
   }
