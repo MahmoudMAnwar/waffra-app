@@ -30,6 +30,8 @@ void main() {
   expect(login,contains('registeredLoading=true'));
   expect(login,contains('if(registeredLoading)return const Scaffold('));
   expect(login,contains('if(provider!=null||registered==null){'));
+  expect(login,contains('onBack:registered==null?null:'));
+  expect(code,contains('leading:widget.onBack==null?null:IconButton('));
   expect(login,contains("return ProfileForm(provider:'Phone',onSave:widget.onSave,"));
   expect(login,contains("signInMode=u.provider.toLowerCase()=='phone'"));
   // Keep one registration form with all approved required fields on screen.
