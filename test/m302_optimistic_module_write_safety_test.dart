@@ -15,7 +15,7 @@ void main() {
   // clearing the already-loaded Home state or launching a full SMS scan.
   expect(guard,contains('if(mounted)await _refreshFromVerifiedFinance();'));
   final refreshStart=s.indexOf('Future<void> _refreshFromVerifiedFinance()');
-  final refreshEnd=s.indexOf('Future<void> _loadFinanceSafely()',refreshStart);
+  final refreshEnd=s.indexOf('Future<bool> _persistModuleOrReload(',refreshStart);
   expect(refreshStart,greaterThan(0));
   expect(refreshEnd,greaterThan(refreshStart));
   final refresh=s.substring(refreshStart,refreshEnd);
