@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M461-fresh-finance-all-manual-recurring-goal-sms-history-performance-20261105",
-  "human_scope_review": "Owner supplied actual Android screenshots 2026-11-05 showing manual income/expense, recurring and goal writes rejected, exclusion rules leaving messages in review, installation-month SMS scan gaps and serious UI freezes on transaction save and pull refresh. Repair only verified financial editor delta capture, failed-save refresh, SMS rule acknowledgement, chronological bounded native cursor scanning and Android background work. Keep immutable SQLCipher source, linked account witnesses, OTP masking, no auto-post, backup and UI records intact. User will validate signed real-phone builds. Changes are candidate until exact-head CI and phone signoff. M461 repairs the obsolete M457 UI regression assertion: a failed commit now refreshes only the independently verified source instead of rerunning the full startup and SMS history scan. The rest of the original M457 test and finance durability checks stay byte-identical. Same-SHA CI runs on 2026-11-05 repeatedly failed before executing database tests when dynamically resolved sqlite3 3.9.0 downloaded Linux libsqlite3mc with digest bef140... instead of package expected 6739.... Pin upstream immutable sqlite3-3.7.0 (official GitHub release, x64 Linux sqlite3mc digest 3dfe8bcd...) rather than overriding any expected SHA, using system SQLite, or disabling encryption. SQLite version compatibility and real-device existing-vault opening still require tests.",
+  "human_scope_review": "Owner supplied actual Android screenshots 2026-11-05 showing manual income/expense, recurring and goal writes rejected, exclusion rules leaving messages in review, installation-month SMS scan gaps and serious UI freezes on transaction save and pull refresh. Repair only verified financial editor delta capture, failed-save refresh, SMS rule acknowledgement, chronological bounded native cursor scanning and Android background work. Keep immutable SQLCipher source, linked account witnesses, OTP masking, no auto-post, backup and UI records intact. User will validate signed real-phone builds. Changes are candidate until exact-head CI and phone signoff. M461 repairs the obsolete M457 UI regression assertion: a failed commit now refreshes only the independently verified source instead of rerunning the full startup and SMS history scan. The rest of the original M457 test and finance durability checks stay byte-identical. Same-SHA CI runs on 2026-11-05 repeatedly failed before executing database tests when dynamically resolved sqlite3 3.9.0 downloaded Linux libsqlite3mc with digest bef140... instead of package expected 6739.... Pin upstream immutable sqlite3-3.7.0 (official GitHub release, x64 Linux sqlite3mc digest 3dfe8bcd...) rather than overriding any expected SHA, using system SQLite, or disabling encryption. SQLite version compatibility and real-device existing-vault opening still require tests. This immediate QA follow-up also scopes test/m302_optimistic_module_write_safety_test.dart only to its first existing test and test/m437_bank_sms_settings_unknown_test.dart only to its second and fourth existing tests. The unchanged tests and production routes remain protected by M385; no existing assertion is skipped.",
   "user_requested_changes": [
     "Repair recurring and goal SQLCipher writes by submitting only explicitly touched projections while comparing every unrelated field with the verified account/source witness, without activating or bypassing a second finance database.",
     "Preserve manual verified income and expense and improve failed-write refresh without clearing the entire UI or rescanning all bank SMS whenever a save fails.",
@@ -11,7 +11,8 @@
     "Keep user data safe under failed transactions and preserve all M385 and M449 audit gates and signed APK readiness requirements.",
     "Update only the obsolete M457 test expectation for reload-on-failed-save; keep all direct manual append, duplicate and encrypted source guards intact.",
     "Pin official immutable sqlite3 3.7.0 native cipher binary release to stop floating 3.9.0 artifact hash-mismatch failures without changing package SHA validation or SQLCipher source selection.",
-    "Keep the SMS exclusion rule editor's default matching and sender-aware message preview scoped to its existing _edit handler, so explicitly excluded SMS are reliably matched and previewed without broadening ledger authorization."
+    "Keep the SMS exclusion rule editor's default matching and sender-aware message preview scoped to its existing _edit handler, so explicitly excluded SMS are reliably matched and previewed without broadening ledger authorization.",
+    "Keep existing optimistic-finance and SMS source tests meaningful after M461: update only three stale source-text assertions to enforce verified finance re-read, bounded unknown SMS scan and Android background execution; preserve all other assertions and strict fail-closed M385 review."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
@@ -26,7 +27,9 @@
     "test/storage/m457_direct_manual_finance_commit_test.dart",
     "pubspec.yaml",
     "test/qa/m461_sqlite_native_artifact_pin_test.py",
-    "lib/waffra_sms_rule_settings_page.dart"
+    "lib/waffra_sms_rule_settings_page.dart",
+    "test/m302_optimistic_module_write_safety_test.dart",
+    "test/m437_bank_sms_settings_unknown_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -103,6 +106,22 @@
       {
         "start": " Future<void> _edit({WaffraSmsLocalRule? existing,String? seed,String? kindHint})async{\n",
         "end": " @override Widget build(BuildContext context)=>Scaffold(\n"
+      }
+    ],
+    "test/m302_optimistic_module_write_safety_test.dart": [
+      {
+        "start": " test('M302 all optimistic module writes must recover authoritative finance state',(){\n",
+        "end": " test('M302 goal funding does not celebrate uncommitted savings',(){\n"
+      }
+    ],
+    "test/m437_bank_sms_settings_unknown_test.dart": [
+      {
+        "start": " test('M437 Etimad debt notices are not monetary transactions',(){\n",
+        "end": " test('M437 unknown notice screen shows original and manual-only action',(){\n"
+      },
+      {
+        "start": " test('M437 Native Android scan is read-only and uses one-time consent',(){\n",
+        "end": " test('M437 history cutoff is original install month, scan remains resumable',(){\n"
       }
     ]
   }
