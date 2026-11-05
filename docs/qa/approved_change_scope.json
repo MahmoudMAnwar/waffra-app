@@ -1,12 +1,14 @@
 {
   "contract_version": 1,
   "change_id": "M465-main-build-rescan-Python-contract-20261105",
-  "human_scope_review": "5 Nov 2026: Owner reported failed main GitHub Actions run 42053505246, job 127335569839, step 8, after approved PR #388 and explicitly requested immediate repair. Root cause is outdated M452 Python source-assertion on old direct SMS rescan handler; correct behavior is progress-aware wrapper. Repair only this regression and its QA scope/release documentation; production code, financial ledger, encryption, and Android SMS data are unchanged. New PR to main subject to exact SHA checks.",
+  "human_scope_review": "5 Nov 2026: Owner reported failed main GitHub Actions run 42053505246, job 127335569839, step 8, after approved PR #388 and explicitly requested immediate repair. Root cause is outdated M452 Python source-assertion on old direct SMS rescan handler; correct behavior is progress-aware wrapper. Repair only this regression and its QA scope/release documentation; production code, financial ledger, encryption, and Android SMS data are unchanged. New PR to main subject to exact SHA checks. Subsequent PR job 127343122683 failed hash checking downloaded sqlite3mc.arm64.android.so against the immutable expected SHA; isolated job retry 127347857126 hit GitHub Releases HTTP 504 downloading JetBrains Kotlin compiler. Only the M147 preview compile step gains a three-attempt retry on explicit upstream transport errors; all source/asset hash and ELF checks remain required.",
   "user_requested_changes": [
     "Fix the specific post-merge main APK pipeline failing in mandatory Python QA step 8 of run 42053505246 while retaining correct progress-aware rescan and preventing accidental regressions to direct importer calls.",
-    "Keep existing encrypted financial records, goals, recurring items, bank SMS, and source authority untouched; do not bypass any mandatory CI gate."
+    "Keep existing encrypted financial records, goals, recurring items, bank SMS, and source authority untouched; do not bypass any mandatory CI gate.",
+    "Fix repeated intermittent GitHub Releases HTTP 504 downloads in M147 ARM64 preview compilation using a bounded retry only for positively identified transport failures, never a skipped check or weakened SHA verification."
   ],
   "allowed_changed_files": [
+    ".github/workflows/m147-final-main-review-gate.yml",
     "docs/qa/approved_change_scope.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "test/qa/m452_sms_review_signup_regression_test.py"
@@ -16,6 +18,12 @@
       {
         "start": "    def test_sms_review_is_collapsible_and_count_remains_visible(self):",
         "end": "    def test_registration_has_single_submit_and_avatar_choices(self):"
+      }
+    ],
+    ".github/workflows/m147-final-main-review-gate.yml": [
+      {
+        "start": "      - name: Compile ARM64 release-mode APK (limited unsigned-app-identity preview)\n",
+        "end": "      # Do not publish a compile-only preview with missing native bindings:"
       }
     ]
   }
