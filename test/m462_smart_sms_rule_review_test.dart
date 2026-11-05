@@ -63,6 +63,63 @@ void main(){
   expect(rule.keywords,isNotEmpty);
  });
 
+ test('M462 groups confirmed bank SMS into reusable class/category patterns',(){
+  const first=WaffraSmsLocalRule(
+   id:'smart_abc',name:'مطاعم',kind:'expense',income:false,
+   keywords:['restaurant'],category:'مطاعم وكافيهات / مطاعم شعبية',
+   sender:'AlRajhiBank',matchAll:false);
+  const next=WaffraSmsLocalRule(
+   id:'smart_xyz',name:'مطاعم',kind:'expense',income:false,
+   keywords:['albaik'],category:'مطاعم وكافيهات / مطاعم شعبية',
+   sender:'AlRajhiBank',matchAll:false);
+  final merged=WaffraSmsLocalRules.upsertLearned(
+   existing:[first],candidate:next);
+  expect(merged,length:1);
+  expect(merged.single.keywords,containsAll(['restaurant','albaik']));
+  expect(WaffraSmsLocalRules.matches(merged.single,
+   'Card Purchase at Albaik SAR 40',sender:'AlRajhiBank'),isTrue);
+  expect(WaffraSmsLocalRules.matches(merged.single,
+   'Card Purchase at Albaik SAR 40',sender:'AnotherBank'),isFalse);
+  // Repeated review changes nothing, including IDs and durable rule count.
+  final again=WaffraSmsLocalRules.upsertLearned(
+   existing:merged,candidate:next);
+  expect(again,length:1);
+  expect(again.single.id,'smart_abc');
+ });
+
+ test('M462 never silently broadens an explicitly enabled autoPost rule',(){
+  const authorized=WaffraSmsLocalRule(
+   id:'smart_verified',name:'Fuel',kind:'expense',income:false,
+   keywords:['petromin'],category:'السيارة / بنزين ووقود',
+   sender:'AlRajhiBank',autoPost:true,accountId:'account_123',
+   accountSuffix:'1234',matchAll:false);
+  const newPattern=WaffraSmsLocalRule(
+   id:'smart_other',name:'Fuel',kind:'expense',income:false,
+   keywords:['fuel'],category:'السيارة / بنزين ووقود',
+   sender:'AlRajhiBank',matchAll:false);
+  final result=WaffraSmsLocalRules.upsertLearned(
+   existing:[authorized],candidate:newPattern);
+  expect(result.first.keywords,['petromin']);
+  expect(result.first.autoPost,isTrue);
+  expect(result.where((r)=>r.autoPost),hasLength(1));
+  expect(result.length,2); // New candidate remains review-only.
+ });
+
+ test('M462 conflicting category evidence cannot poison an existing rule',(){
+  const saved=WaffraSmsLocalRule(
+   id:'smart_old',name:'food',kind:'expense',income:false,
+   keywords:['albaik'],category:'مطاعم وكافيهات / مطاعم شعبية',
+   sender:'AlRajhiBank',matchAll:false);
+  const conflicting=WaffraSmsLocalRule(
+   id:'smart_new',name:'other',kind:'expense',income:false,
+   keywords:['albaik'],category:'المنزل / أخرى',
+   sender:'AlRajhiBank',matchAll:false);
+  final after=WaffraSmsLocalRules.upsertLearned(
+   existing:[saved],candidate:conflicting);
+  expect(after,length:1);
+  expect(after.single.category,saved.category);
+ });
+
  test('M462 beginner review is prefilled and keeps finance approval separate',(){
   final ui=File('lib/waffra_sms_rule_settings_page.dart').readAsStringSync();
   final home=File('lib/main.dart').readAsStringSync();
@@ -77,7 +134,8 @@ void main(){
   expect(home,contains('Future<bool> _learnSafeSmsRule({'));
   expect(home,contains('await store.write(_smsRuleOwnerKey,[...prior,candidate]);'));
   expect(home,contains('if(!learned&&mounted)await _openSmsRules('));
-  expect(home,contains('if(!exists&&!learned&&mounted){'));
+  expect(home,contains('if(!learned&&mounted){'));
+  expect(ui,contains("Key('waffra-sms-rule-bucket-$kind')"));
   expect(home,contains('await bulkSmsSheet(initialText:body,'));
  });
 }
