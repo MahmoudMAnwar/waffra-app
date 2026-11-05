@@ -1,3 +1,12 @@
+[M464-SMS-FOLLOWUP-CORRECTION] 2026-11-05 — Approved account safety and CI reconciliation
+================================================================================
+- Backend now requires a real, verified account ID plus witnessed generation for each NEW manual income/expense; legacy accountless manual posting is blocked (historic unassigned transactions stay readable and unchanged). This supersedes all older accountless manual instructions in #388.
+- Tests M457/M461 now set up a real cash account, select it explicitly, and exercise the direct SQLCipher write instead of expecting an accountless operation. Previous M464 legacy append regression now asserts secure rejection and no modification of goals, recurring, history or SMS hashes.
+- The bank sender-to-account evidence mechanism is independent from classification and cannot grant automatic posting permission; it requires two matching user-verified links, same-bank ambiguity requires an exact trusted suffix or explicit choice.
+- Multi-message evidence updates are serialized after confirmed finance writes so parallel confirmations do not lose or overwrite learning history.
+- CI blocker verified: sqlite3 v3.7.0 native-asset download returns an unexpected SHA256 for libsqlite3mc.x64.linux.so in multiple workflows; Gradle downloads also encounter HTTP 504. Do not disable integrity verification or claim that affected tests passed. CI and physical Android testing are still required.
+- No main branch merge or APK release authorized by this note. New financial and native changes are a draft QA candidate until exact-head checks and phone test pass.
+
 
 [M464-SMS-FOLLOWUP] 2026-11-05 — PR #388 staged account learning, bulk SMS review and visible rescan
 ========================================================================================
