@@ -3941,8 +3941,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // One encrypted native queue commit instead of one platform call per SMS.
   // If the durable acknowledgement fails, retain every pending item in UI.
   if(toAcknowledge.isNotEmpty){
-   final removed=await WaffraAutoSms.acknowledge(toAcknowledge);
-   if(!removed)waiting.addAll(toRestoreOnAckFailure);
+   // Native encrypted ACK is capped at 100 IDs per atomic operation.
+   // Drain larger review queues in batches without losing failed items.
+   final failedAcks=<String>{};
+   for(var from=0;from<toAcknowledge.length;from+=100){
+    final batch=toAcknowledge.skip(from).take(100).toList(growable:false);
+    final removed=await WaffraAutoSms.acknowledge(batch);
+    if(!removed)failedAcks.addAll(batch);
+   }
+   waiting.addAll(toRestoreOnAckFailure.where(
+    (row)=>failedAcks.contains(row['id'])));
   }
   final progress=await WaffraAutoSms.trackingStatus();
   if(!mounted)return;
