@@ -2232,7 +2232,7 @@ class _LoginScreenState extends State<LoginScreen> {
   // No intermediate welcome/create-account page before entering details.
   if(provider!=null||registered==null){
    return ProfileForm(provider:'Phone',onSave:widget.onSave,
-    onBack:()=>setState(()=>provider=null));
+    onBack:registered==null?null:()=>setState(()=>provider=null));
   }
   final hasExisting=registered!=null;
   final legacyAccount=hasExisting&&registered!.provider.toLowerCase()!='phone';
@@ -2478,7 +2478,8 @@ class _ProfileFormState extends State<ProfileForm> {
   return Scaffold(
    appBar:AppBar(title:WaffraText(waffraIsEnglish?
     'Create a Waffra account':'إنشاء حساب وفرة'),
-    leading:IconButton(onPressed:WaffraHaptics.tap(widget.onBack),
+    leading:widget.onBack==null?null:IconButton(
+     onPressed:WaffraHaptics.tap(widget.onBack),
      icon:const Icon(Icons.arrow_back))),
    body:SafeArea(child:ListView(
     key:const Key('waffra-register-single-page'),
