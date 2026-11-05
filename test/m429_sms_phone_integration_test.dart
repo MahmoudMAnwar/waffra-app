@@ -39,7 +39,7 @@ void main(){
   expect(store,contains('"date >= ? AND date < ?"'));
   expect(store,contains('history_cursor_at'));
   expect(store,contains('historical = true'));
-  expect(store,contains('maxCandidates = 100'));
+  expect(store,contains('maxCandidates = 500'));
   expect(activity,contains('"importConsentMonthBankSms"'));
   expect(bridge,contains("channel.invokeMethod<int>('importConsentMonthBankSms')"));
   expect(poster,contains('static bool get reviewOnly => false;'));

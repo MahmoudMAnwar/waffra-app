@@ -762,10 +762,12 @@ class WaffraVerifiedFinanceAuthority {
         (record['receiptPath'] != null && record['receiptPath'] != '')) {
       throw StateError('M457 requires one confirmed unattached manual entry.');
     }
-    if (selectedAccountId != null &&
-        (selectedAccountId.trim().isEmpty || selectedAccountId.length > 128 ||
-         expectedAccountGeneration == null)) {
-      throw StateError('M457 account selection needs verified generation.');
+    // The owner-approved M464 rule supersedes older accountless manual appends.
+    // A NEW manual money entry is a real balance movement and must point to
+    // one explicitly selected, verified and currently active account.
+    if (selectedAccountId == null || selectedAccountId.trim().isEmpty ||
+        selectedAccountId.length > 128 || expectedAccountGeneration == null) {
+      throw StateError('Manual income/expense requires a verified money account.');
     }
     // Deep-freeze input before the first async source check.
     final decoded = jsonDecode(jsonEncode(record));
@@ -773,18 +775,22 @@ class WaffraVerifiedFinanceAuthority {
       throw ArgumentError('Invalid confirmed manual record.');
     }
     final frozen = Map<String, Object?>.unmodifiable(decoded);
-    if (await _requireRoute(route) !=
-        WaffraRuntimeFinanceBackend.verifiedEncrypted) {
+    final source = await _requireRoute(route);
+    // Guarded legacy cannot prove a financial account ownership/generation.
+    // Old unassigned records stay readable, but no new accountless write is
+    // permitted; never invent or persist a shadow bank account.
+    if (source == WaffraRuntimeFinanceBackend.guardedLegacy) {
+      throw StateError('Activate verified accounts before manual money posting.');
+    }
+    if (source != WaffraRuntimeFinanceBackend.verifiedEncrypted) {
       throw StateError('M457 cannot write to an unverified finance source.');
     }
     final result = await encryptedSession!.appendConfirmed(
       records: <Map<String, Object?>>[frozen],
       hashes: const <String?>[null],
       userConfirmed: true,
-      selectedAccountIds: selectedAccountId == null
-          ? null : <String?>[selectedAccountId],
-      expectedAccountGeneration: selectedAccountId == null
-          ? null : expectedAccountGeneration,
+      selectedAccountIds: <String?>[selectedAccountId],
+      expectedAccountGeneration: expectedAccountGeneration,
     );
     if (result.saved != 1 || result.savedIncome + result.savedExpenses != 1) {
       throw StateError('M457 manual entry did not commit exactly once.');

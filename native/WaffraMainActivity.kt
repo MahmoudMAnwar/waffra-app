@@ -255,6 +255,7 @@ class MainActivity : FlutterFragmentActivity() {
                 "autoSmsPermissionState" -> result.success(WaffraAutoSmsStore.permissionGranted(this))
                 "autoSmsEnabled" -> result.success(WaffraAutoSmsStore.enabled(this))
                 "autoSmsTrackingStatus" -> result.success(WaffraAutoSmsStore.trackingStatus(this))
+                "autoSmsScanProgress" -> result.success(WaffraAutoSmsStore.scanProgress(this))
                 "pauseAutoSmsForSignOut" ->
                     result.success(WaffraAutoSmsStore.suspendForSignOut(this))
                 "resumeAutoSmsAfterSignIn" -> {

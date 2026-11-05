@@ -1,3 +1,29 @@
+[M464-M462-REGRESSION-FIX] 2026-11-05 — One unique failure behind six full-suite workflow failures
+===================================================================================================
+- Six exact-head workflows failed due to one outdated M462 transfer-mode source assertion, not six separate financial defects. In the full test run, 2291 tests passed and one test failed.
+- Updated the M462 regression to require that both prefilled SMS transfers and explicit Home transfers cannot change their transaction mode. The production transfer behavior remains unchanged; transfers must never be counted as ordinary expense/income.
+- Updated the strict M385 approved-file and bounded-section manifest. Existing data, finance source, and account state are untouched by this test correction.
+- Exact-head CI is still required; previous workflow results are for the previous SHA, and this note does not attest a successful release.
+
+[M464-SMS-FOLLOWUP-CORRECTION] 2026-11-05 — Approved account safety and CI reconciliation
+================================================================================
+- Backend now requires a real, verified account ID plus witnessed generation for each NEW manual income/expense; legacy accountless manual posting is blocked (historic unassigned transactions stay readable and unchanged). This supersedes all older accountless manual instructions in #388.
+- Tests M457/M461 now set up a real cash account, select it explicitly, and exercise the direct SQLCipher write instead of expecting an accountless operation. Previous M464 legacy append regression now asserts secure rejection and no modification of goals, recurring, history or SMS hashes.
+- The bank sender-to-account evidence mechanism is independent from classification and cannot grant automatic posting permission; it requires two matching user-verified links, same-bank ambiguity requires an exact trusted suffix or explicit choice.
+- Multi-message evidence updates are serialized after confirmed finance writes so parallel confirmations do not lose or overwrite learning history.
+- CI blocker verified: sqlite3 v3.7.0 native-asset download returns an unexpected SHA256 for libsqlite3mc.x64.linux.so in multiple workflows; Gradle downloads also encounter HTTP 504. Do not disable integrity verification or claim that affected tests passed. CI and physical Android testing are still required.
+- No main branch merge or APK release authorized by this note. New financial and native changes are a draft QA candidate until exact-head checks and phone test pass.
+
+
+[M464-SMS-FOLLOWUP] 2026-11-05 — PR #388 staged account learning, bulk SMS review and visible rescan
+========================================================================================
+- Owner approved these additions in the SAME existing draft PR #388; no additional PR or main merge was made.
+- New manual income/expense now requires the owner to choose an existing verified bank/cash/wallet account in the UI. Existing historical unassigned records remain untouched.
+- Independent encrypted sender-to-account evidence is recorded only after a confirmed SMS finance commit. Two consistent confirmed mappings can preselect a matching account. Sender-only suggestion is blocked if the bank has multiple active accounts; four-digit attribution is kept separate from income/expense/transfer classification and never grants auto-post permission.
+- SMS sender groups and individual SMS now support select-all/multi-select and confirmed batch removal from Waffra review (native ACK batches of up to 100); original Android SMS and committed ledger are never deleted.
+- Native encrypted pending queue increases from 100 to 500 candidates; durable cursor and scanned/added/pending counters support cumulative rescan. Home rescan shows busy state, totals and failure feedback rather than an unresponsive button. Further backlog is resumed after queue space is available; 500 is still a bounded capacity, not an unlimited history archive.
+- Updated earlier 100-capacity regressions, added focused SMS review and account-ambiguity tests, and expanded the fail-closed M385 file/section scope for this change. Exact-head CI, signed Android test and human scope approval remain REQUIRED; changes are NOT a release attestation.
+
 وفرة | Waffra
 =============================================
 سجل التعديلات المعتمدة للبيلد التجريبي القادم
@@ -1864,3 +1890,11 @@ M462 final code review following 2026-11-05 SQLCipher rule-read and sender-scope
 M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned SMS category may take precedence over the existing merchant classification; generic built-in purchase/payment rules still use the prior merchant category planner. This prevents a new uncategorized override for otherwise recognized merchants. Source commit fe133303c9ea90f03ced8e79fde075ee968ca974; physical-device verification still required.
 
 [M462+M463 Integration] 2026-11-05 — Combined authenticated one-page signup and SMS classification changes; permission order SMS, notifications, biometric after signup. Reviewed SQLCipher account transfer and budget selection preserved. Physical phone testing still required.
+
+[M464] 2026-11-05 — إصلاح حفظ الدخل والمصروف بدون حساب وإظهار التحويل من زر الإضافة
+- اعتمدنا بلاغ الهاتف: الأهداف والمتكررة محفوظة، لكن تأكيد الدخل أو المصروف اليدوي يُظهر رسالة «تعذر حفظ المعاملة. بياناتك السابقة لم تتغير» من مسار الحفظ الاحتياطي القديم، بينما التحويل غير موجود في قائمة + الرئيسية.
+- يُسمح بإضافة الدخل والمصروف اليدوي بدون إنشاء أي حساب مالي، مع ترك الحساب غير مربوط؛ الربط بالحساب اختيار مستقل عندما يوجد حساب موثّق.
+- العمليات اليدوية الجديدة بلا مرفق تُرسل إلى دالة الحفظ الذري المباشر من واجهة Home بدل إعادة تسلسل بيانات Home المالية بالكامل. إذا كان المصدر SQLCipher موثقًا، يُستخدم نفس مسار M457؛ وإذا كانت النسخة القديمة ما زالت على guardedLegacy، لا يتغير المصدر ولا يحدث تفعيل تشفير تلقائي، وإنما تُضاف عملية واحدة فقط عبر القفل والتوثيق والتعافي المعتمدين أصلاً في الكاتب القديم مع حماية بيانات الأهداف والمتكررة والرسائل والتصنيفات.
+- أضيف زر «تحويل بين حساباتي» إلى قائمة + في الرئيسية، يفتح مباشرة نموذج التحويل ويتطلب مصدرًا ووجهة مختلفين؛ عندما تقل الحسابات عن اثنين، يوجَّه المستخدم لإدارتها. التحويل لا يُسجل دخلًا أو مصروفًا ولا يُحفظ بمجرد اختيار نوعه.
+- أصبح «حساباتي» ظاهرًا ضمن الأدوات المالية حتى عند غياب المصدر الموثق، مع رسالة توضح أنه غير متاح بدل إخفاء الرابط تمامًا.
+- تشمل الاختبارات رفض المعاملة المكررة والصلاحية غير الموثقة والمحافظة على السجل السابق. نجاح CI شرط للدمج ولا يعتبر تجربة هاتف ناجحة أو تأكيدًا بأمان النسخ الاحتياطية.

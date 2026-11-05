@@ -37,11 +37,13 @@ object WaffraAutoSmsStore {
     // Hash of the verified signed-in account. No phone/email is saved here.
     private const val consentedOwnerName = "consented_account_sha256_v1"
     private const val suspendedAfterLogoutName = "suspended_after_logout_v1"
-    private const val maxCandidates = 100
+    private const val maxCandidates = 500
     private const val activationMonth = "sms_activation_month_start"
     private const val historyCursorAt = "sms_history_cursor_at"
     private const val historyCursorId = "sms_history_cursor_id"
     private const val historyComplete = "sms_history_complete"
+    private const val historyScannedCount = "sms_history_scanned_count_v1"
+    private const val historyAddedCount = "sms_history_added_count_v1"
     private const val historySourceMonth = "sms_history_source_install_month_v2"
     private fun monthStart() = Calendar.getInstance().apply {
         set(Calendar.DAY_OF_MONTH, 1)
@@ -136,6 +138,21 @@ object WaffraAutoSmsStore {
         )
     }
 
+    /** Read-only progress counters, persisted alongside the resume cursor. */
+    fun scanProgress(context: Context): Map<String, Any> = synchronized(mutex) {
+        val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        val waiting = try {
+            if (enabled(context)) read(context).length() else -1
+        } catch (_: Exception) { -1 }
+        mapOf(
+            "scanned" to prefs.getLong(historyScannedCount, 0L),
+            "added" to prefs.getLong(historyAddedCount, 0L),
+            "pending" to waiting,
+            "capacity" to maxCandidates,
+            "complete" to prefs.getBoolean(historyComplete, false)
+        )
+    }
+
     // Explicit opt-out must never auto-resume after a future login.
     fun enable(context: Context, allow: Boolean): Boolean = synchronized(mutex) {
         if (allow && !permissionGranted(context)) return@synchronized false
@@ -150,6 +167,7 @@ object WaffraAutoSmsStore {
             // Existing confirmed finance hashes are still deduplicated by UI.
             editor.remove(historyCursorAt).remove(historyCursorId)
                 .remove(historySourceMonth).remove(historyComplete)
+                .remove(historyScannedCount).remove(historyAddedCount)
         }
         if (allow) {
             val owner = signedInOwnerHash(context)
@@ -160,6 +178,7 @@ object WaffraAutoSmsStore {
                 editor.remove(queueName).remove(historyCursorAt)
                     .remove(historyCursorId).remove(historySourceMonth)
                     .remove(historyComplete)
+                    .remove(historyScannedCount).remove(historyAddedCount)
             }
             if (owner != null) editor.putString(consentedOwnerName, owner)
             else editor.remove(consentedOwnerName)
@@ -222,7 +241,7 @@ object WaffraAutoSmsStore {
     private fun open(encrypted: String): JSONArray {
         if (encrypted.isBlank()) return JSONArray()
         val bytes = Base64.decode(encrypted, Base64.NO_WRAP)
-        require(bytes.size > 28 && bytes.size < 250000)
+        require(bytes.size > 28 && bytes.size < 2000000)
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128,
             bytes.copyOfRange(0, 12)))
@@ -533,7 +552,7 @@ object WaffraAutoSmsStore {
     /** Resumable history import: from day 1 of installation month through now.
      * This native importer never posts money or contacts a cloud provider.
      * An separately opted-in Flutter worker may stage sanitized cloud hints.
-     * The encrypted queue holds up to 100 and resumes after user review.
+     * The encrypted queue holds up to 500 and resumes after user review.
      */
     fun importConsentMonth(context: Context, maxRead: Int = 500): Int {
         if (!enabled(context)) return 0
@@ -598,6 +617,10 @@ object WaffraAutoSmsStore {
             prefs.edit().putLong(historyCursorAt, lastAt)
                 .putLong(historyCursorId, lastId)
                 .putLong(historySourceMonth, start)
+                .putLong(historyScannedCount,
+                    (if (sameSource) prefs.getLong(historyScannedCount, 0L) else 0L) + checked)
+                .putLong(historyAddedCount,
+                    (if (sameSource) prefs.getLong(historyAddedCount, 0L) else 0L) + accepted)
                 .putBoolean(historyComplete, complete).commit()
         }
         return accepted

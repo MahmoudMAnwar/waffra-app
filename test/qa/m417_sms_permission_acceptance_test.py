@@ -26,7 +26,7 @@ class M417AutoSmsContractTest(unittest.TestCase):
         self.assertIn("AES/GCM/NoPadding",queue)
         self.assertIn("qualifies(sender, body)",queue)
         self.assertIn("otp.containsMatchIn(safe)",queue)
-        self.assertIn("maxCandidates = 100",queue)
+        self.assertIn("maxCandidates = 500",queue)
         for forbidden in ("FirebaseFirestore", "HttpURLConnection", "OkHttpClient"):
             self.assertNotIn(forbidden,receiver+queue)
         self.assertNotIn("commitConfirmedSms",receiver+queue)
