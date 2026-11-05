@@ -5,6 +5,7 @@ import 'main.dart' show snack, snackSuccess;
 import 'storage/waffra_account_context_repository.dart';
 import 'storage/waffra_accounts_repository.dart';
 import 'storage/waffra_verified_accounts_api.dart';
+import 'waffra_recurring_account_groups.dart';
 
 /// Explicit account configuration only. Never posts a transaction, changes
 /// a reminder or inherits the currently displayed Home account.
@@ -35,45 +36,86 @@ class _WaffraAccountContextSettingsState
 
  Future<void> _editRecurring(WaffraRecurringAccountTemplate item)async{
   final active=widget.accounts.where((a)=>!a.archived).toList();
-  String chosen=active.any((a)=>a.id==item.accountId)
-    ?item.accountId!:'none';
+  final providers=WaffraRecurringAccountGroups.fromAccounts(active);
+  if(providers.isEmpty){
+   _notify('أضف حسابًا ماليًا أولًا قبل ربط العملية المتكررة.',
+    'Add a money account before configuring a recurring payment.');
+   return;
+  }
+  // A missing or archived default never falls back to the Home header.
+  String? selectedProvider;
+  String? chosen;
+  for(final provider in providers){
+   if(provider.accounts.any((a)=>a.id==item.accountId)){
+    selectedProvider=provider.id;
+    chosen=item.accountId;
+    break;
+   }
+  }
   final selection=await showDialog<String>(context:context,
-   builder:(dialog)=>StatefulBuilder(builder:(dialog,update)=>AlertDialog(
-    title:Text(t('حساب العملية المتكررة','Recurring money account')),
-    content:SingleChildScrollView(child:Column(
-     mainAxisSize:MainAxisSize.min,children:[
-      Text(item.title),
-      const SizedBox(height:10),
-      DropdownButtonFormField<String>(
-       isExpanded:true,initialValue:chosen,
-       decoration:const InputDecoration(border:OutlineInputBorder()),
-       items:[
-        DropdownMenuItem(value:'none',child:Text(t('بدون حساب','Unassigned'))),
-        ...active.map((a)=>DropdownMenuItem<String>(
-         value:a.id,child:Text(a.name))),
-       ],
-       onChanged:(v){if(v!=null)update(()=>chosen=v);},
-      ),
-      const SizedBox(height:10),
-      Text(t('التعديل للدفعات القادمة. الدفعات السابقة والتذكيرات لا تتغير.',
-       'Applies to future payments. Existing transactions and reminders stay unchanged.')),
-     ])),
-    actions:[
-     TextButton(onPressed:()=>Navigator.pop(dialog),
-      child:Text(t('إلغاء','Cancel'))),
-     FilledButton(onPressed:()=>Navigator.pop(dialog,chosen),
-      child:Text(t('حفظ','Save'))),
-    ],
-   )));
+   builder:(dialog)=>StatefulBuilder(builder:(dialog,update){
+    final matching=providers.where((p)=>p.id==selectedProvider).toList();
+    final linked=matching.isEmpty?
+     const <WaffraAccountBalance>[]:matching.single.accounts;
+    return AlertDialog(
+     title:Text(t('حساب العملية المتكررة','Recurring money account')),
+     content:SingleChildScrollView(child:Column(
+      mainAxisSize:MainAxisSize.min,children:[
+       Text(item.title),
+       const SizedBox(height:12),
+       DropdownButtonFormField<String>(
+        key:ValueKey('m470-recurring-provider-'+(selectedProvider??'none')),
+        initialValue:selectedProvider,isExpanded:true,
+        decoration:InputDecoration(
+         labelText:t('الجهة أو البنك','Provider or bank'),
+         border:const OutlineInputBorder()),
+        items:providers.map((provider)=>DropdownMenuItem<String>(
+         value:provider.id,
+         child:Text(t(provider.labelAr,provider.labelEn),
+          maxLines:1,overflow:TextOverflow.ellipsis))).toList(),
+        onChanged:(value)=>update((){
+         selectedProvider=value;
+         chosen=null; // Never imply the account from a provider alone.
+        }),
+       ),
+       const SizedBox(height:12),
+       DropdownButtonFormField<String>(
+        key:ValueKey('m470-recurring-account-'+(selectedProvider??'none')),
+        initialValue:chosen,isExpanded:true,
+        decoration:InputDecoration(
+         labelText:t('الحساب المرتبط بالجهة','Linked money account'),
+         border:const OutlineInputBorder()),
+        items:linked.map((account)=>DropdownMenuItem<String>(
+         value:account.id,child:Text(account.name,
+          maxLines:1,overflow:TextOverflow.ellipsis))).toList(),
+        onChanged:selectedProvider==null?null:
+         (value)=>update(()=>chosen=value),
+       ),
+       const SizedBox(height:12),
+       Text(t('الحساب إجباري للدفعات القادمة. لن يتغير سجل المدفوعات السابقة أو التذكيرات.',
+        'A money account is mandatory for future payments. Previous transactions and reminders are unchanged.')),
+      ])),
+     actions:[
+      TextButton(onPressed:()=>Navigator.pop(dialog),
+       child:Text(t('إلغاء','Cancel'))),
+      FilledButton(
+       key:const Key('m470-recurring-default-save'),
+       onPressed:chosen!=null&&linked.any((a)=>a.id==chosen)
+        ?()=>Navigator.pop(dialog,chosen):null,
+       child:Text(t('حفظ','Save'))),
+     ],
+    );
+   }));
   if(selection==null||!mounted)return;
+  if(!active.any((a)=>a.id==selection))return;
   try{
+   // Revalidate the current finance witness inside the encrypted writer.
    await widget.api.balances();
    await widget.api.setRecurringDefaultAccount(
-    recurringId:item.id,
-    accountId:selection=='none'?null:selection,
-    userConfirmed:true);
+    recurringId:item.id,accountId:selection,userConfirmed:true);
    if(mounted)setState(_reload);
-   _notify('تم تحديث الحساب للدفعات القادمة.','Future payment default saved.',success:true);
+   _notify('تم تحديث الحساب للدفعات القادمة.',
+    'Future payment default saved.',success:true);
   }catch(_){
    _notify('تعذر حفظ حساب المتكررة. راجع الحسابات.',
     'Could not save recurring account. Refresh and retry.');
@@ -166,7 +208,8 @@ class _WaffraAccountContextSettingsState
       ...state.data!.map((item)=>Card(child:ListTile(
        title:Text(item.title),
        subtitle:Text(item.accountId==null
-        ?t('بدون حساب','Unassigned')
+        ?t('الحساب غير محدد — اختر حسابًا قبل الدفع',
+          'No account configured — choose before payment')
         :labels[item.accountId]??t('حساب غير متاح','Unavailable account')),
        trailing:const Icon(Icons.edit_outlined),
        onTap:()=>_editRecurring(item),
