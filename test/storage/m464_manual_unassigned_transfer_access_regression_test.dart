@@ -29,7 +29,7 @@ void main(){
    'entries':'[]',
    'waffra_goals_v24':'[{"id":"preserve-goal"}]',
    'waffra_recurring_v24':'[{"id":"preserve-recurring"}]',
-   'waffra_sms_hashes_v1':<String>['a'*64],
+   'waffra_sms_hashes_v1':<String>[List<String>.filled(64,'a').join()],
   });
   work=await Directory.systemTemp.createTemp('waffra-m464-');
   finance=WaffraVerifiedFinanceAuthority(
@@ -69,7 +69,7 @@ void main(){
   await p.reload();
   expect(p.getString('waffra_goals_v24'),'[{"id":"preserve-goal"}]');
   expect(p.getString('waffra_recurring_v24'),'[{"id":"preserve-recurring"}]');
-  expect(p.getStringList('waffra_sms_hashes_v1'),['a'*64]);
+  expect(p.getStringList('waffra_sms_hashes_v1'),[List<String>.filled(64,'a').join()]);
   await expectLater(finance.commitConfirmedManual(
    route:WaffraFinanceRoute.manualTransactionSave,
    record:item('expense',false),userConfirmed:true,
