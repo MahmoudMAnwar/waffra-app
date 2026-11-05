@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M462-reuse-safe-income-expense-transfer-exclusion-buckets-20261105",
-  "human_scope_review": "Owner explicitly approved the simple three-screen Arabic concept on 2026-11-05: understood messages create classification rules automatically; uncertain messages open an editable rule with sender, type, safe keywords and category prefilled as far as available. This PR is stacked on M461 to preserve its proven Android SQLCipher and SMS fixes, is draft, and requires exact-head CI, independent human code scope approval and signed real phone testing before release. Neither rule learning nor UI changes may authorize any ledger writes or expose raw OTPs. Follow-up owner explicitly requested parallel PR work and reuse of existing automatic income/expense/transfer/excluded rule buckets when new manual or scanned classifications are confirmed; never silently add a fresh rule for every event. Preserve distinct financial category per safe phrase rather than overwriting a global category, and never alter custom auto-post permission. Same-day follow-up: owner wants bank SMS to request budget selection if active budgets exist and to allow background posting without one otherwise; finance posting remains subject to the existing explicit per-rule authorization and verified account. Change to background worker is a restriction on posting scope, not a new auto-post permission. Owner 2026-11-05 expanded automatic learning to internal transfers and verified excluded SMS. Background exclusions are classified before permission to post money and never mutate ledger. Reviewed transfer transaction form and manager callbacks were added for explicitly selected source and target accounts. No automatic transfer posting. Confirmed follow-up includes transfer form, accounts manager, Home entry, and native background exclusion. Verified SMS transfer remains an explicit two-account confirmation with dedupe; nonfinancial excluded queue items do not post to ledger.",
+  "human_scope_review": "Owner explicitly approved the simple three-screen Arabic concept on 2026-11-05: understood messages create classification rules automatically; uncertain messages open an editable rule with sender, type, safe keywords and category prefilled as far as available. This PR is stacked on M461 to preserve its proven Android SQLCipher and SMS fixes, is draft, and requires exact-head CI, independent human code scope approval and signed real phone testing before release. Neither rule learning nor UI changes may authorize any ledger writes or expose raw OTPs. Follow-up owner explicitly requested parallel PR work and reuse of existing automatic income/expense/transfer/excluded rule buckets when new manual or scanned classifications are confirmed; never silently add a fresh rule for every event. Preserve distinct financial category per safe phrase rather than overwriting a global category, and never alter custom auto-post permission. Same-day follow-up: owner wants bank SMS to request budget selection if active budgets exist and to allow background posting without one otherwise; finance posting remains subject to the existing explicit per-rule authorization and verified account. Change to background worker is a restriction on posting scope, not a new auto-post permission. Owner 2026-11-05 expanded automatic learning to internal transfers and verified excluded SMS. Background exclusions are classified before permission to post money and never mutate ledger. Reviewed transfer transaction form and manager callbacks were added for explicitly selected source and target accounts. No automatic transfer posting. Confirmed follow-up includes transfer form, accounts manager, Home entry, and native background exclusion. Verified SMS transfer remains an explicit two-account confirmation with dedupe; nonfinancial excluded queue items do not post to ledger. CI M385 verified that new-method-only start anchors do not exist in the main base. Corrected the review-region anchor to an existing unchanged method and bounded the new transfer form import; no CI guard was relaxed or bypassed.",
   "user_requested_changes": [
     "Recognize a verified bank SMS using its independent directional facts and specific built-in category, then securely save a deduplicated sender-scoped local classification rule without another multi-step setup dialog after the user confirms the transaction.",
     "When classification is uncertain, immediately open a pre-populated beginner-friendly rule form containing a suggested name, actual sender, safe phrase chips, known kind and previously verified category where available, with advanced keyword and optional account controls collapsed.",
@@ -37,7 +37,7 @@
         "end": " Map<String,Object?>? _localSmsClassification(\n"
       },
       {
-        "start": " Future<void> _reviewSmsAccountTransfer({\n",
+        "start": " Widget _autoSmsReviewCard(){\n",
         "end": " void _receiveSharedSms(){\n"
       },
       {
@@ -47,6 +47,10 @@
       {
         "start": " Future<void> openVerifiedAccounts()async{\n",
         "end": " WaffraFinanceAuthorityRead? _lastFinanceAuthorityRead;"
+      },
+      {
+        "start": "import 'waffra_accounts_manager_page.dart';\n",
+        "end": "import 'storage/waffra_fresh_finance_modules_repository.dart';\n"
       }
     ],
     "lib/waffra_sms_local_rules.dart": [
