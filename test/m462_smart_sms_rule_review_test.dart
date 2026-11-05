@@ -74,7 +74,7 @@ void main(){
    sender:'AlRajhiBank',matchAll:false);
   final merged=WaffraSmsLocalRules.upsertLearned(
    existing:[first],candidate:next);
-  expect(merged,length:1);
+  expect(merged,hasLength(1));
   expect(merged.single.keywords,containsAll(['restaurant','albaik']));
   expect(WaffraSmsLocalRules.matches(merged.single,
    'Card Purchase at Albaik SAR 40',sender:'AlRajhiBank'),isTrue);
@@ -83,7 +83,7 @@ void main(){
   // Repeated review changes nothing, including IDs and durable rule count.
   final again=WaffraSmsLocalRules.upsertLearned(
    existing:merged,candidate:next);
-  expect(again,length:1);
+  expect(again,hasLength(1));
   expect(again.single.id,'smart_abc');
  });
 
@@ -135,7 +135,7 @@ void main(){
    sender:'AlRajhiBank',matchAll:false);
   final after=WaffraSmsLocalRules.upsertLearned(
    existing:[saved],candidate:conflicting);
-  expect(after,length:1);
+  expect(after,hasLength(1));
   expect(after.single.category,saved.category);
  });
 
@@ -151,10 +151,10 @@ void main(){
   expect(home,contains("Key('waffra-sms-teach-action')"));
   expect(home,contains("if(decision=='teach'&&mounted)"));
   expect(home,contains('Future<bool> _learnSafeSmsRule({'));
-  expect(home,contains('await store.write(_smsRuleOwnerKey,[...prior,candidate]);'));
+  expect(home,contains('await store.write(_smsRuleOwnerKey,updated);'));
   expect(home,contains('if(!learned&&mounted)await _openSmsRules('));
   expect(home,contains('if(!learned&&mounted){'));
-  expect(ui,contains("Key('waffra-sms-rule-bucket-$kind')"));
+  expect(ui,contains(r"Key('waffra-sms-rule-bucket-$kind')"));
   expect(home,contains('await bulkSmsSheet(initialText:body,'));
  });
 }
