@@ -86,6 +86,10 @@ void main() {
       expect(src,contains('WaffraCenteredDropdownFormField<'),
         reason:'$path must use centered, blurry, bordered dropdowns');
       expect(src,isNot(contains('DropdownButtonFormField<')));
+      if (path == 'lib/main.dart') {
+        expect(src,contains("return WaffraCenteredDropdownFormField<String>("));
+        expect(src,contains("key:ValueKey('m466-transfer-"));
+      }
     }
   });
 }

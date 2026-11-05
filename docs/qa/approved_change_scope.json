@@ -21,7 +21,9 @@
     "scripts/qa/waffra_directional_fab_receipt_scope_review.py",
     "test/waffra_oct21_regression_test.dart",
     "test/m384_receipt_corner_upgrade_regression_test.dart",
-    "test/m388_m390_approved_goal_recurring_receipt_test.dart"
+    "test/m388_m390_approved_goal_recurring_receipt_test.dart",
+    "test/m354_android_transaction_sheet_nav_insets_test.dart",
+    "test/m401_m402_budget_month_centered_dropdown_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -120,6 +122,18 @@
       {
         "start": " test('M390: restored receipt references open the same existing gallery',",
         "end": " testWidgets('M390: clipped badge is tappable with 48dp target in Arabic and English',"
+      }
+    ],
+    "test/m354_android_transaction_sheet_nav_insets_test.dart": [
+      {
+        "start": "  test('M354 actual manual/SMS/OCR route uses safe pinned footer',(){",
+        "end": null
+      }
+    ],
+    "test/m401_m402_budget_month_centered_dropdown_test.dart": [
+      {
+        "start": "  test('M402 normal form dropdowns use centered modal, not anchored popup', () {",
+        "end": null
       }
     ]
   }

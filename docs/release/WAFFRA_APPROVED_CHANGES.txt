@@ -1,3 +1,10 @@
+[M466-M282-REGRESSION] 2026-11-05 — Fix exact M282 UI failures without moving the save footer
+================================================================================================
+- M282 combined Flutter suite reported two failures (2292 passed, 2 failed): M354 source assertion still searched for the old four-controller dispose line, and M402 correctly rejected the new transfer's anchored DropdownButtonFormField.
+- Fixed transfer source and destination selectors by using existing WaffraCenteredDropdownFormField, preserving blurred/centered/bordered modal behavior in RTL and English. This is a real user-facing UX fix, not a test bypass.
+- Updated M354 source contract for cleanup of transfer amount/note controllers and asserted both income/expense and transfer confirmation remain pinned using WaffraEntrySheetSafeLayout, while retaining widget tests for keyboard, 3-button navigation and large fonts. Extended M402 exact UI contract to require centered selector for the M466 transfer form; legacy zero-anchored-dropdown guarantee stays intact.
+- Kept M385 allowed-file/section scope and no change to SQLCipher keys, persisted finance data, authorization or migrations. Exact-current-head CI and signed Android tests are required to verify this change.
+
 [M466-M385-SCOPE] 2026-11-05 — Keep unchanged source anchor for approved test scope
 ===================================================================================
 - Retained the M390 test's original section heading as the unchanged M385 base/head anchor. Its stronger M466 owner-bound and encrypted-image assertions remain. This prevents an incorrect missing-anchor scope failure without weakening test coverage.
