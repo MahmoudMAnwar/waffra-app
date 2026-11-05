@@ -42,9 +42,11 @@ void main() {
   expect(dialog,contains('target:noTarget?0.0:n!,saved:0'));
   expect(dialog,contains('duplicate.target<=0'));
   expect(dialog,contains('noTarget=openEnded'));
-  expect(dialog,contains('requestedRecurring=await _confirmGoalDueRecurringLink(g)'));
-  expect(dialog,contains('if(requestedRecurring&&mounted)'));
-  expect(dialog,contains('this._ensureLinkedRecurringForGoal(g)'));
+  expect(dialog,contains('await _confirmGoalDueRecurringLink(g)'));
+  expect(dialog,contains('await this._saveGoalAndLinkedDueAtomically(g,'));
+  expect(dialog,contains('creating:true,linkNew:linkNew'));
+  expect(dialog,isNot(contains("operation:'goal-create'")));
+  expect(dialog,isNot(contains('_ensureLinkedRecurringForGoal(g)')));
   expect(dialog,isNot(contains('target:duplicate.target,saved:duplicate.saved')));
  });
 
@@ -88,9 +90,9 @@ void main() {
   expect(card,contains('g.target>0&&g.saved>=g.target'));
   expect(card,contains("waffraIsEnglish?'Open-ended savings':'ادخار مفتوح'"));
   final edit=File('lib/waffra_goal_recurring_actions.part.dart').readAsStringSync();
-  expect(edit,contains('if(deadline==null||goal.target<=0||!goal.active)'));
+  expect(edit,contains('date==null||updated.target<=0||!updated.active'));
   expect(edit,contains('target:noTarget?0.0:v!'));
-  expect(edit,contains('if(deadline==null||goal.target<=0||!goal.active)'));
+  expect(edit,contains('await _saveGoalAndLinkedDueAtomically(updated'));
  });
 
  test('M390: restored receipt references open the same existing gallery',(){
