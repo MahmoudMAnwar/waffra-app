@@ -3648,6 +3648,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  bool _cloudReviewStageRunning=false;
  bool _autoSmsStatusChecked=false;
  bool _autoSmsHistoryComplete=false;
+ bool _autoSmsRescanRunning=false;
+ Map<String,Object?> _autoSmsProgress=const <String,Object?>{};
  String? _autoSmsStatusProblem;
  final List<Map<String,Object?>> _autoSmsPending=<Map<String,Object?>>[];
 
@@ -3784,6 +3786,40 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  void _receiveAutoSmsNotice(){
   if(mounted&&ready)unawaited(_refreshAutoSmsInbox());
  }
+ Future<void> _rescanAutoSmsInbox()async{
+  if(_autoSmsRescanRunning||!mounted)return;
+  final before=await WaffraAutoSms.scanProgress();
+  if(!mounted)return;
+  setState(()=>_autoSmsRescanRunning=true);
+  try{
+   await _refreshAutoSmsInbox(importMonth:true);
+   if(!mounted)return;
+   final after=await WaffraAutoSms.scanProgress();
+   if(after!=null)setState(()=>_autoSmsProgress=after);
+   final previous=before?['added'] is num?
+    (before!['added'] as num).toInt():0;
+   final current=after?['added'] is num?
+    (after!['added'] as num).toInt():previous;
+   final added=(current-previous).clamp(0,2147483647);
+   final scanned=after?['scanned'] is num?
+    (after!['scanned'] as num).toInt():0;
+   if(_autoSmsStatusProblem!=null){
+    snack(context,_autoSmsStatusProblem!,isError:true);
+   }else{
+    snackSuccess(context,waffraIsEnglish?
+     'Scan completed: $added new • $scanned scanned total • '
+      '${_autoSmsPending.length} awaiting review.':
+     'اكتمل الفحص: $added جديدة • $scanned رسالة فُحصت إجمالًا • '
+      '${_autoSmsPending.length} بانتظار المراجعة.');
+   }
+  }catch(_){
+   if(mounted)snack(context,waffraIsEnglish?
+    'SMS rescan failed. Pending messages were not deleted.':
+    'تعذر إعادة الفحص. لم تُحذف الرسائل المعلقة.',isError:true);
+  }finally{
+   if(mounted)setState(()=>_autoSmsRescanRunning=false);
+  }
+ }
  Future<void>? _autoSmsRefreshInFlight;
  bool _autoSmsRefreshAgain=false;
  bool _autoSmsImportAgain=false;
@@ -3833,13 +3869,28 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    return;
   }
   if(importMonth){
-   // Native importer is cursor-based and processes up to 500 SMS per call.
-   // Catch up in bounded pages; never equate a partial scan with zero SMS.
-   for(var page=0;page<4;page++){
-    await WaffraAutoSms.importConsentMonth();
-    final progress=await WaffraAutoSms.trackingStatus();
-    if(progress==null||progress['enabled']!=true||
-       progress['historyComplete']==true)break;
+   // Bounded native cursor pages; the UI reports real scanned/new counts.
+   // Stop if the encrypted review queue is full until the user reviews items.
+   try{
+    for(var page=0;page<4;page++){
+     final imported=await WaffraAutoSms.importConsentMonthChecked();
+     final snapshot=await WaffraAutoSms.scanProgress();
+     if(mounted&&snapshot!=null)setState(()=>_autoSmsProgress=snapshot);
+     final progress=await WaffraAutoSms.trackingStatus();
+     if(progress==null||progress['enabled']!=true||
+        progress['historyComplete']==true)break;
+     if(snapshot?['pending'] is num&&snapshot?['capacity'] is num&&
+        (snapshot!['pending'] as num)>=(snapshot['capacity'] as num))break;
+     if(imported==0&&snapshot==null)break;
+    }
+   }catch(_){
+    if(mounted)setState((){
+     _autoSmsStatusChecked=true;
+     _autoSmsStatusProblem=waffraIsEnglish?
+      'Could not finish reading the SMS history. Retry.':
+      'تعذر استكمال فحص الرسائل السابقة. أعد المحاولة.';
+    });
+    return;
    }
   }
   final results=await WaffraAutoSms.pendingChecked();
@@ -4223,6 +4274,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          fontWeight:FontWeight.w600)),
       ],
       const SizedBox(height:12),
+      if(_autoSmsRescanRunning)...[
+       Row(children:[
+        const SizedBox(width:18,height:18,
+         child:CircularProgressIndicator(strokeWidth:2.4)),
+        const SizedBox(width:9),
+        Expanded(child:WaffraText(waffraIsEnglish?
+         'Scanning bank SMS now…':'جارٍ الآن فحص الرسائل البنكية…')),
+       ]),
+       const SizedBox(height:10),
+      ],
+      if(_autoSmsProgress['scanned'] is num)...[
+       WaffraText(waffraIsEnglish?
+        'Scanned: ${_autoSmsProgress['scanned']} • Queued: ${_autoSmsProgress['pending']}':
+        'تم فحص: ${_autoSmsProgress['scanned']} • بالمراجعة: ${_autoSmsProgress['pending']}',
+        style:const TextStyle(fontSize:12,color:emerald)),
+       const SizedBox(height:8),
+      ],
       Row(children:[
        Expanded(child:FilledButton.icon(
         key:const Key('waffra-auto-sms-review-open'),
@@ -4233,10 +4301,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        const SizedBox(width:8),
        OutlinedButton.icon(
         key:const Key('waffra-auto-sms-review-refresh'),
-        onPressed:WaffraHaptics.tap(
-         ()=>unawaited(_refreshAutoSmsInbox(importMonth:true))),
-        icon:const Icon(Icons.refresh_rounded,size:19),
-        label:WaffraText(waffraIsEnglish?'Rescan':'إعادة الفحص')),
+        onPressed:_autoSmsRescanRunning?null:
+         WaffraHaptics.tap(()=>unawaited(_rescanAutoSmsInbox())),
+        icon:_autoSmsRescanRunning?
+         const SizedBox(width:19,height:19,
+          child:CircularProgressIndicator(strokeWidth:2)):
+         const Icon(Icons.refresh_rounded,size:19),
+        label:WaffraText(_autoSmsRescanRunning?
+         (waffraIsEnglish?'Scanning…':'جارٍ الفحص'):
+         (waffraIsEnglish?'Rescan':'إعادة الفحص'))),
       ]),
      ])),
    ]),
