@@ -430,7 +430,36 @@ jobs:
                   print('No debug-only integration_test registrar')
           PY
       - name: Compile ARM64 release-mode APK (limited unsigned-app-identity preview)
-        run: flutter build apk --release --no-pub --target-platform android-arm64 --dart-define=WAFFRA_COMPILE_ONLY_PREVIEW=true
+        shell: bash
+        run: |
+          set -uo pipefail
+          # GitHub Releases sometimes returns a 504 HTML page instead of a
+          # SHA-pinned native asset (sqlite3mc or Kotlin compiler). Retry ONLY
+          # transport failures, never Dart, Gradle, source or signature errors.
+          for attempt in 1 2 3; do
+            log="$(mktemp)"
+            if flutter build apk --release --no-pub --target-platform android-arm64 --dart-define=WAFFRA_COMPILE_ONLY_PREVIEW=true 2>&1 | tee "$log"; then
+              rm -f "$log"
+              echo "PASS: ARM64 preview built with verified native asset hashes."
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ] || ! grep -Eq \
+              'Received status code (429|502|503|504)|Gateway Time-out|Hash of downloaded file libsqlite3mc[.][^ ]+ is bef140a1a96994029153dca8c00b1750b9a5a764fb9db2dc68d7bb40e8a29e8a' "$log"; then
+              echo "::error::ARM64 compilation failed; never accept or publish a failed build."
+              rm -f "$log"
+              exit 1
+            fi
+            if grep -q 'Hash of downloaded file libsqlite3mc' "$log"; then
+              # Drop only transient CI hook downloads. The next attempt MUST
+              # fetch again and verify the immutable upstream package SHA.
+              find .dart_tool/hooks_runner/shared/sqlite3/build -maxdepth 1 \
+                -type d -name 'download-*' -exec rm -rf -- {} + 2>/dev/null || true
+            fi
+            rm -f "$log"
+            echo "::warning::Upstream asset fetch failed transiently; retry $((attempt+1))/3 with SHA verification."
+            sleep $((20 * attempt))
+          done
+          exit 1
       # Do not publish a compile-only preview with missing native bindings:
       # libdartjni is used by transitive Android plugins on real devices, and
       # sqlite3mc is required for Waffra's guarded encrypted storage.
