@@ -1,3 +1,8 @@
+[M468] Fast strict source-witness compare for goal and recurring saves
+- When a module-only goal/recurring/category edit preserves an unchanged verified serialized ledger, compare String values directly rather than twice re-encoding megabytes of JSON on Flutter's UI isolate.
+- This is byte-equivalent to the previous JSON string check; non-string structured evidence retains exact original JSON serialization and fail-closed errors. Does not relax an unrelated finance-field mutation.
+- Added positive 4000-record and negative altered-ledger regression tests.
+
 [M468] Preserve capture/commit ordering with background JSON serialization
 - Serialize financial save preparation in the original capture order before entering the existing verified write queue: a second compute task cannot overtake the first save and silently reorder balances.
 - Freeze all ledger row maps synchronously before awaiting. Under the painted overlay await the prior save, offload large JSON encoding, run the original source/witness narrowing guards and submit the already-frozen snapshot to the same financial authority.
