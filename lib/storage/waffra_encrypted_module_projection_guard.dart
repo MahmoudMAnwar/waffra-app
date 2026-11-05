@@ -130,6 +130,27 @@ class WaffraEncryptedModuleProjectionGuard {
     }
   }
 
+  static void _requireCategoryParents(
+    Map<String, Map<String, Object?>> catalog,
+  ) {
+    for (final pair in catalog.entries) {
+      final data = pair.value;
+      final rawParent = data['parentId'];
+      final income = data['income'];
+      if (income is! bool || (rawParent != null && rawParent is! String)) {
+        throw StateError('Category type or parent ID is invalid.');
+      }
+      final parentId = rawParent is String ? rawParent : '';
+      if (parentId.isEmpty) continue;
+      final parent = catalog[parentId];
+      if (parentId == pair.key || parent == null ||
+          parent['income'] != income ||
+          (parent['parentId'] != null && parent['parentId'] != '')) {
+        throw StateError('Subcategory needs a real main category of the same type.');
+      }
+    }
+  }
+
   static Future<void> reconcile({
     required WaffraEncryptedStore store,
     required String key,
@@ -139,6 +160,10 @@ class WaffraEncryptedModuleProjectionGuard {
     final module = _module(key);
     final before = _decode(previousJson);
     final after = _decode(updatedJson);
+    if (module == WaffraFinanceModule.categories) {
+      _requireCategoryParents(before);
+      _requireCategoryParents(after);
+    }
     // Never interpret disappearance from an active list as permission to
     // destroy its SQL record or orphan related historical transactions.
     if (!after.keys.toSet().containsAll(before.keys)) {
