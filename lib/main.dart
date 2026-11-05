@@ -105,6 +105,7 @@ import 'waffra_accounts_manager_page.dart';
 import 'storage/waffra_fresh_finance_modules_repository.dart';
 import 'storage/waffra_verified_module_ui_guard.dart';
 import 'storage/waffra_runtime_finance_route_contract.dart';
+import 'storage/waffra_home_transaction_capture.dart';
 import 'storage/waffra_verified_transaction_ui_guard.dart';
 import 'storage/waffra_m155_category_plan.dart';
 import 'storage/waffra_sms_partial_save_recovery.dart';
@@ -4421,6 +4422,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    'waffra_learned_merchants_v1':jsonEncode(learnedMerchantCategories),
   };
   final baseline=_lastFinanceAuthorityRead;
+  // Fresh verified SQLCipher vaults intentionally omit optional empty modules.
+  // A manual append may change ONLY the ledger; the authoritative writer
+  // still checks its exact witness and the one-entry append invariant.
+  WaffraHomeTransactionCapture.narrowVerifiedManualAppend(
+   route:route,source:baseline?.source,snapshot:snapshot);
   return _saveProgress.track<void>(
    'persist-financial-change',() {
    return _financialWriteQueue.submit(snapshot,(captured)async {
