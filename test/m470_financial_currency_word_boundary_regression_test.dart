@@ -22,7 +22,7 @@ void main() {
   });
 
   test('M470 Arabic message counts do not become SAR currency evidence', () {
-    const text = 'تم إيداع 500 رسالة بانتظار المراجعة';
+    const text = 'تم إيداع 500 رسالة بنكية';
     final decision = WaffraAutoSmsPolicy.decide(
       sender: 'AlinmaPay',
       sms: text,
