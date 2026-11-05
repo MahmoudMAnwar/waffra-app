@@ -1,3 +1,12 @@
+[M469-CRITICAL-AUTH] 2026-11-05 — Guard original phone/password access after sign-out
+==========================================================================================
+- Owner reproduced incorrect mobile/password error after explicitly signing out then re-entering the same phone and password on Android. A signed-device re-test is mandatory: source review alone does not establish which protected value is wrong/missing on that handset.
+- Added non-secret integrity check for the OS-protected local PBKDF2 verifier: intact and phone-bound, missing, malformed, or associated with a different phone. This is NOT a password substitute and never reveals the saved hash or phone.
+- Before clearing an active phone session, guard against losing access if its phone-bound secure verifier is absent or corrupt and no legacy verifier exists; keep the account and finance data untouched.
+- On new interrupted registration, require a secure-store read-back with the same password before completing a new profile; never auto-rotate an existing credential.
+- On login, distinguish absent/damaged secure credential from wrong password and instruct the owner not to clear app data. A wrong password or different phone still fails exactly as before. There is no biometric-only bypass, phone OTP, insecure password reset, or destructive migration.
+- Added M469 verified-record and source lifecycle tests. Existing local accounts already signed out with a lost secure verifier are NOT automatically recovered by this change. Signed main APK and owner device reproduction/probe are outstanding.
+
 [M467-M468-CI-REPAIR] 2026-11-05 — Four distinct full-suite failures behind six failed workflows
 ==================================================================================================
 - Exact-head source suite for PR #392 at 93e4d54 reported 2304 passed, 4 failed in Flutter. Six full-suite workflows failed because they invoke the same tests, not six distinct root defects.
