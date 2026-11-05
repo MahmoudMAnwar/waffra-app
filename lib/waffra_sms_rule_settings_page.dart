@@ -10,6 +10,7 @@ class WaffraSmsRuleSettingsPage extends StatefulWidget {
   required this.scannedMessages,required this.incomeCategories,
   required this.expenseCategories,this.seedMessage,this.seedKind,
   this.seedSender='',this.seedAccountSuffix='',this.bankAccounts=const {},
+  required this.onNotice,
  });
  final bool english;
  final String ownerKey;
@@ -17,6 +18,7 @@ class WaffraSmsRuleSettingsPage extends StatefulWidget {
  final String? seedMessage,seedKind;
  final String seedSender,seedAccountSuffix;
  final Map<String,String> bankAccounts;
+ final void Function(String) onNotice;
  @override State<WaffraSmsRuleSettingsPage> createState()=>_WaffraSmsRuleSettingsPageState();
 }
 
@@ -55,9 +57,9 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
    if(mounted)setState(()=>saved=next);
    return true;
   }catch(_){
-   if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-    content:Text(widget.english?'Could not save rules securely. Nothing changed.':
-     'تعذر حفظ القواعد بأمان. لم يتغير شيء.')));
+   if(mounted)widget.onNotice(widget.english?
+    'Could not save rules securely. Nothing changed.':
+    'تعذر حفظ القواعد بأمان. لم يتغير شيء.');
    return false;
   }finally{if(mounted)setState(()=>busy=false);}
  }
