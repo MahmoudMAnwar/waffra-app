@@ -1,5 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:crypto/crypto.dart';
 
 import 'package:drift/drift.dart' show Variable;
 
@@ -7,6 +10,8 @@ import 'legacy_snapshot_preflight.dart';
 import 'waffra_accounts_schema.dart';
 import 'waffra_atomic_finance_snapshot.dart';
 import 'waffra_experimental_writer_gate.dart';
+import 'waffra_encrypted_receipt_vault.dart';
+import 'waffra_portable_encrypted_vault_restorer.dart';
 
 class WaffraUnifiedWriteResult {
   const WaffraUnifiedWriteResult({
@@ -66,6 +71,7 @@ class WaffraUnifiedFinanceWriter {
     String? accountId,
     List<String?>? selectedAccountIds,
     int? expectedAccountGeneration,
+    List<Uint8List> manualReceiptImages = const <Uint8List>[],
   }) async {
     if (!experimentalEnabled) {
       throw StateError('Unified finance writer is disabled by default.');
@@ -90,6 +96,17 @@ class WaffraUnifiedFinanceWriter {
       confirmedRecords.add(Map<String, Object?>.unmodifiable(decoded));
     }
     final confirmedHashes = List<String?>.unmodifiable(messageHashes);
+    // Picker bytes are copied before acquiring the shared app/Widget lock.
+    // Never put a temporary plaintext file path into the encrypted ledger.
+    final receiptImages = List<Uint8List>.unmodifiable(
+      manualReceiptImages.map(Uint8List.fromList));
+    if (receiptImages.length > WaffraEncryptedReceiptVault.maxReceiptsPerEntry ||
+        receiptImages.any((bytes) => bytes.isEmpty ||
+          bytes.length > WaffraEncryptedReceiptVault.maxReceiptBytes) ||
+        receiptImages.fold<int>(0, (sum, bytes) => sum + bytes.length) >
+          60 * 1024 * 1024) {
+      throw ArgumentError('Invalid attached image count or size.');
+    }
     // One explicit account decision per confirmed transaction. The old
     // single-manual-account argument remains supported for existing callers.
     // Freeze selections before the first await, as the UI may change them.
@@ -111,6 +128,28 @@ class WaffraUnifiedFinanceWriter {
       throw ArgumentError('Account choices must match confirmed entries.');
     }
     final hasAccountLinks=confirmedAccounts.any((id)=>id!=null);
+    String? receiptReference;
+    if (receiptImages.isNotEmpty) {
+      if (confirmedRecords.length != 1 ||
+          confirmedHashes.single != null ||
+          confirmedRecords.single['sourceType'] != 'manual' ||
+          confirmedAccounts.single == null ||
+          confirmedRecords.single['receiptPath'] != null &&
+            confirmedRecords.single['receiptPath'] != '') {
+        throw StateError('Receipts require one new verified account-linked manual entry.');
+      }
+      final id = confirmedRecords.single['id'];
+      if (id is! String || id.trim().isEmpty) {
+        throw ArgumentError('Attached entry must have a verified ID.');
+      }
+      final tokens = List<String>.generate(receiptImages.length,
+        (index) => WaffraEncryptedReceiptReference.of(id, index));
+      receiptReference = tokens.length == 1
+        ? tokens.single : jsonEncode(tokens);
+      confirmedRecords[0] = Map<String,Object?>.unmodifiable({
+        ...confirmedRecords.single, 'receiptPath':receiptReference,
+      });
+    }
     if(hasAccountLinks && expectedAccountGeneration==null){
       throw StateError('Account-linked save needs witnessed finance generation.');
     }
@@ -141,8 +180,10 @@ class WaffraUnifiedFinanceWriter {
       if (hash != null && !RegExp(r'^[a-f0-9]{64}$').hasMatch(hash)) {
         throw ArgumentError('Invalid SMS digest.');
       }
-      if (data['receiptPath'] != null && data['receiptPath'] != '') {
-        throw StateError('Receipts require their own verified file installer.');
+      if (data['receiptPath'] != null && data['receiptPath'] != '' &&
+          !(receiptImages.isNotEmpty && index == 0 &&
+            data['receiptPath'] == receiptReference)) {
+        throw StateError('Unverified plaintext receipt path refused.');
       }
       // Delegate financial value, ID, date and amount validation to the same
       // existing migration preflight instead of silently coercing money.
@@ -272,6 +313,20 @@ class WaffraUnifiedFinanceWriter {
               record['date'], 0, jsonEncode(record),
             ],
           );
+          if (receiptImages.isNotEmpty) {
+            final vault = WaffraEncryptedReceiptVault(
+              store:snapshot.store, experimentalEnabled:true);
+            await vault.attachNewBatch(
+              entryId:record['id'] as String,images:receiptImages);
+            final restored = await vault.readAll(record['id'] as String);
+            if (restored.length != receiptImages.length ||
+                List<int>.generate(restored.length, (i)=>i).any((i)=>
+                  restored[i].position != i ||
+                  sha256.convert(restored[i].bytes) !=
+                    sha256.convert(receiptImages[i]))) {
+              throw StateError('Encrypted manual receipt parity failed.');
+            }
+          }
           // Atomic double-entry association: the original classified ledger
           // row and its selected account link either BOTH commit, or neither.
           final selectedAccount=confirmedAccounts[i];
