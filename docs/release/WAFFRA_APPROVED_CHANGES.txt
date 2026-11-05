@@ -1,3 +1,10 @@
+[M470-26] 2026-11-06 — Move Home account selector inside the emerald balance card
+==================================================================================
+- The former separate All accounts header row is removed; its trigger is now a compact button inside the emerald balance card, preserving the exact verified account dropdown and selected-account display filter.
+- The new control does not pick a money account for manual income/expense, SMS, recurring payments or transfers. Existing verified balances, privacy eye and Widget refresh remain unchanged.
+- A Flutter widget tap regression covers the in-card control and absence in unrelated generic balance cards. Stale M467 source assertions were updated for the approved in-card placement.
+- M385 exact bounded sections were independently matched byte-for-byte against the baseline outside the approved scopes. Android layout and full exact-head CI remain to be verified.
+
 [M470-25] 2026-11-06 — Verified bank/provider then linked account transaction selection
 =====================================================================================
 - The account-manager income/expense/transfer form now shows a provider/bank dropdown before the actual verified account dropdown. Choosing a different provider clears the old linked account; changing the Home display account never fills or posts this form.
