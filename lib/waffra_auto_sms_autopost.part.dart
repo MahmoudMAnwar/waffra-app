@@ -161,7 +161,7 @@ abstract final class WaffraAutoSmsAutoPoster {
       hashes:[fingerprint],
       userConfirmed:true,allowDuplicateHashes:false,
       selectedAccountIds:[matched.accountId],
-      expectedAccountGeneration:accounts.generation,
+      expectedAccountGeneration:accounts.witness.generation,
      );
      final finalHashes=committed.current.finance
       .getStringList('waffra_sms_hashes_v1')??const <String>[];

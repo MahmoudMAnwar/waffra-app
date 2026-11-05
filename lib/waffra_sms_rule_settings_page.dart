@@ -287,7 +287,7 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
          },
          child:Text(widget.english?'Save rule':'حفظ القاعدة')),
        ])),
-      )));
+      ));
     }),
    );
    if(result==null||!mounted)return;
