@@ -762,10 +762,12 @@ class WaffraVerifiedFinanceAuthority {
         (record['receiptPath'] != null && record['receiptPath'] != '')) {
       throw StateError('M457 requires one confirmed unattached manual entry.');
     }
-    if (selectedAccountId != null &&
-        (selectedAccountId.trim().isEmpty || selectedAccountId.length > 128 ||
-         expectedAccountGeneration == null)) {
-      throw StateError('M457 account selection needs verified generation.');
+    // The owner-approved M464 rule supersedes older accountless manual appends.
+    // A NEW manual money entry is a real balance movement and must point to
+    // one explicitly selected, verified and currently active account.
+    if (selectedAccountId == null || selectedAccountId.trim().isEmpty ||
+        selectedAccountId.length > 128 || expectedAccountGeneration == null) {
+      throw StateError('Manual income/expense requires a verified money account.');
     }
     // Deep-freeze input before the first async source check.
     final decoded = jsonDecode(jsonEncode(record));
@@ -774,49 +776,11 @@ class WaffraVerifiedFinanceAuthority {
     }
     final frozen = Map<String, Object?>.unmodifiable(decoded);
     final source = await _requireRoute(route);
+    // Guarded legacy cannot prove a financial account ownership/generation.
+    // Old unassigned records stay readable, but no new accountless write is
+    // permitted; never invent or persist a shadow bank account.
     if (source == WaffraRuntimeFinanceBackend.guardedLegacy) {
-      // Existing guarded-legacy installations must also save manual income
-      // and expenses without creating accounts. Never use Home's cached
-      // full-finance serialization or create an unverified SQLCipher vault.
-      if (selectedAccountId != null || expectedAccountGeneration != null) {
-        throw StateError('Legacy manual entries cannot link an account.');
-      }
-      final baseline = await legacy.loadWithWitness();
-      baseline.finance.requireIntegrity();
-      final previous = jsonDecode(baseline.ledgerRaw ?? '[]');
-      final newId = frozen['id'];
-      if (previous is! List || newId is! String || newId.trim().isEmpty ||
-          newId.length > 128) {
-        throw StateError('Invalid guarded-legacy manual ledger or ID.');
-      }
-      final seen = <String>{};
-      for (final item in previous) {
-        if (item is! Map || item['id'] is! String ||
-            (item['id'] as String).trim().isEmpty ||
-            !seen.add(item['id'] as String)) {
-          throw StateError('Guarded-legacy ledger has duplicate/invalid IDs.');
-        }
-      }
-      if (!seen.add(newId)) {
-        throw StateError('This manual entry has already been committed.');
-      }
-      // Only the new record is appended. Goals, recurring schedules, SMS
-      // originals, category catalogs, and other keys stay byte-for-byte
-      // unchanged. The existing lock/journal blocks concurrent widget writes.
-      await legacy.saveLegacy(
-        snapshot: <String, Object>{
-          'entries': jsonEncode(<Object?>[...previous, frozen]),
-        },
-        expectedLedgerRaw: baseline.ledgerRaw,
-        expectedWidgetRevision: baseline.widgetRevision,
-      );
-      final committed = await load(route: route);
-      final actual = jsonDecode(committed.ledgerRaw ?? '[]');
-      if (actual is! List || actual.length != previous.length + 1 ||
-          actual.where((item) => item is Map && item['id'] == newId).length != 1) {
-        throw StateError('Guarded-legacy manual append could not be verified.');
-      }
-      return committed;
+      throw StateError('Activate verified accounts before manual money posting.');
     }
     if (source != WaffraRuntimeFinanceBackend.verifiedEncrypted) {
       throw StateError('M457 cannot write to an unverified finance source.');
@@ -825,10 +789,8 @@ class WaffraVerifiedFinanceAuthority {
       records: <Map<String, Object?>>[frozen],
       hashes: const <String?>[null],
       userConfirmed: true,
-      selectedAccountIds: selectedAccountId == null
-          ? null : <String?>[selectedAccountId],
-      expectedAccountGeneration: selectedAccountId == null
-          ? null : expectedAccountGeneration,
+      selectedAccountIds: <String?>[selectedAccountId],
+      expectedAccountGeneration: expectedAccountGeneration,
     );
     if (result.saved != 1 || result.savedIncome + result.savedExpenses != 1) {
       throw StateError('M457 manual entry did not commit exactly once.');
