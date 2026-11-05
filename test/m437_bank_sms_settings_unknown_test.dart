@@ -35,8 +35,10 @@ void main(){
   expect(code,contains('return "debt_notice"'));
   expect(code,contains('otp.containsMatchIn(safe)'));
   expect(code,contains('qualifies(name, safe)'));
-  expect(code,contains('maxRead: Int = 500'));
-  expect(code,contains('maxResults: Int = 100'));
+  // Read-only unknown-notice review can scan a larger, bounded history;
+  // a separate import cursor pages confirmed bank-SMS history safely.
+  expect(code,contains('maxRead: Int = 5000'));
+  expect(code,contains('maxResults: Int = 500'));
   expect(code,contains('"date >= ? AND date < ?"'));
   expect(code,contains('installationMonthStart(context)'));
   expect(code,contains('"date DESC"'));
@@ -64,8 +66,14 @@ void main(){
   final bridge=File('lib/waffra_auto_sms.dart').readAsStringSync();
   final activity=File('native/WaffraMainActivity.kt').readAsStringSync();
   final store=File('native/WaffraAutoSmsStore.kt').readAsStringSync();
-  expect(activity,contains('"scanUnknownFinancialSms" -> result.success('));
-  expect(activity,contains('WaffraAutoSmsStore.scanUnknownFinancialSms(this)'));
+  // Keep the expensive Android provider scan off the UI thread, then
+  // report the read-only result on Android's UI thread.
+  expect(activity,contains('"scanUnknownFinancialSms" -> {'));
+  expect(activity,contains('smsHistoryExecutor.execute {'));
+  expect(activity,contains('runOnUiThread { result.success(found) }'));
+  // The worker must use applicationContext rather than a captured Activity.
+  expect(activity,contains('val app = applicationContext'));
+  expect(activity,contains('WaffraAutoSmsStore.scanUnknownFinancialSms(app)'));
   expect(bridge,contains('static Future<List<Map<String,Object?>>> scanUnknownFinancialSms()'));
   expect(bridge,contains('if(!Platform.isAndroid||!await enabled())return const [];'));
   final scan=store.substring(store.indexOf('fun scanUnknownFinancialSms('),

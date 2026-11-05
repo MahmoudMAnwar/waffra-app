@@ -87,7 +87,9 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
   var income=kind=='income';
   var autoPost=existing?.autoPost??false;
   var accountId=existing?.accountId??'';
-  var all=existing?.matchAll??true;
+  // Exclusion rules normally match ANY verified keyword, not every word
+  // suggested from one SMS. Matching all is an explicit advanced option.
+  var all=existing?.matchAll??(kind!='excluded');
   var category=existing?.category;
   var searchQuery='';
   String? validation;
@@ -127,8 +129,13 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
       id:'preview',name:name.text.trim().isEmpty?'Preview':name.text,
       keywords:selected.toList(),income:income,category:category??'',
       kind:kind,matchAll:all,sender:sender.text.trim());
-     final matches=widget.scannedMessages.where((sms)=>
-      WaffraSmsLocalRules.matches(previewRule,sms)).length;
+     // A seeded bank sender is known. Never fake a 0-match preview by
+     // evaluating a sender-scoped rule against senderless queue text.
+     final previewMessages=<String>{...?widget.scannedMessages,
+      if(seed!=null)seed};
+     final matches=previewMessages.where((sms)=>
+      WaffraSmsLocalRules.matches(previewRule,sms,
+       sender:seed!=null&&sms==seed?widget.seedSender:'')).length;
      return SafeArea(top:false,child:Padding(
       padding:EdgeInsets.fromLTRB(18,8,18,MediaQuery.viewInsetsOf(ctx).bottom+12),
       child:ConstrainedBox(constraints:BoxConstraints(
@@ -154,6 +161,7 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
            selected:kind==option,
            onSelected:(_)=>refresh((){
             kind=option;income=option=='income';
+            if(existing==null)all=option!='excluded';
             category=null;autoPost=false;accountId='';
            })),
         ]),
@@ -213,8 +221,11 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
          ],
         ],
         const SizedBox(height:12),
-        Text(widget.english?'Choose keywords from scanned messages':
-         'اختار الكلمات المفتاحية من الرسائل الممسوحة'),
+        Text(widget.english?'Tap one or more chips to SELECT keywords (not just view them).':
+         'اضغط على كلمة من الاقتراحات لتحديدها، وبعد الاختيار هتظهر ضمن الكلمات المختارة.'),
+        const SizedBox(height:5),
+        Text(widget.english?'Selected: ${selected.length} / 12':
+         'الكلمات المختارة: ${selected.length} من ١٢'),
         const SizedBox(height:6),
         TextField(controller:search,
          onChanged:(value)=>refresh(()=>searchQuery=value),
@@ -232,6 +243,7 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
           onSelected:(value)=>refresh((){
            if(value&&selected.length<12)selected.add(word);
            if(!value)selected.remove(word);
+           validation=null;
           })),
         ]),
         const SizedBox(height:9),
@@ -273,6 +285,18 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
            autoPost:autoPost&&financial,accountId:autoPost?accountId:'',
            accountSuffix:autoPost?suffix.text.trim():'',
           );
+          if(name.text.trim().length<2){
+           refresh(()=>validation=widget.english?
+            'Give the rule a name of at least two characters.':
+            'اكتب اسمًا للقاعدة من حرفين على الأقل.');
+           return;
+          }
+          if(selected.isEmpty){
+           refresh(()=>validation=widget.english?
+            'Tap at least one suggested keyword above, or add your own.':
+            'اضغط على كلمة من الاقتراحات لاختيارها أو أضف كلمة جديدة.');
+           return;
+          }
           if(financial&&(categories.isEmpty||category==null)){
            refresh(()=>validation=widget.english?
             'Select a valid category.':'اختار قسم رئيسي وفرعي صحيح.');

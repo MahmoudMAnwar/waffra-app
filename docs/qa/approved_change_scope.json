@@ -1,30 +1,127 @@
 {
   "contract_version": 1,
-  "change_id": "M460-apk-main-same-sha-audit-repository-checkout-20261105",
-  "human_scope_review": "Owner requested that all ready fixes merge in order and that recurring main APK build failures be fixed permanently. M460 fixes the verified exact-main APK dependency-audit failure (job 127112822065): the job imports a repository Python module without checking out the repository. The one-job fix checks out the triggering SHA and keeps all same-SHA mandatory gates active, with a regression test. No finance source or application behavior changes. Exact-head CI and signed main build must pass before release. The same main APK run 41988663385 independently exposed a malformed Python source string at test/qa/m452_sms_review_signup_regression_test.py line 62. M460 repairs that existing source-only QA assertion and keeps its unique verified SMS owner-key check; no runtime behavior change. The broken Python file was corrupted from its last verified-owner guard test through the end; declare only that final test section as the bounded repair. All earlier tests and other file content must remain byte-identical under M385 guard.",
+  "change_id": "M461-fresh-finance-all-manual-recurring-goal-sms-history-performance-20261105",
+  "human_scope_review": "Owner supplied actual Android screenshots 2026-11-05 showing manual income/expense, recurring and goal writes rejected, exclusion rules leaving messages in review, installation-month SMS scan gaps and serious UI freezes on transaction save and pull refresh. Repair only verified financial editor delta capture, failed-save refresh, SMS rule acknowledgement, chronological bounded native cursor scanning and Android background work. Keep immutable SQLCipher source, linked account witnesses, OTP masking, no auto-post, backup and UI records intact. User will validate signed real-phone builds. Changes are candidate until exact-head CI and phone signoff. M461 repairs the obsolete M457 UI regression assertion: a failed commit now refreshes only the independently verified source instead of rerunning the full startup and SMS history scan. The rest of the original M457 test and finance durability checks stay byte-identical. Same-SHA CI runs on 2026-11-05 repeatedly failed before executing database tests when dynamically resolved sqlite3 3.9.0 downloaded Linux libsqlite3mc with digest bef140... instead of package expected 6739.... Pin upstream immutable sqlite3-3.7.0 (official GitHub release, x64 Linux sqlite3mc digest 3dfe8bcd...) rather than overriding any expected SHA, using system SQLite, or disabling encryption. SQLite version compatibility and real-device existing-vault opening still require tests. This immediate QA follow-up also scopes test/m302_optimistic_module_write_safety_test.dart only to its first existing test and test/m437_bank_sms_settings_unknown_test.dart only to its second and fourth existing tests. The unchanged tests and production routes remain protected by M385; no existing assertion is skipped.",
   "user_requested_changes": [
-    "Fix recurring signed Android APK failure on main without bypassing mandatory same-commit independent test checks.",
-    "Ensure the CI audit job checks out its exact trigger SHA before importing the local Python QA helper.",
-    "Add regression coverage to prevent the missing checkout from reappearing in the APK release pipeline.",
-    "Fix broken SMS regression test Python syntax that blocks mandatory main APK CI, while preserving real SMS account ownership assertions."
+    "Repair recurring and goal SQLCipher writes by submitting only explicitly touched projections while comparing every unrelated field with the verified account/source witness, without activating or bypassing a second finance database.",
+    "Preserve manual verified income and expense and improve failed-write refresh without clearing the entire UI or rescanning all bank SMS whenever a save fails.",
+    "Ensure explicitly excluded bank messages disappear from review only after securely storing a matching local rule and successfully acknowledging the selected native encrypted message ID, and automatically refresh without a manual search tap.",
+    "Scan bank SMS from installation-month first day using durable chronological date and row cursor and preserve resumable 100-message encrypted review queue; broaden read-only institutional financial review with no automatic posting.",
+    "Move heavy Android SMS history scans off the UI thread and reduce redundant SQLCipher widget reads and repeated platform calls; test fresh SQLCipher manual, goals, recurring and OTP exclusions.",
+    "Keep user data safe under failed transactions and preserve all M385 and M449 audit gates and signed APK readiness requirements.",
+    "Update only the obsolete M457 test expectation for reload-on-failed-save; keep all direct manual append, duplicate and encrypted source guards intact.",
+    "Pin official immutable sqlite3 3.7.0 native cipher binary release to stop floating 3.9.0 artifact hash-mismatch failures without changing package SHA validation or SQLCipher source selection.",
+    "Keep the SMS exclusion rule editor's default matching and sender-aware message preview scoped to its existing _edit handler, so explicitly excluded SMS are reliably matched and previewed without broadening ledger authorization.",
+    "Keep existing optimistic-finance and SMS source tests meaningful after M461: update only three stale source-text assertions to enforce verified finance re-read, bounded unknown SMS scan and Android background execution; preserve all other assertions and strict fail-closed M385 review."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
-    ".github/workflows/android.yml",
-    "test/qa/m460_main_apk_ci_checkout_test.py",
-    "test/qa/m452_sms_review_signup_regression_test.py"
+    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "lib/main.dart",
+    "lib/storage/waffra_home_transaction_capture.dart",
+    "native/WaffraMainActivity.kt",
+    "native/WaffraAutoSmsStore.kt",
+    "test/storage/m461_verified_module_capture_test.dart",
+    "test/storage/m461_fresh_finance_android_source_regression_test.dart",
+    "test/m461_sms_exclusion_and_history_scan_test.dart",
+    "test/storage/m457_direct_manual_finance_commit_test.dart",
+    "pubspec.yaml",
+    "test/qa/m461_sqlite_native_artifact_pin_test.py",
+    "lib/waffra_sms_rule_settings_page.dart",
+    "test/m302_optimistic_module_write_safety_test.dart",
+    "test/m437_bank_sms_settings_unknown_test.dart"
   ],
   "bounded_sections": {
-    ".github/workflows/android.yml": [
+    "lib/main.dart": [
       {
-        "start": "  verify-same-sha-checks:\n",
-        "end": "      - name: Fail closed on missing, running or failed independent tests\n"
+        "start": " Future<void> _openSmsRules({String? seedMessage,String? seedKind,\n",
+        "end": " Future<void> _analyzeAmbiguousSmsOnDemand(\n"
+      },
+      {
+        "start": " Future<void> _reviewAutoSmsCandidates({String? targetId})async {\n",
+        "end": " void _receiveSharedSms(){\n"
+      },
+      {
+        "start": " Future<void> _refreshFromVerifiedFinance()async {\n",
+        "end": " Future<void> load()async {\n  await _ensureFinanceBound();\n"
+      },
+      {
+        "start": " Future<void> _refreshWidget()async{\n",
+        "end": " Future<void> persist({\n"
+      },
+      {
+        "start": " Future<void> persist({\n",
+        "end": " Future<void> _persistSmsHashes("
+      },
+      {
+        "start": "   if(initial==null&&result.sourceType=='manual'&&\n",
+        "end": "   }else{\n   // Optimistic in-memory edits must roll back if durable save is rejected.\n"
       }
     ],
-    "test/qa/m452_sms_review_signup_regression_test.py": [
+    "lib/storage/waffra_home_transaction_capture.dart": [
       {
-        "start": "    def test_local_rule_store_owner_guard_is_unique(self):\n",
+        "start": "import 'waffra_production_finance_routing_gate.dart';\n",
         "end": null
+      }
+    ],
+    "native/WaffraMainActivity.kt": [
+      {
+        "start": "import java.security.KeyStore\n",
+        "end": "import javax.crypto.SecretKey\n"
+      },
+      {
+        "start": "    private val messagesChannel = \"waffra/messages\"\n",
+        "end": "    private var pendingSmsPermissionResult: MethodChannel.Result? = null\n"
+      },
+      {
+        "start": "                \"importConsentMonthBankSms\" -> {\n",
+        "end": "                \"pendingAutoBankSms\" -> result.success("
+      },
+      {
+        "start": "    override fun onDestroy() {\n",
+        "end": null
+      }
+    ],
+    "native/WaffraAutoSmsStore.kt": [
+      {
+        "start": "    fun qualifies(sender: String, body: String): Boolean {\n",
+        "end": "    // M437: Unknown-finance lookup is strictly ON-DEMAND"
+      },
+      {
+        "start": "    fun scanUnknownFinancialSms(\n",
+        "end": "    private fun id(sender: String, body: String, at: Long): String {\n"
+      },
+      {
+        "start": "    fun importConsentMonth(context: Context, maxRead: Int = 500): Int {\n",
+        "end": "    /** Claim each review notification once"
+      }
+    ],
+    "test/storage/m457_direct_manual_finance_commit_test.dart": [
+      {
+        "start": "  test('M457 manual UI posts a single frozen entry without optimistic ledger',\n",
+        "end": null
+      }
+    ],
+    "lib/waffra_sms_rule_settings_page.dart": [
+      {
+        "start": " Future<void> _edit({WaffraSmsLocalRule? existing,String? seed,String? kindHint})async{\n",
+        "end": " @override Widget build(BuildContext context)=>Scaffold(\n"
+      }
+    ],
+    "test/m302_optimistic_module_write_safety_test.dart": [
+      {
+        "start": " test('M302 all optimistic module writes must recover authoritative finance state',(){\n",
+        "end": " test('M302 goal funding does not celebrate uncommitted savings',(){\n"
+      }
+    ],
+    "test/m437_bank_sms_settings_unknown_test.dart": [
+      {
+        "start": " test('M437 Etimad debt notices are not monetary transactions',(){\n",
+        "end": " test('M437 unknown notice screen shows original and manual-only action',(){\n"
+      },
+      {
+        "start": " test('M437 Native Android scan is read-only and uses one-time consent',(){\n",
+        "end": " test('M437 history cutoff is original install month, scan remains resumable',(){\n"
       }
     ]
   }

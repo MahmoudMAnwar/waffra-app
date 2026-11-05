@@ -212,7 +212,8 @@ void main() {
     expect(flow,contains("jsonEncode(result.toJson())"));
     expect(flow.indexOf('commitConfirmedManual('),
       lessThan(flow.indexOf('final previousEntries=')));
-    expect(flow,contains('await _loadFinanceSafely();'));
+    expect(flow,contains('await _refreshFromVerifiedFinance();'));
+    expect(flow,isNot(contains('await _loadFinanceSafely();')));
     expect(flow,contains('if(initial==null&&result.sourceType=='));
     expect(flow,contains('WaffraRuntimeFinanceBackend.verifiedEncrypted'));
   });

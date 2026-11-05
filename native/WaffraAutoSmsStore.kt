@@ -276,6 +276,10 @@ object WaffraAutoSmsStore {
             (otherFinanceNotice.containsMatchIn(safe) ||
              debtNotice.containsMatchIn(safe))) return true
         if (safe.length < 18) return false
+        // A trusted institution may send a financial amount without the
+        // small v1 action-word set. Keep it in encrypted REVIEW; never post.
+        if (institutionalSender.containsMatchIn(sender) &&
+            money.containsMatchIn(safe) && digits.containsMatchIn(safe)) return true
         if (!action.containsMatchIn(safe) || !money.containsMatchIn(safe) ||
             !digits.containsMatchIn(safe)) return false
         // Unknown financial senders can be reviewed, but a phone number or
@@ -323,7 +327,7 @@ object WaffraAutoSmsStore {
     }
 
     fun scanUnknownFinancialSms(
-        context: Context, maxRead: Int = 500, maxResults: Int = 100
+        context: Context, maxRead: Int = 5000, maxResults: Int = 500
     ): List<Map<String, Any>> {
         if (!enabled(context) || maxRead <= 0 || maxResults <= 0)
             return emptyList()
@@ -544,18 +548,19 @@ object WaffraAutoSmsStore {
             read(context).length()
         } } catch (_: Exception) { return 0 }
         if (queued >= maxCandidates) return 0
-        val projection = arrayOf("_id", "address", "body", "date")
-        val cursor = try {
-            context.contentResolver.query(Uri.parse("content://sms/inbox"),
-                projection, "date >= ? AND date < ?",
-                arrayOf(start.toString(), end.toString()), "date ASC, _id ASC")
-        } catch (_: Exception) { null } ?: return 0
-        // The v1 cursor started on the permission-activation month. On first
-        // v2 scan replay from install-month start; queue and finance hashes
-        // still protect existing reviewed entries from double posting.
+        // Bound the Android SMS provider query to the persisted cursor.
+        // Requerying the entire month on every 500-row page was O(N²) and
+        // blocked the UI; no date or message is silently marked as scanned.
         val sameSource = prefs.getLong(historySourceMonth, 0L) == start
         var lastAt = if (sameSource) prefs.getLong(historyCursorAt, start - 1) else start - 1
         var lastId = if (sameSource) prefs.getLong(historyCursorId, -1) else -1
+        val projection = arrayOf("_id", "address", "body", "date")
+        val cursor = try {
+            context.contentResolver.query(Uri.parse("content://sms/inbox"),
+                projection, "(date > ? OR (date = ? AND _id > ?)) AND date < ?",
+                arrayOf(lastAt.toString(), lastAt.toString(),
+                    lastId.toString(), end.toString()), "date ASC, _id ASC")
+        } catch (_: Exception) { null } ?: return 0
         var checked = 0
         var accepted = 0
         var complete = true

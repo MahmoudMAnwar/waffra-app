@@ -3594,7 +3594,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     seedMessage:seedMessage,
     onNotice:(message)=>snack(context,message),
    )));
-  if(mounted)unawaited(_refreshAutoSmsInbox());
+  // A newly saved rule may free encrypted queue slots. Continue the history
+  // cursor immediately instead of requiring another manual search tap.
+  if(mounted)await _refreshAutoSmsInbox(importMonth:true);
  }
 
  Map<String,Object?>? _localSmsClassification(
@@ -3633,7 +3635,30 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  void _receiveAutoSmsNotice(){
   if(mounted&&ready)unawaited(_refreshAutoSmsInbox());
  }
+ Future<void>? _autoSmsRefreshInFlight;
+ bool _autoSmsRefreshAgain=false;
+ bool _autoSmsImportAgain=false;
  Future<void> _refreshAutoSmsInbox({bool importMonth=false})async{
+  final active=_autoSmsRefreshInFlight;
+  if(active!=null){
+   _autoSmsRefreshAgain=true;
+   _autoSmsImportAgain|=importMonth;
+   await active;
+   return;
+  }
+  final running=_runAutoSmsRefresh(importMonth:importMonth);
+  _autoSmsRefreshInFlight=running;
+  try{await running;}finally{
+   _autoSmsRefreshInFlight=null;
+   if(_autoSmsRefreshAgain){
+    final scan=_autoSmsImportAgain;
+    _autoSmsRefreshAgain=false;
+    _autoSmsImportAgain=false;
+    if(mounted)unawaited(_refreshAutoSmsInbox(importMonth:scan));
+   }
+  }
+ }
+ Future<void> _runAutoSmsRefresh({bool importMonth=false})async{
   if(!mounted||!ready||_financeLoadFailure!=null)return;
   final status=await WaffraAutoSms.trackingStatus();
   if(!mounted)return;
@@ -3691,23 +3716,33 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   if(!mounted)return;
   final waiting=<Map<String,Object?>>[];
+  final toAcknowledge=<String>[];
+  final toRestoreOnAckFailure=<Map<String,Object?>>[];
   for(final candidate in results){
    final id=candidate['id'],body=candidate['body'];
    if(id is! String||body is! String)continue;
    if(smsHashes.contains(bankSmsHash(body))){
-    await WaffraAutoSms.acknowledge([id]);
-   }else{
-    final annotated=Map<String,Object?>.from(candidate);
-    final local=_localSmsClassification(annotated,customRules);
-    if(local!=null){
-     if(local['kind']=='excluded'){
-      final removed=await WaffraAutoSms.acknowledge([id]);
-      if(removed)continue;
-     }
-     annotated['local']=local;
-    }
-    waiting.add(annotated);
+    toAcknowledge.add(id);
+    toRestoreOnAckFailure.add(Map<String,Object?>.from(candidate));
+    continue;
    }
+   final annotated=Map<String,Object?>.from(candidate);
+   final local=_localSmsClassification(annotated,customRules);
+   if(local!=null){
+    annotated['local']=local;
+    if(local['kind']=='excluded'){
+     toAcknowledge.add(id);
+     toRestoreOnAckFailure.add(annotated);
+     continue;
+    }
+   }
+   waiting.add(annotated);
+  }
+  // One encrypted native queue commit instead of one platform call per SMS.
+  // If the durable acknowledgement fails, retain every pending item in UI.
+  if(toAcknowledge.isNotEmpty){
+   final removed=await WaffraAutoSms.acknowledge(toAcknowledge);
+   if(!removed)waiting.addAll(toRestoreOnAckFailure);
   }
   final progress=await WaffraAutoSms.trackingStatus();
   if(!mounted)return;
@@ -4148,28 +4183,43 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     try{
      final existing=await const WaffraSmsLocalRuleStore()
       .read(_smsRuleOwnerKey);
-     final match=WaffraSmsLocalRules.resolveSpecial(
-      body:body,sender:sender,
-      bankKind:sensitive?WaffraBankOperationKind.uncertain:facts.kind,
-      custom:existing);
-     if(match==null&&mounted){
+     final existingMatch=existing.any((rule)=>
+      rule.resolvedKind==kind&&WaffraSmsLocalRules.matches(
+       rule,body,sender:sender));
+     if(!existingMatch&&mounted){
       await _openSmsRules(seedMessage:body,seedKind:kind,seedSender:sender);
      }
      if(!mounted)return;
      final saved=await const WaffraSmsLocalRuleStore()
       .read(_smsRuleOwnerKey);
-     final after=WaffraSmsLocalRules.resolveSpecial(
-      body:body,sender:sender,
-      bankKind:sensitive?WaffraBankOperationKind.uncertain:facts.kind,
-      custom:saved);
-     if(after!=null&&after.resolvedKind==kind){
+     // An explicit exclusion of THIS reviewed ID must not depend on whether
+     // the conservative finance parser classifies it as uncertain. Reusing
+     // the rule for other messages still follows the strict special gate.
+     final matches=saved.any((rule)=>
+      rule.resolvedKind==kind&&WaffraSmsLocalRules.matches(
+       rule,body,sender:sender));
+     if(matches){
       if(kind=='excluded'){
-       await WaffraAutoSms.acknowledge([id]);
+       final acknowledged=await WaffraAutoSms.acknowledge([id]);
+       if(acknowledged&&mounted){
+        setState(()=>_autoSmsPending.removeWhere((item)=>item['id']==id));
+        snackSuccess(context,waffraIsEnglish?
+         'Excluded message removed from review.':'تم استبعاد الرسالة من قائمة المراجعة.');
+        unawaited(_refreshAutoSmsInbox(importMonth:true));
+       }else if(mounted){
+        snack(context,waffraIsEnglish?
+         'Rule saved, but the message was not removed safely. Retry.':
+         'اتحفظت القاعدة لكن تعذر استبعاد الرسالة بأمان. حاول مجددًا.',isError:true);
+       }
       }else{
        snackSuccess(context,waffraIsEnglish?
         'Transfer rule saved. Register the transfer from Accounts; no money was changed.':
         'اتحفظت قاعدة التحويل. سجّل التحويل من شاشة الحسابات؛ مفيش رصيد اتغيّر.');
       }
+     }else if(mounted){
+      snack(context,waffraIsEnglish?
+       'Saved rule does not match this message. Adjust its keywords.':
+       'القاعدة المحفوظة لا تطابق هذه الرسالة. عدّل الكلمات المفتاحية.',isError:true);
      }
     }catch(_){
      if(mounted)snack(context,waffraIsEnglish?
@@ -4420,7 +4470,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _lastLedgerSavedRaw=ledger;
     _lastWidgetRevision=current.widgetRevision;
    });
-   unawaited(_refreshWidget());
+   // The verified pull read already includes the full authoritative ledger.
+   // Reusing it prevents a second SQLCipher decrypt for the Home widget.
+   unawaited(_publishVerifiedWidgetBalance(current));
   }catch(error) {
    debugPrint('Verified pull refresh failed closed: $error');
    if(mounted)setState((){
@@ -4664,11 +4716,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    await _ensureFinanceBound();
    final verified=await _financeAuthority.load(
     route:WaffraFinanceRoute.widgetBalanceRefresh);
+   await _publishVerifiedWidgetBalance(verified);
+  }catch(e){
+   debugPrint('Widget source unavailable: ${e.runtimeType}');
+   await refreshWaffraHomeWidget(
+    balance:'***',negative:false,hidden:true,
+    currency:WaffraDisplayCurrency.label(waffraIsEnglish));
+  }
+ }
+ Future<void> _publishVerifiedWidgetBalance(
+  WaffraFinanceAuthorityRead verified)async{
+  if(!Platform.isAndroid)return;
+  try{
    verified.finance.requireIntegrity();
    final raw=verified.ledgerRaw;
-   if(raw==null){
-    throw StateError('Financial source returned no verified widget ledger.');
-   }
+   if(raw==null)throw StateError('Verified widget ledger is missing.');
    final net=WaffraAuthoritativeWidgetBalance.netHalalas(raw);
    await refreshWaffraHomeWidget(
     balance:hideWaffraAmounts.value?'***':WaffraDisplayCurrency.amount(net/100),
@@ -4676,9 +4738,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     hidden:hideWaffraAmounts.value,
     currency:WaffraDisplayCurrency.label(waffraIsEnglish));
   }catch(e){
-   // An absent OS key, conflicting source witness, corrupt ledger or
-   // interrupted cutover must NEVER display a stale in-memory balance.
-   debugPrint('Verified widget balance refresh unavailable: $e');
+   debugPrint('Verified widget balance refresh unavailable: ${e.runtimeType}');
    await refreshWaffraHomeWidget(
     balance:'***',negative:false,hidden:true,
     currency:WaffraDisplayCurrency.label(waffraIsEnglish));
@@ -4698,6 +4758,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // Migrate old category caps together with the independent budget list.
    // Historic ledger budget IDs are kept unchanged.
    'waffra_categories_v24':jsonEncode(categories.map((c)=>
+    route==WaffraFinanceRoute.challengeAndBudgetUpdate&&
     c.budget>0&&namedBudgets.any((b)=>b.id==c.id)?
      c.copy(budget:0,clearBudget:true).toJson():c.toJson()).toList()),
    'waffra_named_budgets_v1':jsonEncode(
@@ -4719,6 +4780,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // still checks its exact witness and the one-entry append invariant.
   WaffraHomeTransactionCapture.narrowVerifiedManualAppend(
    route:route,source:baseline?.source,snapshot:snapshot);
+  WaffraHomeTransactionCapture.narrowVerifiedModuleEdit(
+   route:route,source:baseline?.source,snapshot:snapshot,
+   witnessedValues:baseline?.encryptedWitness?.snapshot.values);
   return _saveProgress.track<void>(
    'persist-financial-change',() {
    return _financialWriteQueue.submit(snapshot,(captured)async {
@@ -4753,7 +4817,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    return true;
   }catch(error){
    debugPrint('Verified $operation write refused: $error');
-   if(mounted)await _loadFinanceSafely();
+   if(mounted)await _refreshFromVerifiedFinance();
    if(mounted)snack(context,waffraIsEnglish?
     'Changes were not confirmed. Financial records were reloaded safely.':
     'لم يتم تأكيد الحفظ. أعدنا تحميل بياناتك المالية بشكل آمن.');
@@ -7336,7 +7400,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      // claim 'previous data unchanged' or let a retry create a ghost debit.
      debugPrint('M457 manual commit rejected: ${error.runtimeType}');
      if(mounted){
-      await _loadFinanceSafely();
+      await _refreshFromVerifiedFinance();
       if(mounted)snack(context,waffraIsEnglish?
        'Manual save could not be confirmed. Verified records were refreshed before retry. (M457)':
        'لم يتأكد حفظ العملية اليدوية. تم تحديث البيانات المحفوظة قبل إعادة المحاولة. (M457)');
