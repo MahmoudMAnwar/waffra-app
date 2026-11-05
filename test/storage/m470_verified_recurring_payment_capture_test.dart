@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/storage/waffra_home_transaction_capture.dart';
 import 'package:waffra/storage/waffra_production_finance_routing_gate.dart';
@@ -59,6 +60,17 @@ void main() {
    route:WaffraFinanceRoute.recurringPostingAndPostponement,
    source:verified,snapshot:capture,witnessedValues:existing),
    throwsStateError);
+ });
+
+ test('M470 due posting retains recurring provenance, never manual',(){
+  final home=File('lib/main.dart').readAsStringSync();
+  final start=home.indexOf('if(!entries.any((e)=>e.id==id)){');
+  final end=home.indexOf('recurringPostponed.remove(id);',start);
+  expect(start,greaterThan(0));
+  expect(end,greaterThan(start));
+  final posting=home.substring(start,end);
+  expect(posting,contains("sourceType:'recurring'"));
+  expect(posting,isNot(contains("sourceType:'manual'")));
  });
 
  test('M470 never rewrites guarded legacy capture',(){
