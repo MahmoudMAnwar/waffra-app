@@ -15,6 +15,7 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import com.google.firebase.auth.FirebaseAuth
 import java.security.KeyStore
+import java.util.concurrent.Executors
 import javax.crypto.Mac
 import javax.crypto.SecretKey
 import org.json.JSONArray
@@ -24,6 +25,8 @@ import org.json.JSONArray
 class MainActivity : FlutterFragmentActivity() {
     private val privacyChannel = "waffra/privacy"
     private val messagesChannel = "waffra/messages"
+    // History scans/decryption must never run on the Android UI thread.
+    private val smsHistoryExecutor = Executors.newSingleThreadExecutor()
     private val autoSmsRequestCode = 7712
     private var pendingSmsPermissionResult: MethodChannel.Result? = null
     private val autoSmsNotificationRequestCode = 7713
@@ -302,11 +305,34 @@ class MainActivity : FlutterFragmentActivity() {
                     result.success(saved)
                 }
                 "importConsentMonthBankSms" -> {
-                    // Historical candidates are review-only; no worker auto-save.
-                    result.success(WaffraAutoSmsStore.importConsentMonth(this))
+                    // Provider scans and encrypted queue writes are blocking IO.
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        try {
+                            val imported = WaffraAutoSmsStore.importConsentMonth(app)
+                            runOnUiThread { result.success(imported) }
+                        } catch (_: Exception) {
+                            runOnUiThread {
+                                result.error("SMS_HISTORY_IMPORT_FAILED",
+                                    "Could not complete bank SMS history scan", null)
+                            }
+                        }
+                    }
                 }
-                "scanUnknownFinancialSms" -> result.success(
-                    WaffraAutoSmsStore.scanUnknownFinancialSms(this))
+                "scanUnknownFinancialSms" -> {
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        try {
+                            val found = WaffraAutoSmsStore.scanUnknownFinancialSms(app)
+                            runOnUiThread { result.success(found) }
+                        } catch (_: Exception) {
+                            runOnUiThread {
+                                result.error("SMS_HISTORY_REVIEW_FAILED",
+                                    "Could not scan unknown financial SMS", null)
+                            }
+                        }
+                    }
+                }
                 "pendingAutoBankSms" -> result.success(WaffraAutoSmsStore.pending(this))
                 "claimAutoBankSmsCloudAttempt" -> result.success(
                     WaffraAutoSmsStore.claimCloudAttempt(this, call.arguments as? String ?: ""))
@@ -459,6 +485,7 @@ class MainActivity : FlutterFragmentActivity() {
     }
 
     override fun onDestroy() {
+        smsHistoryExecutor.shutdown()
         WaffraAutoSmsStore.onChanged = null
         pendingSmsPermissionResult?.error("SMS_PERMISSION_CANCELLED", "Activity closed", null)
         pendingSmsPermissionResult = null
