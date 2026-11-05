@@ -4366,7 +4366,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          Expanded(child:Column(mainAxisSize:MainAxisSize.min,
           crossAxisAlignment:CrossAxisAlignment.start,children:[
           WaffraText(selectedSender??(waffraIsEnglish?
-           'Messages to review':'رسائل للفرز'),maxLines:2,
+           'Messages to review':'رسائل للمراجعة'),maxLines:2,
            style:const TextStyle(fontSize:22,fontWeight:FontWeight.bold)),
           WaffraText(visibleIds().length.toString()+
            (waffraIsEnglish?' messages from ':' رسالة من ')+
@@ -4424,7 +4424,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             title:WaffraText(sender,maxLines:2,
              style:const TextStyle(fontWeight:FontWeight.bold,fontSize:15)),
             subtitle:WaffraText(count.toString()+
-             (waffraIsEnglish?' messages awaiting review':' رسائل تحتاج فرز'),
+             (waffraIsEnglish?' messages awaiting review':' رسائل بانتظار المراجعة'),
              style:const TextStyle(fontSize:12,color:emerald)),
             trailing:Row(mainAxisSize:MainAxisSize.min,children:[
              Checkbox(
