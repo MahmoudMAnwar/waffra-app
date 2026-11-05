@@ -3479,15 +3479,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
 
  /// Internal transfers use the verified account ledger, never expense.
- /// Income and expenses can still be saved without an account.
+ /// New manual income and expenses require an explicit money account.
  Future<void> openVerifiedTransfer()async{
   try{
    await _ensureFinanceBound();
    final bridge=_financeBinding?.accountsBridge;
    if(bridge==null){
     if(mounted)snack(context,waffraIsEnglish?
-     'Transfers require verified encrypted accounts. Manual income and expenses do not.':
-     'التحويل يحتاج حسابات مشفّرة موثّقة. الدخل والمصروف اليدوي مش محتاجين حساب.',
+     'Transfers and new manual entries require verified money accounts.':
+     'التحويل والدخل والمصروف اليدوي يحتاجوا حسابات مالية موثّقة.',
      isError:true);
     return;
    }
@@ -5673,16 +5673,30 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  /// existing SMS save behavior, without a shadow account database.
  Future<({List<String?>? ids,int? generation})?> reviewSmsAccountLinks(
   List<MoneyEntry> candidates,{String? recurringId})async{
+  final manualRequiresAccount=candidates.any((c)=>c.sourceType=='manual');
   final bridge=_financeBinding?.accountsBridge;
-  if(bridge==null)return (ids:null,generation:null);
+  if(bridge==null){
+   if(manualRequiresAccount&&mounted)snack(context,waffraIsEnglish?
+    'Create a verified money account in My Accounts before adding income or expenses.':
+    'أنشئ حسابًا ماليًا موثّقًا من حساباتي قبل إضافة دخل أو مصروف.',isError:true);
+   return manualRequiresAccount?null:(ids:null,generation:null);
+  }
   if(candidates.isEmpty)return (ids:null,generation:null);
   try{
    final verified=await bridge.readVerifiedAccounts();
    if(!mounted)return null;
    final active=verified.balances.where((a)=>!a.archived).toList();
-   if(active.isEmpty)return (
-    ids:List<String?>.filled(candidates.length,null),
-    generation:verified.witness.generation);
+   if(active.isEmpty){
+    if(manualRequiresAccount){
+     snack(context,waffraIsEnglish?
+      'Add at least one bank, cash, or wallet account in My Accounts first.':
+      'لازم تضيف حسابًا ماليًا واحدًا على الأقل من حساباتي أولًا.',isError:true);
+     return null;
+    }
+    return (
+     ids:List<String?>.filled(candidates.length,null),
+     generation:verified.witness.generation);
+   }
    final assigned=List<String?>.filled(candidates.length,null);
    // Only verified masked bank evidence can suggest a specific SMS account.
    // Manual, recurring, goal-due and uncertain bank messages stay unassigned
@@ -5718,9 +5732,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(!mounted)return null;
    final approved=await showWaffraDialog<bool>(context:context,
     builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
-     title:WaffraText(waffraIsEnglish?
-      'Which account for each bank transaction?':
-      'تسجيل كل معاملة بنكية في أي حساب؟'),
+     title:WaffraText(manualRequiresAccount?
+      (waffraIsEnglish?'Choose a money account':'اختار الحساب المالي للعملية'):
+      (waffraIsEnglish?
+       'Which account for each bank transaction?':
+       'تسجيل كل معاملة بنكية في أي حساب؟')),
      content:SizedBox(width:double.maxFinite,
       height:waffraKeyboardDialogListHeight(ctx,desired:500),
       child:ListView(children:[
@@ -5728,6 +5744,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ?(waffraIsEnglish
           ?'This selection is for this payment only. Change future defaults from Accounts.'
           :'الاختيار لهذه الدفعة فقط. غيّر الحساب للدفعات القادمة من الحسابات.')
+        :manualRequiresAccount?
+         (waffraIsEnglish?
+          'Manual income and expenses must use an existing money account.':
+          'الدخل والمصروف اليدوي لازم يرتبطوا بحساب مالي موجود.')
         :(waffraIsEnglish
           ?'Choose the actual bank or cash account. No account is optional.'
           :'اختار الحساب الفعلي لكل عملية، أو سيبها بدون ربط.')),
@@ -5741,14 +5761,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           WaffraCenteredDropdownFormField<String>(
            key:ValueKey('waffra-sms-account-'+n.toString()+'-'+
             (assigned[n]??'none')),
-           initialValue:assigned[n]??'none',isExpanded:true,
+           initialValue:candidates[n].sourceType=='manual'?
+            assigned[n]:assigned[n]??'none',isExpanded:true,
            menuMaxHeight:min(340.0,MediaQuery.sizeOf(ctx).height*.48),
            decoration:InputDecoration(
             labelText:waffraIsEnglish?'Money account':'الحساب المالي',
             border:const OutlineInputBorder()),
            items:[
-            DropdownMenuItem(value:'none',child:WaffraText(
-             waffraIsEnglish?'Unlinked':'بدون حساب')),
+            if(candidates[n].sourceType!='manual')
+             DropdownMenuItem(value:'none',child:WaffraText(
+              waffraIsEnglish?'Unlinked':'بدون حساب')),
             ...active.map((a)=>DropdownMenuItem(value:a.id,
              child:WaffraText(a.name,maxLines:1))),
            ],
@@ -5760,11 +5782,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      actions:[
       TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),
        child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
-      FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),
+      FilledButton(
+       onPressed:manualRequiresAccount&&
+        candidates.asMap().entries.any((row)=>
+         row.value.sourceType=='manual'&&assigned[row.key]==null)?
+        null:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),
        child:WaffraText(waffraIsEnglish?'Confirm':'تأكيد')),
      ],
     )));
    if(approved!=true)return null;
+   if(manualRequiresAccount&&candidates.asMap().entries.any((row)=>
+       row.value.sourceType=='manual'&&assigned[row.key]==null))return null;
    return (ids:List<String?>.unmodifiable(assigned),
     generation:verified.witness.generation);
   }catch(_){
