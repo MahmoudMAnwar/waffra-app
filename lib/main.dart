@@ -3534,7 +3534,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
 
  double _m467ShownBalance(){
-  if(_m467SelectedAccount=='all')return waffraAvailableCash(entries,goals);
+  if(_m467SelectedAccount=='all'){
+   if(_m467AccountContext==null)return waffraAvailableCash(entries,goals);
+   // The sum of verified balances includes openings, account transfers and
+   // wallet movements. Unassigned ledger entries do not alter accounts.
+   return _m467Accounts.fold<int>(0,(total,a)=>total+a.balanceMinor)/100;
+  }
   if(_m467SelectedAccount=='none')return 0;
   for(final a in _m467Accounts){
    if(a.id==_m467SelectedAccount)return a.balanceMinor/100;
@@ -4258,7 +4263,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       }
      },
      child:SafeArea(
-     child:SizedBox(height:MediaQuery.sizeOf(ctx).height*.74,
+     child:SizedBox(height:selectedSender==null?
+       min(MediaQuery.sizeOf(ctx).height*.78,550.0):
+       MediaQuery.sizeOf(ctx).height*.84,
       child:Column(children:[
        Padding(padding:const EdgeInsets.fromLTRB(14,3,14,8),
         child:Row(children:[
@@ -8240,6 +8247,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   debounce?.cancel();disposeLater([title,value,notes,message,transferAmount,transferNote]);
   if(result==null||!mounted){
    if(transferCommitted&&mounted){
+    unawaited(_m467RefreshHomeAccounts());
     snackSuccess(context,waffraIsEnglish?
      'Transfer recorded in verified accounts.':
      'تم تسجيل التحويل بين الحسابات.');
@@ -8486,6 +8494,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
   }
   if(mounted)await budgetAlert(result,previousSpent);
+  if(mounted)unawaited(_m467RefreshHomeAccounts());
   if(initial!=null&&mounted){
    snack(context,waffraIsEnglish?'Transaction updated':'تم تعديل المعاملة',
     isError:false,duration:const Duration(seconds:5),
@@ -10874,7 +10883,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           (waffraIsEnglish?'Unassigned, no account balance':'بدون حساب — لا يوجد رصيد مرتبط'):
           (_m467SelectedAccount=='all'?null:_m467AccountLabel),
          focusKey:_tourKeys[0],
-         monthlyChangePercent:_m467SelectedAccount=='all'?monthChange:null,
+         monthlyChangePercent:_m467SelectedAccount=='all'&&
+          _m467AccountContext==null?monthChange:null,
          refreshVerifiedWidgetBalance:_refreshWidget)),
       SliverPadding(padding:const EdgeInsets.fromLTRB(14,10,14,96),
        sliver:SliverToBoxAdapter(child:Column(

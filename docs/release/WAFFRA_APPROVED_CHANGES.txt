@@ -1,3 +1,7 @@
+[M467] Main account-balance projection and camera/SMS UI refinements
+- All-accounts balance now sums SQLCipher-witnessed active account balances including openings and transfers. Unassigned transactions appear in overall reports but cannot mutate an account balance. Month-change badge is hidden when there is no matching verified account-period series.
+- Refresh the verified account context after a confirmed transfer or manually saved income/expense. Sender review sheet adapts its height to avoid the large blank area on 2-bank review screens.
+
 [M467] Home header verified account selector completed in draft PR
 - Shows all accounts, each active verified money account with a witnessed SQLCipher balance, unassigned entry filter and Manage Accounts. Visible transaction rows, income/expense summaries and balance header follow the account filter; overall budgets and goal wallet stay independent.
 - Selected display account is a profile-scoped preference only; not used to choose the bank account for any manual, SMS, goal or recurring transaction. Unassigned entries remain in overall reports but do not change any money-account balance.

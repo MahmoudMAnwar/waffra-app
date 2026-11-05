@@ -23,6 +23,9 @@ void main(){
   expect(src,contains('WaffraHomeAccountChip('));
   expect(src,contains('_m467ScopedEntries().toList()'));
   expect(src,contains('api.readAccountContext('));
+  expect(src,contains('_m467Accounts.fold<int>(0,(total,a)=>total+a.balanceMinor)/100'));
+  expect(src,contains('if(transferCommitted&&mounted){'));
+  expect(src,contains('unawaited(_m467RefreshHomeAccounts());'));
   expect(src,contains('if(account.id==_m467SelectedAccount)return account.name;'));
   expect(src,isNot(contains('selectedAccountId:_m467SelectedAccount')));
  });
