@@ -9,7 +9,8 @@
     "Repair the finance write refusal after selecting Paid on a recurring due by narrowing the fresh SQLCipher captured delta to the single new posting and the related postponed metadata, without weakening unrelated finance-data guards.",
     "Maintain an explicit accurate 32-item implementation tracker showing complete, partial, unverified, and pending items rather than inventing Done results.",
     "Improve existing recurring default account configuration with explicit provider/bank first and one linked active money account second; never offer unassigned or silently select a bank account, preserving prior payments and reminders.",
-    "Show a provider/bank selector followed by explicitly chosen linked accounts when editing the recurring default account; prevent a new unassigned default, without guessing financial posting authority or changing historical paid entries."
+    "Show a provider/bank selector followed by explicitly chosen linked accounts when editing the recurring default account; prevent a new unassigned default, without guessing financial posting authority or changing historical paid entries.",
+    "Preserve recurring transaction provenance when a monthly due is confirmed Paid: the saved ledger row must have sourceType recurring and must not be mislabeled a manually entered transaction; ensure one-time receipt and source validation remain unchanged."
   ],
   "allowed_changed_files": [
     "docs/qa/WAFFRA_32_NEW_CHANGES_M470_TRACKER.md",
@@ -37,6 +38,10 @@
       {
         "start": " Future<({List<String?>? ids,int? generation})?> reviewSmsAccountLinks(",
         "end": "\n/// Budget assignment is OPTIONAL"
+      },
+      {
+        "start": "      if(!entries.any((e)=>e.id==id)){",
+        "end": "\n      recurringPostponed.remove(id);"
       }
     ],
     "lib/waffra_home_accounts_sheet.dart": [
