@@ -1303,6 +1303,27 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   if(mounted)setState(()=>googleFirstRunSetup=false);
  }
  Future<void> logout()async {
+  // A phone user must not lose access after an apparently successful logout.
+  // Check OS-protected verifier ownership before clearing the session.
+  final current=profile;
+  if(current!=null&&current.provider.toLowerCase().trim()=='phone'){
+   WaffraLocalCredentialProbe? integrity;
+   try{
+    integrity=await WaffraLocalPhoneCredentials.probeForPhone(
+     WaffraSaudiMobile.inputFromStored(current.phone));
+   }catch(_){integrity=WaffraLocalCredentialProbe.malformed;}
+   if(integrity!=WaffraLocalCredentialProbe.ready){
+    final p=await SharedPreferences.getInstance();
+    final hasLegacy=p.getString('waffra_local_password_salt')!=null&&
+     p.getString('waffra_local_password_hash')!=null;
+    if(!hasLegacy){
+     if(mounted)snack(context,waffraIsEnglish?
+      'Secure sign-in credentials could not be verified. Sign-out was stopped to protect account access. Do not clear app data.':
+      'تعذر التأكد من سلامة بيانات الدخول الآمنة. تم إيقاف تسجيل الخروج لحماية حسابك. لا تمسح بيانات التطبيق.');
+     return;
+    }
+   }
+  }
   // Stop capture BEFORE removing profile. Keep this account's encrypted
   // pending review. If the new native bridge is unavailable, fail closed by
   // using explicit disable; never silently sign out with collection enabled.
@@ -2144,6 +2165,19 @@ class _LoginScreenState extends State<LoginScreen> {
    final storedPhone=WaffraSaudiMobile.inputFromStored(account.phone);
    final hasSecureVerifier=
     await WaffraLocalPhoneCredentials.hasRegisteredCredentials();
+   final verifierStatus=await WaffraLocalPhoneCredentials.probeForPhone(
+    enteredPhone);
+   // Missing or malformed OS credentials are not equivalent to a wrong
+   // password. Never replace the existing identity or financial data.
+   final hasLegacy=prefs.getString('waffra_local_password_salt')!=null&&
+    prefs.getString('waffra_local_password_hash')!=null;
+   if(!hasLegacy&&(verifierStatus==WaffraLocalCredentialProbe.missing||
+      verifierStatus==WaffraLocalCredentialProbe.malformed)){
+    if(mounted)setState(()=>signInAuthError=waffraIsEnglish?
+     'Secure sign-in record is missing or invalid on this device. Your data has not been deleted. Do not clear app data.':
+     'سجل الدخول المشفّر مفقود أو غير صالح على الجهاز. لم تُحذف بياناتك. لا تمسح بيانات التطبيق.');
+    return;
+   }
    // An older editable profile may contain a different display phone.
    // Only the OS-protected verifier may authenticate the entered number.
    // Without a secure verifier, legacy migration must keep its original phone.
