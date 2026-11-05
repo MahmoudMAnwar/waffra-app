@@ -2,6 +2,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -98,6 +99,7 @@ import 'storage/waffra_legacy_finance_writer_coordinator.dart';
 import 'storage/waffra_live_account_write_authority.dart';
 import 'storage/waffra_home_finance_persistence.dart';
 import 'storage/waffra_verified_finance_authority.dart';
+import 'storage/waffra_portable_encrypted_vault_restorer.dart';
 import 'storage/waffra_accounts_portable_backup_v3.dart';
 import 'storage/waffra_verified_active_restore_preflight.dart';
 import 'storage/waffra_verified_pull_refresh_source.dart';
@@ -7366,7 +7368,37 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
  }
 
+ /// One manual action offers income, expense and transfer in the same popup.
+ /// The selected writer remains independently verified for each money type.
+ Future<void> openManualTransactionChoice()async{
+  final selected=await showWaffraDialog<String>(context:context,
+   builder:(dialog)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?
+     'Manual transaction':'عملية يدوية'),
+    content:Column(mainAxisSize:MainAxisSize.min,children:[
+     ListTile(key:const Key('waffra-manual-choice-income'),
+      leading:const Icon(Icons.trending_up_rounded,color:emerald),
+      title:WaffraText(waffraIsEnglish?'Income':'دخل'),
+      onTap:WaffraHaptics.tap(()=>Navigator.pop(dialog,'income'))),
+     ListTile(key:const Key('waffra-manual-choice-expense'),
+      leading:const Icon(Icons.trending_down_rounded,color:emerald),
+      title:WaffraText(waffraIsEnglish?'Expense':'مصروف'),
+      onTap:WaffraHaptics.tap(()=>Navigator.pop(dialog,'expense'))),
+     ListTile(key:const Key('waffra-manual-choice-transfer'),
+      leading:const Icon(Icons.swap_horiz_rounded,color:emerald),
+      title:WaffraText(waffraIsEnglish?
+       'Transfer between my accounts':'تحويل بين حساباتي'),
+      onTap:WaffraHaptics.tap(()=>Navigator.pop(dialog,'transfer'))),
+    ]),
+    actions:[TextButton(onPressed:WaffraHaptics.tap(()=>
+     Navigator.pop(dialog)),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء'))],
+   ));
+  if(!mounted||selected==null)return;
+  if(selected=='transfer'){await openVerifiedTransfer();return;}
+  await entrySheet(initialIncome:selected=='income');
+ }
  Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,
+  bool? initialIncome,
   WaffraReceiptOcrFields? scannedReceipt,XFile? scannedImage,bool? scannedIncome,
   int? scannedImagePosition,int? scannedImageTotal})async {
   if(!WaffraSaudiRelease.receiptImageTransactionImport&&
@@ -7391,7 +7423,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final value=TextEditingController(text:initial!=null?formatWaffraEditAmount(initial.amount):
    scannedReceipt?.amount!=null?formatWaffraEditAmount(scannedReceipt!.amount!):'');
   final message=TextEditingController(text:initialSms??'');
-  bool income=initial?.income??scannedIncome??false,analyzing=false,hasParsed=initialSms!=null;
+  bool income=initial?.income??scannedIncome??initialIncome??false,analyzing=false,hasParsed=initialSms!=null;
   bool submitTapped=false;
   String category=initial?.category??'أخرى';
   String? selectedParentId;
@@ -7845,7 +7877,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             receiptPath=waffraEncodeReceipts([...waffraReceiptPaths(receiptPath)]..remove(path));
            }))),
          ]),
-         onTap:WaffraHaptics.tap(()=>showReceipt(receiptPath!,initialIndex:waffraReceiptPaths(receiptPath).indexOf(path)))),
+         onTap:WaffraHaptics.tap(()=>showReceipt(receiptPath!,
+          entryId:initial?.id,
+          initialIndex:waffraReceiptPaths(receiptPath).indexOf(path)))),
       ],
        ])),
       footer:FilledButton(
@@ -8031,23 +8065,39 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // M457: confirmed manual additions use the same atomic Home/Widget
    // SQLCipher append writer as reviewed bank SMS. Do NOT reserialize or
    // replace pre-existing ledger rows from a cached Home screen.
-   if(initial==null&&result.sourceType=='manual'&&
-      (result.receiptPath==null||result.receiptPath!.isEmpty)&&
-      (_financeBinding?.encrypted==true||
-       _lastFinanceAuthorityRead?.source==
-        WaffraRuntimeFinanceBackend.verifiedEncrypted||
-       _lastFinanceAuthorityRead?.source==
-        WaffraRuntimeFinanceBackend.guardedLegacy)){
+   if(initial==null&&result.sourceType=='manual'){
     try{
      await _saveProgress.track<void>(
       'commit-confirmed-manual',()=>_financialWriteQueue.submit(
        <String,Object>{'record':jsonEncode(result.toJson())},
        (captured)async{
         await _ensureFinanceBound();
+        final record=Map<String,Object?>.from(
+          jsonDecode(captured['record'] as String) as Map);
+        // The form stages temporary image files; only their verified BYTES
+        // may be persisted. The canonical ledger never records local paths.
+        final imagePaths=waffraReceiptPaths(
+         record['receiptPath'] is String?record['receiptPath'] as String:null);
+        final images=<Uint8List>[];
+        if(imagePaths.isNotEmpty){
+         if(imagePaths.length>10||
+            imagePaths.any((path)=>!stagedReceiptCopies.contains(path))){
+          throw StateError('Unverified manual receipt path.');
+         }
+         for(final path in imagePaths){
+          final staged=File(path);
+          final length=await staged.length();
+          if(length<=0||length>8*1024*1024){
+           throw StateError('Manual receipt exceeds encrypted size limit.');
+          }
+          images.add(await staged.readAsBytes());
+         }
+        }
+        record['receiptPath']=null;
         final committed=await _financeAuthority.commitConfirmedManual(
          route:WaffraFinanceRoute.manualTransactionSave,
-         record:Map<String,Object?>.from(
-          jsonDecode(captured['record'] as String) as Map),
+         record:record,
+         receiptImages:images,
          userConfirmed:true,
          selectedAccountId:chosenManual?.ids?.single,
          expectedAccountGeneration:chosenManual?.ids?.single==null?
@@ -8074,6 +8124,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      );
      // A preference failure cannot retry an already-committed debit.
      try{await _learnManualCategoryPreference(result);}catch(_){}
+     // Every staged copy is now inside the encrypted receipt vault. Delete
+     // only files created by this editor; never the user's original photo.
+     for(final copy in stagedReceiptCopies){
+      try{final staged=File(copy);
+       if(await staged.exists())await staged.delete();
+      }catch(_){}
+     }
     }catch(error){
      // A write may have committed before a later source read failed. Never
      // claim 'previous data unchanged' or let a retry create a ghost debit.
@@ -8323,10 +8380,41 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   await File(picked.path).copy(target);
   return target;
  }
- Future<void> showReceipt(String encoded,{int initialIndex=0})async {
+ Future<void> showReceipt(String encoded,{
+  int initialIndex=0,String? entryId,
+ })async {
   final paths=waffraReceiptPaths(encoded);
+  final encrypted=paths.isNotEmpty&&paths.every(
+   (p)=>p.startsWith('waffra-receipt://'));
   final available=<String>[];
-  for(final path in paths){if(await File(path).exists())available.add(path);}
+  List<Uint8List>? encryptedImages;
+  if(encrypted){
+   if(entryId==null||paths.asMap().entries.any((row)=>
+    !WaffraEncryptedReceiptReference.matches(
+     row.value,entryId,row.key))){
+    if(mounted)snack(context,waffraIsEnglish?
+     'Encrypted receipt ownership could not be verified.':
+     'تعذر التحقق من ارتباط المرفقات المشفرة بالمعاملة.',isError:true);
+    return;
+   }
+   try{
+    encryptedImages=await _financeAuthority.loadEncryptedReceiptImages(
+     route:WaffraFinanceRoute.receiptView,entryId:entryId);
+    if(encryptedImages.length!=paths.length){
+     throw StateError('Encrypted receipt count mismatch.');
+    }
+    available.addAll(paths);
+   }catch(_){
+    if(mounted)snack(context,waffraIsEnglish?
+     'Could not open verified encrypted attachments.':
+     'تعذر فتح المرفقات المشفرة بعد التحقق.',isError:true);
+    return;
+   }
+  }else{
+   // Mixed encrypted tokens and plaintext paths can never fall back to disk.
+   if(paths.any((p)=>p.startsWith('waffra-receipt://')))return;
+   for(final path in paths){if(await File(path).exists())available.add(path);}
+  }
   if(available.isEmpty){if(mounted)snack(context,waffraIsEnglish?'Images not found on this device':'ما لقينا الصور على الجهاز');return;}
   if(!mounted)return;
   final controller=PageController(initialPage:initialIndex.clamp(0,available.length-1));
@@ -8357,9 +8445,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          onPageChanged:(index)=>update(()=>current=index),
          itemBuilder:(ctx,index)=>InteractiveViewer(
           minScale:.8,maxScale:5,
-          child:Center(child:Image.file(File(available[index]),fit:BoxFit.contain)))))),
+          child:Center(child:encrypted?
+           Image.memory(encryptedImages![index],fit:BoxFit.contain):
+           Image.file(File(available[index]),fit:BoxFit.contain)))))),
        Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:4),
-        child:WaffraText(WaffraReceiptFilename.displayName(available[current]),
+        child:WaffraText(encrypted?
+         (waffraIsEnglish?'Encrypted attachment ':'مرفق مشفر ')+ '${current+1}':
+         WaffraReceiptFilename.displayName(available[current]),
          maxLines:2,textAlign:TextAlign.center,
          style:const TextStyle(color:Colors.white,fontSize:13,fontWeight:FontWeight.w700))),
        SizedBox(height:58,child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
@@ -9290,7 +9382,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     },
     onClose:()=>Navigator.pop(ctx),
     onViewReceipt:waffraReceiptPaths(entry.receiptPath).isNotEmpty
-      ?(){Navigator.pop(ctx);showReceipt(entry.receiptPath!);}
+      ?(){Navigator.pop(ctx);showReceipt(entry.receiptPath!,entryId:entry.id);}
       :null,
    ),
   );
@@ -9326,7 +9418,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      child:WaffraReceiptCornerAction(
       key:Key('waffra-receipt-corner-list-'+e.id),
       count:attachmentCount,english:waffraIsEnglish,
-      onTap:()=>showReceipt(e.receiptPath!))),
+      onTap:()=>showReceipt(e.receiptPath!,entryId:e.id))),
    ]));
  }
  String get greeting=>WaffraSaudiGreetings.compose(
@@ -10434,7 +10526,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      child:WaffraReceiptCornerAction(
       key:Key('waffra-receipt-corner-home-'+entry.id),
       count:attachmentCount,english:waffraIsEnglish,
-      onTap:()=>showReceipt(entry.receiptPath!))),
+      onTap:()=>showReceipt(entry.receiptPath!,entryId:entry.id))),
    ])));
  }
  Widget dashboard(){
@@ -14889,14 +14981,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          icon:Icons.edit_note_rounded,
          label:waffraIsEnglish?'Manual transaction':'عملية يدوية',
          onTap:WaffraHaptics.tapRequired((){
-          unawaited(_launchAddAction(()=>entrySheet(),fromMenu:true));
-         })),
-        const SizedBox(height:7),
-        _addMenuOption(
-         icon:Icons.swap_horiz_rounded,
-         label:waffraIsEnglish?'Transfer between my accounts':'تحويل بين حساباتي',
-         onTap:WaffraHaptics.tapRequired((){
-          unawaited(_launchAddAction(openVerifiedTransfer,fromMenu:true));
+          unawaited(_launchAddAction(openManualTransactionChoice,fromMenu:true));
          })),
         const SizedBox(height:7),
         _addMenuOption(
