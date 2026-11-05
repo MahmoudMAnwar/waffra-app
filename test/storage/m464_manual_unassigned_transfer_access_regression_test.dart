@@ -52,31 +52,21 @@ void main(){
   income:income,date:DateTime.utc(2026,11,5),
  ).toJson();
 
- test('Accountless manual expense and income append under existing legacy lock '
-  'without changing goals, recurring, or SMS hashes',()async{
-  final first=await finance.commitConfirmedManual(
-   route:WaffraFinanceRoute.manualTransactionSave,
-   record:item('expense',false),userConfirmed:true,
-  );
-  expect(first.source,WaffraRuntimeFinanceBackend.guardedLegacy);
-  expect((jsonDecode(first.ledgerRaw!) as List),hasLength(1));
-  final second=await finance.commitConfirmedManual(
-   route:WaffraFinanceRoute.manualTransactionSave,
-   record:item('income',true),userConfirmed:true,
-  );
-  final records=jsonDecode(second.ledgerRaw!) as List;
-  expect(records.map((x)=>(x as Map)['id']).toList(),['expense','income']);
+ test('Guarded legacy rejects new accountless income and expense '
+  'without changing historical finance or SMS',()async{
+  for(final itemId in <String>['expense','income']){
+   await expectLater(finance.commitConfirmedManual(
+    route:WaffraFinanceRoute.manualTransactionSave,
+    record:item(itemId,itemId=='income'),userConfirmed:true,
+   ),throwsStateError);
+  }
   final p=await SharedPreferences.getInstance();
   await p.reload();
+  expect(p.getString('entries'),'[]');
   expect(p.getString('waffra_goals_v24'),'[{"id":"preserve-goal"}]');
   expect(p.getString('waffra_recurring_v24'),'[{"id":"preserve-recurring"}]');
-  expect(p.getStringList('waffra_sms_hashes_v1'),[List<String>.filled(64,'a').join()]);
-  await expectLater(finance.commitConfirmedManual(
-   route:WaffraFinanceRoute.manualTransactionSave,
-   record:item('expense',false),userConfirmed:true,
-  ),throwsStateError);
-  expect((jsonDecode((await finance.load(
-   route:WaffraFinanceRoute.dashboardRead)).ledgerRaw!) as List),hasLength(2));
+  expect(p.getStringList('waffra_sms_hashes_v1'),
+   [List<String>.filled(64,'a').join()]);
  });
 
  test('Legacy cannot attach unverifiable account or post as SMS',()async{
