@@ -28,7 +28,7 @@ void main() {
   test('M469 generated clipboard password survives register and re-login byte-for-byte',()async{
     // Include common generator symbols, whitespace, and non-ASCII characters.
     // Passwords are secrets: never trim, case-fold or normalize them on paste.
-    const generated='qW7!@#-_=$%*& Àز9  ';
+    const generated=r'qW7!@#-_=$%*& Àز9  ';
     final record=await WaffraLocalPhoneCredentials.deriveRecord(
       phone:phone,password:generated,testSalt:List<int>.filled(32,26));
     final saved=jsonEncode(record);
