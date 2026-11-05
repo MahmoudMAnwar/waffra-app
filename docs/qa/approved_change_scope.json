@@ -1,16 +1,18 @@
 {
   "contract_version": 1,
   "change_id": "M460-apk-main-same-sha-audit-repository-checkout-20261105",
-  "human_scope_review": "Owner requested that all ready fixes merge in order and that recurring main APK build failures be fixed permanently. M460 fixes the verified exact-main APK dependency-audit failure (job 127112822065): the job imports a repository Python module without checking out the repository. The one-job fix checks out the triggering SHA and keeps all same-SHA mandatory gates active, with a regression test. No finance source or application behavior changes. Exact-head CI and signed main build must pass before release.",
+  "human_scope_review": "Owner requested that all ready fixes merge in order and that recurring main APK build failures be fixed permanently. M460 fixes the verified exact-main APK dependency-audit failure (job 127112822065): the job imports a repository Python module without checking out the repository. The one-job fix checks out the triggering SHA and keeps all same-SHA mandatory gates active, with a regression test. No finance source or application behavior changes. Exact-head CI and signed main build must pass before release. The same main APK run 41988663385 independently exposed a malformed Python source string at test/qa/m452_sms_review_signup_regression_test.py line 62. M460 repairs that existing source-only QA assertion and keeps its unique verified SMS owner-key check; no runtime behavior change.",
   "user_requested_changes": [
     "Fix recurring signed Android APK failure on main without bypassing mandatory same-commit independent test checks.",
     "Ensure the CI audit job checks out its exact trigger SHA before importing the local Python QA helper.",
-    "Add regression coverage to prevent the missing checkout from reappearing in the APK release pipeline."
+    "Add regression coverage to prevent the missing checkout from reappearing in the APK release pipeline.",
+    "Fix broken SMS regression test Python syntax that blocks mandatory main APK CI, while preserving real SMS account ownership assertions."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
     ".github/workflows/android.yml",
-    "test/qa/m460_main_apk_ci_checkout_test.py"
+    "test/qa/m460_main_apk_ci_checkout_test.py",
+    "test/qa/m452_sms_review_signup_regression_test.py"
   ],
   "bounded_sections": {
     ".github/workflows/android.yml": [
