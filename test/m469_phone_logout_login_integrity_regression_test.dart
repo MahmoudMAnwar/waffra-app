@@ -25,6 +25,25 @@ void main() {
       phone:phone,password:password),isTrue);
   });
 
+  test('M469 generated clipboard password survives register and re-login byte-for-byte',()async{
+    // Include common generator symbols, whitespace, and non-ASCII characters.
+    // Passwords are secrets: never trim, case-fold or normalize them on paste.
+    const generated='qW7!@#-_=$%*& Àز9  ';
+    final record=await WaffraLocalPhoneCredentials.deriveRecord(
+      phone:phone,password:generated,testSalt:List<int>.filled(32,26));
+    final saved=jsonEncode(record);
+    expect(await WaffraLocalPhoneCredentials.canResumeRecord(saved,
+      phone:phone,password:generated),isTrue);
+    expect(await WaffraLocalPhoneCredentials.canResumeRecord(saved,
+      phone:phone,password:generated.trim()),isFalse);
+    expect(await WaffraLocalPhoneCredentials.canResumeRecord(saved,
+      phone:phone,password:generated.toLowerCase()),isFalse);
+    final main=File('lib/main.dart').readAsStringSync();
+    expect(main,contains('phone:phone.text.trim(),password:password.text'));
+    expect(main,contains('phone:enteredPhone,password:signInPassword.text'));
+    expect(main,isNot(contains('password:signInPassword.text.trim()')));
+  });
+
   test('M469 invalid phone or password cannot unlock or rotate saved credentials',()async{
     final record=await WaffraLocalPhoneCredentials.deriveRecord(
       phone:phone,password:password,testSalt:List<int>.filled(32,24));
