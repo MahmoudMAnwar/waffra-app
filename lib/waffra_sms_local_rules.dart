@@ -174,6 +174,7 @@ abstract final class WaffraSmsLocalRules {
   String category='',bool confidentOnly=false,
  }) {
   if(sender.trim().isEmpty||sender.length>64||
+     (confidentOnly&&sender.trim().length<3)||
      !const <String>{'income','expense','transfer','excluded'}
       .contains(kind))return null;
   final facts=WaffraBankSmsFactsParser.parse(body);
@@ -227,8 +228,12 @@ abstract final class WaffraSmsLocalRules {
    sender:sender.trim(),keywords:safe.toSet().take(6).toList(),
    matchAll:false,autoPost:false,
   );
-  try{validate(rule);return rule;}
-  on FormatException{return null;}
+  try{
+   validate(rule);
+   // Never store a proposal which does not match the exact reviewed SMS.
+   if(!matches(rule,body,sender:sender))return null;
+   return rule;
+  }on FormatException{return null;}
  }
 
  static void validate(WaffraSmsLocalRule rule){
