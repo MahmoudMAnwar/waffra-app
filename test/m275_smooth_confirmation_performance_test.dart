@@ -153,7 +153,13 @@ void main() {
 
   test('P0: all app finance entry points use the safe feedback boundary',(){
     final code=File('lib/main.dart').readAsStringSync();
-    expect(code,contains('return _saveProgress.track<void>('));
+    // M468 preserves the same progress controller but sequences preparation and
+    // commits to prevent out-of-order financial writes.
+    expect(code,contains('final saving=_saveProgress.track<void>('));
+    expect(code,contains('final previousWrite=_m468PersistSequence;'));
+    expect(code,contains('await previousWrite;'));
+    expect(code,contains('_m468PersistSequence=saving.then<void>('));
+    expect(code,contains('return saving;'));
     expect(code,contains("'persist-financial-change'"));
     expect(code,contains("'commit-confirmed-bank-sms'"));
     expect(code,contains("'waffra-bank-sms-save-progress'"));
