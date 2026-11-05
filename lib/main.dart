@@ -2078,22 +2078,42 @@ class _LoginScreenState extends State<LoginScreen> {
  String? provider;
  Person? registered;
  bool signInMode=false,showSignInPassword=false,signingIn=false,signInAttempted=false;
+ bool registeredLoading=true;
+ String? registeredReadError;
  String? signInAuthError;
  bool returnAfterLogout=false;String lastMethod='Local',lastEmail='',lastPhone='';
  final signInPhone=TextEditingController(),signInPassword=TextEditingController();
  @override void initState(){super.initState();_loadRegistered();}
  Future<void> _loadRegistered()async{
-  final prefs=await SharedPreferences.getInstance();
-  final signedOut=prefs.getBool('waffra_signed_out_explicitly')??false;
-  if(mounted)setState((){
-   returnAfterLogout=signedOut;
-   lastMethod=prefs.getString('waffra_last_login_method')??'Local';
-   lastEmail=prefs.getString('waffra_last_login_email')??'';
-   lastPhone=prefs.getString('waffra_last_login_phone')??'';
-  });
-  final raw=prefs.getString('waffra_registered_profile');
-  if(raw==null)return;
-  try{final u=Person.fromJson(Map<String,dynamic>.from(jsonDecode(raw)));if(mounted)setState((){registered=u;signInMode=!signedOut;signInPhone.text=WaffraSaudiMobile.inputFromStored(u.phone);});}catch(_){ }
+  try{
+   final prefs=await SharedPreferences.getInstance();
+   final signedOut=prefs.getBool('waffra_signed_out_explicitly')??false;
+   final raw=prefs.getString('waffra_registered_profile');
+   // A corrupt existing account must NEVER be mistaken for a new install.
+   final existing=raw==null?null:Person.fromJson(
+    Map<String,dynamic>.from(jsonDecode(raw) as Map));
+   if(!mounted)return;
+   setState((){
+    returnAfterLogout=signedOut;
+    lastMethod=prefs.getString('waffra_last_login_method')??'Local';
+    lastEmail=prefs.getString('waffra_last_login_email')??'';
+    lastPhone=prefs.getString('waffra_last_login_phone')??'';
+    registered=existing;
+    // Returning phone users see the password form immediately,
+    // not an intermediate welcome/continue screen.
+    signInMode=existing!=null&&existing.provider.toLowerCase()=='phone';
+    signInPhone.text=existing==null?'':WaffraSaudiMobile.inputFromStored(existing.phone);
+    registeredLoading=false;
+    registeredReadError=null;
+   });
+  }catch(_){
+   if(mounted)setState((){
+    registeredLoading=false;
+    registeredReadError=waffraIsEnglish?
+     'Account details could not be verified. Nothing changed. Retry.':
+     'تعذر التحقق من بيانات الحساب. لم تتغير بياناتك. حاول مجددًا.';
+   });
+  }
  }
  @override void dispose(){signInPhone.dispose();signInPassword.dispose();super.dispose();}
  Future<void> _signIn()async{
@@ -2241,6 +2261,23 @@ class _LoginScreenState extends State<LoginScreen> {
  }
  
  @override Widget build(BuildContext context){
+  if(registeredLoading)return const Scaffold(
+   body:Center(child:CircularProgressIndicator()));
+  if(registeredReadError!=null)return Scaffold(body:Center(
+   child:Padding(padding:const EdgeInsets.all(24),
+    child:Column(mainAxisSize:MainAxisSize.min,children:[
+     WaffraText(registeredReadError!,textAlign:TextAlign.center),
+     const SizedBox(height:16),
+     FilledButton(onPressed:(){
+      setState((){registeredLoading=true;registeredReadError=null;});
+      _loadRegistered();
+     },child:WaffraText(waffraIsEnglish?'Retry':'إعادة المحاولة')),
+    ]))));
+  // New users land on the WHOLE phone-registration form immediately.
+  // No separate welcome/choose-provider step.
+  if(registered==null)return ProfileForm(
+   key:const Key('waffra-initial-single-page-registration'),
+   provider:'Phone',onSave:widget.onSave);
   if(provider!=null)return ProfileForm(provider:'Phone',onSave:widget.onSave,
    onBack:()=>setState(()=>provider=null));
   final hasExisting=registered!=null;
@@ -2487,7 +2524,9 @@ class _ProfileFormState extends State<ProfileForm> {
   return Scaffold(
    appBar:AppBar(title:WaffraText(waffraIsEnglish?
     'Create a Waffra account':'إنشاء حساب وفرة'),
-    leading:IconButton(onPressed:WaffraHaptics.tap(widget.onBack),
+    automaticallyImplyLeading:false,
+    leading:widget.onBack==null?null:IconButton(
+     onPressed:WaffraHaptics.tap(widget.onBack),
      icon:const Icon(Icons.arrow_back))),
    body:SafeArea(child:ListView(
     key:const Key('waffra-register-single-page'),
