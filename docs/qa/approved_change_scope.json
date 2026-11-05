@@ -27,7 +27,7 @@
       },
       {
         "start": " Future<void> saveUser(Person u)async {\n",
-        "end": " Future<void> setUiCountry(\n"
+        "end": " Future<void> setUiCountry("
       },
       {
         "start": "   startupError!=null?Scaffold(",
