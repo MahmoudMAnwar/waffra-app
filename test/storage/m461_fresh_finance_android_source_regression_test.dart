@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:waffra/main.dart' show SavingGoal, RecurringBill, MoneyEntry, defaultCategories;
 import 'package:waffra/storage/waffra_atomic_finance_snapshot.dart';
+import 'package:waffra/storage/waffra_accounts_repository.dart';
 import 'package:waffra/storage/waffra_encrypted_cutover_journal.dart';
 import 'package:waffra/storage/waffra_encrypted_finance_session.dart';
 import 'package:waffra/storage/waffra_encrypted_store.dart';
@@ -58,6 +59,10 @@ void main() {
    authority:authority,
    defaultCategoriesJson:jsonEncode(
     defaultCategories().map((x)=>x.toJson()).toList()));
+  await WaffraAccountsRepository(db:store,experimentalEnabled:true)
+   .createAccount(id:'cash',name:'Cash',kind:'cash',
+    openingMinor:0,createdIso:'2026-11-05T00:00:00Z',
+    userConfirmed:true);
  });
  tearDown(()async{await store.close();if(await dir.exists())await dir.delete(recursive:true);});
 
@@ -122,7 +127,10 @@ void main() {
   ]){
    await authority.commitConfirmedManual(
     route:WaffraFinanceRoute.manualTransactionSave,
-    record:transaction.toJson(),userConfirmed:true);
+    record:transaction.toJson(),userConfirmed:true,
+    selectedAccountId:'cash',
+    expectedAccountGeneration:(await WaffraAtomicFinanceSnapshot(
+     store:store,experimentalEnabled:true).read()).generation);
   }
   final finalRead=await authority.load(route:WaffraFinanceRoute.dashboardRead);
   expect(jsonDecode(finalRead.ledgerRaw!) as List,hasLength(2));
