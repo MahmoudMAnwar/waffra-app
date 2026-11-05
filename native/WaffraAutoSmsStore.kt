@@ -276,6 +276,10 @@ object WaffraAutoSmsStore {
             (otherFinanceNotice.containsMatchIn(safe) ||
              debtNotice.containsMatchIn(safe))) return true
         if (safe.length < 18) return false
+        // A trusted institution may send a financial amount without the
+        // small v1 action-word set. Keep it in encrypted REVIEW; never post.
+        if (institutionalSender.containsMatchIn(sender) &&
+            money.containsMatchIn(safe) && digits.containsMatchIn(safe)) return true
         if (!action.containsMatchIn(safe) || !money.containsMatchIn(safe) ||
             !digits.containsMatchIn(safe)) return false
         // Unknown financial senders can be reviewed, but a phone number or
