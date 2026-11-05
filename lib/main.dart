@@ -6287,12 +6287,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
    if(initialSender.isNotEmpty&&reviewedAccounts.ids!=null){
     final committedIds=persisted.map((entry)=>entry.id).toSet();
+    // Account-learning evidence shares one encrypted owner key. Serialize
+    // confirmations so two entries in the same approved batch cannot race,
+    // overwrite one another, or lose the second confirmation.
     for(var n=0;n<additions.length;n++){
      if(n>=reviewedAccounts.ids!.length||
         !committedIds.contains(additions[n].id))continue;
-     unawaited(_recordConfirmedSmsAccountAssociation(
+     await _recordConfirmedSmsAccountAssociation(
       record:additions[n],sender:initialSender,
-      accountId:reviewedAccounts.ids![n]));
+      accountId:reviewedAccounts.ids![n]);
     }
    }
    setState((){
