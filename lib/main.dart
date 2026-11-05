@@ -4710,6 +4710,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    });
   }
  }
+ Future<void> _refreshWidget()async{
+  if(!Platform.isAndroid)return;
+  try{
+   await _ensureFinanceBound();
+   final verified=await _financeAuthority.load(
+    route:WaffraFinanceRoute.widgetBalanceRefresh);
+   await _publishVerifiedWidgetBalance(verified);
+  }catch(e){
+   debugPrint('Widget source unavailable: ${e.runtimeType}');
+   await refreshWaffraHomeWidget(
+    balance:'***',negative:false,hidden:true,
+    currency:WaffraDisplayCurrency.label(waffraIsEnglish));
+  }
+ }
  Future<void> _publishVerifiedWidgetBalance(
   WaffraFinanceAuthorityRead verified)async{
   if(!Platform.isAndroid)return;
@@ -4725,20 +4739,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     currency:WaffraDisplayCurrency.label(waffraIsEnglish));
   }catch(e){
    debugPrint('Verified widget balance refresh unavailable: ${e.runtimeType}');
-   await refreshWaffraHomeWidget(
-    balance:'***',negative:false,hidden:true,
-    currency:WaffraDisplayCurrency.label(waffraIsEnglish));
-  }
- }
- Future<void> _refreshWidget()async{
-  if(!Platform.isAndroid)return;
-  try{
-   await _ensureFinanceBound();
-   final verified=await _financeAuthority.load(
-    route:WaffraFinanceRoute.widgetBalanceRefresh);
-   await _publishVerifiedWidgetBalance(verified);
-  }catch(e){
-   debugPrint('Widget source unavailable: ${e.runtimeType}');
    await refreshWaffraHomeWidget(
     balance:'***',negative:false,hidden:true,
     currency:WaffraDisplayCurrency.label(waffraIsEnglish));
