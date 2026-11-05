@@ -1,20 +1,75 @@
 {
   "contract_version": 1,
-  "change_id": "CI-M228-post-M468-verified-pull-refresh-assertion-20261105",
-  "human_scope_review": "Owner reported a failed APK build on main 87bbc0d after approved PR #392/#393. GitHub job 127488700667 failed exactly one Python source regression: M228 still expects synchronous named-budget readList, while the M468-approved verified pull-refresh intentionally awaits WaffraLargeJsonDecode in a Flutter isolate. Change only the obsolete source assertion and add positive verification that budget decoding, legacy cap migration and read-only finance invariants remain. No finance implementation, schema, SQLCipher, permissions, authentication or Android workflow changes.",
+  "change_id": "M470-staged-32-approved-Waffra-corrections-20261106",
+  "human_scope_review": "Owner directed a new PR tracking 32 approved Waffra follow-up changes, with real implementation status for every numbered item and strict priority for broken money posts, recurrent due accounts, verified account selection, then UI. This candidate implements only the specifically confirmed M470 items described below. Items 1-23 and the other incompletely reconstructed requests are NOT silently marked done, and no production migration, account reattribution, default budget split, bank-sender guessing, or SQLCipher safety bypass is authorized. Exact-head CI and signed-device approval remain mandatory.",
   "user_requested_changes": [
-    "Repair the M228 Python regression assertion that blocks the owner's APK from main after the approved M468 async verified ledger and budget refresh, maintaining explicit positive integrity and legacy budget projection checks."
+    "Remove the unassigned-transactions option from the Home account selector, while safely resetting an old saved unassigned display preference to All accounts without discarding historical records.",
+    "Allow the user to choose a date in the verified internal transfer form, while preserving verified source/destination selection and stable duplicate-protected transfer intent.",
+    "Require a real verified financial account before confirming a recurring due or a cash-financed savings goal due; never inherit the selected Home account.",
+    "Repair the finance write refusal after selecting Paid on a recurring due by narrowing the fresh SQLCipher captured delta to the single new posting and the related postponed metadata, without weakening unrelated finance-data guards.",
+    "Maintain an explicit accurate 32-item implementation tracker showing complete, partial, unverified, and pending items rather than inventing Done results."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
+    "docs/qa/WAFFRA_32_NEW_CHANGES_M470_TRACKER.md",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "test/qa/m228_pull_refresh_live_wiring_test.py"
+    "lib/main.dart",
+    "lib/storage/waffra_home_transaction_capture.dart",
+    "lib/waffra_account_transaction_form.dart",
+    "lib/waffra_home_accounts_sheet.dart",
+    "test/m467_account_header_test.dart",
+    "test/m470_account_scope_and_transfer_date_test.dart",
+    "test/qa/m447_verified_sms_account_linking_test.py",
+    "test/storage/m470_recurring_payment_sqlcipher_integration_test.dart",
+    "test/storage/m470_verified_recurring_payment_capture_test.dart"
   ],
   "bounded_sections": {
-    "test/qa/m228_pull_refresh_live_wiring_test.py": [
+    "lib/main.dart": [
       {
-        "start": "    def test_refresh_only_changes_source_selection_not_named_budget_projection(self):",
-        "end": "\nif __name__ == \"__main__\":"
+        "start": " Future<void> _m468ReadVerifiedAccountsOnce()async{",
+        "end": "\n Future<void> openVerifiedAccounts()async{"
+      },
+      {
+        "start": " Future<({List<String?>? ids,int? generation})?> reviewSmsAccountLinks(",
+        "end": "\n/// Budget assignment is OPTIONAL"
+      }
+    ],
+    "lib/waffra_home_accounts_sheet.dart": [
+      {
+        "start": "     Flexible(child:ListView(shrinkWrap:true,children:[",
+        "end": "\n     const SizedBox(height:8),\n     OutlinedButton.icon("
+      }
+    ],
+    "lib/waffra_account_transaction_form.dart": [
+      {
+        "start": " late final DateTime requestTime=",
+        "end": "\n WaffraAccountOperation mode="
+      },
+      {
+        "start": "   if(mode==WaffraAccountOperation.transfer){",
+        "end": "\n   }else{"
+      },
+      {
+        "start": "    if(mode==WaffraAccountOperation.transfer)...[",
+        "end": "\n    if(mode!=WaffraAccountOperation.transfer)...["
+      }
+    ],
+    "lib/storage/waffra_home_transaction_capture.dart": [
+      {
+        "start": "    final allowed = switch (route) {",
+        "end": "\n    if (allowed.isEmpty) return;"
+      }
+    ],
+    "test/m467_account_header_test.dart": [
+      {
+        "start": " testWidgets(",
+        "end": "\n test('M467 Home header scope"
+      }
+    ],
+    "test/qa/m447_verified_sms_account_linking_test.py": [
+      {
+        "start": "    def test_verified_source_only_with_no_shadow_db(self):",
+        "end": "\n    def test_no_guarded_legacy_sms_account_override(self):"
       }
     ]
   }
