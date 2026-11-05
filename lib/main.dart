@@ -39,6 +39,7 @@ import 'package:crypto/crypto.dart';
 import 'waffra_biometrics.dart';
 import 'waffra_external_media_session.dart';
 import 'waffra_sms_sender_brand.dart';
+import 'waffra_large_json_decode.dart';
 import 'waffra_home_accounts_sheet.dart';
 import 'storage/waffra_account_context_read.dart';
 import 'waffra_mandatory_biometric_gate.dart';
@@ -5140,16 +5141,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final refreshSource=WaffraVerifiedPullRefreshSource.fromAuthority(current);
    final ledger=refreshSource.ledgerRaw;
    final catalog=refreshSource.categoriesRaw;
-   List<T> readList<T>(String? raw,T Function(Map<String,dynamic>) make) {
+   Future<List<T>> readList<T>(String? raw,T Function(Map<String,dynamic>) make) async {
     if(raw==null)return <T>[];
-    final parsed=jsonDecode(raw);
+    final parsed=await WaffraLargeJsonDecode.parse(raw);
     if(parsed is! List)throw const FormatException('Invalid finance list.');
     return parsed.map((e)=>make(Map<String,dynamic>.from(e as Map))).toList();
    }
-   final nextEntries=readList<MoneyEntry>(ledger,MoneyEntry.fromJson);
+   final nextEntries=await readList<MoneyEntry>(ledger,MoneyEntry.fromJson);
    final nextCategories=catalog==null
     ?defaultCategories()
-    :readList<BudgetCategory>(catalog,BudgetCategory.fromJson);
+    :await readList<BudgetCategory>(catalog,BudgetCategory.fromJson);
    if(current.source==WaffraRuntimeFinanceBackend.guardedLegacy){
     if(nextCategories.isEmpty)nextCategories.addAll(defaultCategories());
     for(final entry in nextEntries){
@@ -5159,7 +5160,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      }
     }
    }
-   final nextNamedBudgets=readList<WaffraNamedBudget>(
+   final nextNamedBudgets=await readList<WaffraNamedBudget>(
     view.getString('waffra_named_budgets_v1'),WaffraNamedBudget.fromJson);
    for(final c in nextCategories.where((c)=>!c.income&&c.budget>0)){
     if(!nextNamedBudgets.any((b)=>b.id==c.id)){
@@ -5169,17 +5170,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // Legacy category caps remain in the source UNTIL a single verified
    // finance batch commits BOTH new budget rows and cleared category caps.
    // Never clear category caps during a catalog upgrade or read-only refresh.
-   final nextGoals=readList<SavingGoal>(
+   final nextGoals=await readList<SavingGoal>(
     view.getString('waffra_goals_v24'),SavingGoal.fromJson);
-   final nextRecurring=readList<RecurringBill>(
+   final nextRecurring=await readList<RecurringBill>(
     view.getString('waffra_recurring_v24'),RecurringBill.fromJson);
-   final nextChallenges=readList<SavingChallenge>(
+   final nextChallenges=await readList<SavingChallenge>(
     view.getString('waffra_challenges_v1'),SavingChallenge.fromJson);
-   List<Map<String,dynamic>> readTrash(String key)=>readList<Map<String,dynamic>>(
+   Future<List<Map<String,dynamic>>> readTrash(String key)=>readList<Map<String,dynamic>>(
     view.getString(key),(row)=>row);
-   final nextCategoryTrash=readTrash('waffra_deleted_categories_v1');
-   final nextGoalTrash=readTrash('waffra_deleted_goals_v1');
-   final nextRecurringTrash=readTrash('waffra_deleted_recurring_v1');
+   final nextCategoryTrash=await readTrash('waffra_deleted_categories_v1');
+   final nextGoalTrash=await readTrash('waffra_deleted_goals_v1');
+   final nextRecurringTrash=await readTrash('waffra_deleted_recurring_v1');
    Map<String,String> readStringMap(String key) {
     final raw=view.getString(key);
     if(raw==null)return <String,String>{};
@@ -5250,11 +5251,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   _lastWidgetRevision=loadedFinance.widgetRevision;
   _lastLedgerSavedRaw=loadedFinance.ledgerRaw;
-  try{final raw=financeView.getString('entries');if(raw!=null)entries.addAll((jsonDecode(raw) as List).map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved transactions cannot be decoded safely: $e');}
-  try{final raw=financeView.getString('waffra_categories_v24');categories.addAll(raw==null?defaultCategories():(jsonDecode(raw) as List).map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved categories cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('entries');if(raw!=null)entries.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved transactions cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_categories_v24');categories.addAll(raw==null?defaultCategories():(await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved categories cannot be decoded safely: $e');}
   try{
    final raw=financeView.getString('waffra_named_budgets_v1');
-   if(raw!=null)namedBudgets.addAll((jsonDecode(raw) as List).map(
+   if(raw!=null)namedBudgets.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map(
     (x)=>WaffraNamedBudget.fromJson(Map<String,dynamic>.from(x))));
    for(final c in categories.where((c)=>!c.income&&c.budget>0)){
     if(!namedBudgets.any((b)=>b.id==c.id)){
@@ -5262,16 +5263,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
    }
   }catch(e){throw StateError('Saved independent budgets are invalid: $e');}
-  try{final raw=financeView.getString('waffra_goals_v24');if(raw!=null)goals.addAll((jsonDecode(raw) as List).map((x)=>SavingGoal.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved goals cannot be decoded safely: $e');}
-  try{final raw=financeView.getString('waffra_recurring_v24');if(raw!=null)recurring.addAll((jsonDecode(raw) as List).map((x)=>RecurringBill.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved recurring finance cannot be decoded safely: $e');}
-  try{final raw=financeView.getString('waffra_challenges_v1');if(raw!=null)challenges.addAll((jsonDecode(raw) as List).map((e)=>SavingChallenge.fromJson(Map<String,dynamic>.from(e))));}catch(e){throw StateError('Saved challenges cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_goals_v24');if(raw!=null)goals.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>SavingGoal.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved goals cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_recurring_v24');if(raw!=null)recurring.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>RecurringBill.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved recurring finance cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_challenges_v1');if(raw!=null)challenges.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map((e)=>SavingChallenge.fromJson(Map<String,dynamic>.from(e))));}catch(e){throw StateError('Saved challenges cannot be decoded safely: $e');}
   try{
    final raw=financeView.getString('waffra_deleted_categories_v1');
-   if(raw!=null)deletedCategories.addAll((jsonDecode(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));
+   if(raw!=null)deletedCategories.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));
   }catch(e){throw StateError('Deleted categories cannot be decoded safely: $e');}
-  try{final raw=financeView.getString('waffra_deleted_goals_v1');if(raw!=null)deletedGoals.addAll((jsonDecode(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));}catch(e){throw StateError('Deleted goals cannot be decoded safely: $e');}
-  try{final raw=financeView.getString('waffra_deleted_recurring_v1');if(raw!=null)deletedRecurring.addAll((jsonDecode(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));}catch(e){throw StateError('Deleted recurring cannot be decoded safely: $e');}
-  try{final raw=financeView.getString('waffra_recurring_postponed_v1');if(raw!=null)recurringPostponed.addAll((jsonDecode(raw) as Map).map((k,v)=>MapEntry(k.toString(),v.toString())));}catch(e){throw StateError('Recurring postponements cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_deleted_goals_v1');if(raw!=null)deletedGoals.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));}catch(e){throw StateError('Deleted goals cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_deleted_recurring_v1');if(raw!=null)deletedRecurring.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));}catch(e){throw StateError('Deleted recurring cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_recurring_postponed_v1');if(raw!=null)recurringPostponed.addAll((await WaffraLargeJsonDecode.parse(raw) as Map).map((k,v)=>MapEntry(k.toString(),v.toString())));}catch(e){throw StateError('Recurring postponements cannot be decoded safely: $e');}
   // The user's device clock cannot purge or hide encrypted SQL tombstones.
   // Deletion/expiry requires independently verified encrypted retention.
   final trashBefore=deletedCategories.length;
@@ -5417,7 +5418,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   try{
    final rawRules=financeView.getString('waffra_learned_merchants_v1');
    if(rawRules!=null){
-    final data=jsonDecode(rawRules);
+    final data=await WaffraLargeJsonDecode.parse(rawRules);
     if(data is Map){
      learnedMerchantCategories.addAll(data.map((key,value)=>MapEntry(key.toString(),value.toString())));
     }

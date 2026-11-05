@@ -7,7 +7,8 @@
     "Add verified all-accounts/individual/unassigned header selector without making the selected header account the source of a new finance entry.",
     "Preserve manual inputs across native camera/gallery round trip and skip biometric only for that bounded user-invoked media activity.",
     "Render the verified Home all-account, individual account, unassigned and manage-accounts selector with header balance/transaction projections. Persist only per-user display preference. Never assign a new money posting by current header.",
-    "M468: reduce application lag after manual income/expense/transfers, goal and recurring saves, first-run and pull-to-refresh by coalescing overlapping verified account reads, skipping full all-account ledger scans, and suppressing redundant native picker/resume SMS history scans without altering financial source authority."
+    "M468: reduce application lag after manual income/expense/transfers, goal and recurring saves, first-run and pull-to-refresh by coalescing overlapping verified account reads, skipping full all-account ledger scans, and suppressing redundant native picker/resume SMS history scans without altering financial source authority.",
+    "M468: decode large verified first-run and pull-refresh ledger/category snapshots in a background Flutter isolate to prevent expensive main-isolate JSON parsing from blocking loading indicators, without editing or bypassing any SQLCipher validation."
   ],
   "allowed_changed_files": [
     "lib/waffra_external_media_session.dart",
@@ -19,7 +20,9 @@
     "lib/waffra_home_accounts_sheet.dart",
     "test/m467_account_header_test.dart",
     "test/m371_goal_wallet_and_budgets_regression_test.dart",
-    "test/m468_app_refresh_performance_regression_test.dart"
+    "test/m468_app_refresh_performance_regression_test.dart",
+    "lib/waffra_large_json_decode.dart",
+    "test/m468_large_ledger_decode_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -70,6 +73,10 @@
       {
         "start": " // Account settings open from the app bar instead of a footer destination.",
         "end": " void _returnToHome(){"
+      },
+      {
+        "start": " Future<void> load()async {\n  await _ensureFinanceBound();",
+        "end": " Future<void> _refreshWidget()async{"
       }
     ],
     "test/m371_goal_wallet_and_budgets_regression_test.dart": [

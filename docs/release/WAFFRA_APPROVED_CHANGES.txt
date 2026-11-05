@@ -1,3 +1,8 @@
+[M468] Verified large ledger parse off UI isolate
+- On initial install and manual pull-to-refresh, authenticated and integrity-checked finance JSON above 64 KiB decodes using Flutter compute; small payloads use the existing exact decoder. Invalid JSON still fails closed and never shows a fabricated balance.
+- Keeps finance authority, confirmation, SQLCipher writer, and widget reconciliation unchanged; optimize only read-side JSON decoding. Adds 5000-record round-trip and invalid-snapshot regression.
+- Real Android frame-time measurements remain required for an actual performance improvement claim.
+
 [M468] Shared performance work for owner-approved Home/finance interactions (2026-11-05)
 - Coalesce overlapping encrypted account reads, and perform at most one trailing read for an intervening new save. The all-accounts header now reads witnessed balances but skips full account-to-entry/budget/goal projection unless a narrower filter needs it.
 - Reuse the verified account snapshot to show the account selector without forcing another storage read on every tap; the next read refreshes after selection or a committed write.
