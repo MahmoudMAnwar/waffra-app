@@ -19,10 +19,12 @@
     "lib/storage/waffra_verified_finance_authority.dart",
     "lib/waffra_account_transaction_form.dart",
     "lib/waffra_auto_sms.dart",
+    "lib/waffra_sms_account_learning.dart",
     "native/WaffraAutoSmsStore.kt",
     "native/WaffraMainActivity.kt",
     "test/m429_sms_phone_integration_test.dart",
     "test/m461_sms_exclusion_and_history_scan_test.dart",
+    "test/m464_sms_account_learning_test.dart",
     "test/m464_sms_bulk_rescan_regression_test.dart",
     "test/qa/m417_sms_permission_acceptance_test.py",
     "test/storage/m464_manual_unassigned_transfer_access_regression_test.dart"
@@ -52,6 +54,18 @@
       {
         "start": " Future<({List<String?>? ids,int? generation})?> reviewSmsAccountLinks(",
         "end": "/// Budget assignment is OPTIONAL in every bank import:"
+      },
+      {
+        "start": "import 'waffra_sms_local_rules.dart';",
+        "end": "import 'waffra_sms_rule_settings_page.dart';"
+      },
+      {
+        "start": "  for(var n=0;n<additions.length;n++){\n   additions[n]=additions[n].withBudget(reviewedBudgets[n]);",
+        "end": "   setState((){\n    entries..clear()..addAll(persisted);"
+      },
+      {
+        "start": "       final budgetSelection=await reviewSmsBudgetLinks([entry]);",
+        "end": "       final verified=(jsonDecode(committed.current.ledgerRaw??'[]') as List)"
       }
     ],
     "lib/waffra_account_transaction_form.dart": [
