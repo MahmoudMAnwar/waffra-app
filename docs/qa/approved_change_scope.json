@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M462-reuse-safe-income-expense-transfer-exclusion-buckets-20261105",
-  "human_scope_review": "Owner explicitly approved the simple three-screen Arabic concept on 2026-11-05: understood messages create classification rules automatically; uncertain messages open an editable rule with sender, type, safe keywords and category prefilled as far as available. This PR is stacked on M461 to preserve its proven Android SQLCipher and SMS fixes, is draft, and requires exact-head CI, independent human code scope approval and signed real phone testing before release. Neither rule learning nor UI changes may authorize any ledger writes or expose raw OTPs. Follow-up owner explicitly requested parallel PR work and reuse of existing automatic income/expense/transfer/excluded rule buckets when new manual or scanned classifications are confirmed; never silently add a fresh rule for every event. Preserve distinct financial category per safe phrase rather than overwriting a global category, and never alter custom auto-post permission. Same-day follow-up: owner wants bank SMS to request budget selection if active budgets exist and to allow background posting without one otherwise; finance posting remains subject to the existing explicit per-rule authorization and verified account. Change to background worker is a restriction on posting scope, not a new auto-post permission. Owner 2026-11-05 expanded automatic learning to internal transfers and verified excluded SMS. Background exclusions are classified before permission to post money and never mutate ledger.",
+  "human_scope_review": "Owner explicitly approved the simple three-screen Arabic concept on 2026-11-05: understood messages create classification rules automatically; uncertain messages open an editable rule with sender, type, safe keywords and category prefilled as far as available. This PR is stacked on M461 to preserve its proven Android SQLCipher and SMS fixes, is draft, and requires exact-head CI, independent human code scope approval and signed real phone testing before release. Neither rule learning nor UI changes may authorize any ledger writes or expose raw OTPs. Follow-up owner explicitly requested parallel PR work and reuse of existing automatic income/expense/transfer/excluded rule buckets when new manual or scanned classifications are confirmed; never silently add a fresh rule for every event. Preserve distinct financial category per safe phrase rather than overwriting a global category, and never alter custom auto-post permission. Same-day follow-up: owner wants bank SMS to request budget selection if active budgets exist and to allow background posting without one otherwise; finance posting remains subject to the existing explicit per-rule authorization and verified account. Change to background worker is a restriction on posting scope, not a new auto-post permission. Owner 2026-11-05 expanded automatic learning to internal transfers and verified excluded SMS. Background exclusions are classified before permission to post money and never mutate ledger. Reviewed transfer transaction form and manager callbacks were added for explicitly selected source and target accounts. No automatic transfer posting.",
   "user_requested_changes": [
     "Recognize a verified bank SMS using its independent directional facts and specific built-in category, then securely save a deduplicated sender-scoped local classification rule without another multi-step setup dialog after the user confirms the transaction.",
     "When classification is uncertain, immediately open a pre-populated beginner-friendly rule form containing a suggested name, actual sender, safe phrase chips, known kind and previously verified category where available, with advanced keyword and optional account controls collapsed.",
@@ -13,7 +13,8 @@
     "If the same phrase maps to contradictory categories, leave the existing encrypted rule unchanged and require human review. Existing explicit user-defined and auto-post authorizations remain immutable under automatic learning.",
     "Group the automatically learned classification list under clear income, expense, transfer and exclusion sections, keeping manual user-created rules separate and their settings unchanged.",
     "When a trusted, separately authorized SMS rule permits automatic posting, save without an invented budget only if no active named or historical budget needs user selection; otherwise keep the bank SMS encrypted for review and Android notification. Never infer, auto-create or silently assign a budget; keep account, transfer and duplicate-post guards intact.",
-    "Classify manual transfers with a senderless non-posting transfer bucket; in Android background, acknowledge only sender-scoped, confirmed nonfinancial exclusion matches, never financial, transfer or settlement messages; do not require finance writer or auto-post authority to exclude safely."
+    "Classify manual transfers with a senderless non-posting transfer bucket; in Android background, acknowledge only sender-scoped, confirmed nonfinancial exclusion matches, never financial, transfer or settlement messages; do not require finance writer or auto-post authority to exclude safely.",
+    "Prefill already-reviewed bank SMS into transfer mode with stable request id, amount and date; lock the form to transfer, require two explicit account choices and verified SQLCipher transfer callback. After separately confirmed manual transfer, invoke optional safe learning callback."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
@@ -22,7 +23,9 @@
     "lib/waffra_sms_local_rules.dart",
     "lib/waffra_sms_rule_settings_page.dart",
     "test/m462_smart_sms_rule_review_test.dart",
-    "lib/waffra_auto_sms_autopost.part.dart"
+    "lib/waffra_auto_sms_autopost.part.dart",
+    "lib/waffra_account_transaction_form.dart",
+    "lib/waffra_accounts_manager_page.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -74,6 +77,18 @@
     "lib/waffra_auto_sms_autopost.part.dart": [
       {
         "start": "abstract final class WaffraAutoSmsAutoPoster {\n",
+        "end": null
+      }
+    ],
+    "lib/waffra_account_transaction_form.dart": [
+      {
+        "start": "class WaffraAccountTransactionForm extends StatefulWidget {\n",
+        "end": null
+      }
+    ],
+    "lib/waffra_accounts_manager_page.dart": [
+      {
+        "start": "class WaffraAccountsManagerPage extends StatefulWidget {\n",
         "end": null
       }
     ]

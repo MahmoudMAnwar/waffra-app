@@ -12,8 +12,9 @@ class WaffraAccountsManagerPage extends StatefulWidget {
  const WaffraAccountsManagerPage({
   super.key,required this.repository,this.english=false,this.onConfirmEntry,
   this.incomeCategories=const [],this.expenseCategories=const [],
-  this.availableBudgets=const {},
+  this.availableBudgets=const {},this.onTransferConfirmed,
  });
+ final Future<void> Function(WaffraInternalTransferDraft)? onTransferConfirmed;
  final WaffraAccountOperations repository;
  final bool english;
  final List<String> incomeCategories,expenseCategories;
@@ -160,6 +161,8 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
        toAccountId:draft.toId,amountMinor:draft.amountMinor,
        occurredIso:draft.occurredIso,
        note:draft.memo,userConfirmed:true);
+      // Learning failures cannot retry or roll back a verified transfer.
+      try{await widget.onTransferConfirmed?.call(draft);}catch(_){}
      },
     ))));
   reload();
