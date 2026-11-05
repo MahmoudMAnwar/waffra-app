@@ -1121,6 +1121,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  bool _biometricVerifiedAwaitingResume=false;
  bool googleFirstRunSetup=false;
  bool autoSmsConsentPending=false;
+ // True only after a new account was saved or a password challenge passed.
+ // A restored session must unlock before its first SMS permission request.
+ bool _smsConsentAfterVerifiedSignIn=false;
  String appearance='light';
  bool introDone=false;
  int _greetingCycle=0;
@@ -1233,7 +1236,10 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   if(!await p.setBool(WaffraAutoSms.firstRunKey,true)){
    throw StateError('Could not persist SMS onboarding decision');
   }
-  if(mounted)setState(()=>autoSmsConsentPending=false);
+  if(mounted)setState((){
+   autoSmsConsentPending=false;
+   _smsConsentAfterVerifiedSignIn=false;
+  });
  }
  Future<void> intro()async {
   final p=await SharedPreferences.getInstance();await p.setBool('waffra_onboarding_completed',true);
@@ -1269,6 +1275,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    !(prefs.getBool(WaffraAutoSms.firstRunKey)??false);
   if(mounted)setState((){
    if(needsSmsAccessAfterRegistration)autoSmsConsentPending=true;
+   // Once the account has been verified, first-run permissions precede
+   // the biometric gate. This does NOT apply to a restored, locked session.
+   _smsConsentAfterVerifiedSignIn=needsSmsAccessAfterRegistration;
    // First phone/password login and new registration require biometrics.
    // Editing a profile in an already-unlocked session does not re-lock.
    final freshSession=profile==null||showLogin;
@@ -1563,13 +1572,14 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     const SizedBox(height:8),
     FilledButton(onPressed:WaffraHaptics.tap((){setState((){loading=true;startupError=null;});load();}),child:const WaffraText('إعادة المحاولة')),
    ])))):
-   autoSmsConsentPending?WaffraAutoSmsConsentPage(
-    english:language=='en',onComplete:finishSmsPermissionChoice):
    profile==null||showLogin||((profile!.phone.trim().isEmpty)&&
     (profile!.provider.toLowerCase().contains('local')||
      profile!.provider.contains('محلي')||
      profile!.provider.toLowerCase().contains('guest')||
      profile!.provider.toLowerCase().contains('demo')))?LoginScreen(onSave:saveUser):
+   (autoSmsConsentPending&&_smsConsentAfterVerifiedSignIn)?
+    WaffraAutoSmsConsentPage(
+     english:language=='en',onComplete:finishSmsPermissionChoice):
    locked?WaffraMandatoryBiometricGate(
     english:language=='en',
     onVerified:(){
@@ -1587,6 +1597,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     },
     onSignOut:logout,
    ):
+   // Updated installs unlock their existing profile before requesting access.
+   autoSmsConsentPending?WaffraAutoSmsConsentPage(
+    english:language=='en',onComplete:finishSmsPermissionChoice):
    googleFirstRunSetup&&WaffraSaudiRelease.locationCountryOnboarding?WaffraCountryFirstRunPage(
      english:language=='en',onComplete:completeGoogleCountrySetup,
      onCountryConfirmed:setUiCountry):
