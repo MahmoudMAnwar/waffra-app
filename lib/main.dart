@@ -6954,6 +6954,64 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
     return;
    }
+   // M457: confirmed manual additions use the same atomic Home/Widget
+   // SQLCipher append writer as reviewed bank SMS. Do NOT reserialize or
+   // replace pre-existing ledger rows from a cached Home screen.
+   if(initial==null&&result.sourceType=='manual'&&
+      (result.receiptPath==null||result.receiptPath!.isEmpty)&&
+      _lastFinanceAuthorityRead?.source==
+       WaffraRuntimeFinanceBackend.verifiedEncrypted){
+    try{
+     await _saveProgress.track<void>(
+      'commit-confirmed-manual',()=>_financialWriteQueue.submit(
+       <String,Object>{'record':jsonEncode(result.toJson())},
+       (captured)async{
+        await _ensureFinanceBound();
+        final committed=await _financeAuthority.commitConfirmedManual(
+         route:WaffraFinanceRoute.manualTransactionSave,
+         record:Map<String,Object?>.from(
+          jsonDecode(captured['record'] as String) as Map),
+         userConfirmed:true,
+         selectedAccountId:chosenManual?.ids?.single,
+         expectedAccountGeneration:chosenManual?.ids?.single==null?
+          null:chosenManual?.generation,
+        );
+        final raw=committed.ledgerRaw;
+        if(raw==null)throw StateError('Confirmed manual ledger missing.');
+        final decoded=jsonDecode(raw);
+        if(decoded is! List)throw StateError('Confirmed manual ledger invalid.');
+        final verified=decoded.map((item)=>MoneyEntry.fromJson(
+          Map<String,dynamic>.from(item as Map))).toList();
+        if(!verified.any((item)=>item.id==result.id)){
+         throw StateError('Confirmed manual entry absent from verified ledger.');
+        }
+        _lastFinanceAuthorityRead=committed;
+        _lastLedgerSavedRaw=raw;
+        _lastWidgetRevision=committed.widgetRevision;
+        if(mounted){
+         setState((){entries..clear()..addAll(verified);});
+         unawaited(_refreshWidget());
+        }
+       },
+      ),
+     );
+    }catch(error){
+     // A write may have committed before a later source read failed. Never
+     // claim 'previous data unchanged' or let a retry create a ghost debit.
+     debugPrint('M457 manual commit rejected: ${error.runtimeType}');
+     if(mounted){
+      await _loadFinanceSafely();
+      if(mounted)snack(context,waffraIsEnglish?
+       'Manual save could not be confirmed. Verified records were refreshed before retry. (M457)':
+       'لم يتأكد حفظ العملية اليدوية. تم تحديث البيانات المحفوظة قبل إعادة المحاولة. (M457)');
+     }
+     for(final copy in stagedReceiptCopies){
+      try{final file=File(copy);if(await file.exists())await file.delete();}
+      catch(_){}
+     }
+     return;
+    }
+   }else{
    // Optimistic in-memory edits must roll back if durable save is rejected.
    // A spinner is NOT proof of a completed financial write.
    final previousEntries=List<MoneyEntry>.of(entries);
@@ -7010,6 +7068,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       'تم حفظ المعاملة، لكن بصمة الرسالة تحتاج مراجعة.');
      return;
     }
+   }
    }
   }
   if(mounted)await budgetAlert(result,previousSpent);
