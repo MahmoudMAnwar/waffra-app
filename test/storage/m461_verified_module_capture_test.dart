@@ -53,7 +53,9 @@ void main() {
   });
 
   test('entry editing submits only entry projection after verified read', () {
-    final capture = displayed()..['entries']='[{"id":"txn-1"}]';
+    final capture = displayed()..['entries']='[{"id":"txn-1"}]'
+      ..['waffra_goals_v24']='[]'
+      ..['waffra_recurring_v24']='[]';
     WaffraHomeTransactionCapture.narrowVerifiedModuleEdit(
       route: WaffraFinanceRoute.transactionEdit,
       source: encrypted, snapshot: capture, witnessedValues: fresh);
