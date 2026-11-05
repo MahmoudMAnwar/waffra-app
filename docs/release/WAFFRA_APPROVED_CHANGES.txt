@@ -1,3 +1,8 @@
+[M467] Home header verified account selector completed in draft PR
+- Shows all accounts, each active verified money account with a witnessed SQLCipher balance, unassigned entry filter and Manage Accounts. Visible transaction rows, income/expense summaries and balance header follow the account filter; overall budgets and goal wallet stay independent.
+- Selected display account is a profile-scoped preference only; not used to choose the bank account for any manual, SMS, goal or recurring transaction. Unassigned entries remain in overall reports but do not change any money-account balance.
+- Android picker and redesigned bank SMS review stay in the same PR. Requires exact-head CI and phone camera/gallery acceptance.
+
 [M467 draft] Owner-approved SMS review, accounts header and camera return (Nov 5, 2026)
 - Introduced bounded external-media lifecycle policy and sender bank-mark components with fixed allowlisted public favicon URLs; never transmit SMS text.
 - Main UI wiring, account-context selector and exact head regression are being added to this same draft PR. No finance schema or write path changes.

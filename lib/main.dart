@@ -39,6 +39,8 @@ import 'package:crypto/crypto.dart';
 import 'waffra_biometrics.dart';
 import 'waffra_external_media_session.dart';
 import 'waffra_sms_sender_brand.dart';
+import 'waffra_home_accounts_sheet.dart';
+import 'storage/waffra_account_context_read.dart';
 import 'waffra_mandatory_biometric_gate.dart';
 import 'waffra_local_phone_credentials.dart';
 import 'waffra_local_account_migration.dart';
@@ -3459,6 +3461,114 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   _financeAuthority=binding.authority;
  }
 
+ // Account filters are presentation-only; never inherit them for new money.
+ List<WaffraAccountBalance> _m467Accounts=const <WaffraAccountBalance>[];
+ WaffraAccountContextReadResult? _m467AccountContext;
+ String _m467SelectedAccount='all';
+ bool _m467AccountChoiceRestored=false;
+
+ String get _m467ChoiceKey{
+  final owner=widget.profile.provider+'|'+widget.profile.phone.trim()+
+   '|'+widget.profile.email.trim().toLowerCase();
+  final hash=sha256.convert(utf8.encode(owner)).toString();
+  return 'waffra_home_account_display_'+hash.substring(0,20);
+ }
+
+ Future<void> _m467RefreshHomeAccounts()async{
+  try{
+   await _ensureFinanceBound();
+   final bridge=_financeBinding?.accountsBridge;
+   if(bridge==null)throw StateError('No verified account bridge');
+   final api=WaffraVerifiedAccountsApi(bridge:bridge);
+   final accounts=await api.balances();
+   var chosen=_m467SelectedAccount;
+   if(!_m467AccountChoiceRestored){
+    final p=await SharedPreferences.getInstance();
+    chosen=p.getString(_m467ChoiceKey)??'all';
+   }
+   if(chosen!='all'&&chosen!='none'&&
+      !accounts.any((a)=>!a.archived&&a.id==chosen))chosen='all';
+   final now=DateTime.now();
+   final month=now.year.toString().padLeft(4,'0')+'-'+
+    now.month.toString().padLeft(2,'0');
+   final contextView=await api.readAccountContext(
+    monthIso:month,
+    selectedAccountId:chosen=='all'||chosen=='none'?null:chosen);
+   if(!mounted)return;
+   setState((){
+    _m467Accounts=accounts.where((a)=>!a.archived).toList();
+    _m467AccountContext=contextView;
+    _m467SelectedAccount=chosen;
+    _m467AccountChoiceRestored=true;
+   });
+  }catch(error){
+   debugPrint('Home accounts view unavailable: '+error.runtimeType.toString());
+   if(!mounted)return;
+   // Never show a stale bank balance when verified SQL projection is absent.
+   setState((){
+    _m467Accounts=const <WaffraAccountBalance>[];
+    _m467AccountContext=null;
+    _m467SelectedAccount='all';
+    _m467AccountChoiceRestored=false;
+   });
+  }
+ }
+
+ String get _m467AccountLabel{
+  if(_m467SelectedAccount=='all')return (waffraIsEnglish?'All accounts':'كل الحسابات');
+  if(_m467SelectedAccount=='none')return (waffraIsEnglish?'Unassigned transactions':'عمليات بدون حساب');
+  for(final account in _m467Accounts){
+   if(account.id==_m467SelectedAccount)return account.name;
+  }
+  return (waffraIsEnglish?'All accounts':'كل الحسابات');
+ }
+
+ Iterable<MoneyEntry> _m467ScopedEntries(){
+  final selected=_m467SelectedAccount;
+  if(selected=='all')return entries;
+  final contextView=_m467AccountContext;
+  if(contextView==null)return const <MoneyEntry>[];
+  final ids=contextView.entries.where((item)=>selected=='none'?
+   item.accountId==null:item.accountId==selected).map((item)=>item.id).toSet();
+  return entries.where((entry)=>ids.contains(entry.id));
+ }
+
+ double _m467ShownBalance(){
+  if(_m467SelectedAccount=='all')return waffraAvailableCash(entries,goals);
+  if(_m467SelectedAccount=='none')return 0;
+  for(final a in _m467Accounts){
+   if(a.id==_m467SelectedAccount)return a.balanceMinor/100;
+  }
+  return 0;
+ }
+
+ Future<void> _m467PickHomeAccount()async{
+  await _m467RefreshHomeAccounts();
+  if(!mounted)return;
+  final next=await showModalBottomSheet<String>(
+   context:context,isScrollControlled:true,useSafeArea:true,
+   showDragHandle:true,
+   builder:(sheet)=>WaffraHomeAccountsSheet(
+    english:waffraIsEnglish,
+    selected:_m467SelectedAccount,
+    accounts:_m467Accounts));
+  if(next==null||!mounted)return;
+  if(next=='manage'){
+   await openVerifiedAccounts();
+   return;
+  }
+  if(next!='all'&&next!='none'&&
+     !_m467Accounts.any((a)=>a.id==next))return;
+  setState(()=>_m467SelectedAccount=next);
+  try{
+   final p=await SharedPreferences.getInstance();
+   await p.setString(_m467ChoiceKey,next);
+  }catch(error){
+   debugPrint('Account display preference unavailable: '+error.runtimeType.toString());
+  }
+  if(mounted)await _m467RefreshHomeAccounts();
+ }
+
  Future<void> openVerifiedAccounts()async{
   await _ensureFinanceBound();
   if(!mounted)return;
@@ -3483,6 +3593,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       !b.deleted&&b.budgetActive&&b.budget>0))item.id:item.budgetLabel??item.name},
     onTransferConfirmed:(_)=>_learnManualTransferPreference(),
    )));
+  if(mounted)await _m467RefreshHomeAccounts();
  }
 
  /// Internal transfers use the verified account ledger, never expense.
@@ -4892,6 +5003,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   recurringPostponed.clear();smsHashes.clear();learnedMerchantCategories.clear();
   try{
    await load();
+   unawaited(_m467RefreshHomeAccounts());
    WidgetsBinding.instance.addPostFrameCallback((_) {
     if(mounted)unawaited(_refreshAutoSmsInbox(importMonth:true));
    });
@@ -5054,6 +5166,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // The verified pull read already includes the full authoritative ledger.
    // Reusing it prevents a second SQLCipher decrypt for the Home widget.
    unawaited(_publishVerifiedWidgetBalance(current));
+   unawaited(_m467RefreshHomeAccounts());
   }catch(error) {
    debugPrint('Verified pull refresh failed closed: $error');
    if(mounted)setState((){
@@ -10503,7 +10616,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ])));
  }
  Future<void> showSummaryTransactions(bool income)async {
-  final items=entries.where((e)=>e.income==income).toList()
+  final items=_m467ScopedEntries().where((e)=>e.income==income).toList()
    ..sort((a,b)=>b.date.compareTo(a.date));
   if(items.isEmpty){
    if(!mounted)return;
@@ -10696,7 +10809,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ])));
  }
  Widget dashboard(){
-  final inc=sum(entries,true),exp=sum(entries,false);
+  final scopedEntries=_m467ScopedEntries().toList();
+  final inc=sum(scopedEntries,true),exp=sum(scopedEntries,false);
   final unverifiedFxEntries=entries.where(waffraNeedsLegacyFxReview).toList();
   // Show the month comparison only when there are genuine prior-month
   // transactions and a positive comparison base. Never show a fake +12%.
@@ -10709,7 +10823,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    entries.where((e)=>e.date.isBefore(monthStart)),goals);
   final monthChange=hasPreviousMonthEntries&&previousClosingBalance>0
    ?((waffraAvailableCash(entries,goals)-previousClosingBalance)/previousClosingBalance)*100:null;
-  final visible=entries.where((e){
+  final visible=scopedEntries.where((e){
    final q=search.trim();
    return(waffraSearchAny([e.title,e.category,waffraTr(e.category)],q))&&
     (transactionsDateRange==null||(e.date.isAfter(transactionsDateRange!.start.subtract(const Duration(days:1)))&&e.date.isBefore(transactionsDateRange!.end.add(const Duration(days:1)))))&&
@@ -10718,7 +10832,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     (typeFilter=='الكل'||(typeFilter=='الدخل'&&e.income)||(typeFilter=='المصروفات'&&!e.income))&&
     (categoryFilter=='الكل'||categoryFilter==e.category);
   }).toList()..sort((a,b)=>b.date.compareTo(a.date));
-  final filterCats=<String>{'الكل',...entries.where((e)=>typeFilter=='الكل'||
+  final filterCats=<String>{'الكل',...scopedEntries.where((e)=>typeFilter=='الكل'||
    (typeFilter=='الدخل'&&e.income)||(typeFilter=='المصروفات'&&!e.income)).map((e)=>e.category)}.toList();
   final selected=filterCats.contains(categoryFilter)?categoryFilter:'الكل';
   final shown=visible.take(waffraDashboardTransactionDisplayCount(
@@ -10745,12 +10859,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         subtitle:waffraIsEnglish?'Your finances at a glance':
          'تابع رصيدك ومعاملاتك وخططك المالية بسهولة.',
         icon:Icons.spa_outlined))),
+      SliverToBoxAdapter(child:Padding(
+       padding:const EdgeInsets.fromLTRB(14,3,14,11),
+       child:WaffraHomeAccountChip(
+        label:_m467AccountLabel,
+        english:waffraIsEnglish,
+        onTap:()=>unawaited(_m467PickHomeAccount())))),
       // Not pinned: the shrinking balance scrolls away without covering data.
       SliverPersistentHeader(
        pinned:false,
        delegate:WaffraBalanceHeader(
-         balance:waffraAvailableCash(entries,goals),english:waffraIsEnglish,focusKey:_tourKeys[0],
-         monthlyChangePercent:monthChange,
+         balance:_m467ShownBalance(),english:waffraIsEnglish,
+         heading:_m467SelectedAccount=='none'?
+          (waffraIsEnglish?'Unassigned, no account balance':'بدون حساب — لا يوجد رصيد مرتبط'):
+          (_m467SelectedAccount=='all'?null:_m467AccountLabel),
+         focusKey:_tourKeys[0],
+         monthlyChangePercent:_m467SelectedAccount=='all'?monthChange:null,
          refreshVerifiedWidgetBalance:_refreshWidget)),
       SliverPadding(padding:const EdgeInsets.fromLTRB(14,10,14,96),
        sliver:SliverToBoxAdapter(child:Column(

@@ -1,11 +1,12 @@
 {
   "contract_version": 1,
   "change_id": "M467-bank-inbox-accounts-camera-20261105",
-  "human_scope_review": "Owner approved both visual designs and reported native camera biometric repeat and lost manual inputs. M467 PR is in active development; runtime integration is not yet complete, no finance persistence or security keys change.",
+  "human_scope_review": "Owner explicitly approved two visuals: bank-logo SMS review and verified Home account picker; also camera biometric and draft-retention defects. This PR implements the presentation and in-memory native picker fixes without changing the SQLCipher write authority, account schema or historic finance data. Phone-specific return-from-camera confirmation and exact-head CI remain required.",
   "user_requested_changes": [
     "Implement redesigned pending SMS list with bank marks, compact tiles, clearer counters and preserved manual review safeguards.",
     "Add verified all-accounts/individual/unassigned header selector without making the selected header account the source of a new finance entry.",
-    "Preserve manual inputs across native camera/gallery round trip and skip biometric only for that bounded user-invoked media activity."
+    "Preserve manual inputs across native camera/gallery round trip and skip biometric only for that bounded user-invoked media activity.",
+    "Render the verified Home all-account, individual account, unassigned and manage-accounts selector with header balance/transaction projections. Persist only per-user display preference. Never assign a new money posting by current header."
   ],
   "allowed_changed_files": [
     "lib/waffra_external_media_session.dart",
@@ -13,7 +14,9 @@
     "test/m467_brand_media_helpers_test.dart",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "docs/qa/approved_change_scope.json",
-    "lib/main.dart"
+    "lib/main.dart",
+    "lib/waffra_home_accounts_sheet.dart",
+    "test/m467_account_header_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -40,6 +43,26 @@
       {
         "start": " Future<void> entrySheet({",
         "end": " Future<String?> chooseTransactionCategory("
+      },
+      {
+        "start": "class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {",
+        "end": " /// Internal transfers use the verified account ledger, never expense."
+      },
+      {
+        "start": " Future<void> _loadFinanceSafely()async{",
+        "end": " Widget _financialRecoveryScreen()"
+      },
+      {
+        "start": " Future<void> _refreshFromVerifiedFinance()async {",
+        "end": " Future<void> load()async {\n  await _ensureFinanceBound();"
+      },
+      {
+        "start": " Future<void> showSummaryTransactions(bool income)async {",
+        "end": " Widget _dashboardShortcut("
+      },
+      {
+        "start": " Widget dashboard(){",
+        "end": " Widget nextMonthForecast(){"
       }
     ]
   }
