@@ -76,16 +76,13 @@ class WaffraHomeAccountsSheet extends StatelessWidget{
      const SizedBox(height:5),
      Flexible(child:ListView(shrinkWrap:true,children:[
       choice(context,id:'all',title:t('كل الحسابات','All accounts'),
-       caption:t('كل العمليات، بما فيها بدون حساب','Every entry, including unassigned'),
+       caption:t('إجمالي الحسابات','All registered accounts'),
        icon:Icons.layers_outlined),
       for(final a in accounts.where((a)=>!a.archived))
        choice(context,id:a.id,title:a.name,caption:sar(a.balanceMinor),
         icon:a.kind=='bank'?Icons.account_balance_rounded:
          a.kind=='cash'?Icons.payments_outlined:
          Icons.account_balance_wallet_outlined),
-      choice(context,id:'none',title:t('عمليات بدون حساب','Unassigned transactions'),
-       caption:t('لا تؤثر على رصيد أي حساب','No account balance affected'),
-       icon:Icons.link_off_rounded),
      ])),
      const SizedBox(height:8),
      OutlinedButton.icon(
