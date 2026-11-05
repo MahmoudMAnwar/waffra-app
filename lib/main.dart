@@ -5951,12 +5951,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Future<({List<String?>? ids,int? generation})?> reviewSmsAccountLinks(
   List<MoneyEntry> candidates,{String? recurringId,String smsSender=''})async{
   final manualRequiresAccount=candidates.any((c)=>c.sourceType=='manual');
+  // A confirmed due payment is a new finance entry, not an unassigned SMS.
+  final dueRequiresAccount=recurringId!=null||
+   candidates.any((c)=>c.sourceType=='goal_due');
+  final mustSelectAccount=manualRequiresAccount||dueRequiresAccount;
   final bridge=_financeBinding?.accountsBridge;
   if(bridge==null){
-   if(manualRequiresAccount&&mounted)snack(context,waffraIsEnglish?
+   if(mustSelectAccount&&mounted)snack(context,waffraIsEnglish?
     'Create a verified money account in My Accounts before adding income or expenses.':
     'أنشئ حسابًا ماليًا موثّقًا من حساباتي قبل إضافة دخل أو مصروف.',isError:true);
-   return manualRequiresAccount?null:(ids:null,generation:null);
+   return mustSelectAccount?null:(ids:null,generation:null);
   }
   if(candidates.isEmpty)return (ids:null,generation:null);
   try{
@@ -5964,7 +5968,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(!mounted)return null;
    final active=verified.balances.where((a)=>!a.archived).toList();
    if(active.isEmpty){
-    if(manualRequiresAccount){
+    if(mustSelectAccount){
      snack(context,waffraIsEnglish?
       'Add at least one bank, cash, or wallet account in My Accounts first.':
       'لازم تضيف حسابًا ماليًا واحدًا على الأقل من حساباتي أولًا.',isError:true);
@@ -6040,7 +6044,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(!mounted)return null;
    final approved=await showWaffraDialog<bool>(context:context,
     builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
-     title:WaffraText(manualRequiresAccount?
+     title:WaffraText(mustSelectAccount?
       (waffraIsEnglish?'Choose a money account':'اختار الحساب المالي للعملية'):
       (waffraIsEnglish?
        'Which account for each bank transaction?':
@@ -6069,14 +6073,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           WaffraCenteredDropdownFormField<String>(
            key:ValueKey('waffra-sms-account-'+n.toString()+'-'+
             (assigned[n]??'none')),
-           initialValue:candidates[n].sourceType=='manual'?
+           initialValue:mustSelectAccount?
             assigned[n]:assigned[n]??'none',isExpanded:true,
            menuMaxHeight:min(340.0,MediaQuery.sizeOf(ctx).height*.48),
            decoration:InputDecoration(
             labelText:waffraIsEnglish?'Money account':'الحساب المالي',
             border:const OutlineInputBorder()),
            items:[
-            if(candidates[n].sourceType!='manual')
+            if(!mustSelectAccount)
              DropdownMenuItem(value:'none',child:WaffraText(
               waffraIsEnglish?'Unlinked':'بدون حساب')),
             ...active.map((a)=>DropdownMenuItem(value:a.id,
@@ -6091,16 +6095,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),
        child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
       FilledButton(
-       onPressed:manualRequiresAccount&&
-        candidates.asMap().entries.any((row)=>
-         row.value.sourceType=='manual'&&assigned[row.key]==null)?
+       onPressed:mustSelectAccount&&assigned.any((account)=>account==null)?
         null:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),
        child:WaffraText(waffraIsEnglish?'Confirm':'تأكيد')),
      ],
     )));
    if(approved!=true)return null;
-   if(manualRequiresAccount&&candidates.asMap().entries.any((row)=>
-       row.value.sourceType=='manual'&&assigned[row.key]==null))return null;
+   if(mustSelectAccount&&assigned.any((account)=>account==null))return null;
    return (ids:List<String?>.unmodifiable(assigned),
     generation:verified.witness.generation);
   }catch(_){
