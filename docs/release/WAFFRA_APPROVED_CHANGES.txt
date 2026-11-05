@@ -1,3 +1,13 @@
+
+[M464-SMS-FOLLOWUP] 2026-11-05 — PR #388 staged account learning, bulk SMS review and visible rescan
+========================================================================================
+- Owner approved these additions in the SAME existing draft PR #388; no additional PR or main merge was made.
+- New manual income/expense now requires the owner to choose an existing verified bank/cash/wallet account in the UI. Existing historical unassigned records remain untouched.
+- Independent encrypted sender-to-account evidence is recorded only after a confirmed SMS finance commit. Two consistent confirmed mappings can preselect a matching account. Sender-only suggestion is blocked if the bank has multiple active accounts; four-digit attribution is kept separate from income/expense/transfer classification and never grants auto-post permission.
+- SMS sender groups and individual SMS now support select-all/multi-select and confirmed batch removal from Waffra review (native ACK batches of up to 100); original Android SMS and committed ledger are never deleted.
+- Native encrypted pending queue increases from 100 to 500 candidates; durable cursor and scanned/added/pending counters support cumulative rescan. Home rescan shows busy state, totals and failure feedback rather than an unresponsive button. Further backlog is resumed after queue space is available; 500 is still a bounded capacity, not an unlimited history archive.
+- Updated earlier 100-capacity regressions, added focused SMS review and account-ambiguity tests, and expanded the fail-closed M385 file/section scope for this change. Exact-head CI, signed Android test and human scope approval remain REQUIRED; changes are NOT a release attestation.
+
 وفرة | Waffra
 =============================================
 سجل التعديلات المعتمدة للبيلد التجريبي القادم
