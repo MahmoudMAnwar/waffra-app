@@ -4166,38 +4166,85 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final cloudSummary=cloudKind is String ?
     '\n'+(waffraIsEnglish?'Cloud AI suggests: ':'اقتراح الذكاء الاصطناعي: ')+
     cloudKind+(cloudAmount is num?' • '+cloudAmount.toStringAsFixed(2):''):'';
+   final understood=facts.kind==WaffraBankOperationKind.income||
+    facts.kind==WaffraBankOperationKind.expense;
+   final firstChoice=sensitive?'exclude':
+    facts.kind==WaffraBankOperationKind.transfer?'transfer':
+    understood?'review':'manual';
    final decision=await showWaffraDialog<String>(context:context,
     builder:(dialog)=>AlertDialog(
-     title:WaffraText(waffraIsEnglish?'Bank SMS needs review':'رسالة بنكية تحتاج مراجعة'),
-     content:WaffraText((waffraIsEnglish?
-      'A financial SMS from $sender requires review before saving.':
-      'وصلت رسالة مالية من $sender وتحتاج مراجعة قبل الحفظ.')
-      +'\n\n'+summary+
-       (localFacts!=null?
-        '\n'+(waffraIsEnglish?'Local category: ':'القسم المقترح محليًا: ')+
-        (localFacts['category']?.toString()??''):'')+
-       cloudSummary),
+     title:WaffraText(waffraIsEnglish?
+      'Review bank message':'مراجعة رسالة بنكية'),
+     content:SingleChildScrollView(child:Column(
+      mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,
+      children:[
+       Container(
+        padding:const EdgeInsets.all(12),
+        decoration:BoxDecoration(borderRadius:BorderRadius.circular(14),
+         color:Theme.of(dialog).colorScheme.surfaceContainerLow),
+        child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+         Row(children:[
+          const Icon(Icons.account_balance_outlined,size:21),
+          const SizedBox(width:8),
+          Expanded(child:WaffraText(sender.isEmpty?
+           (waffraIsEnglish?'Bank sender not confirmed':'مرسل غير محدد'):sender)),
+         ]),
+         const SizedBox(height:8),
+         WaffraText(sensitive?
+          (waffraIsEnglish?
+           'Verification message. The private code is hidden for safety.':
+           'رسالة تحقق. رمز التحقق مخفي لحمايتك.'):
+          summary),
+         if(localFacts!=null)WaffraText(
+          (waffraIsEnglish?'Suggested category: ':'القسم المقترح: ')+
+          (localFacts['category']?.toString()??'')),
+         if(cloudSummary.isNotEmpty)WaffraText(cloudSummary),
+        ])),
+       const SizedBox(height:12),
+       WaffraText(waffraIsEnglish?
+        'Waffra read the sender and safe keywords. Choose the next step.':
+        'وفرة قرأ المرسل والكلمات المهمة. اختار الخطوة المناسبة.'),
+       const SizedBox(height:11),
+       Card(child:ListTile(
+        key:const Key('waffra-sms-understood-action'),
+        leading:Icon(sensitive?Icons.shield_outlined:
+         understood?Icons.account_balance_wallet_outlined:Icons.edit_note_outlined),
+        title:WaffraText(sensitive?
+         (waffraIsEnglish?'Exclude verification SMS':'استبعاد رسالة التحقق'):
+         understood?(waffraIsEnglish?'I understand this transaction':'مراجعة العملية'):
+         (waffraIsEnglish?'Add a separate manual transaction':'إضافة عملية يدوية')),
+        subtitle:WaffraText(sensitive?
+         (waffraIsEnglish?'Learn a safe exclusion rule':'إنشاء قاعدة استثناء آمنة'):
+         (waffraIsEnglish?'Continue with verified transaction review':
+          'استكمال المراجعة قبل تسجيل أي مبلغ')),
+        onTap:()=>Navigator.pop(dialog,firstChoice),
+       )),
+       Card(child:ListTile(
+        key:const Key('waffra-sms-teach-action'),
+        leading:const Icon(Icons.auto_awesome_outlined),
+        title:WaffraText(waffraIsEnglish?'Teach Waffra this message':
+         'علّم وفرة هذه الرسالة'),
+        subtitle:WaffraText(waffraIsEnglish?
+         'Open a prefilled rule. Edit only what is missing.':
+         'افتح قاعدة جاهزة بكل البيانات المقترحة.'),
+        onTap:()=>Navigator.pop(dialog,'teach'),
+       )),
+      ])),
      actions:[
       TextButton(onPressed:()=>Navigator.pop(dialog),
        child:WaffraText(waffraIsEnglish?'Later':'لاحقًا')),
-      TextButton(
-       key:const Key('waffra-sms-exclude-with-rule'),
-       onPressed:()=>Navigator.pop(dialog,'exclude'),
-       child:WaffraText(waffraIsEnglish?
-        'Not a transaction • create exclusion rule':
-        'ليست معاملة • إنشاء قاعدة مستثناة')),
-      if(facts.kind==WaffraBankOperationKind.transfer)TextButton(
-       onPressed:()=>Navigator.pop(dialog,'transfer'),
-       child:WaffraText(waffraIsEnglish?
-        'Classify transfer':'تصنيف كتحويل')),
-      if(!sensitive&&localFacts==null&&cloudFacts==null)OutlinedButton(
-       key:const Key('waffra-ambiguous-ai-request'),
-       onPressed:()=>Navigator.pop(dialog,'ai'),
-       child:WaffraText(waffraIsEnglish?'Analyze with AI':'تحليل بالذكاء الاصطناعي')),
-      FilledButton(onPressed:()=>Navigator.pop(dialog,sensitive?'manual':'review'),
-       child:WaffraText(sensitive?
-        (waffraIsEnglish?'Add separate manual transaction':'إضافة عملية يدوية مستقلة'):
-        (waffraIsEnglish?'Review transaction':'مراجعة العملية'))),
+      if(!sensitive&&localFacts==null&&cloudFacts==null)
+       PopupMenuButton<String>(
+        tooltip:waffraIsEnglish?'More options':'خيارات أخرى',
+        icon:const Icon(Icons.more_horiz),
+        onSelected:(value)=>Navigator.pop(dialog,value),
+        itemBuilder:(_)=>[
+         PopupMenuItem(value:'ai',child:WaffraText(waffraIsEnglish?
+          'Optional AI review':'تحليل اختياري بالذكاء الاصطناعي')),
+         PopupMenuItem(value:'exclude',child:WaffraText(waffraIsEnglish?
+          'Not a transaction':'ليست عملية مالية')),
+        ],
+       ),
      ]));
    if(decision=='exclude'||decision=='transfer'){
     if(_smsRuleOwnerKey.isEmpty)return;
@@ -4252,6 +4299,39 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      if(mounted)snack(context,waffraIsEnglish?
       'Could not verify the rule store. Message remains for review.':
       'تعذر التحقق من القواعد. الرسالة لسه للمراجعة.',isError:true);
+    }
+   }else if(decision=='teach'&&mounted){
+    if(_smsRuleOwnerKey.isEmpty)return;
+    final suggestionKind=sensitive?'excluded':
+     facts.kind==WaffraBankOperationKind.transfer?'transfer':
+     facts.kind==WaffraBankOperationKind.income?'income':
+     facts.kind==WaffraBankOperationKind.expense?'expense':'expense';
+    await _openSmsRules(
+     seedMessage:body,seedSender:sender,seedKind:suggestionKind,
+     seedCategory:localFacts?['category'] is String?
+      (localFacts!['category'] as String):'');
+    // Saving a rule is not a financial transaction. A verified explicit
+    // exclusion can remove the current review item after native acknowledgement.
+    try{
+     final rules=await const WaffraSmsLocalRuleStore()
+      .read(_smsRuleOwnerKey);
+     if(facts.kind==WaffraBankOperationKind.uncertain&&rules.any((r)=>
+      r.resolvedKind=='excluded'&&
+      WaffraSmsLocalRules.matches(r,body,sender:sender))){
+      final acknowledged=await WaffraAutoSms.acknowledge([id]);
+      if(acknowledged&&mounted){
+       setState(()=>_autoSmsPending.removeWhere((item)=>item['id']==id));
+       unawaited(_refreshAutoSmsInbox(importMonth:true));
+      }else if(mounted)snack(context,waffraIsEnglish?
+       'Rule saved, but SMS acknowledgement failed. Retry.':
+       'القاعدة اتحفظت لكن استبعاد الرسالة لم يتأكد. حاول تاني.',
+       isError:true);
+     }
+    }catch(_){
+     if(mounted)snack(context,waffraIsEnglish?
+      'Could not verify the new rule. Message remains for review.':
+      'تعذر التحقق من القاعدة. الرسالة ما زالت للمراجعة.',
+      isError:true);
     }
    }else if(decision=='manual'&&mounted){
     await entrySheet();
