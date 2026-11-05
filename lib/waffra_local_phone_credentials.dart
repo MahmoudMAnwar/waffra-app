@@ -7,6 +7,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// M426: Local-only Saudi-phone/password verifier.
 /// No SMS, Firebase phone identity, network service or subscription.
 /// A phone number is a local login name, NOT verified phone ownership.
+/// Result of checking whether the saved local verifier belongs to the
+/// displayed account. No password, raw hash or phone is exposed to the UI.
+enum WaffraLocalCredentialProbe { ready, missing, malformed, differentPhone }
+
 abstract final class WaffraLocalPhoneCredentials {
  static const _store=FlutterSecureStorage();
  static const _key='waffra_device_phone_credentials_v2';
@@ -66,6 +70,36 @@ abstract final class WaffraLocalPhoneCredentials {
  static Future<bool> hasRegisteredCredentials() async =>
    (await _store.read(key:_key))!=null;
 
+ /// Check that sign-out will not strand a phone account with a missing,
+ /// invalid or unrelated local verifier. This only checks verifier integrity:
+ /// actual sign-in still requires matching the full password-derived key.
+ static WaffraLocalCredentialProbe inspectStoredRecord(
+   String? saved,{required String phone}) {
+  if(saved==null)return WaffraLocalCredentialProbe.missing;
+  try{
+   final obj=jsonDecode(saved);
+   if(obj is! Map<String,dynamic>||obj['version']!=2||
+      obj['iterations']!=_iterations||
+      obj['phoneHash'] is! String||
+      obj['salt'] is! String||obj['hash'] is! String){
+    return WaffraLocalCredentialProbe.malformed;
+   }
+   final salt=base64Decode(obj['salt'] as String);
+   final hash=base64Decode(obj['hash'] as String);
+   if(salt.length!=32||hash.length!=32){
+    return WaffraLocalCredentialProbe.malformed;
+   }
+   if(!validPhone(phone))return WaffraLocalCredentialProbe.differentPhone;
+   final phoneHash=legacy_crypto.sha256.convert(utf8.encode(phone)).toString();
+   return _equal(utf8.encode(phoneHash),
+     utf8.encode(obj['phoneHash'] as String))?
+     WaffraLocalCredentialProbe.ready:
+     WaffraLocalCredentialProbe.differentPhone;
+  }catch(_){return WaffraLocalCredentialProbe.malformed;}
+ }
+ static Future<WaffraLocalCredentialProbe> probeForPhone(String phone) async =>
+   inspectStoredRecord(await _store.read(key:_key),phone:phone);
+
  static Future<void> register({required String phone,
   required String password})async{
   final saved=await _store.read(key:_key);
@@ -89,6 +123,13 @@ abstract final class WaffraLocalPhoneCredentials {
   final saved=await _store.read(key:_key);
   if(saved==null){
    await register(phone:phone,password:password);
+   // Do not write a completed profile if Android secure storage did not
+   // persist the EXACT same verifier. Never auto-reset a prior identity.
+   final persisted=await _store.read(key:_key);
+   if(persisted==null||
+      !await canResumeRecord(persisted,phone:phone,password:password)){
+    throw StateError('local_credential_write_unverified');
+   }
    return;
   }
   if(await canResumeRecord(saved,phone:phone,password:password))return;
