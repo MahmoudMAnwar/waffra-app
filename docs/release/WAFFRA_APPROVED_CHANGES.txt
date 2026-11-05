@@ -1864,3 +1864,11 @@ M462 final code review following 2026-11-05 SQLCipher rule-read and sender-scope
 M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned SMS category may take precedence over the existing merchant classification; generic built-in purchase/payment rules still use the prior merchant category planner. This prevents a new uncategorized override for otherwise recognized merchants. Source commit fe133303c9ea90f03ced8e79fde075ee968ca974; physical-device verification still required.
 
 [M462+M463 Integration] 2026-11-05 — Combined authenticated one-page signup and SMS classification changes; permission order SMS, notifications, biometric after signup. Reviewed SQLCipher account transfer and budget selection preserved. Physical phone testing still required.
+
+[M464] 2026-11-05 — إصلاح حفظ الدخل والمصروف بدون حساب وإظهار التحويل من زر الإضافة
+- اعتمدنا بلاغ الهاتف: الأهداف والمتكررة محفوظة، لكن تأكيد الدخل أو المصروف اليدوي يُظهر رسالة «تعذر حفظ المعاملة. بياناتك السابقة لم تتغير» من مسار الحفظ الاحتياطي القديم، بينما التحويل غير موجود في قائمة + الرئيسية.
+- يُسمح بإضافة الدخل والمصروف اليدوي بدون إنشاء أي حساب مالي، مع ترك الحساب غير مربوط؛ الربط بالحساب اختيار مستقل عندما يوجد حساب موثّق.
+- العمليات اليدوية الجديدة بلا مرفق تُرسل إلى دالة الحفظ الذري المباشر من واجهة Home بدل إعادة تسلسل بيانات Home المالية بالكامل. إذا كان المصدر SQLCipher موثقًا، يُستخدم نفس مسار M457؛ وإذا كانت النسخة القديمة ما زالت على guardedLegacy، لا يتغير المصدر ولا يحدث تفعيل تشفير تلقائي، وإنما تُضاف عملية واحدة فقط عبر القفل والتوثيق والتعافي المعتمدين أصلاً في الكاتب القديم مع حماية بيانات الأهداف والمتكررة والرسائل والتصنيفات.
+- أضيف زر «تحويل بين حساباتي» إلى قائمة + في الرئيسية، يفتح مباشرة نموذج التحويل ويتطلب مصدرًا ووجهة مختلفين؛ عندما تقل الحسابات عن اثنين، يوجَّه المستخدم لإدارتها. التحويل لا يُسجل دخلًا أو مصروفًا ولا يُحفظ بمجرد اختيار نوعه.
+- أصبح «حساباتي» ظاهرًا ضمن الأدوات المالية حتى عند غياب المصدر الموثق، مع رسالة توضح أنه غير متاح بدل إخفاء الرابط تمامًا.
+- تشمل الاختبارات رفض المعاملة المكررة والصلاحية غير الموثقة والمحافظة على السجل السابق. نجاح CI شرط للدمج ولا يعتبر تجربة هاتف ناجحة أو تأكيدًا بأمان النسخ الاحتياطية.

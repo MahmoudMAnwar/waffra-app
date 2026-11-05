@@ -3477,6 +3477,54 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     onTransferConfirmed:(_)=>_learnManualTransferPreference(),
    )));
  }
+
+ /// Internal transfers use the verified account ledger, never expense.
+ /// Income and expenses can still be saved without an account.
+ Future<void> openVerifiedTransfer()async{
+  try{
+   await _ensureFinanceBound();
+   final bridge=_financeBinding?.accountsBridge;
+   if(bridge==null){
+    if(mounted)snack(context,waffraIsEnglish?
+     'Transfers require verified encrypted accounts. Manual income and expenses do not.':
+     'التحويل يحتاج حسابات مشفّرة موثّقة. الدخل والمصروف اليدوي مش محتاجين حساب.',
+     isError:true);
+    return;
+   }
+   final api=WaffraVerifiedAccountsApi(bridge:bridge);
+   final accounts=await api.balances();
+   if(!mounted)return;
+   if(accounts.where((a)=>!a.archived).length<2){
+    snack(context,waffraIsEnglish?
+     'Create two accounts first to transfer between them.':
+     'أنشئ حسابين أولًا عشان تحول بينهم.');
+    await openVerifiedAccounts();
+    return;
+   }
+   await Navigator.of(context).push<void>(MaterialPageRoute(
+    builder:(transferContext)=>Scaffold(
+     appBar:AppBar(title:WaffraText(waffraIsEnglish?
+      'Transfer between my accounts':'تحويل بين حساباتي')),
+     body:WaffraAccountTransactionForm(
+      accounts:accounts,english:waffraIsEnglish,
+      initialOperation:WaffraAccountOperation.transfer,
+      onConfirmTransfer:(draft)async{
+       await api.transfer(id:draft.requestId,
+        fromAccountId:draft.fromId,toAccountId:draft.toId,
+        amountMinor:draft.amountMinor,occurredIso:draft.occurredIso,
+        note:draft.memo,userConfirmed:true);
+       try{await _learnManualTransferPreference();}catch(_){}
+       if(transferContext.mounted)Navigator.of(transferContext).pop();
+      },
+     ),
+    )));
+  }catch(error){
+   debugPrint('Verified transfer route unavailable: ${error.runtimeType}');
+   if(mounted)snack(context,waffraIsEnglish?
+    'Transfer not verified. Check My Accounts.':
+    'تعذر تأكيد التحويل. راجع حساباتي.',isError:true);
+  }
+ }
  WaffraFinanceAuthorityRead? _lastFinanceAuthorityRead;
  final smsHashes=<String>{};
  final expandedCategoryIds=<String>{};
@@ -7675,8 +7723,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // replace pre-existing ledger rows from a cached Home screen.
    if(initial==null&&result.sourceType=='manual'&&
       (result.receiptPath==null||result.receiptPath!.isEmpty)&&
-      _lastFinanceAuthorityRead?.source==
-       WaffraRuntimeFinanceBackend.verifiedEncrypted){
+      (_financeBinding?.encrypted==true||
+       _lastFinanceAuthorityRead?.source==
+        WaffraRuntimeFinanceBackend.verifiedEncrypted||
+       _lastFinanceAuthorityRead?.source==
+        WaffraRuntimeFinanceBackend.guardedLegacy)){
     try{
      await _saveProgress.track<void>(
       'commit-confirmed-manual',()=>_financialWriteQueue.submit(
@@ -14145,8 +14196,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        }:null))),
    ]),
    _accountSection(waffraIsEnglish?'Financial tools':'الأدوات المالية',Icons.account_balance_wallet_outlined,[
-    if(_financeBinding?.accountsBridge!=null)
-     _accountTile(waffraIsEnglish?'My money accounts':'حساباتي',
+    _accountTile(waffraIsEnglish?'My money accounts':'حساباتي',
       waffraIsEnglish?'Cash, bank accounts and internal transfers':'النقد والحسابات البنكية والتحويلات الداخلية',
       Icons.account_balance_outlined,onTap:WaffraHaptics.tap(openVerifiedAccounts)),
     _accountTile(waffraIsEnglish?'Financial calendar':'التقويم المالي',
@@ -14530,6 +14580,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          label:waffraIsEnglish?'Manual transaction':'عملية يدوية',
          onTap:WaffraHaptics.tapRequired((){
           unawaited(_launchAddAction(()=>entrySheet(),fromMenu:true));
+         })),
+        const SizedBox(height:7),
+        _addMenuOption(
+         icon:Icons.swap_horiz_rounded,
+         label:waffraIsEnglish?'Transfer between my accounts':'تحويل بين حساباتي',
+         onTap:WaffraHaptics.tapRequired((){
+          unawaited(_launchAddAction(openVerifiedTransfer,fromMenu:true));
          })),
         const SizedBox(height:7),
         _addMenuOption(

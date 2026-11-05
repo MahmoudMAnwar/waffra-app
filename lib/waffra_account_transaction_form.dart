@@ -54,12 +54,14 @@ class WaffraAccountTransactionForm extends StatefulWidget {
   this.incomeCategories=const [],this.expenseCategories=const [],
   this.availableBudgets=const {},this.requireKnownCategory=false,
   this.initialSmsTransfer,
+  this.initialOperation=WaffraAccountOperation.income,
  });
  final List<WaffraAccountBalance> accounts;
  final List<String> incomeCategories,expenseCategories;
  final Map<String,String> availableBudgets;
  final bool requireKnownCategory;
  final WaffraInternalTransferDraft? initialSmsTransfer;
+ final WaffraAccountOperation initialOperation;
  final bool english;
  final Future<void> Function(WaffraAccountTransactionDraft)? onConfirmEntry;
  final Future<void> Function(WaffraInternalTransferDraft)? onConfirmTransfer;
@@ -85,6 +87,7 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
 
  @override void initState(){
   super.initState();
+  mode=widget.initialOperation;
   final initial=widget.initialSmsTransfer;
   if(initial!=null){
    mode=WaffraAccountOperation.transfer;
@@ -192,7 +195,8 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
        label:Text(tr('تحويل','Transfer'))),
      ],
      selected:{mode},onSelectionChanged:saving||saved||
-      widget.initialSmsTransfer!=null?null:(choice){
+      widget.initialSmsTransfer!=null||
+       widget.initialOperation==WaffraAccountOperation.transfer?null:(choice){
       setState((){mode=choice.first;error=null;selectedBudgetId=null;
        category.clear();});
      }),
