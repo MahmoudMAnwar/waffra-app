@@ -1,9 +1,32 @@
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:waffra/main.dart';
 
 void main() {
  late String main;
  setUpAll(()=>main=File('lib/main.dart').readAsStringSync());
+
+ testWidgets('M463 signup presents all mandatory controls on one screen',
+  (tester) async {
+   tester.view.physicalSize=const Size(430,1600);
+   tester.view.devicePixelRatio=1;
+   addTearDown(tester.view.resetPhysicalSize);
+   addTearDown(tester.view.resetDevicePixelRatio);
+   await tester.pumpWidget(MaterialApp(
+    home:ProfileForm(provider:'Phone',onSave:(_) async {})));
+   await tester.pump();
+   expect(find.byKey(const Key('waffra-register-single-page')),findsOneWidget);
+   expect(find.byKey(const Key('waffra-register-name')),findsOneWidget);
+   expect(find.byKey(const Key('waffra-register-gender-male')),findsOneWidget);
+   expect(find.byKey(const Key('waffra-register-gender-female')),findsOneWidget);
+   expect(find.byKey(const Key('waffra-register-phone')),findsOneWidget);
+   expect(find.byKey(const Key('waffra-register-password')),findsOneWidget);
+   expect(find.byKey(const Key('waffra-register-confirm-password')),findsOneWidget);
+   expect(find.byKey(const Key('waffra-register-submit')),findsOneWidget);
+   expect(find.text('البريد الإلكتروني'),findsNothing);
+   expect(find.text('تاريخ الميلاد'),findsNothing);
+  });
 
  test('M463 app authentication always precedes first-run permissions',(){
   final a=main.indexOf('   startupError!=null?Scaffold(');
