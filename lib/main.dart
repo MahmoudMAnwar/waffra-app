@@ -80,6 +80,7 @@ import 'waffra_bank_sms_facts.dart';
 import 'waffra_sms_cloud_service.dart';
 import 'waffra_sms_cloud_review_analyzer.dart';
 import 'waffra_sms_local_rules.dart';
+import 'waffra_sms_account_learning.dart';
 import 'waffra_sms_rule_settings_page.dart';
 import 'waffra_unknown_financial_sms_page.dart';
 import 'waffra_auto_sms_consent.dart';
@@ -3704,6 +3705,32 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(mounted)await _refreshAutoSmsInbox(importMonth:true);
  }
 
+ Future<void> _recordConfirmedSmsAccountAssociation({
+  required MoneyEntry record,required String sender,
+  required String? accountId,
+ })async{
+  // Learning happens only AFTER a confirmed finance commit. It never posts
+  // money, changes a past entry, or sets autoPost classification permissions.
+  if(accountId==null||accountId.isEmpty||sender.trim().isEmpty||
+     record.sourceType!='sms'||_smsRuleOwnerKey.isEmpty)return;
+  final facts=WaffraBankSmsFactsParser.parse(record.notes);
+  if(!facts.canAutoPostAsIncomeExpense||
+     (facts.kind==WaffraBankOperationKind.income)!=record.income)return;
+  try{
+   final verified=await _financeBinding?.accountsBridge?.readVerifiedAccounts();
+   if(verified==null||!verified.balances.any((a)=>
+       !a.archived&&a.id==accountId))return;
+   final suffix=record.income?
+    facts.destinationSuffix:facts.sourceSuffix;
+   await const WaffraSmsAccountLearningStore().confirm(
+    owner:_smsRuleOwnerKey,sender:sender,accountId:accountId,
+    suffix:suffix);
+  }catch(_){
+   // Learning is best-effort; a confirmed financial write is never rolled
+   // back because a nonauthoritative suggestion could not be persisted.
+  }
+ }
+
  // Local classification learning never authorizes financial posting.
  // Only a specific, independently classified message may produce a rule.
  Future<bool> _learnSafeSmsRule({
@@ -5672,7 +5699,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  /// before posting an explicitly reviewed bank SMS. Guarded legacy keeps the
  /// existing SMS save behavior, without a shadow account database.
  Future<({List<String?>? ids,int? generation})?> reviewSmsAccountLinks(
-  List<MoneyEntry> candidates,{String? recurringId})async{
+  List<MoneyEntry> candidates,{String? recurringId,String smsSender=''})async{
   final manualRequiresAccount=candidates.any((c)=>c.sourceType=='manual');
   final bridge=_financeBinding?.accountsBridge;
   if(bridge==null){
@@ -5702,6 +5729,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // Manual, recurring, goal-due and uncertain bank messages stay unassigned
    // until the user makes an explicit choice; never inherit Home's header.
    final accountEvidence=WaffraVerifiedAccountsApi(bridge:bridge);
+   // Sender-only learning needs two confirmations AND exactly one account
+   // whose user-chosen bank name matches the sender. No sender guesses for
+   // two accounts at the same bank; suffix evidence remains authoritative.
+   var learned=<WaffraSmsAccountEvidence>[];
+   if(smsSender.isNotEmpty&&_smsRuleOwnerKey.isNotEmpty){
+    try{
+     learned=await const WaffraSmsAccountLearningStore()
+      .read(_smsRuleOwnerKey);
+    }catch(_){/* Unavailable learning never blocks manual review. */}
+   }
+   final bankGroup=WaffraSmsAccountLearning.bankGroup(smsSender);
+   final sameBankIds=<String>{
+    if(bankGroup!=null)
+     for(final account in active)
+      if((account.kind=='bank'||account.kind=='wallet')&&
+         WaffraSmsAccountLearning.bankGroup(account.name)==bankGroup)
+       account.id,
+   };
+   final activeAccountIds=active.map((account)=>account.id).toSet();
    // A recurring template owns its default, not the active Home header.
    // A change in this review applies to this payment only; users manage
    // future defaults separately in Accounts -> Recurring defaults.
@@ -5724,6 +5770,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      if(match.confident&&match.accountId!=null&&
         active.any((a)=>a.id==match.accountId)){
       assigned[i]=match.accountId;
+     }else{
+      final suffix=item.income?
+       facts.destinationSuffix:facts.sourceSuffix;
+      // Missing/ambiguous four-digit evidence never overrides the verified
+      // source. Only truly suffix-free SMS may reuse sender-only learning.
+      if(WaffraSmsAccountLearning.suffix4(suffix)==null){
+       final learnedId=WaffraSmsAccountLearning.suggest(
+        learned,sender:smsSender,suffix:null,
+        activeAccountIds:activeAccountIds,
+        sameBankAccountIds:sameBankIds);
+       if(learnedId!=null)assigned[i]=learnedId;
+      }
      }
     }catch(_){
      // Suggestion failure must never guess or silently link an account.
@@ -6196,7 +6254,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   for(var n=0;n<additions.length;n++){
    additions[n]=additions[n].withBudget(reviewedBudgets[n]);
   }
-  final reviewedAccounts=await reviewSmsAccountLinks(additions);
+  final reviewedAccounts=await reviewSmsAccountLinks(additions,smsSender:initialSender);
   if(reviewedAccounts==null){if(ctx.mounted)update(()=>busy=false);return;}
   try{
    // The dashboard and standalone Android widget now use the SAME locked,
@@ -6226,6 +6284,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    );
    if(recovery.saved!=applied.saved){
     throw StateError('SMS finance journal does not match persisted transaction IDs.');
+   }
+   if(initialSender.isNotEmpty&&reviewedAccounts.ids!=null){
+    final committedIds=persisted.map((entry)=>entry.id).toSet();
+    for(var n=0;n<additions.length;n++){
+     if(n>=reviewedAccounts.ids!.length||
+        !committedIds.contains(additions[n].id))continue;
+     unawaited(_recordConfirmedSmsAccountAssociation(
+      record:additions[n],sender:initialSender,
+      accountId:reviewedAccounts.ids![n]));
+    }
    }
    setState((){
     entries..clear()..addAll(persisted);
@@ -6832,7 +6900,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        final budgetSelection=await reviewSmsBudgetLinks([entry]);
        if(budgetSelection==null){if(ctx.mounted)update(()=>busy=false);return;}
        entry=entry.withBudget(budgetSelection.single);
-       final reviewedAccount=await reviewSmsAccountLinks([entry]);
+       final reviewedAccount=await reviewSmsAccountLinks([entry],smsSender:initialSender);
        if(reviewedAccount==null){if(ctx.mounted)update(()=>busy=false);return;}
        final selected=namedBudgets.where((b)=>b.id==entry.budgetId&&
         b.budget>0&&!b.deleted).toList();
@@ -6858,6 +6926,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           :'تم حفظ هذه الرسالة من قبل. راجعها قبل إعادة المحاولة.';
         });
         return;
+       }
+       if(initialSender.isNotEmpty){
+        unawaited(_recordConfirmedSmsAccountAssociation(
+         record:entry,sender:initialSender,
+         accountId:reviewedAccount.ids?.single));
        }
        final verified=(jsonDecode(committed.current.ledgerRaw??'[]') as List)
         .map((item)=>MoneyEntry.fromJson(
