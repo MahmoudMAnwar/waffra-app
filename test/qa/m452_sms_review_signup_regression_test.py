@@ -25,7 +25,21 @@ class M452ReviewAndRegistration(unittest.TestCase):
                         card.index("if(_autoSmsReviewExpanded)Padding("))
         self.assertIn("waffra-auto-sms-review-open", card)
         self.assertIn("waffra-auto-sms-review-refresh", card)
-        self.assertIn("_refreshAutoSmsInbox(importMonth:true)", card)
+        # M465: the visible button calls the guarded, progress-aware rescan
+        # wrapper. Only that wrapper imports a new cursor page. Do not
+        # weaken the check by looking for the old direct handler in the card.
+        self.assertIn("WaffraHaptics.tap(()=>unawaited(_rescanAutoSmsInbox()))", card)
+        self.assertIn("if(_autoSmsRescanRunning)...[", card)
+        self.assertIn("if(_autoSmsProgress['scanned'] is num)", card)
+        self.assertIn(
+            " Future<void> _rescanAutoSmsInbox()async{", home
+        )
+        wrapper = home.split(
+            " Future<void> _rescanAutoSmsInbox()async{", 1
+        )[1].split(" Future<void>? _autoSmsRefreshInFlight;", 1)[0]
+        self.assertIn("await _refreshAutoSmsInbox(importMonth:true);", wrapper)
+        self.assertIn("_autoSmsRescanRunning=false", wrapper)
+        self.assertIn("finally{", wrapper)
         self.assertIn("_autoSmsReviewExpanded=!_autoSmsReviewExpanded", card)
 
     def test_registration_has_single_submit_and_avatar_choices(self):
