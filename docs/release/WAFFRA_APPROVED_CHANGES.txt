@@ -1,3 +1,11 @@
+[M470-25] 2026-11-06 — Verified bank/provider then linked account transaction selection
+=====================================================================================
+- The account-manager income/expense/transfer form now shows a provider/bank dropdown before the actual verified account dropdown. Choosing a different provider clears the old linked account; changing the Home display account never fills or posts this form.
+- Internal transfer has separate provider/account selection for both source and destination, retains distinct-account validation, stable transfer ID and its approved date picker. Existing finance writer, balance and SMS evidence are unchanged.
+- Added M470 provider-selector regression to the existing verified grouping tests, and bounded only the account-form source sections under strict M385 audit.
+- This completes the account-manager form subpart of #25; the older Home manual editor is still not wired to these same two selectors. This is not a production-complete #25 claim.
+- Exact-head CI and signed Android device tests remain required; no automatic bank authorization is inferred from display names.
+
 [M470-27] 2026-11-06 — New account creation UI with distinct type and opening balance
 ====================================================================================
 - Replaced the original crowded account form with a compact account-creation dialog. Account type, verified bank/provider choice (only for a bank), account nickname, and opening balance are distinct labeled controls. Existing cash, bank, wallet, and other storage kinds remain unchanged.
