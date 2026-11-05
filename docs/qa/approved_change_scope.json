@@ -1,45 +1,427 @@
 {
   "contract_version": 1,
-  "change_id": "M451-fresh-sqlcipher-home-empty-ledger-and-catalog-startup-repair",
-  "human_scope_review": "Owner reproduced a second, critical Android issue after PR #370 registration: Home displays 'بياناتك المالية محمية' and refuses to show the dashboard. This exact-scope change uses the EXISTING verified SQLCipher source and atomic cross-engine finance patch to add only missing empty ledger/default category fields in authenticated fresh installations. It cannot select, reset, migrate, initialize or backfill an existing user's unverified finance vault and does not bypass Home or widget source checks. Human review is required before merging.",
+  "change_id": "M453-pr-run-queue-hygiene-superseded-only-20261105",
+  "human_scope_review": "Owner explicitly requested on 2026-11-04 automatic cancellation of superseded PR workflow runs, keeping only latest commit checks, preserving unrelated PRs/main builds, and avoiding broad reruns. This scope changes only top-level workflow event/concurrency headers plus two new narrowly scoped workflows and a regression test. M453 cancellation is limited to authenticated same-repository open PRs and older head SHAs; main/push/manual/fork runs are protected. Existing required finance tests and workflow path filters remain intact. Human review and exact-head CI remain mandatory.",
   "user_requested_changes": [
-    "Fix newly registered Waffra Android homes that refuse startup because M440 initialized a genuinely fresh SQLCipher finance snapshot with absent ledger/categories, while Home requires a durable encrypted category catalog.",
-    "Persist only missing ledger and default category fields together in the existing SQLCipher finance snapshot and typed relational category tables, holding the Home/Widget file lock with verified active source witnesses; never fall back to legacy finance preferences.",
-    "Ensure an already-repaired Home reload is idempotent, existing account/transaction/goal data survive, invalid defaults or missing cutover witnesses are rejected, and existing/migrated finance sources are not fabricated.",
-    "Exercise the exact shipped default category list, new-install Home recovery, repeat reopen, database integrity, pending pointer failure, account source preservation, and update reviewed QA release notes.",
-    "Add an actual Android emulator full first-install to Home to widget-confirmed-SMS to cold Home reopen test with persistent SQLCipher categories, preventing isolated unit-test false positives."
+    "Prevent duplicate queued/running PR runs for an older commit by adding workflow-specific PR-number concurrency groups and PR-only cancel-in-progress to PR workflows currently missing this protection.",
+    "Keep main push/Android APK builds, other PRs and manual workflow_dispatch runs independent by using the run_id fallback and event-limited cancellation.",
+    "Provide a trusted default-branch PR supersession cleaner that cancels only old still-active pull_request runs on the same open same-repository main-targeting PR; exclude forks, main, current SHA, other PRs and completed jobs.",
+    "Offer a manual GitHub Actions dispatch with dry-run enabled by default, plus a limited after-merge sweep of recently updated PRs, without accessing user financial data.",
+    "Retain existing path-based workflow triggers and required financial SQLCipher/CI checks; avoid full re-run after an isolated failure, prefer selective GitHub failed-job retry.",
+    "Add exact-head safe-concurrency regression tests, bounded change-scope documentation and release notes."
   ],
   "allowed_changed_files": [
+    ".github/workflows/finance-full-regression.yml",
+    ".github/workflows/firestore-security-rules.yml",
+    ".github/workflows/legacy-write-smoke.yml",
+    ".github/workflows/m100-independent-runtime-gate.yml",
+    ".github/workflows/m101-independent-runtime-gate.yml",
+    ".github/workflows/m102-independent-runtime-gate.yml",
+    ".github/workflows/m103-same-sha-release-certification.yml",
+    ".github/workflows/m106-play-privacy-preflight.yml",
+    ".github/workflows/m107-account-deletion-crash-privacy.yml",
+    ".github/workflows/m108-home-widget-one-finance-commit.yml",
+    ".github/workflows/m109-verified-finance-authority.yml",
+    ".github/workflows/m110-home-writer-source-authority.yml",
+    ".github/workflows/m111-finance-negative-acceptance.yml",
+    ".github/workflows/m112-source-witness-acceptance.yml",
+    ".github/workflows/m113-recovery-rollback-regression.yml",
+    ".github/workflows/m114-sqlcipher-projected-editor.yml",
+    ".github/workflows/m115-encrypted-receipt-authority.yml",
+    ".github/workflows/m116-encrypted-receipt-replacement.yml",
+    ".github/workflows/m117-receipt-retention-contract.yml",
+    ".github/workflows/m118-encrypted-receipt-recycle.yml",
+    ".github/workflows/m119-verified-receipt-screen-gateway.yml",
+    ".github/workflows/m120-android-receipt-cold-reopen.yml",
+    ".github/workflows/m121-atomic-receipt-screen-witness.yml",
+    ".github/workflows/m122-receipt-expiry-clock-guard.yml",
+    ".github/workflows/m123-production-cutover-release-gate.yml",
+    ".github/workflows/m124-main-integration-audit.yml",
+    ".github/workflows/m157-freeze-confirmed-merchant-category-acceptance.yml",
+    ".github/workflows/m158-widget-sms-title-privacy.yml",
+    ".github/workflows/m160-main-reconciliation.yml",
+    ".github/workflows/m164-exact-ancestry-review.yml",
+    ".github/workflows/m165-sqlcipher-no-cutover.yml",
+    ".github/workflows/m166-android-qa-plan-lint.yml",
+    ".github/workflows/m167-fresh-finance-backup-qa.yml",
+    ".github/workflows/m168-firebase-owner-deletion-qa.yml",
+    ".github/workflows/m169-bilingual-play-data-safety-qa.yml",
+    ".github/workflows/m170-crashlytics-privacy-qa.yml",
+    ".github/workflows/m171-android-supply-chain-review.yml",
+    ".github/workflows/m172-rtl-accessibility-performance-qa.yml",
+    ".github/workflows/m173-production-cutover-evidence-qa.yml",
+    ".github/workflows/m174-main-sha-postmerge.yml",
+    ".github/workflows/m317-ondevice-ai-brain.yml",
+    ".github/workflows/m368-sqlcipher-stage-ci.yml",
+    ".github/workflows/m369-sqlcipher-stage-ci.yml",
+    ".github/workflows/m370-sqlcipher-stage-ci.yml",
+    ".github/workflows/m371-goal-wallet-budget-android-regression.yml",
+    ".github/workflows/m417-auto-bank-sms.yml",
+    ".github/workflows/m422-phone-only-auth-ui.yml",
+    ".github/workflows/m429-integration-smoke.yml",
+    ".github/workflows/m440-account-ledger-and-backup-ci.yml",
+    ".github/workflows/m453-queue-regression.yml",
+    ".github/workflows/m453-superseded-pr-cleanup.yml",
+    ".github/workflows/m80-parallel-independent-acceptance.yml",
+    ".github/workflows/m89-integrated-m79-m88-acceptance.yml",
+    ".github/workflows/m96-runtime-finance-cloud-integration.yml",
+    ".github/workflows/m97-parallel-crash-and-ui-freeze.yml",
+    ".github/workflows/m98-encrypted-recovery-inventory.yml",
+    ".github/workflows/m99-manifest-last-cloud-sync.yml",
+    ".github/workflows/storage-android-integration.yml",
+    ".github/workflows/storage-preflight.yml",
+    ".github/workflows/unified-finance-cloud-release-evidence.yml",
     "docs/qa/approved_change_scope.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "integration_test/fresh_install_production_binding_android_test.dart",
-    "lib/main.dart",
-    "lib/storage/waffra_fresh_home_catalog_recovery.dart",
-    "test/storage/m451_fresh_home_catalog_recovery_test.dart"
+    "scripts/qa/test_m453_queue_hygiene.py"
   ],
   "bounded_sections": {
-    "lib/main.dart": [
+    ".github/workflows/finance-full-regression.yml": [
       {
-        "start": "import 'storage/waffra_production_finance_source_guard.dart';\n",
-        "end": "import 'storage/waffra_legacy_finance_writer_coordinator.dart';\n"
-      },
-      {
-        "start": " Future<void> load()async {\n  await _ensureFinanceBound();\n",
-        "end": "  _lastWidgetRevision=loadedFinance.widgetRevision;\n"
+        "start": "\non:\n",
+        "end": "\njobs:\n"
       }
     ],
-    "integration_test/fresh_install_production_binding_android_test.dart": [
+    ".github/workflows/firestore-security-rules.yml": [
       {
-        "start": "import 'package:integration_test/integration_test.dart';\n",
-        "end": "import 'package:waffra/storage/waffra_home_finance_persistence.dart';\n"
-      },
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/legacy-write-smoke.yml": [
       {
-        "start": "    final home = await bind(WaffraFinanceRoute.appStartup);\n",
-        "end": "    final widget = await bind(WaffraFinanceRoute.widgetStartup);\n"
-      },
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m100-independent-runtime-gate.yml": [
       {
-        "start": "    final reopened = await bind(WaffraFinanceRoute.appStartup);\n",
-        "end": "  });\n}\n"
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m101-independent-runtime-gate.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m102-independent-runtime-gate.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m103-same-sha-release-certification.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m106-play-privacy-preflight.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m107-account-deletion-crash-privacy.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m108-home-widget-one-finance-commit.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m109-verified-finance-authority.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m110-home-writer-source-authority.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m111-finance-negative-acceptance.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m112-source-witness-acceptance.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m113-recovery-rollback-regression.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m114-sqlcipher-projected-editor.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m115-encrypted-receipt-authority.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m116-encrypted-receipt-replacement.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m117-receipt-retention-contract.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m118-encrypted-receipt-recycle.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m119-verified-receipt-screen-gateway.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m120-android-receipt-cold-reopen.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m121-atomic-receipt-screen-witness.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m122-receipt-expiry-clock-guard.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m123-production-cutover-release-gate.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m124-main-integration-audit.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m157-freeze-confirmed-merchant-category-acceptance.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m158-widget-sms-title-privacy.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m160-main-reconciliation.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m164-exact-ancestry-review.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m165-sqlcipher-no-cutover.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m166-android-qa-plan-lint.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m167-fresh-finance-backup-qa.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m168-firebase-owner-deletion-qa.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m169-bilingual-play-data-safety-qa.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m170-crashlytics-privacy-qa.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m171-android-supply-chain-review.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m172-rtl-accessibility-performance-qa.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m173-production-cutover-evidence-qa.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m174-main-sha-postmerge.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m317-ondevice-ai-brain.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m368-sqlcipher-stage-ci.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m369-sqlcipher-stage-ci.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m370-sqlcipher-stage-ci.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m371-goal-wallet-budget-android-regression.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m417-auto-bank-sms.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m422-phone-only-auth-ui.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m429-integration-smoke.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m440-account-ledger-and-backup-ci.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m80-parallel-independent-acceptance.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m89-integrated-m79-m88-acceptance.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m96-runtime-finance-cloud-integration.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m97-parallel-crash-and-ui-freeze.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m98-encrypted-recovery-inventory.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/m99-manifest-last-cloud-sync.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/storage-android-integration.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/storage-preflight.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
+      }
+    ],
+    ".github/workflows/unified-finance-cloud-release-evidence.yml": [
+      {
+        "start": "\non:\n",
+        "end": "\njobs:\n"
       }
     ]
   }

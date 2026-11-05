@@ -1,0 +1,28 @@
+name: M453 PR Concurrency and Safe Cleanup Regression
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/**'
+      - 'scripts/qa/test_m453_queue_hygiene.py'
+      - 'docs/qa/approved_change_scope.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m453-queue-qa-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  verify-concurrency:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Test strict PR-only cancellation and scoped manual sweep
+        run: python3 -m unittest scripts/qa/test_m453_queue_hygiene.py -v

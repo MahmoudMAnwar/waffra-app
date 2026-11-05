@@ -13,6 +13,10 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: waffra-pr-m429-integration-smoke-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   combined-flutter:
     runs-on: ubuntu-latest

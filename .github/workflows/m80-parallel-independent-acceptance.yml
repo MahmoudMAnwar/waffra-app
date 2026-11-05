@@ -11,6 +11,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: waffra-pr-m80-parallel-independent-acceptance-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   confirmed-sms-boundary:
     name: M80 bank-SMS confirmation, 100-limit, rollback, replay

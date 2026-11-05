@@ -17,6 +17,10 @@ on:
 
 permissions:
   contents: read
+concurrency:
+  group: waffra-pr-m440-account-ledger-and-backup-ci-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   m440-account-ledger:
     runs-on: ubuntu-latest
