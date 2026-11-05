@@ -743,6 +743,63 @@ class WaffraVerifiedFinanceAuthority {
     return load(route: route);
   }
 
+  /// M457: add one user-confirmed manual entry without rewriting any existing
+  /// Home JSON rows. The source is re-attested and the shared SQLCipher lock
+  /// atomically appends to both the canonical ledger and the typed table.
+  ///
+  /// The verified SMS path has always used this direct append architecture.
+  /// Manual entries must not rely on an earlier Home ledger serialization,
+  /// which may differ from original imported SMS JSON or Widget mutations.
+  Future<WaffraFinanceAuthorityRead> commitConfirmedManual({
+    required WaffraFinanceRoute route,
+    required Map<String, Object?> record,
+    required bool userConfirmed,
+    String? selectedAccountId,
+    int? expectedAccountGeneration,
+  }) async {
+    if (route != WaffraFinanceRoute.manualTransactionSave ||
+        !userConfirmed || record['sourceType'] != 'manual' ||
+        (record['receiptPath'] != null && record['receiptPath'] != '')) {
+      throw StateError('M457 requires one confirmed unattached manual entry.');
+    }
+    if (selectedAccountId != null &&
+        (selectedAccountId.trim().isEmpty || selectedAccountId.length > 128 ||
+         expectedAccountGeneration == null)) {
+      throw StateError('M457 account selection needs verified generation.');
+    }
+    // Deep-freeze input before the first async source check.
+    final decoded = jsonDecode(jsonEncode(record));
+    if (decoded is! Map<String, dynamic>) {
+      throw ArgumentError('Invalid confirmed manual record.');
+    }
+    final frozen = Map<String, Object?>.unmodifiable(decoded);
+    if (await _requireRoute(route) !=
+        WaffraRuntimeFinanceBackend.verifiedEncrypted) {
+      throw StateError('M457 cannot write to an unverified finance source.');
+    }
+    final result = await encryptedSession!.appendConfirmed(
+      records: <Map<String, Object?>>[frozen],
+      hashes: const <String?>[null],
+      userConfirmed: true,
+      selectedAccountIds: selectedAccountId == null
+          ? null : <String?>[selectedAccountId],
+      expectedAccountGeneration: selectedAccountId == null
+          ? null : expectedAccountGeneration,
+    );
+    if (result.saved != 1 || result.savedIncome + result.savedExpenses != 1) {
+      throw StateError('M457 manual entry did not commit exactly once.');
+    }
+    // A successful SQL insert is not a safe UI receipt until the same
+    // independently attested ledger can be read back and contains this ID.
+    final current = await load(route: route);
+    final rows = jsonDecode(current.ledgerRaw ?? '[]');
+    if (rows is! List ||
+        !rows.any((item) => item is Map && item['id'] == frozen['id'])) {
+      throw StateError('M457 cannot verify committed manual entry.');
+    }
+    return current;
+  }
+
   /// A future encrypted-only receipt attachment route. The caller supplies
   /// picker bytes (never plaintext file paths) and explicitly confirms.
   /// The source selector and the SQLCipher bridge each independently verify

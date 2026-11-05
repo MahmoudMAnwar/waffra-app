@@ -1,24 +1,31 @@
 {
   "contract_version": 1,
-  "change_id": "M456-apk-optional-m410-skip-audit-20261105",
-  "human_scope_review": "After merging the previously CI-green M455 manual transaction fix, the owner directed sequential removal of blockers. The exact-main signed Android APK gate on commit fcab3d5 failed solely because optional conditional M410 retrier was marked 'skipped'. Limit exemption to this exact non-required retry workflow and skipped conclusion. All required checks and all other failures, cancellation, missing, pending and unexpected skipped workflows still block. This is not an unconditional bypass of release controls; verify exact-main signed APK after merge.",
+  "change_id": "M457-verified-direct-manual-save-after-repeated-android-failure-20261105",
+  "human_scope_review": "The owner re-tested an installed signed APK after M455 and supplied an Android screenshot showing the same manual save failure on 2026-11-05. Bank SMS review/save works. Eliminate the manual-only previous-ledger JSON compare and post exactly one confirmed manual entry through the same source-verified native lock and atomic SQLCipher/Widget writer already used by bank SMS. Preserve M455 and all manual edit/legacy routes. Keep financial security and account generation checks fail-closed. Exact current-head CI, current-main signed APK and Android retest required; do not claim physical success from source tests.",
   "user_requested_changes": [
-    "Repair main APK release gate false negative when an optional M410 infrastructure retry intentionally skips on a healthy build, while retaining all real security and financial test requirements.",
-    "Keep main release fail-closed for missing, pending, cancelled, timed out, actually failed or other skipped workflows, with strict negative regression tests.",
-    "Update signed release notes and bounded scope without changing finance application, SQLCipher logic, login or unrelated CI configuration."
+    "Repair repeated manual income/expense confirmation failure without deleting data or weakening SQLCipher source protections.",
+    "Ensure SMS-first records with original raw JSON survive later manual save byte-for-byte without optimistic duplicate or phantom writes.",
+    "Use an atomic single-entry SQLCipher append guarded by verified source, explicit consent, account-generation evidence and duplicate rollback; keep legacy and existing transaction edits unchanged.",
+    "Provide real fresh encrypted-vault tests including prior SMS, cold read, duplicate/account rejection and safe ambiguous-write recovery."
   ],
   "allowed_changed_files": [
-    ".github/workflows/android.yml",
     "docs/qa/approved_change_scope.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "scripts/qa/m456_optional_retry_audit.py",
-    "test/qa/m456_optional_retry_audit_test.py"
+    "lib/main.dart",
+    "lib/storage/waffra_verified_finance_authority.dart",
+    "test/storage/m457_direct_manual_finance_commit_test.dart"
   ],
   "bounded_sections": {
-    ".github/workflows/android.yml": [
+    "lib/main.dart": [
       {
-        "start": "      - name: Fail closed on missing, running or failed independent tests",
-        "end": "\n  build:\n"
+        "start": "   // An account is selected from the same verified source only for a NEW",
+        "end": "  if(mounted)await budgetAlert(result,previousSpent);"
+      }
+    ],
+    "lib/storage/waffra_verified_finance_authority.dart": [
+      {
+        "start": "    // Never publish optimistic UI success before getting durable witness.",
+        "end": "  Future<WaffraEncryptedReceiptTransactionResult> commitWithReceiptBytes({"
       }
     ]
   }
