@@ -5,6 +5,7 @@ import 'storage/waffra_accounts_repository.dart';
 import 'storage/waffra_verified_accounts_api.dart';
 import 'waffra_account_transaction_form.dart';
 import 'waffra_account_context_page.dart';
+import 'waffra_new_account_dialog.dart';
 
 /// M440 optional SQLCipher account page. A production Home route must only
 /// open this after the same certified finance source is active for SMS/widget.
@@ -35,43 +36,19 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
  }
 
  Future<void> addAccount()async{
-  final name=TextEditingController(),opening=TextEditingController(text:'0');
-  String kind='cash';
   try{
-   final draft=await showDialog<({String name,String kind,int opening})>(
-    context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,redraw)=>
-     AlertDialog(title:Text(t('حساب جديد','New account')),
-      content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-       TextField(controller:name,maxLength:80,
-        decoration:InputDecoration(labelText:t('اسم الحساب','Account name'))),
-       DropdownButtonFormField<String>(initialValue:kind,
-        decoration:InputDecoration(labelText:t('النوع','Type')),
-        items:[
-         DropdownMenuItem(value:'cash',child:Text(t('كاش','Cash'))),
-         DropdownMenuItem(value:'bank',child:Text(t('حساب بنكي','Bank'))),
-         DropdownMenuItem(value:'wallet',child:Text(t('محفظة','Wallet'))),
-         DropdownMenuItem(value:'other',child:Text(t('أخرى','Other'))),
-        ],onChanged:(v){if(v!=null)redraw(()=>kind=v);}),
-       TextField(controller:opening,
-        keyboardType:const TextInputType.numberWithOptions(decimal:true),
-        decoration:InputDecoration(labelText:t('الرصيد الافتتاحي (ر.س)','Opening balance (SAR)'))),
-      ])),
-      actions:[
-       TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(t('إلغاء','Cancel'))),
-       FilledButton(onPressed:(){
-        final minor=waffraSarAmountMinor(opening.text,allowZero:true);
-        if(minor==null||name.text.trim().isEmpty)return;
-        Navigator.pop(ctx,(name:name.text.trim(),kind:kind,opening:minor));
-       },child:Text(t('إضافة','Add'))),
-      ])));
+   // The form only creates a draft. Existing verified account creation
+   // remains the sole finance writer and rejects any stale SQLCipher witness.
+   final draft=await showDialog<WaffraNewAccountDraft>(
+    context:context,builder:(ctx)=>WaffraNewAccountDialog(
+     english:widget.english));
    if(draft==null)return;
    await widget.repository.createAccount(
     id:'m440-'+DateTime.now().microsecondsSinceEpoch.toString(),
-    name:draft.name,kind:draft.kind,openingMinor:draft.opening,
+    name:draft.name,kind:draft.kind,openingMinor:draft.openingMinor,
     createdIso:DateTime.now().toIso8601String(),userConfirmed:true);
    reload();
   }catch(_){failed();}
-  finally{name.dispose();opening.dispose();}
  }
 
  Future<void> rename(WaffraAccountBalance item)async{
