@@ -1,22 +1,28 @@
 {
   "contract_version": 1,
-  "change_id": "M454-m453-regression-test-independent-from-later-pr-scope-20261105",
-  "human_scope_review": "Owner requested correction of CI queue blockage. M453 regression unexpectedly fails on any later PR with its own finance or SMS approved_change_scope.json, despite the 58 protected workflows staying intact. This narrowly scoped fix tests the original immutable M453 set, retaining full exact group/PR-only cancellation checks on every PR and trust/cancel checks for the cleanup workflow. Only a single unit-test assertion source and QA docs are changed; no application, CI workflow, or finance release gate is altered.",
+  "change_id": "M455-manual-encrypted-save-capture-20261105",
+  "human_scope_review": "User supplied Android screenshots 2026-11-05 showing a confirmed Home manual finance save rejected with 'تعذر حفظ المعاملة. بياناتك السابقة لم تتغير.' A fresh SQLCipher vault intentionally contains only required entries/categories; Home's full empty-domain snapshot violates the existing SQLCipher manual append-only guard. Limit only the verified new manual save to its ledger delta, preserve baseline source-witness and atomic append checks. No changes to bank SMS, login, source activation, existing-entry edits, legacy writers, UI, or production database migration. Human acceptance and exact-head CI plus signed Android verification remain required.",
   "user_requested_changes": [
-    "Fix M453 queue hygiene QA's accidental dependency on the currently checked-out PR change manifest, which falsely fails when PR #373, #372 or another legitimate PR has fewer than 40 changed workflow files.",
-    "Retain or strengthen the check over all exact 58 workflows originally approved in PR #374 on every later PR; do not skip the test or bypass concurrency or finance gates.",
-    "Document the QA regression correction and rerun exact-HEAD checks before using the new main to review financial PRs."
+    "Fix the reported failed manual transaction save on an authenticated fresh SQLCipher installation without discarding existing data or weakening append-only finance authorization.",
+    "Preserve the full capture for guarded legacy saves, edits and every non-manual route; reject a missing ledger and keep source-witness checks in place.",
+    "Add focused regression coverage for the new scope and unchanged source safety, and update release notes before any merge."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "scripts/qa/test_m453_queue_hygiene.py"
+    "lib/main.dart",
+    "lib/storage/waffra_home_transaction_capture.dart",
+    "test/m455_manual_sqlcipher_capture_scope_test.dart"
   ],
   "bounded_sections": {
-    "scripts/qa/test_m453_queue_hygiene.py": [
+    "lib/main.dart": [
       {
-        "start": "    def test_exact_pr_concurrency_for_every_modified_workflow(self):",
-        "end": "    def test_cleanup_remains_trusted_and_scoped(self):"
+        "start": "import 'storage/waffra_runtime_finance_route_contract.dart';",
+        "end": "import 'storage/waffra_verified_transaction_ui_guard.dart';"
+      },
+      {
+        "start": " Future<void> persist({",
+        "end": " /// Optimistic UI updates must never masquerade as committed finance."
       }
     ]
   }
