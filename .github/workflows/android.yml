@@ -92,6 +92,7 @@ jobs:
         run: |
           python3 - <<'PY'
           import json, os, time, urllib.parse, urllib.request
+          from scripts.qa.m456_optional_retry_audit import classify_same_sha_checks
           repo, sha = os.environ['REPO'], os.environ['TARGET_SHA']
           own_run = int(os.environ['RUN_ID'])
           branch = os.environ['BRANCH_NAME']
@@ -131,10 +132,7 @@ jobs:
               for item in sorted(found, key=lambda x: (x['created_at'], x['id']), reverse=True):
                   if item['id'] != own_run and item['head_sha'] == sha:
                       checks.setdefault(item['name'], item)
-              missing = sorted(expected - checks.keys())
-              pending = [n for n, v in checks.items() if v['status'] != 'completed']
-              failed = [(n, v['conclusion'], v['html_url']) for n, v in checks.items()
-                        if v['status'] == 'completed' and v['conclusion'] != 'success']
+              missing, pending, failed = classify_same_sha_checks(checks, expected)
               if failed:
                   for item in failed:
                       print('BLOCKED failed external CI:', item, flush=True)
