@@ -4142,6 +4142,87 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ]),
   );
  }
+ /// Explicit, idempotent account-to-account transfer from reviewed bank SMS.
+ /// No SMS becomes income/expense or selects bank accounts by guessing.
+ Future<void> _reviewSmsAccountTransfer({
+  required Map<String,Object?> item,
+  required WaffraBankSmsFacts facts,
+ })async{
+  final id=item['id'],body=item['body'];
+  if(id is! String||body is! String||
+     facts.kind!=WaffraBankOperationKind.transfer||facts.pending)return;
+  if(WaffraSmsCurrencies.requiresReviewForSarLedger(body)){
+   if(mounted)snack(context,'تحقق من عملة الرسالة قبل تسجيل التحويل.',
+    isError:true);
+   return;
+  }
+  final bridge=_financeBinding?.accountsBridge;
+  if(bridge==null){
+   if(mounted)snack(context,'الحسابات الموثقة غير متاحة.',
+    isError:true);
+   return;
+  }
+  try{
+   final api=WaffraVerifiedAccountsApi(bridge:bridge);
+   final accounts=await api.balances();
+   if(!mounted)return;
+   if(accounts.where((a)=>!a.archived).length<2){
+    snack(context,'أضف حسابين على الأقل قبل تسجيل التحويل.',isError:true);
+    return;
+   }
+   final parsed=BankParser.parse(body);
+   final arrived=DateTime.fromMillisecondsSinceEpoch(
+    item['receivedAt'] is int?item['receivedAt'] as int:
+     DateTime.now().millisecondsSinceEpoch);
+   final date=bankSmsDate(body,referenceDate:arrived)??arrived;
+   final minor=parsed.amount!=null&&!parsed.requiresCurrencyReview?
+    waffraSarAmountMinor(parsed.amount!.toStringAsFixed(2)):null;
+   final prefill=WaffraInternalTransferDraft(
+    requestId:'sms-transfer-'+bankSmsHash(body),
+    fromId:'',toId:'',amountMinor:minor??0,
+    occurredIso:date.toIso8601String(),memo:'تحويل من رسالة بنكية');
+   var saved=false,ack=false;
+   await Navigator.of(context).push<void>(MaterialPageRoute(
+    builder:(route)=>Scaffold(
+     appBar:AppBar(title:const WaffraText('مراجعة تحويل بين حساباتي')),
+     body:Column(children:[
+      Padding(padding:const EdgeInsets.all(12),
+       child:WaffraText('من الحساب: '+
+        (facts.sourceSuffix==null?'غير معروف':'••••'+facts.sourceSuffix!)+
+        '  إلى الحساب: '+
+        (facts.destinationSuffix==null?'غير معروف':
+         '••••'+facts.destinationSuffix!))),
+      Expanded(child:WaffraAccountTransactionForm(
+       accounts:accounts,english:waffraIsEnglish,
+       initialSmsTransfer:prefill,
+       onConfirmTransfer:(draft)async{
+        await api.transfer(id:draft.requestId,
+         fromAccountId:draft.fromId,toAccountId:draft.toId,
+         amountMinor:draft.amountMinor,occurredIso:draft.occurredIso,
+         note:draft.memo,userConfirmed:true);
+        saved=true;
+        ack=await WaffraAutoSms.acknowledge([id]);
+        if(route.mounted)Navigator.of(route).pop();
+       })),
+     ]),
+    )));
+   if(!mounted||!saved)return;
+   try{await _learnSafeSmsRule(body:body,
+    sender:item['sender'] is String?item['sender'] as String:'',
+    kind:'transfer');}catch(_){}
+   if(ack){
+    setState(()=>_autoSmsPending.removeWhere((r)=>r['id']==id));
+    snackSuccess(context,'تم تسجيل التحويل بين الحسابات.');
+   }else{
+    snack(context,'التحويل اتسجل لكن تأكيد إزالة الرسالة فشل. '
+     'معرّف العملية يمنع الخصم مرتين.',isError:true);
+   }
+   unawaited(_refreshAutoSmsInbox());
+  }catch(_){
+   if(mounted)snack(context,'تعذر تسجيل التحويل؛ الرسالة ما زالت للمراجعة.',
+    isError:true);
+  }
+ }
  Future<void> _reviewAutoSmsCandidates({String? targetId})async {
   if(!mounted||!ready||_smsSheetOpen||_autoSmsReviewOpen||
      _financeLoadFailure!=null)return;
@@ -4235,9 +4316,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        Card(child:ListTile(
         key:const Key('waffra-sms-understood-action'),
         leading:Icon(sensitive?Icons.shield_outlined:
+         facts.kind==WaffraBankOperationKind.transfer?Icons.sync_alt_rounded:
          understood?Icons.account_balance_wallet_outlined:Icons.edit_note_outlined),
         title:WaffraText(sensitive?
          (waffraIsEnglish?'Exclude verification SMS':'استبعاد رسالة التحقق'):
+         facts.kind==WaffraBankOperationKind.transfer?
+          (waffraIsEnglish?'Review account transfer':'مراجعة تحويل بين حساباتي'):
          understood?(waffraIsEnglish?'I understand this transaction':'مراجعة العملية'):
          (waffraIsEnglish?'Add a separate manual transaction':'إضافة عملية يدوية')),
         subtitle:WaffraText(sensitive?
@@ -4313,10 +4397,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          'اتحفظت القاعدة لكن تعذر استبعاد الرسالة بأمان. حاول مجددًا.',isError:true);
        }
       }else{
-       snackSuccess(context,waffraIsEnglish?
-        'Transfer rule saved. Register the transfer from Accounts; no money was changed.':
-        'اتحفظت قاعدة التحويل. سجّل التحويل من شاشة الحسابات؛ مفيش رصيد اتغيّر.');
+       await _reviewSmsAccountTransfer(item:selected,facts:facts);
       }
+     }else if(kind=='transfer'){
+      await _reviewSmsAccountTransfer(item:selected,facts:facts);
      }else if(mounted){
       snack(context,waffraIsEnglish?
        'Saved rule does not match this message. Adjust its keywords.':
