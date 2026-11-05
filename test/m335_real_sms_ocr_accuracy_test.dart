@@ -53,7 +53,7 @@ Joanna Sa
   test('M335 SMS review uses two bounded hierarchical selectors',(){
     final app=File('lib/main.dart').readAsStringSync();
     final section=app.substring(
-      app.indexOf('Future<void> bulkSmsSheet({String? initialText})async'),
+      app.indexOf('Future<void> bulkSmsSheet({String? initialText,'),
       app.indexOf('Future<void> scanAndAddReceipt()async'));
     expect(section,contains('final smsMainCategories=waffraManualCategoryParents('));
     expect(section,contains('final smsSubcategories=waffraManualCategoryChildren('));
