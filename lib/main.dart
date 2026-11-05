@@ -1121,6 +1121,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  bool _biometricVerifiedAwaitingResume=false;
  bool googleFirstRunSetup=false;
  bool autoSmsConsentPending=false;
+ // True only after a new account was saved or a password challenge passed.
+ // A restored session must unlock before its first SMS permission request.
+ bool _smsConsentAfterVerifiedSignIn=false;
  String appearance='light';
  bool introDone=false;
  int _greetingCycle=0;
@@ -1233,7 +1236,10 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   if(!await p.setBool(WaffraAutoSms.firstRunKey,true)){
    throw StateError('Could not persist SMS onboarding decision');
   }
-  if(mounted)setState(()=>autoSmsConsentPending=false);
+  if(mounted)setState((){
+   autoSmsConsentPending=false;
+   _smsConsentAfterVerifiedSignIn=false;
+  });
  }
  Future<void> intro()async {
   final p=await SharedPreferences.getInstance();await p.setBool('waffra_onboarding_completed',true);
@@ -1269,6 +1275,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    !(prefs.getBool(WaffraAutoSms.firstRunKey)??false);
   if(mounted)setState((){
    if(needsSmsAccessAfterRegistration)autoSmsConsentPending=true;
+   // Once the account has been verified, first-run permissions precede
+   // the biometric gate. This does NOT apply to a restored, locked session.
+   _smsConsentAfterVerifiedSignIn=needsSmsAccessAfterRegistration;
    // First phone/password login and new registration require biometrics.
    // Editing a profile in an already-unlocked session does not re-lock.
    final freshSession=profile==null||showLogin;
@@ -1563,13 +1572,14 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     const SizedBox(height:8),
     FilledButton(onPressed:WaffraHaptics.tap((){setState((){loading=true;startupError=null;});load();}),child:const WaffraText('إعادة المحاولة')),
    ])))):
-   autoSmsConsentPending?WaffraAutoSmsConsentPage(
-    english:language=='en',onComplete:finishSmsPermissionChoice):
    profile==null||showLogin||((profile!.phone.trim().isEmpty)&&
     (profile!.provider.toLowerCase().contains('local')||
      profile!.provider.contains('محلي')||
      profile!.provider.toLowerCase().contains('guest')||
      profile!.provider.toLowerCase().contains('demo')))?LoginScreen(onSave:saveUser):
+   (autoSmsConsentPending&&_smsConsentAfterVerifiedSignIn)?
+    WaffraAutoSmsConsentPage(
+     english:language=='en',onComplete:finishSmsPermissionChoice):
    locked?WaffraMandatoryBiometricGate(
     english:language=='en',
     onVerified:(){
@@ -1587,6 +1597,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     },
     onSignOut:logout,
    ):
+   // Updated installs unlock their existing profile before requesting access.
+   autoSmsConsentPending?WaffraAutoSmsConsentPage(
+    english:language=='en',onComplete:finishSmsPermissionChoice):
    googleFirstRunSetup&&WaffraSaudiRelease.locationCountryOnboarding?WaffraCountryFirstRunPage(
      english:language=='en',onComplete:completeGoogleCountrySetup,
      onCountryConfirmed:setUiCountry):
@@ -2060,20 +2073,53 @@ class _LoginScreenState extends State<LoginScreen> {
  bool signInMode=false,showSignInPassword=false,signingIn=false,signInAttempted=false;
  String? signInAuthError;
  bool returnAfterLogout=false;String lastMethod='Local',lastEmail='',lastPhone='';
+ // Never show signup before checking both the old profile and OS verifier.
+ // A fresh phone registration is ONE screen; existing phones sign in directly.
+ bool _registrationChecked=false,_freshSignup=false;
  final signInPhone=TextEditingController(),signInPassword=TextEditingController();
  @override void initState(){super.initState();_loadRegistered();}
  Future<void> _loadRegistered()async{
-  final prefs=await SharedPreferences.getInstance();
-  final signedOut=prefs.getBool('waffra_signed_out_explicitly')??false;
-  if(mounted)setState((){
-   returnAfterLogout=signedOut;
-   lastMethod=prefs.getString('waffra_last_login_method')??'Local';
-   lastEmail=prefs.getString('waffra_last_login_email')??'';
-   lastPhone=prefs.getString('waffra_last_login_phone')??'';
-  });
-  final raw=prefs.getString('waffra_registered_profile');
-  if(raw==null)return;
-  try{final u=Person.fromJson(Map<String,dynamic>.from(jsonDecode(raw)));if(mounted)setState((){registered=u;signInMode=!signedOut;signInPhone.text=WaffraSaudiMobile.inputFromStored(u.phone);});}catch(_){ }
+  try{
+   final prefs=await SharedPreferences.getInstance();
+   final signedOut=prefs.getBool('waffra_signed_out_explicitly')??false;
+   final raw=prefs.getString('waffra_registered_profile');
+   Person? oldUser;
+   if(raw!=null){
+    try{oldUser=Person.fromJson(Map<String,dynamic>.from(
+     jsonDecode(raw) as Map));}catch(_){
+     // Malformed saved identity is NOT permission to replace its finances.
+    }
+   }
+   final hasOldProfile=prefs.getString('waffra_profile')!=null;
+   final hasLegacyVerifier=prefs.containsKey('waffra_local_password_hash')||
+    prefs.containsKey('waffra_local_password_salt');
+   // The OS key may be present even if a profile write was interrupted.
+   final hasSecureVerifier=await WaffraLocalPhoneCredentials
+    .hasRegisteredCredentials();
+   if(!mounted)return;
+   setState((){
+    returnAfterLogout=signedOut;
+    lastMethod=prefs.getString('waffra_last_login_method')??'Local';
+    lastEmail=prefs.getString('waffra_last_login_email')??'';
+    lastPhone=prefs.getString('waffra_last_login_phone')??'';
+    registered=oldUser;
+    signInMode=oldUser?.provider.toLowerCase()=='phone';
+    _freshSignup=raw==null&&!hasOldProfile&&!hasLegacyVerifier&&
+     !hasSecureVerifier;
+    _registrationChecked=true;
+    if(oldUser!=null){
+     signInPhone.text=WaffraSaudiMobile.inputFromStored(oldUser.phone);
+    }
+   });
+  }catch(_){
+   // A failed OS credential read must NOT create a fresh local identity.
+   if(mounted)setState((){
+    _freshSignup=false;_registrationChecked=true;
+    signInAuthError=waffraIsEnglish?
+     'Secure account check failed. Unlock the phone and retry.':
+     'تعذر فحص الحساب الآمن. افتح قفل الهاتف وأعد المحاولة.';
+   });
+  }
  }
  @override void dispose(){signInPhone.dispose();signInPassword.dispose();super.dispose();}
  Future<void> _signIn()async{
@@ -2221,6 +2267,11 @@ class _LoginScreenState extends State<LoginScreen> {
  }
  
  @override Widget build(BuildContext context){
+  if(!_registrationChecked){
+   return const Scaffold(body:Center(child:CircularProgressIndicator()));
+  }
+  // A truly empty install needs no separate welcome/registration-step page.
+  if(_freshSignup)return ProfileForm(provider:'Phone',onSave:widget.onSave);
   if(provider!=null)return ProfileForm(provider:'Phone',onSave:widget.onSave,
    onBack:()=>setState(()=>provider=null));
   final hasExisting=registered!=null;
@@ -2467,7 +2518,8 @@ class _ProfileFormState extends State<ProfileForm> {
   return Scaffold(
    appBar:AppBar(title:WaffraText(waffraIsEnglish?
     'Create a Waffra account':'إنشاء حساب وفرة'),
-    leading:IconButton(onPressed:WaffraHaptics.tap(widget.onBack),
+    leading:widget.onBack==null?null:IconButton(
+     onPressed:WaffraHaptics.tap(widget.onBack),
      icon:const Icon(Icons.arrow_back))),
    body:SafeArea(child:ListView(
     key:const Key('waffra-register-single-page'),
