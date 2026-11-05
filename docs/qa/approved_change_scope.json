@@ -1,13 +1,14 @@
 {
   "contract_version": 1,
   "change_id": "M463-login-first-before-android-permissions-20261105",
-  "human_scope_review": "Owner verified on the signed APK from main merge 7efe2618 that Android bank SMS permission screen appears before any account creation or sign-in, contradicting explicit approved login -> SMS permission -> notification permission -> signed-in application. The bug is a root home ternary precedence error in lib/main.dart; move the existing login route before autoSmsConsentPending. Do not modify financial authority, user records, user SMS consent, native permission handlers or account gates. Add a targeted source regression and release notes, preserve M385/M449 gates. After signed main APK testing, owner separately confirmed the signup/login unexpectedly regressed into two pages. Scope the source changes only to LoginScreen's pre-existing state/init and registration/build sections, leaving profile/credential finance code untouched.",
+  "human_scope_review": "Owner verified on the signed APK from main merge 7efe2618 that Android bank SMS permission screen appears before any account creation or sign-in, contradicting explicit approved login -> SMS permission -> notification permission -> signed-in application. The bug is a root home ternary precedence error in lib/main.dart; move the existing login route before autoSmsConsentPending. Do not modify financial authority, user records, user SMS consent, native permission handlers or account gates. Add a targeted source regression and release notes, preserve M385/M449 gates. After signed main APK testing, owner separately confirmed the signup/login unexpectedly regressed into two pages. Scope the source changes only to LoginScreen's pre-existing state/init and registration/build sections, leaving profile/credential finance code untouched. M463 additionally disables the fake Back arrow on a direct fresh registration form; its only code touch is the existing ProfileForm._phoneRegistrationForm AppBar leading expression.",
   "user_requested_changes": [
     "Display Saudi phone/password account creation or sign-in as the first interactive screen on a new installation, after splash; no Android permission before sign-in.",
     "Only after verified profile saved, offer one-time bank SMS access, followed by notification permission; allow denied permissions without blocking login.",
     "Do not re-request permissions for a returning account with completed onboarding; preserve encrypted and financial records.",
     "Add exact route-order regression and notes so the issue cannot recur in the next signed main APK.",
-    "Eliminate the second welcome-to-account navigation: newly installing users open the complete single-page Saudi mobile registration form immediately after splash, while existing Phone owners see phone/password sign-in fields directly, not a recent-account welcome card; preserve legacy Google migration."
+    "Eliminate the second welcome-to-account navigation: newly installing users open the complete single-page Saudi mobile registration form immediately after splash, while existing Phone owners see phone/password sign-in fields directly, not a recent-account welcome card; preserve legacy Google migration.",
+    "Do not show a useless Back arrow on the single-page first-install registration form; continue to allow controlled navigation for existing sessions."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
@@ -28,6 +29,10 @@
       {
         "start": " Widget recentLoginCard(){\n",
         "end": "class ProfileForm extends StatefulWidget {\n"
+      },
+      {
+        "start": " Widget _phoneRegistrationForm(){\n",
+        "end": " @override Widget build(BuildContext context){\n  if(widget.initial==null&&widget.provider=='Phone')return _phoneRegistrationForm();\n"
       }
     ]
   }
