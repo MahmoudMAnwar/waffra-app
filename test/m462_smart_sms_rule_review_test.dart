@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_sms_local_rules.dart';
+import 'package:waffra/waffra_bank_sms_facts.dart';
 
 void main(){
  test('M462 verified income SMS builds a sender-scoped safe rule, never autoposts',(){
@@ -137,6 +138,79 @@ void main(){
    existing:[saved],candidate:conflicting);
   expect(after,hasLength(1));
   expect(after.single.category,saved.category);
+ });
+
+
+ test('M462 different confirmed categories share one learned expense bucket',(){
+  const first=WaffraSmsLocalRule(
+   id:'manual_food',name:'مصروف',kind:'expense',income:false,
+   keywords:['panda'],category:'بقالة وتموين / سوبرماركت',
+   sender:'',matchAll:false);
+  const second=WaffraSmsLocalRule(
+   id:'manual_dinner',name:'مصروف',kind:'expense',income:false,
+   keywords:['albaik'],category:'مطاعم وكافيهات / مطاعم شعبية',
+   sender:'',matchAll:false);
+  final merged=WaffraSmsLocalRules.upsertLearned(
+   existing:[first],candidate:second);
+  expect(merged,hasLength(1));
+  expect(merged.single.id,'manual_food');
+  expect(merged.single.keywordCategories['panda'],
+   'بقالة وتموين / سوبرماركت');
+  expect(merged.single.keywordCategories['albaik'],
+   'مطاعم وكافيهات / مطاعم شعبية');
+  final reopened=WaffraSmsLocalRule.fromJson(
+   Map<String,dynamic>.from(merged.single.toJson()));
+  final panda=WaffraSmsLocalRules.resolve(
+   body:'Card Purchase at Panda',sender:'Bank',
+   bankKind:WaffraBankOperationKind.expense,custom:[reopened]);
+  final albaik=WaffraSmsLocalRules.resolve(
+   body:'Card Purchase at Albaik',sender:'Bank',
+   bankKind:WaffraBankOperationKind.expense,custom:[reopened]);
+  expect(panda?.category,'بقالة وتموين / سوبرماركت');
+  expect(albaik?.category,'مطاعم وكافيهات / مطاعم شعبية');
+  expect(WaffraSmsLocalRules.upsertLearned(
+   existing:merged,candidate:second),same(merged));
+  expect(WaffraSmsLocalRules.resolve(
+   body:'Card Purchase at Panda and Albaik',sender:'Bank',
+   bankKind:WaffraBankOperationKind.expense,custom:[reopened]),isNull);
+ });
+
+ test('M462 transfer and exclusion reuse separate safe sender buckets',(){
+  const transferA=WaffraSmsLocalRule(
+   id:'smart_transfer',name:'تحويل',kind:'transfer',income:false,
+   category:'',sender:'Bank',keywords:['transfer'],matchAll:false);
+  const transferB=WaffraSmsLocalRule(
+   id:'smart_transfer_next',name:'تحويل',kind:'transfer',income:false,
+   category:'',sender:'Bank',keywords:['تحويل وارد'],matchAll:false);
+  final transfers=WaffraSmsLocalRules.upsertLearned(
+   existing:[transferA],candidate:transferB);
+  expect(transfers,hasLength(1));
+  expect(transfers.single.keywords,containsAll(['transfer','تحويل وارد']));
+  expect(transfers.single.autoPost,isFalse);
+  const excluded=WaffraSmsLocalRule(
+   id:'smart_excluded',name:'استثناء',kind:'excluded',income:false,
+   category:'',sender:'Bank',keywords:['رمز التحقق'],matchAll:false);
+  final separate=WaffraSmsLocalRules.upsertLearned(
+   existing:transfers,candidate:excluded);
+  expect(separate,hasLength(2));
+  expect(separate.map((e)=>e.resolvedKind).toSet(),
+   containsAll(['transfer','excluded']));
+ });
+
+ test('M462 never merges two contradictory categories for the same phrase',(){
+  const old=WaffraSmsLocalRule(
+   id:'manual_original',name:'مصروف',kind:'expense',income:false,
+   category:'بقالة وتموين / سوبرماركت',sender:'',
+   keywords:['panda'],matchAll:false);
+  const conflicting=WaffraSmsLocalRule(
+   id:'manual_conflict',name:'مصروف',kind:'expense',income:false,
+   category:'السيارة / بنزين ووقود',sender:'',
+   keywords:['panda'],matchAll:false);
+  final originals=<WaffraSmsLocalRule>[old];
+  final next=WaffraSmsLocalRules.upsertLearned(
+   existing:originals,candidate:conflicting);
+  expect(next,same(originals));
+  expect(next,hasLength(1));
  });
 
  test('M462 beginner review is prefilled and keeps finance approval separate',(){
