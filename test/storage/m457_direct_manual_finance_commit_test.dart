@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:waffra/main.dart' show MoneyEntry, defaultCategories;
 import 'package:waffra/storage/waffra_atomic_finance_snapshot.dart';
+import 'package:waffra/storage/waffra_accounts_repository.dart';
 import 'package:waffra/storage/waffra_encrypted_cutover_journal.dart';
 import 'package:waffra/storage/waffra_encrypted_finance_session.dart';
 import 'package:waffra/storage/waffra_encrypted_store.dart';
@@ -73,6 +74,10 @@ void main() {
         defaultCategories().map((c) => c.toJson()).toList(),
       ),
     );
+    await WaffraAccountsRepository(db:store,experimentalEnabled:true)
+      .createAccount(id:'cash',name:'Test cash account',kind:'cash',
+       openingMinor:0,createdIso:'2026-11-05T00:00:00Z',
+       userConfirmed:true);
   });
 
   tearDown(() async {
@@ -98,6 +103,8 @@ void main() {
       final read=await authority.commitConfirmedManual(
         route: WaffraFinanceRoute.manualTransactionSave,
         record: entry, userConfirmed: true,
+        selectedAccountId:'cash',
+        expectedAccountGeneration:(await snapshot.read()).generation,
       );
       final list=jsonDecode(read.ledgerRaw!) as List;
       expect(list.any((x)=>x is Map&&x['id']==entry['id']), isTrue);
@@ -147,6 +154,8 @@ void main() {
     final committed=await authority.commitConfirmedManual(
       route:WaffraFinanceRoute.manualTransactionSave,
       record:expense,userConfirmed:true,
+      selectedAccountId:'cash',
+      expectedAccountGeneration:(await snapshot.read()).generation,
     );
     final after=jsonDecode(committed.ledgerRaw!) as List;
     expect(after,hasLength(2));
@@ -172,6 +181,8 @@ void main() {
     await authority.commitConfirmedManual(
       route:WaffraFinanceRoute.manualTransactionSave,
       record:entry,userConfirmed:true,
+      selectedAccountId:'cash',
+      expectedAccountGeneration:(await snapshot.read()).generation,
     );
     final good=await snapshot.read();
     await expectLater(authority.commitConfirmedManual(
