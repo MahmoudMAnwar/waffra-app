@@ -27,8 +27,8 @@ class WaffraSmsAccountEvidence {
 
 abstract final class WaffraSmsAccountLearning {
  static String senderKey(String sender)=>sender.trim().toLowerCase()
-  .replaceAll(RegExp(r'\\s+'),' ')
-  .replaceAll(RegExp(r'[\\u200e\\u200f\\u061c]'),'');
+  .replaceAll(RegExp(r'\s+'),' ')
+  .replaceAll(RegExp(r'[\u200e\u200f\u061c]'),'');
  static String? suffix4(String? value){
   if(value==null)return null;
   const arabic='٠١٢٣٤٥٦٧٨٩',persian='۰۱۲۳۴۵۶۷۸۹';
@@ -72,7 +72,7 @@ abstract final class WaffraSmsAccountLearning {
    result.add(WaffraSmsAccountEvidence(
     sender:scoped,key:key,accountId:accountId,
     confirmations:prior?.accountId==accountId?
-     (prior!.confirmations+1).clamp(1,2):1));
+     (prior!.confirmations+1).clamp(1,2).toInt():1));
   }
   if(result.length>200)result.removeRange(0,result.length-200);
   return List.unmodifiable(result);
