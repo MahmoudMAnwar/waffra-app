@@ -74,6 +74,7 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
  final title=TextEditingController(),category=TextEditingController();
  late final DateTime requestTime=DateTime.tryParse(
   widget.initialSmsTransfer?.occurredIso??'')??DateTime.now();
+ late DateTime transferDate=requestTime;
  late final String requestId=widget.initialSmsTransfer?.requestId??
   'm440-'+requestTime.microsecondsSinceEpoch.toString();
  WaffraAccountOperation mode=WaffraAccountOperation.income;
@@ -147,7 +148,7 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
     if(commit==null)throw StateError('Verified transfer source unavailable.');
     await commit(WaffraInternalTransferDraft(requestId:requestId,
      fromId:source!,toId:destination!,amountMinor:value,
-     occurredIso:requestTime.toIso8601String(),memo:memo.text.trim()));
+     occurredIso:transferDate.toIso8601String(),memo:memo.text.trim()));
    }else{
     final commit=widget.onConfirmEntry;
     if(commit==null)throw StateError('Verified income/expense source unavailable.');
@@ -211,6 +212,25 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
       setState((){source=v;if(destination==v)destination=null;error=null;});
      }),
     if(mode==WaffraAccountOperation.transfer)...[
+     const SizedBox(height:12),
+     OutlinedButton.icon(
+      key:const Key('m470-transfer-date'),
+      onPressed:saving||saved?null:()async{
+       final picked=await showDatePicker(
+        context:context,initialDate:transferDate,
+        firstDate:DateTime(2000),lastDate:DateTime(2100));
+       if(picked!=null&&mounted){
+        setState(()=>transferDate=DateTime(picked.year,picked.month,picked.day,
+         transferDate.hour,transferDate.minute,transferDate.second,
+         transferDate.millisecond,transferDate.microsecond));
+       }
+      },
+      icon:const Icon(Icons.calendar_today_outlined),
+      label:Text(tr('تاريخ التحويل: ','Transfer date: ')+
+       '${transferDate.day.toString().padLeft(2,'0')}/'
+       '${transferDate.month.toString().padLeft(2,'0')}/'
+       '${transferDate.year}'),
+     ),
      if(widget.initialSmsTransfer!=null)
       Padding(padding:const EdgeInsets.symmetric(vertical:8),
        child:Text(tr(
