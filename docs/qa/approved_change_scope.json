@@ -8,7 +8,8 @@
     "Show Income, Expense and Transfer between my accounts in one Manual transaction choice popup under Home +, with no separate Transfer menu action; transfers never count as income/expense.",
     "Display existing encrypted receipt images through the verified receipt source without falling back to a nonexistent local file path.",
     "Add disposable SQLCipher positive/negative regressions for income and expense with multiple images, owner validation, idempotency and popup wiring.",
-    "Preserve and update the M457 UI regression so it positively asserts every new manual save uses the verified authority and strips staged plaintext attachment paths before committing image bytes."
+    "Preserve and update the M457 UI regression so it positively asserts every new manual save uses the verified authority and strips staged plaintext attachment paths before committing image bytes.",
+    "Update M464 Home plus regression for the owner's new three-option popup; continue asserting the verified transfer writer and refuse a separate Home plus transfer button."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
@@ -19,6 +20,7 @@
     "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
     "lib/storage/waffra_verified_finance_authority.dart",
     "test/storage/m457_direct_manual_finance_commit_test.dart",
+    "test/storage/m464_manual_unassigned_transfer_access_regression_test.dart",
     "test/storage/m466_manual_receipt_and_picker_regression_test.dart"
   ],
   "bounded_sections": {
@@ -95,6 +97,12 @@
     "test/storage/m457_direct_manual_finance_commit_test.dart": [
       {
         "start": "  test('M457 manual UI posts a single frozen entry without optimistic ledger',",
+        "end": null
+      }
+    ],
+    "test/storage/m464_manual_unassigned_transfer_access_regression_test.dart": [
+      {
+        "start": " test('Main plus button exposes",
         "end": null
       }
     ]
