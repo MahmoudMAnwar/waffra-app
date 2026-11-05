@@ -1563,13 +1563,15 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     const SizedBox(height:8),
     FilledButton(onPressed:WaffraHaptics.tap((){setState((){loading=true;startupError=null;});load();}),child:const WaffraText('إعادة المحاولة')),
    ])))):
-   autoSmsConsentPending?WaffraAutoSmsConsentPage(
-    english:language=='en',onComplete:finishSmsPermissionChoice):
+   // M463: Account registration/login must precede Android SMS and
+   // notification consent; a restored stale flag never skips login.
    profile==null||showLogin||((profile!.phone.trim().isEmpty)&&
     (profile!.provider.toLowerCase().contains('local')||
      profile!.provider.contains('محلي')||
      profile!.provider.toLowerCase().contains('guest')||
      profile!.provider.toLowerCase().contains('demo')))?LoginScreen(onSave:saveUser):
+   autoSmsConsentPending?WaffraAutoSmsConsentPage(
+    english:language=='en',onComplete:finishSmsPermissionChoice):
    locked?WaffraMandatoryBiometricGate(
     english:language=='en',
     onVerified:(){
