@@ -4280,7 +4280,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          waffraCategoryAvailableForNewEntry(categories,c));
        final learned=!exists&&specific?
         await _learnSafeSmsRule(
-         body:body,sender:sender,kind:known!.resolvedKind,
+         body:body,sender:sender,kind:known.resolvedKind,
          category:known.category):false;
        if(!exists&&!learned&&mounted){
         // Uncertain classification opens a fully prefilled, editable rule.
@@ -4288,8 +4288,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          seedMessage:body,seedSender:sender,
          seedKind:facts.kind==WaffraBankOperationKind.income?
           'income':'expense',
-         seedCategory:localFacts?['category'] is String
-          localFacts!['category'] as String:
+         seedCategory:(localFacts?['category'] is String)?
+          (localFacts!['category'] as String):
           (known?.category??''));
        }else if(learned&&mounted){
         snackSuccess(context,waffraIsEnglish?
