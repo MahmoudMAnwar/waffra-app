@@ -308,6 +308,7 @@ class WaffraEncryptedFinanceSession {
     List<Map<String,Object?>> proposedCategories = const [],
     List<String?>? selectedAccountIds,
     int? expectedAccountGeneration,
+    List<Uint8List> manualReceiptImages = const <Uint8List>[],
   }) async {
     _requireEnabled();
     return bridge.appendConfirmedTransactions(
@@ -318,6 +319,7 @@ class WaffraEncryptedFinanceSession {
       proposedCategories: proposedCategories,
       selectedAccountIds: selectedAccountIds,
       expectedAccountGeneration: expectedAccountGeneration,
+      manualReceiptImages: manualReceiptImages,
     );
   }
 
