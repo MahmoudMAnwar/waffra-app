@@ -327,7 +327,7 @@ object WaffraAutoSmsStore {
     }
 
     fun scanUnknownFinancialSms(
-        context: Context, maxRead: Int = 500, maxResults: Int = 100
+        context: Context, maxRead: Int = 5000, maxResults: Int = 500
     ): List<Map<String, Any>> {
         if (!enabled(context) || maxRead <= 0 || maxResults <= 0)
             return emptyList()
