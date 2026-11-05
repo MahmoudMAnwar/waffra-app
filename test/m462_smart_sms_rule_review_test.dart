@@ -71,6 +71,9 @@ void main(){
   expect(ui,contains("Key('waffra-sms-any-keyword')"));
   expect(ui,contains("Key('waffra-sms-advanced-rule-edit')"));
   expect(ui,contains('WaffraSmsLocalRules.validate(rule)'));
+  expect(home,contains("Key('waffra-sms-understood-action')"));
+  expect(home,contains("Key('waffra-sms-teach-action')"));
+  expect(home,contains("if(decision=='teach'&&mounted)"));
   expect(home,contains('Future<bool> _learnSafeSmsRule({'));
   expect(home,contains('await store.write(_smsRuleOwnerKey,[...prior,candidate]);'));
   expect(home,contains('if(!learned&&mounted)await _openSmsRules('));
