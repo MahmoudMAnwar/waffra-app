@@ -4698,6 +4698,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // Migrate old category caps together with the independent budget list.
    // Historic ledger budget IDs are kept unchanged.
    'waffra_categories_v24':jsonEncode(categories.map((c)=>
+    route==WaffraFinanceRoute.challengeAndBudgetUpdate&&
     c.budget>0&&namedBudgets.any((b)=>b.id==c.id)?
      c.copy(budget:0,clearBudget:true).toJson():c.toJson()).toList()),
    'waffra_named_budgets_v1':jsonEncode(
@@ -4719,6 +4720,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // still checks its exact witness and the one-entry append invariant.
   WaffraHomeTransactionCapture.narrowVerifiedManualAppend(
    route:route,source:baseline?.source,snapshot:snapshot);
+  WaffraHomeTransactionCapture.narrowVerifiedModuleEdit(
+   route:route,source:baseline?.source,snapshot:snapshot,
+   witnessedValues:baseline?.encryptedWitness?.snapshot.values);
   return _saveProgress.track<void>(
    'persist-financial-change',() {
    return _financialWriteQueue.submit(snapshot,(captured)async {
@@ -4753,7 +4757,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    return true;
   }catch(error){
    debugPrint('Verified $operation write refused: $error');
-   if(mounted)await _loadFinanceSafely();
+   if(mounted)await _refreshFromVerifiedFinance();
    if(mounted)snack(context,waffraIsEnglish?
     'Changes were not confirmed. Financial records were reloaded safely.':
     'لم يتم تأكيد الحفظ. أعدنا تحميل بياناتك المالية بشكل آمن.');
@@ -7336,7 +7340,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      // claim 'previous data unchanged' or let a retry create a ghost debit.
      debugPrint('M457 manual commit rejected: ${error.runtimeType}');
      if(mounted){
-      await _loadFinanceSafely();
+      await _refreshFromVerifiedFinance();
       if(mounted)snack(context,waffraIsEnglish?
        'Manual save could not be confirmed. Verified records were refreshed before retry. (M457)':
        'لم يتأكد حفظ العملية اليدوية. تم تحديث البيانات المحفوظة قبل إعادة المحاولة. (M457)');
