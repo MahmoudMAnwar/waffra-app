@@ -2061,7 +2061,8 @@ class _LoginScreenState extends State<LoginScreen> {
  Person? registered;
  bool signInMode=false,showSignInPassword=false,signingIn=false,signInAttempted=false;
  String? signInAuthError;
- bool returnAfterLogout=false;String lastMethod='Local',lastEmail='',lastPhone='';
+ bool returnAfterLogout=false,registeredLoading=true;
+ String lastMethod='Local',lastEmail='',lastPhone='';
  final signInPhone=TextEditingController(),signInPassword=TextEditingController();
  @override void initState(){super.initState();_loadRegistered();}
  Future<void> _loadRegistered()async{
@@ -2074,8 +2075,9 @@ class _LoginScreenState extends State<LoginScreen> {
    lastPhone=prefs.getString('waffra_last_login_phone')??'';
   });
   final raw=prefs.getString('waffra_registered_profile');
-  if(raw==null)return;
+  if(raw==null){if(mounted)setState(()=>registeredLoading=false);return;}
   try{final u=Person.fromJson(Map<String,dynamic>.from(jsonDecode(raw)));if(mounted)setState((){registered=u;signInMode=!signedOut;signInPhone.text=WaffraSaudiMobile.inputFromStored(u.phone);});}catch(_){ }
+  if(mounted)setState(()=>registeredLoading=false);
  }
  @override void dispose(){signInPhone.dispose();signInPassword.dispose();super.dispose();}
  Future<void> _signIn()async{
@@ -2223,8 +2225,15 @@ class _LoginScreenState extends State<LoginScreen> {
  }
  
  @override Widget build(BuildContext context){
-  if(provider!=null)return ProfileForm(provider:'Phone',onSave:widget.onSave,
-   onBack:()=>setState(()=>provider=null));
+  // Do not flash registration while existing account lookup is underway.
+  if(registeredLoading)return const Scaffold(body:Center(
+   child:CircularProgressIndicator()));
+  // A new owner goes straight to the complete Saudi registration form.
+  // No intermediate welcome/create-account page before entering details.
+  if(provider!=null||registered==null){
+   return ProfileForm(provider:'Phone',onSave:widget.onSave,
+    onBack:()=>setState(()=>provider=null));
+  }
   final hasExisting=registered!=null;
   final legacyAccount=hasExisting&&registered!.provider.toLowerCase()!='phone';
   return Scaffold(backgroundColor:forest,resizeToAvoidBottomInset:false,
