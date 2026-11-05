@@ -3594,7 +3594,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     seedMessage:seedMessage,
     onNotice:(message)=>snack(context,message),
    )));
-  if(mounted)unawaited(_refreshAutoSmsInbox());
+  if(mounted)await _refreshAutoSmsInbox();
  }
 
  Map<String,Object?>? _localSmsClassification(
@@ -3633,7 +3633,30 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  void _receiveAutoSmsNotice(){
   if(mounted&&ready)unawaited(_refreshAutoSmsInbox());
  }
+ Future<void>? _autoSmsRefreshInFlight;
+ bool _autoSmsRefreshAgain=false;
+ bool _autoSmsImportAgain=false;
  Future<void> _refreshAutoSmsInbox({bool importMonth=false})async{
+  final active=_autoSmsRefreshInFlight;
+  if(active!=null){
+   _autoSmsRefreshAgain=true;
+   _autoSmsImportAgain|=importMonth;
+   await active;
+   return;
+  }
+  final running=_runAutoSmsRefresh(importMonth:importMonth);
+  _autoSmsRefreshInFlight=running;
+  try{await running;}finally{
+   _autoSmsRefreshInFlight=null;
+   if(_autoSmsRefreshAgain){
+    final scan=_autoSmsImportAgain;
+    _autoSmsRefreshAgain=false;
+    _autoSmsImportAgain=false;
+    if(mounted)unawaited(_refreshAutoSmsInbox(importMonth:scan));
+   }
+  }
+ }
+ Future<void> _runAutoSmsRefresh({bool importMonth=false})async{
   if(!mounted||!ready||_financeLoadFailure!=null)return;
   final status=await WaffraAutoSms.trackingStatus();
   if(!mounted)return;
@@ -3691,23 +3714,33 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   if(!mounted)return;
   final waiting=<Map<String,Object?>>[];
+  final toAcknowledge=<String>[];
+  final toRestoreOnAckFailure=<Map<String,Object?>>[];
   for(final candidate in results){
    final id=candidate['id'],body=candidate['body'];
    if(id is! String||body is! String)continue;
    if(smsHashes.contains(bankSmsHash(body))){
-    await WaffraAutoSms.acknowledge([id]);
-   }else{
-    final annotated=Map<String,Object?>.from(candidate);
-    final local=_localSmsClassification(annotated,customRules);
-    if(local!=null){
-     if(local['kind']=='excluded'){
-      final removed=await WaffraAutoSms.acknowledge([id]);
-      if(removed)continue;
-     }
-     annotated['local']=local;
-    }
-    waiting.add(annotated);
+    toAcknowledge.add(id);
+    toRestoreOnAckFailure.add(Map<String,Object?>.from(candidate));
+    continue;
    }
+   final annotated=Map<String,Object?>.from(candidate);
+   final local=_localSmsClassification(annotated,customRules);
+   if(local!=null){
+    annotated['local']=local;
+    if(local['kind']=='excluded'){
+     toAcknowledge.add(id);
+     toRestoreOnAckFailure.add(annotated);
+     continue;
+    }
+   }
+   waiting.add(annotated);
+  }
+  // One encrypted native queue commit instead of one platform call per SMS.
+  // If the durable acknowledgement fails, retain every pending item in UI.
+  if(toAcknowledge.isNotEmpty){
+   final removed=await WaffraAutoSms.acknowledge(toAcknowledge);
+   if(!removed)waiting.addAll(toRestoreOnAckFailure);
   }
   final progress=await WaffraAutoSms.trackingStatus();
   if(!mounted)return;
