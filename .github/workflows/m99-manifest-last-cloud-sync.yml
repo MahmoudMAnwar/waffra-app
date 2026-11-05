@@ -11,6 +11,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: waffra-pr-m99-manifest-last-cloud-sync-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   m412-impact:
     name: M412 Only Run Tests Impacted By Latest PR Update
