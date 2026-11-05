@@ -96,12 +96,18 @@ void main(){
    route:WaffraFinanceRoute.dashboardRead),throwsStateError);
  });
 
- test('Main plus button exposes transfer, account route and manual direct writer',
+ test('Main plus button exposes a single manual choice popup and verified transfer',
   () {
   final main=File('lib/main.dart').readAsStringSync();
   final form=File('lib/waffra_account_transaction_form.dart').readAsStringSync();
-  expect(main,contains("label:waffraIsEnglish?'Transfer between my accounts':'تحويل بين حساباتي'"));
-  expect(main,contains('_launchAddAction(openVerifiedTransfer,fromMenu:true)'));
+  expect(main,contains("label:waffraIsEnglish?'Manual transaction':'عملية يدوية'"));
+  expect(main,contains('_launchAddAction(openManualTransactionChoice,fromMenu:true)'));
+  for(final key in <String>['waffra-manual-choice-income',
+    'waffra-manual-choice-expense','waffra-manual-choice-transfer']){
+    expect(main,contains(key));
+  }
+  expect(main,isNot(contains('_launchAddAction(openVerifiedTransfer,fromMenu:true)')));
+  expect(main,contains("if(selected=='transfer'){await openVerifiedTransfer();return;}"));
   expect(main,contains('initialOperation:WaffraAccountOperation.transfer'));
   expect(main,contains('accounts.where((a)=>!a.archived).length<2'));
   expect(main,contains('WaffraRuntimeFinanceBackend.guardedLegacy'));
