@@ -82,8 +82,18 @@ void main(){
    route:WaffraFinanceRoute.manualTransactionSave,
    record:item('not-confirmed',false),userConfirmed:false,
   ),throwsStateError);
-  expect((jsonDecode((await finance.load(
-   route:WaffraFinanceRoute.dashboardRead)).ledgerRaw!) as List),isEmpty);
+  // The fixture intentionally includes incomplete legacy goal/recurring
+  // projections. An integrity-checked dashboard read must fail closed;
+  // verify the rejected writes against durable storage instead.
+  final p=await SharedPreferences.getInstance();
+  await p.reload();
+  expect(jsonDecode(p.getString('entries')!),isEmpty);
+  expect(p.getString('waffra_goals_v24'),'[{"id":"preserve-goal"}]');
+  expect(p.getString('waffra_recurring_v24'),'[{"id":"preserve-recurring"}]');
+  expect(p.getStringList('waffra_sms_hashes_v1'),
+   [List<String>.filled(64,'a').join()]);
+  await expectLater(finance.load(
+   route:WaffraFinanceRoute.dashboardRead),throwsStateError);
  });
 
  test('Main plus button exposes transfer, account route and manual direct writer',
