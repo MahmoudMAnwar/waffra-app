@@ -1,14 +1,15 @@
 {
   "contract_version": 1,
   "change_id": "M470-staged-32-approved-Waffra-corrections-20261106",
-  "human_scope_review": "Owner directed a new PR tracking 32 approved Waffra follow-up changes, with real implementation status for every numbered item and strict priority for broken money posts, recurrent due accounts, verified account selection, then UI. This candidate implements only the specifically confirmed M470 items described below. Items 1-23 and the other incompletely reconstructed requests are NOT silently marked done, and no production migration, account reattribution, default budget split, bank-sender guessing, or SQLCipher safety bypass is authorized. Exact-head CI and signed-device approval remain mandatory. This revision additionally includes the approved two-step bank/provider and linked-account selection in EXISTING recurring default settings only; mandatory account on initial recurring creation remains pending.",
+  "human_scope_review": "Owner directed a new PR tracking 32 approved Waffra follow-up changes, with real implementation status for every numbered item and strict priority for broken money posts, recurrent due accounts, verified account selection, then UI. This candidate implements only the specifically confirmed M470 items described below. Items 1-23 and the other incompletely reconstructed requests are NOT silently marked done, and no production migration, account reattribution, default budget split, bank-sender guessing, or SQLCipher safety bypass is authorized. Exact-head CI and signed-device approval remain mandatory. This revision additionally includes the approved two-step bank/provider and linked-account selection in EXISTING recurring default settings only; mandatory account on initial recurring creation remains pending. M470 adds only a provider-then-linked-account picker to recurring default settings, with active-account filtering and explicit confirmed default; this does not claim atomic creation-time linkage. Known bank display grouping is derived only from account labels; unrecognized providers remain isolated, never auto-selected. The user requested this two-level recurring selector.",
   "user_requested_changes": [
     "Remove the unassigned-transactions option from the Home account selector, while safely resetting an old saved unassigned display preference to All accounts without discarding historical records.",
     "Allow the user to choose a date in the verified internal transfer form, while preserving verified source/destination selection and stable duplicate-protected transfer intent.",
     "Require a real verified financial account before confirming a recurring due or a cash-financed savings goal due; never inherit the selected Home account.",
     "Repair the finance write refusal after selecting Paid on a recurring due by narrowing the fresh SQLCipher captured delta to the single new posting and the related postponed metadata, without weakening unrelated finance-data guards.",
     "Maintain an explicit accurate 32-item implementation tracker showing complete, partial, unverified, and pending items rather than inventing Done results.",
-    "Improve existing recurring default account configuration with explicit provider/bank first and one linked active money account second; never offer unassigned or silently select a bank account, preserving prior payments and reminders."
+    "Improve existing recurring default account configuration with explicit provider/bank first and one linked active money account second; never offer unassigned or silently select a bank account, preserving prior payments and reminders.",
+    "Show a provider/bank selector followed by explicitly chosen linked accounts when editing the recurring default account; prevent a new unassigned default, without guessing financial posting authority or changing historical paid entries."
   ],
   "allowed_changed_files": [
     "docs/qa/WAFFRA_32_NEW_CHANGES_M470_TRACKER.md",
@@ -79,7 +80,7 @@
     "lib/waffra_account_context_settings.dart": [
       {
         "start": "import 'storage/waffra_verified_accounts_api.dart';",
-        "end": "\n/// Explicit account configuration only."
+        "end": "\n\n/// Explicit account configuration only."
       },
       {
         "start": " Future<void> _editRecurring(WaffraRecurringAccountTemplate item)async{",
@@ -87,7 +88,7 @@
       },
       {
         "start": "       subtitle:Text(item.accountId==null",
-        "end": "\n        :labels[item.accountId]??"
+        "end": "\n       trailing:const Icon(Icons.edit_outlined)"
       }
     ]
   }
