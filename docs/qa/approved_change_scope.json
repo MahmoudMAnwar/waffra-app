@@ -1,28 +1,24 @@
 {
   "contract_version": 1,
-  "change_id": "M455-manual-encrypted-save-capture-20261105",
-  "human_scope_review": "User supplied Android screenshots 2026-11-05 showing a confirmed Home manual finance save rejected with 'تعذر حفظ المعاملة. بياناتك السابقة لم تتغير.' A fresh SQLCipher vault intentionally contains only required entries/categories; Home's full empty-domain snapshot violates the existing SQLCipher manual append-only guard. Limit only the verified new manual save to its ledger delta, preserve baseline source-witness and atomic append checks. No changes to bank SMS, login, source activation, existing-entry edits, legacy writers, UI, or production database migration. Human acceptance and exact-head CI plus signed Android verification remain required.",
+  "change_id": "M456-apk-optional-m410-skip-audit-20261105",
+  "human_scope_review": "After merging the previously CI-green M455 manual transaction fix, the owner directed sequential removal of blockers. The exact-main signed Android APK gate on commit fcab3d5 failed solely because optional conditional M410 retrier was marked 'skipped'. Limit exemption to this exact non-required retry workflow and skipped conclusion. All required checks and all other failures, cancellation, missing, pending and unexpected skipped workflows still block. This is not an unconditional bypass of release controls; verify exact-main signed APK after merge.",
   "user_requested_changes": [
-    "Fix the reported failed manual transaction save on an authenticated fresh SQLCipher installation without discarding existing data or weakening append-only finance authorization.",
-    "Preserve the full capture for guarded legacy saves, edits and every non-manual route; reject a missing ledger and keep source-witness checks in place.",
-    "Add focused regression coverage for the new scope and unchanged source safety, and update release notes before any merge."
+    "Repair main APK release gate false negative when an optional M410 infrastructure retry intentionally skips on a healthy build, while retaining all real security and financial test requirements.",
+    "Keep main release fail-closed for missing, pending, cancelled, timed out, actually failed or other skipped workflows, with strict negative regression tests.",
+    "Update signed release notes and bounded scope without changing finance application, SQLCipher logic, login or unrelated CI configuration."
   ],
   "allowed_changed_files": [
+    ".github/workflows/android.yml",
     "docs/qa/approved_change_scope.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/main.dart",
-    "lib/storage/waffra_home_transaction_capture.dart",
-    "test/m455_manual_sqlcipher_capture_scope_test.dart"
+    "scripts/qa/m456_optional_retry_audit.py",
+    "test/qa/m456_optional_retry_audit_test.py"
   ],
   "bounded_sections": {
-    "lib/main.dart": [
+    ".github/workflows/android.yml": [
       {
-        "start": "import 'storage/waffra_runtime_finance_route_contract.dart';",
-        "end": "import 'storage/waffra_verified_transaction_ui_guard.dart';"
-      },
-      {
-        "start": " Future<void> persist({",
-        "end": " /// Optimistic UI updates must never masquerade as committed finance."
+        "start": "      - name: Fail closed on missing, running or failed independent tests",
+        "end": "\n  build:\n"
       }
     ]
   }
