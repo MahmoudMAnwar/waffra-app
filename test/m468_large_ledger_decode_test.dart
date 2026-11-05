@@ -34,7 +34,11 @@ void main(){
   final route=src.substring(start,end);
   expect(route,contains('final frozenEntryRows=entries.map((e)=>e.toJson()).toList(growable:false);'));
   expect(route,contains("snapshot['entries']=await WaffraLargeJsonDecode.encodeRecords(frozenEntryRows);"));
-  expect(route.indexOf('final frozenEntryRows='),lessThan(route.indexOf('return _saveProgress.track<void>(')));
+  expect(route.indexOf('final frozenEntryRows='),lessThan(route.indexOf('final saving=_saveProgress.track<void>(')));
+  expect(route,contains('final previousWrite=_m468PersistSequence;'));
+  expect(route,contains('await previousWrite;'));
+  expect(route,contains('_m468PersistSequence=saving.then<void>('));
+  expect(route.indexOf('await previousWrite;'),lessThan(route.indexOf("snapshot['entries']=await")));
   expect(route.indexOf("snapshot['entries']=await"),lessThan(route.indexOf('WaffraHomeTransactionCapture.narrowVerifiedModuleEdit(')));
   expect(route,contains('await _financeAuthority.saveCaptured('));
  });

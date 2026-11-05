@@ -1,3 +1,8 @@
+[M468] Preserve capture/commit ordering with background JSON serialization
+- Serialize financial save preparation in the original capture order before entering the existing verified write queue: a second compute task cannot overtake the first save and silently reorder balances.
+- Freeze all ledger row maps synchronously before awaiting. Under the painted overlay await the prior save, offload large JSON encoding, run the original source/witness narrowing guards and submit the already-frozen snapshot to the same financial authority.
+- New regression asserts freeze-before-await and source-order invariants; no finance guards or SQLCipher code disabled.
+
 [M468] Confirmed finance-save spinner: frozen ledger encoding off UI isolate
 - Existing persist() already freezes each captured ledger entry map before a Future, and now executes expensive 240+ transaction JSON serialization via compute after the saving overlay has painted.
 - The unchanged snapshot-narrowing guards and SQLCipher verified source, witness, account selection and serialized write queue execute AFTER the exact frozen serialization. One save can never silently lose account links or skip user confirmation.

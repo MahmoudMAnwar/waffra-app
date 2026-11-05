@@ -3441,6 +3441,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // cannot clear the replacement Home's back handler.
  late final bool Function() _registeredBackHandler=_consumeHomeBack;
  final WaffraLegacyWriteQueue _financialWriteQueue=WaffraLegacyWriteQueue();
+ // Expensive off-isolate preparation cannot overtake an earlier save.
+ Future<void> _m468PersistSequence=Future<void>.value();
  final WaffraHomeFinancePersistence _homeFinancePersistence=const WaffraHomeFinancePersistence();
  late WaffraVerifiedFinanceAuthority _financeAuthority=WaffraVerifiedFinanceAuthority(legacy:_homeFinancePersistence);
  WaffraProductionFinanceAuthorityBinding? _financeBinding;
@@ -5534,8 +5536,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // Fresh verified SQLCipher vaults intentionally omit optional empty modules.
   // A manual append may change ONLY the ledger; the authoritative writer
   // still checks its exact witness and the one-entry append invariant.
-  return _saveProgress.track<void>(
+  final previousWrite=_m468PersistSequence;
+  final saving=_saveProgress.track<void>(
    'persist-financial-change',() async {
+   // The frozen capture cannot overtake an earlier confirmed finance write.
+   await previousWrite;
    // The overlay is on screen; move large JSON serialization off the UI
    // isolate without changing a single byte or the source witness.
    snapshot['entries']=await WaffraLargeJsonDecode.encodeRecords(frozenEntryRows);
@@ -5564,6 +5569,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    _lastWidgetRevision=committed.widgetRevision;
   }).then((_){unawaited(_refreshWidget());});
   });
+  _m468PersistSequence=saving.then<void>(
+   (_){},onError:(Object error,StackTrace stack){});
+  return saving;
  }
 
  /// Optimistic UI updates must never masquerade as committed finance.
