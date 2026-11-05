@@ -187,6 +187,10 @@ abstract final class WaffraSmsLocalRules {
    return null;
   if(kind=='transfer'&&facts.kind!=WaffraBankOperationKind.transfer)
    return null;
+  if((isIncome||isExpense)&&(
+   category.trim().isEmpty||normalized(category).contains('غير مصنف')||
+   normalized(category).contains('غير محدد')||
+   normalized(category).contains('uncategorized')))return null;
   final normalizedBody=normalized(body);
   final safe=<String>[];
   if(kind=='excluded'){
