@@ -37,7 +37,7 @@
 | 24 | اختيار تاريخ التحويل بين الحسابات | كود + اختبار مضافان؛ CI قيد التحقق | راجع ملفات M470 المعدلة |
 | 25 | إظهار البنك/الجهة ثم الحساب التابع عند إنشاء/تعديل حركة | جزئي: اختيار الجهة ثم الحساب في إعدادات المتكررة الموجودة؛ غير متاح بكل نماذج الحركات | كود + اختبار مرشح |
 | 26 | تعديل مكان وسلوك قائمة «كل الحسابات» في الرئيسية | جزئي: فلتر حسابات موجود من #392؛ تعديل الموضع لم يُنفذ |  |
-| 27 | إعادة تصميم نافذة إضافة حساب مالي | لم يُنفذ |  |
+| 27 | إعادة تصميم نافذة إضافة حساب مالي وفصل النوع والرصيد الافتتاحي | كود UI واختبارات أُضيفت؛ CI/Android قيد التحقق. الأنواع المالية المتقدمة ضمن #23 غير متاحة بعد | lib/waffra_new_account_dialog.dart + lib/waffra_accounts_manager_page.dart + test/m470_new_account_dialog_test.dart |
 | 28 | إزالة فلتر «عمليات بدون حساب» ومنع إنشاء عمليات جديدة بلا حساب | جزئي: حذف الفلتر من الرئيسية وربط يدوي/متكرر؛ SMS وغيره لم يُحسم | راجع ملفات M470 المعدلة |
 | 29 | عرض ميزانية شهرية للحساب المختار ومجموع ميزانيات الحسابات في «كل الحسابات» | جزئي: محرك حساب واختبارات لحصص مالية صريحة، لم يُوصل بعد بواجهة Home أو تخزين تخصيص الميزانية | lib/waffra_account_monthly_budget_policy.dart + test/m470_account_monthly_budget_policy_test.dart |
 | 30 | اشتراط تحديد البنك والحساب عند إنشاء/تعديل العملية المتكررة | جزئي: نموذج تعديل الحساب الافتراضي للمتكررة موجود بخطوتين؛ الإلزام عند الإنشاء لم يُنفذ | كود + اختبار مرشح |
@@ -78,3 +78,5 @@
 ## M470 budget projection notes
 - Added a pure integer-halalas projection for explicitly assigned monthly per-account budget caps, their linked expenses, and All accounts sum. It prevents duplicate `(budgetId,accountId)` allocations and excludes expenses without a saved allocation. This does NOT create or restore allocations, does not remap existing standalone budgets, and does not yet update the actual Home budget card.
 - The user-approved rule is to show the chosen account's own monthly caps, and All accounts' combined caps. No guessed split of one shared monthly budget across multiple accounts is permitted.
+
+- M470 #27: نافذة إنشاء الحساب صارت تعرض نوع الحساب والرصيد الافتتاحي في حقلين منفصلين، وتظهر قائمة الجهة/البنك لو اختار بنكي؛ البيانات تصل لنفس API الحفظ المشفّر، ولا تُحتسب أرصدة البداية دخلًا. أسماء البنوك تُحفظ ضمن مسمى الحساب فقط، دون إدعاء ربط بنكي إلكتروني أو إضافة نوع في قاعدة البيانات. الاختبارات الجديدة لم تُعتبر معتمدة قبل CI.
