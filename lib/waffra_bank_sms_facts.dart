@@ -63,7 +63,7 @@ abstract final class WaffraBankSmsFactsParser {
  static final _fee=RegExp(
   r'(?:الرسوم|رسوم\s+التحويل|fees?|commission)\s*[:：]?\s*'
   r'(?:SAR\s*)?([0-9٠-٩][0-9٠-٩,]*(?:\.[0-9٠-٩]{1,2})?)'
-  r'\s*(?:SAR|ر\.?\s*س|ريال)?',
+  r'\s*(?:(?:SAR|ر\.\s*س|ر\s+س|ريال)(?![A-Za-zء-ي]))?',
   caseSensitive:false);
  static final _ref=RegExp(
   r'(?:الرقم\s+المرجعي|رقم\s+العملية|reference(?:\s+number)?|ref)'
