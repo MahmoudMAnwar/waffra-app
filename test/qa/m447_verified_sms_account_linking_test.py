@@ -36,7 +36,7 @@ class VerifiedSmsAccountLinkingTest(unittest.TestCase):
         self.assertIn("if(!mustSelectAccount)", reader)
         self.assertIn("final manualRequiresAccount=candidates.any", reader)
         self.assertIn("if(active.isEmpty){", reader)
-        self.assertIn("if(manualRequiresAccount){", reader)
+        self.assertIn("if(mustSelectAccount){", reader)
         self.assertIn("await bridge.readVerifiedAccounts()", reader)
         self.assertNotIn("SharedPreferences", reader)
         self.assertNotIn("WaffraEncryptedStore.openAt", reader)
