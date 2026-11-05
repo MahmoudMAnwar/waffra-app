@@ -105,6 +105,25 @@ void main(){
   expect(result.length,2); // New candidate remains review-only.
  });
 
+ test('M462 repeating authorized patterns never creates an extra smart rule',(){
+  const approved=WaffraSmsLocalRule(
+   id:'smart_authorized',name:'Fuel',kind:'expense',income:false,
+   keywords:['petromin'],category:'السيارة / بنزين ووقود',
+   sender:'AlRajhiBank',autoPost:true,accountId:'account_123',
+   accountSuffix:'1234',matchAll:false);
+  const repeated=WaffraSmsLocalRule(
+   id:'smart_repeat',name:'Fuel',kind:'expense',income:false,
+   keywords:['petromin'],category:'السيارة / بنزين ووقود',
+   sender:'AlRajhiBank',matchAll:false);
+  final original=<WaffraSmsLocalRule>[approved];
+  final result=WaffraSmsLocalRules.upsertLearned(
+   existing:original,candidate:repeated);
+  expect(identical(result,original),isTrue);
+  expect(result,same(original));
+  expect(result,singleElement);
+  expect(result.single.keywords,['petromin']);
+ });
+
  test('M462 conflicting category evidence cannot poison an existing rule',(){
   const saved=WaffraSmsLocalRule(
    id:'smart_old',name:'food',kind:'expense',income:false,
