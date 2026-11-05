@@ -11,7 +11,17 @@ void main() {
   expect(guardEnd,greaterThan(guardStart));
   final guard=s.substring(guardStart,guardEnd);
   expect(guard,contains('await persist(route:route);'));
-  expect(guard,contains('if(mounted)await _loadFinanceSafely();'));
+  // A failed write must re-read the verified finance authority without
+  // clearing the already-loaded Home state or launching a full SMS scan.
+  expect(guard,contains('if(mounted)await _refreshFromVerifiedFinance();'));
+  final refreshStart=s.indexOf('Future<void> _refreshFromVerifiedFinance()');
+  final refreshEnd=s.indexOf('Future<void> _loadFinanceSafely()',refreshStart);
+  expect(refreshStart,greaterThan(0));
+  expect(refreshEnd,greaterThan(refreshStart));
+  final refresh=s.substring(refreshStart,refreshEnd);
+  expect(refresh,contains('await _financialWriteQueue.drain();'));
+  expect(refresh,contains('await _financeAuthority.load('));
+  expect(refresh,contains('view.requireIntegrity();'));
   expect(guard,contains('return false;'));
   expect(guard,contains('return true;'));
  });
