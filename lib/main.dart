@@ -839,7 +839,9 @@ class BankParser {
    return BankResult(null,false,'عملية تحتاج مراجعة','أخرى',null);
   }
   const n=r'([0-9][0-9,]*(?:\.[0-9]{1,2})?)';
-  const currency=r'(?:SAR|SR|ر\.?\s*س\.?|ريال(?:\s*سعودي)?|﷼|⃁)';
+  // Never read the first two letters of "رسالة" or "رسوم" as a Riyal unit.
+   // Arabic abbreviations require a literal period or separating whitespace.
+   const currency=r'(?<![A-Za-zء-ي])(?:SAR|SR|ر\.\s*س\.?|ر\s+س\.?|ريال(?:\s+سعودي)?|﷼|⃁)(?![A-Za-zء-ي])';
   // Prefer the explicit transaction amount over remaining balance or fees.
   final patterns=[
    RegExp('(?:^|\\n)\\s*(?:Amount|Amt|المبلغ|مبلغ)\\s*[:：-]?\\s*$n\\s*$currency',caseSensitive:false,multiLine:true),
