@@ -7,24 +7,31 @@ class WaffraHomeAccountChip extends StatelessWidget {
  const WaffraHomeAccountChip({super.key,required this.label,
   required this.english,required this.onTap});
  final String label;final bool english;final VoidCallback onTap;
- @override Widget build(BuildContext context)=>Align(
-  alignment:AlignmentDirectional.centerStart,
-  child:OutlinedButton.icon(
+ @override Widget build(BuildContext context)=>Semantics(
+  button:true,
+  label:english?'Choose account: $label':'اختيار الحساب: $label',
+  child:Material(color:Colors.transparent,child:InkWell(
    key:const Key('m467-home-account-picker'),
-   onPressed:onTap,
-   icon:const Icon(Icons.keyboard_arrow_down_rounded),
-   label:Row(mainAxisSize:MainAxisSize.min,children:[
-    const Icon(Icons.account_balance_wallet_outlined,size:18),
-    const SizedBox(width:7),
-    ConstrainedBox(constraints:const BoxConstraints(maxWidth:200),
-     child:Text(label,maxLines:1,overflow:TextOverflow.ellipsis)),
-   ]),
-   style:OutlinedButton.styleFrom(
-    foregroundColor:const Color(0xFF07563B),
-    side:const BorderSide(color:Color(0xFF78BC9D),width:1.3),
-    padding:const EdgeInsets.symmetric(horizontal:13,vertical:11),
-    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18))),
-  ));
+   onTap:onTap,
+   borderRadius:BorderRadius.circular(13),
+   child:Container(
+    constraints:const BoxConstraints(minHeight:34),
+    padding:const EdgeInsets.symmetric(horizontal:9,vertical:6),
+    decoration:BoxDecoration(
+     color:Colors.white.withValues(alpha:.12),
+     borderRadius:BorderRadius.circular(13),
+     border:Border.all(color:Colors.white.withValues(alpha:.35))),
+    child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+     Flexible(child:Text(label,
+      maxLines:1,overflow:TextOverflow.ellipsis,
+      textAlign:TextAlign.center,
+      style:const TextStyle(color:Colors.white,fontFamily:'Tajawal',
+       fontSize:13,fontWeight:FontWeight.w800))),
+     const SizedBox(width:5),
+     const Icon(Icons.keyboard_arrow_down_rounded,color:Colors.white,size:20),
+    ])),
+  )));
+
 }
 
 class WaffraHomeAccountsSheet extends StatelessWidget{
