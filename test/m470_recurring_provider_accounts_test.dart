@@ -43,4 +43,16 @@ void main() {
   expect(source,contains('accountId:selection,userConfirmed:true'));
   expect(source,isNot(contains("DropdownMenuItem(value:'none'")));
  });
+ test('M470 money form requires an explicit provider before a linked source or destination',(){
+  final source=File('lib/waffra_account_transaction_form.dart').readAsStringSync();
+  expect(source,contains('WaffraRecurringAccountGroups.fromAccounts(accounts)'));
+  expect(source,contains("labelText:tr('الجهة أو البنك','Bank or provider')"));
+  expect(source,contains("Key('m470-'+(isDestination?'target':'source')+'-provider-'"));
+  expect(source,contains("Key('m470-'+(isDestination?'target':'source')+'-account-'"));
+  expect(source,contains('onChanged:saving||saved||group==null?null:onChanged'));
+  expect(source,contains('sourceProvider=v;source=null;'));
+  expect(source,contains('destinationProvider=v;destination=null;'));
+  expect(source,contains('exclude:source,isDestination:true'));
+  expect(source,isNot(contains('sourceProvider=_m467SelectedAccount')));
+ });
 }
