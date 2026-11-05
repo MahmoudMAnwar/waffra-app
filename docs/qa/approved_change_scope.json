@@ -1,21 +1,29 @@
 {
   "contract_version": 1,
-  "change_id": "M464-fix-accountless-manual-save-and-expose-transfer-20261105",
-  "human_scope_review": "Owner Android screenshots on 5 Nov 2026 prove that manual income/expense confirm still takes the old generic persist rollback path, while goal and recurring registration work; owner's approved rule explicitly says manual income/expense does not need an account, and internal transfer requires two separately selected verified accounts. This narrow PR routes unattached manual additions through the direct append writer for both previously verified SQLCipher and guarded pre-migration legacy sources; guarded legacy uses the EXISTING cross-engine lock, crash journal, witness and preserved original finance keys, never an ad-hoc plaintext writer or silent source activation. Shows transfer entry and My Accounts from Home, with no-account and fewer-than-two-accounts guidance. Only these specific function regions change. Bank SMS, goals, recurring, encryption, source selection, and onboarding are untouched. Device QA remains required.",
+  "change_id": "M464-SMS-bulk-rescan-account-attribution-20261105",
+  "human_scope_review": "Owner 5 Nov 2026 explicitly approved expanding the SAME PR #388: sender-level and per-message bulk selection/exclusion; rescan progress and safe paged capacity beyond 100; separate sender+verified last-four account attribution, with ambiguity requiring explicit review; new manual income/expense must belong to a user-created money account. The earlier accountless-manual statement is superseded. Protect Android SMS originals, existing ledger, dedupe, native encrypted queue, and owner-bound permissions. Changes in this PR are staged for exact-head CI and signed-device testing, not claimed production-ready.",
   "user_requested_changes": [
-    "Manual income and expenses must save without creating a bank/cash account, with no account linkage until the owner deliberately chooses an existing account.",
-    "Fix rollback toast on fresh/legacy accountless manual additions by using a one-record finance append instead of a whole stale Home snapshot; existing goals, recurring and banking records must remain unchanged.",
-    "Keep verified SQLCipher direct M457 write untouched and support guarded legacy through its existing writer lock/journal only, without activating encrypted migration or silently changing sources.",
-    "Show an explicit Transfer between my accounts action from Home + menu, open transfer mode immediately, require two existing distinct accounts, and do not count transfer as income/expense.",
-    "Always show the My Accounts destination; if the account source is not verified, explain unavailability rather than hiding the feature, and never require an account for regular income/expense.",
-    "Include regression tests for accountless guarded-legacy append, duplicate protection, unchanged goals/recurring/SMS fingerprints, source gating and visible transfer routing."
+    "Manual income and expense should require at least one verified user-created money account, with explicit choice and no silent account from the Home header.",
+    "Preserve all historical unassigned entries and avoid any accidental migration or double booking while repairing the manual finance append path.",
+    "Expose internal transfer from Home plus; require distinct verified source and destination accounts and never count a transfer as income or expense.",
+    "Learn independent bank sender and verified last-four account-identification evidence only after two consistent confirmed associations; route ambiguous same-bank accounts to user selection.",
+    "Allow multi-select, select-all and bulk exclusion of bank SMS both across sender groups and inside one sender; never delete Android SMS or saved finance ledger entries.",
+    "Make Rescan visibly responsive, show real checked/added/pending counters and recoverable errors, resume the persisted history cursor, and display more than 100 pending candidates when present.",
+    "Keep the encrypted on-device review queue private and preserve account ownership and native permission protections.",
+    "Update impacted regressions, add targeted SMS bulk/rescan and same-bank ambiguity tests, and keep PR draft until exact-head CI and signed Android tests pass."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "lib/waffra_account_transaction_form.dart",
     "lib/storage/waffra_verified_finance_authority.dart",
+    "lib/waffra_account_transaction_form.dart",
+    "lib/waffra_auto_sms.dart",
+    "native/WaffraAutoSmsStore.kt",
+    "native/WaffraMainActivity.kt",
+    "test/m429_sms_phone_integration_test.dart",
+    "test/m464_sms_bulk_rescan_regression_test.dart",
+    "test/qa/m417_sms_permission_acceptance_test.py",
     "test/storage/m464_manual_unassigned_transfer_access_regression_test.dart"
   ],
   "bounded_sections": {
@@ -35,6 +43,10 @@
       {
         "start": "        _addMenuOption(\n         icon:Icons.edit_note_rounded,",
         "end": "        ]else if(goalsOpened||tab==3)...["
+      },
+      {
+        "start": " bool _autoSmsReviewOpen=false;",
+        "end": " /// Explicit, idempotent account-to-account transfer from reviewed bank SMS."
       }
     ],
     "lib/waffra_account_transaction_form.dart": [
@@ -55,6 +67,48 @@
       {
         "start": "  Future<WaffraFinanceAuthorityRead> commitConfirmedManual({\n",
         "end": "  /// A future encrypted-only receipt attachment route."
+      }
+    ],
+    "lib/waffra_auto_sms.dart": [
+      {
+        "start": " static Future<Map<String,bool>?> trackingStatus()async{",
+        "end": " static Future<bool> resumeAfterSignIn()"
+      }
+    ],
+    "native/WaffraAutoSmsStore.kt": [
+      {
+        "start": "    private const val maxCandidates",
+        "end": "    private fun monthStart()"
+      },
+      {
+        "start": "    fun trackingStatus(context: Context): Map<String, Boolean> {",
+        "end": "    // Stop collection immediately on logout."
+      },
+      {
+        "start": "    private fun open(encrypted: String): JSONArray {",
+        "end": "    private fun read(context: Context): JSONArray {"
+      },
+      {
+        "start": "    /** Resumable history import: from day 1 of installation month through now.",
+        "end": "    /** Claim each review notification once"
+      }
+    ],
+    "native/WaffraMainActivity.kt": [
+      {
+        "start": "                \"autoSmsTrackingStatus\" -> result.success",
+        "end": "                \"pauseAutoSmsForSignOut\" ->"
+      }
+    ],
+    "test/m429_sms_phone_integration_test.dart": [
+      {
+        "start": "  expect(store,contains('historical = true'));",
+        "end": "  expect(activity,contains('\"importConsentMonthBankSms\"'));"
+      }
+    ],
+    "test/qa/m417_sms_permission_acceptance_test.py": [
+      {
+        "start": "        self.assertIn(\"otp.containsMatchIn(safe)\",queue)",
+        "end": "        for forbidden in"
       }
     ]
   }
