@@ -22,7 +22,7 @@ void main() {
   });
 
   test('M470 Arabic message counts do not become SAR currency evidence', () {
-    const text = 'حوالة واردة بقيمة 500 رسالة بانتظار المراجعة';
+    const text = 'تم إيداع 500 رسالة بانتظار المراجعة';
     final decision = WaffraAutoSmsPolicy.decide(
       sender: 'AlinmaPay',
       sms: text,
@@ -39,7 +39,7 @@ void main() {
   test('M470 authentic SAR units remain valid for strict SMS gating', () {
     final decision = WaffraAutoSmsPolicy.decide(
       sender: 'AlinmaPay',
-      sms: 'حوالة واردة بمبلغ 135.00 SAR',
+      sms: 'تم إيداع مبلغ 135.00 SAR',
       parsedAmount: 135,
       parsedIncome: true,
       foreignCurrency: false,
