@@ -80,7 +80,7 @@
         "end": "\n bool saving=false,saved=false;"
       },
       {
-        "start": "  Widget accountField(",
+        "start": "  final accounts=active;",
         "end": "  return SafeArea("
       }
     ],
