@@ -3623,6 +3623,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   return true;
  }
 
+ /// Manual entries have no bank SMS sender. Learn only a non-posting
+ /// description/category hint after an independently verified save.
+ Future<void> _learnManualCategoryPreference(MoneyEntry record)async{
+  if(_smsRuleOwnerKey.isEmpty||record.sourceType!='manual')return;
+  final merchant=waffraMerchantKey(record.title,income:record.income)??record.title;
+  final candidate=WaffraSmsLocalRules.manualCategoryPattern(
+   description:merchant,category:record.category,income:record.income);
+  if(candidate==null)return;
+  final store=const WaffraSmsLocalRuleStore();
+  final previous=await store.read(_smsRuleOwnerKey);
+  final next=WaffraSmsLocalRules.upsertLearned(
+   existing:previous,candidate:candidate);
+  if(!identical(next,previous))await store.write(_smsRuleOwnerKey,next);
+ }
+
  Map<String,Object?>? _localSmsClassification(
   Map<String,Object?> item,List<WaffraSmsLocalRule> custom){
   final body=item['body'],sender=item['sender'];
@@ -7502,6 +7517,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        },
       ),
      );
+     // A preference failure cannot retry an already-committed debit.
+     try{await _learnManualCategoryPreference(result);}catch(_){}
     }catch(error){
      // A write may have committed before a later source read failed. Never
      // claim 'previous data unchanged' or let a retry create a ghost debit.
@@ -7544,6 +7561,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      :WaffraFinanceRoute.transactionEdit,
      userConfirmed:initial==null,
      selectedAccountId:initial==null?chosenManual?.ids?.single:null);
+    if(initial==null&&result.sourceType=='manual'){
+     try{await _learnManualCategoryPreference(result);}catch(_){}
+    }
    }catch(e){
     if(mounted){
      setState((){
