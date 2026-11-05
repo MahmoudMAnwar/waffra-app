@@ -20,6 +20,27 @@ void main() {
   expect(tail,contains('LoginScreen(onSave:saveUser)'));
  });
 
+ test('M463 no second welcome step for new or returning Saudi accounts',(){
+  final code=File('lib/main.dart').readAsStringSync();
+  final start=code.indexOf('class _LoginScreenState extends State<LoginScreen>');
+  final end=code.indexOf('class ProfileForm extends StatefulWidget',start);
+  expect(start,greaterThanOrEqualTo(0));
+  expect(end,greaterThan(start));
+  final login=code.substring(start,end);
+  expect(login,contains('registeredLoading=true'));
+  expect(login,contains('if(registeredLoading)return const Scaffold('));
+  expect(login,contains('if(provider!=null||registered==null){'));
+  expect(login,contains("return ProfileForm(provider:'Phone',onSave:widget.onSave,"));
+  expect(login,contains("signInMode=u.provider.toLowerCase()=='phone'"));
+  // Keep one registration form with all approved required fields on screen.
+  final form=code.substring(end,code.indexOf('class ',end+7));
+  expect(code,contains("Key('waffra-register-single-page')"));
+  expect(code,contains("Key('waffra-register-name')"));
+  expect(code,contains("Key('waffra-register-phone')"));
+  expect(code,contains("Key('waffra-register-password')"));
+  expect(code,contains("Key('waffra-register-confirm-password')"));
+ });
+
  test('M463 permissions only after signed-in profile and once per install',(){
   final source=File('lib/main.dart').readAsStringSync();
   expect(source,contains('autoSmsConsentPending=Platform.isAndroid&&u!=null&&'));
