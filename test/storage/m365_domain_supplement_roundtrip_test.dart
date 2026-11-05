@@ -30,6 +30,17 @@ void main() {
   }
 
   Future<void> category(WaffraEncryptedStore db) async {
+    // M452: construct a real two-level hierarchy. The backup under test
+    // deliberately omits category transfer, not the source parent itself.
+    await db.customStatement(
+      'INSERT INTO fresh_finance_categories '
+      '(category_id,name,parent_id,is_income,budget_minor,source_json) '
+      'VALUES (?,?,?,?,?,?)',
+      ['transport','Transport','',0,0,jsonEncode({
+        'id':'transport','name':'Transport','income':false,
+        'parentId':'','budget':0,
+      })],
+    );
     await db.customStatement(
       'INSERT INTO fresh_finance_categories '
       '(category_id,name,parent_id,is_income,budget_minor,source_json) '
