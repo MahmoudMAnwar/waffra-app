@@ -1,22 +1,34 @@
 {
   "contract_version": 1,
-  "change_id": "M454-m453-regression-test-independent-from-later-pr-scope-20261105",
-  "human_scope_review": "Owner requested correction of CI queue blockage. M453 regression unexpectedly fails on any later PR with its own finance or SMS approved_change_scope.json, despite the 58 protected workflows staying intact. This narrowly scoped fix tests the original immutable M453 set, retaining full exact group/PR-only cancellation checks on every PR and trust/cancel checks for the cleanup workflow. Only a single unit-test assertion source and QA docs are changed; no application, CI workflow, or finance release gate is altered.",
+  "change_id": "M455-fresh-sqlcipher-first-manual-transaction-save-20261105",
+  "human_scope_review": "Owner reported manual income and expense saves fail with the visible rollback error after the first encrypted Home startup. Owner confirmed bank SMS saving already works and must remain unchanged. Approve only the comparison of never-initialized canonical empty Home fields in the SQLCipher manual append route, with no alternate source, no migration, no weakening of fail-closed rules. Exact current-head CI and signed Android confirmation are required before merging.",
   "user_requested_changes": [
-    "Fix M453 queue hygiene QA's accidental dependency on the currently checked-out PR change manifest, which falsely fails when PR #373, #372 or another legitimate PR has fewer than 40 changed workflow files.",
-    "Retain or strengthen the check over all exact 58 workflows originally approved in PR #374 on every later PR; do not skip the test or bypass concurrency or finance gates.",
-    "Document the QA regression correction and rerun exact-HEAD checks before using the new main to review financial PRs."
+    "Repair first manual income and expense save failure on a genuine new SQLCipher installation without rewriting or inventing the user's prior finance records.",
+    "Maintain strict rejection when the manual save carries nonempty or modified goals, budgets, recurring items, or any other unrelated finance fields.",
+    "Add focused SQLCipher first-save and negative rollback regression tests, and retain existing bank SMS behavior without modifying its production path.",
+    "Document code scope and release evidence without touching main or releasing a build before exact-head checks and physical device confirmation."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "scripts/qa/test_m453_queue_hygiene.py"
+    "lib/storage/waffra_verified_finance_authority.dart",
+    "test/storage/m451_fresh_home_catalog_recovery_test.dart"
   ],
   "bounded_sections": {
-    "scripts/qa/test_m453_queue_hygiene.py": [
+    "lib/storage/waffra_verified_finance_authority.dart": [
       {
-        "start": "    def test_exact_pr_concurrency_for_every_modified_workflow(self):",
-        "end": "    def test_cleanup_remains_trusted_and_scoped(self):"
+        "start": "    if (backend == WaffraRuntimeFinanceBackend.verifiedEncrypted &&\n        route == WaffraFinanceRoute.manualTransactionSave) {",
+        "end": "    if (backend == WaffraRuntimeFinanceBackend.guardedLegacy) {\n      await legacy.saveLegacy("
+      }
+    ],
+    "test/storage/m451_fresh_home_catalog_recovery_test.dart": [
+      {
+        "start": "import 'package:waffra/main.dart' show ",
+        "end": "import 'package:waffra/storage/waffra_atomic_finance_snapshot.dart';"
+      },
+      {
+        "start": "  test('M451 actual Home uses the same verified startup repair'",
+        "end": null
       }
     ]
   }

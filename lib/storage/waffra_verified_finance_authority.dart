@@ -646,10 +646,34 @@ class WaffraVerifiedFinanceAuthority {
         throw StateError('Manual save requires its original encrypted witness.');
       }
       final original = witness.snapshot.values;
+      // A genuinely fresh encrypted Home has only an empty ledger and the
+      // verified default category catalog. Home sends a full, read-only
+      // capture on every manual save, including empty modules/scalars that
+      // have never been initialized. Absence must be accepted ONLY when the
+      // UI value is the exact canonical empty value; a populated or changed
+      // field still fails closed. No absent field is written by this route.
+      const freshEmptyFields = <String, Object>{
+        'waffra_named_budgets_v1': '[]',
+        'waffra_goals_v24': '[]',
+        'waffra_recurring_v24': '[]',
+        'waffra_challenges_v1': '[]',
+        'waffra_deleted_categories_v1': '[]',
+        'waffra_deleted_goals_v1': '[]',
+        'waffra_deleted_recurring_v1': '[]',
+        'waffra_recurring_postponed_v1': '{}',
+        'waffra_monthly_budget_v1': 0.0,
+        'waffra_monthly_budget_enabled_v1': false,
+        'waffra_learned_merchants_v1': '{}',
+      };
       for (final item in immutableCapture.entries) {
         if (item.key == 'entries') continue;
-        if (!original.containsKey(item.key) ||
-            jsonEncode(original[item.key]) != jsonEncode(item.value)) {
+        if (original.containsKey(item.key)) {
+          if (jsonEncode(original[item.key]) != jsonEncode(item.value)) {
+            throw StateError('Manual save includes unrelated finance edits.');
+          }
+        } else if (!freshEmptyFields.containsKey(item.key) ||
+            jsonEncode(freshEmptyFields[item.key]) !=
+                jsonEncode(item.value)) {
           throw StateError('Manual save includes unrelated finance edits.');
         }
       }

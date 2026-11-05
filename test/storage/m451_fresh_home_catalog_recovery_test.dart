@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:waffra/main.dart' show defaultCategories;
+import 'package:waffra/main.dart' show MoneyEntry, defaultCategories;
 import 'package:waffra/storage/waffra_atomic_finance_snapshot.dart';
 import 'package:waffra/storage/waffra_encrypted_cutover_journal.dart';
 import 'package:waffra/storage/waffra_encrypted_finance_session.dart';
@@ -190,5 +191,137 @@ void main() {
     expect(slice, contains('WaffraFreshHomeCatalogRecovery.load('));
     expect(slice, contains('defaultCategories().map((category)=>category.toJson())'));
     expect(slice, isNot(contains('SharedPreferences.setString(\'entries\'')));
+  });
+
+  Map<String, Object> freshManualCapture(MoneyEntry record) => <String, Object>{
+    'entries': jsonEncode([record.toJson()]),
+    'waffra_categories_v24': defaults(),
+    'waffra_named_budgets_v1': '[]',
+    'waffra_goals_v24': '[]',
+    'waffra_recurring_v24': '[]',
+    'waffra_challenges_v1': '[]',
+    'waffra_deleted_categories_v1': '[]',
+    'waffra_deleted_goals_v1': '[]',
+    'waffra_deleted_recurring_v1': '[]',
+    'waffra_recurring_postponed_v1': '{}',
+    'waffra_monthly_budget_v1': 0.0,
+    'waffra_monthly_budget_enabled_v1': false,
+    'waffra_learned_merchants_v1': '{}',
+  };
+
+  MoneyEntry freshEntry(String id, {bool sms = false}) => MoneyEntry(
+    id: id,
+    title: sms ? 'Verified incoming transfer' : 'Salary',
+    category: defaultCategories().firstWhere(
+      (c) => c.income && c.isSubcategory,
+    ).name,
+    amount: sms ? 50.0 : 100.0,
+    income: true,
+    date: DateTime.utc(2026, 11, 5, 10),
+    sourceType: sms ? 'sms' : 'manual',
+    notes: sms ? 'Incoming transfer SAR 50' : '',
+  );
+
+  test('M455 fresh SQLCipher Home can save its first manual income', () async {
+    final start = await WaffraFreshHomeCatalogRecovery.load(
+      authority: authority, defaultCategoriesJson: defaults(),
+    );
+    expect(start.finance.containsKey('waffra_goals_v24'), false);
+    final committed = await authority.saveCaptured(
+      route: WaffraFinanceRoute.manualTransactionSave,
+      baseline: start,
+      captured: freshManualCapture(freshEntry('m455-manual-1')),
+      userConfirmed: true,
+    );
+    final rows = jsonDecode(committed.ledgerRaw!) as List;
+    expect(rows, hasLength(1));
+    expect((rows.single as Map)['id'], 'm455-manual-1');
+    // Empty UI defaults are compared, not written as an unrelated mutation.
+    expect(committed.finance.containsKey('waffra_goals_v24'), false);
+    expect(committed.source, WaffraRuntimeFinanceBackend.verifiedEncrypted);
+    expect((await vault.customSelect(
+      'SELECT count(*) AS n FROM fresh_finance_entries',
+    ).getSingle()).read<int>('n'), 1);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.containsKey('entries'), false);
+  });
+
+
+  test('M455 fresh SQLCipher Home can save its first manual expense', () async {
+    final start = await WaffraFreshHomeCatalogRecovery.load(
+      authority: authority, defaultCategoriesJson: defaults(),
+    );
+    final expense = MoneyEntry(
+      id: 'm455-expense-1',
+      title: 'Groceries',
+      category: defaultCategories().firstWhere(
+        (c) => !c.income && c.isSubcategory,
+      ).name,
+      amount: 20.5,
+      income: false,
+      date: DateTime.utc(2026, 11, 5, 12),
+      sourceType: 'manual',
+    );
+    final committed = await authority.saveCaptured(
+      route: WaffraFinanceRoute.manualTransactionSave,
+      baseline: start,
+      captured: freshManualCapture(expense),
+      userConfirmed: true,
+    );
+    final rows = jsonDecode(committed.ledgerRaw!) as List;
+    expect(rows, hasLength(1));
+    expect((rows.single as Map)['income'], false);
+    expect(rows.single['amount'], 20.5);
+    expect((await vault.customSelect(
+      'SELECT amount_minor FROM fresh_finance_entries',
+    ).getSingle()).read<int>('amount_minor'), 2050);
+  });
+
+  test('M455 first manual save rejects nonempty unrelated missing field',
+      () async {
+    final start = await WaffraFreshHomeCatalogRecovery.load(
+      authority: authority, defaultCategoriesJson: defaults(),
+    );
+    final before = await snapshot.read();
+    final illegal = freshManualCapture(freshEntry('m455-reject-1'))
+      ..['waffra_goals_v24'] = '[{"id":"unsaved-goal"}]';
+    await expectLater(authority.saveCaptured(
+      route: WaffraFinanceRoute.manualTransactionSave,
+      baseline: start, captured: illegal, userConfirmed: true,
+    ), throwsStateError);
+    final after = await snapshot.read();
+    expect(after.generation, before.generation);
+    expect(after.digest, before.digest);
+    expect(after.values['entries'], '[]');
+  });
+
+  test('M455 first bank SMS uses the same fresh source and saves once',
+      () async {
+    await WaffraFreshHomeCatalogRecovery.load(
+      authority: authority, defaultCategoriesJson: defaults(),
+    );
+    final sms = freshEntry('m455-sms-1', sms: true);
+    final hash = List<String>.filled(64, 'a').join();
+    final committed = await authority.commitConfirmedSms(
+      route: WaffraFinanceRoute.bulkSmsConfirmedSave,
+      records: [sms.toJson()],
+      hashes: [hash],
+      userConfirmed: true,
+    );
+    expect(committed.saved, 1);
+    expect(committed.income, 1);
+    expect((jsonDecode(committed.current.ledgerRaw!) as List).length, 1);
+    expect(committed.current.finance.getStringList('waffra_sms_hashes_v1'),
+      contains(hash));
+    final retried = await authority.commitConfirmedSms(
+      route: WaffraFinanceRoute.bulkSmsConfirmedSave,
+      records: [sms.toJson()],
+      hashes: [hash], userConfirmed: true,
+    );
+    expect(retried.saved, 0);
+    expect(retried.skippedDuplicates, 1);
+    expect((jsonDecode(retried.current.ledgerRaw!) as List).length, 1);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.containsKey('entries'), false);
   });
 }
