@@ -299,6 +299,13 @@ void main() {
     expect(flow,contains('await _refreshFromVerifiedFinance();'));
     expect(flow,isNot(contains('await _loadFinanceSafely();')));
     expect(flow,contains('if(initial==null&&result.sourceType=='));
-    expect(flow,contains('WaffraRuntimeFinanceBackend.verifiedEncrypted'));
+    // M466: direct append ALWAYS checks the active authority under the lock,
+    // rather than guessing source type from a stale Home cache. Pictures
+    // follow the same source and never fall back to legacy whole-ledger save.
+    expect(flow,contains('await _ensureFinanceBound();'));
+    expect(flow,contains("safeRecord['receiptPath']=null;"));
+    expect(flow,contains('manualReceiptImages:images.isEmpty?null:images'));
+    expect(flow,isNot(contains(
+     "(result.receiptPath==null||result.receiptPath!.isEmpty)")));
   });
 }
