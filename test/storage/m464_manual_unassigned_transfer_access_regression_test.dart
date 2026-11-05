@@ -96,14 +96,20 @@ void main(){
    route:WaffraFinanceRoute.dashboardRead),throwsStateError);
  });
 
- test('Main plus button exposes transfer, account route and manual direct writer',
+ test('Main plus opens one manual popup with three modes, verified transfer and direct writer',
   () {
   final main=File('lib/main.dart').readAsStringSync();
   final form=File('lib/waffra_account_transaction_form.dart').readAsStringSync();
-  expect(main,contains("label:waffraIsEnglish?'Transfer between my accounts':'تحويل بين حساباتي'"));
-  expect(main,contains('_launchAddAction(openVerifiedTransfer,fromMenu:true)'));
-  expect(main,contains('initialOperation:WaffraAccountOperation.transfer'));
-  expect(main,contains('accounts.where((a)=>!a.archived).length<2'));
+  final menuStart=main.indexOf("if(tab==0&&!goalsOpened)...[");
+  final menuEnd=main.indexOf("]else if(goalsOpened||tab==3)...[",menuStart);
+  expect(menuStart,greaterThan(0));
+  expect(menuEnd,greaterThan(menuStart));
+  final menu=main.substring(menuStart,menuEnd);
+  expect(menu,contains("label:waffraIsEnglish?'Manual transaction':'عملية يدوية'"));
+  expect(menu,isNot(contains("_launchAddAction(openVerifiedTransfer,fromMenu:true)")));
+  expect(main,contains("Key('waffra-manual-three-modes')"));
+  expect(main,contains("Key('m466-confirm-transfer')"));
+  expect(main,contains('await transferApi!.transfer('));
   expect(main,contains('WaffraRuntimeFinanceBackend.guardedLegacy'));
   expect(main,contains('commitConfirmedManual('));
   expect(form,contains('mode=widget.initialOperation;'));
