@@ -22,6 +22,7 @@
     "native/WaffraAutoSmsStore.kt",
     "native/WaffraMainActivity.kt",
     "test/m429_sms_phone_integration_test.dart",
+    "test/m461_sms_exclusion_and_history_scan_test.dart",
     "test/m464_sms_bulk_rescan_regression_test.dart",
     "test/qa/m417_sms_permission_acceptance_test.py",
     "test/storage/m464_manual_unassigned_transfer_access_regression_test.dart"
@@ -109,6 +110,12 @@
       {
         "start": "        self.assertIn(\"otp.containsMatchIn(safe)\",queue)",
         "end": "        for forbidden in"
+      }
+    ],
+    "test/m461_sms_exclusion_and_history_scan_test.dart": [
+      {
+        "start": "  test('review refresh serializes work and batches durable exclusions',(){",
+        "end": null
       }
     ]
   }
