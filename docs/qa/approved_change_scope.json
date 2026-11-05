@@ -57,7 +57,7 @@
     "native/WaffraMainActivity.kt": [
       {
         "start": "import java.security.KeyStore\n",
-        "end": "import javax.crypto.Mac\n"
+        "end": "import javax.crypto.SecretKey\n"
       },
       {
         "start": "    private val messagesChannel = \"waffra/messages\"\n",
