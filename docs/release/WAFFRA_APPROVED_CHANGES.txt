@@ -1,3 +1,11 @@
+[M465-CI] 2026-11-05 — Bound GitHub Releases 504 retries; do not weaken native safety
+===============================================================================================
+- M147 ARM64 preview job 127343122683 failed because the downloaded sqlite3mc.arm64.android.so hashed as bef140a1... instead of its immutable package SHA. The isolated retry job 127347857126 failed to fetch a JetBrains Kotlin compiler asset from github.com (HTTP 504 Gateway Time-out).
+- Exact source and Flutter tests passed; failures are in external native asset distribution, independent of M452 review-code fixes.
+- The M147 ARM64 preview now retries at most three times ONLY for confirmed GitHub Releases HTTP 429/502/503/504 or the known temporary HTML-file hash. The sqlite3 hook still verifies upstream immutable SHA on every new download; repeated failure or any non-transport compiler/test failure blocks the job.
+- Corrupt transient sqlite3 hook download folders are cleared only inside the disposable CI runner for a retry. The APK/ELF presence, identity and financial storage safety checks are unchanged. No production code, data or cryptographic verification was relaxed.
+- M465 remains subject to exact-head CI, M385 change-scope review, and a separately signed main Android build; green PR checks do not prove a device-ready APK.
+
 [M465] 2026-11-05 — Unblock main signed Android build after PR #388 without weakening checks
 ============================================================================================
 - Owner reported main push run 42053505246 / job 127335569839 / step 8.
