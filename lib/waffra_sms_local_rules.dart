@@ -205,6 +205,9 @@ abstract final class WaffraSmsLocalRules {
    }
   }else{
    // A generic purchase/payment keyword is not a safe learned merchant rule.
+   final merchant=waffraMerchantName(body,income:isIncome);
+   if(merchant!=null&&safeKeyword(merchant)&&
+      normalizedBody.contains(normalized(merchant)))safe.add(merchant);
    for(final known in builtIn.where((r)=>
     r.income==isIncome&&r.category==category&&
     r.id!='builtin_purchase'&&r.id!='builtin_payment'&&
@@ -234,6 +237,56 @@ abstract final class WaffraSmsLocalRules {
    if(!matches(rule,body,sender:sender))return null;
    return rule;
   }on FormatException{return null;}
+ }
+
+ /// Automatic learning is a classification preference, never a ledger
+ /// permission. Keep one reusable sender/category pattern rather than
+ /// creating a new user-visible rule after every reviewed SMS.
+ ///
+ /// An explicitly enabled autoPost rule is immutable here: appending a new
+ /// keyword to it would silently broaden the owner's spending authority.
+ static List<WaffraSmsLocalRule> upsertLearned({
+  required List<WaffraSmsLocalRule> existing,
+  required WaffraSmsLocalRule candidate,
+ }) {
+  validate(candidate);
+  if(candidate.autoPost||candidate.id.startsWith('custom_')){
+   throw const FormatException('Learning cannot grant posting permission');
+  }
+  if(existing.any((rule)=>rule.resolvedKind==candidate.resolvedKind&&
+    normalized(rule.sender)==normalized(candidate.sender)&&
+    rule.category!=candidate.category&&
+    rule.keywords.any((word)=>candidate.keywords.any(
+     (other)=>normalized(word)==normalized(other))))){
+   // Conflicting category evidence must remain human-review only.
+   return List<WaffraSmsLocalRule>.unmodifiable(existing);
+  }
+  final index=existing.indexWhere((rule)=>
+   !rule.autoPost&&rule.id.startsWith('smart_')&&
+   rule.resolvedKind==candidate.resolvedKind&&
+   normalized(rule.sender)==normalized(candidate.sender)&&
+   rule.category==candidate.category&&
+   rule.accountId==candidate.accountId);
+  if(index<0){
+   if(existing.any((r)=>r.id==candidate.id))return existing;
+   if(existing.length>=100)return existing;
+   return List<WaffraSmsLocalRule>.unmodifiable([...existing,candidate]);
+  }
+  final current=existing[index];
+  final combined=<String>{...current.keywords,...candidate.keywords};
+  if(combined.length>12||current.matchAll)return existing;
+  if(combined.length==current.keywords.length)return existing;
+  final updated=WaffraSmsLocalRule(
+   id:current.id,name:current.name,kind:current.resolvedKind,
+   keywords:combined.toList(),income:current.income,
+   category:current.category,sender:current.sender,
+   matchAll:false,autoPost:false,
+   accountId:current.accountId,accountSuffix:current.accountSuffix,
+  );
+  validate(updated);
+  return List<WaffraSmsLocalRule>.unmodifiable([
+   for(var i=0;i<existing.length;i++)i==index?updated:existing[i]
+  ]);
  }
 
  static void validate(WaffraSmsLocalRule rule){
