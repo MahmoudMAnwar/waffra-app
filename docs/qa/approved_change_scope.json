@@ -102,7 +102,7 @@
     "lib/waffra_sms_rule_settings_page.dart": [
       {
         "start": " Future<void> _edit({WaffraSmsLocalRule? existing,String? seed,String? kindHint})async{\n",
-        "end": "  @override Widget build(BuildContext context)=>Scaffold(\n"
+        "end": " @override Widget build(BuildContext context)=>Scaffold(\n"
       }
     ]
   }
