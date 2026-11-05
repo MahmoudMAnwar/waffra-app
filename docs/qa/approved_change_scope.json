@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M470-staged-32-approved-Waffra-corrections-20261106",
-  "human_scope_review": "Owner directed a new PR tracking 32 approved Waffra follow-up changes, with real implementation status for every numbered item and strict priority for broken money posts, recurrent due accounts, verified account selection, then UI. This candidate implements only the specifically confirmed M470 items described below. Items 1-23 and the other incompletely reconstructed requests are NOT silently marked done, and no production migration, account reattribution, default budget split, bank-sender guessing, or SQLCipher safety bypass is authorized. Exact-head CI and signed-device approval remain mandatory. This revision additionally includes the approved two-step bank/provider and linked-account selection in EXISTING recurring default settings only; mandatory account on initial recurring creation remains pending. M470 adds only a provider-then-linked-account picker to recurring default settings, with active-account filtering and explicit confirmed default; this does not claim atomic creation-time linkage. Known bank display grouping is derived only from account labels; unrecognized providers remain isolated, never auto-selected. The user requested this two-level recurring selector.",
+  "human_scope_review": "Owner directed a new PR tracking 32 approved Waffra follow-up changes, with real implementation status for every numbered item and strict priority for broken money posts, recurrent due accounts, verified account selection, then UI. This candidate implements only the specifically confirmed M470 items described below. Items 1-23 and the other incompletely reconstructed requests are NOT silently marked done, and no production migration, account reattribution, default budget split, bank-sender guessing, or SQLCipher safety bypass is authorized. Exact-head CI and signed-device approval remain mandatory. This revision additionally includes the approved two-step bank/provider and linked-account selection in EXISTING recurring default settings only; mandatory account on initial recurring creation remains pending. M470 adds only a provider-then-linked-account picker to recurring default settings, with active-account filtering and explicit confirmed default; this does not claim atomic creation-time linkage. Known bank display grouping is derived only from account labels; unrecognized providers remain isolated, never auto-selected. The user requested this two-level recurring selector. New M470 account-budget math is isolated pure code and disposable unit tests, with no claim of live SQLCipher allocation persistence. Standalone budgets remain shared and must not be split or multiplied until explicitly allocated and backed up.",
   "user_requested_changes": [
     "Remove the unassigned-transactions option from the Home account selector, while safely resetting an old saved unassigned display preference to All accounts without discarding historical records.",
     "Allow the user to choose a date in the verified internal transfer form, while preserving verified source/destination selection and stable duplicate-protected transfer intent.",
@@ -10,7 +10,8 @@
     "Maintain an explicit accurate 32-item implementation tracker showing complete, partial, unverified, and pending items rather than inventing Done results.",
     "Improve existing recurring default account configuration with explicit provider/bank first and one linked active money account second; never offer unassigned or silently select a bank account, preserving prior payments and reminders.",
     "Show a provider/bank selector followed by explicitly chosen linked accounts when editing the recurring default account; prevent a new unassigned default, without guessing financial posting authority or changing historical paid entries.",
-    "Preserve recurring transaction provenance when a monthly due is confirmed Paid: the saved ledger row must have sourceType recurring and must not be mislabeled a manually entered transaction; ensure one-time receipt and source validation remain unchanged."
+    "Preserve recurring transaction provenance when a monthly due is confirmed Paid: the saved ledger row must have sourceType recurring and must not be mislabeled a manually entered transaction; ensure one-time receipt and source validation remain unchanged.",
+    "Calculate monthly budget limits and spending for the selected verified money account and for All accounts by summing only explicitly associated account-specific budget allocations; refuse duplicate caps or synthetic linking of shared or unassigned budgets."
   ],
   "allowed_changed_files": [
     "docs/qa/WAFFRA_32_NEW_CHANGES_M470_TRACKER.md",
@@ -19,10 +20,12 @@
     "lib/main.dart",
     "lib/storage/waffra_home_transaction_capture.dart",
     "lib/waffra_account_context_settings.dart",
+    "lib/waffra_account_monthly_budget_policy.dart",
     "lib/waffra_account_transaction_form.dart",
     "lib/waffra_home_accounts_sheet.dart",
     "lib/waffra_recurring_account_groups.dart",
     "test/m467_account_header_test.dart",
+    "test/m470_account_monthly_budget_policy_test.dart",
     "test/m470_account_scope_and_transfer_date_test.dart",
     "test/m470_recurring_provider_accounts_test.dart",
     "test/qa/m447_verified_sms_account_linking_test.py",
