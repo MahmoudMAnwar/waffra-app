@@ -27,6 +27,7 @@
     "test/m464_sms_account_learning_test.dart",
     "test/m464_sms_bulk_rescan_regression_test.dart",
     "test/qa/m417_sms_permission_acceptance_test.py",
+    "test/qa/m447_verified_sms_account_linking_test.py",
     "test/storage/m464_manual_unassigned_transfer_access_regression_test.dart"
   ],
   "bounded_sections": {
@@ -134,6 +135,12 @@
       {
         "start": "  test('review refresh serializes work and batches durable exclusions',(){",
         "end": null
+      }
+    ],
+    "test/qa/m447_verified_sms_account_linking_test.py": [
+      {
+        "start": "    def test_verified_source_only_with_no_shadow_db(self):",
+        "end": "    def test_no_guarded_legacy_sms_account_override(self):"
       }
     ]
   }
