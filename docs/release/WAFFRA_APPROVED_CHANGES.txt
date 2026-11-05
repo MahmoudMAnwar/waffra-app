@@ -1,3 +1,10 @@
+[M470 - PR #395 DRAFT] 2026-11-06 — Preserve paid recurring source identity
+=========================================================================
+- While reviewing owner-reported Paid confirmation errors, found a definite mismatch: the recurring review candidate used sourceType recurring but the inserted ledger row omitted sourceType and defaulted to manual.
+- Confirmed recurring Paid inserts now tag the posted ledger row as sourceType recurring; all account, amount, due-date, duplicate, Home/Widget SQLCipher and explicit-consent validations remain in place.
+- Added focused static regression in test/storage/m470_verified_recurring_payment_capture_test.dart and bounded the production change in the exact M385 approved file/section scope.
+- This change is not yet certified as a full fix for Paid confirmation. Exact-head CI, signed device and real-money duplicate/rollback scenarios are still required.
+
 [M470 - PR #395 DRAFT] 2026-11-06 — Account selection for recurring default, scope and payment safeguards
 ====================================================================================================
 - The owner requested 32 new Waffra follow-up changes. This draft implements only the specifically verified M470 subitems and does not claim all 32 are finished.
