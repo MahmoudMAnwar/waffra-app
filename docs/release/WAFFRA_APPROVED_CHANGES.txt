@@ -1,3 +1,9 @@
+[CI-M228] 2026-11-05 — Repair verified pull-refresh QA expectation after M468
+==============================================================================
+- Main Android APK run 42096659741 failed in mandatory Python job 127488700667: 136/137 tests passed, with M228 searching for the pre-M468 synchronous named-budget readList.
+- Preserve the existing finance source/ledger integrity, write-queue drain, read-only refresh, named-budget restoration and legacy category-cap projection checks. Assert awaited verified WaffraLargeJsonDecode and awaited budget readList without downgrading any safety property.
+- No production Dart code, SQLCipher source, authentication, data migration, workflow, or signing changes; rerun full exact-head checks and APK on main after this fix is reviewed.
+
 [M469-CRITICAL-AUTH] 2026-11-05 — Guard original phone/password access after sign-out
 ==========================================================================================
 - Owner reproduced incorrect mobile/password error after explicitly signing out then re-entering the same phone and password on Android. A signed-device re-test is mandatory: source review alone does not establish which protected value is wrong/missing on that handset.
