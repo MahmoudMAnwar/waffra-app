@@ -756,11 +756,14 @@ class WaffraVerifiedFinanceAuthority {
     required bool userConfirmed,
     String? selectedAccountId,
     int? expectedAccountGeneration,
+    List<Uint8List> receiptImages = const <Uint8List>[],
   }) async {
     if (route != WaffraFinanceRoute.manualTransactionSave ||
         !userConfirmed || record['sourceType'] != 'manual' ||
         (record['receiptPath'] != null && record['receiptPath'] != '')) {
-      throw StateError('M457 requires one confirmed unattached manual entry.');
+      // The image bytes are supplied separately. A temporary local file
+      // path cannot enter the canonical SQLCipher ledger.
+      throw StateError('Manual finance source refuses unverified receipt paths.');
     }
     // The owner-approved M464 rule supersedes older accountless manual appends.
     // A NEW manual money entry is a real balance movement and must point to
@@ -791,6 +794,7 @@ class WaffraVerifiedFinanceAuthority {
       userConfirmed: true,
       selectedAccountIds: <String?>[selectedAccountId],
       expectedAccountGeneration: expectedAccountGeneration,
+      manualReceiptImages: receiptImages,
     );
     if (result.saved != 1 || result.savedIncome + result.savedExpenses != 1) {
       throw StateError('M457 manual entry did not commit exactly once.');
