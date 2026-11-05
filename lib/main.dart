@@ -3612,12 +3612,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(candidate==null)return false;
   final store=const WaffraSmsLocalRuleStore();
   final prior=await store.read(_smsRuleOwnerKey);
-  if(prior.any((r)=>r.resolvedKind==kind&&
-   WaffraSmsLocalRules.matches(r,body,sender:sender)))return true;
-  if(prior.length>=100)return false;
-  // A deterministic ID prevents duplicated learning after repeat review.
-  if(prior.any((r)=>r.id==candidate.id))return false;
-  await store.write(_smsRuleOwnerKey,[...prior,candidate]);
+  // Same sender, category and direction are reused. Never change an
+  // already-authorized autoPost rule's matching criteria behind the user.
+  final updated=WaffraSmsLocalRules.upsertLearned(
+   existing:prior,candidate:candidate);
+  if(identical(updated,prior))return prior.any((r)=>
+   r.resolvedKind==kind&&r.category==category&&
+   WaffraSmsLocalRules.matches(r,body,sender:sender));
+  await store.write(_smsRuleOwnerKey,updated);
   return true;
  }
 
@@ -4351,18 +4353,26 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        final savedRules=await store.read(_smsRuleOwnerKey);
        final known=WaffraSmsLocalRules.resolve(
         body:body,sender:sender,bankKind:facts.kind,custom:savedRules);
-       final exists=savedRules.any((rule)=>rule.financial&&
-        WaffraSmsLocalRules.matches(rule,body,sender:sender));
-       final specific=known!=null&&known.financial&&
-        known.id!='builtin_purchase'&&known.id!='builtin_payment'&&
-        categories.any((c)=>c.name==known.category&&
-         c.income==known.income&&c.isSubcategory&&
+       // The user's FINAL saved category wins over pre-review guesses.
+       // Only use a record verified back from the encrypted ledger.
+       final confirmed=entries.where((entry)=>entry.sourceType=='sms'&&
+        entry.notes.isNotEmpty&&
+        bankSmsHash(entry.notes)==bankSmsHash(body)).toList();
+       final match=confirmed.length==1?confirmed.single:null;
+       final expectedIncome=facts.kind==WaffraBankOperationKind.income;
+       final specific=match!=null&&
+        (facts.kind==WaffraBankOperationKind.income||
+         facts.kind==WaffraBankOperationKind.expense)&&
+        match.income==expectedIncome&&
+        categories.any((c)=>c.name==match.category&&
+         c.income==match.income&&c.isSubcategory&&
          waffraCategoryAvailableForNewEntry(categories,c));
-       final learned=!exists&&specific?
+       final learned=specific?
         await _learnSafeSmsRule(
-         body:body,sender:sender,kind:known.resolvedKind,
-         category:known.category):false;
-       if(!exists&&!learned&&mounted){
+         body:body,sender:sender,
+         kind:expectedIncome?'income':'expense',
+         category:match.category):false;
+       if(!learned&&mounted){
         // Uncertain classification opens a fully prefilled, editable rule.
         await _openSmsRules(
          seedMessage:body,seedSender:sender,
