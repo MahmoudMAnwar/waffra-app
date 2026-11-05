@@ -10,6 +10,10 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: waffra-pr-m120-android-receipt-cold-reopen-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   android-m120-receipts:
     runs-on: ubuntu-latest

@@ -8,6 +8,10 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: waffra-pr-m112-source-witness-acceptance-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   source-witness:
     runs-on: ubuntu-latest

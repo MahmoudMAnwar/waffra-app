@@ -15,6 +15,10 @@ on:
       - 'docs/qa/m422_phone_password_only_migration.md'
       - '.github/workflows/m422-phone-only-auth-ui.yml'
   workflow_dispatch:
+concurrency:
+  group: waffra-pr-m422-phone-only-auth-ui-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   phone-only-ui-contract:
     runs-on: ubuntu-latest
