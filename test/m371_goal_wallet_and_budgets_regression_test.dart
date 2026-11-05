@@ -110,8 +110,14 @@ void main() {
       () {
     final source=File('lib/main.dart').readAsStringSync();
     expect(source,contains('target:noTarget?0.0:n!,saved:0,dueDate:selectedDeadline'));
-    expect(source,contains('setState(()=>goals.add(g))'));
-    expect(source,contains('operation:\'goal-create\''));
+    final creation=source.split('Future<void> goalDialog(').last
+        .split('/// Release an earmark').first;
+    expect(creation,contains('await this._saveGoalAndLinkedDueAtomically(g,'));
+    expect(creation,contains("operation:'goal-create-and-due'"));
+    expect(creation,isNot(contains('entries.add(')),
+        reason:'Creating a goal and its due cannot append an expense');
+    expect(creation,isNot(contains('await _persistModuleOrReload(')),
+        reason:'Both linked records use one atomic write, not two saves');
     expect(source,contains('balance:waffraAvailableCash(entries,goals)'));
     expect(source,contains('goalWalletPaidMinor:allocation.fromGoalMinor'));
     expect(source,isNot(contains('inc-exp-waffraGoalWalletBalance(goals)')));
