@@ -1,3 +1,10 @@
+[M464-M462-REGRESSION-FIX] 2026-11-05 — One unique failure behind six full-suite workflow failures
+===================================================================================================
+- Six exact-head workflows failed due to one outdated M462 transfer-mode source assertion, not six separate financial defects. In the full test run, 2291 tests passed and one test failed.
+- Updated the M462 regression to require that both prefilled SMS transfers and explicit Home transfers cannot change their transaction mode. The production transfer behavior remains unchanged; transfers must never be counted as ordinary expense/income.
+- Updated the strict M385 approved-file and bounded-section manifest. Existing data, finance source, and account state are untouched by this test correction.
+- Exact-head CI is still required; previous workflow results are for the previous SHA, and this note does not attest a successful release.
+
 [M464-SMS-FOLLOWUP-CORRECTION] 2026-11-05 — Approved account safety and CI reconciliation
 ================================================================================
 - Backend now requires a real, verified account ID plus witnessed generation for each NEW manual income/expense; legacy accountless manual posting is blocked (historic unassigned transactions stay readable and unchanged). This supersedes all older accountless manual instructions in #388.
