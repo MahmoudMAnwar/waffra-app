@@ -24,7 +24,7 @@
     ],
     "lib/storage/waffra_verified_finance_authority.dart": [
       {
-        "start": "  /// A future encrypted-only receipt attachment route.",
+        "start": "    // Never publish optimistic UI success before getting durable witness.",
         "end": "  Future<WaffraEncryptedReceiptTransactionResult> commitWithReceiptBytes({"
       }
     ]
