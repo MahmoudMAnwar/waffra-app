@@ -1,3 +1,8 @@
+[M466-FLUTTER-ANALYZER] 2026-11-05 — Remove redundant import in manual receipt repair
+================================================================================
+- The older parallel candidate PR #390 failed analyzer because Flutter foundation already exports Uint8List and an added dart:typed_data import in lib/main.dart is unnecessary. PR #391 inherited the same import; removed that import alone without changing any saving, receipt or transfer behavior.
+- Recheck exact new head in CI; successful static analysis does not certify signed APK or real handset behavior.
+
 [M466-CI] 2026-11-05 — Keep M457 verified manual-path guard current
 ================================================================================
 - PR #391 workflow Waffra encrypted storage smoke run 42066524014 had 1 failed source regression assertion: M457 still expected a Home cached runtime backend branch, which M466 deliberately removed to avoid picture-triggered legacy fallback.
