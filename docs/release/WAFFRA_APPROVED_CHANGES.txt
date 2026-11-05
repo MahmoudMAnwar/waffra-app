@@ -1,3 +1,7 @@
+[M467 draft] Owner-approved SMS review, accounts header and camera return (Nov 5, 2026)
+- Introduced bounded external-media lifecycle policy and sender bank-mark components with fixed allowlisted public favicon URLs; never transmit SMS text.
+- Main UI wiring, account-context selector and exact head regression are being added to this same draft PR. No finance schema or write path changes.
+
 [M466-M282-REGRESSION] 2026-11-05 — Fix exact M282 UI failures without moving the save footer
 ================================================================================================
 - M282 combined Flutter suite reported two failures (2292 passed, 2 failed): M354 source assertion still searched for the old four-controller dispose line, and M402 correctly rejected the new transfer's anchored DropdownButtonFormField.
