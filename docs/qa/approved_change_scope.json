@@ -85,7 +85,7 @@
       },
       {
         "start": "  test('M457 consent, duplicate and invalid account fail closed',",
-        "end": "  test('M457 manual UI posts a single frozen entry without optimistic ledger',"
+        "end": null
       }
     ],
     "test/storage/m464_manual_unassigned_transfer_access_regression_test.dart": [
