@@ -12,8 +12,9 @@ class M417AutoSmsContractTest(unittest.TestCase):
         consent=self.read("lib/waffra_auto_sms_consent.dart")
         native=self.read("native/WaffraMainActivity.kt")
         self.assertIn("requestAutoSmsPermission",flutter)
-        self.assertIn("m417-permission-allow",consent)
-        self.assertIn("m417-permission-skip",consent)
+        self.assertIn("_requestPermissions()",consent)
+        self.assertIn("await WaffraAutoSms.optIn()",consent)
+        self.assertNotIn("allow(cloud:true)",consent)
         self.assertIn("requestPermissions(arrayOf(Manifest.permission.READ_SMS",native)
         self.assertIn("WaffraAutoSmsStore.permissionGranted",native)
 
@@ -32,7 +33,7 @@ class M417AutoSmsContractTest(unittest.TestCase):
 
     def test_writes_only_from_existing_verified_sms_review(self):
         home=self.read("lib/main.dart")
-        self.assertIn("bulkSmsSheet(initialText:body)",home)
+        self.assertIn("bulkSmsSheet(initialText:body,",home)
         self.assertIn("smsHashes.contains(bankSmsHash(body))",home)
         self.assertIn("await WaffraAutoSms.acknowledge([id])",home)
         self.assertIn("await WaffraAutoSms.disable();",home)
@@ -59,15 +60,12 @@ class M417AutoSmsContractTest(unittest.TestCase):
 
     def test_sms_permission_disclosure_is_review_only(self):
         ui=self.read("lib/waffra_auto_sms_consent.dart")
-        # The user-approved concise first-run copy must retain independent
-        # local/cloud consent, explicit redaction and a skip path.
-        self.assertIn("السماح بالرسائل والتحليل تلقائيًا",ui)
-        self.assertIn("السماح بالرسائل فقط",ui)
-        self.assertIn("بعد إخفاء المعلومات الحساسة لخدمة سحابية",ui)
-        self.assertIn("allow(cloud:true)",ui)
-        self.assertIn("allow(cloud:false)",ui)
-        self.assertIn("if(cloud&&!activated)",ui)
-        self.assertIn("m417-permission-skip",ui)
+        # Account creation is followed by Android SMS then notifications.
+        # Cloud disclosure must be separate and tied to a specific message.
+        self.assertIn("await WaffraSmsCloudService.setConsent(false)",ui)
+        self.assertIn("await WaffraAutoSms.optIn()",ui)
+        self.assertIn("await WaffraAutoSms.requestNotificationPermission()",ui)
+        self.assertNotIn("allow(cloud:true)",ui)
         # History starts at the activation month's first day, independent
         # of UI text length. Verify the native boundary is unchanged.
         store=self.read("native/WaffraAutoSmsStore.kt")
@@ -75,8 +73,11 @@ class M417AutoSmsContractTest(unittest.TestCase):
         self.assertIn("set(Calendar.DAY_OF_MONTH, 1)",store)
         self.assertIn("importConsentMonthBankSms",api)
         poster=self.read("lib/waffra_auto_sms_autopost.part.dart")
-        self.assertIn("static bool get reviewOnly => true;",poster)
-        self.assertLess(poster.index("if(reviewOnly)"),
+        self.assertIn("static bool get reviewOnly => false;",poster)
+        self.assertIn("!matched.autoPost",poster)
+        self.assertIn("matched.accountSuffix",poster)
+        self.assertIn("sourceAccountVerified:true",poster)
+        self.assertLess(poster.index("!matched.autoPost"),
                         poster.index("commitConfirmedSms("))
 
     def test_android_build_uses_explicit_scoped_receiver(self):

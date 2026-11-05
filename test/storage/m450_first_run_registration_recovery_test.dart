@@ -27,11 +27,11 @@ void main() {
       'not-json',phone:phone,password:pass),isFalse);
   });
 
-  test('M450 second registration step never overwrites completed identity', () {
+  test('M459 single-page registration never overwrites completed identity', () {
     final main=File('lib/main.dart').readAsStringSync();
     final save=main.substring(
       main.indexOf(' Future<void> save()async {',main.indexOf('class ProfileForm')),
-      main.indexOf(' void _nextPhoneRegistrationStep(){'),
+      main.indexOf(' Widget _phoneRegistrationForm(){'),
     );
     expect(save,contains("prefs.getString('waffra_registered_profile')!=null"));
     expect(save,contains('WaffraLocalPhoneCredentials.registerOrResume('));

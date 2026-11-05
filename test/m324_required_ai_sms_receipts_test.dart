@@ -6,7 +6,7 @@ void main() {
   final gate=File('lib/waffra_ai_model_gate.dart').readAsStringSync();
 
   test('M335 bank paste and Android shares open without initializing Qwen',(){
-    final entry=home.indexOf('Future<void> bulkSmsSheet({String? initialText})async');
+    final entry=home.indexOf('Future<void> bulkSmsSheet({String? initialText,');
     final sheet=home.indexOf('_smsSheetOpen=true;',entry);
     final pasted=home.indexOf('final pasted=TextEditingController',sheet);
     expect(entry,greaterThan(0));
