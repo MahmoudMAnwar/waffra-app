@@ -405,21 +405,49 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
      'القواعد بتحلل محليًا قبل الذكاء الاصطناعي، وبتقترح نوع العملية والقسم فقط. الحفظ بعد موافقتك.',
      style:Theme.of(context).textTheme.bodyMedium),
     const SizedBox(height:16),
-    Text(widget.english?'My rules':'قواعدي',
+    Text(widget.english?'Learned classifications':'التصنيفات التي تعلّمها وفرة',
      style:Theme.of(context).textTheme.titleMedium),
-    if(saved.isEmpty)Padding(padding:const EdgeInsets.symmetric(vertical:12),
-     child:Text(widget.english?
-      'No custom rules yet. Use Add rule to choose keywords from scanned messages.':
-      'لسه ما أضفتش قواعد. اضغط إضافة قاعدة واختار كلمات من الرسائل الممسوحة.')),
-    for(final rule in saved)Card(child:ListTile(
-     title:Text(rule.name),
-     subtitle:Text('${rule.resolvedKind} • ${rule.category}\n${rule.keywords.join('، ')}'),
-     isThreeLine:true,
-     onTap:()=>_edit(existing:rule),
-     trailing:IconButton(
-      tooltip:widget.english?'Delete rule':'حذف القاعدة',
-      icon:const Icon(Icons.delete_outline),
-      onPressed:busy?null:()=>_remove(rule)))),
+    const SizedBox(height:8),
+    for(final kind in const <String>['income','expense','transfer','excluded'])
+     Card(child:ExpansionTile(
+      key:Key('waffra-sms-rule-bucket-$kind'),
+      leading:Icon(switch(kind){
+       'income'=>Icons.call_received_rounded,
+       'expense'=>Icons.call_made_rounded,
+       'transfer'=>Icons.sync_alt_rounded,
+       _=>Icons.shield_outlined,
+      }),
+      title:Text(switch(kind){
+       'income'=>widget.english?'Income':'دخل',
+       'expense'=>widget.english?'Expenses':'مصروف',
+       'transfer'=>widget.english?'Transfers':'تحويل',
+       _=>widget.english?'Excluded messages':'رسائل مستثناة',
+      }),
+      subtitle:Text(widget.english?
+       '${saved.where((r)=>r.resolvedKind==kind).length} saved patterns':
+       '${saved.where((r)=>r.resolvedKind==kind).length} أنماط محفوظة'),
+      children:[
+       if(!saved.any((r)=>r.resolvedKind==kind))
+        Padding(padding:const EdgeInsets.all(14),
+         child:Text(widget.english?
+          'Waffra will learn from your confirmed SMS.':
+          'وفرة هيتعلّم من الرسائل اللي بتراجعها وتأكدها.')),
+       for(final rule in saved.where((r)=>r.resolvedKind==kind))
+        ListTile(
+         title:Text(rule.name),
+         subtitle:Text(
+          '${rule.category.isNotEmpty?rule.category+' • ':''}'
+          '${rule.sender.isNotEmpty?rule.sender+' • ':''}'
+          '${rule.keywords.join('، ')}',
+          maxLines:3,overflow:TextOverflow.ellipsis),
+         onTap:()=>_edit(existing:rule),
+         trailing:IconButton(
+          tooltip:widget.english?'Delete this pattern':'حذف هذا النمط',
+          icon:const Icon(Icons.delete_outline),
+          onPressed:busy?null:()=>_remove(rule)),
+        ),
+      ],
+     )),
     const SizedBox(height:18),
     Text(widget.english?'Built-in rules':'قواعد جاهزة',
      style:Theme.of(context).textTheme.titleMedium),
