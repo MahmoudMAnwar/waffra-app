@@ -1,3 +1,9 @@
+[M466-CI] 2026-11-05 — Keep M457 verified manual-path guard current
+================================================================================
+- PR #391 workflow Waffra encrypted storage smoke run 42066524014 had 1 failed source regression assertion: M457 still expected a Home cached runtime backend branch, which M466 deliberately removed to avoid picture-triggered legacy fallback.
+- Changed the test to require actual _ensureFinanceBound(), a path-stripped confirmed record, and manualReceiptImages forwarded to the verified authority. Production behavior stays the same; no tests were skipped or downgraded.
+- Latest M466 exact-head CI must pass on the new commit. Signed Android/physical device still unverified.
+
 [M466] 2026-11-05 — Fix verified manual money with attachments; one income/expense/transfer popup
 ===================================================================================================
 - Reproduced source cause of owner's failed manual save: an image path kept new manual income/expense outside commitConfirmedManual, routing it through whole-ledger optimistic persist (which rejects verified source/receipt path).
