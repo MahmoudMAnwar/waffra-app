@@ -34,8 +34,7 @@
     "test/m462_smart_sms_rule_review_test.dart",
     "lib/waffra_auto_sms_autopost.part.dart",
     "lib/waffra_account_transaction_form.dart",
-    "lib/waffra_accounts_manager_page.dart",
-    "test/m463_auth_first_one_page_test.dart"
+    "lib/waffra_accounts_manager_page.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
