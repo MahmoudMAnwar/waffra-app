@@ -1,40 +1,130 @@
 {
   "contract_version": 1,
-  "change_id": "M469-phone-password-relogin-verifier-integrity-20261105",
-  "human_scope_review": "Owner reported on 5 Nov 2026 that after signing out of the same local phone account, entering the original phone and password yields a false incorrect-credentials message. Approved urgent bug fix scope: never clear or overwrite the verified identity or financial data, check OS-protected verifier ownership before phone sign-out, verify durable read-back at registration, and distinguish missing/malformed credential state from password rejection. No password reset bypass, new provider, DB migration, key rotation, or relaxed login allowed. Existing lockout requires exact device diagnosis and a signed APK test.",
+  "change_id": "M467-M468-approved-bank-inbox-accounts-camera-performance-20261105",
+  "human_scope_review": "Owner explicitly approved two visuals: bank-logo SMS review and verified Home account picker; also camera biometric and draft-retention defects. This PR implements the presentation and in-memory native picker fixes without changing the SQLCipher write authority, account schema or historic finance data. Phone-specific return-from-camera confirmation and exact-head CI remain required. On November 5 the owner additionally reported janky loading animations and sluggish interactions after save, pull-to-refresh, first install, goals and recurring actions. M468 is part of this owner-approved PR scope.",
   "user_requested_changes": [
-    "Prevent sign-out from removing a phone session when its original OS-protected login verifier cannot be found or belongs to another identity; preserve all finance and registration data.",
-    "After first-time phone registration, verify secure credential read-back against the exact original phone/password before committing a profile; fail closed if not durable.",
-    "Do not display incorrect password for a missing/malformed secure verifier. Keep wrong phone/password locked and never recreate credentials from a failed login.",
-    "Test correct same-phone/password verification across sign-out contract plus wrong-password, different-phone, corrupt verifier, and source privacy guarantees."
+    "Implement redesigned pending SMS list with bank marks, compact tiles, clearer counters and preserved manual review safeguards.",
+    "Add verified all-accounts/individual/unassigned header selector without making the selected header account the source of a new finance entry.",
+    "Preserve manual inputs across native camera/gallery round trip and skip biometric only for that bounded user-invoked media activity.",
+    "Render the verified Home all-account, individual account, unassigned and manage-accounts selector with header balance/transaction projections. Persist only per-user display preference. Never assign a new money posting by current header.",
+    "M468: reduce application lag after manual income/expense/transfers, goal and recurring saves, first-run and pull-to-refresh by coalescing overlapping verified account reads, skipping full all-account ledger scans, and suppressing redundant native picker/resume SMS history scans without altering financial source authority.",
+    "M468: decode large verified first-run and pull-refresh ledger/category snapshots in a background Flutter isolate to prevent expensive main-isolate JSON parsing from blocking loading indicators, without editing or bypassing any SQLCipher validation.",
+    "M468: eliminate main-isolate JSON serialization stalls on financial edits by freezing complete manual/goal/recurring ledger entry maps before any await, encoding large captures off-isolate under the existing save overlay, and still applying the unchanged witnessed route guards and queue before SQLCipher writes.",
+    "M468: optimize witnessed module-save comparison by checking identical serialized ledger strings directly rather than re-JSON-encoding each large unchanged snapshot on the UI thread, without weakening comparisons for structured values or the account/writer authority.",
+    "Fix account-selector ListTile ink and tint by placing interactive tiles on a clipped Material surface, so Flutter widget tests and actual user touch highlights render correctly.",
+    "Refresh three source regression expectations after M468 sequenced saving and M467 account-scoped monthly comparison/scoped gallery picker while requiring equivalent or stronger safety checks."
   ],
   "allowed_changed_files": [
-    "docs/qa/approved_change_scope.json",
+    "lib/waffra_external_media_session.dart",
+    "lib/waffra_sms_sender_brand.dart",
+    "test/m467_brand_media_helpers_test.dart",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "docs/qa/approved_change_scope.json",
     "lib/main.dart",
-    "lib/waffra_local_phone_credentials.dart",
-    "test/m469_phone_logout_login_integrity_regression_test.dart"
+    "lib/waffra_home_accounts_sheet.dart",
+    "test/m467_account_header_test.dart",
+    "test/m371_goal_wallet_and_budgets_regression_test.dart",
+    "test/m468_app_refresh_performance_regression_test.dart",
+    "lib/waffra_large_json_decode.dart",
+    "test/m468_large_ledger_decode_test.dart",
+    "lib/storage/waffra_home_transaction_capture.dart",
+    "test/m468_snapshot_compare_performance_test.dart",
+    "test/m275_smooth_confirmation_performance_test.dart",
+    "test/m268_approved_emerald_balance_card_test.dart",
+    "test/m290_google_country_reminders_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": " Future<void> logout()async {",
-        "end": " Future<void> setPin("
+        "start": "import 'waffra_biometrics.dart';",
+        "end": "import 'waffra_mandatory_biometric_gate.dart';"
       },
       {
-        "start": " Future<void> _signIn()async{",
-        "end": " String get maskedLastPhone{"
+        "start": " DateTime? _backgroundAt;",
+        "end": " @override void dispose(){WaffraRegionalCopy.countryIso.removeListener(_onRegionChanged);"
+      },
+      {
+        "start": " Future<void> editAvatar()async {",
+        "end": " @override Widget build(BuildContext context){\n  if(widget.initial==null&&widget.provider=='Phone')"
+      },
+      {
+        "start": " Future<void> _openAutoSmsInbox()async{",
+        "end": " Widget _autoSmsReviewCard(){"
+      },
+      {
+        "start": " Future<void> scanAndAddReceipt()async {",
+        "end": " Future<void> entrySheet({"
+      },
+      {
+        "start": " Future<void> entrySheet({",
+        "end": " Future<String?> chooseTransactionCategory("
+      },
+      {
+        "start": "class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {",
+        "end": " /// Internal transfers use the verified account ledger, never expense."
+      },
+      {
+        "start": " Future<void> _loadFinanceSafely()async{",
+        "end": " Widget _financialRecoveryScreen()"
+      },
+      {
+        "start": " Future<void> _refreshFromVerifiedFinance()async {",
+        "end": " Future<void> load()async {\n  await _ensureFinanceBound();"
+      },
+      {
+        "start": " Future<void> showSummaryTransactions(bool income)async {",
+        "end": " Widget _dashboardShortcut("
+      },
+      {
+        "start": " Widget dashboard(){",
+        "end": " Widget nextMonthForecast(){"
+      },
+      {
+        "start": " // Account settings open from the app bar instead of a footer destination.",
+        "end": " void _returnToHome(){"
+      },
+      {
+        "start": " Future<void> load()async {\n  await _ensureFinanceBound();",
+        "end": " Future<void> _refreshWidget()async{"
+      },
+      {
+        "start": " Future<void> persist({",
+        "end": " Future<bool> _persistModuleOrReload("
       }
     ],
-    "lib/waffra_local_phone_credentials.dart": [
+    "test/m371_goal_wallet_and_budgets_regression_test.dart": [
       {
-        "start": "import 'dart:convert';",
+        "start": "  test('M371 goal creation cannot post an expense or negative cash debit',",
         "end": null
       }
     ],
-    "test/m469_phone_logout_login_integrity_regression_test.dart": [
+    "lib/storage/waffra_home_transaction_capture.dart": [
       {
-        "start": "import 'dart:convert';",
+        "start": "  static void narrowVerifiedModuleEdit({",
+        "end": "  static bool _emptyOptionalModule("
+      }
+    ],
+    "lib/waffra_home_accounts_sheet.dart": [
+      {
+        "start": " Widget choice(BuildContext context,{required String id,",
+        "end": " @override Widget build(BuildContext context){"
+      }
+    ],
+    "test/m275_smooth_confirmation_performance_test.dart": [
+      {
+        "start": "  test('P0: all app finance entry points use the safe feedback boundary',(){",
+        "end": null
+      }
+    ],
+    "test/m268_approved_emerald_balance_card_test.dart": [
+      {
+        "start": " test('approved balance artwork stays embedded and never uses external images',(){",
+        "end": " for(final brightness in [Brightness.light,Brightness.dark]){"
+      }
+    ],
+    "test/m290_google_country_reminders_test.dart": [
+      {
+        "start": "  test('M290 permissions are triggered only by the relevant user action', () {",
         "end": null
       }
     ]

@@ -43,7 +43,7 @@ abstract final class WaffraHomeTransactionCapture {
     for (final field in snapshot.entries) {
       if (allowed.contains(field.key)) continue;
       if (witnessedValues.containsKey(field.key)) {
-        if (jsonEncode(witnessedValues[field.key]) != jsonEncode(field.value)) {
+        if (!_sameSnapshotValue(witnessedValues[field.key], field.value)) {
           throw StateError('Unrelated finance field changed during module edit.');
         }
       } else if (!_emptyOptionalModule(field.value)) {
@@ -54,6 +54,16 @@ abstract final class WaffraHomeTransactionCapture {
     if (snapshot.isEmpty) {
       throw StateError('Encrypted module edit has no scoped changes.');
     }
+  }
+
+  /// Exact string equality is equivalent to encoding both JSON strings,
+  /// without copying/escaping a multi-megabyte unchanged ledger on the UI
+  /// isolate. Non-strings retain the strict original JSON comparison.
+  static bool _sameSnapshotValue(Object? witnessed, Object value) {
+    if (witnessed is String && value is String) {
+      return witnessed == value;
+    }
+    return jsonEncode(witnessed) == jsonEncode(value);
   }
 
   static bool _emptyOptionalModule(Object value) =>

@@ -7,6 +7,57 @@
 - On login, distinguish absent/damaged secure credential from wrong password and instruct the owner not to clear app data. A wrong password or different phone still fails exactly as before. There is no biometric-only bypass, phone OTP, insecure password reset, or destructive migration.
 - Added M469 verified-record and source lifecycle tests. Existing local accounts already signed out with a lost secure verifier are NOT automatically recovered by this change. Signed main APK and owner device reproduction/probe are outstanding.
 
+[M467-M468-CI-REPAIR] 2026-11-05 — Four distinct full-suite failures behind six failed workflows
+==================================================================================================
+- Exact-head source suite for PR #392 at 93e4d54 reported 2304 passed, 4 failed in Flutter. Six full-suite workflows failed because they invoke the same tests, not six distinct root defects.
+- Real UI issue: M467 account dropdown used ListTile inside an opaque decorated Container, causing Flutter assertions and hiding native ink/touch feedback. Moved each choice to a clipped Material with identical selected fill, rounded border, and account actions.
+- M275 obsolete text assertion expected an immediate return from _saveProgress.track; M468 deliberately saves through a sequenced future. The revised test requires the same overlay, strict prior-write order, future tracking, and terminal return.
+- M268 obsolete artwork assertion expected unconditional monthlyChangePercent:monthChange. M467 only shows this comparison when the all-account fallback is the source; the revised assertion requires that safe conditional projection, not an invented account-specific month change.
+- M290 obsolete direct gallery-picker assertion expected `await ImagePicker().pickMultiImage(...)` without a scope. M467 wraps this exact user-invoked picker in WaffraExternalMediaSession.runPicker for draft preservation/privacy. Test now requires both wrapper and original picker, preserving deferred permission semantics.
+- M385 changed-file and bounded-section audit updated for these exact changes. No SQLCipher schema, money writer, SMS automatic posting, private credentials, or production source changes.
+- Re-run full Flutter and independent exact-head gates after this commit; these source fixes do not yet certify Android camera lifecycle or a signed APK.
+
+[M468] Fast strict source-witness compare for goal and recurring saves
+- When a module-only goal/recurring/category edit preserves an unchanged verified serialized ledger, compare String values directly rather than twice re-encoding megabytes of JSON on Flutter's UI isolate.
+- This is byte-equivalent to the previous JSON string check; non-string structured evidence retains exact original JSON serialization and fail-closed errors. Does not relax an unrelated finance-field mutation.
+- Added positive 4000-record and negative altered-ledger regression tests.
+
+[M468] Preserve capture/commit ordering with background JSON serialization
+- Serialize financial save preparation in the original capture order before entering the existing verified write queue: a second compute task cannot overtake the first save and silently reorder balances.
+- Freeze all ledger row maps synchronously before awaiting. Under the painted overlay await the prior save, offload large JSON encoding, run the original source/witness narrowing guards and submit the already-frozen snapshot to the same financial authority.
+- New regression asserts freeze-before-await and source-order invariants; no finance guards or SQLCipher code disabled.
+
+[M468] Confirmed finance-save spinner: frozen ledger encoding off UI isolate
+- Existing persist() already freezes each captured ledger entry map before a Future, and now executes expensive 240+ transaction JSON serialization via compute after the saving overlay has painted.
+- The unchanged snapshot-narrowing guards and SQLCipher verified source, witness, account selection and serialized write queue execute AFTER the exact frozen serialization. One save can never silently lose account links or skip user confirmation.
+- An async account result cannot overwrite a new Home account selection made while the read was in flight; one trailing refresh replays the latest chosen filter.
+- Added exact serialization/ordering and account-selection tests; do not claim measured frame-time improvement until real Android profiling.
+
+[M468] Verified large ledger parse off UI isolate
+- On initial install and manual pull-to-refresh, authenticated and integrity-checked finance JSON above 64 KiB decodes using Flutter compute; small payloads use the existing exact decoder. Invalid JSON still fails closed and never shows a fabricated balance.
+- Keeps finance authority, confirmation, SQLCipher writer, and widget reconciliation unchanged; optimize only read-side JSON decoding. Adds 5000-record round-trip and invalid-snapshot regression.
+- Real Android frame-time measurements remain required for an actual performance improvement claim.
+
+[M468] Shared performance work for owner-approved Home/finance interactions (2026-11-05)
+- Coalesce overlapping encrypted account reads, and perform at most one trailing read for an intervening new save. The all-accounts header now reads witnessed balances but skips full account-to-entry/budget/goal projection unless a narrower filter needs it.
+- Reuse the verified account snapshot to show the account selector without forcing another storage read on every tap; the next read refreshes after selection or a committed write.
+- Native camera/gallery resume does not launch widget sync plus four-page history scan over the still-open manual form. Normal app resume keeps verified widget reconciliation, and the SMS history cursor runs only while genuinely incomplete, with a bounded 20-second UI scheduling throttle. Native SMS update listener remains active for incoming texts.
+- M371 still verifies absence of goal-creation cash debits, but updates the old exact Home balance source assertion to cover the approved SQLCipher account-aware Home.
+- Does not remove source verification, persistence, SMS consent or safety checks. Exact-HEAD CI and performance testing on Android required.
+
+[M467] Main account-balance projection and camera/SMS UI refinements
+- All-accounts balance now sums SQLCipher-witnessed active account balances including openings and transfers. Unassigned transactions appear in overall reports but cannot mutate an account balance. Month-change badge is hidden when there is no matching verified account-period series.
+- Refresh the verified account context after a confirmed transfer or manually saved income/expense. Sender review sheet adapts its height to avoid the large blank area on 2-bank review screens.
+
+[M467] Home header verified account selector completed in draft PR
+- Shows all accounts, each active verified money account with a witnessed SQLCipher balance, unassigned entry filter and Manage Accounts. Visible transaction rows, income/expense summaries and balance header follow the account filter; overall budgets and goal wallet stay independent.
+- Selected display account is a profile-scoped preference only; not used to choose the bank account for any manual, SMS, goal or recurring transaction. Unassigned entries remain in overall reports but do not change any money-account balance.
+- Android picker and redesigned bank SMS review stay in the same PR. Requires exact-head CI and phone camera/gallery acceptance.
+
+[M467 draft] Owner-approved SMS review, accounts header and camera return (Nov 5, 2026)
+- Introduced bounded external-media lifecycle policy and sender bank-mark components with fixed allowlisted public favicon URLs; never transmit SMS text.
+- Main UI wiring, account-context selector and exact head regression are being added to this same draft PR. No finance schema or write path changes.
+
 [M466-M282-REGRESSION] 2026-11-05 — Fix exact M282 UI failures without moving the save footer
 ================================================================================================
 - M282 combined Flutter suite reported two failures (2292 passed, 2 failed): M354 source assertion still searched for the old four-controller dispose line, and M402 correctly rejected the new transfer's anchored DropdownButtonFormField.

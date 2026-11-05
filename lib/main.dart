@@ -37,6 +37,11 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:crypto/crypto.dart';
 import 'waffra_biometrics.dart';
+import 'waffra_external_media_session.dart';
+import 'waffra_sms_sender_brand.dart';
+import 'waffra_large_json_decode.dart';
+import 'waffra_home_accounts_sheet.dart';
+import 'storage/waffra_account_context_read.dart';
 import 'waffra_mandatory_biometric_gate.dart';
 import 'waffra_local_phone_credentials.dart';
 import 'waffra_local_account_migration.dart';
@@ -1156,6 +1161,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    }
    return;
   }
+  // Native camera/gallery return preserves an already-unlocked session only
+  // during its bounded picker activity. Real background still locks normally.
+  if(WaffraExternalMediaSession.trustedBackgroundTransition(state))return;
   // A genuine background transition invalidates a pending verification.
   if(state==AppLifecycleState.paused||
      state==AppLifecycleState.hidden||
@@ -2454,8 +2462,8 @@ class _ProfileFormState extends State<ProfileForm> {
   // Do not request global photo or file permissions at app launch.
   XFile? selected;
   try{
-   selected=await ImagePicker().pickImage(
-    source:ImageSource.gallery,imageQuality:92);
+   selected=await WaffraExternalMediaSession.runPicker(()=>
+    ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:92));
   }catch(_){
    if(mounted)snack(context,waffraIsEnglish?
     'Unable to access photos. Check your photo selection permissions.':
@@ -3467,6 +3475,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // cannot clear the replacement Home's back handler.
  late final bool Function() _registeredBackHandler=_consumeHomeBack;
  final WaffraLegacyWriteQueue _financialWriteQueue=WaffraLegacyWriteQueue();
+ // Expensive off-isolate preparation cannot overtake an earlier save.
+ Future<void> _m468PersistSequence=Future<void>.value();
  final WaffraHomeFinancePersistence _homeFinancePersistence=const WaffraHomeFinancePersistence();
  late WaffraVerifiedFinanceAuthority _financeAuthority=WaffraVerifiedFinanceAuthority(legacy:_homeFinancePersistence);
  WaffraProductionFinanceAuthorityBinding? _financeBinding;
@@ -3486,6 +3496,153 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(!mounted){await binding.close();throw StateError('Home startup was disposed.');}
   _financeBinding=binding;
   _financeAuthority=binding.authority;
+ }
+
+ // Account filters are presentation-only; never inherit them for new money.
+ List<WaffraAccountBalance> _m467Accounts=const <WaffraAccountBalance>[];
+ WaffraAccountContextReadResult? _m467AccountContext;
+ String _m467SelectedAccount='all';
+ bool _m467AccountChoiceRestored=false;
+ bool _m468VerifiedAccountsLoaded=false;
+ Future<void>? _m468AccountReadInFlight;
+ bool _m468AccountReadAgain=false;
+
+ String get _m467ChoiceKey{
+  final owner=widget.profile.provider+'|'+widget.profile.phone.trim()+
+   '|'+widget.profile.email.trim().toLowerCase();
+  final hash=sha256.convert(utf8.encode(owner)).toString();
+  return 'waffra_home_account_display_'+hash.substring(0,20);
+ }
+
+ // Concurrent save, transfer, resume and refresh events share one account read.
+ // A later request gets ONE trailing replay so a new commit is not missed.
+ Future<void> _m467RefreshHomeAccounts()async{
+  final active=_m468AccountReadInFlight;
+  if(active!=null){
+   _m468AccountReadAgain=true;
+   await active;
+   return;
+  }
+  final running=_m468ReadVerifiedAccountsOnce();
+  _m468AccountReadInFlight=running;
+  try{await running;}
+  finally{
+   _m468AccountReadInFlight=null;
+   final again=_m468AccountReadAgain;
+   _m468AccountReadAgain=false;
+   if(again&&mounted)unawaited(_m467RefreshHomeAccounts());
+  }
+ }
+
+ Future<void> _m468ReadVerifiedAccountsOnce()async{
+  try{
+   await _ensureFinanceBound();
+   final bridge=_financeBinding?.accountsBridge;
+   if(bridge==null)throw StateError('No verified account bridge');
+   final api=WaffraVerifiedAccountsApi(bridge:bridge);
+   final accounts=await api.balances();
+   var chosen=_m467SelectedAccount;
+   if(!_m467AccountChoiceRestored){
+    final p=await SharedPreferences.getInstance();
+    chosen=p.getString(_m467ChoiceKey)??'all';
+   }
+   if(chosen!='all'&&chosen!='none'&&
+      !accounts.any((a)=>!a.archived&&a.id==chosen))chosen='all';
+   final now=DateTime.now();
+   final month=now.year.toString().padLeft(4,'0')+'-'+
+    now.month.toString().padLeft(2,'0');
+   // "All accounts" already uses verified account balances + Home ledger.
+   // Don't scan the full SQLCipher account context after every save or pull.
+   final contextView=chosen=='all'?null:await api.readAccountContext(
+    monthIso:month,
+    selectedAccountId:chosen=='none'?null:chosen);
+   if(!mounted)return;
+   // A user may switch accounts while this async SQL projection is running.
+   // Never repaint that newly chosen view with a stale older selection.
+   if(_m467AccountChoiceRestored&&_m467SelectedAccount!=chosen){
+    _m468AccountReadAgain=true;
+    return;
+   }
+   setState((){
+    _m467Accounts=accounts.where((a)=>!a.archived).toList();
+    _m467AccountContext=contextView;
+    _m467SelectedAccount=chosen;
+    _m467AccountChoiceRestored=true;
+    _m468VerifiedAccountsLoaded=true;
+   });
+  }catch(error){
+   debugPrint('Home accounts view unavailable: '+error.runtimeType.toString());
+   if(!mounted)return;
+   // Never show a stale bank balance when verified SQL projection is absent.
+   setState((){
+    _m467Accounts=const <WaffraAccountBalance>[];
+    _m467AccountContext=null;
+    _m467SelectedAccount='all';
+    _m467AccountChoiceRestored=false;
+    _m468VerifiedAccountsLoaded=false;
+   });
+  }
+ }
+
+ String get _m467AccountLabel{
+  if(_m467SelectedAccount=='all')return (waffraIsEnglish?'All accounts':'كل الحسابات');
+  if(_m467SelectedAccount=='none')return (waffraIsEnglish?'Unassigned transactions':'عمليات بدون حساب');
+  for(final account in _m467Accounts){
+   if(account.id==_m467SelectedAccount)return account.name;
+  }
+  return (waffraIsEnglish?'All accounts':'كل الحسابات');
+ }
+
+ Iterable<MoneyEntry> _m467ScopedEntries(){
+  final selected=_m467SelectedAccount;
+  if(selected=='all')return entries;
+  final contextView=_m467AccountContext;
+  if(contextView==null)return const <MoneyEntry>[];
+  final ids=contextView.entries.where((item)=>selected=='none'?
+   item.accountId==null:item.accountId==selected).map((item)=>item.id).toSet();
+  return entries.where((entry)=>ids.contains(entry.id));
+ }
+
+ double _m467ShownBalance(){
+  if(_m467SelectedAccount=='all'){
+   if(!_m468VerifiedAccountsLoaded)return waffraAvailableCash(entries,goals);
+   // The sum of verified balances includes openings, account transfers and
+   // wallet movements. Unassigned ledger entries do not alter accounts.
+   return _m467Accounts.fold<int>(0,(total,a)=>total+a.balanceMinor)/100;
+  }
+  if(_m467SelectedAccount=='none')return 0;
+  for(final a in _m467Accounts){
+   if(a.id==_m467SelectedAccount)return a.balanceMinor/100;
+  }
+  return 0;
+ }
+
+ Future<void> _m467PickHomeAccount()async{
+  // Open instantly from a verified snapshot; refresh after selection.
+  if(!_m468VerifiedAccountsLoaded)await _m467RefreshHomeAccounts();
+  if(!mounted)return;
+  final next=await showModalBottomSheet<String>(
+   context:context,isScrollControlled:true,useSafeArea:true,
+   showDragHandle:true,
+   builder:(sheet)=>WaffraHomeAccountsSheet(
+    english:waffraIsEnglish,
+    selected:_m467SelectedAccount,
+    accounts:_m467Accounts));
+  if(next==null||!mounted)return;
+  if(next=='manage'){
+   await openVerifiedAccounts();
+   return;
+  }
+  if(next!='all'&&next!='none'&&
+     !_m467Accounts.any((a)=>a.id==next))return;
+  setState(()=>_m467SelectedAccount=next);
+  try{
+   final p=await SharedPreferences.getInstance();
+   await p.setString(_m467ChoiceKey,next);
+  }catch(error){
+   debugPrint('Account display preference unavailable: '+error.runtimeType.toString());
+  }
+  if(mounted)await _m467RefreshHomeAccounts();
  }
 
  Future<void> openVerifiedAccounts()async{
@@ -3512,6 +3669,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       !b.deleted&&b.budgetActive&&b.budget>0))item.id:item.budgetLabel??item.name},
     onTransferConfirmed:(_)=>_learnManualTransferPreference(),
    )));
+  if(mounted)await _m467RefreshHomeAccounts();
  }
 
  /// Internal transfers use the verified account ledger, never expense.
@@ -3671,7 +3829,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // Account settings open from the app bar instead of a footer destination.
  bool accountOpened=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
- @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraAutoSmsUpdates.addListener(_receiveAutoSmsNotice);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:(){unawaited(_syncWidgetTransactions());unawaited(_refreshAutoSmsInbox(importMonth:true));});unawaited(_loadFinanceSafely());}
+ DateTime? _m468LastResumeSmsScan;
+ void _m468OnResume(){
+  if(!mounted||!ready||
+     WaffraExternalMediaSession.shouldSkipResumeBackgroundWork)return;
+  // Widget revision MUST remain source-verified after a genuine resume.
+  unawaited(_syncWidgetTransactions());
+  // The already-completed history cursor must not be rescanned on every
+  // native Activity return. New SMS still arrive through the native listener.
+  final now=DateTime.now();
+  final last=_m468LastResumeSmsScan;
+  if(_autoSmsRefreshInFlight!=null||
+     (last!=null&&now.difference(last)<const Duration(seconds:20)))return;
+  _m468LastResumeSmsScan=now;
+  unawaited(_refreshAutoSmsInbox(importMonth:!_autoSmsHistoryComplete));
+ }
+ @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraAutoSmsUpdates.addListener(_receiveAutoSmsNotice);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:_m468OnResume);unawaited(_loadFinanceSafely());}
  void _returnToHome(){if(mounted)setState((){_tabBackStack.clear();tab=0;accountOpened=false;goalsOpened=false;addFabExpanded=false;});}
  void _receiveWidgetAction(){
   if(!mounted||!ready||waffraWidgetAction.value!='add')return;
@@ -4176,40 +4349,59 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       }
      },
      child:SafeArea(
-     child:SizedBox(height:MediaQuery.sizeOf(ctx).height*.74,
+     child:SizedBox(height:selectedSender==null?
+       min(MediaQuery.sizeOf(ctx).height*.78,550.0):
+       MediaQuery.sizeOf(ctx).height*.84,
       child:Column(children:[
-       Row(children:[
-        IconButton(
-         key:const Key('waffra-sms-senders-back'),
-         onPressed:(){
-          if(selectedSender==null){Navigator.pop(ctx);}
-          else{refresh(()=>selectedSender=null);}
-         },
-         icon:const Icon(Icons.arrow_back_rounded)),
-        Expanded(child:WaffraText(
-         selectedSender??(waffraIsEnglish?'Bank SMS by sender':'رسائل للفرز'),
-         style:const TextStyle(fontWeight:FontWeight.bold,fontSize:19),
-         maxLines:2)),
-        Padding(padding:const EdgeInsets.all(12),
-         child:WaffraText(selectedSender==null?senders.length.toString():
-          (bySender[selectedSender]?.length??0).toString())),
-       ]),
-       Row(children:[
-        Checkbox(
-         key:const Key('waffra-sms-select-all-visible'),
-         value:visibleIds().isNotEmpty&&
-          visibleIds().every(selectedIds.contains),
-         onChanged:bulkBusy?null:(value)=>refresh((){
-          if(value==true){selectedIds.addAll(visibleIds());}
-          else{selectedIds.removeAll(visibleIds());}
-         })),
-        Expanded(child:WaffraText(waffraIsEnglish?
-         'Select all shown messages':'تحديد كل الرسائل المعروضة')),
-        Padding(padding:const EdgeInsets.only(left:12,right:12),
-         child:WaffraText(waffraIsEnglish?
-          '${selectedIds.length} selected':
-          '${selectedIds.length} محددة')),
-       ]),
+       Padding(padding:const EdgeInsets.fromLTRB(14,3,14,8),
+        child:Row(children:[
+         IconButton(key:const Key('waffra-sms-senders-back'),
+          icon:const Icon(Icons.arrow_back_rounded,color:forest),
+          onPressed:(){
+           if(selectedSender==null){Navigator.pop(ctx);}
+           else{refresh(()=>selectedSender=null);}
+          }),
+         Expanded(child:Column(mainAxisSize:MainAxisSize.min,
+          crossAxisAlignment:CrossAxisAlignment.start,children:[
+          WaffraText(selectedSender??(waffraIsEnglish?
+           'Messages to review':'رسائل للفرز'),maxLines:2,
+           style:const TextStyle(fontSize:22,fontWeight:FontWeight.bold)),
+          WaffraText(visibleIds().length.toString()+
+           (waffraIsEnglish?' messages from ':' رسالة من ')+
+           senders.length.toString()+
+           (waffraIsEnglish?' senders':' مرسلين'),
+           style:TextStyle(fontSize:12,
+            color:Theme.of(ctx).colorScheme.onSurfaceVariant)),
+         ])),
+        ])),
+       Padding(padding:const EdgeInsets.fromLTRB(12,1,12,6),
+        child:WaffraSmsReviewMetrics(
+         shown:visibleIds().length,selected:selectedIds.length,
+         senderCount:senders.length,english:waffraIsEnglish)),
+       Padding(padding:const EdgeInsets.fromLTRB(13,4,13,7),
+        child:Container(
+         decoration:BoxDecoration(
+          color:Theme.of(ctx).brightness==Brightness.dark?
+           const Color(0xFF193E31):const Color(0xFFF2F8F4),
+          borderRadius:BorderRadius.circular(15)),
+         child:Row(children:[
+          Checkbox(
+           key:const Key('waffra-sms-select-all-visible'),
+           value:visibleIds().isNotEmpty&&
+            visibleIds().every(selectedIds.contains),
+           onChanged:bulkBusy?null:(value)=>refresh((){
+            if(value==true){selectedIds.addAll(visibleIds());}
+            else{selectedIds.removeAll(visibleIds());}
+           })),
+          Expanded(child:WaffraText(waffraIsEnglish?
+           'Select all shown messages':'تحديد كل الرسائل المعروضة',
+           style:const TextStyle(fontSize:13,fontWeight:FontWeight.w600))),
+          WaffraText(selectedIds.length.toString()+
+           (waffraIsEnglish?' selected':' محددة'),
+           style:const TextStyle(fontSize:12,color:emerald)),
+          const SizedBox(width:12),
+         ]),
+        )),
        Expanded(child:ListView.builder(
         key:Key(selectedSender==null?'waffra-sms-sender-list':
          'waffra-sms-sender-transactions'),
@@ -4218,18 +4410,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         itemBuilder:(rowContext,index){
          if(selectedSender==null){
           final sender=senders[index],count=bySender[sender]!.length;
-          return Card(margin:const EdgeInsets.symmetric(
-           horizontal:14,vertical:6),
+          return Card(
+           margin:const EdgeInsets.symmetric(horizontal:13,vertical:5),
+           elevation:0,
+           shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18),
+            side:BorderSide(color:forest.withValues(alpha:.14))),
            child:ListTile(
             key:Key('waffra-sms-sender-group-'+index.toString()),
+            contentPadding:const EdgeInsets.symmetric(horizontal:12,vertical:5),
+            leading:WaffraSmsSenderBrand(sender:sender),
             title:WaffraText(sender,maxLines:2,
-             style:const TextStyle(fontWeight:FontWeight.bold)),
-            leading:Container(
-             padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),
-             decoration:BoxDecoration(color:const Color(0xFFE4F4EB),
-              borderRadius:BorderRadius.circular(20)),
-             child:WaffraText(waffraIsEnglish?'$count SMS':'$count رسالة',
-              style:const TextStyle(color:forest,fontWeight:FontWeight.bold))),
+             style:const TextStyle(fontWeight:FontWeight.bold,fontSize:15)),
+            subtitle:WaffraText(count.toString()+
+             (waffraIsEnglish?' messages awaiting review':' رسائل تحتاج فرز'),
+             style:const TextStyle(fontSize:12,color:emerald)),
             trailing:Row(mainAxisSize:MainAxisSize.min,children:[
              Checkbox(
               key:Key('waffra-sms-select-sender-'+index.toString()),
@@ -4240,7 +4434,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                if(value==true){selectedIds.addAll(ids);}
                else{selectedIds.removeAll(ids);}
               })),
-             const Icon(Icons.chevron_left_rounded),
+             const Icon(Icons.chevron_left_rounded,color:forest),
             ]),
             onTap:()=>refresh(()=>selectedSender=sender),
            ));
@@ -4381,11 +4575,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           }
          },
         ))),
-       Padding(padding:const EdgeInsets.all(12),
-        child:WaffraText(waffraIsEnglish?
-         'Nothing is recorded until you approve the transaction.':
-         'ما تتسجلش أي عملية مالية إلا بعد مراجعتك وتأكيدك.',
-         textAlign:TextAlign.center)),
+       Padding(padding:const EdgeInsets.fromLTRB(13,8,13,14),
+        child:Container(padding:const EdgeInsets.all(12),
+         decoration:BoxDecoration(color:const Color(0xFFE8F4EB),
+          borderRadius:BorderRadius.circular(15)),
+         child:Row(children:[
+          const Icon(Icons.info_outline_rounded,color:forest,size:20),
+          const SizedBox(width:9),
+          Expanded(child:WaffraText(waffraIsEnglish?
+           'Nothing is recorded before your review and confirmation.':
+           'لن تُسجَّل أي عملية مالية إلا بعد مراجعتك وتأكيدك.',
+           style:const TextStyle(color:forest,fontSize:12),maxLines:3)),
+         ]))),
       ]),
      ),
     ),
@@ -4895,8 +5096,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   recurringPostponed.clear();smsHashes.clear();learnedMerchantCategories.clear();
   try{
    await load();
+   unawaited(_m467RefreshHomeAccounts());
    WidgetsBinding.instance.addPostFrameCallback((_) {
-    if(mounted)unawaited(_refreshAutoSmsInbox(importMonth:true));
+    if(mounted)unawaited(_refreshAutoSmsInbox(
+     importMonth:!_autoSmsHistoryComplete));
    });
   }catch(e){
    debugPrint('Financial startup integrity/recovery gate blocked access: $e');
@@ -4980,16 +5183,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final refreshSource=WaffraVerifiedPullRefreshSource.fromAuthority(current);
    final ledger=refreshSource.ledgerRaw;
    final catalog=refreshSource.categoriesRaw;
-   List<T> readList<T>(String? raw,T Function(Map<String,dynamic>) make) {
+   Future<List<T>> readList<T>(String? raw,T Function(Map<String,dynamic>) make) async {
     if(raw==null)return <T>[];
-    final parsed=jsonDecode(raw);
+    final parsed=await WaffraLargeJsonDecode.parse(raw);
     if(parsed is! List)throw const FormatException('Invalid finance list.');
     return parsed.map((e)=>make(Map<String,dynamic>.from(e as Map))).toList();
    }
-   final nextEntries=readList<MoneyEntry>(ledger,MoneyEntry.fromJson);
+   final nextEntries=await readList<MoneyEntry>(ledger,MoneyEntry.fromJson);
    final nextCategories=catalog==null
     ?defaultCategories()
-    :readList<BudgetCategory>(catalog,BudgetCategory.fromJson);
+    :await readList<BudgetCategory>(catalog,BudgetCategory.fromJson);
    if(current.source==WaffraRuntimeFinanceBackend.guardedLegacy){
     if(nextCategories.isEmpty)nextCategories.addAll(defaultCategories());
     for(final entry in nextEntries){
@@ -4999,7 +5202,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      }
     }
    }
-   final nextNamedBudgets=readList<WaffraNamedBudget>(
+   final nextNamedBudgets=await readList<WaffraNamedBudget>(
     view.getString('waffra_named_budgets_v1'),WaffraNamedBudget.fromJson);
    for(final c in nextCategories.where((c)=>!c.income&&c.budget>0)){
     if(!nextNamedBudgets.any((b)=>b.id==c.id)){
@@ -5009,17 +5212,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // Legacy category caps remain in the source UNTIL a single verified
    // finance batch commits BOTH new budget rows and cleared category caps.
    // Never clear category caps during a catalog upgrade or read-only refresh.
-   final nextGoals=readList<SavingGoal>(
+   final nextGoals=await readList<SavingGoal>(
     view.getString('waffra_goals_v24'),SavingGoal.fromJson);
-   final nextRecurring=readList<RecurringBill>(
+   final nextRecurring=await readList<RecurringBill>(
     view.getString('waffra_recurring_v24'),RecurringBill.fromJson);
-   final nextChallenges=readList<SavingChallenge>(
+   final nextChallenges=await readList<SavingChallenge>(
     view.getString('waffra_challenges_v1'),SavingChallenge.fromJson);
-   List<Map<String,dynamic>> readTrash(String key)=>readList<Map<String,dynamic>>(
+   Future<List<Map<String,dynamic>>> readTrash(String key)=>readList<Map<String,dynamic>>(
     view.getString(key),(row)=>row);
-   final nextCategoryTrash=readTrash('waffra_deleted_categories_v1');
-   final nextGoalTrash=readTrash('waffra_deleted_goals_v1');
-   final nextRecurringTrash=readTrash('waffra_deleted_recurring_v1');
+   final nextCategoryTrash=await readTrash('waffra_deleted_categories_v1');
+   final nextGoalTrash=await readTrash('waffra_deleted_goals_v1');
+   final nextRecurringTrash=await readTrash('waffra_deleted_recurring_v1');
    Map<String,String> readStringMap(String key) {
     final raw=view.getString(key);
     if(raw==null)return <String,String>{};
@@ -5057,6 +5260,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // The verified pull read already includes the full authoritative ledger.
    // Reusing it prevents a second SQLCipher decrypt for the Home widget.
    unawaited(_publishVerifiedWidgetBalance(current));
+   unawaited(_m467RefreshHomeAccounts());
   }catch(error) {
    debugPrint('Verified pull refresh failed closed: $error');
    if(mounted)setState((){
@@ -5089,11 +5293,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   _lastWidgetRevision=loadedFinance.widgetRevision;
   _lastLedgerSavedRaw=loadedFinance.ledgerRaw;
-  try{final raw=financeView.getString('entries');if(raw!=null)entries.addAll((jsonDecode(raw) as List).map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved transactions cannot be decoded safely: $e');}
-  try{final raw=financeView.getString('waffra_categories_v24');categories.addAll(raw==null?defaultCategories():(jsonDecode(raw) as List).map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved categories cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('entries');if(raw!=null)entries.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved transactions cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_categories_v24');categories.addAll(raw==null?defaultCategories():(await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved categories cannot be decoded safely: $e');}
   try{
    final raw=financeView.getString('waffra_named_budgets_v1');
-   if(raw!=null)namedBudgets.addAll((jsonDecode(raw) as List).map(
+   if(raw!=null)namedBudgets.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map(
     (x)=>WaffraNamedBudget.fromJson(Map<String,dynamic>.from(x))));
    for(final c in categories.where((c)=>!c.income&&c.budget>0)){
     if(!namedBudgets.any((b)=>b.id==c.id)){
@@ -5101,16 +5305,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
    }
   }catch(e){throw StateError('Saved independent budgets are invalid: $e');}
-  try{final raw=financeView.getString('waffra_goals_v24');if(raw!=null)goals.addAll((jsonDecode(raw) as List).map((x)=>SavingGoal.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved goals cannot be decoded safely: $e');}
-  try{final raw=financeView.getString('waffra_recurring_v24');if(raw!=null)recurring.addAll((jsonDecode(raw) as List).map((x)=>RecurringBill.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved recurring finance cannot be decoded safely: $e');}
-  try{final raw=financeView.getString('waffra_challenges_v1');if(raw!=null)challenges.addAll((jsonDecode(raw) as List).map((e)=>SavingChallenge.fromJson(Map<String,dynamic>.from(e))));}catch(e){throw StateError('Saved challenges cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_goals_v24');if(raw!=null)goals.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>SavingGoal.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved goals cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_recurring_v24');if(raw!=null)recurring.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>RecurringBill.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved recurring finance cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_challenges_v1');if(raw!=null)challenges.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map((e)=>SavingChallenge.fromJson(Map<String,dynamic>.from(e))));}catch(e){throw StateError('Saved challenges cannot be decoded safely: $e');}
   try{
    final raw=financeView.getString('waffra_deleted_categories_v1');
-   if(raw!=null)deletedCategories.addAll((jsonDecode(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));
+   if(raw!=null)deletedCategories.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));
   }catch(e){throw StateError('Deleted categories cannot be decoded safely: $e');}
-  try{final raw=financeView.getString('waffra_deleted_goals_v1');if(raw!=null)deletedGoals.addAll((jsonDecode(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));}catch(e){throw StateError('Deleted goals cannot be decoded safely: $e');}
-  try{final raw=financeView.getString('waffra_deleted_recurring_v1');if(raw!=null)deletedRecurring.addAll((jsonDecode(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));}catch(e){throw StateError('Deleted recurring cannot be decoded safely: $e');}
-  try{final raw=financeView.getString('waffra_recurring_postponed_v1');if(raw!=null)recurringPostponed.addAll((jsonDecode(raw) as Map).map((k,v)=>MapEntry(k.toString(),v.toString())));}catch(e){throw StateError('Recurring postponements cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_deleted_goals_v1');if(raw!=null)deletedGoals.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));}catch(e){throw StateError('Deleted goals cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_deleted_recurring_v1');if(raw!=null)deletedRecurring.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));}catch(e){throw StateError('Deleted recurring cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_recurring_postponed_v1');if(raw!=null)recurringPostponed.addAll((await WaffraLargeJsonDecode.parse(raw) as Map).map((k,v)=>MapEntry(k.toString(),v.toString())));}catch(e){throw StateError('Recurring postponements cannot be decoded safely: $e');}
   // The user's device clock cannot purge or hide encrypted SQL tombstones.
   // Deletion/expiry requires independently verified encrypted retention.
   final trashBefore=deletedCategories.length;
@@ -5256,7 +5460,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   try{
    final rawRules=financeView.getString('waffra_learned_merchants_v1');
    if(rawRules!=null){
-    final data=jsonDecode(rawRules);
+    final data=await WaffraLargeJsonDecode.parse(rawRules);
     if(data is Map){
      learnedMerchantCategories.addAll(data.map((key,value)=>MapEntry(key.toString(),value.toString())));
     }
@@ -5337,8 +5541,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // overlapping multi-key saves, so a slower old save could finish last.
   // This protects in-app ordering, not cross-process widget writes or a crash
   // in the middle of SharedPreferences' non-atomic multi-key update.
+  // Freeze the complete entry objects synchronously before ANY suspension.
+  // Encoding an old multi-thousand-entry ledger on the main UI isolate
+  // caused the saving spinner to visibly stall after goal/recurring edits.
+  final frozenEntryRows=entries.map((e)=>e.toJson()).toList(growable:false);
   final snapshot=<String,Object>{
-   'entries':jsonEncode(entries.map((e)=>e.toJson()).toList()),
+   'entries':'', // replaced by the exact frozen payload under the save overlay
    // Migrate old category caps together with the independent budget list.
    // Historic ledger budget IDs are kept unchanged.
    'waffra_categories_v24':jsonEncode(categories.map((c)=>
@@ -5362,13 +5570,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // Fresh verified SQLCipher vaults intentionally omit optional empty modules.
   // A manual append may change ONLY the ledger; the authoritative writer
   // still checks its exact witness and the one-entry append invariant.
-  WaffraHomeTransactionCapture.narrowVerifiedManualAppend(
-   route:route,source:baseline?.source,snapshot:snapshot);
-  WaffraHomeTransactionCapture.narrowVerifiedModuleEdit(
-   route:route,source:baseline?.source,snapshot:snapshot,
-   witnessedValues:baseline?.encryptedWitness?.snapshot.values);
-  return _saveProgress.track<void>(
-   'persist-financial-change',() {
+  final previousWrite=_m468PersistSequence;
+  final saving=_saveProgress.track<void>(
+   'persist-financial-change',() async {
+   // The frozen capture cannot overtake an earlier confirmed finance write.
+   await previousWrite;
+   // The overlay is on screen; move large JSON serialization off the UI
+   // isolate without changing a single byte or the source witness.
+   snapshot['entries']=await WaffraLargeJsonDecode.encodeRecords(frozenEntryRows);
+   WaffraHomeTransactionCapture.narrowVerifiedManualAppend(
+    route:route,source:baseline?.source,snapshot:snapshot);
+   WaffraHomeTransactionCapture.narrowVerifiedModuleEdit(
+    route:route,source:baseline?.source,snapshot:snapshot,
+    witnessedValues:baseline?.encryptedWitness?.snapshot.values);
    return _financialWriteQueue.submit(snapshot,(captured)async {
    if(baseline==null){
     throw StateError('Verified dashboard baseline is unavailable.');
@@ -5389,6 +5603,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    _lastWidgetRevision=committed.widgetRevision;
   }).then((_){unawaited(_refreshWidget());});
   });
+  _m468PersistSequence=saving.then<void>(
+   (_){},onError:(Object error,StackTrace stack){});
+  return saving;
  }
 
  /// Optimistic UI updates must never masquerade as committed finance.
@@ -7305,7 +7522,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ]));
   if(source==null||!mounted){_receiptOcrAiOpening=false;return;}
   try{
-   final picked=await ImagePicker().pickImage(source:source,imageQuality:95);
+   final picked=await WaffraExternalMediaSession.runPicker(()=>
+    ImagePicker().pickImage(source:source,imageQuality:95));
    if(picked==null||!mounted)return;
    final extracted=await _withAiWorkProgress(
     'جاري قراءة الصورة واستخراج بيانات المعاملات…',
@@ -7953,13 +8171,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         // The native camera permission is requested only when this action
         // launches the OS camera; never request it during login or startup.
         try{
-         final file=await ImagePicker().pickImage(
-          source:ImageSource.camera,imageQuality:80);
+         final draft=(title:title.text,amount:value.text,notes:notes.text,
+          category:category,parent:selectedParentId,budget:selectedBudgetId,
+          income:income);
+         final file=await WaffraExternalMediaSession.runPicker(()=>
+          ImagePicker().pickImage(source:ImageSource.camera,imageQuality:80));
          if(file==null)return;
          final path=await saveReceipt(file);
          stagedReceiptCopies.add(path);
-         if(sheetContext.mounted)update(()=>receiptPath=waffraEncodeReceipts(
-          [...waffraReceiptPaths(receiptPath),path]));
+         if(sheetContext.mounted)update((){
+          title.text=draft.title;value.text=draft.amount;notes.text=draft.notes;
+          category=draft.category;selectedParentId=draft.parent;
+          selectedBudgetId=draft.budget;income=draft.income;
+          receiptPath=waffraEncodeReceipts(
+           [...waffraReceiptPaths(receiptPath),path]);
+         });
         }catch(_){
          if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
           'Camera unavailable or permission denied. Review camera access in Settings.':
@@ -7970,15 +8196,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        Expanded(child:OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async{
         // Use OS limited-photo access only after the user taps Attach.
         try{
-         final files=await ImagePicker().pickMultiImage(imageQuality:80);
+         final draft=(title:title.text,amount:value.text,notes:notes.text,
+          category:category,parent:selectedParentId,budget:selectedBudgetId,
+          income:income);
+         final files=await WaffraExternalMediaSession.runPicker(()=>
+          ImagePicker().pickMultiImage(imageQuality:80));
          if(files.isEmpty)return;
          final paths=<String>[...waffraReceiptPaths(receiptPath)];
          for(final file in files){
           final copied=await saveReceipt(file);
           stagedReceiptCopies.add(copied);paths.add(copied);
          }
-         if(sheetContext.mounted)update(()=>
-          receiptPath=waffraEncodeReceipts(paths));
+         if(sheetContext.mounted)update((){
+          title.text=draft.title;value.text=draft.amount;notes.text=draft.notes;
+          category=draft.category;selectedParentId=draft.parent;
+          selectedBudgetId=draft.budget;income=draft.income;
+          receiptPath=waffraEncodeReceipts(paths);
+         });
         }catch(_){
          if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
           'Could not open photos. Please check photo selection access.':
@@ -8113,6 +8347,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   debounce?.cancel();disposeLater([title,value,notes,message,transferAmount,transferNote]);
   if(result==null||!mounted){
    if(transferCommitted&&mounted){
+    unawaited(_m467RefreshHomeAccounts());
     snackSuccess(context,waffraIsEnglish?
      'Transfer recorded in verified accounts.':
      'تم تسجيل التحويل بين الحسابات.');
@@ -8359,6 +8594,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
   }
   if(mounted)await budgetAlert(result,previousSpent);
+  if(mounted)unawaited(_m467RefreshHomeAccounts());
   if(initial!=null&&mounted){
    snack(context,waffraIsEnglish?'Transaction updated':'تم تعديل المعاملة',
     isError:false,duration:const Duration(seconds:5),
@@ -10489,7 +10725,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ])));
  }
  Future<void> showSummaryTransactions(bool income)async {
-  final items=entries.where((e)=>e.income==income).toList()
+  final items=_m467ScopedEntries().where((e)=>e.income==income).toList()
    ..sort((a,b)=>b.date.compareTo(a.date));
   if(items.isEmpty){
    if(!mounted)return;
@@ -10682,7 +10918,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ])));
  }
  Widget dashboard(){
-  final inc=sum(entries,true),exp=sum(entries,false);
+  final scopedEntries=_m467ScopedEntries().toList();
+  final inc=sum(scopedEntries,true),exp=sum(scopedEntries,false);
   final unverifiedFxEntries=entries.where(waffraNeedsLegacyFxReview).toList();
   // Show the month comparison only when there are genuine prior-month
   // transactions and a positive comparison base. Never show a fake +12%.
@@ -10695,7 +10932,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    entries.where((e)=>e.date.isBefore(monthStart)),goals);
   final monthChange=hasPreviousMonthEntries&&previousClosingBalance>0
    ?((waffraAvailableCash(entries,goals)-previousClosingBalance)/previousClosingBalance)*100:null;
-  final visible=entries.where((e){
+  final visible=scopedEntries.where((e){
    final q=search.trim();
    return(waffraSearchAny([e.title,e.category,waffraTr(e.category)],q))&&
     (transactionsDateRange==null||(e.date.isAfter(transactionsDateRange!.start.subtract(const Duration(days:1)))&&e.date.isBefore(transactionsDateRange!.end.add(const Duration(days:1)))))&&
@@ -10704,7 +10941,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     (typeFilter=='الكل'||(typeFilter=='الدخل'&&e.income)||(typeFilter=='المصروفات'&&!e.income))&&
     (categoryFilter=='الكل'||categoryFilter==e.category);
   }).toList()..sort((a,b)=>b.date.compareTo(a.date));
-  final filterCats=<String>{'الكل',...entries.where((e)=>typeFilter=='الكل'||
+  final filterCats=<String>{'الكل',...scopedEntries.where((e)=>typeFilter=='الكل'||
    (typeFilter=='الدخل'&&e.income)||(typeFilter=='المصروفات'&&!e.income)).map((e)=>e.category)}.toList();
   final selected=filterCats.contains(categoryFilter)?categoryFilter:'الكل';
   final shown=visible.take(waffraDashboardTransactionDisplayCount(
@@ -10731,12 +10968,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         subtitle:waffraIsEnglish?'Your finances at a glance':
          'تابع رصيدك ومعاملاتك وخططك المالية بسهولة.',
         icon:Icons.spa_outlined))),
+      SliverToBoxAdapter(child:Padding(
+       padding:const EdgeInsets.fromLTRB(14,3,14,11),
+       child:WaffraHomeAccountChip(
+        label:_m467AccountLabel,
+        english:waffraIsEnglish,
+        onTap:()=>unawaited(_m467PickHomeAccount())))),
       // Not pinned: the shrinking balance scrolls away without covering data.
       SliverPersistentHeader(
        pinned:false,
        delegate:WaffraBalanceHeader(
-         balance:waffraAvailableCash(entries,goals),english:waffraIsEnglish,focusKey:_tourKeys[0],
-         monthlyChangePercent:monthChange,
+         balance:_m467ShownBalance(),english:waffraIsEnglish,
+         heading:_m467SelectedAccount=='none'?
+          (waffraIsEnglish?'Unassigned, no account balance':'بدون حساب — لا يوجد رصيد مرتبط'):
+          (_m467SelectedAccount=='all'?null:_m467AccountLabel),
+         focusKey:_tourKeys[0],
+         monthlyChangePercent:_m467SelectedAccount=='all'&&
+          _m467AccountContext==null?monthChange:null,
          refreshVerifiedWidgetBalance:_refreshWidget)),
       SliverPadding(padding:const EdgeInsets.fromLTRB(14,10,14,96),
        sliver:SliverToBoxAdapter(child:Column(
