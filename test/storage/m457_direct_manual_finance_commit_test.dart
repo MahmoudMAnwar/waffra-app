@@ -35,6 +35,7 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
+    key = null; // New disposable installation requires an absent OS key.
     dir = await Directory.systemTemp.createTemp('waffra-m457-');
     final origin = await WaffraFreshInstallSource.prepareIn(
       dir, readKey: () async => key,
