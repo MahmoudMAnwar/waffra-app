@@ -33,8 +33,8 @@ void main() {
 
   test('Android history scans are bounded by a durable cursor', () {
     final native=File('native/WaffraAutoSmsStore.kt').readAsStringSync();
-    final code=native.split('fun importConsentMonth(',2)[1].split(
-      '/** Claim each review notification once',2)[0];
+    final code=native.split('fun importConsentMonth(')[1].split(
+      '/** Claim each review notification once')[0];
     expect(code,contains('(date > ? OR (date = ? AND _id > ?)) AND date < ?'));
     expect(code,contains('historyCursorAt'));
     expect(code,contains('historyCursorId'));
