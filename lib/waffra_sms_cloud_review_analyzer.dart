@@ -18,8 +18,11 @@ abstract final class WaffraSmsCloudReviewAnalyzer {
  /// for the same SMS even when foreground and WorkManager race.
  /// Returns how many model suggestions were safely staged for user review.
  static Future<int> stagePending(
-  List<Map<String,Object?>> candidates,{int maxPerRun=2}) async {
-  if(maxPerRun<=0||!await WaffraSmsCloudService.hasConsent())return 0;
+  List<Map<String,Object?>> candidates,{int maxPerRun=2,
+  required bool explicitlyRequested}) async {
+  // A general opt-in never grants permission to automatically upload SMS.
+  if(!explicitlyRequested||maxPerRun<=0||
+     !await WaffraSmsCloudService.hasConsent())return 0;
   final prefs=await SharedPreferences.getInstance();
   await prefs.reload();
   final day=DateTime.now().toUtc().toIso8601String().substring(0,10);
@@ -35,7 +38,7 @@ abstract final class WaffraSmsCloudReviewAnalyzer {
   var attempted=0,staged=0;
   for(final item in prioritized){
    if(attempted>=maxPerRun||used>=perInstallationDailyLimit)break;
-   if(item['cloud'] is Map)continue;
+   if(item['cloud'] is Map||item['sensitiveOtp']==true)continue;
    final id=item['id'],body=item['body'];
    if(id is! String||body is! String||body.trim().isEmpty)continue;
    // No message that cannot be locally redacted reaches an external model.
