@@ -37,14 +37,18 @@ class WaffraHomeAccountsSheet extends StatelessWidget{
  Widget choice(BuildContext context,{required String id,
   required String title,required String caption,required IconData icon}){
   final active=selected==id;
-  return Container(
-   margin:const EdgeInsets.symmetric(vertical:4),
-   decoration:BoxDecoration(
+  // ListTile ink must paint on the nearest Material, not behind an
+  // opaque DecoratedBox. Preserve the approved selected tint and outline.
+  return Padding(
+   padding:const EdgeInsets.symmetric(vertical:4),
+   child:Material(
     color:active?const Color(0xFFE7F6ED):Theme.of(context).cardColor,
-    borderRadius:BorderRadius.circular(15),
-    border:Border.all(color:active?
-     const Color(0xFF087A54):const Color(0xFFDBEAE1))),
-   child:ListTile(
+    shape:RoundedRectangleBorder(
+     borderRadius:BorderRadius.circular(15),
+     side:BorderSide(color:active?
+      const Color(0xFF087A54):const Color(0xFFDBEAE1))),
+    clipBehavior:Clip.antiAlias,
+    child:ListTile(
     key:Key('m467-account-choice-'+id),
     leading:Icon(icon,color:const Color(0xFF087A54)),
     title:Text(title,maxLines:1,overflow:TextOverflow.ellipsis,
@@ -53,7 +57,7 @@ class WaffraHomeAccountsSheet extends StatelessWidget{
     trailing:Icon(active?Icons.check_circle_rounded:Icons.circle_outlined,
      color:active?const Color(0xFF087A54):Colors.grey),
     onTap:()=>Navigator.pop(context,id),
-   ));
+   )));
  }
  @override Widget build(BuildContext context){
   return SafeArea(top:false,child:ConstrainedBox(
