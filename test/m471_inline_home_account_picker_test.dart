@@ -67,7 +67,7 @@ void main() {
   tester.view.devicePixelRatio=1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
-  await tester.pumpWidget(const MaterialApp(home:Scaffold(body:Center(
+  await tester.pumpWidget(MaterialApp(home:Scaffold(body:Center(
    child:SizedBox(width:190,child:WaffraHomeAccountChip(
     label:'الإنماء المحفظة الاستثمارية وحساب ادخار طويل جدًا •••• 7856',
     english:false,onTap:_noop))))));
