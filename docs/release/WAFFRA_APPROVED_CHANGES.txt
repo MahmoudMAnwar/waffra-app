@@ -1,3 +1,11 @@
+[M465] 2026-11-05 — Unblock main signed Android build after PR #388 without weakening checks
+============================================================================================
+- Owner reported main push run 42053505246 / job 127335569839 / step 8.
+- The Flutter analyzer, all Flutter regressions and smart CI tests PASSED; one M452 Python source-contract test failed because it still expected the old direct _refreshAutoSmsInbox(importMonth:true) call inside the review card.
+- The approved production implementation intentionally uses _rescanAutoSmsInbox() from the card. The wrapper invokes _refreshAutoSmsInbox(importMonth:true), exposes scan progress and resets busy state.
+- Updated ONLY the M452 regression to assert the visible button delegates to the wrapper, the wrapper imports bank SMS and publishes progress, and the accordion/counter remain present. Original Android SMS, SQLCipher contents and existing user data are untouched.
+- Exact-head PR CI and post-merge main signed APK build are mandatory; this note does not claim either is successful before GitHub proves it.
+
 [M464-M462-REGRESSION-FIX] 2026-11-05 — One unique failure behind six full-suite workflow failures
 ===================================================================================================
 - Six exact-head workflows failed due to one outdated M462 transfer-mode source assertion, not six separate financial defects. In the full test run, 2291 tests passed and one test failed.
