@@ -54,6 +54,45 @@ void main() {
   expect(app,contains("if(!await p.setBool(WaffraAutoSms.firstRunKey,true))"));
  });
 
+ test('M463 fresh user opens a single complete registration page directly',(){
+  final login=source.substring(
+   source.indexOf('class _LoginScreenState extends State<LoginScreen>'),
+   source.indexOf('class ProfileForm extends StatefulWidget'));
+  final build=login.substring(login.indexOf(' @override Widget build(BuildContext context){'));
+  final fresh=build.indexOf('if(registered==null)return ProfileForm(');
+  final welcome=build.indexOf('return Scaffold(backgroundColor:forest');
+  expect(fresh,greaterThan(0));
+  expect(welcome,greaterThan(fresh));
+  expect(build,contains("Key('waffra-initial-single-page-registration')"));
+  final registration=source.substring(
+   source.indexOf('Widget _phoneRegistrationForm(){'),
+   source.indexOf(' @override Widget build(BuildContext context){',
+    source.indexOf('Widget _phoneRegistrationForm(){')));
+  for(final field in [
+   'waffra-register-name','waffra-register-gender-male',
+   'waffra-register-gender-female','waffra-register-phone',
+   'waffra-register-password','waffra-register-confirm-password',
+   'waffra-register-submit',
+  ]) {
+   expect(registration,contains(field));
+  }
+  expect(registration,contains("Key('waffra-register-single-page')"));
+ });
+
+ test('M463 existing Saudi phone user has one direct login view',(){
+  final login=source.substring(
+   source.indexOf('class _LoginScreenState extends State<LoginScreen>'),
+   source.indexOf('class ProfileForm extends StatefulWidget'));
+  expect(login,contains(
+   "signInMode=existing!=null&&existing.provider.toLowerCase()=='phone';"));
+  expect(login,contains('signInPhone.text=existing==null'));
+  expect(login,contains('waffraMobileFieldError(signInPhone.text)'));
+  expect(login,contains('WaffraLocalPhoneCredentials.verify('));
+  expect(login,contains('controller:signInPassword'));
+  expect(login,contains('if(registeredLoading)return const Scaffold('));
+  expect(login,contains('registeredReadError=waffraIsEnglish?'));
+ });
+
  test('M463 no new privacy permission is requested during loading',(){
   final load=source.substring(
    source.indexOf(" Future<void> load()async {"),
