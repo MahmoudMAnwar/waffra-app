@@ -166,6 +166,71 @@ abstract final class WaffraSmsLocalRules {
   return (choices.toList()..sort((a,b)=>a.compareTo(b))).take(100).toList();
  }
 
+ /// Make a conservative, sender-scoped draft from a reviewed bank message.
+ /// Only established classification phrases can be learned automatically;
+ /// the rule is never permission to record money or change an account.
+ static WaffraSmsLocalRule? suggestedRule({
+  required String body,required String sender,required String kind,
+  String category='',bool confidentOnly=false,
+ }) {
+  if(sender.trim().isEmpty||sender.length>64||
+     !const <String>{'income','expense','transfer','excluded'}
+      .contains(kind))return null;
+  final facts=WaffraBankSmsFactsParser.parse(body);
+  final isIncome=kind=='income',isExpense=kind=='expense';
+  if((isIncome||isExpense)&&
+     (facts.pending||facts.kind!=(isIncome?
+      WaffraBankOperationKind.income:WaffraBankOperationKind.expense)))
+   return null;
+  if(kind=='excluded'&&facts.kind!=WaffraBankOperationKind.uncertain)
+   return null;
+  if(kind=='transfer'&&facts.kind!=WaffraBankOperationKind.transfer)
+   return null;
+  final normalizedBody=normalized(body);
+  final safe=<String>[];
+  if(kind=='excluded'){
+   for(final term in const <String>[
+    'رمز التفعيل','رمز التحقق','رمز الدخول','verification code',
+    'security code','one time code','otp',
+   ]){
+    if(safeRuleKeyword(term,kind)&&
+       normalizedBody.contains(normalized(term)))safe.add(term);
+   }
+  }else if(kind=='transfer'){
+   for(final term in const <String>['حوالة صادرة','حوالة واردة',
+    'تحويل صادر','تحويل وارد','transfer']){
+    if(safeRuleKeyword(term,kind)&&
+       normalizedBody.contains(normalized(term)))safe.add(term);
+   }
+  }else{
+   // A generic purchase/payment keyword is not a safe learned merchant rule.
+   for(final known in builtIn.where((r)=>
+    r.income==isIncome&&r.category==category&&
+    r.id!='builtin_purchase'&&r.id!='builtin_payment'&&
+    matches(r,body,sender:sender))){
+    for(final term in known.keywords){
+     if(safeRuleKeyword(term,kind)&&
+        normalizedBody.contains(normalized(term)))safe.add(term);
+    }
+   }
+  }
+  if(safe.isEmpty)return null;
+  final names=<String,String>{
+   'income':'دخل معروف','expense':'مصروف معروف',
+   'transfer':'تحويل بنكي','excluded':'رسائل تحقق',
+  };
+  final rule=WaffraSmsLocalRule(
+   id:'smart_${sha256.convert(utf8.encode(
+    '${normalized(sender)}|$kind|${normalized(safe.first)}')).toString().substring(0,32)}',
+   name:names[kind]!,kind:kind,income:isIncome,
+   category:(isIncome||isExpense)?category:'',
+   sender:sender.trim(),keywords:safe.toSet().take(6).toList(),
+   matchAll:false,autoPost:false,
+  );
+  try{validate(rule);return rule;}
+  on FormatException{return null;}
+ }
+
  static void validate(WaffraSmsLocalRule rule){
   if(rule.builtIn||rule.id.trim().isEmpty||rule.id.length>80||
      !const <String>{'income','expense','transfer','excluded'}
