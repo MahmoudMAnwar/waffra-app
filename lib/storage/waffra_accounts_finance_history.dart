@@ -66,7 +66,17 @@ abstract final class WaffraAccountsFinanceHistory {
       final schema = await store.customSelect('PRAGMA table_info($table)').get();
       final columns = schema.map((c) => c.read<String>('name')).toList();
       final placeholders = List.filled(columns.length, '?').join(',');
-      for (final row in (records[table] as List).cast<Map<String, dynamic>>()) {
+      final recorded = (records[table] as List).cast<Map<String, dynamic>>();
+      final ordered = table == 'fresh_finance_categories'
+          ? (List<Map<String, dynamic>>.of(recorded)..sort((a, b) {
+              // A restored subcategory must never precede its parent when
+              // new SQLCipher parent-consistency triggers are installed.
+              final aChild = (a['parent_id'] as String? ?? '').isNotEmpty;
+              final bChild = (b['parent_id'] as String? ?? '').isNotEmpty;
+              return (aChild ? 1 : 0).compareTo(bChild ? 1 : 0);
+            }))
+          : recorded;
+      for (final row in ordered) {
         if (row.length != columns.length || !columns.every(row.containsKey)) {
           throw const FormatException('Invalid finance history columns.');
         }
