@@ -4181,28 +4181,43 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     try{
      final existing=await const WaffraSmsLocalRuleStore()
       .read(_smsRuleOwnerKey);
-     final match=WaffraSmsLocalRules.resolveSpecial(
-      body:body,sender:sender,
-      bankKind:sensitive?WaffraBankOperationKind.uncertain:facts.kind,
-      custom:existing);
-     if(match==null&&mounted){
+     final existingMatch=existing.any((rule)=>
+      rule.resolvedKind==kind&&WaffraSmsLocalRules.matches(
+       rule,body,sender:sender));
+     if(!existingMatch&&mounted){
       await _openSmsRules(seedMessage:body,seedKind:kind,seedSender:sender);
      }
      if(!mounted)return;
      final saved=await const WaffraSmsLocalRuleStore()
       .read(_smsRuleOwnerKey);
-     final after=WaffraSmsLocalRules.resolveSpecial(
-      body:body,sender:sender,
-      bankKind:sensitive?WaffraBankOperationKind.uncertain:facts.kind,
-      custom:saved);
-     if(after!=null&&after.resolvedKind==kind){
+     // An explicit exclusion of THIS reviewed ID must not depend on whether
+     // the conservative finance parser classifies it as uncertain. Reusing
+     // the rule for other messages still follows the strict special gate.
+     final matches=saved.any((rule)=>
+      rule.resolvedKind==kind&&WaffraSmsLocalRules.matches(
+       rule,body,sender:sender));
+     if(matches){
       if(kind=='excluded'){
-       await WaffraAutoSms.acknowledge([id]);
+       final acknowledged=await WaffraAutoSms.acknowledge([id]);
+       if(acknowledged&&mounted){
+        setState(()=>_autoSmsPending.removeWhere((item)=>item['id']==id));
+        snackSuccess(context,waffraIsEnglish?
+         'Excluded message removed from review.':'تم استبعاد الرسالة من قائمة المراجعة.');
+        unawaited(_refreshAutoSmsInbox(importMonth:true));
+       }else if(mounted){
+        snack(context,waffraIsEnglish?
+         'Rule saved, but the message was not removed safely. Retry.':
+         'اتحفظت القاعدة لكن تعذر استبعاد الرسالة بأمان. حاول مجددًا.',isError:true);
+       }
       }else{
        snackSuccess(context,waffraIsEnglish?
         'Transfer rule saved. Register the transfer from Accounts; no money was changed.':
         'اتحفظت قاعدة التحويل. سجّل التحويل من شاشة الحسابات؛ مفيش رصيد اتغيّر.');
       }
+     }else if(mounted){
+      snack(context,waffraIsEnglish?
+       'Saved rule does not match this message. Adjust its keywords.':
+       'القاعدة المحفوظة لا تطابق هذه الرسالة. عدّل الكلمات المفتاحية.',isError:true);
      }
     }catch(_){
      if(mounted)snack(context,waffraIsEnglish?
