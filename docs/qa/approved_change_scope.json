@@ -1,125 +1,29 @@
 {
   "contract_version": 1,
-  "change_id": "M452-bank-sms-one-page-signup-local-rules-explicit-cloud-review-20261105",
-  "human_scope_review": "Owner explicitly approved on 2026-11-04: create phone/password account on one screen, then Android SMS permission once, then notification permission, then Home; no signup cloud/skip choice. Bank SMS should be locally classified first and uncertain messages offered separately for explicit consented cloud review. No unverified auto-account attribution, no silent remote upload or financial source cutover. Scope includes repair of concrete CI failures, current main M453 queue safeguards, and exact-HEAD regression. Human review and Android device tests are still required. M459 integration updates three obsolete source-string/widget test assertions to accept the approved single-page Saudi registration, permission-only consent (no cloud choice), and extended SMS review method signature without weakening finance/source verification. M459 one-page signup keeps the M450 completed-profile guard unchanged; its regression test now bounds the save method before the new single-page widget rather than a removed second-step helper.",
+  "change_id": "M460-apk-main-same-sha-audit-repository-checkout-20261105",
+  "human_scope_review": "Owner requested that all ready fixes merge in order and that recurring main APK build failures be fixed permanently. M460 fixes the verified exact-main APK dependency-audit failure (job 127112822065): the job imports a repository Python module without checking out the repository. The one-job fix checks out the triggering SHA and keeps all same-SHA mandatory gates active, with a regression test. No finance source or application behavior changes. Exact-head CI and signed main build must pass before release. The same main APK run 41988663385 independently exposed a malformed Python source string at test/qa/m452_sms_review_signup_regression_test.py line 62. M460 repairs that existing source-only QA assertion and keeps its unique verified SMS owner-key check; no runtime behavior change. The broken Python file was corrupted from its last verified-owner guard test through the end; declare only that final test section as the bounded repair. All earlier tests and other file content must remain byte-identical under M385 guard.",
   "user_requested_changes": [
-    "Register with Saudi phone/password, name and gender on a single screen, then request SMS permission and notification permission in sequence, without a multi-step profile flow or AI choice at signup.",
-    "Keep cloud bank-SMS analysis disabled by default; allow the user to approve analyzing a specific ambiguous transaction without unconditional background upload or automatic finance posting.",
-    "Classify financial bank SMS with local rules before optional cloud help; offer a per-user encrypted custom rule editor for explicit verified account/SMS suffix matches without inheriting header/cash account.",
-    "Preserve reviewed bank SMS inbox by sender and visible counts, with accurate saved/review distinction, owner-lock, Android notifications and no duplicate confirmation of the same hash.",
-    "Reject unverified account association, transfers, uncertain currencies, malformed timestamps and OTP from automated posting; use source-verified finance writer and exact account generation.",
-    "Fix verified account witness generation access and compile the new SMS rule editor without Dart syntax errors.",
-    "Align old Android permissions/signup UI regression tests to the user-approved single-screen flow and repair malformed QA Python test source.",
-    "Preserve main-source CI guards (M385/M449) and provide exact changed-file and bounded-function allowlists and release notes; do not bypass financial tests.",
-    "Refresh obsolete SMS onboarding and review regression assertions to the user-approved one-page Saudi signup and permission flow while retaining runtime verification of bank SMS and no automatic finance posting."
+    "Fix recurring signed Android APK failure on main without bypassing mandatory same-commit independent test checks.",
+    "Ensure the CI audit job checks out its exact trigger SHA before importing the local Python QA helper.",
+    "Add regression coverage to prevent the missing checkout from reappearing in the APK release pipeline.",
+    "Fix broken SMS regression test Python syntax that blocks mandatory main APK CI, while preserving real SMS account ownership assertions."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
-    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/main.dart",
-    "lib/waffra_auto_sms_autopost.part.dart",
-    "lib/waffra_auto_sms_consent.dart",
-    "lib/waffra_auto_sms_policy.dart",
-    "lib/waffra_sms_cloud_review_analyzer.dart",
-    "lib/waffra_sms_local_rules.dart",
-    "lib/waffra_sms_rule_settings_page.dart",
-    "native/WaffraAutoSmsStore.kt",
-    "test/m417_sms_first_run_test.dart",
-    "test/m422_phone_only_auth_entry_test.dart",
-    "test/m429_sms_phone_integration_test.dart",
-    "test/m436_cloud_review_pipeline_test.dart",
-    "test/qa/m417_sms_permission_acceptance_test.py",
-    "test/qa/m452_sms_review_signup_regression_test.py",
-    "test/waffra_sms_rule_reuse_test.dart",
-    "test/m324_required_ai_sms_receipts_test.dart",
-    "test/m335_real_sms_ocr_accuracy_test.dart",
-    "test/m441_auth_sms_copy_regression_test.dart",
-    "test/storage/m450_first_run_registration_recovery_test.dart"
+    ".github/workflows/android.yml",
+    "test/qa/m460_main_apk_ci_checkout_test.py",
+    "test/qa/m452_sms_review_signup_regression_test.py"
   ],
   "bounded_sections": {
-    "lib/main.dart": [
+    ".github/workflows/android.yml": [
       {
-        "start": "import 'waffra_auto_sms_policy.dart';\n",
-        "end": "import 'waffra_unknown_financial_sms_page.dart';\n"
-      },
-      {
-        "start": "onboarded=p.getBool('waffra_onboarding_completed')??false;",
-        "end": "Future<void> setUiCountry(String? iso)async{"
-      },
-      {
-        "start": "class ProfileForm extends StatefulWidget {",
-        "end": "void disposeLater(List<TextEditingController> controllers){"
-      },
-      {
-        "start": "bool _acceptFabTap(){",
-        "end": "Future<void> _loadFinanceSafely()async{"
-      },
-      {
-        "start": "'Continue saving':'متابعة الحفظ'))",
-        "end": "// Kept for staged SMS migration; active path uses the verified batch writer."
-      },
-      {
-        "start": "if(Platform.isAndroid)_accountSection(\n",
-        "end": "_accountSection(waffraIsEnglish?'Security & privacy':'الأمان والخصوصية',Icons.shield_outlined,["
+        "start": "  verify-same-sha-checks:\n",
+        "end": "      - name: Fail closed on missing, running or failed independent tests\n"
       }
     ],
-    "lib/waffra_auto_sms_autopost.part.dart": [
+    "test/qa/m452_sms_review_signup_regression_test.py": [
       {
-        "start": "part of 'main.dart';\n",
-        "end": null
-      }
-    ],
-    "lib/waffra_auto_sms_consent.dart": [
-      {
-        "start": "import 'package:flutter/material.dart';\n",
-        "end": null
-      }
-    ],
-    "lib/waffra_auto_sms_policy.dart": [
-      {
-        "start": "abstract final class WaffraAutoSmsPolicy {",
-        "end": null
-      }
-    ],
-    "lib/waffra_sms_cloud_review_analyzer.dart": [
-      {
-        "start": "abstract final class WaffraSmsCloudReviewAnalyzer {",
-        "end": null
-      }
-    ],
-    "native/WaffraAutoSmsStore.kt": [
-      {
-        "start": "object WaffraAutoSmsStore {",
-        "end": null
-      }
-    ],
-    "test/m417_sms_first_run_test.dart": [
-      {
-        "start": "import 'package:flutter/material.dart';\n",
-        "end": null
-      }
-    ],
-    "test/m422_phone_only_auth_entry_test.dart": [
-      {
-        "start": "test('M422 registration uses phone only, no social identity chooser',(){",
-        "end": "test('M422 does not silently overwrite existing Google or phone account',(){"
-      }
-    ],
-    "test/m429_sms_phone_integration_test.dart": [
-      {
-        "start": "void main(){",
-        "end": null
-      }
-    ],
-    "test/m436_cloud_review_pipeline_test.dart": [
-      {
-        "start": "void main() {",
-        "end": null
-      }
-    ],
-    "test/qa/m417_sms_permission_acceptance_test.py": [
-      {
-        "start": "class M417AutoSmsContractTest(unittest.TestCase):",
+        "start": "    def test_local_rule_store_owner_guard_is_unique(self):\n",
         "end": null
       }
     ]
