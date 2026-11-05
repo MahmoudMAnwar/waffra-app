@@ -18,7 +18,7 @@
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": "   autoSmsConsentPending?WaffraAutoSmsConsentPage(\n",
+        "start": "   startupError!=null?Scaffold(body:Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[\n",
         "end": "   locked?WaffraMandatoryBiometricGate(\n"
       },
       {
