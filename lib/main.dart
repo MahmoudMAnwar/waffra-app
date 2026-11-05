@@ -2076,7 +2076,7 @@ class _LoginScreenState extends State<LoginScreen> {
   });
   final raw=prefs.getString('waffra_registered_profile');
   if(raw==null){if(mounted)setState(()=>registeredLoading=false);return;}
-  try{final u=Person.fromJson(Map<String,dynamic>.from(jsonDecode(raw)));if(mounted)setState((){registered=u;signInMode=!signedOut;signInPhone.text=WaffraSaudiMobile.inputFromStored(u.phone);});}catch(_){ }
+  try{final u=Person.fromJson(Map<String,dynamic>.from(jsonDecode(raw)));if(mounted)setState((){registered=u;signInMode=u.provider.toLowerCase()=='phone';signInPhone.text=WaffraSaudiMobile.inputFromStored(u.phone);});}catch(_){ }
   if(mounted)setState(()=>registeredLoading=false);
  }
  @override void dispose(){signInPhone.dispose();signInPassword.dispose();super.dispose();}
