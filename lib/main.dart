@@ -37,6 +37,8 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:crypto/crypto.dart';
 import 'waffra_biometrics.dart';
+import 'waffra_external_media_session.dart';
+import 'waffra_sms_sender_brand.dart';
 import 'waffra_mandatory_biometric_gate.dart';
 import 'waffra_local_phone_credentials.dart';
 import 'waffra_local_account_migration.dart';
@@ -1156,6 +1158,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    }
    return;
   }
+  // Native camera/gallery return preserves an already-unlocked session only
+  // during its bounded picker activity. Real background still locks normally.
+  if(WaffraExternalMediaSession.trustedBackgroundTransition(state))return;
   // A genuine background transition invalidates a pending verification.
   if(state==AppLifecycleState.paused||
      state==AppLifecycleState.hidden||
@@ -2420,8 +2425,8 @@ class _ProfileFormState extends State<ProfileForm> {
   // Do not request global photo or file permissions at app launch.
   XFile? selected;
   try{
-   selected=await ImagePicker().pickImage(
-    source:ImageSource.gallery,imageQuality:92);
+   selected=await WaffraExternalMediaSession.runPicker(()=>
+    ImagePicker().pickImage(source:ImageSource.gallery,imageQuality:92));
   }catch(_){
    if(mounted)snack(context,waffraIsEnglish?
     'Unable to access photos. Check your photo selection permissions.':
@@ -4144,38 +4149,55 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      child:SafeArea(
      child:SizedBox(height:MediaQuery.sizeOf(ctx).height*.74,
       child:Column(children:[
-       Row(children:[
-        IconButton(
-         key:const Key('waffra-sms-senders-back'),
-         onPressed:(){
-          if(selectedSender==null){Navigator.pop(ctx);}
-          else{refresh(()=>selectedSender=null);}
-         },
-         icon:const Icon(Icons.arrow_back_rounded)),
-        Expanded(child:WaffraText(
-         selectedSender??(waffraIsEnglish?'Bank SMS by sender':'رسائل للفرز'),
-         style:const TextStyle(fontWeight:FontWeight.bold,fontSize:19),
-         maxLines:2)),
-        Padding(padding:const EdgeInsets.all(12),
-         child:WaffraText(selectedSender==null?senders.length.toString():
-          (bySender[selectedSender]?.length??0).toString())),
-       ]),
-       Row(children:[
-        Checkbox(
-         key:const Key('waffra-sms-select-all-visible'),
-         value:visibleIds().isNotEmpty&&
-          visibleIds().every(selectedIds.contains),
-         onChanged:bulkBusy?null:(value)=>refresh((){
-          if(value==true){selectedIds.addAll(visibleIds());}
-          else{selectedIds.removeAll(visibleIds());}
-         })),
-        Expanded(child:WaffraText(waffraIsEnglish?
-         'Select all shown messages':'تحديد كل الرسائل المعروضة')),
-        Padding(padding:const EdgeInsets.only(left:12,right:12),
-         child:WaffraText(waffraIsEnglish?
-          '${selectedIds.length} selected':
-          '${selectedIds.length} محددة')),
-       ]),
+       Padding(padding:const EdgeInsets.fromLTRB(14,3,14,8),
+        child:Row(children:[
+         IconButton(key:const Key('waffra-sms-senders-back'),
+          icon:const Icon(Icons.arrow_back_rounded,color:forest),
+          onPressed:(){
+           if(selectedSender==null){Navigator.pop(ctx);}
+           else{refresh(()=>selectedSender=null);}
+          }),
+         Expanded(child:Column(mainAxisSize:MainAxisSize.min,
+          crossAxisAlignment:CrossAxisAlignment.start,children:[
+          WaffraText(selectedSender??(waffraIsEnglish?
+           'Messages to review':'رسائل للفرز'),maxLines:2,
+           style:const TextStyle(fontSize:22,fontWeight:FontWeight.bold)),
+          WaffraText(visibleIds().length.toString()+
+           (waffraIsEnglish?' messages from ':' رسالة من ')+
+           senders.length.toString()+
+           (waffraIsEnglish?' senders':' مرسلين'),
+           style:TextStyle(fontSize:12,
+            color:Theme.of(ctx).colorScheme.onSurfaceVariant)),
+         ])),
+        ])),
+       Padding(padding:const EdgeInsets.fromLTRB(12,1,12,6),
+        child:WaffraSmsReviewMetrics(
+         shown:visibleIds().length,selected:selectedIds.length,
+         senderCount:senders.length,english:waffraIsEnglish)),
+       Padding(padding:const EdgeInsets.fromLTRB(13,4,13,7),
+        child:Container(
+         decoration:BoxDecoration(
+          color:Theme.of(ctx).brightness==Brightness.dark?
+           const Color(0xFF193E31):const Color(0xFFF2F8F4),
+          borderRadius:BorderRadius.circular(15)),
+         child:Row(children:[
+          Checkbox(
+           key:const Key('waffra-sms-select-all-visible'),
+           value:visibleIds().isNotEmpty&&
+            visibleIds().every(selectedIds.contains),
+           onChanged:bulkBusy?null:(value)=>refresh((){
+            if(value==true){selectedIds.addAll(visibleIds());}
+            else{selectedIds.removeAll(visibleIds());}
+           })),
+          Expanded(child:WaffraText(waffraIsEnglish?
+           'Select all shown messages':'تحديد كل الرسائل المعروضة',
+           style:const TextStyle(fontSize:13,fontWeight:FontWeight.w600))),
+          WaffraText(selectedIds.length.toString()+
+           (waffraIsEnglish?' selected':' محددة'),
+           style:const TextStyle(fontSize:12,color:emerald)),
+          const SizedBox(width:12),
+         ]),
+        )),
        Expanded(child:ListView.builder(
         key:Key(selectedSender==null?'waffra-sms-sender-list':
          'waffra-sms-sender-transactions'),
@@ -4184,18 +4206,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         itemBuilder:(rowContext,index){
          if(selectedSender==null){
           final sender=senders[index],count=bySender[sender]!.length;
-          return Card(margin:const EdgeInsets.symmetric(
-           horizontal:14,vertical:6),
+          return Card(
+           margin:const EdgeInsets.symmetric(horizontal:13,vertical:5),
+           elevation:0,
+           shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18),
+            side:BorderSide(color:forest.withValues(alpha:.14))),
            child:ListTile(
             key:Key('waffra-sms-sender-group-'+index.toString()),
+            contentPadding:const EdgeInsets.symmetric(horizontal:12,vertical:5),
+            leading:WaffraSmsSenderBrand(sender:sender),
             title:WaffraText(sender,maxLines:2,
-             style:const TextStyle(fontWeight:FontWeight.bold)),
-            leading:Container(
-             padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),
-             decoration:BoxDecoration(color:const Color(0xFFE4F4EB),
-              borderRadius:BorderRadius.circular(20)),
-             child:WaffraText(waffraIsEnglish?'$count SMS':'$count رسالة',
-              style:const TextStyle(color:forest,fontWeight:FontWeight.bold))),
+             style:const TextStyle(fontWeight:FontWeight.bold,fontSize:15)),
+            subtitle:WaffraText(count.toString()+
+             (waffraIsEnglish?' messages awaiting review':' رسائل تحتاج فرز'),
+             style:const TextStyle(fontSize:12,color:emerald)),
             trailing:Row(mainAxisSize:MainAxisSize.min,children:[
              Checkbox(
               key:Key('waffra-sms-select-sender-'+index.toString()),
@@ -4206,7 +4230,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                if(value==true){selectedIds.addAll(ids);}
                else{selectedIds.removeAll(ids);}
               })),
-             const Icon(Icons.chevron_left_rounded),
+             const Icon(Icons.chevron_left_rounded,color:forest),
             ]),
             onTap:()=>refresh(()=>selectedSender=sender),
            ));
@@ -4347,11 +4371,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           }
          },
         ))),
-       Padding(padding:const EdgeInsets.all(12),
-        child:WaffraText(waffraIsEnglish?
-         'Nothing is recorded until you approve the transaction.':
-         'ما تتسجلش أي عملية مالية إلا بعد مراجعتك وتأكيدك.',
-         textAlign:TextAlign.center)),
+       Padding(padding:const EdgeInsets.fromLTRB(13,8,13,14),
+        child:Container(padding:const EdgeInsets.all(12),
+         decoration:BoxDecoration(color:const Color(0xFFE8F4EB),
+          borderRadius:BorderRadius.circular(15)),
+         child:Row(children:[
+          const Icon(Icons.info_outline_rounded,color:forest,size:20),
+          const SizedBox(width:9),
+          Expanded(child:WaffraText(waffraIsEnglish?
+           'Nothing is recorded before your review and confirmation.':
+           'لن تُسجَّل أي عملية مالية إلا بعد مراجعتك وتأكيدك.',
+           style:const TextStyle(color:forest,fontSize:12),maxLines:3)),
+         ]))),
       ]),
      ),
     ),
@@ -7271,7 +7302,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ]));
   if(source==null||!mounted){_receiptOcrAiOpening=false;return;}
   try{
-   final picked=await ImagePicker().pickImage(source:source,imageQuality:95);
+   final picked=await WaffraExternalMediaSession.runPicker(()=>
+    ImagePicker().pickImage(source:source,imageQuality:95));
    if(picked==null||!mounted)return;
    final extracted=await _withAiWorkProgress(
     'جاري قراءة الصورة واستخراج بيانات المعاملات…',
@@ -7919,13 +7951,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         // The native camera permission is requested only when this action
         // launches the OS camera; never request it during login or startup.
         try{
-         final file=await ImagePicker().pickImage(
-          source:ImageSource.camera,imageQuality:80);
+         final draft=(title:title.text,amount:value.text,notes:notes.text,
+          category:category,parent:selectedParentId,budget:selectedBudgetId,
+          income:income);
+         final file=await WaffraExternalMediaSession.runPicker(()=>
+          ImagePicker().pickImage(source:ImageSource.camera,imageQuality:80));
          if(file==null)return;
          final path=await saveReceipt(file);
          stagedReceiptCopies.add(path);
-         if(sheetContext.mounted)update(()=>receiptPath=waffraEncodeReceipts(
-          [...waffraReceiptPaths(receiptPath),path]));
+         if(sheetContext.mounted)update((){
+          title.text=draft.title;value.text=draft.amount;notes.text=draft.notes;
+          category=draft.category;selectedParentId=draft.parent;
+          selectedBudgetId=draft.budget;income=draft.income;
+          receiptPath=waffraEncodeReceipts(
+           [...waffraReceiptPaths(receiptPath),path]);
+         });
         }catch(_){
          if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
           'Camera unavailable or permission denied. Review camera access in Settings.':
@@ -7936,15 +7976,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        Expanded(child:OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async{
         // Use OS limited-photo access only after the user taps Attach.
         try{
-         final files=await ImagePicker().pickMultiImage(imageQuality:80);
+         final draft=(title:title.text,amount:value.text,notes:notes.text,
+          category:category,parent:selectedParentId,budget:selectedBudgetId,
+          income:income);
+         final files=await WaffraExternalMediaSession.runPicker(()=>
+          ImagePicker().pickMultiImage(imageQuality:80));
          if(files.isEmpty)return;
          final paths=<String>[...waffraReceiptPaths(receiptPath)];
          for(final file in files){
           final copied=await saveReceipt(file);
           stagedReceiptCopies.add(copied);paths.add(copied);
          }
-         if(sheetContext.mounted)update(()=>
-          receiptPath=waffraEncodeReceipts(paths));
+         if(sheetContext.mounted)update((){
+          title.text=draft.title;value.text=draft.amount;notes.text=draft.notes;
+          category=draft.category;selectedParentId=draft.parent;
+          selectedBudgetId=draft.budget;income=draft.income;
+          receiptPath=waffraEncodeReceipts(paths);
+         });
         }catch(_){
          if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
           'Could not open photos. Please check photo selection access.':

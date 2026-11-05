@@ -12,7 +12,35 @@
     "lib/waffra_sms_sender_brand.dart",
     "test/m467_brand_media_helpers_test.dart",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "docs/qa/approved_change_scope.json"
+    "docs/qa/approved_change_scope.json",
+    "lib/main.dart"
   ],
-  "bounded_sections": {}
+  "bounded_sections": {
+    "lib/main.dart": [
+      {
+        "start": "import 'waffra_biometrics.dart';",
+        "end": "import 'waffra_mandatory_biometric_gate.dart';"
+      },
+      {
+        "start": " DateTime? _backgroundAt;",
+        "end": " @override void dispose(){WaffraRegionalCopy.countryIso.removeListener(_onRegionChanged);"
+      },
+      {
+        "start": " Future<void> editAvatar()async {",
+        "end": " @override Widget build(BuildContext context){\n  if(widget.initial==null&&widget.provider=='Phone')"
+      },
+      {
+        "start": " Future<void> _openAutoSmsInbox()async{",
+        "end": " Widget _autoSmsReviewCard(){"
+      },
+      {
+        "start": " Future<void> scanAndAddReceipt()async {",
+        "end": " Future<void> entrySheet({"
+      },
+      {
+        "start": " Future<void> entrySheet({",
+        "end": " Future<String?> chooseTransactionCategory("
+      }
+    ]
+  }
 }
