@@ -3554,7 +3554,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   email:widget.profile.email);
 
  Future<void> _openSmsRules({String? seedMessage,String? seedKind,
-  String seedSender=''})async{
+  String seedSender='',String seedCategory=''})async{
   if(_smsRuleOwnerKey.isEmpty){
    if(mounted)snack(context,waffraIsEnglish?
     'Sign in with a verified phone or email before editing SMS rules.':
@@ -3582,6 +3582,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    builder:(_)=>WaffraSmsRuleSettingsPage(
     english:waffraIsEnglish,ownerKey:_smsRuleOwnerKey,
     seedKind:seedKind,seedSender:seedSender,
+    seedCategory:seedCategory,
     seedAccountSuffix:suffix,bankAccounts:bankAccounts,
     scannedMessages:_autoSmsPending.map((row)=>
      row['body'] is String?row['body'] as String:'').toList(),
@@ -3597,6 +3598,27 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // A newly saved rule may free encrypted queue slots. Continue the history
   // cursor immediately instead of requiring another manual search tap.
   if(mounted)await _refreshAutoSmsInbox(importMonth:true);
+ }
+
+ // Local classification learning never authorizes financial posting.
+ // Only a specific, independently classified message may produce a rule.
+ Future<bool> _learnSafeSmsRule({
+  required String body,required String sender,
+  required String kind,String category='',
+ })async{
+  if(_smsRuleOwnerKey.isEmpty)return false;
+  final candidate=WaffraSmsLocalRules.suggestedRule(
+   body:body,sender:sender,kind:kind,category:category,confidentOnly:true);
+  if(candidate==null)return false;
+  final store=const WaffraSmsLocalRuleStore();
+  final prior=await store.read(_smsRuleOwnerKey);
+  if(prior.any((r)=>r.resolvedKind==kind&&
+   WaffraSmsLocalRules.matches(r,body,sender:sender)))return true;
+  if(prior.length>=100)return false;
+  // A deterministic ID prevents duplicated learning after repeat review.
+  if(prior.any((r)=>r.id==candidate.id))return false;
+  await store.write(_smsRuleOwnerKey,[...prior,candidate]);
+  return true;
  }
 
  Map<String,Object?>? _localSmsClassification(
@@ -4187,7 +4209,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       rule.resolvedKind==kind&&WaffraSmsLocalRules.matches(
        rule,body,sender:sender));
      if(!existingMatch&&mounted){
-      await _openSmsRules(seedMessage:body,seedKind:kind,seedSender:sender);
+      // Explicit exclusion/transfer action allows conservative local learning.
+      // No balance is ever changed by learning a rule.
+      final learned=await _learnSafeSmsRule(
+       body:body,sender:sender,kind:kind);
+      if(!learned&&mounted)await _openSmsRules(
+       seedMessage:body,seedKind:kind,seedSender:sender);
      }
      if(!mounted)return;
      final saved=await const WaffraSmsLocalRuleStore()
@@ -4237,53 +4264,43 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if(smsHashes.contains(bankSmsHash(body))){
      await WaffraAutoSms.acknowledge([id]);
      if(mounted&&_smsRuleOwnerKey.isNotEmpty){
-      // Once a trusted matching rule already exists, never ask to create
-      // that rule again. This does not authorize a balance write by itself.
-      var existingRule=false;
+      // Once a confirmed entry is committed, learn only a specific and
+      // verified bank direction; generic/uncertain categories need review.
       try{
-       final savedRules=await const WaffraSmsLocalRuleStore()
-        .read(_smsRuleOwnerKey);
+       final store=const WaffraSmsLocalRuleStore();
+       final savedRules=await store.read(_smsRuleOwnerKey);
        final known=WaffraSmsLocalRules.resolve(
-        body:body,sender:sender,
-        bankKind:WaffraBankSmsFactsParser.parse(body).kind,
-        custom:savedRules);
-       existingRule=known!=null &&
-        // Generic "purchase" and "payment" don't establish a useful
-        // learned merchant rule. Still offer specific classification.
-        known.id!='builtin_purchase'&&known.id!='builtin_payment';
+        body:body,sender:sender,bankKind:facts.kind,custom:savedRules);
+       final exists=savedRules.any((rule)=>rule.financial&&
+        WaffraSmsLocalRules.matches(rule,body,sender:sender));
+       final specific=known!=null&&known.financial&&
+        known.id!='builtin_purchase'&&known.id!='builtin_payment'&&
+        categories.any((c)=>c.name==known.category&&
+         c.income==known.income&&c.isSubcategory&&
+         waffraCategoryAvailableForNewEntry(categories,c));
+       final learned=!exists&&specific?
+        await _learnSafeSmsRule(
+         body:body,sender:sender,kind:known.resolvedKind,
+         category:known.category):false;
+       if(!exists&&!learned&&mounted){
+        // Uncertain classification opens a fully prefilled, editable rule.
+        await _openSmsRules(
+         seedMessage:body,seedSender:sender,
+         seedKind:facts.kind==WaffraBankOperationKind.income?
+          'income':'expense',
+         seedCategory:localFacts?['category'] is String?
+          localFacts!['category'] as String:
+          (known?.category??''));
+       }else if(learned&&mounted){
+        snackSuccess(context,waffraIsEnglish?
+         'Matching SMS rule saved automatically.':
+         'اتحفظت قاعدة الرسائل المطابقة تلقائيًا.');
+       }
       }catch(_){
-       // A corrupt encrypted rule store is not an empty rules list.
-       // Preserve the financial transaction and alert the owner instead.
        if(mounted)snack(context,waffraIsEnglish?
-        'Could not verify your saved rules. No rule was changed.':
-        'تعذر التحقق من القواعد المحفوظة. لم يتم تغيير أي قاعدة.',
+        'Could not securely save a rule; your confirmed transaction is unchanged.':
+        'تعذر حفظ قاعدة التصنيف بأمان. العملية المالية المؤكدة لم تتغير.',
         isError:true);
-       return;
-      }
-      if(!existingRule&&mounted){
-       await showWaffraDialog<void>(context:context,
-        barrierDismissible:false,
-        builder:(dialog)=>PopScope(
-         canPop:false,
-         child:AlertDialog(
-          title:WaffraText(waffraIsEnglish?
-           'Create a rule for this new SMS format':
-           'إنشاء قاعدة لصيغة الرسالة الجديدة'),
-          content:WaffraText(waffraIsEnglish?
-           'Choose matching keywords, transaction type and category. '
-           'Existing matching rules are reused automatically.':
-           'اختار الكلمات المفتاحية ونوع العملية والقسم. '
-           'القواعد المطابقة الموجودة بنستخدمها تلقائيًا بدون سؤالك مرة تانية.'),
-          actions:[
-           FilledButton(
-            key:const Key('waffra-new-sms-create-rule-required'),
-            onPressed:()=>Navigator.pop(dialog),
-            child:WaffraText(waffraIsEnglish?'Create rule':'إنشاء قاعدة')),
-          ])));
-       if(mounted)await _openSmsRules(
-        seedMessage:body,seedSender:sender,
-        seedKind:WaffraBankSmsFactsParser.parse(body).kind==
-         WaffraBankOperationKind.income?'income':'expense');
       }
      }
     }
