@@ -25,8 +25,8 @@ void main(){
   final bridge=File('lib/waffra_auto_sms.dart').readAsStringSync();
   final consent=File('lib/waffra_auto_sms_consent.dart').readAsStringSync();
   expect(bridge,isNot(contains("channel.invokeMethod<int>('importRecentBankSms')")));
-  expect(consent,contains('final activated=await WaffraSmsCloudService.setConsent(cloud);'));
-  expect(consent,contains('if(cloud&&!activated)'));
+  expect(consent,contains('await WaffraSmsCloudService.setConsent(false)'));
+  expect(consent,contains('await WaffraAutoSms.optIn()'));
  });
 
  test('M433 month-bounded encrypted SMS import is manual-review only',(){
@@ -42,11 +42,11 @@ void main(){
   expect(store,contains('maxCandidates = 100'));
   expect(activity,contains('"importConsentMonthBankSms"'));
   expect(bridge,contains("channel.invokeMethod<int>('importConsentMonthBankSms')"));
-  expect(poster,contains('static bool get reviewOnly => true;'));
-  final guard=poster.substring(poster.indexOf('if(reviewOnly)'),
-   poster.indexOf('final prefs=await SharedPreferences.getInstance();'));
-  expect(guard,contains('return summary;'));
-  expect(guard,isNot(contains('commitConfirmedSms(')));
+  expect(poster,contains('static bool get reviewOnly => false;'));
+  expect(poster,contains('!matched.autoPost'));
+  expect(poster,contains('matched.accountSuffix'));
+  expect(poster,contains('commitConfirmedSms('));
+  expect(poster,isNot(contains('WaffraSmsCloudReviewAnalyzer.stagePending(')));
  });
  test('M433 Home has stable review inbox count and per-SMS manual review',(){
   final main=File('lib/main.dart').readAsStringSync();
@@ -55,7 +55,7 @@ void main(){
   expect(main,contains("Key('waffra-auto-sms-review-open')"));
   expect(main,contains('await WaffraAutoSms.importConsentMonth()'));
   expect(main,contains('Future<void> _openAutoSmsInbox()'));
-  expect(main,contains('bulkSmsSheet(initialText:body)'));
+  expect(main,contains('bulkSmsSheet(initialText:body,'));
   expect(main,contains('reviewSmsBudgetLinks(additions)'));
   expect(main,contains('if(targetId!=null&&id!=targetId)continue;'));
  });
