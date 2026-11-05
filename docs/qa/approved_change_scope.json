@@ -85,7 +85,7 @@
     "lib/waffra_account_context_settings.dart": [
       {
         "start": "import 'storage/waffra_verified_accounts_api.dart';",
-        "end": "\n\n/// Explicit account configuration only."
+        "end": "\nclass WaffraAccountContextSettings extends StatefulWidget {"
       },
       {
         "start": " Future<void> _editRecurring(WaffraRecurringAccountTemplate item)async{",
