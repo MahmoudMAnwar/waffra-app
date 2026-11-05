@@ -5795,12 +5795,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final learned=WaffraSmsLocalRules.resolve(
     body:raw,sender:found.length==1?initialSender:'',
     bankKind:bankFacts.kind,custom:learnedSmsRules);
-   final learnedCategory=learned!=null&&categories.any((c)=>
-     c.isSubcategory&&c.name==learned.category&&
+   // Generic built-in patterns should not supersede the existing planner.
+   final confirmedRule=learned!=null&&!learned.builtIn?learned:null;
+   final learnedCategory=confirmedRule!=null&&categories.any((c)=>
+     c.isSubcategory&&c.name==confirmedRule.category&&
      c.income==result.income&&waffraCategoryAvailableForNewEntry(categories,c))
-      ?learned.category:null;
-   // A matched rule for a deleted/inactive category is unsafe to substitute.
-   if(learned!=null&&learnedCategory==null){
+      ?confirmedRule.category:null;
+   // Inactive learned categories must be reviewed instead of substituted.
+   if(confirmedRule!=null&&learnedCategory==null){
     preRejected[i]=WaffraSmsNotSavedReason.categoryUnresolved;
     continue;
    }
