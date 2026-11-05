@@ -17,7 +17,11 @@
     "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
     "lib/storage/waffra_verified_finance_authority.dart",
     "test/storage/m457_direct_manual_finance_commit_test.dart",
-    "test/storage/m464_manual_unassigned_transfer_access_regression_test.dart"
+    "test/storage/m464_manual_unassigned_transfer_access_regression_test.dart",
+    "scripts/qa/waffra_directional_fab_receipt_scope_review.py",
+    "test/waffra_oct21_regression_test.dart",
+    "test/m384_receipt_corner_upgrade_regression_test.dart",
+    "test/m388_m390_approved_goal_recurring_receipt_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -92,6 +96,30 @@
       {
         "start": " test('Legacy cannot attach unverifiable account or post as SMS',",
         "end": null
+      }
+    ],
+    "scripts/qa/waffra_directional_fab_receipt_scope_review.py": [
+      {
+        "start": "def main():",
+        "end": "if __name__ == \"__main__\":"
+      }
+    ],
+    "test/waffra_oct21_regression_test.dart": [
+      {
+        "start": " test('M384 restored receipt corner on cards and retained details access',",
+        "end": " test('Sensitive financial actions always require OS biometric authentication',"
+      }
+    ],
+    "test/m384_receipt_corner_upgrade_regression_test.dart": [
+      {
+        "start": "  test('M384: both cards show folded count from the stored finance record',",
+        "end": "  testWidgets('M384: top start corner is right in Arabic and left in English',"
+      }
+    ],
+    "test/m388_m390_approved_goal_recurring_receipt_test.dart": [
+      {
+        "start": " test('M390/M466: old paths and owner-bound encrypted receipts open same gallery',",
+        "end": " testWidgets('M390: clipped badge is tappable with 48dp target in Arabic and English',"
       }
     ]
   }

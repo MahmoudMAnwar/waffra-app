@@ -1,3 +1,9 @@
+[M466-RECEIPT-REGRESSION] 2026-11-05 — Preserve corner tests with owner-verified image viewer
+====================================================================================
+- Older M384/M390/October-21 Flutter source contracts and the directional corner reviewer checked the legacy showReceipt(path) call. The new verified viewer intentionally passes entryId to validate encrypted token ownership before opening. Updated only these source assertions to require the owner-bound call and retained the existing legacy-gallery tests.
+- Tests still require working corner badges on both home and list, no disk writes from badge painting, attachment counts, both Arabic/English layouts, and the new memory-backed encrypted reader. No production behavior changed in this update.
+- Re-run all mandatory checks on this exact commit; signed main APK and real Android receipt viewing remain unverified.
+
 [M466-FLUTTER-ANALYZER] 2026-11-05 — Remove redundant import in manual receipt repair
 ================================================================================
 - The older parallel candidate PR #390 failed analyzer because Flutter foundation already exports Uint8List and an added dart:typed_data import in lib/main.dart is unnecessary. PR #391 inherited the same import; removed that import alone without changing any saving, receipt or transfer behavior.

@@ -43,7 +43,7 @@ def main():
         "if(attachmentCount>0)PositionedDirectional(top:0,end:0",
         "child:WaffraReceiptCornerBadge",
         "WaffraReceiptCornerClipper",
-        "onTap:()=>showReceipt(e.receiptPath!)",
+        "onTap:()=>showReceipt(e.receiptPath!,entryId:e.id)",
     ):
         if marker not in app:
             raise SystemExit("UI BLOCKED: approved FAB/corner behavior missing " + marker)
