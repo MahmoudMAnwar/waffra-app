@@ -3335,12 +3335,17 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
  final double balance;
  final bool english;
  final String? heading;
+ // Home account filter lives inside the balance card.
+ // Goal and other balance cards retain their original static heading.
+ final String? accountPickerLabel;
+ final VoidCallback? onPickAccount;
  final bool goalWallet;
  final GlobalKey? focusKey;
  final double? monthlyChangePercent;
  final Future<void> Function() refreshVerifiedWidgetBalance;
  const WaffraBalanceHeader({
   required this.balance,required this.english,this.focusKey,this.heading,this.goalWallet=false,
+  this.accountPickerLabel,this.onPickAccount,
   required this.refreshVerifiedWidgetBalance,this.monthlyChangePercent,
  });
  @override double get minExtent=>130;
@@ -3400,11 +3405,15 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
          }),
          icon:Icon(hidden?Icons.visibility_off_outlined:Icons.visibility_outlined,
           size:22,color:const Color(0xFFE2FBEF))))),
-      Positioned(left:47,right:112,top:14,bottom:45,
+      Positioned(left:47,right:112,top:10,bottom:40,
        child:Column(mainAxisAlignment:MainAxisAlignment.start,
-        crossAxisAlignment:CrossAxisAlignment.center,children:[
-         WaffraText(heading??(english?'Available balance':'الرصيد المتاح للصرف'),
-          maxLines:1,
+        crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+         if(onPickAccount!=null)
+          WaffraHomeAccountChip(
+           label:accountPickerLabel??(english?'All accounts':'كل الحسابات'),
+           english:english,onTap:onPickAccount!)
+         else WaffraText(heading??(english?'Available balance':'الرصيد المتاح للصرف'),
+          maxLines:1,textAlign:TextAlign.center,
           style:const TextStyle(fontSize:14,fontWeight:FontWeight.w600,
            color:Color(0xFFD7F1E5))),
          const SizedBox(height:3),
@@ -10970,20 +10979,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         subtitle:waffraIsEnglish?'Your finances at a glance':
          'تابع رصيدك ومعاملاتك وخططك المالية بسهولة.',
         icon:Icons.spa_outlined))),
-      SliverToBoxAdapter(child:Padding(
-       padding:const EdgeInsets.fromLTRB(14,3,14,11),
-       child:WaffraHomeAccountChip(
-        label:_m467AccountLabel,
-        english:waffraIsEnglish,
-        onTap:()=>unawaited(_m467PickHomeAccount())))),
+      // Verified account filter now lives inside the card; no extra row.
       // Not pinned: the shrinking balance scrolls away without covering data.
       SliverPersistentHeader(
        pinned:false,
        delegate:WaffraBalanceHeader(
          balance:_m467ShownBalance(),english:waffraIsEnglish,
-         heading:_m467SelectedAccount=='none'?
-          (waffraIsEnglish?'Unassigned, no account balance':'بدون حساب — لا يوجد رصيد مرتبط'):
-          (_m467SelectedAccount=='all'?null:_m467AccountLabel),
+         accountPickerLabel:_m467AccountLabel,
+         onPickAccount:()=>unawaited(_m467PickHomeAccount()),
          focusKey:_tourKeys[0],
          monthlyChangePercent:_m467SelectedAccount=='all'&&
           _m467AccountContext==null?monthChange:null,
