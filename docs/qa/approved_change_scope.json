@@ -28,6 +28,8 @@
     "test/m464_sms_bulk_rescan_regression_test.dart",
     "test/qa/m417_sms_permission_acceptance_test.py",
     "test/qa/m447_verified_sms_account_linking_test.py",
+    "test/storage/m457_direct_manual_finance_commit_test.dart",
+    "test/storage/m461_fresh_finance_android_source_regression_test.dart",
     "test/storage/m464_manual_unassigned_transfer_access_regression_test.dart"
   ],
   "bounded_sections": {
@@ -141,6 +143,42 @@
       {
         "start": "    def test_verified_source_only_with_no_shadow_db(self):",
         "end": "    def test_no_guarded_legacy_sms_account_override(self):"
+      }
+    ],
+    "test/storage/m457_direct_manual_finance_commit_test.dart": [
+      {
+        "start": "import 'package:waffra/storage/waffra_atomic_finance_snapshot.dart';",
+        "end": "import 'package:waffra/storage/waffra_encrypted_cutover_journal.dart';"
+      },
+      {
+        "start": "  setUp(() async {",
+        "end": "  tearDown(() async {"
+      },
+      {
+        "start": "  test('M457 fresh SQLCipher commits manual expense then income with typed parity',",
+        "end": "  test('M457 previously confirmed SMS survives next manual append unchanged',"
+      },
+      {
+        "start": "  test('M457 previously confirmed SMS survives next manual append unchanged',",
+        "end": "  test('M457 consent, duplicate and invalid account fail closed',"
+      },
+      {
+        "start": "  test('M457 consent, duplicate and invalid account fail closed',",
+        "end": "  test('M457 manual UI posts a single frozen entry without optimistic ledger',"
+      }
+    ],
+    "test/storage/m461_fresh_finance_android_source_regression_test.dart": [
+      {
+        "start": "import 'package:waffra/storage/waffra_atomic_finance_snapshot.dart';",
+        "end": "import 'package:waffra/storage/waffra_encrypted_cutover_journal.dart';"
+      },
+      {
+        "start": " setUp(() async {",
+        "end": " tearDown(()async{"
+      },
+      {
+        "start": " test('fresh encrypted account accepts goal, linked due and recurring, then manual money',",
+        "end": null
       }
     ]
   }
