@@ -1,3 +1,9 @@
+[M468] Confirmed finance-save spinner: frozen ledger encoding off UI isolate
+- Existing persist() already freezes each captured ledger entry map before a Future, and now executes expensive 240+ transaction JSON serialization via compute after the saving overlay has painted.
+- The unchanged snapshot-narrowing guards and SQLCipher verified source, witness, account selection and serialized write queue execute AFTER the exact frozen serialization. One save can never silently lose account links or skip user confirmation.
+- An async account result cannot overwrite a new Home account selection made while the read was in flight; one trailing refresh replays the latest chosen filter.
+- Added exact serialization/ordering and account-selection tests; do not claim measured frame-time improvement until real Android profiling.
+
 [M468] Verified large ledger parse off UI isolate
 - On initial install and manual pull-to-refresh, authenticated and integrity-checked finance JSON above 64 KiB decodes using Flutter compute; small payloads use the existing exact decoder. Invalid JSON still fails closed and never shows a fabricated balance.
 - Keeps finance authority, confirmation, SQLCipher writer, and widget reconciliation unchanged; optimize only read-side JSON decoding. Adds 5000-record round-trip and invalid-snapshot regression.

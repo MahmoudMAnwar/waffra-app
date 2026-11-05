@@ -18,6 +18,26 @@ void main(){
   expect(await WaffraLargeJsonDecode.parse('{"a":1}'),{'a':1});
   await expectLater(WaffraLargeJsonDecode.parse('[invalid'),throwsFormatException);
  });
+ test('M468 frozen save snapshot encodes exactly without blocking UI at scale',()async{
+  final records=List.generate(500,(i)=>{'id':'entry-$i',
+   'amount':i+0.15,'income':i.isEven,'category':'manual'});
+  final expected=jsonEncode(records);
+  expect(await WaffraLargeJsonDecode.encodeRecords(records),expected);
+  expect(jsonDecode(await WaffraLargeJsonDecode.encodeRecords(records)),records);
+ });
+ test('M468 save freezes the ledger before deferring encoding and guarding',(){
+  final src=File('lib/main.dart').readAsStringSync();
+  final start=src.indexOf(' Future<void> persist({');
+  final end=src.indexOf(' Future<bool> _persistModuleOrReload(',start);
+  expect(start,greaterThan(0));
+  expect(end,greaterThan(start));
+  final route=src.substring(start,end);
+  expect(route,contains('final frozenEntryRows=entries.map((e)=>e.toJson()).toList(growable:false);'));
+  expect(route,contains("snapshot['entries']=await WaffraLargeJsonDecode.encodeRecords(frozenEntryRows);"));
+  expect(route.indexOf('final frozenEntryRows='),lessThan(route.indexOf('return _saveProgress.track<void>(')));
+  expect(route.indexOf("snapshot['entries']=await"),lessThan(route.indexOf('WaffraHomeTransactionCapture.narrowVerifiedModuleEdit(')));
+  expect(route,contains('await _financeAuthority.saveCaptured('));
+ });
  test('M468 first install and pull use the same verified parsing contract',(){
   final src=File('lib/main.dart').readAsStringSync();
   expect(src,contains('await WaffraLargeJsonDecode.parse(raw)'));

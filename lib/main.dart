@@ -3521,6 +3521,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     monthIso:month,
     selectedAccountId:chosen=='none'?null:chosen);
    if(!mounted)return;
+   // A user may switch accounts while this async SQL projection is running.
+   // Never repaint that newly chosen view with a stale older selection.
+   if(_m467AccountChoiceRestored&&_m467SelectedAccount!=chosen){
+    _m468AccountReadAgain=true;
+    return;
+   }
    setState((){
     _m467Accounts=accounts.where((a)=>!a.archived).toList();
     _m467AccountContext=contextView;
@@ -5499,8 +5505,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // overlapping multi-key saves, so a slower old save could finish last.
   // This protects in-app ordering, not cross-process widget writes or a crash
   // in the middle of SharedPreferences' non-atomic multi-key update.
+  // Freeze the complete entry objects synchronously before ANY suspension.
+  // Encoding an old multi-thousand-entry ledger on the main UI isolate
+  // caused the saving spinner to visibly stall after goal/recurring edits.
+  final frozenEntryRows=entries.map((e)=>e.toJson()).toList(growable:false);
   final snapshot=<String,Object>{
-   'entries':jsonEncode(entries.map((e)=>e.toJson()).toList()),
+   'entries':'', // replaced by the exact frozen payload under the save overlay
    // Migrate old category caps together with the independent budget list.
    // Historic ledger budget IDs are kept unchanged.
    'waffra_categories_v24':jsonEncode(categories.map((c)=>
@@ -5524,13 +5534,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // Fresh verified SQLCipher vaults intentionally omit optional empty modules.
   // A manual append may change ONLY the ledger; the authoritative writer
   // still checks its exact witness and the one-entry append invariant.
-  WaffraHomeTransactionCapture.narrowVerifiedManualAppend(
-   route:route,source:baseline?.source,snapshot:snapshot);
-  WaffraHomeTransactionCapture.narrowVerifiedModuleEdit(
-   route:route,source:baseline?.source,snapshot:snapshot,
-   witnessedValues:baseline?.encryptedWitness?.snapshot.values);
   return _saveProgress.track<void>(
-   'persist-financial-change',() {
+   'persist-financial-change',() async {
+   // The overlay is on screen; move large JSON serialization off the UI
+   // isolate without changing a single byte or the source witness.
+   snapshot['entries']=await WaffraLargeJsonDecode.encodeRecords(frozenEntryRows);
+   WaffraHomeTransactionCapture.narrowVerifiedManualAppend(
+    route:route,source:baseline?.source,snapshot:snapshot);
+   WaffraHomeTransactionCapture.narrowVerifiedModuleEdit(
+    route:route,source:baseline?.source,snapshot:snapshot,
+    witnessedValues:baseline?.encryptedWitness?.snapshot.values);
    return _financialWriteQueue.submit(snapshot,(captured)async {
    if(baseline==null){
     throw StateError('Verified dashboard baseline is unavailable.');
