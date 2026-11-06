@@ -8152,6 +8152,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   String? chosenManualAccount=smsEditorDraft?['account'] as String?;
   int budgetMenuRevision=0; // reset action-only dropdown selections
   int accountProviderMenuRevision=0,accountChildMenuRevision=0;
+  int transferSourceProviderRevision=0,transferTargetProviderRevision=0;
+  int transferSourceChildRevision=0,transferTargetChildRevision=0;
   {
    // All reviewed transactions, including SMS, must use a real child category.
    final matchingLeaf=categories.where((c)=>c.income==income&&
@@ -8276,10 +8278,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       }),
       icon:const Icon(Icons.calendar_month,size:19),
       label:WaffraText(dayText(date),maxLines:1));
-    Future<void> createAccountInsideEntryDropdown({required bool mainProvider})async{
+    Future<void> createAccountInsideEntryDropdown({required bool mainProvider,
+      bool forTransfer=false,bool transferTarget=false})async{
      // #405/#416: Add inside either dropdown opens the account FORM directly,
      // not a second My Accounts page. No finance write occurs until Save.
-     final selectedProviderBefore=chosenManualProvider;
+     final selectedProviderBefore=forTransfer?
+       (transferTarget?transferDestinationProvider:transferSourceProvider):
+       chosenManualProvider;
      try{
       await _ensureFinanceBound();
       final bridge=_financeBinding?.accountsBridge;
@@ -8349,13 +8354,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       update((){
        entryAccounts=refreshed;
        entryProviders=groups;
-       if(mainProvider){
+       if(forTransfer){
+        transferAccounts=refreshed;
+        transferApi=api;
+        if(transferTarget){
+         transferDestinationProvider=related.single.id;
+         transferDestination=mainProvider?null:id;
+        }else{
+         transferSourceProvider=related.single.id;
+         transferSource=mainProvider?null:id;
+        }
+        transferError=null;
+       }else if(mainProvider){
         chosenManualProvider=related.single.id;
-        chosenManualAccount=null; // provider alone never selects money
+        chosenManualAccount=null;
        }else if(related.single.id==selectedProviderBefore){
-        chosenManualAccount=id; // explicitly created, verified child
+        chosenManualAccount=id;
        }else{
-        // An unrecognized/other bank gets its own genuine account group.
         chosenManualProvider=related.single.id;
         chosenManualAccount=id;
        }
@@ -8439,32 +8454,67 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       final groups=providers.where((p)=>p.id==group).toList();
       final options=groups.isEmpty?const <WaffraAccountBalance>[]:
        groups.single.accounts.where((a)=>a.id!=exclude).toList();
+      final parentRevision=target?transferTargetProviderRevision:transferSourceProviderRevision;
+      final childRevision=target?transferTargetChildRevision:transferSourceChildRevision;
       return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
        WaffraCenteredDropdownFormField<String>(
-        key:ValueKey('m470-home-transfer-'+(target?'target':'source')+'-provider-'+(group??'none')),
+        key:ValueKey('m470-home-transfer-'+(target?'target':'source')+
+         '-provider-'+(group??'none')+'-$parentRevision'),
         isExpanded:true,initialValue:group,
         decoration:InputDecoration(
          labelText:waffraIsEnglish?'Bank or provider':'الجهة أو البنك',
          border:const OutlineInputBorder()),
-        items:providers.map((p)=>DropdownMenuItem(
-         value:p.id,child:WaffraText(waffraIsEnglish?p.labelEn:p.labelAr,
-          maxLines:1))).toList(),
-        onChanged:transferSaving?null:(v)=>update((){
-         if(target){transferDestinationProvider=v;transferDestination=null;}
-         else{transferSourceProvider=v;transferSource=null;}
-         transferError=null;
-        }),
+        items:[
+         ...providers.map((p)=>DropdownMenuItem<String>(
+          value:p.id,child:WaffraText(waffraIsEnglish?p.labelEn:p.labelAr,
+           maxLines:1))),
+         DropdownMenuItem<String>(value:'__create_transfer_provider__',
+          child:WaffraText(waffraIsEnglish?'Add bank / provider':'إضافة جهة أو بنك')),
+        ],
+        onChanged:transferSaving?null:(v)async{
+         if(v=='__create_transfer_provider__'){
+          await createAccountInsideEntryDropdown(
+           mainProvider:true,forTransfer:true,transferTarget:target);
+          if(sheetContext.mounted)update((){
+           if(target)transferTargetProviderRevision++;
+           else transferSourceProviderRevision++;
+          });
+          return;
+         }
+         if(sheetContext.mounted)update((){
+          if(target){transferDestinationProvider=v;transferDestination=null;}
+          else{transferSourceProvider=v;transferSource=null;}
+          transferError=null;
+         });
+        },
        ),
        const SizedBox(height:9),
        WaffraCenteredDropdownFormField<String>(
-        key:ValueKey('m470-home-transfer-'+(target?'target':'source')+'-account-'+(group??'none')),
+        key:ValueKey('m470-home-transfer-'+(target?'target':'source')+
+         '-account-'+(group??'none')+'-$childRevision'),
         isExpanded:true,
         initialValue:options.any((a)=>a.id==value)?value:null,
         decoration:InputDecoration(labelText:label,
          border:const OutlineInputBorder()),
-        items:options.map((a)=>DropdownMenuItem(value:a.id,
-         child:WaffraText(a.name,maxLines:1))).toList(),
-        onChanged:transferSaving||group==null||options.isEmpty?null:onChange),
+        items:[
+         ...options.map((a)=>DropdownMenuItem<String>(value:a.id,
+          child:WaffraText(a.name,maxLines:1))),
+         if(group!=null)DropdownMenuItem<String>(
+          value:'__create_transfer_child__',
+          child:WaffraText(waffraIsEnglish?'Add linked account':'إضافة حساب تابع')),
+        ],
+        onChanged:transferSaving||group==null?null:(v)async{
+         if(v=='__create_transfer_child__'){
+          await createAccountInsideEntryDropdown(
+           mainProvider:false,forTransfer:true,transferTarget:target);
+          if(sheetContext.mounted)update((){
+           if(target)transferTargetChildRevision++;
+           else transferSourceChildRevision++;
+          });
+          return;
+         }
+         if(sheetContext.mounted)onChange(v);
+        }),
       ]);
      }
      return WaffraEntrySheetSafeLayout(
