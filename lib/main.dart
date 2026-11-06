@@ -4032,8 +4032,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    existing:original,candidate:WaffraSmsLocalRules.manualTransferPattern());
   if(!identical(original,updated))await store.write(_smsRuleOwnerKey,updated);
  }
+ // Reuse one senderless review-only category bucket after a committed
+ // manual OR bank-SMS entry; sender/suffix account learning stays separate.
  Future<void> _learnManualCategoryPreference(MoneyEntry record)async{
-  if(_smsRuleOwnerKey.isEmpty||record.sourceType!='manual')return;
+  if(_smsRuleOwnerKey.isEmpty||
+     (record.sourceType!='manual'&&record.sourceType!='sms'))return;
   final merchant=waffraMerchantKey(record.title,income:record.income)??record.title;
   final candidate=WaffraSmsLocalRules.manualCategoryPattern(
    description:merchant,category:record.category,income:record.income);
@@ -6807,6 +6810,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        category:confirmed.category,confidentOnly:true);
       if(candidate!=null)revisedRules=WaffraSmsLocalRules.upsertLearned(
        existing:revisedRules,candidate:candidate);
+      // Bank SMS and manual inputs teach the SAME safe description hints.
+      // No sender/account is inferred by this review-only rule.
+      final descriptionRule=WaffraSmsLocalRules.manualCategoryPattern(
+       description:confirmed.title,category:confirmed.category,
+       income:confirmed.income);
+      if(descriptionRule!=null)revisedRules=WaffraSmsLocalRules.upsertLearned(
+       existing:revisedRules,candidate:descriptionRule);
      }
      if(!identical(originalRules,revisedRules)){
       await ruleStore.write(_smsRuleOwnerKey,revisedRules);
@@ -7500,6 +7510,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           body:reviewedText,sender:initialSender,
           kind:entry.income?'income':'expense',
           category:entry.category);}catch(_){}
+         // The validated, committed SMS entry also teaches its
+         // user-reviewed description, just like confirmed manual input.
+         try{await _learnManualCategoryPreference(entry);}catch(_){}
         }
        }
        unawaited(_refreshWidget());
