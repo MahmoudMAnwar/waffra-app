@@ -221,7 +221,11 @@ abstract final class WaffraSmsLocalRules {
   final known=<String>{
    'رمز التحقق','رمز التفعيل','رمز الدخول','verification code',
    'security code','one time code','otp',
-   for(final rule in builtIn)
+   // Populate editable quick suggestions from the original small baseline
+   // only: 793 immutable Saudi seed phrases are already available in their
+   // own searchable/read-only buckets. Rechecking each one for 100 SMS would
+   // multiply UI-thread work on first opening the rules editor.
+   for(final rule in builtIn.where((r)=>!r.id.startsWith('sa_')))
     for(final term in rule.keywords)term,
    'حوالة صادرة','تحويل صادر','incoming','outgoing',
    'credited','debited','شراء','راتب',
