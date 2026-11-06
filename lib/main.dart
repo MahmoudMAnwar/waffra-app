@@ -418,9 +418,12 @@ class WaffraNamedBudget extends BudgetCategory {
  final bool deleted;
  /// Separate from budget activation: user-controlled percentage alerts.
  final bool alertsEnabled;
+ /// Explicit display attribution only: shared/unassigned historical budgets
+ /// never receive a guessed account from the Home header.
+ final String? assignedAccountId;
  WaffraNamedBudget({required String id,required String name,
   required double budget,int alertPercent=80,bool budgetActive=true,
-  this.alertsEnabled=true,this.deleted=false}):super(
+  this.alertsEnabled=true,this.deleted=false,this.assignedAccountId}):super(
    id:id,name:name,icon:'wallet',color:0xFF087A54,income:false,
    budget:budget,alertPercent:alertPercent,budgetActive:budgetActive,
    budgetLabel:name,origin:'user');
@@ -446,30 +449,39 @@ class WaffraNamedBudget extends BudgetCategory {
    amount is! num||!amount.isFinite||amount<=0||
    alert is! int||alert<1||alert>100||active is! bool||
    (raw.containsKey('deleted')&&raw['deleted'] is! bool)||
-   (raw.containsKey('alertsEnabled')&&alerts is! bool)){
+   (raw.containsKey('alertsEnabled')&&alerts is! bool)||
+   (raw.containsKey('assignedAccountId')&&raw['assignedAccountId']!=null&&
+     (raw['assignedAccountId'] is! String||
+      (raw['assignedAccountId'] as String).trim().isEmpty||
+      (raw['assignedAccountId'] as String).length>128))){
    throw const FormatException('Invalid standalone named budget.');
   }
   return WaffraNamedBudget(id:id,name:name,budget:amount.toDouble(),
    alertPercent:alert,budgetActive:active,
-   alertsEnabled:alerts!=false,deleted:raw['deleted']==true);
+   alertsEnabled:alerts!=false,deleted:raw['deleted']==true,
+   assignedAccountId:raw['assignedAccountId'] as String?);
  }
  @override Map<String,dynamic> toJson()=>{
   'id':id,'name':name,'parentId':'','income':false,
   'budget':budget,'budgetActive':budgetActive,
   'alertPercent':alertPercent,'alertsEnabled':alertsEnabled,
   'deleted':deleted,
+  if(assignedAccountId!=null)'assignedAccountId':assignedAccountId,
  };
  @override WaffraNamedBudget copy({String? name,String? icon,int? color,
   double? budget,int? alertPercent,String? parentId,
   String? budgetLabel,bool clearBudget=false,bool? budgetActive,
   // Standalone budgets are not categories; keep inherited API compatible
   // without persisting the independent category-activation flag on budgets.
-  bool? categoryActive,bool? alertsEnabled,bool? deleted})=>WaffraNamedBudget(
+  bool? categoryActive,bool? alertsEnabled,bool? deleted,
+  String? assignedAccountId,bool clearAssignedAccount=false})=>WaffraNamedBudget(
     id:id,name:budgetLabel??name??this.name,budget:budget??this.budget,
     alertPercent:alertPercent??this.alertPercent,
     budgetActive:budgetActive??this.budgetActive,
     alertsEnabled:alertsEnabled??this.alertsEnabled,
-    deleted:deleted??this.deleted);
+    deleted:deleted??this.deleted,
+    assignedAccountId:clearAssignedAccount?null:
+     assignedAccountId??this.assignedAccountId);
 }
 
 
@@ -10315,9 +10327,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    formatWaffraEditAmount(selected.budget):'');
   var alert=selected.alertPercent;
   var alertsEnabled=selected is WaffraNamedBudget?selected.alertsEnabled:true;
+  String? budgetSource=selected is WaffraNamedBudget?
+   selected.assignedAccountId:null;
+  final verifiedBudgetAccounts=_m467Accounts.where((a)=>!a.archived).toList();
   String? nameError,amountError;
   try{
-   final edited=await showWaffraDialog<({String label,double amount,int alert,bool alertsEnabled})>(
+   final edited=await showWaffraDialog<({String label,double amount,int alert,bool alertsEnabled,String? accountId})>(
     context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
      title:WaffraText(waffraIsEnglish?'Set named budget':'تحديد ميزانية باسم'),
      scrollable:true,
@@ -10335,6 +10350,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        onChanged:(_)=>update(()=>amountError=null),
        decoration:InputDecoration(labelText:waffraIsEnglish?'Monthly limit *':'الحد الشهري *',
         errorText:amountError,border:const OutlineInputBorder())),
+      const SizedBox(height:12),
+      WaffraCenteredDropdownFormField<String>(
+       key:const Key('m470-budget-edit-account'),
+       initialValue:budgetSource??'shared',isExpanded:true,
+       decoration:InputDecoration(labelText:waffraIsEnglish?
+        'Monthly budget for account':'الميزانية الشهرية للحساب',
+        border:const OutlineInputBorder()),
+       items:[
+        DropdownMenuItem(value:'shared',child:WaffraText(waffraIsEnglish?
+         'Shared budget (all accounts only)':'ميزانية مشتركة (كل الحسابات)')),
+        ...verifiedBudgetAccounts.map((a)=>DropdownMenuItem<String>(
+         value:a.id,child:WaffraText(a.name,maxLines:1))),
+       ],
+       onChanged:(value)=>update(()=>budgetSource=value=='shared'?null:value)),
       const SizedBox(height:12),
       waffraBudgetAlertControls(
        enabled:alertsEnabled,percent:alert,english:waffraIsEnglish,
@@ -10359,7 +10388,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        });
        if(nameError!=null||amountError!=null||value==null||value<=0)return;
        Navigator.pop(ctx,(label:label,amount:value,alert:alert,
-        alertsEnabled:alertsEnabled));
+        alertsEnabled:alertsEnabled,accountId:budgetSource));
       }),child:WaffraText(waffraIsEnglish?'Save budget':'حفظ الميزانية',
        maxLines:1))),
      ]))],
@@ -10375,7 +10404,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final index=namedBudgets.indexWhere((b)=>b.id==selected.id);
     namedBudgets[index]=namedBudgets[index].copy(
      name:edited.label,budget:edited.amount,alertPercent:edited.alert,
-     alertsEnabled:edited.alertsEnabled);
+     alertsEnabled:edited.alertsEnabled,
+     assignedAccountId:edited.accountId,
+     clearAssignedAccount:edited.accountId==null);
     selectedNamedBudgetCategoryId=selected.id;
    });
    await _persistModuleOrReload(WaffraFinanceRoute.challengeAndBudgetUpdate,
@@ -10389,9 +10420,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final amount=TextEditingController();
   var alert=80;
   var alertsEnabled=true;
+  String? budgetSource;
+  final verifiedBudgetAccounts=_m467Accounts.where((a)=>!a.archived).toList();
   String? nameError,amountError;
   try{
-   final selected=await showWaffraDialog<({String name,double cap,int alert,bool alertsEnabled})>(
+   final selected=await showWaffraDialog<({String name,double cap,int alert,bool alertsEnabled,String? accountId})>(
     context:context,builder:(ctx)=>StatefulBuilder(
      builder:(ctx,update)=>AlertDialog(
       key:const Key('waffra-independent-budget-create'),
@@ -10411,6 +10444,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         decoration:InputDecoration(
          labelText:waffraIsEnglish?'Monthly amount *':'الحد الشهري *',
          errorText:amountError,border:const OutlineInputBorder())),
+       const SizedBox(height:12),
+       WaffraCenteredDropdownFormField<String>(
+        key:const Key('m470-budget-create-account'),
+        initialValue:budgetSource??'shared',isExpanded:true,
+        decoration:InputDecoration(labelText:waffraIsEnglish?
+         'Monthly budget for account':'الميزانية الشهرية للحساب',
+         border:const OutlineInputBorder()),
+        items:[
+         DropdownMenuItem(value:'shared',child:WaffraText(waffraIsEnglish?
+          'Shared budget (all accounts only)':'ميزانية مشتركة (كل الحسابات)')),
+         ...verifiedBudgetAccounts.map((a)=>DropdownMenuItem<String>(
+          value:a.id,child:WaffraText(a.name,maxLines:1))),
+        ],
+        onChanged:(value)=>update(()=>budgetSource=value=='shared'?null:value)),
        const SizedBox(height:12),
        waffraBudgetAlertControls(
         enabled:alertsEnabled,percent:alert,english:waffraIsEnglish,
@@ -10432,7 +10479,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         });
         if(nameError!=null||amountError!=null||cap==null||cap<=0)return;
         Navigator.pop(ctx,(name:text,cap:cap,alert:alert,
-         alertsEnabled:alertsEnabled));
+         alertsEnabled:alertsEnabled,accountId:budgetSource));
        }),child:WaffraText(waffraIsEnglish?'Save budget':'حفظ الميزانية')),
       ],
      )));
@@ -10445,9 +10492,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(namedBudgets.any((b)=>!b.deleted&&b.name.toLowerCase()==
       selected.name.toLowerCase()))return null;
    final id='budget:'+newId();
+   if(selected.accountId!=null&&
+      !verifiedBudgetAccounts.any((a)=>a.id==selected.accountId))return null;
    setState(()=>namedBudgets.add(WaffraNamedBudget(
     id:id,name:selected.name,budget:selected.cap,alertPercent:selected.alert,
-    alertsEnabled:selected.alertsEnabled)));
+    alertsEnabled:selected.alertsEnabled,
+    assignedAccountId:selected.accountId)));
    final saved=await _persistModuleOrReload(
     WaffraFinanceRoute.challengeAndBudgetUpdate,
     operation:'standalone-budget-create');
@@ -10462,10 +10512,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final today=DateTime.now();
   final viewedMonth=DateTime(budgetViewedMonth.year,budgetViewedMonth.month,1);
   final viewingToday=viewedMonth.year==today.year&&viewedMonth.month==today.month;
-  final monthEntries=entries.where((e)=>e.date.year==viewedMonth.year&&e.date.month==viewedMonth.month);
-  // Include legacy budgets previously saved on main categories in totals;
-  // only *new* budget creation requires a child category.
-  final allBudgets=namedBudgets.where((b)=>b.budget>0&&!b.deleted).toList();
+  final selectedFinancialAccount=_m467SelectedAccount;
+  final relevantEntries=selectedFinancialAccount=='all'?
+   entries:_m467ScopedEntries();
+  final monthEntries=relevantEntries.where((e)=>
+   e.date.year==viewedMonth.year&&e.date.month==viewedMonth.month);
+  // A shared legacy budget belongs to All only until its owner explicitly
+  // assigns an account. One budget ID is counted once, never once per bank.
+  final allBudgets=namedBudgets.where((b)=>b.budget>0&&!b.deleted&&
+   (selectedFinancialAccount=='all'||
+    b.assignedAccountId==selectedFinancialAccount)).toList();
   // Overall monthly budget is a projection, not an additional saved cap.
   // Paused budgets remain part of the total the user has created.
   final overallLimit=allBudgets.fold<double>(0,(total,c)=>total+c.budget);
@@ -10482,7 +10538,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // Selecting a paused budget must never show it as active or start
   // charging it again; its former limit and historical links remain.
   final spent=selected==null?overallSpent:
-   waffraNamedBudgetSpent(entries,categories,selected,viewedMonth);
+   waffraNamedBudgetSpent(relevantEntries.toList(),categories,selected,viewedMonth);
   final used=limit>0?(spent/limit).clamp(0.0,1.0):0.0;
   // Read-only projection. Missing/invalid source amounts must never be
   // converted or rewritten just to display a forecast.
