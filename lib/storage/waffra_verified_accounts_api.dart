@@ -2,6 +2,7 @@ import 'waffra_accounts_repository.dart';
 import 'waffra_account_context_read.dart';
 import 'waffra_account_context_repository.dart';
 import 'waffra_account_details_schema.dart';
+import 'waffra_custom_account_subtype_schema.dart';
 import 'waffra_account_context_policy.dart';
 import '../waffra_bank_sms_facts.dart';
 import 'waffra_unified_finance_writer.dart';
@@ -65,8 +66,15 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
   required String id,required String name,required String kind,
   required String providerId,required String subtype,
   required int openingMinor,required String createdIso,
-  String? lastFour,required bool userConfirmed,
+  String? lastFour,String? customSubtypeLabel,
+  required bool userConfirmed,
  })=>_commit<void>((accounts)async{
+  if(customSubtypeLabel!=null&&
+     (!WaffraCustomAccountSubtypeSchema.validLabel(customSubtypeLabel)||
+      !((kind=='bank'&&subtype=='other')||
+        (kind=='wallet'&&subtype=='digital')))){
+   throw ArgumentError('Invalid custom subtype and account classification.');
+  }
   if(!WaffraAccountDetailsSchema.valid(
     kind:kind,providerId:providerId,subtype:subtype)){
    throw ArgumentError('Unsupported money-account subtype/provider.');
@@ -82,6 +90,12 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
   await WaffraAccountDetailsSchema.assign(accounts.db,
    accountId:id,kind:kind,providerId:providerId,subtype:subtype,
    confirmedIso:createdIso);
+  if(customSubtypeLabel!=null){
+   await WaffraCustomAccountSubtypeSchema.install(accounts.db);
+   await WaffraCustomAccountSubtypeSchema.assign(accounts.db,
+    accountId:id,kind:kind,label:customSubtypeLabel,
+    confirmedIso:createdIso);
+  }
   if(lastFour!=null){
    await WaffraAccountContextRepository(
     store:accounts.db,experimentalEnabled:true).setVerifiedBankSuffix(
