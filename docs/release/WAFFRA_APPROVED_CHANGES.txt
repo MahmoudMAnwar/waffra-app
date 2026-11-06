@@ -2456,3 +2456,9 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 - Both foreground native MethodChannel and background WorkManager FlutterEngine now honor this same committed-only acknowledgment; immutable built-in exclusion hints cannot auto-ACK in background.
 - M509 Dart test fixture `test/m509_all_sender_sms_rescan_dedup_test.dart` covers 64-char unknown sender acceptance contracts, numeric stronger gates, encrypted journal and owner removal, auto-poster parity, categories and no forced autoPost; additional Android hardware fresh/upgrade tests required.
 - Status: source candidate on Draft PR #436, Issue #440. No main merge, signed APK or physical Android verification claimed.
+
+
+[M509 build and pinned-scope corrections — 2026-11-06]
+- Fixed malformed Dart MethodChannel bridge code in `lib/waffra_auto_sms.dart`; added complete-window rescan and committed-only native API without replacing any existing normal acknowledge/notification methods.
+- M385 guard requires boundary anchors to exist in BOTH merge-base and PR head. Corrected the native MainActivity scope to start from the existing `setAutoSmsEnabled` case and end at existing `scanUnknownFinancialSms`, covering the inserted restart case without changing the guard or widening to unrelated components.
+- Re-tested with current PR head CI; do not treat new queued checks as proof of Android runtime quality.
