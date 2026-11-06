@@ -54,4 +54,23 @@ void main(){
   expect(home,contains('ListView.builder('));
   expect(home,contains('final selectedIds=<String>{};'));
  });
+
+ test('M470 #3/#10 review queue 500-SMS decode never blocks Android UI',(){
+  final activity=File('native/WaffraMainActivity.kt').readAsStringSync();
+  final resume=activity.substring(activity.indexOf('override fun onResume()'),
+   activity.indexOf('override fun onRequestPermissionsResult('));
+  expect(resume,contains('smsHistoryExecutor.execute {'));
+  expect(resume,contains('WaffraAutoSmsStore.pending(app)'));
+  expect(resume,contains('runOnUiThread {'));
+  final messages=activity.substring(
+   activity.indexOf('"excludedAutoSmsSenders" -> {'),
+   activity.indexOf('"openMessages" -> {'));
+  expect(messages,contains('"pendingAutoBankSms" -> {'));
+  expect(messages,contains('"ackAutoBankSms" -> {'));
+  expect(messages,contains('smsHistoryExecutor.execute {'));
+  expect(messages,contains('WaffraAutoSmsStore.acknowledge(app, ids)'));
+  expect(messages,contains('runOnUiThread { result.success(pending) }'));
+  expect(messages,contains('SMS_REVIEW_READ_FAILED'));
+  expect(messages,contains('runOnUiThread { result.success(acknowledged) }'));
+ });
 }
