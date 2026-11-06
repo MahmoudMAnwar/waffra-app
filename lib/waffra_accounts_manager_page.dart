@@ -318,7 +318,14 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
         leading:Icon(a.kind=='bank'?Icons.account_balance:
          a.kind=='cash'?Icons.payments_outlined:Icons.account_balance_wallet_outlined),
         title:Text(a.name),
-        subtitle:Text(amount(a.balanceMinor),textDirection:TextDirection.ltr),
+        subtitle:Column(mainAxisSize:MainAxisSize.min,
+         crossAxisAlignment:CrossAxisAlignment.start,children:[
+         if(a.customSubtypeLabel!=null)
+          Text(t('نوع الحساب: ','Account subtype: ')+a.customSubtypeLabel!,
+           key:Key('m497-custom-subtype-${a.id}'),
+           style:Theme.of(ctx).textTheme.bodySmall),
+         Text(amount(a.balanceMinor),textDirection:TextDirection.ltr),
+        ]),
         trailing:PopupMenuButton<String>(
          onSelected:(action){
           if(action=='rename')rename(a);
