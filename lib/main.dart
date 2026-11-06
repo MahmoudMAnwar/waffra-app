@@ -1331,7 +1331,11 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   if(!complete)throw StateError('Could not save country setup completion.');
   if(mounted)setState(()=>googleFirstRunSetup=false);
  }
+ bool _logoutInProgress=false;
  Future<void> logout()async {
+  if(_logoutInProgress)return;
+  _logoutInProgress=true;
+  try{
   // A phone user must not lose access after an apparently successful logout.
   // Check OS-protected verifier ownership before clearing the session.
   final current=profile;
@@ -1367,6 +1371,17 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   try{await WaffraOnDeviceQwen.shared.dispose();}catch(_){}
   await _accountWriteAuthority.signOut();
   if(mounted)setState((){profile=null;showLogin=true;locked=false;googleFirstRunSetup=false;});
+  }catch(error){
+   // Every sign-out entry point shares this fail-closed feedback. An SMS
+   // suspension or credential-integrity failure must NOT look like logout.
+   debugPrint('Verified sign-out was not completed: ${error.runtimeType}');
+   if(mounted)snack(context,waffraIsEnglish?
+    'Could not safely sign out. Your financial data is unchanged; retry.':
+    'تعذر تسجيل الخروج بأمان. بياناتك المالية لم تتغير؛ حاول مرة أخرى.',
+    isError:true);
+  }finally{
+   _logoutInProgress=false;
+  }
  }
  Future<void> setPin(String? value)async {
   final hash=value==null?null:sha256.convert(utf8.encode(value)).toString();
@@ -5334,6 +5349,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     route:WaffraFinanceRoute.dashboardRead);
    final view=current.finance;
    view.requireIntegrity();
+   // A same-generation/same-digest SQLCipher read is verified but unchanged.
+   // Re-decoding the entire ledger and rebuilding every page on every swipe
+   // caused avoidable UI lag. Do not apply this shortcut to guarded legacy.
+   final previous=_lastFinanceAuthorityRead;
+   final encryptedCurrent=current.encryptedWitness?.snapshot;
+   final encryptedPrevious=previous?.encryptedWitness?.snapshot;
+   if(current.source==WaffraRuntimeFinanceBackend.verifiedEncrypted&&
+      previous?.source==current.source&&
+      encryptedCurrent!=null&&encryptedPrevious!=null&&
+      encryptedCurrent.generation==encryptedPrevious.generation&&
+      encryptedCurrent.digest==encryptedPrevious.digest&&
+      current.widgetRevision==previous?.widgetRevision){
+    return;
+   }
    // Legacy first installs may omit their empty ledger or category catalog.
    // Activated SQLCipher still fails closed if either required source is absent.
    final refreshSource=WaffraVerifiedPullRefreshSource.fromAuthority(current);
