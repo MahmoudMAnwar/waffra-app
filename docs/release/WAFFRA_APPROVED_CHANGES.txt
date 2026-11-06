@@ -2144,3 +2144,10 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 - Encrypted V3 backups now carry optional strictly validated accountDetailsV1 entries; old archives without that field remain compatible. Restore inserts details in the same atomic encrypted transaction after source accounts, rejecting forged provider or orphan identity references.
 - A disposable SQLCipher export/restore test verifies typed identity and untouched legacy cash, plus forged metadata rejection and supported combinations. CI on exact commit, app installation over old phone data and signed Android validation still required.
 - The M470 accounts adapter was restored from its last good revision after an insertion text-duplication regression and now includes one typed creation method and one existing transfer method.
+
+
+[M470 #23 archived-account V3 restore preservation] 2026-11-06
+- Additive account provider/subtype export must also restore archived accounts exactly as archived, rather than rejecting a previously verified, zero-balance savings account or silently activating it.
+- The account details schema keeps ordinary operations active-only but accepts prevalidated archived metadata when called exclusively from authenticated disposable-vault restore. The source account's archived flag and balance never change.
+- A new SQLCipher regression exports a typed, archived, zero-opening bank account and checks the restored account remains archived with the same provider/subtype and zero balance.
+- CI and actual install/update-on-device remain pending, so this is not user-facing Done yet.
