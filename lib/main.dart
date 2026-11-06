@@ -3257,7 +3257,11 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
        // These are TWO independent fields. Editable user notes are persisted
        // on the ordinary transaction route; the original SMS is read from
        // the protected vault and is never substituted into entry.notes.
-       if(entry.sourceType!='sms'&&entry.notes.trim().isNotEmpty)...[
+       // User-edited notes remain visible for reviewed SMS entries too;
+       // they are independent of the protectedOriginalSms vault field.
+       // The verified storage adapter already redacts legacy SMS plaintext
+       // from entry.notes before presenting this details dialog.
+       if(entry.notes.trim().isNotEmpty)...[
         const SizedBox(height:15),
         WaffraText(waffraIsEnglish?'Notes':'الملاحظات',
          textAlign:TextAlign.start,style:TextStyle(fontSize:12,color:muted)),
