@@ -112,6 +112,7 @@ import 'storage/waffra_production_finance_authority_binding.dart';
 import 'storage/waffra_verified_accounts_api.dart';
 import 'storage/waffra_accounts_repository.dart';
 import 'waffra_accounts_manager_page.dart';
+import 'waffra_new_account_dialog.dart';
 import 'waffra_account_transaction_form.dart';
 import 'waffra_recurring_account_groups.dart';
 import 'storage/waffra_fresh_finance_modules_repository.dart';
@@ -6156,9 +6157,76 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   if(candidates.isEmpty)return (ids:null,generation:null);
   try{
-   final verified=await bridge.readVerifiedAccounts();
+   var verified=await bridge.readVerifiedAccounts();
    if(!mounted)return null;
-   final active=verified.balances.where((a)=>!a.archived).toList();
+   var active=verified.balances.where((a)=>!a.archived).toList();
+   String? createdFromSmsAccountId;
+   // First *reviewed* SMS from a known bank with no existing verified
+   // account for that institution can offer a NEW account. Neither sender
+   // text nor a suggested bank automatically creates a financial account.
+   final knownBank=WaffraSmsAccountLearning.bankGroup(smsSender);
+   final firstSenderIncomeExpense=knownBank!=null&&candidates.length==1&&
+    candidates.single.sourceType=='sms'&&
+    candidates.single.notes.trim().isNotEmpty&&
+    WaffraBankSmsFactsParser.parse(candidates.single.notes)
+     .canAutoPostAsIncomeExpense;
+   final alreadyLinkedToBank=knownBank!=null&&active.any((a)=>
+    (a.kind=='bank'||a.kind=='wallet')&&
+    (a.providerId!=null?a.providerId==knownBank:
+     WaffraSmsAccountLearning.bankGroup(a.name)==knownBank));
+   if(firstSenderIncomeExpense&&!alreadyLinkedToBank){
+    final offered=await showWaffraDialog<bool>(
+     context:context,builder:(dialog)=>AlertDialog(
+      title:WaffraText(waffraIsEnglish?
+       'Create an account for this bank?':
+       'إنشاء حساب مالي لهذا البنك؟'),
+      content:WaffraText(waffraIsEnglish?
+       'This is the first reviewed message without a linked account for '
+       '"$smsSender". Create an account with your chosen name and opening '
+       'balance (0 SAR by default)? No transaction is posted automatically.':
+       'دي أول رسالة قيد المراجعة من "$smsSender" بدون حساب مرتبط بالجهة. '
+       'هل تريد إنشاء حساب باسم تختاره ورصيد افتتاحي صفر ريال افتراضيًا؟ '
+       'لن تُسجّل العملية تلقائيًا دون تأكيدك.'),
+      actions:[
+       TextButton(onPressed:()=>Navigator.pop(dialog,false),
+        child:WaffraText(waffraIsEnglish?'Choose existing':'اختيار حساب موجود')),
+       FilledButton(onPressed:()=>Navigator.pop(dialog,true),
+        child:WaffraText(waffraIsEnglish?'Add account':'إضافة حساب')),
+      ],
+     ));
+    if(!mounted)return null;
+    if(offered==true){
+     final draft=await showWaffraDialog<WaffraNewAccountDraft>(
+      context:context,builder:(dialog)=>WaffraNewAccountDialog(
+       english:waffraIsEnglish,suggestedProviderId:knownBank));
+     if(!mounted)return null;
+     if(draft!=null){
+      // Users may edit the form. Never silently approve a different bank
+      // than the reviewed sender or convert a bank SMS to a cash account.
+      if(draft.kind!='bank'||draft.providerId!=knownBank||
+         draft.subtype==null)throw StateError(
+        'New SMS account does not match verified sender institution.');
+      final id='m470-sms-'+DateTime.now().microsecondsSinceEpoch.toString();
+      final createdIso=DateTime.now().toUtc().toIso8601String();
+      final api=WaffraVerifiedAccountsApi(bridge:bridge);
+      await api.balances();
+      await api.createTypedAccountWithIdentity(
+       id:id,name:draft.name,kind:'bank',providerId:knownBank,
+       subtype:draft.subtype!,openingMinor:draft.openingMinor,
+       createdIso:createdIso,lastFour:draft.lastFour,userConfirmed:true);
+      // A bank account creation is one verified SQLCipher transaction.
+      // The later SMS posting is a SEPARATE user-confirmed transaction;
+      // failure cannot debit twice or erase the newly confirmed account.
+      await _refreshFromVerifiedFinance();
+      if(!mounted||_financeLoadFailure!=null)return null;
+      verified=await bridge.readVerifiedAccounts();
+      active=verified.balances.where((a)=>!a.archived).toList();
+      if(!active.any((a)=>a.id==id))throw StateError(
+       'Created SMS account was not verified after save.');
+      createdFromSmsAccountId=id;
+     }
+    }
+   }
    if(active.isEmpty){
     if(mustSelectAccount){
      snack(context,waffraIsEnglish?
@@ -6171,6 +6239,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      generation:verified.witness.generation);
    }
    final assigned=List<String?>.filled(candidates.length,null);
+   if(createdFromSmsAccountId!=null){
+    assigned[0]=createdFromSmsAccountId;
+   }
    if(initialSelectedIds!=null){
     if(initialSelectedIds.length!=candidates.length)return null;
     for(var index=0;index<assigned.length;index++){
