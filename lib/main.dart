@@ -2239,7 +2239,9 @@ class _IntroScreenState extends State<IntroScreen> {
   if(busy)return;setState(()=>busy=true);
   try{await(login?widget.onLogin():widget.onStart());}finally{if(mounted)setState(()=>busy=false);}
  }
- @override Widget build(BuildContext context)=>Scaffold(backgroundColor:forest,
+ @override Widget build(BuildContext context)=>Scaffold(
+  key:const Key('waffra-first-run-auth-choice'),
+  backgroundColor:forest,
   body:Directionality(textDirection:waffraIsEnglish?TextDirection.ltr:TextDirection.rtl,child:Stack(fit:StackFit.expand,children:[
    Column(children:[
     Expanded(flex:82,child:SizedBox(width:double.infinity,child:Image.asset(
@@ -2250,14 +2252,19 @@ class _IntroScreenState extends State<IntroScreen> {
     const Spacer(),
     Padding(padding:const EdgeInsets.fromLTRB(24,0,24,20),child:Column(children:[
      SizedBox(width:double.infinity,height:54,child:FilledButton(
+      key:const Key('waffra-auth-choice-create'),
       onPressed:WaffraHaptics.tap(busy?null:()=>proceed(false)),
       style:FilledButton.styleFrom(backgroundColor:Colors.white,foregroundColor:forest),
-      child:const WaffraText('ابدأ الآن',style:TextStyle(fontSize:17,fontWeight:FontWeight.bold)))),
+      child:WaffraText(waffraIsEnglish?'Create account':'إنشاء حساب',
+       style:const TextStyle(fontSize:17,fontWeight:FontWeight.bold)))),
      const SizedBox(height:12),
      SizedBox(width:double.infinity,height:52,child:OutlinedButton(
+      key:const Key('waffra-auth-choice-sign-in'),
       onPressed:WaffraHaptics.tap(busy?null:()=>proceed(true)),
-      style:OutlinedButton.styleFrom(foregroundColor:Colors.white,side:const BorderSide(color:Colors.white70)),
-      child:const WaffraText('لديك حساب؟ قم بتسجيل الدخول',style:TextStyle(fontSize:15,fontWeight:FontWeight.w600)))),
+      style:OutlinedButton.styleFrom(foregroundColor:Colors.white,
+       side:const BorderSide(color:Colors.white70)),
+      child:WaffraText(waffraIsEnglish?'Sign in':'تسجيل الدخول',
+       style:const TextStyle(fontSize:15,fontWeight:FontWeight.w600)))),
      const SizedBox(height:15),
      const WaffraText('🔒 بياناتك المالية محفوظة على جهازك',
       style:TextStyle(color:Colors.white70,fontSize:12)),
@@ -2280,6 +2287,10 @@ class _LoginScreenState extends State<LoginScreen> {
  // Never show signup before checking both the old profile and OS verifier.
  // A fresh phone registration is ONE screen; existing phones sign in directly.
  bool _registrationChecked=false,_freshSignup=false;
+ // A clean install must ask the owner to choose first. The existing
+ // one-screen phone registration is shown ONLY after tapping Create Account.
+ // Existing registered/logged-out profiles continue straight to login.
+ String? _firstInstallChoice;
  final signInPhone=TextEditingController(),signInPassword=TextEditingController();
  @override void initState(){super.initState();_loadRegistered();}
  Future<void> _loadRegistered()async{
@@ -2487,8 +2498,16 @@ class _LoginScreenState extends State<LoginScreen> {
   if(!_registrationChecked){
    return const Scaffold(body:Center(child:CircularProgressIndicator()));
   }
-  // A truly empty install needs no separate welcome/registration-step page.
-  if(_freshSignup)return ProfileForm(provider:'Phone',onSave:widget.onSave);
+  // M510 #441: restore the explicit choice before either auth form on a
+  // genuinely clean install. Never infer the choice from an empty profile.
+  if(_freshSignup&&_firstInstallChoice==null)return IntroScreen(
+   onStart:()async{if(mounted)setState(()=>_firstInstallChoice='create');},
+   onLogin:()async{if(mounted)setState(()=>_firstInstallChoice='login');});
+  if(_freshSignup&&_firstInstallChoice=='create'){
+   return ProfileForm(
+    provider:'Phone',onSave:widget.onSave,
+    onBack:()=>setState(()=>_firstInstallChoice=null));
+  }
   if(provider!=null)return ProfileForm(provider:'Phone',onSave:widget.onSave,
    onBack:()=>setState(()=>provider=null));
   final hasExisting=registered!=null;
@@ -2531,11 +2550,30 @@ class _LoginScreenState extends State<LoginScreen> {
          const SizedBox(height:12),
          FilledButton(onPressed:WaffraHaptics.tap(socialBusy?null:continueLastLogin),
           child:WaffraText(waffraIsEnglish?'Temporary access to old account':'دخول مؤقت للحساب القديم')),
-        ]else if(signInMode&&hasExisting)...[
+        ]else if((signInMode&&hasExisting)||
+         (_freshSignup&&_firstInstallChoice=='login'))...[
+         if(_freshSignup)Align(alignment:Alignment.centerRight,
+          child:TextButton.icon(
+           key:const Key('waffra-auth-choice-back-from-login'),
+           onPressed:WaffraHaptics.tap(()=>
+            setState(()=>_firstInstallChoice=null)),
+           icon:const Icon(Icons.arrow_back_rounded,color:Colors.white),
+           label:WaffraText(waffraIsEnglish?'Back':'رجوع',
+            style:const TextStyle(color:Colors.white)))),
          WaffraText(waffraIsEnglish?'Sign in to Waffra':'تسجيل الدخول إلى وفرة',
           textAlign:TextAlign.center,
           style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold,color:Colors.white)),
          const SizedBox(height:12),
+         if(!hasExisting)...[
+          WaffraText(waffraIsEnglish?
+           'There is no verified local account on this phone yet. To sign in '
+           'to an account from another device, restore its trusted backup first.':
+           'مفيش حساب محلي موثّق على الموبايل ده حاليًا. لو حسابك على جهاز '
+           'تاني، لازم تستعيد النسخة الاحتياطية الموثوقة الأول.',
+           textAlign:TextAlign.center,
+           style:const TextStyle(color:Colors.white70,fontSize:13)),
+          const SizedBox(height:12),
+         ],
          WaffraText(waffraIsEnglish?'Phone number *':'رقم الجوال *',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold)),
          const SizedBox(height:6),
          TextField(controller:signInPhone,keyboardType:TextInputType.phone,
