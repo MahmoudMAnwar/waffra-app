@@ -1393,15 +1393,6 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   await p.setBool('waffra_dark_mode',dark);
  }
  @override Widget build(BuildContext context)=>MaterialApp(
-  // MaterialApp.builder sits OUTSIDE Navigator. It covers modal routes
-  // on inactivity without destroying HomeScreen, open sheets or draft text.
-  builder:(context,navigator)=>WaffraIdleBiometricOverlay(
-   enabled:profile!=null&&!locked&&!showLogin&&
-    !loading&&introDone&&startupError==null&&
-    !autoSmsConsentPending&&
-    !(googleFirstRunSetup&&WaffraSaudiRelease.locationCountryOnboarding),
-   english:language=='en',onSignOut:logout,
-   child:navigator??const SizedBox.shrink()),
   scrollBehavior:const WaffraVisibleScrollBehavior(),
   debugShowCheckedModeBanner:false,title:'وفرة | Waffra',
   locale:language=='en'?const Locale('en','US'):
@@ -1412,13 +1403,21 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    GlobalMaterialLocalizations.delegate,GlobalWidgetsLocalizations.delegate,
    GlobalCupertinoLocalizations.delegate,
   ],
-  builder:(context,child)=>ValueListenableBuilder<bool>(
-   valueListenable:hideWaffraAmounts,
+  // One existing MaterialApp.builder: keep finance masking and RTL/LTR,
+  // and place idle biometric overlay ABOVE every Navigator route.
+  builder:(context,child)=>WaffraIdleBiometricOverlay(
+   enabled:profile!=null&&!locked&&!showLogin&&
+    !loading&&introDone&&startupError==null&&
+    !autoSmsConsentPending&&
+    !(googleFirstRunSetup&&WaffraSaudiRelease.locationCountryOnboarding),
+   english:language=='en',onSignOut:logout,
+   child:ValueListenableBuilder<bool>(
+    valueListenable:hideWaffraAmounts,
    builder:(context,hidden,_)=>Directionality(
     textDirection:language=='ar'?TextDirection.rtl:TextDirection.ltr,
     // Language is an immediate LTR/RTL layout change, never a
     // navigator replacement or whole-screen slide of the FAB.
-    child:child??const SizedBox.shrink())),
+    child:child??const SizedBox.shrink()))),
 
   theme:ThemeData(
    useMaterial3:true,
