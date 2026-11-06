@@ -349,7 +349,7 @@ object WaffraAutoSmsStore {
         "password|login.?code|authentication.?code|رمزك\\s*السري)",
         RegexOption.IGNORE_CASE)
     private val action = Regex(
-        "(?:شراء|خصم|سحب|حوالة|تحويل|إيداع|ايداع|راتب|استرداد|سداد|" +
+        "(?:شراء|خصم|سحب|حوالة|تحويل|إيداع|ايداع|راتب|استرداد|سداد|شحن|دفع|" +
         "\\bpurchase\\b|\\bdebited\\b|\\bcredited\\b|\\btransfer\\b|" +
         "\\bwithdrawal\\b|\\bpayment\\b|\\bsalary\\b|\\brefund\\b|" +
         "\\bdeposit\\b)", RegexOption.IGNORE_CASE)
@@ -359,11 +359,11 @@ object WaffraAutoSmsStore {
     private val digits = Regex("[0-9٠-٩۰-۹][0-9٠-٩۰-۹,.]{0,14}")
     // Named bank/application senders can be Arabic or English. Personal
     // numeric phone numbers never enter the automatic review queue.
-    private val senderName = Regex("^[\\p{L}][\\p{L}0-9 _-]{2,24}$")
+    private val senderName = Regex("^[\\p{L}][\\p{L}0-9 _.-]{2,30}$")
     private val brand = Regex(
         "(?:bank|alinma|inma|rajhi|snb|sabb|riyad|bilad|anb|saib|" +
         "aljazira|jazeera|alahli|stcpay|stc.?bank|urpay|mobily.?pay|" +
-        "alrajhi|albilad)", RegexOption.IGNORE_CASE)
+        "alrajhi|albilad|الراجحي|الإنماء|الانماء|الأهلي|الاهلي|الرياض|البلاد)", RegexOption.IGNORE_CASE)
 
     fun qualifies(sender: String, body: String): Boolean {
         val safe = body.trim()
@@ -408,7 +408,8 @@ object WaffraAutoSmsStore {
     private val institutionalSender = Regex(
         "(?:etimad|اعتماد|bank|alinma|inma|rajhi|snb|sabb|riyad|" +
         "bilad|anb|saib|aljazira|jazeera|alahli|stcpay|" +
-        "stc.?bank|urpay|mobily.?pay)",
+        "stc.?bank|urpay|mobily.?pay|الراجحي|الإنماء|الانماء|" +
+        "الأهلي|الاهلي|الرياض|البلاد)",
         RegexOption.IGNORE_CASE)
 
     fun unknownFinancialKind(sender: String, body: String): String? {
