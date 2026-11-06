@@ -41,6 +41,13 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: python3 scripts/qa/m385_approved_change_guard.py --base "$BASE_SHA" --head "$HEAD_SHA"
+      # M472: The signed main APK executes these precise, unskipped suites.
+      # Run them against every PR head before merging, too. Missing/new QA
+      # files remain discovered automatically and failures block this job.
+      - name: Run incremental-CI safety policy tests
+        run: python3 -m unittest discover -s scripts -p 'test_smart_ci.py' -v
+      - name: Run every Python QA test including future test files
+        run: python3 -m unittest discover -s test/qa -p '*_test.py' -v
       - name: Generate non-sensitive NO-GO evidence for exact SHA
         env:
           GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
