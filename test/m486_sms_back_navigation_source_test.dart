@@ -39,4 +39,18 @@ void main(){
   expect(detail,contains('await WaffraAutoSms.acknowledge([id]);'));
   expect(detail,contains('_autoSmsReviewOpen=false;'));
  });
+ test('M488 #416 cancelled inline Add retains prior financial selector',(){
+  final source=File('lib/main.dart').readAsStringSync();
+  final start=source.indexOf('Future<void> entrySheet({MoneyEntry? initial');
+  final end=source.indexOf('if(selectedMain.isNotEmpty&&subcategories.isEmpty)',start);
+  expect(start,greaterThanOrEqualTo(0));
+  expect(end,greaterThan(start));
+  final editor=source.substring(start,end);
+  expect(editor,contains('accountProviderMenuRevision'));
+  expect(editor,contains('accountChildMenuRevision'));
+  expect(editor,contains('update(()=>accountProviderMenuRevision++);'));
+  expect(editor,contains('update(()=>accountChildMenuRevision++);'));
+  expect(editor,contains('chosenManualAccount=null; // A parent alone'));
+ });
+
 }
