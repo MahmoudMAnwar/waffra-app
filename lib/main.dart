@@ -4466,7 +4466,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     return y.compareTo(x);
    });
   }
-  String? selectedSender;
+  String? selectedSender,openingReviewId;
   final selectedIds=<String>{};
   var bulkBusy=false;
   List<String> idsOf(Iterable<Map<String,Object?>> rows)=>
@@ -4478,9 +4478,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    context:context,isScrollControlled:true,showDragHandle:true,
    builder:(sheet)=>StatefulBuilder(
     builder:(ctx,refresh)=>PopScope(
-     canPop:selectedSender==null,
+     // Explicit SMS selection must bypass Back-to-senders guard.
+     canPop:selectedSender==null||openingReviewId!=null,
      onPopInvokedWithResult:(didPop,result){
-      if(!didPop&&selectedSender!=null){
+      if(!didPop&&selectedSender!=null&&openingReviewId==null){
        refresh(()=>selectedSender=null);
       }
      },
@@ -4629,7 +4630,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             })),
            const Icon(Icons.chevron_left_rounded),
           ]),
-          onTap:bulkBusy?null:(id is String)?()=>Navigator.pop(ctx,id):null,
+          onTap:bulkBusy||openingReviewId!=null?null:(id is String)?(){
+           // PopScope must rebuild before popping the chosen SMS, otherwise
+           // Android can swallow the first tap as group-back navigation.
+           refresh(()=>openingReviewId=id);
+           WidgetsBinding.instance.addPostFrameCallback((_){
+            if(ctx.mounted)Navigator.pop(ctx,id);
+           });
+          }:null,
          );
         })),
        if(selectedIds.isNotEmpty)Padding(
@@ -8438,31 +8446,32 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          (waffraIsEnglish?'Choose a main category':'اختر القسم الرئيسي'):
          selectedMain.first.displayName,maxLines:2))),
        const SizedBox(height:10),
-       InkWell(onTap:WaffraHaptics.tap(()async{
+       InkWell(key:const Key('m470-entry-subcategory-picker'),onTap:WaffraHaptics.tap(()async{
+        final selectedParentAtTap=selectedParentId;
+        if(selectedParentAtTap==null){
+         snack(sheetContext,waffraIsEnglish?
+          'Choose a main category first.':'اختر القسم الرئيسي أولًا.');
+         return;
+        }
+        // After Back or refresh, use current parent-scoped children instead
+        // of an old list captured by a former sheet build.
         final picked=await chooseTransactionCategory(
-         sheetContext,subcategories,
+         sheetContext,
+         waffraManualCategoryChildren(categories,income,selectedParentAtTap),
          selectedSub.isEmpty?'':selectedSub.first.name,
          leafLabels:true,allowCreate:true,typeIncome:income,
-         parentId:selectedParentId,suggested:suggestion);
-        if(picked==null||!sheetContext.mounted)return;
-        final leaves=categories.where((c)=>c.income==income&&
-         c.isSubcategory&&c.name==picked).toList();
-        final roots=categories.where((c)=>c.income==income&&
-         !c.isSubcategory&&c.name==picked).toList();
+         parentId:selectedParentAtTap,suggested:suggestion);
+        if(picked==null||!sheetContext.mounted||
+           selectedParentId!=selectedParentAtTap)return;
+        final leaves=waffraManualCategoryChildren(
+         categories,income,selectedParentAtTap)
+         .where((c)=>c.name==picked).toList();
         if(leaves.length==1){
          update((){
-          if(category!=leaves.single.name){
-           category=leaves.single.name;
-           selectedBudgetId=null;
-          }
+          category=leaves.single.name;
           selectedParentId=leaves.single.parentId;
-          suggestion=null;
-         });
-        }else if(roots.length==1){
-         update((){
-          selectedParentId=roots.single.id;
-          category='';
           selectedBudgetId=null;
+          suggestion=null;
          });
         }
        }),child:InputDecorator(decoration:InputDecoration(
