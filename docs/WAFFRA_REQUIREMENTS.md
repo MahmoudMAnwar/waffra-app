@@ -399,3 +399,11 @@ Each issue requires linked source changes, exact-head CI, tests and real Android
 - **Permanent one-time confirmed SMS:** when user saves reviewed SMS to encrypted verified ledger successfully, remember a privacy-safe sender/body/timestamp fingerprint, bound to the verified owner. Later historical rescans never present it again; keep existing dedupe of ledger SMS hashes as defense in depth. Failure/abort must not consume SMS.
 - **No regression:** finance/account bindings, biometric/SQLCipher, owner lifecycle, merchant corrections, transfer review and user learned rules retained; no default autoPost, no raw SMS copied to new stores.
 - **Done criterion:** precise discovery/committed replay and restore tests, CI exact HEAD, real Android new install + in-place upgrade checks. **Status: tracked; not yet verified.**
+
+
+## 2026-11-06 — M510 CRITICAL: Restore first-install authentication choice
+
+- **Issue [#441](https://github.com/MahmoudMAnwar/waffra-app/issues/441)**, same **Draft PR [#436](https://github.com/MahmoudMAnwar/waffra-app/pull/436)**. User explicitly objected to unapproved removal of initial **إنشاء حساب / تسجيل الدخول** choice page.
+- **Current regression found in code:** `LoginScreen._freshSignup` bypasses the choice and directly instantiates `ProfileForm`; pre-existing branded `IntroScreen` is no longer reached. No user permission to remove it. This fix restores the explicit choice and preserves subsequent one-page registration.
+- **Flow:** truly fresh install → approved branded choice → **إنشاء حساب** gives single registration form; Back returns to choice. **تسجيل الدخول** gives existing login form; Back returns to choice. Returning users and existing data/update-over-old should continue without a newly forced chooser; biometrics, account persistence, SQLCipher remain unchanged.
+- **CI/test acceptance:** widget test proves both CTA labels/click/navigation and no premature form; tests ensure existing login and avatar/password registration regression stays green. Real Android fresh install + existing-device upgrade confirmation required. **Status: Recorded, implementation pending.**
