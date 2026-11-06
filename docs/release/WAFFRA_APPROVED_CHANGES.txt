@@ -2401,3 +2401,6 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 
 [M506 #435 guarded sign-out recovery candidate]
 - Logout now distinguishes missing local secure password verifier from malformed/different-phone records. When the phone owner is already unlocked, an explicit local password repair prompt requests two matching password entries and mandatory OS biometric confirmation before re-creating only a missing secure verifier; it does not delete/change finance, overwrite any existing verifier, accept legacy broken password, or bypass protected login. Locked biometric gate instructs owner to unlock before recovery; malformed/different-phone still fail closed. Real Android proof remains pending.
+
+[M506 biometric-gate sign-out recovery correction]
+- The protected missing-verifier consent dialog also works above the LOCKED biometric page: first cancel its in-progress OS prompt, then collect an explicit replacement password in the root Navigator and require a fresh independent device fingerprint challenge before creating only a truly missing verifier and completing normal sign-out. Protected financial Home never needs to be revealed to perform this recovery. User cancellation leaves all data, verifier, and locked session untouched. Requires physical two-phone test; malformed/different-owner verifier still cannot be overwritten.

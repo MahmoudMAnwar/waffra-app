@@ -80,7 +80,9 @@ void main() {
     final src=File('lib/main.dart').readAsStringSync();
     final logout=src.substring(src.indexOf(' Future<void> logout()async {'),
       src.indexOf(' Future<void> setPin('));
-    expect(logout,contains('if(integrity==WaffraLocalCredentialProbe.missing&&!locked)'));
+    expect(logout,contains('if(integrity==WaffraLocalCredentialProbe.missing){'));
+    expect(logout,contains('await _repairMissingLocalCredential('));
+    expect(logout,contains('if(!WaffraLocalPhoneCredentials.validPhone(phone))return false;'));
     expect(logout,contains('WaffraBiometrics.unlockMandatory()'));
     expect(logout,contains('WaffraLocalPhoneCredentials.registerOrResume('));
     expect(logout,contains('WaffraLocalCredentialProbe.ready'));
