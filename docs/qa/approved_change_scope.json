@@ -188,11 +188,7 @@
         "end": "                \"pauseAutoSmsForSignOut\" ->"
       },
       {
-        "start": "                \"restartCompletedSmsHistory\" -> {",
-        "end": "                \"importConsentMonthBankSms\" -> {"
-      },
-      {
-        "start": "                \"importConsentMonthBankSms\" -> {",
+        "start": "                \"setAutoSmsEnabled\" -> {",
         "end": "                \"scanUnknownFinancialSms\" -> {"
       },
       {
