@@ -47,16 +47,16 @@ void main(){
   final home=File('lib/main.dart').readAsStringSync();
   final anchor=home.indexOf('Future<void> entrySheet(');
   final editor=home.substring(anchor,home.indexOf('Future<void> showReceipt(',anchor));
-  expect(editor,contains("m470-entry-account-near-date"));
-  expect(editor,contains("m470-entry-add-account-near-date"));
-  expect(editor,contains("m470-entry-create-account-from-picker"));
+  // #416/#418 supersede the old date-adjacent duplicate account button.
+  // Provider and child selection remain mandatory ABOVE the full-width date.
+  expect(editor,contains("m470-home-manual-provider-"));
+  expect(editor,contains("m470-home-manual-account-"));
+  expect(editor,contains("onChanged:chosenManualProvider==null||"));
+  expect(editor,contains("chosenManualAccount=null; // A parent alone is not a money account."));
+  expect(editor,contains("createAccountInsideEntryDropdown(mainProvider:true)"));
+  expect(editor,contains("createAccountInsideEntryDropdown(mainProvider:false)"));
   expect(editor,contains("Expanded(child:dateAction())"));
-  expect(editor,contains("Expanded(child:accountAction())"));
-  expect(editor,contains("await openVerifiedAccounts();"));
-  expect(editor,contains("entryAccounts=fresh;"));
-  expect(editor,contains("chosenManualAccount=created.single.id"));
-  expect(editor,contains("if(initial==null&&!sms&&entryAccounts.isNotEmpty)"));
-  expect(editor,contains("chosenManualAccount=null"));
-  expect(editor,contains("if(entryAccounts.isEmpty){"));
+  expect(editor,contains("if(!income&&waffraHasSelectableBudget(namedBudgets))"));
+  expect(editor,isNot(contains("Expanded(child:accountAction())")));
  });
 }
