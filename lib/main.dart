@@ -6222,10 +6222,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      final proposedSuffix=WaffraSmsAccountLearning.suffix4(
       reviewedIncome?verifiedFacts.destinationSuffix:
        verifiedFacts.sourceSuffix);
+     final savedCustomTypes=active.where((account)=>
+       account.kind=='bank'&&account.customSubtypeLabel!=null)
+       .map((account)=>account.customSubtypeLabel!).toSet().toList()..sort();
      final draft=await showWaffraDialog<WaffraNewAccountDraft>(
       context:context,builder:(dialog)=>WaffraNewAccountDialog(
        english:waffraIsEnglish,suggestedProviderId:knownBank,
-       suggestedSenderName:smsSender,suggestedLastFour:proposedSuffix));
+       suggestedSenderName:smsSender,suggestedLastFour:proposedSuffix,
+       customSubtypeOptions:{'bank':savedCustomTypes}));
      if(!mounted)return null;
      if(draft!=null){
       // Users may edit the form. Never silently approve a different bank
@@ -6240,7 +6244,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       await api.createTypedAccountWithIdentity(
        id:id,name:draft.name,kind:'bank',providerId:knownBank,
        subtype:draft.subtype!,openingMinor:draft.openingMinor,
-       createdIso:createdIso,lastFour:draft.lastFour,userConfirmed:true);
+       createdIso:createdIso,lastFour:draft.lastFour,
+       customSubtypeLabel:draft.customSubtypeLabel,userConfirmed:true);
       // A bank account creation is one verified SQLCipher transaction.
       // The later SMS posting is a SEPARATE user-confirmed transaction;
       // failure cannot debit twice or erase the newly confirmed account.
