@@ -4476,7 +4476,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   List<String> visibleIds()=>selectedSender==null?
    idsOf(bySender.values.expand((rows)=>rows)):
    idsOf(bySender[selectedSender]??const <Map<String,Object?>>[]);
-  final selected=await showModalBottomSheet<String>(
+  await showModalBottomSheet<void>(
    context:context,isScrollControlled:true,showDragHandle:true,
    builder:(sheet)=>StatefulBuilder(
     builder:(ctx,refresh)=>PopScope(
@@ -4632,13 +4632,27 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             })),
            const Icon(Icons.chevron_left_rounded),
           ]),
-          onTap:bulkBusy||openingReviewId!=null?null:(id is String)?(){
-           // PopScope must rebuild before popping the chosen SMS, otherwise
-           // Android can swallow the first tap as group-back navigation.
+          onTap:bulkBusy||openingReviewId!=null?null:(id is String)?()async{
+           // M486: keep the sender inbox underneath review/editor so Back
+           // returns one level and preserves the sender's selection.
            refresh(()=>openingReviewId=id);
-           WidgetsBinding.instance.addPostFrameCallback((_){
-            if(ctx.mounted)Navigator.pop(ctx,id);
-           });
+           try{
+            await _reviewAutoSmsCandidates(targetId:id);
+           }finally{
+            if(ctx.mounted)refresh((){
+             openingReviewId=null;
+             if(!_autoSmsPending.any((row)=>row['id']==id)){
+              for(final group in bySender.values){
+               group.removeWhere((row)=>row['id']==id);
+              }
+              selectedIds.remove(id);
+              senders.removeWhere((name)=>bySender[name]?.isEmpty??true);
+              if(selectedSender!=null&&!senders.contains(selectedSender)){
+               selectedSender=null;
+              }
+             }
+            });
+           }
           }:null,
          );
         })),
@@ -4792,7 +4806,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     ),
    ),
   );
-  if(selected!=null&&mounted)await _reviewAutoSmsCandidates(targetId:selected);
+  // The sender inbox route remains beneath the message review.
  }
  Widget _autoSmsReviewCard(){
   final count=_autoSmsPending.length;
