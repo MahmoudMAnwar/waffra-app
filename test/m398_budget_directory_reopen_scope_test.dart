@@ -53,8 +53,11 @@ void main() {
     expect(app, contains("'__create_budget__'"));
     expect(app, contains("'__manage_budgets__'"));
     expect(app, contains('Expanded(child:dateAction())'));
-    expect(app, contains('Expanded(child:accountAction())'));
-    expect(app, contains('if(initial==null&&!sms)...['));
+    // PR #402: mandatory account cascade has moved above the date row.
+    expect(app, contains("m470-home-manual-provider-"));
+    expect(app, contains("m470-home-manual-account-"));
+    expect(app, contains('if(!income&&waffraHasSelectableBudget(namedBudgets))'));
+    expect(app, isNot(contains('Expanded(child:accountAction())')));
     expect(app, contains('budgetMenuRevision++'));
     final inset = File('lib/waffra_entry_sheet_safe_layout.dart')
       .readAsStringSync();
