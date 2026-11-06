@@ -3957,7 +3957,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final suffix=seedKind=='income'?
    (facts?.destinationSuffix??''):
    (facts?.sourceSuffix??'');
-  await Navigator.push<bool>(context,MaterialPageRoute(
+  final ruleSaved=await Navigator.push<bool>(context,MaterialPageRoute(
    builder:(_)=>WaffraSmsRuleSettingsPage(
     english:waffraIsEnglish,ownerKey:_smsRuleOwnerKey,
     seedKind:seedKind,seedSender:seedSender,
@@ -3974,9 +3974,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     seedMessage:seedMessage,
     onNotice:(message)=>snack(context,message),
    )));
-  // A newly saved rule may free encrypted queue slots. Continue the history
-  // cursor immediately instead of requiring another manual search tap.
-  if(mounted)await _refreshAutoSmsInbox(importMonth:true);
+  // Back without saving must not trigger a full 500-SMS history rescan.
+  // A saved rule may release queue slots, so only then continue the cursor.
+  if(mounted&&ruleSaved==true)unawaited(
+   _refreshAutoSmsInbox(importMonth:true));
  }
 
  Future<void> _recordConfirmedSmsAccountAssociation({
@@ -4968,6 +4969,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(!mounted||!ready||_smsSheetOpen||_autoSmsReviewOpen||
      _financeLoadFailure!=null)return;
   _autoSmsReviewOpen=true;
+  String? resumeAfterTeachId;
   try{
    // Cloud AI may suggest after separate opt-in. Financial posting is always manual.
    final items=await WaffraAutoSms.pending();
@@ -5162,6 +5164,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      seedMessage:body,seedSender:sender,seedKind:suggestionKind,
      seedCategory:(localFacts?['category'] is String)?
       (localFacts!['category'] as String):'');
+    // The rules screen was opened from THIS SMS. Back/Save returns to its
+    // review, not an unrelated Home tab; later verify it is still pending.
+    if(mounted)resumeAfterTeachId=id;
     // Saving a rule is not a financial transaction. A verified explicit
     // exclusion can remove the current review item after native acknowledgement.
     try{
@@ -5247,7 +5252,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
   }finally{
    _autoSmsReviewOpen=false;
-   if(mounted)unawaited(_refreshAutoSmsInbox());
+   if(mounted){
+    unawaited(_refreshAutoSmsInbox());
+    final target=resumeAfterTeachId;
+    if(target!=null){
+     WidgetsBinding.instance.addPostFrameCallback((_){
+      if(mounted&&ready&&!_smsSheetOpen&&!_autoSmsReviewOpen&&
+         _financeLoadFailure==null){
+       // The reopened review reads the encrypted queue again and refuses
+       // to show an SMS already saved or explicitly excluded.
+       unawaited(_reviewAutoSmsCandidates(targetId:target));
+      }
+     });
+    }
+   }
   }
  }
  void _receiveSharedSms(){
