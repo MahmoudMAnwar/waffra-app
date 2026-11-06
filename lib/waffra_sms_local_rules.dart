@@ -280,24 +280,72 @@ abstract final class WaffraSmsLocalRules {
   }on FormatException{return null;}
  }
 
- /// A plain manual transaction can teach a safe merchant/category
- /// preference, but cannot invent a bank sender, account suffix, or SMS amount.
- /// These rules are review-only even if later seen in a bank SMS.
+ /// Conservative, sender-agnostic keyword hints from a confirmed
+ /// transaction description. Manual and user-reviewed SMS use this SAME
+ /// extractor. Never retain amounts, account suffixes, secrets or identifiers.
+ /// Hints can only suggest categories for later bank review, never post money.
+ static List<String> safeDescriptionKeywords(String description){
+  final normalizedText=normalized(description);
+  if(normalizedText.isEmpty||normalizedText.length>160)return const [];
+  // Avoid retaining a sensitive description with secret/account terms.
+  if(RegExp(r'iban|otp|pin|password|رقم الحساب|رمز التحقق|رمز التفعيل|'
+    r'كلمة المرور|بطاقة مصرفية',caseSensitive:false).hasMatch(normalizedText)){
+   return const [];
+  }
+  const generic=<String>{
+   'دخل','مصروف','حواله','تحويل','سداد','دفع','خصم','شراء',
+   'تم','من','الى','علي','في','بواسطه','عبر','عن','لدي',
+   'مبلغ','ريال','رس','العمليه','عمليه','رصيد','حساب',
+   'شحن','اعاده','تجديد','مدفوعات','مشتريات','مستحق',
+   'income','expense','payment','purchase','pos','debit',
+   'credit','amount','sar','from','to','the','for','and',
+   'transfer','paid','received','topup','recharge',
+  };
+  final words=<String>[];
+  for(final item in normalizedText.split(RegExp(r'[^a-z\u0621-\u064a]+',
+   caseSensitive:false))){
+   if(item.length<4||generic.contains(item)||!safeKeyword(item))continue;
+   if(!words.contains(item))words.add(item);
+   if(words.length>=6)break;
+  }
+  if(words.isEmpty)return const [];
+  final candidates=<String>[];
+  // Exact safe description helps deterministic repeated merchant phrases.
+  if(normalizedText.length<=36&&safeKeyword(description)&&
+     !generic.contains(normalizedText))candidates.add(description.trim());
+  // Two distinctive tokens support reordered words in a later SMS.
+  if(words.length>=2){
+   final phrase=words.take(2).join(' ');
+   if(safeKeyword(phrase)&&!candidates.any(
+      (p)=>normalized(p)==normalized(phrase)))candidates.add(phrase);
+  }
+  // Distinctive words enable reviewed suggestions for a similar SMS with
+  // extra intervening terms, not a bank account or auto-posting permission.
+  for(final word in words){
+   if(candidates.any((p)=>normalized(p)==word))continue;
+   candidates.add(word);
+   if(candidates.length>=4)break;
+  }
+  return List<String>.unmodifiable(candidates.take(4));
+ }
+
+ /// A manual OR reviewed-SMS transaction teaches a safe description/category
+ /// preference in a shared non-posting bucket. It cannot invent a bank sender,
+ /// account suffix, SMS amount or finance-account assignment.
  static WaffraSmsLocalRule? manualCategoryPattern({
   required String description,required String category,required bool income,
  }) {
-  final label=normalized(description);
-  if(!safeKeyword(description)||label.length>36||
-     category.trim().isEmpty||label.contains('غير مصنف')||
-     const <String>{'income','expense','دخل','مصروف',
-      'other','purchase','payment','pos','transfer','تحويل',
-      'paid','received','cash','سداد','خصم','ايداع'}.contains(label))return null;
+  if(category.trim().isEmpty||normalized(category).contains('غير مصنف')||
+     normalized(category).contains('غير محدد'))return null;
+  final keywords=safeDescriptionKeywords(description);
+  if(keywords.isEmpty)return null;
   final kind=income?'income':'expense';
   final id='manual_${sha256.convert(utf8.encode(
    '$kind|${normalized(description)}|${normalized(category)}')).toString().substring(0,32)}';
   final rule=WaffraSmsLocalRule(
-   id:id,name:description.trim(),kind:kind,income:income,
-   category:category.trim(),keywords:[description.trim()],
+   id:id,name:description.trim().length<=60?description.trim():keywords.first,
+   kind:kind,income:income,
+   category:category.trim(),keywords:keywords,
    sender:'',matchAll:false,autoPost:false,
   );
   try{validate(rule);return rule;}on FormatException{return null;}
