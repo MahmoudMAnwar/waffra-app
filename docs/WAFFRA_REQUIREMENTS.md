@@ -360,3 +360,8 @@ Each issue requires linked source changes, exact-head CI, tests and real Android
 - Candidate implemented in #436: verified reviewed-SMS receipt transaction, post-commit keyword learning, trusted first sender bank preselect, single SMS original and optional personal notes, scanned count and Arabic sender recognition, bank/provider choices and historical transfer date, fresh verified account witness, and guarded sign-out recovery for MISSING local credential with explicit new password + device fingerprint.
 - **Not accepted:** no user device APK verification yet. Performance jank (#427) needs release-mode tracing and tuning. Logout (#435) must also be tested for missing, corrupted and different-owner verifier states; corrupted/mismatched values must never be overwritten or silently signed out. Source/schema integration tests and all CI still required.
 - GitHub exact-head test results and Android fresh-install/update acceptance determine whether any of these can be marked Done. Preserve user data and encrypted SMS/receipt vault.
+
+
+### M506-01 splash partial improvement (2026-11-06)
+- In draft PR #436, the unconditional 3000ms intro minimum was reduced to 1750ms and the splash animation to 1650ms. Added a Flutter widget test to catch an accidental return to a three-second animation; bounded code scope and release note have been recorded.
+- **Status: Partial code change / latest-head CI and device verification pending.** The startup loading/biometric critical path and all remaining footer, +, refresh, save and animation jank require Android profile traces, root cause correction, and physical test before issue #427 can be closed.
