@@ -58,6 +58,8 @@ void main() {
     expect(app, contains('assignBudgetInsideEditor(b.single.id)'));
     expect(app, contains('if(b.length==1)assignBudgetInsideEditor'));
     expect(app, contains('WaffraNamedBudget('));
-    expect(app, contains('final allBudgets=namedBudgets.where((b)=>b.budget>0&&!b.deleted)'));
+    expect(app, contains('final allBudgets=namedBudgets.where((b)=>b.budget>0&&!b.deleted&&'));
+    expect(app, contains("b.assignedAccountId==selectedFinancialAccount"));
+    expect(app, contains("selectedFinancialAccount=='all'"));
   });
 }
