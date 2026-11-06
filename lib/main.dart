@@ -3382,8 +3382,11 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
   required this.refreshVerifiedWidgetBalance,this.monthlyChangePercent,
   this.selectedAccountLabel,this.onAccountTap,
  });
- @override double get minExtent=>130;
- @override double get maxExtent=>148;
+ // Reserve space for multiline account names rather than trimming them.
+ int get _accountLabelExtraLines=>goalWallet||onAccountTap==null?0:
+  (((selectedAccountLabel?.runes.length??0)-25).clamp(0,150)/25).ceil();
+ @override double get minExtent=>goalWallet?130:164+20*_accountLabelExtraLines;
+ @override double get maxExtent=>goalWallet?148:182+20*_accountLabelExtraLines;
  @override Widget build(BuildContext context,double shrinkOffset,bool overlapsContent){
   final progress=(shrinkOffset/(maxExtent-minExtent)).clamp(0.0,1.0);
   final dark=Theme.of(context).brightness==Brightness.dark;
@@ -3439,39 +3442,34 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
          }),
          icon:Icon(hidden?Icons.visibility_off_outlined:Icons.visibility_outlined,
           size:22,color:const Color(0xFFE2FBEF))))),
-      Positioned(left:47,right:112,top:14,bottom:45,
-       child:Column(mainAxisAlignment:MainAxisAlignment.start,
-        crossAxisAlignment:CrossAxisAlignment.center,children:[
-         WaffraText(heading??(english?'Available balance':'الرصيد المتاح للصرف'),
-          maxLines:1,
-          style:const TextStyle(fontSize:14,fontWeight:FontWeight.w600,
-           color:Color(0xFFD7F1E5))),
-         const SizedBox(height:3),
-         Expanded(child:Center(child:FittedBox(
-          alignment:Alignment.center,fit:BoxFit.scaleDown,
-          child:WaffraCurrencyAmount(balance,fontSize:31-2*progress,
-           color:Colors.white,weight:FontWeight.w800)))),
-        ])),
-      // Account selection is display-only and stays inside the balance card.
-      if(!goalWallet&&onAccountTap!=null)
-       Positioned(right:10,bottom:10,
-        child:ConstrainedBox(
-         constraints:const BoxConstraints(maxWidth:156),
-         child:TextButton.icon(
-          key:const Key('m470-balance-account-picker'),
-          onPressed:onAccountTap,
-          icon:const Icon(Icons.keyboard_arrow_down_rounded,size:17),
-          label:Text(selectedAccountLabel??'',
-           maxLines:1,overflow:TextOverflow.ellipsis,
-           style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700)),
-          style:TextButton.styleFrom(
-           backgroundColor:const Color(0xFFF2FFF7),
-           foregroundColor:const Color(0xFF07563B),
-           minimumSize:const Size(90,34),
-           padding:const EdgeInsets.symmetric(horizontal:9,vertical:5),
-           shape:RoundedRectangleBorder(
-            borderRadius:BorderRadius.circular(12))),
-         ))),
+      // M476 #401: one account picker at the balance heading, with full text.
+      Positioned(left:47,right:14,top:9,
+       child:!goalWallet&&onAccountTap!=null
+        ?TextButton(
+         key:const Key('m470-balance-account-picker'),
+         onPressed:onAccountTap,
+         style:TextButton.styleFrom(
+          backgroundColor:const Color(0xFFF2FFF7),
+          foregroundColor:const Color(0xFF07563B),
+          padding:const EdgeInsets.symmetric(horizontal:10,vertical:7),
+          shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12))),
+         child:Row(mainAxisSize:MainAxisSize.min,children:[
+          const Icon(Icons.keyboard_arrow_down_rounded,size:19),
+          const SizedBox(width:5),
+          Expanded(child:Text(selectedAccountLabel??'',
+           softWrap:true,textAlign:TextAlign.center,
+           style:const TextStyle(fontSize:13,fontWeight:FontWeight.w800))),
+         ]))
+        :Center(child:WaffraText(
+         heading??(english?'Available balance':'الرصيد المتاح للصرف'),
+         style:const TextStyle(fontSize:14,fontWeight:FontWeight.w600,
+          color:Color(0xFFD7F1E5))))),
+      Positioned(left:47,right:112,
+       top:goalWallet?38:52+20*_accountLabelExtraLines,bottom:44,
+       child:Center(child:FittedBox(
+        alignment:Alignment.center,fit:BoxFit.scaleDown,
+        child:WaffraCurrencyAmount(balance,fontSize:31-2*progress,
+         color:Colors.white,weight:FontWeight.w800)))),
       if(validCompare)Positioned(left:18,bottom:14,
        child:Column(crossAxisAlignment:CrossAxisAlignment.start,
         mainAxisSize:MainAxisSize.min,children:[
