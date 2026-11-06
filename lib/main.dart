@@ -4232,10 +4232,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  Future<void> _rescanAutoSmsInbox()async{
   if(_autoSmsRescanRunning||!mounted)return;
-  final before=await WaffraAutoSms.scanProgress();
-  if(!mounted)return;
   setState(()=>_autoSmsRescanRunning=true);
   try{
+   // Never reset an unfinished 2000-row page stream. Otherwise repeat
+   // the first few pages forever. Once complete, explicit Rescan must
+   // revisit the entire installation-month inbox with the expanded M508
+   // Arabic/English detection library, even previously skipped senders.
+   final active=_autoSmsRefreshInFlight;
+   if(active!=null)await active;
+   final progress=await WaffraAutoSms.scanProgress();
+   if(progress?['complete']==true&&
+      !await WaffraAutoSms.restartCompletedHistory()){
+    throw StateError('Could not restart completed SMS history safely');
+   }
+   final before=await WaffraAutoSms.scanProgress();
+   if(!mounted)return;
    await _refreshAutoSmsInbox(importMonth:true);
    if(!mounted)return;
    final after=await WaffraAutoSms.scanProgress();
@@ -4249,6 +4260,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     (after!['scanned'] as num).toInt():0;
    if(_autoSmsStatusProblem!=null){
     snack(context,_autoSmsStatusProblem!,isError:true);
+   }else if(after?['complete']!=true){
+    snack(context,waffraIsEnglish?
+     'Scanned $scanned messages • $added new • '
+      '${_autoSmsPending.length} awaiting review. More history remains.':
+     'اتُفحص $scanned رسالة • $added جديدة • '
+      '${_autoSmsPending.length} بانتظار المراجعة. باقي رسائل لسه محتاجة فحص.');
    }else{
     snackSuccess(context,waffraIsEnglish?
      'Scan completed: $added new • $scanned scanned total • '
@@ -4369,12 +4386,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(!mounted)return;
   final waiting=<Map<String,Object?>>[];
   final toAcknowledge=<String>[];
+  final toAcknowledgeCommitted=<String>[];
   final toRestoreOnAckFailure=<Map<String,Object?>>[];
   for(final candidate in results){
    final id=candidate['id'],body=candidate['body'];
    if(id is! String||body is! String)continue;
    if(smsHashes.contains(bankSmsHash(body))){
-    toAcknowledge.add(id);
+    // This source SMS was already committed in the verified finance journal:
+    // atomically seal the native fingerprint against every future rescan.
+    toAcknowledgeCommitted.add(id);
     toRestoreOnAckFailure.add(Map<String,Object?>.from(candidate));
     continue;
    }
@@ -4405,6 +4425,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
    waiting.addAll(toRestoreOnAckFailure.where(
     (row)=>failedAcks.contains(row['id'])));
+  }
+  // Process verified hashes separately from ordinary user exclusions:
+  // only real finance commits may create permanent native anti-replay markers.
+  if(toAcknowledgeCommitted.isNotEmpty){
+   final failed=<String>{};
+   for(var from=0;from<toAcknowledgeCommitted.length;from+=100){
+    final batch=toAcknowledgeCommitted.skip(from).take(100).toList(growable:false);
+    if(!await WaffraAutoSms.acknowledgeCommitted(batch))failed.addAll(batch);
+   }
+   waiting.addAll(toRestoreOnAckFailure.where(
+    (row)=>failed.contains(row['id'])));
   }
   final progress=await WaffraAutoSms.trackingStatus();
   if(!mounted)return;
@@ -5231,7 +5262,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if(id is! String||body is! String||body.trim().isEmpty)continue;
     if(targetId!=null&&id!=targetId)continue;
     if(smsHashes.contains(bankSmsHash(body))){
-     final acknowledged=await WaffraAutoSms.acknowledge([id]);
+     final acknowledged=await WaffraAutoSms.acknowledgeCommitted([id]);
      if(acknowledged&&mounted){
       setState(()=>_autoSmsPending.removeWhere((row)=>row['id']==id));
      }
@@ -5377,7 +5408,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     // a blank 'manual' record. Uncertain fields remain editable.
     await entrySheet(sms:true,initialSms:body,reviewedSender:sender);
     if(smsHashes.contains(bankSmsHash(body))){
-     final acknowledged=await WaffraAutoSms.acknowledge([id]);
+     final acknowledged=await WaffraAutoSms.acknowledgeCommitted([id]);
      if(acknowledged&&mounted){
       setState(()=>_autoSmsPending.removeWhere((row)=>row['id']==id));
      }else if(mounted){
@@ -5398,7 +5429,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if(smsHashes.contains(bankSmsHash(body))){
      // M484 #411: remove from review only after an exact saved SMS hash
      // and the native acknowledgement both succeed.
-     final acknowledged=await WaffraAutoSms.acknowledge([id]);
+     final acknowledged=await WaffraAutoSms.acknowledgeCommitted([id]);
      if(acknowledged&&mounted){
       setState(()=>_autoSmsPending.removeWhere((row)=>row['id']==id));
      }else if(mounted){
