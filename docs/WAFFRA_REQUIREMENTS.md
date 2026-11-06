@@ -70,7 +70,7 @@
 
 **Validation:** targeted Flutter/widget source checks, actual signed Android screenshots and end-to-end flow, SQLCipher verified-writer/deduplication tests where applicable. Preserve existing M470 rules and current `main` behavior.
 
-**Current implementation (M487):** bank/wallet subtype dropdown offers «إضافة نوع حساب», validates and stores the user-approved label in a separate versioned encrypted table while preserving the existing subtype enum and account balances. Saved custom labels can be reused in subsequent account creation. Pending exact-head CI, real Android UI, migration/backup verification. **Status: Code ready / CI pending.**
+**Status: Recorded / Not implemented.** Existing historical fixes may partially cover this item; check behavior rather than inferring completion from committed source.
 
 ### WAFFRA-NEW-003 — Preserve SMS source and protected original instead of mislabeling manual
 
@@ -100,7 +100,7 @@
 
 **Validation:** targeted Flutter/widget source checks, actual signed Android screenshots and end-to-end flow, SQLCipher verified-writer/deduplication tests where applicable. Preserve existing M470 rules and current `main` behavior.
 
-**Status: Recorded / Not implemented.** Existing historical fixes may partially cover this item; check behavior rather than inferring completion from committed source.
+**Current implementation (M487):** bank/wallet subtype dropdown offers «إضافة نوع حساب», validates and stores the user-approved label in a separate versioned encrypted table while preserving the existing subtype enum and account balances. Saved custom labels can be reused in subsequent account creation. Pending exact-head CI, real Android UI, migration/backup verification. **Status: Code ready / CI pending.**
 
 ### WAFFRA-NEW-006 — Prepopulate verified masked last-four in child account creation
 
