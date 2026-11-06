@@ -31,7 +31,8 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
  final nickname=TextEditingController();
  final opening=TextEditingController(text:'0');
  final smsSuffix=TextEditingController();
- final sessionCustomSubtypes=<String>[];
+ final sessionCustomSubtypes=<String,Set<String>>{};
+ int subtypeRevision=0;
  String? customSubtypeLabel;
  String kind='cash';
  String? provider;
@@ -97,7 +98,7 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
     builder:(dialog)=>StatefulBuilder(builder:(dialog,refresh){
      final label=input.text.trim();
      final existing={
-      ...?widget.customSubtypeOptions[kind],...sessionCustomSubtypes,
+      ...?widget.customSubtypeOptions[kind],...?sessionCustomSubtypes[kind],
      }.map((value)=>value.toLowerCase());
      final allowed=label.runes.length>=2&&label.runes.length<=40&&
       !RegExp(r'[\u0000-\u001f\u007f]').hasMatch(label)&&
@@ -123,7 +124,7 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
     }));
    if(chosen==null||!mounted)return;
    setState((){
-    sessionCustomSubtypes.add(chosen);
+    sessionCustomSubtypes.putIfAbsent(kind,()=><String>{}).add(chosen);
     customSubtypeLabel=chosen;
     subtype=kind=='bank'?'other':'digital';
    });
@@ -180,7 +181,7 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
     if(kind=='bank'||kind=='wallet')...[
      const SizedBox(height:12),
      KeyedSubtree(
-      key:ValueKey('m487-subtype-$kind-${customSubtypeLabel??subtype}'),
+      key:ValueKey('m487-subtype-$kind-${customSubtypeLabel??subtype}-$subtypeRevision'),
       child:DropdownButtonFormField<String>(
        key:const Key('m470-new-account-subtype'),
        initialValue:customSubtypeLabel==null?subtype:
@@ -205,7 +206,7 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
           value:entry.key,child:Text(t(entry.value.ar,entry.value.en),
            overflow:TextOverflow.ellipsis))),
         ...{
-         ...?widget.customSubtypeOptions[kind],...sessionCustomSubtypes,
+         ...?widget.customSubtypeOptions[kind],...?sessionCustomSubtypes[kind],
         }.map((label)=>DropdownMenuItem<String>(
          value:'custom:$label',
          child:Text(label,overflow:TextOverflow.ellipsis))),
@@ -218,7 +219,12 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
          ])),
        ],
        onChanged:(v)async{
-        if(v=='__add_custom__'){await addCustomSubtype();return;}
+        if(v=='__add_custom__'){
+         await addCustomSubtype();
+         // Restore the previous choice when custom-name entry is cancelled.
+         if(mounted)setState(()=>subtypeRevision++);
+         return;
+        }
         if(v==null)return;
         setState((){
          customSubtypeLabel=v.startsWith('custom:')?v.substring(7):null;
