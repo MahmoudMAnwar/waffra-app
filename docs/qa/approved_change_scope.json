@@ -63,10 +63,6 @@
       {
         "start": " Future<void> logout()async {",
         "end": " Future<void> setPin("
-      },
-      {
-        "start": " Future<void> launchIntro()async{",
-        "end": " @override void didChangeAppLifecycleState(AppLifecycleState state){"
       }
     ],
     "lib/storage/waffra_unified_finance_writer.dart": [
