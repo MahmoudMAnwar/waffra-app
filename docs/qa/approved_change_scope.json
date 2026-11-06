@@ -124,7 +124,7 @@
     ],
     "lib/storage/waffra_verified_accounts_api.dart": [
       {
-        "start": " Future<void> registerVerifiedBankSuffix({",
+        "start": " /// Changing an alert/reminder does not trigger this accounting operation.",
         "end": " @override\n Future<void> archiveEmptyAccount("
       }
     ]
