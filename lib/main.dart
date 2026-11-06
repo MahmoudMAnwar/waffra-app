@@ -3887,19 +3887,28 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  bool accountOpened=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
  DateTime? _m468LastResumeSmsScan;
+ bool _m486ResumeQueued=false;
  void _m468OnResume(){
   if(!mounted||!ready||
      WaffraExternalMediaSession.shouldSkipResumeBackgroundWork)return;
-  // Widget revision MUST remain source-verified after a genuine resume.
-  unawaited(_syncWidgetTransactions());
-  // The already-completed history cursor must not be rescanned on every
-  // native Activity return. New SMS still arrive through the native listener.
-  final now=DateTime.now();
-  final last=_m468LastResumeSmsScan;
-  if(_autoSmsRefreshInFlight!=null||
-     (last!=null&&now.difference(last)<const Duration(seconds:20)))return;
-  _m468LastResumeSmsScan=now;
-  unawaited(_refreshAutoSmsInbox(importMonth:!_autoSmsHistoryComplete));
+  // M486 #419: biometrics/OS resume must render a frame before expensive
+  // SQLCipher/widget and SMS I/O start. Collapse repeated lifecycle events.
+  if(_m486ResumeQueued)return;
+  _m486ResumeQueued=true;
+  WidgetsBinding.instance.addPostFrameCallback((_){
+   _m486ResumeQueued=false;
+   if(!mounted||!ready||
+      WaffraExternalMediaSession.shouldSkipResumeBackgroundWork)return;
+   // Verified finance/widget read is still required, merely deferred one
+   // frame. Never infer cash from an unverified snapshot.
+   unawaited(_syncWidgetTransactions());
+   final now=DateTime.now();
+   final last=_m468LastResumeSmsScan;
+   if(_autoSmsRefreshInFlight!=null||
+      (last!=null&&now.difference(last)<const Duration(seconds:20)))return;
+   _m468LastResumeSmsScan=now;
+   unawaited(_refreshAutoSmsInbox(importMonth:!_autoSmsHistoryComplete));
+  });
  }
  @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraAutoSmsUpdates.addListener(_receiveAutoSmsNotice);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:_m468OnResume);unawaited(_loadFinanceSafely());}
  void _returnToHome(){if(mounted)setState((){_tabBackStack.clear();tab=0;accountOpened=false;goalsOpened=false;addFabExpanded=false;});}
@@ -5647,7 +5656,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   // Category display no longer shows caps. Keep the original category rows
   // intact until the user-confirmed atomic migration commits BOTH collections.
-  if(!mounted)return;setState(()=>ready=true);_receiveSharedSms();_receiveWidgetAction();unawaited(_refreshWidget());
+  if(!mounted)return;
+   setState(()=>ready=true);
+   // M486 #419: let Home's first interactive frame paint before competing
+   // asynchronous widget reads and incoming SMS callbacks begin.
+   WidgetsBinding.instance.addPostFrameCallback((_){
+    if(!mounted||!ready)return;
+    _receiveSharedSms();
+    _receiveWidgetAction();
+    unawaited(_refreshWidget());
+   });
   // Home reloading an encrypted ledger must never silently post a due payment.
   if(!verifiedEncryptedStartup){
    WidgetsBinding.instance.addPostFrameCallback((_){
