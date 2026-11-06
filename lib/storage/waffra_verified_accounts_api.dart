@@ -24,6 +24,13 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
   return data.balances;
  }
 
+ /// A witnessed, bounded read for existing entry Edit. Missing SQLCipher
+ /// entries must never be misrepresented as safely migrated legacy data.
+ Future<({bool exists,String? accountId})> readExistingEntryAccount({
+  required String entryId,
+ })=>bridge.readVerifiedAccountMetadata((context)=>
+  context.readExistingEntryAccount(entryId:entryId));
+
  Future<T> _commit<T>(
   Future<T> Function(WaffraAccountsRepository accounts) command,
   {required bool userConfirmed})async{
