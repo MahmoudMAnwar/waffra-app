@@ -170,7 +170,7 @@
       },
       {
         "start": "      if(sms)...[\n       TextField(controller:message",
-        "end": "      operationPicker(),"
+        "end": "      operationPicker(),\n      const SizedBox(height:12),\n      if(initial==null)...["
       }
     ],
     "lib/waffra_sms_local_rules.dart": [
