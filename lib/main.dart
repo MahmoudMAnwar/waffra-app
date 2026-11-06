@@ -5179,6 +5179,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      final acknowledged=await WaffraAutoSms.acknowledge([id]);
      if(acknowledged&&mounted){
       setState(()=>_autoSmsPending.removeWhere((row)=>row['id']==id));
+     }else if(mounted){
+      // The confirmed finance hash prevents a duplicate debit on retry.
+      // A failed Android acknowledgement must retain the review row.
+      snack(context,waffraIsEnglish?
+       'Saved transaction, but could not remove the SMS from review. Retry safely.':
+       'تم حفظ العملية، لكن تعذر إزالة الرسالة من المراجعة. أعد المحاولة بأمان.',
+       isError:true);
      }
     }
    }else if(decision=='ai'&&mounted){
