@@ -40,9 +40,17 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
   try{
    // The form only creates a draft. Existing verified account creation
    // remains the sole finance writer and rejects any stale SQLCipher witness.
+   final options=await widget.repository.balances();
+   if(!mounted)return;
+   final customSubtypes=<String,List<String>>{
+    for(final kind in const ['bank','wallet'])
+     kind:options.where((a)=>!a.archived&&a.kind==kind&&
+      a.customSubtypeLabel!=null).map((a)=>a.customSubtypeLabel!)
+      .toSet().toList(growable:false)..sort(),
+   };
    final draft=await showDialog<WaffraNewAccountDraft>(
     context:context,builder:(ctx)=>WaffraNewAccountDialog(
-     english:widget.english));
+     english:widget.english,customSubtypeOptions:customSubtypes));
    if(draft==null)return;
    final id='m440-'+DateTime.now().microsecondsSinceEpoch.toString();
    final createdIso=DateTime.now().toIso8601String();
@@ -55,7 +63,8 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
      id:id,name:draft.name,kind:draft.kind,
      providerId:provider,subtype:subtype,
      openingMinor:draft.openingMinor,createdIso:createdIso,
-     lastFour:draft.lastFour,userConfirmed:true);
+     lastFour:draft.lastFour,
+     customSubtypeLabel:draft.customSubtypeLabel,userConfirmed:true);
    }else if(draft.kind=='cash'||draft.kind=='other'){
     // Pure QA account adapters can still exercise historical cash/other
     // contracts; real production always uses the verified typed writer.
