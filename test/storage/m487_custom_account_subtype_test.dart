@@ -61,7 +61,7 @@ void main(){
 
  test('M487 rejects unsafe labels and wrong account kinds',()async{
   await WaffraCustomAccountSubtypeSchema.install(store);
-  for(final invalid in ['', 'x', 'bad\\nname', 'x'*41]){
+  for(final invalid in ['', 'x', 'bad\\nname', List.filled(41,'x').join()]){
    await expectLater(WaffraCustomAccountSubtypeSchema.assign(store,
     accountId:'bank-1',kind:'bank',label:invalid,confirmedIso:now),
     throwsA(isA<ArgumentError>()));
@@ -81,7 +81,7 @@ void main(){
   final manager=File('lib/waffra_accounts_manager_page.dart')
    .readAsStringSync();
   expect(adapter,contains('WaffraCustomAccountSubtypeSchema.assign('));
-  expect(adapter,contains('customSubtypeLabel:'));
+  expect(adapter,contains('String? customSubtypeLabel'));
   expect(dialog,contains('m487-custom-account-subtype-save'));
   expect(manager,contains('customSubtypeOptions:customSubtypes'));
   expect(adapter,contains('WaffraAccountDetailsSchema.assign('));
