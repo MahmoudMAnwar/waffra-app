@@ -43,6 +43,7 @@ import 'waffra_large_json_decode.dart';
 import 'waffra_home_accounts_sheet.dart';
 import 'storage/waffra_account_context_read.dart';
 import 'waffra_mandatory_biometric_gate.dart';
+import 'waffra_idle_biometric_overlay.dart';
 import 'waffra_local_phone_credentials.dart';
 import 'waffra_local_account_migration.dart';
 import 'waffra_amount_formatter.dart';
@@ -1392,6 +1393,15 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   await p.setBool('waffra_dark_mode',dark);
  }
  @override Widget build(BuildContext context)=>MaterialApp(
+  // MaterialApp.builder sits OUTSIDE Navigator. It covers modal routes
+  // on inactivity without destroying HomeScreen, open sheets or draft text.
+  builder:(context,navigator)=>WaffraIdleBiometricOverlay(
+   enabled:profile!=null&&!locked&&!showLogin&&
+    !loading&&introDone&&startupError==null&&
+    !autoSmsConsentPending&&
+    !(googleFirstRunSetup&&WaffraSaudiRelease.locationCountryOnboarding),
+   english:language=='en',onSignOut:logout,
+   child:navigator??const SizedBox.shrink()),
   scrollBehavior:const WaffraVisibleScrollBehavior(),
   debugShowCheckedModeBanner:false,title:'وفرة | Waffra',
   locale:language=='en'?const Locale('en','US'):
