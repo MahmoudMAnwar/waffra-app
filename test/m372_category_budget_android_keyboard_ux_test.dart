@@ -34,8 +34,12 @@ void main() {
     expect(form, contains("'__create_budget__'"));
     expect(form, contains("'__manage_budgets__'"));
     expect(form, contains('Expanded(child:dateAction())'));
-    expect(form, contains('Expanded(child:accountAction())'));
-    expect(form, contains('if(initial==null&&!sms)...['));
+    // #416/#418: provider and child are selected above date; the old
+    // account button is removed and budget remains optional.
+    expect(form, contains("m470-home-manual-provider-"));
+    expect(form, contains("m470-home-manual-account-"));
+    expect(form, contains("if(!income&&waffraHasSelectableBudget(namedBudgets))"));
+    expect(form, isNot(contains('Expanded(child:accountAction())')));
     expect(form, contains('budgetMenuRevision++'));
     expect(form, isNot(contains("'waffra-entry-search-budgets'")));
     expect(form, isNot(contains("'waffra-entry-create-named-budget'")));
