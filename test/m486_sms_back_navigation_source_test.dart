@@ -34,7 +34,7 @@ void main(){
   expect(detailStart,greaterThanOrEqualTo(0));
   expect(end,greaterThan(detailStart));
   final detail=source.substring(detailStart,end);
-  expect(detail,contains('await entrySheet(sms:true,initialSms:body);'));
+  expect(detail,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender);'));
   expect(detail,contains('if(smsHashes.contains(bankSmsHash(body)))'));
   expect(detail,contains('await WaffraAutoSms.acknowledge([id]);'));
   expect(detail,contains('A failed Android acknowledgement must retain the review row.'));
@@ -83,6 +83,9 @@ void main(){
   final section=src.substring(start,end);
   expect(section,contains('showWaffraDialog<WaffraNewAccountDraft>'));
   expect(section,contains('suggestedProviderId:expectedBank'));
+  expect(section,contains('expectedBank==bankFromSender'));
+  expect(section,contains('suggestedLastFour:proposedSuffix'));
+  expect(section,contains('bankFacts.destinationSuffix:bankFacts.sourceSuffix'));
   expect(section,contains('await api.balances()'));
   expect(section,contains('await api.createTypedAccountWithIdentity('));
   expect(section,contains('await _m467RefreshHomeAccounts()'));
