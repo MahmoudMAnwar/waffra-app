@@ -14,8 +14,13 @@ class WaffraNewAccountDraft {
 /// A form only: the same verified SQLCipher account API authorizes saving.
 /// Bank names decorate labels, not trusted financial account provenance.
 class WaffraNewAccountDialog extends StatefulWidget {
- const WaffraNewAccountDialog({super.key,this.english=false});
+ const WaffraNewAccountDialog({
+  super.key,this.english=false,this.suggestedProviderId,
+ });
  final bool english;
+ // A reviewed bank sender may suggest an institution. The user still
+ // chooses a name, confirms the opening amount and explicitly taps Save.
+ final String? suggestedProviderId;
  @override State<WaffraNewAccountDialog> createState()=>_WaffraNewAccountDialogState();
 }
 
@@ -36,6 +41,13 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
   'stc':(ar:'STC Bank',en:'STC Bank'),
   'other':(ar:'بنك آخر',en:'Other bank'),
  };
+ @override void initState(){
+  super.initState();
+  final suggested=widget.suggestedProviderId;
+  if(suggested!=null&&banks.containsKey(suggested)&&suggested!='other'){
+   kind='bank';provider=suggested;subtype='current';
+  }
+ }
  @override void dispose(){nickname.dispose();opening.dispose();smsSuffix.dispose();super.dispose();}
  int? get openingMinor=>waffraSarAmountMinor(opening.text,allowZero:true);
  String get accountLabel{
