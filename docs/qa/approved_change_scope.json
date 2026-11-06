@@ -158,7 +158,7 @@
       },
       {
         "start": " Future<void> _refreshFromVerifiedFinance()async {",
-        "end": " Future<void> load()async {"
+        "end": " Future<void> load()async {\n  await _ensureFinanceBound();"
       }
     ],
     "lib/waffra_home_accounts_sheet.dart": [
