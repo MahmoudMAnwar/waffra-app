@@ -407,3 +407,11 @@ Each issue requires linked source changes, exact-head CI, tests and real Android
 - **Current regression found in code:** `LoginScreen._freshSignup` bypasses the choice and directly instantiates `ProfileForm`; pre-existing branded `IntroScreen` is no longer reached. No user permission to remove it. This fix restores the explicit choice and preserves subsequent one-page registration.
 - **Flow:** truly fresh install → approved branded choice → **إنشاء حساب** gives single registration form; Back returns to choice. **تسجيل الدخول** gives existing login form; Back returns to choice. Returning users and existing data/update-over-old should continue without a newly forced chooser; biometrics, account persistence, SQLCipher remain unchanged.
 - **CI/test acceptance:** widget test proves both CTA labels/click/navigation and no premature form; tests ensure existing login and avatar/password registration regression stays green. Real Android fresh install + existing-device upgrade confirmation required. **Status: Recorded, implementation pending.**
+
+
+## 2026-11-07 — M511: Restore M177 encrypted SMS atomic-write CI witness
+
+- **Issue [#442](https://github.com/MahmoudMAnwar/waffra-app/issues/442)**, implementation in **Draft PR [#436](https://github.com/MahmoudMAnwar/waffra-app/pull/436)**. Failure witnessed on exact SHA `af95b958e5201414f0b5c51f5dd2193284e5e57c`, [encrypted storage smoke run 42293249031](https://github.com/MahmoudMAnwar/waffra-app/actions/runs/42293249031).
+- **Root cause:** M177 source witness still requires inline `records:[Map<String,Object?>.from(result.toJson())]`; M506's verified SMS receipt writer now deliberately stores the sanitized `smsRecord` variable (`receiptPath=null`), stages receipt bytes, and submits records + hash atomically to verified finance authority. Retaining the former exact formatting would regress correct receipt handling.
+- **Acceptance:** update only the stale M177 test assertions to recognize the authoritative atomic path; verify sanitization, receipt-byte handoff, same-source SHA dedupe and absence of legacy bypass. Targeted test and latest-HEAD full CI must pass; do not bypass SQLCipher, change application money behavior, or mark Android device testing complete.
+- **Status:** Issue recorded; CI test correction in progress, exact-head gates pending.
