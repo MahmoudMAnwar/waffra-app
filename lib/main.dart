@@ -1331,7 +1331,6 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   if(!complete)throw StateError('Could not save country setup completion.');
   if(mounted)setState(()=>googleFirstRunSetup=false);
  }
- bool _logoutInProgress=false;
  Future<void> logout()async {
   if(_logoutInProgress)return;
   _logoutInProgress=true;
@@ -1383,6 +1382,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    _logoutInProgress=false;
   }
  }
+ bool _logoutInProgress=false;
  Future<void> setPin(String? value)async {
   final hash=value==null?null:sha256.convert(utf8.encode(value)).toString();
   await _accountWriteAuthority.replacePinVerifier(hash);
