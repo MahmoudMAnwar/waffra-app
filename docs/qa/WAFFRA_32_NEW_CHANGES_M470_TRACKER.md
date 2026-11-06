@@ -192,3 +192,11 @@
 
 ## M470 #3: إزالة فك JSON الكبير من واجهة حفظ رسالة SMS مفردة
 - تسجيل الرسالة الواحدة كان يستخدم jsonDecode مباشرة داخل UI بعد commit، رغم استخدام WaffraLargeJsonDecode في مسار SMS الجماعي. الآن يتم فك السجل الكبير عبر compute عند تجاوز العتبة قبل عرض النجاح مع رفض نوع JSON غير المتوقّع، دون تكرار كتابة مالية. Android frame measurement ما زال مطلوبًا.
+
+
+## M470 / Issue #396 — targeted CI recovery (2026-11-06)
+- **Tracked before the code change**: https://github.com/MahmoudMAnwar/waffra-app/issues/396 (linked to PR #395).
+- Previous exact HEAD `821ee2c27cad1b5306947eb8f206d4aef5562beb`: M160, M109, and Full Offline workflows failed from the same Flutter suite (2,385 passed, 5 failed). No evidence of a separate finance writer or backup failure in these run logs.
+- Three M470 #22 widget cases sent Flutter an impossible direct lifecycle transition (`resumed -> paused/hidden -> resumed`) causing `AppLifecycleListener` assertion failures. Tests now send `resumed -> inactive -> hidden -> paused -> hidden -> inactive -> resumed` and continue asserting privacy shield, 59-second draft preservation, 61-second biometric and unchanged open Bottom Sheet.
+- Legacy M440/M443 source assertions required an old immediate `locked=true` on background, which conflicts with the approved 60-second rule. They now verify the actual `WaffraIdleBiometricOverlay` wiring, opaque privacy shield, elapsed-time biometric, verification invalidation and no forced Home navigator rebuild.
+- This is **test synchronization**, not a production security bypass. No lib, SQLCipher, user financial data, biometric gate or backup implementation modified in this change. Targeted/full tests must be green on the new exact commit before calling Issue #396 resolved.

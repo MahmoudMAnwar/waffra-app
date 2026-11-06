@@ -3,6 +3,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_idle_biometric_overlay.dart';
 import 'package:waffra/waffra_mandatory_biometric_gate.dart';
 
+// Exercise the real Android lifecycle ordering: Flutter's AppLifecycleListener
+// rejects shortcuts such as resumed -> paused and paused -> resumed.
+void _moveToBackground(WidgetTester tester) {
+ tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+ tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+ tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+}
+
+void _resumeFromBackground(WidgetTester tester) {
+ tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+ tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+ tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+}
+
 void main(){
  testWidgets('M470 60s lock sits above an open dialog and restores the exact draft',
   (tester)async{
@@ -80,11 +94,11 @@ void main(){
     enabled:true,english:false,now:()=>now,onSignOut:()async{},
     child:navigator??const SizedBox.shrink()),
    home:Scaffold(body:TextField(controller:draft,key:const Key('m470-back-draft')))));
-  tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+  _moveToBackground(tester);
   await tester.pump();
   expect(find.byKey(const Key('m470-background-green-privacy-shield')),findsOneWidget);
   now=now.add(const Duration(seconds:59));
-  tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+  _resumeFromBackground(tester);
   await tester.pump();
   expect(find.byKey(const Key('m470-idle-lock-biometric')),findsNothing);
   expect(find.byKey(const Key('m470-background-green-privacy-shield')),findsNothing);
@@ -101,11 +115,11 @@ void main(){
     enabled:true,english:false,now:()=>now,onSignOut:()async{},
     child:navigator??const SizedBox.shrink()),
    home:Scaffold(body:TextField(controller:draft,key:const Key('m470-back-draft')))));
-  tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+  _moveToBackground(tester);
   await tester.pump();
   expect(find.byKey(const Key('m470-background-green-privacy-shield')),findsOneWidget);
   now=now.add(const Duration(seconds:61));
-  tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+  _resumeFromBackground(tester);
   await tester.pump();
   expect(find.byKey(const Key('m470-idle-lock-biometric')),findsOneWidget);
   expect(draft.text,'مسودة التحويل');
@@ -137,13 +151,13 @@ void main(){
   await tester.tap(find.byKey(const Key('m470-open-transaction-sheet')));
   await tester.pumpAndSettle();
   expect(find.byKey(const Key('m470-sheet-saved-draft')),findsOneWidget);
-  tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+  _moveToBackground(tester);
   await tester.pump();
   final shield=tester.widget<ColoredBox>(
    find.byKey(const Key('m470-background-green-privacy-shield')));
   expect(shield.color,const Color(0xFF064D3B));
   now=now.add(const Duration(seconds:61));
-  tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+  _resumeFromBackground(tester);
   await tester.pump();
   expect(find.byKey(const Key('m470-idle-lock-biometric')),findsOneWidget);
   final gate=tester.widget<WaffraMandatoryBiometricGate>(
