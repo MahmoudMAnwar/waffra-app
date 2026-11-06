@@ -49,7 +49,7 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
   return nickname.text.trim().isNotEmpty&&label.runes.length<=80&&
    openingMinor!=null&&(kind!='bank'||provider!=null)&&
    (smsSuffix.text.trim().isEmpty||
-    (kind=='bank'&&RegExp(r'^[0-9]{4}
+    (kind=='bank'&&RegExp(r'^[0-9]{4}$').hasMatch(smsSuffix.text.trim())));
  }
  @override Widget build(BuildContext context)=>AlertDialog(
   key:const Key('m470-new-account-dialog'),
@@ -112,128 +112,7 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
        helperText:t('تُحفظ بعد تأكيدك للربط الآمن بالرسائل البنكية',
         'Stored with consent for verified bank SMS linking'),
        errorText:smsSuffix.text.trim().isNotEmpty&&
-        !RegExp(r'^[0-9]{4}
-     controller:nickname,maxLength:80,
-     onChanged:(_)=>setState((){}),
-     decoration:InputDecoration(
-      labelText:t('اسم الحساب *','Account name *'),
-      hintText:t('مثال: الجاري أو الادخار','e.g. Current or Savings'),
-      border:const OutlineInputBorder()),
-    ),
-    const SizedBox(height:10),
-    TextField(
-     key:const Key('m470-new-account-opening'),
-     controller:opening,
-     keyboardType:const TextInputType.numberWithOptions(decimal:true),
-     onChanged:(_)=>setState((){}),
-     decoration:InputDecoration(
-      labelText:t('الرصيد الافتتاحي بالريال *','Opening balance in SAR *'),
-      helperText:t('الرصيد الافتتاحي مش معاملة دخل',
-       'Opening balance is not an income transaction'),
-      errorText:openingMinor==null
-       ?t('أدخل مبلغًا صحيحًا غير سالب','Enter a valid nonnegative amount'):null,
-      border:const OutlineInputBorder()),
-    ),
-   ]))),
-  actions:[
-   TextButton(onPressed:()=>Navigator.pop(context),
-    child:Text(t('إلغاء','Cancel'))),
-   FilledButton(
-    key:const Key('m470-new-account-save'),
-    onPressed:valid?()=>Navigator.pop(context,WaffraNewAccountDraft(
-     name:accountLabel,kind:kind,openingMinor:openingMinor!,
-     lastFour:kind=='bank'&&smsSuffix.text.trim().isNotEmpty?
-      smsSuffix.text.trim():null)):null,
-    child:Text(t('إضافة الحساب','Create account'))),
-  ],
- );
-}
-).hasMatch(smsSuffix.text.trim())));
- }
- @override Widget build(BuildContext context)=>AlertDialog(
-  key:const Key('m470-new-account-dialog'),
-  shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(22)),
-  title:Row(children:[
-   const CircleAvatar(backgroundColor:Color(0xFFE6F5EC),
-    child:Icon(Icons.account_balance_wallet_outlined,color:Color(0xFF087A54))),
-   const SizedBox(width:10),
-   Expanded(child:Text(t('إضافة حساب مالي','Add money account'),
-    style:const TextStyle(fontSize:18,fontWeight:FontWeight.w700))),
-  ]),
-  content:SizedBox(width:340,child:SingleChildScrollView(
-   child:Column(mainAxisSize:MainAxisSize.min,
-    crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-    Text(t('حدد نوع الحساب ورصيده الافتتاحي.',
-     'Choose the account type and opening balance.'),
-     style:Theme.of(context).textTheme.bodySmall),
-    const SizedBox(height:14),
-    DropdownButtonFormField<String>(
-     key:const Key('m470-new-account-kind'),
-     initialValue:kind,isExpanded:true,
-     decoration:InputDecoration(
-      labelText:t('نوع الحساب *','Account type *'),
-      border:const OutlineInputBorder()),
-     items:[
-      DropdownMenuItem(value:'bank',child:Text(t('حساب بنكي','Bank account'))),
-      DropdownMenuItem(value:'cash',child:Text(t('نقدي','Cash'))),
-      DropdownMenuItem(value:'wallet',child:Text(t('محفظة','Wallet'))),
-      DropdownMenuItem(value:'other',child:Text(t('أخرى','Other'))),
-     ],
-     onChanged:(v){if(v!=null)setState((){
-      kind=v;if(kind!='bank')provider=null;
-     });},
-    ),
-    if(kind=='bank')...[
-     const SizedBox(height:12),
-     DropdownButtonFormField<String>(
-      key:const Key('m470-new-account-provider'),
-      initialValue:provider,isExpanded:true,
-      decoration:InputDecoration(
-       labelText:t('البنك أو الجهة *','Bank or provider *'),
-       border:const OutlineInputBorder()),
-      items:banks.entries.map((bank)=>DropdownMenuItem<String>(
-       value:bank.key,child:Text(t(bank.value.ar,bank.value.en),
-        overflow:TextOverflow.ellipsis))).toList(),
-      onChanged:(v)=>setState(()=>provider=v),
-     ),
-    ],
-    const SizedBox(height:12),
-    TextField(
-     key:const Key('m470-new-account-label'),
-     controller:nickname,maxLength:80,
-     onChanged:(_)=>setState((){}),
-     decoration:InputDecoration(
-      labelText:t('اسم الحساب *','Account name *'),
-      hintText:t('مثال: الجاري أو الادخار','e.g. Current or Savings'),
-      border:const OutlineInputBorder()),
-    ),
-    const SizedBox(height:10),
-    TextField(
-     key:const Key('m470-new-account-opening'),
-     controller:opening,
-     keyboardType:const TextInputType.numberWithOptions(decimal:true),
-     onChanged:(_)=>setState((){}),
-     decoration:InputDecoration(
-      labelText:t('الرصيد الافتتاحي بالريال *','Opening balance in SAR *'),
-      helperText:t('الرصيد الافتتاحي مش معاملة دخل',
-       'Opening balance is not an income transaction'),
-      errorText:openingMinor==null
-       ?t('أدخل مبلغًا صحيحًا غير سالب','Enter a valid nonnegative amount'):null,
-      border:const OutlineInputBorder()),
-    ),
-   ]))),
-  actions:[
-   TextButton(onPressed:()=>Navigator.pop(context),
-    child:Text(t('إلغاء','Cancel'))),
-   FilledButton(
-    key:const Key('m470-new-account-save'),
-    onPressed:valid?()=>Navigator.pop(context,WaffraNewAccountDraft(
-     name:accountLabel,kind:kind,openingMinor:openingMinor!)):null,
-    child:Text(t('إضافة الحساب','Create account'))),
-  ],
- );
-}
-).hasMatch(smsSuffix.text.trim())?
+        !RegExp(r'^[0-9]{4}$').hasMatch(smsSuffix.text.trim())?
         t('أدخل ٤ أرقام إنجليزية أو اتركه فارغًا',
          'Enter 4 digits or leave blank'):null,
        border:const OutlineInputBorder()),
@@ -270,92 +149,9 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
    FilledButton(
     key:const Key('m470-new-account-save'),
     onPressed:valid?()=>Navigator.pop(context,WaffraNewAccountDraft(
-     name:accountLabel,kind:kind,openingMinor:openingMinor!)):null,
-    child:Text(t('إضافة الحساب','Create account'))),
-  ],
- );
-}
-).hasMatch(smsSuffix.text.trim())));
- }
- @override Widget build(BuildContext context)=>AlertDialog(
-  key:const Key('m470-new-account-dialog'),
-  shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(22)),
-  title:Row(children:[
-   const CircleAvatar(backgroundColor:Color(0xFFE6F5EC),
-    child:Icon(Icons.account_balance_wallet_outlined,color:Color(0xFF087A54))),
-   const SizedBox(width:10),
-   Expanded(child:Text(t('إضافة حساب مالي','Add money account'),
-    style:const TextStyle(fontSize:18,fontWeight:FontWeight.w700))),
-  ]),
-  content:SizedBox(width:340,child:SingleChildScrollView(
-   child:Column(mainAxisSize:MainAxisSize.min,
-    crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-    Text(t('حدد نوع الحساب ورصيده الافتتاحي.',
-     'Choose the account type and opening balance.'),
-     style:Theme.of(context).textTheme.bodySmall),
-    const SizedBox(height:14),
-    DropdownButtonFormField<String>(
-     key:const Key('m470-new-account-kind'),
-     initialValue:kind,isExpanded:true,
-     decoration:InputDecoration(
-      labelText:t('نوع الحساب *','Account type *'),
-      border:const OutlineInputBorder()),
-     items:[
-      DropdownMenuItem(value:'bank',child:Text(t('حساب بنكي','Bank account'))),
-      DropdownMenuItem(value:'cash',child:Text(t('نقدي','Cash'))),
-      DropdownMenuItem(value:'wallet',child:Text(t('محفظة','Wallet'))),
-      DropdownMenuItem(value:'other',child:Text(t('أخرى','Other'))),
-     ],
-     onChanged:(v){if(v!=null)setState((){
-      kind=v;if(kind!='bank')provider=null;
-     });},
-    ),
-    if(kind=='bank')...[
-     const SizedBox(height:12),
-     DropdownButtonFormField<String>(
-      key:const Key('m470-new-account-provider'),
-      initialValue:provider,isExpanded:true,
-      decoration:InputDecoration(
-       labelText:t('البنك أو الجهة *','Bank or provider *'),
-       border:const OutlineInputBorder()),
-      items:banks.entries.map((bank)=>DropdownMenuItem<String>(
-       value:bank.key,child:Text(t(bank.value.ar,bank.value.en),
-        overflow:TextOverflow.ellipsis))).toList(),
-      onChanged:(v)=>setState(()=>provider=v),
-     ),
-    ],
-    const SizedBox(height:12),
-    TextField(
-     key:const Key('m470-new-account-label'),
-     controller:nickname,maxLength:80,
-     onChanged:(_)=>setState((){}),
-     decoration:InputDecoration(
-      labelText:t('اسم الحساب *','Account name *'),
-      hintText:t('مثال: الجاري أو الادخار','e.g. Current or Savings'),
-      border:const OutlineInputBorder()),
-    ),
-    const SizedBox(height:10),
-    TextField(
-     key:const Key('m470-new-account-opening'),
-     controller:opening,
-     keyboardType:const TextInputType.numberWithOptions(decimal:true),
-     onChanged:(_)=>setState((){}),
-     decoration:InputDecoration(
-      labelText:t('الرصيد الافتتاحي بالريال *','Opening balance in SAR *'),
-      helperText:t('الرصيد الافتتاحي مش معاملة دخل',
-       'Opening balance is not an income transaction'),
-      errorText:openingMinor==null
-       ?t('أدخل مبلغًا صحيحًا غير سالب','Enter a valid nonnegative amount'):null,
-      border:const OutlineInputBorder()),
-    ),
-   ]))),
-  actions:[
-   TextButton(onPressed:()=>Navigator.pop(context),
-    child:Text(t('إلغاء','Cancel'))),
-   FilledButton(
-    key:const Key('m470-new-account-save'),
-    onPressed:valid?()=>Navigator.pop(context,WaffraNewAccountDraft(
-     name:accountLabel,kind:kind,openingMinor:openingMinor!)):null,
+     name:accountLabel,kind:kind,openingMinor:openingMinor!,
+     lastFour:kind=='bank'&&smsSuffix.text.trim().isNotEmpty?
+      smsSuffix.text.trim():null)):null,
     child:Text(t('إضافة الحساب','Create account'))),
   ],
  );
