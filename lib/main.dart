@@ -4674,6 +4674,38 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               child:WaffraText(waffraIsEnglish?'Exclude':'تأكيد الاستبعاد')),
             ]));
           if(confirmed!=true||!ctx.mounted)return;
+          // M479 / #417: no native message acknowledgement occurs until
+          // both confirmations are settled. 'Back' preserves selected IDs
+          // and returns to this still-open review rather than hiding SMS.
+          final senderBlockChoices=<String>{};
+          for(final sender in List<String>.of(senders)){
+           final senderIds=idsOf(bySender[sender]??const []);
+           if(senderIds.isEmpty||!senderIds.every(idSet.contains))continue;
+           if(!mounted||!ctx.mounted)return;
+           final choice=await showWaffraDialog<String>(
+            context:context,builder:(dialog)=>AlertDialog(
+             title:WaffraText(waffraIsEnglish?
+              'Exclude the sender too?':
+              'هل تريد استبعاد المرسل نفسه أيضًا؟'),
+             content:WaffraText(waffraIsEnglish?
+              'Exclude "$sender" from future SMS review? Back returns to '
+              'your message selection without excluding anything. You can '
+              'restore an excluded sender later from Excluded senders.':
+              'هل تريد استبعاد "$sender" من مراجعة رسائله القادمة؟ '
+              'العودة ترجع لاختيار الرسائل بدون تنفيذ الاستبعاد، '
+              'ويمكنك إلغاء الاستبعاد لاحقًا من «المستبعدون».'),
+             actions:[
+              TextButton(onPressed:()=>Navigator.pop(dialog,'back'),
+               child:WaffraText(waffraIsEnglish?'Back':'العودة')),
+              TextButton(onPressed:()=>Navigator.pop(dialog,'no'),
+               child:WaffraText(waffraIsEnglish?'No':'لا')),
+              FilledButton(onPressed:()=>Navigator.pop(dialog,'exclude'),
+               child:WaffraText(waffraIsEnglish?'Exclude sender':
+                'استبعاد المرسل')),
+             ]));
+           if(choice==null||choice=='back'||!ctx.mounted)return;
+           if(choice=='exclude')senderBlockChoices.add(sender);
+          }
           refresh(()=>bulkBusy=true);
           final done=<String>{};
           var failed=false;
@@ -4704,32 +4736,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             selectedIds.removeAll(done);
            }
            if(ctx.mounted)Navigator.pop(ctx);
-           // Full removal does NOT imply sender blocking: ask separately.
-           for(final sender in clearedSenders){
+           // Apply only explicit sender decisions for groups whose selected
+           // messages were fully acknowledged. A partial native failure
+           // must not block the unprocessed sender's future messages.
+           for(final sender in clearedSenders.where(senderBlockChoices.contains)){
             if(!mounted)break;
-            final block=await showWaffraDialog<bool>(
-             context:context,builder:(dialog)=>AlertDialog(
-              title:WaffraText(waffraIsEnglish?
-               'Exclude the sender too?':
-               'هل تريد استبعاد المرسل نفسه أيضًا؟'),
-              content:WaffraText(waffraIsEnglish?
-               'Exclude "$sender" so its future SMS are not analyzed or '
-               'placed in review? You can undo this from Excluded senders.':
-               'هل تريد استبعاد "$sender" بحيث لا تُحلَّل رسائله القادمة '
-               'ولا تظهر في المراجعة؟ يمكنك إلغاء ذلك من «المستبعدون».'),
-              actions:[
-               TextButton(onPressed:()=>Navigator.pop(dialog,false),
-                child:WaffraText(waffraIsEnglish?'No':'لا')),
-               FilledButton(onPressed:()=>Navigator.pop(dialog,true),
-                child:WaffraText(waffraIsEnglish?'Exclude sender':
-                 'استبعاد المرسل')),
-              ]));
-            if(block==true&&mounted){
-             final saved=await WaffraAutoSms.excludeSender(sender);
-             if(mounted&&!saved)snack(context,waffraIsEnglish?
-              'Sender exclusion could not be saved.':
-              'تعذر حفظ استبعاد المرسل.',isError:true);
-            }
+            final saved=await WaffraAutoSms.excludeSender(sender);
+            if(mounted&&!saved)snack(context,waffraIsEnglish?
+             'Sender exclusion could not be saved.':
+             'تعذر حفظ استبعاد المرسل.',isError:true);
            }
            if(mounted){
             if(failed)snack(context,waffraIsEnglish?
