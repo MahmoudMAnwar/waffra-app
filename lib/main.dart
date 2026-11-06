@@ -3385,8 +3385,8 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
  // Reserve space for multiline account names rather than trimming them.
  int get _accountLabelExtraLines=>goalWallet||onAccountTap==null?0:
   (((selectedAccountLabel?.runes.length??0)-25).clamp(0,150)/25).ceil();
- @override double get minExtent=>goalWallet?130:164+20*_accountLabelExtraLines;
- @override double get maxExtent=>goalWallet?148:182+20*_accountLabelExtraLines;
+ @override double get minExtent=>goalWallet?130.0:164.0+20.0*_accountLabelExtraLines;
+ @override double get maxExtent=>goalWallet?148.0:182.0+20.0*_accountLabelExtraLines;
  @override Widget build(BuildContext context,double shrinkOffset,bool overlapsContent){
   final progress=(shrinkOffset/(maxExtent-minExtent)).clamp(0.0,1.0);
   final dark=Theme.of(context).brightness==Brightness.dark;
