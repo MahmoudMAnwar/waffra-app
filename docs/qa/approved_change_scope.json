@@ -35,7 +35,8 @@
     "native/WaffraMainActivity.kt",
     "lib/waffra_sms_saudi_seed_rules.part.dart",
     "lib/waffra_sms_rule_settings_page.dart",
-    "test/m508_saudi_default_sms_rules_test.dart"
+    "test/m508_saudi_default_sms_rules_test.dart",
+    "docs/qa/M508_SAUDI_SMS_SEED_LIBRARY.md"
   ],
   "bounded_sections": {
     "lib/main.dart": [
