@@ -8110,91 +8110,31 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       }),
       icon:const Icon(Icons.calendar_month,size:19),
       label:WaffraText(dayText(date),maxLines:1));
-    Future<void> openManualAccountPicker()async{
-     // Keep the current sheet/controllers mounted during account management.
-     // The user explicitly creates or chooses an account; never copy Home filter.
-     if(entryAccounts.isEmpty){
-      final oldIds=entryAccounts.map((a)=>a.id).toSet();
-      await openVerifiedAccounts();
-      if(!sheetContext.mounted)return;
-      final fresh=_m467Accounts.where((a)=>!a.archived).toList();
-      update((){
-       entryAccounts=fresh;
-       entryProviders=WaffraRecurringAccountGroups.fromAccounts(fresh);
-       final created=fresh.where((a)=>!oldIds.contains(a.id)).toList();
-       if(created.length==1){
-        chosenManualAccount=created.single.id;
-        chosenManualProvider=entryProviders.where((p)=>
-         p.accounts.any((a)=>a.id==created.single.id)).firstOrNull?.id;
-       }
-      });
-      return;
-     }
-     final selected=await showModalBottomSheet<String>(
-      context:sheetContext,isScrollControlled:true,showDragHandle:true,
-      builder:(picker)=>SafeArea(child:SizedBox(
-       height:min(520.0,MediaQuery.sizeOf(picker).height*.7),
-       child:ListView(children:[
-        Padding(padding:const EdgeInsets.all(16),
-         child:WaffraText(waffraIsEnglish?'Choose financial account':
-          'اختيار الحساب المالي',style:Theme.of(picker).textTheme.titleLarge)),
-        for(final provider in entryProviders)
-         ExpansionTile(
-          title:WaffraText(waffraIsEnglish?provider.labelEn:provider.labelAr),
-          children:[
-           for(final account in provider.accounts)
-            ListTile(
-             key:Key('m470-entry-pick-account-'+account.id),
-             title:WaffraText(account.name),
-             trailing:account.id==chosenManualAccount?
-              const Icon(Icons.check_rounded,color:emerald):null,
-             onTap:()=>Navigator.pop(picker,account.id)),
-          ]),
-        const Divider(),
-        ListTile(
-         key:const Key('m470-entry-create-account-from-picker'),
-         leading:const Icon(Icons.add_circle_outline,color:emerald),
-         title:WaffraText(waffraIsEnglish?'Add account':'إضافة حساب'),
-         onTap:()=>Navigator.pop(picker,'__create_account__')),
-       ]))));
-     if(!sheetContext.mounted||selected==null)return;
-     if(selected=='__create_account__'){
-      final oldIds=entryAccounts.map((a)=>a.id).toSet();
-      await openVerifiedAccounts();
-      if(!sheetContext.mounted)return;
-      final fresh=_m467Accounts.where((a)=>!a.archived).toList();
-      update((){
-       entryAccounts=fresh;
-       entryProviders=WaffraRecurringAccountGroups.fromAccounts(fresh);
-       final created=fresh.where((a)=>!oldIds.contains(a.id)).toList();
-       if(created.length==1){
-        chosenManualAccount=created.single.id;
-        chosenManualProvider=entryProviders.where((p)=>
-         p.accounts.any((a)=>a.id==created.single.id)).firstOrNull?.id;
-       }
-      });
-      return;
-     }
-     final found=entryAccounts.where((a)=>a.id==selected).toList();
-     if(found.length!=1)return;
+    Future<void> createAccountInsideEntryDropdown({required bool mainProvider})async{
+     // M477 #416: use the existing verified account manager; return to the
+     // same live editor with every unsaved finance field still intact.
+     final oldIds=entryAccounts.map((a)=>a.id).toSet();
+     final selectedProviderBefore=chosenManualProvider;
+     await openVerifiedAccounts();
+     if(!sheetContext.mounted)return;
+     final refreshed=_m467Accounts.where((a)=>!a.archived).toList();
+     final newAccounts=refreshed.where((a)=>!oldIds.contains(a.id)).toList();
+     final newProviders=WaffraRecurringAccountGroups.fromAccounts(refreshed);
      update((){
-      chosenManualAccount=selected;
-      chosenManualProvider=entryProviders.where((p)=>
-       p.accounts.any((a)=>a.id==selected)).firstOrNull?.id;
+      entryAccounts=refreshed;
+      entryProviders=newProviders;
+      if(newAccounts.length==1){
+       final created=newAccounts.single;
+       final group=newProviders.where((p)=>p.accounts.any((a)=>a.id==created.id))
+        .firstOrNull;
+       if(mainProvider&&group!=null){
+        chosenManualProvider=group.id;
+        chosenManualAccount=null; // New provider never posts without child confirmation.
+       }else if(!mainProvider&&group?.id==selectedProviderBefore){
+        chosenManualAccount=created.id;
+       }
+      }
      });
-    }
-    Widget accountAction(){
-     final selected=entryAccounts.where((a)=>a.id==chosenManualAccount).toList();
-     return OutlinedButton.icon(
-      key:Key(entryAccounts.isEmpty?
-       'm470-entry-add-account-near-date':'m470-entry-account-near-date'),
-      icon:Icon(entryAccounts.isEmpty?Icons.add_circle_outline:
-       Icons.account_balance_wallet_outlined,size:19),
-      label:WaffraText(entryAccounts.isEmpty?
-       (waffraIsEnglish?'Add account':'إضافة حساب'):
-       selected.isEmpty?(waffraIsEnglish?'Account':'الحساب'):
-        selected.single.name,maxLines:1),
-      onPressed:WaffraHaptics.tap(openManualAccountPicker));
     }
     Widget operationPicker(){
      if(initial!=null||sms||scannedReceipt!=null){
@@ -8454,32 +8394,63 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ],
       operationPicker(),
       const SizedBox(height:12),
-      if(initial==null&&!sms&&entryAccounts.isNotEmpty)...[
+      if(initial==null&&!sms)...[
        WaffraCenteredDropdownFormField<String>(
         key:ValueKey('m470-home-manual-provider-'+(chosenManualProvider??'none')),
         isExpanded:true,initialValue:chosenManualProvider,
         decoration:InputDecoration(labelText:waffraIsEnglish?
          'Bank or provider *':'الجهة أو البنك *',border:const OutlineInputBorder()),
-        items:entryProviders.map((p)=>DropdownMenuItem<String>(
-         value:p.id,child:WaffraText(waffraIsEnglish?p.labelEn:p.labelAr,
-          maxLines:1))).toList(),
-        onChanged:(provider)=>update((){
-         chosenManualProvider=provider;
-         chosenManualAccount=null; // Provider alone never selects a money account.
-        }),
+        items:[
+         ...entryProviders.map((p)=>DropdownMenuItem<String>(
+          value:p.id,child:WaffraText(waffraIsEnglish?p.labelEn:p.labelAr,
+           maxLines:1))),
+         DropdownMenuItem<String>(value:'__create_provider__',
+          child:Row(children:[
+           const Icon(Icons.add_circle_outline,color:emerald,size:19),
+           const SizedBox(width:8),
+           Expanded(child:WaffraText(waffraIsEnglish?
+            'Add bank / provider':'إضافة جهة أو بنك',maxLines:1)),
+          ])),
+        ],
+        onChanged:(provider)async{
+         if(provider=='__create_provider__'){
+          await createAccountInsideEntryDropdown(mainProvider:true);
+          return;
+         }
+         if(sheetContext.mounted)update((){
+          chosenManualProvider=provider;
+          chosenManualAccount=null; // A parent alone is not a money account.
+         });
+        },
        ),
        const SizedBox(height:10),
        WaffraCenteredDropdownFormField<String>(
-        key:ValueKey('m470-home-manual-account-'+(chosenManualProvider??'none')),
+        key:ValueKey('m470-home-manual-account-'+(chosenManualProvider??'none')+
+         '-'+(chosenManualAccount??'none')),
         isExpanded:true,initialValue:chosenManualAccount,
         decoration:InputDecoration(labelText:waffraIsEnglish?
          'Linked money account *':'الحساب المالي التابع *',
          border:const OutlineInputBorder()),
-        items:entryProviders.where((p)=>p.id==chosenManualProvider)
-         .expand((p)=>p.accounts).map((account)=>DropdownMenuItem<String>(
-          value:account.id,child:WaffraText(account.name,maxLines:1))).toList(),
-        onChanged:chosenManualProvider==null?null:(id)=>
-         update(()=>chosenManualAccount=id),
+        items:[
+         ...entryProviders.where((p)=>p.id==chosenManualProvider)
+          .expand((p)=>p.accounts).map((account)=>DropdownMenuItem<String>(
+           value:account.id,child:WaffraText(account.name,maxLines:1))),
+         if(chosenManualProvider!=null)
+          DropdownMenuItem<String>(value:'__create_child__',
+           child:Row(children:[
+            const Icon(Icons.add_circle_outline,color:emerald,size:19),
+            const SizedBox(width:8),
+            Expanded(child:WaffraText(waffraIsEnglish?
+             'Add linked account':'إضافة حساب تابع',maxLines:1)),
+           ])),
+        ],
+        onChanged:chosenManualProvider==null?null:(id)async{
+         if(id=='__create_child__'){
+          await createAccountInsideEntryDropdown(mainProvider:false);
+          return;
+         }
+         if(sheetContext.mounted)update(()=>chosenManualAccount=id);
+        },
        ),
        const SizedBox(height:12),
       ],
@@ -8595,10 +8566,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           'لا توجد أقسام فرعية؛ افتح القائمة لإضافة قسم.',
          style:const TextStyle(color:Colors.deepOrange,fontSize:12))),
       ],
-      if(!income&&waffraHasSelectableBudget(namedBudgets))...[
-       const SizedBox(height:10),
-       // Budget remains independent; account/date actions have their own row.
-       WaffraCenteredDropdownFormField<String>(
+      Padding(padding:const EdgeInsets.symmetric(vertical:12),
+       child:Row(children:[
+        // M478 #418: date uses 100% width without an optional budget.
+        Expanded(child:dateAction()),
+        if(!income&&waffraHasSelectableBudget(namedBudgets))...[
+         const SizedBox(width:8),
+         // If a budget is displayed, it shares the row 50/50 with date.
+         Expanded(child:WaffraCenteredDropdownFormField<String>(
          key:ValueKey('waffra-entry-budget-'+(selectedBudgetId??'unlinked')+'-$budgetMenuRevision'),
          menuMaxHeight:min(340.0,MediaQuery.sizeOf(sheetContext).height*.48),
          initialValue:namedBudgets.any((b)=>b.budget>0&&
@@ -8657,14 +8632,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           if(sheetContext.mounted)update(
            ()=>assignBudgetInsideEditor(v=='unlinked'?null:v));
          }),
-       ),
-      ],
-      Padding(padding:const EdgeInsets.symmetric(vertical:12),
-       child:Row(children:[
-        Expanded(child:dateAction()),
-        if(initial==null&&!sms)...[
-         const SizedBox(width:8),
-         Expanded(child:accountAction()),
+       
+         )),
         ],
        ])),
       const SizedBox(height:12),
