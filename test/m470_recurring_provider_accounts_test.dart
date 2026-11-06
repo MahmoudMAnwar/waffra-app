@@ -64,7 +64,7 @@ void main() {
   expect(source,contains("'Bank or provider *':'الجهة أو البنك *'"));
   expect(source,contains("'Linked money account *':'الحساب المالي التابع *'"));
   expect(source,contains("Key('m470-home-transfer-'"));
-  expect(source,contains("chosenManualAccount=null; // Provider alone never selects a money account."));
+  expect(source,contains("chosenManualAccount=null; // A parent alone is not a money account."));
   expect(source,contains("initialSelectedIds:chosenManualAccount==null?null:[chosenManualAccount]"));
  });
  test('M470 SMS review has bank and account cascade with sender-match gate',(){
@@ -80,9 +80,10 @@ void main() {
   final source=File('lib/waffra_account_transaction_form.dart').readAsStringSync();
   expect(source,contains('WaffraRecurringAccountGroups.fromAccounts(accounts)'));
   expect(source,contains("labelText:tr('الجهة أو البنك','Bank or provider')"));
-  expect(source,contains("Key('m470-'+(isDestination?'target':'source')+'-provider-'"));
-  expect(source,contains("Key('m470-'+(isDestination?'target':'source')+'-account-'"));
-  expect(source,contains('onChanged:saving||saved||group==null?null:onChanged'));
+  expect(source,contains("key:Key('m470-'+(isDestination?'target':'source')+"));
+  expect(source,contains("'-provider-'+(group??'none')"));
+  expect(source,contains("'-account-'+(group??'none')"));
+  expect(source,contains('onChanged:saving||saved||creatingAccount||group==null?null:'));
   expect(source,contains('sourceProvider=v;source=null;'));
   expect(source,contains('destinationProvider=v;destination=null;'));
   expect(source,contains('exclude:source,isDestination:true'));
