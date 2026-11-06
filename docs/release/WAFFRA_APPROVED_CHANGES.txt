@@ -2210,3 +2210,9 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 
 [M470 owner-final SMS review UX, 2026-11-06]
 - Removed Teach Waffra action entirely from SMS review popups for income/expense/transfer/exclusion. No mandatory Rule Settings detour before transfer or after a confirmed income/expense. Safe sender-scoped rules are learned only after confirmed financial posting or explicitly acknowledged SMS exclusion; rules do not write money and do not silently block whole senders. The independent Rules Settings screen remains. Older requested Teach-return behavior #15/#17 is superseded. Updated M462 test, M470 regression, M385 bounded scope and QA tracker. Same-SHA CI and Android QA required.
+
+[M470 2026-11-06 — Five pending SMS UI/financial fixes grouped under #395]
+- #14/#21: integrate nine Arabic-SAR word-boundary repairs plus two source/UI Flutter regressions and audit, preserving real currency evidence and avoiding 'رس' substitution in رسوم/رسائل/رسالة.
+- #13: review Arabic internal bank transfer only with independently verified SAR principal (e.g. 135.00) and verified user-selected source/destination accounts. Display deducted 0.58 SAR fee as separate information without phantom posting, preserve unknown/foreign currency fail-closed.
+- #18: first message tap from sender groups can finish the queued navigation after PopScope rebuild, without losing Back-to-senders on Android. #19: reconstruct live eligible subcategories from the captured main parent ID after return, never match a namesake child from another parent.
+- M385 source edit scopes, exact-head Flutter regression and release notes refreshed. No SQLCipher writer bypass or automatic account posting. Android screen, currency and category-acceptance QA required before claiming Done.
