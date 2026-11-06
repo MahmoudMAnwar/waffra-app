@@ -2096,3 +2096,9 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 - The Home monthly budget card uses the selected account's assigned budgets and its verified account-scoped expense entries; All accounts sums each unique budget once, including legacy shared budgets once. Changing the Home account does not itself post/transfer money.
 - Regression source tests cover legacy JSON, selected-account serialization/copy and Home display source separation.
 - Code and tests are NOT signed Android/device acceptance; CI exact SHA mandatory. No external bank connection has been activated.
+
+[M470 SMS source bank review follow-up] 2026-11-06 — candidate code
+- The reviewed SMS money-account picker now requires two levels (bank/provider followed by a live linked account), as with Home manual and verified transfers. Switching provider clears the chosen financial account.
+- An automatic suffix-based account suggestion is accepted only when the verified SMS sender's known bank matches the independently verified bank group of that account; ambiguous or unknown senders require user selection. This is source review ONLY, not automatic debit consent.
+- The new-post review copy no longer suggests that accountless posting is allowed. Historical unassigned transactions are untouched.
+- Added regression assertions; exact-head CI and Android acceptance are required.
