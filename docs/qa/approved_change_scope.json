@@ -110,12 +110,12 @@
         "end": "\n Widget _budgetFigure("
       },
       {
-        "start": "import 'waffra_mandatory_biometric_gate.dart';",
+        "start": "import 'waffra_external_media_session.dart';",
         "end": "\nimport 'waffra_local_phone_credentials.dart';"
       },
       {
         "start": " @override Widget build(BuildContext context)=>MaterialApp(",
-        "end": "\n  scrollBehavior:const WaffraVisibleScrollBehavior(),"
+        "end": "\n  debugShowCheckedModeBanner:false,title:'وفرة | Waffra',"
       }
     ],
     "lib/waffra_home_accounts_sheet.dart": [
