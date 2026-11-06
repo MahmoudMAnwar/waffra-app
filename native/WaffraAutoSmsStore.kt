@@ -263,10 +263,18 @@ object WaffraAutoSmsStore {
 
     // Explicit user sender exclusion is encrypted and bound to this authenticated
     // owner. Do not reuse a removed sender as an automatic learned rule.
+    // Parsed plaintext stays only in this process memory and is invalidated
+    // whenever the sealed prefs value changes. Fast for a 500-SMS import.
+    private var excludedCipherCache: String? = null
+    private var excludedArrayCache = JSONArray()
     private fun readExcluded(context: Context): JSONArray {
         val encrypted = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
             .getString(excludedSendersName, "") ?: ""
-        return open(encrypted) // Corruption is an error, not an empty allowlist.
+        if (encrypted == excludedCipherCache) return excludedArrayCache
+        val decoded = open(encrypted) // Corruption must fail closed.
+        excludedCipherCache = encrypted
+        excludedArrayCache = decoded
+        return decoded
     }
 
     private fun normalizedSender(sender: String) =
@@ -472,7 +480,12 @@ object WaffraAutoSmsStore {
 
     fun offer(context: Context, sender: String, body: String, at: Long,
               historical: Boolean = false): Boolean {
-        if (!enabled(context) || !qualifies(sender, body)) return false
+        if (!enabled(context)) return false
+        // Ignore excluded senders before even local financial parsing.
+        try {
+            if (synchronized(mutex) { isExcludedLocked(context, sender) }) return false
+        } catch (_: Exception) { return false }
+        if (!qualifies(sender, body)) return false
         val result = synchronized(mutex) {
             try {
                 // Recheck after entering the lock: logout may race the
@@ -678,8 +691,9 @@ object WaffraAutoSmsStore {
                 }
                 val sender = it.getString(senderCol) ?: ""
                 val body = it.getString(bodyCol) ?: ""
-                if (qualifies(sender, body) &&
-                    offer(context, sender, body, at, historical = true)) {
+                // offer() applies the excluded-sender policy before parsing,
+                // and its own qualification check (no duplicate regex work).
+                if (offer(context, sender, body, at, historical = true)) {
                     queued++
                     accepted++
                 }
