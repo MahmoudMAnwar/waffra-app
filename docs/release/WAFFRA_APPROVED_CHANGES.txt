@@ -1,3 +1,10 @@
+[PR #402 M488] 2026-11-06 — Preserve nested account selector after cancelling inline Add (#416)
+==================================================================================================
+- In both SMS-derived and manual income/expense editors, the provider/child selectors now restore their prior selection if the user taps the synthetic 'Add bank/provider' or 'Add linked account' item but cancels without creating one. The financial draft, optional budget and selected child account remain open and intact.
+- Selection identity is explicitly reset using a local UI-only revision key after the nested account-manager route closes. Account IDs, storage, SQLCipher financial writer, bank-sender verification and existing transfer logic are not modified.
+- Extended source regression test test/m486_sms_back_navigation_source_test.dart. Added a nested-cancel widget test for #406 custom-subtype dropdown in test/m487_custom_subtype_dialog_test.dart.
+- CI, Android one-step Back + cancel, and ledger acceptance remain pending. No signed APK or main merge is claimed.
+
 [PR #402 M487 / M486] 2026-11-06 — Custom account subtypes and nested bank-SMS Back navigation (#406/#410)
 =============================================================================================================
 - M487 / Issue #406: New bank/wallet account dialog offers an explicit Add account subtype action and reuses previously saved custom labels. Labels are validated display metadata; the underlying bank/wallet/cash/other classification, canonical financial subtype, SAR balances, original accounts and SQLCipher writer authority remain unchanged.
