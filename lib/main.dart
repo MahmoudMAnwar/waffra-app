@@ -8124,7 +8124,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    (RegExp(r'شحن\s*(?:جوال|هاتف|رصيد)|top[ -]?up',
     caseSensitive:false).hasMatch(initialSms!)?
      (waffraIsEnglish?'Mobile top-up':'شحن الجوال'):
-     parsedSms.title??''):'';
+     parsedSms.title):'';
   final title=TextEditingController(text:
    (smsEditorDraft?['title'] as String?)??initial?.title??
    scannedReceipt?.merchant??suggestedSmsTitle);
