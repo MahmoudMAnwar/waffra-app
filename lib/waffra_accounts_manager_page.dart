@@ -221,11 +221,52 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
   }
  }
 
+ Future<WaffraAccountBalance?> createAccountInsideComposer(
+  String? providerGroup,bool createProvider)async{
+  final verified=widget.repository;
+  if(verified is! WaffraVerifiedAccountsApi){
+   throw StateError('Inline Add requires a verified SQLCipher writer');
+  }
+  final existing=await verified.balances();
+  if(!mounted)return null;
+  final bank=RegExp(r'^bank:institution:(rajhi|inma|snb|riyad|bilad|stc)$')
+   .firstMatch(createProvider?'':providerGroup??'')?.group(1);
+  final custom=<String,List<String>>{
+   for(final kind in const ['bank','wallet'])
+    kind:existing.where((a)=>!a.archived&&a.kind==kind&&
+     a.customSubtypeLabel!=null).map((a)=>a.customSubtypeLabel!)
+     .toSet().toList()..sort(),
+  };
+  final choice=await showDialog<WaffraNewAccountDraft>(
+   context:context,builder:(ctx)=>WaffraNewAccountDialog(
+    english:widget.english,suggestedProviderId:bank,
+    customSubtypeOptions:custom));
+  if(choice==null||!mounted)return null;
+  if(bank!=null&&(choice.kind!='bank'||choice.providerId!=bank)){
+   throw StateError('Child account must be under the selected bank');
+  }
+  final newId='m499-account-composer-'+
+   DateTime.now().microsecondsSinceEpoch.toString();
+  await verified.createTypedAccountWithIdentity(
+   id:newId,name:choice.name,kind:choice.kind,
+   providerId:choice.providerId??'none',
+   subtype:choice.subtype??'other',openingMinor:choice.openingMinor,
+   createdIso:DateTime.now().toIso8601String(),
+   lastFour:choice.lastFour,customSubtypeLabel:choice.customSubtypeLabel,
+   userConfirmed:true);
+  final refreshed=await verified.balances();
+  final found=refreshed.where((a)=>a.id==newId&&!a.archived).toList();
+  if(found.length!=1)throw StateError('Created account not verified');
+  reload();
+  return found.single;
+ }
+
  Future<void> compose(List<WaffraAccountBalance> accounts)async{
   await Navigator.of(context).push<void>(MaterialPageRoute(builder:(ctx)=>
    Scaffold(appBar:AppBar(title:Text(t('معاملة جديدة','New transaction'))),
     body:WaffraAccountTransactionForm(
      accounts:accounts,english:widget.english,
+     onCreateAccount:createAccountInsideComposer,
      incomeCategories:widget.incomeCategories,
      expenseCategories:widget.expenseCategories,
      availableBudgets:widget.availableBudgets,
