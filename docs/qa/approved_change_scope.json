@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
-  "change_id": "WAFFRA-NEW-012-safe-description-learning-implementation-20261106",
-  "human_scope_review": "User supplied additional Android screenshots on 2026-11-06 showing an SMS → financial entry journey losing parsed amount/title/category and bank SMS provenance, first sender account creation lacking provider/last-four automation, missing custom account subtype, broken one-step Back, and successful SMS entries remaining in review. Issues #403-#411 each record independent acceptance criteria after Issue #401. Owner requested a durable record and linked draft PR before coding. This documentation-only commit changes just WAFFRA_REQUIREMENTS.md and this manifest; it does not update finance/UI functionality or claim CI/phone pass. Prior M470 implementation only partial; preserve current main fixes and all security gates. The later 2026-11-06 user screenshot shows a second account-confirmation popup after provider and child account have already been chosen inside the new income/expense form. Root cause in current main: reviewSmsAccountLinks unconditionally opens selection dialog even when initialSelectedIds carries the previously confirmed selection, and after the first SMS account creation. Track the independent new requirement as WAFFRA-NEW-011 / Issue #412 within draft PR #402. This is documentation only, with no claim of functional fix. User additionally requested same auto-learning of safe description keywords into existing classification rules after confirmed manual and SMS income/expense. Existing main manualCategoryPattern learns full phrase, while bank SMS uses sender-scoped safe rules. Register as #413 / WAFFRA-NEW-012, preserving nonposting review-only behavior and account association safety. Current code changes limited to tracking. Approved follow-up: begin bounded implementation of WAFFRA-NEW-012 only in main app learning methods, local rule extraction logic and isolated tests; all other 11 requirements remain tracked but unimplemented. Preserve source-verified finance, no auto-post/auto-account binding. CI correction after exact SHA: scope includes comment lines immediately preceding the updated manual learning function, from existing transfer-preference function anchor, and app-code release notes appended after source commits. Do not weaken M385/M449 policy.",
+  "change_id": "WAFFRA-NEW-001-011-018-bounded-implementation-20261106",
+  "human_scope_review": "User supplied additional Android screenshots on 2026-11-06 showing an SMS → financial entry journey losing parsed amount/title/category and bank SMS provenance, first sender account creation lacking provider/last-four automation, missing custom account subtype, broken one-step Back, and successful SMS entries remaining in review. Issues #403-#411 each record independent acceptance criteria after Issue #401. Owner requested a durable record and linked draft PR before coding. This documentation-only commit changes just WAFFRA_REQUIREMENTS.md and this manifest; it does not update finance/UI functionality or claim CI/phone pass. Prior M470 implementation only partial; preserve current main fixes and all security gates. The later 2026-11-06 user screenshot shows a second account-confirmation popup after provider and child account have already been chosen inside the new income/expense form. Root cause in current main: reviewSmsAccountLinks unconditionally opens selection dialog even when initialSelectedIds carries the previously confirmed selection, and after the first SMS account creation. Track the independent new requirement as WAFFRA-NEW-011 / Issue #412 within draft PR #402. This is documentation only, with no claim of functional fix. User additionally requested same auto-learning of safe description keywords into existing classification rules after confirmed manual and SMS income/expense. Existing main manualCategoryPattern learns full phrase, while bank SMS uses sender-scoped safe rules. Register as #413 / WAFFRA-NEW-012, preserving nonposting review-only behavior and account association safety. Current code changes limited to tracking. Approved follow-up: begin bounded implementation of WAFFRA-NEW-012 only in main app learning methods, local rule extraction logic and isolated tests; all other 11 requirements remain tracked but unimplemented. Preserve source-verified finance, no auto-post/auto-account binding. CI correction after exact SHA: scope includes comment lines immediately preceding the updated manual learning function, from existing transfer-preference function anchor, and app-code release notes appended after source commits. Do not weaken M385/M449 policy. Owner explicitly authorized starting all tracked PR #402 changes on 2026-11-06, prioritizing app-wide lag and smooth loaders. The current bounded implementation adds M474 smooth + menu and user refresh optimization (Issue #419), verifies the already-chosen money account without a second popup (Issue #412), and moves the full-name account picker from bottom of the Home balance card to its title (Issue #401). These are verified code changes only; no claim of phone validation or entire 18 done. Preserve all SQLCipher/SMS source controls. Approved scope below enumerates exact sections; M385 audit remains fail closed.",
   "user_requested_changes": [
     "Register WAFFRA-NEW-001 Home balance card selected account picker relocation and multiline full bank/account labels, with linked Issue #401 and draft PR #402.",
     "Register WAFFRA-NEW-002..003: scanned-SMS income/expense editor must prefill parsed description, amount, main/subcategory and persist SMS provenance to final transaction details.",
@@ -11,7 +11,10 @@
     "Register WAFFRA-NEW-011 / Issue #412: eliminate repeated bank and child financial account selection after transaction editor confirmation, reusing a previously confirmed valid selection while verifying freshness and retaining exactly-once posting safety.",
     "Register WAFFRA-NEW-012 / Issue #413 to learn conservative reusable description/merchant keywords after independently verified manual and reviewed-SMS income or expense and add them into existing suggestion rule buckets without inventing a sender, account, amount or automatic posting permission.",
     "Implement conservative reusable non-sensitive keyword extraction from confirmed income/expense description for manual and SMS, merging into review-only per-category learned buckets without changing balances or account assignment.",
-    "Document actual reviewed app-code changes in release notes before the PR can pass M449 freshness gate, with no signed APK or production certification claim."
+    "Document actual reviewed app-code changes in release notes before the PR can pass M449 freshness gate, with no signed APK or production certification claim.",
+    "Implement WAFFRA-NEW-018 / #419 smooth UI in response to repeated Android lag during first biometric app startup, pull-to-refresh, global plus, save, and footer navigation; bounded current implementation removes artificial add delays, replaces expensive global blur, coalesces only user pull gestures and skips re-rendering same footer tab, with physical profiling still pending.",
+    "Implement WAFFRA-NEW-011 / #412 skip the second money account selector when the user already chose or created and confirmed the relevant active child account, with a fresh verified-account witness and no SMS auto-posting.",
+    "Implement WAFFRA-NEW-001 / #401 move the sole full-name account picker into the top green balance-card heading and remove the truncated duplicate lower selector. Preserve goal wallet and other balance controls."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -34,6 +37,34 @@
       {
         "start": "       // M470 #20: also learn after a single reviewed SMS was committed,",
         "end": "       unawaited(_refreshWidget());\n       if(!ctx.mounted)return;"
+      },
+      {
+        "start": "class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {",
+        "end": "/// A cancelled budget warning"
+      },
+      {
+        "start": "bool addFabExpanded=false;",
+        "end": "bool _acceptFabTap(){"
+      },
+      {
+        "start": "/// Refresh from the authoritative source",
+        "end": "Future<void> _refreshFromVerifiedFinance()async {"
+      },
+      {
+        "start": "Future<({List<String?>? ids,int? generation})?> reviewSmsAccountLinks(",
+        "end": "/// Budget assignment is OPTIONAL in every bank import"
+      },
+      {
+        "start": "Future<void> selectFooter(int target)async {",
+        "end": "bool _consumeHomeBack(){"
+      },
+      {
+        "start": "floatingActionButton:!ready||accountOpened||tab==2?null:",
+        "end": "bottomNavigationBar:accountOpened?null:"
+      },
+      {
+        "start": "key:const Key('waffra-fullscreen-fab-blur'),",
+        "end": "if(addFabExpanded&&!accountOpened&&(tab==0"
       }
     ],
     "lib/waffra_sms_local_rules.dart": [
