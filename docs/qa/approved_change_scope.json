@@ -9,7 +9,8 @@
     "2026-11-06 Issues #430-#431: preselect trusted bank/provider from selected sender, never financial account ID; original SMS once, user-authored notes separately, no technical encryption warning in details.",
     "2026-11-06 Issue #432: account-bound Android SMS scan from installation-month start must include recognized Arabic banking sender aliases, show true cumulative scanned count and rescan completeness/queue capacity.",
     "2026-11-06 Issues #433-#434: independent bank account selection and new-bank option for transfers; choose historical date before notes; verify active source/destination and commit two-sided transfer with original finance lock.",
-    "2026-11-06 Issue #435: address failed logout due secure verifier/biometric signout preflight safely without credential erasure or unverified account bypass; currently tracked and not claimed solved."
+    "2026-11-06 Issue #435: address failed logout due secure verifier/biometric signout preflight safely without credential erasure or unverified account bypass; currently tracked and not claimed solved.",
+    "2026-11-06 Issue #435 candidate: for a truly missing on-device phone verifier, a previously authenticated account may explicitly choose a new password only after an independent OS biometric confirmation; do not overwrite malformed, differently owned, or existing secure records."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -49,6 +50,10 @@
       {
         "start": " Future<void> entrySheet(",
         "end": " Future<void> showReceipt("
+      },
+      {
+        "start": " Future<void> logout()async {",
+        "end": " Future<void> setPin("
       }
     ],
     "lib/storage/waffra_unified_finance_writer.dart": [

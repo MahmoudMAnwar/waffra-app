@@ -76,6 +76,20 @@ void main() {
     expect(writer,contains("confirmedRecords.single['sourceType'] == 'sms'"));
   });
 
+  test('M506 local sign-out recovery requires fingerprint and never overwrites a verifier', () {
+    final src=File('lib/main.dart').readAsStringSync();
+    final logout=src.substring(src.indexOf(' Future<void> logout()async {'),
+      src.indexOf(' Future<void> setPin('));
+    expect(logout,contains('if(integrity==WaffraLocalCredentialProbe.missing&&!locked)'));
+    expect(logout,contains('WaffraBiometrics.unlockMandatory()'));
+    expect(logout,contains('WaffraLocalPhoneCredentials.registerOrResume('));
+    expect(logout,contains('WaffraLocalCredentialProbe.ready'));
+    expect(logout,contains('if(!hasLegacy){'));
+    expect(logout,contains('_accountWriteAuthority.signOut();'));
+    expect(logout.indexOf('WaffraLocalPhoneCredentials.registerOrResume('),
+      lessThan(logout.indexOf('WaffraLocalCredentialProbe.ready')));
+  });
+
   test('M506 native bank sender aliases preserve OTP and consented review', () {
     final native=File('native/WaffraAutoSmsStore.kt').readAsStringSync();
     expect(native,contains('الإنماء|الانماء'));
