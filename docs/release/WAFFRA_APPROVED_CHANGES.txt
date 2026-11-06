@@ -2413,3 +2413,11 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 
 [M506 startup responsiveness candidate]
 - Shortened the fixed cinematic intro floor from 3000ms to 1750ms, retaining all mandatory finance initialization and biometric gates. This addresses only one cold-launch delay; remaining button, refresh and save jank require measured Android release-profile verification. Latest M506 credential dialog now handles null/cancel safely without logging a user password; no claim of two-device acceptance.
+
+
+[M507 PR #436 — 2026-11-06: Mobile top-up SMS parsing & continuing local learning]
+- User screenshot reproduction: Android reviewed SMS "شحن الجوال / مبلغ:276 ريال / إلى:**8308 / المنتج:سوا فليكس 240 / في:05-11-2026 19:07" was incorrectly treated as an unclear amount and empty category. The conservative financial-kind parser and offline bank parser now recognize a mobile top-up as an outgoing expense, using only source-confirmed explicit SAR 276 and title "شحن الجوال"; masked suffix 8308, product plan 240, timestamp and other unrelated numbers must never be money.
+- Add "شحن الجوال / شحن جوال" into non-posting mobile category hints (فواتير / جوال). Prefer a real active matching child category and parent, otherwise require the user's deliberate selection. No account inferred from text.
+- After confirmed finance commit, reapply locally persisted non-posting keyword/category rules to the pending encrypted review queue. In the multiple-SMS review sheet, read latest rules before each next message rather than reuse a stale first-message guess. Senderless user-reviewed SMS also learns safe description/category after successful verified commit, and manual transactions refresh queued classifications; no background financial posting.
+- New test/m507_sms_amount_and_continuous_review_test.dart covers the exact user screenshot fixture, Arabic digits, misread suffix/product negatives and next-message reviewed rule application.
+- GitHub issues #437 and #438 recorded in docs/WAFFRA_REQUIREMENTS.md and scoped in docs/qa/approved_change_scope.json. Exact-head Flutter/analyzer, parser, Android startup/SMS UI and physical device checks are still required: these are source candidates, not a verified release. No changes to SQLCipher writer, account authentication, SMS dedupe or encrypted original provenance.
