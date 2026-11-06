@@ -36,6 +36,9 @@
 
 | WAFFRA-NEW-015 | In manual and SMS-derived transaction entry, provider is selected first; child-account dropdown is dimmed until provider is confirmed; both lists include their own inline add option; remove duplicate bottom Account button and keep date | [#416](https://github.com/MahmoudMAnwar/waffra-app/issues/416) | [#402](https://github.com/MahmoudMAnwar/waffra-app/pull/402) — Draft | **Recorded / Not implemented** | Documentation only; no app-code changes authorized |
 
+| WAFFRA-NEW-016 | Second SMS exclusion popup must offer **العودة** to reconsider sender exclusion and return to prior selection without finalizing sender block; later unexclude via excluded list | [#417](https://github.com/MahmoudMAnwar/waffra-app/issues/417) | [#402](https://github.com/MahmoudMAnwar/waffra-app/pull/402) — Draft | **Recorded / Not implemented** | Documentation only; no app-code changes authorized |
+| WAFFRA-NEW-017 | After removing bottom Account button, date expands full row; when optional budget control is displayed, date and budget split row equally 50/50 | [#418](https://github.com/MahmoudMAnwar/waffra-app/issues/418) | [#402](https://github.com/MahmoudMAnwar/waffra-app/pull/402) — Draft | **Recorded / Not implemented** | Documentation only; no app-code changes authorized |
+
 ## WAFFRA-NEW-001 — Detailed acceptance contract
 
 **User screenshot (2026-11-06):** Current green balance card shows the account name (`مصرف الإنماء - الإنماء باي`) at its top; a second dropdown with the same truncated name appears on the bottom-right and overlaps the illustration. User explicitly rejected this placement.
@@ -224,3 +227,34 @@
 **Future acceptance:** first and second/manual and bank SMS transactions, all entry types, no provider selected, changed provider, account creation from each dropdown, created item selected on return, existing children, no children, canceled account creation, corrupted/archived child, validation on Save, no duplicate picker/button, no finance change on account creation, Android screenshots and targeted CI.
 
 **Explicit user instruction:** **Save this requirement alongside the existing PR #402 items without any app code implementation now.** All original 14 requirements are preserved. The scoped PR now tracks **15 distinct requirements**.
+
+## 2026-11-06 — Follow-up SMS exclusion reconsideration and date/budget row
+
+### WAFFRA-NEW-016 — Add a genuine Back/reconsider option to sender exclusion prompt
+
+**Issue:** [#417](https://github.com/MahmoudMAnwar/waffra-app/issues/417) · **PR:** [#402](https://github.com/MahmoudMAnwar/waffra-app/pull/402). **Status: Recorded / Not implemented.**
+
+**Screenshot scenario:** In Waffra SMS review, selecting messages and pressing **تأكيد الاستبعاد** first shows **استبعاد الرسائل المحددة؟**. On confirmation, the second dialog **هل تريد استبعاد المرسل نفسه أيضًا؟** offers **استبعاد المرسل** or **لا** only. The user asks for an **العودة** action in this second decision so someone who changes their mind can step back rather than committing sender exclusion.
+
+**Approved behavior:**
+1. Add **العودة** to the second **sender exclusion** dialog, distinct from **لا**. Return one step to the first exclusion confirmation or selected-message review while preserving sender, selected SMS and review context. No sender blocklist change on Back.
+2. **لا** confirms *message-only* exclusion while leaving the sender eligible for future SMS processing. **استبعاد المرسل** blocks that sender's future SMS analysis/review as approved. On Back, **do not silently finalize either decision**; if message exclusion has already committed, safely allow undo of those just-excluded messages before reentering review.
+3. Excluded sender remains recoverable via **المستبعدون** with unexclude/reactivation. Where appropriate, allow an immediate explicit **تراجع** after sender exclusion as well. Undo must target only the intended sender/messages, never delete device SMS or verified financial postings.
+4. Clear button labels, correct dialog/Android Back stack, no duplicate excluded records, preserve account data, finance balances, already-saved transactions and SMS provenance.
+
+**Future tests:** confirm messages→second dialog→Back→review with selection; “لا” vs sender exclusion; undo/re-enable sender and proper future scan behavior; partial failures/restart; small-screen RTL popup layout. **No code changes until explicitly requested.**
+
+### WAFFRA-NEW-017 — Date row width depends on budget control
+
+**Issue:** [#418](https://github.com/MahmoudMAnwar/waffra-app/issues/418) · **PR:** [#402](https://github.com/MahmoudMAnwar/waffra-app/pull/402). **Status: Recorded / Not implemented.**
+
+**Screenshot scenario:** The **إضافة عملية** sheet currently shows a bottom **الحساب** button to the left of the date picker. Per NEW-015/#416 that separate account button will be removed, leaving its space available.
+
+**Approved behavior:**
+1. When no **ميزانية** control is displayed, **التاريخ** occupies **100% of the row**. Keep the existing calendar icon, date chooser, date value and tap area; no blank placeholder on the left.
+2. When an **optional ميزانية / إضافة ميزانية selector** is present on that row, show **التاريخ** and **الميزانية** side by side, **50% width each** with proper spacing and center division. This is a responsive visual requirement, not a rule forcing budgets on transactions.
+3. Preserve the date and rest of the draft when choosing/adding budget. Budget remains optional, independent of required financial account; internal transfers must remain outside spending-budget calculations.
+4. Apply consistently in manual and SMS-reviewed entry forms wherever that budget is applicable. Do not reintroduce a standalone Account button below the form and do not change the two required provider/child dropdowns above.
+5. Test narrow devices, Arabic/English RTL/LTR date, long budget names, text scaling and overflow, all transaction types, saved/unsaved budget, no-budget full width.
+
+**User instruction/context:** Save both alongside PR #402 and prior requirements; **documentation-only; no app source updates or feature implementation**. Total now **17 distinct numbered requirements**, including one earlier source-implemented keyword-learning item awaiting verification.
