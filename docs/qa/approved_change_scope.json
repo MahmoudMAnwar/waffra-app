@@ -352,6 +352,48 @@
       {
         "start": "  test('M398: manual editor retains budget actions and adjacent date', () {"
       }
+    ],
+    "test/m470_recurring_provider_accounts_test.dart": [
+      {
+        "start": " test('M470 Home manual and transfer both show sequential provider-account choices',(){",
+        "end": " test('M470 SMS review has bank and account cascade with sender-match gate',(){"
+      },
+      {
+        "start": " test('M470 money form requires an explicit provider before a linked source or destination',(){"
+      }
+    ],
+    "test/m470_sms_excluded_senders_test.dart": [
+      {
+        "start": " test('M470 #7: excluding an entire sender explicitly asks about the sender',(){",
+        "end": " test('M470 #8: excluded senders have a dedicated restore control',(){"
+      }
+    ],
+    "test/m470_sms_first_sender_account_test.dart": [
+      {
+        "start": " test('M470 #11 account suggestion only starts on confirmed bank SMS review',(){",
+        "end": " test('M470 #11 SMS posting remains a separate user approved atomic writer',(){"
+      }
+    ],
+    "test/m470_sms_sender_and_rule_accuracy_test.dart": [
+      {
+        "start": " test('M470 #5/#6 account action stays beside date with preserved entry state',(){"
+      }
+    ],
+    "test/m470_sms_transfer_fee_firsttap_category_test.dart": [
+      {
+        "start": "  test('M470 #18: first SMS tap opens selected review without PopScope veto', () {",
+        "end": "  test('M470 #19: post-back subcategory must be current parent-scoped', () {"
+      }
+    ],
+    "test/waffra_m206_day_theme_tour_sms_regression_test.dart": [
+      {
+        "start": "  test('FAB launch waits for the menu collapse and suppresses double taps', () {",
+        "end": "  testWidgets('details show entire notes and keep concise name', (tester) async {"
+      },
+      {
+        "start": "  testWidgets('details show entire notes and keep concise name', (tester) async {",
+        "end": "  test('synthetic English Saudi bank batch: 56 confirmed, 13 excluded notices', () {"
+      }
     ]
   }
 }
