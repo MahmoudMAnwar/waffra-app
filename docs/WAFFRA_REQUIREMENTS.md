@@ -365,3 +365,13 @@ Each issue requires linked source changes, exact-head CI, tests and real Android
 ### M506-01 splash partial improvement (2026-11-06)
 - In draft PR #436, the unconditional 3000ms intro minimum was reduced to 1750ms and the splash animation to 1650ms. Added a Flutter widget test to catch an accidental return to a three-second animation; bounded code scope and release note have been recorded.
 - **Status: Partial code change / latest-head CI and device verification pending.** The startup loading/biometric critical path and all remaining footer, +, refresh, save and animation jank require Android profile traces, root cause correction, and physical test before issue #427 can be closed.
+
+
+## 2026-11-06 — M507: SMS analyzed prefill + continuous review-only learning (same draft PR #436)
+
+| ID | Issue | Requirement | State |
+|---|---|---|---|
+| M507-01 | [#437](https://github.com/MahmoudMAnwar/waffra-app/issues/437) | Screenshot-proven SMS "شحن الجوال / مبلغ:276 ريال / إلى:**8308 / المنتج:سوا فليكس 240 / في:05-11-2026 19:07" must detect **276 SAR** as the transaction amount, correctly recognize outgoing mobile top-up, prefill title and matching active main/subcategory; never confuse card suffix, product plan, or date with money | **Recorded / implementation pending** |
+| M507-02 | [#438](https://github.com/MahmoudMAnwar/waffra-app/issues/438) | After a **successfully verified** SMS/manual income/expense save, update reusable non-posting keywords and immediately reclassify still-pending/new incoming SMS. Next reviewed message prefilled with supported amount, income/expense, title and category/subcategory. Never auto-record money; user confirms real money account and can edit all suggested values | **Recorded / implementation pending** |
+
+**Acceptance:** isolate money parser from unrelated numbers and foreign currency, preserve protected original and user notes, use active saved child category or require explicit selection, do not learn on failed/duplicate save, do not discard pending SMS or user drafts, no sensitive keyword training, idempotent review refresh on a successful classification update. Unit/widget coverage for exact screenshot fixture and next SMS reclassification. Phone QA and exact-head CI mandatory before Done.
