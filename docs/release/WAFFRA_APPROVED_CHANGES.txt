@@ -2368,3 +2368,10 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 - Updated copyable transaction-notes widget tests to locate SelectableText by stable key and check complete text alongside an independent protected bank-SMS original; no original SMS was written into editable notes.
 - The strict M385 manifest declares all 35 actually changed files and precisely bounds changed existing test cases. M385, encrypted-ledger authority, duplicate SMS commit protection, source-identity checks and mandatory release gates are unchanged.
 - Earlier six failed full-suite workflow checks shared 17 Flutter test failures on old PR head f6d0b85. They are NOT evidence that new head passes. Exact-current-HEAD tests and physical Android startup/biometric/refresh/back/transfer/backup verification remain required. No main merge, signed APK release, or device certification claimed.
+
+
+[M502 PR #402 Issue #424 — 2026-11-06: account & biometric sign-out response]
+- Fix user-confirmed dead sign-out from account confirmation and mandatory biometric lock: allow lock-screen sign-out while OS biometric authentication is in flight; cancel active challenge and never accept a late unlock completion after sign-out starts.
+- Route all app sign-out progress and guarded credential/SMS/verified-account authority errors through the MaterialApp ScaffoldMessenger key instead of an ancestor context without a ScaffoldMessenger. Never silently turn a failed preflight into an apparently successful logout.
+- Bound Android SMS pause and secure-verifier preflight I/O, retaining fail-closed account/data protection, encrypted SMS owner isolation, unchanged local finance ledger and backups. Do not delete OS password verifier or relax SQLCipher witness.
+- New M502 widget/source regressions. Exact HEAD CI, clean/update Android lock & account confirmation, same-generated-password re-login, encrypted restore and real-device verification PENDING; no signed APK acceptance claimed.
