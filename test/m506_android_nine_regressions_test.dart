@@ -7,6 +7,17 @@ import 'package:waffra/storage/waffra_accounts_repository.dart';
 import 'package:waffra/waffra_recurring_account_groups.dart';
 
 void main() {
+  testWidgets('M506 splash animation settles within 1.9 seconds',
+      (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: WaffraLaunchIntro()));
+    // A frame-based widget regression guard for the launch animation. Real
+    // frame jank and startup I/O still require Android profile tracing.
+    final frames=await tester.pumpAndSettle(
+      const Duration(milliseconds:100));
+    expect(frames,lessThanOrEqualTo(19));
+    expect(tester.takeException(),isNull);
+  });
+
   test('M506 SMS original stays independent from personal notes across JSON and category edits', () {
     final record=MoneyEntry(
       id:'m506-sms-demo',title:'شحن الجوال',category:'فواتير / جوال',
