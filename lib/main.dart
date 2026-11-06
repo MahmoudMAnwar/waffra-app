@@ -8589,6 +8589,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ],
       if(sms)...[
        TextField(controller:message,minLines:3,maxLines:6,
+        // Reviewed Android SMS provenance must remain byte-for-byte original.
+        // Users correct amount/category/title, not the source message itself.
+        readOnly:initialSms!=null,
         onChanged:(v){parseNow(v);update((){});},
         decoration:InputDecoration(labelText:waffraIsEnglish?'Bank SMS *':'الرسالة البنكية *',
          hintText:waffraTr('أول ما تلصقها نحلّلها تلقائيًا'),
@@ -8706,11 +8709,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          'View original bank SMS':'عرض الرسالة البنكية الأصلية'),
         children:[Padding(
          padding:const EdgeInsets.fromLTRB(12,4,12,12),
-         child:WaffraBankSmsFactsParser.parse(message.text).pending?
+         child:WaffraBankSmsFactsParser.parse(initialSms??message.text).pending?
           WaffraText(waffraIsEnglish?
            'Verification or pending message content is hidden.':
            'محتوى رسالة التحقق أو العملية المعلقة مخفي لحمايتك.'):
-          SelectableText(message.text,
+          SelectableText(initialSms??message.text,
            key:const Key('waffra-entry-original-sms-text'),
            textDirection:Directionality.of(sheetContext),
            textAlign:TextAlign.start),
