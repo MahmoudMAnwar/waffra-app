@@ -3874,7 +3874,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(mounted&&addFabExpanded)setState(()=>addFabExpanded=false);
   try{
    // Allow the menu to finish collapsing before presenting a sheet.
-   if(fromMenu)await Future<void>.delayed(waffraMotion(260));
+   // M474: open sheet promptly after closing the menu.
    if(mounted)await action();
   }finally{_addActionOpening=false;}
  }
@@ -5260,13 +5260,26 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  /// Refresh from the authoritative source, not an in-memory repaint.
  /// A failed integrity check never replaces user money with zeroes.
- // Visual-only M258: no finance writes or source-selection changes.
- Future<void> _refreshAndSettle(ScrollController controller,int originalTab)=>
-  waffraRefreshAndRestoreScroll(
+ // M474: coalesce overlapping user refresh gestures only. Internal verified
+ // finance reads/writes still run independently after each committed change.
+ Future<void>? _m474PullRefreshInFlight;
+ Future<void> _refreshAndSettle(ScrollController controller,int originalTab){
+  final pending=_m474PullRefreshInFlight;
+  if(pending!=null)return pending;
+  late final Future<void> tracked;
+  tracked=waffraRefreshAndRestoreScroll(
    refresh:_refreshFromVerifiedFinance,
    controller:controller,
    isStillVisible:()=>mounted&&ready&&_financeLoadFailure==null&&
-    tab==originalTab&&(originalTab!=0||!goalsOpened));
+    tab==originalTab&&(originalTab!=0||!goalsOpened))
+   .whenComplete((){
+    if(identical(_m474PullRefreshInFlight,tracked)){
+     _m474PullRefreshInFlight=null;
+    }
+   });
+  _m474PullRefreshInFlight=tracked;
+  return tracked;
+ }
 
  Future<void> _refreshFromVerifiedFinance()async {
   if(!mounted||!ready)return;
@@ -15789,7 +15802,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(target!=tab)unawaited(selectFooter(target));
  }
  Future<void> selectFooter(int target)async {
-  if(target<0||target>=WaffraFooterNavigation.itemCount||!mounted)return;
+  if(target<0||target>=WaffraFooterNavigation.itemCount||!mounted||
+    (target==tab&&!accountOpened&&!goalsOpened&&!addFabExpanded))return;
   setState((){
    if(target!=tab){
     _tabBackStack.add(tab);
@@ -15911,17 +15925,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      shape:const CircleBorder(),
      child:InkWell(
       customBorder:const CircleBorder(),
-      onTap:()async{
+      onTap:(){
      if(!_acceptFabTap())return;
-     HapticFeedback.lightImpact(); // Only accepted circular + tap triggers haptic feedback.
-     final tappedTab=tab;
-     setState(()=>_fabPressed=true);
-     // Give the press a short, visible response before presenting any menu.
-     await Future<void>.delayed(waffraMotion(165));
-     if(!mounted)return;
-     setState(()=>_fabPressed=false);
-     await Future<void>.delayed(waffraMotion(110));
-     if(!mounted||tab!=tappedTab)return;
+     HapticFeedback.lightImpact();
+     // M474: open immediately, with no 275ms artificial delay.
      setState(()=>addFabExpanded=!addFabExpanded);
     },
     splashFactory:NoSplash.splashFactory,
@@ -15957,12 +15964,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(addFabExpanded&&!accountOpened&&!tourActive)...[
    Positioned.fill(
     key:const Key('waffra-fullscreen-fab-blur'),
-    child:ClipRect(child:BackdropFilter(
-     filter:ui.ImageFilter.blur(sigmaX:9,sigmaY:9),
-     child:GestureDetector(
+    child:GestureDetector(
       behavior:HitTestBehavior.opaque,
       onTap:WaffraHaptics.tap(()=>setState(()=>addFabExpanded=false)),
-      child:ColoredBox(color:Colors.black.withValues(alpha:.24))))),
+      // M474: dim scrim avoids repeatedly blurring every dashboard frame.
+      child:ColoredBox(color:Colors.black.withValues(alpha:.30))),
    ),
     if(addFabExpanded&&!accountOpened&&(tab==0||tab==1||tab==3||tab==4||goalsOpened))
      WaffraFabMenuAnchor(
