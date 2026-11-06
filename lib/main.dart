@@ -6064,7 +6064,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if(bankGroup!=null)
      for(final account in active)
       if((account.kind=='bank'||account.kind=='wallet')&&
-         WaffraSmsAccountLearning.bankGroup(account.name)==bankGroup)
+         (account.providerId!=null?account.providerId==bankGroup:
+          WaffraSmsAccountLearning.bankGroup(account.name)==bankGroup))
        account.id,
    };
    final activeAccountIds=active.map((account)=>account.id).toSet();
