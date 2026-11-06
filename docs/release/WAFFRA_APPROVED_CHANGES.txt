@@ -2375,3 +2375,6 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 - Route all app sign-out progress and guarded credential/SMS/verified-account authority errors through the MaterialApp ScaffoldMessenger key instead of an ancestor context without a ScaffoldMessenger. Never silently turn a failed preflight into an apparently successful logout.
 - Bound Android SMS pause and secure-verifier preflight I/O, retaining fail-closed account/data protection, encrypted SMS owner isolation, unchanged local finance ledger and backups. Do not delete OS password verifier or relax SQLCipher witness.
 - New M502 widget/source regressions. Exact HEAD CI, clean/update Android lock & account confirmation, same-generated-password re-login, encrypted restore and real-device verification PENDING; no signed APK acceptance claimed.
+
+[M502 CI contract follow-up — 2026-11-06]
+- Preserve the existing exact root `if(mounted)setState` logout route assertion for M424 while retaining the new root-level sign-out progress/error feedback and fail-closed verifier/SMS protections. No API or account-data change. Latest exact HEAD CI and physical Android validation still pending.
