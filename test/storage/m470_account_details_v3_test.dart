@@ -95,6 +95,33 @@ void main(){
    throwsA(isA<FormatException>()));
  });
 
+ test('M470 archived bank identity survives V3 without reactivation',()async{
+  final repo=WaffraAccountsRepository(db:source,experimentalEnabled:true);
+  await repo.createAccount(id:'old-bank',name:'Old savings',
+   kind:'bank',openingMinor:0,createdIso:at,userConfirmed:true);
+  await WaffraAccountDetailsSchema.assign(source,
+   accountId:'old-bank',kind:'bank',providerId:'inma',
+   subtype:'savings',confirmedIso:at);
+  await repo.archiveEmptyAccount(id:'old-bank',userConfirmed:true);
+  final encrypted=await encryptedBackup();
+  final target=WaffraEncryptedStore.openAt(
+   File('${dir.path}/archived-restore.sqlite'),
+   key:'m470-archived-restored-disposable-sqlcipher-test-key');
+  try{
+   await WaffraAccountsPortableBackupV3.restoreToEmptyEncryptedVault(
+    encryptedArchive:encrypted,password:password,disposableStore:target,
+    userConfirmed:true,experimentalEnabled:true);
+   final restored=await WaffraAccountsRepository(
+    db:target,experimentalEnabled:true).balances();
+   final old=restored.singleWhere((a)=>a.id=='old-bank');
+   expect(old.archived,isTrue);
+   expect(old.kind,'bank');
+   expect(old.providerId,'inma');
+   expect(old.subtype,'savings');
+   expect(old.balanceMinor,0);
+  }finally{await target.close();}
+ });
+
  test('M470 unsupported bank/provider combinations are rejected',()async{
   expect(WaffraAccountDetailsSchema.valid(
    kind:'bank',providerId:'none',subtype:'current'),isFalse);
