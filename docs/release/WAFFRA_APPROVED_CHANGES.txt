@@ -1,3 +1,9 @@
+[PR #402 M479] 2026-11-06 — Reconsider sender exclusion before acknowledging selected SMS (#417)
+===================================================================================================
+- The sender opt-in dialog now appears BEFORE the native acknowledgment that hides selected messages from review. 'العودة' / Back leaves the message selection intact and neither blocks the sender nor hides SMS; 'لا' / No opts out of sender exclusion; 'استبعاد المرسل' explicitly opts in for this sender.
+- Sender exclusion executes only after that sender's chosen messages were successfully acknowledged. A partial acknowledgment cannot block a sender whose batch remains pending. The Android phone's SMS data and previously posted financial records remain unchanged.
+- Approved #417 code is confined to the SMS bulk selection handler declared in M385, and still requires exact-head CI and Android UX checks. This is not release certification or proof of the entire PR being done.
+
 [PR #402 M477–M478] 2026-11-06 — Dependent account selection and responsive date/budget row
 ================================================================================================
 - M477 / Issue #416 (PARTIAL): the standalone account-selection button beside the date was removed from the Home manual transaction editor. The existing bank/provider and linked-account dropdowns now include their own account-creation options, with the child disabled until its provider is chosen. New-account creation routes through the existing verified account manager and preserves the live entry draft, updating the provider and child choice only when a matching new account was actually created. Manual editor code only; SMS review/transfer parity and signed device tests remain incomplete.
