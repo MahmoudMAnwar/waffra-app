@@ -389,8 +389,8 @@
     ],
     "test/m470_sms_transfer_fee_firsttap_category_test.dart": [
       {
-        "start": "  test('M470 #18: first SMS tap opens selected review without PopScope veto'",
-        "end": "  test('M470 #19: post-back subcategory must be current parent-scoped'"
+        "start": "test('M470 #18: first SMS tap opens selected review without PopScope veto'",
+        "end": "test('M470 #19: post-back subcategory must be current parent-scoped'"
       }
     ],
     "test/waffra_m206_day_theme_tour_sms_regression_test.dart": [
