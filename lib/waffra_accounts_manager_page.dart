@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'main.dart' show snack;
 
 import 'storage/waffra_accounts_repository.dart';
@@ -69,22 +70,97 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
  }
 
  Future<void> rename(WaffraAccountBalance item)async{
+  final verified=widget.repository is WaffraVerifiedAccountsApi
+   ?widget.repository as WaffraVerifiedAccountsApi:null;
+  final bankWithVerifiedSource=item.kind=='bank'&&verified!=null;
+  String? savedSuffix;
+  if(bankWithVerifiedSource){
+   try{
+    // The suffix shown here must come from the verified SQLCipher source.
+    savedSuffix=await verified.verifiedBankSuffix(item.id);
+   }catch(_){failed();return;}
+  }
   final name=TextEditingController(text:item.name);
+  final suffix=TextEditingController(text:savedSuffix??'');
   try{
-   final next=await showDialog<String>(context:context,builder:(ctx)=>
-    AlertDialog(title:Text(t('تعديل اسم الحساب','Rename account')),
-     content:TextField(controller:name,maxLength:80),
-     actions:[
-      TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(t('إلغاء','Cancel'))),
-      FilledButton(onPressed:()=>Navigator.pop(ctx,name.text.trim()),
-       child:Text(t('حفظ','Save'))),
-     ]));
-   if(next==null||next.isEmpty)return;
-   await widget.repository.renameAccount(
-    id:item.id,name:next,userConfirmed:true);
+   final edited=await showDialog<({String name,String? lastFour})>(
+    context:context,builder:(ctx)=>StatefulBuilder(
+     builder:(ctx,update){
+      final candidate=name.text.trim();
+      final digits=suffix.text.trim();
+      final suffixValid=!bankWithVerifiedSource||
+       (digits.isEmpty&&savedSuffix==null)||
+       RegExp(r'^[0-9]{4}$').hasMatch(digits);
+      return AlertDialog(
+       title:Text(t('تعديل بيانات الحساب','Edit account details')),
+       content:SingleChildScrollView(child:Column(
+        mainAxisSize:MainAxisSize.min,
+        crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+         TextField(
+          key:const Key('waffra-account-edit-name'),
+          controller:name,maxLength:80,
+          onChanged:(_)=>update((){}),
+          decoration:InputDecoration(
+           labelText:t('اسم الحساب','Account name'),
+           border:const OutlineInputBorder())),
+         if(bankWithVerifiedSource)...[
+          const SizedBox(height:12),
+          TextField(
+           key:const Key('waffra-account-edit-last-four'),
+           controller:suffix,maxLength:4,
+           keyboardType:TextInputType.number,
+           inputFormatters:[
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(4),
+           ],
+           onChanged:(_)=>update((){}),
+           decoration:InputDecoration(
+            labelText:t('آخر 4 أرقام للحساب','Account last four digits'),
+            hintText:t('أدخل 4 أرقام','Enter 4 digits'),
+            helperText:savedSuffix==null?t(
+             'لم تُحفظ أرقام لهذا الحساب بعد.',
+             'No verified last-four have been saved yet.'):t(
+             'القيمة المحفوظة ظاهرة ويمكنك تصحيحها.',
+             'The saved digits are displayed and editable.'),
+            border:const OutlineInputBorder())),
+         ],
+        ])),
+       actions:[
+        TextButton(onPressed:()=>Navigator.pop(ctx),
+         child:Text(t('إلغاء','Cancel'))),
+        FilledButton(
+         onPressed:candidate.isEmpty||candidate.runes.length>80||!suffixValid
+          ?null:()=>Navigator.pop(ctx,(
+           name:candidate,
+           lastFour:bankWithVerifiedSource&&digits.isNotEmpty?digits:null)),
+         child:Text(t('حفظ','Save'))),
+       ],
+      );
+     }));
+   if(edited==null)return;
+   if(edited.name==item.name&&edited.lastFour==savedSuffix)return;
+   if(verified!=null){
+    // Revalidate what the user actually reviewed before a witnessed write.
+    final latest=await verified.balances();
+    final same=latest.where((a)=>a.id==item.id&&!a.archived&&
+     a.name==item.name&&a.kind==item.kind).toList();
+    if(same.length!=1)throw StateError('Account changed while being edited.');
+    if(bankWithVerifiedSource&&
+      await verified.verifiedBankSuffix(item.id)!=savedSuffix){
+     throw StateError('Bank suffix changed while being edited.');
+    }
+   }
+   if(bankWithVerifiedSource&&edited.lastFour!=null){
+    await verified.renameAccountWithSuffix(
+     id:item.id,name:edited.name,lastFour:edited.lastFour!,
+     userConfirmed:true);
+   }else{
+    await widget.repository.renameAccount(
+     id:item.id,name:edited.name,userConfirmed:true);
+   }
    reload();
   }catch(_){failed();}
-  finally{name.dispose();}
+  finally{name.dispose();suffix.dispose();}
  }
 
  Future<void> archive(WaffraAccountBalance item)async{
