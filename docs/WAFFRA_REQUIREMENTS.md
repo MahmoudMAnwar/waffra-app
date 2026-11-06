@@ -329,3 +329,29 @@ Full Flutter QA on M502 exact head failed in three workflows (`Waffra Full Offli
 ## 2026-11-06 — M504: Weekly safe GitHub failed-run retention (separate CI operations request)
 
 **Issue:** [#425](https://github.com/MahmoudMAnwar/waffra-app/issues/425). **Owner-approved behavior:** run weekly Sunday 02:19 UTC, delete at most 20 FAILED PR workflow runs older than 7 full days only when the PR is merged, same-repo/main-target, the same workflow has a newer SUCCESS on that same PR and branch, and the failed run has zero artifacts. Never delete main runs (including failures), successful/active runs, security/release/SQLCipher/migration/backup evidence, open/unmerged PR runs or candidates with missing metadata. Manual dispatch defaults to dry-run; only trusted main schedule/dispatch has actions:write. Independent of M453 cancellation. Docs: `docs/ci/M504_FAILED_RUN_RETENTION.md`. Implementation in dedicated CI PR; Node safety tests run offline. Actual scheduled deletion becomes active only after merge to main. No claims of backdated log recovery.
+
+
+## 2026-11-06 — M506: Nine confirmed APK regressions following merged PR #402
+
+**Tracking source:** User's Android screenshot set and reproduction report 2026-11-06; **fix branch:** `fix/m506-nine-apk-regressions`; **implementation PR:** pending creation (do not claim fixed until code + CI + device proof).
+
+| ID | Issue | Confirmed symptom | Acceptance target | Status |
+|---|---|---|---|---|
+| M506-01 | [#427](https://github.com/MahmoudMAnwar/waffra-app/issues/427) | App-wide ~2s latency / jank (cold start, refresh, save, footer, +) | Performance profiling; smooth UX; Android validation | Reported / not verified fixed |
+| M506-02 | [#428](https://github.com/MahmoudMAnwar/waffra-app/issues/428) | SMS review + receipt save fails; financial write rollback | Atomic receipt+transaction, error tracing, no duplicate charge | Reported / not verified fixed |
+| M506-03 | [#429](https://github.com/MahmoudMAnwar/waffra-app/issues/429) | Confirmed SMS expense does not update learned keyword rules | Post-commit idempotent, safe income/expense learner | Reported / not verified fixed |
+| M506-04 | [#430](https://github.com/MahmoudMAnwar/waffra-app/issues/430) | First SMS sender not preselected; original SMS shown twice | Sender-to-bank prefill; SMS once; notes not prefilled | Reported / not verified fixed |
+| M506-05 | [#431](https://github.com/MahmoudMAnwar/waffra-app/issues/431) | SMS text in transaction notes and confusing encrypted source warning | Separate user notes/source protected SMS; clean details UI | Reported / not verified fixed |
+| M506-06 | [#432](https://github.com/MahmoudMAnwar/waffra-app/issues/432) | Missing recent SMS senders and stale scanned count | Scan since install-month 1st; incremental rescans; true refreshed counts | Reported / not verified fixed |
+| M506-07 | [#433](https://github.com/MahmoudMAnwar/waffra-app/issues/433) | Destination bank selection missing and no transfer date | Independent bank/account selectors and historical date | Reported / not verified fixed |
+| M506-08 | [#434](https://github.com/MahmoudMAnwar/waffra-app/issues/434) | Two-leg transfer rejects valid accounts as changed | Reconcile current accounts and atomic cross-account transfer | Reported / not verified fixed |
+| M506-09 | [#435](https://github.com/MahmoudMAnwar/waffra-app/issues/435) | Logout broken in account page and fingerprint lock | Unified safe logout preserving credentials/encrypted data | Reported / not verified fixed |
+
+### Approved message ownership and privacy contract
+- Imported/read bank SMS is shown **once** during review in a read-only original-message section. The freeform **Notes** field is for **user-entered notes only** and begins empty; do not copy raw SMS into Notes. The original may be retained in the existing encrypted, separately typed SMS provenance store subject to existing consent; never weaken encryption or discard source evidence just to hide a UI message.
+- After saving, transaction details show notes only if provided. An optional read-only original-message expander appears when source is accessible. Never surface implementation text such as “encrypted source not available”; do not falsely claim original source is present. Safely handle old transactions with legacy SMS-in-notes without deleting genuine notes.
+- First-selection sender-to-provider matching uses trusted normalized aliases, not fuzzy guesses. User still selects/creates associated financial account; financial account IDs never inferred solely from provider/sender.
+- Avoid regressions in money accounting: two-sided transfer only, zero budget effect, real snapshot validation; no forced retry bypass and no orphan receipts/duplicate SMS writes.
+
+### Gate
+Each issue requires linked source changes, exact-head CI, tests and real Android confirmation (new installation + update over existing data when applicable). No issue can be marked Done solely from PR creation or green unit tests; no deployment to the wife's existing-data device before backed-up upgrade QA.
