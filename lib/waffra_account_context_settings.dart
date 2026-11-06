@@ -126,30 +126,72 @@ class _WaffraAccountContextSettingsState
   final banks=widget.accounts.where((a)=>
    !a.archived&&a.kind=='bank').toList();
   if(banks.isEmpty)return;
+  final digitsController=TextEditingController();
   String? selected;
   String digits='';
+  var suffixLoading=false;
+  var suffixReadError=false;
+  var lookupRevision=0;
   List<String>? result;
-  result=await showDialog<List<String>>(
-    context:context,builder:(dialog)=>
-     StatefulBuilder(builder:(dialog,update)=>AlertDialog(
+  try{
+   result=await showDialog<List<String>>(
+    context:context,builder:(dialog)=>StatefulBuilder(
+     builder:(dialog,update)=>AlertDialog(
       title:Text(t('تأكيد حساب الرسائل البنكية','Verify SMS bank account')),
       content:SingleChildScrollView(child:Column(
        mainAxisSize:MainAxisSize.min,children:[
-        Text(t('اربط آخر 4 أرقام المقنّعة بحساب بنكي تختاره. '
-          'عند غياب تطابق فريد، تظل العملية بدون حساب.',
-          'Link the masked last four digits to your chosen bank account. '
-          'Unknown or ambiguous messages stay unassigned.')),
+        Text(t('اختر الحساب البنكي لمراجعة آخر 4 أرقام محفوظة أو تعديلها. '
+          'الرسائل غير المتطابقة تتطلب اختيار الحساب يدويًا.',
+          'Choose a bank account to review or correct its saved last four digits. '
+          'Unmatched messages require an explicit account choice.')),
         const SizedBox(height:10),
         DropdownButtonFormField<String>(
+         key:ValueKey('m481-verified-bank-select-'+(selected??'none')),
          initialValue:selected,isExpanded:true,
          decoration:InputDecoration(labelText:t('الحساب البنكي','Bank account'),
           border:const OutlineInputBorder()),
          items:banks.map((a)=>DropdownMenuItem<String>(
           value:a.id,child:Text(a.name))).toList(),
-         onChanged:(v)=>update(()=>selected=v),
+         onChanged:(v)async{
+          final request=++lookupRevision;
+          update((){
+           selected=v;
+           digitsController.clear();
+           digits='';
+           suffixLoading=v!=null;
+           suffixReadError=false;
+          });
+          if(v==null)return;
+          try{
+           // Only a verified SQLCipher read may populate these digits.
+           final saved=await widget.api.verifiedBankSuffix(v);
+           if(!dialog.mounted||request!=lookupRevision||selected!=v)return;
+           update((){
+            digits=saved??'';
+            digitsController.text=digits;
+            suffixLoading=false;
+           });
+          }catch(_){
+           if(!dialog.mounted||request!=lookupRevision)return;
+           update((){
+            suffixLoading=false;
+            suffixReadError=true;
+           });
+          }
+         },
         ),
         const SizedBox(height:10),
+        if(suffixLoading)const LinearProgressIndicator(),
+        if(suffixReadError)Padding(
+         padding:const EdgeInsets.only(bottom:8),
+         child:Text(t('تعذر قراءة آخر 4 أرقام بشكل موثّق. '
+           'أعد اختيار الحساب قبل التأكيد.',
+           'Could not verify the saved digits. Select the account again.'),
+          style:TextStyle(color:Theme.of(dialog).colorScheme.error))),
         TextField(
+         key:const Key('m481-bank-suffix-editor'),
+         controller:digitsController,
+         enabled:selected!=null&&!suffixLoading&&!suffixReadError,
          keyboardType:TextInputType.number,
          inputFormatters:[
           FilteringTextInputFormatter.digitsOnly,
@@ -158,7 +200,7 @@ class _WaffraAccountContextSettingsState
          maxLength:4,
          onChanged:(v)=>update(()=>digits=v),
          decoration:InputDecoration(
-          labelText:t('آخر 4 أرقام','Last four digits'),
+          labelText:t('آخر 4 أرقام محفوظة','Saved last four digits'),
           border:const OutlineInputBorder()),
         ),
        ])),
@@ -166,18 +208,26 @@ class _WaffraAccountContextSettingsState
        TextButton(onPressed:()=>Navigator.pop(dialog),
         child:Text(t('إلغاء','Cancel'))),
        FilledButton(
-        onPressed:selected!=null&&RegExp(r'^[0-9]{4}$').hasMatch(digits)
+        onPressed:selected!=null&&!suffixLoading&&!suffixReadError&&
+           RegExp(r'^[0-9]{4}$').hasMatch(digits)
          ?()=>Navigator.pop(dialog,[selected!,digits]):null,
         child:Text(t('تأكيد','Verify'))),
       ],
      )));
+  }finally{
+   digitsController.dispose();
+  }
   if(result==null||!mounted)return;
   try{
-   await widget.api.balances();
+   // Revalidate live account membership before updating saved suffix.
+   final latest=await widget.api.balances();
+   if(!latest.any((a)=>a.id==result![0]&&!a.archived&&a.kind=='bank')){
+    throw StateError('Bank account was archived or changed.');
+   }
    await widget.api.registerVerifiedBankSuffix(
     accountId:result[0],lastFour:result[1],userConfirmed:true);
-   _notify('تم حفظ ربط الرسائل البنكية داخل قاعدة البيانات المشفرة.',
-    'Verified bank mapping securely saved.',success:true);
+   _notify('تم حفظ آخر 4 أرقام للحساب داخل قاعدة البيانات المشفرة.',
+    'Verified account suffix securely updated.',success:true);
   }catch(_){
    _notify('تعذر تأكيد الحساب البنكي. راجع البيانات وحاول مرة أخرى.',
     'Bank mapping could not be verified. Refresh and retry.');
