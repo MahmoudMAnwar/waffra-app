@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 
 import 'legacy_snapshot_preflight.dart';
 import 'waffra_encrypted_store.dart';
+import 'waffra_account_context_schema.dart';
 import 'waffra_fresh_encrypted_vault_bootstrap.dart';
 
 /// The screens for categories, goals, and recurring transactions can consume
@@ -139,6 +140,12 @@ class WaffraFreshModulesRepository {
         if (data['active'] != null && data['active'] is! bool) {
           throw ArgumentError('Recurring active flag is invalid.');
         }
+        if(data['accountId']!=null&&
+           (data['accountId'] is! String ||
+            (data['accountId'] as String).trim().isEmpty ||
+            (data['accountId'] as String).length>128)){
+          throw ArgumentError('Invalid recurring default account.');
+        }
         break;
     }
     // Ensure legacy JSON can be serialized losslessly before the SQL write.
@@ -249,6 +256,31 @@ class WaffraFreshModulesRepository {
               '(amount_minor,is_income,due_day,source_json,recurring_id) '
               'VALUES (?,?,?,?,?)',
               [...values, id],
+            );
+          }
+          // Account default and typed recurring source must commit in the SAME
+          // SQLCipher transaction as this new/edited schedule and Home JSON.
+          // An old schedule without accountId remains readable; new editor
+          // writes always supply one. No default is inferred from Home.
+          final linkedId=data['accountId'];
+          if(linkedId is String){
+            await WaffraAccountContextSchema.requireReady(store);
+            final active=await store.customSelect(
+              'SELECT archived,currency FROM fresh_finance_money_accounts '
+              'WHERE account_id=?',
+              variables:[Variable.withString(linkedId)],
+            ).get();
+            if(active.length!=1||
+               active.single.read<int>('archived')!=0||
+               active.single.read<String>('currency')!='SAR'){
+              throw StateError('Recurring default requires an active SAR account.');
+            }
+            await store.customStatement(
+              'INSERT INTO fresh_finance_recurring_account_defaults '
+              '(recurring_id,account_id,changed_iso) VALUES (?,?,?) '
+              'ON CONFLICT(recurring_id) DO UPDATE SET '
+              'account_id=excluded.account_id,changed_iso=excluded.changed_iso',
+              [id,linkedId,DateTime.now().toIso8601String()],
             );
           }
           break;
