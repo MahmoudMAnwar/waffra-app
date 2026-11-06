@@ -92,7 +92,9 @@ void main() {
         // M470: source/destination selectors are Columns containing two
         // centered, blurry dropdowns (provider and account), never
         // Flutter's anchored DropdownButtonFormField.
-        expect(src,contains("final providers=WaffraRecurringAccountGroups.fromAccounts(transferAccounts)"));
+        // Approved transfer picker includes known banks and Add Bank, but
+        // never creates a financial account from a provider label alone.
+        expect(src,contains("final providers=WaffraRecurringAccountGroups.withBankProviderChoices(transferAccounts)"));
         expect(src,contains("key:ValueKey('m470-home-transfer-'"));
         expect(src,contains("Widget accountChoice("));
       }
