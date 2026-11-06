@@ -4471,9 +4471,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             leading:WaffraSmsSenderBrand(sender:sender),
             title:WaffraText(sender,maxLines:2,
              style:const TextStyle(fontWeight:FontWeight.bold,fontSize:15)),
-            subtitle:WaffraText(count.toString()+
-             (waffraIsEnglish?' messages awaiting review':' رسائل تحتاج فرز'),
-             style:const TextStyle(fontSize:12,color:emerald)),
+            subtitle:Directionality(
+             textDirection:waffraIsEnglish?TextDirection.ltr:TextDirection.rtl,
+             child:WaffraText(waffraIsEnglish?
+              '$count messages awaiting review':
+              '\u2068$count\u2069 رسائل بانتظار المراجعة',
+              style:const TextStyle(fontSize:12,color:emerald))),
             trailing:Row(mainAxisSize:MainAxisSize.min,children:[
              Checkbox(
               key:Key('waffra-sms-select-sender-'+index.toString()),
