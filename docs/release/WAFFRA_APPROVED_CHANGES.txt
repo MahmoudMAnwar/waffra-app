@@ -2441,3 +2441,8 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 - New tests `test/m508_saudi_default_sms_rules_test.dart`, audit/provenance `docs/qa/M508_SAUDI_SMS_SEED_LIBRARY.md`, scoped `docs/qa/approved_change_scope.json` and requirements `docs/WAFFRA_REQUIREMENTS.md`.
 - Security: no OTP values, account tails, dates, private SMS, bank linked IDs or financial amounts bundled; foreign currency and money posting are not changed. All default exclusions can only suggest, never silently discard confirmed financial alerts. Built-ins present immediately on fresh and updated installations; no migration/write to encrypted saved rules.
 - Status: candidate feature on Draft PR #436. Exact HEAD CI, complete safety suite, signed APK and two-device Android verification still required. No merge/release certified by documentation alone.
+
+
+[M508 793-keyword UI latency follow-up]
+- Original `WaffraSmsLocalRules.suggestions()` previously scanned all 16 small built-in patterns against up to 100 private local SMS drafts when opening rule suggestions. With M508's 793 new immutable phrases, that could multiply SMS-thread work and worsen the user's reported jank. Bound only quick-add keyword suggestions to the original small default set; the complete new seed dictionary still matches financial incoming messages offline and remains browsable in the four lazy UI groups.
+- Existing user-learned rules and keyword safety checks untouched. M385 scope + fresh/upgrade Android profiling and exact-head regression tests still required.
