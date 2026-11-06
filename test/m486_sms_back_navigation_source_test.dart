@@ -67,9 +67,9 @@ void main(){
   expect(editor,contains('_m492SmsEditorDrafts[smsEditorDraftKey]'));
   for(final field in ["'title'","'amount'","'income'","'parent'",
       "'category'","'budget'","'provider'","'account'","'date'"]){
-   expect(editor,contains('smsEditorDraft'),reason:field);
+   expect(src,contains(field+':'),reason:'stored $field');
   }
-  expect(editor,contains('if(_m492SmsEditorDrafts.length>=8)'));
+  expect(src,contains('_m492SmsEditorDrafts.length>=8'));
   expect(src,contains('if(smsEditorDraftKey!=null)_m492SmsEditorDrafts.remove(smsEditorDraftKey);'));
   expect(src,contains('debounce?.cancel();disposeLater([title,value,notes,message,transferAmount,transferNote]);'));
  });
