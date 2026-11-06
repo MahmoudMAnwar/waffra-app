@@ -5510,7 +5510,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(revision==null||revision==_lastWidgetRevision)return;
    final raw=loadedFinance.ledgerRaw;
    if(raw==null)return;
-   final loaded=(jsonDecode(raw) as List)
+   // Widget resume may follow a biometric/background transition. Decode
+   // large verified ledgers off Flutter's UI isolate to preserve tap/animation
+   // frames; this is read-only and keeps all finance integrity gates intact.
+   final parsed=await WaffraLargeJsonDecode.parse(raw);
+   if(parsed is! List)throw const FormatException(
+    'Widget finance ledger is not a list.');
+   final loaded=parsed
     .map((item)=>MoneyEntry.fromJson(Map<String,dynamic>.from(item as Map))).toList();
    if(!mounted)return;
    setState((){
