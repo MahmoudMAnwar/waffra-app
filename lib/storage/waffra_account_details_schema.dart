@@ -94,6 +94,7 @@ CREATE TABLE fresh_finance_account_details_revision(
   required String accountId,required String kind,
   required String providerId,required String subtype,
   required String confirmedIso,
+  bool allowArchivedRestore=false,
  })async{
   await requireReady(db);
   if(accountId.trim().isEmpty||accountId.length>128||
@@ -104,8 +105,11 @@ CREATE TABLE fresh_finance_account_details_revision(
   final a=await db.customSelect(
    'SELECT kind,archived FROM fresh_finance_money_accounts WHERE account_id=?',
    variables:[Variable.withString(accountId)]).get();
+  // Only an authenticated, prevalidated disposable-vault restore is
+  // permitted to carry identity metadata for an already archived account.
+  // Ordinary account edits can never resurrect or modify archived records.
   if(a.length!=1||a.single.read<String>('kind')!=kind||
-     a.single.read<int>('archived')!=0){
+     (!allowArchivedRestore&&a.single.read<int>('archived')!=0)){
    throw StateError('Identity must match a live verified money account.');
   }
   await db.customStatement(
