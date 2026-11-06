@@ -1,31 +1,15 @@
 {
   "contract_version": 1,
-  "change_id": "M472-main-apk-full-python-premerge-parity-20261106",
-  "human_scope_review": "User explicitly requests a permanent fix for repeated failed signed APK builds on main, most recently run #42211345595 (main a82ae684). Scope of Issue #399 is one remaining M442 outdated source assertion and the root CI discrepancy: M174 PR pipeline did not execute the full Python suites that signed main APK executed. Add both original unskipped exact Python discovery commands inside existing SHA-pinned M174 PR and push check, before evidence generation and Flutter. Introduce independently discovered M472 QA source parity test verifying on every PR that these exact commands and required status are not conditionally disabled; include tracker and M385 scope manifest. No runtime native/Dart, finance, SQLCipher, APK build/release secrets or other test exclusions changed. The M385 bounded sections strictly confine modifications to the one existing M442 QA function and one M174 workflow job block; no whole-workflow replacement. Branch protection enforcement cannot be changed using the connector, so the owner must keep the M174 job mandatory for merges. CI and actual main APK artifact must pass before claiming resolved.",
+  "change_id": "WAFFRA-NEW-001-account-picker-heading-requirement-register-20261106",
+  "human_scope_review": "Owner supplied screenshot on 2026-11-06 and explicitly requested the first UI change be permanently recorded in GitHub Issue and a new PR BEFORE code changes. This initial draft PR contains only requirements documentation plus the required bounded M385 change-scope manifest. It does NOT implement the UI, claim tests, change source, or touch main. Future user changes will receive numbered Issues and tracker updates before implementation, with the allowlist updated to match each actual diff.",
   "user_requested_changes": [
-    "Fix failing main #42211345595: one obsolete M442 Python QA assertion for async SMS inbox worker/foreground notification must check real ordered safe handoff without changing production Android behavior.",
-    "End recurring PR-green/main-red APK regressions by running the identical full Python QA and incremental CI discovery suites in the SHA-pinned always-on M174 PR gate, unskipped and fail-closed.",
-    "Add M472 source QA parity checks for the exact release and PR commands, record issue in permanent tracker, preserve M385 bounded scope and wait for verified APK."
+    "Create permanent numbered requirement #1, linked GitHub issue and draft PR, documenting relocation of the all-accounts picker to the existing bank-name heading inside the green Home balance card.",
+    "Preserve full long selected account name by multiline adaptive button and card layout, with no ellipsis, bottom floating picker, inaccessible arrow, or overlap with amount, eye, or artwork.",
+    "Preserve verified account selection and balance filter semantics, financial storage and CI protections; do not mark implemented until code, regression tests, Android checks and review."
   ],
   "allowed_changed_files": [
-    ".github/workflows/m174-main-sha-postmerge.yml",
-    "test/qa/m442_sms_consent_session_recovery_test.py",
-    "test/qa/m472_main_apk_python_qa_parity_test.py",
-    "docs/qa/approved_change_scope.json",
-    "docs/qa/WAFFRA_32_NEW_CHANGES_M470_TRACKER.md"
+    "docs/WAFFRA_REQUIREMENTS.md",
+    "docs/qa/approved_change_scope.json"
   ],
-  "bounded_sections": {
-    ".github/workflows/m174-main-sha-postmerge.yml": [
-      {
-        "start": "      - name: Enforce declared file and function edit scope versus original main",
-        "end": "      - name: Generate non-sensitive NO-GO evidence for exact SHA"
-      }
-    ],
-    "test/qa/m442_sms_consent_session_recovery_test.py": [
-      {
-        "start": "    def test_logout_races_cannot_capture_or_hide_old_encrypted_data(self):",
-        "end": "    def test_bridge_is_wired_to_native_with_no_os_reprompt_on_relogin(self):"
-      }
-    ]
-  }
+  "bounded_sections": {}
 }
