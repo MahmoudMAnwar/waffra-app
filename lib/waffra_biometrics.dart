@@ -54,6 +54,12 @@ class WaffraBiometrics {
     }
   }
 
+  /// Cancel an in-flight OS challenge before a user-requested sign-out.
+  /// This never marks the session as verified or reveals any finances.
+  static Future<void> cancelMandatory() async {
+    try { await _auth.stopAuthentication(); } catch (_) {}
+  }
+
   static Future<bool> unlock() async {
     try {
       if (!await isAvailable()) return false;

@@ -29,6 +29,7 @@ class WaffraMandatoryBiometricGate extends StatefulWidget {
     required this.onSignOut,
     this.checkAvailable = WaffraBiometrics.isAvailable,
     this.authenticate = WaffraBiometrics.unlockMandatory,
+    this.cancelAuthentication = WaffraBiometrics.cancelMandatory,
   });
 
   final bool english;
@@ -36,6 +37,7 @@ class WaffraMandatoryBiometricGate extends StatefulWidget {
   final Future<void> Function() onSignOut;
   final Future<bool> Function() checkAvailable;
   final Future<bool> Function() authenticate;
+  final Future<void> Function() cancelAuthentication;
 
   @override
   State<WaffraMandatoryBiometricGate> createState() =>
@@ -45,6 +47,8 @@ class WaffraMandatoryBiometricGate extends StatefulWidget {
 class _WaffraMandatoryBiometricGateState
     extends State<WaffraMandatoryBiometricGate> with WidgetsBindingObserver {
   bool _busy = false;
+  bool _signingOut = false;
+  int _authGeneration = 0;
   bool _attempted = false;
   bool _available = false;
   String? _message;
@@ -77,7 +81,8 @@ class _WaffraMandatoryBiometricGateState
   }
 
   Future<void> _tryUnlock() async {
-    if (_busy) return;
+    if (_busy || _signingOut) return;
+    final generation = ++_authGeneration;
     setState(() {
       _busy = true;
       _attempted = true;
@@ -89,7 +94,7 @@ class _WaffraMandatoryBiometricGateState
     } catch (_) {
       available = false;
     }
-    if (!mounted) return;
+    if (!mounted || _signingOut || generation != _authGeneration) return;
     if (!available) {
       setState(() {
         _busy = false;
@@ -107,7 +112,7 @@ class _WaffraMandatoryBiometricGateState
     } catch (_) {
       ok = false;
     }
-    if (!mounted) return;
+    if (!mounted || _signingOut || generation != _authGeneration) return;
     setState(() => _busy = false);
     if (ok) {
       // Parent must ALSO confirm foreground and current session generation;
@@ -119,6 +124,39 @@ class _WaffraMandatoryBiometricGateState
             ? 'Biometric verification was not completed. Try again.'
             : 'لم يكتمل التحقق بالبصمة. حاول مرة أخرى.';
       });
+    }
+  }
+
+  Future<void> _requestSignOut() async {
+    if (_signingOut) return;
+    setState(() {
+      _signingOut = true;
+      _authGeneration++; // Ignore a late successful fingerprint result.
+      _attempted = true;
+      _message = null;
+    });
+    try {
+      // The sign-out escape must work while the native OS challenge is busy.
+      if (_busy) await widget.cancelAuthentication();
+      await widget.onSignOut();
+      if (mounted) {
+        setState(() => _message = widget.english
+          ? 'Sign-out did not complete. Please retry; your data is unchanged.'
+          : 'لم يكتمل تسجيل الخروج. حاول مرة أخرى؛ بياناتك محفوظة.');
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _message = widget.english
+          ? 'Could not sign out securely. Please retry.'
+          : 'تعذر تسجيل الخروج بأمان. حاول مرة أخرى.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _signingOut = false;
+          _busy = false;
+        });
+      }
     }
   }
 
@@ -149,7 +187,7 @@ class _WaffraMandatoryBiometricGateState
                   fontFamily: 'Tajawal', fontSize: 14)),
             ],
             const SizedBox(height: 25),
-            if (_busy)
+            if (_busy || _signingOut)
               const CircularProgressIndicator(color: Colors.white)
             else
               FilledButton.icon(
@@ -161,7 +199,7 @@ class _WaffraMandatoryBiometricGateState
             const SizedBox(height: 12),
             TextButton(
               key: const Key('waffra-mandatory-biometric-signout'),
-              onPressed: _busy ? null : () => widget.onSignOut(),
+              onPressed: _signingOut ? null : _requestSignOut,
               child: Text(widget.english ? 'Sign out' : 'تسجيل الخروج',
                 style: const TextStyle(color: Colors.white)),
             ),

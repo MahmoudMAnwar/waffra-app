@@ -1328,6 +1328,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  Future<void> logout()async {
   if(_logoutInProgress)return;
   _logoutInProgress=true;
+  if(mounted)_showLogoutFeedback(waffraIsEnglish?
+   'Signing out securely…':'جارٍ تسجيل الخروج بأمان…');
   try{
   // A phone user must not lose access after an apparently successful logout.
   // Check OS-protected verifier ownership before clearing the session.
@@ -1336,16 +1338,17 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    WaffraLocalCredentialProbe? integrity;
    try{
     integrity=await WaffraLocalPhoneCredentials.probeForPhone(
-     WaffraSaudiMobile.inputFromStored(current.phone));
+     WaffraSaudiMobile.inputFromStored(current.phone)).timeout(
+      const Duration(seconds:12));
    }catch(_){integrity=WaffraLocalCredentialProbe.malformed;}
    if(integrity!=WaffraLocalCredentialProbe.ready){
     final p=await SharedPreferences.getInstance();
     final hasLegacy=p.getString('waffra_local_password_salt')!=null&&
      p.getString('waffra_local_password_hash')!=null;
     if(!hasLegacy){
-     if(mounted)snack(context,waffraIsEnglish?
+     if(mounted)_showLogoutFeedback(waffraIsEnglish?
       'Secure sign-in credentials could not be verified. Sign-out was stopped to protect account access. Do not clear app data.':
-      'تعذر التأكد من سلامة بيانات الدخول الآمنة. تم إيقاف تسجيل الخروج لحماية حسابك. لا تمسح بيانات التطبيق.');
+      'تعذر التأكد من سلامة بيانات الدخول الآمنة. تم إيقاف تسجيل الخروج لحماية حسابك. لا تمسح بيانات التطبيق.',isError:true);
      return;
     }
    }
@@ -1354,21 +1357,26 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   // pending review. If the new native bridge is unavailable, fail closed by
   // using explicit disable; never silently sign out with collection enabled.
   if(Platform.isAndroid){
-   final paused=await WaffraAutoSms.suspendForSignOut();
-   if(!paused&&!await WaffraAutoSms.disable()){
+   final paused=await WaffraAutoSms.suspendForSignOut().timeout(
+    const Duration(seconds:12),onTimeout:()=>false);
+   if(!paused&&!await WaffraAutoSms.disable().timeout(
+    const Duration(seconds:12),onTimeout:()=>false)){
     throw StateError('Could not safely suspend bank SMS before sign-out');
    }
   }
   // Drop any in-memory AI prompt context and cancel model download before
   // a new account can open its verified finance scope.
-  try{await WaffraOnDeviceQwen.shared.dispose();}catch(_){}
+  await WaffraOnDeviceQwen.shared.dispose().timeout(const Duration(seconds:12));
   await _accountWriteAuthority.signOut();
-  if(mounted)setState((){profile=null;showLogin=true;locked=false;googleFirstRunSetup=false;});
+  if(mounted){
+   _logoutFeedbackKey.currentState?.clearSnackBars();
+   setState((){profile=null;showLogin=true;locked=false;googleFirstRunSetup=false;});
+  }
   }catch(error){
    // Every sign-out entry point shares this fail-closed feedback. An SMS
    // suspension or credential-integrity failure must NOT look like logout.
    debugPrint('Verified sign-out was not completed: ${error.runtimeType}');
-   if(mounted)snack(context,waffraIsEnglish?
+   if(mounted)_showLogoutFeedback(waffraIsEnglish?
     'Could not safely sign out. Your financial data is unchanged; retry.':
     'تعذر تسجيل الخروج بأمان. بياناتك المالية لم تتغير؛ حاول مرة أخرى.',
     isError:true);
@@ -1377,6 +1385,20 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   }
  }
  bool _logoutInProgress=false;
+ final _logoutFeedbackKey=GlobalKey<ScaffoldMessengerState>();
+ void _showLogoutFeedback(String message,{bool isError=false}){
+  // WaffraApp's own BuildContext is ABOVE MaterialApp's ScaffoldMessenger.
+  // Never call ScaffoldMessenger.of(context) from the root error path:
+  // doing so hides a failed sign-out from the user.
+  final messenger=_logoutFeedbackKey.currentState;
+  if(messenger==null)return;
+  messenger.clearSnackBars();
+  messenger.showSnackBar(SnackBar(
+   content:Text(message),
+   duration:Duration(seconds:isError?8:5),
+   behavior:SnackBarBehavior.floating,
+  ));
+ }
  Future<void> setPin(String? value)async {
   final hash=value==null?null:sha256.convert(utf8.encode(value)).toString();
   await _accountWriteAuthority.replacePinVerifier(hash);
@@ -1402,6 +1424,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   await p.setBool('waffra_dark_mode',dark);
  }
  @override Widget build(BuildContext context)=>MaterialApp(
+  scaffoldMessengerKey:_logoutFeedbackKey,
   scrollBehavior:const WaffraVisibleScrollBehavior(),
   debugShowCheckedModeBanner:false,title:'وفرة | Waffra',
   locale:language=='en'?const Locale('en','US'):
