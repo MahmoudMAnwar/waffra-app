@@ -2102,3 +2102,9 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 - An automatic suffix-based account suggestion is accepted only when the verified SMS sender's known bank matches the independently verified bank group of that account; ambiguous or unknown senders require user selection. This is source review ONLY, not automatic debit consent.
 - The new-post review copy no longer suggests that accountless posting is allowed. Historical unassigned transactions are untouched.
 - Added regression assertions; exact-head CI and Android acceptance are required.
+
+[M470 bank account creation and suffix link] 2026-11-06 — #23 partial candidate
+- Add Account bank form now optionally accepts the user-approved last 4 masked bank/card digits. No full account numbers or OTP are saved.
+- WaffraVerifiedAccountsApi now creates the bank account and registers that verified last-four inside one existing native-locked SQLCipher transaction, so a metadata error cannot leave half a creation committed.
+- The existing encrypted V3 account-context backup already captures the confirmed suffix. SMS sender bank must agree with the selected account's verified bank group before its suffix can prefill a source; users still confirm review before finance posting.
+- Advanced versioned account subtype definitions remain incomplete; this item is not Done. Exact-head CI and signed-device verification are required.
