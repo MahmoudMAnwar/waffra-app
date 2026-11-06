@@ -53,6 +53,10 @@ void main() {
      onConfirmTransfer:(_ )async{commits++;}))));
    await tester.tap(find.text('تحويل'));
    await tester.pumpAndSettle();
+   // M470 adds a bank/provider selector above the transfer confirmation.
+   // Scroll to the real button rather than tapping outside a 600px test view.
+   await tester.ensureVisible(find.byKey(const Key('m440-confirm')));
+   await tester.pumpAndSettle();
    await tester.tap(find.byKey(const Key('m440-confirm')));
    await tester.pumpAndSettle();
    expect(find.text('أدخل مبلغًا صحيحًا بالريال'),findsOneWidget);
