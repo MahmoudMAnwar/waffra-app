@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M506-NINE-APK-REGRESSIONS-20261106",
-  "human_scope_review": "Owner submitted nine explicit Android screenshots, reproduced defects, and requested one PR to fix them after #402 main merge. This proposed scope declares only code in the SMS-reviewed transaction editor, its matching source/provider dropdowns, encrypted verified receipt writer, transaction details, scanned-count UI, Arabic banking sender qualifiers, and specific regression tests. Finance/account authentication invariants are protected. Automated checks are NOT human approval, real device certification, or permission to merge. Bounded splash startup timing and its widget regression are within user-requested performance issue #427; this does not certify overall interaction jank or the biometric/finance critical path.",
+  "human_scope_review": "Owner submitted nine explicit Android screenshots, reproduced defects, and requested one PR to fix them after #402 main merge. This proposed scope declares only code in the SMS-reviewed transaction editor, its matching source/provider dropdowns, encrypted verified receipt writer, transaction details, scanned-count UI, Arabic banking sender qualifiers, and specific regression tests. Finance/account authentication invariants are protected. Automated checks are NOT human approval, real device certification, or permission to merge. Bounded splash startup timing and its widget regression are within user-requested performance issue #427; this does not certify overall interaction jank or the biometric/finance critical path. M507 user's 6 Nov screenshot and next-message learning request are recorded as #437/#438. The additional parser, fact-kind, built-in keyword, local-rule reread and safe review-only queue refresh changes are constrained to the declared code blocks; finance authority, SQLCipher, secrets and biometric controls remain unchanged.",
   "user_requested_changes": [
     "2026-11-06 Issue #427: eliminate app-wide cold-start, tap, pull-to-refresh and loading animation lag, with performance profiling and device evidence; tracked, not claimed corrected.",
     "2026-11-06 Issue #428: confirmed Android bank SMS expense with attached receipt must be saved atomically in SQLCipher with verified account and hash, avoiding prior generic save error.",
@@ -11,7 +11,9 @@
     "2026-11-06 Issues #433-#434: independent bank account selection and new-bank option for transfers; choose historical date before notes; verify active source/destination and commit two-sided transfer with original finance lock.",
     "2026-11-06 Issue #435: address failed logout due secure verifier/biometric signout preflight safely without credential erasure or unverified account bypass; currently tracked and not claimed solved.",
     "2026-11-06 Issue #435 candidate: for a truly missing on-device phone verifier, a previously authenticated account may explicitly choose a new password only after an independent OS biometric confirmation; do not overwrite malformed, differently owned, or existing secure records.",
-    "2026-11-06 Issue #427 bounded startup improvement: remove an unconditional 3000ms intro wait, synchronize 1650ms splash animation with 1750ms display minimum, preserving finance startup and biometric barriers; Android release profiling still required."
+    "2026-11-06 Issue #427 bounded startup improvement: remove an unconditional 3000ms intro wait, synchronize 1650ms splash animation with 1750ms display minimum, preserving finance startup and biometric barriers; Android release profiling still required.",
+    "2026-11-06 M507 #437: parse screenshot mobile top-up as 276 SAR and preselect income/expense, title and active main/subcategory without treating phone suffix, product price or date as amount.",
+    "2026-11-06 M507 #438: recompute bank SMS review-only prefill from encrypted local rules after a confirmed commit, including next pasted/queued message; never auto-post, use verified account and preserve drafts."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -24,7 +26,10 @@
     "native/WaffraAutoSmsStore.kt",
     "test/m262_bank_sms_notes_separation_test.dart",
     "test/m506_android_nine_regressions_test.dart",
-    "test/waffra_m206_day_theme_tour_sms_regression_test.dart"
+    "test/waffra_m206_day_theme_tour_sms_regression_test.dart",
+    "lib/waffra_bank_sms_facts.dart",
+    "lib/waffra_sms_local_rules.dart",
+    "test/m507_sms_amount_and_continuous_review_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -63,6 +68,14 @@
       {
         "start": " Future<void> logout()async {",
         "end": " Future<void> setPin("
+      },
+      {
+        "start": "class BankParser {",
+        "end": "DateTime? bankSmsDate("
+      },
+      {
+        "start": " Future<void> bulkSmsSheet(",
+        "end": " Future<void> _previewForeignBankCurrency("
       }
     ],
     "lib/storage/waffra_unified_finance_writer.dart": [
@@ -99,6 +112,18 @@
       {
         "start": "void main() {",
         "end": null
+      }
+    ],
+    "lib/waffra_bank_sms_facts.dart": [
+      {
+        "start": " static final _expense=RegExp(",
+        "end": " static final _pending=RegExp("
+      }
+    ],
+    "lib/waffra_sms_local_rules.dart": [
+      {
+        "start": "  WaffraSmsLocalRule(id:'builtin_mobile'",
+        "end": "  WaffraSmsLocalRule(id:'builtin_pharmacy'"
       }
     ]
   }
