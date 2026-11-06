@@ -2115,3 +2115,9 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 - Restored the original one-class/one-method structures and applied the same user-approved four-digit field and atomic verified SQLCipher account+suffix writer without any duplicate Dart sections.
 - Confirmed latest source files are bounded (new-account dialog 159 lines, verified accounts adapter 232 lines) with a single account creator and no extra account source or bypass of active encrypted finance verification.
 - This is a candidate source fix; do not assert complete CI success, sign an APK or merge before exact-head tests and device acceptance.
+
+
+[M470 CI regression repair] 2026-11-06 — first dependency of next remaining work
+- An exact-PR-head full Flutter run passed thousands of tests but failed four SOURCE-TEXT assertions in existing M343, M359, and M401/M402 tests. Account-scoped monthly budget calculations had replaced the formerly unconditional global spending/cap projections, and the Home transfer now uses a Column of two centered bank/account pickers rather than returning one picker.
+- Updated only those legacy test expectations, retaining and extending checks for correct per-account budget attribution, All-account aggregation and the required two-level centered bank/account UI. Real financial behavior was not reverted or bypassed.
+- Test updates are explicitly declared in the M385 scope manifest; current exact-head CI and physical-device acceptance still required. Existing complete-app tests are not declared passing until independently confirmed on this commit.
