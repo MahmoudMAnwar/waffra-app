@@ -3887,10 +3887,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // Account settings open from the app bar instead of a footer destination.
  bool accountOpened=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
+ DateTime? _m468LastResumeSmsScan;
  // #410: only ephemeral user-edited SMS form fields, keyed by message hash;
  // never persist a duplicate raw SMS outside the verified encrypted source.
  final Map<String,Map<String,Object?>> _m492SmsEditorDrafts={};
- DateTime? _m468LastResumeSmsScan;
  bool _m486ResumeQueued=false;
  void _m468OnResume(){
   if(!mounted||!ready||
