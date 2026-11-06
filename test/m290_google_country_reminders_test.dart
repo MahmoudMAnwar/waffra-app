@@ -167,7 +167,10 @@ void main() {
     expect(reminders, contains('tz.getLocation(identifier)'));
     expect(reminders, isNot(contains("tz.getLocation('Asia/Riyadh')")));
     expect(main, contains('source:ImageSource.camera,imageQuality:80'));
-    expect(main, contains('await ImagePicker().pickMultiImage(imageQuality:80)'));
+    // M467 wraps a user-invoked gallery picker to preserve the draft and
+    // avoid a second biometric gate; it still requests photos only on tap.
+    expect(main, contains('WaffraExternalMediaSession.runPicker(()='));
+    expect(main, contains('ImagePicker().pickMultiImage(imageQuality:80)'));
     expect(main, contains('نطلب صلاحية الكاميرا')); // consent wording in UI
   });
 }

@@ -29,10 +29,19 @@ void main() {
         home.indexOf(' @override void didChangeAppLifecycleState('),
         home.indexOf(' @override void dispose(){WaffraRegionalCopy.'));
     expect(lifecycle, contains('WaffraBiometricSessionGuard.mustLockOn(state)'));
-    expect(lifecycle, contains('state==AppLifecycleState.paused||'));
-    expect(lifecycle, contains('state==AppLifecycleState.hidden||'));
-    expect(lifecycle, contains('state==AppLifecycleState.detached){'));
-    expect(lifecycle, contains('setState(()=>locked=true);'));
+    // M470 deliberately keeps the existing Navigator/draft alive while away.
+    // Background gets a green privacy shield; biometric is required at >=60s.
+    expect(lifecycle, isNot(contains('setState(()=>locked=true);')));
+    expect(home, contains('builder:(context,child)=>WaffraIdleBiometricOverlay('));
+    final overlay = File('lib/waffra_idle_biometric_overlay.dart').readAsStringSync();
+    expect(overlay, contains('state==AppLifecycleState.hidden||'));
+    expect(overlay, contains('state==AppLifecycleState.paused||'));
+    expect(overlay, contains('state==AppLifecycleState.detached){'));
+    expect(overlay, contains('_backgroundAt??=widget.now();'));
+    expect(overlay, contains('widget.now().difference(began)>=widget.timeout'));
+    expect(overlay, contains("key:Key('m470-background-green-privacy-shield')"));
+    expect(overlay, contains('color:Color(0xFF064D3B)'));
+    expect(overlay, contains('child:WaffraMandatoryBiometricGate('));
     expect(home, contains('locked?WaffraMandatoryBiometricGate('));
     // Screenshot permission remains an independent user setting.
     expect(home, contains('setScreenshotsAllowed'));

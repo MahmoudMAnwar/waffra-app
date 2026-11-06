@@ -53,7 +53,7 @@ void main() {
       expect(card,isNot(contains('delete(')));
     }
     expect(app,contains('onViewReceipt:waffraReceiptPaths(entry.receiptPath).isNotEmpty'));
-    expect(app,contains('showReceipt(entry.receiptPath!)'));
+    expect(app,contains('showReceipt(entry.receiptPath!,entryId:entry.id)'));
   });
 
   testWidgets('M384: top start corner is right in Arabic and left in English',

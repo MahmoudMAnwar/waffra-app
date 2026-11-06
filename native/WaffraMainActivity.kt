@@ -15,6 +15,7 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import com.google.firebase.auth.FirebaseAuth
 import java.security.KeyStore
+import java.util.concurrent.Executors
 import javax.crypto.Mac
 import javax.crypto.SecretKey
 import org.json.JSONArray
@@ -24,6 +25,8 @@ import org.json.JSONArray
 class MainActivity : FlutterFragmentActivity() {
     private val privacyChannel = "waffra/privacy"
     private val messagesChannel = "waffra/messages"
+    // History scans/decryption must never run on the Android UI thread.
+    private val smsHistoryExecutor = Executors.newSingleThreadExecutor()
     private val autoSmsRequestCode = 7712
     private var pendingSmsPermissionResult: MethodChannel.Result? = null
     private val autoSmsNotificationRequestCode = 7713
@@ -101,13 +104,21 @@ class MainActivity : FlutterFragmentActivity() {
         // A receiver can enqueue a bank candidate while Waffra is backgrounded.
         // A damaged encrypted queue must be reported by the Flutter review
         // screen, not crash Activity.onResume or be treated as zero pending.
-        val hasReview = try {
-            WaffraAutoSmsStore.enabled(this) &&
-                WaffraAutoSmsStore.pending(this).isNotEmpty()
-        } catch (_: Exception) {
-            true // Foreground refresh will surface the read failure.
+        // Keystore decrypt and 500-item JSON decode can stall the Android UI
+        // on return from Messages/Camera. Serialize this work off the main
+        // thread with the existing dedicated SMS executor.
+        val app = applicationContext
+        smsHistoryExecutor.execute {
+            val hasReview = try {
+                WaffraAutoSmsStore.enabled(app) &&
+                    WaffraAutoSmsStore.pending(app).isNotEmpty()
+            } catch (_: Exception) {
+                true // Flutter review reports the actual queue error.
+            }
+            if (hasReview) runOnUiThread {
+                messageChannel?.invokeMethod("autoSmsAvailable", null)
+            }
         }
-        if (hasReview) messageChannel?.invokeMethod("autoSmsAvailable", null)
     }
 
     override fun onRequestPermissionsResult(requestCode: Int,
@@ -252,6 +263,7 @@ class MainActivity : FlutterFragmentActivity() {
                 "autoSmsPermissionState" -> result.success(WaffraAutoSmsStore.permissionGranted(this))
                 "autoSmsEnabled" -> result.success(WaffraAutoSmsStore.enabled(this))
                 "autoSmsTrackingStatus" -> result.success(WaffraAutoSmsStore.trackingStatus(this))
+                "autoSmsScanProgress" -> result.success(WaffraAutoSmsStore.scanProgress(this))
                 "pauseAutoSmsForSignOut" ->
                     result.success(WaffraAutoSmsStore.suspendForSignOut(this))
                 "resumeAutoSmsAfterSignIn" -> {
@@ -302,12 +314,74 @@ class MainActivity : FlutterFragmentActivity() {
                     result.success(saved)
                 }
                 "importConsentMonthBankSms" -> {
-                    // Historical candidates are review-only; no worker auto-save.
-                    result.success(WaffraAutoSmsStore.importConsentMonth(this))
+                    // Provider scans and encrypted queue writes are blocking IO.
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        try {
+                            val imported = WaffraAutoSmsStore.importConsentMonth(app)
+                            runOnUiThread { result.success(imported) }
+                        } catch (_: Exception) {
+                            runOnUiThread {
+                                result.error("SMS_HISTORY_IMPORT_FAILED",
+                                    "Could not complete bank SMS history scan", null)
+                            }
+                        }
+                    }
                 }
-                "scanUnknownFinancialSms" -> result.success(
-                    WaffraAutoSmsStore.scanUnknownFinancialSms(this))
-                "pendingAutoBankSms" -> result.success(WaffraAutoSmsStore.pending(this))
+                "scanUnknownFinancialSms" -> {
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        try {
+                            val found = WaffraAutoSmsStore.scanUnknownFinancialSms(app)
+                            runOnUiThread { result.success(found) }
+                        } catch (_: Exception) {
+                            runOnUiThread {
+                                result.error("SMS_HISTORY_REVIEW_FAILED",
+                                    "Could not scan unknown financial SMS", null)
+                            }
+                        }
+                    }
+                }
+                "excludedAutoSmsSenders" -> {
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        try {
+                            val senders = WaffraAutoSmsStore.excludedSenders(app)
+                            runOnUiThread { result.success(senders) }
+                        } catch (_: Exception) {
+                            runOnUiThread { result.error("SMS_EXCLUSION_READ_FAILED",
+                                "Could not verify excluded senders", null) }
+                        }
+                    }
+                }
+                "excludeAutoSmsSender" -> {
+                    val sender = call.arguments as? String ?: ""
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        val excluded = WaffraAutoSmsStore.excludeSender(app, sender)
+                        runOnUiThread { result.success(excluded) }
+                    }
+                }
+                "restoreExcludedAutoSmsSender" -> {
+                    val sender = call.arguments as? String ?: ""
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        val restored = WaffraAutoSmsStore.restoreExcludedSender(app, sender)
+                        runOnUiThread { result.success(restored) }
+                    }
+                }
+                "pendingAutoBankSms" -> {
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        try {
+                            val pending = WaffraAutoSmsStore.pending(app)
+                            runOnUiThread { result.success(pending) }
+                        } catch (_: Exception) {
+                            runOnUiThread { result.error("SMS_REVIEW_READ_FAILED",
+                                "Could not verify encrypted SMS queue", null) }
+                        }
+                    }
+                }
                 "claimAutoBankSmsCloudAttempt" -> result.success(
                     WaffraAutoSmsStore.claimCloudAttempt(this, call.arguments as? String ?: ""))
                 "stageAutoBankSmsCloudAnalysis" -> {
@@ -319,7 +393,11 @@ class MainActivity : FlutterFragmentActivity() {
                 "ackAutoBankSms" -> {
                     val values = call.arguments as? List<*>
                     val ids = values?.filterIsInstance<String>()?.toSet() ?: emptySet()
-                    result.success(WaffraAutoSmsStore.acknowledge(this, ids))
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        val acknowledged = WaffraAutoSmsStore.acknowledge(app, ids)
+                        runOnUiThread { result.success(acknowledged) }
+                    }
                 }
                 "openMessages" -> {
                     try {
@@ -459,6 +537,7 @@ class MainActivity : FlutterFragmentActivity() {
     }
 
     override fun onDestroy() {
+        smsHistoryExecutor.shutdown()
         WaffraAutoSmsStore.onChanged = null
         pendingSmsPermissionResult?.error("SMS_PERMISSION_CANCELLED", "Activity closed", null)
         pendingSmsPermissionResult = null

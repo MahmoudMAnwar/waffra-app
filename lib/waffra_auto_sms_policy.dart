@@ -21,7 +21,7 @@ abstract final class WaffraAutoSmsPolicy {
   r'jazira|jazeera|aljazira|bank|urpay|stcpay|stcbank|mobily.?pay',
   caseSensitive:false);
  static final _currency=RegExp(
-  r'\b(?:SAR|SR)\b|ريال(?:\s+سعودي)?|ر\.?\s*س',
+  r'(?<![A-Za-zء-ي])(?:SAR|SR|ريال(?:\s+سعودي)?|ر\.\s*س|ر\s+س)(?![A-Za-zء-ي])',
   caseSensitive:false);
  static final _incoming=RegExp(
   r'\b(?:credit transfer|incoming transfer|account credited|credited|'
@@ -50,6 +50,7 @@ abstract final class WaffraAutoSmsPolicy {
   DateTime? verifiedDate,
   bool accountLinked=true,
   bool categoryActive=true,
+  bool sourceAccountVerified=false,
  }) {
   if(sms.trim().isEmpty || sms.length>1600 || _unsafe.hasMatch(sms)||
       WaffraSmsIntelligence.isPendingOrUnconfirmed(sms)){
@@ -72,7 +73,7 @@ abstract final class WaffraAutoSmsPolicy {
   // Source account suffix alone is NOT an identity-mapping authorization.
   // No typed bank account in the current MoneyEntry schema; do not silently
   // apply a real bank SMS to the app's generic Cash account.
-  if(facts.sourceSuffix!=null){
+  if(facts.sourceSuffix!=null&&!sourceAccountVerified){
    return const WaffraAutoSmsDecision(
     WaffraAutoSmsDisposition.review,'source_account_mapping_required');
   }

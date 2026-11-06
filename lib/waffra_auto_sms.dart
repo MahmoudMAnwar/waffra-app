@@ -29,6 +29,21 @@ abstract final class WaffraAutoSms {
  }
  // Logout preserves standing consent for the SAME verified account, but
  // suspends collection and clears encrypted pending SMS until sign-in.
+ static Future<Map<String,Object?>?> scanProgress()async{
+  if(!Platform.isAndroid)return null;
+  try{
+   final data=await channel.invokeMapMethod<String,dynamic>(
+    'autoSmsScanProgress');
+   return data==null?null:Map<String,Object?>.from(data);
+  }on MissingPluginException{return null;}
+   on PlatformException{return null;}
+ }
+ // Unlike the legacy importer, this one exposes native failures to the
+ // explicit Rescan UI; it never reports an I/O error as an empty inbox.
+ static Future<int> importConsentMonthChecked()async{
+  if(!Platform.isAndroid)throw StateError('Android SMS scan is unavailable.');
+  return await channel.invokeMethod<int>('importConsentMonthBankSms')??0;
+ }
  static Future<bool> suspendForSignOut()=>_boolCall('pauseAutoSmsForSignOut');
  static Future<bool> resumeAfterSignIn()=>_boolCall('resumeAutoSmsAfterSignIn');
  static Future<bool> notificationPermission()=>_boolCall('autoSmsNotificationsEnabled');
@@ -98,6 +113,24 @@ abstract final class WaffraAutoSms {
   if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(id))return false;
   return _boolCall('stageAutoBankSmsCloudAnalysis',
    <String,Object?>{'id':id,'analysis':suggestion});
+ }
+ // Exclusions are stored as encrypted, owner-scoped native SMS policy.
+ // A missing native channel is UNKNOWN, not an empty list.
+ static Future<List<String>?> excludedSenders()async{
+  if(!Platform.isAndroid)return null;
+  try{
+   final values=await channel.invokeListMethod<String>('excludedAutoSmsSenders');
+   return values==null?null:List<String>.unmodifiable(values);
+  }on MissingPluginException{return null;}
+   on PlatformException{return null;}
+ }
+ static Future<bool> excludeSender(String sender)async{
+  if(sender.trim().isEmpty)return false;
+  return _boolCall('excludeAutoSmsSender',sender.trim());
+ }
+ static Future<bool> restoreExcludedSender(String sender)async{
+  if(sender.trim().isEmpty)return false;
+  return _boolCall('restoreExcludedAutoSmsSender',sender.trim());
  }
  static Future<bool> acknowledge(List<String> ids)async{
   if(ids.isEmpty||ids.length>100)return false;

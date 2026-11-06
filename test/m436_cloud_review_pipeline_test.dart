@@ -33,26 +33,19 @@ void main() {
   expect(dart,contains("_boolCall('claimAutoBankSmsCloudAttempt',id)"));
  });
 
- test('M436 background and foreground only stage review suggestions',(){
-  final auto=File('lib/waffra_auto_sms_autopost.part.dart')
-   .readAsStringSync();
+ test('M452 background posts only with account-bound owner rule',(){
+  final auto=File('lib/waffra_auto_sms_autopost.part.dart').readAsStringSync();
   final main=File('lib/main.dart').readAsStringSync();
-  expect(auto,contains('static bool get reviewOnly => true;'));
-  final review=auto.substring(
-   auto.indexOf('if(reviewOnly)'),
-   auto.indexOf('final prefs=await SharedPreferences.getInstance();'));
-  expect(review,contains('WaffraSmsCloudReviewAnalyzer.stagePending('));
-  expect(review,contains('return summary;'));
-  expect(review,isNot(contains('commitConfirmedSms(')));
-  final home=main.substring(
-   main.indexOf('Future<void> _refreshAutoSmsInbox('),
-   main.indexOf('Future<void> _openAutoSmsInbox()'));
-  expect(home,contains('WaffraSmsCloudReviewAnalyzer.stagePending('));
-  expect(home,contains('_cloudReviewStageRunning'));
-  expect(home,isNot(contains('commitConfirmedSms(')));
-  expect(main,contains('اقتراح AI'));
-  expect(main,contains('اقتراحات من الذكاء الاصطناعي'));
-  expect(main,contains('await bulkSmsSheet(initialText:body)'));
+  expect(auto,contains('!matched.autoPost'));
+  expect(auto,contains('matched.accountSuffix'));
+  expect(auto,contains('matched.accountId'));
+  expect(auto,contains('sourceAccountVerified:true'));
+  expect(auto,contains('WaffraProductionFinanceAuthorityBinding.bind('));
+  expect(auto,contains('commitConfirmedSms('));
+  expect(auto,isNot(contains('WaffraSmsCloudReviewAnalyzer.stagePending(')));
+  expect(main,contains('Future<void> _analyzeAmbiguousSmsOnDemand('));
+  expect(main,contains('explicitlyRequested:true'));
+  expect(main,contains('await bulkSmsSheet(initialText:body,'));
   expect(main,contains('reviewSmsBudgetLinks(additions)'));
  });
 
@@ -73,23 +66,21 @@ void main() {
   expect(build,isNot(contains('OPENROUTER_API_KEY')));
  });
 
- test('M436 separate cloud opt-in remains disclosed before upload',(){
+ test('M452 no cloud choice on signup; explicit per-message consent only',(){
   final ui=File('lib/waffra_auto_sms_consent.dart').readAsStringSync();
+  final main=File('lib/main.dart').readAsStringSync();
   final cloud=File('lib/waffra_sms_cloud_service.dart').readAsStringSync();
-  expect(ui,contains("allow(cloud:true)"));
-  expect(ui,contains("allow(cloud:false)"));
-  expect(ui,contains("if(cloud&&!activated)"));
-  // Consent is separately visible and cloud is clearly described.
-  expect(ui,contains("allow(cloud:true)"));
-  expect(ui,contains("allow(cloud:false)"));
-  expect(ui,contains('السماح بالرسائل والتحليل تلقائيًا'));
-  expect(ui,contains('السماح بالرسائل فقط'));
-  expect(ui,contains('التحليل التلقائي يرسل بيانات مالية'));
-  expect(ui,contains('بعد إخفاء المعلومات الحساسة لخدمة سحابية'));
+  expect(ui,contains('await WaffraSmsCloudService.setConsent(false)'));
+  expect(ui,contains('await WaffraAutoSms.optIn()'));
+  expect(ui,isNot(contains('allow(cloud:true)')));
+  expect(main,contains('Analyze this unclear message with AI?'));
+  expect(main,contains('Send this message'));
+  expect(main,contains('WaffraSmsCloudService.setConsent(true)'));
   expect(cloud,contains('FirebaseAppCheck.instance.getToken()'));
   expect(cloud,contains('WaffraCloudflareSmsGateway.analyze('));
   expect(cloud,contains('WaffraSmsCloudRedactor.redact(source)'));
  });
+
  test('M436 redactor accepts compact English multi-currency SMS',(){
   final samples=[
    'JOD198.000 credited to account from CliQ transfer.',

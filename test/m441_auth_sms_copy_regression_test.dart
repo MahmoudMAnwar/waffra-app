@@ -33,24 +33,23 @@ void main() {
     expect(main,contains('Changing a sign-in phone requires verified account migration'));
   });
 
-  test('M442: concise sign-up profile screen excludes redundant helper text', () {
+  test('M459: Saudi account registration is a single page', () {
     final main=File('lib/main.dart').readAsStringSync();
-    final section=main.substring(
-      main.indexOf("WaffraText(waffraIsEnglish?'2. Complete your profile'"),
-      main.indexOf('TextField(controller:name,onChanged:',main.indexOf("WaffraText(waffraIsEnglish?'2. Complete your profile'")));
-    expect(section,isNot(contains('مش محتاج تكتب إيميل أو تاريخ ميلاد')));
-    expect(section,isNot(contains('No email or date of birth required')));
-    expect(section,contains('const SizedBox(height:14)'));
+    expect(main,contains("key:const Key('waffra-register-single-page')"));
+    expect(main,contains("key:const Key('waffra-register-name')"));
+    expect(main,contains("Widget _phoneRegistrationForm(){"));
+    expect(main,isNot(contains("WaffraText(waffraIsEnglish?'2. Complete your profile'")));
   });
 
-  testWidgets('M441: concise SMS permission keeps meaningful cloud choice',
+  testWidgets('M459: SMS permission follows signup without cloud choice',
     (tester) async {
     await tester.pumpWidget(MaterialApp(home:WaffraAutoSmsConsentPage(
       english:false,onComplete:() async {})));
-    expect(find.text('السماح بالرسائل والتحليل تلقائيًا'),findsOneWidget);
-    expect(find.text('السماح بالرسائل فقط'),findsOneWidget);
-    expect(find.text('تخطي الآن'),findsOneWidget);
-    expect(find.textContaining('لخدمة سحابية'),findsOneWidget);
-    expect(find.textContaining('خارج السعودية'),findsNothing);
+    expect(find.text('إعداد أذونات وفرة'),findsOneWidget);
+    expect(find.textContaining('أندرويد هيطلب إذن الرسائل البنكية'),findsOneWidget);
+    expect(find.textContaining('تحليل الرسائل محليًا'),findsOneWidget);
+    expect(find.text('تخطي الآن'),findsNothing);
+    expect(find.textContaining('لخدمة سحابية'),findsNothing);
   });
+
 }

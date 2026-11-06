@@ -29,7 +29,16 @@ class VerifiedSmsAccountLinkingTest(unittest.TestCase):
         reader = home.split("Future<({List<String?>? ids,int? generation})?> reviewSmsAccountLinks(", 1)[1]
         reader = reader.split("/// Budget assignment is OPTIONAL", 1)[0]
         self.assertIn("final bridge=_financeBinding?.accountsBridge;", reader)
-        self.assertIn("if(bridge==null)return (ids:null,generation:null);", reader)
+        self.assertIn("if(bridge==null){", reader)
+        self.assertIn("return mustSelectAccount?null:(ids:null,generation:null);", reader)
+        self.assertIn("final dueRequiresAccount=recurringId!=null", reader)
+        self.assertIn("if(mustSelectAccount&&assigned.any((account)=>account==null))return null;", reader)
+        self.assertIn("final mustSelectAccount=candidates.isNotEmpty;", reader)
+        self.assertIn("initialSelectedIds:chosenManualAccount==null?null:[chosenManualAccount]", home)
+        self.assertNotIn("DropdownMenuItem(value:'none'", reader)
+        self.assertIn("final manualRequiresAccount=candidates.any", reader)
+        self.assertIn("if(active.isEmpty){", reader)
+        self.assertIn("if(mustSelectAccount){", reader)
         self.assertIn("await bridge.readVerifiedAccounts()", reader)
         self.assertNotIn("SharedPreferences", reader)
         self.assertNotIn("WaffraEncryptedStore.openAt", reader)

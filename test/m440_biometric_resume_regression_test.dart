@@ -25,11 +25,21 @@ void main() {
 
   test('Real background transition invalidates verification; inactive alone does not relock', () {
     final source = File('lib/main.dart').readAsStringSync();
-    expect(source, contains('state==AppLifecycleState.paused||'));
-    expect(source, contains('state==AppLifecycleState.hidden||'));
-    expect(source, contains('state==AppLifecycleState.detached){'));
-    expect(source, contains('WaffraBiometricSessionGuard.mustLockOn(state)'));
-    expect(source, contains('_biometricVerifiedAwaitingResume=false;'));
+    // The outer idle overlay now enforces the 60s absence, not an immediate
+    // Home lock that would destroy an open transaction or modal draft.
+    final lifecycle = source.substring(
+        source.indexOf(' @override void didChangeAppLifecycleState('),
+        source.indexOf(' @override void dispose(){WaffraRegionalCopy.'));
+    final overlay = File('lib/waffra_idle_biometric_overlay.dart').readAsStringSync();
+    expect(lifecycle, contains('WaffraBiometricSessionGuard.mustLockOn(state)'));
+    expect(lifecycle, contains('_biometricVerifiedAwaitingResume=false;'));
+    expect(lifecycle, isNot(contains('setState(()=>locked=true);')));
+    expect(source, contains('builder:(context,child)=>WaffraIdleBiometricOverlay('));
+    expect(overlay, contains('state==AppLifecycleState.hidden||'));
+    expect(overlay, contains('state==AppLifecycleState.paused||'));
+    expect(overlay, contains('state==AppLifecycleState.detached){'));
+    expect(overlay, contains('_backgroundAt??=widget.now();'));
+    expect(overlay, contains('widget.now().difference(began)>=widget.timeout'));
     expect(WaffraBiometricSessionGuard.mustLockOn(AppLifecycleState.paused), isTrue);
     expect(WaffraBiometricSessionGuard.mustLockOn(AppLifecycleState.inactive), isFalse);
   });

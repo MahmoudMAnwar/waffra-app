@@ -105,7 +105,7 @@ void main() {
     final home=File('lib/main.dart').readAsStringSync();
     final start=home.indexOf('final result=await showModalBottomSheet<MoneyEntry>(');
     final end=home.indexOf(
-      'debounce?.cancel();disposeLater([title,value,notes,message]);',start);
+      'debounce?.cancel();disposeLater([title,value,notes,message,transferAmount,transferNote]);',start);
     expect(start,greaterThan(0));
     expect(end,greaterThan(start));
     final route=home.substring(start,end);
@@ -114,6 +114,9 @@ void main() {
     expect(route,contains("key:const Key('waffra-entry-form-scroll')"));
     expect(route,contains("key:const Key('waffra-entry-confirm-save')"));
     expect(route,contains('footer:FilledButton('));
+    // The same bottom sheet includes a separate pinned transfer confirmation.
+    expect(route,contains("key:const Key('m466-confirm-transfer')"));
+    expect(route,contains("key:const Key('waffra-manual-three-modes')"));
     expect(route,contains("Navigator.pop(sheetContext,MoneyEntry("));
     expect(route,isNot(contains('viewInsets.bottom+20')));
   });

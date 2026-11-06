@@ -1,0 +1,464 @@
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+import 'waffra_bank_sms_facts.dart';
+import 'waffra_merchant_rules.dart';
+
+/// Local-only, user-reviewable SMS classification. Rules are suggestions:
+/// neither this file nor the settings screen can post money or link an account.
+class WaffraSmsLocalRule {
+ const WaffraSmsLocalRule({
+  required this.id,required this.name,required this.keywords,
+  required this.income,required this.category,
+  this.matchAll=true,this.sender='',this.builtIn=false,
+  this.kind='',this.autoPost=false,this.accountId='',this.accountSuffix='',
+  this.keywordCategories=const <String,String>{},
+ });
+ final String id,name,category,sender;
+ final List<String> keywords;
+ final bool income,matchAll,builtIn,autoPost;
+ final String kind,accountId,accountSuffix;
+ /// Category associated with each normalized phrase in an auto-learned bucket.
+ /// Existing encrypted rules without this field keep their original category.
+ final Map<String,String> keywordCategories;
+ String get resolvedKind=>kind.isEmpty?(income?'income':'expense'):kind;
+ bool get financial=>resolvedKind=='income'||resolvedKind=='expense';
+
+ Map<String,Object?> toJson()=>{
+  'id':id,'name':name,'keywords':keywords,'income':income,
+  'category':category,'matchAll':matchAll,'sender':sender,
+  'kind':resolvedKind,'autoPost':autoPost,'accountId':accountId,
+  'accountSuffix':accountSuffix,
+  if(keywordCategories.isNotEmpty)'keywordCategories':keywordCategories,
+ };
+ factory WaffraSmsLocalRule.fromJson(Map<String,dynamic> j){
+  final keywords=(j['keywords'] as List?)
+   ?.whereType<String>().toList(growable:false)??const <String>[];
+  return WaffraSmsLocalRule(
+   id:(j['id']??'').toString(),name:(j['name']??'').toString(),
+   keywords:keywords,income:j['income']==true,
+   category:(j['category']??'').toString(),
+   matchAll:j['matchAll']!=false,
+   sender:(j['sender']??'').toString(),
+   kind:(j['kind']??'').toString(),autoPost:j['autoPost']==true,
+   accountId:(j['accountId']??'').toString(),
+   accountSuffix:(j['accountSuffix']??'').toString(),
+   keywordCategories:j['keywordCategories']==null
+    ?const <String,String>{}
+    :Map<String,String>.from(j['keywordCategories'] as Map),
+  );
+ }
+}
+
+/// Approved keywords only. Never suggest bank identifiers, long numbers,
+/// statement balances, OTPs, account/card suffixes or unredacted SMS bodies.
+abstract final class WaffraSmsLocalRules {
+ static String normalized(String text)=>text.toLowerCase()
+  .replaceAll(RegExp(r'[\u200e\u200f\u061c\u064B-\u065F\u0670]'),'')
+  .replaceAll(RegExp(r'[أإآٱ]'),'ا')
+  .replaceAll('ى','ي').replaceAll('ة','ه')
+  .replaceAll(RegExp(r'\s+'),' ').trim();
+
+ static bool safeKeyword(String text){
+  final word=normalized(text);
+  if(word.length<2||word.length>48||!RegExp(r'[a-z\u0621-\u064a]').hasMatch(word))return false;
+  if(RegExp(r'[0-9٠-٩۰-۹]|\*|@|#|/|\\|:|\.|iban|otp|pin|password|'
+    r'account|balance|card|reference|حساب|بطاق|الرصيد|الرقم|المرجع',
+    caseSensitive:false).hasMatch(word))return false;
+  return true;
+ }
+
+ static bool safeRuleKeyword(String text,String kind)=>safeKeyword(text)||
+  (kind=='excluded'&&const <String>{'otp','pin'}.contains(normalized(text)));
+
+ static bool matches(WaffraSmsLocalRule rule,String body,{String sender=''}) {
+  if(rule.keywords.isEmpty||rule.keywords.any((word)=>
+    !safeRuleKeyword(word,rule.resolvedKind)))return false;
+  if(rule.sender.isNotEmpty&&normalized(rule.sender)!=normalized(sender))return false;
+  final source=' ${normalized(body)} ';
+  bool has(String keyword){
+   final safe=normalized(keyword);
+   if(safe.isEmpty)return false;
+   // Boundaries prevent short English keywords matching arbitrary longer words.
+   return source.contains(' $safe ')||
+    source.contains(' $safe\n')||
+    RegExp('(^|[^a-z\\u0621-\\u064a])${RegExp.escape(safe)}([^a-z\\u0621-\\u064a]|\u0024)')
+     .hasMatch(source);
+  }
+  return rule.matchAll?rule.keywords.every(has):rule.keywords.any(has);
+ }
+
+ /// Transfers cannot create ledger income/expense entries; exclude rules
+ /// only operate on unconfirmed, non-financial messages.
+ static WaffraSmsLocalRule? resolveSpecial({
+  required String body,required String sender,
+  required WaffraBankOperationKind bankKind,
+  Iterable<WaffraSmsLocalRule> custom=const <WaffraSmsLocalRule>[],
+ }) {
+  final eligible=custom.where((rule)=>
+   ((rule.resolvedKind=='transfer'&&bankKind==WaffraBankOperationKind.transfer)||
+    (rule.resolvedKind=='excluded'&&bankKind==WaffraBankOperationKind.uncertain))&&
+   matches(rule,body,sender:sender)).toList(growable:false);
+  if(eligible.isEmpty)return null;
+  if(eligible.map((r)=>r.resolvedKind).toSet().length>1)return null;
+  return eligible.first;
+ }
+
+
+ /// Keep a single safe auto-learned bucket per direction and sender while
+ /// retaining the exact category learned for each distinct keyword. An
+ /// ambiguous message matches no category, never an arbitrary first one.
+ static WaffraSmsLocalRule? _withMatchedCategory(
+  WaffraSmsLocalRule rule,String body,String sender){
+  if(rule.keywordCategories.isEmpty)return rule;
+  final selected=<String>{};
+  for(final word in rule.keywords){
+   final one=WaffraSmsLocalRule(
+    id:rule.id,name:rule.name,keywords:[word],income:rule.income,
+    category:rule.category,kind:rule.resolvedKind,sender:rule.sender,
+    matchAll:false);
+   if(matches(one,body,sender:sender)){
+    final category=rule.keywordCategories[normalized(word)];
+    if(category==null||category.trim().isEmpty)return null;
+    selected.add(category);
+   }
+  }
+  if(selected.length!=1)return null;
+  return WaffraSmsLocalRule(
+   id:rule.id,name:rule.name,keywords:rule.keywords,income:rule.income,
+   category:selected.single,kind:rule.resolvedKind,
+   sender:rule.sender,matchAll:rule.matchAll,builtIn:rule.builtIn,
+   autoPost:rule.autoPost,accountId:rule.accountId,
+   accountSuffix:rule.accountSuffix,keywordCategories:rule.keywordCategories);
+ }
+
+ static WaffraSmsLocalRule? resolve({
+  required String body,required String sender,
+  required WaffraBankOperationKind bankKind,
+  Iterable<WaffraSmsLocalRule> custom=const <WaffraSmsLocalRule>[],
+ }) {
+  // Financial direction is independent bank evidence, never an editable rule.
+  // All transfers, card settlements, unconfirmed and uncertain SMS need review.
+  if(bankKind!=WaffraBankOperationKind.income&&
+     bankKind!=WaffraBankOperationKind.expense)return null;
+  final income=bankKind==WaffraBankOperationKind.income;
+  final personal=custom.where((rule)=>!rule.builtIn&&rule.financial&&
+    matches(rule,body,sender:sender)).toList(growable:false);
+  if(personal.isNotEmpty){
+   if(personal.any((rule)=>rule.income!=income))return null;
+   final resolved=personal.map((rule)=>
+    _withMatchedCategory(rule,body,sender)).toList(growable:false);
+   if(resolved.any((rule)=>rule==null))return null;
+   if(resolved.map((rule)=>rule!.category).toSet().length!=1)return null;
+   return resolved.first;
+  }
+  final eligible=builtIn.where((rule)=>rule.income==income&&
+    matches(rule,body,sender:sender)).toList(growable:false);
+  if(eligible.isEmpty)return null;
+  // Explicit service/merchant rules first, generic transaction words last.
+  return eligible.first;
+ }
+
+ static const builtIn=<WaffraSmsLocalRule>[
+  WaffraSmsLocalRule(id:'builtin_salary_ar',name:'راتب وارد',keywords:['راتب'],income:true,category:'راتب / راتب أساسي',matchAll:false,builtIn:true),
+  WaffraSmsLocalRule(id:'builtin_salary_en',name:'Salary / Payroll',keywords:['salary','payroll'],income:true,category:'راتب / راتب أساسي',matchAll:false,builtIn:true),
+  WaffraSmsLocalRule(id:'builtin_refund',name:'استرداد مبلغ',keywords:['refund','reversal','استرداد','استرجاع'],income:true,category:'مبالغ مستردة / استرجاع مشتريات',matchAll:false,builtIn:true),
+  WaffraSmsLocalRule(id:'builtin_received',name:'حوالة واردة',keywords:['حوالة واردة','تحويل وارد','credited','received'],income:true,category:'حوالات واردة / حوالة محلية',matchAll:false,builtIn:true),
+  WaffraSmsLocalRule(id:'builtin_deposit',name:'إيداع مالي',keywords:['إيداع','ايداع','deposit'],income:true,category:'دخل آخر / دخل غير مصنف',matchAll:false,builtIn:true),
+  WaffraSmsLocalRule(id:'builtin_groceries',name:'بقالة وتموين',keywords:['بنده','panda','العثيم','othaim','lulu','التميمي','tamimi','danube','الدانوب'],income:false,category:'بقالة وتموين / سوبرماركت',matchAll:false,builtIn:true),
+  WaffraSmsLocalRule(id:'builtin_restaurant',name:'مطاعم ووجبات',keywords:['restaurant','مطعم','البيك','albaik','kfc','ماكدونالدز','mcdonalds'],income:false,category:'مطاعم وكافيهات / مطاعم شعبية',matchAll:false,builtIn:true),
+  WaffraSmsLocalRule(id:'builtin_coffee',name:'قهوة وكافيهات',keywords:['coffee','cafe','قهوة','كافيه','ستاربكس','starbucks'],income:false,category:'مطاعم وكافيهات / مقاهي',matchAll:false,builtIn:true),
+  WaffraSmsLocalRule(id:'builtin_fuel',name:'بنزين ووقود',keywords:['وقود','بنزين','fuel','petromin'],income:false,category:'السيارة / بنزين ووقود',matchAll:false,builtIn:true),
+  WaffraSmsLocalRule(id:'builtin_taxi',name:'مواصلات',keywords:['uber','careem','اوبر','كريم','taxi'],income:false,category:'مواصلات / أوبر وكريم',matchAll:false,builtIn:true),
+  WaffraSmsLocalRule(id:'builtin_mobile',name:'فاتورة جوال',keywords:['فاتورة جوال','mobile bill','stc bill','mobily bill'],income:false,category:'فواتير / جوال',matchAll:false,builtIn:true),
+  WaffraSmsLocalRule(id:'builtin_pharmacy',name:'صيدلية وأدوية',keywords:['صيدلية','pharmacy','النهدي','nahdi'],income:false,category:'صحة / صيدلية وأدوية',matchAll:false,builtIn:true),
+  WaffraSmsLocalRule(id:'builtin_rent',name:'إيجار',keywords:['ايجار','إيجار','rent'],income:false,category:'سكن / إيجار شهري',matchAll:false,builtIn:true),
+  WaffraSmsLocalRule(id:'builtin_subscription',name:'اشتراكات رقمية',keywords:['netflix','نتفليكس','spotify','سبوتيفاي'],income:false,category:'اشتراكات رقمية / بث أفلام',matchAll:false,builtIn:true),
+  WaffraSmsLocalRule(id:'builtin_purchase',name:'مشتريات عامة',keywords:['شراء','purchase','pos'],income:false,category:'أخرى / مصروف غير مصنف',matchAll:false,builtIn:true),
+  WaffraSmsLocalRule(id:'builtin_payment',name:'مدفوعات عامة',keywords:['خصم','debited','payment','دفع'],income:false,category:'أخرى / مصروف غير مصنف',matchAll:false,builtIn:true),
+ ];
+
+ static List<String> suggestions(Iterable<String> messages){
+  final choices=<String>{};
+  final known=<String>{
+   'رمز التحقق','رمز التفعيل','رمز الدخول','verification code',
+   'security code','one time code','otp',
+   for(final rule in builtIn)
+    for(final term in rule.keywords)term,
+   'حوالة صادرة','تحويل صادر','incoming','outgoing',
+   'credited','debited','شراء','راتب',
+  };
+  for(final raw in messages.take(100)){
+   final norm=normalized(raw);
+   if(WaffraBankSmsFactsParser.parse(raw).kind==WaffraBankOperationKind.expense){
+    final merchant=waffraMerchantName(raw,income:false);
+    if(merchant!=null&&safeKeyword(merchant))choices.add(merchant);
+   }
+   for(final term in known){
+    if(safeRuleKeyword(term,'excluded')&&norm.contains(normalized(term)))choices.add(term);
+   }
+  }
+  return (choices.toList()..sort((a,b)=>a.compareTo(b))).take(100).toList();
+ }
+
+ /// Make a conservative, sender-scoped draft from a reviewed bank message.
+ /// Only established classification phrases can be learned automatically;
+ /// the rule is never permission to record money or change an account.
+ static WaffraSmsLocalRule? suggestedRule({
+  required String body,required String sender,required String kind,
+  String category='',bool confidentOnly=false,
+ }) {
+  if(sender.trim().isEmpty||sender.length>64||
+     (confidentOnly&&sender.trim().length<3)||
+     !const <String>{'income','expense','transfer','excluded'}
+      .contains(kind))return null;
+  final facts=WaffraBankSmsFactsParser.parse(body);
+  final isIncome=kind=='income',isExpense=kind=='expense';
+  if((isIncome||isExpense)&&
+     (facts.pending||facts.kind!=(isIncome?
+      WaffraBankOperationKind.income:WaffraBankOperationKind.expense)))
+   return null;
+  if(kind=='excluded'&&facts.kind!=WaffraBankOperationKind.uncertain)
+   return null;
+  if(kind=='transfer'&&facts.kind!=WaffraBankOperationKind.transfer)
+   return null;
+  if((isIncome||isExpense)&&(
+   category.trim().isEmpty||normalized(category).contains('غير مصنف')||
+   normalized(category).contains('غير محدد')||
+   normalized(category).contains('uncategorized')))return null;
+  final normalizedBody=normalized(body);
+  final safe=<String>[];
+  if(kind=='excluded'){
+   for(final term in const <String>[
+    'رمز التفعيل','رمز التحقق','رمز الدخول','verification code',
+    'security code','one time code','otp',
+   ]){
+    if(safeRuleKeyword(term,kind)&&
+       normalizedBody.contains(normalized(term)))safe.add(term);
+   }
+  }else if(kind=='transfer'){
+   for(final term in const <String>['حوالة صادرة','حوالة واردة',
+    'تحويل صادر','تحويل وارد','transfer']){
+    if(safeRuleKeyword(term,kind)&&
+       normalizedBody.contains(normalized(term)))safe.add(term);
+   }
+  }else{
+   // A generic purchase/payment keyword is not a safe learned merchant rule.
+   final merchant=waffraMerchantName(body,income:isIncome);
+   if(merchant!=null&&safeKeyword(merchant)&&
+      normalizedBody.contains(normalized(merchant)))safe.add(merchant);
+   for(final known in builtIn.where((r)=>
+    r.income==isIncome&&r.category==category&&
+    r.id!='builtin_purchase'&&r.id!='builtin_payment'&&
+    matches(r,body,sender:sender))){
+    for(final term in known.keywords){
+     if(safeRuleKeyword(term,kind)&&
+        normalizedBody.contains(normalized(term)))safe.add(term);
+    }
+   }
+  }
+  if(safe.isEmpty)return null;
+  final names=<String,String>{
+   'income':'دخل معروف','expense':'مصروف معروف',
+   'transfer':'تحويل بنكي','excluded':'رسائل تحقق',
+  };
+  final rule=WaffraSmsLocalRule(
+   id:'smart_${sha256.convert(utf8.encode(
+    '${normalized(sender)}|$kind|${normalized(safe.first)}')).toString().substring(0,32)}',
+   name:names[kind]!,kind:kind,income:isIncome,
+   category:(isIncome||isExpense)?category:'',
+   sender:sender.trim(),keywords:safe.toSet().take(6).toList(),
+   matchAll:false,autoPost:false,
+  );
+  try{
+   validate(rule);
+   // Never store a proposal which does not match the exact reviewed SMS.
+   if(!matches(rule,body,sender:sender))return null;
+   return rule;
+  }on FormatException{return null;}
+ }
+
+ /// A plain manual transaction can teach a safe merchant/category
+ /// preference, but cannot invent a bank sender, account suffix, or SMS amount.
+ /// These rules are review-only even if later seen in a bank SMS.
+ static WaffraSmsLocalRule? manualCategoryPattern({
+  required String description,required String category,required bool income,
+ }) {
+  final label=normalized(description);
+  if(!safeKeyword(description)||label.length>36||
+     category.trim().isEmpty||label.contains('غير مصنف')||
+     const <String>{'income','expense','دخل','مصروف',
+      'other','purchase','payment','pos','transfer','تحويل',
+      'paid','received','cash','سداد','خصم','ايداع'}.contains(label))return null;
+  final kind=income?'income':'expense';
+  final id='manual_${sha256.convert(utf8.encode(
+   '$kind|${normalized(description)}|${normalized(category)}')).toString().substring(0,32)}';
+  final rule=WaffraSmsLocalRule(
+   id:id,name:description.trim(),kind:kind,income:income,
+   category:category.trim(),keywords:[description.trim()],
+   sender:'',matchAll:false,autoPost:false,
+  );
+  try{validate(rule);return rule;}on FormatException{return null;}
+ }
+
+ /// A manual account transfer teaches safe bilingual classification hints;
+ /// it cannot post bank SMS or silently choose either account.
+ static WaffraSmsLocalRule manualTransferPattern(){
+  const rule=WaffraSmsLocalRule(
+   id:'manual_transfer_account_to_account',
+   name:'تحويل بين حساباتي',kind:'transfer',income:false,
+   category:'',keywords:['تحويل','transfer'],sender:'',
+   matchAll:false,autoPost:false);
+  validate(rule);
+  return rule;
+ }
+
+ /// Automatic learning is a classification preference, never a ledger
+ /// permission. Keep one reusable sender/category pattern rather than
+ /// creating a new user-visible rule after every reviewed SMS.
+ ///
+ /// An explicitly enabled autoPost rule is immutable here: appending a new
+ /// keyword to it would silently broaden the owner's spending authority.
+
+ /// Add a confirmed keyword to its existing system bucket, not a new rule.
+ /// Keep sender identity and per-phrase category intact. A user-created rule
+ /// or a rule with explicit posting permission is NEVER widened silently.
+ static List<WaffraSmsLocalRule> upsertLearned({
+  required List<WaffraSmsLocalRule> existing,
+  required WaffraSmsLocalRule candidate,
+ }) {
+  validate(candidate);
+  if(candidate.autoPost||candidate.id.startsWith('custom_')){
+   throw const FormatException('Learning cannot grant posting permission');
+  }
+  // A phrase already assigned to a different category is ambiguous.
+  // Do not duplicate it, overwrite the owner, or teach a wrong category.
+  if(existing.any((rule)=>rule.resolvedKind==candidate.resolvedKind&&
+    normalized(rule.sender)==normalized(candidate.sender)&&
+    rule.keywords.any((word)=>candidate.keywords.any((other)=>
+     normalized(word)==normalized(other)&&
+     (rule.keywordCategories[normalized(word)]??rule.category)!=
+      candidate.category)))){
+   return existing;
+  }
+  // An existing explicit auto-post pattern must not be expanded or cloned.
+  if(existing.any((rule)=>rule.autoPost&&
+   rule.resolvedKind==candidate.resolvedKind&&
+   normalized(rule.sender)==normalized(candidate.sender)&&
+   rule.category==candidate.category&&
+   rule.keywords.any((word)=>candidate.keywords.any(
+    (other)=>normalized(word)==normalized(other))))){
+   return existing;
+  }
+  final index=existing.indexWhere((rule)=>
+   !rule.autoPost&&!rule.matchAll&&
+   (rule.id.startsWith('smart_')||rule.id.startsWith('manual_'))&&
+   rule.resolvedKind==candidate.resolvedKind&&
+   normalized(rule.sender)==normalized(candidate.sender)&&
+   rule.accountId==candidate.accountId);
+  if(index<0){
+   if(existing.any((r)=>r.id==candidate.id))return existing;
+   if(existing.length>=100)return existing;
+   return List<WaffraSmsLocalRule>.unmodifiable([...existing,candidate]);
+  }
+  final current=existing[index];
+  final combined=<String>{...current.keywords,...candidate.keywords};
+  if(combined.length>12)return existing;
+  if(combined.length==current.keywords.length)return existing;
+  final mapped=<String,String>{
+   for(final word in current.keywords)
+    normalized(word):current.keywordCategories[normalized(word)]??current.category,
+   for(final word in candidate.keywords)
+    normalized(word):candidate.keywordCategories[normalized(word)]??candidate.category,
+  };
+  final updated=WaffraSmsLocalRule(
+   id:current.id,name:current.name,kind:current.resolvedKind,
+   keywords:combined.toList(),income:current.income,
+   category:current.category,sender:current.sender,
+   matchAll:false,autoPost:false,
+   accountId:current.accountId,accountSuffix:current.accountSuffix,
+   keywordCategories:current.financial?mapped:const <String,String>{},
+  );
+  validate(updated);
+  return List<WaffraSmsLocalRule>.unmodifiable([
+   for(var i=0;i<existing.length;i++)i==index?updated:existing[i]
+  ]);
+ }
+
+ static void validate(WaffraSmsLocalRule rule){
+  if(rule.builtIn||rule.id.trim().isEmpty||rule.id.length>80||
+     !const <String>{'income','expense','transfer','excluded'}
+      .contains(rule.resolvedKind)||
+     (rule.resolvedKind=='income'&&!rule.income)||
+     (rule.resolvedKind!='income'&&rule.income)||
+     rule.name.trim().length<2||rule.name.trim().length>60||
+     rule.keywords.isEmpty||rule.keywords.length>12||
+     rule.keywords.any((s)=>!safeRuleKeyword(s,rule.resolvedKind))||
+     (rule.financial&&rule.category.trim().isEmpty)||
+     rule.category.length>130||rule.sender.length>64||
+     rule.keywordCategories.length>rule.keywords.length||
+     (rule.keywordCategories.isNotEmpty&&
+      (!rule.financial||rule.autoPost||
+       rule.keywordCategories.length!=rule.keywords.map(normalized).toSet().length||
+       rule.keywordCategories.entries.any((e)=>
+        !rule.keywords.any((word)=>normalized(word)==e.key)||
+        e.value.trim().isEmpty||e.value.length>130)))||
+     rule.accountId.length>128||
+     (rule.accountSuffix.isNotEmpty&&
+      !RegExp(r'^[0-9]{4}$').hasMatch(rule.accountSuffix))||
+     (rule.autoPost&&(!rule.financial||rule.accountId.trim().isEmpty||
+      rule.sender.trim().isEmpty||rule.accountSuffix.length!=4))) {
+   throw const FormatException('Invalid local SMS rule');
+  }
+ }
+}
+
+/// Per-user encrypted app configuration, not a new unverified finance writer.
+/// No source SMS or transaction amount is ever persisted here.
+class WaffraSmsLocalRuleStore {
+ const WaffraSmsLocalRuleStore();
+ static const _storage=FlutterSecureStorage(
+  aOptions:AndroidOptions(encryptedSharedPreferences:true));
+
+ static String ownerKey({required String provider,
+  required String phone,required String email}){
+  final identity=email.trim().isNotEmpty?
+   'email:${email.trim().toLowerCase()}':
+   phone.trim().isNotEmpty?'phone:${phone.trim()}':'';
+  if(identity.isEmpty)return '';
+  return sha256.convert(utf8.encode(identity)).toString();
+ }
+ String _key(String owner) {
+  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(owner)){
+   throw const FormatException('Verified SMS rules owner missing');
+  }
+  return 'waffra_sms_local_rules_v1_$owner';
+ }
+ Future<List<WaffraSmsLocalRule>> read(String owner) async {
+  final raw=await _storage.read(key:_key(owner));
+  if(raw==null||raw.isEmpty)return const [];
+  final values=jsonDecode(raw);
+  if(values is! List)throw const FormatException('Invalid local rules store');
+  final rules=<WaffraSmsLocalRule>[];
+  for(final value in values){
+   if(value is! Map)throw const FormatException('Invalid rule record');
+   final rule=WaffraSmsLocalRule.fromJson(Map<String,dynamic>.from(value));
+   WaffraSmsLocalRules.validate(rule);
+   rules.add(rule);
+  }
+  if(rules.length>100||rules.map((e)=>e.id).toSet().length!=rules.length){
+   throw const FormatException('Local rule store failed validation');
+  }
+  return rules;
+ }
+ Future<void> write(String owner,List<WaffraSmsLocalRule> rules)async{
+  if(rules.length>100||rules.map((e)=>e.id).toSet().length!=rules.length){
+   throw const FormatException('Too many or duplicate rules');
+  }
+  for(final rule in rules)WaffraSmsLocalRules.validate(rule);
+  await _storage.write(key:_key(owner),
+   value:jsonEncode(rules.map((rule)=>rule.toJson()).toList(growable:false)));
+ }
+}

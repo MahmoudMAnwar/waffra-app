@@ -19,7 +19,9 @@ void main() {
     expect(card,contains('ميزانية مضافة'));
     expect(card,contains('MaterialLocalizations.of(context).formatMonthYear(viewedMonth)'));
     expect(card,contains('e.date.month==viewedMonth.month'));
-    expect(card,contains('waffraNamedBudgetSpent(entries,categories,selected,viewedMonth)'));
+    expect(card,contains('waffraNamedBudgetSpent(relevantEntries.toList(),categories,selected,viewedMonth)'));
+    expect(card,contains("final relevantEntries=selectedFinancialAccount=='all'?"));
+    expect(card,contains('b.assignedAccountId==selectedFinancialAccount'));
     expect(card,contains("waffraIsEnglish?'Budget overview':'متابعة الميزانيات'"));
     expect(card,isNot(contains('(selected.budgetLabel??\'ميزانية \'+selected.displayName),')));
     // The budget total remains a projection; there is no ledger mutation.
@@ -86,6 +88,14 @@ void main() {
       expect(src,contains('WaffraCenteredDropdownFormField<'),
         reason:'$path must use centered, blurry, bordered dropdowns');
       expect(src,isNot(contains('DropdownButtonFormField<')));
+      if (path == 'lib/main.dart') {
+        // M470: source/destination selectors are Columns containing two
+        // centered, blurry dropdowns (provider and account), never
+        // Flutter's anchored DropdownButtonFormField.
+        expect(src,contains("final providers=WaffraRecurringAccountGroups.fromAccounts(transferAccounts)"));
+        expect(src,contains("key:ValueKey('m470-home-transfer-'"));
+        expect(src,contains("Widget accountChoice("));
+      }
     }
   });
 }

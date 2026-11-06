@@ -33,15 +33,18 @@ object WaffraAutoSmsStore {
     private const val prefsName = "waffra_auto_sms_intake_v1"
     private const val keyAlias = "waffra_sms_intake_aes_v1"
     private const val queueName = "encrypted_candidates"
+    private const val excludedSendersName = "encrypted_excluded_senders_v1"
     private const val activeName = "enabled"
     // Hash of the verified signed-in account. No phone/email is saved here.
     private const val consentedOwnerName = "consented_account_sha256_v1"
     private const val suspendedAfterLogoutName = "suspended_after_logout_v1"
-    private const val maxCandidates = 100
+    private const val maxCandidates = 500
     private const val activationMonth = "sms_activation_month_start"
     private const val historyCursorAt = "sms_history_cursor_at"
     private const val historyCursorId = "sms_history_cursor_id"
     private const val historyComplete = "sms_history_complete"
+    private const val historyScannedCount = "sms_history_scanned_count_v1"
+    private const val historyAddedCount = "sms_history_added_count_v1"
     private const val historySourceMonth = "sms_history_source_install_month_v2"
     private fun monthStart() = Calendar.getInstance().apply {
         set(Calendar.DAY_OF_MONTH, 1)
@@ -82,8 +85,8 @@ object WaffraAutoSmsStore {
     private fun signedInOwnerHash(context: Context): String? {
         val user = context.getSharedPreferences("FlutterSharedPreferences",
             Context.MODE_PRIVATE)
-        if (!user.getBoolean("flutter.waffra_onboarding_completed", false))
-            return null
+        // The account-backed profile is written only after verified login.
+        // Fresh encrypted installs may not carry the legacy onboarding flag.
         val raw = user.getString("flutter.waffra_profile", "") ?: ""
         val profile = try { JSONObject(raw) } catch (_: Exception) { return null }
         val phone = profile.optString("phone", "").filter { it.isDigit() }
@@ -101,8 +104,10 @@ object WaffraAutoSmsStore {
     private fun activeProfileReady(context: Context): Boolean {
         val user = context.getSharedPreferences("FlutterSharedPreferences",
             Context.MODE_PRIVATE)
-        return user.getBoolean("flutter.waffra_onboarding_completed", false) &&
-            !user.getString("flutter.waffra_profile", "").isNullOrBlank()
+        // Require a stable authenticated owner, not an unrelated onboarding
+        // preference. A sign-out removes the profile and fails closed.
+        return !user.getString("flutter.waffra_profile", "").isNullOrBlank() &&
+            signedInOwnerHash(context) != null
     }
 
     fun enabled(context: Context): Boolean = synchronized(mutex) {
@@ -134,6 +139,21 @@ object WaffraAutoSmsStore {
         )
     }
 
+    /** Read-only progress counters, persisted alongside the resume cursor. */
+    fun scanProgress(context: Context): Map<String, Any> = synchronized(mutex) {
+        val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        val waiting = try {
+            if (enabled(context)) read(context).length() else -1
+        } catch (_: Exception) { -1 }
+        mapOf(
+            "scanned" to prefs.getLong(historyScannedCount, 0L),
+            "added" to prefs.getLong(historyAddedCount, 0L),
+            "pending" to waiting,
+            "capacity" to maxCandidates,
+            "complete" to prefs.getBoolean(historyComplete, false)
+        )
+    }
+
     // Explicit opt-out must never auto-resume after a future login.
     fun enable(context: Context, allow: Boolean): Boolean = synchronized(mutex) {
         if (allow && !permissionGranted(context)) return@synchronized false
@@ -148,6 +168,7 @@ object WaffraAutoSmsStore {
             // Existing confirmed finance hashes are still deduplicated by UI.
             editor.remove(historyCursorAt).remove(historyCursorId)
                 .remove(historySourceMonth).remove(historyComplete)
+                .remove(historyScannedCount).remove(historyAddedCount)
         }
         if (allow) {
             val owner = signedInOwnerHash(context)
@@ -155,9 +176,10 @@ object WaffraAutoSmsStore {
             if (previous != null && previous != owner) {
                 // A different account's encrypted queue and read cursor must
                 // never become visible under this explicit new opt-in.
-                editor.remove(queueName).remove(historyCursorAt)
+                editor.remove(queueName).remove(excludedSendersName).remove(historyCursorAt)
                     .remove(historyCursorId).remove(historySourceMonth)
                     .remove(historyComplete)
+                    .remove(historyScannedCount).remove(historyAddedCount)
             }
             if (owner != null) editor.putString(consentedOwnerName, owner)
             else editor.remove(consentedOwnerName)
@@ -220,7 +242,7 @@ object WaffraAutoSmsStore {
     private fun open(encrypted: String): JSONArray {
         if (encrypted.isBlank()) return JSONArray()
         val bytes = Base64.decode(encrypted, Base64.NO_WRAP)
-        require(bytes.size > 28 && bytes.size < 250000)
+        require(bytes.size > 28 && bytes.size < 2000000)
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128,
             bytes.copyOfRange(0, 12)))
@@ -239,6 +261,88 @@ object WaffraAutoSmsStore {
         context.getSharedPreferences(prefsName, Context.MODE_PRIVATE).edit()
             .putString(queueName, seal(content.toString())).commit()
 
+    // Explicit user sender exclusion is encrypted and bound to this authenticated
+    // owner. Do not reuse a removed sender as an automatic learned rule.
+    // Parsed plaintext stays only in this process memory and is invalidated
+    // whenever the sealed prefs value changes. Fast for a 500-SMS import.
+    private var excludedCipherCache: String? = null
+    private var excludedArrayCache = JSONArray()
+    private fun readExcluded(context: Context): JSONArray {
+        val encrypted = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+            .getString(excludedSendersName, "") ?: ""
+        if (encrypted == excludedCipherCache) return excludedArrayCache
+        val decoded = open(encrypted) // Corruption must fail closed.
+        excludedCipherCache = encrypted
+        excludedArrayCache = decoded
+        return decoded
+    }
+
+    private fun normalizedSender(sender: String) =
+        sender.trim().lowercase(java.util.Locale.ROOT)
+
+    private fun isExcludedLocked(context: Context, sender: String): Boolean {
+        val normalized = normalizedSender(sender)
+        val entries = readExcluded(context)
+        for (i in 0 until entries.length()) {
+            if (normalizedSender(entries.getString(i)) == normalized) return true
+        }
+        return false
+    }
+
+    fun excludedSenders(context: Context): List<String> = synchronized(mutex) {
+        if (!enabled(context)) throw IllegalStateException("SMS intake not active")
+        val entries = readExcluded(context)
+        (0 until entries.length()).map { entries.getString(it) }
+    }
+
+    /** Owner-confirmed sender exclusion. Queue removal and denial-list update
+     * are one preferences commit; existing saved finance and phone SMS remain.
+     */
+    fun excludeSender(context: Context, sender: String): Boolean = synchronized(mutex) {
+        val name = sender.trim()
+        if (!enabled(context) || !senderName.matches(name)) return@synchronized false
+        try {
+            val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+            val previous = readExcluded(context)
+            if (isExcludedLocked(context, name)) return@synchronized true
+            val entries = JSONArray()
+            for (i in 0 until previous.length()) entries.put(previous.getString(i))
+            entries.put(name)
+            val current = read(context)
+            val remaining = JSONArray()
+            for (i in 0 until current.length()) {
+                val row = current.getJSONObject(i)
+                if (normalizedSender(row.optString("sender")) != normalizedSender(name))
+                    remaining.put(row)
+            }
+            val success = prefs.edit()
+                .putString(excludedSendersName, seal(entries.toString()))
+                .putString(queueName, seal(remaining.toString())).commit()
+            if (success) Handler(Looper.getMainLooper()).post { onChanged?.invoke() }
+            success
+        } catch (_: Exception) { false }
+    }
+
+    fun restoreExcludedSender(context: Context, sender: String): Boolean =
+        synchronized(mutex) {
+            if (!enabled(context) || !senderName.matches(sender.trim()))
+                return@synchronized false
+            try {
+                val old = readExcluded(context)
+                val updated = JSONArray()
+                var found = false
+                for (i in 0 until old.length()) {
+                    val existing = old.getString(i)
+                    if (normalizedSender(existing) == normalizedSender(sender)) found = true
+                    else updated.put(existing)
+                }
+                if (!found) return@synchronized false
+                context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+                    .edit().putString(excludedSendersName, seal(updated.toString()))
+                    .commit()
+            } catch (_: Exception) { false }
+        }
+
     private val otp = Regex(
         "(?:\\botp\\b|one.?time.?password|verification.?code|security.?code|" +
         "رمز\\s*(?:التحقق|التفعيل|الدخول|المرور)|كود\\s*(?:التحقق|الدخول)|" +
@@ -253,7 +357,9 @@ object WaffraAutoSmsStore {
         "(?:\\b(?:SAR|SR|AED|JOD|EGP|KWD|BHD|OMR|QAR|USD|EUR|GBP)(?=\\b|[0-9٠-٩۰-۹])|" +
         "ر\\.?\\s*س|ريال|درهم|دينار|جنيه|دولار|يورو)", RegexOption.IGNORE_CASE)
     private val digits = Regex("[0-9٠-٩۰-۹][0-9٠-٩۰-۹,.]{0,14}")
-    private val senderName = Regex("^[A-Za-z][A-Za-z0-9 _-]{2,24}$")
+    // Named bank/application senders can be Arabic or English. Personal
+    // numeric phone numbers never enter the automatic review queue.
+    private val senderName = Regex("^[\\p{L}][\\p{L}0-9 _-]{2,24}$")
     private val brand = Regex(
         "(?:bank|alinma|inma|rajhi|snb|sabb|riyad|bilad|anb|saib|" +
         "aljazira|jazeera|alahli|stcpay|stc.?bank|urpay|mobily.?pay|" +
@@ -261,9 +367,21 @@ object WaffraAutoSmsStore {
 
     fun qualifies(sender: String, body: String): Boolean {
         val safe = body.trim()
-        if (safe.length < 18 || safe.length > 1600 || otp.containsMatchIn(safe))
-            return false
+        if (safe.length < 10 || safe.length > 1600) return false
         if (!senderName.matches(sender.trim())) return false
+        // Non-financial verification notices are reviewable as EXCLUDED,
+        // never processed as money. No original verification digits are kept.
+        if (otp.containsMatchIn(safe)) return true
+        // Read-only bank notifications (balance, debt, billing) may be
+        // classified as Excluded on first review; they are never money.
+        if (institutionalSender.containsMatchIn(sender) &&
+            (otherFinanceNotice.containsMatchIn(safe) ||
+             debtNotice.containsMatchIn(safe))) return true
+        if (safe.length < 18) return false
+        // A trusted institution may send a financial amount without the
+        // small v1 action-word set. Keep it in encrypted REVIEW; never post.
+        if (institutionalSender.containsMatchIn(sender) &&
+            money.containsMatchIn(safe) && digits.containsMatchIn(safe)) return true
         if (!action.containsMatchIn(safe) || !money.containsMatchIn(safe) ||
             !digits.containsMatchIn(safe)) return false
         // Unknown financial senders can be reviewed, but a phone number or
@@ -311,7 +429,7 @@ object WaffraAutoSmsStore {
     }
 
     fun scanUnknownFinancialSms(
-        context: Context, maxRead: Int = 500, maxResults: Int = 100
+        context: Context, maxRead: Int = 5000, maxResults: Int = 500
     ): List<Map<String, Any>> {
         if (!enabled(context) || maxRead <= 0 || maxResults <= 0)
             return emptyList()
@@ -336,6 +454,8 @@ object WaffraAutoSmsStore {
                 found.size < maxResults) {
                 checked++
                 val sender = it.getString(senderCol) ?: continue
+                // Read-only unknown-notice scan must obey the same exclusions.
+                if (synchronized(mutex) { isExcludedLocked(context, sender) }) continue
                 val body = it.getString(bodyCol) ?: continue
                 val date = it.getLong(dateCol)
                 val kind = unknownFinancialKind(sender, body) ?: continue
@@ -360,12 +480,18 @@ object WaffraAutoSmsStore {
 
     fun offer(context: Context, sender: String, body: String, at: Long,
               historical: Boolean = false): Boolean {
-        if (!enabled(context) || !qualifies(sender, body)) return false
+        if (!enabled(context)) return false
+        // Ignore excluded senders before even local financial parsing.
+        try {
+            if (synchronized(mutex) { isExcludedLocked(context, sender) }) return false
+        } catch (_: Exception) { return false }
+        if (!qualifies(sender, body)) return false
         val result = synchronized(mutex) {
             try {
                 // Recheck after entering the lock: logout may race the
                 // receiver between its first permission check and this read.
-                if (!enabled(context)) return@synchronized false
+                if (!enabled(context) || isExcludedLocked(context, sender))
+                    return@synchronized false
                 val queue = read(context)
                 val fingerprint = id(sender, body, at)
                 for (i in 0 until queue.length()) {
@@ -373,8 +499,16 @@ object WaffraAutoSmsStore {
                         return@synchronized false
                 }
                 if (queue.length() >= maxCandidates) return@synchronized false
+                val sensitive = otp.containsMatchIn(body)
+                // Mask every contiguous run of digits in OTP notices,
+                // including localized digit variants, before encryption.
+                // The original is used only to derive the dedupe hash;
+                // it is never put in the review queue or cloud payload.
+                val masked = if (sensitive) body.trim().replace(
+                    Regex("[0-9٠-٩۰-۹]+"), "••••") else body.trim()
                 queue.put(JSONObject().put("id", fingerprint)
-                    .put("sender", sender.trim()).put("body", body.trim())
+                    .put("sender", sender.trim()).put("body", masked)
+                    .put("sensitiveOtp", sensitive)
                     .put("receivedAt", at)
                     .put("reviewNotified", historical))
                 save(context, queue)
@@ -394,7 +528,8 @@ object WaffraAutoSmsStore {
                     "id" to row.getString("id"),
                     "sender" to row.getString("sender"),
                     "body" to row.getString("body"),
-                    "receivedAt" to row.getLong("receivedAt"))
+                    "receivedAt" to row.getLong("receivedAt"),
+                    "sensitiveOtp" to row.optBoolean("sensitiveOtp", false))
                 if (row.has("cloud")) {
                     val proof = row.optJSONObject("cloud")
                     if (proof != null) {
@@ -433,6 +568,8 @@ object WaffraAutoSmsStore {
                 for (i in 0 until queue.length()) {
                     val row = queue.getJSONObject(i)
                     if (row.optString("id") != id) continue
+                    if (row.optBoolean("sensitiveOtp", false))
+                        return@synchronized false
                     if (row.has("cloud")) return@synchronized false
                     val previous = row.optLong("cloudAttemptAtMs", 0L)
                     if (previous > now - 86400000L && previous <= now)
@@ -506,7 +643,7 @@ object WaffraAutoSmsStore {
     /** Resumable history import: from day 1 of installation month through now.
      * This native importer never posts money or contacts a cloud provider.
      * An separately opted-in Flutter worker may stage sanitized cloud hints.
-     * The encrypted queue holds up to 100 and resumes after user review.
+     * The encrypted queue holds up to 500 and resumes after user review.
      */
     fun importConsentMonth(context: Context, maxRead: Int = 500): Int {
         if (!enabled(context)) return 0
@@ -521,18 +658,19 @@ object WaffraAutoSmsStore {
             read(context).length()
         } } catch (_: Exception) { return 0 }
         if (queued >= maxCandidates) return 0
-        val projection = arrayOf("_id", "address", "body", "date")
-        val cursor = try {
-            context.contentResolver.query(Uri.parse("content://sms/inbox"),
-                projection, "date >= ? AND date < ?",
-                arrayOf(start.toString(), end.toString()), "date ASC, _id ASC")
-        } catch (_: Exception) { null } ?: return 0
-        // The v1 cursor started on the permission-activation month. On first
-        // v2 scan replay from install-month start; queue and finance hashes
-        // still protect existing reviewed entries from double posting.
+        // Bound the Android SMS provider query to the persisted cursor.
+        // Requerying the entire month on every 500-row page was O(N²) and
+        // blocked the UI; no date or message is silently marked as scanned.
         val sameSource = prefs.getLong(historySourceMonth, 0L) == start
         var lastAt = if (sameSource) prefs.getLong(historyCursorAt, start - 1) else start - 1
         var lastId = if (sameSource) prefs.getLong(historyCursorId, -1) else -1
+        val projection = arrayOf("_id", "address", "body", "date")
+        val cursor = try {
+            context.contentResolver.query(Uri.parse("content://sms/inbox"),
+                projection, "(date > ? OR (date = ? AND _id > ?)) AND date < ?",
+                arrayOf(lastAt.toString(), lastAt.toString(),
+                    lastId.toString(), end.toString()), "date ASC, _id ASC")
+        } catch (_: Exception) { null } ?: return 0
         var checked = 0
         var accepted = 0
         var complete = true
@@ -553,8 +691,9 @@ object WaffraAutoSmsStore {
                 }
                 val sender = it.getString(senderCol) ?: ""
                 val body = it.getString(bodyCol) ?: ""
-                if (qualifies(sender, body) &&
-                    offer(context, sender, body, at, historical = true)) {
+                // offer() applies the excluded-sender policy before parsing,
+                // and its own qualification check (no duplicate regex work).
+                if (offer(context, sender, body, at, historical = true)) {
                     queued++
                     accepted++
                 }
@@ -570,6 +709,10 @@ object WaffraAutoSmsStore {
             prefs.edit().putLong(historyCursorAt, lastAt)
                 .putLong(historyCursorId, lastId)
                 .putLong(historySourceMonth, start)
+                .putLong(historyScannedCount,
+                    (if (sameSource) prefs.getLong(historyScannedCount, 0L) else 0L) + checked)
+                .putLong(historyAddedCount,
+                    (if (sameSource) prefs.getLong(historyAddedCount, 0L) else 0L) + accepted)
                 .putBoolean(historyComplete, complete).commit()
         }
         return accepted

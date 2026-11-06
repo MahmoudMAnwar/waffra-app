@@ -1,6 +1,7 @@
 import 'waffra_accounts_repository.dart';
 import 'waffra_account_context_read.dart';
 import 'waffra_account_context_repository.dart';
+import 'waffra_account_details_schema.dart';
 import 'waffra_account_context_policy.dart';
 import '../waffra_bank_sms_facts.dart';
 import 'waffra_unified_finance_writer.dart';
@@ -57,6 +58,56 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
    repository.createAccount(id:id,name:name,kind:kind,
     openingMinor:openingMinor,createdIso:createdIso,userConfirmed:true),
    userConfirmed:userConfirmed);
+
+ /// User-approved bank/wallet subtype and provider identity are stored
+ /// in the same verified SQLCipher account creation transaction.
+ Future<void> createTypedAccountWithIdentity({
+  required String id,required String name,required String kind,
+  required String providerId,required String subtype,
+  required int openingMinor,required String createdIso,
+  String? lastFour,required bool userConfirmed,
+ })=>_commit<void>((accounts)async{
+  if(!WaffraAccountDetailsSchema.valid(
+    kind:kind,providerId:providerId,subtype:subtype)){
+   throw ArgumentError('Unsupported money-account subtype/provider.');
+  }
+  if(lastFour!=null&&(kind!='bank'||
+     !RegExp(r'^[0-9]{4}$').hasMatch(lastFour))){
+   throw ArgumentError('Only masked bank last-four is supported.');
+  }
+  await WaffraAccountDetailsSchema.install(accounts.db);
+  await accounts.createAccount(
+   id:id,name:name,kind:kind,openingMinor:openingMinor,
+   createdIso:createdIso,userConfirmed:true);
+  await WaffraAccountDetailsSchema.assign(accounts.db,
+   accountId:id,kind:kind,providerId:providerId,subtype:subtype,
+   confirmedIso:createdIso);
+  if(lastFour!=null){
+   await WaffraAccountContextRepository(
+    store:accounts.db,experimentalEnabled:true).setVerifiedBankSuffix(
+     accountId:id,lastFour:lastFour,
+     confirmedIso:createdIso,userConfirmed:true);
+  }
+ },userConfirmed:userConfirmed);
+
+ /// Create a bank account and its explicitly approved four-digit bank
+ /// identifier inside ONE verified SQLCipher writer transaction.
+ Future<void> createBankAccountWithVerifiedSuffix({
+  required String id,required String name,required int openingMinor,
+  required String createdIso,required String lastFour,
+  required bool userConfirmed,
+ })=>_commit<void>((accounts)async{
+  if(!RegExp(r'^[0-9]{4}$').hasMatch(lastFour)){
+   throw ArgumentError('Bank SMS identifier must be four masked digits.');
+  }
+  await accounts.createAccount(
+   id:id,name:name,kind:'bank',openingMinor:openingMinor,
+   createdIso:createdIso,userConfirmed:true);
+  await WaffraAccountContextRepository(
+   store:accounts.db,experimentalEnabled:true).setVerifiedBankSuffix(
+    accountId:id,lastFour:lastFour,
+    confirmedIso:createdIso,userConfirmed:true);
+ },userConfirmed:userConfirmed);
 
  @override
  Future<bool> transfer({required String id,required String fromAccountId,

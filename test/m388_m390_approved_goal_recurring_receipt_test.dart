@@ -101,9 +101,11 @@ void main() {
     .split('String get greeting').first;
   final home=source.split('Widget compactTransaction(MoneyEntry entry){').last
     .split('Widget dashboard(){').first;
-  expect(list,contains('onTap:()=>showReceipt(e.receiptPath!)'));
-  expect(home,contains('onTap:()=>showReceipt(entry.receiptPath!)'));
-  expect(source,contains('Future<void> showReceipt(String encoded,{int initialIndex=0})'));
+  expect(list,contains('onTap:()=>showReceipt(e.receiptPath!,entryId:e.id)'));
+  expect(home,contains('onTap:()=>showReceipt(entry.receiptPath!,entryId:entry.id)'));
+  expect(source,contains('Future<void> showReceipt(String encoded,{int initialIndex=0,String? entryId})'));
+  expect(source,contains('WaffraEncryptedReceiptReference.matches('));
+  expect(source,contains('Image.memory(encryptedBytes[index]'));
   expect(list,isNot(contains('File(')));
   expect(home,isNot(contains('File(')));
   expect(waffraReceiptPaths(jsonEncode(['old.jpg','old2.jpg'])),

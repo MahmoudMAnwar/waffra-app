@@ -81,6 +81,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 55
     steps:
+      # M460: this job imports a repository Python module. Unlike the test
+      # job, it previously had no checkout and always failed with
+      # ModuleNotFoundError: No module named 'scripts' on main.
+      - name: Checkout repository for same-SHA CI audit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
       - name: Fail closed on missing, running or failed independent tests
         shell: bash
         env:
