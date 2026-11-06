@@ -381,3 +381,11 @@ Each issue requires linked source changes, exact-head CI, tests and real Android
 - After a confirmed bank SMS or manual finance save, the encrypted review queue is re-read and reclassified with owner-scoped local rules; follow-on review sheets also re-read rules before each message. No posting is allowed from classification alone.
 - Test: `test/m507_sms_amount_and_continuous_review_test.dart` with exact screenshot, Arabic-Indic amount, card/product mismatch negatives and later similar SMS; source-level acceptance checks added. 
 - CI and physical Android QA remain OPEN; the code candidate must not be represented as production-complete until real-device confirmation.
+
+
+## 2026-11-06 — M508: Large Saudi bilingual default rules for bank SMS
+
+- **Issue [#439](https://github.com/MahmoudMAnwar/waffra-app/issues/439)**, target **Draft PR [#436](https://github.com/MahmoudMAnwar/waffra-app/pull/436)**. User explicitly requested the broadest practical Arabic+English built-in library across *دخل / مصروف / تحويل / مستبعدة*, researched on public web and bundled on fresh + existing installations.
+- **Research baseline:** SAMA bank notification fields, Saudi banks' alerts descriptions, CST anti-fraud guidance; public apps are taxonomy references only. Every template/keyword must be independently curated, not a copy of private banking messages, account details or third-party licensed catalogs.
+- **Built-in rule safety:** no finance posting, no account inference, immutable bundled seeds, user-specific learned rules retained independently, active existing category/leaf only. Direction must be independently verified; transfer is NOT routine income or expense; excluded candidates must NOT auto-ack confirmed money. OTP/fraud/failed notices and marketing are no-finance candidates. Ambiguous signals require review.
+- **Done criteria:** bounded code changes, locale-specific tests for all four buckets, conflicting merchants & financial notifications, release notes, source-reference methodology, exact-head CI and Android profile/new+update tests. **Status: Recorded; not accepted.**
