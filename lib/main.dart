@@ -1368,10 +1368,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   // a new account can open its verified finance scope.
   await WaffraOnDeviceQwen.shared.dispose().timeout(const Duration(seconds:12));
   await _accountWriteAuthority.signOut();
-  if(mounted){
-   _logoutFeedbackKey.currentState?.clearSnackBars();
-   setState((){profile=null;showLogin=true;locked=false;googleFirstRunSetup=false;});
-  }
+  if(mounted)_logoutFeedbackKey.currentState?.clearSnackBars();
+  if(mounted)setState((){profile=null;showLogin=true;locked=false;googleFirstRunSetup=false;});
   }catch(error){
    // Every sign-out entry point shares this fail-closed feedback. An SMS
    // suspension or credential-integrity failure must NOT look like logout.
