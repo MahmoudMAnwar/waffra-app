@@ -68,7 +68,19 @@ class M442SmsConsentSessionRecovery(unittest.TestCase):
         self.assertIn("editor.remove(historyCursorAt).remove(historyCursorId)", store)
         self.assertIn("if (canResume) editor.putString(consentedOwnerName, owner)", store)
         self.assertIn("else editor.remove(queueName)", store)
-        self.assertIn("if (hasReview) messageChannel?.invokeMethod", activity)
+        # The resumed Activity notifies Flutter only when pending encrypted
+        # messages exist (or ciphertext is unreadable). Android UI dispatch
+        # runs after the background executor, so matching the old adjacent
+        # one-line expression would reject the correct race-safe behavior.
+        on_resume = activity[activity.index('override fun onResume()'):
+                             activity.index('override fun onRequestPermissionsResult(')]
+        self.assertIn('smsHistoryExecutor.execute {', on_resume)
+        self.assertIn('if (hasReview) runOnUiThread {', on_resume)
+        self.assertIn('messageChannel?.invokeMethod("autoSmsAvailable", null)', on_resume)
+        self.assertLess(on_resume.index('smsHistoryExecutor.execute {'),
+                        on_resume.index('if (hasReview) runOnUiThread {'))
+        self.assertLess(on_resume.index('if (hasReview) runOnUiThread {'),
+                        on_resume.index('messageChannel?.invokeMethod("autoSmsAvailable", null)'))
 
     def test_bridge_is_wired_to_native_with_no_os_reprompt_on_relogin(self):
         bridge = read("lib/waffra_auto_sms.dart")

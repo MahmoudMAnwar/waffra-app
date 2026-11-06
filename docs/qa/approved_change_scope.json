@@ -1,29 +1,30 @@
 {
   "contract_version": 1,
-  "change_id": "M471-main-apk-m442-regression-recovery-20261106",
-  "human_scope_review": "Owner directly requested repair of the failed main after merging M470 PR #395. Run #42208585749 failed only three stale source-text assertions in preexisting M442 Python QA, while the security contracts are enforced by actual Kotlin source. This PR changes exactly the three M442 Python test method bodies below, the mandatory M385 exact-file scope manifest, and the permanent M470 tracker. All production source, SQLCipher, sender-exclusion policy, native finance writer, approval paths, workflow definitions, and release signatures remain unchanged. Do not conceal or skip the M442 suite. Require exact-head pre-merge tests before main merge and verify build APK on the merged SHA. Tracking issue #397.",
+  "change_id": "M472-main-apk-full-python-premerge-parity-20261106",
+  "human_scope_review": "User explicitly requests a permanent fix for repeated failed signed APK builds on main, most recently run #42211345595 (main a82ae684). Scope of Issue #399 is one remaining M442 outdated source assertion and the root CI discrepancy: M174 PR pipeline did not execute the full Python suites that signed main APK executed. Add both original unskipped exact Python discovery commands inside existing SHA-pinned M174 PR and push check, before evidence generation and Flutter. Introduce independently discovered M472 QA source parity test verifying on every PR that these exact commands and required status are not conditionally disabled; include tracker and M385 scope manifest. No runtime native/Dart, finance, SQLCipher, APK build/release secrets or other test exclusions changed. The M385 bounded sections strictly confine modifications to the one existing M442 QA function and one M174 workflow job block; no whole-workflow replacement. Branch protection enforcement cannot be changed using the connector, so the owner must keep the M174 job mandatory for merges. CI and actual main APK artifact must pass before claiming resolved.",
   "user_requested_changes": [
-    "Fix the current main Build Waffra Android APK failure run #42208585749 by synchronizing three M442 source regression assertions with the approved off-main-thread encrypted SMS queue, sender deny-list, logout race and owner-switch semantics, while preserving every security check.",
-    "Keep full Python QA and Android/Flutter release build gates enforced; make no runtime changes and verify the same-head CI plus the subsequent main APK workflow."
+    "Fix failing main #42211345595: one obsolete M442 Python QA assertion for async SMS inbox worker/foreground notification must check real ordered safe handoff without changing production Android behavior.",
+    "End recurring PR-green/main-red APK regressions by running the identical full Python QA and incremental CI discovery suites in the SHA-pinned always-on M174 PR gate, unskipped and fail-closed.",
+    "Add M472 source QA parity checks for the exact release and PR commands, record issue in permanent tracker, preserve M385 bounded scope and wait for verified APK."
   ],
   "allowed_changed_files": [
+    ".github/workflows/m174-main-sha-postmerge.yml",
+    "test/qa/m442_sms_consent_session_recovery_test.py",
+    "test/qa/m472_main_apk_python_qa_parity_test.py",
     "docs/qa/approved_change_scope.json",
-    "docs/qa/WAFFRA_32_NEW_CHANGES_M470_TRACKER.md",
-    "test/qa/m442_sms_consent_session_recovery_test.py"
+    "docs/qa/WAFFRA_32_NEW_CHANGES_M470_TRACKER.md"
   ],
   "bounded_sections": {
-    "test/qa/m442_sms_consent_session_recovery_test.py": [
+    ".github/workflows/m174-main-sha-postmerge.yml": [
       {
-        "start": "    def test_suspended_session_resumes_only_same_owner(self):",
-        "end": "    def test_logout_races_cannot_capture_or_hide_old_encrypted_data(self):"
-      },
+        "start": "      - name: Enforce declared file and function edit scope versus original main",
+        "end": "      - name: Generate non-sensitive NO-GO evidence for exact SHA"
+      }
+    ],
+    "test/qa/m442_sms_consent_session_recovery_test.py": [
       {
         "start": "    def test_logout_races_cannot_capture_or_hide_old_encrypted_data(self):",
         "end": "    def test_bridge_is_wired_to_native_with_no_os_reprompt_on_relogin(self):"
-      },
-      {
-        "start": "    def test_dashboard_does_not_hide_disabled_or_corrupt_queue_as_zero(self):",
-        "end": "    def test_existing_android_permission_not_misreported_as_missing(self):"
       }
     ]
   }
