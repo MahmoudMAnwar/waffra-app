@@ -5148,7 +5148,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     // Directly review verified accounts; save money before learning a rule.
     await _reviewSmsAccountTransfer(item:selected,facts:facts);
    }else if(decision=='manual'&&mounted){
-    await entrySheet();
+    // Keep the SMS's verified source/hash instead of replacing it with
+    // a blank 'manual' record. Uncertain fields remain editable.
+    await entrySheet(sms:true,initialSms:body);
+    if(smsHashes.contains(bankSmsHash(body))){
+     final acknowledged=await WaffraAutoSms.acknowledge([id]);
+     if(acknowledged&&mounted){
+      setState(()=>_autoSmsPending.removeWhere((row)=>row['id']==id));
+     }
+    }
    }else if(decision=='ai'&&mounted){
     await _analyzeAmbiguousSmsOnDemand(selected);
    }else if(decision=='review'&&mounted){
@@ -8040,14 +8048,41 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    await _m467RefreshHomeAccounts();
    if(!mounted)return;
   }
-  final title=TextEditingController(text:initial?.title??scannedReceipt?.merchant??'');
+  // M485 / #403 #404: correction of a detected SMS is still a reviewed
+  // bank-SMS transaction, not a new unrelated manual entry. Use parsed
+  // values only when source amount, SAR, direction and status agree.
+  final parsedSms=sms&&initialSms!=null?BankParser.parse(initialSms):null;
+  final factsSms=sms&&initialSms!=null?
+   WaffraBankSmsFactsParser.parse(initialSms):null;
+  final sourceAmount=sms&&initialSms!=null?
+   WaffraSmsCurrencies.originalAmount(initialSms):null;
+  final trustedSms=parsedSms!=null&&factsSms!=null&&!factsSms.pending&&
+   (factsSms.kind==WaffraBankOperationKind.income||
+    factsSms.kind==WaffraBankOperationKind.expense)&&
+   parsedSms.amount!=null&&parsedSms.amount!>0&&
+   !parsedSms.requiresCurrencyReview&&
+   sourceAmount!=null&&sourceAmount.currency=='SAR'&&
+   (sourceAmount.amount-parsedSms.amount!).abs()<0.00001&&
+   parsedSms.income==(factsSms.kind==WaffraBankOperationKind.income);
+  final suggestedSmsTitle=trustedSms?
+   (RegExp(r'شحن\s*(?:جوال|هاتف|رصيد)|top[ -]?up',
+    caseSensitive:false).hasMatch(initialSms!)?
+     (waffraIsEnglish?'Mobile top-up':'شحن الجوال'):
+     parsedSms.title):'';
+  final title=TextEditingController(text:initial?.title??
+   scannedReceipt?.merchant??suggestedSmsTitle);
   final notes=TextEditingController(text:initial?.notes??'');
-  final value=TextEditingController(text:initial!=null?formatWaffraEditAmount(initial.amount):
-   scannedReceipt?.amount!=null?formatWaffraEditAmount(scannedReceipt!.amount!):'');
+  final value=TextEditingController(text:initial!=null?
+   formatWaffraEditAmount(initial.amount):
+   scannedReceipt?.amount!=null?
+    formatWaffraEditAmount(scannedReceipt!.amount!):
+    trustedSms?formatWaffraMoney(parsedSms.amount!):'');
   final message=TextEditingController(text:initialSms??'');
-  bool income=initial?.income??scannedIncome??false,analyzing=false,hasParsed=initialSms!=null;
+  bool income=initial?.income??scannedIncome??
+   (trustedSms?parsedSms.income:false),
+   analyzing=false,hasParsed=initialSms!=null;
   bool submitTapped=false;
-  String category=initial?.category??'أخرى';
+  String category=initial?.category??(trustedSms?parsedSms.category:'أخرى');
   String? selectedParentId;
   String? selectedBudgetId=initial?.budgetId;
   var entryAccounts=_m467Accounts.where((a)=>!a.archived).toList();
@@ -8068,7 +8103,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     category='';
    }
   }
-  DateTime date=initial?.date??scannedReceipt?.date??DateTime.now();
+  DateTime date=initial?.date??scannedReceipt?.date??
+   (sms&&initialSms!=null?
+    bankSmsDate(initialSms,referenceDate:DateTime.now()):null)??
+   DateTime.now();
    String? suggestion,pendingHash,receiptPath=initial?.receiptPath;
    final stagedReceiptCopies=<String>[];
    // All three modes share the SAME manual bottom sheet. Transfers never
