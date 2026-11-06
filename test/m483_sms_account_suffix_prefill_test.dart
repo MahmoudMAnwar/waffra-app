@@ -16,7 +16,9 @@ void main() {
     final suffix = tester.widget<TextField>(
       find.byKey(const Key('m470-new-account-last-four')));
     expect(suffix.controller!.text, '8308');
-    expect(find.text('AlinmaPay'), findsWidgets);
+    final name = tester.widget<TextField>(
+      find.byKey(const Key('m470-new-account-label')));
+    expect(name.controller!.text, 'AlinmaPay');
     await tester.enterText(
       find.byKey(const Key('m470-new-account-last-four')), '4702');
     await tester.pump();
