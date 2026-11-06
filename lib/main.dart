@@ -112,6 +112,7 @@ import 'storage/waffra_verified_accounts_api.dart';
 import 'storage/waffra_accounts_repository.dart';
 import 'waffra_accounts_manager_page.dart';
 import 'waffra_account_transaction_form.dart';
+import 'waffra_recurring_account_groups.dart';
 import 'storage/waffra_fresh_finance_modules_repository.dart';
 import 'storage/waffra_verified_module_ui_guard.dart';
 import 'storage/waffra_runtime_finance_route_contract.dart';
@@ -5972,12 +5973,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  /// before posting an explicitly reviewed bank SMS. Guarded legacy keeps the
  /// existing SMS save behavior, without a shadow account database.
  Future<({List<String?>? ids,int? generation})?> reviewSmsAccountLinks(
-  List<MoneyEntry> candidates,{String? recurringId,String smsSender=''})async{
+  List<MoneyEntry> candidates,{String? recurringId,String smsSender='',
+   List<String?>? initialSelectedIds})async{
   final manualRequiresAccount=candidates.any((c)=>c.sourceType=='manual');
   // A confirmed due payment is a new finance entry, not an unassigned SMS.
   final dueRequiresAccount=recurringId!=null||
    candidates.any((c)=>c.sourceType=='goal_due');
-  final mustSelectAccount=manualRequiresAccount||dueRequiresAccount;
+  // User-approved M470: no NEW posted income/expense, SMS, receipt or due
+  // can be saved without an active account. Old unassigned history is kept.
+  final mustSelectAccount=candidates.isNotEmpty;
+  assert(!mustSelectAccount||manualRequiresAccount||dueRequiresAccount||
+   candidates.isNotEmpty);
   final bridge=_financeBinding?.accountsBridge;
   if(bridge==null){
    if(mustSelectAccount&&mounted)snack(context,waffraIsEnglish?
@@ -6002,6 +6008,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      generation:verified.witness.generation);
    }
    final assigned=List<String?>.filled(candidates.length,null);
+   if(initialSelectedIds!=null){
+    if(initialSelectedIds.length!=candidates.length)return null;
+    for(var index=0;index<assigned.length;index++){
+     final requested=initialSelectedIds[index];
+     if(requested==null)continue;
+     if(!active.any((a)=>a.id==requested))return null;
+     assigned[index]=requested;
+    }
+   }
    // Only verified masked bank evidence can suggest a specific SMS account.
    // Manual, recurring, goal-due and uncertain bank messages stay unassigned
    // until the user makes an explicit choice; never inherit Home's header.
@@ -6038,7 +6053,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
    for(var i=0;i<candidates.length;i++){
     final item=candidates[i];
-    if(item.sourceType!='sms'||item.notes.trim().isEmpty)continue;
+    if(assigned[i]!=null||item.sourceType!='sms'||item.notes.trim().isEmpty)continue;
     final facts=WaffraBankSmsFactsParser.parse(item.notes);
     if(!facts.canAutoPostAsIncomeExpense||
        (facts.kind==WaffraBankOperationKind.income)!=item.income)continue;
@@ -6103,9 +6118,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             labelText:waffraIsEnglish?'Money account':'الحساب المالي',
             border:const OutlineInputBorder()),
            items:[
-            if(!mustSelectAccount)
-             DropdownMenuItem(value:'none',child:WaffraText(
-              waffraIsEnglish?'Unlinked':'بدون حساب')),
             ...active.map((a)=>DropdownMenuItem(value:a.id,
              child:WaffraText(a.name,maxLines:1))),
            ],
@@ -7661,6 +7673,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     await _canReviewOcrAsLedgerTransaction(scannedReceipt.rawText);
     return;
   }
+  // Cold-start money selection needs a verified, non-Home-header account list.
+  if(initial==null&&!sms&&!_m468VerifiedAccountsLoaded){
+   await _m467RefreshHomeAccounts();
+   if(!mounted)return;
+  }
   final title=TextEditingController(text:initial?.title??scannedReceipt?.merchant??'');
   final notes=TextEditingController(text:initial?.notes??'');
   final value=TextEditingController(text:initial!=null?formatWaffraEditAmount(initial.amount):
@@ -7671,6 +7688,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   String category=initial?.category??'أخرى';
   String? selectedParentId;
   String? selectedBudgetId=initial?.budgetId;
+  final entryAccounts=_m467Accounts.where((a)=>!a.archived).toList();
+  final entryProviders=WaffraRecurringAccountGroups.fromAccounts(entryAccounts);
+  String? chosenManualProvider,chosenManualAccount;
   int budgetMenuRevision=0; // reset action-only dropdown selections
   {
    // All reviewed transactions, including SMS, must use a real child category.
@@ -7695,6 +7715,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    WaffraVerifiedAccountsApi? transferApi;
    List<WaffraAccountBalance> transferAccounts=<WaffraAccountBalance>[];
    String? transferSource,transferDestination,transferError;
+   String? transferSourceProvider,transferDestinationProvider;
    final transferAmount=TextEditingController();
    final transferNote=TextEditingController();
    final transferRequestId='m466-'+DateTime.now().microsecondsSinceEpoch.toString();
@@ -7835,17 +7856,44 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
     if(transferSelected){
      Widget accountChoice({required String label,required String? value,
-      required ValueChanged<String?> onChange,String? exclude}){
-      final options=transferAccounts.where((a)=>a.id!=exclude).toList();
-      return WaffraCenteredDropdownFormField<String>(
-       key:ValueKey('m466-transfer-'+label+'-'+(value??'none')),
-       isExpanded:true,
-       initialValue:options.any((a)=>a.id==value)?value:null,
-       decoration:InputDecoration(labelText:label,
-        border:const OutlineInputBorder()),
-       items:options.map((a)=>DropdownMenuItem(value:a.id,
-        child:WaffraText(a.name,maxLines:1))).toList(),
-       onChanged:transferSaving||options.isEmpty?null:onChange);
+      required ValueChanged<String?> onChange,String? exclude,bool target=false}){
+      final providers=WaffraRecurringAccountGroups.fromAccounts(transferAccounts);
+      String? group=target?transferDestinationProvider:transferSourceProvider;
+      if(group==null&&value!=null){
+       for(final provider in providers){
+        if(provider.accounts.any((a)=>a.id==value)){group=provider.id;break;}
+       }
+      }
+      final groups=providers.where((p)=>p.id==group).toList();
+      final options=groups.isEmpty?const <WaffraAccountBalance>[]:
+       groups.single.accounts.where((a)=>a.id!=exclude).toList();
+      return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+       WaffraCenteredDropdownFormField<String>(
+        key:ValueKey('m470-home-transfer-'+(target?'target':'source')+'-provider-'+(group??'none')),
+        isExpanded:true,initialValue:group,
+        decoration:InputDecoration(
+         labelText:waffraIsEnglish?'Bank or provider':'الجهة أو البنك',
+         border:const OutlineInputBorder()),
+        items:providers.map((p)=>DropdownMenuItem(
+         value:p.id,child:WaffraText(waffraIsEnglish?p.labelEn:p.labelAr,
+          maxLines:1))).toList(),
+        onChanged:transferSaving?null:(v)=>update((){
+         if(target){transferDestinationProvider=v;transferDestination=null;}
+         else{transferSourceProvider=v;transferSource=null;}
+         transferError=null;
+        }),
+       ),
+       const SizedBox(height:9),
+       WaffraCenteredDropdownFormField<String>(
+        key:ValueKey('m470-home-transfer-'+(target?'target':'source')+'-account-'+(group??'none')),
+        isExpanded:true,
+        initialValue:options.any((a)=>a.id==value)?value:null,
+        decoration:InputDecoration(labelText:label,
+         border:const OutlineInputBorder()),
+        items:options.map((a)=>DropdownMenuItem(value:a.id,
+         child:WaffraText(a.name,maxLines:1))).toList(),
+        onChanged:transferSaving||group==null||options.isEmpty?null:onChange),
+      ]);
      }
      return WaffraEntrySheetSafeLayout(
       form:SingleChildScrollView(
@@ -7877,7 +7925,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           })),
          const SizedBox(height:12),
          accountChoice(label:waffraIsEnglish?'To account':'إلى حساب',
-          value:transferDestination,exclude:transferSource,
+          value:transferDestination,exclude:transferSource,target:true,
           onChange:(v)=>update((){
            transferDestination=v;transferError=null;
           })),
@@ -8005,6 +8053,35 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ],
       operationPicker(),
       const SizedBox(height:12),
+      if(initial==null&&!sms)...[
+       WaffraCenteredDropdownFormField<String>(
+        key:ValueKey('m470-home-manual-provider-'+(chosenManualProvider??'none')),
+        isExpanded:true,initialValue:chosenManualProvider,
+        decoration:InputDecoration(labelText:waffraIsEnglish?
+         'Bank or provider *':'الجهة أو البنك *',border:const OutlineInputBorder()),
+        items:entryProviders.map((p)=>DropdownMenuItem<String>(
+         value:p.id,child:WaffraText(waffraIsEnglish?p.labelEn:p.labelAr,
+          maxLines:1))).toList(),
+        onChanged:(provider)=>update((){
+         chosenManualProvider=provider;
+         chosenManualAccount=null; // Provider alone never selects a money account.
+        }),
+       ),
+       const SizedBox(height:10),
+       WaffraCenteredDropdownFormField<String>(
+        key:ValueKey('m470-home-manual-account-'+(chosenManualProvider??'none')),
+        isExpanded:true,initialValue:chosenManualAccount,
+        decoration:InputDecoration(labelText:waffraIsEnglish?
+         'Linked money account *':'الحساب المالي التابع *',
+         border:const OutlineInputBorder()),
+        items:entryProviders.where((p)=>p.id==chosenManualProvider)
+         .expand((p)=>p.accounts).map((account)=>DropdownMenuItem<String>(
+          value:account.id,child:WaffraText(account.name,maxLines:1))).toList(),
+        onChanged:chosenManualProvider==null?null:(id)=>
+         update(()=>chosenManualAccount=id),
+       ),
+       const SizedBox(height:12),
+      ],
       TextField(controller:title,onChanged:(_)=>update((){}),minLines:1,maxLines:5,
        decoration:InputDecoration(labelText:waffraIsEnglish?'Transaction name *':'اسم العملية *',
         errorText:attempted&&!waffraTransactionTitleAllowed(title.text,
@@ -8321,6 +8398,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          'الميزانية دي متوقفة حاليًا. اختار ميزانية مفعّلة أو خلّي العملية بدون ربط.');
         return;
        }
+       if(initial==null&&!sms&&
+          (chosenManualAccount==null||
+           !entryAccounts.any((a)=>a.id==chosenManualAccount))){
+        snack(sheetContext,waffraIsEnglish?
+         'Choose the bank and its linked money account before saving.':
+         'اختار الجهة والحساب المالي التابع لها قبل الحفظ.',isError:true);
+        return;
+       }
        if(!income&&selectedBudgetId==null&&
           waffraHasSelectableBudget(namedBudgets)){
         final confirmed=await waffraConfirmUnlinkedBudgetSave(
@@ -8468,7 +8553,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // manually posted entry. Editing an existing entry never silently moves
    // that entry to a different financial account.
    final chosenManual=initial==null
-    ?await reviewSmsAccountLinks([result]):null;
+    ?await reviewSmsAccountLinks([result],
+      initialSelectedIds:chosenManualAccount==null?null:[chosenManualAccount]):null;
    if(initial==null&&chosenManual==null){
     for(final copy in stagedReceiptCopies){
      try{final staged=File(copy);if(await staged.exists())await staged.delete();}
