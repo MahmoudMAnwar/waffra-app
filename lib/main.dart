@@ -8068,7 +8068,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    (RegExp(r'شحن\s*(?:جوال|هاتف|رصيد)|top[ -]?up',
     caseSensitive:false).hasMatch(initialSms!)?
      (waffraIsEnglish?'Mobile top-up':'شحن الجوال'):
-     parsedSms.title):'';
+     parsedSms?.title??''):'';
   final title=TextEditingController(text:initial?.title??
    scannedReceipt?.merchant??suggestedSmsTitle);
   final notes=TextEditingController(text:initial?.notes??'');
@@ -8076,13 +8076,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    formatWaffraEditAmount(initial.amount):
    scannedReceipt?.amount!=null?
     formatWaffraEditAmount(scannedReceipt!.amount!):
-    trustedSms?formatWaffraMoney(parsedSms.amount!):'');
+    trustedSms?formatWaffraMoney(parsedSms?.amount??0):'');
   final message=TextEditingController(text:initialSms??'');
   bool income=initial?.income??scannedIncome??
-   (trustedSms?parsedSms.income:false),
+   (trustedSms?(parsedSms?.income??false):false),
    analyzing=false,hasParsed=initialSms!=null;
   bool submitTapped=false;
-  String category=initial?.category??(trustedSms?parsedSms.category:'أخرى');
+  String category=initial?.category??(trustedSms?(parsedSms?.category??'أخرى'):'أخرى');
   String? selectedParentId;
   String? selectedBudgetId=initial?.budgetId;
   var entryAccounts=_m467Accounts.where((a)=>!a.archived).toList();
