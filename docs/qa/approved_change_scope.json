@@ -179,8 +179,8 @@
         "end": "         :(waffraIsEnglish?'Smart analysis suggested fields. Review before saving.':\n          'التحليل الذكي اقترح بيانات. راجعها قبل الحفظ.'),\n        style:const TextStyle(color:emerald)),\n       const SizedBox(height:12),\n      ],"
       },
       {
-        "start": "     Widget operationPicker(){",
-        "end": "      // Keep save above Android navigation controls"
+        "start": "    Widget operationPicker(){",
+        "end": "     // Keep save above Android navigation controls"
       },
       {
         "start": " Future<void> _reviewSmsAccountTransfer({",
