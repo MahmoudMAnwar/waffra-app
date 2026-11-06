@@ -218,10 +218,6 @@
       {
         "start": "  final selected=await showModalBottomSheet<String>(\n   context:context,isScrollControlled:true,showDragHandle:true,\n   builder:(sheet)=>StatefulBuilder(",
         "end": "     child:SizedBox(height:selectedSender==null?"
-      },
-      {
-        "start": "          trailing:Row(mainAxisSize:MainAxisSize.min,children:[\n           Checkbox(\n            key:Key('waffra-sms-select-message-'",
-        "end": "       if(selectedIds.isNotEmpty)Padding("
       }
     ],
     "lib/waffra_home_accounts_sheet.dart": [
