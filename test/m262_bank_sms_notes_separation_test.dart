@@ -47,8 +47,11 @@ void main() {
     // Simulates a persisted transaction edit and a new details open. The
     // protected original always stays independent of the notes attribute.
     await tester.pumpWidget(details(sms(notes: 'قسّطت مبلغ الشراء')));
+    await tester.pumpAndSettle();
+    // SelectableText (rather than Text) intentionally makes long personal
+    // notes copyable; locate it by the stable details-field identity.
     final personal = find.byKey(
-      const Key('waffra-transaction-personal-notes'),
+      const Key('waffra-transaction-personal-notes'),skipOffstage:false,
     );
     expect(tester.widget<SelectableText>(personal).data,
         'قسّطت مبلغ الشراء');
@@ -65,7 +68,11 @@ void main() {
       sms(notes: 'ملاحظة منفصلة'),
       bankSms: null,
     ));
-    expect(find.text('ملاحظة منفصلة'), findsWidgets);
+    // SelectableText is not a plain Text finder target.
+    final personal=find.byKey(const Key('waffra-transaction-personal-notes'),
+      skipOffstage:false);
+    expect(personal,findsOneWidget);
+    expect(tester.widget<SelectableText>(personal).data,'ملاحظة منفصلة');
     expect(find.text(
       'الرسالة البنكية الأصلية غير متاحة من التخزين المشفّر.',
     ), findsWidgets);
