@@ -77,6 +77,23 @@ void main(){
   expect(manager,contains('onCreateAccount:createAccountInsideComposer'));
  });
 
+ test('M500 #420 Details Edit enables verified retroactive account link',(){
+  final src=File('lib/main.dart').readAsStringSync();
+  final from=src.indexOf('Future<void> entrySheet({MoneyEntry? initial');
+  final to=src.indexOf('Future<void> showReceipt(',from);
+  expect(from,greaterThanOrEqualTo(0));
+  expect(to,greaterThan(from));
+  final edit=src.substring(from,to);
+  expect(src,contains("case 'edit':await entrySheet(initial:entry);break;"));
+  expect(edit,contains('readExistingEntryAccount(entryId:initial.id)'));
+  expect(edit,contains('if(initial==null||canLinkExistingAccount)...['));
+  expect(edit,contains('originalLinkedAccountId!=null?null:(provider)async'));
+  expect(edit,contains('accountId:chosenManualAccount!,userConfirmed:true'));
+  expect(edit,contains('await api.linkUnassignedEntry(entryId:initial.id'));
+  expect(edit,contains('linkedHistoricalAccountInThisEdit=true;'));
+  expect(edit,contains('actionLabel:linkedHistoricalAccountInThisEdit?null'));
+ });
+
  testWidgets('M499 #416 child picker is disabled without provider, cancel preserves amount',
   (tester)async{
   var addCalls=0;
