@@ -43,7 +43,9 @@ void main() {
   test('M508 no seed contains secret values or payment digits', () {
     for(final rule in sa) {
       for(final term in rule.keywords) {
-        expect(RegExp(r'[0-9٠-٩۰-۹]|@|\\*|#').hasMatch(term),isFalse,
+        // A character class checks digits and literal symbols. The old
+        // '\\\\*' alternative accidentally matched an empty string.
+        expect(RegExp(r'[0-9٠-٩۰-۹@*#]').hasMatch(term),isFalse,
           reason:'${rule.id}: $term');
       }
     }
