@@ -1,3 +1,9 @@
+[PR #402 M497] 2026-11-06 — Show the saved custom subtype in My Accounts (#406)
+================================================================================================
+- A custom bank/wallet account subtype label approved by the user is now displayed directly beneath that account's name, next to its independently verified SAR balance. This makes the user-defined subtype visible after creation and after reopening My Accounts.
+- No account classification enum, balance formula, encrypted source, ledger, transfer, migration or permission policy is changed. The existing versioned custom subtype metadata remains the only label source.
+- The encrypted account subtype regression test now asserts that the My Accounts list renders that stored label. CI and Android visual tests remain pending.
+
 [PR #402 M496] 2026-11-06 — Trusted sender-scoped bank child suffix suggestion (#407/#405)
 ====================================================================================================
 - The native SMS review screen now passes the original reviewed sender name to its correction editor. When a user explicitly chooses Add linked bank account, the inline account dialog proposes the correctly directed masked four digits from the original SMS only if trusted SAR income/expense evidence is present AND the selected verified provider matches the sender's recognized bank. Unknown sender, different bank, pending message, transfer and unverified currency do not prefill a suffix.
