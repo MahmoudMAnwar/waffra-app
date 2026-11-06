@@ -41,6 +41,8 @@
 
 | WAFFRA-NEW-018 | App-wide lag/jank: biometric first launch, pull-to-refresh, + sheet, transaction save, footer navigation; trace root causes, optimize, benchmark physical Android without compromising financial/security integrity | [#419](https://github.com/MahmoudMAnwar/waffra-app/issues/419) | [#402](https://github.com/MahmoudMAnwar/waffra-app/pull/402) — Draft | **In progress / CI pending** | M474 smooth FAB/refresh/footer and M486 deferred noncritical post-biometric I/O; M495 guard tests added. Real Android frame timing, cold-launch, scroll and loading animation traces still required |
 
+| WAFFRA-NEW-019 | Details → Edit for an existing historical income/expense must show the same provider-first/child-second verified account picker as Add, and allow confirmed retroactive linking without duplicate posting; preserve prior provenance and old-device migration safety | [#420](https://github.com/MahmoudMAnwar/waffra-app/issues/420) | [#402](https://github.com/MahmoudMAnwar/waffra-app/pull/402) — Draft | **Recorded / Not implemented** | Pending code/tests: existing edit UI + witnessed SQLCipher `attachPreviouslyUnassigned`; Android old-device restore/legacy migration independently pending |
+
 ## WAFFRA-NEW-001 — Detailed acceptance contract
 
 **User screenshot (2026-11-06):** Current green balance card shows the account name (`مصرف الإنماء - الإنماء باي`) at its top; a second dropdown with the same truncated name appears on the bottom-right and overlaps the illustration. User explicitly rejected this placement.
@@ -294,3 +296,11 @@ The owner approved beginning implementation of the tracked 18 requests. The tabl
 - The bank-SMS-reviewed transfer form and the My Accounts financial transaction composer now receive a user-triggered verified account-creation callback. The same dependent dropdown behavior is available there too; cancellation returns without losing the transfer amount, date or memo.
 - An explicitly created child is associated with its verified real provider group; a linked child for a known bank cannot be accepted from another bank. The transfer still requires two distinct live accounts and an independently confirmed money write. Sender display text does not authorize source or destination.
 - **Code ready / CI pending, not Done**. Tests in `test/m495_pr402_ui_performance_regression_test.dart` cover dependent menus and cancellation. CI exact HEAD, Android runtime, narrow RTL layout, first/second operation and restore migration acceptance still required.
+
+## 2026-11-06 — WAFFRA-NEW-019: Link a historical entry from its own Edit sheet
+
+**Issue:** [#420](https://github.com/MahmoudMAnwar/waffra-app/issues/420) · **PR:** [#402](https://github.com/MahmoudMAnwar/waffra-app/pull/402) · **Status: Recorded / Not implemented.**
+
+The owner explicitly requests transaction Details → Edit to offer the same provider-first, dependent child-account selection and inline Add behavior as new income/expense. For a prior *unassigned* entry imported/recorded in the verified finance ledger, user confirmation binds its historical `entry_id` to one active account through the existing atomic, idempotent verified SQLCipher account-link route. No duplicate income/expense, no changed transaction IDs, no implicit Home/SMS-derived account, no loss of original SMS or receipt, and a canceled/failed edit has no effect. Prelinked entries cannot be reassigned implicitly by editing metadata. Preserve amount/date/category edits using their existing authority path; do not treat a metadata edit as permission to repost or rewrite ledger account links. Add regression tests for edit, cancel, inline account creation, repeated commit and balance integrity. Update-over-old-data migration and encrypted backup/restore require **separate** Android acceptance; existence of the linking UI is not proof of successful legacy cutover.
+
+**Source targets:** `lib/main.dart` entry editor; `lib/storage/waffra_verified_accounts_api.dart` existing `linkUnassignedEntry`; `test/...` regression and `docs/qa/approved_change_scope.json` gate. **CI and Android:** pending. Total tracked **19** requirements (#001–#019).
