@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:waffra/main.dart' show MoneyEntry, RecurringBill, defaultCategories;
 import 'package:waffra/storage/waffra_accounts_repository.dart';
+import 'package:waffra/storage/waffra_verified_accounts_api.dart';
 import 'package:waffra/storage/waffra_atomic_finance_snapshot.dart';
 import 'package:waffra/storage/waffra_encrypted_cutover_journal.dart';
 import 'package:waffra/storage/waffra_encrypted_finance_session.dart';
@@ -63,6 +64,31 @@ void main(){
      openingMinor:20000,createdIso:'2026-11-01T00:00:00Z',
      userConfirmed:true);
 
+   // User-confirmed bank identifier is created in the same encrypted
+   // account transaction, not in a second optional metadata write.
+   final api=WaffraVerifiedAccountsApi(bridge:bridge);
+   await api.balances();
+   await api.createBankAccountWithVerifiedSuffix(
+    id:'rajhi',name:'مصرف الراجحي - الجاري',
+    openingMinor:0,createdIso:'2026-11-02T00:00:00Z',
+    lastFour:'1234',userConfirmed:true);
+   final account=await store.customSelect(
+    "SELECT account_id FROM fresh_finance_money_accounts "
+    "WHERE account_id='rajhi'").get();
+   expect(account.length,1);
+   final suffix=await store.customSelect(
+    "SELECT last_four FROM fresh_finance_account_sms_suffixes "
+    "WHERE account_id='rajhi'").get();
+   expect(suffix.single.read<String>('last_four'),'1234');
+   await api.balances();
+   await expectLater(api.createBankAccountWithVerifiedSuffix(
+    id:'invalid-bank',name:'Invalid bank',openingMinor:0,
+    createdIso:'2026-11-02T00:00:00Z',
+    lastFour:'123',userConfirmed:true),throwsArgumentError);
+   final invalid=await store.customSelect(
+    "SELECT account_id FROM fresh_finance_money_accounts "
+    "WHERE account_id='invalid-bank'").get();
+   expect(invalid,isEmpty);
    final category=defaultCategories().firstWhere(
     (x)=>!x.income&&x.isSubcategory).name;
    const id='electricity';
