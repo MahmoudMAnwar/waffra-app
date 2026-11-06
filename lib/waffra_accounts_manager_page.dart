@@ -45,19 +45,24 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
    if(draft==null)return;
    final id='m440-'+DateTime.now().microsecondsSinceEpoch.toString();
    final createdIso=DateTime.now().toIso8601String();
-   if(draft.lastFour!=null){
-    final repository=widget.repository;
-    if(repository is! WaffraVerifiedAccountsApi){
-     throw StateError('Bank identity linking needs the verified SQLCipher API.');
-    }
-    await repository.createBankAccountWithVerifiedSuffix(
-     id:id,name:draft.name,openingMinor:draft.openingMinor,
-     createdIso:createdIso,lastFour:draft.lastFour!,
-     userConfirmed:true);
-   }else{
-    await widget.repository.createAccount(
+   final repository=widget.repository;
+   if(repository is WaffraVerifiedAccountsApi){
+    final subtype=draft.subtype,provider=draft.providerId;
+    if(subtype==null||provider==null)throw StateError(
+     'Account subtype and provider must be explicitly selected.');
+    await repository.createTypedAccountWithIdentity(
+     id:id,name:draft.name,kind:draft.kind,
+     providerId:provider,subtype:subtype,
+     openingMinor:draft.openingMinor,createdIso:createdIso,
+     lastFour:draft.lastFour,userConfirmed:true);
+   }else if(draft.kind=='cash'||draft.kind=='other'){
+    // Pure QA account adapters can still exercise historical cash/other
+    // contracts; real production always uses the verified typed writer.
+    await repository.createAccount(
      id:id,name:draft.name,kind:draft.kind,openingMinor:draft.openingMinor,
      createdIso:createdIso,userConfirmed:true);
+   }else{
+    throw StateError('Typed money accounts require verified SQLCipher.');
    }
    reload();
   }catch(_){failed();}
