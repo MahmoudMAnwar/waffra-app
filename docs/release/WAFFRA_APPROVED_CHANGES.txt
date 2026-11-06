@@ -2228,3 +2228,13 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 
 [M470 #3 2026-11-06 — avoid single-SMS post-commit frame stalls]
 - The individually reviewed bank-SMS save path previously decoded the full encrypted journal snapshot synchronously in the Flutter UI isolate after successful commit. It now uses the existing WaffraLargeJsonDecode.parse worker with a strict list type check, preserving the same confirmed journal source, account/hash coherence and rule-learning order. Added a regression assertion against restoring the synchronous decode path. No money writer or duplicate-posting behavior changed. Performance on physical Android remains to be verified.
+
+
+[WAFFRA-NEW-012 — 2026-11-06] توحيد تعلم الكلمات المفتاحية الآمنة بعد حفظ العمليات — PR #402 (Draft)
+=========================================================================================================
+- المستخدم طلب أن يتعلم وفرة من وصف وتبويب أي دخل/مصروف يدوي محفوظ بنجاح، بنفس أسلوب التعلم من رسالة بنكية تم تأكيدها، بحيث يمكن اقتراح التصنيف عند وصول رسالة مشابهة.
+- تحديث قواعد `lib/waffra_sms_local_rules.dart` لاستخراج عبارات وكلمات وصف غير حساسة، وإلحاقها بقواعد الدخل أو المصروف الموجودة مع الاحتفاظ بعلاقة الكلمة بالقسم الفرعي الصحيح، دون تكرار قاعدة لكل عملية.
+- يعمل اقتراح الوصف على العمليات اليدوية والرسائل البنكية المؤكدة فقط، بعد تأكيد الحفظ المالي والتحقق من السجل؛ القواعد ليست إذن تسجيل مالي آلي، ولا تولّد مرسلًا أو حسابًا بنكيًا أو آخر أربعة أرقام من إدخال يدوي.
+- الحفاظ على قواعد التوجيه البنكية الحساسة المستقلة: هوية المرسل وآخر أربعة أرقام للحساب لا يمكن استنتاجها من الكلمات المفتاحية؛ يجب مراجعة الحساب وتأكيده في مسار الأموال الأصلي.
+- اختبارات Flutter مضافة لتغطية وصف عربي متشابه، توجيه دخل/مصروف، تجميع الكلمات، منع التعارض، استبعاد المحتوى الحساس، وتوقيت التعلم بعد الحفظ الموثّق.
+- لا يتضمن هذا التغيير إصلاح البنود 001–011 المسجلة في `docs/WAFFRA_REQUIREMENTS.md`، وما زال #402 Draft. نجاح CI وفحص Android الحقيقي مطلوبان قبل اعتبار هذه الميزة جاهزة أو دمجها في main.
