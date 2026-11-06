@@ -1,3 +1,12 @@
+[PR #402 M480–M481, analyzer correction] 2026-11-06 — Verified bank suffix visibility, edit and exact-source guard
+========================================================================================================
+- M480/M481 / #414/#415: a source-locked read of the user's confirmed last-four bank account identifier is now available from the same verified SQLCipher account context. It never derives digits from the display name or Home account filter and rejects invalid stored values.
+- My Accounts editing now shows the existing last-four digits for a bank and permits correction alongside the account name. The verified adapter executes both changes inside ONE witnessed, exclusive SQLCipher transaction; validation/database failure rolls back the entire change. Empty suffix is allowed for accounts that never had one; an already confirmed suffix cannot be cleared accidentally by saving a blank field.
+- SMS-linked account confirmation now loads the saved last-four when a bank account is selected, clears stale digits immediately on selection changes, ignores out-of-order async reads, and disables confirmation on read error or malformed input. No SMS is posted automatically.
+- Added isolated encrypted-store tests in test/storage/m481_saved_bank_suffix_edit_test.dart for saved suffix correction, invalid and nonbank rejection, SMS matching after correction, and no balance effects; source assertions cover the atomic writer and UI paths. Tests, full analyzer and Android UX checks are not yet certified.
+- Addressed the Flutter analyzer's previous M476 num-to-double mismatch at lib/main.dart:3468 by explicitly typing the balance-card offset as double. Earlier seven failed workflows shared this compiler error; the new exact-head CI will determine if other failures remain.
+- No SQLCipher schema redesign, finance reset, migration, API banking integration or permission bypass; only bounded source edits authorized in docs/qa/approved_change_scope.json. This remains a Draft PR, NOT a signed APK or a claim that all 18 requests are complete.
+
 [PR #402 M479] 2026-11-06 — Reconsider sender exclusion before acknowledging selected SMS (#417)
 ===================================================================================================
 - The sender opt-in dialog now appears BEFORE the native acknowledgment that hides selected messages from review. 'العودة' / Back leaves the message selection intact and neither blocks the sender nor hides SMS; 'لا' / No opts out of sender exclusion; 'استبعاد المرسل' explicitly opts in for this sender.
