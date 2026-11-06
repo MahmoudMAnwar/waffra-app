@@ -94,8 +94,9 @@ void main(){
   final src=File('lib/main.dart').readAsStringSync();
   expect(src,contains("Key('waffra-entry-original-sms-expand')"));
   expect(src,contains("Key('waffra-entry-original-sms-text')"));
-  expect(src,contains('WaffraBankSmsFactsParser.parse(message.text).pending?'));
-  expect(src,contains('SelectableText(message.text,'));
+  expect(src,contains('WaffraBankSmsFactsParser.parse(initialSms??message.text).pending?'));
+  expect(src,contains('SelectableText(initialSms??message.text,'));
+  expect(src,contains('readOnly:initialSms!=null,'));
  });
 
  test('M494 #417 failed bulk exclusion retains the selected sender sheet',(){
