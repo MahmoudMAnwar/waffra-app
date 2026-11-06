@@ -8235,9 +8235,27 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   String? selectedParentId;
   String? selectedBudgetId=(smsEditorDraft?['budget'] as String?)??initial?.budgetId;
   var entryAccounts=_m467Accounts.where((a)=>!a.archived).toList();
-  var entryProviders=WaffraRecurringAccountGroups.fromAccounts(entryAccounts);
+  var entryProviders=sms?
+   WaffraRecurringAccountGroups.withBankProviderChoices(entryAccounts):
+   WaffraRecurringAccountGroups.fromAccounts(entryAccounts);
   String? chosenManualProvider=smsEditorDraft?['provider'] as String?;
   String? chosenManualAccount=smsEditorDraft?['account'] as String?;
+  // The sender identifies a bank/provider only, NEVER a financial account.
+  // Prefer a matching existing bank/wallet group; otherwise show the bank
+  // catalog entry, allowing the user to create a linked account directly.
+  if(sms&&initial==null&&chosenManualProvider==null&&
+     reviewedSender!=null){
+   final bank=WaffraSmsAccountLearning.bankGroup(reviewedSender);
+   if(bank!=null){
+    final existing=entryProviders.where((group)=>
+     group.id.endsWith(':institution:$bank')&&
+     group.accounts.isNotEmpty).toList();
+    final catalog=entryProviders.where((group)=>
+     group.id=='bank:institution:$bank').toList();
+    if(existing.length==1)chosenManualProvider=existing.single.id;
+    else if(catalog.length==1)chosenManualProvider=catalog.single.id;
+   }
+  }
   if(initial!=null&&canLinkExistingAccount&&originalLinkedAccountId!=null){
    final matched=entryProviders.where((p)=>p.accounts.any(
     (a)=>a.id==originalLinkedAccountId)).toList();
@@ -8295,6 +8313,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    List<WaffraAccountBalance> transferAccounts=<WaffraAccountBalance>[];
    String? transferSource,transferDestination,transferError;
    String? transferSourceProvider,transferDestinationProvider;
+   DateTime transferDate=DateTime.now();
    final transferAmount=TextEditingController();
    final transferNote=TextEditingController();
    final transferRequestId='m466-'+DateTime.now().microsecondsSinceEpoch.toString();
@@ -8443,13 +8462,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       if(created.length!=1)throw StateError(
        'Account creation has no verified refreshed balance');
       final groups=WaffraRecurringAccountGroups.fromAccounts(refreshed);
+      // Account creation invalidates its old optimistic witness; refresh it
+      // before handing the same verified API back to the transfer editor.
+      if(forTransfer)await api.balances();
       final related=groups.where((p)=>
        p.accounts.any((a)=>a.id==id)).toList();
       if(related.length!=1)throw StateError(
        'New account group is not uniquely verified');
       update((){
        entryAccounts=refreshed;
-       entryProviders=groups;
+       entryProviders=sms?
+        WaffraRecurringAccountGroups.withBankProviderChoices(refreshed):groups;
        if(forTransfer){
         transferAccounts=refreshed;
         transferApi=api;
@@ -8540,7 +8563,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if(transferSelected){
      Widget accountChoice({required String label,required String? value,
       required ValueChanged<String?> onChange,String? exclude,bool target=false}){
-      final providers=WaffraRecurringAccountGroups.fromAccounts(transferAccounts);
+      final providers=WaffraRecurringAccountGroups.withBankProviderChoices(transferAccounts);
       String? group=target?transferDestinationProvider:transferSourceProvider;
       if(group==null&&value!=null){
        for(final provider in providers){
@@ -8648,6 +8671,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            transferDestination=v;transferError=null;
           })),
          const SizedBox(height:12),
+         OutlinedButton.icon(
+          key:const Key('m506-transfer-date'),
+          onPressed:transferSaving?null:WaffraHaptics.tap(()async{
+           final picked=await waffraPickDateWithToday(
+            english:waffraIsEnglish,context:sheetContext,
+            initialDate:transferDate,firstDate:DateTime(2000),
+            lastDate:DateTime.now());
+           if(picked!=null&&sheetContext.mounted){
+            update(()=>transferDate=picked);
+           }
+          }),
+          icon:const Icon(Icons.calendar_month_outlined),
+          label:WaffraText(waffraIsEnglish?
+           'Transfer date: ${dayText(transferDate)}':
+           'تاريخ التحويل: ${dayText(transferDate)}')),
+         const SizedBox(height:12),
          TextField(key:const Key('m466-transfer-note'),controller:transferNote,
           maxLength:2000,maxLines:3,minLines:1,
           decoration:InputDecoration(
@@ -8672,18 +8711,30 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         }
         update((){transferSaving=true;transferError=null;});
         try{
-         await transferApi!.transfer(
+         // Inline account creation, another widget writer or a previously
+         // attempted transfer can invalidate the optimistic witness. Read a
+         // FRESH verified snapshot before user-confirmed posting, and refuse
+         // to infer any missing account from provider labels.
+         final latest=await transferApi!.balances();
+         if(!latest.any((a)=>a.id==transferSource&&!a.archived)||
+            !latest.any((a)=>a.id==transferDestination&&!a.archived)){
+          throw StateError('m506_transfer_account_missing_or_archived');
+         }
+         if(sheetContext.mounted)update(()=>transferAccounts=latest);
+         final committed=await transferApi!.transfer(
           id:transferRequestId,fromAccountId:transferSource!,
           toAccountId:transferDestination!,amountMinor:amount,
-          occurredIso:DateTime.now().toIso8601String(),
+          occurredIso:transferDate.toIso8601String(),
           note:transferNote.text.trim(),userConfirmed:true);
+         if(!committed)throw StateError('m506_transfer_not_committed');
          transferCommitted=true;
          try{await _learnManualTransferPreference();}catch(_){}
          if(sheetContext.mounted)Navigator.pop(sheetContext);
         }catch(error){
+         debugPrint('M506 transfer rejected: ${error.runtimeType}');
          if(sheetContext.mounted)update(()=>transferError=waffraIsEnglish?
-          'Transfer was not confirmed. Refresh accounts before retrying.':
-          'لم يتأكد التحويل. حدّث حساباتك قبل إعادة المحاولة.');
+          'Transfer was not confirmed. Check both accounts and retry.':
+          'لم يتأكد التحويل. راجع حسابَي المصدر والوجهة وحاول تاني.');
         }finally{
          if(sheetContext.mounted)update(()=>transferSaving=false);
         }
@@ -9332,16 +9383,32 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(pendingHash!=null&&initial==null){
    final reviewedAccount=await reviewSmsAccountLinks([result],
      initialSelectedIds:chosenManualAccount==null?null:[chosenManualAccount]);
-   if(reviewedAccount==null)return;
+   if(reviewedAccount==null){
+    for(final staged in stagedReceiptCopies){
+     try{final file=File(staged);if(await file.exists())await file.delete();}
+     catch(_){}
+    }
+    return;
+   }
    try{
+   // Preserve attachments only as bytes inside the same SQLCipher
+   // transaction as the reviewed SMS and its deduplication fingerprint.
+   final smsReceiptImages=<Uint8List>[];
+   for(final attachment in waffraReceiptPaths(result.receiptPath)){
+    smsReceiptImages.add(await File(attachment).readAsBytes());
+   }
+   final smsRecord=Map<String,Object?>.from(result.toJson());
+   smsRecord['receiptPath']=null;
    // A single reviewed bank SMS must commit both its transaction and
    // fingerprint atomically under the same Home/Widget source and journal.
    // The writer independently checks duplicates again after taking the lock.
    final applied=await _saveProgress.track(
     'commit-confirmed-bank-sms',()=>_financeAuthority.commitConfirmedSms(
      route:WaffraFinanceRoute.bulkSmsConfirmedSave,
-    records:[Map<String,Object?>.from(result.toJson())],
+    records:[smsRecord],
     hashes:[pendingHash!],
+    reviewedSmsReceiptImages:smsReceiptImages.isEmpty?
+     null:smsReceiptImages,
     userConfirmed:true,
     allowDuplicateHashes:explicitlyApprovedSmsDuplicate,
     selectedAccountIds:reviewedAccount.ids,
@@ -9369,6 +9436,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _lastWidgetRevision=applied.current.widgetRevision;
    });
    if(smsEditorDraftKey!=null)_m492SmsEditorDrafts.remove(smsEditorDraftKey);
+   // The expense/income learner applies only AFTER an authoritative commit,
+   // and uses user-approved description/category, not the raw SMS body.
+   try{await _learnManualCategoryPreference(result);}catch(_){}
+   for(final staged in stagedReceiptCopies){
+    try{final file=File(staged);if(await file.exists())await file.delete();}
+    catch(_){}
+   }
    unawaited(_refreshWidget());
    if(applied.originalSmsNotesOmittedOnLegacy&&mounted){
     snack(context,waffraIsEnglish?
@@ -9376,6 +9450,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      'تم حفظ بيانات العملية دون نص الرسالة البنكية الأصلي.',isError:false);
    }
    }catch(e){
+    debugPrint('M506 confirmed SMS save rejected: ${e.runtimeType}');
+    for(final staged in stagedReceiptCopies){
+     try{final file=File(staged);if(await file.exists())await file.delete();}
+     catch(_){}
+    }
     // One rejected source-authorized bank commit must never leave the
     // user looking at a success screen or an unhandled Flutter exception.
     if(mounted)snack(context,waffraIsEnglish?
