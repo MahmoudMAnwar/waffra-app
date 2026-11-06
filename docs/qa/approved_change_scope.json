@@ -210,6 +210,28 @@
         "start": " @override\n Future<void> createAccount(",
         "end": "\n @override\n Future<bool> transfer("
       }
+    ],
+    "test/m343_goal_recurring_named_budgets_test.dart": [
+      {
+        "start": " test('M343 goal/recurring UI uses one saved total and budget remains independent',(){",
+        "end": "\n}"
+      }
+    ],
+    "test/m359_budget_directory_and_templates_test.dart": [
+      {
+        "start": "  test('M359: overall budget is computed, transaction review can create budget', () {",
+        "end": "\n}"
+      }
+    ],
+    "test/m401_m402_budget_month_centered_dropdown_test.dart": [
+      {
+        "start": "  test('M401 monthly budget card counts user budgets and navigates display month', () {",
+        "end": "\n  for (final direction in [TextDirection.rtl,TextDirection.ltr])"
+      },
+      {
+        "start": "  test('M402 normal form dropdowns use centered modal, not anchored popup', () {",
+        "end": "\n}"
+      }
     ]
   }
 }
