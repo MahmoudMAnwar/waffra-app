@@ -39,6 +39,8 @@
 | WAFFRA-NEW-016 | Second SMS exclusion popup must offer **العودة** to reconsider sender exclusion and return to prior selection without finalizing sender block; later unexclude via excluded list | [#417](https://github.com/MahmoudMAnwar/waffra-app/issues/417) | [#402](https://github.com/MahmoudMAnwar/waffra-app/pull/402) — Draft | **Recorded / Not implemented** | Documentation only; no app-code changes authorized |
 | WAFFRA-NEW-017 | After removing bottom Account button, date expands full row; when optional budget control is displayed, date and budget split row equally 50/50 | [#418](https://github.com/MahmoudMAnwar/waffra-app/issues/418) | [#402](https://github.com/MahmoudMAnwar/waffra-app/pull/402) — Draft | **Recorded / Not implemented** | Documentation only; no app-code changes authorized |
 
+| WAFFRA-NEW-018 | App-wide lag/jank: biometric first launch, pull-to-refresh, + sheet, transaction save, footer navigation; trace root causes, optimize, benchmark physical Android without compromising financial/security integrity | [#419](https://github.com/MahmoudMAnwar/waffra-app/issues/419) | [#402](https://github.com/MahmoudMAnwar/waffra-app/pull/402) — Draft | **Recorded / Not implemented** | No code yet; baseline, profiling, CI and physical-device QA required |
+
 ## WAFFRA-NEW-001 — Detailed acceptance contract
 
 **User screenshot (2026-11-06):** Current green balance card shows the account name (`مصرف الإنماء - الإنماء باي`) at its top; a second dropdown with the same truncated name appears on the bottom-right and overlaps the illustration. User explicitly rejected this placement.
@@ -258,3 +260,21 @@
 5. Test narrow devices, Arabic/English RTL/LTR date, long budget names, text scaling and overflow, all transaction types, saved/unsaved budget, no-budget full width.
 
 **User instruction/context:** Save both alongside PR #402 and prior requirements; **documentation-only; no app source updates or feature implementation**. Total now **17 distinct numbered requirements**, including one earlier source-implemented keyword-learning item awaiting verification.
+
+## 2026-11-06 — App-wide performance and responsiveness
+
+### WAFFRA-NEW-018 — Systemic fix for recurring UI lag and jank
+
+**Issue:** [#419](https://github.com/MahmoudMAnwar/waffra-app/issues/419) · **PR:** [#402](https://github.com/MahmoudMAnwar/waffra-app/pull/402). **Status: Recorded / Not implemented.**
+
+**User report:** Lag remains in *many* parts of Waffra despite previous fixes. Specifically (1) first app opening immediately after enabling biometrics; (2) pull-to-refresh everywhere; (3) tapping floating + to open Add Transaction; (4) adding/saving finance operations (manual or reviewed SMS, transfer, goal/recurring where affected); (5) switching between footer navigation tabs. User requests a root-cause, app-wide performance optimization effort, not a cosmetic loading animation tweak.
+
+**Approved scope and implementation contract (future work only):**
+1. Profile exact reproducible journeys in **Flutter profile/release on Android devices**, identify UI/raster thread stalls, synchronous decode/encryption/database work, large data recomputation, widget rebuild storms, repeated requests, overly costly animation effects, memory churn, overlays/navigation and resume/biometric lifecycle timing before choosing any fix.
+2. Collect reproducible **baseline and after** traces for first launch after biometric activation, cold/warm launch, unlock, every page's pull refresh, + menu open, manual/SMS income/expense and transfers save, footer switching and rapid repeat taps, using both clean-install and update-over-data scenarios. Include at least one high-transaction/high-SMS volume scenario.
+3. Preserve verified SQLCipher money storage and encrypted backups, authorization/lifecycle privacy shields, source-account requirements, SMS provenance/consent, budgets/goals/recurring correctness, duplicate write prevention and accurate dashboard/widget balances. Do not bypass security or fake responsiveness by ignoring updates.
+4. Apply targeted code optimizations based on measured bottlenecks (e.g. moving CPU-bound jobs away from UI isolate, canceling redundant stale refreshes, minimizing unnecessary page rebuilds, incremental recomputations, image/layout optimization), while preserving every required visible feature and actual account correctness.
+5. **Acceptance criteria:** no routine visually frozen or unresponsive UI in listed flows; measured build/raster frame timings and jank frequency, tap-to-UI feedback, startup-to-interactive time, refresh latency, memory and database operations compared to baseline. Target smooth frames appropriate to device refresh (at 60 Hz 16.7ms budget, at 120Hz 8.3ms); formal thresholds must be set after profiling. Validate on real Android hardware, latest PR commit CI and no-finance-regression functional tests. 'Zero lag everywhere forever' cannot be guaranteed, so only mark Done after measurements and user/device confirmation.
+6. Track as **one app-wide requirement** with explicit test matrix, not a pile of uncorrelated spinner tweaks. Cross-reference older performance and pull-refresh issues where appropriate, while retaining a single acceptance status for this new tracked request.
+
+**User instruction:** Register this requirement with existing PR #402 scope. **Do not start code implementation now.** Prior 17 requirements remain intact; total becomes **18 numbered items**.
