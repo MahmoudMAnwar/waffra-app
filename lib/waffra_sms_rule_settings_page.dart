@@ -415,6 +415,47 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
    suffix.dispose();
   }
  }
+ /// Curated built-in patterns are read-only and lazily rendered. Avoid
+ /// constructing hundreds of ListTiles on each tap or panel scroll.
+ Widget _defaultRuleBucket(String kind) {
+  final values=WaffraSmsLocalRules.allDefaultRules.where(
+   (rule)=>rule.resolvedKind==kind).toList(growable:false);
+  final keywords=values.fold<int>(0,(sum,r)=>sum+r.keywords.length);
+  final title=switch(kind){
+   'income'=>widget.english?'Income':'دخل',
+   'expense'=>widget.english?'Expenses':'مصروف',
+   'transfer'=>widget.english?'Transfers':'تحويلات',
+   _=>widget.english?'Excluded':'مستثناة',
+  };
+  return Card(child:ExpansionTile(
+   key:Key('waffra-sms-default-rule-bucket-$kind'),
+   leading:Icon(switch(kind){
+    'income'=>Icons.call_received_rounded,
+    'expense'=>Icons.call_made_rounded,
+    'transfer'=>Icons.sync_alt_rounded,
+    _=>Icons.shield_outlined,
+   }),
+   title:Text(title),
+   subtitle:Text(widget.english?
+    '${values.length} default rules • $keywords keywords':
+    '${values.length} قواعد افتراضية • $keywords كلمة مفتاحية'),
+   children:[SizedBox(height:values.length<=5?values.length*78.0:370,
+    child:ListView.builder(
+     primary:false,itemCount:values.length,itemExtent:78,
+     itemBuilder:(context,i){
+      final rule=values[i];
+      return ListTile(dense:true,
+       leading:const Icon(Icons.lock_outline,size:17),
+       title:Text(rule.name,maxLines:1,overflow:TextOverflow.ellipsis),
+       subtitle:Text(
+        '${rule.category.isEmpty?'':rule.category+' • '}${rule.keywords.join('، ')}',
+        maxLines:2,overflow:TextOverflow.ellipsis),
+      );
+     })),
+   ],
+  ));
+ }
+
  @override Widget build(BuildContext context)=>Scaffold(
   appBar:AppBar(title:Text(widget.english?
    'Bank SMS classification rules':'قواعد تحليل الرسائل البنكية')),
@@ -476,16 +517,14 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
       ],
      )),
     const SizedBox(height:18),
-    Text(widget.english?'Built-in rules':'قواعد جاهزة',
+    Text(widget.english?'Built-in Saudi rules':'القواعد السعودية الجاهزة',
      style:Theme.of(context).textTheme.titleMedium),
     Text(widget.english?
-     'Included with Waffra and available from the first SMS.':
-     'موجودة في وفرة من أول رسالة بدون أي إعداد.'),
-    for(final rule in WaffraSmsLocalRules.builtIn)ListTile(
-     dense:true,leading:Icon(rule.income?Icons.south_west:Icons.north_east),
-     title:Text(rule.name),
-     subtitle:Text('${rule.income?(widget.english?'Income':'دخل'):(widget.english?'Expense':'مصروف')} • ${rule.keywords.join('، ')}',
-      maxLines:2,overflow:TextOverflow.ellipsis)),
+     'Offline Arabic/English suggestions active on every installation. Read-only; your saved learning is kept separately and transactions always need approval.':
+     'قواعد عربية وإنجليزية محلية شغالة من أول تثبيت. جاهزة للعرض فقط، وقواعدك المتعلّمة محفوظة لوحدها، وأي عملية محتاجة موافقتك.'),
+    const SizedBox(height:8),
+    for(final kind in const <String>['income','expense','transfer','excluded'])
+     _defaultRuleBucket(kind),
    ]),
  );
 }
