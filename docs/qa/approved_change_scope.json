@@ -37,7 +37,8 @@
     "Add exact-head UI regression tests for long account heading without truncation, adaptive date/budget row, absence of repeated account confirmation, and smooth loading/navigation while preserving all original security and financial checks.",
     "When creating a child bank account inside a reviewed SMS editor, prefill user-editable masked last-four from verified direction and matching sender-bank only, never from unrelated sender, transfer or currency-uncertain message.",
     "Custom account subtype must remain visible on each created money account, not merely be selectable in subsequent account forms.",
-    "Finish #416 / WAFFRA-NEW-015 in manual transfer source and destination, SMS-reviewed account transfer and My Accounts composer. Use in-dropdown Add for provider and child; parent must precede child; preserve all amount/notes/source on cancel and verify the new account before attaching it to any future transfer."
+    "Finish #416 / WAFFRA-NEW-015 in manual transfer source and destination, SMS-reviewed account transfer and My Accounts composer. Use in-dropdown Add for provider and child; parent must precede child; preserve all amount/notes/source on cancel and verify the new account before attaching it to any future transfer.",
+    "WAFFRA-NEW-019 / Issue #420: Existing transaction Details → Edit reuses the verified parent/child account dropdown and inline creation; only already-migrated accountless SQLCipher entries can be linked with witnessed idempotent account association; original transaction ID/amount, SMS provenance and balance safety preserved. Do not claim old Android legacy cutover until physical update-over-data verified."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -62,7 +63,8 @@
     "lib/waffra_sms_account_learning.dart",
     "test/m493_sms_account_matching_regression_test.dart",
     "test/m495_pr402_ui_performance_regression_test.dart",
-    "lib/waffra_account_transaction_form.dart"
+    "lib/waffra_account_transaction_form.dart",
+    "test/storage/m500_historical_entry_edit_account_link_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -185,6 +187,14 @@
       {
         "start": " Future<void> _reviewSmsAccountTransfer({",
         "end": " Future<void> _reviewAutoSmsCandidates({"
+      },
+      {
+        "start": "       key:const Key('waffra-entry-confirm-save'),",
+        "end": "       if(!income&&selectedBudgetId==null&&"
+      },
+      {
+        "start": "   // Optimistic in-memory edits must roll back if durable save is rejected.",
+        "end": " Future<String?> chooseTransactionCategory("
       }
     ],
     "lib/waffra_sms_local_rules.dart": [
@@ -225,6 +235,10 @@
       {
         "start": " /// Only last-four masked identifiers",
         "end": " Future<WaffraSmsAccountDecision> inferSmsAccount("
+      },
+      {
+        "start": " static void _when(String text){",
+        "end": " /// Register the user-confirmed funding source"
       }
     ],
     "lib/storage/waffra_verified_accounts_api.dart": [
@@ -239,6 +253,10 @@
       {
         "start": " Future<void> createTypedAccountWithIdentity({",
         "end": " /// Create a bank account and its explicitly approved four-digit bank"
+      },
+      {
+        "start": " Future<List<WaffraAccountBalance>> balances()async{",
+        "end": " Future<T> _commit<T>("
       }
     ],
     "lib/waffra_new_account_dialog.dart": [
