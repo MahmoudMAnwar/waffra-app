@@ -43,7 +43,7 @@ void main(){
   await tester.pumpWidget(const MaterialApp(home:Scaffold(body:
    WaffraNewAccountDialog(
     english:true,suggestedProviderId:'inma',
-    suggestedSenderName:'AlinmaPay\\nunsafe'))));
+    suggestedSenderName:'AlinmaPay\nunsafe'))));
   final field=tester.widget<TextField>(
    find.byKey(const Key('m470-new-account-label')));
   expect(field.controller!.text,isEmpty);
