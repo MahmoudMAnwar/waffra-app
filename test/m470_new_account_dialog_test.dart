@@ -27,6 +27,7 @@ void main(){
   await tester.tap(find.text('Bank account').last);
   await tester.pumpAndSettle();
   expect(find.byKey(const Key('m470-new-account-provider')),findsOneWidget);
+  expect(find.byKey(const Key('m470-new-account-subtype')),findsOneWidget);
   expect(find.byKey(const Key('m470-new-account-last-four')),findsOneWidget);
   await tester.ensureVisible(find.byKey(const Key('m470-new-account-label')));
   await tester.enterText(find.byKey(const Key('m470-new-account-label')),'Salary');
