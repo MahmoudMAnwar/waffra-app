@@ -2409,3 +2409,7 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 [M506 #427 bounded cold-launch responsiveness — 2026-11-06]
 - Cold launch previously enforced a fixed 3000ms intro even when finance/profile loading had finished earlier. Shorten the intro visibility minimum to 1750ms and match its visual animation to 1650ms. This reduces the artificial splash floor by 1250ms without changing the required secure-finance readiness check, account session state, mandatory biometric gate, SMS consent, or encrypted storage.
 - Added a WaffraLaunchIntro widget frame-settle regression in test/m506_android_nine_regressions_test.dart. Actual initial loading and broad 2-second tap/refresh/save jank remain OPEN until Android profile-mode before/after frame-timing traces and real-device acceptance. Do not claim nine issues closed or merge solely on widget tests.
+
+
+[M506 startup responsiveness candidate]
+- Shortened the fixed cinematic intro floor from 3000ms to 1750ms, retaining all mandatory finance initialization and biometric gates. This addresses only one cold-launch delay; remaining button, refresh and save jank require measured Android release-profile verification. Latest M506 credential dialog now handles null/cancel safely without logging a user password; no claim of two-device acceptance.
