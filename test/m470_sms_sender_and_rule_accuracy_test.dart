@@ -42,4 +42,21 @@ void main(){
   expect(home,contains('textDirection:waffraIsEnglish?TextDirection.ltr:TextDirection.rtl'));
   expect(home,contains(r'\u2068$count\u2069'));
  });
+
+ test('M470 #5/#6 account action stays beside date with preserved entry state',(){
+  final home=File('lib/main.dart').readAsStringSync();
+  final anchor=home.indexOf('Future<void> entrySheet(');
+  final editor=home.substring(anchor,home.indexOf('Future<void> showReceipt(',anchor));
+  expect(editor,contains("m470-entry-account-near-date"));
+  expect(editor,contains("m470-entry-add-account-near-date"));
+  expect(editor,contains("m470-entry-create-account-from-picker"));
+  expect(editor,contains("Expanded(child:dateAction())"));
+  expect(editor,contains("Expanded(child:accountAction())"));
+  expect(editor,contains("await openVerifiedAccounts();"));
+  expect(editor,contains("entryAccounts=fresh;"));
+  expect(editor,contains("chosenManualAccount=created.single.id"));
+  expect(editor,contains("if(initial==null&&!sms&&entryAccounts.isNotEmpty)"));
+  expect(editor,contains("chosenManualAccount=null"));
+  expect(editor,contains("if(entryAccounts.isEmpty){"));
+ });
 }
