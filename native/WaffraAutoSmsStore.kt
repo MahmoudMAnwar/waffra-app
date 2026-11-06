@@ -34,6 +34,9 @@ object WaffraAutoSmsStore {
     private const val keyAlias = "waffra_sms_intake_aes_v1"
     private const val queueName = "encrypted_candidates"
     private const val excludedSendersName = "encrypted_excluded_senders_v1"
+    // M509 #440: Sharded AES-GCM records of COMPLETED finance SMS fingerprints.
+    // Value is sealed, owner-scoped and contains no raw SMS or bank numbers.
+    private const val committedBucketPrefix = "encrypted_committed_sms_v1_"
     private const val activeName = "enabled"
     // Hash of the verified signed-in account. No phone/email is saved here.
     private const val consentedOwnerName = "consented_account_sha256_v1"
@@ -176,6 +179,12 @@ object WaffraAutoSmsStore {
             if (previous != null && previous != owner) {
                 // A different account's encrypted queue and read cursor must
                 // never become visible under this explicit new opt-in.
+                // A different verified account must never inherit completed
+                // message markers from the previous owner.
+                for (key in prefs.all.keys) {
+                    if (key.startsWith(committedBucketPrefix)) editor.remove(key)
+                }
+                committedCipherCache.clear()
                 editor.remove(queueName).remove(excludedSendersName).remove(historyCursorAt)
                     .remove(historyCursorId).remove(historySourceMonth)
                     .remove(historyComplete)
@@ -260,6 +269,29 @@ object WaffraAutoSmsStore {
     private fun save(context: Context, content: JSONArray): Boolean =
         context.getSharedPreferences(prefsName, Context.MODE_PRIVATE).edit()
             .putString(queueName, seal(content.toString())).commit()
+
+    // Split marker ciphertext by first two hexadecimal hash characters:
+    // historic inboxes can grow without a single enormous encrypted JSON
+    // array, while cached shards make each SMS lookup O(1) in a scan.
+    private val committedCipherCache =
+        mutableMapOf<String, Pair<String, Set<String>>>()
+
+    private fun committedBucket(context: Context, id: String): Set<String> {
+        if (!Regex("^[a-f0-9]{64}$").matches(id))
+            throw IllegalArgumentException("Invalid SMS fingerprint")
+        val bucket = id.take(2)
+        val ciphertext = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+            .getString(committedBucketPrefix + bucket, "") ?: ""
+        val cached = committedCipherCache[bucket]
+        if (cached != null && cached.first == ciphertext) return cached.second
+        val decoded = open(ciphertext)
+        val result = (0 until decoded.length()).map { decoded.getString(it) }.toSet()
+        committedCipherCache[bucket] = ciphertext to result
+        return result
+    }
+
+    private fun isCommittedLocked(context: Context, id: String) =
+        committedBucket(context, id).contains(id)
 
     // Explicit user sender exclusion is encrypted and bound to this authenticated
     // owner. Do not reuse a removed sender as an automatic learned rule.
@@ -495,6 +527,10 @@ object WaffraAutoSmsStore {
                     return@synchronized false
                 val queue = read(context)
                 val fingerprint = id(sender, body, at)
+                // Verified financial SMS is never offered again after
+                // rescan, reinstall-preserving update or OS resume.
+                if (isCommittedLocked(context, fingerprint))
+                    return@synchronized false
                 for (i in 0 until queue.length()) {
                     if (queue.getJSONObject(i).optString("id") == fingerprint)
                         return@synchronized false
@@ -640,6 +676,63 @@ object WaffraAutoSmsStore {
                 save(context, remaining)
             } catch (_: Exception) { false }
         }
+
+    /**
+     * Called ONLY after Flutter independently proves the exact bank SMS hash
+     * exists in the authoritative encrypted financial ledger. An ordinary
+     * exclude/reject/transfer ACK is NOT a financial commit and must never
+     * poison this permanent fingerprint set.
+     *
+     * One SharedPreferences editor commits both the cleared queue and all
+     * affected encrypted fingerprint shards atomically. On any failure the
+     * pending message is preserved for another verified reconciliation.
+     */
+    fun acknowledgeCommitted(context: Context, ids: Set<String>): Boolean =
+        synchronized(mutex) {
+            if (!enabled(context) || ids.isEmpty() || ids.size > 100 ||
+                ids.any { !Regex("^[a-f0-9]{64}$").matches(it) })
+                return@synchronized false
+            try {
+                val data = read(context)
+                val remaining = JSONArray()
+                val present = mutableSetOf<String>()
+                for (i in 0 until data.length()) {
+                    val row = data.getJSONObject(i)
+                    val fingerprint = row.getString("id")
+                    if (ids.contains(fingerprint)) present.add(fingerprint)
+                    else remaining.put(row)
+                }
+                // Never accept an arbitrary ID as a "completed" bank SMS.
+                if (ids.any { !present.contains(it) &&
+                        !isCommittedLocked(context, it) }) return@synchronized false
+                val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+                val changed = present.groupBy { it.take(2) }
+                val editor = prefs.edit()
+                    .putString(queueName, seal(remaining.toString()))
+                for ((bucket, additions) in changed) {
+                    val merged = committedBucket(context, additions.first()).toMutableSet()
+                    merged.addAll(additions)
+                    editor.putString(committedBucketPrefix + bucket,
+                        seal(JSONArray(merged.toList()).toString()))
+                }
+                val succeeded = editor.commit()
+                if (succeeded) committedCipherCache.clear()
+                succeeded
+            } catch (_: Exception) { false }
+        }
+
+    /** Rescan the *entire* installed-month inbox only after a prior scan
+     * completed. An unfinished >2000-message scan always resumes its cursor
+     * instead of restarting the same first pages forever.
+     */
+    fun restartCompletedHistory(context: Context): Boolean = synchronized(mutex) {
+        if (!enabled(context)) return@synchronized false
+        val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        if (!prefs.getBoolean(historyComplete, false)) return@synchronized false
+        prefs.edit().remove(historyCursorAt).remove(historyCursorId)
+            .remove(historySourceMonth).remove(historyComplete)
+            .remove(historyScannedCount).remove(historyAddedCount).commit()
+    }
 
     /** Resumable history import: from day 1 of installation month through now.
      * This native importer never posts money or contacts a cloud provider.
