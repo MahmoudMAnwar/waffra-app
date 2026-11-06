@@ -30,7 +30,7 @@ void main() {
     final allowed={
       for(final group in waffraCategoryCatalog)
         for(final sub in group.subcategories)
-          '${group.income}|\${group.name} / $sub',
+          '${group.income}|${group.name} / $sub',
     };
     for(final rule in sa.where((r)=>r.financial)) {
       expect(allowed,contains('${rule.income}|${rule.category}'),
