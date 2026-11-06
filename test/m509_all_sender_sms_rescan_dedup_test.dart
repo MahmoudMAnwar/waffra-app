@@ -7,7 +7,7 @@ import 'package:waffra/waffra_bank_sms_facts.dart';
 void main() {
  test('M509 financial categorization does not require the sender to be a known bank',(){
   for(final sender in ['UnlistedFintechXYZ','LocalMerchant','بنك جديد']){
-   final body='شراء عبر نقاط البيع\\nمبلغ: 236 ريال\\nالتاجر: العثيم';
+   final body='شراء عبر نقاط البيع\nمبلغ: 236 ريال\nالتاجر: العثيم';
    final facts=WaffraBankSmsFactsParser.parse(body);
    expect(facts.kind,WaffraBankOperationKind.expense);
    final result=WaffraSmsLocalRules.resolve(
