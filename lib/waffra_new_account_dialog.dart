@@ -218,11 +218,19 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
           Text(t('إضافة نوع حساب','Add account subtype')),
          ])),
        ],
-       onChanged:(v)async{
+       onChanged:(v){
         if(v=='__add_custom__'){
-         await addCustomSubtype();
-         // Restore the previous choice when custom-name entry is cancelled.
-         if(mounted)setState(()=>subtypeRevision++);
+         // A DropdownRoute is still closing inside onChanged. Opening a
+         // second dialog in that build scope can mark detached dropdown
+         // descendants dirty (Flutter 'wrong build scope' assertion).
+         // Defer the nested route until the dropdown has finished its frame.
+         WidgetsBinding.instance.addPostFrameCallback((_)async{
+          if(!mounted)return;
+          await addCustomSubtype();
+          // Re-create the field with its previously committed choice on
+          // Cancel; the special menu command is never a saved subtype.
+          if(mounted)setState(()=>subtypeRevision++);
+         });
          return;
         }
         if(v==null)return;
