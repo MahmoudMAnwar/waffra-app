@@ -4,11 +4,11 @@ import 'waffra_account_transaction_form.dart';
 class WaffraNewAccountDraft {
  const WaffraNewAccountDraft({
   required this.name,required this.kind,required this.openingMinor,
-  this.lastFour,
+  this.lastFour,this.providerId,this.subtype,
  });
  final String name,kind;
  final int openingMinor;
- final String? lastFour;
+ final String? lastFour,providerId,subtype;
 }
 
 /// A form only: the same verified SQLCipher account API authorizes saving.
@@ -25,6 +25,7 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
  final smsSuffix=TextEditingController();
  String kind='cash';
  String? provider;
+ String? subtype='cash';
  String t(String ar,String en)=>widget.english?en:ar;
  static const banks=<String,({String ar,String en})>{
   'rajhi':(ar:'مصرف الراجحي',en:'Al Rajhi Bank'),
@@ -48,6 +49,7 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
   final label=accountLabel;
   return nickname.text.trim().isNotEmpty&&label.runes.length<=80&&
    openingMinor!=null&&(kind!='bank'||provider!=null)&&
+   subtype!=null&&
    (smsSuffix.text.trim().isEmpty||
     (kind=='bank'&&RegExp(r'^[0-9]{4}$').hasMatch(smsSuffix.text.trim())));
  }
@@ -81,7 +83,8 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
       DropdownMenuItem(value:'other',child:Text(t('أخرى','Other'))),
      ],
      onChanged:(v){if(v!=null)setState((){
-      kind=v;if(kind!='bank')provider=null;
+      kind=v;provider=null;
+      subtype=kind=='cash'?'cash':kind=='other'?'other':null;
      });},
     ),
     if(kind=='bank')...[
@@ -96,6 +99,31 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
        value:bank.key,child:Text(t(bank.value.ar,bank.value.en),
         overflow:TextOverflow.ellipsis))).toList(),
       onChanged:(v)=>setState(()=>provider=v),
+     ),
+    ],
+    if(kind=='bank'||kind=='wallet')...[
+     const SizedBox(height:12),
+     DropdownButtonFormField<String>(
+      key:const Key('m470-new-account-subtype'),
+      initialValue:subtype,isExpanded:true,
+      decoration:InputDecoration(
+       labelText:t('نوع الحساب التفصيلي *','Detailed account type *'),
+       border:const OutlineInputBorder()),
+      items:(kind=='bank'?
+       <String,({String ar,String en})>{
+        'current':(ar:'جاري',en:'Current/checking'),
+        'savings':(ar:'ادخار',en:'Savings'),
+        'investment':(ar:'استثماري',en:'Investment asset'),
+        'deposit':(ar:'وديعة',en:'Term deposit'),
+        'other':(ar:'حساب بنكي آخر',en:'Other bank account'),
+       }:
+       <String,({String ar,String en})>{
+        'digital':(ar:'محفظة رقمية',en:'Digital wallet'),
+        'prepaid':(ar:'مسبقة الدفع',en:'Prepaid wallet'),
+       }).entries.map((entry)=>DropdownMenuItem<String>(
+        value:entry.key,child:Text(t(entry.value.ar,entry.value.en),
+         overflow:TextOverflow.ellipsis))).toList(),
+      onChanged:(v)=>setState(()=>subtype=v),
      ),
     ],
     if(kind=='bank')...[
@@ -150,6 +178,9 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
     key:const Key('m470-new-account-save'),
     onPressed:valid?()=>Navigator.pop(context,WaffraNewAccountDraft(
      name:accountLabel,kind:kind,openingMinor:openingMinor!,
+     providerId:kind=='bank'?provider:
+      kind=='wallet'?'other':'none',
+     subtype:subtype,
      lastFour:kind=='bank'&&smsSuffix.text.trim().isNotEmpty?
       smsSuffix.text.trim():null)):null,
     child:Text(t('إضافة الحساب','Create account'))),
