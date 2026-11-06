@@ -1416,7 +1416,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   String? error;
   var saving=false;
   try{
-   return await showWaffraDialog<bool>(context:host,
+   final repaired=await showWaffraDialog<bool>(context:host,
     builder:(dialogCtx)=>StatefulBuilder(builder:(dialogCtx,update)=>
      AlertDialog(
       title:WaffraText(waffraIsEnglish?
@@ -1484,6 +1484,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
         },child:WaffraText(waffraIsEnglish?
          'Verify fingerprint & repair':'تأكيد بالبصمة وإصلاح الدخول')),
       ])));
+   return repaired==true;
   }catch(_){return false;}
   finally{password.dispose();confirmation.dispose();}
  }
