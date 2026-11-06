@@ -389,3 +389,13 @@ Each issue requires linked source changes, exact-head CI, tests and real Android
 - **Research baseline:** SAMA bank notification fields, Saudi banks' alerts descriptions, CST anti-fraud guidance; public apps are taxonomy references only. Every template/keyword must be independently curated, not a copy of private banking messages, account details or third-party licensed catalogs.
 - **Built-in rule safety:** no finance posting, no account inference, immutable bundled seeds, user-specific learned rules retained independently, active existing category/leaf only. Direction must be independently verified; transfer is NOT routine income or expense; excluded candidates must NOT auto-ack confirmed money. OTP/fraud/failed notices and marketing are no-finance candidates. Ambiguous signals require review.
 - **Done criteria:** bounded code changes, locale-specific tests for all four buckets, conflicting merchants & financial notifications, release notes, source-reference methodology, exact-head CI and Android profile/new+update tests. **Status: Recorded; not accepted.**
+
+
+## 2026-11-06 — M509: All-sender Saudi financial SMS discovery + lifetime committed-message exclusion
+
+- **Issue [#440](https://github.com/MahmoudMAnwar/waffra-app/issues/440)**, same **Draft PR [#436](https://github.com/MahmoudMAnwar/waffra-app/pull/436)**.
+- **Requested:** Scan incoming Android SMS from **all senders** (not only bank-branded) from the original installation month's first day and suggest financial income/expense from M508 Arabic/English seed catalog. Existing SMS still need independent debit/credit amount/direction evidence; don't mistake ordinary personal, OTP, ads, declines, credit settlement or transfer as confirmed money.
+- **Rescan:** explicit user "إعادة الفحص" must revisit earlier skipped inbox rows when bundled classification expands; native scanning remains paged, background off Android UI thread and queue-limited.
+- **Permanent one-time confirmed SMS:** when user saves reviewed SMS to encrypted verified ledger successfully, remember a privacy-safe sender/body/timestamp fingerprint, bound to the verified owner. Later historical rescans never present it again; keep existing dedupe of ledger SMS hashes as defense in depth. Failure/abort must not consume SMS.
+- **No regression:** finance/account bindings, biometric/SQLCipher, owner lifecycle, merchant corrections, transfer review and user learned rules retained; no default autoPost, no raw SMS copied to new stores.
+- **Done criterion:** precise discovery/committed replay and restore tests, CI exact HEAD, real Android new install + in-place upgrade checks. **Status: tracked; not yet verified.**
