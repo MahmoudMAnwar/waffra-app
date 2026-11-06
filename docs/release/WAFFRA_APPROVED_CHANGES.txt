@@ -1,3 +1,9 @@
+[PR #402 M490] 2026-11-06 — Visible acknowledgement failure after reviewed-SMS correction (#411)
+=====================================================================================================
+- After a confirmed bank-SMS-origin manual-style income/expense correction, the durable SMS hash is checked before requesting Android pending-list acknowledgement. If that native request fails, the SMS remains in Review and the user sees an explicit non-posting retry warning; financial ledger entries are never duplicated or rolled back solely because queue acknowledgement failed.
+- The prior verified SMS writer, transfer request idempotency and encrypted account mapping are unchanged. Extended test/m486_sms_back_navigation_source_test.dart to assert the failed-ack retention contract.
+- Exact-head CI and real Android retry/rollback UX remain pending. No signed APK or merge is asserted.
+
 [PR #402 M488] 2026-11-06 — Preserve nested account selector after cancelling inline Add (#416)
 ==================================================================================================
 - In both SMS-derived and manual income/expense editors, the provider/child selectors now restore their prior selection if the user taps the synthetic 'Add bank/provider' or 'Add linked account' item but cancels without creating one. The financial draft, optional budget and selected child account remain open and intact.
