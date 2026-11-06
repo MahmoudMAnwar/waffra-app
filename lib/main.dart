@@ -4969,7 +4969,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(!mounted||!ready||_smsSheetOpen||_autoSmsReviewOpen||
      _financeLoadFailure!=null)return;
   _autoSmsReviewOpen=true;
-  String? resumeAfterTeachId;
   try{
    // Cloud AI may suggest after separate opt-in. Financial posting is always manual.
    final items=await WaffraAutoSms.pending();
@@ -5053,8 +5052,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ])),
        const SizedBox(height:12),
        WaffraText(waffraIsEnglish?
-        'Waffra read the sender and safe keywords. Choose the next step.':
-        'وفرة قرأ المرسل والكلمات المهمة. اختار الخطوة المناسبة.'),
+        'Review the message. Safe rules update after confirmed actions.':
+        'راجع الرسالة؛ وفرة يتعلم القواعد الآمنة بعد تأكيد العملية.'),
        const SizedBox(height:11),
        Card(child:ListTile(
         key:const Key('waffra-sms-understood-action'),
@@ -5068,20 +5067,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          understood?(waffraIsEnglish?'I understand this transaction':'مراجعة العملية'):
          (waffraIsEnglish?'Add a separate manual transaction':'إضافة عملية يدوية')),
         subtitle:WaffraText(sensitive?
-         (waffraIsEnglish?'Learn a safe exclusion rule':'إنشاء قاعدة استثناء آمنة'):
+         (waffraIsEnglish?'Exclude only this reviewed message':'استبعاد الرسالة دي فقط'):
          (waffraIsEnglish?'Continue with verified transaction review':
           'استكمال المراجعة قبل تسجيل أي مبلغ')),
         onTap:()=>Navigator.pop(dialog,firstChoice),
-       )),
-       Card(child:ListTile(
-        key:const Key('waffra-sms-teach-action'),
-        leading:const Icon(Icons.auto_awesome_outlined),
-        title:WaffraText(waffraIsEnglish?'Teach Waffra this message':
-         'علّم وفرة هذه الرسالة'),
-        subtitle:WaffraText(waffraIsEnglish?
-         'Open a prefilled rule. Edit only what is missing.':
-         'افتح قاعدة جاهزة بكل البيانات المقترحة.'),
-        onTap:()=>Navigator.pop(dialog,'teach'),
        )),
       ])),
      actions:[
@@ -5100,96 +5089,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ],
        ),
      ]));
-   if(decision=='exclude'||decision=='transfer'){
-    if(_smsRuleOwnerKey.isEmpty)return;
-    final kind=decision=='exclude'?'excluded':'transfer';
-    try{
-     final existing=await const WaffraSmsLocalRuleStore()
-      .read(_smsRuleOwnerKey);
-     final existingMatch=existing.any((rule)=>
-      rule.resolvedKind==kind&&WaffraSmsLocalRules.matches(
-       rule,body,sender:sender));
-     if(!existingMatch&&mounted){
-      // Explicit exclusion/transfer action allows conservative local learning.
-      // No balance is ever changed by learning a rule.
-      final learned=await _learnSafeSmsRule(
-       body:body,sender:sender,kind:kind);
-      if(!learned&&mounted)await _openSmsRules(
-       seedMessage:body,seedKind:kind,seedSender:sender);
-     }
-     if(!mounted)return;
-     final saved=await const WaffraSmsLocalRuleStore()
-      .read(_smsRuleOwnerKey);
-     // An explicit exclusion of THIS reviewed ID must not depend on whether
-     // the conservative finance parser classifies it as uncertain. Reusing
-     // the rule for other messages still follows the strict special gate.
-     final matches=saved.any((rule)=>
-      rule.resolvedKind==kind&&WaffraSmsLocalRules.matches(
-       rule,body,sender:sender));
-     if(matches){
-      if(kind=='excluded'){
-       final acknowledged=await WaffraAutoSms.acknowledge([id]);
-       if(acknowledged&&mounted){
-        setState(()=>_autoSmsPending.removeWhere((item)=>item['id']==id));
-        snackSuccess(context,waffraIsEnglish?
-         'Excluded message removed from review.':'تم استبعاد الرسالة من قائمة المراجعة.');
-        unawaited(_refreshAutoSmsInbox(importMonth:true));
-       }else if(mounted){
-        snack(context,waffraIsEnglish?
-         'Rule saved, but the message was not removed safely. Retry.':
-         'اتحفظت القاعدة لكن تعذر استبعاد الرسالة بأمان. حاول مجددًا.',isError:true);
-       }
-      }else{
-       await _reviewSmsAccountTransfer(item:selected,facts:facts);
-      }
-     }else if(kind=='transfer'){
-      await _reviewSmsAccountTransfer(item:selected,facts:facts);
-     }else if(mounted){
-      snack(context,waffraIsEnglish?
-       'Saved rule does not match this message. Adjust its keywords.':
-       'القاعدة المحفوظة لا تطابق هذه الرسالة. عدّل الكلمات المفتاحية.',isError:true);
-     }
-    }catch(_){
-     if(mounted)snack(context,waffraIsEnglish?
-      'Could not verify the rule store. Message remains for review.':
-      'تعذر التحقق من القواعد. الرسالة لسه للمراجعة.',isError:true);
+   if(decision=='exclude'&&mounted){
+    // Excluding ONE message must never silently block its sender.
+    final acknowledged=await WaffraAutoSms.acknowledge([id]);
+    if(acknowledged&&mounted){
+     setState(()=>_autoSmsPending.removeWhere((item)=>item['id']==id));
+     snackSuccess(context,waffraIsEnglish?
+      'Message excluded from review.':'تم استبعاد الرسالة من المراجعة.');
+     // Learn safe sender-scoped exclusion patterns only after acknowledgement.
+     try{await _learnSafeSmsRule(
+      body:body,sender:sender,kind:'excluded');}catch(_){}
+     unawaited(_refreshAutoSmsInbox());
+    }else if(mounted){
+     snack(context,waffraIsEnglish?
+      'Could not exclude the message safely. Try again.':
+      'تعذر استبعاد الرسالة بأمان. حاول تاني.',isError:true);
     }
-   }else if(decision=='teach'&&mounted){
-    if(_smsRuleOwnerKey.isEmpty)return;
-    final suggestionKind=sensitive?'excluded':
-     facts.kind==WaffraBankOperationKind.transfer?'transfer':
-     facts.kind==WaffraBankOperationKind.income?'income':
-     facts.kind==WaffraBankOperationKind.expense?'expense':'expense';
-    await _openSmsRules(
-     seedMessage:body,seedSender:sender,seedKind:suggestionKind,
-     seedCategory:(localFacts?['category'] is String)?
-      (localFacts!['category'] as String):'');
-    // The rules screen was opened from THIS SMS. Back/Save returns to its
-    // review, not an unrelated Home tab; later verify it is still pending.
-    if(mounted)resumeAfterTeachId=id;
-    // Saving a rule is not a financial transaction. A verified explicit
-    // exclusion can remove the current review item after native acknowledgement.
-    try{
-     final rules=await const WaffraSmsLocalRuleStore()
-      .read(_smsRuleOwnerKey);
-     if(facts.kind==WaffraBankOperationKind.uncertain&&rules.any((r)=>
-      r.resolvedKind=='excluded'&&
-      WaffraSmsLocalRules.matches(r,body,sender:sender))){
-      final acknowledged=await WaffraAutoSms.acknowledge([id]);
-      if(acknowledged&&mounted){
-       setState(()=>_autoSmsPending.removeWhere((item)=>item['id']==id));
-       unawaited(_refreshAutoSmsInbox(importMonth:true));
-      }else if(mounted)snack(context,waffraIsEnglish?
-       'Rule saved, but SMS acknowledgement failed. Retry.':
-       'القاعدة اتحفظت لكن استبعاد الرسالة لم يتأكد. حاول تاني.',
-       isError:true);
-     }
-    }catch(_){
-     if(mounted)snack(context,waffraIsEnglish?
-      'Could not verify the new rule. Message remains for review.':
-      'تعذر التحقق من القاعدة. الرسالة ما زالت للمراجعة.',
-      isError:true);
-    }
+   }else if(decision=='transfer'&&mounted){
+    // Directly review verified accounts; save money before learning a rule.
+    await _reviewSmsAccountTransfer(item:selected,facts:facts);
    }else if(decision=='manual'&&mounted){
     await entrySheet();
    }else if(decision=='ai'&&mounted){
@@ -5204,10 +5122,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       // Once a confirmed entry is committed, learn only a specific and
       // verified bank direction; generic/uncertain categories need review.
       try{
-       final store=const WaffraSmsLocalRuleStore();
-       final savedRules=await store.read(_smsRuleOwnerKey);
-       final known=WaffraSmsLocalRules.resolve(
-        body:body,sender:sender,bankKind:facts.kind,custom:savedRules);
        // The user's FINAL saved category wins over pre-review guesses.
        // Only use a record verified back from the encrypted ledger.
        final confirmed=entries.where((entry)=>entry.sourceType=='sms'&&
@@ -5227,16 +5141,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          body:body,sender:sender,
          kind:expectedIncome?'income':'expense',
          category:match.category):false;
-       if(!learned&&mounted){
-        // Uncertain classification opens a fully prefilled, editable rule.
-        await _openSmsRules(
-         seedMessage:body,seedSender:sender,
-         seedKind:facts.kind==WaffraBankOperationKind.income?
-          'income':'expense',
-         seedCategory:(localFacts?['category'] is String)?
-          (localFacts!['category'] as String):
-          (known?.category??''));
-       }else if(learned&&mounted){
+       // Unsafe keywords? Preserve the saved entry, no forced rule popup.
+       if(learned&&mounted){
         snackSuccess(context,waffraIsEnglish?
          'Matching SMS rule saved automatically.':
          'اتحفظت قاعدة الرسائل المطابقة تلقائيًا.');
@@ -5254,17 +5160,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    _autoSmsReviewOpen=false;
    if(mounted){
     unawaited(_refreshAutoSmsInbox());
-    final target=resumeAfterTeachId;
-    if(target!=null){
-     WidgetsBinding.instance.addPostFrameCallback((_){
-      if(mounted&&ready&&!_smsSheetOpen&&!_autoSmsReviewOpen&&
-         _financeLoadFailure==null){
-       // The reopened review reads the encrypted queue again and refuses
-       // to show an SMS already saved or explicitly excluded.
-       unawaited(_reviewAutoSmsCandidates(targetId:target));
-      }
-     });
-    }
    }
   }
  }
