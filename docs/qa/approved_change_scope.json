@@ -256,7 +256,7 @@
     ],
     "test/m401_m402_budget_month_centered_dropdown_test.dart": [
       {
-        "start": "        expect(src,contains(\"final providers=WaffraRecurringAccountGroups.fromAccounts(transferAccounts)\"));",
+        "start": "        // M470: source/destination selectors are Columns containing two",
         "end": "        expect(src,contains(\"key:ValueKey('m470-home-transfer-'\"));"
       }
     ]
