@@ -6079,7 +6079,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     try{
      final match=await accountEvidence.suggestSmsAccount(facts);
      if(match.confident&&match.accountId!=null&&
+        bankGroup!=null&&sameBankIds.contains(match.accountId)&&
         active.any((a)=>a.id==match.accountId)){
+      // A suffix by itself cannot prove the SMS belongs to this sender's bank.
       assigned[i]=match.accountId;
      }else{
       final suffix=item.income?
@@ -6099,6 +6101,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
    }
    if(!mounted)return null;
+   final providerGroups=WaffraRecurringAccountGroups.fromAccounts(active);
+   final chosenProviders=List<String?>.generate(assigned.length,(index){
+    for(final group in providerGroups){
+     if(group.accounts.any((a)=>a.id==assigned[index]))return group.id;
+    }
+    return null;
+   });
    final approved=await showWaffraDialog<bool>(context:context,
     builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
      title:WaffraText(mustSelectAccount?
@@ -6118,8 +6127,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           'Manual income and expenses must use an existing money account.':
           'الدخل والمصروف اليدوي لازم يرتبطوا بحساب مالي موجود.')
         :(waffraIsEnglish
-          ?'Choose the actual bank or cash account. No account is optional.'
-          :'اختار الحساب الفعلي لكل عملية، أو سيبها بدون ربط.')),
+          ?'Choose a verified money account; new entries cannot be unassigned.'
+          :'اختار حسابًا ماليًا موثّقًا لكل عملية؛ الحفظ بدون حساب غير مسموح.')),
        const SizedBox(height:12),
        for(var n=0;n<candidates.length;n++)
         Padding(padding:const EdgeInsets.only(bottom:12),
@@ -6127,6 +6136,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           WaffraText(candidates[n].title+' · '+cash(candidates[n].amount),
            maxLines:2,style:const TextStyle(fontWeight:FontWeight.bold)),
           const SizedBox(height:5),
+          WaffraCenteredDropdownFormField<String>(
+           key:ValueKey('m470-review-provider-'+n.toString()+'-'+
+            (chosenProviders[n]??'none')),
+           initialValue:chosenProviders[n],isExpanded:true,
+           menuMaxHeight:min(340.0,MediaQuery.sizeOf(ctx).height*.48),
+           decoration:InputDecoration(
+            labelText:waffraIsEnglish?'Bank or provider':'الجهة أو البنك',
+            border:const OutlineInputBorder()),
+           items:providerGroups.map((group)=>DropdownMenuItem<String>(
+            value:group.id,child:WaffraText(waffraIsEnglish?
+             group.labelEn:group.labelAr,maxLines:1))).toList(),
+           onChanged:WaffraHaptics.selection((value)=>update((){
+            chosenProviders[n]=value;
+            assigned[n]=null; // Provider never silently approves an account.
+           })),
+          ),
+          const SizedBox(height:7),
           WaffraCenteredDropdownFormField<String>(
            key:ValueKey('waffra-sms-account-'+n.toString()+'-'+
             (assigned[n]??'none')),
@@ -6136,12 +6162,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            decoration:InputDecoration(
             labelText:waffraIsEnglish?'Money account':'الحساب المالي',
             border:const OutlineInputBorder()),
-           items:[
-            ...active.map((a)=>DropdownMenuItem(value:a.id,
-             child:WaffraText(a.name,maxLines:1))),
-           ],
-           onChanged:WaffraHaptics.selection((value)=>update(
-            ()=>assigned[n]=value=='none'?null:value)),
+           items:providerGroups.where((p)=>p.id==chosenProviders[n])
+            .expand((p)=>p.accounts).map((a)=>DropdownMenuItem(
+             value:a.id,child:WaffraText(a.name,maxLines:1))).toList(),
+           onChanged:chosenProviders[n]==null?null:
+            WaffraHaptics.selection((value)=>update(
+             ()=>assigned[n]=value)),
           ),
          ])),
       ])),
