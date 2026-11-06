@@ -307,17 +307,18 @@ class MoneyEntry {
  /// Explicitly chosen budget category ID. Null means not assigned.
  final String? budgetId;
  /// Internal merchant identifier is a merchant *name*, never a bank/card ID.
- final String notes,sourceType,merchantKey;
+ final String notes,sourceType,merchantKey,personalNotes;
  /// Saved separately from cash: the confirmed goal-due amount funded by
  /// the goals wallet, in integer halalas. Other entries must leave it zero.
  final int goalWalletPaidMinor;
  MoneyEntry({required this.id,required this.title,required this.category,required this.amount,
   required this.income,required this.date,this.receiptPath,this.notes='',
-  this.sourceType='manual',this.merchantKey='',this.budgetId,
+  this.personalNotes='',this.sourceType='manual',this.merchantKey='',this.budgetId,
   this.goalWalletPaidMinor=0});
  Map<String,dynamic> toJson()=>{'id':id,'title':title,'category':category,
   'amount':amount,'income':income,'date':date.toIso8601String(),
-  'receiptPath':receiptPath,'notes':notes,'sourceType':sourceType,
+  'receiptPath':receiptPath,'notes':notes,'personalNotes':personalNotes,
+  'sourceType':sourceType,
   'merchantKey':merchantKey,if(budgetId!=null)'budgetId':budgetId,
   if(goalWalletPaidMinor>0)'goalWalletPaidMinor':goalWalletPaidMinor};
  factory MoneyEntry.fromJson(Map<String,dynamic> j)=>MoneyEntry(
@@ -325,7 +326,8 @@ class MoneyEntry {
   category:'${j['category']??'أخرى'}',amount:(j['amount'] as num).toDouble(),
   income:j['income']==true,date:DateTime.tryParse('${j['date']}')??DateTime.now(),
   receiptPath:j['receiptPath']?.toString(),
-  notes:'${j['notes']??''}',sourceType:'${j['sourceType']??'legacy'}',
+  notes:'${j['notes']??''}',personalNotes:'${j['personalNotes']??''}',
+  sourceType:'${j['sourceType']??'legacy'}',
   merchantKey:'${j['merchantKey']??''}',
   budgetId:j['budgetId'] is String&&((j['budgetId'] as String).trim().isNotEmpty)?
    j['budgetId'] as String:null,
@@ -335,12 +337,13 @@ class MoneyEntry {
  /// merchant key, original timestamp and receipt references.
  MoneyEntry withCategory(String next)=>MoneyEntry(
   id:id,title:title,category:next,amount:amount,income:income,date:date,
-  receiptPath:receiptPath,notes:notes,sourceType:sourceType,
-  merchantKey:merchantKey,budgetId:budgetId,goalWalletPaidMinor:goalWalletPaidMinor);
+  receiptPath:receiptPath,notes:notes,personalNotes:personalNotes,
+  sourceType:sourceType,merchantKey:merchantKey,budgetId:budgetId,
+  goalWalletPaidMinor:goalWalletPaidMinor);
  /// Reassigning a budget must not mutate the amount, date, SMS, merchant or receipt.
  MoneyEntry withBudget(String? budget)=>MoneyEntry(
   id:id,title:title,category:category,amount:amount,income:income,
-  date:date,receiptPath:receiptPath,notes:notes,
+  date:date,receiptPath:receiptPath,notes:notes,personalNotes:personalNotes,
   sourceType:sourceType,merchantKey:merchantKey,budgetId:income?null:budget,
   goalWalletPaidMinor:goalWalletPaidMinor);
 }
@@ -3152,6 +3155,12 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
   final lightTone=entry.income?const Color(0xFFE4F4EB):const Color(0xFFFCECE8);
   final darkTone=entry.income?const Color(0xFF244C3A):const Color(0xFF49302C);
   final muted=Theme.of(context).colorScheme.onSurface.withValues(alpha:.73);
+  final displayNotes=entry.sourceType=='sms'?entry.personalNotes:entry.notes;
+  // Historical encrypted SMS entries used notes for their source text.
+  // Display such content as a bank SMS only, not a personal note.
+  final displayOriginalSms=(protectedOriginalSms?.trim().isNotEmpty??false)?
+   protectedOriginalSms:entry.sourceType=='sms'&&entry.notes.trim().isNotEmpty?
+   entry.notes:null;
   return Directionality(
    textDirection:rtl?TextDirection.rtl:TextDirection.ltr,
    child:AlertDialog(
@@ -3281,14 +3290,9 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
            fontSize:22,color:dark?Colors.white:accent)),
         ]),
        ),
-       // These are TWO independent fields. Editable user notes are persisted
-       // on the ordinary transaction route; the original SMS is read from
-       // the protected vault and is never substituted into entry.notes.
-       // User-edited notes remain visible for reviewed SMS entries too;
-       // they are independent of the protectedOriginalSms vault field.
-       // The verified storage adapter already redacts legacy SMS plaintext
-       // from entry.notes before presenting this details dialog.
-       if(entry.notes.trim().isNotEmpty)...[
+       // Personal notes are separate from the original SMS in the UI and
+       // canonical JSON. The historical bank SMS field stays encrypted.
+       if(displayNotes.trim().isNotEmpty)...[
         const SizedBox(height:15),
         WaffraText(waffraIsEnglish?'Notes':'الملاحظات',
          textAlign:TextAlign.start,style:TextStyle(fontSize:12,color:muted)),
@@ -3298,16 +3302,13 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
           color:dark?const Color(0xFF252A27):const Color(0xFFF1F8F3),
           borderRadius:BorderRadius.circular(14),
           border:Border.all(color:dark?const Color(0xFF3B5444):const Color(0xFFD5E8DC))),
-         child:entry.notes.isEmpty?WaffraText(
-           waffraIsEnglish?'No notes added':'لا توجد ملاحظات',
-           style:TextStyle(fontSize:13,color:muted)):
-          SelectableText(entry.notes,
+         child:SelectableText(displayNotes,
            key:const Key('waffra-transaction-personal-notes'),
            textDirection:rtl?TextDirection.rtl:TextDirection.ltr,
            textAlign:TextAlign.start,
            style:const TextStyle(fontSize:14,height:1.5))),
        ],
-       if(entry.sourceType=='sms')...[
+       if(entry.sourceType=='sms'&&displayOriginalSms!=null)...[
         const SizedBox(height:15),
         Row(children:[
          Icon(Icons.lock_outline_rounded,size:17,
@@ -3324,13 +3325,7 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
           color:dark?const Color(0xFF18372E):const Color(0xFFE9F5EF),
           borderRadius:BorderRadius.circular(14),
           border:Border.all(color:dark?const Color(0xFF3B7055):const Color(0xFFB8D9C7))),
-         child:protectedOriginalSms==null||protectedOriginalSms!.isEmpty?
-          WaffraText(waffraIsEnglish?
-           'Original encrypted message is unavailable.':
-           'الرسالة البنكية الأصلية غير متاحة من التخزين المشفّر.',
-           textAlign:TextAlign.start,
-           style:TextStyle(fontSize:12,color:muted)):
-          SelectableText(protectedOriginalSms!,
+         child:SelectableText(displayOriginalSms,
            key:const Key('waffra-transaction-protected-bank-sms'),
            textDirection:rtl?TextDirection.rtl:TextDirection.ltr,
            textAlign:TextAlign.start,
@@ -3960,6 +3955,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  bool _autoSmsHistoryComplete=false;
  bool _autoSmsRescanRunning=false;
  Map<String,Object?> _autoSmsProgress=const <String,Object?>{};
+ DateTime? _autoSmsLastChecked;
  String? _autoSmsStatusProblem;
  final List<Map<String,Object?>> _autoSmsPending=<Map<String,Object?>>[];
 
@@ -4246,6 +4242,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      'تعذر قراءة الرسائل المشفرة. لم يُحذف شيء. حاول التحديث.';
    });
    return;
+  }
+  // Update counts on *every* completed refresh, not just initial import.
+  final latestScan=await WaffraAutoSms.scanProgress();
+  if(mounted&&latestScan!=null){
+   setState((){
+    _autoSmsProgress=latestScan;
+    _autoSmsLastChecked=DateTime.now();
+   });
   }
   // On a vault error keep SMS review available with built-in rules.
   var customRules=<WaffraSmsLocalRule>[];
@@ -4932,9 +4936,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ],
       if(_autoSmsProgress['scanned'] is num)...[
        WaffraText(waffraIsEnglish?
-        'Scanned: ${_autoSmsProgress['scanned']} • Queued: ${_autoSmsProgress['pending']}':
-        'تم فحص: ${_autoSmsProgress['scanned']} • بالمراجعة: ${_autoSmsProgress['pending']}',
+        'Total SMS scanned: ${_autoSmsProgress['scanned']} • Awaiting review: ${_autoSmsProgress['pending']}':
+        'إجمالي الرسائل المفحوصة: ${_autoSmsProgress['scanned']} • بانتظار المراجعة: ${_autoSmsProgress['pending']}',
         style:const TextStyle(fontSize:12,color:emerald)),
+       if(_autoSmsLastChecked!=null)
+        WaffraText(waffraIsEnglish?
+         'Updated: ${dayText(_autoSmsLastChecked!)}':
+         'آخر تحديث: ${dayText(_autoSmsLastChecked!)}',
+         style:const TextStyle(fontSize:11,color:emerald)),
        const SizedBox(height:8),
       ],
       Row(children:[
@@ -8218,7 +8227,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    (smsEditorDraft?['title'] as String?)??initial?.title??
    scannedReceipt?.merchant??suggestedSmsTitle);
   final notes=TextEditingController(text:
-   (smsEditorDraft?['notes'] as String?)??initial?.notes??'');
+   (smsEditorDraft?['notes'] as String?)??
+   (initial?.sourceType=='sms'?initial?.personalNotes:initial?.notes)??'');
   final value=TextEditingController(text:
    (smsEditorDraft?['amount'] as String?)??(initial!=null?
    formatWaffraEditAmount(initial.amount):
@@ -8799,7 +8809,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         style:const TextStyle(color:emerald,fontSize:12)),
        const SizedBox(height:12),
       ],
-      if(sms)...[
+      if(sms&&initialSms==null)...[
        TextField(controller:message,minLines:3,maxLines:6,
         // Reviewed Android SMS provenance must remain byte-for-byte original.
         // Users correct amount/category/title, not the source message itself.
@@ -8942,6 +8952,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            textAlign:TextAlign.start),
         )],
        ),
+       const SizedBox(height:12),
+       TextField(
+        key:const Key('m506-sms-personal-notes'),
+        controller:notes,minLines:1,maxLines:3,
+        decoration:InputDecoration(
+         labelText:waffraIsEnglish?'Your notes (optional)':
+          'ملاحظاتك الشخصية (اختياري)',
+         helperText:waffraIsEnglish?
+          'Original bank SMS is stored separately.':
+          'الرسالة البنكية الأصلية منفصلة عن ملاحظاتك.',
+         border:const OutlineInputBorder())),
        const SizedBox(height:12),
       ],
       TextField(controller:value,readOnly:initial?.sourceType=='goal_due',
@@ -9212,7 +9233,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        update(()=>attempted=true);
        final n=sms?amountOf(value.text):amountOfDisplay(value.text);
        if(!waffraTransactionTitleAllowed(title.text,oldTitle:initial?.title)||
-        (!sms&&!waffraTransactionNotesAllowed(notes.text,oldNotes:initial?.notes))||
+        !waffraTransactionNotesAllowed(notes.text,oldNotes:
+         initial?.sourceType=='sms'?initial?.personalNotes:initial?.notes)||
         waffraAmountFieldError(value.text)!=null||n==null)return;
        // A settled goal payment is coupled to a debited earmark. Edits
        // may change its category/budget/notes, but not the money or type.
@@ -9304,7 +9326,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        }
        submitTapped=true; // Synchronous gate: rapid taps cannot post twice.
        Navigator.pop(sheetContext,MoneyEntry(id:initial?.id??newId(),
-        title:title.text.trim(),notes:sms?message.text:notes.text,
+        title:title.text.trim(),
+        notes:sms?message.text:
+         initial?.sourceType=='sms'?initial!.notes:notes.text,
+        personalNotes:sms||initial?.sourceType=='sms'?notes.text:'',
         category:category,amount:n,
         income:income,date:date,receiptPath:receiptPath,
         sourceType:initial?.sourceType??(sms?'sms':scannedReceipt!=null?'receipt':'manual'),
