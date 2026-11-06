@@ -70,7 +70,10 @@ void main(){
   expect(flow,contains('رصيد افتتاحي صفر ريال افتراضيًا'));
   expect(flow,contains("draft.kind!='bank'||draft.providerId!=knownBank"));
   expect(flow,contains('api.createTypedAccountWithIdentity('));
-  expect(flow,contains('lastFour:draft.lastFour,userConfirmed:true'));
+  // Verified suffix and user confirmation are both passed to the writer,
+  // with the optional custom subtype label preserved in between.
+  expect(flow,contains('lastFour:draft.lastFour,'));
+  expect(flow,contains('customSubtypeLabel:draft.customSubtypeLabel,userConfirmed:true'));
   expect(flow,contains('await _refreshFromVerifiedFinance();'));
   expect(flow,contains('verified=await bridge.readVerifiedAccounts();'));
   expect(flow,contains('assigned[0]=createdFromSmsAccountId'));
