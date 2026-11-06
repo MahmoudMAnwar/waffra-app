@@ -92,11 +92,13 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
     (kind=='bank'&&RegExp(r'^[0-9]{4}$').hasMatch(smsSuffix.text.trim())));
  }
  Future<void> addCustomSubtype()async{
-  final input=TextEditingController();
-  try{
-   final chosen=await showDialog<String>(context:context,
-    builder:(dialog)=>StatefulBuilder(builder:(dialog,refresh){
-     final label=input.text.trim();
+  // Keep the typed value in the nested dialog state. A locally owned
+  // TextEditingController may otherwise be disposed while the reverse route
+  // animation still rebuilds its TextField (observed in Flutter widget CI).
+  String typed='';
+  final chosen=await showDialog<String>(context:context,
+   builder:(dialog)=>StatefulBuilder(builder:(dialog,refresh){
+     final label=typed.trim();
      final existing={
       ...?widget.customSubtypeOptions[kind],...?sessionCustomSubtypes[kind],
      }.map((value)=>value.toLowerCase());
@@ -107,8 +109,8 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
       title:Text(t('إضافة نوع حساب','Add account subtype')),
       content:TextField(
        key:const Key('m487-custom-account-subtype-input'),
-       autofocus:true,maxLength:40,controller:input,
-       onChanged:(_)=>refresh((){}),
+       autofocus:true,maxLength:40,
+       onChanged:(value)=>refresh(()=>typed=value),
        decoration:InputDecoration(
         labelText:t('اسم النوع الجديد','New subtype name'),
         helperText:t('اسم وصفي فقط؛ لا يغيّر تصنيف الحساب أو رصيده',
@@ -128,7 +130,6 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
     customSubtypeLabel=chosen;
     subtype=kind=='bank'?'other':'digital';
    });
-  }finally{input.dispose();}
  }
  @override Widget build(BuildContext context)=>AlertDialog(
   key:const Key('m470-new-account-dialog'),
@@ -215,7 +216,8 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
          child:Row(children:[
           const Icon(Icons.add_circle_outline,size:18),
           const SizedBox(width:8),
-          Text(t('إضافة نوع حساب','Add account subtype')),
+          Flexible(child:Text(t('إضافة نوع حساب','Add account subtype'),
+           maxLines:1,overflow:TextOverflow.ellipsis)),
          ])),
        ],
        onChanged:(v){
