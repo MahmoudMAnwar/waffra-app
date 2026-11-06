@@ -1,3 +1,9 @@
+[PR #402 M496] 2026-11-06 — Trusted sender-scoped bank child suffix suggestion (#407/#405)
+====================================================================================================
+- The native SMS review screen now passes the original reviewed sender name to its correction editor. When a user explicitly chooses Add linked bank account, the inline account dialog proposes the correctly directed masked four digits from the original SMS only if trusted SAR income/expense evidence is present AND the selected verified provider matches the sender's recognized bank. Unknown sender, different bank, pending message, transfer and unverified currency do not prefill a suffix.
+- The original received SMS remains read-only to protect provenance, and the proposed four digits remain user editable. Account creation still requires explicit user confirmation and an exclusive verified SQLCipher writer. No automatic money posting or account binding is introduced.
+- Extended test/m486_sms_back_navigation_source_test.dart to protect this sender-bank/direction check. Android validation, bank-provider impersonation scenarios and exact-head CI remain pending.
+
 [PR #402 M495] 2026-11-06 — Exact-head analyzer correction and responsive UI acceptance tests
 =================================================================================================
 - #403: the M429 Flutter analyzer identified one remaining dead null-coalescing expression in the already trusted bank SMS title. Removed only the redundant operator; the bank SMS amount, currency, type, source hash and duplicate-write checks remain unchanged.
