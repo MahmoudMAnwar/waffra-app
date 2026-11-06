@@ -91,6 +91,9 @@ void main(){
   expect(edit,contains('accountId:chosenManualAccount!,userConfirmed:true'));
   expect(edit,contains('await api.linkUnassignedEntry(entryId:initial.id'));
   expect(edit,contains('linkedHistoricalAccountInThisEdit=true;'));
+  expect(edit,contains("'Confirm historical account link'"));
+  expect(edit,contains("'تأكيد ربط العملية القديمة'"));
+  expect(edit,contains('if(approved!=true||!sheetContext.mounted)return;'));
   expect(edit,contains('actionLabel:linkedHistoricalAccountInThisEdit?null'));
  });
 
