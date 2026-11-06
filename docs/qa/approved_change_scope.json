@@ -221,7 +221,7 @@
         "end": "     child:SizedBox(height:selectedSender==null?"
       },
       {
-        "start": " @override void didChangeAppLifecycleState(AppLifecycleState state){",
+        "start": " Future<void> launchIntro()async{",
         "end": " @override void dispose(){WaffraRegionalCopy.countryIso.removeListener(_onRegionChanged);"
       }
     ],
