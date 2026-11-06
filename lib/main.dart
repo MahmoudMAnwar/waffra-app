@@ -6182,11 +6182,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        'إنشاء حساب مالي لهذا البنك؟'),
       content:WaffraText(waffraIsEnglish?
        'This is the first reviewed message without a linked account for '
-       '"$smsSender". Create an account with your chosen name and opening '
-       'balance (0 SAR by default)? No transaction is posted automatically.':
-       'دي أول رسالة قيد المراجعة من "$smsSender" بدون حساب مرتبط بالجهة. '
-       'هل تريد إنشاء حساب باسم تختاره ورصيد افتتاحي صفر ريال افتراضيًا؟ '
-       'لن تُسجّل العملية تلقائيًا دون تأكيدك.'),
+       '"$smsSender". Create an account named "$smsSender" with opening '
+       'balance 0 SAR (editable)? No transaction is posted without approval.':
+       'دي أول رسالة قيد المراجعة من "$smsSender" بدون حساب مرتبط. '
+       'هنقترح إنشاء حساب باسم المرسل نفسه ورصيد افتتاحي صفر ريال افتراضيًا '
+       'ويمكنك تغييره. العملية لن تتسجل من غير موافقتك.'),
       actions:[
        TextButton(onPressed:()=>Navigator.pop(dialog,false),
         child:WaffraText(waffraIsEnglish?'Choose existing':'اختيار حساب موجود')),
@@ -6198,7 +6198,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if(offered==true){
      final draft=await showWaffraDialog<WaffraNewAccountDraft>(
       context:context,builder:(dialog)=>WaffraNewAccountDialog(
-       english:waffraIsEnglish,suggestedProviderId:knownBank));
+       english:waffraIsEnglish,suggestedProviderId:knownBank,
+       suggestedSenderName:smsSender));
      if(!mounted)return null;
      if(draft!=null){
       // Users may edit the form. Never silently approve a different bank
