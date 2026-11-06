@@ -52,7 +52,9 @@ void main() {
     final app = File('lib/main.dart').readAsStringSync();
     expect(app, contains("'__create_budget__'"));
     expect(app, contains("'__manage_budgets__'"));
-    expect(app, contains('SizedBox(width:137,child:dateAction())'));
+    expect(app, contains('Expanded(child:dateAction())'));
+    expect(app, contains('Expanded(child:accountAction())'));
+    expect(app, contains('if(initial==null&&!sms)...['));
     expect(app, contains('budgetMenuRevision++'));
     final inset = File('lib/waffra_entry_sheet_safe_layout.dart')
       .readAsStringSync();

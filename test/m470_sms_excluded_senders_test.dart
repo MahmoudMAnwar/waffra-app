@@ -37,8 +37,19 @@ void main(){
   expect(store,contains('editor.remove(queueName).remove(excludedSendersName)'));
   expect(store,contains('isExcludedLocked(context, sender)'));
   expect(store,contains('if (synchronized(mutex) { isExcludedLocked(context, sender) }) continue'));
-  expect(activity,contains('"excludeAutoSmsSender" -> result.success('));
-  expect(activity,contains('"restoreExcludedAutoSmsSender" -> result.success('));
+  // Native message-queue changes run off Android UI thread and respond on it.
+  final exclude=activity.substring(
+   activity.indexOf('"excludeAutoSmsSender" -> {'),
+   activity.indexOf('"restoreExcludedAutoSmsSender" -> {'));
+  expect(exclude,contains('smsHistoryExecutor.execute {'));
+  expect(exclude,contains('WaffraAutoSmsStore.excludeSender(app, sender)'));
+  expect(exclude,contains('runOnUiThread { result.success(excluded) }'));
+  final restore=activity.substring(
+   activity.indexOf('"restoreExcludedAutoSmsSender" -> {'),
+   activity.indexOf('"pendingAutoBankSms" -> {'));
+  expect(restore,contains('smsHistoryExecutor.execute {'));
+  expect(restore,contains('WaffraAutoSmsStore.restoreExcludedSender(app, sender)'));
+  expect(restore,contains('runOnUiThread { result.success(restored) }'));
   final block=store.substring(store.indexOf('fun excludeSender('),
    store.indexOf('fun restoreExcludedSender('));
   expect(block,isNot(contains('commitConfirmedSms')));

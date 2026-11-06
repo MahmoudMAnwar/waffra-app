@@ -2199,3 +2199,7 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 - إعادة تقديم نفس بصمة SHA-256 للرسالة ترفض إضافة المعاملة الثانية، وتحافظ على الرصيد -200 ريال؛ لا يُقبل الخصم مرتين حتى مع معرّف عملية مختلف.
 - تم ضبط مسار اختبارات UI الخاص باللاج والرجوع إلى «علّم وفرة» داخل test/ وحذف الملف الخاطئ خارج النطاق، وإبقاء حواجز M385 وM449 والإصدار دون تخفيف.
 - لا تزال ذرّية إنشاء الحساب مع أول SMS في معاملة موحدة (وليست معاملتين) مفتوحة، كما أن اختبارات الجهاز الفعلي لا تزال مطلوبة.
+
+[M470 CI correction — 2026-11-06: 4 stale Flutter regressions, 6 workflow verdicts]
+- Six full-suite workflow failures on b546774 reduced to four obsolete source-level expectations; 2,364 Flutter tests passed, 4 failed. Update M206 to assert the idle biometric wrapper keeps the existing RTL ValueListenableBuilder and Navigator; M372/M398 to assert the newly approved adjacent date/account action retains named budget controls; M470 native-SMS test to assert exclude/restore work on dedicated executor with UI-thread reply instead of old synchronous result.success.
+- Updated M385 changed-file list and bounded test sections. No production writer, bank SMS posting logic, account balance, or encryption gates were changed in this correction. Re-run exact HEAD full tests before treating the six workflows as green.
