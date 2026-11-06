@@ -8354,6 +8354,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    WaffraBankSmsFactsParser.parse(initialSms):null;
   final sourceAmount=sms&&initialSms!=null?
    WaffraSmsCurrencies.originalAmount(initialSms):null;
+  // Direct SMS corrections and native review use the same latest offline
+  // category rules. Never infer a money account or post without approval.
+  var editorRules=<WaffraSmsLocalRule>[];
+  if(sms&&initialSms!=null&&_smsRuleOwnerKey.isNotEmpty){
+   try{editorRules=await const WaffraSmsLocalRuleStore()
+    .read(_smsRuleOwnerKey);}catch(_){/* Editable review still available. */}
+  }
+  if(!mounted)return;
+  final editorMatchedRule=sms&&initialSms!=null&&factsSms!=null?
+   WaffraSmsLocalRules.resolve(body:initialSms,
+    sender:reviewedSender??'',bankKind:factsSms.kind,
+    custom:editorRules):null;
+  final editorLearnedCategory=editorMatchedRule!=null&&
+   categories.any((c)=>c.isSubcategory&&
+    c.income==editorMatchedRule.income&&
+    c.name==editorMatchedRule.category&&
+    waffraCategoryAvailableForNewEntry(categories,c))?
+     editorMatchedRule.category:null;
   final trustedSms=parsedSms!=null&&factsSms!=null&&!factsSms.pending&&
    (factsSms.kind==WaffraBankOperationKind.income||
     factsSms.kind==WaffraBankOperationKind.expense)&&
@@ -8385,7 +8403,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    analyzing=false,hasParsed=initialSms!=null;
   bool submitTapped=false;
   String category=(smsEditorDraft?['category'] as String?)??
-   initial?.category??(trustedSms?(parsedSms.category):'أخرى');
+   initial?.category??(trustedSms?
+    (editorLearnedCategory??parsedSms.category):'أخرى');
   String? selectedParentId;
   String? selectedBudgetId=(smsEditorDraft?['budget'] as String?)??initial?.budgetId;
   var entryAccounts=_m467Accounts.where((a)=>!a.archived).toList();
