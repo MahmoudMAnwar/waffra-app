@@ -1,19 +1,91 @@
 {
   "contract_version": 1,
-  "change_id": "M504-7DAY-MERGED-PR-FAILED-RUN-CLEANUP-20261106",
-  "human_scope_review": "Owner explicitly approved safe automatic failed GitHub Actions run cleanup on 2026-11-06 after #402 main merge. This standalone M504 maintenance PR adds a default-branch-only scheduled weekly workflow and pure Node.js retention policy with offline tests, precise 7-day archive cutoff and 20 deletion cap. Scope contains only four NEW files, the current scope manifest, and an appended requirements record; no existing app/Android/SQLCipher/CI workflow is modified, no required check bypass, and no change to APK or finance. User authorized automatic action, but physical security and actual deletion remain auditable under the published conservative policy.",
+  "change_id": "M506-NINE-APK-REGRESSIONS-20261106",
+  "human_scope_review": "Owner submitted nine explicit Android screenshots, reproduced defects, and requested one PR to fix them after #402 main merge. This proposed scope declares only code in the SMS-reviewed transaction editor, its matching source/provider dropdowns, encrypted verified receipt writer, transaction details, scanned-count UI, Arabic banking sender qualifiers, and specific regression tests. Finance/account authentication invariants are protected. Automated checks are NOT human approval, real device certification, or permission to merge.",
   "user_requested_changes": [
-    "2026-11-06 owner instruction: automatically clean obsolete FAILED GitHub Actions PR runs weekly, but leave all successes and main APK/main runs, and use safe retention and a newer passing identical PR workflow as proof. Tracked Issue #425.",
-    "New M504 workflow only: schedule Sunday 02:19 UTC on trusted main and manual dry-run by default; never run write-enabled cleanup from pull_request, use offline Node policy tests to block deployment after regression.",
-    "Retain old failed runs when any linked PR is open or not merged, artifact exists, no explicit newer pass, or insufficient metadata; exclude production/release/SQLCipher workflow evidence and cap at 20 deletions per weekly run."
+    "2026-11-06 Issue #427: eliminate app-wide cold-start, tap, pull-to-refresh and loading animation lag, with performance profiling and device evidence; tracked, not claimed corrected.",
+    "2026-11-06 Issue #428: confirmed Android bank SMS expense with attached receipt must be saved atomically in SQLCipher with verified account and hash, avoiding prior generic save error.",
+    "2026-11-06 Issue #429: confirmed SMS income/expense must teach existing protected keyword classification rule only after a committed finance write; do not auto-post.",
+    "2026-11-06 Issues #430-#431: preselect trusted bank/provider from selected sender, never financial account ID; original SMS once, user-authored notes separately, no technical encryption warning in details.",
+    "2026-11-06 Issue #432: account-bound Android SMS scan from installation-month start must include recognized Arabic banking sender aliases, show true cumulative scanned count and rescan completeness/queue capacity.",
+    "2026-11-06 Issues #433-#434: independent bank account selection and new-bank option for transfers; choose historical date before notes; verify active source/destination and commit two-sided transfer with original finance lock.",
+    "2026-11-06 Issue #435: address failed logout due secure verifier/biometric signout preflight safely without credential erasure or unverified account bypass; currently tracked and not claimed solved."
   ],
   "allowed_changed_files": [
-    ".github/workflows/m504-pr-failed-run-retention.yml",
-    "scripts/qa/m504_failed_run_retention.cjs",
-    "test/qa/m504_failed_run_retention.test.cjs",
-    "docs/ci/M504_FAILED_RUN_RETENTION.md",
+    "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
-    "docs/WAFFRA_REQUIREMENTS.md"
+    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "lib/main.dart",
+    "lib/storage/waffra_unified_finance_writer.dart",
+    "lib/storage/waffra_verified_finance_authority.dart",
+    "lib/waffra_recurring_account_groups.dart",
+    "native/WaffraAutoSmsStore.kt",
+    "test/m262_bank_sms_notes_separation_test.dart",
+    "test/m506_android_nine_regressions_test.dart",
+    "test/waffra_m206_day_theme_tour_sms_regression_test.dart"
   ],
-  "bounded_sections": {}
+  "bounded_sections": {
+    "lib/main.dart": [
+      {
+        "start": "class MoneyEntry {",
+        "end": "class Person {"
+      },
+      {
+        "start": "class WaffraTransactionDetailsDialog extends StatelessWidget {",
+        "end": "class HomeScreen extends StatefulWidget {"
+      },
+      {
+        "start": " Map<String,Object?> _autoSmsProgress=const <String,Object?>{};",
+        "end": " String? _autoSmsStatusProblem;"
+      },
+      {
+        "start": " Future<void> _runAutoSmsRefresh({bool importMonth=false})async{",
+        "end": " Future<void> _analyzeAmbiguousSmsOnDemand("
+      },
+      {
+        "start": " Future<void> _openAutoSmsInbox()async{",
+        "end": " void _receiveSharedSms(){"
+      },
+      {
+        "start": " Future<void> entrySheet(",
+        "end": " Future<void> showReceipt("
+      }
+    ],
+    "lib/storage/waffra_unified_finance_writer.dart": [
+      {
+        "start": "  Future<WaffraUnifiedWriteResult> appendTransactions({",
+        "end": null
+      }
+    ],
+    "lib/storage/waffra_verified_finance_authority.dart": [
+      {
+        "start": "  Future<WaffraFinanceAuthoritySmsCommit> commitConfirmedSms({",
+        "end": null
+      }
+    ],
+    "lib/waffra_recurring_account_groups.dart": [
+      {
+        "start": "abstract final class WaffraRecurringAccountGroups {",
+        "end": null
+      }
+    ],
+    "native/WaffraAutoSmsStore.kt": [
+      {
+        "start": "    private val otp = Regex(",
+        "end": "    fun unknownFinancialKind("
+      }
+    ],
+    "test/m262_bank_sms_notes_separation_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/waffra_m206_day_theme_tour_sms_regression_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ]
+  }
 }
