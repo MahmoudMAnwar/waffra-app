@@ -68,7 +68,7 @@
         "end": "      SliverPadding(padding:const EdgeInsets.fromLTRB(14,10,14,96),"
       },
       {
-        "start": "import 'waffra_account_transaction_form.dart';",
+        "start": "import 'waffra_accounts_manager_page.dart';",
         "end": "\nimport 'storage/waffra_fresh_finance_modules_repository.dart';"
       },
       {
