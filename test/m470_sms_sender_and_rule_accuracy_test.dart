@@ -20,7 +20,7 @@ void main(){
    category:'مصروفات / غير مصنف'),isNull);
   const wrong=WaffraSmsLocalRule(
    id:'bad_transfer_expense',name:'Bad classification',
-   kind:'transfer',income:false,keywords:['خصم'],sender:'AlinmaBank');
+   kind:'transfer',income:false,category:'',keywords:['خصم'],sender:'AlinmaBank');
   expect(WaffraSmsLocalRules.matches(
    wrong,original,sender:'AlinmaBank'),isFalse);
  });
