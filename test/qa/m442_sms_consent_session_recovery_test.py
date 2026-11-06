@@ -28,7 +28,14 @@ class M442SmsConsentSessionRecovery(unittest.TestCase):
         self.assertIn('editor.remove(queueName)', store)
         self.assertIn('else editor.remove(queueName)', store)
         self.assertIn('if (previous != null && previous != owner)', store)
-        self.assertIn('editor.remove(queueName).remove(historyCursorAt)', store)
+        # M470 also removes the old owner's encrypted blocked-sender policy.
+        # All these removals share the same preferences editor/commit.
+        self.assertIn('if (previous != null && previous != owner)', store)
+        self.assertIn(
+            'editor.remove(queueName).remove(excludedSendersName).remove(historyCursorAt)',
+            store)
+        self.assertIn('.remove(historyCursorId).remove(historySourceMonth)', store)
+        self.assertIn('.remove(historyScannedCount).remove(historyAddedCount)', store)
         self.assertIn('.putBoolean(suspendedAfterLogoutName, false)', store)
         # A device-level permission alone never enables capture.
         self.assertIn('!prefs.getBoolean(activeName, false)', store)
@@ -39,8 +46,17 @@ class M442SmsConsentSessionRecovery(unittest.TestCase):
         activity = read("native/WaffraMainActivity.kt")
         offer = store[store.index("fun offer(context:"):
                       store.index("fun pending(context:")]
-        self.assertIn("if (!enabled(context)) return@synchronized false", offer)
-        self.assertIn("val result = synchronized(mutex)", offer)
+        # First reject unauthorized sessions and excluded senders before
+        # parsing; re-check BOTH under the mutex before the encrypted write.
+        self.assertIn('if (!enabled(context)) return false', offer)
+        self.assertIn(
+            'if (synchronized(mutex) { isExcludedLocked(context, sender) }) return false',
+            offer)
+        self.assertIn('val result = synchronized(mutex)', offer)
+        self.assertIn('if (!enabled(context) || isExcludedLocked(context, sender))', offer)
+        self.assertIn('return@synchronized false', offer)
+        self.assertLess(offer.index('if (!enabled(context) || isExcludedLocked'),
+                        offer.index('val queue = read(context)'))
         acknowledge = store[store.index("fun acknowledge(context:"):
                             store.index("fun importConsentMonth(")]
         self.assertIn("if (!enabled(context) || ids.isEmpty()", acknowledge)
@@ -91,8 +107,17 @@ class M442SmsConsentSessionRecovery(unittest.TestCase):
         self.assertIn("progress['historyComplete']==true", home)
         self.assertIn('!_autoSmsHistoryComplete', home)
         self.assertIn("count.toString()", home)
-        self.assertIn("true // Foreground refresh will surface the read failure.", activity := read(
-            "native/WaffraMainActivity.kt"))
+        activity = read("native/WaffraMainActivity.kt")
+        # The encrypted SMS queue is now read on a dedicated worker so
+        # Activity.onResume never blocks Android UI or turns corruption into 0.
+        on_resume = activity[activity.index('override fun onResume()'):
+                             activity.index('override fun onRequestPermissionsResult(')]
+        self.assertIn('smsHistoryExecutor.execute {', on_resume)
+        self.assertIn('WaffraAutoSmsStore.pending(app).isNotEmpty()', on_resume)
+        self.assertIn('true // Flutter review reports the actual queue error.', on_resume)
+        self.assertIn('if (hasReview) runOnUiThread {', on_resume)
+        self.assertIn('messageChannel?.invokeMethod("autoSmsAvailable", null)', on_resume)
+        self.assertNotIn('false // Encrypted queue unreadable', on_resume)
         self.assertNotIn('commitConfirmedSms(', home[
             home.index('Future<void> _scanPreviousBankSmsFromSettings()'):
             home.index('Future<void> _openAutoSmsInbox()')])
