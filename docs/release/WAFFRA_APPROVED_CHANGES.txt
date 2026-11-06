@@ -2108,3 +2108,10 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 - WaffraVerifiedAccountsApi now creates the bank account and registers that verified last-four inside one existing native-locked SQLCipher transaction, so a metadata error cannot leave half a creation committed.
 - The existing encrypted V3 account-context backup already captures the confirmed suffix. SMS sender bank must agree with the selected account's verified bank group before its suffix can prefill a source; users still confirm review before finance posting.
 - Advanced versioned account subtype definitions remain incomplete; this item is not Done. Exact-head CI and signed-device verification are required.
+
+
+[M470 CI recovery after first 2026-11-06 account-suffix changes]
+- Exact-SHA analyzer found accidental Dart text duplication in Add Account dialog and verified accounts API during the optional masked-four-digit change; nine previously failing workflow gates shared this same compilation blocker.
+- Restored the original one-class/one-method structures and applied the same user-approved four-digit field and atomic verified SQLCipher account+suffix writer without any duplicate Dart sections.
+- Confirmed latest source files are bounded (new-account dialog 159 lines, verified accounts adapter 232 lines) with a single account creator and no extra account source or bypass of active encrypted finance verification.
+- This is a candidate source fix; do not assert complete CI success, sign an APK or merge before exact-head tests and device acceptance.
