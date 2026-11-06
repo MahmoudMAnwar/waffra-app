@@ -4762,7 +4762,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             senders.removeWhere((sender)=>bySender[sender]!.isEmpty);
             selectedIds.removeAll(done);
            }
-           if(ctx.mounted)Navigator.pop(ctx);
+           // On a partial native failure, keep the list mounted so the
+           // unprocessed selection is still visible and safely retryable.
+           if(!failed&&ctx.mounted)Navigator.pop(ctx);
            // Apply only explicit sender decisions for groups whose selected
            // messages were fully acknowledged. A partial native failure
            // must not block the unprocessed sender's future messages.
