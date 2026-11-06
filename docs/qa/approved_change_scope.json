@@ -17,7 +17,8 @@
     "2026-11-06 M506 #427 follow-up: move encrypted SMS tracking/status/progress reads to Android's existing dedicated SMS executor; decode the verified widget ledger using the existing large JSON off-UI isolate path after background biometric resume; no financial authorization changes.",
     "2026-11-06 Issue #439 M508: bundle 177 original Arabic/English Saudi SMS rule groups (53 income, 102 expense, 8 transfer, 14 exclusion; 793 curated keywords), display all four default groups in the rule settings UI without losing encrypted user rules. Built-in exclusion suggestions must NEVER acknowledge/discard pending bank messages automatically. Direction and posting gates remain unchanged.",
     "2026-11-06 Issue #440 M509: Discover Saudi income/expense candidate SMS from every sender (not trusted bank names only), full historical rescan after a completed cursor, and persist an encrypted owner-scoped tombstone only after verified financial SMS commit; never requeue committed messages, never broaden finance autoPost permissions.",
-    "M510 user CRITICAL 2026-11-06 issue #441: clean-install opening must show the prior approved branded explicit إنشاء حساب / تسجيل الدخول chooser before any registration/login form. Restore the choice state without unapproved onboarding deletion, preserving one-page register, secure existing-user login, on-device finance profile, biometric, SMS permission flow and back navigation."
+    "M510 user CRITICAL 2026-11-06 issue #441: clean-install opening must show the prior approved branded explicit إنشاء حساب / تسجيل الدخول chooser before any registration/login form. Restore the choice state without unapproved onboarding deletion, preserving one-page register, secure existing-user login, on-device finance profile, biometric, SMS permission flow and back navigation.",
+    "2026-11-07 M511 Issue #442: fix newly failed CI after M506 SMS receipt refactor. Update only bounded M177 source acceptance assertions to require sanitized smsRecord/receipt bytes through the same verified atomic SMS hash writer; preserve SQLCipher and prevent legacy finance bypass."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -43,7 +44,8 @@
     "lib/waffra_auto_sms_autopost.part.dart",
     "test/m509_all_sender_sms_rescan_dedup_test.dart",
     "native/WaffraAutoSmsWorker.kt",
-    "test/m510_first_launch_auth_choice_test.dart"
+    "test/m510_first_launch_auth_choice_test.dart",
+    "test/storage/m177_live_finance_authority_integration_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -228,6 +230,12 @@
       {
         "start": "                        \"ackAutoBankSms\" -> {",
         "end": "                        \"notifyAutoSmsSaved\" -> {"
+      }
+    ],
+    "test/storage/m177_live_finance_authority_integration_test.dart": [
+      {
+        "start": "  test('M177 no screen still directly uses a legacy finance write', () {",
+        "end": "    // Portable .waffra export must read finance after the latest Widget save."
       }
     ]
   }
