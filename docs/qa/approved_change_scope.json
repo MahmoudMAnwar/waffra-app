@@ -38,7 +38,7 @@
     ],
     "lib/waffra_sms_local_rules.dart": [
       {
-        "start": " /// A plain manual transaction can teach a safe merchant/category",
+        "start": "  try{\n   validate(rule);\n   // Never store a proposal which does not match the exact reviewed SMS.",
         "end": " /// A manual account transfer teaches safe bilingual classification hints;"
       }
     ]
