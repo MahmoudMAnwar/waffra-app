@@ -84,6 +84,7 @@ void main(){
   expect(adapter,contains('String? customSubtypeLabel'));
   expect(dialog,contains('m487-custom-account-subtype-save'));
   expect(manager,contains('customSubtypeOptions:customSubtypes'));
+  expect(manager,contains("Key('m497-custom-subtype-"));
   expect(adapter,contains('WaffraAccountDetailsSchema.assign('));
  });
 }
