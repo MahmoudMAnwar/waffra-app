@@ -5179,7 +5179,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }else if(decision=='manual'&&mounted){
     // Keep the SMS's verified source/hash instead of replacing it with
     // a blank 'manual' record. Uncertain fields remain editable.
-    await entrySheet(sms:true,initialSms:body);
+    await entrySheet(sms:true,initialSms:body,reviewedSender:sender);
     if(smsHashes.contains(bankSmsHash(body))){
      final acknowledged=await WaffraAutoSms.acknowledge([id]);
      if(acknowledged&&mounted){
@@ -8074,6 +8074,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
 
  Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,
+  String? reviewedSender,
   WaffraReceiptOcrFields? scannedReceipt,XFile? scannedImage,bool? scannedIncome,
   int? scannedImagePosition,int? scannedImageTotal})async {
   if(!WaffraSaudiRelease.receiptImageTransactionImport&&
@@ -8290,6 +8291,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        r'^bank:institution:(rajhi|inma|snb|riyad|bilad|stc)$')
        .firstMatch(mainProvider?'':selectedProviderBefore??'');
       final expectedBank=bankSelection?.group(1);
+      // A masked account suffix from an Android SMS is a suggestion ONLY
+      // when the reviewed sender's bank matches the selected provider.
+      // Never inherit a suffix from a different bank or an uncertain SMS.
+      final bankFromSender=WaffraSmsAccountLearning.bankGroup(
+       reviewedSender??'');
+      final bankFacts=initialSms!=null?
+       WaffraBankSmsFactsParser.parse(initialSms):null;
+      final proposedSuffix=trustedSms&&expectedBank!=null&&
+       expectedBank==bankFromSender&&bankFacts!=null&&
+       bankFacts.canAutoPostAsIncomeExpense?
+       WaffraSmsAccountLearning.suffix4(
+        bankFacts.kind==WaffraBankOperationKind.income?
+         bankFacts.destinationSuffix:bankFacts.sourceSuffix):null;
       final customOptions=<String,List<String>>{
        for(final kind in const ['bank','wallet'])
         kind:before.where((a)=>!a.archived&&a.kind==kind&&
@@ -8299,6 +8313,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       final draft=await showWaffraDialog<WaffraNewAccountDraft>(
        context:sheetContext,builder:(dialog)=>WaffraNewAccountDialog(
         english:waffraIsEnglish,suggestedProviderId:expectedBank,
+        suggestedLastFour:proposedSuffix,
         customSubtypeOptions:customOptions));
       if(draft==null||!sheetContext.mounted)return;
       // Bank child creation must stay under the selected real institution;
