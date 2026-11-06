@@ -4944,6 +4944,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          'Updated: ${dayText(_autoSmsLastChecked!)}':
          'آخر تحديث: ${dayText(_autoSmsLastChecked!)}',
          style:const TextStyle(fontSize:11,color:emerald)),
+       if(_autoSmsProgress['complete']==false)
+        Padding(padding:const EdgeInsets.only(top:6),child:WaffraText(
+         ((_autoSmsProgress['pending'] as num?)?.toInt()??0)>=
+           ((_autoSmsProgress['capacity'] as num?)?.toInt()??500)?
+          (waffraIsEnglish?
+           'Review pending messages to continue scanning other senders.':
+           'قائمة المراجعة ممتلئة. راجع بعض الرسائل عشان نكمل فحص باقي المرسلين.'):
+          (waffraIsEnglish?
+           'History scan is still in progress. Tap Rescan to continue.':
+           'فحص الرسائل لسه ما اكتملش. اضغط إعادة الفحص لاستكماله.'),
+         style:const TextStyle(fontSize:12,color:emerald))),
        const SizedBox(height:8),
       ],
       Row(children:[
