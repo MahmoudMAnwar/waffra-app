@@ -210,6 +210,11 @@ abstract final class WaffraSmsLocalRules {
   WaffraSmsLocalRule(id:'builtin_payment',name:'مدفوعات عامة',keywords:['خصم','debited','payment','دفع'],income:false,category:'أخرى / مصروف غير مصنف',matchAll:false,builtIn:true),
   ...waffraSaudiFinancialSeedRules,
  ];
+ // Built-in income, expense, transfer and excluded hints used by the rules
+ // UI. Personal secure-store rules remain separate and owner-scoped.
+ static const allDefaultRules=<WaffraSmsLocalRule>[
+  ...builtIn,...waffraSaudiSpecialSeedRules,
+ ];
 
  static List<String> suggestions(Iterable<String> messages){
   final choices=<String>{};
