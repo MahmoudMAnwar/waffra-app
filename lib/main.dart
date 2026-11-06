@@ -3096,7 +3096,8 @@ class WaffraPageHero extends StatelessWidget {
 class WaffraTransactionDetailsDialog extends StatelessWidget {
  /// Only previously persisted provenance is authoritative.
  static String sourceLabel(String source,bool english)=>switch(source){
-  'sms'=>english?'Bank SMS':'رسالة بنكية (SMS)',
+  'sms'=>english?'Bank SMS — reviewed and saved manually':
+   'رسالة بنكية (SMS) — تمت مراجعتها وتسجيلها يدويًا',
   'manual'=>english?'Manual entry':'إدخال يدوي',
   'receipt'=>english?'Receipt capture':'إضافة من فاتورة',
   'goal_due'=>english?'Goal due payment':'استحقاق هدف',
@@ -3256,7 +3257,7 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
        // These are TWO independent fields. Editable user notes are persisted
        // on the ordinary transaction route; the original SMS is read from
        // the protected vault and is never substituted into entry.notes.
-       if(entry.notes.trim().isNotEmpty)...[
+       if(entry.sourceType!='sms'&&entry.notes.trim().isNotEmpty)...[
         const SizedBox(height:15),
         WaffraText(waffraIsEnglish?'Notes':'الملاحظات',
          textAlign:TextAlign.start,style:TextStyle(fontSize:12,color:muted)),
