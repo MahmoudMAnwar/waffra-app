@@ -57,9 +57,12 @@ void main() {
     expect(inbox,contains('openingReviewId'));
     expect(inbox,contains('canPop:selectedSender==null||openingReviewId!=null'));
     expect(inbox,contains('refresh(()=>openingReviewId=id);'));
-    expect(inbox,contains('WidgetsBinding.instance.addPostFrameCallback'));
-    expect(inbox,contains('if(ctx.mounted)Navigator.pop(ctx,id);'));
-    expect(inbox,contains('await _reviewAutoSmsCandidates(targetId:selected);'));
+    // #410/#409: keep the inbox mounted so Back returns one screen,
+    // without requiring a now-removed pop-and-reopen route.
+    expect(inbox,contains('await _reviewAutoSmsCandidates(targetId:id);'));
+    expect(inbox,contains('finally{'));
+    expect(inbox,contains('openingReviewId=null;'));
+    expect(inbox,isNot(contains('Navigator.pop(ctx,id);')));
   });
 
   test('M470 #19: post-back subcategory must be current parent-scoped', () {
