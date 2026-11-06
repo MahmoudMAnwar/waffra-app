@@ -6127,7 +6127,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     (a.kind=='bank'||a.kind=='wallet')&&
     (a.providerId!=null?a.providerId==knownBank:
      WaffraSmsAccountLearning.bankGroup(a.name)==knownBank));
-   if(firstSenderIncomeExpense&&!alreadyLinkedToBank){
+   if(firstSenderIncomeExpense&&!alreadyLinkedToBank&&
+       (initialSelectedIds==null||initialSelectedIds.every((id)=>id==null))){
     final offered=await showWaffraDialog<bool>(
      context:context,builder:(dialog)=>AlertDialog(
       title:WaffraText(waffraIsEnglish?
@@ -8004,7 +8005,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     return;
   }
   // Cold-start money selection needs a verified, non-Home-header account list.
-  if(initial==null&&!sms&&!_m468VerifiedAccountsLoaded){
+  if(initial==null&&!_m468VerifiedAccountsLoaded){
    await _m467RefreshHomeAccounts();
    if(!mounted)return;
   }
@@ -8409,7 +8410,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ],
       operationPicker(),
       const SizedBox(height:12),
-      if(initial==null&&!sms)...[
+      if(initial==null)...[
        WaffraCenteredDropdownFormField<String>(
         key:ValueKey('m470-home-manual-provider-'+(chosenManualProvider??'none')),
         isExpanded:true,initialValue:chosenManualProvider,
@@ -8887,7 +8888,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final previousSpent=linkedBudget.isEmpty?0.0:waffraNamedBudgetSpent(
     entries.where((e)=>e.id!=result.id),categories,linkedBudget.single,result.date);
   if(pendingHash!=null&&initial==null){
-   final reviewedAccount=await reviewSmsAccountLinks([result]);
+   final reviewedAccount=await reviewSmsAccountLinks([result],
+     initialSelectedIds:chosenManualAccount==null?null:[chosenManualAccount]);
    if(reviewedAccount==null)return;
    try{
    // A single reviewed bank SMS must commit both its transaction and
