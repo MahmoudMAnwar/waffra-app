@@ -2135,3 +2135,12 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 - Removed the extra builder and composed the 60s biometric inactivity overlay inside that SAME existing builder, without changing the prior masking, RTL, lifecycle or user-owned Navigator.
 - The overlay still covers open routes, retaining text and current dialog on expiry, and requires mandatory OS biometrics to reveal.
 - CI must run against the new exact HEAD; no physical device pass is claimed.
+
+
+[M470 #23 typed account source metadata] 2026-11-06 — candidate, not release approved
+- Create Account now distinguishes bank current/checking, savings, investment asset, deposit and digital/prepaid wallet subtypes alongside its existing cash/bank/wallet/other money kind and selected bank/provider. Liability/credit-card balances are deliberately not modeled as debit-able assets.
+- User-selected provider and descriptive subtype are written to a NEW separately versioned and referenced SQLCipher account-details table; old accounts and opening/transaction balance math remain untouched. The existing verified native Home/Widget lock commits the account row, subtype/provider and optional masked SMS four-digit suffix together.
+- Account list reads structured identity where present, falls back to the existing legacy account label only for old accounts with NO structured provider, and does not treat a contradictory bank name as trusted SMS evidence.
+- Encrypted V3 backups now carry optional strictly validated accountDetailsV1 entries; old archives without that field remain compatible. Restore inserts details in the same atomic encrypted transaction after source accounts, rejecting forged provider or orphan identity references.
+- A disposable SQLCipher export/restore test verifies typed identity and untouched legacy cash, plus forged metadata rejection and supported combinations. CI on exact commit, app installation over old phone data and signed Android validation still required.
+- The M470 accounts adapter was restored from its last good revision after an insertion text-duplication regression and now includes one typed creation method and one existing transfer method.
