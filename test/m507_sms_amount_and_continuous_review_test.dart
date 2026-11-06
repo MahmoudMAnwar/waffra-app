@@ -52,7 +52,9 @@ void main() {
       description:'شحن الجوال',category:'فواتير / جوال',income:false);
     expect(approved,isNotNull);
     expect(approved!.autoPost,isFalse);
-    expect(approved.accountId,isNull);
+    // The account ID is a non-null String: empty means no inferred account.
+    expect(approved.accountId,isEmpty);
+    expect(approved.accountSuffix,isEmpty);
     final rules=WaffraSmsLocalRules.upsertLearned(
       existing:const <WaffraSmsLocalRule>[],candidate:approved);
     final suggestion=WaffraSmsLocalRules.resolve(
