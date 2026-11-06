@@ -4894,11 +4894,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final id=item['id'],body=item['body'];
   if(id is! String||body is! String||
      facts.kind!=WaffraBankOperationKind.transfer||facts.pending)return;
-  if(WaffraSmsCurrencies.requiresReviewForSarLedger(body)){
-   if(mounted)snack(context,'تحقق من عملة الرسالة قبل تسجيل التحويل.',
-    isError:true);
+  // Verify the main transfer amount independently from fees/balances.
+  // Never use a fee's currency as proof of a SAR account transfer.
+  final sourceAmount=WaffraSmsCurrencies.originalAmount(body);
+  if(sourceAmount==null||sourceAmount.currency!='SAR'||
+     WaffraSmsCurrencies.requiresReviewForSarLedger(body)){
+   if(mounted)snack(context,
+    'مبلغ التحويل الأساسي أو عملته غير مؤكد من الرسالة. '
+    'لن تُسجّل الرسوم أو عملة مجهولة كتحويل.',isError:true);
    return;
   }
+  final verifiedMinor=waffraSarAmountMinor(sourceAmount.amount.toStringAsFixed(2));
+  if(verifiedMinor==null)return;
   final bridge=_financeBinding?.accountsBridge;
   if(bridge==null){
    if(mounted)snack(context,'الحسابات الموثقة غير متاحة.',
@@ -4913,16 +4920,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     snack(context,'أضف حسابين على الأقل قبل تسجيل التحويل.',isError:true);
     return;
    }
-   final parsed=BankParser.parse(body);
    final arrived=DateTime.fromMillisecondsSinceEpoch(
     item['receivedAt'] is int?item['receivedAt'] as int:
      DateTime.now().millisecondsSinceEpoch);
    final date=bankSmsDate(body,referenceDate:arrived)??arrived;
-   final minor=parsed.amount!=null&&!parsed.requiresCurrencyReview?
-    waffraSarAmountMinor(parsed.amount!.toStringAsFixed(2)):null;
    final prefill=WaffraInternalTransferDraft(
     requestId:'sms-transfer-'+bankSmsHash(body),
-    fromId:'',toId:'',amountMinor:minor??0,
+    fromId:'',toId:'',amountMinor:verifiedMinor,
     occurredIso:date.toIso8601String(),memo:'تحويل من رسالة بنكية');
    var saved=false,ack=false;
    await Navigator.of(context).push<void>(MaterialPageRoute(
@@ -4935,6 +4939,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         '  إلى الحساب: '+
         (facts.destinationSuffix==null?'غير معروف':
          '••••'+facts.destinationSuffix!))),
+      if(facts.fee!=null&&facts.fee!>0)
+       Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:6),
+        child:WaffraText(
+         'رسوم التحويل منفصلة: ${facts.fee!.toStringAsFixed(2)} SAR. '
+         'لن تُسجّل تلقائيًا كمصروف إضافي.',
+         style:const TextStyle(color:emerald,fontSize:12))),
       Expanded(child:WaffraAccountTransactionForm(
        accounts:accounts,english:waffraIsEnglish,
        initialSmsTransfer:prefill,
