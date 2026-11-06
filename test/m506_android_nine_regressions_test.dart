@@ -7,6 +7,30 @@ import 'package:waffra/storage/waffra_accounts_repository.dart';
 import 'package:waffra/waffra_recurring_account_groups.dart';
 
 void main() {
+  test('M506 Android bank SMS state reads never decrypt on main thread', () {
+    final native=File('native/WaffraMainActivity.kt').readAsStringSync();
+    final messageHandler=native.substring(
+      native.indexOf('messageChannel?.setMethodCallHandler {'),
+      native.indexOf('"importConsentMonthBankSms" ->'));
+    expect(messageHandler,contains(
+      '"autoSmsEnabled", "autoSmsTrackingStatus", "autoSmsScanProgress" -> {'));
+    expect(messageHandler,contains('smsHistoryExecutor.execute {'));
+    expect(messageHandler,contains('WaffraAutoSmsStore.scanProgress(app)'));
+    expect(messageHandler,contains('runOnUiThread { result.success(response) }'));
+    expect(messageHandler,
+      isNot(contains('result.success(WaffraAutoSmsStore.scanProgress(this))')));
+  });
+
+  test('M506 widget-resume large finance decode uses the isolate threshold', () {
+    final src=File('lib/main.dart').readAsStringSync();
+    final sync=src.substring(src.indexOf(' Future<void> _syncWidgetTransactions()async{'),
+      src.indexOf(' Future<void> _refreshAndSettle('));
+    expect(sync,contains('WaffraLargeJsonDecode.parse(raw)'));
+    expect(sync,isNot(contains('(jsonDecode(raw) as List)')));
+    expect(sync,contains('loadedFinance.finance.requireIntegrity()'));
+  });
+
+
   testWidgets('M506 splash animation settles within 1.9 seconds',
       (tester) async {
     await tester.pumpWidget(const MaterialApp(home: WaffraLaunchIntro()));
