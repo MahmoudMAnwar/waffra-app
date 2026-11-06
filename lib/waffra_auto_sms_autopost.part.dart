@@ -61,8 +61,10 @@ abstract final class WaffraAutoSmsAutoPoster {
     if(facts.kind==WaffraBankOperationKind.uncertain){
      final rule=WaffraSmsLocalRules.resolveSpecial(
       body:body,sender:sender,bankKind:facts.kind,custom:rules);
-     if(rule?.resolvedKind=='excluded'&&
+     if(rule?.resolvedKind=='excluded'&&rule?.builtIn==false&&
         (facts.pending||BankParser.parse(body).amount==null)){
+      // Immutable Saudi exclusion hints cannot silently delete SMS in
+      // WorkManager. Only an owner-approved saved rule may do that.
       if(await WaffraAutoSms.acknowledge([id])){
        summary['excluded']=summary['excluded']!+1;
        continue;
@@ -180,7 +182,7 @@ abstract final class WaffraAutoSmsAutoPoster {
      final fingerprint=bankSmsHash(body);
      if((before.finance.getStringList('waffra_sms_hashes_v1')??
          const <String>[]).contains(fingerprint)){
-      await WaffraAutoSms.acknowledge([id]);
+      await WaffraAutoSms.acknowledgeCommitted([id]);
       summary['duplicates']=summary['duplicates']!+1;
       continue;
      }
@@ -212,14 +214,14 @@ abstract final class WaffraAutoSmsAutoPoster {
        item is Map&&item['id']==entry.id);
      if(committed.saved==1&&persisted&&
         finalHashes.contains(fingerprint)){
-      await WaffraAutoSms.acknowledge([id]);
+      await WaffraAutoSms.acknowledgeCommitted([id]);
       await WaffraAutoSms.notifyCommitted(
        hash:id,amount:parsed.amount!,income:parsed.income,
        linkedBudget:false);
       summary['saved']=summary['saved']!+1;
      }else if(committed.saved==0&&
          finalHashes.contains(fingerprint)){
-      await WaffraAutoSms.acknowledge([id]);
+      await WaffraAutoSms.acknowledgeCommitted([id]);
       summary['duplicates']=summary['duplicates']!+1;
      }else{
       await keepForReview(candidate);
