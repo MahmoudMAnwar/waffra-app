@@ -292,6 +292,14 @@
       {
         "start": "    FilledButton(\n     key:const Key('m440-confirm'),",
         "end": "   ]),\n  ));\n }\n}"
+      },
+      {
+        "start": "    SegmentedButton<WaffraAccountOperation>(",
+        "end": "    TextField(key:const Key('m440-amount'),"
+      },
+      {
+        "start": "     OutlinedButton.icon(\n      key:const Key('m470-transfer-date'),",
+        "end": "     if(widget.initialSmsTransfer!=null)"
       }
     ]
   }
