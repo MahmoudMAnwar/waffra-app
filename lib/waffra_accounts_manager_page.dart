@@ -77,7 +77,7 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
   if(bankWithVerifiedSource){
    try{
     // The suffix shown here must come from the verified SQLCipher source.
-    savedSuffix=await verified.verifiedBankSuffix(item.id);
+    savedSuffix=await verified!.verifiedBankSuffix(item.id);
    }catch(_){failed();return;}
   }
   final name=TextEditingController(text:item.name);
@@ -146,12 +146,12 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
      a.name==item.name&&a.kind==item.kind).toList();
     if(same.length!=1)throw StateError('Account changed while being edited.');
     if(bankWithVerifiedSource&&
-      await verified.verifiedBankSuffix(item.id)!=savedSuffix){
+      await verified!.verifiedBankSuffix(item.id)!=savedSuffix){
      throw StateError('Bank suffix changed while being edited.');
     }
    }
    if(bankWithVerifiedSource&&edited.lastFour!=null){
-    await verified.renameAccountWithSuffix(
+    await verified!.renameAccountWithSuffix(
      id:item.id,name:edited.name,lastFour:edited.lastFour!,
      userConfirmed:true);
    }else{
