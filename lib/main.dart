@@ -6775,6 +6775,47 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       accountId:reviewedAccounts.ids![n]);
     }
    }
+   // M470 #20: learn only from the exact rows confirmed by the durable
+   // encrypted journal, never from pre-save predictions. One rule-store
+   // update for the entire SMS batch avoids 30 slow secure I/O writes.
+   if(initialSender.trim().isNotEmpty&&_smsRuleOwnerKey.isNotEmpty){
+    try{
+     final persistedById={for(final row in persisted)row.id:row};
+     final ruleStore=const WaffraSmsLocalRuleStore();
+     final originalRules=await ruleStore.read(_smsRuleOwnerKey);
+     var revisedRules=originalRules;
+     for(var n=0;n<additions.length;n++){
+      if(n>=proposedSourceIndexes.length)break;
+      final submitted=additions[n];
+      final confirmed=persistedById[submitted.id];
+      if(confirmed==null||confirmed.sourceType!='sms'||
+         confirmed.category!=submitted.category||
+         confirmed.income!=submitted.income||
+         (confirmed.amount-submitted.amount).abs()>0.00001)continue;
+      final raw=found[proposedSourceIndexes[n]];
+      final facts=WaffraBankSmsFactsParser.parse(raw);
+      final amount=WaffraSmsCurrencies.originalAmount(raw);
+      if(facts.pending||
+         (facts.kind!=WaffraBankOperationKind.income&&
+          facts.kind!=WaffraBankOperationKind.expense)||
+         (facts.kind==WaffraBankOperationKind.income)!=confirmed.income||
+         amount==null||amount.currency!='SAR'||
+         (amount.amount-confirmed.amount).abs()>0.00001)continue;
+      final candidate=WaffraSmsLocalRules.suggestedRule(
+       body:raw,sender:initialSender,
+       kind:confirmed.income?'income':'expense',
+       category:confirmed.category,confidentOnly:true);
+      if(candidate!=null)revisedRules=WaffraSmsLocalRules.upsertLearned(
+       existing:revisedRules,candidate:candidate);
+     }
+     if(!identical(originalRules,revisedRules)){
+      await ruleStore.write(_smsRuleOwnerKey,revisedRules);
+     }
+    }catch(error){
+     // Classification suggestions must never reverse or retry money.
+     debugPrint('M470 safe SMS learning skipped: $error');
+    }
+   }
    // Decode any changed category snapshot before the frame update; a
    // large parse inside setState made Flutter rebuilds visibly lag.
    List<BudgetCategory>? verifiedCategories;
@@ -7434,6 +7475,27 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         _lastLedgerSavedRaw=committed.current.ledgerRaw;
         _lastWidgetRevision=committed.current.widgetRevision;
        });
+       // M470 #20: also learn after a single reviewed SMS was committed,
+       // even if the original SMS text was omitted from legacy ledger notes.
+       if(initialSender.trim().isNotEmpty&&_smsRuleOwnerKey.isNotEmpty&&
+          verified.any((row)=>row.id==entry.id&&row.sourceType=='sms'&&
+           row.category==entry.category&&row.income==entry.income&&
+           (row.amount-entry.amount).abs()<0.00001)){
+        final reviewedText=messages[index];
+        final facts=WaffraBankSmsFactsParser.parse(reviewedText);
+        final original=WaffraSmsCurrencies.originalAmount(reviewedText);
+        if(!facts.pending&&
+           (facts.kind==WaffraBankOperationKind.income||
+            facts.kind==WaffraBankOperationKind.expense)&&
+           (facts.kind==WaffraBankOperationKind.income)==entry.income&&
+           original!=null&&original.currency=='SAR'&&
+           (original.amount-entry.amount).abs()<0.00001){
+         try{await _learnSafeSmsRule(
+          body:reviewedText,sender:initialSender,
+          kind:entry.income?'income':'expense',
+          category:entry.category);}catch(_){}
+        }
+       }
        unawaited(_refreshWidget());
        if(!ctx.mounted)return;
        await budgetAlert(entry,previous);
