@@ -2222,3 +2222,6 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 
 [M470 #22 2026-11-06 — preserve draft across app switch with timed biometric]
 - Do not immediately replace Home on pause/hidden. Show fully opaque green privacy shield over the existing Navigator while backgrounded; if returned in under 60 seconds reveal original dropdown/draft without biometric, otherwise verify using mandatory OS biometrics on top of the unchanged Navigator. Authentication on cold app start and sign-in remains mandatory. Two widget lifecycle tests and explicit approved scope; CI and Android acceptance pending.
+
+[M470 #22 — 2026-11-06 same-HEAD release notes freshness and open-sheet QA]
+- After owner-approved change, Waffra preserves in-progress dialogs and dropdown routes on Android background. The existing Navigator is masked by an opaque forest-green privacy surface; return before the elapsed one-minute threshold restores the same form, and return after the threshold requires OS biometric authentication above the unchanged route. App cold-start biometric remains mandatory. Added open-bottom-sheet and input retention widget regression; no financial account writer logic modified. This notes commit succeeds the latest app-source commit for M449 freshness, pending exact-SHA CI and phone acceptance.

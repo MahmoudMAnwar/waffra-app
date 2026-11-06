@@ -116,4 +116,43 @@ void main(){
   expect(find.byKey(const Key('m470-idle-lock-biometric')),findsNothing);
   expect(draft.text,'مسودة التحويل');
  });
+
+ testWidgets('M470 #22 green biometric covers an open bottom sheet and restores its inputs', (tester)async{
+  var now=DateTime(2026,11,6,12);
+  tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+  final draft=TextEditingController(text:'تحويل 135 ريال');
+  addTearDown(draft.dispose);
+  await tester.pumpWidget(MaterialApp(
+   builder:(ctx,navigator)=>WaffraIdleBiometricOverlay(
+    enabled:true,english:false,now:()=>now,onSignOut:()async{},
+    child:navigator??const SizedBox.shrink()),
+   home:Scaffold(body:Builder(builder:(ctx)=>ElevatedButton(
+    key:const Key('m470-open-transaction-sheet'),
+    onPressed:()=>showModalBottomSheet<void>(context:ctx,
+     builder:(route)=>Padding(padding:const EdgeInsets.all(16),
+      child:TextField(key:const Key('m470-sheet-saved-draft'),
+       controller:draft))),
+    child:const Text('فتح التحويل')))),
+  ));
+  await tester.tap(find.byKey(const Key('m470-open-transaction-sheet')));
+  await tester.pumpAndSettle();
+  expect(find.byKey(const Key('m470-sheet-saved-draft')),findsOneWidget);
+  tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+  await tester.pump();
+  final shield=tester.widget<ColoredBox>(
+   find.byKey(const Key('m470-background-green-privacy-shield')));
+  expect(shield.color,const Color(0xFF064D3B));
+  now=now.add(const Duration(seconds:61));
+  tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+  await tester.pump();
+  expect(find.byKey(const Key('m470-idle-lock-biometric')),findsOneWidget);
+  final gate=tester.widget<WaffraMandatoryBiometricGate>(
+   find.byKey(const Key('m470-idle-lock-biometric')));
+  // QA simulates the gate's successful OS callback; shipping requires OS biometric.
+  gate.onVerified();
+  await tester.pump();
+  expect(find.byKey(const Key('m470-idle-lock-biometric')),findsNothing);
+  expect(find.byKey(const Key('m470-sheet-saved-draft')),findsOneWidget);
+  expect(draft.text,'تحويل 135 ريال');
+ });
 }
