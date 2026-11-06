@@ -2151,3 +2151,10 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 - The account details schema keeps ordinary operations active-only but accepts prevalidated archived metadata when called exclusively from authenticated disposable-vault restore. The source account's archived flag and balance never change.
 - A new SQLCipher regression exports a typed, archived, zero-opening bank account and checks the restored account remains archived with the same provider/subtype and zero balance.
 - CI and actual install/update-on-device remain pending, so this is not user-facing Done yet.
+
+[M470 SMS review #12/#16 — 2026-11-06]
+- قائمة مرسلي الرسائل تعرض «N رسائل بانتظار المراجعة» بدل «تحتاج فرز»، باتجاه عربي صحيح وعزل رقمي لمنع تداخل العدد والنص.
+- عند الدخول من «علّم وفرة» لرسالة معروفة ومرسل محدد، لا تختار شاشة القواعد كلمة عامة قد تكون من نوع آخر (مثل «خصم» عند تحليل تحويل). الاقتراحات المسبقة تتقيّد بنوع العملية الفعلي ونص الرسالة والمرسل، مع معاينة لنفس الرسالة؛ تغيير النوع يمحو الكلمات السابقة.
+- زر الحفظ يرفض قاعدة التعليم المخصصة إن اختلفت عن نوع الرسالة أو لم تطابق النص الأصلي والمرسل؛ لا يقوم هذا الإصلاح بحفظ مالي تلقائي أو بتحويل التحويل إلى مصروف.
+- أُضيفت اختبارات M470 للتحقق من مطابقة الكلمات والمرسل وتصحيح RTL. لا تعني إضافة الكود اجتياز كل CI أو اختبار جهاز Android.
+- سجل QA في docs/qa/WAFFRA_32_NEW_CHANGES_M470_TRACKER.md يستعيد البنود 5–12 و16 من نص المستخدم ويترك غير المسترجع غير مؤكد بدل اختلاق حالة.
