@@ -8274,30 +8274,81 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       icon:const Icon(Icons.calendar_month,size:19),
       label:WaffraText(dayText(date),maxLines:1));
     Future<void> createAccountInsideEntryDropdown({required bool mainProvider})async{
-     // M477 #416: use the existing verified account manager; return to the
-     // same live editor with every unsaved finance field still intact.
-     final oldIds=entryAccounts.map((a)=>a.id).toSet();
+     // #405/#416: Add inside either dropdown opens the account FORM directly,
+     // not a second My Accounts page. No finance write occurs until Save.
      final selectedProviderBefore=chosenManualProvider;
-     await openVerifiedAccounts();
-     if(!sheetContext.mounted)return;
-     final refreshed=_m467Accounts.where((a)=>!a.archived).toList();
-     final newAccounts=refreshed.where((a)=>!oldIds.contains(a.id)).toList();
-     final newProviders=WaffraRecurringAccountGroups.fromAccounts(refreshed);
-     update((){
-      entryAccounts=refreshed;
-      entryProviders=newProviders;
-      if(newAccounts.length==1){
-       final created=newAccounts.single;
-       final group=newProviders.where((p)=>p.accounts.any((a)=>a.id==created.id))
-        .firstOrNull;
-       if(mainProvider&&group!=null){
-        chosenManualProvider=group.id;
-        chosenManualAccount=null; // New provider never posts without child confirmation.
-       }else if(!mainProvider&&group?.id==selectedProviderBefore){
-        chosenManualAccount=created.id;
-       }
+     try{
+      await _ensureFinanceBound();
+      final bridge=_financeBinding?.accountsBridge;
+      if(bridge==null)throw StateError('Verified finance source unavailable');
+      final api=WaffraVerifiedAccountsApi(bridge:bridge);
+      final before=await api.balances(); // establish a fresh writer witness
+      if(!sheetContext.mounted)return;
+      final bankSelection=RegExp(
+       r'^bank:institution:(rajhi|inma|snb|riyad|bilad|stc)$')
+       .firstMatch(mainProvider?'':selectedProviderBefore??'');
+      final expectedBank=bankSelection?.group(1);
+      final customOptions=<String,List<String>>{
+       for(final kind in const ['bank','wallet'])
+        kind:before.where((a)=>!a.archived&&a.kind==kind&&
+         a.customSubtypeLabel!=null)
+         .map((a)=>a.customSubtypeLabel!).toSet().toList()..sort(),
+      };
+      final draft=await showWaffraDialog<WaffraNewAccountDraft>(
+       context:sheetContext,builder:(dialog)=>WaffraNewAccountDialog(
+        english:waffraIsEnglish,suggestedProviderId:expectedBank,
+        customSubtypeOptions:customOptions));
+      if(draft==null||!sheetContext.mounted)return;
+      // Bank child creation must stay under the selected real institution;
+      // never silently convert a specific bank group into another provider.
+      if(expectedBank!=null&&
+         (draft.kind!='bank'||draft.providerId!=expectedBank)){
+       snack(sheetContext,waffraIsEnglish?
+        'The linked account must belong to the selected bank.':
+        'الحساب التابع لازم يكون لنفس البنك المختار.',isError:true);
+       return;
       }
-     });
+      final id='m492-inline-'+DateTime.now().microsecondsSinceEpoch.toString();
+      await api.createTypedAccountWithIdentity(
+       id:id,name:draft.name,kind:draft.kind,
+       providerId:draft.providerId??'none',
+       subtype:draft.subtype??'other',
+       openingMinor:draft.openingMinor,
+       createdIso:DateTime.now().toUtc().toIso8601String(),
+       lastFour:draft.lastFour,
+       customSubtypeLabel:draft.customSubtypeLabel,
+       userConfirmed:true);
+      await _m467RefreshHomeAccounts();
+      if(!sheetContext.mounted)return;
+      final refreshed=_m467Accounts.where((a)=>!a.archived).toList();
+      final created=refreshed.where((a)=>a.id==id).toList();
+      if(created.length!=1)throw StateError(
+       'Account creation has no verified refreshed balance');
+      final groups=WaffraRecurringAccountGroups.fromAccounts(refreshed);
+      final related=groups.where((p)=>
+       p.accounts.any((a)=>a.id==id)).toList();
+      if(related.length!=1)throw StateError(
+       'New account group is not uniquely verified');
+      update((){
+       entryAccounts=refreshed;
+       entryProviders=groups;
+       if(mainProvider){
+        chosenManualProvider=related.single.id;
+        chosenManualAccount=null; // provider alone never selects money
+       }else if(related.single.id==selectedProviderBefore){
+        chosenManualAccount=id; // explicitly created, verified child
+       }else{
+        // An unrecognized/other bank gets its own genuine account group.
+        chosenManualProvider=related.single.id;
+        chosenManualAccount=id;
+       }
+      });
+     }catch(error){
+      if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
+       'Could not confirm account creation. Review the form and try again.':
+       'تعذر تأكيد إنشاء الحساب. راجع البيانات وأعد المحاولة.',
+       isError:true);
+     }
     }
     Widget operationPicker(){
      if(initial!=null||sms||scannedReceipt!=null){
