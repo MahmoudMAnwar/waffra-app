@@ -34,7 +34,7 @@ abstract final class WaffraCloudflareSmsGateway {
     // Accept that spelling only when there is no competing ISO or other unit.
     if (currency != 'SAR') return false;
     final normalized = WaffraAiFinanceBrain.normalize(quote);
-    if (!RegExp(r'ريال|ر\.?\s*س\.?').hasMatch(normalized)) return false;
+    if (!RegExp(r'(?<![A-Za-zء-ي])(?:ريال|ر\.\s*س\.?|ر\s+س\.?)(?![A-Za-zء-ي])').hasMatch(normalized)) return false;
     for (final code in WaffraAiFinanceBrain.supported) {
       if (code != 'SAR' &&
           RegExp(r'(?<![A-Za-z])' + code + r'(?![A-Za-z])',

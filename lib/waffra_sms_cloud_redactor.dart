@@ -14,7 +14,7 @@ abstract final class WaffraSmsCloudRedactor {
     caseSensitive: false);
   static final _money = RegExp(
     r'\b(?:SAR|SR|AED|JOD|EGP|KWD|BHD|OMR)(?=\b|[0-9٠-٩۰-۹])|'
-    r'ريال|درهم|دينار|جنيه|ر\.?\s*س',
+    r'(?<![A-Za-zء-ي])(?:ريال|درهم|دينار|جنيه|ر\.\s*س|ر\s+س)(?![A-Za-zء-ي])',
     caseSensitive: false);
   static String? redact(String sms) {
     if (sms.length < 18 || sms.length > 1600 || _otp.hasMatch(sms)) {
