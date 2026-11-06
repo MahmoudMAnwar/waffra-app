@@ -4207,6 +4207,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(special!=null)return <String,Object?>{
    'rule':special.name,'kind':special.resolvedKind,
    'category':special.category,'income':false,
+   'defaultSeed':special.builtIn,
   };
   if(facts.pending||parsed.amount==null||parsed.amount!<=0||
      parsed.requiresCurrencyReview||
@@ -4381,7 +4382,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final local=_localSmsClassification(annotated,customRules);
    if(local!=null){
     annotated['local']=local;
-    if(local['kind']=='excluded'){
+    if(local['kind']=='excluded'&&local['defaultSeed']!=true){
+     // Only the user's previously approved exclusion can ACK automatically.
+     // Bundled Saudi hints are review-only even for apparent promotions/OTPs.
      toAcknowledge.add(id);
      toRestoreOnAckFailure.add(annotated);
      continue;
