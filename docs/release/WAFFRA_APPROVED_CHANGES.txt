@@ -2128,3 +2128,10 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 - A blocking, full-screen biometric overlay is created via MaterialApp.builder OUTSIDE the Navigator. Existing in-progress Home, modal dropdowns, edit dialogs, cash amounts and text drafts stay mounted and are not cleared; the OS gate must complete before any underlying route can be used. Unfocusing a keyboard does not erase the draft.
 - Authenticator foreground handling follows the existing lifecycle safety rule; a real background transition still requires the original independent biometric session lock. Native media picker rules remain unchanged.
 - Added test/m470_idle_biometric_overlay_test.dart for expiry, activity extension, preserving an open dialog after verified callback and login exemption. This code candidate requires exact-head CI, emulator/device and owner acceptance; do not publish/merge based only on a UI source assertion.
+
+
+[M470 #22 MaterialApp single-builder correction] 2026-11-06
+- Flutter CI found a duplicate named builder argument: MaterialApp already wrapped its Navigator in the app's hide-amounts and RTL directionality ValueListenableBuilder.
+- Removed the extra builder and composed the 60s biometric inactivity overlay inside that SAME existing builder, without changing the prior masking, RTL, lifecycle or user-owned Navigator.
+- The overlay still covers open routes, retaining text and current dialog on expiry, and requires mandatory OS biometrics to reveal.
+- CI must run against the new exact HEAD; no physical device pass is claimed.
