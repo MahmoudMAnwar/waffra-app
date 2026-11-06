@@ -9485,6 +9485,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
    }
   }
+  bool linkedHistoricalAccountInThisEdit=false;
   // #420: witnessed idempotent association for the existing entry;
   // never append another income or expense.
   if(initial!=null&&canLinkExistingAccount&&
@@ -9495,6 +9496,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     await api.balances();
     await api.linkUnassignedEntry(entryId:initial.id,
      accountId:chosenManualAccount!,userConfirmed:true);
+    linkedHistoricalAccountInThisEdit=true;
     if(mounted)await _m467RefreshHomeAccounts();
    }catch(error){
     debugPrint('M500 historical link failed: ${error.runtimeType}');
@@ -9507,10 +9509,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(mounted)await budgetAlert(result,previousSpent);
   if(mounted)unawaited(_m467RefreshHomeAccounts());
   if(initial!=null&&mounted){
-   snack(context,waffraIsEnglish?'Transaction updated':'تم تعديل المعاملة',
+   snack(context,linkedHistoricalAccountInThisEdit?
+     (waffraIsEnglish?'Transaction updated and linked to account':'تم تعديل العملية وربطها بالحساب'):
+     (waffraIsEnglish?'Transaction updated':'تم تعديل المعاملة'),
     isError:false,duration:const Duration(seconds:5),
-    actionLabel:waffraIsEnglish?'Undo':'تراجع',
-    onAction:()async{
+    // Existing legacy Undo reverts only metadata, not a confirmed bank link.
+    // Do not offer a misleading Undo after money attribution is committed.
+    actionLabel:linkedHistoricalAccountInThisEdit?null:(waffraIsEnglish?'Undo':'تراجع'),
+    onAction:linkedHistoricalAccountInThisEdit?null:()async{
      if(!mounted)return;
      final index=entries.indexWhere((e)=>e.id==initial.id);
      if(index<0)return;
