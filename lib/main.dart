@@ -8399,6 +8399,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           if(sheetContext.mounted)update(
            ()=>assignBudgetInsideEditor(v=='unlinked'?null:v));
          }),
+       ),
       ],
       Padding(padding:const EdgeInsets.symmetric(vertical:12),
        child:Row(children:[
