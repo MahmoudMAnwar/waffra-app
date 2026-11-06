@@ -16,11 +16,12 @@ class WaffraNewAccountDraft {
 class WaffraNewAccountDialog extends StatefulWidget {
  const WaffraNewAccountDialog({
   super.key,this.english=false,this.suggestedProviderId,
+  this.suggestedSenderName,
  });
  final bool english;
- // A reviewed bank sender may suggest an institution. The user still
- // chooses a name, confirms the opening amount and explicitly taps Save.
- final String? suggestedProviderId;
+ // A reviewed sender can prefill the exact sender display name; the user
+ // still confirms the account and opening balance before any finance write.
+ final String? suggestedProviderId,suggestedSenderName;
  @override State<WaffraNewAccountDialog> createState()=>_WaffraNewAccountDialogState();
 }
 
@@ -46,6 +47,13 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
   final suggested=widget.suggestedProviderId;
   if(suggested!=null&&banks.containsKey(suggested)&&suggested!='other'){
    kind='bank';provider=suggested;subtype='current';
+   final sender=widget.suggestedSenderName?.trim()??'';
+   // SMS sender labels are untrusted text: never inject unbounded control
+   // characters or render an arbitrary message body as an account name.
+   if(sender.isNotEmpty&&sender.runes.length<=80&&
+      !RegExp(r'[\u0000-\u001f\u007f]').hasMatch(sender)){
+    nickname.text=sender;
+   }
   }
  }
  @override void dispose(){nickname.dispose();opening.dispose();smsSuffix.dispose();super.dispose();}
@@ -53,6 +61,9 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
  String get accountLabel{
   final name=nickname.text.trim();
   if(kind!='bank'||provider==null||provider=='other')return name;
+  // On first bank SMS, store exactly the user-approved sender name rather
+  // than prepending a second bank name (e.g. «الإنماء - AlinmaPay»).
+  if(widget.suggestedSenderName!=null&&name.isNotEmpty)return name;
   final chosen=banks[provider]!;
   final prefix=t(chosen.ar,chosen.en);
   return name.contains(prefix)?name:'$prefix - $name';
