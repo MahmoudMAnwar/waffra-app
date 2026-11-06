@@ -389,9 +389,18 @@ object WaffraAutoSmsStore {
         "(?:\\b(?:SAR|SR|AED|JOD|EGP|KWD|BHD|OMR|QAR|USD|EUR|GBP)(?=\\b|[0-9٠-٩۰-۹])|" +
         "ر\\.?\\s*س|ريال|درهم|دينار|جنيه|دولار|يورو)", RegexOption.IGNORE_CASE)
     private val digits = Regex("[0-9٠-٩۰-۹][0-9٠-٩۰-۹,.]{0,14}")
-    // Named bank/application senders can be Arabic or English. Personal
-    // numeric phone numbers never enter the automatic review queue.
-    private val senderName = Regex("^[\\p{L}][\\p{L}0-9 _.-]{2,30}$")
+    // M509: any branded sender can contain a financial notice, even if
+    // its sender name is not on our fixed bank list. Numeric phone senders
+    // require independent strong completed-event evidence before review.
+    private val senderName = Regex("^[\\p{L}][\\p{L}0-9 _.-]{2,63}$")
+    private val numericSender = Regex("^\\+?[0-9]{7,15}$")
+    private val completedFinancialAction = Regex(
+        "(?:تم\\s+(?:الخصم|خصم|السحب|سحب|الإيداع|ايداع|إيداع|الشراء|شراء|الدفع|دفع)|" +
+        "عملية\\s+(?:شراء|خصم|سحب|إيداع|ايداع)|" +
+        "\\b(?:card\\s+purchase|purchase\\s+approved|salary\\s+credited|" +
+        "account\\s+credited|amount\\s+debited|transfer\\s+received|" +
+        "payment\\s+completed|withdrawal\\s+completed)\\b)",
+        RegexOption.IGNORE_CASE)
     private val brand = Regex(
         "(?:bank|alinma|inma|rajhi|snb|sabb|riyad|bilad|anb|saib|" +
         "aljazira|jazeera|alahli|stcpay|stc.?bank|urpay|mobily.?pay|" +
@@ -400,7 +409,17 @@ object WaffraAutoSmsStore {
     fun qualifies(sender: String, body: String): Boolean {
         val safe = body.trim()
         if (safe.length < 10 || safe.length > 1600) return false
-        if (!senderName.matches(sender.trim())) return false
+        val named = senderName.matches(sender.trim())
+        val phoneLike = numericSender.matches(sender.trim())
+        if (!named && !phoneLike) return false
+        // Personal/phone-number senders cannot qualify based on a price
+        // alone. Direction, currency, completed-event wording and amount
+        // must all be present. This still never authorizes a financial account.
+        if (phoneLike) return safe.length >= 18 &&
+            !otp.containsMatchIn(safe) &&
+            completedFinancialAction.containsMatchIn(safe) &&
+            action.containsMatchIn(safe) && money.containsMatchIn(safe) &&
+            digits.containsMatchIn(safe)
         // Non-financial verification notices are reviewable as EXCLUDED,
         // never processed as money. No original verification digits are kept.
         if (otp.containsMatchIn(safe)) return true
@@ -416,11 +435,11 @@ object WaffraAutoSmsStore {
             money.containsMatchIn(safe) && digits.containsMatchIn(safe)) return true
         if (!action.containsMatchIn(safe) || !money.containsMatchIn(safe) ||
             !digits.containsMatchIn(safe)) return false
-        // Unknown financial senders can be reviewed, but a phone number or
-        // personal sender must never become a financial account automatically.
-        val hasFinancialSender = brand.containsMatchIn(sender) ||
-            (sender.length <= 20 && action.containsMatchIn(safe))
-        return hasFinancialSender
+        // M509: do not reject legitimate messages merely because their
+        // sender does not contain a hard-coded bank alias or exceeds 20 chars.
+        // Dart classifies candidates with the M508 Arabic/English catalog
+        // and independently verifies direction, amount and account.
+        return named
     }
 
     // M437: Unknown-finance lookup is strictly ON-DEMAND, and scans from
