@@ -9171,6 +9171,26 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          'اختار الجهة والحساب المالي التابع لها قبل الحفظ.',isError:true);
         return;
        }
+       // Historical entries can predate creation of their money account.
+       // Confirm the balance impact instead of silently treating an opening
+       // balance entered today as a pre-history opening balance.
+       if(initial!=null&&canLinkExistingAccount&&
+          originalLinkedAccountId==null&&chosenManualAccount!=null){
+        final approved=await showWaffraDialog<bool>(
+         context:sheetContext,builder:(dialog)=>AlertDialog(
+         title:WaffraText(waffraIsEnglish?
+          'Confirm historical account link':'تأكيد ربط العملية القديمة'),
+         content:WaffraText(waffraIsEnglish?
+          'This will attribute the existing transaction to the selected account and affect its calculated balance. If the opening balance already represents today’s balance, review that opening balance first to avoid counting old money twice. The original transaction will not be added again.':
+          'ربط العملية القديمة هيؤثر على رصيد الحساب المحسوب. لو الرصيد الافتتاحي اللي أدخلته هو رصيدك الحالي، راجعه الأول عشان العمليات القديمة ما تتحسبش مرتين. مش هنضيف عملية جديدة.'),
+         actions:[
+          TextButton(onPressed:()=>Navigator.pop(dialog,false),
+           child:WaffraText(waffraIsEnglish?'Back':'العودة')),
+          FilledButton(onPressed:()=>Navigator.pop(dialog,true),
+           child:WaffraText(waffraIsEnglish?'Confirm link':'تأكيد الربط')),
+         ]));
+        if(approved!=true||!sheetContext.mounted)return;
+       }
        if(!income&&selectedBudgetId==null&&
           waffraHasSelectableBudget(namedBudgets)){
         final confirmed=await waffraConfirmUnlinkedBudgetSave(
