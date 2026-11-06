@@ -15,7 +15,7 @@
 
 | ID | Requirement | GitHub Issue | Implementation PR | Status | Code and test evidence |
 |---|---|---|---|---|---|
-| WAFFRA-NEW-001 | Home balance card: replace top bank/account heading with its account dropdown; remove floating lower dropdown; show full long names without truncation and avoid overlaps | [#401](https://github.com/MahmoudMAnwar/waffra-app/issues/401) | **New draft PR on `feat/waffra-new-001-home-account-selector-20261106`** (link after PR creation) | **Recorded / Not implemented** | Not yet committed or tested |
+| WAFFRA-NEW-001 | Home balance card: replace top bank/account heading with its account dropdown; remove floating lower dropdown; show full long names without truncation and avoid overlaps | [#401](https://github.com/MahmoudMAnwar/waffra-app/issues/401) | [#402](https://github.com/MahmoudMAnwar/waffra-app/pull/402) — Draft | **Recorded / Not implemented** | Not yet committed or tested |
 
 ## WAFFRA-NEW-001 — Detailed acceptance contract
 
@@ -29,4 +29,4 @@
 
 **Current source anchor:** `lib/main.dart`, class `WaffraBalanceHeader`; the top heading is `WaffraText(heading...maxLines:1)`; the bottom picker has key `m470-balance-account-picker`, positioned at `right:10,bottom:10`, constrained to `maxWidth:156`, `maxLines:1` with ellipsis. This is a documentation-only initial commit.
 
-**Tracking:** Issue [#401](https://github.com/MahmoudMAnwar/waffra-app/issues/401); implementation PR link to be inserted when created. **Status: Recorded / Not implemented.**
+**Tracking:** Issue [#401](https://github.com/MahmoudMAnwar/waffra-app/issues/401); implementation [PR #402](https://github.com/MahmoudMAnwar/waffra-app/pull/402). **Status: Recorded / Not implemented.**
