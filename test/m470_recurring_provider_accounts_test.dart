@@ -53,6 +53,15 @@ void main() {
   expect(source,contains("chosenManualAccount=null; // Provider alone never selects a money account."));
   expect(source,contains("initialSelectedIds:chosenManualAccount==null?null:[chosenManualAccount]"));
  });
+ test('M470 SMS review has bank and account cascade with sender-match gate',(){
+  final source=File('lib/main.dart').readAsStringSync();
+  expect(source,contains("Key('m470-review-provider-'"));
+  expect(source,contains("providerGroups.where((p)=>p.id==chosenProviders[n])"));
+  expect(source,contains("chosenProviders[n]=value;"));
+  expect(source,contains("assigned[n]=null; // Provider never silently approves an account."));
+  expect(source,contains("bankGroup!=null&&sameBankIds.contains(match.accountId)"));
+  expect(source,contains("'اختار حسابًا ماليًا موثّقًا لكل عملية؛ الحفظ بدون حساب غير مسموح.'"));
+ });
  test('M470 money form requires an explicit provider before a linked source or destination',(){
   final source=File('lib/waffra_account_transaction_form.dart').readAsStringSync();
   expect(source,contains('WaffraRecurringAccountGroups.fromAccounts(accounts)'));
