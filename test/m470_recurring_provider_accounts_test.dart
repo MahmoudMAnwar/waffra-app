@@ -26,6 +26,20 @@ void main() {
   expect(grouped.expand((g)=>g.accounts).any((a)=>a.id=='archived'),isFalse);
  });
 
+ test('M470 structured bank identity supersedes accidental bank-name text',(){
+  const typed=[
+   WaffraAccountBalance('t1','Unrelated free-form nickname','bank',500,false,
+    providerId:'snb',subtype:'savings'),
+   WaffraAccountBalance('t2','الراجحي لكن اختيار البنك آخر','bank',500,false,
+    providerId:'other',subtype:'current'),
+  ];
+  final grouped=WaffraRecurringAccountGroups.fromAccounts(typed);
+  expect(grouped.singleWhere((g)=>g.id=='bank:institution:snb')
+   .accounts.single.id,'t1');
+  expect(grouped.singleWhere((g)=>g.id=='bank:account:t2')
+   .accounts.single.id,'t2');
+ });
+
  test('M470 unknown banks must not be guessed into one provider',(){
   final grouped=WaffraRecurringAccountGroups.fromAccounts(accounts);
   expect(grouped.singleWhere((g)=>g.id=='bank:account:u1').accounts.single.id,'u1');
