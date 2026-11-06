@@ -109,7 +109,8 @@ class _WaffraIdleBiometricOverlayState
 
  @override Widget build(BuildContext context)=>Listener(
   behavior:HitTestBehavior.translucent,
-  onPointerDown:(_)=>_onActivity(),
+  // A new user tap always restarts the countdown, even in a fast gesture.
+  onPointerDown:(_)=>_arm(),
   onPointerMove:(_)=>_onActivity(),
   onPointerSignal:(_)=>_onActivity(),
   child:Stack(fit:StackFit.expand,children:[
