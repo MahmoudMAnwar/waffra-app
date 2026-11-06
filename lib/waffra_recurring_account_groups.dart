@@ -35,7 +35,11 @@ abstract final class WaffraRecurringAccountGroups {
    final String id;
    final ({String ar,String en}) name;
    if(account.kind=='bank'||account.kind=='wallet'){
-    final institution=WaffraSmsAccountLearning.bankGroup(account.name);
+    // Versioned, user-selected provider takes precedence over a label.
+    // Only OLD accounts without structured metadata may use name hints.
+    final institution=account.providerId!=null?
+     (account.providerId=='other'?null:account.providerId):
+     WaffraSmsAccountLearning.bankGroup(account.name);
     id=institution==null
       ?'${account.kind}:account:${account.id}'
       :'${account.kind}:institution:$institution';
