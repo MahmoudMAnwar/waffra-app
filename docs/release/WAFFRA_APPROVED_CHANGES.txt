@@ -2404,3 +2404,8 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 
 [M506 biometric-gate sign-out recovery correction]
 - The protected missing-verifier consent dialog also works above the LOCKED biometric page: first cancel its in-progress OS prompt, then collect an explicit replacement password in the root Navigator and require a fresh independent device fingerprint challenge before creating only a truly missing verifier and completing normal sign-out. Protected financial Home never needs to be revealed to perform this recovery. User cancellation leaves all data, verifier, and locked session untouched. Requires physical two-phone test; malformed/different-owner verifier still cannot be overwritten.
+
+
+[M506 #427 bounded cold-launch responsiveness — 2026-11-06]
+- Cold launch previously enforced a fixed 3000ms intro even when finance/profile loading had finished earlier. Shorten the intro visibility minimum to 1750ms and match its visual animation to 1650ms. This reduces the artificial splash floor by 1250ms without changing the required secure-finance readiness check, account session state, mandatory biometric gate, SMS consent, or encrypted storage.
+- Added a WaffraLaunchIntro widget frame-settle regression in test/m506_android_nine_regressions_test.dart. Actual initial loading and broad 2-second tap/refresh/save jank remain OPEN until Android profile-mode before/after frame-timing traces and real-device acceptance. Do not claim nine issues closed or merge solely on widget tests.
