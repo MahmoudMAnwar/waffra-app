@@ -27,8 +27,29 @@ void main(){
   await tester.tap(find.text('Bank account').last);
   await tester.pumpAndSettle();
   expect(find.byKey(const Key('m470-new-account-provider')),findsOneWidget);
+  expect(find.byKey(const Key('m470-new-account-last-four')),findsOneWidget);
+  await tester.ensureVisible(find.byKey(const Key('m470-new-account-label')));
   await tester.enterText(find.byKey(const Key('m470-new-account-label')),'Salary');
   expect(tester.widget<FilledButton>(
    find.byKey(const Key('m470-new-account-save'))).onPressed,isNull);
+ });
+ testWidgets('M470 optional bank suffix validates four digits without storing full account numbers',(tester)async{
+  await tester.pumpWidget(const MaterialApp(home:Scaffold(
+   body:WaffraNewAccountDialog(english:true))));
+  expect(find.byKey(const Key('m470-new-account-last-four')),findsNothing);
+  await tester.tap(find.byKey(const Key('m470-new-account-kind')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Bank account').last);
+  await tester.pumpAndSettle();
+  final suffix=find.byKey(const Key('m470-new-account-last-four'));
+  expect(suffix,findsOneWidget);
+  await tester.ensureVisible(suffix);
+  await tester.enterText(suffix,'12');
+  await tester.pump();
+  expect(tester.widget<FilledButton>(
+   find.byKey(const Key('m470-new-account-save'))).onPressed,isNull);
+  await tester.enterText(suffix,'1234');
+  await tester.pump();
+  expect(tester.widget<TextField>(suffix).controller!.text,'1234');
  });
 }
