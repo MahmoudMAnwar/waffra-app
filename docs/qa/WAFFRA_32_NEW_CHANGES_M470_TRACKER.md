@@ -95,3 +95,12 @@
 - #29 **PARTIAL:** integer-halalas pure calculation is present. No confirmed persistent per-account cap assignment through UI/SQLCipher + V3 restore or live header monthly-budget card view yet. No synthetic splitting of a standalone shared budget.
 - Existing M440 transfer regression was a test-viewport missed tap; the test now scrolls to the visible submit button before asserting invalid amount rejection.
 - These are scoped code changes in PR #395, not final Done items until exact HEAD CI checks and signed Android acceptance succeed.
+
+## M470 later verified-code follow-up (latest, before exact-head CI)
+- #25: Original Home income/expense/transfer and SMS review now have sequential provider -> linked account pickers. Provider change resets prior account; SMS trust also requires bank-sender agreement. This is CODE CANDIDATE, not signed-device Done.
+- #28: Explicit verified active account is mandatory for NEW money, no option to save new bank SMS, manual, OCR, recurring or cash goal due unassigned. Historic rows remain readable. CODE CANDIDATE, not phone Done.
+- #29: A named monthly budget may be explicitly assigned to an active account from the create/edit dialog. assignedAccountId persists with budget JSON, leaves prior unassigned/shared budgets intact, and the Home selected-account budget card now uses matched budgets and verified scoped expenses. The All view includes each budget only once. CODE CANDIDATE pending exact-head CI, V3 restore and phone acceptance; standalone-budget SQL allocations continue to require their own source verification.
+- #30: Actual recurring create/edit requires bank and account; accountId survives schedule serialization and the typed schedule and default link are one SQLCipher transaction. CODE CANDIDATE pending exact-head CI and phone testing.
+- #23: Structured user-defined financial account subtypes/identity remain PARTIAL, with legacy 4 account kinds, safe bank grouping, explicit suffix registration and existing sender-scoped learning; no authenticated schema extension or full multi-device V3 roundtrip proof for new subtypes yet.
+- #32: PARTIAL, source-atomic Paid implementation and one-post checks exist; signed Android Paid/duplicate/retry acceptance is not yet verified.
+- No full completion claims for the six partial items or all 32 are authorized yet.
