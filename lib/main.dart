@@ -4357,6 +4357,74 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     onCreateManual:()async{if(mounted)await entrySheet();},
    )));
  }
+ Future<void> _openExcludedSenders()async{
+  final saved=await WaffraAutoSms.excludedSenders();
+  if(!mounted)return;
+  if(saved==null){
+   snack(context,waffraIsEnglish?
+    'Excluded senders are unavailable. Check SMS access and sign-in.':
+    'تعذر قراءة المستبعدين. تأكد من صلاحية الرسائل وتسجيل الدخول.',
+    isError:true);
+   return;
+  }
+  final senders=saved.toList()..sort((a,b)=>a.toLowerCase().compareTo(b.toLowerCase()));
+  var busy=false;
+  await showModalBottomSheet<void>(
+   context:context,isScrollControlled:true,useSafeArea:true,showDragHandle:true,
+   builder:(sheet)=>StatefulBuilder(builder:(ctx,refresh)=>SafeArea(
+    child:SizedBox(height:min(520.0,MediaQuery.sizeOf(ctx).height*.74),
+     child:Column(children:[
+      Padding(padding:const EdgeInsets.symmetric(horizontal:20,vertical:12),
+       child:Row(children:[
+        const Icon(Icons.block_rounded,color:forest),
+        const SizedBox(width:10),
+        Expanded(child:WaffraText(waffraIsEnglish?'Excluded senders':
+         'المستبعدون',style:Theme.of(ctx).textTheme.titleLarge)),
+       ])),
+      Padding(padding:const EdgeInsets.symmetric(horizontal:20,vertical:5),
+       child:WaffraText(waffraIsEnglish?
+        'New SMS from excluded senders will not be analyzed or queued. '
+        'Restoring a sender affects future SMS; previously removed messages '
+        'are not restored automatically.':
+        'رسائل المرسل المستبعد الجديدة لن تُحلَّل أو تظهر في المراجعة. '
+        'إلغاء الاستبعاد يسمح بالرسائل القادمة فقط، ولا يستعيد الرسائل '
+        'المستبعدة سابقًا تلقائيًا.',
+        style:Theme.of(ctx).textTheme.bodySmall)),
+      Expanded(child:senders.isEmpty?
+       Center(child:WaffraText(waffraIsEnglish?
+        'No excluded senders':'لا يوجد مرسلون مستبعدون')):
+       ListView.builder(
+        key:const Key('waffra-excluded-senders-list'),
+        itemCount:senders.length,
+        itemBuilder:(itemContext,index){
+         final sender=senders[index];
+         return ListTile(
+          key:Key('waffra-excluded-sender-$index'),
+          leading:const Icon(Icons.sms_failed_outlined,color:emerald),
+          title:WaffraText(sender,maxLines:2),
+          trailing:TextButton(
+           onPressed:busy?null:()async{
+            refresh(()=>busy=true);
+            final restored=await WaffraAutoSms.restoreExcludedSender(sender);
+            if(ctx.mounted)refresh((){
+             busy=false;
+             if(restored)senders.remove(sender);
+            });
+            if(mounted){
+             if(restored)snackSuccess(context,waffraIsEnglish?
+              'Sender restored for future SMS.':
+              'تم إلغاء استبعاد المرسل للرسائل القادمة.');
+             else snack(context,waffraIsEnglish?
+              'Could not restore the sender. Retry.':
+              'تعذر إلغاء استبعاد المرسل. حاول مرة أخرى.',isError:true);
+            }
+           },
+           child:WaffraText(waffraIsEnglish?'Restore':'إلغاء الاستبعاد')),
+         );
+        })),
+     ]))),
+   ));
+ }
  Future<void> _openAutoSmsInbox()async{
   await _refreshAutoSmsInbox(importMonth:true);
   if(!mounted||_autoSmsPending.isEmpty)return;
@@ -4558,11 +4626,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           'Exclude ${selectedIds.length} selected':
           'استبعاد ${selectedIds.length} رسالة محددة'),
          onPressed:bulkBusy?null:()async{
-          // Explicit review-queue removal only: NEVER delete Android SMS or
-          // touch the finance ledger. Avoid implicit sender-wide rules.
+          // Explicit queue removal first, followed by a SEPARATE sender opt-in.
+          // No Android SMS or financial ledger entries are deleted.
           final ids=selectedIds.toList(growable:false);
+          final idSet=ids.toSet();
           final likelyFinancial=_autoSmsPending.where((item){
-           if(!ids.contains(item['id'])||item['body'] is! String)return false;
+           if(!idSet.contains(item['id'])||item['body'] is! String)return false;
            final facts=WaffraBankSmsFactsParser.parse(item['body'] as String);
            return facts.kind!=WaffraBankOperationKind.uncertain;
           }).length;
@@ -4599,7 +4668,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             }
             done.addAll(batch);
            }
+           final clearedSenders=<String>[];
            if(done.isNotEmpty){
+            for(final sender in senders){
+             final groupIds=idsOf(bySender[sender]??const []);
+             if(groupIds.isNotEmpty&&groupIds.every(done.contains)){
+              clearedSenders.add(sender);
+             }
+            }
             if(mounted)setState(()=>
              _autoSmsPending.removeWhere((row)=>done.contains(row['id'])));
             for(final rows in bySender.values){
@@ -4609,6 +4685,33 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             selectedIds.removeAll(done);
            }
            if(ctx.mounted)Navigator.pop(ctx);
+           // Full removal does NOT imply sender blocking: ask separately.
+           for(final sender in clearedSenders){
+            if(!mounted)break;
+            final block=await showWaffraDialog<bool>(
+             context:context,builder:(dialog)=>AlertDialog(
+              title:WaffraText(waffraIsEnglish?
+               'Exclude the sender too?':
+               'هل تريد استبعاد المرسل نفسه أيضًا؟'),
+              content:WaffraText(waffraIsEnglish?
+               'Exclude "$sender" so its future SMS are not analyzed or '
+               'placed in review? You can undo this from Excluded senders.':
+               'هل تريد استبعاد "$sender" بحيث لا تُحلَّل رسائله القادمة '
+               'ولا تظهر في المراجعة؟ يمكنك إلغاء ذلك من «المستبعدون».'),
+              actions:[
+               TextButton(onPressed:()=>Navigator.pop(dialog,false),
+                child:WaffraText(waffraIsEnglish?'No':'لا')),
+               FilledButton(onPressed:()=>Navigator.pop(dialog,true),
+                child:WaffraText(waffraIsEnglish?'Exclude sender':
+                 'استبعاد المرسل')),
+              ]));
+            if(block==true&&mounted){
+             final saved=await WaffraAutoSms.excludeSender(sender);
+             if(mounted&&!saved)snack(context,waffraIsEnglish?
+              'Sender exclusion could not be saved.':
+              'تعذر حفظ استبعاد المرسل.',isError:true);
+            }
+           }
            if(mounted){
             if(failed)snack(context,waffraIsEnglish?
              'Only ${done.length} messages were excluded. Retry remaining items.':
@@ -15260,6 +15363,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       'قواعد جاهزة للدخل والمصروف وإضافة قواعد بكلمات مفتاحية.',
      Icons.rule_rounded,
      onTap:()=>unawaited(_openSmsRules())),
+    _accountTile(
+     waffraIsEnglish?'Excluded senders':'المستبعدون',
+     waffraIsEnglish?
+      'Manage blocked SMS senders and restore them.':
+      'إدارة المرسلين المستبعدين وإلغاء الاستبعاد عند الحاجة.',
+     Icons.block_rounded,
+     onTap:()=>unawaited(_openExcludedSenders())),
     _accountTile(
      waffraIsEnglish?'Scan previous SMS':'فحص رسائل SMS السابقة',
      waffraIsEnglish?
