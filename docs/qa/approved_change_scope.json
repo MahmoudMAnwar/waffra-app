@@ -59,7 +59,9 @@
     "lib/storage/waffra_account_details_backup.dart",
     "lib/storage/waffra_accounts_repository.dart",
     "lib/storage/waffra_accounts_portable_backup_v3.dart",
-    "test/storage/m470_account_details_v3_test.dart"
+    "test/storage/m470_account_details_v3_test.dart",
+    "lib/waffra_sms_rule_settings_page.dart",
+    "test/m470_sms_sender_and_rule_accuracy_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -122,6 +124,10 @@
       {
         "start": "  localizationsDelegates:const [",
         "end": "\n\n  theme:ThemeData("
+      },
+      {
+        "start": "            title:WaffraText(sender,maxLines:2,",
+        "end": "            trailing:Row(mainAxisSize:MainAxisSize.min,children:["
       }
     ],
     "lib/waffra_home_accounts_sheet.dart": [
@@ -292,6 +298,16 @@
       {
         "start": " static Future<WaffraPortableEncryptedRestoreResult> restoreToEmptyEncryptedVault({",
         "end": null
+      }
+    ],
+    "lib/waffra_sms_rule_settings_page.dart": [
+      {
+        "start": "import 'package:flutter/material.dart';",
+        "end": "/// Rules configure offline review suggestions only."
+      },
+      {
+        "start": " Future<void> _edit({",
+        "end": "\n @override Widget build(BuildContext context)=>Scaffold("
       }
     ]
   }
