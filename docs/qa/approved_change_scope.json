@@ -221,7 +221,7 @@
         "end": "     child:SizedBox(height:selectedSender==null?"
       },
       {
-        "start": " DateTime? _backgroundAt;",
+        "start": " @override void didChangeAppLifecycleState(AppLifecycleState state){",
         "end": " @override void dispose(){WaffraRegionalCopy.countryIso.removeListener(_onRegionChanged);"
       }
     ],
