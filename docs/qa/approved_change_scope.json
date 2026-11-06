@@ -157,7 +157,7 @@
         "end": "// Home reloading an encrypted ledger must never silently post a due payment."
       },
       {
-        "start": "  final result=await showModalBottomSheet<MoneyEntry>(",
+        "start": "       Navigator.pop(sheetContext,MoneyEntry(id:initial?.id??newId(),",
         "end": "  // Compare OCR, manual and SMS entries across source types before commit."
       },
       {
