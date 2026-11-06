@@ -27,7 +27,10 @@ void main(){
   await tester.pump();
   await tester.tap(find.byKey(const Key('m487-custom-account-subtype-save')));
   await tester.pumpAndSettle();
-  expect(find.text('Rewards Account'),findsWidgets);
+  // Assert committed subtype, not hidden dropdown menu Text nodes.
+  expect(tester.state<FormFieldState<String>>(selector).value,
+    'custom:Rewards Account');
+  expect(tester.takeException(),isNull);
   await tester.tap(find.byKey(const Key('m470-new-account-save')));
   await tester.pumpAndSettle();
   expect(result,isNotNull);
@@ -48,10 +51,12 @@ void main(){
   await tester.ensureVisible(selector);
   await tester.tap(selector);
   await tester.pumpAndSettle();
-  expect(find.text('Rewards Account'),findsOneWidget);
+  expect(find.text('Rewards Account'),findsWidgets);
   await tester.tap(find.text('Rewards Account').last);
-  await tester.pump();
-  expect(find.text('Rewards Account'),findsOneWidget);
+  await tester.pumpAndSettle();
+  expect(tester.state<FormFieldState<String>>(selector).value,
+   'custom:Rewards Account');
+  expect(tester.takeException(),isNull);
  });
  testWidgets('M487 cancel Add restores the selected canonical subtype', (tester)async{
   await tester.pumpWidget(const MaterialApp(home:Scaffold(
