@@ -1,3 +1,12 @@
+[PR #402 M495] 2026-11-06 — Exact-head analyzer correction and responsive UI acceptance tests
+=================================================================================================
+- #403: the M429 Flutter analyzer identified one remaining dead null-coalescing expression in the already trusted bank SMS title. Removed only the redundant operator; the bank SMS amount, currency, type, source hash and duplicate-write checks remain unchanged.
+- #401: added 320px Flutter widget regression for the full Home header account name, with no clipped name or RenderFlex overflow acceptance.
+- #412: added regression guard that confirms an explicitly selected child account bypasses a second selector only after fresh SQLCipher witness validation.
+- #418: added layout regression for a full-width date when no budget exists and equal date/budget widgets when a budget is offered.
+- #419: added code regression for responsive footer selection, stationary + animation, lightweight overlay and post-frame biometric/noncritical I/O.
+- Remaining exact-SHA CI, real Android frame profile, nested Back, upgrade/restore and finance-signoff are not certified. No signed APK or main merge claimed.
+
 [PR #402 M492-M494] 2026-11-06 — Continue the 14 partial SMS/account requirements (Issues #403-#410/#416/#417)
 =================================================================================================================
 - M492 / #410: a temporary hash-scoped, maximum-eight-item in-memory editor cache restores uncommitted reviewed-SMS title, amount, direction, main and subcategory, budget, provider/child money account and date after Back and re-entry. No copied raw SMS is persisted outside the verified encrypted source. A verified committed SMS removes its draft. Existing SMS native acknowledgement remains a separate step.
