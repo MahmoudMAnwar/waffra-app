@@ -18,8 +18,10 @@ void main() {
    expect(find.byKey(const Key('waffra-first-run-auth-choice')),findsOneWidget);
    expect(create,findsOneWidget);
    expect(login,findsOneWidget);
-   expect(find.text('إنشاء حساب'),findsOneWidget);
-   expect(find.text('تسجيل الدخول'),findsOneWidget);
+   // WaffraText can render the same label in multiple text descendants;
+   // the two distinct clickable choice keys are the authoritative controls.
+   expect(find.text('إنشاء حساب'),findsWidgets);
+   expect(find.text('تسجيل الدخول'),findsWidgets);
    expect(find.byKey(const Key('waffra-register-single-page')),findsNothing);
    expect(find.byKey(const Key('waffra-register-phone')),findsNothing);
    await tester.tap(create);
@@ -65,8 +67,9 @@ void main() {
   expect(section,contains("key:const Key('waffra-register-single-page')"));
   expect(section,contains("key:const Key('waffra-register-name')"));
   expect(section,contains("key:const Key('waffra-register-phone')"));
-  expect(section,contains("key:const Key('waffra-register-gender-male')"));
-  expect(section,contains("key:const Key('waffra-register-gender-female')"));
+  // The two stable keys are attached by a conditional ChoiceChip key.
+  expect(section,contains(
+    "key:Key(g=='ذكر'?'waffra-register-gender-male':'waffra-register-gender-female')"));
   expect(section,contains("onPressed:WaffraHaptics.tap(widget.onBack)"));
  });
 }
