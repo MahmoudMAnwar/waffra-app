@@ -8127,6 +8127,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   var entryProviders=WaffraRecurringAccountGroups.fromAccounts(entryAccounts);
   String? chosenManualProvider,chosenManualAccount;
   int budgetMenuRevision=0; // reset action-only dropdown selections
+  int accountProviderMenuRevision=0,accountChildMenuRevision=0;
   {
    // All reviewed transactions, including SMS, must use a real child category.
    final matchingLeaf=categories.where((c)=>c.income==income&&
@@ -8519,7 +8520,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       const SizedBox(height:12),
       if(initial==null)...[
        WaffraCenteredDropdownFormField<String>(
-        key:ValueKey('m470-home-manual-provider-'+(chosenManualProvider??'none')),
+        key:ValueKey('m470-home-manual-provider-'+(chosenManualProvider??'none')+
+         '-$accountProviderMenuRevision'),
         isExpanded:true,initialValue:chosenManualProvider,
         decoration:InputDecoration(labelText:waffraIsEnglish?
          'Bank or provider *':'الجهة أو البنك *',border:const OutlineInputBorder()),
@@ -8538,6 +8540,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         onChanged:(provider)async{
          if(provider=='__create_provider__'){
           await createAccountInsideEntryDropdown(mainProvider:true);
+          // Synthetic Add must not replace a chosen provider on cancel.
+          if(sheetContext.mounted)update(()=>accountProviderMenuRevision++);
           return;
          }
          if(sheetContext.mounted)update((){
@@ -8549,7 +8553,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        const SizedBox(height:10),
        WaffraCenteredDropdownFormField<String>(
         key:ValueKey('m470-home-manual-account-'+(chosenManualProvider??'none')+
-         '-'+(chosenManualAccount??'none')),
+         '-'+(chosenManualAccount??'none')+'-$accountChildMenuRevision'),
         isExpanded:true,initialValue:chosenManualAccount,
         decoration:InputDecoration(labelText:waffraIsEnglish?
          'Linked money account *':'الحساب المالي التابع *',
@@ -8570,6 +8574,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         onChanged:chosenManualProvider==null?null:(id)async{
          if(id=='__create_child__'){
           await createAccountInsideEntryDropdown(mainProvider:false);
+          if(sheetContext.mounted)update(()=>accountChildMenuRevision++);
           return;
          }
          if(sheetContext.mounted)update(()=>chosenManualAccount=id);
