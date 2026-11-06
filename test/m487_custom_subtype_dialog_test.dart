@@ -53,4 +53,20 @@ void main(){
   await tester.pump();
   expect(find.text('Rewards Account'),findsOneWidget);
  });
+ testWidgets('M487 cancel Add restores the selected canonical subtype', (tester)async{
+  await tester.pumpWidget(const MaterialApp(home:Scaffold(
+   body:WaffraNewAccountDialog(english:true,
+    suggestedProviderId:'inma',suggestedSenderName:'AlinmaPay'))));
+  final selector=find.byKey(const Key('m470-new-account-subtype'));
+  await tester.ensureVisible(selector);
+  expect(tester.state<FormFieldState<String>>(selector).value,'current');
+  await tester.tap(selector);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Add account subtype').last);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Cancel').last);
+  await tester.pumpAndSettle();
+  expect(tester.state<FormFieldState<String>>(selector).value,'current');
+ });
+
 }
