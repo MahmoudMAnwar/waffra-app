@@ -196,7 +196,16 @@ void main() {
     // bulk pasted SMS, reviewed individual SMS, and single entry sheet SMS.
     // M275 wraps confirmation UI but must not add a fourth write pathway.
     expect('_financeAuthority.commitConfirmedSms('.allMatches(home).length, 3);
-    expect(home, contains('records:[Map<String,Object?>.from(result.toJson())]'));
+    // M506 stages receipt bytes separately and strips picker file paths from
+    // the ledger record before the SAME verified atomic SMS+hash commit.
+    // The previous inline result.toJson() expectation became stale after that
+    // safety refactor; require the sanitized actual source path instead.
+    expect(home, contains('final smsRecord=Map<String,Object?>.from(result.toJson());'));
+    expect(home, contains("smsRecord['receiptPath']=null;"));
+    expect(home, contains('for(final attachment in waffraReceiptPaths(result.receiptPath))'));
+    expect(home, contains('smsReceiptImages.add(await File(attachment).readAsBytes());'));
+    expect(home, contains('records:[smsRecord]'));
+    expect(home, contains('reviewedSmsReceiptImages:smsReceiptImages.isEmpty?'));
     expect(home, contains('hashes:[pendingHash!]'));
     expect(home, contains('allowDuplicateHashes:explicitlyApprovedSmsDuplicate'));
     expect(home, contains('if(applied.saved!=1){'));
