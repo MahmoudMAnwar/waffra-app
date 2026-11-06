@@ -862,7 +862,9 @@ class BankParser {
   }
   const n=r'([0-9][0-9,]*(?:\.[0-9]{1,2})?)';
   // Only complete currency tokens; Arabic رسوم/رسائل are never SAR units.
-  const currency=r'(?<![A-Za-zء-ي])(?:SAR|SR|ر\.\s*س\.?|ر\s+س\.?|ريال(?:\s+سعودي)?|﷼|⃁)(?![A-Za-zء-ي])';
+  // A bank may write بSR, بـSAR or بــريال next to an amount; allow
+  // that explicit short Arabic preposition without accepting bare رس words.
+  const currency=r'(?<![A-Za-zء-ي])(?:بـ*)?(?:SAR|SR|ر\.\s*س\.?|ر\s+س\.?|ريال(?:\s+سعودي)?|﷼|⃁)(?![A-Za-zء-ي])';
   // Prefer the explicit transaction amount over remaining balance or fees.
   final patterns=[
    RegExp('(?:^|\\n)\\s*(?:Amount|Amt|المبلغ|مبلغ)\\s*[:：-]?\\s*$n\\s*$currency',caseSensitive:false,multiLine:true),

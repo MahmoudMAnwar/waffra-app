@@ -86,4 +86,23 @@ void main() {
     expect(transfer,contains('facts.fee'));
     expect(transfer,contains('await api.transfer('));
   });
+
+ test('M470 currency guard preserves valid bank بSR and بـSAR amounts', () {
+  const examples = <(String, double)>[
+   ('حوالة داخلية واردة بSR 15.50\\nل9001\\nمن9002', 15.5),
+   ('حوالة داخلية صادرة بSR 60\\nمن9001\\nل9004', 60),
+   ('شراء PoS\\nبSAR 74\\nمتجر', 74),
+   ('شراء PoS\\nبـSAR 20', 20),
+   ('شراء PoS\\nبـ84.72SR', 84.72),
+  ];
+  for (final entry in examples) {
+   final raw=entry.$1.replaceAll(r'\\n','\n');
+   expect(WaffraSmsCurrencies.originalAmount(raw)?.amount, entry.$2,
+     reason: 'Valid bank currency prefix must survive strict lexer: $raw');
+   expect(BankParser.parse(raw).amount, entry.$2,
+     reason: 'Currency-prefixed bank SMS must remain recognized: $raw');
+  }
+  expect(WaffraSmsCurrencies.originalAmount(
+    '500 رسالة بنكية\\nرسوم مستقطعة: 0.58 SAR'),isNull);
+ });
 }

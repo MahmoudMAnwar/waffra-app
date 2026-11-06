@@ -258,7 +258,9 @@ abstract final class WaffraSmsCurrencies {
       !RegExp(r'^\s*(?:fees?|service\s+fee|commission|رسوم|الرسوم|ضريبة|vat)\s*[:：-]?',
         caseSensitive:false).hasMatch(line)).join('\n');
     final escaped=currency=='SAR'?
-      r'(?<![A-Za-zء-ي])(?:SAR|SR|ريال(?:\s+سعودي)?|ر\.\s*س\.?|ر\s+س\.?|﷼|⃁)(?![A-Za-zء-ي])':
+      // Allow a real bank's بSR / بـSAR prefix only. Do not allow
+      // a currency alias that matches part of رسوم or رسالة.
+      r'(?<![A-Za-zء-ي])(?:بـ*)?(?:SAR|SR|ريال(?:\s+سعودي)?|ر\.\s*س\.?|ر\s+س\.?|﷼|⃁)(?![A-Za-zء-ي])':
       currency=='EGP'?
       r'(?:EGP|ج\.م|جنيه(?:\s+مصري)?)':
       currency=='AED'?
