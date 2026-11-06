@@ -96,7 +96,7 @@ void main() {
    ('شراء PoS\\nبـ84.72SR', 84.72),
   ];
   for (final entry in examples) {
-   final raw=entry.$1.replaceAll(r'\\n','\n');
+   final raw=entry.$1.replaceAll(r'\n','\n');
    expect(WaffraSmsCurrencies.originalAmount(raw)?.amount, entry.$2,
      reason: 'Valid bank currency prefix must survive strict lexer: $raw');
    expect(BankParser.parse(raw).amount, entry.$2,
