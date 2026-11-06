@@ -94,7 +94,10 @@ void main() {
       )),
     ));
     expect(find.text('شراء - متجر'),findsWidgets);
-    expect(find.text(raw),findsOneWidget);
+    final note=find.byKey(const Key('waffra-transaction-personal-notes'),
+      skipOffstage:false);
+    expect(note,findsOneWidget);
+    expect(tester.widget<SelectableText>(note).data,raw);
     expect(tester.takeException(),isNull);
   });
 
