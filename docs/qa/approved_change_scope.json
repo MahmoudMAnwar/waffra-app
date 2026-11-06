@@ -139,6 +139,10 @@
       },
       {
         "start": " Future<void> _openUnknownSmsFromSettings()async{",
+        "end": " Future<void> _openAutoSmsInbox()async{"
+      },
+      {
+        "start": "            trailing:Row(mainAxisSize:MainAxisSize.min,children:[\n             Checkbox(\n              key:Key('waffra-sms-select-sender-'",
         "end": " Widget _autoSmsReviewCard(){"
       },
       {
