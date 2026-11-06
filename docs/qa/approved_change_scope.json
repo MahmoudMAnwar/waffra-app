@@ -165,8 +165,8 @@
         "end": "   if(applied.originalSmsNotesOmittedOnLegacy&&mounted){"
       },
       {
-        "start": "       if(!sms)...[\n        TextField(controller:notes",
-        "end": "       TextField(controller:value,readOnly:initial?.sourceType=='goal_due',"
+        "start": "      if(!sms)...[\n       TextField(controller:notes",
+        "end": "      TextField(controller:value,readOnly:initial?.sourceType=='goal_due',"
       },
       {
         "start": "      if(sms)...[\n       TextField(controller:message",
