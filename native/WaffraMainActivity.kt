@@ -334,6 +334,21 @@ class MainActivity : FlutterFragmentActivity() {
                     if (saved && allow) WaffraAutoSmsWorker.enqueue(this)
                     result.success(saved)
                 }
+                "restartCompletedSmsHistory" -> {
+                    // Explicit Rescan rechecks previously filtered rows only
+                    // after the earlier cursor has reached the inbox end.
+                    // Do not re-read all first 2000 rows forever when incomplete.
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        try {
+                            val restarted = WaffraAutoSmsStore.restartCompletedHistory(app)
+                            runOnUiThread { result.success(restarted) }
+                        } catch (_: Exception) {
+                            runOnUiThread { result.error("SMS_RESCAN_RESTART_FAILED",
+                                "Could not safely restart SMS history", null) }
+                        }
+                    }
+                }
                 "importConsentMonthBankSms" -> {
                     // Provider scans and encrypted queue writes are blocking IO.
                     val app = applicationContext
@@ -418,6 +433,17 @@ class MainActivity : FlutterFragmentActivity() {
                     smsHistoryExecutor.execute {
                         val acknowledged = WaffraAutoSmsStore.acknowledge(app, ids)
                         runOnUiThread { result.success(acknowledged) }
+                    }
+                }
+                "ackCommittedAutoBankSms" -> {
+                    // Called ONLY after verified SQLCipher ledger hash presence.
+                    // An excluded or cancelled message uses ordinary ACK.
+                    val values = call.arguments as? List<*>
+                    val ids = values?.filterIsInstance<String>()?.toSet() ?: emptySet()
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        val committed = WaffraAutoSmsStore.acknowledgeCommitted(app, ids)
+                        runOnUiThread { result.success(committed) }
                     }
                 }
                 "openMessages" -> {
