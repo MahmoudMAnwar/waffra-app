@@ -7842,26 +7842,30 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        });
        // M470 #20: also learn after a single reviewed SMS was committed,
        // even if the original SMS text was omitted from legacy ledger notes.
-       if(initialSender.trim().isNotEmpty&&_smsRuleOwnerKey.isNotEmpty&&
-          verified.any((row)=>row.id==entry.id&&row.sourceType=='sms'&&
-           row.category==entry.category&&row.income==entry.income&&
-           (row.amount-entry.amount).abs()<0.00001)){
-        final reviewedText=messages[index];
-        final facts=WaffraBankSmsFactsParser.parse(reviewedText);
-        final original=WaffraSmsCurrencies.originalAmount(reviewedText);
-        if(!facts.pending&&
-           (facts.kind==WaffraBankOperationKind.income||
-            facts.kind==WaffraBankOperationKind.expense)&&
-           (facts.kind==WaffraBankOperationKind.income)==entry.income&&
-           original!=null&&original.currency=='SAR'&&
-           (original.amount-entry.amount).abs()<0.00001){
-         try{await _learnSafeSmsRule(
-          body:reviewedText,sender:initialSender,
-          kind:entry.income?'income':'expense',
-          category:entry.category);}catch(_){}
-         // The validated, committed SMS entry also teaches its
-         // user-reviewed description, just like confirmed manual input.
-         try{await _learnManualCategoryPreference(entry);}catch(_){}
+       // Any verified bank SMS (including pasted SMS without sender)
+       // teaches the confirmed description/category after the money commit.
+       // Sender-specific rules require a confirmed sender AND matching bank
+       // direction/amount; neither type grants permission to auto-post.
+       if(_smsRuleOwnerKey.isNotEmpty&&verified.any((row)=>
+          row.id==entry.id&&row.sourceType=='sms'&&
+          row.category==entry.category&&row.income==entry.income&&
+          (row.amount-entry.amount).abs()<0.00001)){
+        try{await _learnManualCategoryPreference(entry);}catch(_){}
+        if(initialSender.trim().isNotEmpty){
+         final reviewedText=messages[index];
+         final facts=WaffraBankSmsFactsParser.parse(reviewedText);
+         final original=WaffraSmsCurrencies.originalAmount(reviewedText);
+         if(!facts.pending&&
+            (facts.kind==WaffraBankOperationKind.income||
+             facts.kind==WaffraBankOperationKind.expense)&&
+            (facts.kind==WaffraBankOperationKind.income)==entry.income&&
+            original!=null&&original.currency=='SAR'&&
+            (original.amount-entry.amount).abs()<0.00001){
+          try{await _learnSafeSmsRule(
+           body:reviewedText,sender:initialSender,
+           kind:entry.income?'income':'expense',
+           category:entry.category);}catch(_){}
+         }
         }
        }
        // Reclassify the remaining encrypted review queue without recording
@@ -9704,6 +9708,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      }
      // A preference failure cannot retry an already-committed debit.
      try{await _learnManualCategoryPreference(result);}catch(_){}
+     // Apply new non-posting hints to the encrypted SMS review queue.
+     if(mounted)unawaited(_refreshAutoSmsInbox());
     }catch(error){
      // A write may have committed before a later source read failed. Never
      // claim 'previous data unchanged' or let a retry create a ghost debit.
