@@ -2424,3 +2424,9 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 
 [M507 direct-SMS editor follow-up]
 - Reopened native-review SMS editor now reads the latest owner-scoped non-posting encrypted local classification preferences and preselects an active matched leaf category; user drafts and explicit corrections take precedence. This is review-only and does not authorize automatic posting or silently select a child money account. Pending exact-head CI and physical Android validation.
+
+
+[M506 #427 responsive SMS and widget resume — 2026-11-06]
+- Following the already-recorded reduced cold-launch animation, Android message status checks (autoSmsEnabled / autoSmsTrackingStatus / autoSmsScanProgress) now run through the pre-existing single-thread SMS executor instead of querying the encrypted queue and shared mutex on Android's main UI thread. Results/errors are marshaled back to UI without logging sensitive SMS data. Source file: native/WaffraMainActivity.kt.
+- Resume-time verified widget finance ledger loading now delegates large JSON decoding to the established WaffraLargeJsonDecode.parse pathway rather than synchronous jsonDecode on the Flutter UI isolate. Integrity/witness checks and verified snapshot behavior are unchanged. Source file: lib/main.dart.
+- Source contract regressions in test/m506_android_nine_regressions_test.dart. The approved M385 scope manifest uses an unchanged base/head Android permission-line anchor to prove the bounded native modification. Profile-mode frame measurements and Android new/update acceptance remain pending; UI smoothness is not yet certified.
