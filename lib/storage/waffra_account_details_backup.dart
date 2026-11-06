@@ -80,7 +80,8 @@ abstract final class WaffraAccountDetailsBackup {
     kind:kindRows.single.read<String>('kind'),
     providerId:row['provider_id']! as String,
     subtype:row['subtype']! as String,
-    confirmedIso:row['confirmed_iso']! as String);
+    confirmedIso:row['confirmed_iso']! as String,
+    allowArchivedRestore:true);
   }
  }
 }
