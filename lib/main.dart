@@ -3465,7 +3465,7 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
          style:const TextStyle(fontSize:14,fontWeight:FontWeight.w600,
           color:Color(0xFFD7F1E5))))),
       Positioned(left:47,right:112,
-       top:goalWallet?38:52+20*_accountLabelExtraLines,bottom:44,
+       top:goalWallet?38.0:52.0+20.0*_accountLabelExtraLines,bottom:44,
        child:Center(child:FittedBox(
         alignment:Alignment.center,fit:BoxFit.scaleDown,
         child:WaffraCurrencyAmount(balance,fontSize:31-2*progress,
