@@ -1,3 +1,9 @@
+[PR #402 M481 CI correction] 2026-11-06 — Restore bank context method boundaries after compiler detection
+=========================================================================================================
+- Initial M481 code insertion into lib/storage/waffra_account_context_repository.dart inadvertently duplicated Dart text after the four-digit regex. Flutter analysis reported parser errors and consequent missing inferSmsAccount method. The entire original verified-context implementation has now been restored byte-for-byte outside the single intended verifiedBankSuffix getter, without changing any finance logic or data.
+- The getter reads saved four digits from verified SQLCipher metadata, checks exactly four ASCII digits and returns null for unlinked or archived accounts; no account inference or background posting was introduced.
+- Commit 981e7eda is the corrected Dart source. Previous failed exact-head runs do not establish a passing build. Run latest-head analyzer, storage test suite and Android smoke before any release.
+
 [PR #402 M480–M481, analyzer correction] 2026-11-06 — Verified bank suffix visibility, edit and exact-source guard
 ========================================================================================================
 - M480/M481 / #414/#415: a source-locked read of the user's confirmed last-four bank account identifier is now available from the same verified SQLCipher account context. It never derives digits from the display name or Home account filter and rejects invalid stored values.
