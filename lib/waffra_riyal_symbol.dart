@@ -45,9 +45,13 @@ class WaffraCurrencyMark extends StatelessWidget {
 List<InlineSpan>? waffraMoneyCurrencySpans(String input, {
   required bool english, required TextStyle style,
 }) {
+  // Only match complete currency units. The former optional-dot expression
+  // also matched the first two letters of Arabic words such as "رسالة",
+  // "رسائل" and "رسوم" after a number, corrupting SMS counters and summaries.
+  // Accept ر.س and ر س, but NEVER bare رس inside a word.
   final matches = RegExp(
-      r'(?:SAR|SR|ر\.?\s*س\.?|ريال(?:\s+سعودي)?|﷼|⃁)',
-      caseSensitive: false).allMatches(input);
+      r'(?<!\p{L})(?:SAR|SR|ر\.\s*س\.?|ر\s+س\.?|ريال(?:\s+سعودي)?|﷼|⃁)(?!\p{L})',
+      caseSensitive: false, unicode: true).allMatches(input);
   final result = <InlineSpan>[];
   var from = 0;
   var converted = false;

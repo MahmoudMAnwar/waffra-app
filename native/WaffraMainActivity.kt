@@ -104,13 +104,21 @@ class MainActivity : FlutterFragmentActivity() {
         // A receiver can enqueue a bank candidate while Waffra is backgrounded.
         // A damaged encrypted queue must be reported by the Flutter review
         // screen, not crash Activity.onResume or be treated as zero pending.
-        val hasReview = try {
-            WaffraAutoSmsStore.enabled(this) &&
-                WaffraAutoSmsStore.pending(this).isNotEmpty()
-        } catch (_: Exception) {
-            true // Foreground refresh will surface the read failure.
+        // Keystore decrypt and 500-item JSON decode can stall the Android UI
+        // on return from Messages/Camera. Serialize this work off the main
+        // thread with the existing dedicated SMS executor.
+        val app = applicationContext
+        smsHistoryExecutor.execute {
+            val hasReview = try {
+                WaffraAutoSmsStore.enabled(app) &&
+                    WaffraAutoSmsStore.pending(app).isNotEmpty()
+            } catch (_: Exception) {
+                true // Flutter review reports the actual queue error.
+            }
+            if (hasReview) runOnUiThread {
+                messageChannel?.invokeMethod("autoSmsAvailable", null)
+            }
         }
-        if (hasReview) messageChannel?.invokeMethod("autoSmsAvailable", null)
     }
 
     override fun onRequestPermissionsResult(requestCode: Int,
@@ -334,7 +342,46 @@ class MainActivity : FlutterFragmentActivity() {
                         }
                     }
                 }
-                "pendingAutoBankSms" -> result.success(WaffraAutoSmsStore.pending(this))
+                "excludedAutoSmsSenders" -> {
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        try {
+                            val senders = WaffraAutoSmsStore.excludedSenders(app)
+                            runOnUiThread { result.success(senders) }
+                        } catch (_: Exception) {
+                            runOnUiThread { result.error("SMS_EXCLUSION_READ_FAILED",
+                                "Could not verify excluded senders", null) }
+                        }
+                    }
+                }
+                "excludeAutoSmsSender" -> {
+                    val sender = call.arguments as? String ?: ""
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        val excluded = WaffraAutoSmsStore.excludeSender(app, sender)
+                        runOnUiThread { result.success(excluded) }
+                    }
+                }
+                "restoreExcludedAutoSmsSender" -> {
+                    val sender = call.arguments as? String ?: ""
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        val restored = WaffraAutoSmsStore.restoreExcludedSender(app, sender)
+                        runOnUiThread { result.success(restored) }
+                    }
+                }
+                "pendingAutoBankSms" -> {
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        try {
+                            val pending = WaffraAutoSmsStore.pending(app)
+                            runOnUiThread { result.success(pending) }
+                        } catch (_: Exception) {
+                            runOnUiThread { result.error("SMS_REVIEW_READ_FAILED",
+                                "Could not verify encrypted SMS queue", null) }
+                        }
+                    }
+                }
                 "claimAutoBankSmsCloudAttempt" -> result.success(
                     WaffraAutoSmsStore.claimCloudAttempt(this, call.arguments as? String ?: ""))
                 "stageAutoBankSmsCloudAnalysis" -> {
@@ -346,7 +393,11 @@ class MainActivity : FlutterFragmentActivity() {
                 "ackAutoBankSms" -> {
                     val values = call.arguments as? List<*>
                     val ids = values?.filterIsInstance<String>()?.toSet() ?: emptySet()
-                    result.success(WaffraAutoSmsStore.acknowledge(this, ids))
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        val acknowledged = WaffraAutoSmsStore.acknowledge(app, ids)
+                        runOnUiThread { result.success(acknowledged) }
+                    }
                 }
                 "openMessages" -> {
                     try {

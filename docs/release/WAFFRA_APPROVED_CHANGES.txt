@@ -1,3 +1,52 @@
+[M470-26] 2026-11-06 — Move Home account selector inside the emerald balance card
+==================================================================================
+- The former separate All accounts header row is removed; its trigger is now a compact button inside the emerald balance card, preserving the exact verified account dropdown and selected-account display filter.
+- The new control does not pick a money account for manual income/expense, SMS, recurring payments or transfers. Existing verified balances, privacy eye and Widget refresh remain unchanged.
+- A Flutter widget tap regression covers the in-card control and absence in unrelated generic balance cards. Stale M467 source assertions were updated for the approved in-card placement.
+- M385 exact bounded sections were independently matched byte-for-byte against the baseline outside the approved scopes. Android layout and full exact-head CI remain to be verified.
+
+[M470-25] 2026-11-06 — Verified bank/provider then linked account transaction selection
+=====================================================================================
+- The account-manager income/expense/transfer form now shows a provider/bank dropdown before the actual verified account dropdown. Choosing a different provider clears the old linked account; changing the Home display account never fills or posts this form.
+- Internal transfer has separate provider/account selection for both source and destination, retains distinct-account validation, stable transfer ID and its approved date picker. Existing finance writer, balance and SMS evidence are unchanged.
+- Added M470 provider-selector regression to the existing verified grouping tests, and bounded only the account-form source sections under strict M385 audit.
+- This completes the account-manager form subpart of #25; the older Home manual editor is still not wired to these same two selectors. This is not a production-complete #25 claim.
+- Exact-head CI and signed Android device tests remain required; no automatic bank authorization is inferred from display names.
+
+[M470-27] 2026-11-06 — New account creation UI with distinct type and opening balance
+====================================================================================
+- Replaced the original crowded account form with a compact account-creation dialog. Account type, verified bank/provider choice (only for a bank), account nickname, and opening balance are distinct labeled controls. Existing cash, bank, wallet, and other storage kinds remain unchanged.
+- Account opening uses the existing SAR-to-halalas parser and rejects negative/invalid amounts, missing names and unknown bank selection. Opening balance is a starting asset, not a new income entry.
+- An explicitly chosen bank name is shown as part of the account display label only. There is no API bank connection, no inferred SMS ownership, and no unapproved schema migration.
+- The original witnessed SQLCipher account creation writer remains the sole financial mutation. Added Flutter tests and exact M385 scoped file/section declarations.
+- Item #27 is code + tests, NOT signed Android success. More detailed account type definitions in item #23 remain to be implemented with compatible V3 backup and migration.
+
+[M470-29] 2026-11-06 — Read-only monthly budgets by explicit account allocation (PR #395)
+============================================================================================
+- Added pure, integer-halalas monthly per-account cap and expense projections for a single account or All accounts. Multiple budgets for one account sum; all explicitly assigned account caps sum once, without duplicating a budget by selecting All.
+- Missing account-budget links cannot be guessed from the Home header or prior unassigned transactions. Invalid month, negative expenses and repeated (budget, account) cap association fail closed.
+- Added tests for separate Rajhi and SNB allocations, all-account sums, cross-month isolation, unlinked expenses and duplicate-cap prevention. NO persistent account-budget allocation writer, Home UI connection, SQLCipher schema/backup migration or finance entry change was made.
+- Remaining item #29: verified account-to-budget allocation storage, V3 backup/restore and account-scoped Home budget display. CI and physical Android acceptance remain outstanding.
+
+[M470 - PR #395 DRAFT] 2026-11-06 — Preserve paid recurring source identity
+=========================================================================
+- While reviewing owner-reported Paid confirmation errors, found a definite mismatch: the recurring review candidate used sourceType recurring but the inserted ledger row omitted sourceType and defaulted to manual.
+- Confirmed recurring Paid inserts now tag the posted ledger row as sourceType recurring; all account, amount, due-date, duplicate, Home/Widget SQLCipher and explicit-consent validations remain in place.
+- Added focused static regression in test/storage/m470_verified_recurring_payment_capture_test.dart and bounded the production change in the exact M385 approved file/section scope.
+- This change is not yet certified as a full fix for Paid confirmation. Exact-head CI, signed device and real-money duplicate/rollback scenarios are still required.
+
+[M470 - PR #395 DRAFT] 2026-11-06 — Account selection for recurring default, scope and payment safeguards
+====================================================================================================
+- The owner requested 32 new Waffra follow-up changes. This draft implements only the specifically verified M470 subitems and does not claim all 32 are finished.
+- Home account picker no longer offers a new "unassigned transactions" display filter. An older saved unassigned display value safely falls back to All accounts; historical entries are not deleted or silently mapped to cash.
+- Verified internal transfers now offer an explicit transaction date while preserving a stable intent ID and mutually distinct source/destination accounts.
+- The paid recurring / cash-financed goal due confirmation requires an explicitly verified money account and does not inherit the Home header. The recurring paid SQLCipher snapshot captures only the one posted ledger entry and due-postponement metadata, with existing rollback protection and duplicate checks.
+- NEW THIS UPDATE: recurring default account settings have two separate selectors: a provider/bank group and an explicitly selected active account in that group. Known Saudi institutions are grouped from display names only; unknown bank accounts are left in separate groups rather than guessed together. Changing a provider clears the chosen account, and Save is disabled until an active account is selected. Historical payments and reminder switches are unaffected.
+- Added tests for multiple Al Rajhi accounts, unknown bank isolation, archived-account exclusion and mandatory explicit account selection. Changes live in lib/waffra_recurring_account_groups.dart, lib/waffra_account_context_settings.dart and test/m470_recurring_provider_accounts_test.dart.
+- Remaining for the recurring workflow: attach an account atomically when a recurring template is CREATED/EDITED, not only when managing its default later; confirm one-time vs future-account selection at due, and certify Android actual paid retry and balance. The per-account monthly budget allocation and other remaining 32 items are NOT done.
+- M385 approved-change scope and the M470 per-item tracker explicitly declare these changes; no writer/schema/security bypass, financial migration, automatic SMS debit or guessable bank source is authorized.
+- Exact-head CI and signed-device tests are pending. This note is documentation of changes on the PR, NOT a successful signed APK or production release certification.
+
 [CI-M228] 2026-11-05 — Repair verified pull-refresh QA expectation after M468
 ==============================================================================
 - Main Android APK run 42096659741 failed in mandatory Python job 127488700667: 136/137 tests passed, with M228 searching for the pre-M468 synchronous named-budget readList.
@@ -2019,3 +2068,163 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 - أضيف زر «تحويل بين حساباتي» إلى قائمة + في الرئيسية، يفتح مباشرة نموذج التحويل ويتطلب مصدرًا ووجهة مختلفين؛ عندما تقل الحسابات عن اثنين، يوجَّه المستخدم لإدارتها. التحويل لا يُسجل دخلًا أو مصروفًا ولا يُحفظ بمجرد اختيار نوعه.
 - أصبح «حساباتي» ظاهرًا ضمن الأدوات المالية حتى عند غياب المصدر الموثق، مع رسالة توضح أنه غير متاح بدل إخفاء الرابط تمامًا.
 - تشمل الاختبارات رفض المعاملة المكررة والصلاحية غير الموثقة والمحافظة على السجل السابق. نجاح CI شرط للدمج ولا يعتبر تجربة هاتف ناجحة أو تأكيدًا بأمان النسخ الاحتياطية.
+
+[M470] 2026-11-06 — 32 requested follow-ups / staged PR (NOT RELEASE-CERTIFIED)
+- Home account selector: remove unassigned choice, preserve historic data, and normalize a former unassigned display preference to All accounts. This is NOT a migration or retroactive account link.
+- Transfer: add explicit transaction date with unchanged stable request ID and verified source/destination accounts.
+- Due payment: require an active verified money account for recurring/goal-due cash confirmations; no implicit account from Home header.
+- Recurring Paid crash: restrict fresh encrypted capture to new ledger entry and related postponement, preserving fail-closed checks for any unrelated finance changes.
+- Added source/widget, protective capture, and disposable SQLCipher integration tests. CI and physical device acceptance on the exact PR SHA are pending; no production merge, main APK or full 32-item Done assertion.
+- Tracker: docs/qa/WAFFRA_32_NEW_CHANGES_M470_TRACKER.md.
+
+[M470 staged follow-up] 2026-11-06 — Verified recurring DEFAULT account setting (partial #25/#30)
+- Existing recurring schedules' default-account editor now has a provider/bank dropdown followed by an explicit active linked account dropdown. It does not present an unassigned option, silently pick the first account, or relink past payments.
+- Known bank names only are grouped; unknown labels remain separate to prevent guessing. This is NOT the still-pending mandatory choice during a NEW recurring schedule's creation.
+- New test: test/m470_recurring_provider_accounts_test.dart. Still requires exact SHA CI, signed Android and a safe initial-creation flow.
+
+
+[M470 implementation follow-up] 2026-11-06 — PR #395 exact-code changes; NOT YET RELEASE CERTIFIED
+- Actual Home manual income/expense entry and internal transfer now offer bank/provider then an explicitly selected linked active money account. Switching provider clears the account; the Home account display filter never authorizes a debit.
+- Every NEW submitted income/expense, reviewed bank SMS, receipt, recurring Paid and cash-financed goal due requires an active verified money account. Historic unassigned ledger data is retained, not silently migrated or allocated. Saved source and generation are verified by the existing financial writer.
+- The original recurring create/edit dialog now requires provider then account, serializes an optional accountId on its schedule, and the typed schedule projection writes its recurring default in the same locked SQLCipher transaction. Invalid or archived account rolls back the whole edit. Historic schedules without defaults are still readable and require selection when edited/paid.
+- Updated transfer widget regression: scroll to the real submit button when provider/account inputs expand the form. Added atomic recurring account rollback and Home selector regression coverage.
+- Scope guard M385 updated to include only these user-approved file/section edits. Advanced financial subtypes and persistent per-account monthly budget assignments are still incomplete; do not label all 32 Done.
+- Current SHA tests and signed Android acceptance remain pending; DO NOT merge into main or claim a released APK based on these candidate commits.
+
+[M470 account-monthly-budget code follow-up] 2026-11-06 — #29 candidate
+- Named budgets may now explicitly designate a verified account at creation/edit. Attribution is stored in the existing encrypted named-budget JSON and survives its V3 finance snapshot/restore; old global/shared budgets remain unassigned and are never silently split.
+- The Home monthly budget card uses the selected account's assigned budgets and its verified account-scoped expense entries; All accounts sums each unique budget once, including legacy shared budgets once. Changing the Home account does not itself post/transfer money.
+- Regression source tests cover legacy JSON, selected-account serialization/copy and Home display source separation.
+- Code and tests are NOT signed Android/device acceptance; CI exact SHA mandatory. No external bank connection has been activated.
+
+[M470 SMS source bank review follow-up] 2026-11-06 — candidate code
+- The reviewed SMS money-account picker now requires two levels (bank/provider followed by a live linked account), as with Home manual and verified transfers. Switching provider clears the chosen financial account.
+- An automatic suffix-based account suggestion is accepted only when the verified SMS sender's known bank matches the independently verified bank group of that account; ambiguous or unknown senders require user selection. This is source review ONLY, not automatic debit consent.
+- The new-post review copy no longer suggests that accountless posting is allowed. Historical unassigned transactions are untouched.
+- Added regression assertions; exact-head CI and Android acceptance are required.
+
+[M470 bank account creation and suffix link] 2026-11-06 — #23 partial candidate
+- Add Account bank form now optionally accepts the user-approved last 4 masked bank/card digits. No full account numbers or OTP are saved.
+- WaffraVerifiedAccountsApi now creates the bank account and registers that verified last-four inside one existing native-locked SQLCipher transaction, so a metadata error cannot leave half a creation committed.
+- The existing encrypted V3 account-context backup already captures the confirmed suffix. SMS sender bank must agree with the selected account's verified bank group before its suffix can prefill a source; users still confirm review before finance posting.
+- Advanced versioned account subtype definitions remain incomplete; this item is not Done. Exact-head CI and signed-device verification are required.
+
+
+[M470 CI recovery after first 2026-11-06 account-suffix changes]
+- Exact-SHA analyzer found accidental Dart text duplication in Add Account dialog and verified accounts API during the optional masked-four-digit change; nine previously failing workflow gates shared this same compilation blocker.
+- Restored the original one-class/one-method structures and applied the same user-approved four-digit field and atomic verified SQLCipher account+suffix writer without any duplicate Dart sections.
+- Confirmed latest source files are bounded (new-account dialog 159 lines, verified accounts adapter 232 lines) with a single account creator and no extra account source or bypass of active encrypted finance verification.
+- This is a candidate source fix; do not assert complete CI success, sign an APK or merge before exact-head tests and device acceptance.
+
+
+[M470 CI regression repair] 2026-11-06 — first dependency of next remaining work
+- An exact-PR-head full Flutter run passed thousands of tests but failed four SOURCE-TEXT assertions in existing M343, M359, and M401/M402 tests. Account-scoped monthly budget calculations had replaced the formerly unconditional global spending/cap projections, and the Home transfer now uses a Column of two centered bank/account pickers rather than returning one picker.
+- Updated only those legacy test expectations, retaining and extending checks for correct per-account budget attribution, All-account aggregation and the required two-level centered bank/account UI. Real financial behavior was not reverted or bypassed.
+- Test updates are explicitly declared in the M385 scope manifest; current exact-head CI and physical-device acceptance still required. Existing complete-app tests are not declared passing until independently confirmed on this commit.
+
+
+[M470 #22 candidate — 60-second idle lock over preserved UI] 2026-11-06
+- A new foreground activity timer requires mandatory native fingerprint/face verification after 60 seconds of inactivity of an authenticated, unlocked Waffra session. Input interactions renew the timer; sign-in and onboarding remain outside this security rule.
+- A blocking, full-screen biometric overlay is created via MaterialApp.builder OUTSIDE the Navigator. Existing in-progress Home, modal dropdowns, edit dialogs, cash amounts and text drafts stay mounted and are not cleared; the OS gate must complete before any underlying route can be used. Unfocusing a keyboard does not erase the draft.
+- Authenticator foreground handling follows the existing lifecycle safety rule; a real background transition still requires the original independent biometric session lock. Native media picker rules remain unchanged.
+- Added test/m470_idle_biometric_overlay_test.dart for expiry, activity extension, preserving an open dialog after verified callback and login exemption. This code candidate requires exact-head CI, emulator/device and owner acceptance; do not publish/merge based only on a UI source assertion.
+
+
+[M470 #22 MaterialApp single-builder correction] 2026-11-06
+- Flutter CI found a duplicate named builder argument: MaterialApp already wrapped its Navigator in the app's hide-amounts and RTL directionality ValueListenableBuilder.
+- Removed the extra builder and composed the 60s biometric inactivity overlay inside that SAME existing builder, without changing the prior masking, RTL, lifecycle or user-owned Navigator.
+- The overlay still covers open routes, retaining text and current dialog on expiry, and requires mandatory OS biometrics to reveal.
+- CI must run against the new exact HEAD; no physical device pass is claimed.
+
+
+[M470 #23 typed account source metadata] 2026-11-06 — candidate, not release approved
+- Create Account now distinguishes bank current/checking, savings, investment asset, deposit and digital/prepaid wallet subtypes alongside its existing cash/bank/wallet/other money kind and selected bank/provider. Liability/credit-card balances are deliberately not modeled as debit-able assets.
+- User-selected provider and descriptive subtype are written to a NEW separately versioned and referenced SQLCipher account-details table; old accounts and opening/transaction balance math remain untouched. The existing verified native Home/Widget lock commits the account row, subtype/provider and optional masked SMS four-digit suffix together.
+- Account list reads structured identity where present, falls back to the existing legacy account label only for old accounts with NO structured provider, and does not treat a contradictory bank name as trusted SMS evidence.
+- Encrypted V3 backups now carry optional strictly validated accountDetailsV1 entries; old archives without that field remain compatible. Restore inserts details in the same atomic encrypted transaction after source accounts, rejecting forged provider or orphan identity references.
+- A disposable SQLCipher export/restore test verifies typed identity and untouched legacy cash, plus forged metadata rejection and supported combinations. CI on exact commit, app installation over old phone data and signed Android validation still required.
+- The M470 accounts adapter was restored from its last good revision after an insertion text-duplication regression and now includes one typed creation method and one existing transfer method.
+
+
+[M470 #23 archived-account V3 restore preservation] 2026-11-06
+- Additive account provider/subtype export must also restore archived accounts exactly as archived, rather than rejecting a previously verified, zero-balance savings account or silently activating it.
+- The account details schema keeps ordinary operations active-only but accepts prevalidated archived metadata when called exclusively from authenticated disposable-vault restore. The source account's archived flag and balance never change.
+- A new SQLCipher regression exports a typed, archived, zero-opening bank account and checks the restored account remains archived with the same provider/subtype and zero balance.
+- CI and actual install/update-on-device remain pending, so this is not user-facing Done yet.
+
+[M470 SMS review #12/#16 — 2026-11-06]
+- قائمة مرسلي الرسائل تعرض «N رسائل بانتظار المراجعة» بدل «تحتاج فرز»، باتجاه عربي صحيح وعزل رقمي لمنع تداخل العدد والنص.
+- عند الدخول من «علّم وفرة» لرسالة معروفة ومرسل محدد، لا تختار شاشة القواعد كلمة عامة قد تكون من نوع آخر (مثل «خصم» عند تحليل تحويل). الاقتراحات المسبقة تتقيّد بنوع العملية الفعلي ونص الرسالة والمرسل، مع معاينة لنفس الرسالة؛ تغيير النوع يمحو الكلمات السابقة.
+- زر الحفظ يرفض قاعدة التعليم المخصصة إن اختلفت عن نوع الرسالة أو لم تطابق النص الأصلي والمرسل؛ لا يقوم هذا الإصلاح بحفظ مالي تلقائي أو بتحويل التحويل إلى مصروف.
+- أُضيفت اختبارات M470 للتحقق من مطابقة الكلمات والمرسل وتصحيح RTL. لا تعني إضافة الكود اجتياز كل CI أو اختبار جهاز Android.
+- سجل QA في docs/qa/WAFFRA_32_NEW_CHANGES_M470_TRACKER.md يستعيد البنود 5–12 و16 من نص المستخدم ويترك غير المسترجع غير مؤكد بدل اختلاق حالة.
+
+[M470 manual income/expense account action #5/#6 — 2026-11-06]
+- بجوار تاريخ معاملة الدخل/المصروف اليدوية زر «الحساب» يفتح قائمة الحسابات الحقيقية المجمعة بحسب جهة/بنك، مع إمكانية «إضافة حساب». اختيار حساب للرئيسية لا يختار حساب الصرف تلقائيًا.
+- إذا لم تكن هناك حسابات يظهر «إضافة حساب» بدل «الحساب». فتح إدارة الحسابات والرجوع لا يتخلص من مسودة المعاملة أو حقولها؛ ويُقترح الحساب الوحيد المنشأ فورًا في نفس المحرر.
+- تظل الجهة والحساب مطلوبين عند تأكيد المعاملة. الميزانية اختيارية ومستقلة، وحقل التاريخ يبقى قابلًا للتعديل. اختبار سلوك إنشاء الحساب والعودة على Android مطلوب قبل اعتماد النتيجة.
+- اختبارات M470 أضيفت لحماية موضع الزر ونموذج الإدخال، ولم يثبت بعد مرور نفس SHA بالكامل.
+
+[M470 CI syntax regressions corrected — 2026-11-06]
+- في إعادة ترتيب صف التاريخ/الحساب، تم إغلاق WaffraCenteredDropdownFormField للميزانية بشكل صحيح بعد أن كشف flutter analyze عن قوس ناقص في main.dart؛ إضافة المكوّن ليست تصريحًا ماليًا جديدًا.
+- اختبار منع تعلم «خصم» داخل التحويل يحدد category الفارغة المطلوبة صراحة لنوع transfer. إعادة تشغيل CI على آخر HEAD مطلوبة بعد الإصلاح.
+
+[M470 user-recovered SMS review #7–#10 — 2026-11-06]
+- استبعاد جميع رسائل مرسل لا يُنشئ حظرًا عامًا؛ بعد تأكيد استبعاد الرسائل نفسها ونجاح إزالتها من طابور المراجعة، يظهر سؤال موافقة منفصل لاستبعاد المرسل نفسه أيضًا. يمكن رفضه مع الاحتفاظ باستبعاد الرسائل فقط.
+- إضافة قسم «المستبعدون» في إعدادات الرسائل، يعرض المرسلين الذين اختار المستخدم منعهم، مع إجراء «إلغاء الاستبعاد». السماح مجددًا يعمل على الرسائل القادمة ولا يعيد الرسائل المستبعدة سابقًا تلقائيًا.
+- تخزين هوية المرسل المستبعد في قائمة مشفرة باستخدام Android Keystore، مقيدة بنفس هوية المستخدم الموثقة؛ تُزال قائمة المستخدم السابق عند تفعيل الرسائل صراحةً لصاحب حساب مختلف. استقبال الرسائل والمسح السابق وفحص الإشعارات غير المعروفة كلها تتجاهل هذا المرسل قبل إدخال أي رسالة في مراجعة وفرة. لا تغيير في رسائل تطبيق الهاتف الأصلية أو سجل الأموال.
+- تحسين مسار 500 رسالة: Set لتحديد الرسائل دون lookup تربيعي، والاحتفاظ بـListView.builder واستبعاد على دفعات لا تتعدى 100 رسالة، وكاش محلي فقط للاسم المستبعد المشفر بدلاً من فك التشفير المتكرر. لا يُدّعى نجاح اختبار أداء 500 رسالة على هاتف حقيقي قبل إثباته.
+- اختبارات M470 تتحقق من وجود موافقة مستقلة، وإلغاء الحظر، والعزل المشفر، وتغليف قنوات Android، وحدود الدفعات. مطلوب مرور Flutter وGradle وM385 وM449 وUAT على نفس commit.
+
+[M470 recovered #1/#2 — sign out & pull refresh — 2026-11-06]
+- شاشة تسجيل الخروج في جميع أجزاء التطبيق تعتمد callback مركزيًا؛ أُضيف منع لتكرار الخروج بالتزامن وإظهار فشل الإجراء للمستخدم لو تعذر تعليق SMS أو إنهاء الجلسة الآمنة. لا تُحذف قاعدة البيانات المالية أو تتغير كلمة المرور عند الخروج.
+- تحسين سحب التحديث: القراءة المتحققة من SQLCipher تعمل أولًا كل مرة؛ لو generation وdigest وwidgetRevision لم تتغير، يتجنب التطبيق فك آلاف سجلات JSON وإعادة بناء صفحات البيانات، مع إبقاء مسار guarded legacy وقراءة التغيرات الجديدة كما هما. لا يستخدم أرصدة وهمية أو بيانات غير متحققة.
+- اختبار M470 يراجع الحماية من المحاولات المتزامنة، واحتفاظ الجلسة عند الفشل، والتحقق قبل التخطي، وعدم اختصار legacy. CI وتجربة الهاتف الفعلية لم يعتمدا بعد.
+
+[M470 recovered SMS account request #11 — 2026-11-06]
+- بعد مراجعة أول رسالة دخل/مصروف من مرسل بنك معروف لا يوجد له حساب موثق، يمكن اختيار «إضافة حساب» بموافقة صريحة. تُعرض جهة البنك المقترحة للمستخدم، ويختار اسم الحساب والنوع والرصيد الافتتاحي الافتراضي صفر ريال وآخر أربعة أرقام اختياريًا.
+- ينشئ وفرة حسابًا ماليًا حقيقيًا وهويته المعتمدة داخل SQLCipher تحت نفس قفل الكاتب المعتمد؛ ثم يعيد قراءة الحساب ويعرض الحساب المنشأ في مراجعة ربط عملية SMS.
+- لا يُحفظ أي دخل أو مصروف من الرسالة إلا بتأكيد المستخدم المستقل في شاشة المراجعة المالية وبآلية منع التكرار القائمة؛ رفض العرض أو إلغاء النموذج لا يُنشئ حسابًا.
+- الحساب الذي وافق المستخدم على إنشائه يظل محفوظًا إذا ألغى حفظ الرسالة بعدها: العمليتان منفصلتان وليستا دمجًا ذريًا زائفًا. اختبارات Widget ومراجعة source مضافة؛ نجاح CI وتجربة هاتف Android ما زالا مطلوبين.
+- القائمة المسترجعة حديثًا تثبت وصف #3 الأداء الشامل وموضوعي #13 SMS transfer rules و#14 التنقل من «علّم وفرة»؛ الثلاثة جزئيون ولا يُعلن اكتمالهم.
+
+[M470 clarified from original 32-item conversation, #3/#4/#11/#14 — 2026-11-06]
+- #3 و#4: تحميل نتائج الحفظ اليدوي والرسائل البنكية لم يعد يفك سجل JSON الكبير على خيط Flutter UI مباشرة؛ يُقرأ بواسطة WaffraLargeJsonDecode، وتُحضَّر الفئات المالية الجديدة قبل التحديث الواحد للواجهة. ولا تزال عمليات النقل/الأهداف/المتكررة وأول تشغيل تحتاج قياس وتحسين على الهاتف.
+- #11: عند اعتماد أول رسالة دخل/مصروف من مرسل بنك معروف بلا حساب موثق، يعرض وفرة اقتراح إنشاء حساب بنفس اسم المرسل مُعبأ تلقائيًا، ورصيد افتتاحي صفر ريال افتراضيًا قابل للتعديل، وآخر أربعة أرقام اختياريًا. يظل التسجيل المالي بعد اختيار الحساب وموافقة منفصلة. معادلة SQLCipher الأصلية تدعم الرصيد السالب عند مصروف يفوق الافتتاحي. لا تزال إنشاء الحساب والعملية مرحلتين ماليتين منفصلتين وليستا عملية ذرّية مشتركة؛ لذلك #11 جزئي وغير معتمد نهائيًا.
+- #14: العودة من «علّم وفرة» تعيد المستخدم لنفس رسالة SMS إن استمرت تحت المراجعة؛ Back دون حفظ لا ينفذ فحصًا تاريخيًا كاملًا. لا تسجيل أو حذف مالي خلال التنقل نفسه.
+- اختبارات Flutter الخاصة بمسار اسم المرسل/الرصيد/الرجوع/فك السجل خارج UI مضافة؛ نتائج exact-head CI وAndroid UAT مطلوبة قبل اعتبار هذه البنود منتهية.
+
+[M470 #11 additional encrypted-finance regression — 2026-11-06]
+- اختبار SQLCipher جديد يحاكي حساب «AlinmaPay» برصيد افتتاحي صفر ثم عملية SMS مصروف 200 ريال؛ ينبغي أن يصبح رصيد الحساب -200 ريال بالضبط، مع رابط حساب واحد ودفعة مصرفية واحدة فقط.
+- إعادة تقديم نفس بصمة SHA-256 للرسالة ترفض إضافة المعاملة الثانية، وتحافظ على الرصيد -200 ريال؛ لا يُقبل الخصم مرتين حتى مع معرّف عملية مختلف.
+- تم ضبط مسار اختبارات UI الخاص باللاج والرجوع إلى «علّم وفرة» داخل test/ وحذف الملف الخاطئ خارج النطاق، وإبقاء حواجز M385 وM449 والإصدار دون تخفيف.
+- لا تزال ذرّية إنشاء الحساب مع أول SMS في معاملة موحدة (وليست معاملتين) مفتوحة، كما أن اختبارات الجهاز الفعلي لا تزال مطلوبة.
+
+[M470 CI correction — 2026-11-06: 4 stale Flutter regressions, 6 workflow verdicts]
+- Six full-suite workflow failures on b546774 reduced to four obsolete source-level expectations; 2,364 Flutter tests passed, 4 failed. Update M206 to assert the idle biometric wrapper keeps the existing RTL ValueListenableBuilder and Navigator; M372/M398 to assert the newly approved adjacent date/account action retains named budget controls; M470 native-SMS test to assert exclude/restore work on dedicated executor with UI-thread reply instead of old synchronous result.success.
+- Updated M385 changed-file list and bounded test sections. No production writer, bank SMS posting logic, account balance, or encryption gates were changed in this correction. Re-run exact HEAD full tests before treating the six workflows as green.
+
+[M470 recovery audit — exact original requests #13 to #22, 2026-11-06]
+- Owner supplied complete original 13–22 descriptions: #13 SMS transfer currency refusal with separate 0.58 SAR fee; #14 bidi/currency text distortion; #15 back from Teach Waffra in transfer to same pending SMS; #16 misleading zero-match keyword suggestion; #17 same back navigation for income/expense; #18 first-tap review unexpectedly returns Home; #19 subcategory picker does not accept selection after Back; #20 safe automatic rule learning only after successful income/expense/transfer saves; #21 comprehensive text distortion/riyal word boundary audit; #22 60-second background session with fully opaque green biometrics above any dropdown and preserved route.
+- All 32 descriptions now recovered; this DOES NOT mean implemented. #13, #18, #19, #20 are functionally open; #14/#21 correction branch fix/m470-global-rtl-currency-text-20261106 remains separate, not present in PR #395; #15/#17 have candidate navigation code but are not Android accepted; #22 foreground idle overlay is not the requested 60-second background lock. No production code changes in this scope-clarification commit.
+
+[M470 owner-final SMS review UX, 2026-11-06]
+- Removed Teach Waffra action entirely from SMS review popups for income/expense/transfer/exclusion. No mandatory Rule Settings detour before transfer or after a confirmed income/expense. Safe sender-scoped rules are learned only after confirmed financial posting or explicitly acknowledged SMS exclusion; rules do not write money and do not silently block whole senders. The independent Rules Settings screen remains. Older requested Teach-return behavior #15/#17 is superseded. Updated M462 test, M470 regression, M385 bounded scope and QA tracker. Same-SHA CI and Android QA required.
+
+[M470 2026-11-06 — Five pending SMS UI/financial fixes grouped under #395]
+- #14/#21: integrate nine Arabic-SAR word-boundary repairs plus two source/UI Flutter regressions and audit, preserving real currency evidence and avoiding 'رس' substitution in رسوم/رسائل/رسالة.
+- #13: review Arabic internal bank transfer only with independently verified SAR principal (e.g. 135.00) and verified user-selected source/destination accounts. Display deducted 0.58 SAR fee as separate information without phantom posting, preserve unknown/foreign currency fail-closed.
+- #18: first message tap from sender groups can finish the queued navigation after PopScope rebuild, without losing Back-to-senders on Android. #19: reconstruct live eligible subcategories from the captured main parent ID after return, never match a namesake child from another parent.
+- M385 source edit scopes, exact-head Flutter regression and release notes refreshed. No SQLCipher writer bypass or automatic account posting. Android screen, currency and category-acceptance QA required before claiming Done.
+
+[M470 2026-11-06 — CI repair: preserved genuine Arabic-prefixed SAR/SR bank amounts]
+- The strict Arabic currency word-boundary fix initially rejected valid verified bank prefixes بSR and بـSAR. The BankParser and originalAmount SAR lexers now accept only an explicit Arabic ب + optional tatweel prefix attached to a complete currency unit, never the first letters رس of ordinary words such as رسوم/رسائل. Added targeted positive/negative regression for legacy M332/M338 failures. Both finance and fee-only failures still remain fail-closed. Release-note ancestry refreshed after the finance parser edit; CI rerun and Android acceptance remain required.
+
+[M470 #22 2026-11-06 — preserve draft across app switch with timed biometric]
+- Do not immediately replace Home on pause/hidden. Show fully opaque green privacy shield over the existing Navigator while backgrounded; if returned in under 60 seconds reveal original dropdown/draft without biometric, otherwise verify using mandatory OS biometrics on top of the unchanged Navigator. Authentication on cold app start and sign-in remains mandatory. Two widget lifecycle tests and explicit approved scope; CI and Android acceptance pending.
+
+[M470 #22 — 2026-11-06 same-HEAD release notes freshness and open-sheet QA]
+- After owner-approved change, Waffra preserves in-progress dialogs and dropdown routes on Android background. The existing Navigator is masked by an opaque forest-green privacy surface; return before the elapsed one-minute threshold restores the same form, and return after the threshold requires OS biometric authentication above the unchanged route. App cold-start biometric remains mandatory. Added open-bottom-sheet and input retention widget regression; no financial account writer logic modified. This notes commit succeeds the latest app-source commit for M449 freshness, pending exact-SHA CI and phone acceptance.
+
+[M470 #3 2026-11-06 — avoid single-SMS post-commit frame stalls]
+- The individually reviewed bank-SMS save path previously decoded the full encrypted journal snapshot synchronously in the Flutter UI isolate after successful commit. It now uses the existing WaffraLargeJsonDecode.parse worker with a strict list type check, preserving the same confirmed journal source, account/hash coherence and rule-learning order. Added a regression assertion against restoring the synchronous decode path. No money writer or duplicate-posting behavior changed. Performance on physical Android remains to be verified.

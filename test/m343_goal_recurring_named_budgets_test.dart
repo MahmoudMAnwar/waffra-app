@@ -109,7 +109,10 @@ void main() {
   final directory=File('lib/waffra_budget_directory.part.dart').readAsStringSync();
   expect(directory,contains('editBudgetForCategory(b)'));
   expect(app,contains('goal.saved/goal.target'));
-  expect(app,contains('waffraNamedBudgetSpent(entries,categories,selected,viewedMonth)'));
+  // M470 narrows the budget preview to the account selected in Home,
+  // while 'all' preserves the independent global view.
+  expect(app,contains('final relevantEntries=selectedFinancialAccount==\'all\'?'));
+  expect(app,contains('waffraNamedBudgetSpent(relevantEntries.toList(),categories,selected,viewedMonth)'));
   expect(link,contains('linkedGoalId:updated.id'));
   expect(link,contains('operation:\'goal-edit-and-due\''));
   expect(app,contains('operation:\'goal-create-and-due\''));

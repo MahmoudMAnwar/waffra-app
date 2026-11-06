@@ -97,10 +97,10 @@ abstract final class WaffraAiFinanceBrain {
     // Only competing *currency-labelled* amounts are payment candidates.
     // Currency-less entries still fail the independent exactCurrency guard.
     final matches=RegExp(
-      r'(?:(?:SAR|SR|ريال(?:\s+سعودي)?|ر\.?\s*س\.?)\s*[:：]?\s*'
+      r'(?:(?<![A-Za-zء-ي])(?:SAR|SR|ريال(?:\s+سعودي)?|ر\.\s*س\.?|ر\s+س\.?)(?![A-Za-zء-ي])\s*[:：]?\s*'
       r'[0-9]{1,12}(?:[.,][0-9]{1,3})?'
       r'|[0-9]{1,12}(?:[.,][0-9]{1,3})?\s*'
-      r'(?:SAR|SR|ريال(?:\s+سعودي)?|ر\.?\s*س\.?))',
+      r'(?<![A-Za-zء-ي])(?:SAR|SR|ريال(?:\s+سعودي)?|ر\.\s*س\.?|ر\s+س\.?)(?![A-Za-zء-ي]))',
       caseSensitive:false,
     ).allMatches(action).toList();
     return matches.length>1;

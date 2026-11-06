@@ -114,6 +114,24 @@ abstract final class WaffraAutoSms {
   return _boolCall('stageAutoBankSmsCloudAnalysis',
    <String,Object?>{'id':id,'analysis':suggestion});
  }
+ // Exclusions are stored as encrypted, owner-scoped native SMS policy.
+ // A missing native channel is UNKNOWN, not an empty list.
+ static Future<List<String>?> excludedSenders()async{
+  if(!Platform.isAndroid)return null;
+  try{
+   final values=await channel.invokeListMethod<String>('excludedAutoSmsSenders');
+   return values==null?null:List<String>.unmodifiable(values);
+  }on MissingPluginException{return null;}
+   on PlatformException{return null;}
+ }
+ static Future<bool> excludeSender(String sender)async{
+  if(sender.trim().isEmpty)return false;
+  return _boolCall('excludeAutoSmsSender',sender.trim());
+ }
+ static Future<bool> restoreExcludedSender(String sender)async{
+  if(sender.trim().isEmpty)return false;
+  return _boolCall('restoreExcludedAutoSmsSender',sender.trim());
+ }
  static Future<bool> acknowledge(List<String> ids)async{
   if(ids.isEmpty||ids.length>100)return false;
   return _boolCall('ackAutoBankSms',ids);

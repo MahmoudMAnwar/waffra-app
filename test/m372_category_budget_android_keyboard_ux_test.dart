@@ -33,7 +33,9 @@ void main() {
       .split('debounce?.cancel();disposeLater(').first;
     expect(form, contains("'__create_budget__'"));
     expect(form, contains("'__manage_budgets__'"));
-    expect(form, contains('SizedBox(width:137,child:dateAction())'));
+    expect(form, contains('Expanded(child:dateAction())'));
+    expect(form, contains('Expanded(child:accountAction())'));
+    expect(form, contains('if(initial==null&&!sms)...['));
     expect(form, contains('budgetMenuRevision++'));
     expect(form, isNot(contains("'waffra-entry-search-budgets'")));
     expect(form, isNot(contains("'waffra-entry-create-named-budget'")));

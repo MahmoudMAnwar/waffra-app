@@ -30,7 +30,8 @@ abstract final class WaffraBankSmsFactsParser {
   r'\b(?:transfer\s+(?:received|sent|in|out|to)|credit\s+transfer|'
   r'debit\s+transfer|funds\s+transferred)\b|'
   r'حوال[ةه](?:\s+مالي[ةه])?\s+(?:صادر[ةه]|وارد[ةه])|'
-  r'تحويل\s+(?:بنكي\s+)?(?:صادر|وارد|بين)|عملية\s+حوال[ةه]',
+  r'تحويل\s+(?:بنكي\s+)?(?:صادر|وارد|بين)|عملية\s+حوال[ةه]|'
+  r'حوال[ةه]\s+داخلي[ةه]|تحويل\s+داخل[يى]|تحويل\s+بين\s+حسابات',
   caseSensitive:false);
  static final _card=RegExp(
   r'\b(?:credit\s+card\s+(?:payment|settlement)|'
@@ -61,9 +62,10 @@ abstract final class WaffraBankSmsFactsParser {
   r'[^\r\n]{0,45}?(?:\*{2,}|x{2,}|X{2,})\s*([0-9٠-٩]{4})',
   caseSensitive:false);
  static final _fee=RegExp(
-  r'(?:الرسوم|رسوم\s+التحويل|fees?|commission)\s*[:：]?\s*'
+  r'(?:الرسوم(?:\s+المستقطعة)?|رسوم(?:\s+(?:التحويل|مستقطعة))?|'
+  r'fees?|commission)\s*[:：]?\s*'
   r'(?:SAR\s*)?([0-9٠-٩][0-9٠-٩,]*(?:\.[0-9٠-٩]{1,2})?)'
-  r'\s*(?:SAR|ر\.?\s*س|ريال)?',
+  r'\s*(?:(?:SAR|ر\.\s*س|ر\s+س|ريال)(?![A-Za-zء-ي]))?',
   caseSensitive:false);
  static final _ref=RegExp(
   r'(?:الرقم\s+المرجعي|رقم\s+العملية|reference(?:\s+number)?|ref)'

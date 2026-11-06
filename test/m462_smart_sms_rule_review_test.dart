@@ -222,12 +222,18 @@ void main(){
   expect(ui,contains("Key('waffra-sms-advanced-rule-edit')"));
   expect(ui,contains('WaffraSmsLocalRules.validate(rule)'));
   expect(home,contains("Key('waffra-sms-understood-action')"));
-  expect(home,contains("Key('waffra-sms-teach-action')"));
-  expect(home,contains("if(decision=='teach'&&mounted)"));
+  // M470 approved final UX: no Teach shortcut in any review.
+  expect(home,isNot(contains("Key('waffra-sms-teach-action')")));
+  expect(home,isNot(contains("decision=='teach'")));
   expect(home,contains('Future<bool> _learnSafeSmsRule({'));
   expect(home,contains('await store.write(_smsRuleOwnerKey,updated);'));
-  expect(home,contains('if(!learned&&mounted)await _openSmsRules('));
-  expect(home,contains('if(!learned&&mounted){'));
+  final review=home.substring(
+   home.indexOf(' Future<void> _reviewAutoSmsCandidates('),
+   home.indexOf(' void _receiveSharedSms('));
+  expect(review,isNot(contains('await _openSmsRules(')));
+  expect(review,contains("decision=='transfer'&&mounted"));
+  expect(review,contains('await _reviewSmsAccountTransfer(item:selected,facts:facts);'));
+  expect(review,contains('if(learned&&mounted){'));
   expect(ui,contains(r"Key('waffra-sms-rule-bucket-$kind')"));
   expect(home,contains('await bulkSmsSheet(initialText:body,'));
  });

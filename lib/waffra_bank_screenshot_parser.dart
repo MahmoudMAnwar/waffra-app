@@ -69,10 +69,10 @@ abstract final class WaffraBankScreenshotParser {
     caseSensitive: false,
   );
   static final _money = RegExp(
-    r'(?<![0-9A-Za-z])(?:SAR|SR|ر\.?\s*س|ريال)\s*[:：]?\s*'
+    r'(?<![0-9A-Za-zء-ي])(?:SAR|SR|ر\.\s*س|ر\s+س|ريال)(?![A-Za-zء-ي])\s*[:：]?\s*'
     r'((?:[0-9]{1,3}(?:,[0-9]{3})+|[0-9]{1,7})(?:[.,][0-9]{1,2})?)(?![0-9.,])'
     r'|(?<![0-9])((?:[0-9]{1,3}(?:,[0-9]{3})+|[0-9]{1,7})'
-    r'(?:[.,][0-9]{1,2})?)(?![0-9.,])\s*(?:SAR|SR|ر\.?\s*س|ريال)',
+    r'(?:[.,][0-9]{1,2})?)(?![0-9.,])\s*(?<![A-Za-zء-ي])(?:SAR|SR|ر\.\s*س|ر\s+س|ريال)(?![A-Za-zء-ي])',
     caseSensitive: false,
   );
   static final _date = RegExp(

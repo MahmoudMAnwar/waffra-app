@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'waffra_sms_local_rules.dart';
+import 'waffra_bank_sms_facts.dart';
 
 /// Rules configure offline review suggestions only. This screen has no ledger,
 /// bank-account, SMS-permission, or cloud-provider write capability.
@@ -104,15 +105,9 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
   var searchQuery='';
   String? validation;
   final selected=<String>{...?existing?.keywords};
-  final candidates=WaffraSmsLocalRules.suggestions([
-   if(seed!=null)seed,...widget.scannedMessages,
-  ]);
-  final seedChoices=seed==null?const <String>[]:
-   WaffraSmsLocalRules.suggestions([seed]);
-  if(existing==null){
-   if(proposed!=null)selected.addAll(proposed.keywords);
-   else if(seedChoices.isNotEmpty)selected.add(seedChoices.first);
-  }
+  // Never fall back to the first generic word (e.g. "خصم") for a
+  // seeded transfer. Only a rule verified against this SMS may be preselected.
+  if(existing==null&&proposed!=null)selected.addAll(proposed.keywords);
   Future<void> addKeyword(StateSetter update)async{
    final keyword=customKeyword.text.trim();
    if(!WaffraSmsLocalRules.safeRuleKeyword(keyword,kind)){
@@ -136,6 +131,11 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
       (income?widget.incomeCategories:widget.expenseCategories):
       const <String>[];
      if(category!=null&&!categories.contains(category))category=null;
+     final candidates=seed==null?
+      WaffraSmsLocalRules.suggestions(widget.scannedMessages):
+      (WaffraSmsLocalRules.suggestedRule(body:seed,
+       sender:widget.seedSender,kind:kind,category:widget.seedCategory)
+        ?.keywords??const <String>[]);
      final visible=candidates.where((item)=>WaffraSmsLocalRules.normalized(item)
       .contains(WaffraSmsLocalRules.normalized(searchQuery))).take(60).toList();
      final previewRule=WaffraSmsLocalRule(
@@ -144,8 +144,9 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
       kind:kind,matchAll:all,sender:sender.text.trim());
      // A seeded bank sender is known. Never fake a 0-match preview by
      // evaluating a sender-scoped rule against senderless queue text.
-     final previewMessages=<String>{...?widget.scannedMessages,
-      if(seed!=null)seed};
+     // When teaching a specific SMS, preview THAT sender and SMS only.
+     final previewMessages=seed!=null?<String>{seed}:
+      <String>{...widget.scannedMessages};
      final matches=previewMessages.where((sms)=>
       WaffraSmsLocalRules.matches(previewRule,sms,
        sender:seed!=null&&sms==seed?widget.seedSender:'')).length;
@@ -191,6 +192,13 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
             kind=option;income=option=='income';
             if(existing==null)all=option!='excluded';
             category=null;autoPost=false;accountId='';
+            // A change of rule type invalidates every old keyword choice.
+            if(seed!=null&&existing==null){
+             selected.clear();
+             selected.addAll(WaffraSmsLocalRules.suggestedRule(
+              body:seed,sender:widget.seedSender,kind:option,
+              category:widget.seedCategory)?.keywords??const <String>[]);
+            }
            })),
         ]),
         const SizedBox(height:12),
@@ -359,6 +367,25 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
            refresh(()=>validation=widget.english?
             'Select a valid category.':'اختار قسم رئيسي وفرعي صحيح.');
            return;
+          }
+          // An explicitly seeded rule must be semantically consistent with
+          // the actual reviewed message, and match its confirmed sender.
+          if(seed!=null){
+           final facts=WaffraBankSmsFactsParser.parse(seed);
+           final consistent=!facts.pending&&switch(kind){
+            'income'=>facts.kind==WaffraBankOperationKind.income,
+            'expense'=>facts.kind==WaffraBankOperationKind.expense,
+            'transfer'=>facts.kind==WaffraBankOperationKind.transfer,
+            'excluded'=>facts.kind==WaffraBankOperationKind.uncertain,
+            _=>false,
+           };
+           if(!consistent||!WaffraSmsLocalRules.matches(
+              rule,seed,sender:widget.seedSender)){
+            refresh(()=>validation=widget.english?
+             'This rule does not match the original sender, message or type.':
+             'القاعدة لا تطابق المرسل أو الرسالة الأصلية أو نوع العملية.');
+            return;
+           }
           }
           try{WaffraSmsLocalRules.validate(rule);}
           on FormatException{

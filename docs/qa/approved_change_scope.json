@@ -1,20 +1,555 @@
 {
   "contract_version": 1,
-  "change_id": "CI-M228-post-M468-verified-pull-refresh-assertion-20261105",
-  "human_scope_review": "Owner reported a failed APK build on main 87bbc0d after approved PR #392/#393. GitHub job 127488700667 failed exactly one Python source regression: M228 still expects synchronous named-budget readList, while the M468-approved verified pull-refresh intentionally awaits WaffraLargeJsonDecode in a Flutter isolate. Change only the obsolete source assertion and add positive verification that budget decoding, legacy cap migration and read-only finance invariants remain. No finance implementation, schema, SQLCipher, permissions, authentication or Android workflow changes.",
+  "change_id": "M470-staged-32-approved-Waffra-corrections-20261106",
+  "human_scope_review": "Owner directed a new PR tracking 32 approved Waffra follow-up changes, with real implementation status for every numbered item and strict priority for broken money posts, recurrent due accounts, verified account selection, then UI. This candidate implements only the specifically confirmed M470 items described below. Items 1-23 and the other incompletely reconstructed requests are NOT silently marked done, and no production migration, account reattribution, default budget split, bank-sender guessing, or SQLCipher safety bypass is authorized. Exact-head CI and signed-device approval remain mandatory. This revision additionally includes the approved two-step bank/provider and linked-account selection in EXISTING recurring default settings only; mandatory account on initial recurring creation remains pending. M470 adds only a provider-then-linked-account picker to recurring default settings, with active-account filtering and explicit confirmed default; this does not claim atomic creation-time linkage. Known bank display grouping is derived only from account labels; unrecognized providers remain isolated, never auto-selected. The user requested this two-level recurring selector. New M470 account-budget math is isolated pure code and disposable unit tests, with no claim of live SQLCipher allocation persistence. Standalone budgets remain shared and must not be split or multiplied until explicitly allocated and backed up. M470 Add Account redesign changes no SQLCipher schema, account types, or native financial writer. Bank/provider input is a display label on one of the four already-supported storage kinds. Advanced account subtype persistence remains pending. M470 linked selectors modify only the existing verified manual/transfer money UI. They preserve its callbacks and source validation. Group by display name is a suggestion, never SMS confidence or a financial posting decision. M470 item 26 moves only the existing Account selector trigger inside the Home balance-card delegate; it preserves active verified balances, privacy eye and finance-account source neutrality. Owner follow-up specifically directs completing partial M470 items #23,#25,#28,#29,#30,#32 before the next group. This revision adds the main Home two-level source/transfer selection, requires explicit verified account selection for all newly posted money, and persists recurring creation-time bank/account selection inside the same SQLCipher transaction as its typed schedule. Existing unassigned history is deliberately preserved. The legacy M440 transfer UI test scrolls to the actual submit button following added two-level selectors. No unrequested files or shortcuts to financial writer authorization are included. #23 and #29 remain pending complete persistence and UI linking, and #32 requires exact-head/device acceptance. Explicit budget attribution is user-selected for an existing SAR account at creation/edit and serialized within existing encrypted named-budget JSON; historic shared budgets are unchanged. The monthly Home card reads only that account's budget limit and verified account-scoped spending, All view sums unique budget IDs once. No destructive SQL schema migration or assumed division of a shared cap. M470 item23 user-approved bank linking: optional last-four is collected with explicit approval in Add Account, and WaffraVerifiedAccountsApi atomically creates the real account + suffix inside the already verified native-locked SQLCipher transaction. No new schema or weakened bank-sender trust; the existing V3 account context already roundtrips suffixes. True versioned account subtype metadata remains pending. Follow-up to owner-approved M470 budget attribution and two-stage bank/account selectors: four preexisting full-Flutter tests failed on obsolete source-text expectations (M343/M359/M401 monthly budget used unconditional entries and caps; M402 expected old one-step return statement). Only regression assertions updated to verify actual correct account-scoped budget projection and two-level centered modal controls. No production behavioral requirement or fail-closed policy relaxed. Owner-approved M470 #22: when an already-authenticated foreground session is idle for 60 seconds, a full-viewport OS-mandatory biometric overlay is built OUTSIDE the Navigator so dialogs, dropdowns, selected tab and entered drafts stay mounted. Activity resets timer; background is still governed by the existing independent security lifecycle gate; login/onboarding remain exempt. Source additions are limited to a new helper and its widget regression plus import and builder lines; no biometric or writer bypass. CI revealed MaterialApp already had a hideWaffraAmounts ValueListenableBuilder; the idle overlay is now composed inside the SAME builder, retaining existing RTL masking logic and avoiding duplicate named argument. The M385 bounded section now covers only the original localization delegates plus that builder. M470 user-requested advanced account kinds are represented as independently versioned SQLCipher provider/subtype rows without changing existing money-account kinds, net-worth math, or archived history. New bank checking/savings/investment/deposit and digital/prepaid wallet subtypes are descriptive asset classifications only; no unsafe debt/credit-liability semantics are introduced. User-selected bank ID and optional masked four digits save within a single verified account creation transaction. The optional authenticated V3 accountDetailsV1 extension validates every provider, subtype and account reference; older V3/V2 restores remain compatible. Existing accounts with no metadata stay untouched. Tests include signed-encrypted backup roundtrip and forged reference rejection. The first typed account writer insertion caused a duplicated text suffix due an authoring substitution issue; the adapter was restored from pre-change commit 105d5ce and the single scoped method reinserted, retaining existing verified locking semantics. No duplicate class or transfer method is present at corrected head. M470 recovered items #7/#8/#9/#10 from direct user copy: after bulk exclusion of ALL messages from a sender, ask for a separate optional permanent sender exclusion; provide an Excluded senders list with restore; block future SMS before local parsing or review queuing. Native sender exclusions are encrypted with the existing Android Keystore, scoped to the verified financial owner and removed when explicit SMS consent changes to another owner. No Android SMS deletion, auto posting or changes to financial ledger. M470 performance uses bounded 100-item acknowledgements and O(1) selected-set checks, with cached sealed sender policy. Signed-device timing for 500 SMS and exact-head CI remain pending. The user's recovered M470 #1 and #2 describe app-wide nonworking Logout and very slow Pull-to-Refresh. Keep login credentials, SMS and financial records safe on failed logout, and preserve verified account-source integrity. Optimize read-only no-op refresh only after trusted encrypted witness digest/generation match; never skip any changed or legacy source. M470 #11 is now user-recovered: explicitly propose a new financial account for the first unlinked verified bank sender, with consent, name and zero opening default, and only after the creation continue through the existing reviewed SMS finance writer. The account creation and subsequent SMS posting are two separate user-authorized SQLCipher transactions, not falsely described as one atomic operation. Review of the recovered app-wide lag #3 and the 500-SMS selection #10 revealed synchronous AndroidKeyStore decryption/JSONArray iteration in Activity.onResume and pending/ack/exclude MethodChannel handlers. Move them to the pre-existing single-thread SMS executor and return safely on main. This is an isolated performance fix, not proof all lag is solved. User's pasted original midnight 32-item chat confirmed exact #4 as lag after committing a bank SMS, and #3 as lag after manual add/transfer/goals/recurring/startup. #11 original requires auto-filled sender name, zero default, negative expense balance and atomic account+first-SMS posting; current account/write are separate transactions, so #11 remains PARTIAL. #14 must return from Teach Waffra to the same pending review without rescanning history on mere Back. M470 moves post-write large ledger JSON decoding and pending category JSON decoding off Flutter UI isolate, without changing the authoritative finance writer or financial values. Exact-head CI and phone UI timing remain required. A dedicated SQLCipher integration test now proves the existing financial account query can represent negative balances and the SMS hash prevents two debits. This does NOT change the known limitation: account creation and first SMS post are still distinct confirmed transactions, requiring additional atomicity work before #11 can be certified as fully done. Follow-up exact-head CI on 2026-11-06 returned 6 failing full-suite workflows caused by four source-text assertions that predate the owner-approved native SMS worker, date-plus-account row and idle biometric wrapper. Update the three preexisting test files only inside tightly anchored M385 sections and the new M470 SMS test to assert those real approved behaviors; do not modify production runtime or financial validation. On 2026-11-06 owner restored the exact original wording for M470 #13-#22. Corrected M470 tracking maps #13 currency refusal before SMS transfer, #14 Arabic SMS fee/currency display corruption, #15 Teach Waffra transfer return, #17 income/expense return, #18 first-tap home redirect, #19 nonresponsive subcategory, #20 post-confirmation learning without Teach Waffra, #21 cross-app word-boundary audit, #22 true 60-second background session. Zero unknown original descriptions remain. The global Riyal text-fix branch is separate and not included in this PR; keep its work unclaimed as Done. Foreground-only idle overlay does not satisfy the background threshold, do not claim completion. This commit contains audit metadata only and no production modifications. M470 final rule-learning UX: protected review handler changed to remove obsolete teach route, no financial writer or SQLCipher policy changed. Existing M462 legacy regression bounded to the single approved test; M470 regression updated. Owner already superseded items #15/#17; exact-head CI and Android acceptance pending. Brought over exactly eight currency source files from fix/m470-global-rtl-currency-text-20261106 plus one narrow BankParser regex in main.dart, two tests and audit document. No home-account-picker code from sibling branch. Nine protected paths have anchored M385 sections and financial writer is unchanged. CI/Android evidence pending. Added exact-head pure finance transfer fee/source-currency tests and source-regressions for sender PopScope and subcategory behavior; changed M385 anchors to match original base exact indent and to include the pre-existing comment in currency UI. Main and bank facts edits are strictly bounded to approved methods; CI and signed Android acceptance still required. Root lifecycle is restricted to its approved method; overlay timer uses wall clock, with deterministic injected clock only in widget tests. No SQLCipher writer, accounts, or login security bypass; Android acceptance pending. M470 #22 already arrived in the source branch from another commit (8ba9f4a): background shield and one-minute wall-clock guard. This follow-up updates M449 fresh release notes after that app code, maintains the exact #22 tracker and adds test coverage for an open bottom sheet and preserved input. No additional production changes in this follow-up, no claim of physical Android verification. M470 #3 single SMS save decoded a potentially large verified ledger with synchronous jsonDecode on Flutter UI after finance commit. Changed only the already-approved M470 bulkSmsSheet region to use existing WaffraLargeJsonDecode.parse async + strict list check; source/test/tracker/release notes all updated together. No finance write or SQLCipher schema changes. Follow-up exact-head M174 M385 guard blocked two old biometric regression test files in the approved #22 QA fix; these exact paths are now explicitly authorized with narrowly bounded test bodies and Issue #396 audit trail. The initial fix commit cc6f8b9 modified no production code. No security guard or full test bypass is allowed; exact-head CI is still required.",
   "user_requested_changes": [
-    "Repair the M228 Python regression assertion that blocks the owner's APK from main after the approved M468 async verified ledger and budget refresh, maintaining explicit positive integrity and legacy budget projection checks."
+    "Remove the unassigned-transactions option from the Home account selector, while safely resetting an old saved unassigned display preference to All accounts without discarding historical records.",
+    "Allow the user to choose a date in the verified internal transfer form, while preserving verified source/destination selection and stable duplicate-protected transfer intent.",
+    "Require a real verified financial account before confirming a recurring due or a cash-financed savings goal due; never inherit the selected Home account.",
+    "Repair the finance write refusal after selecting Paid on a recurring due by narrowing the fresh SQLCipher captured delta to the single new posting and the related postponed metadata, without weakening unrelated finance-data guards.",
+    "Maintain an explicit accurate 32-item implementation tracker showing complete, partial, unverified, and pending items rather than inventing Done results.",
+    "Improve existing recurring default account configuration with explicit provider/bank first and one linked active money account second; never offer unassigned or silently select a bank account, preserving prior payments and reminders.",
+    "Show a provider/bank selector followed by explicitly chosen linked accounts when editing the recurring default account; prevent a new unassigned default, without guessing financial posting authority or changing historical paid entries.",
+    "Preserve recurring transaction provenance when a monthly due is confirmed Paid: the saved ledger row must have sourceType recurring and must not be mislabeled a manually entered transaction; ensure one-time receipt and source validation remain unchanged.",
+    "Calculate monthly budget limits and spending for the selected verified money account and for All accounts by summing only explicitly associated account-specific budget allocations; refuse duplicate caps or synthetic linking of shared or unassigned budgets.",
+    "Redesign Add Account with separate, required account kind, bank/provider when the selected type is bank, a user-defined name and integer-halalas opening balance; route confirmed creation to the existing verified SQLCipher account writer.",
+    "Show the financial institution/bank before its linked account when choosing a verified manual income/expense source and when selecting transfer source/destination accounts; changing the institution must clear the account and never silently use the Home header.",
+    "Move the Home All accounts and selected-account picker inside the emerald balance card while preserving the existing verified read-only filter and preventing an implicit money source.",
+    "Make the actual Home manual income/expense and transfer editor use the provider/bank then account hierarchy and require that account for a new posting.",
+    "Require an explicitly selected verified account before any new income or expense (including reviewed SMS or OCR) is committed; retain historical unassigned entries unchanged.",
+    "When a user creates/edits a monthly recurring schedule, choose bank/provider and an active account in that same editor; store the default with the typed recurring row in one SQLCipher transaction, rejecting invalid account IDs atomically.",
+    "Fix the pre-existing transfer widget regression to scroll to its now-lower confirmation button before tapping and asserting the invalid amount message.",
+    "Persist user-selected account association for each monthly named budget in existing encrypted finance JSON, retaining old shared budgets, and show only verified account-specific monthly caps/spending when switching Home accounts while All sums each budget once.",
+    "During creation of an explicitly selected bank account, optionally ask for the user's confirmed last four account/card digits and register it alongside the bank account in one verified SQLCipher transaction so SMS account matching can use bank/provider and suffix evidence.",
+    "Fix all four existing Flutter regression test failures without reverting the user-approved account-scoped monthly budgets and two-step bank/account selection. Ensure expectations assert the new, stricter financial routing and centered dropdown behavior.",
+    "After 60 seconds of user inactivity in an unlocked foreground Waffra session, show a mandatory biometric-only blocking overlay ABOVE all routes without closing an open form, dropdown or navigation state. On fingerprint/face success reveal exactly the previous screen; cancel/retry must remain locked and login screens are exempt.",
+    "Complete M470 account-type/provider linking without replacing original accounts or ledger: store current/savings/investment/deposit/digital wallet subtypes and user-confirmed bank identity in a separately versioned SQLCipher table, read identity before any SMS bank matching, and include the optional identity in V3 encrypted backup and atomic restore. Preserve existing accounts, bank suffixes, financial arithmetic and V2/V3 compatibility.",
+    "M470 #7: only after removing every queued SMS from a sender, ask if the user ALSO wants to exclude that sender; no implicit sender-level block from queue removal.",
+    "M470 #8: provide the Excluded senders list labelled «المستبعدون» in bank-SMS settings and allow explicit restoration for future messages without restoring intentionally removed past messages.",
+    "M470 #9: keep owner-bound encrypted blocked senders, reject their future SMS before analysis and review queue insertion, apply same filter to historical and unknown-financial scans, and reset on verified owner switch.",
+    "M470 #10: improve 500-message selection and batch removal without blocking the UI or weakening confirmation; use set lookups, lazily built list, native sealed-filter caching, and 100-item acknowledgements.",
+    "M470 #1: fix broken sign-out from every in-app entry point, with a single guarded in-flight action, safe SMS suspension before verified sign-out, and a visible error when the session cannot be safely ended. Preserve all encrypted financial data.",
+    "M470 #2: optimize pull-to-refresh across app screens by detecting an unchanged authenticated encrypted source generation and digest after the mandatory verified read, avoiding unnecessary large ledger JSON parse/rebuild; guarded legacy continues full refresh.",
+    "M470 #11: after explicit bank SMS review for a known sender lacking a matching verified account, offer a user-approved bank account with name, opening SAR 0 default and optional four-digit suffix. Create through verified SQLCipher, re-read source, then continue to separately user-confirmed and deduplicated SMS posting against that new account; cancellation does not save money.",
+    "M470 #3/#10: avoid Android main-thread jank when reviewing hundreds of bank SMS or returning to app. Move encrypted pending-queue decrypt, exclusion list/updates and batch acknowledgement to the existing single dedicated Android SMS executor, dispatch MethodChannel results/errors back on the UI thread. Retain exact queue semantics and financial writer safety.",
+    "M470 #4: eliminate the visible pause immediately after approving a bank SMS finance transaction, by parsing the resulting verified encrypted ledger and newly committed categories outside the Flutter UI isolate before one state update; do not change or bypass the financial writer.",
+    "M470 #14: after opening Teach Waffra from a specific bank SMS, Android Back or Save returns to that same SMS review only if it is still pending. Do not rescan hundreds of historical messages when the user merely backs out without saving a rule.",
+    "M470 #3: after a manual income or expense save, decode the verified encrypted ledger outside Flutter's UI isolate, preserving original atomic write/receipt/integrity behavior.",
+    "M470 #11 verification: a newly explicitly confirmed bank account opened at SAR 0, then charged by one confirmed 200 SAR SMS expense, has an actual SQLCipher balance of -200 SAR. Replaying the exact bank SMS hash must be skipped without creating a second debit or account link.",
+    "Update four obsolete full-suite regression expectations after M470's approved date plus account row, biometric route-preserving overlay, and Android off-main-thread encrypted SMS exclusion. Preserve financial and security assertions; no production code is weakened.",
+    "Reconcile the full owner-provided original M470 items 13 through 22 into the approved 32-item scope tracker, correcting prior misnumbering and noting that the app-wide Arabic currency word-boundary implementation is still in a separate unmerged branch.",
+    "Owner-confirmed final UX decision: remove the Teach Waffra button from bank SMS income, expense, transfer and exclusion review; allow verified financial review directly, auto-learn only safe sender-scoped words after confirmed finance posting or specific SMS acknowledgement; preserve the independent manual Rules settings screen.",
+    "Integrate original owner-approved M470 #14 and #21 Arabic Rial word-boundary audit: fix false SAR matching for ordinary words 'رسالة/رسائل/رسوم' across all nine SMS, image, AI, cloud and display parsing files, while preserving verified true Saudi Riyal amounts and independent transfer fee data. Import its two focused regression tests and audit only, not unrelated changes from the sibling branch.",
+    "Finish M470 #13 bank-SMS transfer review: extract only independently verified SAR principal, keep deducted 0.58 SAR fee separate and do not auto-charge fees, recognize Arabic internal transfers, require two user-confirmed real money accounts.",
+    "Finish M470 #18 first tap from SMS sender group: ensure PopScope allows programmed message selection after rebuild while preserving normal Back navigation; M470 #19: use freshly verified child-category list scoped to the selected main category after returning from dialog.",
+    "M470 #22 final: opaque green app switcher privacy shield and biometric ONLY after 60s background, preserving exact in-progress Navigator route and draft. Cold sign-in and existing explicit auth remain mandatory.",
+    "M470 owner-requested correction of failing PR #395 CI (#396): sync two pre-existing M440/M443 biometric regression test source assertions with approved 60-second WaffraIdleBiometricOverlay, while keeping exact bounded test edits, mandatory green privacy shield and verified biometric after 60 seconds. Fix the three M470 tests to simulate valid Android lifecycle transitions. No production finance or security changes."
   ],
   "allowed_changed_files": [
+    "docs/qa/WAFFRA_32_NEW_CHANGES_M470_TRACKER.md",
     "docs/qa/approved_change_scope.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "test/qa/m228_pull_refresh_live_wiring_test.py"
+    "lib/main.dart",
+    "lib/storage/waffra_home_transaction_capture.dart",
+    "lib/waffra_account_context_settings.dart",
+    "lib/waffra_account_monthly_budget_policy.dart",
+    "lib/waffra_account_transaction_form.dart",
+    "lib/waffra_accounts_manager_page.dart",
+    "lib/waffra_home_accounts_sheet.dart",
+    "lib/waffra_new_account_dialog.dart",
+    "lib/waffra_recurring_account_groups.dart",
+    "test/m467_account_header_test.dart",
+    "test/m470_account_monthly_budget_policy_test.dart",
+    "test/m470_account_scope_and_transfer_date_test.dart",
+    "test/m470_balance_header_account_picker_test.dart",
+    "test/m470_new_account_dialog_test.dart",
+    "test/m470_recurring_provider_accounts_test.dart",
+    "test/qa/m447_verified_sms_account_linking_test.py",
+    "test/storage/m470_recurring_payment_sqlcipher_integration_test.dart",
+    "test/storage/m470_verified_recurring_payment_capture_test.dart",
+    "lib/storage/waffra_fresh_finance_modules_repository.dart",
+    "test/m440_account_transaction_form_test.dart",
+    "lib/storage/waffra_verified_accounts_api.dart",
+    "test/m343_goal_recurring_named_budgets_test.dart",
+    "test/m359_budget_directory_and_templates_test.dart",
+    "test/m401_m402_budget_month_centered_dropdown_test.dart",
+    "lib/waffra_idle_biometric_overlay.dart",
+    "test/m470_idle_biometric_overlay_test.dart",
+    "lib/storage/waffra_account_details_schema.dart",
+    "lib/storage/waffra_account_details_backup.dart",
+    "lib/storage/waffra_accounts_repository.dart",
+    "lib/storage/waffra_accounts_portable_backup_v3.dart",
+    "test/storage/m470_account_details_v3_test.dart",
+    "lib/waffra_sms_rule_settings_page.dart",
+    "test/m470_sms_sender_and_rule_accuracy_test.dart",
+    "lib/waffra_auto_sms.dart",
+    "native/WaffraAutoSmsStore.kt",
+    "native/WaffraMainActivity.kt",
+    "test/m470_sms_excluded_senders_test.dart",
+    "test/m470_logout_and_refresh_test.dart",
+    "test/m470_sms_first_sender_account_test.dart",
+    "test/m470_postsave_lag_and_teach_return_test.dart",
+    "test/storage/m470_first_sms_negative_balance_test.dart",
+    "test/waffra_m206_day_theme_tour_sms_regression_test.dart",
+    "test/m398_budget_directory_reopen_scope_test.dart",
+    "test/m372_category_budget_android_keyboard_ux_test.dart",
+    "test/m462_smart_sms_rule_review_test.dart",
+    "lib/waffra_riyal_symbol.dart",
+    "lib/waffra_sms_multicurrency_review.dart",
+    "lib/waffra_ai_finance_brain.dart",
+    "lib/waffra_auto_sms_policy.dart",
+    "lib/waffra_bank_screenshot_parser.dart",
+    "lib/waffra_bank_sms_facts.dart",
+    "lib/waffra_cloudflare_sms_gateway.dart",
+    "lib/waffra_sms_cloud_redactor.dart",
+    "test/m470_arabic_currency_word_boundary_test.dart",
+    "test/m470_financial_currency_word_boundary_regression_test.dart",
+    "docs/qa/m470_arabic_text_currency_audit.md",
+    "test/m470_sms_transfer_fee_firsttap_category_test.dart",
+    "test/m440_biometric_resume_regression_test.dart",
+    "test/m443_merchant_screenshot_regression_test.dart"
   ],
   "bounded_sections": {
-    "test/qa/m228_pull_refresh_live_wiring_test.py": [
+    "lib/main.dart": [
       {
-        "start": "    def test_refresh_only_changes_source_selection_not_named_budget_projection(self):",
-        "end": "\nif __name__ == \"__main__\":"
+        "start": " Future<void> _m468ReadVerifiedAccountsOnce()async{",
+        "end": "\n Future<void> openVerifiedAccounts()async{"
+      },
+      {
+        "start": " Future<({List<String?>? ids,int? generation})?> reviewSmsAccountLinks(",
+        "end": "\n/// Budget assignment is OPTIONAL"
+      },
+      {
+        "start": "      if(!entries.any((e)=>e.id==id)){",
+        "end": "\n      recurringPostponed.remove(id);"
+      },
+      {
+        "start": "class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {",
+        "end": "/// A cancelled budget warning"
+      },
+      {
+        "start": "      SliverToBoxAdapter(child:Padding(\n       padding:const EdgeInsets.fromLTRB(14,14,14,4),",
+        "end": "      SliverPadding(padding:const EdgeInsets.fromLTRB(14,10,14,96),"
+      },
+      {
+        "start": "import 'waffra_accounts_manager_page.dart';",
+        "end": "\nimport 'storage/waffra_fresh_finance_modules_repository.dart';"
+      },
+      {
+        "start": "class RecurringBill {",
+        "end": "\nconst iconNames="
+      },
+      {
+        "start": " Future<void> entrySheet(",
+        "end": "\n Future<void> showReceipt("
+      },
+      {
+        "start": " Future<void> recurringDialog(",
+        "end": "\n DateTime nextRecurringDue("
+      },
+      {
+        "start": "class WaffraNamedBudget extends BudgetCategory {",
+        "end": "\n/// Independent percentage alerts"
+      },
+      {
+        "start": " Future<void> editBudgetForCategory(",
+        "end": "\n /// No category selection: a budget is a standalone financial envelope."
+      },
+      {
+        "start": " Future<String?> chooseBudgetCategory(",
+        "end": "\n // Cross-screen refresh stays inside State"
+      },
+      {
+        "start": " Widget monthlyBudgetCard(){",
+        "end": "\n Widget _budgetFigure("
+      },
+      {
+        "start": "import 'waffra_external_media_session.dart';",
+        "end": "\nimport 'waffra_local_phone_credentials.dart';"
+      },
+      {
+        "start": "  localizationsDelegates:const [",
+        "end": "\n\n  theme:ThemeData("
+      },
+      {
+        "start": "            title:WaffraText(sender,maxLines:2,",
+        "end": "            trailing:Row(mainAxisSize:MainAxisSize.min,children:["
+      },
+      {
+        "start": " Future<void> _openUnknownSmsFromSettings()async{",
+        "end": " Future<void> _openAutoSmsInbox()async{"
+      },
+      {
+        "start": "            trailing:Row(mainAxisSize:MainAxisSize.min,children:[\n             Checkbox(\n              key:Key('waffra-sms-select-sender-'",
+        "end": " Widget _autoSmsReviewCard(){"
+      },
+      {
+        "start": "     waffraIsEnglish?'Classification rules':'قواعد تحليل الرسائل',",
+        "end": "     waffraIsEnglish?'Scan previous SMS':'فحص رسائل SMS السابقة',"
+      },
+      {
+        "start": " Future<void> logout()async {",
+        "end": " Future<void> setPin("
+      },
+      {
+        "start": " Future<void> _refreshFromVerifiedFinance()async {",
+        "end": " Future<void> load()async {\n  await _ensureFinanceBound();"
+      },
+      {
+        "start": " Future<void> _openSmsRules({String? seedMessage",
+        "end": " Future<void> _recordConfirmedSmsAccountAssociation({"
+      },
+      {
+        "start": " Future<void> _reviewAutoSmsCandidates({String? targetId})async {",
+        "end": " void _receiveSharedSms(){"
+      },
+      {
+        "start": " Future<void> bulkSmsSheet({String? initialText",
+        "end": " Future<void> entrySheet("
+      },
+      {
+        "start": "  const n=r'([0-9][0-9,]*(?:\\.[0-9]{1,2})?)';",
+        "end": "  // Prefer the explicit transaction amount over remaining balance or fees."
+      },
+      {
+        "start": " Future<void> _reviewSmsAccountTransfer({",
+        "end": " Future<void> _reviewAutoSmsCandidates({String? targetId})async {"
+      },
+      {
+        "start": "  final senders=bySender.keys.toList()",
+        "end": "  final selectedIds=<String>{};"
+      },
+      {
+        "start": "  final selected=await showModalBottomSheet<String>(\n   context:context,isScrollControlled:true,showDragHandle:true,\n   builder:(sheet)=>StatefulBuilder(",
+        "end": "     child:SizedBox(height:selectedSender==null?"
+      },
+      {
+        "start": " Future<void> launchIntro()async{",
+        "end": " @override void dispose(){WaffraRegionalCopy.countryIso.removeListener(_onRegionChanged);"
+      }
+    ],
+    "lib/waffra_home_accounts_sheet.dart": [
+      {
+        "start": "     Flexible(child:ListView(shrinkWrap:true,children:[",
+        "end": "\n     const SizedBox(height:8),\n     OutlinedButton.icon("
+      }
+    ],
+    "lib/waffra_account_transaction_form.dart": [
+      {
+        "start": " late final DateTime requestTime=",
+        "end": "\n WaffraAccountOperation mode="
+      },
+      {
+        "start": "   if(mode==WaffraAccountOperation.transfer){",
+        "end": "\n   }else{"
+      },
+      {
+        "start": "    if(mode==WaffraAccountOperation.transfer)...[",
+        "end": "\n    if(mode!=WaffraAccountOperation.transfer)...["
+      },
+      {
+        "start": "import 'storage/waffra_accounts_repository.dart';",
+        "end": "\n/// User-facing transaction modes"
+      },
+      {
+        "start": " String? source,destination,error,selectedBudgetId;",
+        "end": "\n bool saving=false,saved=false;"
+      },
+      {
+        "start": "  final accounts=active;",
+        "end": "  return SafeArea("
+      }
+    ],
+    "lib/storage/waffra_home_transaction_capture.dart": [
+      {
+        "start": "    final allowed = switch (route) {",
+        "end": "\n    if (allowed.isEmpty) return;"
+      }
+    ],
+    "test/m467_account_header_test.dart": [
+      {
+        "start": " testWidgets(",
+        "end": "\n test('M467 Home header scope"
+      },
+      {
+        "start": " test('M467 Home header scope is verified and never passed into finance commits',(){",
+        "end": "\n  expect(src,contains('_m467ScopedEntries().toList()'));"
+      }
+    ],
+    "test/qa/m447_verified_sms_account_linking_test.py": [
+      {
+        "start": "    def test_verified_source_only_with_no_shadow_db(self):",
+        "end": "\n    def test_no_guarded_legacy_sms_account_override(self):"
+      }
+    ],
+    "lib/waffra_account_context_settings.dart": [
+      {
+        "start": "import 'storage/waffra_verified_accounts_api.dart';",
+        "end": "\nclass WaffraAccountContextSettings extends StatefulWidget {"
+      },
+      {
+        "start": " Future<void> _editRecurring(WaffraRecurringAccountTemplate item)async{",
+        "end": "\n Future<void> _verifySmsBank()async{"
+      },
+      {
+        "start": "       subtitle:Text(item.accountId==null",
+        "end": "\n       trailing:const Icon(Icons.edit_outlined)"
+      }
+    ],
+    "lib/waffra_accounts_manager_page.dart": [
+      {
+        "start": "import 'waffra_account_context_page.dart';",
+        "end": "\n/// M440 optional SQLCipher account page."
+      },
+      {
+        "start": " Future<void> addAccount()async{",
+        "end": "\n Future<void> rename("
+      }
+    ],
+    "lib/storage/waffra_fresh_finance_modules_repository.dart": [
+      {
+        "start": "import 'waffra_encrypted_store.dart';",
+        "end": "\n/// The screens for categories"
+      },
+      {
+        "start": "  static Map<String, Object?> _validate(",
+        "end": "\n  Future<List<Map<String, Object?>>> list("
+      },
+      {
+        "start": "  Future<void> save(",
+        "end": "\n  /// Prevent permanent deletion"
+      }
+    ],
+    "test/m440_account_transaction_form_test.dart": [
+      {
+        "start": " testWidgets('M440 bad/empty transfer must not call the finance writer',",
+        "end": "\n}"
+      }
+    ],
+    "lib/storage/waffra_verified_accounts_api.dart": [
+      {
+        "start": " @override\n Future<void> createAccount(",
+        "end": "\n @override\n Future<bool> transfer("
+      },
+      {
+        "start": "import 'waffra_account_context_read.dart';",
+        "end": "\nimport 'waffra_account_context_policy.dart';"
+      }
+    ],
+    "test/m343_goal_recurring_named_budgets_test.dart": [
+      {
+        "start": " test('M343 goal/recurring UI uses one saved total and budget remains independent',(){",
+        "end": "\n}"
+      }
+    ],
+    "test/m359_budget_directory_and_templates_test.dart": [
+      {
+        "start": "  test('M359: overall budget is computed, transaction review can create budget', () {",
+        "end": "\n}"
+      }
+    ],
+    "test/m401_m402_budget_month_centered_dropdown_test.dart": [
+      {
+        "start": "  test('M401 monthly budget card counts user budgets and navigates display month', () {",
+        "end": "\n  for (final direction in [TextDirection.rtl,TextDirection.ltr])"
+      },
+      {
+        "start": "  test('M402 normal form dropdowns use centered modal, not anchored popup', () {",
+        "end": "\n}"
+      }
+    ],
+    "lib/storage/waffra_accounts_repository.dart": [
+      {
+        "start": "import 'package:drift/drift.dart';",
+        "end": "\nimport 'waffra_account_context_schema.dart';"
+      },
+      {
+        "start": "class WaffraAccountBalance {",
+        "end": "\n/// M440. Account movements"
+      },
+      {
+        "start": " Future<List<WaffraAccountBalance>> balances()async{",
+        "end": "\n Future<void> renameAccount({required String id,required String name,\n  required bool userConfirmed})async{"
+      }
+    ],
+    "lib/storage/waffra_accounts_portable_backup_v3.dart": [
+      {
+        "start": "import 'waffra_account_context_schema.dart';",
+        "end": "\nimport 'waffra_accounts_finance_history.dart';"
+      },
+      {
+        "start": "class WaffraAccountsBackupV3Preview {",
+        "end": "\nabstract final class WaffraAccountsPortableBackupV3 {"
+      },
+      {
+        "start": " static Future<Map<String,Object?>> capture(WaffraEncryptedStore store)async{",
+        "end": "\n static List<Map<String,Object?>> _rows("
+      },
+      {
+        "start": " static Future<String> bundle({",
+        "end": "\n static Future<WaffraAccountsBackupV3Preview> verifyAndPreview("
+      },
+      {
+        "start": " static Future<WaffraAccountsBackupV3Preview> verifyAndPreview({",
+        "end": "\n /// Restores ONLY into a caller-owned empty"
+      },
+      {
+        "start": " static Future<WaffraPortableEncryptedRestoreResult> restoreToEmptyEncryptedVault({",
+        "end": null
+      }
+    ],
+    "lib/waffra_sms_rule_settings_page.dart": [
+      {
+        "start": "import 'package:flutter/material.dart';",
+        "end": "/// Rules configure offline review suggestions only."
+      },
+      {
+        "start": " Future<void> _edit({",
+        "end": "\n @override Widget build(BuildContext context)=>Scaffold("
+      }
+    ],
+    "native/WaffraAutoSmsStore.kt": [
+      {
+        "start": "    private const val queueName = \"encrypted_candidates\"",
+        "end": "    private const val activeName = \"enabled\""
+      },
+      {
+        "start": "            if (previous != null && previous != owner) {",
+        "end": "            if (owner != null) editor.putString(consentedOwnerName, owner)"
+      },
+      {
+        "start": "    private fun save(context: Context, content: JSONArray): Boolean =",
+        "end": "    private val otp = Regex("
+      },
+      {
+        "start": "    fun scanUnknownFinancialSms(",
+        "end": "    private fun id(sender: String, body: String, at: Long): String {"
+      },
+      {
+        "start": "    fun offer(context: Context, sender: String, body: String, at: Long,",
+        "end": "    fun pending(context: Context): List<Map<String, Any>> = synchronized(mutex) {"
+      },
+      {
+        "start": "    fun importConsentMonth(context: Context, maxRead: Int = 500): Int {",
+        "end": "    /** Claim each review notification once; history never floods the shade. */"
+      }
+    ],
+    "native/WaffraMainActivity.kt": [
+      {
+        "start": "                \"scanUnknownFinancialSms\" -> {",
+        "end": "                \"claimAutoBankSmsCloudAttempt\" -> result.success("
+      },
+      {
+        "start": "    override fun onResume() {",
+        "end": "    override fun onRequestPermissionsResult("
+      },
+      {
+        "start": "                \"ackAutoBankSms\" -> {",
+        "end": "                \"openMessages\" -> {"
+      }
+    ],
+    "lib/waffra_auto_sms.dart": [
+      {
+        "start": " static Future<bool> stageCloudAnalysis(",
+        "end": " static Future<bool> notifyCommitted({"
+      }
+    ],
+    "lib/waffra_new_account_dialog.dart": [
+      {
+        "start": "class WaffraNewAccountDialog extends StatefulWidget {",
+        "end": "class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {"
+      },
+      {
+        "start": " static const banks=<String,({String ar,String en})>{",
+        "end": " @override void dispose(){nickname.dispose();opening.dispose();smsSuffix.dispose();super.dispose();}"
+      }
+    ],
+    "test/waffra_m206_day_theme_tour_sms_regression_test.dart": [
+      {
+        "start": "  test('AR/EN changes direction instantly without whole-page slide or Navigator replacement', () {",
+        "end": "  test('replayable tour includes seven approved screens and smart tools', () {"
+      }
+    ],
+    "test/m398_budget_directory_reopen_scope_test.dart": [
+      {
+        "start": "  test('M398: manual editor retains budget actions and adjacent date', () {",
+        "end": null
+      }
+    ],
+    "test/m372_category_budget_android_keyboard_ux_test.dart": [
+      {
+        "start": "  test('M372: one budget dropdown has create/manage, date and no duplicate buttons', () {",
+        "end": "  test('M372: budget directory shows templates without category filters', () {"
+      }
+    ],
+    "test/m462_smart_sms_rule_review_test.dart": [
+      {
+        "start": " test('M462 beginner review is prefilled and keeps finance approval separate',(){",
+        "end": " test('M462 background SMS respects explicit budget choice before auto-save',(){"
+      }
+    ],
+    "lib/waffra_riyal_symbol.dart": [
+      {
+        "start": "List<InlineSpan>? waffraMoneyCurrencySpans(String input, {",
+        "end": "  final result = <InlineSpan>[];"
+      }
+    ],
+    "lib/waffra_sms_multicurrency_review.dart": [
+      {
+        "start": "    final escaped=currency=='SAR'?",
+        "end": "    final localizedAliases=_arabicNames.entries"
+      }
+    ],
+    "lib/waffra_ai_finance_brain.dart": [
+      {
+        "start": "  static bool competingAmounts(",
+        "end": "  static bool exactCurrency("
+      }
+    ],
+    "lib/waffra_auto_sms_policy.dart": [
+      {
+        "start": " static final _currency=RegExp(",
+        "end": " static final _incoming=RegExp("
+      }
+    ],
+    "lib/waffra_bank_screenshot_parser.dart": [
+      {
+        "start": "  static final _money = RegExp(",
+        "end": "  static final _date = RegExp("
+      }
+    ],
+    "lib/waffra_bank_sms_facts.dart": [
+      {
+        "start": " static final _fee=RegExp(",
+        "end": " static final _ref=RegExp("
+      },
+      {
+        "start": " static final _transfer=RegExp(",
+        "end": " static final _card=RegExp("
+      }
+    ],
+    "lib/waffra_cloudflare_sms_gateway.dart": [
+      {
+        "start": "  static bool sourceCurrencyMatches(",
+        "end": "  /// Validates every important model claim against the *redacted* source."
+      }
+    ],
+    "lib/waffra_sms_cloud_redactor.dart": [
+      {
+        "start": "  static final _money = RegExp(",
+        "end": "  static String? redact("
+      }
+    ],
+    "test/m440_biometric_resume_regression_test.dart": [
+      {
+        "start": "  test('Real background transition invalidates verification; inactive alone does not relock', () {",
+        "end": "\n}"
+      }
+    ],
+    "test/m443_merchant_screenshot_regression_test.dart": [
+      {
+        "start": "  test('M443 Home retains biometric lock on actual background only', () {",
+        "end": "  test('M443 no merchant selection, brand logos or remote logo assets in active UI', () {"
       }
     ]
   }

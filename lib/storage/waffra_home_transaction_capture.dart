@@ -32,6 +32,11 @@ abstract final class WaffraHomeTransactionCapture {
         const <String>{'waffra_goals_v24', 'waffra_recurring_v24'},
       WaffraFinanceRoute.recurringCreateEditDeleteRestore =>
         const <String>{'waffra_recurring_v24'},
+      // A paid recurring due changes only its immutable ledger entry and
+      // its postponement key. Optional Home modules must never be invented
+      // by a fresh encrypted vault during that guarded atomic commit.
+      WaffraFinanceRoute.recurringPostingAndPostponement =>
+        const <String>{'entries', 'waffra_recurring_postponed_v1'},
       WaffraFinanceRoute.categoryCreateEditDeleteRestore =>
         const <String>{'waffra_categories_v24'},
       _ => const <String>{},
