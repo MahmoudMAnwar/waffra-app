@@ -172,7 +172,7 @@ abstract final class WaffraSmsLocalRules {
   WaffraSmsLocalRule(id:'builtin_coffee',name:'قهوة وكافيهات',keywords:['coffee','cafe','قهوة','كافيه','ستاربكس','starbucks'],income:false,category:'مطاعم وكافيهات / مقاهي',matchAll:false,builtIn:true),
   WaffraSmsLocalRule(id:'builtin_fuel',name:'بنزين ووقود',keywords:['وقود','بنزين','fuel','petromin'],income:false,category:'السيارة / بنزين ووقود',matchAll:false,builtIn:true),
   WaffraSmsLocalRule(id:'builtin_taxi',name:'مواصلات',keywords:['uber','careem','اوبر','كريم','taxi'],income:false,category:'مواصلات / أوبر وكريم',matchAll:false,builtIn:true),
-  WaffraSmsLocalRule(id:'builtin_mobile',name:'فاتورة جوال',keywords:['فاتورة جوال','mobile bill','stc bill','mobily bill'],income:false,category:'فواتير / جوال',matchAll:false,builtIn:true),
+  WaffraSmsLocalRule(id:'builtin_mobile',name:'فاتورة جوال',keywords:['فاتورة جوال','mobile bill','stc bill','mobily bill','شحن الجوال','شحن جوال'],income:false,category:'فواتير / جوال',matchAll:false,builtIn:true),
   WaffraSmsLocalRule(id:'builtin_pharmacy',name:'صيدلية وأدوية',keywords:['صيدلية','pharmacy','النهدي','nahdi'],income:false,category:'صحة / صيدلية وأدوية',matchAll:false,builtIn:true),
   WaffraSmsLocalRule(id:'builtin_rent',name:'إيجار',keywords:['ايجار','إيجار','rent'],income:false,category:'سكن / إيجار شهري',matchAll:false,builtIn:true),
   WaffraSmsLocalRule(id:'builtin_subscription',name:'اشتراكات رقمية',keywords:['netflix','نتفليكس','spotify','سبوتيفاي'],income:false,category:'اشتراكات رقمية / بث أفلام',matchAll:false,builtIn:true),
