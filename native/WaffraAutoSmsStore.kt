@@ -33,6 +33,7 @@ object WaffraAutoSmsStore {
     private const val prefsName = "waffra_auto_sms_intake_v1"
     private const val keyAlias = "waffra_sms_intake_aes_v1"
     private const val queueName = "encrypted_candidates"
+    private const val excludedSendersName = "encrypted_excluded_senders_v1"
     private const val activeName = "enabled"
     // Hash of the verified signed-in account. No phone/email is saved here.
     private const val consentedOwnerName = "consented_account_sha256_v1"
@@ -175,7 +176,7 @@ object WaffraAutoSmsStore {
             if (previous != null && previous != owner) {
                 // A different account's encrypted queue and read cursor must
                 // never become visible under this explicit new opt-in.
-                editor.remove(queueName).remove(historyCursorAt)
+                editor.remove(queueName).remove(excludedSendersName).remove(historyCursorAt)
                     .remove(historyCursorId).remove(historySourceMonth)
                     .remove(historyComplete)
                     .remove(historyScannedCount).remove(historyAddedCount)
@@ -259,6 +260,80 @@ object WaffraAutoSmsStore {
     private fun save(context: Context, content: JSONArray): Boolean =
         context.getSharedPreferences(prefsName, Context.MODE_PRIVATE).edit()
             .putString(queueName, seal(content.toString())).commit()
+
+    // Explicit user sender exclusion is encrypted and bound to this authenticated
+    // owner. Do not reuse a removed sender as an automatic learned rule.
+    private fun readExcluded(context: Context): JSONArray {
+        val encrypted = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+            .getString(excludedSendersName, "") ?: ""
+        return open(encrypted) // Corruption is an error, not an empty allowlist.
+    }
+
+    private fun normalizedSender(sender: String) =
+        sender.trim().lowercase(java.util.Locale.ROOT)
+
+    private fun isExcludedLocked(context: Context, sender: String): Boolean {
+        val normalized = normalizedSender(sender)
+        val entries = readExcluded(context)
+        for (i in 0 until entries.length()) {
+            if (normalizedSender(entries.getString(i)) == normalized) return true
+        }
+        return false
+    }
+
+    fun excludedSenders(context: Context): List<String> = synchronized(mutex) {
+        if (!enabled(context)) throw IllegalStateException("SMS intake not active")
+        val entries = readExcluded(context)
+        (0 until entries.length()).map { entries.getString(it) }
+    }
+
+    /** Owner-confirmed sender exclusion. Queue removal and denial-list update
+     * are one preferences commit; existing saved finance and phone SMS remain.
+     */
+    fun excludeSender(context: Context, sender: String): Boolean = synchronized(mutex) {
+        val name = sender.trim()
+        if (!enabled(context) || !senderName.matches(name)) return@synchronized false
+        try {
+            val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+            val previous = readExcluded(context)
+            if (isExcludedLocked(context, name)) return@synchronized true
+            val entries = JSONArray()
+            for (i in 0 until previous.length()) entries.put(previous.getString(i))
+            entries.put(name)
+            val current = read(context)
+            val remaining = JSONArray()
+            for (i in 0 until current.length()) {
+                val row = current.getJSONObject(i)
+                if (normalizedSender(row.optString("sender")) != normalizedSender(name))
+                    remaining.put(row)
+            }
+            val success = prefs.edit()
+                .putString(excludedSendersName, seal(entries.toString()))
+                .putString(queueName, seal(remaining.toString())).commit()
+            if (success) Handler(Looper.getMainLooper()).post { onChanged?.invoke() }
+            success
+        } catch (_: Exception) { false }
+    }
+
+    fun restoreExcludedSender(context: Context, sender: String): Boolean =
+        synchronized(mutex) {
+            if (!enabled(context) || !senderName.matches(sender.trim()))
+                return@synchronized false
+            try {
+                val old = readExcluded(context)
+                val updated = JSONArray()
+                var found = false
+                for (i in 0 until old.length()) {
+                    val existing = old.getString(i)
+                    if (normalizedSender(existing) == normalizedSender(sender)) found = true
+                    else updated.put(existing)
+                }
+                if (!found) return@synchronized false
+                context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+                    .edit().putString(excludedSendersName, seal(updated.toString()))
+                    .commit()
+            } catch (_: Exception) { false }
+        }
 
     private val otp = Regex(
         "(?:\\botp\\b|one.?time.?password|verification.?code|security.?code|" +
@@ -371,6 +446,8 @@ object WaffraAutoSmsStore {
                 found.size < maxResults) {
                 checked++
                 val sender = it.getString(senderCol) ?: continue
+                // Read-only unknown-notice scan must obey the same exclusions.
+                if (synchronized(mutex) { isExcludedLocked(context, sender) }) continue
                 val body = it.getString(bodyCol) ?: continue
                 val date = it.getLong(dateCol)
                 val kind = unknownFinancialKind(sender, body) ?: continue
@@ -400,7 +477,8 @@ object WaffraAutoSmsStore {
             try {
                 // Recheck after entering the lock: logout may race the
                 // receiver between its first permission check and this read.
-                if (!enabled(context)) return@synchronized false
+                if (!enabled(context) || isExcludedLocked(context, sender))
+                    return@synchronized false
                 val queue = read(context)
                 val fingerprint = id(sender, body, at)
                 for (i in 0 until queue.length()) {
