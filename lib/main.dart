@@ -1353,7 +1353,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
      // verifier can be re-created ONLY after explicit new-password consent
      // and an independent device biometric challenge. Corrupted or
      // differently-owned verifier bytes are NEVER overwritten.
-     if(integrity==WaffraLocalCredentialProbe.missing&&!locked){
+     if(integrity==WaffraLocalCredentialProbe.missing){
       final recovered=await _repairMissingLocalCredential(
        WaffraSaudiMobile.inputFromStored(current.phone));
       if(!recovered)return;
@@ -1406,7 +1406,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  // overwrite an existing record, and biometrics are required independently.
  // The newly chosen password must be retained by the user for next login.
  Future<bool> _repairMissingLocalCredential(String phone)async{
-  if(!WaffraLocalPhoneCredentials.validPhone(phone)||locked)return false;
+  if(!WaffraLocalPhoneCredentials.validPhone(phone))return false;
   final host=_logoutNavigatorKey.currentContext;
   if(host==null||!mounted)return false;
   final password=TextEditingController();
