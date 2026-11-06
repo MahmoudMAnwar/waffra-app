@@ -1,3 +1,10 @@
+[PR #402 M485/M486] 2026-11-06 — SMS provenance details, nested Back and biometric startup frame scheduling
+===============================================================================================================
+- M485 #404: transaction details now identify a bank-SMS-origin transaction as a manually reviewed SMS; verified protected original SMS remains separate from ordinary editable notes. The UI does not print SMS source bodies as free-text personal notes.
+- M486 #410 (partial): the native sender list remains mounted beneath SMS review and any subsequent entry editor. Back returns to the same sender group instead of dropping the user into Home; the reviewed row disappears only after pending acknowledgement succeeds. Full unsaved draft restoration, deep multistep Android Back gestures and rotation require further verification.
+- M486 #419 (partial): during app first-ready and post-biometric resume, noncritical widget and SMS synchronization is queued to a Flutter post-frame callback, collapsing redundant resume requests. SQLCipher financial source reads and privacy protections are not skipped or replaced by stale balances. Physical frame traces needed.
+- M385 includes exact added source bounds. This changelog documents development changes only; it is NOT proof that Flutter compile, finance QA, APK or 18-item acceptance passed.
+
 [PR #402 M483-M485] 2026-11-06 — Masked SMS suggestions, original-message review, pending removal, SMS correction source
 ================================================================================================================
 - M483 / Issue #407 (partial): new bank account dialog accepts an optional four-digit SMS ending as an EDITABLE prefill. The first reviewed SMS offers the verified source ending for expense or destination ending for income (only known SAR income/expense; never infer unrelated digits). No account is bound or money moved without explicit account creation. Added test/m483_sms_account_suffix_prefill_test.dart for valid/invalid/editable input. Transfers and account creation from the nested dropdown still need separate verification.
