@@ -201,8 +201,8 @@ last_four=excluded.last_four,confirmed_iso=excluded.confirmed_iso
   });
  }
 
- /// Read only the user-confirmed four-digit suffix from the verified
- /// SQLCipher store. Never infer it from the account title or SMS sender.
+ /// Read only the user-confirmed four-digit suffix from SQLCipher.
+ /// Never infer digits from account labels, SMS sender or the Home filter.
  Future<String?> verifiedBankSuffix(String accountId)async{
   await _ready();
   _id(accountId);
@@ -216,30 +216,7 @@ WHERE s.account_id=? AND a.kind='bank' AND a.currency='SAR'
   if(rows.length>1)throw StateError('Duplicate verified bank suffix.');
   if(rows.isEmpty)return null;
   final suffix=rows.single.read<String>('last_four');
-  if(!RegExp(r'^[0-9]{4}
-  WaffraBankSmsFacts facts,
- )async{
-  await _ready();
-  final rows=await store.customSelect('''
-SELECT s.account_id,s.last_four
-FROM fresh_finance_account_sms_suffixes s
-JOIN fresh_finance_money_accounts a ON a.account_id=s.account_id
-WHERE a.archived=0 AND a.kind='bank' AND a.currency='SAR'
-''').get();
-  final suffixes=<String,String>{
-   for(final row in rows)row.read<String>('account_id'):
-     row.read<String>('last_four'),
-  };
-  return WaffraAccountContextPolicy.matchBankSms(
-   sourceSuffix:facts.sourceSuffix,
-   destinationSuffix:facts.destinationSuffix,
-   incoming:facts.kind==WaffraBankOperationKind.income,
-   classifiedIncomeOrExpense:facts.canAutoPostAsIncomeExpense,
-   verifiedSuffixByAccount:suffixes,
-  );
- }
-}
-).hasMatch(suffix)){
+  if(!RegExp(r'^[0-9]{4}$').hasMatch(suffix)){
    throw StateError('Stored bank suffix failed integrity validation.');
   }
   return suffix;
