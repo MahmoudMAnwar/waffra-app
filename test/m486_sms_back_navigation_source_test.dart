@@ -74,4 +74,42 @@ void main(){
   expect(src,contains('debounce?.cancel();disposeLater([title,value,notes,message,transferAmount,transferNote]);'));
  });
 
+ test('M494 #405 #416 inline creation is verified and preserves editor',(){
+  final src=File('lib/main.dart').readAsStringSync();
+  final start=src.indexOf('Future<void> createAccountInsideEntryDropdown(');
+  final end=src.indexOf('Widget operationPicker(){',start);
+  expect(start,greaterThanOrEqualTo(0));
+  expect(end,greaterThan(start));
+  final section=src.substring(start,end);
+  expect(section,contains('showWaffraDialog<WaffraNewAccountDraft>'));
+  expect(section,contains('suggestedProviderId:expectedBank'));
+  expect(section,contains('await api.balances()'));
+  expect(section,contains('await api.createTypedAccountWithIdentity('));
+  expect(section,contains('await _m467RefreshHomeAccounts()'));
+  expect(section,contains('chosenManualAccount=id'));
+  expect(section,isNot(contains('await openVerifiedAccounts()')));
+ });
+
+ test('M494 #409 original SMS visible in editor but OTP guarded',(){
+  final src=File('lib/main.dart').readAsStringSync();
+  expect(src,contains("Key('waffra-entry-original-sms-expand')"));
+  expect(src,contains("Key('waffra-entry-original-sms-text')"));
+  expect(src,contains('WaffraBankSmsFactsParser.parse(message.text).pending?'));
+  expect(src,contains('SelectableText(message.text,'));
+ });
+
+ test('M494 #417 failed bulk exclusion retains the selected sender sheet',(){
+  final src=File('lib/main.dart').readAsStringSync();
+  final from=src.indexOf('// Explicit queue removal first, followed by a SEPARATE sender opt-in.');
+  final to=src.indexOf('Widget _autoSmsReviewCard(){',from);
+  expect(from,greaterThanOrEqualTo(0));
+  expect(to,greaterThan(from));
+  final bulk=src.substring(from,to);
+  expect(bulk,contains("if(choice==null||choice=='back'||!ctx.mounted)return;"));
+  expect(bulk,contains('if(!failed&&ctx.mounted)Navigator.pop(ctx);'));
+  expect(bulk,contains('selectedIds.removeAll(done);'));
+  expect(bulk,contains('if(failed)snack(context,'));
+  expect(bulk,contains('senderBlockChoices.contains'));
+ });
+
 }
