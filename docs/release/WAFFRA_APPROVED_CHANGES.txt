@@ -2388,3 +2388,13 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 
 [M503 M429 biometric source-contract follow-up — 2026-11-06]
 - Restore exact pre-existing M424 signed-out state transition in WaffraApp after explicitly dismissing the approved unified footer and ScaffoldMessenger progress feedback. The previous M503 edit had wrapped this transition in a block and broke a source regression test without changing its intended behavior. No test was removed or weakened, the mandatory OS biometric gate remains unchanged, and the original session, local password, native SMS-suspension and encrypted-finance guards remain intact. Exact-head M429 and all full-suite jobs require rerun and device validation.
+
+
+[M506 Draft PR #436 — 2026-11-06: reproduced Android SMS/finance/transfer regressions]
+- Nine issues #427–#435 after merged #402. This draft is not a release and has not passed Android acceptance.
+- Candidate fix: reviewed bank SMS receipt bytes now use the same verified SQLCipher atomic journal as account-linked SMS; learn reviewed expense/income keyword rule only after successful commit; suggest bank provider from validated sender, never infer underlying money account.
+- SMS original appears only once in the editor and details, with a separate optional user-only personalNotes field. For historical saved SMS, original plaintext remains inside the existing protected financial source field and is never displayed as user notes; no scary implementation warning when source unavailable.
+- Known bank dropdown entries including “بنك آخر” are offered without pretending an empty bank has an account. Both source and destination use independent account selection. Transfer date is user-selectable before notes and verified financial accounts are freshly read before the two-sided commit.
+- Android scanner now recognizes known Arabic bank sender aliases and top-up/pay keywords in read-only encrypted review; OTP and personal phone sender protections remain. The dashboard rescans progress and tells the user when the 500-message queue is full or the history cursor is not complete. “2025” was a total scanned-message count, never the year.
+- Do NOT claim performance/biometric-signout root causes fixed: on-device profiling and secure phone-verifier recovery still require work. Avoid disabling verifier integrity checks, erasing credentials, weakening SQLCipher, or posting unreviewed SMS.
+- PR scoped by M385 and tracked in docs/WAFFRA_REQUIREMENTS.md. Every target needs exact-head CI and real Android fresh/update tests; no signed APK or main merge claimed.
