@@ -1,3 +1,12 @@
+[PR #402 M487 / M486] 2026-11-06 — Custom account subtypes and nested bank-SMS Back navigation (#406/#410)
+=============================================================================================================
+- M487 / Issue #406: New bank/wallet account dialog offers an explicit Add account subtype action and reuses previously saved custom labels. Labels are validated display metadata; the underlying bank/wallet/cash/other classification, canonical financial subtype, SAR balances, original accounts and SQLCipher writer authority remain unchanged.
+- The optional custom label is saved atomically alongside a user-confirmed account in a separate versioned encrypted SQLCipher table. Existing installations without this optional metadata remain readable. The matching active money account, its canonical kind and the same verified finance source are still required. No automatic SMS-to-account association was added.
+- M487 tests: test/m487_custom_subtype_dialog_test.dart covers creating/reusing the dropdown label; test/storage/m487_custom_account_subtype_test.dart covers versioned encrypted metadata, invalid input, account kind rejection and unchanged balances. These tests are committed, not yet certified as passing on latest SHA.
+- M486 / Issue #410 (partial): keep the sender's SMS review sheet beneath nested message review and entry/account screens. Android Back should return one layer and preserve sender group and pending selected IDs; pending SMS is acknowledged only when saved/confirmed. Source regression test test/m486_sms_back_navigation_source_test.dart is included. Full unsaved editor form restoration, Android gesture and lifecycle tests remain pending.
+- The M385 manifest now enumerates five owner-requested added files and precise anchors for the affected existing code. The policy scripts and mandatory gates were NOT bypassed or changed.
+- No claim of CI, encrypted backup/restore, APK release, physical Android UI or all-18 acceptance. The PR remains Draft until measured and reviewed.
+
 [PR #402 M485/M486] 2026-11-06 — SMS provenance details, nested Back and biometric startup frame scheduling
 ===============================================================================================================
 - M485 #404: transaction details now identify a bank-SMS-origin transaction as a manually reviewed SMS; verified protected original SMS remains separate from ordinary editable notes. The UI does not print SMS source bodies as free-text personal notes.
