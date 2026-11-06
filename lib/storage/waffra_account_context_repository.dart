@@ -53,6 +53,23 @@ class WaffraAccountContextRepository {
   }
  }
 
+ /// Read a single historical entry association without loading the full
+ /// ledger into a transaction edit sheet. An absent legacy/non-migrated row
+ /// is NOT treated as an accountless verified ledger entry.
+ Future<({bool exists,String? accountId})> readExistingEntryAccount({
+  required String entryId,
+ })async{
+  await _ready();_id(entryId);
+  final rows=await store.customSelect('''
+SELECT e.entry_id,l.account_id FROM fresh_finance_entries e
+LEFT JOIN fresh_finance_account_entry_links l ON l.entry_id=e.entry_id
+WHERE e.entry_id=?
+''',variables:[Variable.withString(entryId)]).get();
+  if(rows.length>1)throw StateError('Entry account link is ambiguous.');
+  return (exists:rows.length==1,
+   accountId:rows.isEmpty?null:rows.single.readNullable<String>('account_id'));
+ }
+
  /// Register the user-confirmed funding source for an EXISTING typed goal
  /// movement. The movement and its amount are never recreated here.
  Future<bool> attributeGoalMovement({
