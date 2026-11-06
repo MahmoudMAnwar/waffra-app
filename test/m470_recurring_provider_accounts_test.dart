@@ -43,6 +43,16 @@ void main() {
   expect(source,contains('accountId:selection,userConfirmed:true'));
   expect(source,isNot(contains("DropdownMenuItem(value:'none'")));
  });
+ test('M470 Home manual and transfer both show sequential provider-account choices',(){
+  final source=File('lib/main.dart').readAsStringSync();
+  expect(source,contains("Key('m470-home-manual-provider-'"));
+  expect(source,contains("Key('m470-home-manual-account-'"));
+  expect(source,contains("'Bank or provider *':'الجهة أو البنك *'"));
+  expect(source,contains("'Linked money account *':'الحساب المالي التابع *'"));
+  expect(source,contains("Key('m470-home-transfer-'"));
+  expect(source,contains("chosenManualAccount=null; // Provider alone never selects a money account."));
+  expect(source,contains("initialSelectedIds:chosenManualAccount==null?null:[chosenManualAccount]"));
+ });
  test('M470 money form requires an explicit provider before a linked source or destination',(){
   final source=File('lib/waffra_account_transaction_form.dart').readAsStringSync();
   expect(source,contains('WaffraRecurringAccountGroups.fromAccounts(accounts)'));
