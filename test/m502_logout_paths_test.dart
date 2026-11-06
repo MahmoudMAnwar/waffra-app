@@ -55,8 +55,8 @@ void main() {
       src.indexOf(' Future<void> setPin('));
     final presenter=src.substring(src.indexOf('void snack(BuildContext context'),
       src.indexOf('void snackSuccess('));
-    expect(RegExp(r'\\.showSnackBar\\s*\\(').allMatches(src).length,1);
-    expect(RegExp(r'\\bSnackBar\\s*\\(').allMatches(src).length,1);
+    expect(RegExp(r'\.showSnackBar\s*\(').allMatches(src).length,1);
+    expect(RegExp(r'\bSnackBar\s*\(').allMatches(src).length,1);
     expect(root,contains('_logoutNavigatorKey.currentContext'));
     expect(root,contains('snack(feedbackContext,message,'));
     expect(root,contains('preferFooter:true'));
