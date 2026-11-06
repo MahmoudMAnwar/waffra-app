@@ -2081,3 +2081,12 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 - Existing recurring schedules' default-account editor now has a provider/bank dropdown followed by an explicit active linked account dropdown. It does not present an unassigned option, silently pick the first account, or relink past payments.
 - Known bank names only are grouped; unknown labels remain separate to prevent guessing. This is NOT the still-pending mandatory choice during a NEW recurring schedule's creation.
 - New test: test/m470_recurring_provider_accounts_test.dart. Still requires exact SHA CI, signed Android and a safe initial-creation flow.
+
+
+[M470 implementation follow-up] 2026-11-06 — PR #395 exact-code changes; NOT YET RELEASE CERTIFIED
+- Actual Home manual income/expense entry and internal transfer now offer bank/provider then an explicitly selected linked active money account. Switching provider clears the account; the Home account display filter never authorizes a debit.
+- Every NEW submitted income/expense, reviewed bank SMS, receipt, recurring Paid and cash-financed goal due requires an active verified money account. Historic unassigned ledger data is retained, not silently migrated or allocated. Saved source and generation are verified by the existing financial writer.
+- The original recurring create/edit dialog now requires provider then account, serializes an optional accountId on its schedule, and the typed schedule projection writes its recurring default in the same locked SQLCipher transaction. Invalid or archived account rolls back the whole edit. Historic schedules without defaults are still readable and require selection when edited/paid.
+- Updated transfer widget regression: scroll to the real submit button when provider/account inputs expand the form. Added atomic recurring account rollback and Home selector regression coverage.
+- Scope guard M385 updated to include only these user-approved file/section edits. Advanced financial subtypes and persistent per-account monthly budget assignments are still incomplete; do not label all 32 Done.
+- Current SHA tests and signed Android acceptance remain pending; DO NOT merge into main or claim a released APK based on these candidate commits.
