@@ -1,11 +1,13 @@
 {
   "contract_version": 1,
-  "change_id": "WAFFRA-NEW-001-account-picker-heading-requirement-register-20261106",
-  "human_scope_review": "Owner supplied screenshot on 2026-11-06 and explicitly requested the first UI change be permanently recorded in GitHub Issue and a new PR BEFORE code changes. This initial draft PR contains only requirements documentation plus the required bounded M385 change-scope manifest. It does NOT implement the UI, claim tests, change source, or touch main. Future user changes will receive numbered Issues and tracker updates before implementation, with the allowlist updated to match each actual diff.",
+  "change_id": "WAFFRA-NEW-001-010-permanent-user-requirements-registration-20261106",
+  "human_scope_review": "User supplied additional Android screenshots on 2026-11-06 showing an SMS → financial entry journey losing parsed amount/title/category and bank SMS provenance, first sender account creation lacking provider/last-four automation, missing custom account subtype, broken one-step Back, and successful SMS entries remaining in review. Issues #403-#411 each record independent acceptance criteria after Issue #401. Owner requested a durable record and linked draft PR before coding. This documentation-only commit changes just WAFFRA_REQUIREMENTS.md and this manifest; it does not update finance/UI functionality or claim CI/phone pass. Prior M470 implementation only partial; preserve current main fixes and all security gates.",
   "user_requested_changes": [
-    "Create permanent numbered requirement #1, linked GitHub issue and draft PR, documenting relocation of the all-accounts picker to the existing bank-name heading inside the green Home balance card.",
-    "Preserve full long selected account name by multiline adaptive button and card layout, with no ellipsis, bottom floating picker, inaccessible arrow, or overlap with amount, eye, or artwork.",
-    "Preserve verified account selection and balance filter semantics, financial storage and CI protections; do not mark implemented until code, regression tests, Android checks and review."
+    "Register WAFFRA-NEW-001 Home balance card selected account picker relocation and multiline full bank/account labels, with linked Issue #401 and draft PR #402.",
+    "Register WAFFRA-NEW-002..003: scanned-SMS income/expense editor must prefill parsed description, amount, main/subcategory and persist SMS provenance to final transaction details.",
+    "Register WAFFRA-NEW-004..007: first bank SMS should suggest institution from sender and verified child account suffix, allow custom financial account subtype, and reliably reuse confirmed institution/child account for later same-sender messages.",
+    "Register WAFFRA-NEW-008..010: full original SMS accessible throughout review/editor, single-step back preserving draft, and confirmed SMS entry removed from pending only after a verified successful nonduplicating financial commit.",
+    "Track each item in permanent docs/WAFFRA_REQUIREMENTS.md linked to separate issues #401, #403-#411 and existing draft PR #402, without touching source or main before implementation."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
