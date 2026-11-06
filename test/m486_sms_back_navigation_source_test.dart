@@ -55,4 +55,23 @@ void main(){
   expect(editor,contains('chosenManualAccount=null; // A parent alone'));
  });
 
+ test('M492 #410 Back stores only an ephemeral matching SMS editor draft',(){
+  final src=File('lib/main.dart').readAsStringSync();
+  final start=src.indexOf('Future<void> entrySheet({MoneyEntry? initial');
+  final end=src.indexOf('if(selectedMain.isNotEmpty&&subcategories.isEmpty)',start);
+  expect(start,greaterThanOrEqualTo(0));
+  expect(end,greaterThan(start));
+  final editor=src.substring(start,end);
+  expect(src,contains('final Map<String,Map<String,Object?>> _m492SmsEditorDrafts={}'));
+  expect(editor,contains('bankSmsHash(initialSms)'));
+  expect(editor,contains('_m492SmsEditorDrafts[smsEditorDraftKey]'));
+  for(final field in ["'title'","'amount'","'income'","'parent'",
+      "'category'","'budget'","'provider'","'account'","'date'"]){
+   expect(editor,contains('smsEditorDraft'),reason:field);
+  }
+  expect(editor,contains('if(_m492SmsEditorDrafts.length>=8)'));
+  expect(src,contains('if(smsEditorDraftKey!=null)_m492SmsEditorDrafts.remove(smsEditorDraftKey);'));
+  expect(src,contains('debounce?.cancel();disposeLater([title,value,notes,message,transferAmount,transferNote]);'));
+ });
+
 }
