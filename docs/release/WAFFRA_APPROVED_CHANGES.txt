@@ -2090,3 +2090,9 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 - Updated transfer widget regression: scroll to the real submit button when provider/account inputs expand the form. Added atomic recurring account rollback and Home selector regression coverage.
 - Scope guard M385 updated to include only these user-approved file/section edits. Advanced financial subtypes and persistent per-account monthly budget assignments are still incomplete; do not label all 32 Done.
 - Current SHA tests and signed Android acceptance remain pending; DO NOT merge into main or claim a released APK based on these candidate commits.
+
+[M470 account-monthly-budget code follow-up] 2026-11-06 — #29 candidate
+- Named budgets may now explicitly designate a verified account at creation/edit. Attribution is stored in the existing encrypted named-budget JSON and survives its V3 finance snapshot/restore; old global/shared budgets remain unassigned and are never silently split.
+- The Home monthly budget card uses the selected account's assigned budgets and its verified account-scoped expense entries; All accounts sums each unique budget once, including legacy shared budgets once. Changing the Home account does not itself post/transfer money.
+- Regression source tests cover legacy JSON, selected-account serialization/copy and Home display source separation.
+- Code and tests are NOT signed Android/device acceptance; CI exact SHA mandatory. No external bank connection has been activated.
