@@ -1,3 +1,11 @@
+[PR #402 M474–M476] 2026-11-06 — Bounded app smoothness, account confirmation and balance header work
+=====================================================================================================
+- M474 / Issue #419 (partial): removed artificial + tap (275ms) and add-sheet (260ms) delays; coalesced concurrent user Pull-to-Refresh gestures only; skipped redundant rebuild when footer item is already selected; replaced expensive full-screen add-menu live blur with a simpler dim scrim. This is NOT proof of zero lag; physical Android profile/release frame timelines, biometric-first-launch and post-save performance remain unverified.
+- M475 / Issue #412 (code added): already-confirmed entry-editor child account or newly approved account can bypass redundant second account picker after a fresh verified SQLCipher account witness confirms it remains active. Unconfirmed/inferred SMS account suggestions still require explicit selection. Exactly-once posting and biometric checks are unchanged; Android regression and CI are pending.
+- M476 / Issue #401 (code added): moved the single account-selection control to the top heading of the emerald balance card, with multiline full-name rendering and height allowance, removing its truncated bottom duplicate. The bank account shown in the header remains a view filter only and is never silently used as the source of a new payment; Android narrow-screen/layout tests remain pending.
+- Only the bounded sections of lib/main.dart listed in docs/qa/approved_change_scope.json changed. No automated financial writer, account source-of-truth, SQLCipher schema, SMS permission/consent or historical balance was weakened.
+- This is a reviewed development changelog on draft PR #402, NOT signed APK acceptance, completed execution of all 18 requirements or production certification.
+
 [M470-26] 2026-11-06 — Move Home account selector inside the emerald balance card
 ==================================================================================
 - The former separate All accounts header row is removed; its trigger is now a compact button inside the emerald balance card, preserving the exact verified account dropdown and selected-account display filter.
