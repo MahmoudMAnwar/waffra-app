@@ -22,6 +22,29 @@ abstract final class WaffraRecurringAccountGroups {
   'stc':(ar:'STC Bank',en:'STC Bank'),
  };
 
+ /// Display the full trusted Saudi provider list in new-account and transfer
+ /// selectors, even when a bank has no linked account yet. A provider choice
+ /// never fabricates a financial account; user must create/select one.
+ static List<WaffraRecurringAccountGroup> withBankProviderChoices(
+  Iterable<WaffraAccountBalance> accounts,
+ ){
+  final groups=fromAccounts(accounts);
+  final byId=<String,WaffraRecurringAccountGroup>{
+   for(final group in groups)group.id:group,
+  };
+  for(final bank in _bankNames.entries){
+   final id='bank:institution:${bank.key}';
+   byId.putIfAbsent(id,()=>WaffraRecurringAccountGroup(
+    id:id,labelAr:bank.value.ar,labelEn:bank.value.en,
+    accounts:const <WaffraAccountBalance>[]));
+  }
+  byId.putIfAbsent('bank:institution:other',
+   ()=>const WaffraRecurringAccountGroup(
+    id:'bank:institution:other',labelAr:'بنك آخر',
+    labelEn:'Other bank',accounts:<WaffraAccountBalance>[]));
+  return List<WaffraRecurringAccountGroup>.unmodifiable(byId.values);
+ }
+
  /// Accounts without a recognized institution are deliberately kept in
  /// individual groups, rather than guessed into a potentially wrong bank.
  /// Selecting a group does not select an account or authorize a payment.
