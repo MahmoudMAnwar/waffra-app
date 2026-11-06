@@ -1172,12 +1172,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   await Future<void>.delayed(const Duration(milliseconds:3000));
   if(mounted)setState(()=>introDone=true);
  }
- DateTime? _backgroundAt;
  @override void didChangeAppLifecycleState(AppLifecycleState state){
   if(state==AppLifecycleState.resumed){
-   _backgroundAt=null;
-   // A successful OS challenge can finish before Android reports resumed.
-   // Only reveal the existing signed-in session after foreground resumes.
+   // Only release a biometric gate that succeeded while OS was inactive.
    if(_biometricVerifiedAwaitingResume){
     _biometricVerifiedAwaitingResume=false;
     if(mounted&&locked&&profile!=null&&!showLogin){
@@ -1186,21 +1183,14 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    }
    return;
   }
-  // Native camera/gallery return preserves an already-unlocked session only
-  // during its bounded picker activity. Real background still locks normally.
+  // Native camera and gallery picker are trusted short-lived OS activities;
+  // the opaque overlay still protects previews without resetting a draft.
   if(WaffraExternalMediaSession.trustedBackgroundTransition(state))return;
-  // A genuine background transition invalidates a pending verification.
-  if(state==AppLifecycleState.paused||
-     state==AppLifecycleState.hidden||
-     state==AppLifecycleState.detached){
-   _biometricVerifiedAwaitingResume=false;
-  }
-  // Immediately lock whenever Waffra loses foreground focus.
   if(WaffraBiometricSessionGuard.mustLockOn(state)){
-   _backgroundAt??=DateTime.now();
-   if(mounted&&profile!=null&&!showLogin&&!locked){
-    setState(()=>locked=true);
-   }
+   _biometricVerifiedAwaitingResume=false;
+   // DO NOT set locked=true here. The idle overlay handles the actual
+   // 60-second absence without tearing down the entire Home Navigator.
+   // Fresh login and explicit signed-out states retain the mandatory gate.
   }
  }
  @override void dispose(){WaffraRegionalCopy.countryIso.removeListener(_onRegionChanged);

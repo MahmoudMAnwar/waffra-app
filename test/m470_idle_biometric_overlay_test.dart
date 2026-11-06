@@ -69,4 +69,51 @@ void main(){
    await tester.pump(const Duration(seconds:70));
    expect(find.byKey(const Key('m470-idle-lock-biometric')),findsNothing);
   });
+
+ testWidgets('M470 #22 59s app switch shows privacy shield but preserves draft', (tester)async{
+  var now=DateTime(2026,11,6,10);
+  tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+  final draft=TextEditingController(text:'المسودة محفوظة');
+  addTearDown(draft.dispose);
+  await tester.pumpWidget(MaterialApp(
+   builder:(ctx,navigator)=>WaffraIdleBiometricOverlay(
+    enabled:true,english:false,now:()=>now,onSignOut:()async{},
+    child:navigator??const SizedBox.shrink()),
+   home:Scaffold(body:TextField(controller:draft,key:const Key('m470-back-draft')))));
+  tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+  await tester.pump();
+  expect(find.byKey(const Key('m470-background-green-privacy-shield')),findsOneWidget);
+  now=now.add(const Duration(seconds:59));
+  tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+  await tester.pump();
+  expect(find.byKey(const Key('m470-idle-lock-biometric')),findsNothing);
+  expect(find.byKey(const Key('m470-background-green-privacy-shield')),findsNothing);
+  expect(draft.text,'المسودة محفوظة');
+ });
+
+ testWidgets('M470 #22 after 61s background challenges above same draft', (tester)async{
+  var now=DateTime(2026,11,6,11);
+  tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+  final draft=TextEditingController(text:'مسودة التحويل');
+  addTearDown(draft.dispose);
+  await tester.pumpWidget(MaterialApp(
+   builder:(ctx,navigator)=>WaffraIdleBiometricOverlay(
+    enabled:true,english:false,now:()=>now,onSignOut:()async{},
+    child:navigator??const SizedBox.shrink()),
+   home:Scaffold(body:TextField(controller:draft,key:const Key('m470-back-draft')))));
+  tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+  await tester.pump();
+  expect(find.byKey(const Key('m470-background-green-privacy-shield')),findsOneWidget);
+  now=now.add(const Duration(seconds:61));
+  tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+  await tester.pump();
+  expect(find.byKey(const Key('m470-idle-lock-biometric')),findsOneWidget);
+  expect(draft.text,'مسودة التحويل');
+  final gate=tester.widget<WaffraMandatoryBiometricGate>(
+   find.byKey(const Key('m470-idle-lock-biometric')));
+  gate.onVerified();
+  await tester.pump();
+  expect(find.byKey(const Key('m470-idle-lock-biometric')),findsNothing);
+  expect(draft.text,'مسودة التحويل');
+ });
 }

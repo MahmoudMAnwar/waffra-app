@@ -2219,3 +2219,6 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 
 [M470 2026-11-06 — CI repair: preserved genuine Arabic-prefixed SAR/SR bank amounts]
 - The strict Arabic currency word-boundary fix initially rejected valid verified bank prefixes بSR and بـSAR. The BankParser and originalAmount SAR lexers now accept only an explicit Arabic ب + optional tatweel prefix attached to a complete currency unit, never the first letters رس of ordinary words such as رسوم/رسائل. Added targeted positive/negative regression for legacy M332/M338 failures. Both finance and fee-only failures still remain fail-closed. Release-note ancestry refreshed after the finance parser edit; CI rerun and Android acceptance remain required.
+
+[M470 #22 2026-11-06 — preserve draft across app switch with timed biometric]
+- Do not immediately replace Home on pause/hidden. Show fully opaque green privacy shield over the existing Navigator while backgrounded; if returned in under 60 seconds reveal original dropdown/draft without biometric, otherwise verify using mandatory OS biometrics on top of the unchanged Navigator. Authentication on cold app start and sign-in remains mandatory. Two widget lifecycle tests and explicit approved scope; CI and Android acceptance pending.
