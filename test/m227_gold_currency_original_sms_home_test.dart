@@ -51,9 +51,12 @@ void main() {
 
   test('M227 preserves merged M226 FAB timings', () {
     final home = File('lib/main.dart').readAsStringSync();
-    expect(home, contains('await Future<void>.delayed(waffraMotion(165));'));
-    expect(home, contains('await Future<void>.delayed(waffraMotion(110));'));
+    // The FAB responsiveness work removed arbitrary transition sleeps;
+    // retain double-tap and menu-close safety instead of old delay values.
+    expect(home, contains('if(_addActionOpening)return;'));
+    expect(home, contains('if(mounted&&addFabExpanded)setState(()=>addFabExpanded=false);'));
+    expect(home, contains('if(mounted)await action();'));
+    expect(home, contains('now.difference(_lastFabTapAt!)<const Duration(milliseconds:380)'));
     expect(home, contains('duration:waffraMotion(220)'));
-    expect(home, contains('Duration(milliseconds:380)'));
   });
 }
