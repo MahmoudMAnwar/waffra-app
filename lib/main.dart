@@ -6790,13 +6790,31 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  bool sheetActive=true;
  Future<void> prepare(int i,StateSetter update)async {
   final result=BankParser.parse(messages[i]);
+  // Every next/previous message re-reads the latest LOCAL rules, including
+  // any pattern just learned from the previously confirmed transaction.
+  // No cloud request, no SMS acknowledgement and no financial write here.
+  var refreshedRules=<WaffraSmsLocalRule>[];
+  if(_smsRuleOwnerKey.isNotEmpty){
+   try{refreshedRules=await const WaffraSmsLocalRuleStore()
+     .read(_smsRuleOwnerKey);}catch(_){/* Manual review remains possible. */}
+  }
+  if(!sheetActive||!mounted)return;
+  final localKind=WaffraBankSmsFactsParser.parse(messages[i]).kind;
+  final inferred=WaffraSmsLocalRules.resolve(
+   body:messages[i],sender:initialSender,bankKind:localKind,
+   custom:refreshedRules);
   update((){
    reviewAttempted=false;index=i;income=result.income;
    final suggested=messages.length==1&&i==0&&
     suggestedLocalIncome==income&&suggestedLocalCategory!=null&&
     categories.any((c)=>c.income==income&&c.isSubcategory&&
      c.name==suggestedLocalCategory)?suggestedLocalCategory:null;
-   category=suggested??(categories.any((c)=>
+   final learned=inferred!=null&&inferred.income==income&&
+    categories.any((c)=>c.income==income&&c.isSubcategory&&
+     c.name==inferred.category&&
+     waffraCategoryAvailableForNewEntry(categories,c))?
+      inferred.category:null;
+   category=suggested??learned??(categories.any((c)=>
     c.income==income&&c.name==result.category)?result.category:
     (forType(income).isNotEmpty?forType(income).first.name:'أخرى'));
    final leaves=categories.where((c)=>c.income==income&&c.isSubcategory&&c.name==category).toList();
@@ -7846,6 +7864,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          try{await _learnManualCategoryPreference(entry);}catch(_){}
         }
        }
+       // Reclassify the remaining encrypted review queue without recording
+       // or acknowledging any of its messages. Native cursor may continue
+       // only when review has available space.
+       if(mounted)unawaited(_refreshAutoSmsInbox(importMonth:true));
        unawaited(_refreshWidget());
        if(!ctx.mounted)return;
        await budgetAlert(entry,previous);
@@ -9582,6 +9604,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // The expense/income learner applies only AFTER an authoritative commit,
    // and uses user-approved description/category, not the raw SMS body.
    try{await _learnManualCategoryPreference(result);}catch(_){}
+   // Immediately apply the updated local rules to every still-pending SMS.
+   // This is review-only; it never creates transactions or assigns accounts.
+   if(mounted)unawaited(_refreshAutoSmsInbox(importMonth:true));
    for(final staged in stagedReceiptCopies){
     try{final file=File(staged);if(await file.exists())await file.delete();}
     catch(_){}
