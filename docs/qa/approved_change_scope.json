@@ -137,10 +137,6 @@
     ],
     "lib/waffra_sms_local_rules.dart": [
       {
-        "start": "  WaffraSmsLocalRule(id:'builtin_mobile'",
-        "end": "  WaffraSmsLocalRule(id:'builtin_pharmacy'"
-      },
-      {
         "start": "import 'waffra_merchant_rules.dart';",
         "end": "/// Local-only, user-reviewable SMS classification."
       },
