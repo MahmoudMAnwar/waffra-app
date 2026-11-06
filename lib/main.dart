@@ -6258,6 +6258,28 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
    }
    if(!mounted)return null;
+   // M475 #412: don't ask for the same money account twice after an
+   // explicit entry-editor choice or user-approved account creation.
+   final allEditorAccountsConfirmed=initialSelectedIds!=null&&
+    initialSelectedIds.length==assigned.length&&
+    initialSelectedIds.every((id)=>id!=null);
+   final newAccountConfirmed=createdFromSmsAccountId!=null&&
+    candidates.length==1;
+   if((allEditorAccountsConfirmed||newAccountConfirmed)&&
+      assigned.every((id)=>id!=null)){
+    // Read a fresh SQLCipher account witness, not a stale picker snapshot.
+    final latest=await bridge.readVerifiedAccounts();
+    final liveIds=latest.balances.where((a)=>!a.archived)
+     .map((a)=>a.id).toSet();
+    if(!assigned.every((id)=>liveIds.contains(id))){
+     if(mounted)snack(context,waffraIsEnglish?
+      'Selected account changed; choose it again before saving.':
+      'الحساب المختار اتغير؛ اختاره مرة تانية قبل الحفظ.',isError:true);
+     return null;
+    }
+    return (ids:List<String?>.unmodifiable(assigned),
+     generation:latest.witness.generation);
+   }
    final providerGroups=WaffraRecurringAccountGroups.fromAccounts(active);
    final chosenProviders=List<String?>.generate(assigned.length,(index){
     for(final group in providerGroups){
