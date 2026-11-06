@@ -6838,9 +6838,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     expectedAccountGeneration:reviewedAccounts.generation,
    ));
    if(!mounted)return;
-   final persisted=(jsonDecode(applied.current.ledgerRaw??'[]') as List)
-    .map((e)=>MoneyEntry.fromJson(Map<String,dynamic>.from(e as Map)))
-    .toList();
+   // Large encrypted ledger decoding belongs off the UI isolate after
+   // commit. A blocked frame here caused the SMS success-screen stutter.
+   final persistedRaw=await WaffraLargeJsonDecode.parse(
+    applied.current.ledgerRaw??'[]');
+   if(persistedRaw is! List)throw StateError(
+    'Committed bank SMS ledger is invalid.');
+   final persisted=persistedRaw.map((e)=>MoneyEntry.fromJson(
+    Map<String,dynamic>.from(e as Map))).toList();
    final recovery=WaffraSmsPartialSaveRecovery.reconcile(
     discovered:found,
     rejectedBeforeCommit:preRejected,
@@ -6864,14 +6869,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       accountId:reviewedAccounts.ids![n]);
     }
    }
+   // Decode any changed category snapshot before the frame update; a
+   // large parse inside setState made Flutter rebuilds visibly lag.
+   List<BudgetCategory>? verifiedCategories;
+   if(proposed.isNotEmpty){
+    final stored=applied.current.finance.getString('waffra_categories_v24');
+    if(stored!=null){
+     final decodedCategories=await WaffraLargeJsonDecode.parse(stored);
+     if(decodedCategories is! List)throw StateError(
+      'Committed bank SMS categories are invalid.');
+     verifiedCategories=decodedCategories.map((e)=>
+      BudgetCategory.fromJson(Map<String,dynamic>.from(e as Map))).toList();
+    }
+   }
+   if(!mounted)return;
    setState((){
     entries..clear()..addAll(persisted);
-    if(proposed.isNotEmpty){
-     final stored=applied.current.finance.getString('waffra_categories_v24');
-     if(stored!=null){
-      categories..clear()..addAll((jsonDecode(stored) as List)
-       .map((e)=>BudgetCategory.fromJson(Map<String,dynamic>.from(e as Map))));
-     }
+    if(verifiedCategories!=null){
+     categories..clear()..addAll(verifiedCategories);
     }
     smsHashes..clear()..addAll(
      applied.current.finance.getStringList('waffra_sms_hashes_v1')??const <String>[]);
@@ -8889,9 +8904,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      'العملية البنكية محفوظة بالفعل. راجعها قبل المحاولة مجددًا.');
     return;
    }
-   final verified=(jsonDecode(applied.current.ledgerRaw??'[]') as List)
-    .map((item)=>MoneyEntry.fromJson(Map<String,dynamic>.from(item as Map)))
-    .toList();
+   final parsedLedger=await WaffraLargeJsonDecode.parse(
+    applied.current.ledgerRaw??'[]');
+   if(parsedLedger is! List)throw StateError(
+    'Confirmed bank SMS ledger is invalid.');
+   final verified=parsedLedger.map((item)=>MoneyEntry.fromJson(
+    Map<String,dynamic>.from(item as Map))).toList();
    if(!mounted)return;
    setState((){
     entries..clear()..addAll(verified);
@@ -8964,7 +8982,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         );
         final raw=committed.ledgerRaw;
         if(raw==null)throw StateError('Confirmed manual ledger missing.');
-        final decoded=jsonDecode(raw);
+        final decoded=await WaffraLargeJsonDecode.parse(raw);
         if(decoded is! List)throw StateError('Confirmed manual ledger invalid.');
         final verified=decoded.map((item)=>MoneyEntry.fromJson(
           Map<String,dynamic>.from(item as Map))).toList();
