@@ -9494,7 +9494,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if(api==null)throw StateError('Verified entry link API unavailable');
     await api.balances();
     await api.linkUnassignedEntry(entryId:initial.id,
-     accountId:chosenManualAccount,userConfirmed:true);
+     accountId:chosenManualAccount!,userConfirmed:true);
     if(mounted)await _m467RefreshHomeAccounts();
    }catch(error){
     debugPrint('M500 historical link failed: ${error.runtimeType}');
