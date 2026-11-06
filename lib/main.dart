@@ -840,7 +840,7 @@ class BankParser {
   final englishIncoming=RegExp('^$credits\\b',caseSensitive:false).hasMatch(header);
   final englishOutgoing=RegExp('^$debits\\b',caseSensitive:false).hasMatch(header);
   final legacyIncoming=RegExp(r'حوال[ةه].{0,25}وارد|تحويل.{0,25}وارد|استلام.{0,25}حوال|credited|deposit|راتب|إيداع|ايداع',caseSensitive:false).hasMatch(s);
-  final legacyOutgoing=RegExp(r'حوال[ةه].{0,25}صادر|تحويل.{0,25}صادر|شراء|نقاط\s*بيع|pos\b|مدى|سحب|خصم|دفع|فاتورة|purchase|debit\b',caseSensitive:false).hasMatch(s);
+  final legacyOutgoing=RegExp(r'حوال[ةه].{0,25}صادر|تحويل.{0,25}صادر|شراء|نقاط\s*بيع|pos\b|مدى|سحب|خصم|دفع|فاتورة|شحن\s*(?:الجوال|جوال|الرصيد|رصيد|الهاتف)|purchase|debit\b',caseSensitive:false).hasMatch(s);
   // A trainable no-cost offline classifier covers previously unseen global
   // headings. Existing successful Saudi and English formats remain unchanged.
   // Currency mismatch never silently corrupts the SAR ledger.
@@ -897,6 +897,12 @@ class BankParser {
   var title=income?'مبلغ وارد':'عملية بنكية',cat=income?'دخل آخر':'أخرى';
   String? suggestion;
   if(RegExp(r'راتب|salary',caseSensitive:false).hasMatch(header)){title='راتب';cat='راتب';}
+  else if(!income&&RegExp(r'شحن\s*(?:الجوال|جوال|الرصيد|رصيد|الهاتف)',
+    caseSensitive:false).hasMatch(header)){
+   // A mobile top-up is not an ambiguous merchant-number notification.
+   // The explicit currency parser still independently verifies its amount.
+   title='شحن الجوال';cat='فواتير / جوال';
+  }
   else if(income){
    title=RegExp(r'refund|reversal',caseSensitive:false).hasMatch(header)?'مبلغ وارد':'حوالة واردة';
   }
