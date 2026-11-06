@@ -1,0 +1,70 @@
+name: M504 Safe Weekly Failed PR Run Retention
+
+# Cleanup is a trusted default-branch maintenance operation, NOT PR execution.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/m504-pr-failed-run-retention.yml'
+      - 'scripts/qa/m504_failed_run_retention.cjs'
+      - 'test/qa/m504_failed_run_retention.test.cjs'
+  schedule:
+    - cron: '19 2 * * 0'  # Sunday 02:19 UTC; GitHub may delay schedules.
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Preview deletions only (recommended for first manual run)'
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m504-failed-pr-retention
+  cancel-in-progress: false
+
+jobs:
+  test-policy:
+    name: Test M504 retention safety policy without network or deletion
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - run: node --test test/qa/m504_failed_run_retention.test.cjs
+
+  cleanup:
+    name: Prune only verified redundant failed PR runs
+    needs: [test-policy]
+    if: >-
+      ${{ github.repository == 'MahmoudMAnwar/waffra-app' &&
+           github.ref == 'refs/heads/main' &&
+           (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: write
+      pull-requests: read
+    steps:
+      - name: Checkout trusted main only
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify default-branch checkout
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Safely prune or preview obsolete failed PR runs
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { cleanup } = require('./scripts/qa/m504_failed_run_retention.cjs');
+            const scheduled = context.eventName === 'schedule';
+            const dryRun = !scheduled && String(context.payload.inputs?.dry_run ?? 'true') !== 'false';
+            await cleanup({ github, context, core, dryRun });
