@@ -69,7 +69,7 @@ void main(){
    final schedule=RecurringBill(
     id:id,title:'Electricity',category:category,
     amount:100,income:false,day:5,
-    startAt:DateTime.utc(2026,11,1));
+    startAt:DateTime.utc(2026,11,1),accountId:'cash');
    final before=await authority.load(route:WaffraFinanceRoute.dashboardRead);
    final create=<String,Object>{
     'entries':'[]',
@@ -86,6 +86,30 @@ void main(){
     route:WaffraFinanceRoute.recurringCreateEditDeleteRestore,
     baseline:before,captured:create);
 
+   final defaultRows=await store.customSelect(
+    "SELECT account_id FROM fresh_finance_recurring_account_defaults "
+    "WHERE recurring_id='electricity'").get();
+   expect(defaultRows.single.read<String>('account_id'),'cash');
+   // A failed recurring creation must not leave an account-default row
+   // or a partly-created typed schedule behind.
+   final rejected=RecurringBill(
+    id:'invalid-template',title:'Invalid',category:category,
+    amount:10,income:false,day:5,startAt:DateTime.utc(2026,11,1),
+    accountId:'missing');
+   final bad=<String,Object>{
+    'waffra_recurring_v24':jsonEncode([schedule.toJson(),rejected.toJson()]),
+   };
+   WaffraHomeTransactionCapture.narrowVerifiedModuleEdit(
+    route:WaffraFinanceRoute.recurringCreateEditDeleteRestore,
+    source:afterCreate.source,snapshot:bad,
+    witnessedValues:afterCreate.encryptedWitness!.snapshot.values);
+   await expectLater(authority.saveCaptured(
+    route:WaffraFinanceRoute.recurringCreateEditDeleteRestore,
+    baseline:afterCreate,captured:bad),throwsStateError);
+   final ghost=await store.customSelect(
+    "SELECT recurring_id FROM fresh_finance_recurring "
+    "WHERE recurring_id='invalid-template'").get();
+   expect(ghost,isEmpty);
    final due=MoneyEntry(id:'rec_electricity_2026_11',
     title:'Electricity',category:category,amount:100,
     income:false,date:DateTime.utc(2026,11,5),sourceType:'recurring');
