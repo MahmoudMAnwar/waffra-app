@@ -2378,3 +2378,10 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 
 [M502 CI contract follow-up — 2026-11-06]
 - Preserve the existing exact root `if(mounted)setState` logout route assertion for M424 while retaining the new root-level sign-out progress/error feedback and fail-closed verifier/SMS protections. No API or account-data change. Latest exact HEAD CI and physical Android validation still pending.
+
+
+[M503 PR #402 Issue #424 — 2026-11-06: final root-cause repair for duplicate notice regressions]
+- 3 full-suite Workflows failed on the previous M502 SHA, all due to only 2 unit source cases: footer-notice and FAB shared-notice presenter. M502 had introduced a second `showSnackBar` in root sign-out feedback, violating the app-wide single-notice contract.
+- Route secure sign-out progress and credential/SMS failure feedback through Waffra's original `snack(...)` presenter. Use the `Navigator` context (below MaterialApp and ScaffoldMessenger) so failures cannot vanish from the root State; show footer-reserved notice on Home, original single snackbar on biometric/login. Dismiss pending unified notice after confirmed sign-out so it does not leak to login.
+- Do not modify/skip the two originally failing regression tests. New M503 regression in M502 test enforces exactly one snackbar presenter and construction globally, plus correct route; native suspension/verifier checks and encrypted finance preservation unchanged. Fix test regex escaping before CI.
+- Scope manifest is narrowed to pre-existing root logout and `snack(...)` boundaries. Latest SHA full Flutter, SQLCipher/security and two-device Android tests pending; no claim of device acceptance.
