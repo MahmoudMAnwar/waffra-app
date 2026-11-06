@@ -149,9 +149,21 @@ void main(){
     child:const Text('فتح التحويل')))),
   ));
   await tester.tap(find.byKey(const Key('m470-open-transaction-sheet')));
-  await tester.pumpAndSettle();
+  // Settle just this modal transition, without accidentally advancing a
+  // fake-async idle timer while a form remains open.
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds:350));
   expect(find.byKey(const Key('m470-sheet-saved-draft')),findsOneWidget);
-  _moveToBackground(tester);
+  expect(find.byKey(const Key('m470-idle-lock-biometric')),findsNothing);
+  // Android exposes Hidden before Paused. Verify the opaque shield is
+  // actually painted while this Navigator still has an open bottom sheet;
+  // then transition to Paused, where Flutter no longer schedules frames.
+  tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+  tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+  await tester.pump();
+  expect(find.byKey(const Key('m470-background-green-privacy-shield')),
+      findsOneWidget);
+  tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
   await tester.pump();
   final shield=tester.widget<ColoredBox>(
    find.byKey(const Key('m470-background-green-privacy-shield')));
