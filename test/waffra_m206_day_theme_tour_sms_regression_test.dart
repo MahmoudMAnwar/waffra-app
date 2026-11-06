@@ -50,7 +50,8 @@ void main() {
     final widget = File('lib/waffra_widget_capture.part.dart').readAsStringSync();
     expect(home, contains("date:bankSmsDate(raw)??DateTime.now(),notes:raw,sourceType:'sms'"));
     expect(home, contains('date:now,notes:messages[index],sourceType:'));
-    expect(home, contains('notes:sms?message.text:notes.text'));
+    expect(home, contains('notes:sms?message.text:'));
+    expect(home, contains("personalNotes:sms||initial?.sourceType=='sms'?notes.text:''"));
     expect(widget, contains('notes:entry.raw,sourceType:'));
     expect(widget, contains('waffraSafeSmsTransactionTitle(parsed.title,entry.raw'));
     expect(home, contains("Key('waffra-transaction-personal-notes')"));
@@ -83,7 +84,7 @@ void main() {
     expect(source, isNot(contains('child:Icon(addFabExpanded?Icons.close:Icons.add')));
   });
 
-  testWidgets('details show entire notes and keep concise name', (tester) async {
+  testWidgets('details show verified original SMS once and concise name', (tester) async {
     const raw = 'عملية شراء\nبمبلغ 84.72 ريال\nتاريخ 2026/10/24\nمرجع ABC123\nرصيد متبقٍ 900 ريال';
     final entry = MoneyEntry(
       id:'m206-test', title:'شراء - متجر', category:'تسوق', amount:84.72,
@@ -96,8 +97,11 @@ void main() {
     expect(find.text('شراء - متجر'),findsWidgets);
     final note=find.byKey(const Key('waffra-transaction-personal-notes'),
       skipOffstage:false);
-    expect(note,findsOneWidget);
-    expect(tester.widget<SelectableText>(note).data,raw);
+    expect(note,findsNothing);
+    final original=find.byKey(const Key('waffra-transaction-protected-bank-sms'),
+      skipOffstage:false);
+    expect(original,findsOneWidget);
+    expect(tester.widget<SelectableText>(original).data,raw);
     expect(tester.takeException(),isNull);
   });
 
