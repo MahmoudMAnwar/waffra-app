@@ -334,6 +334,14 @@ class MainActivity : FlutterFragmentActivity() {
                         }
                     }
                 }
+                "excludedAutoSmsSenders" -> result.success(
+                    WaffraAutoSmsStore.excludedSenders(this))
+                "excludeAutoSmsSender" -> result.success(
+                    WaffraAutoSmsStore.excludeSender(
+                        this, call.arguments as? String ?: ""))
+                "restoreExcludedAutoSmsSender" -> result.success(
+                    WaffraAutoSmsStore.restoreExcludedSender(
+                        this, call.arguments as? String ?: ""))
                 "pendingAutoBankSms" -> result.success(WaffraAutoSmsStore.pending(this))
                 "claimAutoBankSmsCloudAttempt" -> result.success(
                     WaffraAutoSmsStore.claimCloudAttempt(this, call.arguments as? String ?: ""))
