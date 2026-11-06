@@ -10,6 +10,9 @@ void main(){
    source.indexOf(' Future<void> entrySheet('));
   expect(sms,contains('await WaffraLargeJsonDecode.parse('));
   expect(sms,contains('final persistedRaw=await WaffraLargeJsonDecode.parse('));
+  expect(sms,contains('final verifiedRaw=await WaffraLargeJsonDecode.parse('));
+  expect(sms,contains('if(verifiedRaw is! List)throw StateError'));
+  expect(sms,isNot(contains("final verified=(jsonDecode(committed.current.ledgerRaw")));
   expect(sms,contains('final decodedCategories=await WaffraLargeJsonDecode.parse(stored);'));
   expect(sms.indexOf('final decodedCategories=await WaffraLargeJsonDecode.parse(stored);'),
    lessThan(sms.indexOf('if(verifiedCategories!=null){')));

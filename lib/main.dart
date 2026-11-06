@@ -7463,9 +7463,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          record:entry,sender:initialSender,
          accountId:reviewedAccount.ids?.single));
        }
-       final verified=(jsonDecode(committed.current.ledgerRaw??'[]') as List)
-        .map((item)=>MoneyEntry.fromJson(
-         Map<String,dynamic>.from(item as Map))).toList();
+       // A single reviewed SMS can still have a large existing ledger.
+       // Keep parsing off the Flutter UI isolate BEFORE publishing the
+       // confirmed SQLCipher state; this never starts a second finance write.
+       final verifiedRaw=await WaffraLargeJsonDecode.parse(
+        committed.current.ledgerRaw??'[]');
+       if(verifiedRaw is! List)throw StateError(
+        'Committed reviewed SMS ledger snapshot was not a list.');
+       final verified=verifiedRaw.map((item)=>MoneyEntry.fromJson(
+        Map<String,dynamic>.from(item as Map))).toList();
        if(!mounted)return;
        setState((){
         entries..clear()..addAll(verified);
