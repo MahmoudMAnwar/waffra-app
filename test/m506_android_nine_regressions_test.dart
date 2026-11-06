@@ -106,7 +106,10 @@ void main() {
     expect(editor,contains("key:const Key('m506-transfer-date')"));
     expect(editor,contains('final latest=await transferApi!.balances();'));
     expect(editor,contains('occurredIso:transferDate.toIso8601String(),'));
-    expect(authority,contains('reviewedSmsReceiptImages: reviewedSmsReceiptImages'));
+    // Verified authority forwards the SMS receipt bytes to the unified
+    // encrypted transaction writer's existing manualReceiptImages argument.
+    expect(authority,contains('manualReceiptImages: reviewedSmsReceiptImages'));
+    expect(authority,contains('encryptedSession!.appendConfirmed('));
     expect(authority,contains('Bank SMS receipts require verified encrypted storage.'));
     expect(writer,contains("confirmedRecords.single['sourceType'] == 'sms'"));
   });
@@ -123,8 +126,12 @@ void main() {
     expect(logout,contains('WaffraLocalCredentialProbe.ready'));
     expect(logout,contains('if(!hasLegacy){'));
     expect(logout,contains('_accountWriteAuthority.signOut();'));
-    expect(logout.indexOf('WaffraLocalPhoneCredentials.registerOrResume('),
-      lessThan(logout.indexOf('WaffraLocalCredentialProbe.ready')));
+    // The first READY probe belongs to logout's initial preflight; the
+    // subsequent READY probe must verify successful explicit recovery.
+    final recovery=logout.substring(
+      logout.indexOf(' Future<bool> _repairMissingLocalCredential('));
+    expect(recovery.indexOf('WaffraLocalPhoneCredentials.registerOrResume('),
+      lessThan(recovery.indexOf('WaffraLocalCredentialProbe.ready')));
   });
 
   test('M506 native bank sender aliases preserve OTP and consented review', () {
