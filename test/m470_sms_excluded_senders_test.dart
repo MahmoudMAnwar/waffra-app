@@ -7,10 +7,15 @@ void main(){
   expect(home,contains('final clearedSenders=<String>[];'));
   expect(home,contains('groupIds.every(done.contains)'));
   expect(home,contains('هل تريد استبعاد المرسل نفسه أيضًا؟'));
-  expect(home,contains('if(block==true&&mounted)'));
+  // #417: explicit Back, No and Exclude choices. Only Exclude persists.
+  expect(home,contains("Navigator.pop(dialog,'back')"));
+  expect(home,contains("Navigator.pop(dialog,'no')"));
+  expect(home,contains("Navigator.pop(dialog,'exclude')"));
+  expect(home,contains("if(choice==null||choice=='back'||!ctx.mounted)return;"));
+  expect(home,contains("if(choice=='exclude')senderBlockChoices.add(sender);"));
   expect(home,contains('WaffraAutoSms.excludeSender(sender)'));
   // The opt-in follows queue acknowledgement, not a bulk-select tap.
-  expect(home.indexOf('for(final sender in clearedSenders)'),
+  expect(home.indexOf('for(final sender in clearedSenders.where(senderBlockChoices.contains))'),
    greaterThan(home.indexOf('if(!await WaffraAutoSms.acknowledge(batch))')));
  });
 
