@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:waffra/main.dart' show WaffraNamedBudget;
 import 'package:waffra/waffra_account_monthly_budget_policy.dart';
 
 void main(){
@@ -41,4 +43,33 @@ void main(){
     WaffraAccountMonthlySpend(budgetId:'groceries',accountId:'rajhi',
      amountMinor:-1,monthIso:'2026-11')],monthIso:'2026-11'),throwsStateError);
  });
+ test('M470 named budget account attribution survives old JSON, copy and encrypted snapshot JSON',(){
+  final legacy=WaffraNamedBudget.fromJson({
+   'id':'legacy','name':'Shared','budget':100.0,
+   'alertPercent':80,'budgetActive':true,
+  });
+  expect(legacy.assignedAccountId,isNull);
+  expect(legacy.toJson().containsKey('assignedAccountId'),false);
+  final bank=WaffraNamedBudget(
+   id:'bank-a',name:'Rajhi budget',budget:2000,
+   assignedAccountId:'rajhi',alertPercent:80);
+  final restored=WaffraNamedBudget.fromJson(bank.toJson());
+  expect(restored.assignedAccountId,'rajhi');
+  expect(restored.copy(budgetActive:false).assignedAccountId,'rajhi');
+  expect(restored.copy(clearAssignedAccount:true).assignedAccountId,isNull);
+  expect(()=>WaffraNamedBudget.fromJson({
+   ...bank.toJson(),'assignedAccountId':'',
+  }),throwsFormatException);
+ });
+ test('M470 budget creation/edit and monthly Home card read explicit money account',(){
+  final source=File('lib/main.dart').readAsStringSync();
+  expect(source,contains("Key('m470-budget-create-account')"));
+  expect(source,contains("Key('m470-budget-edit-account')"));
+  expect(source,contains("assignedAccountId:selected.accountId"));
+  expect(source,contains("b.assignedAccountId==selectedFinancialAccount"));
+  expect(source,contains("selectedFinancialAccount=='all'?"));
+  expect(source,contains("final relevantEntries=selectedFinancialAccount=='all'?"));
+  expect(source,contains("waffraNamedBudgetSpent(relevantEntries.toList()"));
+ });
+
 }
