@@ -3887,6 +3887,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // Account settings open from the app bar instead of a footer destination.
  bool accountOpened=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
+ // #410: only ephemeral user-edited SMS form fields, keyed by message hash;
+ // never persist a duplicate raw SMS outside the verified encrypted source.
+ final Map<String,Map<String,Object?>> _m492SmsEditorDrafts={};
  DateTime? _m468LastResumeSmsScan;
  bool _m486ResumeQueued=false;
  void _m468OnResume(){
@@ -8093,6 +8096,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    await _m467RefreshHomeAccounts();
    if(!mounted)return;
   }
+  // Restore an unfinished bank SMS editor after one-step Back. No money or
+  // SMS acknowledgement happens until a separate verified commit.
+  final smsEditorDraftKey=sms&&initial==null&&initialSms!=null?
+   bankSmsHash(initialSms):null;
+  final smsEditorDraft=smsEditorDraftKey==null?
+   null:_m492SmsEditorDrafts[smsEditorDraftKey];
   // M485 / #403 #404: correction of a detected SMS is still a reviewed
   // bank-SMS transaction, not a new unrelated manual entry. Use parsed
   // values only when source amount, SAR, direction and status agree.
@@ -8114,25 +8123,30 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     caseSensitive:false).hasMatch(initialSms!)?
      (waffraIsEnglish?'Mobile top-up':'شحن الجوال'):
      parsedSms.title??''):'';
-  final title=TextEditingController(text:initial?.title??
+  final title=TextEditingController(text:
+   (smsEditorDraft?['title'] as String?)??initial?.title??
    scannedReceipt?.merchant??suggestedSmsTitle);
-  final notes=TextEditingController(text:initial?.notes??'');
-  final value=TextEditingController(text:initial!=null?
+  final notes=TextEditingController(text:
+   (smsEditorDraft?['notes'] as String?)??initial?.notes??'');
+  final value=TextEditingController(text:
+   (smsEditorDraft?['amount'] as String?)??(initial!=null?
    formatWaffraEditAmount(initial.amount):
    scannedReceipt?.amount!=null?
     formatWaffraEditAmount(scannedReceipt!.amount!):
-    trustedSms?formatWaffraMoney(parsedSms.amount??0):'');
+    trustedSms?formatWaffraMoney(parsedSms.amount??0):''));
   final message=TextEditingController(text:initialSms??'');
-  bool income=initial?.income??scannedIncome??
+  bool income=(smsEditorDraft?['income'] as bool?)??initial?.income??scannedIncome??
    (trustedSms?(parsedSms.income):false),
    analyzing=false,hasParsed=initialSms!=null;
   bool submitTapped=false;
-  String category=initial?.category??(trustedSms?(parsedSms.category):'أخرى');
+  String category=(smsEditorDraft?['category'] as String?)??
+   initial?.category??(trustedSms?(parsedSms.category):'أخرى');
   String? selectedParentId;
-  String? selectedBudgetId=initial?.budgetId;
+  String? selectedBudgetId=(smsEditorDraft?['budget'] as String?)??initial?.budgetId;
   var entryAccounts=_m467Accounts.where((a)=>!a.archived).toList();
   var entryProviders=WaffraRecurringAccountGroups.fromAccounts(entryAccounts);
-  String? chosenManualProvider,chosenManualAccount;
+  String? chosenManualProvider=smsEditorDraft?['provider'] as String?;
+  String? chosenManualAccount=smsEditorDraft?['account'] as String?;
   int budgetMenuRevision=0; // reset action-only dropdown selections
   int accountProviderMenuRevision=0,accountChildMenuRevision=0;
   {
@@ -8149,7 +8163,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     category='';
    }
   }
-  DateTime date=initial?.date??scannedReceipt?.date??
+  if(smsEditorDraft!=null){
+   final savedParent=smsEditorDraft['parent'] as String?;
+   final savedCategory=smsEditorDraft['category'] as String?;
+   if(savedParent!=null&&categories.any((c)=>c.id==savedParent&&
+      !c.isSubcategory&&c.income==income)){
+    selectedParentId=savedParent;
+    if(savedCategory!=null&&categories.any((c)=>c.isSubcategory&&
+       c.parentId==savedParent&&c.income==income&&c.name==savedCategory)){
+     category=savedCategory;
+    }
+   }
+   if(chosenManualAccount!=null&&
+       !entryAccounts.any((a)=>a.id==chosenManualAccount)){
+    chosenManualAccount=null;
+    chosenManualProvider=null;
+   }
+  }
+  DateTime date=(smsEditorDraft?['date'] as DateTime?)??
+   initial?.date??scannedReceipt?.date??
    (sms&&initialSms!=null?
     bankSmsDate(initialSms,referenceDate:DateTime.now()):null)??
    DateTime.now();
@@ -8958,6 +8990,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       }),child:const WaffraText('تأكيد وحفظ العملية')),
      );
    }));
+  // Capture before disposing controllers. Dismissing this sheet by Android
+  // Back, swipe or Later must retain a user-edited form for the SAME SMS.
+  if(smsEditorDraftKey!=null&&mounted){
+   if(!_m492SmsEditorDrafts.containsKey(smsEditorDraftKey)&&
+      _m492SmsEditorDrafts.length>=8){
+    _m492SmsEditorDrafts.remove(_m492SmsEditorDrafts.keys.first);
+   }
+   _m492SmsEditorDrafts[smsEditorDraftKey]={
+    'title':title.text,'notes':notes.text,'amount':value.text,
+    'income':income,'parent':selectedParentId,'category':category,
+    'budget':selectedBudgetId,'provider':chosenManualProvider,
+    'account':chosenManualAccount,'date':date,
+   };
+  }
   debounce?.cancel();disposeLater([title,value,notes,message,transferAmount,transferNote]);
   if(result==null||!mounted){
    if(transferCommitted&&mounted){
@@ -9045,6 +9091,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _lastLedgerSavedRaw=applied.current.ledgerRaw;
     _lastWidgetRevision=applied.current.widgetRevision;
    });
+   if(smsEditorDraftKey!=null)_m492SmsEditorDrafts.remove(smsEditorDraftKey);
    unawaited(_refreshWidget());
    if(applied.originalSmsNotesOmittedOnLegacy&&mounted){
     snack(context,waffraIsEnglish?
