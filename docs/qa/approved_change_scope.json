@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M506-NINE-APK-REGRESSIONS-20261106",
-  "human_scope_review": "Owner submitted nine explicit Android screenshots, reproduced defects, and requested one PR to fix them after #402 main merge. This proposed scope declares only code in the SMS-reviewed transaction editor, its matching source/provider dropdowns, encrypted verified receipt writer, transaction details, scanned-count UI, Arabic banking sender qualifiers, and specific regression tests. Finance/account authentication invariants are protected. Automated checks are NOT human approval, real device certification, or permission to merge. Bounded splash startup timing and its widget regression are within user-requested performance issue #427; this does not certify overall interaction jank or the biometric/finance critical path. M507 user's 6 Nov screenshot and next-message learning request are recorded as #437/#438. The additional parser, fact-kind, built-in keyword, local-rule reread and safe review-only queue refresh changes are constrained to the declared code blocks; finance authority, SQLCipher, secrets and biometric controls remain unchanged. M506 #427 follow-up covers only Android UI-thread SMS state dispatch and isolate-based verified widget ledger parsing. All owner, data, SQLCipher and native scanning invariants remain intact; device profiling still pending. 2026-11-06 M508 explicitly requested same-PR bilingual Saudi default bank message classifier. Bounded local-rule parser and UI state changes, new original seed part and isolated regression tests are in the approved scope. Automatic exclusion acknowledgements are more restrictive, not broader; no ledger, financial account, SQLCipher, camera or biometric behavior changed. The built-in seed integration must not multiply the editor suggestions scan from 16 legacy patterns to hundreds of seed words per SMS; the suggested keyword candidate scan retains only original defaults plus user message merchant extraction. M509 #440 specifically broadens local *candidate discovery* to all SMS sender names only with evidence, restores safe user-requested completed-window rescans, and adds encrypted per-owner confirmed SMS replay exclusion. It does not affect unsigned/failed transactions, source account identity, manual exclusions or cloud authorization.",
+  "human_scope_review": "Owner submitted nine explicit Android screenshots, reproduced defects, and requested one PR to fix them after #402 main merge. This proposed scope declares only code in the SMS-reviewed transaction editor, its matching source/provider dropdowns, encrypted verified receipt writer, transaction details, scanned-count UI, Arabic banking sender qualifiers, and specific regression tests. Finance/account authentication invariants are protected. Automated checks are NOT human approval, real device certification, or permission to merge. Bounded splash startup timing and its widget regression are within user-requested performance issue #427; this does not certify overall interaction jank or the biometric/finance critical path. M507 user's 6 Nov screenshot and next-message learning request are recorded as #437/#438. The additional parser, fact-kind, built-in keyword, local-rule reread and safe review-only queue refresh changes are constrained to the declared code blocks; finance authority, SQLCipher, secrets and biometric controls remain unchanged. M506 #427 follow-up covers only Android UI-thread SMS state dispatch and isolate-based verified widget ledger parsing. All owner, data, SQLCipher and native scanning invariants remain intact; device profiling still pending. 2026-11-06 M508 explicitly requested same-PR bilingual Saudi default bank message classifier. Bounded local-rule parser and UI state changes, new original seed part and isolated regression tests are in the approved scope. Automatic exclusion acknowledgements are more restrictive, not broader; no ledger, financial account, SQLCipher, camera or biometric behavior changed. The built-in seed integration must not multiply the editor suggestions scan from 16 legacy patterns to hundreds of seed words per SMS; the suggested keyword candidate scan retains only original defaults plus user message merchant extraction. M509 #440 specifically broadens local *candidate discovery* to all SMS sender names only with evidence, restores safe user-requested completed-window rescans, and adds encrypted per-owner confirmed SMS replay exclusion. It does not affect unsigned/failed transactions, source account identity, manual exclusions or cloud authorization. M509 background FlutterEngine also requires an identical committed-only ACK channel so verified WorkManager finance writes do not retry as review candidates.",
   "user_requested_changes": [
     "2026-11-06 Issue #427: eliminate app-wide cold-start, tap, pull-to-refresh and loading animation lag, with performance profiling and device evidence; tracked, not claimed corrected.",
     "2026-11-06 Issue #428: confirmed Android bank SMS expense with attached receipt must be saved atomically in SQLCipher with verified account and hash, avoiding prior generic save error.",
@@ -40,7 +40,8 @@
     "docs/qa/M508_SAUDI_SMS_SEED_LIBRARY.md",
     "lib/waffra_auto_sms.dart",
     "lib/waffra_auto_sms_autopost.part.dart",
-    "test/m509_all_sender_sms_rescan_dedup_test.dart"
+    "test/m509_all_sender_sms_rescan_dedup_test.dart",
+    "native/WaffraAutoSmsWorker.kt"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -211,6 +212,12 @@
       {
         "start": "abstract final class WaffraAutoSmsAutoPoster {",
         "end": null
+      }
+    ],
+    "native/WaffraAutoSmsWorker.kt": [
+      {
+        "start": "                        \"ackAutoBankSms\" -> {",
+        "end": "                        \"notifyAutoSmsSaved\" -> {"
       }
     ]
   }
