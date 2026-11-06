@@ -84,3 +84,14 @@
 - M470 #25: نموذج معاملات الحسابات الموثق يعرض الجهة/البنك أولًا ثم الحساب الحقيقي التابع لها، سواء كمصدر للدخل/المصروف أو كمصدر/وجهة للتحويل الداخلي؛ اختيار جهة جديدة يمسح الحساب السابق بدل تمريره تلقائيًا. لم يتغير SQLCipher writer أو اختيار حساب هيدر الرئيسية. اختبارات مصدرية مضافة؛ ربط محرر الدخل/المصروف الأصلي في Home ما زال مطلوبًا.
 
 - M470 #26: نقل زر فتح قائمة الحسابات إلى داخل بطاقة الرصيد الخضراء نفسها بدل صف منفصل. لا تتغير أرصدة الحسابات ولا يورث الاختيار إلى حفظ المعاملات؛ اختبار Widget يضغط الزر ويؤكد استدعاء فتح القائمة.
+
+
+## M470 follow-up on the six partially implemented items (2026-11-06)
+- #25 **CODE WIRED, CI/PHONE PENDING:** Home entrySheet now has bank/provider -> active linked money account for newly posted manual income, expenses and transfers, in addition to previously linked verified account-manager editor. Changing bank clears the account, and Home displayed account is never a writer input.
+- #28 **CODE WIRED, CI/PHONE PENDING:** reviewSmsAccountLinks now demands one verified active account for every new money posting, including SMS, receipts, manual, recurring and goal-due. An absent account blocks the save. No historical unassigned record is deleted/guessed; old history is still accessible.
+- #30 **CODE WIRED, CI/PHONE PENDING:** actual recurring creation/edit now selects provider then account. Its schedule JSON includes optional accountId and typed recurring SQL projection writes the default account row in the same locked transaction. An invalid account aborts both schedule and linkage; backed up snapshot includes the accountId. Legacy schedules without it remain valid history, but new edits cannot save without selection.
+- #32 **PARTIAL PENDING REAL DEVICE:** earlier verified atomic Paid/duplicate prevention plus provenance remain in code; no proof yet on signed Android that the original Paid failure is resolved end-to-end.
+- #23 **PARTIAL:** 4 baseline account types plus trusted masked-SMS linkage exist. Structured user-defined advanced financial account types, versioned secure storage and backup migration remain unimplemented; do not confuse bank prefix in a label with structured provider identity.
+- #29 **PARTIAL:** integer-halalas pure calculation is present. No confirmed persistent per-account cap assignment through UI/SQLCipher + V3 restore or live header monthly-budget card view yet. No synthetic splitting of a standalone shared budget.
+- Existing M440 transfer regression was a test-viewport missed tap; the test now scrolls to the visible submit button before asserting invalid amount rejection.
+- These are scoped code changes in PR #395, not final Done items until exact HEAD CI checks and signed Android acceptance succeed.
