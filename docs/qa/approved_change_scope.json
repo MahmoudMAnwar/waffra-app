@@ -134,7 +134,7 @@
     ],
     "native/WaffraMainActivity.kt": [
       {
-        "start": "                \"autoSmsEnabled\", \"autoSmsTrackingStatus\", \"autoSmsScanProgress\" -> {",
+        "start": "                \"autoSmsPermissionState\" -> result.success(WaffraAutoSmsStore.permissionGranted(this))",
         "end": "                \"pauseAutoSmsForSignOut\" ->"
       }
     ]
