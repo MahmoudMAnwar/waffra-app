@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'main.dart' show snack;
 
 import 'storage/waffra_accounts_repository.dart';
@@ -39,9 +40,17 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
   try{
    // The form only creates a draft. Existing verified account creation
    // remains the sole finance writer and rejects any stale SQLCipher witness.
+   final options=await widget.repository.balances();
+   if(!mounted)return;
+   final customSubtypes=<String,List<String>>{
+    for(final kind in const ['bank','wallet'])
+     kind:options.where((a)=>!a.archived&&a.kind==kind&&
+      a.customSubtypeLabel!=null).map((a)=>a.customSubtypeLabel!)
+      .toSet().toList(growable:false)..sort(),
+   };
    final draft=await showDialog<WaffraNewAccountDraft>(
     context:context,builder:(ctx)=>WaffraNewAccountDialog(
-     english:widget.english));
+     english:widget.english,customSubtypeOptions:customSubtypes));
    if(draft==null)return;
    final id='m440-'+DateTime.now().microsecondsSinceEpoch.toString();
    final createdIso=DateTime.now().toIso8601String();
@@ -54,7 +63,8 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
      id:id,name:draft.name,kind:draft.kind,
      providerId:provider,subtype:subtype,
      openingMinor:draft.openingMinor,createdIso:createdIso,
-     lastFour:draft.lastFour,userConfirmed:true);
+     lastFour:draft.lastFour,
+     customSubtypeLabel:draft.customSubtypeLabel,userConfirmed:true);
    }else if(draft.kind=='cash'||draft.kind=='other'){
     // Pure QA account adapters can still exercise historical cash/other
     // contracts; real production always uses the verified typed writer.
@@ -69,22 +79,97 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
  }
 
  Future<void> rename(WaffraAccountBalance item)async{
+  final verified=widget.repository is WaffraVerifiedAccountsApi
+   ?widget.repository as WaffraVerifiedAccountsApi:null;
+  final bankWithVerifiedSource=item.kind=='bank'&&verified!=null;
+  String? savedSuffix;
+  if(bankWithVerifiedSource){
+   try{
+    // The suffix shown here must come from the verified SQLCipher source.
+    savedSuffix=await verified.verifiedBankSuffix(item.id);
+   }catch(_){failed();return;}
+  }
   final name=TextEditingController(text:item.name);
+  final suffix=TextEditingController(text:savedSuffix??'');
   try{
-   final next=await showDialog<String>(context:context,builder:(ctx)=>
-    AlertDialog(title:Text(t('تعديل اسم الحساب','Rename account')),
-     content:TextField(controller:name,maxLength:80),
-     actions:[
-      TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(t('إلغاء','Cancel'))),
-      FilledButton(onPressed:()=>Navigator.pop(ctx,name.text.trim()),
-       child:Text(t('حفظ','Save'))),
-     ]));
-   if(next==null||next.isEmpty)return;
-   await widget.repository.renameAccount(
-    id:item.id,name:next,userConfirmed:true);
+   final edited=await showDialog<({String name,String? lastFour})>(
+    context:context,builder:(ctx)=>StatefulBuilder(
+     builder:(ctx,update){
+      final candidate=name.text.trim();
+      final digits=suffix.text.trim();
+      final suffixValid=!bankWithVerifiedSource||
+       (digits.isEmpty&&savedSuffix==null)||
+       RegExp(r'^[0-9]{4}$').hasMatch(digits);
+      return AlertDialog(
+       title:Text(t('تعديل بيانات الحساب','Edit account details')),
+       content:SingleChildScrollView(child:Column(
+        mainAxisSize:MainAxisSize.min,
+        crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+         TextField(
+          key:const Key('waffra-account-edit-name'),
+          controller:name,maxLength:80,
+          onChanged:(_)=>update((){}),
+          decoration:InputDecoration(
+           labelText:t('اسم الحساب','Account name'),
+           border:const OutlineInputBorder())),
+         if(bankWithVerifiedSource)...[
+          const SizedBox(height:12),
+          TextField(
+           key:const Key('waffra-account-edit-last-four'),
+           controller:suffix,maxLength:4,
+           keyboardType:TextInputType.number,
+           inputFormatters:[
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(4),
+           ],
+           onChanged:(_)=>update((){}),
+           decoration:InputDecoration(
+            labelText:t('آخر 4 أرقام للحساب','Account last four digits'),
+            hintText:t('أدخل 4 أرقام','Enter 4 digits'),
+            helperText:savedSuffix==null?t(
+             'لم تُحفظ أرقام لهذا الحساب بعد.',
+             'No verified last-four have been saved yet.'):t(
+             'القيمة المحفوظة ظاهرة ويمكنك تصحيحها.',
+             'The saved digits are displayed and editable.'),
+            border:const OutlineInputBorder())),
+         ],
+        ])),
+       actions:[
+        TextButton(onPressed:()=>Navigator.pop(ctx),
+         child:Text(t('إلغاء','Cancel'))),
+        FilledButton(
+         onPressed:candidate.isEmpty||candidate.runes.length>80||!suffixValid
+          ?null:()=>Navigator.pop(ctx,(
+           name:candidate,
+           lastFour:bankWithVerifiedSource&&digits.isNotEmpty?digits:null)),
+         child:Text(t('حفظ','Save'))),
+       ],
+      );
+     }));
+   if(edited==null)return;
+   if(edited.name==item.name&&edited.lastFour==savedSuffix)return;
+   if(verified!=null){
+    // Revalidate what the user actually reviewed before a witnessed write.
+    final latest=await verified.balances();
+    final same=latest.where((a)=>a.id==item.id&&!a.archived&&
+     a.name==item.name&&a.kind==item.kind).toList();
+    if(same.length!=1)throw StateError('Account changed while being edited.');
+    if(bankWithVerifiedSource&&
+      await verified.verifiedBankSuffix(item.id)!=savedSuffix){
+     throw StateError('Bank suffix changed while being edited.');
+    }
+   }
+   if(bankWithVerifiedSource&&edited.lastFour!=null){
+    await verified.renameAccountWithSuffix(
+     id:item.id,name:edited.name,lastFour:edited.lastFour!,
+     userConfirmed:true);
+   }else{
+    await widget.repository.renameAccount(
+     id:item.id,name:edited.name,userConfirmed:true);
+   }
    reload();
   }catch(_){failed();}
-  finally{name.dispose();}
+  finally{name.dispose();suffix.dispose();}
  }
 
  Future<void> archive(WaffraAccountBalance item)async{
@@ -136,11 +221,52 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
   }
  }
 
+ Future<WaffraAccountBalance?> createAccountInsideComposer(
+  String? providerGroup,bool createProvider)async{
+  final verified=widget.repository;
+  if(verified is! WaffraVerifiedAccountsApi){
+   throw StateError('Inline Add requires a verified SQLCipher writer');
+  }
+  final existing=await verified.balances();
+  if(!mounted)return null;
+  final bank=RegExp(r'^bank:institution:(rajhi|inma|snb|riyad|bilad|stc)$')
+   .firstMatch(createProvider?'':providerGroup??'')?.group(1);
+  final custom=<String,List<String>>{
+   for(final kind in const ['bank','wallet'])
+    kind:existing.where((a)=>!a.archived&&a.kind==kind&&
+     a.customSubtypeLabel!=null).map((a)=>a.customSubtypeLabel!)
+     .toSet().toList()..sort(),
+  };
+  final choice=await showDialog<WaffraNewAccountDraft>(
+   context:context,builder:(ctx)=>WaffraNewAccountDialog(
+    english:widget.english,suggestedProviderId:bank,
+    customSubtypeOptions:custom));
+  if(choice==null||!mounted)return null;
+  if(bank!=null&&(choice.kind!='bank'||choice.providerId!=bank)){
+   throw StateError('Child account must be under the selected bank');
+  }
+  final newId='m499-account-composer-'+
+   DateTime.now().microsecondsSinceEpoch.toString();
+  await verified.createTypedAccountWithIdentity(
+   id:newId,name:choice.name,kind:choice.kind,
+   providerId:choice.providerId??'none',
+   subtype:choice.subtype??'other',openingMinor:choice.openingMinor,
+   createdIso:DateTime.now().toIso8601String(),
+   lastFour:choice.lastFour,customSubtypeLabel:choice.customSubtypeLabel,
+   userConfirmed:true);
+  final refreshed=await verified.balances();
+  final found=refreshed.where((a)=>a.id==newId&&!a.archived).toList();
+  if(found.length!=1)throw StateError('Created account not verified');
+  reload();
+  return found.single;
+ }
+
  Future<void> compose(List<WaffraAccountBalance> accounts)async{
   await Navigator.of(context).push<void>(MaterialPageRoute(builder:(ctx)=>
    Scaffold(appBar:AppBar(title:Text(t('معاملة جديدة','New transaction'))),
     body:WaffraAccountTransactionForm(
      accounts:accounts,english:widget.english,
+     onCreateAccount:createAccountInsideComposer,
      incomeCategories:widget.incomeCategories,
      expenseCategories:widget.expenseCategories,
      availableBudgets:widget.availableBudgets,
@@ -233,7 +359,14 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
         leading:Icon(a.kind=='bank'?Icons.account_balance:
          a.kind=='cash'?Icons.payments_outlined:Icons.account_balance_wallet_outlined),
         title:Text(a.name),
-        subtitle:Text(amount(a.balanceMinor),textDirection:TextDirection.ltr),
+        subtitle:Column(mainAxisSize:MainAxisSize.min,
+         crossAxisAlignment:CrossAxisAlignment.start,children:[
+         if(a.customSubtypeLabel!=null)
+          Text(t('نوع الحساب: ','Account subtype: ')+a.customSubtypeLabel!,
+           key:Key('m497-custom-subtype-${a.id}'),
+           style:Theme.of(ctx).textTheme.bodySmall),
+         Text(amount(a.balanceMinor),textDirection:TextDirection.ltr),
+        ]),
         trailing:PopupMenuButton<String>(
          onSelected:(action){
           if(action=='rename')rename(a);

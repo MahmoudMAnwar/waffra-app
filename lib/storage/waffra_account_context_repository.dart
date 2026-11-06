@@ -53,6 +53,23 @@ class WaffraAccountContextRepository {
   }
  }
 
+ /// Read a single historical entry association without loading the full
+ /// ledger into a transaction edit sheet. An absent legacy/non-migrated row
+ /// is NOT treated as an accountless verified ledger entry.
+ Future<({bool exists,String? accountId})> readExistingEntryAccount({
+  required String entryId,
+ })async{
+  await _ready();_id(entryId);
+  final rows=await store.customSelect('''
+SELECT e.entry_id,l.account_id FROM fresh_finance_entries e
+LEFT JOIN fresh_finance_account_entry_links l ON l.entry_id=e.entry_id
+WHERE e.entry_id=?
+''',variables:[Variable.withString(entryId)]).get();
+  if(rows.length>1)throw StateError('Entry account link is ambiguous.');
+  return (exists:rows.length==1,
+   accountId:rows.isEmpty?null:rows.single.readNullable<String>('account_id'));
+ }
+
  /// Register the user-confirmed funding source for an EXISTING typed goal
  /// movement. The movement and its amount are never recreated here.
  Future<bool> attributeGoalMovement({
@@ -199,6 +216,27 @@ ON CONFLICT(account_id) DO UPDATE SET
 last_four=excluded.last_four,confirmed_iso=excluded.confirmed_iso
 ''',[accountId,lastFour,confirmedIso]);
   });
+ }
+
+ /// Read only the user-confirmed four-digit suffix from SQLCipher.
+ /// Never infer digits from account labels, SMS sender or the Home filter.
+ Future<String?> verifiedBankSuffix(String accountId)async{
+  await _ready();
+  _id(accountId);
+  final rows=await store.customSelect('''
+SELECT s.last_four
+FROM fresh_finance_account_sms_suffixes s
+JOIN fresh_finance_money_accounts a ON a.account_id=s.account_id
+WHERE s.account_id=? AND a.kind='bank' AND a.currency='SAR'
+  AND a.archived=0
+''',variables:[Variable.withString(accountId)]).get();
+  if(rows.length>1)throw StateError('Duplicate verified bank suffix.');
+  if(rows.isEmpty)return null;
+  final suffix=rows.single.read<String>('last_four');
+  if(!RegExp(r'^[0-9]{4}$').hasMatch(suffix)){
+   throw StateError('Stored bank suffix failed integrity validation.');
+  }
+  return suffix;
  }
 
  Future<WaffraSmsAccountDecision> inferSmsAccount(

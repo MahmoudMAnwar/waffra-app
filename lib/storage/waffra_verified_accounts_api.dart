@@ -2,6 +2,7 @@ import 'waffra_accounts_repository.dart';
 import 'waffra_account_context_read.dart';
 import 'waffra_account_context_repository.dart';
 import 'waffra_account_details_schema.dart';
+import 'waffra_custom_account_subtype_schema.dart';
 import 'waffra_account_context_policy.dart';
 import '../waffra_bank_sms_facts.dart';
 import 'waffra_unified_finance_writer.dart';
@@ -22,6 +23,13 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
   _lastDisplayed=data.witness;
   return data.balances;
  }
+
+ /// A witnessed, bounded read for existing entry Edit. Missing SQLCipher
+ /// entries must never be misrepresented as safely migrated legacy data.
+ Future<({bool exists,String? accountId})> readExistingEntryAccount({
+  required String entryId,
+ })=>bridge.readVerifiedAccountMetadata((context)=>
+  context.readExistingEntryAccount(entryId:entryId));
 
  Future<T> _commit<T>(
   Future<T> Function(WaffraAccountsRepository accounts) command,
@@ -65,8 +73,15 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
   required String id,required String name,required String kind,
   required String providerId,required String subtype,
   required int openingMinor,required String createdIso,
-  String? lastFour,required bool userConfirmed,
+  String? lastFour,String? customSubtypeLabel,
+  required bool userConfirmed,
  })=>_commit<void>((accounts)async{
+  if(customSubtypeLabel!=null&&
+     (!WaffraCustomAccountSubtypeSchema.validLabel(customSubtypeLabel)||
+      !((kind=='bank'&&subtype=='other')||
+        (kind=='wallet'&&subtype=='digital')))){
+   throw ArgumentError('Invalid custom subtype and account classification.');
+  }
   if(!WaffraAccountDetailsSchema.valid(
     kind:kind,providerId:providerId,subtype:subtype)){
    throw ArgumentError('Unsupported money-account subtype/provider.');
@@ -82,6 +97,12 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
   await WaffraAccountDetailsSchema.assign(accounts.db,
    accountId:id,kind:kind,providerId:providerId,subtype:subtype,
    confirmedIso:createdIso);
+  if(customSubtypeLabel!=null){
+   await WaffraCustomAccountSubtypeSchema.install(accounts.db);
+   await WaffraCustomAccountSubtypeSchema.assign(accounts.db,
+    accountId:id,kind:kind,label:customSubtypeLabel,
+    confirmedIso:createdIso);
+  }
   if(lastFour!=null){
    await WaffraAccountContextRepository(
     store:accounts.db,experimentalEnabled:true).setVerifiedBankSuffix(
@@ -234,6 +255,12 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
     changedIso:DateTime.now().toIso8601String(),
     userConfirmed:true),userConfirmed:userConfirmed);
 
+ /// Read the exact user-confirmed account identifier from the encrypted
+ /// authority; never derive it from account name or the selected Home filter.
+ Future<String?> verifiedBankSuffix(String accountId)=>
+  bridge.readVerifiedAccountMetadata(
+   (context)=>context.verifiedBankSuffix(accountId));
+
  Future<void> registerVerifiedBankSuffix({
   required String accountId,required String lastFour,
   required bool userConfirmed,
@@ -254,6 +281,23 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
   required bool userConfirmed})=>_commit<void>((repository)=>
    repository.renameAccount(id:id,name:name,userConfirmed:true),
    userConfirmed:userConfirmed);
+
+ /// Update the account label and corrected bank suffix atomically through
+ /// one existing verified SQLCipher writer/ledger generation. Inner SQL
+ /// transactions are nested in the outer witnessed finance transaction.
+ Future<void> renameAccountWithSuffix({
+  required String id,required String name,required String lastFour,
+  required bool userConfirmed,
+ })=>_commit<void>((repository)async{
+  if(!RegExp(r'^[0-9]{4}$').hasMatch(lastFour)){
+   throw ArgumentError('Bank suffix must contain exactly four ASCII digits.');
+  }
+  await repository.renameAccount(id:id,name:name,userConfirmed:true);
+  await WaffraAccountContextRepository(
+   store:repository.db,experimentalEnabled:true).setVerifiedBankSuffix(
+    accountId:id,lastFour:lastFour,
+    confirmedIso:DateTime.now().toIso8601String(),userConfirmed:true);
+ },userConfirmed:userConfirmed);
 
  @override
  Future<void> archiveEmptyAccount({required String id,

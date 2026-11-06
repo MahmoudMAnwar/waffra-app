@@ -2,15 +2,16 @@ import 'package:drift/drift.dart';
 
 import 'waffra_accounts_schema.dart';
 import 'waffra_account_details_schema.dart';
+import 'waffra_custom_account_subtype_schema.dart';
 import 'waffra_account_context_schema.dart';
 import 'waffra_encrypted_store.dart';
 
 class WaffraAccountBalance {
  const WaffraAccountBalance(
   this.id,this.name,this.kind,this.balanceMinor,this.archived,
-  {this.providerId,this.subtype});
+  {this.providerId,this.subtype,this.customSubtypeLabel});
  final String id,name,kind;
- final String? providerId,subtype;
+ final String? providerId,subtype,customSubtypeLabel;
  final int balanceMinor;
  final bool archived;
 }
@@ -178,14 +179,20 @@ class WaffraAccountsRepository implements WaffraAccountOperations {
   await _ready();
   final hasDetails=await WaffraAccountDetailsSchema.exists(db);
   if(hasDetails)await WaffraAccountDetailsSchema.requireReady(db);
+  final hasCustom=await WaffraCustomAccountSubtypeSchema.exists(db);
+  if(hasCustom)await WaffraCustomAccountSubtypeSchema.requireReady(db);
   final detailColumns=hasDetails?
    'd.provider_id AS provider_id,d.subtype AS subtype':
    'NULL AS provider_id,NULL AS subtype';
   final detailJoin=hasDetails?
    'LEFT JOIN fresh_finance_account_details d ON d.account_id=a.account_id':'';
+  final customColumn=hasCustom?
+   'c.label AS custom_subtype_label':'NULL AS custom_subtype_label';
+  final customJoin=hasCustom?
+   'LEFT JOIN fresh_finance_custom_account_subtypes c ON c.account_id=a.account_id':'';
   final rows=await db.customSelect('''
 SELECT a.account_id,a.label,a.kind,a.archived,
- $detailColumns,
+ $detailColumns,$customColumn,
  a.opening_minor +
  COALESCE((SELECT SUM(CASE WHEN e.is_income=1 THEN e.amount_minor
    WHEN due.entry_id IS NOT NULL THEN -due.current_cash_minor
@@ -205,6 +212,7 @@ SELECT a.account_id,a.label,a.kind,a.archived,
   WHERE s.account_id=a.account_id),0) AS balance_minor
 FROM fresh_finance_money_accounts a
 $detailJoin
+$customJoin
 ORDER BY a.created_iso,a.account_id
 ''').get();
   return List<WaffraAccountBalance>.unmodifiable(rows.map((r)=>
@@ -212,7 +220,8 @@ ORDER BY a.created_iso,a.account_id
     r.read<String>('kind'),r.read<int>('balance_minor'),
     r.read<int>('archived')!=0,
     providerId:r.readNullable<String>('provider_id'),
-    subtype:r.readNullable<String>('subtype'))));
+    subtype:r.readNullable<String>('subtype'),
+    customSubtypeLabel:r.readNullable<String>('custom_subtype_label'))));
  }
 
  Future<void> renameAccount({required String id,required String name,

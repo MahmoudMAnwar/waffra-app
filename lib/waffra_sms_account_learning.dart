@@ -92,7 +92,8 @@ abstract final class WaffraSmsAccountLearning {
   if(four!=null){
    final exact=evidence.where((item)=>item.sender==scoped&&
     item.key=='suffix:$four'&&item.confirmations>=2&&
-    activeAccountIds.contains(item.accountId)).toList();
+    activeAccountIds.contains(item.accountId)&&
+    sameBankAccountIds.contains(item.accountId)).toList();
    return exact.length==1?exact.single.accountId:null;
   }
   if(sameBankAccountIds.length!=1)return null;

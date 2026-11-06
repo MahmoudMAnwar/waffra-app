@@ -92,7 +92,12 @@ class M442SmsConsentSessionRecovery(unittest.TestCase):
             self.assertIn('"' + name + '"', activity)
         self.assertIn('WaffraAutoSmsStore.suspendForSignOut(this)', activity)
         self.assertIn('WaffraAutoSmsStore.resumeForSameSignedInOwner(this)', activity)
-        self.assertIn('await WaffraAutoSms.suspendForSignOut();', home)
+        # The bounded native SMS pause must fail closed on timeout instead of
+        # leaving logout apparently unresponsive; preserve native-first order.
+        self.assertIn('WaffraAutoSms.suspendForSignOut().timeout(', home)
+        self.assertIn('const Duration(seconds:12),onTimeout:()=>false', home)
+        self.assertLess(home.index('WaffraAutoSms.suspendForSignOut().timeout('),
+                        home.index('await _accountWriteAuthority.signOut();'))
         self.assertIn('await WaffraAutoSms.resumeAfterSignIn();', home)
         self.assertIn('await _accountWriteAuthority.saveProfile(', home)
         self.assertIn('await _accountWriteAuthority.signOut();', home)

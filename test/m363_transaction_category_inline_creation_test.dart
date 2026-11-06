@@ -27,7 +27,9 @@ void main(){
 
  test('M363 transaction edit keeps same selectable active budget as create',(){
   final source=File('lib/main.dart').readAsStringSync();
-  expect(source,contains('String? selectedBudgetId=initial?.budgetId'));
+  // Back restores any unsaved SMS editor choice, otherwise an existing
+  // finance record preserves its prior budget association on edit.
+  expect(source,contains("String? selectedBudgetId=(smsEditorDraft?['budget'] as String?)??initial?.budgetId;"));
   expect(source,contains("'waffra-entry-budget-'"));
   expect(source,contains("'__create_budget__'"));
   expect(source,contains("'__manage_budgets__'"));

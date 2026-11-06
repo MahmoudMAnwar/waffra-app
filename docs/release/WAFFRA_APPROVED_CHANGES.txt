@@ -1,3 +1,108 @@
+[PR #402 M497] 2026-11-06 — Show the saved custom subtype in My Accounts (#406)
+================================================================================================
+- A custom bank/wallet account subtype label approved by the user is now displayed directly beneath that account's name, next to its independently verified SAR balance. This makes the user-defined subtype visible after creation and after reopening My Accounts.
+- No account classification enum, balance formula, encrypted source, ledger, transfer, migration or permission policy is changed. The existing versioned custom subtype metadata remains the only label source.
+- The encrypted account subtype regression test now asserts that the My Accounts list renders that stored label. CI and Android visual tests remain pending.
+
+[PR #402 M496] 2026-11-06 — Trusted sender-scoped bank child suffix suggestion (#407/#405)
+====================================================================================================
+- The native SMS review screen now passes the original reviewed sender name to its correction editor. When a user explicitly chooses Add linked bank account, the inline account dialog proposes the correctly directed masked four digits from the original SMS only if trusted SAR income/expense evidence is present AND the selected verified provider matches the sender's recognized bank. Unknown sender, different bank, pending message, transfer and unverified currency do not prefill a suffix.
+- The original received SMS remains read-only to protect provenance, and the proposed four digits remain user editable. Account creation still requires explicit user confirmation and an exclusive verified SQLCipher writer. No automatic money posting or account binding is introduced.
+- Extended test/m486_sms_back_navigation_source_test.dart to protect this sender-bank/direction check. Android validation, bank-provider impersonation scenarios and exact-head CI remain pending.
+
+[PR #402 M495] 2026-11-06 — Exact-head analyzer correction and responsive UI acceptance tests
+=================================================================================================
+- #403: the M429 Flutter analyzer identified one remaining dead null-coalescing expression in the already trusted bank SMS title. Removed only the redundant operator; the bank SMS amount, currency, type, source hash and duplicate-write checks remain unchanged.
+- #401: added 320px Flutter widget regression for the full Home header account name, with no clipped name or RenderFlex overflow acceptance.
+- #412: added regression guard that confirms an explicitly selected child account bypasses a second selector only after fresh SQLCipher witness validation.
+- #418: added layout regression for a full-width date when no budget exists and equal date/budget widgets when a budget is offered.
+- #419: added code regression for responsive footer selection, stationary + animation, lightweight overlay and post-frame biometric/noncritical I/O.
+- Remaining exact-SHA CI, real Android frame profile, nested Back, upgrade/restore and finance-signoff are not certified. No signed APK or main merge claimed.
+
+[PR #402 M492-M494] 2026-11-06 — Continue the 14 partial SMS/account requirements (Issues #403-#410/#416/#417)
+=================================================================================================================
+- M492 / #410: a temporary hash-scoped, maximum-eight-item in-memory editor cache restores uncommitted reviewed-SMS title, amount, direction, main and subcategory, budget, provider/child money account and date after Back and re-entry. No copied raw SMS is persisted outside the verified encrypted source. A verified committed SMS removes its draft. Existing SMS native acknowledgement remains a separate step.
+- M493 / #408: learned sender/suffix account suggestion now REQUIRES the chosen active account to belong to the same verified bank group. Two user confirmations remain mandatory and cross-bank, ambiguous and archived account guesses are refused. test/m493_sms_account_matching_regression_test.dart exercises those negatives without auto posting.
+- M494 / #409 + #404: the full original bank SMS is available in an expandable read-only editor section. Previously received Android SMS is now read-only during correction (amount/category/title remain editable), so source hash and provenance cannot drift. Pending/OTP preview remains hidden.
+- M494 / #405 + #416: Add provider and Add linked account actions inside income/expense now open the user-confirmed WaffraNewAccountDialog directly, with structured selected-bank suggestion for a bank child. Account creation goes only through WaffraVerifiedAccountsApi, checks a fresh SQLCipher witness and refreshes the confirmed balance before adopting the child. Cancel does not clear previous editor fields. No separate Accounts management page is required on this path.
+- M494 / #417: if native bulk SMS exclusion fails after partially acknowledging messages, the sender review sheet stays mounted and the unprocessed message selection remains retryable. Only completed groups may be excluded.
+- M495 / #403: remove four unnecessary nullable-access warnings in SMS parsing while preserving safe source amount and classification checks.
+- Existing dedicated #406, #410, #413, #414 and #415 tests plus #408 multi-bank/negative test are committed. M385 scope was extended only to the explicitly requested code and test sections; mandatory financial safety and release workflows were not weakened.
+- Exact-SHA CI, physical Android back/draft/biometric responsiveness, duplicate finance recovery, backup migration, and full 18-item acceptance are still pending. This file documents changes only, NOT passing Android or a signed release.
+
+[PR #402 M490] 2026-11-06 — Visible acknowledgement failure after reviewed-SMS correction (#411)
+=====================================================================================================
+- After a confirmed bank-SMS-origin manual-style income/expense correction, the durable SMS hash is checked before requesting Android pending-list acknowledgement. If that native request fails, the SMS remains in Review and the user sees an explicit non-posting retry warning; financial ledger entries are never duplicated or rolled back solely because queue acknowledgement failed.
+- The prior verified SMS writer, transfer request idempotency and encrypted account mapping are unchanged. Extended test/m486_sms_back_navigation_source_test.dart to assert the failed-ack retention contract.
+- Exact-head CI and real Android retry/rollback UX remain pending. No signed APK or merge is asserted.
+
+[PR #402 M488] 2026-11-06 — Preserve nested account selector after cancelling inline Add (#416)
+==================================================================================================
+- In both SMS-derived and manual income/expense editors, the provider/child selectors now restore their prior selection if the user taps the synthetic 'Add bank/provider' or 'Add linked account' item but cancels without creating one. The financial draft, optional budget and selected child account remain open and intact.
+- Selection identity is explicitly reset using a local UI-only revision key after the nested account-manager route closes. Account IDs, storage, SQLCipher financial writer, bank-sender verification and existing transfer logic are not modified.
+- Extended source regression test test/m486_sms_back_navigation_source_test.dart. Added a nested-cancel widget test for #406 custom-subtype dropdown in test/m487_custom_subtype_dialog_test.dart.
+- CI, Android one-step Back + cancel, and ledger acceptance remain pending. No signed APK or main merge is claimed.
+
+[PR #402 M487 / M486] 2026-11-06 — Custom account subtypes and nested bank-SMS Back navigation (#406/#410)
+=============================================================================================================
+- M487 / Issue #406: New bank/wallet account dialog offers an explicit Add account subtype action and reuses previously saved custom labels. Labels are validated display metadata; the underlying bank/wallet/cash/other classification, canonical financial subtype, SAR balances, original accounts and SQLCipher writer authority remain unchanged.
+- The optional custom label is saved atomically alongside a user-confirmed account in a separate versioned encrypted SQLCipher table. Existing installations without this optional metadata remain readable. The matching active money account, its canonical kind and the same verified finance source are still required. No automatic SMS-to-account association was added.
+- M487 tests: test/m487_custom_subtype_dialog_test.dart covers creating/reusing the dropdown label; test/storage/m487_custom_account_subtype_test.dart covers versioned encrypted metadata, invalid input, account kind rejection and unchanged balances. These tests are committed, not yet certified as passing on latest SHA.
+- M486 / Issue #410 (partial): keep the sender's SMS review sheet beneath nested message review and entry/account screens. Android Back should return one layer and preserve sender group and pending selected IDs; pending SMS is acknowledged only when saved/confirmed. Source regression test test/m486_sms_back_navigation_source_test.dart is included. Full unsaved editor form restoration, Android gesture and lifecycle tests remain pending.
+- The M385 manifest now enumerates five owner-requested added files and precise anchors for the affected existing code. The policy scripts and mandatory gates were NOT bypassed or changed.
+- No claim of CI, encrypted backup/restore, APK release, physical Android UI or all-18 acceptance. The PR remains Draft until measured and reviewed.
+
+[PR #402 M485/M486] 2026-11-06 — SMS provenance details, nested Back and biometric startup frame scheduling
+===============================================================================================================
+- M485 #404: transaction details now identify a bank-SMS-origin transaction as a manually reviewed SMS; verified protected original SMS remains separate from ordinary editable notes. The UI does not print SMS source bodies as free-text personal notes.
+- M486 #410 (partial): the native sender list remains mounted beneath SMS review and any subsequent entry editor. Back returns to the same sender group instead of dropping the user into Home; the reviewed row disappears only after pending acknowledgement succeeds. Full unsaved draft restoration, deep multistep Android Back gestures and rotation require further verification.
+- M486 #419 (partial): during app first-ready and post-biometric resume, noncritical widget and SMS synchronization is queued to a Flutter post-frame callback, collapsing redundant resume requests. SQLCipher financial source reads and privacy protections are not skipped or replaced by stale balances. Physical frame traces needed.
+- M385 includes exact added source bounds. This changelog documents development changes only; it is NOT proof that Flutter compile, finance QA, APK or 18-item acceptance passed.
+
+[PR #402 M483-M485] 2026-11-06 — Masked SMS suggestions, original-message review, pending removal, SMS correction source
+================================================================================================================
+- M483 / Issue #407 (partial): new bank account dialog accepts an optional four-digit SMS ending as an EDITABLE prefill. The first reviewed SMS offers the verified source ending for expense or destination ending for income (only known SAR income/expense; never infer unrelated digits). No account is bound or money moved without explicit account creation. Added test/m483_sms_account_suffix_prefill_test.dart for valid/invalid/editable input. Transfers and account creation from the nested dropdown still need separate verification.
+- M483 code integrity correction: an intermediate file edit accidentally duplicated code in the dialog source, and was corrected immediately by restoring the original single class/constructor/dispose structure plus the exact approved prefill. The duplicate code is not present in the latest source; latest-head compile is still pending.
+- M484 / Issue #409: original SMS can be expanded and selected in the native message review dialog; OTP/verification messages are not exposed. The existing encrypted transaction-details source is authoritative, not user-typed free text.
+- M484 / Issue #411 (partial): native pending SMS is removed from the visible review list only after an already-confirmed SMS hash and successful Android acknowledge. Ack failure leaves it pending and warns for retry; internal transfer already retains an idempotent request ID. No duplicate financial write is triggered by deletion.
+- M485 / Issues #403/#404 (partial): "add manual" from an SMS review now opens the bank-SMS editor WITH the original message and verifies SAR source amount and direction before prefilling title/amount/category/date. It commits via the existing bank SMS consent + hash writer instead of falsely marking the transaction as standalone manual. Uncertain fields remain editable or unfilled, and the account selected in the editor still requires source verification.
+- The changes do not certify the 18-item PR, signed APK, user-device frame smoothness or SMS provenance migration. Exact current-head CI, Android UI/back navigation, DB persistence and older-data restore are still needed.
+
+[PR #402 M481 CI correction] 2026-11-06 — Restore bank context method boundaries after compiler detection
+=========================================================================================================
+- Initial M481 code insertion into lib/storage/waffra_account_context_repository.dart inadvertently duplicated Dart text after the four-digit regex. Flutter analysis reported parser errors and consequent missing inferSmsAccount method. The entire original verified-context implementation has now been restored byte-for-byte outside the single intended verifiedBankSuffix getter, without changing any finance logic or data.
+- The getter reads saved four digits from verified SQLCipher metadata, checks exactly four ASCII digits and returns null for unlinked or archived accounts; no account inference or background posting was introduced.
+- Commit 981e7eda is the corrected Dart source. Previous failed exact-head runs do not establish a passing build. Run latest-head analyzer, storage test suite and Android smoke before any release.
+
+[PR #402 M480–M481, analyzer correction] 2026-11-06 — Verified bank suffix visibility, edit and exact-source guard
+========================================================================================================
+- M480/M481 / #414/#415: a source-locked read of the user's confirmed last-four bank account identifier is now available from the same verified SQLCipher account context. It never derives digits from the display name or Home account filter and rejects invalid stored values.
+- My Accounts editing now shows the existing last-four digits for a bank and permits correction alongside the account name. The verified adapter executes both changes inside ONE witnessed, exclusive SQLCipher transaction; validation/database failure rolls back the entire change. Empty suffix is allowed for accounts that never had one; an already confirmed suffix cannot be cleared accidentally by saving a blank field.
+- SMS-linked account confirmation now loads the saved last-four when a bank account is selected, clears stale digits immediately on selection changes, ignores out-of-order async reads, and disables confirmation on read error or malformed input. No SMS is posted automatically.
+- Added isolated encrypted-store tests in test/storage/m481_saved_bank_suffix_edit_test.dart for saved suffix correction, invalid and nonbank rejection, SMS matching after correction, and no balance effects; source assertions cover the atomic writer and UI paths. Tests, full analyzer and Android UX checks are not yet certified.
+- Addressed the Flutter analyzer's previous M476 num-to-double mismatch at lib/main.dart:3468 by explicitly typing the balance-card offset as double. Earlier seven failed workflows shared this compiler error; the new exact-head CI will determine if other failures remain.
+- No SQLCipher schema redesign, finance reset, migration, API banking integration or permission bypass; only bounded source edits authorized in docs/qa/approved_change_scope.json. This remains a Draft PR, NOT a signed APK or a claim that all 18 requests are complete.
+
+[PR #402 M479] 2026-11-06 — Reconsider sender exclusion before acknowledging selected SMS (#417)
+===================================================================================================
+- The sender opt-in dialog now appears BEFORE the native acknowledgment that hides selected messages from review. 'العودة' / Back leaves the message selection intact and neither blocks the sender nor hides SMS; 'لا' / No opts out of sender exclusion; 'استبعاد المرسل' explicitly opts in for this sender.
+- Sender exclusion executes only after that sender's chosen messages were successfully acknowledged. A partial acknowledgment cannot block a sender whose batch remains pending. The Android phone's SMS data and previously posted financial records remain unchanged.
+- Approved #417 code is confined to the SMS bulk selection handler declared in M385, and still requires exact-head CI and Android UX checks. This is not release certification or proof of the entire PR being done.
+
+[PR #402 M477–M478] 2026-11-06 — Dependent account selection and responsive date/budget row
+================================================================================================
+- M477 / Issue #416 (PARTIAL): the standalone account-selection button beside the date was removed from the Home manual transaction editor. The existing bank/provider and linked-account dropdowns now include their own account-creation options, with the child disabled until its provider is chosen. New-account creation routes through the existing verified account manager and preserves the live entry draft, updating the provider and child choice only when a matching new account was actually created. Manual editor code only; SMS review/transfer parity and signed device tests remain incomplete.
+- M478 / Issue #418 (CODE ADDED): date uses the entire editor row when no selectable expense budget exists. Where the optional expense-budget selector is shown, date and budget use equal Expanded widths on the same row; budget creation/management actions and save-side optional-budget behavior remain intact. Transfers remain exempt from expense budgets.
+- The new UI code does not change SQLCipher balances, user confirmation gates, SMS parsing, transaction account authority, or finance writer. Exact-SHA CI and Android narrow-screen checks are still required. No claim that the PR's 18 items are complete.
+
+[PR #402 M474–M476] 2026-11-06 — Bounded app smoothness, account confirmation and balance header work
+=====================================================================================================
+- M474 / Issue #419 (partial): removed artificial + tap (275ms) and add-sheet (260ms) delays; coalesced concurrent user Pull-to-Refresh gestures only; skipped redundant rebuild when footer item is already selected; replaced expensive full-screen add-menu live blur with a simpler dim scrim. This is NOT proof of zero lag; physical Android profile/release frame timelines, biometric-first-launch and post-save performance remain unverified.
+- M475 / Issue #412 (code added): already-confirmed entry-editor child account or newly approved account can bypass redundant second account picker after a fresh verified SQLCipher account witness confirms it remains active. Unconfirmed/inferred SMS account suggestions still require explicit selection. Exactly-once posting and biometric checks are unchanged; Android regression and CI are pending.
+- M476 / Issue #401 (code added): moved the single account-selection control to the top heading of the emerald balance card, with multiline full-name rendering and height allowance, removing its truncated bottom duplicate. The bank account shown in the header remains a view filter only and is never silently used as the source of a new payment; Android narrow-screen/layout tests remain pending.
+- Only the bounded sections of lib/main.dart listed in docs/qa/approved_change_scope.json changed. No automated financial writer, account source-of-truth, SQLCipher schema, SMS permission/consent or historical balance was weakened.
+- This is a reviewed development changelog on draft PR #402, NOT signed APK acceptance, completed execution of all 18 requirements or production certification.
+
 [M470-26] 2026-11-06 — Move Home account selector inside the emerald balance card
 ==================================================================================
 - The former separate All accounts header row is removed; its trigger is now a compact button inside the emerald balance card, preserving the exact verified account dropdown and selected-account display filter.
@@ -2228,3 +2333,58 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 
 [M470 #3 2026-11-06 — avoid single-SMS post-commit frame stalls]
 - The individually reviewed bank-SMS save path previously decoded the full encrypted journal snapshot synchronously in the Flutter UI isolate after successful commit. It now uses the existing WaffraLargeJsonDecode.parse worker with a strict list type check, preserving the same confirmed journal source, account/hash coherence and rule-learning order. Added a regression assertion against restoring the synchronous decode path. No money writer or duplicate-posting behavior changed. Performance on physical Android remains to be verified.
+
+
+[WAFFRA-NEW-012 — 2026-11-06] توحيد تعلم الكلمات المفتاحية الآمنة بعد حفظ العمليات — PR #402 (Draft)
+=========================================================================================================
+- المستخدم طلب أن يتعلم وفرة من وصف وتبويب أي دخل/مصروف يدوي محفوظ بنجاح، بنفس أسلوب التعلم من رسالة بنكية تم تأكيدها، بحيث يمكن اقتراح التصنيف عند وصول رسالة مشابهة.
+- تحديث قواعد `lib/waffra_sms_local_rules.dart` لاستخراج عبارات وكلمات وصف غير حساسة، وإلحاقها بقواعد الدخل أو المصروف الموجودة مع الاحتفاظ بعلاقة الكلمة بالقسم الفرعي الصحيح، دون تكرار قاعدة لكل عملية.
+- يعمل اقتراح الوصف على العمليات اليدوية والرسائل البنكية المؤكدة فقط، بعد تأكيد الحفظ المالي والتحقق من السجل؛ القواعد ليست إذن تسجيل مالي آلي، ولا تولّد مرسلًا أو حسابًا بنكيًا أو آخر أربعة أرقام من إدخال يدوي.
+- الحفاظ على قواعد التوجيه البنكية الحساسة المستقلة: هوية المرسل وآخر أربعة أرقام للحساب لا يمكن استنتاجها من الكلمات المفتاحية؛ يجب مراجعة الحساب وتأكيده في مسار الأموال الأصلي.
+- اختبارات Flutter مضافة لتغطية وصف عربي متشابه، توجيه دخل/مصروف، تجميع الكلمات، منع التعارض، استبعاد المحتوى الحساس، وتوقيت التعلم بعد الحفظ الموثّق.
+- لا يتضمن هذا التغيير إصلاح البنود 001–011 المسجلة في `docs/WAFFRA_REQUIREMENTS.md`، وما زال #402 Draft. نجاح CI وفحص Android الحقيقي مطلوبان قبل اعتبار هذه الميزة جاهزة أو دمجها في main.
+
+[WAFFRA-NEW-015 / M499 — 2026-11-06: transfer and SMS dropdown parity]
+- استكمال اختيار الجهة/البنك ثم الحساب التابع عند إضافة عملية يدوية أو مراجعة رسالة بنكية، بما في ذلك حساب المصدر وحساب الوجهة في التحويل اليدوي. كل قائمة تدعم إضافة جهة جديدة أو حساب تابع من داخلها، والحساب التابع لا يُختار قبل تحديد الجهة.
+- ربط نموذج تحويل الرسائل البنكية ونموذج التحويل من «حساباتي» بنفس callback الموثق لإنشاء الحساب في SQLCipher، والتحقق من وجوده بعد الإنشاء. في حالة إلغاء نموذج الحساب، تبقى مسودة المبلغ والملاحظات والحسابات كما كانت.
+- لا تُستنتج حسابات التحويل تلقائيًا من اسم مرسل الرسالة، ولا يترتب على إضافة حساب أي ترحيل مالي. يظل التحويل نفسه مستقلاً ومشروطًا باختيار حسابي مصدر ووجهة مختلفين وحفظ موثق مضاد للتكرار.
+- تحديث التتبع والاختبارات M499 بما يشمل عنصر الإضافة وتعطيل اختيار الحساب حتى اختيار الجهة. نجاح الاختبارات على آخر SHA والتحقق على جهاز Android وRTL واستعادة البيانات المشفرة ما زال مطلوبًا، ولا يعد التنفيذ معتمدًا نهائيًا.
+
+[WAFFRA-NEW-019 / M500 — 2026-11-06: historical transaction account assignment from Details Edit]
+- Added provider-first/linked-child account dropdowns inside the edit form for verified historical income/expense entries, reusing the same user-triggered inline account-creation dialog as new transactions. Existing account associations are read from SQLCipher with a witnessed read, never inferred from Home filter or SMS sender.
+- Only existing SQLCipher entries with no account may acquire their first user-confirmed account association. Use the witnessed idempotent link writer; do not create a second income/expense, change the existing transaction ID, or silently move already-linked entries between accounts. A legacy-only entry not yet migrated cannot pretend to be a verified SQLCipher record.
+- Editing details remains on its existing financial writer route; linking follows an explicit verified association step. A partially committed metadata edit does not claim an unverified link, and confirmed bank attribution does not offer misleading metadata-only Undo.
+- Added SQLCipher regression for historical/no-entry/duplicate-link/failed-confirmation safety and source contract regression for Details Edit. New source bounded by M385 manifest; release-note freshness follows application code. Real Android update-over-legacy-data, backup/receipt preservation, full CI and user verification remain required. PR #402 Draft; Issue #420.
+
+[M500 post-review consent + Android balance safety]
+- Before saving an Edit that first links an old income/expense to a money account, show explicit Back/Confirm consent explaining that the existing transaction affects calculated account balance and a current-day opening balance must not already include the same history. Cancel leaves the existing entry unlinked; no new debit or credit is created.
+- Regression source assertion verifies the explicit confirmation. This is not proof of old-version SharedPreferences-to-SQLCipher migration, which still needs separately verified on-device upgrade and preserved receipt/backup evidence.
+
+[PR #402 CI repair / M487 — 2026-11-06: account subtype dialog and current UI regression contract]
+===================================================================================
+- Fixed a real Flutter layout overflow in the in-dropdown "Add account subtype" action: its long localized label now flexes and ellipsizes within the available width instead of overflowing the Row.
+- Fixed a nested dialog lifecycle bug where a locally created TextEditingController was disposed while Flutter still rebuilt the closing route. The editable label now lives in nested dialog state until completion; a Cancel leaves the previous canonical subtype selected. This does not change saved account type, money, SMS, or the SQLCipher verified writer.
+- Updated individually bounded source-based regression assertions which still expected the removed duplicate account button near the date or old FAB delays. The user-approved flow is provider/bank first, explicit linked account next, date full-width without budget or balanced with optional budget. No old account picker was reintroduced simply to satisfy tests.
+- Updated copyable transaction-notes widget tests to locate SelectableText by stable key and check complete text alongside an independent protected bank-SMS original; no original SMS was written into editable notes.
+- The strict M385 manifest declares all 35 actually changed files and precisely bounds changed existing test cases. M385, encrypted-ledger authority, duplicate SMS commit protection, source-identity checks and mandatory release gates are unchanged.
+- Earlier six failed full-suite workflow checks shared 17 Flutter test failures on old PR head f6d0b85. They are NOT evidence that new head passes. Exact-current-HEAD tests and physical Android startup/biometric/refresh/back/transfer/backup verification remain required. No main merge, signed APK release, or device certification claimed.
+
+
+[M502 PR #402 Issue #424 — 2026-11-06: account & biometric sign-out response]
+- Fix user-confirmed dead sign-out from account confirmation and mandatory biometric lock: allow lock-screen sign-out while OS biometric authentication is in flight; cancel active challenge and never accept a late unlock completion after sign-out starts.
+- Route all app sign-out progress and guarded credential/SMS/verified-account authority errors through the MaterialApp ScaffoldMessenger key instead of an ancestor context without a ScaffoldMessenger. Never silently turn a failed preflight into an apparently successful logout.
+- Bound Android SMS pause and secure-verifier preflight I/O, retaining fail-closed account/data protection, encrypted SMS owner isolation, unchanged local finance ledger and backups. Do not delete OS password verifier or relax SQLCipher witness.
+- New M502 widget/source regressions. Exact HEAD CI, clean/update Android lock & account confirmation, same-generated-password re-login, encrypted restore and real-device verification PENDING; no signed APK acceptance claimed.
+
+[M502 CI contract follow-up — 2026-11-06]
+- Preserve the existing exact root `if(mounted)setState` logout route assertion for M424 while retaining the new root-level sign-out progress/error feedback and fail-closed verifier/SMS protections. No API or account-data change. Latest exact HEAD CI and physical Android validation still pending.
+
+
+[M503 PR #402 Issue #424 — 2026-11-06: final root-cause repair for duplicate notice regressions]
+- 3 full-suite Workflows failed on the previous M502 SHA, all due to only 2 unit source cases: footer-notice and FAB shared-notice presenter. M502 had introduced a second `showSnackBar` in root sign-out feedback, violating the app-wide single-notice contract.
+- Route secure sign-out progress and credential/SMS failure feedback through Waffra's original `snack(...)` presenter. Use the `Navigator` context (below MaterialApp and ScaffoldMessenger) so failures cannot vanish from the root State; show footer-reserved notice on Home, original single snackbar on biometric/login. Dismiss pending unified notice after confirmed sign-out so it does not leak to login.
+- Do not modify/skip the two originally failing regression tests. New M503 regression in M502 test enforces exactly one snackbar presenter and construction globally, plus correct route; native suspension/verifier checks and encrypted finance preservation unchanged. Fix test regex escaping before CI.
+- Scope manifest is narrowed to pre-existing root logout and `snack(...)` boundaries. Latest SHA full Flutter, SQLCipher/security and two-device Android tests pending; no claim of device acceptance.
+
+[M503 M429 biometric source-contract follow-up — 2026-11-06]
+- Restore exact pre-existing M424 signed-out state transition in WaffraApp after explicitly dismissing the approved unified footer and ScaffoldMessenger progress feedback. The previous M503 edit had wrapped this transition in a block and broke a source regression test without changing its intended behavior. No test was removed or weakened, the mandatory OS biometric gate remains unchanged, and the original session, local password, native SMS-suspension and encrypted-finance guards remain intact. Exact-head M429 and all full-suite jobs require rerun and device validation.

@@ -65,15 +65,15 @@ void main() {
   test('FAB launch waits for the menu collapse and suppresses double taps', () {
     final source = File('lib/main.dart').readAsStringSync();
     expect(source, contains('if(_addActionOpening)return;'));
-    expect(source, contains('if(fromMenu)await Future<void>.delayed(waffraMotion(260));'));
+    // PR #402 removes the fixed 260ms UI-blocking sleep. The async
+    // gate must still close the menu and suppress double-submission.
+    expect(source, contains('if(mounted&&addFabExpanded)setState(()=>addFabExpanded=false);'));
+    expect(source, contains('if(mounted)await action();'));
     expect(source, contains('if(!_acceptFabTap())return;'));
     expect(source, contains('splashFactory:NoSplash.splashFactory'));
     expect(source, contains('key:_tourKeys[1]'));
-    expect(source, contains('final tappedTab=tab;'));
     expect(source, contains('scale:_fabPressed?0.96:1.0'));
-    expect(source, contains('await Future<void>.delayed(waffraMotion(165));'));
     expect(source, contains('duration:waffraMotion(320)'));
-    expect(source, contains('await Future<void>.delayed(waffraMotion(110));'));
     expect(source, contains('duration:waffraMotion(220)'));
     expect(source, contains('now.difference(_lastFabTapAt!)<const Duration(milliseconds:380)'));
     expect(source, contains("ValueKey('waffra-fab-menu-open')"));
@@ -94,7 +94,10 @@ void main() {
       )),
     ));
     expect(find.text('شراء - متجر'),findsWidgets);
-    expect(find.text(raw),findsOneWidget);
+    final note=find.byKey(const Key('waffra-transaction-personal-notes'),
+      skipOffstage:false);
+    expect(note,findsOneWidget);
+    expect(tester.widget<SelectableText>(note).data,raw);
     expect(tester.takeException(),isNull);
   });
 

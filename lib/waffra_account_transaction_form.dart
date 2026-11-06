@@ -51,7 +51,7 @@ class WaffraInternalTransferDraft {
 class WaffraAccountTransactionForm extends StatefulWidget {
  const WaffraAccountTransactionForm({
   super.key,required this.accounts,this.english=false,
-  this.onConfirmEntry,this.onConfirmTransfer,
+  this.onConfirmEntry,this.onConfirmTransfer,this.onCreateAccount,
   this.incomeCategories=const [],this.expenseCategories=const [],
   this.availableBudgets=const {},this.requireKnownCategory=false,
   this.initialSmsTransfer,
@@ -66,6 +66,8 @@ class WaffraAccountTransactionForm extends StatefulWidget {
  final bool english;
  final Future<void> Function(WaffraAccountTransactionDraft)? onConfirmEntry;
  final Future<void> Function(WaffraInternalTransferDraft)? onConfirmTransfer;
+ /// User-initiated verified account creation; null means cancel.
+ final Future<WaffraAccountBalance?> Function(String? group,bool createProvider)? onCreateAccount;
  @override
  State<WaffraAccountTransactionForm> createState()=>_WaffraAccountTransactionFormState();
 }
@@ -81,16 +83,21 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
  WaffraAccountOperation mode=WaffraAccountOperation.income;
  String? source,destination,error,selectedBudgetId;
  String? sourceProvider,destinationProvider;
+ late List<WaffraAccountBalance> liveAccounts;
+ bool creatingAccount=false;
+ int sourceProviderRevision=0,destinationProviderRevision=0;
+ int sourceChildRevision=0,destinationChildRevision=0;
  List<String> get choices=>mode==WaffraAccountOperation.income?
   widget.incomeCategories:widget.expenseCategories;
  bool saving=false,saved=false;
  List<WaffraAccountBalance> get active=>
-  widget.accounts.where((a)=>!a.archived).toList(growable:false);
+  liveAccounts.where((a)=>!a.archived).toList(growable:false);
  String tr(String ar,String en)=>widget.english?en:ar;
 
  @override void initState(){
   super.initState();
   mode=widget.initialOperation;
+  liveAccounts=List<WaffraAccountBalance>.of(widget.accounts);
   final initial=widget.initialSmsTransfer;
   if(initial!=null){
    mode=WaffraAccountOperation.transfer;
@@ -106,20 +113,83 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
   amount.dispose();memo.dispose();title.dispose();
   super.dispose();
  }
+ Future<void> createFromDropdown({
+  required bool createProvider,required bool isDestination,
+ })async{
+  final create=widget.onCreateAccount;
+  if(create==null||saving||saved||creatingAccount)return;
+  final selectedId=isDestination?destination:source;
+  String? group=isDestination?destinationProvider:sourceProvider;
+  if(group==null&&selectedId!=null){
+   for(final p in WaffraRecurringAccountGroups.fromAccounts(active)){
+    if(p.accounts.any((a)=>a.id==selectedId)){group=p.id;break;}
+   }
+  }
+  setState(()=>creatingAccount=true);
+  try{
+   final created=await create(createProvider?null:group,createProvider);
+   if(!mounted||created==null)return; // cancel never clears the draft.
+   final refreshed=<WaffraAccountBalance>[
+    ...active.where((a)=>a.id!=created.id),created,
+   ];
+   final matches=WaffraRecurringAccountGroups.fromAccounts(refreshed)
+    .where((p)=>p.accounts.any((a)=>a.id==created.id)).toList();
+   if(matches.length!=1||created.archived){
+    throw StateError('Created account did not pass group verification');
+   }
+   final newGroup=matches.single.id;
+   if(!createProvider&&group!=null&&
+      group.startsWith('bank:institution:')&&group!=newGroup){
+    throw StateError('Cannot change bank when creating a linked child');
+   }
+   setState((){
+    liveAccounts=refreshed;
+    if(isDestination){
+     destinationProvider=newGroup;
+     destination=createProvider?null:created.id;
+    }else{
+     sourceProvider=newGroup;
+     source=createProvider?null:created.id;
+     if(source==destination)destination=null;
+    }
+    error=null;
+   });
+  }catch(_){
+   if(mounted)setState(()=>error=tr(
+    'تعذر التحقق من إنشاء الحساب. تم الاحتفاظ بالعملية.',
+    'Could not verify account creation. Transaction draft retained.'));
+  }finally{
+   if(mounted)setState((){
+    creatingAccount=false;
+    if(isDestination){
+     if(createProvider)destinationProviderRevision++;
+     else destinationChildRevision++;
+    }else{
+     if(createProvider)sourceProviderRevision++;
+     else sourceChildRevision++;
+    }
+   });
+  }
+ }
  Future<void> submit()async{
-  if(saving||saved)return;
+  if(saving||saved||creatingAccount)return;
   final value=waffraSarAmountMinor(amount.text);
   if(value==null){
    setState(()=>error=tr('أدخل مبلغًا صحيحًا بالريال','Enter a valid SAR amount'));
    return;
   }
-  if(source==null||!active.any((a)=>a.id==source)){
+  final groups=WaffraRecurringAccountGroups.fromAccounts(active);
+  bool belongsTo(String? group,String? id)=>group==null||
+   groups.any((p)=>p.id==group&&p.accounts.any((a)=>a.id==id));
+  if(source==null||!active.any((a)=>a.id==source)||
+     !belongsTo(sourceProvider,source)){
    setState(()=>error=tr('اختر حسابًا أولًا','Choose an account first'));
    return;
   }
   if(mode==WaffraAccountOperation.transfer &&
     (destination==null||destination==source||
-     !active.any((a)=>a.id==destination))){
+     !active.any((a)=>a.id==destination)||
+     !belongsTo(destinationProvider,destination))){
    setState(()=>error=tr('اختر حساب وجهة مختلفًا','Select a different destination account'));
    return;
   }
@@ -185,31 +255,69 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
    final matches=providers.where((p)=>p.id==group).toList();
    final available=matches.isEmpty?const <WaffraAccountBalance>[]:
     matches.single.accounts.where((a)=>a.id!=exclude).toList();
+   final parentRevision=isDestination?destinationProviderRevision:sourceProviderRevision;
+   final childRevision=isDestination?destinationChildRevision:sourceChildRevision;
    return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
     DropdownButtonFormField<String>(
-     key:Key('m470-'+(isDestination?'target':'source')+'-provider-'+(group??'none')),
+     key:Key('m470-'+(isDestination?'target':'source')+
+      '-provider-'+(group??'none')+'-$parentRevision'),
      initialValue:group,isExpanded:true,
      decoration:InputDecoration(
       labelText:tr('الجهة أو البنك','Bank or provider'),
       border:const OutlineInputBorder()),
-     items:providers.map((p)=>DropdownMenuItem<String>(
-      value:p.id,child:Text(tr(p.labelAr,p.labelEn),
-       maxLines:1,overflow:TextOverflow.ellipsis))).toList(),
-     onChanged:saving||saved?null:(v)=>setState((){
-      if(isDestination){destinationProvider=v;destination=null;}
-      else{sourceProvider=v;source=null;}
-      error=null;
-     }),
+     items:[
+      ...providers.map((p)=>DropdownMenuItem<String>(
+       value:p.id,child:Text(tr(p.labelAr,p.labelEn),
+        maxLines:1,overflow:TextOverflow.ellipsis))),
+      if(widget.onCreateAccount!=null)
+       DropdownMenuItem<String>(value:'__create_provider__',
+        child:Row(children:[
+         const Icon(Icons.add_circle_outline,size:19),
+         const SizedBox(width:8),
+         Expanded(child:Text(tr('إضافة جهة أو بنك','Add bank / provider'),
+          maxLines:1,overflow:TextOverflow.ellipsis)),
+        ])),
+     ],
+     onChanged:saving||saved||creatingAccount?null:(v)async{
+      if(v=='__create_provider__'){
+       await createFromDropdown(createProvider:true,
+        isDestination:isDestination);
+       return;
+      }
+      if(mounted)setState((){
+       if(isDestination){destinationProvider=v;destination=null;}
+       else{sourceProvider=v;source=null;}
+       error=null;
+      });
+     },
     ),
     const SizedBox(height:10),
     DropdownButtonFormField<String>(
-     key:Key('m470-'+(isDestination?'target':'source')+'-account-'+(group??'none')),
+     key:Key('m470-'+(isDestination?'target':'source')+
+      '-account-'+(group??'none')+'-$childRevision'),
      isExpanded:true,
      initialValue:available.any((a)=>a.id==value)?value:null,
      decoration:InputDecoration(labelText:label,border:const OutlineInputBorder()),
-     items:available.map((a)=>DropdownMenuItem<String>(
-      value:a.id,child:Text(a.name,overflow:TextOverflow.ellipsis))).toList(),
-     onChanged:saving||saved||group==null?null:onChanged,
+     items:[
+      ...available.map((a)=>DropdownMenuItem<String>(
+       value:a.id,child:Text(a.name,overflow:TextOverflow.ellipsis))),
+      if(group!=null&&widget.onCreateAccount!=null)
+       DropdownMenuItem<String>(value:'__create_child__',
+        child:Row(children:[
+         const Icon(Icons.add_circle_outline,size:19),
+         const SizedBox(width:8),
+         Expanded(child:Text(tr('إضافة حساب تابع','Add linked account'),
+          maxLines:1,overflow:TextOverflow.ellipsis)),
+        ])),
+     ],
+     onChanged:saving||saved||creatingAccount||group==null?null:(v)async{
+      if(v=='__create_child__'){
+       await createFromDropdown(createProvider:false,
+        isDestination:isDestination);
+       return;
+      }
+      if(mounted)onChanged(v);
+     },
     ),
    ]);
   }
@@ -229,7 +337,7 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
       ButtonSegment(value:WaffraAccountOperation.transfer,
        label:Text(tr('تحويل','Transfer'))),
      ],
-     selected:{mode},onSelectionChanged:saving||saved||
+     selected:{mode},onSelectionChanged:saving||saved||creatingAccount||
       widget.initialSmsTransfer!=null||
        widget.initialOperation==WaffraAccountOperation.transfer?null:(choice){
       setState((){mode=choice.first;error=null;selectedBudgetId=null;
@@ -249,7 +357,7 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
      const SizedBox(height:12),
      OutlinedButton.icon(
       key:const Key('m470-transfer-date'),
-      onPressed:saving||saved?null:()async{
+      onPressed:saving||saved||creatingAccount?null:()async{
        final picked=await showDatePicker(
         context:context,initialDate:transferDate,
         firstDate:DateTime(2000),lastDate:DateTime(2100));
@@ -339,7 +447,7 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
     const SizedBox(height:12),
     FilledButton(
      key:const Key('m440-confirm'),
-     onPressed:saving||saved ||
+     onPressed:saving||saved||creatingAccount||
       (mode==WaffraAccountOperation.transfer?widget.onConfirmTransfer==null:
        widget.onConfirmEntry==null)?null:submit,
      child:Text(saving?tr('جاري الحفظ…','Saving…'):
