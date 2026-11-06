@@ -5006,7 +5006,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if(id is! String||body is! String||body.trim().isEmpty)continue;
     if(targetId!=null&&id!=targetId)continue;
     if(smsHashes.contains(bankSmsHash(body))){
-     await WaffraAutoSms.acknowledge([id]);
+     final acknowledged=await WaffraAutoSms.acknowledge([id]);
+     if(acknowledged&&mounted){
+      setState(()=>_autoSmsPending.removeWhere((row)=>row['id']==id));
+     }
      continue;
     }
     selected=item;break;
@@ -5077,6 +5080,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           (localFacts['category']?.toString()??'')),
          if(cloudSummary.isNotEmpty)WaffraText(cloudSummary),
         ])),
+       if(!sensitive)Padding(
+        padding:const EdgeInsets.only(top:10),
+        child:ExpansionTile(
+         key:const Key('waffra-sms-original-expand'),
+         title:WaffraText(waffraIsEnglish?
+          'Read original bank message':'عرض نص الرسالة البنكية الأصلي'),
+         children:[Padding(padding:const EdgeInsets.all(12),
+          child:SelectableText(body,textAlign:TextAlign.start))],
+        )),
        const SizedBox(height:12),
        WaffraText(waffraIsEnglish?
         'Review the message. Safe rules update after confirmed actions.':
@@ -5144,8 +5156,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      suggestedLocalCategory:localFacts?['category'] as String?,
      suggestedLocalIncome:localFacts?['income'] as bool?);
     if(smsHashes.contains(bankSmsHash(body))){
-     await WaffraAutoSms.acknowledge([id]);
-     if(mounted&&_smsRuleOwnerKey.isNotEmpty){
+     // M484 #411: remove from review only after an exact saved SMS hash
+     // and the native acknowledgement both succeed.
+     final acknowledged=await WaffraAutoSms.acknowledge([id]);
+     if(acknowledged&&mounted){
+      setState(()=>_autoSmsPending.removeWhere((row)=>row['id']==id));
+     }else if(mounted){
+      snack(context,waffraIsEnglish?
+       'Saved transaction, but message removal failed. Retry safely.':
+       'تم حفظ العملية، لكن تعذر إزالة الرسالة من المراجعة. أعد المحاولة.',
+       isError:true);
+     }
+     if(acknowledged&&mounted&&_smsRuleOwnerKey.isNotEmpty){
       // Once a confirmed entry is committed, learn only a specific and
       // verified bank direction; generic/uncertain categories need review.
       try{
