@@ -6150,10 +6150,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      ));
     if(!mounted)return null;
     if(offered==true){
+     // M483 / #407: prefill only the masked source for outgoing
+     // transactions or masked destination for incoming transactions.
+     // Nothing is linked or posted until the user explicitly confirms.
+     final verifiedFacts=WaffraBankSmsFactsParser.parse(
+      candidates.single.notes);
+     final reviewedIncome=verifiedFacts.kind==WaffraBankOperationKind.income;
+     final proposedSuffix=WaffraSmsAccountLearning.suffix4(
+      reviewedIncome?verifiedFacts.destinationSuffix:
+       verifiedFacts.sourceSuffix);
      final draft=await showWaffraDialog<WaffraNewAccountDraft>(
       context:context,builder:(dialog)=>WaffraNewAccountDialog(
        english:waffraIsEnglish,suggestedProviderId:knownBank,
-       suggestedSenderName:smsSender));
+       suggestedSenderName:smsSender,suggestedLastFour:proposedSuffix));
      if(!mounted)return null;
      if(draft!=null){
       // Users may edit the form. Never silently approve a different bank
