@@ -25,6 +25,32 @@ void main(){
   expect(tester.widget<FilledButton>(save).onPressed,isNotNull);
  });
 
+ testWidgets('M470 #11 sender name is prefilled; only opening balance is needed',(tester)async{
+  await tester.pumpWidget(const MaterialApp(home:Scaffold(body:
+   WaffraNewAccountDialog(
+    english:true,suggestedProviderId:'inma',
+    suggestedSenderName:'AlinmaPay'))));
+  final field=tester.widget<TextField>(
+   find.byKey(const Key('m470-new-account-label')));
+  expect(field.controller!.text,'AlinmaPay');
+  expect(tester.widget<TextField>(
+   find.byKey(const Key('m470-new-account-opening'))).controller!.text,'0');
+  expect(tester.widget<FilledButton>(
+   find.byKey(const Key('m470-new-account-save'))).onPressed,isNotNull);
+ });
+
+ testWidgets('M470 #11 suspicious SMS sender is not trusted as account label',(tester)async{
+  await tester.pumpWidget(const MaterialApp(home:Scaffold(body:
+   WaffraNewAccountDialog(
+    english:true,suggestedProviderId:'inma',
+    suggestedSenderName:'AlinmaPay\\nunsafe'))));
+  final field=tester.widget<TextField>(
+   find.byKey(const Key('m470-new-account-label')));
+  expect(field.controller!.text,isEmpty);
+  expect(tester.widget<FilledButton>(
+   find.byKey(const Key('m470-new-account-save'))).onPressed,isNull);
+ });
+
  test('M470 #11 account suggestion only starts on confirmed bank SMS review',(){
   final home=File('lib/main.dart').readAsStringSync();
   final start=home.indexOf(' Future<({List<String?>? ids,int? generation})?> reviewSmsAccountLinks(');
@@ -40,6 +66,8 @@ void main(){
   expect(flow,contains('final offered=await showWaffraDialog<bool>('));
   expect(flow,contains('if(offered==true)'));
   expect(flow,contains('suggestedProviderId:knownBank'));
+  expect(flow,contains('suggestedSenderName:smsSender'));
+  expect(flow,contains('رصيد افتتاحي صفر ريال افتراضيًا'));
   expect(flow,contains("draft.kind!='bank'||draft.providerId!=knownBank"));
   expect(flow,contains('api.createTypedAccountWithIdentity('));
   expect(flow,contains('lastFour:draft.lastFour,userConfirmed:true'));
