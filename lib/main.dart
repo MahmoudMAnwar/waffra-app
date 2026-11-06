@@ -8130,8 +8130,30 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     return;
   }
   // Cold-start money selection needs a verified, non-Home-header account list.
-  if(initial==null&&!_m468VerifiedAccountsLoaded){
+  if(!_m468VerifiedAccountsLoaded){
    await _m467RefreshHomeAccounts();
+   if(!mounted)return;
+  }
+  // #420: a legacy-only entry is NOT treated as successfully migrated.
+  WaffraVerifiedAccountsApi? editAccountLinkApi;
+  bool canLinkExistingAccount=false;
+  String? originalLinkedAccountId;
+  if(initial!=null){
+   try{
+    await _ensureFinanceBound();
+    final bridge=_financeBinding?.accountsBridge;
+    if(bridge!=null){
+     final api=WaffraVerifiedAccountsApi(bridge:bridge);
+     final found=await api.readExistingEntryAccount(entryId:initial.id);
+     if(found.exists){
+      canLinkExistingAccount=true;
+      originalLinkedAccountId=found.accountId;
+      editAccountLinkApi=api;
+     }
+    }
+   }catch(error){
+    debugPrint('M500 edit-account read unavailable: ${error.runtimeType}');
+   }
    if(!mounted)return;
   }
   // Restore an unfinished bank SMS editor after one-step Back. No money or
@@ -8185,6 +8207,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   var entryProviders=WaffraRecurringAccountGroups.fromAccounts(entryAccounts);
   String? chosenManualProvider=smsEditorDraft?['provider'] as String?;
   String? chosenManualAccount=smsEditorDraft?['account'] as String?;
+  if(initial!=null&&canLinkExistingAccount&&originalLinkedAccountId!=null){
+   final matched=entryProviders.where((p)=>p.accounts.any(
+    (a)=>a.id==originalLinkedAccountId)).toList();
+   if(matched.length==1){
+    chosenManualProvider=matched.single.id;
+    chosenManualAccount=originalLinkedAccountId;
+   }
+  }
   int budgetMenuRevision=0; // reset action-only dropdown selections
   int accountProviderMenuRevision=0,accountChildMenuRevision=0;
   int transferSourceProviderRevision=0,transferTargetProviderRevision=0;
@@ -8713,7 +8743,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ],
       operationPicker(),
       const SizedBox(height:12),
-      if(initial==null)...[
+      if(initial==null||canLinkExistingAccount)...[
+       if(initial!=null)Padding(
+        padding:const EdgeInsets.only(bottom:9),
+        child:WaffraText(originalLinkedAccountId!=null?
+         (waffraIsEnglish?
+          'Already linked; editing details cannot move it to another account.':
+          'العملية مربوطة بحساب بالفعل، وتعديل التفاصيل مش هينقلها لحساب آخر.'):
+         (waffraIsEnglish?
+          'Link this older transaction without posting a second income or expense.':
+          'اربط العملية القديمة بحساب دون إضافة دخل أو مصروف مرة ثانية.'),
+         style:const TextStyle(fontSize:12,color:emerald))),
        WaffraCenteredDropdownFormField<String>(
         key:ValueKey('m470-home-manual-provider-'+(chosenManualProvider??'none')+
          '-$accountProviderMenuRevision'),
@@ -8732,7 +8772,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             'Add bank / provider':'إضافة جهة أو بنك',maxLines:1)),
           ])),
         ],
-        onChanged:(provider)async{
+        onChanged:initial!=null&&originalLinkedAccountId!=null?null:(provider)async{
          if(provider=='__create_provider__'){
           await createAccountInsideEntryDropdown(mainProvider:true);
           // Synthetic Add must not replace a chosen provider on cancel.
@@ -8766,7 +8806,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
              'Add linked account':'إضافة حساب تابع',maxLines:1)),
            ])),
         ],
-        onChanged:chosenManualProvider==null?null:(id)async{
+        onChanged:chosenManualProvider==null||
+         (initial!=null&&originalLinkedAccountId!=null)?null:(id)async{
          if(id=='__create_child__'){
           await createAccountInsideEntryDropdown(mainProvider:false);
           if(sheetContext.mounted)update(()=>accountChildMenuRevision++);
@@ -9113,6 +9154,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          'الميزانية دي متوقفة حاليًا. اختار ميزانية مفعّلة أو خلّي العملية بدون ربط.');
         return;
        }
+       if(initial!=null&&canLinkExistingAccount&&
+          originalLinkedAccountId==null&&chosenManualAccount!=null&&
+          !entryProviders.any((p)=>p.id==chosenManualProvider&&
+           p.accounts.any((a)=>a.id==chosenManualAccount))){
+        snack(sheetContext,waffraIsEnglish?
+         'Choose a verified child account of the selected bank.':
+         'اختار حسابًا موثقًا تابعًا للجهة المختارة.',isError:true);
+        return;
+       }
        if(initial==null&&!sms&&
           (chosenManualAccount==null||
            !entryAccounts.any((a)=>a.id==chosenManualAccount))){
@@ -9433,6 +9483,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      return;
     }
    }
+   }
+  }
+  // #420: witnessed idempotent association for the existing entry;
+  // never append another income or expense.
+  if(initial!=null&&canLinkExistingAccount&&
+     originalLinkedAccountId==null&&chosenManualAccount!=null){
+   try{
+    final api=editAccountLinkApi;
+    if(api==null)throw StateError('Verified entry link API unavailable');
+    await api.balances();
+    await api.linkUnassignedEntry(entryId:initial.id,
+     accountId:chosenManualAccount,userConfirmed:true);
+    if(mounted)await _m467RefreshHomeAccounts();
+   }catch(error){
+    debugPrint('M500 historical link failed: ${error.runtimeType}');
+    if(mounted)snack(context,waffraIsEnglish?
+     'Details may be saved, but account linking was not confirmed. Check Unassigned transactions.':
+     'قد يكون تعديل العملية اتحفظ، لكن ربط الحساب لم يتأكد. راجع عمليات بدون حساب.',isError:true);
+    return;
    }
   }
   if(mounted)await budgetAlert(result,previousSpent);
