@@ -43,10 +43,22 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
     context:context,builder:(ctx)=>WaffraNewAccountDialog(
      english:widget.english));
    if(draft==null)return;
-   await widget.repository.createAccount(
-    id:'m440-'+DateTime.now().microsecondsSinceEpoch.toString(),
-    name:draft.name,kind:draft.kind,openingMinor:draft.openingMinor,
-    createdIso:DateTime.now().toIso8601String(),userConfirmed:true);
+   final id='m440-'+DateTime.now().microsecondsSinceEpoch.toString();
+   final createdIso=DateTime.now().toIso8601String();
+   if(draft.lastFour!=null){
+    final repository=widget.repository;
+    if(repository is! WaffraVerifiedAccountsApi){
+     throw StateError('Bank identity linking needs the verified SQLCipher API.');
+    }
+    await repository.createBankAccountWithVerifiedSuffix(
+     id:id,name:draft.name,openingMinor:draft.openingMinor,
+     createdIso:createdIso,lastFour:draft.lastFour!,
+     userConfirmed:true);
+   }else{
+    await widget.repository.createAccount(
+     id:id,name:draft.name,kind:draft.kind,openingMinor:draft.openingMinor,
+     createdIso:createdIso,userConfirmed:true);
+   }
    reload();
   }catch(_){failed();}
  }
