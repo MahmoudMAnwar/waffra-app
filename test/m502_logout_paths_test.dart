@@ -37,6 +37,7 @@ void main() {
     final logout=src.substring(src.indexOf(' Future<void> logout()async {'),
       src.indexOf(' Future<void> setPin('));
     expect(src,contains('scaffoldMessengerKey:_logoutFeedbackKey'));
+    expect(src,contains('navigatorKey:_logoutNavigatorKey'));
     expect(logout,contains('_showLogoutFeedback('));
     expect(logout,contains('_logoutFeedbackKey.currentState'));
     expect(logout,contains('WaffraLocalPhoneCredentials.probeForPhone('));
@@ -46,5 +47,22 @@ void main() {
        lessThan(logout.indexOf('_accountWriteAuthority.signOut()')));
     expect(logout,contains('if(!hasLegacy){'));
     expect(logout,contains('return;'));
+  });
+
+  test('M503: sign-out feedback reuses exactly one footer-aware presenter',(){
+    final src=File('lib/main.dart').readAsStringSync();
+    final root=src.substring(src.indexOf(' void _showLogoutFeedback('),
+      src.indexOf(' Future<void> setPin('));
+    final presenter=src.substring(src.indexOf('void snack(BuildContext context'),
+      src.indexOf('void snackSuccess('));
+    expect(RegExp(r'\\.showSnackBar\\s*\\(').allMatches(src).length,1);
+    expect(RegExp(r'\\bSnackBar\\s*\\(').allMatches(src).length,1);
+    expect(root,contains('_logoutNavigatorKey.currentContext'));
+    expect(root,contains('snack(feedbackContext,message,'));
+    expect(root,contains('preferFooter:true'));
+    expect(presenter,contains('preferFooter||inHome||inHomeDialog'));
+    expect(presenter,contains('_waffraShowFooterNotice(notice)'));
+    expect(presenter,contains('messenger.showSnackBar(SnackBar('));
+    expect(src,contains('waffraDismissFooterNotice();'));
   });
 }

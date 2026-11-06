@@ -1368,8 +1368,12 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   // a new account can open its verified finance scope.
   await WaffraOnDeviceQwen.shared.dispose().timeout(const Duration(seconds:12));
   await _accountWriteAuthority.signOut();
-  if(mounted)_logoutFeedbackKey.currentState?.clearSnackBars();
-  if(mounted)setState((){profile=null;showLogin=true;locked=false;googleFirstRunSetup=false;});
+  if(mounted){
+   // Remove the unified footer/loading notice before the login screen.
+   waffraDismissFooterNotice();
+   _logoutFeedbackKey.currentState?.clearSnackBars();
+   setState((){profile=null;showLogin=true;locked=false;googleFirstRunSetup=false;});
+  }
   }catch(error){
    // Every sign-out entry point shares this fail-closed feedback. An SMS
    // suspension or credential-integrity failure must NOT look like logout.
@@ -1384,18 +1388,18 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  }
  bool _logoutInProgress=false;
  final _logoutFeedbackKey=GlobalKey<ScaffoldMessengerState>();
+ final _logoutNavigatorKey=GlobalKey<NavigatorState>();
  void _showLogoutFeedback(String message,{bool isError=false}){
-  // WaffraApp's own BuildContext is ABOVE MaterialApp's ScaffoldMessenger.
-  // Never call ScaffoldMessenger.of(context) from the root error path:
-  // doing so hides a failed sign-out from the user.
-  final messenger=_logoutFeedbackKey.currentState;
-  if(messenger==null)return;
-  messenger.clearSnackBars();
-  messenger.showSnackBar(SnackBar(
-   content:Text(message),
-   duration:Duration(seconds:isError?8:5),
-   behavior:SnackBarBehavior.floating,
-  ));
+  // The app-level State context is above MaterialApp. The Navigator context
+  // is below its ScaffoldMessenger/Theme and can use the SAME public notice
+  // presenter as every other Waffra screen. Never create a second snackbar.
+  final feedbackContext=_logoutNavigatorKey.currentContext;
+  if(feedbackContext==null)return;
+  snack(feedbackContext,message,
+   isError:isError,
+   kind:isError?WaffraSnackKind.error:WaffraSnackKind.info,
+   preferFooter:true,
+   duration:Duration(seconds:isError?8:5));
  }
  Future<void> setPin(String? value)async {
   final hash=value==null?null:sha256.convert(utf8.encode(value)).toString();
@@ -1423,6 +1427,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  }
  @override Widget build(BuildContext context)=>MaterialApp(
   scaffoldMessengerKey:_logoutFeedbackKey,
+  navigatorKey:_logoutNavigatorKey,
   scrollBehavior:const WaffraVisibleScrollBehavior(),
   debugShowCheckedModeBanner:false,title:'وفرة | Waffra',
   locale:language=='en'?const Locale('en','US'):
@@ -3003,6 +3008,9 @@ void snack(BuildContext context,String text,{
  String? actionLabel,
  VoidCallback? onAction,
  Duration duration=const Duration(seconds:5),
+ // Explicit root-session feedback uses the footer when one is mounted;
+ // dialogs, login and biometric gates use this same notice fallback.
+ bool preferFooter=false,
 }){
  if(!context.mounted)return;
  final notice=WaffraNoticeData(
@@ -3015,7 +3023,7 @@ void snack(BuildContext context,String text,{
  final inHome=context.widget is HomeScreen||
   context.findAncestorWidgetOfExactType<HomeScreen>()!=null;
  final inHomeDialog=ModalRoute.of(context) is PopupRoute;
- if(_waffraFooterHostCount>0&&(inHome||inHomeDialog)){
+ if(_waffraFooterHostCount>0&&(preferFooter||inHome||inHomeDialog)){
   // Switching from a non-footer route must never leave two notices stacked.
   ScaffoldMessenger.maybeOf(context)?.hideCurrentSnackBar();
   _waffraShowFooterNotice(notice);
