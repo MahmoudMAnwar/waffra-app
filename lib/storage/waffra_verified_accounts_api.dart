@@ -234,6 +234,12 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
     changedIso:DateTime.now().toIso8601String(),
     userConfirmed:true),userConfirmed:userConfirmed);
 
+ /// Read the exact user-confirmed account identifier from the encrypted
+ /// authority; never derive it from account name or the selected Home filter.
+ Future<String?> verifiedBankSuffix(String accountId)=>
+  bridge.readVerifiedAccountMetadata(
+   (context)=>context.verifiedBankSuffix(accountId));
+
  Future<void> registerVerifiedBankSuffix({
   required String accountId,required String lastFour,
   required bool userConfirmed,
@@ -254,6 +260,23 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
   required bool userConfirmed})=>_commit<void>((repository)=>
    repository.renameAccount(id:id,name:name,userConfirmed:true),
    userConfirmed:userConfirmed);
+
+ /// Update the account label and corrected bank suffix atomically through
+ /// one existing verified SQLCipher writer/ledger generation. Inner SQL
+ /// transactions are nested in the outer witnessed finance transaction.
+ Future<void> renameAccountWithSuffix({
+  required String id,required String name,required String lastFour,
+  required bool userConfirmed,
+ })=>_commit<void>((repository)async{
+  if(!RegExp(r'^[0-9]{4}$').hasMatch(lastFour)){
+   throw ArgumentError('Bank suffix must contain exactly four ASCII digits.');
+  }
+  await repository.renameAccount(id:id,name:name,userConfirmed:true);
+  await WaffraAccountContextRepository(
+   store:repository.db,experimentalEnabled:true).setVerifiedBankSuffix(
+    accountId:id,lastFour:lastFour,
+    confirmedIso:DateTime.now().toIso8601String(),userConfirmed:true);
+ },userConfirmed:userConfirmed);
 
  @override
  Future<void> archiveEmptyAccount({required String id,
