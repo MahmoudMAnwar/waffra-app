@@ -2121,3 +2121,10 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 - An exact-PR-head full Flutter run passed thousands of tests but failed four SOURCE-TEXT assertions in existing M343, M359, and M401/M402 tests. Account-scoped monthly budget calculations had replaced the formerly unconditional global spending/cap projections, and the Home transfer now uses a Column of two centered bank/account pickers rather than returning one picker.
 - Updated only those legacy test expectations, retaining and extending checks for correct per-account budget attribution, All-account aggregation and the required two-level centered bank/account UI. Real financial behavior was not reverted or bypassed.
 - Test updates are explicitly declared in the M385 scope manifest; current exact-head CI and physical-device acceptance still required. Existing complete-app tests are not declared passing until independently confirmed on this commit.
+
+
+[M470 #22 candidate — 60-second idle lock over preserved UI] 2026-11-06
+- A new foreground activity timer requires mandatory native fingerprint/face verification after 60 seconds of inactivity of an authenticated, unlocked Waffra session. Input interactions renew the timer; sign-in and onboarding remain outside this security rule.
+- A blocking, full-screen biometric overlay is created via MaterialApp.builder OUTSIDE the Navigator. Existing in-progress Home, modal dropdowns, edit dialogs, cash amounts and text drafts stay mounted and are not cleared; the OS gate must complete before any underlying route can be used. Unfocusing a keyboard does not erase the draft.
+- Authenticator foreground handling follows the existing lifecycle safety rule; a real background transition still requires the original independent biometric session lock. Native media picker rules remain unchanged.
+- Added test/m470_idle_biometric_overlay_test.dart for expiry, activity extension, preserving an open dialog after verified callback and login exemption. This code candidate requires exact-head CI, emulator/device and owner acceptance; do not publish/merge based only on a UI source assertion.
