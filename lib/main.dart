@@ -1171,8 +1171,10 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   WaffraRegionalCopy.countryIso.addListener(_onRegionChanged);load();launchIntro();}
  void _onRegionChanged(){if(mounted)setState((){});}
  Future<void> launchIntro()async{
-  // Show the approved cinematic launch for three seconds on each cold start.
-  await Future<void>.delayed(const Duration(milliseconds:3000));
+  // Keep the launch animation visible but avoid a fixed three-second
+  // delay when finance initialization is already ready. Actual loading
+  // and mandatory biometric gates still independently block unsafe entry.
+  await Future<void>.delayed(const Duration(milliseconds:1750));
   if(mounted)setState(()=>introDone=true);
  }
  @override void didChangeAppLifecycleState(AppLifecycleState state){
@@ -1993,7 +1995,7 @@ class _WaffraLaunchIntroState extends State<WaffraLaunchIntro> with SingleTicker
  late final AnimationController controller;
  @override void initState(){
   super.initState();
-  controller=AnimationController(vsync:this,duration:const Duration(milliseconds:2850))..forward();
+  controller=AnimationController(vsync:this,duration:const Duration(milliseconds:1650))..forward();
  }
  @override void dispose(){controller.dispose();super.dispose();}
  double reveal(double t,double start,double end)=>((t-start)/(end-start)).clamp(0.0,1.0);
