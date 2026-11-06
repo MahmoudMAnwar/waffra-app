@@ -86,7 +86,10 @@ void main(){
   expect(inbox,contains("'waffra-sms-sender-transactions'"));
   expect(inbox,contains("Key('waffra-sms-sender-group-'"));
   expect(inbox,contains("Key('waffra-sms-sender-message-'"));
-  expect(inbox,contains('await _reviewAutoSmsCandidates(targetId:selected)'));
+  // #410: the sender route stays mounted while the message is reviewed.
+  expect(inbox,contains('await showModalBottomSheet<void>('));
+  expect(inbox,contains('await _reviewAutoSmsCandidates(targetId:id);'));
+  expect(inbox,contains('openingReviewId=null;'));
   expect(inbox,isNot(contains('commitConfirmedSms(')));
  });
  test('M434 saved transactions preserve genuine SMS versus manual origin',(){
@@ -94,7 +97,10 @@ void main(){
   final details=main.substring(
    main.indexOf('class WaffraTransactionDetailsDialog'),
    main.indexOf('class HomeScreen extends StatefulWidget'));
-  expect(details,contains("'sms'=>english?'Bank SMS':'رسالة بنكية (SMS)'"));
+  // #404: provenance still identifies SMS, now explicitly human-reviewed.
+  expect(details,contains("'sms'=>english?'Bank SMS — reviewed and saved manually':"));
+  expect(details,contains('رسالة بنكية (SMS) — تمت مراجعتها وتسجيلها يدويًا'));
+  expect(details,isNot(contains("'sms'=>english?'Manual entry'")));
   expect(details,contains("'manual'=>english?'Manual entry':'إدخال يدوي'"));
   expect(details,contains('معاملة سابقة (المصدر غير محدد)'));
   expect(details,contains("Key('waffra-transaction-source-provenance')"));
