@@ -211,7 +211,7 @@
         "end": "        trailing:PopupMenuButton<String>("
       },
       {
-        "start": " Future<WaffraAccountBalance?> createAccountInsideComposer(",
+        "start": " Future<void> _saveClassifiedEntry(WaffraAccountTransactionDraft draft)async{",
         "end": " @override Widget build(BuildContext context)=>Scaffold("
       }
     ],
