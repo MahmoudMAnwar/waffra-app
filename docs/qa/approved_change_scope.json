@@ -31,7 +31,7 @@
       },
       {
         "start": "       // M470 #20: also learn after a single reviewed SMS was committed,",
-        "end": "       unawaited(_refreshWidget());"
+        "end": "       unawaited(_refreshWidget());\n       if(!ctx.mounted)return;"
       }
     ],
     "lib/waffra_sms_local_rules.dart": [
