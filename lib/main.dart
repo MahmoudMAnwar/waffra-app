@@ -8643,6 +8643,26 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         'The original bank message is stored separately from your notes.':
         'نص الرسالة البنكية الأصلية يُحفظ منفصلًا عن ملاحظاتك.',
         style:const TextStyle(fontSize:12,color:emerald)),
+       const SizedBox(height:7),
+       // #409: readable, read-only original SMS while editing; verification
+       // and pending SMS remain hidden to avoid exposing private codes.
+       ExpansionTile(
+        key:const Key('waffra-entry-original-sms-expand'),
+        tilePadding:const EdgeInsets.symmetric(horizontal:9),
+        title:WaffraText(waffraIsEnglish?
+         'View original bank SMS':'عرض الرسالة البنكية الأصلية'),
+        children:[Padding(
+         padding:const EdgeInsets.fromLTRB(12,4,12,12),
+         child:WaffraBankSmsFactsParser.parse(message.text).pending?
+          WaffraText(waffraIsEnglish?
+           'Verification or pending message content is hidden.':
+           'محتوى رسالة التحقق أو العملية المعلقة مخفي لحمايتك.'):
+          SelectableText(message.text,
+           key:const Key('waffra-entry-original-sms-text'),
+           textDirection:Directionality.of(sheetContext),
+           textAlign:TextAlign.start),
+        )],
+       ),
        const SizedBox(height:12),
       ],
       TextField(controller:value,readOnly:initial?.sourceType=='goal_due',
