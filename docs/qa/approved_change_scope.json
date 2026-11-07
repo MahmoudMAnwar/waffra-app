@@ -199,6 +199,10 @@
       {
         "start": "  Future<WaffraFinanceAuthorityRead> saveCaptured({",
         "end": "  /// M457: add one user-confirmed manual entry without rewriting any existing"
+      },
+      {
+        "start": "  /// User-confirmed attach of first encrypted receipt(s) to an already",
+        "end": "  /// A future encrypted-only receipt attachment route."
       }
     ],
     "test/qa/m452_sms_review_signup_regression_test.py": [
