@@ -4532,48 +4532,104 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    )));
  }
  Future<void> _openExcludedSenders()async{
+  // M517: whole-sender exclusion and single/bulk message exclusion are
+  // different encrypted policies. An empty sender list is NOT zero exclusions.
   final saved=await WaffraAutoSms.excludedSenders();
+  final excluded=await WaffraAutoSms.excludedMessages();
   if(!mounted)return;
-  if(saved==null){
+  if(saved==null||excluded==null){
    snack(context,waffraIsEnglish?
-    'Excluded senders are unavailable. Check SMS access and sign-in.':
-    'تعذر قراءة المستبعدين. تأكد من صلاحية الرسائل وتسجيل الدخول.',
+    'Excluded messages could not be verified. Check SMS access and sign-in.':
+    'تعذر قراءة الرسائل المستبعدة بأمان. تأكد من صلاحية الرسائل وتسجيل الدخول.',
     isError:true);
    return;
   }
-  final senders=saved.toList()..sort((a,b)=>a.toLowerCase().compareTo(b.toLowerCase()));
+  final senders=saved.toList()
+   ..sort((a,b)=>a.toLowerCase().compareTo(b.toLowerCase()));
+  final messages=excluded.toList();
   var busy=false;
   await showModalBottomSheet<void>(
    context:context,isScrollControlled:true,useSafeArea:true,showDragHandle:true,
    builder:(sheet)=>StatefulBuilder(builder:(ctx,refresh)=>SafeArea(
-    child:SizedBox(height:min(520.0,MediaQuery.sizeOf(ctx).height*.74),
+    child:SizedBox(height:min(620.0,MediaQuery.sizeOf(ctx).height*.78),
      child:Column(children:[
       Padding(padding:const EdgeInsets.symmetric(horizontal:20,vertical:12),
        child:Row(children:[
         const Icon(Icons.block_rounded,color:forest),
         const SizedBox(width:10),
-        Expanded(child:WaffraText(waffraIsEnglish?'Excluded senders':
+        Expanded(child:WaffraText(waffraIsEnglish?'Excluded SMS':
          'المستبعدون',style:Theme.of(ctx).textTheme.titleLarge)),
        ])),
       Padding(padding:const EdgeInsets.symmetric(horizontal:20,vertical:5),
        child:WaffraText(waffraIsEnglish?
-        'New SMS from excluded senders will not be analyzed or queued. '
-        'Restoring a sender affects future SMS; previously removed messages '
-        'are not restored automatically.':
-        'رسائل المرسل المستبعد الجديدة لن تُحلَّل أو تظهر في المراجعة. '
-        'إلغاء الاستبعاد يسمح بالرسائل القادمة فقط، ولا يستعيد الرسائل '
-        'المستبعدة سابقًا تلقائيًا.',
+        '${messages.length} excluded messages • ${senders.length} blocked senders. '
+        'Restoring an individual message allows it on the next manual rescan; '
+        'blocked senders remain blocked. Financial records are unchanged.':
+        '${messages.length} رسالة مستبعدة • ${senders.length} مرسل مستبعد. '
+        'إلغاء استبعاد رسالة يسمح بمراجعتها عند إعادة الفحص، '
+        'ولا يلغي استبعاد المرسل نفسه. بياناتك المالية لا تتغير.',
         style:Theme.of(ctx).textTheme.bodySmall)),
-      Expanded(child:senders.isEmpty?
+      Expanded(child:messages.isEmpty&&senders.isEmpty?
        Center(child:WaffraText(waffraIsEnglish?
-        'No excluded senders':'لا يوجد مرسلون مستبعدون')):
+        'No excluded SMS':'لا توجد رسائل أو مرسلون مستبعدون')):
        ListView.builder(
-        key:const Key('waffra-excluded-senders-list'),
-        itemCount:senders.length,
+        key:const Key('waffra-excluded-sms-list'),
+        itemCount:messages.length+senders.length+2,
         itemBuilder:(itemContext,index){
-         final sender=senders[index];
+         if(index==0){
+          return Padding(padding:const EdgeInsets.fromLTRB(18,12,18,4),
+           child:WaffraText(waffraIsEnglish?
+            'Individual messages (${messages.length})':
+            'رسائل مستبعدة (${messages.length})',
+            style:Theme.of(ctx).textTheme.titleSmall));
+         }
+         if(index<=messages.length){
+          final message=messages[index-1];
+          final id=message['id'] as String;
+          final sender=message['sender'] as String? ?? '';
+          final receivedAt=message['receivedAt'] as int? ?? 0;
+          final date=receivedAt>0?
+           DateTime.fromMillisecondsSinceEpoch(receivedAt):null;
+          final dateLabel=date==null?'': 
+           '${date.day}/${date.month}/${date.year}';
+          return ListTile(
+           key:Key('waffra-excluded-message-${id.substring(0,12)}'),
+           leading:const Icon(Icons.mark_email_read_outlined,color:emerald),
+           title:WaffraText(sender.isNotEmpty?sender:
+            (waffraIsEnglish?'Excluded message':'رسالة مستبعدة')),
+           subtitle:WaffraText(
+            '${dateLabel.isEmpty?'': '$dateLabel • '}'
+            '••••${id.substring(id.length-8)}',
+            style:Theme.of(ctx).textTheme.bodySmall),
+           trailing:TextButton(
+            onPressed:busy?null:()async{
+             refresh(()=>busy=true);
+             final restored=await WaffraAutoSms.restoreExcludedMessage(id);
+             if(ctx.mounted)refresh((){
+              busy=false;
+              if(restored)messages.removeWhere((item)=>item['id']==id);
+             });
+             if(mounted){
+              if(restored)snackSuccess(context,waffraIsEnglish?
+               'Message restored for the next rescan.':
+               'اتلغى استبعاد الرسالة. تقدر ترجعها بإعادة الفحص.');
+              else snack(context,waffraIsEnglish?
+               'Could not restore the message. Retry.':
+               'تعذر إلغاء استبعاد الرسالة. حاول مرة أخرى.',isError:true);
+             }
+            },child:WaffraText(waffraIsEnglish?'Restore':'إلغاء الاستبعاد')),
+          );
+         }
+         if(index==messages.length+1){
+          return Padding(padding:const EdgeInsets.fromLTRB(18,12,18,4),
+           child:WaffraText(waffraIsEnglish?
+            'Blocked senders (${senders.length})':
+            'مرسلون مستبعدون (${senders.length})',
+            style:Theme.of(ctx).textTheme.titleSmall));
+         }
+         final sender=senders[index-messages.length-2];
          return ListTile(
-          key:Key('waffra-excluded-sender-$index'),
+          key:Key('waffra-excluded-sender-${index-messages.length-2}'),
           leading:const Icon(Icons.sms_failed_outlined,color:emerald),
           title:WaffraText(sender,maxLines:2),
           trailing:TextButton(
