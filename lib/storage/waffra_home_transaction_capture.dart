@@ -28,15 +28,6 @@ abstract final class WaffraHomeTransactionCapture {
         route == WaffraFinanceRoute.manualTransactionSave) return;
     final allowed = switch (route) {
       WaffraFinanceRoute.transactionEdit => const <String>{'entries'},
-      // Budget edits must not re-submit unrelated Home modules. In particular,
-      // a fresh encrypted vault can omit optional module defaults entirely.
-      WaffraFinanceRoute.challengeAndBudgetUpdate => const <String>{
-        'waffra_named_budgets_v1',
-        'waffra_challenges_v1',
-        'waffra_monthly_budget_v1',
-        'waffra_monthly_budget_enabled_v1',
-        'waffra_categories_v24',
-      },
       WaffraFinanceRoute.goalCreateEditDeleteRestore =>
         const <String>{'waffra_goals_v24', 'waffra_recurring_v24'},
       WaffraFinanceRoute.recurringCreateEditDeleteRestore =>
