@@ -213,10 +213,6 @@
     ],
     "lib/storage/waffra_home_transaction_capture.dart": [
       {
-        "start": "      WaffraFinanceRoute.categoryCreateEditDeleteRestore =>",
-        "end": "      _ => const <String>{},"
-      },
-      {
         "start": "  static void narrowVerifiedModuleEdit({",
         "end": "  /// Exact string equality is equivalent to encoding both JSON strings,"
       }
