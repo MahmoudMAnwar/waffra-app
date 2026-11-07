@@ -21,15 +21,19 @@
       },
       {
         "start": " void _m468OnResume(){",
-        "end": " @override void initState(){"
+        "end": " @override void initState(){super.initState();WaffraBackNavigation"
       },
       {
         "start": " Widget profilePage(){",
-        "end": " // Build only the selected tab;"
+        "end": " Widget _addMenuOption({"
       },
       {
         "start": "    key:const Key('waffra-header-account-entry'),",
         "end": "    borderRadius:BorderRadius.circular(30),"
+      },
+      {
+        "start": " Future<void> deleteAiModel()async {",
+        "end": " Future<void> eraseFinancialData()async {"
       }
     ]
   }
