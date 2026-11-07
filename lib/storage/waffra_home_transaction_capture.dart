@@ -39,6 +39,16 @@ abstract final class WaffraHomeTransactionCapture {
         const <String>{'entries', 'waffra_recurring_postponed_v1'},
       WaffraFinanceRoute.categoryCreateEditDeleteRestore =>
         const <String>{'waffra_categories_v24'},
+      // Independent monthly budgets are scalar SQLCipher modules, not ledger
+      // postings. Keep their named budget entries together with the existing
+      // budget/challenge setting keys and reject any unrelated mutation.
+      WaffraFinanceRoute.challengeAndBudgetUpdate => const <String>{
+        'waffra_named_budgets_v1',
+        'waffra_challenges_v1',
+        'waffra_monthly_budget_v1',
+        'waffra_monthly_budget_enabled_v1',
+        'waffra_categories_v24',
+      },
       _ => const <String>{},
     };
     if (allowed.isEmpty) return; // Other routes retain their own strict gates.
