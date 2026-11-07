@@ -430,3 +430,12 @@ Each issue requires linked source changes, exact-head CI, tests and real Android
 - **Tracking:** https://github.com/MahmoudMAnwar/waffra-app/issues/454
 - **State:** documented / pending audit. No code refactor or regression-test success claimed.
 - **Execution:** inventory and root-cause matrix first, targeted scoped PRs with regression tests next; protect existing SQLCipher data and upgrade paths; require CI and device acceptance before merge.
+
+
+## M530 — Immutable finance ledger snapshot off UI isolate (2026-11-07; issue #473, audit #454 P01 partial)
+
+- **User request:** improve smoothness immediately after save/add/tap without sacrificing SQLCipher or immutable transaction data on existing devices.
+- **Current code:** `persist()` freezes a full map of all immutable MoneyEntry rows by calling `toJson()` on the UI isolate before the save progress overlay draws; subsequent large jsonEncode is already offloaded.
+- **Bounded behavior:** retain a List.unmodifiable snapshot of immutable final MoneyEntry references before the first await. Convert/encode large snapshots (existing 240-row boundary) off the UI isolate via compute, preserving byte-for-byte JSON, exact source/witness, save order, pending/failed finance no-double-write guarantees. Small histories retain original encodeRecords path.
+- **Tests:** 5000 actual MoneyEntry objects for JSON bytes/order and optionals, source-level freeze-before-await and worker-before-verified-write, exact M468 regression update, M385 and M449. Require both clean and upgrade-over-existing data plus actual Android frame timelines; no blanket modification of financial routes.
+- **Status:** recorded before coding; this is a P01 ledger-only source candidate and not a measured complete fix.
