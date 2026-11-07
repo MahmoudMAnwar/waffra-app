@@ -668,3 +668,8 @@ M274 must also trigger on `docs/release/WAFFRA_APPROVED_CHANGES.txt` changes bec
 - M274 run 42391593765: actual API35 AOSP ATD Flutter driver passed rapid footer taps, reached balance eye test, then Flutter VM extension disappeared and `adb` went offline; QEMU emulator process vanished. Independent widget/golden job passed. Host still had ~14 GiB available RAM and 80 GiB free disk. This is an emulator-host disconnect, not a proven login/logout defect.
 - Emulator startup also logged malformed Pixel 6 SystemUI overlay shell commands. Replace only M274 emulator AVD `profile: pixel_6` with lean `profile: pixel_2` as a bounded stability hypothesis; preserve real API35 AOSP ATD, Flutter driver, strict M274 certification and no skip-on-failure. Assert this exact profile in M533 source contract.
 - This is an experiment, NOT a proven permanent fix. Require a successful full actual M274 Android run plus M174 and all exact-head gates before merge. If it fails again, inspect runner crash artifacts and use an independently stable Android runner/device rather than claiming success.
+
+
+### M542 — Keep M386 fail-closed Android profile contract synchronized (2026-11-07)
+- Exact-head M174 `42392425428` failed: `test_real_android_engine_is_still_required` in `test/qa/m386_m274_emulator_disk_safety_test.py` still asserted `profile: pixel_6` although approved M541 real AOSP ATD workflow now uses `profile: pixel_2`.
+- Change that one existing bounded test assertion to require `profile: pixel_2`, preserving API35/AOSP ATD, live Flutter driver, required Android certification, and no skips. This is a test/config consistency repair, NOT proof that emulator crash was fixed. Re-run all exact-head gates, especially M174 and M274, before merge. PR #480.
