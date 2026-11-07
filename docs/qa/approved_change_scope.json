@@ -1,23 +1,34 @@
 {
   "contract_version": 1,
-  "change_id": "M513-SIMPLE-SAFE-LOGOUT-20261107",
-  "human_scope_review": "Owner supplied two Android screenshots and demanded a simple Yes/No sign-out, not a password repair form. #444 explicitly documents the accepted UX and protected verifier caveat. This candidate only changes existing Home confirmation copy, the shared app root logout verifier barrier, biometric/idle gate confirmation and registration proof check. It NEVER authorizes deleting or overwriting local phone credentials, bypassing OS biometric, SQLCipher, finance-owner or SMS session suspension. A truly missing/malformed verifier remains a blocking integrity error, NOT a false successful logout. Actual Android device testing and independent human scope approval remain pending.",
+  "change_id": "M513-M514-SAFE-LOGOUT-SMS-REVIEW-20261107",
+  "human_scope_review": "Owner supplied new Android evidence and directly requested all listed SMS review fixes in PR #445 on 2026-11-07, recorded as Issues #446-#451 and docs/WAFFRA_REQUIREMENTS.md. Human owner still must verify actual Android acceptance. M385 scopes below bind all edits to existing M513 logout and M514 SMS scan/count, encrypted per-message exclusions, conditional safe learned rules, bank incoming-transfer classification, screen/account review and exact suffix. No SQLCipher finance cutover, weakening authentication, auto-post, or destruction of wallet/previous installation data is authorized.",
   "user_requested_changes": [
     "2026-11-07 Issue #444: after signing up, Sign out must show exactly one 'هل أنت متأكد من تسجيل الخروج؟' confirmation with 'نعم' and 'لا' from Home and both biometric lock entry points. No new password/confirmation/repair popup in normal logout.",
     "2026-11-07 Issue #444: ensure successful new phone registration persists a matching OS-secure verifier BEFORE committing the phone profile; re-login must verify original phone/password. A missing/malformed/different-owner secure record must fail closed with a short user-visible error, not silently reset or bypass.",
     "2026-11-07 Issue #444: preserve all previously saved financial records, biometric session protection, native SMS suspension and SQLCipher ledger through signout and interrupted/failed recovery, and add focused regression tests.",
-    "2026-11-07 M513 CI witness: reconcile one obsolete M424 biometric sign-out test to require user-confirmed Yes/No before callback, with No not signing out and Yes signing out once; no change to biometric unlocking."
+    "2026-11-07 M513 CI witness: reconcile one obsolete M424 biometric sign-out test to require user-confirmed Yes/No before callback, with No not signing out and Yes signing out once; no change to biometric unlocking.",
+    "2026-11-07 owner screenshot #446: Rescan UI must show this click's scanned count and real pending/partial state, not initial-install total. See docs/WAFFRA_REQUIREMENTS.md and PR #445.",
+    "2026-11-07 owner screenshot #447: Remove misleading ambiguous SMS terminology from sender and Home review. See docs/WAFFRA_REQUIREMENTS.md and PR #445.",
+    "2026-11-07 owner screenshot #448: Single and bulk exclusion must persist independent encrypted per-message markers and safely learned owner-scoped rules; no finance hash poisoning. See docs/WAFFRA_REQUIREMENTS.md and PR #445.",
+    "2026-11-07 owner screenshot #449: Explicit incoming bank credits are income review candidates; unknown/outgoing bank transfers require ownership verification and actionable editor. See docs/WAFFRA_REQUIREMENTS.md and PR #445.",
+    "2026-11-07 owner screenshot #450: When creating verified account while reviewing SMS, prefill source-appropriate masked last-four as editable suggestion only. See docs/WAFFRA_REQUIREMENTS.md and PR #445.",
+    "2026-11-07 owner screenshot #451: Investigate and repair confirmed SMS attachments and later editing with same protected SQLCipher guarantees as manual. See docs/WAFFRA_REQUIREMENTS.md and PR #445."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
+    "lib/waffra_account_transaction_form.dart",
+    "lib/waffra_auto_sms.dart",
+    "lib/waffra_bank_sms_facts.dart",
     "lib/waffra_mandatory_biometric_gate.dart",
+    "native/WaffraAutoSmsStore.kt",
+    "native/WaffraMainActivity.kt",
+    "test/m424_mandatory_biometrics_test.dart",
     "test/m502_logout_paths_test.dart",
     "test/m506_android_nine_regressions_test.dart",
-    "test/m513_logout_confirmation_test.dart",
-    "test/m424_mandatory_biometrics_test.dart"
+    "test/m513_logout_confirmation_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -32,6 +43,30 @@
       {
         "start": "   OutlinedButton.icon(style:OutlinedButton.styleFrom(\n    foregroundColor:(isGuest)?emerald:Colors.red,",
         "end": "   const SizedBox(height:13),\n   WaffraText(waffraIsEnglish?\n    'Your data stays on this device."
+      },
+      {
+        "start": " Map<String,Object?> _autoSmsProgress=const <String,Object?>{};",
+        "end": " String? _autoSmsStatusProblem;"
+      },
+      {
+        "start": " Future<void> _rescanAutoSmsInbox()async{",
+        "end": " Future<void>? _autoSmsRefreshInFlight;"
+      },
+      {
+        "start": " Future<void> _refreshAutoSmsInbox({bool importMonth=false})async{",
+        "end": " Future<void> _analyzeAmbiguousSmsOnDemand("
+      },
+      {
+        "start": " Future<void> _openAutoSmsInbox()async{",
+        "end": " Future<void> _reviewSmsAccountTransfer({"
+      },
+      {
+        "start": " Future<void> _reviewSmsAccountTransfer({",
+        "end": " void _receiveSharedSms(){"
+      },
+      {
+        "start": " Future<void> entrySheet(",
+        "end": " Future<void> showReceipt("
       }
     ],
     "lib/waffra_mandatory_biometric_gate.dart": [
@@ -68,6 +103,60 @@
       {
         "start": "  testWidgets('M424: sign-out remains available without unlocking funds',",
         "end": "  test('M424: home route no longer exposes optional PIN settings'"
+      }
+    ],
+    "lib/waffra_account_transaction_form.dart": [
+      {
+        "start": "class WaffraAccountTransactionForm extends StatefulWidget {",
+        "end": "class _WaffraAccountTransactionFormState extends State"
+      },
+      {
+        "start": " Future<void> createFromDropdown({",
+        "end": " @override Widget build(BuildContext context){"
+      },
+      {
+        "start": " @override Widget build(BuildContext context){",
+        "end": null
+      }
+    ],
+    "lib/waffra_auto_sms.dart": [
+      {
+        "start": " static Future<bool> acknowledgeCommitted(",
+        "end": " static Future<bool> notifyCommitted("
+      }
+    ],
+    "lib/waffra_bank_sms_facts.dart": [
+      {
+        "start": "  final isTransfer=_transfer.hasMatch(header);",
+        "end": "  String? normalizeSuffix("
+      }
+    ],
+    "native/WaffraAutoSmsStore.kt": [
+      {
+        "start": "    private const val excludedSendersName =",
+        "end": "    private const val activeName ="
+      },
+      {
+        "start": "                for (key in prefs.all.keys) {",
+        "end": "                editor.remove(queueName)"
+      },
+      {
+        "start": "    private val committedCipherCache =",
+        "end": "    // Explicit user sender exclusion"
+      },
+      {
+        "start": "    fun offer(context: Context, sender: String",
+        "end": "    fun pending(context: Context)"
+      },
+      {
+        "start": "    fun acknowledge(context: Context",
+        "end": "    /** Rescan the *entire* installed-month inbox"
+      }
+    ],
+    "native/WaffraMainActivity.kt": [
+      {
+        "start": "                \"ackAutoBankSms\" -> {",
+        "end": "                \"ackCommittedAutoBankSms\" -> {"
       }
     ]
   }
