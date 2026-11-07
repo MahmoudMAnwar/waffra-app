@@ -183,7 +183,7 @@ void main() {
     expect(cold.finance.getString('waffra_named_budgets_v1'), persisted);
     expect(cold.ledgerRaw, before.ledgerRaw);
     final accounts = await WaffraAccountsRepository(
-      db: db, experimentalEnabled: true).listBalances();
+      db: db, experimentalEnabled: true).balances();
     expect(accounts.singleWhere((account) => account.id == accountId)
       .balanceMinor, 100000);
   });
