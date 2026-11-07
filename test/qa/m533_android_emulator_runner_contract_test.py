@@ -43,6 +43,16 @@ class M533AndroidEmulatorStabilityContractTest(unittest.TestCase):
         self.assertIn('exit "$result"', SCRIPT)
         self.assertNotIn('|| true\n    flutter drive', SCRIPT)
 
+    def test_m534_runner_is_well_scoped_and_reaches_real_flutter_drive(self):
+        self.assertEqual(SCRIPT.count('for attempt in 1 2; do'), 1)
+        self.assertEqual(SCRIPT.count('adb -s "$device" wait-for-device'), 1)
+        self.assertEqual(SCRIPT.count('flutter drive --driver='), 1)
+        self.assertIn('source_properties="$sdk/emulator/source.properties"', SCRIPT)
+        self.assertIn("Pkg", SCRIPT)
+        self.assertIn('M534_EMULATOR_PACKAGE_VERIFIED:36.4.10', SCRIPT)
+        self.assertNotIn('version_output=', SCRIPT)
+        self.assertNotIn('emulator_bin=', SCRIPT)
+
     def test_m412_docs_only_sync_cannot_turn_skipped_android_green(self):
         impact = WORKFLOW.split("  m412-impact:", 1)[1].split(
             "  widget-ui-and-golden-candidates:", 1)[0]
