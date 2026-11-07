@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
-  "change_id": "M513-M517-SAFE-LOGOUT-SMS-REVIEW-20261107",
-  "human_scope_review": "Owner supplied new Android evidence and directly requested all listed SMS review fixes in PR #445 on 2026-11-07, recorded as Issues #446-#451 and docs/WAFFRA_REQUIREMENTS.md. Human owner still must verify actual Android acceptance. M385 scopes below bind all edits to existing M513 logout and M514 SMS scan/count, encrypted per-message exclusions, conditional safe learned rules, bank incoming-transfer classification, screen/account review and exact suffix. No SQLCipher finance cutover, weakening authentication, auto-post, or destruction of wallet/previous installation data is authorized. M515 Issue #452: user-created named budget with verified bank account shows false persistence error because challengeAndBudgetUpdate omitted the independent budget field. Bound policy and tests authorize adding that key to strict budget-specific captures only, without changing finance posting authority. M516 Issue #455: source-confirmed completed SMS internal transfers replay after history rescan, and distinct identical-body SMS collide on transfer requestId. Scope adds dedicated encrypted owner-scoped transfer completion markers, per-native-fingerprint transfer request IDs, and regression tests without treating transfer as excluded or finance hash. M517 Issue #448 follow-up: user-visible excluded list only shows sender policy, but per-message exclusions are correctly encrypted elsewhere; add owner-scoped encrypted message-label metadata and UI list/restore without storing SMS body or touching finance.",
+  "change_id": "M513-M518-SAFE-LOGOUT-SMS-REVIEW-20261107",
+  "human_scope_review": "Owner supplied new Android evidence and directly requested all listed SMS review fixes in PR #445 on 2026-11-07, recorded as Issues #446-#451 and docs/WAFFRA_REQUIREMENTS.md. Human owner still must verify actual Android acceptance. M385 scopes below bind all edits to existing M513 logout and M514 SMS scan/count, encrypted per-message exclusions, conditional safe learned rules, bank incoming-transfer classification, screen/account review and exact suffix. No SQLCipher finance cutover, weakening authentication, auto-post, or destruction of wallet/previous installation data is authorized. M515 Issue #452: user-created named budget with verified bank account shows false persistence error because challengeAndBudgetUpdate omitted the independent budget field. Bound policy and tests authorize adding that key to strict budget-specific captures only, without changing finance posting authority. M516 Issue #455: source-confirmed completed SMS internal transfers replay after history rescan, and distinct identical-body SMS collide on transfer requestId. Scope adds dedicated encrypted owner-scoped transfer completion markers, per-native-fingerprint transfer request IDs, and regression tests without treating transfer as excluded or finance hash. M517 Issue #448 follow-up: user-visible excluded list only shows sender policy, but per-message exclusions are correctly encrypted elsewhere; add owner-scoped encrypted message-label metadata and UI list/restore without storing SMS body or touching finance. M518 Issue #455: live SMS receiver PDU sent timestamp and historical inbox receive timestamp yield distinct IDs; use inbox date_sent for canonical fingerprints and date for review display/cursor when available. No mutation of old financial SMS hash semantics.",
   "user_requested_changes": [
     "2026-11-07 Issue #444: after signing up, Sign out must show exactly one 'هل أنت متأكد من تسجيل الخروج؟' confirmation with 'نعم' and 'لا' from Home and both biometric lock entry points. No new password/confirmation/repair popup in normal logout.",
     "2026-11-07 Issue #444: ensure successful new phone registration persists a matching OS-secure verifier BEFORE committing the phone profile; re-login must verify original phone/password. A missing/malformed/different-owner secure record must fail closed with a short user-visible error, not silently reset or bypass.",
@@ -17,7 +17,8 @@
     "2026-11-07 #452 M515: fix verified SQLCipher account-linked standalone budget failure, using budget-specific captured-field scoping and named-budget allowlist; preserve all other finance and ensure no optimistic success message on failed commit.",
     "2026-11-07 M515 Issue #452 (owner screenshot): fix verified standalone account-linked budget rejection by adding ONLY `waffra_named_budgets_v1` to the approved challengeAndBudgetUpdate scope and narrowing unchanged unrelated optional Home modules; test actual SQLCipher commit, stale conflict, no finance mutation, and cold-reload. No finance write bypass or user-data reset.",
     "2026-11-07 M516 Issue #455: audit-found transfer replay after successful SMS internal transfer caused by transient ACK; add durable owner-scoped completion marker, native-id-based idempotency key, no false excluded/financial hash.",
-    "2026-11-07 M517 #448: excluded messages are stored but not shown; show sender and message exclusions separately with counts, optional per-SMS restore, AES-GCM metadata and legacy hash-only compatibility."
+    "2026-11-07 M517 #448: excluded messages are stored but not shown; show sender and message exclusions separately with counts, optional per-SMS restore, AES-GCM metadata and legacy hash-only compatibility.",
+    "2026-11-07 M518 audit-found: live and history SMS identity mismatch; align provider date_sent with SmsMessage.timestampMillis, retain inbox date and backward compatibility."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -210,6 +211,10 @@
       {
         "start": "    fun excludeMessages(context: Context",
         "end": "    /** Rescan the *entire* installed-month inbox"
+      },
+      {
+        "start": "    fun importConsentMonth(context: Context, maxRead: Int = 500): Int {",
+        "end": "    /** Claim each review notification once; history never floods the shade. */"
       }
     ],
     "native/WaffraMainActivity.kt": [
